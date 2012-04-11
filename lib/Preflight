@@ -1,0 +1,64 @@
+#!/bin/bash
+
+target=`uname`
+defines=""
+message=""
+
+if [ "$QTDIR" = "" ]
+then
+  message="QTDIR not set. Build without Qt4 support." 
+elif [ -f $QTDIR/bin/qmake ]; then
+  version=`$QTDIR/bin/qmake -v 2>&1 | grep 'Qt 3\.'`
+  if [ "$version" != "" ]; then
+    message="QTDIR points to an old Qt version."
+  fi
+else
+  message="Unable to obtain Qt version number."
+fi
+
+if [ "$message" != "" ]; then
+  echo $message >&2
+  echo "Do you want to continue? [y/n]" >&2
+  read yesno
+  if [ "$yesno" = "y" ]; then
+    defines="DEFINES=-DNO_QT4 QTLIBS="
+  else
+    echo -e "Please retry with a valid QTDIR setting, e.g.\n\
+	/usr/lib64/qt4	(Red Hat)\n\
+	/usr/share/qt4	(Ubuntu)\n\
+	/usr/local/qt4\n" >&2
+    target="nothing"
+  fi
+fi
+
+tmpfile=`mktemp /tmp/a.out.XXXXX`
+cmd="cc -o $tmpfile -lgs"
+if [ `uname` = "Darwin" ]; then
+  cmd="$cmd -L/usr/X11/lib -lXt -lX11 -liconv"
+fi
+$cmd >/dev/null 2>&1 <<eof
+#include <stdio.h>
+#include <stdlib.h>
+#include <ghostscript/iapi.h>
+
+int main()
+{
+  gsapi_revision_t r;
+  if (gsapi_revision(&r, sizeof(gsapi_revision_t)) == 0)
+    fprintf(stderr, "%ld\n", r.revision);
+  exit(0);
+}
+eof
+if [ $? -ne 0 ]; then
+  echo "Ghostscript API not found. Build without Ghostscript support." >&2
+  echo "Do you want to continue? [y/n]" >&2
+  read yesno
+  if [ "$yesno" = "y" ]; then
+    defines="$defines DEFINES=-DNO_GS GSLIBS="
+  else
+    target="nothing"
+  fi
+fi
+rm -f $tmpfile
+
+echo $target $defines

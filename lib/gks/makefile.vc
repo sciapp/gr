@@ -1,0 +1,38 @@
+CC = CL
+CFLAGS = /c /Zi /nologo /DNO_X11 /D_DLL /MD /D_POSIX
+DEFINES = /DGRDIR=\"S:\\gr\"
+AR = LIB /nologo
+LINK = LINK /debug:full /nologo
+DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
+DLLLFLAGS = /nodefaultlib -dll
+DLLLINK = LINK /debug:full /nologo
+SRCDIR = .\ 
+
+.SUFFIXES: .obj .c .f
+
+{$(SRCDIR)}.c.obj:
+	$(CC) $(CFLAGS) $(DEFINES) $<
+
+all: libgks.lib demo.exe
+
+libgks.lib: libgks.dll
+
+libgks.dll: gks.obj gksforbnd.obj font.obj afm.obj util.obj dl.obj malloc.obj \
+	 error.obj mf.obj wiss.obj cgm.obj win.obj mac.obj ps.obj pdf.obj \
+	 x11.obj socket.obj plugin.obj compress.obj io.obj
+	$(DLLLINK) /out:$@ $** -def:libgks.def $(DLLLFLAGS) $(DLLLIBS)
+
+demo.obj: demo.c
+	$(CC) /c /nologo /MD demo.c
+demo.exe: demo.obj libgks.lib
+	$(LINK) /out:$@ demo.obj libgks.lib
+
+clean:
+	DEL demo.exe
+	DEL libgks.dll
+	DEL libgks.exp
+	DEL libgks.lib
+	DEL *.pdb
+	DEL *.ilk
+	DEL *.obj
+	DEL *.bak

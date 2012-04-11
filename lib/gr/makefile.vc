@@ -1,0 +1,89 @@
+CC = CL
+INCLUDES = /I..\jpeg /I..\png /I..\zlib /I..\gks /I.
+CFLAGS = /c /nologo /DNO_X11 /D_DLL /MD /D_POSIX $(INCLUDES)
+DEFINES = /DGRDIR=\"S:\\gr\"
+LINK = LINK /nologo
+JPEGLIBS = ..\jpeg\libjpeg.lib
+PNGLIBS = ..\png\libpng.lib
+ZLIBS = ..\zlib\libz.lib
+GRLIBS = libgr.lib
+GKSLIBS = ..\gks\libgks.lib
+DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
+DLLLFLAGS = /nodefaultlib -dll
+DLLLINK = LINK /nologo
+PYHOME = S:\Python
+SRCDIR = .\
+
+DESTDIR = S:\gr
+
+.SUFFIXES: .obj .c
+
+.c.obj:
+	$(CC) $(CFLAGS) $(DEFINES) $<
+
+default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) libgr.lib gr.pyd
+
+$(GKSLIBS):
+	@cd ../gks
+	@$(MAKE) /f makefile.vc
+	@cd ../gr
+
+$(JPEGLIBS):
+	@cd ../jpeg
+	@$(MAKE) /f makefile.vc
+	@cd ../gr
+
+$(PNGLIBS):
+	@cd ../png
+	@$(MAKE) /f makefile.vc
+	@cd ../gr
+
+$(ZLIBS):
+	@cd ../zlib
+	@$(MAKE) /f makefile.vc
+	@cd ../gr
+
+libgr.lib: libgr.dll
+
+libgr.dll: gr.obj text.obj contour.obj spline.obj strlib.obj property.obj \
+	   image.obj
+	$(DLLLINK) /out:$@ $** -def:libgr.def \
+	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(DLLLFLAGS) $(DLLLIBS)
+
+gr.pyd: py_gr.obj
+	$(DLLLINK) /out:$@ $** -def:gr.def \
+	$(PYHOME)\libs\python27.lib $(GRLIBS) \
+	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(DLLLFLAGS) $(DLLLIBS)
+
+py_gr.obj: python\py_gr.c
+	$(CC) $(CFLAGS) /I$(PYHOME)\include $**
+
+install: default
+	COPY /Y ..\gr\libgr.dll $(DESTDIR)
+	COPY /Y ..\gr\libgr.lib $(DESTDIR)
+	COPY /Y ..\gr\gr.pyd $(DESTDIR)
+	COPY /Y ..\gr\gr.h $(DESTDIR)
+	COPY /Y ..\gks\libgks.dll $(DESTDIR)
+	COPY /Y ..\gks\libgks.lib $(DESTDIR)
+	COPY /Y ..\gks\gks.h $(DESTDIR)
+	COPY /Y ..\gks\gksfont.dat $(DESTDIR)\fonts
+
+clean:
+	@cd ../gks
+	@$(MAKE) /f makefile.vc clean
+	@cd ../zlib
+	@$(MAKE) /f makefile.vc clean
+	@cd ../png
+	@$(MAKE) /f makefile.vc clean
+	@cd ../jpeg
+	@$(MAKE) /f makefile.vc clean
+	@cd ../gr
+	DEL libgr.dll
+	DEL libgr.exp
+	DEL libgr.lib
+	DEL gr.pyd
+	DEL gr.exp
+	DEL gr.lib
+	DEL *.obj
+	DEL *.bak
+

@@ -1,0 +1,7 @@
+//
+// Prefix header for all source files of the 'GKSTerm' target in the 'GKSTerm' project
+//
+
+#ifdef __OBJC__
+    #import <Cocoa/Cocoa.h>
+#endif

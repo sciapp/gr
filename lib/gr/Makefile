@@ -1,0 +1,82 @@
+    GRDIR = /usr/local/gr
+   BINDIR = $(GRDIR)/bin
+   LIBDIR = $(GRDIR)/lib
+   INCDIR = $(GRDIR)/include
+
+   GROBJS = gr.o text.o contour.o spline.o strlib.o property.o image.o \
+	    grforbnd.o
+  DEFINES =
+ INCLUDES = -I../gks -I../jpeg -I../png
+       CC = cc
+   CFLAGS = $(DEFINES) -O -Wall -fPIC
+       AR = ar
+   RANLIB = ar ts
+  SOFLAGS = -shared
+     LIBS = -lc -lm
+ JPEGLIBS = ../jpeg/libjpeg.a
+  PNGLIBS = ../png/libpng.a
+  GKSLIBS = ../gks/libGKS.a
+ XLIBPATH = /usr/X11R6/lib
+    XLIBS = -L$(XLIBPATH) -lXt -lX11
+    ZLIBS = -lz
+
+.c.o:
+	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+
+all:
+	@make `../Preflight`
+nothing:
+	@true
+
+targets: prerequisites libGR.a libGR.so add-ons
+
+Linux:
+	@make targets
+Darwin:
+	@make targets \
+	LD="$(CC)" LDFLAGS="-dynamiclib -framework Carbon" LIBS="-lc -lm" \
+	SOFLAGS="-dynamiclib -framework Carbon -Wl,-install_name,$(LIBDIR)/libGR.so"
+
+prerequisites:
+	@for d in jpeg png gks gks/plugin; do make -C ../$$d; done
+
+add-ons:
+	@for d in python; do make -C $$d; done
+
+libGR.a: $(GROBJS)
+	$(AR) crv $@ $?
+	$(RANLIB) $@
+
+libGR.so: $(GROBJS)
+	$(LD) -o $@ $(SOFLAGS) $(GROBJS) $(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
+	$(ZLIBS) $(XLIBS) $(LIBS)
+
+install:
+	@make -C ../gks install
+	@if [ ! -d $(GRDIR) ]; then mkdir -m 755 $(GRDIR); fi
+	@if [ ! -d $(BINDIR) ]; then mkdir -m 755 $(BINDIR); fi
+	cp -p python/gr $(BINDIR)
+	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
+	cp -p libGR.* $(LIBDIR)
+	cp -p python/gr.so $(LIBDIR)
+	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
+	cp -p gr.h $(INCDIR)
+
+clean:
+	@for d in python; do make -C $$d clean; done
+	@for d in jpeg png gks gks/plugin; do make -C ../$$d clean; done
+	rm -f so_locations *.so *.a *.o *.bak *~
+
+depend:
+	makedepend -Y -- gr.c text.c contour.c spline.c strlib.c property.c \
+	image.c grforbnd.c 2> /dev/null
+
+# DO NOT DELETE THIS LINE -- make depend depends on it.
+
+gr.o: gr.h text.h spline.h contour.h strlib.h property.h
+contour.o: gr.h contour.h
+spline.o: spline.h
+strlib.o: strlib.h
+property.o: property.h
+image.o: gr.h
+grforbnd.o: gr.h

@@ -1,0 +1,14 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>images/fileprint.png</file>
+    <file>images/copy.png</file>
+    <file>images/cut.png</file>
+    <file>images/open.png</file>
+    <file>images/paste.png</file>
+    <file>images/save.png</file>
+    <file>images/next.png</file>
+    <file>images/previous.png</file>
+    <file>images/close.png</file>
+    <file>images/rotateright.png</file>
+</qresource>
+</RCC>

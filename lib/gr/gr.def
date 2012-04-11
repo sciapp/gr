@@ -1,0 +1,5 @@
+LIBRARY gr.pyd
+EXETYPE WINDOWS
+
+EXPORTS
+	initgr

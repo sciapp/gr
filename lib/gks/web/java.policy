@@ -1,0 +1,9 @@
+grant {
+  permission java.io.FilePermission 
+	"/usr/local/gr/fonts/gksfont.dat", "read";
+};
+grant {
+  permission java.net.SocketPermission
+        "localhost:8410-", 
+	"accept, connect, listen";
+};

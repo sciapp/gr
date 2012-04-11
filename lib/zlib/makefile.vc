@@ -1,0 +1,21 @@
+OBJS = adler32.obj compress.obj crc32.obj gzio.obj uncompr.obj deflate.obj \
+       trees.obj zutil.obj inflate.obj infback.obj inftrees.obj inffast.obj
+
+CC = CL
+CFLAGS = /c /Zi /nologo /MD /D_POSIX
+AR = LIB /nologo
+SRCDIR = .\ 
+
+.SUFFIXES: .obj .c
+
+{$(SRCDIR)}.c.obj:
+	$(CC) $(CFLAGS) $<
+
+libz.lib: $(OBJS)
+	$(AR) /out:$@ $**
+
+clean:
+	DEL libz.lib
+	DEL *.pdb
+	DEL *.obj
+	DEL *.bak
