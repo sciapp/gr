@@ -52,7 +52,10 @@
                                                 initializing gr3. */
 #define GR3_ERROR_CAMERA_NOT_INITIALIZED 7 /*!< gr3_getpixmap() was called
                                                 before initializing the camera
-                                            */
+*/
+#define GR3_ERROR_UNKNOWN_FILE_EXTENSION 8
+#define GR3_ERROR_CANNOT_OPEN_FILE 9
+#define GR3_ERROR_EXPORT 10
 
 GR3API int         gr3_init(int *attrib_list);
 GR3API void        gr3_terminate(void);
@@ -61,7 +64,7 @@ GR3API int         gr3_clear(void);
 GR3API int         gr3_drawscene(float xmin, float ymin, float xmax, float ymax, int pixelWidth, int pixelHeight);
 GR3API int         gr3_getpovray(int *pixmap, int width, int height);
 GR3API int         gr3_getpixmap(int *pixmap, int width, int height);
-GR3API int         gr3_writehtml(const char *filename, int width, int height);
+GR3API int         gr3_export(const char *filename, int width, int height);
 GR3API int         gr3_createmesh(int *mesh, int n, const float *vertices, const float *normals, const float *colors);
 GR3API void        gr3_drawmesh(int mesh, int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);
 GR3API void        gr3_deletemesh(int mesh);

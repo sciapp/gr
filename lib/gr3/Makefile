@@ -6,6 +6,7 @@
     GRLIBS = -L$(GRDIR)/lib -lGR
     GLLIBS = -lGL -lX11
    PNGLIBS = ../png/libpng.a
+  JPEGLIBS = ../jpeg/libjpeg.a
       LIBS = -lz
     CFLAGS = -Wall -Wextra -pedantic -g -fPIC
    LDFLAGS = -shared
@@ -20,11 +21,11 @@ Darwin:
 targets: prerequisites libGR3.so gr3.py
 
 prerequisites:
-	@make -C ../png
+	@make -C ../gr
 
 libGR3.so: gr3.c
 	${CC} -o $@ $? $(CFLAGS) $(INCLUDES) $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
-	$(LIBS) $(LDFLAGS)
+	$(JPEGLIBS) $(LIBS) $(LDFLAGS)
 
 gr3.c: gr3.h
 

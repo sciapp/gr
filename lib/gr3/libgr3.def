@@ -9,7 +9,7 @@ EXPORTS
 	gr3_drawscene
 	gr3_getpovray
 	gr3_getpixmap
-	gr3_writehtml
+	gr3_export
 	gr3_createmesh
 	gr3_drawmesh
 	gr3_deletemesh

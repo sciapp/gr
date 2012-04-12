@@ -11,6 +11,7 @@
 #include <math.h> /* for sqrt */
 
 #include <png.h>
+#include <jpeglib.h>
 
 #include "gr3.h"
 #include "gr.h"
@@ -308,6 +309,10 @@ static GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
 static int       gr3_extensionsupported_(const char *extension_name);
 static void      gr3_appendtorenderpathstring_(const char *string);
 static void      gr3_log_(const char *log_message);
+static int       gr3_export_html_(const char *filename, int width, int height);
+static int       gr3_export_png_(const char *filename, int width, int height);
+static int       gr3_export_jpeg_(const char *filename, int width, int height);
+static int       gr3_export_pov_(const char *filename, int width, int height);
 static void      gr3_meshaddreference_(int mesh);
 static void      gr3_meshremovereference_(int mesh);
 static void      gr3_dodrawmesh_(int mesh, 
@@ -1243,20 +1248,330 @@ GR3API int gr3_drawscene(float xmin, float xmax, float ymin, float ymax, int pix
     return GR3_ERROR_NONE;
 }
 
-GR3API int gr3_writehtml(const char *filename, int width, int height) {
+static int gr3_strendswith_(const char *str, const char *ending) {
+    int str_len = strlen(str);
+    int ending_len = strlen(ending);
+    return (str_len >= ending_len) && !strcmp(str+str_len-ending_len,ending);
+}
+
+GR3API int gr3_getimage(int width, int height, int *pixels) {
+/* TODO implement quality and different output types */
+    return gr3_getpixmap(pixels,width, height);
+}
+
+GR3API int gr3_export(const char *filename, int width, int height) {
+    
+    gr3_log_(filename);
+    
+    if (gr3_strendswith_(filename, ".html")) {
+        gr3_log_("export as html file");
+        return gr3_export_html_(filename, width, height);
+    } else if (gr3_strendswith_(filename, ".pov")) {
+        gr3_log_("export as pov file");
+        return gr3_export_pov_(filename, width, height);
+    } else if (gr3_strendswith_(filename, ".png")) {
+        gr3_log_("export as png file");
+        return gr3_export_png_(filename, width, height);
+    } else if (gr3_strendswith_(filename, ".jpg") || gr3_strendswith_(filename, ".jpeg")) {
+        gr3_log_("export as jpeg file");
+        return gr3_export_jpeg_(filename, width, height);
+    }
+    
+    return GR3_ERROR_UNKNOWN_FILE_EXTENSION;
+}
+
+static int gr3_export_jpeg_(const char *filename, int width, int height) {
+    FILE *jpegfp;
+    int *pixels;
+    JSAMPLE *rgba_row;
+    JSAMPLE *rgb_row;
+    int err;
+    int i;
+    
+    struct jpeg_compress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    JSAMPROW row_pointer[1];
+    
+    jpegfp = fopen(filename, "wb");
+    if (!jpegfp) {
+        return GR3_ERROR_CANNOT_OPEN_FILE;
+    }
+    
+    pixels = (int *)malloc(width * height * sizeof(int));
+    if (!pixels) {
+        return GR3_ERROR_OUT_OF_MEM;
+    }
+    
+    err = gr3_getimage(width, height, pixels);
+    if (err != GR3_ERROR_NONE) {
+        fclose(jpegfp);
+        free(pixels);
+        return err;
+    }
+    
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_compress(&cinfo);
+    jpeg_stdio_dest(&cinfo, jpegfp);
+    
+    cinfo.image_width = width;
+    cinfo.image_height = height;
+    cinfo.input_components = 3;
+    cinfo.in_color_space = JCS_RGB;
+    jpeg_set_defaults(&cinfo);
+    jpeg_set_quality(&cinfo, 100, TRUE);
+    jpeg_start_compress(&cinfo, TRUE);
+    rgb_row = (JSAMPLE *)malloc(width * 3);
+    if (!rgb_row) {
+     return GR3_ERROR_OUT_OF_MEM;
+    }
+    while (cinfo.next_scanline < cinfo.image_height) {
+        rgba_row = (JSAMPLE *)(pixels+(height-cinfo.next_scanline-1)*width);
+        for (i = 0; i < width; i++) {
+            rgb_row[i*3+0] = rgba_row[i*4+0];
+            rgb_row[i*3+1] = rgba_row[i*4+1];
+            rgb_row[i*3+2] = rgba_row[i*4+2];
+        }
+        row_pointer[0] = rgb_row;
+        jpeg_write_scanlines(&cinfo, row_pointer, 1);
+    }
+    free(rgb_row);
+    
+    jpeg_finish_compress(&cinfo);
+    jpeg_destroy_compress(&cinfo);
+    fclose(jpegfp);
+    free(pixels);
+    return GR3_ERROR_NONE;
+}
+
+static int gr3_export_png_(const char *filename, int width, int height) {
+    FILE *pngfp;
+    int *pixels;
+    int err;
+    int i;
+    
+    png_structp png_ptr;
+    png_infop info_ptr;
+    png_bytepp row_pointers;
+    
+    pngfp = fopen(filename, "wb");
+    if (!pngfp) {
+        return GR3_ERROR_CANNOT_OPEN_FILE;
+    }
+    
+    pixels = (int *)malloc(width * height * sizeof(int));
+    if (!pixels) {
+        return GR3_ERROR_OUT_OF_MEM;
+    }
+    
+    err = gr3_getimage(width, height, pixels);
+    if (err != GR3_ERROR_NONE) {
+        fclose(pngfp);
+        free(pixels);
+        return err;
+    }
+    
+    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png_ptr) {
+        fclose(pngfp);
+        free(pixels);
+        return GR3_ERROR_EXPORT;
+    }
+    info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr) {
+        fclose(pngfp);
+        free(pixels);
+        png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+        return GR3_ERROR_EXPORT;
+    }
+    png_init_io(png_ptr, pngfp);
+    png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    
+    row_pointers = malloc(height*sizeof(png_bytep));
+    for (i = 0; i < height; i++) {
+        row_pointers[i]=(png_bytep)(pixels+(height-i-1)*width);
+    }
+    png_set_rows(png_ptr, info_ptr, (void *)row_pointers);
+    png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+    
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    fclose(pngfp);
+    free(row_pointers);
+    free(pixels);
+    return GR3_ERROR_NONE;
+}
+
+static int gr3_export_pov_(const char *filename, int width, int height) {
+    int i, j, k, l;
+    FILE *povfp;
+    GR3_DrawList_t_ *draw;
+    
+    povfp = fopen(filename, "w");
+    if (!povfp) {
+        return GR3_ERROR_CANNOT_OPEN_FILE;
+    }
+    
+    fprintf(povfp,"camera {\n");
+    fprintf(povfp,"  up <0,1,0>\n");
+    fprintf(povfp,"  right <-1,0,0>\n");
+    fprintf(povfp,"  location <%f, %f, %f>\n", context_struct_.camera_x, context_struct_.camera_y, context_struct_.camera_z);
+    fprintf(povfp,"  look_at <%f, %f, %f>\n", context_struct_.center_x, context_struct_.center_y, context_struct_.center_z);
+    fprintf(povfp,"  sky <%f, %f, %f>\n", context_struct_.up_x, context_struct_.up_y, context_struct_.up_z);
+    fprintf(povfp,"  angle %f\n", context_struct_.vertical_field_of_view);
+    fprintf(povfp,"}\n");
+    
+    if (context_struct_.light_dir[0] == 0 && 
+        context_struct_.light_dir[1] == 0 && 
+        context_struct_.light_dir[2] == 0
+        ) {
+        GLfloat camera_pos[3];
+        camera_pos[0] = context_struct_.camera_x;
+        camera_pos[1] = context_struct_.camera_y;
+        camera_pos[2] = context_struct_.camera_z;
+        fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n",camera_pos[0], camera_pos[1],camera_pos[2]);
+    } else {
+        fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n",context_struct_.light_dir[0], context_struct_.light_dir[1],context_struct_.light_dir[2]);
+    }
+fprintf(povfp,"background { color rgb <%f, %f, %f> }\n", context_struct_.background_color[0], context_struct_.background_color[1], context_struct_.background_color[2]);
+    draw = context_struct_.draw_list_;
+    while (draw) {
+        switch(context_struct_.mesh_list_[draw->mesh].data.type) {
+            case kMTSphereMesh:
+                for(i = 0; i < draw->n; i++) {
+                    fprintf(povfp,"sphere {\n");
+                    fprintf(povfp,"  <%f, %f, %f>, %f\n",draw->positions[i*3+0],draw->positions[i*3+1],draw->positions[i*3+2],draw->scales[i*3+0]);
+                    fprintf(povfp,"  texture {\n");
+                    fprintf(povfp,"    pigment { color rgb <%f, %f, %f> }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
+                    fprintf(povfp,"  }\n");
+                    fprintf(povfp,"}\n");
+                }
+                break;
+            case kMTCylinderMesh:
+                for(i = 0; i < draw->n; i++) {
+                    float len_sq = draw->directions[i*3+0]*draw->directions[i*3+0] + draw->directions[i*3+1]*draw->directions[i*3+1] + draw->directions[i*3+2]*draw->directions[i*3+2];
+                    float len = sqrt(len_sq);
+                    fprintf(povfp,"cylinder {\n");
+                    fprintf(povfp,"  <%f, %f, %f>, <%f, %f, %f>, %f\n",draw->positions[i*3+0],draw->positions[i*3+1],draw->positions[i*3+2],draw->positions[i*3+0]+draw->directions[i*3+0]/len*draw->scales[i*3+2],draw->positions[i*3+1]+draw->directions[i*3+1]/len*draw->scales[i*3+2],draw->positions[i*3+2]+draw->directions[i*3+2]/len*draw->scales[i*3+2],draw->scales[i*3+0]);
+                    fprintf(povfp,"  texture {\n");
+                    fprintf(povfp,"    pigment { color rgb <%f, %f, %f> }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
+                    fprintf(povfp,"  }\n");
+                    fprintf(povfp,"}\n");
+                }
+                break;
+            case kMTConeMesh:
+                for(i = 0; i < draw->n; i++) {
+                    float len_sq = draw->directions[i*3+0]*draw->directions[i*3+0] + draw->directions[i*3+1]*draw->directions[i*3+1] + draw->directions[i*3+2]*draw->directions[i*3+2];
+                    float len = sqrt(len_sq);
+                    fprintf(povfp,"cone {\n");
+                    fprintf(povfp,"  <%f, %f, %f>, %f, <%f, %f, %f>, %f\n",draw->positions[i*3+0],draw->positions[i*3+1],draw->positions[i*3+2],draw->scales[i*3+0],draw->positions[i*3+0]+draw->directions[i*3+0]/len*draw->scales[i*3+2],draw->positions[i*3+1]+draw->directions[i*3+1]/len*draw->scales[i*3+2],draw->positions[i*3+2]+draw->directions[i*3+2]/len*draw->scales[i*3+2],0.0);
+                    fprintf(povfp,"  texture {\n");
+                    fprintf(povfp,"    pigment { color rgb <%f, %f, %f> }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
+                    fprintf(povfp,"  }\n");
+                    fprintf(povfp,"}\n");
+                }
+                break;
+            case kMTNormalMesh:
+                for(i = 0; i < draw->n; i++) {
+                    GLfloat model_matrix[4][4] = {{0}};
+                    const float *vertices = context_struct_.mesh_list_[draw->mesh].data.vertices;
+                    const float *normals = context_struct_.mesh_list_[draw->mesh].data.normals;
+                    const float *colors = context_struct_.mesh_list_[draw->mesh].data.colors;
+                    {
+                        int m;
+                        GLfloat forward[3], up[3], left[3];
+                        float tmp;
+                        /* Calculate an orthonormal base in IR^3, correcting the up vector 
+                         * in case it is not perpendicular to the forward vector. This base
+                         * is used to create the model matrix as a base-transformation 
+                         * matrix.
+                         */
+                        /* forward = normalize(&directions[i*3]); */
+                        tmp = 0;
+                        for (m = 0; m < 3; m++) {
+                            tmp+= draw->directions[i*3+m]*draw->directions[i*3+m];
+                        }
+                        tmp = sqrt(tmp);
+                        for (m = 0; m < 3; m++) {
+                            forward[m] = draw->directions[i*3+m]/tmp;
+                        }/* up = normalize(&ups[i*3]); */
+                        tmp = 0;
+                        for (m = 0; m < 3; m++) {
+                            tmp+= draw->ups[i*3+m]*draw->ups[i*3+m];
+                        }
+                        tmp = sqrt(tmp);
+                        for (m = 0; m < 3; m++) {
+                            up[m] = draw->ups[i*3+m]/tmp;
+                        }
+                        /* left = cross(forward,up); */
+                        for (m = 0; m < 3; m++) {
+                            left[m] = forward[(m+1)%3]*up[(m+2)%3] - up[(m+1)%3]*forward[(m+2)%3];
+                        }
+                        /* up = cross(left,forward); */
+                        for (m = 0; m < 3; m++) {
+                            up[m] = left[(m+1)%3]*forward[(m+2)%3] - forward[(m+1)%3]*left[(m+2)%3];
+                        }
+                        for (m = 0; m < 3; m++) {
+                            model_matrix[0][m] = -left[m];
+                            model_matrix[1][m] = up[m];
+                            model_matrix[2][m] = forward[m];
+                            model_matrix[3][m] = draw->positions[i*3+m];
+                        }
+                        model_matrix[3][3] = 1;
+                    }
+                    fprintf(povfp,"mesh {\n");
+                    for (j = 0; j < context_struct_.mesh_list_[draw->mesh].data.number_of_vertices/3; j++) {
+                        fprintf(povfp,"#local tex = texture { pigment { color rgb <%f, %f, %f> } }\n",draw->colors[i*3+0]*colors[j*3+0],draw->colors[i*3+1]*colors[j*3+1],draw->colors[i*3+2]*colors[j*3+2]);
+                        fprintf(povfp,"  smooth_triangle {\n");
+                        for (k = 0; k < 3; k++) {
+                            float vertex1[4];
+                            float vertex2[4];
+                            float normal1[3];
+                            float normal2[3];
+                            for (l = 0; l < 3; l++) {
+                                vertex1[l] = draw->scales[i*3+l]*vertices[j*9+k*3+l];
+                            }
+                            vertex1[3] = 1;
+                            for (l = 0; l < 4; l++) {
+                                vertex2[l] = model_matrix[0][l]*vertex1[0]+model_matrix[1][l]*vertex1[1]+model_matrix[2][l]*vertex1[2]+model_matrix[3][l]*vertex1[3];
+                            }
+                            for (l = 0; l < 3; l++) {
+                                normal1[l] = normals[j*9+k*3+l];
+                            }
+                            vertex1[3] = 1;
+                            for (l = 0; l < 4; l++) {
+                                normal2[l] = model_matrix[0][l]*normal1[0]+model_matrix[1][l]*normal1[1]+model_matrix[2][l]*normal1[2];
+                            }
+                            fprintf(povfp,"    <%f, %f, %f>,",vertex2[0],vertex2[1],vertex2[2]);
+                            fprintf(povfp," <%f, %f, %f>",normal2[0],normal2[1],normal2[2]);
+                            if (k < 2) {
+                                fprintf(povfp,",");
+                            }
+                            fprintf(povfp,"\n");
+                        }
+                        fprintf(povfp,"    texture { tex }\n");
+                        fprintf(povfp,"  }\n");
+                    }
+                    fprintf(povfp,"}\n");
+                }
+                break;
+            default:
+                gr3_log_("Unknown mesh type");
+                break;
+        }
+        draw = draw->next;
+    }
+    fclose(povfp);
+    return 0;
+}
+
+static int gr3_export_html_(const char *filename, int width, int height) {
     FILE *htmlfp;
-    char *htmlfile; 
     const char *title = "GR3";
     int i, j;
-    if (filename == NULL) {
-        htmlfile = malloc(40);
-        sprintf(htmlfile,"/tmp/gr3.%d.html",getpid());
-        htmlfp = fopen(htmlfile, "w");
-        free(htmlfile);
-    } else {
-        htmlfp = fopen(filename, "w");
+    
+    htmlfp = fopen(filename, "w");
+    if (!htmlfp) {
+        return GR3_ERROR_CANNOT_OPEN_FILE;
     }
-    if (!htmlfp) return GR3_ERROR_INVALID_VALUE;
     
     fprintf(htmlfp, "<!DOCTYPE html>\n");
     fprintf(htmlfp, "<html>\n");
@@ -1811,177 +2126,27 @@ GR3API int gr3_writehtml(const char *filename, int width, int height) {
 }
 
 GR3API int gr3_getpovray(int *pixels, int width, int height) {
-    FILE *povfp;
+#ifdef GR3_USE_WIN
+    char *tempdir = malloc(100);
+    char *povfile = malloc(125);
+    char *pngfile = malloc(125);
+    GetTempPath(100,tempdir);
+    sprintf(povfile,"%sgr3.%d.pov",tempdir,getpid());
+    sprintf(pngfile,"%sgr3.%d.png","C:\\AppData\\Local\\Temp\\",getpid());
+    gr3_log_(povfile);
+    free(tempdir);
+#else
     char *povfile = malloc(40);
     char *pngfile = malloc(40);
-#ifdef GR3_USE_WIN
-    sprintf(povfile,"./gr3.%d.pov",getpid());
-    sprintf(pngfile,"./gr3.%d.png",getpid());
-#else
     sprintf(povfile,"/tmp/gr3.%d.pov",getpid());
     sprintf(pngfile,"/tmp/gr3.%d.png",getpid());
 #endif
-    povfp = fopen(povfile,"w");
-    gr3_log_("povray");
-    fprintf(povfp,"camera {\n");
-    fprintf(povfp,"  up <0,1,0>\n");
-    fprintf(povfp,"  right <-1,0,0>\n");
-    fprintf(povfp,"  location <%f, %f, %f>\n", context_struct_.camera_x, context_struct_.camera_y, context_struct_.camera_z);
-    fprintf(povfp,"  look_at <%f, %f, %f>\n", context_struct_.center_x, context_struct_.center_y, context_struct_.center_z);
-    fprintf(povfp,"  sky <%f, %f, %f>\n", context_struct_.up_x, context_struct_.up_y, context_struct_.up_z);
-    fprintf(povfp,"  angle %f\n", context_struct_.vertical_field_of_view);
-    fprintf(povfp,"}\n");
-    
-    if (context_struct_.light_dir[0] == 0 && 
-        context_struct_.light_dir[1] == 0 && 
-        context_struct_.light_dir[2] == 0
-        ) {
-        GLfloat camera_pos[3];
-        camera_pos[0] = context_struct_.camera_x;
-        camera_pos[1] = context_struct_.camera_y;
-        camera_pos[2] = context_struct_.camera_z;
-        fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n",camera_pos[0], camera_pos[1],camera_pos[2]);
-    } else {
-        fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n",context_struct_.light_dir[0], context_struct_.light_dir[1],context_struct_.light_dir[2]);
-    }
-    fprintf(povfp,"background { color rgb <%f, %f, %f> }\n", context_struct_.background_color[0], context_struct_.background_color[1], context_struct_.background_color[2]);
-    {
-        int i, j, k, l;
-        GR3_DrawList_t_ *draw;
-        draw = context_struct_.draw_list_;
-        while (draw) {
-            switch(context_struct_.mesh_list_[draw->mesh].data.type) {
-                case kMTSphereMesh:
-                    for(i = 0; i < draw->n; i++) {
-                        fprintf(povfp,"sphere {\n");
-                        fprintf(povfp,"  <%f, %f, %f>, %f\n",draw->positions[i*3+0],draw->positions[i*3+1],draw->positions[i*3+2],draw->scales[i*3+0]);
-                        fprintf(povfp,"  texture {\n");
-                        fprintf(povfp,"    pigment { color rgb <%f, %f, %f> }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
-                        fprintf(povfp,"  }\n");
-                        fprintf(povfp,"}\n");
-                    }
-                    break;
-                case kMTCylinderMesh:
-                    for(i = 0; i < draw->n; i++) {
-                        float len_sq = draw->directions[i*3+0]*draw->directions[i*3+0] + draw->directions[i*3+1]*draw->directions[i*3+1] + draw->directions[i*3+2]*draw->directions[i*3+2];
-                        float len = sqrt(len_sq);
-                        fprintf(povfp,"cylinder {\n");
-                        fprintf(povfp,"  <%f, %f, %f>, <%f, %f, %f>, %f\n",draw->positions[i*3+0],draw->positions[i*3+1],draw->positions[i*3+2],draw->positions[i*3+0]+draw->directions[i*3+0]/len*draw->scales[i*3+2],draw->positions[i*3+1]+draw->directions[i*3+1]/len*draw->scales[i*3+2],draw->positions[i*3+2]+draw->directions[i*3+2]/len*draw->scales[i*3+2],draw->scales[i*3+0]);
-                        fprintf(povfp,"  texture {\n");
-                        fprintf(povfp,"    pigment { color rgb <%f, %f, %f> }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
-                        fprintf(povfp,"  }\n");
-                        fprintf(povfp,"}\n");
-                    }
-                    break;
-                case kMTConeMesh:
-                    for(i = 0; i < draw->n; i++) {
-                        float len_sq = draw->directions[i*3+0]*draw->directions[i*3+0] + draw->directions[i*3+1]*draw->directions[i*3+1] + draw->directions[i*3+2]*draw->directions[i*3+2];
-                        float len = sqrt(len_sq);
-                        fprintf(povfp,"cone {\n");
-                        fprintf(povfp,"  <%f, %f, %f>, %f, <%f, %f, %f>, %f\n",draw->positions[i*3+0],draw->positions[i*3+1],draw->positions[i*3+2],draw->scales[i*3+0],draw->positions[i*3+0]+draw->directions[i*3+0]/len*draw->scales[i*3+2],draw->positions[i*3+1]+draw->directions[i*3+1]/len*draw->scales[i*3+2],draw->positions[i*3+2]+draw->directions[i*3+2]/len*draw->scales[i*3+2],0.0);
-                        fprintf(povfp,"  texture {\n");
-                        fprintf(povfp,"    pigment { color rgb <%f, %f, %f> }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
-                        fprintf(povfp,"  }\n");
-                        fprintf(povfp,"}\n");
-                    }
-                    break;
-                case kMTNormalMesh:
-                    for(i = 0; i < draw->n; i++) {
-                        GLfloat model_matrix[4][4] = {{0}};
-                        const float *vertices = context_struct_.mesh_list_[draw->mesh].data.vertices;
-                        const float *normals = context_struct_.mesh_list_[draw->mesh].data.normals;
-                        const float *colors = context_struct_.mesh_list_[draw->mesh].data.colors;
-                        {
-                            int m;
-                            GLfloat forward[3], up[3], left[3];
-                            float tmp;
-                            /* Calculate an orthonormal base in IR^3, correcting the up vector 
-                             * in case it is not perpendicular to the forward vector. This base
-                             * is used to create the model matrix as a base-transformation 
-                             * matrix.
-                             */
-                            /* forward = normalize(&directions[i*3]); */
-                            tmp = 0;
-                            for (m = 0; m < 3; m++) {
-                                tmp+= draw->directions[i*3+m]*draw->directions[i*3+m];
-                            }
-                            tmp = sqrt(tmp);
-                            for (m = 0; m < 3; m++) {
-                                forward[m] = draw->directions[i*3+m]/tmp;
-                            }/* up = normalize(&ups[i*3]); */
-                            tmp = 0;
-                            for (m = 0; m < 3; m++) {
-                                tmp+= draw->ups[i*3+m]*draw->ups[i*3+m];
-                            }
-                            tmp = sqrt(tmp);
-                            for (m = 0; m < 3; m++) {
-                                up[m] = draw->ups[i*3+m]/tmp;
-                            }
-                            /* left = cross(forward,up); */
-                            for (m = 0; m < 3; m++) {
-                                left[m] = forward[(m+1)%3]*up[(m+2)%3] - up[(m+1)%3]*forward[(m+2)%3];
-                            }
-                            /* up = cross(left,forward); */
-                            for (m = 0; m < 3; m++) {
-                                up[m] = left[(m+1)%3]*forward[(m+2)%3] - forward[(m+1)%3]*left[(m+2)%3];
-                            }
-                            for (m = 0; m < 3; m++) {
-                                model_matrix[0][m] = -left[m];
-                                model_matrix[1][m] = up[m];
-                                model_matrix[2][m] = forward[m];
-                                model_matrix[3][m] = draw->positions[i*3+m];
-                            }
-                            model_matrix[3][3] = 1;
-                        }
-                        fprintf(povfp,"mesh {\n");
-                        for (j = 0; j < context_struct_.mesh_list_[draw->mesh].data.number_of_vertices/3; j++) {
-                            fprintf(povfp,"#local tex = texture { pigment { color rgb <%f, %f, %f> } }\n",draw->colors[i*3+0]*colors[j*3+0],draw->colors[i*3+1]*colors[j*3+1],draw->colors[i*3+2]*colors[j*3+2]);
-                            fprintf(povfp,"  smooth_triangle {\n");
-                            for (k = 0; k < 3; k++) {
-                                float vertex1[4];
-                                float vertex2[4];
-                                float normal1[3];
-                                float normal2[3];
-                                for (l = 0; l < 3; l++) {
-                                    vertex1[l] = draw->scales[i*3+l]*vertices[j*9+k*3+l];
-                                }
-                                vertex1[3] = 1;
-                                for (l = 0; l < 4; l++) {
-                                    vertex2[l] = model_matrix[0][l]*vertex1[0]+model_matrix[1][l]*vertex1[1]+model_matrix[2][l]*vertex1[2]+model_matrix[3][l]*vertex1[3];
-                                }
-                                for (l = 0; l < 3; l++) {
-                                    normal1[l] = normals[j*9+k*3+l];
-                                }
-                                vertex1[3] = 1;
-                                for (l = 0; l < 4; l++) {
-                                    normal2[l] = model_matrix[0][l]*normal1[0]+model_matrix[1][l]*normal1[1]+model_matrix[2][l]*normal1[2];
-                                }
-                                fprintf(povfp,"    <%f, %f, %f>,",vertex2[0],vertex2[1],vertex2[2]);
-                                fprintf(povfp," <%f, %f, %f>",normal2[0],normal2[1],normal2[2]);
-                                if (k < 2) {
-                                    fprintf(povfp,",");
-                                }
-                                fprintf(povfp,"\n");
-                            }
-                            fprintf(povfp,"    texture { tex }\n");
-                            fprintf(povfp,"  }\n");
-                        }
-                        fprintf(povfp,"}\n");
-                    }
-                    break;
-                default:
-                    gr3_log_("Unknown mesh type");
-                    break;
-            }
-            draw = draw->next;
-        }
-    }
-    fclose(povfp);
+    gr3_export_pov_(povfile, width, height);
     {
         int res;
         char *povray_call = malloc(strlen(povfile)+strlen(povfile)+80);
 #ifdef GR3_USE_WIN
-        sprintf(povray_call,"megapov +I%s +O%s +H%d +W%d -D +UA +FN +A 2>NUL",povfile,pngfile,width,height);
+        sprintf(povray_call,"megapov +I%s +O%s +H%d +W%d -D +UA +FN +A",povfile,pngfile,width,height);
 #else
         sprintf(povray_call,"povray +I%s +O%s +H%d +W%d -D +UA +FN +A 2>/dev/null",povfile,pngfile,width,height);
 #endif

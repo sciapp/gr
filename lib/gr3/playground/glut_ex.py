@@ -90,22 +90,18 @@ def mouse_motion(x,y):
 
 def keyboard(key, *args):
     if key == 'p':
-        povray()
+        gr3.export("test.pov",0,0)
     elif key == 'j':
-        gr3.writehtml("test.html",800,800)
+        gr3.export("test.html",800,800)
+    elif key == 'n':
+        gr3.export("test.png",800,800)
+    elif key == 'm':
+        gr3.export("test.jpg",800,800)
     elif key == ' ':
         gr3.terminate()
         sys.exit()
     else:
         print key, ord(key)
-def povray():
-    # Bild erzeugen
-    width, height = 1024, 1024
-    bitmap = gr3.getpovray(width, height)
-    
-    # Bild speichern
-    img = Image.frombuffer("RGBA", (width, height), bitmap, "raw", "RGBA", 0, 0)
-    img.save("glut_ex.png", "PNG")
 
 window_width = 400
 window_height = 400

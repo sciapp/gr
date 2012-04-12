@@ -5,7 +5,7 @@ __all__ = ['GR3_InitAttribute',
            'gr3_terminate',
            'gr3_getpixmap',
            'gr3_getpovray',
-           'gr3_writehtml',
+           'gr3_export',
            'gr3_getrenderpathstring',
            'gr3_setlogcallback',
            'gr3_createmesh',
@@ -51,7 +51,7 @@ class GR3_Error(object):
 
 class GR3_Exception(Exception):
     def __init__(self,error_code):
-        Exception.__init__(self,gr3_geterrorstring(error_code))
+        Exception.__init__(self,geterrorstring(error_code))
 
 def init(attrib_list=[]):
     global _gr3
@@ -96,10 +96,10 @@ def getpixmap(width, height):
         raise GR3_Exception(err)
     return _bitmap
 
-def writehtml(filename, width, height):
+def export(filename, width, height):
     global _gr3
     _filename = numpy.array(filename+'\0',ctypes.c_char)
-    err = _gr3.gr3_writehtml(_filename.ctypes.get_as_parameter(),ctypes.c_uint(width),ctypes.c_uint(height))
+    err = _gr3.gr3_export(_filename.ctypes.get_as_parameter(),ctypes.c_uint(width),ctypes.c_uint(height))
     if err:
         raise GR3_Exception(err)
 
