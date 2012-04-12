@@ -1,0 +1,24 @@
+LIBRARY libgr3.dll
+EXETYPE WINDOWS
+
+EXPORTS
+	gr3_init
+	gr3_terminate
+	gr3_getrenderpathstring
+	gr3_clear
+	gr3_drawscene
+	gr3_getpovray
+	gr3_getpixmap
+	gr3_writehtml
+	gr3_createmesh
+	gr3_drawmesh
+	gr3_deletemesh
+	gr3_cameralookat
+	gr3_setcameraprojectionparameters
+	gr3_setlightdirection
+	gr3_setbackgroundcolor
+	gr3_geterrorstring
+	gr3_setlogcallback
+	gr3_drawconemesh
+	gr3_drawcylindermesh
+	gr3_drawspheremesh

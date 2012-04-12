@@ -58,11 +58,9 @@
         static PFNGLBINDBUFFERPROC glBindBuffer;
         static PFNGLGENBUFFERSPROC glGenBuffers;
         static PFNGLGENBUFFERSPROC glDeleteBuffers;
-        #if defined(GR3_USE_GLX)
-                static PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer;
-                static PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation;
-                static PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
-        #endif
+        static PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer;
+        static PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation;
+        static PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
         static PFNGLUSEPROGRAMPROC glUseProgram;
         static PFNGLDELETESHADERPROC glDeleteShader;
         static PFNGLLINKPROGRAMPROC glLinkProgram;
@@ -1170,7 +1168,6 @@ static void gr3_draw_(GLuint width, GLuint height) {
             glLoadMatrixf(&projection_matrix[0][0]);
         }
 
-        
 #ifdef GR3_CAN_USE_VBO
         if (context_struct_.use_vbo) {
             glUniformMatrix4fv(glGetUniformLocation(context_struct_.program, "ViewMatrix"), 1,GL_FALSE,&(context_struct_.view_matrix[0][0]));
@@ -1817,9 +1814,13 @@ GR3API int gr3_getpovray(int *pixels, int width, int height) {
     FILE *povfp;
     char *povfile = malloc(40);
     char *pngfile = malloc(40);
-    
+#ifdef GR3_USE_WIN
+    sprintf(povfile,"./gr3.%d.pov",getpid());
+    sprintf(pngfile,"./gr3.%d.png",getpid());
+#else
     sprintf(povfile,"/tmp/gr3.%d.pov",getpid());
     sprintf(pngfile,"/tmp/gr3.%d.png",getpid());
+#endif
     povfp = fopen(povfile,"w");
     gr3_log_("povray");
     fprintf(povfp,"camera {\n");
@@ -2204,78 +2205,80 @@ static void gr3_appendtorenderpathstring_(const char *string) {
     static int gr3_initGL_WIN_(void) {
         WNDCLASS   wndclass;
         gr3_log_("gr3_initGL_WIN_();");
-     
-        /* Register the frame class */ 
-        wndclass.style         = 0; 
-        wndclass.lpfnWndProc   = DefWindowProc; 
-        wndclass.cbClsExtra    = 0; 
-        wndclass.cbWndExtra    = 0; 
-        wndclass.hInstance     = g_hInstance; 
-        wndclass.hIcon         = NULL; 
-        wndclass.hCursor       = LoadCursor (NULL,IDC_ARROW); 
-        wndclass.hbrBackground = NULL; 
-        wndclass.lpszMenuName  = "OpenGLWindow"; 
-        wndclass.lpszClassName = "OpenGLWindow"; 
-     
-        if (RegisterClass(&wndclass))  {
-            /*fprintf(stderr,"Window Class registered successfully.\n"); */
-        } else {
-            return FALSE;
-        }
-        hWnd = CreateWindow ("OpenGLWindow", 
-                 "Generic OpenGL Sample", 
-                 0, 
-                 0, 
-                 0, 
-                 1, 
-                 1, 
-                 NULL, 
-                 NULL, 
-                 g_hInstance, 
-                 NULL); 
-        if (hWnd != NULL) {
-            /*fprintf(stderr,"Window created successfully.\n"); */
-        } else {
-            return GR3_ERROR_INIT_FAILED;
-        }
-
-        dc = GetDC(hWnd);
-
-        /* Pixel Format selection */ {
-            PIXELFORMATDESCRIPTOR pfd;
-            int iPixelFormat;
-            BOOL result;
-            memset(&pfd,0,sizeof(pfd));
-            pfd.nSize = sizeof(pfd);
-            pfd.nVersion = 1;
-            pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
-            pfd.iPixelType = PFD_TYPE_RGBA;
-            pfd.cColorBits = 24;
-            pfd.cAlphaBits = 8;
-            pfd.cDepthBits = 24;
-            pfd.iLayerType = PFD_MAIN_PLANE;
-            iPixelFormat = ChoosePixelFormat(dc,&pfd);
-            result = SetPixelFormat(dc,iPixelFormat, &pfd);
-            if (result) {
-                /*fprintf(stderr,"Pixel Format set for Device Context successfully.\n");*/
+        glrc = wglGetCurrentContext();
+        if (!glrc) {
+            /* Register the frame class */ 
+            wndclass.style         = 0; 
+            wndclass.lpfnWndProc   = DefWindowProc; 
+            wndclass.cbClsExtra    = 0; 
+            wndclass.cbWndExtra    = 0; 
+            wndclass.hInstance     = g_hInstance; 
+            wndclass.hIcon         = NULL; 
+            wndclass.hCursor       = LoadCursor (NULL,IDC_ARROW); 
+            wndclass.hbrBackground = NULL; 
+            wndclass.lpszMenuName  = "OpenGLWindow"; 
+            wndclass.lpszClassName = "OpenGLWindow"; 
+         
+            if (RegisterClass(&wndclass))  {
+                /*fprintf(stderr,"Window Class registered successfully.\n"); */
+            } else {
+                return FALSE;
+            }
+            hWnd = CreateWindow ("OpenGLWindow", 
+                     "Generic OpenGL Sample", 
+                     0, 
+                     0, 
+                     0, 
+                     1, 
+                     1, 
+                     NULL, 
+                     NULL, 
+                     g_hInstance, 
+                     NULL); 
+            if (hWnd != NULL) {
+                /*fprintf(stderr,"Window created successfully.\n"); */
             } else {
                 return GR3_ERROR_INIT_FAILED;
             }
-        }
 
-        /* OpenGL Rendering Context creation */ {
-            BOOL result;
-            glrc = wglCreateContext(dc);
-            if (glrc != NULL) {
-                /*fprintf(stderr,"OpenGL Rendering Context was created successfully.\n");*/
-            } else {
-                return GR3_ERROR_INIT_FAILED;
+            dc = GetDC(hWnd);
+
+            /* Pixel Format selection */ {
+                PIXELFORMATDESCRIPTOR pfd;
+                int iPixelFormat;
+                BOOL result;
+                memset(&pfd,0,sizeof(pfd));
+                pfd.nSize = sizeof(pfd);
+                pfd.nVersion = 1;
+                pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
+                pfd.iPixelType = PFD_TYPE_RGBA;
+                pfd.cColorBits = 24;
+                pfd.cAlphaBits = 8;
+                pfd.cDepthBits = 24;
+                pfd.iLayerType = PFD_MAIN_PLANE;
+                iPixelFormat = ChoosePixelFormat(dc,&pfd);
+                result = SetPixelFormat(dc,iPixelFormat, &pfd);
+                if (result) {
+                    /*fprintf(stderr,"Pixel Format set for Device Context successfully.\n");*/
+                } else {
+                    return GR3_ERROR_INIT_FAILED;
+                }
             }
-            result = wglMakeCurrent(dc,glrc);
-            if (result) {
-                /*fprintf(stderr,"OpenGL Rendering Context made current successfully.\n");*/
-            } else {
-                return GR3_ERROR_INIT_FAILED;
+
+            /* OpenGL Rendering Context creation */ {
+                BOOL result;
+                glrc = wglCreateContext(dc);
+                if (glrc != NULL) {
+                    /*fprintf(stderr,"OpenGL Rendering Context was created successfully.\n");*/
+                } else {
+                    return GR3_ERROR_INIT_FAILED;
+                }
+                result = wglMakeCurrent(dc,glrc);
+                if (result) {
+                    /*fprintf(stderr,"OpenGL Rendering Context made current successfully.\n");*/
+                } else {
+                    return GR3_ERROR_INIT_FAILED;
+                }
             }
         }
         /* Load Function pointers */ {
@@ -2284,6 +2287,9 @@ static void gr3_appendtorenderpathstring_(const char *string) {
                 glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
                 glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
                 glDeleteBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glDeleteBuffers");
+                glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
+                glGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)wglGetProcAddress("glGetAttribLocation");
+                glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
                 glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
                 glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
                 glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
@@ -2330,10 +2336,12 @@ static void gr3_appendtorenderpathstring_(const char *string) {
     }
     static void gr3_terminateGL_WIN_(void) {
         gr3_log_("gr3_terminateGL_WIN_();");
-        wglDeleteContext(glrc);
-        ReleaseDC(hWnd,dc);
-        DestroyWindow(hWnd);
-        UnregisterClass("OpenGLWindow", g_hInstance);
+        if (dc) {
+            wglDeleteContext(glrc);
+            ReleaseDC(hWnd,dc);
+            DestroyWindow(hWnd);
+            UnregisterClass("OpenGLWindow", g_hInstance);
+        }
     }
 #endif
 
