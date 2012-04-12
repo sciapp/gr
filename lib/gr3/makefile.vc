@@ -2,46 +2,26 @@ CC = CL
 INCLUDES = /I..\jpeg /I..\png /I..\zlib /I..\gks /I..\gr /I.
 CFLAGS = /c /nologo /MD $(INCLUDES)
 LINK = LINK /nologo
-JPEGLIBS = ..\jpeg\libjpeg.lib
 PNGLIBS = ..\png\libpng.lib
 ZLIBS = ..\zlib\libz.lib
 GRLIBS = ..\gr\libgr.lib
-GKSLIBS = ..\gks\libgks.lib
 GR3LIBS = .\libgr3.lib
 DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib opengl32.lib
 DLLLFLAGS = /nodefaultlib -dll
 DLLLINK = LINK /nologo
 SRCDIR = .\
 
+DESTDIR = S:\gr
+
 .SUFFIXES: .obj .c
 
 .c.obj:
 	$(CC) $(CFLAGS) $(DEFINES) $<
 
-default: $(GRLIBS) $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) libgr3.lib
+default: $(GRLIBS) $(PNGLIBS) $(ZLIBS) libgr3.lib
 
 $(GRLIBS):
 	@cd ../gr
-	@$(MAKE) /f makefile.vc
-	@cd ../gr3
-
-$(GKSLIBS):
-	@cd ../gks
-	@$(MAKE) /f makefile.vc
-	@cd ../gr3
-
-$(JPEGLIBS):
-	@cd ../jpeg
-	@$(MAKE) /f makefile.vc
-	@cd ../gr3
-
-$(PNGLIBS):
-	@cd ../png
-	@$(MAKE) /f makefile.vc
-	@cd ../gr3
-
-$(ZLIBS):
-	@cd ../zlib
 	@$(MAKE) /f makefile.vc
 	@cd ../gr3
 
@@ -49,18 +29,15 @@ libgr3.lib: libgr3.dll
 
 libgr3.dll: gr3.obj
 	$(DLLLINK) /out:$@ $** -def:libgr3.def \
-	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(GRLIBS) $(DLLLFLAGS) $(DLLLIBS)
+	$(GRLIBS) $(PNGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
+
+install:
+	COPY /Y libgr3.lib $(DESTDIR)
+	COPY /Y libgr3.dll $(DESTDIR)
+	COPY /Y gr3.py $(DESTDIR)
 
 clean:
 	@cd ../gr
-	@$(MAKE) /f makefile.vc clean
-	@cd ../gks
-	@$(MAKE) /f makefile.vc clean
-	@cd ../zlib
-	@$(MAKE) /f makefile.vc clean
-	@cd ../png
-	@$(MAKE) /f makefile.vc clean
-	@cd ../jpeg
 	@$(MAKE) /f makefile.vc clean
 	@cd ../gr3
 	DEL libgr3.dll

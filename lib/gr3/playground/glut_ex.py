@@ -2,7 +2,6 @@
 import atoms
 import sys
 import math
-import Image
 import numpy
 import numpy.linalg
 from itertools import combinations

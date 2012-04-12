@@ -11,7 +11,7 @@ GKSLIBS = ..\gks\libgks.lib
 DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
 DLLLFLAGS = /nodefaultlib -dll
 DLLLINK = LINK /nologo
-PYHOME = S:\Python
+PYHOME = S:\Python27
 SRCDIR = .\
 
 DESTDIR = S:\gr
