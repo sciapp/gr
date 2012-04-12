@@ -23,6 +23,7 @@ __all__ = ['GR3_InitAttribute',
            'gr3_setbackgroundcolor']
 
 import ctypes
+import ctypes.util
 import numpy
 import sys
 import os

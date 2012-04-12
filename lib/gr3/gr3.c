@@ -1218,7 +1218,6 @@ static void gr3_draw_(GLuint width, GLuint height) {
     }
 #ifdef GR3_CAN_USE_VBO
     if (context_struct_.use_vbo) {
-        gr3_log_("unset program");
         glUseProgram(0);
     }
 #endif
@@ -1237,7 +1236,7 @@ GR3API void gr3_renderdirect(int width, int height) {
 
 GR3API int gr3_drawscene(float xmin, float xmax, float ymin, float ymax, int pixelWidth, int pixelHeight) {
     int *pixels;
-    gr3_log_("gr3_drawscene");
+    gr3_log_("gr3_drawscene();");
     pixelWidth = 800;
     pixelHeight = 800;
     pixels = malloc(sizeof(int)*pixelWidth*pixelHeight);
