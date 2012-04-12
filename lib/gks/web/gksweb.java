@@ -137,11 +137,16 @@ public class gksweb extends Applet
 
   private static Window win;
 
+  private static int nint(double a)
+  {
+    return (int) Math.round(a);
+  }
+
   private static int[] NDCtoDC(float xn, float yn)
   {
     int xd, yd;
-    xd = (int) (ws.a * (xn) + ws.b);
-    yd = (int) (ws.c * (yn) + ws.d);
+    xd = nint(ws.a * (xn) + ws.b);
+    yd = nint(ws.c * (yn) + ws.d);
     return new int[] {xd, yd};
   }
 
@@ -204,7 +209,7 @@ public class gksweb extends Applet
     xr = xy[0];
     yt = xy[1];
 
-    ws.rect[tnr] = new int[] {xl - 1, yb - 1, xr + 1, yt + 1};
+    ws.rect[tnr] = new int[] {xl, yb, xr, yt};
   }
 
   private static float[] segXform(float x, float y)
@@ -231,9 +236,16 @@ public class gksweb extends Applet
     return result;
   }
 
-  private static void setClipRect(int tnr)
+  private static void setClipRect(int state)
   {
+    int tnr;
     Graphics2D g2 = (Graphics2D) g;
+
+    if (state == 1 && sl.clip == GKS_K_CLIP)
+      tnr = sl.cntnr;
+    else
+      tnr = 0;
+
     g2.setClip(ws.rect[tnr][0],
                ws.rect[tnr][1],
                ws.rect[tnr][2] - ws.rect[tnr][0],
@@ -246,7 +258,7 @@ public class gksweb extends Applet
       setClipRect(0);
     g.clearRect(0, 0, ws.width, ws.height); 
     if (sl.cntnr != 0)
-      setClipRect(sl.cntnr);
+      setClipRect(1);
   }
 
   private static void setDevXform(float[] window, float[] viewport)
@@ -508,11 +520,6 @@ public class gksweb extends Applet
     0xb2ffff, 0xbaffff, 0xc3ffff, 0xccffff, 0xd4ffff, 0xddffff,
     0xe5ffff, 0xedffff
   };
-
-  private static int nint(double a)
-  {
-    return (int) Math.round(a);
-  }
 
   private static void setColorRep(int color, float red, float green, float blue)
   {
@@ -2346,6 +2353,7 @@ public class gksweb extends Applet
             sl.window[i_arr[0]][2] = f_arr_2[0];
             sl.window[i_arr[0]][3] = f_arr_2[1];
             setNormXform(i_arr[0]);
+            setClipRect(1);
             break;
 
           case 50:
@@ -2354,18 +2362,17 @@ public class gksweb extends Applet
             sl.viewport[i_arr[0]][2] = f_arr_2[0];
             sl.viewport[i_arr[0]][3] = f_arr_2[1];
             setNormXform(i_arr[0]);
-            if (i_arr[0] == sl.cntnr)
-              setClipRect(sl.cntnr);
+            setClipRect(1);
             break;
 
           case 52:
             sl.cntnr = i_arr[0];
-            setClipRect(sl.cntnr);
+            setClipRect(1);
             break;
 
           case 53:
             sl.clip = i_arr[0];
-            setClipRect(sl.cntnr);
+            setClipRect(1);
             break;
 
           case 54:
@@ -2458,8 +2465,8 @@ public class gksweb extends Applet
         win.init(500, 500);
 
         try {
-          stream = new DataInputStream(new FileInputStream(
-                   "/usr/local/gr/fonts/gksfont.dat"));
+          stream = new DataInputStream(
+                   gksweb.class.getResourceAsStream("gksfont.dat"));
           buf = new byte[stream.available()];
           stream.readFully(buf);
           stream.close();
@@ -2480,7 +2487,7 @@ public class gksweb extends Applet
               }
             catch (IOException e)
               {
-                System.err.println("I/O error");
+                System.err.println("Socket I/O error");
                 done = true;
               }
           }
