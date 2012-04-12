@@ -34,10 +34,9 @@ else:
     _gr3 = ctypes.CDLL(os.path.join(os.path.dirname(os.path.realpath(__file__)),"libGR3.so"))
     
 class GR3_InitAttribute(object):
-    kIAEndOfList = 0
+    GR3_IA_END_OF_LIST = 0
     GR3_IA_FRAMEBUFFER_WIDTH = 1
     GR3_IA_FRAMEBUFFER_HEIGHT = 2
-    kIAAlwaysUseGLFW = 3
 
 class GR3_Error(object):
     GR3_ERROR_NONE = 0
@@ -55,7 +54,13 @@ class GR3_Exception(Exception):
 
 def init(attrib_list=[]):
     global _gr3
-    _attrib_list = numpy.array(list(attrib_list)+[GR3_InitAttribute.kIAEndOfList],ctypes.c_uint)    
+    _attrib_list = numpy.array(list(attrib_list)+[GR3_InitAttribute.GR3_IA_END_OF_LIST],ctypes.c_uint)
+    if py_log_callback:
+        lib_found = ctypes.util.find_library(os.path.join(os.path.dirname(os.path.realpath(__file__)),"libGR3.so"))
+        if lib_found:
+            py_log_callback("Loaded dynamic library from "+lib_found)
+        else:
+            py_log_callback("Loaded dynamic library unknown.")
     err = _gr3.gr3_init(_attrib_list.ctypes.get_as_parameter())
     if err:
         raise GR3_Exception(err)
@@ -99,22 +104,24 @@ def writehtml(filename, width, height):
 
 def geterrorstring(error_code):
     for error_string in dir(GR3_Error):
-        if error_string[:len('kE')] == 'kE':
+        if error_string[:len('GR3_ERROR_')] == 'GR3_ERROR_':
             if GR3_Error.__dict__[error_string] == error_code:
                 return error_string
-    return 'kEUnkown'
+    return 'GR3_ERROR_UNKNOWN'
 
 def getrenderpathstring():
     global _gr3
     _gr3.gr3_getrenderpathstring.restype = ctypes.c_char_p
     return str(_gr3.gr3_getrenderpathstring())
 
+py_log_callback = None
 log_callback = None
 def setlogcallback(func):
-    global log_callback
+    global log_callback, py_log_callback
     global _gr3
     LOGCALLBACK = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
     log_callback = LOGCALLBACK(func)
+    py_log_callback = func
     _gr3.gr3_setlogcallback.argtypes = [LOGCALLBACK]
     _gr3.gr3_setlogcallback.restype = None
     _gr3.gr3_setlogcallback(log_callback)

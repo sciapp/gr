@@ -39,3 +39,4 @@ install: targets
 clean:
 	@make -C ../png clean
 	rm -rf libGR3.so*
+	rm -f *.pyc

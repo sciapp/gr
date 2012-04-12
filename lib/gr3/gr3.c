@@ -1137,6 +1137,11 @@ GR3API int gr3_setcameraprojectionparameters(float vertical_field_of_view,
  * This function iterates over the draw list and draws the image using OpenGL.
  */
 static void gr3_draw_(GLuint width, GLuint height) {
+#ifdef GR3_CAN_USE_VBO
+    if (context_struct_.use_vbo) {
+        glUseProgram(context_struct_.program);
+    }
+#endif
     gr3_log_("gr3_draw_();");
     {
         GLfloat fovy = context_struct_.vertical_field_of_view;
@@ -1211,6 +1216,12 @@ static void gr3_draw_(GLuint width, GLuint height) {
             draw = draw->next;
         }
     }
+#ifdef GR3_CAN_USE_VBO
+    if (context_struct_.use_vbo) {
+        gr3_log_("unset program");
+        glUseProgram(0);
+    }
+#endif
 }
 
 GR3API void gr3_renderdirect(int width, int height) {
@@ -1968,8 +1979,12 @@ GR3API int gr3_getpovray(int *pixels, int width, int height) {
     fclose(povfp);
     {
         int res;
-        char *povray_call = malloc(strlen(povfile)+strlen(povfile)+50);
-        sprintf(povray_call,"povray +I%s +O%s +H%d +W%d -D +UA 2>/dev/null",povfile,pngfile,width,height);
+        char *povray_call = malloc(strlen(povfile)+strlen(povfile)+80);
+#ifdef GR3_USE_WIN
+        sprintf(povray_call,"megapov +I%s +O%s +H%d +W%d -D +UA +FN +A 2>NUL",povfile,pngfile,width,height);
+#else
+        sprintf(povray_call,"povray +I%s +O%s +H%d +W%d -D +UA +FN +A 2>/dev/null",povfile,pngfile,width,height);
+#endif
         system(povray_call);
         free(povray_call);
         res = gr3_readpngtomemory_(pixels,pngfile,width,height);
@@ -2124,7 +2139,7 @@ static char *error_strings_[] = {
     "GR3_ERROR_OUT_OF_MEM",
     "GR3_ERROR_NOT_INITIALIZED",
     "GR3_ERROR_CAMERA_NOT_INITIALIZED",
-    "kEUnknownError"
+    "GR3_ERROR_UNKNOWN"
 };
 
 /*!

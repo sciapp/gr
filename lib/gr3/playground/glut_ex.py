@@ -1,3 +1,4 @@
+# coding=utf-8
 import atoms
 import sys
 import math
@@ -6,6 +7,8 @@ import numpy
 import numpy.linalg
 from itertools import combinations
 from OpenGL.GLUT import *
+from OpenGL.GL import *
+from OpenGL.GLU import *
 import gr
 import gr3
 
@@ -14,8 +17,47 @@ def display():
     # Kamera einstellen
     gr3.setcameraprojectionparameters(45, 1, 200)
     gr3.cameralookat(10*math.cos(-rx*math.pi/2), 10*math.sin(-rx*math.pi/2), 0, 0, 0, 0, 0, 0, 1)
-    
+
     gr3.renderdirect(window_width,window_height)
+    glDisable(GL_LIGHTING)
+    glDisable(GL_DEPTH_TEST)
+    glMatrixMode(GL_MODELVIEW)
+    glPushMatrix()
+    glLoadIdentity()
+    glMatrixMode(GL_PROJECTION)
+    glPushMatrix()
+    glLoadIdentity()
+    glColor4f(1,0,0,1)
+    x, y = 0, 0.22
+    glRasterPos2f(x*2-1,y*2-1)
+    for c in u"Dies ist ein GLUT-Fenster, in dem mit GR3 eine":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18,ord(c))
+    y-=0.05
+    glRasterPos2f(x*2-1,y*2-1)
+    for c in u"Szene gerendert wird. Mit der Maus kann man":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18,ord(c))
+    y-=0.05
+    glRasterPos2f(x*2-1,y*2-1)
+    for c in u"das dargestellte Molekül rotieren lassen.":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18,ord(c))
+    y-=0.04
+    glRasterPos2f(x*2-1,y*2-1)
+    for c in u"'j' - HTML5/WebGL Export":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,ord(c))
+    y-=0.03
+    glRasterPos2f(x*2-1,y*2-1)
+    for c in u"'p' - POV-Ray Export":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,ord(c))
+    y-=0.03
+    glRasterPos2f(x*2-1,y*2-1)
+    for c in u"' ' - Beenden":
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,ord(c))
+    glEnable(GL_DEPTH_TEST)
+    glEnable(GL_LIGHTING)
+    glMatrixMode(GL_MODELVIEW)
+    glPopMatrix()
+    glMatrixMode(GL_PROJECTION)
+    glPopMatrix()
     glutSwapBuffers()
     gr.clearws()
     gr3.drawscene(0.0,0.5,0.0,0.5,800,800)
@@ -24,7 +66,13 @@ def display():
     gr3.cameralookat(10*math.cos(-rx*math.pi/2), 0, 10*math.sin(-rx*math.pi/2), 0, 0, 0, 0, 1, 0)
     gr3.drawscene(0.5,1.0,0.5,1.0,800,800)
     gr.settextcolorind(2)
-    gr.text(0.5,0.75,"Test!")
+    gr.text(0.05,0.9,"Dies ist ein GKS-Fenster,")
+    gr.text(0.05,0.86,"in welches mit GR3 mehrere")
+    gr.text(0.05,0.82,"Ansichten auf eine 3D-Szene")
+    gr.text(0.05,0.78,"gezeichnet werden. Bewegt")
+    gr.text(0.05,0.74,"man die Szene im GLUT-")
+    gr.text(0.05,0.70,"Fenster, dann wird auch ")
+    gr.text(0.05,0.66,"dieses Fenster angepasst.")
     gr.updatews()
     gr3.setcameraprojectionparameters(45, 1, 200)
     gr3.cameralookat(10*math.cos(-rx*math.pi/2), 10*math.sin(-rx*math.pi/2), 0, 0, 0, 0, 0, 0, 1)
@@ -47,6 +95,7 @@ def keyboard(key, *args):
     elif key == 'j':
         gr3.writehtml("test.html",800,800)
     elif key == ' ':
+        gr3.terminate()
         sys.exit()
     else:
         print key, ord(key)
@@ -58,8 +107,6 @@ def povray():
     # Bild speichern
     img = Image.frombuffer("RGBA", (width, height), bitmap, "raw", "RGBA", 0, 0)
     img.save("glut_ex.png", "PNG")
-    gr3.terminate()
-    sys.exit()
 
 window_width = 400
 window_height = 400
