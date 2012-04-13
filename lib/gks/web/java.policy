@@ -1,6 +1,6 @@
 grant {
   permission java.io.FilePermission 
-	"/usr/local/gr/fonts/gksfont.dat", "read";
+	"gksfont.dat", "read";
 };
 grant {
   permission java.net.SocketPermission
