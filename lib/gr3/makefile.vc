@@ -32,7 +32,7 @@ libgr3.dll: gr3.obj
 	$(DLLLINK) /out:$@ $** -def:libgr3.def \
 	$(GRLIBS) $(PNGLIBS) $(JPEGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
-install:
+install: default
 	COPY /Y libgr3.lib $(DESTDIR)
 	COPY /Y libgr3.dll $(DESTDIR)
 	COPY /Y gr3.py $(DESTDIR)
