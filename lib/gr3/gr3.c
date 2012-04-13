@@ -10,7 +10,6 @@
 #include <string.h>
 #include <math.h> /* for sqrt */
 
-
 #include "gr3.h"
 #include "gr.h"
 
@@ -35,6 +34,7 @@
 #elif defined(_WIN32)
     /* Windows */
     #define GR3_USE_WIN
+    #define WIN32_LEAN_AND_MEAN 1
     #include <windows.h>
     #include <GL/gl.h>
     #include "GL/glext.h"
@@ -42,8 +42,8 @@
     #error "This operating system is currently not supported by gr3"
 #endif
 
-#include <png.h>
 #include <jpeglib.h>
+#include <png.h>
 
 #if !(GL_ARB_framebuffer_object || GL_EXT_framebuffer_object)
     #error "Neither GL_ARB_framebuffer_object nor GL_EXT_framebuffer_object \

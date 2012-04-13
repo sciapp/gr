@@ -18,6 +18,14 @@
 /* Define this if you get warnings about undefined structures. */
 /* #undef INCOMPLETE_TYPES_BROKEN */
 
+/* Define "boolean" as unsigned char, not int, on Windows systems. */
+#ifdef _WIN32
+#ifndef __RPCNDR_H__
+typedef unsigned char boolean;
+#endif
+#define HAVE_BOOLEAN
+#endif
+
 #ifdef JPEG_INTERNALS
 
 /* #undef RIGHT_SHIFT_IS_UNSIGNED */
