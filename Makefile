@@ -6,7 +6,7 @@ UNAME := $(shell uname)
 default:
 	@for d in $(DIRS); do make -C $$d GRDIR=$(GRDIR); done
 ifeq ($(UNAME), Darwin)
-	@xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj
+	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj ARCHS=i386
 endif
 
 install: default
@@ -21,5 +21,5 @@ endif
 clean:
 	@for d in $(DIRS); do make -C $$d clean; done
 ifeq ($(UNAME), Darwin)
-	@xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean
+	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean
 endif
