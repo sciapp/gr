@@ -1,0 +1,11 @@
+default:
+	@cd lib\gr && $(MAKE) /f makefile.vc && cd ..\..
+	@cd lib\gr3 && $(MAKE) /f makefile.vc && cd ..\..
+
+install: default
+	@cd lib\gr && $(MAKE) /f makefile.vc install && cd ..\..
+	@cd lib\gr3 && $(MAKE) /f makefile.vc install && cd ..\..
+
+clean:
+	@cd lib\gr && $(MAKE) /f makefile.vc clean && cd ..\..
+	@cd lib\gr3 && $(MAKE) /f makefile.vc clean && cd ..\..
