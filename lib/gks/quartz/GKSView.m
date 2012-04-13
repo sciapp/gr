@@ -102,10 +102,10 @@ float capheights[29] = {
   
 static
 int map[32] = {
-  22,  9,  5, 14, 18, 26, 13,  1,
-  24, 11,  7, 16, 20, 28, 13,  3,
-  23, 10,  6, 15, 19, 27, 13,  2,
-  25, 12,  8, 17, 21, 29, 13,  4
+  22, 9, 5, 14, 18, 26, 13, 1,
+  24, 11, 7, 16, 20, 28, 13, 3,
+  23, 10, 6, 15, 19, 27, 13, 2,
+  25, 12, 8, 17, 21, 29, 13, 4
 };
 
 static
@@ -116,32 +116,32 @@ float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 static
 int dingbats[256]={
-  0,     1,    2,      3,     4,     5,     6,     7,     8,     9,
-  10,    11,   12,     13,    14,    15,    16,    17,    18,    19,
-  20,    21,   22,     23,    24,    25,    26,    27,    28,    29,  
-  30,    31,    32,  9985,  9986,  9987,  9988,  9742,  9990,  9991,  
-  9992,  9993,  9755,  9758,  9996,  9997,  9998,  9999, 10000, 10001, 
+  0,    1,   2,     3,    4,    5,    6,    7,    8,    9,
+  10,   11,  12,    13,   14,   15,   16,   17,   18,   19,
+  20,   21,  22,    23,   24,   25,   26,   27,   28,   29, 
+  30,   31,   32, 9985, 9986, 9987, 9988, 9742, 9990, 9991, 
+  9992, 9993, 9755, 9758, 9996, 9997, 9998, 9999, 10000, 10001, 
   10002, 10003, 10004, 10005, 10006, 10007, 10008, 10009, 10010, 10011, 
   10012, 10013, 10014, 10015, 10016, 10017, 10018, 10019, 10020, 10021, 
-  10022, 10023,  9733, 10025, 10026, 10027, 10028, 10029, 10030, 10031,
+  10022, 10023, 9733, 10025, 10026, 10027, 10028, 10029, 10030, 10031,
   10032, 10033, 10034, 10035, 10036, 10037, 10038, 10039, 10040, 10041, 
   10042, 10043, 10044, 10045, 10046, 10047, 10048, 10049, 10050, 10051, 
-  10052, 10053, 10054, 10055, 10056, 10057, 10058, 10059,  9679, 10061,
-  9632, 10063, 10064, 10065, 10066,  9650,  9660,  9670, 10070,  9687,
-  10072, 10073, 10074, 10075, 10076, 10077, 10078,   127,   128,   129,
-  130,   131,   132,   133,   134,   135,   136,   137,   138,   139,
-  140,   141,   142,   143,   144,   145,   146,   147,   148,   149,
-  150,   151,   152,   153,   154,   155,   156,   157,   158,   159,
-  160, 10081, 10082, 10083, 10084, 10085, 10086, 10087,  9827,  9830,
-  9829,  9824,  9312,  9313,  9314,  9315,  9316,  9317,  9318,  9319,
-  9320,  9321, 10102, 10103, 10104, 10105, 10106, 10107, 10107, 10109,
+  10052, 10053, 10054, 10055, 10056, 10057, 10058, 10059, 9679, 10061,
+  9632, 10063, 10064, 10065, 10066, 9650, 9660, 9670, 10070, 9687,
+  10072, 10073, 10074, 10075, 10076, 10077, 10078,  127,  128,  129,
+  130,  131,  132,  133,  134,  135,  136,  137,  138,  139,
+  140,  141,  142,  143,  144,  145,  146,  147,  148,  149,
+  150,  151,  152,  153,  154,  155,  156,  157,  158,  159,
+  160, 10081, 10082, 10083, 10084, 10085, 10086, 10087, 9827, 9830,
+  9829, 9824, 9312, 9313, 9314, 9315, 9316, 9317, 9318, 9319,
+  9320, 9321, 10102, 10103, 10104, 10105, 10106, 10107, 10107, 10109,
   10110, 10111, 10112, 10113, 10114, 10115, 10116, 10117, 10118, 10119, 
   10120, 10121, 10122, 10123, 10124, 10125, 10126, 10127, 10128, 10129, 
-  10130, 10131, 10132,  8594,  8596,  8597, 10136, 10137, 10138, 10139,
+  10130, 10131, 10132, 8594, 8596, 8597, 10136, 10137, 10138, 10139,
   10140, 10141, 10142, 10143, 10144, 10145, 10146, 10147, 10148, 10149,
   10150, 10151, 10152, 10153, 10154, 10155, 10156, 10157, 10158, 10159,
   32, 10161, 10162, 10163, 10164, 10165, 10166, 10167, 10168, 10169,
-  10170, 10171, 10172, 10173, 10174,    32};
+  10170, 10171, 10172, 10173, 10174,   32};
 
 static
 ws_state_list p_, *p;
@@ -163,7 +163,7 @@ void set_norm_xform(int tnr, float *wn, float *vp)
   d[tnr] = vp[2] - wn[2] * c[tnr];
 
   NDC_to_DC(vp[0], vp[2], rect->origin.x, rect->origin.y);
-  NDC_to_DC(vp[1] - vp[0] , vp[3] - vp[2], rect->size.width, rect->size.height);
+  NDC_to_DC(vp[1] - vp[0], vp[3] - vp[2], rect->size.width, rect->size.height);
     
   rect->size.width +=1;
   rect->size.height +=1;
@@ -182,7 +182,7 @@ static
 void set_color_rep(int color, float red, float green, float blue)
 { 
   if (color >= 0 && color < MAX_COLOR)
-    p->rgb[color] = CGColorCreateGenericRGB( red,  green, blue, gkss->alpha);
+    p->rgb[color] = CGColorCreateGenericRGB(red, green, blue, gkss->alpha);
     
 }
 
@@ -209,12 +209,12 @@ void set_xform(void)
 }
 
 static
-void seg_xform(float *x ,float *y)
+void seg_xform(float *x, float *y)
 {
 }
 
 static
-void seg_xform_rel(float *x ,float *y)
+void seg_xform_rel(float *x, float *y)
 {
 }
 
@@ -564,9 +564,9 @@ void seg_xform_rel(float *x ,float *y)
   
   CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
   
-  CGContextTranslateCTM (context , 250 , 250);
+  CGContextTranslateCTM (context, 250, 250);
   CGContextRotateCTM (context, (angle) * M_PI/180);
-  CGContextTranslateCTM (context , -250 , -250);
+  CGContextTranslateCTM (context, -250, -250);
   
   if (buffer)
     [self interp: buffer];  
@@ -703,7 +703,7 @@ void seg_xform_rel(float *x ,float *y)
                                                         kCFURLPOSIXPathStyle,
                                                         false);      
           CGImageDestinationRef dr = 
-            CGImageDestinationCreateWithURL(url,(CFStringRef)@"public.png" , 1, NULL);
+            CGImageDestinationCreateWithURL(url,(CFStringRef)@"public.png", 1, NULL);
       
           CGImageDestinationAddImage(dr, image, NULL);
       
@@ -724,7 +724,7 @@ void seg_xform_rel(float *x ,float *y)
       
           CFMutableDictionaryRef mSaveMetaAndOpts = 
             CFDictionaryCreateMutable(nil, 0,
-                                      &kCFTypeDictionaryKeyCallBacks,  
+                                      &kCFTypeDictionaryKeyCallBacks, 
                                       &kCFTypeDictionaryValueCallBacks);
       
           float compression = [compressionSlider floatValue];
@@ -738,7 +738,7 @@ void seg_xform_rel(float *x ,float *y)
                                                         kCFURLPOSIXPathStyle,
                                                         false);      
           CGImageDestinationRef dr = 
-            CGImageDestinationCreateWithURL(url,(CFStringRef)@"public.jpeg" , 1, NULL);
+            CGImageDestinationCreateWithURL(url,(CFStringRef)@"public.jpeg", 1, NULL);
       
           CGImageDestinationAddImage(dr, image, mSaveMetaAndOpts);
       
@@ -760,7 +760,7 @@ void seg_xform_rel(float *x ,float *y)
       
           CFMutableDictionaryRef mSaveMetaAndOpts = 
             CFDictionaryCreateMutable(nil, 0, 
-                                      &kCFTypeDictionaryKeyCallBacks,  
+                                      &kCFTypeDictionaryKeyCallBacks, 
                                       &kCFTypeDictionaryValueCallBacks);
       
           float compression = [compressionSlider floatValue];
@@ -773,7 +773,7 @@ void seg_xform_rel(float *x ,float *y)
                                                         kCFURLPOSIXPathStyle,
                                                         false);      
           CGImageDestinationRef dr = 
-            CGImageDestinationCreateWithURL(url,(CFStringRef)@"public.jpeg-2000" , 1, NULL);
+            CGImageDestinationCreateWithURL(url,(CFStringRef)@"public.jpeg-2000", 1, NULL);
       
           CGImageDestinationAddImage(dr, image, mSaveMetaAndOpts);
       
@@ -798,7 +798,7 @@ void seg_xform_rel(float *x ,float *y)
                                                         kCFURLPOSIXPathStyle,
                                                         false);      
           CGImageDestinationRef dr = 
-            CGImageDestinationCreateWithURL(url,(CFStringRef)@"com.compuserve.gif" , 1, NULL);
+            CGImageDestinationCreateWithURL(url,(CFStringRef)@"com.compuserve.gif", 1, NULL);
       
           CGImageDestinationAddImage(dr, image, NULL);
       
@@ -822,7 +822,7 @@ void seg_xform_rel(float *x ,float *y)
                                                         kCFURLPOSIXPathStyle,
                                                         false);      
           CGImageDestinationRef dr = 
-            CGImageDestinationCreateWithURL(url,(CFStringRef)@"com.microsoft.bmp" , 1, NULL);
+            CGImageDestinationCreateWithURL(url,(CFStringRef)@"com.microsoft.bmp", 1, NULL);
       
           CGImageDestinationAddImage(dr, image, NULL);
       
@@ -846,7 +846,7 @@ void seg_xform_rel(float *x ,float *y)
                                                         kCFURLPOSIXPathStyle,
                                                         false);      
           CGImageDestinationRef dr = 
-            CGImageDestinationCreateWithURL(url,(CFStringRef)@"com.apple.pict" , 1, NULL);
+            CGImageDestinationCreateWithURL(url,(CFStringRef)@"com.apple.pict", 1, NULL);
       
           CGImageDestinationAddImage(dr, image, NULL);
       
@@ -913,7 +913,7 @@ void seg_xform_rel(float *x ,float *y)
 }
 
 static
-void begin_context(CGContextRef context )
+void begin_context(CGContextRef context)
 {
   CGContextSaveGState(context);
   CGContextClipToRect (context, _clipRect);
@@ -952,12 +952,12 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   for (i = 0; i < n; ++i)
     {
       WC_to_NDC(px[i], py[i], tnr, x, y);
-      seg_xform(&x ,&y);
+      seg_xform(&x, &y);
       NDC_to_DC(x, y, points[i].x, points[i].y);  
     }
   
   CGContextBeginPath(context);
-  CGContextAddLines ( context,points, n);
+  CGContextAddLines(context, points, n);
   CGContextDrawPath(context, kCGPathStroke);
     
   if (linetype == 0)
@@ -967,11 +967,11 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 - (void) polyline: (int) n: (float *) px: (float *) py
 {
   CGContextRef context;    
-  int ln_type, ln_color ,i ;
+  int ln_type, ln_color, i;
   float ln_width; 
   CGPoint points[n];  
   int dashlist[10];
-  CGFloat lengths[10] ={0. ,0. ,0. ,0. ,0. ,0. ,0. ,0. ,0. ,0. };
+  CGFloat lengths[10] = {0., 0., 0., 0., 0., 0., 0., 0., 0., 0. };
   float x, y;
     
   context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
@@ -980,7 +980,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   for (i = 0; i < n; ++i)
     {
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
-      seg_xform(&x ,&y);
+      seg_xform(&x, &y);
       NDC_to_DC(x, y, points[i].x, points[i].y);  
     }
 
@@ -996,10 +996,10 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   [self set_stroke_color: ln_color: context];
   
   CGContextBeginPath(context);
-  CGContextSetLineDash(context, 0.0 , lengths , dashlist[0]);
+  CGContextSetLineDash(context, 0.0, lengths, dashlist[0]);
     
-  CGContextSetLineWidth(context , ln_width );
-  CGContextAddLines ( context,points, n);
+  CGContextSetLineWidth(context, ln_width);
+  CGContextAddLines(context, points, n);
   CGContextDrawPath(context, kCGPathStroke);   
 
   end_context(context);   
@@ -1014,79 +1014,79 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 
   static int marker[26][57] =
     {
-      { 5, 9, -4, 7, 4, 7, 7, 4, 7, -4,   /* omark */
+      { 5, 9, -4, 7, 4, 7, 7, 4, 7, -4,  /* omark */
         4, -7, -4, -7, -7, -4, -7, 4, 
-        -4, 7,  3, 9, -4, 7, 4, 7, 7, 4, 
+        -4, 7, 3, 9, -4, 7, 4, 7, 7, 4, 
         7, -4, 4, -7, -4, -7, -7, -4, 
-        -7, 4, -4, 7,  0 }, 
-      { 5, 13, -2, 8, 2, 8, 2, 2, 8, 2,   /* hollow plus */
+        -7, 4, -4, 7, 0 }, 
+      { 5, 13, -2, 8, 2, 8, 2, 2, 8, 2,  /* hollow plus */
         8, -2, 2, -2, 2, -8, -2, -8, 
         -2, -2, -8, -2, -8, 2, -2, 2, 
-        -2, 8,  3, 13, -2, 8, 2, 8, 
+        -2, 8, 3, 13, -2, 8, 2, 8, 
         2, 2, 8, 2, 8, -2, 2, -2, 2, -8, 
         -2, -8, -2, -2, -8, -2, -8, 2, 
-        -2, 2, -2, 8,  0 }, 
-      { 4, 4, -8, 0, 4, 7, 4, -7,   /* solid triangle right */
-        -8, 0,  0 }, 
-      { 4, 4, 8, 0, -4, -7, -4, 7,        /* solid triangle left */
-        8, 0,  0 }, 
-      { 5, 4, 0, 8, 7, -4, -7, -4, 0, 8,  /* triangle up down */
+        -2, 2, -2, 8, 0 }, 
+      { 4, 4, -8, 0, 4, 7, 4, -7,  /* solid triangle right */
+        -8, 0, 0 }, 
+      { 4, 4, 8, 0, -4, -7, -4, 7,       /* solid triangle left */
+        8, 0, 0 }, 
+      { 5, 4, 0, 8, 7, -4, -7, -4, 0, 8, /* triangle up down */
         5, 4, 0, -8, -7, 4, 7, 4, 0, -8, 
         3, 4, 0, 8, 7, -4, -7, -4, 0, 8, 
         3, 4, 0, -8, -7, 4, 7, 4, 0, -8, 
         0 }, 
-      { 4, 11, 0, 9, 2, 2, 9, 3, 3, -1,   /* solid star */
+      { 4, 11, 0, 9, 2, 2, 9, 3, 3, -1,  /* solid star */
         6, -8, 0, -3, -6, -8, -3, -1, 
-        -9, 3, -2, 2, 0, 9,  0 }, 
-      { 5, 11, 0, 9, 2, 2, 9, 3, 3, -1,   /* hollow star */
+        -9, 3, -2, 2, 0, 9, 0 }, 
+      { 5, 11, 0, 9, 2, 2, 9, 3, 3, -1,  /* hollow star */
         6, -8, 0, -3, -6, -8, -3, -1, 
         -9, 3, -2, 2, 0, 9, 
         3, 11, 0, 9, 2, 2, 9, 3, 3, -1, 
         6, -8, 0, -3, -6, -8, -3, -1, 
-        -9, 3, -2, 2, 0, 9,  0 }, 
-      { 4, 5, 0, 9, 9, 0, 0, -9, -9, 0,   /* solid diamond */
-        0, 9,  0 }, 
-      { 5, 5, 0, 9, 9, 0, 0, -9, -9, 0,   /* hollow diamond */
-        0, 9,  3, 5, 0, 9, 9, 0, 0, -9, 
-        -9, 0, 0, 9,  0 }, 
+        -9, 3, -2, 2, 0, 9, 0 }, 
+      { 4, 5, 0, 9, 9, 0, 0, -9, -9, 0,  /* solid diamond */
+        0, 9, 0 }, 
+      { 5, 5, 0, 9, 9, 0, 0, -9, -9, 0,  /* hollow diamond */
+        0, 9, 3, 5, 0, 9, 9, 0, 0, -9, 
+        -9, 0, 0, 9, 0 }, 
       { 4, 5, 9, 9, -9, -9, 9, -9, -9, 9, /* solid hourglass */
-        9, 9,  0 }, 
+        9, 9, 0 }, 
       { 5, 5, 9, 9, -9, -9, 9, -9, -9, 9, /* hollow hourglass */
-        9, 9,  3, 5, 9, 9, -9, -9, 9, -9, 
-        -9, 9, 9, 9,  0 }, 
+        9, 9, 3, 5, 9, 9, -9, -9, 9, -9, 
+        -9, 9, 9, 9, 0 }, 
       { 4, 5, 9, 9, 9, -9, -9, 9, -9, -9, /* solid bowtie */
-        9, 9,  0 }, 
+        9, 9, 0 }, 
       { 5, 5, 9, 9, 9, -9, -9, 9, -9, -9, /* hollow bowtie */
-        9, 9,  3, 5, 9, 9, 9, -9, -9, 9, 
-        -9, -9, 9, 9,  0 }, 
+        9, 9, 3, 5, 9, 9, 9, -9, -9, 9, 
+        -9, -9, 9, 9, 0 }, 
       { 4, 5, 9, 9, 9, -9, -9, -9, -9, 9, /* solid square */
-        9, 9,  0 }, 
+        9, 9, 0 }, 
       { 5, 5, 9, 9, 9, -9, -9, -9, -9, 9, /* hollow square */
-        9, 9,  3, 5, 9, 9, 9, -9, -9, -9, 
-        -9, 9, 9, 9,  0 }, 
-      { 4, 4, -9, 9, 9, 9, 0, -9, -9, 9,  /* solid triangle down */
+        9, 9, 3, 5, 9, 9, 9, -9, -9, -9, 
+        -9, 9, 9, 9, 0 }, 
+      { 4, 4, -9, 9, 9, 9, 0, -9, -9, 9, /* solid triangle down */
         0 }, 
-      { 5, 4, -9, 9, 9, 9, 0, -9, -9, 9,  /* hollow triangle down */
+      { 5, 4, -9, 9, 9, 9, 0, -9, -9, 9, /* hollow triangle down */
         3, 4, -9, 9, 9, 9, 0, -9, -9, 9, 
         0 }, 
-      { 4, 4, 0, 9, 9, -9, -9, -9, 0, 9,  /* solid triangle up */
+      { 4, 4, 0, 9, 9, -9, -9, -9, 0, 9, /* solid triangle up */
         0 }, 
-      { 5, 4, 0, 9, 9, -9, -9, -9, 0, 9,  /* hollow triangle up */
+      { 5, 4, 0, 9, 9, -9, -9, -9, 0, 9, /* hollow triangle up */
         3, 4, 0, 9, 9, -9, -9, -9, 0, 9,
         0 }, 
-      { 7,  0 },         /* solid circle */
-      { 0 },                   /* not used */
-      { 1,  0 },                 /* dot */
-      { 2,  0, 0, 0, 9,  2, 0, 0, 9, 0,   /* plus */
-        2, 0, 0, 0, -9,  2, 0, 0, -9, 0,  
+      { 7, 0 },        /* solid circle */
+      { 0 },                  /* not used */
+      { 1, 0 },                /* dot */
+      { 2, 0, 0, 0, 9, 2, 0, 0, 9, 0,  /* plus */
+        2, 0, 0, 0, -9, 2, 0, 0, -9, 0, 
         0 }, 
-      { 2, 0, 0, 0, 9,  2, 0, 0, 9, 3,    /* asterisk */
-        2, 0, 0, 6, -9,  2, 0, 0, -6, -9,  
+      { 2, 0, 0, 0, 9, 2, 0, 0, 9, 3,   /* asterisk */
+        2, 0, 0, 6, -9, 2, 0, 0, -6, -9, 
         2, 0, 0, -9, 3,
         0 }, 
-      { 8,  6,  0 },       /* circle */
-      { 2, 0, 0, 9, 9,  2, 0, 0, 9, -9,   /* diagonal cross */
-        2, 0, 0, -9, -9,  2, 0, 0, -9, 9, 
+      { 8, 6, 0 },      /* circle */
+      { 2, 0, 0, 9, 9, 2, 0, 0, 9, -9,  /* diagonal cross */
+        2, 0, 0, -9, -9, 2, 0, 0, -9, 9, 
         0 }
     };
 
@@ -1097,7 +1097,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 
   xr = r;
   yr = 0;
-  seg_xform_rel(&xr ,&yr);
+  seg_xform_rel(&xr, &yr);
   r = nint(sqrt(xr * xr + yr * yr));
 
   NDC_to_DC(xn, yn, x, y);
@@ -1111,7 +1111,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
       switch (op)
         {
         case 1: // point 
-          CGContextFillRect(context, CGRectMake(x,y,1,1));
+          CGContextFillRect(context, CGRectMake(x, y, 1, 1));
           break;
 
         case 2: // line 
@@ -1120,11 +1120,11 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
             {
               xr =  scale * marker[mtype][pc + 2 * i + 1];
               yr =  scale * marker[mtype][pc + 2 * i + 2];
-              seg_xform_rel( &xr , &yr);
+              seg_xform_rel(&xr, &yr);
               if (i == 0)
                 CGContextMoveToPoint(context, x - xr, y + yr);
               else
-                CGContextAddLineToPoint(context ,x - xr, y + yr);
+                CGContextAddLineToPoint(context, x - xr, y + yr);
             }
           CGContextDrawPath(context, kCGPathStroke);
           pc += 4;
@@ -1136,7 +1136,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
             {
               xr =  scale * marker[mtype][pc + 2 + 2 * i];
               yr =  scale * marker[mtype][pc + 3 + 2 * i];
-              seg_xform_rel( &xr ,&yr);
+              seg_xform_rel(&xr, &yr);
               if (i == 0)
                 CGContextMoveToPoint(context, x - xr, y + yr);
               else
@@ -1156,7 +1156,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
             {
               xr =  scale * marker[mtype][pc + 2 + 2 * i];
               yr =  scale * marker[mtype][pc + 3 + 2 * i];
-              seg_xform_rel( &xr ,&yr);
+              seg_xform_rel(&xr, &yr);
               if (i == 0)
                 CGContextMoveToPoint(context, x - xr, y + yr);
               else
@@ -1208,14 +1208,14 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   mk_size  = gkss->asf[4] ? gkss->mszsc  : 1;
   mk_color = gkss->asf[5] ? Color8Bit(gkss->pmcoli) : 1;
 
-  CGContextSetLineWidth(context , 1 );
+  CGContextSetLineWidth(context, 1);
   [self set_stroke_color:mk_color: context];
   [self set_fill_color:mk_color: context];
     
   for (i = 0; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
-      seg_xform( &x ,&y);
+      seg_xform(&x, &y);
       
       if (gkss->clip == GKS_K_CLIP)
         draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
@@ -1242,7 +1242,7 @@ void drawPatternCell(void *info, CGContextRef context)
 }
 
 static
-void draw_pattern(int index, CGPathRef shape , CGContextRef context)
+void draw_pattern(int index, CGPathRef shape, CGContextRef context)
 {
   int scale1 = (p->c + p->a)/120;
   float scale = 0.125 * scale1;
@@ -1262,7 +1262,7 @@ void draw_pattern(int index, CGPathRef shape , CGContextRef context)
       n = patArray[k];//[i+1];
       for (l = patWidth-scale; l >= 0; l -= scale) 
         {
-          if ( (n % 2) == 0 ) 
+          if ((n % 2) == 0) 
             {
               CGContextFillRect(layerContext, CGRectMake(l, i, scale, scale));
               CGContextStrokeRectWithWidth(layerContext, CGRectMake(l, i, scale, scale), 0.5);
@@ -1298,7 +1298,7 @@ void draw_pattern(int index, CGPathRef shape , CGContextRef context)
 static
 void fill_routine(int n, float *px, float *py, int tnr)
 {
-  float x,y;
+  float x, y;
   int i;
   CGPoint points[n];
   CGContextRef context;
@@ -1308,17 +1308,17 @@ void fill_routine(int n, float *px, float *py, int tnr)
   for (i = 0; i < n; ++i)
     {
       WC_to_NDC(px[i], py[i], tnr, x, y);
-      seg_xform(&x ,&y);
+      seg_xform(&x, &y);
       NDC_to_DC(x, y, points[i].x, points[i].y);  
     }
     
   CGMutablePathRef shape = CGPathCreateMutable();
-  CGPathAddLines (shape,NULL,  points, n);
+  CGPathAddLines (shape,NULL, points, n);
   CGPathCloseSubpath(shape);
     
   if (pattern_ > -1)
     {  
-      draw_pattern( pattern_ ,shape ,context);
+      draw_pattern(pattern_, shape, context);
     }
   else 
     {
@@ -1333,7 +1333,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 {
   CGContextRef context;
   int fl_inter, fl_style, fl_color, i = 0;
-  float x,y;
+  float x, y;
   CGPoint points[n];
 
   context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
@@ -1342,7 +1342,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
   for (i = 0; i < n; ++i)
     {
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
-      seg_xform(&x ,&y);
+      seg_xform(&x, &y);
       NDC_to_DC(x, y, points[i].x, points[i].y);  
     }
 
@@ -1355,8 +1355,8 @@ void fill_routine(int n, float *px, float *py, int tnr)
       [self set_stroke_color: fl_color: context];
 
       CGContextBeginPath(context);
-      CGContextSetLineWidth(context , 1 );
-      CGContextAddLines ( context,points, n);
+      CGContextSetLineWidth(context, 1);
+      CGContextAddLines(context, points, n);
       CGContextClosePath(context);
       CGContextDrawPath(context, kCGPathStroke);
     }
@@ -1366,8 +1366,8 @@ void fill_routine(int n, float *px, float *py, int tnr)
       [self set_fill_color: fl_color: context];
 
       CGContextBeginPath(context);
-      CGContextSetLineWidth(context , 1 );
-      CGContextAddLines ( context,points, n);
+      CGContextSetLineWidth(context, 1);
+      CGContextAddLines(context, points, n);
       CGContextClosePath(context);
       CGContextDrawPath(context, kCGPathFillStroke);
     }
@@ -1443,7 +1443,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
                                        ((rgba >> 16) & 0xff) / 255.0,
                                        1.0);
             }
-          CGContextFillRect(context, CGRectMake(x+i,y+j,1,1));  
+          CGContextFillRect(context, CGRectMake(x+i, y+j, 1, 1));  
         }
     }    
   end_context(context);
@@ -1474,7 +1474,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
     {
       WC_to_NDC(px, py, gkss->cntnr, x, y);
       seg_xform(&x, &y);
-      NDC_to_DC(x,y,xstart,ystart);        
+      NDC_to_DC(x, y, xstart, ystart);
     
       if ([[font fontName] isEqualToString: 
                             [NSString stringWithCString: "ZapfDingbatsITC"
@@ -1497,7 +1497,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
       
           string = [NSString stringWithCString: text encoding: encode];
         }
-    
+        
       NSMutableDictionary *stringAttr = [NSMutableDictionary dictionaryWithCapacity:2];    
       [stringAttr setObject: font forKey: NSFontAttributeName];     
     
