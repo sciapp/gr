@@ -2,7 +2,7 @@
     LIBDIR = $(GRDIR)/lib
     INCDIR = $(GRDIR)/include
 
-  INCLUDES = -I../png -I$(GRDIR)/include
+  INCLUDES = -I../png -I../jpeg -I$(GRDIR)/include
     GRLIBS = -L$(GRDIR)/lib -lGR
     GLLIBS = -lGL -lX11
    PNGLIBS = ../png/libpng.a
@@ -38,6 +38,6 @@ install: targets
 	cp -p gr3.h $(INCDIR)
 
 clean:
-	@make -C ../png clean
+	@make -C ../gr clean
 	rm -rf libGR3.so*
 	rm -f *.pyc
