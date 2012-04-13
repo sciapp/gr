@@ -6,6 +6,7 @@ UNAME := $(shell uname)
 default:
 	@for d in $(DIRS); do make -C $$d GRDIR=$(GRDIR); done
 ifeq ($(UNAME), Darwin)
+# -arch i386 for xcode 4.3 or later
 	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj ARCHS=i386
 endif
 
