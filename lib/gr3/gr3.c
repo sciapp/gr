@@ -10,8 +10,6 @@
 #include <string.h>
 #include <math.h> /* for sqrt */
 
-#include <png.h>
-#include <jpeglib.h>
 
 #include "gr3.h"
 #include "gr.h"
@@ -43,6 +41,9 @@
 #else
     #error "This operating system is currently not supported by gr3"
 #endif
+
+#include <png.h>
+#include <jpeglib.h>
 
 #if !(GL_ARB_framebuffer_object || GL_EXT_framebuffer_object)
     #error "Neither GL_ARB_framebuffer_object nor GL_EXT_framebuffer_object \

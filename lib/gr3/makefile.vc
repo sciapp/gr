@@ -3,6 +3,7 @@ INCLUDES = /I..\jpeg /I..\png /I..\zlib /I..\gks /I..\gr /I.
 CFLAGS = /c /nologo /MD $(INCLUDES)
 LINK = LINK /nologo
 PNGLIBS = ..\png\libpng.lib
+JPEGLIBS = ..\jpeg\libjpeg.lib
 ZLIBS = ..\zlib\libz.lib
 GRLIBS = ..\gr\libgr.lib
 GR3LIBS = .\libgr3.lib
@@ -29,7 +30,7 @@ libgr3.lib: libgr3.dll
 
 libgr3.dll: gr3.obj
 	$(DLLLINK) /out:$@ $** -def:libgr3.def \
-	$(GRLIBS) $(PNGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
+	$(GRLIBS) $(PNGLIBS) $(JPEGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
 install:
 	COPY /Y libgr3.lib $(DESTDIR)
