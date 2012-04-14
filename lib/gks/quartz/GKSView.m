@@ -621,8 +621,6 @@ void seg_xform_rel(float *x, float *y)
 {  
   if (buffer)
     free(buffer);
-  if (gkss)
-    gks_close_font(gkss->fontfile);
   [self release];
 }
 
@@ -1518,7 +1516,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
       CGContextSetTextDrawingMode(context, kCGTextFill); 
 
-      NSAffineTransform *transform = [NSAffineTransform transform];    
+      NSAffineTransform *transform = [[NSAffineTransform alloc] init];
       [transform translateXBy: xstart yBy: ystart];
       [transform rotateByRadians: p->angle];
       [transform translateXBy: -xstart yBy: -ystart];    
