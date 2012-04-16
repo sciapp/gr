@@ -58,7 +58,7 @@ int usleep(useconds_t);
 #endif
 #define nint(a)		((int)(a + 0.5))
 
-#define WindowName "GKS 5"
+#define WindowName "GKS 5 __TIME__"
 
 #define DrawBorder	0
 #define Undefined	0xffff
@@ -199,6 +199,12 @@ static char *urw_fonts[] =
   "-urw-urw palladio l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
   "-urw-urw chancery l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
   "-urw-dingbats-medium-r-normal--*-%d0-%d-%d-*-*-*-*"
+};
+
+static char *base_fonts[] =
+{
+  "Times", "Helvetica", "Courier", "Symbol",
+  "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua"
 };
 
 static int map[32] =
@@ -2510,7 +2516,13 @@ static
 void try_load_font(int font, int size)
 {
   char fontname[256];
-  int f;
+  int f; 
+#ifdef XFT
+  int family, weight, slant;
+  XftPattern *font_pattern;
+  XftPattern *match_pattern;
+  XftResult match_result;
+#endif
 
   sprintf(fontname, urw_fonts[font], size, p->dpi, p->dpi);
   p->fstr[font][size] = load_font(p->dpy, fontname);
@@ -2526,9 +2538,32 @@ void try_load_font(int font, int size)
 	    break;
 	}
     }
+#ifdef XFT
+  if (font > 28)
+    return;
+  f = font + 1;
+  if (f > 13)
+    f += 3;
+  family = (f - 1) / 4;
+  weight = (f % 4 == 1 || f % 4 == 2) ? XFT_WEIGHT_MEDIUM : XFT_WEIGHT_BOLD;
+  slant = (f % 4 == 2 || f % 4 == 0) ? XFT_SLANT_ITALIC : XFT_SLANT_ROMAN;
 
+  font_pattern = XftPatternCreate();
+  XftPatternAddString(font_pattern, XFT_FAMILY, base_fonts[family]);
+  XftPatternAddInteger(font_pattern, XFT_WEIGHT, weight);
+  XftPatternAddInteger(font_pattern, XFT_SLANT, slant);
+  XftPatternAddDouble(font_pattern, XFT_PIXEL_SIZE, (double) size);
+
+  match_pattern = XftFontMatch(p->dpy, DefaultScreen(p->dpy), font_pattern,
+                               &match_result);
+  //if (match_pattern)
+    p->fstr[font][size] = XftFontOpenPattern(p->dpy, match_pattern);
+  //else
+  //  p->fstr[font][size] = NULL;
+
+  XftPatternDestroy(font_pattern);
+#endif
 }
-
 
 static
 void verify_font_capabilities(void)

@@ -12,7 +12,7 @@ DLLLFLAGS = /nodefaultlib -dll
 DLLLINK = LINK /nologo
 SRCDIR = .\
 
-DESTDIR = S:\gr
+DESTDIR = \"S:\gr\"
 
 .SUFFIXES: .obj .c
 

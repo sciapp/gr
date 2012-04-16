@@ -16,8 +16,9 @@
  JPEGLIBS = ../jpeg/libjpeg.a
   PNGLIBS = ../png/libpng.a
   GKSLIBS = ../gks/libGKS.a
+  XFTLIBS = -lXft -lfontconfig
  XLIBPATH = /usr/X11R6/lib
-    XLIBS = -L$(XLIBPATH) -lXt -lX11
+    XLIBS = -L$(XLIBPATH) $(XFTLIBS) -lXt -lX11
     ZLIBS = -lz
 
 .c.o:
@@ -34,7 +35,7 @@ Linux:
 	@make targets
 Darwin:
 	@make targets \
-	LD="$(CC)" LDFLAGS="-dynamiclib -framework Carbon" LIBS="-lc -lm" \
+	LD="$(CC)" LDFLAGS="-dynamiclib -framework Carbon" \
 	SOFLAGS="-dynamiclib -framework Carbon -Wl,-install_name,$(LIBDIR)/libGR.so"
 
 prerequisites:

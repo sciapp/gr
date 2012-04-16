@@ -8,8 +8,10 @@ default:
 nothing:
 	@true
 
-Linux:
-Darwin:
+Linux: all
+Darwin: all
+
+all:
 	@for d in $(DIRS); do make -C $$d GRDIR=$(GRDIR); done
 ifeq ($(UNAME), Darwin)
 # -arch i386 for xcode 4.3 or later

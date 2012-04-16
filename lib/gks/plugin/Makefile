@@ -24,7 +24,7 @@ default:
 Darwin:
 	@make $(TARGETS) quartzplugin.so \
 	INCLUDES="-I.. -I../../png -I/usr/local/include" \
-	PNGLIBS="-L../../png -lpng" SOFLAGS="-F. -bundle" \
+	PNGLIBS="-L../../png -lpng" \
 	GSINC="-I/usr/local/include/ghostscript" LIBS="-liconv"
 Linux:
 	@make $(TARGETS) \

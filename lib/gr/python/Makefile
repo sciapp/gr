@@ -19,7 +19,7 @@ default:
 	@make `./Config`
 
 Darwin:
-	@make all SOFLAGS="-F. -bundle" static=true \
+	@make all static=true \
 	LDFLAGS="-framework Carbon -Wl,-install_name,$(LIBDIR)/gr.so"
 Linux:
 	make all SOFLAGS="-shared" LDFLAGS="-Wl,-rpath=$(LIBDIR)" \

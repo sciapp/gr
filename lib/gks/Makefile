@@ -1,29 +1,30 @@
-    GRDIR = /usr/local/gr
-   BINDIR = $(GRDIR)/bin
-   LIBDIR = $(GRDIR)/lib
-   INCDIR = $(GRDIR)/include
-  FONTDIR = $(GRDIR)/fonts
+       GRDIR = /usr/local/gr
+      BINDIR = $(GRDIR)/bin
+      LIBDIR = $(GRDIR)/lib
+      INCDIR = $(GRDIR)/include
+     FONTDIR = $(GRDIR)/fonts
 
-  GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o dl.o malloc.o error.o \
-	    mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o plugin.o \
-	    compress.o io.o
+     GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o dl.o malloc.o error.o \
+               mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
+               plugin.o compress.o io.o
 
-  DEFINES = -DGRDIR="\\\"$(GRDIR)\\\"" -DHAVE_ZLIB
- INCLUDES = -I/usr/X11R6/include
-       CC = cc
-   CFLAGS = $(DEFINES) -O -Wall -fPIC
-       LD = cc
-  LDFLAGS =
-       AR = ar
-   RANLIB = ar ts
-  SOFLAGS = -shared
-     LIBS = -lpthread -ldl -lc -lm
-  XFTLIBS =
-    XLIBS = -L/usr/X11R6/lib -lXt -lX11 $(XFTLIBS)
-    ZLIBS = -lz
+     DEFINES = -DGRDIR=\"$(GRDIR)\" -DHAVE_ZLIB -DXFT
+    INCLUDES = -I/usr/X11R6/include
+ XFTINCLUDES = -I/usr/include/freetype2
+          CC = cc
+      CFLAGS = -O -Wall -fPIC
+          LD = cc
+     LDFLAGS =
+          AR = ar
+      RANLIB = ar ts
+     SOFLAGS = -shared
+        LIBS = -lpthread -ldl -lc -lm
+     XFTLIBS = -lXft -lfontconfig
+       XLIBS = $(XFTLIBS) -L/usr/X11R6/lib -lXt -lX11
+       ZLIBS = -lz
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CFLAGS) $(DEFINES) $(INCLUDES) $(XFTINCLUDES) $<
 
 default:
 	@make `uname`
@@ -31,10 +32,10 @@ default:
 targets: libGKS.a libGKS.so demo gksm plugins
 
 Linux:
-	@make targets CFLAGS="$(CFLAGS) -DXFT" \
-	INCLUDES="$(INCLUDES) -I/usr/include/freetype2" XFTLIBS="-lXft"
+	@make targets
 Darwin:
 	@make targets CFLAGS="$(CFLAGS) -fpascal-strings" \
+	XFTINCLUDES="-I/usr/X11/include/freetype2"
 	LD="$(CC)" LDFLAGS="-framework Carbon" \
 	SOFLAGS="-dynamiclib -framework Carbon -Wl,-install_name,$(LIBDIR)/libGKS.so"
 
