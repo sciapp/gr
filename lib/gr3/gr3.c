@@ -1,6 +1,6 @@
 /*!\file gr3.c
  * ToDo:
- * -
+ * - gr3_drawimage
  * Bugs:
  * - glXCreatePbuffer -> "failed to create drawable" probably caused by being 
  *      run in virtual box, other applications show the same error message
@@ -294,6 +294,8 @@ typedef struct _GR3_ContextStruct_t_ {
     float camera_x; float camera_y; float camera_z;
     float center_x; float center_y; float center_z; 
     float up_x;     float up_y;     float up_z;
+    GLfloat *projection_matrix;
+    int quality;
 } GR3_ContextStruct_t_;
 /*!
  * The only instance of ::GR3_ContextStruct_t_. For documentation, see 
@@ -303,7 +305,7 @@ typedef struct _GR3_ContextStruct_t_ {
                                                 NULL,0,NULL,not_initialized_,\
                                                 NULL, NULL,0,0,{{0}},0,0,0,\
                                                 {0,0,0,0},0,0,0,0,{0,0,0,1},0,\
-                                                0,0,0,0,0,0,0,0,0}
+                                                0,0,0,0,0,0,0,0,0, NULL,0}
 static GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
 
 /* For documentation, see the definition. */
@@ -324,6 +326,8 @@ static void     gr3_createcylindermesh_(void);
 static void     gr3_createspheremesh_(void);
 static void     gr3_createconemesh_(void);
 static int      gr3_readpngtomemory_(int *pixels, const char *pngfile, int width, int height);
+static int      gr3_getpixmap_(char *bitmap, int width, int height, int use_alpha, int ssaa_factor);
+static int      gr3_getpovray_(char *bitmap, int width, int height, int use_alpha, int ssaa_factor);
 #ifdef GR3_USE_CGL
     static int gr3_initGL_CGL_(void);
     static void      gr3_terminateGL_CGL_(void);
@@ -738,7 +742,7 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
 
 /*!
  * This function adds a mesh to the draw list, so it will be drawn when the user
- * calls gr3_getpixmap(). The given data stays owned by the user, a copy will be 
+ * calls gr3_getpixmap_(). The given data stays owned by the user, a copy will be 
  * saved in the draw list and the mesh reference counter will be increased.
  * \param [in] mesh         The mesh to be drawn
  * \param [in] positions    The positions where the meshes should be drawn
@@ -750,7 +754,7 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
  * \param [in] scales       The scaling factors
  * \param [in] n            The number of meshes to be drawn
  * \note This function does not return an error code, because of its 
- * asynchronous nature. If gr3_getpixmap() returns a ::GR3_ERROR_OPENGL_ERR, this 
+ * asynchronous nature. If gr3_getpixmap_() returns a ::GR3_ERROR_OPENGL_ERR, this 
  * might be caused by this function saving unuseable data into the draw list.
  */
 GR3API void gr3_drawmesh(int mesh, int n, const float *positions, 
@@ -990,8 +994,8 @@ GR3API void gr3_setlightdirection(float x, float y, float z) {
  * position of the center of focus and the direction which should point up. This 
  * function takes effect when the next image is created. Therefore if you want 
  * to take pictures of the same data from different perspectives, you can call 
- * and  gr3_cameralookat(), gr3_getpixmap(), gr3_cameralookat(), 
- * gr3_getpixmap(), ... without calling gr3_clear() and gr3_drawmesh() again.
+ * and  gr3_cameralookat(), gr3_getpixmap_(), gr3_cameralookat(), 
+ * gr3_getpixmap_(), ... without calling gr3_clear() and gr3_drawmesh() again.
  * \param [in] camera_x The x-coordinate of the camera
  * \param [in] camera_y The y-coordinate of the camera
  * \param [in] camera_z The z-coordinate of the camera
@@ -1148,30 +1152,36 @@ static void gr3_draw_(GLuint width, GLuint height) {
 #endif
     gr3_log_("gr3_draw_();");
     {
-        GLfloat fovy = context_struct_.vertical_field_of_view;
-        GLfloat zNear = context_struct_.zNear;
-        GLfloat zFar = context_struct_.zFar;
-        
         GLfloat projection_matrix[4][4] = {{0}};
-
-        {
-            /* Source: http://www.opengl.org/sdk/docs/man/xhtml/gluPerspective.xml */
-            GLfloat aspect = (GLfloat)width/height;
-            GLfloat f = 1/tan(fovy*M_PI/360.0);
-            projection_matrix[0][0] = f/aspect;
-            projection_matrix[1][1] = f;
-            projection_matrix[2][2] = (zFar+zNear)/(zNear-zFar);
-            projection_matrix[3][2] = 2*zFar*zNear/(zNear-zFar);
-            projection_matrix[2][3] = -1;
+        GLfloat *pm;
+        if (context_struct_.projection_matrix != NULL) {
+            pm = context_struct_.projection_matrix;
+        } else {
+            GLfloat fovy = context_struct_.vertical_field_of_view;
+            GLfloat zNear = context_struct_.zNear;
+            GLfloat zFar = context_struct_.zFar;
+            
+            
+            {
+                /* Source: http://www.opengl.org/sdk/docs/man/xhtml/gluPerspective.xml */
+                GLfloat aspect = (GLfloat)width/height;
+                GLfloat f = 1/tan(fovy*M_PI/360.0);
+                projection_matrix[0][0] = f/aspect;
+                projection_matrix[1][1] = f;
+                projection_matrix[2][2] = (zFar+zNear)/(zNear-zFar);
+                projection_matrix[3][2] = 2*zFar*zNear/(zNear-zFar);
+                projection_matrix[2][3] = -1;
+            }
+            pm = &projection_matrix[0][0];
         }
 #ifdef GR3_CAN_USE_VBO
         if (context_struct_.use_vbo) {
-            glUniformMatrix4fv(glGetUniformLocation(context_struct_.program, "ProjectionMatrix"), 1,GL_FALSE,&projection_matrix[0][0]);
+            glUniformMatrix4fv(glGetUniformLocation(context_struct_.program, "ProjectionMatrix"), 1,GL_FALSE,pm);
         } else
 #endif
         {
             glMatrixMode(GL_PROJECTION);
-            glLoadMatrixf(&projection_matrix[0][0]);
+            glLoadMatrixf(pm);
         }
 
 #ifdef GR3_CAN_USE_VBO
@@ -1238,12 +1248,20 @@ GR3API void gr3_renderdirect(int width, int height) {
 }
 
 GR3API int gr3_drawscene(float xmin, float xmax, float ymin, float ymax, int pixelWidth, int pixelHeight) {
-    int *pixels;
+    char *pixels;
+    int err;
     gr3_log_("gr3_drawscene();");
     pixelWidth = 800;
     pixelHeight = 800;
-    pixels = malloc(sizeof(int)*pixelWidth*pixelHeight);
-    gr3_getpixmap((int *)pixels,pixelWidth,pixelHeight);
+    pixels = (char *)malloc(sizeof(int)*pixelWidth*pixelHeight);
+    if (!pixels) {
+        return GR3_ERROR_OUT_OF_MEM;
+    }
+    err = gr3_getimage(pixelWidth,pixelHeight,TRUE,pixels);
+    if (err != GR3_ERROR_NONE) {
+        free(pixels);
+        return err;
+    }
     gr_drawimage(xmin, xmax, ymax, ymin, pixelWidth, pixelHeight, (int *)pixels);
     free(pixels);
     return GR3_ERROR_NONE;
@@ -1255,9 +1273,37 @@ static int gr3_strendswith_(const char *str, const char *ending) {
     return (str_len >= ending_len) && !strcmp(str+str_len-ending_len,ending);
 }
 
-GR3API int gr3_getimage(int width, int height, int *pixels) {
-/* TODO implement quality and different output types */
-    return gr3_getpixmap(pixels,width, height);
+GR3API int gr3_setquality(int quality) {
+    int ssaa_factor = quality & ~1;
+    int i;
+    if (quality > 33 || quality < 0) {
+        return GR3_ERROR_INVALID_VALUE;
+    }
+    if (ssaa_factor == 0) ssaa_factor = 1;
+    i = ssaa_factor;
+    while ( i/2*2 == i) {
+        i = i/2;
+    }
+    if (i != 1) {
+        return GR3_ERROR_INVALID_VALUE;
+    }
+    context_struct_.quality = quality;
+    fprintf(stderr,"setquality(%d);\n",quality);
+    return GR3_ERROR_NONE;
+}
+
+GR3API int gr3_getimage(int width, int height, int use_alpha, char *pixels) {
+    int err;
+    int quality = context_struct_.quality;
+    int ssaa_factor = quality & ~1;
+    int use_povray = quality & 1;
+    if (ssaa_factor == 0) ssaa_factor = 1;
+    if (use_povray) {
+        err = gr3_getpovray_(pixels,width, height, use_alpha, ssaa_factor);
+    } else {
+        err = gr3_getpixmap_(pixels,width, height, use_alpha, ssaa_factor);
+    }
+    return err;
 }
 
 GR3API int gr3_export(const char *filename, int width, int height) {
@@ -1283,27 +1329,23 @@ GR3API int gr3_export(const char *filename, int width, int height) {
 
 static int gr3_export_jpeg_(const char *filename, int width, int height) {
     FILE *jpegfp;
-    int *pixels;
-    JSAMPLE *rgba_row;
-    JSAMPLE *rgb_row;
+    char *pixels;
     int err;
-    int i;
     
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
-    JSAMPROW row_pointer[1];
     
     jpegfp = fopen(filename, "wb");
     if (!jpegfp) {
         return GR3_ERROR_CANNOT_OPEN_FILE;
     }
     
-    pixels = (int *)malloc(width * height * sizeof(int));
+    pixels = (char *)malloc(width * height * 3);
     if (!pixels) {
         return GR3_ERROR_OUT_OF_MEM;
     }
     
-    err = gr3_getimage(width, height, pixels);
+    err = gr3_getimage(width, height, FALSE, pixels);
     if (err != GR3_ERROR_NONE) {
         fclose(jpegfp);
         free(pixels);
@@ -1321,22 +1363,11 @@ static int gr3_export_jpeg_(const char *filename, int width, int height) {
     jpeg_set_defaults(&cinfo);
     jpeg_set_quality(&cinfo, 100, TRUE);
     jpeg_start_compress(&cinfo, TRUE);
-    rgb_row = (JSAMPLE *)malloc(width * 3);
-    if (!rgb_row) {
-     return GR3_ERROR_OUT_OF_MEM;
-    }
     while (cinfo.next_scanline < cinfo.image_height) {
-        rgba_row = (JSAMPLE *)(pixels+(height-cinfo.next_scanline-1)*width);
-        for (i = 0; i < width; i++) {
-            rgb_row[i*3+0] = rgba_row[i*4+0];
-            rgb_row[i*3+1] = rgba_row[i*4+1];
-            rgb_row[i*3+2] = rgba_row[i*4+2];
-        }
-        row_pointer[0] = rgb_row;
+        JSAMPROW row_pointer[1];
+        row_pointer[0] = (JSAMPLE *)(pixels+3*(height-cinfo.next_scanline-1)*width);
         jpeg_write_scanlines(&cinfo, row_pointer, 1);
     }
-    free(rgb_row);
-    
     jpeg_finish_compress(&cinfo);
     jpeg_destroy_compress(&cinfo);
     fclose(jpegfp);
@@ -1364,7 +1395,7 @@ static int gr3_export_png_(const char *filename, int width, int height) {
         return GR3_ERROR_OUT_OF_MEM;
     }
     
-    err = gr3_getimage(width, height, pixels);
+    err = gr3_getimage(width, height, TRUE, (char *)pixels);
     if (err != GR3_ERROR_NONE) {
         fclose(pngfp);
         free(pixels);
@@ -1405,6 +1436,8 @@ static int gr3_export_pov_(const char *filename, int width, int height) {
     int i, j, k, l;
     FILE *povfp;
     GR3_DrawList_t_ *draw;
+    
+    /* dummy */ width = height = width; /* dummy */
     
     povfp = fopen(filename, "w");
     if (!povfp) {
@@ -2126,16 +2159,13 @@ static int gr3_export_html_(const char *filename, int width, int height) {
     return GR3_ERROR_NONE;
 }
 
-GR3API int gr3_getpovray(int *pixels, int width, int height) {
+GR3API int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_factor) {
+    int i;
 #ifdef GR3_USE_WIN
-    char *tempdir = malloc(100);
-    char *povfile = malloc(125);
-    char *pngfile = malloc(125);
-    GetTempPath(100,tempdir);
-    sprintf(povfile,"%sgr3.%d.pov",tempdir,getpid());
-    sprintf(pngfile,"%sgr3.%d.png","C:\\AppData\\Local\\Temp\\",getpid());
-    gr3_log_(povfile);
-    free(tempdir);
+    char *povfile = malloc(40);
+    char *pngfile = malloc(40);
+    sprintf(povfile,"./gr3.%d.pov",getpid());
+    sprintf(pngfile,"./gr3.%d.png",getpid());
 #else
     char *povfile = malloc(40);
     char *pngfile = malloc(40);
@@ -2147,13 +2177,35 @@ GR3API int gr3_getpovray(int *pixels, int width, int height) {
         int res;
         char *povray_call = malloc(strlen(povfile)+strlen(povfile)+80);
 #ifdef GR3_USE_WIN
-        sprintf(povray_call,"megapov +I%s +O%s +H%d +W%d -D +UA +FN +A",povfile,pngfile,width,height);
+        sprintf(povray_call,"megapov +I%s +O%s +H%d +W%d -D +UA +FN +A +R%d",povfile,pngfile,width,height, ssaa_factor);
 #else
-        sprintf(povray_call,"povray +I%s +O%s +H%d +W%d -D +UA +FN +A 2>/dev/null",povfile,pngfile,width,height);
+        sprintf(povray_call,"povray +I%s +O%s +H%d +W%d -D +UA +FN +A +R%d 2>/dev/null",povfile,pngfile,width,height, ssaa_factor);
 #endif
         system(povray_call);
         free(povray_call);
-        res = gr3_readpngtomemory_(pixels,pngfile,width,height);
+        if (use_alpha) {
+            res = gr3_readpngtomemory_((int *)pixels,pngfile,width,height);
+            if (res) {
+                return GR3_ERROR_EXPORT;
+            }
+        } else {
+            char *raw_pixels = malloc(width*height*4);
+            if (!raw_pixels) {
+                return GR3_ERROR_OUT_OF_MEM;
+            }
+            res = gr3_readpngtomemory_((int *)raw_pixels,pngfile,width,height);
+            if (res) {
+                free(raw_pixels);
+                return GR3_ERROR_EXPORT;
+            }
+            for (i = 0; i < width*height; i++) {
+                pixels[3*i+0] = raw_pixels[4*i+0];
+                pixels[3*i+1] = raw_pixels[4*i+1];
+                pixels[3*i+2] = raw_pixels[4*i+2];
+            }
+            free(raw_pixels);
+        }
+        
     }
     remove(povfile);
     remove(pngfile);
@@ -2176,15 +2228,29 @@ GR3API int gr3_getpovray(int *pixels, int width, int height) {
  * \note The memory bitmap points to must be \f$sizeof(int) \cdot width 
  * \cdot height\f$ bytes in size, so the whole image can be stored.
  */
-GR3API int gr3_getpixmap(int *bitmap, int width, 
-                        int height) {
+GR3API int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, int ssaa_factor) {
     int x, y;
     int fb_width, fb_height;
     int dx, dy;
     int x_patches, y_patches;
     int view_matrix_all_zeros;
+    char *raw_pixels;
+    
+    GLenum format = use_alpha ? GL_RGBA : GL_RGB;
+    int bpp = use_alpha ? 4 : 3;
+    GLfloat fovy = context_struct_.vertical_field_of_view;
+    GLfloat tan_halffovy = tan(fovy*M_PI/360.0);
+    GLfloat aspect = (GLfloat)width/height;
+    GLfloat zNear = context_struct_.zNear;
+    GLfloat zFar = context_struct_.zFar;
+    
+    GLfloat right = zNear*tan_halffovy*aspect;
+    GLfloat left = -right;
+    GLfloat top = zNear*tan_halffovy;
+    GLfloat bottom = -top;
+
     if (context_struct_.is_initialized) {
-        if (width == 0 || height == 0 || bitmap == NULL) {
+        if (width == 0 || height == 0 || pixmap == NULL) {
             return GR3_ERROR_INVALID_VALUE;
         }
         view_matrix_all_zeros = 1;
@@ -2207,20 +2273,28 @@ GR3API int gr3_getpixmap(int *bitmap, int width,
             /* gr3_setcameraprojectionparameters has not been called */
             return GR3_ERROR_CAMERA_NOT_INITIALIZED;
         }
+        
+        fb_width = context_struct_.init_struct.framebuffer_width;
+        fb_height = context_struct_.init_struct.framebuffer_height;
+        if (ssaa_factor != 1) {
+            raw_pixels = malloc((size_t)fb_width*fb_height*ssaa_factor*ssaa_factor*bpp);
+            if (!raw_pixels) {
+                return GR3_ERROR_OUT_OF_MEM;
+            }
+            width = width*ssaa_factor;
+            height = height*ssaa_factor;
+        }
+        
 #if GL_ARB_framebuffer_object
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 #else
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebuffer);
 #endif
         
-        fb_width = context_struct_.init_struct.framebuffer_width;
-        fb_height = context_struct_.init_struct.framebuffer_height;
         x_patches = width/fb_width+(width/fb_width*fb_width < width);
         y_patches = height/fb_height+(height/fb_height*fb_height < height);
         for (y = 0; y < y_patches; y++) {
             for (x = 0; x < x_patches; x++) {
-                glViewport(-x*fb_width, -y*fb_height, width, height);
-                gr3_draw_(width, height);
                 if ((x+1)*fb_width <= width) {
                     dx = fb_width;
                 } else {
@@ -2231,28 +2305,86 @@ GR3API int gr3_getpixmap(int *bitmap, int width,
                 } else {
                     dy = height - fb_height*y;
                 }
+                {
+                    GLfloat projection_matrix[4][4] = {{0}};
+                    GLfloat l = left + 1.0f*(right-left)*(x*fb_width)/width;
+                    GLfloat r = left + 1.0f*(right-left)*(x*fb_width+dx)/width;
+                    GLfloat b = bottom + 1.0f*(top-bottom)*(y*fb_height)/height;
+                    GLfloat t = bottom + 1.0f*(top-bottom)*(y*fb_height+dy)/height;
+                    
+                    /* Source: http://www.opengl.org/sdk/docs/man/xhtml/glFrustum.xml */
+                    projection_matrix[0][0] = 2*zNear/(r - l);
+                    projection_matrix[2][0] = (r+l)/(r - l);
+                    projection_matrix[1][1] = 2*zNear/(t - b);
+                    projection_matrix[2][1] = (t+b)/(t - b);
+                    projection_matrix[2][2] = (zFar+zNear)/(zNear-zFar);
+                    projection_matrix[3][2] = 2*zFar*zNear/(zNear-zFar);
+                    projection_matrix[2][3] = -1;
+                    
+                    context_struct_.projection_matrix = &projection_matrix[0][0];
+                    glViewport(0, 0, dx, dy);
+                    gr3_draw_(width, height);
+                    context_struct_.projection_matrix = NULL;
+                }
                 glPixelStorei(GL_PACK_ALIGNMENT,1); /* byte-wise alignment */
-                #ifdef GR3_USE_WIN
-                    /* There seems to be a driver error on windows considering 
-                       GL_PACK_ROW_LENGTH, so I have to roll my own loop to 
-                       read the pixels row-wise instead of copying whole 
-                       images. 
-                    */
+                if (ssaa_factor == 1) {
+                    #ifdef GR3_USE_WIN
+                        /* There seems to be a driver error on windows considering 
+                           GL_PACK_ROW_LENGTH, so I have to roll my own loop to 
+                           read the pixels row-wise instead of copying whole 
+                           images. 
+                        */
+                        {
+                            int i;
+                            for (i = 0; i < dy; i++)  {
+                                glReadPixels(0, i, dx, 1, format, GL_UNSIGNED_BYTE, 
+                                             pixmap+bpp*(y*width*fb_height+i*width+x*fb_width));
+                            }
+                        }
+                    #else
+                        /* On other systems, GL_PACK_ROW_LENGTH works fine. */
+                        glPixelStorei(GL_PACK_ROW_LENGTH,width);
+                        glReadPixels(0, 0, dx, dy, format, GL_UNSIGNED_BYTE, 
+                                     pixmap+bpp*(y*width*fb_height+x*fb_width));
+                    #endif
+                } else {
+                    #ifdef GR3_USE_WIN
                     {
                         int i;
                         for (i = 0; i < dy; i++)  {
-                            glReadPixels(0, i, dx, 1, GL_RGBA, GL_UNSIGNED_BYTE, 
-                                         bitmap+y*width*fb_height+i*width+x*fb_width);
+                            glReadPixels(0, i, dx, 1, format, GL_UNSIGNED_BYTE, raw_pixels+i*fb_width);
                         }
                     }
-                #else
-                    /* On other systems, GL_PACK_ROW_LENGTH works fine. */
-                    glPixelStorei(GL_PACK_ROW_LENGTH,width);
-                    glReadPixels(0, 0, dx, dy, GL_RGBA, GL_UNSIGNED_BYTE, 
-                                 bitmap+y*width*fb_height+x*fb_width);
-                 #endif
-                
+                    #else
+                        glPixelStorei(GL_PACK_ROW_LENGTH,fb_width);
+                        glReadPixels(0, 0, dx, dy, format, GL_UNSIGNED_BYTE, raw_pixels);
+                    #endif
+                    {
+                        int i,j,k,l,m,v,c;
+                        for (i = 0; i < dx/ssaa_factor; i++) {
+                            for (j = 0; j < dy/ssaa_factor; j++) {
+                                for (l = 0; l < bpp; l++) {
+                                    v = 0;
+                                    c = 0;
+                                    for (k = 0; k < ssaa_factor; k++) {
+                                        for (m = 0; m < ssaa_factor; m++) {
+                                            if ((ssaa_factor*i+k < dx) && (ssaa_factor*j+m < dy)) {
+                                                v += (unsigned char)raw_pixels[bpp*((ssaa_factor*i+k)+(ssaa_factor*j+m)*fb_width) + l];
+                                                c++;
+                                            }
+                                        }
+                                    }
+                                    v = v/c;
+                                    pixmap[bpp*(y*fb_height/ssaa_factor*width/ssaa_factor + x*fb_width/ssaa_factor +i + j*width/ssaa_factor)+l] = v;
+                                }
+                            }
+                        }
+                    }
+                }
             }
+        }
+        if (ssaa_factor != 1) {
+            free(raw_pixels);
         }
         if (glGetError() == GL_NO_ERROR) {
             return GR3_ERROR_NONE;

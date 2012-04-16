@@ -100,6 +100,20 @@ def keyboard(key, *args):
     elif key == ' ':
         gr3.terminate()
         sys.exit()
+    elif key == '0':
+        gr3.setquality(0)
+    elif key == '1':
+        gr3.setquality(2)
+    elif key == '2':
+        gr3.setquality(4)
+    elif key == '3':
+        gr3.setquality(8)
+    elif key == '4':
+        gr3.setquality(3)
+    elif key == '5':
+        gr3.setquality(5)
+    elif key == '6':
+        gr3.setquality(9)
     else:
         print key, ord(key)
 
