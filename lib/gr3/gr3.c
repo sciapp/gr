@@ -2159,7 +2159,7 @@ static int gr3_export_html_(const char *filename, int width, int height) {
     return GR3_ERROR_NONE;
 }
 
-GR3API int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_factor) {
+static int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_factor) {
     int i;
 #ifdef GR3_USE_WIN
     char *povfile = malloc(40);
@@ -2228,7 +2228,7 @@ GR3API int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, in
  * \note The memory bitmap points to must be \f$sizeof(int) \cdot width 
  * \cdot height\f$ bytes in size, so the whole image can be stored.
  */
-GR3API int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, int ssaa_factor) {
+static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, int ssaa_factor) {
     int x, y;
     int fb_width, fb_height;
     int dx, dy;
