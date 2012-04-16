@@ -58,7 +58,7 @@ int usleep(useconds_t);
 #endif
 #define nint(a)		((int)(a + 0.5))
 
-#define WindowName "GKS 5 __TIME__"
+#define WindowName "GKS 5"
 
 #define DrawBorder	0
 #define Undefined	0xffff
@@ -204,7 +204,8 @@ static char *urw_fonts[] =
 static char *base_fonts[] =
 {
   "Times", "Helvetica", "Courier", "Symbol",
-  "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua"
+  "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua",
+  "Zapfino", "Zapf Dingbats"
 };
 
 static int map[32] =
@@ -2539,14 +2540,21 @@ void try_load_font(int font, int size)
 	}
     }
 #ifdef XFT
-  if (font > 28)
-    return;
   f = font + 1;
-  if (f > 13)
-    f += 3;
-  family = (f - 1) / 4;
-  weight = (f % 4 == 1 || f % 4 == 2) ? XFT_WEIGHT_MEDIUM : XFT_WEIGHT_BOLD;
-  slant = (f % 4 == 2 || f % 4 == 0) ? XFT_SLANT_ITALIC : XFT_SLANT_ROMAN;
+  if (f < 30)
+    {
+      if (f > 13)
+        f += 3;
+      family = (f - 1) / 4;
+      weight = (f % 4 == 1 || f % 4 == 2) ? XFT_WEIGHT_MEDIUM : XFT_WEIGHT_BOLD;
+      slant = (f % 4 == 2 || f % 4 == 0) ? XFT_SLANT_ITALIC : XFT_SLANT_ROMAN;
+    }
+  else
+    {
+      family = 8 + f - 30; 
+      weight = XFT_WEIGHT_MEDIUM;
+      slant = XFT_SLANT_ROMAN;
+    }
 
   font_pattern = XftPatternCreate();
   XftPatternAddString(font_pattern, XFT_FAMILY, base_fonts[family]);
@@ -2556,11 +2564,7 @@ void try_load_font(int font, int size)
 
   match_pattern = XftFontMatch(p->dpy, DefaultScreen(p->dpy), font_pattern,
                                &match_result);
-  //if (match_pattern)
-    p->fstr[font][size] = XftFontOpenPattern(p->dpy, match_pattern);
-  //else
-  //  p->fstr[font][size] = NULL;
-
+  p->fstr[font][size] = XftFontOpenPattern(p->dpy, match_pattern);
   XftPatternDestroy(font_pattern);
 #endif
 }
