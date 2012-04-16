@@ -1437,6 +1437,8 @@ static int gr3_export_pov_(const char *filename, int width, int height) {
     FILE *povfp;
     GR3_DrawList_t_ *draw;
     
+    /* dummy */ width = height = width; /* dummy */
+    
     povfp = fopen(filename, "w");
     if (!povfp) {
         return GR3_ERROR_CANNOT_OPEN_FILE;
