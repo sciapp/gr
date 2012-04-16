@@ -1,26 +1,27 @@
 __all__ = ['GR3_InitAttribute',
            'GR3_Error',
            'GR3_Exception',
-           'gr3_init',
-           'gr3_terminate',
-           'gr3_getpixmap',
-           'gr3_getpovray',
-           'gr3_export',
-           'gr3_getrenderpathstring',
-           'gr3_setlogcallback',
-           'gr3_createmesh',
-           'gr3_drawmesh',
-           'gr3_drawscene',
-           'gr3_deletemesh',
-           'gr3_clear',
-           'gr3_renderdirect',
-           'gr3_cameralookat',
-           'gr3_setcameraprojectionparameters',
-           'gr3_setlightdirection',
-           'gr3_drawcylindermesh',
-           'gr3_drawconemesh',
-           'gr3_drawspheremesh',
-           'gr3_setbackgroundcolor']
+           'GR3_Quality',
+           'init',
+           'terminate',
+           'getimage',
+           'export',
+           'getrenderpathstring',
+           'setlogcallback',
+           'createmesh',
+           'drawmesh',
+           'drawscene',
+           'deletemesh',
+           'setquality',
+           'clear',
+           'renderdirect',
+           'cameralookat',
+           'setcameraprojectionparameters',
+           'setlightdirection',
+           'drawcylindermesh',
+           'drawconemesh',
+           'drawspheremesh',
+           'setbackgroundcolor']
 
 import ctypes
 import ctypes.util
@@ -49,6 +50,19 @@ class GR3_Error(object):
     GR3_ERROR_NOT_INITIALIZED = 6
     GR3_ERROR_CAMERA_NOT_INITIALIZED = 7
 
+
+class GR3_Quality(object):
+    GR3_QUALITY_OPENGL_NO_SSAA  = 0x00000
+    GR3_QUALITY_OPENGL_2X_SSAA  = 0x00010
+    GR3_QUALITY_OPENGL_4X_SSAA  = 0x00100
+    GR3_QUALITY_OPENGL_8X_SSAA  = 0x01000
+    GR3_QUALITY_OPENGL_16X_SSAA = 0x10000
+    GR3_QUALITY_POVRAY_NO_SSAA  = 0x00001
+    GR3_QUALITY_POVRAY_2X_SSAA  = 0x00011
+    GR3_QUALITY_POVRAY_4X_SSAA  = 0x00101
+    GR3_QUALITY_POVRAY_8X_SSAA  = 0x01001
+    GR3_QUALITY_POVRAY_16X_SSAA = 0x10001
+
 class GR3_Exception(Exception):
     def __init__(self,error_code):
         Exception.__init__(self,geterrorstring(error_code))
@@ -76,22 +90,21 @@ def terminate():
     global _gr3
     _gr3.gr3_terminate()
 
-def getpovray(width, height):
-    global _gr3
-    _bitmap = numpy.zeros((width*height*4),ctypes.c_ubyte)
-    err = _gr3.gr3_getpovray(_bitmap.ctypes.get_as_parameter(),ctypes.c_uint(width),ctypes.c_uint(height))
-    if err:
-        raise GR3_Exception(err)
-    return _bitmap
-
 def renderdirect(width, height):
     global _gr3
     _gr3.gr3_renderdirect(width, height)
 
-def getpixmap(width, height):
+def setquality(quality):
     global _gr3
-    _bitmap = numpy.zeros((width*height*4),ctypes.c_ubyte)
-    err = _gr3.gr3_getpixmap(_bitmap.ctypes.get_as_parameter(),ctypes.c_uint(width),ctypes.c_uint(height))
+    err = _gr3.gr3_setquality(quality)
+    if err:
+        raise GR3_Exception(err)
+
+def getimage(width, height, use_alpha = True):
+    global _gr3
+    bpp = 4 if use_alpha else 3
+    _bitmap = numpy.zeros((width*height*bpp),ctypes.c_ubyte)
+    err = _gr3.gr3_getimage(ctypes.c_uint(width),ctypes.c_uint(height),ctypes.c_uint(use_alpha),_bitmap.ctypes.get_as_parameter())
     if err:
         raise GR3_Exception(err)
     return _bitmap
