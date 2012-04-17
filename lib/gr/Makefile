@@ -24,19 +24,17 @@
 .c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
-all:
-	@make `../Preflight`
-nothing:
-	@true
-
-targets: prerequisites libGR.a libGR.so add-ons
+default:
+	@make `uname`
 
 Linux:
-	@make targets
+	@make targets \
+	LDFLAGS="-Wl,-rpath,$(LIBDIR)"
 Darwin:
 	@make targets \
-	LD="$(CC)" LDFLAGS="-dynamiclib -framework Carbon" \
-	SOFLAGS="-dynamiclib -framework Carbon -Wl,-install_name,$(LIBDIR)/libGR.so"
+	LD="$(CC)" LDFLAGS="-dynamiclib -framework Carbon"
+
+targets: prerequisites libGR.a libGR.so add-ons
 
 prerequisites:
 	@for d in jpeg png gks gks/plugin; do make -C ../$$d; done

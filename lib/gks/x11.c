@@ -201,12 +201,16 @@ static char *urw_fonts[] =
   "-urw-dingbats-medium-r-normal--*-%d0-%d-%d-*-*-*-*"
 };
 
+#ifdef XFT
+
 static char *base_fonts[] =
 {
   "Times", "Helvetica", "Courier", "Symbol",
   "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua",
   "Zapfino", "Zapf Dingbats"
 };
+
+#endif
 
 static int map[32] =
 {

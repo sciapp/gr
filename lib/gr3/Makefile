@@ -9,12 +9,13 @@
   JPEGLIBS = ../jpeg/libjpeg.a
       LIBS = -lz
     CFLAGS = -Wall -Wextra -pedantic -g -fPIC
-   LDFLAGS = -shared
+   SOFLAGS = -shared
+   LDFLAGS =
 
 default:
 	make `uname`
 Linux:
-	make targets
+	make targets LDFLAGS="-Wl,-rpath,$(LIBDIR)"
 Darwin:
 	make targets GLLIBS="-framework OpenGL -framework Cocoa"
 
@@ -25,7 +26,7 @@ prerequisites:
 
 libGR3.so: gr3.c
 	${CC} -o $@ $? $(CFLAGS) $(INCLUDES) $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
-	$(JPEGLIBS) $(LIBS) $(LDFLAGS)
+	$(JPEGLIBS) $(LIBS) $(SOFLAGS) $(LDFLAGS)
 
 gr3.c: gr3.h
 

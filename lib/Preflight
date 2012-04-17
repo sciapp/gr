@@ -21,7 +21,7 @@ if [ "$message" != "" ]; then
   echo "Do you want to continue? [y/n]" >&2
   read yesno
   if [ "$yesno" = "y" ]; then
-    defines="DEFINES=-DNO_QT4 QTLIBS="
+    defines="DEFINES=-DNO_QT4 QTINC= QTLIBS="
   else
     echo -e "Please retry with a valid QTDIR setting, e.g.\n\
 	/usr/lib64/qt4	(Red Hat)\n\
@@ -31,12 +31,9 @@ if [ "$message" != "" ]; then
   fi
 fi
 
-tmpfile=`mktemp /tmp/a.out.XXXXX`
-cmd="cc -o $tmpfile -lgs"
-if [ `uname` = "Darwin" ]; then
-  cmd="$cmd -L/usr/X11/lib -lXt -lX11 -liconv"
-fi
-$cmd >/dev/null 2>&1 <<eof
+tmpout=`mktemp /tmp/a.out.XXXXX`
+tmpsrc=`mktemp /tmp/a$$.c`
+cat >$tmpsrc << eof
 #include <stdio.h>
 #include <stdlib.h>
 #include <ghostscript/iapi.h>
@@ -49,16 +46,21 @@ int main()
   exit(0);
 }
 eof
+cmd="cc -o $tmpout $tmpsrc -lgs"
+if [ `uname` = "Darwin" ]; then
+  cmd="$cmd -L/usr/X11/lib -lXt -lX11 -liconv"
+fi
+$cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   echo "Ghostscript API not found. Build without Ghostscript support." >&2
   echo "Do you want to continue? [y/n]" >&2
   read yesno
   if [ "$yesno" = "y" ]; then
-    defines="$defines DEFINES=-DNO_GS GSLIBS="
+    defines="$defines DEFINES=-DNO_GS GSINC= GSLIBS="
   else
     target="nothing"
   fi
 fi
-rm -f $tmpfile
+rm -f $tmpout $tmpsrc
 
 echo $target $defines

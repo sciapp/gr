@@ -8,7 +8,7 @@
                mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
                plugin.o compress.o io.o
 
-     DEFINES = -DGRDIR=\"$(GRDIR)\" -DHAVE_ZLIB -DXFT
+     DEFINES = -DHAVE_ZLIB -DXFT
     INCLUDES = -I/usr/X11R6/include
  XFTINCLUDES = -I/usr/include/freetype2
           CC = cc
@@ -24,7 +24,7 @@
        ZLIBS = -lz
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(DEFINES) $(INCLUDES) $(XFTINCLUDES) $<
+	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(XFTINCLUDES) $<
 
 default:
 	@make `uname`
