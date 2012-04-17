@@ -6,7 +6,8 @@ EXPORTS
 	gr3_terminate
 	gr3_getrenderpathstring
 	gr3_clear
-	gr3_drawscene
+	gr3_drawimage
+	gr3_getimage
 	gr3_export
 	gr3_createmesh
 	gr3_drawmesh

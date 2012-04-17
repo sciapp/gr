@@ -17,7 +17,8 @@ def display():
     gr3.setcameraprojectionparameters(45, 1, 200)
     gr3.cameralookat(10*math.cos(-rx*math.pi/2), 10*math.sin(-rx*math.pi/2), 0, 0, 0, 0, 0, 0, 1)
 
-    gr3.renderdirect(window_width,window_height)
+    gr3.drawimage(0, window_width, 0, window_height, window_width, window_height, gr3.GR3_Window.GR3_WINDOW_OPENGL)
+    glViewport(0,0,window_width,window_height);
     glDisable(GL_LIGHTING)
     glDisable(GL_DEPTH_TEST)
     glMatrixMode(GL_MODELVIEW)
@@ -41,15 +42,7 @@ def display():
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18,ord(c))
     y-=0.04
     glRasterPos2f(x*2-1,y*2-1)
-    for c in u"'j' - HTML5/WebGL Export":
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,ord(c))
-    y-=0.03
-    glRasterPos2f(x*2-1,y*2-1)
-    for c in u"'p' - POV-Ray Export":
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,ord(c))
-    y-=0.03
-    glRasterPos2f(x*2-1,y*2-1)
-    for c in u"' ' - Beenden":
+    for c in u"(Rechtsklick öffnet das Kontextmenü)":
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12,ord(c))
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_LIGHTING)
@@ -59,11 +52,11 @@ def display():
     glPopMatrix()
     glutSwapBuffers()
     gr.clearws()
-    gr3.drawscene(0.0,0.5,0.0,0.5,800,800)
+    gr3.drawimage(0.0,0.5,0.0,0.5,800,800, gr3.GR3_Window.GR3_WINDOW_GKS)
     gr3.cameralookat(0, 0, 10, 0, 0, 0, math.cos(-rx*math.pi/2), math.sin(-rx*math.pi/2), 0)
-    gr3.drawscene(0.5,1.0,0.0,0.5,800,800)
+    gr3.drawimage(0.5,1.0,0.0,0.5,800,800, gr3.GR3_Window.GR3_WINDOW_GKS)
     gr3.cameralookat(10*math.cos(-rx*math.pi/2), 0, 10*math.sin(-rx*math.pi/2), 0, 0, 0, 0, 1, 0)
-    gr3.drawscene(0.5,1.0,0.5,1.0,800,800)
+    gr3.drawimage(0.5,1.0,0.5,1.0,800,800, gr3.GR3_Window.GR3_WINDOW_GKS)
     gr.settextcolorind(2)
     gr.text(0.05,0.9,"Dies ist ein GKS-Fenster,")
     gr.text(0.05,0.86,"in welches mit GR3 mehrere")
@@ -119,6 +112,7 @@ def keyboard(key, *args):
 
 window_width = 400
 window_height = 400
+export_quality = gr3.GR3_Quality.GR3_QUALITY_OPENGL_NO_SSAA
 def init_glut():
     glutInit()
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_ALPHA | GLUT_DEPTH)
@@ -128,6 +122,31 @@ def init_glut():
     glutReshapeFunc(reshape)
     glutMotionFunc(mouse_motion)
     glutKeyboardFunc(keyboard)
+    export_menu = glutCreateMenu(on_export_menu)
+    glutAddMenuEntry("POV-Ray scene (scene.pov)", 1)
+    glutAddMenuEntry("HTML5/WebGL (scene.html)", 2)
+    glutAddMenuEntry("JPEG image (scene.jpg)", 3)
+    glutAddMenuEntry("PNG image (scene.png)", 4)
+    opengl_quality_menu = glutCreateMenu(on_quality_menu)
+    glutAddMenuEntry(" No SSAA", gr3.GR3_Quality.GR3_QUALITY_OPENGL_NO_SSAA)
+    glutAddMenuEntry(" 2x SSAA", gr3.GR3_Quality.GR3_QUALITY_OPENGL_2X_SSAA)
+    glutAddMenuEntry(" 4x SSAA", gr3.GR3_Quality.GR3_QUALITY_OPENGL_4X_SSAA)
+    glutAddMenuEntry(" 8x SSAA", gr3.GR3_Quality.GR3_QUALITY_OPENGL_8X_SSAA)
+    glutAddMenuEntry("16x SSAA", gr3.GR3_Quality.GR3_QUALITY_OPENGL_16X_SSAA)
+    povray_quality_menu = glutCreateMenu(on_quality_menu)
+    glutAddMenuEntry(" No SSAA", gr3.GR3_Quality.GR3_QUALITY_POVRAY_NO_SSAA)
+    glutAddMenuEntry(" 2x SSAA", gr3.GR3_Quality.GR3_QUALITY_POVRAY_2X_SSAA)
+    glutAddMenuEntry(" 4x SSAA", gr3.GR3_Quality.GR3_QUALITY_POVRAY_4X_SSAA)
+    glutAddMenuEntry(" 8x SSAA", gr3.GR3_Quality.GR3_QUALITY_POVRAY_8X_SSAA)
+    glutAddMenuEntry("16x SSAA", gr3.GR3_Quality.GR3_QUALITY_POVRAY_16X_SSAA)
+    quality_menu = glutCreateMenu(on_quality_menu)
+    glutAddSubMenu("OpenGL", opengl_quality_menu)
+    glutAddSubMenu("POV-Ray", povray_quality_menu)
+    glutCreateMenu(on_main_menu)
+    glutAddSubMenu("Export as...", export_menu)
+    glutAddSubMenu("Set export quality", quality_menu)
+    glutAddMenuEntry("Quit", 0)
+    glutAttachMenu(GLUT_RIGHT_BUTTON);
 def init_gr3():
     def log_callback(message):
         print "Log: ", message
@@ -140,6 +159,32 @@ def init_gr3():
     gr3.drawspheremesh(len(atom_data), sphere_positions, sphere_colors, sphere_radii)
     # Atombindungen zeichnen
     gr3.drawcylindermesh(len(cylinder_positions), cylinder_positions, cylinder_directions, cylinder_colors, cylinder_radii, cylinder_lengths)
+
+def on_quality_menu(entry):
+    global export_quality
+    export_quality = entry
+    return 0
+
+def on_export_menu(entry):
+    if entry == 1:
+        filename = "scene.pov"
+    elif entry == 2:
+        filename = "scene.html"
+    elif entry == 3:
+        filename = "scene.jpg"
+    elif entry == 4:
+        filename = "scene.png"
+    else:
+        return 1
+    gr3.setquality(export_quality)
+    gr3.export(filename,800,800)
+    gr3.setquality(0)
+    return 0
+
+def on_main_menu(entry):
+    gr3.terminate()
+    sys.exit()
+    return 0
 
 if __name__ == "__main__":
     if not len(sys.argv) == 2:

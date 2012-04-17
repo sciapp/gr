@@ -328,6 +328,8 @@ static void     gr3_createconemesh_(void);
 static int      gr3_readpngtomemory_(int *pixels, const char *pngfile, int width, int height);
 static int      gr3_getpixmap_(char *bitmap, int width, int height, int use_alpha, int ssaa_factor);
 static int      gr3_getpovray_(char *bitmap, int width, int height, int use_alpha, int ssaa_factor);
+static int      gr3_drawimage_opengl_(float xmin, float xmax, float ymin, float ymax, int width, int height);
+static int      gr3_drawimage_gks_(float xmin, float xmax, float ymin, float ymax, int width, int height);
 #ifdef GR3_USE_CGL
     static int gr3_initGL_CGL_(void);
     static void      gr3_terminateGL_CGL_(void);
@@ -1236,33 +1238,43 @@ static void gr3_draw_(GLuint width, GLuint height) {
 #endif
 }
 
-GR3API void gr3_renderdirect(int width, int height) {
-    gr3_log_("gr3_renderdirect();");
-#if GL_ARB_framebuffer_object
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-#else
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-#endif
-    glViewport(0,0,width,height);
-    gr3_draw_(width, height);
+GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int window) {
+    switch (window) {
+        case GR3_WINDOW_OPENGL:
+            return gr3_drawimage_opengl_(xmin, xmax, ymin, ymax, width, height);
+        case GR3_WINDOW_GKS:
+            return gr3_drawimage_gks_(xmin, xmax, ymin, ymax, width, height);
+        default:
+            return GR3_ERROR_INVALID_VALUE;
+    }
 }
 
-GR3API int gr3_drawscene(float xmin, float xmax, float ymin, float ymax, int pixelWidth, int pixelHeight) {
+static int gr3_drawimage_opengl_(float xmin, float xmax, float ymin, float ymax, int width, int height) {
+    gr3_log_("gr3_drawimage_opengl_();");
+    #if GL_ARB_framebuffer_object
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    #else
+        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+    #endif
+    glViewport(xmin,ymin,xmax-xmin,ymax-ymin);
+    gr3_draw_(width, height);
+    return GR3_ERROR_NONE;
+}
+
+static int gr3_drawimage_gks_(float xmin, float xmax, float ymin, float ymax, int width, int height) {
     char *pixels;
     int err;
-    gr3_log_("gr3_drawscene();");
-    pixelWidth = 800;
-    pixelHeight = 800;
-    pixels = (char *)malloc(sizeof(int)*pixelWidth*pixelHeight);
+    gr3_log_("gr3_drawimage_gks_();");
+    pixels = (char *)malloc(sizeof(int)*width*height);
     if (!pixels) {
         return GR3_ERROR_OUT_OF_MEM;
     }
-    err = gr3_getimage(pixelWidth,pixelHeight,TRUE,pixels);
+    err = gr3_getimage(width,height,TRUE,pixels);
     if (err != GR3_ERROR_NONE) {
         free(pixels);
         return err;
     }
-    gr_drawimage(xmin, xmax, ymax, ymin, pixelWidth, pixelHeight, (int *)pixels);
+    gr_drawimage(xmin, xmax, ymax, ymin, width, height, (int *)pixels);
     free(pixels);
     return GR3_ERROR_NONE;
 }
