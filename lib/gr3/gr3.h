@@ -46,57 +46,55 @@
 #define GR3_ERROR_OPENGL_ERR 4             /*!< An OpenGL error occured */
 #define GR3_ERROR_OUT_OF_MEM 5             /*!< gr3 was unable to allocate
                                                 required memory. If this error
-                                                occurs, gr3 state is undefined.
-                                            */
+                                                occurs, gr3 state is undefined. */
 #define GR3_ERROR_NOT_INITIALIZED 6        /*!< A function was called before
                                                 initializing gr3. */
 #define GR3_ERROR_CAMERA_NOT_INITIALIZED 7 /*!< gr3_getpixmap() was called
-                                                before initializing the camera
-*/
+                                                before initializing the camera */
 #define GR3_ERROR_UNKNOWN_FILE_EXTENSION 8
 #define GR3_ERROR_CANNOT_OPEN_FILE 9
 #define GR3_ERROR_EXPORT 10
 
+#define GR3_QUALITY_OPENGL_NO_SSAA   0
+#define GR3_QUALITY_OPENGL_2X_SSAA   2
+#define GR3_QUALITY_OPENGL_4X_SSAA   4
+#define GR3_QUALITY_OPENGL_8X_SSAA   8
+#define GR3_QUALITY_OPENGL_16X_SSAA  16
+#define GR3_QUALITY_POVRAY_NO_SSAA   1
+#define GR3_QUALITY_POVRAY_2X_SSAA   3
+#define GR3_QUALITY_POVRAY_4X_SSAA   5
+#define GR3_QUALITY_POVRAY_8X_SSAA   9
+#define GR3_QUALITY_POVRAY_16X_SSAA  17
+
+#define GR3_WINDOW_OPENGL 1
+#define GR3_WINDOW_GKS 2
+            
 GR3API int         gr3_init(int *attrib_list);
 GR3API void        gr3_terminate(void);
 GR3API const char *gr3_getrenderpathstring(void);
+GR3API const char *gr3_geterrorstring(int error);
+GR3API void        gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
 GR3API int         gr3_clear(void);
 
-#define GR3_QUALITY_OPENGL_NO_SSAA   0x00000
-#define GR3_QUALITY_OPENGL_2X_SSAA   0x00010
-#define GR3_QUALITY_OPENGL_4X_SSAA   0x00100
-#define GR3_QUALITY_OPENGL_8X_SSAA   0x01000
-#define GR3_QUALITY_OPENGL_16X_SSAA  0x10000
-#define GR3_QUALITY_POVRAY_NO_SSAA   0x00001
-#define GR3_QUALITY_POVRAY_2X_SSAA   0x00011
-#define GR3_QUALITY_POVRAY_4X_SSAA   0x00101
-#define GR3_QUALITY_POVRAY_8X_SSAA   0x01001
-#define GR3_QUALITY_POVRAY_16X_SSAA  0x10001
 GR3API int         gr3_setquality(int quality);
-            
 GR3API int         gr3_getimage(int width, int height, int use_alpha, char *pixels);
 GR3API int         gr3_export(const char *filename, int width, int height);
+GR3API int         gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int window);
 
 GR3API int         gr3_createmesh(int *mesh, int n, const float *vertices, const float *normals, const float *colors);
 GR3API void        gr3_drawmesh(int mesh, int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);
 GR3API void        gr3_deletemesh(int mesh);
+
 GR3API void        gr3_cameralookat(float camera_x, float camera_y, float camera_z, float center_x, float center_y, float center_z, float up_x,  float up_y,  float up_z);
 GR3API int         gr3_setcameraprojectionparameters(float vertical_field_of_view, float zNear, float zFar);
 GR3API void        gr3_setlightdirection(float x, float y, float z);
 GR3API void        gr3_setbackgroundcolor(float red, float green, float blue, float alpha);
 
-GR3API const char *gr3_geterrorstring(int error);
-GR3API void        gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
 
 GR3API void        gr3_drawconemesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
 GR3API void        gr3_drawcylindermesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
 GR3API void        gr3_drawspheremesh(int n, const float *positions, const float *colors, const float *radii);
 
-            
-/* Deprecated: */
-GR3API int         gr3_drawscene(float xmin, float ymin, float xmax, float ymax, int pixelWidth, int pixelHeight);
-GR3API int         gr3_getpovray(int *pixmap, int width, int height);
-            
 #ifdef _WIN32
     #ifdef __cplusplus
         }

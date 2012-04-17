@@ -2,19 +2,19 @@ __all__ = ['GR3_InitAttribute',
            'GR3_Error',
            'GR3_Exception',
            'GR3_Quality',
+           'GR3_Window',
            'init',
            'terminate',
            'getimage',
            'export',
            'getrenderpathstring',
            'setlogcallback',
+           'drawimage',
            'createmesh',
            'drawmesh',
-           'drawscene',
            'deletemesh',
            'setquality',
            'clear',
-           'renderdirect',
            'cameralookat',
            'setcameraprojectionparameters',
            'setlightdirection',
@@ -49,19 +49,25 @@ class GR3_Error(object):
     GR3_ERROR_OUT_OF_MEM = 5
     GR3_ERROR_NOT_INITIALIZED = 6
     GR3_ERROR_CAMERA_NOT_INITIALIZED = 7
-
+    GR3_ERROR_UNKNOWN_FILE_EXTENSION = 8
+    GR3_ERROR_CANNOT_OPEN_FILE = 9
+    GR3_ERROR_EXPORT = 10
 
 class GR3_Quality(object):
-    GR3_QUALITY_OPENGL_NO_SSAA  = 0x00000
-    GR3_QUALITY_OPENGL_2X_SSAA  = 0x00010
-    GR3_QUALITY_OPENGL_4X_SSAA  = 0x00100
-    GR3_QUALITY_OPENGL_8X_SSAA  = 0x01000
-    GR3_QUALITY_OPENGL_16X_SSAA = 0x10000
-    GR3_QUALITY_POVRAY_NO_SSAA  = 0x00001
-    GR3_QUALITY_POVRAY_2X_SSAA  = 0x00011
-    GR3_QUALITY_POVRAY_4X_SSAA  = 0x00101
-    GR3_QUALITY_POVRAY_8X_SSAA  = 0x01001
-    GR3_QUALITY_POVRAY_16X_SSAA = 0x10001
+    GR3_QUALITY_OPENGL_NO_SSAA  = 0
+    GR3_QUALITY_OPENGL_2X_SSAA  = 2
+    GR3_QUALITY_OPENGL_4X_SSAA  = 4
+    GR3_QUALITY_OPENGL_8X_SSAA  = 8
+    GR3_QUALITY_OPENGL_16X_SSAA = 16
+    GR3_QUALITY_POVRAY_NO_SSAA  = 0+1
+    GR3_QUALITY_POVRAY_2X_SSAA  = 2+1
+    GR3_QUALITY_POVRAY_4X_SSAA  = 4+1
+    GR3_QUALITY_POVRAY_8X_SSAA  = 8+1
+    GR3_QUALITY_POVRAY_16X_SSAA = 16+1
+
+class GR3_Window(object):
+    GR3_WINDOW_OPENGL = 1
+    GR3_WINDOW_GKS = 2
 
 class GR3_Exception(Exception):
     def __init__(self,error_code):
@@ -80,19 +86,17 @@ def init(attrib_list=[]):
     if err:
         raise GR3_Exception(err)
 
-def drawscene(xmin,xmax,ymin,ymax,pixel_width,pixel_height):
+def drawimage(xmin,xmax,ymin,ymax,pixel_width,pixel_height, window):
     global _gr3
-    _gr3.gr3_drawscene(ctypes.c_float(xmin),ctypes.c_float(xmax),
+    err = _gr3.gr3_drawimage(ctypes.c_float(xmin),ctypes.c_float(xmax),
                        ctypes.c_float(ymin),ctypes.c_float(ymax),
-                         ctypes.c_uint(pixel_width),ctypes.c_uint(pixel_height))
+                         ctypes.c_uint(pixel_width),ctypes.c_uint(pixel_height),ctypes.c_uint(window))
+    if err:
+        raise GR3_Exception(err)
 
 def terminate():
     global _gr3
     _gr3.gr3_terminate()
-
-def renderdirect(width, height):
-    global _gr3
-    _gr3.gr3_renderdirect(width, height)
 
 def setquality(quality):
     global _gr3
