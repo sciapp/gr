@@ -18,6 +18,7 @@
           AR = ar
       RANLIB = ar ts
      SOFLAGS = -shared
+INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
         LIBS = -lpthread -ldl -lc -lm
      XFTLIBS = -lXft -lfontconfig
        XLIBS = $(XFTLIBS) -L/usr/X11R6/lib -lXt -lX11
@@ -29,22 +30,21 @@
 default:
 	@make `uname`
 
-targets: libGKS.a libGKS.so demo gksm plugins
-
 Linux:
-	@make targets
+	@make targets INSTALL_NAME=""
 Darwin:
 	@make targets CFLAGS="$(CFLAGS) -fpascal-strings" \
-	XFTINCLUDES="-I/usr/X11/include/freetype2"
-	LD="$(CC)" LDFLAGS="-framework Carbon" \
-	SOFLAGS="-dynamiclib -framework Carbon -Wl,-install_name,$(LIBDIR)/libGKS.so"
+	XFTINCLUDES="-I/usr/X11/include/freetype2" SOFLAGS="-dynamiclib"
+
+targets: libGKS.a libGKS.so demo gksm plugins
 
 libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?
 	$(RANLIB) $@
 
 libGKS.so: $(GKSOBJS)
-	$(LD) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(XLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(XLIBS) $(LIBS) \
+	$(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGKS.a
 	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(XLIBS) $(LIBS)

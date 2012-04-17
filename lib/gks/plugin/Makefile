@@ -31,7 +31,7 @@ Darwin:
 	GSINC="-I/usr/local/include/ghostscript" LIBS="-liconv"
 Linux:
 	@make targets \
-	SOFLAGS="-shared" LDFLAGS="-Wl,-rpath,$(QTDIR)/lib"
+	SOFLAGS="-shared" LDFLAGS="-Wl,-rpath=$(QTDIR)/lib"
 
 qtplugin.so: qtplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(QTLIBS) $(LDFLAGS) $(XLIBS) $(LIBS)

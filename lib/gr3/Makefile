@@ -15,7 +15,7 @@
 default:
 	make `uname`
 Linux:
-	make targets LDFLAGS="-Wl,-rpath,$(LIBDIR)"
+	make targets LDFLAGS="-Wl,-rpath=$(LIBDIR)"
 Darwin:
 	make targets GLLIBS="-framework OpenGL -framework Cocoa"
 

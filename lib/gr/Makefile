@@ -1,25 +1,27 @@
-    GRDIR = /usr/local/gr
-   BINDIR = $(GRDIR)/bin
-   LIBDIR = $(GRDIR)/lib
-   INCDIR = $(GRDIR)/include
+       GRDIR = /usr/local/gr
+      BINDIR = $(GRDIR)/bin
+      LIBDIR = $(GRDIR)/lib
+      INCDIR = $(GRDIR)/include
 
-   GROBJS = gr.o text.o contour.o spline.o strlib.o property.o image.o \
-	    grforbnd.o
-  DEFINES =
- INCLUDES = -I../gks -I../jpeg -I../png
-       CC = cc
-   CFLAGS = $(DEFINES) -O -Wall -fPIC
-       AR = ar
-   RANLIB = ar ts
-  SOFLAGS = -shared
-     LIBS = -lc -lm
- JPEGLIBS = ../jpeg/libjpeg.a
-  PNGLIBS = ../png/libpng.a
-  GKSLIBS = ../gks/libGKS.a
-  XFTLIBS = -lXft -lfontconfig
- XLIBPATH = /usr/X11R6/lib
-    XLIBS = -L$(XLIBPATH) $(XFTLIBS) -lXt -lX11
-    ZLIBS = -lz
+      GROBJS = gr.o text.o contour.o spline.o strlib.o property.o image.o \
+               grforbnd.o
+     DEFINES =
+    INCLUDES = -I../gks -I../jpeg -I../png
+          CC = cc
+      CFLAGS = $(DEFINES) -O -Wall -fPIC
+          AR = ar
+      RANLIB = ar ts
+     SOFLAGS = -shared
+INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
+     LDFLAGS =
+        LIBS = -lc -lm
+    JPEGLIBS = ../jpeg/libjpeg.a
+     PNGLIBS = ../png/libpng.a
+     GKSLIBS = ../gks/libGKS.a
+     XFTLIBS = -lXft -lfontconfig
+    XLIBPATH = /usr/X11R6/lib
+       XLIBS = -L$(XLIBPATH) $(XFTLIBS) -lXt -lX11
+       ZLIBS = -lz
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
@@ -29,10 +31,10 @@ default:
 
 Linux:
 	@make targets \
-	LDFLAGS="-Wl,-rpath,$(LIBDIR)"
+	INSTALL_NAME="" LDFLAGS="-Wl,-rpath=$(LIBDIR)"
 Darwin:
-	@make targets \
-	LD="$(CC)" LDFLAGS="-dynamiclib -framework Carbon"
+	@make targets LD="$(CC)" \
+	SOFLAGS="-dynamiclib"
 
 targets: prerequisites libGR.a libGR.so add-ons
 
@@ -47,8 +49,8 @@ libGR.a: $(GROBJS)
 	$(RANLIB) $@
 
 libGR.so: $(GROBJS)
-	$(LD) -o $@ $(SOFLAGS) $(GROBJS) $(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
-	$(ZLIBS) $(XLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
+	$(ZLIBS) $(XLIBS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 install:
 	@make -C ../gks install
