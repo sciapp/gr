@@ -1,23 +1,25 @@
-     GRDIR = /usr/local/gr
-    LIBDIR = $(GRDIR)/lib
-    INCDIR = $(GRDIR)/include
+       GRDIR = /usr/local/gr
+      LIBDIR = $(GRDIR)/lib
+      INCDIR = $(GRDIR)/include
 
-  INCLUDES = -I../png -I../jpeg -I$(GRDIR)/include
-    GRLIBS = -L$(GRDIR)/lib -lGR
-    GLLIBS = -lGL -lX11
-   PNGLIBS = ../png/libpng.a
-  JPEGLIBS = ../jpeg/libjpeg.a
-      LIBS = -lz
-    CFLAGS = -Wall -Wextra -pedantic -g -fPIC
-   SOFLAGS = -shared
-   LDFLAGS =
+    INCLUDES = -I../png -I../jpeg -I../gr
+      GRLIBS = -L../gr -lGR
+      GLLIBS = -lGL -lX11
+     PNGLIBS = ../png/libpng.a
+    JPEGLIBS = ../jpeg/libjpeg.a
+        LIBS = -lz
+      CFLAGS = -Wall -Wextra -pedantic -g -fPIC
+     SOFLAGS = -shared
+INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR3.so
+     LDFLAGS =
 
 default:
 	make `uname`
 Linux:
-	make targets LDFLAGS="-Wl,-rpath=$(LIBDIR)"
+	make targets INSTALL_NAME="" LDFLAGS="-Wl,-rpath=$(LIBDIR)"
 Darwin:
-	make targets GLLIBS="-framework OpenGL -framework Cocoa"
+	make targets SOFLAGS="-dynamiclib" \
+	GLLIBS="-framework OpenGL -framework Cocoa" SOFLAGS="-dynamiclib"
 
 targets: prerequisites libGR3.so gr3.py
 
@@ -26,7 +28,7 @@ prerequisites:
 
 libGR3.so: gr3.c
 	${CC} -o $@ $? $(CFLAGS) $(INCLUDES) $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
-	$(JPEGLIBS) $(LIBS) $(SOFLAGS) $(LDFLAGS)
+	$(JPEGLIBS) $(LIBS) $(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
 
 gr3.c: gr3.h
 
