@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "moldyn.h"
 #include "moldyn_element_infos.h"
@@ -38,6 +39,16 @@ float *bond_colors = NULL;
 float *bond_radii = NULL;
 float *bond_lengths = NULL;
 
+float xmin;
+float xmax;
+float ymin;
+float ymax;
+float zmin;
+float zmax;
+float xmean;
+float ymean;
+float zmean;
+
 static FILE *current_file = NULL;
 static int current_file_format = MOLDYN_FORMAT_UNKNOWN;
 static int current_frame = 0;
@@ -51,8 +62,9 @@ static void moldyn_realloc_atom_buffers_(int new_num_atoms);
 static void moldyn_realloc_bond_buffers_(int new_num_bonds);
 static int  moldyn_check_file_(FILE *fp, int *format, long *first_frame_position);
 static int  moldyn_read_frame_(int frame_number);
-static int moldyn_read_frame_xyz_(void);
-static int moldyn_read_frame_normal_(void);
+static int  moldyn_read_frame_xyz_(void);
+static int  moldyn_read_frame_normal_(void);
+static void moldyn_analyze_frame_(void);
 static int atomname2atomnumber(const char *atomname);
 
 void moldyn_init_filereader(void) {
@@ -193,6 +205,7 @@ static int moldyn_read_frame_(int frame_number) {
         }
         return 1;
     }
+    moldyn_analyze_frame_();
     
     current_frame = frame_number;
     if (frame_number + 1 == num_known_frame_positions) {
@@ -382,6 +395,106 @@ static int moldyn_read_frame_xyz_(void) {
     return 0;
 }
 
+static void moldyn_analyze_frame_(void) {
+    int i, j;
+    int dim;
+    float scale;
+    
+    xmin = atom_positions[0];
+    xmax = atom_positions[0];
+    ymin = atom_positions[1];
+    ymax = atom_positions[1];
+    zmin = atom_positions[2];
+    zmax = atom_positions[2];
+    
+    for (i = 0; i < num_atoms; i++) {
+        if (atom_positions[3*i+0] < xmin) {
+            xmin = atom_positions[3*i+0];
+        } else if (atom_positions[3*i+0] > xmax) {
+            xmax = atom_positions[3*i+0];
+        }
+        if (atom_positions[3*i+1] < ymin) {
+            ymin = atom_positions[3*i+1];
+        } else if (atom_positions[3*i+1] > ymax) {
+            ymax = atom_positions[3*i+1];
+        }
+        if (atom_positions[3*i+2] < zmin) {
+            zmin = atom_positions[3*i+2];
+        } else if (atom_positions[3*i+2] > zmax) {
+            zmax = atom_positions[3*i+2];
+        }
+    }
+    
+    xmean = (xmin + xmax)/2;
+    ymean = (ymin + ymax)/2;
+    zmean = (zmin + zmax)/2;
+    xmin -= xmean;
+    xmax -= xmean;
+    ymin -= ymean;
+    ymax -= ymean;
+    zmin -= zmean;
+    zmax -= zmean;
+    
+    if (current_options.box_size > 0) {
+        xmin = -current_options.box_size;
+        xmax = current_options.box_size;
+        ymin = -current_options.box_size;
+        ymax = current_options.box_size;
+        zmin = -current_options.box_size;
+        zmax = current_options.box_size;
+    }
+    
+    if (xmax == xmin || ymax == ymin || zmax == zmin) {
+        dim = 2;
+    } else {
+        dim = 3;
+    }
+    
+    scale = (xmax - xmin + ymax - ymin + zmax - zmin) / dim;
+    while (scale < (zmax - zmin) / 2) {
+        scale = scale * 1.5;
+    }
+    /* TODO: add dist */
+    if (current_options.delta <= 0) {
+        float delta;
+        if (current_options.show_bonds && current_options.delta < 0) {
+            delta = 0;
+            for (i = 0; i + 1 < num_atoms; i++) {
+                float *pos1 = atom_positions + 3*i;
+                float *pos2 = atom_positions + 3*(i+1);
+                delta += sqrt((pos1[0]-pos2[0])*(pos1[0]-pos2[0])
+                              +(pos1[1]-pos2[1])*(pos1[1]-pos2[1])
+                              +(pos1[2]-pos2[2])*(pos1[2]-pos2[2]));
+            }
+            delta = 1.125 * delta / (num_atoms - 1);
+        } else {
+            delta = 2.25 * scale / sqrt(num_atoms);
+        }
+        
+        if (current_options.show_bonds) {
+            while (TRUE) {
+                num_bonds = 0;
+                for (i = 0; i < num_atoms; i++) {
+                    for (j = i + 1; j < num_atoms; j++) {
+                        float *pos1 = atom_positions + 3*i;
+                        float *pos2 = atom_positions + 3*j;
+                        if ( delta > sqrt((pos1[0]-pos2[0])*(pos1[0]-pos2[0])
+                                         +(pos1[1]-pos2[1])*(pos1[1]-pos2[1])
+                                         +(pos1[2]-pos2[2])*(pos1[2]-pos2[2]))) {
+                            num_bonds++;
+                        }
+                    }
+                }
+                if (num_bonds > 3 * num_atoms) {
+                    delta *= 0.75;
+                } else {
+                    break;
+                }
+            }
+        } 
+    }
+}
+
 static int moldyn_check_file_(FILE *fp, int *format, long *first_frame_position) {
     char line[MOLDYN_MAX_LINE_LENGTH+1] = {0};
     int i_dummy;
@@ -396,7 +509,14 @@ static int moldyn_check_file_(FILE *fp, int *format, long *first_frame_position)
     }
     
     if (*line == '#') {
+        options_t file_options = start_options;
         strcpy(temp_comment, line);
+        if (moldyn_parse_options_from_comment(&file_options,temp_comment)) {
+            moldyn_log("file comment was no valid options string!");
+            current_options = start_options; 
+        } else {
+            current_options = file_options;
+        }
         *first_frame_position = ftell(fp);
         if (!fgets(line, MOLDYN_MAX_LINE_LENGTH+1, fp)) {
             return 1;

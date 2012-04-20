@@ -4,6 +4,21 @@
 #define MOLDYN_MAX_LINE_LENGTH 255
 #define MOLDYN_SEPARATORS " \t"
 
+typedef struct {
+    int show_box;
+    float box_size;
+    int show_bonds;
+    int bond_chain;
+    float delta;
+    float rot;
+    float tilt;
+} options_t;
+
+extern options_t current_options;
+extern options_t start_options;
+extern const char *program_name;
+extern char *current_filename;
+
 extern char current_title[MOLDYN_MAX_LINE_LENGTH+1];
 extern char current_file_comment[MOLDYN_MAX_LINE_LENGTH+1];
 
@@ -97,4 +112,7 @@ int  moldyn_set_normal_quality(int quality);
 /* Utility functions */
 void *moldyn_reallocf(void *ptr, size_t size);
 void moldyn_log(const char *log_message);
+int moldyn_parse_options(options_t *options, int argc, char *argv[]);
+int moldyn_parse_options_from_comment(options_t *options, const char *comment);
+int moldyn_parse_arguments(int argc, char *argv[]);
 #endif
