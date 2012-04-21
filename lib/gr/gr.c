@@ -4827,7 +4827,7 @@ void gr_setarrowstyle(int style)
 void gr_drawarrow(float x1, float y1, float x2, float y2)
 {
   float xs, ys, xe, ye;
-  int errind, ltype, intstyle;
+  int errind, ltype, intstyle, tnr;
   float a, c, xc, yc, f;
   int fill, i, j, n;
   float xi, yi, x[10], y[10];
@@ -4841,8 +4841,10 @@ void gr_drawarrow(float x1, float y1, float x2, float y2)
 
   gks_inq_pline_linetype(&errind, &ltype);
   gks_inq_fill_int_style(&errind, &intstyle);
+  gks_inq_current_xformno(&errind, &tnr);
 
   gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+  gks_select_xform(NDC);
 
   c = sqrt((xe - xs) * (xe - xs) + (ye - ys) * (ye - ys));
   if (ys != ye)
@@ -4869,15 +4871,16 @@ void gr_drawarrow(float x1, float y1, float x2, float y2)
 	{
 	  xi = f * vertex_list[arrow_style][j++];
 	  yi = f * vertex_list[arrow_style][j++];
-	  x[i] = x_log((xc + cos(a) * xi - sin(a) * yi - nx.b) / nx.a);
-	  y[i] = y_log((yc + sin(a) * xi + cos(a) * yi - nx.d) / nx.c);
+	  x[i] = xc + cos(a) * xi - sin(a) * yi;
+	  y[i] = yc + sin(a) * xi + cos(a) * yi;
 	}
       if (fill)
-	gr_fillarea(n, x, y);
+	gks_fillarea(n, x, y);
       else
-	gr_polyline(n, x, y);
+	gks_polyline(n, x, y);
     }
 
+  gks_select_xform(tnr);
   gks_set_fill_int_style(intstyle);
   gks_set_pline_linetype(ltype);
 
