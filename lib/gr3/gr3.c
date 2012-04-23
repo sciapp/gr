@@ -1,6 +1,6 @@
 /*!\file gr3.c
  * ToDo:
- * - gr3_drawimage
+ * - 
  * Bugs:
  * - glXCreatePbuffer -> "failed to create drawable" probably caused by being 
  *      run in virtual box, other applications show the same error message
@@ -847,6 +847,14 @@ static void gr3_dodrawmesh_(int mesh,
             /* left = cross(forward,up); */
             for (j = 0; j < 3; j++) {
                 left[j] = forward[(j+1)%3]*up[(j+2)%3] - up[(j+1)%3]*forward[(j+2)%3];
+            }
+            tmp = 0;
+            for (j = 0; j < 3; j++) {
+                tmp+= left[j]*left[j];
+            }
+            tmp = sqrt(tmp);
+            for (j = 0; j < 3; j++) {
+                left[j] = left[j]/tmp;
             }
             /* up = cross(left,forward); */
             for (j = 0; j < 3; j++) {
@@ -2018,6 +2026,14 @@ static int gr3_export_html_(const char *filename, int width, int height) {
                     /* left = cross(forward,up); */
                     for (j = 0; j < 3; j++) {
                         left[j] = forward[(j+1)%3]*up[(j+2)%3] - up[(j+1)%3]*forward[(j+2)%3];
+                    }/* left = normalize(left); */
+                    tmp = 0;
+                    for (j = 0; j < 3; j++) {
+                        tmp+= left[j]*left[j];
+                    }
+                    tmp = sqrt(tmp);
+                    for (j = 0; j < 3; j++) {
+                        left[j] = left[j]/tmp;
                     }
                     /* up = cross(left,forward); */
                     for (j = 0; j < 3; j++) {
