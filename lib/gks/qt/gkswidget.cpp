@@ -180,6 +180,9 @@ static
 int predef_styli[] = { 1, 1, 1, 2, 3 };
 
 static
+int unused_variable = 0;
+
+static
 void set_norm_xform(int tnr, float *wn, float *vp)
 {
   int xp1, yp1, xp2, yp2;
@@ -672,7 +675,7 @@ void polymarker(int n, float *px, float *py)
 static
 void text_routine(float x, float y, int nchars, char *chars)
 {
-  int i, ch, xstart, ystart, width, ascent, descent;
+  int i, ch, xstart, ystart, width;
   float xrel, yrel, ax, ay;
   QFontMetrics fm = QFontMetrics(*p->font);
   QString s = QString("");
@@ -690,9 +693,6 @@ void text_routine(float x, float y, int nchars, char *chars)
   NDC_to_DC(x, y, xstart, ystart);
 
   width = fm.width(s);
-  ascent = fm.ascent();
-  descent = fm.descent();
-
   xrel = width * xfac[gkss->txal[0]];
   yrel = p->capheight * yfac[gkss->txal[1]];
   CharXform(xrel, yrel, ax, ay);
@@ -939,7 +939,7 @@ void interp(char *str)
   char *s;
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
-  int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr;
+  int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
   float *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
@@ -1084,6 +1084,7 @@ void interp(char *str)
           break;
 
         case  14:
+	  unused_variable = *len_c_arr;
           text(f_arr_1[0], f_arr_2[0], strlen(c_arr), c_arr);
           break;
 

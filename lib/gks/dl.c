@@ -253,5 +253,10 @@ void gks_dl_write_item(gks_display_list_t *d,
     }
 
   if (d->buffer != NULL)
-    d->buffer[d->nbytes] = 0;
+    {
+      if (d->nbytes + 4 > d->size)
+        reallocate(d, 4);
+
+      memset(d->buffer + d->nbytes, 0, 4);
+    }
 }
