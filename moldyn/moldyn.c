@@ -9,6 +9,12 @@
 #include "moldyn.h"
 
 #define MAX_ARGS 32
+#ifdef _WIN32
+#define HUGE 100000000
+#else
+#define HUGE HUGE_VAL
+#endif
+
 
 #define SEPARATORS " \t"
 
@@ -71,8 +77,8 @@ static int CP_LEN;
 static double delta = 0;
 static double tolerance = 0;
 int num_atoms = 0;
-double xmin = HUGE_VAL, ymin = HUGE_VAL, zmin = HUGE_VAL;
-double xmax = -HUGE_VAL, ymax = -HUGE_VAL, zmax = -HUGE_VAL;
+double xmin = HUGE, ymin = HUGE, zmin = HUGE;
+double xmax = -HUGE, ymax = -HUGE, zmax = -HUGE;
 
 static double global_xmin, global_xmax, global_ymin, global_ymax, global_zmin, global_zmax;
 static double global_meanx, global_meany, global_meanz;
