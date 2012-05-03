@@ -2200,7 +2200,7 @@ static int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, in
         int res;
         char *povray_call = malloc(strlen(povfile)+strlen(povfile)+80);
 #ifdef GR3_USE_WIN
-        sprintf(povray_call,"megapov +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d",povfile,pngfile,width,height, ssaa_factor);
+        sprintf(povray_call,"megapov +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d 2>NUL",povfile,pngfile,width,height, ssaa_factor);
 #else
         sprintf(povray_call,"povray +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d 2>/dev/null",povfile,pngfile,width,height, ssaa_factor);
 #endif

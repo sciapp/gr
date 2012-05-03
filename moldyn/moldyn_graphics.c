@@ -19,6 +19,9 @@
 #include "gr3.h"
 
 #include "jpeg2ps/jpeg2ps.h"
+#ifndef M_PI
+#define M_PI 3.1415926535
+#endif
 
 #define torad(alpha) ((alpha)*(M_PI / 180.0))
 #define todeg(alpha) ((alpha)*(180.0 / M_PI))
@@ -59,10 +62,6 @@ static void moldyn_display_callback(void);
 static void moldyn_display_text_(void);
 static void moldyn_display_box_(void);
 
-#define MOLDYN_EXPORT_TO_JPEG 1
-#define MOLDYN_EXPORT_TO_PNG 2
-#define MOLDYN_EXPORT_TO_POV 3
-#define MOLDYN_EXPORT_TO_HTML 4
 static void moldyn_export_(int type, int width, int height);
 
 void start_mainloop() {
@@ -231,7 +230,7 @@ static void moldyn_init_gr3(void) {
     if (err) {
         moldyn_error(gr3_geterrorstring(err));
     }
-    gr3_setbackgroundcolor(1, 1, 1, 0);
+    gr3_setbackgroundcolor(1, 1, 1, 1);
     
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
@@ -364,7 +363,7 @@ static void drawStr(float x, float y, const char *str, void *fnt) {
     }
 }
 
-void makePov(void) {
+void makePov(int type) {
     int xres, yres;
     float x,y,z;
     double c1 = cos(torad(-rotation-10));
@@ -392,7 +391,7 @@ void makePov(void) {
     gr3_setlightdirection(x, y, z);
     gr3_setquality(GR3_QUALITY_POVRAY_8X_SSAA);
     if (povray == -9999) {
-        moldyn_export_(MOLDYN_EXPORT_TO_PNG,xres,yres);
+        moldyn_export_(type,xres,yres);
     } else if (povray > 0) {
         rewind(fptr);
         current_cycle = 0;
@@ -401,7 +400,7 @@ void makePov(void) {
             if (file_done)
                 break;
             moldyn_update_graphics();
-            moldyn_export_(MOLDYN_EXPORT_TO_PNG,xres,yres);
+            moldyn_export_(type,xres,yres);
         }
     }
     gr3_setquality(GR3_QUALITY_OPENGL_NO_SSAA);
@@ -544,7 +543,7 @@ static void keyboard(unsigned char key, int x, int y) {
     switch (key) {
         case 'a':
             povray = pix = -9999;
-            makePov();
+            makePov(MOLDYN_EXPORT_TO_PNG);
             break;
             
         case 'r':

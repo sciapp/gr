@@ -1,18 +1,20 @@
 #include <stdlib.h>
 #include <stdio.h>
-
+#ifdef WIN32
+#include <conio.h>
+#endif
 #include "moldyn.h"
 
-#ifndef Version
-#define Version "MolDyn"
+#ifndef MOLDYN_VERSION
+#define MOLDYN_VERSION "MolDyn"
 #endif
-#ifndef Revision
-#define Revision ""
+#ifndef MOLDYN_REVISION
+#define MOLDYN_REVISION ""
 #endif
 
 char *program_name = "moldyn";
 static const char *help_message[] = {
-    "where options include:                      "Version" "Revision"",
+    "where options include:                      "MOLDYN_VERSION" "MOLDYN_REVISION"",
     "    -povray n             povray [0]         by J.Heinen (initial version),",
     "    -atoms n              number of atoms         A.Peters, F.Rhiem",
     "    -bonds (yes|no|chain) display bonds",
@@ -60,6 +62,9 @@ void moldyn_usage(void) {
     for (cpp = (char **) help_message; *cpp; cpp++) {
         fprintf(stderr, "%s\n", *cpp);
     }
-    
+#ifdef _WIN32
+    fprintf(stderr, "(Press any key to exit)");
+    _getch();
+#endif
     moldyn_exit(0);
 }

@@ -6,7 +6,7 @@ GR3INCLUDES = -I./../lib/gr3/
      CFLAGS = -Wall -pedantic
 JPEG2PSOBJS = jpeg2ps/jpeg2ps.o jpeg2ps/readjpeg.o jpeg2ps/asc85ec.o
        OBJS = moldyn.o  moldyn_utilities.o moldyn_element_information.o moldyn_graphics.o ${JPEG2PSOBJS}
-    DEFINES = -DVersion="\"MolDyn - 8.0.0\"" -DRevision="\"Rev: `date +"%b %e %Y"`\""
+    DEFINES = -MOLDYN_VERSION="\"MolDyn - 8.0.0\"" -DMOLDYN_REVISION="\"Rev: `date +"%b %e %Y"`\""
 
 default:
 	make `uname`
@@ -33,7 +33,7 @@ libGR3.so:
 	$(CC) ${CFLAGS} ${DEFINES} -c -o $@ $<
 
 moldyn_graphics.o: moldyn_graphics.c libGR3.so
-	$(CC) ${CFLAGS} -I ${GLINCLUDES} ${GR3INCLUDES} ${DEFINES} -c -o $@ moldyn_graphics.c
+	$(CC) ${CFLAGS} ${GLINCLUDES} ${GR3INCLUDES} ${DEFINES} -c -o $@ moldyn_graphics.c
 
 moldyn: ${OBJS}
 	$(CC) ${CFLAGS} ${GLLIBS} ${XLIBS2} ${GR3LIBS} -o $@ ${OBJS}

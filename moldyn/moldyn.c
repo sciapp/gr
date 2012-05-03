@@ -12,7 +12,9 @@
 #ifdef _WIN32
 #define HUGE 100000000
 #else
+#ifndef HUGE
 #define HUGE HUGE_VAL
+#endif
 #endif
 
 
@@ -981,7 +983,7 @@ int main(int argc, char **argv) {
     if (povray <= 0) {
         start_mainloop();
     } else {
-        makePov();
+        makePov(MOLDYN_EXPORT_TO_PNG);
     }
     return 0;
 }
