@@ -7,13 +7,13 @@
       GLLIBS = -lGL -lX11
      PNGLIBS = ../png/libpng.a
     JPEGLIBS = ../jpeg/libjpeg.a
-        LIBS = -lz
+       ZLIBS = -lz
       CFLAGS = -Wall -Wextra -pedantic -g -fPIC
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR3.so
      LDFLAGS =
 
-default:
+default: gr3.c gr3.h
 	make `uname`
 Linux:
 	make targets INSTALL_NAME="" LDFLAGS="-Wl,-rpath=$(LIBDIR)"
@@ -27,8 +27,8 @@ prerequisites:
 	@make -C ../gr
 
 libGR3.so: gr3.c
-	${CC} -o $@ $? $(CFLAGS) $(INCLUDES) $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
-	$(JPEGLIBS) $(LIBS) $(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
+	${CC} -o $@ $? $(CFLAGS) $(INCLUDES) ${ZLIBS} $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
+	$(JPEGLIBS) $(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
 
 gr3.c: gr3.h
 

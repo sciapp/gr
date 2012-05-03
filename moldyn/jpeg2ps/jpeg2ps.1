@@ -1,0 +1,139 @@
+.\" This is the manual page for jpeg2ps
+.\"
+.TH JPEG2PS 1 "Feb 02, 2002" "" ""
+
+.SH NAME
+jpeg2ps \- convert JPEG compressed images to PostScript Level 2 or 3
+
+.SH SYNOPSIS
+.B jpeg2ps 
+[-a] [-b] [-h] [-o 
+.I name
+] [-p 
+.I size
+] [-q] [-r
+.I dpi
+] file.jpg > file.eps
+
+.SH DESCRIPTION
+jpeg2ps reads a JPEG file (\fBnot\fP stdin) and writes a DSC-compliant EPS
+file containing the compressed JPEG data in PostScript format to stdout.
+The produced EPS files contain the necessary DSC comments including
+BoundingBox, so they may be imported in page layout applications. However,
+they do not contain preview images, so you will only see a gray box on
+screen.
+
+The jpeg2ps program performs some sanity checks with the JPEG data. It
+detects several kinds of corrupt input data, but it is not absolutely
+foolproof. One special feature is that you can feed Macintosh JPEG files
+(PICT-JPEG) to jpeg2ps.  These normally have several hundred bytes of
+additional stuff before the JPEG data. This PICT rubbish is simply ignored
+by jpeg2ps.
+
+.SH OPTIONS
+.TP
+\fB-a\fP
+
+Auto rotate feature. If the auto rotate feature is activated, images with
+width > height are automatically rotated to landscape mode. The image is
+scaled in a way to use at least one full edge of the paper. A 20 pt margin
+is subtracted on each side. Page sizes can be chosen with the \fB-p\fP
+option. The default page size is \fIletter\fP or \fIa4\fP, depending on the
+compilation flags. Don't use this option if you simply want to generate EPS
+files for inclusion in your documents.
+
+.TP
+\fB-b\fP
+Binary mode. By default, jpeg2ps sends the image data in ASCII85 encoded
+form which is suitable for any communication channel (serial, parallel or
+whatever). If you are sure that your channel is truly 8-bit clean,
+you can force 8-bit data with this option. Note that this normally does not
+apply to 8-bit serial or even parallel channels since some control
+characters are reserved for the communications protocol. You can use binary
+data e.g.: with some networked printers, with direct-access PostScript
+interpreters, e.g. Ghostscript, or serial and parallel channels using
+Binary Control Protocol (BCP).
+
+.TP
+\fB-h\fP 
+Hex mode (ASCIIHex encoding). Using this option, jpeg2ps generates 7-bit
+clean data by using ASCIIHex encoding instead of the more space-efficient
+ASCII85 encoding.  This is only useful for specialized applications,
+e.g. for debugging, since jpeg2ps requires PostScript Level 2 anyway, and
+ASCII85 is supported in any Level 2 interpreter.
+
+.TP
+\fB-o\fP \fIname\fP
+Output file name (as an alternative to output redirection).
+
+.TP
+\fB-p\fP \fIsize\fP
+Page size name. Known names are: a0, a1, a2, a3, a4, a5, a6, b5, letter,
+legal, ledger, p11x17
+
+.TP
+\fB-q\fP
+Quiet mode: suppress all informational messages
+
+.TP
+\fB-r\fP \fIdpi\fP
+
+Resolution value. Using this option you can force jpeg2ps to use a certain
+dpi value.  Since automatic actions are also disabled in this case, you are
+responsible for choosing a reasonable resolution value.  For example, you
+can print a 300 dpi image half-sized by supplying -r 600. 
+The option "-r 0" instructs jpeg2ps to look for a JFIF density/resolution
+marker and use that value. Automatic scaling and rotation are disabled.
+However, if no resolution information is found in the file, jpeg2ps
+applies the default algorithm described above.
+
+.SH DIAGNOSTICS
+The jpeg2ps program issues three kinds of messages:
+.TP
+\fBNotes\fP
+Have an informational character.
+.TP
+\fBWarnings\fP
+A potential problem with the file was recognized, processing continues.
+.TP
+\fBErrors\fP
+Either a severe problem within the JPEG file was found or the file explores
+JPEG features not compatible with PostScript Level 2.
+
+.P
+Note that there are some JPEG producers which do not exactly conform to the
+specification and that the JPEG spec itself does not cover every aspect of
+the file format. You are on the safe side if you demand JFIF files which are
+happily accepted by jpeg2ps. (For further information see the JPEG FAQ
+by Tom Lane.)
+
+.SH SHAMELESS PLUG
+My book contains a lot of information on PostScript, Fonts, and PDF
+(currently only available in German):
+
+.nf
+Die PostScript- & PDF-Bibel
+Von Thomas Merz und Olaf Druemmer
+654 Seiten, ISBN 3-935320-01-9
+Kopublikation PDFlib GmbH/dpunkt Verlag
+http://www.pdflib.com/bibel
+e-mail orders: books@pdflib.com
+
+.SH AUTHOR
+.nf
+Thomas Merz <tm@pdflib.com>
+http://www.pdflib.com
+.fe
+
+.SH LICENSE
+This software is free. You are granted the right to use and copy it. This
+software may not be sold or bundled with any commercial package without
+express written permission of the author. 
+
+The author accepts no responsibility for damages resulting from the use of
+this software and makes no warranty, either express or implied, including but
+not limited to, any implied warranty of merchantability or fitness for a
+particular purpose. This software is provided as is, and you assume all risks
+when using it. 
+
+.\" End of manual page.

@@ -483,7 +483,6 @@ GR3API int gr3_init(int *attrib_list) {
                 "if (dot(LightDirection,LightDirection) > 0.001) {",
                 "diffuse = dot(normalize(LightDirection),Normal);",
                 "}",
-                "diffuse = abs(diffuse);\n",
                 "Color.rgb = diffuse*Color.rgb;"
             "}\n"};
             
@@ -1308,7 +1307,6 @@ GR3API int gr3_setquality(int quality) {
         return GR3_ERROR_INVALID_VALUE;
     }
     context_struct_.quality = quality;
-    fprintf(stderr,"setquality(%d);\n",quality);
     return GR3_ERROR_NONE;
 }
 
@@ -1409,7 +1407,6 @@ static int gr3_export_png_(const char *filename, int width, int height) {
     if (!pngfp) {
         return GR3_ERROR_CANNOT_OPEN_FILE;
     }
-    
     pixels = (int *)malloc(width * height * sizeof(int));
     if (!pixels) {
         return GR3_ERROR_OUT_OF_MEM;
@@ -1457,7 +1454,6 @@ static int gr3_export_pov_(const char *filename, int width, int height) {
     FILE *povfp;
     GR3_DrawList_t_ *draw;
     
-    /* dummy */ width = height = width; /* dummy */
     
     povfp = fopen(filename, "w");
     if (!povfp) {
@@ -1466,7 +1462,7 @@ static int gr3_export_pov_(const char *filename, int width, int height) {
     
     fprintf(povfp,"camera {\n");
     fprintf(povfp,"  up <0,1,0>\n");
-    fprintf(povfp,"  right <-1,0,0>\n");
+    fprintf(povfp,"  right <-%f,0,0>\n",1.0*width/height);
     fprintf(povfp,"  location <%f, %f, %f>\n", context_struct_.camera_x, context_struct_.camera_y, context_struct_.camera_z);
     fprintf(povfp,"  look_at <%f, %f, %f>\n", context_struct_.center_x, context_struct_.center_y, context_struct_.center_z);
     fprintf(povfp,"  sky <%f, %f, %f>\n", context_struct_.up_x, context_struct_.up_y, context_struct_.up_z);
@@ -2164,7 +2160,6 @@ static int gr3_export_html_(const char *filename, int width, int height) {
     fprintf(htmlfp, "        if (dot(LightDirection,LightDirection) > 0.001) {\n");
     fprintf(htmlfp, "          diffuse = dot(normalize(LightDirection),Normal);\n"); 
     fprintf(htmlfp, "        }\n"); 
-    fprintf(htmlfp, "        diffuse = abs(diffuse);\n"); 
     fprintf(htmlfp, "        Color.rgb = diffuse*Color.rgb;\n");
     fprintf(htmlfp, "      }\n");
     fprintf(htmlfp, "    </script>\n");
@@ -2205,9 +2200,9 @@ static int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, in
         int res;
         char *povray_call = malloc(strlen(povfile)+strlen(povfile)+80);
 #ifdef GR3_USE_WIN
-        sprintf(povray_call,"megapov +I%s +O%s +H%d +W%d -D +UA +FN +A +R%d",povfile,pngfile,width,height, ssaa_factor);
+        sprintf(povray_call,"megapov +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d",povfile,pngfile,width,height, ssaa_factor);
 #else
-        sprintf(povray_call,"povray +I%s +O%s +H%d +W%d -D +UA +FN +A +R%d 2>/dev/null",povfile,pngfile,width,height, ssaa_factor);
+        sprintf(povray_call,"povray +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d 2>/dev/null",povfile,pngfile,width,height, ssaa_factor);
 #endif
         system(povray_call);
         free(povray_call);
@@ -3444,11 +3439,8 @@ static int gr3_readpngtomemory_(int *pixels, const char *pngfile, int width, int
         png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
         return 4;
     }
-    
     png_init_io(png_ptr, png_fp);
-    
     png_set_sig_bytes(png_ptr, 8);
-    png_set_user_limits(png_ptr, width, height);
     png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
     row_pointers = png_get_rows(png_ptr, info_ptr);
     for (i = 0; i < height; i++) {

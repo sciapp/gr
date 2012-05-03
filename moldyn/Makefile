@@ -1,48 +1,48 @@
-     GR3DIR = ../lib/gr3
-    LIBDIR = $(GR3DIR)
-MOLDYNOBJS = moldyn.o moldyn_utils.o moldyn_filereader.o moldyn_gr3.o \
-             moldyn_glut.o moldyn_glut_menu.o moldyn_glut_key_bindings.o
-  INCLUDES = -I.
-   GR3LIBS = -L$(GR3DIR) -lGR3
-    GLLIBS = -lGL -lX11 -lglut
-      LIBS = -lm
-    CFLAGS = -Wall -Wextra -pedantic -g
+ GLINCLUDES = 
+GR3INCLUDES = -I./../lib/gr3/
+    GR3LIBS = -L./ -lGR3
+     GLLIBS = 
+      XLIBS2 = 
+     CFLAGS = -Wall -pedantic
+JPEG2PSOBJS = jpeg2ps/jpeg2ps.o jpeg2ps/readjpeg.o jpeg2ps/asc85ec.o
+       OBJS = moldyn.o  moldyn_utilities.o moldyn_element_information.o moldyn_graphics.o ${JPEG2PSOBJS}
+    DEFINES = -DVersion="\"MolDyn - 8.0.0\"" -DRevision="\"Rev: `date +"%b %e %Y"`\""
 
 default:
 	make `uname`
+
 Linux:
-	make targets
+	make moldyn GLLIBS="-lglut -lGLU -lGL -lm" XLIBS2="-lX11"
+
 Darwin:
-	make targets GLLIBS="-framework OpenGL -framework Cocoa -framework GLUT"
+	make moldyn GLLIBS="-framework OpenGL -framework GLUT -L/System/Library/Frameworks/OpenGL.framework/Libraries -lGLU -lGL -lobjc"
 
-targets: prerequisites moldyn libGR3.so
+targets: prerequisites moldyn
 
-prerequisites:
-	@make -C ../lib/gr3
+prerequisites: libGR3.so jpeg2ps
 
-.c.o:
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
-
-moldyn: $(MOLDYNOBJS)
-	${CC} -o $@ *.o $(CFLAGS) $(INCLUDES) $(GR3LIBS) $(GLLIBS) $(LIBS)
-
-gr3.h:
-	cp $(GR3DIR)/gr3.h .
+jpeg2ps:
+	make -C jpeg2ps
 
 libGR3.so:
-	cp $(GR3DIR)/libGR3.so .
+	make -C../lib/gr3
+	cp ../lib/gr3/libGR3.so .
 
-moldyn_filereader.c: moldyn_element_infos.h
-moldyn_gr3.c: gr3.h
+%.c: %.h
+%.o: %.c
+	$(CC) ${CFLAGS} ${DEFINES} -c -o $@ $<
 
-install: default
+moldyn_graphics.o: moldyn_graphics.c libGR3.so
+	$(CC) ${CFLAGS} -I ${GLINCLUDES} ${GR3INCLUDES} ${DEFINES} -c -o $@ moldyn_graphics.c
+
+moldyn: ${OBJS}
+	$(CC) ${CFLAGS} ${GLLIBS} ${XLIBS2} ${GR3LIBS} -o $@ ${OBJS}
 
 clean:
-	@make -C ../lib/gr3 clean
-	rm -f libGR3.so
-	rm -f gr3.h
-	rm -f *.pyc
-	rm -f *.o
+	@make -C../lib/gr3 clean
+	@make -C jpeg2ps clean
 	rm -f moldyn
-	rm -f moldyn.dSYM
+	rm -f *.o
+	rm -f *.eps *.jpg *.pov *.png *.html *.mov
+	rm -rf moldyn.dSYM
 	rm -f libGR3.so
