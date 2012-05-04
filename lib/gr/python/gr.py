@@ -65,28 +65,74 @@ def polyline(n, x, y):
 Draws a polyline using the current line attributes,
 starting from the first data point and ending at the
 last data point.
-  """
+
+N - The number of points in the line to be drawn (N > 1)
+X - A list of length N containing the X coordinates
+Y - A list of length N containing the Y coordinates
+
+The values for X and Y are in world coordinates.
+The attributes that control the appearance of a polyline are
+linetype, linewidth and color index.
+"""
   _x = floatarray(n, x)
   _y = floatarray(n, y)
   __gr.gr_polyline(c_int(n), _x, _y)
 
 def polymarker(n, x, y):
+  """
+Draws marker symbols centered at the given data points.
+
+N - The number of markers to be drawn (N > 1)
+X - A list of length N containing the X coordinates
+Y - A list of length N containing the Y coordinates
+
+The values for X and Y are in world coordinates.
+The attributes that control the appearance of a polyline are
+marker type, marker size scale factor and color index.
+"""
   _x = floatarray(n, x)
   _y = floatarray(n, y)
   __gr.gr_polymarker(c_int(n), _x, _y)
 
 def text(x, y, string):
   """
-Draws a text at position x, y using the current text attributes
+Draws a text at position X, Y using the current text attributes.
+The values for X and Y are in normalized device coordinates.
+The attributes that control the appearance of text are text font and precision,
+character expansion factor, character spacing, text color index, character
+height, character up vector, text path and text alignment.
   """
   __gr.gr_text(c_float(x), c_float(y), char(string))
 
 def fillarea(n, x, y):
+  """
+Allows you to specify a polygonal shape of an area to be filled.
+
+N - The number of points of the polygon to be drawn (N > 1)
+X - A list of length N containing the X coordinates
+Y - A list of length N containing the Y coordinates
+
+The attributes that control the appearance of fill areas are fill area interior
+style, fill area style index and fill area color index.
+  """
   _x = floatarray(n, x)
   _y = floatarray(n, y)
   __gr.gr_fillarea(c_int(n), _x, _y)
 
 def cellarray(xmin, xmax, ymin, ymax, dimx, dimy, color):
+  """
+Displays rasterlike images in a device-independent manner. The cell array
+function partitions a rectangle given by two corner points into DIMX x DIMY
+cells, each of them colored individually by the corresponding color index
+of the given cell array.
+
+XMIN, YMIN - Lower left point of the rectangle
+XMAX, YMAX - Upper right point of the rectangle
+DIMX, DIMY - X and Y dimension of the color index array
+COLOR - Color index array
+
+The values for XMIN, XMAX, YMIN and YMAX are in world coordinates.
+  """
   _color = intarray(dimx*dimy, color)
   __gr.gr_cellarray(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax),
                     c_int(dimx), c_int(dimy), c_int(1), c_int(1),

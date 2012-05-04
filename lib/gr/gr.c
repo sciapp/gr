@@ -131,8 +131,8 @@ FILE *stream;
 #define BOTTOM (1<<4)
 #define TOP    (1<<5)
 
-#define SIGHT_HEADER  "<!--Gr V1.0-->\n<!--Normal-->\n<document>\n"
-#define SIGHT_TRAILER "</document>\n"
+#define GR_HEADER  "<?xml version='1.0' encoding='ISO-8859-1'?>\n<gr>\n"
+#define GR_TRAILER "</gr>\n"
 
 typedef enum
 {
@@ -835,7 +835,6 @@ void gr_polymarker(int n, float *x, float *y)
 void gr_text(float x, float y, char *string)
 {
   int errind, tnr;
-  register int i, n;
 
   check_autoinit;
 
@@ -849,17 +848,7 @@ void gr_text(float x, float y, char *string)
     gks_select_xform(tnr);
 
   if (flag_graphics)
-    {
-      n = strlen(string);
-      fprintf(stream, "<text x='%g' y='%g' text='", x, y);
-      for (i = 0; i < n; i++)
-	{
-	  if (i > 0)
-	    fprintf(stream, " ");
-	  fprintf(stream, "%d", (unsigned int) string[i]);
-	}
-      fprintf(stream, "'/>\n");
-    }
+    fprintf(stream, "<text x='%g' y='%g' text='%s'/>\n", x, y, string);
 }
 
 void gr_fillarea(int n, float *x, float *y)
@@ -1729,7 +1718,6 @@ void start_pline3d(float x, float y, float z)
 int gr_textext(float x, float y, char *string)
 {
   int errind, tnr, result;
-  register int i, n;
 
   check_autoinit;
 
@@ -1743,13 +1731,7 @@ int gr_textext(float x, float y, char *string)
     gks_select_xform(tnr);
 
   if (flag_graphics)
-    {
-      n = strlen(string);
-      fprintf(stream, "<text x='%g' y='%g' text='", x, y);
-      for (i = 0; i < n; i++)
-	fprintf(stream, "%d ", (unsigned int) string[i]);
-      fprintf(stream, "'/>\n");
-    }
+    fprintf(stream, "<textex x='%g' y='%g' text='%s'/>\n", x, y, string);
 
   return result;
 }
@@ -4943,10 +4925,7 @@ void gr_begingraphics(char *path)
 
       if (stream)
 	{
-	  fprintf(stream, SIGHT_HEADER);
-	  fprintf(stream,
-	    "<setviewport xmin='0' xmax='0.707107' ymin='0' ymax='1'/>\n"
-	    "<setwindow xmin='0' xmax='1' ymin='0' ymax='1'/>\n");
+	  fprintf(stream, GR_HEADER);
 	  flag_graphics = 1;
 	}
       else
@@ -4958,7 +4937,7 @@ void gr_endgraphics(void)
 {
   if (flag_graphics)
     {
-      fprintf(stream, SIGHT_TRAILER);
+      fprintf(stream, GR_TRAILER);
       if (stream != stdout)
 	fclose(stream);
       flag_graphics = 0;
