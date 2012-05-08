@@ -78,8 +78,8 @@ int read_png_image(char *path, int *width, int *height, int **data)
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep *row_pointers;
-  int x, y;
-  unsigned int r, g, b;
+  int x, y, channels;
+  unsigned int r, g, b, a;
   int *dataP;
   int ret = -1;
   size_t nbytes;
@@ -108,15 +108,21 @@ int read_png_image(char *path, int *width, int *height, int **data)
 		  png_set_sig_bytes(png_ptr, PNG_BYTES_TO_CHECK);
 
 		  png_read_info(png_ptr, info_ptr);
+		  if (info_ptr->color_type == PNG_COLOR_TYPE_PALETTE)
+		    png_set_palette_to_rgb(png_ptr);
 
-		  if (info_ptr->color_type == PNG_COLOR_TYPE_RGB ||
+		  channels = info_ptr->color_type == PNG_COLOR_TYPE_RGBA ?
+			     4 : 3;
+		  if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+		    {
+		      png_set_tRNS_to_alpha(png_ptr);
+		      channels += 1;
+		    }
+
+		  if (info_ptr->color_type == PNG_COLOR_TYPE_PALETTE ||
+		      info_ptr->color_type == PNG_COLOR_TYPE_RGB ||
 		      info_ptr->color_type == PNG_COLOR_TYPE_RGBA)
 		    {
-		      int bytes_per_pixel;
-
-		      bytes_per_pixel =
-			info_ptr->color_type == PNG_COLOR_TYPE_RGB ? 3 : 4;
-
 		      *width = info_ptr->width;
 		      *height = info_ptr->height;
 		      *data = dataP =
@@ -139,11 +145,18 @@ int read_png_image(char *path, int *width, int *height, int **data)
 			  png_byte *row = row_pointers[y];
 			  for (x = 0; x < *width; x++)
 			    {
-			      png_byte *ptr = &(row[x * bytes_per_pixel]);
+			      png_byte *ptr = &(row[x * channels]);
 			      r = ptr[0];
-			      g = ptr[1] << 8;
-			      b = ptr[2] << 16;
-			      *dataP++ = r | g | b;
+			      g = ptr[1];
+			      b = ptr[2];
+			      if (channels > 3)
+				{
+				  a = ptr[3];
+				  r = (int)(r * a / 255.0 + 0.5);
+				  g = (int)(g * a / 255.0 + 0.5);
+				  b = (int)(b * a / 255.0 + 0.5);
+				}
+			      *dataP++ = r | (g << 8) | (b << 16);
 			    }
 			}
 
