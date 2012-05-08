@@ -160,7 +160,8 @@ void gks_drv_socket(
       break;
 
     case 8:
-      send_socket(wss->s, wss->dl.buffer, &(wss->dl.nbytes));
+      if (ia[1] == GKS_K_PERFORM_FLAG)
+        send_socket(wss->s, wss->dl.buffer, &(wss->dl.nbytes));
       break;
   }
 
