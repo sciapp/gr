@@ -635,7 +635,7 @@ void initialize(int state)
 static
 void initgks(void)
 {
-  int state, errfil = 0, wkid = 1;
+  int state, errfil = 0, wkid = 1, errind, conid, wtype;
 
   gks_inq_operating_state(&state);
   if (state == GKS_K_GKCL)
@@ -648,6 +648,10 @@ void initgks(void)
       gks_open_ws(wkid, GKS_K_CONID_DEFAULT, GKS_K_WSTYPE_DEFAULT);
       gks_activate_ws(wkid);
     }
+
+  gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
+  if (!double_buf)
+    double_buf = wtype == 381 || wtype == 400 || wtype == 410;
 }
 
 void gr_opengks(void)
