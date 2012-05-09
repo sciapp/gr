@@ -37,6 +37,7 @@ EXPORTS
 	gr_inqtextext
 	gr_moveselection
 	gr_ndctowc
+	gr_mathtex
 	gr_opengks
 	gr_openws
 	gr_polyline

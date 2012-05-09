@@ -1346,6 +1346,19 @@ PyObject *_gr_endgraphics(PyObject *self, PyObject *args)
 }
 
 static
+PyObject *_gr_mathtex(PyObject *self, PyObject *args)
+{
+  float x, y;
+  char *string;
+
+  TRY(PyArg_ParseTuple(args, "ffs:mathtex", &x, &y, &string));
+  gr_mathtex(x, y, string);
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static
 PyObject *_gr_beginselection(PyObject *self, PyObject *args)
 {
   int index, type;
@@ -1497,6 +1510,7 @@ PyMethodDef gr_methods[] = {
   {"setcoordxform", _gr_setcoordxform, METH_VARARGS},
   {"begingraphics", _gr_begingraphics, METH_VARARGS},
   {"endgraphics", _gr_endgraphics, METH_VARARGS},
+  {"mathtex", _gr_mathtex, METH_VARARGS},
   {"beginselection", _gr_beginselection, METH_VARARGS},
   {"endselection", _gr_endselection, METH_VARARGS},
   {"moveselection", _gr_moveselection, METH_VARARGS},

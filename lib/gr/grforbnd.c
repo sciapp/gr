@@ -540,3 +540,17 @@ void FORTRAN(gr_endgraphics)(void)
 {
   gr_endgraphics();
 }
+
+void FORTRAN(gr_mathtex)(
+  float *x, float *y, char *string, unsigned char string_len)
+{
+  char *_string;
+
+  _string = (char *) calloc(1, sizeof(char) * string_len);
+  strncpy(_string, string, string_len);
+
+  gr_mathtex(*x, *y, _string);
+
+  free(_string);
+}
+

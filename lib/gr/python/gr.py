@@ -423,6 +423,9 @@ def begingraphics(path):
 def endgraphics():
   __gr.gr_endgraphics()
 
+def mathtex(x, y, string):
+  return __gr.gr_mathtex(c_float(x), c_float(y), char(string))
+
 def beginselection(index, type):
   __gr.gr_beginselection(c_int(index), c_int(type))
 

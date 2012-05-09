@@ -116,6 +116,7 @@ DLLEXPORT void gr_settransparency(float);
 DLLEXPORT void gr_setcoordxform(float [3][2]);
 DLLEXPORT void gr_begingraphics(char *);
 DLLEXPORT void gr_endgraphics(void);
+DLLEXPORT void gr_mathtex(float, float, char *);
 DLLEXPORT void gr_beginselection(int, int);
 DLLEXPORT void gr_endselection(void);
 DLLEXPORT void gr_moveselection(float, float);

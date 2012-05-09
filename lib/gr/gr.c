@@ -20,6 +20,7 @@
 #include "contour.h"
 #include "strlib.h"
 #include "property.h"
+#include "md5.h"
 
 typedef struct
 {
@@ -133,6 +134,9 @@ FILE *stream;
 
 #define GR_HEADER  "<?xml version='1.0' encoding='ISO-8859-1'?>\n<gr>\n"
 #define GR_TRAILER "</gr>\n"
+
+#define nominalWindowHeight 500
+#define qualityFactor 4
 
 typedef enum
 {
@@ -4945,6 +4949,107 @@ void gr_endgraphics(void)
       if (stream != stdout)
 	fclose(stream);
       flag_graphics = 0;
+    }
+}
+
+static
+void latex2image(char *string, int pointSize, float *rgb,
+                 int *width, int *height, int **data)
+{
+  int color;
+  char s[FILENAME_MAX], path[FILENAME_MAX], cache[33];
+  char *tmp, *null, cmd[1024];
+  char tex[FILENAME_MAX], dvi[FILENAME_MAX], png[FILENAME_MAX];
+  FILE *stream;
+
+  color = ((int)(rgb[0] / 255)      ) + 
+          ((int)(rgb[1] / 255) <<  8) +
+          ((int)(rgb[2] / 255) << 16); 
+  sprintf(s, "%d%x%s", pointSize, color, string);
+  md5(s, cache);
+#ifdef WIN32
+  sprintf(path, "C:\\TEMP\\gr-cache-%s.png", cache);
+#else
+  sprintf(path, "/tmp/gr-cache-%s.png", cache);
+#endif
+
+  if (access(path, R_OK) != 0)
+    {
+      tmp = tempnam(".", NULL);
+      sprintf(tex, "%s.tex", tmp);
+      sprintf(dvi, "%s.dvi", tmp);
+      sprintf(png, "%s.png", tmp);
+#ifdef _WN32
+      null = "NUL";
+#else
+      null = "/dev/null";
+#endif
+
+      stream = fopen(tex, "w");
+      fprintf(stream, "\
+\\documentclass{article}\n\
+\\pagestyle{empty}\n\
+\\usepackage[dvips]{color}\n\
+\\color[rgb]{%.3f,%.3f,%.3f}\n\
+\\begin{document}\n\
+\\[\n", rgb[0], rgb[1], rgb[2]);
+      fwrite(string, strlen(string), 1, stream);
+      fprintf(stream, "\n\
+\\]\n\
+\\end{document}");
+      fclose(stream);
+
+      sprintf(cmd, "latex -interaction=batchmode -halt-on-error %s -o %s >%s",
+              tex, dvi, null);
+      system(cmd);
+
+      if (access(dvi, R_OK) == 0)
+        {
+          sprintf(cmd, "dvipng -q -T tight -x %d %s -o %s >%s",
+                  pointSize * 100, dvi, png, null);
+          system(cmd);
+
+          rename(png, path);
+
+          sprintf(cmd, "rm -f %s.*", tmp);
+          system(cmd);
+        }
+    }
+
+  if (access(path, R_OK) == 0)
+    gr_readimage(path, width, height, data);
+}
+
+void gr_mathtex(float x, float y, char *string)
+{
+  int errind, pointSize, color;
+  float chh, rgb[3];
+  int width, height, *data = NULL;
+  float w, h, xmin, xmax, ymin, ymax;
+
+  check_autoinit;
+
+  gks_inq_text_height(&errind, &chh);
+  pointSize = chh * qualityFactor * nominalWindowHeight;
+
+  gks_inq_text_color_index(&errind, &color);
+  gks_inq_rgb(color, &rgb[0], &rgb[1], &rgb[2]);
+
+  latex2image(string, pointSize, rgb, &width, &height, &data);
+
+  if (data != NULL)
+    {
+      w =  width / (float) (qualityFactor * nominalWindowHeight);
+      h = height / (float) (qualityFactor * nominalWindowHeight);
+      xmin = x - 0.5 * w;
+      xmax = x + 0.5 * w;
+      ymin = y - 0.5 * h;
+      ymax = y + 0.5 * h;
+
+      gr_selntran(0);
+      gr_drawimage(xmin, xmax, ymin, ymax, width, height, data);
+
+      free(data);
     }
 }
 

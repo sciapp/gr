@@ -4,7 +4,7 @@
       INCDIR = $(GRDIR)/include
 
       GROBJS = gr.o text.o contour.o spline.o strlib.o property.o image.o \
-               grforbnd.o
+               md5.o grforbnd.o
      DEFINES =
     INCLUDES = -I../gks -I../jpeg -I../png
           CC = cc
@@ -70,7 +70,7 @@ clean:
 
 depend:
 	makedepend -Y -- gr.c text.c contour.c spline.c strlib.c property.c \
-	image.c grforbnd.c 2> /dev/null
+	image.c md5.c grforbnd.c 2> /dev/null
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
@@ -80,4 +80,5 @@ spline.o: spline.h
 strlib.o: strlib.h
 property.o: property.h
 image.o: gr.h
+md5.o: md5.h
 grforbnd.o: gr.h
