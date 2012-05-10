@@ -10,6 +10,11 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#define TMPDIR "C:\\TEMP"
+#define DIRDELIM "\\"
+#else
+#define TMPDIR "/tmp"
+#define DIRDELIM "/"
 #endif
 
 #include "gks.h"
@@ -92,6 +97,12 @@ int flag_printing = 0, flag_graphics = 0;
 
 static
 FILE *stream;
+
+static
+float xfac[4] = { 0, 0, -0.5, -1 };
+
+static
+float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 #define check_autoinit if (autoinit) initgks()
 
@@ -4964,18 +4975,14 @@ void latex2image(char *string, int pointSize, float *rgb,
 
   color = ((int)(rgb[0] / 255)      ) + 
           ((int)(rgb[1] / 255) <<  8) +
-          ((int)(rgb[2] / 255) << 16); 
+          ((int)(rgb[2] / 255) << 16);
   sprintf(s, "%d%x%s", pointSize, color, string);
   md5(s, cache);
-#ifdef WIN32
-  sprintf(path, "C:\\TEMP\\gr-cache-%s.png", cache);
-#else
-  sprintf(path, "/tmp/gr-cache-%s.png", cache);
-#endif
+  sprintf(path, "%s%sgr-cache-%s.png", TMPDIR, DIRDELIM, cache);
 
   if (access(path, R_OK) != 0)
     {
-      tmp = tempnam(".", NULL);
+      tmp = tempnam(TMPDIR, NULL);
       sprintf(tex, "%s.tex", tmp);
       sprintf(dvi, "%s.dvi", tmp);
       sprintf(png, "%s.png", tmp);
@@ -4984,7 +4991,6 @@ void latex2image(char *string, int pointSize, float *rgb,
 #else
       null = "/dev/null";
 #endif
-
       stream = fopen(tex, "w");
       fprintf(stream, "\
 \\documentclass{article}\n\
@@ -4999,8 +5005,8 @@ void latex2image(char *string, int pointSize, float *rgb,
 \\end{document}");
       fclose(stream);
 
-      sprintf(cmd, "latex -interaction=batchmode -halt-on-error %s -o %s >%s",
-              tex, dvi, null);
+      sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s",
+              TMPDIR, tex, null);
       system(cmd);
 
       if (access(dvi, R_OK) == 0)
@@ -5008,7 +5014,6 @@ void latex2image(char *string, int pointSize, float *rgb,
           sprintf(cmd, "dvipng -q -T tight -x %d %s -o %s >%s",
                   pointSize * 100, dvi, png, null);
           system(cmd);
-
           rename(png, path);
 
           sprintf(cmd, "rm -f %s.*", tmp);
@@ -5026,6 +5031,7 @@ void gr_mathtex(float x, float y, char *string)
   float chh, rgb[3];
   int width, height, *data = NULL;
   float w, h, xmin, xmax, ymin, ymax;
+  int halign, valign, tnr;
 
   check_autoinit;
 
@@ -5041,16 +5047,28 @@ void gr_mathtex(float x, float y, char *string)
     {
       w =  width / (float) (qualityFactor * nominalWindowHeight);
       h = height / (float) (qualityFactor * nominalWindowHeight);
-      xmin = x - 0.5 * w;
-      xmax = x + 0.5 * w;
-      ymin = y - 0.5 * h;
-      ymax = y + 0.5 * h;
 
-      gr_selntran(0);
+      gks_inq_text_align(&errind, &halign, &valign);
+
+      xmin = x + xfac[halign] * w;
+      xmax = xmin + w;
+      ymin = y + yfac[valign] * h;
+      ymax = ymin + h;
+
+      gks_inq_current_xformno(&errind, &tnr);
+      if (tnr != NDC)
+        gks_select_xform(NDC);
+
       gr_drawimage(xmin, xmax, ymin, ymax, width, height, data);
+
+      if (tnr != NDC)
+        gks_select_xform(tnr);
 
       free(data);
     }
+
+  if (flag_graphics)
+    fprintf(stream, "<mathtex x='%g' y='%g' text='%s'/>\n", x, y, string);
 }
 
 void gr_beginselection(int index, int type)
