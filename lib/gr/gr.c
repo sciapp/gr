@@ -10,7 +10,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#define TMPDIR "C:\\TEMP"
+#define TMPDIR "C:\\Users\\%USERNAME%\\AppData\\Local\\Temp"
 #define DIRDELIM "\\"
 #else
 #define TMPDIR "/tmp"
@@ -4973,7 +4973,7 @@ void latex2image(char *string, int pointSize, float *rgb,
 {
   int color;
   char s[FILENAME_MAX], path[FILENAME_MAX], cache[33];
-  char *tmp, *null, cmd[1024];
+  char *tmp, *temp, *null, cmd[1024];
   char tex[FILENAME_MAX], dvi[FILENAME_MAX], png[FILENAME_MAX];
   FILE *stream;
 
@@ -4982,15 +4982,25 @@ void latex2image(char *string, int pointSize, float *rgb,
           ((int)(rgb[2] / 255) << 16);
   sprintf(s, "%d%x%s", pointSize, color, string);
   md5(s, cache);
-  sprintf(path, "%s%sgr-cache-%s.png", TMPDIR, DIRDELIM, cache);
+#ifdef _WIN32
+  temp = (char *) getenv("TEMP");
+#else
+  temp = TMPDIR;
+#endif
+  sprintf(path, "%s%sgr-cache-%s.png", temp, DIRDELIM, cache);
 
   if (access(path, R_OK) != 0)
     {
-      tmp = tempnam(TMPDIR, NULL);
+#ifdef _WIN32
+      tmp = cache;
+      temp = ".";
+#else
+      tmp = tempnam(temp, NULL);
+#endif
       sprintf(tex, "%s.tex", tmp);
       sprintf(dvi, "%s.dvi", tmp);
       sprintf(png, "%s.png", tmp);
-#ifdef _WN32
+#ifdef _WIN32
       null = "NUL";
 #else
       null = "/dev/null";
@@ -5010,7 +5020,7 @@ void latex2image(char *string, int pointSize, float *rgb,
       fclose(stream);
 
       sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s",
-              TMPDIR, tex, null);
+              temp, tex, null);
       system(cmd);
 
       if (access(dvi, R_OK) == 0)
@@ -5019,8 +5029,11 @@ void latex2image(char *string, int pointSize, float *rgb,
                   pointSize * 100, dvi, png, null);
           system(cmd);
           rename(png, path);
-
+#ifdef _WIN32
+          sprintf(cmd, "DEL %s.*", tmp);
+#else
           sprintf(cmd, "rm -f %s.*", tmp);
+#endif
           system(cmd);
         }
     }
