@@ -27,6 +27,10 @@
 #include "property.h"
 #include "md5.h"
 
+#ifndef R_OK
+#define R_OK 4
+#endif
+
 typedef struct
 {
   int index;
@@ -5027,7 +5031,7 @@ void latex2image(char *string, int pointSize, float *rgb,
 
 void gr_mathtex(float x, float y, char *string)
 {
-  int errind, pointSize, color;
+  int wkid = 1, errind, pointSize, color;
   float chh, rgb[3];
   int width, height, *data = NULL;
   float w, h, xmin, xmax, ymin, ymax;
@@ -5039,7 +5043,8 @@ void gr_mathtex(float x, float y, char *string)
   pointSize = chh * qualityFactor * nominalWindowHeight;
 
   gks_inq_text_color_index(&errind, &color);
-  gks_inq_rgb(color, &rgb[0], &rgb[1], &rgb[2]);
+  gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET,
+                    &errind, &rgb[0], &rgb[1], &rgb[2]);
 
   latex2image(string, pointSize, rgb, &width, &height, &data);
 
