@@ -32,7 +32,7 @@ if [ "$message" != "" ]; then
 fi
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
-tmpsrc=`mktemp /tmp/a$$.c`
+tmpsrc=`mktemp /tmp/a$$XXXXX.c`
 cat >$tmpsrc << eof
 #include <stdio.h>
 #include <stdlib.h>

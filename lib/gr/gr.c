@@ -151,7 +151,7 @@ float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 #define GR_TRAILER "</gr>\n"
 
 #define nominalWindowHeight 500
-#define qualityFactor 4
+#define printQualityFactor 4
 
 typedef enum
 {
@@ -4976,6 +4976,7 @@ void latex2image(char *string, int pointSize, float *rgb,
   char *tmp, *temp, *null, cmd[1024];
   char tex[FILENAME_MAX], dvi[FILENAME_MAX], png[FILENAME_MAX];
   FILE *stream;
+  int ret;
 
   color = ((int)(rgb[0] / 255)      ) + 
           ((int)(rgb[1] / 255) <<  8) +
@@ -5021,21 +5022,30 @@ void latex2image(char *string, int pointSize, float *rgb,
 
       sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s",
               temp, tex, null);
-      system(cmd);
+      ret = system(cmd);
 
-      if (access(dvi, R_OK) == 0)
+      if (ret == 0 && access(dvi, R_OK) == 0)
         {
           sprintf(cmd, "dvipng -q -T tight -x %d %s -o %s >%s",
                   pointSize * 100, dvi, png, null);
-          system(cmd);
-          rename(png, path);
+          ret = system(cmd);
+          if (ret == 0)
+            {
+              rename(png, path);
 #ifdef _WIN32
-          sprintf(cmd, "DEL %s.*", tmp);
+              sprintf(cmd, "DEL %s.*", tmp);
 #else
-          sprintf(cmd, "rm -f %s.*", tmp);
+              sprintf(cmd, "rm -f %s.*", tmp);
 #endif
-          system(cmd);
+              ret = system(cmd);
+              if (ret != 0)
+                fprintf(stderr, "error deleting temprorary files\n");
+            }
+          else
+            fprintf(stderr, "dvipng: PNG conversion failed\n");
         }
+      else
+        fprintf(stderr, "latex: failed to create a dvi file\n");
     }
 
   if (access(path, R_OK) == 0)
@@ -5044,7 +5054,7 @@ void latex2image(char *string, int pointSize, float *rgb,
 
 void gr_mathtex(float x, float y, char *string)
 {
-  int wkid = 1, errind, pointSize, color;
+  int wkid = 1, errind, pointSize, qualityFactor = 1, color;
   float chh, rgb[3];
   int width, height, *data = NULL;
   float w, h, xmin, xmax, ymin, ymax;
@@ -5053,6 +5063,8 @@ void gr_mathtex(float x, float y, char *string)
   check_autoinit;
 
   gks_inq_text_height(&errind, &chh);
+  if (flag_printing)
+    qualityFactor = printQualityFactor;
   pointSize = chh * qualityFactor * nominalWindowHeight;
 
   gks_inq_text_color_index(&errind, &color);
