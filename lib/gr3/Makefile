@@ -1,6 +1,7 @@
        GRDIR = /usr/local/gr
       LIBDIR = $(GRDIR)/lib
       INCDIR = $(GRDIR)/include
+   PYTHONDIR = $(LIBDIR)/python
 
     INCLUDES = -I../png -I../jpeg -I../gr
       GRLIBS = -L../gr -lGR
@@ -36,7 +37,8 @@ install: targets
 	@if [ ! -d $(GRDIR) ]; then mkdir -m 755 $(GRDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGR3.so $(LIBDIR)
-	cp -p gr3.py $(LIBDIR)
+	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
+	cp -p gr3.py $(PYTHONDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr3.h $(INCDIR)
 

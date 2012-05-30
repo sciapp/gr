@@ -1,5 +1,5 @@
 
-from ctypes import c_int, c_float, c_char_p, byref, CDLL
+from ctypes import c_int, c_float, c_char_p, byref, POINTER, addressof, CDLL
 from sys import version_info
 from platform import system
 
@@ -169,7 +169,7 @@ def setmarkersize(size):
   __gr.gr_setmarkersize(c_float(size))
 
 def setmarkercolorind(color):
-  __gr.setmarkercolorind(c_int(color))
+  __gr.gr_setmarkercolorind(c_int(color))
 
 def settextind(index):
   __gr.gr_settextint(c_int(index))
@@ -401,6 +401,15 @@ def setarrowstyle(style):
 
 def drawarrow(x1, y1, x2, y2):
   __gr.gr_drawarrow(c_float(x1), c_float(y1), c_float(x2), c_float(y2))
+
+def readimage(path):
+  width = c_int()
+  height = c_int()
+  _data = POINTER(c_int)()
+  __gr.gr_readimage(char(path), byref(width), byref(height), byref(_data))
+  _type = (c_int * (width.value * height.value))
+  data = _type.from_address(addressof(_data.contents))
+  return [width.value, height.value, data]
 
 def drawimage(xmin, xmax, ymin, ymax, width, height, data):
   _data = intarray(width*height, data)

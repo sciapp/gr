@@ -2,6 +2,7 @@
       BINDIR = $(GRDIR)/bin
       LIBDIR = $(GRDIR)/lib
       INCDIR = $(GRDIR)/include
+   PYTHONDIR = $(LIBDIR)/python
 
       GROBJS = gr.o text.o contour.o spline.o strlib.o property.o image.o \
                md5.o grforbnd.o
@@ -60,6 +61,8 @@ install:
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGR.* $(LIBDIR)
 	cp -p python/gr.so $(LIBDIR)
+	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
+	cp -p python/gr.py $(PYTHONDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr.h $(INCDIR)
 

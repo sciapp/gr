@@ -374,10 +374,10 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
 
       /*  Check to see if the variable names match */
       while (*lpEnvSearch && *lpszVarSearch && *lpEnvSearch == *lpszVarSearch)
-	{
-	  lpEnvSearch++;
-	  lpszVarSearch++;
-	}
+        {
+          lpEnvSearch++;
+          lpszVarSearch++;
+        }
       /*
        *  If the names match, the lpEnvSearch pointer is on the "="
        *  character and lpszVarSearch is on a null terminator.
@@ -388,10 +388,10 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
        *  reaches the end of the current variable string.
        */
       if (*lpEnvSearch == '=' && *lpszVarSearch == '\0')
-	return (lpEnvSearch + 1);
+        return (lpEnvSearch + 1);
       else
-	while (*lpEnvSearch)
-	  lpEnvSearch++;
+        while (*lpEnvSearch)
+          lpEnvSearch++;
 
       /*
        *  At this point the end of the environment variable's string
@@ -402,10 +402,10 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
       lpEnvSearch++;
     }
 
-  return NULL;		/*
-			 *  If this section of code is reached, the variable
-			 *  was not found.
-			 */
+  return NULL;          /*
+                         *  If this section of code is reached, the variable
+                         *  was not found.
+                         */
 }
 
 #endif
@@ -453,9 +453,9 @@ float x_lin(float x)
   if (OPTION_X_LOG & lx.scale_options)
     {
       if (x > 0)
-	result = lx.a * log10(x) + lx.b;
+        result = lx.a * log10(x) + lx.b;
       else
-	result = -FLT_MAX;
+        result = -FLT_MAX;
     }
   else
     result = x;
@@ -474,9 +474,9 @@ float y_lin(float y)
   if (OPTION_Y_LOG & lx.scale_options)
     {
       if (y > 0)
-	result = lx.c * log10(y) + lx.d;
+        result = lx.c * log10(y) + lx.d;
       else
-	result = -FLT_MAX;
+        result = -FLT_MAX;
     }
   else
     result = y;
@@ -495,9 +495,9 @@ float z_lin(float z)
   if (OPTION_Z_LOG & lx.scale_options)
     {
       if (z > 0)
-	result = lx.e * log10(z) + lx.f;
+        result = lx.e * log10(z) + lx.f;
       else
-	result = -FLT_MAX;
+        result = -FLT_MAX;
     }
   else
     result = z;
@@ -581,12 +581,12 @@ void foreach_openws(void (*routine) (int, void *), void *arg)
     {
       gks_inq_open_ws(n, &errind, &ol, &wkid);
       for (count = ol; count >= 1; count--)
-	{
-	  n = count;
-	  gks_inq_open_ws(n, &errind, &ol, &wkid);
+        {
+          n = count;
+          gks_inq_open_ws(n, &errind, &ol, &wkid);
 
-	  routine(wkid, arg);
-	}
+          routine(wkid, arg);
+        }
     }
 }
 
@@ -600,13 +600,134 @@ void foreach_activews(void (*routine) (int, void *), void *arg)
     {
       gks_inq_active_ws(n, &errind, &ol, &wkid);
       for (count = ol; count >= 1; count--)
-	{
-	  n = count;
-	  gks_inq_active_ws(n, &errind, &ol, &wkid);
+        {
+          n = count;
+          gks_inq_active_ws(n, &errind, &ol, &wkid);
 
-	  routine(wkid, arg);
-	}
+          routine(wkid, arg);
+        }
     }
+}
+
+static
+void setspace(float zmin, float zmax, int rotation, int tilt)
+{
+  int errind, tnr;
+  float wn[4], vp[4];
+  float xmin, xmax, ymin, ymax, r, t, a, c;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_inq_xform(tnr, &errind, wn, vp);
+
+  xmin = wn[0];
+  xmax = wn[1];
+  ymin = wn[2];
+  ymax = wn[3];
+
+  wx.zmin = zmin;
+  wx.zmax = zmax;
+  wx.phi = rotation;
+  wx.delta = tilt;
+
+  r = arc(rotation);
+  wx.a1 = cos(r);
+  wx.a2 = sin(r);
+
+  a = (xmax - xmin) / (wx.a1 + wx.a2);
+  wx.b = xmin;
+
+  wx.a1 = a * wx.a1 / (xmax - xmin);
+  wx.a2 = a * wx.a2 / (ymax - ymin);
+  wx.b = wx.b - wx.a1 * xmin - wx.a2 * ymin;
+
+  t = arc(tilt);
+  wx.c1 = (pow(cos(r), 2.) - 1.) * tan(t / 2.);
+  wx.c2 = -(pow(sin(r), 2.) - 1.) * tan(t / 2.);
+  wx.c3 = cos(t);
+
+  c = (ymax - ymin) / (wx.c2 + wx.c3 - wx.c1);
+  wx.d = ymin - c * wx.c1;
+
+  wx.c1 = c * wx.c1 / (xmax - xmin);
+  wx.c2 = c * wx.c2 / (ymax - ymin);
+  wx.c3 = c * wx.c3 / (zmax - zmin);
+  wx.d = wx.d - wx.c1 * xmin - wx.c2 * ymin - wx.c3 * zmin;
+}
+
+static
+int setscale(int options)
+{
+  int errind, tnr;
+  float wn[4], vp[4];
+  int result = 0;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_inq_xform(tnr, &errind, wn, vp);
+
+  nx.a = (vp[1] - vp[0]) / (wn[1] - wn[0]);
+  nx.b = vp[0] - wn[0] * nx.a;
+  nx.c = (vp[3] - vp[2]) / (wn[3] - wn[2]);
+  nx.d = vp[2] - wn[2] * nx.c;
+
+  lx.scale_options = 0;
+
+  lx.xmin = wn[0];
+  lx.xmax = wn[1];
+
+  if (OPTION_X_LOG & options)
+    {
+      if (wn[0] > 0)
+        {
+          lx.a = (wn[1] - wn[0]) / log10(wn[1] / wn[0]);
+          lx.b = wn[0] - lx.a * log10(wn[0]);
+          lx.scale_options |= OPTION_X_LOG;
+        }
+      else
+        result = -1;
+    }
+
+  lx.ymin = wn[2];
+  lx.ymax = wn[3];
+
+  if (OPTION_Y_LOG & options)
+    {
+      if (wn[2] > 0)
+        {
+          lx.c = (wn[3] - wn[2]) / log10(wn[3] / wn[2]);
+          lx.d = wn[2] - lx.c * log10(wn[2]);
+          lx.scale_options |= OPTION_Y_LOG;
+        }
+      else
+        result = -1;
+    }
+
+  setspace(wx.zmin, wx.zmax, wx.phi, wx.delta);
+
+  lx.zmin = wx.zmin;
+  lx.zmax = wx.zmax;
+
+  if (OPTION_Z_LOG & options)
+    {
+      if (lx.zmin > 0)
+        {
+          lx.e = (lx.zmax - lx.zmin) / log10(lx.zmax / lx.zmin);
+          lx.f = lx.zmin - lx.e * log10(lx.zmin);
+          lx.scale_options |= OPTION_Z_LOG;
+        }
+      else
+        result = -1;
+    }
+
+  if (OPTION_FLIP_X & options)
+    lx.scale_options |= OPTION_FLIP_X;
+
+  if (OPTION_FLIP_Y & options)
+    lx.scale_options |= OPTION_FLIP_Y;
+
+  if (OPTION_FLIP_Z & options)
+    lx.scale_options |= OPTION_FLIP_Z;
+
+  return result;
 }
 
 static
@@ -648,7 +769,7 @@ void initialize(int state)
   else
     accel = 0;
 
-  gr_setscale(options);
+  setscale(options);
 }
 
 static
@@ -704,7 +825,7 @@ void gr_openws(int workstation_id, char *connection, int type)
   if (connection)
     {
       if (!*connection)
-	connection = NULL;
+        connection = NULL;
     }
   gks_open_ws(workstation_id, connection, type);
 }
@@ -787,18 +908,36 @@ void gr_updatews(void)
   if (lx.scale_options) \
     { \
       if (npoints >= maxpoints) \
-	reallocate(npoints); \
+        reallocate(npoints); \
 \
       px = xpoint; \
       py = ypoint; \
       for (i = 0; i < npoints; i++) \
-	{ \
-	  px[i] = x_lin(x[i]); \
-	  py[i] = y_lin(y[i]); \
-	} \
+        { \
+          px[i] = x_lin(x[i]); \
+          py[i] = y_lin(y[i]); \
+        } \
     } \
 \
   primitive(npoints, px, py)
+
+static
+void polyline(int n, float *x, float *y)
+{
+  gks(gks_polyline);
+}
+
+static
+void polymarker(int n, float *x, float *y)
+{
+  gks(gks_polymarker);
+}
+
+static
+void fillarea(int n, float *x, float *y)
+{
+  gks(gks_fillarea);
+}
 
 static
 void print_int_array(char *name, int n, int *data)
@@ -809,7 +948,7 @@ void print_int_array(char *name, int n, int *data)
   for (i = 0; i < n; i++)
     {
       if (i > 0)
-	fprintf(stream, " ");
+        fprintf(stream, " ");
       fprintf(stream, "%d", data[i]);
     }
   fprintf(stream, "'");
@@ -824,7 +963,7 @@ void print_float_array(char *name, int n, float *data)
   for (i = 0; i < n; i++)
     {
       if (i > 0)
-	fprintf(stream, " ");
+        fprintf(stream, " ");
       fprintf(stream, "%g", data[i]);
     }
   fprintf(stream, "'");
@@ -901,23 +1040,23 @@ void gr_cellarray(
       register int i, n;
 
       for (i = 0; i < MAX_COLOR; i++)
-	{
-	  gks_inq_color_rep(wkid, i, GKS_K_VALUE_SET, &errind, &r, &g, &b);
-	  rgb[i] =    ((int) (r * 255) & 0xff)
-		   + (((int) (g * 255) & 0xff) << 8)
-		   + (((int) (b * 255) & 0xff) << 16);
-	}
+        {
+          gks_inq_color_rep(wkid, i, GKS_K_VALUE_SET, &errind, &r, &g, &b);
+          rgb[i] =    ((int) (r * 255) & 0xff)
+                   + (((int) (g * 255) & 0xff) << 8)
+                   + (((int) (b * 255) & 0xff) << 16);
+        }
 
       n = dimx * dimy;
       data = (int *) xmalloc(n * sizeof(int));
       for (i = 0; i < n; i++)
-	data[i] = color[i] >= 0 && color[i] < MAX_COLOR ? rgb[color[i]] : 0;
+        data[i] = color[i] >= 0 && color[i] < MAX_COLOR ? rgb[color[i]] : 0;
 
-      fprintf(stream, "<image xmin='%g' xmax='%g' ymin='%g' ymax='%g' "
-	      "width='%d' height='%d'",
-	      xmin, xmax, ymin, ymax, dimx, dimy);
+      fprintf(stream, "<cellarray xmin='%g' xmax='%g' ymin='%g' ymax='%g' "
+              "width='%d' height='%d'",
+              xmin, xmax, ymin, ymax, dimx, dimy);
       print_int_array("data", n, data);
-      fprintf(stream, " path=''/>\n");
+      fprintf(stream, "/>\n");
 
       free(data);
     }
@@ -965,67 +1104,67 @@ void gr_spline(int n, float *px, float *py, int m, int method)
   if (method >= -1)
     {
       for (i = 1; i < n; i++)
-	if (px[i - 1] >= px[i])
-	  {
-	    fprintf(stderr, "points not sorted in ascending order\n");
-	    err = 1;
-	  }
+        if (px[i - 1] >= px[i])
+          {
+            fprintf(stderr, "points not sorted in ascending order\n");
+            err = 1;
+          }
 
       if (!err)
-	{
-	  sx[0] = x[0];
-	  for (j = 1; j < m - 1; j++)
-	    sx[j] = x[0] + j * (x[n - 1] - x[0]) / (m - 1);
-	  sx[m - 1] = x[n - 1];
+        {
+          sx[0] = x[0];
+          for (j = 1; j < m - 1; j++)
+            sx[j] = x[0] + j * (x[n - 1] - x[0]) / (m - 1);
+          sx[m - 1] = x[n - 1];
 
-	  job = 0;
-	  ic = n - 1;
-	  var = (double) method;
+          job = 0;
+          ic = n - 1;
+          var = (double) method;
 
-	  cubgcv(x, f, df, &n, y, c, &ic, &var, &job, se, wk, &ier);
+          cubgcv(x, f, df, &n, y, c, &ic, &var, &job, se, wk, &ier);
 
-	  if (ier == 0)
-	    {
-	      for (j = 0; j < m; j++)
-		{
-		  i = 0;
-		  while ((i < ic) && (x[i] <= sx[j]))
-		    i++;
-		  if (x[i] > sx[j])
-		    i--;
-		  if (i < 0)
-		    i = 0;
-		  else if (i >= ic)
-		    i = ic - 1;
-		  d = sx[j] - x[i];
+          if (ier == 0)
+            {
+              for (j = 0; j < m; j++)
+                {
+                  i = 0;
+                  while ((i < ic) && (x[i] <= sx[j]))
+                    i++;
+                  if (x[i] > sx[j])
+                    i--;
+                  if (i < 0)
+                    i = 0;
+                  else if (i >= ic)
+                    i = ic - 1;
+                  d = sx[j] - x[i];
 
-		  s[j] = (float) (((c[i + 2 * ic] * d + c[i + ic]) * d +
-				   c[i]) * d + y[i]);
-		}
-	    }
-	  else
-	    {
-	      fprintf(stderr, "invalid argument to math library\n");
-	      err = 1;
-	    }
-	}
+                  s[j] = (float) (((c[i + 2 * ic] * d + c[i + ic]) * d +
+                                   c[i]) * d + y[i]);
+                }
+            }
+          else
+            {
+              fprintf(stderr, "invalid argument to math library\n");
+              err = 1;
+            }
+        }
     }
   else
     {
       b_spline(n, x, f, m, sx, sy);
 
       for (j = 0; j < m; j++)
-	s[j] = (float) sy[j];
+        s[j] = (float) sy[j];
     }
 
   if (!err)
     {
       for (j = 0; j < m; j++)
-	{
-	  t[j] = x_log((float) (lx.xmin + sx[j] * (lx.xmax - lx.xmin)));
-	  s[j] = y_log((float) (lx.ymin + s[j] * (lx.ymax - lx.ymin)));
-	}
-      gr_polyline(m, t, s);
+        {
+          t[j] = x_log((float) (lx.xmin + sx[j] * (lx.xmax - lx.xmin)));
+          s[j] = y_log((float) (lx.ymin + s[j] * (lx.ymax - lx.ymin)));
+        }
+      polyline(m, t, s);
     }
 
   free(wk);
@@ -1154,7 +1293,7 @@ void gr_settextfontprec(int font, int precision)
 
   if (flag_graphics)
     fprintf(stream, "<settextfontprec font='%d' precision='%d'/>\n",
-	    font, precision);
+            font, precision);
 }
 
 void gr_setcharexpan(float factor)
@@ -1219,7 +1358,7 @@ void gr_settextalign(int horizontal, int vertical)
 
   if (flag_graphics)
     fprintf(stream, "<settextalign halign='%d' valign='%d'/>\n",
-	    horizontal, vertical);
+            horizontal, vertical);
 }
 
 void gr_setfillind(int index)
@@ -1268,10 +1407,11 @@ void setcolor(int workstation_id, color_t *color)
   int wkid = workstation_id;
 
   gks_set_color_rep(wkid, color->index, color->red, color->green,
-		    color->blue);
+                    color->blue);
 }
 
-void gr_setcolorrep(int index, float red, float green, float blue)
+static
+void setcolorrep(int index, float red, float green, float blue)
 {
   color_t color;
 
@@ -1280,96 +1420,33 @@ void gr_setcolorrep(int index, float red, float green, float blue)
   color.green = green;
   color.blue = blue;
 
+  foreach_activews((void (*)(int, void *)) setcolor, (void *) &color);
+}
+
+void gr_setcolorrep(int index, float red, float green, float blue)
+{
   check_autoinit;
 
-  foreach_activews((void (*)(int, void *)) setcolor, (void *) &color);
+  setcolorrep(index, red, green, blue);
 }
 
 int gr_setscale(int options)
 {
-  int errind, tnr;
-  float wn[4], vp[4];
-  int result = 0, scale_options;
+  int result = 0;
 
   check_autoinit;
 
-  gks_inq_current_xformno(&errind, &tnr);
-  gks_inq_xform(tnr, &errind, wn, vp);
-
-  nx.a = (vp[1] - vp[0]) / (wn[1] - wn[0]);
-  nx.b = vp[0] - wn[0] * nx.a;
-  nx.c = (vp[3] - vp[2]) / (wn[3] - wn[2]);
-  nx.d = vp[2] - wn[2] * nx.c;
-
-  scale_options = lx.scale_options;
-  lx.scale_options = 0;
-
-  lx.xmin = wn[0];
-  lx.xmax = wn[1];
-
-  if (OPTION_X_LOG & options)
-    {
-      if (wn[0] > 0)
-	{
-	  lx.a = (wn[1] - wn[0]) / log10(wn[1] / wn[0]);
-	  lx.b = wn[0] - lx.a * log10(wn[0]);
-	  lx.scale_options |= OPTION_X_LOG;
-	}
-      else
-	result = -1;
-    }
-
-  lx.ymin = wn[2];
-  lx.ymax = wn[3];
-
-  if (OPTION_Y_LOG & options)
-    {
-      if (wn[2] > 0)
-	{
-	  lx.c = (wn[3] - wn[2]) / log10(wn[3] / wn[2]);
-	  lx.d = wn[2] - lx.c * log10(wn[2]);
-	  lx.scale_options |= OPTION_Y_LOG;
-	}
-      else
-	result = -1;
-    }
-
-  gr_setspace(wx.zmin, wx.zmax, wx.phi, wx.delta);
-
-  lx.zmin = wx.zmin;
-  lx.zmax = wx.zmax;
-
-  if (OPTION_Z_LOG & options)
-    {
-      if (lx.zmin > 0)
-	{
-	  lx.e = (lx.zmax - lx.zmin) / log10(lx.zmax / lx.zmin);
-	  lx.f = lx.zmin - lx.e * log10(lx.zmin);
-	  lx.scale_options |= OPTION_Z_LOG;
-	}
-      else
-	result = -1;
-    }
-
-  if (OPTION_FLIP_X & options)
-    lx.scale_options |= OPTION_FLIP_X;
-
-  if (OPTION_FLIP_Y & options)
-    lx.scale_options |= OPTION_FLIP_Y;
-
-  if (OPTION_FLIP_Z & options)
-    lx.scale_options |= OPTION_FLIP_Z;
+  result = setscale(options);
 
   if (accel)
-    if (options != scale_options)
-      gr_setproperty(
-	"logx: %d; logy: %d; logz: %d; flipx: %d; flipy: %d; flipz: %d;",
-	OPTION_X_LOG & lx.scale_options ? 1 : 0,
-	OPTION_Y_LOG & lx.scale_options ? 1 : 0,
-	OPTION_Z_LOG & lx.scale_options ? 1 : 0,
-	OPTION_FLIP_X & lx.scale_options ? 1 : 0,
-	OPTION_FLIP_Y & lx.scale_options ? 1 : 0,
-	OPTION_FLIP_Z & lx.scale_options ? 1 : 0);
+    gr_setproperty(
+      "logx: %d; logy: %d; logz: %d; flipx: %d; flipy: %d; flipz: %d;",
+      OPTION_X_LOG & lx.scale_options ? 1 : 0,
+      OPTION_Y_LOG & lx.scale_options ? 1 : 0,
+      OPTION_Z_LOG & lx.scale_options ? 1 : 0,
+      OPTION_FLIP_X & lx.scale_options ? 1 : 0,
+      OPTION_FLIP_Y & lx.scale_options ? 1 : 0,
+      OPTION_FLIP_Z & lx.scale_options ? 1 : 0);
 
   if (flag_graphics)
     fprintf(stream, "<setscale scale='%d'/>\n", options);
@@ -1389,15 +1466,15 @@ void gr_setwindow(float xmin, float xmax, float ymin, float ymax)
   check_autoinit;
 
   gks_set_window(tnr, xmin, xmax, ymin, ymax);
-  gr_setscale(lx.scale_options);
+  setscale(lx.scale_options);
 
   if (accel)
     gr_setproperty("xmin: %g; xmax: %g; ymin: %g; ymax: %g;",
-		   lx.xmin, lx.xmax, lx.ymin, lx.ymax);
+                   lx.xmin, lx.xmax, lx.ymin, lx.ymax);
 
   if (flag_graphics)
     fprintf(stream, "<setwindow xmin='%g' xmax='%g' ymin='%g' ymax='%g'/>\n",
-	    xmin, xmax, ymin, ymax);
+            xmin, xmax, ymin, ymax);
 }
 
 void gr_inqwindow(float *xmin, float *xmax, float *ymin, float *ymax)
@@ -1415,11 +1492,11 @@ void gr_setviewport(float xmin, float xmax, float ymin, float ymax)
   check_autoinit;
 
   gks_set_viewport(tnr, xmin, xmax, ymin, ymax);
-  gr_setscale(lx.scale_options);
+  setscale(lx.scale_options);
 
   if (flag_graphics)
     fprintf(stream, "<setviewport xmin='%g' xmax='%g' ymin='%g' ymax='%g'/>\n",
-	    xmin, xmax, ymin, ymax);
+            xmin, xmax, ymin, ymax);
 }
 
 void gr_selntran(int transform)
@@ -1536,7 +1613,7 @@ void gr_setsegtran(
   check_autoinit;
 
   gks_eval_xform_matrix(fx, fy, transx, transy, phi, scalex, scaley,
-			GKS_K_COORDINATES_NDC, mat);
+                        GKS_K_COORDINATES_NDC, mat);
   gks_set_seg_xform(segn, mat);
 }
 
@@ -1565,29 +1642,25 @@ void gr_updategks(void)
       gks_inq_open_ws(n, &errind, &ol, &wkid);
 
       for (count = 1; count <= ol; count++)
-	{
-	  n = count;
-	  gks_inq_open_ws(n, &errind, &ol, &wkid);
+        {
+          n = count;
+          gks_inq_open_ws(n, &errind, &ol, &wkid);
 
-	  gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
-	  gks_inq_ws_category(wtype, &errind, &wkcat);
+          gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
+          gks_inq_ws_category(wtype, &errind, &wkcat);
 
-	  if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN)
-	    gks_update_ws(wkid, GKS_K_POSTPONE_FLAG);
-	}
+          if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN)
+            gks_update_ws(wkid, GKS_K_POSTPONE_FLAG);
+        }
     }
 }
 
 int gr_setspace(float zmin, float zmax, int rotation, int tilt)
 {
-  int errind, tnr;
-  float wn[4], vp[4];
-  float xmin, xmax, ymin, ymax, r, t, a, c;
-
   if (zmin < zmax)
     {
       if (rotation < 0 || rotation > 90 || tilt < 0 || tilt > 90)
-	return -1;
+        return -1;
     }
   else
     return -1;
@@ -1596,46 +1669,11 @@ int gr_setspace(float zmin, float zmax, int rotation, int tilt)
 
   if (accel)
     if (wx.zmin != zmin || wx.zmax != zmax ||
-	wx.phi != rotation || wx.delta != tilt)
+        wx.phi != rotation || wx.delta != tilt)
       gr_setproperty("zmin: %g; zmax: %g; rotation: %d; tilt: %d;",
-		     zmin, zmax, rotation, tilt);
+                     zmin, zmax, rotation, tilt);
 
-  gks_inq_current_xformno(&errind, &tnr);
-  gks_inq_xform(tnr, &errind, wn, vp);
-
-  xmin = wn[0];
-  xmax = wn[1];
-  ymin = wn[2];
-  ymax = wn[3];
-
-  wx.zmin = zmin;
-  wx.zmax = zmax;
-  wx.phi = rotation;
-  wx.delta = tilt;
-
-  r = arc(rotation);
-  wx.a1 = cos(r);
-  wx.a2 = sin(r);
-
-  a = (xmax - xmin) / (wx.a1 + wx.a2);
-  wx.b = xmin;
-
-  wx.a1 = a * wx.a1 / (xmax - xmin);
-  wx.a2 = a * wx.a2 / (ymax - ymin);
-  wx.b = wx.b - wx.a1 * xmin - wx.a2 * ymin;
-
-  t = arc(tilt);
-  wx.c1 = (pow(cos(r), 2.) - 1.) * tan(t / 2.);
-  wx.c2 = -(pow(sin(r), 2.) - 1.) * tan(t / 2.);
-  wx.c3 = cos(t);
-
-  c = (ymax - ymin) / (wx.c2 + wx.c3 - wx.c1);
-  wx.d = ymin - c * wx.c1;
-
-  wx.c1 = c * wx.c1 / (xmax - xmin);
-  wx.c2 = c * wx.c2 / (ymax - ymin);
-  wx.c3 = c * wx.c3 / (zmax - zmin);
-  wx.d = wx.d - wx.c1 * xmin - wx.c2 * ymin - wx.c3 * zmin;
+  setspace(zmin, zmax, rotation, tilt);
 
   return 0;
 }
@@ -1777,15 +1815,15 @@ void gr_inqtextext(float x, float y, char *string, float *tbx, float *tby)
       gks_select_xform(tnr);
 
       for (i = 0; i < 4; i++)
-	{
-	  tbx[i] = (tbx[i] - nx.b) / nx.a;
-	  tby[i] = (tby[i] - nx.d) / nx.c;
-	  if (lx.scale_options)
-	    {
-	      tbx[i] = x_log(tbx[i]);
-	      tby[i] = y_log(tby[i]);
-	    }
-	}
+        {
+          tbx[i] = (tbx[i] - nx.b) / nx.a;
+          tby[i] = (tby[i] - nx.d) / nx.c;
+          if (lx.scale_options)
+            {
+              tbx[i] = x_log(tbx[i]);
+              tby[i] = y_log(tby[i]);
+            }
+        }
     }
 }
 
@@ -1815,7 +1853,7 @@ void text2d(float x, float y, char *chars)
 }
 
 void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
-	     int major_x, int major_y, float tick_size)
+             int major_x, int major_y, float tick_size)
 {
   int errind, tnr;
   int ltype, halign, valign, clsw;
@@ -1880,121 +1918,121 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
       /* set text alignment */
 
       if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
 
-	  if (tick > 0)
-	    x_label = x_log(x_lin(x_org) - tick);
-	}
+          if (tick > 0)
+            x_label = x_log(x_lin(x_org) - tick);
+        }
       else
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-	  if (tick < 0)
-	    x_label = x_log(x_lin(x_org) - tick);
-	}
+          if (tick < 0)
+            x_label = x_log(x_lin(x_org) - tick);
+        }
 
       if (OPTION_Y_LOG & lx.scale_options)
-	{
-	  y0 = pow(10.0, (double) gauss(log10(y_min)));
+        {
+          y0 = pow(10.0, (double) gauss(log10(y_min)));
 
-	  i = ipred((float) (y_min / y0));
-	  yi = y0 + i * y0;
-	  decade = 0;
+          i = ipred((float) (y_min / y0));
+          yi = y0 + i * y0;
+          decade = 0;
 
-	  /* draw Y-axis */
+          /* draw Y-axis */
 
-	  start_pline(x_org, y_min);
+          start_pline(x_org, y_min);
 
-	  while (yi <= y_max * (1.0 + FEPS))
-	    {
-	      pline(x_org, yi);
+          while (yi <= y_max * (1.0 + FEPS))
+            {
+              pline(x_org, yi);
 
-	      if (i == 0)
-		{
-		  xi = major_tick;
+              if (i == 0)
+                {
+                  xi = major_tick;
 
-		  if (major_y > 0)
-		    if (decade % major_y == 0)
-		      if (yi != y_org || y_org == y_min || y_org == y_max)
-			{
-			  if (y_tick > 1)
-			    {
-			      exponent = iround(log10(yi));
-			      sprintf(string, "10^{%d}", exponent);
-			      text2d(x_label, yi, string);
-			    }
-			  else
-			    text2d(x_label, yi, str_ftoa(string, yi, 0.));
-			}
-		}
-	      else
-		xi = minor_tick;
+                  if (major_y > 0)
+                    if (decade % major_y == 0)
+                      if (yi != y_org || y_org == y_min || y_org == y_max)
+                        {
+                          if (y_tick > 1)
+                            {
+                              exponent = iround(log10(yi));
+                              sprintf(string, "10^{%d}", exponent);
+                              text2d(x_label, yi, string);
+                            }
+                          else
+                            text2d(x_label, yi, str_ftoa(string, yi, 0.));
+                        }
+                }
+              else
+                xi = minor_tick;
 
-	      if (i == 0 || abs(major_y) == 1)
-		{
-		  pline(xi, yi);
-		  pline(x_org, yi);
-		}
+              if (i == 0 || abs(major_y) == 1)
+                {
+                  pline(xi, yi);
+                  pline(x_org, yi);
+                }
 
-	      if (i == 9)
-		{
-		  y0 = y0 * 10.;
-		  i = 0;
-		  decade++;
-		}
-	      else
-		i++;
+              if (i == 9)
+                {
+                  y0 = y0 * 10.;
+                  i = 0;
+                  decade++;
+                }
+              else
+                i++;
 
-	      yi = y0 + i * y0;
-	    }
+              yi = y0 + i * y0;
+            }
 
-	  if (yi > y_max * (1.0 + FEPS))
-	    pline(x_org, y_max);
+          if (yi > y_max * (1.0 + FEPS))
+            pline(x_org, y_max);
 
-	  end_pline();
-	}
+          end_pline();
+        }
       else
-	{
-	  i = isucc((float) (y_min / y_tick));
-	  yi = i * y_tick;
+        {
+          i = isucc((float) (y_min / y_tick));
+          yi = i * y_tick;
 
-	  /* draw Y-axis */
+          /* draw Y-axis */
 
-	  start_pline(x_org, y_min);
+          start_pline(x_org, y_min);
 
-	  while (yi <= y_max * (1.0 + FEPS))
-	    {
-	      pline(x_org, yi);
+          while (yi <= y_max * (1.0 + FEPS))
+            {
+              pline(x_org, yi);
 
-	      if (major_y != 0)
-		{
-		  if (i % major_y == 0)
-		    {
-		      xi = major_tick;
-		      if (yi != y_org || y_org == y_min || y_org == y_max)
-			if (major_y > 0)
-			  text2d(x_label, yi,
-			         str_ftoa(string, yi, y_tick * major_y));
-		    }
-		  else
-		    xi = minor_tick;
-		}
-	      else
-		xi = major_tick;
+              if (major_y != 0)
+                {
+                  if (i % major_y == 0)
+                    {
+                      xi = major_tick;
+                      if (yi != y_org || y_org == y_min || y_org == y_max)
+                        if (major_y > 0)
+                          text2d(x_label, yi,
+                                 str_ftoa(string, yi, y_tick * major_y));
+                    }
+                  else
+                    xi = minor_tick;
+                }
+              else
+                xi = major_tick;
 
-	      pline(xi, yi);
-	      pline(x_org, yi);
+              pline(xi, yi);
+              pline(x_org, yi);
 
-	      i++;
-	      yi = i * y_tick;
-	    }
+              i++;
+              yi = i * y_tick;
+            }
 
-	  if (yi > y_max * (1.0 + FEPS))
-	    pline(x_org, y_max);
+          if (yi > y_max * (1.0 + FEPS))
+            pline(x_org, y_max);
 
-	  end_pline();
-	}
+          end_pline();
+        }
     }
 
   if (x_tick != 0)
@@ -2008,122 +2046,122 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
       /* set text alignment */
 
       if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
 
-	  if (tick > 0)
-	    y_label = y_log(y_lin(y_org) - tick);
-	}
+          if (tick > 0)
+            y_label = y_log(y_lin(y_org) - tick);
+        }
       else
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER,
-			     GKS_K_TEXT_VALIGN_BOTTOM);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER,
+                             GKS_K_TEXT_VALIGN_BOTTOM);
 
-	  if (tick < 0)
-	    y_label = y_log(y_lin(y_org) - tick);
-	}
+          if (tick < 0)
+            y_label = y_log(y_lin(y_org) - tick);
+        }
 
       if (OPTION_X_LOG & lx.scale_options)
-	{
-	  x0 = pow(10.0, (double) gauss(log10(x_min)));
+        {
+          x0 = pow(10.0, (double) gauss(log10(x_min)));
 
-	  i = ipred((float) (x_min / x0));
-	  xi = x0 + i * x0;
-	  decade = 0;
+          i = ipred((float) (x_min / x0));
+          xi = x0 + i * x0;
+          decade = 0;
 
-	  /* draw X-axis */
+          /* draw X-axis */
 
-	  start_pline(x_min, y_org);
+          start_pline(x_min, y_org);
 
-	  while (xi <= x_max * (1.0 + FEPS))
-	    {
-	      pline(xi, y_org);
+          while (xi <= x_max * (1.0 + FEPS))
+            {
+              pline(xi, y_org);
 
-	      if (i == 0)
-		{
-		  yi = major_tick;
+              if (i == 0)
+                {
+                  yi = major_tick;
 
-		  if (major_x > 0)
-		    if (decade % major_x == 0)
-		      if (xi != x_org || x_org == x_min || x_org == x_max)
-			{
-			  if (x_tick > 1)
-			    {
-			      exponent = iround(log10(xi));
-			      sprintf(string, "10^{%d}", exponent);
-			      text2d(xi, y_label, string);
-			    }
-			  else
-			    text2d(xi, y_label, str_ftoa(string, xi, 0.));
-			}
-		}
-	      else
-		yi = minor_tick;
+                  if (major_x > 0)
+                    if (decade % major_x == 0)
+                      if (xi != x_org || x_org == x_min || x_org == x_max)
+                        {
+                          if (x_tick > 1)
+                            {
+                              exponent = iround(log10(xi));
+                              sprintf(string, "10^{%d}", exponent);
+                              text2d(xi, y_label, string);
+                            }
+                          else
+                            text2d(xi, y_label, str_ftoa(string, xi, 0.));
+                        }
+                }
+              else
+                yi = minor_tick;
 
-	      if (i == 0 || abs(major_x) == 1)
-		{
-		  pline(xi, yi);
-		  pline(xi, y_org);
-		}
+              if (i == 0 || abs(major_x) == 1)
+                {
+                  pline(xi, yi);
+                  pline(xi, y_org);
+                }
 
-	      if (i == 9)
-		{
-		  x0 = x0 * 10.;
-		  i = 0;
-		  decade++;
-		}
-	      else
-		i++;
+              if (i == 9)
+                {
+                  x0 = x0 * 10.;
+                  i = 0;
+                  decade++;
+                }
+              else
+                i++;
 
-	      xi = x0 + i * x0;
-	    }
+              xi = x0 + i * x0;
+            }
 
-	  if (xi > x_max * (1.0 + FEPS))
-	    pline(x_max, y_org);
+          if (xi > x_max * (1.0 + FEPS))
+            pline(x_max, y_org);
 
-	  end_pline();
-	}
+          end_pline();
+        }
       else
-	{
-	  i = isucc((float) (x_min / x_tick));
-	  xi = i * x_tick;
+        {
+          i = isucc((float) (x_min / x_tick));
+          xi = i * x_tick;
 
-	  /* draw X-axis */
+          /* draw X-axis */
 
-	  start_pline(x_min, y_org);
+          start_pline(x_min, y_org);
 
-	  while (xi <= x_max * (1.0 + FEPS))
-	    {
-	      pline(xi, y_org);
+          while (xi <= x_max * (1.0 + FEPS))
+            {
+              pline(xi, y_org);
 
-	      if (major_x != 0)
-		{
-		  if (i % major_x == 0)
-		    {
-		      yi = major_tick;
-		      if (xi != x_org || x_org == x_min || x_org == x_max)
-			if (major_x > 0)
-			  text2d(xi, y_label,
-			         str_ftoa(string, xi, x_tick * major_x));
-		    }
-		  else
-		    yi = minor_tick;
-		}
-	      else
-		yi = major_tick;
+              if (major_x != 0)
+                {
+                  if (i % major_x == 0)
+                    {
+                      yi = major_tick;
+                      if (xi != x_org || x_org == x_min || x_org == x_max)
+                        if (major_x > 0)
+                          text2d(xi, y_label,
+                                 str_ftoa(string, xi, x_tick * major_x));
+                    }
+                  else
+                    yi = minor_tick;
+                }
+              else
+                yi = major_tick;
 
-	      pline(xi, yi);
-	      pline(xi, y_org);
+              pline(xi, yi);
+              pline(xi, y_org);
 
-	      i++;
-	      xi = i * x_tick;
-	    }
+              i++;
+              xi = i * x_tick;
+            }
 
-	  if (xi > x_max * (1.0 + FEPS))
-	    pline(x_max, y_org);
+          if (xi > x_max * (1.0 + FEPS))
+            pline(x_max, y_org);
 
-	  end_pline();
-	}
+          end_pline();
+        }
     }
 
   /* restore linetype, text alignment, character-up vector
@@ -2136,8 +2174,8 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
 
   if (flag_graphics)
     fprintf(stream, "<axes x_tick='%g' y_tick='%g' x_org='%g' y_org='%g' "
-	    "major_x='%d major_y='%d' ticksize='%g'/>\n",
-	    x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
+            "major_x='%d major_y='%d' ticksize='%g'/>\n",
+            x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
 }
 
 static
@@ -2153,7 +2191,7 @@ void grid_line(float x0, float y0, float x1, float y1, float tick)
 }
 
 void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
-	     int major_x, int major_y)
+             int major_x, int major_y)
 {
   int errind, tnr;
   int ltype, clsw;
@@ -2200,123 +2238,123 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
   if (y_tick != 0)
     {
       if (OPTION_Y_LOG & lx.scale_options)
-	{
-	  y0 = pow(10.0, (double) gauss(log10(y_min)));
+        {
+          y0 = pow(10.0, (double) gauss(log10(y_min)));
 
-	  i = ipred((float) (y_min / y0));
-	  yi = y0 + i * y0;
+          i = ipred((float) (y_min / y0));
+          yi = y0 + i * y0;
 
-	  /* draw horizontal grid lines */
+          /* draw horizontal grid lines */
 
-	  while (yi <= y_max)
-	    {
-	      if (i == 0 || major_y == 1)
-		{
-		  if (i == 0)
-		    tick = -1.;
-		  else
-		    tick = x_tick;
+          while (yi <= y_max)
+            {
+              if (i == 0 || major_y == 1)
+                {
+                  if (i == 0)
+                    tick = -1.;
+                  else
+                    tick = x_tick;
 
-		  grid_line(x_min, yi, x_max, yi, tick);
-		}
+                  grid_line(x_min, yi, x_max, yi, tick);
+                }
 
-	      if (i == 9)
-		{
-		  y0 = y0 * 10.;
-		  i = 0;
-		}
-	      else
-		i++;
+              if (i == 9)
+                {
+                  y0 = y0 * 10.;
+                  i = 0;
+                }
+              else
+                i++;
 
-	      yi = y0 + i * y0;
-	    }
-	}
+              yi = y0 + i * y0;
+            }
+        }
       else
-	{
-	  i = isucc((float) (y_min / y_tick));
-	  yi = i * y_tick;
+        {
+          i = isucc((float) (y_min / y_tick));
+          yi = i * y_tick;
 
-	  /* draw horizontal grid lines */
+          /* draw horizontal grid lines */
 
-	  while (yi <= y_max)
-	    {
-	      if (major_y > 0)
-		{
-		  if (i % major_y == 0)
-		    tick = -1.;
-		  else
-		    tick = y_tick;
-		}
-	      else
-		tick = -1.;
+          while (yi <= y_max)
+            {
+              if (major_y > 0)
+                {
+                  if (i % major_y == 0)
+                    tick = -1.;
+                  else
+                    tick = y_tick;
+                }
+              else
+                tick = -1.;
 
-	      grid_line(x_min, yi, x_max, yi, tick);
+              grid_line(x_min, yi, x_max, yi, tick);
 
-	      i++;
-	      yi = i * y_tick;
-	    }
-	}
+              i++;
+              yi = i * y_tick;
+            }
+        }
     }
 
   if (x_tick != 0)
     {
       if (OPTION_X_LOG & lx.scale_options)
-	{
-	  x0 = pow(10.0, (double) gauss(log10(x_min)));
+        {
+          x0 = pow(10.0, (double) gauss(log10(x_min)));
 
-	  i = ipred((float) (x_min / x0));
-	  xi = x0 + i * x0;
+          i = ipred((float) (x_min / x0));
+          xi = x0 + i * x0;
 
-	  /* draw vertical grid lines */
+          /* draw vertical grid lines */
 
-	  while (xi <= x_max)
-	    {
-	      if (i == 0 || major_x == 1)
-		{
-		  if (i == 0)
-		    tick = -1.;
-		  else
-		    tick = x_tick;
+          while (xi <= x_max)
+            {
+              if (i == 0 || major_x == 1)
+                {
+                  if (i == 0)
+                    tick = -1.;
+                  else
+                    tick = x_tick;
 
-		  grid_line(xi, y_min, xi, y_max, tick);
-		}
+                  grid_line(xi, y_min, xi, y_max, tick);
+                }
 
-	      if (i == 9)
-		{
-		  x0 = x0 * 10.;
-		  i = 0;
-		}
-	      else
-		i++;
+              if (i == 9)
+                {
+                  x0 = x0 * 10.;
+                  i = 0;
+                }
+              else
+                i++;
 
-	      xi = x0 + i * x0;
-	    }
-	}
+              xi = x0 + i * x0;
+            }
+        }
       else
-	{
-	  i = isucc((float) (x_min / x_tick));
-	  xi = i * x_tick;
+        {
+          i = isucc((float) (x_min / x_tick));
+          xi = i * x_tick;
 
-	  /* draw vertical grid lines */
+          /* draw vertical grid lines */
 
-	  while (xi <= x_max)
-	    {
-	      if (major_x > 0)
-		{
-		  if (i % major_x == 0)
-		    tick = -1.;
-		  else
-		    tick = x_tick;
-		}
-	      else
-		tick = -1.;
+          while (xi <= x_max)
+            {
+              if (major_x > 0)
+                {
+                  if (i % major_x == 0)
+                    tick = -1.;
+                  else
+                    tick = x_tick;
+                }
+              else
+                tick = -1.;
 
-	      grid_line(xi, y_min, xi, y_max, tick);
+              grid_line(xi, y_min, xi, y_max, tick);
 
-	      i++;
-	      xi = i * x_tick;
-	    }
-	}
+              i++;
+              xi = i * x_tick;
+            }
+        }
     }
 
   /* restore linetype and clipping indicator */
@@ -2326,8 +2364,8 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
 
   if (flag_graphics)
     fprintf(stream, "<grid x_tick='%g' y_tick='%g' x_org='%g' y_org='%g' "
-	    "major_x='%d major_y='%d'/>\n",
-	    x_tick, y_tick, x_org, y_org, major_x, major_y);
+            "major_x='%d major_y='%d'/>\n",
+            x_tick, y_tick, x_org, y_org, major_x, major_y);
 }
 
 void gr_verrorbars(int n, float *px, float *py, float *e1, float *e2)
@@ -2368,7 +2406,7 @@ void gr_verrorbars(int n, float *px, float *py, float *e1, float *e2)
       end_pline();
     }
 
-  gr_polymarker(n, px, py);
+  polymarker(n, px, py);
 
   if (flag_graphics)
     {
@@ -2419,7 +2457,7 @@ void gr_herrorbars(int n, float *px, float *py, float *e1, float *e2)
       end_pline();
     }
 
-  gr_polymarker(n, px, py);
+  polymarker(n, px, py);
 
   if (flag_graphics)
     {
@@ -2452,7 +2490,7 @@ void clip_code(float x, float y, float z, int *c)
 
 static
 void clip3d(float *x0, float *x1, float *y0, float *y1, float *z0,
-	    float *z1, int *visible)
+            float *z1, int *visible)
 {
   int c, c0, c1;
   float x = 0, y = 0, z = 0;
@@ -2465,59 +2503,59 @@ void clip3d(float *x0, float *x1, float *y0, float *y1, float *z0,
   while (c0 | c1)
     {
       if (c0 & c1)
-	return;
+        return;
       c = c0 ? c0 : c1;
 
       if (c & LEFT)
-	{
-	  x = cxl;
-	  y = *y0 + (*y1 - *y0) * (cxl - *x0) / (*x1 - *x0);
-	  z = *z0 + (*z1 - *z0) * (cxl - *x0) / (*x1 - *x0);
-	}
+        {
+          x = cxl;
+          y = *y0 + (*y1 - *y0) * (cxl - *x0) / (*x1 - *x0);
+          z = *z0 + (*z1 - *z0) * (cxl - *x0) / (*x1 - *x0);
+        }
       else if (c & RIGHT)
-	{
-	  x = cxr;
-	  y = *y0 + (*y1 - *y0) * (cxr - *x0) / (*x1 - *x0);
-	  z = *z0 + (*z1 - *z0) * (cxr - *x0) / (*x1 - *x0);
-	}
+        {
+          x = cxr;
+          y = *y0 + (*y1 - *y0) * (cxr - *x0) / (*x1 - *x0);
+          z = *z0 + (*z1 - *z0) * (cxr - *x0) / (*x1 - *x0);
+        }
       else if (c & FRONT)
-	{
-	  x = *x0 + (*x1 - *x0) * (cyf - *y0) / (*y1 - *y0);
-	  y = cyf;
-	  z = *z0 + (*z1 - *z0) * (cyf - *y0) / (*y1 - *y0);
-	}
+        {
+          x = *x0 + (*x1 - *x0) * (cyf - *y0) / (*y1 - *y0);
+          y = cyf;
+          z = *z0 + (*z1 - *z0) * (cyf - *y0) / (*y1 - *y0);
+        }
       else if (c & BACK)
-	{
-	  x = *x0 + (*x1 - *x0) * (cyb - *y0) / (*y1 - *y0);
-	  y = cyb;
-	  z = *z0 + (*z1 - *z0) * (cyb - *y0) / (*y1 - *y0);
-	}
+        {
+          x = *x0 + (*x1 - *x0) * (cyb - *y0) / (*y1 - *y0);
+          y = cyb;
+          z = *z0 + (*z1 - *z0) * (cyb - *y0) / (*y1 - *y0);
+        }
       else if (c & BOTTOM)
-	{
-	  x = *x0 + (*x1 - *x0) * (czb - *z0) / (*z1 - *z0);
-	  y = *y0 + (*y1 - *y0) * (czb - *z0) / (*z1 - *z0);
-	  z = czb;
-	}
+        {
+          x = *x0 + (*x1 - *x0) * (czb - *z0) / (*z1 - *z0);
+          y = *y0 + (*y1 - *y0) * (czb - *z0) / (*z1 - *z0);
+          z = czb;
+        }
       else if (c & TOP)
-	{
-	  x = *x0 + (*x1 - *x0) * (czt - *z0) / (*z1 - *z0);
-	  y = *y0 + (*y1 - *y0) * (czt - *z0) / (*z1 - *z0);
-	  z = czt;
-	}
+        {
+          x = *x0 + (*x1 - *x0) * (czt - *z0) / (*z1 - *z0);
+          y = *y0 + (*y1 - *y0) * (czt - *z0) / (*z1 - *z0);
+          z = czt;
+        }
       if (c == c0)
-	{
-	  *x0 = x;
-	  *y0 = y;
-	  *z0 = z;
-	  clip_code(x, y, z, &c0);
-	}
+        {
+          *x0 = x;
+          *y0 = y;
+          *z0 = z;
+          clip_code(x, y, z, &c0);
+        }
       else
-	{
-	  *x1 = x;
-	  *y1 = y;
-	  *z1 = z;
-	  clip_code(x, y, z, &c1);
-	}
+        {
+          *x1 = x;
+          *y1 = y;
+          *z1 = z;
+          clip_code(x, y, z, &c1);
+        }
     }
 
   /* if we reach here, the line from (x0, y0, z0) to (x1, y1, z1) is visible */
@@ -2535,7 +2573,7 @@ void gr_polyline3d(int n, float *px, float *py, float *pz)
 
   check_autoinit;
 
-  gr_setscale(lx.scale_options);
+  setscale(lx.scale_options);
 
   gks_inq_clip(&errind, &clsw, clrt);
 
@@ -2567,17 +2605,17 @@ void gr_polyline3d(int n, float *px, float *py, float *pz)
       y = y1;
       z = z1;
       if (clsw == GKS_K_CLIP)
-	clip3d(&x0, &x1, &y0, &y1, &z0, &z1, &visible);
+        clip3d(&x0, &x1, &y0, &y1, &z0, &z1, &visible);
 
       if (visible)
-	{
-	  if (clip)
-	    {
-	      start_pline3d(x0, y0, z0);
-	      clip = 0;
-	    }
-	  pline3d(x1, y1, z1);
-	}
+        {
+          if (clip)
+            {
+              start_pline3d(x0, y0, z0);
+              clip = 0;
+            }
+          pline3d(x1, y1, z1);
+        }
 
       clip = !visible || x != x1 || y != y1 || z != z1;
       x0 = x;
@@ -2613,8 +2651,8 @@ void text3d(float x, float y, float z, char *chars)
 }
 
 void gr_axes3d(float x_tick, float y_tick, float z_tick,
-	       float x_org, float y_org, float z_org,
-	       int major_x, int major_y, int major_z, float tick_size)
+               float x_org, float y_org, float z_org,
+               int major_x, int major_y, int major_z, float tick_size)
 {
   int errind, tnr;
   int ltype, halign, valign, font, prec, clsw;
@@ -2645,7 +2683,7 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
 
   check_autoinit;
 
-  gr_setscale(lx.scale_options);
+  setscale(lx.scale_options);
 
   /* inquire current normalization transformation */
 
@@ -2670,11 +2708,11 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
   if (accel)
     {
       gr_setproperty("axes: 1; xtick: %g; ytick: %g; ztick: %g;",
-		     x_tick, y_tick, z_tick);
+                     x_tick, y_tick, z_tick);
       gr_setproperty("majorx: %d; majory: %d; majorz: %d; ticksize: %g;",
-		     major_x, major_y, major_z, tick_size);
+                     major_x, major_y, major_z, tick_size);
       if (accel > 1)
-	return;
+        return;
     }
 
   r = (x_max - x_min) / (y_max - y_min) * (vp[3] - vp[2]) / (vp[1] - vp[0]);
@@ -2727,19 +2765,19 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
       /* set text alignment */
 
       if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
 
-	  if (tick > 0)
-	    y_label = y_log(y_lin(y_org) - tick);
-	}
+          if (tick > 0)
+            y_label = y_log(y_lin(y_org) - tick);
+        }
       else
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-	  if (tick < 0)
-	    y_label = y_log(y_lin(y_org) - tick);
-	}
+          if (tick < 0)
+            y_label = y_log(y_lin(y_org) - tick);
+        }
 
       rep = rep_table[which_rep][2];
 
@@ -2747,102 +2785,102 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
       gks_set_text_slant(text_slant[axes_rep[rep][2]]);
 
       if (OPTION_Z_LOG & lx.scale_options)
-	{
-	  z0 = pow(10.0, (double) gauss(log10(z_min)));
+        {
+          z0 = pow(10.0, (double) gauss(log10(z_min)));
 
-	  i = ipred((float) (z_min / z0));
-	  zi = z0 + i * z0;
-	  decade = 0;
+          i = ipred((float) (z_min / z0));
+          zi = z0 + i * z0;
+          decade = 0;
 
-	  /* draw Z-axis */
+          /* draw Z-axis */
 
-	  start_pline3d(x_org, y_org, z_min);
+          start_pline3d(x_org, y_org, z_min);
 
-	  while (zi <= z_max && !flag_abort)
-	    {
-	      pline3d(x_org, y_org, zi);
+          while (zi <= z_max && !flag_abort)
+            {
+              pline3d(x_org, y_org, zi);
 
-	      if (i == 0)
-		{
-		  yi = major_tick;
-		  if (major_z > 0 && zi != z_org)
-		    if (decade % major_z == 0)
-		      {
-			if (z_tick > 1)
-			  {
-			    exponent = iround(log10(zi));
-			    sprintf(string, "10^{%d}", exponent);
-			    text3d(x_org, y_label, zi, string);
-			  }
-			else
-			  text3d(x_org, y_label, zi, str_ftoa(string, zi, 0.));
-		      }
-		}
-	      else
-		yi = minor_tick;
+              if (i == 0)
+                {
+                  yi = major_tick;
+                  if (major_z > 0 && zi != z_org)
+                    if (decade % major_z == 0)
+                      {
+                        if (z_tick > 1)
+                          {
+                            exponent = iround(log10(zi));
+                            sprintf(string, "10^{%d}", exponent);
+                            text3d(x_org, y_label, zi, string);
+                          }
+                        else
+                          text3d(x_org, y_label, zi, str_ftoa(string, zi, 0.));
+                      }
+                }
+              else
+                yi = minor_tick;
 
-	      if (i == 0 || abs(major_z) == 1)
-		{
-		  pline3d(x_org, yi, zi);
-		  pline3d(x_org, y_org, zi);
-		}
+              if (i == 0 || abs(major_z) == 1)
+                {
+                  pline3d(x_org, yi, zi);
+                  pline3d(x_org, y_org, zi);
+                }
 
-	      if (i == 9)
-		{
-		  z0 = z0 * 10.;
-		  i = 0;
-		  decade++;
-		}
-	      else
-		i++;
+              if (i == 9)
+                {
+                  z0 = z0 * 10.;
+                  i = 0;
+                  decade++;
+                }
+              else
+                i++;
 
-	      zi = z0 + i * z0;
-	    }
+              zi = z0 + i * z0;
+            }
 
-	  pline3d(x_org, y_org, z_max);
+          pline3d(x_org, y_org, z_max);
 
-	  end_pline();
-	}
+          end_pline();
+        }
       else
-	{
-	  i = isucc((float) (z_min / z_tick));
-	  zi = i * z_tick;
+        {
+          i = isucc((float) (z_min / z_tick));
+          zi = i * z_tick;
 
-	  /* draw Z-axis */
+          /* draw Z-axis */
 
-	  start_pline3d(x_org, y_org, z_min);
+          start_pline3d(x_org, y_org, z_min);
 
-	  while (zi <= z_max && !flag_abort)
-	    {
-	      pline3d(x_org, y_org, zi);
+          while (zi <= z_max && !flag_abort)
+            {
+              pline3d(x_org, y_org, zi);
 
-	      if (major_z != 0)
-		{
-		  if (i % major_z == 0)
-		    {
-		      yi = major_tick;
-		      if ((zi != z_org) && (major_z > 0))
-			text3d(x_org, y_label, zi,
-			       str_ftoa(string, zi, z_tick * major_z));
-		    }
-		  else
-		    yi = minor_tick;
-		}
-	      else
-		yi = major_tick;
+              if (major_z != 0)
+                {
+                  if (i % major_z == 0)
+                    {
+                      yi = major_tick;
+                      if ((zi != z_org) && (major_z > 0))
+                        text3d(x_org, y_label, zi,
+                               str_ftoa(string, zi, z_tick * major_z));
+                    }
+                  else
+                    yi = minor_tick;
+                }
+              else
+                yi = major_tick;
 
-	      pline3d(x_org, yi, zi);
-	      pline3d(x_org, y_org, zi);
+              pline3d(x_org, yi, zi);
+              pline3d(x_org, y_org, zi);
 
-	      i++;
-	      zi = i * z_tick;
-	    }
+              i++;
+              zi = i * z_tick;
+            }
 
-	  if (zi > z_max)
-	    pline3d(x_org, y_org, z_max);
+          if (zi > z_max)
+            pline3d(x_org, y_org, z_max);
 
-	  end_pline();
-	}
+          end_pline();
+        }
     }
 
   if (y_tick != 0)
@@ -2856,124 +2894,124 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
       /* set text alignment */
 
       if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
 
-	  if (tick > 0)
-	    x_label = x_log(x_lin(x_org) - tick);
-	}
+          if (tick > 0)
+            x_label = x_log(x_lin(x_org) - tick);
+        }
       else
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-	  if (tick < 0)
-	    x_label = x_log(x_lin(x_org) - tick);
-	}
+          if (tick < 0)
+            x_label = x_log(x_lin(x_org) - tick);
+        }
 
       rep = rep_table[which_rep][1];
       if (rep == 0)
-	gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
 
       gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
       gks_set_text_slant(text_slant[axes_rep[rep][2]]);
 
       if (OPTION_Y_LOG & lx.scale_options)
-	{
-	  y0 = pow(10.0, (double) gauss(log10(y_min)));
+        {
+          y0 = pow(10.0, (double) gauss(log10(y_min)));
 
-	  i = ipred((float) (y_min / y0));
-	  yi = y0 + i * y0;
-	  decade = 0;
+          i = ipred((float) (y_min / y0));
+          yi = y0 + i * y0;
+          decade = 0;
 
-	  /* draw Y-axis */
+          /* draw Y-axis */
 
-	  start_pline3d(x_org, y_min, z_org);
+          start_pline3d(x_org, y_min, z_org);
 
-	  while (yi <= y_max && !flag_abort)
-	    {
-	      pline3d(x_org, yi, z_org);
+          while (yi <= y_max && !flag_abort)
+            {
+              pline3d(x_org, yi, z_org);
 
-	      if (i == 0)
-		{
-		  xi = major_tick;
-		  if (major_y > 0 && yi != y_org)
-		    if (decade % major_y == 0)
-		      {
-			if (y_tick > 1)
-			  {
-			    exponent = iround(log10(yi));
-			    sprintf(string, "10^{%d}", exponent);
-			    text3d(x_label, yi, z_org, string);
-			  }
-			else
-			  text3d(x_label, yi, z_org, str_ftoa(string, yi, 0.));
-		      }
-		}
-	      else
-		xi = minor_tick;
+              if (i == 0)
+                {
+                  xi = major_tick;
+                  if (major_y > 0 && yi != y_org)
+                    if (decade % major_y == 0)
+                      {
+                        if (y_tick > 1)
+                          {
+                            exponent = iround(log10(yi));
+                            sprintf(string, "10^{%d}", exponent);
+                            text3d(x_label, yi, z_org, string);
+                          }
+                        else
+                          text3d(x_label, yi, z_org, str_ftoa(string, yi, 0.));
+                      }
+                }
+              else
+                xi = minor_tick;
 
-	      if (i == 0 || abs(major_y) == 1)
-		{
-		  pline3d(xi, yi, z_org);
-		  pline3d(x_org, yi, z_org);
-		}
+              if (i == 0 || abs(major_y) == 1)
+                {
+                  pline3d(xi, yi, z_org);
+                  pline3d(x_org, yi, z_org);
+                }
 
-	      if (i == 9)
-		{
-		  y0 = y0 * 10.;
-		  i = 0;
-		  decade++;
-		}
-	      else
-		i++;
+              if (i == 9)
+                {
+                  y0 = y0 * 10.;
+                  i = 0;
+                  decade++;
+                }
+              else
+                i++;
 
-	      yi = y0 + i * y0;
-	    }
+              yi = y0 + i * y0;
+            }
 
-	  pline3d(x_org, y_max, z_org);
+          pline3d(x_org, y_max, z_org);
 
-	  end_pline();
-	}
+          end_pline();
+        }
       else
-	{
-	  i = isucc((float) (y_min / y_tick));
-	  yi = i * y_tick;
+        {
+          i = isucc((float) (y_min / y_tick));
+          yi = i * y_tick;
 
-	  /* draw Y-axis */
+          /* draw Y-axis */
 
-	  start_pline3d(x_org, y_min, z_org);
+          start_pline3d(x_org, y_min, z_org);
 
-	  while (yi <= y_max && !flag_abort)
-	    {
-	      pline3d(x_org, yi, z_org);
+          while (yi <= y_max && !flag_abort)
+            {
+              pline3d(x_org, yi, z_org);
 
-	      if (major_y != 0)
-		{
-		  if (i % major_y == 0)
-		    {
-		      xi = major_tick;
-		      if ((yi != y_org) && (major_y > 0))
-			text3d(x_label, yi, z_org,
-			       str_ftoa(string, yi, y_tick * major_y));
-		    }
-		  else
-		    xi = minor_tick;
-		}
-	      else
-		xi = major_tick;
+              if (major_y != 0)
+                {
+                  if (i % major_y == 0)
+                    {
+                      xi = major_tick;
+                      if ((yi != y_org) && (major_y > 0))
+                        text3d(x_label, yi, z_org,
+                               str_ftoa(string, yi, y_tick * major_y));
+                    }
+                  else
+                    xi = minor_tick;
+                }
+              else
+                xi = major_tick;
 
-	      pline3d(xi, yi, z_org);
-	      pline3d(x_org, yi, z_org);
+              pline3d(xi, yi, z_org);
+              pline3d(x_org, yi, z_org);
 
-	      i++;
-	      yi = i * y_tick;
-	    }
+              i++;
+              yi = i * y_tick;
+            }
 
-	  if (yi > y_max)
-	    pline3d(x_org, y_max, z_org);
+          if (yi > y_max)
+            pline3d(x_org, y_max, z_org);
 
-	  end_pline();
-	}
+          end_pline();
+        }
     }
 
   if (x_tick != 0)
@@ -2987,124 +3025,124 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
       /* set text alignment */
 
       if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
 
-	  if (tick > 0)
-	    y_label = y_log(y_lin(y_org) - tick);
-	}
+          if (tick > 0)
+            y_label = y_log(y_lin(y_org) - tick);
+        }
       else
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-	  if (tick < 0)
-	    y_label = y_log(y_lin(y_org) - tick);
-	}
+          if (tick < 0)
+            y_label = y_log(y_lin(y_org) - tick);
+        }
 
       rep = rep_table[which_rep][0];
       if (rep == 2)
-	gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
 
       gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
       gks_set_text_slant(text_slant[axes_rep[rep][2]]);
 
       if (OPTION_X_LOG & lx.scale_options)
-	{
-	  x0 = pow(10.0, (double) gauss(log10(x_min)));
+        {
+          x0 = pow(10.0, (double) gauss(log10(x_min)));
 
-	  i = ipred((float) (x_min / x0));
-	  xi = x0 + i * x0;
-	  decade = 0;
+          i = ipred((float) (x_min / x0));
+          xi = x0 + i * x0;
+          decade = 0;
 
-	  /* draw X-axis */
+          /* draw X-axis */
 
-	  start_pline3d(x_min, y_org, z_org);
+          start_pline3d(x_min, y_org, z_org);
 
-	  while (xi <= x_max && !flag_abort)
-	    {
-	      pline3d(xi, y_org, z_org);
+          while (xi <= x_max && !flag_abort)
+            {
+              pline3d(xi, y_org, z_org);
 
-	      if (i == 0)
-		{
-		  yi = major_tick;
-		  if (major_x > 0 && xi != x_org)
-		    if (decade % major_x == 0)
-		      {
-			if (x_tick > 1)
-			  {
-			    exponent = iround(log10(xi));
-			    sprintf(string, "10^{%d}", exponent);
-			    text3d(xi, y_label, z_org, string);
-			  }
-			else
-			  text3d(xi, y_label, z_org, str_ftoa(string, xi, 0.));
-		      }
-		}
-	      else
-		yi = minor_tick;
+              if (i == 0)
+                {
+                  yi = major_tick;
+                  if (major_x > 0 && xi != x_org)
+                    if (decade % major_x == 0)
+                      {
+                        if (x_tick > 1)
+                          {
+                            exponent = iround(log10(xi));
+                            sprintf(string, "10^{%d}", exponent);
+                            text3d(xi, y_label, z_org, string);
+                          }
+                        else
+                          text3d(xi, y_label, z_org, str_ftoa(string, xi, 0.));
+                      }
+                }
+              else
+                yi = minor_tick;
 
-	      if (i == 0 || abs(major_x) == 1)
-		{
-		  pline3d(xi, yi, z_org);
-		  pline3d(xi, y_org, z_org);
-		}
+              if (i == 0 || abs(major_x) == 1)
+                {
+                  pline3d(xi, yi, z_org);
+                  pline3d(xi, y_org, z_org);
+                }
 
-	      if (i == 9)
-		{
-		  x0 = x0 * 10.;
-		  i = 0;
-		  decade++;
-		}
-	      else
-		i++;
+              if (i == 9)
+                {
+                  x0 = x0 * 10.;
+                  i = 0;
+                  decade++;
+                }
+              else
+                i++;
 
-	      xi = x0 + i * x0;
-	    }
+              xi = x0 + i * x0;
+            }
 
-	  pline3d(x_max, y_org, z_org);
+          pline3d(x_max, y_org, z_org);
 
-	  end_pline();
-	}
+          end_pline();
+        }
       else
-	{
-	  i = isucc((float) (x_min / x_tick));
-	  xi = i * x_tick;
+        {
+          i = isucc((float) (x_min / x_tick));
+          xi = i * x_tick;
 
-	  /* draw X-axis */
+          /* draw X-axis */
 
-	  start_pline3d(x_min, y_org, z_org);
+          start_pline3d(x_min, y_org, z_org);
 
-	  while (xi <= x_max && !flag_abort)
-	    {
-	      pline3d(xi, y_org, z_org);
+          while (xi <= x_max && !flag_abort)
+            {
+              pline3d(xi, y_org, z_org);
 
-	      if (major_x != 0)
-		{
-		  if (i % major_x == 0)
-		    {
-		      yi = major_tick;
-		      if ((xi != x_org) && (major_x > 0))
-			text3d(xi, y_label, z_org,
-			       str_ftoa(string, xi, x_tick * major_x));
-		    }
-		  else
-		    yi = minor_tick;
-		}
-	      else
-		yi = major_tick;
+              if (major_x != 0)
+                {
+                  if (i % major_x == 0)
+                    {
+                      yi = major_tick;
+                      if ((xi != x_org) && (major_x > 0))
+                        text3d(xi, y_label, z_org,
+                               str_ftoa(string, xi, x_tick * major_x));
+                    }
+                  else
+                    yi = minor_tick;
+                }
+              else
+                yi = major_tick;
 
-	      pline3d(xi, yi, z_org);
-	      pline3d(xi, y_org, z_org);
+              pline3d(xi, yi, z_org);
+              pline3d(xi, y_org, z_org);
 
-	      i++;
-	      xi = i * x_tick;
-	    }
+              i++;
+              xi = i * x_tick;
+            }
 
-	  if (xi > x_max)
-	    pline3d(x_max, y_org, z_org);
+          if (xi > x_max)
+            pline3d(x_max, y_org, z_org);
 
-	  end_pline();
-	}
+          end_pline();
+        }
     }
 
   /* restore linetype, text alignment, text font, text slant,
@@ -3144,14 +3182,14 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
   check_autoinit;
 
-  gr_setscale(lx.scale_options);
+  setscale(lx.scale_options);
 
   if (accel)
     {
       gr_setproperty("xlabel: \"%s\"; ylabel: \"%s\"; zlabel: \"%s\";",
-		      x_title, y_title, z_title);
+                      x_title, y_title, z_title);
       if (accel > 1)
-	return;
+        return;
     }
 
   /* inquire current normalization transformation */
@@ -3273,38 +3311,38 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
       x = x_log(0.5 * (x_lin(x_min) + x_lin(x_max)));
       if (rep == 0)
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
 
-	  rep = rep_table[which_rep][0];
+          rep = rep_table[which_rep][0];
 
-	  if (flip_y)
-	    y = y_max;
-	  else
-	    y = y_min;
+          if (flip_y)
+            y = y_max;
+          else
+            y = y_min;
 
-	  zr = x_mid_y / (2 * c3);
-	  z_rel = zr * (z_lin(z_max) - z_lin(z_min));
+          zr = x_mid_y / (2 * c3);
+          z_rel = zr * (z_lin(z_max) - z_lin(z_min));
 
-	  if (flip_z)
-	    z = z_log(z_lin(z_max) + z_rel);
-	  else
-	    z = z_log(z_lin(z_min) - z_rel);
-	}
+          if (flip_z)
+            z = z_log(z_lin(z_max) + z_rel);
+          else
+            z = z_log(z_lin(z_min) - z_rel);
+        }
       else
-	{
-	  if (flip_y)
-	    y = y_log(y_lin(y_max) + y_rel);
-	  else
-	    y = y_log(y_lin(y_min) - y_rel);
+        {
+          if (flip_y)
+            y = y_log(y_lin(y_max) + y_rel);
+          else
+            y = y_log(y_lin(y_min) - y_rel);
 
-	  if (flip_z)
-	    z = z_max;
-	  else
-	    z = z_min;
+          if (flip_z)
+            z = z_max;
+          else
+            z = z_min;
 
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
-	}
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
+        }
 
       gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
       gks_set_text_slant(text_slant[axes_rep[rep][2]]);
@@ -3318,38 +3356,38 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
       y = y_log(0.5 * (y_lin(y_min) + y_lin(y_max)));
       if (rep == 2)
-	{
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
 
-	  rep = rep_table[which_rep][1];
+          rep = rep_table[which_rep][1];
 
-	  if (flip_x)
-	    x = x_min;
-	  else
-	    x = x_max;
+          if (flip_x)
+            x = x_min;
+          else
+            x = x_max;
 
-	  zr = y_mid_y / (2 * c3);
-	  z_rel = zr * (z_lin(z_max) - z_lin(z_min));
+          zr = y_mid_y / (2 * c3);
+          z_rel = zr * (z_lin(z_max) - z_lin(z_min));
 
-	  if (flip_z)
-	    z = z_log(z_lin(z_max) + z_rel);
-	  else
-	    z = z_log(z_lin(z_min) - z_rel);
-	}
+          if (flip_z)
+            z = z_log(z_lin(z_max) + z_rel);
+          else
+            z = z_log(z_lin(z_min) - z_rel);
+        }
       else
-	{
-	  if (flip_x)
-	    x = x_log(x_lin(x_min) - x_rel);
-	  else
-	    x = x_log(x_lin(x_max) + x_rel);
+        {
+          if (flip_x)
+            x = x_log(x_lin(x_min) - x_rel);
+          else
+            x = x_log(x_lin(x_max) + x_rel);
 
-	  if (flip_z)
-	    z = z_max;
-	  else
-	    z = z_min;
+          if (flip_z)
+            z = z_max;
+          else
+            z = z_min;
 
-	  gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
-	}
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
+        }
 
       gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
       gks_set_text_slant(text_slant[axes_rep[rep][2]]);
@@ -3365,22 +3403,22 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
       gks_set_text_slant(text_slant[axes_rep[rep][2]]);
 
       if (flip_x)
-	x = x_max;
+        x = x_max;
       else
-	x = x_min;
+        x = x_min;
 
       if (flip_y)
-	y = y_max;
+        y = y_max;
       else
-	y = y_min;
+        y = y_min;
 
       zr = (1 - (c1 + c3 + vp[2])) / (2 * c3);
       z_rel = zr * (z_lin(z_max) - z_lin(z_min));
 
       if (flip_z)
-	z = z_log(z_lin(z_min) - 0.5 * z_rel);
+        z = z_log(z_lin(z_min) - 0.5 * z_rel);
       else
-	z = z_log(z_lin(z_max) + 0.5 * z_rel);
+        z = z_log(z_lin(z_max) + 0.5 * z_rel);
 
       gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BASE);
 
@@ -3418,60 +3456,60 @@ void init_hlr(void)
   for (sign = -1; sign <= 1; sign += 2)
     {
       if (sign == 1)
-	{
-	  hide = hlr.ymin;
-	  x[0] = hlr.x0; y[0] = hlr.y0; z[0] = hlr.z0;
-	  x[1] = hlr.x1; y[1] = hlr.y0; z[1] = hlr.z0;
-	  x[2] = hlr.x1; y[2] = hlr.y1; z[2] = hlr.z0;
-	}
+        {
+          hide = hlr.ymin;
+          x[0] = hlr.x0; y[0] = hlr.y0; z[0] = hlr.z0;
+          x[1] = hlr.x1; y[1] = hlr.y0; z[1] = hlr.z0;
+          x[2] = hlr.x1; y[2] = hlr.y1; z[2] = hlr.z0;
+        }
       else
-	{
-	  hide = hlr.ymax;
-	  x[0] = hlr.x0; y[0] = hlr.y0; z[0] = hlr.z1;
-	  x[1] = hlr.x0; y[1] = hlr.y1; z[1] = hlr.z1;
-	  x[2] = hlr.x1; y[2] = hlr.y1; z[2] = hlr.z1;
-	}
+        {
+          hide = hlr.ymax;
+          x[0] = hlr.x0; y[0] = hlr.y0; z[0] = hlr.z1;
+          x[1] = hlr.x0; y[1] = hlr.y1; z[1] = hlr.z1;
+          x[2] = hlr.x1; y[2] = hlr.y1; z[2] = hlr.z1;
+        }
 
       for (i = 0; i < 3; i++)
-	apply_world_xform(x + i, y + i, z + i);
+        apply_world_xform(x + i, y + i, z + i);
 
       if (hlr.xmax > hlr.xmin)
-	{
-	  a = RESOLUTION_X / (hlr.xmax - hlr.xmin);
-	  b = -(hlr.xmin * a);
-	}
+        {
+          a = RESOLUTION_X / (hlr.xmax - hlr.xmin);
+          b = -(hlr.xmin * a);
+        }
       else
-	{
-	  a = 1;
-	  b = 0;
-	}
+        {
+          a = 1;
+          b = 0;
+        }
 
       x1 = nint(a * x[0] + b);
       if (x1 < 0)
-	x1 = 0;
+        x1 = 0;
       x2 = x1;
 
       for (i = 1; i < 3; i++)
-	{
-	  x1 = x2;
-	  x2 = nint(a * x[i] + b);
+        {
+          x1 = x2;
+          x2 = nint(a * x[i] + b);
 
-	  if (x1 <= x2)
-	    {
-	      if (x1 != x2)
-		m = (y[i] - y[i - 1]) / (x2 - x1);
+          if (x1 <= x2)
+            {
+              if (x1 != x2)
+                m = (y[i] - y[i - 1]) / (x2 - x1);
 
-	      for (j = x1; j <= x2; j++)
-		{
-		  if (x1 != x2)
-		    yj = y[i - 1] + m * (j - x1);
-		  else
-		    yj = y[i];
+              for (j = x1; j <= x2; j++)
+                {
+                  if (x1 != x2)
+                    yj = y[i - 1] + m * (j - x1);
+                  else
+                    yj = y[i];
 
-		  hide[j] = yj - sign * eps;
-		}
-	    }
-	}
+                  hide[j] = yj - sign * eps;
+                }
+            }
+        }
     }
 }
 
@@ -3528,14 +3566,14 @@ void pline_hlr(int n, float *x, float *y, float *z)
       init_hlr();
 
       if (hlr.ymin[x1] <= y[0] && y[0] <= hlr.ymax[x1])
-	{
-	  hide[x1] = y[0];
+        {
+          hide[x1] = y[0];
 
-	  if (draw)
-	    start_pline(x[0], y[0]);
+          if (draw)
+            start_pline(x[0], y[0]);
 
-	  visible = 1;
-	}
+          visible = 1;
+        }
     }
 
   for (i = 1; i < n; i++)
@@ -3544,76 +3582,76 @@ void pline_hlr(int n, float *x, float *y, float *z)
       x2 = nint(a * x[i] + b);
 
       if (x1 < x2)
-	{
-	  if (x1 != x2)
-	    m = (y[i] - y[i - 1]) / (x2 - x1);
+        {
+          if (x1 != x2)
+            m = (y[i] - y[i - 1]) / (x2 - x1);
 
-	  for (j = x1; j <= x2; j++)
-	    {
-	      if (x1 != x2)
-		yj = y[i - 1] + m * (j - x1);
-	      else
-		yj = y[i];
+          for (j = x1; j <= x2; j++)
+            {
+              if (x1 != x2)
+                yj = y[i - 1] + m * (j - x1);
+              else
+                yj = y[i];
 
-	      if (hlr.ymin[j] <= yj && yj <= hlr.ymax[j])
-		{
-		  if (!visible)
-		    {
-		      if (draw)
-			{
-			  xj = c * j + hlr.xmin;
+              if (hlr.ymin[j] <= yj && yj <= hlr.ymax[j])
+                {
+                  if (!visible)
+                    {
+                      if (draw)
+                        {
+                          xj = c * j + hlr.xmin;
 
-			  start_pline(xj, yj);
-			}
+                          start_pline(xj, yj);
+                        }
 
-		      visible = 1;
-		    }
-		}
-	      else
-		{
-		  if (visible)
-		    {
-		      if (draw)
-			{
-			  xj = c * j + hlr.xmin;
+                      visible = 1;
+                    }
+                }
+              else
+                {
+                  if (visible)
+                    {
+                      if (draw)
+                        {
+                          xj = c * j + hlr.xmin;
 
-			  pline(xj, yj);
-			  end_pline();
-			}
+                          pline(xj, yj);
+                          end_pline();
+                        }
 
-		      visible = 0;
-		    }
-		}
+                      visible = 0;
+                    }
+                }
 
-	      if ((yj - hide[j]) * hlr.sign > 0)
-		hide[j] = yj;
-	    }
+              if ((yj - hide[j]) * hlr.sign > 0)
+                hide[j] = yj;
+            }
 
-	  if (visible && draw)
-	    pline(x[i], y[i]);
-	}
+          if (visible && draw)
+            pline(x[i], y[i]);
+        }
 
       else if (x1 == x2)
-	{
-	  if (draw)
-	    {
+        {
+          if (draw)
+            {
               j = x1;
-	      xj = c * j + hlr.xmin;
-	      yj = y[i];
+              xj = c * j + hlr.xmin;
+              yj = y[i];
 
-	      if ((yj - hide[j]) * hlr.sign > 0)
-		{
-		  start_pline(xj, hide[j]);
-		  pline(xj, yj);
-		  end_pline();
+              if ((yj - hide[j]) * hlr.sign > 0)
+                {
+                  start_pline(xj, hide[j]);
+                  pline(xj, yj);
+                  end_pline();
 
-		  visible = 1;
-		  hide[j] = yj;
-		}
-	      else
-		visible = 0;
+                  visible = 1;
+                  hide[j] = yj;
+                }
+              else
+                visible = 0;
             }
-	}
+        }
     }
 
   if (visible && draw)
@@ -3639,7 +3677,7 @@ void glint(int dinp, int *inp, int doutp, int *outp)
     {
       delta = ratio * (inp[i + 1] - inp[i]);
       for (k = 1; k <= n; k++)
-	outp[j++] = inp[i] + (int)(k * delta + 0.5);
+        outp[j++] = inp[i] + (int)(k * delta + 0.5);
     }
 
   for (k = j; k < doutp; k++)
@@ -3667,11 +3705,11 @@ void pixel(
   for (i = 0; i < dx; i++)
     {
       for (j = 0; j < dy; j++)
-	wk1[j] = colia[i + j * dx];
+        wk1[j] = colia[i + j * dx];
 
       glint(dy, wk1, h, wk2);
       for (j = 0; j < h; j++)
-	pixmap[ix + j * w] = wk2[j];
+        pixmap[ix + j * w] = wk2[j];
 
       ix += nx;
     }
@@ -3680,14 +3718,14 @@ void pixel(
     {
       ix = 0;
       for (i = 0; i < dx; i++)
-	{
-	  wk1[i] = pixmap[ix + j * w];
-	  ix += nx;
-	}
+        {
+          wk1[i] = pixmap[ix + j * w];
+          ix += nx;
+        }
 
       glint(dx, wk1, w, wk2);
       for (i = 0; i < w; i++)
-	pixmap[i + j * w] = wk2[i];
+        pixmap[i + j * w] = wk2[i];
     }
 
   gks_cellarray(xmin, ymin, xmax, ymax, w, h, sx, sy, w, h, pixmap);
@@ -3710,17 +3748,17 @@ void get_intensity(
   for (k = 1; k < 4; k++)
     {
       if (fx[k] > max_x)
-	max_x = fx[k];
+        max_x = fx[k];
       else if (fx[k] < min_x)
-	min_x = fx[k];
+        min_x = fx[k];
       if (fy[k] > max_y)
-	max_y = fy[k];
+        max_y = fy[k];
       else if (fy[k] < min_y)
-	min_y = fy[k];
+        min_y = fy[k];
       if (fz[k] > max_z)
-	max_z = fz[k];
+        max_z = fz[k];
       else if (fz[k] < min_z)
-	min_z = fz[k];
+        min_z = fz[k];
     }
 
   center[0] = (max_x + min_x) / 2;
@@ -3731,7 +3769,7 @@ void get_intensity(
     negated[k] = light_source[k] - center[k];
 
   norm_1 = (float) sqrt(negated[0] * negated[0] + negated[1] * negated[1] +
-			negated[2] * negated[2]);
+                        negated[2] * negated[2]);
 
   for (k = 0; k < 3; k++)
     negated_norm[k] = negated[k] / norm_1;
@@ -3748,7 +3786,7 @@ void get_intensity(
   normal[3] = 1;
 
   norm_2 = (float) sqrt(normal[0] * normal[0] + normal[1] * normal[1] +
-			normal[2] * normal[2]);
+                        normal[2] * normal[2]);
 
   for (k = 0; k < 3; k++)
     oddnormal[k] = normal[k] / norm_2;
@@ -3789,20 +3827,20 @@ void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
   for (i = 1; i < nx; i++)
     if (px[i - 1] >= px[i])
       {
-	fprintf(stderr, "points not sorted in ascending order\n");
-	return;
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
       }
 
   for (j = 1; j < ny; j++)
     if (py[j - 1] >= py[j])
       {
-	fprintf(stderr, "points not sorted in ascending order\n");
-	return;
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
       }
 
   check_autoinit;
 
-  gr_setscale(lx.scale_options);
+  setscale(lx.scale_options);
 
 #define Z(x, y) pz[(x) + nx * (y)]
 
@@ -3810,12 +3848,12 @@ void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
     {
       gr_beginproperty("data3d: %i; %i;", nx, ny);
       for (j = 0; j < ny; j++)
-	for (i = 0; i < nx; i++)
-	  gr_addproperty("%g;", Z(i, j));
+        for (i = 0; i < nx; i++)
+          gr_addproperty("%g;", Z(i, j));
       gr_endproperty();
       gr_setproperty("surface: 1; flush;");
       if (accel > 1)
-	return;
+        return;
     }
 
   a = 1.0 / (lx.xmax - lx.xmin);
@@ -3853,10 +3891,10 @@ void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
     {
       jj = flip_y ? ny - j - 1 : j;
       for (i = 0; i < nx; i++)
-	{
-	  ii = flip_x ? nx - i - 1 : i;
-	  z[k++] = z_lin(Z(ii, jj));
-	}
+        {
+          ii = flip_x ? nx - i - 1 : i;
+          z[k++] = z_lin(Z(ii, jj));
+        }
     }
 
 #undef Z
@@ -3890,264 +3928,264 @@ void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
       hlr.sign = -hlr.sign;
 
       switch (option)
-	{
+        {
 
-	case OPTION_LINES:
-	  {
-	    j = 0;
-	    hlr.initialize = 1;
+        case OPTION_LINES:
+          {
+            j = 0;
+            hlr.initialize = 1;
 
-	    while (j < ny && !flag_abort)
-	      {
-		k = 0;
+            while (j < ny && !flag_abort)
+              {
+                k = 0;
 
-		if (j > 0)
-		  {
-		    xn[k] = x[0];
-		    yn[k] = y[j - 1];
-		    zn[k] = Z(0, j - 1);
-		    k++;
-		  }
+                if (j > 0)
+                  {
+                    xn[k] = x[0];
+                    yn[k] = y[j - 1];
+                    zn[k] = Z(0, j - 1);
+                    k++;
+                  }
 
-		for (i = 0; i < nx; i++)
-		  {
-		    xn[k] = x[i];
-		    yn[k] = y[j];
-		    zn[k] = Z(i, j);
-		    k++;
-		  }
+                for (i = 0; i < nx; i++)
+                  {
+                    xn[k] = x[i];
+                    yn[k] = y[j];
+                    zn[k] = Z(i, j);
+                    k++;
+                  }
 
-		if (j == 0)
+                if (j == 0)
 
-		  for (i = 1; i < ny; i++)
-		    {
-		      xn[k] = x[nx - 1];
-		      yn[k] = y[i];
-		      zn[k] = Z(nx - 1, i);
-		      k++;
-		    }
+                  for (i = 1; i < ny; i++)
+                    {
+                      xn[k] = x[nx - 1];
+                      yn[k] = y[i];
+                      zn[k] = Z(nx - 1, i);
+                      k++;
+                    }
 
-		pline_hlr(k, xn, yn, zn);
+                pline_hlr(k, xn, yn, zn);
 
-		hlr.initialize = 0;
-		j++;
-	      }
+                hlr.initialize = 0;
+                j++;
+              }
 
-	    break;
-	  }
+            break;
+          }
 
-	case OPTION_MESH:
-	  {
-	    k = 0;
+        case OPTION_MESH:
+          {
+            k = 0;
 
-	    for (i = 0; i < nx; i++)
-	      {
-		xn[k] = x[i];
-		yn[k] = y[0];
-		zn[k] = Z(i, 0);
-		k++;
-	      }
+            for (i = 0; i < nx; i++)
+              {
+                xn[k] = x[i];
+                yn[k] = y[0];
+                zn[k] = Z(i, 0);
+                k++;
+              }
 
-	    for (j = 1; j < ny; j++)
-	      {
-		xn[k] = x[nx - 1];
-		yn[k] = y[j];
-		zn[k] = Z(nx - 1, j);
-		k++;
-	      }
+            for (j = 1; j < ny; j++)
+              {
+                xn[k] = x[nx - 1];
+                yn[k] = y[j];
+                zn[k] = Z(nx - 1, j);
+                k++;
+              }
 
-	    hlr.initialize = 1;
+            hlr.initialize = 1;
 
-	    pline_hlr(k, xn, yn, zn);
+            pline_hlr(k, xn, yn, zn);
 
-	    i = nx - 1;
+            i = nx - 1;
 
-	    while (i > 0 && !flag_abort)
-	      {
-		hlr.initialize = 0;
+            while (i > 0 && !flag_abort)
+              {
+                hlr.initialize = 0;
 
-		for (j = 1; j < ny; j++)
-		  {
-		    xn[0] = x[i - 1];
-		    yn[0] = y[j - 1];
-		    zn[0] = Z(i - 1, j - 1);
+                for (j = 1; j < ny; j++)
+                  {
+                    xn[0] = x[i - 1];
+                    yn[0] = y[j - 1];
+                    zn[0] = Z(i - 1, j - 1);
 
-		    xn[1] = x[i - 1];
-		    yn[1] = y[j];
-		    zn[1] = Z(i - 1, j);
+                    xn[1] = x[i - 1];
+                    yn[1] = y[j];
+                    zn[1] = Z(i - 1, j);
 
-		    xn[2] = x[i];
-		    yn[2] = y[j];
-		    zn[2] = Z(i, j);
+                    xn[2] = x[i];
+                    yn[2] = y[j];
+                    zn[2] = Z(i, j);
 
-		    pline_hlr(3, xn, yn, zn);
-		  }
+                    pline_hlr(3, xn, yn, zn);
+                  }
 
-		i--;
-	      }
+                i--;
+              }
 
-	    break;
-	  }
+            break;
+          }
 
-	case OPTION_FILLED_MESH:
-	case OPTION_Z_SHADED_MESH:
-	case OPTION_COLORED_MESH:
-	case OPTION_SHADED_MESH:
-	  {
-	    j = ny - 1;
+        case OPTION_FILLED_MESH:
+        case OPTION_Z_SHADED_MESH:
+        case OPTION_COLORED_MESH:
+        case OPTION_SHADED_MESH:
+          {
+            j = ny - 1;
 
-	    gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+            gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
 
-	    while (j > 0 && !flag_abort)
-	      {
-		for (i = 1; i < nx; i++)
-		  {
-		    xn[0] = x[i - 1];
-		    yn[0] = y[j];
-		    zn[0] = Z(i - 1, j);
+            while (j > 0 && !flag_abort)
+              {
+                for (i = 1; i < nx; i++)
+                  {
+                    xn[0] = x[i - 1];
+                    yn[0] = y[j];
+                    zn[0] = Z(i - 1, j);
 
-		    xn[1] = x[i - 1];
-		    yn[1] = y[j - 1];
-		    zn[1] = Z(i - 1, j - 1);
+                    xn[1] = x[i - 1];
+                    yn[1] = y[j - 1];
+                    zn[1] = Z(i - 1, j - 1);
 
-		    xn[2] = x[i];
-		    yn[2] = y[j - 1];
-		    zn[2] = Z(i, j - 1);
+                    xn[2] = x[i];
+                    yn[2] = y[j - 1];
+                    zn[2] = Z(i, j - 1);
 
-		    xn[3] = x[i];
-		    yn[3] = y[j];
-		    zn[3] = Z(i, j);
+                    xn[3] = x[i];
+                    yn[3] = y[j];
+                    zn[3] = Z(i, j);
 
-		    xn[4] = xn[0];
-		    yn[4] = yn[0];
-		    zn[4] = zn[0];
+                    xn[4] = xn[0];
+                    yn[4] = yn[0];
+                    zn[4] = zn[0];
 
-		    if (option == OPTION_SHADED_MESH)
-		      {
-			for (k = 0; k < 4; k++)
-			  {
-			    facex[k] = a * xn[k] + b;
-			    facey[k] = c * yn[k] + d;
-			    facez[k] = e * zn[k] + f;
-			  }
-			get_intensity(facex, facey, facez,
-				      light_source, &intensity);
-		      }
+                    if (option == OPTION_SHADED_MESH)
+                      {
+                        for (k = 0; k < 4; k++)
+                          {
+                            facex[k] = a * xn[k] + b;
+                            facey[k] = c * yn[k] + d;
+                            facez[k] = e * zn[k] + f;
+                          }
+                        get_intensity(facex, facey, facez,
+                                      light_source, &intensity);
+                      }
 
-		    for (k = 0; k <= 4; k++)
-		      apply_world_xform(xn + k, yn + k, zn + k);
+                    for (k = 0; k <= 4; k++)
+                      apply_world_xform(xn + k, yn + k, zn + k);
 
-		    meanz = 0.25 * (Z(i - 1, j - 1) + Z(i, j - 1) +
-				    Z(i, j) + Z(i - 1, j));
+                    meanz = 0.25 * (Z(i - 1, j - 1) + Z(i, j - 1) +
+                                    Z(i, j) + Z(i - 1, j));
 
-		    if (option == OPTION_Z_SHADED_MESH)
-		      {
-			color = iround(meanz) + FIRST_COLOR;
+                    if (option == OPTION_Z_SHADED_MESH)
+                      {
+                        color = iround(meanz) + FIRST_COLOR;
 
-			if (color < FIRST_COLOR)
-			  color = FIRST_COLOR;
-			else if (color > LAST_COLOR)
-			  color = LAST_COLOR;
+                        if (color < FIRST_COLOR)
+                          color = FIRST_COLOR;
+                        else if (color > LAST_COLOR)
+                          color = LAST_COLOR;
 
-			gks_set_fill_color_index(color);
-		      }
+                        gks_set_fill_color_index(color);
+                      }
 
-		    else if (option == OPTION_COLORED_MESH)
-		      {
-			color = iround((meanz - wx.zmin) / (wx.zmax - wx.zmin) *
-			  (LAST_COLOR - FIRST_COLOR)) + FIRST_COLOR;
+                    else if (option == OPTION_COLORED_MESH)
+                      {
+                        color = iround((meanz - wx.zmin) / (wx.zmax - wx.zmin) *
+                          (LAST_COLOR - FIRST_COLOR)) + FIRST_COLOR;
 
-			if (color < FIRST_COLOR)
-			  color = FIRST_COLOR;
-			else if (color > LAST_COLOR)
-			  color = LAST_COLOR;
+                        if (color < FIRST_COLOR)
+                          color = FIRST_COLOR;
+                        else if (color > LAST_COLOR)
+                          color = LAST_COLOR;
 
-			gks_set_fill_color_index(color);
-		      }
+                        gks_set_fill_color_index(color);
+                      }
 
-		    else if (option == OPTION_SHADED_MESH)
-		      {
-			color = iround(intensity * (LAST_COLOR - FIRST_COLOR)) +
-			  FIRST_COLOR;
+                    else if (option == OPTION_SHADED_MESH)
+                      {
+                        color = iround(intensity * (LAST_COLOR - FIRST_COLOR)) +
+                          FIRST_COLOR;
 
-			if (color < FIRST_COLOR)
-			  color = FIRST_COLOR;
-			else if (color > LAST_COLOR)
-			  color = LAST_COLOR;
+                        if (color < FIRST_COLOR)
+                          color = FIRST_COLOR;
+                        else if (color > LAST_COLOR)
+                          color = LAST_COLOR;
 
-			gks_set_fill_color_index(color);
-		      }
+                        gks_set_fill_color_index(color);
+                      }
 
-		    np = 4;
-		    gks_fillarea(np, xn, yn);
+                    np = 4;
+                    gks_fillarea(np, xn, yn);
 
-		    if (option == OPTION_FILLED_MESH)
-		      {
-			np = 5;
-			gks_polyline(np, xn, yn);
-		      }
-		  }
+                    if (option == OPTION_FILLED_MESH)
+                      {
+                        np = 5;
+                        gks_polyline(np, xn, yn);
+                      }
+                  }
 
-		j--;
-	      }
+                j--;
+              }
 
-	    break;
-	  }
+            break;
+          }
 
-	case OPTION_CELL_ARRAY:
+        case OPTION_CELL_ARRAY:
 
-	  colia = (int *) xmalloc(nx * ny * sizeof(int));
-	  k = 0;
-	  for (j = 0; j < ny; j++)
-	    for (i = 0; i < nx; i++)
-	      {
-		if (Z(i, j) != MISSING_VALUE)
-		  {
-		    color = FIRST_COLOR + (int) (
-		      (Z(i, j) - wx.zmin) / (wx.zmax - wx.zmin) *
-		      (LAST_COLOR - FIRST_COLOR));
+          colia = (int *) xmalloc(nx * ny * sizeof(int));
+          k = 0;
+          for (j = 0; j < ny; j++)
+            for (i = 0; i < nx; i++)
+              {
+                if (Z(i, j) != MISSING_VALUE)
+                  {
+                    color = FIRST_COLOR + (int) (
+                      (Z(i, j) - wx.zmin) / (wx.zmax - wx.zmin) *
+                      (LAST_COLOR - FIRST_COLOR));
 
-		    if (color < FIRST_COLOR)
-		      color = FIRST_COLOR;
-		    else if (color > LAST_COLOR)
-		      color = LAST_COLOR;
-		  }
-		else
-		  color = BACKGROUND;
+                    if (color < FIRST_COLOR)
+                      color = FIRST_COLOR;
+                    else if (color > LAST_COLOR)
+                      color = LAST_COLOR;
+                  }
+                else
+                  color = BACKGROUND;
 
-		colia[k++] = color;
-	      }
+                colia[k++] = color;
+              }
 
-	  w = (nx < 256) ? nx * (255 / nx + 1) - 1 : nx - 1;
-	  h = (ny < 256) ? ny * (255 / ny + 1) - 1 : ny - 1;
-	  ca = (int *) xmalloc(w * h * sizeof(int));
+          w = (nx < 256) ? nx * (255 / nx + 1) - 1 : nx - 1;
+          h = (ny < 256) ? ny * (255 / ny + 1) - 1 : ny - 1;
+          ca = (int *) xmalloc(w * h * sizeof(int));
 
-	  dwk = w;
-	  if (h > dwk)
-	    dwk = h;
-	  if (nx > dwk)
-	    dwk = nx;
-	  if (ny > dwk)
-	    dwk = ny;
-	  wk1 = (int *) xmalloc(dwk * sizeof(int));
-	  wk2 = (int *) xmalloc(dwk * sizeof(int));
+          dwk = w;
+          if (h > dwk)
+            dwk = h;
+          if (nx > dwk)
+            dwk = nx;
+          if (ny > dwk)
+            dwk = ny;
+          wk1 = (int *) xmalloc(dwk * sizeof(int));
+          wk2 = (int *) xmalloc(dwk * sizeof(int));
 
-	  pixel(hlr.xmin, hlr.xmax, ymin, ymax,
-		nx, ny, colia, w, h, ca, dwk, wk1, wk2);
+          pixel(hlr.xmin, hlr.xmax, ymin, ymax,
+                nx, ny, colia, w, h, ca, dwk, wk1, wk2);
 
-	  free(wk2);
-	  free(wk1);
-	  free(ca);
-	  free(colia);
+          free(wk2);
+          free(wk1);
+          free(ca);
+          free(colia);
 
-	  break;
-	}
+          break;
+        }
 
       gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_SOLID :
-			     GKS_K_LINETYPE_DOTTED);
+                             GKS_K_LINETYPE_DOTTED);
     }
   while ((hlr.sign >= 0) && !flag_abort &&
-	 ((int) option <= (int) OPTION_MESH));
+         ((int) option <= (int) OPTION_MESH));
 
 #undef Z
 
@@ -4184,20 +4222,20 @@ void gr_contour(
   for (i = 1; i < nx; i++)
     if (px[i - 1] >= px[i])
       {
-	fprintf(stderr, "points not sorted in ascending order\n");
-	return;
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
       }
 
   for (j = 1; j < ny; j++)
     if (py[j - 1] >= py[j])
       {
-	fprintf(stderr, "points not sorted in ascending order\n");
-	return;
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
       }
 
   check_autoinit;
 
-  gr_setscale(lx.scale_options);
+  setscale(lx.scale_options);
 
   /* save linetype, text alignment and character-up vector */
 
@@ -4265,6 +4303,8 @@ void gr_setcolormap(int index)
   double x;
   int inverted, j;
 
+  check_autoinit;
+
   i = 0;
   inverted = 0;
   r = g = b = 0;
@@ -4280,142 +4320,142 @@ void gr_setcolormap(int index)
       x = (double) i / (double) (LAST_COLOR - FIRST_COLOR + 1);
 
       switch (index)
-	{
-	case COLORMAP_UNIFORM:
-	case COLORMAP_TEMPERATURE:
-	  if (index == COLORMAP_UNIFORM)
-	    h = i * 360.0 / (LAST_COLOR - FIRST_COLOR + 1) - 120;
-	  else
-	    h = 270 - i * 300.0 / (LAST_COLOR - FIRST_COLOR + 1);
+        {
+        case COLORMAP_UNIFORM:
+        case COLORMAP_TEMPERATURE:
+          if (index == COLORMAP_UNIFORM)
+            h = i * 360.0 / (LAST_COLOR - FIRST_COLOR + 1) - 120;
+          else
+            h = 270 - i * 300.0 / (LAST_COLOR - FIRST_COLOR + 1);
 
-	  l = 0.5;
-	  s = 0.75;
+          l = 0.5;
+          s = 0.75;
 
-	  hls_to_rgb(h, l, s, &r, &g, &b);
-	  break;
+          hls_to_rgb(h, l, s, &r, &g, &b);
+          break;
 
-	case COLORMAP_GRAYSCALE:
-	  r = x;
-	  g = x;
-	  b = x;
-	  break;
+        case COLORMAP_GRAYSCALE:
+          r = x;
+          g = x;
+          b = x;
+          break;
 
-	case COLORMAP_GLOWING:
-	  r = pow(x, 1.0 / 4.0);
-	  g = x;
-	  b = pow(x, 4.0);
-	  break;
+        case COLORMAP_GLOWING:
+          r = pow(x, 1.0 / 4.0);
+          g = x;
+          b = pow(x, 4.0);
+          break;
 
-	case COLORMAP_RAINBOW:
-	case COLORMAP_FLAME:
-	  if (x < 0.125)
-	    r = 4.0 * (x + 0.125);
-	  else if (x < 0.375)
-	    r = 1.0;
-	  else if (x < 0.625)
-	    r = 4.0 * (0.625 - x);
-	  else
-	    r = 0;
+        case COLORMAP_RAINBOW:
+        case COLORMAP_FLAME:
+          if (x < 0.125)
+            r = 4.0 * (x + 0.125);
+          else if (x < 0.375)
+            r = 1.0;
+          else if (x < 0.625)
+            r = 4.0 * (0.625 - x);
+          else
+            r = 0;
 
-	  if (x < 0.125)
-	    g = 0;
-	  else if (x < 0.375)
-	    g = 4.0 * (x - 0.125);
-	  else if (x < 0.625)
-	    g = 1.0;
-	  else if (x < 0.875)
-	    g = 4.0 * (0.875 - x);
-	  else
-	    g = 0;
+          if (x < 0.125)
+            g = 0;
+          else if (x < 0.375)
+            g = 4.0 * (x - 0.125);
+          else if (x < 0.625)
+            g = 1.0;
+          else if (x < 0.875)
+            g = 4.0 * (0.875 - x);
+          else
+            g = 0;
 
-	  if (x < 0.375)
-	    b = 0;
-	  else if (x < 0.625)
-	    b = 4.0 * (x - 0.375);
-	  else if (x < 0.875)
-	    b = 1.0;
-	  else
-	    b = 4.0 * (1.125 - x);
+          if (x < 0.375)
+            b = 0;
+          else if (x < 0.625)
+            b = 4.0 * (x - 0.375);
+          else if (x < 0.875)
+            b = 1.0;
+          else
+            b = 4.0 * (1.125 - x);
 
-	  if (index == COLORMAP_FLAME)
-	    {
-	      r = 1.0 - r;
-	      g = 1.0 - g;
-	      b = 1.0 - b;
-	    }
-	  break;
+          if (index == COLORMAP_FLAME)
+            {
+              r = 1.0 - r;
+              g = 1.0 - g;
+              b = 1.0 - b;
+            }
+          break;
 
-	case COLORMAP_GEOLOGIC:
-	  if (x < 0.333333)
-	    r = 0.333333 - x;
-	  else if (x < 0.666666)
-	    r = 3.0 * (x - 0.333333);
-	  else
-	    r = 1.0 - (x - 0.666666);
+        case COLORMAP_GEOLOGIC:
+          if (x < 0.333333)
+            r = 0.333333 - x;
+          else if (x < 0.666666)
+            r = 3.0 * (x - 0.333333);
+          else
+            r = 1.0 - (x - 0.666666);
 
-	  if (x < 0.666666)
-	    g = 0.75 * x + 0.333333;
-	  else
-	    g = 0.833333 - 1.5 * (x - 0.666666);
+          if (x < 0.666666)
+            g = 0.75 * x + 0.333333;
+          else
+            g = 0.833333 - 1.5 * (x - 0.666666);
 
-	  if (x < 0.333333)
-	    b = 1.0 - 2.0 * x;
-	  else if (x < 0.666666)
-	    b = x;
-	  else
-	    b = 0.666666 - 2.0 * (x - 0.666666);
-	  break;
+          if (x < 0.333333)
+            b = 1.0 - 2.0 * x;
+          else if (x < 0.666666)
+            b = x;
+          else
+            b = 0.666666 - 2.0 * (x - 0.666666);
+          break;
 
-	case COLORMAP_GREENSCALE:
-	  r = x;
-	  g = pow(x, 1.0 / 4.0);
-	  b = pow(x, 4.0);
-	  break;
+        case COLORMAP_GREENSCALE:
+          r = x;
+          g = pow(x, 1.0 / 4.0);
+          b = pow(x, 4.0);
+          break;
 
-	case COLORMAP_CYANSCALE:
-	  r = pow(x, 4.0);
-	  g = pow(x, 1.0 / 4.0);
-	  b = x;
-	  break;
+        case COLORMAP_CYANSCALE:
+          r = pow(x, 4.0);
+          g = pow(x, 1.0 / 4.0);
+          b = x;
+          break;
 
-	case COLORMAP_BLUESCALE:
-	  r = pow(x, 4.0);
-	  g = x;
-	  b = pow(x, 1.0 / 4.0);
-	  break;
+        case COLORMAP_BLUESCALE:
+          r = pow(x, 4.0);
+          g = x;
+          b = pow(x, 1.0 / 4.0);
+          break;
 
-	case COLORMAP_MAGENTASCALE:
-	  r = x;
-	  g = pow(x, 4.0);
-	  b = pow(x, 1.0 / 4.0);
-	  break;
+        case COLORMAP_MAGENTASCALE:
+          r = x;
+          g = pow(x, 4.0);
+          b = pow(x, 1.0 / 4.0);
+          break;
 
-	case COLORMAP_REDSCALE:
-	  r = pow(x, 1.0 / 4.0);
-	  g = pow(x, 4.0);
-	  b = x;
-	  break;
+        case COLORMAP_REDSCALE:
+          r = pow(x, 1.0 / 4.0);
+          g = pow(x, 4.0);
+          b = x;
+          break;
 
-	case COLORMAP_BROWNSCALE:
-	  r = 0.55 + x * 0.45;
-	  g = 0.15 + x * 0.85;
-	  b = 0;
-	  break;
+        case COLORMAP_BROWNSCALE:
+          r = 0.55 + x * 0.45;
+          g = 0.15 + x * 0.85;
+          b = 0;
+          break;
 
-	case COLORMAP_USER_DEFINED:
-	  j = inverted ? i - 1 : i;
-	  r = cmap[j][0] / 255.0;
-	  g = cmap[j][1] / 255.0;
-	  b = cmap[j][2] / 255.0;
-	  break;
-	};
+        case COLORMAP_USER_DEFINED:
+          j = inverted ? i - 1 : i;
+          r = cmap[j][0] / 255.0;
+          g = cmap[j][1] / 255.0;
+          b = cmap[j][2] / 255.0;
+          break;
+        };
 
-      gr_setcolorrep(ci, r, g, b);
+      setcolorrep(ci, r, g, b);
 
       if (inverted)
-	i--;
+        i--;
       else
-	i++;
+        i++;
     }
 
   if (accel)
@@ -4434,7 +4474,7 @@ void gr_colormap(void)
 
   check_autoinit;
 
-  gr_setscale(lx.scale_options);
+  setscale(lx.scale_options);
 
   /* save text alignment and clipping indicator */
 
@@ -4497,15 +4537,15 @@ float gr_tick(float amin, float amax)
       factor = pow(10.0, (double) (exponent - n));
 
       if (factor > 5)
-	tick_unit = 2;
+        tick_unit = 2;
       else
        if (factor > 2.5)
-	tick_unit = 1;
+        tick_unit = 1;
       else
        if (factor > 1)
-	tick_unit = 0.5;
+        tick_unit = 0.5;
       else
-	tick_unit = 0.2;
+        tick_unit = 0.2;
 
       tick_unit = tick_unit * pow(10.0, (double) n);
     }
@@ -4513,7 +4553,7 @@ float gr_tick(float amin, float amax)
     tick_unit = 0;
 
   return (tick_unit); /* return a tick unit that evenly divides into the
-			 difference between the minimum and maximum value */
+                         difference between the minimum and maximum value */
 }
 
 static
@@ -4529,9 +4569,9 @@ void gr_adjustrange(float *amin, float *amax)
   if (*amin == *amax)
     {
       if (*amin != 0)
-	tick = pow(10.0, (double) fract(log10(fabs(*amin))));
+        tick = pow(10.0, (double) fract(log10(fabs(*amin))));
       else
-	tick = 0.1;
+        tick = 0.1;
 
       *amin = *amin - tick;
       *amax = *amax + tick;
@@ -4589,14 +4629,14 @@ void gr_beginprint(char *pathname)
   if (!flag_printing)
     {
       if ((type = strrchr(pathname, '.')) != NULL)
-	wstype = gks_wstype(type + 1);
+        wstype = gks_wstype(type + 1);
 
       if (wstype >= 0)
-	{
-	  gks_open_ws(wkid, pathname, wstype);
-	  gks_activate_ws(wkid);
-	  flag_printing = 1;
-	}
+        {
+          gks_open_ws(wkid, pathname, wstype);
+          gks_activate_ws(wkid);
+          flag_printing = 1;
+        }
     }
   else
     fprintf(stderr, "print device already activated\n");
@@ -4616,63 +4656,63 @@ void gr_beginprintext(
   if (!flag_printing)
     {
       if ((type = strrchr(pathname, '.')) != NULL)
-	wstype = gks_wstype(type + 1);
+        wstype = gks_wstype(type + 1);
 
       if (wstype >= 0)
-	{
-	  if (str_casecmp(mode, "Color") == 0)
-	    color = 1;
-	  else if (str_casecmp(mode, "GrayScale") != 0)
-	    fprintf(stderr, "%s: invalid color mode\n", mode);
+        {
+          if (str_casecmp(mode, "Color") == 0)
+            color = 1;
+          else if (str_casecmp(mode, "GrayScale") != 0)
+            fprintf(stderr, "%s: invalid color mode\n", mode);
 
-	  while (p->format != NULL)
-	    {
-	      if (str_casecmp(p->format, format) == 0)
-		{
-		  width = p->width * 0.9;
-		  height = p->height * 0.9;
-		  break;
-		}
-	      p++;
-	    }
-	  if (p->format == NULL)
-	    fprintf(stderr, "%s: invalid page size\n", format);
+          while (p->format != NULL)
+            {
+              if (str_casecmp(p->format, format) == 0)
+                {
+                  width = p->width * 0.9;
+                  height = p->height * 0.9;
+                  break;
+                }
+              p++;
+            }
+          if (p->format == NULL)
+            fprintf(stderr, "%s: invalid page size\n", format);
 
-	  if (str_casecmp(orientation, "Landscape") == 0)
-	    landscape = 1;
-	  else if (str_casecmp(orientation, "Portrait") != 0)
-	    fprintf(stderr, "%s: invalid page orientation\n", orientation);
+          if (str_casecmp(orientation, "Landscape") == 0)
+            landscape = 1;
+          else if (str_casecmp(orientation, "Portrait") != 0)
+            fprintf(stderr, "%s: invalid page orientation\n", orientation);
 
-	  if (wstype == 62)
-	    {
-	      if (!color)
-		wstype -= 1;
-	      if (landscape)
-		wstype += 2;
-	    }
+          if (wstype == 62)
+            {
+              if (!color)
+                wstype -= 1;
+              if (landscape)
+                wstype += 2;
+            }
 
-	  gks_open_ws(wkid, pathname, wstype);
-	  gks_activate_ws(wkid);
+          gks_open_ws(wkid, pathname, wstype);
+          gks_activate_ws(wkid);
 
-	  if (!landscape)
-	    {
-	      gks_set_ws_viewport(wkid, 0.0, width, 0.0, height);
-	      if (width < height)
-		gks_set_ws_window(wkid, 0.0, width / height, 0.0, 1.0);
-	      else
-		gks_set_ws_window(wkid, 0.0, 1.0, 0.0, height / width);
-	    }
-	  else
-	    {
-	      gks_set_ws_viewport(wkid, 0.0, height, 0.0, width);
-	      if (width < height)
-		gks_set_ws_window(wkid, 0.0, 1.0, 0.0, width / height);
-	      else
-		gks_set_ws_window(wkid, 0.0, height / width, 0.0, 1.0);
-	    }
+          if (!landscape)
+            {
+              gks_set_ws_viewport(wkid, 0.0, width, 0.0, height);
+              if (width < height)
+                gks_set_ws_window(wkid, 0.0, width / height, 0.0, 1.0);
+              else
+                gks_set_ws_window(wkid, 0.0, 1.0, 0.0, height / width);
+            }
+          else
+            {
+              gks_set_ws_viewport(wkid, 0.0, height, 0.0, width);
+              if (width < height)
+                gks_set_ws_window(wkid, 0.0, 1.0, 0.0, width / height);
+              else
+                gks_set_ws_window(wkid, 0.0, height / width, 0.0, 1.0);
+            }
 
-	  flag_printing = 1;
-	}
+          flag_printing = 1;
+        }
     }
   else
     fprintf(stderr, "print device already activated\n");
@@ -4721,11 +4761,11 @@ void gr_drawrect(float xmin, float xmax, float ymin, float ymax)
   y[2] = y[3] = max(ymin, ymax);
   y[4] = y[0];
   
-  gr_polyline(5, x, y);
+  polyline(5, x, y);
 
   if (flag_graphics)
     fprintf(stream, "<drawrect xmin='%g' xmax='%g' ymin='%g' ymax='%g'/>\n",
-	    xmin, xmax, ymin, ymax);
+            xmin, xmax, ymin, ymax);
 }
 
 void gr_fillrect(float xmin, float xmax, float ymin, float ymax)
@@ -4739,11 +4779,11 @@ void gr_fillrect(float xmin, float xmax, float ymin, float ymax)
   y[0] = y[1] = min(ymin, ymax);
   y[2] = y[3] = max(ymin, ymax);
   
-  gr_fillarea(4, x, y);
+  fillarea(4, x, y);
 
   if (flag_graphics)
     fprintf(stream, "<fillrect xmin='%g' xmax='%g' ymin='%g' ymax='%g'/>\n",
-	    xmin, xmax, ymin, ymax);
+            xmin, xmax, ymin, ymax);
 }
 
 void gr_drawarc(
@@ -4774,7 +4814,7 @@ void gr_drawarc(
     }
 
   if (n > 1)
-    gr_polyline(n, x, y);
+    polyline(n, x, y);
 
   if (flag_graphics)
     fprintf(stream,
@@ -4810,7 +4850,7 @@ void gr_fillarc(
     }
 
   if (n > 2)
-    gr_fillarea(n, x, y);
+    fillarea(n, x, y);
 
   if (flag_graphics)
     fprintf(stream,
@@ -4873,16 +4913,16 @@ void gr_drawarrow(float x1, float y1, float x2, float y2)
       n = abs(n);
       gks_set_pline_linetype(n > 2 ? GKS_K_LINETYPE_SOLID : ltype);
       for (i = 0; i < n; i++)
-	{
-	  xi = f * vertex_list[arrow_style][j++];
-	  yi = f * vertex_list[arrow_style][j++];
-	  x[i] = xc + cos(a) * xi - sin(a) * yi;
-	  y[i] = yc + sin(a) * xi + cos(a) * yi;
-	}
+        {
+          xi = f * vertex_list[arrow_style][j++];
+          yi = f * vertex_list[arrow_style][j++];
+          x[i] = xc + cos(a) * xi - sin(a) * yi;
+          y[i] = yc + sin(a) * xi + cos(a) * yi;
+        }
       if (fill)
-	gks_fillarea(n, x, y);
+        gks_fillarea(n, x, y);
       else
-	gks_polyline(n, x, y);
+        gks_polyline(n, x, y);
     }
 
   gks_select_xform(tnr);
@@ -4891,7 +4931,7 @@ void gr_drawarrow(float x1, float y1, float x2, float y2)
 
   if (flag_graphics)
     fprintf(stream, "<arrow x1='%g' y1='%g' x2='%g' y2='%g'/>\n",
-	    x1, y1, x2, y2);
+            x1, y1, x2, y2);
 }
 
 void gr_drawimage(
@@ -4909,8 +4949,8 @@ void gr_drawimage(
     {
       n = width * height;
       fprintf(stream, "<image xmin='%g' xmax='%g' ymin='%g' ymax='%g' "
-	      "width='%d' height='%d'",
-	      xmin, xmax, ymin, ymax, width, height);
+              "width='%d' height='%d'",
+              xmin, xmax, ymin, ymax, width, height);
       print_int_array("data", n, data);
       fprintf(stream, " path=''/>\n");
     }
@@ -4942,17 +4982,17 @@ void gr_begingraphics(char *path)
   if (!flag_graphics)
     {
       if (!strcmp(path, "-"))
-	stream = stdout;
+        stream = stdout;
       else
-	stream = fopen(path, "w");
+        stream = fopen(path, "w");
 
       if (stream)
-	{
-	  fprintf(stream, GR_HEADER);
-	  flag_graphics = 1;
-	}
+        {
+          fprintf(stream, GR_HEADER);
+          flag_graphics = 1;
+        }
       else
-	fprintf(stderr, "%s: open failed\n", path);
+        fprintf(stderr, "%s: open failed\n", path);
     }
 }
 
@@ -4962,7 +5002,7 @@ void gr_endgraphics(void)
     {
       fprintf(stream, GR_TRAILER);
       if (stream != stdout)
-	fclose(stream);
+        fclose(stream);
       flag_graphics = 0;
     }
 }
@@ -5089,7 +5129,8 @@ void gr_mathtex(float x, float y, char *string)
       if (tnr != NDC)
         gks_select_xform(NDC);
 
-      gr_drawimage(xmin, xmax, ymin, ymax, width, height, data);
+      gks_draw_image(x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin),
+                     width, height, data);
 
       if (tnr != NDC)
         gks_select_xform(tnr);

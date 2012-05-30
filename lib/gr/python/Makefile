@@ -1,5 +1,6 @@
        GRDIR = /usr/local/gr
       LIBDIR = $(GRDIR)/lib
+   PYTHONDIR = $(LIBDIR)/python
 
      INSTALL = cp
      DEFINES =
@@ -54,8 +55,11 @@ else
 	$(EXTRALIBS) -L$(XLIBPATH) -lXt -lX11 $(LIBS)
 endif
 
-install: gr.so
+install: gr.so gr.py
+	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	$(INSTALL) -p gr.so $(LIBDIR)/gr.so
+	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
+	$(INSTALL) -p gr.py $(PYTHONDIR)/gr.py
 
 clean:
 	rm -f gr so_locations *.so *.a *.o *.bak *~
