@@ -1025,10 +1025,6 @@ void gr_cellarray(
   float xmin, float xmax, float ymin, float ymax, int dimx, int dimy,
   int scol, int srow, int ncol, int nrow, int *color)
 {
-  int wkid = 1, errind;
-  int rgb[MAX_COLOR], *data;
-  float r, g, b;
-
   check_autoinit;
 
   gks_cellarray(
@@ -1037,28 +1033,11 @@ void gr_cellarray(
 
   if (flag_graphics)
     {
-      register int i, n;
-
-      for (i = 0; i < MAX_COLOR; i++)
-        {
-          gks_inq_color_rep(wkid, i, GKS_K_VALUE_SET, &errind, &r, &g, &b);
-          rgb[i] =    ((int) (r * 255) & 0xff)
-                   + (((int) (g * 255) & 0xff) << 8)
-                   + (((int) (b * 255) & 0xff) << 16);
-        }
-
-      n = dimx * dimy;
-      data = (int *) xmalloc(n * sizeof(int));
-      for (i = 0; i < n; i++)
-        data[i] = color[i] >= 0 && color[i] < MAX_COLOR ? rgb[color[i]] : 0;
-
       fprintf(stream, "<cellarray xmin='%g' xmax='%g' ymin='%g' ymax='%g' "
-              "width='%d' height='%d'",
-              xmin, xmax, ymin, ymax, dimx, dimy);
-      print_int_array("data", n, data);
+              "dimx='%d' dimy='%d' scol='%d' srow='%d' ncol='%d' nrow='%d'",
+              xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow);
+      print_int_array("color", dimx * dimy, color);
       fprintf(stream, "/>\n");
-
-      free(data);
     }
 }
 
@@ -1675,6 +1654,10 @@ int gr_setspace(float zmin, float zmax, int rotation, int tilt)
 
   setspace(zmin, zmax, rotation, tilt);
 
+  if (flag_graphics)
+    fprintf(stream, "<setspace zmin='%g' zmax='%g' rotation='%d' tilt='%d'/>\n",
+            zmin, zmax, rotation, tilt);
+
   return 0;
 }
 
@@ -2173,8 +2156,8 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    fprintf(stream, "<axes x_tick='%g' y_tick='%g' x_org='%g' y_org='%g' "
-            "major_x='%d major_y='%d' ticksize='%g'/>\n",
+    fprintf(stream, "<axes xtick='%g' ytick='%g' xorg='%g' yorg='%g' "
+            "majorx='%d' majory='%d' ticksize='%g'/>\n",
             x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
 }
 
@@ -2363,8 +2346,8 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    fprintf(stream, "<grid x_tick='%g' y_tick='%g' x_org='%g' y_org='%g' "
-            "major_x='%d major_y='%d'/>\n",
+    fprintf(stream, "<grid xtick='%g' ytick='%g' xorg='%g' yorg='%g' "
+            "majorx='%d' majory='%d'/>\n",
             x_tick, y_tick, x_org, y_org, major_x, major_y);
 }
 
@@ -3154,6 +3137,13 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
   gks_set_text_slant(slant);
   gks_set_text_upvec(chux, chuy);
   gks_set_clipping(clsw);
+
+  if (flag_graphics)
+    fprintf(stream, "<axes3d xtick='%g' ytick='%g' ztick='%g' "
+            "xorg='%g' yorg='%g' zorg='%g' "
+            "majorx='%d' majory='%d' majorz='%d' ticksize='%g'/>\n",
+            x_tick, y_tick, z_tick, x_org, y_org, z_org,
+            major_x, major_y, major_z, tick_size);
 }
 
 void gr_titles3d(char *x_title, char *y_title, char *z_title)
@@ -3433,6 +3423,10 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
   gks_set_text_slant(slant);
   gks_set_text_upvec(chux, chuy);
   gks_set_clipping(clsw);
+
+  if (flag_graphics)
+    fprintf(stream, "<titles3d xtitle='%s' ytitle='%s' ztitle='%s'/>\n",
+            x_title, y_title, z_title);
 }
 
 #define nint(x) (int)((x) + 0.5)
@@ -4201,6 +4195,15 @@ void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
   gks_set_pline_linetype(ltype);
   gks_set_fill_int_style(int_style);
   gks_set_fill_color_index(coli);
+
+  if (flag_graphics)
+    {
+      fprintf(stream, "<surface nx='%d' ny='%d'", nx, ny);
+      print_float_array("x", nx, px);
+      print_float_array("y", ny, py);
+      print_float_array("z", nx * ny, pz);
+      fprintf(stream, " option='%d'/>\n", option);
+    }
 }
 
 void gr_contour(
@@ -4252,6 +4255,16 @@ void gr_contour(
   gks_set_pline_linetype(ltype);
   gks_set_text_align(halign, valign);
   gks_set_text_upvec(chux, chuy);
+
+  if (flag_graphics)
+    {
+      fprintf(stream, "<contour nx='%d' ny='%d' nh='%d'", nx, ny, nh);
+      print_float_array("x", nx, px);
+      print_float_array("y", ny, py);
+      print_float_array("h", nh, h);
+      print_float_array("z", nx * ny, pz);
+      fprintf(stream, " majorh='%d'/>\n", major_h);
+    }
 }
 
 static
@@ -4459,7 +4472,10 @@ void gr_setcolormap(int index)
     }
 
   if (accel)
-    gr_setproperty("colormap: %d;", index);
+    gr_setproperty("colormap: %d;", index); /* FIXME: should be 'setcolormap' */
+
+  if (flag_graphics)
+    fprintf(stream, "<setcolormap index='%d'/>\n", index);
 }
 
 void gr_colormap(void)
@@ -4522,6 +4538,9 @@ void gr_colormap(void)
 
   gks_set_text_align(halign, valign);
   gks_set_clipping(clsw);
+
+  if (flag_graphics)
+    fprintf(stream, "<colormap/>\n");
 }
 
 float gr_tick(float amin, float amax)
@@ -4952,7 +4971,7 @@ void gr_drawimage(
               "width='%d' height='%d'",
               xmin, xmax, ymin, ymax, width, height);
       print_int_array("data", n, data);
-      fprintf(stream, " path=''/>\n");
+      fprintf(stream, "/>\n");
     }
 }
 
