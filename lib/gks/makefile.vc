@@ -1,5 +1,5 @@
 CC = CL
-CFLAGS = /c /Zi /nologo /DNO_X11 /D_DLL /MD /D_POSIX
+CFLAGS = /c /Zi /nologo /DNO_X11 /DNO_WX /D_DLL /MD /D_POSIX
 DEFINES = /DGRDIR=\"S:\\gr\"
 AR = LIB /nologo
 LINK = LINK /debug:full /nologo

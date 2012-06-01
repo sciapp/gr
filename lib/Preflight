@@ -1,9 +1,24 @@
 #!/bin/bash
 
 target=`uname`
-defines=""
-message=""
+wxdefs=""
+qtdefs=""
+gsdefs=""
 
+wxconfig=wx-config
+if [ "$WX_CONFIG" != "" ]
+then
+  wxconfig=$WX_CONFIG
+fi
+if [ "`which $wxconfig`" = "" ]
+then
+  echo "wx-config not found. Build without wxWidgets support." >&2
+  wxdefs="WXDEFS=-DNO_WX WXINC= WXLIBS="
+else
+  wxdefs="WX_CONFIG=$wxconfig"
+fi
+
+message=""
 if [ "$QTDIR" = "" ]
 then
   message="QTDIR not set. Build without Qt4 support." 
@@ -21,7 +36,7 @@ if [ "$message" != "" ]; then
   echo "Do you want to continue? [y/n]" >&2
   read yesno
   if [ "$yesno" = "y" ]; then
-    defines="DEFINES=-DNO_QT4 QTINC= QTLIBS="
+    qtdefs="QTDEFS=-DNO_QT4 QTINC= QTLIBS="
   else
     echo -e "Please retry with a valid QTDIR setting, e.g.\n\
 	/usr/lib64/qt4	(Red Hat)\n\
@@ -56,11 +71,11 @@ if [ $? -ne 0 ]; then
   echo "Do you want to continue? [y/n]" >&2
   read yesno
   if [ "$yesno" = "y" ]; then
-    defines="$defines DEFINES=-DNO_GS GSINC= GSLIBS="
+    gsdefs="GSDEFS=-DNO_GS GSINC= GSLIBS="
   else
     target="nothing"
   fi
 fi
 rm -f $tmpout $tmpsrc
 
-echo $target $defines
+echo $target $wxdefs $qtdefs $gsdefs

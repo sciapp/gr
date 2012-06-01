@@ -791,7 +791,7 @@ void initgks(void)
 
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
   if (!double_buf)
-    double_buf = wtype == 381 || wtype == 400 || wtype == 410;
+    double_buf = wtype == 380 || wtype == 381 || wtype == 400 || wtype == 410;
 }
 
 void gr_opengks(void)
