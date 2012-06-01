@@ -11,7 +11,7 @@ if [ "$WX_CONFIG" != "" ]
 then
   wxconfig=$WX_CONFIG
 fi
-if [ "`which $wxconfig`" = "" ]
+if [ "`which $wxconfig 2>/dev/null`" = "" ]
 then
   echo "wx-config not found. Build without wxWidgets support." >&2
   wxdefs="WXDEFS=-DNO_WX WXINC= WXLIBS="
