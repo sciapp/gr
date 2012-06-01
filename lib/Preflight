@@ -3,6 +3,7 @@
 target=`uname`
 wxdefs=""
 qtdefs=""
+gtkdefs=""
 gsdefs=""
 
 wxconfig=wx-config
@@ -46,6 +47,12 @@ if [ "$message" != "" ]; then
   fi
 fi
 
+if [ "`pkg-config gtk+-2.0 --cflags 2>/dev/null`" = "" ]
+then
+  echo "gtk+-2.0 not found. Build without GTK+ support." >&2
+  gtkdefs="GTKDEFS=-DNO_GTK GTKINC= GTKLIBS="
+fi
+
 tmpout=`mktemp /tmp/a.out.XXXXX`
 tmpsrc=`mktemp /tmp/a$$XXXXX.c`
 cat >$tmpsrc << eof
@@ -78,4 +85,4 @@ if [ $? -ne 0 ]; then
 fi
 rm -f $tmpout $tmpsrc
 
-echo $target $wxdefs $qtdefs $gsdefs
+echo $target $wxdefs $qtdefs $gtkdefs $gsdefs

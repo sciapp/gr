@@ -1,37 +1,40 @@
-    GRDIR = /usr/local/gr
-   LIBDIR = $(GRDIR)/lib
+      GRDIR = /usr/local/gr
+     LIBDIR = $(GRDIR)/lib
 
- CXXFLAGS = -g -Wall -fPIC
- INCLUDES = -I.. -I../../png -I/usr/local/include
-  SOFLAGS = -shared
-  LDFLAGS =
-WX_CONFIG =
-   WXDEFS =
-    WXINC = `$(WX_CONFIG) --cxxflags`
-   WXLIBS = `$(WX_CONFIG) --libs`
-   QTDEFS =
-    QTINC = -I$(QTDIR)/include
-   QTLIBS = -L$(QTDIR)/lib -lQtGui -lQtCore
-    XLIBS = -L/usr/X11R6/lib -lXt -lX11
-  PNGLIBS = -L../../png -lpng
-   GSDEFS = 
-    GSINC = -I/usr/include/ghostscript
-   GSLIBS = -lgs
-     LIBS = -lc -lm
-    ZLIBS = -lz
+   CXXFLAGS = -g -Wall -fPIC
+   INCLUDES = -I.. -I../../png -I/usr/local/include
+    SOFLAGS = -shared
+    LDFLAGS =
+  WX_CONFIG =
+     WXDEFS =
+      WXINC = `$(WX_CONFIG) --cxxflags`
+     WXLIBS = `$(WX_CONFIG) --libs`
+     QTDEFS =
+      QTINC = -I$(QTDIR)/include
+     QTLIBS = -L$(QTDIR)/lib -lQtGui -lQtCore
+    GTKDEFS =
+     GTKINC = `pkg-config gtk+-2.0 --cflags`
+    GTKLIBS = `pkg-config gtk+-2.0 --libs`
+      XLIBS = -L/usr/X11R6/lib -lXt -lX11
+    PNGLIBS = -L../../png -lpng
+     GSDEFS = 
+      GSINC = -I/usr/include/ghostscript
+     GSLIBS = -lgs
+       LIBS = -lc -lm
+      ZLIBS = -lz
 
 .SUFFIXES: .o .m .cxx
 
 .m.o:
 	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $<
 .cxx.o:
-	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) ${WXDEFS} $(WXINC) $(QTDEFS) $(QTINC) $(GSDEFS) $(GSINC) $(INCLUDES) $<
+	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(INCLUDES) $<
 
 default:
 	@make `uname`
 
-targets: wxplugin.so qtplugin.so svgplugin.so figplugin.so gsplugin.so \
-         wmfplugin.so
+targets: wxplugin.so qtplugin.so svgplugin.so gtkplugin.so figplugin.so \
+         gsplugin.so wmfplugin.so
 
 Darwin:
 	@make targets quartzplugin.so \
@@ -48,6 +51,9 @@ qtplugin.so: qtplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 
 svgplugin.so: svgplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
+
+gtkplugin.so: gtkplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
+	$(CXX) -o $@ $(SOFLAGS) $? $(GTKLIBS) $(LDFLAGS) $(XLIBS) $(LIBS)
 
 figplugin.so: figplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
