@@ -5016,7 +5016,7 @@ void latex2image(char *string, int pointSize, float *rgb,
       null = "/dev/null";
 #endif
       stream = fopen(tex, "w");
-      gr_writestream("\
+      fprintf(stream, "\
 \\documentclass{article}\n\
 \\pagestyle{empty}\n\
 \\usepackage[dvips]{color}\n\
@@ -5024,7 +5024,7 @@ void latex2image(char *string, int pointSize, float *rgb,
 \\begin{document}\n\
 \\[\n", rgb[0], rgb[1], rgb[2]);
       fwrite(string, strlen(string), 1, stream);
-      gr_writestream("\n\
+      fprintf(stream, "\n\
 \\]\n\
 \\end{document}");
       fclose(stream);
