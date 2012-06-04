@@ -15,6 +15,7 @@ EXPORTS
 	gr_cellarray
 	gr_clearws
 	gr_closegks
+	gr_closestream
 	gr_closeseg
 	gr_closews
 	gr_contour
@@ -29,6 +30,7 @@ EXPORTS
 	gr_endselection
 	gr_endgraphics
 	gr_fillarea
+	gr_flushstream
 	gr_grid
 	gr_herrorbars
 	gr_inqdspsize
@@ -39,6 +41,7 @@ EXPORTS
 	gr_ndctowc
 	gr_mathtex
 	gr_opengks
+	gr_openstream
 	gr_openws
 	gr_polyline
 	gr_polyline3d
@@ -68,7 +71,6 @@ EXPORTS
 	gr_setmarkerind
 	gr_setmarkersize
 	gr_setmarkertype
-	gr_setproperty
 	gr_setscale
 	gr_setsegtran
 	gr_setspace
@@ -91,3 +93,4 @@ EXPORTS
 	gr_updatews
 	gr_verrorbars
 	gr_wctondc
+	gr_writestream

@@ -14,7 +14,7 @@ fi
 if [ "`which $wxconfig 2>/dev/null`" = "" ]
 then
   echo "wx-config not found. Build without wxWidgets support." >&2
-  wxdefs="WXDEFS=-DNO_WX WXINC= WXLIBS="
+  wxdefs="WX_CONFIG=false WXDEFS=-DNO_WX WXINC= WXLIBS="
 else
   wxdefs="WX_CONFIG=$wxconfig"
 fi
@@ -50,7 +50,7 @@ fi
 if [ "`pkg-config gtk+-2.0 --cflags 2>/dev/null`" = "" ]
 then
   echo "gtk+-2.0 not found. Build without GTK+ support." >&2
-  gtkdefs="GTKDEFS=-DNO_GTK GTKINC= GTKLIBS="
+  gtkdefs="PKG_CONFIG=false GTKDEFS=-DNO_GTK GTKINC= GTKLIBS="
 fi
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
