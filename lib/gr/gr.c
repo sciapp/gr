@@ -1043,9 +1043,11 @@ void gr_cellarray(
 
   if (flag_graphics)
     {
-      gr_writestream("<cellarray xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
-              "dimx=\"%d\" dimy=\"%d\" scol=\"%d\" srow=\"%d\" ncol=\"%d\" nrow=\"%d\"",
-              xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow);
+      gr_writestream(
+        "<cellarray xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+        "dimx=\"%d\" dimy=\"%d\" scol=\"%d\" srow=\"%d\" "
+        "ncol=\"%d\" nrow=\"%d\"",
+        xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow);
       print_int_array("color", dimx * dimy, color);
       gr_writestream("/>\n");
     }
@@ -1173,7 +1175,7 @@ void gr_spline(int n, float *px, float *py, int m, int method)
       gr_writestream("<spline len=\"%d\"", n);
       print_float_array("x", n, px);
       print_float_array("y", n, py);
-      gr_writestream(" method=\"%d\"/>\n", method);
+      gr_writestream(" m=\"%d\" method=\"%d\"/>\n", m, method);
     }
 }
 
@@ -1448,8 +1450,9 @@ void gr_setwindow(float xmin, float xmax, float ymin, float ymax)
   setscale(lx.scale_options);
 
   if (flag_graphics)
-    gr_writestream("<setwindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-            xmin, xmax, ymin, ymax);
+    gr_writestream(
+      "<setwindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
+      xmin, xmax, ymin, ymax);
 }
 
 void gr_inqwindow(float *xmin, float *xmax, float *ymin, float *ymax)
@@ -1470,8 +1473,9 @@ void gr_setviewport(float xmin, float xmax, float ymin, float ymax)
   setscale(lx.scale_options);
 
   if (flag_graphics)
-    gr_writestream("<setviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-            xmin, xmax, ymin, ymax);
+    gr_writestream(
+      "<setviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
+      xmin, xmax, ymin, ymax);
 }
 
 void gr_selntran(int transform)
@@ -1645,8 +1649,9 @@ int gr_setspace(float zmin, float zmax, int rotation, int tilt)
   setspace(zmin, zmax, rotation, tilt);
 
   if (flag_graphics)
-    gr_writestream("<setspace zmin=\"%g\" zmax=\"%g\" rotation=\"%d\" tilt=\"%d\"/>\n",
-            zmin, zmax, rotation, tilt);
+    gr_writestream(
+      "<setspace zmin=\"%g\" zmax=\"%g\" rotation=\"%d\" tilt=\"%d\"/>\n",
+      zmin, zmax, rotation, tilt);
 
   return 0;
 }
@@ -1765,7 +1770,7 @@ int gr_textext(float x, float y, char *string)
     gks_select_xform(tnr);
 
   if (flag_graphics)
-    gr_writestream("<textex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+    gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 
   return result;
 }
@@ -2146,9 +2151,10 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    gr_writestream("<axes xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
-            "majorx=\"%d\" majory=\"%d\" ticksize=\"%g\"/>\n",
-            x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
+    gr_writestream(
+      "<axes xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
+      "majorx=\"%d\" majory=\"%d\" ticksize=\"%g\"/>\n",
+      x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
 }
 
 static
@@ -2336,9 +2342,10 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    gr_writestream("<grid xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
-            "majorx=\"%d\" majory=\"%d\"/>\n",
-            x_tick, y_tick, x_org, y_org, major_x, major_y);
+    gr_writestream(
+      "<grid xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
+      "majorx=\"%d\" majory=\"%d\"/>\n",
+      x_tick, y_tick, x_org, y_org, major_x, major_y);
 }
 
 void gr_verrorbars(int n, float *px, float *py, float *e1, float *e2)
@@ -3119,11 +3126,12 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    gr_writestream("<axes3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
-            "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
-            "majorx=\"%d\" majory=\"%d\" majorz=\"%d\" ticksize=\"%g\"/>\n",
-            x_tick, y_tick, z_tick, x_org, y_org, z_org,
-            major_x, major_y, major_z, tick_size);
+    gr_writestream(
+      "<axes3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
+      "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
+      "majorx=\"%d\" majory=\"%d\" majorz=\"%d\" ticksize=\"%g\"/>\n",
+      x_tick, y_tick, z_tick, x_org, y_org, z_org,
+      major_x, major_y, major_z, tick_size);
 }
 
 void gr_titles3d(char *x_title, char *y_title, char *z_title)
@@ -3398,7 +3406,7 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
   if (flag_graphics)
     gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n",
-            x_title, y_title, z_title);
+                   x_title, y_title, z_title);
 }
 
 #define nint(x) (int)((x) + 0.5)
@@ -4739,8 +4747,9 @@ void gr_drawrect(float xmin, float xmax, float ymin, float ymax)
   polyline(5, x, y);
 
   if (flag_graphics)
-    gr_writestream("<drawrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-            xmin, xmax, ymin, ymax);
+    gr_writestream(
+      "<drawrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
+      xmin, xmax, ymin, ymax);
 }
 
 void gr_fillrect(float xmin, float xmax, float ymin, float ymax)
@@ -4757,8 +4766,9 @@ void gr_fillrect(float xmin, float xmax, float ymin, float ymax)
   fillarea(4, x, y);
 
   if (flag_graphics)
-    gr_writestream("<fillrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-            xmin, xmax, ymin, ymax);
+    gr_writestream(
+      "<fillrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
+      xmin, xmax, ymin, ymax);
 }
 
 void gr_drawarc(
@@ -4793,7 +4803,8 @@ void gr_drawarc(
 
   if (flag_graphics)
     gr_writestream(
-      "<drawarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" a1=\"%d\" a2=\"%d\"/>\n",
+      "<drawarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+      "a1=\"%d\" a2=\"%d\"/>\n",
       xmin, xmax, ymin, ymax, a1, a2);
 }
 
@@ -4829,7 +4840,8 @@ void gr_fillarc(
 
   if (flag_graphics)
     gr_writestream(
-      "<fillarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" a1=\"%d\" a2=\"%d\"/>\n",
+      "<fillarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+      "a1=\"%d\" a2=\"%d\"/>\n",
       xmin, xmax, ymin, ymax, a1, a2);
 }
 
@@ -4905,8 +4917,8 @@ void gr_drawarrow(float x1, float y1, float x2, float y2)
   gks_set_pline_linetype(ltype);
 
   if (flag_graphics)
-    gr_writestream("<arrow x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n",
-            x1, y1, x2, y2);
+    gr_writestream("<drawarrow x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n",
+                   x1, y1, x2, y2);
 }
 
 void gr_drawimage(
@@ -4923,9 +4935,10 @@ void gr_drawimage(
   if (flag_graphics)
     {
       n = width * height;
-      gr_writestream("<image xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
-              "width=\"%d\" height=\"%d\"",
-              xmin, xmax, ymin, ymax, width, height);
+      gr_writestream(
+        "<drawimage xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+        "width=\"%d\" height=\"%d\"",
+        xmin, xmax, ymin, ymax, width, height);
       print_int_array("data", n, data);
       gr_writestream("/>\n");
     }

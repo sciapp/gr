@@ -46,7 +46,7 @@ $(ZLIBS):
 libgr.lib: libgr.dll
 
 libgr.dll: gr.obj text.obj contour.obj spline.obj strlib.obj io.obj \
-	   image.obj md5.obj
+	   image.obj md5.obj import.obj
 	$(DLLLINK) /out:$@ $** -def:libgr.def \
 	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(DLLLFLAGS) $(DLLLIBS)
 

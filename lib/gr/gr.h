@@ -111,6 +111,7 @@ DLLEXPORT void gr_setarrowstyle(int);
 DLLEXPORT void gr_drawarrow(float, float, float, float);
 DLLEXPORT int gr_readimage(char *, int *, int *, int **);
 DLLEXPORT void gr_drawimage(float, float, float, float, int, int, int *);
+DLLEXPORT int gr_import(char *);
 DLLEXPORT void gr_setshadow(float, float, float);
 DLLEXPORT void gr_settransparency(float);
 DLLEXPORT void gr_setcoordxform(float [3][2]);

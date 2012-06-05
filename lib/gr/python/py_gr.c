@@ -1278,6 +1278,19 @@ PyObject *_gr_drawimage(PyObject *self, PyObject *args)
 }
 
 static
+PyObject *_gr_import(PyObject *self, PyObject *args)
+{
+  char *path;
+
+  TRY(PyArg_ParseTuple(args, "s:import", &path));
+
+  gr_import(path);
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static
 PyObject *_gr_setshadow(PyObject *self, PyObject *args)
 {
   float offsetx, offsety, blur;
@@ -1505,6 +1518,7 @@ PyMethodDef gr_methods[] = {
   {"drawarrow", _gr_drawarrow, METH_VARARGS},
   {"readimage", _gr_readimage, METH_VARARGS},
   {"drawimage", _gr_drawimage, METH_VARARGS},
+  {"import", _gr_import, METH_VARARGS},
   {"setshadow", _gr_setshadow, METH_VARARGS},
   {"settransparency", _gr_settransparency, METH_VARARGS},
   {"setcoordxform", _gr_setcoordxform, METH_VARARGS},
