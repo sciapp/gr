@@ -416,8 +416,8 @@ def drawimage(xmin, xmax, ymin, ymax, width, height, data):
   __gr.gr_drawimage(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax),
                     c_int(width), c_int(height), _data)
 
-def import(path):
-  __gr.gr_import(char(path))
+def importgraphics(path):
+  __gr.gr_importgraphicsgraphics(char(path))
 
 def setshadow(offsetx, offsety, blur):
   __gr.gr_setshadow(c_float(offsetx), c_float(offsety), c_float(blur))

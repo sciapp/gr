@@ -33,7 +33,7 @@ EXPORTS
 	gr_flushstream
 	gr_grid
 	gr_herrorbars
-	gr_import
+	gr_importgraphics
 	gr_inqdspsize
 	gr_inqscale
 	gr_inqspace

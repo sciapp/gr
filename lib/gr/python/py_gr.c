@@ -1278,13 +1278,13 @@ PyObject *_gr_drawimage(PyObject *self, PyObject *args)
 }
 
 static
-PyObject *_gr_import(PyObject *self, PyObject *args)
+PyObject *_gr_importgraphics(PyObject *self, PyObject *args)
 {
   char *path;
 
-  TRY(PyArg_ParseTuple(args, "s:import", &path));
+  TRY(PyArg_ParseTuple(args, "s:importgraphics", &path));
 
-  gr_import(path);
+  gr_importgraphics(path);
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -1518,7 +1518,7 @@ PyMethodDef gr_methods[] = {
   {"drawarrow", _gr_drawarrow, METH_VARARGS},
   {"readimage", _gr_readimage, METH_VARARGS},
   {"drawimage", _gr_drawimage, METH_VARARGS},
-  {"import", _gr_import, METH_VARARGS},
+  {"importgraphics", _gr_importgraphics, METH_VARARGS},
   {"setshadow", _gr_setshadow, METH_VARARGS},
   {"settransparency", _gr_settransparency, METH_VARARGS},
   {"setcoordxform", _gr_setcoordxform, METH_VARARGS},

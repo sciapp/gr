@@ -335,7 +335,7 @@ void gr(int id)
     }
 }
 
-int gr_import(char *path)
+int gr_importgraphics(char *path)
 {
   FILE *stream;
   char *buff, *s, *el, *fmt;
