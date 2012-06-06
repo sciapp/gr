@@ -7,7 +7,7 @@
       GROBJS = gr.o text.o contour.o spline.o strlib.o io.o image.o \
                md5.o import.o grforbnd.o
      DEFINES =
-    INCLUDES = -I../gks -I../jpeg -I../png
+    INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty/png
           CC = cc
       CFLAGS = $(DEFINES) -O -Wall -fPIC
           AR = ar
@@ -16,8 +16,8 @@
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
      LDFLAGS =
         LIBS = -lc -lm
-    JPEGLIBS = ../jpeg/libjpeg.a
-     PNGLIBS = ../png/libpng.a
+    JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
+     PNGLIBS = ../../3rdparty/png/libpng.a
      GKSLIBS = ../gks/libGKS.a
      XFTLIBS = -lXft -lfontconfig
     XLIBPATH = /usr/X11R6/lib
@@ -40,7 +40,8 @@ Darwin:
 targets: prerequisites libGR.a libGR.so add-ons
 
 prerequisites:
-	@for d in jpeg png gks gks/plugin; do make -C ../$$d; done
+	@for d in jpeg png; do make -C ../../3rdparty/$$d; done
+	@for d in gks gks/plugin; do make -C ../$$d; done
 
 add-ons:
 	@for d in python; do make -C $$d; done
@@ -68,7 +69,8 @@ install:
 
 clean:
 	@for d in python; do make -C $$d clean; done
-	@for d in jpeg png gks gks/plugin; do make -C ../$$d clean; done
+	@for d in gks gks/plugin; do make -C ../$$d clean; done
+	@for d in jpeg png; do make -C ../../3rdparty/$$d clean; done
 	rm -f so_locations *.so *.a *.o *.bak *~
 
 depend:

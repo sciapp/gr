@@ -16,7 +16,7 @@ OBJS = \
 	pngwutil.obj
 
 CC = CL
-CFLAGS = /c /Zi /nologo /MD /D_POSIX /I..\zlib
+CFLAGS = /c /Zi /nologo /MD /D_POSIX /I..\..\3rdparty\zlib
 AR = LIB /nologo
 SRCDIR = .\ 
 

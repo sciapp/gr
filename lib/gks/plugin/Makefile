@@ -2,7 +2,7 @@
      LIBDIR = $(GRDIR)/lib
 
    CXXFLAGS = -g -Wall -fPIC
-   INCLUDES = -I.. -I../../png -I/usr/local/include
+   INCLUDES = -I.. -I../../../3rdparty/png -I/usr/local/include
     SOFLAGS = -shared
     LDFLAGS =
   WX_CONFIG = false
@@ -17,7 +17,7 @@
      GTKINC = `$(PKG_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
     GTKLIBS = `$(PKG_CONFIG) gtk+-2.0 --libs 2>/dev/null`
       XLIBS = -L/usr/X11R6/lib -lXt -lX11
-    PNGLIBS = -L../../png -lpng
+    PNGLIBS = -L../../../3rdparty/png -lpng
      GSDEFS = 
       GSINC = -I/usr/include/ghostscript
      GSLIBS = -lgs

@@ -3,19 +3,16 @@ EXETYPE WINDOWS
 
 EXPORTS
 	gr_activatews
-	gr_addproperty
 	gr_adjustrange
 	gr_axes
 	gr_axes3d
 	gr_beginprint
 	gr_beginprintext
-	gr_beginproperty
 	gr_beginselection
 	gr_begingraphics
 	gr_cellarray
 	gr_clearws
 	gr_closegks
-	gr_closestream
 	gr_closeseg
 	gr_closews
 	gr_contour
@@ -26,11 +23,9 @@ EXPORTS
 	gr_drawimage
 	gr_emergencyclosegks
 	gr_endprint
-	gr_endproperty
 	gr_endselection
 	gr_endgraphics
 	gr_fillarea
-	gr_flushstream
 	gr_grid
 	gr_herrorbars
 	gr_importgraphics
@@ -42,7 +37,6 @@ EXPORTS
 	gr_ndctowc
 	gr_mathtex
 	gr_opengks
-	gr_openstream
 	gr_openws
 	gr_polyline
 	gr_polyline3d
@@ -94,4 +88,3 @@ EXPORTS
 	gr_updatews
 	gr_verrorbars
 	gr_wctondc
-	gr_writestream

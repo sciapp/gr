@@ -1,11 +1,11 @@
 CC = CL
-INCLUDES = /I..\jpeg /I..\png /I..\zlib /I..\gks /I.
+INCLUDES = /I..\..\3rdparty\jpeg /I..\..\3rdparty\png /I..\..\3rdparty\zlib /I..\gks /I.
 CFLAGS = /c /nologo /DNO_X11 /D_DLL /MD /D_POSIX $(INCLUDES)
 DEFINES = /DGRDIR=\"S:\\gr\"
 LINK = LINK /nologo
-JPEGLIBS = ..\jpeg\libjpeg.lib
-PNGLIBS = ..\png\libpng.lib
-ZLIBS = ..\zlib\libz.lib
+JPEGLIBS = ..\..\3rdparty\jpeg\libjpeg.lib
+PNGLIBS = ..\..\3rdparty\png\libpng.lib
+ZLIBS = ..\..\3rdparty\zlib\libz.lib
 GRLIBS = libgr.lib
 GKSLIBS = ..\gks\libgks.lib
 DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
@@ -29,19 +29,19 @@ $(GKSLIBS):
 	@cd ../gr
 
 $(JPEGLIBS):
-	@cd ../jpeg
+	@cd ../../3rdparty/jpeg
 	@$(MAKE) /f makefile.vc
-	@cd ../gr
+	@cd ..\..\lib\gr
 
 $(PNGLIBS):
-	@cd ../png
+	@cd ../../3rdparty/png
 	@$(MAKE) /f makefile.vc
-	@cd ../gr
+	@cd ..\..\lib\gr
 
 $(ZLIBS):
-	@cd ../zlib
+	@cd ../../3rdparty/zlib
 	@$(MAKE) /f makefile.vc
-	@cd ../gr
+	@cd ..\..\lib\gr
 
 libgr.lib: libgr.dll
 
@@ -71,13 +71,13 @@ install: default
 clean:
 	@cd ../gks
 	@$(MAKE) /f makefile.vc clean
-	@cd ../zlib
+	@cd ../../3rdparty/zlib
 	@$(MAKE) /f makefile.vc clean
-	@cd ../png
+	@cd ../../3rdparty/png
 	@$(MAKE) /f makefile.vc clean
-	@cd ../jpeg
+	@cd ../../3rdparty/jpeg
 	@$(MAKE) /f makefile.vc clean
-	@cd ../gr
+	@cd ..\..\lib\gr
 	DEL libgr.dll
 	DEL libgr.exp
 	DEL libgr.lib
