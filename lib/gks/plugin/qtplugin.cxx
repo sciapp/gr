@@ -1241,7 +1241,7 @@ void gks_qtplugin(
     {
     case 2:
       gkss = (gks_state_list_t *) * ptr;
-      p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
+      p = new ws_state_list;
 
       p->width = p->height = 500;
 
@@ -1262,9 +1262,9 @@ void gks_qtplugin(
 	if (p->pattern[i] != NULL)
 	  free(p->pattern[i]);
 
-      free(p->points);
-      free(p->font);
-      free(p);
+      delete p->points;
+      delete p->font;
+      delete p;
 
       p = NULL;
       break;

@@ -1483,6 +1483,9 @@ void gr_selntran(int transform)
   check_autoinit;
 
   gks_select_xform(transform);
+
+  if (flag_graphics)
+    gr_writestream("<selntran transform=\"%d\"/>\n", transform);
 }
 
 void gr_setclip(int indicator)
@@ -1490,6 +1493,9 @@ void gr_setclip(int indicator)
   check_autoinit;
 
   gks_set_clipping(indicator);
+
+  if (flag_graphics)
+    gr_writestream("<setclip indicator=\"%d\"/>\n", indicator);
 }
 
 static
