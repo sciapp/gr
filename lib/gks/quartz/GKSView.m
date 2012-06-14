@@ -1482,7 +1482,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
           [string autorelease];
 
           for (i = 0; i < nchars; i++)
-            string = [string stringByAppendingFormat:@"%C", dingbats[text[i]]];
+            string = [string stringByAppendingFormat:@"%d", dingbats[text[i]]];
         }
       else
         {
