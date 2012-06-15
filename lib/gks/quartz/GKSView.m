@@ -707,9 +707,11 @@ void seg_xform_rel(float *x, float *y)
       
           CGImageDestinationFinalize(dr);
       
-          CGImageRelease (image);
-          CFRelease(dr);   
-        } 
+          [bitmap release];
+          CFRelease(dr);
+
+          CFRelease(url);
+        }
       else if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"JPEG"])
         {
           filename = [filename stringByAppendingPathExtension:@"jpg"];
@@ -743,8 +745,11 @@ void seg_xform_rel(float *x, float *y)
           CGImageDestinationFinalize(dr);
       
           CFRelease(mSaveMetaAndOpts);
-          CGImageRelease (image);
+
+          [bitmap release];
           CFRelease(dr);   
+
+          CFRelease(url);
         }
       else if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"JPEG-2000"])
         {
@@ -778,8 +783,11 @@ void seg_xform_rel(float *x, float *y)
           CGImageDestinationFinalize(dr);
       
           CFRelease(mSaveMetaAndOpts);
-          CGImageRelease (image);
-          CFRelease(dr);   
+
+          [bitmap release];
+          CFRelease(dr);
+
+          CFRelease(url);
         }
       else if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"GIF"])
         {
@@ -802,9 +810,11 @@ void seg_xform_rel(float *x, float *y)
       
           CGImageDestinationFinalize(dr);
       
-          CGImageRelease (image);
-          CFRelease(dr);   
-        } 
+          [bitmap release];
+          CFRelease(dr);
+
+          CFRelease(url);
+        }
       else if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"BMP"])
         {
           filename = [filename stringByAppendingPathExtension:@"bmp"];
@@ -826,8 +836,10 @@ void seg_xform_rel(float *x, float *y)
       
           CGImageDestinationFinalize(dr);
       
-          CGImageRelease (image);
-          CFRelease(dr);   
+          [bitmap release];
+          CFRelease(dr);
+
+          CFRelease(url);
         }
       else if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"PICT"])
         {
@@ -850,8 +862,10 @@ void seg_xform_rel(float *x, float *y)
       
           CGImageDestinationFinalize(dr);
       
-          CGImageRelease (image);
-          CFRelease(dr);   
+          [bitmap release];
+          CFRelease(dr);
+
+          CFRelease(url);
         }
     
       [[NSUserDefaults standardUserDefaults] setObject:
@@ -875,9 +889,6 @@ void seg_xform_rel(float *x, float *y)
 {
   float max_width, max_height, width, height;
   NSRect rect;
-  CGContextRef context; 
-  
-  context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
   
   max_width = MWIDTH;
   max_height = max_width * p->sheight / p->swidth;

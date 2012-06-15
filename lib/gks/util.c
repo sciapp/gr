@@ -2091,8 +2091,7 @@ int clip_code(float x, float y)
 }
 
 static
-void clip_line(
-  float *x0, float *y0, float *x1, float *y1, int *visible)
+int clip_line(float *x0, float *y0, float *x1, float *y1)
 {
   register int c, c0, c1;
   register float x = 0, y = 0;
@@ -2100,12 +2099,10 @@ void clip_line(
   c0 = clip_code(*x0, *y0);
   c1 = clip_code(*x1, *y1);
 
-  *visible = 0;
-
   while (c0 | c1)
     {
       if (c0 & c1)
-	return;
+	return 0;
       c = c0 ? c0 : c1;
 
       if (c & LEFT)
@@ -2142,7 +2139,7 @@ void clip_line(
 	  c1 = clip_code(x, y);
 	}
     }
-  *visible = 1;
+  return 1;
 }
 
 void gks_emul_polyline(int n, float *px, float *py, int ltype, int tnr,
@@ -2173,11 +2170,11 @@ void gks_emul_polyline(int n, float *px, float *py, int ltype, int tnr,
 
       x = x1;
       y = y1;
-      clip_line(&x0, &y0, &x1, &y1, &visible);
+      visible = clip_line(&x0, &y0, &x1, &y1);
 
       if (visible)
 	{
-	  if (clip)
+	  if (clip == 1)
 	    {
 	      move(x0, y0);
 	      clip = 0;
