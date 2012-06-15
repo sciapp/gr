@@ -2174,7 +2174,7 @@ void gks_emul_polyline(int n, float *px, float *py, int ltype, int tnr,
 
       if (visible)
 	{
-	  if (clip == 1)
+	  if (clip)
 	    {
 	      move(x0, y0);
 	      clip = 0;
@@ -2182,7 +2182,8 @@ void gks_emul_polyline(int n, float *px, float *py, int ltype, int tnr,
 	  draw(x1, y1);
 	}
 
-      clip = !visible || x != x1 || y != y1;
+      if (x != x1 || y != y1 || !visible)
+        clip = 1;
       x0 = x;
       y0 = y;
     }
