@@ -147,7 +147,8 @@ float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 #define BOTTOM (1<<4)
 #define TOP    (1<<5)
 
-#define GR_HEADER  "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n<gr>\n"
+#define XML_HEADER "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
+#define GR_HEADER  "<gr>\n"
 #define GR_TRAILER "</gr>\n"
 
 #define nominalWindowHeight 500
@@ -788,6 +789,7 @@ void initgks(void)
     {
       if (gr_openstream(display) == 0)
         {
+          gr_writestream(XML_HEADER);
           gr_writestream(GR_HEADER);
           flag_graphics = 1;
         }
@@ -876,7 +878,12 @@ void gr_clearws(void)
   foreach_activews((void (*)(int, void *)) clear, (void *) &clearflag);
 
   if (flag_graphics)
-    gr_flushstream(1);
+    {
+      gr_writestream(GR_TRAILER);
+      gr_flushstream(1);
+      gr_writestream(XML_HEADER);
+      gr_writestream(GR_HEADER);
+    }
 }
 
 static
@@ -4977,6 +4984,7 @@ void gr_begingraphics(char *path)
     {
       if (gr_openstream(path) == 0)
         {
+          gr_writestream(XML_HEADER);
           gr_writestream(GR_HEADER);
           flag_graphics = 1;
         }
