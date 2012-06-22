@@ -2117,7 +2117,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
   QDomDocument domDoc = QDomDocument( QString("grDoc") );
   domDoc.setContent(data_string);
   QDomElement gr_root = domDoc.documentElement();
-  qDebug() << "gr_root tagname =" << gr_root.tagName();
   
   if (gr_root.tagName() != "gr") {
       QMessageBox::information(NULL, QObject::tr("DOM gr"),
@@ -2132,7 +2131,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
   }
 
   bool hasChilds = gr_root.hasChildNodes();
-  qDebug() << "hasChilds =" << hasChilds;
   if ( hasChilds ) {
     gr_rootChilds   = gr_root.childNodes();
     n_gr_rootChilds = gr_rootChilds.count();
@@ -2148,10 +2146,8 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
 
     error = false;
     QString node_name =  gr_rootChilds.item(i).nodeName();
-    qDebug() << "\n\nchild nr. " << i << "node name =" <<  node_name;
     QDomNamedNodeMap namedNodeMap = gr_rootChilds.item(i).attributes();
     int n_attr = namedNodeMap.count();
-    qDebug() << "child attributes count =" << n_attr;
 
     if( node_name == QString("axes3d") ) {
 
