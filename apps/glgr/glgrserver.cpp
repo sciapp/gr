@@ -1,7 +1,6 @@
 
 #include <QtNetwork>
 #include <qapplication.h>
-#include <iostream>
 
 #include "glgrserver.h"
 
@@ -12,7 +11,6 @@
 glgrServer::glgrServer(QObject *parent) 
   : QTcpServer(parent)
 {
-  std::cout << "entry glgrserver" << std::endl;
   setMaxPendingConnections(MAXCONN);
   connect(this, SIGNAL(newConnection()), this, SLOT(NewConnection()));
   s = NULL;
@@ -26,7 +24,6 @@ glgrServer::glgrServer(QObject *parent)
 
 void glgrServer::NewConnection()
 {
-  std::cout << "entry NewConnection" << std::endl;
   if (s != NULL)
     s->disconnectFromHost();
 
@@ -49,8 +46,6 @@ void glgrServer::readClient()
   qint64 cc;
   char buf[MY_BUFSIZ+1];
 
-  std::cout << "entry readClient" << std::endl;
-
   while ( s->bytesAvailable() ) 
     {
       cc = s->read(buf, MY_BUFSIZ);
@@ -59,7 +54,6 @@ void glgrServer::readClient()
 
       buf[cc] = '\0';
       data_string += QString(buf);
-      std::cout << "indexOf</gr> = " << data_string.indexOf("</gr>") << std::endl;
       if (data_string.indexOf("</gr>") != -1)
 	{
 	  emit(newData(data_string));
@@ -71,5 +65,4 @@ void glgrServer::readClient()
 
 void glgrServer::killSocket()
 {
-  std::cout << Q_FUNC_INFO <<": SIGNAL disconnected was emitted" << std::endl;     //deleteLater();
 }

@@ -1,15 +1,15 @@
 #ifndef GLGRWIDGET_H_INCLUDED
 #define GLGRWIDGET_H_INCLUDED
-//#include <QCoreApplication>
+
 #include <QGLWidget> 
 #include <QDomDocument>
 #include <QMessageBox>
-#include <vector>
-#include "vec.h"
-#include "rect.h"
 #include <qpoint.h>
 
-#include <iostream>
+#include <vector>
+
+#include "vec.h"
+#include "rect.h"
 
 #define PRINT_DPI 150
 using std::vector;

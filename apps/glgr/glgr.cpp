@@ -7,15 +7,16 @@
 #include <QPalette>
 #include <QPrintDialog>
 #include <qregexp.h> 
+
 #include <cmath>
 #include <cfloat>
+#include <iostream>
+
 #include "glgr.h"
 #include "glgrserver.h"
-#include <iostream>
 
 glgrServer *glgr_server=NULL;
 
-//GLGrWidget::GLGrWidget(QWidget *parent, const char *name) :
 GLGrWidget::GLGrWidget(QWidget *parent) :
   QGLWidget(parent), 
   last_context(NULL),title_offset(.12f),subtitle_offset(.10f),legend_offset(.18f),proj_rad((float)sqrt(3*0.5*0.5)),
@@ -2105,8 +2106,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
   float float_value;
   int int_value;
  
-  std::cout << "entry glgr.cpp get_plot3d_orders: Anfang von data_string = " << std::endl << qPrintable(data_string.left(1000))
-            << "......." << std::endl << std::endl;
   data_string=data_string.simplified();
 
   QDomNodeList gr_rootChilds;
@@ -2159,7 +2158,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
       for( int j=0; j<n_attr; j++ ) {
         attribute     = namedNodeMap.item(j).nodeName();
         attribute_val = namedNodeMap.item(j).nodeValue();
-        std::cout << "attribute nr " << j << " name = " << qPrintable(attribute) << " value = " << qPrintable(attribute_val) << std::endl;
         if( attribute == QString("xtick") ) {
 
           float_value = attribute_val.toFloat();
@@ -2195,9 +2193,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
           int_value = attribute_val.toInt();
           setMajorZ( int_value );
 
-
-          } else {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
         }
       }
       
@@ -2208,14 +2203,10 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
       for( int j=0; j<n_attr; j++ ) {
         attribute     = namedNodeMap.item(j).nodeName();
         attribute_val = namedNodeMap.item(j).nodeValue();
-        std::cout << "attribute nr " << j << " name = " << qPrintable(attribute) << " value = " << qPrintable(attribute_val) << std::endl;
         if( attribute == QString("index") ) {
           int_value = attribute_val.toInt();
           if( int_value>12 || int_value <0 ) int_value = 0;
           setColormap( int_value );
-
-        } else {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
         }
       }
         
@@ -2226,7 +2217,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
       if( namedNodeMap.contains("nh") )
         {
           nh = namedNodeMap.namedItem( "nh" ).nodeValue().toInt();
-          std::cout << "attribute nh value = " << nh << std::endl;
           setContourLineNumber( nh );
         }
        
@@ -2235,33 +2225,15 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
       for( int j=0; j<n_attr; j++ ) {
         attribute     = namedNodeMap.item(j).nodeName();
         attribute_val = namedNodeMap.item(j).nodeValue();
-        std::cout << "attribute nr " << j << " name = " << qPrintable(attribute) << " value = " << qPrintable(attribute_val) << std::endl;
-        if( attribute == QString("len") ) {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
-        } else if( attribute == QString("x") ) {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
-        } else if( attribute == QString("y") ) {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
-        } else {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
         }
-      }
      
     } else if( node_name == QString("setscale") ) {
 
       for( int j=0; j<n_attr; j++ ) {
          attribute     = namedNodeMap.item(j).nodeName();
          attribute_val = namedNodeMap.item(j).nodeValue();
-         std::cout << "attribute nr " << j << " name = " << qPrintable(attribute) << " value = " << qPrintable(attribute_val) << std::endl;
          if( attribute == QString("scale") ) {
 	  int_value = attribute_val.toInt(); 
-
-	  // if( int_value & LOGX ) std::cout << "set logx" << std::endl;
-	  // if( int_value & LOGY ) std::cout << "set logy" << std::endl;
-	  // if( int_value & LOGZ ) std::cout << "set logz" << std::endl;
-	  // if( int_value & FLIPX ) std::cout << "set flipx" << std::endl;
-	  // if( int_value & FLIPY ) std::cout << "set flipy" << std::endl;
-	  // if( int_value & FLIPZ ) std::cout << "set flipz" << std::endl;
 
 	  if( int_value & LOGX )  { setLogX( true );  } else { setLogX( false );  }
 	  if( int_value & LOGY )  { setLogY( true );  } else { setLogY( false );  }
@@ -2269,9 +2241,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
 	  if( int_value & FLIPX ) { setFlipX( true ); } else { setFlipX( false ); }
 	  if( int_value & FLIPY ) { setFlipY( true ); } else { setFlipY( false ); }
 	  if( int_value & FLIPZ ) { setFlipZ( true ); } else { setFlipZ( false ); }
-
-	} else {
- 	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
 	}
      }
 
@@ -2280,12 +2249,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
       for( int j=0; j<n_attr; j++ ) {
         attribute     = namedNodeMap.item(j).nodeName();
         attribute_val = namedNodeMap.item(j).nodeValue();
-        std::cout << "attribute nr " << j << " name = " << qPrintable(attribute) << " value = " << qPrintable(attribute_val) << std::endl;
-        if( attribute == QString("dummy") ) {
-          ;
-        } else {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
-        }
       }
       
     } else if( node_name == QString("setwindow") ) {
@@ -2293,7 +2256,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
       for( int j=0; j<n_attr; j++ ) {
         attribute     = namedNodeMap.item(j).nodeName();
         attribute_val = namedNodeMap.item(j).nodeValue();
-        std::cout << "attribute nr " << j << " name = " << qPrintable(attribute) << " value = " << qPrintable(attribute_val) << std::endl;
         if( attribute == "xmin" ) {
 
           float_value = attribute_val.toFloat();
@@ -2314,8 +2276,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
           float_value = attribute_val.toFloat();
           setYMax( float_value );
 
-         } else {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
         }
       }
       
@@ -2324,8 +2284,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
       for( int j=0; j<n_attr; j++ ) {
         attribute     = namedNodeMap.item(j).nodeName();
         attribute_val = namedNodeMap.item(j).nodeValue();
-        std::cout << "attribute nr " << j << " name = " << qPrintable(attribute) << " value = " 
-                  << qPrintable(attribute_val) << std::endl;
  	if( attribute == QString("zmin") ) {
 
           float_value = attribute_val.toFloat();
@@ -2346,8 +2304,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
           int_value = attribute_val.toInt();
           setTilt( int_value );
 
-         } else {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
         }
       }
      
@@ -2360,10 +2316,6 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
       for( int j=0; j<n_attr; j++ ) {
         attribute     = namedNodeMap.item(j).nodeName();
         attribute_val = namedNodeMap.item(j).nodeValue();
-        std::cout << "attribute nr " << j << " name = " << qPrintable(attribute) << " value = " 
-                  << qPrintable(attribute_val.left(100));
-	if( attribute_val.size() > 100 ) std::cout << "......";
-				     std::cout << std::endl;
       }
 
       if( namedNodeMap.contains("nx") )
@@ -2400,16 +2352,8 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
         return;
        }
      
-       if( namedNodeMap.contains("x") ) {
-	  std::cout << "attribute <x> ignored" << std::endl;
-       }  
-       if( namedNodeMap.contains("y") ) {
-	  std::cout << "attribute <y> ignored" << std::endl;
-       }  
-
       if( namedNodeMap.contains("z") )
         {
-	  std::cout << "nx, ny = " << nx << "," << ny << std::endl;
           if( (nx*ny) <= 0 ) {   
             QMessageBox::warning(NULL, QObject::tr("DOM gr"),
                                  QObject::tr("nx *ny <= 0 --> cannot allocate memory for z-values"));
@@ -2439,9 +2383,7 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
           if( error) {
             continue;
           } else {
-	    std::cout << "vor setData: np = " << np << std::endl;
             setData(nx, ny, d, NULL);
-	    std::cout << "hinter setData" << std::endl;
           }
 
          } else {
@@ -2456,28 +2398,19 @@ void GLGrWidget::get_plot3d_orders(QString &data_string) {
       for( int j=0; j<n_attr; j++ ) {
         attribute     = namedNodeMap.item(j).nodeName();
         attribute_val = namedNodeMap.item(j).nodeValue();
-        std::cout << "attribute nr " << j << " name = " << qPrintable(attribute) << " value = " << qPrintable(attribute_val) << std::endl;
         if(  attribute == QString("xtitle") ) {
           setXLabel( attribute_val );
         } else if(attribute == QString("ytitle")) {
           setYLabel( attribute_val );
         } else if (attribute == QString("ztitle")) {
           setZLabel( attribute_val );
-        } else {
-	  std::cout << "attribute <" << qPrintable(attribute) << "> ignored" << std::endl;
         }
       }
 
     } else if( node_name == QString("") ) {
       ; 
-    } else {
-      std::cout << "node name <" << qPrintable(node_name) << "> ignored" << std::endl;
     }
-
-
-  }                                             // Ende for( int i=0; i<n_gr_rootChilds; i++)
-  //============================================================================================//
-  std::cout << "vor update" << std::endl;
+  }
   update();
 }
 
