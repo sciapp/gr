@@ -9,4 +9,4 @@ REQUIRES	= opengl
 
 HEADERS		= glgr.h rect.h vec.h glgrserver.h
 SOURCES		= main.cpp glgr.cpp rect.cpp vec.cpp glgrserver.cpp
-QT		+= network opengl
+QT		+= network xml opengl
