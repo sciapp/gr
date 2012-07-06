@@ -62,9 +62,7 @@ int update_required = 0;
 @implementation gks_quartz_thread
 + (void) update: (id) param
 {
-  NSAutoreleasePool *pool;
-
-  pool = [[NSAutoreleasePool alloc] init];
+  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
   for (;;)
     {
       [mutex lock];
@@ -78,6 +76,7 @@ int update_required = 0;
       [mutex unlock];
       usleep(100000);
     }
+  [pool release];
 }
 @end
 
@@ -109,7 +108,7 @@ void gks_quartzplugin(
 
       wss = (ws_state_list *) calloc(1, sizeof(ws_state_list));
       pool = [[NSAutoreleasePool alloc] init];
-      displayList = [[NSData alloc] autorelease];  
+      displayList = [[NSData alloc] init];  
       plugin = [NSConnection rootProxyForConnectionWithRegisteredName:
                 @"GKSQuartz" host: nil];
       mutex = [[NSLock alloc] init];
@@ -134,7 +133,6 @@ void gks_quartzplugin(
         {
           [NSThread detachNewThreadSelector: @selector(update:) toTarget:[gks_quartz_thread class] withObject:nil];
           [plugin setProtocolForProxy: @protocol(gks_protocol)];
-          [plugin autorelease];
         }
 
       wss->win = [plugin GKSQuartzCreateWindow];
@@ -145,7 +143,8 @@ void gks_quartzplugin(
     case 3:
       [plugin GKSQuartzCloseWindow: wss->win];
       [mutex release];
-      [pool release];
+      [plugin release];
+      [displayList release];
 
       free(wss);
       wss = NULL;

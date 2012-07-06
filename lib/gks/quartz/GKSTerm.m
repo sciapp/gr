@@ -8,10 +8,7 @@
 @implementation GKSTerm
 
 - (void) awakeFromNib
-{
-  if (!pool)
-    pool = [[NSAutoreleasePool alloc] init];
-  
+{  
   [[NSNotificationCenter defaultCenter] addObserver:self 
                                         selector:@selector(keepOnDisplay:) 
                                         name:@"GKSViewKeepOnDisplayNotification" object:nil];   
@@ -25,7 +22,6 @@
       num_windows = 0;
       curr_win_id = 0;
     }
-  [pool release];
 }
 
 - (int) GKSQuartzCreateWindow

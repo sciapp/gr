@@ -12,8 +12,7 @@
 
 @interface GKSTerm : NSObject <gks_protocol> 
 {
-  @private
-    NSAutoreleasePool *pool;    
+  @private 
     NSConnection *connection;
     int num_windows;
     int curr_win_id;
