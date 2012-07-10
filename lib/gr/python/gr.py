@@ -143,13 +143,6 @@ def spline(n, px, py, m, method):
   _py = floatarray(n, py)
   __gr.gr_spline(c_int(n), _px, _py, c_int(m), c_int(method))
 
-def setasf(asfs):
-  _asfs = intarray(asfs)
-  __gr.gr_setasf(_asfs)
-
-def setlineind(index):
-  __gr.gr_setlineind(c_int(index))
-
 def setlinetype(type):
   __gr.gr_setlinetype(c_int(type))
 
@@ -159,9 +152,6 @@ def setlinewidth(width):
 def setlinecolorind(color):
   __gr.gr_setlinecolorind(c_int(color))
 
-def setmarkerind(index):
-  __gr.gr_setmarkerind(c_int(index))
-
 def setmarkertype(type):
   __gr.gr_setmarkertype(c_int(type))
 
@@ -170,9 +160,6 @@ def setmarkersize(size):
 
 def setmarkercolorind(color):
   __gr.gr_setmarkercolorind(c_int(color))
-
-def settextind(index):
-  __gr.gr_settextint(c_int(index))
 
 def settextfontprec(font, precision):
   __gr.gr_settextfontprec(c_int(font), c_int(precision))
@@ -197,9 +184,6 @@ def settextpath(path):
 
 def settextalign(horizontal, vertical):
   __gr.gr_settextalign(c_int(horizontal), c_int(vertical))
-
-def setfillind(index):
-  __gr.gr_setfillind(c_int(index))
 
 def setfillintstyle(style):
   __gr.gr_setfillintstyle(c_int(style))

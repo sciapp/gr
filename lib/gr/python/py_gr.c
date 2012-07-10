@@ -317,36 +317,6 @@ PyObject *_gr_spline(PyObject *self, PyObject *args)
   return Py_None;
 }
 
-static
-PyObject *_gr_setasf(PyObject *self, PyObject *args)
-{
-  int *asfs;
-  PyObject *opasfs;
-
-  TRY(PyArg_ParseTuple(args, "O:setasf", &opasfs));
-  TRY(asfs = intarray(opasfs, 13, "asfs"));
-
-  gr_setasf(asfs);
-
-  free(asfs);
-
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
-static
-PyObject *_gr_setlineind(PyObject *self, PyObject *args)
-{
-  int index;
-
-  TRY(PyArg_ParseTuple(args, "i:setlineind", &index));
-
-  gr_setlineind(index);
-
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
 PyObject *_gr_setlinetype(PyObject *self, PyObject *args)
 {
   int type;
@@ -378,19 +348,6 @@ PyObject *_gr_setlinecolorind(PyObject *self, PyObject *args)
   TRY(PyArg_ParseTuple(args, "i:setlinecolorind", &color));
 
   gr_setlinecolorind(color);
-
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
-static
-PyObject *_gr_setmarkerind(PyObject *self, PyObject *args)
-{
-  int index;
-
-  TRY(PyArg_ParseTuple(args, "i:setmarkerind", &index));
-
-  gr_setmarkerind(index);
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -430,19 +387,6 @@ PyObject *_gr_setmarkercolorind(PyObject *self, PyObject *args)
   TRY(PyArg_ParseTuple(args, "i:setmarkercolorind", &color));
 
   gr_setmarkercolorind(color);
-
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
-static
-PyObject *_gr_settextind(PyObject *self, PyObject *args)
-{
-  int index;
-
-  TRY(PyArg_ParseTuple(args, "i:settextind", &index));
-
-  gr_settextind(index);
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -547,19 +491,6 @@ PyObject *_gr_settextalign(PyObject *self, PyObject *args)
   TRY(PyArg_ParseTuple(args, "ii:settextalign", &horizontal, &vertical));
 
   gr_settextalign(horizontal, vertical);
-
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
-static
-PyObject *_gr_setfillind(PyObject *self, PyObject *args)
-{
-  int index;
-
-  TRY(PyArg_ParseTuple(args, "i:setfillind", &index));
-
-  gr_setfillind(index);
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -1449,16 +1380,12 @@ PyMethodDef gr_methods[] = {
   {"fillarea", _gr_fillarea, METH_VARARGS},
   {"cellarray", _gr_cellarray, METH_VARARGS},
   {"spline", _gr_spline, METH_VARARGS},
-  {"setasf", _gr_setasf, METH_VARARGS},
-  {"setlineind", _gr_setlineind, METH_VARARGS},
   {"setlinetype", _gr_setlinetype, METH_VARARGS},
   {"setlinewidth", _gr_setlinewidth, METH_VARARGS},
   {"setlinecolorind", _gr_setlinecolorind, METH_VARARGS},
-  {"setmarkerind", _gr_setmarkerind, METH_VARARGS},
   {"setmarkertype", _gr_setmarkertype, METH_VARARGS},
   {"setmarkersize", _gr_setmarkersize, METH_VARARGS},
   {"setmarkercolorind", _gr_setmarkercolorind, METH_VARARGS},
-  {"settextind", _gr_settextind, METH_VARARGS},
   {"settextfontprec", _gr_settextfontprec, METH_VARARGS},
   {"setcharexpan", _gr_setcharexpan, METH_VARARGS},
   {"setcharspace", _gr_setcharspace, METH_VARARGS},
@@ -1467,7 +1394,6 @@ PyMethodDef gr_methods[] = {
   {"setcharup", _gr_setcharup, METH_VARARGS},
   {"settextpath", _gr_settextpath, METH_VARARGS},
   {"settextalign", _gr_settextalign, METH_VARARGS},
-  {"setfillind", _gr_setfillind, METH_VARARGS},
   {"setfillintstyle", _gr_setfillintstyle, METH_VARARGS},
   {"setfillstyle", _gr_setfillstyle, METH_VARARGS},
   {"setfillcolorind", _gr_setfillcolorind, METH_VARARGS},

@@ -46,7 +46,6 @@ EXPORTS
 	gr_resizeselection
 	gr_selntran
 	gr_setarrowstyle
-	gr_setasf
 	gr_setcharexpan
 	gr_setcharheight
 	gr_setcharspace
@@ -55,15 +54,12 @@ EXPORTS
 	gr_setcolormap
 	gr_setcolorrep
 	gr_setfillcolorind
-	gr_setfillind
 	gr_setfillintstyle
 	gr_setfillstyle
 	gr_setlinecolorind
-	gr_setlineind
 	gr_setlinetype
 	gr_setlinewidth
 	gr_setmarkercolorind
-	gr_setmarkerind
 	gr_setmarkersize
 	gr_setmarkertype
 	gr_setscale
@@ -72,7 +68,6 @@ EXPORTS
 	gr_settextalign
 	gr_settextcolorind
 	gr_settextfontprec
-	gr_settextind
 	gr_settextpath
 	gr_setviewport
 	gr_setwindow

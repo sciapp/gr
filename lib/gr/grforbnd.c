@@ -108,16 +108,6 @@ void FORTRAN(gr_spline)(int *n, float *x, float *y, int *m, int *method)
   gr_spline(*n, x, y, *m, *method);
 }
 
-void FORTRAN(gr_setasf)(int *asfs)
-{
-  gr_setasf(asfs);
-}
-
-void FORTRAN(gr_setlineind)(int *index)
-{
-  gr_setlineind(*index);
-}
-
 void FORTRAN(gr_setlinetype)(int *type)
 {
   gr_setlinetype(*type);
@@ -133,11 +123,6 @@ void FORTRAN(gr_setlinecolorind)(int *color)
   gr_setlinecolorind(*color);
 }
 
-void FORTRAN(gr_setmarkerind)(int *index)
-{
-  gr_setmarkerind(*index);
-}
-
 void FORTRAN(gr_setmarkertype)(int *type)
 {
   gr_setmarkertype(*type);
@@ -151,11 +136,6 @@ void FORTRAN(gr_setmarkersize)(float *size)
 void FORTRAN(gr_setmarkercolorind)(int *color)
 {
   gr_setmarkercolorind(*color);
-}
-
-void FORTRAN(gr_settextind)(int *index)
-{
-  gr_settextind(*index);
 }
 
 void FORTRAN(gr_settextfontprec)(int *font, int *precision)
@@ -196,11 +176,6 @@ void FORTRAN(gr_settextpath)(int *path)
 void FORTRAN(gr_settextalign)(int *horizontal, int *vertical)
 {
   gr_settextalign(*horizontal, *vertical);
-}
-
-void FORTRAN(gr_setfillind)(int *index)
-{
-  gr_setfillind(*index);
 }
 
 void FORTRAN(gr_setfillintstyle)(int *style)

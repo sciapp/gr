@@ -760,6 +760,9 @@ void initialize(int state)
   double_buf = getenv("GKS_DOUBLE_BUF") != NULL;
   display = getenv("GR_DISPLAY");
 #endif
+  if (display)
+    if (*display == '\0')
+      display = NULL;
 
   setscale(options);
 }
@@ -1186,23 +1189,6 @@ void gr_spline(int n, float *px, float *py, int m, int method)
     }
 }
 
-void gr_setasf(int *asfs)
-{
-  check_autoinit;
-
-  gks_set_asf(asfs);
-}
-
-void gr_setlineind(int index)
-{
-  check_autoinit;
-
-  gks_set_pline_index(index);
-
-  if (flag_graphics)
-    gr_writestream("<setlineind index=\"%d\"/>\n", index);
-}
-
 void gr_setlinetype(int type)
 {
   check_autoinit;
@@ -1233,16 +1219,6 @@ void gr_setlinecolorind(int color)
     gr_writestream("<setlinecolorind color=\"%d\"/>\n", color);
 }
 
-void gr_setmarkerind(int index)
-{
-  check_autoinit;
-
-  gks_set_pmark_index(index);
-
-  if (flag_graphics)
-    gr_writestream("<setmarkerind index=\"%d\"/>\n", index);
-}
-
 void gr_setmarkertype(int type)
 {
   check_autoinit;
@@ -1271,16 +1247,6 @@ void gr_setmarkercolorind(int color)
 
   if (flag_graphics)
     gr_writestream("<setmarkercolorind color=\"%d\"/>\n", color);
-}
-
-void gr_settextind(int index)
-{
-  check_autoinit;
-
-  gks_set_text_index(index);
-
-  if (flag_graphics)
-    gr_writestream("<settextind index=\"%d\"/>\n", index);
 }
 
 void gr_settextfontprec(int font, int precision)
@@ -1357,16 +1323,6 @@ void gr_settextalign(int horizontal, int vertical)
   if (flag_graphics)
     gr_writestream("<settextalign halign=\"%d\" valign=\"%d\"/>\n",
             horizontal, vertical);
-}
-
-void gr_setfillind(int index)
-{
-  check_autoinit;
-
-  gks_set_fill_index(index);
-
-  if (flag_graphics)
-    gr_writestream("<setfillind index=\"%d\"/>\n", index);
 }
 
 void gr_setfillintstyle(int style)
