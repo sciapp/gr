@@ -211,3 +211,25 @@ def setlightdirection(*xyz):
             raise TypeError("if gr3_setlightdirection() is called with 1 argument, it should be None")
     else:
         raise TypeError("gr3_setlightdirection() takes exactly 1 or exactly 3 arguments (%d given)" %len(xyz))
+        
+_gr3.gr3_init.argtypes = [ctypes.POINTER(ctypes.c_int)]
+_gr3.gr3_terminate.argtypes = []
+_gr3.gr3_getrenderpathstring.argtypes = []
+_gr3.gr3_geterrorstring.argtypes = [ctypes.c_int]
+_gr3.gr3_setlogcallback.argtypes = [ctypes.CFUNCTYPE(None, ctypes.c_char_p)]
+_gr3.gr3_clear.argtypes = []
+_gr3.gr3_setquality.argtypes = [ctypes.c_int]
+_gr3.gr3_getimage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_char)]
+_gr3.gr3_export.argtypes = [ctypes.POINTER(ctypes.c_char), ctypes.c_int, ctypes.c_int]
+_gr3.gr3_drawimage.argtypes = [ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+_gr3.gr3_createmesh.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_drawmesh.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_deletemesh.argtypes = [ctypes.c_int]
+
+_gr3.gr3_cameralookat.argtypes = [ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float]
+_gr3.gr3_setcameraprojectionparameters.argtypes = [ctypes.c_float,ctypes.c_float,ctypes.c_float]
+_gr3.gr3_setlightdirection.argtypes = [ctypes.c_float,ctypes.c_float,ctypes.c_float]
+_gr3.gr3_setbackgroundcolor.argtypes = [ctypes.c_float,ctypes.c_float,ctypes.c_float,ctypes.c_float]
+_gr3.gr3_drawconemesh.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_drawcylindermesh.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_setbackgroundcolor.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
