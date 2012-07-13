@@ -337,6 +337,7 @@ def colormap():
   __gr.gr_colormap()
   
 def tick(amin, amax):
+  __gr.gr_tick.restype = c_float
   return __gr.gr_tick(c_float(amin), c_float(amax))
 
 def adjustrange(amin, amax):
@@ -446,6 +447,102 @@ if system() == 'Windows' :
   __gr = CDLL("S:\gr\libGR.dll")
 else:
   __gr = CDLL("/usr/local/gr/lib/libGR.so")
+
+__gr.gr_opengks.argtypes = [];
+__gr.gr_closegks.argtypes = [];
+__gr.gr_inqdspsize.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_int), POINTER(c_int)];
+__gr.gr_openws.argtypes = [c_int, c_char_p, c_int];
+__gr.gr_closews.argtypes = [c_int];
+__gr.gr_activatews.argtypes = [c_int];
+__gr.gr_deactivatews.argtypes = [c_int];
+__gr.gr_clearws.argtypes = [];
+__gr.gr_updatews.argtypes = [];
+__gr.gr_polyline.argtypes = [c_int, POINTER(c_float), POINTER(c_float)];
+__gr.gr_polymarker.argtypes = [c_int, POINTER(c_float), POINTER(c_float)];
+__gr.gr_text.argtypes = [c_float, c_float, c_char_p];
+__gr.gr_fillarea.argtypes = [c_int, POINTER(c_float), POINTER(c_float)];
+__gr.gr_cellarray.argtypes = [
+  c_float, c_float, c_float, c_float, c_int, c_int, c_int, c_int, c_int, c_int, POINTER(c_int)];
+__gr.gr_spline.argtypes = [c_int, POINTER(c_float), POINTER(c_float), c_int, c_int];
+__gr.gr_setlinetype.argtypes = [c_int];
+__gr.gr_setlinewidth.argtypes = [c_float];
+__gr.gr_setlinecolorind.argtypes = [c_int];
+__gr.gr_setmarkertype.argtypes = [c_int];
+__gr.gr_setmarkersize.argtypes = [c_float];
+__gr.gr_setmarkercolorind.argtypes = [c_int];
+__gr.gr_settextfontprec.argtypes = [c_int, c_int];
+__gr.gr_setcharexpan.argtypes = [c_float];
+__gr.gr_setcharspace.argtypes = [c_float];
+__gr.gr_settextcolorind.argtypes = [c_int];
+__gr.gr_setcharheight.argtypes = [c_float];
+__gr.gr_setcharup.argtypes = [c_float, c_float];
+__gr.gr_settextpath.argtypes = [c_int];
+__gr.gr_settextalign.argtypes = [c_int, c_int];
+__gr.gr_setfillintstyle.argtypes = [c_int];
+__gr.gr_setfillstyle.argtypes = [c_int];
+__gr.gr_setfillcolorind.argtypes = [c_int];
+__gr.gr_setcolorrep.argtypes = [c_int, c_float, c_float, c_float];
+__gr.gr_setwindow.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_inqwindow.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];
+__gr.gr_setviewport.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_selntran.argtypes = [c_int];
+__gr.gr_setclip.argtypes = [c_int];
+__gr.gr_setwswindow.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_setwsviewport.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_createseg.argtypes = [c_int];
+__gr.gr_copysegws.argtypes = [c_int];
+__gr.gr_redrawsegws.argtypes = [];
+__gr.gr_setsegtran.argtypes = [
+  c_int, c_float, c_float, c_float, c_float, c_float, c_float, c_float];
+__gr.gr_closeseg.argtypes = [];
+__gr.gr_emergencyclosegks.argtypes = [];
+__gr.gr_updategks.argtypes = [];
+__gr.gr_setspace.argtypes = [c_float, c_float, c_int, c_int];
+__gr.gr_inqspace.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_int), POINTER(c_int)];
+__gr.gr_setscale.argtypes = [c_int];
+__gr.gr_inqscale.argtypes = [POINTER(c_int)];
+__gr.gr_textext.argtypes = [c_float, c_float, c_char_p];
+__gr.gr_inqtextext.argtypes = [c_float, c_float, c_char_p, POINTER(c_float), POINTER(c_float)];
+__gr.gr_axes.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int, c_float];
+__gr.gr_grid.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int];
+__gr.gr_verrorbars.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];
+__gr.gr_herrorbars.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];
+__gr.gr_polyline3d.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float)];
+__gr.gr_axes3d.argtypes = [
+  c_float, c_float, c_float, c_float, c_float, c_float, c_int, c_int, c_int, c_float];
+__gr.gr_titles3d.argtypes = [c_char_p, c_char_p, c_char_p];
+__gr.gr_surface.argtypes = [c_int, c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int];
+__gr.gr_contour.argtypes = [
+  c_int, c_int, c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int];
+__gr.gr_setcolormap.argtypes = [c_int];
+__gr.gr_colormap.argtypes = [];
+__gr.gr_tick.argtypes = [c_float, c_float];
+__gr.gr_adjustrange.argtypes = [POINTER(c_float), POINTER(c_float)];
+__gr.gr_beginprint.argtypes = [c_char_p];
+__gr.gr_beginprintext.argtypes = [c_char_p, c_char_p, c_char_p, c_char_p];
+__gr.gr_endprint.argtypes = [];
+__gr.gr_ndctowc.argtypes = [POINTER(c_float), POINTER(c_float)];
+__gr.gr_wctondc.argtypes = [POINTER(c_float), POINTER(c_float)];
+__gr.gr_drawrect.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_fillrect.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_drawarc.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int];
+__gr.gr_fillarc.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int];
+__gr.gr_setarrowstyle.argtypes = [c_int];
+__gr.gr_drawarrow.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_readimage.argtypes = [c_char_p, POINTER(c_int), POINTER(c_int), POINTER(POINTER(c_int))];
+__gr.gr_drawimage.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int, POINTER(c_int)];
+__gr.gr_importgraphics.argtypes = [c_char_p];
+__gr.gr_setshadow.argtypes = [c_float, c_float, c_float];
+__gr.gr_settransparency.argtypes = [c_float];
+__gr.gr_setcoordxform.argtypes = [POINTER(c_float)];
+__gr.gr_begingraphics.argtypes = [c_char_p];
+__gr.gr_endgraphics.argtypes = [];
+__gr.gr_mathtex.argtypes = [c_float, c_float, c_char_p];
+__gr.gr_beginselection.argtypes = [c_int, c_int];
+__gr.gr_endselection.argtypes = [];
+__gr.gr_moveselection.argtypes = [c_float, c_float];
+__gr.gr_resizeselection.argtypes = [c_int, c_float, c_float];
+__gr.gr_inqbbox.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];
 
 ASF_BUNDLED = 0
 ASF_INDIVIDUAL = 1
