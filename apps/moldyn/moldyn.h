@@ -60,6 +60,7 @@ extern double xmin, ymin, zmin;
 extern double xmax, ymax, zmax;
 
 extern float *atom_positions;
+extern float *atom_spins;
 extern float *atom_radii;
 extern float *atom_colors;
 extern int *atom_numbers;

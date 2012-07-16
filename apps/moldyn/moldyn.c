@@ -72,6 +72,7 @@ int *atom_numbers = NULL;
 int *atom_numbers2 = NULL;
 char *atom_adjacency_matrix = NULL;
 char **atom_names = NULL; /* An atom name is three or less characters long. */
+float *atom_spins = NULL;
 
 static char *CP = NULL; /* misc. string (?) */
 static int CP_LEN;
@@ -495,6 +496,11 @@ void read_cycle() {
                 atom_colors[0+3*i] = element_colors[atom_numbers[i] - 1][0] / 255.0;
                 atom_colors[1+3*i] = element_colors[atom_numbers[i] - 1][1] / 255.0;
                 atom_colors[2+3*i] = element_colors[atom_numbers[i] - 1][2] / 255.0;
+                if (sscanf(cp, "%3s %g %g %g %g %g %g", s, &atom_positions[0+3*i], &atom_positions[1+3*i], &atom_positions[2+3*i], &atom_spins[0+3*i], &atom_spins[1+3*i], &atom_spins[2+3*i]) != 7) {
+                    atom_spins[3*i] = 0;
+                    atom_spins[3*i+1] = 0;
+                    atom_spins[3*i+2] = 0;
+                }
                 
                 strcpy(atom_names[i], s);
             } else {
@@ -997,6 +1003,7 @@ static void allocate_atom_memory(void) {
         atom_numbers = (int *) malloc(max_atoms * sizeof(int));
         atom_numbers2 = (int *) malloc(max_atoms * sizeof(int));
         atom_positions = (float *) malloc(max_atoms * 3 * sizeof(float));
+        atom_spins = (float *) malloc(max_atoms * 3 * sizeof(float));
         atom_colors = (float *) malloc(max_atoms * 3 * sizeof(float));
         atom_radii = (float *) malloc(max_atoms * sizeof(float));
         atom_adjacency_matrix = (char *) malloc(max_atoms * max_atoms * sizeof(char));
@@ -1018,6 +1025,7 @@ static void free_atom_memory(void) {
     free(atom_numbers);
     free(atom_numbers2);
     free(atom_positions);
+    free(atom_spins);
     free(atom_radii);
     free(atom_colors);
     free(atom_adjacency_matrix);

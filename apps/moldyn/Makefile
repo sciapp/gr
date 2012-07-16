@@ -1,12 +1,13 @@
  GLINCLUDES = 
-GR3INCLUDES = -I./../lib/gr3/
+GR3INCLUDES = -I./../../lib/gr3/
     GR3LIBS = -L./ -lGR3
      GLLIBS = 
       XLIBS2 = 
      CFLAGS = -Wall -pedantic
 JPEG2PSOBJS = jpeg2ps/jpeg2ps.o jpeg2ps/readjpeg.o jpeg2ps/asc85ec.o
        OBJS = moldyn.o  moldyn_utilities.o moldyn_element_information.o moldyn_graphics.o ${JPEG2PSOBJS}
-    DEFINES = -MOLDYN_VERSION="\"MolDyn - 8.0.0\"" -DMOLDYN_REVISION="\"Rev: `date +"%b %e %Y"`\""
+    DEFINES = -DMOLDYN_VERSION="\"MolDyn - 8.0.0\"" 
+-DMOLDYN_REVISION="\"Rev: `date +"%b %e %Y"`\""
 
 default:
 	make `uname`
@@ -25,8 +26,8 @@ jpeg2ps:
 	make -C jpeg2ps
 
 libGR3.so:
-	make -C../lib/gr3
-	cp ../lib/gr3/libGR3.so .
+	make -C../../lib/gr3
+	cp ../../lib/gr3/libGR3.so .
 
 %.c: %.h
 %.o: %.c
@@ -39,7 +40,7 @@ moldyn: ${OBJS}
 	$(CC) ${CFLAGS} ${GLLIBS} ${XLIBS2} ${GR3LIBS} -o $@ ${OBJS}
 
 clean:
-	@make -C../lib/gr3 clean
+	@make -C../../lib/gr3 clean
 	@make -C jpeg2ps clean
 	rm -f moldyn
 	rm -f *.o

@@ -109,6 +109,68 @@ void moldyn_update_graphics(void) {
             }
         }
     }
+    
+    if (format == xyz) {
+        int i;
+        int num_spins = 0;
+        float spin_len = 1;
+        float spintop_len = 0.4;
+        float *spin_positions;
+        float *spin_directions;
+        float *spin_colors;
+        float *spin_radii;
+        float *spin_lengths;
+        for (i = 0; i < num_atoms; i++) {
+            if (atom_spins[3*i+0] != 0 || atom_spins[3*i+1] != 0 || atom_spins[3*i+2] != 0) {
+                num_spins++;
+            }
+        }
+        fprintf(stderr,"num spins: %d\n",num_spins);
+        spin_positions = (float *) malloc(sizeof(float) * 3 * num_spins);
+        spin_directions = (float *) malloc(sizeof(float) * 3 * num_spins);
+        spin_colors = (float *) malloc(sizeof(float) * 3 * num_spins);
+        spin_radii = (float *) malloc(sizeof(float) * num_spins);
+        spin_lengths = (float *) malloc(sizeof(float) * num_spins);
+        for (i = 0; i < num_atoms; i++) {
+            if (atom_spins[3*i+0] != 0 || atom_spins[3*i+1] != 0 || atom_spins[3*i+2] != 0) {
+                spin_positions[3*i+0] = atom_positions[3*i+0] - atom_spins[3*i+0]/2*spin_len;
+                spin_positions[3*i+1] = atom_positions[3*i+1] - atom_spins[3*i+1]/2*spin_len;
+                spin_positions[3*i+2] = atom_positions[3*i+2] - atom_spins[3*i+2]/2*spin_len;
+                spin_directions[3*i+0] = atom_spins[3*i+0];
+                spin_directions[3*i+1] = atom_spins[3*i+1];
+                spin_directions[3*i+2] = atom_spins[3*i+2];
+                spin_colors[3*i+0] = 1;
+                spin_colors[3*i+1] = 1;
+                spin_colors[3*i+2] = 1;
+                spin_lengths[i] = spin_len;
+                spin_radii[i] = cyl_rad;
+            }
+        }
+        gr3_drawcylindermesh(num_spins, spin_positions, spin_directions, spin_colors, spin_radii, spin_lengths);
+        for (i = 0; i < num_atoms; i++) {
+            if (atom_spins[3*i+0] != 0 || atom_spins[3*i+1] != 0 || atom_spins[3*i+2] != 0) {
+                spin_positions[3*i+0] = atom_positions[3*i+0] + atom_spins[3*i+0]/2*spin_len;
+                spin_positions[3*i+1] = atom_positions[3*i+1] + atom_spins[3*i+1]/2*spin_len;
+                spin_positions[3*i+2] = atom_positions[3*i+2] + atom_spins[3*i+2]/2*spin_len;
+                spin_directions[3*i+0] = atom_spins[3*i+0];
+                spin_directions[3*i+1] = atom_spins[3*i+1];
+                spin_directions[3*i+2] = atom_spins[3*i+2];
+                spin_colors[3*i+0] = 1;
+                spin_colors[3*i+1] = 1;
+                spin_colors[3*i+2] = 1;
+                spin_lengths[i] = spintop_len;
+                spin_radii[i] = 2*cyl_rad;
+            }
+        }
+        gr3_drawconemesh(num_spins, spin_positions, spin_directions, spin_colors, spin_radii, spin_lengths);
+        free(spin_positions);
+        free(spin_directions);
+        free(spin_colors);
+        free(spin_radii);
+        free(spin_lengths);
+    }
+    
+    
     if (bonds) {
         int i, j, k, l;
         double vx, vy, vz, cyl_len;
