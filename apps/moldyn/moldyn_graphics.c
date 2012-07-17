@@ -536,6 +536,32 @@ static void moldyn_menu_(int value) {
         case 0:
             moldyn_exit(0);
             break;
+        case 1:
+        {
+            char *argv[] = {"jpeg2ps", "-o", "moldyn.eps", path};
+            moldyn_export_(MOLDYN_EXPORT_TO_JPEG, 2000, 2000);
+            jpeg2ps_main(sizeof(argv)/sizeof(char *),argv);
+        }
+#ifdef _WIN32
+            system("copy moldyn.eps %PRINTER%");
+#else
+            system("lpr -h moldyn.eps");
+#endif
+
+            break;
+        case 2:
+            hint = (hint) ? False : True;
+            glutPostRedisplay();
+            break;
+        case 3:
+            numbers = (numbers) ? False : True;
+            glutPostRedisplay();
+            break;
+    }
+}
+
+static void moldyn_menu_export_(int value) {
+    switch (value) {
         case MOLDYN_EXPORT_TO_PNG:
         case MOLDYN_EXPORT_TO_JPEG:
         case MOLDYN_EXPORT_TO_HTML:
@@ -544,8 +570,109 @@ static void moldyn_menu_(int value) {
             moldyn_export_(value, 500, 500);
             gr3_setquality(GR3_QUALITY_OPENGL_NO_SSAA);
             break;
+        case 0:
+            if (show_stat == HOLD && !file_done)
+            {
+                jpeg = True;
+                moldyn_export_(MOLDYN_EXPORT_TO_JPEG, window_width, window_height);
+                
+                glutIdleFunc(animate);
+                show_stat = SHOW_ALL;
+            }
+            else if (show_stat == SHOW_ALL)
+            {
+                jpeg = False;
+                show_stat = HOLD;
+                moldyn_update_graphics();
+                glutPostRedisplay();
+            }
+            break;
     }
-};
+}
+
+static void moldyn_menu_view_(int value) {
+    switch (value) {
+        case 0:
+            xeye = 0.0;
+            yeye = 0.0;
+            zeye = -2.0 * range;
+            glutPostRedisplay();
+            break;
+        case 1:
+            if (magstep <= 10) {
+                magstep++;
+                magnification = pow(1.2, (double) magstep);
+                zeye = -2 * range * magnification;
+                glutPostRedisplay();
+            }
+            break;
+            
+        case 2:
+            if (magstep >= -10) {
+                magstep--;
+                magnification = pow(1.2, (double) magstep);
+                zeye = -2 * range * magnification;                
+                glutPostRedisplay();
+            }
+            break;
+        case 3:
+            if (move_stat == ROTATE) {
+                move_stat = TRANSLATE;
+            } else if (move_stat == TRANSLATE) {
+                move_stat = ROTATE;
+            }
+            break;
+    }
+}
+
+
+static void moldyn_menu_frame_(int value) {
+    switch (value) {
+        case 0:
+            if (current_cycle == 1) {
+                break;
+            }
+            show_stat = SHOW_PREV;
+            current_cycle -= 2;
+            file_done = 0;
+            if (feof(fptr))
+                rewind(fptr);
+            
+            if (fsetpos(fptr, &cycle_position[current_cycle]))
+                moldyn_error("can't position file");
+            
+            read_cycle();
+            moldyn_update_graphics();
+            glutPostRedisplay();
+            break;
+        case 1:
+            if (file_done && last_init_done) {
+                break;
+            } else {
+                show_stat = SHOW_NEXT;
+                read_cycle();
+                moldyn_update_graphics();
+                glutPostRedisplay();
+                break;
+            }
+
+        case 2:
+            if (show_stat == HOLD && !file_done)
+            {
+                glutIdleFunc(animate);
+                show_stat = SHOW_ALL;
+            }
+            else if (show_stat == SHOW_ALL)
+            {
+                jpeg = False;
+                show_stat = HOLD;
+                moldyn_update_graphics();
+                glutPostRedisplay();
+            }
+            break;
+
+    }
+}
 
 static void moldyn_init_glut(int *argcp, char **argv, const char *window_name) {
     int i = 0;
@@ -569,12 +696,32 @@ static void moldyn_init_glut(int *argcp, char **argv, const char *window_name) {
     glutSpecialFunc(specialKey);
     
     {
-        int menu_root = glutCreateMenu(moldyn_menu_);
-        glutAddMenuEntry("Export as .png",MOLDYN_EXPORT_TO_PNG);
-        glutAddMenuEntry("Export as .jpg",MOLDYN_EXPORT_TO_JPEG);
-        glutAddMenuEntry("Export as .html",MOLDYN_EXPORT_TO_HTML);
-        glutAddMenuEntry("Export as .pov",MOLDYN_EXPORT_TO_POV);
-        glutAddMenuEntry("Quit",0);
+        int menu_view;
+        int menu_export;
+        int menu_frame;
+        menu_frame  = glutCreateMenu(moldyn_menu_frame_);
+        glutAddMenuEntry("Previous frame [b]",0);
+        glutAddMenuEntry("Next frame [n]",1);
+        glutAddMenuEntry("Animaton On/Off [h]",2);
+        menu_view  = glutCreateMenu(moldyn_menu_view_);
+        glutAddMenuEntry("Switch rotation/translation [s]",3);
+        glutAddMenuEntry("Zoom in [m]",2);
+        glutAddMenuEntry("Zoom out [r]",1);
+        glutAddMenuEntry("Reset zoom and translation [0]",0);
+        menu_export = glutCreateMenu(moldyn_menu_export_);
+        glutAddMenuEntry("PNG image (.png)",MOLDYN_EXPORT_TO_PNG);
+        glutAddMenuEntry("JPEG image (.jpg)",MOLDYN_EXPORT_TO_JPEG);
+        glutAddMenuEntry("HTML5 document (.html)",MOLDYN_EXPORT_TO_HTML);
+        glutAddMenuEntry("POV-Ray scene (.pov)",MOLDYN_EXPORT_TO_POV);
+        glutAddMenuEntry("QuickTime movie (.mov)",0);
+        glutCreateMenu(moldyn_menu_);
+        glutAddMenuEntry("Show hints [?]",2);
+        glutAddMenuEntry("Show numbers [t]",3);
+        glutAddSubMenu("Frames...",menu_frame);
+        glutAddSubMenu("Adjust view...",menu_view);
+        glutAddSubMenu("Export as...",menu_export);
+        glutAddMenuEntry("Print [p]",1);
+        glutAddMenuEntry("Quit [q]",0);
         glutAttachMenu(GLUT_RIGHT_BUTTON);
     }
 }
