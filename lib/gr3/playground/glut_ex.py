@@ -10,9 +10,12 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import gr
 import gr3
+from gr import * 
+import math, time
 
 def display():
     global window_width, window_height, rx
+    gr3.setbackgroundcolor(1,1,1,1)
     # Kamera einstellen
     gr3.setcameraprojectionparameters(45, 1, 200)
     gr3.cameralookat(10*math.cos(-rx*math.pi/2), 10*math.sin(-rx*math.pi/2), 0, 0, 0, 0, 0, 0, 1)
@@ -52,19 +55,152 @@ def display():
     glPopMatrix()
     glutSwapBuffers()
     gr.clearws()
-    gr3.drawimage(0.0,0.5,0.0,0.5,800,800, gr3.GR3_Window.GR3_WINDOW_GKS)
-    gr3.cameralookat(0, 0, 10, 0, 0, 0, math.cos(-rx*math.pi/2), math.sin(-rx*math.pi/2), 0)
-    gr3.drawimage(0.5,1.0,0.0,0.5,800,800, gr3.GR3_Window.GR3_WINDOW_GKS)
-    gr3.cameralookat(10*math.cos(-rx*math.pi/2), 0, 10*math.sin(-rx*math.pi/2), 0, 0, 0, 0, 1, 0)
-    gr3.drawimage(0.5,1.0,0.5,1.0,800,800, gr3.GR3_Window.GR3_WINDOW_GKS)
-    gr.settextcolorind(2)
-    gr.text(0.05,0.9,"Dies ist ein GKS-Fenster,")
-    gr.text(0.05,0.86,"in welches mit GR3 mehrere")
-    gr.text(0.05,0.82,"Ansichten auf eine 3D-Szene")
-    gr.text(0.05,0.78,"gezeichnet werden. Bewegt")
-    gr.text(0.05,0.74,"man die Szene im GLUT-")
-    gr.text(0.05,0.70,"Fenster, dann wird auch ")
-    gr.text(0.05,0.66,"dieses Fenster angepasst.")
+    gr3.setquality(4)
+    gr3.drawimage(0.15, 0.5, 0.46, 0.81,175,175, gr3.GR3_Window.GR3_WINDOW_GKS)
+    gr.settextcolorind(1)
+    gr.settextfontprec(6,0)
+
+    setcharheight(0.02)
+    settextalign(TEXT_HALIGN_LEFT, TEXT_VALIGN_BASE)
+    gr.mathtex(0.05,0.01,"i\\hbar\\frac{\\partial\\psi}{\\partial t} = \\frac{\\hbar^2}{2m}\\nabla^2\\psi + V(\\mathbf{r})\\psi")
+
+    x = list(range(5))
+    y = list(range(5))
+
+    selntran(0)
+
+    # text fonts
+    for i in range(-1, -23, -1):
+      settextfontprec(i, TEXT_PRECISION_STROKE)
+      if i >= -11:
+        text(0.6, 0.75 + i * 0.05, "Font" + "%d" %i)
+      else:
+        text(0.8, 0.75 + (i + 11) * 0.05, "Font" + "%d" %i)
+
+    settextfontprec(-23, TEXT_PRECISION_STROKE)
+    text(0.6, 0.15, "Font-23")
+    settextfontprec(-24, TEXT_PRECISION_STROKE)
+    text(0.8, 0.15, "Font-24")
+
+    # colors
+
+    settextfontprec(-5, TEXT_PRECISION_STRING)
+    settextcolorind(0)
+    text(0.45, 0.35, "White")
+    settextcolorind(1)
+    text(0.45, 0.32, "Black")
+    settextcolorind(2)
+    text(0.45, 0.29, "Red")
+    settextcolorind(3)
+    text(0.45, 0.26, "Green")
+    settextcolorind(4)
+    text(0.45, 0.23, "Blue")
+    settextcolorind(5)
+    text(0.45, 0.20, "Cyan")
+    settextcolorind(6)
+    text(0.45, 0.17, "Yellow")
+    settextcolorind(7)
+    text(0.45, 0.14, "Magenta")
+
+    # linetypes
+
+    x[0] = 0.12
+    x[1] = 0.28
+    y[0] = 0.95
+    y[1] = y[0]
+
+    for j in range(-8, 5):
+      if j != 0:
+        setlinetype(j)
+        y[0] = y[0] - 0.02
+        y[1] = y[0]
+        polyline(2, x, y)
+
+    for i in range(1,4):
+      y[0] = y[0] - 0.03
+      setlinewidth(i)
+      for j in range(1, 5):
+        setlinetype(j)
+        y[0] = y[0] - 0.02
+        y[1] = y[0]
+        polyline(2, x, y)
+
+    setlinewidth(1)
+
+    # markertypes
+
+    setmarkersize(4.0)
+
+    x[0] = 0.3
+    y[0] = 0.95
+    for j in range (-20, -12):
+      setmarkertype(j)
+      x[0] = x[0] + 0.065
+      polymarker(1, x, y)
+
+    x[0] = 0.3
+    y[0] = 0.875
+    for j in range (-12, -4):
+      setmarkertype(j)
+      x[0] = x[0] + 0.065
+      polymarker(1, x, y)
+
+    x[0] = 0.3
+    y[0] = 0.8
+    for j in range(-4, 5):
+      if j != 0:
+        setmarkertype(j)
+        x[0] = x[0] + 0.065
+        polymarker(1, x, y)
+
+    # fill areas
+
+    x[0] = 0.02
+    x[1] = 0.12
+    x[2] = 0.12
+    x[3] = 0.02
+    x[4] = x[0]
+    y[0] = 0.02
+    y[1] = 0.02
+    y[2] = 0.12
+    y[3] = 0.12
+    y[4] = y[0]
+
+    setfillstyle(4)
+    for j in range(0, 4):
+      for i in range(0, 5):
+        x[i] = x[i] + 0.1
+        y[i] = y[i] + 0.1
+      setfillintstyle(j)
+      fillarea(5, x, y)
+     
+    # patterns
+
+    x[0] = 0.05
+    x[1] = 0.1
+    x[2] = 0.1
+    x[3] = 0.05
+    x[4] = x[0]
+    y[0] = 0.2
+    y[1] = 0.2
+    y[2] = 0.25
+    y[3] = 0.25
+    y[4] = y[0]
+
+    setfillintstyle(2)
+    for j in range(4, 16):
+      for i in range(0, 5):
+        y[i] = y[i] + 0.06
+      setfillstyle(j - 3)
+      fillarea(5, x, y)
+
+    # cell array
+
+    setcharheight(0.06)
+    settextalign(TEXT_HALIGN_CENTER, TEXT_VALIGN_HALF)
+    settextcolorind(1)
+    settextfontprec(12, TEXT_PRECISION_STROKE)
+    text(0.75, 0.05, "Hello World")
     gr.updatews()
     gr3.setcameraprojectionparameters(45, 1, 200)
     gr3.cameralookat(10*math.cos(-rx*math.pi/2), 10*math.sin(-rx*math.pi/2), 0, 0, 0, 0, 0, 0, 1)

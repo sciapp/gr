@@ -125,7 +125,6 @@ void moldyn_update_graphics(void) {
                 num_spins++;
             }
         }
-        fprintf(stderr,"num spins: %d\n",num_spins);
         spin_positions = (float *) malloc(sizeof(float) * 3 * num_spins);
         spin_directions = (float *) malloc(sizeof(float) * 3 * num_spins);
         spin_colors = (float *) malloc(sizeof(float) * 3 * num_spins);
@@ -532,6 +531,22 @@ void moldyn_init_graphics(int *argcp, char **argv, const char *window_name) {
     moldyn_init_gr3();
 }
 
+static void moldyn_menu_(int value) {
+    switch (value) {
+        case 0:
+            moldyn_exit(0);
+            break;
+        case MOLDYN_EXPORT_TO_PNG:
+        case MOLDYN_EXPORT_TO_JPEG:
+        case MOLDYN_EXPORT_TO_HTML:
+        case MOLDYN_EXPORT_TO_POV:
+            gr3_setquality(GR3_QUALITY_OPENGL_2X_SSAA);
+            moldyn_export_(value, 500, 500);
+            gr3_setquality(GR3_QUALITY_OPENGL_NO_SSAA);
+            break;
+    }
+};
+
 static void moldyn_init_glut(int *argcp, char **argv, const char *window_name) {
     int i = 0;
     if (argcp == NULL || argv == NULL) {
@@ -552,6 +567,16 @@ static void moldyn_init_glut(int *argcp, char **argv, const char *window_name) {
     glutMotionFunc(motion);
     glutKeyboardFunc(keyboard);
     glutSpecialFunc(specialKey);
+    
+    {
+        int menu_root = glutCreateMenu(moldyn_menu_);
+        glutAddMenuEntry("Export as .png",MOLDYN_EXPORT_TO_PNG);
+        glutAddMenuEntry("Export as .jpg",MOLDYN_EXPORT_TO_JPEG);
+        glutAddMenuEntry("Export as .html",MOLDYN_EXPORT_TO_HTML);
+        glutAddMenuEntry("Export as .pov",MOLDYN_EXPORT_TO_POV);
+        glutAddMenuEntry("Quit",0);
+        glutAttachMenu(GLUT_RIGHT_BUTTON);
+    }
 }
 
 static void reshape(int w, int h) {
