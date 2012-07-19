@@ -2,7 +2,7 @@ __all__ = ['GR3_InitAttribute',
            'GR3_Error',
            'GR3_Exception',
            'GR3_Quality',
-           'GR3_Window',
+           'GR3_Drawable',
            'init',
            'terminate',
            'getimage',
@@ -82,7 +82,7 @@ def init(attrib_list=[]):
             py_log_callback("Loaded dynamic library from "+lib_found)
         else:
             py_log_callback("Loaded dynamic library unknown.")
-    err = _gr3.gr3_init(_attrib_list.ctypes.get_as_parameter())
+    err = _gr3.gr3_init(_attrib_list.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
     if err:
         raise GR3_Exception(err)
 
@@ -90,7 +90,7 @@ def drawimage(xmin,xmax,ymin,ymax,pixel_width,pixel_height, window):
     global _gr3
     err = _gr3.gr3_drawimage(ctypes.c_float(xmin),ctypes.c_float(xmax),
                        ctypes.c_float(ymin),ctypes.c_float(ymax),
-                         ctypes.c_uint(pixel_width),ctypes.c_uint(pixel_height),ctypes.c_uint(window))
+                         ctypes.c_int(pixel_width),ctypes.c_int(pixel_height),ctypes.c_int(window))
     if err:
         raise GR3_Exception(err)
 
@@ -108,7 +108,7 @@ def getimage(width, height, use_alpha = True):
     global _gr3
     bpp = 4 if use_alpha else 3
     _bitmap = numpy.zeros((width*height*bpp),ctypes.c_ubyte)
-    err = _gr3.gr3_getimage(ctypes.c_uint(width),ctypes.c_uint(height),ctypes.c_uint(use_alpha),_bitmap.ctypes.get_as_parameter())
+    err = _gr3.gr3_getimage(ctypes.c_uint(width),ctypes.c_uint(height),ctypes.c_uint(use_alpha),_bitmap.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte)))
     if err:
         raise GR3_Exception(err)
     return _bitmap
@@ -116,7 +116,7 @@ def getimage(width, height, use_alpha = True):
 def export(filename, width, height):
     global _gr3
     _filename = numpy.array(filename+'\0',ctypes.c_char)
-    err = _gr3.gr3_export(_filename.ctypes.get_as_parameter(),ctypes.c_uint(width),ctypes.c_uint(height))
+    err = _gr3.gr3_export(_filename.ctypes.data_as(ctypes.POINTER(ctypes.c_char)),ctypes.c_uint(width),ctypes.c_uint(height))
     if err:
         raise GR3_Exception(err)
 
@@ -150,7 +150,7 @@ def createmesh(n, vertices, normals, colors):
     vertices = numpy.array(vertices, ctypes.c_float)
     normals = numpy.array(normals, ctypes.c_float)
     colors = numpy.array(colors, ctypes.c_float)
-    err = _gr3.gr3_createmesh(ctypes.byref(_mesh),ctypes.c_uint(n),vertices.ctypes.get_as_parameter(), normals.ctypes.get_as_parameter(), colors.ctypes.get_as_parameter())
+    err = _gr3.gr3_createmesh(ctypes.byref(_mesh),ctypes.c_uint(n),vertices.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), normals.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), colors.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
     if err:
         raise GR3_Exception(err)
     return _mesh
@@ -161,7 +161,7 @@ def drawcylindermesh(n, positions, directions, colors, radii, lengths):
     colors = numpy.array(colors, ctypes.c_float)
     radii = numpy.array(radii, ctypes.c_float)
     lengths = numpy.array(lengths, ctypes.c_float)
-    _gr3.gr3_drawcylindermesh(ctypes.c_uint(n), positions.ctypes.get_as_parameter(), directions.ctypes.get_as_parameter(), colors.ctypes.get_as_parameter(), radii.ctypes.get_as_parameter(), lengths.ctypes.get_as_parameter())
+    _gr3.gr3_drawcylindermesh(ctypes.c_uint(n), positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), directions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), colors.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), radii.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), lengths.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
 
 def drawconemesh(n, positions, directions, colors, radii, lengths):
     positions = numpy.array(positions, ctypes.c_float)
@@ -169,13 +169,13 @@ def drawconemesh(n, positions, directions, colors, radii, lengths):
     colors = numpy.array(colors, ctypes.c_float)
     radii = numpy.array(radii, ctypes.c_float)
     lengths = numpy.array(lengths, ctypes.c_float)
-    _gr3.gr3_drawconemesh(ctypes.c_uint(n), positions.ctypes.get_as_parameter(), directions.ctypes.get_as_parameter(), colors.ctypes.get_as_parameter(), radii.ctypes.get_as_parameter(), lengths.ctypes.get_as_parameter())
+    _gr3.gr3_drawconemesh(ctypes.c_uint(n), positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), directions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), colors.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), radii.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), lengths.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
 
 def drawspheremesh(n, positions,colors, radii):
     positions = numpy.array(positions, ctypes.c_float)
     colors = numpy.array(colors, ctypes.c_float)
     radii = numpy.array(radii, ctypes.c_float)
-    _gr3.gr3_drawspheremesh(ctypes.c_uint(n), positions.ctypes.get_as_parameter(), colors.ctypes.get_as_parameter(), radii.ctypes.get_as_parameter())
+    _gr3.gr3_drawspheremesh(ctypes.c_uint(n), positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), colors.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), radii.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
 
 def drawmesh(mesh, n, positions, directions, ups, colors, scales):
     positions = numpy.array(positions, ctypes.c_float)
@@ -183,7 +183,7 @@ def drawmesh(mesh, n, positions, directions, ups, colors, scales):
     ups = numpy.array(ups, ctypes.c_float)
     colors = numpy.array(colors, ctypes.c_float)
     scales = numpy.array(scales, ctypes.c_float)
-    _gr3.gr3_drawmesh(mesh,ctypes.c_uint(n),positions.ctypes.get_as_parameter(), directions.ctypes.get_as_parameter(), ups.ctypes.get_as_parameter(), colors.ctypes.get_as_parameter(), scales.ctypes.get_as_parameter())
+    _gr3.gr3_drawmesh(mesh,ctypes.c_uint(n),positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), directions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), ups.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), colors.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), scales.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
     
 def deletemesh(mesh):
     _gr3.gr3_deletemesh(mesh)
@@ -219,7 +219,7 @@ _gr3.gr3_geterrorstring.argtypes = [ctypes.c_int]
 _gr3.gr3_setlogcallback.argtypes = [ctypes.CFUNCTYPE(None, ctypes.c_char_p)]
 _gr3.gr3_clear.argtypes = []
 _gr3.gr3_setquality.argtypes = [ctypes.c_int]
-_gr3.gr3_getimage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_char)]
+_gr3.gr3_getimage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_ubyte)]
 _gr3.gr3_export.argtypes = [ctypes.POINTER(ctypes.c_char), ctypes.c_int, ctypes.c_int]
 _gr3.gr3_drawimage.argtypes = [ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_int, ctypes.c_int, ctypes.c_int]
 _gr3.gr3_createmesh.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
@@ -230,6 +230,6 @@ _gr3.gr3_cameralookat.argtypes = [ctypes.c_float, ctypes.c_float, ctypes.c_float
 _gr3.gr3_setcameraprojectionparameters.argtypes = [ctypes.c_float,ctypes.c_float,ctypes.c_float]
 _gr3.gr3_setlightdirection.argtypes = [ctypes.c_float,ctypes.c_float,ctypes.c_float]
 _gr3.gr3_setbackgroundcolor.argtypes = [ctypes.c_float,ctypes.c_float,ctypes.c_float,ctypes.c_float]
-_gr3.gr3_drawconemesh.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
-_gr3.gr3_drawcylindermesh.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
-_gr3.gr3_setbackgroundcolor.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_drawconemesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_drawcylindermesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_drawspheremesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
