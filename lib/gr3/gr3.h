@@ -66,8 +66,8 @@
 #define GR3_QUALITY_POVRAY_8X_SSAA   9
 #define GR3_QUALITY_POVRAY_16X_SSAA  17
 
-#define GR3_WINDOW_OPENGL 1
-#define GR3_WINDOW_GKS 2
+#define GR3_DRAWABLE_OPENGL 1
+#define GR3_DRAWABLE_GKS 2
             
 GR3API int         gr3_init(int *attrib_list);
 GR3API void        gr3_terminate(void);
@@ -79,7 +79,7 @@ GR3API int         gr3_clear(void);
 GR3API int         gr3_setquality(int quality);
 GR3API int         gr3_getimage(int width, int height, int use_alpha, char *pixels);
 GR3API int         gr3_export(const char *filename, int width, int height);
-GR3API int         gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int window);
+GR3API int         gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type);
 
 GR3API int         gr3_createmesh(int *mesh, int n, const float *vertices, const float *normals, const float *colors);
 GR3API void        gr3_drawmesh(int mesh, int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);

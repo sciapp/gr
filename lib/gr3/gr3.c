@@ -1245,11 +1245,11 @@ static void gr3_draw_(GLuint width, GLuint height) {
 #endif
 }
 
-GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int window) {
-    switch (window) {
-        case GR3_WINDOW_OPENGL:
+GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type) {
+    switch (drawable_type) {
+        case GR3_DRAWABLE_OPENGL:
             return gr3_drawimage_opengl_(xmin, xmax, ymin, ymax, width, height);
-        case GR3_WINDOW_GKS:
+        case GR3_DRAWABLE_GKS:
             return gr3_drawimage_gks_(xmin, xmax, ymin, ymax, width, height);
         default:
             return GR3_ERROR_INVALID_VALUE;

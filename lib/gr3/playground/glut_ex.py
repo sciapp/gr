@@ -20,7 +20,7 @@ def display():
     gr3.setcameraprojectionparameters(45, 1, 200)
     gr3.cameralookat(10*math.cos(-rx*math.pi/2), 10*math.sin(-rx*math.pi/2), 0, 0, 0, 0, 0, 0, 1)
 
-    gr3.drawimage(0, window_width, 0, window_height, window_width, window_height, gr3.GR3_Window.GR3_WINDOW_OPENGL)
+    gr3.drawimage(0, window_width, 0, window_height, window_width, window_height, gr3.GR3_Drawable.GR3_DRAWABLE_OPENGL)
     glViewport(0,0,window_width,window_height);
     glDisable(GL_LIGHTING)
     glDisable(GL_DEPTH_TEST)
@@ -56,7 +56,7 @@ def display():
     glutSwapBuffers()
     gr.clearws()
     gr3.setquality(4)
-    gr3.drawimage(0.15, 0.5, 0.46, 0.81,175,175, gr3.GR3_Window.GR3_WINDOW_GKS)
+    gr3.drawimage(0.15, 0.5, 0.46, 0.81,175,175, gr3.GR3_Drawable.GR3_DRAWABLE_GKS)
     gr.settextcolorind(1)
     gr.settextfontprec(6,0)
 

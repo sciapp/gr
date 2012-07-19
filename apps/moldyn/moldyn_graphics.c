@@ -259,7 +259,7 @@ void moldyn_display_callback(void) {
     
     gr3_setcameraprojectionparameters(45, 0.5, 7.0 * range);
     gr3_cameralookat(x, y, z, fx, fy, fz, ux, uy, uz);
-    err = gr3_drawimage(0, window_width, 0, window_height, window_width, window_height, GR3_WINDOW_OPENGL);
+    err = gr3_drawimage(0, window_width, 0, window_height, window_width, window_height, GR3_DRAWABLE_OPENGL);
     if (err) {
         moldyn_error(gr3_geterrorstring(err));
     }

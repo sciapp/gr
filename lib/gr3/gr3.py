@@ -65,9 +65,9 @@ class GR3_Quality(object):
     GR3_QUALITY_POVRAY_8X_SSAA  = 8+1
     GR3_QUALITY_POVRAY_16X_SSAA = 16+1
 
-class GR3_Window(object):
-    GR3_WINDOW_OPENGL = 1
-    GR3_WINDOW_GKS = 2
+class GR3_Drawable(object):
+    GR3_DRAWABLE_OPENGL = 1
+    GR3_DRAWABLE_GKS = 2
 
 class GR3_Exception(Exception):
     def __init__(self,error_code):
