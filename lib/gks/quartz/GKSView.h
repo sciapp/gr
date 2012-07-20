@@ -17,7 +17,6 @@
 }
 - (void) setDisplayList: (id) display_list;
 - (void) close;
-- (void) clear;
 
 - (void) setWinID: (int) winid;
 - (int) getWinID;

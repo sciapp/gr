@@ -51,7 +51,6 @@
   c >= 588 ? 80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) : \
   c >= 257 ? 8 + nint((c - 257) / 330.0 * (72 - 1)) : c
 
-
 static
 gks_state_list_t gkss_, *gkss;
 
@@ -146,11 +145,23 @@ int dingbats[256]={
 static
 ws_state_list p_, *p;
 
+static
 CGLayerRef patternLayer;
 
+static
 int pattern_ = -1;
 
-CGRect _clipRect;
+static
+CGContextRef context = NULL;
+
+static
+CGLayerRef layer;
+
+static
+CGRect clipRect;
+
+static
+int cur_color = -1;
 
 static
 void set_norm_xform(int tnr, float *wn, float *vp)
@@ -183,7 +194,6 @@ void set_color_rep(int color, float red, float green, float blue)
 { 
   if (color >= 0 && color < MAX_COLOR)
     p->rgb[color] = CGColorCreateGenericRGB(red, green, blue, gkss->alpha);
-    
 }
 
 static
@@ -358,6 +368,9 @@ void seg_xform_rel(float *x, float *y)
         
           gkss->fontfile = gks_open_font();
           gks_init_core(gkss);
+                
+          cur_color = -1;
+          [self set_clip_rect: gkss->cntnr];
           break;
 
         case 12:
@@ -561,16 +574,29 @@ void seg_xform_rel(float *x, float *y)
 
 - (void) drawRect: (NSRect) rect
 {  
-  
-  CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-  
-  CGContextTranslateCTM (context, 250, 250);
-  CGContextRotateCTM (context, (angle) * M_PI/180);
-  CGContextTranslateCTM (context, -250, -250);
-  
+  CGContextRef c;
+
+  c = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+
+  layer = CGLayerCreateWithContext(c,
+    CGSizeMake(self.bounds.size.width, self.bounds.size.height), NULL);
+  context = CGLayerGetContext(layer);
+
   if (buffer)
-    [self interp: buffer];  
-}  
+    {
+      if (angle != 0)
+        {
+          CGContextTranslateCTM (context, 250, 250);
+          CGContextRotateCTM (context, (angle) * M_PI/180);
+          CGContextTranslateCTM (context, -250, -250);
+        }
+
+      [self interp: buffer];
+
+      CGContextDrawLayerAtPoint(c, CGPointMake(0, 0), layer);
+      CGContextFlush(context);
+    }
+}
 
 - (void) setDisplayList: (id) display_list
 {
@@ -589,10 +615,14 @@ void seg_xform_rel(float *x, float *y)
 }
 
 - (void) setWinID: (int)winid
-{  win_id = winid;}
+{
+  win_id = winid;
+}
 
 - (int)getWinID
-{  return win_id;}
+{
+  return win_id;
+}
 
 - (IBAction) keep_on_display: (id)sender
 { 
@@ -612,8 +642,13 @@ void seg_xform_rel(float *x, float *y)
 {  
   if (buffer)
     {
+      if (context != NULL)
+        {
+          CGContextSetFillColorWithColor(context, p->rgb[0]);
+          CGContextFillRect(context,
+            CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height));
+        }
       buffer[0] = 0;
-      [self setNeedsDisplay: YES];
     }
 }
 
@@ -882,7 +917,11 @@ void seg_xform_rel(float *x, float *y)
 
 - (void) set_stroke_color: (int) color: (CGContextRef) context
 {    
-  CGContextSetStrokeColorWithColor(context, p->rgb[color]);
+  if (color != cur_color)
+    {
+      CGContextSetStrokeColorWithColor(context, p->rgb[color]);
+      cur_color = color;
+    }
 }
 
 - (void) resize_window
@@ -916,16 +955,16 @@ void seg_xform_rel(float *x, float *y)
 - (void) set_clip_rect: (int) tnr
 {
   if (gkss->clip == GKS_K_CLIP)
-    _clipRect = p->rect[tnr];
+    clipRect = p->rect[tnr];
   else
-    _clipRect = p->rect[0];
+    clipRect = p->rect[0];
 }
 
 static
 void begin_context(CGContextRef context)
 {
   CGContextSaveGState(context);
-  CGContextClipToRect (context, _clipRect);
+  CGContextClipToRect(context, clipRect);
 }
 
 static
@@ -937,12 +976,7 @@ void end_context(CGContextRef context)
 - (void) gks_set_shadow
 {
   CGSize offset;
-  CGContextRef context;
     
-  context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-          
-  //  NDC_to_DC(gkss->shoff[0], gkss->shoff[1], offset.width, offset.height);  
-
   offset.width = gkss->shoff[0];
   offset.height = gkss->shoff[1];
   
@@ -955,8 +989,6 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   float x, y;
   int i;
   CGPoint points[n];
-  CGContextRef context;
-  context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
   
   for (i = 0; i < n; ++i)
     {
@@ -975,16 +1007,12 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 
 - (void) polyline: (int) n: (float *) px: (float *) py
 {
-  CGContextRef context;    
   int ln_type, ln_color, i;
   float ln_width; 
   CGPoint points[n];  
   int dashlist[10];
   CGFloat lengths[10] = {0., 0., 0., 0., 0., 0., 0., 0., 0., 0. };
   float x, y;
-    
-  context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-  begin_context(context);
     
   for (i = 0; i < n; ++i)
     {
@@ -997,15 +1025,20 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? Color8Bit(gkss->plcoli) : 1;    
             
-  gks_get_dash_list(ln_type, ln_width, dashlist);
-    
-  for (i = 1 ; i<= dashlist[0]; ++i)
-    lengths[i-1] = (float) dashlist[i];        
-
   [self set_stroke_color: ln_color: context];
   
+  begin_context(context);
+
   CGContextBeginPath(context);
-  CGContextSetLineDash(context, 0.0, lengths, dashlist[0]);
+
+  if (ln_type != 1)
+    {
+      gks_get_dash_list(ln_type, ln_width, dashlist);
+      for (i = 1 ; i<= dashlist[0]; ++i)
+        lengths[i-1] = (float) dashlist[i];        
+
+      CGContextSetLineDash(context, 0.0, lengths, dashlist[0]);
+    }
     
   CGContextSetLineWidth(context, ln_width);
   CGContextAddLines(context, points, n);
@@ -1099,8 +1132,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
         0 }
     };
 
-  // if (gkss->version > 4)
-  //     mscale *= p->height / 500.0;
+  mscale *= p->height / 500.0;
   r = (int)(3 * mscale);
   scale = mscale / 3.0;
 
@@ -1202,24 +1234,22 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 
 - (void) polymarker: (int) n: (float *)px: (float *)py 
 {
-
-  CGContextRef context;
   int mk_type, mk_color;
   float mk_size;
   float x, y;
   float *clrt = gkss->viewport[gkss->cntnr];
   register int i, draw;
     
-  context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-  begin_context(context);
-
   mk_type  = gkss->asf[3] ? gkss->mtype  : gkss->mindex;
   mk_size  = gkss->asf[4] ? gkss->mszsc  : 1;
   mk_color = gkss->asf[5] ? Color8Bit(gkss->pmcoli) : 1;
 
+  [self set_stroke_color: mk_color: context];
+
+  begin_context(context);
+
   CGContextSetLineWidth(context, 1);
-  [self set_stroke_color:mk_color: context];
-  [self set_fill_color:mk_color: context];
+  [self set_fill_color: mk_color: context];
     
   for (i = 0; i < n; i++)
     {
@@ -1233,7 +1263,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
     
       if (draw)
         [self draw_marker: x: y: mk_type: mk_size: mk_color: context];
-    }    
+    }
   end_context(context);
 }
 
@@ -1253,12 +1283,11 @@ void drawPatternCell(void *info, CGContextRef context)
 static
 void draw_pattern(int index, CGPathRef shape, CGContextRef context)
 {
-  int scale1 = (p->c + p->a)/120;
-  float scale = 0.125 * scale1;
+  int scale = (int)(0.125 * (int)(p->c + p->a) / 120);
 
   gks_inq_pattern_array(index, patArray);
-  float patHeight = patArray[0]*scale;
-  float patWidth = 8*scale;
+  float patHeight = patArray[0] * scale;
+  float patWidth = patHeight;
   float i, l;
   int k = 1, n;
   
@@ -1266,10 +1295,10 @@ void draw_pattern(int index, CGPathRef shape, CGContextRef context)
   CGContextRef layerContext = CGLayerGetContext(patternLayer);
   begin_context(context);
 
-  for (i = 0; i < patHeight; i+=scale) 
+  for (i = 0; i < patHeight; i += scale)
     {
-      n = patArray[k];//[i+1];
-      for (l = patWidth-scale; l >= 0; l -= scale) 
+      n = patArray[k];
+      for (l = patWidth - scale; l >= 0; l -= scale)
         {
           if ((n % 2) == 0) 
             {
@@ -1310,10 +1339,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
   float x, y;
   int i;
   CGPoint points[n];
-  CGContextRef context;
     
-  context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-  
   for (i = 0; i < n; ++i)
     {
       WC_to_NDC(px[i], py[i], tnr, x, y);
@@ -1322,7 +1348,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
     }
     
   CGMutablePathRef shape = CGPathCreateMutable();
-  CGPathAddLines (shape,NULL, points, n);
+  CGPathAddLines (shape, NULL, points, n);
   CGPathCloseSubpath(shape);
     
   if (pattern_ > -1)
@@ -1340,14 +1366,10 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
 - (void) fillarea: (int) n: (float *)px: (float *)py 
 {
-  CGContextRef context;
   int fl_inter, fl_style, fl_color, i = 0;
   float x, y;
   CGPoint points[n];
 
-  context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-  begin_context(context);
-  
   for (i = 0; i < n; ++i)
     {
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
@@ -1359,26 +1381,28 @@ void fill_routine(int n, float *px, float *py, int tnr)
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
   fl_color = gkss->asf[12] ? Color8Bit(gkss->facoli) : 1;
 
+  [self set_stroke_color: fl_color: context];
+
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
-      [self set_stroke_color: fl_color: context];
-
+      begin_context(context);
       CGContextBeginPath(context);
       CGContextSetLineWidth(context, 1);
       CGContextAddLines(context, points, n);
       CGContextClosePath(context);
       CGContextDrawPath(context, kCGPathStroke);
+      end_context(context);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
-      [self set_stroke_color: fl_color: context];
+      begin_context(context);
       [self set_fill_color: fl_color: context];
-
       CGContextBeginPath(context);
       CGContextSetLineWidth(context, 1);
       CGContextAddLines(context, points, n);
       CGContextClosePath(context);
       CGContextDrawPath(context, kCGPathFillStroke);
+      end_context(context);
     }
   else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
            fl_inter == GKS_K_INTSTYLE_HATCH)
@@ -1392,17 +1416,13 @@ void fill_routine(int n, float *px, float *py, int tnr)
       pattern_ = fl_style;
       fill_routine(n, px, py, gkss->cntnr);
       pattern_ = -1;
-    }   
-        
-  end_context(context);
+    }
 }
 
 -(void) cellarray:
      (float) xmin: (float) xmax: (float) ymin: (float) ymax:
          (int) dx: (int) dy: (int) dimx: (int *)colia: (int) true_color
 {
-  CGContextRef context;
-
   float x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
@@ -1417,7 +1437,6 @@ void fill_routine(int n, float *px, float *py, int tnr)
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, ix2, iy2);
 
-  context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
   begin_context(context);
 
   width = abs(ix2 - ix1) + 1;
@@ -1462,21 +1481,21 @@ void fill_routine(int n, float *px, float *py, int tnr)
 {
   int tx_font, tx_prec, tx_color, nchars,i;
   float x, y, xstart, ystart, xrel, yrel, ax, ay;
-  CGContextRef context;
-  NSFont * font;
-  NSString * string;
+  NSFont *font;
+  NSString *string;
   NSStringEncoding encode;
   NSRect rect;
   
   nchars = strlen(text);
   
-  context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-  begin_context(context);
-  
   tx_font  = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec  = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? Color8Bit(gkss->txcoli) : 1;
   
+  [self set_stroke_color: tx_color: context];
+
+  begin_context(context);
+
   font = [self set_font:tx_font];
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
@@ -1525,25 +1544,28 @@ void fill_routine(int n, float *px, float *py, int tnr)
       xstart += ax;
       ystart += ay;
 
-      CGContextSetTextDrawingMode(context, kCGTextFill); 
+      CGContextSetTextDrawingMode(context, kCGTextFill);
 
-      NSAffineTransform *transform = [[NSAffineTransform alloc] init];
-      [transform translateXBy: xstart yBy: ystart];
-      [transform rotateByRadians: p->angle];
-      [transform translateXBy: -xstart yBy: -ystart];    
-      [transform concat];    
+      [[NSGraphicsContext currentContext] saveGraphicsState];
 
+      if (p->angle != 0)
+        {
+          NSAffineTransform *xform = [NSAffineTransform transform];
+          [xform translateXBy: xstart yBy: ystart];
+          [xform rotateByRadians: p->angle];
+          [xform translateXBy: -xstart yBy: -ystart];
+          [xform concat];
+        }
       rect.origin = NSMakePoint(xstart, ystart);
       rect.size = NSMakeSize(0, 0);
-      [self lockFocus];
       [string drawWithRect: rect 
-              options: NSStringDrawingDisableScreenFontSubstitution 
+              options: NSStringDrawingDisableScreenFontSubstitution
               attributes: stringAttr];
-      [self unlockFocus];    
+
+      [[NSGraphicsContext currentContext] restoreGraphicsState];
     }
   else
     {
-      [self set_stroke_color: tx_color: context];
       gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
     }
   end_context(context); 

@@ -53,7 +53,7 @@ id plugin;
 NSLock *mutex;
 
 static
-int update_required = 0;
+int inactivity_counter = -1;
 
 @interface gks_quartz_thread : NSObject
 + (void) update: (id) param;
@@ -66,13 +66,15 @@ int update_required = 0;
   for (;;)
     {
       [mutex lock];
-      if (update_required)
+      if (inactivity_counter == 3)
 	{
           [displayList initWithBytesNoCopy:
            wss->dl.buffer length: wss->dl.nbytes freeWhenDone: NO];
           [plugin GKSQuartzDraw: wss->win displayList: displayList];
-	  update_required = 0;
+	  inactivity_counter = -1;
         }
+      if (inactivity_counter >= 0)
+        inactivity_counter++;
       [mutex unlock];
       usleep(100000);
     }
@@ -150,10 +152,6 @@ void gks_quartzplugin(
       wss = NULL;
       break;
 
-    case 6:
-      [plugin GKSQuartzClear: wss->win];
-      break;
- 
     case 8:
       if (ia[1] == GKS_K_PERFORM_FLAG)
         {
@@ -161,10 +159,21 @@ void gks_quartzplugin(
           [displayList initWithBytesNoCopy:
            wss->dl.buffer length: wss->dl.nbytes freeWhenDone: NO];
           [plugin GKSQuartzDraw: wss->win displayList: displayList];
+          inactivity_counter = -1;
           [mutex unlock];
         }
-      else
-        update_required = 1;
+      break;
+
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case DRAW_IMAGE:
+      [mutex lock];
+      inactivity_counter = 0;
+      [mutex unlock];
+      break;
     }
 
   if (wss != NULL)

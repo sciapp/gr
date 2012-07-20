@@ -19,6 +19,5 @@ ws_state_list;
 @protocol gks_protocol
 - (int) GKSQuartzCreateWindow;
 - (void) GKSQuartzDraw: (int) win displayList: (id) displayList;
-- (void) GKSQuartzClear: (int) win;
 - (void) GKSQuartzCloseWindow: (int) win;
 @end

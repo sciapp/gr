@@ -74,11 +74,6 @@
   curr_win_id = win;
 }
 
-- (void) GKSQuartzClear: (int) win
-{
-  [view[win] clear];
-}
-
 - (IBAction) cascadeWindows: (id) sender
 {
   int i;
