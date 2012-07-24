@@ -125,7 +125,7 @@ typedef struct ws_state_list_t
   int width, height;
   int color, linewidth;
   float alpha, angle;
-  int capheight;
+  int family, capheight;
   int pattern, have_pattern[PATTERNS];
   SVG_stream *stream;
   SVG_point *points;
@@ -223,21 +223,6 @@ SVG_stream *svg_alloc_stream(void)
   p->size = p->length = 0;
 
   return p;
-}
-
-static
-void svg_header(void)
-{
-  svg_printf(p->stream, "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-	     "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
-	     "width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\">\n",
-	     p->width, p->height, p->width, p->height);
-}
-
-static
-void svg_trailer(void)
-{
-  svg_printf(p->stream, "</svg>\n");
 }
 
 static
@@ -558,13 +543,13 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
 	case 5:		/* hollow polygon */
 	  if (op == 5)
 	    svg_printf(p->stream,
-		       "<polygon clip-path=\"url(#clip%02d)\" sty"
-		       "le=\"fill:#%s\" points=\"", p->path_index,
+		       "<polygon clip-path=\"url(#clip%02d)\" "
+		       "style=\"fill:#%s\" points=\"", p->path_index,
 		       p->rgb[0]);
 	  else
 	    svg_printf(p->stream,
-		       "<polygon clip-path=\"url(#clip%02d)\" sty"
-		       "le=\"fill:#%s\" points=\"\n  ", p->path_index,
+		       "<polygon clip-path=\"url(#clip%02d)\" "
+		       "style=\"fill:#%s\" points=\"\n  ", p->path_index,
 		       p->rgb[mcolor]);
 	  for (i = 0; i < marker[mtype][pc + 1]; i++)
 	    {
@@ -598,9 +583,9 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
 	case 8:		/* hollow arc */
 	  if (op == 8)
 	    svg_printf(p->stream,
-		       "<circle clip-path=\"url(#clip%02d)\" style=\"fill:non"
-		       "e;stroke:none\" cx=\"%d\" cy=\"%d\" r=\"%d\"/>\n",
-		       p->path_index, x, y, r);
+		       "<circle clip-path=\"url(#clip%02d)\" style=\"fill:none;"
+		       "stroke:#%s\" cx=\"%d\" cy=\"%d\" r=\"%d\"/>\n",
+		       p->path_index, p->rgb[mcolor], x, y, r);
 	  else
 	    svg_printf(p->stream,
 		       "<circle clip-path=\"url(#clip%02d)\" style=\"fill:#%s;"
@@ -789,6 +774,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 		"<image width=\"8\" height=\"8\" xlink:href=\"data:;base64,\n",\
 		p->pattern + 1);
       s = base64_stream(TMP_NAME);
+      remove(TMP_NAME);
       i = j = 0;
       while (s[j])
 	{
@@ -900,6 +886,8 @@ void text_routine(float x, float y, int nchars, char *chars)
 {
   int xstart, ystart, width, height, ch;
   float xrel, yrel, ax, ay;
+  char utf[4];
+  size_t len;
 
   NDC_to_DC(x, y, xstart, ystart);
 
@@ -945,14 +933,12 @@ void text_routine(float x, float y, int nchars, char *chars)
 	  svg_printf(p->stream, "&apos;");
 	  break;
 	default:
-	  if (ch > 127)
-	    {
-	      svg_printf(p->stream, "&#%d;", ch);
-	    }
-	  else
-	    {
-	      svg_printf(p->stream, "%c", ch);
-	    }
+	  if (p->family == 3)
+	    gks_symbol2utf(ch, utf, &len);
+          else
+	    gks_iso2utf(ch, utf, &len);
+	  utf[len] = '\0';
+          svg_printf(p->stream, "%s", utf);
 	  break;
 	}
     }
@@ -963,7 +949,7 @@ static
 void set_font(int font)
 {
   float scale, ux, uy, angle;
-  int family, size;
+  int size;
   float width, height, capheight;
   int bold, italic;
 
@@ -1000,11 +986,12 @@ void set_font(int font)
   size = nint(capheight / capheights[font-1]);
   if (font > 13)
     font += 3;
-  family = (font - 1) / 4;
+  p->family = (font - 1) / 4;
   bold = (font % 4 == 1 || font % 4 == 2) ? 0 : 1;
   italic = (font % 4 == 2 || font % 4 == 0);
 
-  svg_printf(p->stream, "font-family:%s; font-size:%d; ", fonts[family], size);
+  svg_printf(p->stream, "font-family:%s; font-size:%d; ",
+             fonts[p->family], size);
   if (bold && italic)
     svg_printf(p->stream, "font-style:italic; font-weight:bold; ");
   else if (italic)
@@ -1134,6 +1121,7 @@ void cellarray(float xmin, float xmax, float ymin, float ymax,
   fclose(stream);
 
   s = base64_stream(TMP_NAME);
+  remove(TMP_NAME);
   svg_printf(p->stream,
 	     "<g clip-path=\"url(#clip%02d)\">\n"
 	     "<image width=\"%d\" height=\"%d\" xlink:href=\"data:;base64,\n",
@@ -1219,26 +1207,42 @@ static
 void write_page(void)
 {
   const char *env;
-  char path[MAXPATHLEN];
+  char path[MAXPATHLEN], buf[256];
   int fd;
 
   p->page_counter++;
 
-  env = gks_getenv("GKS_CONID");
-  if (env != NULL)
+  if (p->conid == 0)
     {
-      char *s = strdup(env);
-      strtok(s, ".");
-      sprintf(path, "%s_p%03d.svg", s, p->page_counter);
-      free(s);
+      env = gks_getenv("GKS_CONID");
+      if (env != NULL)
+        {
+          char *s = strdup(env);
+          strtok(s, ".");
+          sprintf(path, "%s_p%03d.svg", s, p->page_counter);
+          free(s);
+        }
+      else
+        sprintf(path, "gks_p%03d.svg", p->page_counter);
+
+      fd = gks_open_file(path, "w");
     }
   else
-    sprintf(path, "gks_p%03d.svg", p->page_counter);
+    fd = p->conid;
 
-  if ((fd = gks_open_file(path, "w")) >= 0)
+  if (fd >= 0)
     {
+      sprintf(buf, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+              "<svg xmlns=\"http://www.w3.org/2000/svg\" "
+	      "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
+	      "width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\">\n",
+	     p->width, p->height, p->width, p->height);
+      gks_write_file(fd, buf, strlen(buf));
       gks_write_file(fd, p->stream->buffer, p->stream->length);
-      gks_close_file(fd);
+      sprintf(buf, "</svg>\n");
+      gks_write_file(fd, buf, strlen(buf));
+      if (fd != p->conid)
+        gks_close_file(fd);
 
       p->stream->length = 0;
     }
@@ -1279,7 +1283,6 @@ void gks_svgplugin(
       p->viewport[3] = (float) p->height * MHEIGHT / HEIGHT;
 
       p->stream = svg_alloc_stream();
-      svg_header();
 
       p->max_points = MAX_POINTS;
       p->points = (SVG_point *) gks_malloc(p->max_points * sizeof(SVG_point));
@@ -1302,11 +1305,7 @@ void gks_svgplugin(
 
 /* close workstation */
     case 3:
-      svg_trailer();
-
-      gks_write_file(p->conid, p->stream->buffer, p->stream->length);
-
-      if (!p->empty && p->page_counter > 0)
+      if (!p->empty)
 	write_page();
 
       free(p->stream->buffer);
@@ -1328,12 +1327,9 @@ void gks_svgplugin(
     case 6:
       if (!p->empty)
 	{
-	  svg_trailer();
 	  p->empty = 1;
-
 	  write_page();
 
-	  svg_header();
 	  init_clippaths();
 	}
       break;

@@ -1423,18 +1423,25 @@ void write_page(void)
 
   p->page_counter++;
 
-  env = gks_getenv("GKS_CONID");
-  if (env != NULL)
+  if (p->conid == 0)
     {
-      char *s = strdup(env);
-      strtok(s, ".");
-      sprintf(path, "%s_p%03d.wmf", s, p->page_counter);
-      free(s);
+      env = gks_getenv("GKS_CONID");
+      if (env != NULL)
+        {
+          char *s = strdup(env);
+          strtok(s, ".");
+          sprintf(path, "%s_p%03d.wmf", s, p->page_counter);
+          free(s);
+        }
+      else
+        sprintf(path, "gks_p%03d.wmf", p->page_counter);
+
+      stream = fopen(path, "wb");
     }
   else
-    sprintf(path, "gks_p%03d.wmf", p->page_counter);
+    stream = fdopen(p->conid, "wb"); 
 
-  if ((stream = fopen(path, "wb")) != NULL)
+  if (stream != NULL)
     {
       fwrite(p->stream->buffer, p->stream->length, 1, stream);
       fclose(stream);
@@ -1492,9 +1499,7 @@ void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia,
     case 3:
       wmf_trailer();
 
-      gks_write_file(p->conid, p->stream->buffer, p->stream->length);
-
-      if (!p->empty && p->page_counter > 0)
+      if (!p->empty)
 	write_page();
 
       free(p->stream->buffer);

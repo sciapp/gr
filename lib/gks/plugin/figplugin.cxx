@@ -978,21 +978,29 @@ void write_page(void)
 
   p->page_counter++;
 
-  env = gks_getenv("GKS_CONID");
-  if (env != NULL)
+  if (p->conid == 0)
     {
-      char *s = strdup(env);
-      strtok(s, ".");
-      sprintf(path, "%s_p%03d.fig", s, p->page_counter);
-      free(s);
+      env = gks_getenv("GKS_CONID");
+      if (env != NULL)
+        {
+          char *s = strdup(env);
+          strtok(s, ".");
+          sprintf(path, "%s_p%03d.fig", s, p->page_counter);
+          free(s);
+        }
+      else
+        sprintf(path, "gks_p%03d.fig", p->page_counter);
+
+      fd = gks_open_file(path, "w");
     }
   else
-    sprintf(path, "gks_p%03d.fig", p->page_counter);
+    fd = p->conid;
 
-  if ((fd = gks_open_file(path, "w")) >= 0)
+  if (fd >= 0)
     {
       gks_write_file(fd, p->stream->buffer, p->stream->length);
-      gks_close_file(fd);
+      if (fd != p->conid)
+        gks_close_file(fd);
 
       p->stream->length = 0;
     }
@@ -1050,9 +1058,7 @@ void gks_figplugin(
 
 /* close workstation */
     case 3:
-      gks_write_file(p->conid, p->stream->buffer, p->stream->length);
-
-      if (!p->empty && p->page_counter > 0)
+      if (!p->empty)
 	write_page();
 
       free(p->stream->buffer);

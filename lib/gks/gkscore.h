@@ -377,6 +377,9 @@ int gks_read_file(int fd, void *buf, int count);
 int gks_write_file(int fd, void *buf, int count);
 int gks_close_file(int fd);
 
+void gks_iso2utf(unsigned char c, char *utf, size_t *len);
+void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
+
 #ifdef _WIN32
 #ifdef __cplusplus
 }

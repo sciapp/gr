@@ -19,11 +19,7 @@
 #define EXTENSION "dll"
 #else
 #ifndef aix
-#ifdef __APPLE__
-#define EXTENSION "dylib"
-#else
 #define EXTENSION "so"
-#endif
 #else
 #define EXTENSION "a"
 #endif
