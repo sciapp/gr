@@ -4,6 +4,11 @@
 #import "gkscore.h"
 #import "gksquartz.h"
 
+typedef struct {
+  int fontsize;
+  NSString *fontfamily;
+} _FontInfo;
+
 @interface GKSView : NSView 
 {
   @private
@@ -35,7 +40,8 @@
   (int) dx: (int) dy: (int) dimx: (int *) colia: (int) true_color;
   
 - (void) text: (float) px: (float) py: (char *) text;
-- (NSFont *) set_font: (int) font;
+- (_FontInfo) set_font: (int) font;
+- (NSString *) stringForText: (const char*)text withFontFamilyID: (int)family;
 
 - (IBAction) keep_on_display: (id) sender;
 - (IBAction) rotate: (id) sender;

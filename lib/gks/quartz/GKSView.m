@@ -1477,14 +1477,31 @@ void fill_routine(int n, float *px, float *py, int tnr)
   end_context(context);
 }
 
+-(NSString *)stringForText:(const char *)text withFontFamilyID: (int)family
+{
+  NSString *string;
+  if (family == 30) { // ZapfDingbatsITC
+    int i;
+    int nchars = strlen(text);
+    string = [NSString string];
+    for (i = 0; i < nchars; i++) {
+      string = [string stringByAppendingFormat:@"%d", dingbats[text[i]]];
+    }
+  } else if (family == 12) { // Symbols
+    string = [NSString stringWithCString: text encoding: NSSymbolStringEncoding];
+  } else { // Anything else
+    string = [NSString stringWithCString: text encoding: NSASCIIStringEncoding];
+  }
+  return string;
+}
+
+
 - (void) text: (float) px: (float) py: (char *) text
 {
-  int tx_font, tx_prec, tx_color, nchars,i;
+  int tx_font, tx_prec, tx_color, nchars;
   float x, y, xstart, ystart, xrel, yrel, ax, ay;
-  NSFont *font;
+  NSString *fontName;
   NSString *string;
-  NSStringEncoding encode;
-  NSRect rect;
   
   nchars = strlen(text);
   
@@ -1496,85 +1513,65 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
   begin_context(context);
 
-  font = [self set_font:tx_font];
-
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
-    {
-      WC_to_NDC(px, py, gkss->cntnr, x, y);
-      seg_xform(&x, &y);
-      NDC_to_DC(x, y, xstart, ystart);
+  {
+    _FontInfo info = [self set_font:tx_font];
+    fontName = info.fontfamily;
+    string = [self stringForText:text withFontFamilyID:p->family];      
+    const char *cString = [string cStringUsingEncoding:NSUnicodeStringEncoding];
+    int charCount = [string length];
+    float fontsize = info.fontsize;
     
-      if ([[font fontName] isEqualToString: 
-                            [NSString stringWithCString: "ZapfDingbatsITC"
-                                      encoding: NSASCIIStringEncoding]])
-        {
-          string = [[NSString alloc]init];
-          [string autorelease];
-
-          for (i = 0; i < nchars; i++)
-            string = [string stringByAppendingFormat:@"%d", dingbats[text[i]]];
-        }
-      else
-        {
-          if ([[font fontName] isEqualToString: 
-                                 [NSString stringWithCString: "Symbol"
-                                           encoding: NSASCIIStringEncoding]])
-            encode = NSSymbolStringEncoding;
-          else
-            encode = NSASCIIStringEncoding;
-      
-          string = [NSString stringWithCString: text encoding: encode];
-        }
-        
-      NSMutableDictionary *stringAttr = [NSMutableDictionary dictionaryWithCapacity:2];    
-      [stringAttr setObject: font forKey: NSFontAttributeName];     
+    // Calculate string width (this is the recommended way: https://developer.apple.com/library/mac/#documentation/graphicsimaging/conceptual/drawingwithquartz2d/dq_text/dq_text.html )
+    CTFontRef font = CTFontCreateWithName((CFStringRef)fontName, fontsize, &CGAffineTransformIdentity);
+    CGGlyph glyphs[charCount];
+    CTFontGetGlyphsForCharacters(font, (const unichar*)cString, glyphs, charCount);
+    CFRelease(font);
+    CGContextSetTextMatrix(context, CGAffineTransformIdentity); 
+    CGContextSetTextDrawingMode(context, kCGTextInvisible);
+    CGPoint beforeDrawing = CGContextGetTextPosition(context);
+    CGContextShowGlyphs(context, glyphs, charCount);
+    CGPoint afterDrawing = CGContextGetTextPosition(context);
+    float stringWidth = afterDrawing.x-beforeDrawing.x;
     
-      float *colorComponents = (float *)CGColorGetComponents(p->rgb[tx_color]);    
-      NSColor *color = [NSColor colorWithCalibratedRed: colorComponents[0]
-                                green: colorComponents[1] 
-                                blue: colorComponents[2] 
-                                alpha: colorComponents[3]];    
-      [stringAttr setObject: color forKey:NSForegroundColorAttributeName];
+    WC_to_NDC(px, py, gkss->cntnr, x, y);
+    seg_xform(&x, &y);
+    NDC_to_DC(x, y, xstart, ystart);
+    xrel = stringWidth * xfac[gkss->txal[0]];
+    yrel = p->capheight * yfac[gkss->txal[1]];
+    CharXform(xrel, yrel, ax, ay);
+    xstart += ax;
+    ystart += ay;
     
-      NSSize stringSize =[string sizeWithAttributes: stringAttr];
-      xrel = stringSize.width * xfac[gkss->txal[0]];
-      yrel = p->capheight * yfac[gkss->txal[1]];
-
-      CharXform(xrel, yrel, ax, ay);
-      xstart += ax;
-      ystart += ay;
-
-      CGContextSetTextDrawingMode(context, kCGTextFill);
-
-      [[NSGraphicsContext currentContext] saveGraphicsState];
-
-      if (p->angle != 0)
-        {
-          NSAffineTransform *xform = [NSAffineTransform transform];
-          [xform translateXBy: xstart yBy: ystart];
-          [xform rotateByRadians: p->angle];
-          [xform translateXBy: -xstart yBy: -ystart];
-          [xform concat];
-        }
-      rect.origin = NSMakePoint(xstart, ystart);
-      rect.size = NSMakeSize(0, 0);
-      [string drawWithRect: rect 
-              options: NSStringDrawingDisableScreenFontSubstitution
-              attributes: stringAttr];
-
-      [[NSGraphicsContext currentContext] restoreGraphicsState];
-    }
+    // Setup the rendering properties:
+    CGFontRef cgfont = CGFontCreateWithFontName((CFStringRef)fontName);
+    CGContextSetFont(context, cgfont);
+    CGContextSetFontSize(context, fontsize);
+    CGContextSetTextDrawingMode(context, kCGTextFill);
+    float *colorComponents = (float *)CGColorGetComponents(p->rgb[tx_color]);
+    CGContextSetRGBFillColor(context, colorComponents[0], colorComponents[1], colorComponents[2], colorComponents[3]);
+    CGContextSetRGBStrokeColor(context, colorComponents[0], colorComponents[1], colorComponents[2], colorComponents[3]); 
+    CGAffineTransform transform;
+    transform = CGAffineTransformMakeTranslation(xstart, ystart);
+    transform = CGAffineTransformRotate(transform, p->angle);
+    transform = CGAffineTransformTranslate(transform, -xstart, -ystart);
+    CGContextSetTextMatrix(context, transform); 
+    CGContextShowGlyphsAtPoint(context, xstart, ystart, glyphs, charCount);
+    CGFontRelease(cgfont);
+  }
   else
-    {
-      gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
-    }
-  end_context(context); 
+  {
+    gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
+  }
+  end_context(context);
 }
 
-- (NSFont *) set_font: (int) font
+
+
+- (_FontInfo) set_font: (int) font
 {
   float scale, ux, uy;
-  int ftsize;
+  int fontsize;
   float width, height, capheight;
  
   font = abs(font);
@@ -1603,13 +1600,12 @@ void fill_routine(int n, float *px, float *py, int tnr)
   capheight = nint(height * (fabs(p->c) + 1));
   p->capheight = nint(capheight);
 
-  ftsize = nint(capheight / capheights[font - 1]);
-  p->family = font - 1; 
-
-  return [NSFont fontWithName:
-                   [NSString stringWithCString: fonts[p->family] 
-                             encoding: NSASCIIStringEncoding]
-                 size: ftsize];
+  fontsize = nint(capheight / capheights[font - 1]);
+  p->family = font - 1;
+  _FontInfo info;
+  info.fontsize = fontsize;
+  info.fontfamily = [NSString stringWithCString: fonts[p->family] encoding: NSASCIIStringEncoding];
+  return info;
 }
 
 @end
