@@ -1523,6 +1523,9 @@ void fill_routine(int n, float *px, float *py, int tnr)
     float fontsize = info.fontsize;
     
     // Calculate string width (this is the recommended way: https://developer.apple.com/library/mac/#documentation/graphicsimaging/conceptual/drawingwithquartz2d/dq_text/dq_text.html )
+    CGFontRef cgfont = CGFontCreateWithFontName((CFStringRef)fontName);
+    CGContextSetFont(context, cgfont);
+    CGContextSetFontSize(context, fontsize);
     CTFontRef font = CTFontCreateWithName((CFStringRef)fontName, fontsize, &CGAffineTransformIdentity);
     CGGlyph glyphs[charCount];
     CTFontGetGlyphsForCharacters(font, (const unichar*)cString, glyphs, charCount);
@@ -1544,9 +1547,6 @@ void fill_routine(int n, float *px, float *py, int tnr)
     ystart += ay;
     
     // Setup the rendering properties:
-    CGFontRef cgfont = CGFontCreateWithFontName((CFStringRef)fontName);
-    CGContextSetFont(context, cgfont);
-    CGContextSetFontSize(context, fontsize);
     CGContextSetTextDrawingMode(context, kCGTextFill);
     float *colorComponents = (float *)CGColorGetComponents(p->rgb[tx_color]);
     CGContextSetRGBFillColor(context, colorComponents[0], colorComponents[1], colorComponents[2], colorComponents[3]);
@@ -1560,10 +1560,11 @@ void fill_routine(int n, float *px, float *py, int tnr)
     CGFontRelease(cgfont);
   }
   else
-  {
-    gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
-  }
-  end_context(context);
+    {
+      gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
+    }
+  end_context(context); 
+  
 }
 
 
@@ -1601,7 +1602,8 @@ void fill_routine(int n, float *px, float *py, int tnr)
   p->capheight = nint(capheight);
 
   fontsize = nint(capheight / capheights[font - 1]);
-  p->family = font - 1;
+  p->family = font - 1; 
+
   _FontInfo info;
   info.fontsize = fontsize;
   info.fontfamily = [NSString stringWithCString: fonts[p->family] encoding: NSASCIIStringEncoding];
