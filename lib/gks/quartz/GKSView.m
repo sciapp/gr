@@ -1296,7 +1296,7 @@ void drawPatternCell(void *info, CGContextRef context)
 static
 void draw_pattern(int index, CGPathRef shape, CGContextRef context)
 {
-  int scale = (int)(0.125 * (int)(p->c + p->a) / 120);
+  int scale = (int)(0.125 * (int)(p->c + p->a) / 125);
 
   gks_inq_pattern_array(index, patArray);
   float patHeight = patArray[0] * scale;
@@ -1306,17 +1306,16 @@ void draw_pattern(int index, CGPathRef shape, CGContextRef context)
   
   patternLayer = CGLayerCreateWithContext(context, CGSizeMake(patWidth, patHeight), NULL);
   CGContextRef layerContext = CGLayerGetContext(patternLayer);
+  CGContextSetShouldAntialias(layerContext, NO);
   begin_context(context);
-
-  for (i = 0; i < patHeight; i += scale)
+  for (i = patHeight - scale; i >= 0; i -= scale)
     {
       n = patArray[k];
-      for (l = patWidth - scale; l >= 0; l -= scale)
+      for (l = 0; l < patWidth; l += scale)
         {
           if ((n % 2) == 0) 
             {
               CGContextFillRect(layerContext, CGRectMake(l, i, scale, scale));
-              CGContextStrokeRectWithWidth(layerContext, CGRectMake(l, i, scale, scale), 0.5);
             }
           n >>= 1;
         }
