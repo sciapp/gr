@@ -60,8 +60,10 @@
 
 - (void) windowWillClose:(NSNotification *)notification
 {
+  int win;
+
   NSWindow *nswin = [notification object];
-  for (int win = 0; win < MAX_WINDOWS; win++) {
+  for (win = 0; win < MAX_WINDOWS; win++) {
     if (window[win] != nil && close_window[win] && window[win] == nswin) {
       window[win] = nil;
     }
