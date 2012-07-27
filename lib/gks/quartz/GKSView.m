@@ -1565,9 +1565,8 @@ void fill_routine(int n, float *px, float *py, int tnr)
     
     // Setup the rendering properties:
     CGContextSetTextDrawingMode(context, kCGTextFill);
-    float *colorComponents = (float *)CGColorGetComponents(p->rgb[tx_color]);
-    CGContextSetRGBFillColor(context, colorComponents[0], colorComponents[1], colorComponents[2], colorComponents[3]);
-    CGContextSetRGBStrokeColor(context, colorComponents[0], colorComponents[1], colorComponents[2], colorComponents[3]); 
+    CGContextSetFillColorWithColor(context, p->rgb[tx_color]);
+    CGContextSetStrokeColorWithColor(context, p->rgb[tx_color]);
     CGAffineTransform transform;
     transform = CGAffineTransformMakeTranslation(xstart, ystart);
     transform = CGAffineTransformRotate(transform, p->angle);
