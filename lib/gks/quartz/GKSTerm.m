@@ -63,8 +63,6 @@
   NSWindow *nswin = [notification object];
   for (int win = 0; win < MAX_WINDOWS; win++) {
     if (window[win] != nil && close_window[win] && window[win] == nswin) {
-      [view[win] close];
-      view[win] = nil;
       window[win] = nil;
     }
   }
