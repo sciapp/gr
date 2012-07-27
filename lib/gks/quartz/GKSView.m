@@ -88,6 +88,19 @@ char *fonts[] =
   };
 
 static
+CGFontRef cgfontrefs[] = {
+  NULL,NULL,NULL,NULL,
+  NULL,NULL,NULL,NULL,
+  NULL,NULL,NULL,NULL,
+  NULL,
+  NULL,NULL,NULL,NULL,
+  NULL,NULL,NULL,NULL,
+  NULL,NULL,NULL,NULL,
+  NULL,NULL,NULL,NULL,
+  NULL,NULL
+};
+
+static
 float capheights[29] = {
   0.662, 0.660, 0.681, 0.662,
   0.729, 0.729, 0.729, 0.729,
@@ -1523,10 +1536,15 @@ void fill_routine(int n, float *px, float *py, int tnr)
     float fontsize = info.fontsize;
     
     // Calculate string width (this is the recommended way: https://developer.apple.com/library/mac/#documentation/graphicsimaging/conceptual/drawingwithquartz2d/dq_text/dq_text.html )
-    CGFontRef cgfont = CGFontCreateWithFontName((CFStringRef)fontName);
+    CGFontRef cgfont; // Check if CGFont is already cached
+    if (cgfontrefs[p->family] == NULL) {
+      cgfontrefs[p->family] = CGFontCreateWithFontName((CFStringRef)fontName);
+    }
+    cgfont = cgfontrefs[p->family];
     CGContextSetFont(context, cgfont);
     CGContextSetFontSize(context, fontsize);
-    CTFontRef font = CTFontCreateWithName((CFStringRef)fontName, fontsize, &CGAffineTransformIdentity);
+    CTFontRef font = CTFontCreateWithGraphicsFont(cgfont, fontsize, &CGAffineTransformIdentity, NULL);
+    //CTFontRef font = CTFontCreateWithName((CFStringRef)fontName, fontsize, &CGAffineTransformIdentity);
     CGGlyph glyphs[charCount];
     CTFontGetGlyphsForCharacters(font, (const unichar*)cString, glyphs, charCount);
     CFRelease(font);
@@ -1557,7 +1575,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
     transform = CGAffineTransformTranslate(transform, -xstart, -ystart);
     CGContextSetTextMatrix(context, transform); 
     CGContextShowGlyphsAtPoint(context, xstart, ystart, glyphs, charCount);
-    CGFontRelease(cgfont);
+    //CGFontRelease(cgfont);
   }
   else
     {
@@ -1566,8 +1584,6 @@ void fill_routine(int n, float *px, float *py, int tnr)
   end_context(context); 
   
 }
-
-
 
 - (_FontInfo) set_font: (int) font
 {
