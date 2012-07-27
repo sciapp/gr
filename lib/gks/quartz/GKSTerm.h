@@ -25,4 +25,5 @@
 - (void) setWindowPos: (NSWindow *) plotWindow;
 - (void) keepOnDisplay: (NSNotification *) aNotification;
 - (int) getNextWindowID;
+- (void) windowWillClose:(NSNotification *)notification;
 @end

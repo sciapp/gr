@@ -49,11 +49,25 @@
       cascadingPoint = [window[win] cascadeTopLeftFromPoint: cascadingPoint];
       
       close_window[win]=YES;
-
+      [[NSNotificationCenter defaultCenter] addObserver:self
+              selector:@selector(windowWillClose:) name:NSWindowWillCloseNotification
+              object:window[win]];
       return win;
     }
   else
     return -1;
+}
+
+- (void) windowWillClose:(NSNotification *)notification
+{
+  NSWindow *nswin = [notification object];
+  for (int win = 0; win < MAX_WINDOWS; win++) {
+    if (window[win] != nil && close_window[win] && window[win] == nswin) {
+      [view[win] close];
+      view[win] = nil;
+      window[win] = nil;
+    }
+  }
 }
 
 - (void) GKSQuartzDraw: (int) win displayList: (id) displayList
@@ -65,8 +79,12 @@
 {
   if (close_window[win])
     {
-      [view[win] close];
-      [window[win] close];
+      if (view[win] != nil) {
+        [view[win] close];
+      }
+      if (window[win] != nil) {
+        [window[win] close];
+      }
     }
   view[win] = nil;
   window[win] = nil;
