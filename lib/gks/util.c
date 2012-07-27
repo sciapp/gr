@@ -2790,8 +2790,8 @@ int gks_get_ws_type(void)
    wstype = atoi(env);
  else
 #ifndef _WIN32
-#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1060
-   wstype = 51;
+#ifdef __APPLE__
+   wstype = 400;
 #else
    wstype = 211;
 #endif
