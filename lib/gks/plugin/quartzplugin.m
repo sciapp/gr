@@ -62,16 +62,25 @@ int inactivity_counter = -1;
 @implementation gks_quartz_thread
 + (void) update: (id) param
 {
+  int didDie = 0;
+
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  for (;;)
+  while (!didDie)
     {
       [mutex lock];
       if (inactivity_counter == 3)
 	{
           [displayList initWithBytesNoCopy:
            wss->dl.buffer length: wss->dl.nbytes freeWhenDone: NO];
-          [plugin GKSQuartzDraw: wss->win displayList: displayList];
-	  inactivity_counter = -1;
+          @try
+            {
+              [plugin GKSQuartzDraw: wss->win displayList: displayList];
+	      inactivity_counter = -1;
+            }
+          @catch (NSException *e)
+            {
+              didDie = 1;
+            }
         }
       if (inactivity_counter >= 0)
         inactivity_counter++;
@@ -143,7 +152,14 @@ void gks_quartzplugin(
       break;
   
     case 3:
-      [plugin GKSQuartzCloseWindow: wss->win];
+      @try
+        {
+          [plugin GKSQuartzCloseWindow: wss->win];
+        }
+      @catch (NSException *e)
+        {
+          NSLog(@"Disconnect from GKSTerm failed.");          
+        }
       [mutex release];
       [plugin release];
       [displayList release];
@@ -158,8 +174,15 @@ void gks_quartzplugin(
           [mutex lock];
           [displayList initWithBytesNoCopy:
            wss->dl.buffer length: wss->dl.nbytes freeWhenDone: NO];
-          [plugin GKSQuartzDraw: wss->win displayList: displayList];
-          inactivity_counter = -1;
+          @try
+            {
+              [plugin GKSQuartzDraw: wss->win displayList: displayList];
+              inactivity_counter = -1;
+            }
+          @catch (NSException *e)
+            {
+              NSLog(@"Connection to GKSTerm lost.");          
+            }
           [mutex unlock];
         }
       break;
