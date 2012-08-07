@@ -74,30 +74,30 @@ DLLEXPORT void gks_wxplugin(
 #define FEPS 1.0E-06
 
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
-	xn = a[tnr] * (xw) + b[tnr]; \
-	yn = c[tnr] * (yw) + d[tnr]
+  xn = a[tnr] * (xw) + b[tnr]; \
+  yn = c[tnr] * (yw) + d[tnr]
 
 #define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
-	xn = a[tnr] * (xw); \
-	yn = c[tnr] * (yw)
+  xn = a[tnr] * (xw); \
+  yn = c[tnr] * (yw)
 
 #define NDC_to_DC(xn, yn, xd, yd) \
-	xd = (int) (p->a * (xn) + p->b); \
-	yd = (int) (p->c * (yn) + p->d);
+  xd = (int) (p->a * (xn) + p->b); \
+  yd = (int) (p->c * (yn) + p->d);
 
 #define DC_to_NDC(xd, yd, xn, yn) \
-	xn = ((xd) - p->b) / p->a; \
-	yn = ((yd) - p->d) / p->c;
+  xn = ((xd) - p->b) / p->a; \
+  yn = ((yd) - p->d) / p->c;
 
 #define CharXform(xrel, yrel, x, y) \
-	x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
-	y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
+  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
+  y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
 
 #define Color8Bit(c) \
-	c >= 588 ? 80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) : \
-	c >= 257 ? 8 + nint((c - 257) / 330.0 * (72 - 1)) : c
+  c >= 588 ? 80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) : \
+  c >= 257 ? 8 + nint((c - 257) / 330.0 * (72 - 1)) : c
 
 #ifndef min
 #define min(a,b) (((a) < (b)) ? (a) : (b))
@@ -116,9 +116,9 @@ typedef struct ws_state_list_t
 #if defined(USE_WX_GCDC) && wxCHECK_VERSION(2, 9, 0)
   wxGCDC             *pixmap;
 #else
-  wxMemoryDC	     *pixmap;
+  wxMemoryDC         *pixmap;
 #endif
-  int 	              antialias;
+  int                 antialias;
   int                 state, wtype;
   int                 width, height;
   float               a, b, c, d;
