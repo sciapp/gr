@@ -1,4 +1,3 @@
-#include <iostream>
 
 #ifndef NO_WX
 
@@ -372,8 +371,6 @@ static void polyline(int n, float *px, float *py)
   ln_type  = gkss->asf[0] ? gkss->ltype  : gkss->lindex;
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? Color8Bit(gkss->plcoli) : 1;
-
-  std::cerr << ln_type << std::endl;
 
   if (gkss->version > 4)
     width = nint(ln_width * p->height / 500.0);
