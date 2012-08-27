@@ -159,6 +159,9 @@ static
 ws_state_list p_, *p;
 
 static
+int fontfile = 0;
+
+static
 CGLayerRef patternLayer;
 
 static
@@ -169,6 +172,9 @@ CGContextRef context = NULL;
 
 static
 CGLayerRef layer;
+
+static
+NSMutableArray *contextStack = NULL, *layerStack = NULL;
 
 static
 CGRect clipRect;
@@ -205,8 +211,13 @@ void init_norm_xform(void)
 static
 void set_color_rep(int color, float red, float green, float blue)
 { 
-  if (color >= 0 && color < MAX_COLOR)
+  if (color >= 0 && color < MAX_COLOR) {
+    if (p->rgb[color] != 0)
+      {
+        CGColorRelease(p->rgb[color]);
+      }
     p->rgb[color] = CGColorCreateGenericRGB(red, green, blue, gkss->alpha);
+  }
 }
 
 static
@@ -379,7 +390,7 @@ void seg_xform_rel(float *x, float *y)
           init_norm_xform();
           init_colors();      
         
-          gkss->fontfile = gks_open_font();
+          gkss->fontfile = fontfile;
           gks_init_core(gkss);
                 
           cur_color = -1;
@@ -581,6 +592,7 @@ void seg_xform_rel(float *x, float *y)
       buffer = NULL;
       size = 0;
       angle = 0;
+      fontfile = gks_open_font();
     }
   return self;
 }
@@ -589,26 +601,42 @@ void seg_xform_rel(float *x, float *y)
 {  
   CGContextRef c;
 
-  c = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-
-  layer = CGLayerCreateWithContext(c,
-    CGSizeMake(self.bounds.size.width, self.bounds.size.height), NULL);
-  context = CGLayerGetContext(layer);
+  if (contextStack == NULL)
+    {
+      contextStack = [[NSMutableArray alloc] initWithCapacity:5];
+      layerStack = [[NSMutableArray alloc] initWithCapacity:5];
+    }
 
   if (buffer)
-    {
-      if (angle != 0)
-        {
-          CGContextTranslateCTM (context, 250, 250);
-          CGContextRotateCTM (context, (angle) * M_PI/180);
-          CGContextTranslateCTM (context, -250, -250);
-        }
+  {
+    c = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
 
-      [self interp: buffer];
+    layer = CGLayerCreateWithContext(c,
+      CGSizeMake(self.bounds.size.width, self.bounds.size.height), NULL);
+    context = CGLayerGetContext(layer);
 
-      CGContextDrawLayerAtPoint(c, CGPointMake(0, 0), layer);
-      CGContextFlush(context);
-    }
+    [contextStack addObject: (id)context];
+    [layerStack addObject: (id)layer];
+    
+    if (angle != 0)
+      {
+        CGContextTranslateCTM (context, 250, 250);
+        CGContextRotateCTM (context, (angle) * M_PI/180);
+        CGContextTranslateCTM (context, -250, -250);
+      }
+    
+    [self interp: buffer];
+    CGContextDrawLayerAtPoint(c, CGPointMake(0, 0), layer);
+    
+    CGContextFlush(context);
+    CGLayerRelease(layer);
+
+    [contextStack removeLastObject];
+    [layerStack removeLastObject];
+
+    context = (CGContextRef)[contextStack lastObject];
+    layer = (CGLayerRef)[layerStack lastObject];
+  }
 }
 
 - (void) setDisplayList: (id) display_list
@@ -667,12 +695,13 @@ void seg_xform_rel(float *x, float *y)
 
 - (void) close
 {  
+  gks_close_font(fontfile);
   if (buffer)
     free(buffer);
   [self release];
 }
 
-/*   SaveAs Dialog  */
+/* SaveAs Dialog */
 
 - (IBAction)saveDocumentAs: (id)sender
 {
@@ -1543,7 +1572,6 @@ void fill_routine(int n, float *px, float *py, int tnr)
     CGContextSetFont(context, cgfont);
     CGContextSetFontSize(context, fontsize);
     CTFontRef font = CTFontCreateWithGraphicsFont(cgfont, fontsize, &CGAffineTransformIdentity, NULL);
-    //CTFontRef font = CTFontCreateWithName((CFStringRef)fontName, fontsize, &CGAffineTransformIdentity);
     CGGlyph glyphs[charCount];
     CTFontGetGlyphsForCharacters(font, (const unichar*)cString, glyphs, charCount);
     CFRelease(font);
@@ -1573,14 +1601,13 @@ void fill_routine(int n, float *px, float *py, int tnr)
     transform = CGAffineTransformTranslate(transform, -xstart, -ystart);
     CGContextSetTextMatrix(context, transform); 
     CGContextShowGlyphsAtPoint(context, xstart, ystart, glyphs, charCount);
-    //CGFontRelease(cgfont);
   }
   else
     {
       gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
     }
-  end_context(context); 
-  
+
+  end_context(context);
 }
 
 - (_FontInfo) set_font: (int) font
