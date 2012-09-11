@@ -1,49 +1,40 @@
- GLINCLUDES = 
-GR3INCLUDES = -I./../../lib/gr3/
-    GR3LIBS = -L./ -lGR3
+      GRDIR = /usr/local/gr
+GR3INCLUDES = -I$(GRDIR)/include
+    GR3LIBS = -L$(GRDIR)/lib -lGR3
      GLLIBS = 
-      XLIBS2 = 
+      XLIBS = 
      CFLAGS = -Wall -pedantic
+    LDFLAGS =
 JPEG2PSOBJS = jpeg2ps/jpeg2ps.o jpeg2ps/readjpeg.o jpeg2ps/asc85ec.o
        OBJS = moldyn.o  moldyn_utilities.o moldyn_element_information.o moldyn_graphics.o ${JPEG2PSOBJS}
     DEFINES = -DMOLDYN_VERSION="\"MolDyn - 8.0.0\"" 
 -DMOLDYN_REVISION="\"Rev: `date +"%b %e %Y"`\""
 
 default:
-	make `uname`
+	@make `uname`
 
 Linux:
-	make moldyn GLLIBS="-lglut -lGLU -lGL -lm" XLIBS2="-lX11"
+	make moldyn GLLIBS="-lglut -lGLU -lGL -lm" \
+	LDFLAGS="-Wl,-rpath,$(GRDIR)/lib" XLIBS="-lX11"
 
 Darwin:
 	make moldyn GLLIBS="-framework OpenGL -framework GLUT -L/System/Library/Frameworks/OpenGL.framework/Libraries -lGLU -lGL -lobjc"
 
-targets: prerequisites moldyn
-
-prerequisites: libGR3.so jpeg2ps
-
-jpeg2ps:
-	make -C jpeg2ps
-
-libGR3.so:
-	make -C../../lib/gr3
-	cp ../../lib/gr3/libGR3.so .
-
-%.c: %.h
 %.o: %.c
 	$(CC) ${CFLAGS} ${DEFINES} -c -o $@ $<
 
-moldyn_graphics.o: moldyn_graphics.c libGR3.so
-	$(CC) ${CFLAGS} ${GLINCLUDES} ${GR3INCLUDES} ${DEFINES} -c -o $@ moldyn_graphics.c
+moldyn_graphics.o: moldyn_graphics.c
+	$(CC) ${CFLAGS} ${GR3INCLUDES} ${DEFINES} -c -o $@ moldyn_graphics.c
 
 moldyn: ${OBJS}
-	$(CC) ${CFLAGS} ${GLLIBS} ${XLIBS2} ${GR3LIBS} -o $@ ${OBJS}
+	$(CC) ${LDFLAGS} ${GR3LIBS} ${GLLIBS} ${XLIBS} -o $@ ${OBJS}
+
+install: moldyn
+	cp -p moldyn ${GRDIR}/bin
 
 clean:
-	@make -C../../lib/gr3 clean
 	@make -C jpeg2ps clean
 	rm -f moldyn
 	rm -f *.o
 	rm -f *.eps *.jpg *.pov *.png *.html *.mov
 	rm -rf moldyn.dSYM
-	rm -f libGR3.so
