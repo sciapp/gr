@@ -148,6 +148,7 @@ typedef struct _GR3_DrawList_t_ {
                         Each triple means the scaling factors 
                         for one mesh to be drawn. */
     int n;          /*!< The number of meshes to be drawn. */
+    int selection_id;
     struct _GR3_DrawList_t_ *next; /*!< The pointer to the next GR3_DrawList_t_. */
 } GR3_DrawList_t_;
 
@@ -220,6 +221,8 @@ static char not_initialized_[] = "Not initialized";
  * The id of the framebuffer object used for rendering.
  */
 static GLuint framebuffer = 0;
+
+static int current_selection_id = 0;
 
 /*!
  * This struct holds all context data. All data that is dependent on gr3 to 
@@ -780,6 +783,7 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions,
         draw->scales = malloc(sizeof(float)*n*3);
         memcpy(draw->scales,scales,sizeof(float)*n*3);
         draw->n = n;
+      draw->selection_id = current_selection_id;
         draw->next= NULL;
         gr3_meshaddreference_(mesh);
         if (context_struct_.draw_list_ == NULL) {
@@ -3449,4 +3453,217 @@ static int gr3_readpngtomemory_(int *pixels, const char *pngfile, int width, int
     png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
     fclose(png_fp);
     return 0;
+}
+
+
+GR3API void        gr3_setselectionid(int id) {
+  current_selection_id = id;
+}
+
+static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height);
+GR3API int         gr3_selectid(int px, int py, int width, int height, int *selection_id) {
+  int x, y;
+  int fb_width, fb_height;
+  int dx, dy;
+  int x_patches, y_patches;
+  int view_matrix_all_zeros;
+  *selection_id = 0;
+  
+  GLfloat fovy = context_struct_.vertical_field_of_view;
+  GLfloat tan_halffovy = tan(fovy*M_PI/360.0);
+  GLfloat aspect = (GLfloat)width/height;
+  GLfloat zNear = context_struct_.zNear;
+  GLfloat zFar = context_struct_.zFar;
+  
+  GLfloat right = zNear*tan_halffovy*aspect;
+  GLfloat left = -right;
+  GLfloat top = zNear*tan_halffovy;
+  GLfloat bottom = -top;
+  
+  if (context_struct_.is_initialized) {
+    if (width == 0 || height == 0) {
+      return GR3_ERROR_INVALID_VALUE;
+    }
+    view_matrix_all_zeros = 1;
+    for (x = 0; x < 4; x++) {
+      for (y = 0; y < 4; y++) {
+        if (context_struct_.view_matrix[x][y] != 0) {
+          view_matrix_all_zeros = 0;
+        }
+      }
+    }
+    if (view_matrix_all_zeros) {
+      /* gr3_cameralookat has not been called */
+      return GR3_ERROR_CAMERA_NOT_INITIALIZED;
+    }
+    if (context_struct_.zFar < context_struct_.zNear ||
+        context_struct_.zNear <= 0 ||
+        context_struct_.vertical_field_of_view >= 180||
+        context_struct_.vertical_field_of_view <= 0
+        ) {
+      /* gr3_setcameraprojectionparameters has not been called */
+      return GR3_ERROR_CAMERA_NOT_INITIALIZED;
+    }
+    
+    fb_width = context_struct_.init_struct.framebuffer_width;
+    fb_height = context_struct_.init_struct.framebuffer_height;
+    
+#if GL_ARB_framebuffer_object
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+#else
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebuffer);
+#endif
+    
+    x_patches = width/fb_width+(width/fb_width*fb_width < width);
+    y_patches = height/fb_height+(height/fb_height*fb_height < height);
+    for (y = 0; y < y_patches; y++) {
+      for (x = 0; x < x_patches; x++) {
+        if ((x+1)*fb_width <= width) {
+          dx = fb_width;
+        } else {
+          dx = width - fb_width*x;
+        }
+        if ((y+1)*fb_height <= height) {
+          dy = fb_height;
+        } else {
+          dy = height - fb_height*y;
+        }
+        if (px >= x*fb_width && px < x*fb_width+dx && py >= y*fb_height && py < y*fb_height+dy) {
+          {
+            GLfloat projection_matrix[4][4] = {{0}};
+            GLfloat l = left + 1.0f*(right-left)*(x*fb_width)/width;
+            GLfloat r = left + 1.0f*(right-left)*(x*fb_width+dx)/width;
+            GLfloat b = bottom + 1.0f*(top-bottom)*(y*fb_height)/height;
+            GLfloat t = bottom + 1.0f*(top-bottom)*(y*fb_height+dy)/height;
+            
+            /* Source: http://www.opengl.org/sdk/docs/man/xhtml/glFrustum.xml */
+            projection_matrix[0][0] = 2*zNear/(r - l);
+            projection_matrix[2][0] = (r+l)/(r - l);
+            projection_matrix[1][1] = 2*zNear/(t - b);
+            projection_matrix[2][1] = (t+b)/(t - b);
+            projection_matrix[2][2] = (zFar+zNear)/(zNear-zFar);
+            projection_matrix[3][2] = 2*zFar*zNear/(zNear-zFar);
+            projection_matrix[2][3] = -1;
+            
+            context_struct_.projection_matrix = &projection_matrix[0][0];
+            glViewport(0, 0, dx, dy);
+            int id = gr3_selectiondraw_(px-x*fb_width,py-y*fb_height,width, height);
+            context_struct_.projection_matrix = NULL;
+            if (id != 0) {
+              *selection_id = id;
+            }
+          }
+        }
+      }
+    }
+    if (glGetError() == GL_NO_ERROR) {
+      return GR3_ERROR_NONE;
+    } else {
+      return GR3_ERROR_OPENGL_ERR;
+    }
+  } else {
+    return GR3_ERROR_NOT_INITIALIZED;
+  }
+}
+
+static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
+ 
+#ifdef GR3_CAN_USE_VBO
+  if (context_struct_.use_vbo) {
+    glUseProgram(context_struct_.program);
+  }
+#endif
+  gr3_log_("gr3_draw_();");
+  {
+    GLfloat projection_matrix[4][4] = {{0}};
+    GLfloat *pm;
+    if (context_struct_.projection_matrix != NULL) {
+      pm = context_struct_.projection_matrix;
+    } else {
+      GLfloat fovy = context_struct_.vertical_field_of_view;
+      GLfloat zNear = context_struct_.zNear;
+      GLfloat zFar = context_struct_.zFar;
+      
+      
+      {
+        /* Source: http://www.opengl.org/sdk/docs/man/xhtml/gluPerspective.xml */
+        GLfloat aspect = (GLfloat)width/height;
+        GLfloat f = 1/tan(fovy*M_PI/360.0);
+        projection_matrix[0][0] = f/aspect;
+        projection_matrix[1][1] = f;
+        projection_matrix[2][2] = (zFar+zNear)/(zNear-zFar);
+        projection_matrix[3][2] = 2*zFar*zNear/(zNear-zFar);
+        projection_matrix[2][3] = -1;
+      }
+      pm = &projection_matrix[0][0];
+    }
+#ifdef GR3_CAN_USE_VBO
+    if (context_struct_.use_vbo) {
+      glUniformMatrix4fv(glGetUniformLocation(context_struct_.program, "ProjectionMatrix"), 1,GL_FALSE,pm);
+    } else
+#endif
+    {
+      glMatrixMode(GL_PROJECTION);
+      glLoadMatrixf(pm);
+    }
+    
+#ifdef GR3_CAN_USE_VBO
+    if (context_struct_.use_vbo) {
+      glUniformMatrix4fv(glGetUniformLocation(context_struct_.program, "ViewMatrix"), 1,GL_FALSE,&(context_struct_.view_matrix[0][0]));
+    } else
+#endif
+    {
+      glMatrixMode(GL_MODELVIEW);
+      if (context_struct_.light_dir[0] == 0 &&
+          context_struct_.light_dir[1] == 0 &&
+          context_struct_.light_dir[2] == 0
+          ) {
+        GLfloat def[4] = {0,0,1,0};
+        glLoadIdentity();
+        glLightfv(GL_LIGHT0, GL_POSITION, &def[0]);
+      }
+      glLoadMatrixf(&(context_struct_.view_matrix[0][0]));
+    }
+#ifdef GR3_CAN_USE_VBO
+    if (context_struct_.use_vbo) {
+      glUniform3f(glGetUniformLocation(context_struct_.program, "LightDirection"),context_struct_.light_dir[0],context_struct_.light_dir[1],context_struct_.light_dir[2]);
+    }
+#endif
+  }
+  glEnable(GL_NORMALIZE);
+  if (!context_struct_.use_vbo) {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    if (context_struct_.light_dir[0] != 0 ||
+        context_struct_.light_dir[1] != 0 ||
+        context_struct_.light_dir[2] != 0
+        ) {
+      glLightfv(GL_LIGHT0, GL_POSITION, &context_struct_.light_dir[0]);
+    }
+  }
+  glClearColor(0, 0, 0, 0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  int selection_id = 0;
+  {
+    GR3_DrawList_t_ *draw;
+    draw = context_struct_.draw_list_;
+    while (draw) {
+      glClear(GL_COLOR_BUFFER_BIT);
+      gr3_dodrawmesh_(draw->mesh,draw->n,draw->positions,draw->directions,
+                      draw->ups,draw->colors,draw->scales);
+      unsigned int color = 0;
+      glReadPixels(px, py, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE,&color);
+      if (color != 0) {
+        
+        selection_id = draw->selection_id;
+      }
+      draw = draw->next;
+    }
+  }
+#ifdef GR3_CAN_USE_VBO
+  if (context_struct_.use_vbo) {
+    glUseProgram(0);
+  }
+#endif
+  return selection_id;
 }

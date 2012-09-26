@@ -95,6 +95,9 @@ GR3API void        gr3_drawconemesh(int n, const float *positions, const float *
 GR3API void        gr3_drawcylindermesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
 GR3API void        gr3_drawspheremesh(int n, const float *positions, const float *colors, const float *radii);
 
+          
+GR3API void        gr3_setselectionid(int id);
+GR3API int         gr3_selectid(int x, int y, int width, int height, int *selection_id);
 #ifdef _WIN32
     #ifdef __cplusplus
         }
