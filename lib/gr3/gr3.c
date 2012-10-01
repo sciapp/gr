@@ -148,7 +148,7 @@ typedef struct _GR3_DrawList_t_ {
                         Each triple means the scaling factors 
                         for one mesh to be drawn. */
     int n;          /*!< The number of meshes to be drawn. */
-    int selection_id;
+    int object_id;
     struct _GR3_DrawList_t_ *next; /*!< The pointer to the next GR3_DrawList_t_. */
 } GR3_DrawList_t_;
 
@@ -222,7 +222,7 @@ static char not_initialized_[] = "Not initialized";
  */
 static GLuint framebuffer = 0;
 
-static int current_selection_id = 0;
+static int current_object_id = 0;
 
 /*!
  * This struct holds all context data. All data that is dependent on gr3 to 
@@ -783,7 +783,7 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions,
         draw->scales = malloc(sizeof(float)*n*3);
         memcpy(draw->scales,scales,sizeof(float)*n*3);
         draw->n = n;
-      draw->selection_id = current_selection_id;
+      draw->object_id = current_object_id;
         draw->next= NULL;
         gr3_meshaddreference_(mesh);
         if (context_struct_.draw_list_ == NULL) {
@@ -3456,18 +3456,18 @@ static int gr3_readpngtomemory_(int *pixels, const char *pngfile, int width, int
 }
 
 
-GR3API void        gr3_setselectionid(int id) {
-  current_selection_id = id;
+GR3API void        gr3_setobjectid(int id) {
+  current_object_id = id;
 }
 
 static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height);
-GR3API int         gr3_selectid(int px, int py, int width, int height, int *selection_id) {
+GR3API int         gr3_selectid(int px, int py, int width, int height, int *object_id) {
   int x, y;
   int fb_width, fb_height;
   int dx, dy;
   int x_patches, y_patches;
   int view_matrix_all_zeros;
-  *selection_id = 0;
+  *object_id = 0;
   
   GLfloat fovy = context_struct_.vertical_field_of_view;
   GLfloat tan_halffovy = tan(fovy*M_PI/360.0);
@@ -3550,7 +3550,7 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *sele
             int id = gr3_selectiondraw_(px-x*fb_width,py-y*fb_height,width, height);
             context_struct_.projection_matrix = NULL;
             if (id != 0) {
-              *selection_id = id;
+              *object_id = id;
             }
           }
         }
@@ -3643,7 +3643,7 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
   }
   glClearColor(0, 0, 0, 0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  int selection_id = 0;
+  int object_id = 0;
   {
     GR3_DrawList_t_ *draw;
     draw = context_struct_.draw_list_;
@@ -3655,7 +3655,7 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
       glReadPixels(px, py, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE,&color);
       if (color != 0) {
         
-        selection_id = draw->selection_id;
+        object_id = draw->object_id;
       }
       draw = draw->next;
     }
@@ -3665,5 +3665,5 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
     glUseProgram(0);
   }
 #endif
-  return selection_id;
+  return object_id;
 }
