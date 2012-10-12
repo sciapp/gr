@@ -990,7 +990,7 @@ static void interp(char *str)
   char *s;
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
-  int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr;
+  int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
   float *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
@@ -1021,6 +1021,8 @@ static void interp(char *str)
           RESOLVE(f_arr_2, float, sizeof(float));
           RESOLVE(len_c_arr, int, sizeof(int));
           RESOLVE(c_arr, char, 132);
+	  /* dummy assignment to avoid warning 'set but not used' */
+          *len_c_arr = *len_c_arr;
           break;
 
         case  16:               /* cell array */

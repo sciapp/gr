@@ -3467,7 +3467,6 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
   int dx, dy;
   int x_patches, y_patches;
   int view_matrix_all_zeros;
-  *object_id = 0;
   
   GLfloat fovy = context_struct_.vertical_field_of_view;
   GLfloat tan_halffovy = tan(fovy*M_PI/360.0);
@@ -3479,7 +3478,10 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
   GLfloat left = -right;
   GLfloat top = zNear*tan_halffovy;
   GLfloat bottom = -top;
+  int id;
   
+  *object_id = 0;
+
   if (context_struct_.is_initialized) {
     if (width == 0 || height == 0) {
       return GR3_ERROR_INVALID_VALUE;
@@ -3547,7 +3549,7 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
             
             context_struct_.projection_matrix = &projection_matrix[0][0];
             glViewport(0, 0, dx, dy);
-            int id = gr3_selectiondraw_(px-x*fb_width,py-y*fb_height,width, height);
+            id = gr3_selectiondraw_(px-x*fb_width,py-y*fb_height,width, height);
             context_struct_.projection_matrix = NULL;
             if (id != 0) {
               *object_id = id;
@@ -3567,6 +3569,8 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
 }
 
 static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
+  int object_id = 0;
+  unsigned int color;
  
 #ifdef GR3_CAN_USE_VBO
   if (context_struct_.use_vbo) {
@@ -3643,7 +3647,6 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
   }
   glClearColor(0, 0, 0, 0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  int object_id = 0;
   {
     GR3_DrawList_t_ *draw;
     draw = context_struct_.draw_list_;
@@ -3651,7 +3654,7 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
       glClear(GL_COLOR_BUFFER_BIT);
       gr3_dodrawmesh_(draw->mesh,draw->n,draw->positions,draw->directions,
                       draw->ups,draw->colors,draw->scales);
-      unsigned int color = 0;
+      color = 0;
       glReadPixels(px, py, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE,&color);
       if (color != 0) {
         

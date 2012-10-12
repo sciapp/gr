@@ -1342,6 +1342,7 @@ void GKSQtWindow::updateMenus()
 GKSWidget *GKSQtWindow::activeMdiChild()
 {
   if (QMdiSubWindow *activeSubWindow = mdiArea->activeSubWindow()) {
+    mdiArea->update();
     return qobject_cast<GKSWidget *>(activeSubWindow->widget());
   }
   return 0;
