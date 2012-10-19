@@ -1542,7 +1542,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
                                            ( rgba        & 0xff) / 255.0,
                                            ((rgba >>  8) & 0xff) / 255.0,
                                            ((rgba >> 16) & 0xff) / 255.0,
-                                           1.0 - ((rgba >> 24) & 0xff) / 255.0);
+                                           1.0);
                 }
               CGContextFillRect(context,
                                 CGRectMake(x + i, y + height - j - 1, 1, 1));
