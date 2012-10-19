@@ -4972,7 +4972,8 @@ void latex2image(char *string, int pointSize, float *rgb,
 
   color = ((int)(rgb[0] / 255)      ) + 
           ((int)(rgb[1] / 255) <<  8) +
-          ((int)(rgb[2] / 255) << 16);
+          ((int)(rgb[2] / 255) << 16) +
+          (               255  << 24);
   sprintf(s, "%d%x%s", pointSize, color, string);
   md5(s, cache);
 #ifdef _WIN32
