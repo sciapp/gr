@@ -484,7 +484,7 @@ GR3API int gr3_init(int *attrib_list) {
                 "Color = vec4(in_Color,1);\n",
                 "float diffuse = Normal.z;\n",
                 "if (dot(LightDirection,LightDirection) > 0.001) {",
-                "diffuse = dot(normalize(LightDirection),Normal);",
+                "diffuse = dot(mat3(ViewMatrix)*normalize(LightDirection),Normal);",
                 "}",
                 "Color.rgb = diffuse*Color.rgb;"
             "}\n"};
