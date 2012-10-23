@@ -3804,10 +3804,14 @@ GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int 
 
 GR3API void gr3_drawheightmap(const float *heightmap, int num_columns, int num_rows, const float *positions, const float *scales) {
   int mesh;
-  float directions[3] = {0,0,-1};
+  float directions[3] = {0,0,1};
   float ups[3] = {0,1,0};
   float colors[3] = {1,1,1};
+  float pos[3];
+  pos[0] = positions[0]-scales[0]/2;
+  pos[1] = positions[1]-scales[1]/2;
+  pos[2] = positions[2]-scales[2]/2;
   mesh = gr3_createheightmapmesh((float *)heightmap, num_columns, num_rows);
-  gr3_drawmesh(mesh, 1, positions, directions, ups, colors, scales);
+  gr3_drawmesh(mesh, 1, pos, directions, ups, colors, scales);
   gr3_deletemesh(mesh);
 }
