@@ -159,13 +159,13 @@ def createmesh(n, vertices, normals, colors):
 
 def createheightmapmesh(heightmap, num_columns, num_rows):
     heightmap = numpy.array(heightmap, ctypes.c_float)
-    return _gr3.gr3_createheightmapmesh(heightmap.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),ctypes.c_uint(num_columns),ctypes.c_uint(num_rows))
+    return _gr3.gr3_createheightmapmesh(heightmap.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),ctypes.c_int(num_columns),ctypes.c_int(num_rows))
 
 def drawheightmap(heightmap, num_columns, num_rows, positions, scales):
     heightmap = numpy.array(heightmap, ctypes.c_float)
     positions = numpy.array(heightmap, ctypes.c_float)
     scales = numpy.array(heightmap, ctypes.c_float)
-    _gr3.gr3_drawheightmap(heightmap.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),ctypes.c_uint(num_columns),ctypes.c_uint(num_rows),positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), scales.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+    _gr3.gr3_drawheightmap(heightmap.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),ctypes.c_int(num_columns),ctypes.c_int(num_rows),positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), scales.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
     
 
 
