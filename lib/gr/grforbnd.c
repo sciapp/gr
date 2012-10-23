@@ -405,6 +405,11 @@ void FORTRAN(gr_colormap)(void)
   gr_colormap();
 }
 
+void FORTRAN(gr_inqcolor)(int *color, int *rgb)
+{
+  gr_inqcolor(*color, rgb);
+}
+
 float FORTRAN(gr_tick)(float *amin, float *amax)
 {
   return gr_tick(*amin, *amax);

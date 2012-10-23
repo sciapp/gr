@@ -64,9 +64,9 @@ int inactivity_counter = -1;
 {
   int didDie = 0;
 
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
   while (!didDie)
     {
+      NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
       [mutex lock];
       if (inactivity_counter == 3)
 	{
@@ -85,9 +85,9 @@ int inactivity_counter = -1;
       if (inactivity_counter >= 0)
         inactivity_counter++;
       [mutex unlock];
+      [pool release];
       usleep(100000);
     }
-  [pool release];
 }
 @end
 
@@ -127,7 +127,10 @@ void gks_quartzplugin(
       if (plugin == nil)
         {
           if (!gks_terminal())
-            NSLog(@"Launching GKSTerm failed.");          
+            {
+               NSLog(@"Launching GKSTerm failed.");          
+               exit(-1);
+            }
           else
             {
               int counter = 10;
@@ -159,6 +162,7 @@ void gks_quartzplugin(
       @catch (NSException *e)
         {
           NSLog(@"Disconnect from GKSTerm failed.");          
+          exit(-1);
         }
       [mutex release];
       [plugin release];
@@ -182,6 +186,7 @@ void gks_quartzplugin(
           @catch (NSException *e)
             {
               NSLog(@"Connection to GKSTerm lost.");          
+              exit(-1);
             }
           [mutex unlock];
         }

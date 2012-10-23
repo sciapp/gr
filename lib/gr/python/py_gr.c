@@ -996,6 +996,18 @@ PyObject *_gr_colormap(PyObject *self, PyObject *args)
 }
 
 static
+PyObject *_gr_inqcolor(PyObject *self, PyObject *args)
+{
+  int color, rgb;
+
+  TRY(PyArg_ParseTuple(args, "i:inqcolor", &color));
+
+  gr_inqcolor(color, &rgb);
+
+  return Py_BuildValue("i", rgb);
+}
+
+static
 PyObject *_gr_tick(PyObject *self, PyObject *args)
 {
   float amin, amax, tick;
@@ -1429,6 +1441,7 @@ PyMethodDef gr_methods[] = {
   {"contour", _gr_contour, METH_VARARGS},
   {"setcolormap", _gr_setcolormap, METH_VARARGS},
   {"colormap", _gr_colormap, METH_VARARGS},
+  {"inqcolor", _gr_inqcolor, METH_VARARGS},
   {"tick", _gr_tick, METH_VARARGS},
   {"adjustrange", _gr_adjustrange, METH_VARARGS},
   {"beginprint", _gr_beginprint, METH_VARARGS},

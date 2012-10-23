@@ -110,6 +110,8 @@ float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 #define check_autoinit if (autoinit) initgks()
 
+#define nint(x) (int)((x) + 0.5)
+
 #define NDC 0
 #define WC  1
 
@@ -3378,8 +3380,6 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
                    x_title, y_title, z_title);
 }
 
-#define nint(x) (int)((x) + 0.5)
-
 static
 void init_hlr(void)
 {
@@ -3673,8 +3673,6 @@ void pixel(
 
   gks_cellarray(xmin, ymin, xmax, ymax, w, h, sx, sy, w, h, pixmap);
 }
-
-#undef nint
 
 static
 void get_intensity(
@@ -4474,6 +4472,19 @@ void gr_colormap(void)
 
   if (flag_graphics)
     gr_writestream("<colormap/>\n");
+}
+
+void gr_inqcolor(int color, int *rgb)
+{
+  int wkid = 1, errind;
+  float r, g, b;
+
+  check_autoinit;
+
+  gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
+  *rgb = ((nint(r * 255) & 0xff)      ) |
+         ((nint(g * 255) & 0xff) <<  8) |
+         ((nint(b * 255) & 0xff) << 16);
 }
 
 float gr_tick(float amin, float amax)

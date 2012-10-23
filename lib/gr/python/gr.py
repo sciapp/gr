@@ -336,6 +336,11 @@ def setcolormap(index):
 def colormap():
   __gr.gr_colormap()
   
+def inqcolor(color):
+  rgb = c_int()
+  __gr.gr_inqcolor(c_int(color), byref(rgb))
+  return rgb.value
+ 
 def tick(amin, amax):
   __gr.gr_tick.restype = c_float
   return __gr.gr_tick(c_float(amin), c_float(amax))
@@ -516,6 +521,7 @@ __gr.gr_contour.argtypes = [
   c_int, c_int, c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int];
 __gr.gr_setcolormap.argtypes = [c_int];
 __gr.gr_colormap.argtypes = [];
+__gr.gr_inqcolor.argtypes = [c_int, POINTER(c_int)];
 __gr.gr_tick.argtypes = [c_float, c_float];
 __gr.gr_adjustrange.argtypes = [POINTER(c_float), POINTER(c_float)];
 __gr.gr_beginprint.argtypes = [c_char_p];
