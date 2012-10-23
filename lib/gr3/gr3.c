@@ -3670,3 +3670,144 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
 #endif
   return object_id;
 }
+
+GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int num_rows) {
+  int mesh;
+  float colormap[72][3];
+  
+  /* Find the range of height values */
+  int row;
+  int column;
+  float min_height = heightmap[0*num_columns+0];
+  float max_height = heightmap[0*num_columns+0];
+  for (row = 0; row < num_rows; row++) {
+    for (column = 0; column < num_columns; column++) {
+      float height = heightmap[row*num_columns+column];
+      min_height = (min_height > height ) ? height : min_height;
+      max_height = (max_height < height ) ? height : max_height;
+    }
+  }
+  if (min_height == max_height) {
+    max_height+=1;
+  }
+  
+  {
+    int i;
+    for (i = 0; i < 72; i++) {
+      int color;
+      gr_inqcolor(i+8,&color);
+      colormap[i][0] =  (color        & 0xff) / 255.0;
+      colormap[i][1] = ((color >>  8) & 0xff) / 255.0;
+      colormap[i][2] = ((color >> 16) & 0xff) / 255.0;
+    }
+  }
+  
+  {
+    /* Allocate memory for the vertex data */
+    int num_rectangles = (num_columns-1)*(num_rows-1);
+    float *positions = malloc(num_rectangles*2*3*3*sizeof(float));
+    float *normals = malloc(num_rectangles*2*3*3*sizeof(float));
+    float *colors = malloc(num_rectangles*2*3*3*sizeof(float));
+    /* For each rectangle... */
+    for (row = 0; row < num_rows-1; row++) {
+      for (column = 0; column < num_columns-1; column++) {
+        /* ... and for each of the 6 vertices per rectangle (2 triangles)... */
+        int drow[] = {0,0,1, 1,0,1};
+        int dcolumn[] = {0,1,1, 1,0,0};
+        int i;
+        for (i = 0; i < 6; i++) {
+          int array_offset = ((row*(num_columns-1)+column)*6+i)*3;
+          /* Set current row and column */
+          int crow = row+drow[i];
+          int ccolumn = column+dcolumn[i];
+          /* Normalize the row and column to [0;1] */
+          float nrow = 1.0f*crow/num_rows;
+          float ncolumn = 1.0f*ccolumn/num_columns;
+          /* And read the height value from the heightmap */
+          float height = heightmap[crow*num_columns+ccolumn];
+          /* Normalize the height value to [0;1] */
+          height = (height-min_height)/(max_height-min_height);
+          /* Write the values into the positions array */
+          positions[array_offset+0] = ncolumn;
+          positions[array_offset+1] = nrow;
+          positions[array_offset+2] = height;
+          /* Calculate normals via cross product */
+          {
+            float vector1[3];
+            float vector2[3];
+            float vector3[3];
+            
+            vector1[0] = 0;
+            vector1[1] = 1.0/num_rows;
+            if (crow > 0) {
+              float height_updown = heightmap[(crow-1)*num_columns+ccolumn];
+              height_updown = (height_updown-min_height)/(max_height-min_height);
+              vector1[2] = height_updown-height;
+            } else {
+              float height_updown = heightmap[(crow+1)*num_columns+ccolumn];
+              height_updown = (height_updown-min_height)/(max_height-min_height);
+              vector1[2] = height_updown-height;
+            }
+            
+            vector2[0] = 1.0/num_columns;
+            vector2[1] = 0;
+            if (ccolumn > 0) {
+              float height_leftright = heightmap[crow*num_columns+ccolumn-1];
+              height_leftright = (height_leftright-min_height)/(max_height-min_height);
+              vector2[2] = height_leftright-height;
+            } else {
+              float height_leftright = heightmap[crow*num_columns+ccolumn+1];
+              height_leftright = (height_leftright-min_height)/(max_height-min_height);
+              vector2[2] = height_leftright-height;
+            }
+            
+            /* Calculate the cross product */
+            vector3[0] = vector2[1]*vector1[2]-vector2[2]*vector1[1];
+            vector3[1] = vector2[2]*vector1[0]-vector2[0]*vector1[2];
+            vector3[2] = vector2[0]*vector1[1]-vector2[1]*vector1[0];
+            
+            /* Normalize the cross product */
+            {
+              int j;
+              float tmp = 0;
+              for (j = 0; j < 3; j++) {
+                tmp += vector3[j]*vector3[j];
+              }
+              tmp = sqrt(tmp);
+              for (j = 0; j < 3; j++) {
+                vector3[j] /= tmp;
+              }
+            }
+            normals[array_offset+0] = -vector3[0];
+            normals[array_offset+1] = -vector3[1];
+            normals[array_offset+2] = vector3[2];
+          }
+          /* Use fake colors */
+          
+          colors[array_offset+0] = colormap[(int)(height*71.5)][0];
+          colors[array_offset+1] = colormap[(int)(height*71.5)][1];
+          colors[array_offset+2] = colormap[(int)(height*71.5)][2];
+        }
+      }
+    }
+    
+    /* Create a mesh with the data */
+    gr3_createmesh(&mesh,(num_columns-1)*(num_rows-1)*2*3,positions,normals,colors);
+    
+    /* Free the allocated memory */
+    free(positions);
+    free(normals);
+    free(colors);
+  }
+  return mesh;
+}
+
+GR3API void gr3_drawheightmap(const float *heightmap, int num_columns, int num_rows, const float *positions, const float *scales) {
+  int mesh;
+  float directions[3] = {0,0,-1};
+  float ups[3] = {0,1,0};
+  float colors[3] = {1,1,1};
+  mesh = gr3_createheightmapmesh((float *)heightmap, num_columns, num_rows);
+  gr3_drawmesh(mesh, 1, positions, directions, ups, colors, scales);
+  gr3_deletemesh(mesh);
+}

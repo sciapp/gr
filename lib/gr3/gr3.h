@@ -89,7 +89,9 @@ GR3API void        gr3_cameralookat(float camera_x, float camera_y, float camera
 GR3API int         gr3_setcameraprojectionparameters(float vertical_field_of_view, float zNear, float zFar);
 GR3API void        gr3_setlightdirection(float x, float y, float z);
 GR3API void        gr3_setbackgroundcolor(float red, float green, float blue, float alpha);
-
+          
+GR3API int         gr3_createheightmapmesh(const float *heightmap, int num_columns, int num_rows);
+GR3API void        gr3_drawheightmap(const float *heightmap, int num_columns, int num_rows, const float *positions, const float *scales);
 
 GR3API void        gr3_drawconemesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
 GR3API void        gr3_drawcylindermesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);

@@ -12,6 +12,8 @@ __all__ = ['GR3_InitAttribute',
            'drawimage',
            'createmesh',
            'drawmesh',
+           'createheightmapmesh',
+           'drawheightmap',
            'deletemesh',
            'setquality',
            'clear',
@@ -155,6 +157,18 @@ def createmesh(n, vertices, normals, colors):
         raise GR3_Exception(err)
     return _mesh
 
+def createheightmapmesh(heightmap, num_columns, num_rows):
+    heightmap = numpy.array(heightmap, ctypes.c_float)
+    return _gr3.gr3_createheightmapmesh(heightmap.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),ctypes.c_uint(num_columns),ctypes.c_uint(num_rows))
+
+def drawheightmap(heightmap, num_columns, num_rows, positions, scales):
+    heightmap = numpy.array(heightmap, ctypes.c_float)
+    positions = numpy.array(heightmap, ctypes.c_float)
+    scales = numpy.array(heightmap, ctypes.c_float)
+    _gr3.gr3_drawheightmap(heightmap.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),ctypes.c_uint(num_columns),ctypes.c_uint(num_rows),positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), scales.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+    
+
+
 def drawcylindermesh(n, positions, directions, colors, radii, lengths):
     positions = numpy.array(positions, ctypes.c_float)
     directions = numpy.array(directions, ctypes.c_float)
@@ -223,6 +237,8 @@ _gr3.gr3_getimage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.P
 _gr3.gr3_export.argtypes = [ctypes.POINTER(ctypes.c_char), ctypes.c_uint, ctypes.c_uint]
 _gr3.gr3_drawimage.argtypes = [ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_int, ctypes.c_int, ctypes.c_int]
 _gr3.gr3_createmesh.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_createheightmapmesh.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int]
+_gr3.gr3_drawheightmap.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
 _gr3.gr3_drawmesh.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
 _gr3.gr3_deletemesh.argtypes = [ctypes.c_int]
 
