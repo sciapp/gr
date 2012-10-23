@@ -1156,8 +1156,9 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
       { 4, 4, 0, 9, 9, -9, -9, -9, 0, 9,   /* solid triangle up */
         0 },
       { 5, 4, 0, 9, 9, -9, -9, -9, 0, 9,   /* hollow triangle up */
-        3, 4, 0, 9, 9, -9, -9, -9, 0, 9, 0 },
-      { 7, 0, 360, 0 },                    /* solid circle */
+        3, 4, 0, 9, 9, -9, -9, -9, 0, 9,
+        0 },
+      { 7, 0 },                            /* solid circle */
       { 0 },                               /* not used */
       { 1, 0 },                            /* dot */
       { 2, 0, 0, 0, 9, 2, 0, 0, 9, 0,      /* plus */
@@ -1165,8 +1166,9 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
         0 },
       { 2, 0, 0, 0, 9, 2, 0, 0, 9, 3,      /* asterisk */
         2, 0, 0, 6, -9, 2, 0, 0, -6, -9,
-        2, 0, 0, -9, 3, 0 },
-      { 8, 0, 360, 6, 0, 360, 0 },         /* circle */
+        2, 0, 0, -9, 3,
+        0 },
+      { 8, 6, 0 },                         /* circle */
       { 2, 0, 0, 9, 9, 2, 0, 0, 9, -9,     /* diagonal cross */
         2, 0, 0, -9, -9, 2, 0, 0, -9, 9,
         0 }
@@ -1542,7 +1544,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
                                            ( rgba        & 0xff) / 255.0,
                                            ((rgba >>  8) & 0xff) / 255.0,
                                            ((rgba >> 16) & 0xff) / 255.0,
-                                           1.0 - ((rgba >> 24) & 0xff) / 255.0);
+                                           1.0);
                 }
               CGContextFillRect(context,
                                 CGRectMake(x + i, y + height - j - 1, 1, 1));
