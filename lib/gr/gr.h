@@ -87,6 +87,7 @@ DLLEXPORT void gr_contour(
   int, int, int, float *, float *, float *, float *, int);
 DLLEXPORT void gr_setcolormap(int);
 DLLEXPORT void gr_colormap(void);
+DLLEXPORT void gr_inqcolor(int, int *);
 DLLEXPORT float gr_tick(float, float);
 DLLEXPORT void gr_adjustrange(float *, float *);
 DLLEXPORT void gr_beginprint(char *);
