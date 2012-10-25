@@ -416,7 +416,8 @@ void gks_open_gks(int errfil)
 
       state = GKS_K_GKOP;
 
-      atexit(gks_emergency_close);
+      if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL)
+        atexit(gks_emergency_close);
     }
   else
     /* GKS not in proper state. GKS must be in the state GKCL */
