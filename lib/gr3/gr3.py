@@ -163,8 +163,8 @@ def createheightmapmesh(heightmap, num_columns, num_rows):
 
 def drawheightmap(heightmap, num_columns, num_rows, positions, scales):
     heightmap = numpy.array(heightmap, ctypes.c_float)
-    positions = numpy.array(heightmap, ctypes.c_float)
-    scales = numpy.array(heightmap, ctypes.c_float)
+    positions = numpy.array(positions, ctypes.c_float)
+    scales = numpy.array(scales, ctypes.c_float)
     _gr3.gr3_drawheightmap(heightmap.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),ctypes.c_int(num_columns),ctypes.c_int(num_rows),positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), scales.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
     
 

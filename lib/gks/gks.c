@@ -416,7 +416,8 @@ void gks_open_gks(int errfil)
 
       state = GKS_K_GKOP;
 
-      atexit(gks_emergency_close);
+      if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL)
+        atexit(gks_emergency_close);
     }
   else
     /* GKS not in proper state. GKS must be in the state GKCL */
@@ -1513,6 +1514,8 @@ void gks_set_color_rep(int wkid, int index, float red, float green, float blue)
 		  if (red >= 0 && red <= 1 && green >= 0 && green <= 1 &&
 		      blue >= 0 && blue <= 1)
 		    {
+                      gks_set_rgb(index, red, green, blue);
+
 		      i_arr[0] = wkid;
 		      i_arr[1] = index;
 		      f_arr_1[0] = red;
