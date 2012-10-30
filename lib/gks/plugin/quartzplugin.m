@@ -47,7 +47,6 @@ gks_state_list_t *gkss;
 static
 ws_state_list *wss;
 
-NSAutoreleasePool *pool;
 id displayList;
 id plugin;
 NSLock *mutex;
@@ -87,7 +86,7 @@ int inactivity_counter = -1;
       [mutex unlock];
       usleep(100000);
     }
-  [pool release];
+  [pool drain];
 }
 @end
 
@@ -111,6 +110,7 @@ void gks_quartzplugin(
   int lc, char *chars, void **ptr)
 {
   wss = (ws_state_list *) *ptr;
+  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
   switch (fctid)
     {
@@ -118,7 +118,6 @@ void gks_quartzplugin(
       gkss = (gks_state_list_t *) *ptr;      
 
       wss = (ws_state_list *) calloc(1, sizeof(ws_state_list));
-      pool = [[NSAutoreleasePool alloc] init];
       displayList = [[NSData alloc] init];  
       plugin = [NSConnection rootProxyForConnectionWithRegisteredName:
                 @"GKSQuartz" host: nil];
@@ -167,15 +166,12 @@ void gks_quartzplugin(
       [mutex release];
       [plugin release];
       [displayList release];
-      [pool release];
 
       free(wss);
       wss = NULL;
       break;
 
-    case 6:
-      [pool release];
-      pool = [[NSAutoreleasePool alloc] init];
+      case 6:
       break;
 
     case 8:
@@ -213,4 +209,6 @@ void gks_quartzplugin(
   if (wss != NULL)
     gks_dl_write_item(&wss->dl,
       fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, gkss);
+  
+  [pool drain];
 }
