@@ -64,6 +64,7 @@ install:
 	cp -p python/gr.so $(LIBDIR)
 	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
 	cp -p python/gr.py $(PYTHONDIR)
+	cp -p python/pygr.py $(PYTHONDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr.h $(INCDIR)
 
