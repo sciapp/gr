@@ -21,7 +21,8 @@ DESTDIR = S:\gr
 .c.obj:
 	$(CC) $(CFLAGS) $(DEFINES) $<
 
-default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) libgr.lib gr.pyd
+#default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) libgr.lib gr.pyd
+default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) libgr.lib
 
 $(GKSLIBS):
 	@cd ../gks
@@ -61,7 +62,8 @@ py_gr.obj: python\py_gr.c
 install: default
 	COPY /Y ..\gr\libgr.dll $(DESTDIR)
 	COPY /Y ..\gr\libgr.lib $(DESTDIR)
-	COPY /Y ..\gr\gr.pyd $(DESTDIR)
+#	COPY /Y ..\gr\gr.pyd $(DESTDIR)
+	COPY /Y ..\gr\python\gr.py $(DESTDIR)
 	COPY /Y ..\gr\python\pygr.py $(DESTDIR)
 	COPY /Y ..\gr\gr.h $(DESTDIR)
 	COPY /Y ..\gks\libgks.dll $(DESTDIR)

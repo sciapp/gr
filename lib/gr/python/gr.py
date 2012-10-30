@@ -97,6 +97,11 @@ marker type, marker size scale factor and color index.
 def text(x, y, string):
   """
 Draws a text at position X, Y using the current text attributes.
+
+X - The X coordinate of starting position of the text string
+Y - The Y coordinate of starting position of the text string
+STRING - The text to be drawn
+
 The values for X and Y are in normalized device coordinates.
 The attributes that control the appearance of text are text font and precision,
 character expansion factor, character spacing, text color index, character
