@@ -2,10 +2,10 @@ CC = CL
 CFLAGS = /c /Zi /nologo /DNO_X11 /D_DLL /MD /D_POSIX
 DEFINES = /DGRDIR=\"S:\\gr\"
 AR = LIB /nologo
-LINK = LINK /debug:full /nologo
+LINK = LINK /nologo
 DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
 DLLLFLAGS = /nodefaultlib -dll
-DLLLINK = LINK /debug:full /nologo
+DLLLINK = LINK /nologo
 SRCDIR = .\ 
 
 .SUFFIXES: .obj .c .f

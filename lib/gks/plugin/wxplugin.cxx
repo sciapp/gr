@@ -960,7 +960,7 @@ static void fillarea(int n, float *px, float *py)
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
-      p->pixmap->SetPen(wxNullPen);
+      p->pixmap->SetPen(*wxTRANSPARENT_PEN);
 #if wxCHECK_VERSION(2, 9, 0)
       p->pixmap->SetBrush(wxBrush(p->rgb[fl_color], wxBRUSHSTYLE_SOLID));
 #else
@@ -977,9 +977,8 @@ static void fillarea(int n, float *px, float *py)
         fl_style = 1;
       if (p->pattern[fl_style] == NULL)
         p->pattern[fl_style] = create_pattern(fl_style);
-      // p->pixmap->SetPen(wxNullPen);
       p->pixmap->SetPen(*wxTRANSPARENT_PEN);
-      // TODO !!!
+      // TODO: color
       p->pixmap->SetBrush(wxBrush(*p->pattern[fl_style]));
       fill_routine(n, px, py, gkss->cntnr);
     }

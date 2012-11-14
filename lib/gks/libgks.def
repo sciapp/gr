@@ -1,5 +1,4 @@
 LIBRARY libgks.dll
-EXETYPE WINDOWS
 
 EXPORTS
 	gks_open_gks

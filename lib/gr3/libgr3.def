@@ -1,5 +1,4 @@
 LIBRARY libgr3.dll
-EXETYPE WINDOWS
 
 EXPORTS
 	gr3_init

@@ -1,5 +1,4 @@
 LIBRARY libgr.dll
-EXETYPE WINDOWS
 
 EXPORTS
 	gr_activatews

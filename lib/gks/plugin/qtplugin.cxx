@@ -6,9 +6,9 @@
 #include <string.h>
 #include <math.h>
 
-#include <Qt/qwidget.h>
-#include <Qt/qpainter.h>
-#include <Qt/qimage.h>
+#include <QtGui/QWidget>
+#include <QtGui/QPainter>
+#include <QtGui/QImage>
 
 #endif
 
@@ -317,7 +317,8 @@ QPixmap *create_pattern(int pattern)
       img.setPixel(i, j, (parray[(j % parray[0]) + 1] >> i) & 0x01 ? 0 : 1);
 
   pm = new QPixmap(8, 8);
-  *pm = QPixmap::fromImage(img);
+  QPixmap tmp = QPixmap::fromImage(img);
+  *pm = tmp;
 
   return pm;
 }
