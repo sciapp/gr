@@ -419,7 +419,6 @@ static void polyline(int n, float *px, float *py)
       pen.SetStyle(wxSOLID);
 #endif
     }
-  p->pixmap->SetPen(wxNullPen);
   p->pixmap->SetPen(pen);
 
   if (p->npoints)

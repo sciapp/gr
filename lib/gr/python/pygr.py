@@ -111,15 +111,15 @@ def plot3d(z,
     gr.setspace(zmin, zmax, rotation, tilt)
     charheight = 0.024 * (viewport[3] - viewport[2])
     gr.setcharheight(charheight)
-    if rotation == 0 and tilt == 90:
-        gr.axes(xtick, ytick, xmin, ymin, 5, 5, -0.01)
-    else:
+    if rotation != 0 or tilt != 90:
         gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 5, 0, 5, -0.01)
         gr.axes3d(0, ytick,  0, xmax, ymin, zmin, 0, 5, 0,  0.01)
     gr.setcolormap(colormap)
     gr.surface(xmax, ymax, x, y, z, option)
     if contours:
         gr.contour(xmax, ymax, 0, x, y, range(1), z, 0)
+    if rotation == 0 and tilt == 90:
+        gr.axes(xtick, ytick, xmin, ymin, 5, 5, -0.01)
     if xtitle != '' or ytitle != '' or ztitle != '':
         gr.titles3d(xtitle, ytitle, ztitle)
     gr.updatews()
