@@ -1,0 +1,1142 @@
+====== GR Function Reference for Python ======
+This is a procedural interface to the GR plotting library, which may be
+imported directly, e.g.:
+
+<code python>
+import gr
+</code>
+
+===== Output Functions =====
+
+==== gr.polyline ====
+Draws a polyline using the current line attributes, starting from the
+first data point and ending at the last data point.
+
+<code python>
+polyline(n, x, y)
+</code>
+
+== Parameters ==
+  * //n// --- The number of points in the line to be drawn (//n// > 1)
+  * //x// --- A list of length //n// containing the X coordinate
+  * //y// --- A list of length //n// containing the Y coordinate
+
+The values for //x// and //y// are in world coordinates. The attributes that
+control the appearance of a polyline are linetype, linewidth and color
+index.
+
+==== gr.polymarker ====
+Draws marker symbols centered at the given data points.
+
+<code python>
+polymarker(n, x, y)
+</code>
+
+== Parameters ==
+  * //n// --- The number of markers to be drawn
+  * //x// --- A list of length //n// containing the X coordinate
+  * //y// --- A list of length //n// containing the Y coordinate
+
+The values for //x// and //y// are in world coordinates. The attributes that
+control the appearance of a polyline are marker type, marker size
+scale factor and color index.
+
+==== gr.text ====
+Draws a text at position //x, y// using the current text attributes.
+
+<code python>
+text(x, y, string)
+</code>
+
+== Parameters ==
+  * //x// --- The X coordinate of starting position of the text string
+  * //y// --- The Y coordinate of starting position of the text string
+  * //string// --- The text to be drawn
+
+The values for //x// and //y// are in normalized device coordinates.
+The attributes that control the appearance of text are text font and precision,
+character expansion factor, character spacing, text color index, character
+height, character up vector, text path and text alignment.
+
+==== gr.fillarea ====
+Allows you to specify a polygonal shape of an area to be filled.
+
+<code python>
+fillarea(n, x, y)
+</code>
+
+== Parameters ==
+  * //n// --- The number of points in the polygon to be drawn (//n// > 2)
+  * //x// --- A list of length //n// containing the X coordinate
+  * //y// --- A list of length //n// containing the Y coordinate
+
+The attributes that control the appearance of fill areas are fill area interior
+style, fill area style index and fill area color index.
+
+==== gr.cellarray ====
+Displays rasterlike images in a device-independent manner. The cell array
+function partitions a rectangle given by two corner points into //dimx x dimy//
+cells, each of them colored individually by the corresponding color index
+of the given cell array.
+
+<code python>
+cellarray(xmin, xmax, ymin, ymax, dimx, dimy, color)
+</code>
+
+== Parameters ==
+  * //xmin, ymin// --- Lower left point of the rectangle
+  * //xmax, ymax// --- Upper right point of the rectangle
+  * //dimx, dimy// --- X and Y dimension of the color index array
+  * //color// --- Color index array
+
+The values for //xmin//, //xmax//, //ymin// and //ymax// are in world coordinates.
+
+==== gr.spline ====
+Generates a cubic spline-fit, starting from the first data point and
+ending at the last data point.
+
+<code python>
+spline(n, x, y, m, method)
+</code>
+
+== Parameters ==
+  * //n// --- The number of data points (//n// > 1)
+  * //x// --- A list of length //n// containing the X coordinate
+  * //y// --- A list of length //n// containing the Y coordinate
+  * //m// --- The number of points in the polygon to be drawn (//m// > //n//)
+  * //method// --- The smoothing method
+
+The values for X and Y are in world coordinates. The attributes that
+control the appearance of a spline-fit are linetype, linewidth and color
+index.
+
+If //method// is > 0, then a generalized cross-validated smoothing spline is calculated.
+If //method// is 0, then an interpolating natural cubic spline is calculated.
+If //method// is < -1, then a cubic B-spline is calculated.
+
+===== Attribute Functions =====
+
+==== gr.setlinetype ====
+Specifies the line style for polylines.
+
+<code python>
+setlinetype(style)
+</code>
+
+== Parameters ==
+  * //style// --- The polyline line style
+
+The available line types are:
+
+| ''LINETYPE_SOLID''  |  1| Solid line  |
+| ''LINETYPE_DASHED''  |  2| Dashed line  |
+| ''LINETYPE_DOTTED''  |  3| Dotted line  |
+| ''LINETYPE_DASHED_DOTTED''  |  4| Dashed-dotted line  |
+| ''LINETYPE_DASH_2_DOT''  |  -1| Sequence of one dash followed by two dots  |
+| ''LINETYPE_DASH_3_DOT''  |  -2| Sequence of one dash followed by three dots  |
+| ''LINETYPE_LONG_DASH''  |  -3| Sequence of long dashes  |
+| ''LINETYPE_LONG_SHORT_DASH''  |  -4| Sequence of a long dash followed by a short dash  |
+| ''LINETYPE_SPACED_DASH''  |  -5| Sequence of dashes double spaced  |
+| ''LINETYPE_SPACED_DOT''  |  -6| Sequence of dots double spaced  |
+| ''LINETYPE_DOUBLE_DOT'' |  -7| Sequence of pairs of dots  |
+| ''LINETYPE_TRIPLE_DOT''  |  -8| Sequence of groups of three dots  |
+
+==== gr.setlinewidth ====
+Defines the line width of subsequent polyline output primitives.
+
+<code python>
+setlinewidth(width)
+</code>
+
+== Parameters ==
+  * //width// --- The polyline line width scale factor
+
+The line width is calculated as the nominal line width generated
+on the workstation multiplied by the line width scale factor.
+This value is mapped by the workstation to the nearest available line width.
+The default line width is 1.0, or 1 times the line width generated on the graphics device.
+
+==== gr.setlinecolorind ====
+Defines the color of subsequent polyline output primitives.
+
+<code python>
+setlinecolorind(color)
+</code>
+
+== Parameters ==
+  * //color// --- The polyline color index (//color// < 980)
+
+==== gr.setmarkertype ====
+Specifies the marker type for polymarkers.
+
+<code python>
+setmarkertype(style)
+</code>
+
+== Parameters ==
+  * //style// --- The polymarker marker type
+
+The available marker types are:
+
+| ''MARKERTYPE_DOT'' |  1| Smallest displayable dot |
+| ''MARKERTYPE_PLUS'' |  2| Plus sign |
+| ''MARKERTYPE_ASTERISK'' |  3| Asterisk |
+| ''MARKERTYPE_CIRCLE'' |  4| Hollow circle |
+| ''MARKERTYPE_DIAGONAL_CROSS'' |  5| Diagonal cross |
+| ''MARKERTYPE_SOLID_CIRCLE'' |  -1| Filled circle |
+| ''MARKERTYPE_TRIANGLE_UP'' |  -2| Hollow triangle pointing upward |
+| ''MARKERTYPE_SOLID_TRI_UP'' |  -3| Filled triangle pointing upward |
+| ''MARKERTYPE_TRIANGLE_DOWN'' |  -4| Hollow triangle pointing downward |
+| ''MARKERTYPE_SOLID_TRI_DOWN'' |  -5| Filled triangle pointing downward |
+| ''MARKERTYPE_SOLID_TRI_LEFT'' |  -6| Filled triangle pointing left |
+| ''MARKERTYPE_SOLID_TRI_RIGHT'' |  -7| Filled triangle point right |
+| ''MARKERTYPE_TRI_UP_DOWN'' |  -8| Hollow triangles pointing up and down overlaid |
+| ''MARKERTYPE_SQUARE'' |  -9| Hollow square |
+| ''MARKERTYPE_SOLID_SQUARE'' |  -10| Filled square |
+| ''MARKERTYPE_BOWTIE'' |  -11| Hollow bowtie |
+| ''MARKERTYPE_SOLID_BOWTIE'' |  -12| Filled bowtie |
+| ''MARKERTYPE_STAR'' |  -13| Hollow star |
+| ''MARKERTYPE_SOLID_STAR'' |  -14| Filled Star |
+| ''MARKERTYPE_DIAMOND'' |  -15| Hollow diamond |
+| ''MARKERTYPE_SOLID_DIAMOND'' |  -16| Filled Diamond |
+| ''MARKERTYPE_HGLASS'' |  -17| Hollow hourglass |
+| ''MARKERTYPE_SOLID_HGLASS'' |  -18| Filled hourglass |
+| ''MARKERTYPE_HOLLOW PLUS'' |  -19| Hollow plus sign |
+| ''MARKERTYPE_SOLID PLUS'' |  -20| Solid plus sign |
+
+Polymarkers appear centered over their specified coordinates.
+
+==== gr.setmarkersize ====
+Specifies the marker size for polymarkers.
+
+<code python>
+setmarkersize(size)
+</code>
+
+== Parameters ==
+  * //size// --- Scale factor applied to the nominal marker size
+
+The polymarker size is calculated as the nominal size generated on the graphics device
+multiplied by the marker size scale factor.
+
+==== gr.setmarkercolorind ====
+Defines the color of subsequent polymarker output primitives.
+
+<code python>
+setmarkercolorind(color)
+</code>
+
+== Parameters ==
+  * //color// --- The polymerker color index (//color// < 980)
+
+==== gr.settextfontprec ====
+Specifies the text font and precision for subsequent text output primitives.
+
+<code python>
+settextfontprec(font, precision)
+</code>
+
+== Parameters ==
+  * //font// --- Text font (see tables below)
+  * //precision// --- Text precision (see table below)
+
+The available text fonts are:
+
+| ''FONT_TIMES_ROMAN'' |  101|
+| ''FONT_TIMES_ITALIC'' |  102| 
+| ''FONT_TIMES_BOLD'' |  103|
+| ''FONT_TIMES_BOLDITALIC'' |  104|
+| ''FONT_HELVETICA'' |  105|
+| ''FONT_HELVETICA_OBLIQUE'' |  106|
+| ''FONT_HELVETICA_BOLD'' |  107|
+| ''FONT_HELVETICA_BOLDOBLIQUE'' |  108|
+| ''FONT_COURIER'' |  109|
+| ''FONT_COURIER_OBLIQUE'' |  110|
+| ''FONT_COURIER_BOLD'' |  111|
+| ''FONT_COURIER_BOLDOBLIQUE'' |  112|
+| ''FONT_SYMBOL'' |  113|
+| ''FONT_BOOKMAN_LIGHT'' |  114|
+| ''FONT_BOOKMAN_LIGHTITALIC'' |  115|
+| ''FONT_BOOKMAN_DEMI'' |  116|
+| ''FONT_BOOKMAN_DEMIITALIC'' |  117|
+| ''FONT_NEWCENTURYSCHLBK_ROMAN'' |  118|
+| ''FONT_NEWCENTURYSCHLBK_ITALIC'' |  119|
+| ''FONT_NEWCENTURYSCHLBK_BOLD'' |  120|
+| ''FONT_NEWCENTURYSCHLBK_BOLDITALIC'' |  121|
+| ''FONT_AVANTGARDE_BOOK'' |  122|
+| ''FONT_AVANTGARDE_BOOKOBLIQUE'' |  123|
+| ''FONT_AVANTGARDE_DEMI'' |  124|
+| ''FONT_AVANTGARDE_DEMIOBLIQUE'' |  125|
+| ''FONT_PALATINO_ROMAN'' |  126|
+| ''FONT_PALATINO_ITALIC'' |  127|
+| ''FONT_PALATINO_BOLD'' |  128|
+| ''FONT_PALATINO_BOLDITALIC'' |  129|
+| ''FONT_ZAPFCHANCERY_MEDIUMITALIC'' |  130|
+| ''FONT_ZAPFDINGBATS'' |  131|
+
+The available text precisions are:
+
+| ''TEXT_PRECISION_STRING'' |  0| String precision (higher quality) |
+| ''TEXT_PRECISION_CHAR'' |  1| Character precision (medium quality) |
+| ''TEXT_PRECISION_STROKE'' |  2| Stroke precision (lower quality) |
+
+The appearance of a font depends on the text precision value specified.
+STRING, CHARACTER or STROKE precision allows for a greater or lesser
+realization of the text primitives, for efficiency. STRING is the default
+precision for GR and produces the highest quality output.
+
+==== gr.setcharexpan ====
+FIXME
+
+<code python>
+setcharexpan(factor)
+</code>
+
+== Parameters ==
+  * //factor// --- FIXME
+
+==== gr.settextcolorind ====
+FIXME
+
+<code python>
+settextcolorind(color)
+</code>
+
+== Parameters ==
+  * //color// --- FIXME
+
+==== gr.setcharheight ====
+FIXME
+
+<code python>
+setcharheight(height)
+</code>
+
+== Parameters ==
+  * //height// --- FIXME
+
+==== gr.setcharup ====
+FIXME
+
+<code python>
+setcharup(ux, uy)
+</code>
+
+== Parameters ==
+  * //ux// --- FIXME
+  * //uy// --- FIXME
+
+==== gr.settextpath ====
+FIXME
+
+<code python>
+settextpath(path)
+</code>
+
+== Parameters ==
+  * //path// --- FIXME
+
+==== gr.settextalign ====
+FIXME
+
+<code python>
+settextalign(horizontal, vertical)
+</code>
+
+== Parameters ==
+  * //horizontal// --- FIXME
+  * //vertical// --- FIXME
+
+==== gr.setfillintstyle ====
+FIXME
+
+<code python>
+setfillintstyle(style)
+</code>
+
+== Parameters ==
+  * //style// --- FIXME
+
+==== gr.setfillstyle ====
+FIXME
+
+<code python>
+setfillstyle(index)
+</code>
+
+== Parameters ==
+  * //index// --- FIXME
+
+==== gr.setfillcolorind ====
+FIXME
+
+<code python>
+setfillcolorind(color)
+</code>
+
+== Parameters ==
+  * //color// --- FIXME
+
+===== Transformation Functions =====
+
+==== gr.setscale ====
+FIXME
+
+<code python>
+setscale(options)
+</code>
+
+== Parameters ==
+  * //options// --- FIXME
+
+==== gr.inqscale ====
+FIXME
+
+<code python>
+inqscale(options)
+</code>
+
+== Parameters ==
+  * //options// --- FIXME
+
+==== gr.setwindow ====
+FIXME
+
+<code python>
+setwindow(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
+==== gr.inqwindow ====
+FIXME
+
+<code python>
+inqwindow(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
+==== gr.setviewport ====
+FIXME
+
+<code python>
+setviewport(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
+==== gr.selntran ====
+FIXME
+
+<code python>
+selntran(transform)
+</code>
+
+== Parameters ==
+  * //transform// --- FIXME
+
+==== gr.setclip ====
+FIXME
+
+<code python>
+setclip(indicator)
+</code>
+
+== Parameters ==
+  * //indicator// --- FIXME
+
+==== gr.setwswindow ====
+FIXME
+
+<code python>
+setwswindow(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
+==== gr.setwsviewport ====
+FIXME
+
+<code python>
+setwsviewport(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
+===== Control Functions =====
+
+==== gr.opengks ====
+FIXME
+
+<code python>
+opengks()
+</code>
+
+==== gr.closegks ====
+FIXME
+
+<code python>
+closegks()
+</code>
+
+==== gr.inqdspsize ====
+FIXME
+
+<code python>
+inqdspsize(mwidth, mheight, width, height)
+</code>
+
+== Parameters ==
+  * //mwidth// --- FIXME
+  * //mheight// --- FIXME
+  * //width// --- FIXME
+  * //height// --- FIXME
+
+==== gr.openws ====
+FIXME
+
+<code python>
+openws(workstation_id, connection, type)
+</code>
+
+== Parameters ==
+  * //workstation_id// --- FIXME
+  * //connection// --- FIXME
+  * //type// --- FIXME
+
+==== gr.closews ====
+FIXME
+
+<code python>
+closews(workstation_id)
+</code>
+
+== Parameters ==
+  * //workstation_id// --- FIXME
+
+==== gr.activatews ====
+FIXME
+
+<code python>
+activatews(workstation_id)
+</code>
+
+== Parameters ==
+  * //workstation_id// --- FIXME
+
+==== gr.deactivatews ====
+FIXME
+
+<code python>
+deactivatews(workstation_id)
+</code>
+
+== Parameters ==
+  * //workstation_id// --- FIXME
+
+==== gr.clearws ====
+FIXME
+
+<code python>
+clearws()
+</code>
+
+==== gr.updatews ====
+FIXME
+
+<code python>
+updatews()
+</code>
+
+==== gr.setcolorrep ====
+FIXME
+
+<code python>
+setcolorrep(index, red, green, blue)
+</code>
+
+== Parameters ==
+  * //index// --- FIXME
+  * //red// --- FIXME
+  * //green// --- FIXME
+  * //blue// --- FIXME
+
+==== gr.updategks ====
+FIXME
+
+<code python>
+updategks()
+</code>
+
+==== gr.emergencyclosegks ====
+FIXME
+
+<code python>
+emergencyclosegks()
+</code>
+
+===== Segment Functions =====
+
+==== gr.createseg ====
+FIXME
+
+<code python>
+createseg(segment)
+</code>
+
+== Parameters ==
+  * //segment// --- FIXME
+
+==== gr.copysegws ====
+FIXME
+
+<code python>
+copysegws(segment)
+</code>
+
+== Parameters ==
+  * //segment// --- FIXME
+
+==== gr.redrawsegws ====
+FIXME
+
+<code python>
+redrawsegws()
+</code>
+
+==== gr.setsegtran ====
+FIXME
+
+<code python>
+setsegtran(segment, fx, fy, transx, transy, phi, scalex, scaley)
+</code>
+
+== Parameters ==
+  * //segment// --- FIXME
+  * //fx// --- FIXME
+  * //fy// --- FIXME
+  * //transx// --- FIXME
+  * //transy// --- FIXME
+  * //phi// --- FIXME
+  * //scalex// --- FIXME
+  * //scaley// --- FIXME
+
+==== gr.setspace ====
+FIXME
+
+<code python>
+setspace(zmin, zmax, rotation, tilt)
+</code>
+
+== Parameters ==
+  * //zmin// --- FIXME
+  * //zmax// --- FIXME
+  * //rotation// --- FIXME
+  * //tilt// --- FIXME
+
+==== gr.inqspace ====
+FIXME
+
+<code python>
+inqspace(zmin, zmax, rotation, tilt)
+</code>
+
+== Parameters ==
+  * //zmin// --- FIXME
+  * //zmax// --- FIXME
+  * //rotation// --- FIXME
+  * //tilt// --- FIXME
+
+==== gr.textext ====
+FIXME
+
+<code python>
+textext(x, y, string)
+</code>
+
+== Parameters ==
+  * //x// --- FIXME
+  * //y// --- FIXME
+  * //string// --- FIXME
+
+==== gr.inqtextext ====
+FIXME
+
+<code python>
+inqtextext(x, y, string, tbx, tby)
+</code>
+
+== Parameters ==
+  * //x// --- FIXME
+  * //y// --- FIXME
+  * //string// --- FIXME
+  * //tbx// --- FIXME
+  * //tby// --- FIXME
+
+==== gr.axes ====
+FIXME
+
+<code python>
+axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size)
+</code>
+
+== Parameters ==
+  * //x_tick// --- FIXME
+  * //y_tick// --- FIXME
+  * //x_org// --- FIXME
+  * //y_org// --- FIXME
+  * //major_x// --- FIXME
+  * //major_y// --- FIXME
+  * //tick_size// --- FIXME
+
+==== gr.grid ====
+FIXME
+
+<code python>
+grid(x_tick, y_tick, x_org, y_org, major_x, major_y)
+</code>
+
+== Parameters ==
+  * //x_tick// --- FIXME
+  * //y_tick// --- FIXME
+  * //x_org// --- FIXME
+  * //y_org// --- FIXME
+  * //major_x// --- FIXME
+  * //major_y// --- FIXME
+
+==== gr.verrorbars ====
+FIXME
+
+<code python>
+verrorbars(n, px, py, e1, e2)
+</code>
+
+== Parameters ==
+  * //n// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //e1// --- FIXME
+  * //e2// --- FIXME
+
+==== gr.herrorbars ====
+FIXME
+
+<code python>
+herrorbars(n, px, py, e1, e2)
+</code>
+
+== Parameters ==
+  * //n// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //e1// --- FIXME
+  * //e2// --- FIXME
+
+==== gr.polyline3d ====
+FIXME
+
+<code python>
+polyline3d(n, px, py, pz)
+</code>
+
+== Parameters ==
+  * //n// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //pz// --- FIXME
+
+==== gr.axes3d ====
+FIXME
+
+<code python>
+axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size)
+</code>
+
+== Parameters ==
+  * //x_tick// --- FIXME
+  * //y_tick// --- FIXME
+  * //z_tick// --- FIXME
+  * //x_org// --- FIXME
+  * //y_org// --- FIXME
+  * //z_org// --- FIXME
+  * //major_x// --- FIXME
+  * //major_y// --- FIXME
+  * //major_z// --- FIXME
+  * //tick_size// --- FIXME
+
+==== gr.titles3d ====
+FIXME
+
+<code python>
+titles3d(x_title, y_title, z_title)
+</code>
+
+== Parameters ==
+  * //x_title// --- FIXME
+  * //y_title// --- FIXME
+  * //z_title// --- FIXME
+
+==== gr.surface ====
+FIXME
+
+<code python>
+surface(nx, ny, px, py, pz, option)
+</code>
+
+== Parameters ==
+  * //nx// --- FIXME
+  * //ny// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //pz// --- FIXME
+  * //option// --- FIXME
+
+==== gr.contour ====
+FIXME
+
+<code python>
+contour(nx, ny, nh, px, py, pz, major_h)
+</code>
+
+== Parameters ==
+  * //nx// --- FIXME
+  * //ny// --- FIXME
+  * //nh// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //pz// --- FIXME
+  * //major_h// --- FIXME
+
+==== gr.setcolormap ====
+FIXME
+
+<code python>
+setcolormap(index)
+</code>
+
+== Parameters ==
+  * //index// --- FIXME
+
+==== gr.colormap ====
+FIXME
+
+<code python>
+colormap()
+</code>
+
+==== gr.inqcolor ====
+FIXME
+
+<code python>
+inqcolor(color, rgb)
+</code>
+
+== Parameters ==
+  * //color// --- FIXME
+  * //rgb// --- FIXME
+
+==== gr.tick ====
+FIXME
+
+<code python>
+tick(amin, amax)
+</code>
+
+== Parameters ==
+  * //amin// --- FIXME
+  * //amax// --- FIXME
+
+==== gr.adjustrange ====
+FIXME
+
+<code python>
+adjustrange(amin, amax)
+</code>
+
+== Parameters ==
+  * //amin// --- FIXME
+  * //amax// --- FIXME
+
+==== gr.ndctowc ====
+FIXME
+
+<code python>
+ndctowc(x, y)
+</code>
+
+== Parameters ==
+  * //x// --- FIXME
+  * //y// --- FIXME
+
+==== gr.wctondc ====
+FIXME
+
+<code python>
+wctondc(x, y)
+</code>
+
+== Parameters ==
+  * //x// --- FIXME
+  * //y// --- FIXME
+
+==== gr.beginprint ====
+FIXME
+
+<code python>
+beginprint(pathname)
+</code>
+
+== Parameters ==
+  * //pathname// --- FIXME
+
+==== gr.beginprintext ====
+FIXME
+
+<code python>
+beginprintext(pathname, mode, format, orientation)
+</code>
+
+== Parameters ==
+  * //pathname// --- FIXME
+  * //mode// --- FIXME
+  * //format// --- FIXME
+  * //orientation// --- FIXME
+
+==== gr.endprint ====
+FIXME
+
+<code python>
+endprint()
+</code>
+
+==== gr.drawrect ====
+FIXME
+
+<code python>
+drawrect(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
+==== gr.fillrect ====
+FIXME
+
+<code python>
+fillrect(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
+==== gr.drawarc ====
+FIXME
+
+<code python>
+drawarc(xmin, xmax, ymin, ymax, a1, a2)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+  * //a1// --- FIXME
+  * //a2// --- FIXME
+
+==== gr.fillarc ====
+FIXME
+
+<code python>
+fillarc(xmin, xmax, ymin, ymax, a1, a2)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+  * //a1// --- FIXME
+  * //a2// --- FIXME
+
+==== gr.setarrowstyle ====
+FIXME
+
+<code python>
+setarrowstyle(style)
+</code>
+
+== Parameters ==
+  * //style// --- FIXME
+
+==== gr.drawarrow ====
+FIXME
+
+<code python>
+drawarrow(x1, y1, x2, y2)
+</code>
+
+== Parameters ==
+  * //x1// --- FIXME
+  * //y1// --- FIXME
+  * //x2// --- FIXME
+  * //y2// --- FIXME
+
+==== gr.drawimage ====
+FIXME
+
+<code python>
+drawimage(xmin, xmax, ymin, ymax, width, height, data)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+  * //width// --- FIXME
+  * //height// --- FIXME
+  * //data// --- FIXME
+
+==== gr.setshadow ====
+FIXME
+
+<code python>
+setshadow(offsetx, offsety, blur)
+</code>
+
+== Parameters ==
+  * //offsetx// --- FIXME
+  * //offsety// --- FIXME
+  * //blur// --- FIXME
+
+==== gr.settransparency ====
+FIXME
+
+<code python>
+settransparency(alpha)
+</code>
+
+== Parameters ==
+  * //alpha// --- FIXME
+
+==== gr.setcoordxform ====
+FIXME
+
+<code python>
+setcoordxform(mat[3][2])
+</code>
+
+== Parameters ==
+  * //mat[3][2]// --- FIXME
+
+==== gr.begingraphics ====
+FIXME
+
+<code python>
+begingraphics(path)
+</code>
+
+== Parameters ==
+  * //path// --- FIXME
+
+==== gr.endgraphics ====
+FIXME
+
+<code python>
+endgraphics()
+</code>
+
+==== gr.mathtex ====
+FIXME
+
+<code python>
+mathtex(x, y, string)
+</code>
+
+== Parameters ==
+  * //x// --- FIXME
+  * //y// --- FIXME
+  * //string// --- FIXME
+
+==== gr.beginselection ====
+FIXME
+
+<code python>
+beginselection(index, type)
+</code>
+
+== Parameters ==
+  * //index// --- FIXME
+  * //type// --- FIXME
+
+==== gr.endselection ====
+FIXME
+
+<code python>
+endselection()
+</code>
+
+==== gr.moveselection ====
+FIXME
+
+<code python>
+moveselection(x, y)
+</code>
+
+== Parameters ==
+  * //x// --- FIXME
+  * //y// --- FIXME
+
+==== gr.resizeselection ====
+FIXME
+
+<code python>
+resizeselection(type, x, y)
+</code>
+
+== Parameters ==
+  * //type// --- FIXME
+  * //x// --- FIXME
+  * //y// --- FIXME
+
+==== gr.inqbbox ====
+FIXME
+
+<code python>
+inqbbox(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
