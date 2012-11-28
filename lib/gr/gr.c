@@ -4087,7 +4087,7 @@ void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
 
           w = (nx < 256) ? nx * (255 / nx + 1) - 1 : nx - 1;
           h = (ny < 256) ? ny * (255 / ny + 1) - 1 : ny - 1;
-          ca = (int *) xmalloc(w * h * sizeof(int));
+          ca = (int *) xmalloc((w+1) * (h+1) * sizeof(int));
 
           dwk = w;
           if (h > dwk)
@@ -4096,6 +4096,7 @@ void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
             dwk = nx;
           if (ny > dwk)
             dwk = ny;
+          dwk += 1;
           wk1 = (int *) xmalloc(dwk * sizeof(int));
           wk2 = (int *) xmalloc(dwk * sizeof(int));
 

@@ -114,6 +114,322 @@ If //method// is > 0, then a generalized cross-validated smoothing spline is cal
 If //method// is 0, then an interpolating natural cubic spline is calculated.
 If //method// is < -1, then a cubic B-spline is calculated.
 
+==== gr.textext ====
+Draws a text at position //x, y// using the current text attributes. Strings can be
+defined to create basic mathematical expressions and Greek letters. 
+
+<code python>
+textext(x, y, string)
+</code>
+
+== Parameters ==
+  * //x// --- The X coordinate of starting position of the text string
+  * //y// --- The Y coordinate of starting position of the text string
+  * //string// --- The text to be drawn
+
+The values for //x// and //y// are in normalized device coordinates.
+The attributes that control the appearance of text are text font and precision,
+character expansion factor, character spacing, text color index, character
+height, character up vector, text path and text alignment.
+
+The character string is interpreted to be a simple mathematical formula.
+The following notations apply: 
+  * Subscripts and superscripts: These are indicated by carets (''^'') and underscores (''_''). If the sub/superscript contains more than one character, it must be enclosed in curly braces (''{}'').
+  * Fractions are typeset with //a//''/''//b//, where //a// stands for the numerator and //b// for the denominator.
+  * To include a Greek letter you must specify the corresponding keyword after a backslash (''\'') character. The text translator produces uppercase or lowercase Greek letters depending on the case of the keyword.
+
+| Letter | Keyword |
+|Α α | alpha |
+|Β β | beta |
+|Γ γ | gamma |
+|Δ δ | delta |
+|Ε ε | epsilon |
+|Ζ ζ | zeta |
+|Η η | eta |
+|Θ θ | theta |
+|Ι ι | iota |
+|Κ κ | kappa |
+|Λ λ | lambda |
+|Μ μ | mu |
+|Ν ν | nu |
+|Ξ ξ | xi |
+|Ο ο | omicron |
+|Π π | pi |
+|Ρ ρ | rho |
+|Σ σ | sigma |
+|Τ τ | tau |
+|Υ υ | upsilon |
+|Φ φ | phi |
+|Χ χ | chi |
+|Ψ ψ | psi |
+|Ω ω | omega |
+
+For more sophisticated mathematical formulas, you should use the ''gr.mathtex'' function.
+
+==== gr.inqtextext ====
+Inquires the text extent rectangle for a text at position //x, y//.
+
+<code python>
+tbx, tby = inqtextext(x, y, string)
+</code>
+
+== Parameters ==
+  * //x// --- The X coordinate of starting position of the text string
+  * //y// --- The Y coordinate of starting position of the text string
+  * //string// --- The text to be measured
+
+== Returns ==
+  * //tbx// --- The X coordinates of the text extent rectangle
+  * //tby// --- The Y coordinates of the text extent rectangle
+
+The resulting text box is calculated from the concatenated character bodies of
+the string. The current text attributes relate to the text extent rectangle.
+
+==== gr.axes ====
+Draws X and Y coordinate axes with linearly and/or logarithmically spaced tick marks.
+
+<code python>
+axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size)
+</code>
+
+== Parameters ==
+  * //x_tick, y_tick// --- The interval between minor tick marks on each axis
+  * //x_org, y_org// --- The world coordinates of the origin (point of intersection) of the X and Y axes.
+  * //major_x, major_y// --- Unitless integer values specifying the number of minor tick intervals between major tick marks. Values of 0 or 1 imply no minor ticks. Negative values specify no labels will be drawn for the associated axis.
+  * //tick_size// --- The length of minor tick marks specified in a normalized device coordinate unit. Major tick marks are twice as long as minor tick marks. A negative value reverses the tick marks on the axes from inward facing to outward facing (or vice versa). 
+
+Tick marks are positioned along each axis so that major tick marks fall on the axes
+origin (whether visible or not). Major tick marks are labeled with the corresponding
+data values. Axes are drawn according to the scale of the window. Axes and tick marks
+are drawn using solid lines; line color and width can be modified using the
+//setlinetype// and //setlinewidth// functions. Axes are drawn according to
+the linear or logarithmic transformation established by the //setscale// command.
+
+==== gr.grid ====
+FIXME
+
+<code python>
+grid(x_tick, y_tick, x_org, y_org, major_x, major_y)
+</code>
+
+== Parameters ==
+  * //x_tick// --- FIXME
+  * //y_tick// --- FIXME
+  * //x_org// --- FIXME
+  * //y_org// --- FIXME
+  * //major_x// --- FIXME
+  * //major_y// --- FIXME
+
+==== gr.verrorbars ====
+FIXME
+
+<code python>
+verrorbars(n, px, py, e1, e2)
+</code>
+
+== Parameters ==
+  * //n// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //e1// --- FIXME
+  * //e2// --- FIXME
+
+==== gr.herrorbars ====
+FIXME
+
+<code python>
+herrorbars(n, px, py, e1, e2)
+</code>
+
+== Parameters ==
+  * //n// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //e1// --- FIXME
+  * //e2// --- FIXME
+
+==== gr.polyline3d ====
+FIXME
+
+<code python>
+polyline3d(n, px, py, pz)
+</code>
+
+== Parameters ==
+  * //n// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //pz// --- FIXME
+
+==== gr.axes3d ====
+FIXME
+
+<code python>
+axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size)
+</code>
+
+== Parameters ==
+  * //x_tick// --- FIXME
+  * //y_tick// --- FIXME
+  * //z_tick// --- FIXME
+  * //x_org// --- FIXME
+  * //y_org// --- FIXME
+  * //z_org// --- FIXME
+  * //major_x// --- FIXME
+  * //major_y// --- FIXME
+  * //major_z// --- FIXME
+  * //tick_size// --- FIXME
+
+==== gr.titles3d ====
+FIXME
+
+<code python>
+titles3d(x_title, y_title, z_title)
+</code>
+
+== Parameters ==
+  * //x_title// --- FIXME
+  * //y_title// --- FIXME
+  * //z_title// --- FIXME
+
+==== gr.surface ====
+FIXME
+
+<code python>
+surface(nx, ny, px, py, pz, option)
+</code>
+
+== Parameters ==
+  * //nx// --- FIXME
+  * //ny// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //pz// --- FIXME
+  * //option// --- FIXME
+
+==== gr.contour ====
+FIXME
+
+<code python>
+contour(nx, ny, nh, px, py, pz, major_h)
+</code>
+
+== Parameters ==
+  * //nx// --- FIXME
+  * //ny// --- FIXME
+  * //nh// --- FIXME
+  * //px// --- FIXME
+  * //py// --- FIXME
+  * //pz// --- FIXME
+  * //major_h// --- FIXME
+
+==== gr.drawrect ====
+FIXME
+
+<code python>
+drawrect(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
+==== gr.fillrect ====
+FIXME
+
+<code python>
+fillrect(xmin, xmax, ymin, ymax)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+
+==== gr.drawarc ====
+FIXME
+
+<code python>
+drawarc(xmin, xmax, ymin, ymax, a1, a2)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+  * //a1// --- FIXME
+  * //a2// --- FIXME
+
+==== gr.fillarc ====
+FIXME
+
+<code python>
+fillarc(xmin, xmax, ymin, ymax, a1, a2)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+  * //a1// --- FIXME
+  * //a2// --- FIXME
+
+==== gr.setarrowstyle ====
+FIXME
+
+<code python>
+setarrowstyle(style)
+</code>
+
+== Parameters ==
+  * //style// --- FIXME
+
+==== gr.drawarrow ====
+FIXME
+
+<code python>
+drawarrow(x1, y1, x2, y2)
+</code>
+
+== Parameters ==
+  * //x1// --- FIXME
+  * //y1// --- FIXME
+  * //x2// --- FIXME
+  * //y2// --- FIXME
+
+==== gr.drawimage ====
+FIXME
+
+<code python>
+drawimage(xmin, xmax, ymin, ymax, width, height, data)
+</code>
+
+== Parameters ==
+  * //xmin// --- FIXME
+  * //xmax// --- FIXME
+  * //ymin// --- FIXME
+  * //ymax// --- FIXME
+  * //width// --- FIXME
+  * //height// --- FIXME
+  * //data// --- FIXME
+
+==== gr.mathtex ====
+FIXME
+
+<code python>
+mathtex(x, y, string)
+</code>
+
+== Parameters ==
+  * //x// --- FIXME
+  * //y// --- FIXME
+  * //string// --- FIXME
+
 ===== Attribute Functions =====
 
 ==== gr.setlinetype ====
@@ -377,6 +693,28 @@ setfillcolorind(color)
 == Parameters ==
   * //color// --- FIXME
 
+==== gr.setshadow ====
+FIXME
+
+<code python>
+setshadow(offsetx, offsety, blur)
+</code>
+
+== Parameters ==
+  * //offsetx// --- FIXME
+  * //offsety// --- FIXME
+  * //blur// --- FIXME
+
+==== gr.settransparency ====
+FIXME
+
+<code python>
+settransparency(alpha)
+</code>
+
+== Parameters ==
+  * //alpha// --- FIXME
+
 ===== Transformation Functions =====
 
 ==== gr.setscale ====
@@ -484,7 +822,124 @@ setwsviewport(xmin, xmax, ymin, ymax)
   * //ymin// --- FIXME
   * //ymax// --- FIXME
 
+==== gr.setspace ====
+FIXME
+
+<code python>
+setspace(zmin, zmax, rotation, tilt)
+</code>
+
+== Parameters ==
+  * //zmin// --- FIXME
+  * //zmax// --- FIXME
+  * //rotation// --- FIXME
+  * //tilt// --- FIXME
+
+==== gr.inqspace ====
+FIXME
+
+<code python>
+inqspace(zmin, zmax, rotation, tilt)
+</code>
+
+== Parameters ==
+  * //zmin// --- FIXME
+  * //zmax// --- FIXME
+  * //rotation// --- FIXME
+  * //tilt// --- FIXME
+
+==== gr.setcoordxform ====
+FIXME
+
+<code python>
+setcoordxform(mat[3][2])
+</code>
+
+== Parameters ==
+  * //mat[3][2]// --- FIXME
+
 ===== Control Functions =====
+
+==== gr.clearws ====
+FIXME
+
+<code python>
+clearws()
+</code>
+
+==== gr.updatews ====
+FIXME
+
+<code python>
+updatews()
+</code>
+
+==== gr.beginprint ====
+FIXME
+
+<code python>
+beginprint(pathname)
+</code>
+
+== Parameters ==
+  * //pathname// --- FIXME
+
+==== gr.beginprintext ====
+FIXME
+
+<code python>
+beginprintext(pathname, mode, format, orientation)
+</code>
+
+== Parameters ==
+  * //pathname// --- FIXME
+  * //mode// --- FIXME
+  * //format// --- FIXME
+  * //orientation// --- FIXME
+
+==== gr.endprint ====
+FIXME
+
+<code python>
+endprint()
+</code>
+
+==== gr.begingraphics ====
+FIXME
+
+<code python>
+begingraphics(path)
+</code>
+
+== Parameters ==
+  * //path// --- FIXME
+
+==== gr.endgraphics ====
+FIXME
+
+<code python>
+endgraphics()
+</code>
+
+==== gr.setcolorrep ====
+FIXME
+
+<code python>
+setcolorrep(index, red, green, blue)
+</code>
+
+== Parameters ==
+  * //index// --- FIXME
+  * //red// --- FIXME
+  * //green// --- FIXME
+  * //blue// --- FIXME
+
+==== gr.updategks ====
+FIXME
+
+<code python>
+updategks()
+</code>
 
 ==== gr.opengks ====
 FIXME
@@ -555,40 +1010,6 @@ deactivatews(workstation_id)
 == Parameters ==
   * //workstation_id// --- FIXME
 
-==== gr.clearws ====
-FIXME
-
-<code python>
-clearws()
-</code>
-
-==== gr.updatews ====
-FIXME
-
-<code python>
-updatews()
-</code>
-
-==== gr.setcolorrep ====
-FIXME
-
-<code python>
-setcolorrep(index, red, green, blue)
-</code>
-
-== Parameters ==
-  * //index// --- FIXME
-  * //red// --- FIXME
-  * //green// --- FIXME
-  * //blue// --- FIXME
-
-==== gr.updategks ====
-FIXME
-
-<code python>
-updategks()
-</code>
-
 ==== gr.emergencyclosegks ====
 FIXME
 
@@ -642,192 +1063,6 @@ setsegtran(segment, fx, fy, transx, transy, phi, scalex, scaley)
   * //scalex// --- FIXME
   * //scaley// --- FIXME
 
-==== gr.setspace ====
-FIXME
-
-<code python>
-setspace(zmin, zmax, rotation, tilt)
-</code>
-
-== Parameters ==
-  * //zmin// --- FIXME
-  * //zmax// --- FIXME
-  * //rotation// --- FIXME
-  * //tilt// --- FIXME
-
-==== gr.inqspace ====
-FIXME
-
-<code python>
-inqspace(zmin, zmax, rotation, tilt)
-</code>
-
-== Parameters ==
-  * //zmin// --- FIXME
-  * //zmax// --- FIXME
-  * //rotation// --- FIXME
-  * //tilt// --- FIXME
-
-==== gr.textext ====
-FIXME
-
-<code python>
-textext(x, y, string)
-</code>
-
-== Parameters ==
-  * //x// --- FIXME
-  * //y// --- FIXME
-  * //string// --- FIXME
-
-==== gr.inqtextext ====
-FIXME
-
-<code python>
-inqtextext(x, y, string, tbx, tby)
-</code>
-
-== Parameters ==
-  * //x// --- FIXME
-  * //y// --- FIXME
-  * //string// --- FIXME
-  * //tbx// --- FIXME
-  * //tby// --- FIXME
-
-==== gr.axes ====
-FIXME
-
-<code python>
-axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size)
-</code>
-
-== Parameters ==
-  * //x_tick// --- FIXME
-  * //y_tick// --- FIXME
-  * //x_org// --- FIXME
-  * //y_org// --- FIXME
-  * //major_x// --- FIXME
-  * //major_y// --- FIXME
-  * //tick_size// --- FIXME
-
-==== gr.grid ====
-FIXME
-
-<code python>
-grid(x_tick, y_tick, x_org, y_org, major_x, major_y)
-</code>
-
-== Parameters ==
-  * //x_tick// --- FIXME
-  * //y_tick// --- FIXME
-  * //x_org// --- FIXME
-  * //y_org// --- FIXME
-  * //major_x// --- FIXME
-  * //major_y// --- FIXME
-
-==== gr.verrorbars ====
-FIXME
-
-<code python>
-verrorbars(n, px, py, e1, e2)
-</code>
-
-== Parameters ==
-  * //n// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //e1// --- FIXME
-  * //e2// --- FIXME
-
-==== gr.herrorbars ====
-FIXME
-
-<code python>
-herrorbars(n, px, py, e1, e2)
-</code>
-
-== Parameters ==
-  * //n// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //e1// --- FIXME
-  * //e2// --- FIXME
-
-==== gr.polyline3d ====
-FIXME
-
-<code python>
-polyline3d(n, px, py, pz)
-</code>
-
-== Parameters ==
-  * //n// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //pz// --- FIXME
-
-==== gr.axes3d ====
-FIXME
-
-<code python>
-axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size)
-</code>
-
-== Parameters ==
-  * //x_tick// --- FIXME
-  * //y_tick// --- FIXME
-  * //z_tick// --- FIXME
-  * //x_org// --- FIXME
-  * //y_org// --- FIXME
-  * //z_org// --- FIXME
-  * //major_x// --- FIXME
-  * //major_y// --- FIXME
-  * //major_z// --- FIXME
-  * //tick_size// --- FIXME
-
-==== gr.titles3d ====
-FIXME
-
-<code python>
-titles3d(x_title, y_title, z_title)
-</code>
-
-== Parameters ==
-  * //x_title// --- FIXME
-  * //y_title// --- FIXME
-  * //z_title// --- FIXME
-
-==== gr.surface ====
-FIXME
-
-<code python>
-surface(nx, ny, px, py, pz, option)
-</code>
-
-== Parameters ==
-  * //nx// --- FIXME
-  * //ny// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //pz// --- FIXME
-  * //option// --- FIXME
-
-==== gr.contour ====
-FIXME
-
-<code python>
-contour(nx, ny, nh, px, py, pz, major_h)
-</code>
-
-== Parameters ==
-  * //nx// --- FIXME
-  * //ny// --- FIXME
-  * //nh// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //pz// --- FIXME
-  * //major_h// --- FIXME
-
 ==== gr.setcolormap ====
 FIXME
 
@@ -837,6 +1072,8 @@ setcolormap(index)
 
 == Parameters ==
   * //index// --- FIXME
+
+===== Miscellaneous Functions =====
 
 ==== gr.colormap ====
 FIXME
@@ -899,192 +1136,6 @@ wctondc(x, y)
 == Parameters ==
   * //x// --- FIXME
   * //y// --- FIXME
-
-==== gr.beginprint ====
-FIXME
-
-<code python>
-beginprint(pathname)
-</code>
-
-== Parameters ==
-  * //pathname// --- FIXME
-
-==== gr.beginprintext ====
-FIXME
-
-<code python>
-beginprintext(pathname, mode, format, orientation)
-</code>
-
-== Parameters ==
-  * //pathname// --- FIXME
-  * //mode// --- FIXME
-  * //format// --- FIXME
-  * //orientation// --- FIXME
-
-==== gr.endprint ====
-FIXME
-
-<code python>
-endprint()
-</code>
-
-==== gr.drawrect ====
-FIXME
-
-<code python>
-drawrect(xmin, xmax, ymin, ymax)
-</code>
-
-== Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-
-==== gr.fillrect ====
-FIXME
-
-<code python>
-fillrect(xmin, xmax, ymin, ymax)
-</code>
-
-== Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-
-==== gr.drawarc ====
-FIXME
-
-<code python>
-drawarc(xmin, xmax, ymin, ymax, a1, a2)
-</code>
-
-== Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-  * //a1// --- FIXME
-  * //a2// --- FIXME
-
-==== gr.fillarc ====
-FIXME
-
-<code python>
-fillarc(xmin, xmax, ymin, ymax, a1, a2)
-</code>
-
-== Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-  * //a1// --- FIXME
-  * //a2// --- FIXME
-
-==== gr.setarrowstyle ====
-FIXME
-
-<code python>
-setarrowstyle(style)
-</code>
-
-== Parameters ==
-  * //style// --- FIXME
-
-==== gr.drawarrow ====
-FIXME
-
-<code python>
-drawarrow(x1, y1, x2, y2)
-</code>
-
-== Parameters ==
-  * //x1// --- FIXME
-  * //y1// --- FIXME
-  * //x2// --- FIXME
-  * //y2// --- FIXME
-
-==== gr.drawimage ====
-FIXME
-
-<code python>
-drawimage(xmin, xmax, ymin, ymax, width, height, data)
-</code>
-
-== Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-  * //width// --- FIXME
-  * //height// --- FIXME
-  * //data// --- FIXME
-
-==== gr.setshadow ====
-FIXME
-
-<code python>
-setshadow(offsetx, offsety, blur)
-</code>
-
-== Parameters ==
-  * //offsetx// --- FIXME
-  * //offsety// --- FIXME
-  * //blur// --- FIXME
-
-==== gr.settransparency ====
-FIXME
-
-<code python>
-settransparency(alpha)
-</code>
-
-== Parameters ==
-  * //alpha// --- FIXME
-
-==== gr.setcoordxform ====
-FIXME
-
-<code python>
-setcoordxform(mat[3][2])
-</code>
-
-== Parameters ==
-  * //mat[3][2]// --- FIXME
-
-==== gr.begingraphics ====
-FIXME
-
-<code python>
-begingraphics(path)
-</code>
-
-== Parameters ==
-  * //path// --- FIXME
-
-==== gr.endgraphics ====
-FIXME
-
-<code python>
-endgraphics()
-</code>
-
-==== gr.mathtex ====
-FIXME
-
-<code python>
-mathtex(x, y, string)
-</code>
-
-== Parameters ==
-  * //x// --- FIXME
-  * //y// --- FIXME
-  * //string// --- FIXME
 
 ==== gr.beginselection ====
 FIXME
