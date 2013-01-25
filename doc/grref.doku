@@ -203,232 +203,255 @@ origin (whether visible or not). Major tick marks are labeled with the correspon
 data values. Axes are drawn according to the scale of the window. Axes and tick marks
 are drawn using solid lines; line color and width can be modified using the
 //setlinetype// and //setlinewidth// functions. Axes are drawn according to
-the linear or logarithmic transformation established by the //setscale// command.
+the linear or logarithmic transformation established by the //setscale// function.
 
 ==== gr.grid ====
-FIXME
+Draws a linear and/or logarithmic grid.
 
 <code python>
 grid(x_tick, y_tick, x_org, y_org, major_x, major_y)
 </code>
 
 == Parameters ==
-  * //x_tick// --- FIXME
-  * //y_tick// --- FIXME
-  * //x_org// --- FIXME
-  * //y_org// --- FIXME
-  * //major_x// --- FIXME
-  * //major_y// --- FIXME
+  * //x_tick, y_tick// --- The length in world coordinates of the interval between minor grid lines.
+  * //x_org, y_org// --- The world coordinates of the origin (point of intersection) of the grid.
+  * //major_x, major_y// --- Unitless integer values specifying the number of minor grid lines between major grid lines. Values of 0 or 1 imply no grid lines.
+
+Major grid lines correspond to the axes origin and major tick marks whether visible or not.
+Minor grid lines are drawn at points equal to minor tick marks.
+Major grid lines are drawn using solid lines and minor grid lines are drawn using dotted lines.
 
 ==== gr.verrorbars ====
-FIXME
+Draws a standard vertical error bar graph.
 
 <code python>
 verrorbars(n, px, py, e1, e2)
 </code>
 
 == Parameters ==
-  * //n// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //e1// --- FIXME
-  * //e2// --- FIXME
+  * //n// --- The number of error bars to be drawn
+  * //px// --- A list of length //n// containing the X coordinate
+  * //py// --- A list of length //n// containing the Y coordinate
+  * //e1// --- The absolute value of the negative deviation at the given point
+  * //e2// --- The absolute value of the positive deviation at the given point
 
 ==== gr.herrorbars ====
-FIXME
+Draws a standard horizontal error bar graph.
 
 <code python>
 herrorbars(n, px, py, e1, e2)
 </code>
 
 == Parameters ==
-  * //n// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //e1// --- FIXME
-  * //e2// --- FIXME
+  * //n// --- The number of error bars to be drawn
+  * //px// --- A list of length //n// containing the X coordinate
+  * //py// --- A list of length //n// containing the Y coordinate
+  * //e1// --- The absolute value of the negative deviation at the given point
+  * //e2// --- The absolute value of the positive deviation at the given point
 
 ==== gr.polyline3d ====
-FIXME
+Draws a 3D curve using the current line attributes, starting from the
+first data point and ending at the last data point.
 
 <code python>
 polyline3d(n, px, py, pz)
 </code>
 
 == Parameters ==
-  * //n// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //pz// --- FIXME
+  * //n// --- The number of points in the line to be drawn (//n// > 1)
+  * //x// --- A list of length //n// containing the X coordinate
+  * //y// --- A list of length //n// containing the Y coordinate
+  * //z// --- A list of length //n// containing the Z coordinate
+
+The values for //x//, //y// and //z// are in world coordinates. The attributes that
+control the appearance of a polyline are linetype, linewidth and color
+index.
 
 ==== gr.axes3d ====
-FIXME
+Draws X, Y and Z labeled coordinate axes with linearly and/or logarithmically spaced tick marks.
 
 <code python>
 axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size)
 </code>
 
 == Parameters ==
-  * //x_tick// --- FIXME
-  * //y_tick// --- FIXME
-  * //z_tick// --- FIXME
-  * //x_org// --- FIXME
-  * //y_org// --- FIXME
-  * //z_org// --- FIXME
-  * //major_x// --- FIXME
-  * //major_y// --- FIXME
-  * //major_z// --- FIXME
-  * //tick_size// --- FIXME
+  * //x_tick, y_tick, z_tick// --- The interval between minor tick marks on each axis
+  * //x_org, y_org, z_org// --- The world coordinates of the origin (point of intersection) of the axes.
+  * //major_x, major_y, major_z// --- Unitless integer values specifying the number of minor tick intervals between major tick marks. Values of 0 or 1 imply no minor ticks. Negative values specify no labels will be drawn for the associated axis.
+  * //tick_size// --- The length of minor tick marks specified in a normalized device coordinate unit. Major tick marks are twice as long as minor tick marks. A negative value reverses the tick marks on the axes from inward facing to outward facing (or vice versa). 
+
+Tick marks are positioned along each axis so that major tick marks fall on the axes
+origin (whether visible or not). Major tick marks are labeled with the corresponding
+data values. Axes are drawn according to the scale of the window. Axes and tick marks
+are drawn using solid lines; line color and width can be modified using the
+//setlinetype// and //setlinewidth// functions. Axes are drawn according to
+the linear or logarithmic transformation established by the //setscale// function.
+The //setspace// function defines the rotation and tilt (viewing angle) of the axes and
+sets the Z-axis minimum and maximum values for the window. 
 
 ==== gr.titles3d ====
-FIXME
+Displays axis titles just outside of their respective axes.
 
 <code python>
 titles3d(x_title, y_title, z_title)
 </code>
 
 == Parameters ==
-  * //x_title// --- FIXME
-  * //y_title// --- FIXME
-  * //z_title// --- FIXME
+  * //x_title, y_title, z_title// --- The text to be displayed on each axis
 
 ==== gr.surface ====
-FIXME
+Draws a three-dimensional surface plot for the given data points.
 
 <code python>
-surface(nx, ny, px, py, pz, option)
+surface(nx, ny, x, y, z, option)
 </code>
 
 == Parameters ==
-  * //nx// --- FIXME
-  * //ny// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //pz// --- FIXME
-  * //option// --- FIXME
+  * //nx// --- The number of points in the X direction (//nx// > 1)
+  * //ny// --- The number of points in the Y direction (//ny// > 1)
+  * //x// --- A list of length //ny// containing the X coordinate
+  * //y// --- A list of length //ny// containing the Y coordinate
+  * //z// --- A list of length //nx//*//ny// containing the Z coordinate
+  * //option// --- Surface display option (see table below)
+
+//x// and //y// define a grid. //z// is a singly dimensioned array containing at least
+//x// * //y// data points. //z// describes the surface height at each point on the grid.
+Data is ordered as shown in the following table:
+
+| ''LINES''  | 0| Use X Y polylines to denote surface  |
+| ''MESH'' | 1| Use wire grid to denote surface  |
+| ''FILLED_MESH''  | 2| Applies opaque grid to surface  |
+| ''COLORED_MESH''  | 3| Applies colored grid to surface  |
+| ''CELL_ARRAY''  | 4| Applies a grid of individually-colored cells to the surface  |
+| ''SHADED_MESH''  | 5| Applies light source shading to 3-D surface  |
+| ''Z_SHADED_MESH''  | 6| Applies Z-value shading to surface  |
 
 ==== gr.contour ====
-FIXME
+Draws contours of a three-dimensional data set whose values are specified over a
+rectangular mesh. Contour lines may optionally be labeled. 
 
 <code python>
-contour(nx, ny, nh, px, py, pz, major_h)
+contour(nx, ny, nh, x, y, h, z, major_h)
 </code>
 
 == Parameters ==
-  * //nx// --- FIXME
-  * //ny// --- FIXME
-  * //nh// --- FIXME
-  * //px// --- FIXME
-  * //py// --- FIXME
-  * //pz// --- FIXME
-  * //major_h// --- FIXME
+  * //nx// --- The number of points in the X direction (//nx// > 1)
+  * //ny// --- The number of points in the Y direction (//ny// > 1)
+  * //nh// --- The number of height values (//nh// > 0)
+  * //x// --- A list of length //ny// containing the X coordinate
+  * //y// --- A list of length //ny// containing the Y coordinate
+  * //h// --- A list of length //nh// containing the Z coordinate for the height values
+  * //z// --- A list of length //nx//*//ny// containing the Z coordinate
+  * //major_h// --- Directs GR to label contour lines. For example, a value of 3 would label every third line. A value of 1 will label every line. A value of 0 produces no labels.
 
 ==== gr.drawrect ====
-FIXME
+Draws a rectangle using the current line attributes.
 
 <code python>
 drawrect(xmin, xmax, ymin, ymax)
 </code>
 
 == Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
+  * //xmin// --- Lower left edge of the rectangle
+  * //xmax// --- Lower right edge of the rectangle
+  * //ymin// --- Upper left edge of the rectangle
+  * //ymax// --- Upper right edge of the rectangle
 
 ==== gr.fillrect ====
-FIXME
+Draws a filled rectangle using the current fill attributes.
 
 <code python>
 fillrect(xmin, xmax, ymin, ymax)
 </code>
 
 == Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
+  * //xmin// --- Lower left edge of the rectangle
+  * //xmax// --- Lower right edge of the rectangle
+  * //ymin// --- Upper left edge of the rectangle
+  * //ymax// --- Upper right edge of the rectangle
 
 ==== gr.drawarc ====
-FIXME
+Draws a circular or elliptical arc covering the specified rectangle.
 
 <code python>
 drawarc(xmin, xmax, ymin, ymax, a1, a2)
 </code>
 
 == Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-  * //a1// --- FIXME
-  * //a2// --- FIXME
+  * //xmin// --- Lower left edge of the rectangle
+  * //xmax// --- Lower right edge of the rectangle
+  * //ymin// --- Upper left edge of the rectangle
+  * //ymax// --- Upper right edge of the rectangle
+  * //a1// --- The start angle
+  * //a2// --- The end angle
+
+The resulting arc begins at //a1// and ends at //a2// degrees. Angles are interpreted such
+that 0 degrees is at the 3 o'clock position. The center of the arc is the center of the
+given rectangle.
 
 ==== gr.fillarc ====
-FIXME
+Fills a circular or elliptical arc covering the specified rectangle.
 
 <code python>
 fillarc(xmin, xmax, ymin, ymax, a1, a2)
 </code>
 
 == Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-  * //a1// --- FIXME
-  * //a2// --- FIXME
+  * //xmin// --- Lower left edge of the rectangle
+  * //xmax// --- Lower right edge of the rectangle
+  * //ymin// --- Upper left edge of the rectangle
+  * //ymax// --- Upper right edge of the rectangle
+  * //a1// --- The start angle
+  * //a2// --- The end angle
 
-==== gr.setarrowstyle ====
-FIXME
-
-<code python>
-setarrowstyle(style)
-</code>
-
-== Parameters ==
-  * //style// --- FIXME
+The resulting arc begins at //a1// and ends at //a2// degrees. Angles are interpreted such
+that 0 degrees is at the 3 o'clock position. The center of the arc is the center of the
+given rectangle.
 
 ==== gr.drawarrow ====
-FIXME
+Draw an arrow between two points.
 
 <code python>
 drawarrow(x1, y1, x2, y2)
 </code>
 
 == Parameters ==
-  * //x1// --- FIXME
-  * //y1// --- FIXME
-  * //x2// --- FIXME
-  * //y2// --- FIXME
+  * //x1, y1// --- Starting point of the arrow (tail)
+  * //x2, y2 // --- Head of the arrow
+
+Different arrow styles (angles between arrow tail and wing, optionally filled
+heads, double headed arrows) are available and can be set with the //setarrowstyle//
+function.
 
 ==== gr.drawimage ====
-FIXME
+Draws an image into a given rectangular area.
 
 <code python>
 drawimage(xmin, xmax, ymin, ymax, width, height, data)
 </code>
 
 == Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-  * //width// --- FIXME
-  * //height// --- FIXME
-  * //data// --- FIXME
+  * //xmin, ymin// --- First corner point of the rectangle
+  * //xmax, ymax// --- Second corner point of the rectangle
+  * //width, height// --- The width and the height of the image
+  * //data// --- An array of RGB values dimensioned //width// by //height//
+
+The points (//xmin, ymin//) and (//xmax, ymax//) are world coordinates defining
+diagonally opposite corner points of a rectangle. This rectangle is divided into
+//width// by //height// cells. The two-dimensional array //data// specifies colors
+for each cell.
 
 ==== gr.mathtex ====
-FIXME
+Generates a character string starting at the given location. Strings can be defined
+to create mathematical symbols and Greek letters using LaTeX syntax.
 
 <code python>
 mathtex(x, y, string)
 </code>
 
 == Parameters ==
-  * //x// --- FIXME
-  * //y// --- FIXME
-  * //string// --- FIXME
+  * //x, y// --- Position of the text string specified in world coordinates
+  * //string// --- The text string to be drawn
 
 ===== Attribute Functions =====
 
@@ -543,7 +566,7 @@ setmarkercolorind(color)
 </code>
 
 == Parameters ==
-  * //color// --- The polymerker color index (//color// < 980)
+  * //color// --- The polymarker color index (//color// < 980)
 
 ==== gr.settextfontprec ====
 Specifies the text font and precision for subsequent text output primitives.
@@ -602,66 +625,100 @@ realization of the text primitives, for efficiency. STRING is the default
 precision for GR and produces the highest quality output.
 
 ==== gr.setcharexpan ====
-FIXME
+Sets the current character expansion factor (width to height ratio).
 
 <code python>
 setcharexpan(factor)
 </code>
 
 == Parameters ==
-  * //factor// --- FIXME
+  * //factor// --- Text expansion factor applied to the nominal text width-to-height ratio
+
+//setcharexp// defines the width of subsequent text output primitives. The expansion
+factor alters the width of the generated characters, but not their height. The default
+text expansion factor is 1, or one times the normal width-to-height ratio of the text.
 
 ==== gr.settextcolorind ====
-FIXME
+Sets the current text color index.
 
 <code python>
 settextcolorind(color)
 </code>
 
 == Parameters ==
-  * //color// --- FIXME
+  * //color// --- The text color index (//color// < 980)
+
+//settextcolorind// defines the color of subsequent text output primitives.
+GR uses the default foreground color (black=1) for the default text color index.
 
 ==== gr.setcharheight ====
-FIXME
+Sets the current character height.
 
 <code python>
 setcharheight(height)
 </code>
 
 == Parameters ==
-  * //height// --- FIXME
+  * //height// --- Text height value
+
+//setcharheight// defines the height of subsequent text output primitives. Text height
+is defined as a percentage of the default window. GR uses the default text height of 0.027
+(2.7% of the height of the default window).
 
 ==== gr.setcharup ====
-FIXME
+Sets the current character text angle up vector.
 
 <code python>
 setcharup(ux, uy)
 </code>
 
 == Parameters ==
-  * //ux// --- FIXME
-  * //uy// --- FIXME
+  * //ux, uy// --- Text up vector
+
+//setcharup// defines the vertical rotation of subsequent text output primitives.
+The text up vector is initially set to (0, 1), horizontal to the baseline.
 
 ==== gr.settextpath ====
-FIXME
+Define the current direction in which subsequent text will be drawn.
 
 <code python>
 settextpath(path)
 </code>
 
 == Parameters ==
-  * //path// --- FIXME
+  * //path// --- Text path (see table below)
+
+| ''TEXT_PATH_RIGHT''  |  0| left-to-right |
+| ''TEXT_PATH_LEFT''  |  1| right-to-left |
+| ''TEXT_PATH_UP''  |  2|  downside-up |
+| ''TEXT_PATH_DOWN''  |  3| upside-down |
 
 ==== gr.settextalign ====
-FIXME
+Sets the current horizontal and vertical alignment for text.
 
 <code python>
 settextalign(horizontal, vertical)
 </code>
 
 == Parameters ==
-  * //horizontal// --- FIXME
-  * //vertical// --- FIXME
+  * //horizontal// --- Horizontal text alignment (see the table below)
+  * //vertical// --- Vertical text alignment (see the table below)
+
+//settextalign// specifies how the characters in a text primitive will be aligned
+in horizontal and vertical space. The default text alignment indicates horizontal left
+alignment and vertical baseline alignment.
+
+| ''TEXT_HALIGN_NORMAL''  |  0|  |
+| ''TEXT_HALIGN_LEFT''  |  1| Left justify |
+| ''TEXT_HALIGN_CENTER''  |  2| Center justify |
+| ''TEXT_HALIGN_RIGHT''  |  3| Right justify |
+
+| ''TEXT_VALIGN_NORMAL''  |  0|  |
+| ''TEXT_VALIGN_TOP''  |  1| Align with the top of the characters |
+| ''TEXT_VALIGN_CAP''  |  2| Aligned with the cap of the characters |
+| ''TEXT_VALIGN_HALF''  |  3| Aligned with the half line of the characters |
+| ''TEXT_VALIGN_BASE''  |  4| Aligned with the base line of the characters |
+| ''TEXT_VALIGN_BOTTOM''  |  5| Aligned with the bottom line of the characters |
 
 ==== gr.setfillintstyle ====
 FIXME
@@ -692,6 +749,16 @@ setfillcolorind(color)
 
 == Parameters ==
   * //color// --- FIXME
+
+==== gr.setarrowstyle ====
+FIXME
+
+<code python>
+setarrowstyle(style)
+</code>
+
+== Parameters ==
+  * //style// --- FIXME
 
 ==== gr.setshadow ====
 FIXME
