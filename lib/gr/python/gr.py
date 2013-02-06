@@ -148,6 +148,16 @@ def spline(n, px, py, m, method):
   _py = floatarray(n, py)
   __gr.gr_spline(c_int(n), _px, _py, c_int(m), c_int(method))
 
+def gridit(nd, xd, yd, zd, nx, ny):
+  _xd = floatarray(nd, xd)
+  _yd = floatarray(nd, yd)
+  _zd = floatarray(nd, zd)
+  x = (c_float * nx)()
+  y = (c_float * ny)()
+  z = (c_float * (nx * ny))()
+  __gr.gr_gridit(c_int(nd), _xd, _yd, _zd, c_int(nx), c_int(ny), x, y, z)
+  return [x[:], y[:], z[:]]
+
 def setlinetype(type):
   __gr.gr_setlinetype(c_int(type))
 
@@ -474,6 +484,7 @@ __gr.gr_fillarea.argtypes = [c_int, POINTER(c_float), POINTER(c_float)];
 __gr.gr_cellarray.argtypes = [
   c_float, c_float, c_float, c_float, c_int, c_int, c_int, c_int, c_int, c_int, POINTER(c_int)];
 __gr.gr_spline.argtypes = [c_int, POINTER(c_float), POINTER(c_float), c_int, c_int];
+__gr.gr_gridit.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int, c_int];
 __gr.gr_setlinetype.argtypes = [c_int];
 __gr.gr_setlinewidth.argtypes = [c_float];
 __gr.gr_setlinecolorind.argtypes = [c_int];

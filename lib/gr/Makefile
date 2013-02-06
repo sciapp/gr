@@ -4,7 +4,7 @@
       INCDIR = $(GRDIR)/include
    PYTHONDIR = $(LIBDIR)/python
 
-      GROBJS = gr.o text.o contour.o spline.o strlib.o io.o image.o \
+      GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                md5.o import.o grforbnd.o
      DEFINES =
     INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty/png
@@ -75,7 +75,7 @@ clean:
 	rm -f so_locations *.so *.a *.o *.bak *~
 
 depend:
-	makedepend -Y -- gr.c text.c contour.c spline.c strlib.c io.c \
+	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \
 	image.c md5.c import.c grforbnd.c 2> /dev/null
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
@@ -83,6 +83,7 @@ depend:
 gr.o: gr.h text.h spline.h contour.h strlib.h io.h md5.h
 contour.o: gr.h contour.h
 spline.o: spline.h
+gridit.o: gridit.h
 strlib.o: strlib.h
 io.o: io.h
 image.o: gr.h

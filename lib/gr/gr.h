@@ -35,6 +35,8 @@ DLLEXPORT void gr_fillarea(int, float *, float *);
 DLLEXPORT void gr_cellarray(
   float, float, float, float, int, int, int, int, int, int, int *);
 DLLEXPORT void gr_spline(int, float *, float *, int, int);
+DLLEXPORT void gr_gridit(
+  int, float *, float *, float *, int, int, float *, float *, float *);
 DLLEXPORT void gr_setlinetype(int);
 DLLEXPORT void gr_setlinewidth(float);
 DLLEXPORT void gr_setlinecolorind(int);
