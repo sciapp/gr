@@ -7,19 +7,20 @@
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
+#define Integer static int
+#define    Real static float
+
 static
 int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
 {
-  const int NCPMX = 25;
-
-  int j1, j2, j3, j4;
-  float x1, y1, r1, r2;
-  int ip1, ip2, ip3;
-  float dx12, dy12, dx13, dy13;
-  int jmx, ipc0[NCPMX], ncp0, ndp0;
-  float dsq0[NCPMX], dsqi;
-  int ip2mn, ip3mn, nclpt;
-  float dsqmn, dsqmx;
+  Integer j1, j2, j3, j4;
+  Real x1, y1, r1, r2;
+  Integer ip1, ip2, ip3;
+  Real dx12, dy12, dx13, dy13;
+  Integer jmx, ipc0[25], ncp0, ndp0;
+  Real dsq0[25], dsqi;
+  Integer ip2mn, ip3mn, nclpt;
+  Real dsqmn, dsqmx;
 
   /* THIS SUBROUTINE SELECTS SEVERAL DATA POINTS THAT ARE CLOSEST */
   /* TO EACH OF THE DATA POINT. */
@@ -43,7 +44,7 @@ int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
   ncp0 = *ncp;
   dsqmn = 0.f;
   if (ndp0 >= 2) {
-    if (ncp0 >= 1 && ncp0 <= NCPMX && ncp0 < ndp0) {
+    if (ncp0 >= 1 && ncp0 <= 25 && ncp0 < ndp0) {
       /* CALCULATION */
       for (ip1 = 1; ip1 <= ndp0; ++ip1) {
         /* - SELECTS NCP POINTS. */
@@ -171,15 +172,15 @@ int idgrid(float *xd, float *yd, int *nt, int *ipt,
            int *nl, int *ipl, int *nxi, int *nyi, float *xi, float *yi,
            int *ngp, int *igp)
 {
-  int l;
-  float x1, y1, x2, y2, x3, y3, r1, r2;
-  int il0, nl0, ip1, ip2, it0, ip3, nt0, ixi, iyi;
-  float yii, xii;
-  int izi;
-  float xmn, ymn, xmx, ymx;
-  int ngp0, ngp1, ilp1, nxi0, nyi0, il0t3, insd, it0t3;
-  float ximn, yimn, expr, ximx, yimx;
-  int jigp0, jigp1, jngp0, jngp1, ilp1t3, iximn, iximx, jigp1i, nxinyi;
+  Integer l;
+  Real x1, y1, x2, y2, x3, y3, r1, r2;
+  Integer il0, nl0, ip1, ip2, it0, ip3, nt0, ixi, iyi;
+  Real yii, xii;
+  Integer izi;
+  Real xmn, ymn, xmx, ymx;
+  Integer ngp0, ngp1, ilp1, nxi0, nyi0, il0t3, insd, it0t3;
+  Real ximn, yimn, expr, ximx, yimx;
+  Integer jigp0, jigp1, jngp0, jngp1, ilp1t3, iximn, iximx, jigp1i, nxinyi;
 
   /* THIS SUBROUTINE ORGANIZES GRID POINTS FOR SURFACE FITTING BY */
   /* SORTING THEM IN ASCENDING ORDER OF TRIANGLE NUMBERS AND OF THE */
@@ -537,17 +538,17 @@ static
 int idpdrv(int *ndp, float *xd, float *yd, float *zd,
            int *ncp, int *ipc, float *pd)
 {
-  float x0, y0, z0;
-  int ic1, ic2, ip0;
-  float dx1, dy1, dz1, dx2, dy2, dz2, zx0, zy0;
-  int jpd, ipi;
-  float nmx, nmy, nmz;
-  int jpd0, ncp0, ndp0;
-  float dzx1, dzy1, dzx2, dzy2;
-  int jipc;
-  float dnmx, dnmy, dnmz, nmxx, nmxy, nmyx, nmyy;
-  int jipc0, ic2mn, ncpm1;
-  float dnmxx, dnmxy, dnmyx, dnmyy;
+  Real x0, y0, z0;
+  Integer ic1, ic2, ip0;
+  Real dx1, dy1, dz1, dx2, dy2, dz2, zx0, zy0;
+  Integer jpd, ipi;
+  Real nmx, nmy, nmz;
+  Integer jpd0, ncp0, ndp0;
+  Real dzx1, dzy1, dzx2, dzy2;
+  Integer jipc;
+  Real dnmx, dnmy, dnmz, nmxx, nmxy, nmyx, nmyy;
+  Integer jipc0, ic2mn, ncpm1;
+  Real dnmxx, dnmxy, dnmyx, dnmyy;
 
   /* THIS SUBROUTINE ESTIMATES PARTIAL DERIVATIVES OF THE FIRST AND */
   /* SECOND ORDER AT THE DATA POINTS. */
@@ -684,18 +685,18 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
   static float p05 = 0.f, p10 = 0.f, p11 = 0.f, p12 = 0.f, p13 = 0.f, p14 = 0.f;
   static float p20 = 0.f, p21 = 0.f, p22 = 0.f, p23 = 0.f, p30 = 0.f, p31 = 0.f;
   static float p32 = 0.f, p40 = 0.f, p41 = 0.f, p50 = 0.f;
-  float a, b, c, d;
-  int i;
-  float u, v, x[3], y[3], z[3], g1, h1, h2, h3, g2, p0, p1, p2, p3, p4;
-  float aa, ab, bb, ad, bc, cc, cd, dd, ac;
-  float pd[15], lu, lv;
-  float zu[3], zv[3], dx, dy;
-  int il1, il2, it0, idp, jpd, kpd;
-  float dlt;
-  int ntl;
-  float zuu[3], zuv[3], zvv[3], act2, bdt2, adbc;
-  int jpdd, jipl, jipt;
-  float csuv, thus, thsv, thuv, thxu;
+  Real a, b, c, d;
+  Integer i;
+  Real u, v, x[3], y[3], z[3], g1, h1, h2, h3, g2, p0, p1, p2, p3, p4;
+  Real aa, ab, bb, ad, bc, cc, cd, dd, ac;
+  Real pd[15], lu, lv;
+  Real zu[3], zv[3], dx, dy;
+  Integer il1, il2, it0, idp, jpd, kpd;
+  Real dlt;
+  Integer ntl;
+  Real zuu[3], zuv[3], zvv[3], act2, bdt2, adbc;
+  Integer jpdd, jipl, jipt;
+  Real csuv, thus, thsv, thuv, thxu;
 
   /* THIS SUBROUTINE PERFORMS PUNCTUAL INTERPOLATION OR EXTRAPOLA- */
   /* TION, I.E., DETERMINES THE Z VALUE AT A POINT. */
@@ -985,12 +986,12 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
 static
 int idxchg(float *x, float *y, int *i1, int *i2, int *i3, int *i4)
 {
-  int ret_val;
-  float r1, r2;
-  float a1sq, b1sq, c1sq, c2sq, a3sq, b2sq, b3sq, a4sq, b4sq, a2sq, c4sq, c3sq;
-  float u1, u2, u3, x1, y1, x2, y2, x3, y3, x4, y4, u4;
-  int idx;
-  float s1sq, s2sq, s3sq, s4sq;
+  Integer ret_val;
+  Real r1, r2;
+  Real a1sq, b1sq, c1sq, c2sq, a3sq, b2sq, b3sq, a4sq, b4sq, a2sq, c4sq, c3sq;
+  Real u1, u2, u3, x1, y1, x2, y2, x3, y3, x4, y4, u4;
+  Integer idx;
+  Real s1sq, s2sq, s3sq, s4sq;
 
   /* THIS FUNCTION DETERMINES WHETHER OR NOT THE EXCHANGE OF TWO */
   /* TRIANGLES IS NECESSARY ON THE BASIS OF MAX-MIN-ANGLE CRITERION */
@@ -1053,29 +1054,29 @@ static
 int idtang(int *ndp, float *xd, float *yd, int *nt,
            int *ipt, int *nl, int *ipl, int *iwl, int *iwp, float *wk)
 {
-  float ratio = 1e-6f;
-  int nrep = 100;
+  Real ratio = 1e-6f;
+  Integer nrep = 100;
 
-  float x1, y1, ar, r1, r2;
-  int ip, jp;
-  float dx, dy;
-  int it, ip1, ip2, jp1, jp2, ip3, nl0, nt0, ilf, jpc;
-  float dx21, dy21;
-  int nlf, itf[2], nln, nsh, ntf, jwl, its, ndp0, ipl1, ipl2;
-  int jlt3, ipt1, ipt2, ipt3, nlt3, jwl1, itt3, ntt3, nlfc, ip1p1;
-  float dsq12, armn;
-  int irep;
-  float dsqi;
-  int jp2t3, jp3t3, jpmn;
-  float dxmn, dymn, xdmp, ydmp, armx;
-  int ipti, it1t3, it2t3, jpmx;
-  float dxmx, dymx;
-  int ndpm1, ilft2, iplj1, iplj2, ipmn1, ipmn2, ipti1, ipti2;
-  int nlft2, nlnt3, nsht3, itt3r;
-  float dsqmn;
-  int ntt3p3;
-  float dsqmx;
-  int jwl1mn;
+  Real x1, y1, ar, r1, r2;
+  Integer ip, jp;
+  Real dx, dy;
+  Integer it, ip1, ip2, jp1, jp2, ip3, nl0, nt0, ilf, jpc;
+  Real dx21, dy21;
+  Integer nlf, itf[2], nln, nsh, ntf, jwl, its, ndp0, ipl1, ipl2;
+  Integer jlt3, ipt1, ipt2, ipt3, nlt3, jwl1, itt3, ntt3, nlfc, ip1p1;
+  Real dsq12, armn;
+  Integer irep;
+  Real dsqi;
+  Integer jp2t3, jp3t3, jpmn;
+  Real dxmn, dymn, xdmp, ydmp, armx;
+  Integer ipti, it1t3, it2t3, jpmx;
+  Real dxmx, dymx;
+  Integer ndpm1, ilft2, iplj1, iplj2, ipmn1, ipmn2, ipti1, ipti2;
+  Integer nlft2, nlnt3, nsht3, itt3r;
+  Real dsqmn;
+  Integer ntt3p3;
+  Real dsqmx;
+  Integer jwl1mn;
 
   /* THIS SUBROUTINE PERFORMS TRIANGULATION.  IT DIVIDES THE X-Y */
   /* PLANE INTO A NUMBER OF TRIANGLES ACCORDING TO GIVEN DATA */
@@ -1516,8 +1517,8 @@ int idtang(int *ndp, float *xd, float *yd, int *nt,
 static
 int idlin(float *xd, float *yd, float *zd, int *nt, int *iwk, float *wk)
 {
-  float x1, y1, z1, x2, y2, z2, x3, y3, z3;
-  int ip1, ip2, ip3, itri, ipoint;
+  Real x1, y1, z1, x2, y2, z2, x3, y3, z3;
+  Integer ip1, ip2, ip3, itri, ipoint;
 
   /* THIS ROUTINE GENERATES THE COORDINATES USED IN A LINEAR INTERPOLATION */
   /* OF THE TRIANGLES CREATED FROM IRREGULARLY DISTRIBUTED DATA. */
@@ -1553,8 +1554,8 @@ static
 int idlcom(float *x, float *y, float *z, int *itri,
            float *xd, float *yd, float *zd, int *nt, int *iwk, float *wk)
 {
-  float x1, y1, z1;
-  int iv, ipoint;
+  Real x1, y1, z1;
+  Integer iv, ipoint;
 
   /* COMPUTE A Z VALUE FOR A GIVEN X,Y VALUE */
   /* IF OUTSIDE CONVEX HULL DON'T COMPUTE A VALUE */
@@ -1573,14 +1574,14 @@ int idlcom(float *x, float *y, float *z, int *itri,
 
 static
 void idsfft(int *md, int *ncp, int *ndp, float *xd, float *yd, float *zd,
-             int *nxi, int *nyi, float *xi, float *yi, float *zi,
-             int *iwk, float *wk)
+            int *nxi, int *nyi, float *xi, float *yi, float *zi,
+            int *iwk, float *wk)
 {
-  int nl, nt, md0, il1, il2, iti, ixi, izi, iyi, ncp0, ndp0;
-  int ngp0, ngp1, nxi0, nyi0, jigp, jngp, nngp, itpv;
-  int jwipc, jwigp, jwipl, ncppv, ndppv, jwngp, jwiwl, jwipt;
-  int jwiwp, nxipv, nyipv, jig0mn, jig1mn, jig0mx, jig1mx, jwigp0, jwngp0;
-  int linear;
+  Integer nl, nt, md0, il1, il2, iti, ixi, izi, iyi, ncp0, ndp0;
+  Integer ngp0, ngp1, nxi0, nyi0, jigp, jngp, nngp, itpv;
+  Integer jwipc, jwigp, jwipl, ncppv, ndppv, jwngp, jwiwl, jwipt;
+  Integer jwiwp, nxipv, nyipv, jig0mn, jig1mn, jig0mx, jig1mx, jwigp0, jwngp0;
+  Integer linear;
 
   /* THIS SUBROUTINE PERFORMS SMOOTH SURFACE FITTING WHEN THE PRO- */
   /* JECTIONS OF THE DATA POINTS IN THE X-Y PLANE ARE IRREGULARLY */
