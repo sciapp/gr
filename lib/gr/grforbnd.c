@@ -108,6 +108,13 @@ void FORTRAN(gr_spline)(int *n, float *x, float *y, int *m, int *method)
   gr_spline(*n, x, y, *m, *method);
 }
 
+void FORTRAN(gr_gridit)(
+  int *nd, float *xd, float *yd, float *zd,
+  int *nx, int *ny, float *x, float *y, float *z)
+{
+  gr_gridit(*nd, xd, yd, zd, *nx, *ny, x, y, z);
+}
+
 void FORTRAN(gr_setlinetype)(int *type)
 {
   gr_setlinetype(*type);

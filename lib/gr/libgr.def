@@ -26,6 +26,7 @@ EXPORTS
 	gr_endgraphics
 	gr_fillarea
 	gr_grid
+	gr_gridit
 	gr_herrorbars
 	gr_importgraphics
 	gr_inqdspsize
