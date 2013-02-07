@@ -8,7 +8,7 @@
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
 #define Integer static int
-#define    Real static float
+#define Real    static float
 
 static
 int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
@@ -680,11 +680,11 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
            int *ipt, int *nl, int *ipl, float *pdd, int *iti,
            float *xii, float *yii, float *zii, int *itpv)
 {
-  static float ap = 0.f, bp = 0.f, cp = 0.f, dp = 0.f, x0 = 0.f, y0 = 0.f;
-  static float p5 = 0.f, p00 = 0.f, p01 = 0.f, p02 = 0.f, p03 = 0.f, p04 = 0.f;
-  static float p05 = 0.f, p10 = 0.f, p11 = 0.f, p12 = 0.f, p13 = 0.f, p14 = 0.f;
-  static float p20 = 0.f, p21 = 0.f, p22 = 0.f, p23 = 0.f, p30 = 0.f, p31 = 0.f;
-  static float p32 = 0.f, p40 = 0.f, p41 = 0.f, p50 = 0.f;
+  Real ap = 0.f, bp = 0.f, cp = 0.f, dp = 0.f, x0 = 0.f, y0 = 0.f;
+  Real p5 = 0.f, p00 = 0.f, p01 = 0.f, p02 = 0.f, p03 = 0.f, p04 = 0.f;
+  Real p05 = 0.f, p10 = 0.f, p11 = 0.f, p12 = 0.f, p13 = 0.f, p14 = 0.f;
+  Real p20 = 0.f, p21 = 0.f, p22 = 0.f, p23 = 0.f, p30 = 0.f, p31 = 0.f;
+  Real p32 = 0.f, p40 = 0.f, p41 = 0.f, p50 = 0.f;
   Real a, b, c, d;
   Integer i;
   Real u, v, x[3], y[3], z[3], g1, h1, h2, h3, g2, p0, p1, p2, p3, p4;
@@ -1056,7 +1056,6 @@ int idtang(int *ndp, float *xd, float *yd, int *nt,
 {
   Real ratio = 1e-6f;
   Integer nrep = 100;
-
   Real x1, y1, ar, r1, r2;
   Integer ip, jp;
   Real dx, dy;
@@ -1493,8 +1492,8 @@ int idtang(int *ndp, float *xd, float *yd, int *nt,
       ip1 = ipt[itt3 - 3];
       ip2 = ipt[itt3 - 2];
       ip3 = ipt[itt3-1];
-      if ((yd[ip3-1] - yd[ip1-1]) * (xd[ip2-1] - xd[ip1-1]) - (xd[ip3-1] - xd[ip1-1])
-          * (yd[ip2-1] - yd[ip1-1]) < 0.f) {
+      if ((yd[ip3-1] - yd[ip1-1]) * (xd[ip2-1] - xd[ip1-1]) -
+          (xd[ip3-1] - xd[ip1-1]) * (yd[ip2-1] - yd[ip1-1]) < 0.f) {
         ipt[itt3 - 3] = ip2;
         ipt[itt3 - 2] = ip1;
       }
@@ -1787,9 +1786,9 @@ void idsfft(int *md, int *ncp, int *ndp, float *xd, float *yd, float *zd,
 }
 
 void gr_gridit(int nd, float *xd, float *yd, float *zd,
-               int nxi, int nyi, float *xi, float *yi, float *zi)
+               int nx, int ny, float *x, float *y, float *z)
 {
-  int i, md, ncp, ixi, iyi;
+  int i, md, ncp;
   float xmin, ymin, xmax, ymax;
   int *iwk;
   float *wk;
@@ -1808,20 +1807,20 @@ void gr_gridit(int nd, float *xd, float *yd, float *zd,
   }
 
   /* DETERMINE GRID POINTS INSIDE THE DATA AREA */
-  for (ixi = 0; ixi < nxi; ++ixi) {
-    xi[ixi] = xmin + ixi / (float) (nxi - 1) * (xmax - xmin);
+  for (i = 0; i < nx; ++i) {
+    x[i] = xmin + i / (float) (nx - 1) * (xmax - xmin);
   }
-  for (iyi = 0; iyi < nyi; ++iyi) {
-    yi[iyi] = ymin + iyi / (float) (nyi - 1) * (ymax - ymin);
+  for (i = 0; i < ny; ++i) {
+    y[i] = ymin + i / (float) (ny - 1) * (ymax - ymin);
   }
 
   /* CALL THE SMOOTH SURFACE FIT ROUTINE */
   md = 1;
   ncp = 4;
-  iwk = (int *) calloc(31 * nd + nxi * nyi, sizeof(int));
+  iwk = (int *) calloc(31 * nd + nx * ny, sizeof(int));
   wk = (float *) calloc(5 * nd, sizeof(float));
 
-  idsfft(&md, &ncp, &nd, xd, yd, zd, &nxi, &nyi, xi, yi, zi, iwk, wk);
+  idsfft(&md, &ncp, &nd, xd, yd, zd, &nx, &ny, x, y, z, iwk, wk);
 
   free(wk);
   free(iwk);
