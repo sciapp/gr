@@ -64,7 +64,7 @@ int inactivity_counter = -1;
   int didDie = 0;
 
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  while (!didDie)
+  while (!didDie && wss != NULL)
     {
       [mutex lock];
       if (inactivity_counter == 3)
