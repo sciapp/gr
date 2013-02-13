@@ -2221,8 +2221,8 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
         }
       else
         {
-          i = isucc((float) (y_min / y_tick));
-          yi = i * y_tick;
+          i = isucc((float) ((y_min - y_org) / y_tick));
+          yi = y_org + i * y_tick;
 
           /* draw horizontal grid lines */
 
@@ -2241,7 +2241,7 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
               grid_line(x_min, yi, x_max, yi, tick);
 
               i++;
-              yi = i * y_tick;
+              yi = y_org + i * y_tick;
             }
         }
     }
@@ -2282,8 +2282,8 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
         }
       else
         {
-          i = isucc((float) (x_min / x_tick));
-          xi = i * x_tick;
+          i = isucc((float) ((x_min - x_org) / x_tick));
+          xi = x_org + i * x_tick;
 
           /* draw vertical grid lines */
 
@@ -2302,7 +2302,7 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
               grid_line(xi, y_min, xi, y_max, tick);
 
               i++;
-              xi = i * x_tick;
+              xi = x_org + i * x_tick;
             }
         }
     }
