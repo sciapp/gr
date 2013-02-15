@@ -1,5 +1,6 @@
 
-from ctypes import c_int, c_float, c_char_p, byref, POINTER, addressof, CDLL
+from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
+from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
 from sys import version_info
 from platform import system
 
@@ -24,9 +25,10 @@ def intarray(n, a):
 
 def char(string):
   if version_info[0] == 3:
-    return c_char_p(string.encode('iso8859-15'))
+    s = create_string_buffer(string.encode('iso8859-15'))
   else:
-    return c_char_p(string)
+    s = create_string_buffer(string)
+  return cast(s, c_char_p)
 
 def opengks():
   __gr.gr_opengks()

@@ -31,17 +31,17 @@ typedef struct {
 
 - (void) gks_set_shadow;
 
-- (void) polyline: (int) n: (float *) px: (float *) py;
-- (void) draw_marker: (float) xn: (float) yn: (int) mtype: (float) mscale: (int) mcolor: (CGContextRef) context;
-- (void) polymarker: (int) n: (float *) px: (float *) py;
-- (void) fillarea: (int) n: (float *) px: (float *) py;
+- (void) polyline: (int) n : (float *) px : (float *) py;
+- (void) draw_marker: (float) xn : (float) yn : (int) mtype : (float) mscale : (int) mcolor : (CGContextRef) context;
+- (void) polymarker: (int) n : (float *) px : (float *) py;
+- (void) fillarea: (int) n : (float *) px : (float *) py;
 - (void) cellarray:
-  (float) xmin: (float) xmax: (float) ymin: (float) ymax:
-  (int) dx: (int) dy: (int) dimx: (int *) colia: (int) true_color;
+  (float) xmin : (float) xmax : (float) ymin : (float) ymax :
+  (int) dx : (int) dy : (int) dimx : (int *) colia : (int) true_color;
   
-- (void) text: (float) px: (float) py: (char *) text;
+- (void) text: (float) px : (float) py : (char *) text;
 - (_FontInfo) set_font: (int) font;
-- (NSString *) stringForText: (const char*)text withFontFamilyID: (int)family;
+- (NSString *) stringForText: (const char*)text withFontFamilyID : (int)family;
 
 - (IBAction) keep_on_display: (id) sender;
 - (IBAction) rotate: (id) sender;
