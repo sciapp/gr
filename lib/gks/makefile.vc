@@ -17,9 +17,9 @@ all: libgks.lib demo.exe
 
 libgks.lib: libgks.dll
 
-libgks.dll: gks.obj gksforbnd.obj font.obj afm.obj util.obj dl.obj malloc.obj \
-	 error.obj mf.obj wiss.obj cgm.obj win.obj mac.obj ps.obj pdf.obj \
-	 x11.obj socket.obj plugin.obj compress.obj io.obj
+libgks.dll: gks.obj gksforbnd.obj font.obj afm.obj util.obj ft.obj dl.obj \
+	 malloc.obj error.obj mf.obj wiss.obj cgm.obj win.obj mac.obj ps.obj \
+	 pdf.obj x11.obj socket.obj plugin.obj compress.obj io.obj
 	$(DLLLINK) /out:$@ $** -def:libgks.def $(DLLLFLAGS) $(DLLLIBS)
 
 demo.obj: demo.c

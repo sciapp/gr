@@ -4,8 +4,8 @@
       INCDIR = $(GRDIR)/include
      FONTDIR = $(GRDIR)/fonts
 
-     GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o dl.o malloc.o error.o \
-               mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
+     GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o malloc.o \
+               error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
                plugin.o compress.o io.o
 
      DEFINES = -DHAVE_ZLIB -DXFT
@@ -20,7 +20,7 @@
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
         LIBS = -lpthread -ldl -lc -lm
-     XFTLIBS = -lXft -lfontconfig
+     XFTLIBS = -lXft -lfreetype -lfontconfig
        XLIBS = $(XFTLIBS) -L/usr/X11R6/lib -lXt -lX11
        ZLIBS = -lz
 
@@ -67,6 +67,7 @@ install:
 	cp -p gksm $(BINDIR)
 	@if [ ! -d $(FONTDIR) ]; then mkdir -m 755 $(FONTDIR); fi
 	cp -p gksfont.dat $(FONTDIR)
+	cp -p fonts/* $(FONTDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gks.h $(INCDIR)
 

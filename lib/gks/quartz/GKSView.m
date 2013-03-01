@@ -254,7 +254,7 @@ void seg_xform_rel(float *x, float *y)
 
 @implementation GKSView
 
-- (void) interp : (char *) str
+- (void) interp: (char *) str
 {
   char *s;
   gks_state_list_t *sl = NULL, saved_gkss;
@@ -278,22 +278,22 @@ void seg_xform_rel(float *x, float *y)
           RESOLVE(sl, gks_state_list_t, sizeof(gks_state_list_t));
           break;
 
-        case 12 :                /* polyline */
-        case 13 :                /* polymarker */
-        case 15 :                /* fill area */
+        case 12:                /* polyline */
+        case 13:                /* polymarker */
+        case 15:                /* fill area */
           RESOLVE(i_arr, int, sizeof(int));
           RESOLVE(f_arr_1, float, i_arr[0] * sizeof(float));
           RESOLVE(f_arr_2, float, i_arr[0] * sizeof(float));
           break;
 
-        case 14 :                /* text */
+        case 14:                /* text */
           RESOLVE(f_arr_1, float, sizeof(float));
           RESOLVE(f_arr_2, float, sizeof(float));
           RESOLVE(len_c_arr, int, sizeof(int));
           RESOLVE(c_arr, char, 132);
           break;
 
-        case 16 :                /* cell array */
+        case 16:                /* cell array */
         case 201:
           RESOLVE(f_arr_1, float, 2 * sizeof(float));
           RESOLVE(f_arr_2, float, 2 * sizeof(float));
@@ -303,59 +303,59 @@ void seg_xform_rel(float *x, float *y)
           RESOLVE(i_arr, int, *dimx * *dy * sizeof(int));
           break;
 
-        case 19 :                /* set linetype */
-        case 21 :                /* set polyline color index */
-        case 23 :                /* set markertype */
-        case 25 :                /* set polymarker color index */
-        case 30 :                /* set text color index */
-        case 33 :                /* set text path */
-        case 36 :                /* set fillarea interior style */
-        case 37 :                /* set fillarea style index */
-        case 38 :                /* set fillarea color index */
-        case 52 :                /* select normalization transformation */
-        case 53 :                /* set clipping indicator */
+        case 19:                /* set linetype */
+        case 21:                /* set polyline color index */
+        case 23:                /* set markertype */
+        case 25:                /* set polymarker color index */
+        case 30:                /* set text color index */
+        case 33:                /* set text path */
+        case 36:                /* set fillarea interior style */
+        case 37:                /* set fillarea style index */
+        case 38:                /* set fillarea color index */
+        case 52:                /* select normalization transformation */
+        case 53:                /* set clipping indicator */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
-        case 27 :                /* set text font and precision */
-        case 34 :                /* set text alignment */
+        case 27:                /* set text font and precision */
+        case 34:                /* set text alignment */
           RESOLVE(i_arr, int, 2 * sizeof(int));
           break;
 
-        case 20 :                /* set linewidth scale factor */
-        case 24 :                /* set marker size scale factor */
-        case 28 :                /* set character expansion factor */
-        case 29 :                /* set character spacing */
-        case 31 :                /* set character height */
-        case 200 :               /* set text slant */
-        case 203 :               /* set transparency */
+        case 20:                /* set linewidth scale factor */
+        case 24:                /* set marker size scale factor */
+        case 28:                /* set character expansion factor */
+        case 29:                /* set character spacing */
+        case 31:                /* set character height */
+        case 200:               /* set text slant */
+        case 203:               /* set transparency */
           RESOLVE(f_arr_1, float, sizeof(float));
           break;
 
-        case 32 :                /* set character up vector */
+        case 32:                /* set character up vector */
           RESOLVE(f_arr_1, float, sizeof(float));
           RESOLVE(f_arr_2, float, sizeof(float));
           break;
 
-        case 41 :              /* set aspect source flags */
+        case 41:              /* set aspect source flags */
           RESOLVE(i_arr, int, 13 * sizeof(int));
           break;
 
-        case 48 :                /* set color representation */
+        case 48:                /* set color representation */
           RESOLVE(i_arr, int, sizeof(int));
           RESOLVE(f_arr_1, float, 3 * sizeof(float));
           break;
 
-        case 49 :                /* set window */
-        case 50 :                /* set viewport */
-        case 54 :                /* set workstation window */
-        case 55 :                /* set workstation viewport */
+        case 49:                /* set window */
+        case 50:                /* set viewport */
+        case 54:                /* set workstation window */
+        case 55:                /* set workstation viewport */
           RESOLVE(i_arr, int, sizeof(int));
           RESOLVE(f_arr_1, float, 2 * sizeof(float));
           RESOLVE(f_arr_2, float, 2 * sizeof(float));
           break;
 
-        case 202 :               /* set shadow */
+        case 202:               /* set shadow */
           RESOLVE(f_arr_1, float, 3* sizeof(float));
           break;
 
@@ -394,27 +394,27 @@ void seg_xform_rel(float *x, float *y)
           gks_init_core(gkss);
 
           cur_color = -1;
-          [self set_clip_rect : gkss->cntnr];
+          [self set_clip_rect: gkss->cntnr];
           break;
 
         case 12:
-          [self polyline : i_arr[0] : f_arr_1 : f_arr_2];
+          [self polyline: i_arr[0] : f_arr_1 : f_arr_2];
           break;
 
         case 13:
-          [self polymarker : i_arr[0] : f_arr_1 : f_arr_2];
+          [self polymarker: i_arr[0] : f_arr_1 : f_arr_2];
           break;
 
         case 14:
-          [self text : f_arr_1[0] : f_arr_2[0] : c_arr];
+          [self text: f_arr_1[0] : f_arr_2[0] : c_arr];
           break;
 
         case 15:
-          [self fillarea : i_arr[0] : f_arr_1 : f_arr_2];
+          [self fillarea: i_arr[0] : f_arr_1 : f_arr_2];
           break;
 
         case 16:
-          [self cellarray : f_arr_1[0] : f_arr_1[1] : f_arr_2[0] : f_arr_2[1]:
+          [self cellarray: f_arr_1[0] : f_arr_1[1] : f_arr_2[0] : f_arr_2[1]:
                            *dx : *dy :  *dimx : i_arr : 0];
           break;
 
@@ -515,17 +515,17 @@ void seg_xform_rel(float *x, float *y)
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
 
           if (*i_arr == gkss->cntnr)
-            [self set_clip_rect : *i_arr];
+            [self set_clip_rect: *i_arr];
           break;
 
         case 52:
           gkss->cntnr = i_arr[0];
-          [self set_clip_rect : gkss->cntnr];
+          [self set_clip_rect: gkss->cntnr];
           break;
 
         case 53:
           gkss->clip = i_arr[0];
-          [self set_clip_rect : gkss->cntnr];
+          [self set_clip_rect: gkss->cntnr];
           break;
 
         case 54:
@@ -554,7 +554,7 @@ void seg_xform_rel(float *x, float *y)
           break;
 
         case 201:
-          [self cellarray : f_arr_1[0] : f_arr_1[1] : f_arr_2[0] : f_arr_2[1]:
+          [self cellarray: f_arr_1[0] : f_arr_1[1] : f_arr_2[0] : f_arr_2[1]:
                            *dx : *dy : *dimx : i_arr : 1];
           break;
 
@@ -583,9 +583,9 @@ void seg_xform_rel(float *x, float *y)
   memcpy(gkss, &saved_gkss, sizeof(gks_state_list_t));
 }
 
-- (id) initWithFrame : (NSRect) frame
+- (id) initWithFrame: (NSRect) frame
 {
-  self = [super initWithFrame : frame];
+  self = [super initWithFrame: frame];
 
   if (self)
     {
@@ -597,7 +597,7 @@ void seg_xform_rel(float *x, float *y)
   return self;
 }
 
-- (void) drawRect : (NSRect) rect
+- (void) drawRect: (NSRect) rect
 {
   CGContextRef c;
 
@@ -615,8 +615,8 @@ void seg_xform_rel(float *x, float *y)
       CGSizeMake(self.bounds.size.width, self.bounds.size.height), NULL);
     context = CGLayerGetContext(layer);
 
-    [contextStack addObject : (id)context];
-    [layerStack addObject : (id)layer];
+    [contextStack addObject: (id)context];
+    [layerStack addObject: (id)layer];
 
     if (angle != 0)
       {
@@ -625,7 +625,7 @@ void seg_xform_rel(float *x, float *y)
         CGContextTranslateCTM (context, -250, -250);
       }
 
-    [self interp : buffer];
+    [self interp: buffer];
     CGContextDrawLayerAtPoint(c, CGPointMake(0, 0), layer);
 
     CGContextFlush(context);
@@ -639,7 +639,7 @@ void seg_xform_rel(float *x, float *y)
   }
 }
 
-- (void) setDisplayList : (id) display_list
+- (void) setDisplayList: (id) display_list
 {
   int len = [display_list length];
   if (len >= size)
@@ -652,10 +652,10 @@ void seg_xform_rel(float *x, float *y)
   memcpy(buffer, (char *) [display_list bytes], len);
   buffer[len] = 0;
 
-  [self setNeedsDisplay : YES];
+  [self setNeedsDisplay: YES];
 }
 
-- (void) setWinID : (int)winid
+- (void) setWinID: (int)winid
 {
   win_id = winid;
 }
@@ -665,18 +665,18 @@ void seg_xform_rel(float *x, float *y)
   return win_id;
 }
 
-- (IBAction) keep_on_display : (id)sender
+- (IBAction) keep_on_display: (id)sender
 {
   [[NSNotificationQueue defaultQueue] enqueueNotification:
-   [NSNotification notificationWithName : @"GKSViewKeepOnDisplayNotification"
+   [NSNotification notificationWithName: @"GKSViewKeepOnDisplayNotification"
                                          object : self]
                                          postingStyle : NSPostWhenIdle];
 }
 
-- (IBAction) rotate : (id)sender
+- (IBAction) rotate: (id)sender
 {
   angle = (int)(angle + 90) % 360;
-  [self setNeedsDisplay : YES];
+  [self setNeedsDisplay: YES];
 }
 
 - (void) clear
@@ -703,7 +703,7 @@ void seg_xform_rel(float *x, float *y)
 
 /* SaveAs Dialog */
 
-- (IBAction)saveDocumentAs : (id)sender
+- (IBAction)saveDocumentAs: (id)sender
 {
   NSSavePanel *savePanel = [NSSavePanel savePanel];
 
@@ -715,7 +715,7 @@ void seg_xform_rel(float *x, float *y)
   [saveFormatPopUp selectItemWithTitle:
    [[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFormat"]];
 
-  [savePanel setAccessoryView : extendSavePanelView];
+  [savePanel setAccessoryView: extendSavePanelView];
 
   [savePanel beginSheetForDirectory:
    [[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFolder"]
@@ -740,13 +740,13 @@ void seg_xform_rel(float *x, float *y)
 
       if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"PDF"])
         {
-          data = [self dataWithPDFInsideRect : [self bounds]];
-          [data writeToFile : [filename stringByAppendingPathExtension:@"pdf"] atomically : NO];
+          data = [self dataWithPDFInsideRect: [self bounds]];
+          [data writeToFile: [filename stringByAppendingPathExtension:@"pdf"] atomically : NO];
         }
       else if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"EPS"])
         {
-          data = [self dataWithEPSInsideRect : [self bounds]];
-          [data writeToFile : [filename stringByAppendingPathExtension:@"eps"] atomically : NO];
+          data = [self dataWithEPSInsideRect: [self bounds]];
+          [data writeToFile: [filename stringByAppendingPathExtension:@"eps"] atomically : NO];
         }
       else if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"TIFF"])
         {
@@ -755,10 +755,10 @@ void seg_xform_rel(float *x, float *y)
           filename = [filename stringByAppendingPathExtension:@"tiff"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect : [self bounds]];
+          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect: [self bounds]];
           [self unlockFocus];
 
-          [[bitmap TIFFRepresentationUsingCompression : compression factor:1.0]
+          [[bitmap TIFFRepresentationUsingCompression: compression factor:1.0]
             writeToFile : filename atomically:YES];
 
           [bitmap release];
@@ -768,7 +768,7 @@ void seg_xform_rel(float *x, float *y)
           filename = [filename stringByAppendingPathExtension:@"png"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect : [self bounds]];
+          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect: [self bounds]];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -794,7 +794,7 @@ void seg_xform_rel(float *x, float *y)
           filename = [filename stringByAppendingPathExtension:@"jpg"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect : [self bounds]];
+          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect: [self bounds]];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -833,7 +833,7 @@ void seg_xform_rel(float *x, float *y)
           filename = [filename stringByAppendingPathExtension:@"jp2"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect : [self bounds]];
+          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect: [self bounds]];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -871,7 +871,7 @@ void seg_xform_rel(float *x, float *y)
           filename = [filename stringByAppendingPathExtension:@"gif"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect : [self bounds]];
+          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect: [self bounds]];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -897,7 +897,7 @@ void seg_xform_rel(float *x, float *y)
           filename = [filename stringByAppendingPathExtension:@"bmp"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect : [self bounds]];
+          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect: [self bounds]];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -923,7 +923,7 @@ void seg_xform_rel(float *x, float *y)
           filename = [filename stringByAppendingPathExtension:@"pic"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect : [self bounds]];
+          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect: [self bounds]];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -952,12 +952,12 @@ void seg_xform_rel(float *x, float *y)
     }
 }
 
-- (void) set_fill_color : (int) color : (CGContextRef) context
+- (void) set_fill_color: (int) color : (CGContextRef) context
 {
   CGContextSetFillColorWithColor(context, p->rgb[color]);
 }
 
-- (void) set_stroke_color : (int) color : (CGContextRef) context
+- (void) set_stroke_color: (int) color : (CGContextRef) context
 {
   if (color != cur_color)
     {
@@ -989,12 +989,12 @@ void seg_xform_rel(float *x, float *y)
       p->width  = width;
       p->height = height;
 
-      [self setNeedsDisplay : YES];
-      [[self window] setFrame : rect display : YES];
+      [self setNeedsDisplay: YES];
+      [[self window] setFrame: rect display : YES];
     }
 }
 
-- (void) set_clip_rect : (int) tnr
+- (void) set_clip_rect: (int) tnr
 {
   if (gkss->clip == GKS_K_CLIP)
     clipRect = p->rect[tnr];
@@ -1047,7 +1047,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
     CGContextClosePath(context);
 }
 
-- (void) polyline : (int) n : (float *) px : (float *) py
+- (void) polyline: (int) n : (float *) px : (float *) py
 {
   int ln_type, ln_color, i;
   float ln_width;
@@ -1063,11 +1063,11 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
       NDC_to_DC(x, y, points[i].x, points[i].y);
     }
 
-  ln_type  = gkss->asf[0] ? gkss->ltype  : gkss->lindex;
+  ln_type  = gkss->asf[0] ? gkss->ltype : gkss->lindex;
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? Color8Bit(gkss->plcoli) : 1;
 
-  [self set_stroke_color : ln_color : context];
+  [self set_stroke_color: ln_color : context];
 
   begin_context(context);
 
@@ -1089,7 +1089,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   end_context(context);
 }
 
-- (void) draw_marker : (float) xn : (float) yn : (int) mtype :
+- (void) draw_marker: (float) xn : (float) yn : (int) mtype :
                       (float) mscale : (int) mcolor : (CGContextRef) context
 {
   int r, x, y, i;
@@ -1193,11 +1193,11 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
       op = marker[mtype][pc];
       switch (op)
         {
-        case 1 : // point
+        case 1: // point
           CGContextFillRect(context, CGRectMake(x, y, 1, 1));
           break;
 
-        case 2 : // line
+        case 2: // line
           CGContextBeginPath(context);
           for (i = 0; i < 2; i++)
             {
@@ -1213,7 +1213,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
           pc += 4;
           break;
 
-        case 3 : // polyline
+        case 3: // polyline
           CGContextBeginPath(context);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
@@ -1230,11 +1230,11 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
-        case 4 : // filled polygon
-        case 5 : // hollow polygon
+        case 4: // filled polygon
+        case 5: // hollow polygon
           CGContextBeginPath(context);
           if (op == 5)
-            [self set_fill_color : 0 : context];
+            [self set_fill_color: 0 : context];
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr =  scale * marker[mtype][pc + 2 + 2 * i];
@@ -1250,31 +1250,31 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 
           pc += 1 + 2 * marker[mtype][pc + 1];
           if (op == 5)
-            [self set_fill_color : mcolor : context];
+            [self set_fill_color: mcolor : context];
           break;
 
-        case 6 : // arc
+        case 6: // arc
           CGContextBeginPath(context);
           CGContextAddArc(context, x, y, r, 0.0, 2*M_PI,0);
           CGContextDrawPath(context, kCGPathStroke);
           break;
 
-        case 7 : // filled arc
-        case 8 : // hollow arc
+        case 7: // filled arc
+        case 8: // hollow arc
           if (op == 8)
-            [self set_fill_color : 0 : context];
+            [self set_fill_color: 0 : context];
           CGContextBeginPath(context);
           CGContextAddArc(context, x, y, r, 0.0, 2*M_PI,0);
           CGContextDrawPath(context, kCGPathFill);
           if (op == 8)
-            [self set_fill_color : mcolor : context];
+            [self set_fill_color: mcolor : context];
           break;
         }
       pc++;
     }while (op != 0);
 }
 
-- (void) polymarker : (int) n : (float *) px : (float *) py
+- (void) polymarker: (int) n : (float *) px : (float *) py
 {
   int mk_type, mk_color;
   float mk_size;
@@ -1282,16 +1282,16 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   float *clrt = gkss->viewport[gkss->cntnr];
   register int i, draw;
 
-  mk_type  = gkss->asf[3] ? gkss->mtype  : gkss->mindex;
-  mk_size  = gkss->asf[4] ? gkss->mszsc  : 1;
+  mk_type  = gkss->asf[3] ? gkss->mtype : gkss->mindex;
+  mk_size  = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? Color8Bit(gkss->pmcoli) : 1;
 
-  [self set_stroke_color : mk_color : context];
+  [self set_stroke_color: mk_color : context];
 
   begin_context(context);
 
   CGContextSetLineWidth(context, 1);
-  [self set_fill_color : mk_color : context];
+  [self set_fill_color: mk_color : context];
 
   for (i = 0; i < n; i++)
     {
@@ -1304,7 +1304,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
         draw = 1;
 
       if (draw)
-        [self draw_marker : x : y : mk_type : mk_size : mk_color : context];
+        [self draw_marker: x : y : mk_type : mk_size : mk_color : context];
     }
   end_context(context);
 }
@@ -1405,7 +1405,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
   CGPathRelease(shape);
 }
 
-- (void) fillarea : (int) n : (float *)px : (float *)py
+- (void) fillarea: (int) n : (float *)px : (float *)py
 {
   int fl_inter, fl_style, fl_color, i = 0;
   float x, y;
@@ -1418,11 +1418,11 @@ void fill_routine(int n, float *px, float *py, int tnr)
       NDC_to_DC(x, y, points[i].x, points[i].y);
     }
 
-  fl_inter = gkss->asf[10] ? gkss->ints  : predef_ints[gkss->findex - 1];
+  fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
   fl_color = gkss->asf[12] ? Color8Bit(gkss->facoli) : 1;
 
-  [self set_stroke_color : fl_color : context];
+  [self set_stroke_color: fl_color : context];
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
@@ -1437,7 +1437,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
       begin_context(context);
-      [self set_fill_color : fl_color : context];
+      [self set_fill_color: fl_color : context];
       CGContextBeginPath(context);
       CGContextSetLineWidth(context, 1);
       CGContextAddLines(context, points, n);
@@ -1448,7 +1448,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
   else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
            fl_inter == GKS_K_INTSTYLE_HATCH)
     {
-      [self set_fill_color : fl_color : context];
+      [self set_fill_color: fl_color : context];
       if (fl_inter == GKS_K_INTSTYLE_HATCH)
         fl_style += HATCH_STYLE;
       if (fl_style >= PATTERNS)
@@ -1461,8 +1461,8 @@ void fill_routine(int n, float *px, float *py, int tnr)
 }
 
 -(void) cellarray:
-     (float) xmin : (float) xmax : (float) ymin : (float) ymax :
-         (int) dx : (int) dy : (int) dimx : (int *)colia : (int) true_color
+    (float) xmin : (float) xmax : (float) ymin : (float) ymax :
+    (int) dx : (int) dy : (int) dimx : (int *)colia : (int) true_color
 {
   float x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
@@ -1513,7 +1513,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
       cs = CGColorSpaceCreateDeviceRGB();
       bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width,
-                                     cs, kCGImageAlphaNoneSkipLast);
+                                     cs, kCGImageAlphaPremultipliedLast);
       image = CGBitmapContextCreateImage(bitmap);
       CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
       CGImageRelease(image);
@@ -1535,7 +1535,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
               if (!true_color)
                 {
                   ind = Color8Bit(colia[iy * dimx + ix]);
-                  [self set_fill_color : ind : context];
+                  [self set_fill_color: ind : context];
                 }
               else
                 {
@@ -1554,6 +1554,25 @@ void fill_routine(int n, float *px, float *py, int tnr)
   end_context(context);
 }
 
+-(void) drawimage: (int) x : (int) y : (int) width : (int) height :
+                   (int *) bitmap
+{
+  CGColorSpaceRef cs;
+  CGContextRef bmp;
+  CGImageRef image;
+
+  begin_context(context);
+  cs = CGColorSpaceCreateDeviceRGB();
+  bmp = CGBitmapContextCreate(bitmap, width, height, 8, 4 * width, cs,
+                              kCGImageAlphaPremultipliedLast);
+  image = CGBitmapContextCreateImage(bmp);
+  CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
+  CGImageRelease(image);
+  CGContextRelease(bmp);
+  CGColorSpaceRelease(cs);
+  end_context(context);
+}
+
 -(NSString *)stringForText:(const char *)text withFontFamilyID : (int)family
 {
   NSString *string;
@@ -1565,18 +1584,18 @@ void fill_routine(int n, float *px, float *py, int tnr)
       string = [string stringByAppendingFormat:@"%d", dingbats[text[i]]];
     }
   } else if (family == 12) { // Symbols
-    string = [NSString stringWithCString : text encoding : NSSymbolStringEncoding];
+    string = [NSString stringWithCString: text encoding : NSSymbolStringEncoding];
   } else { // Anything else
-    string = [NSString stringWithCString : text encoding : NSASCIIStringEncoding];
+    string = [NSString stringWithCString: text encoding : NSASCIIStringEncoding];
   }
   return string;
 }
 
 
-- (void) text : (float) px : (float) py : (char *) text
+- (void) text: (float) px : (float) py : (char *) text
 {
   int tx_font, tx_prec, tx_color, nchars;
-  float x, y, xstart, ystart, xrel, yrel, ax, ay;
+  float xn, yn, xstart, ystart, xrel, yrel, ax, ay;
   NSString *fontName;
   NSString *string;
 
@@ -1586,7 +1605,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
   tx_prec  = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? Color8Bit(gkss->txcoli) : 1;
 
-  [self set_stroke_color : tx_color : context];
+  [self set_stroke_color: tx_color : context];
 
   begin_context(context);
 
@@ -1599,7 +1618,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
     int charCount = [string length];
     float fontsize = info.fontsize;
 
-    // Calculate string width (this is the recommended way : https://developer.apple.com/library/mac/#documentation/graphicsimaging/conceptual/drawingwithquartz2d/dq_text/dq_text.html )
+    // Calculate string width (this is the recommended way: https://developer.apple.com/library/mac/#documentation/graphicsimaging/conceptual/drawingwithquartz2d/dq_text/dq_text.html )
     CGFontRef cgfont; // Check if CGFont is already cached
     if (cgfontrefs[p->family] == NULL) {
       cgfontrefs[p->family] = CGFontCreateWithFontName((CFStringRef)fontName);
@@ -1618,9 +1637,9 @@ void fill_routine(int n, float *px, float *py, int tnr)
     CGPoint afterDrawing = CGContextGetTextPosition(context);
     float stringWidth = afterDrawing.x-beforeDrawing.x;
 
-    WC_to_NDC(px, py, gkss->cntnr, x, y);
-    seg_xform(&x, &y);
-    NDC_to_DC(x, y, xstart, ystart);
+    WC_to_NDC(px, py, gkss->cntnr, xn, yn);
+    seg_xform(&xn, &yn);
+    NDC_to_DC(xn, yn, xstart, ystart);
     xrel = stringWidth * xfac[gkss->txal[0]];
     yrel = p->capheight * yfac[gkss->txal[1]];
     CharXform(xrel, yrel, ax, ay);
@@ -1638,6 +1657,26 @@ void fill_routine(int n, float *px, float *py, int tnr)
     CGContextSetTextMatrix(context, transform);
     CGContextShowGlyphsAtPoint(context, xstart, ystart, glyphs, charCount);
   }
+#ifdef XFT
+  else if (tx_prec == GKS_K_TEXT_PRECISION_CHAR)
+  {
+    int *bitmap;
+    int x, y, w, h;
+
+    WC_to_NDC(px, py, gkss->cntnr, xn, yn);
+    NDC_to_DC(xn, yn, x, y);
+    bitmap = gks_ft_render(&x, &y, &w, &h, gkss, text, nchars);
+    if (bitmap != NULL)
+      {
+        [self drawimage: x : y : w : h : bitmap];
+        free(bitmap);
+      }
+    else
+      {
+        gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
+      }
+  }
+#endif
   else
     {
       gks_emul_text(px, py, nchars, text, line_routine, fill_routine);
@@ -1646,7 +1685,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
   end_context(context);
 }
 
-- (_FontInfo) set_font : (int) font
+- (_FontInfo) set_font: (int) font
 {
   float scale, ux, uy;
   int fontsize;
@@ -1683,7 +1722,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
   _FontInfo info;
   info.fontsize = fontsize;
-  info.fontfamily = [NSString stringWithCString : fonts[p->family] encoding : NSASCIIStringEncoding];
+  info.fontfamily = [NSString stringWithCString: fonts[p->family] encoding : NSASCIIStringEncoding];
   return info;
 }
 
