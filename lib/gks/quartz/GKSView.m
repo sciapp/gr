@@ -1513,7 +1513,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
       cs = CGColorSpaceCreateDeviceRGB();
       bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width,
-                                     cs, kCGImageAlphaPremultipliedLast);
+                                     cs, kCGImageAlphaNoneSkipLast);
       image = CGBitmapContextCreateImage(bitmap);
       CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
       CGImageRelease(image);
