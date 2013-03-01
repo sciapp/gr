@@ -1664,7 +1664,9 @@ void fill_routine(int n, float *px, float *py, int tnr)
     int x, y, w, h;
 
     WC_to_NDC(px, py, gkss->cntnr, xn, yn);
+    seg_xform(&xn, &yn);
     NDC_to_DC(xn, yn, x, y);
+    h = p->c;
     bitmap = gks_ft_render(&x, &y, &w, &h, gkss, text, nchars);
     if (bitmap != NULL)
       {

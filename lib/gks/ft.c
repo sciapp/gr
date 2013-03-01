@@ -200,7 +200,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   int i, j, k, textfont;
   float red, green, blue;
 
-  const int windowheight = abs(gkss->window[1][3] - gkss->window[1][2]);
+  const int capheight = *height;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN ||
                             direction == GKS_K_TEXT_PATH_UP);
@@ -259,7 +259,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     return NULL;
   }
   if (strcmp(FT_Get_X11_Font_Format(face), "Type 1") == 0) {
-    const FT_String *suffix_type1[] = {".afm",".pfm"};
+    const FT_String *suffix_type1[] = { ".afm", ".pfm" };
     for (i = 0; i < 2; i++) {
       strcpy(file, prefix);
 #ifndef _WIN32
@@ -275,7 +275,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   free(file);
     
   FT_Set_Transform(face, NULL, NULL);
-  textheight = gkss->chh * windowheight * 64;
+  textheight = gkss->chh * capheight * 64;
   error = FT_Set_Pixel_Sizes(face, 0, textheight >> 6);
   error += FT_Load_Glyph(face, FT_Get_Char_Index(face, 'H'), FT_LOAD_DEFAULT);
   if (face->glyph->metrics.height == 0) {
@@ -317,8 +317,8 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     
   for (i = 0; i < num_glyphs; i++) {
     FT_Vector tr;
-    const FT_UInt codepoint = unicode_string
-      [direction == GKS_K_TEXT_PATH_LEFT ? (num_glyphs-1-i) : i];
+    const FT_UInt codepoint = unicode_string[direction == GKS_K_TEXT_PATH_LEFT ?
+                                             (num_glyphs-1-i) : i];
     error = set_glyph(&face, codepoint, &previous, &pen, vertical, &rotation);
     if (error) continue;
         
@@ -453,7 +453,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   if (valign != GKS_K_TEXT_VALIGN_BASE) {
     FT_Vector point;
     point.x = 0;
-    point.y = gkss->chh * windowheight * 64;
+    point.y = gkss->chh * capheight * 64;
     FT_Vector_Transform(&point, &rotation);
     if (valign == GKS_K_TEXT_VALIGN_CAP) {
       align.x += point.x;
