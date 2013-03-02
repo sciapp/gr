@@ -151,7 +151,7 @@ static void convert_text(FT_Bytes str, FT_UInt *unicode_string, int *length) {
     num_glyphs++;
   }
   unicode_string[num_glyphs] = '\0';
-    
+
   *length = num_glyphs;
 }
 
@@ -184,7 +184,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   FT_Long xmin, ymin, xmax, ymax; /* bounding box */
   FT_UInt previous;               /* previous glyph index */
   FT_Vector spacing;              /* amount of additional space between glyphs */
-  FT_Vector right_side;           /* for computing vertical alignment */
+  FT_Vector right;                /* for computing vertical alignment */
   FT_ULong textheight;            /* textheight in FreeType convention */
   FT_Error error;                 /* for error codes */
   FT_Matrix rotation;             /* text rotation matrix */
@@ -200,18 +200,18 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   int i, j, k, textfont;
   float red, green, blue;
 
-  const int capheight = *height;
+  const int windowheight = *height;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN ||
                             direction == GKS_K_TEXT_PATH_UP);
-    
+
   if (!init) gks_ft_init();
-    
+
   num_glyphs = length;
   unicode_string = (FT_UInt *) malloc(length * sizeof(FT_UInt) + 1);
   convert_text((FT_Bytes)text, unicode_string, &num_glyphs);
-    
-  if (gkss->txal[0] >= 1 && gkss->txal[0] <= 3) {
+
+  if (gkss->txal[0] != GKS_K_TEXT_HALIGN_NORMAL) {
     halign = gkss->txal[0];
   } else if (vertical) {
     halign = GKS_K_TEXT_HALIGN_CENTER;
@@ -220,13 +220,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   } else {
     halign = GKS_K_TEXT_HALIGN_LEFT;
   }
-
-  if (gkss->txal[1] >= 1 && gkss->txal[1] <= 5) {
-    valign = gkss->txal[1];
-  } else {
-    valign = GKS_K_TEXT_VALIGN_BASE;
-  }
-    
+  valign = gkss->txal[1];
   textfont = abs(gkss->txfont);
   if (textfont >= 101 && textfont <= 131)
     textfont -= 100;
@@ -236,7 +230,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     gks_perror("Invalid font index: %d", gkss->txfont);
     font = gks_font_list[0];
   }
-    
+
   prefix = gks_getenv("GKS_FONTPATH");
   if (prefix == NULL) {
     prefix = GRDIR;
@@ -273,9 +267,9 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     }
   }
   free(file);
-    
+
   FT_Set_Transform(face, NULL, NULL);
-  textheight = gkss->chh * capheight * 64;
+  textheight = gkss->chh * windowheight * 64;
   error = FT_Set_Pixel_Sizes(face, 0, textheight >> 6);
   error += FT_Load_Glyph(face, FT_Get_Char_Index(face, 'H'), FT_LOAD_DEFAULT);
   if (face->glyph->metrics.height == 0) {
@@ -287,7 +281,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   }
   error += FT_Set_Pixel_Sizes(face, gkss->chxp*textheight/64, textheight/64);
   if (error) gks_perror("Cannot set text height");
-    
+
   if (gkss->chup[0] != 0.0 || gkss->chup[1] != 0.0) {
     const float angle = atan2f(gkss->chup[1], gkss->chup[0]) - M_PI/2;
     rotation.xx =  cosf(angle) * 0x10000L;
@@ -296,7 +290,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     rotation.yy =  cosf(angle) * 0x10000L;
     FT_Set_Transform(face, &rotation, NULL);
   }
- 
+
   spacing.x = spacing.y = 0;
   if (gkss->chsp != 0.0) {
     error = FT_Load_Glyph(face, FT_Get_Char_Index(face, ' '),
@@ -308,20 +302,20 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
       gks_perror("Cannot apply character spacing");
     }
   }
-    
+
   xmin = ymin = LONG_MAX;
   xmax = ymax = LONG_MIN;
   pen.x = pen.y = 0;
-  right_side.x = right_side.y = 0;
+  right.x = right.y = 0;
   previous = 0;
-    
+
   for (i = 0; i < num_glyphs; i++) {
     FT_Vector tr;
     const FT_UInt codepoint = unicode_string[direction == GKS_K_TEXT_PATH_LEFT ?
                                              (num_glyphs-1-i) : i];
     error = set_glyph(&face, codepoint, &previous, &pen, vertical, &rotation);
     if (error) continue;
-        
+
     /* glyph translation vector for vertical text */
     tr.x = tr.y = 0;
     if (vertical && halign != GKS_K_TEXT_HALIGN_LEFT) {
@@ -340,7 +334,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
 	       64*(face->glyph->bitmap_top - face->glyph->bitmap.rows));
     ymax = max(ymax, pen.y + max(tr.y, 0) + 64*face->glyph->bitmap_top);
     if (vertical) {
-      right_side.x = max(right_side.x, face->glyph->metrics.width);
+      right.x = max(right.x, face->glyph->metrics.width);
     }
     if (direction == GKS_K_TEXT_PATH_DOWN) {
       pen.x -= face->glyph->advance.x + spacing.x;
@@ -350,22 +344,18 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
       pen.y += face->glyph->advance.y + spacing.y;
     }
   }
-    
+
   *width = (int)(xmax - xmin >> 6);
   *height = (int)(ymax - ymin >> 6);
   if (xmax <= xmin || ymax <= ymin) return NULL;
   size = *width * *height;
   mono_bitmap = (FT_Byte *) realloc_save(mono_bitmap, size);
-#ifdef SHOW_BITMAP_BOX
-  memset(mono_bitmap, 30, size);
-#else
   memset(mono_bitmap, 0, size);
-#endif
-    
+
   pen.x = 0;
   pen.y = 0;
   previous = 0;
-    
+
   for (i = 0; i < num_glyphs; i++) {
     FT_Bitmap ftbitmap;
     FT_Vector tr;
@@ -373,10 +363,10 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
 					     (num_glyphs-1-i) : i];
     error = set_glyph(&face, codepoint, &previous, &pen, vertical, &rotation);
     if (error) continue;
-        
+
     tr.x = 0; tr.y = 0;
     if (vertical && halign != GKS_K_TEXT_HALIGN_LEFT) {
-      tr.x = right_side.x - face->glyph->metrics.width;
+      tr.x = right.x - face->glyph->metrics.width;
       if (tr.x != 0) FT_Vector_Transform(&tr, &rotation);
       if (halign != GKS_K_TEXT_HALIGN_RIGHT) {
 	tr.x /= 2;
@@ -432,14 +422,14 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     int tmp = rgba_bitmap[4*i + 3] + mono_bitmap[i];
     rgba_bitmap[4*i + 3] = (FT_Byte) min(tmp, 255);
   }
-    
+
   if (vertical) {
-    FT_Vector_Transform(&right_side, &rotation);
-    pen.x = right_side.x;
-    pen.y = right_side.y;
+    FT_Vector_Transform(&right, &rotation);
+    pen.x = right.x;
+    pen.y = right.y;
   }
   FT_Vector align;
-    
+
   if (halign == GKS_K_TEXT_HALIGN_LEFT) {
     align.x = 0;
     align.y = 0;
@@ -453,7 +443,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   if (valign != GKS_K_TEXT_VALIGN_BASE) {
     FT_Vector point;
     point.x = 0;
-    point.y = gkss->chh * capheight * 64;
+    point.y = gkss->chh * windowheight * 64;
     FT_Vector_Transform(&point, &rotation);
     if (valign == GKS_K_TEXT_VALIGN_CAP) {
       align.x += point.x;
@@ -471,7 +461,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   }
   *x += (xmin - align.x) / 64;
   *y += (ymin - align.y) / 64;
-    
+
   free(mono_bitmap);
   return (int *)rgba_bitmap;
 }
