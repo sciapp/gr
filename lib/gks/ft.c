@@ -199,7 +199,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   FT_Int num_glyphs;              /* number of glyphs */
   FT_Vector tr, align, point;
   FT_Bitmap ftbitmap;
-  const FT_UInt codepoint;
+  FT_UInt codepoint;
   int i, j, k, textfont, dx, dy, value, tmp;
   float red, green, blue, angle;
   const int windowheight = *height;
@@ -296,7 +296,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   spacing.x = spacing.y = 0;
   if (gkss->chsp != 0.0) {
     error = FT_Load_Glyph(face, FT_Get_Char_Index(face, ' '),
-                          vertical ? FT_LOAD_VERTICAL_LAYOUT : FT_LOAD_DEFAULT)
+                          vertical ? FT_LOAD_VERTICAL_LAYOUT : FT_LOAD_DEFAULT);
     if (!error) {
       spacing.x = face->glyph->advance.x * gkss->chsp;
       spacing.y = face->glyph->advance.y * gkss->chsp;
