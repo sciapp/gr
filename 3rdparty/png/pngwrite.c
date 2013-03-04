@@ -1,8 +1,8 @@
 
 /* pngwrite.c - general routines to write a PNG file
  *
- * Last changed in libpng 1.2.42 [January 3, 2010]
- * Copyright (c) 1998-2010 Glenn Randers-Pehrson
+ * Last changed in libpng 1.2.45 [July 7, 2011]
+ * Copyright (c) 1998-2011 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -38,7 +38,8 @@ png_write_info_before_PLTE(png_structp png_ptr, png_infop info_ptr)
    /* Write PNG signature */
    png_write_sig(png_ptr);
 #ifdef PNG_MNG_FEATURES_SUPPORTED
-   if ((png_ptr->mode&PNG_HAVE_PNG_SIGNATURE)&&(png_ptr->mng_features_permitted))
+   if ((png_ptr->mode&PNG_HAVE_PNG_SIGNATURE) && \
+      (png_ptr->mng_features_permitted))
    {
       png_warning(png_ptr, "MNG features are not allowed in a PNG datastream");
       png_ptr->mng_features_permitted = 0;
@@ -294,6 +295,7 @@ png_write_info(png_structp png_ptr, png_infop info_ptr)
          if (keep != PNG_HANDLE_CHUNK_NEVER &&
             up->location && (up->location & PNG_HAVE_PLTE) &&
             !(up->location & PNG_HAVE_IDAT) &&
+            !(up->location & PNG_AFTER_IDAT) &&
             ((up->name[3] & 0x20) || keep == PNG_HANDLE_CHUNK_ALWAYS ||
             (png_ptr->flags & PNG_FLAG_KEEP_UNSAFE_CHUNKS)))
          {
@@ -639,7 +641,8 @@ png_write_init_2(png_structp png_ptr, png_const_charp user_png_ver,
       png_ptr->flags = 0;
 #endif
       png_error(png_ptr,
-      "The png struct allocated by the application for writing is too small.");
+      "The png struct allocated by the application for writing is"
+      " too small.");
    }
    if (png_sizeof(png_info) > png_info_size)
    {
@@ -648,7 +651,8 @@ png_write_init_2(png_structp png_ptr, png_const_charp user_png_ver,
       png_ptr->flags = 0;
 #endif
       png_error(png_ptr,
-      "The info struct allocated by the application for writing is too small.");
+      "The info struct allocated by the application for writing is"
+      " too small.");
    }
    png_write_init_3(&png_ptr, user_png_ver, png_struct_size);
 }
@@ -803,15 +807,19 @@ png_write_row(png_structp png_ptr, png_bytep row)
       /* Check for transforms that have been set but were defined out */
 #if !defined(PNG_WRITE_INVERT_SUPPORTED) && defined(PNG_READ_INVERT_SUPPORTED)
       if (png_ptr->transformations & PNG_INVERT_MONO)
-         png_warning(png_ptr, "PNG_WRITE_INVERT_SUPPORTED is not defined.");
+         png_warning(png_ptr,
+             "PNG_WRITE_INVERT_SUPPORTED is not defined.");
 #endif
 #if !defined(PNG_WRITE_FILLER_SUPPORTED) && defined(PNG_READ_FILLER_SUPPORTED)
       if (png_ptr->transformations & PNG_FILLER)
-         png_warning(png_ptr, "PNG_WRITE_FILLER_SUPPORTED is not defined.");
+         png_warning(png_ptr,
+             "PNG_WRITE_FILLER_SUPPORTED is not defined.");
 #endif
-#if !defined(PNG_WRITE_PACKSWAP_SUPPORTED) && defined(PNG_READ_PACKSWAP_SUPPORTED)
+#if !defined(PNG_WRITE_PACKSWAP_SUPPORTED) && \
+    defined(PNG_READ_PACKSWAP_SUPPORTED)
       if (png_ptr->transformations & PNG_PACKSWAP)
-         png_warning(png_ptr, "PNG_WRITE_PACKSWAP_SUPPORTED is not defined.");
+         png_warning(png_ptr,
+             "PNG_WRITE_PACKSWAP_SUPPORTED is not defined.");
 #endif
 #if !defined(PNG_WRITE_PACK_SUPPORTED) && defined(PNG_READ_PACK_SUPPORTED)
       if (png_ptr->transformations & PNG_PACK)
@@ -1066,7 +1074,7 @@ png_destroy_write_struct(png_structpp png_ptr_ptr, png_infopp info_ptr_ptr)
       {
         png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
 
-#ifdef PNG_UNKNOWN_CHUNKS_SUPPORTED
+#ifdef PNG_HANDLE_AS_UNKNOWN_SUPPORTED
         if (png_ptr->num_chunk_list)
         {
            png_free(png_ptr, png_ptr->chunk_list);

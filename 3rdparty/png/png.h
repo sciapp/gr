@@ -1,7 +1,7 @@
 /* png.h - header file for PNG reference library
  *
- * libpng version 1.2.42 - January 3, 2010
- * Copyright (c) 1998-2010 Glenn Randers-Pehrson
+ * libpng version 1.2.50 - July 10, 2012
+ * Copyright (c) 1998-2012 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  *
@@ -10,7 +10,7 @@
  * Authors and maintainers:
  *  libpng versions 0.71, May 1995, through 0.88, January 1996: Guy Schalnat
  *  libpng versions 0.89c, June 1996, through 0.96, May 1997: Andreas Dilger
- *  libpng versions 0.97, January 1998, through 1.2.42 - January 3, 2010: Glenn
+ *  libpng versions 0.97, January 1998, through 1.2.50 - July 10, 2012: Glenn
  *  See also "Contributing Authors", below.
  *
  * Note about libpng version numbers:
@@ -231,7 +231,7 @@
  *    1.2.37beta01-03         13    10237  12.so.0.37[.0]
  *    1.2.37rc01              13    10237  12.so.0.37[.0]
  *    1.2.37                  13    10237  12.so.0.37[.0]
- *    1.2.45                  10    10045  12.so.0.45[.0]
+ *    1.0.45                  10    10045  12.so.0.45[.0]
  *    1.0.46                  10    10046  10.so.0.46[.0]
  *    1.2.38beta01            13    10238  12.so.0.38[.0]
  *    1.2.38rc01-03           13    10238  12.so.0.38[.0]
@@ -254,6 +254,36 @@
  *    1.2.42rc01-05           13    10242  12.so.0.42[.0]
  *    1.0.52                  10    10052  10.so.0.52[.0]
  *    1.2.42                  13    10242  12.so.0.42[.0]
+ *    1.2.43beta01-05         13    10243  12.so.0.43[.0]
+ *    1.0.53rc01-02           10    10053  10.so.0.53[.0]
+ *    1.2.43rc01-02           13    10243  12.so.0.43[.0]
+ *    1.0.53                  10    10053  10.so.0.53[.0]
+ *    1.2.43                  13    10243  12.so.0.43[.0]
+ *    1.2.44beta01-03         13    10244  12.so.0.44[.0]
+ *    1.2.44rc01-03           13    10244  12.so.0.44[.0]
+ *    1.2.44                  13    10244  12.so.0.44[.0]
+ *    1.2.45beta01-03         13    10245  12.so.0.45[.0]
+ *    1.0.55rc01              10    10055  10.so.0.55[.0]
+ *    1.2.45rc01              13    10245  12.so.0.45[.0]
+ *    1.0.55                  10    10055  10.so.0.55[.0]
+ *    1.2.45                  13    10245  12.so.0.45[.0]
+ *    1.2.46rc01-02           13    10246  12.so.0.46[.0]
+ *    1.0.56                  10    10056  10.so.0.56[.0]
+ *    1.2.46                  13    10246  12.so.0.46[.0]
+ *    1.2.47beta01            13    10247  12.so.0.47[.0]
+ *    1.2.47rc01              13    10247  12.so.0.47[.0]
+ *    1.0.57rc01              10    10057  10.so.0.57[.0]
+ *    1.2.47                  13    10247  12.so.0.47[.0]
+ *    1.0.57                  10    10057  10.so.0.57[.0]
+ *    1.2.48beta01            13    10248  12.so.0.48[.0]
+ *    1.2.48rc01-02           13    10248  12.so.0.48[.0]
+ *    1.0.58                  10    10058  10.so.0.58[.0]
+ *    1.2.48                  13    10248  12.so.0.48[.0]
+ *    1.2.49rc01              13    10249  12.so.0.49[.0]
+ *    1.0.59                  10    10059  10.so.0.59[.0]
+ *    1.2.49                  13    10249  12.so.0.49[.0]
+ *    1.0.60                  10    10060  10.so.0.60[.0]
+ *    1.2.50                  13    10250  12.so.0.50[.0]
  *
  *    Henceforth the source version will match the shared-library major
  *    and minor numbers; the shared-library major version number will be
@@ -285,8 +315,8 @@
  *
  * This code is released under the libpng license.
  *
- * libpng versions 1.2.6, August 15, 2004, through 1.2.42, January 3, 2010, are
- * Copyright (c) 2004, 2006-2010 Glenn Randers-Pehrson, and are
+ * libpng versions 1.2.6, August 15, 2004, through 1.2.50, July 10, 2012, are
+ * Copyright (c) 2004, 2006-2011 Glenn Randers-Pehrson, and are
  * distributed according to the same disclaimer and license as libpng-1.2.5
  * with the following individual added to the list of Contributing Authors:
  *
@@ -397,13 +427,13 @@
  * Y2K compliance in libpng:
  * =========================
  *
- *    January 3, 2010
+ *    July 10, 2012
  *
  *    Since the PNG Development group is an ad-hoc body, we can't make
  *    an official declaration.
  *
  *    This is your unofficial assurance that libpng from version 0.71 and
- *    upward through 1.2.42 are Y2K compliant.  It is my belief that earlier
+ *    upward through 1.2.50 are Y2K compliant.  It is my belief that earlier
  *    versions were also Y2K compliant.
  *
  *    Libpng only has three year fields.  One is a 2-byte unsigned integer
@@ -459,9 +489,9 @@
  */
 
 /* Version information for png.h - this should match the version in png.c */
-#define PNG_LIBPNG_VER_STRING "1.2.42"
+#define PNG_LIBPNG_VER_STRING "1.2.50"
 #define PNG_HEADER_VERSION_STRING \
-   " libpng version 1.2.42 - January 3, 2010\n"
+   " libpng version 1.2.50 - July 10, 2012\n"
 
 #define PNG_LIBPNG_VER_SONUM   0
 #define PNG_LIBPNG_VER_DLLNUM  13
@@ -469,7 +499,7 @@
 /* These should match the first 3 components of PNG_LIBPNG_VER_STRING: */
 #define PNG_LIBPNG_VER_MAJOR   1
 #define PNG_LIBPNG_VER_MINOR   2
-#define PNG_LIBPNG_VER_RELEASE 42
+#define PNG_LIBPNG_VER_RELEASE 50
 /* This should match the numeric part of the final component of
  * PNG_LIBPNG_VER_STRING, omitting any leading zero:
  */
@@ -499,7 +529,7 @@
  * version 1.0.0 was mis-numbered 100 instead of 10000).  From
  * version 1.0.1 it's    xxyyzz, where x=major, y=minor, z=release
  */
-#define PNG_LIBPNG_VER 10242 /* 1.2.42 */
+#define PNG_LIBPNG_VER 10250 /* 1.2.50 */
 
 #ifndef PNG_VERSION_INFO_ONLY
 /* Include the compression library's header */
@@ -1273,7 +1303,16 @@ struct png_struct_def
    png_uint_32 num_rows PNG_DEPSTRUCT;      /* number of rows in current pass */
    png_uint_32 usr_width PNG_DEPSTRUCT;     /* width of row at start of write */
    png_uint_32 rowbytes PNG_DEPSTRUCT;      /* size of row in bytes */
-   png_uint_32 irowbytes PNG_DEPSTRUCT;     /* size of current interlaced row in bytes */
+#if 0 /* Replaced with the following in libpng-1.2.43 */
+   png_size_t irowbytes PNG_DEPSTRUCT;
+#endif
+/* Added in libpng-1.2.43 */
+#ifdef PNG_USER_LIMITS_SUPPORTED
+   /* Added in libpng-1.4.0: Total number of sPLT, text, and unknown
+    * chunks that can be stored (0 means unlimited).
+    */
+   png_uint_32 user_chunk_cache_max PNG_DEPSTRUCT;
+#endif
    png_uint_32 iwidth PNG_DEPSTRUCT;        /* width of current interlaced row in pixels */
    png_uint_32 row_number PNG_DEPSTRUCT;    /* current row in interlace pass */
    png_bytep prev_row PNG_DEPSTRUCT;        /* buffer to save previous (unfiltered) row */
@@ -1505,7 +1544,7 @@ struct png_struct_def
 /* New members added in libpng-1.0.16 and 1.2.6 */
    png_byte compression_type PNG_DEPSTRUCT;
 
-#ifdef PNG_SET_USER_LIMITS_SUPPORTED
+#ifdef PNG_USER_LIMITS_SUPPORTED
    png_uint_32 user_width_max PNG_DEPSTRUCT;
    png_uint_32 user_height_max PNG_DEPSTRUCT;
 #endif
@@ -1530,7 +1569,7 @@ struct png_struct_def
 /* This triggers a compiler error in png.c, if png.c and png.h
  * do not agree upon the version number.
  */
-typedef png_structp version_1_2_42;
+typedef png_structp version_1_2_50;
 
 typedef png_struct FAR * FAR * png_structpp;
 
