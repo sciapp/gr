@@ -1,0 +1,43 @@
+OBJS = \
+        bio.obj \
+        cio.obj \
+        dwt.obj \
+        event.obj \
+        image.obj \
+        j2k.obj \
+        j2k_lib.obj \
+        jp2.obj \
+        jpt.obj \
+        mct.obj \
+        mqc.obj \
+        openjpeg.obj \
+        pi.obj \
+        raw.obj \
+        t1.obj \
+        t2.obj \
+        tcd.obj \
+        tgt.obj \
+        cidx_manager.obj \
+        phix_manager.obj \
+        ppix_manager.obj \
+        thix_manager.obj \
+        tpix_manager.obj
+
+CC = CL
+CFLAGS = /c /Zi /nologo /MD /D_POSIX /DOPJ_STATIC
+AR = LIB /nologo
+SRCDIR = .\ 
+
+.SUFFIXES: .obj .c
+
+{$(SRCDIR)}.c.obj:
+	$(CC) $(CFLAGS) $<
+
+libopenjpeg.lib: $(OBJS)
+	$(AR) /out:$@ $**
+
+clean:
+	DEL libopenjpeg.lib
+	DEL *.pdb
+	DEL *.obj
+	DEL *.bak

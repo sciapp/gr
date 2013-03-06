@@ -1,0 +1,35 @@
+OBJS = \
+        jbig2.obj \
+        jbig2_arith.obj \
+        jbig2_arith_iaid.obj \
+        jbig2_arith_int.obj \
+        jbig2_generic.obj \
+        jbig2_halftone.obj \
+        jbig2_huffman.obj \
+        jbig2_image.obj \
+        jbig2_metadata.obj \
+        jbig2_mmr.obj \
+        jbig2_page.obj \
+        jbig2_refinement.obj \
+        jbig2_segment.obj \
+        jbig2_symbol_dict.obj \
+        jbig2_text.obj
+
+CC = CL
+CFLAGS = /c /Zi /nologo /MD /D_POSIX
+AR = LIB /nologo
+SRCDIR = .\ 
+
+.SUFFIXES: .obj .c
+
+{$(SRCDIR)}.c.obj:
+	$(CC) $(CFLAGS) $<
+
+libjbig2dec.lib: $(OBJS)
+	$(AR) /out:$@ $**
+
+clean:
+	DEL libjbig2dec.lib
+	DEL *.pdb
+	DEL *.obj
+	DEL *.bak

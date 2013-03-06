@@ -51,7 +51,7 @@ const static FT_String *gks_font_list[] = {
 static FT_Bool init = 0;
 static FT_Library library;
 
-static FT_Pointer realloc_save(FT_Pointer ptr, size_t size);
+static FT_Pointer safe_realloc(FT_Pointer ptr, size_t size);
 static FT_Error set_glyph(FT_Face *face, FT_UInt codepoint, FT_UInt *previous,
                           FT_Vector *pen, FT_Bool vertical, FT_Matrix *rotation);
 static void convert_text(FT_Bytes str, FT_UInt *unicode_string, int *length);
@@ -66,7 +66,7 @@ static FT_Long max(FT_Long a, FT_Long b) {
   return a > b ? a : b;
 }
 
-static FT_Pointer realloc_save(FT_Pointer ptr, size_t size) {
+static FT_Pointer safe_realloc(FT_Pointer ptr, size_t size) {
   FT_Pointer tmp;
   if (ptr) {
     tmp = malloc(size);
@@ -350,7 +350,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   *height = (int)((ymax - ymin) / 64);
   if (xmax <= xmin || ymax <= ymin) return NULL;
   size = *width * *height;
-  mono_bitmap = (FT_Byte *) realloc_save(mono_bitmap, size);
+  mono_bitmap = (FT_Byte *) safe_realloc(mono_bitmap, size);
   memset(mono_bitmap, 0, size);
 
   pen.x = 0;
@@ -398,20 +398,12 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     }
   }
 
-  if (direction == GKS_K_TEXT_PATH_DOWN) {
-    pen.x += spacing.x;
-    pen.y += spacing.y;
-  } else {
-    pen.x -= spacing.x;
-    pen.y -= spacing.y;
-  }
-
   gks_inq_rgb(gkss->txcoli, &red, &green, &blue);
   color[0] = (int)(red * 255);
   color[1] = (int)(green * 255);
   color[2] = (int)(blue * 255);
 
-  rgba_bitmap = (FT_Byte *) realloc_save(rgba_bitmap, 4 * size);
+  rgba_bitmap = (FT_Byte *) safe_realloc(rgba_bitmap, 4 * size);
   memset(rgba_bitmap, 0, 4 * size);
   for (i = 0; i < size; i++) {
     for (j = 0; j < 3; j++) {
@@ -422,10 +414,28 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     rgba_bitmap[4*i + 3] = (FT_Byte) min(tmp, 255);
   }
 
-  if (vertical) {
+  if (direction == GKS_K_TEXT_PATH_DOWN) {
+    pen.x += spacing.x;
+    pen.y += spacing.y;
+  } else {
+    pen.x -= spacing.x;
+    pen.y -= spacing.y;
+  }
+  if(!vertical) {
+    pen.x -= face->glyph->advance.x;
+    pen.y -= face->glyph->advance.y;
+    right.x = face->glyph->metrics.width;
+  }
+
+  if (right.x!=0 || right.y!=0) {
     FT_Vector_Transform(&right, &rotation);
+  }
+  if (vertical) {
     pen.x = right.x;
     pen.y = right.y;
+  } else {
+    pen.x += right.x;
+    pen.y += right.y;
   }
 
   if (halign == GKS_K_TEXT_HALIGN_LEFT) {

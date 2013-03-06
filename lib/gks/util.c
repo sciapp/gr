@@ -2307,7 +2307,7 @@ void inq_text_extent(
   *txx = 0;
   if (nchars > 0)
     {
-      if (prec != GKS_K_TEXT_PRECISION_STRING)
+      if (prec == GKS_K_TEXT_PRECISION_STROKE)
 	{
 	  for (i = 0; i < nchars; i++)
 	    {
@@ -2330,7 +2330,7 @@ void inq_text_extent(
     }
   else
     {
-      if (prec != GKS_K_TEXT_PRECISION_STRING)
+      if (prec == GKS_K_TEXT_PRECISION_STROKE)
 	gks_lookup_font(gkss->fontfile, gkss->version, font, ' ', &s);
       else
 	gks_lookup_afm(font, ' ', &s);
