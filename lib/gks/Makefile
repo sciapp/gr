@@ -67,7 +67,7 @@ install:
 	cp -p gksm $(BINDIR)
 	@if [ ! -d $(FONTDIR) ]; then mkdir -m 755 $(FONTDIR); fi
 	cp -p gksfont.dat $(FONTDIR)
-	cp -p fonts/* $(FONTDIR)
+	cp -a fonts/* $(FONTDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gks.h $(INCDIR)
 
