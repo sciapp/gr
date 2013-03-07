@@ -11,41 +11,57 @@
 #include FT_GLYPH_H
 #include FT_XFREE86_H
 
-/* GKS font list (uncommented entries: Times Roman) */
 const static FT_String *gks_font_list[] = {
-  "n021003l",
-  "a010013l", /*  1 Avant Garde Book */
-  "n022003l", /*  2 Courier */
-  "n019003l", /*  3 Helvetica */
-  "n021003l",
-  "c059013l", /*  5 New Century Schoolbook Roman */
-  "n021003l",
-  "s050000l", /*  7 Symbol */
-  "n021003l", /*  8 Times New Roman */
-  "a010015l", /*  9 Avant Garde Demi */
-  "n022004l", /* 10 Courier Bold */
-  "n019004l", /* 11 Helvetica Bold */
-  "n021003l",
-  "c059016l", /* 13 New Century Schoolbook Bold */
-  "n021003l",
-  "n021003l",
-  "n021004l", /* 16 Times Bold */
-  "a010033l", /* 17 Avant Garde Book Oblique */
-  "n022023l", /* 18 Courier Oblique */
-  "n019023l", /* 19 Helvetica Oblique */
-  "n021003l",
-  "c059033l", /* 21 New Century Schoolbook Italic */
-  "n021003l",
-  "n021003l",
-  "n021023l", /* 24 Times Italic */
-  "a010035l", /* 25 Avant Garde Demi Oblique */
-  "n022024l", /* 26 Courier Bold Oblique */
-  "n019024l", /* 27 Helvetica Bold Oblique */
-  "n021003l",
-  "c059036l", /* 29 New Century Schoolbook Bold Italic */
-  "n021003l",
-  "n021003l",
-  "n021024l"  /* 32 Times Bold Italic */
+  "NimbusRomNo9L-Regu",         /* 1: Times New Roman */
+  "NimbusRomNo9L-ReguItal",
+  "NimbusRomNo9L-Medi",
+  "NimbusRomNo9L-MediItal",
+  "NimbusSanL-Regu",            /* 5: Helvetica */
+  "NimbusSanL-ReguItal",
+  "NimbusSanL-Bold",
+  "NimbusSanL-BoldItal",
+  "NimbusMonL-Regu",            /* 9: Courier */
+  "NimbusMonL-ReguObli",
+  "NimbusMonL-Bold",
+  "NimbusMonL-BoldObli",
+  "StandardSymL",               /* 13: Symbol */
+  "URWBookmanL-Ligh",           /* 14: Bookman Light */
+  "URWBookmanL-LighItal",
+  "URWBookmanL-DemiBold",
+  "URWBookmanL-DemiBoldItal",
+  "CenturySchL-Roma",           /* 18: New Century Schoolbook Roman */
+  "CenturySchL-Ital",
+  "CenturySchL-Bold",
+  "CenturySchL-BoldItal",
+  "URWGothicL-Book",            /* 22: Avant Garde Book */
+  "URWGothicL-BookObli",
+  "URWGothicL-Demi",
+  "URWGothicL-DemiObli",
+  "URWPalladioL-Roma",          /* 26: Palatino */
+  "URWPalladioL-Ital",
+  "URWPalladioL-Bold",
+  "URWPalladioL-BoldItal",
+  "URWChanceryL-MediItal",      /* 30: Zapf Chancery */
+  "Dingbats"                    /* 31: Zapf Dingbats */
+};
+
+const static int map[] = {
+  22, 9, 5, 14, 18, 26, 13, 1,
+  24, 11, 7, 16, 20, 28, 13, 3,
+  23, 10, 6, 15, 19, 27, 13, 2,
+  25, 12, 8, 17, 21, 29, 13, 4
+};
+
+const static float caps[] = {
+  0.662, 0.660, 0.681, 0.662,
+  0.729, 0.729, 0.729, 0.729,
+  0.583, 0.583, 0.583, 0.583,
+  0.667,
+  0.681, 0.681, 0.681, 0.681,
+  0.722, 0.722, 0.722, 0.722,
+  0.739, 0.739, 0.739, 0.739,
+  0.694, 0.693, 0.683, 0.683,
+  0.587, 0.692
 };
 
 static FT_Bool init = 0;
@@ -206,7 +222,6 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN ||
                             direction == GKS_K_TEXT_PATH_UP);
-  const FT_String *suffix_type1[] = { ".afm", ".pfm" };
 
   if (!init) gks_ft_init();
 
@@ -228,7 +243,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   if (textfont >= 101 && textfont <= 131)
     textfont -= 100;
   if (textfont <= 32) {
-    font = gks_font_list[textfont];
+    font = gks_font_list[map[textfont - 1] - 1];
   } else {
     gks_perror("Invalid font index: %d", gkss->txfont);
     font = gks_font_list[0];
@@ -256,32 +271,20 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     return NULL;
   }
   if (strcmp(FT_Get_X11_Font_Format(face), "Type 1") == 0) {
-    for (i = 0; i < 2; i++) {
-      strcpy(file, prefix);
+    strcpy(file, prefix);
 #ifndef _WIN32
-      strcat(file, "/fonts/");
+    strcat(file, "/fonts/");
 #else
-      strcat(fontdb, "\\FONTS\\");
+    strcat(fontdb, "\\FONTS\\");
 #endif
-      strcat(file, font);
-      strcat(file, suffix_type1[i]);
-      FT_Attach_File(face, file);
-    }
+    strcat(file, font);
+    strcat(file, ".afm");
+    FT_Attach_File(face, file);
   }
   free(file);
 
-  FT_Set_Transform(face, NULL, NULL);
-  textheight = gkss->chh * windowheight * 64;
-  error = FT_Set_Pixel_Sizes(face, 0, textheight/64);
-  error += FT_Load_Glyph(face, FT_Get_Char_Index(face, 'H'), FT_LOAD_DEFAULT);
-  if (face->glyph->metrics.height == 0) {
-    error += 1;
-    gks_perror("Invalid font metrics");
-  } else {
-    textheight *= 1.0 * textheight / face->glyph->metrics.height;
-    textheight += 63; /* round up to next integer */
-  }
-  error += FT_Set_Pixel_Sizes(face, gkss->chxp*textheight/64, textheight/64);
+  textheight = gkss->chh * windowheight * 64 / caps[map[textfont-1]-1];
+  error = FT_Set_Char_Size(face, textheight * gkss->chxp, textheight, 72, 72);
   if (error) gks_perror("Cannot set text height");
 
   if (gkss->chup[0] != 0.0 || gkss->chup[1] != 0.0) {
@@ -291,6 +294,8 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     rotation.yx =  sinf(angle) * 0x10000L;
     rotation.yy =  cosf(angle) * 0x10000L;
     FT_Set_Transform(face, &rotation, NULL);
+  } else {
+    FT_Set_Transform(face, NULL, NULL);
   }
 
   spacing.x = spacing.y = 0;
@@ -414,28 +419,12 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     rgba_bitmap[4*i + 3] = (FT_Byte) min(tmp, 255);
   }
 
-  if (direction == GKS_K_TEXT_PATH_DOWN) {
-    pen.x += spacing.x;
-    pen.y += spacing.y;
-  } else {
-    pen.x -= spacing.x;
-    pen.y -= spacing.y;
-  }
-  if(!vertical) {
-    pen.x -= face->glyph->advance.x;
-    pen.y -= face->glyph->advance.y;
-    right.x = face->glyph->metrics.width;
-  }
-
   if (right.x!=0 || right.y!=0) {
     FT_Vector_Transform(&right, &rotation);
   }
   if (vertical) {
     pen.x = right.x;
     pen.y = right.y;
-  } else {
-    pen.x += right.x;
-    pen.y += right.y;
   }
 
   if (halign == GKS_K_TEXT_HALIGN_LEFT) {
