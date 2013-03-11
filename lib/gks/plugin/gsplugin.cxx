@@ -197,7 +197,7 @@ typedef struct ws_state_list_t
 
     float ysize;
 
-    int len, size, column;
+    int len, size, column, saved_len, saved_column;
     char *buffer;
 
     unsigned char ascii85_buffer[10];
@@ -259,27 +259,42 @@ void seg_xform_rel(float *x, float *y)
 }
 
 static
+int lastop(char *op)
+{
+  int len;
+
+  len = strlen(op);
+  if (len < p->len)
+    return strncmp(p->buffer + p->len - len, op, len);
+  else
+    return -1;
+}
+
+static
 void packb(const char *buff)
 {
   int len, i;
 
   len = strlen(buff);
 
+  p->saved_len = p->len;
+  p->saved_column = p->column;
+
   if (buff[0] == '%')
     {
       if (p->column != 0)
-	{
-	  p->buffer[p->len++] = '\n';
-	  p->column = 0;
-	}
+        {
+          p->buffer[p->len++] = '\n';
+          p->column = 0;
+        }
     }
   else if (len > 78 - p->column)
     {
       if (p->len != 0)
-	{
-	  p->buffer[p->len++] = '\n';
-	  p->column = 0;
-	}
+        {
+          p->buffer[p->len++] = '\n';
+          p->column = 0;
+        }
     }
 
   if (len + 2 > p->size - p->len)
@@ -375,7 +390,7 @@ void Ascii85Encode(unsigned char code)
   for (n = p->a85offset; n >= 4; n -= 4)
     {
       for (q = Ascii85Tuple(c); *q; q++)
-	b[i++] = *q;
+        b[i++] = *q;
       c += 8;
     }
   p->a85offset = n;
@@ -394,8 +409,8 @@ void Ascii85Encode(unsigned char code)
 static
 unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
 {
-#define LZWClr  256UL		/* Clear Table Marker */
-#define LZWEod  257UL		/* End of Data marker */
+#define LZWClr  256UL           /* Clear Table Marker */
+#define LZWEod  257UL           /* End of Data marker */
 #define OutputCode(code) \
 { \
     accumulator += code << (32 - code_width - number_bits); \
@@ -451,50 +466,50 @@ unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
        */
       index = (long) last_code;
       while (index != -1)
-	if ((table[index].prefix != (long) last_code) ||
-	    (table[index].suffix != (long) pixels[i]))
-	  index = table[index].next;
-	else
-	  {
-	    last_code = (unsigned long) index;
-	    break;
-	  }
+        if ((table[index].prefix != (long) last_code) ||
+            (table[index].suffix != (long) pixels[i]))
+          index = table[index].next;
+        else
+          {
+            last_code = (unsigned long) index;
+            break;
+          }
       if (last_code != (unsigned long) index)
-	{
-	  /*
-	   * Add string.
-	   */
-	  OutputCode(last_code);
-	  table[next_index].prefix = (long) last_code;
-	  table[next_index].suffix = (short) pixels[i];
-	  table[next_index].next = table[last_code].next;
-	  table[last_code].next = (long) next_index;
-	  next_index++;
-	  /*
-	   * Did we just move up to next bit width?
-	   */
-	  if ((next_index >> code_width) != 0)
-	    {
-	      code_width++;
-	      if (code_width > 12)
-		{
-		  /*
-		   * Did we overflow the max bit width?
-		   */
-		  code_width--;
-		  OutputCode(LZWClr);
-		  for (index = 0; index < 256; index++)
-		    {
-		      table[index].prefix = (-1);
-		      table[index].suffix = index;
-		      table[index].next = (-1);
-		    }
-		  next_index = LZWEod + 1;
-		  code_width = 9;
-		}
-	    }
-	  last_code = (unsigned long) pixels[i];
-	}
+        {
+          /*
+           * Add string.
+           */
+          OutputCode(last_code);
+          table[next_index].prefix = (long) last_code;
+          table[next_index].suffix = (short) pixels[i];
+          table[next_index].next = table[last_code].next;
+          table[last_code].next = (long) next_index;
+          next_index++;
+          /*
+           * Did we just move up to next bit width?
+           */
+          if ((next_index >> code_width) != 0)
+            {
+              code_width++;
+              if (code_width > 12)
+                {
+                  /*
+                   * Did we overflow the max bit width?
+                   */
+                  code_width--;
+                  OutputCode(LZWClr);
+                  for (index = 0; index < 256; index++)
+                    {
+                      table[index].prefix = (-1);
+                      table[index].suffix = index;
+                      table[index].next = (-1);
+                    }
+                  next_index = LZWEod + 1;
+                  code_width = 9;
+                }
+            }
+          last_code = (unsigned long) pixels[i];
+        }
     }
   /*
    * Flush tables.
@@ -558,7 +573,7 @@ void bounding_box(int landscape, float magstep)
   if (gkss->version > 4)
     {
       sprintf(buffer, "%%%%Orientation: %s",
-	      landscape ? "Landscape" : "Portrait");
+              landscape ? "Landscape" : "Portrait");
       packb(buffer);
     }
 }
@@ -597,27 +612,27 @@ void draw(float x, float y)
       rx = p->ix - jx;
       ry = p->iy - jy;
       if (abs(rx) > 1 || abs(ry) > 1)
-	{
-	  sprintf(buffer, "%d %d rl", rx, ry);
-	  packb(buffer);
-	}
+        {
+          sprintf(buffer, "%d %d rl", rx, ry);
+          packb(buffer);
+        }
       else
-	packb(dc[rx + 1][ry + 1]);
+        packb(dc[rx + 1][ry + 1]);
       p->np++;
 
       if (p->limit)
-	{
-	  if (p->np == p->limit)
-	    {
-	      packb("sk");
-	      p->stroke = 0;
-	      sprintf(buffer, "%d %d m", p->ix, p->iy);
-	      packb(buffer);
-	      p->np = 1;
-	    }
-	  else 
-	    p->stroke = 1;
-	}
+        {
+          if (p->np == p->limit)
+            {
+              packb("sk");
+              p->stroke = 0;
+              sprintf(buffer, "%d %d m", p->ix, p->iy);
+              packb(buffer);
+              p->np = 1;
+            }
+          else 
+            p->stroke = 1;
+        }
     }
 }
 
@@ -672,7 +687,7 @@ void set_linewidth(float width)
     {
       p->cwidth = fabs(width);
       sprintf(buffer, "%.4g lw",
-	gkss->version > 4 ? p->cwidth * 600 / 72 : p->cwidth * 4);
+        gkss->version > 4 ? p->cwidth * 600 / 72 : p->cwidth * 4);
       packb(buffer);
     }
 }
@@ -744,7 +759,7 @@ void gkinfo(int *nchars, char *chars)
   strcpy(host, utsname.nodename);
 #else
 #if defined(OS2) || (defined(_WIN32) && !defined(__GNUC__))
-  strcpy(host, "(unknown)");	/* FIXME */
+  strcpy(host, "(unknown)");    /* FIXME */
 #else
   gethostname(host, 100);
 #endif /* _WIN32 */
@@ -792,23 +807,28 @@ void set_color(int color, int wtype)
   if (color < 980)
     {
       if (color != p->color)
-	{
-	  index = abs(color);
-	  if (wtype % 2)
-	    {
-	      grey = 0.3 * p->red[index] + 0.59 * p->green[index] +
-		     0.11 * p->blue[index];
-	      sprintf(buffer, "%.4g sg", grey);
-	      packb(buffer);
-	    }
-	  else
-	    {
-	      sprintf(buffer, "%.4g %.4g %.4g sc", p->red[index],
-		      p->green[index], p->blue[index]);
-	      packb(buffer);
-	    }
-	  p->color = index;
-	}
+        {
+          if (lastop("sc") == 0)
+            {
+              p->len = p->saved_len;
+              p->column = p->saved_column;
+            }
+          index = abs(color);
+          if (wtype % 2)
+            {
+              grey = 0.3 * p->red[index] + 0.59 * p->green[index] +
+                     0.11 * p->blue[index];
+              sprintf(buffer, "%.4g sg", grey);
+              packb(buffer);
+            }
+          else
+            {
+              sprintf(buffer, "%.4g %.4g %.4g sc", p->red[index],
+                      p->green[index], p->blue[index]);
+              packb(buffer);
+            }
+          p->color = index;
+        }
     }
 }
 
@@ -822,29 +842,29 @@ void set_foreground(int color, int wtype)
   if (color < 980)
     {
       if (color != p->fcol)
-	{
-	  index = abs(color);
-	  if (wtype % 2)
-	    {
-	      grey = 0.3 * p->red[index] + 0.59 * p->green[index] +
-		    0.11 * p->blue[index];
-	      sprintf(buffer, "/fg {%.4g sg} def", grey);
-	      packb(buffer);
-	    }
-	  else
-	    {
-	      sprintf(buffer, "/fg {%.4g %.4g %.4g sc} def",
-		      p->red[index], p->green[index], p->blue[index]);
-	      packb(buffer);
-	    }
-	  p->fcol = index;
-	}
+        {
+          index = abs(color);
+          if (wtype % 2)
+            {
+              grey = 0.3 * p->red[index] + 0.59 * p->green[index] +
+                    0.11 * p->blue[index];
+              sprintf(buffer, "/fg {%.4g sg} def", grey);
+              packb(buffer);
+            }
+          else
+            {
+              sprintf(buffer, "/fg {%.4g %.4g %.4g sc} def",
+                      p->red[index], p->green[index], p->blue[index]);
+              packb(buffer);
+            }
+          p->fcol = index;
+        }
       if (color != p->color)
-	{
-	  index = abs(color);
-	  packb("fg");
-	  p->color = index;
-	}
+        {
+          index = abs(color);
+          packb("fg");
+          p->color = index;
+        }
     }
 }
 
@@ -863,7 +883,7 @@ void set_background(int wtype)
   else
     {
       sprintf(buffer, "/bg {%.4g %.4g %.4g sc} def",
-	      p->red[0], p->green[0], p->blue[0]);
+              p->red[0], p->green[0], p->blue[0]);
       packb(buffer);
     }
 }
@@ -898,7 +918,7 @@ void set_clipping(float *clrt)
   iy2 = NINT(cy2) + 2;
 
   sprintf(buffer, "np %d %d m %d %d l %d %d l %d %d l cp clip",
-	  ix1, iy1, ix1, iy2, ix2, iy2, ix2, iy1);
+          ix1, iy1, ix1, iy2, ix2, iy2, ix2, iy1);
   packb(buffer);
 }
 
@@ -927,31 +947,31 @@ void set_font(int font, int height)
       p->cheight = fabs(chh);
 
       if (p->font >= 101 && p->font <= 131)
-	font = p->font - 101;
+        font = p->font - 101;
       else if (p->font >= 1 && p->font <= 32)
-	font = map[p->font - 1] - 1;
+        font = map[p->font - 1] - 1;
       else
-	font = 8;
+        font = 8;
 
       p->ysize = p->cheight * height;
       size = MIN(MAX((int) (p->ysize / caps[font]), 1), 7200);
 
       if (font != 12 && font != 29 && font != 30)
-	{
-	  sprintf(buffer, "gsave /%s_ ISOLatin1Encoding", fonts[font]);
-	  packb(buffer);
-	  sprintf(buffer, "/%s encodefont pop grestore", fonts[font]);
-	  packb(buffer);
-	  sprintf(buffer, "/%s_ findfont %d scalefont setfont",
-		  fonts[font], size);
-	  packb(buffer);
-	}
+        {
+          sprintf(buffer, "gsave /%s_ ISOLatin1Encoding", fonts[font]);
+          packb(buffer);
+          sprintf(buffer, "/%s encodefont pop grestore", fonts[font]);
+          packb(buffer);
+          sprintf(buffer, "/%s_ findfont %d scalefont setfont",
+                  fonts[font], size);
+          packb(buffer);
+        }
       else
-	{
-	  sprintf(buffer, "/%s findfont %d scalefont setfont",
-		  fonts[font], size);
-	  packb(buffer);
-	}
+        {
+          sprintf(buffer, "/%s findfont %d scalefont setfont",
+                  fonts[font], size);
+          packb(buffer);
+        }
     }
 }
 
@@ -1086,24 +1106,24 @@ void ps_init(int *pages)
       packb("/nom {sxy bg om fi fg om csk gr} def");
 
       for (i = 0; i < PATTERNS; i++)
-	{
-	  gks_inq_pattern_array(i, pa);
-	  for (j = *pa; j < ((*pa == 32) ? 16 : (*pa == 4) ? 8 : *pa); j++)
-	    {
-	      pa[j + 1] = pa[j % *pa + 1];
-	    }
-	  for (k = 0, j = 1; j < 9; j++, k += 2)
-	    {
-	      sprintf(str + k, "%02x", pa[j]);
-	    }
-	  sprintf(buffer, "/pat%d << /PaintType 2 /PatternType 1 /TilingType 1\
+        {
+          gks_inq_pattern_array(i, pa);
+          for (j = *pa; j < ((*pa == 32) ? 16 : (*pa == 4) ? 8 : *pa); j++)
+            {
+              pa[j + 1] = pa[j % *pa + 1];
+            }
+          for (k = 0, j = 1; j < 9; j++, k += 2)
+            {
+              sprintf(str + k, "%02x", pa[j]);
+            }
+          sprintf(buffer, "/pat%d << /PaintType 2 /PatternType 1 /TilingType 1\
  /BBox [0 0 1 1] /XStep 1", i);
-	  packb(buffer);
-	  sprintf(buffer, "/YStep 1 /PaintProc {pop 8 8 false [8 0 0 8 0 0] \
+          packb(buffer);
+          sprintf(buffer, "/YStep 1 /PaintProc {pop 8 8 false [8 0 0 8 0 0] \
 {<%s>} imagemask}", str);
-	  packb(buffer);
-	  packb(">> [0 8 -8 0 0 0] makepattern def");
-	}
+          packb(buffer);
+          packb(">> [0 8 -8 0 0 0] makepattern def");
+        }
 
       packb("/OF /findfont load def");
       packb("/findfont {dup GKS_dict exch known");
@@ -1161,9 +1181,9 @@ void ps_init(int *pages)
   if (landscape)
     {
       if (gkss->version < 5)
-	sprintf(buffer, "%d %d translate -90 rotate", LLX, p->ytrans);
+        sprintf(buffer, "%d %d translate -90 rotate", LLX, p->ytrans);
       else
-	sprintf(buffer, "90 rotate %d %d translate", LLX, p->ytrans);
+        sprintf(buffer, "90 rotate %d %d translate", LLX, p->ytrans);
       packb(buffer);
     }
   else
@@ -1232,7 +1252,7 @@ void query_color(int index, unsigned char **buf, int wtype)
   if (wtype % 2)
     {
       grey = 0.3 * p->red[index] + 0.59 * p->green[index] +
-	     0.11 * p->blue[index];
+             0.11 * p->blue[index];
       **buf = (char) NINT(grey * 255);
       (*buf)++;
     }
@@ -1299,7 +1319,7 @@ void set_connection(int conid, char *path, int wtype)
   p->empty = 1;
   p->page_counter = 0;
   p->color = 1;
-  p->len = p->column = 0;
+  p->len = p->column = p->saved_len = p->saved_column = 0;
   p->font = 0;
   p->ltype = GKS_K_LINETYPE_SOLID;
   p->cwidth = p->csize = p->cangle = p->cheight = 0.0;
@@ -1407,22 +1427,22 @@ void cell_array(
   for (j = 0; j < dy; j++)
     {
       for (i = 0; i < dx; i++)
-	{
-	  ci = colia[j * dimx + i];
-	  if (!true_color)
-	    {
-	      if (ci >= 588)
-		ci = 80 + NINT((ci - 588) / 56 * 12 + NINT((ci - 588) % 56)
-			       * 11.0 / 56);
-	      else if (ci >= 257)
-		ci = 8 + NINT((ci - 257) / 330.0 * (72 - 1));
-	      else if (ci < 0)
-		ci = 0;
-	      query_color(ci, &bufP, wtype);
-	    }
-	  else
-	    rgb2color(ci, &bufP, wtype);
-	}
+        {
+          ci = colia[j * dimx + i];
+          if (!true_color)
+            {
+              if (ci >= 588)
+                ci = 80 + NINT((ci - 588) / 56 * 12 + NINT((ci - 588) % 56)
+                               * 11.0 / 56);
+              else if (ci >= 257)
+                ci = 8 + NINT((ci - 257) / 330.0 * (72 - 1));
+              else if (ci < 0)
+                ci = 0;
+              query_color(ci, &bufP, wtype);
+            }
+          else
+            rgb2color(ci, &bufP, wtype);
+        }
     }
   LZWEncodeImage(len, buf);
   free(buf);
@@ -1467,18 +1487,18 @@ void text_routine(float *x, float *y, int *nchars, char *chars)
     {
       ic = chars[i];
       if (ic < 0)
-	ic += 256;
+        ic += 256;
       if (ic < 127)
-	{
-	  if (strchr("()\\", ic) != NULL)
-	    str[j++] = '\\';
-	  str[j++] = chars[i];
-	}
+        {
+          if (strchr("()\\", ic) != NULL)
+            str[j++] = '\\';
+          str[j++] = chars[i];
+        }
       else
-	{
-	  sprintf(str+j, "\\%03o", ic);
-	  j += 4;
-	}
+        {
+          sprintf(str+j, "\\%03o", ic);
+          j += 4;
+        }
       str[j] = '\0';
     }
   sprintf(buffer, "(%s) %s", str, show[alh + GKS_K_TEXT_HALIGN_NORMAL]);
@@ -1494,14 +1514,15 @@ void fillpattern_routine(int n, float *px, float *py, int tnr, int pattern)
   char buffer[100];
 
   sprintf(buffer,
-	  "gs [/Pattern /Device%s] setcolorspace %.4g %.4g %.4g pat%d setcolor",
-	  p->wtype % 2 == 0 ? "RGB" : "Gray",
-	  p->red[p->color], p->green[p->color], p->blue[p->color], pattern);
+          "gs [/Pattern /Device%s] setcolorspace %.4g %.4g %.4g pat%d setcolor",
+          p->wtype % 2 == 0 ? "RGB" : "Gray",
+          p->red[p->color], p->green[p->color], p->blue[p->color], pattern);
   packb(buffer);
 
-  p->limit=0;
+  p->limit = 0;
   gks_emul_polyline(n, px, py, ltype, tnr, move, draw);
-  packb("fi gr");
+  if (p->np > 1)
+    packb("fi gr");
 }
 
 static
@@ -1511,7 +1532,8 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
   p->limit = 0;
   gks_emul_polyline(n, px, py, ltype, tnr, move, draw);
-  packb("fi");
+  if (p->np > 1)
+    packb("fi");
 }
 
 static
@@ -1536,15 +1558,15 @@ int GSDLLCALL gsdll_stdin(void *instance, char *buf, int len)
     {
       ch = p->buffer[count + p->gs_position];
       if (ch == '\0')
-	{
-	  return 0;
-	}
+        {
+          return 0;
+        }
       *buf++ = ch;
       ++count;
       if (ch == '\n')
-	{
-	  break;
-	}
+        {
+          break;
+        }
     }
   p->gs_position += count;
   return count;
@@ -1591,16 +1613,16 @@ void init_arguments(void)
 
       dot = strrchr(name, '.');
       if (dot)
-	{
-	  for (i = 0; i < num_gs_devs; i++)
-	    if (strcmp(dot, gs_devs[i].type) == 0)
-	      {
-		type = gs_devs[i].type;
-		device = gs_devs[i].device;
-		break;
-	      }
-	  *dot = '\0';
-	}
+        {
+          for (i = 0; i < num_gs_devs; i++)
+            if (strcmp(dot, gs_devs[i].type) == 0)
+              {
+                type = gs_devs[i].type;
+                device = gs_devs[i].device;
+                break;
+              }
+          *dot = '\0';
+        }
 
       sprintf(path, "%s_p%03d%s", name, p->page_counter, type);
       free(name);
@@ -1610,7 +1632,7 @@ void init_arguments(void)
       if (p->path)
         strcpy(path, p->path);
       else
-	sprintf(path, "gks_p%03d%s", p->page_counter, type);
+        sprintf(path, "gks_p%03d%s", p->page_counter, type);
     }
 
   p->gs_argc = NUM_GS_ARGS;
@@ -1626,8 +1648,8 @@ void init_arguments(void)
 #endif
   sprintf(p->gs_argv[1], "-sDEVICE=%s", device);
   sprintf(p->gs_argv[2], "-g%dx%d",
-	  (int) (p->viewpt[1] * 100.0 * 300.0 / 2.54),
-	  (int) (p->viewpt[3] * 100.0 * 300.0 / 2.54));
+          (int) (p->viewpt[1] * 100.0 * 300.0 / 2.54),
+          (int) (p->viewpt[3] * 100.0 * 300.0 / 2.54));
   sprintf(p->gs_argv[3], "-r300x300");
   sprintf(p->gs_argv[4], "-sOutputFile=%s", path);
   sprintf(p->gs_argv[5], "-dGraphicsAlphaBits=4");
@@ -1696,20 +1718,20 @@ void gks_gsplugin(
 /* close workstation */
     case 3:
       if (p->init)
-	{
-	  if (!p->empty)
-	    packb("showpage");
-	  packb("psl restore end % GKS_dict");
-	  end_page(p->pages);
-	  packb("%%Trailer");
-	  packb("GKS_save restore");
-	}
+        {
+          if (!p->empty)
+            packb("showpage");
+          packb("psl restore end % GKS_dict");
+          end_page(p->pages);
+          packb("%%Trailer");
+          packb("GKS_save restore");
+        }
       if (p->pages == 0)
-	packb("%%Trailer");
+        packb("%%Trailer");
       update();
 
       if (!p->empty)
-	gs();
+        gs();
 
       free(p->buffer);
       free(p);
@@ -1728,21 +1750,21 @@ void gks_gsplugin(
 /* clear workstation */
     case 6:
       if (p->init)
-	{
-	  if (!p->empty)
-	    {
-	      packb("showpage");
-	      p->empty = 1;
-	    }
-	  packb("psl restore end % GKS_dict");
-	  end_page(p->pages);
+        {
+          if (!p->empty)
+            {
+              packb("showpage");
+              p->empty = 1;
+            }
+          packb("psl restore end % GKS_dict");
+          end_page(p->pages);
 
-	  gs();
+          gs();
 
-	  p->init = 0;
-	  p->pages = 0;
-	  p->len = p->column = 0;
-	}
+          p->init = 0;
+          p->pages = 0;
+          p->len = p->column = 0;
+        }
       break;
 
 /* update workstation */
@@ -1752,140 +1774,140 @@ void gks_gsplugin(
 /* polyline */
     case 12:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (!p->init)
-	    {
-	      ps_init(&p->pages);
-	      p->init = 1;
-	    }
-	  tnr = gkss->cntnr;
-	  gks_set_dev_xform(gkss, p->window, p->viewpt);
-	  ltype = gkss->asf[0] ? gkss->ltype : gkss->lindex;
-	  width = gkss->asf[1] ? gkss->lwidth : 1;
-	  color = gkss->asf[2] ? gkss->plcoli : 1;
-	  if (ltype != GKS_K_LINETYPE_SOLID)
-	    set_linetype(ltype, width);
-	  set_linewidth(width);
-	  set_color(color, p->wtype);
-	  line_routine(ia[0], r1, r2, ltype, tnr);
-	  if (ltype != GKS_K_LINETYPE_SOLID)
-	    set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
-	  p->empty = 0;
-	}
+        {
+          if (!p->init)
+            {
+              ps_init(&p->pages);
+              p->init = 1;
+            }
+          tnr = gkss->cntnr;
+          gks_set_dev_xform(gkss, p->window, p->viewpt);
+          ltype = gkss->asf[0] ? gkss->ltype : gkss->lindex;
+          width = gkss->asf[1] ? gkss->lwidth : 1;
+          color = gkss->asf[2] ? gkss->plcoli : 1;
+          if (ltype != GKS_K_LINETYPE_SOLID)
+            set_linetype(ltype, width);
+          set_linewidth(width);
+          set_color(color, p->wtype);
+          line_routine(ia[0], r1, r2, ltype, tnr);
+          if (ltype != GKS_K_LINETYPE_SOLID)
+            set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
+          p->empty = 0;
+        }
       break;
 
 /* polymarker */
     case 13:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (!p->init)
-	    {
-	      ps_init(&p->pages);
-	      p->init = 1;
-	    }
-	  gks_set_dev_xform(gkss, p->window, p->viewpt);
-	  size = gkss->asf[4] ? gkss->mszsc : 1;
-	  x = 0.0;
-	  y = 1.0;
-	  seg_xform_rel(&x, &y);
-	  size *= sqrt(x*x + y*y);
-	  set_markersize(23 * size / 24);
-	  angle = -atan2(x, y) * 180.0 / M_PI;
-	  set_markerangle(angle);
-	  factor = size / 2.0;
-	  set_linewidth(factor);
-	  color = gkss->asf[5] ? gkss->pmcoli : 1;
-	  set_foreground(color, p->wtype);
-	  gks_emul_polymarker(ia[0], r1, r2, marker_routine);
-	  p->empty = 0;
-	}
+        {
+          if (!p->init)
+            {
+              ps_init(&p->pages);
+              p->init = 1;
+            }
+          gks_set_dev_xform(gkss, p->window, p->viewpt);
+          size = gkss->asf[4] ? gkss->mszsc : 1;
+          x = 0.0;
+          y = 1.0;
+          seg_xform_rel(&x, &y);
+          size *= sqrt(x*x + y*y);
+          set_markersize(23 * size / 24);
+          angle = -atan2(x, y) * 180.0 / M_PI;
+          set_markerangle(angle);
+          factor = size / 2.0;
+          set_linewidth(factor);
+          color = gkss->asf[5] ? gkss->pmcoli : 1;
+          set_foreground(color, p->wtype);
+          gks_emul_polymarker(ia[0], r1, r2, marker_routine);
+          p->empty = 0;
+        }
       break;
 
 /* text */
     case 14:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (!p->init)
-	    {
-	      ps_init(&p->pages);
-	      p->init = 1;
-	    }
-	  tnr = gkss->cntnr;
-	  gks_set_dev_xform(gkss, p->window, p->viewpt);
-	  font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
-	  prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
-	  if (prec != GKS_K_TEXT_PRECISION_STROKE)
-	    set_font(font, p->height);
-	  else
-	    set_linewidth(1.0);
-	  color = gkss->asf[9] ? gkss->txcoli : 1;
-	  set_color(color, p->wtype);
-	  nchars = strlen(chars);
-	  if (prec == GKS_K_TEXT_PRECISION_STRING)
-	    {
-	      float px, py;
-	      WC_to_NDC(*r1, *r2, tnr, px, py);
-	      seg_xform(&px, &py);
-	      text_routine(&px, &py, &nchars, chars);
-	    }
-	  else
-	    {
-	      gks_emul_text(r1[0], r2[0], nchars, chars, line_routine,
-		fill_routine);
-	    }
-	  p->empty = 0;
-	}
+        {
+          if (!p->init)
+            {
+              ps_init(&p->pages);
+              p->init = 1;
+            }
+          tnr = gkss->cntnr;
+          gks_set_dev_xform(gkss, p->window, p->viewpt);
+          font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
+          prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
+          if (prec != GKS_K_TEXT_PRECISION_STROKE)
+            set_font(font, p->height);
+          else
+            set_linewidth(1.0);
+          color = gkss->asf[9] ? gkss->txcoli : 1;
+          set_color(color, p->wtype);
+          nchars = strlen(chars);
+          if (prec == GKS_K_TEXT_PRECISION_STRING)
+            {
+              float px, py;
+              WC_to_NDC(*r1, *r2, tnr, px, py);
+              seg_xform(&px, &py);
+              text_routine(&px, &py, &nchars, chars);
+            }
+          else
+            {
+              gks_emul_text(r1[0], r2[0], nchars, chars, line_routine,
+                fill_routine);
+            }
+          p->empty = 0;
+        }
       break;
 
 /* fill area */
     case 15:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (!p->init)
-	    {
-	      ps_init(&p->pages);
-	      p->init = 1;
-	    }
-	  tnr = gkss->cntnr;
-	  gks_set_dev_xform(gkss, p->window, p->viewpt);
-	  style = gkss->asf[10] ? gkss->ints   : predef_ints[gkss->findex - 1];
-	  color = gkss->asf[12] ? gkss->facoli : 1;
-	  set_color(color, p->wtype);
-	  set_linewidth(1.0);
-	  if (style == GKS_K_INTSTYLE_SOLID)
-	    fill_routine(ia[0], r1, r2, tnr);
-	  else if (style == GKS_K_INTSTYLE_PATTERN)
-	    {
-	      pattern = gkss->asf[11] ? gkss->styli :
-		predef_styli[gkss->findex - 1];
-	      fillpattern_routine(ia[0], r1, r2, tnr, pattern);
-	    }
-	  else
-	    {
-	      yres = 1.0 / 4650.0;
-	      gks_emul_fillarea(ia[0], r1, r2, tnr, line_routine, yres);
-	    }
-	  p->empty = 0;
-	}
+        {
+          if (!p->init)
+            {
+              ps_init(&p->pages);
+              p->init = 1;
+            }
+          tnr = gkss->cntnr;
+          gks_set_dev_xform(gkss, p->window, p->viewpt);
+          style = gkss->asf[10] ? gkss->ints   : predef_ints[gkss->findex - 1];
+          color = gkss->asf[12] ? gkss->facoli : 1;
+          set_color(color, p->wtype);
+          set_linewidth(1.0);
+          if (style == GKS_K_INTSTYLE_SOLID)
+            fill_routine(ia[0], r1, r2, tnr);
+          else if (style == GKS_K_INTSTYLE_PATTERN)
+            {
+              pattern = gkss->asf[11] ? gkss->styli :
+                predef_styli[gkss->findex - 1];
+              fillpattern_routine(ia[0], r1, r2, tnr, pattern);
+            }
+          else
+            {
+              yres = 1.0 / 4650.0;
+              gks_emul_fillarea(ia[0], r1, r2, tnr, line_routine, yres);
+            }
+          p->empty = 0;
+        }
       break;
 
 /* cell array */
     case 16:
     case DRAW_IMAGE:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  int true_color = fctid == DRAW_IMAGE;
+        {
+          int true_color = fctid == DRAW_IMAGE;
 
-	  if (!p->init)
-	    {
-	      ps_init(&p->pages);
-	      p->init = 1;
-	    }
-	  gks_set_dev_xform(gkss, p->window, p->viewpt);
-	  cell_array(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, p->wtype,
-		     true_color);
-	  p->empty = 0;
-	}
+          if (!p->init)
+            {
+              ps_init(&p->pages);
+              p->init = 1;
+            }
+          gks_set_dev_xform(gkss, p->window, p->viewpt);
+          cell_array(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, p->wtype,
+                     true_color);
+          p->empty = 0;
+        }
       break;
 
 /* set color representation */
@@ -1912,7 +1934,7 @@ void gks_gsplugin(
       set_xform(p->window, p->viewpt, &p->height);
       init_norm_xform();
       if (p->init)
-	set_clipping(p->window);
+        set_clipping(p->window);
       break;
 
 /* set workstation viewport */
