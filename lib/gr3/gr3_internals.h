@@ -22,6 +22,9 @@
   #error "This operating system is currently not supported by gr3"
 #endif
 
+#define GR3_DO_INIT do { if (!context_struct_.gl_is_initialized) { gr3_log_("auto-init"); gr3_init(NULL); } } while(0)
+
+
 
 
 /*!

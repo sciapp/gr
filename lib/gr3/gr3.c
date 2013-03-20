@@ -239,7 +239,9 @@ GR3API int gr3_init(int *attrib_list) {
     
     gr3_appendtorenderpathstring_((const char *)glGetString(GL_VERSION));
     gr3_appendtorenderpathstring_((const char *)glGetString(GL_RENDERER));
-  gr3_init_convenience();
+    gr3_init_convenience();
+    gr3_setcameraprojectionparameters(45, 1, 200);
+    gr3_cameralookat(0, 0, 10, 0, 0, 0, 0, 1, 0);
     return GR3_ERROR_NONE;
 }
 
@@ -320,6 +322,7 @@ GR3API void gr3_terminate(void) {
  *                                calling gr3_init() first
  */
 GR3API int gr3_clear(void) {
+  GR3_DO_INIT;
     gr3_log_("gr3_clear();");
     
     if (context_struct_.is_initialized) {
@@ -350,6 +353,7 @@ GR3API int gr3_clear(void) {
  * This function sets the background color.
  */
 GR3API void gr3_setbackgroundcolor(float red, float green, float blue, float alpha) {
+  GR3_DO_INIT;
     if (context_struct_.is_initialized) {
         context_struct_.background_color[0] = red;
         context_struct_.background_color[1] = green;
@@ -377,7 +381,8 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
                         
     int i;
     void *mem;
-
+  
+    GR3_DO_INIT;
     if (!context_struct_.is_initialized) {
         return GR3_ERROR_NOT_INITIALIZED;
     }
@@ -477,7 +482,8 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
 GR3API void gr3_drawmesh(int mesh, int n, const float *positions, 
                   const float *directions, const float *ups, 
                   const float *colors, const float *scales) {
-
+  
+  GR3_DO_INIT;
     if (!context_struct_.is_initialized) {
         return;
     } else {
@@ -638,6 +644,7 @@ static void gr3_dodrawmesh_(int mesh,
  * \param [in] mesh     The mesh that should be marked for deletion
  */
 GR3API void gr3_deletemesh(int mesh) {
+  GR3_DO_INIT;
     gr3_log_("gr3_deletemesh_();");
     if (!context_struct_.is_initialized) {
         return;
@@ -707,6 +714,7 @@ static void gr3_meshremovereference_(int mesh) {
  * 
  */
 GR3API void gr3_setlightdirection(float x, float y, float z) {
+  GR3_DO_INIT;
     if (!context_struct_.is_initialized) {
         return;
     }
@@ -749,6 +757,7 @@ GR3API void gr3_cameralookat(float camera_x, float camera_y, float camera_z,
     GLfloat s[3];
     GLfloat u[3];
     GLfloat tmp;
+  GR3_DO_INIT;
     
     if (!context_struct_.is_initialized) {
         return;
@@ -854,6 +863,7 @@ GR3API void gr3_cameralookat(float camera_x, float camera_y, float camera_z,
  */
 GR3API int gr3_setcameraprojectionparameters(float vertical_field_of_view, 
                                              float zNear, float zFar) {
+  GR3_DO_INIT;
     if (!context_struct_.is_initialized) {
         return GR3_ERROR_NOT_INITIALIZED;
     }
@@ -963,6 +973,7 @@ static void gr3_draw_(GLuint width, GLuint height) {
 }
 
 GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type) {
+  GR3_DO_INIT;
     switch (drawable_type) {
         case GR3_DRAWABLE_OPENGL:
             return gr3_drawimage_opengl_(xmin, xmax, ymin, ymax, width, height);
@@ -996,6 +1007,7 @@ static int gr3_strendswith_(const char *str, const char *ending) {
 GR3API int gr3_setquality(int quality) {
     int ssaa_factor = quality & ~1;
     int i;
+  GR3_DO_INIT;
     if (quality > 33 || quality < 0) {
         return GR3_ERROR_INVALID_VALUE;
     }
@@ -1016,6 +1028,7 @@ GR3API int gr3_getimage(int width, int height, int use_alpha, char *pixels) {
     int quality = context_struct_.quality;
     int ssaa_factor = quality & ~1;
     int use_povray = quality & 1;
+  GR3_DO_INIT;
     if (ssaa_factor == 0) ssaa_factor = 1;
     if (use_povray) {
         err = gr3_getpovray_(pixels,width, height, use_alpha, ssaa_factor);
@@ -1026,7 +1039,8 @@ GR3API int gr3_getimage(int width, int height, int use_alpha, char *pixels) {
 }
 
 GR3API int gr3_export(const char *filename, int width, int height) {
-    
+  
+  GR3_DO_INIT;
     gr3_log_(filename);
     
     if (gr3_strendswith_(filename, ".html")) {
@@ -1302,6 +1316,7 @@ GR3API const char *gr3_geterrorstring(int error) {
  *          If gr3 is not initialized "Not initialized" is returned.
  */
 GR3API const char *gr3_getrenderpathstring(void) {
+  GR3_DO_INIT;
     return context_struct_.renderpath_string;
 }
 
@@ -1469,6 +1484,7 @@ static GLuint depth_renderbuffer = 0;
 
 
 GR3API void        gr3_setobjectid(int id) {
+  GR3_DO_INIT;
   current_object_id = id;
 }
 
@@ -1491,6 +1507,7 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
   GLfloat top = zNear*tan_halffovy;
   GLfloat bottom = -top;
   int id;
+  GR3_DO_INIT;
   
   *object_id = 0;
 

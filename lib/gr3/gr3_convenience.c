@@ -137,6 +137,7 @@ GR3API void gr3_drawcylindermesh(int n, const float *positions, const float *dir
   int min_n;
   float *scales = malloc(n*3*sizeof(float));
   float *ups = malloc(n*3*sizeof(float));
+  GR3_DO_INIT;
   for (i = 0; i < n; i++) {
     scales[3*i+0] = radii[i];
     scales[3*i+1] = radii[i];
@@ -235,6 +236,8 @@ GR3API void gr3_drawconemesh(int n,const float *positions, const float *directio
   int min_n;
   float *scales = malloc(n*3*sizeof(float));
   float *ups = malloc(n*3*sizeof(float));
+  GR3_DO_INIT;
+
   for (i = 0; i < n; i++) {
     scales[3*i+0] = radii[i];
     scales[3*i+1] = radii[i];
@@ -267,6 +270,8 @@ GR3API void gr3_drawspheremesh(int n,const float *positions, const float *colors
   float *directions = malloc(n*3*sizeof(float));
   float *ups = malloc(n*3*sizeof(float));
   float *scales = malloc(n*3*sizeof(float));
+  GR3_DO_INIT;
+
   for (i = 0; i < n; i++) {
     directions[i*3+0] = 0;
     directions[i*3+1] = 0;
@@ -392,6 +397,8 @@ GR3API void gr3_drawheightmap(const float *heightmap, int num_columns, int num_r
   float ups[3] = {0,1,0};
   float colors[3] = {1,1,1};
   float pos[3];
+  GR3_DO_INIT;
+
   pos[0] = positions[0]-scales[0]/2;
   pos[1] = positions[1]-scales[1]/2;
   pos[2] = positions[2]-scales[2]/2;
