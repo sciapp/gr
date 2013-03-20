@@ -595,8 +595,8 @@ GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int 
           int crow = row+drow[i];
           int ccolumn = column+dcolumn[i];
           /* Normalize the row and column to [0;1] */
-          float nrow = 1.0f*crow/num_rows;
-          float ncolumn = 1.0f*ccolumn/num_columns;
+          float nrow = 1.0f*crow/(num_rows-1);
+          float ncolumn = 1.0f*ccolumn/(num_columns-1);
           /* And read the height value from the heightmap */
           float height = heightmap[crow*num_columns+ccolumn];
           /* Normalize the height value to [0;1] */

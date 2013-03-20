@@ -23,6 +23,7 @@ __all__ = ['GR3_InitAttribute',
            'drawcylindermesh',
            'drawconemesh',
            'drawspheremesh',
+           'drawcubemesh',
            'setbackgroundcolor']
 
 import ctypes
@@ -199,6 +200,15 @@ def drawmesh(mesh, n, positions, directions, ups, colors, scales):
     scales = numpy.array(scales, ctypes.c_float)
     _gr3.gr3_drawmesh(mesh,ctypes.c_uint(n),positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), directions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), ups.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), colors.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), scales.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
     
+def drawcubemesh(n, positions, directions, ups, colors, scales):
+    positions = numpy.array(positions, ctypes.c_float)
+    directions = numpy.array(directions, ctypes.c_float)
+    ups = numpy.array(ups, ctypes.c_float)
+    colors = numpy.array(colors, ctypes.c_float)
+    scales = numpy.array(scales, ctypes.c_float)
+    _gr3.gr3_drawcubemesh(ctypes.c_uint(n),positions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), directions.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), ups.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), colors.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), scales.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+    
+    
 def deletemesh(mesh):
     _gr3.gr3_deletemesh(mesh)
 
@@ -249,3 +259,5 @@ _gr3.gr3_setbackgroundcolor.argtypes = [ctypes.c_float,ctypes.c_float,ctypes.c_f
 _gr3.gr3_drawconemesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
 _gr3.gr3_drawcylindermesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
 _gr3.gr3_drawspheremesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_drawcubemesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+
