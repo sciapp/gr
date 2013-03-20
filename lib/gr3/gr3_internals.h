@@ -191,6 +191,7 @@ typedef struct _GR3_ContextStruct_t_ {
   int cylinder_mesh;
   int sphere_mesh;
   int cone_mesh;
+  int cube_mesh;
   GLfloat background_color[4];
   GLuint program;
   float camera_x; float camera_y; float camera_z;

@@ -46,7 +46,7 @@ static int current_object_id = 0;
 #define GR3_ContextStruct_INITIALIZER {GR3_InitStruct_INITIALIZER,0,0,\
                                                 NULL,0,NULL,not_initialized_,\
                                                 NULL, NULL,0,0,{{0}},0,0,0,\
-                                                {0,0,0,0},0,0,0,0,{0,0,0,1},0,\
+                                                {0,0,0,0},0,0,0,0,0,{0,0,0,1},0,\
                                                 0,0,0,0,0,0,0,0,0, NULL,0}
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
 
