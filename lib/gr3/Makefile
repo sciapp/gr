@@ -17,21 +17,32 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR3.so
 default: gr3.c gr3.h
 	make `uname`
 Linux:
-	make targets INSTALL_NAME="" LDFLAGS="-Wl,-rpath=$(LIBDIR)"
+	make targets INSTALL_NAME="" LDFLAGS="-Wl,-rpath=$(LIBDIR)" \
+	GR3_PLATFORM_SPECIFIC_C="gr3_glx.c"
 Darwin:
 	make targets SOFLAGS="-dynamiclib" \
-	GLLIBS="-framework OpenGL -framework Cocoa" SOFLAGS="-dynamiclib"
+	GLLIBS="-framework OpenGL -framework Cocoa" SOFLAGS="-dynamiclib" \
+	GR3_PLATFORM_SPECIFIC_C="gr3_cgl.c"
 
 targets: prerequisites libGR3.so gr3.py
 
 prerequisites:
 	@make -C ../gr
 
-libGR3.so: gr3.c
-	${CC} -o $@ $? $(CFLAGS) $(INCLUDES) ${ZLIBS} $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
+libGR3.so: gr3.c $(GR3_PLATFORM_SPECIFIC_C) gr3_convenience.c gr3_html.c gr3_povray.c gr3_png.c gr3_jpeg.c gr3_gr.c
+	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) ${ZLIBS} $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
 	$(JPEGLIBS) $(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
 
-gr3.c: gr3.h
+gr3.c: gr3.h gr3_internals.h
+gr3_internals.h: gr3.h gr3_glx.h gr3_cgl.h
+gr3_glx.c: gr3_glx.h
+gr3_cgl.c: gr3_cgl.h
+gr3_convenience.c: gr3_internals.h
+gr3_html.c: gr3_internals.h
+gr3_povray.c: gr3_internals.h
+gr3_png.c: gr3_internals.h
+gr3_jpeg.c: gr3_internals.h
+gr3_gr.c: gr3_internals.h
 
 install: targets
 	@if [ ! -d $(GRDIR) ]; then mkdir -m 755 $(GRDIR); fi

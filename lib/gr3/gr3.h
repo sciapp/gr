@@ -96,6 +96,7 @@ GR3API void        gr3_drawheightmap(const float *heightmap, int num_columns, in
 GR3API void        gr3_drawconemesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
 GR3API void        gr3_drawcylindermesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
 GR3API void        gr3_drawspheremesh(int n, const float *positions, const float *colors, const float *radii);
+GR3API void        gr3_drawcubemesh(int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);
 
           
 GR3API void        gr3_setobjectid(int id);
