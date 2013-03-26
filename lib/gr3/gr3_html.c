@@ -110,7 +110,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
     if (context_struct_.mesh_list_[i].refcount > 0) {
       fprintf(htmlfp, "        var vertices = [\n");
       for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices; j++) {
-        fprintf(htmlfp, "          %f, %f, %f", context_struct_.mesh_list_[i].data.vertices[3*j+0], context_struct_.mesh_list_[i].data.vertices[3*j+1], context_struct_.mesh_list_[i].data.vertices[3*j+2]);
+        fprintf(htmlfp, "%g,%g,%g", context_struct_.mesh_list_[i].data.vertices[3*j+0], context_struct_.mesh_list_[i].data.vertices[3*j+1], context_struct_.mesh_list_[i].data.vertices[3*j+2]);
         if (j + 1 < context_struct_.mesh_list_[i].data.number_of_vertices) {
           fprintf(htmlfp, ",\n");
         }
@@ -118,7 +118,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
       fprintf(htmlfp, "        ];\n");
       fprintf(htmlfp, "        var normals = [\n");
       for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices; j++) {
-        fprintf(htmlfp, "          %f, %f, %f", context_struct_.mesh_list_[i].data.normals[3*j+0], context_struct_.mesh_list_[i].data.normals[3*j+1], context_struct_.mesh_list_[i].data.normals[3*j+2]);
+        fprintf(htmlfp, "%g,%g,%g", context_struct_.mesh_list_[i].data.normals[3*j+0], context_struct_.mesh_list_[i].data.normals[3*j+1], context_struct_.mesh_list_[i].data.normals[3*j+2]);
         if (j + 1 < context_struct_.mesh_list_[i].data.number_of_vertices) {
           fprintf(htmlfp, ",\n");
         }
@@ -135,7 +135,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
         if (!all_ones) {
           fprintf(htmlfp, "        var colors = [\n");
           for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices; j++) {
-            fprintf(htmlfp, "          %f, %f, %f", context_struct_.mesh_list_[i].data.colors[3*j+0], context_struct_.mesh_list_[i].data.colors[3*j+1], context_struct_.mesh_list_[i].data.colors[3*j+2]);
+            fprintf(htmlfp, "%g,%g,%g", context_struct_.mesh_list_[i].data.colors[3*j+0], context_struct_.mesh_list_[i].data.colors[3*j+1], context_struct_.mesh_list_[i].data.colors[3*j+2]);
             if (j + 1 < context_struct_.mesh_list_[i].data.number_of_vertices) {
               fprintf(htmlfp, ",\n");
             }
@@ -144,7 +144,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
         } else {
           fprintf(htmlfp, "        var colors = Array();");
           fprintf(htmlfp, "        for (var i = 0; i < %d; i++) {", context_struct_.mesh_list_[i].data.number_of_vertices*3);
-          fprintf(htmlfp, "        colors[i] = 1.0;");
+          fprintf(htmlfp, "          colors[i] = 1.0;");
           fprintf(htmlfp, "        }");
         }
         fprintf(htmlfp, "        \n");
@@ -347,9 +347,9 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        }\n");
   fprintf(htmlfp, "        viewMatrix = transposeMatrix4(viewMatrix);\n");
   fprintf(htmlfp, "      }\n");
-  fprintf(htmlfp, "      var camera_pos = [%f, %f, %f];\n", context_struct_.camera_x, context_struct_.camera_y, context_struct_.camera_z);
-  fprintf(htmlfp, "      var center_pos = [%f, %f, %f];\n", context_struct_.center_x, context_struct_.center_y, context_struct_.center_z);
-  fprintf(htmlfp, "      var up_dir = [%f, %f, %f];\n", context_struct_.up_x, context_struct_.up_y, context_struct_.up_z);
+  fprintf(htmlfp, "      var camera_pos = [%g, %g, %g];\n", context_struct_.camera_x, context_struct_.camera_y, context_struct_.camera_z);
+  fprintf(htmlfp, "      var center_pos = [%g, %g, %g];\n", context_struct_.center_x, context_struct_.center_y, context_struct_.center_z);
+  fprintf(htmlfp, "      var up_dir = [%g, %g, %g];\n", context_struct_.up_x, context_struct_.up_y, context_struct_.up_z);
   fprintf(htmlfp, "      var original_camera_pos = camera_pos.slice(0);\n");
   fprintf(htmlfp, "      var original_center_pos = center_pos.slice(0);\n");
   fprintf(htmlfp, "      var original_up_dir = up_dir.slice(0);\n");
@@ -358,9 +358,9 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        if (!viewMatrix) {\n");
   fprintf(htmlfp, "          calculateViewMatrix();\n");
   fprintf(htmlfp, "        }\n");
-  fprintf(htmlfp, "        var verticalFieldOfView = %f;\n", context_struct_.vertical_field_of_view);
-  fprintf(htmlfp, "        var zNear = %f;\n", context_struct_.zNear);
-  fprintf(htmlfp, "        var zFar = %f;\n", context_struct_.zFar);
+  fprintf(htmlfp, "        var verticalFieldOfView = %g;\n", context_struct_.vertical_field_of_view);
+  fprintf(htmlfp, "        var zNear = %g;\n", context_struct_.zNear);
+  fprintf(htmlfp, "        var zFar = %g;\n", context_struct_.zFar);
   fprintf(htmlfp, "        var aspect = 1.0*gl.viewportWidth/gl.viewportHeight;\n");
   fprintf(htmlfp, "        var f = 1/Math.tan(verticalFieldOfView*Math.PI/360.0);\n");
   fprintf(htmlfp, "        \n");
@@ -374,11 +374,11 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        var lightDirection = [\n");
-  fprintf(htmlfp, "          %f, %f, %f\n", context_struct_.light_dir[0], context_struct_.light_dir[1], context_struct_.light_dir[2]);
+  fprintf(htmlfp, "          %g, %g, %g\n", context_struct_.light_dir[0], context_struct_.light_dir[1], context_struct_.light_dir[2]);
   fprintf(htmlfp, "        ];\n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        \n");
-  fprintf(htmlfp, "        gl.clearColor(%f,%f,%f,%f);\n", context_struct_.background_color[0], context_struct_.background_color[1], context_struct_.background_color[2], context_struct_.background_color[3]);
+  fprintf(htmlfp, "        gl.clearColor(%g,%g,%g,%g);\n", context_struct_.background_color[0], context_struct_.background_color[1], context_struct_.background_color[2], context_struct_.background_color[3]);
   fprintf(htmlfp, "        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);\n");
   {
     GR3_DrawList_t_ *draw;
@@ -451,20 +451,20 @@ int gr3_export_html_(const char *filename, int width, int height) {
         }
         
         fprintf(htmlfp, "        var modelMatrix = [\n");
-        fprintf(htmlfp, "          %f, %f, %f, %f,\n", model_matrix[0][0], model_matrix[1][0], model_matrix[2][0], model_matrix[3][0]);
-        fprintf(htmlfp, "          %f, %f, %f, %f,\n", model_matrix[0][1], model_matrix[1][1], model_matrix[2][1], model_matrix[3][1]);
-        fprintf(htmlfp, "          %f, %f, %f, %f,\n", model_matrix[0][2], model_matrix[1][2], model_matrix[2][2], model_matrix[3][2]);
-        fprintf(htmlfp, "          %f, %f, %f, %f\n", model_matrix[0][3], model_matrix[1][3], model_matrix[2][3], model_matrix[3][3]);
+        fprintf(htmlfp, "          %g, %g, %g, %g,\n", model_matrix[0][0], model_matrix[1][0], model_matrix[2][0], model_matrix[3][0]);
+        fprintf(htmlfp, "          %g, %g, %g, %g,\n", model_matrix[0][1], model_matrix[1][1], model_matrix[2][1], model_matrix[3][1]);
+        fprintf(htmlfp, "          %g, %g, %g, %g,\n", model_matrix[0][2], model_matrix[1][2], model_matrix[2][2], model_matrix[3][2]);
+        fprintf(htmlfp, "          %g, %g, %g, %g\n", model_matrix[0][3], model_matrix[1][3], model_matrix[2][3], model_matrix[3][3]);
         fprintf(htmlfp, "        ];\n");
         fprintf(htmlfp, "        modelMatrices.push(transposeMatrix4(modelMatrix));\n");
         
         fprintf(htmlfp, "        var scale = [\n");
-        fprintf(htmlfp, "          %f, %f, %f\n", draw->scales[i*3+0], draw->scales[i*3+1], draw->scales[i*3+2]);
+        fprintf(htmlfp, "          %g, %g, %g\n", draw->scales[i*3+0], draw->scales[i*3+1], draw->scales[i*3+2]);
         fprintf(htmlfp, "        ];\n");
         fprintf(htmlfp, "        scales.push(scale);\n");
         fprintf(htmlfp, "        \n");
         fprintf(htmlfp, "        var color = [\n");
-        fprintf(htmlfp, "          %f, %f, %f\n", draw->colors[i*3+0], draw->colors[i*3+1], draw->colors[i*3+2]);
+        fprintf(htmlfp, "          %g, %g, %g\n", draw->colors[i*3+0], draw->colors[i*3+1], draw->colors[i*3+2]);
         fprintf(htmlfp, "        ];\n");
         fprintf(htmlfp, "        colors.push(color);\n");
       }
