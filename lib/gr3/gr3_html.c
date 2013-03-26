@@ -124,15 +124,31 @@ int gr3_export_html_(const char *filename, int width, int height) {
         }
       }
       fprintf(htmlfp, "        ];\n");
-      fprintf(htmlfp, "        var colors = [\n");
-      for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices; j++) {
-        fprintf(htmlfp, "          %f, %f, %f", context_struct_.mesh_list_[i].data.colors[3*j+0], context_struct_.mesh_list_[i].data.colors[3*j+1], context_struct_.mesh_list_[i].data.colors[3*j+2]);
-        if (j + 1 < context_struct_.mesh_list_[i].data.number_of_vertices) {
-          fprintf(htmlfp, ",\n");
+      {
+        int all_ones = 1;
+        for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices*3; j++) {
+          if (context_struct_.mesh_list_[i].data.colors[j] != 1) {
+            all_ones = 0;
+            break;
+          }
         }
+        if (!all_ones) {
+          fprintf(htmlfp, "        var colors = [\n");
+          for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices; j++) {
+            fprintf(htmlfp, "          %f, %f, %f", context_struct_.mesh_list_[i].data.colors[3*j+0], context_struct_.mesh_list_[i].data.colors[3*j+1], context_struct_.mesh_list_[i].data.colors[3*j+2]);
+            if (j + 1 < context_struct_.mesh_list_[i].data.number_of_vertices) {
+              fprintf(htmlfp, ",\n");
+            }
+          }
+          fprintf(htmlfp, "        ];\n");
+        } else {
+          fprintf(htmlfp, "        var colors = Array();");
+          fprintf(htmlfp, "        for (var i = 0; i < %d; i++) {", context_struct_.mesh_list_[i].data.number_of_vertices*3);
+          fprintf(htmlfp, "        colors[i] = 1.0;");
+          fprintf(htmlfp, "        }");
+        }
+        fprintf(htmlfp, "        \n");
       }
-      fprintf(htmlfp, "        ];\n");
-      fprintf(htmlfp, "        \n");
       fprintf(htmlfp, "        var mesh = new Mesh(%u, vertices, normals, colors);\n", i);
       fprintf(htmlfp, "        mesh.init();\n");
       fprintf(htmlfp, "        meshes.push(mesh);\n");
