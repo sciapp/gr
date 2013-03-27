@@ -259,7 +259,7 @@ void seg_xform_rel(float *x, float *y)
 }
 
 static
-int lastop(char *op)
+int lastop(const char *op)
 {
   int len;
 
