@@ -68,8 +68,9 @@ static FT_Bool init = 0;
 static FT_Library library;
 
 static FT_Pointer safe_realloc(FT_Pointer ptr, size_t size);
-static FT_Error set_glyph(FT_Face *face, FT_UInt codepoint, FT_UInt *previous,
-                          FT_Vector *pen, FT_Bool vertical, FT_Matrix *rotation);
+static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous,
+                          FT_Vector *pen, FT_Bool vertical, FT_Matrix *rotation,
+                          FT_Vector *bearing, FT_Int halign);
 static void convert_text(FT_Bytes str, FT_UInt *unicode_string, int *length);
 static FT_Long min(FT_Long a, FT_Long b);
 static FT_Long max(FT_Long a, FT_Long b);
@@ -98,33 +99,53 @@ static FT_Pointer safe_realloc(FT_Pointer ptr, size_t size) {
   return ptr;
 }
 
-/* load a glyph into the slot */
-static FT_Error set_glyph(FT_Face *face, FT_UInt codepoint, FT_UInt *previous,
-                          FT_Vector *pen, FT_Bool vertical, FT_Matrix *rotation) {
+/* load a glyph into the slot and compute bearing */
+static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous,
+                          FT_Vector *pen, FT_Bool vertical, FT_Matrix *rotation,
+                          FT_Vector *bearing, FT_Int halign) {
   FT_Error error;
   FT_UInt glyph_index;
 
-  glyph_index = FT_Get_Char_Index(*face, codepoint);
-  if (FT_HAS_KERNING((*face)) && *previous && glyph_index) {
+  glyph_index = FT_Get_Char_Index(face, codepoint);
+  if (FT_HAS_KERNING(face) && *previous && !vertical && glyph_index) {
     FT_Vector delta;
-    FT_Get_Kerning(*face, *previous, glyph_index, FT_KERNING_DEFAULT,
+    FT_Get_Kerning(face, *previous, glyph_index, FT_KERNING_DEFAULT,
                    &delta);
     FT_Vector_Transform(&delta, rotation);
-    if (!vertical) (*pen).x += delta.x;
-    (*pen).y += delta.y;
+    pen->x += delta.x;
+    pen->y += delta.y;
   }
-  error = FT_Load_Glyph(*face, glyph_index, vertical ?
+  error = FT_Load_Glyph(face, glyph_index, vertical ?
                         FT_LOAD_VERTICAL_LAYOUT : FT_LOAD_DEFAULT);
   if (error) {
     gks_perror("Glyph could not be loaded: %c", codepoint);
     return 1;
   }
-  error = FT_Render_Glyph((*face)->glyph, FT_RENDER_MODE_NORMAL);
+  error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
   if (error) {
     gks_perror("Glyph could not be rendered: %c", codepoint);
     return 1;
   }
   *previous = glyph_index;
+
+  bearing->x = face->glyph->metrics.horiBearingX;
+  bearing->y = 0;
+  if (vertical) {
+    if (halign == GKS_K_TEXT_HALIGN_RIGHT) {
+      bearing->x += face->glyph->metrics.width;
+    } else if (halign == GKS_K_TEXT_HALIGN_CENTER) {
+      bearing->x += face->glyph->metrics.width / 2;
+    }
+    if (bearing->x != 0) FT_Vector_Transform(bearing, rotation);
+    bearing->x = 64 * face->glyph->bitmap_left - bearing->x;
+    bearing->y = 64 * face->glyph->bitmap_top  - bearing->y;
+  } else {
+    if (bearing->x != 0) FT_Vector_Transform(bearing, rotation);
+    pen->x -= bearing->x;
+    pen->y -= bearing->y;
+    bearing->x = 64 * face->glyph->bitmap_left;
+    bearing->y = 64 * face->glyph->bitmap_top;
+  }
   return 0;
 }
 
@@ -197,10 +218,10 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
                    gks_state_list_t *gkss, const char *text, int length) {
   FT_Face face;                   /* font face */
   FT_Vector pen;                  /* glyph position */
-  FT_Long xmin, ymin, xmax, ymax; /* bounding box */
+  FT_BBox bb;                     /* bounding box */
+  FT_Vector bearing;              /* individual glyph translation */
   FT_UInt previous;               /* previous glyph index */
   FT_Vector spacing;              /* amount of additional space between glyphs */
-  FT_Vector right;                /* for computing vertical alignment */
   FT_ULong textheight;            /* textheight in FreeType convention */
   FT_Error error;                 /* error code */
   FT_Matrix rotation;             /* text rotation matrix */
@@ -213,15 +234,16 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   FT_Byte *mono_bitmap = NULL;    /* target for rendered text */
   FT_Byte *rgba_bitmap = NULL;    /*        for creation of colored text */
   FT_Int num_glyphs;              /* number of glyphs */
-  FT_Vector tr, align, point;
+  FT_Vector align;
   FT_Bitmap ftbitmap;
   FT_UInt codepoint;
-  int i, j, k, textfont, dx, dy, value, tmp;
+  int i, j, k, textfont, dx, dy, value, tmp, pos_x, pos_y;
   float red, green, blue, angle;
   const int windowheight = *height;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN ||
                             direction == GKS_K_TEXT_PATH_UP);
+  const FT_String *suffix_type1 = ".afm";
 
   if (!init) gks_ft_init();
 
@@ -239,6 +261,12 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     halign = GKS_K_TEXT_HALIGN_LEFT;
   }
   valign = gkss->txal[1];
+  if (valign != GKS_K_TEXT_VALIGN_NORMAL) {
+    valign = gkss->txal[1];
+  } else {
+    valign = GKS_K_TEXT_VALIGN_BASE;
+  }
+
   textfont = abs(gkss->txfont);
   if (textfont >= 101 && textfont <= 131)
     textfont -= 100;
@@ -248,7 +276,6 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     gks_perror("Invalid font index: %d", gkss->txfont);
     font = gks_font_list[0];
   }
-
   prefix = gks_getenv("GKS_FONTPATH");
   if (prefix == NULL) {
     prefix = GRDIR;
@@ -278,17 +305,17 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     strcat(fontdb, "\\FONTS\\");
 #endif
     strcat(file, font);
-    strcat(file, ".afm");
+    strcat(file, suffix_type1);
     FT_Attach_File(face, file);
   }
   free(file);
 
-  textheight = gkss->chh * windowheight * 64 / caps[map[textfont-1]-1];
+  textheight = gkss->chh * windowheight * 64 / caps[map[textfont - 1] - 1];
   error = FT_Set_Char_Size(face, textheight * gkss->chxp, textheight, 72, 72);
   if (error) gks_perror("Cannot set text height");
 
   if (gkss->chup[0] != 0.0 || gkss->chup[1] != 0.0) {
-    angle = atan2f(gkss->chup[1], gkss->chup[0]) - M_PI/2;
+    angle = atan2f(gkss->chup[1], gkss->chup[0]) - M_PI / 2;
     rotation.xx =  cosf(angle) * 0x10000L;
     rotation.xy = -sinf(angle) * 0x10000L;
     rotation.yx =  sinf(angle) * 0x10000L;
@@ -310,38 +337,23 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     }
   }
 
-  xmin = ymin = LONG_MAX;
-  xmax = ymax = LONG_MIN;
+  bb.xMin = bb.yMin = LONG_MAX;
+  bb.xMax = bb.yMax = LONG_MIN;
   pen.x = pen.y = 0;
-  right.x = right.y = 0;
   previous = 0;
 
   for (i = 0; i < num_glyphs; i++) {
     codepoint = unicode_string[direction == GKS_K_TEXT_PATH_LEFT ?
                                (num_glyphs - 1 - i) : i];
-    error = set_glyph(&face, codepoint, &previous, &pen, vertical, &rotation);
+    error = set_glyph(face, codepoint, &previous, &pen, vertical, &rotation,
+                      &bearing, halign);
     if (error) continue;
 
-    /* glyph translation vector for vertical text */
-    tr.x = tr.y = 0;
-    if (vertical && halign != GKS_K_TEXT_HALIGN_LEFT) {
-      tr.x = face->size->metrics.max_advance - face->glyph->metrics.width;
-      if (tr.x != 0) FT_Vector_Transform(&tr, &rotation);
-      if (halign != GKS_K_TEXT_HALIGN_RIGHT) {
-        tr.x /= 2;
-        tr.y /= 2;
-      }
-    }
-    /* enlarge bounding box if necessary */
-    xmin = min(xmin, pen.x + min(tr.x, 0) + 64*face->glyph->bitmap_left);
-    xmax = max(xmax, pen.x + max(tr.x, 0) +
-               64*(face->glyph->bitmap_left + face->glyph->bitmap.width));
-    ymin = min(ymin, pen.y + min(tr.y, 0) +
-               64*(face->glyph->bitmap_top - face->glyph->bitmap.rows));
-    ymax = max(ymax, pen.y + max(tr.y, 0) + 64*face->glyph->bitmap_top);
-    if (vertical) {
-      right.x = max(right.x, face->glyph->metrics.width);
-    }
+    bb.xMin = min(bb.xMin, pen.x + bearing.x);
+    bb.xMax = max(bb.xMax, pen.x + bearing.x + 64 * face->glyph->bitmap.width);
+    bb.yMin = min(bb.yMin, pen.y + bearing.y - 64 * face->glyph->bitmap.rows);
+    bb.yMax = max(bb.yMax, pen.y + bearing.y);
+  
     if (direction == GKS_K_TEXT_PATH_DOWN) {
       pen.x -= face->glyph->advance.x + spacing.x;
       pen.y -= face->glyph->advance.y + spacing.y;
@@ -350,10 +362,12 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
       pen.y += face->glyph->advance.y + spacing.y;
     }
   }
-
-  *width = (int)((xmax - xmin) / 64);
-  *height = (int)((ymax - ymin) / 64);
-  if (xmax <= xmin || ymax <= ymin) return NULL;
+  *width  = (int)((bb.xMax - bb.xMin) / 64);
+  *height = (int)((bb.yMax - bb.yMin) / 64);
+  if (bb.xMax <= bb.xMin || bb.yMax <= bb.yMin) {
+    gks_perror("Invalid bitmap size");
+    return NULL;
+  }
   size = *width * *height;
   mono_bitmap = (FT_Byte *) safe_realloc(mono_bitmap, size);
   memset(mono_bitmap, 0, size);
@@ -363,28 +377,20 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   previous = 0;
 
   for (i = 0; i < num_glyphs; i++) {
+    bearing.x = bearing.y = 0;
     codepoint = unicode_string[direction == GKS_K_TEXT_PATH_LEFT ?
                                (num_glyphs - 1 - i) : i];
-    error = set_glyph(&face, codepoint, &previous, &pen, vertical, &rotation);
+    error = set_glyph(face, codepoint, &previous, &pen, vertical, &rotation,
+                      &bearing, halign);
     if (error) continue;
 
-    tr.x = 0; tr.y = 0;
-    if (vertical && halign != GKS_K_TEXT_HALIGN_LEFT) {
-      tr.x = right.x - face->glyph->metrics.width;
-      if (tr.x != 0) FT_Vector_Transform(&tr, &rotation);
-      if (halign != GKS_K_TEXT_HALIGN_RIGHT) {
-        tr.x /= 2;
-        tr.y /= 2;
-      }
-    }
-
-    tr.x =  tr.x + pen.x + 64*face->glyph->bitmap_left - xmin;
-    tr.y = -tr.y - pen.y - 64*face->glyph->bitmap_top  + ymax;
+    pos_x = ( pen.x + bearing.x - bb.xMin) / 64;
+    pos_y = (-pen.y - bearing.y + bb.yMax) / 64;
     ftbitmap = face->glyph->bitmap;
     for (j = 0; j < ftbitmap.rows; j++) {
       for (k = 0; k < ftbitmap.width; k++) {
-        dx = k + (tr.x / 64);
-        dy = j + (tr.y / 64);
+        dx = k + pos_x;
+        dy = j + pos_y;
         value = mono_bitmap[dy * *width + dx];
         value += ftbitmap.buffer[j * ftbitmap.pitch + k];
         if (value > 255) {
@@ -412,51 +418,58 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   memset(rgba_bitmap, 0, 4 * size);
   for (i = 0; i < size; i++) {
     for (j = 0; j < 3; j++) {
-      tmp = rgba_bitmap[4*i + j] + color[j] * mono_bitmap[i]/255;
+      tmp = rgba_bitmap[4*i + j] + color[j] * mono_bitmap[i] / 255;
       rgba_bitmap[4*i + j] = (FT_Byte) min(tmp, 255);
     }
     tmp = rgba_bitmap[4*i + 3] + mono_bitmap[i];
     rgba_bitmap[4*i + 3] = (FT_Byte) min(tmp, 255);
   }
 
-  if (right.x!=0 || right.y!=0) {
-    FT_Vector_Transform(&right, &rotation);
-  }
-  if (vertical) {
-    pen.x = right.x;
-    pen.y = right.y;
+  /* Alignment */
+  if (direction == GKS_K_TEXT_PATH_DOWN) {
+    pen.x += spacing.x;
+    pen.y += spacing.y;
+  } else {
+    pen.x -= spacing.x;
+    pen.y -= spacing.y;
   }
 
-  if (halign == GKS_K_TEXT_HALIGN_LEFT) {
-    align.x = 0;
-    align.y = 0;
-  } else if (halign == GKS_K_TEXT_HALIGN_CENTER) {
-    align.x = pen.x / 2;
-    align.y = pen.y / 2;
-  } else { /* right justified */
-    align.x = pen.x;
-    align.y = pen.y;
-  }
+  align.x = align.y = 0;
   if (valign != GKS_K_TEXT_VALIGN_BASE) {
-    point.x = 0;
-    point.y = gkss->chh * windowheight * 64;
-    FT_Vector_Transform(&point, &rotation);
-    if (valign == GKS_K_TEXT_VALIGN_CAP) {
-      align.x += point.x;
-      align.y += point.y;
-    } else if (valign == GKS_K_TEXT_VALIGN_HALF) {
-      align.x += point.x * 0.5;
-      align.y += point.y * 0.5;
+    align.y = gkss->chh * windowheight * 64;
+    FT_Vector_Transform(&align, &rotation);
+    if (valign == GKS_K_TEXT_VALIGN_HALF) {
+      align.x *= 0.5;
+      align.y *= 0.5;
     } else if (valign == GKS_K_TEXT_VALIGN_TOP) {
-      align.x += (point.x * 1.2);
-      align.y += (point.y * 1.2);
+      align.x *= 1.2;
+      align.y *= 1.2;
     } else if (valign == GKS_K_TEXT_VALIGN_BOTTOM) {
-      align.x -= (point.x * 0.2);
-      align.y -= (point.y * 0.2);
+      align.x *= -0.2;
+      align.y *= -0.2;
     }
   }
-  *x += (xmin - align.x) / 64;
-  *y += (ymin - align.y) / 64;
+
+  if (!vertical && halign != GKS_K_TEXT_HALIGN_LEFT) {
+    FT_Vector right;
+    right.x = face->glyph->metrics.width + face->glyph->metrics.horiBearingX;
+    right.y = 0;
+    if (right.x != 0) {
+      FT_Vector_Transform(&right, &rotation);
+    }
+    pen.x += right.x - face->glyph->advance.x;
+    pen.y += right.y - face->glyph->advance.y;
+    if (halign == GKS_K_TEXT_HALIGN_CENTER) {
+      align.x += pen.x / 2;
+      align.y += pen.y / 2;
+    } else if (halign == GKS_K_TEXT_HALIGN_RIGHT) {
+      align.x += pen.x;
+      align.y += pen.y;
+    }
+  }
+
+  *x += (bb.xMin - align.x) / 64;
+  *y += (bb.yMin - align.y) / 64;
 
   free(mono_bitmap);
   return (int *) rgba_bitmap;
