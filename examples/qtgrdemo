@@ -3,7 +3,7 @@
 """
 """
 # standard library
-# ...
+import os
 # third party
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -41,15 +41,17 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
 
-class MainWindow(QtGui.QMainWindow):
-
-    _FILE_TYPES = ("PDF files (*.pdf);;JPEG files (*.jpg);;GRX files (*.grx)" +
-                   ";;All files (*.*)")
-    
+class MainWindow(QtGui.QMainWindow):   
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         uic.loadUi("qtgrdemo.ui", self)
+        
+        dictPrintType = dict(gr.PRINT_TYPE)
+        map(lambda k: dictPrintType.pop(k), [gr.PRINT_JPEG, gr.PRINT_TIF])
+        self._saveTypes = (";;".join(dictPrintType.values()) + ";;" +
+                           ";;".join(gr.GRAPHIC_TYPE.values()))
+        self._title = unicode(self.windowTitle())
         
         self.connect(self._chkLogX, QtCore.SIGNAL("stateChanged(int)"),
                      self._logXClicked)
@@ -76,10 +78,17 @@ class MainWindow(QtGui.QMainWindow):
         self._gr.plot(x, y)
         
     def save(self):
-        path = QtGui.QFileDialog.getSaveFileName(self,
-                                                 filter=MainWindow._FILE_TYPES)
-        if path:
-            self._gr.save(unicode(path))
+        qpath = QtGui.QFileDialog.getSaveFileName(self, filter=self._saveTypes)
+        if qpath:
+            path = unicode(qpath)
+            (p, suffix) = os.path.splitext(path)
+            if suffix and (suffix[1:] in gr.PRINT_TYPE.keys() or
+                           suffix[1:] in gr.GRAPHIC_TYPE):
+                self._gr.save(path)
+                self.setWindowTitle(self._title + " - %s"
+                                    %os.path.basename(path))
+            else:
+                raise Exception("Unsupported file format")
         
     def mouseMoveGr(self, event):
         dc = event.getDC()
