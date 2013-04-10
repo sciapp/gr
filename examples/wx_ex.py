@@ -49,7 +49,7 @@ class GrWidget(wx.Panel):
         self.bm = wx.EmptyBitmap(self.GetSizeTuple()[0], self.GetSizeTuple()[1])
         dc = wx.MemoryDC(self.bm)
         
-        os.environ['GKS_CONID'] = "%x!%x" % (get_address(repr(self)), get_address(repr(dc)))
+        os.environ['GKSconid'] = "%x!%x" % (get_address(repr(self)), get_address(repr(dc)))
         
         dc.SetBackground(wx.WHITE_BRUSH)
         dc.Clear()

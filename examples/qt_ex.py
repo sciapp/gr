@@ -64,7 +64,7 @@ class GrWidget(QtGui.QWidget) :
         self.painter = QtGui.QPainter()
         self.painter.begin(self)
         self.painter.drawText(15, 15, "Contour Example using PyQt4 ...")
-        os.environ['GKS_CONID'] = "%x!%x" % (sip.unwrapinstance(self), sip.unwrapinstance(self.painter))
+        os.environ['GKSconid'] = "%x!%x" % (sip.unwrapinstance(self), sip.unwrapinstance(self.painter))
         gr.updatews()
         self.painter.end()
 
