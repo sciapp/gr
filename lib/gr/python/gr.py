@@ -1,4 +1,5 @@
 
+import os
 from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
 from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
 from sys import version_info
@@ -466,9 +467,15 @@ def inqbbox():
   return [xmin.value, xmax.value, ymin.value, ymax.value]
 
 if system() == 'Windows' :
-  __gr = CDLL("S:\gr\libGR.dll")
+  grdir = os.getenv("GRDIR", os.path.join(os.getenv("SystemDrive", "C:"),
+                                          os.sep, "gr"))
+  grlib = grdir
+  libext = ".dll"
 else:
-  __gr = CDLL("/usr/local/gr/lib/libGR.so")
+  grdir = os.getenv("GRDIR", os.path.join(os.sep, "usr", "local", "gr"))
+  grlib = os.path.join(grdir, "lib")
+  libext = ".so"        
+__gr = CDLL(os.path.join(grlib, "libGR" + libext))
 
 __gr.gr_opengks.argtypes = [];
 __gr.gr_closegks.argtypes = [];
