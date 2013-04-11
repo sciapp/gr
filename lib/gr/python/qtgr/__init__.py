@@ -45,21 +45,6 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
 
 class GRWidget(QtGui.QWidget):
     
-    # jpeg, tif
-    GR_PRINT_TYPES = { "ps" : "PostScript (*.ps)",
-                      "eps" : "Encapsulated PostScript (*.eps)",
-                      "pdf" : "Portable Document Format (*.pdf)",
-                      "bmp" : "Windows Bitmap (*.bmp)",
-                      "jpg" : "JPEG (*.jpg)",
-                      "png" : "Portable Network Graphics (*.png)",
-                      "tiff" : "Tagged Image File Format (*.tiff)",
-                      "fig" : "Figure (*.fig)",
-                      "svg" : "Scalable Vector Graphics (*.svg)",
-                      "wmf" : "Windows Metafile (*.wmf)"
-    }
-    
-    GR_GRAPHICS_TYPES = { "grx" : "Graphics Format (*.grx)"}
-    
     def __init__(self, *args, **kwargs):
         super(GRWidget, self).__init__(*args, **kwargs)
         os.environ["GKS_WSTYPE"] = "381" # GKS Qt Plugin
@@ -75,6 +60,47 @@ class GRWidget(QtGui.QWidget):
         gr.updatews()
         self._painter.end()
         
+    # put gr commands in here
+    def draw(self, clear=False, update=True):
+        pass
+        
+    def save(self, path):
+        (p, ext) = os.path.splitext(path)
+        if ext.lower()[1:] == gr.GRAPHIC_GRX:
+            gr.begingraphics(path)
+            self.draw(update=False)
+            gr.endgraphics()
+        else:
+            gr.beginprint(path)
+            self.draw(update=False)
+            gr.endprint()
+            
+    def printDialog(self, documentName="qtgr-untitled"):
+        printer = QtGui.QPrinter(QtGui.QPrinter.HighResolution)
+        printer.setDocName(documentName)
+        painter = QtGui.QPainter()
+        dlg = QtGui.QPrintDialog(printer)
+        if dlg.exec_() == QtGui.QPrintDialog.Accepted:
+            painter.begin(printer)
+            os.environ["GKSconid"] = "%x!%x" %(sip.unwrapinstance(self),
+                                               sip.unwrapinstance(painter))
+        
+            # upscaling to paper size and
+            # alignment (horizontal and vertical centering)
+            xscale = printer.pageRect().width()/float(self.width());
+            yscale = printer.pageRect().height()/float(self.height());
+            scale = min(xscale, yscale);
+            painter.translate(printer.paperRect().x() +
+                              printer.pageRect().width()/2,
+                              printer.paperRect().y() +
+                              printer.pageRect().height()/2)
+            painter.scale(scale, scale);
+            painter.translate(-self.width()/2, -self.height()/2);
+        
+            self.draw(True)
+            gr.updatews()
+            painter.end()
+        
     def __del__(self):
         if gr:
             gr.emergencyclosegks()
@@ -82,8 +108,6 @@ class GRWidget(QtGui.QWidget):
 #        super(GRWidget, self).__del__()
 
 class InteractiveGRWidget(GRWidget):
-    
-    GRX_SUFFIX = ".grx"
     
     def __init__(self, *args, **kwargs):
         super(InteractiveGRWidget, self).__init__(*args, **kwargs)
@@ -109,7 +133,6 @@ class InteractiveGRWidget(GRWidget):
         self._plotSubTitle = None
         self._lblX = None
         self._lblY = None
-#        self._printPath = None
         self.setviewport(0.1, 0.95, 0.1, 0.95)
         
     def _drawTitleAndSubTitle(self):
@@ -127,7 +150,7 @@ class InteractiveGRWidget(GRWidget):
             if y > 1.:
                 y = ymax
                 self.setviewport(xmin, xmax, ymin, ymax-dy)
-                self._draw(True)
+                self.draw(True)
             if title:
                 gr.text(x, y, title)
                 y -= .05
@@ -147,7 +170,7 @@ class InteractiveGRWidget(GRWidget):
             gr.text(0., .5, ylabel)
             gr.setcharup(0., 1.)
             
-    def _draw(self, clear=False, update=True):
+    def draw(self, clear=False, update=True):
         if self._x and self._y:
             self.plot(self._x, self._y, clear)
         self._drawTitleAndSubTitle()
@@ -155,21 +178,6 @@ class InteractiveGRWidget(GRWidget):
         if update:
             self.update()
         
-#    def _save(self, path):
-    def save(self, path):
-        (p, ext) = os.path.splitext(path)
-        if ext.lower() == InteractiveGRWidget.GRX_SUFFIX:
-            gr.begingraphics(path)
-            self._draw(update=False)
-            gr.endgraphics()
-        else:
-            gr.beginprint(path)
-            self._draw(update=False)
-            gr.endprint()
-        
-#    def save(self, path):
-#        self._printPath = path
-    
     def plot(self, x, y, clear=False):
         if self._resetWindow:
             window = None
@@ -185,10 +193,6 @@ class InteractiveGRWidget(GRWidget):
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
         self._painter.begin(self)
-#        if self._printPath:
-#            self._save(self._printPath)
-#            self._printPath = None
-#        else:
         if self._mouseLeft:
             startDC = self._startPoint.getDC()
             endDC = self._curPoint.getDC()
@@ -206,7 +210,7 @@ class InteractiveGRWidget(GRWidget):
     
     def setTitle(self, title):
         self._plotTitle = title
-        self._draw(True)
+        self.draw(True)
         self.update()
                 
     def getSubTitle(self):
@@ -214,7 +218,7 @@ class InteractiveGRWidget(GRWidget):
     
     def setSubTitle(self, subtitle):
         self._plotSubTitle = subtitle
-        self._draw(True)
+        self.draw(True)
         self.update()
     
     def getXLabel(self):
@@ -222,7 +226,7 @@ class InteractiveGRWidget(GRWidget):
     
     def setXLabel(self, xlabel):
         self._lblX = xlabel
-        self._draw(True)
+        self.draw(True)
         self.update()
         
     def getYLabel(self):
@@ -230,7 +234,7 @@ class InteractiveGRWidget(GRWidget):
     
     def setYLabel(self, ylabel):
         self._lblY = ylabel
-        self._draw(True)
+        self.draw(True)
         self.update()
     
     def setviewport(self, xmin, xmax, ymin, ymax):
@@ -251,23 +255,23 @@ class InteractiveGRWidget(GRWidget):
             self._option_scale |= gr.OPTION_X_LOG
         else:
             self._option_scale &= ~gr.OPTION_X_LOG
-        self._draw(clear=True)
+        self.draw(clear=True)
             
     def setLogY(self, bool):
         if bool:
             self._option_scale |= gr.OPTION_Y_LOG
         else:
             self._option_scale &= ~gr.OPTION_Y_LOG
-        self._draw(clear=True)
+        self.draw(clear=True)
             
     def setGrid(self, bool):
         self._grid = bool
-        self._draw(clear=True)
+        self.draw(clear=True)
         
     def reset(self):
 #        gr.clearws()
         self._resetWindow = True
-        self._draw(clear=True)
+        self.draw(clear=True)
         
     def _check_window(self, xmin, xmax, ymin, ymax):
         res = True
@@ -309,7 +313,7 @@ class InteractiveGRWidget(GRWidget):
             ymin = p0.y()
             ymax = p1.y()
         gr.setwindow(xmin, xmax, ymin, ymax)
-        self._draw()
+        self.draw()
         
     def _pan(self, dp):
         gr.clearws()
@@ -319,7 +323,7 @@ class InteractiveGRWidget(GRWidget):
         window[2] -= dp.y()
         window[3] -= dp.y()
         gr.setwindow(*window)
-        self._draw()
+        self.draw()
                 
     def _zoom(self, point, dpercent):
         gr.clearws()
@@ -336,10 +340,10 @@ class InteractiveGRWidget(GRWidget):
         
         if not self._check_window(*window):
             self._resetWindow = True
-            self._draw(True)
+            self.draw(True)
         else:
             gr.setwindow(*window)
-            self._draw()
+            self.draw()
         
     def mousePress(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
@@ -388,7 +392,7 @@ class InteractiveGRWidget(GRWidget):
         
     def pickMove(self, event):
         wcPoint = event.getWC()
-        self._draw(True)
+        self.draw(True)
         gr.setmarkertype(gr.MARKERTYPE_PLUS)
         gr.polymarker(1, [wcPoint.x()], [wcPoint.y()])
         self.update()

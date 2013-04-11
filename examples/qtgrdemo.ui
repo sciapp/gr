@@ -83,6 +83,8 @@
     </property>
     <addaction name="_actionSave"/>
     <addaction name="separator"/>
+    <addaction name="_actionPrint"/>
+    <addaction name="separator"/>
     <addaction name="_actionQuit"/>
    </widget>
    <addaction name="_menuFile"/>
@@ -102,6 +104,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="_actionPrint">
+   <property name="text">
+    <string>&amp;Print</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
    </property>
   </action>
  </widget>

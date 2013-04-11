@@ -51,6 +51,7 @@ class MainWindow(QtGui.QMainWindow):
         map(lambda k: dictPrintType.pop(k), [gr.PRINT_JPEG, gr.PRINT_TIF])
         self._saveTypes = (";;".join(dictPrintType.values()) + ";;" +
                            ";;".join(gr.GRAPHIC_TYPE.values()))
+        self._saveName = None
         self._title = unicode(self.windowTitle())
         
         self.connect(self._chkLogX, QtCore.SIGNAL("stateChanged(int)"),
@@ -68,6 +69,8 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(self._shell, QtCore.SIGNAL("returnPressed()"),
                      self._shellEx)
         self.connect(self._actionSave, QtCore.SIGNAL("activated()"), self.save)
+        self.connect(self._actionPrint, QtCore.SIGNAL("activated()"),
+                     self.printGR)
         
         guiConn = GUIConnector(self._gr)
         guiConn.connect(MouseEvent.MOUSE_MOVE, self.mouseMoveGr)
@@ -83,13 +86,22 @@ class MainWindow(QtGui.QMainWindow):
         if qpath:
             path = unicode(qpath)
             (p, suffix) = os.path.splitext(path)
+            suffix = suffix.lower()
             if suffix and (suffix[1:] in gr.PRINT_TYPE.keys() or
                            suffix[1:] in gr.GRAPHIC_TYPE):
                 self._gr.save(path)
+                self._saveName = os.path.basename(path)
                 self.setWindowTitle(self._title + " - %s"
-                                    %os.path.basename(path))
+                                    %self._saveName)
             else:
                 raise Exception("Unsupported file format")
+        
+    def printGR(self):
+        if self._saveName:
+            title = "GR_Demo-" + self._saveName
+        else:
+            title = "GR_Demo-untitled"
+        self._gr.printDialog(title)
         
     def mouseMoveGr(self, event):
         dc = event.getDC()
