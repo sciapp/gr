@@ -279,19 +279,20 @@ class InteractiveGRWidget(GRWidget):
         return res
     
     def _pick(self, p0, type):
-        p0x = p0.x()
-        for idx, x in enumerate(self._x):
-            if x >= p0x:
-                break
-        coord = CoordConverter(self.width(), self.height())
-        coord.setWC(self._x[idx], self._y[idx])
-        dcPoint = coord.getDC()
-        
-        QtGui.QApplication.sendEvent(self, PickEvent(type,
-                                                     self.width(),
-                                                     self.height(),
-                                                     dcPoint.x(),
-                                                     dcPoint.y()))
+        if self._x and self._y:
+            p0x = p0.x()
+            for idx, x in enumerate(self._x):
+                if x >= p0x:
+                    break
+            coord = CoordConverter(self.width(), self.height())
+            coord.setWC(self._x[idx], self._y[idx])
+            dcPoint = coord.getDC()
+            
+            QtGui.QApplication.sendEvent(self, PickEvent(type,
+                                                         self.width(),
+                                                         self.height(),
+                                                         dcPoint.x(),
+                                                         dcPoint.y()))
         
     def _select(self, p0, p1):
         gr.clearws()
