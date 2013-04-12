@@ -123,6 +123,8 @@ class InteractiveGRWidget(GRWidget):
         self._startPoint = None
         self._curPoint = None
         self._option_scale = 0
+        self._logXinDomain = None
+        self._logYinDomain = None
         self._grid = True
         self._bgColor = 163
         self._x = None
@@ -134,6 +136,15 @@ class InteractiveGRWidget(GRWidget):
         self._lblX = None
         self._lblY = None
         self.setviewport(0.1, 0.95, 0.1, 0.95)
+        
+    @staticmethod
+    def isInLogDomain(*args):
+        res = True
+        for value in args:
+            if value <= 1e-8: # epsilon
+                res = False
+                break
+        return res
         
     def _drawTitleAndSubTitle(self):
         title =  self.getTitle()
@@ -170,7 +181,21 @@ class InteractiveGRWidget(GRWidget):
             gr.text(0., .5, ylabel)
             gr.setcharup(0., 1.)
             
+    def _logDomainCheck(self):
+        # log x, log y domain check
+        # emit signals on change
+        window = gr.inqwindow()
+        logXinDomain = InteractiveGRWidget.isInLogDomain(window[0], window[1])
+        logYinDomain = InteractiveGRWidget.isInLogDomain(window[2], window[3])
+        if logXinDomain != self._logXinDomain:
+            self._logXinDomain = logXinDomain
+            self.emit(QtCore.SIGNAL("logXinDomain(bool)"), self._logXinDomain)
+        if logYinDomain != self._logYinDomain:
+            self._logYinDomain = logYinDomain
+            self.emit(QtCore.SIGNAL("logYinDomain(bool)"), self._logYinDomain)
+            
     def draw(self, clear=False, update=True):
+        # drawing
         if self._x and self._y:
             self.plot(self._x, self._y, clear)
         self._drawTitleAndSubTitle()
@@ -184,6 +209,8 @@ class InteractiveGRWidget(GRWidget):
             self._resetWindow = False
         else:
             window = gr.inqwindow()
+        # log x, log y domain check
+        self._logDomainCheck()
         self._x = x
         self._y = y
         pygr.plot(x, y, bgcolor=self._bgColor, viewport=self._viewport,
@@ -251,15 +278,25 @@ class InteractiveGRWidget(GRWidget):
         self.emit(QtCore.SIGNAL("modePick(bool)"), self._pickMode)
         
     def setLogX(self, bool):
+        window = gr.inqwindow()
         if bool:
-            self._option_scale |= gr.OPTION_X_LOG
+            if InteractiveGRWidget.isInLogDomain(window[0], window[1]):
+                self._option_scale |= gr.OPTION_X_LOG
+            else:
+                raise Exception("(%d..%d) not in log(x) domain." %(window[0],
+                                                                   window[1]))
         else:
             self._option_scale &= ~gr.OPTION_X_LOG
         self.draw(clear=True)
             
     def setLogY(self, bool):
+        window = gr.inqwindow()
         if bool:
-            self._option_scale |= gr.OPTION_Y_LOG
+            if InteractiveGRWidget.isInLogDomain(window[2], window[3]):
+                self._option_scale |= gr.OPTION_Y_LOG
+            else:
+                raise Exception("(%d..%d) not in log(y) domain." %(window[2],
+                                                                   window[3]))
         else:
             self._option_scale &= ~gr.OPTION_Y_LOG
         self.draw(clear=True)
@@ -404,20 +441,9 @@ if __name__ == "__main__":
     grw = InteractiveGRWidget()
     grw.setviewport(0.1, 0.95, 0.1, 0.9)
     grw.show()
-#    gr.begingraphics("test.grx")
-#    gr.beginprint("test.pdf")
-#    gr.openws(5, "WISS", 5)
-#    gr.createseg(0)
     x = [-3.3 + t*.1 for t in range(66)]
     y = [t**5 - 13*t**3 + 36*t for t in x]
-#    y = [math.exp(t) for t in x]
     grw.plot(x, y)
 #    pygr.plot(x, y, bgcolor=163, clear=False, update=False)
 #    gr.clearws()
-#    gks set seg_xform 0.5 0.5 0 0 pi/2 1 1
-#    gr.setsegtran(0, .5, .5, 0, 0, 1.55, 1, 1)
-    
-#    gr.closews(5)
-#    gr.endprint()
-#    gr.endgraphics()
     sys.exit(app.exec_())
