@@ -117,7 +117,17 @@ class MainWindow(QtGui.QMainWindow):
 #        print "  buttons: 0x%x" %event.getButtons()
 #        print "modifiers: 0x%x" %event.getModifiers()
     def pointPickGr(self, event):
-        print "pick coord: %s" %event.getWC()
+        p = event.getWC()
+        
+        if p.x() < 0:
+            self._lblPickX.setText("%4.2f" %p.x())
+        else:
+            self._lblPickX.setText(" %4.2f" %p.x())
+             
+        if p.y() < 0:
+            self._lblPickY.setText("%4.2f" %p.y())
+        else:
+            self._lblPickY.setText(" %4.2f" %p.y())
         
     @QtCore.pyqtSlot()
     def _gridClicked(self, state):
