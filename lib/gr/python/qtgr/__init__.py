@@ -209,13 +209,15 @@ class InteractiveGRWidget(GRWidget):
             self._resetWindow = False
         else:
             window = gr.inqwindow()
-        # log x, log y domain check
-        self._logDomainCheck()
         self._x = x
         self._y = y
         pygr.plot(x, y, bgcolor=self._bgColor, viewport=self._viewport,
                   window=window, scale=self._option_scale, grid=self._grid,
                   clear=clear, update=False)
+        # log x, log y domain check
+        # this check has to be performed after plotting because of
+        # possible window changes, e.g. on resetWindow.
+        self._logDomainCheck()
     
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
@@ -306,7 +308,6 @@ class InteractiveGRWidget(GRWidget):
         self.draw(clear=True)
         
     def reset(self):
-#        gr.clearws()
         self._resetWindow = True
         self.draw(clear=True)
         
