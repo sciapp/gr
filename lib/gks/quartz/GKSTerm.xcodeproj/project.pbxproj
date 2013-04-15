@@ -325,7 +325,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				New_Setting = "";
 				OTHER_CPLUSPLUSFLAGS = "";
-				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.6.sdk";
+				SDKROOT = "";
 			};
 			name = Debug;
 		};
@@ -351,7 +351,7 @@
 				New_Setting = "";
 				OTHER_CPLUSPLUSFLAGS = "";
 				SCAN_ALL_SOURCE_FILES_FOR_INCLUDES = YES;
-				SDKROOT = "$(DEVELOPER_SDK_DIR)/MacOSX10.6.sdk";
+				SDKROOT = "";
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 			};
 			name = Release;
