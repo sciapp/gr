@@ -45,7 +45,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
-        uic.loadUi("qtgrdemo.ui", self)
+        uic.loadUi(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                "qtgrdemo.ui"), self)
         
         dictPrintType = dict(gr.PRINT_TYPE)
         map(lambda k: dictPrintType.pop(k), [gr.PRINT_JPEG, gr.PRINT_TIF])
