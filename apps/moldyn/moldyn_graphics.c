@@ -680,7 +680,16 @@ static void moldyn_init_glut(int *argcp, char **argv, const char *window_name) {
         argcp = &i;
         argv = NULL;
     }
-    
+#ifdef __linux__
+  char *argv2[] = {"moldyn","-indirect"};
+  int argcp2[] = {2};
+  if (getenv("SSH_CLIENT") != NULL) {
+    argv = (char **)argv2;
+    argcp = argcp2;
+    fprintf(stderr, "Indirect rendering over SSH\n");
+  }
+#endif
+  
     glutInit(argcp, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_ALPHA | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(window_width, window_height);
