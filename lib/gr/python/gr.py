@@ -1,4 +1,5 @@
 
+import os
 from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
 from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
 from sys import version_info
@@ -466,9 +467,15 @@ def inqbbox():
   return [xmin.value, xmax.value, ymin.value, ymax.value]
 
 if system() == 'Windows' :
-  __gr = CDLL("S:\gr\libGR.dll")
+  grdir = os.getenv("GRDIR", os.path.join(os.getenv("SystemDrive", "C:"),
+                                          os.sep, "gr"))
+  grlib = grdir
+  libext = ".dll"
 else:
-  __gr = CDLL("/usr/local/gr/lib/libGR.so")
+  grdir = os.getenv("GRDIR", os.path.join(os.sep, "usr", "local", "gr"))
+  grlib = os.path.join(grdir, "lib")
+  libext = ".so"        
+__gr = CDLL(os.path.join(grlib, "libGR" + libext))
 
 __gr.gr_opengks.argtypes = [];
 __gr.gr_closegks.argtypes = [];
@@ -703,3 +710,36 @@ FONT_PALATINO_BOLDITALIC = 129
 FONT_ZAPFCHANCERY_MEDIUMITALIC = 130
 FONT_ZAPFDINGBATS = 131
 
+# gr.beginprint types
+PRINT_PS   = "ps"
+PRINT_EPS  = "eps"
+PRINT_PDF  = "pdf"
+PRINT_BMP  = "bmp"
+PRINT_JPEG = "jpeg"
+PRINT_JPG  = "jpg"
+PRINT_PNG  = "png"
+PRINT_TIFF = "tiff"
+PRINT_TIF  = "tif"
+PRINT_FIG  = "fig"
+PRINT_SVG  = "svg"
+PRINT_WMF  = "wmf"
+
+PRINT_TYPE = { PRINT_PS   : "PostScript (*.ps)",
+               PRINT_EPS  : "Encapsulated PostScript (*.eps)",
+               PRINT_PDF  : "Portable Document Format (*.pdf)",
+               PRINT_BMP  : "Windows Bitmap (*.bmp)",
+               PRINT_JPEG : "JPEG image (*.jpg *.jpeg)",
+               PRINT_PNG  : "Portable Network Graphics (*.png)",
+               PRINT_TIFF : "Tagged Image File Format (*.tif *.tiff)",
+               PRINT_FIG  : "Figure (*.fig)",
+               PRINT_SVG  : "Scalable Vector Graphics (*.svg)",
+               PRINT_WMF  : "Windows Metafile (*.wmf)"
+}
+# multiple keys
+PRINT_TYPE[PRINT_JPG] = PRINT_TYPE[PRINT_JPEG]
+PRINT_TYPE[PRINT_TIF] = PRINT_TYPE[PRINT_TIFF]
+
+# gr.begingraphics types
+GRAPHIC_GRX = "grx"
+
+GRAPHIC_TYPE = { GRAPHIC_GRX : "Graphics Format (*.grx)" }
