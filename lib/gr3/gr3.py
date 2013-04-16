@@ -32,11 +32,17 @@ import numpy
 import sys
 import os
 
-# Shared Library should be in the same directory as the python module
 if sys.platform == 'win32':
-    _gr3 = ctypes.CDLL(os.path.join(os.path.dirname(os.path.realpath(__file__)),"libgr3.dll"))
+    grdir = os.getenv("GRDIR", os.path.join(os.getenv("SystemDrive", "C:"),
+                                            os.sep, "gr"))
+    grlib = grdir
+    libext = ".dll"
 else:
-    _gr3 = ctypes.CDLL(os.path.join(os.path.dirname(os.path.realpath(__file__)),"libGR3.so"))
+    grdir = os.getenv("GRDIR", os.path.join(os.sep, "usr", "local", "gr"))
+    grlib = os.path.join(grdir, "lib")
+    libext = ".so"
+
+_gr3 = ctypes.CDLL(os.path.join(grlib, "libGR3" + libext)
     
 class GR3_InitAttribute(object):
     GR3_IA_END_OF_LIST = 0
