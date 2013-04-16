@@ -42,7 +42,7 @@ else:
     grlib = os.path.join(grdir, "lib")
     libext = ".so"
 
-_gr3 = ctypes.CDLL(os.path.join(grlib, "libGR3" + libext)
+_gr3 = ctypes.CDLL(os.path.join(grlib, "libGR3" + libext))
     
 class GR3_InitAttribute(object):
     GR3_IA_END_OF_LIST = 0
