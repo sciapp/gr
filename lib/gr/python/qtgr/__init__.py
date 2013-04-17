@@ -9,9 +9,9 @@ import math
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 import sip
+# local library
 import gr
 import pygr
-# local library
 import qtgr.events
 from qtgr.events import GUIConnector, MouseEvent, PickEvent
 from qtgr.events import CoordConverter, Point
@@ -122,7 +122,99 @@ class PlotCurve(qtgr.base.GRMeta):
             self._e1.drawGR()
         if self._e2:
             self._e2.drawGR()
+            
+class PlotAxes(qtgr.base.GRMeta):
 
+    COUNT = 0
+
+    def __init__(self, parent):
+        self._parent = parent
+        self._lstPlotCurve = None
+        self._bgColor = 163
+        self._window = None
+        PlotAxes.COUNT += 1
+        self._id = PlotAxes.COUNT
+        
+    def getCurves(self):
+        return self._lstPlotCurve
+    
+    def setWindow(self, xmin, xmax, ymin, ymax):
+        self._window = [xmin, xmax, ymin, ymax]
+    
+    def getWindow(self):
+        return self._window
+    
+    def getId(self):
+        return self._id
+    
+    def drawGR(self):
+        lstPlotCurve = self.getCurves()
+        scale = self._parent.getScale()
+        viewport = self._parent.viewport
+        resetWindow = self._parent.isReset()
+        grid = self._parent.isGridEnabled()
+        bgColor = self._bgColor
+        if lstPlotCurve:
+            if resetWindow:
+                self._resetWindow = False
+                # global xmin, xmax, ymin, ymax
+                xmin = min(map(lambda curve: min(curve.x),
+                               lstPlotCurve))
+                xmax = max(map(lambda curve: max(curve.x),
+                               lstPlotCurve))
+                ymin = min(map(lambda curve: min(curve.y),
+                               lstPlotCurve))
+                ymax = max(map(lambda curve: max(curve.y),
+                               lstPlotCurve))
+                if scale & gr.OPTION_X_LOG == 0:
+                    xmin, xmax = gr.adjustrange(xmin, xmax)
+                if scale & gr.OPTION_Y_LOG == 0:
+                    ymin, ymax = gr.adjustrange(ymin, ymax)
+                window = [xmin, xmax, ymin, ymax]
+            else:
+#                window = gr.inqwindow()
+                window = self.getWindow()
+                xmin, xmax, ymin, ymax = window
+                
+            if scale & gr.OPTION_X_LOG:
+                xtick = majorx = 1
+            else:
+                majorx = 5
+                xtick = gr.tick(xmin, xmax) / majorx
+            if scale & gr.OPTION_Y_LOG:
+                ytick = majory = 1
+            else:
+                majory = 5
+                ytick = gr.tick(ymin, ymax) / majory
+            gr.setviewport(*viewport)
+            gr.setwindow(*window)
+            gr.setscale(scale)
+            if bgColor != 0 and bgColor is not None and self.getId() == 1:
+                gr.setfillintstyle(1)
+                gr.setfillcolorind(bgColor)
+                gr.fillrect(*window)
+            charHeight = .024 * (viewport[3] - viewport[2])
+            gr.setcharheight(charHeight)
+            if self.getId() == 1:
+                # first y axis
+                gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
+            elif self.getId() == 2:
+                # second y axis
+                gr.axes(xtick, ytick, xmax, ymax, majorx, majory, -0.01)
+            if grid and self.getId() == 1:
+                gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
+            for curve in lstPlotCurve:
+                curve.drawGR()
+        self._window = window
+    
+    def plot(self, *args, **kwargs):
+        if len(args) > 0 and len(args)%2 == 0:
+            self._lstPlotCurve = []
+            for i in range(0, len(args)/2):
+                x = args[2*i]
+                y = args[2*i + 1]
+                self._lstPlotCurve.append(PlotCurve(x, y))
+            
 class GRWidget(QtGui.QWidget):
     
     def __init__(self, *args, **kwargs):
@@ -206,17 +298,14 @@ class InteractiveGRWidget(GRWidget):
         self._logXinDomain = None
         self._logYinDomain = None
         self._grid = True
-        self._bgColor = 163
-        self._x = None
-        self._y = None
         self._resetWindow = True
         self._pickMode = False
         self._plotTitle = None
         self._plotSubTitle = None
         self._lblX = None
         self._lblY = None
-        self.setviewport(0.1, 0.95, 0.1, 0.95)
-        self._lstPlotCurve = None
+        self.viewport = [0.1, 0.95, 0.1, 0.95]
+        self._lstAxes = None
         
     @staticmethod
     def isInLogDomain(*args):
@@ -233,7 +322,7 @@ class InteractiveGRWidget(GRWidget):
         if title or subTitle:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(0., 1.)
-            [xmin, xmax, ymin, ymax] = self.getviewport()
+            [xmin, xmax, ymin, ymax] = self.viewport
             x = xmin + (xmax-xmin)/2
             dy = .05
             if title and subTitle:
@@ -241,7 +330,7 @@ class InteractiveGRWidget(GRWidget):
             y = ymax + dy
             if y > 1.:
                 y = ymax
-                self.setviewport(xmin, xmax, ymin, ymax-dy)
+                self.viewport = [xmin, xmax, ymin, ymax-dy]
                 self.draw(True)
             if title:
                 gr.text(x, y, title)
@@ -262,57 +351,10 @@ class InteractiveGRWidget(GRWidget):
             gr.text(0., .5, ylabel)
             gr.setcharup(0., 1.)
             
-    def _drawPlot(self, lstPlotCurve, bgColor=0, viewport=None, scale=0, grid=True,
-                  resetWindow=False):
-        if lstPlotCurve:
-            if not viewport:
-                viewport = self._viewport
-            
-            if resetWindow:
-                self._resetWindow = False
-                # global xmin, xmax, ymin, ymax
-                xmin = min(map(lambda curve: min(curve.x),
-                               lstPlotCurve))
-                xmax = max(map(lambda curve: max(curve.x),
-                               lstPlotCurve))
-                ymin = min(map(lambda curve: min(curve.y),
-                               lstPlotCurve))
-                ymax = max(map(lambda curve: max(curve.y),
-                               lstPlotCurve))
-                if scale & gr.OPTION_X_LOG == 0:
-                    xmin, xmax = gr.adjustrange(xmin, xmax)
-                if scale & gr.OPTION_Y_LOG == 0:
-                    ymin, ymax = gr.adjustrange(ymin, ymax)
-                window = [xmin, xmax, ymin, ymax]
-            else:
-                window = gr.inqwindow()
-                xmin, xmax, ymin, ymax = window
-                
-            if scale & gr.OPTION_X_LOG:
-                xtick = majorx = 1
-            else:
-                majorx = 5
-                xtick = gr.tick(xmin, xmax) / majorx
-            if scale & gr.OPTION_Y_LOG:
-                ytick = majory = 1
-            else:
-                majory = 5
-                ytick = gr.tick(ymin, ymax) / majory
-            gr.setviewport(*viewport)
-            gr.setwindow(*window)
-            gr.setscale(scale)
-            if bgColor != 0:
-                gr.setfillintstyle(1)
-                gr.setfillcolorind(bgColor)
-                gr.fillrect(*window)
-            charHeight = .024 * (viewport[3] - viewport[2])
-            gr.setcharheight(charHeight)
-            gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
-            gr.axes(xtick, ytick, xmax, ymax, -majorx, -majory, -0.01)
-            if grid:
-                gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
-            for curve in lstPlotCurve:
-                curve.drawGR()
+    def _drawPlot(self, lstAxes):
+        if lstAxes:
+            for axis in lstAxes:
+                axis.drawGR()
             # log x, log y domain check
             # this check has to be performed after plotting because of
             # possible window changes, e.g. on resetWindow.
@@ -322,13 +364,13 @@ class InteractiveGRWidget(GRWidget):
         if clear:
             gr.clearws()
             
-        self._drawPlot(self._lstPlotCurve, self._bgColor, self._viewport,
-                       self._option_scale, self._grid, self._resetWindow)
+        self._drawPlot(self._lstAxes)
 
         self._drawTitleAndSubTitle()
         self._drawXYLabel()
         if update:
             self.update()
+        self._resetWindow = False
             
     def _logDomainCheck(self):
         # log x, log y domain check
@@ -345,16 +387,14 @@ class InteractiveGRWidget(GRWidget):
             
     def plot(self, *args, **kwargs):
 #        clear = kwargs.get("clear", False)
-        if len(args) > 0 and len(args)%2 == 0:
-            self._lstPlotCurve = []
-            x = args[0]
-            y = args[1]
-            self._x = x
-            self._y = y
-            for i in range(0, len(args)/2):
-                x = args[2*i]
-                y = args[2*i + 1]
-                self._lstPlotCurve.append(PlotCurve(x, y))
+#        axis = PlotAxes(self)
+#        axis.plot(*args, **kwargs)
+#        self._lstAxes = [axis]
+        axis = PlotAxes(self)
+        axis.plot(args[0], args[1])
+        axis2 = PlotAxes(self)
+        axis2.plot(args[2], args[3])
+        self._lstAxes = [axis, axis2]
         self.draw(clear=True, update=True)
 
     def paintEvent(self, event):
@@ -403,12 +443,18 @@ class InteractiveGRWidget(GRWidget):
         self.draw(True)
         self.update()
     
-    def setviewport(self, xmin, xmax, ymin, ymax):
-        self._viewport = [xmin, xmax, ymin, ymax]
-        
-    def getviewport(self):
+    @property
+    def viewport(self):
+        """get current viewport"""
         return self._viewport
     
+    @viewport.setter
+    def viewport(self, viewport):
+        self._viewport = viewport
+    
+    def setviewport(self, xmin, xmax, ymin, ymax):
+        self.viewport = [xmin, xmax, ymin, ymax]
+        
     def getPickMode(self):
         return self._pickMode
     
@@ -439,14 +485,23 @@ class InteractiveGRWidget(GRWidget):
         else:
             self._option_scale &= ~gr.OPTION_Y_LOG
         self.draw(clear=True)
+        
+    def getScale(self):
+        return self._option_scale
             
     def setGrid(self, bool):
         self._grid = bool
         self.draw(clear=True)
         
+    def isGridEnabled(self):
+        return self._grid
+        
     def reset(self):
         self._resetWindow = True
         self.draw(clear=True)
+        
+    def isReset(self):
+        return self._resetWindow
         
     def _check_window(self, xmin, xmax, ymin, ymax):
         res = True
@@ -458,25 +513,37 @@ class InteractiveGRWidget(GRWidget):
         return res
     
     def _pick(self, p0, type):
-        if self._lstPlotCurve:
+        window = gr.inqwindow()
+        if self._lstAxes:
+            coord = CoordConverter(self.width(), self.height())
             points = []
-            for curve in self._lstPlotCurve:
-                for idx, x in enumerate(curve.x):
-                    if x >= p0.x:
-                        break
-                points.append(Point(x, curve.y[idx]))
+            axes = []
+            for axis in self._lstAxes:
+                gr.setwindow(*axis.getWindow())
+                coord.setNDC(p0.x, p0.y)
+                wcPick = coord.getWC()
+                for curve in axis.getCurves():
+                    for idx, x in enumerate(curve.x):
+                        if x >= wcPick.x:
+                            break
+                    coord.setWC(x, curve.y[idx])
+                    points.append(coord.getNDC())
+                    axes.append(axis) 
             # calculate distance between p0 and point on curve
             norms = map(lambda p: (p0-p).norm(), points)
             # nearest point
-            p = points[norms.index(min(norms))]
-            coord = CoordConverter(self.width(), self.height())
-            coord.setWC(p.x, p.y)
+            idx = norms.index(min(norms))
+            p = points[idx]
+            axis = axes[idx]
+            coord.setNDC(p.x, p.y)
             dcPoint = coord.getDC()
             QtGui.QApplication.sendEvent(self, PickEvent(type,
                                                          self.width(),
                                                          self.height(),
                                                          dcPoint.x,
-                                                         dcPoint.y))
+                                                         dcPoint.y,
+                                                         axis.getWindow()))
+        gr.setwindow(*window)
         
     def _select(self, p0, p1):
         gr.clearws()
@@ -497,12 +564,15 @@ class InteractiveGRWidget(GRWidget):
         
     def _pan(self, dp):
         gr.clearws()
-        window = gr.inqwindow()
-        window[0] -= dp.x
-        window[1] -= dp.x
-        window[2] -= dp.y
-        window[3] -= dp.y
-        gr.setwindow(*window)
+        for axis in self._lstAxes:
+            window = axis.getWindow()
+#        window = gr.inqwindow()
+            window[0] -= dp.x
+            window[1] -= dp.x
+            window[2] -= dp.y
+            window[3] -= dp.y
+            axis.setWindow(*window)
+#        gr.setwindow(*window)
         self.draw()
                 
     def _zoom(self, point, dpercent):
@@ -528,7 +598,7 @@ class InteractiveGRWidget(GRWidget):
     def mousePress(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
             if self.getPickMode():
-                self._pick(event.getWC(), PickEvent.PICK_PRESS)
+                self._pick(event.getNDC(), PickEvent.PICK_PRESS)
                 self.setPickMode(False)
             else:
                 if event.getModifiers() & MouseEvent.CONTROL_MODIFIER:
@@ -554,7 +624,7 @@ class InteractiveGRWidget(GRWidget):
             
     def mouseMove(self, event):
         if self.getPickMode():
-            self._pick(event.getWC(), PickEvent.PICK_MOVE)
+            self._pick(event.getNDC(), PickEvent.PICK_MOVE)
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
             self._curPoint = event
             self.update()
@@ -573,8 +643,11 @@ class InteractiveGRWidget(GRWidget):
     def pickMove(self, event):
         wcPoint = event.getWC()
         self.draw(True)
+        window = gr.inqwindow()
+        gr.setwindow(*event._window)
         gr.setmarkertype(gr.MARKERTYPE_PLUS)
         gr.polymarker(1, [wcPoint.x], [wcPoint.y])
+        gr.setwindow(*window)
         self.update()
         
 if __name__ == "__main__":
@@ -582,7 +655,7 @@ if __name__ == "__main__":
     import pygr
     app = QtGui.QApplication(sys.argv)
     grw = InteractiveGRWidget()
-    grw.setviewport(0.1, 0.95, 0.1, 0.9)
+    grw.viewport = [0.1, 0.95, 0.1, 0.9]
     grw.show()
     x = [-3.3 + t*.1 for t in range(66)]
     y = [t**5 - 13*t**3 + 36*t for t in x]
