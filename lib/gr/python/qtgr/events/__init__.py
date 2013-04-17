@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# standard library
+import math
 # third party
 from PyQt4 import QtCore
 import gr
@@ -74,12 +76,15 @@ class Point(object):
         return Point(self.x-other.x, self.y-other.y)
     
     def __mul__(self, other):
-        return Point(self.x*other.x, self.y*other.y)
+        """Calculate scalar product."""
+        return self.x*other.x + self.y*other.y
     
     def __div__(self, other):
+        """Calculate component-by-component division."""
         return Point(self.x/other.x, self.y/other.y)
     
     def __neg__(self):
+        """Calculate negation."""
         return Point(-self.x, -self.y)
     
     def __pos__(self):
@@ -87,6 +92,11 @@ class Point(object):
     
     def __abs__(self):
         return Point(abs(self.x), abs(self.y))
+    
+    def norm(self):
+        """Calculate euclidean norm."""
+        return math.sqrt(self*self)
+        
 
 class CoordConverter(object):
     

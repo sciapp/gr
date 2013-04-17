@@ -83,7 +83,9 @@ class MainWindow(QtGui.QMainWindow):
         
         x = [-3.3 + t*.1 for t in range(66)]
         y = [t**5 - 13*t**3 + 36*t for t in x]
-        self._gr.plot(x, y, [-3.5, 3.5], [-40, 25])
+        x2 = [-3.5 + i*.5 for i in range(0, 15)]
+        y2 = [9.3*t - 7.5 for t in x2]
+        self._gr.plot(x, y, x2, y2)
         
     def save(self):
         qpath = QtGui.QFileDialog.getSaveFileName(self, filter=self._saveTypes,

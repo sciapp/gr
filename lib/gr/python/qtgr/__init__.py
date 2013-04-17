@@ -13,7 +13,8 @@ import gr
 import pygr
 # local library
 import qtgr.events
-from qtgr.events import GUIConnector, MouseEvent, PickEvent, CoordConverter
+from qtgr.events import GUIConnector, MouseEvent, PickEvent
+from qtgr.events import CoordConverter, Point
 import qtgr.base
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -457,14 +458,20 @@ class InteractiveGRWidget(GRWidget):
         return res
     
     def _pick(self, p0, type):
-        if self._x and self._y:
-            for idx, x in enumerate(self._x):
-                if x >= p0.x:
-                    break
+        if self._lstPlotCurve:
+            points = []
+            for curve in self._lstPlotCurve:
+                for idx, x in enumerate(curve.x):
+                    if x >= p0.x:
+                        break
+                points.append(Point(x, curve.y[idx]))
+            # calculate distance between p0 and point on curve
+            norms = map(lambda p: (p0-p).norm(), points)
+            # nearest point
+            p = points[norms.index(min(norms))]
             coord = CoordConverter(self.width(), self.height())
-            coord.setWC(self._x[idx], self._y[idx])
+            coord.setWC(p.x, p.y)
             dcPoint = coord.getDC()
-            
             QtGui.QApplication.sendEvent(self, PickEvent(type,
                                                          self.width(),
                                                          self.height(),
