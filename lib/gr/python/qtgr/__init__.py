@@ -14,6 +14,7 @@ import pygr
 # local library
 import qtgr.events
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, CoordConverter
+import qtgr.base
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
 __date__    = "2013-04-10"
@@ -42,6 +43,84 @@ You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
+
+class ErrorBar(qtgr.base.GRMeta):
+    
+    HORIZONTAL = 0
+    VERTICAL = 1
+    
+    def __init__(self, x, y, dneg, dpos, direction=VERTICAL):
+        self._grerror = None
+        self._direction = direction
+        self._x = x
+        self._y = y
+        self._n = len(self._x)
+        self._dneg = dneg
+        self._dpos = dpos
+        if direction == ErrorBar.VERTICAL:
+            self._grerror = gr.verrorbars
+        elif direction == ErrorBar.HORIZONTAL:
+            self._grerror = gr.herrorbars
+        else:
+            raise AttributeError("unsupported value for direction.")
+        
+    def drawGR(self):
+        self._grerror(self._n, self._x, self._y, self._dneg, self._dpos)
+
+class PlotCurve(qtgr.base.GRMeta):
+    
+    def __init__(self, x, y, errBar1=None, errBar2=None,
+                 linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_DOT):
+        self._x, self._y = x, y
+        self._e1, self._e2 = errBar1, errBar2
+        self._linetype, self._markertype = linetype, markertype
+        self._n = len(self._x)
+        
+    def setLineType(self, linetype):
+        self._linetype = linetype
+        
+    def getLineType(self):
+        return self._linetype
+        
+    def setMarkerType(self, markertype):
+        self._markertype = markertype
+        
+    def getMarkerType(self):
+        return self._markertype
+
+    @property
+    def x(self):
+        """Get the current list/ndarray of x values."""
+        return self._x
+    
+    @x.setter
+    def x(self, lst):
+        self._x = lst
+    
+    @property
+    def y(self):
+        """Get the current list/ndarray of y values."""
+        return self._y
+    
+    @y.setter
+    def y(self, lst):
+        self._y = lst
+    
+    def drawGR(self):
+        if self.getLineType() is not None:
+            gr.setlinetype(self._linetype)
+            gr.polyline(self._n, self.x, self.y)
+            if (self.getMarkerType() != gr.MARKERTYPE_DOT and
+                self.getMarkerType() is not None):
+                gr.setmarkertype(self._markertype)
+                gr.polymarker(self._n, self.x, self.y)
+        elif self.getMarkerType() is not None:
+            gr.setmarkertype(self._markertype)
+            gr.polymarker(self._n, self.x, self.y)
+        if self._e1:
+            self._e1.drawGR()
+        if self._e2:
+            self._e2.drawGR()
 
 class GRWidget(QtGui.QWidget):
     
@@ -136,6 +215,7 @@ class InteractiveGRWidget(GRWidget):
         self._lblX = None
         self._lblY = None
         self.setviewport(0.1, 0.95, 0.1, 0.95)
+        self._lstPlotCurve = None
         
     @staticmethod
     def isInLogDomain(*args):
@@ -181,6 +261,74 @@ class InteractiveGRWidget(GRWidget):
             gr.text(0., .5, ylabel)
             gr.setcharup(0., 1.)
             
+    def _drawPlot(self, lstPlotCurve, bgColor=0, viewport=None, scale=0, grid=True,
+                  resetWindow=False):
+        if lstPlotCurve:
+            if not viewport:
+                viewport = self._viewport
+            
+            if resetWindow:
+                self._resetWindow = False
+                # global xmin, xmax, ymin, ymax
+                xmin = min(map(lambda curve: min(curve.x),
+                               lstPlotCurve))
+                xmax = max(map(lambda curve: max(curve.x),
+                               lstPlotCurve))
+                ymin = min(map(lambda curve: min(curve.y),
+                               lstPlotCurve))
+                ymax = max(map(lambda curve: max(curve.y),
+                               lstPlotCurve))
+                if scale & gr.OPTION_X_LOG == 0:
+                    xmin, xmax = gr.adjustrange(xmin, xmax)
+                if scale & gr.OPTION_Y_LOG == 0:
+                    ymin, ymax = gr.adjustrange(ymin, ymax)
+                window = [xmin, xmax, ymin, ymax]
+            else:
+                window = gr.inqwindow()
+                xmin, xmax, ymin, ymax = window
+                
+            if scale & gr.OPTION_X_LOG:
+                xtick = majorx = 1
+            else:
+                majorx = 5
+                xtick = gr.tick(xmin, xmax) / majorx
+            if scale & gr.OPTION_Y_LOG:
+                ytick = majory = 1
+            else:
+                majory = 5
+                ytick = gr.tick(ymin, ymax) / majory
+            gr.setviewport(*viewport)
+            gr.setwindow(*window)
+            gr.setscale(scale)
+            if bgColor != 0:
+                gr.setfillintstyle(1)
+                gr.setfillcolorind(bgColor)
+                gr.fillrect(*window)
+            charHeight = .024 * (viewport[3] - viewport[2])
+            gr.setcharheight(charHeight)
+            gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
+            gr.axes(xtick, ytick, xmax, ymax, -majorx, -majory, -0.01)
+            if grid:
+                gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
+            for curve in lstPlotCurve:
+                curve.drawGR()
+            # log x, log y domain check
+            # this check has to be performed after plotting because of
+            # possible window changes, e.g. on resetWindow.
+            self._logDomainCheck()
+        
+    def draw(self, clear=False, update=True):
+        if clear:
+            gr.clearws()
+            
+        self._drawPlot(self._lstPlotCurve, self._bgColor, self._viewport,
+                       self._option_scale, self._grid, self._resetWindow)
+
+        self._drawTitleAndSubTitle()
+        self._drawXYLabel()
+        if update:
+            self.update()
+            
     def _logDomainCheck(self):
         # log x, log y domain check
         # emit signals on change
@@ -194,40 +342,28 @@ class InteractiveGRWidget(GRWidget):
             self._logYinDomain = logYinDomain
             self.emit(QtCore.SIGNAL("logYinDomain(bool)"), self._logYinDomain)
             
-    def draw(self, clear=False, update=True):
-        # drawing
-        if self._x and self._y:
-            self.plot(self._x, self._y, clear)
-        self._drawTitleAndSubTitle()
-        self._drawXYLabel()
-        if update:
-            self.update()
-        
-    def plot(self, x, y, clear=False):
-        if self._resetWindow:
-            window = None
-            self._resetWindow = False
-        else:
-            window = gr.inqwindow()
-        self._x = x
-        self._y = y
-        pygr.plot(x, y, bgcolor=self._bgColor, viewport=self._viewport,
-                  window=window, scale=self._option_scale, grid=self._grid,
-                  clear=clear, update=False)
-        # log x, log y domain check
-        # this check has to be performed after plotting because of
-        # possible window changes, e.g. on resetWindow.
-        self._logDomainCheck()
-    
+    def plot(self, *args, **kwargs):
+#        clear = kwargs.get("clear", False)
+        if len(args) > 0 and len(args)%2 == 0:
+            self._lstPlotCurve = []
+            x = args[0]
+            y = args[1]
+            self._x = x
+            self._y = y
+            for i in range(0, len(args)/2):
+                x = args[2*i]
+                y = args[2*i + 1]
+                self._lstPlotCurve.append(PlotCurve(x, y))
+        self.draw(clear=True, update=True)
+
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
         self._painter.begin(self)
         if self._mouseLeft:
             startDC = self._startPoint.getDC()
             endDC = self._curPoint.getDC()
-            rect = QtCore.QRect(QtCore.QPoint(startDC.x(), startDC.y()),
-                                QtCore.QPoint(endDC.x(),
-                                              endDC.y())).normalized()
+            rect = QtCore.QRect(QtCore.QPoint(startDC.x, startDC.y),
+                                QtCore.QPoint(endDC.x, endDC.y)).normalized()
             self._painter.setOpacity(.75)
             self._painter.drawRect(rect)
             self._painter.setOpacity(1.)
@@ -322,9 +458,8 @@ class InteractiveGRWidget(GRWidget):
     
     def _pick(self, p0, type):
         if self._x and self._y:
-            p0x = p0.x()
             for idx, x in enumerate(self._x):
-                if x >= p0x:
+                if x >= p0.x:
                     break
             coord = CoordConverter(self.width(), self.height())
             coord.setWC(self._x[idx], self._y[idx])
@@ -333,33 +468,33 @@ class InteractiveGRWidget(GRWidget):
             QtGui.QApplication.sendEvent(self, PickEvent(type,
                                                          self.width(),
                                                          self.height(),
-                                                         dcPoint.x(),
-                                                         dcPoint.y()))
+                                                         dcPoint.x,
+                                                         dcPoint.y))
         
     def _select(self, p0, p1):
         gr.clearws()
-        if p0.x() > p1.x():
-            xmin = p1.x()
-            xmax = p0.x()
+        if p0.x > p1.x:
+            xmin = p1.x
+            xmax = p0.x
         else:
-            xmin = p0.x()
-            xmax = p1.x()
-        if p0.y() > p1.y():
-            ymin = p1.y()
-            ymax = p0.y()
+            xmin = p0.x
+            xmax = p1.x
+        if p0.y > p1.y:
+            ymin = p1.y
+            ymax = p0.y
         else:
-            ymin = p0.y()
-            ymax = p1.y()
+            ymin = p0.y
+            ymax = p1.y
         gr.setwindow(xmin, xmax, ymin, ymax)
         self.draw()
         
     def _pan(self, dp):
         gr.clearws()
         window = gr.inqwindow()
-        window[0] -= dp.x()
-        window[1] -= dp.x()
-        window[2] -= dp.y()
-        window[3] -= dp.y()
+        window[0] -= dp.x
+        window[1] -= dp.x
+        window[2] -= dp.y
+        window[3] -= dp.y
         gr.setwindow(*window)
         self.draw()
                 
@@ -432,7 +567,7 @@ class InteractiveGRWidget(GRWidget):
         wcPoint = event.getWC()
         self.draw(True)
         gr.setmarkertype(gr.MARKERTYPE_PLUS)
-        gr.polymarker(1, [wcPoint.x()], [wcPoint.y()])
+        gr.polymarker(1, [wcPoint.x], [wcPoint.y])
         self.update()
         
 if __name__ == "__main__":
@@ -444,7 +579,15 @@ if __name__ == "__main__":
     grw.show()
     x = [-3.3 + t*.1 for t in range(66)]
     y = [t**5 - 13*t**3 + 36*t for t in x]
-    grw.plot(x, y)
+    
+    n = 100
+    pi2_n = 2.*math.pi/n
+    x2 = [i * pi2_n for i in range(0, n+1)]
+    y2 = map(lambda xi: math.sin(xi), x2)
+    
+    grw.plot(x, y, x2, y2)
+#    grw.plot([0, 0], [1, 1], [2,2,2], [3,3,3])
+    
 #    pygr.plot(x, y, bgcolor=163, clear=False, update=False)
 #    gr.clearws()
     sys.exit(app.exec_())
