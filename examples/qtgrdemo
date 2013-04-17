@@ -83,7 +83,7 @@ class MainWindow(QtGui.QMainWindow):
         
         x = [-3.3 + t*.1 for t in range(66)]
         y = [t**5 - 13*t**3 + 36*t for t in x]
-        self._gr.plot(x, y)
+        self._gr.plot(x, y, [-3.5, 3.5], [-40, 25])
         
     def save(self):
         qpath = QtGui.QFileDialog.getSaveFileName(self, filter=self._saveTypes,
@@ -112,23 +112,23 @@ class MainWindow(QtGui.QMainWindow):
         dc = event.getDC()
         ndc = event.getNDC()
         wc = event.getWC()
-        self._statusbar.showMessage("DC: (%4d, %4d)\t " %(dc.x(), dc.y()) +
-                                 "NDC: (%3.2f, %3.2f)\t " %(ndc.x(), ndc.y()) +
-                                 "WC: (%3.2f, %3.2f)" %(wc.x(), wc.y()))
+        self._statusbar.showMessage("DC: (%4d, %4d)\t " %(dc.x, dc.y) +
+                                    "NDC: (%3.2f, %3.2f)\t " %(ndc.x, ndc.y) +
+                                    "WC: (%3.2f, %3.2f)" %(wc.x, wc.y))
 #        print "  buttons: 0x%x" %event.getButtons()
 #        print "modifiers: 0x%x" %event.getModifiers()
     def pointPickGr(self, event):
         p = event.getWC()
         
-        if p.x() < 0:
-            self._lblPickX.setText("%4.2f" %p.x())
+        if p.x < 0:
+            self._lblPickX.setText("%4.2f" %p.x)
         else:
-            self._lblPickX.setText(" %4.2f" %p.x())
+            self._lblPickX.setText(" %4.2f" %p.x)
              
-        if p.y() < 0:
-            self._lblPickY.setText("%4.2f" %p.y())
+        if p.y < 0:
+            self._lblPickY.setText("%4.2f" %p.y)
         else:
-            self._lblPickY.setText(" %4.2f" %p.y())
+            self._lblPickY.setText(" %4.2f" %p.y)
         
     @QtCore.pyqtSlot()
     def _gridClicked(self, state):
