@@ -38,44 +38,55 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
 class Point(object):
     
     def __init__(self, x, y):
-        self._x = x
-        self._y = y
+        self._x, self._y = x, y
         
+    @property
     def x(self):
+        """Get the current x value."""
         return self._x
     
+    @x.setter
+    def x(self, value):
+        self._x = value
+    
+    @property
     def y(self):
+        """Get the current y value."""
         return self._y
+    
+    @y.setter
+    def y(self, value):
+        self._y = value
     
     def __str__(self):
         return "(%s, %s)" %(self._x, self._y)
     
     def __eq__(self, other):
-        return (self.x() == other.x() and self.y() == other.y())
+        return (self.x == other.x and self.y == other.y)
     
     def __ne__(self, other):
         return not self.__eq__(other)
     
     def __add__(self, other):
-        return Point(self.x()+other.x(), self.y()+other.y())
+        return Point(self.x+other.x, self.y+other.y)
     
     def __sub__(self, other):
-        return Point(self.x()-other.x(), self.y()-other.y())
+        return Point(self.x-other.x, self.y-other.y)
     
     def __mul__(self, other):
-        return Point(self.x()*other.x(), self.y()*other.y())
+        return Point(self.x*other.x, self.y*other.y)
     
     def __div__(self, other):
-        return Point(self.x()/other.x(), self.y()/other.y())
+        return Point(self.x/other.x, self.y/other.y)
     
     def __neg__(self):
-        return Point(-self.x(), -self.y())
+        return Point(-self.x, -self.y)
     
     def __pos__(self):
         return self
     
     def __abs__(self):
-        return Point(abs(self.x()), abs(self.y()))
+        return Point(abs(self.x), abs(self.y))
 
 class CoordConverter(object):
     
@@ -85,7 +96,7 @@ class CoordConverter(object):
         self._p = None
     
     def _checkRaiseXY(self):
-        if self._p.x() is None or self._p.y() is None:
+        if self._p.x is None or self._p.y is None:
             raise AttributeError("x or y has not been initialized.")
         return True
     
@@ -105,13 +116,13 @@ class CoordConverter(object):
         
     def getNDC(self):
         self._checkRaiseXY()
-        return Point(float(self._p.x())/self._width,
-                     1. - float(self._p.y())/self._height)
+        return Point(float(self._p.x)/self._width,
+                     1. - float(self._p.y)/self._height)
         
     def getWC(self):
         self._checkRaiseXY()
         ndcPoint = self.getNDC()
-        tWC = gr.ndctowc(ndcPoint.x(), ndcPoint.y()) # wc tuple
+        tWC = gr.ndctowc(ndcPoint.x, ndcPoint.y) # wc tuple
         return Point(tWC[0], tWC[1])
 
 class MouseEvent(MouseLocationEventMeta):
