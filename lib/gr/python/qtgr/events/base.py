@@ -4,6 +4,7 @@
 # third party
 from PyQt4 import QtCore
 # local library
+import gr
 import qtgr.events
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -45,13 +46,21 @@ class EventMeta(QtCore.QEvent):
     
 class MouseLocationEventMeta(EventMeta):
 
-    def __init__(self, type, width, height, x, y):
+    def __init__(self, type, width, height, x, y, window=None):
         super(MouseLocationEventMeta, self).__init__(type)
         self._coords = qtgr.events.CoordConverter(width, height)
         self._coords.setDC(x, y)
+        self._window = window
         
     def getWC(self):
-        return self._coords.getWC()
+        if self._window:
+            window = gr.inqwindow()
+            gr.setwindow(*self._window)
+            p = self._coords.getWC()
+            gr.setwindow(*window)
+        else:
+            p = self._coords.getWC()
+        return p
     
     def getNDC(self):
         return self._coords.getNDC()

@@ -193,8 +193,8 @@ class PickEvent(MouseLocationEventMeta):
     PICK_MOVE  = QtCore.QEvent.registerEventType()
     PICK_PRESS = QtCore.QEvent.registerEventType()
     
-    def __init__(self, type, width, height, x, y):
-        super(PickEvent, self).__init__(type, width, height, x, y)
+    def __init__(self, type, width, height, x, y, window=None):
+        super(PickEvent, self).__init__(type, width, height, x, y, window)
     
 class EventFilter(QtCore.QObject):
     
