@@ -582,24 +582,24 @@ class InteractiveGRWidget(GRWidget):
         self.draw()
                 
     def _zoom(self, point, dpercent):
-        gr.clearws()
         window = gr.inqwindow()
-        winWidth_2 = (window[1]-window[0])/2
-        winHeight_2 = (window[3]-window[2])/2
-        dx_2 = winWidth_2 - (1+dpercent)*winWidth_2
-        dy_2 = winHeight_2 - (1+dpercent)*winHeight_2
-        
-        window[0] -= dx_2
-        window[1] += dx_2
-        window[2] -= dy_2
-        window[3] += dy_2
-        
-        if not self._check_window(*window):
-            self._resetWindow = True
-            self.draw(True)
-        else:
-            gr.setwindow(*window)
-            self.draw()
+        gr.clearws()
+        for axis in self._lstAxes:
+            win = axis.getWindow()
+            winWidth_2 = (win[1]-win[0])/2
+            winHeight_2 = (win[3]-win[2])/2
+            dx_2 = winWidth_2 - (1+dpercent)*winWidth_2
+            dy_2 = winHeight_2 - (1+dpercent)*winHeight_2
+            win[0] -= dx_2
+            win[1] += dx_2
+            win[2] -= dy_2
+            win[3] += dy_2
+            if self._check_window(*win):
+                axis.setWindow(*win)
+            else:
+                self._resetWindow = True
+                break
+        self.draw()
         
     def mousePress(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
