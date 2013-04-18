@@ -65,6 +65,7 @@ install: default
 #	COPY /Y ..\gr\gr.pyd $(DESTDIR)
 	COPY /Y ..\gr\python\gr.py $(DESTDIR)
 	COPY /Y ..\gr\python\pygr.py $(DESTDIR)
+	XCOPY /I /S /Y ..\gr\python\qtgr $(DESTDIR)
 	COPY /Y ..\gr\gr.h $(DESTDIR)
 	COPY /Y ..\gks\libgks.dll $(DESTDIR)
 	COPY /Y ..\gks\libgks.lib $(DESTDIR)

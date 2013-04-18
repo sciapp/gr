@@ -56,7 +56,7 @@ class GRWidget(QtGui.QWidget):
         self._painter = QtGui.QPainter()
         self._painter.begin(self)
         os.environ["GKSconid"] = "%x!%x" %(sip.unwrapinstance(self),
-                                            sip.unwrapinstance(self._painter))
+                                           sip.unwrapinstance(self._painter))
         gr.updatews()
         self._painter.end()
         
@@ -104,8 +104,6 @@ class GRWidget(QtGui.QWidget):
     def __del__(self):
         if gr:
             gr.emergencyclosegks()
-        # super destructor not available
-#        super(GRWidget, self).__del__()
 
 class InteractiveGRWidget(GRWidget):
     
@@ -269,7 +267,6 @@ class InteractiveGRWidget(GRWidget):
         self.draw(clear=True)
         
     def reset(self):
-#        gr.clearws()
         self._resetWindow = True
         self.draw(clear=True)
         
@@ -404,20 +401,7 @@ if __name__ == "__main__":
     grw = InteractiveGRWidget()
     grw.setviewport(0.1, 0.95, 0.1, 0.9)
     grw.show()
-#    gr.begingraphics("test.grx")
-#    gr.beginprint("test.pdf")
-#    gr.openws(5, "WISS", 5)
-#    gr.createseg(0)
     x = [-3.3 + t*.1 for t in range(66)]
     y = [t**5 - 13*t**3 + 36*t for t in x]
-#    y = [math.exp(t) for t in x]
     grw.plot(x, y)
-#    pygr.plot(x, y, bgcolor=163, clear=False, update=False)
-#    gr.clearws()
-#    gks set seg_xform 0.5 0.5 0 0 pi/2 1 1
-#    gr.setsegtran(0, .5, .5, 0, 0, 1.55, 1, 1)
-    
-#    gr.closews(5)
-#    gr.endprint()
-#    gr.endgraphics()
     sys.exit(app.exec_())

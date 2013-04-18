@@ -60,6 +60,9 @@ install: gr.so gr.py
 	$(INSTALL) -p gr.so $(LIBDIR)/gr.so
 	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
 	$(INSTALL) -p gr.py $(PYTHONDIR)/gr.py
+	$(INSTALL) -p pygr.py $(PYTHONDIR)/pygr.py
+	@if [ ! -d $(PYTHONDIR)/qtgr ]; then mkdir -m 755 $(PYTHONDIR)/qtgr; fi
+	$(INSTALL) -a qtgr $(PYTHONDIR)
 
 clean:
 	rm -f gr so_locations *.so *.a *.o *.bak *~
