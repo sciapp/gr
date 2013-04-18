@@ -45,6 +45,35 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
 
+class Helper(object):
+    
+    _ZERO = 1e-8
+    _EPSILON = 1e-8
+    
+    @staticmethod
+    def isInLogDomain(*args):
+        res = True
+        for value in args:
+            if value <= Helper._ZERO:
+                res = False
+                break
+        return res
+    
+    @staticmethod
+    def isInWindowDomain(xmin, xmax, ymin, ymax):
+        res = True
+        if (math.isnan(xmin) or math.isinf(xmin) or math.isnan(xmax)
+            or math.isinf(xmax) or math.isnan(ymin) or math.isinf(ymin) or
+            math.isnan(ymax) or math.isinf(ymax) or
+            xmin > max or ymin > ymax or abs(xmax-xmin) < Helper._EPSILON or
+            abs(ymax-ymin) < Helper._EPSILON):
+            res = False
+#        print "isInWindowDomain( %s, %s, %s, %s )" %(xmin, xmax, ymin, ymax)
+#        print "  %s %s" %(abs(xmax-xmin), abs(xmax-xmin) < Helper._EPSILON)
+#        print "  %s %s" %(abs(ymax-ymin), abs(xmax-xmin) < Helper._EPSILON)
+#        print "  %s" %res
+        return res
+
 class ErrorBar(qtgr.base.GRMeta):
     
     HORIZONTAL = 0
@@ -130,13 +159,46 @@ class PlotAxes(qtgr.base.GRMeta):
     def __init__(self, parent):
         self._parent = parent
         self._lstPlotCurve = None
-        self._bgColor = 163
+        self._backgroundColor = 163
         self._window = None
+        self._scale = 0
+        self._grid = True
+        self._resetWindow = True
         PlotAxes.COUNT += 1
         self._id = PlotAxes.COUNT
         
     def getCurves(self):
         return self._lstPlotCurve
+    
+    def isXLogDomain(self):
+        window = self.getWindow()
+        return Helper.isInLogDomain(window[0], window[1])
+    
+    def isYLogDomain(self):
+        window = self.getWindow()
+        return Helper.isInLogDomain(window[2], window[3])
+    
+    @property
+    def scale(self):
+        return self._scale
+    
+    @scale.setter
+    def scale(self, options):
+        self._scale = options
+        
+    @property
+    def backgroundColor(self):
+        return self._backgroundColor
+    
+    @backgroundColor.setter
+    def backgroundColor(self, color):
+        self._backgroundColor = color
+        
+    def setGrid(self, bool):
+        self._grid = bool
+        
+    def isGridEnabled(self):
+        return self._grid
     
     def setWindow(self, xmin, xmax, ymin, ymax):
         self._window = [xmin, xmax, ymin, ymax]
@@ -144,18 +206,20 @@ class PlotAxes(qtgr.base.GRMeta):
     def getWindow(self):
         return list(self._window)
     
+    def reset(self):
+        self._resetWindow = True
+        
+    def isReset(self):
+        return self._resetWindow
+    
     def getId(self):
         return self._id
     
     def drawGR(self):
         lstPlotCurve = self.getCurves()
-        scale = self._parent.getScale()
         viewport = self._parent.viewport
-        resetWindow = self._parent.isReset()
-        grid = self._parent.isGridEnabled()
-        bgColor = self._bgColor
         if lstPlotCurve:
-            if resetWindow:
+            if self.isReset():
                 self._resetWindow = False
                 # global xmin, xmax, ymin, ymax
                 xmin = min(map(lambda curve: min(curve.x),
@@ -166,46 +230,52 @@ class PlotAxes(qtgr.base.GRMeta):
                                lstPlotCurve))
                 ymax = max(map(lambda curve: max(curve.y),
                                lstPlotCurve))
-                if scale & gr.OPTION_X_LOG == 0:
+                if self.scale & gr.OPTION_X_LOG == 0:
                     xmin, xmax = gr.adjustrange(xmin, xmax)
-                if scale & gr.OPTION_Y_LOG == 0:
+                if self.scale & gr.OPTION_Y_LOG == 0:
                     ymin, ymax = gr.adjustrange(ymin, ymax)
                 window = [xmin, xmax, ymin, ymax]
+                self.setWindow(*window)
             else:
-#                window = gr.inqwindow()
                 window = self.getWindow()
                 xmin, xmax, ymin, ymax = window
                 
-            if scale & gr.OPTION_X_LOG:
-                xtick = majorx = 1
+            if (window[0] > xmin or xmin > window[1] or window[2] > ymin or
+                ymin > window[3]):
+                #GKS: Rectangle definition is invalid in routine SET_WINDOW
+                #origin outside current window
+                self.reset()
+                self.drawGR()
             else:
-                majorx = 5
-                xtick = gr.tick(xmin, xmax) / majorx
-            if scale & gr.OPTION_Y_LOG:
-                ytick = majory = 1
-            else:
-                majory = 5
-                ytick = gr.tick(ymin, ymax) / majory
-            gr.setviewport(*viewport)
-            gr.setwindow(*window)
-            gr.setscale(scale)
-            if bgColor != 0 and bgColor is not None and self.getId() == 1:
-                gr.setfillintstyle(1)
-                gr.setfillcolorind(bgColor)
-                gr.fillrect(*window)
-            charHeight = .024 * (viewport[3] - viewport[2])
-            gr.setcharheight(charHeight)
-            if self.getId() == 1:
-                # first y axis
-                gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
-            elif self.getId() == 2:
-                # second y axis
-                gr.axes(xtick, ytick, xmax, ymax, majorx, majory, -0.01)
-            if grid and self.getId() == 1:
-                gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
-            for curve in lstPlotCurve:
-                curve.drawGR()
-        self._window = window
+                if self.scale & gr.OPTION_X_LOG:
+                    xtick = majorx = 1
+                else:
+                    majorx = 5
+                    xtick = gr.tick(xmin, xmax) / majorx
+                if self.scale & gr.OPTION_Y_LOG:
+                    ytick = majory = 1
+                else:
+                    majory = 5
+                    ytick = gr.tick(ymin, ymax) / majory
+                gr.setviewport(*viewport)
+                gr.setwindow(*window)
+                gr.setscale(self.scale)
+                if self.backgroundColor and self.getId() == 1:
+                    gr.setfillintstyle(1)
+                    gr.setfillcolorind(self.backgroundColor)
+                    gr.fillrect(*window)
+                charHeight = .024 * (viewport[3] - viewport[2])
+                gr.setcharheight(charHeight)
+                if self.getId() == 1:
+                    # first y axis
+                    gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
+                elif self.getId() == 2:
+                    # second y axis
+                    gr.axes(xtick, ytick, xmax, ymax, majorx, majory, -0.01)
+                if self.isGridEnabled() and self.getId() == 1:
+                    gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
+                for curve in lstPlotCurve:
+                    curve.drawGR()
     
     def plot(self, *args, **kwargs):
         if len(args) > 0 and len(args)%2 == 0:
@@ -294,11 +364,11 @@ class InteractiveGRWidget(GRWidget):
         self._mouseRight = False
         self._startPoint = None
         self._curPoint = None
-        self._option_scale = 0
+#        self._option_scale = 0
         self._logXinDomain = None
         self._logYinDomain = None
-        self._grid = True
-        self._resetWindow = True
+#        self._grid = True
+#        self._resetWindow = True
         self._pickMode = False
         self._plotTitle = None
         self._plotSubTitle = None
@@ -306,15 +376,6 @@ class InteractiveGRWidget(GRWidget):
         self._lblY = None
         self.viewport = [0.1, 0.95, 0.1, 0.95]
         self._lstAxes = None
-        
-    @staticmethod
-    def isInLogDomain(*args):
-        res = True
-        for value in args:
-            if value <= 1e-8: # epsilon
-                res = False
-                break
-        return res
         
     def _drawTitleAndSubTitle(self):
         title =  self.getTitle()
@@ -370,7 +431,6 @@ class InteractiveGRWidget(GRWidget):
         self._drawXYLabel()
         if update:
             self.update()
-        self._resetWindow = False
             
     def _logDomainCheck(self):
         # log x, log y domain check
@@ -378,11 +438,8 @@ class InteractiveGRWidget(GRWidget):
         logXinDomain = True
         logYinDomain = True
         for axis in self._lstAxes:
-            xmin, xmax, ymin, ymax = axis.getWindow()
-            logXinDomain = (logXinDomain &
-                            InteractiveGRWidget.isInLogDomain(xmin, xmax))
-            logYinDomain = (logYinDomain &
-                            InteractiveGRWidget.isInLogDomain(ymin, ymax))
+            logXinDomain = (logXinDomain & axis.isXLogDomain())
+            logYinDomain = (logYinDomain & axis.isYLogDomain())
         if logXinDomain != self._logXinDomain:
             self._logXinDomain = logXinDomain
             self.emit(QtCore.SIGNAL("logXinDomain(bool)"), self._logXinDomain)
@@ -470,7 +527,7 @@ class InteractiveGRWidget(GRWidget):
     def setLogX(self, bool):
         window = gr.inqwindow()
         if bool:
-            if InteractiveGRWidget.isInLogDomain(window[0], window[1]):
+            if Helper.isInLogDomain(window[0], window[1]):
                 self._option_scale |= gr.OPTION_X_LOG
             else:
                 raise Exception("(%d..%d) not in log(x) domain." %(window[0],
@@ -482,7 +539,7 @@ class InteractiveGRWidget(GRWidget):
     def setLogY(self, bool):
         window = gr.inqwindow()
         if bool:
-            if InteractiveGRWidget.isInLogDomain(window[2], window[3]):
+            if Helper.isInLogDomain(window[2], window[3]):
                 self._option_scale |= gr.OPTION_Y_LOG
             else:
                 raise Exception("(%d..%d) not in log(y) domain." %(window[2],
@@ -495,28 +552,18 @@ class InteractiveGRWidget(GRWidget):
         return self._option_scale
             
     def setGrid(self, bool):
-        self._grid = bool
+        for axis in self._lstAxes:
+            axis.setGrid(bool)
         self.draw(clear=True)
         
     def isGridEnabled(self):
         return self._grid
         
     def reset(self):
-        self._resetWindow = True
+        for axis in self._lstAxes:
+            axis.reset()
         self.draw(clear=True)
         
-    def isReset(self):
-        return self._resetWindow
-        
-    def _check_window(self, xmin, xmax, ymin, ymax):
-        res = True
-        if (math.isnan(xmin) or math.isinf(xmin) or math.isnan(xmax)
-            or math.isinf(xmax) or math.isnan(ymin) or math.isinf(ymin) or
-            math.isnan(ymax) or math.isinf(ymax) or
-            xmin > max or ymin > ymax):
-            res = False
-        return res
-    
     def _pick(self, p0, type):
         window = gr.inqwindow()
         if self._lstAxes:
@@ -599,10 +646,11 @@ class InteractiveGRWidget(GRWidget):
             win[1] += dx_2
             win[2] -= dy_2
             win[3] += dy_2
-            if self._check_window(*win):
+            if Helper.isInWindowDomain(*window):
                 axis.setWindow(*win)
             else:
-                self._resetWindow = True
+                axis.setWindow(*window)
+                self.reset()
                 break
         self.draw()
         
