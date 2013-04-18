@@ -112,13 +112,16 @@ class CoordConverter(object):
     
     def setDC(self, x, y):
         self._p = Point(x, y)
+        return self
         
     def setNDC(self, x, y):
         self._p = Point(x * self._width, (1.-y) * self._height)
+        return self
         
     def setWC(self, x, y):
         tNC = gr.wctondc(x, y) # ndc tuple
         self.setNDC(tNC[0], tNC[1])
+        return self
     
     def getDC(self):
         self._checkRaiseXY()
