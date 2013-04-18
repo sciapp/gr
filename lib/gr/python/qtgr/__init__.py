@@ -546,20 +546,20 @@ class InteractiveGRWidget(GRWidget):
         gr.setwindow(*window)
         
     def _select(self, p0, p1):
+        window = gr.inqwindow()
+        coord = CoordConverter(self.width(), self.height())
         gr.clearws()
-        if p0.x > p1.x:
-            xmin = p1.x
-            xmax = p0.x
-        else:
-            xmin = p0.x
-            xmax = p1.x
-        if p0.y > p1.y:
-            ymin = p1.y
-            ymax = p0.y
-        else:
-            ymin = p0.y
-            ymax = p1.y
-        gr.setwindow(xmin, xmax, ymin, ymax)
+        for axis in self._lstAxes:
+            win = axis.getWindow()
+            gr.setwindow(*win)
+            p0World = coord.setNDC(p0.x, p0.y).getWC()
+            p1World = coord.setNDC(p1.x, p1.y).getWC()
+            xmin = min(p0World.x, p1World.x)
+            xmax = max(p0World.x, p1World.x)
+            ymin = min(p0World.y, p1World.y)
+            ymax = max(p0World.y, p1World.y)
+            axis.setWindow(xmin, xmax, ymin, ymax)
+        gr.setwindow(*window)
         self.draw()
         
     def _pan(self, dp):
@@ -620,8 +620,8 @@ class InteractiveGRWidget(GRWidget):
         if event.getButtons() & MouseEvent.LEFT_BUTTON and self._mouseLeft:
             self._mouseLeft = False
             self._curPoint = event
-            p0 = self._startPoint.getWC()
-            p1 = self._curPoint.getWC()
+            p0 = self._startPoint.getNDC()
+            p1 = self._curPoint.getNDC()
             if p0 != p1:
                 self._select(p0, p1)
         elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
