@@ -586,7 +586,7 @@ class InteractiveGRWidget(GRWidget):
         gr.setwindow(*window)
         self.draw()
                 
-    def _zoom(self, point, dpercent):
+    def _zoom(self, dpercent):
         window = gr.inqwindow()
         gr.clearws()
         for axis in self._lstAxes:
@@ -649,7 +649,7 @@ class InteractiveGRWidget(GRWidget):
     def wheelMove(self, event):
         # delta percent
         dpercent = event.getDegree()/16.
-        self._zoom(event.getWC(), dpercent)
+        self._zoom(dpercent)
         
     def pickMove(self, event):
         wcPoint = event.getWC()
