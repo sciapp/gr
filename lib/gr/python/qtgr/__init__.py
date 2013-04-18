@@ -375,9 +375,14 @@ class InteractiveGRWidget(GRWidget):
     def _logDomainCheck(self):
         # log x, log y domain check
         # emit signals on change
-        window = gr.inqwindow()
-        logXinDomain = InteractiveGRWidget.isInLogDomain(window[0], window[1])
-        logYinDomain = InteractiveGRWidget.isInLogDomain(window[2], window[3])
+        logXinDomain = True
+        logYinDomain = True
+        for axis in self._lstAxes:
+            xmin, xmax, ymin, ymax = axis.getWindow()
+            logXinDomain = (logXinDomain &
+                            InteractiveGRWidget.isInLogDomain(xmin, xmax))
+            logYinDomain = (logYinDomain &
+                            InteractiveGRWidget.isInLogDomain(ymin, ymax))
         if logXinDomain != self._logXinDomain:
             self._logXinDomain = logXinDomain
             self.emit(QtCore.SIGNAL("logXinDomain(bool)"), self._logXinDomain)
