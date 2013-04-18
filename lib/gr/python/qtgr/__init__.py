@@ -142,7 +142,7 @@ class PlotAxes(qtgr.base.GRMeta):
         self._window = [xmin, xmax, ymin, ymax]
     
     def getWindow(self):
-        return self._window
+        return list(self._window)
     
     def getId(self):
         return self._id
@@ -563,16 +563,22 @@ class InteractiveGRWidget(GRWidget):
         self.draw()
         
     def _pan(self, dp):
+        window = gr.inqwindow()
+        coord = CoordConverter(self.width(), self.height())
         gr.clearws()
         for axis in self._lstAxes:
-            window = axis.getWindow()
-#        window = gr.inqwindow()
-            window[0] -= dp.x
-            window[1] -= dp.x
-            window[2] -= dp.y
-            window[3] -= dp.y
-            axis.setWindow(*window)
-#        gr.setwindow(*window)
+            win = axis.getWindow()
+            gr.setwindow(*win)
+            coord.setWC(0, 0)
+            ndcOrigin = coord.getNDC()
+            coord.setNDC(ndcOrigin.x + dp.x, ndcOrigin.y + dp.y)
+            dpWorld = coord.getWC()
+            win[0] -= dpWorld.x
+            win[1] -= dpWorld.x
+            win[2] -= dpWorld.y
+            win[3] -= dpWorld.y
+            axis.setWindow(*win)
+        gr.setwindow(*window)
         self.draw()
                 
     def _zoom(self, point, dpercent):
@@ -629,8 +635,8 @@ class InteractiveGRWidget(GRWidget):
             self._curPoint = event
             self.update()
         elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
-            p0 = self._curPoint.getWC() # point before now
-            p1 = event.getWC()
+            p0 = self._curPoint.getNDC() # point before now
+            p1 = event.getNDC()
             dp = p1-p0
             self._curPoint = event
             self._pan(dp)
