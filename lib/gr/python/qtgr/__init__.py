@@ -649,6 +649,7 @@ class InteractiveGRWidget(GRWidget):
         for axes in self._lstAxes:
             win = axes.getWindow()
             gr.setwindow(*win)
+            gr.setscale(0)
             coord.setWC(0, 0)
             ndcOrigin = coord.getNDC()
             coord.setNDC(ndcOrigin.x + dp.x, ndcOrigin.y + dp.y)
@@ -657,6 +658,7 @@ class InteractiveGRWidget(GRWidget):
             win[1] -= dpWorld.x
             win[2] -= dpWorld.y
             win[3] -= dpWorld.y
+            gr.setscale(axes.scale)
             axes.setWindow(*win)
         gr.setwindow(*window)
         self.draw()
