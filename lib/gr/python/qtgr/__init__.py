@@ -156,8 +156,8 @@ class PlotAxes(qtgr.base.GRMeta):
 
     COUNT = 0
 
-    def __init__(self, parent):
-        self._parent = parent
+    def __init__(self, parent, drawX=True, drawY=True):
+        self._parent, self._drawX, self._drawY = parent, drawX, drawY
         self._lstPlotCurve = None
         self._backgroundColor = 163
         self._window = None
@@ -193,6 +193,18 @@ class PlotAxes(qtgr.base.GRMeta):
     @backgroundColor.setter
     def backgroundColor(self, color):
         self._backgroundColor = color
+        
+    def isXDrawingEnabled(self):
+        return self._drawX
+        
+    def setXDrawing(self, bool):
+        self._drawX = bool
+        
+    def isYDrawingEnabled(self):
+        return self._drawY
+        
+    def setYDrawing(self, bool):
+        self._drawY = bool
         
     def setLogX(self, bool):
         if bool:
@@ -279,10 +291,18 @@ class PlotAxes(qtgr.base.GRMeta):
                 charHeight = .024 * (viewport[3] - viewport[2])
                 gr.setcharheight(charHeight)
                 if self.getId() == 1:
-                    # first y axis
+                    # first x, y axis
+                    if not self.isXDrawingEnabled():
+                        majorx = -majorx
+                    if not self.isYDrawingEnabled():
+                        majory = -majory
                     gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
                 elif self.getId() == 2:
-                    # second y axis
+                    # second x, y axis
+                    if not self.isXDrawingEnabled():
+                        majorx = -majorx
+                    if not self.isYDrawingEnabled():
+                        majory = -majory
                     gr.axes(xtick, ytick, xmax, ymax, majorx, majory, -0.01)
                 if self.isGridEnabled() and self.getId() == 1:
                     gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
@@ -296,6 +316,7 @@ class PlotAxes(qtgr.base.GRMeta):
                 x = args[2*i]
                 y = args[2*i + 1]
                 self._lstPlotCurve.append(PlotCurve(x, y))
+        return self
             
 class GRWidget(QtGui.QWidget):
     
@@ -384,7 +405,7 @@ class InteractiveGRWidget(GRWidget):
         self._lblX = None
         self._lblY = None
         self.viewport = [0.1, 0.95, 0.1, 0.95]
-        self._lstAxes = None
+        self._lstAxes = []
         
     def _drawTitleAndSubTitle(self):
         title =  self.getTitle()
@@ -423,8 +444,8 @@ class InteractiveGRWidget(GRWidget):
             
     def _drawPlot(self, lstAxes):
         if lstAxes:
-            for axis in lstAxes:
-                axis.drawGR()
+            for axes in lstAxes:
+                axes.drawGR()
             # log x, log y domain check
             # this check has to be performed after plotting because of
             # possible window changes, e.g. on resetWindow.
@@ -446,9 +467,9 @@ class InteractiveGRWidget(GRWidget):
         # emit signals on change
         logXinDomain = True
         logYinDomain = True
-        for axis in self._lstAxes:
-            logXinDomain = (logXinDomain & axis.isXLogDomain())
-            logYinDomain = (logYinDomain & axis.isYLogDomain())
+        for axes in self._lstAxes:
+            logXinDomain = (logXinDomain & axes.isXLogDomain())
+            logYinDomain = (logYinDomain & axes.isYLogDomain())
         if logXinDomain != self._logXinDomain:
             self._logXinDomain = logXinDomain
             self.emit(QtCore.SIGNAL("logXinDomain(bool)"), self._logXinDomain)
@@ -457,16 +478,16 @@ class InteractiveGRWidget(GRWidget):
             self.emit(QtCore.SIGNAL("logYinDomain(bool)"), self._logYinDomain)
             
     def plot(self, *args, **kwargs):
-#        clear = kwargs.get("clear", False)
-#        axis = PlotAxes(self)
-#        axis.plot(*args, **kwargs)
-#        self._lstAxes = [axis]
-        axis = PlotAxes(self)
-        axis.plot(args[0], args[1])
-        axis2 = PlotAxes(self)
-        axis2.plot(args[2], args[3])
-        self._lstAxes = [axis, axis2]
+        axes = PlotAxes(self)
+        axes.plot(*args, **kwargs)
+        self.addAxes(axes)
         self.draw(clear=True, update=True)
+        
+    def addAxes(self, *args, **kwargs):
+        for plotAxes in args:
+            if plotAxes and plotAxes not in self._lstAxes:
+                self._lstAxes.append(plotAxes)
+        self.draw(clear=True)
 
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
@@ -535,40 +556,40 @@ class InteractiveGRWidget(GRWidget):
         
     def setLogX(self, bool):
         if bool:
-            for axis in self._lstAxes:
-                if axis.isXLogDomain():
-                    axis.setLogX(bool)
+            for axes in self._lstAxes:
+                if axes.isXLogDomain():
+                    axes.setLogX(bool)
                 else:
-                    win = axis.getWindow()
-                    raise Exception("AXIS[%d]: (%d..%d) not in log(x) domain."
-                                    %(axis.getId(), win[0], win[1]))
+                    win = axes.getWindow()
+                    raise Exception("AXES[%d]: (%d..%d) not in log(x) domain."
+                                    %(axes.getId(), win[0], win[1]))
         else:
-            for axis in self._lstAxes:
-                axis.setLogX(bool)
+            for axes in self._lstAxes:
+                axes.setLogX(bool)
         self.draw(clear=True)
             
     def setLogY(self, bool):
         if bool:
-            for axis in self._lstAxes:
-                if axis.isYLogDomain():
-                    axis.setLogY(bool)
+            for axes in self._lstAxes:
+                if axes.isYLogDomain():
+                    axes.setLogY(bool)
                 else:
-                    win = axis.getWindow()
-                    raise Exception("AXIS[%d]: (%d..%d) not in log(y) domain."
-                                    %(axis.getId(), win[2], win[3]))
+                    win = axes.getWindow()
+                    raise Exception("AXES[%d]: (%d..%d) not in log(y) domain."
+                                    %(axes.getId(), win[2], win[3]))
         else:
-            for axis in self._lstAxes:
-                axis.setLogY(bool)
+            for axes in self._lstAxes:
+                axes.setLogY(bool)
         self.draw(clear=True)
         
     def setGrid(self, bool):
-        for axis in self._lstAxes:
-            axis.setGrid(bool)
+        for axes in self._lstAxes:
+            axes.setGrid(bool)
         self.draw(clear=True)
         
     def reset(self):
-        for axis in self._lstAxes:
-            axis.reset()
+        for axes in self._lstAxes:
+            axes.reset()
         self.draw(clear=True)
         
     def _pick(self, p0, type):
@@ -576,24 +597,24 @@ class InteractiveGRWidget(GRWidget):
         if self._lstAxes:
             coord = CoordConverter(self.width(), self.height())
             points = []
-            axes = []
-            for axis in self._lstAxes:
-                gr.setwindow(*axis.getWindow())
+            lstAxes = []
+            for axes in self._lstAxes:
+                gr.setwindow(*axes.getWindow())
                 coord.setNDC(p0.x, p0.y)
                 wcPick = coord.getWC()
-                for curve in axis.getCurves():
+                for curve in axes.getCurves():
                     for idx, x in enumerate(curve.x):
                         if x >= wcPick.x:
                             break
                     coord.setWC(x, curve.y[idx])
                     points.append(coord.getNDC())
-                    axes.append(axis) 
+                    lstAxes.append(axes) 
             # calculate distance between p0 and point on curve
             norms = map(lambda p: (p0-p).norm(), points)
             # nearest point
             idx = norms.index(min(norms))
             p = points[idx]
-            axis = axes[idx]
+            axes = lstAxes[idx]
             coord.setNDC(p.x, p.y)
             dcPoint = coord.getDC()
             QtGui.QApplication.sendEvent(self, PickEvent(type,
@@ -601,15 +622,15 @@ class InteractiveGRWidget(GRWidget):
                                                          self.height(),
                                                          dcPoint.x,
                                                          dcPoint.y,
-                                                         axis.getWindow()))
+                                                         axes.getWindow()))
         gr.setwindow(*window)
         
     def _select(self, p0, p1):
         window = gr.inqwindow()
         coord = CoordConverter(self.width(), self.height())
         gr.clearws()
-        for axis in self._lstAxes:
-            win = axis.getWindow()
+        for axes in self._lstAxes:
+            win = axes.getWindow()
             gr.setwindow(*win)
             p0World = coord.setNDC(p0.x, p0.y).getWC()
             p1World = coord.setNDC(p1.x, p1.y).getWC()
@@ -617,7 +638,7 @@ class InteractiveGRWidget(GRWidget):
             xmax = max(p0World.x, p1World.x)
             ymin = min(p0World.y, p1World.y)
             ymax = max(p0World.y, p1World.y)
-            axis.setWindow(xmin, xmax, ymin, ymax)
+            axes.setWindow(xmin, xmax, ymin, ymax)
         gr.setwindow(*window)
         self.draw()
         
@@ -625,8 +646,8 @@ class InteractiveGRWidget(GRWidget):
         window = gr.inqwindow()
         coord = CoordConverter(self.width(), self.height())
         gr.clearws()
-        for axis in self._lstAxes:
-            win = axis.getWindow()
+        for axes in self._lstAxes:
+            win = axes.getWindow()
             gr.setwindow(*win)
             coord.setWC(0, 0)
             ndcOrigin = coord.getNDC()
@@ -636,15 +657,15 @@ class InteractiveGRWidget(GRWidget):
             win[1] -= dpWorld.x
             win[2] -= dpWorld.y
             win[3] -= dpWorld.y
-            axis.setWindow(*win)
+            axes.setWindow(*win)
         gr.setwindow(*window)
         self.draw()
                 
     def _zoom(self, dpercent):
         window = gr.inqwindow()
         gr.clearws()
-        for axis in self._lstAxes:
-            win = axis.getWindow()
+        for axes in self._lstAxes:
+            win = axes.getWindow()
             winWidth_2 = (win[1]-win[0])/2
             winHeight_2 = (win[3]-win[2])/2
             dx_2 = winWidth_2 - (1+dpercent)*winWidth_2
@@ -654,9 +675,9 @@ class InteractiveGRWidget(GRWidget):
             win[2] -= dy_2
             win[3] += dy_2
             if Helper.isInWindowDomain(*window):
-                axis.setWindow(*win)
+                axes.setWindow(*win)
             else:
-                axis.setWindow(*window)
+                axes.setWindow(*window)
                 self.reset()
                 break
         self.draw()
@@ -731,7 +752,7 @@ if __name__ == "__main__":
     x2 = [i * pi2_n for i in range(0, n+1)]
     y2 = map(lambda xi: math.sin(xi), x2)
     
-    grw.plot(x, y, x2, y2)
+    grw.addAxes(PlotAxes(grw).plot(x, y), PlotAxes(grw).plot(x2, y2))
 #    grw.plot([0, 0], [1, 1], [2,2,2], [3,3,3])
     
 #    pygr.plot(x, y, bgcolor=163, clear=False, update=False)
