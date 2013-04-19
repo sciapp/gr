@@ -194,6 +194,18 @@ class PlotAxes(qtgr.base.GRMeta):
     def backgroundColor(self, color):
         self._backgroundColor = color
         
+    def setLogX(self, bool):
+        if bool:
+            self.scale |= gr.OPTION_X_LOG
+        else:
+            self.scale &= ~gr.OPTION_X_LOG
+        
+    def setLogY(self, bool):
+        if bool:
+            self.scale |= gr.OPTION_Y_LOG
+        else:
+            self.scale &= ~gr.OPTION_Y_LOG
+        
     def setGrid(self, bool):
         self._grid = bool
         
@@ -364,11 +376,8 @@ class InteractiveGRWidget(GRWidget):
         self._mouseRight = False
         self._startPoint = None
         self._curPoint = None
-#        self._option_scale = 0
         self._logXinDomain = None
         self._logYinDomain = None
-#        self._grid = True
-#        self._resetWindow = True
         self._pickMode = False
         self._plotTitle = None
         self._plotSubTitle = None
@@ -525,39 +534,37 @@ class InteractiveGRWidget(GRWidget):
         self.emit(QtCore.SIGNAL("modePick(bool)"), self._pickMode)
         
     def setLogX(self, bool):
-        window = gr.inqwindow()
         if bool:
-            if Helper.isInLogDomain(window[0], window[1]):
-                self._option_scale |= gr.OPTION_X_LOG
-            else:
-                raise Exception("(%d..%d) not in log(x) domain." %(window[0],
-                                                                   window[1]))
+            for axis in self._lstAxes:
+                if axis.isXLogDomain():
+                    axis.setLogX(bool)
+                else:
+                    win = axis.getWindow()
+                    raise Exception("AXIS[%d]: (%d..%d) not in log(x) domain."
+                                    %(axis.getId(), win[0], win[1]))
         else:
-            self._option_scale &= ~gr.OPTION_X_LOG
+            for axis in self._lstAxes:
+                axis.setLogX(bool)
         self.draw(clear=True)
             
     def setLogY(self, bool):
-        window = gr.inqwindow()
         if bool:
-            if Helper.isInLogDomain(window[2], window[3]):
-                self._option_scale |= gr.OPTION_Y_LOG
-            else:
-                raise Exception("(%d..%d) not in log(y) domain." %(window[2],
-                                                                   window[3]))
+            for axis in self._lstAxes:
+                if axis.isYLogDomain():
+                    axis.setLogY(bool)
+                else:
+                    win = axis.getWindow()
+                    raise Exception("AXIS[%d]: (%d..%d) not in log(y) domain."
+                                    %(axis.getId(), win[2], win[3]))
         else:
-            self._option_scale &= ~gr.OPTION_Y_LOG
+            for axis in self._lstAxes:
+                axis.setLogY(bool)
         self.draw(clear=True)
         
-    def getScale(self):
-        return self._option_scale
-            
     def setGrid(self, bool):
         for axis in self._lstAxes:
             axis.setGrid(bool)
         self.draw(clear=True)
-        
-    def isGridEnabled(self):
-        return self._grid
         
     def reset(self):
         for axis in self._lstAxes:
