@@ -326,6 +326,11 @@ class PlotAxes(qtgr.base.GRMeta):
                 y = args[2*i + 1]
                 self._lstPlotCurve.append(PlotCurve(x, y))
         return self
+    
+    def addCurves(self, *args, **kwargs):
+        for plotCurve in args:
+            if plotCurve and plotCurve not in self._lstPlotCurve:
+                self._lstPlotCurve.append(plotCurve)
             
 class GRWidget(QtGui.QWidget):
     
