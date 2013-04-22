@@ -156,8 +156,8 @@ class PlotAxes(qtgr.base.GRMeta):
 
     COUNT = 0
 
-    def __init__(self, parent, drawX=True, drawY=True):
-        self._parent, self._drawX, self._drawY = parent, drawX, drawY
+    def __init__(self, viewport=[0.1, 0.95, 0.1, 0.95], drawX=True, drawY=True):
+        self._viewport, self._drawX, self._drawY = viewport, drawX, drawY
         self._lstPlotCurve = None
         self._backgroundColor = 163
         self._window = None
@@ -177,6 +177,15 @@ class PlotAxes(qtgr.base.GRMeta):
     def isYLogDomain(self):
         window = self.getWindow()
         return Helper.isInLogDomain(window[2], window[3])
+    
+    @property
+    def viewport(self):
+        """get current viewport"""
+        return self._viewport
+    
+    @viewport.setter
+    def viewport(self, viewport):
+        self._viewport = viewport
     
     @property
     def scale(self):
@@ -241,7 +250,7 @@ class PlotAxes(qtgr.base.GRMeta):
     
     def drawGR(self):
         lstPlotCurve = self.getCurves()
-        viewport = self._parent.viewport
+        viewport = self.viewport
         if lstPlotCurve:
             if self.isReset():
                 self._resetWindow = False
@@ -478,7 +487,7 @@ class InteractiveGRWidget(GRWidget):
             self.emit(QtCore.SIGNAL("logYinDomain(bool)"), self._logYinDomain)
             
     def plot(self, *args, **kwargs):
-        axes = PlotAxes(self)
+        axes = PlotAxes(self.viewport)
         axes.plot(*args, **kwargs)
         self.addAxes(axes)
         self.draw(clear=True, update=True)
@@ -754,7 +763,8 @@ if __name__ == "__main__":
     x2 = [i * pi2_n for i in range(0, n+1)]
     y2 = map(lambda xi: math.sin(xi), x2)
     
-    grw.addAxes(PlotAxes(grw).plot(x, y), PlotAxes(grw).plot(x2, y2))
+    grw.addAxes(PlotAxes(grw.viewport).plot(x, y),
+                PlotAxes(grw.viewport).plot(x2, y2))
 #    grw.plot([0, 0], [1, 1], [2,2,2], [3,3,3])
     
 #    pygr.plot(x, y, bgcolor=163, clear=False, update=False)
