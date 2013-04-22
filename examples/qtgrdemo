@@ -12,10 +12,11 @@ from PyQt4 import uic
 import gr # TESTING shell
 import qtgr
 from qtgr.events import GUIConnector, MouseEvent, PickEvent
+from qtgr import PlotAxes
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-04-10"
-__version__ = "0.1.0"
+__date__    = "2013-04-17"
+__version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -45,7 +46,8 @@ class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
-        uic.loadUi("qtgrdemo.ui", self)
+        uic.loadUi(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                "qtgrdemo.ui"), self)
         
         dictPrintType = dict(gr.PRINT_TYPE)
         map(lambda k: dictPrintType.pop(k), [gr.PRINT_JPEG, gr.PRINT_TIF])
@@ -58,6 +60,10 @@ class MainWindow(QtGui.QMainWindow):
                      self._logXClicked)
         self.connect(self._chkLogY, QtCore.SIGNAL("stateChanged(int)"),
                      self._logYClicked)
+        self.connect(self._gr, QtCore.SIGNAL("logXinDomain(bool)"),
+                     self._logXinDomain)
+        self.connect(self._gr, QtCore.SIGNAL("logYinDomain(bool)"),
+                     self._logYinDomain)
         self.connect(self._chkGrid, QtCore.SIGNAL("stateChanged(int)"),
                      self._gridClicked)
         self.connect(self._btnReset, QtCore.SIGNAL("clicked()"),
@@ -78,7 +84,13 @@ class MainWindow(QtGui.QMainWindow):
         
         x = [-3.3 + t*.1 for t in range(66)]
         y = [t**5 - 13*t**3 + 36*t for t in x]
-        self._gr.plot(x, y)
+        x2 = [-3.5 + i*.5 for i in range(0, 15)]
+#        y2 = [9.3*t - 7.5 for t in x2]
+        y2 = x2
+#        self._gr.plot(x, y, x2, y2)
+        
+        self._gr.addAxes(PlotAxes(self._gr.viewport).plot(x, y),
+                         PlotAxes(self._gr.viewport, drawX=False).plot(x2, y2))
         
     def save(self):
         qpath = QtGui.QFileDialog.getSaveFileName(self, filter=self._saveTypes,
@@ -107,13 +119,23 @@ class MainWindow(QtGui.QMainWindow):
         dc = event.getDC()
         ndc = event.getNDC()
         wc = event.getWC()
-        self._statusbar.showMessage("DC: (%4d, %4d)\t " %(dc.x(), dc.y()) +
-                                 "NDC: (%3.2f, %3.2f)\t " %(ndc.x(), ndc.y()) +
-                                 "WC: (%3.2f, %3.2f)" %(wc.x(), wc.y()))
+        self._statusbar.showMessage("DC: (%4d, %4d)\t " %(dc.x, dc.y) +
+                                    "NDC: (%3.2f, %3.2f)\t " %(ndc.x, ndc.y) +
+                                    "WC: (%3.2f, %3.2f)" %(wc.x, wc.y))
 #        print "  buttons: 0x%x" %event.getButtons()
 #        print "modifiers: 0x%x" %event.getModifiers()
     def pointPickGr(self, event):
-        print "pick coord: %s" %event.getWC()
+        p = event.getWC()
+        
+        if p.x < 0:
+            self._lblPickX.setText("%4.2f" %p.x)
+        else:
+            self._lblPickX.setText(" %4.2f" %p.x)
+             
+        if p.y < 0:
+            self._lblPickY.setText("%4.2f" %p.y)
+        else:
+            self._lblPickY.setText(" %4.2f" %p.y)
         
     @QtCore.pyqtSlot()
     def _gridClicked(self, state):
@@ -145,6 +167,18 @@ class MainWindow(QtGui.QMainWindow):
         exec input
         self._shell.clear()
         self._gr.update()
+    
+    @QtCore.pyqtSlot()
+    def _logXinDomain(self, bool):
+        self._chkLogX.setEnabled(bool)
+        if not bool:
+            self._chkLogX.setChecked(bool)
+        
+    @QtCore.pyqtSlot()
+    def _logYinDomain(self, bool):
+        self._chkLogY.setEnabled(bool)
+        if not bool:
+            self._chkLogY.setChecked(bool)
 
 if __name__ == '__main__':
     import sys
