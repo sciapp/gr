@@ -4,3 +4,7 @@ playground/
 *.so
 .DS_Store
 ._*
+.settings
+.pydevproject
+.project
+*.pyc
