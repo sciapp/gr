@@ -773,6 +773,10 @@ class InteractiveGRWidget(GRWidget):
         self._pickMode = False
         self._lstPlot = []
         
+    def update(self):
+        self.draw(clear=True, update=True)
+        super(InteractiveGRWidget, self).update()
+        
     def draw(self, clear=False, update=True):
         if clear:
             gr.clearws()
@@ -792,7 +796,7 @@ class InteractiveGRWidget(GRWidget):
                           self._logYinDomain)
 
         if update:
-            self.update()
+            super(InteractiveGRWidget, self).update()
             
     def addPlot(self, *args, **kwargs):
         for plot in args:
@@ -828,26 +832,6 @@ class InteractiveGRWidget(GRWidget):
     def setPickMode(self, bool):
         self._pickMode = bool
         self.emit(QtCore.SIGNAL("modePick(bool)"), self._pickMode)
-        
-    def setLogX(self, bool):
-        for plot in self._lstPlot:
-            plot.setLogX(bool)
-        self.draw(clear=True)
-            
-    def setLogY(self, bool):
-        for plot in self._lstPlot:
-            plot.setLogY(bool)
-        self.draw(clear=True)
-        
-    def setGrid(self, bool):
-        for plot in self._lstPlot:
-            plot.setGrid(bool)
-        self.draw(clear=True)
-        
-    def reset(self):
-        for plot in self._lstPlot:
-            plot.reset()
-        self.draw(clear=True)
         
     def _pick(self, p0, type):
         for plot in self._lstPlot:
@@ -907,7 +891,7 @@ class InteractiveGRWidget(GRWidget):
             self._pick(event.getNDC(), PickEvent.PICK_MOVE)
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
             self._curPoint = event
-            self.update()
+            super(InteractiveGRWidget, self).update()
         elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
             p0 = self._curPoint.getNDC() # point before now
             p1 = event.getNDC()
@@ -928,7 +912,7 @@ class InteractiveGRWidget(GRWidget):
         gr.setmarkertype(gr.MARKERTYPE_PLUS)
         gr.polymarker(1, [wcPoint.x], [wcPoint.y])
         gr.setwindow(*window)
-        self.update()
+        super(InteractiveGRWidget, self).update()
         
 if __name__ == "__main__":
     import sys
