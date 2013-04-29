@@ -14,7 +14,6 @@ import gr
 import pygr
 import qtgr.events
 from qtgr.events import GUIConnector, MouseEvent, PickEvent
-from qtgr.events import CoordConverter, Point
 import qtgr.base
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -44,6 +43,133 @@ You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
+
+class Point(object):
+    
+    def __init__(self, x, y):
+        self._x, self._y = x, y
+        
+    @property
+    def x(self):
+        """Get the current x value."""
+        return self._x
+    
+    @x.setter
+    def x(self, value):
+        self._x = value
+    
+    @property
+    def y(self):
+        """Get the current y value."""
+        return self._y
+    
+    @y.setter
+    def y(self, value):
+        self._y = value
+    
+    def __str__(self):
+        return "(%s, %s)" %(self._x, self._y)
+    
+    def __eq__(self, other):
+        return (self.x == other.x and self.y == other.y)
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    
+    def __add__(self, other):
+        return Point(self.x+other.x, self.y+other.y)
+    
+    def __sub__(self, other):
+        return Point(self.x-other.x, self.y-other.y)
+    
+    def __mul__(self, other):
+        """Calculate scalar product."""
+        return self.x*other.x + self.y*other.y
+    
+    def __div__(self, other):
+        """Calculate component-by-component division."""
+        return Point(self.x/other.x, self.y/other.y)
+    
+    def __neg__(self):
+        """Calculate negation."""
+        return Point(-self.x, -self.y)
+    
+    def __pos__(self):
+        return self
+    
+    def __abs__(self):
+        return Point(abs(self.x), abs(self.y))
+    
+    def norm(self):
+        """Calculate euclidean norm."""
+        return math.sqrt(self*self)
+        
+
+class CoordConverter(object):
+    
+    def __init__(self, width, height, window=None):
+        self._width, self._height, self._window = width, height, window
+        self._p = None
+    
+    def _checkRaiseXY(self):
+        if self._p.x is None or self._p.y is None:
+            raise AttributeError("x or y has not been initialized.")
+        return True
+    
+    @property
+    def window(self):
+        return self._window
+        
+    def setWindow(self, xmin, xmax, ymin, ymax):
+        self._window = [xmin, xmax, ymin, ymax]
+    
+    def getWindow(self):
+        if self._window:
+            return list(self._window)
+        else:
+            return None
+    
+    def setDC(self, x, y):
+        self._p = Point(x, y)
+        return self
+        
+    def setNDC(self, x, y):
+        self._p = Point(x * self._width, (1.-y) * self._height)
+        return self
+        
+    def setWC(self, x, y, window=None):
+        if window:
+            self.setWindow(*window)
+        if self.getWindow():
+            window = gr.inqwindow()
+            gr.setwindow(*self.getWindow())
+            tNC = gr.wctondc(x, y) # ndc tuple
+            gr.setwindow(*window)
+        else:
+            tNC = gr.wctondc(x, y) # ndc tuple
+        self.setNDC(tNC[0], tNC[1])
+        return self
+    
+    def getDC(self):
+        self._checkRaiseXY()
+        return self._p
+        
+    def getNDC(self):
+        self._checkRaiseXY()
+        return Point(float(self._p.x)/self._width,
+                     1. - float(self._p.y)/self._height)
+        
+    def getWC(self):
+        self._checkRaiseXY()
+        ndcPoint = self.getNDC()
+        if self.getWindow():
+            window = gr.inqwindow()
+            gr.setwindow(*self.getWindow())
+            tWC = gr.ndctowc(ndcPoint.x, ndcPoint.y) # wc tuple
+            gr.setwindow(*window)
+        else:
+            tWC = gr.ndctowc(ndcPoint.x, ndcPoint.y) # wc tuple
+        return Point(tWC[0], tWC[1])
 
 class Helper(object):
     
@@ -96,6 +222,238 @@ class ErrorBar(qtgr.base.GRMeta):
         
     def drawGR(self):
         self._grerror(self._n, self._x, self._y, self._dneg, self._dpos)
+
+class Plot(qtgr.base.GRMeta):
+    
+    DEFAULT_VIEWPORT = (.1, .95, .1, .95)
+    
+    def __init__(self, viewport=list(DEFAULT_VIEWPORT)):
+        self.viewport = viewport
+        self._lstAxes = []
+        self._title = None
+        self._subTitle = None
+        self._lblX = None
+        
+    @property
+    def xlabel(self):
+        """get label for x axis"""
+        return self._lblX
+        
+    @xlabel.setter
+    def xlabel(self, xlabel):
+        self._lblX = xlabel
+        
+    @property
+    def ylabel(self):
+        """get label for y axis"""
+        return self._lblY
+        
+    @ylabel.setter
+    def ylabel(self, ylabel):
+        self._lblY = ylabel
+        
+    @property
+    def subTitle(self):
+        """get plot subtitle"""
+        return self._subTitle
+    
+    @subTitle.setter
+    def subTitle(self, subTitle):
+        self._subTitle = subTitle
+        
+    @property
+    def title(self):
+        """get plot title"""
+        return self._title
+    
+    @title.setter
+    def title(self, title):
+        self._title = title
+        
+    @property
+    def viewport(self):
+        """get current viewport"""
+        return self._viewport
+    
+    @viewport.setter
+    def viewport(self, viewport):
+        self._viewport = viewport
+        for axes in self._lstAxes:
+            axes.viewport = viewport
+        
+    def setLogX(self, bool):
+        if bool:
+            for axes in self._lstAxes:
+                if axes.isXLogDomain():
+                    axes.setLogX(bool)
+                else:
+                    win = axes.getWindow()
+                    raise Exception("AXES[%d]: (%d..%d) not in log(x) domain."
+                                    %(axes.getId(), win[0], win[1]))
+        else:
+            for axes in self._lstAxes:
+                axes.setLogX(bool)
+    
+    def setLogY(self, bool):
+        if bool:
+            for axes in self._lstAxes:
+                if axes.isYLogDomain():
+                    axes.setLogY(bool)
+                else:
+                    win = axes.getWindow()
+                    raise Exception("AXES[%d]: (%d..%d) not in log(y) domain."
+                                    %(axes.getId(), win[2], win[3]))
+        else:
+            for axes in self._lstAxes:
+                axes.setLogY(bool)
+                
+    def setGrid(self, bool):
+        for axes in self._lstAxes:
+            axes.setGrid(bool)
+                
+    def reset(self):
+        for axes in self._lstAxes:
+            axes.reset()
+        
+    def logXinDomain(self):
+        logXinDomain = True
+        for axes in self._lstAxes:
+            logXinDomain = (logXinDomain & axes.isXLogDomain())
+        return logXinDomain
+            
+    def logYinDomain(self):
+        logYinDomain = True
+        for axes in self._lstAxes:
+            logYinDomain = (logYinDomain & axes.isYLogDomain())
+        return logYinDomain
+    
+    def pick(self, p0):
+        coord = None
+        window = gr.inqwindow()
+        if self._lstAxes:
+            coord = CoordConverter(self.width(), self.height())
+            points = []
+            lstAxes = []
+            for axes in self._lstAxes:
+                gr.setwindow(*axes.getWindow())
+                coord.setNDC(p0.x, p0.y)
+                wcPick = coord.getWC()
+                for curve in axes.getCurves():
+                    for idx, x in enumerate(curve.x):
+                        if x >= wcPick.x:
+                            break
+                    coord.setWC(x, curve.y[idx])
+                    points.append(coord.getNDC())
+                    lstAxes.append(axes) 
+            # calculate distance between p0 and point on curve
+            norms = map(lambda p: (p0-p).norm(), points)
+            # nearest point
+            idx = norms.index(min(norms))
+            p = points[idx]
+            axes = lstAxes[idx]
+            coord.setNDC(p.x, p.y)
+            coord.setWindow(*axes.getWindow())
+        gr.setwindow(*window)
+        return coord
+    
+    def select(self, p0, p1):
+        window = gr.inqwindow()
+        coord = CoordConverter(self.width(), self.height())
+        # TODO: remove clearws here?
+        gr.clearws()
+        for axes in self._lstAxes:
+            win = axes.getWindow()
+            gr.setwindow(*win)
+            p0World = coord.setNDC(p0.x, p0.y).getWC()
+            p1World = coord.setNDC(p1.x, p1.y).getWC()
+            xmin = min(p0World.x, p1World.x)
+            xmax = max(p0World.x, p1World.x)
+            ymin = min(p0World.y, p1World.y)
+            ymax = max(p0World.y, p1World.y)
+            axes.setWindow(xmin, xmax, ymin, ymax)
+        gr.setwindow(*window)
+        
+    def pan(self, dp):
+        window = gr.inqwindow()
+        coord = CoordConverter(self.width(), self.height())
+        # TODO: remove clearws here?
+        gr.clearws()
+        for axes in self._lstAxes:
+            win = axes.getWindow()
+            gr.setwindow(*win)
+            gr.setscale(0)
+            coord.setWC(0, 0)
+            ndcOrigin = coord.getNDC()
+            coord.setNDC(ndcOrigin.x + dp.x, ndcOrigin.y + dp.y)
+            dpWorld = coord.getWC()
+            win[0] -= dpWorld.x
+            win[1] -= dpWorld.x
+            win[2] -= dpWorld.y
+            win[3] -= dpWorld.y
+            gr.setscale(axes.scale)
+            axes.setWindow(*win)
+        gr.setwindow(*window)
+        
+    def zoom(self, dpercent):
+        window = gr.inqwindow()
+        # TODO: remove clearws here?
+        gr.clearws()
+        for axes in self._lstAxes:
+            win = axes.getWindow()
+            winWidth_2 = (win[1]-win[0])/2
+            winHeight_2 = (win[3]-win[2])/2
+            dx_2 = winWidth_2 - (1+dpercent)*winWidth_2
+            dy_2 = winHeight_2 - (1+dpercent)*winHeight_2
+            win[0] -= dx_2
+            win[1] += dx_2
+            win[2] -= dy_2
+            win[3] += dy_2
+            if Helper.isInWindowDomain(*window):
+                axes.setWindow(*win)
+            else:
+                axes.setWindow(*window)
+                self.reset()
+                break
+        
+    def addAxes(self, *args, **kwargs):
+        for plotAxes in args:
+            if plotAxes and plotAxes not in self._lstAxes:
+                self._lstAxes.append(plotAxes)
+
+    def drawGR(self):
+        # draw axes and curves
+        if self._lstAxes:
+            for axes in self._lstAxes:
+                axes.drawGR()
+        # draw title and subtitle
+        if self.title or self.subTitle:
+            gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
+            gr.setcharup(0., 1.)
+            [xmin, xmax, ymin, ymax] = self.viewport
+            x = xmin + (xmax-xmin)/2
+            dy = .05
+            if self.title and self.subTitle:
+                dy = .1
+            y = ymax + dy
+            if y > 1.:
+                y = ymax
+                self.viewport = [xmin, xmax, ymin, ymax-dy]
+                self.draw(True)
+            if self.title:
+                gr.text(x, y, title)
+                y -= .05
+            if self.subTitle:
+                gr.text(x, y, subTitle)
+        # draw x- and y label
+        if self.xlabel:
+            gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
+            gr.setcharup(0., 1.)
+            gr.text(.5, 0.035, self.xlabel)
+        if self.ylabel:
+            gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
+            gr.setcharup(-1., 0.)
+            gr.text(0., .5, self.ylabel)
+            gr.setcharup(0., 1.)
 
 class PlotCurve(qtgr.base.GRMeta):
     
@@ -156,7 +514,7 @@ class PlotAxes(qtgr.base.GRMeta):
 
     COUNT = 0
 
-    def __init__(self, viewport=[0.1, 0.95, 0.1, 0.95], drawX=True, drawY=True):
+    def __init__(self, viewport=list(Plot.DEFAULT_VIEWPORT), drawX=True, drawY=True):
         self._viewport, self._drawX, self._drawY = viewport, drawX, drawY
         self._lstPlotCurve = None
         self._backgroundColor = 163
@@ -237,7 +595,10 @@ class PlotAxes(qtgr.base.GRMeta):
         self._window = [xmin, xmax, ymin, ymax]
     
     def getWindow(self):
-        return list(self._window)
+        if self._window:
+            return list(self._window)
+        else:
+            return None
     
     def reset(self):
         self._resetWindow = True
@@ -331,7 +692,7 @@ class PlotAxes(qtgr.base.GRMeta):
         for plotCurve in args:
             if plotCurve and plotCurve not in self._lstPlotCurve:
                 self._lstPlotCurve.append(plotCurve)
-            
+  
 class GRWidget(QtGui.QWidget):
     
     def __init__(self, *args, **kwargs):
@@ -747,7 +1108,7 @@ class InteractiveGRWidget(GRWidget):
         wcPoint = event.getWC()
         self.draw(True)
         window = gr.inqwindow()
-        gr.setwindow(*event._window)
+        gr.setwindow(*event.getWindow())
         gr.setmarkertype(gr.MARKERTYPE_PLUS)
         gr.polymarker(1, [wcPoint.x], [wcPoint.y])
         gr.setwindow(*window)
