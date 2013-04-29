@@ -103,7 +103,6 @@ class Point(object):
     def norm(self):
         """Calculate euclidean norm."""
         return math.sqrt(self*self)
-        
 
 class CoordConverter(object):
     
@@ -228,11 +227,12 @@ class Plot(qtgr.base.GRMeta):
     DEFAULT_VIEWPORT = (.1, .95, .1, .95)
     
     def __init__(self, viewport=list(DEFAULT_VIEWPORT)):
-        self.viewport = viewport
+        self._viewport = viewport
         self._lstAxes = []
         self._title = None
         self._subTitle = None
         self._lblX = None
+        self._lblY = None
         
     @property
     def xlabel(self):
@@ -327,11 +327,11 @@ class Plot(qtgr.base.GRMeta):
             logYinDomain = (logYinDomain & axes.isYLogDomain())
         return logYinDomain
     
-    def pick(self, p0):
+    def pick(self, p0, width, height):
         coord = None
         window = gr.inqwindow()
         if self._lstAxes:
-            coord = CoordConverter(self.width(), self.height())
+            coord = CoordConverter(width, height)
             points = []
             lstAxes = []
             for axes in self._lstAxes:
@@ -356,11 +356,9 @@ class Plot(qtgr.base.GRMeta):
         gr.setwindow(*window)
         return coord
     
-    def select(self, p0, p1):
+    def select(self, p0, p1, width, height):
         window = gr.inqwindow()
-        coord = CoordConverter(self.width(), self.height())
-        # TODO: remove clearws here?
-        gr.clearws()
+        coord = CoordConverter(width, height)
         for axes in self._lstAxes:
             win = axes.getWindow()
             gr.setwindow(*win)
@@ -373,11 +371,9 @@ class Plot(qtgr.base.GRMeta):
             axes.setWindow(xmin, xmax, ymin, ymax)
         gr.setwindow(*window)
         
-    def pan(self, dp):
+    def pan(self, dp, width, height):
         window = gr.inqwindow()
-        coord = CoordConverter(self.width(), self.height())
-        # TODO: remove clearws here?
-        gr.clearws()
+        coord = CoordConverter(width, height)
         for axes in self._lstAxes:
             win = axes.getWindow()
             gr.setwindow(*win)
@@ -396,8 +392,6 @@ class Plot(qtgr.base.GRMeta):
         
     def zoom(self, dpercent):
         window = gr.inqwindow()
-        # TODO: remove clearws here?
-        gr.clearws()
         for axes in self._lstAxes:
             win = axes.getWindow()
             winWidth_2 = (win[1]-win[0])/2
@@ -418,7 +412,9 @@ class Plot(qtgr.base.GRMeta):
     def addAxes(self, *args, **kwargs):
         for plotAxes in args:
             if plotAxes and plotAxes not in self._lstAxes:
+                plotAxes.viewport = self.viewport
                 self._lstAxes.append(plotAxes)
+        return self
 
     def drawGR(self):
         # draw axes and curves
@@ -438,12 +434,11 @@ class Plot(qtgr.base.GRMeta):
             if y > 1.:
                 y = ymax
                 self.viewport = [xmin, xmax, ymin, ymax-dy]
-                self.draw(True)
             if self.title:
-                gr.text(x, y, title)
+                gr.text(x, y, self.title)
                 y -= .05
             if self.subTitle:
-                gr.text(x, y, subTitle)
+                gr.text(x, y, self.subTitle)
         # draw x- and y label
         if self.xlabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
@@ -692,6 +687,7 @@ class PlotAxes(qtgr.base.GRMeta):
         for plotCurve in args:
             if plotCurve and plotCurve not in self._lstPlotCurve:
                 self._lstPlotCurve.append(plotCurve)
+        return self
   
 class GRWidget(QtGui.QWidget):
     
@@ -775,95 +771,43 @@ class InteractiveGRWidget(GRWidget):
         self._logXinDomain = None
         self._logYinDomain = None
         self._pickMode = False
-        self._plotTitle = None
-        self._plotSubTitle = None
-        self._lblX = None
-        self._lblY = None
-        self.viewport = [0.1, 0.95, 0.1, 0.95]
-        self._lstAxes = []
-        
-    def _drawTitleAndSubTitle(self):
-        title =  self.getTitle()
-        subTitle = self.getSubTitle()
-        if title or subTitle:
-            gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
-            gr.setcharup(0., 1.)
-            [xmin, xmax, ymin, ymax] = self.viewport
-            x = xmin + (xmax-xmin)/2
-            dy = .05
-            if title and subTitle:
-                dy = .1
-            y = ymax + dy
-            if y > 1.:
-                y = ymax
-                self.viewport = [xmin, xmax, ymin, ymax-dy]
-                self.draw(True)
-            if title:
-                gr.text(x, y, title)
-                y -= .05
-            if subTitle:
-                gr.text(x, y, subTitle)
-            
-    def _drawXYLabel(self):
-        xlabel = self.getXLabel()
-        ylabel = self.getYLabel()
-        if xlabel:
-            gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
-            gr.setcharup(0., 1.)
-            gr.text(.5, 0.035, xlabel)
-        if ylabel:
-            gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
-            gr.setcharup(-1., 0.)
-            gr.text(0., .5, ylabel)
-            gr.setcharup(0., 1.)
-            
-    def _drawPlot(self, lstAxes):
-        if lstAxes:
-            for axes in lstAxes:
-                axes.drawGR()
-            # log x, log y domain check
-            # this check has to be performed after plotting because of
-            # possible window changes, e.g. on resetWindow.
-            self._logDomainCheck()
+        self._lstPlot = []
         
     def draw(self, clear=False, update=True):
         if clear:
             gr.clearws()
             
-        self._drawPlot(self._lstAxes)
+        for plot in self._lstPlot:
+            plot.drawGR()
+            # logDomainCheck
+            logXinDomain = plot.logXinDomain()
+            logYinDomain = plot.logYinDomain()
+            if logXinDomain != self._logXinDomain:
+                self._logXinDomain = logXinDomain
+                self.emit(QtCore.SIGNAL("logXinDomain(bool)"),
+                          self._logXinDomain)
+            if logYinDomain != self._logYinDomain:
+                self._logYinDomain = logYinDomain
+                self.emit(QtCore.SIGNAL("logYinDomain(bool)"),
+                          self._logYinDomain)
 
-        self._drawTitleAndSubTitle()
-        self._drawXYLabel()
         if update:
             self.update()
             
-    def _logDomainCheck(self):
-        # log x, log y domain check
-        # emit signals on change
-        logXinDomain = True
-        logYinDomain = True
-        for axes in self._lstAxes:
-            logXinDomain = (logXinDomain & axes.isXLogDomain())
-            logYinDomain = (logYinDomain & axes.isYLogDomain())
-        if logXinDomain != self._logXinDomain:
-            self._logXinDomain = logXinDomain
-            self.emit(QtCore.SIGNAL("logXinDomain(bool)"), self._logXinDomain)
-        if logYinDomain != self._logYinDomain:
-            self._logYinDomain = logYinDomain
-            self.emit(QtCore.SIGNAL("logYinDomain(bool)"), self._logYinDomain)
-            
-    def plot(self, *args, **kwargs):
-        axes = PlotAxes(self.viewport)
-        axes.plot(*args, **kwargs)
-        self.addAxes(axes)
+    def addPlot(self, *args, **kwargs):
+        for plot in args:
+            if plot and plot not in self._lstPlot:
+                self._lstPlot.append(plot)
         self.draw(clear=True, update=True)
+        return self
         
-    def addAxes(self, *args, **kwargs):
-        for plotAxes in args:
-            if plotAxes and plotAxes not in self._lstAxes:
-                self._lstAxes.append(plotAxes)
-        self.draw(clear=True)
-
+    def plot(self, *args, **kwargs):
+        plot = Plot()
+        axes = PlotAxes(plot.viewport())
+        axes.plot(*args, **kwargs)
+        plot.addAxes(axes)
+        return self.addPlot(plot)
+        
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
         self._painter.begin(self)
@@ -878,50 +822,6 @@ class InteractiveGRWidget(GRWidget):
 
         self._painter.end()
         
-    def getTitle(self):
-        return self._plotTitle
-    
-    def setTitle(self, title):
-        self._plotTitle = title
-        self.draw(True)
-        self.update()
-                
-    def getSubTitle(self):
-        return self._plotSubTitle
-    
-    def setSubTitle(self, subtitle):
-        self._plotSubTitle = subtitle
-        self.draw(True)
-        self.update()
-    
-    def getXLabel(self):
-        return self._lblX
-    
-    def setXLabel(self, xlabel):
-        self._lblX = xlabel
-        self.draw(True)
-        self.update()
-        
-    def getYLabel(self):
-        return self._lblY
-    
-    def setYLabel(self, ylabel):
-        self._lblY = ylabel
-        self.draw(True)
-        self.update()
-    
-    @property
-    def viewport(self):
-        """get current viewport"""
-        return self._viewport
-    
-    @viewport.setter
-    def viewport(self, viewport):
-        self._viewport = viewport
-    
-    def setviewport(self, xmin, xmax, ymin, ymax):
-        self.viewport = [xmin, xmax, ymin, ymax]
-        
     def getPickMode(self):
         return self._pickMode
     
@@ -930,134 +830,50 @@ class InteractiveGRWidget(GRWidget):
         self.emit(QtCore.SIGNAL("modePick(bool)"), self._pickMode)
         
     def setLogX(self, bool):
-        if bool:
-            for axes in self._lstAxes:
-                if axes.isXLogDomain():
-                    axes.setLogX(bool)
-                else:
-                    win = axes.getWindow()
-                    raise Exception("AXES[%d]: (%d..%d) not in log(x) domain."
-                                    %(axes.getId(), win[0], win[1]))
-        else:
-            for axes in self._lstAxes:
-                axes.setLogX(bool)
+        for plot in self._lstPlot:
+            plot.setLogX(bool)
         self.draw(clear=True)
             
     def setLogY(self, bool):
-        if bool:
-            for axes in self._lstAxes:
-                if axes.isYLogDomain():
-                    axes.setLogY(bool)
-                else:
-                    win = axes.getWindow()
-                    raise Exception("AXES[%d]: (%d..%d) not in log(y) domain."
-                                    %(axes.getId(), win[2], win[3]))
-        else:
-            for axes in self._lstAxes:
-                axes.setLogY(bool)
+        for plot in self._lstPlot:
+            plot.setLogY(bool)
         self.draw(clear=True)
         
     def setGrid(self, bool):
-        for axes in self._lstAxes:
-            axes.setGrid(bool)
+        for plot in self._lstPlot:
+            plot.setGrid(bool)
         self.draw(clear=True)
         
     def reset(self):
-        for axes in self._lstAxes:
-            axes.reset()
+        for plot in self._lstPlot:
+            plot.reset()
         self.draw(clear=True)
         
     def _pick(self, p0, type):
-        window = gr.inqwindow()
-        if self._lstAxes:
-            coord = CoordConverter(self.width(), self.height())
-            points = []
-            lstAxes = []
-            for axes in self._lstAxes:
-                gr.setwindow(*axes.getWindow())
-                coord.setNDC(p0.x, p0.y)
-                wcPick = coord.getWC()
-                for curve in axes.getCurves():
-                    for idx, x in enumerate(curve.x):
-                        if x >= wcPick.x:
-                            break
-                    coord.setWC(x, curve.y[idx])
-                    points.append(coord.getNDC())
-                    lstAxes.append(axes) 
-            # calculate distance between p0 and point on curve
-            norms = map(lambda p: (p0-p).norm(), points)
-            # nearest point
-            idx = norms.index(min(norms))
-            p = points[idx]
-            axes = lstAxes[idx]
-            coord.setNDC(p.x, p.y)
+        for plot in self._lstPlot:
+            coord = plot.pick(p0, self.width(), self.height())
             dcPoint = coord.getDC()
             QtGui.QApplication.sendEvent(self, PickEvent(type,
                                                          self.width(),
                                                          self.height(),
                                                          dcPoint.x,
                                                          dcPoint.y,
-                                                         axes.getWindow()))
-        gr.setwindow(*window)
+                                                         coord.getWindow()))
         
     def _select(self, p0, p1):
-        window = gr.inqwindow()
-        coord = CoordConverter(self.width(), self.height())
-        gr.clearws()
-        for axes in self._lstAxes:
-            win = axes.getWindow()
-            gr.setwindow(*win)
-            p0World = coord.setNDC(p0.x, p0.y).getWC()
-            p1World = coord.setNDC(p1.x, p1.y).getWC()
-            xmin = min(p0World.x, p1World.x)
-            xmax = max(p0World.x, p1World.x)
-            ymin = min(p0World.y, p1World.y)
-            ymax = max(p0World.y, p1World.y)
-            axes.setWindow(xmin, xmax, ymin, ymax)
-        gr.setwindow(*window)
-        self.draw()
+        for plot in self._lstPlot:
+            plot.select(p0, p1, self.width(), self.height())
+        self.draw(True)
         
     def _pan(self, dp):
-        window = gr.inqwindow()
-        coord = CoordConverter(self.width(), self.height())
-        gr.clearws()
-        for axes in self._lstAxes:
-            win = axes.getWindow()
-            gr.setwindow(*win)
-            gr.setscale(0)
-            coord.setWC(0, 0)
-            ndcOrigin = coord.getNDC()
-            coord.setNDC(ndcOrigin.x + dp.x, ndcOrigin.y + dp.y)
-            dpWorld = coord.getWC()
-            win[0] -= dpWorld.x
-            win[1] -= dpWorld.x
-            win[2] -= dpWorld.y
-            win[3] -= dpWorld.y
-            gr.setscale(axes.scale)
-            axes.setWindow(*win)
-        gr.setwindow(*window)
-        self.draw()
+        for plot in self._lstPlot:
+            plot.pan(dp, self.width(), self.height())
+        self.draw(True)
                 
     def _zoom(self, dpercent):
-        window = gr.inqwindow()
-        gr.clearws()
-        for axes in self._lstAxes:
-            win = axes.getWindow()
-            winWidth_2 = (win[1]-win[0])/2
-            winHeight_2 = (win[3]-win[2])/2
-            dx_2 = winWidth_2 - (1+dpercent)*winWidth_2
-            dy_2 = winHeight_2 - (1+dpercent)*winHeight_2
-            win[0] -= dx_2
-            win[1] += dx_2
-            win[2] -= dy_2
-            win[3] += dy_2
-            if Helper.isInWindowDomain(*window):
-                axes.setWindow(*win)
-            else:
-                axes.setWindow(*window)
-                self.reset()
-                break
-        self.draw()
+        for plot in self._lstPlot:
+            plot.zoom(dpercent)
+        self.draw(True)
         
     def mousePress(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
@@ -1116,7 +932,6 @@ class InteractiveGRWidget(GRWidget):
         
 if __name__ == "__main__":
     import sys
-    import pygr
     app = QtGui.QApplication(sys.argv)
     grw = InteractiveGRWidget()
     grw.viewport = [0.1, 0.95, 0.1, 0.9]
@@ -1129,10 +944,7 @@ if __name__ == "__main__":
     x2 = [i * pi2_n for i in range(0, n+1)]
     y2 = map(lambda xi: math.sin(xi), x2)
     
-    grw.addAxes(PlotAxes(grw.viewport).plot(x, y),
-                PlotAxes(grw.viewport).plot(x2, y2))
-#    grw.plot([0, 0], [1, 1], [2,2,2], [3,3,3])
+    grw.addPlot(Plot().addAxes(PlotAxes().plot(x, y),
+                               PlotAxes().plot(x2, y2)))
     
-#    pygr.plot(x, y, bgcolor=163, clear=False, update=False)
-#    gr.clearws()
     sys.exit(app.exec_())

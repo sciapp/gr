@@ -12,7 +12,7 @@ from PyQt4 import uic
 import gr # TESTING shell
 import qtgr
 from qtgr.events import GUIConnector, MouseEvent, PickEvent
-from qtgr import PlotAxes
+from qtgr import Plot, PlotAxes
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
 __date__    = "2013-04-17"
@@ -89,8 +89,8 @@ class MainWindow(QtGui.QMainWindow):
         y2 = x2
 #        self._gr.plot(x, y, x2, y2)
         
-        self._gr.addAxes(PlotAxes(self._gr.viewport).plot(x, y),
-                         PlotAxes(self._gr.viewport, drawX=False).plot(x2, y2))
+        self._gr.addPlot(Plot().addAxes(PlotAxes().plot(x, y),
+                                        PlotAxes(drawX=False).plot(x2, y2)))
         
     def save(self):
         qpath = QtGui.QFileDialog.getSaveFileName(self, filter=self._saveTypes,
