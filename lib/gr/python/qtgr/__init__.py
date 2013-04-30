@@ -803,7 +803,7 @@ class InteractiveGRWidget(GRWidget):
             if plot and plot not in self._lstPlot:
                 self._lstPlot.append(plot)
         self.draw(clear=True, update=True)
-        return self
+        return self._lstPlot
         
     def plot(self, *args, **kwargs):
         plot = Plot()
