@@ -33,12 +33,6 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
 
-#os.environ["CFLAGS"] = "-fPIC"
-#os.environ["LDFLAGS"] = "-L/usr/X11R6/lib -dynamiclib"
-
-#DISTUTILS_USE_SDK 
-os.environ["MACOSX_DEPLOYMENT_TARGET"] = "10.8"
-
 _gks_src = ["gks.c", "gksforbnd.c", "font.c", "afm.c", "util.c", "ft.c", "dl.c",
             "malloc.c", "error.c", "mf.c", "wiss.c", "cgm.c", "win.c", "mac.c",
             "ps.c", "pdf.c", "x11.c", "socket.c", "plugin.c", "compress.c",
@@ -46,14 +40,13 @@ _gks_src = ["gks.c", "gksforbnd.c", "font.c", "afm.c", "util.c", "ft.c", "dl.c",
 
 _gks_src_path = map(lambda p: os.path.join("lib/gks", p), _gks_src)
 
-_gks_includes = ["/usr/X11R6/include"]
-
 if sys.platform == "darwin":
+    os.environ["MACOSX_DEPLOYMENT_TARGET"] = "10.6"
     _gks_xftincludes = ["/usr/X11/include/freetype2"]
-#    os.environ["CFLAGS"] += " -fpascal-strings"
 else:
     _gks_xftincludes = ["/usr/include/freetype2"]
-    
+
+_gks_includes = ["/usr/X11R6/include"]    
 _gks_include_dirs = list(_gks_includes)
 _gks_include_dirs.extend(_gks_xftincludes)
 
@@ -67,6 +60,16 @@ _gks_libraries = list(_gks_libs)
 _gks_libraries.extend(_gks_zlibs)
 _gks_libraries.extend(_gks_xlibs)
 
+_gksExt = Extension("libGKS", _gks_src_path,
+                    define_macros=[("HAVE_ZLIB", ), ("XFT", ),
+                                   ("GRDIR", "\"%s\""
+                                    %os.getenv("GRDIR", "/usr/local/gr"))],
+                    include_dirs=_gks_include_dirs,
+                    libraries=_gks_libraries,
+                    # next line needed for mac?
+#                    extra_compile_args=["-fpascal-strings"],
+                    extra_link_args=["-L/usr/X11R6/lib"])
+
 setup(name="gr",
       version=__version__,
       description="GR, a universal framework for visualization applications",
@@ -77,17 +80,4 @@ setup(name="gr",
       package_dir={'': "lib/gr/python"},
       py_modules=["gr", "pygr"],
       packages=["qtgr", "qtgr.events"],
-      ext_modules=[
-                   Extension("libGKS", _gks_src_path,
-                             define_macros=[("HAVE_ZLIB", ), ("XFT", ),
-                                            ("GRDIR", "\"%s\""
-                                             %os.getenv("GRDIR",
-                                                        "/usr/local/gr"))],
-                             include_dirs=_gks_include_dirs,
-                             libraries=_gks_libraries,
-#                             extra_compile_args=["-Wimplicit-function-declaration"],
-                             extra_link_args=["-L/usr/X11R6/lib"]
-                             )
-                   
-                   ]
-      )
+      ext_modules=[_gksExt])
