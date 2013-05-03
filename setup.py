@@ -48,7 +48,8 @@ _gks_src = ["gks.c", "gksforbnd.c", "font.c", "afm.c", "util.c", "ft.c", "dl.c",
             "io.c"]
 _gks_plugin_src = ["font.cxx", "afm.cxx", "util.cxx", "dl.cxx",
                    "malloc.cxx", "error.cxx", "io.cxx"]
-_gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "svgplugin.cxx"]
+_gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "svgplugin.cxx",
+                "figplugin.cxx", "gsplugin.cxx"]
 
 _gks_src_path = map(lambda p: os.path.join("lib", "gks", p), _gks_src)
 _gks_plugin_src_path = map(lambda p: os.path.join("lib", "gks", "plugin", p),
@@ -83,6 +84,7 @@ _gks_zlibs = ["z"]
 
 _gks_plugin_libs = ["c", "m"]
 _gks_plugin_xlibs = ["Xt", "X11"]
+_gks_plugin_gslibs = ["gs"]
 
 _pnglibs = ["png"]
 
@@ -165,6 +167,25 @@ _gksSvgExt = Extension("svgplugin", _plugins_path["svgplugin.cxx"],
                        include_dirs=_gks_plugin_includes,
                        libraries=_gks_svg_libraries)
 _ext_modules.append(_gksSvgExt)
+
+_gks_fig_libraries = list(_pnglibs)
+_gks_fig_libraries.extend(_gks_zlibs)
+_gksFigExt = Extension("figplugin", _plugins_path["figplugin.cxx"],
+                       define_macros=[_gr_macro],
+                       include_dirs=_gks_plugin_includes,
+                       libraries=_gks_fig_libraries)
+_ext_modules.append(_gksFigExt)
+
+_gks_gs_includes = list(_gks_plugin_includes)
+_gks_gs_includes.append("/usr/local/include/ghostscript")
+_gks_gs_libraries = list(_gks_plugin_xlibs)
+_gks_gs_libraries.extend(_gks_plugin_gslibs)
+_gksGsExt = Extension("gsplugin", _plugins_path["gsplugin.cxx"],
+                       define_macros=[_gr_macro],
+                       include_dirs=_gks_gs_includes,
+                       libraries=_gks_gs_libraries,
+                       extra_link_args=["-L/usr/X11R6/lib"])
+_ext_modules.append(_gksGsExt)
 
 setup(name="gr",
       version=__version__,
