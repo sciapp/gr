@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from distutils.core import setup, Extension
-from subprocess import Popen, PIPE
-import shlex
-import os
 import sys
+import os
+import shlex
+import re
+from distutils.core import setup, Extension
+from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
 __date__    = "2013-04-12"
@@ -39,13 +40,15 @@ _grdir = os.getenv("GRDIR", "/usr/local/gr")
 _wxconfig = os.getenv("WX_CONFIG",
                       Popen(["which", "wx-config"],
                             stdout=PIPE).communicate()[0].rstrip())
+_qtdir = os.getenv("QTDIR", None)
+
 _gks_src = ["gks.c", "gksforbnd.c", "font.c", "afm.c", "util.c", "ft.c", "dl.c",
             "malloc.c", "error.c", "mf.c", "wiss.c", "cgm.c", "win.c", "mac.c",
             "ps.c", "pdf.c", "x11.c", "socket.c", "plugin.c", "compress.c",
             "io.c"]
 _gks_plugin_src = ["font.cxx", "afm.cxx", "util.cxx", "dl.cxx",
                    "malloc.cxx", "error.cxx", "io.cxx"]
-_gks_plugins = ["wxplugin.cxx"]
+_gks_plugins = ["wxplugin.cxx", "qtplugin.cxx"]
 
 _gks_src_path = map(lambda p: os.path.join("lib", "gks", p), _gks_src)
 _gks_plugin_src_path = map(lambda p: os.path.join("lib", "gks", "plugin", p),
@@ -115,6 +118,45 @@ if _wxconfig:
                           extra_compile_args=_wx_includes,
                           extra_link_args=_extra_link_args)
     _ext_modules.append(_gksWxExt)
+    
+if _qtdir:
+    _qmake = os.path.join(_qtdir, "bin", "qmake")
+    _qtversion = Popen([_qmake, "-v"], stdout=PIPE, stderr=STDOUT).communicate()[0].rstrip()
+    match = re.search("\d\.\d\.\d", _qtversion)
+    if match:
+        _qtversion = map(lambda s: int(s), match.group(0).split('.'))
+        if _qtversion[0] < 4:
+            if "clean" not in sys.argv:
+                print >>sys.stderr, ("QTDIR points to old Qt version %s."
+                                     %'.'.join(map(lambda i: str(i),
+                                                   _qtversion)))
+            
+                inp = raw_input("Do you want to continue? [y/n]: ")
+                if inp != 'y':
+                    print >>sys.stderr, "exiting"
+                    print >>sys.stderr, """
+Please retry with a valid QTDIR setting, e.g.
+/usr/lib64/qt4    (Red Hat)
+/usr/share/qt4    (Ubuntu)
+/usr/local/qt4"""
+                    sys.exit(-1)
+        # build
+        _qt_include_dirs = [os.path.join(_qtdir, "include")]
+        _gks_qt_includes = list(_gks_plugin_includes)
+        _gks_qt_includes.extend(_qt_include_dirs)
+        _gks_qt_libraries = ["QtGui", "QtCore"]
+        _gksQtExt = Extension("qtplugin", _plugins_path["qtplugin.cxx"],
+                              define_macros=[_gr_macro],
+                              include_dirs=_gks_qt_includes,
+                              libraries=_gks_qt_libraries,
+                              extra_link_args=["-L/usr/X11R6/lib",
+                                               "-L%s" %os.path.join(_qtdir,
+                                                                    "lib")])
+        _ext_modules.append(_gksQtExt)
+    else:
+        print >>sys.stderr, "Unable to obtain Qt version number."
+else:
+    print >>sys.stderr, "QTDIR not set. Build without Qt4 support."
 
 setup(name="gr",
       version=__version__,
