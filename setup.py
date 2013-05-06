@@ -5,6 +5,7 @@ import sys
 import os
 import shlex
 import re
+import tempfile
 from distutils.core import setup, Extension
 from subprocess import Popen, PIPE, STDOUT
 
@@ -37,6 +38,7 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
 """
 
 _grdir = os.getenv("GRDIR", "/usr/local/gr")
+_cc = os.getenv("CC", "cc")
 _wxconfig = os.getenv("WX_CONFIG",
                       Popen(["which", "wx-config"],
                             stdout=PIPE).communicate()[0].rstrip())
@@ -99,8 +101,6 @@ _gksExt = Extension("libGKS", _gks_src_path,
                     define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                     include_dirs=_gks_include_dirs,
                     libraries=_gks_libraries,
-                    # next line needed for mac?
-#                    extra_compile_args=["-fpascal-strings"],
                     extra_link_args=["-L/usr/X11R6/lib"])
 
 _ext_modules = [_gksExt]
@@ -161,6 +161,55 @@ Please retry with a valid QTDIR setting, e.g.
 else:
     print >>sys.stderr, "QTDIR not set. Build without Qt4 support."
     
+# check for ghostscript support
+if "clean" not in sys.argv:
+    (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
+    (fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
+    os.write(fd, """#include <stdio.h>
+#include <stdlib.h>
+#include <ghostscript/iapi.h>
+
+int main()
+{
+  gsapi_revision_t r;
+  if (gsapi_revision(&r, sizeof(gsapi_revision_t)) == 0)
+    fprintf(stderr, \"%ld\\n\", r.revision);
+  exit(0);
+}
+
+""")
+    os.close(fd)
+    if sys.platform == "darwin":
+        _gscc = Popen([_cc, "-o%s" %tmpout, tmpsrc, "-lgs", "-L/usr/X11/lib",
+                       "-lXt", "-lX11", "-liconv"], stdout=PIPE, stderr=STDOUT)
+    else:
+        _gscc = Popen([_cc, "-o %s" %tmpout, tmpsrc, "-lgs"],
+                      stdout=PIPE, stderr=STDOUT)
+    _gscc.communicate()
+    try:
+        os.remove(tmpsrc)
+        os.remove(tmpout)
+    except OSError:
+        pass
+    if _gscc.returncode == 0:
+        _gks_gs_includes = list(_gks_plugin_includes)
+        _gks_gs_includes.append("/usr/local/include/ghostscript")
+        _gks_gs_libraries = list(_gks_plugin_xlibs)
+        _gks_gs_libraries.extend(_gks_plugin_gslibs)
+        _gksGsExt = Extension("gsplugin", _plugins_path["gsplugin.cxx"],
+                               define_macros=[_gr_macro],
+                               include_dirs=_gks_gs_includes,
+                               libraries=_gks_gs_libraries,
+                               extra_link_args=["-L/usr/X11R6/lib"])
+        _ext_modules.append(_gksGsExt)
+    else:
+        print >>sys.stderr, ("Ghostscript API not found. " +
+                             "Build without Ghostscript support.")
+        inp = raw_input("Do you want to continue? [y/n]: ")
+        if inp != 'y':
+            print >>sys.stderr, "exiting"
+            sys.exit(-2)
+    
 _gks_svg_libraries = list(_pnglibs)
 _gks_svg_libraries.extend(_gks_zlibs)
 _gksSvgExt = Extension("svgplugin", _plugins_path["svgplugin.cxx"],
@@ -176,17 +225,6 @@ _gksFigExt = Extension("figplugin", _plugins_path["figplugin.cxx"],
                        include_dirs=_gks_plugin_includes,
                        libraries=_gks_fig_libraries)
 _ext_modules.append(_gksFigExt)
-
-_gks_gs_includes = list(_gks_plugin_includes)
-_gks_gs_includes.append("/usr/local/include/ghostscript")
-_gks_gs_libraries = list(_gks_plugin_xlibs)
-_gks_gs_libraries.extend(_gks_plugin_gslibs)
-_gksGsExt = Extension("gsplugin", _plugins_path["gsplugin.cxx"],
-                       define_macros=[_gr_macro],
-                       include_dirs=_gks_gs_includes,
-                       libraries=_gks_gs_libraries,
-                       extra_link_args=["-L/usr/X11R6/lib"])
-_ext_modules.append(_gksGsExt)
 
 _gksWmfExt = Extension("wmfplugin", _plugins_path["wmfplugin.cxx"],
                        define_macros=[_gr_macro],
