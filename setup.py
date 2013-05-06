@@ -328,6 +328,19 @@ _grExt = Extension("libGR", _gr_src_path,
                    extra_link_args=_gr_extra_link_args)
 _ext_modules.append(_grExt)
 
+#libGR3
+_gr3_include_dirs = list(_gr_include_dirs)
+_gr3_include_dirs.append(os.path.join("lib", "gr"))
+_gr3_libraries = list(_gr_libraries)
+_gr3_libraries.append("GL")
+_gr3_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
+_gr3Ext = Extension("libGR3", _gr3_src_path,
+                    define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
+                    include_dirs=_gr3_include_dirs,
+                    libraries=_gr3_libraries,
+                    extra_link_args=_gr3_extra_link_args)
+_ext_modules.append(_gr3Ext)
+
 setup(name="gr",
       version=__version__,
       description="GR, a universal framework for visualization applications",
