@@ -49,7 +49,7 @@ _gks_src = ["gks.c", "gksforbnd.c", "font.c", "afm.c", "util.c", "ft.c", "dl.c",
 _gks_plugin_src = ["font.cxx", "afm.cxx", "util.cxx", "dl.cxx",
                    "malloc.cxx", "error.cxx", "io.cxx"]
 _gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "svgplugin.cxx",
-                "figplugin.cxx", "gsplugin.cxx"]
+                "figplugin.cxx", "gsplugin.cxx", "wmfplugin.cxx"]
 
 _gks_src_path = map(lambda p: os.path.join("lib", "gks", p), _gks_src)
 _gks_plugin_src_path = map(lambda p: os.path.join("lib", "gks", "plugin", p),
@@ -186,6 +186,11 @@ _gksGsExt = Extension("gsplugin", _plugins_path["gsplugin.cxx"],
                        libraries=_gks_gs_libraries,
                        extra_link_args=["-L/usr/X11R6/lib"])
 _ext_modules.append(_gksGsExt)
+
+_gksWmfExt = Extension("wmfplugin", _plugins_path["wmfplugin.cxx"],
+                       define_macros=[_gr_macro],
+                       include_dirs=_gks_plugin_includes)
+_ext_modules.append(_gksWmfExt)
 
 setup(name="gr",
       version=__version__,
