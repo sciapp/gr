@@ -62,20 +62,10 @@ _gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "gtkplugin.cxx",
                 "quartzplugin.m", "svgplugin.cxx", "figplugin.cxx",
                 "gsplugin.cxx", "wmfplugin.cxx"]
 
-_gks_src_path = map(lambda p: os.path.join("lib", "gks", p), _gks_src)
-_gks_plugin_src_path = map(lambda p: os.path.join("lib", "gks", "plugin", p),
-                           _gks_plugin_src)
-
-_gr_src = ["gr.c", "text.c", "contour.c", "spline.c", "gridit.c", "strlib.c",
-           "io.c", "image.c", "md5.c", "import.c", "grforbnd.c"]
-_gr_src_path = map(lambda p: os.path.join("lib", "gr", p), _gr_src)
-
 _libpng_src = ["png.c", "pngerror.c", "pngget.c", "pngmem.c", "pngpread.c", 
                "pngread.c", "pngrio.c", "pngrtran.c", "pngrutil.c", "pngset.c",
                "pngtrans.c", "pngwio.c", "pngwrite.c", "pngwtran.c",
                "pngwutil.c"]
-_libpng_src_path = map(lambda p: os.path.join("3rdparty", "png", p),
-                       _libpng_src)
 
 _libjpeg_src = ["jaricom.c", "jcapimin.c", "jcapistd.c", "jcarith.c",
                 "jccoefct.c", "jccolor.c", "jcdctmgr.c", "jchuff.c", "jcinit.c",
@@ -88,15 +78,33 @@ _libjpeg_src = ["jaricom.c", "jcapimin.c", "jcapistd.c", "jcarith.c",
                 "jdtrans.c", "jerror.c", "jfdctflt.c", "jfdctfst.c",
                 "jfdctint.c", "jidctflt.c", "jidctfst.c", "jidctint.c",
                 "jmemmgr.c", "jmemnobs.c", "jquant1.c", "jquant2.c", "jutils.c"]
-_libjpeg_src_path = map(lambda p: os.path.join("3rdparty", "jpeg", p),
-                       _libjpeg_src)
+
+_gr_src = ["gr.c", "text.c", "contour.c", "spline.c", "gridit.c", "strlib.c",
+           "io.c", "image.c", "md5.c", "import.c", "grforbnd.c"]
+
+_gr3_src = ["gr3_convenience.c", "gr3_html.c", "gr3_povray.c", "gr3_png.c",
+            "gr3_jpeg.c", "gr3_gr.c"]
 
 if sys.platform == "darwin":
     os.environ["MACOSX_DEPLOYMENT_TARGET"] = "10.6"
     os.environ["ARCHFLAGS"] = os.getenv("ARCHFLAGS", "-arch x86_64")
     _gks_xftincludes = ["/usr/X11/include/freetype2"]
-else:
+    _gr3_src.insert(0, "gr3_cgl.c")
+elif "linux" in sys.platform:
     _gks_xftincludes = ["/usr/include/freetype2"]
+    _gr3_src.insert(0, "gr3_glx.c")
+elif sys.platform == "win32":
+    _gr3_src.insert(0, "gr3_win.c")
+
+_gks_src_path = map(lambda p: os.path.join("lib", "gks", p), _gks_src)
+_gks_plugin_src_path = map(lambda p: os.path.join("lib", "gks", "plugin", p),
+                           _gks_plugin_src)
+_libpng_src_path = map(lambda p: os.path.join("3rdparty", "png", p),
+                       _libpng_src)
+_libjpeg_src_path = map(lambda p: os.path.join("3rdparty", "jpeg", p),
+                       _libjpeg_src)
+_gr_src_path = map(lambda p: os.path.join("lib", "gr", p), _gr_src)
+_gr3_src_path = map(lambda p: os.path.join("lib", "gr3", p), _gr3_src)
     
 _plugins_path = {}
 for plugin_src in _gks_plugins:
