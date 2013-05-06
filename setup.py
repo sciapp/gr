@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import sysconfig
 import os
 import shlex
 import re
 import tempfile
 from distutils.core import setup, Extension
+from distutils.ccompiler import new_compiler
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -37,6 +39,7 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
 
+_GTK_PACKAGE = "gtk+-2.0"
 _grdir = os.getenv("GRDIR", "/usr/local/gr")
 _cc = os.getenv("CC", "cc")
 _wxconfig = os.getenv("WX_CONFIG",
@@ -44,19 +47,49 @@ _wxconfig = os.getenv("WX_CONFIG",
                             stdout=PIPE).communicate()[0].rstrip())
 _qtdir = os.getenv("QTDIR", None)
 
+_build_3rdparty = os.path.join("build",
+                               "3rdparty.%s-%d.%d" %(sysconfig.get_platform(),
+                                                     sys.version_info.major,
+                                                     sys.version_info.minor))
+
 _gks_src = ["gks.c", "gksforbnd.c", "font.c", "afm.c", "util.c", "ft.c", "dl.c",
             "malloc.c", "error.c", "mf.c", "wiss.c", "cgm.c", "win.c", "mac.c",
             "ps.c", "pdf.c", "x11.c", "socket.c", "plugin.c", "compress.c",
             "io.c"]
 _gks_plugin_src = ["font.cxx", "afm.cxx", "util.cxx", "dl.cxx",
                    "malloc.cxx", "error.cxx", "io.cxx"]
-_gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "svgplugin.cxx",
-                "figplugin.cxx", "gsplugin.cxx", "wmfplugin.cxx",
-                "quartzplugin.m"]
+_gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "gtkplugin.cxx",
+                "quartzplugin.m", "svgplugin.cxx", "figplugin.cxx",
+                "gsplugin.cxx", "wmfplugin.cxx"]
 
 _gks_src_path = map(lambda p: os.path.join("lib", "gks", p), _gks_src)
 _gks_plugin_src_path = map(lambda p: os.path.join("lib", "gks", "plugin", p),
                            _gks_plugin_src)
+
+_gr_src = ["gr.c", "text.c", "contour.c", "spline.c", "gridit.c", "strlib.c",
+           "io.c", "image.c", "md5.c", "import.c", "grforbnd.c"]
+_gr_src_path = map(lambda p: os.path.join("lib", "gr", p), _gr_src)
+
+_libpng_src = ["png.c", "pngerror.c", "pngget.c", "pngmem.c", "pngpread.c", 
+               "pngread.c", "pngrio.c", "pngrtran.c", "pngrutil.c", "pngset.c",
+               "pngtrans.c", "pngwio.c", "pngwrite.c", "pngwtran.c",
+               "pngwutil.c"]
+_libpng_src_path = map(lambda p: os.path.join("3rdparty", "png", p),
+                       _libpng_src)
+
+_libjpeg_src = ["jaricom.c", "jcapimin.c", "jcapistd.c", "jcarith.c",
+                "jccoefct.c", "jccolor.c", "jcdctmgr.c", "jchuff.c", "jcinit.c",
+                "jcmainct.c", "jcmarker.c", "jcmaster.c", "jcomapi.c",
+                "jcparam.c", "jcprepct.c", "jcsample.c", "jctrans.c",
+                "jdapimin.c", "jdapistd.c", "jdarith.c", "jdatadst.c",
+                "jdatasrc.c", "jdcoefct.c", "jdcolor.c", "jddctmgr.c",
+                "jdhuff.c", "jdinput.c", "jdmainct.c", "jdmarker.c",
+                "jdmaster.c", "jdmerge.c", "jdpostct.c", "jdsample.c",
+                "jdtrans.c", "jerror.c", "jfdctflt.c", "jfdctfst.c",
+                "jfdctint.c", "jidctflt.c", "jidctfst.c", "jidctint.c",
+                "jmemmgr.c", "jmemnobs.c", "jquant1.c", "jquant2.c", "jutils.c"]
+_libjpeg_src_path = map(lambda p: os.path.join("3rdparty", "jpeg", p),
+                       _libjpeg_src)
 
 if sys.platform == "darwin":
     os.environ["MACOSX_DEPLOYMENT_TARGET"] = "10.6"
@@ -90,6 +123,7 @@ _gks_plugin_xlibs = ["Xt", "X11"]
 _gks_plugin_gslibs = ["gs"]
 
 _pnglibs = ["png"]
+#_jpeglibs = ["jpeg"]
 
 _gks_libraries = list(_gks_libs)
 _gks_libraries.extend(_gks_zlibs)
@@ -209,6 +243,18 @@ int main()
         if inp != 'y':
             print >>sys.stderr, "exiting"
             sys.exit(-2)
+            
+    # check for GTK PACKAGE support
+    _gtk_cflags = shlex.split(Popen(["pkg-config", _GTK_PACKAGE, "--cflags"],
+                                    stdout=PIPE,
+                                    stderr=PIPE).communicate()[0].rstrip())
+    if _gtk_cflags:
+        _gksGtkExt = Extension("gtkplugin", _plugins_path["gtkplugin.cxx"],
+                               define_macros=[_gr_macro],
+                               include_dirs=_gks_plugin_includes,
+                               extra_compile_args=_gtk_cflags,
+                               extra_link_args=["-L/usr/X11R6/lib"])
+        _ext_modules.append(_gksGtkExt)
     
 _gks_svg_libraries = list(_pnglibs)
 _gks_svg_libraries.extend(_gks_zlibs)
@@ -240,6 +286,39 @@ if sys.platform == "darwin":
                                                "-framework " +
                                                "ApplicationServices"])
     _ext_modules.append(_gksQuartzExt)
+    
+# prerequisites: build static 3rdparty libraries
+_libpng = os.path.join(_build_3rdparty, "libpng.a")
+_libjpeg = os.path.join(_build_3rdparty, "libjpeg.a")
+if "clean" not in sys.argv:
+    compiler = new_compiler()
+    if not os.path.isfile(_libpng):
+        obj = compiler.compile(_libpng_src_path, extra_preargs=["-fPIC"])
+        compiler.create_static_lib(obj, "png", output_dir=_build_3rdparty)
+    if not os.path.isfile(_libjpeg):  
+        obj = compiler.compile(_libjpeg_src_path, extra_preargs=["-fPIC"])
+        compiler.create_static_lib(obj, "jpeg", output_dir=_build_3rdparty)
+else:
+    try:
+        map(lambda p: os.remove(os.path.join(_build_3rdparty, p)),
+            os.listdir(_build_3rdparty))
+        os.rmdir(_build_3rdparty)
+    except OSError:
+        pass
+
+# libGR
+_gr_include_dirs = list(_gks_xftincludes)
+_gr_include_dirs.append(os.path.join("lib", "gks"))
+_gr_include_dirs.append(os.path.join("3rdparty", "png"))
+_gr_include_dirs.append(os.path.join("3rdparty", "jpeg"))
+_gr_libraries = list(_gks_libraries)
+_gr_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
+_grExt = Extension("libGR", _gr_src_path,
+                   define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
+                   include_dirs=_gr_include_dirs,
+                   libraries=_gr_libraries,
+                   extra_link_args=_gr_extra_link_args)
+_ext_modules.append(_grExt)
 
 setup(name="gr",
       version=__version__,
