@@ -49,7 +49,8 @@ _gks_src = ["gks.c", "gksforbnd.c", "font.c", "afm.c", "util.c", "ft.c", "dl.c",
 _gks_plugin_src = ["font.cxx", "afm.cxx", "util.cxx", "dl.cxx",
                    "malloc.cxx", "error.cxx", "io.cxx"]
 _gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "svgplugin.cxx",
-                "figplugin.cxx", "gsplugin.cxx", "wmfplugin.cxx"]
+                "figplugin.cxx", "gsplugin.cxx", "wmfplugin.cxx",
+                "quartzplugin.m"]
 
 _gks_src_path = map(lambda p: os.path.join("lib", "gks", p), _gks_src)
 _gks_plugin_src_path = map(lambda p: os.path.join("lib", "gks", "plugin", p),
@@ -191,6 +192,16 @@ _gksWmfExt = Extension("wmfplugin", _plugins_path["wmfplugin.cxx"],
                        define_macros=[_gr_macro],
                        include_dirs=_gks_plugin_includes)
 _ext_modules.append(_gksWmfExt)
+
+if sys.platform == "darwin":
+    _gksQuartzExt = Extension("quartzplugin", _plugins_path["quartzplugin.m"],
+                              define_macros=[_gr_macro],
+                              include_dirs=_gks_plugin_includes,
+                              libraries=["objc"],
+                              extra_link_args=["-framework Foundation",
+                                               "-framework " +
+                                               "ApplicationServices"])
+    _ext_modules.append(_gksQuartzExt)
 
 setup(name="gr",
       version=__version__,
