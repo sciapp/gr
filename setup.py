@@ -9,6 +9,7 @@ import re
 import tempfile
 from distutils.core import setup, Extension
 from distutils.ccompiler import new_compiler
+from distutils.sysconfig import get_config_var
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -47,6 +48,10 @@ _wxconfig = os.getenv("WX_CONFIG",
                             stdout=PIPE).communicate()[0].rstrip())
 _qtdir = os.getenv("QTDIR", None)
 
+_build_lib = os.path.join("build",
+                          "lib.%s-%d.%d" %(sysconfig.get_platform(),
+                                           sys.version_info.major,
+                                           sys.version_info.minor))
 _build_3rdparty = os.path.join("build",
                                "3rdparty.%s-%d.%d" %(sysconfig.get_platform(),
                                                      sys.version_info.major,
@@ -88,6 +93,8 @@ _gr3_src = ["gr3_convenience.c", "gr3_html.c", "gr3_povray.c", "gr3_png.c",
 if sys.platform == "darwin":
     os.environ["MACOSX_DEPLOYMENT_TARGET"] = "10.6"
     os.environ["ARCHFLAGS"] = os.getenv("ARCHFLAGS", "-arch x86_64")
+    os.environ["LDSHARED"] = get_config_var("LDSHARED").replace("-bundle",
+                                                                "-dynamiclib")
     _gks_xftincludes = ["/usr/X11/include/freetype2"]
     _gr3_src.insert(0, "gr3_cgl.c")
 elif "linux" in sys.platform:
@@ -320,11 +327,14 @@ _gr_include_dirs.append(os.path.join("lib", "gks"))
 _gr_include_dirs.append(os.path.join("3rdparty", "png"))
 _gr_include_dirs.append(os.path.join("3rdparty", "jpeg"))
 _gr_libraries = list(_gks_libraries)
+_gr_libraries.append("GKS")
 _gr_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
+#_gr_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
 _grExt = Extension("libGR", _gr_src_path,
                    define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                    include_dirs=_gr_include_dirs,
                    libraries=_gr_libraries,
+                   library_dirs=[_build_lib],
                    extra_link_args=_gr_extra_link_args)
 _ext_modules.append(_grExt)
 
@@ -333,11 +343,13 @@ _gr3_include_dirs = list(_gr_include_dirs)
 _gr3_include_dirs.append(os.path.join("lib", "gr"))
 _gr3_libraries = list(_gr_libraries)
 _gr3_libraries.append("GL")
+_gr3_libraries.append("GR")
 _gr3_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
 _gr3Ext = Extension("libGR3", _gr3_src_path,
                     define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                     include_dirs=_gr3_include_dirs,
                     libraries=_gr3_libraries,
+                    library_dirs=[_build_lib],
                     extra_link_args=_gr3_extra_link_args)
 _ext_modules.append(_gr3Ext)
 

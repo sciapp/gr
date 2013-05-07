@@ -469,7 +469,8 @@ if platform == 'win32':
   libext = ".dll"
 else:
   libext = ".so"        
-__gr = CDLL(os.path.join(os.path.dirname(__file__), "libGR" + libext))
+__gr = CDLL(os.path.realpath(os.path.join(os.path.dirname(__file__),
+                                          "libGR" + libext)))
 
 __gr.gr_opengks.argtypes = [];
 __gr.gr_closegks.argtypes = [];
