@@ -312,8 +312,8 @@ if sys.platform == "darwin":
                               define_macros=[_gr_macro],
                               include_dirs=_gks_plugin_includes,
                               libraries=["objc"],
-                              extra_link_args=["-framework Foundation",
-                                               "-framework " +
+                              extra_link_args=["-framework", "Foundation",
+                                               "-framework",
                                                "ApplicationServices"])
     _ext_modules.append(_gksQuartzExt)
     
@@ -360,16 +360,16 @@ _ext_modules.append(_grExt)
 #libGR3
 _gr3_include_dirs = list(_gr_include_dirs)
 _gr3_include_dirs.append(os.path.join("lib", "gr"))
-#_gr3_libraries = list(_gr_libraries)
-_gr3_libraries = []
+_gr3_libraries = list(_gr_libraries)
+#_gr3_libraries = []
 _gr3_libraries.append("GR")
 _gr3_extra_link_args = ["-L/usr/X11R6/lib"]
 _gr3_extra_link_args.extend(_platform_extra_link_args)
 _gr3_extra_link_args.append(_libjpeg)
 _gr3_extra_link_args.append(_libpng)
 if sys.platform == "darwin":
-    _gr3_extra_link_args.append("-framework OpenGL")
-    _gr3_extra_link_args.append("-framework Cocoa")
+    framework = ["-framework", "OpenGL", "-framework", "Cocoa"]
+    _gr3_extra_link_args.extend(framework)
     _gr3_extra_link_args.append("-Wl,-install_name,@rpath/libGR3.so")
 else:
     _gr3_libraries.append("GL")
@@ -393,7 +393,3 @@ setup(name="gr",
       py_modules=["gr", "pygr"],
       packages=["gr3", "qtgr", "qtgr.events"],
       ext_modules=_ext_modules)
-
-print
-print
-print _gr3_libraries
