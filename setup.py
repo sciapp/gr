@@ -147,8 +147,9 @@ _gks_libraries.extend(_gks_xlibs)
 _gr_macro = ("GRDIR", "\"%s\"" %_grdir)
 
 _gks_extra_link_args = ["-L/usr/X11R6/lib"]
-#if sys.platform == "darwin":
-#    _gks_extra_link_args.append("-Wl,install_name=$ORIGIN/libGKS.so")
+if sys.platform == "darwin":
+    _gks_extra_link_args.append("-Wl,-rpath,@loader_path/.")
+    _gks_extra_link_args.append("-Wl,-install_name,@rpath/libGKS.so")
 
 _gksExt = Extension("libGKS", _gks_src_path,
                     define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
@@ -336,12 +337,10 @@ _gr_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
 if "linux" in sys.platform:
     _gr_extra_link_args.append("-Wl,-rpath,$ORIGIN")
 elif sys.platform == "darwin":
-    _gr_extra_link_args.append("-Wl,-rpath,$ORIGIN")
-#    _gr_extra_link_args.append("-Wl,-rpath,@loader_path/.")
-#    _gr_extra_link_args.append("install_name=@rpath/libGR.so")
+    _gr_extra_link_args.append("-Wl,-rpath,@loader_path/.")
+    _gr_extra_link_args.append("-Wl,-install_name,@rpath/libGR.so")
 elif sys.platform == "solaris":
     _gr_extra_link_args.append("-R$ORIGIN")
-#_gr_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
 _grExt = Extension("libGR", _gr_src_path,
                    define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                    include_dirs=_gr_include_dirs,
