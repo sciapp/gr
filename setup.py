@@ -87,8 +87,8 @@ _libjpeg_src = ["jaricom.c", "jcapimin.c", "jcapistd.c", "jcarith.c",
 _gr_src = ["gr.c", "text.c", "contour.c", "spline.c", "gridit.c", "strlib.c",
            "io.c", "image.c", "md5.c", "import.c", "grforbnd.c"]
 
-_gr3_src = ["gr3_convenience.c", "gr3_html.c", "gr3_povray.c", "gr3_png.c",
-            "gr3_jpeg.c", "gr3_gr.c"]
+_gr3_src = ["gr3.c", "gr3_convenience.c", "gr3_html.c", "gr3_povray.c",
+            "gr3_png.c", "gr3_jpeg.c", "gr3_gr.c"]
 
 if sys.platform == "darwin":
     os.environ["MACOSX_DEPLOYMENT_TARGET"] = "10.6"
@@ -363,8 +363,11 @@ _gr3_include_dirs.append(os.path.join("lib", "gr"))
 _gr3_libraries = list(_gr_libraries)
 _gr3_libraries.append("GL")
 _gr3_libraries.append("GR")
-_gr3_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
+_gr3_libraries.append("GKS")
+_gr3_extra_link_args = ["-L/usr/X11R6/lib"]
 _gr3_extra_link_args.extend(_platform_extra_link_args)
+_gr3_extra_link_args.append(_libjpeg)
+_gr3_extra_link_args.append(_libpng)
 if sys.platform == "darwin":
     _gr3_extra_link_args.append("-Wl,-install_name,@rpath/libGR3.so")
 _gr3Ext = Extension("libGR3", _gr3_src_path,
