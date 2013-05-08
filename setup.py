@@ -87,8 +87,8 @@ _libjpeg_src = ["jaricom.c", "jcapimin.c", "jcapistd.c", "jcarith.c",
 _gr_src = ["gr.c", "text.c", "contour.c", "spline.c", "gridit.c", "strlib.c",
            "io.c", "image.c", "md5.c", "import.c", "grforbnd.c"]
 
-_gr3_src = ["gr3_convenience.c", "gr3_html.c", "gr3_povray.c", "gr3_png.c",
-            "gr3_jpeg.c", "gr3_gr.c"]
+_gr3_src = ["gr3.c", "gr3_convenience.c", "gr3_html.c", "gr3_povray.c",
+            "gr3_png.c", "gr3_jpeg.c", "gr3_gr.c"]
 
 if sys.platform == "darwin":
     os.environ["MACOSX_DEPLOYMENT_TARGET"] = "10.6"
@@ -96,12 +96,24 @@ if sys.platform == "darwin":
     os.environ["LDSHARED"] = get_config_var("LDSHARED").replace("-bundle",
                                                                 "-dynamiclib")
     _gks_xftincludes = ["/usr/X11/include/freetype2"]
+    _platform_extra_link_args = ["-Wl,-rpath,@loader_path/."]
     _gr3_src.insert(0, "gr3_cgl.c")
 elif "linux" in sys.platform:
     _gks_xftincludes = ["/usr/include/freetype2"]
+    _platform_extra_link_args = ["-Wl,-rpath,$ORIGIN"]
     _gr3_src.insert(0, "gr3_glx.c")
 elif sys.platform == "win32":
+    # win32 not tested.
+    _gks_xftincludes = []
+    _platform_extra_link_args = []
     _gr3_src.insert(0, "gr3_win.c")
+#elif sys.platform == "solaris":
+#    _gks_xftincludes = ["/usr/include/freetype2"]
+#    _platform_extra_link_args.append("-R$ORIGIN")
+#    _gr3_src.insert(0, "gr3_glx.c")
+else:
+    print >>sys.stderr, "Platform \"%s\" is not supported." %sys.platform
+    sys.exit(-3)
 
 _gks_src_path = map(lambda p: os.path.join("lib", "gks", p), _gks_src)
 _gks_plugin_src_path = map(lambda p: os.path.join("lib", "gks", "plugin", p),
@@ -147,15 +159,14 @@ _gks_libraries.extend(_gks_xlibs)
 _gr_macro = ("GRDIR", "\"%s\"" %_grdir)
 
 _gks_extra_link_args = ["-L/usr/X11R6/lib"]
-#if sys.platform == "darwin":
-#    _gks_extra_link_args.append("-Wl,install_name=$ORIGIN/libGKS.so")
-
+_gks_extra_link_args.extend(_platform_extra_link_args)
+if sys.platform == "darwin":
+    _gks_extra_link_args.append("-Wl,-install_name,@rpath/libGKS.so")
 _gksExt = Extension("libGKS", _gks_src_path,
                     define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                     include_dirs=_gks_include_dirs,
                     libraries=_gks_libraries,
                     extra_link_args=_gks_extra_link_args)
-
 _ext_modules = [_gksExt]
 
 if _wxconfig:
@@ -332,16 +343,12 @@ _gr_include_dirs.append(os.path.join("3rdparty", "png"))
 _gr_include_dirs.append(os.path.join("3rdparty", "jpeg"))
 _gr_libraries = list(_gks_libraries)
 _gr_libraries.append("GKS")
-_gr_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
-if "linux" in sys.platform:
-    _gr_extra_link_args.append("-Wl,-rpath,$ORIGIN")
-elif sys.platform == "darwin":
-    _gr_extra_link_args.append("-Wl,-rpath,$ORIGIN")
-#    _gr_extra_link_args.append("-Wl,-rpath,@loader_path/.")
-#    _gr_extra_link_args.append("install_name=@rpath/libGR.so")
-elif sys.platform == "solaris":
-    _gr_extra_link_args.append("-R$ORIGIN")
-#_gr_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
+_gr_extra_link_args = ["-L/usr/X11R6/lib"]
+_gr_extra_link_args.extend(_platform_extra_link_args)
+_gr_extra_link_args.append(_libjpeg)
+_gr_extra_link_args.append(_libpng)
+if sys.platform == "darwin":
+    _gr_extra_link_args.append("-Wl,-install_name,@rpath/libGR.so")
 _grExt = Extension("libGR", _gr_src_path,
                    define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                    include_dirs=_gr_include_dirs,
@@ -356,14 +363,20 @@ _gr3_include_dirs.append(os.path.join("lib", "gr"))
 _gr3_libraries = list(_gr_libraries)
 _gr3_libraries.append("GL")
 _gr3_libraries.append("GR")
-_gr3_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
+_gr3_libraries.append("GKS")
+_gr3_extra_link_args = ["-L/usr/X11R6/lib"]
+_gr3_extra_link_args.extend(_platform_extra_link_args)
+_gr3_extra_link_args.append(_libjpeg)
+_gr3_extra_link_args.append(_libpng)
+if sys.platform == "darwin":
+    _gr3_extra_link_args.append("-Wl,-install_name,@rpath/libGR3.so")
 _gr3Ext = Extension("libGR3", _gr3_src_path,
                     define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                     include_dirs=_gr3_include_dirs,
                     libraries=_gr3_libraries,
                     library_dirs=[_build_lib],
                     extra_link_args=_gr3_extra_link_args)
-#_ext_modules.append(_gr3Ext)
+_ext_modules.append(_gr3Ext)
 
 setup(name="gr",
       version=__version__,
@@ -372,7 +385,8 @@ setup(name="gr",
       author_email="j.heinen@fz-juelich.de",
       license="GNU General Public License",
       url="https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr",
-      package_dir={'': "lib/gr/python"},
+      package_dir={'': "lib/gr/python",
+                   "gr3": "lib/gr3"},
       py_modules=["gr", "pygr"],
-      packages=["qtgr", "qtgr.events"],
+      packages=["gr3", "qtgr", "qtgr.events"],
       ext_modules=_ext_modules)
