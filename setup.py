@@ -343,8 +343,10 @@ _gr_include_dirs.append(os.path.join("3rdparty", "png"))
 _gr_include_dirs.append(os.path.join("3rdparty", "jpeg"))
 _gr_libraries = list(_gks_libraries)
 _gr_libraries.append("GKS")
-_gr_extra_link_args = ["-L/usr/X11R6/lib", _libjpeg, _libpng]
+_gr_extra_link_args = ["-L/usr/X11R6/lib"]
 _gr_extra_link_args.extend(_platform_extra_link_args)
+_gr_extra_link_args.append(_libjpeg)
+_gr_extra_link_args.append(_libpng)
 if sys.platform == "darwin":
     _gr_extra_link_args.append("-Wl,-install_name,@rpath/libGR.so")
 _grExt = Extension("libGR", _gr_src_path,
