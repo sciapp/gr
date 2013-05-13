@@ -1423,7 +1423,9 @@ static GLuint depth_renderbuffer = 0;
      * - ::GR3_ERROR_OPENGL_ERR    if an OpenGL error occurs
      */
     static int gr3_initFBO_EXT_(void) {
-        GLenum framebuffer_status;
+#ifdef FRAMEBUFFER_STATUS
+    	GLenum framebuffer_status;
+#endif
         GLenum draw_buffers[] = {GL_COLOR_ATTACHMENT0_EXT};
         GLuint _width = context_struct_.init_struct.framebuffer_width;
         GLuint _height = context_struct_.init_struct.framebuffer_height;
@@ -1431,31 +1433,46 @@ static GLuint depth_renderbuffer = 0;
         gr3_log_("gr3_initFBO_EXT_();");
             
         glGenFramebuffersEXT(1, &framebuffer);
+        gr3_log_("glGenFramebuffersEXT");
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebuffer);
-        
+        gr3_log_("glBindFramebufferEXT");
         glGenRenderbuffersEXT(1, &color_renderbuffer);
+        gr3_log_("glGenRenderbuffersEXT");
         glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, color_renderbuffer);
+        gr3_log_("glBindRenderbufferEXT");
         glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA8, _width, _height);
+        gr3_log_("glRenderbufferStorageEXT");
         glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, color_renderbuffer);
-        
+        gr3_log_("glFramebufferRenderbufferEXT");
         glGenRenderbuffersEXT(2, &depth_renderbuffer);
+        gr3_log_("glGenRenderbuffersEXT");
         glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, depth_renderbuffer);
+        gr3_log_("glBindRenderbufferEXT");
         glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, _width, _height);
+        gr3_log_("glRenderbufferStorageEXT");
         glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, depth_renderbuffer);
+        gr3_log_("glFramebufferRenderbufferEXT");
         
         glDrawBuffers(1,draw_buffers);
+        gr3_log_("glDrawBuffers");
         glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
+        gr3_log_("glReadBuffer");
+#ifdef FRAMEBUFFER_STATUS
         framebuffer_status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+        gr3_log_("glCheckFramebufferStatusEXT");
         if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE_EXT) {
             return GR3_ERROR_OPENGL_ERR;
         }
+#endif
         glViewport(0,0,_width,_height);
+        gr3_log_("glViewport");
         glEnable(GL_DEPTH_TEST);
+        gr3_log_("glEnable");
         if (glGetError() != GL_NO_ERROR) {
             gr3_terminateFBO_EXT_();
             return GR3_ERROR_OPENGL_ERR;
         }
-        
+
         context_struct_.terminateFBO = gr3_terminateFBO_EXT_;
         context_struct_.fbo_is_initialized = 1;
         gr3_appendtorenderpathstring_("GL_EXT_framebuffer_object");
