@@ -22,6 +22,7 @@
 #include "gr.h"
 #include "text.h"
 #include "spline.h"
+#include "gridit.h"
 #include "contour.h"
 #include "strlib.h"
 #include "io.h"
@@ -1189,6 +1190,60 @@ void gr_spline(int n, float *px, float *py, int m, int method)
       print_float_array("y", n, py);
       gr_writestream(" m=\"%d\" method=\"%d\"/>\n", m, method);
     }
+}
+
+void gr_gridit(int nd, float *xd, float *yd, float *zd,
+               int nx, int ny, float *x, float *y, float *z)
+{
+  int i, md, ncp;
+  float xmin, ymin, xmax, ymax;
+  int *iwk;
+  float *wk;
+
+  if (nd < 5)
+    {
+      fprintf(stderr, "invalid number of domain values\n");
+      return;
+    }
+  else if (nx < 1 || ny < 1)
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return;
+    }
+
+  check_autoinit;
+
+  xmin = xd[0];
+  xmax = xmin;
+  ymin = yd[0];
+  ymax = ymin;
+
+  /* CALCULATION OF MIN/MAX VALUES */
+  for (i = 1; i < nd; ++i) {
+    xmin = min(xmin, xd[i]);
+    xmax = max(xmax, xd[i]);
+    ymin = min(ymin, yd[i]);
+    ymax = max(ymax, yd[i]);
+  }
+
+  /* DETERMINE GRID POINTS INSIDE THE DATA AREA */
+  for (i = 0; i < nx; ++i) {
+    x[i] = xmin + i / (float) (nx - 1) * (xmax - xmin);
+  }
+  for (i = 0; i < ny; ++i) {
+    y[i] = ymin + i / (float) (ny - 1) * (ymax - ymin);
+  }
+
+  /* CALL THE SMOOTH SURFACE FIT ROUTINE */
+  md = 1;
+  ncp = 4;
+  iwk = (int *) calloc(31 * nd + nx * ny, sizeof(int));
+  wk = (float *) calloc(5 * nd, sizeof(float));
+
+  idsfft(&md, &ncp, &nd, xd, yd, zd, &nx, &ny, x, y, z, iwk, wk);
+
+  free(wk);
+  free(iwk);
 }
 
 void gr_setlinetype(int type)
