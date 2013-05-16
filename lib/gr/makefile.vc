@@ -70,6 +70,7 @@ install: default
 	COPY /Y ..\gks\libgks.dll $(DESTDIR)
 	COPY /Y ..\gks\libgks.lib $(DESTDIR)
 	COPY /Y ..\gks\gks.h $(DESTDIR)
+	IF NOT EXIST $(DESTDIR)\fonts MKDIR $(DESTDIR)\fonts
 	COPY /Y ..\gks\gksfont.dat $(DESTDIR)\fonts
 
 clean:
