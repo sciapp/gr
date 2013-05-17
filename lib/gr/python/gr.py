@@ -466,6 +466,7 @@ def inqbbox():
   return [xmin.value, xmax.value, ymin.value, ymax.value]
 
 if platform == 'win32':
+  os.environ["PATH"] = os.path.dirname(__file__)
   libext = ".dll"
 else:
   libext = ".so"        
@@ -488,7 +489,7 @@ __gr.gr_fillarea.argtypes = [c_int, POINTER(c_float), POINTER(c_float)];
 __gr.gr_cellarray.argtypes = [
   c_float, c_float, c_float, c_float, c_int, c_int, c_int, c_int, c_int, c_int, POINTER(c_int)];
 __gr.gr_spline.argtypes = [c_int, POINTER(c_float), POINTER(c_float), c_int, c_int];
-__gr.gr_gridit.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int, c_int];
+__gr.gr_gridit.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int, c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float)];
 __gr.gr_setlinetype.argtypes = [c_int];
 __gr.gr_setlinewidth.argtypes = [c_float];
 __gr.gr_setlinecolorind.argtypes = [c_int];
