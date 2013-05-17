@@ -1,5 +1,3 @@
-#define MAX_COLOR 980
-
 typedef struct
   {
     int state;

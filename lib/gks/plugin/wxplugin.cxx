@@ -48,7 +48,6 @@ DLLEXPORT void gks_wxplugin(
 
 #define TIMER_INTERVAL 100
 
-#define MAX_COLOR 980
 #define PATTERNS 120
 #define MAX_TNR 9
 

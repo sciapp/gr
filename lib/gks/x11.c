@@ -70,7 +70,6 @@ int usleep(useconds_t);
 #define MAX_PIXMAP      512
 #define MAX_SIZE        1000
 
-#define MAX_COLORS	256
 #define MAX_POINTS	2048
 #define MAX_SELECTIONS	100
 #define PATTERNS	120
@@ -352,17 +351,17 @@ typedef struct ws_state_list_struct
     XFontStruct *fstr[31][MAX_SIZE + 1], *cfont;
 #endif
     int capheight, font;
-    Pixmap tile[MAX_COLORS][PATTERNS];
-    Pixmap stipple[MAX_COLORS][PATTERNS];
+    Pixmap tile[MAX_COLOR][PATTERNS];
+    Pixmap stipple[MAX_COLOR][PATTERNS];
     Bool ored_patterns;
-    XColor color[MAX_COLORS];
+    XColor color[MAX_COLOR];
 #ifdef XFT
-    XftColor rendercolor[MAX_COLORS];
+    XftColor rendercolor[MAX_COLOR];
 #endif
-    unsigned long pixels[MAX_COLORS];
+    unsigned long pixels[MAX_COLOR];
     int ccolor;
-    float red[MAX_COLORS], green[MAX_COLORS], blue[MAX_COLORS];
-    float gray[MAX_COLORS];
+    float red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
+    float gray[MAX_COLOR];
     int ltype;
     unsigned int lwidth;
     float a, b, c, d;
@@ -828,7 +827,7 @@ void set_colors(void)
 {
   int i;
 
-  for (i = 0; i < MAX_COLORS; i++)
+  for (i = 0; i < MAX_COLOR; i++)
     {
       gks_inq_rgb(i, &p->red[i], &p->green[i], &p->blue[i]);
       p->gray[i] = 0.3 * p->red[i] + 0.59 * p->green[i] + 0.11 * p->blue[i];
@@ -933,7 +932,7 @@ void allocate_colors(void)
   p->depth = XDefaultDepthOfScreen(p->screen);
   p->cmap = XDefaultColormapOfScreen(p->screen);
 
-  for (i = 0; i < MAX_COLORS; i++)
+  for (i = 0; i < MAX_COLOR; i++)
     {
       p->color[i].red = (unsigned short)(p->red[i] * 65535);
       p->color[i].green = (unsigned short)(p->green[i] * 65535);
@@ -971,7 +970,7 @@ void allocate_rendercolors(void)
   XRenderColor rendercolor;
   register int i;
 
-  for (i = 0; i < MAX_COLORS; i++)
+  for (i = 0; i < MAX_COLOR; i++)
     {
       rendercolor.red   = p->color[i].red;
       rendercolor.green = p->color[i].green;
@@ -993,7 +992,7 @@ void free_rendercolors(void)
 {
   register int i;
 
-  for (i = 0; i < MAX_COLORS; i++)
+  for (i = 0; i < MAX_COLOR; i++)
     XftColorFree(p->dpy, p->vis, p->cmap, &p->rendercolor[i]);
 }
 
@@ -1338,8 +1337,8 @@ void initialize_arrays(void)
 #else
   memset((void *) p->fstr, 0, n_font * (MAX_SIZE + 1) * sizeof(XFontStruct *));
 #endif
-  memset((void *) p->tile, 0, MAX_COLORS * PATTERNS * sizeof(Pixmap));
-  memset((void *) p->stipple, 0, MAX_COLORS * PATTERNS * sizeof(Pixmap));
+  memset((void *) p->tile, 0, MAX_COLOR * PATTERNS * sizeof(Pixmap));
+  memset((void *) p->stipple, 0, MAX_COLOR * PATTERNS * sizeof(Pixmap));
 }
 
 
@@ -1396,7 +1395,7 @@ void set_color_repr(int i, float r, float g, float b)
   p->blue[i] = b;
   p->gray[i] = 0.3 * r + 0.59 * g + 0.11 * b;
 
-  if (i < MAX_COLORS)
+  if (i < MAX_COLOR)
     {
       p->color[i].red = (unsigned short)(r * 65535);
       p->color[i].green = (unsigned short)(g * 65535);
@@ -1442,7 +1441,7 @@ void set_pattern(int color, int style)
   unsigned int w, h;
   char *pattern;
 
-  if (color < MAX_COLORS && style > 0 && style < PATTERNS)
+  if (color < MAX_COLOR && style > 0 && style < PATTERNS)
     {
       if (p->tile[color][style] == 0)
 	{
@@ -2811,7 +2810,7 @@ void pixmap_to_gif(void)
 	    {
 	      pixel = XGetPixel(image, i, j);
 	      coli = 0;
-	      for (k = 0; k < MAX_COLORS; k++)
+	      for (k = 0; k < MAX_COLOR; k++)
 		{
 		  if (pixel == p->color[k].pixel)
 		    {
@@ -3039,7 +3038,7 @@ void pixmap_to_rf(void)
 	    {
 	      pixel = XGetPixel(image, i, j);
 	      coli = 0;
-	      for (k = 0; k < MAX_COLORS; k++)
+	      for (k = 0; k < MAX_COLOR; k++)
 		{
 		  if (pixel == p->color[k].pixel)
 		    {
@@ -3064,9 +3063,9 @@ void pixmap_to_rf(void)
       write_rf_long(besize);
       write_rf_long(RT_BYTE_ENCODED);
       write_rf_long(RMT_EQUAL_RGB);
-      write_rf_long(3 * MAX_COLORS);
+      write_rf_long(3 * MAX_COLOR);
 
-      for (i = 0; i < MAX_COLORS; i++)
+      for (i = 0; i < MAX_COLOR; i++)
 	{
 	  rmap[i] = (byte)(255 * p->red[i]);
 	  gmap[i] = (byte)(255 * p->green[i]);
@@ -3075,9 +3074,9 @@ void pixmap_to_rf(void)
 
       /* write the colormap */
 
-      gks_write_file(p->rf, rmap, MAX_COLORS);
-      gks_write_file(p->rf, gmap, MAX_COLORS);
-      gks_write_file(p->rf, bmap, MAX_COLORS);
+      gks_write_file(p->rf, rmap, MAX_COLOR);
+      gks_write_file(p->rf, gmap, MAX_COLOR);
+      gks_write_file(p->rf, bmap, MAX_COLOR);
 
       /* write the image */
 
@@ -4625,7 +4624,7 @@ void gks_drv_x11(
  *  Set color representation
  */
       lock();
-      if (ia[1] >= 0 && ia[1] < MAX_COLORS)
+      if (ia[1] >= 0 && ia[1] < MAX_COLOR)
 	{
 	  set_color_repr(ia[1], r1[0], r1[1], r1[2]);
 	  free_tile_patterns(ia[1]);

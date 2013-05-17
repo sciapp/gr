@@ -8,7 +8,6 @@
 #define cprec		    8		    /* bits used for color precision */
 #define cxprec  	    16		    /*     and color index precision */
 #define max_colors	    (01<<cprec)	    /* number of adressable colors */
-#define max_colorxs	    980 	    /*     and color indices */
 
 #define max_pbuffer	    512		    /* number of points in buffer */
 

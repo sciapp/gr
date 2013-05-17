@@ -10,7 +10,6 @@
 
 #define MEMORY_INCREMENT 32768
 
-#define MAX_COLOR 980
 #define MAX_POINTS 2048
 #define PATTERNS 120
 #define HATCH_STYLE 108
@@ -141,10 +140,10 @@ typedef struct ws_state_list_t
   int conid, state, wtype;
   float a, b, c, d;
   float window[4], viewport[4];
-  char rgb[980][7];
-  int red[980];
-  int green[980];
-  int blue[980];
+  char rgb[MAX_COLOR][7];
+  int red[MAX_COLOR];
+  int green[MAX_COLOR];
+  int blue[MAX_COLOR];
   int width, height;
   int color, linewidth;
   float alpha;
