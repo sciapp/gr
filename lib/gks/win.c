@@ -401,8 +401,8 @@ DWORD WINAPI create_window(LPVOID parm)
   else
     {
       p->win = (HWND)parm;
-      p->wndproc = (WNDPROC) GetWindowLong(p->win, GWL_WNDPROC);
-      SetWindowLong(p->win, GWL_WNDPROC, (DWORD) wndproc);
+      p->wndproc = (WNDPROC) GetWindowLongPtr(p->win, GWLP_WNDPROC);
+      SetWindowLongPtr(p->win, GWLP_WNDPROC, (DWORD) wndproc);
     }
   
   GetClientRect(p->win, &rc);
