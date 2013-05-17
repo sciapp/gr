@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
+/*#include "gr.h"*/
 #include "gridit.h"
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
