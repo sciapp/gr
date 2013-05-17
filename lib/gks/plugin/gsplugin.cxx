@@ -192,7 +192,7 @@ typedef struct ws_state_list_t
     float magstep;
     int stroke, limit, np;
 
-    float red[980], green[980], blue[980];
+    float red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
     int color, fcol;
 
     float ysize;
@@ -804,7 +804,7 @@ void set_color(int color, int wtype)
   float grey;
   int index;
 
-  if (color < 980)
+  if (color < MAX_COLOR)
     {
       if (color != p->color)
         {
@@ -839,7 +839,7 @@ void set_foreground(int color, int wtype)
   int index;
   float grey;
 
-  if (color < 980)
+  if (color < MAX_COLOR)
     {
       if (color != p->fcol)
         {
@@ -1226,7 +1226,7 @@ void set_colortable(void)
 {
   int i;
 
-  for (i = 0; i < 980; i++)
+  for (i = 0; i < MAX_COLOR; i++)
     gks_inq_rgb(i, p->red + i, p->green + i, p->blue + i);
   p->color = -1;
 }
@@ -1234,7 +1234,7 @@ void set_colortable(void)
 static
 void set_color_rep(int color, float red, float green, float blue)
 {
-  if (color >= 0 && color < 980)
+  if (color >= 0 && color < MAX_COLOR)
     {
       p->red[color] = red;
       p->green[color] = green;
@@ -1247,7 +1247,7 @@ void query_color(int index, unsigned char **buf, int wtype)
 {
   float grey;
 
-  index %= 980;
+  index %= MAX_COLOR;
 
   if (wtype % 2)
     {

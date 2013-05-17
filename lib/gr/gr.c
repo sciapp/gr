@@ -122,7 +122,6 @@ float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 #define BACKGROUND 0
 #define FIRST_COLOR 8
 #define LAST_COLOR 79
-#define MAX_COLOR 980
 #define MISSING_VALUE FLT_MAX
 
 #ifndef FLT_MAX

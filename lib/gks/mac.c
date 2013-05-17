@@ -12,7 +12,6 @@
 #include "gks.h"
 #include "gkscore.h"
 
-#define MAX_COLOR 980
 #define PATTERNS 120
 #define HATCH_STYLE 108
 

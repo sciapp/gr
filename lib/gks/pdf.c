@@ -20,7 +20,6 @@ typedef unsigned char Byte;
 typedef unsigned long uLong;
 #endif
 
-#define MAX_COLOR 980
 #define MAX_FONT 31
 #define HATCH_STYLE 108
 #define PATTERNS 120

@@ -18,7 +18,6 @@
 
 #define MAXCONN 10
 
-#define MAX_COLOR 980
 #define MAX_POINTS 2048
 #define MAX_SELECTIONS 100
 #define PATTERNS 120

@@ -91,7 +91,7 @@ typedef struct
   fill_attributes fill;		/* current fill area attributes */
   int buffer_ind;		/* output buffer index */
   char buffer[max_buffer + 2];	/* output buffer */
-  float color_t[max_colorxs * 3];	/* color table */
+  float color_t[MAX_COLOR * 3];	/* color table */
   int conid;			/* GKS connection id */
   unsigned active;		/* indicates active workstation */
   unsigned begin_page;		/* indicates begin page */
@@ -533,7 +533,7 @@ static void cgmt_maxcind(void)
 {
   cgmt_start_cmd(1, (int) MaxCInd);
 
-  cgmt_int(max_colorxs - 1);
+  cgmt_int(MAX_COLOR - 1);
 
   cgmt_flush_cmd(final_flush);
 }
@@ -1954,7 +1954,7 @@ static void cgmb_maxcind(void)
 {
   cgmb_start_cmd(1, (int) MaxCInd);
 
-  cgmb_cxint(max_colorxs - 1);
+  cgmb_cxint(MAX_COLOR - 1);
 
   cgmb_flush_cmd(final_flush);
 }
@@ -2559,7 +2559,7 @@ static void init_color_table(void)
 {
   int i, j;
 
-  for (i = 0; i < max_colorxs; i++)
+  for (i = 0; i < MAX_COLOR; i++)
     {
       j = i;
       gks_inq_rgb(j, &p->color_t[i * 3], &p->color_t[i * 3 + 1],
@@ -2573,7 +2573,7 @@ static void setup_colors(void)
 {
   int i;
 
-  for (i = 0; i < max_colorxs; i++)
+  for (i = 0; i < MAX_COLOR; i++)
     p->cgm[coltab] (i, 1, &p->color_t[3 * i]);
 }
 

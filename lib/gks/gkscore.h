@@ -29,6 +29,7 @@ extern "C" {
 
 #define MAX_WS 16	/* maximum number of workstations */
 #define MAX_TNR 9	/* maximum number of normalization transformations */
+#define MAX_COLOR 1000  /* maximum number of predefined colors */
 
 #define OPEN_GKS 0
 #define CLOSE_GKS 1

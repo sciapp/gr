@@ -4,7 +4,6 @@
 
 #import "GKSView.h"
 
-#define MAX_COLOR 980
 #define MEMORY_INCREMENT 262144
 #define PATTERNS 120
 #define HATCH_STYLE 108
