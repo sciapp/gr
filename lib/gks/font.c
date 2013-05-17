@@ -5,6 +5,9 @@
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
+#else
+#include <io.h>
+#define lseek _lseek
 #endif
 
 #include "gks.h"

@@ -4,9 +4,12 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <math.h>
 #include <png.h>
+
+#if !defined(VMS) && !defined(_WIN32)
+#include <unistd.h>
+#endif
 
 #include "gks.h"
 #include "gkscore.h"
