@@ -14,7 +14,7 @@ from distutils.sysconfig import get_config_var
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-05-17"
+__date__    = "2013-05-21"
 __version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -311,17 +311,28 @@ Please retry with a valid QTDIR setting, e.g.
 /usr/local/qt4"""
                     sys.exit(-1)
         # build
+        if sys.platform == "win32":
+# do not use _msvc_extra_link_args because /nodefaultlib causes
+# error LNK2019: unresolved external symbol ""__declspec(dllimport)
+#                void __cdecl std::_Xbad_alloc(void)" ...
+            _qt_extra_link_args = ["-dll"]
+            _gks_qt_libraries = ["QtGui%d" %_qtversion[0],
+                                 "QtCore%d" %_qtversion[0]]
+            _gks_qt_libraries.extend(_libs_msvc)
+        else:
+            _qt_extra_link_args = ["-L/usr/X11R6/lib",
+                                   "-L%s" %os.path.join(_qtdir, "lib")]
+            _gks_qt_libraries = ["QtGui", "QtCore"]
         _qt_include_dirs = [os.path.join(_qtdir, "include")]
         _gks_qt_includes = list(_gks_plugin_includes)
         _gks_qt_includes.extend(_qt_include_dirs)
-        _gks_qt_libraries = ["QtGui", "QtCore"]
         _gksQtExt = Extension("qtplugin", _plugins_path["qtplugin.cxx"],
                               define_macros=[_gr_macro],
                               include_dirs=_gks_qt_includes,
                               libraries=_gks_qt_libraries,
-                              extra_link_args=["-L/usr/X11R6/lib",
-                                               "-L%s" %os.path.join(_qtdir,
-                                                                    "lib")])
+                              library_dirs=[os.path.join(_qtdir, "lib")],
+                              extra_link_args=_qt_extra_link_args,
+                              extra_compile_args=_msvc_extra_compile_args)
         _ext_modules.append(_gksQtExt)
     else:
         print >>sys.stderr, "Unable to obtain Qt version number."
