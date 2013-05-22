@@ -14,7 +14,7 @@ from distutils.sysconfig import get_config_var
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-05-21"
+__date__    = "2013-05-22"
 __version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -491,37 +491,6 @@ if sys.platform == "darwin":
                                                "ApplicationServices"])
     _ext_modules.append(_gksQuartzExt)
     
-## prerequisites: build static 3rdparty libraries
-#if "clean" not in sys.argv:
-#    if sys.platform == "win32":
-#        _extra_preargs = list(_msvc_extra_compile_args)
-#    else:
-#        _extra_preargs = ["-fPIC"]
-#    if not os.path.isdir("build"):
-#        os.mkdir("build")
-#    if not os.path.isdir(_build_3rdparty):
-#        os.mkdir(_build_3rdparty)
-#    compiler = new_compiler()
-#    if not os.path.isfile(_libz):
-#        obj = compiler.compile(_libz_src_path, extra_preargs=_extra_preargs)
-#        compiler.create_static_lib(obj, "z", output_dir=_build_3rdparty)
-#    if not os.path.isfile(_libpng):
-#        _png_extra_preargs = list(_extra_preargs)
-#        _png_extra_preargs.append("-I3rdparty/zlib")
-#        obj = compiler.compile(_libpng_src_path,
-#                               extra_preargs=_png_extra_preargs)
-#        compiler.create_static_lib(obj, "png", output_dir=_build_3rdparty)
-#    if not os.path.isfile(_libjpeg):  
-#        obj = compiler.compile(_libjpeg_src_path, extra_preargs=_extra_preargs)
-#        compiler.create_static_lib(obj, "jpeg", output_dir=_build_3rdparty)
-#else:
-#    try:
-#        map(lambda p: os.remove(os.path.join(_build_3rdparty, p)),
-#            os.listdir(_build_3rdparty))
-#        os.rmdir(_build_3rdparty)
-#    except OSError:
-#        pass
-
 # libGR
 _gr_include_dirs = list(_gks_xftincludes)
 _gr_include_dirs.append(os.path.join("lib", "gks"))
@@ -539,7 +508,7 @@ if sys.platform != "win32":
     _gr_extra_link_args.append(_libjpeg)
     _gr_extra_link_args.append(_libz)
 else:
-    _gr_libraries = ["libGKS"] 
+    _gr_libraries = ["libGKS"]
     _gr_libraries.extend(_pnglibs)
     _gr_libraries.extend(_jpeglibs)
     _gr_libraries.extend(_zlibs)
@@ -561,7 +530,6 @@ _gr3_include_dirs = list(_gr_include_dirs)
 _gr3_include_dirs.append(os.path.join("lib", "gr"))
 #_gr3_libraries = list(_gr_libraries)
 _gr3_libraries = []
-_gr3_libraries.append("GR")
 #_gr3_extra_link_args = ["-L/usr/X11R6/lib"]
 _gr3_extra_link_args = []
 _gr3_extra_link_args.extend(_platform_extra_link_args)
@@ -569,23 +537,35 @@ _gr3_extra_link_args.extend(_platform_extra_link_args)
 _gr3_extra_link_args.append(_libpng)
 _gr3_extra_link_args.append(_libjpeg)
 _gr3_extra_link_args.append(_libz)
+_gr3_library_dirs = [_build_lib]
 if sys.platform == "darwin":
     framework = ["-framework", "OpenGL", "-framework", "Cocoa"]
+    _gr3_libraries.append("GR")
     _gr3_extra_link_args.extend(framework)
     _gr3_extra_link_args.append("-Wl,-install_name,@rpath/libGR3.so")
-else:
+elif "linux" in sys.platform:
+    _gr3_libraries.append("GR")
     _gr3_libraries.append("GL")
     _gr3_libraries.append("X11")
     _gr3_libraries.append(_libz)
+elif sys.platform == "win32":
+    _gr3_include_dirs.append("3rdparty")
+    _gr3_libraries.append("libGR")    
+    _gr3_libraries.append("opengl32")
+    _gr3_libraries.extend(_libs_msvc)
+    _gr3_extra_link_args.append("-dll")
+    _gr3_library_dirs.append(_build_3rdparty)
+    _gr3_library_dirs.append(os.path.join(_build_temp, "Release", "lib", "gks"))
+    _gr3_library_dirs.append(os.path.join(_build_temp, "Release", "lib", "gr"))
 #    _gr3_libraries.extend(_zlibs)
 _gr3Ext = Extension("libGR3", _gr3_src_path,
 #                    define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                     include_dirs=_gr3_include_dirs,
                     libraries=_gr3_libraries,
-                    library_dirs=[_build_lib],
-                    extra_link_args=_gr3_extra_link_args)
-if sys.platform != "win32":
-    _ext_modules.append(_gr3Ext)
+                    library_dirs=_gr3_library_dirs,
+                    extra_link_args=_gr3_extra_link_args,
+                    extra_compile_args=_msvc_extra_compile_args)
+_ext_modules.append(_gr3Ext)
 
 setup(cmdclass={"build_ext": build_ext},
       name="gr",
