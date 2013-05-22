@@ -14,7 +14,7 @@ from distutils.sysconfig import get_config_var
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-05-17"
+__date__    = "2013-05-21"
 __version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -68,7 +68,9 @@ _GTK_PACKAGE = "gtk+-2.0"
 _grdir = os.getenv("GRDIR", "/usr/local/gr")
 _cc = os.getenv("CC", "cc")
 _wxconfig = os.getenv("WX_CONFIG")
-_qtdir = os.getenv("QTDIR", None)
+_qtdir = os.getenv("QTDIR")
+_wxdir = os.getenv("WXDIR")
+_wxlib = os.getenv("WXLIB")
 
 # unique platform id used by distutils
 _uPlatformId = "%s-%d.%d" %(sysconfig.get_platform(), sys.version_info.major,
@@ -205,7 +207,10 @@ _gks_xftlibs = ["Xft", "freetype", "fontconfig"]
 _gks_xlibs = list(_gks_xftlibs)
 _gks_xlibs.extend(["Xt", "X11"])
 
-_gks_plugin_libs = ["c", "m"]
+if sys.platform == "win32":
+    _gks_plugin_libs = list(_libs_msvc)
+else:
+    _gks_plugin_libs = ["c", "m"]
 _gks_plugin_xlibs = ["Xt", "X11"]
 _gks_plugin_gslibs = ["gs"]
 
@@ -272,20 +277,40 @@ else:
     except OSError:
         pass
 
+_gks_wx_libraries = list(_gks_plugin_libs)
+_gks_wx_includes = list(_gks_plugin_includes)
+_wxlibs = None
 if _wxconfig:
     _wxlibs = shlex.split(Popen([_wxconfig, "--libs"],
                                 stdout=PIPE).communicate()[0].rstrip())
-    _wx_includes = shlex.split(Popen([_wxconfig, "--cxxflags"],
-                                     stdout=PIPE).communicate()[0].rstrip())
-    _gks_wx_libraries = list(_gks_plugin_libs)
+    _wx_extra_compile_args = shlex.split(Popen([_wxconfig, "--cxxflags"],
+                                               stdout=PIPE).communicate()[0].rstrip())
+    _wx_library_dirs = None
     _gks_wx_libraries.extend(_gks_plugin_xlibs)
     _extra_link_args = list(_wxlibs)
     _extra_link_args.append("-L/usr/X11R6/lib")
+elif sys.platform == "win32":
+    if _wxlib and _wxdir:
+        _wxlibs = ["wxmsw29ud_core", "wxbase29ud"]
+        _gks_wx_includes.append(os.path.join(_wxdir, "include", "msvc"))
+        _gks_wx_includes.append(os.path.join(_wxdir, "include"))
+        _wx_library_dirs = [_wxlib]
+        _wx_extra_compile_args = list(_msvc_extra_compile_args)
+        _wx_extra_compile_args.append("/DWXUSINGDLL")
+        _wx_extra_compile_args.append("/DwxMSVC_VERSION_AUTO")
+        _wx_extra_compile_args.append("/D_UNICODE")
+        _extra_link_args = ["-dll"]
+#        _gks_wx_libraries.extend(_libs_msvc)
+    else:
+        print >>sys.stderr, "WXDIR or WXLIB not set. Build without wx support."
+
+if _wxlibs:
     _gksWxExt = Extension("wxplugin", _plugins_path["wxplugin.cxx"],
                           define_macros=[_gr_macro],
-                          include_dirs=_gks_plugin_includes,
+                          include_dirs=_gks_wx_includes,
+                          library_dirs=_wx_library_dirs,
                           libraries=_gks_wx_libraries,
-                          extra_compile_args=_wx_includes,
+                          extra_compile_args=_wx_extra_compile_args,
                           extra_link_args=_extra_link_args)
     _ext_modules.append(_gksWxExt)
     
@@ -311,17 +336,28 @@ Please retry with a valid QTDIR setting, e.g.
 /usr/local/qt4"""
                     sys.exit(-1)
         # build
+        if sys.platform == "win32":
+# do not use _msvc_extra_link_args because /nodefaultlib causes
+# error LNK2019: unresolved external symbol ""__declspec(dllimport)
+#                void __cdecl std::_Xbad_alloc(void)" ...
+            _qt_extra_link_args = ["-dll"]
+            _gks_qt_libraries = ["QtGui%d" %_qtversion[0],
+                                 "QtCore%d" %_qtversion[0]]
+            _gks_qt_libraries.extend(_libs_msvc)
+        else:
+            _qt_extra_link_args = ["-L/usr/X11R6/lib",
+                                   "-L%s" %os.path.join(_qtdir, "lib")]
+            _gks_qt_libraries = ["QtGui", "QtCore"]
         _qt_include_dirs = [os.path.join(_qtdir, "include")]
         _gks_qt_includes = list(_gks_plugin_includes)
         _gks_qt_includes.extend(_qt_include_dirs)
-        _gks_qt_libraries = ["QtGui", "QtCore"]
         _gksQtExt = Extension("qtplugin", _plugins_path["qtplugin.cxx"],
                               define_macros=[_gr_macro],
                               include_dirs=_gks_qt_includes,
                               libraries=_gks_qt_libraries,
-                              extra_link_args=["-L/usr/X11R6/lib",
-                                               "-L%s" %os.path.join(_qtdir,
-                                                                    "lib")])
+                              library_dirs=[os.path.join(_qtdir, "lib")],
+                              extra_link_args=_qt_extra_link_args,
+                              extra_compile_args=_msvc_extra_compile_args)
         _ext_modules.append(_gksQtExt)
     else:
         print >>sys.stderr, "Unable to obtain Qt version number."

@@ -74,8 +74,8 @@ class MainWindow(QtGui.QMainWindow):
                      self._pickModeChanged)
         self.connect(self._shell, QtCore.SIGNAL("returnPressed()"),
                      self._shellEx)
-        self.connect(self._actionSave, QtCore.SIGNAL("activated()"), self.save)
-        self.connect(self._actionPrint, QtCore.SIGNAL("activated()"),
+        self.connect(self._actionSave, QtCore.SIGNAL("triggered()"), self.save)
+        self.connect(self._actionPrint, QtCore.SIGNAL("triggered()"),
                      self.printGR)
         
         guiConn = GUIConnector(self._gr)
