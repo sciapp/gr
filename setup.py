@@ -71,6 +71,7 @@ _wxconfig = os.getenv("WX_CONFIG")
 _qtdir = os.getenv("QTDIR")
 _wxdir = os.getenv("WXDIR")
 _wxlib = os.getenv("WXLIB")
+_gsdir = os.getenv("GSDIR")
 
 # unique platform id used by distutils
 _uPlatformId = "%s-%d.%d" %(sysconfig.get_platform(), sys.version_info.major,
@@ -366,9 +367,39 @@ else:
     
 # check for ghostscript support
 if "clean" not in sys.argv:
-    (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
-    (fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-    os.write(fd, """#include <stdio.h>
+    _gks_gs_library_dirs = None
+    _gks_gs_includes = list(_gks_plugin_includes)
+    if sys.platform == "win32":
+        _gks_gs_libraries = ["gsdll32"]
+        _gks_gs_libraries.extend(_libs_msvc)
+        _gks_gs_extra_link_args = list(_msvc_extra_link_args)
+        if _gsdir:
+            _gks_gs_library_dirs = [os.path.join(_gsdir, "bin")]
+            _gks_gs_includes.append(os.path.join(_gsdir, "include"))
+        else:
+            print >>sys.stderr, ("GSDIR not set. " +
+                                 "Build without Ghostscript support.")
+    else:
+        _gks_gs_includes.append("/usr/local/include/ghostscript")
+        _gks_gs_libraries = list(_gks_plugin_xlibs)
+        _gks_gs_libraries.extend(_gks_plugin_gslibs)
+        _gks_gs_extra_link_args = ["-L/usr/X11R6/lib"]
+        
+    _gksGsExt = Extension("gsplugin", _plugins_path["gsplugin.cxx"],
+                           define_macros=[_gr_macro],
+                           include_dirs=_gks_gs_includes,
+                           library_dirs=_gks_gs_library_dirs,
+                           libraries=_gks_gs_libraries,
+                           extra_link_args=_gks_gs_extra_link_args,
+                           extra_compile_args=_msvc_extra_compile_args)
+    
+    if sys.platform == "win32" and _gsdir:
+        _ext_modules.append(_gksGsExt)
+    
+    if _cc:
+        (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
+        (fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
+        os.write(fd, """#include <stdio.h>
 #include <stdlib.h>
 #include <ghostscript/iapi.h>
 
@@ -381,8 +412,7 @@ int main()
 }
 
 """)
-    os.close(fd)
-    if _cc:
+        os.close(fd)
         if sys.platform == "darwin":
             _gscc = Popen([_cc, "-o%s" %tmpout, tmpsrc, "-lgs", "-L/usr/X11/lib",
                            "-lXt", "-lX11", "-liconv"], stdout=PIPE, stderr=STDOUT)
@@ -396,15 +426,6 @@ int main()
         except OSError:
             pass
         if _gscc.returncode == 0:
-            _gks_gs_includes = list(_gks_plugin_includes)
-            _gks_gs_includes.append("/usr/local/include/ghostscript")
-            _gks_gs_libraries = list(_gks_plugin_xlibs)
-            _gks_gs_libraries.extend(_gks_plugin_gslibs)
-            _gksGsExt = Extension("gsplugin", _plugins_path["gsplugin.cxx"],
-                                   define_macros=[_gr_macro],
-                                   include_dirs=_gks_gs_includes,
-                                   libraries=_gks_gs_libraries,
-                                   extra_link_args=["-L/usr/X11R6/lib"])
             _ext_modules.append(_gksGsExt)
         else:
             print >>sys.stderr, ("Ghostscript API not found. " +
