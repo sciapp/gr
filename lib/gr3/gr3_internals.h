@@ -17,7 +17,7 @@
 #elif defined(_WIN32)
   /* Windows */
   #define GR3_USE_WIN
-  #include "gr3_win32.h"
+  #include "gr3_win.h"
 #else
   #error "This operating system is currently not supported by gr3"
 #endif
