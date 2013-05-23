@@ -2,6 +2,7 @@
 setlocal
 set GRDIR=S:\gr
 set GSBIN=S:\gs\gs9.06\bin
+set GSLIB=S:\gs\gs9.06\lib
 set WXLIB=S:\wxWidgets\lib\vc100_dll
 set PYTHONPATH=%GRDIR%
 set PATH=%GRDIR%;%GSBIN%;%WXLIB%;%PATH%
