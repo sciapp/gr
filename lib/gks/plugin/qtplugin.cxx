@@ -924,9 +924,9 @@ void interp(char *str)
 
   s = str;
 
-  while (s[sp])
+  RESOLVE(len, int, sizeof(int));
+  while (*len)
     {
-      RESOLVE(len, int, sizeof(int));
       RESOLVE(f, int, sizeof(int));
 
       switch (*f)
@@ -1204,6 +1204,8 @@ void interp(char *str)
           gkss->txslant = f_arr_1[0];
           break;
         }
+
+      RESOLVE(len, int, sizeof(int));
     }
 
   memcpy(gkss, &saved_gkss, sizeof(gks_state_list_t));

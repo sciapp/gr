@@ -465,9 +465,9 @@ void interp(char *str)
 
   s = str;
 
-  while (s[sp])
+  RESOLVE(len, int, sizeof(int));
+  while (*len)
     {
-      RESOLVE(len, int, sizeof(int));
       RESOLVE(f, int, sizeof(int));
 
       switch (*f)
@@ -698,6 +698,8 @@ void interp(char *str)
 	  gks_set_coord_xform(mat);
 	  break;
 	}
+
+      RESOLVE(len, int, sizeof(int));
     }
 }
 

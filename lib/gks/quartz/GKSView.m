@@ -266,9 +266,9 @@ void seg_xform_rel(float *x, float *y)
 
   s = str;
 
-  while (s[sp])
+  RESOLVE(len, int, sizeof(int));
+  while (*len)
     {
-      RESOLVE(len, int, sizeof(int));
       RESOLVE(f, int, sizeof(int));
 
       switch (*f)
@@ -577,6 +577,8 @@ void seg_xform_rel(float *x, float *y)
           mat[2][1] = f_arr_1[5];
           break;
         }
+
+      RESOLVE(len, int, sizeof(int));
     }
 
   memcpy(gkss, &saved_gkss, sizeof(gks_state_list_t));
@@ -641,15 +643,15 @@ void seg_xform_rel(float *x, float *y)
 - (void) setDisplayList: (id) display_list
 {
   int len = [display_list length];
-  if (len >= size)
+  if (len + sizeof(int) > size)
     {
-      while (len >= size)
+      while (len + sizeof(int) > size)
         size += MEMORY_INCREMENT;
       buffer = (char *) realloc(buffer, size);
     }
 
   memcpy(buffer, (char *) [display_list bytes], len);
-  buffer[len] = 0;
+  memset(buffer + len, 0, sizeof(int));
 
   [self setNeedsDisplay: YES];
 }

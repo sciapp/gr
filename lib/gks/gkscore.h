@@ -382,8 +382,12 @@ void gks_iso2utf(unsigned char c, char *utf, size_t *len);
 void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
 
 int gks_ft_init(void);
-int *gks_ft_render(int *x, int *y, int *width, int *height,
-                   gks_state_list_t *gkss, const char *text, int length);
+int *gks_ft_render(
+  int *x, int *y, int *width, int *height,
+  gks_state_list_t *gkss, const char *text, int length);
+unsigned char *gks_ft_get_bitmap(
+  int *x, int *y, int *width, int *height,
+  gks_state_list_t *gkss, const char *text, int length);
 void gks_ft_terminate(void);
 
 #ifdef _WIN32

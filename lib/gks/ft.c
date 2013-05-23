@@ -213,9 +213,8 @@ void gks_ft_terminate(void) {
   init = 0;
 }
 
-/* create rgba bitmap and compute position */
-int *gks_ft_render(int *x, int *y, int *width, int *height,
-                   gks_state_list_t *gkss, const char *text, int length) {
+unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
+                                 gks_state_list_t *gkss, const char *text, int length) {
   FT_Face face;                   /* font face */
   FT_Vector pen;                  /* glyph position */
   FT_BBox bb;                     /* bounding box */
@@ -228,17 +227,15 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   FT_UInt size;                   /* number of pixels of the bitmap */
   FT_String *file;                /* concatenated font path */
   const FT_String *font, *prefix; /* font file name and directory */
-  int color[3];                   /* text color */
   FT_UInt *unicode_string;        /* unicode text string */
   FT_Int halign, valign;          /* alignment */
   FT_Byte *mono_bitmap = NULL;    /* target for rendered text */
-  FT_Byte *rgba_bitmap = NULL;    /*        for creation of colored text */
   FT_Int num_glyphs;              /* number of glyphs */
   FT_Vector align;
   FT_Bitmap ftbitmap;
   FT_UInt codepoint;
-  int i, j, k, textfont, dx, dy, value, tmp, pos_x, pos_y;
-  float red, green, blue, angle;
+  int i, j, k, textfont, dx, dy, value, pos_x, pos_y;
+  float angle;
   const int windowheight = *height;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN ||
@@ -353,7 +350,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     bb.xMax = max(bb.xMax, pen.x + bearing.x + 64 * face->glyph->bitmap.width);
     bb.yMin = min(bb.yMin, pen.y + bearing.y - 64 * face->glyph->bitmap.rows);
     bb.yMax = max(bb.yMax, pen.y + bearing.y);
-  
+
     if (direction == GKS_K_TEXT_PATH_DOWN) {
       pen.x -= face->glyph->advance.x + spacing.x;
       pen.y -= face->glyph->advance.y + spacing.y;
@@ -409,22 +406,6 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
     }
   }
 
-  gks_inq_rgb(gkss->txcoli, &red, &green, &blue);
-  color[0] = (int)(red * 255);
-  color[1] = (int)(green * 255);
-  color[2] = (int)(blue * 255);
-
-  rgba_bitmap = (FT_Byte *) safe_realloc(rgba_bitmap, 4 * size);
-  memset(rgba_bitmap, 0, 4 * size);
-  for (i = 0; i < size; i++) {
-    for (j = 0; j < 3; j++) {
-      tmp = rgba_bitmap[4*i + j] + color[j] * mono_bitmap[i] / 255;
-      rgba_bitmap[4*i + j] = (FT_Byte) min(tmp, 255);
-    }
-    tmp = rgba_bitmap[4*i + 3] + mono_bitmap[i];
-    rgba_bitmap[4*i + 3] = (FT_Byte) min(tmp, 255);
-  }
-
   /* Alignment */
   if (direction == GKS_K_TEXT_PATH_DOWN) {
     pen.x += spacing.x;
@@ -470,6 +451,34 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
 
   *x += (bb.xMin - align.x) / 64;
   *y += (bb.yMin - align.y) / 64;
+  return mono_bitmap;
+}
+
+int *gks_ft_render(int *x, int *y, int *width, int *height,
+                   gks_state_list_t *gkss, const char *text, int length) {
+  FT_Byte *rgba_bitmap = NULL;
+  float red, green, blue;
+  int tmp, size, i, j;
+  int color[3];
+  unsigned char *mono_bitmap;
+
+  mono_bitmap = gks_ft_get_bitmap(x, y, width, height, gkss, text, length);
+  gks_inq_rgb(gkss->txcoli, &red, &green, &blue);
+  color[0] = (int)(red * 255);
+  color[1] = (int)(green * 255);
+  color[2] = (int)(blue * 255);
+
+  size = *width * *height;
+  rgba_bitmap = (FT_Byte *) safe_realloc(rgba_bitmap, 4 * size);
+  memset(rgba_bitmap, 0, 4 * size);
+  for (i = 0; i < size; i++) {
+    for (j = 0; j < 3; j++) {
+      tmp = rgba_bitmap[4*i + j] + color[j] * mono_bitmap[i] / 255;
+      rgba_bitmap[4*i + j] = (FT_Byte) min(tmp, 255);
+    }
+    tmp = rgba_bitmap[4*i + 3] + mono_bitmap[i];
+    rgba_bitmap[4*i + 3] = (FT_Byte) min(tmp, 255);
+  }
 
   free(mono_bitmap);
   return (int *) rgba_bitmap;

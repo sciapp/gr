@@ -301,10 +301,11 @@ void delete_seg(char *str, int segn)
 
   s = d = str;
 
-  while (s[sp] || s[sp + 1] || s[sp + 2] || s[sp + 3])
+  saved_sp = sp;
+  RESOLVE(len, int, sizeof(int));
+
+  while (*len)
     {
-      saved_sp = sp;
-      RESOLVE(len, int, sizeof(int));
       RESOLVE(sgnum, int, sizeof(int));
       sp = saved_sp;
 
@@ -315,6 +316,9 @@ void delete_seg(char *str, int segn)
 	  dp += *len;
 	}
       sp += *len;
+
+      saved_sp = sp;
+      RESOLVE(len, int, sizeof(int));
     }
 
   if (sp > dp)
@@ -469,11 +473,11 @@ void interp(char *str, int segn)
 
   s = str;
 
-  while (s[sp] || s[sp + 1] || s[sp + 2] || s[sp + 3])
-    {
-      saved_sp = sp;
+  saved_sp = sp;
+  RESOLVE(len, int, sizeof(int));
 
-      RESOLVE(len, int, sizeof(int));
+  while (*len)
+    {
       RESOLVE(sgnum, int, sizeof(int));
       RESOLVE(fctid, int, sizeof(int));
 
@@ -713,6 +717,9 @@ void interp(char *str, int segn)
 	      break;
 	    }
 	}
+
+      saved_sp = sp;
+      RESOLVE(len, int, sizeof(int));
     }
 }
 
