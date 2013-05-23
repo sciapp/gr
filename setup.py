@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import with_statement
+
 import sys
 import sysconfig
 import os
@@ -248,7 +250,7 @@ _gksExt = Extension("libGKS", _gks_src_path,
 _ext_modules = [_gksExt]
 
 # prerequisites: build static 3rdparty libraries
-if "clean" not in sys.argv:
+if "clean" not in sys.argv and "help" not in sys.argv:
     if sys.platform == "win32":
         _extra_preargs = list(_msvc_extra_compile_args)
     else:
@@ -257,6 +259,8 @@ if "clean" not in sys.argv:
         os.mkdir("build")
     if not os.path.isdir(_build_3rdparty):
         os.mkdir(_build_3rdparty)
+    if not os.path.isdir(_build_temp):
+        os.mkdir(_build_temp)
     compiler = new_compiler()
     if not os.path.isfile(_libz):
         obj = compiler.compile(_libz_src_path, extra_preargs=_extra_preargs)
@@ -270,6 +274,20 @@ if "clean" not in sys.argv:
     if not os.path.isfile(_libjpeg):  
         obj = compiler.compile(_libjpeg_src_path, extra_preargs=_extra_preargs)
         compiler.create_static_lib(obj, "jpeg", output_dir=_build_3rdparty)
+        
+    # create batch scripts
+    if sys.platform == "win32":
+        _grvarsallbat = os.path.join(_build_temp, "grvarsall.bat")
+        with open(_grvarsallbat, "wb") as fd:
+            paths = ["%PATH%"]
+            fd.write("@echo off\r\n")
+            if _wxlib:
+                fd.write("set WXLIB=%s\r\n" %_wxlib)
+                paths.append("%WXLIB%")
+            if _gsdir:
+                fd.write("set GSDIR=%s\r\n" %_gsdir)
+                paths.append("%GSDIR%\\bin")
+            fd.write("set PATH=%s\r\n" %(';'.join(paths)))
 else:
     try:
         map(lambda p: os.remove(os.path.join(_build_3rdparty, p)),
@@ -322,7 +340,7 @@ if _qtdir:
     if match:
         _qtversion = map(lambda s: int(s), match.group(0).split('.'))
         if _qtversion[0] < 4:
-            if "clean" not in sys.argv:
+            if "clean" not in sys.argv and "help" not in sys.argv:
                 print >>sys.stderr, ("QTDIR points to old Qt version %s."
                                      %'.'.join(map(lambda i: str(i),
                                                    _qtversion)))
@@ -366,7 +384,7 @@ else:
     print >>sys.stderr, "QTDIR not set. Build without Qt4 support."
     
 # check for ghostscript support
-if "clean" not in sys.argv:
+if "clean" not in sys.argv and "help" not in sys.argv:
     _gks_gs_library_dirs = None
     _gks_gs_includes = list(_gks_plugin_includes)
     if sys.platform == "win32":
