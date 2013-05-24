@@ -89,28 +89,17 @@ int connect_socket()
 }
 
 static
-int send_socket(int s, char *buf, int *nbyte)
+int send_socket(int s, char *buf, int size)
 {
-  int offset = 0, bytes_to_copy, length = 0;
+  int sent, n = 0;
 
-  if (send(s, (char *) nbyte, sizeof(int), 0) == -1) {
-    perror("send");
-    return -1;
-  }
-  bytes_to_copy = *nbyte;
-  while (bytes_to_copy > 0) {
-    if (bytes_to_copy > BUFSIZ)
-      length = BUFSIZ;
-    else
-      length = bytes_to_copy;
-    if (send(s, buf + offset, length, 0) == -1) {
+  for (sent = 0; sent < size; sent += n) {
+    if ((n = send(s, buf + sent, size - sent, 0)) == -1) {
       perror("send");
       return -1;
     }
-    offset += length;
-    bytes_to_copy -= length;
   }
-  return 0;
+  return sent;
 }
 
 static
@@ -161,7 +150,10 @@ void gks_drv_socket(
 
     case 8:
       if (ia[1] == GKS_K_PERFORM_FLAG)
-        send_socket(wss->s, wss->dl.buffer, &(wss->dl.nbytes));
+        {
+          send_socket(wss->s, (char *) &wss->dl.nbytes, sizeof(int));
+          send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes);
+        }
       break;
   }
 

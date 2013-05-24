@@ -71,7 +71,7 @@ static FT_Pointer safe_realloc(FT_Pointer ptr, size_t size);
 static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous,
                           FT_Vector *pen, FT_Bool vertical, FT_Matrix *rotation,
                           FT_Vector *bearing, FT_Int halign);
-static void convert_text(FT_Bytes str, FT_UInt *unicode_string, int *length);
+static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int *length);
 static FT_Long min(FT_Long a, FT_Long b);
 static FT_Long max(FT_Long a, FT_Long b);
 
@@ -149,8 +149,53 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous,
   return 0;
 }
 
+
+static
+void symbol_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int length)
+{
+  static int symbol2utf[256] = {
+    0,     1,     2,     3,     4,     5,     6,     7,
+    8,     9,    10,    11,    12,    13,    14,    15,
+    16,    17,    18,    18,    20,    21,    22,    23,
+    24,    25,    26,    27,    28,    29,    30,    31,
+    32,    33,  8704,    35,  8707,    37,    38,  8715,
+    40,    41,    42,    43,    44,    45,    46,    47,
+    48,    49,    50,    51,    52,    53,    54,    55,
+    56,    57,    58,    59,    60,    61,    62,    63,
+    8773,   913,   914,   935,   916,   917,   934,   915,
+    919,   921,   977,   922,   923,   924,   925,   927,
+    928,   920,   929,   931,   932,   933,   962,   937,
+    926,   936,   918,    91,  8756,    93,  8869,    95,
+    8254,   945,   946,   967,   948,   949,   966,   947,
+    951,   953,   981,   954,   955,   956,   957,   959,
+    960,   952,   961,   963,   964,   965,   982,   969,
+    958,   968,   950,   123,   124,   125,   126,   127,
+    128,   129,   130,   131,   132,   133,   134,   135,
+    136,   137,   138,   139,   140,   141,   142,   143,
+    144,   145,   146,   147,   148,   149,   150,   151,
+    152,   153,   154,   155,   156,   157,   158,   159,
+    160,   978,  8242,  8804,  8260,  8734,   402,  9827,
+    9830,  9829,  9824,  8596,  8592,  8593,  8594,  8595,
+    176,   177,  8243,  8805,   215,  8733,  8706,  8226,
+    247,  8800,  8801,  8776,  8230,  9116,  9135,  8629,
+    8501,  8465,  8476,  8472,  8855,  8853,  8709,  8745,
+    8746,  8835,  8839,  8836,  8834,  8838,  8712,  8713,
+    8736,  8711,   174,   169,  8482,  8719,  8730,   183,
+    172,  8743,  8744,  8660,  8656,  8657,  8658,  8659,
+    9674, 12296,   174,   169,  8482,  8721,  9115,  9116,
+    9117,  9121,  9116,  9123,  9127,  9128,  9129,  9116,
+    240, 12297,  8747,  9127,  9116,  9133,  9131,  9130,
+    9120,  9124,  9130,  9126,  9131,  9132,  9133,   255
+  };
+  int i;
+
+  for (i = 0; i < length; i++)
+    unicode_string[i] = symbol2utf[str[i]];
+}
+
 /* set text string, converting UTF-8 into Unicode */
-static void convert_text(FT_Bytes str, FT_UInt *unicode_string, int *length) {
+static
+void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int *length) {
   FT_UInt num_glyphs = 0;
   FT_UInt codepoint;
   FT_Byte following_bytes;
@@ -244,10 +289,6 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
 
   if (!init) gks_ft_init();
 
-  num_glyphs = length;
-  unicode_string = (FT_UInt *) malloc(length * sizeof(FT_UInt) + 1);
-  convert_text((FT_Bytes)text, unicode_string, &num_glyphs);
-
   if (gkss->txal[0] != GKS_K_TEXT_HALIGN_NORMAL) {
     halign = gkss->txal[0];
   } else if (vertical) {
@@ -277,7 +318,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   if (prefix == NULL) {
     prefix = GRDIR;
   }
-  file = (FT_String *) malloc(strlen(prefix) + 9 + strlen(font) + 4 + 1);
+  file = (FT_String *) malloc(strlen(prefix) + 7 + strlen(font) + 4 + 1);
   strcpy(file, prefix);
 #ifndef _WIN32
   strcat(file, "/fonts/");
@@ -306,6 +347,14 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
     FT_Attach_File(face, file);
   }
   free(file);
+
+  num_glyphs = length;
+  unicode_string = (FT_UInt *) malloc(length * sizeof(FT_UInt) + 1);
+  if (map[textfont - 1] == 13) {
+    symbol_to_unicode((FT_Bytes)text, unicode_string, num_glyphs);
+  } else {
+    utf_to_unicode((FT_Bytes)text, unicode_string, &num_glyphs);
+  }
 
   textheight = gkss->chh * windowheight * 64 / caps[map[textfont - 1] - 1];
   error = FT_Set_Char_Size(face, textheight * gkss->chxp, textheight, 72, 72);
@@ -405,6 +454,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
       pen.y += face->glyph->advance.y + spacing.y;
     }
   }
+  free(unicode_string);
 
   /* Alignment */
   if (direction == GKS_K_TEXT_PATH_DOWN) {

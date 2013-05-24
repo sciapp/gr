@@ -5,6 +5,7 @@ wxdefs=""
 qtdefs=""
 gtkdefs=""
 gsdefs=""
+glfwdefs=""
 
 wxconfig=wx-config
 if [ "$WX_CONFIG" != "" ]
@@ -85,4 +86,35 @@ if [ $? -ne 0 ]; then
 fi
 rm -f $tmpout $tmpsrc
 
-echo $target $wxdefs $qtdefs $gtkdefs $gsdefs
+tmpout=`mktemp /tmp/a.out.XXXXX`
+tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+cat >$tmpsrc << eof
+#include <GL/glfw.h>
+
+int main(void)
+{
+    if (!glfwInit())
+        return -1;
+    return 0;
+}
+eof
+cmd="cc -o $tmpout $tmpsrc -lglfw"
+if [ `uname` = "Darwin" ]; then
+  cmd="$cmd -framework OpenGL -framework Cocoa -framework IOKit"
+else
+  cmd="$cmd -lXrandr -lX11 -lGL -lrt"
+fi
+$cmd >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "GLFW API not found. Build without GLFW support." >&2
+  echo "Do you want to continue? [y/n]" >&2
+  read yesno
+  if [ "$yesno" = "y" ]; then
+    glfwdefs="GLFWDEFS=-DNO_GLFW GLFWLIBS="
+  else
+    target="nothing"
+  fi
+fi
+rm -f $tmpout $tmpsrc
+
+echo $target $wxdefs $qtdefs $gtkdefs $gsdefs $glfwdefs
