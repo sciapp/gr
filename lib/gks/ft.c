@@ -11,6 +11,8 @@
 #include FT_GLYPH_H
 #include FT_XFREE86_H
 
+#define nint(a) ((int)(a + 0.5))
+
 const static FT_String *gks_font_list[] = {
   "NimbusRomNo9L-Regu",         /* 1: Times New Roman */
   "NimbusRomNo9L-ReguItal",
@@ -356,16 +358,17 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
     utf_to_unicode((FT_Bytes)text, unicode_string, &num_glyphs);
   }
 
-  textheight = gkss->chh * windowheight * 64 / caps[map[textfont - 1] - 1];
-  error = FT_Set_Char_Size(face, textheight * gkss->chxp, textheight, 72, 72);
+  textheight = nint(gkss->chh * windowheight * 64 / caps[map[textfont-1] - 1]);
+  error = FT_Set_Char_Size(face, nint(textheight * gkss->chxp), textheight,
+                           72, 72);
   if (error) gks_perror("Cannot set text height");
 
   if (gkss->chup[0] != 0.0 || gkss->chup[1] != 0.0) {
     angle = atan2f(gkss->chup[1], gkss->chup[0]) - M_PI / 2;
-    rotation.xx =  cosf(angle) * 0x10000L;
-    rotation.xy = -sinf(angle) * 0x10000L;
-    rotation.yx =  sinf(angle) * 0x10000L;
-    rotation.yy =  cosf(angle) * 0x10000L;
+    rotation.xx = nint( cosf(angle) * 0x10000L);
+    rotation.xy = nint(-sinf(angle) * 0x10000L);
+    rotation.yx = nint( sinf(angle) * 0x10000L);
+    rotation.yy = nint( cosf(angle) * 0x10000L);
     FT_Set_Transform(face, &rotation, NULL);
   } else {
     FT_Set_Transform(face, NULL, NULL);
@@ -376,8 +379,8 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
     error = FT_Load_Glyph(face, FT_Get_Char_Index(face, ' '),
                           vertical ? FT_LOAD_VERTICAL_LAYOUT : FT_LOAD_DEFAULT);
     if (!error) {
-      spacing.x = face->glyph->advance.x * gkss->chsp;
-      spacing.y = face->glyph->advance.y * gkss->chsp;
+      spacing.x = nint(face->glyph->advance.x * gkss->chsp);
+      spacing.y = nint(face->glyph->advance.y * gkss->chsp);
     } else {
       gks_perror("Cannot apply character spacing");
     }
@@ -467,17 +470,17 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
 
   align.x = align.y = 0;
   if (valign != GKS_K_TEXT_VALIGN_BASE) {
-    align.y = gkss->chh * windowheight * 64;
+    align.y = nint(gkss->chh * windowheight * 64);
     FT_Vector_Transform(&align, &rotation);
     if (valign == GKS_K_TEXT_VALIGN_HALF) {
-      align.x *= 0.5;
-      align.y *= 0.5;
+      align.x = nint(0.5 * align.x);
+      align.y = nint(0.5 * align.y);
     } else if (valign == GKS_K_TEXT_VALIGN_TOP) {
-      align.x *= 1.2;
-      align.y *= 1.2;
+      align.x = nint(1.2 * align.x);
+      align.y = nint(1.2 * align.y);
     } else if (valign == GKS_K_TEXT_VALIGN_BOTTOM) {
-      align.x *= -0.2;
-      align.y *= -0.2;
+      align.x = nint(-0.2 * align.x);
+      align.y = nint(-0.2 * align.y);
     }
   }
 

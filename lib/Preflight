@@ -102,7 +102,7 @@ cmd="cc -o $tmpout $tmpsrc -lglfw"
 if [ `uname` = "Darwin" ]; then
   cmd="$cmd -framework OpenGL -framework Cocoa -framework IOKit"
 else
-  cmd="$cmd -lXrandr -lX11 -lGL -lrt"
+  cmd="$cmd -lGL -lXrandr -lX11 -lrt"
 fi
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then

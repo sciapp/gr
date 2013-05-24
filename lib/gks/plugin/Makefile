@@ -21,6 +21,9 @@
      GSDEFS = 
       GSINC = -I/usr/include/ghostscript
      GSLIBS = -lgs
+   GLFWDEFS = -DXFT
+    GLFWINC = -I/usr/include/freetype2 
+   GLFWLIBS = -lfreetype -lglfw -lGL -lXrandr -lX11 -lrt
        LIBS = -lc -lm
       ZLIBS = -lz
 
@@ -29,17 +32,20 @@
 .m.o:
 	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $<
 .cxx.o:
-	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(INCLUDES) $<
+	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(INCLUDES) $<
 
 default:
 	@make `uname`
 
 targets: wxplugin.so qtplugin.so svgplugin.so gtkplugin.so figplugin.so \
-         gsplugin.so wmfplugin.so
+         gsplugin.so wmfplugin.so glplugin.so
 
 Darwin:
 	@make targets quartzplugin.so \
-	GSINC="-I/usr/local/include/ghostscript" LIBS="-liconv"
+	GSINC="-I/usr/local/include/ghostscript" \
+	GLFWINC="-I/usr/X11/include/freetype2" \
+	GLFWLIBS="-lfreetype -lglfw -framework OpenGL -framework Cocoa -framework IOKit" \
+	LIBS="-liconv"
 Linux:
 	@make targets \
 	SOFLAGS="-shared" LDFLAGS="-Wl,-rpath=$(QTDIR)/lib"
@@ -68,6 +74,9 @@ wmfplugin.so: wmfplugin.o font.o afm.o util.o malloc.o error.o io.o
 quartzplugin.so: quartzplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LIBS) \
 	-lobjc -framework Foundation -framework ApplicationServices
+
+glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
+	$(CXX) -o $@ $(SOFLAGS) $? $(GLFWLIBS) $(XLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)
