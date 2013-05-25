@@ -26,7 +26,7 @@ typedef unsigned long uLong;
 
 #define MEMORY_INCREMENT 32768
 #define MAX_OBJECTS 10000
-#define MAX_PAGES 100
+#define MAX_PAGES 1000
 #define NO_OF_BUFS 10
 
 #define DrawBorder 0
