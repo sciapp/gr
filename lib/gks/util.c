@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
 
 #ifdef _WIN32
@@ -47,8 +48,42 @@
     xn = gkss->a[tnr] * (xw); \
     yn = gkss->c[tnr] * (yw)
 
+struct wstypes_t {
+  char *name;
+  int wstype;
+};
+
 static
-int pattern[120][33] = 
+struct wstypes_t wstypes[] = {
+  { "cgm", 8 },
+  { "win", 42 },
+  { "ps", 62 },
+  { "eps", 62 },
+  { "pdf", 102 },
+  { "mov", 120 },
+  { "x11", 211 },
+  { "bmp", 320 },
+  { "jpeg", 321 },
+  { "jpg", 321 },
+  { "png", 322 },
+  { "tiff", 323 },
+  { "tif", 323 },
+  { "fig", 370 },
+  { "gtk", 370 },
+  { "wx", 380 },
+  { "qt", 381 },
+  { "svg", 382 },
+  { "wmf", 390 },
+  { "quartz", 400 },
+  { "socket", 410 },
+  { "opengl", 420 }
+};
+
+static
+int num_wstypes = sizeof(wstypes) / sizeof(wstypes[0]);
+
+static
+int pattern[120][33] =
 {
   {  4,   0,   0,   0,   0,   0,   0,   0,   0,
           0,   0,   0,   0,   0,   0,   0,   0,
@@ -533,7 +568,7 @@ int pattern[120][33] =
 };
 
 static
-float rgb[1000][3] = 
+float rgb[1000][3] =
 {
   { 1.00000, 1.00000, 1.00000 },
   { 0.00000, 0.00000, 0.00000 },
@@ -1538,7 +1573,7 @@ float rgb[1000][3] =
 };
 
 static
-int pix[256] = 
+int pix[256] =
 {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1713,7 +1748,7 @@ void gks_init_core(gks_state_list_t *list)
 gks_list_t *gks_list_find(gks_list_t *list, int element)
 {
   while (list != NULL)
-    { 
+    {
       if (list->item == element)
         return list;
       list = list->next;
@@ -1780,7 +1815,7 @@ void gks_list_free(gks_list_t *list)
   gks_list_t *next;
 
   while (list != NULL)
-    { 
+    {
       next = list->next;
       if (list->ptr != NULL)
 	gks_free(list->ptr);
@@ -1844,7 +1879,7 @@ void gks_inq_pixel(int index, int *pixel)
 
   if (index >= 588)
     i = 80 + (index - 588) / 56 * 12 + nint((index - 588) % 56 * 11.0 / 56.0);
-  else if (index >= 257) 
+  else if (index >= 257)
     i = 8 + nint((index - 257) / 330.0 * (72 - 1));
   else
     i = index;
@@ -1913,7 +1948,7 @@ void gks_WC_to_NDC(int tnr, float *x, float *y)
 void gks_seg_xform(float *x, float *y)
 {
   float xx;
- 
+
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1] + gkss->mat[2][0];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1] + gkss->mat[2][1];
   *x = xx;
@@ -1981,10 +2016,10 @@ void gks_set_chr_xform(void)
 
   tnr = gkss->cntnr;
 
-  chux = gkss->chup[0]; chuy = gkss->chup[1]; 
-  chh = gkss->chh; 
-  chxp = gkss->chxp; 
-  slant = gkss->txslant; 
+  chux = gkss->chup[0]; chuy = gkss->chup[1];
+  chh = gkss->chh;
+  chxp = gkss->chxp;
+  slant = gkss->txslant;
 
   /* scale to normalize the up vector */
   scale = sqrt(chux * chux + chuy * chuy);
@@ -2416,7 +2451,7 @@ void draw_character(float x, float y, char chr, int font,
       mszsc = gkss->mszsc;
       scalex = 0.001 * mszsc / (xmax - xmin);
       scaley = 0.001 * mszsc / (ymax - ymin);
-	  
+
       gks_inq_dev_xform(window, viewport);
       scalex *= (window[1] - window[0]) / (viewport[1] - viewport[0]);
       scaley *= (window[3] - window[2]) / (viewport[3] - viewport[2]);
@@ -2546,7 +2581,7 @@ void gks_emul_text(float px, float py, int nchars, char *chars,
     default:
       ay = 0;
     }
-  
+
   gks_chr_xform(&ax, &ay, size);
 
   xn += ax;
@@ -2796,8 +2831,8 @@ void gks_emul_fillarea(int n, float *px, float *py, int tnr,
 int gks_get_ws_type(void)
 {
   const char *env;
-  int wstype;
- 
+  int wstype = 0, i;
+
   env = gks_getenv("GKS_WSTYPE");
 #ifdef VMS
   if (!env)
@@ -2805,18 +2840,34 @@ int gks_get_ws_type(void)
 #endif
   if (!env)
     env = gks_getenv("GKSwstype");
- 
- if (env)
-   wstype = atoi(env);
- else
+
+  if (env)
+    {
+      if (isalpha(*env))
+        {
+          for (i = 0; i < num_wstypes; i++)
+            if (strcmp(wstypes[i].name, env) == 0)
+              {
+                wstype = wstypes[i].wstype;
+                break;
+              }
+        }
+      else
+        wstype = atoi(env);
+
+      if (wstype == 0)
+        gks_perror("invalid workstation type (%s)", env);
+    }
+
+  if (wstype == 0)
 #ifndef _WIN32
 #ifdef __APPLE__
-   wstype = 400;
+    wstype = 400;
 #else
-   wstype = 211;
+    wstype = 211;
 #endif
 #else
-   wstype = 41;
+    wstype = 41;
 #endif
 
   return wstype;

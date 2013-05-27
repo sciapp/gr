@@ -95,7 +95,7 @@ static FT_Pointer safe_realloc(FT_Pointer ptr, size_t size) {
   if (tmp != NULL) {
     ptr = tmp;
   } else {
-    gks_perror("Out of memory");
+    gks_perror("out of memory");
     ptr = NULL;
   }
   return ptr;
@@ -120,12 +120,12 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous,
   error = FT_Load_Glyph(face, glyph_index, vertical ?
                         FT_LOAD_VERTICAL_LAYOUT : FT_LOAD_DEFAULT);
   if (error) {
-    gks_perror("Glyph could not be loaded: %c", codepoint);
+    gks_perror("glyph could not be loaded: %c", codepoint);
     return 1;
   }
   error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
   if (error) {
-    gks_perror("Glyph could not be rendered: %c", codepoint);
+    gks_perror("glyph could not be rendered: %c", codepoint);
     return 1;
   }
   *previous = glyph_index;
@@ -218,7 +218,7 @@ void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int *length) {
       offset = 128+64+32+16;
       following_bytes = 3;
     } else {
-      gks_perror("Character ignored due to unicode error");
+      gks_perror("character ignored due to unicode error");
       continue;
     }
     codepoint = str[i] - offset;
@@ -226,7 +226,7 @@ void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int *length) {
       codepoint = codepoint * 64;
       i++;
       if (str[i] < 128 || str[i] >= 128+64) {
-        gks_perror("Character ignored due to unicode error");
+        gks_perror("character ignored due to unicode error");
         continue;
       }
       codepoint += str[i] - 128;
@@ -244,7 +244,7 @@ int gks_ft_init(void) {
   if (init) return 0;
   error = FT_Init_FreeType(&library);
   if (error) {
-    gks_perror("Could not initialize freetype library");
+    gks_perror("could not initialize freetype library");
     init = 0;
   } else {
     init = 1;
@@ -313,7 +313,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   if (textfont <= 32) {
     font = gks_font_list[map[textfont - 1] - 1];
   } else {
-    gks_perror("Invalid font index: %d", gkss->txfont);
+    gks_perror("invalid font index: %d", gkss->txfont);
     font = gks_font_list[0];
   }
   prefix = gks_getenv("GKS_FONTPATH");
@@ -331,10 +331,10 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   strcat(file, ".pfb");
   error = FT_New_Face(library, file, 0, &face);
   if (error == FT_Err_Unknown_File_Format) {
-    gks_perror("Unknown file format: %s", file);
+    gks_perror("unknown file format: %s", file);
     return NULL;
   } else if (error) {
-    gks_perror("Could not open font file: %s", file);
+    gks_perror("could not open font file: %s", file);
     return NULL;
   }
   if (strcmp(FT_Get_X11_Font_Format(face), "Type 1") == 0) {
@@ -361,7 +361,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   textheight = nint(gkss->chh * windowheight * 64 / caps[map[textfont-1] - 1]);
   error = FT_Set_Char_Size(face, nint(textheight * gkss->chxp), textheight,
                            72, 72);
-  if (error) gks_perror("Cannot set text height");
+  if (error) gks_perror("cannot set text height");
 
   if (gkss->chup[0] != 0.0 || gkss->chup[1] != 0.0) {
     angle = atan2f(gkss->chup[1], gkss->chup[0]) - M_PI / 2;
@@ -382,7 +382,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
       spacing.x = nint(face->glyph->advance.x * gkss->chsp);
       spacing.y = nint(face->glyph->advance.y * gkss->chsp);
     } else {
-      gks_perror("Cannot apply character spacing");
+      gks_perror("cannot apply character spacing");
     }
   }
 
@@ -414,7 +414,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   *width  = (int)((bb.xMax - bb.xMin) / 64);
   *height = (int)((bb.yMax - bb.yMin) / 64);
   if (bb.xMax <= bb.xMin || bb.yMax <= bb.yMin) {
-    gks_perror("Invalid bitmap size");
+    gks_perror("invalid bitmap size");
     return NULL;
   }
   size = *width * *height;
