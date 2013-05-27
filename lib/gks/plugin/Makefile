@@ -12,10 +12,10 @@
      QTDEFS =
       QTINC = -I$(QTDIR)/include
      QTLIBS = -L$(QTDIR)/lib -lQtGui -lQtCore
- PKG_CONFIG = false
+ GTK_CONFIG = false
     GTKDEFS =
-     GTKINC = `$(PKG_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
-    GTKLIBS = `$(PKG_CONFIG) gtk+-2.0 --libs 2>/dev/null`
+     GTKINC = `$(GTK_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
+    GTKLIBS = `$(GTK_CONFIG) gtk+-2.0 --libs 2>/dev/null`
       XLIBS = -L/usr/X11R6/lib -lXt -lX11
     PNGLIBS = -L../../../3rdparty/png -lpng
      GSDEFS = 

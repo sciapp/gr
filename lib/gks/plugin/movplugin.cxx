@@ -10,8 +10,40 @@
 #include <unistd.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#define DLLEXPORT __declspec(dllexport)
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#else
+
+#ifdef __cplusplus
+#define DLLEXPORT extern "C"
+#else
+#define DLLEXPORT
+#endif
+
+#endif
+
+DLLEXPORT void gks_movplugin(
+  int fctid, int dx, int dy, int dimx, int *i_arr,
+  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_c_arr, char *c_arr, void **ptr);
+
+#ifdef _WIN32
+#ifdef __cplusplus
+}
+#endif
+#endif
+
 #include "gks.h"
 #include "gkscore.h"
+
+#include "vc.h"
 
 #ifdef HAVE_ZLIB
 #include <zlib.h>
@@ -454,6 +486,9 @@ void pdf_close(PDF *p)
   int count, object, font, pattern;
   int filter_id, i;
   stroke_data_t s;
+  movie_t movie;
+  pdf_t pdf;
+  frame_t *frames;
 
   pdf_printf(p->stream, "%%PDF-1.%d\n", p->compress ? 2 : 0);
   pdf_printf(p->stream, "%%\344\343\317\322\n");  /* %âãÏÓ\n */
@@ -694,7 +729,18 @@ void pdf_close(PDF *p)
 
   pdf_printf(p->stream, "%%%%EOF\n");
 
-  gks_write_file(p->fd, p->stream->buffer, p->stream->length);
+  movie = vc_movie_create("gks.mov", 25, 4000000);
+
+  pdf = vc_pdf_from_memory(p->stream->buffer, p->stream->length);
+  frames = vc_pdf_to_frames(pdf, p->width, p->height);
+
+  for (i = 0; i <= vc_pdf_get_number_of_pages(pdf) - 1; i++) {
+    vc_movie_append_frame(movie, frames[i]);
+    vc_frame_free(frames[i]);
+  }
+
+  vc_pdf_close(pdf);
+  vc_movie_finish(movie);
 
   free(p->stream->buffer);
 }
@@ -1588,7 +1634,7 @@ void cellarray(float xmin, float xmax, float ymin, float ymax,
   pdf_restore(p);
 }
 
-void gks_drv_pdf(
+void gks_movplugin(
   int fctid, int dx, int dy, int dimx, int *ia,
   int lr1, float *r1, int lr2, float *r2, int lc, char *chars, void **ptr)
 {
@@ -1604,6 +1650,8 @@ void gks_drv_pdf(
       init_norm_xform();
       init_colors();
       create_patterns();
+
+      gks_init_core(gkss);
 
       *ptr = p;
       break;

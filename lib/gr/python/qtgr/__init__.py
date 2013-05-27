@@ -305,6 +305,8 @@ class PlotAxes(qtgr.base.GRMeta):
                         majorx = -majorx
                     if not self.isYDrawingEnabled():
                         majory = -majory
+                    if self.isGridEnabled():
+                        gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
                     gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
                 elif self.getId() == 2:
                     # second x, y axis
@@ -313,8 +315,6 @@ class PlotAxes(qtgr.base.GRMeta):
                     if not self.isYDrawingEnabled():
                         majory = -majory
                     gr.axes(xtick, ytick, xmax, ymax, majorx, majory, -0.01)
-                if self.isGridEnabled() and self.getId() == 1:
-                    gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
                 for curve in lstPlotCurve:
                     curve.drawGR()
     

@@ -32,8 +32,8 @@ while (True):
         continue
     gr.clearws()
     gr.setlinecolorind(1)
-    gr.axes(1, 5, 50, 0, 1, 2, -0.008)
     gr.grid(1, 5, 50, 0, 1, 2)
+    gr.axes(1, 5, 50, 0, 1, 2, -0.008)
     gr.setcharheight(0.020)
     gr.text(0.15, 0.965, '100Hz')
     gr.text(0.47, 0.965, '1kHz')

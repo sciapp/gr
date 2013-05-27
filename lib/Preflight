@@ -51,7 +51,9 @@ fi
 if [ "`pkg-config gtk+-2.0 --cflags 2>/dev/null`" = "" ]
 then
   echo "gtk+-2.0 not found. Build without GTK+ support." >&2
-  gtkdefs="PKG_CONFIG=false GTKDEFS=-DNO_GTK GTKINC= GTKLIBS="
+  gtkdefs="GTK_CONFIG=false GTKDEFS=-DNO_GTK GTKINC= GTKLIBS="
+else
+  gtkdefs="GTK_CONFIG=pkg-config"
 fi
 
 tmpout=`mktemp /tmp/a.out.XXXXX`

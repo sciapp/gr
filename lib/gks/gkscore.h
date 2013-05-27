@@ -376,6 +376,12 @@ DLLEXPORT void gks_gl_plugin(
   int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
+DLLEXPORT void gks_mov_plugin(
+  int fctid,
+  int dx, int dy, int dimx, int *i_arr,
+  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_c_arr, char *c_arr, void **ptr);
+
 void gks_compress(
   int bits, unsigned char *in, int in_len, unsigned char *out, int *out_len);
 

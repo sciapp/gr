@@ -73,10 +73,10 @@ def plot(x, y,
         gr.fillrect(xmin, xmax, ymin, ymax)
     charheight = 0.024 * (viewport[3] - viewport[2])
     gr.setcharheight(charheight)
-    gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
-    gr.axes(xtick, ytick, xmax, ymax, -majorx, -majory, -0.01)
     if grid:
          gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
+    gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
+    gr.axes(xtick, ytick, xmax, ymax, -majorx, -majory, -0.01)
     gr.setlinetype(linetype)
     gr.polyline(n, x, y)
     if markertype != gr.MARKERTYPE_DOT:

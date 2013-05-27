@@ -2185,9 +2185,9 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
 static
 void grid_line(float x0, float y0, float x1, float y1, float tick)
 {
-  int ltype = tick < 0 ? GKS_K_LINETYPE_SOLID : GKS_K_LINETYPE_DOTTED;
+  int color = tick < 0 ? 88 : 90;
 
-  gks_set_pline_linetype(ltype);
+  gks_set_pline_color_index(color);
 
   start_pline(x0, y0);
   pline(x1, y1);
@@ -2198,7 +2198,7 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
              int major_x, int major_y)
 {
   int errind, tnr;
-  int ltype, clsw;
+  int ltype, color, clsw;
 
   float clrt[4], wn[4], vp[4];
   float x_min, x_max, y_min, y_max;
@@ -2231,9 +2231,10 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
       return;
     }
 
-  /* save linetype and clipping indicator */
+  /* save linetype, line color and clipping indicator */
 
   gks_inq_pline_linetype(&errind, &ltype);
+  gks_inq_pline_color_index(&errind, &color);
   gks_inq_clip(&errind, &clsw, clrt);
 
   gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
@@ -2259,7 +2260,8 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
                   else
                     tick = x_tick;
 
-                  grid_line(x_min, yi, x_max, yi, tick);
+                  if (fabs(yi - y_org) > FEPS)
+                    grid_line(x_min, yi, x_max, yi, tick);
                 }
 
               if (i == 9)
@@ -2292,7 +2294,8 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
               else
                 tick = -1.;
 
-              grid_line(x_min, yi, x_max, yi, tick);
+              if (fabs(yi - y_org) > FEPS)
+                grid_line(x_min, yi, x_max, yi, tick);
 
               i++;
               yi = y_org + i * y_tick;
@@ -2320,7 +2323,8 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
                   else
                     tick = x_tick;
 
-                  grid_line(xi, y_min, xi, y_max, tick);
+                  if (fabs(xi - x_org) > FEPS)
+                    grid_line(xi, y_min, xi, y_max, tick);
                 }
 
               if (i == 9)
@@ -2353,7 +2357,8 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
               else
                 tick = -1.;
 
-              grid_line(xi, y_min, xi, y_max, tick);
+              if (fabs(xi - x_org) > FEPS)
+                grid_line(xi, y_min, xi, y_max, tick);
 
               i++;
               xi = x_org + i * x_tick;
@@ -2361,9 +2366,10 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
         }
     }
 
-  /* restore linetype and clipping indicator */
+  /* restore linetype, line color and clipping indicator */
 
   gks_set_pline_linetype(ltype);
+  gks_set_pline_color_index(color);
   gks_set_clipping(clsw);
 
   if (flag_graphics)
