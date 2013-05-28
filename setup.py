@@ -415,7 +415,10 @@ if "clean" not in sys.argv and "help" not in sys.argv:
             print >>sys.stderr, ("GSDIR not set. " +
                                  "Build without Ghostscript support.")
     else:
-        _gks_gs_includes.append("/usr/local/include/ghostscript")
+        if sys.platform == "darwin":
+            _gks_gs_includes.append("/usr/local/include/ghostscript")
+        else:
+            _gks_gs_includes.append("/usr/include/ghostscript")
         _gks_gs_libraries = list(_gks_plugin_xlibs)
         _gks_gs_libraries.extend(_gks_plugin_gslibs)
         _gks_gs_extra_link_args = ["-L/usr/X11R6/lib"]
@@ -452,7 +455,7 @@ int main()
             _gscc = Popen([_cc, "-o%s" %tmpout, tmpsrc, "-lgs", "-L/usr/X11/lib",
                            "-lXt", "-lX11", "-liconv"], stdout=PIPE, stderr=STDOUT)
         else:
-            _gscc = Popen([_cc, "-o %s" %tmpout, tmpsrc, "-lgs"],
+            _gscc = Popen([_cc, "-o%s" %tmpout, tmpsrc, "-lgs"],
                           stdout=PIPE, stderr=STDOUT)
         _gscc.communicate()
         try:
