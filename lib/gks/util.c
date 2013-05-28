@@ -49,7 +49,7 @@
     yn = gkss->c[tnr] * (yw)
 
 struct wstypes_t {
-  char *name;
+  const char *name;
   int wstype;
 };
 

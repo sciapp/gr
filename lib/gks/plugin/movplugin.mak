@@ -4,7 +4,7 @@
   CXXFLAGS = -g -Wall -fPIC $(DEFINES) $(INCLUDES)
     TARGET = movplugin.so
    SOFLAGS = -shared 
-      LIBS = -lavcodec -lavformat -lavdevice -lavutil -lfitz -lswscale -lfreetype -lbz2 -ljbig2dec -ljpeg -lopenjpeg -lpng -lz
+      LIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -lfitz -lfreetype -lbz2 -ljbig2dec -ljpeg -lopenjpeg -lpng -lz -lpthread
  EXTRALIBS =
 
 .cxx.o:
