@@ -12,11 +12,11 @@ import tempfile
 from distutils.command.build_ext import build_ext as _build_ext
 from distutils.core import setup, Extension
 from distutils.ccompiler import new_compiler
-from distutils.sysconfig import get_config_var
+from distutils.sysconfig import get_config_var, get_python_lib
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-05-22"
+__date__    = "2013-05-28"
 __version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -66,8 +66,10 @@ class build_ext(_build_ext):
             ret = pathNoExt + ".dll"
         return ret
 
+_prefix = ''
+
 _GTK_PACKAGE = "gtk+-2.0"
-_grdir = os.getenv("GRDIR", "/usr/local/gr")
+_grdir = os.getenv("GRDIR", os.path.join(get_python_lib(prefix=''), "gr"))
 _cc = os.getenv("CC", "cc")
 _wxconfig = os.getenv("WX_CONFIG")
 _qtdir = os.getenv("QTDIR")
@@ -82,6 +84,14 @@ _build_lib = os.path.join("build", "lib." + _uPlatformId)
 _build_3rdparty = os.path.join("build", "3rdparty." + _uPlatformId)
 _build_temp = os.path.join("build", "temp." + _uPlatformId)
 
+# additional data files in the distribtion
+_gks_fonts = os.path.join("lib", "gks", "fonts")
+_gks_fonts_path = map(lambda f: os.path.join(_gks_fonts, f),
+                      os.listdir(_gks_fonts))
+_gks_fonts_path.append(os.path.join("lib", "gks", "gksfont.dat"))
+_data_files = [(os.path.join(get_python_lib(prefix=''), "gr", "fonts"),
+                _gks_fonts_path)]
+
 # prerequisites: static 3rdparty libraries
 if sys.platform == "win32":
     # if linking against png, jpeg and zlib use this ordering!
@@ -92,7 +102,7 @@ if sys.platform == "win32":
     _libs_msvc = ["msvcrt", "oldnames", "kernel32", "wsock32", "advapi32",
                   "user32", "gdi32", "comdlg32", "winspool"]
     # w32ERR: __imp_ -> fixed by linking against oldnames.lib
-    _msvc_extra_compile_args = ["/Zi", "/D_DLL", "/D_POSIX"]
+    _msvc_extra_compile_args = ["/Zi", "/D_DLL", "/D_POSIX", "/nologo"]
     _msvc_extra_link_args = ["/nodefaultlib", "-dll"]
 else:
     _libz = os.path.join(_build_3rdparty, "libz.a")
@@ -163,7 +173,9 @@ elif sys.platform == "win32":
     _platform_extra_link_args = []
     _gr3_src.insert(0, "gr3_win.c")
     _cc = os.getenv("CC")
-    _grdir = os.getenv("GRDIR", "\"C:\\\\gr\"")
+    _grdir = os.getenv("GRDIR", ("\\\"%s\\\""
+                                 %os.path.join(get_python_lib(prefix=''),
+                                               "gr").replace('\\', "\\\\")))
 #elif sys.platform == "solaris":
 #    _gks_xftincludes = ["/usr/include/freetype2"]
 #    _platform_extra_link_args.append("-R$ORIGIN")
@@ -319,7 +331,8 @@ elif sys.platform == "win32":
         _wx_extra_compile_args.append("/DwxMSVC_VERSION_AUTO")
         _wx_extra_compile_args.append("/D_UNICODE")
         _extra_link_args = ["-dll"]
-#        _gks_wx_libraries.extend(_libs_msvc)
+#        _data_files.append(('', [os.path.join(_wxlib, "wxmsw294u_core_vc100.dll"),
+#                                 os.path.join(_wxlib, "wxbase294ud_vc100.dll")]))
     else:
         print >>sys.stderr, "WXDIR or WXLIB not set. Build without wx support."
 
@@ -363,10 +376,12 @@ Please retry with a valid QTDIR setting, e.g.
             _gks_qt_libraries = ["QtGui%d" %_qtversion[0],
                                  "QtCore%d" %_qtversion[0]]
             _gks_qt_libraries.extend(_libs_msvc)
+            _gks_qt_extra_compile_args = list(_msvc_extra_compile_args)
         else:
             _qt_extra_link_args = ["-L/usr/X11R6/lib",
                                    "-L%s" %os.path.join(_qtdir, "lib")]
             _gks_qt_libraries = ["QtGui", "QtCore"]
+            _gks_qt_extra_compile_args = []
         _qt_include_dirs = [os.path.join(_qtdir, "include")]
         _gks_qt_includes = list(_gks_plugin_includes)
         _gks_qt_includes.extend(_qt_include_dirs)
@@ -376,7 +391,7 @@ Please retry with a valid QTDIR setting, e.g.
                               libraries=_gks_qt_libraries,
                               library_dirs=[os.path.join(_qtdir, "lib")],
                               extra_link_args=_qt_extra_link_args,
-                              extra_compile_args=_msvc_extra_compile_args)
+                              extra_compile_args=_gks_qt_extra_compile_args)
         _ext_modules.append(_gksQtExt)
     else:
         print >>sys.stderr, "Unable to obtain Qt version number."
@@ -394,6 +409,8 @@ if "clean" not in sys.argv and "help" not in sys.argv:
         if _gsdir:
             _gks_gs_library_dirs = [os.path.join(_gsdir, "bin")]
             _gks_gs_includes.append(os.path.join(_gsdir, "include"))
+            _data_files.append(('',
+                                [os.path.join(_gsdir, "bin", "gsdll32.dll")]))
         else:
             print >>sys.stderr, ("GSDIR not set. " +
                                  "Build without Ghostscript support.")
@@ -556,6 +573,7 @@ _gr3_extra_link_args.append(_libpng)
 _gr3_extra_link_args.append(_libjpeg)
 _gr3_extra_link_args.append(_libz)
 _gr3_library_dirs = [_build_lib]
+_gr3_extra_compile_args = list(_msvc_extra_compile_args)
 if sys.platform == "darwin":
     framework = ["-framework", "OpenGL", "-framework", "Cocoa"]
     _gr3_libraries.append("GR")
@@ -597,4 +615,5 @@ setup(cmdclass={"build_ext": build_ext},
                    "gr3": "lib/gr3"},
       py_modules=["gr", "pygr"],
       packages=["gr3", "qtgr", "qtgr.events"],
-      ext_modules=_ext_modules)
+      ext_modules=_ext_modules,
+      data_files=_data_files)
