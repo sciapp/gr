@@ -465,6 +465,14 @@ def inqbbox():
   __gr.gr_inqbbox(byref(xmin), byref(xmax), byref(ymin), byref(ymax))
   return [xmin.value, xmax.value, ymin.value, ymax.value]
 
+os.environ["GRDIR"] = os.getenv("GRDIR",
+                                os.path.realpath(
+                                                 os.path.join(
+                                                   os.path.dirname(__file__),
+                                                              "gr")
+                                                 ))
+os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", os.getenv("GRDIR"))
+
 if platform == 'win32':
   os.environ["PATH"] = os.path.dirname(__file__)
   libext = ".dll"
