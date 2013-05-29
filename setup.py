@@ -12,7 +12,8 @@ import tempfile
 from distutils.command.build_ext import build_ext as _build_ext
 from distutils.core import setup, Extension
 from distutils.ccompiler import new_compiler
-from distutils.sysconfig import get_config_var, get_python_lib
+from distutils.sysconfig import get_config_var
+from distutils.sysconfig import get_python_lib as _get_python_lib
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -50,6 +51,7 @@ class build_ext(_build_ext):
         """Return the list of symbols that a shared extension has to
         export. This overloaded function does not append "init" + module_name
         to the exported symbols (default in superclass function).
+        
         """
         return ext.export_symbols
     
@@ -59,6 +61,7 @@ class build_ext(_build_ext):
         r"""Convert the name of an extension (eg. "foo.bar") into the name
         of the file from which it will be loaded (eg. "foo/bar.so", or
         "foo\bar.dll not foo\bar.pyd (default in superclass function)").
+        
         """
         ret = _build_ext.get_ext_filename(self, ext_name)
         (pathNoExt, ext) = os.path.splitext(ret)
@@ -66,7 +69,27 @@ class build_ext(_build_ext):
             ret = pathNoExt + ".dll"
         return ret
 
-_prefix = ''
+def get_python_lib(*args, **kwargs):
+    """Return the directory containing the Python library (standard or
+    site additions).
+
+    If 'plat_specific' is true, return the directory containing
+    platform-specific modules, i.e. any module from a non-pure-Python
+    module distribution; otherwise, return the platform-shared library
+    directory.  If 'standard_lib' is true, return the directory
+    containing standard Python library modules; otherwise, return the
+    directory for site-specific modules.
+
+    If 'prefix' is supplied, use it instead of sys.prefix or
+    sys.exec_prefix -- i.e., ignore 'plat_specific'.
+    
+    Do not return dist-packages on Debian based systems, e.g. Ubuntu
+    (default in superfunction) because just modules from the
+    Debian package manager should go there.
+    
+    """
+    return _get_python_lib(*args, **kwargs).replace("dist-packages",
+                                                    "site-packages")
 
 _GTK_PACKAGE = "gtk+-2.0"
 _grdir = os.getenv("GRDIR", os.path.join(get_python_lib(prefix=''), "gr"))
