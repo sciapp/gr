@@ -103,7 +103,8 @@ _gsdir = os.getenv("GSDIR")
 # unique platform id used by distutils
 _uPlatformId = "%s-%d.%d" %(sysconfig.get_platform(), sys.version_info.major,
                             sys.version_info.minor)
-_build_lib = os.path.join("build", "lib." + _uPlatformId) 
+_build_lib = os.path.join("build", "lib." + _uPlatformId)
+_build_lib_grpkg = os.path.join(_build_lib, "gr") 
 _build_3rdparty = os.path.join("build", "3rdparty." + _uPlatformId)
 _build_temp = os.path.join("build", "temp." + _uPlatformId)
 
@@ -275,7 +276,7 @@ _gks_extra_link_args.extend(_platform_extra_link_args)
 #_gks_extra_link_args.append(_libz)
 if sys.platform == "darwin":
     _gks_extra_link_args.append("-Wl,-install_name,@rpath/libGKS.so")
-_gksExt = Extension("libGKS", _gks_src_path,
+_gksExt = Extension("gr.libGKS", _gks_src_path,
                     define_macros=_gks_macros,
                     include_dirs=_gks_include_dirs,
                     libraries=_gks_libraries,
@@ -360,7 +361,7 @@ elif sys.platform == "win32":
         print >>sys.stderr, "WXDIR or WXLIB not set. Build without wx support."
 
 if _wxlibs:
-    _gksWxExt = Extension("wxplugin", _plugins_path["wxplugin.cxx"],
+    _gksWxExt = Extension("gr.wxplugin", _plugins_path["wxplugin.cxx"],
                           define_macros=[_gr_macro],
                           include_dirs=_gks_wx_includes,
                           library_dirs=_wx_library_dirs,
@@ -408,7 +409,7 @@ Please retry with a valid QTDIR setting, e.g.
         _qt_include_dirs = [os.path.join(_qtdir, "include")]
         _gks_qt_includes = list(_gks_plugin_includes)
         _gks_qt_includes.extend(_qt_include_dirs)
-        _gksQtExt = Extension("qtplugin", _plugins_path["qtplugin.cxx"],
+        _gksQtExt = Extension("gr.qtplugin", _plugins_path["qtplugin.cxx"],
                               define_macros=[_gr_macro],
                               include_dirs=_gks_qt_includes,
                               libraries=_gks_qt_libraries,
@@ -432,7 +433,7 @@ if "clean" not in sys.argv and "help" not in sys.argv:
         if _gsdir:
             _gks_gs_library_dirs = [os.path.join(_gsdir, "bin")]
             _gks_gs_includes.append(os.path.join(_gsdir, "include"))
-            _data_files.append(('',
+            _data_files.append((os.path.join(get_python_lib(prefix=''), "gr"),
                                 [os.path.join(_gsdir, "bin", "gsdll32.dll")]))
         else:
             print >>sys.stderr, ("GSDIR not set. " +
@@ -446,7 +447,7 @@ if "clean" not in sys.argv and "help" not in sys.argv:
         _gks_gs_libraries.extend(_gks_plugin_gslibs)
         _gks_gs_extra_link_args = ["-L/usr/X11R6/lib"]
         
-    _gksGsExt = Extension("gsplugin", _plugins_path["gsplugin.cxx"],
+    _gksGsExt = Extension("gr.gsplugin", _plugins_path["gsplugin.cxx"],
                            define_macros=[_gr_macro],
                            include_dirs=_gks_gs_includes,
                            library_dirs=_gks_gs_library_dirs,
@@ -502,7 +503,7 @@ int main()
                                         stdout=PIPE,
                                         stderr=PIPE).communicate()[0].rstrip())
         if _gtk_cflags:
-            _gksGtkExt = Extension("gtkplugin", _plugins_path["gtkplugin.cxx"],
+            _gksGtkExt = Extension("gr.gtkplugin", _plugins_path["gtkplugin.cxx"],
                                    define_macros=[_gr_macro],
                                    include_dirs=_gks_plugin_includes,
                                    extra_compile_args=_gtk_cflags,
@@ -515,7 +516,7 @@ _gks_svg_libraries.extend(_libs_msvc)
 #_gks_svg_libraries = [_libpng, _libz]
 if sys.platform == "win32":
     _gks_svg_libraries.extend(_libs_msvc)
-_gksSvgExt = Extension("svgplugin", _plugins_path["svgplugin.cxx"],
+_gksSvgExt = Extension("gr.svgplugin", _plugins_path["svgplugin.cxx"],
                        define_macros=[_gr_macro],
                        include_dirs=_gks_plugin_includes,
                        library_dirs=[_build_3rdparty],
@@ -527,7 +528,7 @@ _gks_fig_libraries = list(_pnglibs) # w32ERR: __imp_
 _gks_fig_libraries.extend(_zlibs)   # w32ERR: __imp_
 _gks_fig_libraries.extend(_libs_msvc)
 #_gks_fig_libraries = [_libpng, _libz]
-_gksFigExt = Extension("figplugin", _plugins_path["figplugin.cxx"],
+_gksFigExt = Extension("gr.figplugin", _plugins_path["figplugin.cxx"],
                        define_macros=[_gr_macro],
                        include_dirs=_gks_plugin_includes,
                        library_dirs=[_build_3rdparty],
@@ -536,14 +537,15 @@ _gksFigExt = Extension("figplugin", _plugins_path["figplugin.cxx"],
                        extra_link_args=_msvc_extra_link_args)
 _ext_modules.append(_gksFigExt)
 
-_gksWmfExt = Extension("wmfplugin", _plugins_path["wmfplugin.cxx"],
+_gksWmfExt = Extension("gr.wmfplugin", _plugins_path["wmfplugin.cxx"],
                        define_macros=[_gr_macro],
                        include_dirs=_gks_plugin_includes,
                        libraries=_libs_msvc)
 _ext_modules.append(_gksWmfExt)
 
 if sys.platform == "darwin":
-    _gksQuartzExt = Extension("quartzplugin", _plugins_path["quartzplugin.m"],
+    _gksQuartzExt = Extension("gr.quartzplugin",
+                              _plugins_path["quartzplugin.m"],
                               define_macros=[_gr_macro],
                               include_dirs=_gks_plugin_includes,
                               libraries=["objc"],
@@ -563,7 +565,7 @@ _gr_extra_link_args = list(_platform_extra_link_args)
 if sys.platform != "win32":
     _gr_libraries = ["GKS"]
     _gr_extra_link_args.append("-L/usr/X11R6/lib")
-    _gr_library_dirs = [_build_lib, _build_3rdparty]
+    _gr_library_dirs = [_build_lib_grpkg, _build_3rdparty]
     # important: lib ordering png, jpeg, z
     _gr_extra_link_args.append(_libpng)
     _gr_extra_link_args.append(_libjpeg)
@@ -573,12 +575,12 @@ else:
     _gr_libraries.extend(_pnglibs)
     _gr_libraries.extend(_jpeglibs)
     _gr_libraries.extend(_zlibs)
-    _gr_library_dirs = [_build_lib, _build_3rdparty,
+    _gr_library_dirs = [_build_lib_grpkg, _build_3rdparty,
                         os.path.join(_build_temp, "Release", "lib", "gks")]
     _gr_libraries.extend(_libs_msvc)
 if sys.platform == "darwin":
     _gr_extra_link_args.append("-Wl,-install_name,@rpath/libGR.so")
-_grExt = Extension("libGR", _gr_src_path,
+_grExt = Extension("gr.libGR", _gr_src_path,
                    define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                    include_dirs=_gr_include_dirs,
                    libraries=_gr_libraries,
@@ -598,18 +600,20 @@ _gr3_extra_link_args.extend(_platform_extra_link_args)
 _gr3_extra_link_args.append(_libpng)
 _gr3_extra_link_args.append(_libjpeg)
 _gr3_extra_link_args.append(_libz)
-_gr3_library_dirs = [_build_lib]
+_gr3_library_dirs = [_build_lib_grpkg]
 _gr3_extra_compile_args = list(_msvc_extra_compile_args)
 if sys.platform == "darwin":
     framework = ["-framework", "OpenGL", "-framework", "Cocoa"]
     _gr3_libraries.append("GR")
     _gr3_extra_link_args.extend(framework)
     _gr3_extra_link_args.append("-Wl,-install_name,@rpath/libGR3.so")
+    _gr3_extra_link_args.append("-Wl,-rpath,@loader_path/../gr/.")
 elif "linux" in sys.platform:
     _gr3_libraries.append("GR")
     _gr3_libraries.append("GL")
     _gr3_libraries.append("X11")
     _gr3_libraries.append(_libz)
+    _gr3_extra_link_args.append("-Wl,-rpath,$ORIGIN/../gr")
 elif sys.platform == "win32":
     _gr3_include_dirs.append("3rdparty")
     _gr3_libraries.append("libGR")    
@@ -620,7 +624,7 @@ elif sys.platform == "win32":
     _gr3_library_dirs.append(os.path.join(_build_temp, "Release", "lib", "gks"))
     _gr3_library_dirs.append(os.path.join(_build_temp, "Release", "lib", "gr"))
 #    _gr3_libraries.extend(_zlibs)
-_gr3Ext = Extension("libGR3", _gr3_src_path,
+_gr3Ext = Extension("gr3.libGR3", _gr3_src_path,
 #                    define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
                     include_dirs=_gr3_include_dirs,
                     libraries=_gr3_libraries,
@@ -639,7 +643,7 @@ setup(cmdclass={"build_ext": build_ext},
       url="https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr",
       package_dir={'': "lib/gr/python",
                    "gr3": "lib/gr3"},
-      py_modules=["gr", "pygr"],
-      packages=["gr3", "qtgr", "qtgr.events"],
+      py_modules=["pygr"],
+      packages=["gr", "gr3", "qtgr", "qtgr.events"],
       ext_modules=_ext_modules,
       data_files=_data_files)
