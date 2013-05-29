@@ -503,7 +503,7 @@ setlinecolorind(color)
 </code>
 
 == Parameters ==
-  * //color// --- The polyline color index (//color// < 980)
+  * //color// --- The polyline color index (//color// < 1000)
 
 ==== gr.setmarkertype ====
 Specifies the marker type for polymarkers.
@@ -566,7 +566,7 @@ setmarkercolorind(color)
 </code>
 
 == Parameters ==
-  * //color// --- The polymarker color index (//color// < 980)
+  * //color// --- The polymarker color index (//color// < 1000)
 
 ==== gr.settextfontprec ====
 Specifies the text font and precision for subsequent text output primitives.
@@ -646,7 +646,7 @@ settextcolorind(color)
 </code>
 
 == Parameters ==
-  * //color// --- The text color index (//color// < 980)
+  * //color// --- The text color index (//color// < 1000)
 
 //settextcolorind// defines the color of subsequent text output primitives.
 GR uses the default foreground color (black=1) for the default text color index.
@@ -721,34 +721,51 @@ alignment and vertical baseline alignment.
 | ''TEXT_VALIGN_BOTTOM''  |  5| Aligned with the bottom line of the characters |
 
 ==== gr.setfillintstyle ====
-FIXME
+Sets the fill area interior style to be used for fill areas.
 
 <code python>
 setfillintstyle(style)
 </code>
 
 == Parameters ==
-  * //style// --- FIXME
+  * //style// --- The style of fill to be used
+
+//setfillintstyle// defines the interior style  for subsequent fill area output
+primitives. The default interior style is HOLLOW.
+
+| ''HOLLOW''  |  0| No filling. Just draw the bounding polyline|
+| ''SOLID''  |  1| Fill the interior of the polygon using the fill color index|
+| ''PATTERN''  |  2| Fill the interior of the polygon using the style index as a pattern index|
+| ''HATCH''  |  3| Fill the interior of the polygon using the style index as a cross-hatched style|
 
 ==== gr.setfillstyle ====
-FIXME
+Sets the fill style to be used for subsequent fill areas.
 
 <code python>
 setfillstyle(index)
 </code>
 
 == Parameters ==
-  * //index// --- FIXME
+  * //index// --- The fill style index to be used
+
+//setfillstyle// specifies an index when PATTERN fill or HATCH fill is requested by the
+//setfillintstyle// function. If the interior style is set to PATTERN, the fill style
+index points to a device-independent pattern table. If interior style is set to HATCH
+the fill style index indicates different hatch styles. If HOLLOW or SOLID is specified
+for the interior style, the fill style index is unused.
 
 ==== gr.setfillcolorind ====
-FIXME
+Sets the current fill area color index.
 
 <code python>
 setfillcolorind(color)
 </code>
 
 == Parameters ==
-  * //color// --- FIXME
+  * //color// --- The fill area color index (//color// < 1000)
+
+//setfillcolorind// defines the color of subsequent fill area output primitives.
+GR uses the default foreground color (black=1) for the default fill area color index.
 
 ==== gr.setarrowstyle ====
 FIXME
