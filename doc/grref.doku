@@ -134,8 +134,9 @@ height, character up vector, text path and text alignment.
 
 The character string is interpreted to be a simple mathematical formula.
 The following notations apply: 
+
   * Subscripts and superscripts: These are indicated by carets (''^'') and underscores (''_''). If the sub/superscript contains more than one character, it must be enclosed in curly braces (''{}'').
-  * Fractions are typeset with //a//''/''//b//, where //a// stands for the numerator and //b// for the denominator.
+  * Fractions are typeset with //a// ''/'' //b//, where //a// stands for the numerator and //b// for the denominator.
   * To include a Greek letter you must specify the corresponding keyword after a backslash (''\'') character. The text translator produces uppercase or lowercase Greek letters depending on the case of the keyword.
 
 | Letter | Keyword |
@@ -417,7 +418,7 @@ drawarrow(x1, y1, x2, y2)
 
 == Parameters ==
   * //x1, y1// --- Starting point of the arrow (tail)
-  * //x2, y2 // --- Head of the arrow
+  * //x2, y2// --- Head of the arrow
 
 Different arrow styles (angles between arrow tail and wing, optionally filled
 heads, double headed arrows) are available and can be set with the //setarrowstyle//
@@ -582,7 +583,7 @@ settextfontprec(font, precision)
 The available text fonts are:
 
 | ''FONT_TIMES_ROMAN'' |  101|
-| ''FONT_TIMES_ITALIC'' |  102| 
+| ''FONT_TIMES_ITALIC'' |  102|
 | ''FONT_TIMES_BOLD'' |  103|
 | ''FONT_TIMES_BOLDITALIC'' |  104|
 | ''FONT_HELVETICA'' |  105|
