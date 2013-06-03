@@ -1,11 +1,15 @@
 #!/usr/bin/env python
-
-import sys, os
-
+# -*- coding: utf-8 -*-
+"""
+"""
+# standard library
+import sys
+import os
+# third party
 from PyQt4 import QtCore, QtGui
 import sip
-
-from pygr import *
+# local library
+from gr.pygr import *
 
 class GrWidget(QtGui.QWidget) :
     def __init__(self, *args) :
@@ -13,8 +17,8 @@ class GrWidget(QtGui.QWidget) :
         
         self.setupUi(self)
 
-        os.environ['GKS_WSTYPE'] = "381"
-        os.environ['GKS_DOUBLE_BUF'] = "True"
+        os.environ["GKS_WSTYPE"] = "381"
+        os.environ["GKS_DOUBLE_BUF"] = "True"
 
         self.connect(self.DrawButton, QtCore.SIGNAL("clicked()"), self.draw)
         self.connect(self.QuitButton, QtCore.SIGNAL("clicked()"), self.quit)
@@ -45,7 +49,8 @@ class GrWidget(QtGui.QWidget) :
 
         x = range(0, 128)
         y = range(0, 128)
-        z = readfile('kws.dat', separator = '$')
+        z = readfile(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                  "kws.dat"), separator='$')
         zrange = max(z) - min(z)
         h = [min(z) + i * 0.025 * zrange for i in range(0, 40)]
 

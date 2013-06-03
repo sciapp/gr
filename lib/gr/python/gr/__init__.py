@@ -1,15 +1,15 @@
-
-import os
-from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
-from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
-from sys import version_info, platform
-
+# -*- coding: utf-8 -*-
 """
 This is procedural interface to the GR plotting library,
 which may be imported directly, e.g.:
 
   import gr
 """
+# standard library
+import os
+from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
+from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
+from sys import version_info, platform
 
 def floatarray(n, a):
   _a = (c_float * n)()

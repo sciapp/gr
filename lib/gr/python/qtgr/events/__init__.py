@@ -4,8 +4,8 @@
 import math
 # third party
 from PyQt4 import QtCore
-import gr
 # local library
+import gr
 import qtgr
 from qtgr.events.base import EventMeta, MouseLocationEventMeta
 

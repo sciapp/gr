@@ -1,9 +1,13 @@
 #!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
+"""
+"""
+# third party
 import pyaudio
 import numpy
+# local library
 import gr
-from pygr import *
+from gr.pygr import *
 
 FS=44100		# Sampling frequency
 SAMPLES=1000
