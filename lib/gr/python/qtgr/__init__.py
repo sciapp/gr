@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
+"""PyQt GR module
+
+Exported Classes:
+
 """
 # standard library
 import os
@@ -11,13 +14,12 @@ from PyQt4 import QtGui
 import sip
 # local library
 import gr
-import pygr
 import qtgr.events
 from qtgr.events import GUIConnector, MouseEvent, PickEvent
 import qtgr.base
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-04-19"
+__date__    = "2013-06-03"
 __version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
