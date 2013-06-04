@@ -92,7 +92,9 @@ def get_python_lib(*args, **kwargs):
                                                     "site-packages")
 
 _GTK_PACKAGE = "gtk+-2.0"
-_grdir = os.getenv("GRDIR", os.path.join(get_python_lib(prefix=''), "gr"))
+_grdir = os.getenv("GRDIR",
+                   os.path.join(get_python_lib(plat_specific=True, prefix=''),
+                                "gr"))
 _cc = os.getenv("CC", "cc")
 _wxconfig = os.getenv("WX_CONFIG")
 _qtdir = os.getenv("QTDIR")
@@ -113,8 +115,8 @@ _gks_fonts = os.path.join("lib", "gks", "fonts")
 _gks_fonts_path = map(lambda f: os.path.join(_gks_fonts, f),
                       os.listdir(_gks_fonts))
 _gks_fonts_path.append(os.path.join("lib", "gks", "gksfont.dat"))
-_data_files = [(os.path.join(get_python_lib(prefix=''), "gr", "fonts"),
-                _gks_fonts_path)]
+_data_files = [(os.path.join(get_python_lib(plat_specific=True, prefix=''),
+                             "gr", "fonts"), _gks_fonts_path)]
 
 # prerequisites: static 3rdparty libraries
 if sys.platform == "win32":
@@ -198,7 +200,8 @@ elif sys.platform == "win32":
     _gr3_src.insert(0, "gr3_win.c")
     _cc = os.getenv("CC")
     _grdir = os.getenv("GRDIR", ("\\\"%s\\\""
-                                 %os.path.join(get_python_lib(prefix=''),
+                                 %os.path.join(get_python_lib(plat_specific=True,
+                                                              prefix=''),
                                                "gr").replace('\\', "\\\\")))
 #elif sys.platform == "solaris":
 #    _gks_xftincludes = ["/usr/include/freetype2"]
@@ -433,7 +436,8 @@ if "clean" not in sys.argv and "help" not in sys.argv:
         if _gsdir:
             _gks_gs_library_dirs = [os.path.join(_gsdir, "bin")]
             _gks_gs_includes.append(os.path.join(_gsdir, "include"))
-            _data_files.append((os.path.join(get_python_lib(prefix=''), "gr"),
+            _data_files.append((os.path.join(get_python_lib(plat_specific=True,
+                                                            prefix=''), "gr"),
                                 [os.path.join(_gsdir, "bin", "gsdll32.dll")]))
         else:
             print >>sys.stderr, ("GSDIR not set. " +
