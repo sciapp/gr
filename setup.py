@@ -101,8 +101,8 @@ _wxlib = os.getenv("WXLIB")
 _gsdir = os.getenv("GSDIR")
 
 # unique platform id used by distutils
-_uPlatformId = "%s-%d.%d" %(get_platform(), sys.version_info.major,
-                            sys.version_info.minor)
+_uPlatformId = "%s-%d.%d" %(get_platform(), sys.version_info[0],
+                            sys.version_info[1])
 _build_lib = os.path.join("build", "lib." + _uPlatformId)
 _build_lib_grpkg = os.path.join(_build_lib, "gr") 
 _build_3rdparty = os.path.join("build", "3rdparty." + _uPlatformId)
