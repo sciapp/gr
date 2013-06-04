@@ -4,7 +4,6 @@
 from __future__ import with_statement
 
 import sys
-import sysconfig
 import os
 import shlex
 import re
@@ -14,6 +13,7 @@ from distutils.core import setup, Extension
 from distutils.ccompiler import new_compiler
 from distutils.sysconfig import get_config_var
 from distutils.sysconfig import get_python_lib as _get_python_lib
+from distutils.util import get_platform
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -101,7 +101,7 @@ _wxlib = os.getenv("WXLIB")
 _gsdir = os.getenv("GSDIR")
 
 # unique platform id used by distutils
-_uPlatformId = "%s-%d.%d" %(sysconfig.get_platform(), sys.version_info.major,
+_uPlatformId = "%s-%d.%d" %(get_platform(), sys.version_info.major,
                             sys.version_info.minor)
 _build_lib = os.path.join("build", "lib." + _uPlatformId)
 _build_lib_grpkg = os.path.join(_build_lib, "gr") 
