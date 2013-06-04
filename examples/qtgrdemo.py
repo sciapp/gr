@@ -92,8 +92,8 @@ class MainWindow(QtGui.QMainWindow):
         self._gr.addPlot(self._plot)
         
     def save(self):
-        qpath = QtGui.QFileDialog.getSaveFileName(self, filter=self._saveTypes,
-                                  selectedFilter=gr.PRINT_TYPE[gr.PRINT_PDF])
+        qpath = QtGui.QFileDialog.getSaveFileName(self, "", "", self._saveTypes,
+                                                  gr.PRINT_TYPE[gr.PRINT_PDF])
         if qpath:
             path = unicode(qpath)
             (p, suffix) = os.path.splitext(path)
