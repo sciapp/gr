@@ -1,4 +1,6 @@
 playground/
+dist/
+MANIFEST
 *.o
 *.a
 *.so
@@ -8,3 +10,4 @@ playground/
 .pydevproject
 .project
 *.pyc
+*.pdb
