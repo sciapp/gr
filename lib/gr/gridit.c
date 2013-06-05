@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
+/*#include "gr.h"*/
 #include "gridit.h"
 
 #ifndef max

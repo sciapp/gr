@@ -2,7 +2,7 @@
 """..."""
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-04-19"
+__date__    = "2013-06-05"
 __version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -30,9 +30,6 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
 """
 
 class GRMeta(object):
-    
-#    def __init__(self):
-#        pass
     
     def drawGR(self):
         raise NotImplementedError

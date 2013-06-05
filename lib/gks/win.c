@@ -12,6 +12,7 @@
 #include "gks.h"
 #include "gkscore.h"
 
+#define MAX_COLOR 256
 #define MAX_POINTS 2048
 #define MAX_MESSAGES 80
 #define MAX_BITMAP 120
@@ -401,7 +402,7 @@ DWORD WINAPI create_window(LPVOID parm)
     {
       p->win = (HWND)parm;
       p->wndproc = (WNDPROC) GetWindowLongPtr(p->win, GWLP_WNDPROC);
-      SetWindowLong(p->win, GWL_WNDPROC, (DWORD) wndproc);
+      SetWindowLongPtr(p->win, GWLP_WNDPROC, (DWORD) wndproc);
     }
   
   GetClientRect(p->win, &rc);

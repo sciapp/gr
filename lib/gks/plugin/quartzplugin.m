@@ -95,12 +95,17 @@ BOOL gks_terminal(void)
 {
   NSURL *url;
   OSStatus status;
+    
+  NSString *grdir = [[[NSProcessInfo processInfo]
+                      environment]objectForKey:@"GRDIR"];
+  if ( grdir == NULL )
+    grdir = [NSString stringWithUTF8String:GRDIR];
 
-  NSString *path = [NSString stringWithFormat:@"%s/Applications/GKSTerm.app",
-                    GRDIR];
+  NSString *path = [NSString stringWithFormat:@"%@/Applications/GKSTerm.app",
+                    grdir];
   url = [NSURL fileURLWithPath: path];
   status = LSOpenCFURLRef((CFURLRef) url, NULL);
-  
+
   return (status == noErr);
 }
 

@@ -12,10 +12,10 @@ from PyQt4 import uic
 import gr # TESTING shell
 import qtgr
 from qtgr.events import GUIConnector, MouseEvent, PickEvent
-from qtgr import PlotAxes
+from gr.pygr import Plot, PlotAxes
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-04-17"
+__date__    = "2013-06-05"
 __version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -74,8 +74,8 @@ class MainWindow(QtGui.QMainWindow):
                      self._pickModeChanged)
         self.connect(self._shell, QtCore.SIGNAL("returnPressed()"),
                      self._shellEx)
-        self.connect(self._actionSave, QtCore.SIGNAL("activated()"), self.save)
-        self.connect(self._actionPrint, QtCore.SIGNAL("activated()"),
+        self.connect(self._actionSave, QtCore.SIGNAL("triggered()"), self.save)
+        self.connect(self._actionPrint, QtCore.SIGNAL("triggered()"),
                      self.printGR)
         
         guiConn = GUIConnector(self._gr)
@@ -85,16 +85,15 @@ class MainWindow(QtGui.QMainWindow):
         x = [-3.3 + t*.1 for t in range(66)]
         y = [t**5 - 13*t**3 + 36*t for t in x]
         x2 = [-3.5 + i*.5 for i in range(0, 15)]
-#        y2 = [9.3*t - 7.5 for t in x2]
         y2 = x2
-#        self._gr.plot(x, y, x2, y2)
         
-        self._gr.addAxes(PlotAxes(self._gr.viewport).plot(x, y),
-                         PlotAxes(self._gr.viewport, drawX=False).plot(x2, y2))
+        self._plot = Plot().addAxes(PlotAxes().plot(x, y),
+                                    PlotAxes(drawX=False).plot(x2, y2))
+        self._gr.addPlot(self._plot)
         
     def save(self):
-        qpath = QtGui.QFileDialog.getSaveFileName(self, filter=self._saveTypes,
-                                  selectedFilter=gr.PRINT_TYPE[gr.PRINT_PDF])
+        qpath = QtGui.QFileDialog.getSaveFileName(self, "", "", self._saveTypes,
+                                                  gr.PRINT_TYPE[gr.PRINT_PDF])
         if qpath:
             path = unicode(qpath)
             (p, suffix) = os.path.splitext(path)
@@ -139,19 +138,23 @@ class MainWindow(QtGui.QMainWindow):
         
     @QtCore.pyqtSlot()
     def _gridClicked(self, state):
-        self._gr.setGrid(self._chkGrid.isChecked())
+        self._plot.setGrid(self._chkGrid.isChecked())
+        self._gr.update()
         
     @QtCore.pyqtSlot()
-    def _logXClicked(self, state):        
-        self._gr.setLogX(self._chkLogX.isChecked())
+    def _logXClicked(self, state):
+        self._plot.setLogX(self._chkLogX.isChecked())
+        self._gr.update()      
     
     @QtCore.pyqtSlot()    
     def _logYClicked(self, state):
-        self._gr.setLogY(self._chkLogY.isChecked())
+        self._plot.setLogY(self._chkLogY.isChecked())
+        self._gr.update()
             
     @QtCore.pyqtSlot()
     def _resetClicked(self):
-        self._gr.reset()
+        self._plot.reset()
+        self._gr.update()
     
     @QtCore.pyqtSlot()    
     def _pickClicked(self):
