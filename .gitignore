@@ -2,6 +2,7 @@ playground/
 dist/
 MANIFEST
 *.o
+*.obj
 *.a
 *.so
 .DS_Store
