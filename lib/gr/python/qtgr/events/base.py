@@ -6,9 +6,10 @@ from PyQt4 import QtCore
 # local library
 import gr
 import qtgr
+from gr.pygr import CoordConverter
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-04-19"
+__date__    = "2013-06-05"
 __version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -48,7 +49,7 @@ class MouseLocationEventMeta(EventMeta):
 
     def __init__(self, type, width, height, x, y, window=None):
         super(MouseLocationEventMeta, self).__init__(type)
-        self._coords = qtgr.CoordConverter(width, height, window)
+        self._coords = CoordConverter(width, height, window)
         self._coords.setDC(x, y)
         
     def getWindow(self):
