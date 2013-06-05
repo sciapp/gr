@@ -653,6 +653,8 @@ class PlotAxes(GRMeta):
                     gr.fillrect(*window)
                 charHeight = .024 * (viewport[3] - viewport[2])
                 gr.setcharheight(charHeight)
+                if self.isGridEnabled() and self.getId() == 1:
+                    gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
                 if self.getId() == 1:
                     # first x, y axis
                     if not self.isXDrawingEnabled():
@@ -667,8 +669,6 @@ class PlotAxes(GRMeta):
                     if not self.isYDrawingEnabled():
                         majory = -majory
                     gr.axes(xtick, ytick, xmax, ymax, majorx, majory, -0.01)
-                if self.isGridEnabled() and self.getId() == 1:
-                    gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
                 for curve in lstPlotCurve:
                     curve.drawGR()
     
