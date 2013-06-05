@@ -17,7 +17,7 @@ from distutils.util import get_platform
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-06-03"
+__date__    = "2013-06-05"
 __version__ = "0.2.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -647,6 +647,6 @@ setup(cmdclass={"build_ext": build_ext},
       url="https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr",
       package_dir={'': "lib/gr/python",
                    "gr3": "lib/gr3"},
-      packages=["gr", "gr3", "qtgr", "qtgr.events"],
+      packages=["gr", "gr.pygr", "gr3", "qtgr", "qtgr.events"],
       ext_modules=_ext_modules,
       data_files=_data_files)
