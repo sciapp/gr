@@ -46,10 +46,6 @@
 
 #define nint(a) ((int)(a + 0.5))
 
-#define Color8Bit(c)                                                         \
-  c >= 588 ? 80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) : \
-  c >= 257 ? 8 + nint((c - 257) / 330.0 * (72 - 1)) : c
-
 static
 gks_state_list_t gkss_, *gkss;
 
