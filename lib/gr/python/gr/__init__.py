@@ -130,7 +130,8 @@ def cellarray(xmin, xmax, ymin, ymax, dimx, dimy, color):
   """
 Displays rasterlike images in a device-independent manner. The cell array
 function partitions a rectangle given by two corner points into DIMX x DIMY
-cells, each of them colored individually by the corresponding color index
+cells (divided from upper left point to lower right point),
+each of them colored individually by the corresponding color index
 of the given cell array.
 
 XMIN, YMIN - Lower left point of the rectangle
