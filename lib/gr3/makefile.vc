@@ -35,7 +35,6 @@ libgr3.dll: gr3.obj
 install: default
 	COPY /Y libgr3.lib $(DESTDIR)
 	COPY /Y libgr3.dll $(DESTDIR)
-	COPY /Y gr3.py $(DESTDIR)
 
 clean:
 	@cd ../gr
