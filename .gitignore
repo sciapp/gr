@@ -1,6 +1,14 @@
 playground/
+dist/
+MANIFEST
 *.o
+*.obj
 *.a
 *.so
 .DS_Store
 ._*
+.settings
+.pydevproject
+.project
+*.pyc
+*.pdb

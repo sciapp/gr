@@ -33,16 +33,11 @@ import sys
 import os
 
 if sys.platform == 'win32':
-    grdir = os.getenv("GRDIR", os.path.join(os.getenv("SystemDrive", "C:"),
-                                            os.sep, "gr"))
-    grlib = grdir
     libext = ".dll"
 else:
-    grdir = os.getenv("GRDIR", os.path.join(os.sep, "usr", "local", "gr"))
-    grlib = os.path.join(grdir, "lib")
     libext = ".so"
-
-_gr3 = ctypes.CDLL(os.path.join(grlib, "libGR3" + libext))
+_gr3 = ctypes.CDLL(os.path.realpath(os.path.join(os.path.dirname(__file__),
+                                                 "libGR3" + libext)))
     
 class GR3_InitAttribute(object):
     GR3_IA_END_OF_LIST = 0

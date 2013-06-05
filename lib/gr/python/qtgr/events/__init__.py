@@ -4,8 +4,8 @@
 import math
 # third party
 from PyQt4 import QtCore
-import gr
 # local library
+import gr
 import qtgr
 from qtgr.events.base import EventMeta, MouseLocationEventMeta
 
@@ -36,107 +36,6 @@ You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
-
-class Point(object):
-    
-    def __init__(self, x, y):
-        self._x, self._y = x, y
-        
-    @property
-    def x(self):
-        """Get the current x value."""
-        return self._x
-    
-    @x.setter
-    def x(self, value):
-        self._x = value
-    
-    @property
-    def y(self):
-        """Get the current y value."""
-        return self._y
-    
-    @y.setter
-    def y(self, value):
-        self._y = value
-    
-    def __str__(self):
-        return "(%s, %s)" %(self._x, self._y)
-    
-    def __eq__(self, other):
-        return (self.x == other.x and self.y == other.y)
-    
-    def __ne__(self, other):
-        return not self.__eq__(other)
-    
-    def __add__(self, other):
-        return Point(self.x+other.x, self.y+other.y)
-    
-    def __sub__(self, other):
-        return Point(self.x-other.x, self.y-other.y)
-    
-    def __mul__(self, other):
-        """Calculate scalar product."""
-        return self.x*other.x + self.y*other.y
-    
-    def __div__(self, other):
-        """Calculate component-by-component division."""
-        return Point(self.x/other.x, self.y/other.y)
-    
-    def __neg__(self):
-        """Calculate negation."""
-        return Point(-self.x, -self.y)
-    
-    def __pos__(self):
-        return self
-    
-    def __abs__(self):
-        return Point(abs(self.x), abs(self.y))
-    
-    def norm(self):
-        """Calculate euclidean norm."""
-        return math.sqrt(self*self)
-        
-
-class CoordConverter(object):
-    
-    def __init__(self, width, height):
-        self._width = width
-        self._height = height
-        self._p = None
-    
-    def _checkRaiseXY(self):
-        if self._p.x is None or self._p.y is None:
-            raise AttributeError("x or y has not been initialized.")
-        return True
-    
-    def setDC(self, x, y):
-        self._p = Point(x, y)
-        return self
-        
-    def setNDC(self, x, y):
-        self._p = Point(x * self._width, (1.-y) * self._height)
-        return self
-        
-    def setWC(self, x, y):
-        tNC = gr.wctondc(x, y) # ndc tuple
-        self.setNDC(tNC[0], tNC[1])
-        return self
-    
-    def getDC(self):
-        self._checkRaiseXY()
-        return self._p
-        
-    def getNDC(self):
-        self._checkRaiseXY()
-        return Point(float(self._p.x)/self._width,
-                     1. - float(self._p.y)/self._height)
-        
-    def getWC(self):
-        self._checkRaiseXY()
-        ndcPoint = self.getNDC()
-        tWC = gr.ndctowc(ndcPoint.x, ndcPoint.y) # wc tuple
-        return Point(tWC[0], tWC[1])
 
 class MouseEvent(MouseLocationEventMeta):
     

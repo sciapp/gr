@@ -26,7 +26,7 @@ Linux:
 Darwin:
 	@make all static=true LDFLAGS=""
 
-all: gr.so gr
+all: gr.so grbin
 
 gr.so: py_gr.o
 ifdef static
@@ -42,7 +42,7 @@ endif
 py_gr.o: py_gr.c
 	$(CC) -c $(CFLAGS) -I$(PYTHON_HOME)/include/python$(PY_VER) -o $@ $<
 
-gr: py_gr.c
+grbin: py_gr.c
 ifdef static
 	$(CC) -D__MAIN__ -o $@ $(LDFLAGS) $< -L.. -lGR -L../../gks -lGKS \
 	-I.. -I$(PYTHON_HOME)/include/python$(PY_VER) \
@@ -55,14 +55,9 @@ else
 	$(EXTRALIBS) -L$(XLIBPATH) -lXt -lX11 $(LIBS)
 endif
 
-install: gr.so gr.py
+install: gr.so
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	$(INSTALL) -p gr.so $(LIBDIR)/gr.so
-	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
-	$(INSTALL) -p gr.py $(PYTHONDIR)/gr.py
-	$(INSTALL) -p pygr.py $(PYTHONDIR)/pygr.py
-	@if [ ! -d $(PYTHONDIR)/qtgr ]; then mkdir -m 755 $(PYTHONDIR)/qtgr; fi
-	$(INSTALL) -a qtgr $(PYTHONDIR)
 
 clean:
-	rm -f gr so_locations *.so *.a *.o *.bak *~
+	rm -f grbin so_locations *.so *.a *.o *.bak *~

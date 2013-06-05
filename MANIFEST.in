@@ -1,0 +1,6 @@
+include COPYING
+include README
+recursive-include lib/gks/fonts *
+recursive-include 3rdparty *
+recursive-include examples *
+recursive-include doc *

@@ -2,7 +2,6 @@
       BINDIR = $(GRDIR)/bin
       LIBDIR = $(GRDIR)/lib
       INCDIR = $(GRDIR)/include
-   PYTHONDIR = $(LIBDIR)/python
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                md5.o import.o grforbnd.o
@@ -58,15 +57,10 @@ install:
 	@make -C ../gks install
 	@if [ ! -d $(GRDIR) ]; then mkdir -m 755 $(GRDIR); fi
 	@if [ ! -d $(BINDIR) ]; then mkdir -m 755 $(BINDIR); fi
-	cp -p python/gr $(BINDIR)
+	cp -p python/grbin $(BINDIR)/gr
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGR.* $(LIBDIR)
 	cp -p python/gr.so $(LIBDIR)
-	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
-	cp -p python/gr.py $(PYTHONDIR)
-	cp -p python/pygr.py $(PYTHONDIR)
-	@if [ ! -d $(PYTHONDIR)/qtgr ]; then mkdir -m 755 $(PYTHONDIR)/qtgr; fi
-	cp -a python/qtgr $(PYTHONDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr.h $(INCDIR)
 

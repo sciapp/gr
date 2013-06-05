@@ -1,15 +1,15 @@
-
-import os
-from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
-from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
-from sys import version_info, platform
-
+# -*- coding: utf-8 -*-
 """
 This is procedural interface to the GR plotting library,
 which may be imported directly, e.g.:
 
   import gr
 """
+# standard library
+import os
+from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
+from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
+from sys import version_info, platform
 
 def floatarray(n, a):
   _a = (c_float * n)()
@@ -465,17 +465,16 @@ def inqbbox():
   __gr.gr_inqbbox(byref(xmin), byref(xmax), byref(ymin), byref(ymax))
   return [xmin.value, xmax.value, ymin.value, ymax.value]
 
+_grPkgDir = os.path.realpath(os.path.dirname(__file__))
+os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", _grPkgDir)
+
 if platform == 'win32':
-  grdir = os.getenv("GRDIR", os.path.join(os.getenv("SystemDrive", "C:"),
-                                          os.sep, "gr"))
-  grlib = grdir
+  os.environ["PATH"] = os.getenv("PATH", "") + ";" + _grPkgDir
   libext = ".dll"
 else:
-  grdir = os.getenv("GRDIR", os.path.join(os.sep, "usr", "local", "gr"))
-  grlib = os.path.join(grdir, "lib")
   libext = ".so"        
-
-__gr = CDLL(os.path.join(grlib, "libGR" + libext))
+__gr = CDLL(os.path.realpath(os.path.join(os.path.dirname(__file__),
+                                          "libGR" + libext)))
 
 __gr.gr_opengks.argtypes = [];
 __gr.gr_closegks.argtypes = [];
