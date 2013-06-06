@@ -2,6 +2,7 @@
       BINDIR = $(GRDIR)/bin
       LIBDIR = $(GRDIR)/lib
       INCDIR = $(GRDIR)/include
+   PYTHONDIR = $(LIBDIR)/python
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                md5.o import.o grforbnd.o
@@ -36,14 +37,11 @@ Darwin:
 	@make targets LD="$(CC)" \
 	SOFLAGS="-dynamiclib"
 
-targets: prerequisites libGR.a libGR.so add-ons
+targets: prerequisites libGR.a libGR.so
 
 prerequisites:
 	@for d in jpeg png; do make -C ../../3rdparty/$$d; done
 	@for d in gks gks/plugin; do make -C ../$$d; done
-
-add-ons:
-	@for d in python; do make -C $$d; done
 
 libGR.a: $(GROBJS)
 	$(AR) crv $@ $?
@@ -57,15 +55,15 @@ install:
 	@make -C ../gks install
 	@if [ ! -d $(GRDIR) ]; then mkdir -m 755 $(GRDIR); fi
 	@if [ ! -d $(BINDIR) ]; then mkdir -m 755 $(BINDIR); fi
-	cp -p python/grbin $(BINDIR)/gr
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGR.* $(LIBDIR)
-	cp -p python/gr.so $(LIBDIR)
+	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
+	cp -a python/gr $(PYTHONDIR)
+	cp -a python/qtgr $(PYTHONDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr.h $(INCDIR)
 
 clean:
-	@for d in python; do make -C $$d clean; done
 	@for d in gks gks/plugin; do make -C ../$$d clean; done
 	@for d in jpeg png; do make -C ../../3rdparty/$$d clean; done
 	rm -f so_locations *.so *.a *.o *.bak *~

@@ -62,7 +62,8 @@ py_gr.obj: python\py_gr.c
 install: default
 	COPY /Y ..\gr\libgr.dll $(DESTDIR)
 	COPY /Y ..\gr\libgr.lib $(DESTDIR)
-#	COPY /Y ..\gr\gr.pyd $(DESTDIR)
+	XCOPY /I /S /Y ..\gr\python\gr $(DESTDIR)
+	XCOPY /I /S /Y ..\gr\python\qtgr $(DESTDIR)
 	COPY /Y ..\gr\gr.h $(DESTDIR)
 	COPY /Y ..\gks\libgks.dll $(DESTDIR)
 	COPY /Y ..\gks\libgks.lib $(DESTDIR)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This is procedural interface to the GR plotting library,
+This is a procedural interface to the GR plotting library,
 which may be imported directly, e.g.:
 
   import gr
@@ -465,8 +465,11 @@ def inqbbox():
   __gr.gr_inqbbox(byref(xmin), byref(xmax), byref(ymin), byref(ymax))
   return [xmin.value, xmax.value, ymin.value, ymax.value]
 
+
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
-os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", _grPkgDir)
+_gksFontPath = os.path.join(_grPkgDir, "fonts")
+if os.access(_gksFontPath, os.R_OK):
+  os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", _grPkgDir)
 
 if platform == 'win32':
   os.environ["PATH"] = os.getenv("PATH", "") + ";" + _grPkgDir
