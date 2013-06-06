@@ -488,6 +488,11 @@ class PlotCurve(GRMeta):
         self._y = lst
     
     def drawGR(self):
+        # preserve old values
+        ltype = gr.inqlinetype()
+        mtype = gr.inqmarkertype()
+        lcolor = gr.inqlinecolorind()
+
         if self.getLineType() is not None:
             gr.setlinetype(self._linetype)
             gr.polyline(self._n, self.x, self.y)
@@ -502,6 +507,10 @@ class PlotCurve(GRMeta):
             self._e1.drawGR()
         if self._e2:
             self._e2.drawGR()
+        # restore old values
+        gr.setlinecolorind(lcolor)
+        gr.setlinetype(ltype)
+        gr.setmarkertype(mtype)
             
 class PlotAxes(GRMeta):
 
