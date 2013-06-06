@@ -163,22 +163,42 @@ def gridit(nd, xd, yd, zd, nx, ny):
 
 def setlinetype(type):
   __gr.gr_setlinetype(c_int(type))
+  
+def inqlinetype():
+  ltype = c_int()
+  __gr.gr_inqlinetype(byref(ltype))
+  return ltype.value
 
 def setlinewidth(width):
   __gr.gr_setlinewidth(c_float(width))
 
 def setlinecolorind(color):
   __gr.gr_setlinecolorind(c_int(color))
+  
+def inqlinecolorind():
+  coli = c_int()
+  __gr.gr_inqlinecolorind(byref(coli))
+  return coli.value
 
 def setmarkertype(type):
   __gr.gr_setmarkertype(c_int(type))
+  
+def inqmarkertype():
+  mtype = c_int()
+  __gr.gr_inqmarkertype(byref(mtype))
+  return mtype.value
 
 def setmarkersize(size):
   __gr.gr_setmarkersize(c_float(size))
 
 def setmarkercolorind(color):
   __gr.gr_setmarkercolorind(c_int(color))
-
+  
+def inqmarkercolorind():
+  coli = c_int()
+  __gr.gr_inqmarkercolorind(byref(coli))
+  return coli.value
+  
 def settextfontprec(font, precision):
   __gr.gr_settextfontprec(c_int(font), c_int(precision))
 
@@ -498,11 +518,15 @@ __gr.gr_cellarray.argtypes = [
 __gr.gr_spline.argtypes = [c_int, POINTER(c_float), POINTER(c_float), c_int, c_int];
 __gr.gr_gridit.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int, c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float)];
 __gr.gr_setlinetype.argtypes = [c_int];
+__gr.gr_inqlinetype.argtypes = [POINTER(c_int)];
 __gr.gr_setlinewidth.argtypes = [c_float];
 __gr.gr_setlinecolorind.argtypes = [c_int];
+__gr.gr_inqlinecolorind.argtypes = [POINTER(c_int)];
 __gr.gr_setmarkertype.argtypes = [c_int];
+__gr.gr_inqmarkertype.argtypes = [POINTER(c_int)];
 __gr.gr_setmarkersize.argtypes = [c_float];
 __gr.gr_setmarkercolorind.argtypes = [c_int];
+__gr.gr_inqmarkercolorind.argtypes = [POINTER(c_int)];
 __gr.gr_settextfontprec.argtypes = [c_int, c_int];
 __gr.gr_setcharexpan.argtypes = [c_float];
 __gr.gr_setcharspace.argtypes = [c_float];

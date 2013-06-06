@@ -1255,6 +1255,12 @@ void gr_setlinetype(int type)
     gr_writestream("<setlinetype type=\"%d\"/>\n", type);
 }
 
+void gr_inqlinetype(int *ltype)
+{
+	int errind;
+	gks_inq_pline_linetype(&errind, ltype);
+}
+
 void gr_setlinewidth(float width)
 {
   check_autoinit;
@@ -1275,6 +1281,12 @@ void gr_setlinecolorind(int color)
     gr_writestream("<setlinecolorind color=\"%d\"/>\n", color);
 }
 
+void gr_inqlinecolorind(int *coli)
+{
+	int errind;
+	gks_inq_pline_color_index(&errind, coli);
+}
+
 void gr_setmarkertype(int type)
 {
   check_autoinit;
@@ -1283,6 +1295,12 @@ void gr_setmarkertype(int type)
 
   if (flag_graphics)
     gr_writestream("<setmarkertype type=\"%d\"/>\n", type);
+}
+
+void gr_inqmarkertype(int *mtype)
+{
+	int errind;
+	gks_inq_pmark_type(&errind, mtype);
 }
 
 void gr_setmarkersize(float size)
@@ -1303,6 +1321,12 @@ void gr_setmarkercolorind(int color)
 
   if (flag_graphics)
     gr_writestream("<setmarkercolorind color=\"%d\"/>\n", color);
+}
+
+void gr_inqmarkercolorind(int *coli)
+{
+	int errind;
+	gks_inq_pmark_color_index(&errind, coli);
 }
 
 void gr_settextfontprec(int font, int precision)
