@@ -5,7 +5,7 @@ which may be imported directly, e.g.:
 
   import gr
 """
-# standard library
+
 import os
 from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
 from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
@@ -470,14 +470,25 @@ _grPkgDir = os.path.realpath(os.path.dirname(__file__))
 _gksFontPath = os.path.join(_grPkgDir, "fonts")
 if os.access(_gksFontPath, os.R_OK):
   os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", _grPkgDir)
-
-if platform == 'win32':
-  os.environ["PATH"] = os.getenv("PATH", "") + ";" + _grPkgDir
-  libext = ".dll"
 else:
-  libext = ".so"        
-__gr = CDLL(os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                          "libGR" + libext)))
+  _grPkgDir = ''
+
+_grLibDir = _grPkgDir
+if platform == 'win32':
+  if os.access(_grLibDir, os.R_OK):
+    os.environ["PATH"] = os.getenv("PATH", "") + ";" + _grPkgDir
+  else:
+    _grLibDir = os.getenv("GRDIR", os.path.join(os.getenv("SystemDrive", "C:"),
+                                                          os.sep, "gr"))
+  _libext = ".dll"        
+else:
+  if not os.access(_grLibDir, os.R_OK):
+    _grLibDir = os.path.join(
+      os.getenv("GRDIR", os.path.join(os.sep, "usr", "local", "gr")), "lib")
+  _libext = ".so"        
+
+__gr = CDLL(os.path.join(_grLibDir, "libGR" + _libext))
+
 
 __gr.gr_opengks.argtypes = [];
 __gr.gr_closegks.argtypes = [];
@@ -712,7 +723,6 @@ FONT_PALATINO_BOLDITALIC = 129
 FONT_ZAPFCHANCERY_MEDIUMITALIC = 130
 FONT_ZAPFDINGBATS = 131
 
-# gr.beginprint types
 PRINT_PS   = "ps"
 PRINT_EPS  = "eps"
 PRINT_PDF  = "pdf"
@@ -737,11 +747,9 @@ PRINT_TYPE = { PRINT_PS   : "PostScript (*.ps)",
                PRINT_SVG  : "Scalable Vector Graphics (*.svg)",
                PRINT_WMF  : "Windows Metafile (*.wmf)"
 }
-# multiple keys
 PRINT_TYPE[PRINT_JPG] = PRINT_TYPE[PRINT_JPEG]
 PRINT_TYPE[PRINT_TIF] = PRINT_TYPE[PRINT_TIFF]
 
-# gr.begingraphics types
 GRAPHIC_GRX = "grx"
 
 GRAPHIC_TYPE = { GRAPHIC_GRX : "Graphics Format (*.grx)" }
