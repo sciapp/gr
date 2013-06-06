@@ -115,10 +115,6 @@ int usleep(useconds_t);
     x = cos_f[p->path] * (xrel) - sin_f[p->path] * (yrel); \
     y = sin_f[p->path] * (xrel) + cos_f[p->path] * (yrel);
 
-#define Color8Bit(c) \
-    (c) >= 588 ? 80 + (c-588)/56 * 12 + nint((c-588)%56 * 11.0/56.0) : \
-    (c) >= 257 ? 8 + nint((c-257)/330.0 * (72-1)) : (c)
-
 static int idle = False;
 
 static char *fonts[] =
