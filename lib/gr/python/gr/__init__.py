@@ -488,17 +488,23 @@ def inqbbox():
 
 
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
+_grLibDir = _grPkgDir
 _gksFontPath = os.path.join(_grPkgDir, "fonts")
 if os.access(_gksFontPath, os.R_OK):
   os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", _grPkgDir)
-
-if platform == 'win32':
-  os.environ["PATH"] = os.getenv("PATH", "") + ";" + _grPkgDir
+  
+if platform == "win32":
   libext = ".dll"
 else:
-  libext = ".so"        
-__gr = CDLL(os.path.realpath(os.path.join(os.path.dirname(__file__),
-                                          "libGR" + libext)))
+  libext = ".so"
+
+_grLib = os.path.join(_grLibDir, "libGR" + libext)
+if not os.access(_grLib, os.R_OK):          
+    _grLibDir = os.path.join(_grPkgDir, "..", "..")
+    _grLib = os.path.join(_grLibDir, "libGR" + libext)
+if platform == "win32":
+    os.environ["PATH"] = os.getenv("PATH", "") + ";" + _grLibDir
+__gr = CDLL(_grLib)
 
 __gr.gr_opengks.argtypes = [];
 __gr.gr_closegks.argtypes = [];
