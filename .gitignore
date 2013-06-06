@@ -1,4 +1,5 @@
 playground/
+build/
 dist/
 MANIFEST
 *.o
