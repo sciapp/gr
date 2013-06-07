@@ -488,7 +488,7 @@ def inqbbox():
 
 
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
-_grLibDir = _grPkgDir
+_grLibDir = os.getenv("GRLIB", _grPkgDir)
 _gksFontPath = os.path.join(_grPkgDir, "fonts")
 if os.access(_gksFontPath, os.R_OK):
   os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", _grPkgDir)
@@ -499,7 +499,7 @@ else:
   libext = ".so"
 
 _grLib = os.path.join(_grLibDir, "libGR" + libext)
-if not os.access(_grLib, os.R_OK):          
+if not os.getenv("GRLIB") and not os.access(_grLib, os.R_OK):          
     _grLibDir = os.path.join(_grPkgDir, "..", "..")
     _grLib = os.path.join(_grLibDir, "libGR" + libext)
 if platform == "win32":

@@ -32,18 +32,18 @@ import numpy
 import sys
 import os
 
-_grPkgDir = os.path.realpath(os.path.dirname(__file__))
-_grLibDir = _grPkgDir
+_gr3PkgDir = os.path.realpath(os.path.dirname(__file__))
+_gr3LibDir = os.getenv("GR3LIB", _gr3PkgDir)
 if sys.platform == "win32":
     libext = ".dll"
 else:
     libext = ".so"
 
-_grLib = os.path.join(_grLibDir, "libGR3" + libext)
-if not os.access(_grLib, os.R_OK):          
-    _grLibDir = os.path.join(_grPkgDir, "..", "..")
-    _grLib = os.path.join(_grLibDir, "libGR3" + libext)
-_gr3 = ctypes.CDLL(_grLib)
+_gr3Lib = os.path.join(_gr3LibDir, "libGR3" + libext)
+if not os.getenv("GR3LIB") and not os.access(_gr3Lib, os.R_OK):          
+    _gr3LibDir = os.path.join(_gr3PkgDir, "..", "..")
+    _gr3Lib = os.path.join(_gr3LibDir, "libGR3" + libext)
+_gr3 = ctypes.CDLL(_gr3Lib)
     
 class GR3_InitAttribute(object):
     GR3_IA_END_OF_LIST = 0
