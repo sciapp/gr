@@ -196,6 +196,19 @@ class Helper(object):
 #        print "  %s %s" %(abs(ymax-ymin), abs(xmax-xmin) < Helper._EPSILON)
 #        print "  %s" %res
         return res
+    
+class ColorIndexGenerator():
+    
+    _distinct_colors = range(980, 1000)
+    _n = len(_distinct_colors)
+    _curIdx = 0
+    
+    @staticmethod
+    def nextColorIndex():
+        idx = ColorIndexGenerator._distinct_colors[ColorIndexGenerator._curIdx]
+        ColorIndexGenerator._curIdx = ((ColorIndexGenerator._curIdx + 1)
+                                       % ColorIndexGenerator._n)
+        return idx
 
 class ErrorBar(GRMeta):
     
@@ -451,10 +464,16 @@ class Plot(GRMeta):
 class PlotCurve(GRMeta):
     
     def __init__(self, x, y, errBar1=None, errBar2=None,
-                 linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_DOT):
+                 linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_DOT,
+                 linecolor=None, markercolor=1):
         self._x, self._y = x, y
         self._e1, self._e2 = errBar1, errBar2
         self._linetype, self._markertype = linetype, markertype
+        self._markercolor = markercolor
+        if linecolor is None:
+            self._linecolor = ColorIndexGenerator.nextColorIndex()
+        else:
+            self._linecolor = linecolor
         self._n = len(self._x)
         
     def setLineType(self, linetype):
@@ -468,6 +487,18 @@ class PlotCurve(GRMeta):
         
     def getMarkerType(self):
         return self._markertype
+    
+    def setLineColor(self, color):
+        self._linecolor = color
+        
+    def getLineColor(self):
+        return self._linecolor
+    
+    def setMarkerColor(self, color):
+        self._markercolor = color
+        
+    def getMarkerColor(self):
+        return self._markercolor
 
     @property
     def x(self):
@@ -488,7 +519,15 @@ class PlotCurve(GRMeta):
         self._y = lst
     
     def drawGR(self):
+        # preserve old values
+        ltype = gr.inqlinetype()
+        mtype = gr.inqmarkertype()
+        lcolor = gr.inqlinecolorind()
+        mcolor = gr.inqmarkercolorind()
+
         if self.getLineType() is not None:
+            gr.setlinecolorind(self.getLineColor())
+            gr.setmarkercolorind(self.getMarkerColor())
             gr.setlinetype(self._linetype)
             gr.polyline(self._n, self.x, self.y)
             if (self.getMarkerType() != gr.MARKERTYPE_DOT and
@@ -502,6 +541,11 @@ class PlotCurve(GRMeta):
             self._e1.drawGR()
         if self._e2:
             self._e2.drawGR()
+        # restore old values
+        gr.setlinecolorind(lcolor)
+        gr.setmarkercolorind(mcolor)
+        gr.setlinetype(ltype)
+        gr.setmarkertype(mtype)
             
 class PlotAxes(GRMeta):
 

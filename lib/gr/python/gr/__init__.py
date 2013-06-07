@@ -5,7 +5,7 @@ which may be imported directly, e.g.:
 
   import gr
 """
-
+# standard library
 import os
 from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
 from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
@@ -130,7 +130,8 @@ def cellarray(xmin, xmax, ymin, ymax, dimx, dimy, color):
   """
 Displays rasterlike images in a device-independent manner. The cell array
 function partitions a rectangle given by two corner points into DIMX x DIMY
-cells, each of them colored individually by the corresponding color index
+cells (divided from upper left point to lower right point),
+each of them colored individually by the corresponding color index
 of the given cell array.
 
 XMIN, YMIN - Lower left point of the rectangle
@@ -162,22 +163,42 @@ def gridit(nd, xd, yd, zd, nx, ny):
 
 def setlinetype(type):
   __gr.gr_setlinetype(c_int(type))
+  
+def inqlinetype():
+  ltype = c_int()
+  __gr.gr_inqlinetype(byref(ltype))
+  return ltype.value
 
 def setlinewidth(width):
   __gr.gr_setlinewidth(c_float(width))
 
 def setlinecolorind(color):
   __gr.gr_setlinecolorind(c_int(color))
+  
+def inqlinecolorind():
+  coli = c_int()
+  __gr.gr_inqlinecolorind(byref(coli))
+  return coli.value
 
 def setmarkertype(type):
   __gr.gr_setmarkertype(c_int(type))
+  
+def inqmarkertype():
+  mtype = c_int()
+  __gr.gr_inqmarkertype(byref(mtype))
+  return mtype.value
 
 def setmarkersize(size):
   __gr.gr_setmarkersize(c_float(size))
 
 def setmarkercolorind(color):
   __gr.gr_setmarkercolorind(c_int(color))
-
+  
+def inqmarkercolorind():
+  coli = c_int()
+  __gr.gr_inqmarkercolorind(byref(coli))
+  return coli.value
+  
 def settextfontprec(font, precision):
   __gr.gr_settextfontprec(c_int(font), c_int(precision))
 
@@ -467,28 +488,23 @@ def inqbbox():
 
 
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
+_grLibDir = _grPkgDir
 _gksFontPath = os.path.join(_grPkgDir, "fonts")
 if os.access(_gksFontPath, os.R_OK):
   os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", _grPkgDir)
+  
+if platform == "win32":
+  libext = ".dll"
 else:
-  _grPkgDir = ''
+  libext = ".so"
 
-_grLibDir = _grPkgDir
-if platform == 'win32':
-  if os.access(_grLibDir, os.R_OK):
-    os.environ["PATH"] = os.getenv("PATH", "") + ";" + _grPkgDir
-  else:
-    _grLibDir = os.getenv("GRDIR", os.path.join(os.getenv("SystemDrive", "C:"),
-                                                          os.sep, "gr"))
-  _libext = ".dll"        
-else:
-  if not os.access(_grLibDir, os.R_OK):
-    _grLibDir = os.path.join(
-      os.getenv("GRDIR", os.path.join(os.sep, "usr", "local", "gr")), "lib")
-  _libext = ".so"        
-
-__gr = CDLL(os.path.join(_grLibDir, "libGR" + _libext))
-
+_grLib = os.path.join(_grLibDir, "libGR" + libext)
+if not os.access(_grLib, os.R_OK):          
+    _grLibDir = os.path.join(_grPkgDir, "..", "..")
+    _grLib = os.path.join(_grLibDir, "libGR" + libext)
+if platform == "win32":
+    os.environ["PATH"] = os.getenv("PATH", "") + ";" + _grLibDir
+__gr = CDLL(_grLib)
 
 __gr.gr_opengks.argtypes = [];
 __gr.gr_closegks.argtypes = [];
@@ -508,11 +524,15 @@ __gr.gr_cellarray.argtypes = [
 __gr.gr_spline.argtypes = [c_int, POINTER(c_float), POINTER(c_float), c_int, c_int];
 __gr.gr_gridit.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int, c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float)];
 __gr.gr_setlinetype.argtypes = [c_int];
+__gr.gr_inqlinetype.argtypes = [POINTER(c_int)];
 __gr.gr_setlinewidth.argtypes = [c_float];
 __gr.gr_setlinecolorind.argtypes = [c_int];
+__gr.gr_inqlinecolorind.argtypes = [POINTER(c_int)];
 __gr.gr_setmarkertype.argtypes = [c_int];
+__gr.gr_inqmarkertype.argtypes = [POINTER(c_int)];
 __gr.gr_setmarkersize.argtypes = [c_float];
 __gr.gr_setmarkercolorind.argtypes = [c_int];
+__gr.gr_inqmarkercolorind.argtypes = [POINTER(c_int)];
 __gr.gr_settextfontprec.argtypes = [c_int, c_int];
 __gr.gr_setcharexpan.argtypes = [c_float];
 __gr.gr_setcharspace.argtypes = [c_float];
@@ -723,6 +743,7 @@ FONT_PALATINO_BOLDITALIC = 129
 FONT_ZAPFCHANCERY_MEDIUMITALIC = 130
 FONT_ZAPFDINGBATS = 131
 
+# gr.beginprint types
 PRINT_PS   = "ps"
 PRINT_EPS  = "eps"
 PRINT_PDF  = "pdf"
@@ -747,9 +768,11 @@ PRINT_TYPE = { PRINT_PS   : "PostScript (*.ps)",
                PRINT_SVG  : "Scalable Vector Graphics (*.svg)",
                PRINT_WMF  : "Windows Metafile (*.wmf)"
 }
+# multiple keys
 PRINT_TYPE[PRINT_JPG] = PRINT_TYPE[PRINT_JPEG]
 PRINT_TYPE[PRINT_TIF] = PRINT_TYPE[PRINT_TIFF]
 
+# gr.begingraphics types
 GRAPHIC_GRX = "grx"
 
 GRAPHIC_TYPE = { GRAPHIC_GRX : "Graphics Format (*.grx)" }
