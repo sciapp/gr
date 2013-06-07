@@ -428,10 +428,6 @@ class Plot(GRMeta):
         return self
 
     def drawGR(self):
-        # draw axes and curves
-        if self._lstAxes:
-            for axes in self._lstAxes:
-                axes.drawGR()
         # draw title and subtitle
         if self.title or self.subTitle:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
@@ -445,11 +441,16 @@ class Plot(GRMeta):
             if y > 1.:
                 y = ymax
                 self.viewport = [xmin, xmax, ymin, ymax-dy]
+                gr.clearws()
             if self.title:
                 gr.text(x, y, self.title)
                 y -= .05
             if self.subTitle:
                 gr.text(x, y, self.subTitle)
+        # draw axes and curves
+        if self._lstAxes:
+            for axes in self._lstAxes:
+                axes.drawGR()
         # draw x- and y label
         if self.xlabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
