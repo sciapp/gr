@@ -33,25 +33,18 @@ import sys
 import os
 
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
-_gksFontPath = os.path.join(_grPkgDir, "fonts")
-if not os.access(_gksFontPath, os.R_OK):
-  _grPkgDir = ''
-
 _grLibDir = _grPkgDir
-if sys.platform == 'win32':
-  if not os.access(_grLibDir, os.R_OK):
-    _grLibDir = os.getenv("GRDIR", os.path.join(os.getenv("SystemDrive", "C:"),
-                                                          os.sep, "gr"))
-  _libext = ".dll"
+if sys.platform == "win32":
+    libext = ".dll"
 else:
-  if not os.access(_grLibDir, os.R_OK):
-    _grLibDir = os.path.join(
-      os.getenv("GRDIR", os.path.join(os.sep, "usr", "local", "gr")), "lib")
-  _libext = ".so"
+    libext = ".so"
 
-_gr3 = ctypes.CDLL(os.path.join(_grLibDir, "libGR3" + _libext))
-
-
+_grLib = os.path.join(_grLibDir, "libGR3" + libext)
+if not os.access(_grLib, os.R_OK):          
+    _grLibDir = os.path.join(_grPkgDir, "..", "..")
+    _grLib = os.path.join(_grLibDir, "libGR3" + libext)
+_gr3 = ctypes.CDLL(_grLib)
+    
 class GR3_InitAttribute(object):
     GR3_IA_END_OF_LIST = 0
     GR3_IA_FRAMEBUFFER_WIDTH = 1

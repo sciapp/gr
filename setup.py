@@ -646,7 +646,7 @@ setup(cmdclass={"build_ext": build_ext},
       license="GNU General Public License",
       url="https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr",
       package_dir={'': "lib/gr/python",
-                   "gr3": "lib/gr3"},
+                   "gr3": "lib/gr3/python/gr3"},
       packages=["gr", "gr.pygr", "gr3", "qtgr", "qtgr.events"],
       ext_modules=_ext_modules,
       data_files=_data_files)

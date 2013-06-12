@@ -38,11 +38,15 @@ DLLEXPORT void gr_spline(int, float *, float *, int, int);
 DLLEXPORT void gr_gridit(
   int, float *, float *, float *, int, int, float *, float *, float *);
 DLLEXPORT void gr_setlinetype(int);
+DLLEXPORT void gr_inqlinetype(int *);
 DLLEXPORT void gr_setlinewidth(float);
 DLLEXPORT void gr_setlinecolorind(int);
+DLLEXPORT void gr_inqlinecolorind(int *);
 DLLEXPORT void gr_setmarkertype(int);
+DLLEXPORT void gr_inqmarkertype(int *);
 DLLEXPORT void gr_setmarkersize(float);
 DLLEXPORT void gr_setmarkercolorind(int);
+DLLEXPORT void gr_inqmarkercolorind(int *);
 DLLEXPORT void gr_settextfontprec(int, int);
 DLLEXPORT void gr_setcharexpan(float);
 DLLEXPORT void gr_setcharspace(float);
