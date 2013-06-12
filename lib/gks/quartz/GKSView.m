@@ -577,7 +577,8 @@ void seg_xform_rel(float *x, float *y)
       RESOLVE(len, int, sizeof(int));
     }
 
-  memcpy(gkss, &saved_gkss, sizeof(gks_state_list_t));
+  if (gkss != NULL)
+    memcpy(gkss, &saved_gkss, sizeof(gks_state_list_t));
 }
 
 - (id) initWithFrame: (NSRect) frame

@@ -69,8 +69,8 @@ int inactivity_counter = -1;
       [mutex lock];
       if (inactivity_counter == 3)
 	{
-          [displayList initWithBytesNoCopy:
-           wss->dl.buffer length: wss->dl.nbytes freeWhenDone: NO];
+          [displayList initWithBytesNoCopy: wss->dl.buffer
+                       length: wss->dl.nbytes freeWhenDone: NO];
           @try
             {
               [plugin GKSQuartzDraw: wss->win displayList: displayList];
@@ -123,7 +123,9 @@ void gks_quartzplugin(
       gkss = (gks_state_list_t *) *ptr;      
 
       wss = (ws_state_list *) calloc(1, sizeof(ws_state_list));
-      displayList = [[NSData alloc] init];  
+      displayList = [[NSData alloc] initWithBytesNoCopy: wss
+                                    length: sizeof(ws_state_list)
+                                    freeWhenDone: NO];  
       plugin = [NSConnection rootProxyForConnectionWithRegisteredName:
                 @"GKSQuartz" host: nil];
       mutex = [[NSLock alloc] init];
@@ -183,8 +185,8 @@ void gks_quartzplugin(
       if (ia[1] == GKS_K_PERFORM_FLAG)
         {
           [mutex lock];
-          [displayList initWithBytesNoCopy:
-           wss->dl.buffer length: wss->dl.nbytes freeWhenDone: NO];
+          [displayList initWithBytesNoCopy: wss->dl.buffer
+                       length: wss->dl.nbytes freeWhenDone: NO];
           @try
             {
               [plugin GKSQuartzDraw: wss->win displayList: displayList];

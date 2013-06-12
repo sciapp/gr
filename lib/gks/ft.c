@@ -415,6 +415,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   *height = (int)((bb.yMax - bb.yMin) / 64);
   if (bb.xMax <= bb.xMin || bb.yMax <= bb.yMin) {
     gks_perror("invalid bitmap size");
+    free(unicode_string);
     return NULL;
   }
   size = *width * *height;

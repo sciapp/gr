@@ -188,7 +188,7 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0450;
+				LastUpgradeCheck = 0500;
 			};
 			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "GKSTerm" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -272,7 +272,7 @@
 		C01FCF4B08A954540054247B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_WARN_OBJCPP_ARC_ABI = YES;
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -280,6 +280,10 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = GKSTerm_Prefix.pch;
+				HEADER_SEARCH_PATHS = (
+					/usr/X11/include,
+					/usr/X11/include/freetype2,
+				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				"OTHER_CFLAGS[arch=*]" = "-DXFT";
@@ -288,7 +292,6 @@
 					"-lfreetype",
 				);
 				PRODUCT_NAME = GKSTerm;
-				USER_HEADER_SEARCH_PATHS = /usr/X11/include/freetype2;
 				WRAPPER_EXTENSION = app;
 				ZERO_LINK = YES;
 			};
@@ -297,12 +300,16 @@
 		C01FCF4C08A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_WARN_OBJCPP_ARC_ABI = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G5;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = GKSTerm_Prefix.pch;
+				HEADER_SEARCH_PATHS = (
+					/usr/X11/include,
+					/usr/X11/include/freetype2,
+				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
 				"OTHER_CFLAGS[arch=*]" = "-DXFT";
@@ -311,7 +318,6 @@
 					"-lfreetype",
 				);
 				PRODUCT_NAME = GKSTerm;
-				USER_HEADER_SEARCH_PATHS = /usr/X11/include/freetype2;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
@@ -324,6 +330,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				New_Setting = "";
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = "";
 				SDKROOT = "";
 			};
@@ -332,7 +339,6 @@
 		C01FCF5008A954540054247B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COMBINE_HIDPI_IMAGES = YES;
 				DEBUG_INFORMATION_FORMAT = stabs;
 				GCC_ENABLE_OBJC_GC = unsupported;
