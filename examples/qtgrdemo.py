@@ -89,6 +89,10 @@ class MainWindow(QtGui.QMainWindow):
         
         self._plot = Plot().addAxes(PlotAxes().plot(x, y),
                                     PlotAxes(drawX=False).plot(x2, y2))
+        self._plot.title = "QtGR Demo"
+        self._plot.subTitle = "Multiple Axes Example"
+        self._plot.xlabel = "x"
+        self._plot.ylabel = "f(x)"
         self._gr.addPlot(self._plot)
         
     def save(self):
