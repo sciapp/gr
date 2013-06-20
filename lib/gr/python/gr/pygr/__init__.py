@@ -239,6 +239,7 @@ class Plot(GRMeta):
     
     def __init__(self, viewport=list(DEFAULT_VIEWPORT)):
         self._viewport = viewport
+        self._viewMaxYForText = viewport[3] + .05
         self._lstAxes = []
         self._title = None
         self._subTitle = None
@@ -289,6 +290,7 @@ class Plot(GRMeta):
     @viewport.setter
     def viewport(self, viewport):
         self._viewport = viewport
+        self._viewMaxYForText = viewport[3] + .05
         for axes in self._lstAxes:
             axes.viewport = viewport
         
@@ -428,38 +430,58 @@ class Plot(GRMeta):
         return self
 
     def drawGR(self):
+        [xmin, xmax, ymin, ymax] = self.viewport
         # draw title and subtitle
         if self.title or self.subTitle:
+            dyTitle = 0
+            dySubTitle = 0
+            charHeight = .027 * (self._viewMaxYForText-ymin)
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(0., 1.)
-            [xmin, xmax, ymin, ymax] = self.viewport
+            gr.setcharheight(charHeight)
             x = xmin + (xmax-xmin)/2
-            dy = .05
+            if self.title:
+                tby = gr.inqtextext(0, 0, self.title)[1]
+                tby = map(lambda y: gr.wctondc(0, y)[1], tby)
+                dyTitle = max(tby)-min(tby)
+            y = self._viewMaxYForText - (dyTitle+dySubTitle)/2
             if self.title and self.subTitle:
-                dy = .1
-            y = ymax + dy
-            if y > 1.:
-                y = ymax
-                self.viewport = [xmin, xmax, ymin, ymax-dy]
+                tby = gr.inqtextext(0, 0, self.subTitle)[1]
+                tby = map(lambda y: gr.wctondc(0, y)[1], tby)
+                dySubTitle = max(tby)-min(tby)
+            if (ymax+dyTitle+dySubTitle) > self._viewMaxYForText:
+                # preserve self._viewMaxYForText value
+                # to avoid changing by self.viewport setter
+                maxYForText = self._viewMaxYForText
+                self.viewport = [xmin, xmax, ymin, ymax-dyTitle-dySubTitle]
+                self._viewMaxYForText = maxYForText
                 gr.clearws()
             if self.title:
                 gr.text(x, y, self.title)
-                y -= .05
+                y -= dyTitle
             if self.subTitle:
                 gr.text(x, y, self.subTitle)
         # draw axes and curves
         if self._lstAxes:
             for axes in self._lstAxes:
                 axes.drawGR()
+        # current values, viewport maybe changed above
+        [xmin, xmax, ymin, ymax] = self.viewport
         # draw x- and y label
         if self.xlabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(0., 1.)
-            gr.text(.5, 0.035, self.xlabel)
+            tby = gr.inqtextext(0, 0, self.xlabel)[1]
+            tby = map(lambda y: gr.wctondc(0, y)[1], tby)
+            dyXLabel = max(tby)-min(tby)
+            gr.text(xmin+(xmax-xmin)/2., ymin-dyXLabel/2.-.05, self.xlabel)
         if self.ylabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(-1., 0.)
-            gr.text(0., .5, self.ylabel)
+            tbx = gr.inqtextext(0, 0, self.ylabel)[0]
+            tbx = map(lambda y: gr.wctondc(0, y)[0], tbx)
+            dxYLabel = max(tbx)-min(tbx)
+            gr.text(xmin-dxYLabel/2.-.075, ymin+(ymax-ymin)/2., self.ylabel)
             gr.setcharup(0., 1.)
 
 class PlotCurve(GRMeta):
