@@ -93,6 +93,7 @@ class MainWindow(QtGui.QMainWindow):
         self._plot.subTitle = "Multiple Axes Example"
         self._plot.xlabel = "x"
         self._plot.ylabel = "f(x)"
+        self._plot.setLegend(True)
         self._gr.addPlot(self._plot)
         
     def save(self):

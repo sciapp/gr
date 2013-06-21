@@ -245,6 +245,7 @@ class Plot(GRMeta):
         self._subTitle = None
         self._lblX = None
         self._lblY = None
+        self._legend = False
         
     @property
     def xlabel(self):
@@ -323,6 +324,9 @@ class Plot(GRMeta):
     def setGrid(self, bool):
         for axes in self._lstAxes:
             axes.setGrid(bool)
+            
+    def setLegend(self, bool):
+        self._legend = bool
                 
     def reset(self):
         for axes in self._lstAxes:
@@ -467,6 +471,8 @@ class Plot(GRMeta):
                 axes.drawGR()
         # current values, viewport maybe changed above
         [xmin, xmax, ymin, ymax] = self.viewport
+        dyXLabel = 0
+        dxYLabel = 0
         # draw x- and y label
         if self.xlabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
@@ -483,12 +489,64 @@ class Plot(GRMeta):
             dxYLabel = max(tbx)-min(tbx)
             gr.text(xmin-dxYLabel/2.-.075, ymin+(ymax-ymin)/2., self.ylabel)
             gr.setcharup(0., 1.)
+            
+        if self._legend:
+            x, y = .1, ymin-dyXLabel-.075
+            if y < 0:
+                self.viewport[2] += dyXLabel
+                gr.clearws()
+                self.drawGR()
+            else:
+                window = gr.inqwindow()
+                gr.setviewport(0, 1, 0, 1)
+                gr.setwindow(0, 1, 0, 1)
+                # preserve old values
+                ltype = gr.inqlinetype()
+                mtype = gr.inqmarkertype()
+                lcolor = gr.inqlinecolorind()
+                mcolor = gr.inqmarkercolorind()
+                for axes in self._lstAxes:
+                    for curve in axes.getCurves():
+                        if curve.legend:
+                            gr.setlinetype(curve.getLineType())
+                            gr.setmarkertype(curve.getMarkerType())
+                            gr.setlinecolorind(curve.getLineColor())
+                            gr.setmarkercolorind(curve.getMarkerColor())
+                            if curve.getLineType() is not None:
+                                gr.setlinecolorind(curve.getLineColor())
+                                gr.setmarkercolorind(curve.getMarkerColor())
+                                gr.setlinetype(curve.getLineType())
+                                gr.polyline(2, [x, x+.1], [y, y])
+                                if (curve.getMarkerType() != gr.MARKERTYPE_DOT
+                                    and curve.getMarkerType() is not None):
+                                    gr.setmarkertype(curve.getMarkerType())
+                                    gr.polymarker(1, [x+.1/2.], [y])
+                            elif curve.getMarkerType() is not None:
+                                gr.setmarkertype(curve.getMarkerType)
+                                gr.polymarker(1, [x+.1/2.], [y])
+                            tbx = gr.inqtextext(0, 0, curve.legend)[0]
+                            tbx = map(lambda y: gr.wctondc(0, y)[0], tbx)
+                            x += .1
+                            gr.settextalign(gr.TEXT_HALIGN_LEFT,
+                                            gr.TEXT_VALIGN_HALF)
+                            gr.text(x, y, curve.legend)
+                            x += max(tbx)-min(tbx) + .1
+                # restore old values
+                gr.setlinecolorind(lcolor)
+                gr.setmarkercolorind(mcolor)
+                gr.setlinetype(ltype)
+                gr.setmarkertype(mtype)
+                # restore viewport and window
+                gr.setviewport(*self.viewport)
+                gr.setwindow(*window)
 
 class PlotCurve(GRMeta):
     
+    COUNT = 0
+    
     def __init__(self, x, y, errBar1=None, errBar2=None,
                  linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_DOT,
-                 linecolor=None, markercolor=1):
+                 linecolor=None, markercolor=1, legend=None):
         self._x, self._y = x, y
         self._e1, self._e2 = errBar1, errBar2
         self._linetype, self._markertype = linetype, markertype
@@ -497,6 +555,9 @@ class PlotCurve(GRMeta):
             self._linecolor = ColorIndexGenerator.nextColorIndex()
         else:
             self._linecolor = linecolor
+        PlotCurve.COUNT += 1
+        if legend is None:
+            self._legend = "curve %d" %PlotCurve.COUNT
         self._n = len(self._x)
         
     def setLineType(self, linetype):
@@ -540,6 +601,15 @@ class PlotCurve(GRMeta):
     @y.setter
     def y(self, lst):
         self._y = lst
+        
+    @property
+    def legend(self):
+        """Get current text for a legend."""
+        return self._legend
+        
+    @legend.setter
+    def legend(self, s):
+        self._legend = s
     
     def drawGR(self):
         # preserve old values
@@ -753,7 +823,33 @@ class PlotAxes(GRMeta):
             if plotCurve and plotCurve not in self._lstPlotCurve:
                 self._lstPlotCurve.append(plotCurve)
         return self
-
+    
+def ndctowc(x, y):
+    try:
+        iter(x)
+        iter(y)
+        resX = []
+        resY = []
+        for xi, yi in map(lambda x, y: gr.ndctowc(x, y), x, y): 
+            resX.append(xi)
+            resY.append(yi)
+        return resX, resY
+    except TypeError:
+        return gr.ndctowc(x, y)
+    
+def wctondc(x, y):
+    try:
+        iter(x)
+        iter(y)
+        resX = []
+        resY = []
+        for xi, yi in map(lambda x, y: gr.wctondc(x, y), x, y): 
+            resX.append(xi)
+            resY.append(yi)
+        return resX, resY
+    except TypeError:
+        return gr.wctondc(x, y)
+    
 def _guessdimension(len):
     x = int(math.sqrt(len))
     d = []
