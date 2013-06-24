@@ -193,13 +193,14 @@ class InteractiveGRWidget(GRWidget):
     def _pick(self, p0, type):
         for plot in self._lstPlot:
             coord = plot.pick(p0, self.width(), self.height())
-            dcPoint = coord.getDC()
-            QtGui.QApplication.sendEvent(self, PickEvent(type,
-                                                         self.width(),
-                                                         self.height(),
-                                                         dcPoint.x,
-                                                         dcPoint.y,
-                                                         coord.getWindow()))
+            if coord:
+                dcPoint = coord.getDC()
+                QtGui.QApplication.sendEvent(self, PickEvent(type,
+                                                             self.width(),
+                                                             self.height(),
+                                                             dcPoint.x,
+                                                             dcPoint.y,
+                                                             coord.getWindow()))
         
     def _select(self, p0, p1):
         for plot in self._lstPlot:

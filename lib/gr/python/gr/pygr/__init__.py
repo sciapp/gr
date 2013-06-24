@@ -355,21 +355,25 @@ class Plot(GRMeta):
                 gr.setwindow(*axes.getWindow())
                 coord.setNDC(p0.x, p0.y)
                 wcPick = coord.getWC()
-                for curve in axes.getCurves():
+                curves = filter(lambda c: c.visible, axes.getCurves())
+                for curve in curves:
                     for idx, x in enumerate(curve.x):
                         if x >= wcPick.x:
                             break
                     coord.setWC(x, curve.y[idx])
                     points.append(coord.getNDC())
-                    lstAxes.append(axes) 
-            # calculate distance between p0 and point on curve
-            norms = map(lambda p: (p0-p).norm(), points)
-            # nearest point
-            idx = norms.index(min(norms))
-            p = points[idx]
-            axes = lstAxes[idx]
-            coord.setNDC(p.x, p.y)
-            coord.setWindow(*axes.getWindow())
+                    lstAxes.append(axes)
+            if points: 
+                # calculate distance between p0 and point on curve
+                norms = map(lambda p: (p0-p).norm(), points)
+                # nearest point
+                idx = norms.index(min(norms))
+                p = points[idx]
+                axes = lstAxes[idx]
+                coord.setNDC(p.x, p.y)
+                coord.setWindow(*axes.getWindow())
+            else:
+                coord = None
         gr.setwindow(*window)
         return coord
     
@@ -526,7 +530,7 @@ class Plot(GRMeta):
                                 gr.polymarker(1, [x+.1/2.], [y])
                             tbx = gr.inqtextext(0, 0, curve.legend)[0]
                             tbx = map(lambda y: gr.wctondc(0, y)[0], tbx)
-                            x += .1
+                            x += .11
                             gr.settextalign(gr.TEXT_HALIGN_LEFT,
                                             gr.TEXT_VALIGN_HALF)
                             gr.text(x, y, curve.legend)
@@ -556,9 +560,11 @@ class PlotCurve(GRMeta):
         else:
             self._linecolor = linecolor
         PlotCurve.COUNT += 1
+        self._id = PlotCurve.COUNT
         if legend is None:
-            self._legend = "curve %d" %PlotCurve.COUNT
+            self._legend = "curve %d" %self._id
         self._n = len(self._x)
+        self._visible = True
         
     def setLineType(self, linetype):
         self._linetype = linetype
@@ -610,35 +616,44 @@ class PlotCurve(GRMeta):
     @legend.setter
     def legend(self, s):
         self._legend = s
+        
+    @property
+    def visible(self):
+        return self._visible
+    
+    @visible.setter
+    def visible(self, bool):
+        self._visible = bool
     
     def drawGR(self):
-        # preserve old values
-        ltype = gr.inqlinetype()
-        mtype = gr.inqmarkertype()
-        lcolor = gr.inqlinecolorind()
-        mcolor = gr.inqmarkercolorind()
-
-        if self.getLineType() is not None:
-            gr.setlinecolorind(self.getLineColor())
-            gr.setmarkercolorind(self.getMarkerColor())
-            gr.setlinetype(self._linetype)
-            gr.polyline(self._n, self.x, self.y)
-            if (self.getMarkerType() != gr.MARKERTYPE_DOT and
-                self.getMarkerType() is not None):
+        if self.visible:
+            # preserve old values
+            ltype = gr.inqlinetype()
+            mtype = gr.inqmarkertype()
+            lcolor = gr.inqlinecolorind()
+            mcolor = gr.inqmarkercolorind()
+    
+            if self.getLineType() is not None:
+                gr.setlinecolorind(self.getLineColor())
+                gr.setmarkercolorind(self.getMarkerColor())
+                gr.setlinetype(self._linetype)
+                gr.polyline(self._n, self.x, self.y)
+                if (self.getMarkerType() != gr.MARKERTYPE_DOT and
+                    self.getMarkerType() is not None):
+                    gr.setmarkertype(self._markertype)
+                    gr.polymarker(self._n, self.x, self.y)
+            elif self.getMarkerType() is not None:
                 gr.setmarkertype(self._markertype)
                 gr.polymarker(self._n, self.x, self.y)
-        elif self.getMarkerType() is not None:
-            gr.setmarkertype(self._markertype)
-            gr.polymarker(self._n, self.x, self.y)
-        if self._e1:
-            self._e1.drawGR()
-        if self._e2:
-            self._e2.drawGR()
-        # restore old values
-        gr.setlinecolorind(lcolor)
-        gr.setmarkercolorind(mcolor)
-        gr.setlinetype(ltype)
-        gr.setmarkertype(mtype)
+            if self._e1:
+                self._e1.drawGR()
+            if self._e2:
+                self._e2.drawGR()
+            # restore old values
+            gr.setlinecolorind(lcolor)
+            gr.setmarkercolorind(mcolor)
+            gr.setlinetype(ltype)
+            gr.setmarkertype(mtype)
             
 class PlotAxes(GRMeta):
 
