@@ -101,6 +101,42 @@ class Point(object):
     def norm(self):
         """Calculate euclidean norm."""
         return math.sqrt(self*self)
+    
+class RegionOfInterest(object):
+    
+    def __init__(self, *args, **kwargs):
+        self._poly = args
+        
+    def isPointInside(self, p0):
+        """
+        
+        """
+        # Even-odd rule (Point in Polygon Test)
+        # assume a ray from testpoint to infinity along positive x axis
+        # count intersections along this ray.
+        # If odd inside - outside otherwise.
+        res = False
+        if self._poly:
+            n = len(self._poly)
+            j = n-1
+            for i in range(n):
+                pi, pj = self._poly[i], self._poly[j]
+                # if testpoint y component between pi, pj
+                # => intersection possible
+                if ( ((pi.y > p0.y) != (pj.y > p0.y)) and
+                     # if x components are both greater than testpoint's x
+                     # => intersection (with polyline)
+                     ( ((pi.x > p0.x) and (pj.x > p0.x)) or
+                    # if testpoint left from intersection (with polyline)
+                    # along x axis with same y component
+                    # => intersection with polyline
+                       (p0.x < ((p0.y-pi.y) * (pi.x-pj.x)/(pi.y-pj.y) + pi.x))
+                     )
+                    ):
+                    # flip on intersection
+                    res = not res
+                j = i
+        return res
 
 class CoordConverter(object):
     
@@ -197,7 +233,7 @@ class Helper(object):
 #        print "  %s" %res
         return res
     
-class ColorIndexGenerator():
+class ColorIndexGenerator(object):
     
     _distinct_colors = range(980, 1000)
     _n = len(_distinct_colors)
@@ -232,7 +268,7 @@ class ErrorBar(GRMeta):
         
     def drawGR(self):
         self._grerror(self._n, self._x, self._y, self._dneg, self._dpos)
-
+        
 class Plot(GRMeta):
     
     DEFAULT_VIEWPORT = (.1, .95, .1, .95)
