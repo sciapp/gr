@@ -101,6 +101,90 @@ class Point(object):
     def norm(self):
         """Calculate euclidean norm."""
         return math.sqrt(self*self)
+    
+class RegionOfInterest(object):
+    
+    LEGEND = 0x1
+    
+    def __init__(self, *args, **kwargs):
+        self._poly, self._x, self._y = None, None, None
+        self._ref = None
+        self._regionType = None
+        for p in args:
+            self.append(p)
+        if "reference" in kwargs:
+            self._ref = kwargs["reference"]
+        if "regionType" in kwargs:
+            self._regionType = kwargs["regionType"]
+        
+    @property
+    def x(self):
+        """Get the current x values."""
+        return self._x
+    
+    @property
+    def y(self):
+        """Get the current y values."""
+        return self._y
+    
+    @property
+    def reference(self):
+        """Get the current reference."""
+        return self._ref
+    
+    @reference.setter
+    def reference(self, ref):
+        self._ref = ref
+        
+    @property
+    def regionType(self):
+        """Get the current regionType."""
+        return self._regionType
+    
+    @regionType.setter
+    def regionType(self, rtype):
+        self._regionType = rtype
+        
+    def append(self, *args):
+        if self._poly is None:
+            self._poly = []
+            self._x = []
+            self._y = []
+        for p0 in args:
+            self._poly.append(p0)
+            self._x.append(p0.x)
+            self._y.append(p0.y)
+            
+    def isPointInside(self, p0):
+        """
+        
+        """
+        # Even-odd rule (Point in Polygon Test)
+        # assume a ray from testpoint to infinity along positive x axis
+        # count intersections along this ray.
+        # If odd inside - outside otherwise.
+        res = False
+        if self._poly:
+            n = len(self._poly)
+            j = n-1
+            for i in range(n):
+                pi, pj = self._poly[i], self._poly[j]
+                # if testpoint y component between pi, pj
+                # => intersection possible
+                if ( ((pi.y > p0.y) != (pj.y > p0.y)) and
+                     # if x components are both greater than testpoint's x
+                     # => intersection (with polyline)
+                     ( ((pi.x > p0.x) and (pj.x > p0.x)) or
+                    # if testpoint left from intersection (with polyline)
+                    # along x axis with same y component
+                    # => intersection with polyline
+                       (p0.x < ((p0.y-pi.y) * (pi.x-pj.x)/(pi.y-pj.y) + pi.x))
+                     )
+                    ):
+                    # flip on intersection
+                    res = not res
+                j = i
+        return res
 
 class CoordConverter(object):
     
@@ -197,7 +281,7 @@ class Helper(object):
 #        print "  %s" %res
         return res
     
-class ColorIndexGenerator():
+class ColorIndexGenerator(object):
     
     _distinct_colors = range(980, 1000)
     _n = len(_distinct_colors)
@@ -232,7 +316,7 @@ class ErrorBar(GRMeta):
         
     def drawGR(self):
         self._grerror(self._n, self._x, self._y, self._dneg, self._dpos)
-
+        
 class Plot(GRMeta):
     
     DEFAULT_VIEWPORT = (.1, .95, .1, .95)
@@ -246,6 +330,7 @@ class Plot(GRMeta):
         self._lblX = None
         self._lblY = None
         self._legend = False
+        self._legendROI = None
         
     @property
     def xlabel(self):
@@ -355,21 +440,25 @@ class Plot(GRMeta):
                 gr.setwindow(*axes.getWindow())
                 coord.setNDC(p0.x, p0.y)
                 wcPick = coord.getWC()
-                for curve in axes.getCurves():
+                curves = filter(lambda c: c.visible, axes.getCurves())
+                for curve in curves:
                     for idx, x in enumerate(curve.x):
                         if x >= wcPick.x:
                             break
                     coord.setWC(x, curve.y[idx])
                     points.append(coord.getNDC())
-                    lstAxes.append(axes) 
-            # calculate distance between p0 and point on curve
-            norms = map(lambda p: (p0-p).norm(), points)
-            # nearest point
-            idx = norms.index(min(norms))
-            p = points[idx]
-            axes = lstAxes[idx]
-            coord.setNDC(p.x, p.y)
-            coord.setWindow(*axes.getWindow())
+                    lstAxes.append(axes)
+            if points: 
+                # calculate distance between p0 and point on curve
+                norms = map(lambda p: (p0-p).norm(), points)
+                # nearest point
+                idx = norms.index(min(norms))
+                p = points[idx]
+                axes = lstAxes[idx]
+                coord.setNDC(p.x, p.y)
+                coord.setWindow(*axes.getWindow())
+            else:
+                coord = None
         gr.setwindow(*window)
         return coord
     
@@ -425,6 +514,14 @@ class Plot(GRMeta):
                 axes.setWindow(*window)
                 self.reset()
                 break
+            
+    def getROI(self, p0):
+        res = None
+        if self._legendROI:
+            for roi in self._legendROI:
+                if roi.isPointInside(p0):
+                    res = roi
+        return res
         
     def addAxes(self, *args, **kwargs):
         for plotAxes in args:
@@ -489,7 +586,7 @@ class Plot(GRMeta):
             dxYLabel = max(tbx)-min(tbx)
             gr.text(xmin-dxYLabel/2.-.075, ymin+(ymax-ymin)/2., self.ylabel)
             gr.setcharup(0., 1.)
-            
+        # draw legend and calculate ROIs for legend items 
         if self._legend:
             x, y = .1, ymin-dyXLabel-.075
             if y < 0:
@@ -505,6 +602,7 @@ class Plot(GRMeta):
                 mtype = gr.inqmarkertype()
                 lcolor = gr.inqlinecolorind()
                 mcolor = gr.inqmarkercolorind()
+                self._legendROI = []
                 for axes in self._lstAxes:
                     for curve in axes.getCurves():
                         if curve.legend:
@@ -524,13 +622,22 @@ class Plot(GRMeta):
                             elif curve.getMarkerType() is not None:
                                 gr.setmarkertype(curve.getMarkerType)
                                 gr.polymarker(1, [x+.1/2.], [y])
-                            tbx = gr.inqtextext(0, 0, curve.legend)[0]
-                            tbx = map(lambda y: gr.wctondc(0, y)[0], tbx)
-                            x += .1
+                            tbx, tby = gr.inqtextext(0, 0, curve.legend)
+                            ybase = y-(max(tby)-min(tby))/2
+                            ytop = y+(max(tby)-min(tby))/2
+                            roi = RegionOfInterest(Point(x, ybase),
+                                                   Point(x, ytop),
+                                                   reference=curve,
+                                                   regionType=RegionOfInterest.LEGEND)
+                            x += .11
                             gr.settextalign(gr.TEXT_HALIGN_LEFT,
                                             gr.TEXT_VALIGN_HALF)
                             gr.text(x, y, curve.legend)
-                            x += max(tbx)-min(tbx) + .1
+                            x += max(tbx)-min(tbx)
+                            roi.append(Point(x, ytop), Point(x, ybase))
+                            self._legendROI.append(roi)
+                if not self._legendROI:
+                    self._legendROI = None
                 # restore old values
                 gr.setlinecolorind(lcolor)
                 gr.setmarkercolorind(mcolor)
@@ -551,14 +658,17 @@ class PlotCurve(GRMeta):
         self._e1, self._e2 = errBar1, errBar2
         self._linetype, self._markertype = linetype, markertype
         self._markercolor = markercolor
+        self._legend = legend
         if linecolor is None:
             self._linecolor = ColorIndexGenerator.nextColorIndex()
         else:
             self._linecolor = linecolor
         PlotCurve.COUNT += 1
+        self._id = PlotCurve.COUNT
         if legend is None:
-            self._legend = "curve %d" %PlotCurve.COUNT
+            self._legend = "curve %d" %self._id
         self._n = len(self._x)
+        self._visible = True
         
     def setLineType(self, linetype):
         self._linetype = linetype
@@ -610,35 +720,44 @@ class PlotCurve(GRMeta):
     @legend.setter
     def legend(self, s):
         self._legend = s
+        
+    @property
+    def visible(self):
+        return self._visible
+    
+    @visible.setter
+    def visible(self, bool):
+        self._visible = bool
     
     def drawGR(self):
-        # preserve old values
-        ltype = gr.inqlinetype()
-        mtype = gr.inqmarkertype()
-        lcolor = gr.inqlinecolorind()
-        mcolor = gr.inqmarkercolorind()
-
-        if self.getLineType() is not None:
-            gr.setlinecolorind(self.getLineColor())
-            gr.setmarkercolorind(self.getMarkerColor())
-            gr.setlinetype(self._linetype)
-            gr.polyline(self._n, self.x, self.y)
-            if (self.getMarkerType() != gr.MARKERTYPE_DOT and
-                self.getMarkerType() is not None):
+        if self.visible:
+            # preserve old values
+            ltype = gr.inqlinetype()
+            mtype = gr.inqmarkertype()
+            lcolor = gr.inqlinecolorind()
+            mcolor = gr.inqmarkercolorind()
+    
+            if self.getLineType() is not None:
+                gr.setlinecolorind(self.getLineColor())
+                gr.setmarkercolorind(self.getMarkerColor())
+                gr.setlinetype(self._linetype)
+                gr.polyline(self._n, self.x, self.y)
+                if (self.getMarkerType() != gr.MARKERTYPE_DOT and
+                    self.getMarkerType() is not None):
+                    gr.setmarkertype(self._markertype)
+                    gr.polymarker(self._n, self.x, self.y)
+            elif self.getMarkerType() is not None:
                 gr.setmarkertype(self._markertype)
                 gr.polymarker(self._n, self.x, self.y)
-        elif self.getMarkerType() is not None:
-            gr.setmarkertype(self._markertype)
-            gr.polymarker(self._n, self.x, self.y)
-        if self._e1:
-            self._e1.drawGR()
-        if self._e2:
-            self._e2.drawGR()
-        # restore old values
-        gr.setlinecolorind(lcolor)
-        gr.setmarkercolorind(mcolor)
-        gr.setlinetype(ltype)
-        gr.setmarkertype(mtype)
+            if self._e1:
+                self._e1.drawGR()
+            if self._e2:
+                self._e2.drawGR()
+            # restore old values
+            gr.setlinecolorind(lcolor)
+            gr.setmarkercolorind(mcolor)
+            gr.setlinetype(ltype)
+            gr.setmarkertype(mtype)
             
 class PlotAxes(GRMeta):
 
@@ -646,7 +765,7 @@ class PlotAxes(GRMeta):
 
     def __init__(self, viewport=list(Plot.DEFAULT_VIEWPORT), drawX=True, drawY=True):
         self._viewport, self._drawX, self._drawY = viewport, drawX, drawY
-        self._lstPlotCurve = None
+        self._lstPlotCurve = []
         self._backgroundColor = 163
         self._window = None
         self._scale = 0
