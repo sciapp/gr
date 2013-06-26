@@ -15,7 +15,7 @@ import sip
 # local library
 import gr
 import qtgr.events
-from gr.pygr import Plot, PlotAxes
+from gr.pygr import Plot, PlotAxes, RegionOfInterest
 from qtgr.events import GUIConnector, MouseEvent, PickEvent
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -217,6 +217,14 @@ class InteractiveGRWidget(GRWidget):
             plot.zoom(dpercent)
         self.draw(True)
         
+    def _leftClicked(self, p0):
+        for plot in self._lstPlot:
+            roi = plot.getROI(p0)
+            if roi:
+                if roi.regionType == RegionOfInterest.LEGEND:
+                    roi.reference.visible = not roi.reference.visible
+        self.draw(True)
+        
     def mousePress(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
             if self.getPickMode():
@@ -240,6 +248,8 @@ class InteractiveGRWidget(GRWidget):
             p1 = self._curPoint.getNDC()
             if p0 != p1:
                 self._select(p0, p1)
+            else:
+                self._leftClicked(p0)
         elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
             self._mouseRight = False
         self._curPoint = event
