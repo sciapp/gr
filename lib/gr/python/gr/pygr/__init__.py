@@ -104,9 +104,57 @@ class Point(object):
     
 class RegionOfInterest(object):
     
+    LEGEND = 0x1
+    
     def __init__(self, *args, **kwargs):
-        self._poly = args
+        self._poly, self._x, self._y = None, None, None
+        self._ref = None
+        self._regionType = None
+        for p in args:
+            self.append(p)
+        if "reference" in kwargs:
+            self._ref = kwargs["reference"]
+        if "regionType" in kwargs:
+            self._regionType = kwargs["regionType"]
         
+    @property
+    def x(self):
+        """Get the current x values."""
+        return self._x
+    
+    @property
+    def y(self):
+        """Get the current y values."""
+        return self._y
+    
+    @property
+    def reference(self):
+        """Get the current reference."""
+        return self._ref
+    
+    @reference.setter
+    def reference(self, ref):
+        self._ref = ref
+        
+    @property
+    def regionType(self):
+        """Get the current regionType."""
+        return self._regionType
+    
+    @regionType.setter
+    def regionType(self, rtype):
+        self._regionType = rtype
+        
+    def append(self, *args):
+        if self._poly is None:
+            self._poly = []
+            self._x = []
+            self._y = []
+        for p0 in args:
+            self._poly.append(p0)
+            self._x.append(p0.x)
+            self._y.append(p0.y)
+            
     def isPointInside(self, p0):
         """
         
@@ -282,6 +330,7 @@ class Plot(GRMeta):
         self._lblX = None
         self._lblY = None
         self._legend = False
+        self._legendROI = None
         
     @property
     def xlabel(self):
@@ -465,6 +514,14 @@ class Plot(GRMeta):
                 axes.setWindow(*window)
                 self.reset()
                 break
+            
+    def getROI(self, p0):
+        res = None
+        if self._legendROI:
+            for roi in self._legendROI:
+                if roi.isPointInside(p0):
+                    res = roi
+        return res
         
     def addAxes(self, *args, **kwargs):
         for plotAxes in args:
@@ -529,7 +586,7 @@ class Plot(GRMeta):
             dxYLabel = max(tbx)-min(tbx)
             gr.text(xmin-dxYLabel/2.-.075, ymin+(ymax-ymin)/2., self.ylabel)
             gr.setcharup(0., 1.)
-            
+        # draw legend and calculate ROIs for legend items 
         if self._legend:
             x, y = .1, ymin-dyXLabel-.075
             if y < 0:
@@ -545,6 +602,7 @@ class Plot(GRMeta):
                 mtype = gr.inqmarkertype()
                 lcolor = gr.inqlinecolorind()
                 mcolor = gr.inqmarkercolorind()
+                self._legendROI = []
                 for axes in self._lstAxes:
                     for curve in axes.getCurves():
                         if curve.legend:
@@ -564,13 +622,22 @@ class Plot(GRMeta):
                             elif curve.getMarkerType() is not None:
                                 gr.setmarkertype(curve.getMarkerType)
                                 gr.polymarker(1, [x+.1/2.], [y])
-                            tbx = gr.inqtextext(0, 0, curve.legend)[0]
-                            tbx = map(lambda y: gr.wctondc(0, y)[0], tbx)
+                            tbx, tby = gr.inqtextext(0, 0, curve.legend)
+                            ybase = y-(max(tby)-min(tby))/2
+                            ytop = y+(max(tby)-min(tby))/2
+                            roi = RegionOfInterest(Point(x, ybase),
+                                                   Point(x, ytop),
+                                                   reference=curve,
+                                                   regionType=RegionOfInterest.LEGEND)
                             x += .11
                             gr.settextalign(gr.TEXT_HALIGN_LEFT,
                                             gr.TEXT_VALIGN_HALF)
                             gr.text(x, y, curve.legend)
-                            x += max(tbx)-min(tbx) + .1
+                            x += max(tbx)-min(tbx)
+                            roi.append(Point(x, ytop), Point(x, ybase))
+                            self._legendROI.append(roi)
+                if not self._legendROI:
+                    self._legendROI = None
                 # restore old values
                 gr.setlinecolorind(lcolor)
                 gr.setmarkercolorind(mcolor)
@@ -591,6 +658,7 @@ class PlotCurve(GRMeta):
         self._e1, self._e2 = errBar1, errBar2
         self._linetype, self._markertype = linetype, markertype
         self._markercolor = markercolor
+        self._legend = legend
         if linecolor is None:
             self._linecolor = ColorIndexGenerator.nextColorIndex()
         else:
@@ -697,7 +765,7 @@ class PlotAxes(GRMeta):
 
     def __init__(self, viewport=list(Plot.DEFAULT_VIEWPORT), drawX=True, drawY=True):
         self._viewport, self._drawX, self._drawY = viewport, drawX, drawY
-        self._lstPlotCurve = None
+        self._lstPlotCurve = []
         self._backgroundColor = 163
         self._window = None
         self._scale = 0
