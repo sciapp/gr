@@ -12,7 +12,7 @@ from PyQt4 import uic
 import gr # TESTING shell
 import qtgr
 from qtgr.events import GUIConnector, MouseEvent, PickEvent
-from gr.pygr import Plot, PlotAxes
+from gr.pygr import Plot, PlotAxes, PlotCurve
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
 __date__    = "2013-06-05"
@@ -87,7 +87,8 @@ class MainWindow(QtGui.QMainWindow):
         x2 = [-3.5 + i*.5 for i in range(0, 15)]
         y2 = x2
         
-        self._plot = Plot().addAxes(PlotAxes().plot(x, y),
+        self._plot = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x, y,
+                                               legend="foo bar")),
                                     PlotAxes(drawX=False).plot(x2, y2))
         self._plot.title = "QtGR Demo"
         self._plot.subTitle = "Multiple Axes Example"
