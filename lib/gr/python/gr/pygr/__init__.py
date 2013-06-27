@@ -672,7 +672,6 @@ class PlotCurve(GRMeta):
         self._id = PlotCurve.COUNT
         if legend is None:
             self._legend = "curve %d" %self._id
-        self._n = len(self._x)
         self._visible = True
         
     def setLineType(self, linetype):
@@ -743,17 +742,18 @@ class PlotCurve(GRMeta):
             mcolor = gr.inqmarkercolorind()
     
             if self.getLineType() is not None:
+                n = len(self.y)
                 gr.setlinecolorind(self.getLineColor())
                 gr.setmarkercolorind(self.getMarkerColor())
                 gr.setlinetype(self._linetype)
-                gr.polyline(self._n, self.x, self.y)
+                gr.polyline(n, self.x, self.y)
                 if (self.getMarkerType() != gr.MARKERTYPE_DOT and
                     self.getMarkerType() is not None):
                     gr.setmarkertype(self._markertype)
-                    gr.polymarker(self._n, self.x, self.y)
+                    gr.polymarker(n, self.x, self.y)
             elif self.getMarkerType() is not None:
                 gr.setmarkertype(self._markertype)
-                gr.polymarker(self._n, self.x, self.y)
+                gr.polymarker(n, self.x, self.y)
             if self._e1:
                 self._e1.drawGR()
             if self._e2:
