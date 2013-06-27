@@ -97,6 +97,32 @@ class PickEvent(MouseLocationEventMeta):
     
     def __init__(self, type, width, height, x, y, window=None):
         super(PickEvent, self).__init__(type, width, height, x, y, window)
+        
+class ROIEvent(MouseEvent):
+    
+    ROI_CLICKED = QtCore.QEvent.registerEventType()
+    ROI_OVER    = QtCore.QEvent.registerEventType()
+    
+    def __init__(self, type, width, height, x, y, buttons, modifiers, roi):
+        super(ROIEvent, self).__init__(type, width, height, x, y, buttons,
+                                       modifiers)
+        self._roi = roi
+        
+    @property
+    def roi(self):
+        """Get RegionOfInterest instance."""
+        return self._roi
+    
+class LegendEvent(ROIEvent):
+    
+    def __init__(self, type, width, height, x, y, buttons, modifiers, roi):
+        super(LegendEvent, self).__init__(type, width, height, x, y, buttons,
+                                          modifiers, roi)
+    
+    @property
+    def curve(self):
+        """Get PlotCurve instance referenced by this legend item."""
+        return self._roi.reference    
     
 class EventFilter(QtCore.QObject):
     
