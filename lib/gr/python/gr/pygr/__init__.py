@@ -768,7 +768,10 @@ class PlotAxes(GRMeta):
 
     COUNT = 0
 
-    def __init__(self, viewport=list(Plot.DEFAULT_VIEWPORT), drawX=True, drawY=True):
+    def __init__(self, xtick=None, ytick=None, majorx=None, majory=None,
+                 viewport=list(Plot.DEFAULT_VIEWPORT), drawX=True, drawY=True):
+        self._xtick, self._ytick = xtick, ytick
+        self.majorx, self.majory = majorx, majory
         self._viewport, self._drawX, self._drawY = viewport, drawX, drawY
         self._lstPlotCurve = []
         self._backgroundColor = 163
@@ -789,6 +792,44 @@ class PlotAxes(GRMeta):
     def isYLogDomain(self):
         window = self.getWindow()
         return Helper.isInLogDomain(window[2], window[3])
+    
+    @property
+    def xtick(self):
+        """get current user-defined interval between minor x ticks"""
+        return self._xtick
+    
+    @xtick.setter
+    def xtick(self, tickInterval):
+        self._xtick = tickInterval
+        
+    @property
+    def ytick(self):
+        """get current user-defined interval between minor y ticks"""
+        return self._ytick
+    
+    @ytick.setter
+    def ytick(self, tickInterval):
+        self._ytick = tickInterval
+        
+    @property
+    def majorx(self):
+        """get current user-defined number of minor tick intervals between
+        major x tick marks"""
+        return self._majorx
+
+    @majorx.setter    
+    def majorx(self, minorCount):
+        self._majorx = minorCount if minorCount > 0 or minorCount is None else 1
+        
+    @property
+    def majory(self):
+        """get current user-defined number of minor tick intervals between
+        major y tick marks"""
+        return self._majory 
+
+    @majory.setter    
+    def majory(self, minorCount):
+        self._majory = minorCount if minorCount > 0 or minorCount is None else 1
     
     @property
     def viewport(self):
@@ -898,13 +939,19 @@ class PlotAxes(GRMeta):
                 if self.scale & gr.OPTION_X_LOG:
                     xtick = majorx = 1
                 else:
-                    majorx = 5
-                    xtick = gr.tick(xmin, xmax) / majorx
+                    majorx = self._majorx if self._majorx is not None else 5
+                    if self._xtick is not None:
+                        xtick = self._xtick
+                    else:
+                        xtick = gr.tick(xmin, xmax) / majorx
                 if self.scale & gr.OPTION_Y_LOG:
                     ytick = majory = 1
                 else:
-                    majory = 5
-                    ytick = gr.tick(ymin, ymax) / majory
+                    majory = self._majory if self._majory is not None else 5
+                    if self._ytick is not None:
+                        ytick = self._ytick
+                    else:
+                        ytick = gr.tick(ymin, ymax) / majory
                 gr.setviewport(*viewport)
                 gr.setwindow(*window)
                 gr.setscale(self.scale)
