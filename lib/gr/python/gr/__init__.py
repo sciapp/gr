@@ -29,6 +29,12 @@ def char(string):
   else:
     s = create_string_buffer(string)
   return cast(s, c_char_p)
+  
+def chararray(n, a):
+    _a = (c_char_p * n)()
+    for i in range(n):
+      _a[i] = char(a[i])
+    return _a
 
 def opengks():
   __gr.gr_opengks()
@@ -314,11 +320,20 @@ def inqtextext(x, y, string):
   return [[tbx[0], tbx[1], tbx[2], tbx[3]],
           [tby[0], tby[1], tby[2], tby[3]]]
 
+def axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
+            labels_x, n, labels_y, m):
+    
+  __gr.gr_axeslbl(c_float(x_tick), c_float(y_tick),
+               c_float(x_org), c_float(y_org),
+               c_int(major_x), c_int(major_y), c_float(tick_size),
+               chararray(len(labels_x), labels_x), c_int(n),
+               chararray(len(labels_y), labels_y), c_int(m))
+
 def axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size):
   __gr.gr_axes(c_float(x_tick), c_float(y_tick),
                c_float(x_org), c_float(y_org),
                c_int(major_x), c_int(major_y), c_float(tick_size))
-
+  
 def grid(x_tick, y_tick, x_org, y_org, major_x, major_y):
   __gr.gr_grid(c_float(x_tick), c_float(y_tick),
                c_float(x_org), c_float(y_org),
@@ -566,6 +581,9 @@ __gr.gr_setscale.argtypes = [c_int];
 __gr.gr_inqscale.argtypes = [POINTER(c_int)];
 __gr.gr_textext.argtypes = [c_float, c_float, c_char_p];
 __gr.gr_inqtextext.argtypes = [c_float, c_float, c_char_p, POINTER(c_float), POINTER(c_float)];
+__gr.gr_axeslbl.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int,
+                            c_float, POINTER(c_char_p), c_int,
+                            POINTER(c_char_p), c_int]
 __gr.gr_axes.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int, c_float];
 __gr.gr_grid.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int];
 __gr.gr_verrorbars.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];

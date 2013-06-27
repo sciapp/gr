@@ -1879,8 +1879,9 @@ void text2d(float x, float y, char *chars)
     gks_select_xform(tnr);
 }
 
-void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
-             int major_x, int major_y, float tick_size)
+void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
+                int major_x, int major_y, float tick_size,
+                char **labels_x, int n, char **labels_y, int m)
 {
   int errind, tnr;
   int ltype, halign, valign, clsw;
@@ -1990,7 +1991,12 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
                               text2d(x_label, yi, string);
                             }
                           else
-                            text2d(x_label, yi, str_ftoa(string, yi, 0.));
+                            {
+                        	  if ( m-- > 0 )
+                        	    text2d(x_label, yi, *labels_y++);
+                        	  else
+                        		text2d(x_label, yi, str_ftoa(string, yi, 0.));
+                            }
                         }
                 }
               else
@@ -2039,8 +2045,13 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
                       xi = major_tick;
                       if (yi != y_org || y_org == y_min || y_org == y_max)
                         if (major_y > 0)
-                          text2d(x_label, yi,
-                                 str_ftoa(string, yi, y_tick * major_y));
+                          {
+                     	    if ( m-- > 0 )
+                     	      text2d(x_label, yi, *labels_y++);
+                     	    else
+                              text2d(x_label, yi,
+                                     str_ftoa(string, yi, y_tick * major_y));
+                          }
                     }
                   else
                     xi = minor_tick;
@@ -2119,7 +2130,12 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
                               text2d(xi, y_label, string);
                             }
                           else
-                            text2d(xi, y_label, str_ftoa(string, xi, 0.));
+                            {
+                        	  if ( n-- > 0 )
+                        	    text2d(xi, y_label, *labels_x++);
+                        	  else
+                                text2d(xi, y_label, str_ftoa(string, xi, 0.));
+                            }
                         }
                 }
               else
@@ -2168,8 +2184,13 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
                       yi = major_tick;
                       if (xi != x_org || x_org == x_min || x_org == x_max)
                         if (major_x > 0)
-                          text2d(xi, y_label,
-                                 str_ftoa(string, xi, x_tick * major_x));
+                          {
+                        	if ( n-- > 0 )
+                        	  text2d(xi, y_label, *labels_x++);
+                        	else
+                              text2d(xi, y_label,
+                                     str_ftoa(string, xi, x_tick * major_x));
+                          }
                     }
                   else
                     yi = minor_tick;
@@ -2204,6 +2225,13 @@ void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
       "<axes xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
       "majorx=\"%d\" majory=\"%d\" ticksize=\"%g\"/>\n",
       x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
+}
+
+void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
+             int major_x, int major_y, float tick_size)
+{
+  gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
+              NULL, 0, NULL, 0);
 }
 
 static
