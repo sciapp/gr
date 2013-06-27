@@ -16,7 +16,8 @@ import sip
 import gr
 import qtgr.events
 from gr.pygr import Plot, PlotAxes, RegionOfInterest
-from qtgr.events import GUIConnector, MouseEvent, PickEvent
+from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent,\
+    LegendEvent
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
 __date__    = "2013-06-05"
@@ -217,13 +218,21 @@ class InteractiveGRWidget(GRWidget):
             plot.zoom(dpercent)
         self.draw(True)
         
-    def _leftClicked(self, p0):
+    def _roi(self, p0, type, buttons, modifiers):
         for plot in self._lstPlot:
             roi = plot.getROI(p0)
             if roi:
                 if roi.regionType == RegionOfInterest.LEGEND:
-                    roi.reference.visible = not roi.reference.visible
-        self.draw(True)
+                    eventObj = LegendEvent
+                else:
+                    eventObj = ROIEvent
+                QtGui.QApplication.sendEvent(self,
+                                             eventObj(type,
+                                                      self.width(),
+                                                      self.height(),
+                                                      p0.x, p0.y,
+                                                      buttons, modifiers,
+                                                      roi))
         
     def mousePress(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
@@ -249,9 +258,12 @@ class InteractiveGRWidget(GRWidget):
             if p0 != p1:
                 self._select(p0, p1)
             else:
-                self._leftClicked(p0)
+                self._roi(p0, ROIEvent.ROI_CLICKED, event.getButtons(),
+                          event.getModifiers())
         elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
             self._mouseRight = False
+            self._roi(event.getNDC(), ROIEvent.ROI_CLICKED, event.getButtons(),
+                      event.getModifiers())
         self._curPoint = event
             
     def mouseMove(self, event):
@@ -266,6 +278,8 @@ class InteractiveGRWidget(GRWidget):
             dp = p1-p0
             self._curPoint = event
             self._pan(dp)
+        self._roi(event.getNDC(), ROIEvent.ROI_OVER, event.getButtons(),
+                  event.getModifiers())
             
     def wheelMove(self, event):
         # delta percent

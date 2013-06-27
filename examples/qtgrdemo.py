@@ -11,7 +11,7 @@ from PyQt4 import uic
 # local library
 import gr # TESTING shell
 import qtgr
-from qtgr.events import GUIConnector, MouseEvent, PickEvent
+from qtgr.events import GUIConnector, MouseEvent, PickEvent, LegendEvent
 from gr.pygr import Plot, PlotAxes, PlotCurve
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -81,6 +81,8 @@ class MainWindow(QtGui.QMainWindow):
         guiConn = GUIConnector(self._gr)
         guiConn.connect(MouseEvent.MOUSE_MOVE, self.mouseMoveGr)
         guiConn.connect(PickEvent.PICK_PRESS, self.pointPickGr)
+        guiConn.connect(LegendEvent.ROI_CLICKED, self.legendClick)
+        guiConn.connect(LegendEvent.ROI_OVER, self.legendOver)
         
         x = [-3.3 + t*.1 for t in range(66)]
         y = [t**5 - 13*t**3 + 36*t for t in x]
@@ -127,8 +129,10 @@ class MainWindow(QtGui.QMainWindow):
         self._statusbar.showMessage("DC: (%4d, %4d)\t " %(dc.x, dc.y) +
                                     "NDC: (%3.2f, %3.2f)\t " %(ndc.x, ndc.y) +
                                     "WC: (%3.2f, %3.2f)" %(wc.x, wc.y))
+        self._lblOverLegend.setText("")
 #        print "  buttons: 0x%x" %event.getButtons()
 #        print "modifiers: 0x%x" %event.getModifiers()
+
     def pointPickGr(self, event):
         p = event.getWC()
         
@@ -141,6 +145,14 @@ class MainWindow(QtGui.QMainWindow):
             self._lblPickY.setText("%4.2f" %p.y)
         else:
             self._lblPickY.setText(" %4.2f" %p.y)
+    
+    def legendClick(self, event):
+        if event.getButtons() & MouseEvent.LEFT_BUTTON:
+            event.curve.visible = not event.curve.visible
+            self._gr.update()
+            
+    def legendOver(self, event):
+        self._lblOverLegend.setText(event.curve.legend)
         
     @QtCore.pyqtSlot()
     def _gridClicked(self, state):

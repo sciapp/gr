@@ -630,9 +630,14 @@ class Plot(GRMeta):
                                                    reference=curve,
                                                    regionType=RegionOfInterest.LEGEND)
                             x += .11
+                            if curve.visible:
+                                gr.settextcolorind(1)
+                            else:
+                                gr.settextcolorind(83)
                             gr.settextalign(gr.TEXT_HALIGN_LEFT,
                                             gr.TEXT_VALIGN_HALF)
                             gr.text(x, y, curve.legend)
+                            gr.settextcolorind(1)
                             x += max(tbx)-min(tbx)
                             roi.append(Point(x, ytop), Point(x, ybase))
                             self._legendROI.append(roi)
