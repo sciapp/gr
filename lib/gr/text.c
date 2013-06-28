@@ -1296,7 +1296,7 @@ void drawFormula(formula_t * formula, float Height, float scale)
 /*                      gr_textex                              */
 /*                                                             */
 /***************************************************************/
-int gr_textex(float x, float y, char *string, int inquire,
+int gr_textex(float x, float y, const char *string, int inquire,
 	      float *tbx, float *tby)
 {
   char *str = strdup(string);

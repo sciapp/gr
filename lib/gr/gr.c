@@ -1855,7 +1855,7 @@ void gr_inqtextext(float x, float y, char *string, float *tbx, float *tby)
 }
 
 static
-void text2d(float x, float y, char *chars)
+void text2d(float x, float y, const char *chars)
 {
   int errind, tnr;
 
@@ -1881,7 +1881,7 @@ void text2d(float x, float y, char *chars)
 
 void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
                 int major_x, int major_y, float tick_size,
-                char **labels_x, int n, char **labels_y, int m)
+                const char **labels_x, int m, const char **labels_y, int n)
 {
   int errind, tnr;
   int ltype, halign, valign, clsw;
@@ -1992,7 +1992,7 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
                             }
                           else
                             {
-                        	  if ( m-- > 0 )
+                        	  if ( n-- > 0 )
                         	    text2d(x_label, yi, *labels_y++);
                         	  else
                         		text2d(x_label, yi, str_ftoa(string, yi, 0.));
@@ -2046,7 +2046,7 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
                       if (yi != y_org || y_org == y_min || y_org == y_max)
                         if (major_y > 0)
                           {
-                     	    if ( m-- > 0 )
+                     	    if ( n-- > 0 )
                      	      text2d(x_label, yi, *labels_y++);
                      	    else
                               text2d(x_label, yi,
@@ -2131,7 +2131,7 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
                             }
                           else
                             {
-                        	  if ( n-- > 0 )
+                        	  if ( m-- > 0 )
                         	    text2d(xi, y_label, *labels_x++);
                         	  else
                                 text2d(xi, y_label, str_ftoa(string, xi, 0.));
@@ -2185,7 +2185,7 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
                       if (xi != x_org || x_org == x_min || x_org == x_max)
                         if (major_x > 0)
                           {
-                        	if ( n-- > 0 )
+                        	if ( m-- > 0 )
                         	  text2d(xi, y_label, *labels_x++);
                         	else
                               text2d(xi, y_label,

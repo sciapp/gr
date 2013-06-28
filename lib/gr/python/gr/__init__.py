@@ -321,13 +321,13 @@ def inqtextext(x, y, string):
           [tby[0], tby[1], tby[2], tby[3]]]
 
 def axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
-            labels_x, n, labels_y, m):
+            labels_x, m, labels_y, n):
     
   __gr.gr_axeslbl(c_float(x_tick), c_float(y_tick),
                c_float(x_org), c_float(y_org),
                c_int(major_x), c_int(major_y), c_float(tick_size),
-               chararray(len(labels_x), labels_x), c_int(n),
-               chararray(len(labels_y), labels_y), c_int(m))
+               chararray(len(labels_x), labels_x), c_int(m),
+               chararray(len(labels_y), labels_y), c_int(n))
 
 def axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size):
   __gr.gr_axes(c_float(x_tick), c_float(y_tick),
