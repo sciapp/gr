@@ -13,6 +13,7 @@ import gr # TESTING shell
 import qtgr
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, LegendEvent
 from gr.pygr import Plot, PlotAxes, PlotCurve
+from gr.pygr.base import AxisFmtMeta
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
 __date__    = "2013-06-27"
@@ -41,6 +42,14 @@ You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
+
+class XYAxisFmt(AxisFmtMeta):
+    
+    def tickLabel(self, tickvalue):
+        lst = []
+        for value in tickvalue:
+            lst.append("%s'" %value)
+        return lst
 
 class MainWindow(QtGui.QMainWindow):   
 
@@ -89,8 +98,9 @@ class MainWindow(QtGui.QMainWindow):
         x2 = [-3.5 + i*.5 for i in range(0, 15)]
         y2 = x2
         
-        self._plot = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x, y,
-                                               legend="foo bar")),
+        self._plot = Plot().addAxes(PlotAxes(xaxisFmt=XYAxisFmt(),
+                                             yaxisFmt=XYAxisFmt()).addCurves(
+                                             PlotCurve(x, y, legend="foo bar")),
                                     PlotAxes(drawX=False).plot(x2, y2))
         self._plot.title = "QtGR Demo"
         self._plot.subTitle = "Multiple Axes Example"
@@ -174,7 +184,7 @@ class MainWindow(QtGui.QMainWindow):
         self._plot.reset()
         self._gr.update()
     
-    @QtCore.pyqtSlot()    
+    @QtCore.pyqtSlot()
     def _pickClicked(self):
         self._gr.setPickMode(True)
     

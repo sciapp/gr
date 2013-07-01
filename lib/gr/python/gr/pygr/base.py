@@ -33,3 +33,8 @@ class GRMeta(object):
     
     def drawGR(self):
         raise NotImplementedError
+
+class AxisFmtMeta(object):
+    
+    def tickLabel(self, tickvalue):
+        raise NotImplementedError
