@@ -332,6 +332,9 @@ class Plot(GRMeta):
         self._legend = False
         self._legendROI = None
         
+    def getAxes(self):
+        return self._lstAxes
+        
     @property
     def xlabel(self):
         """get label for x axis"""
@@ -769,12 +772,10 @@ class PlotAxes(GRMeta):
     COUNT = 0
 
     def __init__(self, xtick=None, ytick=None, majorx=None, majory=None,
-                 viewport=list(Plot.DEFAULT_VIEWPORT), drawX=True, drawY=True,
-                 xaxisFmt=None, yaxisFmt=None):
+                 viewport=list(Plot.DEFAULT_VIEWPORT), drawX=True, drawY=True):
         self._xtick, self._ytick = xtick, ytick
         self.majorx, self.majory = majorx, majory
         self._viewport, self._drawX, self._drawY = viewport, drawX, drawY
-        self._xaxisFmt, self._yaxisFmt = xaxisFmt, yaxisFmt
         self._lstPlotCurve = []
         self._backgroundColor = 163
         self._window = None
@@ -785,10 +786,8 @@ class PlotAxes(GRMeta):
         self._id = PlotAxes.COUNT
         self._xtickValue = []
         self._ytickValue = []
-        self._xtickLabel = None
-        self._ytickLabel = None
-        self._m = 0 # major ticks x axis
-        self._n = 0 # major ticks y axis
+        self._xtickLabel = []
+        self._ytickLabel = []
         
     def getCurves(self):
         return self._lstPlotCurve
@@ -903,31 +902,31 @@ class PlotAxes(GRMeta):
         else:
             return None
         
-    def _xtick_callback(self, i, svalue):
+    def _storeTickValue(self, i, svalue, lstTick):
         if i == 0:
-            self._xtickValue = [svalue]
-        elif i == -1 and self._xaxisFmt is not None and svalue is None:
-            self._xtickLabel = self._xaxisFmt.tickLabel(self._xtickValue)
-            self._m = len(self._xtickLabel)
-            print "update x: %s" %self._xtickLabel
+            lstTick = [svalue]
+        elif i == -1 and svalue is None: # if last tick received
+            pass
         else:
-            self._xtickValue.append(svalue)
+            lstTick.append(svalue)
+        
+    def _xtick_callback(self, i, svalue):
+        self._storeTickValue(i, svalue, self._xtickValue)
         
     def _ytick_callback(self, i, svalue):
-        if i == 0:
-            self._ytickValue = [svalue]
-        elif i == -1 and self._yaxisFmt is not None and svalue is None:
-            self._ytickLabel = self._yaxisFmt.tickLabel(self._ytickValue)
-            self._n = len(self._ytickLabel)
-            print "update y:  %s" %self._ytickLabel
-        else:
-            self._ytickValue.append(svalue)
+        self._storeTickValue(i, svalue, self._ytickValue)
         
     def getXtickValues(self):
         return list(self._xtickValue)
     
     def getYtickValues(self):
         return list(self._ytickValue)
+    
+    def setXtickLabels(self, ticks):
+        self._xtickLabel = ticks
+        
+    def setYtickLables(self, ticks):
+        self._ytickLabel = ticks
     
     def reset(self):
         self._xtickLabel = []
@@ -1008,8 +1007,8 @@ class PlotAxes(GRMeta):
                     if not self.isYDrawingEnabled():
                         majory = -majory
                     gr.axeslbl(xtick, ytick, xmin, ymin,  majorx,  majory, 
-                               0.01, self._xtickLabel, self._m,
-                               self._ytickLabel, self._n, 
+                               0.01, self._xtickLabel, len(self._xtickLabel),
+                               self._ytickLabel, len(self._ytickLabel), 
                                self._xtick_callback, self._ytick_callback)
                 elif self.getId() == 2:
                     # second x, y axis
@@ -1018,8 +1017,8 @@ class PlotAxes(GRMeta):
                     if not self.isYDrawingEnabled():
                         majory = -majory
                     gr.axeslbl(xtick, ytick, xmax, ymax, majorx, majory,
-                               -0.01, self._xtickLabel, self._m,
-                               self._ytickLabel, self._n,
+                               -0.01, self._xtickLabel, len(self._xtickLabel),
+                               self._ytickLabel, len(self._ytickLabel),
                                self._xtick_callback, self._ytick_callback)
                 for curve in lstPlotCurve:
                     curve.drawGR()
