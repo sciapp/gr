@@ -4,6 +4,7 @@
 """
 # standard library
 import os
+import time
 # third party
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -12,6 +13,7 @@ from PyQt4 import uic
 import gr # TESTING shell
 import qtgr
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, LegendEvent
+from qtgr.events import TickEvent
 from gr.pygr import Plot, PlotAxes, PlotCurve
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
@@ -41,6 +43,16 @@ You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
+   
+class TimeAxisFmt(object):
+    
+    @staticmethod
+    def tickLabel(ticks):
+        lst = []
+        for value in ticks:
+            lst.append("%s" %time.strftime("%H:%M:%S",
+                                           time.localtime(float(value))))
+        return lst
 
 class MainWindow(QtGui.QMainWindow):   
 
@@ -83,6 +95,7 @@ class MainWindow(QtGui.QMainWindow):
         guiConn.connect(PickEvent.PICK_PRESS, self.pointPickGr)
         guiConn.connect(LegendEvent.ROI_CLICKED, self.legendClick)
         guiConn.connect(LegendEvent.ROI_OVER, self.legendOver)
+        guiConn.connect(TickEvent.TICKS_CHANGED, self.ticksChanged)
         
         x = [-3.3 + t*.1 for t in range(66)]
         y = [t**5 - 13*t**3 + 36*t for t in x]
@@ -90,7 +103,7 @@ class MainWindow(QtGui.QMainWindow):
         y2 = x2
         
         self._plot = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x, y,
-                                               legend="foo bar")),
+                                                           legend="foo bar")),
                                     PlotAxes(drawX=False).plot(x2, y2))
         self._plot.title = "QtGR Demo"
         self._plot.subTitle = "Multiple Axes Example"
@@ -154,6 +167,11 @@ class MainWindow(QtGui.QMainWindow):
     def legendOver(self, event):
         self._lblOverLegend.setText(event.curve.legend)
         
+    def ticksChanged(self, event):
+        if event.origin == TickEvent.AXIS_X:
+            event.axes.setXtickLabels(TimeAxisFmt.tickLabel(event.labels))
+        self._gr.updateTicks()
+        
     @QtCore.pyqtSlot()
     def _gridClicked(self, state):
         self._plot.setGrid(self._chkGrid.isChecked())
@@ -174,7 +192,7 @@ class MainWindow(QtGui.QMainWindow):
         self._plot.reset()
         self._gr.update()
     
-    @QtCore.pyqtSlot()    
+    @QtCore.pyqtSlot()
     def _pickClicked(self):
         self._gr.setPickMode(True)
     

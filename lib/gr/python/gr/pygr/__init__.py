@@ -332,6 +332,9 @@ class Plot(GRMeta):
         self._legend = False
         self._legendROI = None
         
+    def getAxes(self):
+        return self._lstAxes
+        
     @property
     def xlabel(self):
         """get label for x axis"""
@@ -781,6 +784,10 @@ class PlotAxes(GRMeta):
         self._resetWindow = True
         PlotAxes.COUNT += 1
         self._id = PlotAxes.COUNT
+        self._xtickValue = []
+        self._ytickValue = []
+        self._xtickLabel = []
+        self._ytickLabel = []
         
     def getCurves(self):
         return self._lstPlotCurve
@@ -894,8 +901,38 @@ class PlotAxes(GRMeta):
             return list(self._window)
         else:
             return None
+        
+    def _storeTickValue(self, i, svalue, lstTick):
+        if i == 0:
+            lstTick = [svalue]
+        elif i == -1 and svalue is None: # if last tick received
+            pass
+        else:
+            lstTick.append(svalue)
+        
+    def _xtick_callback(self, i, svalue):
+        self._storeTickValue(i, svalue, self._xtickValue)
+        
+    def _ytick_callback(self, i, svalue):
+        self._storeTickValue(i, svalue, self._ytickValue)
+        
+    def getXtickValues(self):
+        return list(self._xtickValue)
+    
+    def getYtickValues(self):
+        return list(self._ytickValue)
+    
+    def setXtickLabels(self, ticks):
+        self._xtickLabel = ticks
+        
+    def setYtickLables(self, ticks):
+        self._ytickLabel = ticks
     
     def reset(self):
+        self._xtickLabel = []
+        self._ytickLabel = []
+        self._m = 0
+        self._n = 0
         self._resetWindow = True
         
     def isReset(self):
@@ -969,14 +1006,20 @@ class PlotAxes(GRMeta):
                         majorx = -majorx
                     if not self.isYDrawingEnabled():
                         majory = -majory
-                    gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
+                    gr.axeslbl(xtick, ytick, xmin, ymin,  majorx,  majory, 
+                               0.01, self._xtickLabel, len(self._xtickLabel),
+                               self._ytickLabel, len(self._ytickLabel), 
+                               self._xtick_callback, self._ytick_callback)
                 elif self.getId() == 2:
                     # second x, y axis
                     if not self.isXDrawingEnabled():
                         majorx = -majorx
                     if not self.isYDrawingEnabled():
                         majory = -majory
-                    gr.axes(xtick, ytick, xmax, ymax, majorx, majory, -0.01)
+                    gr.axeslbl(xtick, ytick, xmax, ymax, majorx, majory,
+                               -0.01, self._xtickLabel, len(self._xtickLabel),
+                               self._ytickLabel, len(self._ytickLabel),
+                               self._xtick_callback, self._ytick_callback)
                 for curve in lstPlotCurve:
                     curve.drawGR()
     

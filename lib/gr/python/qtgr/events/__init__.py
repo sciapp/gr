@@ -122,7 +122,34 @@ class LegendEvent(ROIEvent):
     @property
     def curve(self):
         """Get PlotCurve instance referenced by this legend item."""
-        return self._roi.reference    
+        return self._roi.reference
+    
+class TickEvent(EventMeta):
+    
+    TICKS_CHANGED = QtCore.QEvent.registerEventType()
+    
+    AXIS_X = 0x1
+    AXIS_Y = 0x2
+    AXIS_Z = 0x3
+    
+    def __init__(self, type, origin, tickLabels, axes):
+        super(TickEvent, self).__init__(type)
+        self._origin, self._labels, self._axes = origin, tickLabels, axes
+        
+    @property
+    def axes(self):
+        """Get PlotAxes instance referenced by this TickEvent."""
+        return self._axes
+    
+    @property
+    def labels(self):
+        """Get list of tick labels."""
+        return self._labels
+    
+    @property
+    def origin(self):
+        """Get origin where ticks has changed."""
+        return self._origin
     
 class EventFilter(QtCore.QObject):
     

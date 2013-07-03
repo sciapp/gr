@@ -17,7 +17,7 @@ import gr
 import qtgr.events
 from gr.pygr import Plot, PlotAxes, RegionOfInterest
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent,\
-    LegendEvent
+    LegendEvent, TickEvent
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
 __date__    = "2013-06-27"
@@ -130,12 +130,16 @@ class InteractiveGRWidget(GRWidget):
         self._logYinDomain = None
         self._pickMode = False
         self._lstPlot = []
+        self._dictAxesTicks = {}
         
-    def update(self):
-        self.draw(clear=True, update=True)
+    def update(self, checkTicks=True):
+        self.draw(clear=True, update=True, checkTicks=checkTicks)
         super(InteractiveGRWidget, self).update()
         
-    def draw(self, clear=False, update=True):
+    def updateTicks(self):
+        self.update(checkTicks=False)
+        
+    def draw(self, clear=False, update=True, checkTicks=True):
         if clear:
             gr.clearws()
             
@@ -152,6 +156,10 @@ class InteractiveGRWidget(GRWidget):
                 self._logYinDomain = logYinDomain
                 self.emit(QtCore.SIGNAL("logYinDomain(bool)"),
                           self._logYinDomain)
+            # axes tick changed check
+            if checkTicks:
+                for axes in plot.getAxes():
+                    self._axesTickValues(axes)
 
         if update:
             super(InteractiveGRWidget, self).update()
@@ -169,7 +177,7 @@ class InteractiveGRWidget(GRWidget):
         axes.plot(*args, **kwargs)
         plot.addAxes(axes)
         return self.addPlot(plot)
-        
+    
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
         self._painter.begin(self)
@@ -190,6 +198,26 @@ class InteractiveGRWidget(GRWidget):
     def setPickMode(self, bool):
         self._pickMode = bool
         self.emit(QtCore.SIGNAL("modePick(bool)"), self._pickMode)
+        
+    def _axesTickValues(self, axes):
+        oldX = None
+        oldY = None
+        xtickValue = axes.getXtickValues()
+        ytickValue = axes.getYtickValues()
+        if axes in self._dictAxesTicks:
+            oldX = self._dictAxesTicks[axes]['x']
+            oldY = self._dictAxesTicks[axes]['y']
+        if xtickValue and xtickValue != oldX:
+            QtGui.QApplication.sendEvent(self,
+                                         TickEvent(TickEvent.TICKS_CHANGED,
+                                                   TickEvent.AXIS_X,
+                                                   xtickValue, axes))
+        if ytickValue and ytickValue != oldY:
+            QtGui.QApplication.sendEvent(self,
+                                         TickEvent(TickEvent.TICKS_CHANGED,
+                                                   TickEvent.AXIS_Y,
+                                                   ytickValue, axes))
+        self._dictAxesTicks[axes] = { 'x': xtickValue, 'y': ytickValue }
         
     def _pick(self, p0, type):
         for plot in self._lstPlot:
