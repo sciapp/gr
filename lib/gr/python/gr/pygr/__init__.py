@@ -275,10 +275,6 @@ class Helper(object):
             xmin > max or ymin > ymax or abs(xmax-xmin) < Helper._EPSILON or
             abs(ymax-ymin) < Helper._EPSILON):
             res = False
-#        print "isInWindowDomain( %s, %s, %s, %s )" %(xmin, xmax, ymin, ymax)
-#        print "  %s %s" %(abs(xmax-xmin), abs(xmax-xmin) < Helper._EPSILON)
-#        print "  %s %s" %(abs(ymax-ymin), abs(xmax-xmin) < Helper._EPSILON)
-#        print "  %s" %res
         return res
     
 class ColorIndexGenerator(object):
@@ -597,14 +593,15 @@ class Plot(GRMeta):
                 gr.clearws()
                 self.drawGR()
             else:
-                window = gr.inqwindow()
-                gr.setviewport(0, 1, 0, 1)
-                gr.setwindow(0, 1, 0, 1)
                 # preserve old values
                 ltype = gr.inqlinetype()
                 mtype = gr.inqmarkertype()
                 lcolor = gr.inqlinecolorind()
                 mcolor = gr.inqmarkercolorind()
+                window = gr.inqwindow()
+                scale = gr.inqscale()
+                gr.setviewport(0, 1, 0, 1)
+                gr.setwindow(0, 1, 0, 1)
                 self._legendROI = []
                 for axes in self._lstAxes:
                     for curve in axes.getCurves():
@@ -654,6 +651,8 @@ class Plot(GRMeta):
                 # restore viewport and window
                 gr.setviewport(*self.viewport)
                 gr.setwindow(*window)
+                # restore scale
+                gr.setscale(scale)
 
 class PlotCurve(GRMeta):
     
