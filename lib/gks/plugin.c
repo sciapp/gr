@@ -290,3 +290,22 @@ void gks_mov_plugin(
   if (entry != NULL)
     (*entry) (fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, ptr);
 }
+
+void gks_zmq_plugin(
+  int fctid, int dx, int dy, int dimx, int *ia,
+  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  void **ptr)
+{
+  static char *name = NULL;
+  static void (*entry) (ENTRY_ARGS) = NULL;
+
+  if (name == NULL)
+    {
+      name = "zmqplugin";
+      *(void **)(&entry) = load_library(name);
+    }
+
+  if (entry != NULL)
+    (*entry) (fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, ptr);
+}
+

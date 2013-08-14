@@ -6,6 +6,7 @@ qtdefs=""
 gtkdefs=""
 gsdefs=""
 glfwdefs=""
+zmqdefs=""
 
 wxconfig=wx-config
 if [ "$WX_CONFIG" != "" ]
@@ -119,4 +120,34 @@ if [ $? -ne 0 ]; then
 fi
 rm -f $tmpout $tmpsrc
 
-echo $target $wxdefs $qtdefs $gtkdefs $gsdefs $glfwdefs
+tmpout=`mktemp /tmp/a.out.XXXXX`
+tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+cat >$tmpsrc << eof
+#include <zmq.h>
+
+int main(void)
+{
+    void *context = zmq_ctx_new();
+    void *publisher = zmq_socket(context, ZMQ_PUSH);
+    zmq_bind(publisher, "tcp://*:5556");
+    zmq_send(publisher, "Hello", 5, 0);
+    zmq_close(publisher);
+    zmq_ctx_destroy(context);
+    return 0;
+}
+eof
+cmd="cc -o $tmpout $tmpsrc -lzmq"
+$cmd >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "0MQ API not found. Build without 0MQ support." >&2
+  echo "Do you want to continue? [y/n]" >&2
+  read yesno
+  if [ "$yesno" = "y" ]; then
+    zmqdefs="ZMQDEFS=-DNO_ZMQ ZMQLIBS="
+  else
+    target="nothing"
+  fi
+fi
+rm -f $tmpout $tmpsrc
+
+echo $target $wxdefs $qtdefs $gtkdefs $gsdefs $glfwdefs $zmqdefs

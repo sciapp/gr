@@ -24,6 +24,8 @@
    GLFWDEFS = -DXFT
     GLFWINC = -I/usr/include/freetype2 
    GLFWLIBS = -lfreetype -lglfw -lGL -lXrandr -lX11 -lrt
+    ZMQDEFS = 
+    ZMQLIBS = -lzmq
        LIBS = -lc -lm
       ZLIBS = -lz
 
@@ -32,13 +34,13 @@
 .m.o:
 	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $<
 .cxx.o:
-	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(INCLUDES) $<
+	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $<
 
 default:
 	@make `uname`
 
 targets: wxplugin.so qtplugin.so svgplugin.so gtkplugin.so figplugin.so \
-         gsplugin.so wmfplugin.so glplugin.so
+         gsplugin.so wmfplugin.so glplugin.so zmqplugin.so
 
 Darwin:
 	@make targets quartzplugin.so \
@@ -77,6 +79,9 @@ quartzplugin.so: quartzplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 
 glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(GLFWLIBS) $(XLIBS) $(LIBS)
+
+zmqplugin.so: zmqplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
+	$(CXX) -o $@ $(SOFLAGS) $? $(ZMQLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)
