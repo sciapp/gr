@@ -105,12 +105,23 @@ class MainWindow(QtGui.QMainWindow):
         self._plot = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x, y,
                                                            legend="foo bar")),
                                     PlotAxes(drawX=False).plot(x2, y2))
+        self._plot2 = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x2, y2,
+                                                           legend="second")))
+        
         self._plot.title = "QtGR Demo"
         self._plot.subTitle = "Multiple Axes Example"
         self._plot.xlabel = "x"
         self._plot.ylabel = "f(x)"
         self._plot.setLegend(True)
         self._gr.addPlot(self._plot)
+#        self._gr2.addPlot(Plot().addAxes(PlotAxes().addCurves(PlotCurve(x2, y2, legend="second"))))
+        self._plot2.title = "Second Widget"
+        self._plot2.subTitle = "Linear Example (less interactive)"
+        self._plot2.xlabel = "x2"
+        self._plot2.ylabel = "f2(x2)"
+        self._plot2.setLegend(True)
+        self._plot2.setGrid(False)
+        self._gr2.addPlot(self._plot2)
         
     def save(self):
         qpath = QtGui.QFileDialog.getSaveFileName(self, "", "", self._saveTypes,
