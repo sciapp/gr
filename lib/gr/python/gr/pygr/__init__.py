@@ -327,6 +327,7 @@ class Plot(GRMeta):
         self._lblY = None
         self._legend = False
         self._legendROI = None
+        self._countAxes = 0
         
     def getAxes(self):
         return self._lstAxes
@@ -527,6 +528,9 @@ class Plot(GRMeta):
             if plotAxes and plotAxes not in self._lstAxes:
                 plotAxes.viewport = self.viewport
                 self._lstAxes.append(plotAxes)
+                # overwrite ids (1: first axis, 2: second axis)
+                self._countAxes += 1
+                plotAxes._id = self._countAxes
         return self
 
     def drawGR(self):
@@ -793,11 +797,17 @@ class PlotAxes(GRMeta):
     
     def isXLogDomain(self):
         window = self.getWindow()
-        return Helper.isInLogDomain(window[0], window[1])
+        if window:
+            return Helper.isInLogDomain(window[0], window[1])
+        else:
+            return False
     
     def isYLogDomain(self):
         window = self.getWindow()
-        return Helper.isInLogDomain(window[2], window[3])
+        if window:
+            return Helper.isInLogDomain(window[2], window[3])
+        else:
+            return False
     
     @property
     def xtick(self):
