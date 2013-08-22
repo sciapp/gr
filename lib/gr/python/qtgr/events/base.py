@@ -9,8 +9,8 @@ import qtgr
 from gr.pygr import CoordConverter
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-06-05"
-__version__ = "0.2.0"
+__date__    = "2013-08-22"
+__version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
