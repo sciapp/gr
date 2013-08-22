@@ -51,6 +51,7 @@ class GRWidget(QtGui.QWidget):
     
     def __init__(self, *args, **kwargs):
         super(GRWidget, self).__init__(*args, **kwargs)
+        self._clear, self._update, self._checkTicks = False, False, False
         os.environ["GKS_WSTYPE"] = "381" # GKS Qt Plugin
         os.environ["GKS_DOUBLE_BUF"] = "True"
         self.setPalette(QtGui.QPalette(QtGui.QColor.fromRgb(0xffffff)))
@@ -58,26 +59,31 @@ class GRWidget(QtGui.QWidget):
     
     def paintEvent(self, event):
         self._painter = QtGui.QPainter()
-        self._painter.begin(self)
+        self._painter.begin(self) 
         os.environ["GKSconid"] = "%x!%x" %(sip.unwrapinstance(self),
-                                            sip.unwrapinstance(self._painter))
+                                           sip.unwrapinstance(self._painter))
+        self.draw(self._clear, self._update, self._checkTicks)
         gr.updatews()
         self._painter.end()
         
-    # put gr commands in here
-    def draw(self, clear=False, update=True):
+    def _draw(self, clear=False, update=True, checkTicks=True):
+        self._clear, self._update, self._checkTicks = clear, update, checkTicks
+        
+    def draw(self, clear=False, update=True, checkTicks=True):
+        # put gr commands in here
         pass
         
     def save(self, path):
         (p, ext) = os.path.splitext(path)
         if ext.lower()[1:] == gr.GRAPHIC_GRX:
             gr.begingraphics(path)
-            self.draw(update=False)
+            self.draw()
             gr.endgraphics()
         else:
             gr.beginprint(path)
-            self.draw(update=False)
+            self.draw()
             gr.endprint()
+        self.repaint()
             
     def printDialog(self, documentName="qtgr-untitled"):
         printer = QtGui.QPrinter(QtGui.QPrinter.HighResolution)
@@ -129,16 +135,18 @@ class InteractiveGRWidget(GRWidget):
         self._logXinDomain = None
         self._logYinDomain = None
         self._pickMode = False
+        self._pickEvent = None
         self._lstPlot = []
         self._dictAxesTicks = {}
         
     def update(self, checkTicks=True):
-        self.draw(clear=True, update=True, checkTicks=checkTicks)
+##        self._draw(clear=True, update=True, checkTicks=checkTicks)
+        self._checkTicks = checkTicks
         super(InteractiveGRWidget, self).update()
         
     def updateTicks(self):
         self.update(checkTicks=False)
-        
+    
     def draw(self, clear=False, update=True, checkTicks=True):
         if clear:
             gr.clearws()
@@ -161,14 +169,20 @@ class InteractiveGRWidget(GRWidget):
                 for axes in plot.getAxes():
                     self._axesTickValues(axes)
 
-        if update:
-            super(InteractiveGRWidget, self).update()
-            
+        if self._pickEvent:
+            event = self._pickEvent
+            wcPoint = event.getWC()
+            window = gr.inqwindow()
+            gr.setwindow(*event.getWindow())
+            gr.setmarkertype(gr.MARKERTYPE_PLUS)
+            gr.polymarker(1, [wcPoint.x], [wcPoint.y])
+            gr.setwindow(*window)
+
     def addPlot(self, *args, **kwargs):
         for plot in args:
             if plot and plot not in self._lstPlot:
                 self._lstPlot.append(plot)
-        self.draw(clear=True, update=True)
+        self._draw(clear=True, update=True)
         return self._lstPlot
         
     def plot(self, *args, **kwargs):
@@ -232,19 +246,25 @@ class InteractiveGRWidget(GRWidget):
                                                              coord.getWindow()))
         
     def _select(self, p0, p1):
+        self._pickEvent = None
         for plot in self._lstPlot:
             plot.select(p0, p1, self.width(), self.height())
-        self.draw(True)
+        self._draw(True)
+        self.update()
         
     def _pan(self, dp):
+        self._pickEvent = None
         for plot in self._lstPlot:
             plot.pan(dp, self.width(), self.height())
-        self.draw(True)
+        self._draw(True)
+        self.update()
                 
     def _zoom(self, dpercent):
+        self._pickEvent = None
         for plot in self._lstPlot:
             plot.zoom(dpercent)
-        self.draw(True)
+        self._draw(True)
+        self.update()
         
     def _roi(self, p0, type, buttons, modifiers):
         for plot in self._lstPlot:
@@ -315,14 +335,8 @@ class InteractiveGRWidget(GRWidget):
         self._zoom(dpercent)
         
     def pickMove(self, event):
-        wcPoint = event.getWC()
-        self.draw(True)
-        window = gr.inqwindow()
-        gr.setwindow(*event.getWindow())
-        gr.setmarkertype(gr.MARKERTYPE_PLUS)
-        gr.polymarker(1, [wcPoint.x], [wcPoint.y])
-        gr.setwindow(*window)
-        super(InteractiveGRWidget, self).update()
+        self._pickEvent = event
+        self.update()
         
 if __name__ == "__main__":
     import sys
@@ -340,5 +354,6 @@ if __name__ == "__main__":
     
     grw.addPlot(Plot().addAxes(PlotAxes().plot(x, y),
                                PlotAxes().plot(x2, y2)))
+    grw.update()
     
     sys.exit(app.exec_())
