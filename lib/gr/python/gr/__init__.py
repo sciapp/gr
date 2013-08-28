@@ -7,8 +7,9 @@ which may be imported directly, e.g.:
 """
 # standard library
 import os
-from ctypes import c_int, c_float, byref, POINTER, addressof, CDLL
-from ctypes import create_string_buffer, create_unicode_buffer, cast, c_char_p
+from ctypes import c_int, c_float, c_char_p, c_void_p
+from ctypes import byref, POINTER, addressof, CDLL, CFUNCTYPE
+from ctypes import create_string_buffer, create_unicode_buffer, cast
 from sys import version_info, platform
 
 def floatarray(n, a):
@@ -29,6 +30,12 @@ def char(string):
   else:
     s = create_string_buffer(string)
   return cast(s, c_char_p)
+  
+def chararray(n, a):
+    _a = (c_char_p * n)()
+    for i in range(n):
+      _a[i] = char(a[i])
+    return _a
 
 def opengks():
   __gr.gr_opengks()
@@ -314,11 +321,28 @@ def inqtextext(x, y, string):
   return [[tbx[0], tbx[1], tbx[2], tbx[3]],
           [tby[0], tby[1], tby[2], tby[3]]]
 
+_axeslbl_callback = CFUNCTYPE(c_void_p, c_int, c_char_p)
+def axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
+            labels_x, m, labels_y, n, fpx=0, fpy=0):
+  if fpx is None:
+    fpx = 0
+  if fpy is None:
+    fpy = 0
+    
+  cfpx = _axeslbl_callback(fpx)
+  cfpy = _axeslbl_callback(fpy)
+  __gr.gr_axeslbl(c_float(x_tick), c_float(y_tick),
+                  c_float(x_org), c_float(y_org),
+                  c_int(major_x), c_int(major_y), c_float(tick_size),
+                  chararray(m, labels_x), c_int(m),
+                  chararray(n, labels_y), c_int(n),
+                  cfpx, cfpy)
+
 def axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size):
   __gr.gr_axes(c_float(x_tick), c_float(y_tick),
                c_float(x_org), c_float(y_org),
                c_int(major_x), c_int(major_y), c_float(tick_size))
-
+  
 def grid(x_tick, y_tick, x_org, y_org, major_x, major_y):
   __gr.gr_grid(c_float(x_tick), c_float(y_tick),
                c_float(x_org), c_float(y_org),
@@ -488,7 +512,7 @@ def inqbbox():
 
 
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
-_grLibDir = _grPkgDir
+_grLibDir = os.getenv("GRLIB", _grPkgDir)
 _gksFontPath = os.path.join(_grPkgDir, "fonts")
 if os.access(_gksFontPath, os.R_OK):
   os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", _grPkgDir)
@@ -499,7 +523,7 @@ else:
   libext = ".so"
 
 _grLib = os.path.join(_grLibDir, "libGR" + libext)
-if not os.access(_grLib, os.R_OK):          
+if not os.getenv("GRLIB") and not os.access(_grLib, os.R_OK):          
     _grLibDir = os.path.join(_grPkgDir, "..", "..")
     _grLib = os.path.join(_grLibDir, "libGR" + libext)
 if platform == "win32":
@@ -566,6 +590,10 @@ __gr.gr_setscale.argtypes = [c_int];
 __gr.gr_inqscale.argtypes = [POINTER(c_int)];
 __gr.gr_textext.argtypes = [c_float, c_float, c_char_p];
 __gr.gr_inqtextext.argtypes = [c_float, c_float, c_char_p, POINTER(c_float), POINTER(c_float)];
+__gr.gr_axeslbl.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int,
+                            c_float, POINTER(c_char_p), c_int,
+                            POINTER(c_char_p), c_int,
+                            _axeslbl_callback, _axeslbl_callback]
 __gr.gr_axes.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int, c_float];
 __gr.gr_grid.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int];
 __gr.gr_verrorbars.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];

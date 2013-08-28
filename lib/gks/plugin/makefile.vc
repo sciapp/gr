@@ -2,7 +2,7 @@ CXX = CL
 QTDIR = S:\Qt\4.8.3
 GSDIR = S:\gs\gs9.06
 WXDIR = S:\wxWidgets
-DEFINES = /DGRDIR=\"S:\\gr\" /DNO_X11 /D_DLL /MD /D_POSIX /DWXUSINGDLL /DwxMSVC_VERSION_AUTO /D_UNICODE
+DEFINES = /DGRDIR=\"$(GRDIR)\" /DNO_X11 /D_DLL /MD /D_POSIX /DWXUSINGDLL /DwxMSVC_VERSION_AUTO /D_UNICODE
 INCLUDES = /I.. /I$(QTDIR)\include /I$(WXDIR)\include\msvc /I$(WXDIR)\include /I$(GSDIR)\include
 CXXFLAGS = /Zi /EHsc /nologo $(DEFINES) $(INCLUDES)
 QTLIBS = $(QTDIR)\lib\QtGui4.lib $(QTDIR)\lib\QtCore4.lib
@@ -68,3 +68,4 @@ clean:
 	DEL *.ilk
 	DEL *.obj
 	DEL *.bak
+	DEL *.manifest

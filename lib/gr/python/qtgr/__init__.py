@@ -15,12 +15,13 @@ import sip
 # local library
 import gr
 import qtgr.events
-from gr.pygr import Plot, PlotAxes
-from qtgr.events import GUIConnector, MouseEvent, PickEvent
+from gr.pygr import Plot, PlotAxes, RegionOfInterest
+from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent,\
+    LegendEvent, TickEvent
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-06-05"
-__version__ = "0.2.0"
+__date__    = "2013-08-22"
+__version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -50,6 +51,7 @@ class GRWidget(QtGui.QWidget):
     
     def __init__(self, *args, **kwargs):
         super(GRWidget, self).__init__(*args, **kwargs)
+        self._clear, self._update, self._checkTicks = False, False, False
         os.environ["GKS_WSTYPE"] = "381" # GKS Qt Plugin
         os.environ["GKS_DOUBLE_BUF"] = "True"
         self.setPalette(QtGui.QPalette(QtGui.QColor.fromRgb(0xffffff)))
@@ -57,26 +59,31 @@ class GRWidget(QtGui.QWidget):
     
     def paintEvent(self, event):
         self._painter = QtGui.QPainter()
-        self._painter.begin(self)
+        self._painter.begin(self) 
         os.environ["GKSconid"] = "%x!%x" %(sip.unwrapinstance(self),
-                                            sip.unwrapinstance(self._painter))
+                                           sip.unwrapinstance(self._painter))
+        self.draw(self._clear, self._update, self._checkTicks)
         gr.updatews()
         self._painter.end()
         
-    # put gr commands in here
-    def draw(self, clear=False, update=True):
+    def _draw(self, clear=False, update=True, checkTicks=True):
+        self._clear, self._update, self._checkTicks = clear, update, checkTicks
+        
+    def draw(self, clear=False, update=True, checkTicks=True):
+        # put gr commands in here
         pass
         
     def save(self, path):
         (p, ext) = os.path.splitext(path)
         if ext.lower()[1:] == gr.GRAPHIC_GRX:
             gr.begingraphics(path)
-            self.draw(update=False)
+            self.draw()
             gr.endgraphics()
         else:
             gr.beginprint(path)
-            self.draw(update=False)
+            self.draw()
             gr.endprint()
+        self.repaint()
             
     def printDialog(self, documentName="qtgr-untitled"):
         printer = QtGui.QPrinter(QtGui.QPrinter.HighResolution)
@@ -128,13 +135,19 @@ class InteractiveGRWidget(GRWidget):
         self._logXinDomain = None
         self._logYinDomain = None
         self._pickMode = False
+        self._pickEvent = None
         self._lstPlot = []
+        self._dictAxesTicks = {}
         
-    def update(self):
-        self.draw(clear=True, update=True)
+    def update(self, checkTicks=True):
+##        self._draw(clear=True, update=True, checkTicks=checkTicks)
+        self._checkTicks = checkTicks
         super(InteractiveGRWidget, self).update()
         
-    def draw(self, clear=False, update=True):
+    def updateTicks(self):
+        self.update(checkTicks=False)
+    
+    def draw(self, clear=False, update=True, checkTicks=True):
         if clear:
             gr.clearws()
             
@@ -151,15 +164,25 @@ class InteractiveGRWidget(GRWidget):
                 self._logYinDomain = logYinDomain
                 self.emit(QtCore.SIGNAL("logYinDomain(bool)"),
                           self._logYinDomain)
+            # axes tick changed check
+            if checkTicks:
+                for axes in plot.getAxes():
+                    self._axesTickValues(axes)
 
-        if update:
-            super(InteractiveGRWidget, self).update()
-            
+        if self._pickEvent:
+            event = self._pickEvent
+            wcPoint = event.getWC()
+            window = gr.inqwindow()
+            gr.setwindow(*event.getWindow())
+            gr.setmarkertype(gr.MARKERTYPE_PLUS)
+            gr.polymarker(1, [wcPoint.x], [wcPoint.y])
+            gr.setwindow(*window)
+
     def addPlot(self, *args, **kwargs):
         for plot in args:
             if plot and plot not in self._lstPlot:
                 self._lstPlot.append(plot)
-        self.draw(clear=True, update=True)
+        self._draw(clear=True, update=True)
         return self._lstPlot
         
     def plot(self, *args, **kwargs):
@@ -168,7 +191,7 @@ class InteractiveGRWidget(GRWidget):
         axes.plot(*args, **kwargs)
         plot.addAxes(axes)
         return self.addPlot(plot)
-        
+    
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
         self._painter.begin(self)
@@ -190,31 +213,74 @@ class InteractiveGRWidget(GRWidget):
         self._pickMode = bool
         self.emit(QtCore.SIGNAL("modePick(bool)"), self._pickMode)
         
+    def _axesTickValues(self, axes):
+        oldX = None
+        oldY = None
+        xtickValue = axes.getXtickValues()
+        ytickValue = axes.getYtickValues()
+        if axes in self._dictAxesTicks:
+            oldX = self._dictAxesTicks[axes]['x']
+            oldY = self._dictAxesTicks[axes]['y']
+        if xtickValue and xtickValue != oldX:
+            QtGui.QApplication.sendEvent(self,
+                                         TickEvent(TickEvent.TICKS_CHANGED,
+                                                   TickEvent.AXIS_X,
+                                                   xtickValue, axes))
+        if ytickValue and ytickValue != oldY:
+            QtGui.QApplication.sendEvent(self,
+                                         TickEvent(TickEvent.TICKS_CHANGED,
+                                                   TickEvent.AXIS_Y,
+                                                   ytickValue, axes))
+        self._dictAxesTicks[axes] = { 'x': xtickValue, 'y': ytickValue }
+        
     def _pick(self, p0, type):
         for plot in self._lstPlot:
             coord = plot.pick(p0, self.width(), self.height())
-            dcPoint = coord.getDC()
-            QtGui.QApplication.sendEvent(self, PickEvent(type,
-                                                         self.width(),
-                                                         self.height(),
-                                                         dcPoint.x,
-                                                         dcPoint.y,
-                                                         coord.getWindow()))
+            if coord:
+                dcPoint = coord.getDC()
+                QtGui.QApplication.sendEvent(self, PickEvent(type,
+                                                             self.width(),
+                                                             self.height(),
+                                                             dcPoint.x,
+                                                             dcPoint.y,
+                                                             coord.getWindow()))
         
     def _select(self, p0, p1):
+        self._pickEvent = None
         for plot in self._lstPlot:
             plot.select(p0, p1, self.width(), self.height())
-        self.draw(True)
+        self._draw(True)
+        self.update()
         
     def _pan(self, dp):
+        self._pickEvent = None
         for plot in self._lstPlot:
             plot.pan(dp, self.width(), self.height())
-        self.draw(True)
+        self._draw(True)
+        self.update()
                 
     def _zoom(self, dpercent):
+        self._pickEvent = None
         for plot in self._lstPlot:
             plot.zoom(dpercent)
-        self.draw(True)
+        self._draw(True)
+        self.update()
+        
+    def _roi(self, p0, type, buttons, modifiers):
+        for plot in self._lstPlot:
+            roi = plot.getROI(p0)
+            if roi:
+                if roi.regionType == RegionOfInterest.LEGEND:
+                    eventObj = LegendEvent
+                else:
+                    eventObj = ROIEvent
+                QtGui.QApplication.sendEvent(self,
+                                             eventObj(type,
+                                                      self.width(),
+                                                      self.height(),
+                                                      p0.x, p0.y,
+                                                      buttons, modifiers,
+                                                      roi))
         
     def mousePress(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
@@ -239,8 +305,13 @@ class InteractiveGRWidget(GRWidget):
             p1 = self._curPoint.getNDC()
             if p0 != p1:
                 self._select(p0, p1)
+            else:
+                self._roi(p0, ROIEvent.ROI_CLICKED, event.getButtons(),
+                          event.getModifiers())
         elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
             self._mouseRight = False
+            self._roi(event.getNDC(), ROIEvent.ROI_CLICKED, event.getButtons(),
+                      event.getModifiers())
         self._curPoint = event
             
     def mouseMove(self, event):
@@ -255,6 +326,8 @@ class InteractiveGRWidget(GRWidget):
             dp = p1-p0
             self._curPoint = event
             self._pan(dp)
+        self._roi(event.getNDC(), ROIEvent.ROI_OVER, event.getButtons(),
+                  event.getModifiers())
             
     def wheelMove(self, event):
         # delta percent
@@ -262,14 +335,8 @@ class InteractiveGRWidget(GRWidget):
         self._zoom(dpercent)
         
     def pickMove(self, event):
-        wcPoint = event.getWC()
-        self.draw(True)
-        window = gr.inqwindow()
-        gr.setwindow(*event.getWindow())
-        gr.setmarkertype(gr.MARKERTYPE_PLUS)
-        gr.polymarker(1, [wcPoint.x], [wcPoint.y])
-        gr.setwindow(*window)
-        super(InteractiveGRWidget, self).update()
+        self._pickEvent = event
+        self.update()
         
 if __name__ == "__main__":
     import sys
@@ -287,5 +354,6 @@ if __name__ == "__main__":
     
     grw.addPlot(Plot().addAxes(PlotAxes().plot(x, y),
                                PlotAxes().plot(x2, y2)))
+    grw.update()
     
     sys.exit(app.exec_())

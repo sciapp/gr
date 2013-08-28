@@ -1,1 +1,1 @@
-int gr_textex(float, float, char *, int, float *, float *);
+int gr_textex(float, float, const char *, int, float *, float *);
