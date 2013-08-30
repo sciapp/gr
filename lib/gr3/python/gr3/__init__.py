@@ -24,7 +24,8 @@ __all__ = ['GR3_InitAttribute',
            'drawconemesh',
            'drawspheremesh',
            'drawcubemesh',
-           'setbackgroundcolor']
+           'setbackgroundcolor',
+           'triangulate']
 
 import ctypes
 import ctypes.util
@@ -242,7 +243,49 @@ def setlightdirection(*xyz):
             raise TypeError("if gr3_setlightdirection() is called with 1 argument, it should be None")
     else:
         raise TypeError("gr3_setlightdirection() takes exactly 1 or exactly 3 arguments (%d given)" %len(xyz))
-        
+
+def triangulate(grid, step, offset, isolevel, slices = None):
+    data = grid.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort))
+    isolevel = ctypes.c_int(isolevel)
+    if slices is None:
+        dim_x, dim_y, dim_z = map(ctypes.c_uint, grid.shape)
+        stride_x, stride_y, stride_z = (0, 0, 0)
+    else:
+        stride_x = grid.shape[2]*grid.shape[1]
+        stride_y = grid.shape[2]
+        stride_z = 1
+        for i, slice in enumerate(slices):
+            if slice[0] >= slice[1]:
+                raise ValueError("first slice value must be less than the second value (axis=%d)" % i)
+            if slice[0] < 0:
+                raise ValueError("slice values must be positive (axis=%d)" % i)
+            if slice[1] > grid.shape[i]:
+                raise ValueError("second slice value must be at most as large as the grid dimension (axis=%d)" % i)
+        dim_x, dim_y, dim_z = [ctypes.c_uint(slice[1]-slice[0]) for slice in slices]
+        data_offset = 2*(stride_x*slices[0][0] + stride_y*slices[1][0] + stride_z*slices[2][0])
+        data_address = cast(ctypes.byref(data), ctypes.POINTER(ctypes.c_ulong)).contents.value
+        data_address += data_offset
+        data = cast(ctypes.POINTER(ctypes.c_ulong)(ctypes.c_ulong(data_address)), ctypes.POINTER(ctypes.POINTER(ctypes.c_ushort))).contents
+        offset = [offset[i] + slices[i][0]*step[i] for i in range(3)]
+    stride_x = ctypes.c_uint(stride_x)
+    stride_y = ctypes.c_uint(stride_y)
+    stride_z = ctypes.c_uint(stride_z)
+    step_x, step_y, step_z = map(ctypes.c_double, step)
+    offset_x, offset_y, offset_z = map(ctypes.c_double, offset)
+    triangles_p = ctypes.POINTER(ctypes.c_float)()
+    num_triangles = _gr3.gr3_triangulate(data, isolevel,
+                                    dim_x, dim_y, dim_z,
+                                    stride_x, stride_y, stride_z,
+                                    step_x, step_y, step_z,
+                                    offset_x, offset_y, offset_z,
+                                    ctypes.byref(triangles_p))
+    triangles = numpy.fromiter(triangles_p, ctypes.c_float, num_triangles*2*3*3)
+    _gr3.free(triangles_p)
+    triangles.shape = (num_triangles, 2, 3, 3)
+    vertices = triangles[:,0,:,:]
+    normals = triangles[:,1,:,:]
+    return vertices, normals
+
 _gr3.gr3_init.argtypes = [ctypes.POINTER(ctypes.c_int)]
 _gr3.gr3_terminate.argtypes = []
 _gr3.gr3_getrenderpathstring.argtypes = []
@@ -267,4 +310,6 @@ _gr3.gr3_drawconemesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float),
 _gr3.gr3_drawcylindermesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
 _gr3.gr3_drawspheremesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
 _gr3.gr3_drawcubemesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_triangulate.restype = ctypes.c_uint
+_gr3.gr3_triangulate.argtypes = (ctypes.POINTER(ctypes.c_ushort), ctypes.c_int, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.POINTER(ctypes.POINTER(ctypes.c_float)))
 

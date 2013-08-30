@@ -20,3 +20,7 @@ EXPORTS
 	gr3_drawconemesh
 	gr3_drawcylindermesh
 	gr3_drawspheremesh
+	gr3_drawcubemesh
+	gr3_setobjectid
+	gr3_selectid
+	gr3_triangulate

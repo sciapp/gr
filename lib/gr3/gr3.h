@@ -68,39 +68,52 @@
 
 #define GR3_DRAWABLE_OPENGL 1
 #define GR3_DRAWABLE_GKS 2
-            
-GR3API int         gr3_init(int *attrib_list);
-GR3API void        gr3_terminate(void);
-GR3API const char *gr3_getrenderpathstring(void);
-GR3API const char *gr3_geterrorstring(int error);
-GR3API void        gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
-GR3API int         gr3_clear(void);
 
-GR3API int         gr3_setquality(int quality);
-GR3API int         gr3_getimage(int width, int height, int use_alpha, char *pixels);
-GR3API int         gr3_export(const char *filename, int width, int height);
-GR3API int         gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type);
+#define GR3_MC_DTYPE unsigned short
 
-GR3API int         gr3_createmesh(int *mesh, int n, const float *vertices, const float *normals, const float *colors);
-GR3API void        gr3_drawmesh(int mesh, int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);
-GR3API void        gr3_deletemesh(int mesh);
+typedef struct {
+  float x, y, z;
+} gr3_coord_t;
 
-GR3API void        gr3_cameralookat(float camera_x, float camera_y, float camera_z, float center_x, float center_y, float center_z, float up_x,  float up_y,  float up_z);
-GR3API int         gr3_setcameraprojectionparameters(float vertical_field_of_view, float zNear, float zFar);
-GR3API void        gr3_setlightdirection(float x, float y, float z);
-GR3API void        gr3_setbackgroundcolor(float red, float green, float blue, float alpha);
+typedef struct {
+  gr3_coord_t vertex[3];
+  gr3_coord_t normal[3];
+} gr3_triangle_t;
+
+GR3API int          gr3_init(int *attrib_list);
+GR3API void         gr3_terminate(void);
+GR3API const char  *gr3_getrenderpathstring(void);
+GR3API const char  *gr3_geterrorstring(int error);
+GR3API void         gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
+GR3API int          gr3_clear(void);
+
+GR3API int          gr3_setquality(int quality);
+GR3API int          gr3_getimage(int width, int height, int use_alpha, char *pixels);
+GR3API int          gr3_export(const char *filename, int width, int height);
+GR3API int          gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type);
+
+GR3API int          gr3_createmesh(int *mesh, int n, const float *vertices, const float *normals, const float *colors);
+GR3API void         gr3_drawmesh(int mesh, int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);
+GR3API void         gr3_deletemesh(int mesh);
+
+GR3API void         gr3_cameralookat(float camera_x, float camera_y, float camera_z, float center_x, float center_y, float center_z, float up_x,  float up_y,  float up_z);
+GR3API int          gr3_setcameraprojectionparameters(float vertical_field_of_view, float zNear, float zFar);
+GR3API void         gr3_setlightdirection(float x, float y, float z);
+GR3API void         gr3_setbackgroundcolor(float red, float green, float blue, float alpha);
           
-GR3API int         gr3_createheightmapmesh(const float *heightmap, int num_columns, int num_rows);
-GR3API void        gr3_drawheightmap(const float *heightmap, int num_columns, int num_rows, const float *positions, const float *scales);
+GR3API int          gr3_createheightmapmesh(const float *heightmap, int num_columns, int num_rows);
+GR3API void         gr3_drawheightmap(const float *heightmap, int num_columns, int num_rows, const float *positions, const float *scales);
 
-GR3API void        gr3_drawconemesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
-GR3API void        gr3_drawcylindermesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
-GR3API void        gr3_drawspheremesh(int n, const float *positions, const float *colors, const float *radii);
-GR3API void        gr3_drawcubemesh(int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);
+GR3API void         gr3_drawconemesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
+GR3API void         gr3_drawcylindermesh(int n, const float *positions, const float *directions, const float *colors, const float *radii, const float *lengths);
+GR3API void         gr3_drawspheremesh(int n, const float *positions, const float *colors, const float *radii);
+GR3API void         gr3_drawcubemesh(int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);
 
           
-GR3API void        gr3_setobjectid(int id);
-GR3API int         gr3_selectid(int x, int y, int width, int height, int *selection_id);
+GR3API void         gr3_setobjectid(int id);
+GR3API int          gr3_selectid(int x, int y, int width, int height, int *selection_id);
+GR3API unsigned int gr3_triangulate(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel, unsigned int dim_x, unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned int stride_y, unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x, double offset_y, double offset_z, gr3_triangle_t **triangles_p);
+
 #ifdef _WIN32
     #ifdef __cplusplus
         }
