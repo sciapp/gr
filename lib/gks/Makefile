@@ -1,8 +1,8 @@
        GRDIR = /usr/local/gr
-      BINDIR = $(GRDIR)/bin
-      LIBDIR = $(GRDIR)/lib
-      INCDIR = $(GRDIR)/include
-     FONTDIR = $(GRDIR)/fonts
+      BINDIR = $(DESTDIR)$(GRDIR)/bin
+      LIBDIR = $(DESTDIR)$(GRDIR)/lib
+      INCDIR = $(DESTDIR)$(GRDIR)/include
+     FONTDIR = $(DESTDIR)$(GRDIR)/fonts
 
      GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o malloc.o \
                error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
@@ -59,7 +59,7 @@ pasdemo: default
 	fpc demo.p -g -Fl./
 
 install:
-	@if [ ! -d $(GRDIR) ]; then mkdir -m 755 $(GRDIR); fi
+	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGKS.* $(LIBDIR)
 	cp -p plugin/*plugin.so $(LIBDIR)

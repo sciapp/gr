@@ -1,5 +1,5 @@
       GRDIR = /usr/local/gr
-     LIBDIR = $(GRDIR)/lib
+     LIBDIR = $(DESTDIR)$(GRDIR)/lib
 
    CXXFLAGS = -g -Wall -fPIC
    INCLUDES = -I.. -I../../../3rdparty/png -I/usr/local/include

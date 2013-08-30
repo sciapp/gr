@@ -21,10 +21,10 @@ endif
 install: default
 	@for d in $(DIRS); do make -C $$d GRDIR=$(GRDIR) install; done
 ifeq ($(UNAME), Darwin)
-	@if [ ! -d $(GRDIR)/Applications ]; then \
-	mkdir -m 755 $(GRDIR)/Applications; fi
+	@if [ ! -d $(DESTDIR)$(GRDIR)/Applications ]; then \
+	mkdir -m 755 $(DESTDIR)$(GRDIR)/Applications; fi
 	@ditto lib/gks/quartz/build/Release/GKSTerm.app \
-	$(GRDIR)/Applications/GKSTerm.app 
+	$(DESTDIR)$(GRDIR)/Applications/GKSTerm.app 
 endif
 
 clean:
