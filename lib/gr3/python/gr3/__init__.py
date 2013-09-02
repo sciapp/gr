@@ -27,10 +27,15 @@ __all__ = ['GR3_InitAttribute',
            'setbackgroundcolor',
            'triangulate']
 
+
+import sys
+if any([module.startswith('OpenGL') for module in sys.modules]):
+    import warnings
+    warnings.warn("Importing gr3 after importing pyOpenGL (or any of its modules) might cause problems on some platforms. Please import gr3 first to avoid this.")
+
 import ctypes
 import ctypes.util
 import numpy
-import sys
 import os
 
 _gr3PkgDir = os.path.realpath(os.path.dirname(__file__))
