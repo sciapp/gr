@@ -12,7 +12,7 @@
     INCLUDES = -I/usr/X11R6/include
  XFTINCLUDES = -I/usr/include/freetype2
           CC = cc
-      CFLAGS = -O -Wall -fPIC
+      CFLAGS = -O3 -Wall -fPIC
           LD = cc
      LDFLAGS =
           AR = ar

@@ -9,7 +9,7 @@
      DEFINES =
     INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty/png
           CC = cc
-      CFLAGS = $(DEFINES) -O -Wall -fPIC
+      CFLAGS = $(DEFINES) -O3 -Wall -fPIC
           AR = ar
       RANLIB = ar ts
      SOFLAGS = -shared

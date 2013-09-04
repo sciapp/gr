@@ -9,7 +9,7 @@
      PNGLIBS = ../../3rdparty/png/libpng.a
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
        ZLIBS = -lz
-      CFLAGS = -Wall -Wextra -pedantic -g -fPIC
+      CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR3.so
      LDFLAGS =
