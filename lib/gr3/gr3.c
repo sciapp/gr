@@ -1263,6 +1263,10 @@ void gr3_log_(const char *log_message) {
     }
 }
 
+GR3API void gr3_free(void *pointer) {
+  free(pointer);
+}
+
 /*!
  * During software development it will often be helpful to get debug output 
  * from gr3. This information is not printed, but reported directly to the 

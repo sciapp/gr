@@ -287,8 +287,8 @@ def triangulate(grid, step, offset, isolevel, slices = None):
     buffer_from_memory = ctypes.pythonapi.PyBuffer_FromMemory
     buffer_from_memory.restype = ctypes.py_object
     buffer = buffer_from_memory(triangles_p, 4*3*3*2*num_triangles)
-    triangles = np.frombuffer(buffer, numpy.float32).copy()
-    _gr3.free(triangles_p)
+    triangles = numpy.frombuffer(buffer, numpy.float32).copy()
+    _gr3.gr3_free(triangles_p)
     triangles.shape = (num_triangles, 2, 3, 3)
     vertices = triangles[:,0,:,:]
     normals = triangles[:,1,:,:]

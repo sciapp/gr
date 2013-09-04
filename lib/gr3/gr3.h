@@ -81,6 +81,7 @@ typedef struct {
 } gr3_triangle_t;
 
 GR3API int          gr3_init(int *attrib_list);
+GR3API void         gr3_free(void *pointer);
 GR3API void         gr3_terminate(void);
 GR3API const char  *gr3_getrenderpathstring(void);
 GR3API const char  *gr3_geterrorstring(int error);
