@@ -284,7 +284,10 @@ def triangulate(grid, step, offset, isolevel, slices = None):
                                     step_x, step_y, step_z,
                                     offset_x, offset_y, offset_z,
                                     ctypes.byref(triangles_p))
-    triangles = numpy.fromiter(triangles_p, ctypes.c_float, num_triangles*2*3*3)
+    buffer_from_memory = ctypes.pythonapi.PyBuffer_FromMemory
+    buffer_from_memory.restype = ctypes.py_object
+    buffer = buffer_from_memory(triangles_p, 4*3*3*2*num_triangles)
+    triangles = np.frombuffer(buffer, numpy.float32).copy()
     _gr3.free(triangles_p)
     triangles.shape = (num_triangles, 2, 3, 3)
     vertices = triangles[:,0,:,:]
