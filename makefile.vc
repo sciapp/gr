@@ -1,11 +1,13 @@
+MAKE_FLAGS=/nologo GRDIR=S:\\gr
+
 default:
-	@cd lib\gr && $(MAKE) /nologo /f makefile.vc && cd ..\..
-	@cd lib\gr3 && $(MAKE) /nologo /f makefile.vc && cd ..\..
+	@cd lib\gr && $(MAKE) $(MAKE_FLAGS) /f makefile.vc && cd ..\..
+	@cd lib\gr3 && $(MAKE) $(MAKE_FLAGS) /f makefile.vc && cd ..\..
 
 install: default
-	@cd lib\gr && $(MAKE) /nologo /f makefile.vc install && cd ..\..
-	@cd lib\gr3 && $(MAKE) /nologo /f makefile.vc install && cd ..\..
+	@cd lib\gr && $(MAKE) $(MAKE_FLAGS) /f makefile.vc install && cd ..\..
+	@cd lib\gr3 && $(MAKE) $(MAKE_FLAGS) /f makefile.vc install && cd ..\..
 
 clean:
-	@cd lib\gr && $(MAKE) /nologo /f makefile.vc clean && cd ..\..
-	@cd lib\gr3 && $(MAKE) /nologo /f makefile.vc clean && cd ..\..
+	@cd lib\gr && $(MAKE) $(MAKE_FLAGS) /f makefile.vc clean && cd ..\..
+	@cd lib\gr3 && $(MAKE) $(MAKE_FLAGS) /f makefile.vc clean && cd ..\..

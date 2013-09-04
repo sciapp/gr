@@ -12,7 +12,6 @@
 #include "gks.h"
 #include "gkscore.h"
 
-#define MAX_COLOR 256
 #define MAX_POINTS 2048
 #define MAX_MESSAGES 80
 #define MAX_BITMAP 120
