@@ -590,7 +590,7 @@ bool factor(formula_t ** formula, int font, int prec)
 static
 bool term(formula_t ** formula, int font, int prec)
 {
-  formula_t *sub;
+  formula_t *sub = NULL;
   formula_t **current = formula;
   int frac_found = 0;
 

@@ -1090,7 +1090,7 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
     int dx, dy;
     int x_patches, y_patches;
     int view_matrix_all_zeros;
-    char *raw_pixels;
+    char *raw_pixels = NULL;
     
     GLenum format = use_alpha ? GL_RGBA : GL_RGB;
     int bpp = use_alpha ? 4 : 3;

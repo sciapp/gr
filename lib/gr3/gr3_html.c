@@ -47,6 +47,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
   FILE *htmlfp;
   const char *title = "GR3";
   int i, j;
+  char *b64vertices = NULL, *b64normals = NULL;
   
   htmlfp = fopen(filename, "w");
   if (!htmlfp) {
@@ -164,10 +165,10 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        meshes = new Array();\n");
   for (i = 0; i < context_struct_.mesh_list_capacity_; i++) {
     if (context_struct_.mesh_list_[i].refcount > 0) {
-      char *b64vertices = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
+      b64vertices = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
       fprintf(htmlfp, "        var vertices = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3);
       
-      char *b64normals = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.normals, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
+      b64normals = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.normals, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
       fprintf(htmlfp, "        var normals = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64normals, context_struct_.mesh_list_[i].data.number_of_vertices*3);
       {
         int all_ones = 1;
