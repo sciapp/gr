@@ -651,7 +651,9 @@ GR3API void gr3_deletemesh(int mesh) {
     }
     if (!context_struct_.mesh_list_[mesh].marked_for_deletion) {
         gr3_meshremovereference_(mesh);
-        context_struct_.mesh_list_[mesh].marked_for_deletion = 1;
+        if (context_struct_.mesh_list_[mesh].refcount > 0) {
+            context_struct_.mesh_list_[mesh].marked_for_deletion = 1;
+        }
     } else {
         gr3_log_("Mesh already marked for deletion!");
     }
