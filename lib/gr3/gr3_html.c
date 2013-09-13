@@ -165,10 +165,10 @@ int gr3_export_html_(const char *filename, int width, int height) {
   for (i = 0; i < context_struct_.mesh_list_capacity_; i++) {
     if (context_struct_.mesh_list_[i].refcount > 0) {
       char *b64vertices = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
-      fprintf(htmlfp, "        var vertices = Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3);
+      fprintf(htmlfp, "        var vertices = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3);
       
       char *b64normals = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.normals, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
-      fprintf(htmlfp, "        var normals = Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64normals, context_struct_.mesh_list_[i].data.number_of_vertices*3);
+      fprintf(htmlfp, "        var normals = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64normals, context_struct_.mesh_list_[i].data.number_of_vertices*3);
       {
         int all_ones = 1;
         for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices*3; j++) {
@@ -179,7 +179,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
         }
         if (!all_ones) {
           char *b64colors = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.colors, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
-          fprintf(htmlfp, "        var colors = Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64colors, context_struct_.mesh_list_[i].data.number_of_vertices*3);
+          fprintf(htmlfp, "        var colors = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64colors, context_struct_.mesh_list_[i].data.number_of_vertices*3);
           
         } else {
           fprintf(htmlfp, "        var colors = Array();");
