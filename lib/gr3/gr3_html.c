@@ -1,7 +1,47 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include "gr3.h"
 #include "gr3_internals.h"
+static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+  'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+  'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+  'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+  'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+  'w', 'x', 'y', 'z', '0', '1', '2', '3',
+  '4', '5', '6', '7', '8', '9', '+', '/'};
+static unsigned int mod_table[] = {0, 2, 1};
+
+
+static char *base64_encode(const unsigned char *data,
+                    size_t input_length) {
+  unsigned int i, j;
+  size_t output_length = 4 * ((input_length + 2) / 3) + 1;
+  char *encoded_data = malloc(output_length);
+  if (encoded_data == NULL) {
+    return NULL;
+  }
+  
+  for (i = 0, j = 0; i < input_length;) {
+    unsigned int octet_a = i < input_length ? data[i++] : 0;
+    unsigned int octet_b = i < input_length ? data[i++] : 0;
+    unsigned int octet_c = i < input_length ? data[i++] : 0;
+    
+    unsigned int triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+    
+    encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
+    encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
+    encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
+    encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
+  }
+  
+  for (i = 0; i < mod_table[input_length % 3]; i++) {
+    encoded_data[output_length - 2 - i] = '=';
+  }
+  encoded_data[output_length-1] = 0;
+  return encoded_data;
+}
 
 int gr3_export_html_(const char *filename, int width, int height) {
   FILE *htmlfp;
@@ -12,13 +52,29 @@ int gr3_export_html_(const char *filename, int width, int height) {
   if (!htmlfp) {
     return GR3_ERROR_CANNOT_OPEN_FILE;
   }
-  
   fprintf(htmlfp, "<!DOCTYPE html>\n");
   fprintf(htmlfp, "<html>\n");
   fprintf(htmlfp, "  <head>\n");
   fprintf(htmlfp, "    <meta charset=\"utf-8\" />\n");
   fprintf(htmlfp, "    <title>%s</title>\n", title);
   fprintf(htmlfp, "    <script type=\"text/javascript\">\n");
+  fprintf(htmlfp, "      function b64ToUint6 (nChr) {\n");
+  fprintf(htmlfp, "        return nChr > 64 && nChr < 91 ? nChr - 65 : nChr > 96 && nChr < 123 ? nChr - 71 : nChr > 47 && nChr < 58 ? nChr + 4 : nChr === 43 ? 62 : nChr === 47 ? 63 : 0;\n");
+  fprintf(htmlfp, "      }\n");
+  fprintf(htmlfp, "      function base64DecToArr (sBase64, nBlocksSize) {\n");
+  fprintf(htmlfp, "    var sB64Enc = sBase64.replace(/[^A-Za-z0-9\\+\\/]/g, \"\"), nInLen = sB64Enc.length, nOutLen = nBlocksSize ? Math.ceil((nInLen * 3 + 1 >> 2) / nBlocksSize) * nBlocksSize : nInLen * 3 + 1 >> 2, taBytes = new Uint8Array(nOutLen);\n");
+  fprintf(htmlfp, "    for (var nMod3, nMod4, nUint24 = 0, nOutIdx = 0, nInIdx = 0; nInIdx < nInLen; nInIdx++) {\n");
+  fprintf(htmlfp, "      nMod4 = nInIdx & 3;\n");
+  fprintf(htmlfp, "      nUint24 |= b64ToUint6(sB64Enc.charCodeAt(nInIdx)) << 18 - 6 * nMod4;\n");
+  fprintf(htmlfp, "      if (nMod4 === 3 || nInLen - nInIdx === 1) {\n");
+  fprintf(htmlfp, "        for (nMod3 = 0; nMod3 < 3 && nOutIdx < nOutLen; nMod3++, nOutIdx++) {\n");
+  fprintf(htmlfp, "          taBytes[nOutIdx] = nUint24 >>> (16 >>> nMod3 & 24) & 255;\n");
+  fprintf(htmlfp, "        }\n");
+  fprintf(htmlfp, "        nUint24 = 0;\n");
+  fprintf(htmlfp, "      }\n");
+  fprintf(htmlfp, "    }\n");
+  fprintf(htmlfp, "    return taBytes;\n");
+  fprintf(htmlfp, "  }\n");
   
   fprintf(htmlfp, "      function startWebGLCanvas() {\n");
   fprintf(htmlfp, "        var canvas = document.getElementById(\"webgl-canvas\");\n");
@@ -108,22 +164,11 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        meshes = new Array();\n");
   for (i = 0; i < context_struct_.mesh_list_capacity_; i++) {
     if (context_struct_.mesh_list_[i].refcount > 0) {
-      fprintf(htmlfp, "        var vertices = [\n");
-      for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices; j++) {
-        fprintf(htmlfp, "%g,%g,%g", context_struct_.mesh_list_[i].data.vertices[3*j+0], context_struct_.mesh_list_[i].data.vertices[3*j+1], context_struct_.mesh_list_[i].data.vertices[3*j+2]);
-        if (j + 1 < context_struct_.mesh_list_[i].data.number_of_vertices) {
-          fprintf(htmlfp, ",\n");
-        }
-      }
-      fprintf(htmlfp, "        ];\n");
-      fprintf(htmlfp, "        var normals = [\n");
-      for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices; j++) {
-        fprintf(htmlfp, "%g,%g,%g", context_struct_.mesh_list_[i].data.normals[3*j+0], context_struct_.mesh_list_[i].data.normals[3*j+1], context_struct_.mesh_list_[i].data.normals[3*j+2]);
-        if (j + 1 < context_struct_.mesh_list_[i].data.number_of_vertices) {
-          fprintf(htmlfp, ",\n");
-        }
-      }
-      fprintf(htmlfp, "        ];\n");
+      char *b64vertices = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
+      fprintf(htmlfp, "        var vertices = Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3);
+      
+      char *b64normals = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.normals, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
+      fprintf(htmlfp, "        var normals = Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64normals, context_struct_.mesh_list_[i].data.number_of_vertices*3);
       {
         int all_ones = 1;
         for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices*3; j++) {
@@ -133,14 +178,9 @@ int gr3_export_html_(const char *filename, int width, int height) {
           }
         }
         if (!all_ones) {
-          fprintf(htmlfp, "        var colors = [\n");
-          for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices; j++) {
-            fprintf(htmlfp, "%g,%g,%g", context_struct_.mesh_list_[i].data.colors[3*j+0], context_struct_.mesh_list_[i].data.colors[3*j+1], context_struct_.mesh_list_[i].data.colors[3*j+2]);
-            if (j + 1 < context_struct_.mesh_list_[i].data.number_of_vertices) {
-              fprintf(htmlfp, ",\n");
-            }
-          }
-          fprintf(htmlfp, "        ];\n");
+          char *b64colors = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.colors, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
+          fprintf(htmlfp, "        var colors = Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64colors, context_struct_.mesh_list_[i].data.number_of_vertices*3);
+          
         } else {
           fprintf(htmlfp, "        var colors = Array();");
           fprintf(htmlfp, "        for (var i = 0; i < %d; i++) {", context_struct_.mesh_list_[i].data.number_of_vertices*3);
