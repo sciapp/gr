@@ -43,6 +43,7 @@ typedef struct _GR3_InitStruct_t_ {
 
 typedef enum _GR3_MeshType_t {
   kMTNormalMesh,
+  kMTIndexedMesh,
   kMTConeMesh,
   kMTSphereMesh,
   kMTCylinderMesh
@@ -59,11 +60,17 @@ typedef struct _GR3_MeshData_t_ {
   union  {
     int display_list_id; /*!< The OpenGL display list of the mesh. */
     unsigned int vertex_buffer_id;
+    struct { 
+        unsigned int index_buffer_id;
+        unsigned int vertex_buffer_id;
+    } buffers;
   } data;
   float * vertices;
   float * normals;
   float * colors;
+  int * indices;
   int number_of_vertices;
+  int number_of_indices;
 } GR3_MeshData_t_;
 
 
@@ -213,4 +220,5 @@ int  gr3_export_png_(const char *filename, int width, int height);
 int  gr3_readpngtomemory_(int *pixels, const char *pngfile, int width, int height);
 int  gr3_export_jpeg_(const char *filename, int width, int height);
 int  gr3_drawimage_gks_(float xmin, float xmax, float ymin, float ymax, int width, int height);
+void gr3_sortindexedmeshdata(int mesh);
 #endif

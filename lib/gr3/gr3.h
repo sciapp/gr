@@ -94,6 +94,7 @@ GR3API int          gr3_export(const char *filename, int width, int height);
 GR3API int          gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type);
 
 GR3API int          gr3_createmesh(int *mesh, int n, const float *vertices, const float *normals, const float *colors);
+GR3API int          gr3_createindexedmesh(int *mesh, int number_of_vertices, const float *vertices, const float *normals, const float *colors, int number_of_indices, const int *indices);
 GR3API void         gr3_drawmesh(int mesh, int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);
 GR3API void         gr3_deletemesh(int mesh);
 

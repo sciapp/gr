@@ -362,6 +362,58 @@ GR3API void gr3_setbackgroundcolor(float red, float green, float blue, float alp
     }
 }
 
+static void gr3_getfirstfreemesh(int *mesh) {
+    void *mem;
+    *mesh = context_struct_.mesh_list_first_free_;
+    if (context_struct_.mesh_list_first_free_ >= context_struct_.mesh_list_capacity_) {
+        int new_capacity = context_struct_.mesh_list_capacity_*2;
+        if (context_struct_.mesh_list_capacity_ == 0) {
+            new_capacity = 8;
+        }
+        mem = realloc(context_struct_.mesh_list_, new_capacity*sizeof(*context_struct_.mesh_list_));
+        context_struct_.mesh_list_ = mem;
+        while(context_struct_.mesh_list_capacity_ < new_capacity) {
+            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].next_free = context_struct_.mesh_list_capacity_+1;
+            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].refcount = 0;
+            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].marked_for_deletion = 0;
+            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.type = kMTNormalMesh;
+            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.data.display_list_id = 0;
+            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.data.vertex_buffer_id = 0;
+            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.number_of_vertices = 0;
+            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.number_of_indices = 0;
+            context_struct_.mesh_list_capacity_++;
+        }
+    }
+    context_struct_.mesh_list_first_free_ = context_struct_.mesh_list_[*mesh].next_free;
+}
+
+void gr3_sortindexedmeshdata(int mesh) {
+    if (context_struct_.mesh_list_[mesh].data.type != kMTIndexedMesh) {
+        return;
+    } else if (context_struct_.mesh_list_[mesh].data.indices == NULL) {
+        return;
+    } else {
+        int i;
+        float *vertices = (float *)malloc(sizeof(float)*context_struct_.mesh_list_[mesh].data.number_of_indices*3);
+        float *colors = (float *)malloc(sizeof(float)*context_struct_.mesh_list_[mesh].data.number_of_indices*3);
+        float *normals = (float *)malloc(sizeof(float)*context_struct_.mesh_list_[mesh].data.number_of_indices*3);
+        for (i = 0; i < context_struct_.mesh_list_[mesh].data.number_of_indices; i++) {
+            memcpy(vertices+i*3, context_struct_.mesh_list_[mesh].data.vertices+context_struct_.mesh_list_[mesh].data.indices[i]*3, sizeof(float)*3);
+            memcpy(normals+i*3, context_struct_.mesh_list_[mesh].data.normals+context_struct_.mesh_list_[mesh].data.indices[i]*3, sizeof(float)*3);
+            memcpy(colors+i*3, context_struct_.mesh_list_[mesh].data.colors+context_struct_.mesh_list_[mesh].data.indices[i]*3, sizeof(float)*3);
+        }
+        context_struct_.mesh_list_[mesh].data.number_of_vertices = context_struct_.mesh_list_[mesh].data.number_of_indices;
+        free(context_struct_.mesh_list_[mesh].data.vertices);
+        free(context_struct_.mesh_list_[mesh].data.normals);
+        free(context_struct_.mesh_list_[mesh].data.colors);
+        free(context_struct_.mesh_list_[mesh].data.indices);
+        context_struct_.mesh_list_[mesh].data.vertices = vertices;
+        context_struct_.mesh_list_[mesh].data.colors = colors;
+        context_struct_.mesh_list_[mesh].data.normals = normals;
+        context_struct_.mesh_list_[mesh].data.indices = NULL;
+    }
+}
+
 /*!
  * This function creates a int from vertex position, normal and color data.
  * \param [out] mesh          a pointer to a int 
@@ -387,35 +439,13 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
         return GR3_ERROR_NOT_INITIALIZED;
     }
 
-    *mesh = context_struct_.mesh_list_first_free_;
-    if (context_struct_.mesh_list_first_free_ >= context_struct_.mesh_list_capacity_) {
-        int new_capacity = context_struct_.mesh_list_capacity_*2;
-        if (context_struct_.mesh_list_capacity_ == 0) {
-            new_capacity = 8;
-        }
-        mem = realloc(context_struct_.mesh_list_, new_capacity*sizeof(*context_struct_.mesh_list_));
-        if (mem == NULL) {
-            return GR3_ERROR_OUT_OF_MEM;
-        }
-        context_struct_.mesh_list_ = mem;
-        while(context_struct_.mesh_list_capacity_ < new_capacity) {
-            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].next_free = context_struct_.mesh_list_capacity_+1;
-            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].refcount = 0;
-            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].marked_for_deletion = 0;
-            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.type = kMTNormalMesh;
-            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.data.display_list_id = 0;
-            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.data.vertex_buffer_id = 0;
-            context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.number_of_vertices = 0;
-            context_struct_.mesh_list_capacity_++;
-        }
-    }
-    context_struct_.mesh_list_first_free_ = context_struct_.mesh_list_[*mesh].next_free;
+    gr3_getfirstfreemesh(mesh);
     
+    context_struct_.mesh_list_[*mesh].data.number_of_vertices = n;
     gr3_meshaddreference_(*mesh);
     #ifdef GR3_CAN_USE_VBO
     if (context_struct_.use_vbo) {
         glGenBuffers(1, &context_struct_.mesh_list_[*mesh].data.data.vertex_buffer_id);
-        context_struct_.mesh_list_[*mesh].data.number_of_vertices = n;
         glBindBuffer(GL_ARRAY_BUFFER, context_struct_.mesh_list_[*mesh].data.data.vertex_buffer_id);
         mem = malloc(n*3*3*sizeof(GLfloat));
         if (mem == NULL) {
@@ -456,10 +486,81 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
     memcpy(context_struct_.mesh_list_[*mesh].data.vertices,vertices,sizeof(float)*n*3);
     memcpy(context_struct_.mesh_list_[*mesh].data.normals,normals,sizeof(float)*n*3);
     memcpy(context_struct_.mesh_list_[*mesh].data.colors,colors,sizeof(float)*n*3);
-    if (glGetError() != GL_NO_ERROR)
+    if (glGetError() != GL_NO_ERROR) {
         return GR3_ERROR_OPENGL_ERR;
-    else
+    } else {
         return GR3_ERROR_NONE;
+    }
+}
+
+GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices, const float *vertices, 
+                                 const float *normals, const float *colors, int number_of_indices, const int *indices) {
+    int i;
+    void *mem;
+    
+    GR3_DO_INIT;
+    if (!context_struct_.is_initialized) {
+        return GR3_ERROR_NOT_INITIALIZED;
+    }
+    
+    gr3_getfirstfreemesh(mesh);
+    context_struct_.mesh_list_[*mesh].data.type = kMTIndexedMesh;
+    context_struct_.mesh_list_[*mesh].data.number_of_vertices = number_of_vertices;
+    context_struct_.mesh_list_[*mesh].data.number_of_indices = number_of_indices;
+    #ifdef GR3_CAN_USE_VBO
+    if (context_struct_.use_vbo) {
+        glGenBuffers(1, &context_struct_.mesh_list_[*mesh].data.data.buffers.index_buffer_id);
+        glGenBuffers(1, &context_struct_.mesh_list_[*mesh].data.data.buffers.vertex_buffer_id);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, context_struct_.mesh_list_[*mesh].data.data.buffers.index_buffer_id);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, number_of_indices*sizeof(int), indices, GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, context_struct_.mesh_list_[*mesh].data.data.buffers.vertex_buffer_id);
+        mem = malloc(number_of_vertices*3*3*sizeof(GLfloat));
+        if (mem == NULL) {
+            return GR3_ERROR_OUT_OF_MEM;
+        }
+        for (i = 0; i < number_of_vertices; i++) {
+            GLfloat *data = ((GLfloat *)mem)+i*3*3;
+            data[0] = vertices[i*3+0];
+            data[1] = vertices[i*3+1];
+            data[2] = vertices[i*3+2];
+            data[3] = normals[i*3+0];
+            data[4] = normals[i*3+1];
+            data[5] = normals[i*3+2];
+            data[6] = colors[i*3+0];
+            data[7] = colors[i*3+1];
+            data[8] = colors[i*3+2];
+        }
+        glBufferData(GL_ARRAY_BUFFER, number_of_vertices*3*3*sizeof(GLfloat), mem, GL_STATIC_DRAW);
+        free(mem);
+        glBindBuffer(GL_ARRAY_BUFFER,0);
+    } else
+    #endif
+    {
+        context_struct_.mesh_list_[*mesh].data.data.display_list_id = glGenLists(1);
+        glNewList(context_struct_.mesh_list_[*mesh].data.data.display_list_id, GL_COMPILE);
+        glBegin(GL_TRIANGLES);
+        for (i = 0; i < number_of_indices; i++) {
+            glColor3fv(colors+indices[i]*3);
+            glNormal3fv(normals+indices[i]*3);
+            glVertex3fv(vertices+indices[i]*3);    
+        }
+        glEnd();
+        glEndList();
+    }
+    
+    context_struct_.mesh_list_[*mesh].data.vertices = (float *)malloc(sizeof(float)*number_of_vertices*3);
+    context_struct_.mesh_list_[*mesh].data.normals = (float *)malloc(sizeof(float)*number_of_vertices*3);
+    context_struct_.mesh_list_[*mesh].data.colors = (float *)malloc(sizeof(float)*number_of_vertices*3);
+    context_struct_.mesh_list_[*mesh].data.indices = (int *)malloc(sizeof(int)*number_of_indices);
+    memcpy(context_struct_.mesh_list_[*mesh].data.vertices,vertices,sizeof(float)*number_of_vertices*3);
+    memcpy(context_struct_.mesh_list_[*mesh].data.normals,normals,sizeof(float)*number_of_vertices*3);
+    memcpy(context_struct_.mesh_list_[*mesh].data.colors,colors,sizeof(float)*number_of_vertices*3);
+    memcpy(context_struct_.mesh_list_[*mesh].data.indices,indices,sizeof(int)*number_of_indices);
+    if (glGetError() != GL_NO_ERROR) {
+        return GR3_ERROR_OPENGL_ERR;
+    } else {
+        return GR3_ERROR_NONE;
+    }
 }
 
 /*!
@@ -616,14 +717,28 @@ static void gr3_dodrawmesh_(int mesh,
         if (context_struct_.use_vbo) {
             glUniform4f(glGetUniformLocation(context_struct_.program, "Scales"),scales[3*i+0],scales[3*i+1],scales[3*i+2],1);
             glUniformMatrix4fv(glGetUniformLocation(context_struct_.program, "ModelMatrix"), 1,GL_FALSE,&model_matrix[0][0]);
-            glBindBuffer(GL_ARRAY_BUFFER, context_struct_.mesh_list_[mesh].data.data.vertex_buffer_id);
+            if (context_struct_.mesh_list_[mesh].data.type == kMTIndexedMesh) {
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, context_struct_.mesh_list_[mesh].data.data.buffers.index_buffer_id);
+                glBindBuffer(GL_ARRAY_BUFFER, context_struct_.mesh_list_[mesh].data.data.buffers.vertex_buffer_id);
+            } else {
+                glBindBuffer(GL_ARRAY_BUFFER, context_struct_.mesh_list_[mesh].data.data.vertex_buffer_id);
+            }
             glVertexAttribPointer(glGetAttribLocation(context_struct_.program, "in_Vertex"), 3,GL_FLOAT, GL_FALSE, sizeof(GLfloat)*3*3,(void *)(sizeof(GLfloat)*3*0));
             glVertexAttribPointer(glGetAttribLocation(context_struct_.program, "in_Normal"), 3,GL_FLOAT, GL_FALSE, sizeof(GLfloat)*3*3,(void *)(sizeof(GLfloat)*3*1));
             glVertexAttribPointer(glGetAttribLocation(context_struct_.program, "in_Color"), 3,GL_FLOAT, GL_FALSE, sizeof(GLfloat)*3*3,(void *)(sizeof(GLfloat)*3*2));
             glEnableVertexAttribArray(glGetAttribLocation(context_struct_.program, "in_Vertex"));
             glEnableVertexAttribArray(glGetAttribLocation(context_struct_.program, "in_Normal"));
             glEnableVertexAttribArray(glGetAttribLocation(context_struct_.program, "in_Color"));
-            glDrawArrays(GL_TRIANGLES, 0, context_struct_.mesh_list_[mesh].data.number_of_vertices);
+            if (context_struct_.mesh_list_[mesh].data.type == kMTIndexedMesh) {
+                fprintf(stderr, "indexed mesh (");
+                if (context_struct_.mesh_list_[mesh].data.indices) {
+                    fprintf(stderr, "un");
+                }
+                fprintf(stderr, "sorted)\n");
+                glDrawElements(GL_TRIANGLES, context_struct_.mesh_list_[mesh].data.number_of_indices, GL_UNSIGNED_INT, NULL);
+            } else {
+                glDrawArrays(GL_TRIANGLES, 0, context_struct_.mesh_list_[mesh].data.number_of_vertices);
+            }
         } else
         #endif
         {
@@ -679,11 +794,19 @@ static void gr3_meshremovereference_(int mesh) {
     if (context_struct_.mesh_list_[mesh].refcount <= 0) {
         #ifdef GR3_CAN_USE_VBO
         if (context_struct_.use_vbo) {
-            glDeleteBuffers(1,&context_struct_.mesh_list_[mesh].data.data.vertex_buffer_id);
+            if (context_struct_.mesh_list_[mesh].data.type == kMTIndexedMesh) {
+                glDeleteBuffers(1,&context_struct_.mesh_list_[mesh].data.data.buffers.index_buffer_id);
+                glDeleteBuffers(1,&context_struct_.mesh_list_[mesh].data.data.buffers.vertex_buffer_id);
+            } else {
+                glDeleteBuffers(1,&context_struct_.mesh_list_[mesh].data.data.vertex_buffer_id);
+            }
         } else 
         #endif
         {
             glDeleteLists(context_struct_.mesh_list_[mesh].data.data.display_list_id,1);
+        }
+        if (context_struct_.mesh_list_[mesh].data.type == kMTIndexedMesh) {
+            free(context_struct_.mesh_list_[mesh].data.indices);
         }
         free(context_struct_.mesh_list_[mesh].data.vertices);
         free(context_struct_.mesh_list_[mesh].data.normals);
