@@ -259,7 +259,7 @@ frame_t vc_frame_from_pdf(pdf_t pdf, int page, int width, int height)
    * bounds, so it will contain the entire page.
    */
 
-  pix = fz_new_pixmap(pdf->ctx, fz_device_rgb, width, height);
+  pix = fz_new_pixmap(pdf->ctx, fz_device_rgb(pdf->ctx), width, height);
   fz_clear_pixmap_with_value(pdf->ctx, pix, 0xff);
 
   /*

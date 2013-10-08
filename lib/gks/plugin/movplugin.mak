@@ -1,10 +1,10 @@
      GRDIR = /usr/local/gr
    DEFINES = -DGRDIR=\"$(GRDIR)\" -DXFT
-  INCLUDES = -I..
+  INCLUDES = -I.. -I/usr/local/include/mupdf
   CXXFLAGS = -g -Wall -fPIC $(DEFINES) $(INCLUDES)
     TARGET = movplugin.so
    SOFLAGS = -shared 
-      LIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -lfitz -lfreetype -lbz2 -ljbig2dec -ljpeg -lopenjpeg -lpng -lz -lpthread
+      LIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -lmupdf -lmupdf-js-none -lfreetype -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz -lpthread
  EXTRALIBS =
 
 .cxx.o:
