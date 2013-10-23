@@ -1,14 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-"""
-# standard library
+
 import sys
 import os
-# third party
 from PyQt4 import QtCore, QtGui
 import sip
-# local library
 from gr.pygr import *
 
 class GrWidget(QtGui.QWidget) :
