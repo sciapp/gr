@@ -662,8 +662,8 @@ DLLEXPORT int gcopysegws(Gint, Gint);
 DLLEXPORT int gredrawsegws(Gint);
 DLLEXPORT int gcloseseg(void);
 DLLEXPORT int gevaltran(
-  Gpoint *, Gpoint *, Gfloat, Gscale *, Gcsw, Gfloat [3][2]);
-DLLEXPORT int gsetsegtran(Gint, Gfloat [3][2]);
+  Gpoint *, Gpoint *, Gfloat, Gscale *, Gcsw, Gfloat [2][3]);
+DLLEXPORT int gsetsegtran(Gint, Gfloat [2][3]);
 DLLEXPORT int ginqopst(Gint *);
 DLLEXPORT int ginqlevelgks(Gint *, Gint *);
 DLLEXPORT int ginqmaxntrannum(Gint *, Gint *);

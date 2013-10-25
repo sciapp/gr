@@ -74,7 +74,6 @@ int usleep(useconds_t);
 #define MAX_SELECTIONS	100
 #define PATTERNS	120
 #define HATCH_STYLE     108
-#define MAX_COLORIND	1024
 
 #define WHITE 255
 #define THRESH 127
@@ -3011,7 +3010,7 @@ void pixmap_to_rf(void)
   int linesize, size, besize, depth = 8;
   byte *pix, *ppix, *beimage;
   register int i, j, k, coli;
-  byte rmap[255], gmap[255], bmap[255];
+  byte rmap[MAX_COLOR], gmap[MAX_COLOR], bmap[MAX_COLOR];
   unsigned long pixel;
 
   image = XGetImage(p->dpy, p->pixmap, 0, 0, p->width, p->height, AllPlanes,
@@ -3271,11 +3270,11 @@ unsigned long rgb2pixel(int rgb)
   register int *ilptr, *ipptr; \
   register byte *blptr, *bpptr, *packed_colia; \
   register type *elptr, *epptr, tmp, *tmpptr; \
-  type pixel[MAX_COLORIND]; \
+  type pixel[MAX_COLOR]; \
 \
   if (!true_color) \
     { \
-      for (i = 0; i < MAX_COLORIND; i++) \
+      for (i = 0; i < MAX_COLOR; i++) \
 	{ \
 	  if (p->depth != 1) \
 	    { \

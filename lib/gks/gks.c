@@ -3435,7 +3435,7 @@ int gcloseseg(void)
 }
 
 int gevaltran(Gpoint *ppoint, Gpoint *pshift, Gfloat angle, Gscale *pscale,
-	      Gcsw coord, Gfloat result[3][2])
+	      Gcsw coord, Gfloat result[2][3])
 {
   float x0, y0, tx, ty, phi, fx, fy;
   int isw, i, j;
@@ -3454,19 +3454,19 @@ int gevaltran(Gpoint *ppoint, Gpoint *pshift, Gfloat angle, Gscale *pscale,
 
   for (i = 0; i < 2; i++)
     for (j = 0; j < 3; j++)
-      result[i][j] = tran[i][j];
+      result[i][j] = tran[j][i];
 
   return gks_errno;
 }
 
-int gsetsegtran(Gint segment_name, Gfloat segtran[3][2])
+int gsetsegtran(Gint segment_name, Gfloat segtran[2][3])
 {
   int segn = segment_name, i, j;
   float tran[3][2];
 
   for (i = 0; i < 2; i++)
     for (j = 0; j < 3; j++)
-      tran[i][j] = segtran[i][j];
+      tran[j][i] = segtran[i][j];
 
   gks_set_seg_xform(segn, tran);
 

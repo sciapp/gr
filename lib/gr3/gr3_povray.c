@@ -198,7 +198,7 @@ int gr3_export_pov_(const char *filename, int width, int height) {
                 normal1[l] = normals[j*9+k*3+l];
               }
               vertex1[3] = 1;
-              for (l = 0; l < 4; l++) {
+              for (l = 0; l < 3; l++) {
                 normal2[l] = model_matrix[0][l]*normal1[0]+model_matrix[1][l]*normal1[1]+model_matrix[2][l]*normal1[2];
               }
               fprintf(povfp,"    <%f, %f, %f>,",vertex2[0],vertex2[1],vertex2[2]);
