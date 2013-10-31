@@ -1193,5 +1193,28 @@ def plot3d(z,
         gr.titles3d(xtitle, ytitle, ztitle)
     gr.updatews()
 
+def imshow(data, cmap=gr.COLORMAP_GRAYSCALE):
+    height, width = data.shape
+    d = data.reshape(width * height).astype(float)
+    d = 8 + 72 * (d - min(d))/(max(d) - min(d))
+    ca = d.astype(int)
+    gr.clearws()
+    if width < height:
+        ratio = float(width) / height
+        xmin = max(0.5 * (1 - ratio), 0)
+        xmax = min(xmin + ratio, 1)
+        ymin = 0
+        ymax = 1
+    else:
+        ratio = float(height) / width
+        xmin = 0
+        xmax = 1
+        ymin = max(0.5 * (1 - ratio), 0)
+        ymax = min(ymin + ratio, 1)
+    gr.selntran(0)
+    gr.setcolormap(cmap)
+    gr.cellarray(xmin, xmax, ymin, ymax, width, height, ca)
+    gr.updatews()
+
 def delay(seconds):
     time.sleep(seconds)
