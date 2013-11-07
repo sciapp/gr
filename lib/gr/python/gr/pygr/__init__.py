@@ -11,9 +11,9 @@ import time
 import gr
 from gr.pygr.base import GRMeta
 
-__author__  = """Christian Felder <c.felder@fz-juelich.de>,
+__author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
-__date__    = "2013-11-07"
+__date__ = "2013-11-07"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -43,69 +43,69 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
 #__all__ = ['delay', 'gr', 'plot', 'plot3d', 'readfile']
 
 class Point(object):
-    
+
     def __init__(self, x, y):
         self._x, self._y = x, y
-        
+
     @property
     def x(self):
         """Get the current x value."""
         return self._x
-    
+
     @x.setter
     def x(self, value):
         self._x = value
-    
+
     @property
     def y(self):
         """Get the current y value."""
         return self._y
-    
+
     @y.setter
     def y(self, value):
         self._y = value
-    
+
     def __str__(self):
-        return "(%s, %s)" %(self._x, self._y)
-    
+        return "(%s, %s)" % (self._x, self._y)
+
     def __eq__(self, other):
         return (self.x == other.x and self.y == other.y)
-    
+
     def __ne__(self, other):
         return not self.__eq__(other)
-    
+
     def __add__(self, other):
-        return Point(self.x+other.x, self.y+other.y)
-    
+        return Point(self.x + other.x, self.y + other.y)
+
     def __sub__(self, other):
-        return Point(self.x-other.x, self.y-other.y)
-    
+        return Point(self.x - other.x, self.y - other.y)
+
     def __mul__(self, other):
         """Calculate scalar product."""
-        return self.x*other.x + self.y*other.y
-    
+        return self.x * other.x + self.y * other.y
+
     def __div__(self, other):
         """Calculate component-by-component division."""
-        return Point(self.x/other.x, self.y/other.y)
-    
+        return Point(self.x / other.x, self.y / other.y)
+
     def __neg__(self):
         """Calculate negation."""
         return Point(-self.x, -self.y)
-    
+
     def __pos__(self):
         return self
-    
+
     def __abs__(self):
         return Point(abs(self.x), abs(self.y))
-    
+
     def norm(self):
         """Calculate euclidean norm."""
-        return math.sqrt(self*self)
-    
+        return math.sqrt(self * self)
+
 class RegionOfInterest(object):
-    
+
     LEGEND = 0x1
-    
+
     def __init__(self, *args, **kwargs):
         self._poly, self._x, self._y = None, None, None
         self._ref = None
@@ -116,35 +116,35 @@ class RegionOfInterest(object):
             self._ref = kwargs["reference"]
         if "regionType" in kwargs:
             self._regionType = kwargs["regionType"]
-        
+
     @property
     def x(self):
         """Get the current x values."""
         return self._x
-    
+
     @property
     def y(self):
         """Get the current y values."""
         return self._y
-    
+
     @property
     def reference(self):
         """Get the current reference."""
         return self._ref
-    
+
     @reference.setter
     def reference(self, ref):
         self._ref = ref
-        
+
     @property
     def regionType(self):
         """Get the current regionType."""
         return self._regionType
-    
+
     @regionType.setter
     def regionType(self, rtype):
         self._regionType = rtype
-        
+
     def append(self, *args):
         if self._poly is None:
             self._poly = []
@@ -154,7 +154,7 @@ class RegionOfInterest(object):
             self._poly.append(p0)
             self._x.append(p0.x)
             self._y.append(p0.y)
-            
+
     def isPointInside(self, p0):
         """
         
@@ -166,19 +166,19 @@ class RegionOfInterest(object):
         res = False
         if self._poly:
             n = len(self._poly)
-            j = n-1
+            j = n - 1
             for i in range(n):
                 pi, pj = self._poly[i], self._poly[j]
                 # if testpoint y component between pi, pj
                 # => intersection possible
-                if ( ((pi.y > p0.y) != (pj.y > p0.y)) and
+                if (((pi.y > p0.y) != (pj.y > p0.y)) and
                      # if x components are both greater than testpoint's x
                      # => intersection (with polyline)
-                     ( ((pi.x > p0.x) and (pj.x > p0.x)) or
+                     (((pi.x > p0.x) and (pj.x > p0.x)) or
                     # if testpoint left from intersection (with polyline)
                     # along x axis with same y component
                     # => intersection with polyline
-                       (p0.x < ((p0.y-pi.y) * (pi.x-pj.x)/(pi.y-pj.y) + pi.x))
+                       (p0.x < ((p0.y - pi.y) * (pi.x - pj.x) / (pi.y - pj.y) + pi.x))
                      )
                     ):
                     # flip on intersection
@@ -187,37 +187,37 @@ class RegionOfInterest(object):
         return res
 
 class CoordConverter(object):
-    
+
     def __init__(self, width, height, window=None):
         self._width, self._height, self._window = width, height, window
         self._p = None
-    
+
     def _checkRaiseXY(self):
         if self._p.x is None or self._p.y is None:
             raise AttributeError("x or y has not been initialized.")
         return True
-    
+
     @property
     def window(self):
         return self._window
-        
+
     def setWindow(self, xmin, xmax, ymin, ymax):
         self._window = [xmin, xmax, ymin, ymax]
-    
+
     def getWindow(self):
         if self._window:
             return list(self._window)
         else:
             return None
-    
+
     def setDC(self, x, y):
         self._p = Point(x, y)
         return self
-        
+
     def setNDC(self, x, y):
-        self._p = Point(x * self._width, (1.-y) * self._height)
+        self._p = Point(x * self._width, (1. - y) * self._height)
         return self
-        
+
     def setWC(self, x, y, window=None):
         if window:
             self.setWindow(*window)
@@ -230,16 +230,16 @@ class CoordConverter(object):
             tNC = gr.wctondc(x, y) # ndc tuple
         self.setNDC(tNC[0], tNC[1])
         return self
-    
+
     def getDC(self):
         self._checkRaiseXY()
         return self._p
-        
+
     def getNDC(self):
         self._checkRaiseXY()
-        return Point(float(self._p.x)/self._width,
-                     1. - float(self._p.y)/self._height)
-        
+        return Point(float(self._p.x) / self._width,
+                     1. - float(self._p.y) / self._height)
+
     def getWC(self):
         self._checkRaiseXY()
         ndcPoint = self.getNDC()
@@ -253,10 +253,10 @@ class CoordConverter(object):
         return Point(tWC[0], tWC[1])
 
 class Helper(object):
-    
+
     _ZERO = 1e-8
     _EPSILON = 1e-8
-    
+
     @staticmethod
     def isInLogDomain(*args):
         res = True
@@ -265,24 +265,24 @@ class Helper(object):
                 res = False
                 break
         return res
-    
+
     @staticmethod
     def isInWindowDomain(xmin, xmax, ymin, ymax):
         res = True
         if (math.isnan(xmin) or math.isinf(xmin) or math.isnan(xmax)
             or math.isinf(xmax) or math.isnan(ymin) or math.isinf(ymin) or
             math.isnan(ymax) or math.isinf(ymax) or
-            xmin > max or ymin > ymax or abs(xmax-xmin) < Helper._EPSILON or
-            abs(ymax-ymin) < Helper._EPSILON):
+            xmin > max or ymin > ymax or abs(xmax - xmin) < Helper._EPSILON or
+            abs(ymax - ymin) < Helper._EPSILON):
             res = False
         return res
-    
+
 class ColorIndexGenerator(object):
-    
+
     _distinct_colors = range(980, 1000)
     _n = len(_distinct_colors)
     _curIdx = 0
-    
+
     @staticmethod
     def nextColorIndex():
         idx = ColorIndexGenerator._distinct_colors[ColorIndexGenerator._curIdx]
@@ -291,10 +291,10 @@ class ColorIndexGenerator(object):
         return idx
 
 class ErrorBar(GRMeta):
-    
+
     HORIZONTAL = 0
     VERTICAL = 1
-    
+
     def __init__(self, x, y, dneg, dpos, direction=VERTICAL):
         self._grerror = None
         self._direction = direction
@@ -309,14 +309,14 @@ class ErrorBar(GRMeta):
             self._grerror = gr.herrorbars
         else:
             raise AttributeError("unsupported value for direction.")
-        
+
     def drawGR(self):
         self._grerror(self._n, self._x, self._y, self._dneg, self._dpos)
-        
+
 class Plot(GRMeta):
-    
+
     DEFAULT_VIEWPORT = (.1, .95, .1, .95)
-    
+
     def __init__(self, viewport=list(DEFAULT_VIEWPORT)):
         self._viewport = viewport
         self._viewMaxYForText = viewport[3] + .05
@@ -328,58 +328,58 @@ class Plot(GRMeta):
         self._legend = False
         self._legendROI = None
         self._countAxes = 0
-        
+
     def getAxes(self):
         return self._lstAxes
-        
+
     @property
     def xlabel(self):
         """get label for x axis"""
         return self._lblX
-        
+
     @xlabel.setter
     def xlabel(self, xlabel):
         self._lblX = xlabel
-        
+
     @property
     def ylabel(self):
         """get label for y axis"""
         return self._lblY
-        
+
     @ylabel.setter
     def ylabel(self, ylabel):
         self._lblY = ylabel
-        
+
     @property
     def subTitle(self):
         """get plot subtitle"""
         return self._subTitle
-    
+
     @subTitle.setter
     def subTitle(self, subTitle):
         self._subTitle = subTitle
-        
+
     @property
     def title(self):
         """get plot title"""
         return self._title
-    
+
     @title.setter
     def title(self, title):
         self._title = title
-        
+
     @property
     def viewport(self):
         """get current viewport"""
         return self._viewport
-    
+
     @viewport.setter
     def viewport(self, viewport):
         self._viewport = viewport
         self._viewMaxYForText = viewport[3] + .05
         for axes in self._lstAxes:
             axes.viewport = viewport
-        
+
     def setLogX(self, bool):
         if bool:
             for axes in self._lstAxes:
@@ -389,7 +389,7 @@ class Plot(GRMeta):
                     win = axes.getWindow()
                     if win is not None:
                         raise Exception("AXES[%d]: (%d..%d) "
-                                        %(axes.getId(), win[0], win[1])
+                                        % (axes.getId(), win[0], win[1])
                                         + "not in log(x) domain.")
                     else:
                         raise Exception("AXES[%d] not in log(x) domain."
@@ -397,7 +397,7 @@ class Plot(GRMeta):
         else:
             for axes in self._lstAxes:
                 axes.setLogX(bool)
-    
+
     def setLogY(self, bool):
         if bool:
             for axes in self._lstAxes:
@@ -407,7 +407,7 @@ class Plot(GRMeta):
                     win = axes.getWindow()
                     if win is not None:
                         raise Exception("AXES[%d]: (%d..%d) "
-                                        %(axes.getId(), win[2], win[3])
+                                        % (axes.getId(), win[2], win[3])
                                         + "not in log(y) domain.")
                     else:
                         raise Exception("AXES[%d] not in log(y) domain."
@@ -415,30 +415,30 @@ class Plot(GRMeta):
         else:
             for axes in self._lstAxes:
                 axes.setLogY(bool)
-                
+
     def setGrid(self, bool):
         for axes in self._lstAxes:
             axes.setGrid(bool)
-            
+
     def setLegend(self, bool):
         self._legend = bool
-                
+
     def reset(self):
         for axes in self._lstAxes:
             axes.reset()
-        
+
     def logXinDomain(self):
         logXinDomain = True
         for axes in self._lstAxes:
             logXinDomain = (logXinDomain & axes.isXLogDomain())
         return logXinDomain
-            
+
     def logYinDomain(self):
         logYinDomain = True
         for axes in self._lstAxes:
             logYinDomain = (logYinDomain & axes.isYLogDomain())
         return logYinDomain
-    
+
     def pick(self, p0, width, height):
         coord = None
         window = gr.inqwindow()
@@ -458,9 +458,9 @@ class Plot(GRMeta):
                     coord.setWC(x, curve.y[idx])
                     points.append(coord.getNDC())
                     lstAxes.append(axes)
-            if points: 
+            if points:
                 # calculate distance between p0 and point on curve
-                norms = map(lambda p: (p0-p).norm(), points)
+                norms = map(lambda p: (p0 - p).norm(), points)
                 # nearest point
                 idx = norms.index(min(norms))
                 p = points[idx]
@@ -471,7 +471,7 @@ class Plot(GRMeta):
                 coord = None
         gr.setwindow(*window)
         return coord
-    
+
     def select(self, p0, p1, width, height):
         window = gr.inqwindow()
         coord = CoordConverter(width, height)
@@ -486,7 +486,7 @@ class Plot(GRMeta):
             ymax = max(p0World.y, p1World.y)
             axes.setWindow(xmin, xmax, ymin, ymax)
         gr.setwindow(*window)
-        
+
     def pan(self, dp, width, height):
         window = gr.inqwindow()
         coord = CoordConverter(width, height)
@@ -505,15 +505,15 @@ class Plot(GRMeta):
             gr.setscale(axes.scale)
             axes.setWindow(*win)
         gr.setwindow(*window)
-        
+
     def zoom(self, dpercent):
         window = gr.inqwindow()
         for axes in self._lstAxes:
             win = axes.getWindow()
-            winWidth_2 = (win[1]-win[0])/2
-            winHeight_2 = (win[3]-win[2])/2
-            dx_2 = winWidth_2 - (1+dpercent)*winWidth_2
-            dy_2 = winHeight_2 - (1+dpercent)*winHeight_2
+            winWidth_2 = (win[1] - win[0]) / 2
+            winHeight_2 = (win[3] - win[2]) / 2
+            dx_2 = winWidth_2 - (1 + dpercent) * winWidth_2
+            dy_2 = winHeight_2 - (1 + dpercent) * winHeight_2
             win[0] -= dx_2
             win[1] += dx_2
             win[2] -= dy_2
@@ -524,7 +524,7 @@ class Plot(GRMeta):
                 axes.setWindow(*window)
                 self.reset()
                 break
-            
+
     def getROI(self, p0):
         res = None
         if self._legendROI:
@@ -532,7 +532,7 @@ class Plot(GRMeta):
                 if roi.isPointInside(p0):
                     res = roi
         return res
-        
+
     def addAxes(self, *args, **kwargs):
         for plotAxes in args:
             if plotAxes and plotAxes not in self._lstAxes:
@@ -549,25 +549,25 @@ class Plot(GRMeta):
         if self.title or self.subTitle:
             dyTitle = 0
             dySubTitle = 0
-            charHeight = .027 * (self._viewMaxYForText-ymin)
+            charHeight = .027 * (self._viewMaxYForText - ymin)
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(0., 1.)
             gr.setcharheight(charHeight)
-            x = xmin + (xmax-xmin)/2
+            x = xmin + (xmax - xmin) / 2
             if self.title:
                 tby = gr.inqtextext(0, 0, self.title)[1]
                 tby = map(lambda y: gr.wctondc(0, y)[1], tby)
-                dyTitle = max(tby)-min(tby)
-            y = self._viewMaxYForText - (dyTitle+dySubTitle)/2
+                dyTitle = max(tby) - min(tby)
+            y = self._viewMaxYForText - (dyTitle + dySubTitle) / 2
             if self.title and self.subTitle:
                 tby = gr.inqtextext(0, 0, self.subTitle)[1]
                 tby = map(lambda y: gr.wctondc(0, y)[1], tby)
-                dySubTitle = max(tby)-min(tby)
-            if (ymax+dyTitle+dySubTitle) > self._viewMaxYForText:
+                dySubTitle = max(tby) - min(tby)
+            if (ymax + dyTitle + dySubTitle) > self._viewMaxYForText:
                 # preserve self._viewMaxYForText value
                 # to avoid changing by self.viewport setter
                 maxYForText = self._viewMaxYForText
-                self.viewport = [xmin, xmax, ymin, ymax-dyTitle-dySubTitle]
+                self.viewport = [xmin, xmax, ymin, ymax - dyTitle - dySubTitle]
                 self._viewMaxYForText = maxYForText
                 gr.clearws()
             if self.title:
@@ -589,19 +589,19 @@ class Plot(GRMeta):
             gr.setcharup(0., 1.)
             tby = gr.inqtextext(0, 0, self.xlabel)[1]
             tby = map(lambda y: gr.wctondc(0, y)[1], tby)
-            dyXLabel = max(tby)-min(tby)
-            gr.text(xmin+(xmax-xmin)/2., ymin-dyXLabel/2.-.05, self.xlabel)
+            dyXLabel = max(tby) - min(tby)
+            gr.text(xmin + (xmax - xmin) / 2., ymin - dyXLabel / 2. - .05, self.xlabel)
         if self.ylabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(-1., 0.)
             tbx = gr.inqtextext(0, 0, self.ylabel)[0]
             tbx = map(lambda y: gr.wctondc(0, y)[0], tbx)
-            dxYLabel = max(tbx)-min(tbx)
-            gr.text(xmin-dxYLabel/2.-.075, ymin+(ymax-ymin)/2., self.ylabel)
+            dxYLabel = max(tbx) - min(tbx)
+            gr.text(xmin - dxYLabel / 2. - .075, ymin + (ymax - ymin) / 2., self.ylabel)
             gr.setcharup(0., 1.)
         # draw legend and calculate ROIs for legend items 
         if self._legend:
-            x, y = .1, ymin-dyXLabel-.075
+            x, y = .1, ymin - dyXLabel - .075
             if y < 0:
                 self.viewport[2] += dyXLabel
                 gr.clearws()
@@ -628,17 +628,17 @@ class Plot(GRMeta):
                                 gr.setlinecolorind(curve.getLineColor())
                                 gr.setmarkercolorind(curve.getMarkerColor())
                                 gr.setlinetype(curve.getLineType())
-                                gr.polyline(2, [x, x+.1], [y, y])
+                                gr.polyline(2, [x, x + .1], [y, y])
                                 if (curve.getMarkerType() != gr.MARKERTYPE_DOT
                                     and curve.getMarkerType() is not None):
                                     gr.setmarkertype(curve.getMarkerType())
-                                    gr.polymarker(1, [x+.1/2.], [y])
+                                    gr.polymarker(1, [x + .1 / 2.], [y])
                             elif curve.getMarkerType() is not None:
                                 gr.setmarkertype(curve.getMarkerType)
-                                gr.polymarker(1, [x+.1/2.], [y])
+                                gr.polymarker(1, [x + .1 / 2.], [y])
                             tbx, tby = gr.inqtextext(0, 0, curve.legend)
-                            ybase = y-(max(tby)-min(tby))/2
-                            ytop = y+(max(tby)-min(tby))/2
+                            ybase = y - (max(tby) - min(tby)) / 2
+                            ytop = y + (max(tby) - min(tby)) / 2
                             roi = RegionOfInterest(Point(x, ybase),
                                                    Point(x, ytop),
                                                    reference=curve,
@@ -652,7 +652,7 @@ class Plot(GRMeta):
                                             gr.TEXT_VALIGN_HALF)
                             gr.text(x, y, curve.legend)
                             gr.settextcolorind(1)
-                            x += max(tbx)-min(tbx)
+                            x += max(tbx) - min(tbx)
                             roi.append(Point(x, ytop), Point(x, ybase))
                             self._legendROI.append(roi)
                 if not self._legendROI:
@@ -669,9 +669,9 @@ class Plot(GRMeta):
                 gr.setscale(scale)
 
 class PlotCurve(GRMeta):
-    
+
     COUNT = 0
-    
+
     def __init__(self, x, y, errBar1=None, errBar2=None,
                  linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_DOT,
                  linecolor=None, markercolor=1, legend=None):
@@ -687,30 +687,30 @@ class PlotCurve(GRMeta):
         PlotCurve.COUNT += 1
         self._id = PlotCurve.COUNT
         if legend is None:
-            self._legend = "curve %d" %self._id
+            self._legend = "curve %d" % self._id
         self._visible = True
-        
+
     def setLineType(self, linetype):
         self._linetype = linetype
-        
+
     def getLineType(self):
         return self._linetype
-        
+
     def setMarkerType(self, markertype):
         self._markertype = markertype
-        
+
     def getMarkerType(self):
         return self._markertype
-    
+
     def setLineColor(self, color):
         self._linecolor = color
-        
+
     def getLineColor(self):
         return self._linecolor
-    
+
     def setMarkerColor(self, color):
         self._markercolor = color
-        
+
     def getMarkerColor(self):
         return self._markercolor
 
@@ -718,37 +718,37 @@ class PlotCurve(GRMeta):
     def x(self):
         """Get the current list/ndarray of x values."""
         return self._x
-    
+
     @x.setter
     def x(self, lst):
         self._x = lst
-    
+
     @property
     def y(self):
         """Get the current list/ndarray of y values."""
         return self._y
-    
+
     @y.setter
     def y(self, lst):
         self._y = lst
-        
+
     @property
     def legend(self):
         """Get current text for a legend."""
         return self._legend
-        
+
     @legend.setter
     def legend(self, s):
         self._legend = s
-        
+
     @property
     def visible(self):
         return self._visible
-    
+
     @visible.setter
     def visible(self, bool):
         self._visible = bool
-    
+
     def drawGR(self):
         if self.visible:
             # preserve old values
@@ -756,7 +756,7 @@ class PlotCurve(GRMeta):
             mtype = gr.inqmarkertype()
             lcolor = gr.inqlinecolorind()
             mcolor = gr.inqmarkercolorind()
-    
+
             if self.getLineType() is not None:
                 n = len(self.y)
                 gr.setlinecolorind(self.getLineColor())
@@ -779,7 +779,7 @@ class PlotCurve(GRMeta):
             gr.setmarkercolorind(mcolor)
             gr.setlinetype(ltype)
             gr.setmarkertype(mtype)
-            
+
 class PlotAxes(GRMeta):
 
     COUNT = 0
@@ -801,126 +801,126 @@ class PlotAxes(GRMeta):
         self._ytickValue = []
         self._xtickLabel = []
         self._ytickLabel = []
-        
+
     def getCurves(self):
         return self._lstPlotCurve
-    
+
     def isXLogDomain(self):
         window = self.getWindow()
         if window:
             return Helper.isInLogDomain(window[0], window[1])
         else:
             return False
-    
+
     def isYLogDomain(self):
         window = self.getWindow()
         if window:
             return Helper.isInLogDomain(window[2], window[3])
         else:
             return False
-    
+
     @property
     def xtick(self):
         """get current user-defined interval between minor x ticks"""
         return self._xtick
-    
+
     @xtick.setter
     def xtick(self, tickInterval):
         self._xtick = tickInterval
-        
+
     @property
     def ytick(self):
         """get current user-defined interval between minor y ticks"""
         return self._ytick
-    
+
     @ytick.setter
     def ytick(self, tickInterval):
         self._ytick = tickInterval
-        
+
     @property
     def majorx(self):
         """get current user-defined number of minor tick intervals between
         major x tick marks"""
         return self._majorx
 
-    @majorx.setter    
+    @majorx.setter
     def majorx(self, minorCount):
         self._majorx = minorCount if minorCount > 0 or minorCount is None else 1
-        
+
     @property
     def majory(self):
         """get current user-defined number of minor tick intervals between
         major y tick marks"""
-        return self._majory 
+        return self._majory
 
-    @majory.setter    
+    @majory.setter
     def majory(self, minorCount):
         self._majory = minorCount if minorCount > 0 or minorCount is None else 1
-    
+
     @property
     def viewport(self):
         """get current viewport"""
         return self._viewport
-    
+
     @viewport.setter
     def viewport(self, viewport):
         self._viewport = viewport
-    
+
     @property
     def scale(self):
         return self._scale
-    
+
     @scale.setter
     def scale(self, options):
         self._scale = options
-        
+
     @property
     def backgroundColor(self):
         return self._backgroundColor
-    
+
     @backgroundColor.setter
     def backgroundColor(self, color):
         self._backgroundColor = color
-        
+
     def isXDrawingEnabled(self):
         return self._drawX
-        
+
     def setXDrawing(self, bool):
         self._drawX = bool
-        
+
     def isYDrawingEnabled(self):
         return self._drawY
-        
+
     def setYDrawing(self, bool):
         self._drawY = bool
-        
+
     def setLogX(self, bool):
         if bool:
             self.scale |= gr.OPTION_X_LOG
         else:
             self.scale &= ~gr.OPTION_X_LOG
-        
+
     def setLogY(self, bool):
         if bool:
             self.scale |= gr.OPTION_Y_LOG
         else:
             self.scale &= ~gr.OPTION_Y_LOG
-        
+
     def setGrid(self, bool):
         self._grid = bool
-        
+
     def isGridEnabled(self):
         return self._grid
-    
+
     def setWindow(self, xmin, xmax, ymin, ymax):
         self._window = [xmin, xmax, ymin, ymax]
-    
+
     def getWindow(self):
         if self._window:
             return list(self._window)
         else:
             return None
-        
+
     def _storeTickValue(self, i, svalue, lstTick):
         if i == 0:
             lstTick = [svalue]
@@ -928,38 +928,38 @@ class PlotAxes(GRMeta):
             pass
         else:
             lstTick.append(svalue)
-        
+
     def _xtick_callback(self, i, svalue):
         self._storeTickValue(i, svalue, self._xtickValue)
-        
+
     def _ytick_callback(self, i, svalue):
         self._storeTickValue(i, svalue, self._ytickValue)
-        
+
     def getXtickValues(self):
         return list(self._xtickValue)
-    
+
     def getYtickValues(self):
         return list(self._ytickValue)
-    
+
     def setXtickLabels(self, ticks):
         self._xtickLabel = ticks
-        
+
     def setYtickLables(self, ticks):
         self._ytickLabel = ticks
-    
+
     def reset(self):
         self._xtickLabel = []
         self._ytickLabel = []
         self._m = 0
         self._n = 0
         self._resetWindow = True
-        
+
     def isReset(self):
         return self._resetWindow
-    
+
     def getId(self):
         return self._id
-    
+
     def drawGR(self):
         lstPlotCurve = self.getCurves()
         viewport = self.viewport
@@ -984,7 +984,7 @@ class PlotAxes(GRMeta):
             else:
                 window = self.getWindow()
                 xmin, xmax, ymin, ymax = window
-                
+
             if (window[0] > xmin or xmin > window[1] or window[2] > ymin or
                 ymin > window[3]):
                 #GKS: Rectangle definition is invalid in routine SET_WINDOW
@@ -1025,9 +1025,9 @@ class PlotAxes(GRMeta):
                         majorx = -majorx
                     if not self.isYDrawingEnabled():
                         majory = -majory
-                    gr.axeslbl(xtick, ytick, xmin, ymin,  majorx,  majory, 
+                    gr.axeslbl(xtick, ytick, xmin, ymin, majorx, majory,
                                0.01, self._xtickLabel, len(self._xtickLabel),
-                               self._ytickLabel, len(self._ytickLabel), 
+                               self._ytickLabel, len(self._ytickLabel),
                                self._xtick_callback, self._ytick_callback)
                 elif self.getId() == 2:
                     # second x, y axis
@@ -1036,53 +1036,53 @@ class PlotAxes(GRMeta):
                     if not self.isYDrawingEnabled():
                         majory = -majory
                     gr.axeslbl(xtick, ytick, xmax, ymax, majorx, majory,
-                               -0.01, self._xtickLabel, len(self._xtickLabel),
+                               - 0.01, self._xtickLabel, len(self._xtickLabel),
                                self._ytickLabel, len(self._ytickLabel),
                                self._xtick_callback, self._ytick_callback)
                 for curve in lstPlotCurve:
                     curve.drawGR()
-    
+
     def plot(self, *args, **kwargs):
-        if len(args) > 0 and len(args)%2 == 0:
+        if len(args) > 0 and len(args) % 2 == 0:
             self._lstPlotCurve = []
-            for i in range(0, len(args)/2):
-                x = args[2*i]
-                y = args[2*i + 1]
+            for i in range(0, len(args) / 2):
+                x = args[2 * i]
+                y = args[2 * i + 1]
                 self._lstPlotCurve.append(PlotCurve(x, y))
         return self
-    
+
     def addCurves(self, *args, **kwargs):
         for plotCurve in args:
             if plotCurve and plotCurve not in self._lstPlotCurve:
                 self._lstPlotCurve.append(plotCurve)
         return self
-    
+
 def ndctowc(x, y):
     try:
         iter(x)
         iter(y)
         resX = []
         resY = []
-        for xi, yi in map(lambda x, y: gr.ndctowc(x, y), x, y): 
+        for xi, yi in map(lambda x, y: gr.ndctowc(x, y), x, y):
             resX.append(xi)
             resY.append(yi)
         return resX, resY
     except TypeError:
         return gr.ndctowc(x, y)
-    
+
 def wctondc(x, y):
     try:
         iter(x)
         iter(y)
         resX = []
         resY = []
-        for xi, yi in map(lambda x, y: gr.wctondc(x, y), x, y): 
+        for xi, yi in map(lambda x, y: gr.wctondc(x, y), x, y):
             resX.append(xi)
             resY.append(yi)
         return resX, resY
     except TypeError:
         return gr.wctondc(x, y)
-    
+
 def _guessdimension(len):
     x = int(math.sqrt(len))
     d = []
@@ -1093,7 +1093,7 @@ def _guessdimension(len):
         x -= 1
     return sorted(d, key=lambda t: t[1] - t[0])
 
-def readfile(path, separator = ''):
+def readfile(path, separator=''):
     fp = open(path, "r")
     if separator != '':
         while True:
@@ -1108,17 +1108,17 @@ def readfile(path, separator = ''):
             data.append(float(item))
     fp.close()
     return data
- 
+
 def plot(x, y,
-         bgcolor = 0,
-         viewport = (0.1, 0.95, 0.1, 0.95),
-         window = None,
-         scale = 0,
-         grid = True,
-         linetype = gr.LINETYPE_SOLID,
-         markertype = gr.MARKERTYPE_DOT,
-         clear = True,
-         update = True):
+         bgcolor=0,
+         viewport=(0.1, 0.95, 0.1, 0.95),
+         window=None,
+         scale=0,
+         grid=True,
+         linetype=gr.LINETYPE_SOLID,
+         markertype=gr.MARKERTYPE_DOT,
+         clear=True,
+         update=True):
     if clear:
         gr.clearws()
     n = len(x)
@@ -1140,7 +1140,7 @@ def plot(x, y,
         xtick = majorx = 1
     if scale & gr.OPTION_Y_LOG == 0:
         majory = 5
-        ytick = gr.tick(ymin, ymax) /majory 
+        ytick = gr.tick(ymin, ymax) / majory
     else:
         ytick = majory = 1
     gr.setviewport(viewport[0], viewport[1], viewport[2], viewport[3])
@@ -1154,7 +1154,7 @@ def plot(x, y,
     gr.setcharheight(charheight)
     if grid:
          gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
-    gr.axes(xtick, ytick, xmin, ymin,  majorx,  majory,  0.01)
+    gr.axes(xtick, ytick, xmin, ymin, majorx, majory, 0.01)
     gr.axes(xtick, ytick, xmax, ymax, -majorx, -majory, -0.01)
     gr.setlinetype(linetype)
     gr.polyline(n, x, y)
@@ -1165,15 +1165,15 @@ def plot(x, y,
         gr.updatews()
 
 def plot3d(z,
-           viewport = (0.1, 0.9, 0.1, 0.9),
-           rotation = 30,
-           tilt = 70,
-           colormap = 1,
-           option = 4,
-           contours = True,
-           xtitle = '',
-           ytitle = '',
-           ztitle = ''):
+           viewport=(0.1, 0.9, 0.1, 0.9),
+           rotation=30,
+           tilt=70,
+           colormap=1,
+           option=4,
+           contours=True,
+           xtitle='',
+           ytitle='',
+           ztitle=''):
     gr.clearws()
     xmin, ymin = (1, 1)
     xmax, ymax = _guessdimension(len(z))[0]
@@ -1192,7 +1192,7 @@ def plot3d(z,
     gr.setcharheight(charheight)
     if rotation != 0 or tilt != 90:
         gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 5, 0, 5, -0.01)
-        gr.axes3d(0, ytick,  0, xmax, ymin, zmin, 0, 5, 0,  0.01)
+        gr.axes3d(0, ytick, 0, xmax, ymin, zmin, 0, 5, 0, 0.01)
     gr.setcolormap(colormap)
     gr.surface(xmax, ymax, x, y, z, option)
     if contours:
