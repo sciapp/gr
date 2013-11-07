@@ -13,7 +13,7 @@ from gr.pygr.base import GRMeta
 
 __author__  = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
-__date__    = "2013-08-22"
+__date__    = "2013-11-07"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -387,8 +387,13 @@ class Plot(GRMeta):
                     axes.setLogX(bool)
                 else:
                     win = axes.getWindow()
-                    raise Exception("AXES[%d]: (%d..%d) not in log(x) domain."
-                                    %(axes.getId(), win[0], win[1]))
+                    if win is not None:
+                        raise Exception("AXES[%d]: (%d..%d) "
+                                        %(axes.getId(), win[0], win[1])
+                                        + "not in log(x) domain.")
+                    else:
+                        raise Exception("AXES[%d] not in log(x) domain."
+                                        % axes.getId())
         else:
             for axes in self._lstAxes:
                 axes.setLogX(bool)
@@ -400,8 +405,13 @@ class Plot(GRMeta):
                     axes.setLogY(bool)
                 else:
                     win = axes.getWindow()
-                    raise Exception("AXES[%d]: (%d..%d) not in log(y) domain."
-                                    %(axes.getId(), win[2], win[3]))
+                    if win is not None:
+                        raise Exception("AXES[%d]: (%d..%d) "
+                                        %(axes.getId(), win[2], win[3])
+                                        + "not in log(y) domain.")
+                    else:
+                        raise Exception("AXES[%d] not in log(y) domain."
+                                        % axes.getId())
         else:
             for axes in self._lstAxes:
                 axes.setLogY(bool)
