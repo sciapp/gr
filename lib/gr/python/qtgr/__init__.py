@@ -18,9 +18,11 @@ import qtgr.events
 from gr.pygr import Plot, PlotAxes, RegionOfInterest
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent,\
     LegendEvent, TickEvent
+    
+QtCore.Signal = QtCore.pyqtSignal
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-08-22"
+__date__    = "2013-11-08"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -119,6 +121,10 @@ class GRWidget(QtGui.QWidget):
 
 class InteractiveGRWidget(GRWidget):
     
+    logXinDomain = QtCore.Signal(bool)
+    logYinDomain = QtCore.Signal(bool)
+    modePick = QtCore.Signal(bool)
+    
     def __init__(self, *args, **kwargs):
         super(InteractiveGRWidget, self).__init__(*args, **kwargs)
         guiConn = GUIConnector(self)
@@ -158,12 +164,10 @@ class InteractiveGRWidget(GRWidget):
             logYinDomain = plot.logYinDomain()
             if logXinDomain != self._logXinDomain:
                 self._logXinDomain = logXinDomain
-                self.emit(QtCore.SIGNAL("logXinDomain(bool)"),
-                          self._logXinDomain)
+                self.logXinDomain.emit(self._logXinDomain)
             if logYinDomain != self._logYinDomain:
                 self._logYinDomain = logYinDomain
-                self.emit(QtCore.SIGNAL("logYinDomain(bool)"),
-                          self._logYinDomain)
+                self.logYinDomain.emit(self._logYinDomain)
             # axes tick changed check
             if checkTicks:
                 for axes in plot.getAxes():
@@ -211,7 +215,7 @@ class InteractiveGRWidget(GRWidget):
     
     def setPickMode(self, bool):
         self._pickMode = bool
-        self.emit(QtCore.SIGNAL("modePick(bool)"), self._pickMode)
+        self.modePick.emit(self._pickMode)
         
     def _axesTickValues(self, axes):
         oldX = None

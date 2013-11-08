@@ -17,8 +17,8 @@ from qtgr.events import TickEvent
 from gr.pygr import Plot, PlotAxes, PlotCurve
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-06-27"
-__version__ = "0.2.0"
+__date__    = "2013-11-08"
+__version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -68,27 +68,17 @@ class MainWindow(QtGui.QMainWindow):
         self._saveName = None
         self._title = unicode(self.windowTitle())
         
-        self.connect(self._chkLogX, QtCore.SIGNAL("stateChanged(int)"),
-                     self._logXClicked)
-        self.connect(self._chkLogY, QtCore.SIGNAL("stateChanged(int)"),
-                     self._logYClicked)
-        self.connect(self._gr, QtCore.SIGNAL("logXinDomain(bool)"),
-                     self._logXinDomain)
-        self.connect(self._gr, QtCore.SIGNAL("logYinDomain(bool)"),
-                     self._logYinDomain)
-        self.connect(self._chkGrid, QtCore.SIGNAL("stateChanged(int)"),
-                     self._gridClicked)
-        self.connect(self._btnReset, QtCore.SIGNAL("clicked()"),
-                     self._resetClicked)
-        self.connect(self._btnPick, QtCore.SIGNAL("clicked()"),
-                     self._pickClicked)
-        self.connect(self._gr, QtCore.SIGNAL("modePick(bool)"),
-                     self._pickModeChanged)
-        self.connect(self._shell, QtCore.SIGNAL("returnPressed()"),
-                     self._shellEx)
-        self.connect(self._actionSave, QtCore.SIGNAL("triggered()"), self.save)
-        self.connect(self._actionPrint, QtCore.SIGNAL("triggered()"),
-                     self.printGR)
+        self._chkLogX.stateChanged.connect(self._logXClicked)
+        self._chkLogY.stateChanged.connect(self._logYClicked)
+        self._chkGrid.stateChanged.connect(self._gridClicked)
+        self._btnReset.clicked.connect(self._resetClicked)
+        self._btnPick.clicked.connect(self._pickClicked)
+        self._shell.returnPressed.connect(self._shellEx)
+        self._actionSave.triggered.connect(self.save)
+        self._actionPrint.triggered.connect(self.printGR)
+        self._gr.logXinDomain.connect(self._logXinDomain)
+        self._gr.logYinDomain.connect(self._logYinDomain)
+        self._gr.modePick.connect(self._pickModeChanged)
         
         guiConn = GUIConnector(self._gr)
         guiConn.connect(MouseEvent.MOUSE_MOVE, self.mouseMoveGr)
@@ -183,31 +173,25 @@ class MainWindow(QtGui.QMainWindow):
             event.axes.setXtickLabels(TimeAxisFmt.tickLabel(event.labels))
         self._gr.updateTicks()
         
-    @QtCore.pyqtSlot()
     def _gridClicked(self, state):
         self._plot.setGrid(self._chkGrid.isChecked())
         self._gr.update()
         
-    @QtCore.pyqtSlot()
     def _logXClicked(self, state):
         self._plot.setLogX(self._chkLogX.isChecked())
         self._gr.update()      
     
-    @QtCore.pyqtSlot()    
     def _logYClicked(self, state):
         self._plot.setLogY(self._chkLogY.isChecked())
         self._gr.update()
             
-    @QtCore.pyqtSlot()
     def _resetClicked(self):
         self._plot.reset()
         self._gr.update()
     
-    @QtCore.pyqtSlot()
     def _pickClicked(self):
         self._gr.setPickMode(True)
     
-    @QtCore.pyqtSlot()    
     def _pickModeChanged(self, bool):
         self._btnPick.setChecked(bool)
         
@@ -218,13 +202,11 @@ class MainWindow(QtGui.QMainWindow):
         self._shell.clear()
         self._gr.update()
     
-    @QtCore.pyqtSlot()
     def _logXinDomain(self, bool):
         self._chkLogX.setEnabled(bool)
         if not bool:
             self._chkLogX.setChecked(bool)
         
-    @QtCore.pyqtSlot()
     def _logYinDomain(self, bool):
         self._chkLogY.setEnabled(bool)
         if not bool:
