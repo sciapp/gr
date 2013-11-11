@@ -985,14 +985,18 @@ class PlotAxes(GRMeta):
             if self.isReset():
                 self._resetWindow = False
                 # global xmin, xmax, ymin, ymax
+                visibleCurves = filter(lambda curve: curve.visible,
+                                       lstPlotCurve)
+                if not visibleCurves:
+                    visibleCurves = lstPlotCurve
                 xmin = min(map(lambda curve: min(curve.x),
-                               lstPlotCurve))
+                               visibleCurves))
                 xmax = max(map(lambda curve: max(curve.x),
-                               lstPlotCurve))
+                               visibleCurves))
                 ymin = min(map(lambda curve: min(curve.y),
-                               lstPlotCurve))
+                               visibleCurves))
                 ymax = max(map(lambda curve: max(curve.y),
-                               lstPlotCurve))
+                               visibleCurves))
                 if self.scale & gr.OPTION_X_LOG == 0:
                     xmin, xmax = gr.adjustrange(xmin, xmax)
                 if self.scale & gr.OPTION_Y_LOG == 0:
