@@ -14,7 +14,7 @@ import gr # TESTING shell
 import qtgr
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, LegendEvent
 from qtgr.events import TickEvent
-from gr.pygr import Plot, PlotAxes, PlotCurve
+from gr.pygr import Plot, PlotAxes, PlotCurve, ErrorBar
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
 __date__ = "2013-11-08"
@@ -71,6 +71,7 @@ class MainWindow(QtGui.QMainWindow):
         self._chkLogX.stateChanged.connect(self._logXClicked)
         self._chkLogY.stateChanged.connect(self._logYClicked)
         self._chkGrid.stateChanged.connect(self._gridClicked)
+        self._chkErr.stateChanged.connect(self._errorsClicked)
         self._btnReset.clicked.connect(self._resetClicked)
         self._btnPick.clicked.connect(self._pickClicked)
         self._shell.returnPressed.connect(self._shellEx)
@@ -92,8 +93,12 @@ class MainWindow(QtGui.QMainWindow):
         x2 = [-3.5 + i * .5 for i in range(0, 15)]
         y2 = x2
 
-        self._plot = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x, y,
-                                                           legend="foo bar")),
+        dneg = map(lambda y: y - 0.25 * abs(y), y)
+        dpos = map(lambda y: y + 0.25 * abs(y), y)
+        self._errBar = ErrorBar(x, y, dneg, dpos)
+
+        self._curveFoo = PlotCurve(x, y, legend="foo bar")
+        self._plot = Plot().addAxes(PlotAxes().addCurves(self._curveFoo),
                                     PlotAxes(drawX=False).plot(x2, y2))
         self._plot2 = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x2, y2,
                                                            legend="second")))
@@ -172,6 +177,13 @@ class MainWindow(QtGui.QMainWindow):
         if event.origin == TickEvent.AXIS_X:
             event.axes.setXtickLabels(TimeAxisFmt.tickLabel(event.labels))
         self._gr.updateTicks()
+
+    def _errorsClicked(self, state):
+        if self._chkErr.isChecked():
+            self._curveFoo.errorBar1 = self._errBar
+        else:
+            self._curveFoo.errorBar1 = None
+        self._gr.update()
 
     def _gridClicked(self, state):
         self._plot.setGrid(self._chkGrid.isChecked())

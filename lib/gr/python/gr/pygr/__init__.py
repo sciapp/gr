@@ -715,6 +715,24 @@ class PlotCurve(GRMeta):
         return self._markercolor
 
     @property
+    def errorBar1(self):
+        """Get current ErrorBar #1 instance."""
+        return self._e1
+
+    @errorBar1.setter
+    def errorBar1(self, value):
+        self._e1 = value
+
+    @property
+    def errorBar2(self):
+        """Get current ErrorBar #2 instance."""
+        return self._e2
+
+    @errorBar1.setter
+    def errorBar1(self, value):
+        self._e2 = value
+
+    @property
     def x(self):
         """Get the current list/ndarray of x values."""
         return self._x
