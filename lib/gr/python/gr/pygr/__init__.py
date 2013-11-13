@@ -365,38 +365,76 @@ class Plot(GRMeta):
         for axes in self._lstAxes:
             axes.viewport = viewport
 
-    def setLogX(self, bool):
+    def setLogX(self, bool, rescale=False):
         if bool:
             for axes in self._lstAxes:
                 if axes.isXLogDomain():
                     axes.setLogX(bool)
                 else:
-                    win = axes.getWindow()
-                    if win is not None:
-                        raise Exception("AXES[%d]: (%d..%d) "
-                                        % (axes.getId(), win[0], win[1])
-                                        + "not in log(x) domain.")
+                    if rescale:
+                        lstPlotCurves = axes.getCurves()
+                        if lstPlotCurves:
+                            visibleCurves = filter(lambda curve: curve.visible,
+                                                   lstPlotCurves)
+                            if not visibleCurves:
+                                visibleCurves = lstPlotCurves
+                            window = axes.getWindow()
+                            xmax = window[1]
+                            xmin = min(map(lambda curve: min(curve.x),
+                                           visibleCurves))
+                            if xmin <= 0:
+                                # 3 constant
+                                xmin = 1 / 10 ** max(0, 3 - math.log10(xmax))
+
+                            window[0] = xmin
+                            axes.setWindow(*window)
+                            axes.setLogX(bool)
                     else:
-                        raise Exception("AXES[%d] not in log(x) domain."
-                                        % axes.getId())
+                        win = axes.getWindow()
+                        if win is not None:
+                            raise Exception("AXES[%d]: (%d..%d) "
+                                            % (axes.getId(), win[0], win[1])
+                                            + "not in log(x) domain.")
+                        else:
+                            raise Exception("AXES[%d] not in log(x) domain."
+                                            % axes.getId())
         else:
             for axes in self._lstAxes:
                 axes.setLogX(bool)
 
-    def setLogY(self, bool):
+    def setLogY(self, bool, rescale=False):
         if bool:
             for axes in self._lstAxes:
                 if axes.isYLogDomain():
                     axes.setLogY(bool)
                 else:
-                    win = axes.getWindow()
-                    if win is not None:
-                        raise Exception("AXES[%d]: (%d..%d) "
-                                        % (axes.getId(), win[2], win[3])
-                                        + "not in log(y) domain.")
+                    if rescale:
+                        lstPlotCurves = axes.getCurves()
+                        if lstPlotCurves:
+                            visibleCurves = filter(lambda curve: curve.visible,
+                                                   lstPlotCurves)
+                            if not visibleCurves:
+                                visibleCurves = lstPlotCurves
+                            window = axes.getWindow()
+                            ymax = window[3]
+                            ymin = min(map(lambda curve: min(curve.y),
+                                           visibleCurves))
+                            if ymin <= 0:
+                                # 3 constant
+                                ymin = 1 / 10 ** max(0, 3 - math.log10(ymax))
+
+                            window[2] = ymin
+                            axes.setWindow(*window)
+                            axes.setLogY(bool)
                     else:
-                        raise Exception("AXES[%d] not in log(y) domain."
-                                        % axes.getId())
+                        win = axes.getWindow()
+                        if win is not None:
+                            raise Exception("AXES[%d]: (%d..%d) "
+                                            % (axes.getId(), win[2], win[3])
+                                            + "not in log(y) domain.")
+                        else:
+                            raise Exception("AXES[%d] not in log(y) domain."
+                                            % axes.getId())
         else:
             for axes in self._lstAxes:
                 axes.setLogY(bool)
