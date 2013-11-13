@@ -9,11 +9,12 @@ import math
 import time
 # local library
 import gr
-from gr.pygr.base import GRMeta
+from gr.pygr.base import GRDrawAttributes, GRMeta
+from gr.pygr.helper import ColorIndexGenerator, DomainChecker
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
-__date__ = "2013-11-07"
+__date__ = "2013-11-13"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -252,57 +253,20 @@ class CoordConverter(object):
             tWC = gr.ndctowc(ndcPoint.x, ndcPoint.y) # wc tuple
         return Point(tWC[0], tWC[1])
 
-class Helper(object):
-
-    _ZERO = 1e-8
-    _EPSILON = 1e-8
-
-    @staticmethod
-    def isInLogDomain(*args):
-        res = True
-        for value in args:
-            if value <= Helper._ZERO:
-                res = False
-                break
-        return res
-
-    @staticmethod
-    def isInWindowDomain(xmin, xmax, ymin, ymax):
-        res = True
-        if (math.isnan(xmin) or math.isinf(xmin) or math.isnan(xmax)
-            or math.isinf(xmax) or math.isnan(ymin) or math.isinf(ymin) or
-            math.isnan(ymax) or math.isinf(ymax) or
-            xmin > max or ymin > ymax or abs(xmax - xmin) < Helper._EPSILON or
-            abs(ymax - ymin) < Helper._EPSILON):
-            res = False
-        return res
-
-class ColorIndexGenerator(object):
-
-    _distinct_colors = range(980, 1000)
-    _n = len(_distinct_colors)
-    _curIdx = 0
-
-    @staticmethod
-    def nextColorIndex():
-        idx = ColorIndexGenerator._distinct_colors[ColorIndexGenerator._curIdx]
-        ColorIndexGenerator._curIdx = ((ColorIndexGenerator._curIdx + 1)
-                                       % ColorIndexGenerator._n)
-        return idx
-
-class ErrorBar(GRMeta):
+class ErrorBar(GRDrawAttributes, GRMeta):
 
     HORIZONTAL = 0
     VERTICAL = 1
 
-    def __init__(self, x, y, dneg, dpos, direction=VERTICAL):
-        self._grerror = None
+    def __init__(self, x, y, dneg, dpos, direction=VERTICAL,
+                 linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_OMARK,
+                 linecolor=1, markercolor=1):
+        super(ErrorBar, self).__init__(linetype, markertype, linecolor,
+                                       markercolor)
+        self._x, self._y, self._dneg, self._dpos = x, y, dneg, dpos
         self._direction = direction
-        self._x = x
-        self._y = y
+        self._grerror = None
         self._n = len(self._x)
-        self._dneg = dneg
-        self._dpos = dpos
         if direction == ErrorBar.VERTICAL:
             self._grerror = gr.verrorbars
         elif direction == ErrorBar.HORIZONTAL:
@@ -311,7 +275,28 @@ class ErrorBar(GRMeta):
             raise AttributeError("unsupported value for direction.")
 
     def drawGR(self):
+        # preserve old values
+        ltype = gr.inqlinetype()
+        mtype = gr.inqmarkertype()
+        lcolor = gr.inqlinecolorind()
+        mcolor = gr.inqmarkercolorind()
+
+        if self.linetype is not None:
+            gr.setlinecolorind(self.linecolor)
+            gr.setmarkercolorind(self.markercolor)
+            gr.setlinetype(self.linetype)
+        if self.markertype is not None:
+            gr.setmarkertype(self.markertype)
+        else:
+            gr.setmarkertype(gr.MARKERTYPE_DOT)
+
         self._grerror(self._n, self._x, self._y, self._dneg, self._dpos)
+
+        # restore old values
+        gr.setlinecolorind(lcolor)
+        gr.setmarkercolorind(mcolor)
+        gr.setlinetype(ltype)
+        gr.setmarkertype(mtype)
 
 class Plot(GRMeta):
 
@@ -518,7 +503,7 @@ class Plot(GRMeta):
             win[1] += dx_2
             win[2] -= dy_2
             win[3] += dy_2
-            if Helper.isInWindowDomain(*window):
+            if DomainChecker.isInWindowDomain(*window):
                 axes.setWindow(*win)
             else:
                 axes.setWindow(*window)
@@ -620,21 +605,21 @@ class Plot(GRMeta):
                 for axes in self._lstAxes:
                     for curve in axes.getCurves():
                         if curve.legend:
-                            gr.setlinetype(curve.getLineType())
-                            gr.setmarkertype(curve.getMarkerType())
-                            gr.setlinecolorind(curve.getLineColor())
-                            gr.setmarkercolorind(curve.getMarkerColor())
-                            if curve.getLineType() is not None:
-                                gr.setlinecolorind(curve.getLineColor())
-                                gr.setmarkercolorind(curve.getMarkerColor())
-                                gr.setlinetype(curve.getLineType())
+                            gr.setlinetype(curve.linetype)
+                            gr.setmarkertype(curve.markertype)
+                            gr.setlinecolorind(curve.linecolor)
+                            gr.setmarkercolorind(curve.markercolor)
+                            if curve.linetype is not None:
+                                gr.setlinecolorind(curve.linecolor)
+                                gr.setmarkercolorind(curve.markercolor)
+                                gr.setlinetype(curve.linetype)
                                 gr.polyline(2, [x, x + .1], [y, y])
-                                if (curve.getMarkerType() != gr.MARKERTYPE_DOT
-                                    and curve.getMarkerType() is not None):
-                                    gr.setmarkertype(curve.getMarkerType())
+                                if (curve.markertype != gr.MARKERTYPE_DOT
+                                    and curve.markertype is not None):
+                                    gr.setmarkertype(curve.markertype)
                                     gr.polymarker(1, [x + .1 / 2.], [y])
-                            elif curve.getMarkerType() is not None:
-                                gr.setmarkertype(curve.getMarkerType)
+                            elif curve.markertype is not None:
+                                gr.setmarkertype(curve.markertype)
                                 gr.polymarker(1, [x + .1 / 2.], [y])
                             tbx, tby = gr.inqtextext(0, 0, curve.legend)
                             ybase = y - (max(tby) - min(tby)) / 2
@@ -642,7 +627,7 @@ class Plot(GRMeta):
                             roi = RegionOfInterest(Point(x, ybase),
                                                    Point(x, ytop),
                                                    reference=curve,
-                                                   regionType=RegionOfInterest.LEGEND)
+                                           regionType=RegionOfInterest.LEGEND)
                             x += .11
                             if curve.visible:
                                 gr.settextcolorind(1)
@@ -668,51 +653,25 @@ class Plot(GRMeta):
                 # restore scale
                 gr.setscale(scale)
 
-class PlotCurve(GRMeta):
+class PlotCurve(GRDrawAttributes, GRMeta):
 
     COUNT = 0
 
     def __init__(self, x, y, errBar1=None, errBar2=None,
                  linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_DOT,
                  linecolor=None, markercolor=1, legend=None):
+        super(PlotCurve, self).__init__(linetype, markertype, linecolor,
+                                       markercolor)
         self._x, self._y = x, y
         self._e1, self._e2 = errBar1, errBar2
         self._linetype, self._markertype = linetype, markertype
         self._markercolor = markercolor
         self._legend = legend
-        if linecolor is None:
-            self._linecolor = ColorIndexGenerator.nextColorIndex()
-        else:
-            self._linecolor = linecolor
         PlotCurve.COUNT += 1
         self._id = PlotCurve.COUNT
         if legend is None:
             self._legend = "curve %d" % self._id
         self._visible = True
-
-    def setLineType(self, linetype):
-        self._linetype = linetype
-
-    def getLineType(self):
-        return self._linetype
-
-    def setMarkerType(self, markertype):
-        self._markertype = markertype
-
-    def getMarkerType(self):
-        return self._markertype
-
-    def setLineColor(self, color):
-        self._linecolor = color
-
-    def getLineColor(self):
-        return self._linecolor
-
-    def setMarkerColor(self, color):
-        self._markercolor = color
-
-    def getMarkerColor(self):
-        return self._markercolor
 
     @property
     def errorBar1(self):
@@ -728,8 +687,8 @@ class PlotCurve(GRMeta):
         """Get current ErrorBar #2 instance."""
         return self._e2
 
-    @errorBar1.setter
-    def errorBar1(self, value):
+    @errorBar2.setter
+    def errorBar2(self, value):
         self._e2 = value
 
     @property
@@ -775,23 +734,23 @@ class PlotCurve(GRMeta):
             lcolor = gr.inqlinecolorind()
             mcolor = gr.inqmarkercolorind()
 
-            if self.getLineType() is not None:
+            if self.linetype is not None:
                 n = len(self.y)
-                gr.setlinecolorind(self.getLineColor())
-                gr.setmarkercolorind(self.getMarkerColor())
-                gr.setlinetype(self._linetype)
+                gr.setlinecolorind(self.linecolor)
+                gr.setmarkercolorind(self.markercolor)
+                gr.setlinetype(self.linetype)
                 gr.polyline(n, self.x, self.y)
-                if (self.getMarkerType() != gr.MARKERTYPE_DOT and
-                    self.getMarkerType() is not None):
-                    gr.setmarkertype(self._markertype)
+                if (self.markertype != gr.MARKERTYPE_DOT and
+                    self.markertype is not None):
+                    gr.setmarkertype(self.markertype)
                     gr.polymarker(n, self.x, self.y)
-            elif self.getMarkerType() is not None:
-                gr.setmarkertype(self._markertype)
+            elif self.markertype is not None:
+                gr.setmarkertype(self.markertype)
                 gr.polymarker(n, self.x, self.y)
-            if self._e1:
-                self._e1.drawGR()
-            if self._e2:
-                self._e2.drawGR()
+            if self.errorBar1:
+                self.errorBar1.drawGR()
+            if self.errorBar2:
+                self.errorBar2.drawGR()
             # restore old values
             gr.setlinecolorind(lcolor)
             gr.setmarkercolorind(mcolor)
@@ -826,14 +785,14 @@ class PlotAxes(GRMeta):
     def isXLogDomain(self):
         window = self.getWindow()
         if window:
-            return Helper.isInLogDomain(window[0], window[1])
+            return DomainChecker.isInLogDomain(window[0], window[1])
         else:
             return False
 
     def isYLogDomain(self):
         window = self.getWindow()
         if window:
-            return Helper.isInLogDomain(window[2], window[3])
+            return DomainChecker.isInLogDomain(window[2], window[3])
         else:
             return False
 
