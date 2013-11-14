@@ -266,7 +266,6 @@ class ErrorBar(GRDrawAttributes, GRMeta):
         self._x, self._y, self._dneg, self._dpos = x, y, dneg, dpos
         self._direction = direction
         self._grerror = None
-        self._n = len(self._x)
         if direction == ErrorBar.VERTICAL:
             self._grerror = gr.verrorbars
         elif direction == ErrorBar.HORIZONTAL:
@@ -290,7 +289,7 @@ class ErrorBar(GRDrawAttributes, GRMeta):
         else:
             gr.setmarkertype(gr.MARKERTYPE_DOT)
 
-        self._grerror(self._n, self._x, self._y, self._dneg, self._dpos)
+        self._grerror(len(self._x), self._x, self._y, self._dneg, self._dpos)
 
         # restore old values
         gr.setlinecolorind(lcolor)
@@ -772,8 +771,8 @@ class PlotCurve(GRDrawAttributes, GRMeta):
             lcolor = gr.inqlinecolorind()
             mcolor = gr.inqmarkercolorind()
 
+            n = len(self.y)
             if self.linetype is not None:
-                n = len(self.y)
                 gr.setlinecolorind(self.linecolor)
                 gr.setmarkercolorind(self.markercolor)
                 gr.setlinetype(self.linetype)
