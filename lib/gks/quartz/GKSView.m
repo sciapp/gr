@@ -9,6 +9,7 @@
 #define HATCH_STYLE 108
 
 #define MWIDTH 0.381
+#define TITLE_BAR_HEIGHT 22
 
 #define RESOLVE(arg, type, nbytes) arg = (type *)(s + sp); sp += nbytes
 
@@ -23,6 +24,8 @@
 #ifndef max
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 #endif
+
+#define nint(a) (int)((a) + 0.5)
 
 #define WC_to_NDC(xw, yw, tnr, xn, yn)          \
   xn = a[tnr] * (xw) + b[tnr];                  \
@@ -43,8 +46,6 @@
 #define CharXform(xrel, yrel, x, y)                             \
   x = cos(p->angle) * (xrel) - (sin(p->angle)) * (yrel);        \
   y = sin(p->angle) * (xrel) + (cos(p->angle)) * (yrel)
-
-#define nint(a) ((int)(a + 0.5))
 
 static
 gks_state_list_t gkss_, *gkss;
@@ -155,6 +156,9 @@ ws_state_list p_, *p;
 
 static
 int fontfile = 0;
+
+static
+int resizing = 0;
 
 static
 CGLayerRef patternLayer;
@@ -539,7 +543,12 @@ void seg_xform_rel(float *x, float *y)
           p->viewport[2] = f_arr_2[0];
           p->viewport[3] = f_arr_2[1];
 
-          [self resize_window];
+          if (!resizing)
+            {
+              resizing = 1;
+              [self resize_window];
+              resizing = 0;
+            }
           set_xform();
           init_norm_xform();
           break;
@@ -591,6 +600,7 @@ void seg_xform_rel(float *x, float *y)
       size = 0;
       angle = 0;
       fontfile = gks_open_font();
+      resizing = 0;
     }
   return self;
 }
@@ -967,28 +977,26 @@ void seg_xform_rel(float *x, float *y)
 - (void) resize_window
 {
   float max_width, max_height, width, height;
-  NSRect rect;
+  NSRect rect = [[self window] frame];
 
   max_width = MWIDTH;
   max_height = max_width * p->sheight / p->swidth;
 
   gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.075);
-  width  = (p->viewport[1] - p->viewport[0]) / max_width  * p->swidth;
-  height = (p->viewport[3] - p->viewport[2]) / max_height * p->sheight;
+  width  = nint((p->viewport[1] - p->viewport[0]) / max_width  * p->swidth);
+  height = nint((p->viewport[3] - p->viewport[2]) / max_height * p->sheight);
 
   if (p->width != width || p->height != height)
     {
-      rect.origin.x = [[self window] frame].origin.x;
-      rect.origin.y = [[self window] frame].origin.y + (p->height - height);
-
+      rect.origin.y   += rect.size.height - (height + TITLE_BAR_HEIGHT);
       rect.size.width  = width;
-      rect.size.height = height;
+      rect.size.height = height + TITLE_BAR_HEIGHT;
 
       p->width  = width;
       p->height = height;
 
       [self setNeedsDisplay: YES];
-      [[self window] setFrame: rect display : YES];
+      [[self window] setFrame: rect display: YES];
     }
 }
 
