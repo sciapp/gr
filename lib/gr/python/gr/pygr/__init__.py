@@ -14,7 +14,7 @@ from gr.pygr.helper import ColorIndexGenerator, DomainChecker
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
-__date__ = "2013-11-13"
+__date__ = "2013-11-18"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -305,16 +305,32 @@ class Plot(GRMeta):
         self._viewport = viewport
         self._viewMaxYForText = viewport[3] + .05
         self._lstAxes = []
-        self._title = None
-        self._subTitle = None
-        self._lblX = None
-        self._lblY = None
-        self._legend = False
-        self._legendROI = None
+        self._title, self._subTitle = None, None
+        self._lblX, self._lblY = None, None
+        self._offsetLblX, self._offsetLblY = 0., 0.
+        self._legend, self._legendROI = False, None
         self._countAxes = 0
 
     def getAxes(self):
         return self._lstAxes
+
+    @property
+    def offsetXLabel(self):
+        """get NDC Y offset for xlabel"""
+        return self._offsetLblX
+
+    @offsetXLabel.setter
+    def offsetXLabel(self, yoff):
+        self._offsetLblX = yoff
+
+    @property
+    def offsetYLabel(self):
+        """get NDC X offset for ylabel"""
+        return self._offsetLblY
+
+    @offsetYLabel.setter
+    def offsetYLabel(self, xoff):
+        self._offsetLblY = xoff
 
     @property
     def xlabel(self):
@@ -612,18 +628,20 @@ class Plot(GRMeta):
             tby = gr.inqtextext(0, 0, self.xlabel)[1]
             tby = map(lambda y: gr.wctondc(0, y)[1], tby)
             dyXLabel = max(tby) - min(tby)
-            gr.text(xmin + (xmax - xmin) / 2., ymin - dyXLabel / 2. - .05, self.xlabel)
+            gr.text(xmin + (xmax - xmin) / 2.,
+                    self.offsetXLabel + ymin - dyXLabel / 2. - .05, self.xlabel)
         if self.ylabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(-1., 0.)
             tbx = gr.inqtextext(0, 0, self.ylabel)[0]
             tbx = map(lambda y: gr.wctondc(0, y)[0], tbx)
             dxYLabel = max(tbx) - min(tbx)
-            gr.text(xmin - dxYLabel / 2. - .075, ymin + (ymax - ymin) / 2., self.ylabel)
+            gr.text(self.offsetYLabel + xmin - dxYLabel / 2. - .075,
+                    ymin + (ymax - ymin) / 2., self.ylabel)
             gr.setcharup(0., 1.)
         # draw legend and calculate ROIs for legend items 
         if self._legend:
-            x, y = .1, ymin - dyXLabel - .075
+            x, y = .1, self.offsetXLabel + ymin - dyXLabel - .075
             if y < 0:
                 self.viewport[2] += dyXLabel
                 gr.clearws()
@@ -642,9 +660,7 @@ class Plot(GRMeta):
                 for axes in self._lstAxes:
                     for curve in axes.getCurves():
                         if curve.legend:
-                            gr.setlinetype(curve.linetype)
                             gr.setmarkertype(curve.markertype)
-                            gr.setlinecolorind(curve.linecolor)
                             gr.setmarkercolorind(curve.markercolor)
                             if curve.linetype is not None:
                                 gr.setlinecolorind(curve.linecolor)
@@ -811,10 +827,7 @@ class PlotAxes(GRMeta):
         self._resetWindow = True
         PlotAxes.COUNT += 1
         self._id = PlotAxes.COUNT
-        self._xtickValue = []
-        self._ytickValue = []
-        self._xtickLabel = []
-        self._ytickLabel = []
+        self._xtick_callback, self._ytick_callback = None, None
 
     def getCurves(self):
         return self._lstPlotCurve
@@ -935,37 +948,13 @@ class PlotAxes(GRMeta):
         else:
             return None
 
-    def _storeTickValue(self, i, svalue, lstTick):
-        if i == 0:
-            lstTick = [svalue]
-        elif i == -1 and svalue is None: # if last tick received
-            pass
-        else:
-            lstTick.append(svalue)
+    def setXtickCallback(self, fp):
+        self._xtick_callback = fp
 
-    def _xtick_callback(self, i, svalue):
-        self._storeTickValue(i, svalue, self._xtickValue)
-
-    def _ytick_callback(self, i, svalue):
-        self._storeTickValue(i, svalue, self._ytickValue)
-
-    def getXtickValues(self):
-        return list(self._xtickValue)
-
-    def getYtickValues(self):
-        return list(self._ytickValue)
-
-    def setXtickLabels(self, ticks):
-        self._xtickLabel = ticks
-
-    def setYtickLables(self, ticks):
-        self._ytickLabel = ticks
+    def setYtickCallback(self, fp):
+        self._ytick_callback = fp
 
     def reset(self):
-        self._xtickLabel = []
-        self._ytickLabel = []
-        self._m = 0
-        self._n = 0
         self._resetWindow = True
 
     def isReset(self):
@@ -1044,9 +1033,7 @@ class PlotAxes(GRMeta):
                     if not self.isYDrawingEnabled():
                         majory = -majory
                     gr.axeslbl(xtick, ytick, xmin, ymin, majorx, majory,
-                               0.01, self._xtickLabel, len(self._xtickLabel),
-                               self._ytickLabel, len(self._ytickLabel),
-                               self._xtick_callback, self._ytick_callback)
+                               0.01, self._xtick_callback, self._ytick_callback)
                 elif self.getId() == 2:
                     # second x, y axis
                     if not self.isXDrawingEnabled():
@@ -1054,9 +1041,8 @@ class PlotAxes(GRMeta):
                     if not self.isYDrawingEnabled():
                         majory = -majory
                     gr.axeslbl(xtick, ytick, xmax, ymax, majorx, majory,
-                               - 0.01, self._xtickLabel, len(self._xtickLabel),
-                               self._ytickLabel, len(self._ytickLabel),
-                               self._xtick_callback, self._ytick_callback)
+                               - 0.01, self._xtick_callback,
+                               self._ytick_callback)
                 for curve in lstPlotCurve:
                     curve.drawGR()
 

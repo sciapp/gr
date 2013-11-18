@@ -321,9 +321,10 @@ def inqtextext(x, y, string):
   return [[tbx[0], tbx[1], tbx[2], tbx[3]],
           [tby[0], tby[1], tby[2], tby[3]]]
 
-_axeslbl_callback = CFUNCTYPE(c_void_p, c_int, c_char_p)
+_axeslbl_callback = CFUNCTYPE(c_void_p, c_float, c_float, c_char_p)
 def axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
-            labels_x, m, labels_y, n, fpx=0, fpy=0):
+            fpx=0, fpy=0):
+    #labels_x, m, labels_y, n, 
   if fpx is None:
     fpx = 0
   if fpy is None:
@@ -334,8 +335,6 @@ def axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
   __gr.gr_axeslbl(c_float(x_tick), c_float(y_tick),
                   c_float(x_org), c_float(y_org),
                   c_int(major_x), c_int(major_y), c_float(tick_size),
-                  chararray(m, labels_x), c_int(m),
-                  chararray(n, labels_y), c_int(n),
                   cfpx, cfpy)
 
 def axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size):
@@ -591,9 +590,7 @@ __gr.gr_inqscale.argtypes = [POINTER(c_int)];
 __gr.gr_textext.argtypes = [c_float, c_float, c_char_p];
 __gr.gr_inqtextext.argtypes = [c_float, c_float, c_char_p, POINTER(c_float), POINTER(c_float)];
 __gr.gr_axeslbl.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int,
-                            c_float, POINTER(c_char_p), c_int,
-                            POINTER(c_char_p), c_int,
-                            _axeslbl_callback, _axeslbl_callback]
+                            c_float, _axeslbl_callback, _axeslbl_callback]
 __gr.gr_axes.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int, c_float];
 __gr.gr_grid.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int];
 __gr.gr_verrorbars.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];

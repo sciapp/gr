@@ -17,12 +17,12 @@ import gr
 import qtgr.events
 from gr.pygr import Plot, PlotAxes, RegionOfInterest
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent, \
-    LegendEvent, TickEvent
+    LegendEvent
 
 QtCore.Signal = QtCore.pyqtSignal
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-08"
+__date__ = "2013-11-18"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -53,7 +53,7 @@ class GRWidget(QtGui.QWidget):
 
     def __init__(self, *args, **kwargs):
         super(GRWidget, self).__init__(*args, **kwargs)
-        self._clear, self._update, self._checkTicks = False, False, False
+        self._clear, self._update = False, False
         os.environ["GKS_WSTYPE"] = "381" # GKS Qt Plugin
         os.environ["GKS_DOUBLE_BUF"] = "True"
         self.setPalette(QtGui.QPalette(QtGui.QColor.fromRgb(0xffffff)))
@@ -64,14 +64,14 @@ class GRWidget(QtGui.QWidget):
         self._painter.begin(self)
         os.environ["GKSconid"] = "%x!%x" % (sip.unwrapinstance(self),
                                            sip.unwrapinstance(self._painter))
-        self.draw(self._clear, self._update, self._checkTicks)
+        self.draw(self._clear, self._update)
         gr.updatews()
         self._painter.end()
 
-    def _draw(self, clear=False, update=True, checkTicks=True):
-        self._clear, self._update, self._checkTicks = clear, update, checkTicks
+    def _draw(self, clear=False, update=True):
+        self._clear, self._update = clear, update
 
-    def draw(self, clear=False, update=True, checkTicks=True):
+    def draw(self, clear=False, update=True):
         # put gr commands in here
         pass
 
@@ -143,17 +143,11 @@ class InteractiveGRWidget(GRWidget):
         self._pickMode = False
         self._pickEvent = None
         self._lstPlot = []
-        self._dictAxesTicks = {}
 
-    def update(self, checkTicks=True):
-##        self._draw(clear=True, update=True, checkTicks=checkTicks)
-        self._checkTicks = checkTicks
+    def update(self):
         super(InteractiveGRWidget, self).update()
 
-    def updateTicks(self):
-        self.update(checkTicks=False)
-
-    def draw(self, clear=False, update=True, checkTicks=True):
+    def draw(self, clear=False, update=True):
         if clear:
             gr.clearws()
 
@@ -168,10 +162,6 @@ class InteractiveGRWidget(GRWidget):
             if logYinDomain != self._logYinDomain:
                 self._logYinDomain = logYinDomain
                 self.logYinDomain.emit(self._logYinDomain)
-            # axes tick changed check
-            if checkTicks:
-                for axes in plot.getAxes():
-                    self._axesTickValues(axes)
 
         if self._pickEvent:
             event = self._pickEvent
@@ -216,26 +206,6 @@ class InteractiveGRWidget(GRWidget):
     def setPickMode(self, bool):
         self._pickMode = bool
         self.modePick.emit(self._pickMode)
-
-    def _axesTickValues(self, axes):
-        oldX = None
-        oldY = None
-        xtickValue = axes.getXtickValues()
-        ytickValue = axes.getYtickValues()
-        if axes in self._dictAxesTicks:
-            oldX = self._dictAxesTicks[axes]['x']
-            oldY = self._dictAxesTicks[axes]['y']
-        if xtickValue and xtickValue != oldX:
-            QtGui.QApplication.sendEvent(self,
-                                         TickEvent(TickEvent.TICKS_CHANGED,
-                                                   TickEvent.AXIS_X,
-                                                   xtickValue, axes))
-        if ytickValue and ytickValue != oldY:
-            QtGui.QApplication.sendEvent(self,
-                                         TickEvent(TickEvent.TICKS_CHANGED,
-                                                   TickEvent.AXIS_Y,
-                                                   ytickValue, axes))
-        self._dictAxesTicks[axes] = { 'x': xtickValue, 'y': ytickValue }
 
     def _pick(self, p0, type):
         for plot in self._lstPlot:

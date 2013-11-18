@@ -5,6 +5,7 @@
 # standard library
 import os
 import time
+import logging
 # third party
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -13,11 +14,10 @@ from PyQt4 import uic
 import gr # TESTING shell
 import qtgr
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, LegendEvent
-from qtgr.events import TickEvent
 from gr.pygr import Plot, PlotAxes, PlotCurve, ErrorBar
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-08"
+__date__ = "2013-11-18"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -44,15 +44,7 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
 
-class TimeAxisFmt(object):
-
-    @staticmethod
-    def tickLabel(ticks):
-        lst = []
-        for value in ticks:
-            lst.append("%s" % time.strftime("%H:%M:%S",
-                                           time.localtime(float(value))))
-        return lst
+_log = logging.getLogger(__name__)
 
 class MainWindow(QtGui.QMainWindow):
 
@@ -86,7 +78,6 @@ class MainWindow(QtGui.QMainWindow):
         guiConn.connect(PickEvent.PICK_PRESS, self.pointPickGr)
         guiConn.connect(LegendEvent.ROI_CLICKED, self.legendClick)
         guiConn.connect(LegendEvent.ROI_OVER, self.legendOver)
-        guiConn.connect(TickEvent.TICKS_CHANGED, self.ticksChanged)
 
         x = [-3.3 + t * .1 for t in range(66)]
         y = [t ** 5 - 13 * t ** 3 + 36 * t for t in x]
@@ -98,8 +89,11 @@ class MainWindow(QtGui.QMainWindow):
         self._errBar = ErrorBar(x, y, dneg, dpos)
 
         self._curveFoo = PlotCurve(x, y, legend="foo bar")
-        self._plot = Plot().addAxes(PlotAxes().addCurves(self._curveFoo),
+        axes = PlotAxes().addCurves(self._curveFoo)
+        axes.setXtickCallback(self._xtickCallBack)
+        self._plot = Plot((.1, .92, .15, .95)).addAxes(axes,
                                     PlotAxes(drawX=False).plot(x2, y2))
+        self._plot.offsetXLabel = -.05
         self._plot2 = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x2, y2,
                                                            legend="second")))
 
@@ -109,7 +103,7 @@ class MainWindow(QtGui.QMainWindow):
         self._plot.ylabel = "f(x)"
         self._plot.setLegend(True)
         self._gr.addPlot(self._plot)
-#        self._gr2.addPlot(Plot().addAxes(PlotAxes().addCurves(PlotCurve(x2, y2, legend="second"))))
+
         self._plot2.title = "Second Widget"
         self._plot2.subTitle = "Linear Example (less interactive)"
         self._plot2.xlabel = "x2"
@@ -173,10 +167,12 @@ class MainWindow(QtGui.QMainWindow):
     def legendOver(self, event):
         self._lblOverLegend.setText(event.curve.legend)
 
-    def ticksChanged(self, event):
-        if event.origin == TickEvent.AXIS_X:
-            event.axes.setXtickLabels(TimeAxisFmt.tickLabel(event.labels))
-        self._gr.updateTicks()
+    def _xtickCallBack(self, x, y, svalue):
+        gr.setcharup(1., 1.)
+        gr.settextalign(gr.TEXT_HALIGN_LEFT, gr.TEXT_VALIGN_TOP)
+        gr.text(x, y, "%s"
+                % time.strftime("%H:%M:%S", time.localtime(float(svalue))))
+        gr.setcharup(0., 1.)
 
     def _errorsClicked(self, state):
         if self._chkErr.isChecked():
@@ -226,6 +222,8 @@ class MainWindow(QtGui.QMainWindow):
 
 if __name__ == '__main__':
     import sys
+    logging.basicConfig(level=logging.CRITICAL)
+    _log.setLevel(logging.DEBUG)
     app = QtGui.QApplication(sys.argv)
     mainWin = MainWindow()
     mainWin.show()
