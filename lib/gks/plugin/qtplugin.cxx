@@ -24,22 +24,22 @@
 extern "C"
 {
 #endif
- 
+
 #else
- 
+
 #ifdef __cplusplus
 #define DLLEXPORT extern "C"
 #else
 #define DLLEXPORT
 #endif
-  
+
 #endif
-  
+
 DLLEXPORT void gks_qtplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
   int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
-  
+
 #ifdef _WIN32
 #ifdef __cplusplus
 }
@@ -52,11 +52,6 @@ DLLEXPORT void gks_qtplugin(
 #define MAX_SELECTIONS 100
 #define PATTERNS 120
 #define HATCH_STYLE 108
-
-#define MWIDTH  0.254
-#define MHEIGHT 0.1905
-#define WIDTH   1024
-#define HEIGHT  768
 
 #define DrawBorder 0
 
@@ -231,6 +226,15 @@ void init_norm_xform(void)
 }
 
 static
+void resize_window(void)
+{
+  p->width  = nint((p->viewport[1] - p->viewport[0]) / 2.54 *
+                    p->widget->logicalDpiX() * 100);
+  p->height = nint((p->viewport[3] - p->viewport[2]) / 2.54 *
+                    p->widget->logicalDpiY() * 100);
+}
+
+static
 void set_xform(void)
 {
   p->a = (p->width - 1) / (p->window[1] - p->window[0]);
@@ -340,7 +344,7 @@ void line_to(float x, float y)
   NDC_to_DC(x, y, ix, iy);
   p->points->setPoint(p->npoints++, ix, iy);
 }
-  
+
 static
 void move(float x, float y)
 {
@@ -717,7 +721,7 @@ void set_font(int font)
   seg_xform_rel(&width, &height);
 
   height = sqrt(width * width + height * height);
-  capheight = nint(height * (fabs(p->c) + 1));
+  capheight = height * (fabs(p->c) + 1);
   p->capheight = nint(capheight);
 
   fontNum = font - 1;
@@ -832,7 +836,7 @@ static void fillarea(int n, float *px, float *py)
       if (fl_style >= PATTERNS)
         fl_style = 1;
       if (p->pattern[fl_style] == NULL)
-	p->pattern[fl_style] = create_pattern(fl_style);
+        p->pattern[fl_style] = create_pattern(fl_style);
       p->pixmap->setPen(Qt::NoPen);
       p->pixmap->setBrush(QBrush(p->rgb[fl_color], *p->pattern[fl_style]));
       fill_routine(n, px, py, gkss->cntnr);
@@ -989,16 +993,16 @@ void interp(char *str)
           RESOLVE(f_arr_1, float, sizeof(float));
           RESOLVE(f_arr_2, float, sizeof(float));
           break;
-        
+
         case  41:               /* set aspect source flags */
-          RESOLVE(i_arr, int, 13 * sizeof(int));        
-          break;  
-        
+          RESOLVE(i_arr, int, 13 * sizeof(int));
+          break;
+
         case  48:               /* set color representation */
           RESOLVE(i_arr, int, sizeof(int));
           RESOLVE(f_arr_1, float, 3 * sizeof(float));
           break;
-        
+
         case  49:               /* set window */
         case  50:               /* set viewport */
         case  54:               /* set workstation window */
@@ -1007,7 +1011,7 @@ void interp(char *str)
           RESOLVE(f_arr_1, float, 2 * sizeof(float));
           RESOLVE(f_arr_2, float, 2 * sizeof(float));
           break;
-        
+
         case 202:               /* set shadow */
           RESOLVE(f_arr_1, float, 3 * sizeof(float));
           break;
@@ -1031,8 +1035,8 @@ void interp(char *str)
           p->window[1] = p->window[3] = 1.0;
 
           p->viewport[0] = p->viewport[2] = 0.0;
-          p->viewport[1] = p->width  * MWIDTH / WIDTH;
-          p->viewport[3] = p->height * MWIDTH / HEIGHT;
+          p->viewport[1] = p->width  * 2.54 / p->widget->logicalDpiX() / 100;
+          p->viewport[3] = p->height * 2.54 / p->widget->logicalDpiY() / 100;
 
           set_xform();
           init_norm_xform();
@@ -1050,7 +1054,7 @@ void interp(char *str)
           break;
 
         case  14:
-	  unused_variable = *len_c_arr;
+          unused_variable = *len_c_arr;
           text(f_arr_1[0], f_arr_2[0], strlen(c_arr), c_arr);
           break;
 
@@ -1061,7 +1065,8 @@ void interp(char *str)
         case  16:
         case 201:
           true_color = *f == DRAW_IMAGE;
-          cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1], *dx, *dy, *dimx, i_arr, true_color);
+          cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1],
+                    *dx, *dy, *dimx, i_arr, true_color);
           break;
 
         case  19:
@@ -1134,7 +1139,7 @@ void interp(char *str)
         case  38:
           gkss->facoli = i_arr[0];
           break;
-        
+
         case  41:
           for (i = 0; i < 13; i++)
             gkss->asf[i] = i_arr[i];
@@ -1149,7 +1154,6 @@ void interp(char *str)
           gkss->window[*i_arr][1] = f_arr_1[1];
           gkss->window[*i_arr][2] = f_arr_2[0];
           gkss->window[*i_arr][3] = f_arr_2[1];
-          set_xform();
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           break;
@@ -1161,7 +1165,7 @@ void interp(char *str)
           gkss->viewport[*i_arr][3] = f_arr_2[1];
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          
+
           if (*i_arr == gkss->cntnr)
             set_clip_rect(*i_arr);
           break;
@@ -1181,21 +1185,22 @@ void interp(char *str)
           p->window[1] = f_arr_1[1];
           p->window[2] = f_arr_2[0];
           p->window[3] = f_arr_2[1];
-         
+
           set_xform();
           init_norm_xform();
           break;
-          
+
         case  55:
           p->viewport[0] = f_arr_1[0];
           p->viewport[1] = f_arr_1[1];
           p->viewport[2] = f_arr_2[0];
           p->viewport[3] = f_arr_2[1];
-          
+
+          resize_window();
           set_xform();
           init_norm_xform();
           break;
-          
+
         case 200:
           gkss->txslant = f_arr_1[0];
           break;
@@ -1250,15 +1255,15 @@ void gks_qtplugin(
       p->max_points = MAX_POINTS;
 
       for (i = 0; i < PATTERNS; i++)
-	p->pattern[i] = NULL;
+        p->pattern[i] = NULL;
 
       *ptr = p;
       break;
 
     case 3:
       for (i = 0; i < PATTERNS; i++)
-	if (p->pattern[i] != NULL)
-	  free(p->pattern[i]);
+        if (p->pattern[i] != NULL)
+          free(p->pattern[i]);
 
       delete p->points;
       delete p->font;
@@ -1275,9 +1280,9 @@ void gks_qtplugin(
     case 8:
       if (i_arr[1] == GKS_K_PERFORM_FLAG)
         {
-	  get_pixmap();
-	  interp(p->dl.buffer);
-	}
+          get_pixmap();
+          interp(p->dl.buffer);
+        }
       break;
 
     default:

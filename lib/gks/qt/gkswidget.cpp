@@ -23,11 +23,6 @@
 #define PATTERNS 120
 #define HATCH_STYLE 108
 
-#define MWIDTH  0.254
-#define MHEIGHT 0.1905
-#define WIDTH   1024
-#define HEIGHT  768
-
 #define DrawBorder 0
 
 #define RESOLVE(arg, type, nbytes) arg = (type *)(s + sp); sp += nbytes
@@ -312,17 +307,19 @@ void create_window(ws_state_list *p)
 }
 
 static
-void resize_window(int width, int height)
+void resize_window(void)
 {
-  if (width == 0 || height == 0)
-    {
-      gks_fit_ws_viewport(p->viewport, MWIDTH, MHEIGHT, 0.075);
-      width = nint((p->viewport[1] - p->viewport[0]) / MWIDTH * WIDTH);
-      height = nint((p->viewport[3] - p->viewport[2]) / MHEIGHT * HEIGHT);
-    }
+  int width, height;
+
+  width  = nint((p->viewport[1] - p->viewport[0]) / 2.54 *
+                 activeWidget->logicalDpiX() * 100);
+  height = nint((p->viewport[3] - p->viewport[2]) / 2.54 *
+                 activeWidget->logicalDpiY() * 100);
 
   if (p->width != width || p->height != height)
     {
+      activeWidget->setFixedSize(width, height);
+
       p->width = width;
       p->height = height;
 
@@ -362,7 +359,7 @@ void line_to(float x, float y)
   NDC_to_DC(x, y, ix, iy);
   p->points->setPoint(p->npoints++, ix, iy);
 }
-  
+
 static
 void move(float x, float y)
 {
@@ -739,7 +736,7 @@ void set_font(int font)
   seg_xform_rel(&width, &height);
 
   height = sqrt(width * width + height * height);
-  capheight = nint(height * (fabs(p->c) + 1));
+  capheight = height * (fabs(p->c) + 1);
   p->capheight = nint(capheight);
 
   fontNum = font - 1;
@@ -854,7 +851,7 @@ static void fillarea(int n, float *px, float *py)
       if (fl_style >= PATTERNS)
         fl_style = 1;
       if (p->pattern[fl_style] == NULL)
-	p->pattern[fl_style] = create_pattern(fl_style);
+        p->pattern[fl_style] = create_pattern(fl_style);
       p->pixmap->setPen(Qt::NoPen);
       p->pixmap->setBrush(QBrush(p->rgb[fl_color], *p->pattern[fl_style]));
       fill_routine(n, px, py, gkss->cntnr);
@@ -1011,16 +1008,16 @@ void interp(char *str)
           RESOLVE(f_arr_1, float, sizeof(float));
           RESOLVE(f_arr_2, float, sizeof(float));
           break;
-        
+
         case  41:               /* set aspect source flags */
-          RESOLVE(i_arr, int, 13 * sizeof(int));        
-          break;  
-        
+          RESOLVE(i_arr, int, 13 * sizeof(int));
+          break;
+
         case  48:               /* set color representation */
           RESOLVE(i_arr, int, sizeof(int));
           RESOLVE(f_arr_1, float, 3 * sizeof(float));
           break;
-        
+
         case  49:               /* set window */
         case  50:               /* set viewport */
         case  54:               /* set workstation window */
@@ -1029,7 +1026,7 @@ void interp(char *str)
           RESOLVE(f_arr_1, float, 2 * sizeof(float));
           RESOLVE(f_arr_2, float, 2 * sizeof(float));
           break;
-        
+
         case 202:               /* set shadow */
           RESOLVE(f_arr_1, float, 3 * sizeof(float));
           break;
@@ -1047,7 +1044,7 @@ void interp(char *str)
         {
         case   2:
           gkss = &gkss_;
-	  p = &p_;
+          p = &p_;
 
           memcpy(&saved_gkss, gkss, sizeof(gks_state_list_t));
           memcpy(gkss, sl, sizeof(gks_state_list_t));
@@ -1056,8 +1053,8 @@ void interp(char *str)
           p->window[1] = p->window[3] = 1.0;
 
           p->viewport[0] = p->viewport[2] = 0.0;
-          p->viewport[1] = p->width  * MWIDTH / WIDTH;
-          p->viewport[3] = p->height * MWIDTH / HEIGHT;
+          p->viewport[1] = p->width  * 2.54 / activeWidget->logicalDpiX() / 100;
+          p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() / 100;
 
           set_xform();
           init_norm_xform();
@@ -1080,7 +1077,7 @@ void interp(char *str)
           break;
 
         case  14:
-	  unused_variable = *len_c_arr;
+          unused_variable = *len_c_arr;
           text(f_arr_1[0], f_arr_2[0], strlen(c_arr), c_arr);
           break;
 
@@ -1091,7 +1088,8 @@ void interp(char *str)
         case  16:
         case 201:
           true_color = *f == DRAW_IMAGE;
-          cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1], *dx, *dy, *dimx, i_arr, true_color);
+          cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1],
+                    *dx, *dy, *dimx, i_arr, true_color);
           break;
 
         case  19:
@@ -1164,7 +1162,7 @@ void interp(char *str)
         case  38:
           gkss->facoli = i_arr[0];
           break;
-        
+
         case  41:
           for (i = 0; i < 13; i++)
             gkss->asf[i] = i_arr[i];
@@ -1179,7 +1177,6 @@ void interp(char *str)
           gkss->window[*i_arr][1] = f_arr_1[1];
           gkss->window[*i_arr][2] = f_arr_2[0];
           gkss->window[*i_arr][3] = f_arr_2[1];
-          set_xform();
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           break;
@@ -1191,7 +1188,7 @@ void interp(char *str)
           gkss->viewport[*i_arr][3] = f_arr_2[1];
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          
+
           if (*i_arr == gkss->cntnr)
             set_clip_rect(*i_arr);
           break;
@@ -1211,22 +1208,22 @@ void interp(char *str)
           p->window[1] = f_arr_1[1];
           p->window[2] = f_arr_2[0];
           p->window[3] = f_arr_2[1];
-         
+
           set_xform();
           init_norm_xform();
           break;
-          
+
         case  55:
           p->viewport[0] = f_arr_1[0];
           p->viewport[1] = f_arr_1[1];
           p->viewport[2] = f_arr_2[0];
           p->viewport[3] = f_arr_2[1];
-          
-          resize_window(0, 0);
+
+          resize_window();
           set_xform();
           init_norm_xform();
           break;
-          
+
         case 200:
           gkss->txslant = f_arr_1[0];
           break;
@@ -1251,15 +1248,15 @@ GKSQtWindow::GKSQtWindow(QWidget *parent)
 
   connect(mdiArea, SIGNAL(subWindowActivated(QMdiSubWindow *)),
           this, SLOT(updateMenus()));
- 
+
   windowMapper = new QSignalMapper(this);
   connect(windowMapper, SIGNAL(mapped(QWidget *)),
-	  this, SLOT(setActiveSubWindow(QWidget *)));
+          this, SLOT(setActiveSubWindow(QWidget *)));
 
   dl = NULL;
   activeWidget = NULL;
 
-  server = new GKSServer(); 
+  server = new GKSServer();
   connect(server, SIGNAL(data(char *)), this, SLOT(interpret(char *)));
 
   p = &p_;
@@ -1271,8 +1268,8 @@ GKSQtWindow::GKSQtWindow(QWidget *parent)
   numWidgets = 0;
 
   create_window(p);
-  createMenubar();  
-  createToolbar();  
+  createMenubar();
+  createToolbar();
 
   setWindowTitle(tr("GKS Qt"));
   setUnifiedTitleAndToolBarOnMac(true);
@@ -1285,7 +1282,7 @@ GKSQtWindow::~GKSQtWindow()
 {
 }
 
-void GKSQtWindow::setActiveSubWindow(QWidget *window) 
+void GKSQtWindow::setActiveSubWindow(QWidget *window)
 {
   if (!window)
     return;
@@ -1346,7 +1343,7 @@ GKSWidget *GKSQtWindow::activeMdiChild()
   return 0;
 }
 
-void GKSQtWindow::createToolbar() 
+void GKSQtWindow::createToolbar()
 {
   toolBarFile = addToolBar("menuFile");
   toolBarFile->setToolButtonStyle(Qt::ToolButtonIconOnly);
@@ -1374,11 +1371,11 @@ void GKSQtWindow::createToolbar()
   menuView->addAction(act);
   act = toolBarWindow->toggleViewAction();
   act->setText("Window toolbar");
-  menuView->addAction(act); 
+  menuView->addAction(act);
 
 }
 
-void GKSQtWindow::createMenubar() 
+void GKSQtWindow::createMenubar()
 {
   menuBar = new QMenuBar(this);
 
@@ -1439,7 +1436,7 @@ void GKSQtWindow::createMenubar()
   actionPaste->setObjectName(QString::fromUtf8("actionPaste"));
   actionPaste->setText(QString::fromUtf8("Paste"));
   actionPaste->setShortcut(QKeySequence(QKeySequence::Paste));
-  actionPaste->setEnabled(false); 
+  actionPaste->setEnabled(false);
   actionPaste->setIcon(QIcon(":/images/paste.png"));
   actionPaste->setIconText(actionPaste->text());
 
@@ -1534,7 +1531,7 @@ void GKSQtWindow::createMenubar()
   menuTabPosition->addAction(actionTabPositionSouth);
   menuTabPosition->addAction(actionTabPositionWest);
 
-  
+
   actionTile = new QAction(this);
   actionTile->setObjectName(QString::fromUtf8("actionTile"));
   actionTile->setText(QString::fromUtf8("Tile"));
@@ -1585,11 +1582,11 @@ void GKSQtWindow::createMenubar()
   menuHelp->addAction(actionAbout_Qt);
   menuHelp->addAction(actionGKSQt_Help);
 
-  updateMenus(); 
+  updateMenus();
 
   printer  = new QPrinter();
   savePath = QDir::currentPath();
-  
+
   QMetaObject::connectSlotsByName(this);
 }
 
@@ -1599,7 +1596,7 @@ void GKSQtWindow::interpret(char *dl)
 
   GKSWidget *widget =  new GKSWidget(NULL, Qt::Window);
   widget->setAttribute(Qt::WA_DeleteOnClose);
-  mdiArea->addSubWindow(widget, Qt::Window); 
+  mdiArea->addSubWindow(widget, Qt::Window);
 
   activeWidget = widget;
 
@@ -1617,22 +1614,22 @@ void GKSQtWindow::on_actionQuitGKSQt_triggered()
   qApp->closeAllWindows();
 }
 
-void GKSQtWindow::on_actionClose_triggered() 
+void GKSQtWindow::on_actionClose_triggered()
 {
   mdiArea->closeActiveSubWindow();
 }
 
-void GKSQtWindow::on_actionCloseAll_triggered() 
+void GKSQtWindow::on_actionCloseAll_triggered()
 {
   mdiArea->closeAllSubWindows();
 }
 
-void GKSQtWindow::on_actionSave_As_triggered() 
+void GKSQtWindow::on_actionSave_As_triggered()
 {
   activeWidget = qobject_cast<GKSWidget *>(mdiArea->activeSubWindow()->widget());
   if (activeWidget == NULL) {
     QMessageBox::warning(this, QString(tr("Save as ...")),
-                         QString(tr("No data to save")));  
+                         QString(tr("No data to save")));
     return;
   }
 
@@ -1640,9 +1637,9 @@ void GKSQtWindow::on_actionSave_As_triggered()
   QFileDialog *fd = new QFileDialog(this, caption, savePath);
   fd->setFileMode(QFileDialog::AnyFile);
   fd->setAcceptMode(QFileDialog::AcceptSave);
-  fd->setLabelText(QFileDialog::FileName, QString("Save As:"));  
-  fd->setLabelText(QFileDialog::FileType, QString("Save figure as:"));  
-  
+  fd->setLabelText(QFileDialog::FileName, QString("Save As:"));
+  fd->setLabelText(QFileDialog::FileType, QString("Save figure as:"));
+
   int i = 0;
   QStringList nameFilters;
   foreach(const QByteArray &sff, supportedFileFmtList)
@@ -1660,45 +1657,44 @@ void GKSQtWindow::on_actionSave_As_triggered()
     QStringList selFiles = fd->selectedFiles();
     if (!selFiles.isEmpty()) {
       savePath = fd->directory().dirName();
-      SaveFileAs(selFiles.first()+QString(".")+selType); 
+      SaveFileAs(selFiles.first()+QString(".")+selType);
     }
   }
 }
 
-void GKSQtWindow::on_actionPage_Setup_triggered() 
+void GKSQtWindow::on_actionPage_Setup_triggered()
 {
-  printer->setOutputFormat(QPrinter::NativeFormat); 
+  printer->setOutputFormat(QPrinter::NativeFormat);
   QPageSetupDialog *pgDialog = new QPageSetupDialog(printer, this);
   pgDialog->exec();
 }
 
-void GKSQtWindow::on_actionPrint_triggered() 
+void GKSQtWindow::on_actionPrint_triggered()
 {
   int rc;
   activeWidget = qobject_cast<GKSWidget *>(mdiArea->activeSubWindow()->widget());
   if (activeWidget == NULL) {
     QMessageBox::warning(this, QString(tr("print ...")),
-                         QString(tr("No data to print")));  
+                         QString(tr("No data to print")));
     return;
   }
 
-  printer->setOutputFormat(QPrinter::NativeFormat); 
+  printer->setOutputFormat(QPrinter::NativeFormat);
   QPrintDialog *prtDialog = new QPrintDialog(printer,this);
   rc = prtDialog->exec();
   if (rc == QDialog::Accepted) {
-    QPainter painter(printer);  
+    QPainter painter(printer);
     if (activeWidget != NULL) {
-      QRect rect = painter.window();
       int rot = activeWidget->getRotation();
       if (rot > 0) {
-	qreal angle = rot * rotateBy;
-	QMatrix matrix;
-	qreal x = painter.window().width() / 2.0;
-	qreal y = painter.window().height() / 2.0;
-	matrix.translate(x, y);
-	matrix.rotate(angle);
-	matrix.translate(-x, -y);
-	painter.setMatrix(matrix);
+        qreal angle = rot * rotateBy;
+        QMatrix matrix;
+        qreal x = painter.window().width() / 2.0;
+        qreal y = painter.window().height() / 2.0;
+        matrix.translate(x, y);
+        matrix.rotate(angle);
+        matrix.translate(-x, -y);
+        painter.setMatrix(matrix);
       }
 
       QPixmap *pm = new QPixmap(* (activeWidget->getPixmap()));
@@ -1707,24 +1703,24 @@ void GKSQtWindow::on_actionPrint_triggered()
   }
 }
 
-void GKSQtWindow::on_actionCut_triggered() 
+void GKSQtWindow::on_actionCut_triggered()
 {
 }
 
-void GKSQtWindow::on_actionCopy_triggered() 
+void GKSQtWindow::on_actionCopy_triggered()
 {
 }
 
-void GKSQtWindow::on_actionPaste_triggered() 
+void GKSQtWindow::on_actionPaste_triggered()
 {
 }
 
-void GKSQtWindow::on_actionKeep_on_Display_triggered() 
+void GKSQtWindow::on_actionKeep_on_Display_triggered()
 {
   server->setKeepOnDisplay(actionKeep_on_Display->isChecked());
 }
 
-void GKSQtWindow::on_actionRotate_by_90_triggered() 
+void GKSQtWindow::on_actionRotate_by_90_triggered()
 {
   activeWidget = qobject_cast<GKSWidget *>(mdiArea->activeSubWindow()->widget());
   if (activeWidget != NULL) {
@@ -1733,14 +1729,14 @@ void GKSQtWindow::on_actionRotate_by_90_triggered()
   }
 }
 
-void GKSQtWindow::on_actionSpecial_Characters_triggered() 
+void GKSQtWindow::on_actionSpecial_Characters_triggered()
 {
   QStringList args;
-  args << QString("-a") << QString("/System/Library/Input Methods/CharacterPalette.app"); 
+  args << QString("-a") << QString("/System/Library/Input Methods/CharacterPalette.app");
   QProcess::execute(QString("open"), args);
 }
 
-void GKSQtWindow::on_actionMinimize_triggered() 
+void GKSQtWindow::on_actionMinimize_triggered()
 {
   activeWidget = qobject_cast<GKSWidget *>(mdiArea->activeSubWindow()->widget());
   if (activeWidget != NULL) activeWidget->showMinimized();
@@ -1748,7 +1744,7 @@ void GKSQtWindow::on_actionMinimize_triggered()
 
 void GKSQtWindow::on_actionTabbedView_triggered() {
   if (actionTabbedView->isChecked()) {
-    mdiArea->setViewMode(QMdiArea::TabbedView);   
+    mdiArea->setViewMode(QMdiArea::TabbedView);
   } else {
     mdiArea->setViewMode(QMdiArea::SubWindowView);
   }
@@ -1775,17 +1771,17 @@ void  GKSQtWindow::on_actionTabPositionWest_triggered()
   mdiArea->setTabPosition(QTabWidget::West);
 }
 
-void GKSQtWindow::on_actionTile_triggered() 
+void GKSQtWindow::on_actionTile_triggered()
 {
   mdiArea->tileSubWindows();
 }
 
-void GKSQtWindow::on_actionCascade_triggered() 
+void GKSQtWindow::on_actionCascade_triggered()
 {
   mdiArea->cascadeSubWindows();
 }
 
-void GKSQtWindow::on_actionNext_triggered() 
+void GKSQtWindow::on_actionNext_triggered()
 {
   mdiArea->activateNextSubWindow();
 }
@@ -1804,13 +1800,13 @@ void GKSQtWindow::on_actionGKSQt_Help_triggered()
 {
 }
 
-void GKSQtWindow::SaveFileAs (const QString fname) 
+void GKSQtWindow::SaveFileAs (const QString fname)
 {
   activeWidget = qobject_cast<GKSWidget *>(mdiArea->activeSubWindow()->widget());
 
   if (activeWidget == NULL) {
     QMessageBox::warning(this, QString(tr("Save as ...")),
-                         QString(tr("No data to save")));  
+                         QString(tr("No data to save")));
     return;
   }
 
@@ -1825,11 +1821,11 @@ void GKSQtWindow::SaveFileAs (const QString fname)
     pm->save(fname, 0, quality);
   } else {
     QMessageBox::warning(this, QString(tr("Save as ...")),
-                         QString(tr("File format not supported: %1")).arg(fi->suffix()));  
+                         QString(tr("File format not supported: %1")).arg(fi->suffix()));
   }
 }
 
-GKSWidget::GKSWidget(QWidget *parent, Qt::WindowFlags f)   
+GKSWidget::GKSWidget(QWidget *parent, Qt::WindowFlags f)
   : QWidget(parent,f)
 {
   dl = NULL;
@@ -1855,7 +1851,7 @@ void GKSWidget::setWidgetNumber(int number)
 
 }
 
-QPixmap* GKSWidget::getPixmap() 
+QPixmap* GKSWidget::getPixmap()
 {
   return pm;
 }
@@ -1880,11 +1876,11 @@ void GKSWidget::paintEvent(QPaintEvent *)
 
       if (first) {
         p->pm->fill(Qt::white);
-	interp(dl);
-	pm = new QPixmap(* (p->pm));
+        interp(dl);
+        pm = new QPixmap(* (p->pm));
         first = false;
       }
-       
+
       painter.drawPixmap(0, 0, *pm);
     }
 }
@@ -1904,7 +1900,7 @@ int GKSWidget::getRotation() {
   return rotation;
 }
 
-void GKSWidget::setRotateBy(const qreal val) 
+void GKSWidget::setRotateBy(const qreal val)
 {
   rotateBy = val;
 }

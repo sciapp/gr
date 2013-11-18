@@ -17,6 +17,10 @@ class GrWidget(QtGui.QWidget) :
 
         self.connect(self.DrawButton, QtCore.SIGNAL("clicked()"), self.draw)
         self.connect(self.QuitButton, QtCore.SIGNAL("clicked()"), self.quit)
+        self.w = 500
+        self.h = 500
+        self.sizex = 1
+        self.sizey = 1
  
     def setupUi(self, Form) :
 
@@ -49,16 +53,31 @@ class GrWidget(QtGui.QWidget) :
         zrange = max(z) - min(z)
         h = [min(z) + i * 0.025 * zrange for i in range(0, 40)]
 
-        gr.setviewport(0.075, 0.95, 0.075, 0.95)
+        gr.clearws()
+        mwidth  = self.w * 2.54 / self.logicalDpiX() / 100
+        mheight = self.h * 2.54 / self.logicalDpiY() / 100
+        gr.setwsviewport(0, mwidth, 0, mheight)
+        gr.setwswindow(0, self.sizex, 0, self.sizey)
+        gr.setviewport(0.075 * self.sizex, 0.95 * self.sizex, 0.075 * self.sizey, 0.95 * self.sizey)
         gr.setwindow(1, 128, 1, 128)
         gr.setspace(min(z), max(z), 0, 90)
         gr.setcharheight(0.018)
         gr.setcolormap(-3)
         gr.surface(128, 128, x, y, z, 5)
         gr.contour(128, 128, 20, x, y, h, z, -1)
-        gr.axes(5, 5, 1, 1, 2, 2, -0.0075)
-
+        gr.axes(5, 5, 1, 1, 2, 2, 0.0075)
         self.update()
+
+    def resizeEvent(self, event):
+        self.w = event.size().width()
+        self.h = event.size().height()
+        if self.w > self.h:
+          self.sizex = 1
+          self.sizey = float(self.h)/self.w
+        else:
+          self.sizex = float(self.w)/self.h
+          self.sizey = 1
+        self.draw()
 
     def paintEvent(self, ev) :
         self.painter = QtGui.QPainter()
