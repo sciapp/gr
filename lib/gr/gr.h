@@ -80,10 +80,9 @@ DLLEXPORT int gr_setscale(int);
 DLLEXPORT void gr_inqscale(int *);
 DLLEXPORT int gr_textext(float, float, char *);
 DLLEXPORT void gr_inqtextext(float, float, char *, float *, float *);
-DLLEXPORT void gr_axeslbl(float, float, float, float, int, int, float,
-                          void (*)(float, float, const char*),
-                          void (*)(float, float, const char*));
 DLLEXPORT void gr_axes(float, float, float, float, int, int, float);
+DLLEXPORT void gr_axeslbl(float, float, float, float, int, int, float,
+  void (*)(float, float, const char*), void (*)(float, float, const char*));
 DLLEXPORT void gr_grid(float, float, float, float, int, int);
 DLLEXPORT void gr_verrorbars(int, float *, float *, float *, float *);
 DLLEXPORT void gr_herrorbars(int, float *, float *, float *, float *);

@@ -168,7 +168,7 @@ typedef enum {
   COLORMAP_GLOWING, COLORMAP_RAINBOW, COLORMAP_GEOLOGIC,
   COLORMAP_GREENSCALE, COLORMAP_CYANSCALE, COLORMAP_BLUESCALE,
   COLORMAP_MAGENTASCALE, COLORMAP_REDSCALE, COLORMAP_FLAME,
-  COLORMAP_BROWNSCALE, COLORMAP_USER_DEFINED
+  COLORMAP_BROWNSCALE, COLORMAP_BONE, COLORMAP_USER_DEFINED
 }
 colormap_t;
 
@@ -353,6 +353,82 @@ int cmap[72][3] = {
   { 225, 225, 225 },
   { 239, 239, 239 },
   { 251, 251, 251 }
+};
+
+static
+int bone[72][3] = {
+  {   0,   0,   0 },
+  {   3,   3,   4 },
+  {   6,   6,   9 },
+  {   9,   9,  13 },
+  {  13,  13,  17 },
+  {  16,  16,  22 },
+  {  19,  19,  26 },
+  {  22,  22,  31 },
+  {  25,  25,  35 },
+  {  28,  28,  39 },
+  {  31,  31,  44 },
+  {  35,  35,  48 },
+  {  38,  38,  52 },
+  {  41,  41,  57 },
+  {  44,  44,  61 },
+  {  47,  47,  66 },
+  {  50,  50,  70 },
+  {  53,  53,  74 },
+  {  57,  57,  79 },
+  {  60,  60,  83 },
+  {  63,  63,  87 },
+  {  66,  66,  92 },
+  {  69,  69,  96 },
+  {  72,  72, 101 },
+  {  75,  75, 105 },
+  {  79,  79, 109 },
+  {  82,  82, 114 },
+  {  85,  86, 117 },
+  {  88,  90, 120 },
+  {  91,  95, 123 },
+  {  94,  99, 126 },
+  {  97, 103, 129 },
+  { 101, 108, 132 },
+  { 104, 112, 136 },
+  { 107, 116, 139 },
+  { 110, 121, 142 },
+  { 113, 125, 145 },
+  { 116, 129, 148 },
+  { 119, 134, 151 },
+  { 123, 138, 154 },
+  { 126, 142, 158 },
+  { 129, 147, 161 },
+  { 132, 151, 164 },
+  { 135, 155, 167 },
+  { 138, 160, 170 },
+  { 141, 164, 173 },
+  { 145, 168, 176 },
+  { 148, 173, 180 },
+  { 151, 177, 183 },
+  { 154, 181, 186 },
+  { 157, 186, 189 },
+  { 160, 190, 192 },
+  { 163, 194, 195 },
+  { 167, 198, 198 },
+  { 172, 202, 202 },
+  { 176, 205, 205 },
+  { 181, 208, 208 },
+  { 186, 211, 211 },
+  { 191, 214, 214 },
+  { 196, 217, 217 },
+  { 201, 220, 220 },
+  { 206, 224, 224 },
+  { 211, 227, 227 },
+  { 216, 230, 230 },
+  { 221, 233, 233 },
+  { 226, 236, 236 },
+  { 230, 239, 239 },
+  { 235, 242, 242 },
+  { 240, 246, 246 },
+  { 245, 249, 249 },
+  { 250, 252, 252 },
+  { 255, 255, 255 }
 };
 
 #ifdef _WIN32
@@ -1856,7 +1932,7 @@ void gr_inqtextext(float x, float y, char *string, float *tbx, float *tby)
 
 static
 void text2dlbl(float x, float y, const char *chars,
-               void(*fp)(float, float, const char*))
+               void (*fp)(float, float, const char*))
 {
   int errind, tnr;
 
@@ -1874,7 +1950,7 @@ void text2dlbl(float x, float y, const char *chars,
       gks_select_xform(NDC);
     }
 
-  if ( fp == NULL )
+  if (fp == NULL)
     gr_textex(x, y, chars, 0, NULL, NULL);
   else
     fp(x, y, chars);
@@ -1886,7 +1962,7 @@ void text2dlbl(float x, float y, const char *chars,
 static
 void text2d(float x, float y, const char *chars)
 {
-	text2dlbl(x ,y, chars, NULL);
+  text2dlbl(x, y, chars, NULL);
 }
 
 void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
@@ -2002,7 +2078,8 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
                               text2dlbl(x_label, yi, string, fpy);
                             }
                           else
-                            text2dlbl(x_label, yi, str_ftoa(string, yi, 0.), fpy);
+                            text2dlbl(x_label, yi,
+                                      str_ftoa(string, yi, 0.), fpy);
                         }
                 }
               else
@@ -2051,8 +2128,9 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
                       xi = major_tick;
                       if (yi != y_org || y_org == y_min || y_org == y_max)
                         if (major_y > 0)
-                            text2dlbl(x_label, yi,
-                                str_ftoa(string, yi, y_tick * major_y), fpy);
+                          text2dlbl(x_label, yi,
+                                    str_ftoa(string, yi, y_tick * major_y),
+                                    fpy);
                     }
                   else
                     xi = minor_tick;
@@ -2131,8 +2209,8 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
                               text2dlbl(xi, y_label, string, fpx);
                             }
                           else
-                            text2dlbl(xi, y_label, str_ftoa(string, xi, 0.),
-                                      fpx);
+                            text2dlbl(xi, y_label,
+                                      str_ftoa(string, xi, 0.), fpx);
                         }
                 }
               else
@@ -2182,7 +2260,8 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
                       if (xi != x_org || x_org == x_min || x_org == x_max)
                         if (major_x > 0)
                           text2dlbl(xi, y_label,
-                                    str_ftoa(string, xi, x_tick * major_x), fpx);
+                                    str_ftoa(string, xi, x_tick * major_x),
+                                    fpx);
                     }
                   else
                     yi = minor_tick;
@@ -2222,8 +2301,8 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
 void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
              int major_x, int major_y, float tick_size)
 {
-  gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
-             NULL, NULL);
+  gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size, NULL,
+             NULL);
 }
 
 static
@@ -4492,6 +4571,13 @@ void gr_setcolormap(int index)
           r = 0.55 + x * 0.45;
           g = 0.15 + x * 0.85;
           b = 0;
+          break;
+
+        case COLORMAP_BONE:
+          j = inverted ? i - 1 : i;
+          r = bone[j][0] / 255.0;
+          g = bone[j][1] / 255.0;
+          b = bone[j][2] / 255.0;
           break;
 
         case COLORMAP_USER_DEFINED:
