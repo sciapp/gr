@@ -1,7 +1,7 @@
        GRDIR = /usr/local/gr
-      BINDIR = $(GRDIR)/bin
-      LIBDIR = $(GRDIR)/lib
-      INCDIR = $(GRDIR)/include
+      BINDIR = $(DESTDIR)$(GRDIR)/bin
+      LIBDIR = $(DESTDIR)$(GRDIR)/lib
+      INCDIR = $(DESTDIR)$(GRDIR)/include
    PYTHONDIR = $(LIBDIR)/python
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
@@ -53,7 +53,7 @@ libGR.so: $(GROBJS)
 
 install:
 	@make -C ../gks install
-	@if [ ! -d $(GRDIR) ]; then mkdir -m 755 $(GRDIR); fi
+	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
 	@if [ ! -d $(BINDIR) ]; then mkdir -m 755 $(BINDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGR.* $(LIBDIR)

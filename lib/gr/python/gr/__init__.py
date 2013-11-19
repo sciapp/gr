@@ -328,7 +328,7 @@ def axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
     fpx = 0
   if fpy is None:
     fpy = 0
-
+    
   cfpx = _axeslbl_callback(fpx)
   cfpy = _axeslbl_callback(fpy)
   __gr.gr_axeslbl(c_float(x_tick), c_float(y_tick),
@@ -733,8 +733,7 @@ COLORMAP_MAGENTASCALE = 9
 COLORMAP_REDSCALE = 10
 COLORMAP_FLAME = 11
 COLORMAP_BROWNSCALE = 12
-COLORMAP_BONE = 13
-COLORMAP_USER_DEFINED = 14
+COLORMAP_USER_DEFINED = 13
 
 FONT_TIMES_ROMAN = 101
 FONT_TIMES_ITALIC = 102
