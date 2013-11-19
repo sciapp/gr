@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1024</width>
+    <width>1280</width>
     <height>640</height>
    </rect>
   </property>
@@ -27,7 +27,6 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <zorder></zorder>
          </widget>
         </item>
         <item>
@@ -100,6 +99,13 @@
             </property>
             <property name="checked">
              <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="_chkErr">
+            <property name="text">
+             <string>errors</string>
             </property>
            </widget>
           </item>
@@ -189,8 +195,6 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <zorder>_gr</zorder>
-        <zorder>_gr</zorder>
        </widget>
       </item>
      </layout>
@@ -205,7 +209,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1024</width>
+     <width>1280</width>
      <height>22</height>
     </rect>
    </property>
