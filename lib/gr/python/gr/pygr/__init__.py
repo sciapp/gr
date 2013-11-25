@@ -7,14 +7,15 @@ Exported Classes:
 # standard library
 import math
 import time
+import logging
 # local library
 import gr
-from gr.pygr.base import GRDrawAttributes, GRMeta
+from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort
 from gr.pygr.helper import ColorIndexGenerator, DomainChecker
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
-__date__ = "2013-11-18"
+__date__ = "2013-11-25"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -41,7 +42,7 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
 
-#__all__ = ['delay', 'gr', 'plot', 'plot3d', 'readfile']
+_log = logging.getLogger(__name__)
 
 class Point(object):
 
@@ -189,9 +190,17 @@ class RegionOfInterest(object):
 
 class CoordConverter(object):
 
-    def __init__(self, width, height, window=None):
+    def __init__(self, width, height, sizex=None, sizey=None, window=None):
         self._width, self._height, self._window = width, height, window
-        self._p = None
+        self._sizex, self._sizey = sizex, sizey
+        self._p = None # always stored in DC
+        if self._sizex is None and self._sizey is None:
+            if self._width > self._height:
+                self._sizex = 1.
+                self._sizey = float(self._height) / self._width
+            else:
+                self._sizex = float(self._width) / self._height
+                self._sizey = 1.
 
     def _checkRaiseXY(self):
         if self._p.x is None or self._p.y is None:
@@ -216,7 +225,8 @@ class CoordConverter(object):
         return self
 
     def setNDC(self, x, y):
-        self._p = Point(x * self._width, (1. - y) * self._height)
+        self._p = Point(x / self._sizex * self._width,
+                        (1. - y / self._sizey) * self._height)
         return self
 
     def setWC(self, x, y, window=None):
@@ -238,12 +248,13 @@ class CoordConverter(object):
 
     def getNDC(self):
         self._checkRaiseXY()
-        return Point(float(self._p.x) / self._width,
-                     1. - float(self._p.y) / self._height)
+        return Point(float(self._p.x) / self._width * self._sizex,
+                     (1. - float(self._p.y) / self._height) * self._sizey)
 
     def getWC(self):
         self._checkRaiseXY()
         ndcPoint = self.getNDC()
+        ndcPoint = Point(ndcPoint.x, ndcPoint.y)
         if self.getWindow():
             window = gr.inqwindow()
             gr.setwindow(*self.getWindow())
@@ -297,13 +308,10 @@ class ErrorBar(GRDrawAttributes, GRMeta):
         gr.setlinetype(ltype)
         gr.setmarkertype(mtype)
 
-class Plot(GRMeta):
+class Plot(GRViewPort, GRMeta):
 
-    DEFAULT_VIEWPORT = (.1, .95, .1, .95)
-
-    def __init__(self, viewport=list(DEFAULT_VIEWPORT)):
-        self._viewport = viewport
-        self._viewMaxYForText = viewport[3] + .05
+    def __init__(self, viewport=GRViewPort.DEFAULT_VIEWPORT):
+        super(Plot, self).__init__(list(viewport))
         self._lstAxes = []
         self._title, self._subTitle = None, None
         self._lblX, self._lblY = None, None
@@ -368,17 +376,24 @@ class Plot(GRMeta):
     def title(self, title):
         self._title = title
 
-    @property
-    def viewport(self):
-        """get current viewport"""
-        return self._viewport
-
-    @viewport.setter
+    @GRViewPort.viewport.setter
     def viewport(self, viewport):
         self._viewport = viewport
-        self._viewMaxYForText = viewport[3] + .05
+#        GRViewPort.viewport = viewport
         for axes in self._lstAxes:
             axes.viewport = viewport
+
+    @GRViewPort.sizex.setter
+    def sizex(self, value):
+        self._sizex = value
+        for axes in self._lstAxes:
+            axes.sizex = value
+
+    @GRViewPort.sizey.setter
+    def sizey(self, value):
+        self._sizey = value
+        for axes in self._lstAxes:
+            axes.sizey = value
 
     def setLogX(self, bool, rescale=False):
         if bool:
@@ -481,7 +496,7 @@ class Plot(GRMeta):
         coord = None
         window = gr.inqwindow()
         if self._lstAxes:
-            coord = CoordConverter(width, height)
+            coord = CoordConverter(width, height, self._sizex, self._sizey)
             points = []
             lstAxes = []
             for axes in self._lstAxes:
@@ -512,7 +527,7 @@ class Plot(GRMeta):
 
     def select(self, p0, p1, width, height):
         window = gr.inqwindow()
-        coord = CoordConverter(width, height)
+        coord = CoordConverter(width, height, self._sizex, self._sizey)
         for axes in self._lstAxes:
             win = axes.getWindow()
             gr.setwindow(*win)
@@ -527,7 +542,7 @@ class Plot(GRMeta):
 
     def pan(self, dp, width, height):
         window = gr.inqwindow()
-        coord = CoordConverter(width, height)
+        coord = CoordConverter(width, height, self._sizex, self._sizey)
         for axes in self._lstAxes:
             win = axes.getWindow()
             gr.setwindow(*win)
@@ -582,54 +597,47 @@ class Plot(GRMeta):
         return self
 
     def drawGR(self):
-        [xmin, xmax, ymin, ymax] = self.viewport
+        [xmin, xmax, ymin, ymax] = self.viewportscaled
         # draw title and subtitle
         if self.title or self.subTitle:
             dyTitle = 0
             dySubTitle = 0
-            charHeight = .027 * (self._viewMaxYForText - ymin)
-            gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
+            charHeight = .027 * (ymax - ymin)
+            charHeightUnscaled = .027 * (self.viewport[3] - self.viewport[2])
+            gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_BOTTOM)
             gr.setcharup(0., 1.)
             gr.setcharheight(charHeight)
             x = xmin + (xmax - xmin) / 2
             if self.title:
-                tby = gr.inqtextext(0, 0, self.title)[1]
-                tby = map(lambda y: gr.wctondc(0, y)[1], tby)
-                dyTitle = max(tby) - min(tby)
-            y = self._viewMaxYForText - (dyTitle + dySubTitle) / 2
+                dyTitle = charHeightUnscaled
             if self.title and self.subTitle:
-                tby = gr.inqtextext(0, 0, self.subTitle)[1]
-                tby = map(lambda y: gr.wctondc(0, y)[1], tby)
-                dySubTitle = max(tby) - min(tby)
-            if (ymax + dyTitle + dySubTitle) > self._viewMaxYForText:
-                # preserve self._viewMaxYForText value
-                # to avoid changing by self.viewport setter
-                maxYForText = self._viewMaxYForText
-                self.viewport = [xmin, xmax, ymin, ymax - dyTitle - dySubTitle]
-                self._viewMaxYForText = maxYForText
-                gr.clearws()
+                dySubTitle = charHeightUnscaled
+            y = (self.viewport[3] + dyTitle + dySubTitle + charHeightUnscaled
+                 + 0.01)
+
             if self.title:
-                gr.text(x, y, self.title)
-                y -= dyTitle
+                gr.text(x, y * self.sizey, self.title)
+                y -= dyTitle + 0.01
             if self.subTitle:
-                gr.text(x, y, self.subTitle)
+                gr.text(x, y * self.sizey, self.subTitle)
         # draw axes and curves
         if self._lstAxes:
             for axes in self._lstAxes:
                 axes.drawGR()
         # current values, viewport maybe changed above
-        [xmin, xmax, ymin, ymax] = self.viewport
+        [xmin, xmax, ymin, ymax] = self.viewportscaled
         dyXLabel = 0
         dxYLabel = 0
         # draw x- and y label
+        y = self.offsetXLabel + ymin
         if self.xlabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(0., 1.)
             tby = gr.inqtextext(0, 0, self.xlabel)[1]
             tby = map(lambda y: gr.wctondc(0, y)[1], tby)
             dyXLabel = max(tby) - min(tby)
-            gr.text(xmin + (xmax - xmin) / 2.,
-                    self.offsetXLabel + ymin - dyXLabel / 2. - .05, self.xlabel)
+            y -= dyXLabel + charHeight
+            gr.text(xmin + (xmax - xmin) / 2., y, self.xlabel)
         if self.ylabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(-1., 0.)
@@ -641,7 +649,7 @@ class Plot(GRMeta):
             gr.setcharup(0., 1.)
         # draw legend and calculate ROIs for legend items 
         if self._legend:
-            x, y = .1, self.offsetXLabel + ymin - dyXLabel - .075
+            x, y = .1, y - dyXLabel - charHeight
             if y < 0:
                 self.viewport[2] += dyXLabel
                 gr.clearws()
@@ -654,8 +662,8 @@ class Plot(GRMeta):
                 mcolor = gr.inqmarkercolorind()
                 window = gr.inqwindow()
                 scale = gr.inqscale()
-                gr.setviewport(0, 1, 0, 1)
-                gr.setwindow(0, 1, 0, 1)
+                gr.setviewport(0, self.sizex, 0, self.sizey)
+                gr.setwindow(0, self.sizex, 0, self.sizey)
                 self._legendROI = []
                 for axes in self._lstAxes:
                     for curve in axes.getCurves():
@@ -675,8 +683,8 @@ class Plot(GRMeta):
                                 gr.setmarkertype(curve.markertype)
                                 gr.polymarker(1, [x + .1 / 2.], [y])
                             tbx, tby = gr.inqtextext(0, 0, curve.legend)
-                            ybase = y - (max(tby) - min(tby)) / 2
-                            ytop = y + (max(tby) - min(tby)) / 2
+                            ybase = y - charHeightUnscaled / 2
+                            ytop = y + charHeightUnscaled / 2
                             roi = RegionOfInterest(Point(x, ybase),
                                                    Point(x, ytop),
                                                    reference=curve,
@@ -693,6 +701,10 @@ class Plot(GRMeta):
                             x += max(tbx) - min(tbx)
                             roi.append(Point(x, ytop), Point(x, ybase))
                             self._legendROI.append(roi)
+#                            gr.polyline(len(roi.x), roi.x, roi.y)
+                            tbx = gr.inqtextext(0, 0, "X")[0]
+                            charWidth = max(tbx) - min(tbx)
+                            x += charWidth
                 if not self._legendROI:
                     self._legendROI = None
                 # restore old values
@@ -701,7 +713,7 @@ class Plot(GRMeta):
                 gr.setlinetype(ltype)
                 gr.setmarkertype(mtype)
                 # restore viewport and window
-                gr.setviewport(*self.viewport)
+                gr.setviewport(*self.viewportscaled)
                 gr.setwindow(*window)
                 # restore scale
                 gr.setscale(scale)
@@ -810,15 +822,17 @@ class PlotCurve(GRDrawAttributes, GRMeta):
             gr.setlinetype(ltype)
             gr.setmarkertype(mtype)
 
-class PlotAxes(GRMeta):
+class PlotAxes(GRViewPort, GRMeta):
 
     COUNT = 0
 
     def __init__(self, xtick=None, ytick=None, majorx=None, majory=None,
-                 viewport=list(Plot.DEFAULT_VIEWPORT), drawX=True, drawY=True):
+                 viewport=GRViewPort.DEFAULT_VIEWPORT, drawX=True,
+                 drawY=True):
+        super(PlotAxes, self).__init__(list(viewport))
         self._xtick, self._ytick = xtick, ytick
         self.majorx, self.majory = majorx, majory
-        self._viewport, self._drawX, self._drawY = viewport, drawX, drawY
+        self._drawX, self._drawY = drawX, drawY
         self._lstPlotCurve = []
         self._backgroundColor = 163
         self._window = None
@@ -883,15 +897,6 @@ class PlotAxes(GRMeta):
     @majory.setter
     def majory(self, minorCount):
         self._majory = minorCount if minorCount > 0 or minorCount is None else 1
-
-    @property
-    def viewport(self):
-        """get current viewport"""
-        return self._viewport
-
-    @viewport.setter
-    def viewport(self, viewport):
-        self._viewport = viewport
 
     @property
     def scale(self):
@@ -965,7 +970,7 @@ class PlotAxes(GRMeta):
 
     def drawGR(self):
         lstPlotCurve = self.getCurves()
-        viewport = self.viewport
+        viewport = self.viewportscaled
         if lstPlotCurve:
             if self.isReset():
                 self._resetWindow = False
@@ -1015,7 +1020,7 @@ class PlotAxes(GRMeta):
                         ytick = self._ytick
                     else:
                         ytick = gr.tick(ymin, ymax) / majory
-                gr.setviewport(*viewport)
+                gr.setviewport(*self.viewportscaled)
                 gr.setwindow(*window)
                 gr.setscale(self.scale)
                 if self.backgroundColor and self.getId() == 1:
@@ -1210,7 +1215,7 @@ def plot3d(z,
 def imshow(data, cmap=gr.COLORMAP_GRAYSCALE):
     height, width = data.shape
     d = data.reshape(width * height).astype(float)
-    d = 8 + 72 * (d - min(d))/(max(d) - min(d))
+    d = 8 + 72 * (d - min(d)) / (max(d) - min(d))
     ca = d.astype(int)
     gr.clearws()
     if width < height:

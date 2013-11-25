@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """..."""
-
+# standard library
+import logging
+# third party
+# ...
 # local library
 import gr
 from gr.pygr.helper import ColorIndexGenerator
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-13"
+__date__ = "2013-11-25"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -32,6 +35,8 @@ You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
+
+_log = logging.getLogger(__name__)
 
 class GRMeta(object):
 
@@ -84,3 +89,48 @@ class GRDrawAttributes(object):
     @markercolor.setter
     def markercolor(self, value):
         self._markercolor = value
+
+class GRViewPort(object):
+
+    DEFAULT_VIEWPORT = (.1, .95, .1, .95)
+
+    def __init__(self, viewport=list(DEFAULT_VIEWPORT)):
+        self._viewport = viewport
+        self._sizex, self._sizey = 1., 1.
+
+    @property
+    def sizex(self):
+        """..."""
+        return self._sizex
+
+    @sizex.setter
+    def sizex(self, value):
+        self._sizex = value
+
+    @property
+    def sizey(self):
+        """..."""
+        return self._sizey
+
+    @sizey.setter
+    def sizey(self, value):
+        self._sizey = value
+
+    @property
+    def viewport(self):
+        """get current viewport"""
+        return self._viewport
+
+    @viewport.setter
+    def viewport(self, viewport):
+        self._viewport = viewport
+
+    @property
+    def viewportscaled(self):
+        vp = list(self.viewport)
+        vp[0] *= self.sizex
+        vp[1] *= self.sizex
+        vp[2] *= self.sizey
+        vp[3] *= self.sizey
+        return vp
+

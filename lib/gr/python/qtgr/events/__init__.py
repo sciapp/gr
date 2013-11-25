@@ -2,6 +2,7 @@
 
 # standard library
 import math
+import logging
 # third party
 from PyQt4 import QtCore
 # local library
@@ -10,7 +11,7 @@ import qtgr
 from qtgr.events.base import EventMeta, MouseLocationEventMeta
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-18"
+__date__ = "2013-11-25"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -36,6 +37,8 @@ You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
+
+_log = logging.getLogger(__name__)
 
 class MouseEvent(MouseLocationEventMeta):
 
@@ -135,6 +138,8 @@ class EventFilter(QtCore.QObject):
     def handleEvent(self, event):
         if self._manager.hasHandler(event.type()):
             for handle in self._manager.getHandler(event.type()):
+                # update widget to get current state: window, viewport...
+                self._widget.update()
                 handle(event)
 
     def wheelEvent(self, type, target, event):
@@ -145,7 +150,7 @@ class EventFilter(QtCore.QObject):
         if event.buttons() & QtCore.Qt.RightButton:
             btn_mask |= MouseEvent.RIGHT_BUTTON
 
-        wEvent = WheelEvent(type, target.width(), target.height(), event.x(),
+        wEvent = WheelEvent(type, target.dwidth, target.dheight, event.x(),
                             event.y(), btn_mask, event.delta())
         self.handleEvent(wEvent)
 
@@ -177,7 +182,7 @@ class EventFilter(QtCore.QObject):
         if event.modifiers() & QtCore.Qt.GroupSwitchModifier:
             mod_mask |= MouseEvent.GROUP_SWITCH_MODIFIER
 
-        mEvent = MouseEvent(type, target.width(), target.height(),
+        mEvent = MouseEvent(type, target.dwidth, target.dheight,
                             event.x(), event.y(), btn_mask, mod_mask)
         self.handleEvent(mEvent)
         # special case:

@@ -8,6 +8,7 @@ Exported Classes:
 # standard library
 import os
 import math
+import logging
 # third party
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -22,7 +23,7 @@ from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent, \
 QtCore.Signal = QtCore.pyqtSignal
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-18"
+__date__ = "2013-11-25"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -49,11 +50,18 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
 
+_log = logging.getLogger(__name__)
+
 class GRWidget(QtGui.QWidget):
 
     def __init__(self, *args, **kwargs):
         super(GRWidget, self).__init__(*args, **kwargs)
         self._clear, self._update = False, False
+        self._sizex, self._sizey = 1., 1.
+        self._dwidth, self._dheight = self.width(), self.height()
+        self._mwidth = self.width() * .0254 / self.logicalDpiX()
+        self._mheight = self.height() * .0254 / self.logicalDpiY()
+        self._keepRatio = False
         os.environ["GKS_WSTYPE"] = "381" # GKS Qt Plugin
         os.environ["GKS_DOUBLE_BUF"] = "True"
         self.setPalette(QtGui.QPalette(QtGui.QColor.fromRgb(0xffffff)))
@@ -67,6 +75,67 @@ class GRWidget(QtGui.QWidget):
         self.draw(self._clear, self._update)
         gr.updatews()
         self._painter.end()
+
+    def resizeEvent(self, event):
+        self._dwidth, self._dheight = self.width(), self.height()
+        self._mwidth = self.width() * .0254 / self.logicalDpiX()
+        self._mheight = self.height() * .0254 / self.logicalDpiY()
+        if self._mwidth > self._mheight:
+            self._sizex = 1.
+            if self.keepRatio:
+                self._sizey = 1.
+                self._mwidth = self._mheight
+                self._dwidth = self._dheight
+            else:
+                self._sizey = self._mheight / self._mwidth
+        else:
+            if self.keepRatio:
+                self._sizex = 1.
+                self._mheight = self._mwidth
+                self._dheight = self._dwidth
+            else:
+                self._sizex = self._mwidth / self._mheight
+            self._sizey = 1.
+
+    @property
+    def mwidth(self):
+        """Get metric width of the widget excluding any window frame."""
+        return self._mwidth
+
+    @property
+    def mheight(self):
+        """Get metric height of the widget excluding any window frame."""
+        return self._mheight
+
+    @property
+    def dwidth(self):
+        """Get device width in consideration of ratio (keepRatio)."""
+        return self._dwidth
+
+    @property
+    def dheight(self):
+        """Get device height in consideration of ratio (keepRatio)."""
+        return self._dheight
+
+    @property
+    def sizex(self):
+        """..."""
+        return self._sizex
+
+    @property
+    def sizey(self):
+        """..."""
+        return self._sizey
+
+    @property
+    def keepRatio(self):
+        return self._keepRatio
+
+    @keepRatio.setter
+    def keepRatio(self, bool):
+        self._keepRatio = bool
+        self.resizeEvent(None)
+        self.update()
 
     def _draw(self, clear=False, update=True):
         self._clear, self._update = clear, update
@@ -150,8 +219,11 @@ class InteractiveGRWidget(GRWidget):
     def draw(self, clear=False, update=True):
         if clear:
             gr.clearws()
+        gr.setwsviewport(0, self.mwidth, 0, self.mheight)
+        gr.setwswindow(0, self.sizex, 0, self.sizey)
 
         for plot in self._lstPlot:
+            plot.sizex, plot.sizey = self.sizex, self.sizey
             plot.drawGR()
             # logDomainCheck
             logXinDomain = plot.logXinDomain()
@@ -181,7 +253,7 @@ class InteractiveGRWidget(GRWidget):
 
     def plot(self, *args, **kwargs):
         plot = Plot()
-        axes = PlotAxes(plot.viewport())
+        axes = PlotAxes(plot.viewport)
         axes.plot(*args, **kwargs)
         plot.addAxes(axes)
         return self.addPlot(plot)
@@ -209,12 +281,12 @@ class InteractiveGRWidget(GRWidget):
 
     def _pick(self, p0, type):
         for plot in self._lstPlot:
-            coord = plot.pick(p0, self.width(), self.height())
+            coord = plot.pick(p0, self.dwidth, self.dheight)
             if coord:
                 dcPoint = coord.getDC()
                 QtGui.QApplication.sendEvent(self, PickEvent(type,
-                                                             self.width(),
-                                                             self.height(),
+                                                             self.dwidth,
+                                                             self.dheight,
                                                              dcPoint.x,
                                                              dcPoint.y,
                                                              coord.getWindow()))
@@ -222,14 +294,14 @@ class InteractiveGRWidget(GRWidget):
     def _select(self, p0, p1):
         self._pickEvent = None
         for plot in self._lstPlot:
-            plot.select(p0, p1, self.width(), self.height())
+            plot.select(p0, p1, self.dwidth, self.dheight)
         self._draw(True)
         self.update()
 
     def _pan(self, dp):
         self._pickEvent = None
         for plot in self._lstPlot:
-            plot.pan(dp, self.width(), self.height())
+            plot.pan(dp, self.dwidth, self.dheight)
         self._draw(True)
         self.update()
 
@@ -250,8 +322,8 @@ class InteractiveGRWidget(GRWidget):
                     eventObj = ROIEvent
                 QtGui.QApplication.sendEvent(self,
                                              eventObj(type,
-                                                      self.width(),
-                                                      self.height(),
+                                                      self.dwidth,
+                                                      self.dheight,
                                                       p0.x, p0.y,
                                                       buttons, modifiers,
                                                       roi))
@@ -314,10 +386,15 @@ class InteractiveGRWidget(GRWidget):
 
 if __name__ == "__main__":
     import sys
+    from gr import pygr
+    logging.basicConfig(level=logging.CRITICAL)
+    for name in [__name__, pygr.base.__name__, pygr.__name__]:
+        logging.getLogger(name).setLevel(logging.DEBUG)
     app = QtGui.QApplication(sys.argv)
     grw = InteractiveGRWidget()
-    grw.viewport = [0.1, 0.95, 0.1, 0.9]
-    grw.show()
+    grw.resize(QtCore.QSize(500, 500))
+    viewport = [0.1, 0.9, 0.1, 0.88]
+
     x = [-3.3 + t * .1 for t in range(66)]
     y = [t ** 5 - 13 * t ** 3 + 36 * t for t in x]
 
@@ -326,8 +403,13 @@ if __name__ == "__main__":
     x2 = [i * pi2_n for i in range(0, n + 1)]
     y2 = map(lambda xi: math.sin(xi), x2)
 
-    grw.addPlot(Plot().addAxes(PlotAxes().plot(x, y),
-                               PlotAxes().plot(x2, y2)))
+    plot = Plot(viewport).addAxes(PlotAxes().plot(x, y),
+                                  PlotAxes().plot(x2, y2))
+    plot.title, plot.subTitle = "foo", "bar"
+    plot.xlabel, plot.ylabel = "x", "f(x)"
+
+    grw.addPlot(plot)
+    grw.show()
     grw.update()
 
     sys.exit(app.exec_())

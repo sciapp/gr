@@ -17,7 +17,7 @@ from qtgr.events import GUIConnector, MouseEvent, PickEvent, LegendEvent
 from gr.pygr import Plot, PlotAxes, PlotCurve, ErrorBar
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-18"
+__date__ = "2013-11-25"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -64,6 +64,7 @@ class MainWindow(QtGui.QMainWindow):
         self._chkLogY.stateChanged.connect(self._logYClicked)
         self._chkGrid.stateChanged.connect(self._gridClicked)
         self._chkErr.stateChanged.connect(self._errorsClicked)
+        self._chkKeepRatio.stateChanged.connect(self._keepRatioClicked)
         self._btnReset.clicked.connect(self._resetClicked)
         self._btnPick.clicked.connect(self._pickClicked)
         self._shell.returnPressed.connect(self._shellEx)
@@ -91,10 +92,10 @@ class MainWindow(QtGui.QMainWindow):
         self._curveFoo = PlotCurve(x, y, legend="foo bar")
         axes = PlotAxes().addCurves(self._curveFoo)
         axes.setXtickCallback(self._xtickCallBack)
-        self._plot = Plot((.1, .92, .15, .95)).addAxes(axes,
+        self._plot = Plot((.1, .92, .2, .88)).addAxes(axes,
                                     PlotAxes(drawX=False).plot(x2, y2))
         self._plot.offsetXLabel = -.05
-        self._plot2 = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x2, y2,
+        self._plot2 = Plot((.1, .95, .15, .88)).addAxes(PlotAxes().addCurves(PlotCurve(x2, y2,
                                                            legend="second")))
 
         self._plot.title = "QtGR Demo"
@@ -143,8 +144,6 @@ class MainWindow(QtGui.QMainWindow):
                                     "NDC: (%3.2f, %3.2f)\t " % (ndc.x, ndc.y) +
                                     "WC: (%3.2f, %3.2f)" % (wc.x, wc.y))
         self._lblOverLegend.setText("")
-#        print "  buttons: 0x%x" %event.getButtons()
-#        print "modifiers: 0x%x" %event.getModifiers()
 
     def pointPickGr(self, event):
         p = event.getWC()
@@ -170,8 +169,9 @@ class MainWindow(QtGui.QMainWindow):
     def _xtickCallBack(self, x, y, svalue):
         gr.setcharup(1., 1.)
         gr.settextalign(gr.TEXT_HALIGN_LEFT, gr.TEXT_VALIGN_TOP)
-        gr.text(x, y, "%s"
-                % time.strftime("%H:%M:%S", time.localtime(float(svalue))))
+        gr.text(x, y, "%s (%s)"
+                % (time.strftime("%H:%M:%S", time.localtime(float(svalue))),
+                   svalue))
         gr.setcharup(0., 1.)
 
     def _errorsClicked(self, state):
@@ -179,6 +179,10 @@ class MainWindow(QtGui.QMainWindow):
             self._curveFoo.errorBar1 = self._errBar
         else:
             self._curveFoo.errorBar1 = None
+        self._gr.update()
+
+    def _keepRatioClicked(self, state):
+        self._gr.keepRatio = self._chkKeepRatio.isChecked()
         self._gr.update()
 
     def _gridClicked(self, state):
@@ -222,8 +226,11 @@ class MainWindow(QtGui.QMainWindow):
 
 if __name__ == '__main__':
     import sys
-    logging.basicConfig(level=logging.CRITICAL)
-    _log.setLevel(logging.DEBUG)
+#    logging.basicConfig(level=logging.CRITICAL)
+#    for name in [__name__, qtgr.__name__, qtgr.events.__name__,
+#                 qtgr.events.base.__name__,
+#                 gr.pygr.base.__name__, gr.pygr.__name__]:
+#        logging.getLogger(name).setLevel(logging.DEBUG)
     app = QtGui.QApplication(sys.argv)
     mainWin = MainWindow()
     mainWin.show()

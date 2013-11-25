@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """..."""
-
+# standard library
+import logging
 # third party
 from PyQt4 import QtCore
 # local library
@@ -8,8 +9,8 @@ import gr
 import qtgr
 from gr.pygr import CoordConverter
 
-__author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-08-22"
+__author__ = "Christian Felder <c.felder@fz-juelich.de>"
+__date__ = "2013-11-25"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -36,30 +37,32 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
 
+_log = logging.getLogger(__name__)
+
 class EventMeta(QtCore.QEvent):
-       
+
     def __init__(self, type):
         super(EventMeta, self).__init__(type)
         self._type = type
-       
+
     def type(self):
         return self._type
-    
+
 class MouseLocationEventMeta(EventMeta):
 
     def __init__(self, type, width, height, x, y, window=None):
         super(MouseLocationEventMeta, self).__init__(type)
-        self._coords = CoordConverter(width, height, window)
+        self._coords = CoordConverter(width, height, window=window)
         self._coords.setDC(x, y)
-        
+
     def getWindow(self):
         return self._coords.getWindow()
-        
+
     def getWC(self):
         return self._coords.getWC()
-    
+
     def getNDC(self):
         return self._coords.getNDC()
-    
+
     def getDC(self):
         return self._coords.getDC()
