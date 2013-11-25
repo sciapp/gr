@@ -59,6 +59,7 @@ class MainWindow(QtGui.QMainWindow):
                            ";;".join(gr.GRAPHIC_TYPE.values()))
         self._saveName = None
         self._title = unicode(self.windowTitle())
+        self._startupTime = time.time()
 
         self._chkLogX.stateChanged.connect(self._logXClicked)
         self._chkLogY.stateChanged.connect(self._logYClicked)
@@ -170,8 +171,9 @@ class MainWindow(QtGui.QMainWindow):
         gr.setcharup(1., 1.)
         gr.settextalign(gr.TEXT_HALIGN_LEFT, gr.TEXT_VALIGN_TOP)
         gr.text(x, y, "%s (%s)"
-                % (time.strftime("%H:%M:%S", time.localtime(float(svalue))),
-                   svalue))
+                % (time.strftime("%H:%M:%S",
+                                 time.localtime(self._startupTime
+                                                + float(svalue))), svalue))
         gr.setcharup(0., 1.)
 
     def _errorsClicked(self, state):
