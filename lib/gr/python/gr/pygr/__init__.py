@@ -649,7 +649,7 @@ class Plot(GRViewPort, GRMeta):
             gr.setcharup(0., 1.)
         # draw legend and calculate ROIs for legend items 
         if self._legend:
-            x, y = .1, y - dyXLabel - charHeight
+            x, y = self.viewport[0], y - dyXLabel - charHeight
             if y < 0:
                 self.viewport[2] += dyXLabel
                 gr.clearws()
@@ -668,13 +668,19 @@ class Plot(GRViewPort, GRMeta):
                 for axes in self._lstAxes:
                     for curve in axes.getCurves():
                         if curve.legend:
+                            tbx, tby = gr.inqtextext(0, 0, curve.legend)
+                            textWidth = max(tbx) - min(tbx)
+                            lineWidth = .1
+                            if x + lineWidth + textWidth > self.sizex:
+                                x = self.viewport[0]
+                                y -= 2 * charHeight
                             gr.setmarkertype(curve.markertype)
                             gr.setmarkercolorind(curve.markercolor)
                             if curve.linetype is not None:
                                 gr.setlinecolorind(curve.linecolor)
                                 gr.setmarkercolorind(curve.markercolor)
                                 gr.setlinetype(curve.linetype)
-                                gr.polyline(2, [x, x + .1], [y, y])
+                                gr.polyline(2, [x, x + lineWidth], [y, y])
                                 if (curve.markertype != gr.MARKERTYPE_DOT
                                     and curve.markertype is not None):
                                     gr.setmarkertype(curve.markertype)
@@ -682,7 +688,7 @@ class Plot(GRViewPort, GRMeta):
                             elif curve.markertype is not None:
                                 gr.setmarkertype(curve.markertype)
                                 gr.polymarker(1, [x + .1 / 2.], [y])
-                            tbx, tby = gr.inqtextext(0, 0, curve.legend)
+
                             ybase = y - charHeightUnscaled / 2
                             ytop = y + charHeightUnscaled / 2
                             roi = RegionOfInterest(Point(x, ybase),
@@ -698,7 +704,7 @@ class Plot(GRViewPort, GRMeta):
                                             gr.TEXT_VALIGN_HALF)
                             gr.text(x, y, curve.legend)
                             gr.settextcolorind(1)
-                            x += max(tbx) - min(tbx)
+                            x += textWidth
                             roi.append(Point(x, ytop), Point(x, ybase))
                             self._legendROI.append(roi)
 #                            gr.polyline(len(roi.x), roi.x, roi.y)
