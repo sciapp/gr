@@ -331,8 +331,8 @@ class InteractiveGRWidget(GRWidget):
     def mousePress(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
             if self.getPickMode():
-                self._pick(event.getNDC(), PickEvent.PICK_PRESS)
                 self.setPickMode(False)
+                self._pick(event.getNDC(), PickEvent.PICK_PRESS)
             else:
                 if event.getModifiers() & MouseEvent.CONTROL_MODIFIER:
                     self.setPickMode(True)
