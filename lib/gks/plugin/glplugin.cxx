@@ -47,7 +47,7 @@ extern "C"
 
 DLLEXPORT void gks_glplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef _WIN32
@@ -118,16 +118,16 @@ static
 gks_state_list_t *gkss;
 
 static
-float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 typedef struct ws_state_list_t
 {
   int state, empty;
   gks_display_list_t dl;
   int width, height;
-  float a, b, c, d;
-  float window[4], viewport[4];
-  float rgb[MAX_COLOR][3];
+  double a, b, c, d;
+  double window[4], viewport[4];
+  double rgb[MAX_COLOR][3];
   int rect[MAX_TNR][4];
 }
 ws_state_list;
@@ -154,7 +154,7 @@ void resize_window(void)
 }
 
 static
-void set_norm_xform(int tnr, float *wn, float *vp)
+void set_norm_xform(int tnr, double *wn, double *vp)
 {
   int xp1, yp1, xp2, yp2;
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
@@ -190,9 +190,9 @@ void set_xform(void)
 }
 
 static
-void seg_xform(float *x, float *y)
+void seg_xform(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1] + gkss->mat[2][0];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1] + gkss->mat[2][1];
@@ -200,9 +200,9 @@ void seg_xform(float *x, float *y)
 }
 
 static
-void seg_xform_rel(float *x, float *y)
+void seg_xform_rel(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1];
@@ -224,7 +224,7 @@ void set_clip_rect(int tnr)
 }
 
 static
-void set_color_rep(int color, float red, float green, float blue)
+void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
   {
@@ -238,7 +238,7 @@ static
 void init_colors(void)
 {
   int color;
-  float red, green, blue;
+  double red, green, blue;
 
   for (color = 0; color < MAX_COLOR; color++)
   {
@@ -273,7 +273,7 @@ void open_window(void)
   gl_init();
   glClearColor(1, 1, 1, 1);
   glClear(GL_COLOR_BUFFER_BIT);
-  glColor3f(0, 0, 0);
+  glColor3d(0, 0, 0);
 }
 
 static
@@ -290,11 +290,11 @@ void update(void)
 }
 
 static
-void line_routine(int num_points, float *x, float *y, int linetype, int tnr)
+void line_routine(int num_points, double *x, double *y, int linetype, int tnr)
 {
   int i;
-  float xn, yn, xd, yd;
-  const float modelview_matrix[16] = {
+  double xn, yn, xd, yd;
+  const double modelview_matrix[16] = {
     2.0f/p->width, 0,               0, -1,
     0,             -2.0f/p->height, 0, 1,
     0,             0,               1, 0,
@@ -302,21 +302,21 @@ void line_routine(int num_points, float *x, float *y, int linetype, int tnr)
   };
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
+  glLoadTransposeMatrixd(modelview_matrix);
   glBegin(GL_LINE_STRIP);
   for (i = 0; i < num_points; ++i)
     {
       WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
       seg_xform(&xn, &yn);
       NDC_to_DC(xn, yn, xd, yd);
-      glVertex2f(xd,yd);
+      glVertex2d(xd,yd);
     }
   glEnd();
   glLoadIdentity();
 }
 
 static
-void polyline(int num_points, float *x, float *y)
+void polyline(int num_points, double *x, double *y)
 {
   static GLushort pattern[13] = {
     0x0111, 0x0041, 0x5555, 0x7F7F, 0x3CFF, 0x0FFF, 0x249F, 0x111F,
@@ -329,7 +329,7 @@ void polyline(int num_points, float *x, float *y)
     1, 1, 1, 1
   };
   int ln_type, ln_color;
-  float ln_width;
+  double ln_width;
 
   ln_type  = gkss->asf[0] ? gkss->ltype  : gkss->lindex;
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
@@ -342,17 +342,17 @@ void polyline(int num_points, float *x, float *y)
   glLineWidth(ln_width);
   glLineStipple(nint(ln_width * factor[ln_type + 8]), pattern[ln_type + 8]);
   glEnable(GL_LINE_STIPPLE);
-  glColor3fv(p->rgb[ln_color]);
+  glColor3dv(p->rgb[ln_color]);
 
   line_routine(num_points, x, y, ln_type, gkss->cntnr);
 
-  glColor3f(0, 0, 0);
+  glColor3d(0, 0, 0);
   glDisable(GL_LINE_STIPPLE);
   glLineWidth(1.0);
 }
 
 static
-void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
+void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   static int marker[26][57] = {
     { 5, 9, -4, 7, 4, 7, 7, 4, 7, -4,   /* omark */
@@ -433,7 +433,7 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
     0,
     0, 0, 0, 0, 0 };
 
-  const float modelview_matrix[16] = {
+  const double modelview_matrix[16] = {
     2.0f/p->width, 0,               0, -1,
     0,             -2.0f/p->height, 0, 1,
     0,             0,               1, 0,
@@ -442,7 +442,7 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
 
   int r, i, num_segments;
   int pc, op;
-  float scale, x, y, xr, yr, angle, c, s, tmp;
+  double scale, x, y, xr, yr, angle, c, s, tmp;
 
   if (gkss->version > 4)
     mscale *= p->height / 500.0;
@@ -460,8 +460,8 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
   mtype = (2 * r > 1) ? mtype + 20 : 21;
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
-  glColor3fv(p->rgb[mcolor]);
+  glLoadTransposeMatrixd(modelview_matrix);
+  glColor3dv(p->rgb[mcolor]);
 
   do
     {
@@ -470,7 +470,7 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
         {
         case 1:         /* point */
           glBegin(GL_POINTS);
-          glVertex2f(x, y);
+          glVertex2d(x, y);
           glEnd();
           break;
 
@@ -481,7 +481,7 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
               xr = scale * marker[mtype][pc + 2 * i + 1];
               yr = -scale * marker[mtype][pc + 2 * i + 2];
               seg_xform_rel(&xr, &yr);
-              glVertex2f(x - xr, y + yr);
+              glVertex2d(x - xr, y + yr);
             }
           glEnd();
           pc += 4;
@@ -493,22 +493,22 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
           if (op == 4) {
             glBegin(GL_TRIANGLE_FAN);
           } else if (op == 5) {
-            glColor3f(1, 1, 1);
+            glColor3d(1, 1, 1);
             glBegin(GL_TRIANGLE_FAN);
           } else {
             glBegin(GL_LINE_LOOP);
           }
           if (op != 3 && is_concav[mtype])
-            glVertex2f(x, y);
+            glVertex2d(x, y);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
-              glVertex2f(x - xr, y + yr);
+              glVertex2d(x - xr, y + yr);
             }
           glEnd();
-          if (op == 5) glColor3fv(p->rgb[mcolor]);
+          if (op == 5) glColor3dv(p->rgb[mcolor]);
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
@@ -525,19 +525,19 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
             if (op == 7) {
               glBegin(GL_TRIANGLE_FAN);
             } else if (op == 8) {
-              glColor3f(1, 1, 1);
+              glColor3d(1, 1, 1);
               glBegin(GL_TRIANGLE_FAN);
             } else {
               glBegin(GL_LINE_LOOP);
             }
             for (i = 0; i < num_segments; i++) {
-              glVertex2f(x + xr, y + yr);
+              glVertex2d(x + xr, y + yr);
               tmp = xr;
               xr = c * xr  - s * yr;
               yr = s * tmp + c * yr;
             }
             glEnd();
-            if (op == 8) glColor3fv(p->rgb[mcolor]);
+            if (op == 8) glColor3dv(p->rgb[mcolor]);
           }
           pc += 2;
           break;
@@ -550,11 +550,11 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
 }
 
 static
-void polymarker(int n, float *px, float *py)
+void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
-  float mk_size, ln_width, *clrt;
-  float x, y;
+  double mk_size, ln_width, *clrt;
+  double x, y;
   int i;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
@@ -580,24 +580,24 @@ void polymarker(int n, float *px, float *py)
 }
 
 static
-void fill_routine (int n, float *px, float *py, int tnr)
+void fill_routine (int n, double *px, double *py, int tnr)
 {
   int fl_inter, fl_style, i, j, ln_width;
-  GLfloat vertices[2*n];
+  GLdouble vertices[2*n];
   GLuint texture = 0;
   int parray[33];
   GLubyte bitmap[8][8];
   static GLuint buffer = 0;
   GLboolean draw_pattern = 0;
-  float x, y;
+  double x, y;
 
-  const float modelview_matrix[16] = {
+  const double modelview_matrix[16] = {
     2.0f/p->width, 0,               0, -1,
     0,             -2.0f/p->height, 0, 1,
     0,             0,               1, 0,
     0,             0,               0, 1
   };
-  const float texcoord_matrix[16] = {
+  const double texcoord_matrix[16] = {
     1./8.,  0,      0, 0,
     0,      1./8.,  0, 0,
     0,      0,      1, 0,
@@ -646,10 +646,10 @@ void fill_routine (int n, float *px, float *py, int tnr)
   }
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
+  glLoadTransposeMatrixd(modelview_matrix);
   if (draw_pattern) {
     glMatrixMode(GL_TEXTURE);
-    glLoadTransposeMatrixf(texcoord_matrix);
+    glLoadTransposeMatrixd(texcoord_matrix);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
   }
   glEnableClientState(GL_VERTEX_ARRAY);
@@ -675,29 +675,29 @@ void fill_routine (int n, float *px, float *py, int tnr)
 }
 
 static
-void fillarea(int n, float *px, float *py)
+void fillarea(int n, double *px, double *py)
 {
   int fl_color;
 
   fl_color = gkss->asf[12] ? Color8Bit(gkss->facoli) : 1;
-  glColor3fv(p->rgb[fl_color]);
+  glColor3dv(p->rgb[fl_color]);
 
   fill_routine(n, px, py, gkss->cntnr);
 
-  glColor3f(0, 0, 0);
+  glColor3d(0, 0, 0);
 }
 
 static
 void cellarray(
-  float xmin, float xmax, float ymin, float ymax,
+  double xmin, double xmax, double ymin, double ymax,
   int dx, int dy, int dimx, int *colia, int true_color)
 {
-  float x1, y1, x2, y2;
+  double x1, y1, x2, y2;
   int x, y, width, height, ix, iy;
   static GLuint buffer = 0;
   GLuint texture = 0;
   int i, j, k, index, rgb;
-  GLfloat bitmap[dx][dy][4];
+  GLdouble bitmap[dx][dy][4];
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -712,7 +712,7 @@ void cellarray(
   width  = (int) fabs(x2 - x1) + 1;
   height = (int) fabs(y2 - y1) + 1;
 
-  const float modelview_matrix[16] = {
+  const double modelview_matrix[16] = {
     2.0f*width/p->width, 0,                      0, 2.0f*x/p->width-1,
     0,                   -2.0f*height/p->height, 0, -2.0f*y/p->height+1,
     0,                   0,                      1, 0,
@@ -750,12 +750,12 @@ void cellarray(
 
   glEnable(GL_TEXTURE_2D);
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
+  glLoadTransposeMatrixd(modelview_matrix);
   glEnableClientState(GL_VERTEX_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
   if (!buffer) {
-    GLfloat vertices[8] = {0,0, 1,0, 0,1, 1,1};
+    GLdouble vertices[8] = {0,0, 1,0, 0,1, 1,1};
     glGenBuffers(1, &buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -764,7 +764,7 @@ void cellarray(
   glVertexPointer(2, GL_FLOAT, 0, 0);
   glBindBuffer(GL_ARRAY_BUFFER, buffer);
   glTexCoordPointer(2, GL_FLOAT, 0, 0);
-  glColor3f(1,1,1);
+  glColor3d(1, 1, 1);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   glMatrixMode(GL_MODELVIEW);
@@ -783,7 +783,7 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
   static GLuint texture = 0;
   int tx_color;
 
-  const float modelview_matrix[16] = {
+  const double modelview_matrix[16] = {
     2.0f*w/p->width, 0,                0, 2.0f*x/p->width-1,
     0,               2.0f*h/p->height, 0, 2.0f*y/p->height-1,
     0,               0,                1, 0,
@@ -808,15 +808,15 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_TEXTURE_2D);
-  glColor3fv(p->rgb[tx_color]);
+  glColor3dv(p->rgb[tx_color]);
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
+  glLoadTransposeMatrixd(modelview_matrix);
   glEnableClientState(GL_VERTEX_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
   if (!buffers[0]) {
-    GLfloat vertices[] = {0,0, 1,0, 0,1, 1,1};
+    GLdouble vertices[] = {0,0, 1,0, 0,1, 1,1};
     GLint text_box[] = {0,1, 1,1, 0,0, 1,0};
     glGenBuffers(2, buffers);
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
@@ -839,7 +839,7 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
 #endif
 
 static
-void text(float x_pos, float y_pos, int nchars, char *text)
+void text(double x_pos, double y_pos, int nchars, char *text)
 {
   int tx_color;
 #ifdef XFT
@@ -852,9 +852,9 @@ void text(float x_pos, float y_pos, int nchars, char *text)
     tx_color = gkss->asf[9] ? Color8Bit(gkss->txcoli) : 1;
     if (tx_color <= 0 || tx_color >= MAX_COLOR) tx_color = 1;
 
-    glColor3fv(p->rgb[tx_color]);
+    glColor3dv(p->rgb[tx_color]);
     gks_emul_text(x_pos, y_pos, nchars, text, line_routine, fill_routine);
-    glColor3f(0,0,0);
+    glColor3d(0, 0, 0);
 
 #ifdef XFT
   } else {
@@ -877,7 +877,7 @@ void interp(char *str)
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
-  float *f_arr_1 = NULL, *f_arr_2 = NULL;
+  double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
 
@@ -898,13 +898,13 @@ void interp(char *str)
         case  13:               /* polymarker */
         case  15:               /* fill area */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, i_arr[0] * sizeof(float));
-          RESOLVE(f_arr_2, float, i_arr[0] * sizeof(float));
+          RESOLVE(f_arr_1, double, i_arr[0] * sizeof(double));
+          RESOLVE(f_arr_2, double, i_arr[0] * sizeof(double));
           break;
 
         case  14:               /* text */
-          RESOLVE(f_arr_1, float, sizeof(float));
-          RESOLVE(f_arr_2, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
+          RESOLVE(f_arr_2, double, sizeof(double));
           RESOLVE(len_c_arr, int, sizeof(int));
           RESOLVE(c_arr, char, 132);
           /* dummy assignment to avoid warning 'set but not used' */
@@ -913,8 +913,8 @@ void interp(char *str)
 
         case  16:               /* cell array */
         case 201:               /* draw image */
-          RESOLVE(f_arr_1, float, 2 * sizeof(float));
-          RESOLVE(f_arr_2, float, 2 * sizeof(float));
+          RESOLVE(f_arr_1, double, 2 * sizeof(double));
+          RESOLVE(f_arr_2, double, 2 * sizeof(double));
           RESOLVE(dx, int, sizeof(int));
           RESOLVE(dy, int, sizeof(int));
           RESOLVE(dimx, int, sizeof(int));
@@ -947,12 +947,12 @@ void interp(char *str)
         case  31:               /* set character height */
         case 200:               /* set text slant */
         case 203:               /* set transparency */
-          RESOLVE(f_arr_1, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
         case  32:               /* set character up vector */
-          RESOLVE(f_arr_1, float, sizeof(float));
-          RESOLVE(f_arr_2, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
+          RESOLVE(f_arr_2, double, sizeof(double));
           break;
 
         case  41:               /* set aspect source flags */
@@ -961,7 +961,7 @@ void interp(char *str)
 
         case  48:               /* set color representation */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, 3 * sizeof(float));
+          RESOLVE(f_arr_1, double, 3 * sizeof(double));
           break;
 
         case  49:               /* set window */
@@ -969,16 +969,16 @@ void interp(char *str)
         case  54:               /* set workstation window */
         case  55:               /* set workstation viewport */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, 2 * sizeof(float));
-          RESOLVE(f_arr_2, float, 2 * sizeof(float));
+          RESOLVE(f_arr_1, double, 2 * sizeof(double));
+          RESOLVE(f_arr_2, double, 2 * sizeof(double));
           break;
 
         case 202:               /* set shadow */
-          RESOLVE(f_arr_1, float, 3 * sizeof(float));
+          RESOLVE(f_arr_1, double, 3 * sizeof(double));
           break;
 
         case 204:               /* set coord xform */
-          RESOLVE(f_arr_1, float, 6 * sizeof(float));
+          RESOLVE(f_arr_1, double, 6 * sizeof(double));
           break;
 
         default:
@@ -995,8 +995,8 @@ void interp(char *str)
           p->window[0] = p->window[2] = 0.0;
           p->window[1] = p->window[3] = 1.0;
           p->viewport[0] = p->viewport[2] = 0;
-          p->viewport[1] = (float) p->width * MWIDTH / WIDTH;
-          p->viewport[3] = (float) p->height * MHEIGHT / HEIGHT;
+          p->viewport[1] = (double) p->width * MWIDTH / WIDTH;
+          p->viewport[3] = (double) p->height * MHEIGHT / HEIGHT;
           p->empty = 1;
 
           set_xform();
@@ -1179,7 +1179,7 @@ void interp(char *str)
 
 void gks_glplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr)
 {
   p = (ws_state_list *) *ptr;
@@ -1226,7 +1226,7 @@ void gks_glplugin(
 
 void gks_glplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr)
 {
   if (fctid == 2)

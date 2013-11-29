@@ -52,11 +52,11 @@
 typedef struct ws_state_list_t
 {
   int state;
-  float window[4], viewport[4];
+  double window[4], viewport[4];
   int show;
-  float width, height, mwidth, mheight;
+  double width, height, mwidth, mheight;
   int swidth, sheight;
-  float a, b, c, d;
+  double a, b, c, d;
   int path, capheight;
   DWORD thread;
   HWND win;
@@ -97,19 +97,19 @@ static
 int max_points = MAX_POINTS;
 
 static
-float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 static
-float xfac[4] = { 0, 0, -0.5, -1 };
+double xfac[4] = { 0, 0, -0.5, -1 };
 
 static
-float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 static
-float sin_f[] = { 0, 1, 0, -1 };
+double sin_f[] = { 0, 1, 0, -1 };
 
 static
-float cos_f[] = { 1, 0, -1, 0 };
+double cos_f[] = { 1, 0, -1, 0 };
 
 static
 int map[32] =
@@ -143,7 +143,7 @@ char *fonts[] =
 };
 
 static
-float capheights[29] = 
+double capheights[29] = 
 {
   0.662, 0.660, 0.681, 0.662,
   0.729, 0.729, 0.729, 0.729,
@@ -156,7 +156,7 @@ float capheights[29] =
 };
 
 static
-void fill_routine(int n, float *px, float *py, int tnr);
+void fill_routine(int n, double *px, double *py, int tnr);
 
 static
 void set_clip_region(int tnr)
@@ -172,7 +172,7 @@ void set_clip_region(int tnr)
 }
 
 static
-void set_norm_xform(int tnr, float *wn, float *vp)
+void set_norm_xform(int tnr, double *wn, double *vp)
 {
   RECT *rc = &p->rc[tnr];
 
@@ -206,9 +206,9 @@ void set_xform(void)
 }
 
 static
-void seg_xform(float *x, float *y)
+void seg_xform(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1] + gkss->mat[2][0];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1] + gkss->mat[2][1];
@@ -216,9 +216,9 @@ void seg_xform(float *x, float *y)
 }
 
 static
-void seg_xform_rel(float *x, float *y)
+void seg_xform_rel(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1];
@@ -226,7 +226,7 @@ void seg_xform_rel(float *x, float *y)
 }
 
 static
-void set_color(int color, float red, float green, float blue)
+void set_color(int color, double red, double green, double blue)
 {
   BYTE r, g, b, tmp, c[4];
 
@@ -246,7 +246,7 @@ static
 void init_colors(void)
 {
   int color;
-  float red, green, blue;
+  double red, green, blue;
   BYTE r, g, b, tmp, c[4];
 
   for (color = 0; color < MAX_COLOR; color++)
@@ -479,14 +479,14 @@ void open_ws(void)
 
   set_xform();
 
-  p->viewport[1] = (float)p->width * p->mwidth / p->swidth;
-  p->viewport[3] = (float)p->height * p->mheight / p->sheight;
+  p->viewport[1] = (double)p->width * p->mwidth / p->swidth;
+  p->viewport[3] = (double)p->height * p->mheight / p->sheight;
 }
 
 static
 void resize_window(void)
 {
-  float max_width, max_height;
+  double max_width, max_height;
   int width, height;
   RECT rc;
 
@@ -571,7 +571,7 @@ void update_ws(void)
 }
 
 static
-void move_to(float x, float y)
+void move_to(double x, double y)
 {
   int ix, iy;
 
@@ -583,7 +583,7 @@ void move_to(float x, float y)
 }
 
 static
-void line_to(float x, float y)
+void line_to(double x, double y)
 {
   int ix, iy;
 
@@ -595,21 +595,21 @@ void line_to(float x, float y)
 }
 
 static
-void move(float x, float y)
+void move(double x, double y)
 {
   gks_move(x, y, move_to);
 }
 
 static
-void draw(float x, float y)
+void draw(double x, double y)
 {
   gks_dash(x, y, move_to, line_to);
 }
 
 static
-void line_routine(int n, float *px, float *py, int linetype, int tnr)
+void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
-  float x, y;
+  double x, y;
   int i, ix, iy, ix0, iy0;
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
@@ -643,10 +643,10 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 }
 
 static
-void polyline(int n, float *px, float *py)
+void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  float ln_width;
+  double ln_width;
   HPEN pen, dc_pen, memdc_pen;
 
   ln_type  = gkss->asf[0] ? gkss->ltype  : gkss->lindex;
@@ -701,11 +701,11 @@ void polyline(int n, float *px, float *py)
 }
 
 static
-void draw_marker(float xn, float yn, int mtype, int mscale, int mcolor)
+void draw_marker(double xn, double yn, int mtype, int mscale, int mcolor)
 {
   int r, x, y, i;
   int pc, op;
-  float scale, xr, yr;
+  double scale, xr, yr;
   POINT points[13];
 
   static int marker[26][57] =
@@ -914,10 +914,10 @@ void draw_marker(float xn, float yn, int mtype, int mscale, int mcolor)
 
 static
 void marker_routine(
-  int n, float *px, float *py, int mtype, float mscale, int mcolor)
+  int n, double *px, double *py, int mtype, double mscale, int mcolor)
 {
-  float x, y;
-  float *clrt = gkss->viewport[gkss->cntnr];
+  double x, y;
+  double *clrt = gkss->viewport[gkss->cntnr];
   register int i, draw;
 
   for (i = 0; i < n; i++)
@@ -936,10 +936,10 @@ void marker_routine(
 }
 
 static
-void polymarker(int n, float *px, float *py)
+void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color, ln_width;
-  float mk_size;
+  double mk_size;
   HPEN pen, dc_pen, memdc_pen;
   HBRUSH dc_brush, memdc_brush;
 
@@ -1063,11 +1063,11 @@ void draw_text(int x, int y, int width, char *chars, int nchars)
 }
 
 static
-void text_routine(float x, float y, int nchars, char *chars)
+void text_routine(double x, double y, int nchars, char *chars)
 {
   int xstart, ystart;
   SIZE size;
-  float xrel, yrel, ax, ay;
+  double xrel, yrel, ax, ay;
 
   NDC_to_DC(x, y, xstart, ystart);
 
@@ -1084,9 +1084,9 @@ void text_routine(float x, float y, int nchars, char *chars)
 static
 void create_font(int font)
 {
-  float rad, scale, ux, uy;
+  double rad, scale, ux, uy;
   int family, size, angle;
-  float width, height, capheight;
+  double width, height, capheight;
   LOGFONT lf;
 
   font = abs(font);
@@ -1130,10 +1130,10 @@ void create_font(int font)
 }
 
 static
-void text(float px, float py, int nchars, char *chars)
+void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color, ln_width;
-  float x, y;
+  double x, y;
   unsigned short chars_len = nchars;
   HPEN pen, dc_pen, memdc_pen;
   HFONT dc_font, memdc_font;
@@ -1206,10 +1206,10 @@ void text(float px, float py, int nchars, char *chars)
 }
 
 static
-void fill_routine(int n, float *px, float *py, int tnr)
+void fill_routine(int n, double *px, double *py, int tnr)
 {
   register int i;
-  float x, y;
+  double x, y;
 
   if (n > max_points)
   {
@@ -1231,7 +1231,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 }
 
 static
-void fillarea(int n, float *px, float *py)
+void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color, ln_width;
   int ln_type, fill = 1;
@@ -1313,10 +1313,10 @@ void fillarea(int n, float *px, float *py)
 
 static
 void cellarray(
-  float xmin, float xmax, float ymin, float ymax,
+  double xmin, double xmax, double ymin, double ymax,
   int dx, int dy, int dimx, int *colia, int true_color)
 {
-  float x1, y1, x2, y2;
+  double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
   register int i, j, ix, iy, ind;
@@ -1416,7 +1416,7 @@ void crosshair(int mousex, int mousey)
 }
 
 static
-void get_pointer(float *x, float *y, int *state)
+void get_pointer(double *x, double *y, int *state)
 {
   MSG *msg;
   int mousex = -1, mousey = -1;
@@ -1464,7 +1464,7 @@ void get_string(int *n, char *chars, int *state)
 
 void gks_drv_win(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars, void **ptr)
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars, void **ptr)
 {
   int true_color = 0;
 
@@ -1624,7 +1624,7 @@ void gks_drv_win(
 
 void gks_drv_win(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars, void **ptr)
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars, void **ptr)
 {
   if (fctid == 2)
   {

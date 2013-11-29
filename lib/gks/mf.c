@@ -48,7 +48,7 @@ void reallocate(int len)
 static
 void write_item(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_farr_1, float *f_arr_1, int len_farr_2, float *f_arr_2,
+  int len_farr_1, double *f_arr_1, int len_farr_2, double *f_arr_2,
   int len_c_arr, char *c_arr)
 {
   char s[132];
@@ -60,20 +60,20 @@ void write_item(
     case  13:			/* polymarker */
     case  15:			/* fill area */
 
-      len = 3 * sizeof(int) + 2 * i_arr[0] * sizeof(float);
+      len = 3 * sizeof(int) + 2 * i_arr[0] * sizeof(double);
       if (p->nbytes + len > p->size)
 	reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
       COPY(i_arr, sizeof(int));
-      COPY(f_arr_1, i_arr[0] * sizeof(float));
-      COPY(f_arr_2, i_arr[0] * sizeof(float));
+      COPY(f_arr_1, i_arr[0] * sizeof(double));
+      COPY(f_arr_2, i_arr[0] * sizeof(double));
       break;
 
     case  14:			/* text */
 
-      len = 3 * sizeof(int) + 2 * sizeof(float) + 132;
+      len = 3 * sizeof(int) + 2 * sizeof(double) + 132;
       if (p->nbytes + len > p->size)
 	reallocate(len);
 
@@ -83,8 +83,8 @@ void write_item(
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(f_arr_1, sizeof(float));
-      COPY(f_arr_2, sizeof(float));
+      COPY(f_arr_1, sizeof(double));
+      COPY(f_arr_2, sizeof(double));
       COPY(&slen, sizeof(int));
       COPY(s, 132);
       break;
@@ -92,14 +92,14 @@ void write_item(
     case  16:			/* cell array */
     case 201:			/* draw image */
 
-      len = (5 + dimx * dy) * sizeof(int) + 4 * sizeof(float);
+      len = (5 + dimx * dy) * sizeof(int) + 4 * sizeof(double);
       if (p->nbytes + len > p->size)
 	reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(f_arr_1, 2 * sizeof(float));
-      COPY(f_arr_2, 2 * sizeof(float));
+      COPY(f_arr_1, 2 * sizeof(double));
+      COPY(f_arr_2, 2 * sizeof(double));
       COPY(&dx, sizeof(int));
       COPY(&dy, sizeof(int));
       COPY(&dimx, sizeof(int));
@@ -147,25 +147,25 @@ void write_item(
     case 200:			/* set text slant */
     case 203:			/* set transparency */
 
-      len = 2 * sizeof(int) + sizeof(float);
+      len = 2 * sizeof(int) + sizeof(double);
       if (p->nbytes + len > p->size)
 	reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(f_arr_1, sizeof(float));
+      COPY(f_arr_1, sizeof(double));
       break;
 
     case  32:			/* set character up vector */
 
-      len = 2 * sizeof(int) + 2 * sizeof(float);
+      len = 2 * sizeof(int) + 2 * sizeof(double);
       if (p->nbytes + len > p->size)
 	reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(f_arr_1, sizeof(float));
-      COPY(f_arr_2, sizeof(float));
+      COPY(f_arr_1, sizeof(double));
+      COPY(f_arr_2, sizeof(double));
       break;
 
     case  41:			/* set aspect source flags */
@@ -181,50 +181,50 @@ void write_item(
 
     case  48:			/* set color representation */
 
-      len = 3 * sizeof(int) + 3 * sizeof(float);
+      len = 3 * sizeof(int) + 3 * sizeof(double);
       if (p->nbytes + len > p->size)
 	reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
       COPY(&i_arr[1], sizeof(int));
-      COPY(f_arr_1, 3 * sizeof(float));
+      COPY(f_arr_1, 3 * sizeof(double));
       break;
 
     case  49:			/* set window */
     case  50:			/* set viewport */
 
-      len = 3 * sizeof(int) + 4 * sizeof(float);
+      len = 3 * sizeof(int) + 4 * sizeof(double);
       if (p->nbytes + len > p->size)
 	reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
       COPY(i_arr, sizeof(int));
-      COPY(f_arr_1, 2 * sizeof(float));
-      COPY(f_arr_2, 2 * sizeof(float));
+      COPY(f_arr_1, 2 * sizeof(double));
+      COPY(f_arr_2, 2 * sizeof(double));
       break;
 
     case 202:                   /* set shadow */
 
-      len = 2 * sizeof(int) + 3 * sizeof(float);
+      len = 2 * sizeof(int) + 3 * sizeof(double);
       if (p->nbytes + len >= p->size)
 	reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(f_arr_1, 3 * sizeof(float));
+      COPY(f_arr_1, 3 * sizeof(double));
       break;
 
     case 204:                   /* set coord xform */
 
-      len = 2 * sizeof(int) + 6 * sizeof(float);
+      len = 2 * sizeof(int) + 6 * sizeof(double);
       if (p->nbytes + len >= p->size)
 	reallocate(len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(f_arr_1, 6 * sizeof(float));
+      COPY(f_arr_1, 6 * sizeof(double));
       break;
     }
 }
@@ -265,7 +265,7 @@ void write_gksm(int stream)
 
 void gks_drv_mo(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_farr_1, float *f_arr_1, int len_farr_2, float *f_arr_2,
+  int len_farr_1, double *f_arr_1, int len_farr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr)
 {
   int gksm = 2;
@@ -409,7 +409,7 @@ static
 void gksinit(gks_state_list_t * gkss)
 {
   int tnr;
-  float *wn, *vp;
+  double *wn, *vp;
 
   gks_set_pline_index(gkss->lindex);
   gks_set_pline_linetype(gkss->ltype);
@@ -459,9 +459,9 @@ void interp(char *str)
   gks_state_list_t *gkss = NULL;
   int sp = 0, *len, *f,  sx = 1, sy = 1;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
-  float *f_arr_1 = NULL, *f_arr_2 = NULL;
+  double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
-  float mat[3][2];
+  double mat[3][2];
 
   s = str;
 
@@ -482,14 +482,14 @@ void interp(char *str)
 	case  15:		/* fill area */
 
 	  RESOLVE(i_arr, int, sizeof(int));
-	  RESOLVE(f_arr_1, float, i_arr[0] * sizeof(float));
-	  RESOLVE(f_arr_2, float, i_arr[0] * sizeof(float));
+	  RESOLVE(f_arr_1, double, i_arr[0] * sizeof(double));
+	  RESOLVE(f_arr_2, double, i_arr[0] * sizeof(double));
 	  break;
 
 	case  14:		/* text */
 
-	  RESOLVE(f_arr_1, float, sizeof(float));
-	  RESOLVE(f_arr_2, float, sizeof(float));
+	  RESOLVE(f_arr_1, double, sizeof(double));
+	  RESOLVE(f_arr_2, double, sizeof(double));
 	  RESOLVE(len_c_arr, int, sizeof(int));
 	  RESOLVE(c_arr, char, 132);
 	  break;
@@ -497,8 +497,8 @@ void interp(char *str)
 	case  16:		/* cell array */
 	case 201:		/* draw image */
 
-	  RESOLVE(f_arr_1, float, 2 * sizeof(float));
-	  RESOLVE(f_arr_2, float, 2 * sizeof(float));
+	  RESOLVE(f_arr_1, double, 2 * sizeof(double));
+	  RESOLVE(f_arr_2, double, 2 * sizeof(double));
 	  RESOLVE(dx, int, sizeof(int));
 	  RESOLVE(dy, int, sizeof(int));
 	  RESOLVE(dimx, int, sizeof(int));
@@ -534,13 +534,13 @@ void interp(char *str)
 	case 200:		/* set text slant */
 	case 203:		/* set transparency */
 
-	  RESOLVE(f_arr_1, float, sizeof(float));
+	  RESOLVE(f_arr_1, double, sizeof(double));
 	  break;
 
 	case  32:		/* set character up vector */
 
-	  RESOLVE(f_arr_1, float, sizeof(float));
-	  RESOLVE(f_arr_2, float, sizeof(float));
+	  RESOLVE(f_arr_1, double, sizeof(double));
+	  RESOLVE(f_arr_2, double, sizeof(double));
 	  break;
 
 	case  41:		/* set aspect source flags */
@@ -551,25 +551,25 @@ void interp(char *str)
 	case  48:		/* set color representation */
 
 	  RESOLVE(i_arr, int, sizeof(int));
-	  RESOLVE(f_arr_1, float, 3 * sizeof(float));
+	  RESOLVE(f_arr_1, double, 3 * sizeof(double));
 	  break;
 
 	case  49:		/* set window */
 	case  50:		/* set viewport */
 
 	  RESOLVE(i_arr, int, sizeof(int));
-	  RESOLVE(f_arr_1, float, 2 * sizeof(float));
-	  RESOLVE(f_arr_2, float, 2 * sizeof(float));
+	  RESOLVE(f_arr_1, double, 2 * sizeof(double));
+	  RESOLVE(f_arr_2, double, 2 * sizeof(double));
 	  break;
 
 	case 202:	       /* set shadow */
 
-	  RESOLVE(f_arr_1, float, 3 * sizeof(float));
+	  RESOLVE(f_arr_1, double, 3 * sizeof(double));
 	  break;
 
 	case 204:	       /* set coord xform */
 
-	  RESOLVE(f_arr_1, float, 6 * sizeof(float));
+	  RESOLVE(f_arr_1, double, 6 * sizeof(double));
 	  break;
 
 	default:
@@ -705,7 +705,7 @@ void interp(char *str)
 
 void gks_drv_mi(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_farr_1, float *f_arr_1, int len_farr_2, float *f_arr_2,
+  int len_farr_1, double *f_arr_1, int len_farr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr)
 {
   char *s;

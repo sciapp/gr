@@ -214,7 +214,7 @@ static int map[32] =
   25, 12, 8, 17, 21, 29, 13, 4
 };
 
-static float capheights[31] =
+static double capheights[31] =
 {
   0.662, 0.660, 0.681, 0.662,
   0.729, 0.729, 0.729, 0.729,
@@ -271,11 +271,11 @@ int adobe2utf[256] =
 static char patterns[PATTERNS][33];
 static Bool have_patterns = False;
 
-static float xfac[4] = {0, 0, -0.5, -1};
-static float yfac[6] = {0, -1.2, -1, -0.5, 0, 0.2};
+static double xfac[4] = {0, 0, -0.5, -1};
+static double yfac[6] = {0, -1.2, -1, -0.5, 0, 0.2};
 
-static float sin_f[] = {0, 1, 0, -1};
-static float cos_f[] = {1, 0, -1, 0};
+static double sin_f[] = {0, 1, 0, -1};
+static double cos_f[] = {1, 0, -1, 0};
 
 static int predef_font[] = {1, 1, 1, -2, -3, -4};
 static int predef_prec[] = {0, 1, 2, 2, 2, 2};
@@ -336,7 +336,7 @@ typedef struct ws_state_list_struct
     int swidth, sheight, dpi, x, y, width, height;
     int selection, bb_update, num_bb, max_bb;
     Segment *bb, *bbox, bounding_box;
-    float mwidth, mheight, resolution, magnification, window[4], viewport[4];
+    double mwidth, mheight, resolution, magnification, window[4], viewport[4];
     int state, mapped;
     Bool empty;
     int path;
@@ -355,11 +355,11 @@ typedef struct ws_state_list_struct
 #endif
     unsigned long pixels[MAX_COLOR];
     int ccolor;
-    float red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
-    float gray[MAX_COLOR];
+    double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
+    double gray[MAX_COLOR];
     int ltype;
     unsigned int lwidth;
-    float a, b, c, d;
+    double a, b, c, d;
     pe_type type;
     int px, py;
     char *error;
@@ -493,7 +493,7 @@ static compose_keys key_bindings[] =
 static int n_key = sizeof(key_bindings) / sizeof(key_bindings[0]);
 
 static gks_state_list_t *gksl;
-static float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 static ws_state_list *p;
 static int error_code, request_code, function_id;
@@ -537,9 +537,9 @@ int sint(double a)
 
 
 static
-void seg_xform(float *x, float *y)
+void seg_xform(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gksl->mat[0][0] + *y * gksl->mat[0][1] + gksl->mat[2][0];
   *y = *x * gksl->mat[1][0] + *y * gksl->mat[1][1] + gksl->mat[2][1];
@@ -548,9 +548,9 @@ void seg_xform(float *x, float *y)
 
 
 static
-void seg_xform_rel(float *x, float *y)
+void seg_xform_rel(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gksl->mat[0][0] + *y * gksl->mat[0][1];
   *y = *x * gksl->mat[1][0] + *y * gksl->mat[1][1];
@@ -621,13 +621,13 @@ void draw_bbox(int type, int xoff, int yoff)
 static
 void set_clipping(Bool state)
 {
-  float clrt[4];
+  double clrt[4];
   int i, j;
   XRectangle rt;
 
   if (state && gksl->clip == GKS_K_CLIP)
     {
-      memcpy(clrt, gksl->viewport[gksl->cntnr], 4 * sizeof(float));
+      memcpy(clrt, gksl->viewport[gksl->cntnr], 4 * sizeof(double));
       seg_xform(&clrt[0], &clrt[2]);
       seg_xform(&clrt[1], &clrt[3]);
       i = clrt[0] < clrt[1] ? 0 : 1;
@@ -800,7 +800,7 @@ Display *open_display(void)
   else
     {
 #if 0
-      float dpi = 0.0254 / p->resolution;
+      double dpi = 0.0254 / p->resolution;
 
       if (fabs(dpi - 75) < fabs(100 - dpi))
 	p->dpi = 75;
@@ -995,7 +995,7 @@ void free_rendercolors(void)
 
 
 static
-void setup_xform(float *window, float *viewport)
+void setup_xform(double *window, double *viewport)
 {
   p->a = (p->width - 1) / (window[1] - window[0]);
   p->b = -window[0] * p->a;
@@ -1381,7 +1381,7 @@ void create_cursor(void)
 
 
 static
-void set_color_repr(int i, float r, float g, float b)
+void set_color_repr(int i, double r, double g, double b)
 {
   int pix;
 
@@ -1473,7 +1473,7 @@ void configure_event(XConfigureEvent *event)
  */
 
 {
-  float req_aspect_ratio, cur_aspect_ratio;
+  double req_aspect_ratio, cur_aspect_ratio;
   int width, height;
 
   if (p->widget || p->gif >= 0 || p->rf >= 0 || p->uil >= 0 || p->frame)
@@ -1629,7 +1629,7 @@ void unmap_window(void)
 
 
 static
-void setup_norm_xform(int tnr, float *wn, float *vp)
+void setup_norm_xform(int tnr, double *wn, double *vp)
 {
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -1649,12 +1649,12 @@ void init_norm_xform(void)
 
 
 static
-void draw_marker(float xn, float yn, int mtype, float mscale)
+void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   int r, d, x, y, i;
   int pc, op;
   XPoint points[13];
-  float scale, xr, yr;
+  double scale, xr, yr;
 
   static int marker[26][57] =
   {
@@ -1896,10 +1896,10 @@ void draw_marker(float xn, float yn, int mtype, float mscale)
 
 
 static
-void draw_points(int n, float *px, float *py, int tnr)
+void draw_points(int n, double *px, double *py, int tnr)
 {
   register int i;
-  float xn, yn;
+  double xn, yn;
 
   if (n > max_points)
     {
@@ -1925,9 +1925,10 @@ void draw_points(int n, float *px, float *py, int tnr)
 
 static
 void marker_routine(
-  int n, float *px, float *py, int tnr, int mtype, float mscale)
+  int n, double *px, double *py, int tnr, int mtype, double mscale)
 {
-  float clrt[4], x, y;
+  double clrt[4] = {0, 1, 0, 1};
+  double x, y;
   register int i, xd, yd;
   register Bool draw;
 
@@ -1935,7 +1936,7 @@ void marker_routine(
     {
       if (gksl->clip == GKS_K_CLIP)
 	{
-	  memcpy(clrt, gksl->viewport[gksl->cntnr], 4 * sizeof(float));
+	  memcpy(clrt, gksl->viewport[gksl->cntnr], 4 * sizeof(double));
 	  seg_xform(&clrt[0], &clrt[2]);
 	  seg_xform(&clrt[1], &clrt[3]);
 	}
@@ -1962,7 +1963,7 @@ void marker_routine(
 
 
 static
-void set_line_attr(int linetype, float linewidth)
+void set_line_attr(int linetype, double linewidth)
 {
   int i, list[10];
   char dash_list[10];
@@ -2040,21 +2041,21 @@ void clip_line(int *x0, int *x1, int *y0, int *y1, Bool *visible, Bool *clip)
       if (c & LEFT)
 	{
 	  x = 0;
-	  y = (int)(*y0 - (*y1 - *y0) * (float)(*x0) / (*x1 - *x0));
+	  y = (int)(*y0 - (*y1 - *y0) * (double)(*x0) / (*x1 - *x0));
 	}
       else if (c & RIGHT)
 	{
 	  x = p->width;
-	  y = (int)(*y0 + (*y1 - *y0) * (float)(p->width - *x0) / (*x1 - *x0));
+	  y = (int)(*y0 + (*y1 - *y0) * (double)(p->width - *x0) / (*x1 - *x0));
 	}
       else if (c & BOTTOM)
 	{
-	  x = (int)(*x0 - (*x1 - *x0) * (float)(*y0) / (*y1 - *y0));
+	  x = (int)(*x0 - (*x1 - *x0) * (double)(*y0) / (*y1 - *y0));
 	  y = 0;
 	}
       else if (c & TOP)
 	{
-	  x = (int)(*x0 + (*x1 - *x0) * (float)(p->height - *y0) / (*y1 - *y0));
+	  x = (int)(*x0 + (*x1 - *x0) * (double)(p->height - *y0) / (*y1 - *y0));
 	  y = p->height;
 	}
 
@@ -2076,9 +2077,9 @@ void clip_line(int *x0, int *x1, int *y0, int *y1, Bool *visible, Bool *clip)
 
 
 static
-void line_routine(int n, float *px, float *py, int linetype, int tnr)
+void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
-  float x1, y1;
+  double x1, y1;
   register int i, j, npoints, m;
   int ix0, iy0, ix1, iy1, x, y;
   Bool visible, clip;
@@ -2168,10 +2169,10 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 
 
 static
-void polyline(int n, float *px, float *py)
+void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  float ln_width;
+  double ln_width;
 
   ln_type = gksl->asf[0] ? gksl->ltype : gksl->lindex;
   ln_width = gksl->asf[1] ? gksl->lwidth : 1;
@@ -2185,10 +2186,10 @@ void polyline(int n, float *px, float *py)
 
 
 static
-void polymarker(int n, float *px, float *py)
+void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
-  float mk_size;
+  double mk_size;
 
   mk_type = gksl->asf[3] ? gksl->mtype : gksl->mindex;
   mk_size = gksl->asf[4] ? gksl->mszsc : 1;
@@ -2202,9 +2203,9 @@ void polymarker(int n, float *px, float *py)
 
 
 static
-void fill_routine(int n, float *px, float *py, int tnr)
+void fill_routine(int n, double *px, double *py, int tnr)
 {
-  float x, y;
+  double x, y;
   register int i, npoints;
 
   if (n > max_points)
@@ -2237,7 +2238,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
 
 static
-void fill_area(int n, float *px, float *py)
+void fill_area(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color;
   int ln_type;
@@ -2441,10 +2442,10 @@ void draw_string(int x, int y, int width, int height, char *chars, int nchars)
 
 
 static
-void text_routine(float x, float y, int nchars, char *chars)
+void text_routine(double x, double y, int nchars, char *chars)
 {
   int xorg, yorg, width, height;
-  float xrel, yrel, ax, ay;
+  double xrel, yrel, ax, ay;
   int tx_prec;
 #ifdef XFT
   XGlyphInfo extents;
@@ -2601,7 +2602,7 @@ void verify_font_capabilities(void)
 				(unsigned char *) "A", 1, &extents);
 
 	      if (extents.height != 0)
-		capheights[font] = (float) extents.height / MAX_SIZE;
+		capheights[font] = (double) extents.height / MAX_SIZE;
 	    }
 	}
     }
@@ -2614,8 +2615,8 @@ void set_font(int font)
 {
   int size, angle;
   char fontname[256];
-  float scale, ux, uy, rad;
-  float width, height, capheight, points;
+  double scale, ux, uy, rad;
+  double width, height, capheight, points;
 
   font = abs(font);
   if (font >= 101 && font <= 131)
@@ -2705,10 +2706,10 @@ void set_font(int font)
 
 
 static
-void text(float px, float py, int nchars, char *chars)
+void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
-  float x, y;
+  double x, y;
 
   tx_font = gksl->asf[6] ? gksl->txfont : predef_font[gksl->tindex - 1];
   tx_prec = gksl->asf[6] ? gksl->txprec : predef_prec[gksl->tindex - 1];
@@ -3546,12 +3547,12 @@ void int64to16(short int *a, int length)
 
 static
 void cell_array(
-  float xmin, float xmax, float ymin, float ymax,
+  double xmin, double xmax, double ymin, double ymax,
   int dx, int dy, int dimx, int *colia, int true_color)
 {
   XImage *image = NULL;
 
-  float x1, y1, x2, y2;
+  double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, w, h, bytes_per_line = 0, bitmap_pad, size;
   byte *ba = NULL;
@@ -3767,7 +3768,7 @@ void display_cursor(int x, int y)
 
 
 static
-void get_pointer(int *n, float *x, float *y, int *state, int *term)
+void get_pointer(int *n, double *x, double *y, int *state, int *term)
 {
   Window focus, root_win, child_win;
   XEvent event;
@@ -4209,7 +4210,7 @@ void *event_loop(void *arg)
 
 void gks_drv_x11(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static int win = 0;
@@ -4685,7 +4686,7 @@ void gks_drv_x11(
  *  Set workstation viewport
  */
       {
-	float max_width, max_height;
+	double max_width, max_height;
 
 	lock();
 	p->viewport[0] = r1[0];
@@ -4877,7 +4878,7 @@ void gks_drv_x11(
 
 void gks_drv_x11(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   if (fctid == 2)

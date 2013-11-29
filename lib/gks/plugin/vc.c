@@ -224,7 +224,7 @@ pdf_t vc_pdf_from_memory(unsigned char *data, int len)
 
 frame_t vc_frame_from_pdf(pdf_t pdf, int page, int width, int height)
 {
-  float transx, transy, zoom;
+  double transx, transy, zoom;
   fz_matrix transform, scale_mat, transl_mat;
   fz_rect rect;
   fz_irect bbox;

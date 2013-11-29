@@ -30,7 +30,7 @@ extern "C"
 
 DLLEXPORT void gks_zmqplugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2,
+  int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr);
 
 #ifdef _WIN32
@@ -56,7 +56,7 @@ gks_state_list_t *gkss;
 
 void gks_zmqplugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2,
+  int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
 {
   ws_state_list *wss;
@@ -106,7 +106,7 @@ void gks_zmqplugin(
 
 void gks_zmqplugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2,
+  int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
 {
   if (fctid == 2)

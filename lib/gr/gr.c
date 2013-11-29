@@ -35,44 +35,44 @@
 typedef struct
 {
   int index;
-  float red, green, blue;
+  double red, green, blue;
 }
 color_t;
 
 typedef struct
 {
-  float xmin, xmax, ymin, ymax;
+  double xmin, xmax, ymin, ymax;
 }
 rect_t;
 
 typedef struct
 {
-  float a, b, c, d;
+  double a, b, c, d;
 }
 norm_xform;
 
 typedef struct
 {
   int scale_options;
-  float xmin, xmax, ymin, ymax, zmin, zmax, a, b, c, d, e, f;
+  double xmin, xmax, ymin, ymax, zmin, zmax, a, b, c, d, e, f;
 }
 linear_xform;
 
 typedef struct
 {
-  float zmin, zmax;
+  double zmin, zmax;
   int phi, delta;
-  float a1, a2, b, c1, c2, c3, d;
+  double a1, a2, b, c1, c2, c3, d;
 }
 world_xform;
 
 typedef struct
 {
   int sign;
-  float x0, x1, y0, y1, z0, z1;
-  float xmin, xmax;
+  double x0, x1, y0, y1, z0, z1;
+  double xmin, xmax;
   int initialize;
-  float *buf, *ymin, *ymax;
+  double *buf, *ymin, *ymax;
 }
 hlr_t;
 
@@ -95,7 +95,7 @@ static
 char *display = NULL;
 
 static
-float cxl, cxr, cyf, cyb, czb, czt;
+double cxl, cxr, cyf, cyb, czb, czt;
 
 static
 int arrow_style = 0;
@@ -104,10 +104,10 @@ static
 int flag_printing = 0, flag_graphics = 0;
 
 static
-float xfac[4] = { 0, 0, -0.5, -1 };
+double xfac[4] = { 0, 0, -0.5, -1 };
 
 static
-float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 #define check_autoinit if (autoinit) initgks()
 
@@ -175,7 +175,7 @@ colormap_t;
 typedef struct
 {
   char *format;
-  float width, height;
+  double width, height;
 }
 format_t;
 
@@ -191,7 +191,7 @@ format_t;
 #define deg(rad) ((rad) * 180.0 / M_PI)
 
 static
-float *xpoint = NULL, *ypoint = NULL, *zpoint = NULL;
+double *xpoint = NULL, *ypoint = NULL, *zpoint = NULL;
 
 static
 int npoints = 0, maxpoints = 0;
@@ -519,15 +519,15 @@ void reallocate(int npoints)
   while (npoints >= maxpoints)
     maxpoints += POINT_INC;
 
-  xpoint = (float *) xrealloc(xpoint, maxpoints * sizeof(float));
-  ypoint = (float *) xrealloc(ypoint, maxpoints * sizeof(float));
-  zpoint = (float *) xrealloc(zpoint, maxpoints * sizeof(float));
+  xpoint = (double *) xrealloc(xpoint, maxpoints * sizeof(double));
+  ypoint = (double *) xrealloc(ypoint, maxpoints * sizeof(double));
+  zpoint = (double *) xrealloc(zpoint, maxpoints * sizeof(double));
 }
 
 static
-float x_lin(float x)
+double x_lin(double x)
 {
-  float result;
+  double result;
 
   if (OPTION_X_LOG & lx.scale_options)
     {
@@ -546,9 +546,9 @@ float x_lin(float x)
 }
 
 static
-float y_lin(float y)
+double y_lin(double y)
 {
-  float result;
+  double result;
 
   if (OPTION_Y_LOG & lx.scale_options)
     {
@@ -567,9 +567,9 @@ float y_lin(float y)
 }
 
 static
-float z_lin(float z)
+double z_lin(double z)
 {
-  float result;
+  double result;
 
   if (OPTION_Z_LOG & lx.scale_options)
     {
@@ -588,7 +588,7 @@ float z_lin(float z)
 }
 
 static
-float x_log(float x)
+double x_log(double x)
 {
   if (OPTION_FLIP_X & lx.scale_options)
     x = lx.xmax - x + lx.xmin;
@@ -600,7 +600,7 @@ float x_log(float x)
 }
 
 static
-float y_log(float y)
+double y_log(double y)
 {
   if (OPTION_FLIP_Y & lx.scale_options)
     y = lx.ymax - y + lx.ymin;
@@ -612,7 +612,7 @@ float y_log(float y)
 }
 
 static
-float z_log(float z)
+double z_log(double z)
 {
   if (OPTION_FLIP_Z & lx.scale_options)
     z = lx.zmax - z + lx.zmin;
@@ -624,9 +624,9 @@ float z_log(float z)
 }
 
 static
-float atan_2(float x, float y)
+double atan_2(double x, double y)
 {
-  float a;
+  double a;
 
   if (y == 0)
     if (x < 0)
@@ -640,9 +640,9 @@ float atan_2(float x, float y)
 }
 
 static
-void apply_world_xform (float *x, float *y, float *z)
+void apply_world_xform (double *x, double *y, double *z)
 {
-  float xw, yw;
+  double xw, yw;
 
   xw = wx.a1 * *x + wx.a2 * *y + wx.b;
   yw = wx.c1 * *x + wx.c2 * *y + wx.c3 * *z + wx.d;
@@ -689,11 +689,11 @@ void foreach_activews(void (*routine) (int, void *), void *arg)
 }
 
 static
-void setspace(float zmin, float zmax, int rotation, int tilt)
+void setspace(double zmin, double zmax, int rotation, int tilt)
 {
   int errind, tnr;
-  float wn[4], vp[4];
-  float xmin, xmax, ymin, ymax, r, t, a, c;
+  double wn[4], vp[4];
+  double xmin, xmax, ymin, ymax, r, t, a, c;
 
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
@@ -737,7 +737,7 @@ static
 int setscale(int options)
 {
   int errind, tnr;
-  float wn[4], vp[4];
+  double wn[4], vp[4];
   int result = 0;
 
   gks_inq_current_xformno(&errind, &tnr);
@@ -813,9 +813,9 @@ static
 void initialize(int state)
 {
   int tnr = WC, font = 3, options = 0;
-  float xmin = 0.2, xmax = 0.9, ymin = 0.2, ymax = 0.9;
+  double xmin = 0.2, xmax = 0.9, ymin = 0.2, ymax = 0.9;
   int asf[13] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-  float size = 2, height = 0.027;
+  double size = 2, height = 0.027;
 
   if (state == GKS_K_GKCL)
     {
@@ -894,7 +894,7 @@ void gr_closegks(void)
   autoinit = 1;
 }
 
-void gr_inqdspsize(float *mwidth, float *mheight, int *width, int *height)
+void gr_inqdspsize(double *mwidth, double *mheight, int *width, int *height)
 {
   int n = 1, errind, wkid, ol, conid, wtype, dcunit;
 
@@ -998,7 +998,7 @@ void gr_updatews(void)
 
 #define gks(primitive) \
   int npoints = n; \
-  float *px = x, *py = y; \
+  double *px = x, *py = y; \
   register int i; \
 \
   check_autoinit; \
@@ -1020,19 +1020,19 @@ void gr_updatews(void)
   primitive(npoints, px, py)
 
 static
-void polyline(int n, float *x, float *y)
+void polyline(int n, double *x, double *y)
 {
   gks(gks_polyline);
 }
 
 static
-void polymarker(int n, float *x, float *y)
+void polymarker(int n, double *x, double *y)
 {
   gks(gks_polymarker);
 }
 
 static
-void fillarea(int n, float *x, float *y)
+void fillarea(int n, double *x, double *y)
 {
   gks(gks_fillarea);
 }
@@ -1053,7 +1053,7 @@ void print_int_array(char *name, int n, int *data)
 }
 
 static
-void print_float_array(char *name, int n, float *data)
+void print_float_array(char *name, int n, double *data)
 {
   register int i;
 
@@ -1068,7 +1068,7 @@ void print_float_array(char *name, int n, float *data)
 }
 
 static
-void primitive(char *name, int n, float *x, float *y)
+void primitive(char *name, int n, double *x, double *y)
 {
   gr_writestream("<%s len=\"%d\"", name, n);
   print_float_array("x", n, x);
@@ -1076,7 +1076,7 @@ void primitive(char *name, int n, float *x, float *y)
   gr_writestream("/>\n");
 }
 
-void gr_polyline(int n, float *x, float *y)
+void gr_polyline(int n, double *x, double *y)
 {
   gks(gks_polyline);
 
@@ -1084,7 +1084,7 @@ void gr_polyline(int n, float *x, float *y)
     primitive("polyline", n, x, y);
 }
 
-void gr_polymarker(int n, float *x, float *y)
+void gr_polymarker(int n, double *x, double *y)
 {
   gks(gks_polymarker);
 
@@ -1092,7 +1092,7 @@ void gr_polymarker(int n, float *x, float *y)
     primitive("polymarker", n, x, y);
 }
 
-void gr_text(float x, float y, char *string)
+void gr_text(double x, double y, char *string)
 {
   int errind, tnr;
 
@@ -1111,7 +1111,7 @@ void gr_text(float x, float y, char *string)
     gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
-void gr_fillarea(int n, float *x, float *y)
+void gr_fillarea(int n, double *x, double *y)
 {
   gks(gks_fillarea);
 
@@ -1120,7 +1120,7 @@ void gr_fillarea(int n, float *x, float *y)
 }
 
 void gr_cellarray(
-  float xmin, float xmax, float ymin, float ymax, int dimx, int dimy,
+  double xmin, double xmax, double ymin, double ymax, int dimx, int dimy,
   int scol, int srow, int ncol, int nrow, int *color)
 {
   check_autoinit;
@@ -1141,10 +1141,10 @@ void gr_cellarray(
     }
 }
 
-void gr_spline(int n, float *px, float *py, int m, int method)
+void gr_spline(int n, double *px, double *py, int m, int method)
 {
   int err = 0, i, j;
-  float *t, *s;
+  double *t, *s;
   double *sx, *sy, *x, *f, *df, *y, *c, *wk, *se, var, d;
   int ic, job, ier;
 
@@ -1161,8 +1161,8 @@ void gr_spline(int n, float *px, float *py, int m, int method)
 
   check_autoinit;
 
-  t = (float *) xmalloc(sizeof(float) * m);
-  s = (float *) xmalloc(sizeof(float) * m);
+  t = (double *) xmalloc(sizeof(double) * m);
+  s = (double *) xmalloc(sizeof(double) * m);
   sx = (double *) xmalloc(sizeof(double) * m);
   sy = (double *) xmalloc(sizeof(double) * m);
   x = (double *) xmalloc(sizeof(double) * n);
@@ -1217,7 +1217,7 @@ void gr_spline(int n, float *px, float *py, int m, int method)
                     i = ic - 1;
                   d = sx[j] - x[i];
 
-                  s[j] = (float) (((c[i + 2 * ic] * d + c[i + ic]) * d +
+                  s[j] = (double) (((c[i + 2 * ic] * d + c[i + ic]) * d +
                                    c[i]) * d + y[i]);
                 }
             }
@@ -1233,15 +1233,15 @@ void gr_spline(int n, float *px, float *py, int m, int method)
       b_spline(n, x, f, m, sx, sy);
 
       for (j = 0; j < m; j++)
-        s[j] = (float) sy[j];
+        s[j] = (double) sy[j];
     }
 
   if (!err)
     {
       for (j = 0; j < m; j++)
         {
-          t[j] = x_log((float) (lx.xmin + sx[j] * (lx.xmax - lx.xmin)));
-          s[j] = y_log((float) (lx.ymin + s[j] * (lx.ymax - lx.ymin)));
+          t[j] = x_log((double) (lx.xmin + sx[j] * (lx.xmax - lx.xmin)));
+          s[j] = y_log((double) (lx.ymin + s[j] * (lx.ymax - lx.ymin)));
         }
       polyline(m, t, s);
     }
@@ -1267,13 +1267,13 @@ void gr_spline(int n, float *px, float *py, int m, int method)
     }
 }
 
-void gr_gridit(int nd, float *xd, float *yd, float *zd,
-               int nx, int ny, float *x, float *y, float *z)
+void gr_gridit(int nd, double *xd, double *yd, double *zd,
+               int nx, int ny, double *x, double *y, double *z)
 {
   int i, md, ncp;
-  float xmin, ymin, xmax, ymax;
+  double xmin, ymin, xmax, ymax;
   int *iwk;
-  float *wk;
+  double *wk;
 
   if (nd < 5)
     {
@@ -1303,17 +1303,17 @@ void gr_gridit(int nd, float *xd, float *yd, float *zd,
 
   /* DETERMINE GRID POINTS INSIDE THE DATA AREA */
   for (i = 0; i < nx; ++i) {
-    x[i] = xmin + i / (float) (nx - 1) * (xmax - xmin);
+    x[i] = xmin + i / (double) (nx - 1) * (xmax - xmin);
   }
   for (i = 0; i < ny; ++i) {
-    y[i] = ymin + i / (float) (ny - 1) * (ymax - ymin);
+    y[i] = ymin + i / (double) (ny - 1) * (ymax - ymin);
   }
 
   /* CALL THE SMOOTH SURFACE FIT ROUTINE */
   md = 1;
   ncp = 4;
   iwk = (int *) calloc(31 * nd + nx * ny, sizeof(int));
-  wk = (float *) calloc(5 * nd, sizeof(float));
+  wk = (double *) calloc(5 * nd, sizeof(double));
 
   idsfft(&md, &ncp, &nd, xd, yd, zd, &nx, &ny, x, y, z, iwk, wk);
 
@@ -1337,7 +1337,7 @@ void gr_inqlinetype(int *ltype)
 	gks_inq_pline_linetype(&errind, ltype);
 }
 
-void gr_setlinewidth(float width)
+void gr_setlinewidth(double width)
 {
   check_autoinit;
 
@@ -1379,7 +1379,7 @@ void gr_inqmarkertype(int *mtype)
 	gks_inq_pmark_type(&errind, mtype);
 }
 
-void gr_setmarkersize(float size)
+void gr_setmarkersize(double size)
 {
   check_autoinit;
 
@@ -1416,14 +1416,14 @@ void gr_settextfontprec(int font, int precision)
             font, precision);
 }
 
-void gr_setcharexpan(float factor)
+void gr_setcharexpan(double factor)
 {
   check_autoinit;
 
   gks_set_text_expfac(factor);
 }
 
-void gr_setcharspace(float spacing)
+void gr_setcharspace(double spacing)
 {
   check_autoinit;
 
@@ -1440,7 +1440,7 @@ void gr_settextcolorind(int color)
     gr_writestream("<settextcolorind color=\"%d\"/>\n", color);
 }
 
-void gr_setcharheight(float height)
+void gr_setcharheight(double height)
 {
   check_autoinit;
 
@@ -1450,7 +1450,7 @@ void gr_setcharheight(float height)
     gr_writestream("<setcharheight height=\"%g\"/>\n", height);
 }
 
-void gr_setcharup(float ux, float uy)
+void gr_setcharup(double ux, double uy)
 {
   check_autoinit;
 
@@ -1521,7 +1521,7 @@ void setcolor(int workstation_id, color_t *color)
 }
 
 static
-void setcolorrep(int index, float red, float green, float blue)
+void setcolorrep(int index, double red, double green, double blue)
 {
   color_t color;
 
@@ -1533,7 +1533,7 @@ void setcolorrep(int index, float red, float green, float blue)
   foreach_activews((void (*)(int, void *)) setcolor, (void *) &color);
 }
 
-void gr_setcolorrep(int index, float red, float green, float blue)
+void gr_setcolorrep(int index, double red, double green, double blue)
 {
   check_autoinit;
 
@@ -1559,7 +1559,7 @@ void gr_inqscale(int *options)
   *options = lx.scale_options;
 }
 
-void gr_setwindow(float xmin, float xmax, float ymin, float ymax)
+void gr_setwindow(double xmin, double xmax, double ymin, double ymax)
 {
   int tnr = WC;
 
@@ -1574,7 +1574,7 @@ void gr_setwindow(float xmin, float xmax, float ymin, float ymax)
       xmin, xmax, ymin, ymax);
 }
 
-void gr_inqwindow(float *xmin, float *xmax, float *ymin, float *ymax)
+void gr_inqwindow(double *xmin, double *xmax, double *ymin, double *ymax)
 {
   *xmin = lx.xmin;
   *xmax = lx.xmax;
@@ -1582,7 +1582,7 @@ void gr_inqwindow(float *xmin, float *xmax, float *ymin, float *ymax)
   *ymax = lx.ymax;
 }
 
-void gr_setviewport(float xmin, float xmax, float ymin, float ymax)
+void gr_setviewport(double xmin, double xmax, double ymin, double ymax)
 {
   int tnr = WC;
 
@@ -1625,7 +1625,7 @@ void wswindow(int workstation_id, rect_t *rect)
   gks_set_ws_window(wkid, rect->xmin, rect->xmax, rect->ymin, rect->ymax);
 }
 
-void gr_setwswindow(float xmin, float xmax, float ymin, float ymax)
+void gr_setwswindow(double xmin, double xmax, double ymin, double ymax)
 {
   rect_t rect;
 
@@ -1647,7 +1647,7 @@ void wsviewport(int workstation_id, rect_t *rect)
   gks_set_ws_viewport(wkid, rect->xmin, rect->xmax, rect->ymin, rect->ymax);
 }
 
-void gr_setwsviewport(float xmin, float xmax, float ymin, float ymax)
+void gr_setwsviewport(double xmin, double xmax, double ymin, double ymax)
 {
   rect_t rect;
 
@@ -1708,11 +1708,11 @@ void gr_redrawsegws(void)
 }
 
 void gr_setsegtran(
-  int segment, float fx, float fy, float transx, float transy, float phi,
-  float scalex, float scaley)
+  int segment, double fx, double fy, double transx, double transy, double phi,
+  double scalex, double scaley)
 {
   int segn = segment;
-  float mat[3][2];
+  double mat[3][2];
 
   check_autoinit;
 
@@ -1759,7 +1759,7 @@ void gr_updategks(void)
     }
 }
 
-int gr_setspace(float zmin, float zmax, int rotation, int tilt)
+int gr_setspace(double zmin, double zmax, int rotation, int tilt)
 {
   if (zmin < zmax)
     {
@@ -1781,7 +1781,7 @@ int gr_setspace(float zmin, float zmax, int rotation, int tilt)
   return 0;
 }
 
-void gr_inqspace(float *zmin, float *zmax, int *rotation, int *tilt)
+void gr_inqspace(double *zmin, double *zmax, int *rotation, int *tilt)
 {
   *zmin = wx.zmin;
   *zmax = wx.zmax;
@@ -1790,7 +1790,7 @@ void gr_inqspace(float *zmin, float *zmax, int *rotation, int *tilt)
 }
 
 static
-int iround(float x)
+int iround(double x)
 {
   if (x < 0)
     return ((int) (x - 0.5));
@@ -1799,7 +1799,7 @@ int iround(float x)
 }
 
 static
-int gauss(float x)
+int gauss(double x)
 {
   if (x >= 0 || x == (int) x)
     return ((int) x);
@@ -1808,7 +1808,7 @@ int gauss(float x)
 }
 
 static
-int ipred(float x)
+int ipred(double x)
 {
   if (x == (int) x)
     return ((int) x - 1);
@@ -1817,7 +1817,7 @@ int ipred(float x)
 }
 
 static
-int isucc(float x)
+int isucc(double x)
 {
   if (x == (int) x)
     return ((int) x);
@@ -1836,7 +1836,7 @@ void end_pline(void)
 }
 
 static
-void pline(float x, float y)
+void pline(double x, double y)
 {
   if (npoints >= maxpoints)
     reallocate(npoints);
@@ -1847,7 +1847,7 @@ void pline(float x, float y)
 }
 
 static
-void start_pline(float x, float y)
+void start_pline(double x, double y)
 {
   end_pline();
 
@@ -1856,7 +1856,7 @@ void start_pline(float x, float y)
 }
 
 static
-void pline3d(float x, float y, float z)
+void pline3d(double x, double y, double z)
 {
   if (npoints >= maxpoints)
     reallocate(npoints);
@@ -1871,7 +1871,7 @@ void pline3d(float x, float y, float z)
 }
 
 static
-void start_pline3d(float x, float y, float z)
+void start_pline3d(double x, double y, double z)
 {
   end_pline();
 
@@ -1879,7 +1879,7 @@ void start_pline3d(float x, float y, float z)
   pline3d(x, y, z);
 }
 
-int gr_textext(float x, float y, char *string)
+int gr_textext(double x, double y, char *string)
 {
   int errind, tnr, result;
 
@@ -1900,7 +1900,7 @@ int gr_textext(float x, float y, char *string)
   return result;
 }
 
-void gr_inqtextext(float x, float y, char *string, float *tbx, float *tby)
+void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
 {
   int errind, tnr;
   register int i;
@@ -1931,8 +1931,8 @@ void gr_inqtextext(float x, float y, char *string, float *tbx, float *tby)
 }
 
 static
-void text2dlbl(float x, float y, const char *chars,
-               void (*fp)(float, float, const char*))
+void text2dlbl(double x, double y, const char *chars,
+               void (*fp)(double, double, const char*))
 {
   int errind, tnr;
 
@@ -1960,24 +1960,24 @@ void text2dlbl(float x, float y, const char *chars,
 }
 
 static
-void text2d(float x, float y, const char *chars)
+void text2d(double x, double y, const char *chars)
 {
   text2dlbl(x, y, chars, NULL);
 }
 
-void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
-                int major_x, int major_y, float tick_size,
-                void (*fpx)(float, float, const char*),
-                void (*fpy)(float, float, const char*))
+void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
+                int major_x, int major_y, double tick_size,
+                void (*fpx)(double, double, const char*),
+                void (*fpy)(double, double, const char*))
 {
   int errind, tnr;
   int ltype, halign, valign, clsw;
-  float chux, chuy;
+  double chux, chuy;
 
-  float clrt[4], wn[4], vp[4];
-  float x_min, x_max, y_min, y_max;
+  double clrt[4], wn[4], vp[4];
+  double x_min, x_max, y_min, y_max;
 
-  float tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
+  double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
   int decade, exponent, i;
   char string[256];
 
@@ -2051,7 +2051,7 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
         {
           y0 = pow(10.0, (double) gauss(log10(y_min)));
 
-          i = ipred((float) (y_min / y0));
+          i = ipred((double) (y_min / y0));
           yi = y0 + i * y0;
           decade = 0;
 
@@ -2110,7 +2110,7 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
         }
       else
         {
-          i = isucc((float) (y_min / y_tick));
+          i = isucc((double) (y_min / y_tick));
           yi = i * y_tick;
 
           /* draw Y-axis */
@@ -2182,7 +2182,7 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
         {
           x0 = pow(10.0, (double) gauss(log10(x_min)));
 
-          i = ipred((float) (x_min / x0));
+          i = ipred((double) (x_min / x0));
           xi = x0 + i * x0;
           decade = 0;
 
@@ -2241,7 +2241,7 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
         }
       else
         {
-          i = isucc((float) (x_min / x_tick));
+          i = isucc((double) (x_min / x_tick));
           xi = i * x_tick;
 
           /* draw X-axis */
@@ -2298,15 +2298,15 @@ void gr_axeslbl(float x_tick, float y_tick, float x_org, float y_org,
       x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
 }
 
-void gr_axes(float x_tick, float y_tick, float x_org, float y_org,
-             int major_x, int major_y, float tick_size)
+void gr_axes(double x_tick, double y_tick, double x_org, double y_org,
+             int major_x, int major_y, double tick_size)
 {
   gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size, NULL,
              NULL);
 }
 
 static
-void grid_line(float x0, float y0, float x1, float y1, float tick)
+void grid_line(double x0, double y0, double x1, double y1, double tick)
 {
   int color = tick < 0 ? 88 : 90;
 
@@ -2317,16 +2317,16 @@ void grid_line(float x0, float y0, float x1, float y1, float tick)
   end_pline();
 }
 
-void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
+void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
              int major_x, int major_y)
 {
   int errind, tnr;
   int ltype, color, clsw;
 
-  float clrt[4], wn[4], vp[4];
-  float x_min, x_max, y_min, y_max;
+  double clrt[4], wn[4], vp[4];
+  double x_min, x_max, y_min, y_max;
 
-  float x0, y0, xi, yi, tick;
+  double x0, y0, xi, yi, tick;
 
   int i;
 
@@ -2369,7 +2369,7 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
         {
           y0 = pow(10.0, (double) gauss(log10(y_min)));
 
-          i = ipred((float) (y_min / y0));
+          i = ipred((double) (y_min / y0));
           yi = y0 + i * y0;
 
           /* draw horizontal grid lines */
@@ -2400,7 +2400,7 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
         }
       else
         {
-          i = isucc((float) ((y_min - y_org) / y_tick));
+          i = isucc((double) ((y_min - y_org) / y_tick));
           yi = y_org + i * y_tick;
 
           /* draw horizontal grid lines */
@@ -2432,7 +2432,7 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
         {
           x0 = pow(10.0, (double) gauss(log10(x_min)));
 
-          i = ipred((float) (x_min / x0));
+          i = ipred((double) (x_min / x0));
           xi = x0 + i * x0;
 
           /* draw vertical grid lines */
@@ -2463,7 +2463,7 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
         }
       else
         {
-          i = isucc((float) ((x_min - x_org) / x_tick));
+          i = isucc((double) ((x_min - x_org) / x_tick));
           xi = x_org + i * x_tick;
 
           /* draw vertical grid lines */
@@ -2502,10 +2502,10 @@ void gr_grid(float x_tick, float y_tick, float x_org, float y_org,
       x_tick, y_tick, x_org, y_org, major_x, major_y);
 }
 
-void gr_verrorbars(int n, float *px, float *py, float *e1, float *e2)
+void gr_verrorbars(int n, double *px, double *py, double *e1, double *e2)
 {
   int errind, i;
-  float tick, x, x1, x2, y1, y2, marker_size;
+  double tick, x, x1, x2, y1, y2, marker_size;
 
   if (n < 1)
     {
@@ -2553,10 +2553,10 @@ void gr_verrorbars(int n, float *px, float *py, float *e1, float *e2)
     }
 }
 
-void gr_herrorbars(int n, float *px, float *py, float *e1, float *e2)
+void gr_herrorbars(int n, double *px, double *py, double *e1, double *e2)
 {
   int errind, i;
-  float tick, y, x1, x2, y1, y2, marker_size;
+  double tick, y, x1, x2, y1, y2, marker_size;
 
   if (n < 1)
     {
@@ -2605,7 +2605,7 @@ void gr_herrorbars(int n, float *px, float *py, float *e1, float *e2)
 }
 
 static
-void clip_code(float x, float y, float z, int *c)
+void clip_code(double x, double y, double z, int *c)
 {
   *c = 0;
   if (x < cxl)
@@ -2623,11 +2623,11 @@ void clip_code(float x, float y, float z, int *c)
 }
 
 static
-void clip3d(float *x0, float *x1, float *y0, float *y1, float *z0,
-            float *z1, int *visible)
+void clip3d(double *x0, double *x1, double *y0, double *y1, double *z0,
+            double *z1, int *visible)
 {
   int c, c0, c1;
-  float x = 0, y = 0, z = 0;
+  double x = 0, y = 0, z = 0;
 
   clip_code(*x0, *y0, *z0, &c0);
   clip_code(*x1, *y1, *z1, &c1);
@@ -2697,12 +2697,12 @@ void clip3d(float *x0, float *x1, float *y0, float *y1, float *z0,
   *visible = 1;
 }
 
-void gr_polyline3d(int n, float *px, float *py, float *pz)
+void gr_polyline3d(int n, double *px, double *py, double *pz)
 {
   int errind, clsw, i;
-  float clrt[4];
+  double clrt[4];
 
-  float x, y, z, x0, y0, z0, x1, y1, z1;
+  double x, y, z, x0, y0, z0, x1, y1, z1;
   int clip = 1, visible = 1;
 
   check_autoinit;
@@ -2761,7 +2761,7 @@ void gr_polyline3d(int n, float *px, float *py, float *pz)
 }
 
 static
-void text3d(float x, float y, float z, char *chars)
+void text3d(double x, double y, double z, char *chars)
 {
   int errind, tnr;
 
@@ -2784,23 +2784,23 @@ void text3d(float x, float y, float z, char *chars)
     gks_select_xform(tnr);
 }
 
-void gr_axes3d(float x_tick, float y_tick, float z_tick,
-               float x_org, float y_org, float z_org,
-               int major_x, int major_y, int major_z, float tick_size)
+void gr_axes3d(double x_tick, double y_tick, double z_tick,
+               double x_org, double y_org, double z_org,
+               int major_x, int major_y, int major_z, double tick_size)
 {
   int errind, tnr;
   int ltype, halign, valign, font, prec, clsw;
-  float chux, chuy, slant;
+  double chux, chuy, slant;
 
-  float clrt[4], wn[4], vp[4];
-  float x_min, x_max, y_min, y_max, z_min, z_max;
+  double clrt[4], wn[4], vp[4];
+  double x_min, x_max, y_min, y_max, z_min, z_max;
 
-  float r, alpha, beta;
-  float a[2], c[2], text_slant[4];
+  double r, alpha, beta;
+  double a[2], c[2], text_slant[4];
   int *anglep, which_rep, rep;
 
-  float tick, minor_tick, major_tick, x_label, y_label;
-  float x0, y0, z0, xi, yi, zi;
+  double tick, minor_tick, major_tick, x_label, y_label;
+  double x0, y0, z0, xi, yi, zi;
   int i, decade, exponent;
   char string[256];
 
@@ -2912,7 +2912,7 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
         {
           z0 = pow(10.0, (double) gauss(log10(z_min)));
 
-          i = ipred((float) (z_min / z0));
+          i = ipred((double) (z_min / z0));
           zi = z0 + i * z0;
           decade = 0;
 
@@ -2967,7 +2967,7 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
         }
       else
         {
-          i = isucc((float) (z_min / z_tick));
+          i = isucc((double) (z_min / z_tick));
           zi = i * z_tick;
 
           /* draw Z-axis */
@@ -3043,7 +3043,7 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
         {
           y0 = pow(10.0, (double) gauss(log10(y_min)));
 
-          i = ipred((float) (y_min / y0));
+          i = ipred((double) (y_min / y0));
           yi = y0 + i * y0;
           decade = 0;
 
@@ -3098,7 +3098,7 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
         }
       else
         {
-          i = isucc((float) (y_min / y_tick));
+          i = isucc((double) (y_min / y_tick));
           yi = i * y_tick;
 
           /* draw Y-axis */
@@ -3174,7 +3174,7 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
         {
           x0 = pow(10.0, (double) gauss(log10(x_min)));
 
-          i = ipred((float) (x_min / x0));
+          i = ipred((double) (x_min / x0));
           xi = x0 + i * x0;
           decade = 0;
 
@@ -3229,7 +3229,7 @@ void gr_axes3d(float x_tick, float y_tick, float z_tick,
         }
       else
         {
-          i = isucc((float) (x_min / x_tick));
+          i = isucc((double) (x_min / x_tick));
           xi = i * x_tick;
 
           /* draw X-axis */
@@ -3292,23 +3292,23 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 {
   int errind, tnr;
   int halign, valign, clsw, font, prec;
-  float chux, chuy;
+  double chux, chuy;
 
-  float clrt[4], wn[4], vp[4];
-  float x_min, x_max, y_min, y_max, z_min, z_max;
-  float x_rel, y_rel, z_rel, x, y, z;
+  double clrt[4], wn[4], vp[4];
+  double x_min, x_max, y_min, y_max, z_min, z_max;
+  double x_rel, y_rel, z_rel, x, y, z;
 
-  float r, t, alpha, beta;
-  float a[2], c[2];
+  double r, t, alpha, beta;
+  double a[2], c[2];
 
-  float slant, text_slant[4];
+  double slant, text_slant[4];
   int *anglep, which_rep, rep;
 
-  float x_2d, y_2d, x_2d_max, y_2d_max;
-  float x_angle, y_angle;
-  float x_mid_x, x_mid_y, y_mid_x, y_mid_y;
-  float a1, a2, c1, c2, c3, aa, cc;
-  float xr, yr, zr;
+  double x_2d, y_2d, x_2d_max, y_2d_max;
+  double x_angle, y_angle;
+  double x_mid_x, x_mid_y, y_mid_x, y_mid_y;
+  double a1, a2, c1, c2, c3, aa, cc;
+  double xr, yr, zr;
 
   int flip_x, flip_y, flip_z;
 
@@ -3567,9 +3567,9 @@ static
 void init_hlr(void)
 {
   register int sign, i, j, x1, x2;
-  register float *hide, a, b, m = 0;
-  float x[3], y[3], z[3], yj;
-  float eps;
+  register double *hide, a, b, m = 0;
+  double x[3], y[3], z[3], yj;
+  double eps;
 
   eps = (lx.ymax - lx.ymin) * 1E-5;
 
@@ -3640,18 +3640,18 @@ void init_hlr(void)
 }
 
 static
-void pline_hlr(int n, float *x, float *y, float *z)
+void pline_hlr(int n, double *x, double *y, double *z)
 {
   register int i, j, x1, x2;
   register int visible, draw;
-  register float *hide, a, b, c, m = 0;
+  register double *hide, a, b, c, m = 0;
 
   int saved_scale_options;
-  float xj, yj;
+  double xj, yj;
 
   if (hlr.buf == NULL)
     {
-      hlr.buf = (float *) xmalloc(sizeof(float) * (RESOLUTION_X + 1) * 2);
+      hlr.buf = (double *) xmalloc(sizeof(double) * (RESOLUTION_X + 1) * 2);
       hlr.ymin = hlr.buf;
       hlr.ymax = hlr.buf + RESOLUTION_X + 1;
     }
@@ -3790,7 +3790,7 @@ static
 void glint(int dinp, int *inp, int doutp, int *outp)
 {
   int i, j, k, n;
-  float ratio, delta;
+  double ratio, delta;
 
   n = (doutp + 1) / dinp;
   ratio = 1.0 / n;
@@ -3812,7 +3812,7 @@ void glint(int dinp, int *inp, int doutp, int *outp)
 
 static
 void pixel(
-  float xmin, float xmax, float ymin, float ymax,
+  double xmin, double xmax, double ymin, double ymax,
   int dx, int dy, int *colia, int w, int h, int *pixmap,
   int dwk, int *wk1, int *wk2)
 {
@@ -3859,11 +3859,11 @@ void pixel(
 
 static
 void get_intensity(
-  float *fx, float *fy, float *fz, float *light_source, float *intensity)
+  double *fx, double *fy, double *fz, double *light_source, double *intensity)
 {
   int k;
-  float max_x, max_y, max_z, min_x, min_y, min_z, norm_1, norm_2;
-  float center[4], normal[4], negated[4], oddnormal[4], negated_norm[4];
+  double max_x, max_y, max_z, min_x, min_y, min_z, norm_1, norm_2;
+  double center[4], normal[4], negated[4], oddnormal[4], negated_norm[4];
 
   min_x = max_x = fx[0];
   min_y = max_y = fy[0];
@@ -3892,7 +3892,7 @@ void get_intensity(
   for (k = 0; k < 3; k++)
     negated[k] = light_source[k] - center[k];
 
-  norm_1 = (float) sqrt(negated[0] * negated[0] + negated[1] * negated[1] +
+  norm_1 = (double) sqrt(negated[0] * negated[0] + negated[1] * negated[1] +
                         negated[2] * negated[2]);
 
   for (k = 0; k < 3; k++)
@@ -3909,7 +3909,7 @@ void get_intensity(
     ((fx[2] - fx[1]) * (fy[3] - fy[1]) - (fy[2] - fy[1]) * (fx[3] - fx[1]));
   normal[3] = 1;
 
-  norm_2 = (float) sqrt(normal[0] * normal[0] + normal[1] * normal[1] +
+  norm_2 = (double) sqrt(normal[0] * normal[0] + normal[1] * normal[1] +
                         normal[2] * normal[2]);
 
   for (k = 0; k < 3; k++)
@@ -3920,25 +3920,25 @@ void get_intensity(
      oddnormal[2] * negated_norm[2]) * 0.8 + 0.2;
 }
 
-void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
+void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 {
   int errind, ltype, coli, int_style;
 
   int i, ii, j, jj, k;
   int color;
 
-  float *xn, *yn, *zn, *x, *y, *z;
-  float facex[4], facey[4], facez[4], intensity = 0, meanz;
-  float a, b, c, d, e, f;
+  double *xn, *yn, *zn, *x, *y, *z;
+  double facex[4], facey[4], facez[4], intensity = 0, meanz;
+  double a, b, c, d, e, f;
 
-  float ymin, ymax, zmin, zmax;
+  double ymin, ymax, zmin, zmax;
 
   int flip_x, flip_y, flip_z;
   int np;
 
   int *colia, w, h, *ca, dwk, *wk1, *wk2;
 
-  static float light_source[3] = { 0.5, -1, 2 };
+  static double light_source[3] = { 0.5, -1, 2 };
 
   if ((nx <= 0) || (ny <= 0))
     {
@@ -3982,13 +3982,13 @@ void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
   gks_inq_fill_int_style(&errind, &int_style);
   gks_inq_fill_color_index(&errind, &coli);
 
-  k = sizeof(float) * (nx + ny) * 3;
-  xn = (float *) xmalloc(k);
-  yn = (float *) xmalloc(k);
-  zn = (float *) xmalloc(k);
-  x = (float *) xmalloc(nx * sizeof(float));
-  y = (float *) xmalloc(ny * sizeof(float));
-  z = (float *) xmalloc(nx * ny * sizeof(float));
+  k = sizeof(double) * (nx + ny) * 3;
+  xn = (double *) xmalloc(k);
+  yn = (double *) xmalloc(k);
+  zn = (double *) xmalloc(k);
+  x = (double *) xmalloc(nx * sizeof(double));
+  y = (double *) xmalloc(ny * sizeof(double));
+  z = (double *) xmalloc(nx * ny * sizeof(double));
 
   flip_x = OPTION_FLIP_X & lx.scale_options;
   for (i = 0; i < nx; i++)
@@ -4325,12 +4325,12 @@ void gr_surface(int nx, int ny, float *px, float *py, float *pz, int option)
 }
 
 void gr_contour(
-  int nx, int ny, int nh, float *px, float *py, float *h, float *pz,
+  int nx, int ny, int nh, double *px, double *py, double *h, double *pz,
   int major_h)
 {
   int i, j;
   int errind, ltype, halign, valign;
-  float chux, chuy;
+  double chux, chuy;
 
   if ((nx <= 0) || (ny <= 0))
     {
@@ -4386,9 +4386,9 @@ void gr_contour(
 }
 
 static
-float value(float n1, float n2, float hue)
+double value(double n1, double n2, double hue)
 {
-  float val;
+  double val;
 
   if (hue > 360)
     hue -= 360;
@@ -4408,9 +4408,9 @@ float value(float n1, float n2, float hue)
 }
 
 static
-void hls_to_rgb(float h, float l, float s, float *r, float *g, float *b)
+void hls_to_rgb(double h, double l, double s, double *r, double *g, double *b)
 {
-  float m1, m2;
+  double m1, m2;
 
   m2 = (l < 0.5) ? l * (1 + s) : l + s - l * s;
   m1 = 2 * l - m2;
@@ -4430,7 +4430,7 @@ void hls_to_rgb(float h, float l, float s, float *r, float *g, float *b)
 void gr_setcolormap(int index)
 {
   int i, ci;
-  float r, g, b, h, l, s;
+  double r, g, b, h, l, s;
   double x;
   int inverted, j;
 
@@ -4603,11 +4603,11 @@ void gr_setcolormap(int index)
 void gr_colormap(void)
 {
   int errind, halign, valign, clsw, tnr;
-  float clrt[4], wn[4], vp[4];
-  float xmin, xmax, ymin, ymax, zmin, zmax;
+  double clrt[4], wn[4], vp[4];
+  double xmin, xmax, ymin, ymax, zmin, zmax;
   int w, h, sx, sy, nx, ny, colia[LAST_COLOR - FIRST_COLOR + 1];
   int i, nz, ci, cells;
-  float x, y, z, dy, dz;
+  double x, y, z, dy, dz;
   char text[256];
 
   check_autoinit;
@@ -4668,7 +4668,7 @@ void gr_colormap(void)
 void gr_inqcolor(int color, int *rgb)
 {
   int wkid = 1, errind;
-  float r, g, b;
+  double r, g, b;
 
   check_autoinit;
 
@@ -4678,9 +4678,9 @@ void gr_inqcolor(int color, int *rgb)
          ((nint(b * 255) & 0xff) << 16);
 }
 
-float gr_tick(float amin, float amax)
+double gr_tick(double amin, double amax)
 {
-  float tick_unit, exponent, factor;
+  double tick_unit, exponent, factor;
   int n;
 
   if (amax > amin)
@@ -4711,14 +4711,14 @@ float gr_tick(float amin, float amax)
 }
 
 static
-float fract(float x)
+double fract(double x)
 {
   return (x - (int) x);
 }
 
-void gr_adjustrange(float *amin, float *amax)
+void gr_adjustrange(double *amin, double *amax)
 {
-  float tick;
+  double tick;
 
   if (*amin == *amax)
     {
@@ -4801,7 +4801,7 @@ void gr_beginprintext(
 {
   int wkid = 6, wstype = 62;
   char *type;
-  float width = 0.210, height = 0.297;
+  double width = 0.210, height = 0.297;
   format_t *p = formats;
   int color = 0, landscape = 0;
 
@@ -4886,7 +4886,7 @@ void gr_endprint(void)
     fprintf(stderr, "no print device activated\n");
 }
 
-void gr_ndctowc(float *x, float *y)
+void gr_ndctowc(double *x, double *y)
 {
   check_autoinit;
 
@@ -4894,7 +4894,7 @@ void gr_ndctowc(float *x, float *y)
   *y = y_log((*y - nx.d) / nx.c);
 }
 
-void gr_wctondc(float *x, float *y)
+void gr_wctondc(double *x, double *y)
 {
   check_autoinit;
 
@@ -4902,9 +4902,9 @@ void gr_wctondc(float *x, float *y)
   *y = nx.c * y_lin(*y) + nx.d;
 }
 
-void gr_drawrect(float xmin, float xmax, float ymin, float ymax)
+void gr_drawrect(double xmin, double xmax, double ymin, double ymax)
 {
-  float x[5], y[5];
+  double x[5], y[5];
 
   check_autoinit;
 
@@ -4923,9 +4923,9 @@ void gr_drawrect(float xmin, float xmax, float ymin, float ymax)
       xmin, xmax, ymin, ymax);
 }
 
-void gr_fillrect(float xmin, float xmax, float ymin, float ymax)
+void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
 {
-  float x[4], y[4];
+  double x[4], y[4];
 
   check_autoinit;
 
@@ -4943,11 +4943,11 @@ void gr_fillrect(float xmin, float xmax, float ymin, float ymax)
 }
 
 void gr_drawarc(
-  float xmin, float xmax, float ymin, float ymax, int a1, int a2)
+  double xmin, double xmax, double ymin, double ymax, int a1, int a2)
 {
-  float xcenter, ycenter, width, height;
+  double xcenter, ycenter, width, height;
   int a, n;
-  float x[361], y[361];
+  double x[361], y[361];
 
   check_autoinit;
 
@@ -4980,11 +4980,11 @@ void gr_drawarc(
 }
 
 void gr_fillarc(
-  float xmin, float xmax, float ymin, float ymax, int a1, int a2)
+  double xmin, double xmax, double ymin, double ymax, int a1, int a2)
 {
-  float xcenter, ycenter, width, height;
+  double xcenter, ycenter, width, height;
   int a, n;
-  float x[361], y[361];
+  double x[361], y[361];
 
   check_autoinit;
 
@@ -5027,13 +5027,13 @@ void gr_setarrowstyle(int style)
     gr_writestream("<setarrowstyle style=\"%d\"/>\n", style);
 }
 
-void gr_drawarrow(float x1, float y1, float x2, float y2)
+void gr_drawarrow(double x1, double y1, double x2, double y2)
 {
-  float xs, ys, xe, ye;
+  double xs, ys, xe, ye;
   int errind, ltype, intstyle, tnr;
-  float a, c, xc, yc, f;
+  double a, c, xc, yc, f;
   int fill, i, j, n;
-  float xi, yi, x[10], y[10];
+  double xi, yi, x[10], y[10];
 
   check_autoinit;
 
@@ -5093,7 +5093,7 @@ void gr_drawarrow(float x1, float y1, float x2, float y2)
 }
 
 void gr_drawimage(
-  float xmin, float xmax, float ymin, float ymax,
+  double xmin, double xmax, double ymin, double ymax,
   int width, int height, int *data)
 {
   register int n;
@@ -5115,21 +5115,21 @@ void gr_drawimage(
     }
 }
 
-void gr_setshadow(float offsetx, float offsety, float blur)
+void gr_setshadow(double offsetx, double offsety, double blur)
 {
   check_autoinit;
 
   gks_set_shadow(offsetx, offsety, blur);
 }
 
-void gr_settransparency(float alpha)
+void gr_settransparency(double alpha)
 {
   check_autoinit;
 
   gks_set_transparency(alpha);
 }
 
-void gr_setcoordxform(float mat[3][2])
+void gr_setcoordxform(double mat[3][2])
 {
   check_autoinit;
 
@@ -5162,7 +5162,7 @@ void gr_endgraphics(void)
 }
 
 static
-void latex2image(char *string, int pointSize, float *rgb,
+void latex2image(char *string, int pointSize, double *rgb,
                  int *width, int *height, int **data)
 {
   int color;
@@ -5247,12 +5247,12 @@ void latex2image(char *string, int pointSize, float *rgb,
     gr_readimage(path, width, height, data);
 }
 
-void gr_mathtex(float x, float y, char *string)
+void gr_mathtex(double x, double y, char *string)
 {
   int wkid = 1, errind, pointSize, qualityFactor = 1, color;
-  float chh, rgb[3];
+  double chh, rgb[3];
   int width, height, *data = NULL;
-  float w, h, xmin, xmax, ymin, ymax;
+  double w, h, xmin, xmax, ymin, ymax;
   int halign, valign, tnr;
 
   check_autoinit;
@@ -5270,8 +5270,8 @@ void gr_mathtex(float x, float y, char *string)
 
   if (data != NULL)
     {
-      w =  width / (float) (qualityFactor * nominalWindowHeight);
-      h = height / (float) (qualityFactor * nominalWindowHeight);
+      w =  width / (double) (qualityFactor * nominalWindowHeight);
+      h = height / (double) (qualityFactor * nominalWindowHeight);
 
       gks_inq_text_align(&errind, &halign, &valign);
 
@@ -5311,21 +5311,21 @@ void gr_endselection(void)
   gks_end_selection();
 }
 
-void gr_moveselection(float x, float y)
+void gr_moveselection(double x, double y)
 {
   check_autoinit;
 
   gks_move_selection(x, y);
 }
 
-void gr_resizeselection(int type, float x, float y)
+void gr_resizeselection(int type, double x, double y)
 {
   check_autoinit;
 
   gks_resize_selection(type, x, y);
 }
 
-void gr_inqbbox(float *xmin, float *xmax, float *ymin, float *ymax)
+void gr_inqbbox(double *xmin, double *xmax, double *ymin, double *ymax)
 {
   int errind;
 

@@ -33,14 +33,14 @@
 
 typedef struct
 {
-  float a, b, c, d;
+  double a, b, c, d;
 }
 norm_xform;
 
 typedef struct
 {
   int type;
-  float width;
+  double width;
   int color;
 }
 line_attributes;
@@ -48,7 +48,7 @@ line_attributes;
 typedef struct
 {
   int type;
-  float width;
+  double width;
   int color;
 }
 marker_attributes;
@@ -57,10 +57,10 @@ typedef struct
 {
   int font;
   int prec;
-  float expfac;
-  float spacing;
+  double expfac;
+  double spacing;
   int color;
-  float height;
+  double height;
   int upx;
   int upy;
   int path;
@@ -87,14 +87,14 @@ typedef struct
   fill_attributes fill;		/* current fill area attributes */
   int buffer_ind;		/* output buffer index */
   char buffer[max_buffer + 2];	/* output buffer */
-  float color_t[MAX_COLOR * 3];	/* color table */
+  double color_t[MAX_COLOR * 3];	/* color table */
   int conid;			/* GKS connection id */
   unsigned active;		/* indicates active workstation */
   unsigned begin_page;		/* indicates begin page */
-  float vp[4];			/* current GKS viewport */
-  float wn[4];			/* current GKS window */
+  double vp[4];			/* current GKS viewport */
+  double wn[4];			/* current GKS window */
   int xext, yext;		/* VDC extent */
-  float mm;			/* metric size in mm */
+  double mm;			/* metric size in mm */
   char cmd_buffer[hdr_long + max_long];	/* where we buffer output */
   char *cmd_hdr;		/* the command header */
   char *cmd_data;		/* the command data */
@@ -137,9 +137,9 @@ static int map[] =
 
 /* Transform world coordinates to virtual device coordinates */
 
-static void WC_to_VDC(float xin, float yin, int *xout, int *yout)
+static void WC_to_VDC(double xin, double yin, int *xout, int *yout)
 {
-  float x, y;
+  double x, y;
 
 /* Normalization transformation */
 
@@ -299,7 +299,7 @@ static void cgmt_int(int xin)
 
 /* Write a real variable */
 
-static void cgmt_real(float xin)
+static void cgmt_real(double xin)
 {
   char buffer[max_str];
 
@@ -826,7 +826,7 @@ static void cgmt_ltype(int line_type)
 
 /* Line width */
 
-static void cgmt_lwidth(float rmul)
+static void cgmt_lwidth(double rmul)
 {
   cgmt_start_cmd(5, (int) LWidth);
 
@@ -865,7 +865,7 @@ static void cgmt_mtype(int marker)
 
 /* Marker size */
 
-static void cgmt_msize(float rmul)
+static void cgmt_msize(double rmul)
 {
   cgmt_start_cmd(5, (int) MSize);
 
@@ -937,7 +937,7 @@ static void cgmt_tprec(int precision)
 
 /* Character expansion factor */
 
-static void cgmt_cexpfac(float factor)
+static void cgmt_cexpfac(double factor)
 {
   cgmt_start_cmd(5, (int) CExpFac);
 
@@ -950,7 +950,7 @@ static void cgmt_cexpfac(float factor)
 
 /* Character space */
 
-static void cgmt_cspace(float space)
+static void cgmt_cspace(double space)
 {
   cgmt_start_cmd(5, (int) CSpace);
 
@@ -1217,7 +1217,7 @@ static void cgmt_pindex(int new_index)
 
 /* Colour table */
 
-static void cgmt_coltab(int beg_index, int no_entries, float *ctab)
+static void cgmt_coltab(int beg_index, int no_entries, double *ctab)
 {
   int i, j;
 
@@ -1551,10 +1551,10 @@ static void cgmb_uint(unsigned int xin, int precision)
 
 /* Write fixed point variable */
 
-static void cgmb_fixed(float xin)
+static void cgmb_fixed(double xin)
 {
   int exp_part, fract_part;
-  float fract_real;
+  double fract_real;
 
   exp_part = (int) xin;
   if (exp_part > xin)
@@ -1573,7 +1573,7 @@ static void cgmb_fixed(float xin)
 
 /* Write IEEE floating point variable */
 
-static void cgmb_float(float xin)
+static void cgmb_float(double xin)
 {
   unsigned char arry[8];
   int sign_bit, i;
@@ -2287,7 +2287,7 @@ static void cgmb_ltype(int line_type)
 
 /* Line width */
 
-static void cgmb_lwidth(float rmul)
+static void cgmb_lwidth(double rmul)
 {
   cgmb_start_cmd(5, (int) LWidth);
 
@@ -2326,7 +2326,7 @@ static void cgmb_mtype(int marker)
 
 /* Marker size */
 
-static void cgmb_msize(float rmul)
+static void cgmb_msize(double rmul)
 {
   cgmb_start_cmd(5, (int) MSize);
 
@@ -2379,7 +2379,7 @@ static void cgmb_tprec(int precision)
 
 /* Character expansion factor */
 
-static void cgmb_cexpfac(float factor)
+static void cgmb_cexpfac(double factor)
 {
   cgmb_start_cmd(5, (int) CExpFac);
 
@@ -2392,7 +2392,7 @@ static void cgmb_cexpfac(float factor)
 
 /* Character space */
 
-static void cgmb_cspace(float space)
+static void cgmb_cspace(double space)
 {
   cgmb_start_cmd(5, (int) CSpace);
 
@@ -2530,7 +2530,7 @@ static void cgmb_pindex(int new_index)
 
 /* Colour table */
 
-static void cgmb_coltab(int beg_index, int no_entries, float *ctab)
+static void cgmb_coltab(int beg_index, int no_entries, double *ctab)
 {
   int i, j;
 
@@ -2578,8 +2578,8 @@ static void setup_colors(void)
 static void set_xform(unsigned init)
 {
   int errind, tnr;
-  float vp_new[4], wn_new[4];
-  float clprt[4];
+  double vp_new[4], wn_new[4];
+  double clprt[4];
   static int clip_old;
   int clip_new, clip_rect[4];
   int i;
@@ -2662,7 +2662,7 @@ static void set_xform(unsigned init)
 
 
 static void output_points(void (*output_func) (int, int *, int *),
-			  int n_points, float *x, float *y)
+			  int n_points, double *x, double *y)
 {
   int i;
   static int x_buffer[max_pbuffer], y_buffer[max_pbuffer];
@@ -2672,8 +2672,8 @@ static void output_points(void (*output_func) (int, int *, int *),
 
   if (n_points > max_pbuffer)
     {
-      d_x_buffer = (int *) gks_malloc(sizeof(float) * n_points);
-      d_y_buffer = (int *) gks_malloc(sizeof(float) * n_points);
+      d_x_buffer = (int *) gks_malloc(sizeof(double) * n_points);
+      d_y_buffer = (int *) gks_malloc(sizeof(double) * n_points);
 
       for (i = 0; i < n_points; i++)
 	{
@@ -2790,7 +2790,7 @@ static void setup_text_attributes(unsigned init)
 {
   text_attributes newtext;
   int errind;
-  float upx, upy, norm;
+  double upx, upy, norm;
 
   if (init)
     {
@@ -3117,7 +3117,7 @@ static void cgm_begin_page(void)
 
 
 void gks_drv_cgm(int fctid, int dx, int dy, int dimx, int *ia,
-		 int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+		 int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
 		 void **context)
 {
   char *buffer;

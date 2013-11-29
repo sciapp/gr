@@ -30,7 +30,7 @@ extern "C"
   
 DLLEXPORT void gks_gtkplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
   
 #ifdef _WIN32
@@ -43,7 +43,7 @@ DLLEXPORT void gks_gtkplugin(
 
 void gks_gtkplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr)
 {
   if (fctid == 2)
@@ -57,7 +57,7 @@ void gks_gtkplugin(
 
 void gks_gtkplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr)
 {
   if (fctid == 2)

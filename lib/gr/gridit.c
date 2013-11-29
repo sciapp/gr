@@ -14,10 +14,10 @@
 #endif
 
 #define Integer static int
-#define Real    static float
+#define Real    static double
 
 static
-int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
+int idcldp(int *ndp, double *xd, double *yd, int *ncp, int *ipc)
 {
   Integer j1, j2, j3, j4;
   Real x1, y1, r1, r2;
@@ -174,8 +174,8 @@ int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
 }
 
 static
-int idgrid(float *xd, float *yd, int *nt, int *ipt,
-           int *nl, int *ipl, int *nxi, int *nyi, float *xi, float *yi,
+int idgrid(double *xd, double *yd, int *nt, int *ipt,
+           int *nl, int *ipl, int *nxi, int *nyi, double *xi, double *yi,
            int *ngp, int *igp)
 {
   Integer l;
@@ -541,8 +541,8 @@ int idgrid(float *xd, float *yd, int *nt, int *ipt,
 }
 
 static
-int idpdrv(int *ndp, float *xd, float *yd, float *zd,
-           int *ncp, int *ipc, float *pd)
+int idpdrv(int *ndp, double *xd, double *yd, double *zd,
+           int *ncp, int *ipc, double *pd)
 {
   Real x0, y0, z0;
   Integer ic1, ic2, ip0;
@@ -682,9 +682,9 @@ int idpdrv(int *ndp, float *xd, float *yd, float *zd,
 }
 
 static
-int idptip(float *xd, float *yd, float *zd, int *nt,
-           int *ipt, int *nl, int *ipl, float *pdd, int *iti,
-           float *xii, float *yii, float *zii, int *itpv)
+int idptip(double *xd, double *yd, double *zd, int *nt,
+           int *ipt, int *nl, int *ipl, double *pdd, int *iti,
+           double *xii, double *yii, double *zii, int *itpv)
 {
   Real ap = 0.f, bp = 0.f, cp = 0.f, dp = 0.f, x0 = 0.f, y0 = 0.f;
   Real p5 = 0.f, p00 = 0.f, p01 = 0.f, p02 = 0.f, p03 = 0.f, p04 = 0.f;
@@ -990,7 +990,7 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
 }
 
 static
-int idxchg(float *x, float *y, int *i1, int *i2, int *i3, int *i4)
+int idxchg(double *x, double *y, int *i1, int *i2, int *i3, int *i4)
 {
   Integer ret_val;
   Real r1, r2;
@@ -1057,8 +1057,8 @@ int idxchg(float *x, float *y, int *i1, int *i2, int *i3, int *i4)
 }
 
 static
-int idtang(int *ndp, float *xd, float *yd, int *nt,
-           int *ipt, int *nl, int *ipl, int *iwl, int *iwp, float *wk)
+int idtang(int *ndp, double *xd, double *yd, int *nt,
+           int *ipt, int *nl, int *ipl, int *iwl, int *iwp, double *wk)
 {
   Real ratio = 1e-6f;
   Integer nrep = 100;
@@ -1520,7 +1520,7 @@ int idtang(int *ndp, float *xd, float *yd, int *nt,
 }
 
 static
-int idlin(float *xd, float *yd, float *zd, int *nt, int *iwk, float *wk)
+int idlin(double *xd, double *yd, double *zd, int *nt, int *iwk, double *wk)
 {
   Real x1, y1, z1, x2, y2, z2, x3, y3, z3;
   Integer ip1, ip2, ip3, itri, ipoint;
@@ -1556,8 +1556,8 @@ int idlin(float *xd, float *yd, float *zd, int *nt, int *iwk, float *wk)
 }
 
 static
-int idlcom(float *x, float *y, float *z, int *itri,
-           float *xd, float *yd, float *zd, int *nt, int *iwk, float *wk)
+int idlcom(double *x, double *y, double *z, int *itri,
+           double *xd, double *yd, double *zd, int *nt, int *iwk, double *wk)
 {
   Real x1, y1, z1;
   Integer iv, ipoint;
@@ -1577,9 +1577,9 @@ int idlcom(float *x, float *y, float *z, int *itri,
   return 0;
 }
 
-void idsfft(int *md, int *ncp, int *ndp, float *xd, float *yd, float *zd,
-            int *nxi, int *nyi, float *xi, float *yi, float *zi,
-            int *iwk, float *wk)
+void idsfft(int *md, int *ncp, int *ndp, double *xd, double *yd, double *zd,
+            int *nxi, int *nyi, double *xi, double *yi, double *zi,
+            int *iwk, double *wk)
 {
   Integer nl, nt, md0, il1, il2, iti, ixi, izi, iyi, ncp0, ndp0;
   Integer ngp0, ngp1, nxi0, nyi0, jigp, jngp, nngp, itpv;

@@ -114,7 +114,7 @@ int close_socket(int s)
 
 void gks_drv_socket(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2,
+  int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
 {
   ws_state_list *wss;

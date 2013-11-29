@@ -7,13 +7,13 @@ which may be imported directly, e.g.:
 """
 # standard library
 import os
-from ctypes import c_int, c_float, c_char_p, c_void_p
+from ctypes import c_int, c_double, c_char_p, c_void_p
 from ctypes import byref, POINTER, addressof, CDLL, CFUNCTYPE
 from ctypes import create_string_buffer, create_unicode_buffer, cast
 from sys import version_info, platform
 
 def floatarray(n, a):
-  _a = (c_float * n)()
+  _a = (c_double * n)()
   for i in range(n):
     _a[i] = a[i]
   return _a
@@ -44,8 +44,8 @@ def closegks():
   __gr.gr_closegks(void)
 
 def inqdspsize():
-  mwidth = c_float()
-  mheight = c_float()
+  mwidth = c_double()
+  mheight = c_double()
   width = c_int()
   height = c_int()
   __gr.gr_inqdspsize(byref(mwidth), byref(mheight), byref(width), byref(height))
@@ -116,7 +116,7 @@ The attributes that control the appearance of text are text font and precision,
 character expansion factor, character spacing, text color index, character
 height, character up vector, text path and text alignment.
   """
-  __gr.gr_text(c_float(x), c_float(y), char(string))
+  __gr.gr_text(c_double(x), c_double(y), char(string))
 
 def fillarea(n, x, y):
   """
@@ -149,7 +149,7 @@ COLOR - Color index array
 The values for XMIN, XMAX, YMIN and YMAX are in world coordinates.
   """
   _color = intarray(dimx*dimy, color)
-  __gr.gr_cellarray(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax),
+  __gr.gr_cellarray(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax),
                     c_int(dimx), c_int(dimy), c_int(1), c_int(1),
                     c_int(dimx), c_int(dimy), _color)
 
@@ -162,9 +162,9 @@ def gridit(nd, xd, yd, zd, nx, ny):
   _xd = floatarray(nd, xd)
   _yd = floatarray(nd, yd)
   _zd = floatarray(nd, zd)
-  x = (c_float * nx)()
-  y = (c_float * ny)()
-  z = (c_float * (nx * ny))()
+  x = (c_double * nx)()
+  y = (c_double * ny)()
+  z = (c_double * (nx * ny))()
   __gr.gr_gridit(c_int(nd), _xd, _yd, _zd, c_int(nx), c_int(ny), x, y, z)
   return [x[:], y[:], z[:]]
 
@@ -177,7 +177,7 @@ def inqlinetype():
   return ltype.value
 
 def setlinewidth(width):
-  __gr.gr_setlinewidth(c_float(width))
+  __gr.gr_setlinewidth(c_double(width))
 
 def setlinecolorind(color):
   __gr.gr_setlinecolorind(c_int(color))
@@ -196,7 +196,7 @@ def inqmarkertype():
   return mtype.value
 
 def setmarkersize(size):
-  __gr.gr_setmarkersize(c_float(size))
+  __gr.gr_setmarkersize(c_double(size))
 
 def setmarkercolorind(color):
   __gr.gr_setmarkercolorind(c_int(color))
@@ -210,19 +210,19 @@ def settextfontprec(font, precision):
   __gr.gr_settextfontprec(c_int(font), c_int(precision))
 
 def setcharexpan(factor):
-  __gr.gr_setcharexpan(c_float(factor))
+  __gr.gr_setcharexpan(c_double(factor))
 
 def setcharspace(spacing):
-  __gr.gr_setcharspace(c_float(spacing))
+  __gr.gr_setcharspace(c_double(spacing))
 
 def settextcolorind(color):
   __gr.gr_settextcolorind(c_int(color))
 
 def setcharheight(height):
-  __gr.gr_setcharheight(c_float(height))
+  __gr.gr_setcharheight(c_double(height))
 
 def setcharup(ux, uy):
-  __gr.gr_setcharup(c_float(ux), c_float(uy))
+  __gr.gr_setcharup(c_double(ux), c_double(uy))
 
 def settextpath(path):
   __gr.gr_settextpath(c_int(path))
@@ -240,7 +240,7 @@ def setfillcolorind(color):
   __gr.gr_setfillcolorind(c_int(color))
 
 def setcolorrep(index, red, green, blue):
-  __gr.gr_setcolorrep(c_int(index), c_float(red), c_float(green), c_float(blue))
+  __gr.gr_setcolorrep(c_int(index), c_double(red), c_double(green), c_double(blue))
 
 def setscale(options):
   return __gr.gr_setscale(c_int(options))
@@ -251,18 +251,18 @@ def inqscale():
   return options.value
 
 def setwindow(xmin, xmax, ymin, ymax):
-  __gr.gr_setwindow(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax))
+  __gr.gr_setwindow(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax))
 
 def inqwindow():
-  xmin = c_float()
-  xmax = c_float()
-  ymin = c_float()
-  ymax = c_float()
+  xmin = c_double()
+  xmax = c_double()
+  ymin = c_double()
+  ymax = c_double()
   __gr.gr_inqwindow(byref(xmin), byref(xmax), byref(ymin), byref(ymax))
   return [xmin.value, xmax.value, ymin.value, ymax.value]
 
 def setviewport(xmin, xmax, ymin, ymax):
-  __gr.gr_setviewport(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax))
+  __gr.gr_setviewport(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax))
 
 def selntran(transform):
   __gr.gr_selntran(c_int(transform))
@@ -271,10 +271,10 @@ def setclip(indicator):
   __gr.gr_setclip(c_int(indicator))
 
 def setwswindow(xmin, xmax, ymin, ymax):
-  __gr.gr_setwswindow(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax))
+  __gr.gr_setwswindow(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax))
 
 def setwsviewport(xmin, xmax, ymin, ymax):
-  __gr.gr_setwsviewport(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax))
+  __gr.gr_setwsviewport(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax))
 
 def createseg(segment):
   __gr.gr_createseg(c_int(segment))
@@ -286,9 +286,9 @@ def redrawsegws():
   __gr.gr_redrawsegws()
 
 def setsegtran(segment, fx, fy, transx, transy, phi, scalex, scaley):
-  __gr.gr_setsegtran(c_int(segment), c_float(fx), c_float(fy),
-                     c_float(transx), c_float(transy), c_float(phi),
-                     c_float(scalex), c_float(scaley))
+  __gr.gr_setsegtran(c_int(segment), c_double(fx), c_double(fy),
+                     c_double(transx), c_double(transy), c_double(phi),
+                     c_double(scalex), c_double(scaley))
 
 def closeseg():
   __gr.gr_closegks()
@@ -300,28 +300,28 @@ def updategks():
   __gr.gr_updategks()
 
 def setspace(zmin, zmax, rotation, tilt):
-  return __gr.gr_setspace(c_float(zmin), c_float(zmax),
+  return __gr.gr_setspace(c_double(zmin), c_double(zmax),
                           c_int(rotation), c_int(tilt))
 
 def inqspace():
-  zmin = c_float()
-  zmax = c_float()
+  zmin = c_double()
+  zmax = c_double()
   rotation = c_int()
   tilt = c_int()
   __gr.gr_inqspace(byref(zmin), byref(zmax), byref(rotation), byref(tilt))
   return [zmin.value, zmax.value, rotation.value, tilt.value]
         
 def textext(x, y, string):
-  return __gr.gr_textext(c_float(x), c_float(y), char(string))
+  return __gr.gr_textext(c_double(x), c_double(y), char(string))
   
 def inqtextext(x, y, string):
-  tbx = (c_float * 4)()
-  tby = (c_float * 4)() 
-  __gr.gr_inqtextext(c_float(x), c_float(y), char(string), tbx, tby)
+  tbx = (c_double * 4)()
+  tby = (c_double * 4)() 
+  __gr.gr_inqtextext(c_double(x), c_double(y), char(string), tbx, tby)
   return [[tbx[0], tbx[1], tbx[2], tbx[3]],
           [tby[0], tby[1], tby[2], tby[3]]]
 
-_axeslbl_callback = CFUNCTYPE(c_void_p, c_float, c_float, c_char_p)
+_axeslbl_callback = CFUNCTYPE(c_void_p, c_double, c_double, c_char_p)
 def axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
             fpx=0, fpy=0):
   if fpx is None:
@@ -331,19 +331,19 @@ def axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,
 
   cfpx = _axeslbl_callback(fpx)
   cfpy = _axeslbl_callback(fpy)
-  __gr.gr_axeslbl(c_float(x_tick), c_float(y_tick),
-                  c_float(x_org), c_float(y_org),
-                  c_int(major_x), c_int(major_y), c_float(tick_size),
+  __gr.gr_axeslbl(c_double(x_tick), c_double(y_tick),
+                  c_double(x_org), c_double(y_org),
+                  c_int(major_x), c_int(major_y), c_double(tick_size),
                   cfpx, cfpy)
 
 def axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size):
-  __gr.gr_axes(c_float(x_tick), c_float(y_tick),
-               c_float(x_org), c_float(y_org),
-               c_int(major_x), c_int(major_y), c_float(tick_size))
+  __gr.gr_axes(c_double(x_tick), c_double(y_tick),
+               c_double(x_org), c_double(y_org),
+               c_int(major_x), c_int(major_y), c_double(tick_size))
   
 def grid(x_tick, y_tick, x_org, y_org, major_x, major_y):
-  __gr.gr_grid(c_float(x_tick), c_float(y_tick),
-               c_float(x_org), c_float(y_org),
+  __gr.gr_grid(c_double(x_tick), c_double(y_tick),
+               c_double(x_org), c_double(y_org),
                c_int(major_x), c_int(major_y))
 
 def verrorbars(n, px, py, e1, e2):
@@ -368,10 +368,10 @@ def polyline3d(n, px, py, pz):
   
 def axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org,
            major_x, major_y, major_z, tick_size):
-  __gr.gr_axes3d(c_float(x_tick), c_float(y_tick), c_float(z_tick),
-                 c_float(x_org), c_float(y_org), c_float(z_org),
+  __gr.gr_axes3d(c_double(x_tick), c_double(y_tick), c_double(z_tick),
+                 c_double(x_org), c_double(y_org), c_double(z_org),
                  c_int(major_x), c_int(major_y), c_int(major_z),
-                 c_float(tick_size))
+                 c_double(tick_size))
 
 def titles3d(x_title, y_title, z_title):
   __gr.gr_titles3d(char(x_title), char(y_title), char(z_title))
@@ -402,12 +402,12 @@ def inqcolor(color):
   return rgb.value
  
 def tick(amin, amax):
-  __gr.gr_tick.restype = c_float
-  return __gr.gr_tick(c_float(amin), c_float(amax))
+  __gr.gr_tick.restype = c_double
+  return __gr.gr_tick(c_double(amin), c_double(amax))
 
 def adjustrange(amin, amax):
-  _amin = c_float(amin)
-  _amax = c_float(amax)
+  _amin = c_double(amin)
+  _amax = c_double(amax)
   __gr.gr_adjustrange(byref(_amin), byref(_amax))
   return [_amin.value, _amax.value]
 
@@ -421,36 +421,36 @@ def endprint():
   __gr.gr_endprint()
 
 def ndctowc(x, y):
-  _x = c_float(x)
-  _y = c_float(y)
+  _x = c_double(x)
+  _y = c_double(y)
   __gr.gr_ndctowc(byref(_x), byref(_y))
   return [_x.value, _y.value]
 
 def wctondc(x, y):
-  _x = c_float(x)
-  _y = c_float(y)
+  _x = c_double(x)
+  _y = c_double(y)
   __gr.gr_wctondc(byref(_x), byref(_y))
   return [_x.value, _y.value]
 
 def drawrect(xmin, xmax, ymin, ymax):
-  __gr.gr_drawrect(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax))
+  __gr.gr_drawrect(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax))
 
 def fillrect(xmin, xmax, ymin, ymax):
-  __gr.gr_fillrect(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax))
+  __gr.gr_fillrect(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax))
 
 def drawarc(xmin, xmax, ymin, ymax, a1, a2):
-  __gr.gr_drawarc(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax),
+  __gr.gr_drawarc(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax),
                   c_int(a1), c_int(a2))
 
 def fillarc(xmin, xmax, ymin, ymax, a1, a2):
-  __gr.gr_fillarc(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax),
+  __gr.gr_fillarc(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax),
                   c_int(a1), c_int(a2))
 
 def setarrowstyle(style):
   __gr.gr_setarrowstyle(c_int(style))
 
 def drawarrow(x1, y1, x2, y2):
-  __gr.gr_drawarrow(c_float(x1), c_float(y1), c_float(x2), c_float(y2))
+  __gr.gr_drawarrow(c_double(x1), c_double(y1), c_double(x2), c_double(y2))
 
 def readimage(path):
   width = c_int()
@@ -463,17 +463,17 @@ def readimage(path):
 
 def drawimage(xmin, xmax, ymin, ymax, width, height, data):
   _data = intarray(width*height, data)
-  __gr.gr_drawimage(c_float(xmin), c_float(xmax), c_float(ymin), c_float(ymax),
+  __gr.gr_drawimage(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax),
                     c_int(width), c_int(height), _data)
 
 def importgraphics(path):
   __gr.gr_importgraphics(char(path))
 
 def setshadow(offsetx, offsety, blur):
-  __gr.gr_setshadow(c_float(offsetx), c_float(offsety), c_float(blur))
+  __gr.gr_setshadow(c_double(offsetx), c_double(offsety), c_double(blur))
 
 def settransparency(alpha):
-  __gr.gr_settransparency(c_float(alpha))
+  __gr.gr_settransparency(c_double(alpha))
 
 def setcoordxform(mat):
   _mat = floatarray(6, mat)
@@ -486,7 +486,7 @@ def endgraphics():
   __gr.gr_endgraphics()
 
 def mathtex(x, y, string):
-  return __gr.gr_mathtex(c_float(x), c_float(y), char(string))
+  return __gr.gr_mathtex(c_double(x), c_double(y), char(string))
 
 def beginselection(index, type):
   __gr.gr_beginselection(c_int(index), c_int(type))
@@ -495,16 +495,16 @@ def endselection():
   __gr.gr_endselection()
 
 def moveselection(x, y):
-  __gr.gr_moveselection(c_float(x), c_float(y))
+  __gr.gr_moveselection(c_double(x), c_double(y))
 
 def resizeselection(type, x, y):
-  __gr.gr_resizeselection(c_int(type), c_float(x), c_float(y))
+  __gr.gr_resizeselection(c_int(type), c_double(x), c_double(y))
 
 def inqbbox():
-  xmin = c_float()
-  xmax = c_float()
-  ymin = c_float()
-  ymax = c_float()
+  xmin = c_double()
+  xmax = c_double()
+  ymin = c_double()
+  ymax = c_double()
   __gr.gr_inqbbox(byref(xmin), byref(xmax), byref(ymin), byref(ymax))
   return [xmin.value, xmax.value, ymin.value, ymax.value]
 
@@ -530,107 +530,107 @@ __gr = CDLL(_grLib)
 
 __gr.gr_opengks.argtypes = [];
 __gr.gr_closegks.argtypes = [];
-__gr.gr_inqdspsize.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_int), POINTER(c_int)];
+__gr.gr_inqdspsize.argtypes = [POINTER(c_double), POINTER(c_double), POINTER(c_int), POINTER(c_int)];
 __gr.gr_openws.argtypes = [c_int, c_char_p, c_int];
 __gr.gr_closews.argtypes = [c_int];
 __gr.gr_activatews.argtypes = [c_int];
 __gr.gr_deactivatews.argtypes = [c_int];
 __gr.gr_clearws.argtypes = [];
 __gr.gr_updatews.argtypes = [];
-__gr.gr_polyline.argtypes = [c_int, POINTER(c_float), POINTER(c_float)];
-__gr.gr_polymarker.argtypes = [c_int, POINTER(c_float), POINTER(c_float)];
-__gr.gr_text.argtypes = [c_float, c_float, c_char_p];
-__gr.gr_fillarea.argtypes = [c_int, POINTER(c_float), POINTER(c_float)];
+__gr.gr_polyline.argtypes = [c_int, POINTER(c_double), POINTER(c_double)];
+__gr.gr_polymarker.argtypes = [c_int, POINTER(c_double), POINTER(c_double)];
+__gr.gr_text.argtypes = [c_double, c_double, c_char_p];
+__gr.gr_fillarea.argtypes = [c_int, POINTER(c_double), POINTER(c_double)];
 __gr.gr_cellarray.argtypes = [
-  c_float, c_float, c_float, c_float, c_int, c_int, c_int, c_int, c_int, c_int, POINTER(c_int)];
-__gr.gr_spline.argtypes = [c_int, POINTER(c_float), POINTER(c_float), c_int, c_int];
-__gr.gr_gridit.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int, c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float)];
+  c_double, c_double, c_double, c_double, c_int, c_int, c_int, c_int, c_int, c_int, POINTER(c_int)];
+__gr.gr_spline.argtypes = [c_int, POINTER(c_double), POINTER(c_double), c_int, c_int];
+__gr.gr_gridit.argtypes = [c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double), c_int, c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double)];
 __gr.gr_setlinetype.argtypes = [c_int];
 __gr.gr_inqlinetype.argtypes = [POINTER(c_int)];
-__gr.gr_setlinewidth.argtypes = [c_float];
+__gr.gr_setlinewidth.argtypes = [c_double];
 __gr.gr_setlinecolorind.argtypes = [c_int];
 __gr.gr_inqlinecolorind.argtypes = [POINTER(c_int)];
 __gr.gr_setmarkertype.argtypes = [c_int];
 __gr.gr_inqmarkertype.argtypes = [POINTER(c_int)];
-__gr.gr_setmarkersize.argtypes = [c_float];
+__gr.gr_setmarkersize.argtypes = [c_double];
 __gr.gr_setmarkercolorind.argtypes = [c_int];
 __gr.gr_inqmarkercolorind.argtypes = [POINTER(c_int)];
 __gr.gr_settextfontprec.argtypes = [c_int, c_int];
-__gr.gr_setcharexpan.argtypes = [c_float];
-__gr.gr_setcharspace.argtypes = [c_float];
+__gr.gr_setcharexpan.argtypes = [c_double];
+__gr.gr_setcharspace.argtypes = [c_double];
 __gr.gr_settextcolorind.argtypes = [c_int];
-__gr.gr_setcharheight.argtypes = [c_float];
-__gr.gr_setcharup.argtypes = [c_float, c_float];
+__gr.gr_setcharheight.argtypes = [c_double];
+__gr.gr_setcharup.argtypes = [c_double, c_double];
 __gr.gr_settextpath.argtypes = [c_int];
 __gr.gr_settextalign.argtypes = [c_int, c_int];
 __gr.gr_setfillintstyle.argtypes = [c_int];
 __gr.gr_setfillstyle.argtypes = [c_int];
 __gr.gr_setfillcolorind.argtypes = [c_int];
-__gr.gr_setcolorrep.argtypes = [c_int, c_float, c_float, c_float];
-__gr.gr_setwindow.argtypes = [c_float, c_float, c_float, c_float];
-__gr.gr_inqwindow.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];
-__gr.gr_setviewport.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_setcolorrep.argtypes = [c_int, c_double, c_double, c_double];
+__gr.gr_setwindow.argtypes = [c_double, c_double, c_double, c_double];
+__gr.gr_inqwindow.argtypes = [POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_double)];
+__gr.gr_setviewport.argtypes = [c_double, c_double, c_double, c_double];
 __gr.gr_selntran.argtypes = [c_int];
 __gr.gr_setclip.argtypes = [c_int];
-__gr.gr_setwswindow.argtypes = [c_float, c_float, c_float, c_float];
-__gr.gr_setwsviewport.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_setwswindow.argtypes = [c_double, c_double, c_double, c_double];
+__gr.gr_setwsviewport.argtypes = [c_double, c_double, c_double, c_double];
 __gr.gr_createseg.argtypes = [c_int];
 __gr.gr_copysegws.argtypes = [c_int];
 __gr.gr_redrawsegws.argtypes = [];
 __gr.gr_setsegtran.argtypes = [
-  c_int, c_float, c_float, c_float, c_float, c_float, c_float, c_float];
+  c_int, c_double, c_double, c_double, c_double, c_double, c_double, c_double];
 __gr.gr_closeseg.argtypes = [];
 __gr.gr_emergencyclosegks.argtypes = [];
 __gr.gr_updategks.argtypes = [];
-__gr.gr_setspace.argtypes = [c_float, c_float, c_int, c_int];
-__gr.gr_inqspace.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_int), POINTER(c_int)];
+__gr.gr_setspace.argtypes = [c_double, c_double, c_int, c_int];
+__gr.gr_inqspace.argtypes = [POINTER(c_double), POINTER(c_double), POINTER(c_int), POINTER(c_int)];
 __gr.gr_setscale.argtypes = [c_int];
 __gr.gr_inqscale.argtypes = [POINTER(c_int)];
-__gr.gr_textext.argtypes = [c_float, c_float, c_char_p];
-__gr.gr_inqtextext.argtypes = [c_float, c_float, c_char_p, POINTER(c_float), POINTER(c_float)];
-__gr.gr_axeslbl.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int,
-                            c_float, _axeslbl_callback, _axeslbl_callback]
-__gr.gr_axes.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int, c_float];
-__gr.gr_grid.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int];
-__gr.gr_verrorbars.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];
-__gr.gr_herrorbars.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];
-__gr.gr_polyline3d.argtypes = [c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float)];
+__gr.gr_textext.argtypes = [c_double, c_double, c_char_p];
+__gr.gr_inqtextext.argtypes = [c_double, c_double, c_char_p, POINTER(c_double), POINTER(c_double)];
+__gr.gr_axeslbl.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int,
+                            c_double, _axeslbl_callback, _axeslbl_callback]
+__gr.gr_axes.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int, c_double];
+__gr.gr_grid.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int];
+__gr.gr_verrorbars.argtypes = [c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_double)];
+__gr.gr_herrorbars.argtypes = [c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_double)];
+__gr.gr_polyline3d.argtypes = [c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double)];
 __gr.gr_axes3d.argtypes = [
-  c_float, c_float, c_float, c_float, c_float, c_float, c_int, c_int, c_int, c_float];
+  c_double, c_double, c_double, c_double, c_double, c_double, c_int, c_int, c_int, c_double];
 __gr.gr_titles3d.argtypes = [c_char_p, c_char_p, c_char_p];
-__gr.gr_surface.argtypes = [c_int, c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int];
+__gr.gr_surface.argtypes = [c_int, c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double), c_int];
 __gr.gr_contour.argtypes = [
-  c_int, c_int, c_int, POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float), c_int];
+  c_int, c_int, c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_double), c_int];
 __gr.gr_setcolormap.argtypes = [c_int];
 __gr.gr_colormap.argtypes = [];
 __gr.gr_inqcolor.argtypes = [c_int, POINTER(c_int)];
-__gr.gr_tick.argtypes = [c_float, c_float];
-__gr.gr_adjustrange.argtypes = [POINTER(c_float), POINTER(c_float)];
+__gr.gr_tick.argtypes = [c_double, c_double];
+__gr.gr_adjustrange.argtypes = [POINTER(c_double), POINTER(c_double)];
 __gr.gr_beginprint.argtypes = [c_char_p];
 __gr.gr_beginprintext.argtypes = [c_char_p, c_char_p, c_char_p, c_char_p];
 __gr.gr_endprint.argtypes = [];
-__gr.gr_ndctowc.argtypes = [POINTER(c_float), POINTER(c_float)];
-__gr.gr_wctondc.argtypes = [POINTER(c_float), POINTER(c_float)];
-__gr.gr_drawrect.argtypes = [c_float, c_float, c_float, c_float];
-__gr.gr_fillrect.argtypes = [c_float, c_float, c_float, c_float];
-__gr.gr_drawarc.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int];
-__gr.gr_fillarc.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int];
+__gr.gr_ndctowc.argtypes = [POINTER(c_double), POINTER(c_double)];
+__gr.gr_wctondc.argtypes = [POINTER(c_double), POINTER(c_double)];
+__gr.gr_drawrect.argtypes = [c_double, c_double, c_double, c_double];
+__gr.gr_fillrect.argtypes = [c_double, c_double, c_double, c_double];
+__gr.gr_drawarc.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int];
+__gr.gr_fillarc.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int];
 __gr.gr_setarrowstyle.argtypes = [c_int];
-__gr.gr_drawarrow.argtypes = [c_float, c_float, c_float, c_float];
+__gr.gr_drawarrow.argtypes = [c_double, c_double, c_double, c_double];
 __gr.gr_readimage.argtypes = [c_char_p, POINTER(c_int), POINTER(c_int), POINTER(POINTER(c_int))];
-__gr.gr_drawimage.argtypes = [c_float, c_float, c_float, c_float, c_int, c_int, POINTER(c_int)];
+__gr.gr_drawimage.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int, POINTER(c_int)];
 __gr.gr_importgraphics.argtypes = [c_char_p];
-__gr.gr_setshadow.argtypes = [c_float, c_float, c_float];
-__gr.gr_settransparency.argtypes = [c_float];
-__gr.gr_setcoordxform.argtypes = [POINTER(c_float)];
+__gr.gr_setshadow.argtypes = [c_double, c_double, c_double];
+__gr.gr_settransparency.argtypes = [c_double];
+__gr.gr_setcoordxform.argtypes = [POINTER(c_double)];
 __gr.gr_begingraphics.argtypes = [c_char_p];
 __gr.gr_endgraphics.argtypes = [];
-__gr.gr_mathtex.argtypes = [c_float, c_float, c_char_p];
+__gr.gr_mathtex.argtypes = [c_double, c_double, c_char_p];
 __gr.gr_beginselection.argtypes = [c_int, c_int];
 __gr.gr_endselection.argtypes = [];
-__gr.gr_moveselection.argtypes = [c_float, c_float];
-__gr.gr_resizeselection.argtypes = [c_int, c_float, c_float];
-__gr.gr_inqbbox.argtypes = [POINTER(c_float), POINTER(c_float), POINTER(c_float), POINTER(c_float)];
+__gr.gr_moveselection.argtypes = [c_double, c_double];
+__gr.gr_resizeselection.argtypes = [c_int, c_double, c_double];
+__gr.gr_inqbbox.argtypes = [POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_double)];
 
 ASF_BUNDLED = 0
 ASF_INDIVIDUAL = 1

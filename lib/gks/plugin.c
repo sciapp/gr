@@ -27,7 +27,7 @@
 
 #define NAME  "plugin"
 #define ENTRY_ARGS \
-  int, int, int, int, int *, int, float *, int, float *, int, char *, void **
+  int, int, int, int, int *, int, double *, int, double *, int, char *, void **
 
 static
 void *load_library(const char *name)
@@ -91,7 +91,7 @@ void *load_library(const char *name)
 
 void gks_drv_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static const char *name = NULL;
@@ -113,7 +113,7 @@ void gks_drv_plugin(
 
 void gks_gs_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -131,7 +131,7 @@ void gks_gs_plugin(
 
 void gks_fig_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -149,7 +149,7 @@ void gks_fig_plugin(
 
 void gks_gtk_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -167,7 +167,7 @@ void gks_gtk_plugin(
 
 void gks_wx_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -185,7 +185,7 @@ void gks_wx_plugin(
 
 void gks_qt_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -203,7 +203,7 @@ void gks_qt_plugin(
 
 void gks_svg_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -221,7 +221,7 @@ void gks_svg_plugin(
 
 void gks_wmf_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -239,7 +239,7 @@ void gks_wmf_plugin(
 
 void gks_quartz_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -257,7 +257,7 @@ void gks_quartz_plugin(
 
 void gks_gl_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -275,7 +275,7 @@ void gks_gl_plugin(
 
 void gks_mov_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;
@@ -293,7 +293,7 @@ void gks_mov_plugin(
 
 void gks_zmq_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   static char *name = NULL;

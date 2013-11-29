@@ -57,10 +57,10 @@ static
 gks_state_list_t *gkss;
 
 static
-float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 static const char *show[] = {"lj", "lj", "ct", "rj"};
-static float yfac[] = {0., -1.2, -1.0, -0.5, 0., 0.2};
+static double yfac[] = {0., -1.2, -1.0, -0.5, 0., 0.2};
 
 static int predef_font[] = {1, 1, 1, -2, -3, -4};
 static int predef_prec[] = {0, 1, 2, 2, 2, 2};
@@ -75,7 +75,7 @@ static int map[] =
   25, 12, 8, 17, 21, 29, 13, 4
 };
 
-static float caps[] =
+static double caps[] =
 {
   0.662, 0.660, 0.681, 0.662,
   0.729, 0.729, 0.729, 0.729,
@@ -115,15 +115,15 @@ typedef struct ws_state_list_t
     int empty, init, pages;
 
     int ix, iy;
-    float a, b, c, d, e, f, g, h, mw, mh;
+    double a, b, c, d, e, f, g, h, mw, mh;
     int ytrans, res;
-    float magstep;
+    double magstep;
     int stroke, limit, np;
 
-    float red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
+    double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
     int color, fcol;
 
-    float ysize;
+    double ysize;
 
     int len, size, column, saved_len, saved_column;
     char *buffer;
@@ -132,10 +132,10 @@ typedef struct ws_state_list_t
     char a85line[100];
     long a85offset;
 
-    float window[4], viewpt[4];
+    double window[4], viewpt[4];
 
     int ltype;
-    float cwidth, csize, cangle, cheight;
+    double cwidth, csize, cangle, cheight;
     int font, height;
   }
 ws_state_list;
@@ -144,7 +144,7 @@ static
 ws_state_list *p;
 
 static
-void set_norm_xform(int tnr, float *wn, float *vp)
+void set_norm_xform(int tnr, double *wn, double *vp)
 {
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -162,9 +162,9 @@ void init_norm_xform(void)
 }
 
 static
-void seg_xform(float *x, float *y)
+void seg_xform(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1] + gkss->mat[2][0];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1] + gkss->mat[2][1];
@@ -172,9 +172,9 @@ void seg_xform(float *x, float *y)
 }
 
 static
-void seg_xform_rel(float *x, float *y)
+void seg_xform_rel(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1];
@@ -449,7 +449,7 @@ unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
 }
 
 static
-void set_xform(float *wn, float *vp, int *height)
+void set_xform(double *wn, double *vp, int *height)
 {
   p->e = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   p->f = (6750 - 1) / 0.28575;
@@ -470,11 +470,11 @@ void set_xform(float *wn, float *vp, int *height)
 }
 
 static
-void bounding_box(int landscape, float magstep)
+void bounding_box(int landscape, double magstep)
 {
   char buffer[50];
   int ix1, ix2, iy1, iy2;
-  float magn;
+  double magn;
 
   if (fabs(magstep) > FEPS)
     magn = pow(1.2f, magstep);
@@ -502,7 +502,7 @@ void bounding_box(int landscape, float magstep)
 }
 
 static
-void move(float x, float y)
+void move(double x, double y)
 {
   char buffer[50];
 
@@ -520,7 +520,7 @@ void move(float x, float y)
 }
 
 static
-void draw(float x, float y)
+void draw(double x, double y)
 {
   char buffer[50];
   int jx, jy, rx, ry;
@@ -560,7 +560,7 @@ void draw(float x, float y)
 }
 
 static
-void moveto(float x, float y)
+void moveto(double x, double y)
 {
   char buffer[20];
 
@@ -572,7 +572,7 @@ void moveto(float x, float y)
 }
 
 static
-void amoveto(float angle, float x, float y)
+void amoveto(double angle, double x, double y)
 {
   char buffer[30];
 
@@ -584,7 +584,7 @@ void amoveto(float angle, float x, float y)
 }
 
 static
-void set_linetype(int ltype, float lwidth)
+void set_linetype(int ltype, double lwidth)
 {
   char buffer[100], dash[80];
 
@@ -600,7 +600,7 @@ void set_linetype(int ltype, float lwidth)
 }
 
 static
-void set_linewidth(float width)
+void set_linewidth(double width)
 {
   char buffer[20];
 
@@ -616,7 +616,7 @@ void set_linewidth(float width)
 }
 
 static
-void set_markersize(float size)
+void set_markersize(double size)
 {
   char buffer[20];
 
@@ -631,7 +631,7 @@ void set_markersize(float size)
 }
 
 static
-void set_markerangle(float angle)
+void set_markerangle(double angle)
 {
   char buffer[20];
 
@@ -730,7 +730,7 @@ static
 void set_color(int color, int wtype)
 {
   char buffer[50];
-  float grey;
+  double grey;
   int index;
 
   if (color < MAX_COLOR)
@@ -766,7 +766,7 @@ void set_foreground(int color, int wtype)
 {
   char buffer[50];
   int index;
-  float grey;
+  double grey;
 
   if (color < MAX_COLOR)
     {
@@ -801,7 +801,7 @@ static
 void set_background(int wtype)
 {
   char buffer[50];
-  float grey;
+  double grey;
 
   if (wtype % 2)
     {
@@ -828,11 +828,11 @@ void update(void)
 }
 
 static
-void set_clipping(float *clrt)
+void set_clipping(double *clrt)
 {
   int i, j;
   int ix1, ix2, iy1, iy2;
-  float cx1, cy1, cx2, cy2;
+  double cx1, cy1, cx2, cy2;
   char buffer[100];
 
   i = clrt[0] < clrt[1] ? 0 : 1;
@@ -855,7 +855,7 @@ static
 void set_font(int font, int height)
 {
 
-  float scale, w, h, ux, uy, chh;
+  double scale, w, h, ux, uy, chh;
   char buffer[200];
   int size;
 
@@ -905,7 +905,7 @@ void set_font(int font, int height)
 }
 
 static
-void get_magstep(float *magstep, int *dpi)
+void get_magstep(double *magstep, int *dpi)
 {
   char *env;
 
@@ -1159,7 +1159,7 @@ void set_colortable(void)
 }
 
 static
-void set_color_rep(int color, float red, float green, float blue)
+void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
@@ -1172,7 +1172,7 @@ void set_color_rep(int color, float red, float green, float blue)
 static
 void query_color(int index, unsigned char **buf, int wtype)
 {
-  float grey;
+  double grey;
 
   index %= MAX_COLOR;
 
@@ -1198,7 +1198,7 @@ static
 void rgb2color(int rgb, unsigned char **buf, int wtype)
 {
   int r, g, b;
-  float grey;
+  double grey;
 
   r = (rgb & 0xff);
   g = (rgb & 0xff00) >> 8;
@@ -1250,9 +1250,9 @@ void set_connection(int conid, int wtype)
 }
 
 static
-void marker_routine(float x, float y, int marker)
+void marker_routine(double x, double y, int marker)
 {
-  float dx, dy;
+  double dx, dy;
   char buffer[50];
   static const char *macro[] =
   {
@@ -1271,13 +1271,13 @@ void marker_routine(float x, float y, int marker)
 
 static
 void cell_array(
-  float xmin, float xmax, float ymin, float ymax,
+  double xmin, double xmax, double ymin, double ymax,
   int dx, int dy, int dimx, int *colia, int wtype, int true_color)
 {
   char buffer[100];
   unsigned char *buf, *bufP;
   int clsw;
-  float clrt[4], x1, x2, y1, y2;
+  double clrt[4], x1, x2, y1, y2;
   int w, h, x, y;
 
   int i, j, ci, len, swap = 0;
@@ -1375,11 +1375,11 @@ void cell_array(
 }
 
 static
-void text_routine(float *x, float *y, int *nchars, char *chars)
+void text_routine(double *x, double *y, int *nchars, char *chars)
 {
   int i, j;
-  float ux, uy, yrel, angle, phi;
-  float xorg, yorg;
+  double ux, uy, yrel, angle, phi;
+  double xorg, yorg;
   int alh, alv, ic;
   char str[500], buffer[510];
   int prec;
@@ -1432,7 +1432,7 @@ void text_routine(float *x, float *y, int *nchars, char *chars)
 }
 
 static
-void fillpattern_routine(int n, float *px, float *py, int tnr, int pattern)
+void fillpattern_routine(int n, double *px, double *py, int tnr, int pattern)
 {
   int ltype = 0;
   char buffer[100];
@@ -1450,7 +1450,7 @@ void fillpattern_routine(int n, float *px, float *py, int tnr, int pattern)
 }
 
 static
-void fill_routine(int n, float *px, float *py, int tnr)
+void fill_routine(int n, double *px, double *py, int tnr)
 {
   int ltype = 0;
 
@@ -1461,7 +1461,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 }
 
 static
-void line_routine(int n, float *px, float *py, int ltype, int tnr)
+void line_routine(int n, double *px, double *py, int ltype, int tnr)
 {
   p->limit = 1000;
   gks_emul_polyline(n, px, py, ltype, tnr, move, draw);
@@ -1474,11 +1474,11 @@ void line_routine(int n, float *px, float *py, int ltype, int tnr)
 
 void gks_drv_ps(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   int style, color, pattern, ltype;
-  float yres, width, size, factor, x, y, angle;
+  double yres, width, size, factor, x, y, angle;
   int font, tnr, prec;
   int nchars;
 
@@ -1627,7 +1627,7 @@ void gks_drv_ps(
           nchars = strlen(chars);
           if (prec == GKS_K_TEXT_PRECISION_STRING)
             {
-              float px, py;
+              double px, py;
               WC_to_NDC(*r1, *r2, tnr, px, py);
               seg_xform(&px, &py);
               text_routine(&px, &py, &nchars, chars);

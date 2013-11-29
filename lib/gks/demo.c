@@ -7,7 +7,7 @@
 int main(int argc, char *argv[])
 {
   int asf[13];
-  float x[10], y[10], cpx, cpy, tx[4], ty[4];
+  double x[10], y[10], cpx, cpy, tx[4], ty[4];
   int i, j, k;
   int colia[8][10];
   int inp_status, tnr, errind;

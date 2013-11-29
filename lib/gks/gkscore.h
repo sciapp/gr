@@ -114,36 +114,36 @@ typedef struct
   {
     int lindex;
     int ltype;
-    float lwidth;
+    double lwidth;
     int plcoli;
     int mindex;
     int mtype;
-    float mszsc;
+    double mszsc;
     int pmcoli;
     int tindex;
     int txfont, txprec;
-    float chxp;
-    float chsp;
+    double chxp;
+    double chsp;
     int txcoli;
-    float chh;
-    float chup[2];
+    double chh;
+    double chup[2];
     int txp;
     int txal[2];
     int findex;
     int ints;
     int styli;
     int facoli;
-    float window[MAX_TNR][4], viewport[MAX_TNR][4];
+    double window[MAX_TNR][4], viewport[MAX_TNR][4];
     int cntnr, clip, opsg;
-    float mat[3][2];
+    double mat[3][2];
     int asf[13];
     int wiss, version;
     int fontfile;
-    float txslant;
-    float shoff[2];
-    float blur;
-    float alpha;
-    float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+    double txslant;
+    double shoff[2];
+    double blur;
+    double alpha;
+    double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
   }
 gks_state_list_t;
 
@@ -169,7 +169,7 @@ typedef struct
   {
     int wtype;
     int dcunit;
-    float sizex, sizey;
+    double sizex, sizey;
     int unitsx, unitsy;
     int wscat;
     char *path;
@@ -218,37 +218,37 @@ gks_list_t *gks_list_del(gks_list_t *list, int element);
 void gks_list_free(gks_list_t *list);
 void gks_inq_pattern_array(int index, int *pa);
 void gks_set_pattern_array(int index, int *pa);
-void gks_inq_rgb(int index, float *red, float *green, float *blue);
-void gks_set_rgb(int index, float red, float green, float blue);
+void gks_inq_rgb(int index, double *red, double *green, double *blue);
+void gks_set_rgb(int index, double red, double green, double blue);
 void gks_inq_pixel(int index, int *pixel);
 void gks_set_pixel(int index, int pixel);
-void gks_fit_ws_viewport(float *viewport, float xmax, float ymax, float margin);
-void gks_set_norm_xform(int tnr, float *window, float *viewport);
-void gks_set_xform_matrix(float tran[3][2]);
-void gks_seg_xform(float *x, float *y);
-void gks_WC_to_NDC(int tnr, float *x, float *y);
-void gks_NDC_to_WC(int tnr, float *x, float *y);
-void gks_set_dev_xform(gks_state_list_t *s, float *window, float *viewport);
-void gks_inq_dev_xform(float *window, float *viewport);
+void gks_fit_ws_viewport(double *viewport, double xmax, double ymax, double margin);
+void gks_set_norm_xform(int tnr, double *window, double *viewport);
+void gks_set_xform_matrix(double tran[3][2]);
+void gks_seg_xform(double *x, double *y);
+void gks_WC_to_NDC(int tnr, double *x, double *y);
+void gks_NDC_to_WC(int tnr, double *x, double *y);
+void gks_set_dev_xform(gks_state_list_t *s, double *window, double *viewport);
+void gks_inq_dev_xform(double *window, double *viewport);
 void gks_set_chr_xform(void);
-void gks_chr_height(float *height);
-void gks_get_dash(int ltype, float scale, char *dash);
-void gks_get_dash_list(int ltype, float scale, int list[10]);
-void gks_move(float x, float y, void (*move)(float x, float y));
-void gks_dash(float x, float y,
-  void (*move)(float x, float y), void (*draw)(float x, float y));
-void gks_emul_polyline(int n, float *px, float *py, int ltype, int tnr,
-  void (*move)(float x, float y), void (*draw)(float x, float y));
+void gks_chr_height(double *height);
+void gks_get_dash(int ltype, double scale, char *dash);
+void gks_get_dash_list(int ltype, double scale, int list[10]);
+void gks_move(double x, double y, void (*move)(double x, double y));
+void gks_dash(double x, double y,
+  void (*move)(double x, double y), void (*draw)(double x, double y));
+void gks_emul_polyline(int n, double *px, double *py, int ltype, int tnr,
+  void (*move)(double x, double y), void (*draw)(double x, double y));
 void gks_emul_polymarker(
-  int n, float *px, float *py, void (*marker)(float x, float y, int mtype));
-void gks_emul_text(float px, float py, int nchars, char *chars,
-  void (*polyline)(int n, float *px, float *py, int ltype, int tnr),
-  void (*fillarea)(int n, float *px, float *py, int tnr));
-void gks_emul_fillarea(int n, float *px, float *py, int tnr,
-  void (*polyline)(int n, float *px, float *py, int ltype, int tnr),
-  float yres);
-void gks_util_inq_text_extent(float px, float py, char *chars, int nchars,
-  float *cpx, float *cpy, float tx[4], float ty[4]);
+  int n, double *px, double *py, void (*marker)(double x, double y, int mtype));
+void gks_emul_text(double px, double py, int nchars, char *chars,
+  void (*polyline)(int n, double *px, double *py, int ltype, int tnr),
+  void (*fillarea)(int n, double *px, double *py, int tnr));
+void gks_emul_fillarea(int n, double *px, double *py, int tnr,
+  void (*polyline)(int n, double *px, double *py, int ltype, int tnr),
+  double yres);
+void gks_util_inq_text_extent(double px, double py, char *chars, int nchars,
+  double *cpx, double *cpy, double tx[4], double ty[4]);
 int gks_get_ws_type(void);
 int gks_base64(
   unsigned char *src, size_t srclength, char *target, size_t targsize);
@@ -256,25 +256,25 @@ const char *gks_getenv(const char *env);
 
 DLLEXPORT void gks_dl_write_item(gks_display_list_t *d,
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *c,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *c,
   gks_state_list_t *gkss);
 
 void gks_drv_mo(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_drv_mi(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_drv_wiss(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_wiss_dispatch(int fctid, int wkid, int segn);
@@ -282,115 +282,115 @@ void gks_wiss_dispatch(int fctid, int wkid, int segn);
 void gks_drv_cgm(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_drv_win(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_drv_mac(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_drv_ps(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_drv_pdf(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_drv_x11(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_drv_socket(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_drv_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_gs_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_fig_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_gtk_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_wx_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_qt_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_svg_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_wmf_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_quartz_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_gl_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_mov_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 DLLEXPORT void gks_zmq_plugin(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
 void gks_compress(

@@ -51,7 +51,7 @@ static
 gks_state_list_t gkss_, *gkss;
 
 static
-float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 static
 int patArray[33];
@@ -97,7 +97,7 @@ CGFontRef cgfontrefs[] = {
 };
 
 static
-float capheights[29] = {
+double capheights[29] = {
   0.662, 0.660, 0.681, 0.662,
   0.729, 0.729, 0.729, 0.729,
   0.583, 0.583, 0.583, 0.583,
@@ -117,10 +117,10 @@ int map[32] = {
 };
 
 static
-float xfac[4] = { 0, 0, -0.5, -1 };
+double xfac[4] = { 0, 0, -0.5, -1 };
 
 static
-float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 static
 int dingbats[256] = {
@@ -182,7 +182,7 @@ static
 int cur_color = -1;
 
 static
-void set_norm_xform(int tnr, float *wn, float *vp)
+void set_norm_xform(int tnr, double *wn, double *vp)
 {
   CGRect *rect = &p->rect[tnr];
 
@@ -208,7 +208,7 @@ void init_norm_xform(void)
 }
 
 static
-void set_color_rep(int color, float red, float green, float blue)
+void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR) {
     if (p->rgb[color] != 0)
@@ -223,7 +223,7 @@ static
 void init_colors(void)
 {
   int color;
-  float red, green, blue;
+  double red, green, blue;
 
   for (color = 0; color < MAX_COLOR; color++)
     {
@@ -242,12 +242,12 @@ void set_xform(void)
 }
 
 static
-void seg_xform(float *x, float *y)
+void seg_xform(double *x, double *y)
 {
 }
 
 static
-void seg_xform_rel(float *x, float *y)
+void seg_xform_rel(double *x, double *y)
 {
 }
 
@@ -259,9 +259,9 @@ void seg_xform_rel(float *x, float *y)
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr;
-  float *f_arr_1 = NULL, *f_arr_2 = NULL;
+  double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
-  float mat[3][2];
+  double mat[3][2];
   int i;
 
   s = str;
@@ -281,21 +281,21 @@ void seg_xform_rel(float *x, float *y)
         case 13:                /* polymarker */
         case 15:                /* fill area */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, i_arr[0] * sizeof(float));
-          RESOLVE(f_arr_2, float, i_arr[0] * sizeof(float));
+          RESOLVE(f_arr_1, double, i_arr[0] * sizeof(double));
+          RESOLVE(f_arr_2, double, i_arr[0] * sizeof(double));
           break;
 
         case 14:                /* text */
-          RESOLVE(f_arr_1, float, sizeof(float));
-          RESOLVE(f_arr_2, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
+          RESOLVE(f_arr_2, double, sizeof(double));
           RESOLVE(len_c_arr, int, sizeof(int));
           RESOLVE(c_arr, char, 132);
           break;
 
         case 16:                /* cell array */
         case 201:
-          RESOLVE(f_arr_1, float, 2 * sizeof(float));
-          RESOLVE(f_arr_2, float, 2 * sizeof(float));
+          RESOLVE(f_arr_1, double, 2 * sizeof(double));
+          RESOLVE(f_arr_2, double, 2 * sizeof(double));
           RESOLVE(dx, int, sizeof(int));
           RESOLVE(dy, int, sizeof(int));
           RESOLVE(dimx, int, sizeof(int));
@@ -328,12 +328,12 @@ void seg_xform_rel(float *x, float *y)
         case 31:                /* set character height */
         case 200:               /* set text slant */
         case 203:               /* set transparency */
-          RESOLVE(f_arr_1, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
         case 32:                /* set character up vector */
-          RESOLVE(f_arr_1, float, sizeof(float));
-          RESOLVE(f_arr_2, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
+          RESOLVE(f_arr_2, double, sizeof(double));
           break;
 
         case 41:              /* set aspect source flags */
@@ -342,7 +342,7 @@ void seg_xform_rel(float *x, float *y)
 
         case 48:                /* set color representation */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, 3 * sizeof(float));
+          RESOLVE(f_arr_1, double, 3 * sizeof(double));
           break;
 
         case 49:                /* set window */
@@ -350,12 +350,12 @@ void seg_xform_rel(float *x, float *y)
         case 54:                /* set workstation window */
         case 55:                /* set workstation viewport */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, 2 * sizeof(float));
-          RESOLVE(f_arr_2, float, 2 * sizeof(float));
+          RESOLVE(f_arr_1, double, 2 * sizeof(double));
+          RESOLVE(f_arr_2, double, 2 * sizeof(double));
           break;
 
         case 202:               /* set shadow */
-          RESOLVE(f_arr_1, float, 3* sizeof(float));
+          RESOLVE(f_arr_1, double, 3* sizeof(double));
           break;
 
         default:
@@ -853,7 +853,8 @@ void seg_xform_rel(float *x, float *y)
 
           float compression = [compressionSlider floatValue];
 
-          CFDictionarySetValue(mSaveMetaAndOpts, kCGImageDestinationLossyCompressionQuality,
+          CFDictionarySetValue(mSaveMetaAndOpts,
+                               kCGImageDestinationLossyCompressionQuality,
                                [NSNumber numberWithFloat:compression]);
 
           CFURLRef url =  CFURLCreateWithFileSystemPath(kCFAllocatorDefault,
@@ -976,7 +977,7 @@ void seg_xform_rel(float *x, float *y)
 
 - (void) resize_window
 {
-  float max_width, max_height, width, height;
+  double max_width, max_height, width, height;
   NSRect rect = [[self window] frame];
 
   max_width = MWIDTH;
@@ -1032,9 +1033,9 @@ void end_context(CGContextRef context)
 }
 
 static
-void line_routine(int n, float *px, float *py, int linetype, int tnr)
+void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
-  float x, y;
+  double x, y;
   int i;
   CGPoint points[n];
 
@@ -1053,14 +1054,14 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
     CGContextClosePath(context);
 }
 
-- (void) polyline: (int) n : (float *) px : (float *) py
+- (void) polyline: (int) n : (double *) px : (double *) py
 {
   int ln_type, ln_color, i;
-  float ln_width;
+  double ln_width;
   CGPoint points[n];
   int dashlist[10];
   CGFloat lengths[10] = {0., 0., 0., 0., 0., 0., 0., 0., 0., 0. };
-  float x, y;
+  double x, y;
 
   for (i = 0; i < n; ++i)
     {
@@ -1095,11 +1096,11 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   end_context(context);
 }
 
-- (void) draw_marker: (float) xn : (float) yn : (int) mtype :
-                      (float) mscale : (int) mcolor : (CGContextRef) context
+- (void) draw_marker: (double) xn : (double) yn : (int) mtype :
+                      (double) mscale : (int) mcolor : (CGContextRef) context
 {
   int r, x, y, i;
-  float scale, xr, yr;
+  double scale, xr, yr;
   int pc, op;
 
   static int marker[26][57] =
@@ -1280,12 +1281,12 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
     }while (op != 0);
 }
 
-- (void) polymarker: (int) n : (float *) px : (float *) py
+- (void) polymarker: (int) n : (double *) px : (double *) py
 {
   int mk_type, mk_color;
-  float mk_size;
-  float x, y;
-  float *clrt = gkss->viewport[gkss->cntnr];
+  double mk_size;
+  double x, y;
+  double *clrt = gkss->viewport[gkss->cntnr];
   register int i, draw;
 
   mk_type  = gkss->asf[3] ? gkss->mtype : gkss->mindex;
@@ -1334,9 +1335,9 @@ void draw_pattern(int index, CGPathRef shape, CGContextRef context)
   int scale = (int)(0.125 * (int)(p->c + p->a) / 125);
 
   gks_inq_pattern_array(index, patArray);
-  float patHeight = patArray[0] * scale;
-  float patWidth = patHeight;
-  float i, l;
+  double patHeight = patArray[0] * scale;
+  double patWidth = patHeight;
+  double i, l;
   int k = 1, n;
 
   patternLayer = CGLayerCreateWithContext(context, CGSizeMake(patWidth, patHeight), NULL);
@@ -1381,9 +1382,9 @@ void draw_pattern(int index, CGPathRef shape, CGContextRef context)
 }
 
 static
-void fill_routine(int n, float *px, float *py, int tnr)
+void fill_routine(int n, double *px, double *py, int tnr)
 {
-  float x, y;
+  double x, y;
   int i;
   CGPoint points[n];
 
@@ -1411,10 +1412,10 @@ void fill_routine(int n, float *px, float *py, int tnr)
   CGPathRelease(shape);
 }
 
-- (void) fillarea: (int) n : (float *)px : (float *)py
+- (void) fillarea: (int) n : (double *)px : (double *)py
 {
   int fl_inter, fl_style, fl_color, i = 0;
-  float x, y;
+  double x, y;
   CGPoint points[n];
 
   for (i = 0; i < n; ++i)
@@ -1467,10 +1468,10 @@ void fill_routine(int n, float *px, float *py, int tnr)
 }
 
 -(void) cellarray:
-    (float) xmin : (float) xmax : (float) ymin : (float) ymax :
+    (double) xmin : (double) xmax : (double) ymin : (double) ymax :
     (int) dx : (int) dy : (int) dimx : (int *)colia : (int) true_color
 {
-  float x1, y1, x2, y2;
+  double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height, h;
   register int i, j, ix, iy, ind;
@@ -1598,10 +1599,10 @@ void fill_routine(int n, float *px, float *py, int tnr)
 }
 
 
-- (void) text: (float) px : (float) py : (char *) text
+- (void) text: (double) px : (double) py : (char *) text
 {
   int tx_font, tx_prec, tx_color, nchars;
-  float xn, yn, xstart, ystart, xrel, yrel, ax, ay;
+  double xn, yn, xstart, ystart, xrel, yrel, ax, ay;
   NSString *fontName;
   NSString *string;
 
@@ -1641,7 +1642,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
     CGPoint beforeDrawing = CGContextGetTextPosition(context);
     CGContextShowGlyphs(context, glyphs, charCount);
     CGPoint afterDrawing = CGContextGetTextPosition(context);
-    float stringWidth = afterDrawing.x-beforeDrawing.x;
+    float stringWidth = afterDrawing.x - beforeDrawing.x;
 
     WC_to_NDC(px, py, gkss->cntnr, xn, yn);
     seg_xform(&xn, &yn);
@@ -1695,9 +1696,9 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
 - (_FontInfo) set_font: (int) font
 {
-  float scale, ux, uy;
+  double scale, ux, uy;
   int fontsize;
-  float width, height, capheight;
+  double width, height, capheight;
 
   font = abs(font);
   if (font >= 101 && font <= 129)

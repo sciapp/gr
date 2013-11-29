@@ -15,7 +15,7 @@ typedef struct {
     char *buffer;
     int size;
     int win_id;
-    float angle;
+    double angle;
     IBOutlet NSBox *extendSavePanelView;
     IBOutlet NSPopUpButton *saveFormatPopUp;
     IBOutlet NSSlider *compressionSlider;
@@ -31,15 +31,15 @@ typedef struct {
 
 - (void) gks_set_shadow;
 
-- (void) polyline: (int) n : (float *) px : (float *) py;
-- (void) draw_marker: (float) xn : (float) yn : (int) mtype : (float) mscale : (int) mcolor : (CGContextRef) context;
-- (void) polymarker: (int) n : (float *) px : (float *) py;
-- (void) fillarea: (int) n : (float *) px : (float *) py;
+- (void) polyline: (int) n : (double *) px : (double *) py;
+- (void) draw_marker: (double) xn : (double) yn : (int) mtype : (double) mscale : (int) mcolor : (CGContextRef) context;
+- (void) polymarker: (int) n : (double *) px : (double *) py;
+- (void) fillarea: (int) n : (double *) px : (double *) py;
 - (void) cellarray:
-  (float) xmin : (float) xmax : (float) ymin : (float) ymax :
+  (double) xmin : (double) xmax : (double) ymin : (double) ymax :
   (int) dx : (int) dy : (int) dimx : (int *) colia : (int) true_color;
   
-- (void) text: (float) px : (float) py : (char *) text;
+- (void) text: (double) px : (double) py : (char *) text;
 - (_FontInfo) set_font: (int) font;
 - (NSString *) stringForText: (const char*)text withFontFamilyID : (int)family;
 

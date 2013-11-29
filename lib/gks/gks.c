@@ -21,7 +21,7 @@ static gks_state_list_t *s = NULL, *seg_state = NULL;
 static int state = GKS_K_GKCL, api = 1;
 
 static int i_arr[13];
-static float f_arr_1[6], f_arr_2[6];
+static double f_arr_1[6], f_arr_2[6];
 static char c_arr[1];
 static int id = 0;
 
@@ -100,7 +100,7 @@ int gddm_fill_styles[6] = { 4, 10, 3, 9, 2, 1 };
 extern int gks_errno;
 
 static
-float *x = NULL, *y = NULL;
+double *x = NULL, *y = NULL;
 
 static
 int max_points = 0;
@@ -109,7 +109,7 @@ static
 void gks_ddlk(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr)
 {
   gks_list_t *list;
@@ -914,7 +914,7 @@ void gks_message(int wkid, char *message)
     gks_report_error(MESSAGE, 7);
 }
 
-void gks_polyline(int n, float *pxa, float *pya)
+void gks_polyline(int n, double *pxa, double *pya)
 {
   if (state >= GKS_K_WSAC)
     {
@@ -935,7 +935,7 @@ void gks_polyline(int n, float *pxa, float *pya)
     gks_report_error(POLYLINE, 5);
 }
 
-void gks_polymarker(int n, float *pxa, float *pya)
+void gks_polymarker(int n, double *pxa, double *pya)
 {
   if (state >= GKS_K_WSAC)
     {
@@ -956,7 +956,7 @@ void gks_polymarker(int n, float *pxa, float *pya)
     gks_report_error(POLYMARKER, 5);
 }
 
-void gks_text(float px, float py, char *str)
+void gks_text(double px, double py, char *str)
 {
   if (state >= GKS_K_WSAC)
     {
@@ -972,7 +972,7 @@ void gks_text(float px, float py, char *str)
     gks_report_error(TEXT, 5);
 }
 
-void gks_fillarea(int n, float *pxa, float *pya)
+void gks_fillarea(int n, double *pxa, double *pya)
 {
   if (state >= GKS_K_WSAC)
     {
@@ -994,7 +994,7 @@ void gks_fillarea(int n, float *pxa, float *pya)
 }
 
 void gks_cellarray(
-  float xmin, float xmax, float ymin, float ymax,
+  double xmin, double xmax, double ymin, double ymax,
   int dimx, int dimy, int scol, int srow, int ncol, int nrow, int *colia)
 {
   if (state >= GKS_K_WSAC)
@@ -1065,7 +1065,7 @@ void gks_set_pline_linetype(int ltype)
     gks_report_error(SET_PLINE_LINETYPE, 8);
 }
 
-void gks_set_pline_linewidth(float lwidth)
+void gks_set_pline_linewidth(double lwidth)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -1159,7 +1159,7 @@ void gks_set_pmark_type(int mtype)
     gks_report_error(SET_PMARK_TYPE, 8);
 }
 
-void gks_set_pmark_size(float mszsc)
+void gks_set_pmark_size(double mszsc)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -1251,7 +1251,7 @@ void gks_set_text_fontprec(int font, int prec)
     gks_report_error(SET_TEXT_FONTPREC, 8);
 }
 
-void gks_set_text_expfac(float chxp)
+void gks_set_text_expfac(double chxp)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -1276,7 +1276,7 @@ void gks_set_text_expfac(float chxp)
     gks_report_error(SET_TEXT_EXPFAC, 8);
 }
 
-void gks_set_text_spacing(float chsp)
+void gks_set_text_spacing(double chsp)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -1320,7 +1320,7 @@ void gks_set_text_color_index(int coli)
     gks_report_error(SET_TEXT_COLOR_INDEX, 8);
 }
 
-void gks_set_text_height(float chh)
+void gks_set_text_height(double chh)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -1345,7 +1345,7 @@ void gks_set_text_height(float chh)
     gks_report_error(SET_TEXT_HEIGHT, 8);
 }
 
-void gks_set_text_upvec(float chux, float chuy)
+void gks_set_text_upvec(double chux, double chuy)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -1522,7 +1522,8 @@ void gks_set_asf(int *flag)
     gks_report_error(SET_ASF, 8);
 }
 
-void gks_set_color_rep(int wkid, int index, float red, float green, float blue)
+void gks_set_color_rep(int wkid, int index,
+                       double red, double green, double blue)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -1569,7 +1570,7 @@ void gks_set_color_rep(int wkid, int index, float red, float green, float blue)
     gks_report_error(SET_COLOR_REP, 8);
 }
 
-void gks_set_window(int tnr, float xmin, float xmax, float ymin, float ymax)
+void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -1602,7 +1603,8 @@ void gks_set_window(int tnr, float xmin, float xmax, float ymin, float ymax)
     gks_report_error(SET_WINDOW, 8);
 }
 
-void gks_set_viewport(int tnr, float xmin, float xmax, float ymin, float ymax)
+void gks_set_viewport(
+  int tnr, double xmin, double xmax, double ymin, double ymax)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -1683,7 +1685,7 @@ void gks_set_clipping(int clsw)
 }
 
 void gks_set_ws_window(
-  int wkid, float xmin, float xmax, float ymin, float ymax)
+  int wkid, double xmin, double xmax, double ymin, double ymax)
 {
   if (state >= GKS_K_WSOP)
     {
@@ -1728,7 +1730,7 @@ void gks_set_ws_window(
 }
 
 void gks_set_ws_viewport(
-  int wkid, float xmin, float xmax, float ymin, float ymax)
+  int wkid, double xmin, double xmax, double ymin, double ymax)
 {
   if (state >= GKS_K_WSOP)
     {
@@ -1908,7 +1910,7 @@ void gks_copy_seg_to_ws(int wkid, int segn)
     gks_report_error(COPY_SEG_TO_WS, 7);
 }
 
-void gks_set_seg_xform(int segn, float mat[3][2])
+void gks_set_seg_xform(int segn, double mat[3][2])
 {
   register int i, j;
 
@@ -1945,8 +1947,8 @@ int workstation_category(int wkid)
 }
 
 void gks_initialize_locator(
-  int wkid, int lcdnr, int tnr, float px, float py, int pet,
-  float xmin, float xmax, float ymin, float ymax, int ldr, char *datrec)
+  int wkid, int lcdnr, int tnr, double px, double py, int pet,
+  double xmin, double xmax, double ymin, double ymax, int ldr, char *datrec)
 {
   int wscat;
 
@@ -1995,7 +1997,7 @@ void gks_initialize_locator(
 }
 
 void gks_request_locator(
-  int wkid, int lcdnr, int *stat, int *tnr, float *px, float *py)
+  int wkid, int lcdnr, int *stat, int *tnr, double *px, double *py)
 {
   int wscat;
 
@@ -2044,7 +2046,7 @@ void gks_request_locator(
 
 void gks_request_stroke(
   int wkid, int skdnr, int n,
-  int *stat, int *tnr, int *np, float *pxa, float *pya)
+  int *stat, int *tnr, int *np, double *pxa, double *pya)
 {
   int wscat;
 
@@ -2293,16 +2295,16 @@ void gks_interpret_item(int type, int lenidr, int dimidr, char *idr)
 }
 
 void gks_eval_xform_matrix(
-  float fx, float fy, float transx, float transy, float phi,
-  float scalex, float scaley, int coord, float tran[3][2])
+  double fx, double fy, double transx, double transy, double phi,
+  double scalex, double scaley, int coord, double tran[3][2])
 {
-  float cosf, sinf;
+  double cosf, sinf;
 
   if (state >= GKS_K_GKOP)
     {
       if (coord == GKS_K_COORDINATES_WC)
 	{
-	  float xorg = 0, yorg = 0;
+	  double xorg = 0, yorg = 0;
 
 	  gks_WC_to_NDC(s->cntnr, &xorg, &yorg);
 
@@ -2413,7 +2415,7 @@ void gks_inq_segn_ws(int wkid, int n, int *errind, int *ol, int *segn)
 
 void gks_inq_color_rep(
   int wkid, int index, int type,
-  int *errind, float *red, float *green, float *blue)
+  int *errind, double *red, double *green, double *blue)
 {
   *errind = GKS_K_NO_ERROR;
   gks_inq_rgb(index, red, green, blue);
@@ -2428,7 +2430,7 @@ void gks_inq_pline_linetype(int *errind, int *ltype)
     *ltype = s->ltype;
 }
 
-void gks_inq_pline_linewidth(int *errind, float *lwidth)
+void gks_inq_pline_linewidth(int *errind, double *lwidth)
 {
   *errind = GKS_K_NO_ERROR;
   if (api)
@@ -2455,7 +2457,7 @@ void gks_inq_pmark_type(int *errind, int *mtype)
     *mtype = s->mtype;
 }
 
-void gks_inq_pmark_size(int *errind, float *mszsc)
+void gks_inq_pmark_size(int *errind, double *mszsc)
 {
   *errind = GKS_K_NO_ERROR;
   if (api)
@@ -2496,7 +2498,7 @@ void gks_inq_text_fontprec(int *errind, int *font, int *prec)
     }
 }
 
-void gks_inq_text_expfac(int *errind, float *chxp)
+void gks_inq_text_expfac(int *errind, double *chxp)
 {
   *errind = GKS_K_NO_ERROR;
   if (api)
@@ -2505,7 +2507,7 @@ void gks_inq_text_expfac(int *errind, float *chxp)
     *chxp = s->chxp;
 }
 
-void gks_inq_text_spacing(int *errind, float *chsp)
+void gks_inq_text_spacing(int *errind, double *chsp)
 {
   *errind = GKS_K_NO_ERROR;
   if (api)
@@ -2523,13 +2525,13 @@ void gks_inq_text_color_index(int *errind, int *coli)
     *coli = s->txcoli;
 }
 
-void gks_inq_text_height(int *errind, float *chh)
+void gks_inq_text_height(int *errind, double *chh)
 {
   *errind = GKS_K_NO_ERROR;
   *chh = s->chh;
 }
 
-void gks_inq_text_upvec(int *errind, float *chux, float *chuy)
+void gks_inq_text_upvec(int *errind, double *chux, double *chuy)
 {
   *errind = GKS_K_NO_ERROR;
   *chux = s->chup[0];
@@ -2595,7 +2597,7 @@ void gks_inq_current_xformno(int *errind, int *tnr)
   *tnr = s->cntnr;
 }
 
-void gks_inq_xform(int tnr, int *errind, float *wn, float *vp)
+void gks_inq_xform(int tnr, int *errind, double *wn, double *vp)
 {
   register int i;
 
@@ -2613,7 +2615,7 @@ void gks_inq_xform(int tnr, int *errind, float *wn, float *vp)
     *errind = GKS_K_ERROR;
 }
 
-void gks_inq_clip(int *errind, int *clsw, float *clrt)
+void gks_inq_clip(int *errind, int *clsw, double *clrt)
 {
   register int i, tnr;
 
@@ -2659,8 +2661,8 @@ void gks_inq_ws_category(int wtype, int *errind, int *wscat)
 }
 
 void gks_inq_text_extent(
-  int wkid, float px, float py, char *str,
-  int *errind, float *cpx, float *cpy, float *tx, float *ty)
+  int wkid, double px, double py, char *str,
+  int *errind, double *cpx, double *cpy, double *tx, double *ty)
 {
   if (gks_list_find(open_ws, wkid) != NULL)
     {
@@ -2672,7 +2674,7 @@ void gks_inq_text_extent(
 }
 
 void gks_inq_max_ds_size(
-  int wtype, int *errind, int *dcunit, float *rx, float *ry, int *lx, int *ly)
+  int wtype, int *errind, int *dcunit, double *rx, double *ry, int *lx, int *ly)
 {
   gks_list_t *element;
   ws_descr_t *ws;
@@ -2713,7 +2715,7 @@ void gks_emergency_close(void)
     gks_close_gks();
 }
 
-void gks_set_text_slant(float slant)
+void gks_set_text_slant(double slant)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -2729,7 +2731,7 @@ void gks_set_text_slant(float slant)
     gks_report_error(SET_TEXT_SLANT, 8);
 }
 
-void gks_set_shadow(float offsetx, float offsety, float blur)
+void gks_set_shadow(double offsetx, double offsety, double blur)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -2747,7 +2749,7 @@ void gks_set_shadow(float offsetx, float offsety, float blur)
     gks_report_error(SET_SHADOW, 8);
 }
 
-void gks_set_transparency(float alpha)
+void gks_set_transparency(double alpha)
 {
   if (state >= GKS_K_GKOP)
     {
@@ -2763,7 +2765,7 @@ void gks_set_transparency(float alpha)
     gks_report_error(SET_TRANSPARENCY, 8);
 }
 
-void gks_set_coord_xform(float mat[3][2])
+void gks_set_coord_xform(double mat[3][2])
 {
   if (state >= GKS_K_GKOP)
     {
@@ -2815,7 +2817,7 @@ void gks_end_selection(void)
     gks_report_error(END_SELECTION, 5);
 }
 
-void gks_move_selection(float x, float y)
+void gks_move_selection(double x, double y)
 {
   if (state >= GKS_K_WSAC)
     {
@@ -2832,7 +2834,7 @@ void gks_move_selection(float x, float y)
     gks_report_error(MOVE_SELECTION, 5);
 }
 
-void gks_resize_selection(int kind, float x, float y)
+void gks_resize_selection(int kind, double x, double y)
 {
   if (state >= GKS_K_WSAC)
     {
@@ -2851,7 +2853,7 @@ void gks_resize_selection(int kind, float x, float y)
 }
 
 void gks_draw_image(
-  float x, float y, float scalex, float scaley,
+  double x, double y, double scalex, double scaley,
   int width, int height, int *data)
 {
   if (state >= GKS_K_WSAC)
@@ -2885,7 +2887,7 @@ void gks_draw_image(
 }
 
 void gks_inq_bbox(
-  int *errind, float *xmin, float *xmax, float *ymin, float *ymax)
+  int *errind, double *xmin, double *xmax, double *ymin, double *ymax)
 {
   if (state >= GKS_K_WSAC)
     {
@@ -2906,7 +2908,7 @@ void gks_inq_bbox(
     *errind = GKS_K_ERROR;
 }
 
-void gks_inq_text_slant(int *errind, float *slant)
+void gks_inq_text_slant(int *errind, double *slant)
 {
   *errind = GKS_K_NO_ERROR;
   *slant = s->txslant;
@@ -2917,8 +2919,8 @@ void gksrealloc(int n)
 {
   if (n > max_points)
     {
-      x = (float *) realloc(x, sizeof(float) * n);
-      y = (float *) realloc(y, sizeof(float) * n);
+      x = (double *) realloc(x, sizeof(double) * n);
+      y = (double *) realloc(y, sizeof(double) * n);
       max_points = n;
     }
 }
@@ -2933,8 +2935,8 @@ int gopengks(Gfile *errfile, Glong memory)
 
   if (gks_errno == 0)
     {
-      x = (float *) malloc(sizeof(float) * MAX_POINTS);
-      y = (float *) malloc(sizeof(float) * MAX_POINTS);
+      x = (double *) malloc(sizeof(double) * MAX_POINTS);
+      y = (double *) malloc(sizeof(double) * MAX_POINTS);
       max_points = MAX_POINTS;
     }
   return gks_errno;
@@ -3042,7 +3044,7 @@ int gpolymarker(Gint n, Gpoint *points)
 
 int gtext(Gpoint *position, Gchar *string)
 {
-  float qx, qy;
+  double qx, qy;
   char *chars;
 
   qx = position->x;
@@ -3071,7 +3073,7 @@ int gfillarea(Gint n, Gpoint *points)
 
 int gcellarray(Grect *rectangle, Gidim *dimensions, Gint *color)
 {
-  float qx, qy, rx, ry;
+  double qx, qy, rx, ry;
   int dx, dy, scol, srow, ncol, nrow, *colia = color;
 
   qx = rectangle->ul.x;
@@ -3133,7 +3135,7 @@ int gsetlinetype(Gint type)
 
 int gsetlinewidth(Gfloat width)
 {
-  float lwidth = width;
+  double lwidth = width;
 
   gks_set_pline_linewidth(lwidth);
 
@@ -3169,7 +3171,7 @@ int gsetmarkertype(Gint type)
 
 int gsetmarkersize(Gfloat size)
 {
-  float mszsc = size;
+  double mszsc = size;
 
   gks_set_pmark_size(mszsc);
 
@@ -3205,7 +3207,7 @@ int gsettextfontprec(Gtxfp *txfp)
 
 int gsetcharexpan(Gfloat exp)
 {
-  float chxp = exp;
+  double chxp = exp;
 
   gks_set_text_expfac(chxp);
 
@@ -3214,7 +3216,7 @@ int gsetcharexpan(Gfloat exp)
 
 int gsetcharspace(Gfloat spacing)
 {
-  float chsp = spacing;
+  double chsp = spacing;
 
   gks_set_text_spacing(chsp);
 
@@ -3232,7 +3234,7 @@ int gsettextcolourind(Gint colour)
 
 int gsetcharheight(Gfloat height)
 {
-  float chh = height;
+  double chh = height;
 
   gks_set_text_height(chh);
 
@@ -3241,7 +3243,7 @@ int gsetcharheight(Gfloat height)
 
 int gsetcharup(Gpoint *charup)
 {
-  float chux, chuy;
+  double chux, chuy;
 
   chux = charup->x;
   chuy = charup->y;
@@ -3311,7 +3313,7 @@ int gsetfillcolourind(Gint colour)
 int gsetcolourrep(Gint workstation_id, Gint index, Gcobundl *rep)
 {
   int wkid = workstation_id, coli = index;
-  float r, g, b;
+  double r, g, b;
 
   r = rep->red;
   g = rep->green;
@@ -3325,7 +3327,7 @@ int gsetcolourrep(Gint workstation_id, Gint index, Gcobundl *rep)
 int gsetwindow(Gint transform, Glimit *window)
 {
   int tnr = transform;
-  float xmin, xmax, ymin, ymax;
+  double xmin, xmax, ymin, ymax;
 
   xmin = window->xmin;
   xmax = window->xmax;
@@ -3340,7 +3342,7 @@ int gsetwindow(Gint transform, Glimit *window)
 int gsetviewport(Gint transform, Glimit *viewport)
 {
   int tnr = transform;
-  float xmin, xmax, ymin, ymax;
+  double xmin, xmax, ymin, ymax;
 
   xmin = viewport->xmin;
   xmax = viewport->xmax;
@@ -3373,7 +3375,7 @@ int gsetclip(Gclip indicator)
 int gsetwswindow(Gint workstation_id, Glimit *window)
 {
   int wkid = workstation_id;
-  float xmin, xmax, ymin, ymax;
+  double xmin, xmax, ymin, ymax;
 
   xmin = window->xmin;
   xmax = window->xmax;
@@ -3388,7 +3390,7 @@ int gsetwswindow(Gint workstation_id, Glimit *window)
 int gsetwsviewport(Gint workstation_id, Glimit *viewport)
 {
   int wkid = workstation_id;
-  float xmin, xmax, ymin, ymax;
+  double xmin, xmax, ymin, ymax;
 
   xmin = viewport->xmin;
   xmax = viewport->xmax;
@@ -3437,9 +3439,9 @@ int gcloseseg(void)
 int gevaltran(Gpoint *ppoint, Gpoint *pshift, Gfloat angle, Gscale *pscale,
 	      Gcsw coord, Gfloat result[2][3])
 {
-  float x0, y0, tx, ty, phi, fx, fy;
+  double x0, y0, tx, ty, phi, fx, fy;
   int isw, i, j;
-  float tran[3][2];
+  double tran[3][2];
 
   x0 = ppoint->x;
   y0 = ppoint->y;
@@ -3462,7 +3464,7 @@ int gevaltran(Gpoint *ppoint, Gpoint *pshift, Gfloat angle, Gscale *pscale,
 int gsetsegtran(Gint segment_name, Gfloat segtran[2][3])
 {
   int segn = segment_name, i, j;
-  float tran[3][2];
+  double tran[3][2];
 
   for (i = 0; i < 2; i++)
     for (j = 0; j < 3; j++)
@@ -3511,7 +3513,7 @@ int ginqmaxntrannum(Gint *maxtran, Gint *error_status)
 int ginqcharheight(Gfloat *height, Gint *error_status)
 {
   int errind;
-  float chh;
+  double chh;
 
   gks_inq_text_height(&errind, &chh);
 
@@ -3523,7 +3525,7 @@ int ginqcharheight(Gfloat *height, Gint *error_status)
 
 int ginqcharup(Gpoint *up, Gint *error_status)
 {
-  float chux, chuy;
+  double chux, chuy;
   int errind;
 
   gks_inq_text_upvec(&errind, &chux, &chuy);
@@ -3574,7 +3576,7 @@ int ginqlinetype(Gint *type, Gint *error_status)
 int ginqlinewidth(Gfloat *width, Gint *error_status)
 {
   int errind;
-  float lwidth;
+  double lwidth;
 
   gks_inq_pline_linewidth(&errind, &lwidth);
 
@@ -3611,7 +3613,7 @@ int ginqmarkertype(Gint *level, Gint *error_status)
 int ginqmarkersize(Gfloat *mksize, Gint *error_status)
 {
   int errind;
-  float mszsc;
+  double mszsc;
 
   gks_inq_pmark_size(&errind, &mszsc);
 
@@ -3649,7 +3651,7 @@ int ginqtextfontprec(Gtxfp *txfp, Gint *error_status)
 int ginqcharexpan(Gfloat *chexp, Gint *error_status)
 {
   int errind;
-  float chxp;
+  double chxp;
 
   gks_inq_text_expfac(&errind, &chxp);
 
@@ -3662,7 +3664,7 @@ int ginqcharexpan(Gfloat *chexp, Gint *error_status)
 int ginqcharspace(Gfloat *chspc, Gint *error_status)
 {
   int errind;
-  float chsp;
+  double chsp;
 
   gks_inq_text_spacing(&errind, &chsp);
 
@@ -3735,7 +3737,7 @@ int ginqcurntrannum(Gint *tran, Gint *error_status)
 int ginqntran(Gint num, Gtran *tran, Gint *error_status)
 {
   int tnr = num, errind;
-  float wn[4], vp[4];
+  double wn[4], vp[4];
 
   gks_inq_xform(tnr, &errind, wn, vp);
 
@@ -3755,7 +3757,7 @@ int ginqntran(Gint num, Gtran *tran, Gint *error_status)
 int ginqclip(Gcliprect *clipping, Gint *error_status)
 {
   int errind, clsw;
-  float clrt[4];
+  double clrt[4];
 
   gks_inq_clip(&errind, &clsw, clrt);
 
@@ -3787,7 +3789,7 @@ int ginqdisplaysize(Gwstype *workstation_type, Gdspsize *dspsz,
 {
   int wstype = *workstation_type;
   int errind, units, ras_x, ras_y;
-  float px, py;
+  double px, py;
 
   gks_inq_max_ds_size(wstype, &errind, &units, &px, &py, &ras_x, &ras_y);
 
@@ -3805,7 +3807,7 @@ int ginqtextextent(Gint workstation_id, Gpoint *position, Gchar *string,
 		   Gextent *extent, Gint *error_status)
 {
   int wkid = workstation_id, errind;
-  float qx, qy, cpx, cpy, tx[4], ty[4];
+  double qx, qy, cpx, cpy, tx[4], ty[4];
   char *chars;
 
   qx = position->x;

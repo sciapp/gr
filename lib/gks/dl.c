@@ -20,7 +20,7 @@ void reallocate(gks_display_list_t *d, int len)
 
 void gks_dl_write_item(gks_display_list_t *d,
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *c,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *c,
   gks_state_list_t *gkss)
 {
   char s[132];
@@ -75,15 +75,15 @@ void gks_dl_write_item(gks_display_list_t *d,
     case  15:                        /* fill area */
       if (d->state == GKS_K_WS_ACTIVE)
         {
-          len = 3 * sizeof(int) + 2 * ia[0] * sizeof(float);
+          len = 3 * sizeof(int) + 2 * ia[0] * sizeof(double);
           if (d->nbytes + len > d->size)
             reallocate(d, len);
 
           COPY(&len, sizeof(int));
           COPY(&fctid, sizeof(int));
           COPY(ia, sizeof(int));
-          COPY(r1, ia[0] * sizeof(float));
-          COPY(r2, ia[0] * sizeof(float));
+          COPY(r1, ia[0] * sizeof(double));
+          COPY(r2, ia[0] * sizeof(double));
         }
       break;
 
@@ -91,7 +91,7 @@ void gks_dl_write_item(gks_display_list_t *d,
 
       if (d->state == GKS_K_WS_ACTIVE)
         {
-          len = 3 * sizeof(int) + 2 * sizeof(float) + 132;
+          len = 3 * sizeof(int) + 2 * sizeof(double) + 132;
           if (d->nbytes + len > d->size)
             reallocate(d, len);
 
@@ -101,8 +101,8 @@ void gks_dl_write_item(gks_display_list_t *d,
 
           COPY(&len, sizeof(int));
           COPY(&fctid, sizeof(int));
-          COPY(r1, sizeof(float));
-          COPY(r2, sizeof(float));
+          COPY(r1, sizeof(double));
+          COPY(r2, sizeof(double));
           COPY(&slen, sizeof(int));
           COPY(s, 132);
         }
@@ -113,14 +113,14 @@ void gks_dl_write_item(gks_display_list_t *d,
 
       if (d->state == GKS_K_WS_ACTIVE)
         {
-          len = (5 + dimx * dy) * sizeof(int) + 4 * sizeof(float);
+          len = (5 + dimx * dy) * sizeof(int) + 4 * sizeof(double);
           if (d->nbytes + len > d->size)
             reallocate(d, len);
 
           COPY(&len, sizeof(int));
           COPY(&fctid, sizeof(int));
-          COPY(r1, 2 * sizeof(float));
-          COPY(r2, 2 * sizeof(float));
+          COPY(r1, 2 * sizeof(double));
+          COPY(r2, 2 * sizeof(double));
           COPY(&dx, sizeof(int));
           COPY(&dy, sizeof(int));
           COPY(&dimx, sizeof(int));
@@ -169,25 +169,25 @@ void gks_dl_write_item(gks_display_list_t *d,
     case 200:                        /* set text slant */
     case 203:                        /* set transparency */
 
-      len = 2 * sizeof(int) + sizeof(float);
+      len = 2 * sizeof(int) + sizeof(double);
       if (d->nbytes + len > d->size)
         reallocate(d, len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(r1, sizeof(float));
+      COPY(r1, sizeof(double));
       break;
 
     case  32:                        /* set character up vector */
 
-      len = 2 * sizeof(int) + 2 * sizeof(float);
+      len = 2 * sizeof(int) + 2 * sizeof(double);
       if (d->nbytes + len > d->size)
         reallocate(d, len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(r1, sizeof(float));
-      COPY(r2, sizeof(float));
+      COPY(r1, sizeof(double));
+      COPY(r2, sizeof(double));
       break;
 
     case  41:                        /* set aspect source flags */
@@ -203,14 +203,14 @@ void gks_dl_write_item(gks_display_list_t *d,
 
     case  48:                        /* set color representation */
 
-      len = 3 * sizeof(int) + 3 * sizeof(float);
+      len = 3 * sizeof(int) + 3 * sizeof(double);
       if (d->nbytes + len > d->size)
         reallocate(d, len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
       COPY(&ia[1], sizeof(int));
-      COPY(r1, 3 * sizeof(float));
+      COPY(r1, 3 * sizeof(double));
       break;
 
     case  49:                        /* set window */
@@ -218,37 +218,37 @@ void gks_dl_write_item(gks_display_list_t *d,
     case  54:                        /* set workstation window */
     case  55:                        /* set workstation viewport */
 
-      len = 3 * sizeof(int) + 4 * sizeof(float);
+      len = 3 * sizeof(int) + 4 * sizeof(double);
       if (d->nbytes + len > d->size)
         reallocate(d, len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
       COPY(ia, sizeof(int));
-      COPY(r1, 2 * sizeof(float));
-      COPY(r2, 2 * sizeof(float));
+      COPY(r1, 2 * sizeof(double));
+      COPY(r2, 2 * sizeof(double));
       break;
 
     case 202:                        /* set shadow */
 
-      len = 2 * sizeof(int) + 3 * sizeof(float);
+      len = 2 * sizeof(int) + 3 * sizeof(double);
       if (d->nbytes + len >= d->size)
 	reallocate(d, len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(r1, 3 * sizeof(float));
+      COPY(r1, 3 * sizeof(double));
       break;
 
     case 204:                        /* set coord xform */
 
-      len = 2 * sizeof(int) + 6 * sizeof(float);
+      len = 2 * sizeof(int) + 6 * sizeof(double);
       if (d->nbytes + len >= d->size)
 	reallocate(d, len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(r1, 6 * sizeof(float));
+      COPY(r1, 6 * sizeof(double));
       break;
     }
 
