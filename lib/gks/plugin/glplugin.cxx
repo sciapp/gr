@@ -295,10 +295,10 @@ void line_routine(int num_points, double *x, double *y, int linetype, int tnr)
   int i;
   double xn, yn, xd, yd;
   const double modelview_matrix[16] = {
-    2.0f/p->width, 0,               0, -1,
-    0,             -2.0f/p->height, 0, 1,
-    0,             0,               1, 0,
-    0,             0,               0, 1
+    2.0/p->width, 0,              0, -1,
+    0,            -2.0/p->height, 0, 1,
+    0,            0,              1, 0,
+    0,            0,              0, 1
   };
 
   glMatrixMode(GL_MODELVIEW);
@@ -434,10 +434,10 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
     0, 0, 0, 0, 0 };
 
   const double modelview_matrix[16] = {
-    2.0f/p->width, 0,               0, -1,
-    0,             -2.0f/p->height, 0, 1,
-    0,             0,               1, 0,
-    0,             0,               0, 1
+    2.0/p->width, 0,              0, -1,
+    0,            -2.0/p->height, 0, 1,
+    0,            0,              1, 0,
+    0,            0,              0, 1
   };
 
   int r, i, num_segments;
@@ -592,10 +592,10 @@ void fill_routine (int n, double *px, double *py, int tnr)
   double x, y;
 
   const double modelview_matrix[16] = {
-    2.0f/p->width, 0,               0, -1,
-    0,             -2.0f/p->height, 0, 1,
-    0,             0,               1, 0,
-    0,             0,               0, 1
+    2.0/p->width, 0,              0, -1,
+    0,            -2.0/p->height, 0, 1,
+    0,            0,              1, 0,
+    0,            0,              0, 1
   };
   const double texcoord_matrix[16] = {
     1./8.,  0,      0, 0,
@@ -713,10 +713,10 @@ void cellarray(
   height = (int) fabs(y2 - y1) + 1;
 
   const double modelview_matrix[16] = {
-    2.0f*width/p->width, 0,                      0, 2.0f*x/p->width-1,
-    0,                   -2.0f*height/p->height, 0, -2.0f*y/p->height+1,
-    0,                   0,                      1, 0,
-    0,                   0,                      0, 1
+    2.0*width/p->width, 0,                     0, 2.0*x/p->width-1,
+    0,                  -2.0*height/p->height, 0, -2.0*y/p->height+1,
+    0,                  0,                     1, 0,
+    0,                  0,                     0, 1
   };
 
   for (i = 0; i < dx; i++) {
@@ -784,10 +784,10 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
   int tx_color;
 
   const double modelview_matrix[16] = {
-    2.0f*w/p->width, 0,                0, 2.0f*x/p->width-1,
-    0,               2.0f*h/p->height, 0, 2.0f*y/p->height-1,
-    0,               0,                1, 0,
-    0,               0,                0, 1
+    2.0*w/p->width, 0,               0, 2.0*x/p->width-1,
+    0,              2.0*h/p->height, 0, 2.0*y/p->height-1,
+    0,              0,               1, 0,
+    0,              0,               0, 1
   };
 
   tx_color = gkss->asf[9] ? Color8Bit(gkss->txcoli) : 1;

@@ -649,7 +649,7 @@ public class gksweb extends Applet
     ln_color = sl.asf[2] != 0 ? Color8Bit(sl.plcoli) : 1;
 
     if (sl.version > 4)
-      width = nint(ln_width * ws.height / 500.0f);
+      width = nint(ln_width * ws.height / 500.0);
     else
       width = nint(ln_width);
 
@@ -751,11 +751,11 @@ public class gksweb extends Applet
     int[][] p;
 
     if (sl.version > 4)
-      mscale *= ws.height / 500.0f;
+      mscale *= ws.height / 500.0;
 
     r = (int) (3 * mscale);
     d = 2 * r;
-    scale = mscale / 3.0f;
+    scale = mscale / 3.0;
 
     xr = r;
     yr = 0;
@@ -892,7 +892,7 @@ public class gksweb extends Applet
 
     if (sl.version > 4)
       {
-        ln_width = nint(ws.height / 500.0f);
+        ln_width = nint(ws.height / 500.0);
         if (ln_width < 1)
           ln_width = 1;
       }
@@ -1041,7 +1041,7 @@ public class gksweb extends Applet
         l = numseg = 0;
         onoff = pattern[style][j + 1] & 0x01;
         if (onoff == 1)
-          seglen[numseg++] = 0.0f;
+          seglen[numseg++] = 0.0;
         for (k = 0; k < len; k++)
         {
           bit = (pattern[style][j + 1] >> k) & 0x01;
@@ -1189,7 +1189,7 @@ public class gksweb extends Applet
 
     if (sl.version > 4)
       {
-        ln_width = nint(ws.height / 500.0f);
+        ln_width = nint(ws.height / 500.0);
         if (ln_width < 1)
           ln_width = 1;
       }
@@ -1262,8 +1262,8 @@ public class gksweb extends Applet
     9120,  9124,  9130,  9126,  9131,  9132,  9133,   255
   };
 
-  private static double[] xfac = {0.0f, 0.0f, -0.5f, -1.0f};
-  private static double[] yfac = {0.0f, -1.2f, -1.0f, -0.5f, 0, 0.2f};
+  private static double[] xfac = {0.0, 0.0, -0.5, -1.0};
+  private static double[] yfac = {0.0, -1.2, -1.0, -0.5, 0, 0.2};
 
   private static void textRoutine(double x, double y, String text)
   {
@@ -1326,14 +1326,14 @@ public class gksweb extends Applet
   };
 
   static final double[] capheights = {
-    0.662f, 0.660f, 0.681f, 0.662f,
-    0.729f, 0.729f, 0.729f, 0.729f,
-    0.583f, 0.583f, 0.633f, 0.633f,
-    0.667f,
-    0.681f, 0.681f, 0.681f, 0.681f,
-    0.722f, 0.722f, 0.722f, 0.722f,
-    0.739f, 0.739f, 0.739f, 0.739f,
-    0.694f, 0.693f, 0.683f, 0.683f
+    0.662, 0.660, 0.681, 0.662,
+    0.729, 0.729, 0.729, 0.729,
+    0.583, 0.583, 0.633, 0.633,
+    0.667,
+    0.681, 0.681, 0.681, 0.681,
+    0.722, 0.722, 0.722, 0.722,
+    0.739, 0.739, 0.739, 0.739,
+    0.694, 0.693, 0.683, 0.683
   };
 
   static final String[] fonts = {
@@ -1443,7 +1443,7 @@ public class gksweb extends Applet
     switch (alh)
       {
       case GKS_K_TEXT_HALIGN_CENTER:
-        ax = -0.5f * txx[0];
+        ax = -0.5 * txx[0];
         break;
       case GKS_K_TEXT_HALIGN_RIGHT:
         ax = -txx[0];
@@ -1468,7 +1468,7 @@ public class gksweb extends Applet
         ay = base[0] - cap[0];
         break;
       case GKS_K_TEXT_VALIGN_HALF:
-        ay = (base[0] - cap[0]) * 0.5f;
+        ay = (base[0] - cap[0]) * 0.5;
         break;
       case GKS_K_TEXT_VALIGN_BOTTOM:
         ay = base[0] - bottom[0];
@@ -1625,15 +1625,15 @@ public class gksweb extends Applet
           }
 
         mszsc = sl.mszsc;
-        scalex = 0.001f * mszsc / (xmax - xmin);
-        scaley = 0.001f * mszsc / (ymax - ymin);
+        scalex = 0.001 * mszsc / (xmax - xmin);
+        scaley = 0.001 * mszsc / (ymax - ymin);
         scalex *= (ws.window[1] - ws.window[0]) /
                   (ws.viewport[1] - ws.viewport[0]);
         scaley *= (ws.window[3] - ws.window[2]) /
                   (ws.viewport[3] - ws.viewport[2]);
 
-        center = 0.5f * (xmin + xmax);
-        half = 0.5f * (ymin + ymax);
+        center = 0.5 * (xmin + xmax);
+        half = 0.5 * (ymin + ymax);
       }
 
     n = 0;
@@ -1925,7 +1925,7 @@ public class gksweb extends Applet
 
     if (sl.version > 4)
       {
-        ln_width = nint(ws.height / 500.0f);
+        ln_width = nint(ws.height / 500.0);
         if (ln_width < 1)
           ln_width = 1;
       }
@@ -2252,12 +2252,12 @@ public class gksweb extends Applet
           case 2:
             ws.width = ws.height = 500;
 
-            ws.window[0] = ws.window[2] = 0.0f;
-            ws.window[1] = ws.window[3] = 1.0f;
+            ws.window[0] = ws.window[2] = 0.0;
+            ws.window[1] = ws.window[3] = 1.0;
 
-            ws.viewport[0] = ws.viewport[2] = 0.0f;
-            ws.viewport[1] = ws.width * 0.254f / 1024;
-            ws.viewport[3] = ws.height * 0.1905f / 768;
+            ws.viewport[0] = ws.viewport[2] = 0.0;
+            ws.viewport[1] = ws.width * 0.254 / 1024;
+            ws.viewport[3] = ws.height * 0.1905 / 768;
 
             setXform();
             initNormXform();

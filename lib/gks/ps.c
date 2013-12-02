@@ -477,7 +477,7 @@ void bounding_box(int landscape, double magstep)
   double magn;
 
   if (fabs(magstep) > FEPS)
-    magn = pow(1.2f, magstep);
+    magn = pow(1.2, magstep);
   else
     magn = 1.0;
 
@@ -1120,7 +1120,7 @@ void ps_init(int *pages)
     }
   if (fabs(p->magstep) > FEPS)
     {
-      sprintf(buffer, "%.4g 1 in 600 div mul dup scale", pow(1.2f, p->magstep));
+      sprintf(buffer, "%.4g 1 in 600 div mul dup scale", pow(1.2, p->magstep));
       packb(buffer);
     }
   else
