@@ -9,7 +9,7 @@ import gr
 import os
 from ctypes import c_int, c_double, c_char_p, c_void_p
 from ctypes import byref, POINTER, addressof, CDLL, CFUNCTYPE
-from ctypes import create_string_buffer, create_unicode_buffer, cast
+from ctypes import create_string_buffer, cast
 from sys import version_info, platform
 
 
@@ -59,7 +59,7 @@ def inqdspsize():
     return [mwidth.value, mheight.value, width.value, height.value]
 
 
-def openws(workstation_id, connection, type):
+def openws(workstation_id, connection, workstation_type):
     """
     Open a graphical workstation.
 
@@ -69,7 +69,7 @@ def openws(workstation_id, connection, type):
         A workstation identifier.
     `connection` :
         A connection identifier.
-    `type` :
+    `workstation_type` :
         The desired workstation type.
 
     Available workstation types:
@@ -125,7 +125,7 @@ def openws(workstation_id, connection, type):
     +-------------+------------------------------------------------------+
 
     """
-    __gr.gr_openws(c_int(workstation_id), char(connection), c_int(type))
+    __gr.gr_openws(c_int(workstation_id), char(connection), c_int(workstation_type))
 
 
 def closews(workstation_id):
@@ -334,7 +334,7 @@ def gridit(nd, xd, yd, zd, nx, ny):
     return [x[:], y[:], z[:]]
 
 
-def setlinetype(type):
+def setlinetype(style):
     """
     Specify the line style for polylines.
 
@@ -372,7 +372,7 @@ def setlinetype(type):
     +---------------------------+----+---------------------------------------------------+
 
     """
-    __gr.gr_setlinetype(c_int(type))
+    __gr.gr_setlinetype(c_int(style))
 
 
 def inqlinetype():
@@ -418,7 +418,7 @@ def inqlinecolorind():
     return coli.value
 
 
-def setmarkertype(type):
+def setmarkertype(style):
     """
     Specifiy the marker type for polymarkers.
 
@@ -484,7 +484,7 @@ def setmarkertype(type):
     Polymarkers appear centered over their specified coordinates.
 
     """
-    __gr.gr_setmarkertype(c_int(type))
+    __gr.gr_setmarkertype(c_int(style))
 
 
 def inqmarkertype():
@@ -1527,7 +1527,7 @@ def beginprint(pathname):
     __gr.gr_beginprint(char(pathname))
 
 
-def beginprintext(pathname, mode, format, orientation):
+def beginprintext(pathname, mode, fmt, orientation):
     """
     Open and activate a print device with the given layout attributes.
 
@@ -1537,7 +1537,7 @@ def beginprintext(pathname, mode, format, orientation):
         Filename for the print device.
     `mode` :
         Output mode (Color, GrayScale)
-    `format` :
+    `fmt` :
         Output format (see table below)
     `orientation` :
         Page orientation (Landscape, Portait)
@@ -1607,7 +1607,7 @@ def beginprintext(pathname, mode, format, orientation):
     +-----------+---------------+
 
     """
-    __gr.gr_beginprintext(char(pathname), char(mode), char(format), char(orientation))
+    __gr.gr_beginprintext(char(pathname), char(mode), char(fmt), char(orientation))
 
 
 def endprint():
@@ -1921,8 +1921,8 @@ def mathtex(x, y, string):
     return __gr.gr_mathtex(c_double(x), c_double(y), char(string))
 
 
-def beginselection(index, type):
-    __gr.gr_beginselection(c_int(index), c_int(type))
+def beginselection(index, kind):
+    __gr.gr_beginselection(c_int(index), c_int(kind))
 
 
 def endselection():
@@ -1933,8 +1933,8 @@ def moveselection(x, y):
     __gr.gr_moveselection(c_double(x), c_double(y))
 
 
-def resizeselection(type, x, y):
-    __gr.gr_resizeselection(c_int(type), c_double(x), c_double(y))
+def resizeselection(kind, x, y):
+    __gr.gr_resizeselection(c_int(kind), c_double(x), c_double(y))
 
 
 def inqbbox():
@@ -2244,8 +2244,8 @@ PRINT_TYPE = {PRINT_PS: "PostScript (*.ps)",
               PRINT_TIFF: "Tagged Image File Format (*.tif *.tiff)",
               PRINT_FIG: "Figure (*.fig)",
               PRINT_SVG: "Scalable Vector Graphics (*.svg)",
-              PRINT_WMF: "Windows Metafile (*.wmf)"
-}
+              PRINT_WMF: "Windows Metafile (*.wmf)"}
+
 # multiple keys
 PRINT_TYPE[PRINT_JPG] = PRINT_TYPE[PRINT_JPEG]
 PRINT_TYPE[PRINT_TIF] = PRINT_TYPE[PRINT_TIFF]
