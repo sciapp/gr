@@ -13,7 +13,7 @@
 #define STR_MAX 31
 
 #ifndef FLT_DIG
-#define FLT_DIG 6
+#define FLT_DIG 10
 #endif
 
 
@@ -55,17 +55,17 @@ char *str_pad(char *str, char fill, int size)
 }
 
 
-char *str_ftoa(char *result, float value, float reference)
+char *str_ftoa(char *result, double value, double reference)
 
 /*
- *  str_flt - convert real value to floating equivalent
+ *  str_ftoa - convert real value to floating equivalent
  */
 
 {
   static char *digit = "0123456789";
   char format[STR_MAX];
 
-  float abs_val;
+  double abs_val;
   char str[STR_MAX], *fcp, *cp;
   int count, exponent, factor, mantissa;
   int fdigits, digits, scientific_notation;
@@ -74,12 +74,12 @@ char *str_ftoa(char *result, float value, float reference)
     {
       abs_val = fabs(value);
 
-      exponent = (int) (log10(abs_val) + pow(10.0, (double) (-FLT_DIG)));
+      exponent = (int) (log10(abs_val) + pow(10.0, -FLT_DIG));
       if (exponent < 0)
 	exponent--;
 
       factor = (FLT_DIG - 1) - exponent;
-      mantissa = (int) (abs_val * pow(10.0, (double) factor) + 0.5);
+      mantissa = (int) (abs_val * pow(10.0, factor) + 0.5);
 
       strcpy(result, "");
 
@@ -144,7 +144,7 @@ char *str_ftoa(char *result, float value, float reference)
 	}
       else
 	{
-	  sprintf(format, "%g", reference);
+	  sprintf(format, "%lg", reference);
 
 	  if (strchr(format, 'E') == 0)
 
@@ -157,12 +157,12 @@ char *str_ftoa(char *result, float value, float reference)
 		    digits = strlen(result) - (int) (cp - result) - 1;
 
 		    if (fdigits > digits)
-		      strncat(result, "00000", fdigits - digits);
+		      strncat(result, "000000000", fdigits - digits);
 		  }
 		else
 		  {
 		    strcat(result, ".");
-		    strncat(result, "00000", fdigits);
+		    strncat(result, "000000000", fdigits);
 		  }
 	      }
 	}
