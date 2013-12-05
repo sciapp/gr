@@ -10,7 +10,7 @@
 
 #include "strlib.h"
 
-#define STR_MAX 31
+#define STR_MAX 255
 
 #ifndef FLT_DIG
 #define FLT_DIG 10
@@ -67,19 +67,20 @@ char *str_ftoa(char *result, double value, double reference)
 
   double abs_val;
   char str[STR_MAX], *fcp, *cp;
-  int count, exponent, factor, mantissa;
+  int count, exponent, factor;
+  long mantissa;
   int fdigits, digits, scientific_notation;
 
   if (value != 0)
     {
       abs_val = fabs(value);
 
-      exponent = (int) (log10(abs_val) + pow(10.0, -FLT_DIG));
+      exponent = (int) (log10(abs_val) + pow(10.0, (double)(-FLT_DIG)));
       if (exponent < 0)
 	exponent--;
 
       factor = (FLT_DIG - 1) - exponent;
-      mantissa = (int) (abs_val * pow(10.0, factor) + 0.5);
+      mantissa = (long) (abs_val * pow(10.0, (double)(factor)) + 0.5);
 
       strcpy(result, "");
 
@@ -157,12 +158,12 @@ char *str_ftoa(char *result, double value, double reference)
 		    digits = strlen(result) - (int) (cp - result) - 1;
 
 		    if (fdigits > digits)
-		      strncat(result, "000000000", fdigits - digits);
+		      strncat(result, "0000000000", fdigits - digits);
 		  }
 		else
 		  {
 		    strcat(result, ".");
-		    strncat(result, "000000000", fdigits);
+		    strncat(result, "0000000000", fdigits);
 		  }
 	      }
 	}
