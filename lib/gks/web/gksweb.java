@@ -55,7 +55,7 @@ public class gksweb extends Applet
   static final int GLIGKS = 4;
   static final int GKS5 = 5;
 
-  static final double FEPS = 1.0E-06;
+  static final double FEPS = 1.0E-09;
 
   private static class GKSStateList
   {

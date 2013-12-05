@@ -11,7 +11,7 @@
 #include "gks.h"
 #include "gkscore.h"
 
-#define FEPS 1.0E-6
+#define FEPS 1.0E-09
 
 #define OK          0
 #define MAX_POINTS  2048

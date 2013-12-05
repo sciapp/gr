@@ -132,7 +132,7 @@ double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 #define M_PI 3.14159265358979323846
 #endif
 
-#define FEPS 1.0e-6
+#define FEPS 1.0E-09
 
 #define OPTION_X_LOG (1 << 0)
 #define OPTION_Y_LOG (1 << 1)

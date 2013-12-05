@@ -31,7 +31,7 @@ typedef unsigned long uLong;
 
 #define DrawBorder 0
 
-#define FEPS 1.0E-06
+#define FEPS 1.0E-09
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
