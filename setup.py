@@ -97,7 +97,7 @@ _grdir = os.getenv("GRDIR",
                                 "gr"))
 _cc = os.getenv("CC", "cc")
 _wxconfig = os.getenv("WX_CONFIG")
-_qtdir = os.getenv("QTDIR")
+_qtdir = os.getenv("QTDIR", "")
 _wxdir = os.getenv("WXDIR")
 _wxlib = os.getenv("WXLIB")
 _gsdir = os.getenv("GSDIR")
@@ -186,13 +186,15 @@ if sys.platform == "darwin":
     _platform_extra_link_args = ["-Wl,-rpath,@loader_path/."]
     _gr3_src.insert(0, "gr3_cgl.c")
     if not _wxconfig:
-        Popen(["which", "wx-config"], stdout=PIPE).communicate()[0].rstrip()
+        _wxconfig = Popen(["which", "wx-config"],
+                          stdout=PIPE).communicate()[0].rstrip()
 elif "linux" in sys.platform:
     _gks_xftincludes = ["/usr/include/freetype2"]
     _platform_extra_link_args = ["-Wl,-rpath,$ORIGIN"]
     _gr3_src.insert(0, "gr3_glx.c")
     if not _wxconfig:
-        Popen(["which", "wx-config"], stdout=PIPE).communicate()[0].rstrip()
+        _wxconfig = Popen(["which", "wx-config"],
+                          stdout=PIPE).communicate()[0].rstrip()
 elif sys.platform == "win32":
     # win32 not tested.
     _gks_xftincludes = []
@@ -375,16 +377,24 @@ if _wxlibs:
     
 if _qtdir:
     _qmake = os.path.join(_qtdir, "bin", "qmake")
-    _qtversion = Popen([_qmake, "-v"], stdout=PIPE, stderr=STDOUT).communicate()[0].rstrip()
+elif sys.platform != "win32":
+    _qmake = Popen(["which", "qmake"],
+                   stdout=PIPE).communicate()[0].rstrip()
+
+if _qmake:
+    _qtversion = Popen([_qmake, "-v"], stdout=PIPE,
+                       stderr=STDOUT).communicate()[0].rstrip()
     match = re.search("\d\.\d\.\d", _qtversion)
     if match:
+        _build_qt = True
         _qtversion = map(lambda s: int(s), match.group(0).split('.'))
         if _qtversion[0] < 4:
             if "clean" not in sys.argv and "help" not in sys.argv:
+                _build_qt = False
                 print >>sys.stderr, ("QTDIR points to old Qt version %s."
                                      %'.'.join(map(lambda i: str(i),
                                                    _qtversion)))
-            
+                print >>sys.stderr, "Building without Qt Plugin."
                 inp = raw_input("Do you want to continue? [y/n]: ")
                 if inp != 'y':
                     print >>sys.stderr, "exiting"
@@ -394,32 +404,46 @@ Please retry with a valid QTDIR setting, e.g.
 /usr/share/qt4    (Ubuntu)
 /usr/local/qt4"""
                     sys.exit(-1)
-        # build
-        if sys.platform == "win32":
+        if _build_qt:
+            # build
+            _qquery_headers = os.path.join(_qtdir, "include")
+            _qquery_libs = os.path.join(_qtdir, "lib")
+            if sys.platform == "win32":
 # do not use _msvc_extra_link_args because /nodefaultlib causes
 # error LNK2019: unresolved external symbol ""__declspec(dllimport)
 #                void __cdecl std::_Xbad_alloc(void)" ...
-            _qt_extra_link_args = ["-dll"]
-            _gks_qt_libraries = ["QtGui%d" %_qtversion[0],
-                                 "QtCore%d" %_qtversion[0]]
-            _gks_qt_libraries.extend(_libs_msvc)
-            _gks_qt_extra_compile_args = list(_msvc_extra_compile_args)
-        else:
-            _qt_extra_link_args = ["-L/usr/X11R6/lib",
-                                   "-L%s" %os.path.join(_qtdir, "lib")]
-            _gks_qt_libraries = ["QtGui", "QtCore"]
-            _gks_qt_extra_compile_args = []
-        _qt_include_dirs = [os.path.join(_qtdir, "include")]
-        _gks_qt_includes = list(_gks_plugin_includes)
-        _gks_qt_includes.extend(_qt_include_dirs)
-        _gksQtExt = Extension("gr.qtplugin", _plugins_path["qtplugin.cxx"],
-                              define_macros=[_gr_macro],
-                              include_dirs=_gks_qt_includes,
-                              libraries=_gks_qt_libraries,
-                              library_dirs=[os.path.join(_qtdir, "lib")],
-                              extra_link_args=_qt_extra_link_args,
-                              extra_compile_args=_gks_qt_extra_compile_args)
-        _ext_modules.append(_gksQtExt)
+                _qt_extra_link_args = ["-dll"]
+                _gks_qt_libraries = ["QtGui%d" %_qtversion[0],
+                                     "QtCore%d" %_qtversion[0]]
+                _gks_qt_libraries.extend(_libs_msvc)
+                _gks_qt_extra_compile_args = list(_msvc_extra_compile_args)
+            else:
+                _qquery = Popen([_qmake, "-query", "QT_INSTALL_HEADERS"],
+                                stdout=PIPE)
+                _std = _qquery.communicate()
+                if _qquery.returncode == 0:
+                    _qquery_headers = _std[0].rstrip()
+                _qquery = Popen([_qmake, "-query", "QT_INSTALL_LIBS"],
+                                stdout=PIPE)
+                _std = _qquery.communicate()
+                if _qquery.returncode == 0:
+                    _qquery_libs = _std[0].rstrip()
+                    
+                _qt_extra_link_args = ["-L/usr/X11R6/lib",
+                                       "-L%s" %_qquery_libs]
+                _gks_qt_libraries = ["QtGui", "QtCore"]
+                _gks_qt_extra_compile_args = []
+            _qt_include_dirs = [_qquery_headers]
+            _gks_qt_includes = list(_gks_plugin_includes)
+            _gks_qt_includes.extend(_qt_include_dirs)
+            _gksQtExt = Extension("gr.qtplugin", _plugins_path["qtplugin.cxx"],
+                                  define_macros=[_gr_macro],
+                                  include_dirs=_gks_qt_includes,
+                                  libraries=_gks_qt_libraries,
+                                  library_dirs=[_qquery_libs],
+                                  extra_link_args=_qt_extra_link_args,
+                                  extra_compile_args=_gks_qt_extra_compile_args)
+            _ext_modules.append(_gksQtExt)
     else:
         print >>sys.stderr, "Unable to obtain Qt version number."
 else:
