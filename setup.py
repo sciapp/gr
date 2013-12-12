@@ -148,7 +148,7 @@ _gks_plugin_src = ["font.cxx", "afm.cxx", "util.cxx", "dl.cxx",
                    "malloc.cxx", "error.cxx", "io.cxx"]
 _gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "gtkplugin.cxx",
                 "quartzplugin.m", "svgplugin.cxx", "figplugin.cxx",
-                "gsplugin.cxx", "wmfplugin.cxx"]
+                "gsplugin.cxx", "wmfplugin.cxx", "movplugin.cxx"]
 
 _libz_src = ["adler32.c", "compress.c", "crc32.c", "deflate.c", "gzclose.c",
              "gzlib.c", "gzread.c", "gzwrite.c", "infback.c", "inffast.c",
@@ -524,7 +524,71 @@ int main()
             if inp != 'y':
                 print >>sys.stderr, "exiting"
                 sys.exit(-2)
-            
+    
+    # movplugin
+    _plugins_path["movplugin.cxx"].append(os.path.join("lib", "gks", "plugin",
+                                                       "vc.c"))
+    _gks_mov_library_dirs = None
+    _gks_mov_libraries = ["avdevice", "avformat", "avfilter", "avcodec",
+                          "swscale", "avutil", "mupdf", "mupdf-js-none",
+                          "freetype", "bz2", "jbig2dec", "jpeg", "openjp2",
+                          "z", "pthread"]
+    _gks_mov_includes = list(_gks_plugin_includes)
+    _gks_mov_extra_link_args = None
+    if sys.platform == "win32":
+        _gks_mov_libraries.extend(_libs_msvc)
+        _gks_mov_extra_link_args = list(_msvc_extra_link_args)
+    else:
+        _gks_mov_includes.append("/usr/local/include/mupdf")
+
+    _gksMovExt = Extension("gr.movplugin", _plugins_path["movplugin.cxx"],
+                           define_macros=[_gr_macro],
+                           include_dirs=_gks_mov_includes,
+                           library_dirs=_gks_mov_library_dirs,
+                           libraries=_gks_mov_libraries,
+                           extra_link_args=_gks_mov_extra_link_args,
+                           extra_compile_args=_msvc_extra_compile_args)
+    # check movplugin support
+    if _cc:
+        (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
+        (fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
+        os.write(fd, """#include <stdio.h>
+#include <stdlib.h>
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/mathematics.h>
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
+#include <fitz.h>
+
+int main()
+{
+  exit(0);
+}
+
+""")
+        os.close(fd)
+        lstPopen = [_cc, "-o%s" %tmpout, tmpsrc]
+        if sys.platform != "win32":
+            lstPopen.append("-I/usr/local/include/mupdf")
+        lstPopen.extend(map(lambda s: "-l%s" % s, _gks_mov_libraries))
+        _mvcc = Popen(lstPopen, stdout=PIPE, stderr=STDOUT)
+        _mvcc.communicate()
+        try:
+            os.remove(tmpsrc)
+            os.remove(tmpout)
+        except OSError:
+            pass
+        if _mvcc.returncode == 0:
+            _ext_modules.append(_gksMovExt)
+        else:
+            print >>sys.stderr, ("Required dependencies for Movie Plugin not " +
+                                 "found. Build without Movie Plugin support.")
+            inp = raw_input("Do you want to continue? [y/n]: ")
+            if inp != 'y':
+                print >>sys.stderr, "exiting"
+                sys.exit(-3)
+
     # check for GTK PACKAGE support
     if sys.platform != "win32":
         _gtk_cflags = shlex.split(Popen(["pkg-config", _GTK_PACKAGE, "--cflags"],
