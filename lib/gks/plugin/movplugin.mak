@@ -13,7 +13,7 @@
 default:
 	make -f movplugin.mak `uname`
 Darwin:
-	make -f movplugin.mak $(TARGET) EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation"
+	make -f movplugin.mak $(TARGET) EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation -liconv"
 
 Linux:
 	make -f movplugin.mak $(TARGET)
