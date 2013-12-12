@@ -4749,6 +4749,8 @@ int gks_wstype(char *type)
     wstype = 62;
   else if (!str_casecmp(type, "pdf"))
     wstype = 102;
+  else if (!str_casecmp(type, "mov"))
+    wstype = 120;
   else if (!str_casecmp(type, "bmp"))
     wstype = 320;
   else if (!str_casecmp(type, "jpeg") || !str_casecmp(type, "jpg"))
@@ -4766,7 +4768,7 @@ int gks_wstype(char *type)
   else
     {
       fprintf(stderr, "%s: unrecognized file type\nAvailable formats: \
-bmp, eps, fig, jpeg, pdf, png, ps, svg, tiff or wmf\n", type);
+bmp, eps, fig, jpeg, mov, pdf, png, ps, svg, tiff or wmf\n", type);
       wstype = -1;
     }
 
