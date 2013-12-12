@@ -317,6 +317,7 @@ class Plot(GRViewPort, GRMeta):
         self._lblX, self._lblY = None, None
         self._offsetLblX, self._offsetLblY = 0., 0.
         self._legend, self._legendROI = False, None
+        self._autoscale = False
         self._countAxes = 0
 
     def getAxes(self):
@@ -476,6 +477,16 @@ class Plot(GRViewPort, GRMeta):
     def setLegend(self, bool):
         self._legend = bool
 
+    @property
+    def autoscale(self):
+        return self._autoscale
+
+    @autoscale.setter
+    def autoscale(self, bool):
+        self._autoscale = bool
+        for axes in self._lstAxes:
+            axes.autoscale = bool
+
     def reset(self):
         for axes in self._lstAxes:
             axes.reset()
@@ -537,6 +548,8 @@ class Plot(GRViewPort, GRMeta):
             xmax = max(p0World.x, p1World.x)
             ymin = min(p0World.y, p1World.y)
             ymax = max(p0World.y, p1World.y)
+#            if self.autoscale:
+#                self.autoscale = (xmax >= win[1])
             axes.setWindow(xmin, xmax, ymin, ymax)
         gr.setwindow(*window)
 
@@ -563,6 +576,7 @@ class Plot(GRViewPort, GRMeta):
         window = gr.inqwindow()
         for axes in self._lstAxes:
             win = axes.getWindow()
+            winXmax = axes.getWindow()[1]
             winWidth_2 = (win[1] - win[0]) / 2
             winHeight_2 = (win[3] - win[2]) / 2
             dx_2 = winWidth_2 - (1 + dpercent) * winWidth_2
@@ -571,6 +585,8 @@ class Plot(GRViewPort, GRMeta):
             win[1] += dx_2
             win[2] -= dy_2
             win[3] += dy_2
+#            if self.autoscale:
+#                self.autoscale = (win[1] >= winXmax)
             if DomainChecker.isInWindowDomain(*window):
                 axes.setWindow(*win)
             else:
@@ -845,6 +861,7 @@ class PlotAxes(GRViewPort, GRMeta):
         self._scale = 0
         self._grid = True
         self._resetWindow = True
+        self._autoscale = False
         PlotAxes.COUNT += 1
         self._id = PlotAxes.COUNT
         self._xtick_callback, self._ytick_callback = None, None
@@ -971,6 +988,14 @@ class PlotAxes(GRViewPort, GRMeta):
     def isReset(self):
         return self._resetWindow
 
+    @property
+    def autoscale(self):
+        return self._autoscale
+
+    @autoscale.setter
+    def autoscale(self, bool):
+        self._autoscale = bool
+
     def getId(self):
         return self._id
 
@@ -978,8 +1003,7 @@ class PlotAxes(GRViewPort, GRMeta):
         lstPlotCurve = self.getCurves()
         viewport = self.viewportscaled
         if lstPlotCurve:
-            if self.isReset():
-                self._resetWindow = False
+            if self.isReset() or self.autoscale:
                 # global xmin, xmax, ymin, ymax
                 visibleCurves = filter(lambda curve: curve.visible,
                                        lstPlotCurve)
@@ -993,10 +1017,18 @@ class PlotAxes(GRViewPort, GRMeta):
                                visibleCurves))
                 ymax = max(map(lambda curve: max(curve.y),
                                visibleCurves))
+                if self.isReset():
+                    self._resetWindow = False
+                elif self.autoscale:
+                    win = self.getWindow()
+                    if win and xmin <= win[0]:
+                        xmin = win[0]
+
                 if self.scale & gr.OPTION_X_LOG == 0:
                     xmin, xmax = gr.adjustrange(xmin, xmax)
                 if self.scale & gr.OPTION_Y_LOG == 0:
                     ymin, ymax = gr.adjustrange(ymin, ymax)
+
                 window = [xmin, xmax, ymin, ymax]
                 self.setWindow(*window)
             else:

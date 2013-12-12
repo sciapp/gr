@@ -190,6 +190,7 @@ class GRWidget(QtGui.QWidget):
 
 class InteractiveGRWidget(GRWidget):
 
+#    autoScaleChanged = QtCore.Signal(bool)
     logXinDomain = QtCore.Signal(bool)
     logYinDomain = QtCore.Signal(bool)
     modePick = QtCore.Signal(bool)
@@ -272,6 +273,11 @@ class InteractiveGRWidget(GRWidget):
 
         self._painter.end()
 
+    def setAutoScale(self, bool):
+        for plot in self._lstPlot:
+            plot.autoscale = bool
+#        self.autoScaleChanged.emit(bool)
+
     def getPickMode(self):
         return self._pickMode
 
@@ -295,6 +301,10 @@ class InteractiveGRWidget(GRWidget):
         self._pickEvent = None
         for plot in self._lstPlot:
             plot.select(p0, p1, self.dwidth, self.dheight)
+#            if self._autoscale != plot.autoscale:
+#                self._autoscale = plot.autoscale
+#                self.autoScaleChanged.emit(plot.autoscale)
+#                _log.debug("TODO: EVENT: plot: autoscale: %s" % plot.autoscale)
         self._draw(True)
         self.update()
 
@@ -302,6 +312,10 @@ class InteractiveGRWidget(GRWidget):
         self._pickEvent = None
         for plot in self._lstPlot:
             plot.pan(dp, self.dwidth, self.dheight)
+#            if self._autoscale != plot.autoscale:
+#                self._autoscale = plot.autoscale
+#                self.autoScaleChanged.emit(plot.autoscale)
+#                _log.debug("TODO: EVENT: plot: autoscale: %s" % plot.autoscale)
         self._draw(True)
         self.update()
 
@@ -309,6 +323,10 @@ class InteractiveGRWidget(GRWidget):
         self._pickEvent = None
         for plot in self._lstPlot:
             plot.zoom(dpercent)
+#            if self._autoscale != plot.autoscale:
+#                self._autoscale = plot.autoscale
+#                self.autoScaleChanged.emit(plot.autoscale)
+#                _log.debug("TODO: EVENT: plot: autoscale: %s" % plot.autoscale)
         self._draw(True)
         self.update()
 
