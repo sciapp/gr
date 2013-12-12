@@ -174,7 +174,7 @@ void vc_frame_free(frame_t frame)
 
 void vc_movie_finish(movie_t movie)
 {
-  int i;
+  unsigned int i;
 
   av_write_trailer(movie->fmt_ctx);
 

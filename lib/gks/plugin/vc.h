@@ -6,6 +6,7 @@
 extern "C" {
 #endif
 
+#define __STDC_CONSTANT_MACROS
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/mathematics.h>
