@@ -6,7 +6,7 @@
 #include <string.h>
 #include <math.h>
 
-#include <GL/glfw.h>
+#include <GL/glfw3.h>
 
 #ifndef __APPLE__
 #include <GL/glext.h>
@@ -124,6 +124,7 @@ typedef struct ws_state_list_t
 {
   int state, empty;
   gks_display_list_t dl;
+  GLFWwindow *win;
   int width, height;
   double a, b, c, d;
   double window[4], viewport[4];
@@ -269,7 +270,7 @@ static
 void open_window(void)
 {
   glfwInit();
-  glfwOpenWindow(p->width, p->height, 8, 8, 8, 0, 0, 0, GLFW_WINDOW);
+  p->win = glfwCreateWindow(p->width, p->height, "GKS", NULL, NULL);
   gl_init();
   glClearColor(1, 1, 1, 1);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -279,14 +280,14 @@ void open_window(void)
 static
 void close_window(void)
 {
-  glfwCloseWindow();
+  glfwDestroyWindow(p->win);
   glfwTerminate();
 }
 
 static
 void update(void)
 {
-  glfwSwapBuffers();
+  glfwSwapBuffers(p->win);
 }
 
 static
