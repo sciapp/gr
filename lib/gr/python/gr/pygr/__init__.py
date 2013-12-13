@@ -284,6 +284,35 @@ class ErrorBar(GRDrawAttributes, GRMeta):
         else:
             raise AttributeError("unsupported value for direction.")
 
+    @property
+    def direction(self):
+        """Get ErrorBars direction."""
+        return self._direction
+
+    @property
+    def x(self):
+        """Get the current list/ndarray of x values."""
+        return self._x
+
+    @x.setter
+    def x(self, lst):
+        if self.direction == ErrorBar.HORIZONTAL:
+            self._dneg = self._dneg - self.x + lst
+            self._dpos = self._dpos - self.x + lst
+        self._x = lst
+
+    @property
+    def y(self):
+        """Get the current list/ndarray of y values."""
+        return self._y
+
+    @y.setter
+    def y(self, lst):
+        if self.direction == ErrorBar.VERTICAL:
+            self._dneg = self._dneg - self.y + lst
+            self._dpos = self._dpos - self.y + lst
+        self._y = lst
+
     def drawGR(self):
         # preserve old values
         ltype = gr.inqlinetype()
