@@ -128,7 +128,7 @@ typedef struct ws_state_list_t
   int width, height;
   double a, b, c, d;
   double window[4], viewport[4];
-  double rgb[MAX_COLOR][3];
+  float rgb[MAX_COLOR][3];
   int rect[MAX_TNR][4];
 }
 ws_state_list;
@@ -229,9 +229,9 @@ void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
   {
-    p->rgb[color][0] = red;
-    p->rgb[color][1] = green;
-    p->rgb[color][2] = blue;
+    p->rgb[color][0] = (float) red;
+    p->rgb[color][1] = (float) green;
+    p->rgb[color][2] = (float) blue;
   }
 }
 
@@ -267,10 +267,24 @@ void gl_init(void)
 }
 
 static
+void error_callback(int error, const char *description)
+{
+  fprintf(stderr, "GKS GL: %s\n", description);
+}
+
+static
 void open_window(void)
 {
+  glfwSetErrorCallback(error_callback);
   glfwInit();
-  p->win = glfwCreateWindow(p->width, p->height, "GKS", NULL, NULL);
+  p->win = glfwCreateWindow(p->width, p->height, "GKS GL", NULL, NULL);
+  glfwWindowHint(GLFW_RED_BITS, 8);
+  glfwWindowHint(GLFW_GREEN_BITS, 8);
+  glfwWindowHint(GLFW_BLUE_BITS, 8);
+  glfwWindowHint(GLFW_ALPHA_BITS, 0);
+  glfwWindowHint(GLFW_DEPTH_BITS, 0);
+  glfwWindowHint(GLFW_STENCIL_BITS, 0);
+  glfwMakeContextCurrent(p->win);
   gl_init();
   glClearColor(1, 1, 1, 1);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -287,7 +301,16 @@ void close_window(void)
 static
 void update(void)
 {
-  glfwSwapBuffers(p->win);
+  if (!glfwWindowShouldClose(p->win))
+    {
+      glfwSwapBuffers(p->win);
+      glfwPollEvents();
+    }
+  else
+    {
+      close_window();
+      exit(0);
+    }
 }
 
 static
@@ -295,7 +318,7 @@ void line_routine(int num_points, double *x, double *y, int linetype, int tnr)
 {
   int i;
   double xn, yn, xd, yd;
-  const double modelview_matrix[16] = {
+  const float modelview_matrix[16] = {
     2.0/p->width, 0,              0, -1,
     0,            -2.0/p->height, 0, 1,
     0,            0,              1, 0,
@@ -303,14 +326,14 @@ void line_routine(int num_points, double *x, double *y, int linetype, int tnr)
   };
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixd(modelview_matrix);
+  glLoadTransposeMatrixf(modelview_matrix);
   glBegin(GL_LINE_STRIP);
   for (i = 0; i < num_points; ++i)
     {
       WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
       seg_xform(&xn, &yn);
       NDC_to_DC(xn, yn, xd, yd);
-      glVertex2d(xd,yd);
+      glVertex2d(xd, yd);
     }
   glEnd();
   glLoadIdentity();
@@ -343,7 +366,7 @@ void polyline(int num_points, double *x, double *y)
   glLineWidth(ln_width);
   glLineStipple(nint(ln_width * factor[ln_type + 8]), pattern[ln_type + 8]);
   glEnable(GL_LINE_STIPPLE);
-  glColor3dv(p->rgb[ln_color]);
+  glColor3fv(p->rgb[ln_color]);
 
   line_routine(num_points, x, y, ln_type, gkss->cntnr);
 
@@ -434,7 +457,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
     0,
     0, 0, 0, 0, 0 };
 
-  const double modelview_matrix[16] = {
+  const float modelview_matrix[16] = {
     2.0/p->width, 0,              0, -1,
     0,            -2.0/p->height, 0, 1,
     0,            0,              1, 0,
@@ -461,8 +484,8 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
   mtype = (2 * r > 1) ? mtype + 20 : 21;
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixd(modelview_matrix);
-  glColor3dv(p->rgb[mcolor]);
+  glLoadTransposeMatrixf(modelview_matrix);
+  glColor3fv(p->rgb[mcolor]);
 
   do
     {
@@ -509,7 +532,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
               glVertex2d(x - xr, y + yr);
             }
           glEnd();
-          if (op == 5) glColor3dv(p->rgb[mcolor]);
+          if (op == 5) glColor3fv(p->rgb[mcolor]);
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
@@ -538,7 +561,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
               yr = s * tmp + c * yr;
             }
             glEnd();
-            if (op == 8) glColor3dv(p->rgb[mcolor]);
+            if (op == 8) glColor3fv(p->rgb[mcolor]);
           }
           pc += 2;
           break;
@@ -584,7 +607,7 @@ static
 void fill_routine (int n, double *px, double *py, int tnr)
 {
   int fl_inter, fl_style, i, j, ln_width;
-  GLdouble vertices[2*n];
+  GLfloat vertices[2*n];
   GLuint texture = 0;
   int parray[33];
   GLubyte bitmap[8][8];
@@ -592,13 +615,13 @@ void fill_routine (int n, double *px, double *py, int tnr)
   GLboolean draw_pattern = 0;
   double x, y;
 
-  const double modelview_matrix[16] = {
+  const float modelview_matrix[16] = {
     2.0/p->width, 0,              0, -1,
     0,            -2.0/p->height, 0, 1,
     0,            0,              1, 0,
     0,            0,              0, 1
   };
-  const double texcoord_matrix[16] = {
+  const float texcoord_matrix[16] = {
     1./8.,  0,      0, 0,
     0,      1./8.,  0, 0,
     0,      0,      1, 0,
@@ -647,10 +670,10 @@ void fill_routine (int n, double *px, double *py, int tnr)
   }
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixd(modelview_matrix);
+  glLoadTransposeMatrixf(modelview_matrix);
   if (draw_pattern) {
     glMatrixMode(GL_TEXTURE);
-    glLoadTransposeMatrixd(texcoord_matrix);
+    glLoadTransposeMatrixf(texcoord_matrix);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
   }
   glEnableClientState(GL_VERTEX_ARRAY);
@@ -681,7 +704,7 @@ void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? Color8Bit(gkss->facoli) : 1;
-  glColor3dv(p->rgb[fl_color]);
+  glColor3fv(p->rgb[fl_color]);
 
   fill_routine(n, px, py, gkss->cntnr);
 
@@ -698,7 +721,7 @@ void cellarray(
   static GLuint buffer = 0;
   GLuint texture = 0;
   int i, j, k, index, rgb;
-  GLdouble bitmap[dx][dy][4];
+  GLfloat bitmap[dx][dy][4];
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -713,7 +736,7 @@ void cellarray(
   width  = (int) fabs(x2 - x1) + 1;
   height = (int) fabs(y2 - y1) + 1;
 
-  const double modelview_matrix[16] = {
+  const float modelview_matrix[16] = {
     2.0*width/p->width, 0,                     0, 2.0*x/p->width-1,
     0,                  -2.0*height/p->height, 0, -2.0*y/p->height+1,
     0,                  0,                     1, 0,
@@ -751,12 +774,12 @@ void cellarray(
 
   glEnable(GL_TEXTURE_2D);
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixd(modelview_matrix);
+  glLoadTransposeMatrixf(modelview_matrix);
   glEnableClientState(GL_VERTEX_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
   if (!buffer) {
-    GLdouble vertices[8] = {0,0, 1,0, 0,1, 1,1};
+    GLfloat vertices[8] = {0,0, 1,0, 0,1, 1,1};
     glGenBuffers(1, &buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -784,7 +807,7 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
   static GLuint texture = 0;
   int tx_color;
 
-  const double modelview_matrix[16] = {
+  const float modelview_matrix[16] = {
     2.0*w/p->width, 0,               0, 2.0*x/p->width-1,
     0,              2.0*h/p->height, 0, 2.0*y/p->height-1,
     0,              0,               1, 0,
@@ -809,15 +832,15 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_TEXTURE_2D);
-  glColor3dv(p->rgb[tx_color]);
+  glColor3fv(p->rgb[tx_color]);
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixd(modelview_matrix);
+  glLoadTransposeMatrixf(modelview_matrix);
   glEnableClientState(GL_VERTEX_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
   if (!buffers[0]) {
-    GLdouble vertices[] = {0,0, 1,0, 0,1, 1,1};
+    GLfloat vertices[] = {0,0, 1,0, 0,1, 1,1};
     GLint text_box[] = {0,1, 1,1, 0,0, 1,0};
     glGenBuffers(2, buffers);
     glBindBuffer(GL_ARRAY_BUFFER, buffers[0]);
@@ -853,7 +876,7 @@ void text(double x_pos, double y_pos, int nchars, char *text)
     tx_color = gkss->asf[9] ? Color8Bit(gkss->txcoli) : 1;
     if (tx_color <= 0 || tx_color >= MAX_COLOR) tx_color = 1;
 
-    glColor3dv(p->rgb[tx_color]);
+    glColor3fv(p->rgb[tx_color]);
     gks_emul_text(x_pos, y_pos, nchars, text, line_routine, fill_routine);
     glColor3d(0, 0, 0);
 
