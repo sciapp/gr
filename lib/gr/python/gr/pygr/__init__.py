@@ -503,6 +503,9 @@ class Plot(GRViewPort, GRMeta):
         for axes in self._lstAxes:
             axes.setGrid(bool)
 
+    def isLegendEnabled(self):
+        return self._legend
+
     def setLegend(self, bool):
         self._legend = bool
 
