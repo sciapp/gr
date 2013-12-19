@@ -318,7 +318,7 @@ void line_routine(int num_points, double *x, double *y, int linetype, int tnr)
 {
   int i;
   double xn, yn, xd, yd;
-  const float modelview_matrix[16] = {
+  const double modelview_matrix[16] = {
     2.0/p->width, 0,              0, -1,
     0,            -2.0/p->height, 0, 1,
     0,            0,              1, 0,
@@ -326,7 +326,7 @@ void line_routine(int num_points, double *x, double *y, int linetype, int tnr)
   };
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
+  glLoadTransposeMatrixd(modelview_matrix);
   glBegin(GL_LINE_STRIP);
   for (i = 0; i < num_points; ++i)
     {
@@ -457,7 +457,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
     0,
     0, 0, 0, 0, 0 };
 
-  const float modelview_matrix[16] = {
+  const double modelview_matrix[16] = {
     2.0/p->width, 0,              0, -1,
     0,            -2.0/p->height, 0, 1,
     0,            0,              1, 0,
@@ -484,7 +484,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
   mtype = (2 * r > 1) ? mtype + 20 : 21;
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
+  glLoadTransposeMatrixd(modelview_matrix);
   glColor3fv(p->rgb[mcolor]);
 
   do
@@ -615,13 +615,13 @@ void fill_routine (int n, double *px, double *py, int tnr)
   GLboolean draw_pattern = 0;
   double x, y;
 
-  const float modelview_matrix[16] = {
+  const double modelview_matrix[16] = {
     2.0/p->width, 0,              0, -1,
     0,            -2.0/p->height, 0, 1,
     0,            0,              1, 0,
     0,            0,              0, 1
   };
-  const float texcoord_matrix[16] = {
+  const double texcoord_matrix[16] = {
     1./8.,  0,      0, 0,
     0,      1./8.,  0, 0,
     0,      0,      1, 0,
@@ -670,10 +670,10 @@ void fill_routine (int n, double *px, double *py, int tnr)
   }
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
+  glLoadTransposeMatrixd(modelview_matrix);
   if (draw_pattern) {
     glMatrixMode(GL_TEXTURE);
-    glLoadTransposeMatrixf(texcoord_matrix);
+    glLoadTransposeMatrixd(texcoord_matrix);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
   }
   glEnableClientState(GL_VERTEX_ARRAY);
@@ -736,7 +736,7 @@ void cellarray(
   width  = (int) fabs(x2 - x1) + 1;
   height = (int) fabs(y2 - y1) + 1;
 
-  const float modelview_matrix[16] = {
+  const double modelview_matrix[16] = {
     2.0*width/p->width, 0,                     0, 2.0*x/p->width-1,
     0,                  -2.0*height/p->height, 0, -2.0*y/p->height+1,
     0,                  0,                     1, 0,
@@ -774,7 +774,7 @@ void cellarray(
 
   glEnable(GL_TEXTURE_2D);
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
+  glLoadTransposeMatrixd(modelview_matrix);
   glEnableClientState(GL_VERTEX_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
@@ -807,7 +807,7 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
   static GLuint texture = 0;
   int tx_color;
 
-  const float modelview_matrix[16] = {
+  const double modelview_matrix[16] = {
     2.0*w/p->width, 0,               0, 2.0*x/p->width-1,
     0,              2.0*h/p->height, 0, 2.0*y/p->height-1,
     0,              0,               1, 0,
@@ -835,7 +835,7 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
   glColor3fv(p->rgb[tx_color]);
 
   glMatrixMode(GL_MODELVIEW);
-  glLoadTransposeMatrixf(modelview_matrix);
+  glLoadTransposeMatrixd(modelview_matrix);
   glEnableClientState(GL_VERTEX_ARRAY);
   glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
