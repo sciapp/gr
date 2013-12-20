@@ -485,6 +485,8 @@ void pdf_close(PDF *p)
   movie_t movie;
   pdf_t pdf;
   frame_t *frames;
+  char *env = NULL;
+  int framerate = 25;
 
   pdf_printf(p->stream, "%%PDF-1.%d\n", p->compress ? 2 : 0);
   pdf_printf(p->stream, "%%\344\343\317\322\n");  /* %âãÏÓ\n */
@@ -725,7 +727,13 @@ void pdf_close(PDF *p)
 
   pdf_printf(p->stream, "%%%%EOF\n");
 
-  movie = vc_movie_create("gks.mov", 25, 4000000);
+  env = (char *) getenv("GKS_FPS");
+  if (env != NULL)
+    framerate = atoi(env);
+  if (framerate <= 0)
+    framerate = 25;
+
+  movie = vc_movie_create("gks.mov", framerate, 4000000);
 
   pdf = vc_pdf_from_memory(p->stream->buffer, p->stream->length);
   frames = vc_pdf_to_frames(pdf, p->width, p->height);
