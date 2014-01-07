@@ -373,7 +373,7 @@ void seg_xform_rel(double *x, double *y)
           memcpy(gkss, sl, sizeof(gks_state_list_t));
 
           p->width  = [self bounds].size.width;
-          p->height = [self bounds].size.height;
+          p->height = [self bounds].size.height - TITLE_BAR_HEIGHT;
 
           p->swidth  = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
           p->sheight = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
