@@ -53,6 +53,8 @@
   xd = p->a * (xn) + p->b; \
   yd = p->c * (yn) + p->d
 
+#define nint(a) ((int)(a + 0.5))
+
 static
 gks_state_list_t *gkss;
 
@@ -1355,13 +1357,7 @@ void cell_array(
           ci = colia[j * dimx + i];
           if (!true_color)
             {
-              if (ci >= 588)
-                ci = 80 + NINT((ci - 588) / 56 * 12 + NINT((ci - 588) % 56)
-                               * 11.0 / 56);
-              else if (ci >= 257)
-                ci = 8 + NINT((ci - 257) / 330.0 * (72 - 1));
-              else if (ci < 0)
-                ci = 0;
+              ci = Color8Bit(ci);
               query_color(ci, &bufP, wtype);
             }
           else

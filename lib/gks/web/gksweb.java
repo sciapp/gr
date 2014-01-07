@@ -531,9 +531,9 @@ public class gksweb extends Applet
 
   private static int Color8Bit(int c)
   {
-    return c >= 588 ?
-           80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) :
-           c >= 257 ? 8 + nint((c - 257) / 330.0 * (72 - 1)) : c;
+    return c <= 256 || c >= 980 ? c :
+      c >= 588 ? 80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) :
+      8 + nint((c - 257) / 330.0 * (72 - 1));
   }
 
   static final int[][] dash_table =

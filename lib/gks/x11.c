@@ -921,7 +921,7 @@ void alloc_color(XColor *color)
 static
 void allocate_colors(void)
 {
-  int i, pix;
+  int i;
 
   p->vis = XDefaultVisualOfScreen(p->screen);
   p->depth = XDefaultDepthOfScreen(p->screen);
@@ -945,9 +945,6 @@ void allocate_colors(void)
 	{
 	  p->color[i].pixel = 0xffff;
 	}
-
-      pix = p->color[i].pixel;
-      gks_set_pixel(i, pix);
     }
 
   p->ccolor = Undefined;
@@ -1400,9 +1397,6 @@ void set_color_repr(int i, double r, double g, double b)
 	{
 	  p->color[i].pixel = 0xffff;
 	}
-
-      pix = p->color[i].pixel;
-      gks_set_pixel(i, pix);
     }
 
   if (i < 2)
@@ -3333,7 +3327,7 @@ unsigned long rgb2pixel(int rgb)
 		  ix = (dx * i) / w; \
 		  ipptr = ilptr + ix; \
 		  *epptr = true_color ? \
-		    rgb2pixel(*ipptr) : pixel[*ipptr & 0x3ff]; \
+		    rgb2pixel(*ipptr) : pixel[*ipptr % MAX_COLOR]; \
 		} \
 	    } \
 	} \
@@ -3343,7 +3337,8 @@ unsigned long rgb2pixel(int rgb)
 	  epptr = ba; \
 	  ipptr = colia; \
 	  for (i = 0; i < nbytes; i++, ipptr++) \
-	    *epptr++ = true_color ? rgb2pixel(*ipptr) : pixel[*ipptr & 0x3ff]; \
+	    *epptr++ = true_color ? \
+              rgb2pixel(*ipptr) : pixel[*ipptr % MAX_COLOR ]; \
 	} \
     } \
 \

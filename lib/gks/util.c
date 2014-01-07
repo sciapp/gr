@@ -1574,27 +1574,6 @@ double rgb[MAX_COLOR][3] =
 };
 
 static
-int pix[256] =
-{
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-static
 const char *symbol2utf[256] = {
    "\x3f", "\x3f", "\x3f", "\x3f",
    "\x3f", "\x3f", "\x3f", "\x3f",
@@ -1872,27 +1851,6 @@ void gks_set_rgb(int index, double red, double green, double blue)
       rgb[index][1] = green;
       rgb[index][2] = blue;
     }
-}
-
-void gks_inq_pixel(int index, int *pixel)
-{
-  int i;
-
-  if (index >= 588)
-    i = 80 + (index - 588) / 56 * 12 + nint((index - 588) % 56 * 11.0 / 56.0);
-  else if (index >= 257)
-    i = 8 + nint((index - 257) / 330.0 * (72 - 1));
-  else
-    i = index;
-
-  if (i < 256)
-    *pixel = pix[i];
-}
-
-void gks_set_pixel(int index, int pixel)
-{
-  if (index < 256)
-    pix[index] = pixel;
 }
 
 void gks_fit_ws_viewport(double *viewport, double xmax, double ymax,
