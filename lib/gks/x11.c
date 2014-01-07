@@ -1380,8 +1380,6 @@ void create_cursor(void)
 static
 void set_color_repr(int i, double r, double g, double b)
 {
-  int pix;
-
   p->red[i] = r;
   p->green[i] = g;
   p->blue[i] = b;
