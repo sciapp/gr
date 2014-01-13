@@ -19,9 +19,8 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
      PNGLIBS = ../../3rdparty/png/libpng.a
      GKSLIBS = ../gks/libGKS.a
-     XFTLIBS = -lXft -lfontconfig
-    XLIBPATH = /usr/X11R6/lib
-       XLIBS = -L$(XLIBPATH) $(XFTLIBS) -lXt -lX11
+      FTLIBS = -lXft -lfontconfig
+     X11LIBS = $(FTLIBS) -lXt -lX11
        ZLIBS = -lz
 
 .c.o:
@@ -49,7 +48,7 @@ libGR.a: $(GROBJS)
 
 libGR.so: $(GROBJS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
-	$(ZLIBS) $(XLIBS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
+	$(ZLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 install:
 	@make -C ../gks install

@@ -4,7 +4,7 @@
 #include "gks.h"
 #include "gkscore.h"
 
-#ifdef XFT
+#ifndef NO_FT
 
 #include <ft2build.h>
 #include FT_FREETYPE_H

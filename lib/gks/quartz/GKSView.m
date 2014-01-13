@@ -1664,7 +1664,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
     CGContextSetTextMatrix(context, transform);
     CGContextShowGlyphsAtPoint(context, xstart, ystart, glyphs, charCount);
   }
-#ifdef XFT
+#ifndef NO_FT
   else if (tx_prec == GKS_K_TEXT_PRECISION_CHAR)
   {
     int *bitmap;

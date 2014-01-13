@@ -74,7 +74,7 @@ int gr3_readpngtomemory_(int *pixels, const char *pngfile, int width, int height
   if (!png_fp) {
     return 1;
   }
-  fread(sig, 1, 8, png_fp);
+  i = fread(sig, 1, 8, png_fp);
   if (!png_check_sig(sig, 8)){
     return 2;
   }

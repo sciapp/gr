@@ -2,11 +2,92 @@
 
 target=`uname`
 wxdefs=""
+ftdefs=""
 qtdefs=""
 gtkdefs=""
+x11defs=""
 gsdefs=""
 glfwdefs=""
 zmqdefs=""
+movdefs=""
+ret=0
+
+yes="yes"
+no="yes"
+
+printf "\nBuilding GR Framework\n---------------------\n" >&2
+
+if [ "`which cc 2>/dev/null`" = "" ]
+then
+  info=" no [not found]"
+else
+  info="yes [`cc --version | head -1`]"
+fi
+printf "%12s: %s\n" "C" "$info" >&2
+
+if [ "`which c++ 2>/dev/null`" = "" ]
+then
+  info=" no [not found]"
+else
+  info="yes [`c++ --version | head -1`]"
+fi
+printf "%12s: %s\n" "C++" "$info" >&2
+
+if [ "`which python 2>/dev/null`" = "" ]
+then
+  info=" no [not found]"
+else
+  info="yes [version `python -c 'import sys;print sys.version' | head -1`]"
+fi
+printf "%12s: %s\n" "Python" "$info" >&2
+
+if [ "`which latex 2>/dev/null`" = "" ]
+then
+  info=" no [not found]"
+else
+  info="yes [version `latex --version|grep ^pdfTeX|awk '{print $2}'`]"
+fi
+printf "%12s: %s\n" "LaTeX" "$info" >&2
+
+if [ "`which dvipng 2>/dev/null`" = "" ]
+then
+  info=" no [not found]"
+else
+  info="yes [version `dvipng --version|grep ^dvipng|awk '{print $2}'`]"
+fi
+printf "%12s: %s\n" "dvipng" "$info" >&2
+
+info=""
+if [ "$QTDIR" = "" ]
+then
+  if [ -d /usr/lib64/qt4 ] # Red Hat
+  then
+    QTDIR=/usr/lib64/qt4
+  elif [ -d /usr/share/qt4 ] # Debian / Ubuntu
+  then
+    QTDIR=/usr/share/qt4
+  elif [ -d /usr/local/qt4 ]
+  then
+    QTDIR=/usr/local/qt4
+  fi
+  qtdefs="QTDIR=$QTDIR"
+fi
+if [ "$QTDIR" = "" ]
+then
+  info=" no [QTDIR not set]"
+elif [ -f $QTDIR/bin/qmake ]; then
+  version=`$QTDIR/bin/qmake -v 2>&1 | grep 'Qt 3\.'`
+  if [ "$version" != "" ]; then
+    info=" no [QTDIR points to an old Qt version]"
+  fi
+fi
+if [ "$info" != "" ]; then
+  qtdefs="QTDEFS=-DNO_QT4 QTINC= QTLIBS="
+  ret=1
+else
+  info="yes [$QTDIR]"
+fi
+printf "%12s: %s\n" "Qt4" "$info" >&2
 
 wxconfig=wx-config
 if [ "$WX_CONFIG" != "" ]
@@ -15,50 +96,83 @@ then
 fi
 if [ "`which $wxconfig 2>/dev/null`" = "" ]
 then
-  echo "wx-config not found. Build without wxWidgets support." >&2
   wxdefs="WX_CONFIG=false WXDEFS=-DNO_WX WXINC= WXLIBS="
+  info=" no [wx-config not found]"
+  ret=1
 else
   wxdefs="WX_CONFIG=$wxconfig"
+  info="yes [version `wx-config --version`]"
 fi
-
-message=""
-if [ "$QTDIR" = "" ]
-then
-  message="QTDIR not set. Build without Qt4 support." 
-elif [ -f $QTDIR/bin/qmake ]; then
-  version=`$QTDIR/bin/qmake -v 2>&1 | grep 'Qt 3\.'`
-  if [ "$version" != "" ]; then
-    message="QTDIR points to an old Qt version."
-  fi
-else
-  message="Unable to obtain Qt version number."
-fi
-
-if [ "$message" != "" ]; then
-  echo $message >&2
-  echo "Do you want to continue? [y/n]" >&2
-  read yesno
-  if [ "$yesno" = "y" ]; then
-    qtdefs="QTDEFS=-DNO_QT4 QTINC= QTLIBS="
-  else
-    echo -e "Please retry with a valid QTDIR setting, e.g.\n\
-	/usr/lib64/qt4	(Red Hat)\n\
-	/usr/share/qt4	(Ubuntu)\n\
-	/usr/local/qt4\n" >&2
-    target="nothing"
-  fi
-fi
+printf "%12s: %s\n" "wxWidgets" "$info" >&2
 
 if [ "`pkg-config gtk+-2.0 --cflags 2>/dev/null`" = "" ]
 then
-  echo "gtk+-2.0 not found. Build without GTK+ support." >&2
   gtkdefs="GTK_CONFIG=false GTKDEFS=-DNO_GTK GTKINC= GTKLIBS="
+  info=" no [gtk+-2.0 not found]"
+  ret=1
 else
   gtkdefs="GTK_CONFIG=pkg-config"
+  info="yes [version `pkg-config gtk+-2.0 --modversion`]"
+fi
+printf "%12s: %s\n" "GTK+" "$info" >&2
+
+ftconfig=freetype-config
+if [ "$FT_CONFIG" != "" ]
+then
+  ftconfig=$FT_CONFIG
+fi
+if [ "`which $ftconfig 2>/dev/null`" = "" ]
+then
+  ftdefs="FT_CONFIG=false FTDEFS=-DNO_FT FTINC= FTLIBS="
+  info=" no [freetype-config not found]"
+  ret=1
+else
+  ftdefs="FT_CONFIG=$ftconfig"
+  info="yes [version `$ftconfig --version`]"
+fi
+printf "%12s: %s\n" "FreeType" "$info" >&2
+
+tmpout=`mktemp /tmp/a.out.XXXXX`
+tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+cat >$tmpsrc << eof
+#include <X11/Intrinsic.h>
+
+int main(int argc, char **argv)
+{
+    Widget toplevel;
+    toplevel = XtInitialize(argv[0], "simple", NULL, 0, &argc, argv);
+    XtMainLoop();
+    return 0;
+}
+eof
+if [ -d /usr/X11R6 ]; then
+  x11path="/usr/X11R6"
+else
+  x11path="/usr/X11"
+fi
+cmd="cc -o $tmpout $tmpsrc -I$x11path/include -L$x11path/lib -lXt -lX11"
+$cmd >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  x11defs="X11DEFS=-DNO_X11 X11INC= X11LIBS="
+  info=" no [X11 API not found]"
+  ret=1
+else
+  x11defs="X11PATH=$x11path"
+  info="yes [$x11path]"
+fi
+printf "%12s: %s\n" "X11" "$info" >&2
+rm -f $tmpout $tmpsrc
+if [ `uname` = "Darwin" ]; then
+  if [ $ret -eq 0 ]; then
+    cp -p lib/gks/quartz/project.pbxproj.X11 lib/gks/quartz/GKSTerm.xcodeproj/
+  else
+    cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
+  fi
 fi
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
 tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+tmprev=`mktemp /tmp/tttt$$XXXXX.txt`
 cat >$tmpsrc << eof
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,10 +180,10 @@ cat >$tmpsrc << eof
 
 int main()
 {
-  gsapi_revision_t r;
-  if (gsapi_revision(&r, sizeof(gsapi_revision_t)) == 0)
-    fprintf(stderr, "%ld\n", r.revision);
-  exit(0);
+    gsapi_revision_t r;
+    if (gsapi_revision(&r, sizeof(gsapi_revision_t)) == 0)
+        fprintf(stderr, "%ld\n", r.revision);
+    exit(0);
 }
 eof
 cmd="cc -o $tmpout $tmpsrc -lgs"
@@ -78,16 +192,15 @@ if [ `uname` = "Darwin" ]; then
 fi
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "Ghostscript API not found. Build without Ghostscript support." >&2
-  echo "Do you want to continue? [y/n]" >&2
-  read yesno
-  if [ "$yesno" = "y" ]; then
-    gsdefs="GSDEFS=-DNO_GS GSINC= GSLIBS="
-  else
-    target="nothing"
-  fi
+  gsdefs="GSDEFS=-DNO_GS GSINC= GSLIBS="
+  info=" no [GS API not found]"
+  ret=1
+else
+  $tmpout >$tmprev 2>&1
+  info="yes [revision `cat $tmprev`]"
 fi
-rm -f $tmpout $tmpsrc
+printf "%12s: %s\n" "Ghostscript" "$info" >&2
+rm -f $tmpout $tmpsrc $tmprev
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
 tmpsrc=`mktemp /tmp/a$$XXXXX.c`
@@ -103,21 +216,21 @@ int main(void)
 eof
 cmd="cc -o $tmpout $tmpsrc -lglfw"
 if [ `uname` = "Darwin" ]; then
-  cmd="$cmd -framework OpenGL -framework Cocoa -framework IOKit"
+  libs="-framework OpenGL -framework Cocoa -framework IOKit"
+  ret=1
 else
-  cmd="$cmd -lGL -lXrandr -lX11 -lrt"
+  libs="-lGL -lXrandr -lX11 -lrt"
 fi
-$cmd >/dev/null 2>&1
+$cmd $libs >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "GLFW API not found. Build without GLFW support." >&2
-  echo "Do you want to continue? [y/n]" >&2
-  read yesno
-  if [ "$yesno" = "y" ]; then
-    glfwdefs="GLFWDEFS=-DNO_GLFW GLFWLIBS="
-  else
-    target="nothing"
-  fi
+  glfwdefs="GLFWDEFS=-DNO_GLFW GLFWLIBS="
+  info=" no [GLFW 3.x API not found]"
+  ret=1
+else
+  glfdefs="GLFWLIBS=$libs"
+  info="yes"
 fi
+printf "%12s: %s\n" "GLFW" "$info" >&2
 rm -f $tmpout $tmpsrc
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
@@ -139,15 +252,36 @@ eof
 cmd="cc -o $tmpout $tmpsrc -lzmq"
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "0MQ API not found. Build without 0MQ support." >&2
-  echo "Do you want to continue? [y/n]" >&2
-  read yesno
-  if [ "$yesno" = "y" ]; then
-    zmqdefs="ZMQDEFS=-DNO_ZMQ ZMQLIBS="
-  else
-    target="nothing"
-  fi
+  info=" no [0MQ 3.x API not found]"
+  zmqdefs="ZMQDEFS=-DNO_ZMQ ZMQLIBS="
+  ret=1
+else
+  info="yes"
 fi
+printf "%12s: %s\n" "0MQ" "$info" >&2
 rm -f $tmpout $tmpsrc
 
-echo $target $wxdefs $qtdefs $gtkdefs $gsdefs $glfwdefs $zmqdefs
+tmpout=`mktemp /tmp/a.out.XXXXX`
+cmd="cc -c -o $tmpout lib/gks/plugin/vc.c"
+$cmd >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  movdefs="MOVDEFS=-DNO_MOV MOVLIBS="
+  info=" no [required APIs not found]"
+  ret=1
+else
+  info="yes"
+fi
+printf "%12s: %s\n" "MuPDF/ffmpeg" "$info" >&2
+rm -f $tmpout
+
+echo "" >&2
+#if [ $ret -ne 0 -a "$1" = "" ]
+#then
+#  echo "Continue in 5 seconds? [y/n]" >&2
+#  read -t 5 ans
+#  if [ "$ans" != "y" -a $? -eq 0 ]; then
+#    target="nothing"
+#  fi
+#fi
+
+echo $target $wxdefs $ftdefs $qtdefs $gtkdefs $x11defs $gsdefs $glfwdefs $zmqdefs $movdefs

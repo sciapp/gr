@@ -8,10 +8,12 @@
                error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
                plugin.o compress.o io.o
 
-     DEFINES = -DHAVE_ZLIB -DXFT
-    INCLUDES = -I/usr/X11R6/include
- XFTINCLUDES = -I/usr/include/freetype2
+     X11DEFS =
+      FTDEFS =
+       FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
+      X11INC = -I/usr/X11R6/include
           CC = cc
+     DEFINES = -DHAVE_ZLIB $(X11DEFS) $(FTDEFS)
       CFLAGS = -O3 -Wall -fPIC
           LD = cc
      LDFLAGS =
@@ -20,12 +22,12 @@
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
         LIBS = -lpthread -ldl -lc -lm
-     XFTLIBS = -lXft -lfreetype -lfontconfig
-       XLIBS = $(XFTLIBS) -L/usr/X11R6/lib -lXt -lX11
+      FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
+     X11LIBS = -lXft -lfontconfig -lXt -lX11
        ZLIBS = -lz
 
 .c.o:
-	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(XFTINCLUDES) $<
+	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(X11INC) $<
 
 default:
 	@make `uname`
@@ -34,7 +36,7 @@ Linux:
 	@make targets INSTALL_NAME=""
 Darwin:
 	@make targets CFLAGS="$(CFLAGS) -fpascal-strings" \
-	XFTINCLUDES="-I/usr/X11/include/freetype2" SOFLAGS="-dynamiclib"
+	SOFLAGS="-dynamiclib"
 
 targets: libGKS.a libGKS.so demo gksm plugins
 
@@ -43,14 +45,14 @@ libGKS.a: $(GKSOBJS)
 	$(RANLIB) $@
 
 libGKS.so: $(GKSOBJS)
-	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(XLIBS) $(LIBS) \
-	$(LDFLAGS) $(INSTALL_NAME)
+	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(FTLIBS) -L$(X11PATH)/lib $(X11LIBS) \
+	$(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGKS.a
-	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(XLIBS) $(LIBS)
+	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(FTLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS)
 
 gksm: gksm.c libGKS.a
-	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(XLIBS) $(LIBS)
+	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(FTLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS)
 
 plugins:
 	@make -C plugin

@@ -1,3 +1,4 @@
+#ifndef NO_MOV
 
 #include <stdio.h>
 
@@ -307,3 +308,5 @@ void vc_pdf_close(pdf_t pdf)
   fz_free_context(pdf->ctx);
   pdf->num_pages = -1;
 }
+
+#endif

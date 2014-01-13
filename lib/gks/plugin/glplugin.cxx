@@ -136,7 +136,7 @@ ws_state_list;
 static
 ws_state_list *p;
 
-#ifdef XFT
+#ifndef NO_FT
 static
 int predef_prec[] = { 0, 1, 2, 2, 2, 2 };
 #endif
@@ -798,7 +798,7 @@ void cellarray(
   glDeleteTextures(1, &texture);
 }
 
-#ifdef XFT
+#ifndef NO_FT
 
 static
 void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
@@ -866,7 +866,7 @@ static
 void text(double x_pos, double y_pos, int nchars, char *text)
 {
   int tx_color;
-#ifdef XFT
+#ifndef NO_FT
   unsigned char *bitmap;
   int x, y, w, h;
   int tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
@@ -880,7 +880,7 @@ void text(double x_pos, double y_pos, int nchars, char *text)
     gks_emul_text(x_pos, y_pos, nchars, text, line_routine, fill_routine);
     glColor3d(0, 0, 0);
 
-#ifdef XFT
+#ifndef NO_FT
   } else {
     NDC_to_DC(x_pos, y_pos, x, y);
     h = p->height;

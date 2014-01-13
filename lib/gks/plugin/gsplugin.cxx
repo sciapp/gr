@@ -15,9 +15,9 @@
 #define GSDLLEXPORT extern "C"
 #endif
 
-#include "iapi.h"
-#include "gdevdsp.h"
-#include "ierrors.h"
+#include "ghostscript/iapi.h"
+#include "ghostscript/gdevdsp.h"
+#include "ghostscript/ierrors.h"
 
 #if DISPLAY_VERSION_MAJOR > 1
 #define gs_main_instance void

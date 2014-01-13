@@ -1,4 +1,6 @@
 
+#ifndef NO_MOV
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -9,6 +11,11 @@
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
 #endif
+
+#endif
+
+#include "gks.h"
+#include "gkscore.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -29,6 +36,8 @@ extern "C"
 
 #endif
 
+#ifndef NO_MOV
+
 DLLEXPORT void gks_movplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
   int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
@@ -39,9 +48,6 @@ DLLEXPORT void gks_movplugin(
 }
 #endif
 #endif
-
-#include "gks.h"
-#include "gkscore.h"
 
 #include "vc.h"
 
@@ -1783,3 +1789,19 @@ void gks_movplugin(
       ;
     }
 }
+
+#else
+
+void gks_movplugin(
+  int fctid, int dx, int dy, int dimx, int *i_arr,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
+  int len_c_arr, char *c_arr, void **ptr)
+{
+  if (fctid == 2)
+  {
+    gks_perror("Movie support not compiled in");
+    i_arr[0] = 0;
+  }
+}
+
+#endif

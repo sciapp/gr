@@ -27,7 +27,7 @@ int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_
 #else
     sprintf(povray_call,"povray +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d 2>/dev/null",povfile,pngfile,width,height, ssaa_factor);
 #endif
-    system(povray_call);
+    res = system(povray_call);
     free(povray_call);
     if (use_alpha) {
       res = gr3_readpngtomemory_((int *)pixels,pngfile,width,height);
