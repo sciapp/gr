@@ -27,7 +27,8 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
 	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 default:
-	@make `uname`
+	@make -C ../.. Makedefs
+	@make `cat ../../Makedefs`
 
 Linux:
 	@make targets \

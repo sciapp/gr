@@ -30,7 +30,8 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
 	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(X11INC) $<
 
 default:
-	@make `uname`
+	@make -C ../.. Makedefs
+	@make `cat ../../Makedefs`
 
 Linux:
 	@make targets INSTALL_NAME=""
@@ -38,7 +39,10 @@ Darwin:
 	@make targets CFLAGS="$(CFLAGS) -fpascal-strings" \
 	SOFLAGS="-dynamiclib"
 
-targets: libGKS.a libGKS.so demo gksm plugins
+targets: prerequisites libGKS.a libGKS.so demo gksm plugins
+
+prerequisites:
+	@for d in png; do make -C ../../3rdparty/$$d; done
 
 libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?

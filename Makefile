@@ -3,10 +3,11 @@
 
 UNAME := $(shell uname)
 
-default:
-	@make `lib/Preflight`
-nothing:
-	@true
+default: Makedefs
+	@make `uname`
+
+Makedefs:
+	@lib/Preflight >Makedefs
 
 Linux: all
 Darwin: all
@@ -28,6 +29,7 @@ ifeq ($(UNAME), Darwin)
 endif
 
 clean:
+	rm -f Makedefs
 	@for d in $(DIRS); do make -C $$d clean; done
 ifeq ($(UNAME), Darwin)
 	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean

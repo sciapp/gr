@@ -1,4 +1,4 @@
-  CFLAGS = -O -I. -I../zlib/  -fPIC -fno-common $(ARCHS)
+  CFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(ARCHS)
     OBJS = \
 	png.o \
 	pngerror.o \
@@ -15,6 +15,13 @@
 	pngwrite.o \
 	pngwtran.o \
 	pngwutil.o
+
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Darwin)
+.c.o:
+	$(CC) -c $(CFLAGS) -Wno-self-assign $<
+endif
 
 libpng.a: $(OBJS)
 	$(AR) crv $@ $?

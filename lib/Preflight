@@ -170,10 +170,11 @@ fi
 printf "%12s: %s\n" "X11" "$info" >&2
 rm -f $tmpout $tmpsrc
 if [ `uname` = "Darwin" ]; then
+  dir=`dirname $0`
   if [ $ret -eq 0 ]; then
-    cp -p lib/gks/quartz/project.pbxproj.X11 lib/gks/quartz/GKSTerm.xcodeproj/
+    cp -p $dir/gks/quartz/project.pbxproj.X11 lib/gks/quartz/GKSTerm.xcodeproj/
   else
-    cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
+    cp -p $dir/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
   fi
 fi
 
@@ -301,13 +302,4 @@ printf "%12s: %s\n" "MuPDF/ffmpeg" "$info" >&2
 rm -f $tmpout $tmpver
 
 echo "" >&2
-#if [ $ret -ne 0 -a "$1" = "" ]
-#then
-#  echo "Continue in 5 seconds? [y/n]" >&2
-#  read -t 5 ans
-#  if [ "$ans" != "y" -a $? -eq 0 ]; then
-#    target="nothing"
-#  fi
-#fi
-
 echo $target $wxdefs $ftdefs $qtdefs $gtkdefs $x11defs $gsdefs $glfwdefs $zmqdefs $movdefs
