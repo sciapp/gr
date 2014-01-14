@@ -47,10 +47,15 @@
 	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(FTDEFS) $(FTINC) $(MOVDEFS) $(X11DEFS) $(X11INC) $<
 
 default:
-	@make `uname`
+	@make -C ../../.. Makedefs
+	@make `cat ../../../Makedefs`
 
-targets: wxplugin.so qtplugin.so svgplugin.so gtkplugin.so figplugin.so \
+targets: prerequisites \
+         wxplugin.so qtplugin.so svgplugin.so gtkplugin.so figplugin.so \
          gsplugin.so wmfplugin.so glplugin.so zmqplugin.so movplugin.so
+
+prerequisites:
+	@for d in png; do make -C ../../../3rdparty/$$d; done
 
 Darwin:
 	@make targets quartzplugin.so \
