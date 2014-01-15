@@ -17,7 +17,7 @@ from distutils.util import get_platform
 from subprocess import Popen, PIPE, STDOUT
 
 __author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-08-22"
+__date__    = "2014-01-15"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -268,9 +268,10 @@ if sys.platform != "win32":
     _gks_libraries.extend(_gks_xlibs)
 
 _gr_macro = ("GRDIR", "\"%s\"" %_grdir)
-_gks_macros = [("HAVE_ZLIB", ), ("XFT", ), _gr_macro]
+_gks_macros = [("HAVE_ZLIB", ), _gr_macro]
 if sys.platform == "win32":
     _gks_macros.append(("NO_X11", 1))
+    _gks_macros.append(("NO_FT", 1))
     _gks_extra_link_args = ["/nodefaultlib", "-def:lib\gks\libgks.def"]
     _gks_extra_compile_args = list(_msvc_extra_compile_args)
     _gks_export_symbols = os.path.join("lib", "gks", "libgks.def")
@@ -654,8 +655,10 @@ _gr_include_dirs.append(os.path.join("3rdparty", "png"))
 _gr_include_dirs.append(os.path.join("3rdparty", "jpeg"))
 #_gr_libraries = list(_gks_libraries)
 _gr_extra_link_args = list(_platform_extra_link_args)
+_gr_macros = [("HAVE_ZLIB", ), _gr_macro]
 if sys.platform != "win32":
-    _gr_libraries = ["GKS"]
+    _gr_libraries = ["GKS", "mupdf", "mupdf-js-none",
+                     "freetype", "bz2", "jbig2dec", "jpeg", "openjp2"]
     _gr_extra_link_args.append("-L/usr/X11R6/lib")
     _gr_library_dirs = [_build_lib_grpkg, _build_3rdparty]
     # important: lib ordering png, jpeg, z
@@ -663,7 +666,11 @@ if sys.platform != "win32":
     _gr_extra_link_args.append(_libjpeg)
     _gr_extra_link_args.append(_libz)
 else:
+    _gks_macros.append(("NO_FT", 1))
+    _gr_macros.append(("NO_MUPDF", 1))
     _gr_libraries = ["libGKS"]
+#    _gr_libraries = ["libGKS", "mupdf", "mupdf-js-none",
+#                     "freetype", "bz2", "jbig2dec", "jpeg", "openjp2"]
     _gr_libraries.extend(_pnglibs)
     _gr_libraries.extend(_jpeglibs)
     _gr_libraries.extend(_zlibs)
@@ -673,7 +680,7 @@ else:
 if sys.platform == "darwin":
     _gr_extra_link_args.append("-Wl,-install_name,@rpath/libGR.so")
 _grExt = Extension("gr.libGR", _gr_src_path,
-                   define_macros=[("HAVE_ZLIB", ), ("XFT", ), _gr_macro],
+                   define_macros=_gr_macros,
                    include_dirs=_gr_include_dirs,
                    libraries=_gr_libraries,
                    library_dirs=_gr_library_dirs,

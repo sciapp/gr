@@ -17,7 +17,7 @@ from qtgr.events import GUIConnector, MouseEvent, PickEvent, LegendEvent
 from gr.pygr import Plot, PlotAxes, PlotCurve, ErrorBar
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-25"
+__date__ = "2014-01-15"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -54,7 +54,7 @@ class MainWindow(QtGui.QMainWindow):
                                 "qtgrdemo.ui"), self)
 
         dictPrintType = dict(gr.PRINT_TYPE)
-        map(lambda k: dictPrintType.pop(k), [gr.PRINT_JPEG, gr.PRINT_TIF])
+        map(dictPrintType.pop, [gr.PRINT_JPEG, gr.PRINT_TIF])
         self._saveTypes = (";;".join(dictPrintType.values()) + ";;" +
                            ";;".join(gr.GRAPHIC_TYPE.values()))
         self._saveName = None
@@ -119,7 +119,7 @@ class MainWindow(QtGui.QMainWindow):
                                                   gr.PRINT_TYPE[gr.PRINT_PDF])
         if qpath:
             path = unicode(qpath)
-            (p, suffix) = os.path.splitext(path)
+            (_p, suffix) = os.path.splitext(path)
             suffix = suffix.lower()
             if suffix and (suffix[1:] in gr.PRINT_TYPE.keys() or
                            suffix[1:] in gr.GRAPHIC_TYPE):
