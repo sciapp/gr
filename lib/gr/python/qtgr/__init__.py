@@ -52,6 +52,7 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
 
 _log = logging.getLogger(__name__)
 
+
 class GRWidget(QtGui.QWidget):
 
     def __init__(self, *args, **kwargs):
@@ -188,9 +189,9 @@ class GRWidget(QtGui.QWidget):
         # super destructor not available
 #        super(GRWidget, self).__del__()
 
+
 class InteractiveGRWidget(GRWidget):
 
-#    autoScaleChanged = QtCore.Signal(bool)
     logXinDomain = QtCore.Signal(bool)
     logYinDomain = QtCore.Signal(bool)
     modePick = QtCore.Signal(bool)
@@ -276,7 +277,6 @@ class InteractiveGRWidget(GRWidget):
     def setAutoScale(self, bool):
         for plot in self._lstPlot:
             plot.autoscale = bool
-#        self.autoScaleChanged.emit(bool)
 
     def getPickMode(self):
         return self._pickMode
@@ -301,10 +301,6 @@ class InteractiveGRWidget(GRWidget):
         self._pickEvent = None
         for plot in self._lstPlot:
             plot.select(p0, p1, self.dwidth, self.dheight)
-#            if self._autoscale != plot.autoscale:
-#                self._autoscale = plot.autoscale
-#                self.autoScaleChanged.emit(plot.autoscale)
-#                _log.debug("TODO: EVENT: plot: autoscale: %s" % plot.autoscale)
         self._draw(True)
         self.update()
 
@@ -312,10 +308,6 @@ class InteractiveGRWidget(GRWidget):
         self._pickEvent = None
         for plot in self._lstPlot:
             plot.pan(dp, self.dwidth, self.dheight)
-#            if self._autoscale != plot.autoscale:
-#                self._autoscale = plot.autoscale
-#                self.autoScaleChanged.emit(plot.autoscale)
-#                _log.debug("TODO: EVENT: plot: autoscale: %s" % plot.autoscale)
         self._draw(True)
         self.update()
 
@@ -323,10 +315,6 @@ class InteractiveGRWidget(GRWidget):
         self._pickEvent = None
         for plot in self._lstPlot:
             plot.zoom(dpercent)
-#            if self._autoscale != plot.autoscale:
-#                self._autoscale = plot.autoscale
-#                self.autoScaleChanged.emit(plot.autoscale)
-#                _log.debug("TODO: EVENT: plot: autoscale: %s" % plot.autoscale)
         self._draw(True)
         self.update()
 
@@ -401,6 +389,7 @@ class InteractiveGRWidget(GRWidget):
     def pickMove(self, event):
         self._pickEvent = event
         self.update()
+
 
 if __name__ == "__main__":
     import sys
