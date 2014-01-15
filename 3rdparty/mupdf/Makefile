@@ -1,5 +1,5 @@
 INCLUDES = -I../jbig2dec -I../jpeg -I ../png -I../openjpeg -I../zlib \
-           -I/usr/X11/include/freetype2
+           `freetype-config --cflags`
   CFLAGS = -O -I. -fPIC -fno-common $(INCLUDES) $(ARCHS)
     OBJS = \
         base_context.o \
