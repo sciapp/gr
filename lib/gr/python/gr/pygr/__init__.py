@@ -580,8 +580,6 @@ class Plot(GRViewPort, GRMeta):
             xmax = max(p0World.x, p1World.x)
             ymin = min(p0World.y, p1World.y)
             ymax = max(p0World.y, p1World.y)
-#            if self.autoscale:
-#                self.autoscale = (xmax >= win[1])
             axes.setWindow(xmin, xmax, ymin, ymax)
         gr.setwindow(*window)
 
@@ -608,7 +606,6 @@ class Plot(GRViewPort, GRMeta):
         window = gr.inqwindow()
         for axes in self._lstAxes:
             win = axes.getWindow()
-            winXmax = axes.getWindow()[1]
             winWidth_2 = (win[1] - win[0]) / 2
             winHeight_2 = (win[3] - win[2]) / 2
             dx_2 = winWidth_2 - (1 + dpercent) * winWidth_2
@@ -617,8 +614,6 @@ class Plot(GRViewPort, GRMeta):
             win[1] += dx_2
             win[2] -= dy_2
             win[3] += dy_2
-#            if self.autoscale:
-#                self.autoscale = (win[1] >= winXmax)
             if DomainChecker.isInWindowDomain(*window):
                 axes.setWindow(*win)
             else:
@@ -1041,20 +1036,39 @@ class PlotAxes(GRViewPort, GRMeta):
                                        lstPlotCurve)
                 if not visibleCurves:
                     visibleCurves = lstPlotCurve
-                xmin = min(map(lambda curve: min(curve.x),
-                               visibleCurves))
-                xmax = max(map(lambda curve: max(curve.x),
-                               visibleCurves))
+                # calculate previous xmin, xmax
+                xpmin = min(map(lambda curve: min(curve.x[:-1])
+                                if len(curve.x) > 1 else curve.x[-1],
+                                visibleCurves))
+                xpmax = max(map(lambda curve: max(curve.x[:-1])
+                                if len(curve.x) > 1 else curve.x[-1],
+                                visibleCurves))
+                # calculate xmin, xmax
+                xmin = min(xpmin, *map(lambda curve: curve.x[-1], visibleCurves))
+                xmax = max(xpmax, *map(lambda curve: curve.x[-1], visibleCurves))
+                # calculate ymin, ymax
                 ymin = min(map(lambda curve: min(curve.y),
                                visibleCurves))
                 ymax = max(map(lambda curve: max(curve.y),
                                visibleCurves))
+
                 if self.isReset():
                     self._resetWindow = False
                 elif self.autoscale:
                     win = self.getWindow()
-                    if win and xmin <= win[0]:
-                        xmin = win[0]
+                    if win:
+                        if xmin < xpmin:
+                            # growing in negative direction
+                            # hold max value
+                            if xmax >= win[1]:
+                                # win[1]: user max value
+                                xmax = win[1]
+                        elif xmax > xpmax:
+                            # growing in positive direction
+                            # hold min value
+                            if xmin <= win[0]:
+                                # win[0]: user min value
+                                xmin = win[0]
 
                 if self.scale & gr.OPTION_X_LOG == 0:
                     xmin, xmax = gr.adjustrange(xmin, xmax)
