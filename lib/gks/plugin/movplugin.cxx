@@ -1,5 +1,5 @@
 
-#ifndef NO_MOV
+#ifndef NO_AV
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +36,7 @@ extern "C"
 
 #endif
 
-#ifndef NO_MOV
+#ifndef NO_AV
 
 DLLEXPORT void gks_movplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,

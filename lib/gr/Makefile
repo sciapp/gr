@@ -6,7 +6,8 @@
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                md5.o import.o grforbnd.o
-     DEFINES =
+   MUPDFDEFS = 
+     DEFINES = $(MUPDFDEFS)
     INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty/png
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC
@@ -20,6 +21,7 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
      PNGLIBS = ../../3rdparty/png/libpng.a
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = -lXft -lfontconfig
+   MUPDFLIBS = -lmupdf -lmupdf-js-none -lfreetype -lbz2 -ljbig2dec -ljpeg -lopenjp2
      X11LIBS = $(FTLIBS) -lXt -lX11
        ZLIBS = -lz
 
@@ -49,7 +51,8 @@ libGR.a: $(GROBJS)
 
 libGR.so: $(GROBJS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
-	$(ZLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
+	$(MUPDFLIBS) $(ZLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS) $(LDFLAGS) \
+	$(INSTALL_NAME)
 
 install:
 	@make -C ../gks install

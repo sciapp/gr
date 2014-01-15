@@ -27,8 +27,10 @@
      FTDEFS =
       FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
      FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
-    MOVDEFS = 
-    MOVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -lmupdf -lmupdf-js-none -lfreetype -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz -lpthread
+     AVDEFS = 
+     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil
+  MUPDFDEFS = 
+  MUPDFLIBS = -lmupdf -lmupdf-js-none -lfreetype -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz
     X11DEFS =
     X11LIBS = -lfontconfig -lXt -lX11
     ZMQDEFS = 
@@ -42,9 +44,9 @@
 .m.o:
 	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $<
 .c.o:
-	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(MOVDEFS) $<
+	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(AVDEFS) $(MUPDFDEFS) $<
 .cxx.o:
-	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(FTDEFS) $(FTINC) $(MOVDEFS) $(X11DEFS) $(X11INC) $<
+	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(X11DEFS) $(X11INC) $<
 
 default:
 	@make -C ../../.. Makedefs
@@ -96,7 +98,7 @@ zmqplugin.so: zmqplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(ZMQLIBS) $(LIBS)
 
 movplugin.so: movplugin.o font.o afm.o util.o vc.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(MOVLIBS) $(EXTRALIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(AVLIBS) $(MUPDFLIBS) $(EXTRALIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)

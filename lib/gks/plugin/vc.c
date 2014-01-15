@@ -1,4 +1,4 @@
-#ifndef NO_MOV
+#ifndef NO_AV
 
 #include <stdio.h>
 
