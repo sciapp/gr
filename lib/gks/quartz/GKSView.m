@@ -715,7 +715,11 @@ void seg_xform_rel(double *x, double *y)
 {
   NSSavePanel *savePanel = [NSSavePanel savePanel];
 
+#if __MAC_OS_X_VERSION_MAX_ALLOWED > 1070
+  if (![[NSBundle mainBundle] loadNibNamed:@"ExtendSavePanel" owner:self topLevelObjects:nil])
+#else
   if (![NSBundle loadNibNamed:@"ExtendSavePanel" owner:self])
+#endif
     {
       NSLog(@"Failed to load ExtendSavePanel.nib");
       return;
@@ -724,14 +728,11 @@ void seg_xform_rel(double *x, double *y)
    [[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFormat"]];
 
   [savePanel setAccessoryView: extendSavePanelView];
-
-  [savePanel beginSheetForDirectory:
-   [[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFolder"]
-             file : [[self window]title]
-             modalForWindow : [self window]
-             modalDelegate:self
-             didEndSelector:@selector(savePanelDidEnd:returnCode:contextInfo:)
-             contextInfo:saveFormatPopUp];
+  [savePanel setNameFieldStringValue: [[self window] title]];
+  [savePanel setDirectoryURL:[NSURL fileURLWithPath:[[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFolder"]]];
+  [savePanel beginSheetModalForWindow:_window completionHandler:^(NSInteger result) {
+    [self savePanelDidEnd: savePanel returnCode:result contextInfo:saveFormatPopUp];
+  }];
 }
 
 - (void)savePanelDidEnd : (NSSavePanel *)theSheet
@@ -742,10 +743,9 @@ void seg_xform_rel(double *x, double *y)
   NSData *data;
   NSBitmapImageRep *bitmap;
 
-  if (NSFileHandlingPanelOKButton == returnCode)
+  if (NSFileHandlingPanelOKButton == returnCode && [[theSheet URL] isFileURL])
     {
-      filename = [[theSheet filename] stringByDeletingPathExtension];
-
+      filename = [[[theSheet URL] path] stringByDeletingPathExtension];
       if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"PDF"])
         {
           data = [self dataWithPDFInsideRect: [self bounds]];
