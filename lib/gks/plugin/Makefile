@@ -30,7 +30,7 @@
      AVDEFS = 
      AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil
   MUPDFDEFS = 
-  MUPDFLIBS = -lmupdf -lmupdf-js-none -lfreetype -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz
+  MUPDFLIBS = -lmupdf -lmupdf-js-none $(FTLIBS) -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz
     X11DEFS =
     X11LIBS = -lfontconfig -lXt -lX11
     ZMQDEFS = 

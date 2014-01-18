@@ -20,9 +20,10 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
      PNGLIBS = ../../3rdparty/png/libpng.a
      GKSLIBS = ../gks/libGKS.a
-      FTLIBS = -lXft -lfontconfig
-   MUPDFLIBS = -lmupdf -lmupdf-js-none -lfreetype -lbz2 -ljbig2dec -ljpeg -lopenjp2
-     X11LIBS = $(FTLIBS) -lXt -lX11
+      FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
+     XFTLIBS = -lXft -lfontconfig
+   MUPDFLIBS = -lmupdf -lmupdf-js-none $(FTLIBS) -lbz2 -ljbig2dec -ljpeg -lopenjp2
+     X11LIBS = $(XFTLIBS) -lXt -lX11
        ZLIBS = -lz
 
 .c.o:
