@@ -1,4 +1,3 @@
-
 #ifndef NO_QT4
 
 #include <stdio.h>
@@ -872,14 +871,7 @@ void cellarray(
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
 
-  if (!true_color)
-    {
-      img = new QImage(width, height, QImage::Format_Indexed8);
-      for (i = 0; i < 256; i++)
-        img->setColor(i, p->rgb[i].rgb());
-    }
-  else
-    img = new QImage(width, height, QImage::Format_RGB32);
+  img = new QImage(width, height, QImage::Format_RGB32);
 
   for (j = 0; j < height; j++)
     {
@@ -894,7 +886,11 @@ void cellarray(
           if (!true_color)
             {
               ind = colia[iy * dimx + ix];
-              img->setPixel(i, j, Color8Bit(ind));
+              if (ind < 0)
+                ind = 0;
+              else if (ind >= MAX_COLOR)
+                  ind = MAX_COLOR - 1;
+              img->setPixel(i, j, p->rgb[Color8Bit(ind)].rgb());
             }
           else
             {
