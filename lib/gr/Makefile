@@ -23,7 +23,7 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
       FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
      XFTLIBS = -lXft -lfontconfig
    MUPDFLIBS = -lmupdf -lmupdf-js-none $(FTLIBS) -lbz2 -ljbig2dec -ljpeg -lopenjp2
-     X11LIBS = $(XFTLIBS) -lXt -lX11
+     X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
        ZLIBS = -lz
 
 .c.o:
@@ -52,7 +52,7 @@ libGR.a: $(GROBJS)
 
 libGR.so: $(GROBJS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
-	$(MUPDFLIBS) $(ZLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS) $(LDFLAGS) \
+	$(MUPDFLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS) \
 	$(INSTALL_NAME)
 
 install:

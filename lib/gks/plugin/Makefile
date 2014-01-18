@@ -32,7 +32,7 @@
   MUPDFDEFS = 
   MUPDFLIBS = -lmupdf -lmupdf-js-none $(FTLIBS) -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz
     X11DEFS =
-    X11LIBS = -lfontconfig -lXt -lX11
+    X11LIBS = $(X11PATH) -lfontconfig -lXt -lX11
     ZMQDEFS = 
     ZMQLIBS = -lzmq
   EXTRALIBS =
@@ -67,22 +67,22 @@ Linux:
 	SOFLAGS="-shared" LDFLAGS="-Wl,-rpath=$(QTDIR)/lib"
 
 wxplugin.so: wxplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(WXLIBS) $(LDFLAGS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(WXLIBS) $(LDFLAGS) $(X11LIBS) $(LIBS)
 
 qtplugin.so: qtplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(QTLIBS) $(LDFLAGS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(QTLIBS) $(LDFLAGS) $(X11LIBS) $(LIBS)
 
 svgplugin.so: svgplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gtkplugin.so: gtkplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(GTKLIBS) $(LDFLAGS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(GTKLIBS) $(LDFLAGS) $(X11LIBS) $(LIBS)
 
 figplugin.so: figplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gsplugin.so: gsplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(GSLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(GSLIBS) $(X11LIBS) $(LIBS)
 
 wmfplugin.so: wmfplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LIBS)
@@ -92,7 +92,7 @@ quartzplugin.so: quartzplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	-lobjc -framework Foundation -framework ApplicationServices
 
 glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(GLFWLIBS) $(FTLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 zmqplugin.so: zmqplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(ZMQLIBS) $(LIBS)

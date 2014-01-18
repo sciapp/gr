@@ -23,7 +23,7 @@
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
         LIBS = -lpthread -ldl -lc -lm
       FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
-     X11LIBS = -lXft -lfontconfig -lXt -lX11
+     X11LIBS = $(X11PATH) -lXft -lfontconfig -lXt -lX11
        ZLIBS = -lz
 
 .c.o:
@@ -49,14 +49,14 @@ libGKS.a: $(GKSOBJS)
 	$(RANLIB) $@
 
 libGKS.so: $(GKSOBJS)
-	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(FTLIBS) -L$(X11PATH)/lib $(X11LIBS) \
+	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(FTLIBS) $(X11LIBS) \
 	$(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGKS.a
-	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(FTLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS)
+	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 gksm: gksm.c libGKS.a
-	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(FTLIBS) -L$(X11PATH)/lib $(X11LIBS) $(LIBS)
+	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 plugins:
 	@make -C plugin

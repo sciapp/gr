@@ -131,6 +131,7 @@ then
 fi
 if [ "`which $ftconfig 2>/dev/null`" = "" ]
 then
+  ftconfig=false
   ftdefs="FT_CONFIG=false FTDEFS=-DNO_FT FTINC= FTLIBS="
   info="${red} no${normal} [freetype-config not found]"
   ret=1
@@ -165,7 +166,7 @@ if [ $? -ne 0 ]; then
   info="${red} no${normal} [X11 API not found]"
   ret=1
 else
-  x11defs="X11PATH=$x11path"
+  x11defs="X11PATH=-L$x11path/lib"
   info="${green}yes${normal} [$x11path]"
 fi
 printf "%12s: %s\n" "X11" "$info" >&2
@@ -332,7 +333,8 @@ int main(int argc, char **argv)
   fz_free_context(ctx);
 }
 eof
-cmd="cc -o $tmpout $tmpsrc -lmupdf -lmupdf-js-none `freetype-config --libs` -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz -lm"
+ftlibs=`$ftconfig --libs`
+cmd="cc -o $tmpout $tmpsrc -lmupdf -lmupdf-js-none $ftlibs -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz -lm"
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   info="${red} no${normal} [MuPDF 1.3 API not found]"
