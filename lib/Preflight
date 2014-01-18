@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ -f /usr/local/bin/python ]
+then
+  export PATH="/usr/local/bin:$PATH"
+fi
+
 target=`uname`
 wxdefs=""
 ftdefs=""
