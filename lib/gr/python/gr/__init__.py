@@ -7,6 +7,7 @@ import gr
 """
 
 import os
+from numpy import array, ndarray
 from ctypes import c_int, c_double, c_char_p, c_void_p
 from ctypes import byref, POINTER, addressof, CDLL, CFUNCTYPE
 from ctypes import create_string_buffer, cast
@@ -14,17 +15,25 @@ from sys import version_info, platform
 
 
 def floatarray(n, a):
-    _a = (c_double * n)()
-    for i in range(n):
-        _a[i] = a[i]
-    return _a
+    if isinstance(a, ndarray):
+        _a = array(a, c_double)
+        return _a.ctypes.data_as(POINTER(c_double))
+    else:
+        _a = (c_double * n)()
+        for i in range(n):
+            _a[i] = a[i]
+        return _a
 
 
 def intarray(n, a):
-    _a = (c_int * n)()
-    for i in range(n):
-        _a[i] = a[i]
-    return _a
+    if isinstance(a, ndarray):
+        _a = array(a, c_int)
+        return _a.ctypes.data_as(POINTER(c_int))
+    else:
+        _a = (c_int * n)()
+        for i in range(n):
+            _a[i] = a[i]
+        return _a
 
 
 def char(string):
@@ -33,13 +42,6 @@ def char(string):
     else:
         s = create_string_buffer(string)
     return cast(s, c_char_p)
-
-
-def chararray(n, a):
-    _a = (c_char_p * n)()
-    for i in range(n):
-        _a[i] = char(a[i])
-    return _a
 
 
 def opengks():
