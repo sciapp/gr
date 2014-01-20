@@ -15,10 +15,10 @@ from sys import version_info, platform
 
 
 def floatarray(n, a):
-    if isinstance(a, ndarray):
-        _a = array(a, c_double)
-        return _a.ctypes.data_as(POINTER(c_double))
-    else:
+#    if isinstance(a, ndarray):
+#        _a = array(a, c_double)
+#        return _a.ctypes.data_as(POINTER(c_double))
+#    else:
         _a = (c_double * n)()
         for i in range(n):
             _a[i] = a[i]
@@ -26,10 +26,10 @@ def floatarray(n, a):
 
 
 def intarray(n, a):
-    if isinstance(a, ndarray):
-        _a = array(a, c_int)
-        return _a.ctypes.data_as(POINTER(c_int))
-    else:
+#    if isinstance(a, ndarray):
+#        _a = array(a, c_int)
+#        return _a.ctypes.data_as(POINTER(c_int))
+#    else:
         _a = (c_int * n)()
         for i in range(n):
             _a[i] = a[i]

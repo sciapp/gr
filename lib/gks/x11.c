@@ -3336,7 +3336,7 @@ unsigned long rgb2pixel(int rgb)
 	  ipptr = colia; \
 	  for (i = 0; i < nbytes; i++, ipptr++) \
 	    *epptr++ = true_color ? \
-              rgb2pixel(*ipptr) : pixel[*ipptr % MAX_COLOR ]; \
+              rgb2pixel(*ipptr) : pixel[*ipptr % MAX_COLOR]; \
 	} \
     } \
 \
