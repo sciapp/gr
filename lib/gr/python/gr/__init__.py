@@ -13,12 +13,16 @@ from ctypes import byref, POINTER, addressof, CDLL, CFUNCTYPE
 from ctypes import create_string_buffer, cast
 from sys import version_info, platform
 
+_strongref = [ 0 ] * 16
+_i = 0
 
 def floatarray(n, a):
-#    if isinstance(a, ndarray):
-#        _a = array(a, c_double)
-#        return _a.ctypes.data_as(POINTER(c_double))
-#    else:
+    global _strongref, _i
+    _i = (_i + 1) % 16
+    if isinstance(a, ndarray):
+        _strongref[_i] = array(a, c_double)
+        return _strongref[_i].ctypes.data_as(POINTER(c_double))
+    else:
         _a = (c_double * n)()
         for i in range(n):
             _a[i] = a[i]
@@ -26,10 +30,12 @@ def floatarray(n, a):
 
 
 def intarray(n, a):
-#    if isinstance(a, ndarray):
-#        _a = array(a, c_int)
-#        return _a.ctypes.data_as(POINTER(c_int))
-#    else:
+    global _strongref, _i
+    _i = (_i + 1) % 16
+    if isinstance(a, ndarray):
+        _strongref[_i] = array(a, c_int)
+        return _strongref[_i].ctypes.data_as(POINTER(c_int))
+    else:
         _a = (c_int * n)()
         for i in range(n):
             _a[i] = a[i]
@@ -408,7 +414,7 @@ def setlinecolorind(color):
     Parameters:
     -----------
     `color` :
-        The polyline color index (COLOR < 1000)
+        The polyline color index (COLOR < 1256)
 
     """
     __gr.gr_setlinecolorind(c_int(color))
@@ -518,7 +524,7 @@ def setmarkercolorind(color):
     Parameters:
     -----------
     `color` :
-        The polymarker color index (`color` < 1000)
+        The polymarker color index (COLOR < 1256)
 
     """
     __gr.gr_setmarkercolorind(c_int(color))
@@ -654,7 +660,7 @@ def settextcolorind(color):
     Parameters:
     -----------
     `color` :
-        The text color index (COLOR < 1000)
+        The text color index (COLOR < 1256)
 
     `settextcolorind` defines the color of subsequent text output primitives.
     GR uses the default foreground color (black=1) for the default text color index.
@@ -814,7 +820,7 @@ def setfillcolorind(color):
     Parameters:
     -----------
     `color` :
-        The fill area color index (COLOR < 1000)
+        The fill area color index (COLOR < 1256)
 
     `setfillcolorind` defines the color of subsequent fill area output primitives.
     GR uses the default foreground color (black=1) for the default fill area color index.
@@ -831,7 +837,7 @@ def setcolorrep(index, red, green, blue):
     Parameters:
     -----------
     `index` :
-        Color index in the range 0 to 1000
+        Color index in the range 0 to 1256
     `red` :
         Red intensity in the range 0.0 to 1.0
     `green` :
