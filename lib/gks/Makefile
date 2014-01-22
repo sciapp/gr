@@ -49,14 +49,14 @@ libGKS.a: $(GKSOBJS)
 	$(RANLIB) $@
 
 libGKS.so: $(GKSOBJS)
-	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(FTLIBS) $(X11LIBS) \
+	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(FTLIBS) $(ZLIBS) $(X11LIBS) \
 	$(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGKS.a
-	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
 gksm: gksm.c libGKS.a
-	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
 plugins:
 	@make -C plugin

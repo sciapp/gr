@@ -142,6 +142,13 @@ then
   ret=1
 else
   ftdefs="FT_CONFIG=$ftconfig"
+  if [ `uname` = "Linux" ]; then
+    ftlib="`$ftconfig --prefix`/lib/libfreetype.a"
+    if [ -f ${ftlib} ]
+    then
+      ftdefs="${ftdefs} FTLIBS=${ftlib}"
+    fi
+  fi
   info="${green}yes${normal} [version `$ftconfig --version`]"
 fi
 printf "%12s: %s\n" "FreeType" "$info" >&2
