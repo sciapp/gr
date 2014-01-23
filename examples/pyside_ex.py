@@ -3,7 +3,11 @@
 
 import sys
 import os
-from PySide import QtCore, QtGui, shiboken
+from PySide import QtCore, QtGui
+try:
+    from PySide import shiboken
+except ImportError:
+    import shiboken
 from gr.pygr import *
 
 class GrWidget(QtGui.QWidget) :
