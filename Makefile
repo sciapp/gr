@@ -27,6 +27,8 @@ ifeq ($(UNAME), Darwin)
 	@ditto lib/gks/quartz/build/Release/GKSTerm.app \
 	$(DESTDIR)$(GRDIR)/Applications/GKSTerm.app 
 endif
+	cp -p bin/gr.sh $(DESTDIR)$(GRDIR)/bin/gr
+	cp -p bin/anaconda.sh $(DESTDIR)$(GRDIR)/bin/anaconda
 
 clean:
 	rm -f Makedefs
@@ -34,3 +36,8 @@ clean:
 ifeq ($(UNAME), Darwin)
 	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean
 endif
+	cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
+	rm -f gr.pkg
+
+osxpkg:
+	pkgbuild --identifier de.fz-juelich.gr --root /usr/local/gr --install-location /usr/local/gr --ownership preserve gr.pkg
