@@ -40,4 +40,11 @@ endif
 	rm -f gr.pkg
 
 osxpkg:
-	pkgbuild --identifier de.fz-juelich.gr --root /usr/local/gr --install-location /usr/local/gr --ownership preserve gr.pkg
+	mkdir -p tmp/bin tmp/gr
+	rsync -a /usr/local/gr/ tmp/gr/
+	ln -s ../gr/bin/gr.sh tmp/bin/gr
+	ln -s ../gr/Applications/glgr.app/Contents/MacOS/glgr tmp/bin/glgr
+	ln -s ../gr/Applications/gksqt.app/Contents/MacOS/gksqt tmp/bin/gksqt
+	sudo chown -R -h root:wheel tmp/
+	pkgbuild --identifier de.fz-juelich.gr --root tmp --install-location /usr/local --ownership preserve gr.pkg
+	sudo rm -rf tmp

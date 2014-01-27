@@ -18,8 +18,8 @@ polyline(n, x, y)
 
 == Parameters ==
   * //n// --- The number of points in the line to be drawn (//n// > 1)
-  * //x// --- A list of length //n// containing the X coordinate
-  * //y// --- A list of length //n// containing the Y coordinate
+  * //x// --- A list of length //n// containing the X coordinates
+  * //y// --- A list of length //n// containing the Y coordinates
 
 The values for //x// and //y// are in world coordinates. The attributes that
 control the appearance of a polyline are linetype, linewidth and color
@@ -34,8 +34,8 @@ polymarker(n, x, y)
 
 == Parameters ==
   * //n// --- The number of markers to be drawn
-  * //x// --- A list of length //n// containing the X coordinate
-  * //y// --- A list of length //n// containing the Y coordinate
+  * //x// --- A list of length //n// containing the X coordinates
+  * //y// --- A list of length //n// containing the Y coordinates
 
 The values for //x// and //y// are in world coordinates. The attributes that
 control the appearance of a polyline are marker type, marker size
@@ -67,8 +67,8 @@ fillarea(n, x, y)
 
 == Parameters ==
   * //n// --- The number of points in the polygon to be drawn (//n// > 2)
-  * //x// --- A list of length //n// containing the X coordinate
-  * //y// --- A list of length //n// containing the Y coordinate
+  * //x// --- A list of length //n// containing the X coordinates
+  * //y// --- A list of length //n// containing the Y coordinates
 
 The attributes that control the appearance of fill areas are fill area interior
 style, fill area style index and fill area color index.
@@ -101,8 +101,8 @@ spline(n, x, y, m, method)
 
 == Parameters ==
   * //n// --- The number of data points (//n// > 1)
-  * //x// --- A list of length //n// containing the X coordinate
-  * //y// --- A list of length //n// containing the Y coordinate
+  * //x// --- A list of length //n// containing the X coordinates
+  * //y// --- A list of length //n// containing the Y coordinates
   * //m// --- The number of points in the polygon to be drawn (//m// > //n//)
   * //method// --- The smoothing method
 
@@ -231,8 +231,8 @@ verrorbars(n, px, py, e1, e2)
 
 == Parameters ==
   * //n// --- The number of error bars to be drawn
-  * //px// --- A list of length //n// containing the X coordinate
-  * //py// --- A list of length //n// containing the Y coordinate
+  * //px// --- A list of length //n// containing the X coordinates
+  * //py// --- A list of length //n// containing the Y coordinates
   * //e1// --- The absolute value of the negative deviation at the given point
   * //e2// --- The absolute value of the positive deviation at the given point
 
@@ -245,8 +245,8 @@ herrorbars(n, px, py, e1, e2)
 
 == Parameters ==
   * //n// --- The number of error bars to be drawn
-  * //px// --- A list of length //n// containing the X coordinate
-  * //py// --- A list of length //n// containing the Y coordinate
+  * //px// --- A list of length //n// containing the X coordinates
+  * //py// --- A list of length //n// containing the Y coordinates
   * //e1// --- The absolute value of the negative deviation at the given point
   * //e2// --- The absolute value of the positive deviation at the given point
 
@@ -260,9 +260,9 @@ polyline3d(n, px, py, pz)
 
 == Parameters ==
   * //n// --- The number of points in the line to be drawn (//n// > 1)
-  * //x// --- A list of length //n// containing the X coordinate
-  * //y// --- A list of length //n// containing the Y coordinate
-  * //z// --- A list of length //n// containing the Z coordinate
+  * //x// --- A list of length //n// containing the X coordinates
+  * //y// --- A list of length //n// containing the Y coordinates
+  * //z// --- A list of length //n// containing the Z coordinates
 
 The values for //x//, //y// and //z// are in world coordinates. The attributes that
 control the appearance of a polyline are linetype, linewidth and color
@@ -310,9 +310,9 @@ surface(nx, ny, x, y, z, option)
 == Parameters ==
   * //nx// --- The number of points in the X direction (//nx// > 1)
   * //ny// --- The number of points in the Y direction (//ny// > 1)
-  * //x// --- A list of length //ny// containing the X coordinate
-  * //y// --- A list of length //ny// containing the Y coordinate
-  * //z// --- A list of length //nx//*//ny// containing the Z coordinate
+  * //x// --- A list of length //ny// containing the X coordinates
+  * //y// --- A list of length //ny// containing the Y coordinates
+  * //z// --- A list of length //nx//*//ny// containing the Z coordinates
   * //option// --- Surface display option (see table below)
 
 //x// and //y// define a grid. //z// is a singly dimensioned array containing at least
@@ -339,10 +339,10 @@ contour(nx, ny, nh, x, y, h, z, major_h)
   * //nx// --- The number of points in the X direction (//nx// > 1)
   * //ny// --- The number of points in the Y direction (//ny// > 1)
   * //nh// --- The number of height values (//nh// > 0)
-  * //x// --- A list of length //ny// containing the X coordinate
-  * //y// --- A list of length //ny// containing the Y coordinate
+  * //x// --- A list of length //ny// containing the X coordinates
+  * //y// --- A list of length //ny// containing the Y coordinates
   * //h// --- A list of length //nh// containing the Z coordinate for the height values
-  * //z// --- A list of length //nx//*//ny// containing the Z coordinate
+  * //z// --- A list of length //nx//*//ny// containing the Z coordinates
   * //major_h// --- Directs GR to label contour lines. For example, a value of 3 would label every third line. A value of 1 will label every line. A value of 0 produces no labels.
 
 ==== gr.drawrect ====
@@ -769,510 +769,490 @@ setfillcolorind(color)
 GR uses the default foreground color (black=1) for the default fill area color index.
 
 ==== gr.setarrowstyle ====
-FIXME
+Sets the arrow style to be used for subsequent arrow commands.
 
 <code python>
 setarrowstyle(style)
 </code>
 
 == Parameters ==
-  * //style// --- FIXME
+  * //style// --- The arrow style to be used
+
+//setarrowstyle// defines the arrow style for subsequent arrow primitives.
+The default arrow style is 1.
+
+|  1|  simple, single-ended|
+|  2|  simple, single-ended, acute head|
+|  3|  hollow, single-ended|
+|  4|  filled, single-ended|
+|  5|  triangle, single-ended|
+|  6|  filled triangle, single-ended|
+|  7|  kite, single-ended|
+|  8|  filled kite, single-ended|
+|  9|  simple, double-ended|
+| 10|  simple, double-ended, acute head|
+| 11|  hollow, double-ended|
+| 12|  filled, double-ended|
+| 13|  triangle, double-ended|
+| 14|  filled triangle, double-ended|
+| 15|  kite, double-ended|
+| 16|  filled kite, double-ended|
+| 17|  double line, single-ended|
+| 18|  double line, double-ended|
 
 ==== gr.setshadow ====
-FIXME
+//setshadow// allows drawing of shadows, realized by images painted underneath,
+and offset from, graphics objects such that the shadow mimics the effect of a light
+source cast on the graphics objects.
 
 <code python>
 setshadow(offsetx, offsety, blur)
 </code>
 
 == Parameters ==
-  * //offsetx// --- FIXME
-  * //offsety// --- FIXME
-  * //blur// --- FIXME
+  * //offsetx// --- An x-offset, which specifies how far in the horizontal direction the shadow is offset from the object
+  * //offsety// --- A y-offset, which specifies how far in the vertical direction the shadow is offset from the object
+  * //blur// --- A blur value, which specifies whether the object has a hard or a diffuse edge
 
 ==== gr.settransparency ====
-FIXME
+Sets the value of the alpha component associated with GR colors
 
 <code python>
 settransparency(alpha)
 </code>
 
 == Parameters ==
-  * //alpha// --- FIXME
+  * //alpha// --- An alpha value (0.0 - 1.0)
 
 ===== Transformation Functions =====
 
 ==== gr.setscale ====
-FIXME
+//setscale// sets the type of transformation to be used for subsequent GR output primitives.
 
 <code python>
 setscale(options)
 </code>
 
 == Parameters ==
-  * //options// --- FIXME
+  * //options// --- Scale specification (see Table below)
+
+| OPTION_X_LOG  |  Logarithmic X-axis|
+| OPTION_Y_LOG  |  Logarithmic Y-axis|
+| OPTION_Z_LOG  |  Logarithmic Z-axis|
+| OPTION_FLIP_X |  Flip X-axis|
+| OPTION_FLIP_Y |  Flip Y-axis|
+| OPTION_FLIP_Z |  Flip Z-axis|
+
+//setscale// defines the current transformation according to the given scale
+specification which may be or'ed together using any of the above options. GR uses these
+options for all subsequent output primitives until another value is provided.
+The scale options are used to transform points from an abstract logarithmic or
+semi-logarithmic coordinate system, which may be flipped along each axis, into the
+world coordinate system. 
+
+Note: When applying a logarithmic transformation to a specific axis, the system assumes
+that the axes limits are greater than zero.
 
 ==== gr.inqscale ====
-FIXME
+//inqscale// returns the current scale options.
 
 <code python>
-inqscale(options)
+inqscale()
 </code>
 
-== Parameters ==
-  * //options// --- FIXME
-
 ==== gr.setwindow ====
-FIXME
+//setwindow// establishes a window, or rectangular subspace, of world coordinates to be
+plotted. If you desire log scaling or mirror-imaging of axes, use the //setscale// function.
 
 <code python>
 setwindow(xmin, xmax, ymin, ymax)
 </code>
 
 == Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
+  * //xmin// --- The left horizontal coordinate of the window (//xmin// < //xmax//).
+  * //xmax// --- The right horizontal coordinate of the window.
+  * //ymin// --- The bottom vertical coordinate of the window (//ymin// < //ymax//).
+  * //ymax// --- The top vertical coordinate of the window.
+
+//setwindow// defines the rectangular portion of the World Coordinate space (WC) to be
+associated with the specified normalization transformation. The WC window and the
+Normalized Device Coordinates (NDC) viewport define the normalization transformation
+through which all output primitives are mapped. The WC window is mapped onto the
+rectangular NDC viewport which is, in turn, mapped onto the display surface of the
+open and active workstation, in device coordinates. By default, GR uses the range
+[0,1] x [0,1], in world coordinates, as the normalization transformation window.
 
 ==== gr.inqwindow ====
-FIXME
+Returns the current window.
 
 <code python>
-inqwindow(xmin, xmax, ymin, ymax)
+inqwindow()
 </code>
 
-== Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-
 ==== gr.setviewport ====
-FIXME
+//setviewport// establishes a rectangular subspace of normalized device coordinates.
 
 <code python>
 setviewport(xmin, xmax, ymin, ymax)
 </code>
 
 == Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
+  * //xmin// --- The left horizontal coordinate of the viewport.
+  * //xmax// --- The right horizontal coordinate of the viewport (0 <= //xmin// < //xmax// <= 1).
+  * //ymin// --- The bottom vertical coordinate of the viewport.
+  * //ymax// --- The top vertical coordinate of the viewport (0 <= //ymin// < //ymax// <= 1).
+
+//setviewport// defines the rectangular portion of the Normalized Device Coordinate (NDC)
+space to be associated with the specified normalization transformation. The NDC viewport
+and World Coordinate (WC) window define the normalization transformation through
+which all output primitives pass. The WC window is mapped onto the rectangular NDC
+viewport which is, in turn, mapped onto the display surface of the open and active
+workstation, in device coordinates.
 
 ==== gr.selntran ====
-FIXME
+//selntran// selects a predefined transformation from world coordinates to normalized
+device coordinates.
 
 <code python>
 selntran(transform)
 </code>
 
 == Parameters ==
-  * //transform// --- FIXME
+  * //transform// --- A normalization transformation number.
+
+| 0     |  Selects the identity transformation in which both the window and viewport have the range of 0 to 1|
+| >= 1  |  Selects a normalization transformation as defined by //setwindow// and //setviewport//|
 
 ==== gr.setclip ====
-FIXME
+Sets the clipping indicator.
 
 <code python>
 setclip(indicator)
 </code>
 
 == Parameters ==
-  * //indicator// --- FIXME
+  * //indicator// --- An indicator specifying whether clipping is on or off.
+
+| 0  |  Clipping is off. Data outside of the window will be drawn.|
+| 1  |  Clipping is on. Data outside of the window will not be drawn.|
+
+//setclip// enables or disables clipping of the image drawn in the current window.
+Clipping is defined as the removal of those portions of the graph that lie outside of
+the defined viewport. If clipping is on, GR does not draw generated output primitives
+past the viewport boundaries. If clipping is off, primitives may exceed the viewport
+boundaries, and they will be drawn to the edge of the workstation window.
+By default, clipping is on. 
 
 ==== gr.setwswindow ====
-FIXME
+Sets the area of the NDC viewport that is to be drawn in the workstation window. 
 
 <code python>
 setwswindow(xmin, xmax, ymin, ymax)
 </code>
 
 == Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
+  * //xmin// --- The left horizontal coordinate of the workstation window.
+  * //xmax// --- The right horizontal coordinate of the workstation window (0 <= //xmin// < //xmax// <= 1).
+  * //ymin// --- The bottom vertical coordinate of the workstation window.
+  * //ymax// --- The top vertical coordinate of the workstation window (0 <= //ymin// < //ymax// <= 1).
+
+//setwswindow// defines the rectangular area of the Normalized Device Coordinate space
+to be output to the device. By default, the workstation transformation will map the range
+[0,1] x [0,1] in NDC onto the largest square on the workstation’s display surface.
+The aspect ratio of the workstation window is maintained at 1 to 1.
 
 ==== gr.setwsviewport ====
-FIXME
+Defines the size of the workstation graphics window in meters.
 
 <code python>
 setwsviewport(xmin, xmax, ymin, ymax)
 </code>
 
 == Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
+  * //xmin// --- The left horizontal coordinate of the workstation viewport.
+  * //xmax// --- The right horizontal coordinate of the workstation viewport.
+  * //ymin// --- The bottom vertical coordinate of the workstation viewport.
+  * //ymax// --- The top vertical coordinate of the workstation viewport.
 
+//setwsviewport// places a workstation window on the display of the specified size in
+meters. This command allows the workstation window to be accurately sized for a display
+or hardcopy device, and is often useful for sizing graphs for desktop publishing
+applications. 
+ 
 ==== gr.setspace ====
-FIXME
+Sets the abstract Z-space used for mapping three-dimensional output primitives into
+the current world coordinate space.
 
 <code python>
 setspace(zmin, zmax, rotation, tilt)
 </code>
 
 == Parameters ==
-  * //zmin// --- FIXME
-  * //zmax// --- FIXME
-  * //rotation// --- FIXME
-  * //tilt// --- FIXME
+  * //zmin// --- Minimum value for the Z-axis.
+  * //zmax// --- Maximum value for the Z-axis.
+  * //rotation// --- Angle for the rotation of the X axis, in degrees.
+  * //tilt// --- Viewing angle of the Z axis in degrees.
+
+//setspace// establishes the limits of an abstract Z-axis and defines the angles for
+rotation and for the viewing angle (tilt) of a simulated three-dimensional graph,
+used for mapping corresponding output primitives into the current window.
+These settings are used for all subsequent three-dimensional output primitives until
+other values are specified. Angles of rotation and viewing angle must be specified
+between 0° and 90°. 
 
 ==== gr.inqspace ====
-FIXME
+Return the Z-axes limits and the angles for rotation and tilt of the three-dimensional
+coordinate space.
 
 <code python>
-inqspace(zmin, zmax, rotation, tilt)
+inqspace()
 </code>
 
-== Parameters ==
-  * //zmin// --- FIXME
-  * //zmax// --- FIXME
-  * //rotation// --- FIXME
-  * //tilt// --- FIXME
-
 ==== gr.setcoordxform ====
-FIXME
+Change the coordinate transformation according to the given matrix.
 
 <code python>
 setcoordxform(mat[3][2])
 </code>
 
 == Parameters ==
-  * //mat[3][2]// --- FIXME
+  * //mat[3][2]// --- 2D transformation matrix
 
 ===== Control Functions =====
 
 ==== gr.clearws ====
-FIXME
+Clears the display surface.
 
 <code python>
 clearws()
 </code>
 
+//clearws// erases previously generated primitives (graphics), allowing you to draw new
+elements on the display surface. 
+
 ==== gr.updatews ====
-FIXME
+//updatews// outputs all buffers and redraws and displays generated graphics on all
+devices.
 
 <code python>
 updatews()
 </code>
 
+//updatews// generates all deferred output on active devices.
+
 ==== gr.beginprint ====
-FIXME
+Opens and activates a print device.
 
 <code python>
 beginprint(pathname)
 </code>
 
 == Parameters ==
-  * //pathname// --- FIXME
+  * //pathname// --- Filename for the print device.
+
+//beginprint// opens an additional graphics output device. The device type is obtained
+from the given file extension. The following file types are supported:
+
+| .ps, .eps   |  PostScript |
+| .pdf        |  Portable Document Format |
+| .bmp        |  Windows Bitmap (BMP) |
+| .jpeg, .jpg |  JPEG image file |
+| .png        |  Portable Network Graphics file (PNG) |
+| .tiff, .tif |  Tagged Image File Format (TIFF) |
+| .fig        |  Xfig vector graphics file |
+| .svg        |  Scalable Vector Graphics |
+| .wmf        |  Windows Metafile |
 
 ==== gr.beginprintext ====
-FIXME
+Opens and activates a print device with the given layout attributes.
 
 <code python>
 beginprintext(pathname, mode, format, orientation)
 </code>
 
 == Parameters ==
-  * //pathname// --- FIXME
-  * //mode// --- FIXME
-  * //format// --- FIXME
-  * //orientation// --- FIXME
+  * //pathname// --- Filename for the print device.
+  * //mode// --- Output mode (Color, GrayScale)
+  * //format// --- Output format (see table below)
+  * //orientation// --- Page orientation (Landscape, Portait)
+
+The available formats are:
+
+| A4        | 0.210 x 0.297 |
+| B5        | 0.176 x 0.250 |
+| Letter    | 0.216 x 0.279 |
+| Legal     | 0.216 x 0.356 |
+| Executive | 0.191 x 0.254 |
+| A0        | 0.841 x 1.189 |
+| A1        | 0.594 x 0.841 |
+| A2        | 0.420 x 0.594 |
+| A3        | 0.297 x 0.420 |
+| A5        | 0.148 x 0.210 |
+| A6        | 0.105 x 0.148 |
+| A7        | 0.074 x 0.105 |
+| A8        | 0.052 x 0.074 |
+| A9        | 0.037 x 0.052 |
+| B0        | 1.000 x 1.414 |
+| B1        | 0.500 x 0.707 |
+| B10       | 0.031 x 0.044 |
+| B2        | 0.500 x 0.707 |
+| B3        | 0.353 x 0.500 |
+| B4        | 0.250 x 0.353 |
+| B6        | 0.125 x 0.176 |
+| B7        | 0.088 x 0.125 |
+| B8        | 0.062 x 0.088 |
+| B9        | 0.044 x 0.062 |
+| C5E       | 0.163 x 0.229 |
+| Comm10E   | 0.105 x 0.241 |
+| DLE       | 0.110 x 0.220 |
+| Folio     | 0.210 x 0.330 |
+| Ledger    | 0.432 x 0.279 |
+| Tabloid   | 0.279 x 0.432 |
 
 ==== gr.endprint ====
-FIXME
+Closes the print device previously opened by //beginprint// or //beginprintext//.
 
 <code python>
 endprint()
 </code>
 
 ==== gr.begingraphics ====
-FIXME
+Opens a file for graphics output.
 
 <code python>
 begingraphics(path)
 </code>
 
 == Parameters ==
-  * //path// --- FIXME
+  * //path// --- Filename for the graphics file.
+
+//begingraphics// allows to write all graphics output into a XML-formatted file until
+the //endgraphics// functions is called. The resulting file may later be imported with the
+//importgraphics// function.
 
 ==== gr.endgraphics ====
-FIXME
+Closes the graphics file previously opened by //begingraphics//.
 
 <code python>
 endgraphics()
 </code>
 
 ==== gr.setcolorrep ====
-FIXME
+//setcolorrep// allows to redefine an existing color index representation by specifying
+an RGB color triplet. 
 
 <code python>
 setcolorrep(index, red, green, blue)
 </code>
 
 == Parameters ==
-  * //index// --- FIXME
-  * //red// --- FIXME
-  * //green// --- FIXME
-  * //blue// --- FIXME
-
+  * //index// --- Color index in the range 0 to 1000
+  * //red// --- Red intensity in the range 0.0 to 1.0
+  * //green// --- Green intensity in the range 0.0 to 1.0
+  * //blue// --- Blue intensity in the range 0.0 to 1.0
+ 
 ==== gr.updategks ====
-FIXME
+//updategks// updates all open output devices.
 
 <code python>
 updategks()
 </code>
 
 ==== gr.opengks ====
-FIXME
+//opengks// initializes the underlying Graphics Kernel System (GKS). When using GR, you
+usually don't have to call this function.
 
 <code python>
 opengks()
 </code>
 
 ==== gr.closegks ====
-FIXME
+//closegks// closes the underlying Graphics Kernel System (GKS). When using GR, you
+usually don't have to call this function.
 
 <code python>
 closegks()
 </code>
 
 ==== gr.inqdspsize ====
-FIXME
+//inqdspsize// returns the metric size and the maximum display surface coordinates.
 
 <code python>
-inqdspsize(mwidth, mheight, width, height)
+inqdspsize()
 </code>
 
-== Parameters ==
-  * //mwidth// --- FIXME
-  * //mheight// --- FIXME
-  * //width// --- FIXME
-  * //height// --- FIXME
-
 ==== gr.openws ====
-FIXME
+Opens a graphical workstation.
 
 <code python>
 openws(workstation_id, connection, type)
 </code>
 
 == Parameters ==
-  * //workstation_id// --- FIXME
-  * //connection// --- FIXME
-  * //type// --- FIXME
+  * //workstation_id// --- A workstation identifier.
+  * //connection// --- A connection identifier.
+  * //type// --- The desired workstation type.
+
+Available workstation types:
+
+| 5           |  Workstation Independent Segment Storage |
+| 7, 8        |  Computer Graphics Metafile (CGM binary, clear text) |
+| 41          |  Windows GDI |
+| 51          |  Mac Quickdraw |
+| 61 - 64     |  PostScript (b/w, color) |
+| 101, 102    |  Portable Document Format (plain, compressed) |
+| 210 - 213   |  X Windows |
+| 214         |  Sun Raster file (RF) |
+| 215, 218    |  Graphics Interchange Format (GIF87, GIF89) |
+| 216         |  Motif User Interface Language (UIL) |
+| 320         |  Windows Bitmap (BMP) |
+| 321         |  JPEG image file |
+| 322         |  Portable Network Graphics file (PNG) |
+| 323         |  Tagged Image File Format (TIFF) |
+| 370         |  Xfig vector graphics file |
+| 371         |  Gtk |
+| 380         |  wxWidgets |
+| 381         |  Qt4 |
+| 382         |  Scaleable Vector Graphics (SVG) |
+| 390         |  Windows Metafile |
+| 400         |  Quartz |
+| 410         |  Socket driver |
+| 415         |  0MQ driver |
+| 420         |  OpenGL |
 
 ==== gr.closews ====
-FIXME
+Closes the specified workstation.
 
 <code python>
 closews(workstation_id)
 </code>
 
 == Parameters ==
-  * //workstation_id// --- FIXME
+  * //workstation_id// --- A workstation identifier.
 
 ==== gr.activatews ====
-FIXME
+Activates the specified workstation.
 
 <code python>
 activatews(workstation_id)
 </code>
 
 == Parameters ==
-  * //workstation_id// --- FIXME
+  * //workstation_id// --- A workstation identifier.
 
 ==== gr.deactivatews ====
-FIXME
+Deactivates the specified workstation.
 
 <code python>
 deactivatews(workstation_id)
 </code>
 
 == Parameters ==
-  * //workstation_id// --- FIXME
+  * //workstation_id// --- A workstation identifier.
 
 ==== gr.emergencyclosegks ====
-FIXME
+Closes GKS in a rapid and orderly fashion.
 
 <code python>
 emergencyclosegks()
 </code>
-
-===== Segment Functions =====
-
-==== gr.createseg ====
-FIXME
-
-<code python>
-createseg(segment)
-</code>
-
-== Parameters ==
-  * //segment// --- FIXME
-
-==== gr.copysegws ====
-FIXME
-
-<code python>
-copysegws(segment)
-</code>
-
-== Parameters ==
-  * //segment// --- FIXME
-
-==== gr.redrawsegws ====
-FIXME
-
-<code python>
-redrawsegws()
-</code>
-
-==== gr.setsegtran ====
-FIXME
-
-<code python>
-setsegtran(segment, fx, fy, transx, transy, phi, scalex, scaley)
-</code>
-
-== Parameters ==
-  * //segment// --- FIXME
-  * //fx// --- FIXME
-  * //fy// --- FIXME
-  * //transx// --- FIXME
-  * //transy// --- FIXME
-  * //phi// --- FIXME
-  * //scalex// --- FIXME
-  * //scaley// --- FIXME
-
-==== gr.setcolormap ====
-FIXME
-
-<code python>
-setcolormap(index)
-</code>
-
-== Parameters ==
-  * //index// --- FIXME
-
-===== Miscellaneous Functions =====
-
-==== gr.colormap ====
-FIXME
-
-<code python>
-colormap()
-</code>
-
-==== gr.inqcolor ====
-FIXME
-
-<code python>
-inqcolor(color, rgb)
-</code>
-
-== Parameters ==
-  * //color// --- FIXME
-  * //rgb// --- FIXME
-
-==== gr.tick ====
-FIXME
-
-<code python>
-tick(amin, amax)
-</code>
-
-== Parameters ==
-  * //amin// --- FIXME
-  * //amax// --- FIXME
-
-==== gr.adjustrange ====
-FIXME
-
-<code python>
-adjustrange(amin, amax)
-</code>
-
-== Parameters ==
-  * //amin// --- FIXME
-  * //amax// --- FIXME
-
-==== gr.ndctowc ====
-FIXME
-
-<code python>
-ndctowc(x, y)
-</code>
-
-== Parameters ==
-  * //x// --- FIXME
-  * //y// --- FIXME
-
-==== gr.wctondc ====
-FIXME
-
-<code python>
-wctondc(x, y)
-</code>
-
-== Parameters ==
-  * //x// --- FIXME
-  * //y// --- FIXME
-
-==== gr.beginselection ====
-FIXME
-
-<code python>
-beginselection(index, type)
-</code>
-
-== Parameters ==
-  * //index// --- FIXME
-  * //type// --- FIXME
-
-==== gr.endselection ====
-FIXME
-
-<code python>
-endselection()
-</code>
-
-==== gr.moveselection ====
-FIXME
-
-<code python>
-moveselection(x, y)
-</code>
-
-== Parameters ==
-  * //x// --- FIXME
-  * //y// --- FIXME
-
-==== gr.resizeselection ====
-FIXME
-
-<code python>
-resizeselection(type, x, y)
-</code>
-
-== Parameters ==
-  * //type// --- FIXME
-  * //x// --- FIXME
-  * //y// --- FIXME
-
-==== gr.inqbbox ====
-FIXME
-
-<code python>
-inqbbox(xmin, xmax, ymin, ymax)
-</code>
-
-== Parameters ==
-  * //xmin// --- FIXME
-  * //xmax// --- FIXME
-  * //ymin// --- FIXME
-  * //ymax// --- FIXME
-
