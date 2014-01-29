@@ -98,6 +98,9 @@ int main(int argc, char **argv)
 	int zoom = argc > 3 ? atoi(argv[3]) : 100;
 	int rotation = argc > 4 ? atoi(argv[4]) : 0;
 
-	render(filename, pagenumber, zoom, rotation);
+	if (argc > 1) {
+		render(filename, pagenumber, zoom, rotation);
+		printf("%s --> out.png\n", argv[1]);
+	}
 	return 0;
 }

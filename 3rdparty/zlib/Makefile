@@ -1,5 +1,5 @@
 CC=cc
-CFLAGS=-O3 -DHAVE_HIDDEN $(ARCHS)
+CFLAGS=-O -fPIC -DHAVE_HIDDEN $(ARCHS)
 LIBS=libz.a
 AR=ar rc
 RANLIB=ranlib

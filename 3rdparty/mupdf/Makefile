@@ -118,7 +118,7 @@ libmupdf.a: $(OBJS)
 	$(AR) ts $@
 
 example: example.c libmupdf.a
-	$(CC) $? -o $@ -I. libmupdf.a ../jbig2dec/libjbig2dec.a ../openjpeg/libopenjpeg.a ../jpeg/libjpeg.a ../png/libpng.a -lfreetype -lm -lz
+	$(CC) $? -o $@ -I. libmupdf.a ../jbig2dec/libjbig2dec.a ../openjpeg/libopenjpeg.a ../jpeg/libjpeg.a ../png/libpng.a -lfreetype -lm ../zlib/libz.a
 
 distclean: clean
 
