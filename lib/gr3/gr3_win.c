@@ -39,6 +39,7 @@ int gr3_initGL_WIN_(void) {
     if (RegisterClass(&wndclass))  {
       /*fprintf(stderr,"Window Class registered successfully.\n"); */
     } else {
+      gr3_log_("failed to register a window class");
       return FALSE;
     }
     hWnd = CreateWindow ("OpenGLWindow",
@@ -55,6 +56,7 @@ int gr3_initGL_WIN_(void) {
     if (hWnd != NULL) {
       /*fprintf(stderr,"Window created successfully.\n"); */
     } else {
+      gr3_log_("failed to create a window");
       return GR3_ERROR_INIT_FAILED;
     }
     
@@ -78,6 +80,7 @@ int gr3_initGL_WIN_(void) {
       if (result) {
         /*fprintf(stderr,"Pixel Format set for Device Context successfully.\n");*/
       } else {
+        gr3_log_("failed to set a pixel format for the device context");
         return GR3_ERROR_INIT_FAILED;
       }
     }
@@ -88,12 +91,14 @@ int gr3_initGL_WIN_(void) {
       if (glrc != NULL) {
         /*fprintf(stderr,"OpenGL Rendering Context was created successfully.\n");*/
       } else {
+        gr3_log_("failed to create an OpenGL context for the device context");
         return GR3_ERROR_INIT_FAILED;
       }
       result = wglMakeCurrent(dc,glrc);
       if (result) {
         /*fprintf(stderr,"OpenGL Rendering Context made current successfully.\n");*/
       } else {
+        gr3_log_("failed to make OpenGL context current with the device context");
         return GR3_ERROR_INIT_FAILED;
       }
     }
