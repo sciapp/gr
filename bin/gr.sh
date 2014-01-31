@@ -1,6 +1,12 @@
 #!/bin/sh
-GRDIR=/usr/local/gr
-PYTHONHOME=/usr/local
+name=`readlink -f ${0}`
+GRDIR=`dirname "${name}" | sed -e 's;/bin;;'`
+if [ -f /usr/local/bin/python ]
+then
+  PYTHONHOME=/usr/local
+else
+  PYTHONHOME=/usr
+fi
 if [ `uname` = "Darwin" ]
 then
     export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${GRDIR}/lib

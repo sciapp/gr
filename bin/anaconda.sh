@@ -1,15 +1,17 @@
 #!/bin/sh
-if [ `uname` = "Darwin" ]
-then
-  export DYLD_LIBRARY_PATH=/usr/local/gr/lib
-else
-  export LD_LIBRARY_PATH=/usr/local/gr/lib
-fi
-export PYTHONPATH=/usr/local/gr/lib/python
+name=`readlink -f ${0}`
+GRDIR=`dirname "${name}" | sed -e 's;/bin;;'`
 if [ -d /opt/anaconda ]
 then
-  ANACONDAPATH=/opt/anaconda
+  PYTHONHOME=/opt/anaconda
 else
-  ANACONDAPATH=/usr/local/anaconda
+  PYTHONHOME=/usr/local/anaconda
 fi
-exec ${ANACONDAPATH}/bin/python $*
+if [ `uname` = "Darwin" ]
+then
+    export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${GRDIR}/lib
+else
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${GRDIR}/lib
+fi
+export PYTHONPATH=${PYTHONPATH}:${GRDIR}/lib/python
+exec ${PYTHONHOME}/bin/python $*
