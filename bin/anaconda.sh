@@ -1,6 +1,14 @@
 #!/bin/sh
-name=`readlink -f ${0}`
-GRDIR=`dirname "${name}" | sed -e 's;/bin;;'`
+cwd="${PWD}"
+cd "$(dirname "${0}")"
+dir=$(readlink "$(basename "${0}")")
+while [ "${dir}" ]; do
+  cd "$(dirname "${dir}")"
+  dir=$(readlink "$(basename "${0}")")
+done
+name="${PWD}/$(basename "${0}")"
+cd "${cwd}"
+GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
 if [ -d /opt/anaconda ]
 then
   PYTHONHOME=/opt/anaconda
