@@ -21,8 +21,8 @@ from distutils.util import get_platform
 from subprocess import Popen, PIPE, STDOUT
 
 
-__author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2014-02-03"
+__author__ = "Christian Felder <c.felder@fz-juelich.de>"
+__date__ = "2014-02-03"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -59,7 +59,7 @@ class build_static(Command):
 
     def initialize_options(self):
         pass
-    
+
     def finalize_options(self):
         pass
 
@@ -84,7 +84,7 @@ class build_static(Command):
             obj = compiler.compile(_libpng_src_path,
                                    extra_preargs=_png_extra_preargs)
             compiler.create_static_lib(obj, "png", output_dir=_build_3rdparty)
-        if not os.path.isfile(_libjpeg):  
+        if not os.path.isfile(_libjpeg):
             obj = compiler.compile(_libjpeg_src_path,
                                    extra_preargs=_extra_preargs)
             compiler.create_static_lib(obj, "jpeg", output_dir=_build_3rdparty)
@@ -111,12 +111,12 @@ class clean_static(Command):
 
     def initialize_options(self):
         pass
-    
+
     def finalize_options(self):
         pass
 
     def run(self):
-        print "removing '%s' (and everything under it)" %_build_3rdparty
+        print "removing '%s' (and everything under it)" % _build_3rdparty
         try:
             map(lambda p: os.remove(os.path.join(_build_3rdparty, p)),
                 os.listdir(_build_3rdparty))
@@ -163,7 +163,7 @@ class check_ext(Command):
         self.isLinuxOrDarwin = any(s in sys.platform for s in
                                    ["linux", "darwin"])
         self.isLinux = ("linux" in sys.platform)
-        self.isDarwin = (sys.platform =="darwin")
+        self.isDarwin = (sys.platform == "darwin")
         self.isWin32 = (sys.platform == "win32")
         # extensions list
         self.ext_modules = []
@@ -239,8 +239,8 @@ class check_ext(Command):
         self.platform_ldflags = []
 
     def _test_gs(self, gsinc=[], gslibs=[], gscflags=[], gsldflags=[]):
-        cflags = ['-I'+i for i in gsinc]
-        ldflags = ["-l"+l for l in gslibs]
+        cflags = ["-I" + i for i in gsinc]
+        ldflags = ["-l" + l for l in gslibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
         os.write(fd, """#include <stdio.h>
@@ -257,7 +257,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" %tmpout, tmpsrc]
+        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(gscflags)
         cmd.extend(ldflags)
@@ -270,11 +270,11 @@ int main()
         except OSError:
             pass
         return gscc.returncode == 0
-    
+
     def _test_mupdf(self, mupdfinc=[], mupdflibs=[], mupdfcflags=[],
                     mupdfldflags=[]):
-        cflags = ['-I'+i for i in mupdfinc]
-        ldflags = ["-l"+l for l in mupdflibs]
+        cflags = ["-I" + i for i in mupdfinc]
+        ldflags = ["-l" + l for l in mupdflibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
         os.write(fd, """#include <mupdf/fitz.h>
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" %tmpout, tmpsrc]
+        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(mupdfcflags)
         cmd.extend(ldflags)
@@ -323,8 +323,8 @@ int main(int argc, char **argv)
 
     def _test_mov(self, mupdfinc=[], mupdflibs=[], mupdfcflags=[],
                   mupdfldflags=[]):
-        cflags = ['-I'+i for i in mupdfinc]
-        ldflags = ["-l"+l for l in mupdflibs]
+        cflags = ["-I" + i for i in mupdfinc]
+        ldflags = ["-l" + l for l in mupdflibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
         os.write(fd, """#include <stdio.h>
@@ -343,7 +343,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" %tmpout, tmpsrc]
+        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(mupdfcflags)
         cmd.extend(ldflags)
@@ -358,8 +358,8 @@ int main()
         return gscc.returncode == 0
 
     def _test_opengl(self, glinc=[], gllibs=[], glcflags=[], glldflags=[]):
-        cflags = ['-I'+i for i in glinc]
-        ldflags = ["-l"+l for l in gllibs]
+        cflags = ["-I" + i for i in glinc]
+        ldflags = ["-l" + l for l in gllibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
         os.write(fd, """#include <stdio.h>
@@ -377,7 +377,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" %tmpout, tmpsrc]
+        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(glcflags)
         cmd.extend(ldflags)
@@ -393,9 +393,9 @@ int main()
 
     def _test_xft(self, xftinc=[], xftlib=[], xftlibs=[], xftcflags=[],
                   xftldflags=[]):
-        cflags = ['-I'+i for i in xftinc]
-        ldflags= ['-L'+ld for ld in xftlib]
-        ld = ["-l"+l for l in xftlibs]
+        cflags = ["-I" + i for i in xftinc]
+        ldflags = ["-L" + ld for ld in xftlib]
+        ld = ["-l" + l for l in xftlibs]
         ldflags.extend(ld)
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
@@ -415,7 +415,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" %tmpout, tmpsrc]
+        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(xftcflags)
         cmd.extend(ldflags)
@@ -428,11 +428,12 @@ int main()
         except OSError:
             pass
         return gscc.returncode == 0
-    
-    def _test_xt(self, xtinc=[], xtlib=[], xtlibs=[], xtcflags=[], xtldflags=[]):
-        cflags = ['-I'+i for i in xtinc]
-        ldflags= ['-L'+ld for ld in xtlib]
-        ld = ["-l"+l for l in xtlibs]
+
+    def _test_xt(self, xtinc=[], xtlib=[], xtlibs=[], xtcflags=[],
+                 xtldflags=[]):
+        cflags = ["-I" + i for i in xtinc]
+        ldflags = ["-L" + ld for ld in xtlib]
+        ld = ["-l" + l for l in xtlibs]
         ldflags.extend(ld)
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
@@ -452,7 +453,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" %tmpout, tmpsrc]
+        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(xtcflags)
         cmd.extend(ldflags)
@@ -467,8 +468,8 @@ int main()
         return gscc.returncode == 0
 
     def _test_freetype(self, ftinc=[], ftlibs=[], ftcflags=[], ftldflags=[]):
-        cflags = ['-I'+i for i in ftinc]
-        ldflags = ["-l"+l for l in ftlibs]
+        cflags = ["-I" + i for i in ftinc]
+        ldflags = ["-l" + l for l in ftlibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
         os.write(fd, """#include <stdio.h>
@@ -483,7 +484,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" %tmpout, tmpsrc]
+        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(ftcflags)
         cmd.extend(ldflags)
@@ -559,7 +560,7 @@ int main()
                 self.gslibs = ["gs"] if self.isLinux else ["gs", "Xt", "X11",
                                                            "iconv"]
                 if self.isDarwin:
-                    self.gsldflags = ["-L"+ldir for ldir in self.x11lib]
+                    self.gsldflags = ["-L" + ldir for ldir in self.x11lib]
                 self.disable_gs = not self._test_gs(self.gsinc, self.gslibs,
                                                     gsldflags=self.gsldflags)
         # -- freetype -------------------------------------
@@ -633,7 +634,7 @@ int main()
             gllibs, glldflags = [], []
             if self.isDarwin:
                 framework = ["-framework", "OpenGL", "-framework", "Cocoa"]
-                glldflags.extend(framework) 
+                glldflags.extend(framework)
             elif self.isLinux:
                 gllibs.append("GL")
             self.disable_opengl = not self._test_opengl(gllibs=gllibs,
@@ -673,7 +674,7 @@ int main()
             self.gllibs.append("opengl32")
         # -- grdir -------------------------------------
         self.grdir = os.getenv("GRDIR", ("\\\"%s\\\""
-                 % os.path.join(get_python_lib(plat_specific=True,prefix=''),
+                 % os.path.join(get_python_lib(plat_specific=True, prefix=''),
                                 "gr").replace('\\', "\\\\")))
 
     def finalize_options(self):
@@ -805,7 +806,7 @@ int main()
             print
 
             zinc = [os.path.join("3rdparty", "zlib")]
-            defines = [("HAVE_ZLIB", ), ("GRDIR", "\"%s\"" % self.grdir)]
+            defines = [("HAVE_ZLIB",), ("GRDIR", "\"%s\"" % self.grdir)]
             if self.disable_x11:
                 defines.append(("NO_X11", 1))
             if self.disable_freetype:
@@ -819,7 +820,7 @@ int main()
             lib = list(self.x11lib)
             libs = list(self.x11libs)
             ldflags = list(self.x11ldflags)
-            ldflags.extend(self.ftldflags) 
+            ldflags.extend(self.ftldflags)
             cflags = list(self.x11cflags)
             cflags.extend(self.ftcflags)
             if self.isWin32:
@@ -867,7 +868,8 @@ int main()
                 if self.isWin32:
                     libs.extend(_libs_msvc)
                     cflags.extend(_msvc_extra_compile_args)
-                gksGsExt = Extension("gr.gsplugin", _plugins_path["gsplugin.cxx"],
+                gksGsExt = Extension("gr.gsplugin",
+                                     _plugins_path["gsplugin.cxx"],
                                      define_macros=defines,
                                      include_dirs=inc,
                                      library_dirs=lib,
@@ -890,13 +892,14 @@ int main()
                 if self.isWin32:
                     libs.extend(_libs_msvc)
                     cflags.extend(_msvc_extra_compile_args)
-                gksSvgExt = Extension("gr.svgplugin", _plugins_path["svgplugin.cxx"],
-                                     define_macros=defines,
-                                     include_dirs=inc,
-                                     library_dirs=lib,
-                                     libraries=libs,
-                                     extra_link_args=ldflags,
-                                     extra_compile_args=cflags)
+                gksSvgExt = Extension("gr.svgplugin",
+                                      _plugins_path["svgplugin.cxx"],
+                                      define_macros=defines,
+                                      include_dirs=inc,
+                                      library_dirs=lib,
+                                      libraries=libs,
+                                      extra_link_args=ldflags,
+                                      extra_compile_args=cflags)
                 self.ext_modules.append(gksSvgExt)
 
             # -- fig -------------------------------------
@@ -913,13 +916,14 @@ int main()
                 if self.isWin32:
                     libs.extend(_libs_msvc)
                     cflags.extend(_msvc_extra_compile_args)
-                gksFigExt = Extension("gr.figplugin", _plugins_path["figplugin.cxx"],
-                                     define_macros=defines,
-                                     include_dirs=inc,
-                                     library_dirs=lib,
-                                     libraries=libs,
-                                     extra_link_args=ldflags,
-                                     extra_compile_args=cflags)
+                gksFigExt = Extension("gr.figplugin",
+                                      _plugins_path["figplugin.cxx"],
+                                      define_macros=defines,
+                                      include_dirs=inc,
+                                      library_dirs=lib,
+                                      libraries=libs,
+                                      extra_link_args=ldflags,
+                                      extra_compile_args=cflags)
                 self.ext_modules.append(gksFigExt)
 
             # -- wmf -------------------------------------
@@ -932,7 +936,8 @@ int main()
                 if self.isWin32:
                     libs.extend(_libs_msvc)
                     cflags.extend(_msvc_extra_compile_args)
-                gksWmfExt = Extension("gr.wmfplugin", _plugins_path["wmfplugin.cxx"],
+                gksWmfExt = Extension("gr.wmfplugin",
+                                      _plugins_path["wmfplugin.cxx"],
                                       define_macros=defines,
                                       include_dirs=inc,
                                       libraries=libs,
@@ -956,12 +961,13 @@ int main()
                     libs.extend(_libs_msvc)
 #                    ldflags.extend(_msvc_extra_link_args)   # necessary?
                     cflags.extend(_msvc_extra_compile_args)
-                gksMovExt = Extension("gr.movplugin", _plugins_path["movplugin.cxx"],
-                                       define_macros=defines,
-                                       include_dirs=inc,
-                                       libraries=libs,
-                                       extra_link_args=ldflags,
-                                       extra_compile_args=cflags)
+                gksMovExt = Extension("gr.movplugin",
+                                      _plugins_path["movplugin.cxx"],
+                                      define_macros=defines,
+                                      include_dirs=inc,
+                                      libraries=libs,
+                                      extra_link_args=ldflags,
+                                      extra_compile_args=cflags)
                 self.ext_modules.append(gksMovExt)
 
             # -- wx -------------------------------------
@@ -979,7 +985,8 @@ int main()
                     cflags.append("/DWXUSINGDLL")
                     cflags.append("/DwxMSVC_VERSION_AUTO")
                     cflags.append("/D_UNICODE")
-                gksWxExt = Extension("gr.wxplugin", _plugins_path["wxplugin.cxx"],
+                gksWxExt = Extension("gr.wxplugin",
+                                     _plugins_path["wxplugin.cxx"],
                                      define_macros=defines,
                                      include_dirs=inc,
                                      library_dirs=lib,
@@ -1004,7 +1011,8 @@ int main()
                     ldflags.append("-dll")
                     libs.extend(_libs_msvc)
                     cflags.extend(_msvc_extra_compile_args)
-                gksQtExt = Extension("gr.qtplugin", _plugins_path["qtplugin.cxx"],
+                gksQtExt = Extension("gr.qtplugin",
+                                     _plugins_path["qtplugin.cxx"],
                                      define_macros=defines,
                                      include_dirs=inc,
                                      library_dirs=lib,
@@ -1023,13 +1031,14 @@ int main()
                 if self.isWin32:
                     libs.extend(_libs_msvc)
                     cflags.extend(_msvc_extra_compile_args)
-                gksGtkExt = Extension("gr.gtkplugin", _plugins_path["gtkplugin.cxx"],
-                                       define_macros=defines,
-                                       include_dirs=inc,
-                                       extra_compile_args=cflags,
-                                       extra_link_args=ldflags)
+                gksGtkExt = Extension("gr.gtkplugin",
+                                      _plugins_path["gtkplugin.cxx"],
+                                      define_macros=defines,
+                                      include_dirs=inc,
+                                      extra_compile_args=cflags,
+                                      extra_link_args=ldflags)
                 self.ext_modules.append(gksGtkExt)
-                
+
             # -- quartz -------------------------------------
             if not self.disable_quartz:
                 inc = list(gksinc)
@@ -1037,11 +1046,12 @@ int main()
                 ldflags = ["-framework", "Foundation",
                            "-framework", "ApplicationServices"]
                 ldflags.extend(self.platform_ldflags)
-                gksQuartzExt = Extension("gr.quartzplugin", _plugins_path["quartzplugin.m"],
-                              define_macros=defines,
-                              include_dirs=inc,
-                              libraries=libs,
-                              extra_link_args=ldflags)
+                gksQuartzExt = Extension("gr.quartzplugin",
+                                         _plugins_path["quartzplugin.m"],
+                                         define_macros=defines,
+                                         include_dirs=inc,
+                                         libraries=libs,
+                                         extra_link_args=ldflags)
                 self.ext_modules.append(gksQuartzExt)
 
             # -- GR -------------------------------------
@@ -1057,7 +1067,7 @@ int main()
             if self.isLinuxOrDarwin:
                 libs = ["GKS"]
             else:
-                libs =  ["libGKS"]
+                libs = ["libGKS"]
                 lib.append(os.path.join(_build_temp, "Release", "lib", "gks"))
             libs.extend(self.x11libs)
             libs.extend(self.mupdflibs)
@@ -1076,12 +1086,12 @@ int main()
             if self.isDarwin:
                 ldflags.append("-Wl,-install_name,@rpath/libGR.so")
             grExt = Extension("gr.libGR", _gr_src_path,
-                               define_macros=defines,
-                               include_dirs=inc,
-                               library_dirs=lib,
-                               libraries=libs,
-                               extra_link_args=ldflags,
-                               extra_compile_args=cflags)
+                              define_macros=defines,
+                              include_dirs=inc,
+                              library_dirs=lib,
+                              libraries=libs,
+                              extra_link_args=ldflags,
+                              extra_compile_args=cflags)
             self.ext_modules.append(grExt)
             grinc = inc
             grlib = lib
@@ -1110,8 +1120,10 @@ int main()
                     ldflags.append("-Wl,-rpath,$ORIGIN/../gr")
                 elif self.isWin32:
                     inc.append("3rdparty")
-                    lib.append(os.path.join(_build_temp, "Release", "lib", "gks"))
-                    lib.append(os.path.join(_build_temp, "Release", "lib", "gr"))
+                    lib.append(os.path.join(_build_temp, "Release", "lib",
+                                            "gks"))
+                    lib.append(os.path.join(_build_temp, "Release", "lib",
+                                            "gr"))
                     libs.append("libGR")
                     libs.extend(_libs_msvc)
                     cflags.extend(_msvc_extra_compile_args)
@@ -1125,8 +1137,8 @@ int main()
                                    extra_compile_args=cflags)
                 self.ext_modules.append(gr3Ext)
         else:
-            print >>sys.stderr, ("Platform \"%s\" is not supported."
-                                 % sys.platform)
+            print >> sys.stderr, ("Platform \"%s\" is not supported."
+                                  % sys.platform)
             sys.exit(-3)
 
 
@@ -1159,7 +1171,7 @@ class build_ext(_build_ext, check_ext, build_static):
         check_ext.initialize_options(self)
         build_static.initialize_options(self)
         _build_ext.initialize_options(self)
-        
+
     def finalize_options(self):
         check_ext.finalize_options(self)
         build_static.initialize_options(self)
@@ -1195,10 +1207,10 @@ def get_python_lib(*args, **kwargs):
                                                     "site-packages")
 
 # unique platform id used by distutils
-_uPlatformId = "%s-%d.%d" %(get_platform(), sys.version_info[0],
-                            sys.version_info[1])
+_uPlatformId = "%s-%d.%d" % (get_platform(), sys.version_info[0],
+                             sys.version_info[1])
 _build_lib = os.path.join("build", "lib." + _uPlatformId)
-_build_lib_grpkg = os.path.join(_build_lib, "gr") 
+_build_lib_grpkg = os.path.join(_build_lib, "gr")
 _build_3rdparty = os.path.join("build", "3rdparty." + _uPlatformId)
 _build_temp = os.path.join("build", "temp." + _uPlatformId)
 
@@ -1216,7 +1228,7 @@ if sys.platform == "win32":
     _libpng = os.path.join(_build_3rdparty, "png.lib")
     _libjpeg = os.path.join(_build_3rdparty, "jpeg.lib")
     _libz = os.path.join(_build_3rdparty, "z.lib")
-    
+
     _libs_msvc = ["msvcrt", "oldnames", "kernel32", "wsock32", "advapi32",
                   "user32", "gdi32", "comdlg32", "winspool"]
     # w32ERR: __imp_ -> fixed by linking against oldnames.lib
@@ -1226,7 +1238,7 @@ else:
     _libz = os.path.join(_build_3rdparty, "libz.a")
     _libpng = os.path.join(_build_3rdparty, "libpng.a")
     _libjpeg = os.path.join(_build_3rdparty, "libjpeg.a")
-    
+
     _libs_msvc = []
     _msvc_extra_compile_args = []
     _msvc_extra_link_args = []
@@ -1245,7 +1257,7 @@ _libz_src = ["adler32.c", "compress.c", "crc32.c", "deflate.c", "gzclose.c",
              "gzlib.c", "gzread.c", "gzwrite.c", "infback.c", "inffast.c",
              "inflate.c", "inftrees.c", "trees.c", "uncompr.c", "zutil.c"]
 
-_libpng_src = ["png.c", "pngerror.c", "pngget.c", "pngmem.c", "pngpread.c", 
+_libpng_src = ["png.c", "pngerror.c", "pngget.c", "pngmem.c", "pngpread.c",
                "pngread.c", "pngrio.c", "pngrtran.c", "pngrutil.c", "pngset.c",
                "pngtrans.c", "pngwio.c", "pngwrite.c", "pngwtran.c",
                "pngwutil.c"]
@@ -1290,7 +1302,7 @@ _libjpeg_src_path = map(lambda p: os.path.join("3rdparty", "jpeg", p),
                        _libjpeg_src)
 _gr_src_path = map(lambda p: os.path.join("lib", "gr", p), _gr_src)
 _gr3_src_path = map(lambda p: os.path.join("lib", "gr3", p), _gr3_src)
-    
+
 _plugins_path = {}
 for plugin_src in _gks_plugins:
     _plugins_path[plugin_src] = list(_gks_plugin_src_path)
