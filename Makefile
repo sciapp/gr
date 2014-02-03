@@ -42,7 +42,7 @@ endif
 osxpkg:
 	mkdir -p tmp/bin tmp/gr
 	rsync -a /usr/local/gr/ tmp/gr/
-	ln -s ../gr/bin/gr.sh tmp/bin/gr
+	ln -s ../gr/bin/gr tmp/bin/gr
 	ln -s ../gr/Applications/glgr.app/Contents/MacOS/glgr tmp/bin/glgr
 	ln -s ../gr/Applications/gksqt.app/Contents/MacOS/gksqt tmp/bin/gksqt
 	sudo chown -R -h root:wheel tmp/
