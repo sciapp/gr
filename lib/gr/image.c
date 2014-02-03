@@ -115,15 +115,21 @@ int read_png_image(char *path, int *width, int *height, int **data)
 		  if (info_ptr->color_type == PNG_COLOR_TYPE_PALETTE)
 		    png_set_palette_to_rgb(png_ptr);
 
-		  channels = info_ptr->color_type == PNG_COLOR_TYPE_RGBA ?
-			     4 : 3;
+		  if (info_ptr->color_type == PNG_COLOR_TYPE_GRAY)
+		    channels = 1;
+		  else if (info_ptr->color_type == PNG_COLOR_TYPE_RGBA)
+		    channels = 4;
+		  else
+		    channels = 3;
+
 		  if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
 		    {
 		      png_set_tRNS_to_alpha(png_ptr);
 		      channels += 1;
 		    }
 
-		  if (info_ptr->color_type == PNG_COLOR_TYPE_PALETTE ||
+		  if (info_ptr->color_type == PNG_COLOR_TYPE_GRAY ||
+		      info_ptr->color_type == PNG_COLOR_TYPE_PALETTE ||
 		      info_ptr->color_type == PNG_COLOR_TYPE_RGB ||
 		      info_ptr->color_type == PNG_COLOR_TYPE_RGBA)
 		    {
@@ -150,9 +156,14 @@ int read_png_image(char *path, int *width, int *height, int **data)
 			  for (x = 0; x < *width; x++)
 			    {
 			      png_byte *ptr = &(row[x * channels]);
-			      r = ptr[0];
-			      g = ptr[1];
-			      b = ptr[2];
+			      if (channels == 1)
+				r = g = b = ptr[0];
+			      else
+				{
+				  r = ptr[0];
+				  g = ptr[1];
+				  b = ptr[2];
+				}
 			      if (channels > 3)
 				{
 				  a = ptr[3];
