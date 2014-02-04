@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import with_statement
+from __future__ import with_statement, print_function
 
 import sys
 import os
@@ -116,7 +116,7 @@ class clean_static(Command):
         pass
 
     def run(self):
-        print "removing '%s' (and everything under it)" % _build_3rdparty
+        print("removing '", _build_3rdparty, "' (and everything under it)")
         try:
             map(lambda p: os.remove(os.path.join(_build_3rdparty, p)),
                 os.listdir(_build_3rdparty))
@@ -740,70 +740,70 @@ int main()
 
     def run(self):
         if self.isLinuxOrDarwin or self.isWin32:
-            print " isLinuxOrDarwin: %s" % self.isLinuxOrDarwin
-            print "         isLinux: %s" % self.isLinux
-            print "        isDarwin: %s" % self.isDarwin
-            print "         isWin32: %s" % self.isWin32
-            print
-            print "           x11lib: %s" % self.x11lib
-            print "           x11inc: %s" % self.x11inc
-            print "          x11libs: %s" % self.x11libs
-            print "       x11ldflags: %s" % self.x11ldflags
-            print "        x11cflags: %s" % self.x11cflags
-            print
-            print "        wxconfig: %s" % self.wxconfig
-            print "           wxdir: %s" % self.wxdir
-            print "           wxlib: %s" % self.wxlib
-            print "           wxinc: %s" % self.wxinc
-            print "          wxlibs: %s" % self.wxlibs
-            print "       wxldflags: %s" % self.wxldflags
-            print "           wxcxx: %s" % self.wxcxx
-            print
-            print "      gtkldflags: %s" % self.gtkldflags
-            print "       gtkcflags: %s" % self.gtkcflags
-            print
-            print "           qmake: %s" % self.qmake
-            print "           qtdir: %s" % self.qtdir
-            print "           qtinc: %s" % self.qtinc
-            print "           qtlib: %s" % self.qtlib
-            print "          qtlibs: %s" % self.qtlibs
-            print "       qtldflags: %s" % self.qtldflags
-            print "      Qt version: %s" % self.qtversion
-            print
-            print "           gsdir: %s" % self.gsdir
-            print "           gsinc: %s" % self.gsinc
-            print "           gslib: %s" % self.gslib
-            print "          gslibs: %s" % self.gslibs
-            print "       gsldflags: %s" % self.gsldflags
-            print
-            print "           grdir: %s" % self.grdir
-            print
-            print " freetype-config: %s" % self.ftconfig
-            print "       ftldflags: %s" % self.ftldflags
-            print "        ftcflags: %s" % self.ftcflags
-            print
-            print "        mupdfinc: %s" % self.mupdfinc
-            print "       mupdflibs: %s" % self.mupdflibs
-            print
-            print "      opengllibs: %s" % self.gllibs
-            print "    opengldflags: %s" % self.glldflags
-            print
-            print "     disable-x11: %s" % self.disable_x11
-            print "      disable-xt: %s" % self.disable_xt
-            print "     disable-xft: %s" % self.disable_xft
-            print "      disable-wx: %s" % self.disable_wx
-            print "      disable-qt: %s" % self.disable_qt
-            print "     disable-gtk: %s" % self.disable_gtk
-            print "      disable-gs: %s" % self.disable_gs
-            print "     disable-fig: %s" % self.disable_fig
-            print "     disable-svg: %s" % self.disable_svg
-            print "     disable-wmf: %s" % self.disable_wmf
-            print "     disable-mov: %s" % self.disable_mov
-            print "  disable-opengl: %s" % self.disable_opengl
-            print "  disable-quartz: %s" % self.disable_quartz
-            print "disable-freetype: %s" % self.disable_freetype
-            print "   disable-mupdf: %s" % self.disable_mupdf
-            print
+            print(" isLinuxOrDarwin: ", self.isLinuxOrDarwin)
+            print("         isLinux: ", self.isLinux)
+            print("        isDarwin: ", self.isDarwin)
+            print("         isWin32: ", self.isWin32)
+            print("")
+            print("          x11lib: ", self.x11lib)
+            print("          x11inc: ", self.x11inc)
+            print("         x11libs: ", self.x11libs)
+            print("      x11ldflags: ", self.x11ldflags)
+            print("       x11cflags: ", self.x11cflags)
+            print("")
+            print("        wxconfig: ", self.wxconfig)
+            print("           wxdir: ", self.wxdir)
+            print("           wxlib: ", self.wxlib)
+            print("           wxinc: ", self.wxinc)
+            print("          wxlibs: ", self.wxlibs)
+            print("       wxldflags: ", self.wxldflags)
+            print("           wxcxx: ", self.wxcxx)
+            print("")
+            print("      gtkldflags: ", self.gtkldflags)
+            print("       gtkcflags: ", self.gtkcflags)
+            print("")
+            print("           qmake: ", self.qmake)
+            print("           qtdir: ", self.qtdir)
+            print("           qtinc: ", self.qtinc)
+            print("           qtlib: ", self.qtlib)
+            print("          qtlibs: ", self.qtlibs)
+            print("       qtldflags: ", self.qtldflags)
+            print("      Qt version: ", self.qtversion)
+            print("")
+            print("           gsdir: ", self.gsdir)
+            print("           gsinc: ", self.gsinc)
+            print("           gslib: ", self.gslib)
+            print("          gslibs: ", self.gslibs)
+            print("       gsldflags: ", self.gsldflags)
+            print("")
+            print("           grdir: ", self.grdir)
+            print("")
+            print(" freetype-config: ", self.ftconfig)
+            print("       ftldflags: ", self.ftldflags)
+            print("        ftcflags: ", self.ftcflags)
+            print("")
+            print("        mupdfinc: ", self.mupdfinc)
+            print("       mupdflibs: ", self.mupdflibs)
+            print("")
+            print("      opengllibs: ", self.gllibs)
+            print("    opengldflags: ", self.glldflags)
+            print("")
+            print("     disable-x11: ", self.disable_x11)
+            print("      disable-xt: ", self.disable_xt)
+            print("     disable-xft: ", self.disable_xft)
+            print("      disable-wx: ", self.disable_wx)
+            print("      disable-qt: ", self.disable_qt)
+            print("     disable-gtk: ", self.disable_gtk)
+            print("      disable-gs: ", self.disable_gs)
+            print("     disable-fig: ", self.disable_fig)
+            print("     disable-svg: ", self.disable_svg)
+            print("     disable-wmf: ", self.disable_wmf)
+            print("     disable-mov: ", self.disable_mov)
+            print("  disable-opengl: ", self.disable_opengl)
+            print("  disable-quartz: ", self.disable_quartz)
+            print("disable-freetype: ", self.disable_freetype)
+            print("   disable-mupdf: ", self.disable_mupdf)
+            print("")
 
             zinc = [os.path.join("3rdparty", "zlib")]
             defines = [("HAVE_ZLIB",), ("GRDIR", "\"%s\"" % self.grdir)]
@@ -1137,8 +1137,8 @@ int main()
                                    extra_compile_args=cflags)
                 self.ext_modules.append(gr3Ext)
         else:
-            print >> sys.stderr, ("Platform \"%s\" is not supported."
-                                  % sys.platform)
+            print("Platform \"", sys.platform, "\" is not supported.",
+                  file=sys.stderr)
             sys.exit(-3)
 
 
