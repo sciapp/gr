@@ -528,9 +528,13 @@ int main()
             self.qtlibs = ["QtGui", "QtCore"]
         # -- x11 -------------------------------------
         if self.isLinux:
-            x11ldflags = shlex.split(Popen(["pkg-config", "x11", "--libs"],
-                                          stdout=PIPE,
-                                      stderr=PIPE).communicate()[0].rstrip())
+            x11ldflags = None
+            try:
+                x11ldflags = shlex.split(Popen(["pkg-config", "x11", "--libs"],
+                                               stdout=PIPE,
+                                       stderr=PIPE).communicate()[0].rstrip())
+            except OSError:
+                pass
             if x11ldflags:
                 self.x11ldflags = x11ldflags
                 self.x11cflags = shlex.split(Popen(["pkg-config", "x11",
@@ -597,9 +601,13 @@ int main()
                                                 self.x11ldflags)
         # -- gtk -------------------------------------
         if not self.disable_gtk:
-            gtkcflags = shlex.split(Popen(["pkg-config", self.gtk_package,
-                                           "--cflags"], stdout=PIPE,
+            gtkcflags = None
+            try:
+                gtkcflags = shlex.split(Popen(["pkg-config", self.gtk_package,
+                                               "--cflags"], stdout=PIPE,
                                       stderr=PIPE).communicate()[0].rstrip())
+            except OSError:
+                pass
             if gtkcflags:
                 self.gtkcflags = gtkcflags
                 self.gtkldflags = shlex.split(Popen(["pkg-config",
@@ -1282,7 +1290,6 @@ _gr3_src = ["gr3.c", "gr3_convenience.c", "gr3_html.c", "gr3_povray.c",
             "gr3_png.c", "gr3_jpeg.c", "gr3_gr.c", "gr3_mc.c"]
 
 if sys.platform == "darwin":
-    os.environ["MACOSX_DEPLOYMENT_TARGET"] = "10.6"
     os.environ["ARCHFLAGS"] = os.getenv("ARCHFLAGS", "-arch x86_64")
     os.environ["LDSHARED"] = get_config_var("LDSHARED").replace("-bundle",
                                                                 "-dynamiclib")
