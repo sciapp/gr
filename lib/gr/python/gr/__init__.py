@@ -24,8 +24,15 @@ def floatarray(n, a):
         return _strongref[_i].ctypes.data_as(POINTER(c_double))
     else:
         _a = (c_double * n)()
+        status = 0
         for i in range(n):
-            _a[i] = a[i]
+            try:
+                _a[i] = a[i]
+            except:
+                if not status:
+                    status = 1
+                    print('Float array lookup failure')
+                _a[i] = 0
         return _a
 
 
@@ -37,8 +44,15 @@ def intarray(n, a):
         return _strongref[_i].ctypes.data_as(POINTER(c_int))
     else:
         _a = (c_int * n)()
+        status = 0
         for i in range(n):
-            _a[i] = a[i]
+            try:
+                _a[i] = a[i]
+            except:
+                if not status:
+                    status = 1
+                    print('Integer array lookup failure')
+                _a[i] = 0
         return _a
 
 
@@ -1809,7 +1823,10 @@ def readimage(path):
     _data = POINTER(c_int)()
     __gr.gr_readimage(char(path), byref(width), byref(height), byref(_data))
     _type = (c_int * (width.value * height.value))
-    data = _type.from_address(addressof(_data.contents))
+    try:
+        data = _type.from_address(addressof(_data.contents))
+    except:
+        data = []
     return [width.value, height.value, data]
 
 

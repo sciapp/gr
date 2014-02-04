@@ -2,7 +2,6 @@
 
 import wx
 import os
-import Image
 import gr
 
 # get_address = lambda obj_str: obj_str[obj_str.find('0x'): obj_str.find('>', obj_str.find('0x'))]
