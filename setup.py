@@ -200,6 +200,7 @@ class check_ext(Command):
         self.gsdir = os.getenv("GSDIR")
         self.gsinc = []
         self.gslib = []
+        self.gslibs = []
         self.gsldflags = []
         # -- wx -------------------------------------
         self.wxconfig = os.getenv("WX_CONFIG")
