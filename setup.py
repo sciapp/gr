@@ -9,6 +9,7 @@ import shlex
 import re
 import tempfile
 import distutils.command
+import distutils.command.install
 from distutils.core import Command
 from distutils.command.build_ext import build_ext as _build_ext
 from distutils.command.build import build as _build
@@ -22,7 +23,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-03"
+__date__ = "2014-02-05"
 __version__ = "0.3.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -1214,6 +1215,14 @@ def get_python_lib(*args, **kwargs):
     """
     return _get_python_lib(*args, **kwargs).replace("dist-packages",
                                                     "site-packages")
+
+# Do not return dist-packages on Debian based systems, e.g. Ubuntu
+# (default in superfunction) because just modules from the
+# Debian package manager should go there.
+INSTALL_SCHEMES = distutils.command.install.INSTALL_SCHEMES
+for k, d in INSTALL_SCHEMES.items():
+    for kk, v in d.items():
+        INSTALL_SCHEMES[k][kk] = v.replace("dist-packages", "site-packages")
 
 # unique platform id used by distutils
 _uPlatformId = "%s-%d.%d" % (get_platform(), sys.version_info[0],
