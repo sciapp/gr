@@ -17,7 +17,7 @@ from distutils.command.clean import clean as _clean
 from distutils.core import setup, Extension
 from distutils.ccompiler import new_compiler
 from distutils.sysconfig import get_config_var
-from distutils.sysconfig import get_python_lib as _get_python_lib
+from distutils.sysconfig import get_python_lib
 from distutils.util import get_platform
 from subprocess import Popen, PIPE, STDOUT
 
@@ -1194,35 +1194,21 @@ class build_ext(_build_ext, check_ext, build_static):
         _build_ext.run(self)
 
 
-def get_python_lib(*args, **kwargs):
-    """Return the directory containing the Python library (standard or
-    site additions).
-
-    If 'plat_specific' is true, return the directory containing
-    platform-specific modules, i.e. any module from a non-pure-Python
-    module distribution; otherwise, return the platform-shared library
-    directory.  If 'standard_lib' is true, return the directory
-    containing standard Python library modules; otherwise, return the
-    directory for site-specific modules.
-
-    If 'prefix' is supplied, use it instead of sys.prefix or
-    sys.exec_prefix -- i.e., ignore 'plat_specific'.
-    
-    Do not return dist-packages on Debian based systems, e.g. Ubuntu
-    (default in superfunction) because just modules from the
-    Debian package manager should go there.
-    
-    """
-    return _get_python_lib(*args, **kwargs).replace("dist-packages",
-                                                    "site-packages")
-
-# Do not return dist-packages on Debian based systems, e.g. Ubuntu
-# (default in superfunction) because just modules from the
-# Debian package manager should go there.
-INSTALL_SCHEMES = distutils.command.install.INSTALL_SCHEMES
-for k, d in INSTALL_SCHEMES.items():
-    for kk, v in d.items():
-        INSTALL_SCHEMES[k][kk] = v.replace("dist-packages", "site-packages")
+# check wether this is a Debian based system, e.g. Ubuntu
+if "deb_system" in distutils.command.install.INSTALL_SCHEMES:
+    # Overwrite all site-packages paths with dist-packages in INSTALL_SCHEMES
+    # on Debian based systems, e.g. Ubuntu, because site-packages is not in
+    # sys.path (PYTHONPATH) per default.
+    # Without this patch installation with prefix shows following
+    # unexpected behavior:
+    # - packages will be installed into dist-packages
+    # - data_files will be installed into site-packages (!)
+    #   instead of dist-packages (as expected).
+    # Installation without prefix works as expected.
+    INSTALL_SCHEMES = distutils.command.install.INSTALL_SCHEMES
+    for k, d in INSTALL_SCHEMES.items():
+        for kk, v in d.items():
+            INSTALL_SCHEMES[k][kk] = v.replace("site-packages", "dist-packages")
 
 # unique platform id used by distutils
 _uPlatformId = "%s-%d.%d" % (get_platform(), sys.version_info[0],
