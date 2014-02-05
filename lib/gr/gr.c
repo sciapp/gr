@@ -2215,28 +2215,28 @@ int iround(double x)
 }
 
 static
-int gauss(double x)
+long gauss(double x)
 {
-  if (x >= 0 || x == (int) x)
-    return ((int) x);
+  if (x >= 0 || x == (long) x)
+    return ((long) x);
   else
-    return ((int) x - 1);
+    return ((long) x - 1);
 }
 
 static
-int ipred(double x)
+long ipred(double x)
 {
-  if (x == (int) x)
-    return ((int) x - 1);
+  if (x == (long) x)
+    return ((long) x - 1);
   else
     return (gauss(x));
 }
 
 static
-int isucc(double x)
+long isucc(double x)
 {
-  if (x == (int) x)
-    return ((int) x);
+  if (x == (long) x)
+    return ((long) x);
   else
     return (gauss(x) + 1);
 }
@@ -2394,7 +2394,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
   double x_min, x_max, y_min, y_max;
 
   double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
-  int decade, exponent, i;
+  int decade, exponent;
+  long i;
   char string[256];
 
   if (x_tick < 0 || y_tick < 0)
@@ -3217,7 +3218,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
   double tick, minor_tick, major_tick, x_label, y_label;
   double x0, y0, z0, xi, yi, zi;
-  int i, decade, exponent;
+  int decade, exponent;
+  long i;
   char string[256];
 
   if (x_tick < 0 || y_tick < 0 || z_tick < 0)
