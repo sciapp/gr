@@ -170,10 +170,13 @@ class MainWindow(QtGui.QMainWindow):
     def _xtickCallBack(self, x, y, svalue):
         gr.setcharup(1., 1.)
         gr.settextalign(gr.TEXT_HALIGN_LEFT, gr.TEXT_VALIGN_TOP)
-        gr.text(x, y, "%s (%s)"
-                % (time.strftime("%H:%M:%S",
-                                 time.localtime(self._startupTime
-                                                + float(svalue))), svalue))
+        try:
+            gr.text(x, y, "%s (%s)"
+                    % (time.strftime("%H:%M:%S",
+                                     time.localtime(self._startupTime
+                                                    + float(svalue))), svalue))
+        except ValueError:
+            gr.text(x, y, svalue)
         gr.setcharup(0., 1.)
 
     def _errorsClicked(self, state):
