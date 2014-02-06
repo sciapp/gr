@@ -15,7 +15,6 @@ Darwin: all
 all:
 	@for d in $(DIRS); do make -C $$d GRDIR=$(GRDIR); done
 ifeq ($(UNAME), Darwin)
-#	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj ARCHS=i386
 	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj
 endif
 
@@ -38,6 +37,9 @@ ifeq ($(UNAME), Darwin)
 endif
 	cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
 	rm -f gr.pkg
+
+pypi:
+	python setup.py sdist upload
 
 osxpkg:
 	mkdir -p tmp/bin tmp/gr
