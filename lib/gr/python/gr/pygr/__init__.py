@@ -614,9 +614,7 @@ class Plot(GRViewPort, GRMeta):
             win[1] += dx_2
             win[2] -= dy_2
             win[3] += dy_2
-            if DomainChecker.isInWindowDomain(*window):
-                axes.setWindow(*win)
-            else:
+            if not axes.setWindow(*win):
                 axes.setWindow(*window)
                 self.reset()
                 break
@@ -995,7 +993,13 @@ class PlotAxes(GRViewPort, GRMeta):
         return self._grid
 
     def setWindow(self, xmin, xmax, ymin, ymax):
-        self._window = [xmin, xmax, ymin, ymax]
+        res = True
+        if DomainChecker.isInWindowDomain(xmin, xmax, ymin, ymax):
+            self._window = [xmin, xmax, ymin, ymax]
+        else:
+            res = False
+            _log.debug("xmin, xmax, ymin, ymax not in window domain.")
+        return res
 
     def getWindow(self):
         if self._window:
