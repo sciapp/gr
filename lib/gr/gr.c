@@ -2391,7 +2391,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
   double chux, chuy;
 
   double clrt[4], wn[4], vp[4];
-  double x_min, x_max, y_min, y_max;
+  double x_min, x_max, y_min, y_max, feps;
 
   double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
   int decade, exponent;
@@ -2441,6 +2441,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
   if (y_tick != 0)
     {
+      feps = FEPS * (y_max - y_min);
       tick = tick_size * (x_max - x_min) / (vp[1] - vp[0]);
 
       minor_tick = x_log(x_lin(x_org) + tick);
@@ -2476,7 +2477,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           start_pline(x_org, y_min);
 
-          while (yi <= y_max * (1.0 + FEPS))
+          while (yi <= y_max + feps)
             {
               pline(x_org, yi);
 
@@ -2520,7 +2521,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               yi = y0 + i * y0;
             }
 
-          if (yi > y_max * (1.0 + FEPS))
+          if (yi > y_max + feps)
             pline(x_org, y_max);
 
           end_pline();
@@ -2534,7 +2535,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           start_pline(x_org, y_min);
 
-          while (yi <= y_max * (1.0 + FEPS))
+          while (yi <= y_max + feps)
             {
               pline(x_org, yi);
 
@@ -2562,7 +2563,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               yi = i * y_tick;
             }
 
-          if (yi > y_max * (1.0 + FEPS))
+          if (yi > y_max + feps)
             pline(x_org, y_max);
 
           end_pline();
@@ -2571,6 +2572,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
   if (x_tick != 0)
     {
+      feps = FEPS * (x_max - x_min);
       tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
       minor_tick = y_log(y_lin(y_org) + tick);
@@ -2607,7 +2609,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           start_pline(x_min, y_org);
 
-          while (xi <= x_max * (1.0 + FEPS))
+          while (xi <= x_max + feps)
             {
               pline(xi, y_org);
 
@@ -2651,7 +2653,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               xi = x0 + i * x0;
             }
 
-          if (xi > x_max * (1.0 + FEPS))
+          if (xi > x_max + feps)
             pline(x_max, y_org);
 
           end_pline();
@@ -2665,7 +2667,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           start_pline(x_min, y_org);
 
-          while (xi <= x_max * (1.0 + FEPS))
+          while (xi <= x_max + feps)
             {
               pline(xi, y_org);
 
@@ -2693,7 +2695,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               xi = i * x_tick;
             }
 
-          if (xi > x_max * (1.0 + FEPS))
+          if (xi > x_max + feps)
             pline(x_max, y_org);
 
           end_pline();
