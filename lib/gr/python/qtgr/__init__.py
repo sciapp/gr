@@ -23,9 +23,9 @@ from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent, \
 QtCore.Signal = QtCore.pyqtSignal
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-25"
+__date__ = "2014-02-07"
 __version__ = "0.3.0"
-__copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
+__copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
 Visit https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr for the latest
@@ -215,9 +215,6 @@ class InteractiveGRWidget(GRWidget):
         self._pickEvent = None
         self._lstPlot = []
 
-    def update(self):
-        super(InteractiveGRWidget, self).update()
-
     def draw(self, clear=False, update=True):
         if clear:
             gr.clearws()
@@ -239,7 +236,7 @@ class InteractiveGRWidget(GRWidget):
 
         if self._pickEvent:
             event = self._pickEvent
-            wcPoint = event.getWC()
+            wcPoint = event.getWC(event.viewport)
             window = gr.inqwindow()
             gr.setwindow(*event.getWindow())
             gr.setmarkertype(gr.MARKERTYPE_PLUS)
@@ -295,6 +292,7 @@ class InteractiveGRWidget(GRWidget):
                                                              self.dheight,
                                                              dcPoint.x,
                                                              dcPoint.y,
+                                                             plot.viewport,
                                                              coord.getWindow()))
 
     def _select(self, p0, p1):

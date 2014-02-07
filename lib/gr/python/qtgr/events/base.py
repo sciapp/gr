@@ -10,9 +10,9 @@ import qtgr
 from gr.pygr import CoordConverter
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-25"
+__date__ = "2014-02-07"
 __version__ = "0.3.0"
-__copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
+__copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
 Visit https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr for the latest
@@ -58,8 +58,8 @@ class MouseLocationEventMeta(EventMeta):
     def getWindow(self):
         return self._coords.getWindow()
 
-    def getWC(self):
-        return self._coords.getWC()
+    def getWC(self, viewport):
+        return self._coords.getWC(viewport)
 
     def getNDC(self):
         return self._coords.getNDC()

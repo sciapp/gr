@@ -9,11 +9,12 @@ from PyQt4 import QtCore
 import gr
 import qtgr
 from qtgr.events.base import EventMeta, MouseLocationEventMeta
+from gr.pygr.base import GRViewPort
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2013-11-25"
+__date__ = "2014-02-07"
 __version__ = "0.3.0"
-__copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
+__copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
 Visit https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr for the latest
@@ -93,13 +94,14 @@ class WheelEvent(MouseLocationEventMeta):
     def getButtons(self):
         return self._buttons
 
-class PickEvent(MouseLocationEventMeta):
+class PickEvent(MouseLocationEventMeta, GRViewPort):
 
     PICK_MOVE = QtCore.QEvent.registerEventType()
     PICK_PRESS = QtCore.QEvent.registerEventType()
 
-    def __init__(self, type, width, height, x, y, window=None):
+    def __init__(self, type, width, height, x, y, viewport, window=None):
         super(PickEvent, self).__init__(type, width, height, x, y, window)
+        GRViewPort.__init__(self, viewport)
 
 class ROIEvent(MouseEvent):
 
@@ -131,15 +133,12 @@ class EventFilter(QtCore.QObject):
 
     def __init__(self, parent, manager):
         super(EventFilter, self).__init__(parent)
-        self._widget = parent
         self._manager = manager
         self._last_btn_mask = None
 
     def handleEvent(self, event):
         if self._manager.hasHandler(event.type()):
             for handle in self._manager.getHandler(event.type()):
-                # update widget to get current state: window, viewport...
-                self._widget.update()
                 handle(event)
 
     def wheelEvent(self, type, target, event):

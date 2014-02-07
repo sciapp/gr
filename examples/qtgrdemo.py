@@ -17,9 +17,9 @@ from qtgr.events import GUIConnector, MouseEvent, PickEvent, LegendEvent
 from gr.pygr import Plot, PlotAxes, PlotCurve, ErrorBar
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-01-15"
+__date__ = "2014-02-07"
 __version__ = "0.3.0"
-__copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
+__copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
 Visit https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr for the latest
@@ -140,14 +140,14 @@ class MainWindow(QtGui.QMainWindow):
     def mouseMoveGr(self, event):
         dc = event.getDC()
         ndc = event.getNDC()
-        wc = event.getWC()
+        wc = event.getWC(self._plot.viewport)
         self._statusbar.showMessage("DC: (%4d, %4d)\t " % (dc.x, dc.y) +
                                     "NDC: (%3.2f, %3.2f)\t " % (ndc.x, ndc.y) +
                                     "WC: (%3.2f, %3.2f)" % (wc.x, wc.y))
         self._lblOverLegend.setText("")
 
     def pointPickGr(self, event):
-        p = event.getWC()
+        p = event.getWC(event.viewport)
 
         if p.x < 0:
             self._lblPickX.setText("%4.2f" % p.x)

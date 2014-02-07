@@ -15,9 +15,9 @@ from gr.pygr.helper import ColorIndexGenerator, DomainChecker
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
-__date__ = "2013-11-25"
+__date__ = "2014-02-07"
 __version__ = "0.3.0"
-__copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
+__copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
 Visit https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr for the latest
@@ -251,18 +251,20 @@ class CoordConverter(object):
         return Point(float(self._p.x) / self._width * self._sizex,
                      (1. - float(self._p.y) / self._height) * self._sizey)
 
-    def getWC(self):
+    def getWC(self, viewport):
         self._checkRaiseXY()
         ndcPoint = self.getNDC()
         ndcPoint = Point(ndcPoint.x, ndcPoint.y)
         if self.getWindow():
-            window = gr.inqwindow()
-            gr.setwindow(*self.getWindow())
-            tWC = gr.ndctowc(ndcPoint.x, ndcPoint.y) # wc tuple
-            gr.setwindow(*window)
+            xmin, xmax, ymin, ymax = self.getWindow()
         else:
-            tWC = gr.ndctowc(ndcPoint.x, ndcPoint.y) # wc tuple
-        return Point(tWC[0], tWC[1])
+            xmin, xmax, ymin, ymax = gr.inqwindow()
+        vp = viewport
+        wcY = (ymin + (ndcPoint.y / self._sizey - vp[2])
+               * (ymax - ymin) / (vp[3] - vp[2]))
+        wcX = (xmin + (ndcPoint.x / self._sizex - vp[0])
+               * (xmax - xmin) / (vp[1] - vp[0]))
+        return Point(wcX, wcY)
 
 class ErrorBar(GRDrawAttributes, GRMeta):
 
@@ -545,7 +547,7 @@ class Plot(GRViewPort, GRMeta):
             for axes in self._lstAxes:
                 gr.setwindow(*axes.getWindow())
                 coord.setNDC(p0.x, p0.y)
-                wcPick = coord.getWC()
+                wcPick = coord.getWC(self.viewport)
                 curves = filter(lambda c: c.visible, axes.getCurves())
                 for curve in curves:
                     for idx, x in enumerate(curve.x):
@@ -574,8 +576,8 @@ class Plot(GRViewPort, GRMeta):
         for axes in self._lstAxes:
             win = axes.getWindow()
             gr.setwindow(*win)
-            p0World = coord.setNDC(p0.x, p0.y).getWC()
-            p1World = coord.setNDC(p1.x, p1.y).getWC()
+            p0World = coord.setNDC(p0.x, p0.y).getWC(self.viewport)
+            p1World = coord.setNDC(p1.x, p1.y).getWC(self.viewport)
             xmin = min(p0World.x, p1World.x)
             xmax = max(p0World.x, p1World.x)
             ymin = min(p0World.y, p1World.y)
@@ -593,7 +595,7 @@ class Plot(GRViewPort, GRMeta):
             coord.setWC(0, 0)
             ndcOrigin = coord.getNDC()
             coord.setNDC(ndcOrigin.x + dp.x, ndcOrigin.y + dp.y)
-            dpWorld = coord.getWC()
+            dpWorld = coord.getWC(self.viewport)
             win[0] -= dpWorld.x
             win[1] -= dpWorld.x
             win[2] -= dpWorld.y
