@@ -844,6 +844,7 @@ int main()
             if not self.disable_freetype:
                 libs.append("fontconfig")
                 libs.append("Xft")
+            if not self.disable_freetype or not self.disable_xt:
                 libs.append("Xt")
             gksExt = Extension("gr.libGKS", _gks_src_path,
                                define_macros=defines,
