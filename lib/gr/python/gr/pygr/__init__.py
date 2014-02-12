@@ -351,8 +351,13 @@ class Plot(GRViewPort, GRMeta):
         self._autoscale = False
         self._countAxes = 0
 
-    def getAxes(self):
-        return self._lstAxes
+    def getAxes(self, idx=None):
+        ret = None
+        if idx is None:
+            ret = self._lstAxes
+        elif idx < len(self._lstAxes):
+            ret = self._lstAxes[idx]
+        return ret
 
     @property
     def offsetXLabel(self):
