@@ -741,6 +741,8 @@ void set_font(int font)
 
   fontNum = font - 1;
   size = nint(p->capheight / capheights[fontNum]);
+  if (size < 1)
+    size = 1;
   if (font > 13)
     font += 3;
   p->family = (font - 1) / 4;
