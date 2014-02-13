@@ -63,14 +63,14 @@ class GRWidget(QtGui.QWidget):
         self._mwidth = self.width() * .0254 / self.logicalDpiX()
         self._mheight = self.height() * .0254 / self.logicalDpiY()
         self._keepRatio = False
+        self._bgColor = QtCore.Qt.white
         os.environ["GKS_WSTYPE"] = "381" # GKS Qt Plugin
         os.environ["GKS_DOUBLE_BUF"] = "True"
-        self.setPalette(QtGui.QPalette(QtGui.QColor.fromRgb(0xffffff)))
-        self.setAttribute(QtCore.Qt.WA_PaintOnScreen)
 
     def paintEvent(self, event):
         self._painter = QtGui.QPainter()
         self._painter.begin(self)
+        self._painter.fillRect(0, 0, self.width(), self.height(), self._bgColor)
         os.environ["GKSconid"] = "%x!%x" % (sip.unwrapinstance(self),
                                            sip.unwrapinstance(self._painter))
         self.draw(self._clear, self._update)
@@ -97,6 +97,9 @@ class GRWidget(QtGui.QWidget):
             else:
                 self._sizex = self._mwidth / self._mheight
             self._sizey = 1.
+
+    def setBackground(self, qcolor):
+        self._bgColor = qcolor
 
     @property
     def mwidth(self):
