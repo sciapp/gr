@@ -23,8 +23,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-05"
-__version__ = "0.3.0"
+__date__ = "2014-02-14"
+__version__ = "0.4.0"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -1332,5 +1332,7 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       package_dir={'': "lib/gr/python",
                    "gr3": "lib/gr3/python/gr3"},
       packages=["gr", "gr.pygr", "gr3", "qtgr", "qtgr.events"],
-      ext_modules=["Will be replaced by check_ext"],
+      # ext_modules dummy entry
+      # check_ext dynamically generates a list of Extensions
+      ext_modules=[Extension("", [""])],
       data_files=_data_files)
