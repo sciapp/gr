@@ -38,8 +38,11 @@ endif
 	cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
 	rm -f gr.pkg
 
-pypi:
+pypi: clean
 	python setup.py sdist upload
+
+testpypi: clean
+	python setup.py sdist upload -r https://testpypi.python.org/pypi
 
 osxpkg:
 	mkdir -p tmp/bin tmp/gr
