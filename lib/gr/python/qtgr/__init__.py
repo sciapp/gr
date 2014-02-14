@@ -10,9 +10,40 @@ import os
 import math
 import logging
 # third party
-from PyQt4 import QtCore
-from PyQt4 import QtGui
-import sip
+getGKSConnectionId = None
+def _getGKSConnectionIdPySide(widget, painter):
+    return "%x!%x" % (long(shiboken.getCppPointer(widget)[0]),
+                      long(shiboken.getCppPointer(painter)[0]))
+
+def _getGKSConnectionIdPyQt4(widget, painter):
+    return "%x!%x" % (sip.unwrapinstance(widget),
+                      sip.unwrapinstance(painter))
+
+def _importPySide():
+    global QtCore, QtGui, shiboken, getGKSConnectionId
+    from PySide import QtCore
+    from PySide import QtGui
+    try:
+        from PySide import shiboken
+    except ImportError:
+        import shiboken # Anaconda
+    getGKSConnectionId = _getGKSConnectionIdPySide
+
+def _importPyQt4():
+    global QtCore, QtGui, sip, getGKSConnectionId
+    from PyQt4 import QtCore
+    from PyQt4 import QtGui
+    import sip
+    getGKSConnectionId = _getGKSConnectionIdPyQt4
+    QtCore.Signal = QtCore.pyqtSignal
+
+from qtgr.backend import QT_BACKEND_ORDER, QT_PYSIDE, QT_PYQT4
+_imp = {QT_PYSIDE: _importPySide,
+        QT_PYQT4: _importPyQt4}
+try:
+    _imp[QT_BACKEND_ORDER[0]]()
+except ImportError:
+    _imp[QT_BACKEND_ORDER[1]]()
 # local library
 import gr
 import qtgr.events
@@ -20,11 +51,10 @@ from gr.pygr import Plot, PlotAxes, RegionOfInterest
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent, \
     LegendEvent
 
-QtCore.Signal = QtCore.pyqtSignal
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-07"
-__version__ = "0.3.0"
+__date__ = "2014-02-14"
+__version__ = "0.4.0"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -71,8 +101,7 @@ class GRWidget(QtGui.QWidget):
         self._painter = QtGui.QPainter()
         self._painter.begin(self)
         self._painter.fillRect(0, 0, self.width(), self.height(), self._bgColor)
-        os.environ["GKSconid"] = "%x!%x" % (sip.unwrapinstance(self),
-                                           sip.unwrapinstance(self._painter))
+        os.environ["GKSconid"] = getGKSConnectionId(self, self._painter) 
         self.draw(self._clear, self._update)
         gr.updatews()
         self._painter.end()
