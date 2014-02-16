@@ -1336,3 +1336,10 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       # check_ext dynamically generates a list of Extensions
       ext_modules=[Extension("", [""])],
       data_files=_data_files)
+
+if sys.platform.startswith("darwin"):
+    if "build" in sys.argv:
+        os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj")
+        os.system("ditto lib/gks/quartz/build/Release/GKSTerm.app " + os.path.join(_build_lib, "Applications", "GKSTerm.app"))
+    elif "clean" in sys.argv:
+        os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean")
