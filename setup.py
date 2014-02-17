@@ -23,8 +23,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-14"
-__version__ = "0.4.0"
+__date__ = "2014-02-17"
+__version__ = "0.4.1"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -131,6 +131,8 @@ class clean(_clean, clean_static):
     def run(self):
         clean_static.run(self)
         _clean.run(self)
+        if sys.platform == "darwin":
+            os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean")
 
 
 class check_ext(Command):
@@ -1193,6 +1195,10 @@ class build_ext(_build_ext, check_ext, build_static):
         check_ext.run(self)
         build_static.run(self)
         _build_ext.run(self)
+        if not self.disable_quartz:
+            os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj")
+            os.system("ditto lib/gks/quartz/build/Release/GKSTerm.app " +
+                      os.path.join(_build_scripts, "GKSTerm.app"))
 
 
 # check wether this is a Debian based system, e.g. Ubuntu
@@ -1218,6 +1224,8 @@ _build_lib = os.path.join("build", "lib." + _uPlatformId)
 _build_lib_grpkg = os.path.join(_build_lib, "gr")
 _build_3rdparty = os.path.join("build", "3rdparty." + _uPlatformId)
 _build_temp = os.path.join("build", "temp." + _uPlatformId)
+_build_scripts = os.path.join("build", "scripts-%d.%d" % (sys.version_info[0],
+                                                          sys.version_info[1]))
 
 # additional data files in the distribtion
 _gks_fonts = os.path.join("lib", "gks", "fonts")
@@ -1319,6 +1327,13 @@ _jpeglibs = ["jpeg"]
 
 
 # -- setup -----------------------------------------------------------------
+# [OSX] Install GSKTerm.app if build was successful.
+if (os.path.isdir(os.path.join(_build_scripts, "GKSTerm.app"))
+    and sys.platform == "darwin"):
+    _scripts = [os.path.join(_build_scripts, "GKSTerm.app")]
+else:
+    _scripts = None
+
 setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
                 "build_static": build_static, "clean_static": clean_static,
                 "clean": clean},
@@ -1331,15 +1346,10 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       url="https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr",
       package_dir={'': "lib/gr/python",
                    "gr3": "lib/gr3/python/gr3"},
+      requires=["numpy"],
       packages=["gr", "gr.pygr", "gr3", "qtgr", "qtgr.events"],
       # ext_modules dummy entry
       # check_ext dynamically generates a list of Extensions
       ext_modules=[Extension("", [""])],
+      scripts=_scripts,
       data_files=_data_files)
-
-if sys.platform.startswith("darwin"):
-    if "build" in sys.argv:
-        os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj")
-        os.system("ditto lib/gks/quartz/build/Release/GKSTerm.app " + os.path.join(_build_lib, "Applications", "GKSTerm.app"))
-    elif "clean" in sys.argv:
-        os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean")

@@ -45,8 +45,15 @@ if sys.platform == "win32":
 else:
     libext = ".so"
 
+# Detect whether this is a site-package installation
+if os.access(os.path.join(_gr3PkgDir, "libGR3" + libext), os.R_OK):
+    # Set GRDIR environment accordingly to site-package installation.
+    # (needed for finding GKSTerm on OSX)
+    os.environ["GRDIR"] = os.getenv("GRDIR",
+        os.path.join(os.path.realpath(os.path.dirname(__file__)), "..", "gr"))
+
 _gr3Lib = os.path.join(_gr3LibDir, "libGR3" + libext)
-if not os.getenv("GR3LIB") and not os.access(_gr3Lib, os.R_OK):          
+if not os.getenv("GR3LIB") and not os.access(_gr3Lib, os.R_OK):
     _gr3LibDir = os.path.join(_gr3PkgDir, "..", "..")
     _gr3Lib = os.path.join(_gr3LibDir, "libGR3" + libext)
 _gr3 = ctypes.CDLL(_gr3Lib)

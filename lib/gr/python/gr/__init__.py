@@ -16,6 +16,13 @@ from sys import version_info, platform
 _strongref = [ 0 ] * 16
 _i = 0
 
+# Detect whether this is a site-package installation
+if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
+    # Set GRDIR environment accordingly to site-package installation.
+    # (needed for finding GKSTerm on OSX)
+    os.environ["GRDIR"] = os.getenv("GRDIR",
+                                    os.path.realpath(os.path.dirname(__file__)))
+
 def floatarray(n, a):
     global _strongref, _i
     _i = (_i + 1) % 16

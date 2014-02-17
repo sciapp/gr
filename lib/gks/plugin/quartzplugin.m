@@ -1,6 +1,7 @@
 
 #import <Foundation/Foundation.h>
 #import <ApplicationServices/ApplicationServices.h>
+#import <Foundation/NSFileManager.h>
 
 #include "gks.h"
 #include "gkscore.h"
@@ -95,7 +96,9 @@ BOOL gks_terminal(void)
 {
   NSURL *url;
   OSStatus status;
-    
+  BOOL isDir;
+
+  NSFileManager *fm = [[NSFileManager alloc] init];
   NSString *grdir = [[[NSProcessInfo processInfo]
                       environment]objectForKey:@"GRDIR"];
   if ( grdir == NULL )
@@ -103,6 +106,8 @@ BOOL gks_terminal(void)
 
   NSString *path = [NSString stringWithFormat:@"%@/Applications/GKSTerm.app",
                     grdir];
+  if ( ! ([fm fileExistsAtPath:path isDirectory:&isDir] && isDir) )
+    path = [NSString stringWithFormat:@"%@/../../../../bin/GKSTerm.app", grdir];
   url = [NSURL fileURLWithPath: path];
   status = LSOpenCFURLRef((CFURLRef) url, NULL);
 
@@ -167,7 +172,7 @@ void gks_quartzplugin(
         }
       @catch (NSException *e)
         {
-          NSLog(@"Disconnect from GKSTerm failed.");          
+          NSLog(@"Disconnect from GKSTerm failed.");
           exit(-1);
         }
       [mutex release];
