@@ -1,5 +1,5 @@
-Code Examples
--------------
+Examples
+--------
 
 .. include:: examples/ex.rst
 
