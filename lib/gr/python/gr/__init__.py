@@ -1711,7 +1711,7 @@ def drawarc(xmin, xmax, ymin, ymax, a1, a2):
         Upper right edge of the rectangle
     `a1` :
         The start angle
-    `a1` :
+    `a2` :
         The end angle
 
     The resulting arc begins at `a1` and ends at `a2` degrees. Angles are interpreted
@@ -1739,7 +1739,7 @@ def fillarc(xmin, xmax, ymin, ymax, a1, a2):
         Upper right edge of the rectangle
     `a1` :
         The start angle
-    `a1` :
+    `a2` :
         The end angle
 
     The resulting arc begins at `a1` and ends at `a2` degrees. Angles are interpreted
