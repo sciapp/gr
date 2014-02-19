@@ -92,8 +92,8 @@ def openws(workstation_id, connection, workstation_type):
     """
     Open a graphical workstation.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `workstation_id` :
         A workstation identifier.
     `connection` :
@@ -161,8 +161,8 @@ def closews(workstation_id):
     """
     Close the specified workstation.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `workstation_id` :
         A workstation identifier.
 
@@ -174,8 +174,8 @@ def activatews(workstation_id):
     """
     Activate the specified workstation.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `workstation_id` :
         A workstation identifier.
 
@@ -187,8 +187,8 @@ def deactivatews(workstation_id):
     """
     Deactivate the specified workstation.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `workstation_id` :
         A workstation identifier.
 
@@ -209,8 +209,8 @@ def polyline(n, x, y):
     Draw a polyline using the current line attributes, starting from the
     first data point and ending at the last data point.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `n` :
        The number of points in the line to be drawn (`n` > 1)
     `x` :
@@ -232,8 +232,8 @@ def polymarker(n, x, y):
     """
     Draw marker symbols centered at the given data points.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `x` :
         A list of length `n` containing the X coordinates
     `y` :
@@ -253,8 +253,8 @@ def text(x, y, string):
     """
     Draw a text at position `x`, `y` using the current text attributes.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `x` :
         The X coordinate of starting position of the text string
     `y` :
@@ -275,8 +275,8 @@ def fillarea(n, x, y):
     """
     Allows you to specify a polygonal shape of an area to be filled.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `n` :
         The number of points in the polygon to be drawn (`n` > 2)
     `x` :
@@ -300,8 +300,8 @@ def cellarray(xmin, xmax, ymin, ymax, dimx, dimy, color):
     cells, each of them colored individually by the corresponding color index
     of the given cell array.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin`, `ymin` :
         Lower left point of the rectangle
     `xmax`, `ymax` :
@@ -325,8 +325,8 @@ def spline(n, px, py, m, method):
     Generate a cubic spline-fit, starting from the first data point and
     ending at the last data point.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `n` :
         The number of points in the spline to be drawn (`n` > 2)
     `x` :
@@ -367,8 +367,8 @@ def setlinetype(style):
     """
     Specify the line style for polylines.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `style` :
         The polyline line style
 
@@ -414,8 +414,8 @@ def setlinewidth(width):
     """
     Define the line width of subsequent polyline output primitives.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `width` :
         The polyline line width scale factor
 
@@ -432,8 +432,8 @@ def setlinecolorind(color):
     """
     Define the color of subsequent polyline output primitives.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `color` :
         The polyline color index (COLOR < 1256)
 
@@ -451,8 +451,8 @@ def setmarkertype(style):
     """
     Specifiy the marker type for polymarkers.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `style` :
         The polymarker marker type
 
@@ -526,8 +526,8 @@ def setmarkersize(size):
     """
     Specify the marker size for polymarkers.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `size` :
         Scale factor applied to the nominal marker size
 
@@ -542,8 +542,8 @@ def setmarkercolorind(color):
     """
     Define the color of subsequent polymarker output primitives.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `color` :
         The polymarker color index (COLOR < 1256)
 
@@ -561,8 +561,8 @@ def settextfontprec(font, precision):
     """
     Specify the text font and precision for subsequent text output primitives.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `font` :
         Text font (see tables below)
     `precision` :
@@ -657,8 +657,8 @@ def setcharexpan(factor):
     """
     Set the current character expansion factor (width to height ratio).
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `factor` :
         Text expansion factor applied to the nominal text width-to-height ratio
 
@@ -678,8 +678,8 @@ def settextcolorind(color):
     """
     Sets the current text color index.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `color` :
         The text color index (COLOR < 1256)
 
@@ -694,8 +694,8 @@ def setcharheight(height):
     """
     Set the current character height.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `height` :
         Text height value
 
@@ -711,8 +711,8 @@ def setcharup(ux, uy):
     """
     Set the current character text angle up vector.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `ux`, `uy` :
         Text up vector
 
@@ -727,8 +727,8 @@ def settextpath(path):
     """
     Define the current direction in which subsequent text will be drawn.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `path` :
         Text path (see table below)
 
@@ -750,8 +750,8 @@ def settextalign(horizontal, vertical):
     """
     Set the current horizontal and vertical alignment for text.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `horizontal` :
         Horizontal text alignment (see the table below)
     `vertical` :
@@ -793,8 +793,8 @@ def setfillintstyle(style):
     """
     Set the fill area interior style to be used for fill areas.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `style` :
         The style of fill to be used
 
@@ -819,8 +819,8 @@ def setfillstyle(index):
     """
     Sets the fill style to be used for subsequent fill areas.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `index` :
         The fill style index to be used
 
@@ -838,8 +838,8 @@ def setfillcolorind(color):
     """
     Sets the current fill area color index.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `color` :
         The fill area color index (COLOR < 1256)
 
@@ -855,8 +855,8 @@ def setcolorrep(index, red, green, blue):
     `setcolorrep` allows to redefine an existing color index representation by specifying
     an RGB color triplet.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `index` :
         Color index in the range 0 to 1256
     `red` :
@@ -875,8 +875,8 @@ def setscale(options):
     `setscale` sets the type of transformation to be used for subsequent GR output
     primitives.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `options` :
         Scale specification (see Table below)
 
@@ -919,8 +919,8 @@ def setwindow(xmin, xmax, ymin, ymax):
     `setwindow` establishes a window, or rectangular subspace, of world coordinates to be
     plotted. If you desire log scaling or mirror-imaging of axes, use the SETSCALE function.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin` :
         The left horizontal coordinate of the window (`xmin` < `xmax`).
     `xmax` :
@@ -955,8 +955,8 @@ def setviewport(xmin, xmax, ymin, ymax):
     """
     `setviewport` establishes a rectangular subspace of normalized device coordinates.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin` :
         The left horizontal coordinate of the viewport.
     `xmax` :
@@ -982,8 +982,8 @@ def selntran(transform):
     `selntran` selects a predefined transformation from world coordinates to normalized
     device coordinates.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `transform` :
         A normalization transformation number.
 
@@ -1001,8 +1001,8 @@ def setclip(indicator):
     """
     Set the clipping indicator.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `indicator` :
         An indicator specifying whether clipping is on or off.
 
@@ -1027,8 +1027,8 @@ def setwswindow(xmin, xmax, ymin, ymax):
     """
     Set the area of the NDC viewport that is to be drawn in the workstation window.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin` :
         The left horizontal coordinate of the workstation window.
     `xmax` :
@@ -1051,8 +1051,8 @@ def setwsviewport(xmin, xmax, ymin, ymax):
     """
     Define the size of the workstation graphics window in meters.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin` :
         The left horizontal coordinate of the workstation viewport.
     `xmax` :
@@ -1106,8 +1106,8 @@ def setspace(zmin, zmax, rotation, tilt):
     Set the abstract Z-space used for mapping three-dimensional output primitives into
     the current world coordinate space.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `zmin` :
         Minimum value for the Z-axis.
     `zmax` :
@@ -1143,8 +1143,8 @@ def textext(x, y, string):
     Draw a text at position `x`, `y` using the current text attributes. Strings can be
     defined to create basic mathematical expressions and Greek letters.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `x` :
         The X coordinate of starting position of the text string
     `y` :
@@ -1260,8 +1260,8 @@ def axes(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size):
     """
     Draw X and Y coordinate axes with linearly and/or logarithmically spaced tick marks.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `x_tick`, `y_tick` :
         The interval between minor tick marks on each axis.
     `x_org`, `y_org` :
@@ -1294,8 +1294,8 @@ def grid(x_tick, y_tick, x_org, y_org, major_x, major_y):
     """
     Draw a linear and/or logarithmic grid.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `x_tick`, `y_tick` :
         The length in world coordinates of the interval between minor grid
         lines.
@@ -1319,8 +1319,8 @@ def verrorbars(n, px, py, e1, e2):
     """
     Draw a standard vertical error bar graph.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `n` :
         The number of error bars to be drawn
     `px` :
@@ -1344,8 +1344,8 @@ def herrorbars(n, px, py, e1, e2):
     """
     Draw a standard horizontal error bar graph.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `n` :
         The number of error bars to be drawn
     `px` :
@@ -1370,8 +1370,8 @@ def polyline3d(n, px, py, pz):
     Draw a 3D curve using the current line attributes, starting from the
     first data point and ending at the last data point.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `n` :
         The number of points in the line to be drawn (N > 1)
     `x` :
@@ -1404,8 +1404,8 @@ def titles3d(x_title, y_title, z_title):
     """
     Display axis titles just outside of their respective axes.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `x_title`, `y_title`, `z_title` :
         The text to be displayed on each axis
 
@@ -1417,8 +1417,8 @@ def surface(nx, ny, px, py, pz, option):
     """
     Draw a three-dimensional surface plot for the given data points.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `nx` :
         The number of points in the X direction (`nx` > 1)
     `ny` :
@@ -1464,8 +1464,8 @@ def contour(nx, ny, nh, px, py, h, pz, major_h):
     Draw contours of a three-dimensional data set whose values are specified over a
     rectangular mesh. Contour lines may optionally be labeled.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `nx` :
         The number of points in the X direction (`nx` > 1)
     `ny` :
@@ -1524,8 +1524,8 @@ def beginprint(pathname):
     """
     Open and activate a print device.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `pathname` :
         Filename for the print device.
 
@@ -1560,8 +1560,8 @@ def beginprintext(pathname, mode, fmt, orientation):
     """
     Open and activate a print device with the given layout attributes.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `pathname` :
         Filename for the print device.
     `mode` :
@@ -1661,8 +1661,8 @@ def drawrect(xmin, xmax, ymin, ymax):
     """
     Draw a rectangle using the current line attributes.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin` :
         Lower left edge of the rectangle
     `xmax` :
@@ -1680,8 +1680,8 @@ def fillrect(xmin, xmax, ymin, ymax):
     """
     Draw a filled rectangle using the current fill attributes.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin` :
         Lower left edge of the rectangle
     `xmax` :
@@ -1699,8 +1699,8 @@ def drawarc(xmin, xmax, ymin, ymax, a1, a2):
     """
     Draw a circular or elliptical arc covering the specified rectangle.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin` :
         Lower left edge of the rectangle
     `xmax` :
@@ -1727,8 +1727,8 @@ def fillarc(xmin, xmax, ymin, ymax, a1, a2):
     """
     Fill a circular or elliptical arc covering the specified rectangle.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin` :
         Lower left edge of the rectangle
     `xmax` :
@@ -1755,8 +1755,8 @@ def setarrowstyle(style):
     """
     Set the arrow style to be used for subsequent arrow commands.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `style` :
         The arrow style to be used
 
@@ -1809,8 +1809,8 @@ def drawarrow(x1, y1, x2, y2):
     """
     Draw an arrow between two points.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `x1`, `y1` :
         Starting point of the arrow (tail)
     `x2`, `y2` :
@@ -1841,8 +1841,8 @@ def drawimage(xmin, xmax, ymin, ymax, width, height, data):
     """
     Draw an image into a given rectangular area.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `xmin`, `ymin` :
         First corner point of the rectangle
     `xmax`, `ymax` :
@@ -1873,8 +1873,8 @@ def setshadow(offsetx, offsety, blur):
     and offset from, graphics objects such that the shadow mimics the effect of a light
     source cast on the graphics objects.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `offsetx` :
         An x-offset, which specifies how far in the horizontal direction the
         shadow is offset from the object
@@ -1893,8 +1893,8 @@ def settransparency(alpha):
     """
     Set the value of the alpha component associated with GR colors
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `alpha` :
         An alpha value (0.0 - 1.0)
 
@@ -1906,8 +1906,8 @@ def setcoordxform(mat):
     """
     Change the coordinate transformation according to the given matrix.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `mat[3][2]` :
         2D transformation matrix
 
@@ -1920,8 +1920,8 @@ def begingraphics(path):
     """
     Open a file for graphics output.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `path` :
         Filename for the graphics file.
 
@@ -1942,8 +1942,8 @@ def mathtex(x, y, string):
     Generate a character string starting at the given location. Strings can be defined
     to create mathematical symbols and Greek letters using LaTeX syntax.
 
-    Parameters:
-    -----------
+    **Parameters:**
+
     `x`, `y` :
         Position of the text string specified in world coordinates
     `string` :

@@ -1,0 +1,1 @@
+.. include:: codeexamples/ex.rst
