@@ -23,7 +23,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-17"
+__date__ = "2014-02-20"
 __version__ = "0.4.1"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -1327,9 +1327,8 @@ _jpeglibs = ["jpeg"]
 
 
 # -- setup -----------------------------------------------------------------
-# [OSX] Install GSKTerm.app if build was successful.
-if (os.path.isdir(os.path.join(_build_scripts, "GKSTerm.app"))
-    and sys.platform == "darwin"):
+# [OSX] Install GSKTerm.app.
+if sys.platform == "darwin":
     _scripts = [os.path.join(_build_scripts, "GKSTerm.app")]
 else:
     _scripts = None
