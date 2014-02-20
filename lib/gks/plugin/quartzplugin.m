@@ -107,7 +107,7 @@ BOOL gks_terminal(void)
   NSString *path = [NSString stringWithFormat:@"%@/Applications/GKSTerm.app",
                     grdir];
   if ( ! ([fm fileExistsAtPath:path isDirectory:&isDir] && isDir) )
-    path = [NSString stringWithFormat:@"%@/../../../../bin/GKSTerm.app", grdir];
+    path = [[NSString stringWithFormat:@"%@/../../../../bin/GKSTerm.app", grdir] stringByStandardizingPath];
   url = [NSURL fileURLWithPath: path];
   status = LSOpenCFURLRef((CFURLRef) url, NULL);
 
