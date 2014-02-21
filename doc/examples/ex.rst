@@ -14,6 +14,6 @@ This is s small example that shows how to plot a function with the use of gr::
 *Result:* 
 
 .. image:: images/ex.png
-	:scale: 50%
+	:scale: 25%
 
 *Explanation:* 
