@@ -1428,12 +1428,12 @@ def surface(nx, ny, px, py, pz, option):
     `y` :
         A list of length `ny` containing the Y coordinates
     `z` :
-        A list of length `nx`*`ny` containing the Z coordinates
+        A list of length `nx` * `ny` containing the Z coordinates
     `option` :
         Surface display option (see table below)
 
     `x` and `y` define a grid. `z` is a singly dimensioned array containing at least
-    `nx`*`ny` data points. Z describes the surface height at each point on the grid.
+    `nx` * `ny` data points. Z describes the surface height at each point on the grid.
     Data is ordered as shown in the following table:
 
     +------------------+--+--------------------------------------------------------------+
@@ -1479,7 +1479,7 @@ def contour(nx, ny, nh, px, py, h, pz, major_h):
     `h` :
         A list of length `nh` containing the Z coordinate for the height values
     `z` :
-        A list of length `nx`*`ny` containing the Z coordinates
+        A list of length `nx` * `ny` containing the Z coordinates
     `major_h` :
         Directs GR to label contour lines. For example, a value of 3 would label
         every third line. A value of 1 will label every line. A value of 0
