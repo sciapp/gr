@@ -479,31 +479,31 @@ def setmarkertype(style):
     +-----------------------------+-----+------------------------------------------------+
     |MARKERTYPE_SOLID_TRI_DOWN    |   -5|Filled triangle pointing downward               |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_SOLID_TRI_LEFT    |   -6|Filled triangle pointing left                   |
+    |MARKERTYPE_SQUARE            |   -6|Hollow square                                   |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_SOLID_TRI_RIGHT   |   -7|Filled triangle point right                     |
+    |MARKERTYPE_SOLID_SQUARE      |   -7|Filled square                                   |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_TRI_UP_DOWN       |   -8|Hollow triangles pointing up and down overlaid  |
+    |MARKERTYPE_BOWTIE            |   -8|Hollow bowtie                                   |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_SQUARE            |   -9|Hollow square                                   |
+    |MARKERTYPE_SOLID_BOWTIE      |   -9|Filled bowtie                                   |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_SOLID_SQUARE      |  -10|Filled square                                   |
+    |MARKERTYPE_HGLASS            |  -10|Hollow hourglass                                |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_BOWTIE            |  -11|Hollow bowtie                                   |
+    |MARKERTYPE_SOLID_HGLASS      |  -11|Filled hourglass                                |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_SOLID_BOWTIE      |  -12|Filled bowtie                                   |
+    |MARKERTYPE_DIAMOND           |  -12|Hollow diamond                                  |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_STAR              |  -13|Hollow star                                     |
+    |MARKERTYPE_SOLID_DIAMOND     |  -13|Filled Diamond                                  |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_SOLID_STAR        |  -14|Filled Star                                     |
+    |MARKERTYPE_STAR              |  -14|Hollow star                                     |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_DIAMOND           |  -15|Hollow diamond                                  |
+    |MARKERTYPE_SOLID_STAR        |  -15|Filled Star                                     |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_SOLID_DIAMOND     |  -16|Filled Diamond                                  |
+    |MARKERTYPE_TRI_UP_DOWN       |  -16|Hollow triangles pointing up and down overlaid  |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_HGLASS            |  -17|Hollow hourglass                                |
+    |MARKERTYPE_SOLID_TRI_RIGHT   |  -17|Filled triangle point right                     |
     +-----------------------------+-----+------------------------------------------------+
-    |MARKERTYPE_SOLID_HGLASS      |  -18|Filled hourglass                                |
+    |MARKERTYPE_SOLID_TRI_LEFT    |  -18|Filled triangle pointing left                   |
     +-----------------------------+-----+------------------------------------------------+
     |MARKERTYPE_HOLLOW PLUS       |  -19|Hollow plus sign                                |
     +-----------------------------+-----+------------------------------------------------+
