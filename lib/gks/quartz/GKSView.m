@@ -179,7 +179,7 @@ static
 CGRect clipRect;
 
 static
-int cur_color = -1;
+int have_colors = 0;
 
 static
 void set_norm_xform(int tnr, double *wn, double *vp)
@@ -387,12 +387,16 @@ void seg_xform_rel(double *x, double *y)
 
           set_xform();
           init_norm_xform();
-          init_colors();
+
+          if (!have_colors)
+            {
+              init_colors();
+              have_colors = 1;
+            }
 
           gkss->fontfile = fontfile;
           gks_init_core(gkss);
 
-          cur_color = -1;
           [self set_clip_rect: gkss->cntnr];
           break;
 
@@ -968,11 +972,7 @@ void seg_xform_rel(double *x, double *y)
 
 - (void) set_stroke_color: (int) color : (CGContextRef) context
 {
-  if (color != cur_color)
-    {
-      CGContextSetStrokeColorWithColor(context, p->rgb[color]);
-      cur_color = color;
-    }
+  CGContextSetStrokeColorWithColor(context, p->rgb[color]);
 }
 
 - (void) resize_window
@@ -1299,6 +1299,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   begin_context(context);
 
   CGContextSetLineWidth(context, 1);
+  [self set_stroke_color: mk_color : context];
   [self set_fill_color: mk_color : context];
 
   for (i = 0; i < n; i++)
