@@ -342,7 +342,7 @@ class ErrorBar(GRDrawAttributes, GRMeta):
 class Plot(GRViewPort, GRMeta):
 
     def __init__(self, viewport=GRViewPort.DEFAULT_VIEWPORT):
-        super(Plot, self).__init__(list(viewport))
+        super(Plot, self).__init__(viewport)
         self._lstAxes = []
         self._title, self._subTitle = None, None
         self._lblX, self._lblY = None, None
@@ -415,7 +415,7 @@ class Plot(GRViewPort, GRMeta):
 
     @GRViewPort.viewport.setter
     def viewport(self, viewport):
-        self._viewport = viewport
+        self._viewport = list(viewport)
 #        GRViewPort.viewport = viewport
         for axes in self._lstAxes:
             axes.viewport = viewport
@@ -883,7 +883,7 @@ class PlotAxes(GRViewPort, GRMeta):
     def __init__(self, xtick=None, ytick=None, majorx=None, majory=None,
                  viewport=GRViewPort.DEFAULT_VIEWPORT, drawX=True,
                  drawY=True):
-        super(PlotAxes, self).__init__(list(viewport))
+        super(PlotAxes, self).__init__(viewport)
         self._xtick, self._ytick = xtick, ytick
         self.majorx, self.majory = majorx, majory
         self._drawX, self._drawY = drawX, drawY
