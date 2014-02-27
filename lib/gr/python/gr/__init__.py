@@ -13,9 +13,6 @@ from ctypes import byref, POINTER, addressof, CDLL, CFUNCTYPE
 from ctypes import create_string_buffer, cast
 from sys import version_info, platform
 
-_strongref = [ 0 ] * 16
-_i = 0
-
 # Detect whether this is a site-package installation
 if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
     # Set GRDIR environment accordingly to site-package installation.
@@ -23,44 +20,40 @@ if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
     os.environ["GRDIR"] = os.getenv("GRDIR",
                                     os.path.realpath(os.path.dirname(__file__)))
 
-def floatarray(n, a):
-    global _strongref, _i
-    _i = (_i + 1) % 16
-    if isinstance(a, ndarray):
-        _strongref[_i] = array(a, c_double)
-        return _strongref[_i].ctypes.data_as(POINTER(c_double))
-    else:
-        _a = (c_double * n)()
-        status = 0
-        for i in range(n):
-            try:
-                _a[i] = a[i]
-            except:
-                if not status:
-                    status = 1
-                    print('Float array lookup failure')
-                _a[i] = 0
-        return _a
+class floatarray:
+    def __init__(self, n, a):
+        if isinstance(a, ndarray):
+            self.array = array(a, c_double)
+            self.data = self.array.ctypes.data_as(POINTER(c_double))
+        else:
+            self.data = (c_double * n)()
+            status = 0
+            for i in range(n):
+                try:
+                    self.data[i] = a[i]
+                except:
+                    if not status:
+                        status = 1
+                        print('Float array lookup failure')
+                    self.data[i] = 0
 
 
-def intarray(n, a):
-    global _strongref, _i
-    _i = (_i + 1) % 16
-    if isinstance(a, ndarray):
-        _strongref[_i] = array(a, c_int)
-        return _strongref[_i].ctypes.data_as(POINTER(c_int))
-    else:
-        _a = (c_int * n)()
-        status = 0
-        for i in range(n):
-            try:
-                _a[i] = a[i]
-            except:
-                if not status:
-                    status = 1
-                    print('Integer array lookup failure')
-                _a[i] = 0
-        return _a
+class intarray:
+    def __init__(self, n, a):
+        if isinstance(a, ndarray):
+            self.array = array(a, c_int)
+            self.data = self.array.ctypes.data_as(POINTER(c_int))
+        else:
+            self.data = (c_int * n)()
+            status = 0
+            for i in range(n):
+                try:
+                    self.data[i] = a[i]
+                except:
+                    if not status:
+                        status = 1
+                        print('Integer array lookup failure')
+                    self.data[i] = 0
 
 
 def char(string):
@@ -225,7 +218,7 @@ def polyline(n, x, y):
     """
     _x = floatarray(n, x)
     _y = floatarray(n, y)
-    __gr.gr_polyline(c_int(n), _x, _y)
+    __gr.gr_polyline(c_int(n), _x.data, _y.data)
 
 
 def polymarker(n, x, y):
@@ -246,7 +239,7 @@ def polymarker(n, x, y):
     """
     _x = floatarray(n, x)
     _y = floatarray(n, y)
-    __gr.gr_polymarker(c_int(n), _x, _y)
+    __gr.gr_polymarker(c_int(n), _x.data, _y.data)
 
 
 def text(x, y, string):
@@ -290,7 +283,7 @@ def fillarea(n, x, y):
     """
     _x = floatarray(n, x)
     _y = floatarray(n, y)
-    __gr.gr_fillarea(c_int(n), _x, _y)
+    __gr.gr_fillarea(c_int(n), _x.data, _y.data)
 
 
 def cellarray(xmin, xmax, ymin, ymax, dimx, dimy, color):
@@ -317,7 +310,7 @@ def cellarray(xmin, xmax, ymin, ymax, dimx, dimy, color):
     _color = intarray(dimx * dimy, color)
     __gr.gr_cellarray(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax),
                       c_int(dimx), c_int(dimy), c_int(1), c_int(1),
-                      c_int(dimx), c_int(dimy), _color)
+                      c_int(dimx), c_int(dimy), _color.data)
 
 
 def spline(n, px, py, m, method):
@@ -349,7 +342,7 @@ def spline(n, px, py, m, method):
     """
     _px = floatarray(n, px)
     _py = floatarray(n, py)
-    __gr.gr_spline(c_int(n), _px, _py, c_int(m), c_int(method))
+    __gr.gr_spline(c_int(n), _px.data, _py.data, c_int(m), c_int(method))
 
 
 def gridit(nd, xd, yd, zd, nx, ny):
@@ -359,7 +352,8 @@ def gridit(nd, xd, yd, zd, nx, ny):
     x = (c_double * nx)()
     y = (c_double * ny)()
     z = (c_double * (nx * ny))()
-    __gr.gr_gridit(c_int(nd), _xd, _yd, _zd, c_int(nx), c_int(ny), x, y, z)
+    __gr.gr_gridit(c_int(nd), _xd.data, _yd.data, _zd.data,
+                   c_int(nx), c_int(ny), x, y, z)
     return [x[:], y[:], z[:]]
 
 
@@ -1337,7 +1331,7 @@ def verrorbars(n, px, py, e1, e2):
     _py = floatarray(n, py)
     _e1 = floatarray(n, e1)
     _e2 = floatarray(n, e2)
-    __gr.gr_verrorbars(c_int(n), _px, _py, _e1, _e2)
+    __gr.gr_verrorbars(c_int(n), _px.data, _py.data, _e1.data, _e2.data)
 
 
 def herrorbars(n, px, py, e1, e2):
@@ -1362,7 +1356,7 @@ def herrorbars(n, px, py, e1, e2):
     _py = floatarray(n, py)
     _e1 = floatarray(n, e1)
     _e2 = floatarray(n, e2)
-    __gr.gr_herrorbars(c_int(n), _px, _py, _e1, _e2)
+    __gr.gr_herrorbars(c_int(n), _px.data, _py.data, _e1.data, _e2.data)
 
 
 def polyline3d(n, px, py, pz):
@@ -1389,7 +1383,7 @@ def polyline3d(n, px, py, pz):
     _px = floatarray(n, px)
     _py = floatarray(n, py)
     _pz = floatarray(n, pz)
-    __gr.gr_polyline3d(c_int(n), _px, _py, _pz)
+    __gr.gr_polyline3d(c_int(n), _px.data, _py.data, _pz.data)
 
 
 def axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org,
@@ -1456,7 +1450,8 @@ def surface(nx, ny, px, py, pz, option):
     _px = floatarray(nx, px)
     _py = floatarray(ny, py)
     _pz = floatarray(nx * ny, pz)
-    __gr.gr_surface(c_int(nx), c_int(ny), _px, _py, _pz, c_int(option))
+    __gr.gr_surface(c_int(nx), c_int(ny), _px.data, _py.data, _pz.data,
+                    c_int(option))
 
 
 def contour(nx, ny, nh, px, py, h, pz, major_h):
@@ -1490,8 +1485,8 @@ def contour(nx, ny, nh, px, py, h, pz, major_h):
     _py = floatarray(ny, py)
     _h = floatarray(nh, h)
     _pz = floatarray(nx * ny, pz)
-    __gr.gr_contour(c_int(nx), c_int(ny), c_int(nh), _px, _py, _h, _pz,
-                    c_int(major_h))
+    __gr.gr_contour(c_int(nx), c_int(ny), c_int(nh),
+                    _px.data, _py.data, _h.data, _pz.data, c_int(major_h))
 
 
 def setcolormap(index):
@@ -1860,7 +1855,7 @@ def drawimage(xmin, xmax, ymin, ymax, width, height, data):
     """
     _data = intarray(width * height, data)
     __gr.gr_drawimage(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax),
-                      c_int(width), c_int(height), _data)
+                      c_int(width), c_int(height), _data.data)
 
 
 def importgraphics(path):
@@ -1913,7 +1908,7 @@ def setcoordxform(mat):
 
     """
     _mat = floatarray(6, mat)
-    __gr.gr_setcoordxform(_mat)
+    __gr.gr_setcoordxform(_mat.data)
 
 
 def begingraphics(path):
