@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+GR / PySide interoperability example
+"""
 
 import sys
 import os

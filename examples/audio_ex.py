@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# -*- animation -*-
+"""
+Play an audio file and display signal and power spectrum in realtime
+"""
+
 import wave, pyaudio
 import numpy
 import gr

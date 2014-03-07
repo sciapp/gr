@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# -*- no-plot -*-
 """
+3D surface plot from neutron spectrum data
 """
-# standard library
+
 import os
-# local library
 from gr.pygr import *
 
 os.environ["GR_DISPLAY"] = "localhost:"

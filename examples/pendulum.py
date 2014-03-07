@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# -*- animation -*-
+"""
+Animation of a damped pendulum
+"""
+
 from numpy import sin, cos, sqrt, pi, array
 import time
 import gr

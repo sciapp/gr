@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# -*- animation -*-
+"""
+Sample microphone input and display power spectrum
+"""
 
 import pyaudio
 import numpy

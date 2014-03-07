@@ -1,4 +1,4 @@
-#coding=utf-8
+# -*- coding: utf-8 -*-
 """
 This module includes information about elements:
 - atom_name_list maps element number to name

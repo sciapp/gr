@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
+Contour plot of irregular distributed data
 """
-# local library
+
 from gr.pygr import *
 
 xd = [3, 3, 10, 18, 18, 10, 10, 5, 1, 15, 20, 5, 15, 10, 7, 13, 16]

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# -*- animation -*-
 """
+Sample microphone and display input signal in realtime
 """
-# third party
+
 import pyaudio
 import numpy
-# local library
 import gr
 from gr.pygr import *
 

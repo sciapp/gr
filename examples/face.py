@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+"""
+Simple surface plot example
+"""
+
 from gr import * 
 from math import *
 

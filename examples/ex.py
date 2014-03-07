@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
+Small example that shows how to plot a function with the use of gr
 """
+
 from gr.pygr import *
 
 x = [-3.3 + t*0.1 for t in range(66)]

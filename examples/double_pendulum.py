@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# -*- animation -*-
+"""
+Animation of a double pendulum
+"""
 
 from numpy import sin, cos, pi, array
 import time

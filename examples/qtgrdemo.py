@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+Demo showing the capabilities of qtgr
 """
+
 # standard library
 import sys
 setattr(sys, "QT_BACKEND_ORDER", ["PyQt4", "PySide"])

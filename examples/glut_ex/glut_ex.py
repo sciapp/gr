@@ -1,4 +1,5 @@
-#! coding=utf-8
+# -*- coding: utf-8 -*-
+
 import atoms
 import sys
 import math
