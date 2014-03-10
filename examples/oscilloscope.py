@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- animation -*-
+# -*- no-plot -*-
 """
 Sample microphone and display input signal in realtime
 """

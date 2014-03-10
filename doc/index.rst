@@ -27,14 +27,14 @@ module.
 Contents:
 
 .. toctree::
-   :maxdepth: 5
-   :includehidden:
+   :maxdepth: 1
 
    installation
    gr
-   examples
+   Examples <examples/examples.rst>
    gr3
    links
+
 
 Indices and tables
 ==================

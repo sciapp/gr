@@ -47,9 +47,15 @@ def create_examples(examples):
         # Get source
         doclines = []
         sourcelines = []
+        animation = False
+        plot = True
         with open(os.path.join(EXAMPLES_DIR, name + '.py')) as f:
             for line in f.readlines():
                 line = line.rstrip()
+                if line.startswith('# -*- no-plot -*-') or 'PySide' in line or 'PyQt4' in line or 'wxPython' in line:
+                    plot = False
+                elif line.startswith('# -*- animation -*-'):
+                    animation = True
                 if not doclines:
                     if line.startswith('"""'):
                         doclines.append(line.lstrip('" '))
@@ -72,6 +78,17 @@ def create_examples(examples):
         lines.append('.. code-block:: python')
         lines.append('    ')
         lines.extend(sourcelines)
+        lines.append('    ')
+        if plot:
+            if animation:
+                pass
+                #lines.append('.. raw:: html')
+                #lines.append('   ')
+                #lines.append('   <video src="%s.mov" autoplay></video>' % name)
+            else:
+                lines.append('    ')
+                lines.append('.. image:: %s' % (name + '.png'))
+
         lines.append('')
 
         # Write
@@ -81,6 +98,17 @@ def create_examples(examples):
             os.mkdir(output_dir)
         with open(output_filename, 'w') as f:
             f.write('\n'.join(lines))
+
+        if plot:
+            if animation:
+                pass
+                #print('Create MOV animation for example %s' % name)
+                #os.popen('cd %s; gr -t=mov %s.py' % (EXAMPLES_DIR, name))
+                #shutil.move('%s/gks.mov' % EXAMPLES_DIR, '%s.mov' % os.path.join(OUTPUT_DIR, name))
+            else:
+                print('Create PNG figure for example %s' % name)
+                os.popen('cd %s; gr -t=png %s.py' % (EXAMPLES_DIR, name))
+                shutil.move('%s/gks_p001.png' % EXAMPLES_DIR, '%s.png' % os.path.join(OUTPUT_DIR, name))
 
 
 def create_examples_list(examples):
@@ -92,11 +120,15 @@ def create_examples_list(examples):
     lines.append('')
 
     # Add entry for each example that we know
+    lines.append('.. toctree::')
+    lines.append('   :maxdepth: 2')
+    lines.append('')
     for _, name in examples:
-        lines.append('.. include:: examples/%s.rst' % name)
+        lines.append('   %s' % name)
+    lines.append('')
 
     # Write file
-    with open(os.path.join(DOC_DIR, 'examples.rst'), 'w') as f:
+    with open(os.path.join(DOC_DIR, 'examples', 'examples.rst'), 'w') as f:
         f.write('\n'.join(lines))
 
 

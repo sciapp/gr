@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# -*- no-plot -*-
 """
 Demo showing the capabilities of qtgr
 """

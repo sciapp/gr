@@ -1,8 +1,8 @@
 Links
 -----
 
-Links to talks, tutorials or presentations can be found
-`here <http://gr.fz-juelich.de/>`_. Unfortunately, most of them are in
+Links to talks, tutorials or presentations can be found at the
+`GR home page <http://gr.fz-juelich.de/>`_. Unfortunately, most of them are in
 German language.
 
 The GR framework has already been presented in a talk at PyCon DE
