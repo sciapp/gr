@@ -77,6 +77,7 @@ release = '0.4.3'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = ['_build']
+exclude_patterns = ['media']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -154,8 +155,7 @@ html_static_path = ['_static']
 # Custom sidebar templates, maps document names to template names.
 html_sidebars = {
     '**': ['navigation.html',
-           'localtoc.html',
-           'versions.html'],
+           'localtoc.html'],
 }
 
 # Additional templates that should be rendered to pages, maps page names to

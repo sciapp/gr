@@ -1,7 +1,7 @@
-playground/
 build/
 dist/
 MANIFEST
+doc/media/
 *.o
 *.obj
 *.a

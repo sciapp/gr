@@ -6,6 +6,7 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 DOC_DIR = os.path.abspath(os.path.join(THIS_DIR, '..'))
 EXAMPLES_DIR = os.path.abspath(os.path.join(DOC_DIR, '..', 'examples'))
 OUTPUT_DIR = os.path.join(DOC_DIR, 'examples')
+MEDIA_DIR = os.path.abspath(os.path.join(DOC_DIR, 'media'))
 
 
 def clean():
@@ -81,13 +82,16 @@ def create_examples(examples):
         lines.append('    ')
         if plot:
             if animation:
-                pass
-                #lines.append('.. raw:: html')
-                #lines.append('   ')
-                #lines.append('   <video src="%s.mov" autoplay></video>' % name)
+                lines.append('')
+                lines.append('*Screencast:*')
+                lines.append('')
+                lines.append('.. raw:: html')
+                lines.append('')
+                lines.append('   <video id="%s" src="/media/%s.mov" autoplay></video>' % (name, name))
             else:
-                lines.append('    ')
+                lines.append('')
                 lines.append('.. image:: %s' % (name + '.png'))
+                lines.append('')
 
         lines.append('')
 
@@ -101,10 +105,11 @@ def create_examples(examples):
 
         if plot:
             if animation:
-                pass
-                #print('Create MOV animation for example %s' % name)
-                #os.popen('cd %s; gr -t=mov %s.py' % (EXAMPLES_DIR, name))
-                #shutil.move('%s/gks.mov' % EXAMPLES_DIR, '%s.mov' % os.path.join(OUTPUT_DIR, name))
+                mov_file = os.path.join(MEDIA_DIR, name + '.mov')
+                if not os.access(mov_file, os.R_OK):
+                    print('Create MOV animation for example %s' % name)
+                    os.popen('cd %s; gr -t=mov %s.py' % (EXAMPLES_DIR, name))
+                    shutil.move('%s/gks.mov' % EXAMPLES_DIR, mov_file)
             else:
                 print('Create PNG figure for example %s' % name)
                 os.popen('cd %s; gr -t=png %s.py' % (EXAMPLES_DIR, name))

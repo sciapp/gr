@@ -37,6 +37,7 @@ ifeq ($(UNAME), Darwin)
 endif
 	cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
 	rm -f gr.pkg
+	make -C doc clean
 
 pypi: clean
 	python setup.py sdist upload
@@ -53,3 +54,8 @@ osxpkg:
 	sudo chown -R -h root:wheel tmp/
 	pkgbuild --identifier de.fz-juelich.gr --root tmp --install-location /usr/local --ownership preserve gr.pkg
 	sudo rm -rf tmp
+
+sphinxdoc:
+	make -C doc html
+	rsync -av --delete --exclude=/media doc/_build/html/ iffwww:/WebServer/Documents/gr/
+	rsync -av --delete doc/media/ iffwww:/WebServer/Documents/gr/media/
