@@ -31,7 +31,7 @@ __version__ = "0.4.3"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
-Visit https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr for the latest
+Visit http://gr-framework.org for the latest
 version.
 
 GR was developed by the Scientific IT-Systems group at the Peter Grünberg

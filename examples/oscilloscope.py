@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- no-plot -*-
+# -*- animation -*-
 """
 Sample microphone and display input signal in realtime
 """
@@ -7,6 +7,7 @@ Sample microphone and display input signal in realtime
 import pyaudio
 import numpy
 import gr
+import time
 from gr.pygr import *
 
 FS=44100		# Sampling frequency
@@ -22,7 +23,9 @@ def get_audio_data():
     amplitudes = numpy.fromstring(mic.read(SAMPLES), dtype=numpy.short)
     return amplitudes / 32768.
 
-while (True):
+start = time.time()
+
+while time.time() - start < 10:
     try:
         amplitudes = get_audio_data()
     except (IOError):

@@ -4,37 +4,50 @@ Installation
 Prerequisites
 ^^^^^^^^^^^^^
 
-* Debian:
-    - libx11-dev
-    - libxft-dev
-    - libxt-dev
-    - python2.7-dev
-    - libgl1-mesa-dev
-    - libgs-dev
-    - texlive-latex3
-    - dvipng
-    - qt4-dev-tools
-    - libgtk2.0-dev
-    - pyqt4-dev-tools
-    - libwxgtk2.8-dev
-    - python-wxgtk2.8
-    - python-pyaudio
-    - python-opengl
+The following table show which packages are required to support the different
+features:
 
-* Fedora:
-    - Development Tools
-    - Basic X Window System
-    - qt4-devel
-    - wxBase.x86_64
-    - wxGTK-devel.x86_64
-    - ghostscript-devel
-    - python-devel
-    - glfw-devel
-    - texlive
-    - dvipng
-    - PyQt4
-    - wxPython
-    - pyaudio
++---------------+----------------------+---------------------+
+|               |- Debian / Rasbian    |- Fedora             |
+|               |- Ubuntu              |- RedHat             |
++===============+======================+=====================+ 
+|**required:**                                               |
++---------------+----------------------+---------------------+
+|               |                      |Development Tools    |
++---------------+----------------------+---------------------+
+|               |- libx11-dev          |Basic X Window System|
+|               |- libxft-dev          |                     |
+|               |- libxt-dev           |                     |
++---------------+----------------------+---------------------+
+|Python support |python2.7-dev         |python-devel         |
++---------------+----------------------+---------------------+
+|**optional:**                                               |
++---------------+----------------------+---------------------+
+|LaTeX support  |- texlive-latex3      |- texlive            |
+|               |- dvipng              |- dvipng             |
++---------------+----------------------+---------------------+
+|Image output   |libgs-dev             |ghostscript-devel    |
++---------------+----------------------+---------------------+
+|Qt embedding   |- qt4-dev-tools       |- qt4-devel          |
+|               |- pyqt4-dev-tools     |- PyQt4              |
++---------------+----------------------+---------------------+
+|wxWidgets      |- libgtk2.0-devs      |- wxBase.x86_64      |
+|               |- libwxgtk2.8-dev     |- wxGTK-devel.x86_64 |
+|               |- python-wxgtk2.8     |- wxPython           |
++---------------+----------------------+---------------------+
+|OpenGL         |- python-opengl       |PyOpenGL             |
+|               |- libgl1-mesa-dev     |                     |
++---------------+----------------------+---------------------+
+|GLFW           |                      |glfw-devel           |
++---------------+----------------------+---------------------+
+|Audio demos    |python-pyaudio        |pyaudio              |
++---------------+----------------------+---------------------+
+
+Instead of manually installing Python and required modules it's highly
+recommended to use a python bundle, eg. Anaconda or Enthought, instead.
+Those distributions provide more packages that you can think you will ever
+need and they are very easy to update using package managers.
+
 
 Source install from git
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -46,7 +59,9 @@ Clone the main source using::
 and build and install as usual with::
 
     cd gr
-    make; make install; make clean
+    make
+    make install
+    make clean
     export PYTHONPATH=${PYTHONPATH}:/usr/local/gr/lib/python
 
 Install from PyPi
