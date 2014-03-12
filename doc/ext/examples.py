@@ -75,26 +75,24 @@ def create_examples(examples):
         lines.extend(doclines)
         lines.append('')
 
-        # Add source code
-        lines.append('.. code-block:: python')
-        lines.append('    ')
-        lines.extend(sourcelines)
-        lines.append('    ')
+        # Add image or screencast
         if plot:
             if animation:
-                lines.append('')
-                lines.append('*Screencast:*')
-                lines.append('')
                 lines.append('.. raw:: html')
                 lines.append('')
                 lines.append('   <script language="javascript">')
                 lines.append('   QT_WriteOBJECT("/media/%s.mov" , "500", "500" , "");' % name)
                 lines.append('   </script>')
             else:
-                lines.append('')
                 lines.append('.. image:: %s' % (name + '.png'))
-                lines.append('')
+            lines.append('')
+            lines.append('----')
 
+        # Add source code
+        lines.append('')
+        lines.append('.. code-block:: python')
+        lines.append('    ')
+        lines.extend(sourcelines)
         lines.append('')
 
         # Write
