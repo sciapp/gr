@@ -198,7 +198,7 @@ def getrenderpathstring():
     """
     This function allows the user to find out how his commands are rendered.
 
-    **Retruns:** 
+    **Returns:** 
 
     If gr3 is initialized, a string in the format: `"gr3 - " + window toolkit + " - " + framebuffer extension + " - " + OpenGL version + " - " + OpenGL renderer string`. 
     For example `"gr3 - GLX - GL_ARB_framebuffer_object - 2.1 Mesa 7.10.2 - Software Rasterizer"` might be returned on a Linux system (using GLX) with an available GL_ARB_framebuffer_object implementation.

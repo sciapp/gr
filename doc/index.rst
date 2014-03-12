@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-GR framework documentation
---------------------------
+GR framework
+------------
 
 *GR* is a universal framework for cross-platform visualization applications.
 It offers developers a compact, portable and consistent graphics library for
@@ -20,13 +20,17 @@ into modern object-oriented systems, in particular those based on GUI toolkits.
 web technologies and mobile devices. The *GR* framework is especially suitable
 for real-time environments.
 
+*GR* was developed by the Scientific IT-Systems group at the Peter Grünberg
+Institute at Forschunsgzentrum Jülich. The main development has been done
+by Josef Heinen who currently maintains the software.
+
 *GR3* is a software library for simple visualization of 3D scenes.
 It was developed by Florian Rhiem as part of his bachelor's thesis.
 *GR3* is written in C and can also be used from Python through a wrapper
 module. 
 
-Git repository
---------------
+Obtaining GR
+------------
 
 If you want to get the very latest version of *GR* direct from the
 source code repository then you can use git::
@@ -36,6 +40,9 @@ source code repository then you can use git::
 The *GR* framewok is also available on PyPI package index:
 `https://pypi.python.org/pypi/gr <https://pypi.python.org/pypi/gr/>`_
 
+The installation method depends on the environment in which GR will
+be used. For further information please refer to the installation
+documentation.
 
 **Contents:**
 
@@ -47,21 +54,8 @@ The *GR* framewok is also available on PyPI package index:
    Examples <examples/examples.rst>
    gr3
    links
+   thanks
    imprint
-
-
-Thanks
-------
-
-* Marcel Dück for the Java code and the iGR iOS App
-* Christian Felder for the qtgr module and the GKS iOS App
-* Marvin Goblet for the initial GKSTerm implementation
-* Ingo Heimbach for implementing the GKS wxWidgets plugin
-* David Knodt for the video converter routines
-* Robert Nesselrath for the glgr application
-* Florian Rhiem for the design and implementation of *GR3*
-* Elmar Westphal for the gr_textex routine
-* Jörg Winkler for the GKS OpenGL device driver
 
 
 Indices and tables

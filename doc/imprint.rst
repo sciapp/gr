@@ -1,10 +1,6 @@
 Imprint
 -------
 
-*GR* was developed by the Scientific IT-Systems group at the Peter Grünberg
-Institute at Forschunsgzentrum Jülich. The main development has been done
-by Josef Heinen who currently maintains the software.
-
 *GR* is free software, you can redistribute it and/or modify it under
 the terms of the GNU General Public License. The GNU General Public License
 does not permit this software to be redistributed in proprietary programs.

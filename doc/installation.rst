@@ -19,7 +19,8 @@ features:
 |               |- libxft-dev          |                     |
 |               |- libxt-dev           |                     |
 +---------------+----------------------+---------------------+
-|Python support |python2.7-dev         |python-devel         |
+|Python support |- python2.7-dev       |- python-devel       |
+|               |- numpy               |- numpy              |
 +---------------+----------------------+---------------------+
 |**optional:**                                               |
 +---------------+----------------------+---------------------+
@@ -44,9 +45,17 @@ features:
 +---------------+----------------------+---------------------+
 
 Instead of manually installing Python and required modules it's highly
-recommended to use a python bundle, eg. Anaconda or Enthought, instead.
+recommended to use a python bundle, eg. Anaconda, instead. This is
+especially true for Windows and Mac OS X.
+
 Those distributions provide more packages that you can think you will ever
 need and they are very easy to update using package managers.
+
+To use the GR framework with Anaconda, you simply have to extend
+the Python path::
+
+    export PYTHONPATH=${PYTHONPATH}:/usr/local/gr
+    anaconda
 
 
 Source install from git
@@ -63,6 +72,11 @@ and build and install as usual with::
     make install
     make clean
     export PYTHONPATH=${PYTHONPATH}:/usr/local/gr/lib/python
+
+This will install the GR framework into the directory /usr/local/gr. You can
+choose any other destination by specifying the GRDIR variable, e.g.::
+
+    make GRDIR=/opt/gr
 
 Install from PyPi
 ^^^^^^^^^^^^^^^^^

@@ -87,7 +87,9 @@ def create_examples(examples):
                 lines.append('')
                 lines.append('.. raw:: html')
                 lines.append('')
-                lines.append('   <video id="%s" src="/media/%s.mov" autoplay></video>' % (name, name))
+                lines.append('   <script language="javascript">')
+                lines.append('   QT_WriteOBJECT("/media/%s.mov" , "500", "500" , "");' % name)
+                lines.append('   </script>')
             else:
                 lines.append('')
                 lines.append('.. image:: %s' % (name + '.png'))
