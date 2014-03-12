@@ -3,13 +3,15 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-GR framework
+Introduction
 ------------
 
 *GR* is a universal framework for cross-platform visualization applications.
 It offers developers a compact, portable and consistent graphics library for
 their programs. Applications range from publication quality 2D graphs to the
 representation of complex 3D scenes.
+
+.. image:: media/screenshots.png
 
 *GR* is essentially based on an implementation of a Graphical Kernel System (GKS)
 and OpenGL. As a self-contained system it can quickly and easily be integrated
@@ -20,6 +22,8 @@ into modern object-oriented systems, in particular those based on GUI toolkits.
 web technologies and mobile devices. The *GR* framework is especially suitable
 for real-time environments.
 
+.. image:: media/gr-structure.png
+
 *GR* was developed by the Scientific IT-Systems group at the Peter Grünberg
 Institute at Forschunsgzentrum Jülich. The main development has been done
 by Josef Heinen who currently maintains the software.
@@ -29,8 +33,8 @@ It was developed by Florian Rhiem as part of his bachelor's thesis.
 *GR3* is written in C and can also be used from Python through a wrapper
 module. 
 
-Obtaining GR
-------------
+Getting Started
+---------------
 
 If you want to get the very latest version of *GR* direct from the
 source code repository then you can use git::
@@ -44,6 +48,14 @@ The installation method depends on the environment in which GR will
 be used. For further information please refer to the installation
 documentation.
 
+Once you have installed the GR framework you simply need to type::
+
+    from gr import pygr
+    pygr.plot([0,1,4],[3,2,5])
+
+At this point, you should browse the gallery to get an impression
+of GR's capabilities.
+
 **Contents:**
 
 .. toctree::
@@ -53,6 +65,7 @@ documentation.
    gr
    Examples <examples/examples.rst>
    gr3
+   tutorials
    links
    thanks
    imprint
@@ -63,5 +76,4 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`search`
-
 
