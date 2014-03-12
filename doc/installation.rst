@@ -4,45 +4,45 @@ Installation
 Prerequisites
 ^^^^^^^^^^^^^
 
-The following table show which packages are required to support the different
+The following table shows which packages are required to support the different
 features:
 
-+---------------+----------------------+---------------------+
-|               |- Debian / Rasbian    |- Fedora             |
-|               |- Ubuntu              |- RedHat             |
-+===============+======================+=====================+ 
-|**required:**                                               |
-+---------------+----------------------+---------------------+
-|               |                      |Development Tools    |
-+---------------+----------------------+---------------------+
-|               |- libx11-dev          |Basic X Window System|
-|               |- libxft-dev          |                     |
-|               |- libxt-dev           |                     |
-+---------------+----------------------+---------------------+
-|Python support |- python2.7-dev       |- python-devel       |
-|               |- numpy               |- numpy              |
-+---------------+----------------------+---------------------+
-|**optional:**                                               |
-+---------------+----------------------+---------------------+
-|LaTeX support  |- texlive-latex3      |- texlive            |
-|               |- dvipng              |- dvipng             |
-+---------------+----------------------+---------------------+
-|Image output   |libgs-dev             |ghostscript-devel    |
-+---------------+----------------------+---------------------+
-|Qt embedding   |- qt4-dev-tools       |- qt4-devel          |
-|               |- pyqt4-dev-tools     |- PyQt4              |
-+---------------+----------------------+---------------------+
-|wxWidgets      |- libgtk2.0-devs      |- wxBase.x86_64      |
-|               |- libwxgtk2.8-dev     |- wxGTK-devel.x86_64 |
-|               |- python-wxgtk2.8     |- wxPython           |
-+---------------+----------------------+---------------------+
-|OpenGL         |- python-opengl       |PyOpenGL             |
-|               |- libgl1-mesa-dev     |                     |
-+---------------+----------------------+---------------------+
-|GLFW           |                      |glfw-devel           |
-+---------------+----------------------+---------------------+
-|Audio demos    |python-pyaudio        |pyaudio              |
-+---------------+----------------------+---------------------+
++---------------+----------------------+----------------------+
+|               |- Debian / Rasbian    |- Fedora              |
+|               |- Ubuntu              |- RedHat              |
++===============+======================+======================+ 
+|**required:**                                                |
++---------------+----------------------+----------------------+
+|               |                      |Development Tools     |
++---------------+----------------------+----------------------+
+|               |- libx11-dev          |Basic X Window System |
+|               |- libxft-dev          |                      |
+|               |- libxt-dev           |                      |
++---------------+----------------------+----------------------+
+|Python support |- python2.7-dev       |- python-devel        |
+|               |- numpy               |- numpy               |
++---------------+----------------------+----------------------+
+|**optional:**                                                |
++---------------+----------------------+----------------------+
+|LaTeX support  |- texlive-latex3      |- texlive             |
+|               |- dvipng              |- dvipng              |
++---------------+----------------------+----------------------+
+|Image output   |libgs-dev             |ghostscript-devel     |
++---------------+----------------------+----------------------+
+|Qt embedding   |- qt4-dev-tools       |- qt4-devel           |
+|               |- pyqt4-dev-tools     |- PyQt4               |
++---------------+----------------------+----------------------+
+|wxWidgets      |- libgtk2.0-devs      |- wxBase.x86_64       |
+|               |- libwxgtk2.8-dev     |- wxGTK-devel.x86_64  |
+|               |- python-wxgtk2.8     |- wxPython            |
++---------------+----------------------+----------------------+
+|OpenGL         |- python-opengl       |PyOpenGL              |
+|               |- libgl1-mesa-dev     |                      |
++---------------+----------------------+----------------------+
+|GLFW           |                      |glfw-devel            |
++---------------+----------------------+----------------------+
+|Audio demos    |python-pyaudio        |pyaudio               |
++---------------+----------------------+----------------------+
 
 Instead of manually installing Python and required modules it's highly
 recommended to use a python bundle, eg. Anaconda, instead. This is
