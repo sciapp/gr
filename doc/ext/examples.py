@@ -12,9 +12,6 @@ MEDIA_DIR = os.path.abspath(os.path.join(DOC_DIR, 'media'))
 def clean():
     if os.path.isdir(OUTPUT_DIR):
         shutil.rmtree(OUTPUT_DIR)
-    fname = os.path.join(DOC_DIR, 'examples.rst')
-    if os.path.isfile(fname):
-        os.remove(fname)
 
 
 def get_example_filenames(examples_dir):
@@ -108,12 +105,12 @@ def create_examples(examples):
                 mov_file = os.path.join(MEDIA_DIR, name + '.mov')
                 if not os.access(mov_file, os.R_OK):
                     print('Create MOV animation for example %s' % name)
-                    os.popen('cd %s; gr -t=mov %s.py' % (EXAMPLES_DIR, name))
-                    shutil.move('%s/gks.mov' % EXAMPLES_DIR, mov_file)
+                    os.popen('gr -t=mov %s.py' % os.path.join(EXAMPLES_DIR, name))
+                    shutil.move('gks.mov', mov_file)
             else:
                 print('Create PNG figure for example %s' % name)
-                os.popen('cd %s; gr -t=png %s.py' % (EXAMPLES_DIR, name))
-                shutil.move('%s/gks_p001.png' % EXAMPLES_DIR, '%s.png' % os.path.join(OUTPUT_DIR, name))
+                os.popen('gr -t=png %s.py' % os.path.join(EXAMPLES_DIR, name))
+                shutil.move('gks_p001.png', '%s.png' % os.path.join(OUTPUT_DIR, name))
 
 
 def create_examples_list(examples):
@@ -133,7 +130,7 @@ def create_examples_list(examples):
     lines.append('')
 
     # Write file
-    with open(os.path.join(DOC_DIR, 'examples', 'examples.rst'), 'w') as f:
+    with open(os.path.join(DOC_DIR, 'examples', 'index.rst'), 'w') as f:
         f.write('\n'.join(lines))
 
 

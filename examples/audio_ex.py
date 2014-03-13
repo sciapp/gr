@@ -4,13 +4,14 @@
 Play an audio file and display signal and power spectrum in realtime
 """
 
-import wave, pyaudio
+import os, wave, pyaudio
 import numpy
 import gr
 
 SAMPLES = 2048
 
-wf = wave.open('Monty_Python.wav', 'rb')
+wf = wave.open(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                            'Monty_Python.wav'), 'rb')
 pa = pyaudio.PyAudio()
 stream = pa.open(format=pa.get_format_from_width(wf.getsampwidth()),
                  channels=wf.getnchannels(), rate=wf.getframerate(), output=True)

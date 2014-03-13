@@ -13,6 +13,8 @@ representation of complex 3D scenes.
 
 .. image:: media/screenshots.png
 
+----
+
 *GR* is essentially based on an implementation of a Graphical Kernel System (GKS)
 and OpenGL. As a self-contained system it can quickly and easily be integrated
 into existing applications (i.e. using the ctypes mechanism in Python).
@@ -23,6 +25,8 @@ web technologies and mobile devices. The *GR* framework is especially suitable
 for real-time environments.
 
 .. image:: media/gr-structure.png
+
+----
 
 *GR* was developed by the `Scientific IT-Systems <https://iffwww.iff.kfa-juelich.de>`_ group at the `Peter Grünberg Institute <http://www.fz-juelich.de/pgi>`_
 at `Forschunsgzentrum Jülich <http://www.fz-juelich.de>`_.
@@ -65,7 +69,7 @@ Contents
 
    installation.rst
    gr.rst
-   Examples <examples/examples.rst>
+   Examples <examples/index.rst>
    gr3.rst
    tutorials/index.rst
    links.rst
