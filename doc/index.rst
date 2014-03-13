@@ -24,9 +24,10 @@ for real-time environments.
 
 .. image:: media/gr-structure.png
 
-*GR* was developed by the Scientific IT-Systems group at the Peter Grünberg
-Institute at Forschunsgzentrum Jülich. The main development has been done
-by Josef Heinen who currently maintains the software.
+*GR* was developed by the `Scientific IT-Systems <https://iffwww.iff.kfa-juelich.de>`_ group at the `Peter Grünberg Institute <http://www.fz-juelich.de/pgi>`_
+at `Forschunsgzentrum Jülich <http://www.fz-juelich.de>`_.
+The main development has been done by Josef Heinen who currently maintains
+the software.
 
 *GR3* is a software library for simple visualization of 3D scenes.
 It was developed by Florian Rhiem as part of his bachelor's thesis.
@@ -56,19 +57,20 @@ Once you have installed the GR framework you simply need to type::
 At this point, you should browse the gallery to get an impression
 of GR's capabilities.
 
-**Contents:**
+Contents
+--------
 
 .. toctree::
    :maxdepth: 1
 
-   installation
-   gr
+   installation.rst
+   gr.rst
    Examples <examples/examples.rst>
-   gr3
-   tutorials
-   links
-   thanks
-   imprint
+   gr3.rst
+   tutorials/index.rst
+   links.rst
+   thanks.rst
+   imprint.rst
 
 
 Indices and tables

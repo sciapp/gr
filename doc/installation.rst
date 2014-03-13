@@ -10,7 +10,7 @@ features:
 +---------------+----------------------+----------------------+
 |               |- Debian / Rasbian    |- Fedora              |
 |               |- Ubuntu              |- RedHat              |
-+===============+======================+======================+ 
++===============+======================+======================+
 |**required:**                                                |
 +---------------+----------------------+----------------------+
 |               |                      |Development Tools     |
@@ -45,16 +45,24 @@ features:
 +---------------+----------------------+----------------------+
 
 Instead of manually installing Python and required modules it's highly
-recommended to use a python bundle, eg. Anaconda, instead. This is
-especially true for Windows and Mac OS X.
+recommended to use a python bundle, eg.
+`Anaconda <http://continuum.io/downloads>`_, instead. This is
+especially true for Windows and OS X.
 
 Those distributions provide more packages that you can think you will ever
 need and they are very easy to update using package managers.
 
+.. note::
+    Binary packages for Windows or OS X will soon be made available.
+    We are also working on a binary package for Anaconda, which may
+    be used with the ``conda install`` command and then be obtained from
+    `conda.binstar.org <http://conda.binstar.org>`_.
+
 To use the GR framework with Anaconda, you simply have to extend
 the Python path::
 
-    export PYTHONPATH=${PYTHONPATH}:/usr/local/gr
+    export GRDIR=/usr/local/gr
+    export PYTHONPATH=${PYTHONPATH}:${GRDIR}/lib/python
     anaconda
 
 
@@ -73,8 +81,8 @@ and build and install as usual with::
     make clean
     export PYTHONPATH=${PYTHONPATH}:/usr/local/gr/lib/python
 
-This will install the GR framework into the directory /usr/local/gr. You can
-choose any other destination by specifying the GRDIR variable, e.g.::
+This will install the GR framework into the directory ``/usr/local/gr``. You can
+choose any other destination by specifying the ``GRDIR`` variable, e.g.::
 
     make GRDIR=/opt/gr
 
