@@ -78,12 +78,19 @@ def create_examples(examples):
                 lines.append('.. raw:: html')
                 lines.append('')
                 lines.append('   <script language="javascript">')
-                lines.append('   QT_WriteOBJECT("/media/%s.mov" , "500", "500" , "");' % name)
+                lines.append('   QT_WriteOBJECT("/media/%s.mov" , "558", "588" , "");' % name)
                 lines.append('   </script>')
             else:
                 lines.append('.. image:: %s' % (name + '.png'))
             lines.append('')
             lines.append('----')
+        else:
+            png_file = os.path.join(MEDIA_DIR, name + '.png')
+            if os.access(png_file, os.R_OK):
+                lines.append('.. image:: %s' % (name + '.png'))
+                lines.append('')
+                lines.append('----')
+                shutil.copy(png_file, '%s.png' % os.path.join(OUTPUT_DIR, name))
 
         # Add source code
         lines.append('')
