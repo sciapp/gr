@@ -5,4 +5,4 @@ recursive-include 3rdparty *
 recursive-include examples *
 recursive-include doc *
 recursive-exclude *.vc Makefile makefile Preflight
-prune lib/gr3/playground
+prune doc/media
