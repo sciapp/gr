@@ -40,7 +40,7 @@ endif
 	make -C doc clean
 
 pypi: clean
-	python setup.py sdist upload
+	python setup.py sdist upload -r https://pypi.python.org/pypi
 
 testpypi: clean
 	python setup.py sdist upload -r https://testpypi.python.org/pypi
