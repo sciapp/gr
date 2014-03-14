@@ -44,7 +44,7 @@ Getting Started
 If you want to get the very latest version of *GR* direct from the
 source code repository then you can use git::
 
-    git clone git://ifflinux.iff.kfa-juelich.de/gr
+    git clone https://github.com/jheinen/gr
 
 The *GR* framewok is also available on PyPI package index:
 `https://pypi.python.org/pypi/gr <https://pypi.python.org/pypi/gr/>`_

@@ -71,7 +71,7 @@ Source install from git
 
 Clone the main source using::
 
-    git clone git://ifflinux.iff.kfa-juelich.de/gr
+    git clone https://github.com/jheinen/gr
 
 and build and install as usual with::
 

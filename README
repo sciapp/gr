@@ -21,7 +21,7 @@ GIT REPOSITORY
 If you want to get the very latest version of GR direct from the
 source code repository then you can use git:
 
-    git clone git://ifflinux.iff.kfa-juelich.de/gr
+    git clone https://github.com/jheinen/gr
 
 COPYRIGHT
 =========
