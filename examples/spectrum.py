@@ -9,7 +9,7 @@ import numpy
 import time
 import gr
 
-FS=44100		# Sampling frequency
+FS=44100       # Sampling frequency
 SAMPLES=1024
 
 mic = None

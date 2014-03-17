@@ -10,7 +10,7 @@ import gr
 import time
 from gr.pygr import *
 
-FS=44100		# Sampling frequency
+FS=44100       # Sampling frequency
 SAMPLES=1000
 
 mic = None

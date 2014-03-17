@@ -30,6 +30,26 @@ def get_example_filenames(examples_dir):
                 yield filename, name
 
 
+def movie(name):
+    lines = []
+    lines.append('.. raw:: html')
+    lines.append('')
+    lines.append('   <script language="javascript">')
+    lines.append('   QT_WriteOBJECT("/media/%s.mov" , "558", "588" , "");' % name)
+    lines.append('   </script>')
+    return lines
+
+def image(name):
+    lines = []
+    lines.append('.. image:: %s.png' % name)
+    return lines
+
+def separator():
+    lines = []
+    lines.append('')
+    lines.append('----')
+    return lines
+
 def create_examples(examples):
 
     # Create doc file for each example
@@ -75,22 +95,20 @@ def create_examples(examples):
         # Add image or screencast
         if plot:
             if animation:
-                lines.append('.. raw:: html')
-                lines.append('')
-                lines.append('   <script language="javascript">')
-                lines.append('   QT_WriteOBJECT("/media/%s.mov" , "558", "588" , "");' % name)
-                lines.append('   </script>')
+                lines.extend(movie(name))
             else:
-                lines.append('.. image:: %s' % (name + '.png'))
-            lines.append('')
-            lines.append('----')
+                lines.extend(image(name))
+            lines.extend(separator())
         else:
-            png_file = os.path.join(MEDIA_DIR, name + '.png')
-            if os.access(png_file, os.R_OK):
-                lines.append('.. image:: %s' % (name + '.png'))
-                lines.append('')
-                lines.append('----')
-                shutil.copy(png_file, '%s.png' % os.path.join(OUTPUT_DIR, name))
+            path = os.path.join(MEDIA_DIR, name)
+            if os.access(path + '.png', os.R_OK):
+                lines.extend(image(name))
+                lines.extend(separator())
+                shutil.copy(path + '.png', '%s.png' % os.path.join(OUTPUT_DIR, name))
+            elif os.access(path + '.mov', os.R_OK):
+                lines.extend(movie(name))
+                lines.extend(separator())
+                shutil.copy(path + '.mov', '%s.mov' % os.path.join(OUTPUT_DIR, name))
 
         # Add source code
         lines.append('')

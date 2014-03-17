@@ -64,7 +64,7 @@ class GrWidget(wx.Panel):
         w, h, d = gr.readimage(
             os.path.join(os.path.dirname(os.path.realpath(__file__)),
                          'surf.png'))
-	z = map(lambda x: x & 0xff, d)
+        z = map(lambda x: x & 0xff, d)
 
         gr.setviewport(0, 1, 0, 1)
         gr.setwindow(1, 480, 1, 480)
