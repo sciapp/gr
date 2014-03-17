@@ -23,8 +23,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-26"
-__version__ = "0.4.4"
+__date__ = "2014-03-17"
+__version__ = "0.4.5"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -247,7 +247,7 @@ class check_ext(Command):
         ldflags = ["-l" + l for l in gslibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, """#include <stdio.h>
+        os.write(fd, b"""#include <stdio.h>
 #include <stdlib.h>
 #include <ghostscript/iapi.h>
 
@@ -281,7 +281,7 @@ int main()
         ldflags = ["-l" + l for l in mupdflibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, """#include <mupdf/fitz.h>
+        os.write(fd, b"""#include <mupdf/fitz.h>
 
 int main(int argc, char **argv)
 {
@@ -331,7 +331,7 @@ int main(int argc, char **argv)
         ldflags = ["-l" + l for l in mupdflibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, """#include <stdio.h>
+        os.write(fd, b"""#include <stdio.h>
 #include <stdlib.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -366,7 +366,7 @@ int main()
         ldflags = ["-l" + l for l in gllibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, """#include <stdio.h>
+        os.write(fd, b"""#include <stdio.h>
 #include <stdlib.h>
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -403,7 +403,7 @@ int main()
         ldflags.extend(ld)
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, """#include <stdio.h>
+        os.write(fd, b"""#include <stdio.h>
 #include <stdlib.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -441,7 +441,7 @@ int main()
         ldflags.extend(ld)
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, """#include <stdio.h>
+        os.write(fd, b"""#include <stdio.h>
 #include <stdlib.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -476,7 +476,7 @@ int main()
         ldflags = ["-l" + l for l in ftlibs]
         (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
         (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, """#include <stdio.h>
+        os.write(fd, b"""#include <stdio.h>
 #include <stdlib.h>
 
 #include <ft2build.h>
@@ -515,34 +515,33 @@ int main()
         # -- wx -------------------------------------
         if not self.disable_wx and not self.wxconfig:
             self.wxconfig = Popen(["which", "wx-config"],
-                                  stdout=PIPE).communicate()[0].rstrip()
+                              stdout=PIPE).communicate()[0].decode().rstrip()
             if not os.path.isfile(self.wxconfig):
                 self.disable_wx = True
             else:
                 self.wxldflags = shlex.split(Popen([self.wxconfig, "--libs"],
-                                        stdout=PIPE).communicate()[0].rstrip())
+                                stdout=PIPE).communicate()[0].decode().rstrip())
                 self.wxcxx = shlex.split(Popen([self.wxconfig, "--cxxflags"],
-                                       stdout=PIPE).communicate()[0].rstrip())
+                               stdout=PIPE).communicate()[0].decode().rstrip())
         # -- qt -------------------------------------
         if not self.disable_qt:
             if not self.qmake:
                 self.qmake = Popen(["which", "qmake"],
-                                   stdout=PIPE).communicate()[0].rstrip()
+                               stdout=PIPE).communicate()[0].decode().rstrip()
             self.qtlibs = ["QtGui", "QtCore"]
         # -- x11 -------------------------------------
         if self.isLinux:
             x11ldflags = None
             try:
                 x11ldflags = shlex.split(Popen(["pkg-config", "x11", "--libs"],
-                                               stdout=PIPE,
-                                       stderr=PIPE).communicate()[0].rstrip())
+                   stdout=PIPE, stderr=PIPE).communicate()[0].decode().rstrip())
             except OSError:
                 pass
             if x11ldflags:
                 self.x11ldflags = x11ldflags
                 self.x11cflags = shlex.split(Popen(["pkg-config", "x11",
                                                     "--cflags"], stdout=PIPE,
-                                      stderr=PIPE).communicate()[0].rstrip())
+                               stderr=PIPE).communicate()[0].decode().rstrip())
             else:
                 self.disable_x11 = True
         else:
@@ -574,14 +573,14 @@ int main()
         # -- freetype -------------------------------------
         if not self.disable_freetype:
             ftconfig = Popen(["which", "freetype-config"],
-                             stdout=PIPE).communicate()[0].rstrip()
+                             stdout=PIPE).communicate()[0].decode().rstrip()
             self.disable_freetype = not bool(ftconfig)
             if not self.disable_freetype:
                 self.ftconfig = ftconfig
                 self.ftldflags = shlex.split(Popen([self.ftconfig, "--libs"],
-                                       stdout=PIPE).communicate()[0].rstrip())
+                               stdout=PIPE).communicate()[0].decode().rstrip())
                 self.ftcflags = shlex.split(Popen([self.ftconfig, "--cflags"],
-                                        stdout=PIPE).communicate()[0].rstrip())
+                              stdout=PIPE).communicate()[0].decode().rstrip())
             self.disable_freetype = (
                              not self._test_freetype(ftcflags=self.ftcflags,
                                                      ftldflags=self.ftldflags))
@@ -608,14 +607,14 @@ int main()
             try:
                 gtkcflags = shlex.split(Popen(["pkg-config", self.gtk_package,
                                                "--cflags"], stdout=PIPE,
-                                      stderr=PIPE).communicate()[0].rstrip())
+                              stderr=PIPE).communicate()[0].decode().rstrip())
             except OSError:
                 pass
             if gtkcflags:
                 self.gtkcflags = gtkcflags
                 self.gtkldflags = shlex.split(Popen(["pkg-config",
                                      self.gtk_package, "--libs"], stdout=PIPE,
-                                        stderr=PIPE).communicate()[0].rstrip())
+                                stderr=PIPE).communicate()[0].decode().rstrip())
             else:
                 self.disable_gtk = True
         # -- mupdf -------------------------------------
@@ -703,24 +702,24 @@ int main()
                 self.disable_qt = True
             else:
                 qtversion = Popen([self.qmake, "-v"], stdout=PIPE,
-                                  stderr=STDOUT).communicate()[0].rstrip()
+                              stderr=STDOUT).communicate()[0].decode().rstrip()
                 match = re.search("\d\.\d\.\d", qtversion)
                 if match:
-                    self.qtversion = map(lambda s: int(s),
-                                         match.group(0).split('.'))
-                if not self.qtversion or self.qtversion < 4:
+                    self.qtversion = list(map(lambda s: int(s),
+                                              match.group(0).split('.')))
+                if not self.qtversion or self.qtversion[0] < 4:
                     self.disable_qt = True
                 else:
                     qquery = Popen([self.qmake, "-query", "QT_INSTALL_HEADERS"],
                                     stdout=PIPE)
                     std = qquery.communicate()
                     if qquery.returncode == 0:
-                        self.qtinc = [std[0].rstrip()]
+                        self.qtinc = [std[0].decode().rstrip()]
                     qquery = Popen([self.qmake, "-query", "QT_INSTALL_LIBS"],
                                     stdout=PIPE)
                     std = qquery.communicate()
                     if qquery.returncode == 0:
-                        self.qtlib = [std[0].rstrip()]
+                        self.qtlib = [std[0].decode().rstrip()]
 
         # -- platform independend tests -------------------------------------
 #        if not self.disable_gs:
@@ -1229,8 +1228,8 @@ _build_scripts = os.path.join("build", "scripts-%d.%d" % (sys.version_info[0],
 
 # additional data files in the distribtion
 _gks_fonts = os.path.join("lib", "gks", "fonts")
-_gks_fonts_path = map(lambda f: os.path.join(_gks_fonts, f),
-                      os.listdir(_gks_fonts))
+_gks_fonts_path = list(map(lambda f: os.path.join(_gks_fonts, f),
+                           os.listdir(_gks_fonts)))
 _gks_fonts_path.append(os.path.join("lib", "gks", "gksfont.dat"))
 _data_files = [(os.path.join(get_python_lib(plat_specific=True, prefix=''),
                              "gr", "fonts"), _gks_fonts_path)]
@@ -1303,17 +1302,17 @@ elif "linux" in sys.platform:
 elif sys.platform == "win32":
     _gr3_src.insert(0, "gr3_win.c")
 
-_gks_src_path = map(lambda p: os.path.join("lib", "gks", p), _gks_src)
-_gks_plugin_src_path = map(lambda p: os.path.join("lib", "gks", "plugin", p),
-                           _gks_plugin_src)
-_libz_src_path = map(lambda p: os.path.join("3rdparty", "zlib", p),
-                       _libz_src)
-_libpng_src_path = map(lambda p: os.path.join("3rdparty", "png", p),
-                       _libpng_src)
-_libjpeg_src_path = map(lambda p: os.path.join("3rdparty", "jpeg", p),
-                       _libjpeg_src)
-_gr_src_path = map(lambda p: os.path.join("lib", "gr", p), _gr_src)
-_gr3_src_path = map(lambda p: os.path.join("lib", "gr3", p), _gr3_src)
+_gks_src_path = list(map(lambda p: os.path.join("lib", "gks", p), _gks_src))
+_gks_plugin_src_path = list(map(lambda p: os.path.join("lib", "gks", "plugin",
+                                                       p), _gks_plugin_src))
+_libz_src_path = list(map(lambda p: os.path.join("3rdparty", "zlib", p),
+                          _libz_src))
+_libpng_src_path = list(map(lambda p: os.path.join("3rdparty", "png", p),
+                            _libpng_src))
+_libjpeg_src_path = list(map(lambda p: os.path.join("3rdparty", "jpeg", p),
+                             _libjpeg_src))
+_gr_src_path = list(map(lambda p: os.path.join("lib", "gr", p), _gr_src))
+_gr3_src_path = list(map(lambda p: os.path.join("lib", "gr3", p), _gr3_src))
 
 _plugins_path = {}
 for plugin_src in _gks_plugins:
