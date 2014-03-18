@@ -1,5 +1,6 @@
+#########################################################
 GR - a universal framework for visualization applications
-=========================================================
+#########################################################
 
 GR is a universal framework for cross-platform visualization applications.
 It offers developers a compact, portable and consistent graphics library for
@@ -21,5 +22,5 @@ by Josef Heinen who currently maintains the software, but there are other
 developers who currently make valuable contributions. Special thanks to
 Florian Rhiem (GR3) and Christian Felder (qtgr, setup.py).
 
-For further information please refer to the GR home page <http://gr-framework.org/>`_.
+For further information please refer to the `GR home page <http://gr-framework.org/>`_.
  
