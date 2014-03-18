@@ -52,6 +52,8 @@ def separator():
 
 def create_examples(examples):
 
+    contents = []
+
     # Create doc file for each example
     for filename, name in examples:
         print('Writing example %s' % name)
@@ -64,6 +66,7 @@ def create_examples(examples):
 
         # Get source
         doclines = []
+        infoline = ''
         sourcelines = []
         animation = False
         plot = True
@@ -84,6 +87,8 @@ def create_examples(examples):
                     if '"""' in line:
                         sourcelines.append('    ' + line.partition('"""')[0])
                     else:
+                        if infoline == '':
+                            infoline = line
                         doclines.append(line)
                 else:
                     sourcelines.append('    ' + line)
@@ -136,9 +141,12 @@ def create_examples(examples):
                 print('Create PNG figure for example %s' % name)
                 os.popen('gr -t=png %s.py' % os.path.join(EXAMPLES_DIR, name))
                 shutil.move('gks_p001.png', '%s.png' % os.path.join(OUTPUT_DIR, name))
+        contents.append([filename, name, infoline])
+
+    return contents
 
 
-def create_examples_list(examples):
+def create_toc(contents):
 
     # Create TOC
     lines = []
@@ -150,8 +158,8 @@ def create_examples_list(examples):
     lines.append('.. toctree::')
     lines.append('   :maxdepth: 2')
     lines.append('')
-    for _, name in examples:
-        lines.append('   %s' % name)
+    for _, name, info in contents:
+        lines.append('   %s <%s>' % (info, name))
     lines.append('')
 
     # Write file
@@ -165,8 +173,8 @@ def main():
     examples = list(get_example_filenames(EXAMPLES_DIR))
     examples.sort(key=lambda x: x[1])
 
-    create_examples(examples)
-    create_examples_list(examples)
+    contents = create_examples(examples)
+    create_toc(contents)
 
 
 if __name__ == '__main__':

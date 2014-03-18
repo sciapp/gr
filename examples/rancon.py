@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Contour plot of irregular distributed data
+Plot irregular distributed data
 """
 
 from gr.pygr import *

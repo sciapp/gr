@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Small example that shows how to plot a function with the use of gr
+Plot a function with the use of gr
 """
 
 from gr.pygr import *

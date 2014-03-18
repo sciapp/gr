@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This demo shows how to create a contour plot of irregular distributed data
+Create a contour plot of irregular distributed data
 """
 
 from numpy.random import uniform, seed

@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 # -*- no-plot -*-
 """
-Simple MRI visualization GUI
+Simple MRI visualization example
+    - drag the mouse to move the camera
+    - use the mousewheel to change the threshold value for densities
 """
 
 from os import environ
