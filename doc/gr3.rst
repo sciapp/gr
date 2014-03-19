@@ -1,5 +1,5 @@
-Documentation for gr3
----------------------
+GR3 Reference
+-------------
 
 General Functions
 ^^^^^^^^^^^^^^^^^

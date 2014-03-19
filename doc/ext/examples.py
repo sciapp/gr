@@ -156,7 +156,6 @@ def create_toc(contents):
 
     # Add entry for each example that we know
     lines.append('.. toctree::')
-    lines.append('   :maxdepth: 2')
     lines.append('')
     for _, name, info in contents:
         lines.append('   %s <%s>' % (info, name))

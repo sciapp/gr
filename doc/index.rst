@@ -41,17 +41,16 @@ module.
 Getting Started
 ---------------
 
-If you want to get the very latest version of *GR* direct from the
-source code repository then you can use git::
+If you want to get the very latest version can clone the
+`GR repository <https://github.com/jheinen/gr>`_ from GitHub::
 
     git clone https://github.com/jheinen/gr
 
-The *GR* framewok is also available on PyPI package index:
+The *GR* framewok is also available on PyPI:
 `https://pypi.python.org/pypi/gr <https://pypi.python.org/pypi/gr/>`_
 
 The installation method depends on the environment in which GR will
-be used. For further information please refer to the installation
-documentation.
+be used. For further information please refer to the :doc:`installation documentation <installation>`.
 
 Once you have installed the GR framework you simply need to type::
 
@@ -61,21 +60,32 @@ Once you have installed the GR framework you simply need to type::
 At this point, you should browse the gallery to get an impression
 of GR's capabilities.
 
-Contents
---------
+Documentation
+-------------
+
+This is the documentation for the GR framework.
+
+*  :doc:`GR Reference <gr>`
+*  :doc:`GR3 Reference <gr3>`
+*  :doc:`Tutorials <tutorials/index>`
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
 
    installation.rst
    gr.rst
-   Examples <examples/index.rst>
    gr3.rst
+   Examples <examples/index.rst>
    tutorials/index.rst
-   links.rst
-   thanks.rst
+   credits.rst
+   references.rst
    imprint.rst
 
+**Other resources**
+
+* The GR framework has already been presented in a talk at PyCon DE `2012 <https://2012.de.pycon.org/programm/schedule/sessions/54>`_ and `2013 <https://2013.de.pycon.org/schedule/sessions/45/>`_, during a `poster session <https://us.pycon.org/2013/schedule/presentation/158/>`_ at PyCon US 2013, and at `PythonCamps 2013 <http://josefheinen.de/rasberry-pi.html>`_ in Cologne. The slides for the PyCon.DE 2013 talk can be found `here <http://iffwww.iff.kfa-juelich.de/pub/doc/PyCon_DE_2013>`_.
+
+* There is an active developer group and :doc:`list <credits>` of people who have made significant contributions. More information can be found :doc:`here <references>`.
 
 Indices and tables
 ------------------

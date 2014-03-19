@@ -1,5 +1,5 @@
-Documentation for gr
---------------------
+GR Reference
+------------
 
 Output Functions
 ^^^^^^^^^^^^^^^^

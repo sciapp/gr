@@ -22,24 +22,32 @@ features:
 |Python support |- python2.7-dev       |- python-devel        |
 |               |- numpy               |- numpy               |
 +---------------+----------------------+----------------------+
-|**optional:**                                                |
+|**recommended:**                                             |
 +---------------+----------------------+----------------------+
 |LaTeX support  |- texlive-latex3      |- texlive             |
 |               |- dvipng              |- dvipng              |
 +---------------+----------------------+----------------------+
-|Image output   |libgs-dev             |ghostscript-devel     |
+|OpenGL         |- python-opengl       |PyOpenGL              |
+|               |- libgl1-mesa-dev     |                      |
 +---------------+----------------------+----------------------+
 |Qt embedding   |- qt4-dev-tools       |- qt4-devel           |
 |               |- pyqt4-dev-tools     |- PyQt4               |
++---------------+----------------------+----------------------+
+|**optional:**                                                |
++---------------+----------------------+----------------------+
+|Image output   |libgs-dev             |ghostscript-devel     |
++---------------+----------------------+----------------------+
+|PDF import     |mupdf-dev             |mupdf-devel           |
++---------------+----------------------+----------------------+
+|MOV export     |        ffmpeg-2.x (source build)            |
 +---------------+----------------------+----------------------+
 |wxWidgets      |- libgtk2.0-devs      |- wxBase.x86_64       |
 |               |- libwxgtk2.8-dev     |- wxGTK-devel.x86_64  |
 |               |- python-wxgtk2.8     |- wxPython            |
 +---------------+----------------------+----------------------+
-|OpenGL         |- python-opengl       |PyOpenGL              |
-|               |- libgl1-mesa-dev     |                      |
-+---------------+----------------------+----------------------+
 |GLFW           |                      |glfw-devel            |
++---------------+----------------------+----------------------+
+|**for the demos:**                                           |
 +---------------+----------------------+----------------------+
 |Audio demos    |python-pyaudio        |pyaudio               |
 +---------------+----------------------+----------------------+
