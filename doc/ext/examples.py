@@ -35,7 +35,7 @@ def movie(name):
     lines.append('.. raw:: html')
     lines.append('')
     lines.append('   <script language="javascript">')
-    lines.append('   QT_WriteOBJECT("/media/%s.mov" , "558", "588" , "");' % name)
+    lines.append('   QT_WriteOBJECT("/media/%s.mov" , "558", "558" , "", "autoplay", "true", "controller", "false");' % name)
     lines.append('   </script>')
     return lines
 

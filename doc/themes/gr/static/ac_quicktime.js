@@ -4,7 +4,7 @@ File: AC_QuickTime.js
 
 Abstract: This file contains functions to generate OBJECT and EMBED tags for QuickTime content.
 
-Version: <1.2>
+Version: <1.2.1>
 
 Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple
 Computer, Inc. ("Apple") in consideration of your agreement to the
@@ -213,6 +213,7 @@ function _QTGenerate(callingFcnName, generateXHTML, args)
 	gTagAttrs["src"] = args[0];
 	gTagAttrs["width"] = args[1];
 	gTagAttrs["height"] = args[2];
+	gTagAttrs["type"] = "video/quicktime";
 	gTagAttrs["classid"] = "clsid:02BF25D5-8C17-4B23-BC80-D3488ABDDC6B";
 		//Impportant note: It is recommended that you use this exact classid in order to ensure a seamless experience for all viewers
 	gTagAttrs["pluginspage"] = "http://www.apple.com/quicktime/download/";
@@ -264,6 +265,7 @@ function _QTGenerate(callingFcnName, generateXHTML, args)
 					+ '>'
 					+ _QTAddObjectParam("src", generateXHTML);
 	var embedTag = '<embed '
+					+ _QTAddEmbedAttr("type")
 					+ _QTAddEmbedAttr("src")
 					+ _QTAddEmbedAttr("width")
 					+ _QTAddEmbedAttr("height")
@@ -274,7 +276,7 @@ function _QTGenerate(callingFcnName, generateXHTML, args)
 					+ _QTAddEmbedAttr("tabindex");
 
 	// delete the attributes/params we have already added
-	_QTDeleteTagAttrs("src","width","height","pluginspage","classid","codebase","name","tabindex",
+	_QTDeleteTagAttrs("type","src","width","height","pluginspage","classid","codebase","name","tabindex",
 					"hspace","vspace","border","align","noexternaldata","class","title","accesskey","id","style");
 
 	// and finally, add all of the remaining attributes to the embed and object
