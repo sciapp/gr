@@ -311,13 +311,13 @@ int main(void)
    exit(0);
 }
 eof
-cmd="cc -o $tmpout $tmpsrc -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx -lz"
+cmd="cc -o $tmpout $tmpsrc -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -lz"
 if [ `uname` = "Linux" ]
 then
   cmd="$cmd -lpthread -lm"
 elif [ `uname` = "Darwin" ]
 then
-  cmd="$cmd -liconv"
+  cmd="$cmd -ltheora -logg -lvpx -liconv"
 fi
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then

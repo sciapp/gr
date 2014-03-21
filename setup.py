@@ -963,7 +963,9 @@ int main()
                 inc.extend(gksinc)
                 libs = list(self.mupdflibs)
                 ffmpeglibs = ["avdevice", "avformat", "avfilter", "avcodec",
-                              "swscale", "avutil", "theora", "ogg", "pvx"]
+                              "swscale", "avutil"]
+                if self.isDarwin:
+                    ffmpeglibs.extend(["theora", "ogg", "pvx"])
                 libs.extend(_zlibs)
                 libs.append("pthread")
                 ldflags = list(self.ftldflags)

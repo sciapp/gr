@@ -1,3 +1,5 @@
+   UNAME_S := $(shell uname -s)
+
       GRDIR = /usr/local/gr
      LIBDIR = $(DESTDIR)$(GRDIR)/lib
 
@@ -28,7 +30,12 @@
       FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
      FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
      AVDEFS = 
-     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
+     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil
+ifeq ($(UNAME_S),Darwin)
+ifneq ($(AVLIBS),)
+     AVLIBS += -ltheora -logg -lvpx
+endif
+endif
   MUPDFDEFS = 
   MUPDFLIBS = -lmupdf -lmupdf-js-none $(FTLIBS) -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz
     X11DEFS =
