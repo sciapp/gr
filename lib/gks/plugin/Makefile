@@ -28,7 +28,7 @@
       FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
      FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
      AVDEFS = 
-     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil
+     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
   MUPDFDEFS = 
   MUPDFLIBS = -lmupdf -lmupdf-js-none $(FTLIBS) -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz
     X11DEFS =

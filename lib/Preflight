@@ -296,8 +296,29 @@ printf "%12s: %s\n" "0MQ" "$info" >&2
 rm -f $tmpout $tmpsrc $tmpver
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
+tmpsrc=`mktemp /tmp/a$$XXXXX.c`
 tmpver=`mktemp /tmp/a$$XXXXX.txt`
-cmd="cc -c -o $tmpout lib/gks/plugin/vc.c"
+cat >$tmpsrc << eof
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/mathematics.h>
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
+
+int main(void)
+{
+   avcodec_register_all();
+   exit(0);
+}
+eof
+cmd="cc -o $tmpout $tmpsrc -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx -lz"
+if [ `uname` = "Linux" ]
+then
+  cmd="$cmd -lpthread -lm"
+elif [ `uname` = "Darwin" ]
+then
+  cmd="$cmd -liconv"
+fi
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   avdefs="AVDEFS=-DNO_AV AVLIBS="
@@ -313,7 +334,7 @@ else
   info="${green}yes${normal} [`cat $tmpver | head -1`]"
 fi
 printf "%12s: %s\n" "ffmpeg" "$info" >&2
-rm -f $tmpout $tmpver
+rm -f $tmpsrc $tmpout $tmpver
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
 tmpsrc=`mktemp /tmp/a$$XXXXX.c`

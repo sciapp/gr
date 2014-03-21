@@ -963,7 +963,7 @@ int main()
                 inc.extend(gksinc)
                 libs = list(self.mupdflibs)
                 ffmpeglibs = ["avdevice", "avformat", "avfilter", "avcodec",
-                              "swscale", "avutil"]
+                              "swscale", "avutil", "theora", "ogg", "pvx"]
                 libs.extend(_zlibs)
                 libs.append("pthread")
                 ldflags = list(self.ftldflags)
