@@ -9,7 +9,7 @@ import math
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-26"
+__date__ = "2014-03-27"
 __version__ = "0.4.5"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -83,3 +83,6 @@ class ColorIndexGenerator(object):
         idx = ColorIndexGenerator._distinct_colors[self._i]
         self._i = (self._i + 1) % ColorIndexGenerator._n
         return idx
+
+    def reset(self):
+        self._i = 0
