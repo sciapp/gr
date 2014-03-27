@@ -646,6 +646,9 @@ class Plot(GRViewPort, GRMeta):
 
     def drawGR(self):
         [xmin, xmax, ymin, ymax] = self.viewportscaled
+         # redraw flag will be set if viewport has been adjusted in order to
+         # display all legend items.
+        redraw = False
         # -- draw title and subtitle -----------------------------------------
         if self.title or self.subTitle:
             dyTitle = 0
@@ -698,7 +701,9 @@ class Plot(GRViewPort, GRMeta):
         if self._legend:
             x, y = xmin, y - dyXLabel - charHeightUnscaled
             if y < 0:
-                self.viewport[2] += dyXLabel
+                vp = self.viewport
+                vp[2] += dyXLabel
+                self.viewport = vp # propagate update (calls setter)
                 gr.clearws()
                 self.drawGR()
             else:
@@ -713,6 +718,8 @@ class Plot(GRViewPort, GRMeta):
                 gr.setwindow(0, self.sizex, 0, self.sizey)
                 self._legendROI = []
                 for axes in self._lstAxes:
+                    if redraw:
+                        break
                     for curve in axes.getCurves():
                         if curve.legend:
                             tbx, tby = gr.inqtextext(0, 0, curve.legend)
@@ -721,10 +728,17 @@ class Plot(GRViewPort, GRMeta):
                             if x + lineWidth + textWidth > self.sizex:
                                 x = xmin
                                 y -= 2 * charHeightUnscaled
+                                if y < 0:
+                                    vp = self.viewport
+                                    vp[2] += 3 * charHeightUnscaled
+                                    # propagate update (calls setter)
+                                    self.viewport = vp
+                                    redraw = True
+                                    break
                             gr.setmarkertype(curve.markertype)
                             gr.setmarkercolorind(curve.markercolor)
                             if curve.linetype is not None:
-                                ys = y * self.sizey # sclaed y value
+                                ys = y * self.sizey # scaled y value
                                 gr.setlinecolorind(curve.linecolor)
                                 gr.setmarkercolorind(curve.markercolor)
                                 gr.setlinetype(curve.linetype)
@@ -771,6 +785,9 @@ class Plot(GRViewPort, GRMeta):
                 gr.setwindow(*window)
                 # restore scale
                 gr.setscale(scale)
+        if redraw:
+            gr.clearws()
+            self.drawGR()
 
 class PlotCurve(GRDrawAttributes, GRMeta):
 
