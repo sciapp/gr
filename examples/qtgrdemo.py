@@ -100,7 +100,7 @@ class MainWindow(QtGui.QMainWindow):
         axes.setXtickCallback(self._xtickCallBack)
         self._plot = Plot((.1, .92, .2, .88)).addAxes(axes,
                                     PlotAxes(drawX=False).plot(x2, y2))
-        self._plot.offsetXLabel = -.05
+        self._plot.offsetXLabel = -.1
         self._plot2 = Plot((.1, .95, .15, .88)).addAxes(PlotAxes().addCurves(PlotCurve(x2, y2,
                                                            legend="second")))
 
