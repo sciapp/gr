@@ -7,8 +7,9 @@ Exported Classes:
 # standard library
 import math
 
+
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-26"
+__date__ = "2014-03-27"
 __version__ = "0.4.5"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
@@ -35,6 +36,7 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
 
+
 class DomainChecker(object):
 
     _ZERO = 1e-8
@@ -60,11 +62,15 @@ class DomainChecker(object):
             res = False
         return res
 
+
 class ColorIndexGenerator(object):
 
     _distinct_colors = range(980, 1000)
     _n = len(_distinct_colors)
     _curIdx = 0
+
+    def __init__(self):
+        self._i = 0
 
     @staticmethod
     def nextColorIndex():
@@ -72,3 +78,11 @@ class ColorIndexGenerator(object):
         ColorIndexGenerator._curIdx = ((ColorIndexGenerator._curIdx + 1)
                                        % ColorIndexGenerator._n)
         return idx
+
+    def getNextColorIndex(self):
+        idx = ColorIndexGenerator._distinct_colors[self._i]
+        self._i = (self._i + 1) % ColorIndexGenerator._n
+        return idx
+
+    def reset(self):
+        self._i = 0

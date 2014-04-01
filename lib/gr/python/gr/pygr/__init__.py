@@ -646,7 +646,10 @@ class Plot(GRViewPort, GRMeta):
 
     def drawGR(self):
         [xmin, xmax, ymin, ymax] = self.viewportscaled
-        # draw title and subtitle
+         # redraw flag will be set if viewport has been adjusted in order to
+         # display all legend items.
+        redraw = False
+        # -- draw title and subtitle -----------------------------------------
         if self.title or self.subTitle:
             dyTitle = 0
             dySubTitle = 0
@@ -668,24 +671,23 @@ class Plot(GRViewPort, GRMeta):
                 y -= dyTitle + 0.01
             if self.subTitle:
                 gr.text(x, y * self.sizey, self.subTitle)
-        # draw axes and curves
+        # -- draw axes and curves --------------------------------------------
         if self._lstAxes:
             for axes in self._lstAxes:
                 axes.drawGR()
-        # current values, viewport maybe changed above
-        [xmin, xmax, ymin, ymax] = self.viewportscaled
         dyXLabel = 0
         dxYLabel = 0
-        # draw x- and y label
-        y = self.offsetXLabel + ymin
+        # -- draw x- and y label ---------------------------------------------
+        y = self.offsetXLabel + self.viewport[2]
         if self.xlabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(0., 1.)
-            tby = gr.inqtextext(0, 0, self.xlabel)[1]
-            tby = map(lambda y: gr.wctondc(0, y)[1], tby)
-            dyXLabel = max(tby) - min(tby)
-            y -= dyXLabel + charHeight
-            gr.text(xmin + (xmax - xmin) / 2., y, self.xlabel)
+#            tby = gr.inqtextext(0, 0, self.xlabel)[1]
+#            tby = map(lambda y: gr.wctondc(0, y)[1], tby)
+#            dyXLabel = max(tby) - min(tby) # already scaled
+            dyXLabel = charHeightUnscaled
+            y -= dyXLabel + charHeightUnscaled
+            gr.text(xmin + (xmax - xmin) / 2., y * self.sizey, self.xlabel)
         if self.ylabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(-1., 0.)
@@ -695,11 +697,13 @@ class Plot(GRViewPort, GRMeta):
             gr.text(self.offsetYLabel + xmin - dxYLabel / 2. - .075,
                     ymin + (ymax - ymin) / 2., self.ylabel)
             gr.setcharup(0., 1.)
-        # draw legend and calculate ROIs for legend items 
+        # -- draw legend and calculate ROIs for legend items -----------------
         if self._legend:
-            x, y = self.viewport[0], y - dyXLabel - charHeight
+            x, y = xmin, y - dyXLabel - charHeightUnscaled
             if y < 0:
-                self.viewport[2] += dyXLabel
+                vp = self.viewport
+                vp[2] += dyXLabel
+                self.viewport = vp # propagate update (calls setter)
                 gr.clearws()
                 self.drawGR()
             else:
@@ -714,31 +718,41 @@ class Plot(GRViewPort, GRMeta):
                 gr.setwindow(0, self.sizex, 0, self.sizey)
                 self._legendROI = []
                 for axes in self._lstAxes:
+                    if redraw:
+                        break
                     for curve in axes.getCurves():
                         if curve.legend:
                             tbx, tby = gr.inqtextext(0, 0, curve.legend)
                             textWidth = max(tbx) - min(tbx)
                             lineWidth = .1
                             if x + lineWidth + textWidth > self.sizex:
-                                x = self.viewport[0]
-                                y -= 2 * charHeight
+                                x = xmin
+                                y -= 2 * charHeightUnscaled
+                                if y < 0:
+                                    vp = self.viewport
+                                    vp[2] += 3 * charHeightUnscaled
+                                    # propagate update (calls setter)
+                                    self.viewport = vp
+                                    redraw = True
+                                    break
                             gr.setmarkertype(curve.markertype)
                             gr.setmarkercolorind(curve.markercolor)
                             if curve.linetype is not None:
+                                ys = y * self.sizey # scaled y value
                                 gr.setlinecolorind(curve.linecolor)
                                 gr.setmarkercolorind(curve.markercolor)
                                 gr.setlinetype(curve.linetype)
-                                gr.polyline(2, [x, x + lineWidth], [y, y])
+                                gr.polyline(2, [x, x + lineWidth], [ys, ys])
                                 if (curve.markertype != gr.MARKERTYPE_DOT
                                     and curve.markertype is not None):
                                     gr.setmarkertype(curve.markertype)
-                                    gr.polymarker(1, [x + .1 / 2.], [y])
+                                    gr.polymarker(1, [x + .1 / 2.], [ys])
                             elif curve.markertype is not None:
                                 gr.setmarkertype(curve.markertype)
-                                gr.polymarker(1, [x + .1 / 2.], [y])
+                                gr.polymarker(1, [x + .1 / 2.], [ys])
 
-                            ybase = y - charHeightUnscaled / 2
-                            ytop = y + charHeightUnscaled / 2
+                            ybase = (y - charHeightUnscaled / 2) * self.sizey
+                            ytop = (y + charHeightUnscaled / 2) * self.sizey
                             roi = RegionOfInterest(Point(x, ybase),
                                                    Point(x, ytop),
                                                    reference=curve,
@@ -750,7 +764,7 @@ class Plot(GRViewPort, GRMeta):
                                 gr.settextcolorind(83)
                             gr.settextalign(gr.TEXT_HALIGN_LEFT,
                                             gr.TEXT_VALIGN_HALF)
-                            gr.text(x, y, curve.legend)
+                            gr.text(x, ys, curve.legend)
                             gr.settextcolorind(1)
                             x += textWidth
                             roi.append(Point(x, ytop), Point(x, ybase))
@@ -771,6 +785,9 @@ class Plot(GRViewPort, GRMeta):
                 gr.setwindow(*window)
                 # restore scale
                 gr.setscale(scale)
+        if redraw:
+            gr.clearws()
+            self.drawGR()
 
 class PlotCurve(GRDrawAttributes, GRMeta):
 
