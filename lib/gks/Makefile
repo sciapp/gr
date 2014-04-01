@@ -62,7 +62,7 @@ plugins:
 	@make -C plugin
 
 pasdemo: default
-	fpc demo.p -g -Fl./
+	fpc -Px86_64 demo.p -g -Fl./
 
 install:
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi

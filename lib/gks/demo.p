@@ -5,9 +5,9 @@ uses
 
 var
   asf : array[1..13] of longint;
-  x, y : array[1..10] of single;
-  cpx, cpy : single;
-  tx, ty : array[1..4] of single;
+  x, y : array[1..10] of double;
+  cpx, cpy : double;
+  tx, ty : array[1..4] of double;
   i, j, k : longint;
   colia : array[1..80] of longint;
   inp_status, tnr, errind : longint;
@@ -216,12 +216,16 @@ begin
   gks_set_text_align(1, 1);
   gks_set_text_fontprec(3, GKS_K_TEXT_PRECISION_STRING);
   gks_set_text_upvec(-1, 0);
+  gks_set_text_color_index(200);
   gks_text(0.05, 0.15, 'up');
   gks_set_text_upvec(0, -1);
+  gks_set_text_color_index(400);
   gks_text(0.05, 0.15, 'left');
   gks_set_text_upvec(1, 0);
+  gks_set_text_color_index(600);
   gks_text(0.05, 0.15, 'down');
   gks_set_text_upvec(0, 1);
+  gks_set_text_color_index(800);
   gks_text(0.05, 0.15, 'right');
 
   if ARGC > 1 then

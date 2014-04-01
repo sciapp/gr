@@ -5,7 +5,7 @@ interface
 {$linklib GKS}
 
   type
-     Psingle  = ^single;
+     Pdouble  = ^double;
      Plongint  = ^longint;
 
   const
@@ -176,35 +176,35 @@ interface
     wkid : longint; message : ansistring); cdecl; external 'GKS';
 
   procedure gks_polyline(
-    n : longint; pxa, pya : array of single); cdecl; external 'GKS';
+    n : longint; pxa, pya : array of double); cdecl; external 'GKS';
   procedure gks_polymarker(
-    n : longint; pxa, pya : array of single); cdecl; external 'GKS';
+    n : longint; pxa, pya : array of double); cdecl; external 'GKS';
   procedure gks_text(
-    px : single; py : single; str : ansistring); cdecl; external 'GKS';
+    px : double; py : double; str : ansistring); cdecl; external 'GKS';
   procedure gks_fillarea(
-    n : longint; pxa, pya : array of single); cdecl; external 'GKS';
+    n : longint; pxa, pya : array of double); cdecl; external 'GKS';
   procedure gks_cellarray(
-    xmin, xmax, ymin, ymax : single;
+    xmin, xmax, ymin, ymax : double;
     dimx : longint; dimy : longint; scol : longint; srow : longint;
     ncol : longint; nrow : longint; colia : array of longint);
     cdecl; external 'GKS';
 
   procedure gks_set_pline_index(index : longint); cdecl; external 'GKS';
   procedure gks_set_pline_linetype(ltype : longint); cdecl; external 'GKS';
-  procedure gks_set_pline_linewidth(lwidth : single); cdecl; external 'GKS';
+  procedure gks_set_pline_linewidth(lwidth : double); cdecl; external 'GKS';
   procedure gks_set_pline_color_index(coli : longint); cdecl; external 'GKS';
   procedure gks_set_pmark_index(index : longint); cdecl; external 'GKS';
   procedure gks_set_pmark_type(mtype : longint); cdecl; external 'GKS';
-  procedure gks_set_pmark_size(mszsc : single); cdecl; external 'GKS';
+  procedure gks_set_pmark_size(mszsc : double); cdecl; external 'GKS';
   procedure gks_set_pmark_color_index(coli : longint); cdecl; external 'GKS';
   procedure gks_set_text_index(index : longint); cdecl; external 'GKS';
   procedure gks_set_text_fontprec(font : longint; prec : longint);
      cdecl; external 'GKS';
-  procedure gks_set_text_expfac(chxp : single); cdecl; external 'GKS';
-  procedure gks_set_text_spacing(chsp : single); cdecl; external 'GKS';
+  procedure gks_set_text_expfac(chxp : double); cdecl; external 'GKS';
+  procedure gks_set_text_spacing(chsp : double); cdecl; external 'GKS';
   procedure gks_set_text_color_index(coli : longint); cdecl; external 'GKS';
-  procedure gks_set_text_height(chh : single); cdecl; external 'GKS';
-  procedure gks_set_text_upvec(chux : single; chuy : single);
+  procedure gks_set_text_height(chh : double); cdecl; external 'GKS';
+  procedure gks_set_text_upvec(chux : double; chuy : double);
      cdecl; external 'GKS';
   procedure gks_set_text_path(txp : longint); cdecl; external 'GKS';
   procedure gks_set_text_align(txalh : longint; txalv : longint);
@@ -215,19 +215,19 @@ interface
   procedure gks_set_fill_color_index(coli : longint); cdecl; external 'GKS';
   procedure gks_set_asf(flag : array of longint); cdecl; external 'GKS';
   procedure gks_set_color_rep(
-    wkid : longint; index : longint; red, green, blue : single);
+    wkid : longint; index : longint; red, green, blue : double);
     cdecl; external 'GKS';
 
-  procedure gks_set_window(tnr : longint; xmin, xmax, ymin, ymax : single);
+  procedure gks_set_window(tnr : longint; xmin, xmax, ymin, ymax : double);
     cdecl; external 'GKS';
-  procedure gks_set_viewport(tnr : longint; xmin, xmax, ymin, ymax : single);
+  procedure gks_set_viewport(tnr : longint; xmin, xmax, ymin, ymax : double);
     cdecl; external 'GKS';
   procedure gks_select_xform(tnr : longint); cdecl; external 'GKS';
   procedure gks_set_clipping(clsw : longint); cdecl; external 'GKS';
-  procedure gks_set_ws_window(wkid : longint; xmin, xmax, ymin, ymax : single);
+  procedure gks_set_ws_window(wkid : longint; xmin, xmax, ymin, ymax : double);
     cdecl; external 'GKS';
   procedure gks_set_ws_viewport(
-    wkid : longint; xmin, xmax, ymin, ymax : single); cdecl; external 'GKS';
+    wkid : longint; xmin, xmax, ymin, ymax : double); cdecl; external 'GKS';
 
   procedure gks_create_seg(segn : longint); cdecl; external 'GKS';
   procedure gks_close_seg; cdecl; external 'GKS';
@@ -237,18 +237,18 @@ interface
   procedure gks_copy_seg_to_ws(
     wkid : longint; segn : longint); cdecl; external 'GKS';
   procedure gks_set_seg_xform(
-    segn : longint; mat : Psingle); cdecl; external 'GKS';
+    segn : longint; mat : Pdouble); cdecl; external 'GKS';
 
   procedure gks_initialize_locator(
-    wkid : longint; lcdnr : longint; tnr : longint; px, py : single;
-    pet : longint; xmin, xmax, ymin, ymax : single; ldr : longint;
+    wkid : longint; lcdnr : longint; tnr : longint; px, py : double;
+    pet : longint; xmin, xmax, ymin, ymax : double; ldr : longint;
     datrec : ansistring); cdecl; external 'GKS';
   procedure gks_request_locator(
     wkid : longint; lcdnr : longint; var stat, tnr : longint;
-    var px, py : single); cdecl; external 'GKS';
+    var px, py : double); cdecl; external 'GKS';
   procedure gks_request_stroke(
     wkid : longint; skdnr : longint; n : longint; stat : Plongint;
-    tnr : Plongint; np : Plongint; pxa, pya : array of single);
+    tnr : Plongint; np : Plongint; pxa, pya : array of double);
     cdecl; external 'GKS';
   procedure gks_request_choice(
     wkid : longint; chdnr : longint; stat : Plongint; chnr : Plongint);
@@ -266,8 +266,8 @@ interface
     _type : longint; lenidr : longint; dimidr : longint; idr : ansistring);
     cdecl; external 'GKS';
   procedure gks_eval_xform_matrix(
-    fx, fy : single; transx, transy : single; phi : single;
-    scalex, scaley : single; coord : longint; tran : Psingle);
+    fx, fy : double; transx, transy : double; phi : double;
+    scalex, scaley : double; coord : longint; tran : Pdouble);
     cdecl; external 'GKS';
 
   procedure gks_inq_operating_state(opsta : Plongint); cdecl; external 'GKS';
@@ -285,27 +285,27 @@ interface
     cdecl; external 'GKS';
   procedure gks_inq_pline_linetype(var errind, ltype : longint);
     cdecl; external 'GKS';
-  procedure gks_inq_pline_linewidth(var errind : longint; var lwidth : single);
+  procedure gks_inq_pline_linewidth(var errind : longint; var lwidth : double);
     cdecl; external 'GKS';
   procedure gks_inq_pline_color_index(var errind, coli : longint);
     cdecl; external 'GKS';
   procedure gks_inq_pmark_type(var errind, mtype : longint);
     cdecl; external 'GKS';
-  procedure gks_inq_pmark_size(var errind : longint; var mszsc : single);
+  procedure gks_inq_pmark_size(var errind : longint; var mszsc : double);
     cdecl; external 'GKS';
   procedure gks_inq_pmark_color_index(var errind, coli : longint);
     cdecl; external 'GKS';
   procedure gks_inq_text_fontprec(var errind, font, prec : longint);
     cdecl; external 'GKS';
-  procedure gks_inq_text_expfac(var errind : longint; var chxp : single);
+  procedure gks_inq_text_expfac(var errind : longint; var chxp : double);
     cdecl; external 'GKS';
-  procedure gks_inq_text_spacing(var errind : longint; var chsp : single);
+  procedure gks_inq_text_spacing(var errind : longint; var chsp : double);
     cdecl; external 'GKS';
   procedure gks_inq_text_color_index(var errind, coli : longint);
     cdecl; external 'GKS';
-  procedure gks_inq_text_height(var errind : longint; var chh : single);
+  procedure gks_inq_text_height(var errind : longint; var chh : double);
     cdecl; external 'GKS';
-  procedure gks_inq_text_upvec(var errind : longint; var chux, chuy : single);
+  procedure gks_inq_text_upvec(var errind : longint; var chux, chuy : double);
     cdecl; external 'GKS';
   procedure gks_inq_text_path(var errind, txp : longint); cdecl; external 'GKS';
   procedure gks_inq_text_align(var errind, txalh, txalv : longint);
@@ -321,40 +321,40 @@ interface
   procedure gks_inq_current_xformno(var errind, tnr : longint);
     cdecl; external 'GKS';
   procedure gks_inq_xform(
-    tnr : longint; var errind : longint; var wn, vp : array of single);
+    tnr : longint; var errind : longint; var wn, vp : array of double);
     cdecl; external 'GKS';
   procedure gks_inq_clip(
-    var errind, clsw : longint; var clrt : array of single);
+    var errind, clsw : longint; var clrt : array of double);
     cdecl; external 'GKS';
   procedure gks_inq_ws_conntype(
     wkid : longint; var errind, conid, wtype : longint); cdecl; external 'GKS';
   procedure gks_inq_ws_category(
     wkid : longint; var errind, wscat : longint); cdecl; external 'GKS';
   procedure gks_inq_text_extent(
-    wkid : longint; px, py : single; str : ansistring; var errind : longint;
-    var cpx, cpy : single; var tx, ty : array of single); cdecl; external 'GKS';
+    wkid : longint; px, py : double; str : ansistring; var errind : longint;
+    var cpx, cpy : double; var tx, ty : array of double); cdecl; external 'GKS';
   procedure gks_inq_max_ds_size(
-    wtype : longint; var errind, dcunit : longint; var rx, ry : single;
+    wtype : longint; var errind, dcunit : longint; var rx, ry : double;
     var lx, ly : longint); cdecl; external 'GKS';
 
   procedure gks_emergency_close; cdecl; external 'GKS';
 
-  procedure gks_set_text_slant(slant : single); cdecl; external 'GKS';
+  procedure gks_set_text_slant(slant : double); cdecl; external 'GKS';
   procedure gks_draw_image(
-    x, y, scalex, scaley : single; width, height : longint; data : Plongint);
+    x, y, scalex, scaley : double; width, height : longint; data : Plongint);
     cdecl; external 'GKS';
-  procedure gks_set_shadow(offsetx, offsety, blur : single);
+  procedure gks_set_shadow(offsetx, offsety, blur : double);
     cdecl; external 'GKS';
-  procedure gks_set_transparency(alpha : single); cdecl; external 'GKS';
-  procedure gks_set_coord_xform(mat : Psingle); cdecl; external 'GKS';
+  procedure gks_set_transparency(alpha : double); cdecl; external 'GKS';
+  procedure gks_set_coord_xform(mat : Pdouble); cdecl; external 'GKS';
 
   procedure gks_begin_selection(index, kind : longint); cdecl; external 'GKS';
   procedure gks_end_selection; cdecl; external 'GKS';
-  procedure gks_move_selection(x : single; y : single); cdecl; external 'GKS';
+  procedure gks_move_selection(x : double; y : double); cdecl; external 'GKS';
   procedure gks_resize_selection(
-    kind : longint; x : single; y : single); cdecl; external 'GKS';
+    kind : longint; x : double; y : double); cdecl; external 'GKS';
 
-  procedure gks_inq_text_slant(var errind : longint; var slant : single); cdecl;
+  procedure gks_inq_text_slant(var errind : longint; var slant : double); cdecl;
     external 'GKS';
 
 implementation
