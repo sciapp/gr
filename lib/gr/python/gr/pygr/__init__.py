@@ -1073,13 +1073,17 @@ class PlotAxes(GRViewPort, GRMeta):
                                 if len(curve.x) > 1 else curve.x[-1],
                                 visibleCurves))
                 # calculate xmin, xmax
-                xmin = min(xpmin, *map(lambda curve: curve.x[-1], visibleCurves))
-                xmax = max(xpmax, *map(lambda curve: curve.x[-1], visibleCurves))
+                xl = [curve.x[-1] for curve in visibleCurves]
+                yl = [curve.y[-1] for curve in visibleCurves]
+                xmin = min(xpmin, *xl)
+                xmax = max(xpmax, *xl)
                 # calculate ymin, ymax
                 ymin = min(map(lambda curve: min(curve.y),
                                visibleCurves))
                 ymax = max(map(lambda curve: max(curve.y),
                                visibleCurves))
+                # calculate ymin, ymax for last (added) point.
+                ylmin, ylmax = min(yl), max(yl)
 
                 if self.isReset():
                     self._resetWindow = False
@@ -1098,10 +1102,15 @@ class PlotAxes(GRViewPort, GRMeta):
                             if xmin <= win[0]:
                                 # win[0]: user min value
                                 xmin = win[0]
-
-                if self.scale & gr.OPTION_X_LOG == 0:
+                        ymin = ylmin if ylmin < win[2] else win[2]
+                        ymax = ylmax if ylmax > win[3] else win[3]
+                if ((not self.autoscale
+                     or math.fabs(xmax - xmin) < DomainChecker._EPSILON)
+                    and self.scale & gr.OPTION_X_LOG == 0):
                     xmin, xmax = gr.adjustrange(xmin, xmax)
-                if self.scale & gr.OPTION_Y_LOG == 0:
+                if ((not self.autoscale or
+                     math.fabs(ymax - ymin) < DomainChecker._EPSILON)
+                    and self.scale & gr.OPTION_Y_LOG == 0):
                     ymin, ymax = gr.adjustrange(ymin, ymax)
 
                 window = [xmin, xmax, ymin, ymax]
