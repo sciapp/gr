@@ -12,6 +12,7 @@ import logging
 import gr
 from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort
 from gr.pygr.helper import ColorIndexGenerator, DomainChecker
+from numpy import ndarray
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
@@ -1297,13 +1298,18 @@ def plot3d(z,
            ztitle=''):
     gr.clearws()
     xmin, ymin = (1, 1)
-    xmax, ymax = _guessdimension(len(z))[0]
+    if type(z) == ndarray:
+        xmax, ymax = z.shape
+        zmin = z.min()
+        zmax = z.max()
+    else:
+        xmax, ymax = _guessdimension(len(z))[0]
+        zmin = min(z)
+        zmax = max(z)
     xtick = gr.tick(xmin, xmax) / 5
     ytick = gr.tick(ymin, ymax) / 5
     x = range(1, xmax + 1)
     y = range(1, ymax + 1)
-    zmin = min(z)
-    zmax = max(z)
     zmin, zmax = gr.adjustrange(zmin, zmax)
     ztick = gr.tick(zmin, zmax) / 5
     gr.setviewport(viewport[0], viewport[1], viewport[2], viewport[3])
