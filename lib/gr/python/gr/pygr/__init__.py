@@ -906,7 +906,7 @@ class PlotAxes(GRViewPort, GRMeta):
         self.majorx, self.majory = majorx, majory
         self._drawX, self._drawY = drawX, drawY
         self._lstPlotCurve = []
-        self._backgroundColor = 163
+        self._backgroundColor = 0
         self._window = None
         self._scale = 0
         self._grid = True
