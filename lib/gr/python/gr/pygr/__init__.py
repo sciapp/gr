@@ -1152,7 +1152,20 @@ class PlotAxes(GRViewPort, GRMeta):
                 charHeight = .024 * (viewport[3] - viewport[2])
                 gr.setcharheight(charHeight)
                 if self.isGridEnabled() and self.getId() == 1:
-                    gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
+                    # delta majorx, delta majory
+                    dmx = xtick * majorx
+                    dmy = ytick * majory
+                    # xorg, yorg
+                    xorg, yorg = None, None
+                    i = int(xmin / dmx)
+                    while xorg < xmin:
+                        xorg = i * dmx
+                        i += 1
+                    j = int(ymin / dmy)
+                    while yorg < ymin:
+                        yorg = j * dmy
+                        j += 1
+                    gr.grid(xtick, ytick, xorg, yorg, majorx, majory)
                 if self.getId() == 1:
                     # first x, y axis
                     if not self.isXDrawingEnabled():
