@@ -1156,15 +1156,10 @@ class PlotAxes(GRViewPort, GRMeta):
                     dmx = xtick * majorx
                     dmy = ytick * majory
                     # xorg, yorg
-                    xorg, yorg = None, None
-                    i = int(xmin / dmx)
-                    while xorg < xmin:
-                        xorg = i * dmx
-                        i += 1
-                    j = int(ymin / dmy)
-                    while yorg < ymin:
-                        yorg = j * dmy
-                        j += 1
+                    i = int(xmin / dmx) if xmin < 0 else int(xmin / dmx + 1)
+                    j = int(ymin / dmy) if ymin < 0 else int(ymin / dmy + 1)
+                    xorg = i * dmx
+                    yorg = j * dmy
                     gr.grid(xtick, ytick, xorg, yorg, majorx, majory)
                 if self.getId() == 1:
                     # first x, y axis
