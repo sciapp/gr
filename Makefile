@@ -37,7 +37,6 @@ ifeq ($(UNAME), Darwin)
 endif
 	cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
 	rm -f gr.pkg
-	make -C doc clean
 
 pypi: clean
 	python setup.py sdist upload -r https://pypi.python.org/pypi
