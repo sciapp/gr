@@ -10,7 +10,7 @@ import math
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
 __date__ = "2014-03-27"
-__version__ = "0.4.5"
+__version__ = "0.4.6"
 __copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
