@@ -2804,7 +2804,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
                   else
                     tick = x_tick;
 
-                  if (fabs(y_org - y_min) > feps)
+                  if (fabs(yi - y_min) > feps)
                     grid_line(x_min, yi, x_max, yi, tick);
                 }
 
@@ -2838,7 +2838,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               else
                 tick = -1.;
 
-              if (fabs(y_org - y_min) > feps)
+              if (fabs(yi - y_min) > feps)
                 grid_line(x_min, yi, x_max, yi, tick);
 
               i++;
@@ -2869,7 +2869,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
                   else
                     tick = x_tick;
 
-                  if (fabs(x_org - x_min) > feps)
+                  if (fabs(xi - x_min) > feps)
                     grid_line(xi, y_min, xi, y_max, tick);
                 }
 
@@ -2903,7 +2903,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               else
                 tick = -1.;
 
-              if (fabs(x_org - x_min) > feps)
+              if (fabs(xi - x_min) > feps)
                 grid_line(xi, y_min, xi, y_max, tick);
 
               i++;
