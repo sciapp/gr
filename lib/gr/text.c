@@ -1300,12 +1300,20 @@ int gr_textex(double x, double y, const char *string, int inquire,
 	      double *tbx, double *tby)
 {
   char *str = strdup(string);
+  int n, wkid = 0;
+  double cpx, cpy;
   formula_t *formula = NULL;
-
   int errind, font, prec;
   int align_hor, align_ver;
   double height;
   double x_shift, y_shift;
+
+  if (inquire && strlen(str) == 1)
+    {
+      gks_inq_open_ws(1, &errind, &n, &wkid);
+      gks_inq_text_extent(wkid, x, y, str, &errind, &cpx, &cpy, tbx, tby);
+      return 1;
+    }
 
   chin = str;
 

@@ -1749,8 +1749,8 @@ void gr_setlinetype(int type)
 
 void gr_inqlinetype(int *ltype)
 {
-	int errind;
-	gks_inq_pline_linetype(&errind, ltype);
+  int errind;
+  gks_inq_pline_linetype(&errind, ltype);
 }
 
 void gr_setlinewidth(double width)
@@ -1775,8 +1775,8 @@ void gr_setlinecolorind(int color)
 
 void gr_inqlinecolorind(int *coli)
 {
-	int errind;
-	gks_inq_pline_color_index(&errind, coli);
+  int errind;
+  gks_inq_pline_color_index(&errind, coli);
 }
 
 void gr_setmarkertype(int type)
@@ -1791,8 +1791,8 @@ void gr_setmarkertype(int type)
 
 void gr_inqmarkertype(int *mtype)
 {
-	int errind;
-	gks_inq_pmark_type(&errind, mtype);
+  int errind;
+  gks_inq_pmark_type(&errind, mtype);
 }
 
 void gr_setmarkersize(double size)
@@ -1817,8 +1817,8 @@ void gr_setmarkercolorind(int color)
 
 void gr_inqmarkercolorind(int *coli)
 {
-	int errind;
-	gks_inq_pmark_color_index(&errind, coli);
+  int errind;
+  gks_inq_pmark_color_index(&errind, coli);
 }
 
 void gr_settextfontprec(int font, int precision)
@@ -2743,7 +2743,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
   int ltype, color, clsw;
 
   double clrt[4], wn[4], vp[4];
-  double x_min, x_max, y_min, y_max;
+  double x_min, x_max, y_min, y_max, feps;
 
   double x0, y0, xi, yi, tick;
 
@@ -2784,6 +2784,8 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
 
   if (y_tick != 0)
     {
+      feps = FEPS * (y_max - y_min);
+
       if (OPTION_Y_LOG & lx.scale_options)
         {
           y0 = pow(10.0, (double) gauss(log10(y_min)));
@@ -2802,7 +2804,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
                   else
                     tick = x_tick;
 
-                  if (fabs(yi - y_org) > FEPS)
+                  if (fabs(y_org - y_min) > feps)
                     grid_line(x_min, yi, x_max, yi, tick);
                 }
 
@@ -2836,7 +2838,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               else
                 tick = -1.;
 
-              if (fabs(yi - y_org) > FEPS)
+              if (fabs(y_org - y_min) > feps)
                 grid_line(x_min, yi, x_max, yi, tick);
 
               i++;
@@ -2847,6 +2849,8 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
 
   if (x_tick != 0)
     {
+      feps = FEPS * (x_max - x_min);
+
       if (OPTION_X_LOG & lx.scale_options)
         {
           x0 = pow(10.0, (double) gauss(log10(x_min)));
@@ -2865,7 +2869,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
                   else
                     tick = x_tick;
 
-                  if (fabs(xi - x_org) > FEPS)
+                  if (fabs(x_org - x_min) > feps)
                     grid_line(xi, y_min, xi, y_max, tick);
                 }
 
@@ -2899,7 +2903,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               else
                 tick = -1.;
 
-              if (fabs(xi - x_org) > FEPS)
+              if (fabs(x_org - x_min) > feps)
                 grid_line(xi, y_min, xi, y_max, tick);
 
               i++;
@@ -3741,243 +3745,294 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  x_min = wn[0];
-  x_max = wn[1];
-  y_min = wn[2];
-  y_max = wn[3];
-
-  z_min = wx.zmin;
-  z_max = wx.zmax;
-
-  r = (x_max - x_min) / (y_max - y_min) * (vp[3] - vp[2]) / (vp[1] - vp[0]);
-
-  alpha = atan_2(r * wx.c1, wx.a1);
-  a[0] = -sin(alpha);
-  c[0] = cos(alpha);
-  alpha = deg(alpha);
-
-  beta = atan_2(r * wx.c2, wx.a2);
-  a[1] = -sin(beta);
-  c[1] = cos(beta);
-  beta = deg(beta);
-
-  text_slant[0] = alpha;
-  text_slant[1] = beta;
-  text_slant[2] = -(90.0 + alpha - beta);
-  text_slant[3] = 90.0 + alpha - beta;
-
-  /* save text alignment, text font, text slant,
-     character-up vector and clipping indicator */
-
-  gks_inq_text_align(&errind, &halign, &valign);
-  gks_inq_text_fontprec(&errind, &font, &prec);
-  gks_inq_text_slant(&errind, &slant);
-  gks_inq_text_upvec(&errind, &chux, &chuy);
-  gks_inq_clip(&errind, &clsw, clrt);
-
-  gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
-  gks_set_text_fontprec(font, GKS_K_TEXT_PRECISION_STROKE);
-  gks_set_clipping(GKS_K_NOCLIP);
-
-  which_rep = 0;
-  anglep = angle;
-  while (wx.delta > *anglep++)
-    which_rep++;
-  anglep = angle;
-  while (wx.phi > *anglep++)
-    which_rep += 4;
-
-  r = arc(wx.phi);
-  a1 = cos(r);
-  a2 = sin(r);
-  aa = a1 + a2;
-  a1 = a1 / aa;
-  a2 = a2 / aa;
-
-  t = arc(wx.delta);
-  c1 = (pow(cos(r), 2.) - 1) * tan(t / 2.);
-  c2 = -(pow(sin(r), 2.) - 1) * tan(t / 2.);
-  c3 = cos(t);
-  cc = (c2 + c3 - c1);
-  c1 = c1 / cc;
-  c2 = c2 / cc;
-  c3 = c3 / cc;
-
-  a1 = fabs(a1) * (vp[1] - vp[0]);
-  a2 = fabs(a2) * (vp[1] - vp[0]);
-  c1 = fabs(c1) * (vp[3] - vp[2]);
-  c2 = fabs(c2) * (vp[3] - vp[2]);
-  c3 = fabs(c3) * (vp[3] - vp[2]);
-
-  x_mid_x = vp[0] + a1 / 2.;
-  x_mid_y = vp[2] + c1 / 2.;
-  y_mid_x = 1 - vp[1] + a2 / 2.;
-  y_mid_y = vp[2] + c2 / 2.;
-
-  x_2d_max = sqrt(y_mid_x * y_mid_x + y_mid_y * y_mid_y);
-  y_2d_max = sqrt(x_mid_x * x_mid_x + x_mid_y * x_mid_y);
-
-  x_angle = atan_2(a1, c1);
-  x_2d = y_mid_y / cos(x_angle);
-
-  if (x_2d > x_2d_max)
+  if (wx.phi != 0 || wx.delta != 90)
     {
-      x_angle = M_PI / 2. - x_angle;
-      x_2d = y_mid_x / cos(x_angle);
-    }
+      x_min = wn[0];
+      x_max = wn[1];
+      y_min = wn[2];
+      y_max = wn[3];
 
-  xr = x_2d / (2 * sqrt(pow(c1, 2.) + pow(a1, 2.)));
+      z_min = wx.zmin;
+      z_max = wx.zmax;
 
-  y_angle = atan_2(c2, a2);
-  y_2d = x_mid_x / cos(y_angle);
+      r = (x_max - x_min) / (y_max - y_min) * (vp[3] - vp[2]) / (vp[1] - vp[0]);
 
-  if (y_2d > y_2d_max)
-    {
-      y_angle = M_PI / 2. - y_angle;
-      y_2d = x_mid_y / cos(y_angle);
-    }
+      alpha = atan_2(r * wx.c1, wx.a1);
+      a[0] = -sin(alpha);
+      c[0] = cos(alpha);
+      alpha = deg(alpha);
 
-  if (wx.phi + wx.delta != 0)
-    yr = y_2d / (2 * sqrt(pow(c2, 2.) + pow(a2, 2.)));
-  else
-    yr = 0;
+      beta = atan_2(r * wx.c2, wx.a2);
+      a[1] = -sin(beta);
+      c[1] = cos(beta);
+      beta = deg(beta);
 
-  x_rel = xr * (x_lin(x_max) - x_lin(x_min));
-  y_rel = yr * (y_lin(y_max) - y_lin(y_min));
+      text_slant[0] = alpha;
+      text_slant[1] = beta;
+      text_slant[2] = -(90.0 + alpha - beta);
+      text_slant[3] = 90.0 + alpha - beta;
 
-  flip_x = OPTION_FLIP_X & lx.scale_options;
-  flip_y = OPTION_FLIP_Y & lx.scale_options;
-  flip_z = OPTION_FLIP_Z & lx.scale_options;
+      /* save text alignment, text font, text slant,
+         character-up vector and clipping indicator */
 
-  if (*x_title)
-    {
-      rep = rep_table[which_rep][1];
+      gks_inq_text_align(&errind, &halign, &valign);
+      gks_inq_text_fontprec(&errind, &font, &prec);
+      gks_inq_text_slant(&errind, &slant);
+      gks_inq_text_upvec(&errind, &chux, &chuy);
+      gks_inq_clip(&errind, &clsw, clrt);
 
-      x = x_log(0.5 * (x_lin(x_min) + x_lin(x_max)));
-      if (rep == 0)
+      gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
+      gks_set_text_fontprec(font, GKS_K_TEXT_PRECISION_STROKE);
+      gks_set_clipping(GKS_K_NOCLIP);
+
+      which_rep = 0;
+      anglep = angle;
+      while (wx.delta > *anglep++)
+        which_rep++;
+      anglep = angle;
+      while (wx.phi > *anglep++)
+        which_rep += 4;
+
+      r = arc(wx.phi);
+      a1 = cos(r);
+      a2 = sin(r);
+      aa = a1 + a2;
+      a1 = a1 / aa;
+      a2 = a2 / aa;
+
+      t = arc(wx.delta);
+      c1 = (pow(cos(r), 2.) - 1) * tan(t / 2.);
+      c2 = -(pow(sin(r), 2.) - 1) * tan(t / 2.);
+      c3 = cos(t);
+      cc = (c2 + c3 - c1);
+      c1 = c1 / cc;
+      c2 = c2 / cc;
+      c3 = c3 / cc;
+
+      a1 = fabs(a1) * (vp[1] - vp[0]);
+      a2 = fabs(a2) * (vp[1] - vp[0]);
+      c1 = fabs(c1) * (vp[3] - vp[2]);
+      c2 = fabs(c2) * (vp[3] - vp[2]);
+      c3 = fabs(c3) * (vp[3] - vp[2]);
+
+      x_mid_x = vp[0] + a1 / 2.;
+      x_mid_y = vp[2] + c1 / 2.;
+      y_mid_x = 1 - vp[1] + a2 / 2.;
+      y_mid_y = vp[2] + c2 / 2.;
+
+      x_2d_max = sqrt(y_mid_x * y_mid_x + y_mid_y * y_mid_y);
+      y_2d_max = sqrt(x_mid_x * x_mid_x + x_mid_y * x_mid_y);
+
+      x_angle = atan_2(a1, c1);
+      x_2d = y_mid_y / cos(x_angle);
+
+      if (x_2d > x_2d_max)
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          x_angle = M_PI / 2. - x_angle;
+          x_2d = y_mid_x / cos(x_angle);
+        }
 
+      xr = x_2d / (2 * sqrt(pow(c1, 2.) + pow(a1, 2.)));
+
+      y_angle = atan_2(c2, a2);
+      y_2d = x_mid_x / cos(y_angle);
+
+      if (y_2d > y_2d_max)
+        {
+          y_angle = M_PI / 2. - y_angle;
+          y_2d = x_mid_y / cos(y_angle);
+        }
+
+      if (wx.phi + wx.delta != 0)
+        yr = y_2d / (2 * sqrt(pow(c2, 2.) + pow(a2, 2.)));
+      else
+        yr = 0;
+
+      x_rel = xr * (x_lin(x_max) - x_lin(x_min));
+      y_rel = yr * (y_lin(y_max) - y_lin(y_min));
+
+      flip_x = OPTION_FLIP_X & lx.scale_options;
+      flip_y = OPTION_FLIP_Y & lx.scale_options;
+      flip_z = OPTION_FLIP_Z & lx.scale_options;
+
+      if (*x_title)
+        {
+          rep = rep_table[which_rep][1];
+
+          x = x_log(0.5 * (x_lin(x_min) + x_lin(x_max)));
+          if (rep == 0)
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+
+              rep = rep_table[which_rep][0];
+
+              if (flip_y)
+                y = y_max;
+              else
+                y = y_min;
+
+              zr = x_mid_y / (2 * c3);
+              z_rel = zr * (z_lin(z_max) - z_lin(z_min));
+
+              if (flip_z)
+                z = z_log(z_lin(z_max) + z_rel);
+              else
+                z = z_log(z_lin(z_min) - z_rel);
+            }
+          else
+            {
+              if (flip_y)
+                y = y_log(y_lin(y_max) + y_rel);
+              else
+                y = y_log(y_lin(y_min) - y_rel);
+
+              if (flip_z)
+                z = z_max;
+              else
+                z = z_min;
+
+              gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
+            }
+
+          gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
+          gks_set_text_slant(text_slant[axes_rep[rep][2]]);
+
+          text3d(x, y, z, x_title);
+        }
+
+      if (*y_title)
+        {
           rep = rep_table[which_rep][0];
+
+          y = y_log(0.5 * (y_lin(y_min) + y_lin(y_max)));
+          if (rep == 2)
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+
+              rep = rep_table[which_rep][1];
+
+              if (flip_x)
+                x = x_min;
+              else
+                x = x_max;
+
+              zr = y_mid_y / (2 * c3);
+              z_rel = zr * (z_lin(z_max) - z_lin(z_min));
+
+              if (flip_z)
+                z = z_log(z_lin(z_max) + z_rel);
+              else
+                z = z_log(z_lin(z_min) - z_rel);
+            }
+          else
+            {
+              if (flip_x)
+                x = x_log(x_lin(x_min) - x_rel);
+              else
+                x = x_log(x_lin(x_max) + x_rel);
+
+              if (flip_z)
+                z = z_max;
+              else
+                z = z_min;
+
+              gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
+            }
+
+          gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
+          gks_set_text_slant(text_slant[axes_rep[rep][2]]);
+
+          text3d(x, y, z, y_title);
+        }
+
+      if (*z_title)
+        {
+          rep = rep_table[which_rep][2];
+
+          gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
+          gks_set_text_slant(text_slant[axes_rep[rep][2]]);
+
+          if (flip_x)
+            x = x_max;
+          else
+            x = x_min;
 
           if (flip_y)
             y = y_max;
           else
             y = y_min;
 
-          zr = x_mid_y / (2 * c3);
+          zr = (1 - (c1 + c3 + vp[2])) / (2 * c3);
           z_rel = zr * (z_lin(z_max) - z_lin(z_min));
 
           if (flip_z)
-            z = z_log(z_lin(z_max) + z_rel);
+            z = z_log(z_lin(z_min) - 0.5 * z_rel);
           else
-            z = z_log(z_lin(z_min) - z_rel);
-        }
-      else
-        {
-          if (flip_y)
-            y = y_log(y_lin(y_max) + y_rel);
-          else
-            y = y_log(y_lin(y_min) - y_rel);
+            z = z_log(z_lin(z_max) + 0.5 * z_rel);
 
-          if (flip_z)
-            z = z_max;
-          else
-            z = z_min;
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BASE);
 
-          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
+          text3d(x, y, z, z_title);
         }
 
-      gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
-      gks_set_text_slant(text_slant[axes_rep[rep][2]]);
+      /* restore text alignment, text font, text slant,
+         character-up vector and clipping indicator */
 
-      text3d(x, y, z, x_title);
+      gks_set_text_align(halign, valign);
+      gks_set_text_fontprec(font, prec);
+      gks_set_text_slant(slant);
+      gks_set_text_upvec(chux, chuy);
+      gks_set_clipping(clsw);
     }
-
-  if (*y_title)
+  else
     {
-      rep = rep_table[which_rep][0];
+      /* save text alignment and character-up vector */
 
-      y = y_log(0.5 * (y_lin(y_min) + y_lin(y_max)));
-      if (rep == 2)
+      gks_inq_text_align(&errind, &halign, &valign);
+      gks_inq_text_upvec(&errind, &chux, &chuy);
+
+      if (*x_title)
+        {
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BASE);
+          gks_set_text_upvec(0.0, 1.0);
+
+          x = 0.5 * (vp[0] + vp[1]);
+          y = vp[2] * 0.2 * (vp[3] - vp[2]);
+          gr_ndctowc(&x, &y);
+
+          text2d(x, y, x_title);
+        }
+
+      if (*y_title)
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+          gks_set_text_upvec(-1.0, 0.0);
 
-          rep = rep_table[which_rep][1];
+          x = vp[0] * 0.1 * (vp[1] - vp[0]);
+          y = 0.5 * (vp[2] + vp[3]);
+          gr_ndctowc(&x, &y);
 
-          if (flip_x)
-            x = x_min;
-          else
-            x = x_max;
-
-          zr = y_mid_y / (2 * c3);
-          z_rel = zr * (z_lin(z_max) - z_lin(z_min));
-
-          if (flip_z)
-            z = z_log(z_lin(z_max) + z_rel);
-          else
-            z = z_log(z_lin(z_min) - z_rel);
+          text2d(x, y, y_title);
         }
-      else
+
+      if (*z_title)
         {
-          if (flip_x)
-            x = x_log(x_lin(x_min) - x_rel);
-          else
-            x = x_log(x_lin(x_max) + x_rel);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BASE);
+          gks_set_text_upvec(0.0, 1.0);
 
-          if (flip_z)
-            z = z_max;
-          else
-            z = z_min;
+          x = 0.5 * (vp[0] + vp[1]);
+          y = vp[3] + 0.05 * (vp[3] - vp[2]);
+          gr_ndctowc(&x, &y);
 
-          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
+          text2d(x, y, z_title);
         }
 
-      gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
-      gks_set_text_slant(text_slant[axes_rep[rep][2]]);
+      /* restore text alignment and character-up vector */
 
-      text3d(x, y, z, y_title);
+      gks_set_text_align(halign, valign);
+      gks_set_text_upvec(chux, chuy);
     }
-
-  if (*z_title)
-    {
-      rep = rep_table[which_rep][2];
-
-      gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
-      gks_set_text_slant(text_slant[axes_rep[rep][2]]);
-
-      if (flip_x)
-        x = x_max;
-      else
-        x = x_min;
-
-      if (flip_y)
-        y = y_max;
-      else
-        y = y_min;
-
-      zr = (1 - (c1 + c3 + vp[2])) / (2 * c3);
-      z_rel = zr * (z_lin(z_max) - z_lin(z_min));
-
-      if (flip_z)
-        z = z_log(z_lin(z_min) - 0.5 * z_rel);
-      else
-        z = z_log(z_lin(z_max) + 0.5 * z_rel);
-
-      gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BASE);
-
-      text3d(x, y, z, z_title);
-    }
-
-  /* restore text alignment, text font, text slant,
-     character-up vector and clipping indicator */
-
-  gks_set_text_align(halign, valign);
-  gks_set_text_fontprec(font, prec);
-  gks_set_text_slant(slant);
-  gks_set_text_upvec(chux, chuy);
-  gks_set_clipping(clsw);
-
+    
   if (flag_graphics)
     gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n",
                    x_title, y_title, z_title);
