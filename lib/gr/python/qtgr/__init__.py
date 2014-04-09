@@ -413,7 +413,7 @@ class InteractiveGRWidget(GRWidget):
 
     def wheelMove(self, event):
         # delta percent
-        dpercent = event.getDegree() / 16.
+        dpercent = event.getSteps() * .1
         self._zoom(dpercent)
 
     def pickMove(self, event):
