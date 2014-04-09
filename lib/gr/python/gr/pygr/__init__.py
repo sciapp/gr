@@ -253,6 +253,7 @@ class CoordConverter(object):
                      (1. - float(self._p.y) / self._height) * self._sizey)
 
     def getWC(self, viewport):
+        scale = gr.inqscale()
         self._checkRaiseXY()
         ndcPoint = self.getNDC()
         ndcPoint = Point(ndcPoint.x, ndcPoint.y)
@@ -261,10 +262,18 @@ class CoordConverter(object):
         else:
             xmin, xmax, ymin, ymax = gr.inqwindow()
         vp = viewport
+        if scale & gr.OPTION_Y_LOG:
+            ymin, ymax = math.log10(ymin), math.log10(ymax)
+        if scale & gr.OPTION_X_LOG:
+            xmin, xmax = math.log10(xmin), math.log10(xmax)
         wcY = (ymin + (ndcPoint.y / self._sizey - vp[2])
                * (ymax - ymin) / (vp[3] - vp[2]))
         wcX = (xmin + (ndcPoint.x / self._sizex - vp[0])
                * (xmax - xmin) / (vp[1] - vp[0]))
+        if scale & gr.OPTION_Y_LOG:
+            wcY = 10 ** wcY
+        if scale & gr.OPTION_X_LOG:
+            wcX = 10 ** wcX
         return Point(wcX, wcY)
 
 class ErrorBar(GRDrawAttributes, GRMeta):
