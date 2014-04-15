@@ -619,18 +619,36 @@ class Plot(GRViewPort, GRMeta):
             axes.setWindow(*win)
         gr.setwindow(*window)
 
-    def zoom(self, dpercent):
+    def zoom(self, dpercent, p0=None, width=None, height=None):
         window = gr.inqwindow()
+        coord = CoordConverter(width, height, self._sizex, self._sizey)
         for axes in self._lstAxes:
             win = axes.getWindow()
-            winWidth_2 = (win[1] - win[0]) / 2
-            winHeight_2 = (win[3] - win[2]) / 2
+            xmin, xmax, ymin, ymax = win
+            gr.setwindow(*win)
+            # zoom from center
+            winWidth = xmax - xmin
+            winWidth_2 = winWidth / 2
+            winHeight = ymax - ymin
+            winHeight_2 = winHeight / 2
             dx_2 = winWidth_2 - (1 + dpercent) * winWidth_2
             dy_2 = winHeight_2 - (1 + dpercent) * winHeight_2
             win[0] -= dx_2
             win[1] += dx_2
             win[2] -= dy_2
             win[3] += dy_2
+            # calculate ratio and adjust to ratio / zoom at origin p0
+            if p0 is not None and width is not None and height is not None:
+                p0World = coord.setNDC(p0.x, p0.y).getWC(self.viewport)
+                ratio_xleft = (p0World.x - xmin) / winWidth
+                ratio_ydown = (p0World.y - ymin) / winHeight
+                # calculate new xmin, xmax, ymin, ymax with same ratio
+                xmin_n = p0World.x - ratio_xleft * (win[1] - win[0])
+                xmax_n = xmin_n + (win[1] - win[0])
+                ymin_n = p0World.y - ratio_ydown * (win[3] - win[2])
+                ymax_n = ymin_n + (win[3] - win[2])
+                win = [xmin_n, xmax_n, ymin_n, ymax_n]
+            gr.setwindow(*window)
             if not axes.setWindow(*win):
                 axes.setWindow(*window)
                 self.reset()

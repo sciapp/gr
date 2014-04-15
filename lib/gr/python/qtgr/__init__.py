@@ -341,10 +341,10 @@ class InteractiveGRWidget(GRWidget):
         self._draw(True)
         self.update()
 
-    def _zoom(self, dpercent):
+    def _zoom(self, dpercent, p0):
         self._pickEvent = None
         for plot in self._lstPlot:
-            plot.zoom(dpercent)
+            plot.zoom(dpercent, p0, self.dwidth, self.dheight)
         self._draw(True)
         self.update()
 
@@ -414,7 +414,7 @@ class InteractiveGRWidget(GRWidget):
     def wheelMove(self, event):
         # delta percent
         dpercent = event.getSteps() * .1
-        self._zoom(dpercent)
+        self._zoom(dpercent, event.getNDC())
 
     def pickMove(self, event):
         self._pickEvent = event
