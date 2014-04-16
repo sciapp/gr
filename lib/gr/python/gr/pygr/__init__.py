@@ -230,17 +230,26 @@ class CoordConverter(object):
                         (1. - y / self._sizey) * self._height)
         return self
 
-    def setWC(self, x, y, window=None):
+    def setWC(self, x, y, viewport, window=None):
+        scale = gr.inqscale()
         if window:
             self.setWindow(*window)
         if self.getWindow():
-            window = gr.inqwindow()
-            gr.setwindow(*self.getWindow())
-            tNC = gr.wctondc(x, y) # ndc tuple
-            gr.setwindow(*window)
+            xmin, xmax, ymin, ymax = self.getWindow()
         else:
-            tNC = gr.wctondc(x, y) # ndc tuple
-        self.setNDC(tNC[0], tNC[1])
+            xmin, xmax, ymin, ymax = gr.inqwindow()
+        vp = viewport
+        if scale & gr.OPTION_Y_LOG:
+            ymin, ymax = math.log10(ymin), math.log10(ymax)
+            y = math.log10(y)
+        if scale & gr.OPTION_X_LOG:
+            xmin, xmax = math.log10(xmin), math.log10(xmax)
+            x = math.log10(x)
+        ndcX = (vp[0] * self._sizex + (x - xmin) / (xmax - xmin)
+                * (vp[1] - vp[0]) * self._sizex)
+        ndcY = (vp[2] * self._sizey + (y - ymin) / (ymax - ymin)
+                * (vp[3] - vp[2]) * self._sizey)
+        self.setNDC(ndcX, ndcY)
         return self
 
     def getDC(self):
@@ -562,13 +571,13 @@ class Plot(GRViewPort, GRMeta):
             for axes in self._lstAxes:
                 gr.setwindow(*axes.getWindow())
                 coord.setNDC(p0.x, p0.y)
-                wcPick = coord.getWC(self.viewport)
+                wcPick = coord.getWC(axes.viewport)
                 curves = filter(lambda c: c.visible, axes.getCurves())
                 for curve in curves:
                     for idx, x in enumerate(curve.x):
                         if x >= wcPick.x:
                             break
-                    coord.setWC(x, curve.y[idx])
+                    coord.setWC(x, curve.y[idx], axes.viewport)
                     points.append(coord.getNDC())
                     lstAxes.append(axes)
             if points:
@@ -607,7 +616,7 @@ class Plot(GRViewPort, GRMeta):
             win = axes.getWindow()
             gr.setwindow(*win)
             gr.setscale(0)
-            coord.setWC(0, 0)
+            coord.setWC(0, 0, axes.viewport)
             ndcOrigin = coord.getNDC()
             coord.setNDC(ndcOrigin.x + dp.x, ndcOrigin.y + dp.y)
             dpWorld = coord.getWC(self.viewport)
@@ -627,8 +636,8 @@ class Plot(GRViewPort, GRMeta):
             xmin, xmax, ymin, ymax = win
             gr.setwindow(*win)
             # zoom from center
-            pmin = coord.setWC(xmin, ymin, win).getNDC()
-            pmax = coord.setWC(xmax, ymax, win).getNDC()
+            pmin = coord.setWC(xmin, ymin, axes.viewport, win).getNDC()
+            pmax = coord.setWC(xmax, ymax, axes.viewport, win).getNDC()
             winWidth = pmax.x - pmin.x
             winWidth_2 = winWidth / 2
             winHeight = pmax.y - pmin.y
