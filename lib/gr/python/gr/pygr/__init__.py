@@ -627,27 +627,29 @@ class Plot(GRViewPort, GRMeta):
             xmin, xmax, ymin, ymax = win
             gr.setwindow(*win)
             # zoom from center
-            winWidth = xmax - xmin
+            pmin = coord.setWC(xmin, ymin, win).getNDC()
+            pmax = coord.setWC(xmax, ymax, win).getNDC()
+            winWidth = pmax.x - pmin.x
             winWidth_2 = winWidth / 2
-            winHeight = ymax - ymin
+            winHeight = pmax.y - pmin.y
             winHeight_2 = winHeight / 2
             dx_2 = winWidth_2 - (1 + dpercent) * winWidth_2
             dy_2 = winHeight_2 - (1 + dpercent) * winHeight_2
-            win[0] -= dx_2
-            win[1] += dx_2
-            win[2] -= dy_2
-            win[3] += dy_2
+            ndcWin = [pmin.x - dx_2, pmax.x + dx_2,
+                      pmin.y - dy_2, pmax.y + dy_2]
             # calculate ratio and adjust to ratio / zoom at origin p0
             if p0 is not None and width is not None and height is not None:
-                p0World = coord.setNDC(p0.x, p0.y).getWC(self.viewport)
-                ratio_xleft = (p0World.x - xmin) / winWidth
-                ratio_ydown = (p0World.y - ymin) / winHeight
+                ratio_xleft = (p0.x - pmin.x) / winWidth
+                ratio_ydown = (p0.y - pmin.y) / winHeight
                 # calculate new xmin, xmax, ymin, ymax with same ratio
-                xmin_n = p0World.x - ratio_xleft * (win[1] - win[0])
-                xmax_n = xmin_n + (win[1] - win[0])
-                ymin_n = p0World.y - ratio_ydown * (win[3] - win[2])
-                ymax_n = ymin_n + (win[3] - win[2])
-                win = [xmin_n, xmax_n, ymin_n, ymax_n]
+                xmin_n = p0.x - ratio_xleft * (ndcWin[1] - ndcWin[0])
+                xmax_n = xmin_n + (ndcWin[1] - ndcWin[0])
+                ymin_n = p0.y - ratio_ydown * (ndcWin[3] - ndcWin[2])
+                ymax_n = ymin_n + (ndcWin[3] - ndcWin[2])
+                ndcWin = [xmin_n, xmax_n, ymin_n, ymax_n]
+            wmin = coord.setNDC(ndcWin[0], ndcWin[2]).getWC(self.viewport)
+            wmax = coord.setNDC(ndcWin[1], ndcWin[3]).getWC(self.viewport)
+            win = [wmin.x, wmax.x, wmin.y, wmax.y]
             gr.setwindow(*window)
             if not axes.setWindow(*win):
                 axes.setWindow(*window)
