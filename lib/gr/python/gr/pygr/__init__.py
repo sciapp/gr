@@ -719,7 +719,7 @@ class Plot(GRViewPort, GRMeta):
         if self.xlabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(0., 1.)
-#            tby = gr.inqtextext(0, 0, self.xlabel)[1]
+#            tby = gr.inqtext(0, 0, self.xlabel)[1]
 #            tby = map(lambda y: gr.wctondc(0, y)[1], tby)
 #            dyXLabel = max(tby) - min(tby) # already scaled
             dyXLabel = charHeightUnscaled
@@ -728,7 +728,7 @@ class Plot(GRViewPort, GRMeta):
         if self.ylabel:
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(-1., 0.)
-            tbx = gr.inqtextext(0, 0, self.ylabel)[0]
+            tbx = gr.inqtext(0, 0, self.ylabel)[0]
             tbx = map(lambda y: gr.wctondc(0, y)[0], tbx)
             dxYLabel = max(tbx) - min(tbx)
             gr.text(self.offsetYLabel + xmin - dxYLabel / 2. - .075,
@@ -759,7 +759,7 @@ class Plot(GRViewPort, GRMeta):
                         break
                     for curve in axes.getCurves():
                         if curve.legend:
-                            tbx, tby = gr.inqtextext(0, 0, curve.legend)
+                            tbx, tby = gr.inqtext(0, 0, curve.legend)
                             textWidth = max(tbx) - min(tbx)
                             lineWidth = .1
                             if x + lineWidth + textWidth > self.sizex:
@@ -807,7 +807,7 @@ class Plot(GRViewPort, GRMeta):
                             roi.append(Point(x, ytop), Point(x, ybase))
                             self._legendROI.append(roi)
 #                            gr.polyline(len(roi.x), roi.x, roi.y)
-                            tbx = gr.inqtextext(0, 0, "X")[0]
+                            tbx = gr.inqtext(0, 0, "X")[0]
                             charWidth = max(tbx) - min(tbx)
                             x += charWidth
                 if not self._legendROI:
