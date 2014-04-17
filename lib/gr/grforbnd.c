@@ -90,6 +90,20 @@ void FORTRAN(gr_text)(
   free(_string);
 }
 
+void FORTRAN(gr_inqtext)(
+  double *x, double *y, char *string, double *tbx, double *tby,
+  unsigned short string_len)
+{
+  char *_string;
+
+  _string = (char *) calloc(1, sizeof(char) * string_len);
+  strncpy(_string, string, string_len);
+
+  gr_inqtext(*x, *y, _string, tbx, tby);
+
+  free(_string);
+}
+
 void FORTRAN(gr_fillarea)(int *n, double *x, double *y)
 {
   gr_fillarea(*n, x, y);

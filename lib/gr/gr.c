@@ -1527,6 +1527,39 @@ void gr_text(double x, double y, char *string)
     gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
+void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
+{
+  int errind, tnr;
+  register int i;
+  int n, wkid = 0;
+  double cpx, cpy;
+
+  check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  if (tnr != NDC)
+    gks_select_xform(NDC);
+
+  gks_inq_open_ws(1, &errind, &n, &wkid);
+  gks_inq_text_extent(wkid, x, y, string, &errind, &cpx, &cpy, tbx, tby);
+
+  if (tnr != NDC)
+    {
+      gks_select_xform(tnr);
+
+      for (i = 0; i < 4; i++)
+        {
+          tbx[i] = (tbx[i] - nx.b) / nx.a;
+          tby[i] = (tby[i] - nx.d) / nx.c;
+          if (lx.scale_options)
+            {
+              tbx[i] = x_log(tbx[i]);
+              tby[i] = y_log(tby[i]);
+            }
+        }
+    }
+}
+
 void gr_fillarea(int n, double *x, double *y)
 {
   gks(gks_fillarea);

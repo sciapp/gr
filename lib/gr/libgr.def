@@ -32,6 +32,7 @@ EXPORTS
 	gr_inqdspsize
 	gr_inqscale
 	gr_inqspace
+	gr_inqtext
 	gr_inqtextext
 	gr_moveselection
 	gr_ndctowc

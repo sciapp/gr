@@ -264,6 +264,14 @@ def text(x, y, string):
     __gr.gr_text(c_double(x), c_double(y), char(string))
 
 
+def inqtext(x, y, string):
+    tbx = (c_double * 4)()
+    tby = (c_double * 4)()
+    __gr.gr_inqtext(c_double(x), c_double(y), char(string), tbx, tby)
+    return [[tbx[0], tbx[1], tbx[2], tbx[3]],
+            [tby[0], tby[1], tby[2], tby[3]]]
+
+
 def fillarea(n, x, y):
     """
     Allows you to specify a polygonal shape of an area to be filled.

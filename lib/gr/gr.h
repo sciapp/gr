@@ -31,6 +31,7 @@ DLLEXPORT void gr_updatews(void);
 DLLEXPORT void gr_polyline(int, double *, double *);
 DLLEXPORT void gr_polymarker(int, double *, double *);
 DLLEXPORT void gr_text(double, double, char *);
+DLLEXPORT void gr_inqtext(double, double, char *, double *, double *);
 DLLEXPORT void gr_fillarea(int, double *, double *);
 DLLEXPORT void gr_cellarray(
   double, double, double, double, int, int, int, int, int, int, int *);
