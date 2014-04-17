@@ -614,17 +614,15 @@ class Plot(GRViewPort, GRMeta):
         coord = CoordConverter(width, height, self._sizex, self._sizey)
         for axes in self._lstAxes:
             win = axes.getWindow()
+            xmin, xmax, ymin, ymax = win
             gr.setwindow(*win)
-            gr.setscale(0)
-            coord.setWC(0, 0, axes.viewport)
-            ndcOrigin = coord.getNDC()
-            coord.setNDC(ndcOrigin.x + dp.x, ndcOrigin.y + dp.y)
-            dpWorld = coord.getWC(self.viewport)
-            win[0] -= dpWorld.x
-            win[1] -= dpWorld.x
-            win[2] -= dpWorld.y
-            win[3] -= dpWorld.y
-            gr.setscale(axes.scale)
+            pmin = coord.setWC(xmin, ymin, axes.viewport, win).getNDC()
+            pmax = coord.setWC(xmax, ymax, axes.viewport, win).getNDC()
+            ndcWin = [pmin.x - dp.x, pmax.x - dp.x,
+                      pmin.y - dp.y, pmax.y - dp.y]
+            wmin = coord.setNDC(ndcWin[0], ndcWin[2]).getWC(axes.viewport)
+            wmax = coord.setNDC(ndcWin[1], ndcWin[3]).getWC(axes.viewport)
+            win = [wmin.x, wmax.x, wmin.y, wmax.y]
             axes.setWindow(*win)
         gr.setwindow(*window)
 
