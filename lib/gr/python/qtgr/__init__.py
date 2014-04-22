@@ -316,7 +316,7 @@ class InteractiveGRWidget(GRWidget):
 
     def _pick(self, p0, type):
         for plot in self._lstPlot:
-            coord = plot.pick(p0, self.dwidth, self.dheight)
+            (coord, _axes, _curve) = plot.pick(p0, self.dwidth, self.dheight)
             if coord:
                 dcPoint = coord.getDC()
                 QtGui.QApplication.sendEvent(self, PickEvent(type,
