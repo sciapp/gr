@@ -562,12 +562,13 @@ class Plot(GRViewPort, GRMeta):
         return logYinDomain
 
     def pick(self, p0, width, height):
-        coord = None
+        coord, axes, curve = None, None, None
         window = gr.inqwindow()
         if self._lstAxes:
             coord = CoordConverter(width, height, self._sizex, self._sizey)
             points = []
             lstAxes = []
+            lstCurves = []
             for axes in self._lstAxes:
                 gr.setwindow(*axes.getWindow())
                 coord.setNDC(p0.x, p0.y)
@@ -580,6 +581,7 @@ class Plot(GRViewPort, GRMeta):
                     coord.setWC(x, curve.y[idx], axes.viewport)
                     points.append(coord.getNDC())
                     lstAxes.append(axes)
+                    lstCurves.append(curve)
             if points:
                 # calculate distance between p0 and point on curve
                 norms = map(lambda p: (p0 - p).norm(), points)
@@ -587,12 +589,13 @@ class Plot(GRViewPort, GRMeta):
                 idx = norms.index(min(norms))
                 p = points[idx]
                 axes = lstAxes[idx]
+                curve = lstCurves[idx]
                 coord.setNDC(p.x, p.y)
                 coord.setWindow(*axes.getWindow())
             else:
-                coord = None
+                coord, axes, curve = None, None, None
         gr.setwindow(*window)
-        return coord
+        return (coord, axes, curve)
 
     def select(self, p0, p1, width, height):
         window = gr.inqwindow()
