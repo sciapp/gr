@@ -53,8 +53,8 @@ from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent, \
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-26"
-__version__ = "0.4.6"
+__date__ = "2014-04-23"
+__version__ = "0.5.0"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -272,7 +272,7 @@ class InteractiveGRWidget(GRWidget):
             window = gr.inqwindow()
             gr.setwindow(*event.getWindow())
             gr.setmarkertype(gr.MARKERTYPE_PLUS)
-            gr.polymarker(1, [wcPoint.x], [wcPoint.y])
+            gr.polymarker([wcPoint.x], [wcPoint.y])
             gr.setwindow(*window)
 
     def addPlot(self, *args, **kwargs):

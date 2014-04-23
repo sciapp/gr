@@ -31,8 +31,8 @@ while data != '' and len(data) == SAMPLES * wf.getsampwidth():
     gr.clearws()
     gr.fillrect(0, SAMPLES, -30000, 30000)
     gr.grid(40, 1200, 0, 0, 5, 5)
-    gr.polyline(SAMPLES/4, range(SAMPLES)[0::4], amplitudes[0::4])
-    gr.polyline(SAMPLES/8, range(SAMPLES)[0::8], power)
+    gr.polyline(range(SAMPLES)[0::4], amplitudes[0::4])
+    gr.polyline(range(SAMPLES)[0::4], power)
     gr.updatews()
 
     data = wf.readframes(SAMPLES)

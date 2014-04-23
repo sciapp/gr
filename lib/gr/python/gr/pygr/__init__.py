@@ -16,8 +16,8 @@ from numpy import ndarray
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
-__date__ = "2014-02-26"
-__version__ = "0.4.6"
+__date__ = "2014-04-23"
+__version__ = "0.5.0"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -350,7 +350,7 @@ class ErrorBar(GRDrawAttributes, GRMeta):
         else:
             gr.setmarkertype(gr.MARKERTYPE_DOT)
 
-        self._grerror(len(self._x), self._x, self._y, self._dneg, self._dpos)
+        self._grerror(self._x, self._y, self._dneg, self._dpos)
 
         # restore old values
         gr.setlinecolorind(lcolor)
@@ -782,14 +782,14 @@ class Plot(GRViewPort, GRMeta):
                                 gr.setlinecolorind(curve.linecolor)
                                 gr.setmarkercolorind(curve.markercolor)
                                 gr.setlinetype(curve.linetype)
-                                gr.polyline(2, [x, x + lineWidth], [ys, ys])
+                                gr.polyline([x, x + lineWidth], [ys, ys])
                                 if (curve.markertype != gr.MARKERTYPE_DOT
                                     and curve.markertype is not None):
                                     gr.setmarkertype(curve.markertype)
-                                    gr.polymarker(1, [x + .1 / 2.], [ys])
+                                    gr.polymarker([x + .1 / 2.], [ys])
                             elif curve.markertype is not None:
                                 gr.setmarkertype(curve.markertype)
-                                gr.polymarker(1, [x + .1 / 2.], [ys])
+                                gr.polymarker([x + .1 / 2.], [ys])
 
                             ybase = (y - charHeightUnscaled / 2) * self.sizey
                             ytop = (y + charHeightUnscaled / 2) * self.sizey
@@ -809,7 +809,7 @@ class Plot(GRViewPort, GRMeta):
                             x += textWidth
                             roi.append(Point(x, ytop), Point(x, ybase))
                             self._legendROI.append(roi)
-#                            gr.polyline(len(roi.x), roi.x, roi.y)
+#                            gr.polyline(roi.x, roi.y)
                             tbx = gr.inqtext(0, 0, "X")[0]
                             charWidth = max(tbx) - min(tbx)
                             x += charWidth
@@ -910,19 +910,18 @@ class PlotCurve(GRDrawAttributes, GRMeta):
             lcolor = gr.inqlinecolorind()
             mcolor = gr.inqmarkercolorind()
 
-            n = len(self.y)
             if self.linetype is not None:
                 gr.setlinecolorind(self.linecolor)
                 gr.setmarkercolorind(self.markercolor)
                 gr.setlinetype(self.linetype)
-                gr.polyline(n, self.x, self.y)
+                gr.polyline(self.x, self.y)
                 if (self.markertype != gr.MARKERTYPE_DOT and
                     self.markertype is not None):
                     gr.setmarkertype(self.markertype)
-                    gr.polymarker(n, self.x, self.y)
+                    gr.polymarker(self.x, self.y)
             elif self.markertype is not None:
                 gr.setmarkertype(self.markertype)
-                gr.polymarker(n, self.x, self.y)
+                gr.polymarker(self.x, self.y)
             if self.errorBar1:
                 self.errorBar1.drawGR()
             if self.errorBar2:
@@ -1299,7 +1298,6 @@ def plot(x, y,
          update=True):
     if clear:
         gr.clearws()
-    n = len(x)
     if window == None:
         if scale & gr.OPTION_X_LOG == 0:
             xmin, xmax = gr.adjustrange(min(x), max(x))
@@ -1335,10 +1333,10 @@ def plot(x, y,
     gr.axes(xtick, ytick, xmin, ymin, majorx, majory, 0.01)
     gr.axes(xtick, ytick, xmax, ymax, -majorx, -majory, -0.01)
     gr.setlinetype(linetype)
-    gr.polyline(n, x, y)
+    gr.polyline(x, y)
     if markertype != gr.MARKERTYPE_DOT:
         gr.setmarkertype(markertype)
-        gr.polymarker(n, x, y)
+        gr.polymarker(x, y)
     if update:
         gr.updatews()
 
@@ -1377,9 +1375,9 @@ def plot3d(z,
         gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 5, 0, 5, -0.01)
         gr.axes3d(0, ytick, 0, xmax, ymin, zmin, 0, 5, 0, 0.01)
     gr.setcolormap(colormap)
-    gr.surface(xmax, ymax, x, y, z, option)
+    gr.surface(x, y, z, option)
     if contours:
-        gr.contour(xmax, ymax, 0, x, y, range(1), z, 0)
+        gr.contour(x, y, range(1), z, 0)
     if rotation == 0 and tilt == 90:
         gr.axes(xtick, ytick, xmin, ymin, 5, 5, -0.01)
     if xtitle != '' or ytitle != '' or ztitle != '':

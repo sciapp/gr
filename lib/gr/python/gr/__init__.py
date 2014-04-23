@@ -197,46 +197,53 @@ def updatews():
     __gr.gr_updatews()
 
 
-def polyline(n, x, y):
+def _assertEqualLength(*args):
+    if args and all(len(args[0]) == len(arg) for arg in args):
+        return len(args[0])
+    else:
+        raise AttributeError("Sequences must have same length.")
+
+
+def polyline(x, y):
     """
     Draw a polyline using the current line attributes, starting from the
     first data point and ending at the last data point.
 
     **Parameters:**
 
-    `n` :
-       The number of points in the line to be drawn (`n` > 1)
     `x` :
-        A list of length `n` containing the X coordinates
+        A list containing the X coordinates
     `y` :
-        A list of length `n` containing the Y coordinates
+        A list containing the Y coordinates
 
     The values for `x` and `y` are in world coordinates. The attributes that
     control the appearance of a polyline are linetype, linewidth and color
     index.
 
     """
+    n = _assertEqualLength(x, y)
     _x = floatarray(n, x)
     _y = floatarray(n, y)
-    __gr.gr_polyline(c_int(n), _x.data, _y.data)
+    __gr.gr_polyline(c_int(n), _x.data, _y.data) 
 
 
-def polymarker(n, x, y):
+def polymarker(x, y):
     """
     Draw marker symbols centered at the given data points.
 
     **Parameters:**
 
     `x` :
-        A list of length `n` containing the X coordinates
+        A list containing the X coordinates
     `y` :
-        A list of length `n` containing the Y coordinates
+        A list containing the Y coordinates
 
     The values for `x` and `y` are in world coordinates. The attributes that
     control the appearance of a polyline are marker type, marker size
     scale factor and color index.
 
     """
+    n = _assertEqualLength(x, y)
     _x = floatarray(n, x)
     _y = floatarray(n, y)
     __gr.gr_polymarker(c_int(n), _x.data, _y.data)
@@ -272,23 +279,22 @@ def inqtext(x, y, string):
             [tby[0], tby[1], tby[2], tby[3]]]
 
 
-def fillarea(n, x, y):
+def fillarea(x, y):
     """
     Allows you to specify a polygonal shape of an area to be filled.
 
     **Parameters:**
 
-    `n` :
-        The number of points in the polygon to be drawn (`n` > 2)
     `x` :
-        A list of length `n` containing the X coordinates
+        A list containing the X coordinates
     `y` :
-        A list of length `n` containing the Y coordinates
+        A list containing the Y coordinates
 
     The attributes that control the appearance of fill areas are fill area interior
     style, fill area style index and fill area color index.
 
     """
+    n = _assertEqualLength(x, y)
     _x = floatarray(n, x)
     _y = floatarray(n, y)
     __gr.gr_fillarea(c_int(n), _x.data, _y.data)
@@ -321,19 +327,17 @@ def cellarray(xmin, xmax, ymin, ymax, dimx, dimy, color):
                       c_int(dimx), c_int(dimy), _color.data)
 
 
-def spline(n, px, py, m, method):
+def spline(px, py, m, method):
     """
     Generate a cubic spline-fit, starting from the first data point and
     ending at the last data point.
 
     **Parameters:**
 
-    `n` :
-        The number of points in the spline to be drawn (`n` > 2)
     `x` :
-        A list of length `n` containing the X coordinates
+        A list containing the X coordinates
     `y` :
-        A list of length `n` containing the Y coordinates
+        A list containing the Y coordinates
     `m` :
         The number of points in the polygon to be drawn (`m` > `n`)
     `method` :
@@ -348,12 +352,14 @@ def spline(n, px, py, m, method):
     If `method` is < -1, then a cubic B-spline is calculated.
 
     """
+    n = _assertEqualLength(px, py)
     _px = floatarray(n, px)
     _py = floatarray(n, py)
     __gr.gr_spline(c_int(n), _px.data, _py.data, c_int(m), c_int(method))
 
 
-def gridit(nd, xd, yd, zd, nx, ny):
+def gridit(xd, yd, zd, nx, ny):
+    nd = _assertEqualLength(xd, yd, zd)
     _xd = floatarray(nd, xd)
     _yd = floatarray(nd, yd)
     _zd = floatarray(nd, zd)
@@ -1317,14 +1323,12 @@ def grid(x_tick, y_tick, x_org, y_org, major_x, major_y):
                  c_int(major_x), c_int(major_y))
 
 
-def verrorbars(n, px, py, e1, e2):
+def verrorbars(px, py, e1, e2):
     """
     Draw a standard vertical error bar graph.
 
     **Parameters:**
 
-    `n` :
-        The number of error bars to be drawn
     `px` :
         A list of length N containing the X coordinates
     `py` :
@@ -1335,6 +1339,7 @@ def verrorbars(n, px, py, e1, e2):
         The absolute value of the positive deviation at the given point
 
     """
+    n = _assertEqualLength(px, py, e1, e2)
     _px = floatarray(n, px)
     _py = floatarray(n, py)
     _e1 = floatarray(n, e1)
@@ -1342,14 +1347,12 @@ def verrorbars(n, px, py, e1, e2):
     __gr.gr_verrorbars(c_int(n), _px.data, _py.data, _e1.data, _e2.data)
 
 
-def herrorbars(n, px, py, e1, e2):
+def herrorbars(px, py, e1, e2):
     """
     Draw a standard horizontal error bar graph.
 
     **Parameters:**
 
-    `n` :
-        The number of error bars to be drawn
     `px` :
         A list of length N containing the X coordinates
     `py` :
@@ -1360,6 +1363,7 @@ def herrorbars(n, px, py, e1, e2):
         The absolute value of the positive deviation at the given point
 
     """
+    n = _assertEqualLength(px, py, e1, e2)
     _px = floatarray(n, px)
     _py = floatarray(n, py)
     _e1 = floatarray(n, e1)
@@ -1367,15 +1371,13 @@ def herrorbars(n, px, py, e1, e2):
     __gr.gr_herrorbars(c_int(n), _px.data, _py.data, _e1.data, _e2.data)
 
 
-def polyline3d(n, px, py, pz):
+def polyline3d(px, py, pz):
     """
     Draw a 3D curve using the current line attributes, starting from the
     first data point and ending at the last data point.
 
     **Parameters:**
 
-    `n` :
-        The number of points in the line to be drawn (N > 1)
     `x` :
         A list of length N containing the X coordinates
     `y` :
@@ -1388,6 +1390,7 @@ def polyline3d(n, px, py, pz):
     index.
 
     """
+    n = _assertEqualLength(px, py, pz)
     _px = floatarray(n, px)
     _py = floatarray(n, py)
     _pz = floatarray(n, pz)
@@ -1415,22 +1418,18 @@ def titles3d(x_title, y_title, z_title):
     __gr.gr_titles3d(char(x_title), char(y_title), char(z_title))
 
 
-def surface(nx, ny, px, py, pz, option):
+def surface(px, py, pz, option):
     """
     Draw a three-dimensional surface plot for the given data points.
 
     **Parameters:**
 
-    `nx` :
-        The number of points in the X direction (`nx` > 1)
-    `ny` :
-        The number of points in the Y direction (`ny` > 1)
     `x` :
-        A list of length `nx` containing the X coordinates
+        A list containing the X coordinates
     `y` :
-        A list of length `ny` containing the Y coordinates
+        A list containing the Y coordinates
     `z` :
-        A list of length `nx` * `ny` containing the Z coordinates
+        A list of length `len(x)` * `len(y)` containing the Z coordinates
     `option` :
         Surface display option (see table below)
 
@@ -1455,46 +1454,55 @@ def surface(nx, ny, px, py, pz, option):
     +------------------+--+--------------------------------------------------------------+
 
     """
-    _px = floatarray(nx, px)
-    _py = floatarray(ny, py)
-    _pz = floatarray(nx * ny, pz)
-    __gr.gr_surface(c_int(nx), c_int(ny), _px.data, _py.data, _pz.data,
-                    c_int(option))
+    nx = len(px)
+    ny = len(py)
+    nz = len(pz)
+    if nz == nx * ny:
+        _px = floatarray(nx, px)
+        _py = floatarray(ny, py)
+        _pz = floatarray(nx * ny, pz)
+        __gr.gr_surface(c_int(nx), c_int(ny), _px.data, _py.data, _pz.data,
+                        c_int(option))
+    else:
+        raise AttributeError("Sequences have incorrect length. " +
+                             "Assert len(z) = len(x) * len(y) failed.")
 
 
-def contour(nx, ny, nh, px, py, h, pz, major_h):
+def contour(px, py, h, pz, major_h):
     """
     Draw contours of a three-dimensional data set whose values are specified over a
     rectangular mesh. Contour lines may optionally be labeled.
 
     **Parameters:**
 
-    `nx` :
-        The number of points in the X direction (`nx` > 1)
-    `ny` :
-        The number of points in the Y direction (`ny` > 1)
-    `nh` :
-        The number of height values (`nh` > 0)
     `x` :
-        A list of length `nx` containing the X coordinates
+        A list containing the X coordinates
     `y` :
-        A list of length `ny` containing the Y coordinates
+        A list containing the Y coordinates
     `h` :
-        A list of length `nh` containing the Z coordinate for the height values
+        A list containing the Z coordinate for the height values
     `z` :
-        A list of length `nx` * `ny` containing the Z coordinates
+        A list of length `len(x)` * `len(y)` containing the Z coordinates
     `major_h` :
         Directs GR to label contour lines. For example, a value of 3 would label
         every third line. A value of 1 will label every line. A value of 0
         produces no labels.
 
     """
-    _px = floatarray(nx, px)
-    _py = floatarray(ny, py)
-    _h = floatarray(nh, h)
-    _pz = floatarray(nx * ny, pz)
-    __gr.gr_contour(c_int(nx), c_int(ny), c_int(nh),
-                    _px.data, _py.data, _h.data, _pz.data, c_int(major_h))
+    nx = len(px)
+    ny = len(py)
+    nz = len(pz)
+    nh = len(h)
+    if nz == nx * ny:
+        _px = floatarray(nx, px)
+        _py = floatarray(ny, py)
+        _h = floatarray(nh, h)
+        _pz = floatarray(nz, pz)
+        __gr.gr_contour(c_int(nx), c_int(ny), c_int(nh),
+                        _px.data, _py.data, _h.data, _pz.data, c_int(major_h))
+    else:
+        raise AttributeError("Sequences have incorrect length. " +
+                             "Assert len(z) = len(x) * len(y) failed.")
 
 
 def setcolormap(index):

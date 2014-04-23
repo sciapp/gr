@@ -46,6 +46,6 @@ while time.time() - start < 10:
     gr.text(0.47, 0.965, '1kHz')
     gr.text(0.79, 0.965, '10kHz')
     gr.setlinecolorind(4)
-    gr.polyline(SAMPLES/2, f, power)
+    gr.polyline(f, power)
     gr.updatews()
 

@@ -67,8 +67,8 @@ class GrWidget(QtGui.QWidget) :
         gr.setspace(min(z), max(z), 0, 90)
         gr.setcharheight(0.018)
         gr.setcolormap(-3)
-        gr.surface(128, 128, x, y, z, 5)
-        gr.contour(128, 128, 20, x, y, h, z, -1)
+        gr.surface(x, y, z, 5)
+        gr.contour(x, y, h, z, -1)
         gr.axes(5, 5, 1, 1, 2, 2, 0.0075)
         self.update()
 

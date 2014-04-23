@@ -70,8 +70,8 @@ class GrWidget(wx.Panel):
         gr.setwindow(1, 480, 1, 480)
         gr.setspace(1, 1000, 30, 80)
         gr.setcolormap(3)
-        gr.surface(480, 480, x, y, z, 6)
-        gr.contour(480, 480, 0, x, y, range(1), z, 0)
+        gr.surface(x, y, z, 6)
+        gr.contour(x, y, range(1), z, 0)
         gr.updatews()
         
         self.Refresh()

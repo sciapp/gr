@@ -95,7 +95,7 @@ while t < 20:
     x = a[0, :, 0]
     y = a[0, :, 1]
     gr.setmarkercolorind(75)
-    gr.polymarker(len(x), x, y)
+    gr.polymarker(x, y)
     gr.text(0.01, 0.95, '%10s: %6.2f fps' % (worker, (1.0 / (now - start))))
     gr.updatews()
 
