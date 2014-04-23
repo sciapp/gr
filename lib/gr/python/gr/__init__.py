@@ -339,7 +339,7 @@ def spline(px, py, m, method):
     `y` :
         A list containing the Y coordinates
     `m` :
-        The number of points in the polygon to be drawn (`m` > `n`)
+        The number of points in the polygon to be drawn (`m` > len(`x`))
     `method` :
         The smoothing method
 
