@@ -6,6 +6,7 @@
 #include <wx/fontutil.h>
 #include <wx/bitmap.h>
 #include <wx/image.h>
+#include <wx/string.h>
 #include <cstring>
 
 #endif
@@ -667,7 +668,11 @@ static void text_routine(double x, double y, int nchars, char *chars)
 {
   int i, ch, xstart, ystart, width, height, descent;
   double xrel, yrel, ax, ay;
+#if wxCHECK_VERSION(2, 9, 0)
   wxString s(wxT(""));
+#else
+  wxString s("");
+#endif
 
   for (i = 0; i < nchars; i++)
     {
@@ -676,7 +681,11 @@ static void text_routine(double x, double y, int nchars, char *chars)
         ch += 256;
       if (p->family == 3)
         ch = symbol2utf[ch];
+#if wxCHECK_VERSION(2, 9, 0)
       s.append(static_cast<wchar_t>(ch));
+#else
+      s.append(static_cast<char>(ch));
+#endif
     }
 
   NDC_to_DC(x, y, xstart, ystart);
