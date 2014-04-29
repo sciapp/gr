@@ -372,9 +372,13 @@ void seg_xform_rel(double *x, double *y)
           memcpy(&saved_gkss, gkss, sizeof(gks_state_list_t));
           memcpy(gkss, sl, sizeof(gks_state_list_t));
 
-          p->width  = [self bounds].size.width;
-          p->height = [self bounds].size.height; // - TITLE_BAR_HEIGHT;
+       // p->width  = [self bounds].size.width;
+       // p->height = [self bounds].size.height; // - TITLE_BAR_HEIGHT;
 
+          p->width  = [NSWindow contentRectForFrameRect: [self frame]
+                                styleMask: NSTitledWindowMask].size.width;
+          p->height = [NSWindow contentRectForFrameRect: [self frame]
+                                styleMask: NSTitledWindowMask].size.height;
           p->swidth  = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
           p->sheight = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
 
@@ -1482,6 +1486,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
   CGContextRef bitmap;
   CGImageRef image;
   register int *elptr, *epptr, *tmpptr;
+  const CGFloat *colors;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -1501,7 +1506,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
   swapx = ix1 > ix2;
   swapy = iy1 > iy2;
 
-  if (swapx == 0 && true_color && dimx == dx && dx == width && dy == height)
+  if (swapx == 0 && dimx == dx && dx == width && dy == height)
     {
       if (swapy)
         {
@@ -1521,13 +1526,34 @@ void fill_routine(int n, double *px, double *py, int tnr)
         }
 
       cs = CGColorSpaceCreateDeviceRGB();
-      bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width,
-                                     cs, kCGImageAlphaNoneSkipLast);
+      if (!true_color)
+        {
+          tmpptr = (int *) gks_malloc(width * height * sizeof(int));
+          for (i = 0; i < width * height; i++)
+            {
+              ind = Color8Bit(colia[i]);
+              if (ind >= MAX_COLOR)
+                ind = MAX_COLOR - 1;
+              colors = CGColorGetComponents(p->rgb[ind]);
+              tmpptr[i] =  (int)(colors[0] * 255) +
+                          ((int)(colors[1] * 255) << 8) +
+                          ((int)(colors[2] * 255) << 16);
+            }
+          bitmap = CGBitmapContextCreate(tmpptr, width, height, 8, 4 * width,
+                                         cs, kCGImageAlphaNoneSkipLast);
+        }
+      else
+        bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width,
+                                       cs, kCGImageAlphaNoneSkipLast);
+
       image = CGBitmapContextCreateImage(bitmap);
       CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
       CGImageRelease(image);
       CGContextRelease(bitmap);
       CGColorSpaceRelease(cs);
+
+      if (!true_color)
+        free(tmpptr);
     }
   else
     {
@@ -1544,6 +1570,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
               if (!true_color)
                 {
                   ind = Color8Bit(colia[iy * dimx + ix]);
+                  if (ind >= MAX_COLOR)
+                    ind = MAX_COLOR - 1;
                   [self set_fill_color: ind : context];
                 }
               else
