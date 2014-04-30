@@ -253,6 +253,9 @@ int gks_get_ws_type(void);
 int gks_base64(
   unsigned char *src, size_t srclength, char *target, size_t targsize);
 const char *gks_getenv(const char *env);
+void gks_iso2utf(unsigned char c, char *utf, size_t *len);
+void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
+int *gks_resize(int *image, int width, int height, int w, int h);
 
 DLLEXPORT void gks_dl_write_item(gks_display_list_t *d,
   int fctid, int dx, int dy, int dimx, int *ia,
@@ -400,9 +403,6 @@ int gks_open_file(const char *path, const char *mode);
 int gks_read_file(int fd, void *buf, int count);
 int gks_write_file(int fd, void *buf, int count);
 int gks_close_file(int fd);
-
-void gks_iso2utf(unsigned char c, char *utf, size_t *len);
-void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
 
 int gks_ft_init(void);
 int *gks_ft_render(

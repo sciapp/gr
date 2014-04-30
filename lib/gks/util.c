@@ -3132,3 +3132,22 @@ void gks_symbol2utf(unsigned char c, char *utf, size_t *len)
   *len = strlen(symbol2utf[c]);
   memcpy(utf, symbol2utf[c], *len);
 }
+
+int *gks_resize(int *image, int width, int height, int w, int h)
+{
+  int x_ratio = (int) ((width  << 16) / w) + 1;
+  int y_ratio = (int) ((height << 16) / h) + 1;
+  int *result, i, j, x, y;
+
+  result = (int *) malloc(w * h * sizeof(int));
+  for (i = 0; i < h; i++)
+    {
+      for (j = 0; j < w; j++)
+        {
+          x = ((j * x_ratio) >> 16);
+          y = ((i * y_ratio) >> 16);
+          result[(i * w) + j] = image[(y * width) + x];
+        }                
+    }                
+  return result;
+}

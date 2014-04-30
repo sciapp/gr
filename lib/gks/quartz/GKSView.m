@@ -9,7 +9,6 @@
 #define HATCH_STYLE 108
 
 #define MWIDTH 0.381
-#define TITLE_BAR_HEIGHT 22
 
 #define RESOLVE(arg, type, nbytes) arg = (type *)(s + sp); sp += nbytes
 
@@ -372,13 +371,8 @@ void seg_xform_rel(double *x, double *y)
           memcpy(&saved_gkss, gkss, sizeof(gks_state_list_t));
           memcpy(gkss, sl, sizeof(gks_state_list_t));
 
-       // p->width  = [self bounds].size.width;
-       // p->height = [self bounds].size.height; // - TITLE_BAR_HEIGHT;
-
-          p->width  = [NSWindow contentRectForFrameRect: [self frame]
-                                styleMask: NSTitledWindowMask].size.width;
-          p->height = [NSWindow contentRectForFrameRect: [self frame]
-                                styleMask: NSTitledWindowMask].size.height;
+          p->width  = [self bounds].size.width;
+          p->height = [self bounds].size.height;
           p->swidth  = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
           p->sheight = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
 
@@ -993,10 +987,9 @@ void seg_xform_rel(double *x, double *y)
 
   if (p->width != width || p->height != height)
     {
-   // rect.origin.y   += rect.size.height - (height + TITLE_BAR_HEIGHT);
       rect.origin.y   += rect.size.height - height;
       rect.size.width  = width;
-      rect.size.height = height; // + TITLE_BAR_HEIGHT;
+      rect.size.height = height;
 
       p->width  = width;
       p->height = height;
@@ -1479,13 +1472,12 @@ void fill_routine(int n, double *px, double *py, int tnr)
 {
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
-  int x, y, width, height, h;
+  int x, y, width, height;
   register int i, j, ix, iy, ind;
-  int swapx, swapy;
+  int swapx, swapy, *tmpptr;
   CGColorSpaceRef cs;
   CGContextRef bitmap;
   CGImageRef image;
-  register int *elptr, *epptr, *tmpptr;
   const CGFloat *colors;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
@@ -1506,88 +1498,49 @@ void fill_routine(int n, double *px, double *py, int tnr)
   swapx = ix1 > ix2;
   swapy = iy1 > iy2;
 
-  if (swapx == 0 && dimx == dx && dx == width && dy == height)
+  tmpptr = (int *) gks_malloc(dx * dy * sizeof(int));
+  for (i = 0; i < dx; i++)
+    for (j = 0; j < dy; j++)
+      {
+        ix = swapx ? dx - i - 1 : i;
+        iy = swapy ? dy - j - 1 : j;
+        tmpptr[iy * dx + ix] = colia[j * dimx + i];
+      }
+
+  if (dx != width || dy != height)
     {
-      if (swapy)
-        {
-          tmpptr = (int *) gks_malloc(width * sizeof(int));
-          elptr = colia;
-          epptr = colia + height * width;
-          h = height / 2;
-          for (j = 0; j < h; j++)
-            {
-              epptr -= width;
-              memcpy(tmpptr, elptr, width * sizeof(int));
-              memcpy(elptr, epptr, width * sizeof(int));
-              memcpy(epptr, tmpptr, width * sizeof(int));
-              elptr += width;
-            }
-          free(tmpptr);
-        }
-
-      cs = CGColorSpaceCreateDeviceRGB();
-      if (!true_color)
-        {
-          tmpptr = (int *) gks_malloc(width * height * sizeof(int));
-          for (i = 0; i < width * height; i++)
-            {
-              ind = Color8Bit(colia[i]);
-              if (ind >= MAX_COLOR)
-                ind = MAX_COLOR - 1;
-              colors = CGColorGetComponents(p->rgb[ind]);
-              tmpptr[i] =  (int)(colors[0] * 255) +
-                          ((int)(colors[1] * 255) << 8) +
-                          ((int)(colors[2] * 255) << 16);
-            }
-          bitmap = CGBitmapContextCreate(tmpptr, width, height, 8, 4 * width,
-                                         cs, kCGImageAlphaNoneSkipLast);
-        }
-      else
-        bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width,
-                                       cs, kCGImageAlphaNoneSkipLast);
-
-      image = CGBitmapContextCreateImage(bitmap);
-      CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
-      CGImageRelease(image);
-      CGContextRelease(bitmap);
-      CGColorSpaceRelease(cs);
-
-      if (!true_color)
-        free(tmpptr);
+      colia = gks_resize(tmpptr, dx, dy, width, height);
+      free(tmpptr);
     }
   else
+    colia = tmpptr;
+
+  cs = CGColorSpaceCreateDeviceRGB();
+  if (!true_color)
     {
-      for (j = 0; j < height; j++)
+      for (i = 0; i < width * height; i++)
         {
-          iy = dy * j / height;
-          if (swapy)
-            iy = dy - 1 - iy;
-          for (i = 0; i < width; i++)
-            {
-              ix = dx * i / width;
-              if (swapx)
-                ix = dx - 1 - ix;
-              if (!true_color)
-                {
-                  ind = Color8Bit(colia[iy * dimx + ix]);
-                  if (ind >= MAX_COLOR)
-                    ind = MAX_COLOR - 1;
-                  [self set_fill_color: ind : context];
-                }
-              else
-                {
-                  int rgba = colia[iy * dimx + ix];
-                  CGContextSetRGBFillColor(context,
-                                           ( rgba        & 0xff) / 255.0,
-                                           ((rgba >>  8) & 0xff) / 255.0,
-                                           ((rgba >> 16) & 0xff) / 255.0,
-                                           1.0);
-                }
-              CGContextFillRect(context,
-                                CGRectMake(x + i, y + height - j - 1, 1, 1));
-            }
+          ind = Color8Bit(colia[i]);
+          if (ind >= MAX_COLOR)
+            ind = MAX_COLOR - 1;
+          colors = CGColorGetComponents(p->rgb[ind]);
+          colia[i] =  (int)(colors[0] * 255) +
+                     ((int)(colors[1] * 255) << 8) +
+                     ((int)(colors[2] * 255) << 16);
         }
     }
+
+  bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width,
+                                 cs, kCGImageAlphaNoneSkipLast);
+  image = CGBitmapContextCreateImage(bitmap);
+  CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
+
+  CGImageRelease(image);
+  CGContextRelease(bitmap);
+  CGColorSpaceRelease(cs);
+
+  free(colia);
+
   end_context(context);
 }
 

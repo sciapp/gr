@@ -5,8 +5,6 @@
 #import "GKSTerm.h"
 #import "GKSView.h"
 
-#define TITLE_BAR_HEIGHT 22
-
 @implementation GKSTerm
 
 - (void) awakeFromNib
@@ -34,7 +32,7 @@
     {
       NSRect screenFrame = [[[NSScreen screens] objectAtIndex:0] frame];
       window[win] = [[NSWindow alloc]
-                      initWithContentRect: NSMakeRect(NSMinX(screenFrame), NSMaxY(screenFrame) - 500 - TITLE_BAR_HEIGHT, 500, 500 + TITLE_BAR_HEIGHT)
+                      initWithContentRect: NSMakeRect(NSMinX(screenFrame), NSMaxY(screenFrame) - 500, 500, 500)
                       styleMask: NSTitledWindowMask | NSClosableWindowMask |
                       NSMiniaturizableWindowMask | NSResizableWindowMask
                       backing: NSBackingStoreBuffered defer: NO];
