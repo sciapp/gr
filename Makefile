@@ -45,6 +45,9 @@ pypi: clean
 testpypi: clean
 	python setup.py sdist upload -r https://testpypi.python.org/pypi
 
+conda: clean
+	conda build recipe
+
 osxpkg:
 	mkdir -p tmp/bin tmp/gr
 	rsync -a /usr/local/gr/ tmp/gr/

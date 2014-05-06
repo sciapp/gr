@@ -1,7 +1,8 @@
 build/
 dist/
-MANIFEST
 doc/media/
+recipe/
+MANIFEST
 *.o
 *.obj
 *.a
