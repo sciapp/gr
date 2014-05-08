@@ -1356,6 +1356,7 @@ def plot3d(z,
         xmax, ymax = z.shape
         zmin = z.min()
         zmax = z.max()
+        z = z.ravel()
     else:
         xmax, ymax = _guessdimension(len(z))[0]
         zmin = min(z)
