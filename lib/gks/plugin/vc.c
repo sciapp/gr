@@ -201,6 +201,7 @@ pdf_t vc_pdf_from_file(const char *path)
   pdf_t pdf = (pdf_t) malloc(sizeof(struct pdf_t_));
 
   pdf->ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+  fz_register_document_handlers(pdf->ctx);
   pdf->doc = fz_open_document(pdf->ctx, path);
   pdf->num_pages = fz_count_pages(pdf->doc);
   pdf->path = path;
@@ -215,6 +216,7 @@ pdf_t vc_pdf_from_memory(unsigned char *data, int len)
   pdf_t pdf = (pdf_t) malloc(sizeof(struct pdf_t_));
 
   pdf->ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+  fz_register_document_handlers(pdf->ctx);
   stream = fz_open_memory(pdf->ctx, data, len);
   pdf->doc = fz_open_document_with_stream(pdf->ctx, "pdf", stream);
   pdf->num_pages = fz_count_pages(pdf->doc);

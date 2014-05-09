@@ -220,6 +220,7 @@ int read_pdf_image(char *path, int *width, int *height, int **data)
   unsigned char *rgba;
 
   ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+  fz_register_document_handlers(ctx);
   doc = fz_open_document(ctx, path);
   page = fz_load_page(doc, page_number);
   fz_bound_page(doc, page, &rect);

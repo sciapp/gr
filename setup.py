@@ -294,6 +294,7 @@ int main(int argc, char **argv)
   fz_page     *page;
 
   ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+  fz_register_document_handlers(ctx);
   doc = fz_open_document(ctx, argv[1]);
   page = fz_load_page(doc, 0);
   fz_bound_page(doc, page, &rect);
@@ -628,8 +629,8 @@ int main()
             if not self.mupdfinc:
                 self.disable_mupdf = True
             else:
-                self.mupdflibs = ["mupdf", "mupdf-js-none",
-                              "jbig2dec", "jpeg", "openjp2"]
+                self.mupdflibs = ["mupdf",
+                              "jbig2dec", "jpeg", "openjp2", "ssl", "crypto"]
                 self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
                                                           self.mupdflibs,
                                                   mupdfldflags=self.ftldflags)

@@ -352,6 +352,7 @@ int main(int argc, char **argv)
   fz_page     *page;
 
   ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+  fz_register_document_handlers(ctx);
   doc = fz_open_document(ctx, argv[1]);
   page = fz_load_page(doc, 0);
   fz_bound_page(doc, page, &rect);
@@ -367,10 +368,10 @@ int main(int argc, char **argv)
 }
 eof
 ftlibs=`$ftconfig --libs`
-cmd="cc -o $tmpout $tmpsrc -lmupdf -lmupdf-js-none $ftlibs -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz -lm"
+cmd="cc -o $tmpout $tmpsrc -lmupdf $ftlibs -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lssl -lcrypto -lz -lm"
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  info="${red} no${normal} [MuPDF 1.3 API not found]"
+  info="${red} no${normal} [MuPDF 1.4 API not found]"
   mupdfdefs="MUPDFDEFS=-DNO_MUPDF MUPDFLIBS="
   ret=1
 else
