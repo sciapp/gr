@@ -1340,7 +1340,14 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
                 "clean": clean},
       name="gr",
       version=__version__,
-      description="GR, a universal framework for visualization applications",
+      description="GR framework",
+      long_description="""
+        GR is a universal framework for cross-platform visualization
+        applications. It offers developers a compact, portable and consistent
+        graphics library for their programs. Applications range from
+        publication quality 2D graphs to the representation of complex 3D
+        scenes.
+        """,
       author="Scientific IT-Systems",
       author_email="j.heinen@fz-juelich.de",
       license="GNU General Public License",
