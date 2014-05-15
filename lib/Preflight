@@ -6,6 +6,17 @@ then
 fi
 
 target=`uname`
+if [ -z "${CC}" ]; then
+  CC="cc"
+fi
+if [ -z "${CXX}" ]; then
+  CXX="c++"
+fi
+while [ $# -gt 0 ]
+do
+  eval $1
+  shift
+done
 wxdefs=""
 ftdefs=""
 qtdefs=""
@@ -24,19 +35,19 @@ normal=$(tput sgr0)
 
 printf "\nBuilding GR Framework\n---------------------\n" >&2
 
-if [ "`which cc 2>/dev/null`" = "" ]
+if [ "`which ${CC} 2>/dev/null`" = "" ]
 then
   info="${red} no${normal} [not found]"
 else
-  info="${green}yes${normal} [`cc --version | sed 's/) (/ /' | head -1`]"
+  info="${green}yes${normal} [`${CC} --version | sed 's/) (/ /' | head -1`]"
 fi
 printf "%12s: %s\n" "C" "$info" >&2
 
-if [ "`which c++ 2>/dev/null`" = "" ]
+if [ "`which ${CXX} 2>/dev/null`" = "" ]
 then
   info="${red} no${normal} [not found]"
 else
-  info="${green}yes${normal} [`c++ --version | sed 's/) (/ /' | head -1`]"
+  info="${green}yes${normal} [`${CXX} --version | sed 's/) (/ /' | head -1`]"
 fi
 printf "%12s: %s\n" "C++" "$info" >&2
 
@@ -171,7 +182,7 @@ if [ -d /usr/X11R6 ]; then
 else
   x11path="/usr/X11"
 fi
-cmd="cc -o $tmpout $tmpsrc -I$x11path/include -L$x11path/lib -lXt -lX11"
+cmd="${CC} -o $tmpout $tmpsrc -I$x11path/include -L$x11path/lib -lXt -lX11"
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   x11defs="X11DEFS=-DNO_X11 X11INC= X11LIBS="
@@ -208,11 +219,11 @@ int main()
     exit(0);
 }
 eof
-cmd="cc -o $tmpout $tmpsrc -lgs"
+cmd="${CC} -o $tmpout $tmpsrc -lgs"
 if [ `uname` = "Darwin" ]; then
   cmd="$cmd -L/usr/X11/lib -lXt -lX11 -liconv"
 fi
-$cmd >/dev/null 2>&1
+$cmd #>/dev/null 2>&1
 if [ $? -ne 0 ]; then
   gsdefs="GSDEFS=-DNO_GS GSINC= GSLIBS="
   info="${red} no${normal} [GS API not found]"
@@ -240,7 +251,7 @@ int main(void)
     return 0;
 }
 eof
-cmd="cc -o $tmpout $tmpsrc -lglfw"
+cmd="${CC} -o $tmpout $tmpsrc -lglfw"
 if [ `uname` = "Darwin" ]; then
   libs="-framework OpenGL -framework Cocoa -framework IOKit"
   ret=1
@@ -282,7 +293,7 @@ int main(void)
     return 0;
 }
 eof
-cmd="cc -o $tmpout $tmpsrc -lzmq"
+cmd="${CC} -o $tmpout $tmpsrc -lzmq"
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   info="${red} no${normal} [0MQ 3.x API not found]"
@@ -311,7 +322,7 @@ int main(void)
    exit(0);
 }
 eof
-cmd="cc -o $tmpout $tmpsrc -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -lz"
+cmd="${CC} -o $tmpout $tmpsrc -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -lz"
 if [ `uname` = "Linux" ]
 then
   cmd="$cmd -lpthread -lm"
@@ -368,7 +379,7 @@ int main(int argc, char **argv)
 }
 eof
 ftlibs=`$ftconfig --libs`
-cmd="cc -o $tmpout $tmpsrc -lmupdf $ftlibs -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lssl -lcrypto -lz -lm"
+cmd="${CC} -o $tmpout $tmpsrc -lmupdf $ftlibs -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lssl -lcrypto -lz -lm"
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   info="${red} no${normal} [MuPDF 1.4 API not found]"
