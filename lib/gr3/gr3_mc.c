@@ -1,501 +1,496 @@
 /*
+ * gr3_mc.c
+ *
+ * Optimized OpenMP implementation of the marching cubes algorithm.
+ *
  * This code is based on Paul Bourke's Marching Cubes implementation
  * (http://paulbourke.net/geometry/polygonise/)
+ *
+ * Creates an indexed mesh to reduce the number of vertices to calculate.
+ * This is done by caching generated vertices depending on their location.
+ * Multiple threads create independent meshes.
+ * Caches values between adjacent cubes.
+ *
+ * Fabian Beule
+ * 2014-02-10
  */
 
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <math.h>
 #include "gr3.h"
-
-typedef struct {
-  gr3_coord_t position[8];
-  gr3_coord_t normal[8];
-  int value[8];
-} cell_t;
+#include "gr3_mc_data.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
-#define INDEX(x,y,z) ((x)*stride_x+(y)*stride_y+(z)*stride_z)
+#define INDEX(x,y,z) ((x)*mcdata.stride[0]+(y)*mcdata.stride[1]+(z)*mcdata.stride[2])
+#define IDX2D(y,z) ((y)*mcdata.dim[2] + (z))
 
-static
-const int edgeTable[256] = {
-  0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
-  0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
-  0x190, 0x99 , 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
-  0x99c, 0x895, 0xb9f, 0xa96, 0xd9a, 0xc93, 0xf99, 0xe90,
-  0x230, 0x339, 0x33 , 0x13a, 0x636, 0x73f, 0x435, 0x53c,
-  0xa3c, 0xb35, 0x83f, 0x936, 0xe3a, 0xf33, 0xc39, 0xd30,
-  0x3a0, 0x2a9, 0x1a3, 0xaa , 0x7a6, 0x6af, 0x5a5, 0x4ac,
-  0xbac, 0xaa5, 0x9af, 0x8a6, 0xfaa, 0xea3, 0xda9, 0xca0,
-  0x460, 0x569, 0x663, 0x76a, 0x66 , 0x16f, 0x265, 0x36c,
-  0xc6c, 0xd65, 0xe6f, 0xf66, 0x86a, 0x963, 0xa69, 0xb60,
-  0x5f0, 0x4f9, 0x7f3, 0x6fa, 0x1f6, 0xff , 0x3f5, 0x2fc,
-  0xdfc, 0xcf5, 0xfff, 0xef6, 0x9fa, 0x8f3, 0xbf9, 0xaf0,
-  0x650, 0x759, 0x453, 0x55a, 0x256, 0x35f, 0x55 , 0x15c,
-  0xe5c, 0xf55, 0xc5f, 0xd56, 0xa5a, 0xb53, 0x859, 0x950,
-  0x7c0, 0x6c9, 0x5c3, 0x4ca, 0x3c6, 0x2cf, 0x1c5, 0xcc ,
-  0xfcc, 0xec5, 0xdcf, 0xcc6, 0xbca, 0xac3, 0x9c9, 0x8c0,
-  0x8c0, 0x9c9, 0xac3, 0xbca, 0xcc6, 0xdcf, 0xec5, 0xfcc,
-  0xcc , 0x1c5, 0x2cf, 0x3c6, 0x4ca, 0x5c3, 0x6c9, 0x7c0,
-  0x950, 0x859, 0xb53, 0xa5a, 0xd56, 0xc5f, 0xf55, 0xe5c,
-  0x15c, 0x55 , 0x35f, 0x256, 0x55a, 0x453, 0x759, 0x650,
-  0xaf0, 0xbf9, 0x8f3, 0x9fa, 0xef6, 0xfff, 0xcf5, 0xdfc,
-  0x2fc, 0x3f5, 0xff , 0x1f6, 0x6fa, 0x7f3, 0x4f9, 0x5f0,
-  0xb60, 0xa69, 0x963, 0x86a, 0xf66, 0xe6f, 0xd65, 0xc6c,
-  0x36c, 0x265, 0x16f, 0x66 , 0x76a, 0x663, 0x569, 0x460,
-  0xca0, 0xda9, 0xea3, 0xfaa, 0x8a6, 0x9af, 0xaa5, 0xbac,
-  0x4ac, 0x5a5, 0x6af, 0x7a6, 0xaa , 0x1a3, 0x2a9, 0x3a0,
-  0xd30, 0xc39, 0xf33, 0xe3a, 0x936, 0x83f, 0xb35, 0xa3c,
-  0x53c, 0x435, 0x73f, 0x636, 0x13a, 0x33 , 0x339, 0x230,
-  0xe90, 0xf99, 0xc93, 0xd9a, 0xa96, 0xb9f, 0x895, 0x99c,
-  0x69c, 0x795, 0x49f, 0x596, 0x29a, 0x393, 0x99 , 0x190,
-  0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
-  0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0
-};
+/* speedup does not grow much with a high number of threads */
+#define THREADLIMIT 16
 
-static
-const int triTable[256][16] = {
-  {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 8, 3, 9, 8, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 2, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 8, 3, 1, 2, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {9, 2, 10, 0, 2, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {2, 8, 3, 2, 10, 8, 10, 9, 8, -1, -1, -1, -1, -1, -1, -1},
-  {3, 11, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 11, 2, 8, 11, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 9, 0, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 11, 2, 1, 9, 11, 9, 8, 11, -1, -1, -1, -1, -1, -1, -1},
-  {3, 10, 1, 11, 10, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 10, 1, 0, 8, 10, 8, 11, 10, -1, -1, -1, -1, -1, -1, -1},
-  {3, 9, 0, 3, 11, 9, 11, 10, 9, -1, -1, -1, -1, -1, -1, -1},
-  {9, 8, 10, 10, 8, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {4, 7, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {4, 3, 0, 7, 3, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 1, 9, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {4, 1, 9, 4, 7, 1, 7, 3, 1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 2, 10, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {3, 4, 7, 3, 0, 4, 1, 2, 10, -1, -1, -1, -1, -1, -1, -1},
-  {9, 2, 10, 9, 0, 2, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1},
-  {2, 10, 9, 2, 9, 7, 2, 7, 3, 7, 9, 4, -1, -1, -1, -1},
-  {8, 4, 7, 3, 11, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {11, 4, 7, 11, 2, 4, 2, 0, 4, -1, -1, -1, -1, -1, -1, -1},
-  {9, 0, 1, 8, 4, 7, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1},
-  {4, 7, 11, 9, 4, 11, 9, 11, 2, 9, 2, 1, -1, -1, -1, -1},
-  {3, 10, 1, 3, 11, 10, 7, 8, 4, -1, -1, -1, -1, -1, -1, -1},
-  {1, 11, 10, 1, 4, 11, 1, 0, 4, 7, 11, 4, -1, -1, -1, -1},
-  {4, 7, 8, 9, 0, 11, 9, 11, 10, 11, 0, 3, -1, -1, -1, -1},
-  {4, 7, 11, 4, 11, 9, 9, 11, 10, -1, -1, -1, -1, -1, -1, -1},
-  {9, 5, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {9, 5, 4, 0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 5, 4, 1, 5, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {8, 5, 4, 8, 3, 5, 3, 1, 5, -1, -1, -1, -1, -1, -1, -1},
-  {1, 2, 10, 9, 5, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {3, 0, 8, 1, 2, 10, 4, 9, 5, -1, -1, -1, -1, -1, -1, -1},
-  {5, 2, 10, 5, 4, 2, 4, 0, 2, -1, -1, -1, -1, -1, -1, -1},
-  {2, 10, 5, 3, 2, 5, 3, 5, 4, 3, 4, 8, -1, -1, -1, -1},
-  {9, 5, 4, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 11, 2, 0, 8, 11, 4, 9, 5, -1, -1, -1, -1, -1, -1, -1},
-  {0, 5, 4, 0, 1, 5, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1},
-  {2, 1, 5, 2, 5, 8, 2, 8, 11, 4, 8, 5, -1, -1, -1, -1},
-  {10, 3, 11, 10, 1, 3, 9, 5, 4, -1, -1, -1, -1, -1, -1, -1},
-  {4, 9, 5, 0, 8, 1, 8, 10, 1, 8, 11, 10, -1, -1, -1, -1},
-  {5, 4, 0, 5, 0, 11, 5, 11, 10, 11, 0, 3, -1, -1, -1, -1},
-  {5, 4, 8, 5, 8, 10, 10, 8, 11, -1, -1, -1, -1, -1, -1, -1},
-  {9, 7, 8, 5, 7, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {9, 3, 0, 9, 5, 3, 5, 7, 3, -1, -1, -1, -1, -1, -1, -1},
-  {0, 7, 8, 0, 1, 7, 1, 5, 7, -1, -1, -1, -1, -1, -1, -1},
-  {1, 5, 3, 3, 5, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {9, 7, 8, 9, 5, 7, 10, 1, 2, -1, -1, -1, -1, -1, -1, -1},
-  {10, 1, 2, 9, 5, 0, 5, 3, 0, 5, 7, 3, -1, -1, -1, -1},
-  {8, 0, 2, 8, 2, 5, 8, 5, 7, 10, 5, 2, -1, -1, -1, -1},
-  {2, 10, 5, 2, 5, 3, 3, 5, 7, -1, -1, -1, -1, -1, -1, -1},
-  {7, 9, 5, 7, 8, 9, 3, 11, 2, -1, -1, -1, -1, -1, -1, -1},
-  {9, 5, 7, 9, 7, 2, 9, 2, 0, 2, 7, 11, -1, -1, -1, -1},
-  {2, 3, 11, 0, 1, 8, 1, 7, 8, 1, 5, 7, -1, -1, -1, -1},
-  {11, 2, 1, 11, 1, 7, 7, 1, 5, -1, -1, -1, -1, -1, -1, -1},
-  {9, 5, 8, 8, 5, 7, 10, 1, 3, 10, 3, 11, -1, -1, -1, -1},
-  {5, 7, 0, 5, 0, 9, 7, 11, 0, 1, 0, 10, 11, 10, 0, -1},
-  {11, 10, 0, 11, 0, 3, 10, 5, 0, 8, 0, 7, 5, 7, 0, -1},
-  {11, 10, 5, 7, 11, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {10, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 8, 3, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {9, 0, 1, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 8, 3, 1, 9, 8, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1},
-  {1, 6, 5, 2, 6, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 6, 5, 1, 2, 6, 3, 0, 8, -1, -1, -1, -1, -1, -1, -1},
-  {9, 6, 5, 9, 0, 6, 0, 2, 6, -1, -1, -1, -1, -1, -1, -1},
-  {5, 9, 8, 5, 8, 2, 5, 2, 6, 3, 2, 8, -1, -1, -1, -1},
-  {2, 3, 11, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {11, 0, 8, 11, 2, 0, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1},
-  {0, 1, 9, 2, 3, 11, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1},
-  {5, 10, 6, 1, 9, 2, 9, 11, 2, 9, 8, 11, -1, -1, -1, -1},
-  {6, 3, 11, 6, 5, 3, 5, 1, 3, -1, -1, -1, -1, -1, -1, -1},
-  {0, 8, 11, 0, 11, 5, 0, 5, 1, 5, 11, 6, -1, -1, -1, -1},
-  {3, 11, 6, 0, 3, 6, 0, 6, 5, 0, 5, 9, -1, -1, -1, -1},
-  {6, 5, 9, 6, 9, 11, 11, 9, 8, -1, -1, -1, -1, -1, -1, -1},
-  {5, 10, 6, 4, 7, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {4, 3, 0, 4, 7, 3, 6, 5, 10, -1, -1, -1, -1, -1, -1, -1},
-  {1, 9, 0, 5, 10, 6, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1},
-  {10, 6, 5, 1, 9, 7, 1, 7, 3, 7, 9, 4, -1, -1, -1, -1},
-  {6, 1, 2, 6, 5, 1, 4, 7, 8, -1, -1, -1, -1, -1, -1, -1},
-  {1, 2, 5, 5, 2, 6, 3, 0, 4, 3, 4, 7, -1, -1, -1, -1},
-  {8, 4, 7, 9, 0, 5, 0, 6, 5, 0, 2, 6, -1, -1, -1, -1},
-  {7, 3, 9, 7, 9, 4, 3, 2, 9, 5, 9, 6, 2, 6, 9, -1},
-  {3, 11, 2, 7, 8, 4, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1},
-  {5, 10, 6, 4, 7, 2, 4, 2, 0, 2, 7, 11, -1, -1, -1, -1},
-  {0, 1, 9, 4, 7, 8, 2, 3, 11, 5, 10, 6, -1, -1, -1, -1},
-  {9, 2, 1, 9, 11, 2, 9, 4, 11, 7, 11, 4, 5, 10, 6, -1},
-  {8, 4, 7, 3, 11, 5, 3, 5, 1, 5, 11, 6, -1, -1, -1, -1},
-  {5, 1, 11, 5, 11, 6, 1, 0, 11, 7, 11, 4, 0, 4, 11, -1},
-  {0, 5, 9, 0, 6, 5, 0, 3, 6, 11, 6, 3, 8, 4, 7, -1},
-  {6, 5, 9, 6, 9, 11, 4, 7, 9, 7, 11, 9, -1, -1, -1, -1},
-  {10, 4, 9, 6, 4, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {4, 10, 6, 4, 9, 10, 0, 8, 3, -1, -1, -1, -1, -1, -1, -1},
-  {10, 0, 1, 10, 6, 0, 6, 4, 0, -1, -1, -1, -1, -1, -1, -1},
-  {8, 3, 1, 8, 1, 6, 8, 6, 4, 6, 1, 10, -1, -1, -1, -1},
-  {1, 4, 9, 1, 2, 4, 2, 6, 4, -1, -1, -1, -1, -1, -1, -1},
-  {3, 0, 8, 1, 2, 9, 2, 4, 9, 2, 6, 4, -1, -1, -1, -1},
-  {0, 2, 4, 4, 2, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {8, 3, 2, 8, 2, 4, 4, 2, 6, -1, -1, -1, -1, -1, -1, -1},
-  {10, 4, 9, 10, 6, 4, 11, 2, 3, -1, -1, -1, -1, -1, -1, -1},
-  {0, 8, 2, 2, 8, 11, 4, 9, 10, 4, 10, 6, -1, -1, -1, -1},
-  {3, 11, 2, 0, 1, 6, 0, 6, 4, 6, 1, 10, -1, -1, -1, -1},
-  {6, 4, 1, 6, 1, 10, 4, 8, 1, 2, 1, 11, 8, 11, 1, -1},
-  {9, 6, 4, 9, 3, 6, 9, 1, 3, 11, 6, 3, -1, -1, -1, -1},
-  {8, 11, 1, 8, 1, 0, 11, 6, 1, 9, 1, 4, 6, 4, 1, -1},
-  {3, 11, 6, 3, 6, 0, 0, 6, 4, -1, -1, -1, -1, -1, -1, -1},
-  {6, 4, 8, 11, 6, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {7, 10, 6, 7, 8, 10, 8, 9, 10, -1, -1, -1, -1, -1, -1, -1},
-  {0, 7, 3, 0, 10, 7, 0, 9, 10, 6, 7, 10, -1, -1, -1, -1},
-  {10, 6, 7, 1, 10, 7, 1, 7, 8, 1, 8, 0, -1, -1, -1, -1},
-  {10, 6, 7, 10, 7, 1, 1, 7, 3, -1, -1, -1, -1, -1, -1, -1},
-  {1, 2, 6, 1, 6, 8, 1, 8, 9, 8, 6, 7, -1, -1, -1, -1},
-  {2, 6, 9, 2, 9, 1, 6, 7, 9, 0, 9, 3, 7, 3, 9, -1},
-  {7, 8, 0, 7, 0, 6, 6, 0, 2, -1, -1, -1, -1, -1, -1, -1},
-  {7, 3, 2, 6, 7, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {2, 3, 11, 10, 6, 8, 10, 8, 9, 8, 6, 7, -1, -1, -1, -1},
-  {2, 0, 7, 2, 7, 11, 0, 9, 7, 6, 7, 10, 9, 10, 7, -1},
-  {1, 8, 0, 1, 7, 8, 1, 10, 7, 6, 7, 10, 2, 3, 11, -1},
-  {11, 2, 1, 11, 1, 7, 10, 6, 1, 6, 7, 1, -1, -1, -1, -1},
-  {8, 9, 6, 8, 6, 7, 9, 1, 6, 11, 6, 3, 1, 3, 6, -1},
-  {0, 9, 1, 11, 6, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {7, 8, 0, 7, 0, 6, 3, 11, 0, 11, 6, 0, -1, -1, -1, -1},
-  {7, 11, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {7, 6, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {3, 0, 8, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 1, 9, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {8, 1, 9, 8, 3, 1, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1},
-  {10, 1, 2, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 2, 10, 3, 0, 8, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1},
-  {2, 9, 0, 2, 10, 9, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1},
-  {6, 11, 7, 2, 10, 3, 10, 8, 3, 10, 9, 8, -1, -1, -1, -1},
-  {7, 2, 3, 6, 2, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {7, 0, 8, 7, 6, 0, 6, 2, 0, -1, -1, -1, -1, -1, -1, -1},
-  {2, 7, 6, 2, 3, 7, 0, 1, 9, -1, -1, -1, -1, -1, -1, -1},
-  {1, 6, 2, 1, 8, 6, 1, 9, 8, 8, 7, 6, -1, -1, -1, -1},
-  {10, 7, 6, 10, 1, 7, 1, 3, 7, -1, -1, -1, -1, -1, -1, -1},
-  {10, 7, 6, 1, 7, 10, 1, 8, 7, 1, 0, 8, -1, -1, -1, -1},
-  {0, 3, 7, 0, 7, 10, 0, 10, 9, 6, 10, 7, -1, -1, -1, -1},
-  {7, 6, 10, 7, 10, 8, 8, 10, 9, -1, -1, -1, -1, -1, -1, -1},
-  {6, 8, 4, 11, 8, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {3, 6, 11, 3, 0, 6, 0, 4, 6, -1, -1, -1, -1, -1, -1, -1},
-  {8, 6, 11, 8, 4, 6, 9, 0, 1, -1, -1, -1, -1, -1, -1, -1},
-  {9, 4, 6, 9, 6, 3, 9, 3, 1, 11, 3, 6, -1, -1, -1, -1},
-  {6, 8, 4, 6, 11, 8, 2, 10, 1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 2, 10, 3, 0, 11, 0, 6, 11, 0, 4, 6, -1, -1, -1, -1},
-  {4, 11, 8, 4, 6, 11, 0, 2, 9, 2, 10, 9, -1, -1, -1, -1},
-  {10, 9, 3, 10, 3, 2, 9, 4, 3, 11, 3, 6, 4, 6, 3, -1},
-  {8, 2, 3, 8, 4, 2, 4, 6, 2, -1, -1, -1, -1, -1, -1, -1},
-  {0, 4, 2, 4, 6, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 9, 0, 2, 3, 4, 2, 4, 6, 4, 3, 8, -1, -1, -1, -1},
-  {1, 9, 4, 1, 4, 2, 2, 4, 6, -1, -1, -1, -1, -1, -1, -1},
-  {8, 1, 3, 8, 6, 1, 8, 4, 6, 6, 10, 1, -1, -1, -1, -1},
-  {10, 1, 0, 10, 0, 6, 6, 0, 4, -1, -1, -1, -1, -1, -1, -1},
-  {4, 6, 3, 4, 3, 8, 6, 10, 3, 0, 3, 9, 10, 9, 3, -1},
-  {10, 9, 4, 6, 10, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {4, 9, 5, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 8, 3, 4, 9, 5, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1},
-  {5, 0, 1, 5, 4, 0, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1},
-  {11, 7, 6, 8, 3, 4, 3, 5, 4, 3, 1, 5, -1, -1, -1, -1},
-  {9, 5, 4, 10, 1, 2, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1},
-  {6, 11, 7, 1, 2, 10, 0, 8, 3, 4, 9, 5, -1, -1, -1, -1},
-  {7, 6, 11, 5, 4, 10, 4, 2, 10, 4, 0, 2, -1, -1, -1, -1},
-  {3, 4, 8, 3, 5, 4, 3, 2, 5, 10, 5, 2, 11, 7, 6, -1},
-  {7, 2, 3, 7, 6, 2, 5, 4, 9, -1, -1, -1, -1, -1, -1, -1},
-  {9, 5, 4, 0, 8, 6, 0, 6, 2, 6, 8, 7, -1, -1, -1, -1},
-  {3, 6, 2, 3, 7, 6, 1, 5, 0, 5, 4, 0, -1, -1, -1, -1},
-  {6, 2, 8, 6, 8, 7, 2, 1, 8, 4, 8, 5, 1, 5, 8, -1},
-  {9, 5, 4, 10, 1, 6, 1, 7, 6, 1, 3, 7, -1, -1, -1, -1},
-  {1, 6, 10, 1, 7, 6, 1, 0, 7, 8, 7, 0, 9, 5, 4, -1},
-  {4, 0, 10, 4, 10, 5, 0, 3, 10, 6, 10, 7, 3, 7, 10, -1},
-  {7, 6, 10, 7, 10, 8, 5, 4, 10, 4, 8, 10, -1, -1, -1, -1},
-  {6, 9, 5, 6, 11, 9, 11, 8, 9, -1, -1, -1, -1, -1, -1, -1},
-  {3, 6, 11, 0, 6, 3, 0, 5, 6, 0, 9, 5, -1, -1, -1, -1},
-  {0, 11, 8, 0, 5, 11, 0, 1, 5, 5, 6, 11, -1, -1, -1, -1},
-  {6, 11, 3, 6, 3, 5, 5, 3, 1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 2, 10, 9, 5, 11, 9, 11, 8, 11, 5, 6, -1, -1, -1, -1},
-  {0, 11, 3, 0, 6, 11, 0, 9, 6, 5, 6, 9, 1, 2, 10, -1},
-  {11, 8, 5, 11, 5, 6, 8, 0, 5, 10, 5, 2, 0, 2, 5, -1},
-  {6, 11, 3, 6, 3, 5, 2, 10, 3, 10, 5, 3, -1, -1, -1, -1},
-  {5, 8, 9, 5, 2, 8, 5, 6, 2, 3, 8, 2, -1, -1, -1, -1},
-  {9, 5, 6, 9, 6, 0, 0, 6, 2, -1, -1, -1, -1, -1, -1, -1},
-  {1, 5, 8, 1, 8, 0, 5, 6, 8, 3, 8, 2, 6, 2, 8, -1},
-  {1, 5, 6, 2, 1, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 3, 6, 1, 6, 10, 3, 8, 6, 5, 6, 9, 8, 9, 6, -1},
-  {10, 1, 0, 10, 0, 6, 9, 5, 0, 5, 6, 0, -1, -1, -1, -1},
-  {0, 3, 8, 5, 6, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {10, 5, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {11, 5, 10, 7, 5, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {11, 5, 10, 11, 7, 5, 8, 3, 0, -1, -1, -1, -1, -1, -1, -1},
-  {5, 11, 7, 5, 10, 11, 1, 9, 0, -1, -1, -1, -1, -1, -1, -1},
-  {10, 7, 5, 10, 11, 7, 9, 8, 1, 8, 3, 1, -1, -1, -1, -1},
-  {11, 1, 2, 11, 7, 1, 7, 5, 1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 8, 3, 1, 2, 7, 1, 7, 5, 7, 2, 11, -1, -1, -1, -1},
-  {9, 7, 5, 9, 2, 7, 9, 0, 2, 2, 11, 7, -1, -1, -1, -1},
-  {7, 5, 2, 7, 2, 11, 5, 9, 2, 3, 2, 8, 9, 8, 2, -1},
-  {2, 5, 10, 2, 3, 5, 3, 7, 5, -1, -1, -1, -1, -1, -1, -1},
-  {8, 2, 0, 8, 5, 2, 8, 7, 5, 10, 2, 5, -1, -1, -1, -1},
-  {9, 0, 1, 5, 10, 3, 5, 3, 7, 3, 10, 2, -1, -1, -1, -1},
-  {9, 8, 2, 9, 2, 1, 8, 7, 2, 10, 2, 5, 7, 5, 2, -1},
-  {1, 3, 5, 3, 7, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 8, 7, 0, 7, 1, 1, 7, 5, -1, -1, -1, -1, -1, -1, -1},
-  {9, 0, 3, 9, 3, 5, 5, 3, 7, -1, -1, -1, -1, -1, -1, -1},
-  {9, 8, 7, 5, 9, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {5, 8, 4, 5, 10, 8, 10, 11, 8, -1, -1, -1, -1, -1, -1, -1},
-  {5, 0, 4, 5, 11, 0, 5, 10, 11, 11, 3, 0, -1, -1, -1, -1},
-  {0, 1, 9, 8, 4, 10, 8, 10, 11, 10, 4, 5, -1, -1, -1, -1},
-  {10, 11, 4, 10, 4, 5, 11, 3, 4, 9, 4, 1, 3, 1, 4, -1},
-  {2, 5, 1, 2, 8, 5, 2, 11, 8, 4, 5, 8, -1, -1, -1, -1},
-  {0, 4, 11, 0, 11, 3, 4, 5, 11, 2, 11, 1, 5, 1, 11, -1},
-  {0, 2, 5, 0, 5, 9, 2, 11, 5, 4, 5, 8, 11, 8, 5, -1},
-  {9, 4, 5, 2, 11, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {2, 5, 10, 3, 5, 2, 3, 4, 5, 3, 8, 4, -1, -1, -1, -1},
-  {5, 10, 2, 5, 2, 4, 4, 2, 0, -1, -1, -1, -1, -1, -1, -1},
-  {3, 10, 2, 3, 5, 10, 3, 8, 5, 4, 5, 8, 0, 1, 9, -1},
-  {5, 10, 2, 5, 2, 4, 1, 9, 2, 9, 4, 2, -1, -1, -1, -1},
-  {8, 4, 5, 8, 5, 3, 3, 5, 1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 4, 5, 1, 0, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {8, 4, 5, 8, 5, 3, 9, 0, 5, 0, 3, 5, -1, -1, -1, -1},
-  {9, 4, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {4, 11, 7, 4, 9, 11, 9, 10, 11, -1, -1, -1, -1, -1, -1, -1},
-  {0, 8, 3, 4, 9, 7, 9, 11, 7, 9, 10, 11, -1, -1, -1, -1},
-  {1, 10, 11, 1, 11, 4, 1, 4, 0, 7, 4, 11, -1, -1, -1, -1},
-  {3, 1, 4, 3, 4, 8, 1, 10, 4, 7, 4, 11, 10, 11, 4, -1},
-  {4, 11, 7, 9, 11, 4, 9, 2, 11, 9, 1, 2, -1, -1, -1, -1},
-  {9, 7, 4, 9, 11, 7, 9, 1, 11, 2, 11, 1, 0, 8, 3, -1},
-  {11, 7, 4, 11, 4, 2, 2, 4, 0, -1, -1, -1, -1, -1, -1, -1},
-  {11, 7, 4, 11, 4, 2, 8, 3, 4, 3, 2, 4, -1, -1, -1, -1},
-  {2, 9, 10, 2, 7, 9, 2, 3, 7, 7, 4, 9, -1, -1, -1, -1},
-  {9, 10, 7, 9, 7, 4, 10, 2, 7, 8, 7, 0, 2, 0, 7, -1},
-  {3, 7, 10, 3, 10, 2, 7, 4, 10, 1, 10, 0, 4, 0, 10, -1},
-  {1, 10, 2, 8, 7, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {4, 9, 1, 4, 1, 7, 7, 1, 3, -1, -1, -1, -1, -1, -1, -1},
-  {4, 9, 1, 4, 1, 7, 0, 8, 1, 8, 7, 1, -1, -1, -1, -1},
-  {4, 0, 3, 7, 4, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {4, 8, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {9, 10, 8, 10, 11, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {3, 0, 9, 3, 9, 11, 11, 9, 10, -1, -1, -1, -1, -1, -1, -1},
-  {0, 1, 10, 0, 10, 8, 8, 10, 11, -1, -1, -1, -1, -1, -1, -1},
-  {3, 1, 10, 11, 3, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 2, 11, 1, 11, 9, 9, 11, 8, -1, -1, -1, -1, -1, -1, -1},
-  {3, 0, 9, 3, 9, 11, 1, 2, 9, 2, 11, 9, -1, -1, -1, -1},
-  {0, 2, 11, 8, 0, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {3, 2, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {2, 3, 8, 2, 8, 10, 10, 8, 9, -1, -1, -1, -1, -1, -1, -1},
-  {9, 10, 2, 0, 9, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {2, 3, 8, 2, 8, 10, 0, 1, 8, 1, 10, 8, -1, -1, -1, -1},
-  {1, 10, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {1, 3, 8, 9, 1, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 9, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-  {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
-};
+/* for smaller function headers */
+typedef struct {
+    const GR3_MC_DTYPE *data;
+    GR3_MC_DTYPE isolevel;
+    int dim[3];
+    int stride[3];
+    double step[3];
+    double offset[3];
+} mcdata_t;
 
-static
-const int cubeEdges[12][2] = {
-  {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6},
-  {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}
-};
-
-static
-const int cubeVerts[8][3] = {
-  {0, 0, 0}, {0, 0, 1}, {0, 1, 1}, {0, 1, 0},
-  {1, 0, 0}, {1, 0, 1}, {1, 1, 1}, {1, 1, 0}
-};
-
-static
-gr3_coord_t VertexInterp(GR3_MC_DTYPE isolevel,
-                         gr3_coord_t p1, gr3_coord_t p2,
-                         GR3_MC_DTYPE valp1, GR3_MC_DTYPE valp2)
+/* calculate the gradient via difference qoutient */
+static gr3_coord_t getgrad(mcdata_t mcdata, int x, int y, int z)
 {
-  double mu;
-  gr3_coord_t p;
-  
-  if (ABS(isolevel-valp1) < 0.00001)
-    return p1;
-  if (ABS(isolevel-valp2) < 0.00001)
-    return p2;
-  if (ABS(valp1-valp2) < 0.00001)
-    return p1;
-  
-  mu = 1.0 * (isolevel - valp1) / (valp2 - valp1);
-  p.x = p1.x + mu * (p2.x - p1.x);
-  p.y = p1.y + mu * (p2.y - p1.y);
-  p.z = p1.z + mu * (p2.z - p1.z);
-  
-  return p;
+    int v[3];
+    int neigh[3][2];
+    int i;
+    gr3_coord_t n;
+
+	v[0] = x;
+	v[1] = y;
+	v[2] = z;
+
+    for (i = 0; i < 3; i++) {
+        if (v[i] > 0)
+            neigh[i][0] = v[i] - 1;
+        else
+            neigh[i][0] = v[i];
+        if (v[i] < mcdata.dim[i] - 1)
+            neigh[i][1] = v[i] + 1;
+        else
+            neigh[i][1] = v[i];
+    }
+    n.x = (mcdata.data[INDEX(neigh[0][1], y, z)]
+           - mcdata.data[INDEX(neigh[0][0], y, z)])
+          / (neigh[0][1] - neigh[0][0]) / mcdata.step[0];
+    n.y = (mcdata.data[INDEX(x, neigh[1][1], z)]
+           - mcdata.data[INDEX(x, neigh[1][0], z)])
+          / (neigh[1][1] - neigh[1][0]) / mcdata.step[1];
+    n.z = (mcdata.data[INDEX(x, y, neigh[2][1])]
+           - mcdata.data[INDEX(x, y, neigh[2][0])])
+          / (neigh[2][1] - neigh[2][0]) / mcdata.step[2];
+
+    return n;
 }
 
-static
-unsigned int polygonise(
-  const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel,
-  unsigned int dim_x, unsigned int dim_y, unsigned int dim_z,
-  unsigned int stride_x, unsigned int stride_y, unsigned int stride_z,
-  unsigned int x, unsigned int y, unsigned int z,
-  gr3_triangle_t *triangle)
+/* interpolate points and calulate normals */
+static void interpolate(mcdata_t mcdata, int px, int py, int pz, 
+                        GR3_MC_DTYPE v1,
+                        int qx,  int qy,  int qz,
+                        GR3_MC_DTYPE v2,
+                        gr3_coord_t *p, gr3_coord_t *n)
 {
-  cell_t c;
-  int i, numTriangles = 0;
-  int cubeindex;
-  gr3_coord_t vertices[12], normals[12];
-  double norm;
-  gr3_coord_t normal, *v, *n;
-  const int *edge, *vert;
-  
-  for (i = 0; i < 8; i++) {
-    vert = cubeVerts[i];
-    c.position[i].x = x + vert[0];
-    c.position[i].y = y + vert[1];
-    c.position[i].z = z + vert[2];
-    c.value[i] = data[INDEX((x + vert[0]), (y + vert[1]), (z + vert[2]))];
-  }
-  
-  cubeindex = 0;
-  for (i = 0; i < 8; i++)
-    if (c.value[i] > isolevel) cubeindex |= 1<<i;
-  
-  if (edgeTable[cubeindex] == 0)
-    return 0;
-  
-  for (i = 0; i < 8; i++) {
-    x = c.position[i].x;
-    y = c.position[i].y;
-    z = c.position[i].z;
-    if (x > 0 && x < dim_x-1)
-      normal.x =    data[INDEX(x-1, y, z)] - data[INDEX(x+1, y, z)];
-    else if (x == 0)
-      normal.x = 2*(data[INDEX(x, y, z)]   - data[INDEX(x+1, y ,z)]);
+    double mu;
+    gr3_coord_t n1, n2;
+    double norm;
+
+    if (ABS(mcdata.isolevel - v1) < 0.00001)
+        mu = 0.0;
+    else if (ABS(mcdata.isolevel - v2) < 0.00001)
+        mu = 1.0;
+    else if (ABS(v1 - v2) < 0.00001)
+        mu = 0.5;
     else
-      normal.x = 2*(data[INDEX(x-1, y, z)] - data[INDEX(x, y, z)]);
-    if (y > 0 && y < dim_y-1)
-      normal.y =    data[INDEX(x, y-1, z)] - data[INDEX(x, y+1, z)];
-    else if (y == 0)
-      normal.y = 2*(data[INDEX(x, y, z)]   - data[INDEX(x, y+1, z)]);
-    else
-      normal.y = 2*(data[INDEX(x, y-1, z)] - data[INDEX(x, y, z)]);
-    if (z > 0 && z < dim_z-1)
-      normal.z =    data[INDEX(x, y, z-1)] - data[INDEX(x, y, z+1)];
-    else if (z == 0)
-      normal.z = 2*(data[INDEX(x, y, z)]   - data[INDEX(x, y, z+1)]);
-    else
-      normal.z = 2*(data[INDEX(x, y, z-1)] - data[INDEX(x, y, z)]);
-    norm = sqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z);
-    if (norm > 0) {
-      c.normal[i].x = normal.x / norm;
-      c.normal[i].y = normal.y / norm;
-      c.normal[i].z = normal.z / norm;
-    } else {
-      c.normal[i].x = 0;
-      c.normal[i].y = 0;
-      c.normal[i].z = 0;
+        mu = 1.0 * (mcdata.isolevel - v1) / (v2 - v1);
+
+    p->x = (px + mu * (qx - px)) * mcdata.step[0] + mcdata.offset[0];
+    p->y = (py + mu * (qy - py)) * mcdata.step[1] + mcdata.offset[1];
+    p->z = (pz + mu * (qz - pz)) * mcdata.step[2] + mcdata.offset[2];
+
+    n1 = getgrad(mcdata, px, py, pz);
+    n2 = getgrad(mcdata, qx, qy, qz);
+    n->x = -(n1.x + mu * (n2.x - n1.x));
+    n->y = -(n1.y + mu * (n2.y - n1.y));
+    n->z = -(n1.z + mu * (n2.z - n1.z));
+
+    norm = sqrt(n->x * n->x + n->y * n->y + n->z * n->z);
+    if (norm > 0.0) {
+        n->x /= norm;
+        n->y /= norm;
+        n->z /= norm;
     }
-  }
-  
-  for (i = 0;  i < 12;  i++) {
-    if (edgeTable[cubeindex] & (1<<i)) {
-      edge = cubeEdges[i];
-      vertices[i] = VertexInterp(isolevel,
-                                 c.position[edge[0]], c.position[edge[1]],
-                                 c.value[edge[0]], c.value[edge[1]]);
-      normals[i]  = VertexInterp(isolevel,
-                                 c.normal[edge[0]], c.normal[edge[1]],
-                                 c.value[edge[0]], c.value[edge[1]]);
-      norm = sqrt(normals[i].x * normals[i].x +
-                  normals[i].y * normals[i].y +
-                  normals[i].z * normals[i].z);
-      if (norm > 0) {
-        normals[i].x /= norm;
-        normals[i].y /= norm;
-        normals[i].z /= norm;
-      }
-    }
-  }
-  
-  for (i = 0; triTable[cubeindex][i] !=-1; i += 3) {
-    v = triangle[numTriangles].vertex;
-    v[0] = vertices[triTable[cubeindex][i  ]];
-    v[1] = vertices[triTable[cubeindex][i+1]];
-    v[2] = vertices[triTable[cubeindex][i+2]];
-    if ((v[0].x != v[1].x || v[0].y != v[1].y || v[0].z != v[1].z) &&
-        (v[1].x != v[2].x || v[1].y != v[2].y || v[1].z != v[2].z) &&
-        (v[2].x != v[0].x || v[2].y != v[0].y || v[2].z != v[0].z)) {
-      n = triangle[numTriangles].normal;
-      n[0] =  normals[triTable[cubeindex][i  ]];
-      n[1] =  normals[triTable[cubeindex][i+1]];
-      n[2] =  normals[triTable[cubeindex][i+2]];
-      numTriangles++;
-    }
-  }
-  
-  return numTriangles;
 }
 
-unsigned int gr3_triangulate(
-  const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel,
-  unsigned int dim_x, unsigned int dim_y, unsigned int dim_z,
-  unsigned int stride_x, unsigned int stride_y, unsigned int stride_z,
-  double step_x, double step_y, double step_z,
-  double offset_x, double offset_y, double offset_z,
-  gr3_triangle_t **triangles_p)
+/*
+ * marching cubes algorithm for one x-layer.
+ * created vertices are cached between calls using vindex.
+ * vindex associates the intersected edge with the vertex index.
+ * the edge is identified by its location (low, high), direction (x, y, z)
+ * and coordinates (py, pz) of its starting point.
+ * direction and location are the first index:
+ * (x, y_low, z_low, y_high, z_high) (see mc_edgeprop) 
+ * second index is py * mcdata.dim[1] + pz.
+ * py and pz are the coordinates of the lower one of both edge vertices
+ */
+static void layer(mcdata_t mcdata, int x, int **vindex,
+      unsigned int *num_vertices, gr3_coord_t **vertices,
+      gr3_coord_t **normals, unsigned int *vertcapacity,
+      unsigned int *num_faces, unsigned int **indices,
+      unsigned int *facecapacity)
 {
-  unsigned int x, y, z, i, j;
-  unsigned int numTriangles = 0, num_subcube_triangles;
-  gr3_triangle_t *triangles = NULL;
-  
-  if (stride_x == 0) stride_x = dim_z*dim_y;
-  if (stride_y == 0) stride_y = dim_z;
-  if (stride_z == 0) stride_z = 1;
-  
-  for (x = 0; x < dim_x-1; x++) {
-    for (y = 0; y < dim_y-1; y++) {
-      for (z = 0; z < dim_z-1; z++) {
-        gr3_triangle_t subcube_triangles[5];
-        num_subcube_triangles = polygonise(data, isolevel,
-                                           dim_x, dim_y, dim_x,
-                                           stride_x, stride_y, stride_z,
-                                           x, y, z, subcube_triangles);
-        if (num_subcube_triangles) {
-          triangles = realloc(triangles,
-                              (numTriangles + num_subcube_triangles) *
-                               sizeof(gr3_triangle_t));
-          memcpy(triangles+numTriangles, subcube_triangles,
-                 num_subcube_triangles * sizeof(gr3_triangle_t));
-          numTriangles += num_subcube_triangles;
+    int i, j;
+    int y, z;
+    int cubeindex;
+    GR3_MC_DTYPE cubeval[8]; /* also cache between adjacent cubes */
+
+    for (y = 0; y < mcdata.dim[1] - 1; y++) {
+        /* init z-cache */
+        for (i = 0; i < 4; i++) {
+            int zi = mc_zvertices[0][i];
+
+            cubeval[mc_zvertices[1][i]] = mcdata.data[INDEX(
+                x + mc_cubeverts[zi][0],
+                y + mc_cubeverts[zi][1],
+                0 + mc_cubeverts[zi][2])];
         }
-      }
-    }
-  }
-  for (i = 0; i < numTriangles; i++) {
-    for (j = 0; j < 3; j++) {
-      triangles[i].vertex[j].x = triangles[i].vertex[j].x * step_x + offset_x;
-      triangles[i].vertex[j].y = triangles[i].vertex[j].y * step_y + offset_y;
-      triangles[i].vertex[j].z = triangles[i].vertex[j].z * step_z + offset_z;
-    }
-  }
-  *triangles_p = triangles;
+        for (z = 0; z < mcdata.dim[2] - 1; z++) {
+            cubeindex = 0;
+            /* shift old values (z-cache) */
+            for (i = 0; i < 4; i++) {
+                int zi = mc_zvertices[0][i];
 
-  return numTriangles;
+                cubeval[zi] = cubeval[mc_zvertices[1][i]];
+                if (cubeval[zi] < mcdata.isolevel) {
+                    cubeindex |= 1 << zi;
+                }
+            }
+            /* read new cube values */
+            for (i = 0; i < 4; i++) {
+                int zi = mc_zvertices[1][i];
+
+                cubeval[zi] = mcdata.data[INDEX(x + mc_cubeverts[zi][0],
+                    y + mc_cubeverts[zi][1], z + mc_cubeverts[zi][2])];
+                if (cubeval[zi] < mcdata.isolevel) {
+                    cubeindex |= 1 << zi;
+                }
+            }
+            if (cubeindex != 0 && cubeindex != 255) {
+                /* create triangles */
+                for (i = 0; i < mc_tricount[cubeindex]; i++) {
+                    if (*facecapacity <= *num_faces) {
+                        (*facecapacity) = (unsigned int) 
+                                          (*num_faces * 1.5) + 50;
+                        *indices = realloc(*indices, (*facecapacity)
+                                           * 3 * sizeof(int));
+                    }
+                    /* create triangle vertices */
+                    for (j = 0; j < 3; j++) {
+                        int trival = mc_tritable[cubeindex][i*3+j];
+                        const int *edge = mc_cubeedges[trival];
+                        int dir = mc_edgeprop[trival];
+                        int px = x + mc_cubeverts[edge[0]][0];
+                        int py = y + mc_cubeverts[edge[0]][1];
+                        int pz = z + mc_cubeverts[edge[0]][2];
+                        /* lookup if vertex already exists */
+                        int node = vindex[dir][IDX2D(py, pz)];
+                        if (node < 0) {
+                            /* it does not, create it */
+                            GR3_MC_DTYPE v1 = cubeval[edge[0]];
+                            GR3_MC_DTYPE v2 = cubeval[edge[1]];
+                            if (*vertcapacity <= *num_vertices) {
+                                (*vertcapacity) = (unsigned int)
+                                                  (*num_vertices * 1.5)
+                                                  + 50;
+                                *vertices =
+                                    realloc(*vertices, (*vertcapacity)
+                                            * sizeof(gr3_coord_t));
+                                *normals =
+                                    realloc(*normals, (*vertcapacity)
+                                            * sizeof(gr3_coord_t));
+                            }
+                            node = *num_vertices;
+                            interpolate(mcdata, px, py, pz, v1,
+                                        x + mc_cubeverts[edge[1]][0],
+                                        y + mc_cubeverts[edge[1]][1],
+                                        z + mc_cubeverts[edge[1]][2], v2,
+                                        *vertices + node,
+                                        *normals + node);
+                            vindex[dir][IDX2D(py, pz)] = node;
+                            (*num_vertices)++;
+                        }
+                        /* add vertex index to the element array */
+                        (*indices)[*num_faces * 3 + j] = node;
+                    }
+                    (*num_faces)++;
+                }
+            }
+        }
+    }
+}
+
+/*
+ * handle consecutive calls to layer
+ */
+static void layerblock(mcdata_t mcdata, int from, int to,
+    unsigned int *num_vertices, gr3_coord_t **vertices,
+    gr3_coord_t **normals, unsigned int *num_faces,
+    unsigned int **faces)
+{
+    int x;
+    int y;
+    int z;
+    unsigned int vertcapacity;
+    unsigned int facecapacity;
+    /* cache for the vertex indices of the x-layer
+     * [x, y_bot, z_bot, y_top, z_top] */
+    int *vindex[5], *ntmp;
+
+    *num_vertices = 0;
+    vertcapacity = 0;
+    *vertices = NULL;
+    *normals = NULL;
+    *num_faces = 0;
+    facecapacity = 0;
+    *faces = NULL;
+
+    vindex[0] = malloc(5 * mcdata.dim[1] * mcdata.dim[2] * sizeof(int));
+    vindex[1] = vindex[0] + mcdata.dim[1] * mcdata.dim[2];
+    vindex[2] = vindex[0] + 2 * mcdata.dim[1] * mcdata.dim[2];
+    vindex[3] = vindex[0] + 3 * mcdata.dim[1] * mcdata.dim[2];
+    vindex[4] = vindex[0] + 4 * mcdata.dim[1] * mcdata.dim[2];
+
+    for (y = 0; y < mcdata.dim[1]; y++) {
+        for (z = 0; z < mcdata.dim[2]; z++) {
+            vindex[0][IDX2D(y, z)] = -1;
+            vindex[3][IDX2D(y, z)] = -1;
+            vindex[4][IDX2D(y, z)] = -1;
+        }
+    }
+    /*
+     * iterate layer-by-layer through the data
+     * create an indexed mesh
+     * indices are cached in vindex[direction of the edge][y, z]
+     * the top cache becomes the bottom in the next iterarion
+     */
+    for (x = from; x < to; x++) {
+        ntmp = vindex[1];
+        vindex[1] = vindex[3];
+        vindex[3] = ntmp;
+        ntmp = vindex[2];
+        vindex[2] = vindex[4];
+        vindex[4] = ntmp;
+        for (y = 0; y < mcdata.dim[1]; y++) {
+            for (z = 0; z < mcdata.dim[2]; z++) {
+                vindex[0][IDX2D(y, z)] = -1;
+                vindex[3][IDX2D(y, z)] = -1;
+                vindex[4][IDX2D(y, z)] = -1;
+            }
+        }
+        layer(mcdata, x, vindex,
+              num_vertices, vertices, normals, &vertcapacity,
+              num_faces, faces, &facecapacity);
+    }
+    free(vindex[0]);
+}
+
+/*
+ * create an indexed mesh with the marching cubes algorithm.
+ * this function manages the parallelization:
+ * allocate memory, call layerblock and create a single mesh.
+ * the data is divided into blocks along the x-axis.
+ */
+void gr3_triangulateindexed(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel,
+                       unsigned int dim_x, unsigned int dim_y,
+                       unsigned int dim_z, unsigned int stride_x,
+                       unsigned int stride_y, unsigned int stride_z,
+                       double step_x, double step_y, double step_z,
+                       double offset_x, double offset_y, double offset_z,
+                       unsigned int *num_vertices, gr3_coord_t **vertices,
+                       gr3_coord_t **normals, unsigned int *num_indices,
+                       unsigned int **indices)
+{
+    int num_threads;
+    unsigned int num_faces;
+    unsigned int *num_t_vertices, *num_t_faces, **t_faces;
+    gr3_coord_t **t_vertices, **t_normals;
+    unsigned int *vertblock, *faceblock;
+    mcdata_t mcdata;
+#if defined(_OPENMP) && defined(THREADLIMIT)
+    int max_threads;
+
+    max_threads = omp_get_max_threads();
+    if (max_threads > THREADLIMIT)
+        omp_set_num_threads(THREADLIMIT);
+#endif
+
+    if (stride_x == 0)
+        stride_x = dim_z * dim_y;
+    if (stride_y == 0)
+        stride_y = dim_z;
+    if (stride_z == 0)
+        stride_z = 1;
+
+    mcdata.data = data;
+    mcdata.isolevel = isolevel;
+    mcdata.dim[0] = dim_x;
+    mcdata.dim[1] = dim_y;
+    mcdata.dim[2] = dim_z;
+    mcdata.stride[0] = stride_x;
+    mcdata.stride[1] = stride_y;
+    mcdata.stride[2] = stride_z;
+    mcdata.step[0] = step_x;
+    mcdata.step[1] = step_y;
+    mcdata.step[2] = step_z;
+    mcdata.offset[0] = offset_x;
+    mcdata.offset[1] = offset_y;
+    mcdata.offset[2] = offset_z;
+
+    *num_vertices = 0;
+    *vertices = NULL;
+    *normals = NULL;
+    *num_indices = 0;
+    *indices = NULL;
+
+#ifdef _OPENMP
+#pragma omp parallel default(none) shared(num_threads, num_t_vertices, \
+t_vertices, t_normals, num_t_faces, t_faces, mcdata, \
+vertblock, faceblock, num_vertices, num_faces, vertices, normals, indices)
+#endif
+    {
+        int thread_id;
+        unsigned int from, to;
+        unsigned int i;
+#ifdef _OPENMP
+#pragma omp single
+#endif
+        {
+            /* allocate temporary memory for each thread */
+#ifdef _OPENMP
+            num_threads = omp_get_num_threads();
+#else
+            num_threads = 1;
+#endif
+            num_t_vertices = malloc(num_threads * sizeof(unsigned int));
+            t_vertices = malloc(num_threads * sizeof(gr3_coord_t *));
+            t_normals = malloc(num_threads * sizeof(gr3_coord_t *));
+            num_t_faces = malloc(num_threads * sizeof(unsigned int));
+            t_faces = malloc(num_threads * sizeof(unsigned int *));
+        }
+        /* create a mesh per thread */
+#ifdef _OPENMP
+        thread_id = omp_get_thread_num();
+#else
+        thread_id = 0;
+#endif
+        from = thread_id * (mcdata.dim[0] - 1) / num_threads;
+        to = (thread_id + 1) * (mcdata.dim[0] - 1) / num_threads;
+        num_t_vertices[thread_id] = 0;
+        t_vertices[thread_id] = NULL;
+        t_normals[thread_id] = NULL;
+        num_t_faces[thread_id] = 0;
+        t_faces[thread_id] = NULL;
+        layerblock(mcdata, from, to,
+                   num_t_vertices + thread_id,
+                   t_vertices + thread_id, t_normals + thread_id,
+                   num_t_faces + thread_id, t_faces + thread_id);
+#ifdef _OPENMP
+#pragma omp barrier
+#pragma omp single
+#endif
+        {
+            /* calculate beginning indices of thread blocks */
+            vertblock = malloc((num_threads + 1) * sizeof(unsigned int));
+            vertblock[0] = 0;
+            faceblock = malloc((num_threads + 1) * sizeof(unsigned int));
+            faceblock[0] = 0;
+            for (i = 0; i < (unsigned int) num_threads; i++) {
+                vertblock[i + 1] = vertblock[i] + num_t_vertices[i];
+                faceblock[i + 1] = faceblock[i] + num_t_faces[i];
+            }
+            *num_vertices = vertblock[num_threads];
+            num_faces = faceblock[num_threads];
+            *vertices =
+                realloc(*vertices, *num_vertices * sizeof(gr3_coord_t));
+            *normals =
+                realloc(*normals, *num_vertices * sizeof(gr3_coord_t));
+            *indices =
+                realloc(*indices, num_faces * 3 * sizeof(unsigned int));
+        }
+        /* copy thread meshes into the arrays */
+        memcpy(*vertices + vertblock[thread_id],
+               t_vertices[thread_id],
+               num_t_vertices[thread_id] * sizeof(gr3_coord_t));
+        memcpy(*normals + vertblock[thread_id],
+               t_normals[thread_id],
+               num_t_vertices[thread_id] * sizeof(gr3_coord_t));
+        /* translate thread indices to global indices */
+        for (i = 0; i < num_t_faces[thread_id]; i++) {
+            (*indices)[(faceblock[thread_id] + i) * 3 + 0]
+                = t_faces[thread_id][i * 3 + 0] + vertblock[thread_id];
+            (*indices)[(faceblock[thread_id] + i) * 3 + 1]
+                = t_faces[thread_id][i * 3 + 1] + vertblock[thread_id];
+            (*indices)[(faceblock[thread_id] + i) * 3 + 2]
+                = t_faces[thread_id][i * 3 + 2] + vertblock[thread_id];
+        }
+        free(t_vertices[thread_id]);
+        free(t_normals[thread_id]);
+        free(t_faces[thread_id]);
+    }
+    free(faceblock);
+    free(vertblock);
+    free(t_faces);
+    free(num_t_faces);
+    free(t_normals);
+    free(t_vertices);
+    free(num_t_vertices);
+    *num_indices = num_faces * 3;
+#if defined(_OPENMP) && defined(THREADLIMIT)
+    omp_set_num_threads(max_threads);
+#endif
+}
+
+/*
+ * create a mesh of single triangles (type gr3_triangle_t).
+ * create an indexed mesh and copy the values
+ */
+unsigned int gr3_triangulate(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel,
+                unsigned int dim_x, unsigned int dim_y, unsigned int dim_z,
+                unsigned int stride_x, unsigned int stride_y,
+                unsigned int stride_z, double step_x, double step_y,
+                double step_z, double offset_x, double offset_y,
+                double offset_z, gr3_triangle_t **triangles_p)
+{
+    unsigned int num_vertices;
+    gr3_coord_t *vertices, *normals;
+    unsigned int num_indices;
+    unsigned int *indices;
+    unsigned int i, j;
+#if defined(_OPENMP) && defined(THREADLIMIT)
+    int max_threads;
+
+    max_threads = omp_get_max_threads();
+    if (max_threads > THREADLIMIT)
+        omp_set_num_threads(THREADLIMIT);
+#endif
+
+    gr3_triangulateindexed(data, isolevel,
+                           dim_x, dim_y, dim_z,
+                           stride_x, stride_y, stride_z,
+                           step_x, step_y, step_z,
+                           offset_x, offset_y, offset_z,
+                           &num_vertices, &vertices, &normals,
+                           &num_indices, &indices);
+
+    *triangles_p = malloc(num_indices / 3 * sizeof(gr3_triangle_t));
+#ifdef _OPENMP
+#pragma omp parallel for default(none) private(j) \
+shared(num_indices, triangles_p, indices, vertices, normals)
+#endif
+    for (i = 0; i < num_indices / 3; i++) {
+        for (j = 0; j < 3; j++) {
+            (*triangles_p)[i].vertex[j] = vertices[indices[i * 3 + j]];
+            (*triangles_p)[i].normal[j] = normals[indices[i * 3 + j]];
+        }
+    }
+    free(vertices);
+    free(normals);
+    free(indices);
+
+#if defined(_OPENMP) && defined(THREADLIMIT)
+    omp_set_num_threads(max_threads);
+#endif
+    return num_indices / 3;
 }
