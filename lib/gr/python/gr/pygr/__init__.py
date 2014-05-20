@@ -1061,16 +1061,26 @@ class PlotAxes(GRViewPort, GRMeta):
         wmin, wmax = DomainChecker._ZERO * 10, DomainChecker._ZERO * 100
         # stay in log x domain
         if self.scale & gr.OPTION_X_LOG:
-            if xmin < wmin:
-                xmin = wmin
             if xmax < wmax:
+                res = False
                 xmax = wmax
+            if xmin < wmin:
+                res = False
+                if self.autoscale:
+                    xmin = 1 / 10 ** max(0, 3 - math.log10(xmax))
+                else:
+                    xmin = wmin
         # stay in log y domain
         if self.scale & gr.OPTION_Y_LOG:
-            if ymin < wmin:
-                ymin = wmin
             if ymax < wmax:
+                res = False
                 ymax = wmax
+            if ymin < wmin:
+                res = False
+                if self.autoscale:
+                    ymin = 1 / 10 ** max(0, 3 - math.log10(ymax))
+                else:
+                    ymin = wmin
         if DomainChecker.isInWindowDomain(xmin, xmax, ymin, ymax):
             self._window = [xmin, xmax, ymin, ymax]
         else:
@@ -1194,6 +1204,8 @@ class PlotAxes(GRViewPort, GRMeta):
                         ytick = self._ytick
                     else:
                         ytick = gr.tick(ymin, ymax) / majory
+                # window may has been modified - get most recent window
+                window = self.getWindow()
                 gr.setviewport(*self.viewportscaled)
                 gr.setwindow(*window)
                 gr.setscale(self.scale)
