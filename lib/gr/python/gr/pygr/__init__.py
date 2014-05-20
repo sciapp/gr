@@ -1057,6 +1057,20 @@ class PlotAxes(GRViewPort, GRMeta):
 
     def setWindow(self, xmin, xmax, ymin, ymax):
         res = True
+        # minimum window borders for log scale
+        wmin, wmax = DomainChecker._ZERO * 10, DomainChecker._ZERO * 100
+        # stay in log x domain
+        if self.scale & gr.OPTION_X_LOG:
+            if xmin < wmin:
+                xmin = wmin
+            if xmax < wmax:
+                xmax = wmax
+        # stay in log y domain
+        if self.scale & gr.OPTION_Y_LOG:
+            if ymin < wmin:
+                ymin = wmin
+            if ymax < wmax:
+                ymax = wmax
         if DomainChecker.isInWindowDomain(xmin, xmax, ymin, ymax):
             self._window = [xmin, xmax, ymin, ymax]
         else:
