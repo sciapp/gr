@@ -1206,6 +1206,7 @@ class PlotAxes(GRViewPort, GRMeta):
                         ytick = gr.tick(ymin, ymax) / majory
                 # window may has been modified - get most recent window
                 window = self.getWindow()
+                xmin, xmax, ymin, ymax = window
                 gr.setviewport(*self.viewportscaled)
                 gr.setwindow(*window)
                 gr.setscale(self.scale)
