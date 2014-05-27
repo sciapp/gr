@@ -505,6 +505,7 @@ GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices, const float 
     }
     
     gr3_getfirstfreemesh(mesh);
+    gr3_meshaddreference_(*mesh);
     context_struct_.mesh_list_[*mesh].data.type = kMTIndexedMesh;
     context_struct_.mesh_list_[*mesh].data.number_of_vertices = number_of_vertices;
     context_struct_.mesh_list_[*mesh].data.number_of_indices = number_of_indices;
