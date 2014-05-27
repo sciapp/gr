@@ -1,6 +1,10 @@
 References
 ----------
 
+**Workshops**
+
+* Heinen, J. (2014), "Scientific Visualization". Workshop, PGI/JCNS, Forschungszentrum Jülich (`PDF <http://iffwww.iff.kfa-juelich.de/pub/doc/sci-vis.pdf>`__, `HTML <http://iffwww.iff.kfa-juelich.de/pub/doc/sci-vis/>`__)
+
 **Poster Sessions**
 
 * Heinen, J. (2013), `"GR - a universal framework for visualization applications" <https://us.pycon.org/2013/schedule/presentation/158>`__. `PyCon US 2013 <https://us.pycon.org/2013>`__, Santa Clara, CA (`PDF <http://iffwww.iff.kfa-juelich.de/pub/doc/GR-A_Universal_Framework_for_Visualization_Applications.pdf>`__, `Poster <http://iffwww.iff.kfa-juelich.de/pub/doc/PyCon_US_2013_GR-A_Universal_Framework_for_Visualization_Applications.pdf>`__, `Video <https://www.youtube.com/watch?v=LqX_ZHwWRW8>`__)

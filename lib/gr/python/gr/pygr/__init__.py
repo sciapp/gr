@@ -17,7 +17,7 @@ from numpy import ndarray
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
 __date__ = "2014-04-23"
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -1057,6 +1057,30 @@ class PlotAxes(GRViewPort, GRMeta):
 
     def setWindow(self, xmin, xmax, ymin, ymax):
         res = True
+        # minimum window borders for log scale
+        wmin, wmax = DomainChecker._ZERO * 10, DomainChecker._ZERO * 100
+        # stay in log x domain
+        if self.scale & gr.OPTION_X_LOG:
+            if xmax < wmax:
+                res = False
+                xmax = wmax
+            if xmin < wmin:
+                res = False
+                if self.autoscale:
+                    xmin = 1 / 10 ** max(0, 3 - math.log10(xmax))
+                else:
+                    xmin = wmin
+        # stay in log y domain
+        if self.scale & gr.OPTION_Y_LOG:
+            if ymax < wmax:
+                res = False
+                ymax = wmax
+            if ymin < wmin:
+                res = False
+                if self.autoscale:
+                    ymin = 1 / 10 ** max(0, 3 - math.log10(ymax))
+                else:
+                    ymin = wmin
         if DomainChecker.isInWindowDomain(xmin, xmax, ymin, ymax):
             self._window = [xmin, xmax, ymin, ymax]
         else:
@@ -1180,6 +1204,9 @@ class PlotAxes(GRViewPort, GRMeta):
                         ytick = self._ytick
                     else:
                         ytick = gr.tick(ymin, ymax) / majory
+                # window may has been modified - get most recent window
+                window = self.getWindow()
+                xmin, xmax, ymin, ymax = window
                 gr.setviewport(*self.viewportscaled)
                 gr.setwindow(*window)
                 gr.setscale(self.scale)
