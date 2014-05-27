@@ -9,6 +9,7 @@ EXPORTS
 	gr3_getimage
 	gr3_export
 	gr3_createmesh
+	gr3_createindexedmesh
 	gr3_drawmesh
 	gr3_deletemesh
 	gr3_cameralookat

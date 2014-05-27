@@ -11,6 +11,7 @@ __all__ = ['GR3_InitAttribute',
            'setlogcallback',
            'drawimage',
            'createmesh',
+           'createindexedmesh',
            'drawmesh',
            'createheightmapmesh',
            'drawheightmap',
@@ -262,6 +263,48 @@ def createmesh(n, vertices, normals, colors):
     normals = numpy.array(normals, ctypes.c_float)
     colors = numpy.array(colors, ctypes.c_float)
     err = _gr3.gr3_createmesh(ctypes.byref(_mesh),ctypes.c_uint(n),vertices.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), normals.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), colors.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+    if err:
+        raise GR3_Exception(err)
+    return _mesh
+
+def createindexedmesh(num_vertices, vertices, normals, colors, num_indices, indices):
+    """
+    This function creates an indexed mesh from vertex information (position,
+    normal and color) and triangle information (indices).
+    Returns a mesh.
+
+    **Parameters:**
+
+        `num_vertices` : the number of vertices in the mesh
+
+        `vertices` : the vertex positions
+
+        `normals` : the vertex normals
+
+        `colors` : the vertex colors, they should be white (1,1,1) if you want to change the color for each drawn mesh
+
+        `num_indices` : the number of indices in the mesh (three times the number of triangles)
+
+        `indices` : the index array (vertex indices for each triangle)
+
+    **Raises:**
+
+    `gr3.GR3_Error.GR3_ERROR_EXPORT`: Raises GR3_Exception
+
+        +----------------------+-------------------------------+
+        | GR3_ERROR_NONE       | on success                    |
+        +----------------------+-------------------------------+
+        | GR3_ERROR_OPENGL_ERR | if an OpenGL error occured    |
+        +----------------------+-------------------------------+
+        | GR3_ERROR_OUT_OF_MEM | if a memory allocation failed |
+        +----------------------+-------------------------------+
+    """
+    _mesh = ctypes.c_uint(0)
+    vertices = numpy.array(vertices, ctypes.c_float)
+    normals = numpy.array(normals, ctypes.c_float)
+    colors = numpy.array(colors, ctypes.c_float)
+    indices = numpy.array(indices, ctypes.c_int)
+    err = _gr3.gr3_createindexedmesh(ctypes.byref(_mesh),ctypes.c_uint(num_vertices),vertices.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), normals.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), colors.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),ctypes.c_uint(num_indices),indices.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
     if err:
         raise GR3_Exception(err)
     return _mesh
@@ -540,6 +583,8 @@ _gr3.gr3_getimage.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.P
 _gr3.gr3_export.argtypes = [ctypes.POINTER(ctypes.c_char), ctypes.c_uint, ctypes.c_uint]
 _gr3.gr3_drawimage.argtypes = [ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_int, ctypes.c_int, ctypes.c_int]
 _gr3.gr3_createmesh.argtypes = [ctypes.POINTER(ctypes.c_uint), ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+_gr3.gr3_createindexedmesh.restype = ctypes.c_int
+_gr3.gr3_createindexedmesh.argtypes = [ctypes.POINTER(ctypes.c_uint), ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float),ctypes.c_uint,ctypes.POINTER(ctypes.c_int)]
 _gr3.gr3_createheightmapmesh.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int]
 _gr3.gr3_drawheightmap.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
 _gr3.gr3_drawmesh.argtypes = [ctypes.c_uint, ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]

@@ -494,6 +494,26 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
     }
 }
 
+/*!
+ * This function creates an indexed mesh from vertex information (position,
+ * normal and color) and triangle information (indices).
+ * \param [out] mesh              a pointer to an int
+ * \param [in] number_of_vertices the number of vertices in the mesh
+ * \param [in] vertices           the vertex positions
+ * \param [in] normals            the vertex normals
+ * \param [in] colors             the vertex colors, they should be
+ *                                white (1,1,1) if you want to change the
+ *                                color for each drawn mesh
+ * \param [in] number_of_indices  the number of indices in the mesh
+ *                                (three times the number of triangles)
+ * \param [in] indices            the index array (vertex indices for
+ *                                each triangle)
+ *
+ * \returns
+ *  - ::GR3_ERROR_NONE        on success
+ *  - ::GR3_ERROR_OPENGL_ERR  if an OpenGL error occured
+ *  - ::GR3_ERROR_OUT_OF_MEM  if a memory allocation failed
+ */
 GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices, const float *vertices, 
                                  const float *normals, const float *colors, int number_of_indices, const int *indices) {
     int i;
@@ -732,11 +752,6 @@ static void gr3_dodrawmesh_(int mesh,
             glEnableVertexAttribArray(glGetAttribLocation(context_struct_.program, "in_Normal"));
             glEnableVertexAttribArray(glGetAttribLocation(context_struct_.program, "in_Color"));
             if (context_struct_.mesh_list_[mesh].data.type == kMTIndexedMesh) {
-                fprintf(stderr, "indexed mesh (");
-                if (context_struct_.mesh_list_[mesh].data.indices) {
-                    fprintf(stderr, "un");
-                }
-                fprintf(stderr, "sorted)\n");
                 glDrawElements(GL_TRIANGLES, context_struct_.mesh_list_[mesh].data.number_of_indices, GL_UNSIGNED_INT, NULL);
             } else {
                 glDrawArrays(GL_TRIANGLES, 0, context_struct_.mesh_list_[mesh].data.number_of_vertices);
