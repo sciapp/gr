@@ -1,6 +1,6 @@
 CC = CL
 INCLUDES = /I..\..\3rdparty\jpeg /I..\..\3rdparty\png /I..\..\3rdparty\zlib /I..\gks /I..\gr /I..\..\3rdparty /I.
-CFLAGS = /c /nologo /MD $(INCLUDES)
+CFLAGS = /Ox /c /nologo /MD $(INCLUDES)
 LINK = LINK /nologo
 PNGLIBS = ..\..\3rdparty\png\libpng.lib
 JPEGLIBS = ..\..\3rdparty\jpeg\libjpeg.lib

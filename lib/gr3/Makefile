@@ -43,7 +43,7 @@ gr3_povray.c: gr3_internals.h
 gr3_png.c: gr3_internals.h
 gr3_jpeg.c: gr3_internals.h
 gr3_gr.c: gr3_internals.h
-gr3_mc.c: gr3.h
+gr3_mc.c: gr3.h gr3_mc_data.h
 
 install: targets
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
