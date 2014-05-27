@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
+Plot irregular distributed data
 """
-# local library
+
 from gr.pygr import *
 
 xd = [3, 3, 10, 18, 18, 10, 10, 5, 1, 15, 20, 5, 15, 10, 7, 13, 16]
@@ -21,9 +21,9 @@ gr.axes(1.0, 1.0, 0.0, 0.0, 5, 5, -0.01)
 gr.setwindow(0, 20, 0, 20)
 gr.setspace(-10, 40, 0, 90)
 
-x, y, z = gr.gridit(17, xd, yd, zd, 40, 40)
+x, y, z = gr.gridit(xd, yd, zd, 40, 40)
 h = range(-4, 28, 2)
-gr.contour(40, 40, len(h), x, y, h, z, 0)
+gr.contour(x, y, h, z, 0)
 
 gr.updatews()
 

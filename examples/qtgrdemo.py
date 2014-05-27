@@ -1,10 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# -*- no-plot -*-
 """
+Demo showing the capabilities of qtgr
 """
+
 # standard library
+import sys
+setattr(sys, "QT_BACKEND_ORDER", ["PyQt4", "PySide"])
 import os
 import time
+import logging
 # third party
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -13,16 +19,15 @@ from PyQt4 import uic
 import gr # TESTING shell
 import qtgr
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, LegendEvent
-from qtgr.events import TickEvent
-from gr.pygr import Plot, PlotAxes, PlotCurve
+from gr.pygr import Plot, PlotAxes, PlotCurve, ErrorBar
 
-__author__  = "Christian Felder <c.felder@fz-juelich.de>"
-__date__    = "2013-06-27"
-__version__ = "0.2.0"
-__copyright__ = """Copyright 2012, 2013 Forschungszentrum Juelich GmbH
+__author__ = "Christian Felder <c.felder@fz-juelich.de>"
+__date__ = "2014-04-23"
+__version__ = "0.5.1"
+__copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
-Visit https://iffwww.iff.kfa-juelich.de/portal/doku.php?id=gr for the latest
+Visit http://gr-framework.org for the latest
 version.
 
 GR was developed by the Scientific IT-Systems group at the Peter Grünberg
@@ -43,78 +48,69 @@ You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
  
 """
-   
-class TimeAxisFmt(object):
-    
-    @staticmethod
-    def tickLabel(ticks):
-        lst = []
-        for value in ticks:
-            lst.append("%s" %time.strftime("%H:%M:%S",
-                                           time.localtime(float(value))))
-        return lst
 
-class MainWindow(QtGui.QMainWindow):   
+_log = logging.getLogger(__name__)
+
+class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         uic.loadUi(os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 "qtgrdemo.ui"), self)
-        
+
         dictPrintType = dict(gr.PRINT_TYPE)
-        map(lambda k: dictPrintType.pop(k), [gr.PRINT_JPEG, gr.PRINT_TIF])
+        map(dictPrintType.pop, [gr.PRINT_JPEG, gr.PRINT_TIF])
         self._saveTypes = (";;".join(dictPrintType.values()) + ";;" +
                            ";;".join(gr.GRAPHIC_TYPE.values()))
         self._saveName = None
         self._title = unicode(self.windowTitle())
-        
-        self.connect(self._chkLogX, QtCore.SIGNAL("stateChanged(int)"),
-                     self._logXClicked)
-        self.connect(self._chkLogY, QtCore.SIGNAL("stateChanged(int)"),
-                     self._logYClicked)
-        self.connect(self._gr, QtCore.SIGNAL("logXinDomain(bool)"),
-                     self._logXinDomain)
-        self.connect(self._gr, QtCore.SIGNAL("logYinDomain(bool)"),
-                     self._logYinDomain)
-        self.connect(self._chkGrid, QtCore.SIGNAL("stateChanged(int)"),
-                     self._gridClicked)
-        self.connect(self._btnReset, QtCore.SIGNAL("clicked()"),
-                     self._resetClicked)
-        self.connect(self._btnPick, QtCore.SIGNAL("clicked()"),
-                     self._pickClicked)
-        self.connect(self._gr, QtCore.SIGNAL("modePick(bool)"),
-                     self._pickModeChanged)
-        self.connect(self._shell, QtCore.SIGNAL("returnPressed()"),
-                     self._shellEx)
-        self.connect(self._actionSave, QtCore.SIGNAL("triggered()"), self.save)
-        self.connect(self._actionPrint, QtCore.SIGNAL("triggered()"),
-                     self.printGR)
-        
+        self._startupTime = time.time()
+
+        self._chkLogX.stateChanged.connect(self._logXClicked)
+        self._chkLogY.stateChanged.connect(self._logYClicked)
+        self._chkGrid.stateChanged.connect(self._gridClicked)
+        self._chkErr.stateChanged.connect(self._errorsClicked)
+        self._chkKeepRatio.stateChanged.connect(self._keepRatioClicked)
+        self._btnReset.clicked.connect(self._resetClicked)
+        self._btnPick.clicked.connect(self._pickClicked)
+        self._shell.returnPressed.connect(self._shellEx)
+        self._actionSave.triggered.connect(self.save)
+        self._actionPrint.triggered.connect(self.printGR)
+        self._gr.logXinDomain.connect(self._logXinDomain)
+        self._gr.logYinDomain.connect(self._logYinDomain)
+        self._gr.modePick.connect(self._pickModeChanged)
+
         guiConn = GUIConnector(self._gr)
         guiConn.connect(MouseEvent.MOUSE_MOVE, self.mouseMoveGr)
         guiConn.connect(PickEvent.PICK_PRESS, self.pointPickGr)
         guiConn.connect(LegendEvent.ROI_CLICKED, self.legendClick)
         guiConn.connect(LegendEvent.ROI_OVER, self.legendOver)
-        guiConn.connect(TickEvent.TICKS_CHANGED, self.ticksChanged)
-        
-        x = [-3.3 + t*.1 for t in range(66)]
-        y = [t**5 - 13*t**3 + 36*t for t in x]
-        x2 = [-3.5 + i*.5 for i in range(0, 15)]
+
+        x = [-3.3 + t * .1 for t in range(66)]
+        y = [t ** 5 - 13 * t ** 3 + 36 * t for t in x]
+        x2 = [-3.5 + i * .5 for i in range(0, 15)]
         y2 = x2
-        
-        self._plot = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x, y,
-                                                           legend="foo bar")),
+
+        dneg = map(lambda y: y - 0.25 * abs(y), y)
+        dpos = map(lambda y: y + 0.25 * abs(y), y)
+        self._errBar = ErrorBar(x, y, dneg, dpos)
+
+        self._curveFoo = PlotCurve(x, y, legend="foo bar")
+        axes = PlotAxes().addCurves(self._curveFoo)
+        axes.setXtickCallback(self._xtickCallBack)
+        self._plot = Plot((.1, .92, .2, .88)).addAxes(axes,
                                     PlotAxes(drawX=False).plot(x2, y2))
-        self._plot2 = Plot().addAxes(PlotAxes().addCurves(PlotCurve(x2, y2,
+        self._plot.offsetXLabel = -.1
+        self._plot2 = Plot((.1, .95, .15, .88)).addAxes(PlotAxes().addCurves(PlotCurve(x2, y2,
                                                            legend="second")))
-        
+
         self._plot.title = "QtGR Demo"
         self._plot.subTitle = "Multiple Axes Example"
         self._plot.xlabel = "x"
         self._plot.ylabel = "f(x)"
         self._plot.setLegend(True)
         self._gr.addPlot(self._plot)
-#        self._gr2.addPlot(Plot().addAxes(PlotAxes().addCurves(PlotCurve(x2, y2, legend="second"))))
+
         self._plot2.title = "Second Widget"
         self._plot2.subTitle = "Linear Example (less interactive)"
         self._plot2.xlabel = "x2"
@@ -122,109 +118,117 @@ class MainWindow(QtGui.QMainWindow):
         self._plot2.setLegend(True)
         self._plot2.setGrid(False)
         self._gr2.addPlot(self._plot2)
-        
+
     def save(self):
         qpath = QtGui.QFileDialog.getSaveFileName(self, "", "", self._saveTypes,
                                                   gr.PRINT_TYPE[gr.PRINT_PDF])
         if qpath:
             path = unicode(qpath)
-            (p, suffix) = os.path.splitext(path)
+            (_p, suffix) = os.path.splitext(path)
             suffix = suffix.lower()
             if suffix and (suffix[1:] in gr.PRINT_TYPE.keys() or
                            suffix[1:] in gr.GRAPHIC_TYPE):
                 self._gr.save(path)
                 self._saveName = os.path.basename(path)
                 self.setWindowTitle(self._title + " - %s"
-                                    %self._saveName)
+                                    % self._saveName)
             else:
                 raise Exception("Unsupported file format")
-        
+
     def printGR(self):
         if self._saveName:
             title = "GR_Demo-" + self._saveName
         else:
             title = "GR_Demo-untitled"
         self._gr.printDialog(title)
-        
+
     def mouseMoveGr(self, event):
         dc = event.getDC()
         ndc = event.getNDC()
-        wc = event.getWC()
-        self._statusbar.showMessage("DC: (%4d, %4d)\t " %(dc.x, dc.y) +
-                                    "NDC: (%3.2f, %3.2f)\t " %(ndc.x, ndc.y) +
-                                    "WC: (%3.2f, %3.2f)" %(wc.x, wc.y))
+        wc = event.getWC(self._plot.viewport)
+        self._statusbar.showMessage("DC: (%4d, %4d)\t " % (dc.x, dc.y) +
+                                    "NDC: (%3.2f, %3.2f)\t " % (ndc.x, ndc.y) +
+                                    "WC: (%3.2f, %3.2f)" % (wc.x, wc.y))
         self._lblOverLegend.setText("")
-#        print "  buttons: 0x%x" %event.getButtons()
-#        print "modifiers: 0x%x" %event.getModifiers()
 
     def pointPickGr(self, event):
-        p = event.getWC()
-        
+        p = event.getWC(event.viewport)
+
         if p.x < 0:
-            self._lblPickX.setText("%4.2f" %p.x)
+            self._lblPickX.setText("%4.2f" % p.x)
         else:
-            self._lblPickX.setText(" %4.2f" %p.x)
-             
+            self._lblPickX.setText(" %4.2f" % p.x)
+
         if p.y < 0:
-            self._lblPickY.setText("%4.2f" %p.y)
+            self._lblPickY.setText("%4.2f" % p.y)
         else:
-            self._lblPickY.setText(" %4.2f" %p.y)
-    
+            self._lblPickY.setText(" %4.2f" % p.y)
+
     def legendClick(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
             event.curve.visible = not event.curve.visible
             self._gr.update()
-            
+
     def legendOver(self, event):
         self._lblOverLegend.setText(event.curve.legend)
-        
-    def ticksChanged(self, event):
-        if event.origin == TickEvent.AXIS_X:
-            event.axes.setXtickLabels(TimeAxisFmt.tickLabel(event.labels))
-        self._gr.updateTicks()
-        
-    @QtCore.pyqtSlot()
+
+    def _xtickCallBack(self, x, y, svalue):
+        gr.setcharup(1., 1.)
+        gr.settextalign(gr.TEXT_HALIGN_LEFT, gr.TEXT_VALIGN_TOP)
+        try:
+            gr.text(x, y, "%s (%s)"
+                    % (time.strftime("%H:%M:%S",
+                                     time.localtime(self._startupTime
+                                                    + float(svalue))), svalue))
+        except ValueError:
+            gr.text(x, y, svalue)
+        gr.setcharup(0., 1.)
+
+    def _errorsClicked(self, state):
+        if self._chkErr.isChecked():
+            self._curveFoo.errorBar1 = self._errBar
+        else:
+            self._curveFoo.errorBar1 = None
+        self._gr.update()
+
+    def _keepRatioClicked(self, state):
+        self._gr.keepRatio = self._chkKeepRatio.isChecked()
+        self._gr.update()
+
     def _gridClicked(self, state):
         self._plot.setGrid(self._chkGrid.isChecked())
         self._gr.update()
-        
-    @QtCore.pyqtSlot()
+
     def _logXClicked(self, state):
         self._plot.setLogX(self._chkLogX.isChecked())
-        self._gr.update()      
-    
-    @QtCore.pyqtSlot()    
+        self._gr.update()
+
     def _logYClicked(self, state):
         self._plot.setLogY(self._chkLogY.isChecked())
         self._gr.update()
-            
-    @QtCore.pyqtSlot()
+
     def _resetClicked(self):
         self._plot.reset()
         self._gr.update()
-    
-    @QtCore.pyqtSlot()
+
     def _pickClicked(self):
         self._gr.setPickMode(True)
-    
-    @QtCore.pyqtSlot()    
+
     def _pickModeChanged(self, bool):
         self._btnPick.setChecked(bool)
-        
+
     @QtCore.pyqtSlot()
     def _shellEx(self):
         input = str(self._shell.text())
         exec input
         self._shell.clear()
         self._gr.update()
-    
-    @QtCore.pyqtSlot()
+
     def _logXinDomain(self, bool):
         self._chkLogX.setEnabled(bool)
         if not bool:
             self._chkLogX.setChecked(bool)
-        
-    @QtCore.pyqtSlot()
+
     def _logYinDomain(self, bool):
         self._chkLogY.setEnabled(bool)
         if not bool:
@@ -232,6 +236,11 @@ class MainWindow(QtGui.QMainWindow):
 
 if __name__ == '__main__':
     import sys
+#    logging.basicConfig(level=logging.CRITICAL)
+#    for name in [__name__, qtgr.__name__, qtgr.events.__name__,
+#                 qtgr.events.base.__name__,
+#                 gr.pygr.base.__name__, gr.pygr.__name__]:
+#        logging.getLogger(name).setLevel(logging.DEBUG)
     app = QtGui.QApplication(sys.argv)
     mainWin = MainWindow()
     mainWin.show()

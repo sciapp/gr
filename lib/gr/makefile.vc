@@ -1,6 +1,6 @@
 CC = CL
 INCLUDES = /I..\..\3rdparty\jpeg /I..\..\3rdparty\png /I..\..\3rdparty\zlib /I..\gks /I.
-CFLAGS = /c /nologo /DNO_X11 /D_DLL /MD /D_POSIX $(INCLUDES)
+CFLAGS = /c /nologo /DNO_MUPDF /DNO_X11 /D_DLL /MD /D_POSIX $(INCLUDES)
 DEFINES = /DGRDIR=\"$(GRDIR)\"
 LINK = LINK /nologo
 JPEGLIBS = ..\..\3rdparty\jpeg\libjpeg.lib

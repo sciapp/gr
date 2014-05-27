@@ -1,12 +1,117 @@
 #!/bin/bash
 
+if [ -f /usr/local/bin/python ]
+then
+  export PATH="/usr/local/bin:$PATH"
+fi
+
 target=`uname`
+if [ -z "${CC}" ]; then
+  CC="cc"
+fi
+if [ -z "${CXX}" ]; then
+  CXX="c++"
+fi
+while [ $# -gt 0 ]
+do
+  eval $1
+  shift
+done
 wxdefs=""
+ftdefs=""
 qtdefs=""
 gtkdefs=""
+x11defs=""
 gsdefs=""
 glfwdefs=""
 zmqdefs=""
+avdefs=""
+mupdfdefs=""
+ret=0
+
+red=$(tput setaf 1)
+green=$(tput setaf 2)
+normal=$(tput sgr0)
+
+printf "\nBuilding GR Framework\n---------------------\n" >&2
+
+if [ "`which ${CC} 2>/dev/null`" = "" ]
+then
+  info="${red} no${normal} [not found]"
+else
+  info="${green}yes${normal} [`${CC} --version | sed 's/) (/ /' | head -1`]"
+fi
+printf "%12s: %s\n" "C" "$info" >&2
+
+if [ "`which ${CXX} 2>/dev/null`" = "" ]
+then
+  info="${red} no${normal} [not found]"
+else
+  info="${green}yes${normal} [`${CXX} --version | sed 's/) (/ /' | head -1`]"
+fi
+printf "%12s: %s\n" "C++" "$info" >&2
+
+if [ "`which python 2>/dev/null`" = "" ]
+then
+  info="${red} no${normal} [not found]"
+else
+  info="${green}yes${normal} [version `python -c 'import sys;print sys.version' | head -1`]"
+fi
+printf "%12s: %s\n" "Python" "$info" >&2
+
+if [ "`which latex 2>/dev/null`" = "" ]
+then
+  info="${red} no${normal} [not found]"
+else
+  info="${green}yes${normal} [version `latex --version|grep ^pdfTeX|awk '{print $2}'`]"
+fi
+printf "%12s: %s\n" "LaTeX" "$info" >&2
+
+if [ "`which dvipng 2>/dev/null`" = "" ]
+then
+  info="${red} no${normal} [not found]"
+else
+  info="${green}yes${normal} [version `dvipng --version|grep ^dvipng|awk '{print $2}'`]"
+fi
+printf "%12s: %s\n" "dvipng" "$info" >&2
+
+info=""
+if [ "$QTDIR" = "" ]
+then
+  if [ -d /usr/lib64/qt4 ] # Red Hat
+  then
+    QTDIR=/usr/lib64/qt4
+  elif [ -d /usr/share/qt4 ] # Debian / Ubuntu
+  then
+    QTDIR=/usr/share/qt4
+  elif [ -d /usr/local/qt4 ]
+  then
+    QTDIR=/usr/local/qt4
+  fi
+  qtdefs="QTDIR=$QTDIR"
+fi
+if [ "$QTDIR" = "" ]
+then
+  info="${red} no${normal} [QTDIR not set]"
+else
+  if [ -f $QTDIR/include/QtCore/qglobal.h ]; then
+    version=`cat $QTDIR/include/QtCore/qglobal.h|grep QT_VERSION_STR|awk '{print $3}'|sed s/\"//g`
+  elif [ -f /usr/include/QtCore/qglobal.h ]; then
+    version=`cat /usr/include/QtCore/qglobal.h|grep QT_VERSION_STR|awk '{print $3}'|sed s/\"//g`
+  else
+    info="${red} no${normal} [Qt4 API not found]"
+  fi
+  if [ "`echo $version|grep ^3\.`" != "" ]; then
+    info="${red} no${normal} [QTDIR points to an old Qt version]"
+  fi
+fi
+if [ "$info" != "" ]; then
+  qtdefs="QTDEFS=-DNO_QT4 QTINC= QTLIBS="
+  ret=1
+else
+  info="${green}yes${normal} [$QTDIR, version $version]"
+fi
+printf "%12s: %s\n" "Qt4" "$info" >&2
 
 wxconfig=wx-config
 if [ "$WX_CONFIG" != "" ]
@@ -15,50 +120,92 @@ then
 fi
 if [ "`which $wxconfig 2>/dev/null`" = "" ]
 then
-  echo "wx-config not found. Build without wxWidgets support." >&2
   wxdefs="WX_CONFIG=false WXDEFS=-DNO_WX WXINC= WXLIBS="
+  info="${red} no${normal} [wx-config not found]"
+  ret=1
 else
   wxdefs="WX_CONFIG=$wxconfig"
+  info="${green}yes${normal} [version `wx-config --version`]"
 fi
-
-message=""
-if [ "$QTDIR" = "" ]
-then
-  message="QTDIR not set. Build without Qt4 support." 
-elif [ -f $QTDIR/bin/qmake ]; then
-  version=`$QTDIR/bin/qmake -v 2>&1 | grep 'Qt 3\.'`
-  if [ "$version" != "" ]; then
-    message="QTDIR points to an old Qt version."
-  fi
-else
-  message="Unable to obtain Qt version number."
-fi
-
-if [ "$message" != "" ]; then
-  echo $message >&2
-  echo "Do you want to continue? [y/n]" >&2
-  read yesno
-  if [ "$yesno" = "y" ]; then
-    qtdefs="QTDEFS=-DNO_QT4 QTINC= QTLIBS="
-  else
-    echo -e "Please retry with a valid QTDIR setting, e.g.\n\
-	/usr/lib64/qt4	(Red Hat)\n\
-	/usr/share/qt4	(Ubuntu)\n\
-	/usr/local/qt4\n" >&2
-    target="nothing"
-  fi
-fi
+printf "%12s: %s\n" "wxWidgets" "$info" >&2
 
 if [ "`pkg-config gtk+-2.0 --cflags 2>/dev/null`" = "" ]
 then
-  echo "gtk+-2.0 not found. Build without GTK+ support." >&2
   gtkdefs="GTK_CONFIG=false GTKDEFS=-DNO_GTK GTKINC= GTKLIBS="
+  info="${red} no${normal} [gtk+-2.0 not found]"
+  ret=1
 else
   gtkdefs="GTK_CONFIG=pkg-config"
+  info="${green}yes${normal} [version `pkg-config gtk+-2.0 --modversion`]"
+fi
+printf "%12s: %s\n" "GTK+" "$info" >&2
+
+ftconfig=freetype-config
+if [ "$FT_CONFIG" != "" ]
+then
+  ftconfig=$FT_CONFIG
+fi
+if [ "`which $ftconfig 2>/dev/null`" = "" ]
+then
+  ftconfig=false
+  ftdefs="FT_CONFIG=false FTDEFS=-DNO_FT FTINC= FTLIBS="
+  info="${red} no${normal} [freetype-config not found]"
+  ret=1
+else
+  ftdefs="FT_CONFIG=$ftconfig"
+  if [ `uname` = "Linux" ]; then
+    ftlib="`$ftconfig --prefix`/lib/libfreetype.a"
+    if [ -f ${ftlib} ]
+    then
+      ftdefs="${ftdefs} FTLIBS=${ftlib}"
+    fi
+  fi
+  info="${green}yes${normal} [version `$ftconfig --version`]"
+fi
+printf "%12s: %s\n" "FreeType" "$info" >&2
+
+tmpout=`mktemp /tmp/a.out.XXXXX`
+tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+cat >$tmpsrc << eof
+#include <X11/Intrinsic.h>
+
+int main(int argc, char **argv)
+{
+    Widget toplevel;
+    toplevel = XtInitialize(argv[0], "simple", NULL, 0, &argc, argv);
+    XtMainLoop();
+    return 0;
+}
+eof
+if [ -d /usr/X11R6 ]; then
+  x11path="/usr/X11R6"
+else
+  x11path="/usr/X11"
+fi
+cmd="${CC} -o $tmpout $tmpsrc -I$x11path/include -L$x11path/lib -lXt -lX11"
+$cmd >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  x11defs="X11DEFS=-DNO_X11 X11INC= X11LIBS="
+  info="${red} no${normal} [X11 API not found]"
+  ret=1
+else
+  x11defs="X11PATH=-L$x11path/lib"
+  info="${green}yes${normal} [$x11path]"
+fi
+printf "%12s: %s\n" "X11" "$info" >&2
+rm -f $tmpout $tmpsrc
+if [ `uname` = "Darwin" ]; then
+  dir=`dirname $0`
+  if [ $ret -eq 0 ]; then
+    cp -p $dir/gks/quartz/project.pbxproj.X11 lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj
+  else
+    cp -p $dir/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj
+  fi
 fi
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
 tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+tmprev=`mktemp /tmp/a$$XXXXX.txt`
 cat >$tmpsrc << eof
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,88 +213,183 @@ cat >$tmpsrc << eof
 
 int main()
 {
-  gsapi_revision_t r;
-  if (gsapi_revision(&r, sizeof(gsapi_revision_t)) == 0)
-    fprintf(stderr, "%ld\n", r.revision);
-  exit(0);
+    gsapi_revision_t r;
+    if (gsapi_revision(&r, sizeof(gsapi_revision_t)) == 0)
+        fprintf(stderr, "%ld\n", r.revision);
+    exit(0);
 }
 eof
-cmd="cc -o $tmpout $tmpsrc -lgs"
+cmd="${CC} -o $tmpout $tmpsrc -lgs"
 if [ `uname` = "Darwin" ]; then
   cmd="$cmd -L/usr/X11/lib -lXt -lX11 -liconv"
 fi
-$cmd >/dev/null 2>&1
+$cmd #>/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "Ghostscript API not found. Build without Ghostscript support." >&2
-  echo "Do you want to continue? [y/n]" >&2
-  read yesno
-  if [ "$yesno" = "y" ]; then
-    gsdefs="GSDEFS=-DNO_GS GSINC= GSLIBS="
-  else
-    target="nothing"
-  fi
+  gsdefs="GSDEFS=-DNO_GS GSINC= GSLIBS="
+  info="${red} no${normal} [GS API not found]"
+  ret=1
+else
+  $tmpout >$tmprev 2>&1
+  info="${green}yes${normal} [revision `cat $tmprev`]"
 fi
-rm -f $tmpout $tmpsrc
+printf "%12s: %s\n" "Ghostscript" "$info" >&2
+rm -f $tmpout $tmpsrc $tmprev
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
 tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+tmpver=`mktemp /tmp/a$$XXXXX.txt`
 cat >$tmpsrc << eof
-#include <GL/glfw.h>
+#include <stdio.h>
+#include <GLFW/glfw3.h>
 
 int main(void)
 {
     if (!glfwInit())
         return -1;
+    fprintf(stderr, "%d.%d.%d\n", GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR,
+        GLFW_VERSION_REVISION);
     return 0;
 }
 eof
-cmd="cc -o $tmpout $tmpsrc -lglfw"
+cmd="${CC} -o $tmpout $tmpsrc -lglfw"
 if [ `uname` = "Darwin" ]; then
-  cmd="$cmd -framework OpenGL -framework Cocoa -framework IOKit"
+  libs="-framework OpenGL -framework Cocoa -framework IOKit"
+  ret=1
 else
-  cmd="$cmd -lGL -lXrandr -lX11 -lrt"
+  libs="-lGL -lXrandr -lX11 -lrt"
 fi
-$cmd >/dev/null 2>&1
+$cmd $libs >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "GLFW API not found. Build without GLFW support." >&2
-  echo "Do you want to continue? [y/n]" >&2
-  read yesno
-  if [ "$yesno" = "y" ]; then
-    glfwdefs="GLFWDEFS=-DNO_GLFW GLFWLIBS="
-  else
-    target="nothing"
-  fi
+  glfwdefs="GLFWDEFS=-DNO_GLFW GLFWLIBS="
+  info="${red} no${normal} [GLFW 3.x API not found]"
+  ret=1
+else
+  $tmpout >$tmpver 2>&1
+  glfdefs="GLFWLIBS=$libs"
+  info="${green}yes${normal} [version `cat $tmpver`]"
 fi
-rm -f $tmpout $tmpsrc
+printf "%12s: %s\n" "GLFW" "$info" >&2
+rm -f $tmpout $tmpsrc $tmpver
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
 tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+tmpver=`mktemp /tmp/a$$XXXXX.txt`
 cat >$tmpsrc << eof
+#include <stdio.h>
 #include <zmq.h>
 
 int main(void)
 {
     void *context = zmq_ctx_new();
     void *publisher = zmq_socket(context, ZMQ_PUSH);
-    zmq_bind(publisher, "tcp://*:5556");
-    zmq_send(publisher, "Hello", 5, 0);
+    if (0) {
+        zmq_bind(publisher, "tcp://*:5556");
+        zmq_send(publisher, "Hello", 5, 0);
+    }
     zmq_close(publisher);
     zmq_ctx_destroy(context);
+    fprintf(stderr, "%d.%d.%d\n", ZMQ_VERSION_MAJOR, ZMQ_VERSION_MINOR,
+        ZMQ_VERSION_PATCH);
     return 0;
 }
 eof
-cmd="cc -o $tmpout $tmpsrc -lzmq"
+cmd="${CC} -o $tmpout $tmpsrc -lzmq"
 $cmd >/dev/null 2>&1
 if [ $? -ne 0 ]; then
-  echo "0MQ API not found. Build without 0MQ support." >&2
-  echo "Do you want to continue? [y/n]" >&2
-  read yesno
-  if [ "$yesno" = "y" ]; then
-    zmqdefs="ZMQDEFS=-DNO_ZMQ ZMQLIBS="
-  else
-    target="nothing"
-  fi
+  info="${red} no${normal} [0MQ 3.x API not found]"
+  zmqdefs="ZMQDEFS=-DNO_ZMQ ZMQLIBS="
+  ret=1
+else
+  $tmpout >$tmpver 2>&1
+  info="${green}yes${normal} [version `cat $tmpver`]"
 fi
+printf "%12s: %s\n" "0MQ" "$info" >&2
+rm -f $tmpout $tmpsrc $tmpver
+
+tmpout=`mktemp /tmp/a.out.XXXXX`
+tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+tmpver=`mktemp /tmp/a$$XXXXX.txt`
+cat >$tmpsrc << eof
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/mathematics.h>
+#include <libavutil/imgutils.h>
+#include <libswscale/swscale.h>
+
+int main(void)
+{
+   avcodec_register_all();
+   exit(0);
+}
+eof
+cmd="${CC} -o $tmpout $tmpsrc -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -lz"
+if [ `uname` = "Linux" ]
+then
+  cmd="$cmd -lpthread -lm"
+elif [ `uname` = "Darwin" ]
+then
+  cmd="$cmd -ltheora -logg -lvpx -liconv"
+fi
+$cmd >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  avdefs="AVDEFS=-DNO_AV AVLIBS="
+  info="${red} no${normal} [required APIs not found]"
+  ret=1
+else
+  if [ "`which ffmpeg 2>/dev/null`" != "" ]
+  then
+    ffmpeg -version >$tmpver 2>&1
+  else
+    cat /dev/null >$tmpver
+  fi
+  info="${green}yes${normal} [`cat $tmpver | head -1`]"
+fi
+printf "%12s: %s\n" "ffmpeg" "$info" >&2
+rm -f $tmpsrc $tmpout $tmpver
+
+tmpout=`mktemp /tmp/a.out.XXXXX`
+tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+cat >$tmpsrc << eof
+#include <mupdf/fitz.h>
+
+int main(int argc, char **argv)
+{
+  fz_context  *ctx;
+  fz_document *doc;
+  fz_rect      rect;
+  fz_irect     bbox;
+  fz_pixmap   *pix;
+  fz_device   *dev;
+  fz_page     *page;
+
+  ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+  fz_register_document_handlers(ctx);
+  doc = fz_open_document(ctx, argv[1]);
+  page = fz_load_page(doc, 0);
+  fz_bound_page(doc, page, &rect);
+  fz_round_rect(&bbox, &rect);
+  pix = fz_new_pixmap_with_bbox(ctx, fz_device_rgb(ctx), &bbox);
+  dev = fz_new_draw_device(ctx, pix);
+  fz_run_page(doc, page, dev, &fz_identity, NULL);
+
+  fz_free_device(dev);
+  fz_drop_pixmap(ctx, pix);
+  fz_free_page(doc, page);
+  fz_free_context(ctx);
+}
+eof
+ftlibs=`$ftconfig --libs`
+cmd="${CC} -o $tmpout $tmpsrc -lmupdf $ftlibs -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lssl -lcrypto -lz -lm"
+$cmd >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  info="${red} no${normal} [MuPDF 1.4 API not found]"
+  mupdfdefs="MUPDFDEFS=-DNO_MUPDF MUPDFLIBS="
+  ret=1
+else
+  info="${green}yes${normal}"
+fi
+printf "%12s: %s\n" "MuPDF" "$info" >&2
 rm -f $tmpout $tmpsrc
 
-echo $target $wxdefs $qtdefs $gtkdefs $gsdefs $glfwdefs $zmqdefs
+echo "" >&2
+echo $target $wxdefs $ftdefs $qtdefs $gtkdefs $x11defs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs

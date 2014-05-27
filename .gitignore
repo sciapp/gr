@@ -1,6 +1,7 @@
-playground/
 build/
 dist/
+doc/media/
+recipe/
 MANIFEST
 *.o
 *.obj

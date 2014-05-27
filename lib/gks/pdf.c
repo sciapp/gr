@@ -31,7 +31,7 @@ typedef unsigned long uLong;
 
 #define DrawBorder 0
 
-#define FEPS 1.0E-06
+#define FEPS 1.0E-09
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -85,7 +85,7 @@ typedef unsigned long uLong;
 #define pdf_setdash(p, dash)	pdf_printf(p->content, "%s 0 d\n", dash)
 
 #define pdf_setlinewidth(p, width) \
-  pdf_printf(p->content, "%s w\n", pdf_float(width))
+  pdf_printf(p->content, "%s w\n", pdf_double(width))
 
 #define pdf_text(p, xorg, yorg, text) \
   pdf_printf(p->content, "BT\n/F%d %d Tf\n%.2f %.2f Td\n(%s) Tj\nET\n", \
@@ -93,11 +93,11 @@ typedef unsigned long uLong;
 
 #define pdf_setrgbcolor(p, red, green, blue) \
   pdf_printf(p->content, "%s %s %s RG\n", \
-    pdf_float(red), pdf_float(green), pdf_float(blue))
+    pdf_double(red), pdf_double(green), pdf_double(blue))
 
 #define pdf_setfillcolor(p, red, green, blue) \
   pdf_printf(p->content, "%s %s %s rg\n", \
-    pdf_float(red), pdf_float(green), pdf_float(blue))
+    pdf_double(red), pdf_double(green), pdf_double(blue))
 
 #define PDF ws_state_list
 
@@ -111,7 +111,7 @@ PDF_stream;
 typedef struct PDF_page_t
   {
     long object, contents, fonts[MAX_FONT];
-    float width, height;
+    double width, height;
     PDF_stream *stream;
   }
 PDF_page;
@@ -120,15 +120,15 @@ typedef struct ws_state_list_t
   {
     int state;
     int fd;
-    float window[4], viewport[4];
+    double window[4], viewport[4];
     int empty;
     int width, height;
-    float a, b, c, d;
+    double a, b, c, d;
     int stroke;
-    float lastx, lasty;
-    float red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
+    double lastx, lasty;
+    double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
     int color, fillcolor, ltype, font, size, pt;
-    float lwidth, angle;
+    double lwidth, angle;
     PDF_stream *stream;
     long object_number;
     long info, root, outlines, pages;
@@ -150,7 +150,7 @@ static
 gks_state_list_t *gkss;
 
 static
-float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 static
 const char *fonts[MAX_FONT] =
@@ -234,7 +234,7 @@ const char *bboxes[MAX_FONT] =
   };
 
 static
-float angles[MAX_FONT] = 
+double angles[MAX_FONT] = 
   {
         0, -15.5,     0,   -15,
         0,   -12,     0,   -12,
@@ -248,7 +248,7 @@ float angles[MAX_FONT] =
   };
 
 static
-float capheights[MAX_FONT] =
+double capheights[MAX_FONT] =
   {
     0.662, 0.660, 0.681, 0.662,
     0.729, 0.729, 0.729, 0.729,
@@ -313,19 +313,19 @@ static
 int predef_styli[] = { 1, 1, 1, 2, 3 };
 
 static
-float xfac[4] = { 0, 0, -0.5, -1 };
+double xfac[4] = { 0, 0, -0.5, -1 };
 
 static
-float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 static
-void fill_routine(int n, float *px, float *py, int tnr);
+void fill_routine(int n, double *px, double *py, int tnr);
 
 static char buf_array[NO_OF_BUFS][20];
 static int current_buf = 0;
 
 static
-const char *pdf_float(float f)
+const char *pdf_double(double f)
 {
   char *buf = buf_array[(current_buf++) % NO_OF_BUFS];
 
@@ -415,7 +415,7 @@ void pdf_open(int fd)
 }
 
 static
-void pdf_page(PDF *p, float height, float width)
+void pdf_page(PDF *p, double height, double width)
 {
   PDF_page *page;
   int font;
@@ -696,9 +696,9 @@ void pdf_close(PDF *p)
 }
 
 static
-void pdf_text_ex(PDF *p, float xorg, float yorg, char *text)
+void pdf_text_ex(PDF *p, double xorg, double yorg, char *text)
 {
-  float rad, c, s;
+  double rad, c, s;
 
   rad = p->angle * M_PI / 180;
   c = cos(rad);
@@ -706,12 +706,12 @@ void pdf_text_ex(PDF *p, float xorg, float yorg, char *text)
 
   pdf_printf(p->content,
 	     "BT\n/F%d %d Tf\n%s %s %s %s %.2f %.2f Tm\n(%s) Tj\nET\n",
-	     p->font, p->pt, pdf_float(c), pdf_float(s), pdf_float(-s),
-	     pdf_float(c), xorg, yorg, text);
+	     p->font, p->pt, pdf_double(c), pdf_double(s), pdf_double(-s),
+	     pdf_double(c), xorg, yorg, text);
 }
 
 static
-void set_norm_xform(int tnr, float *wn, float *vp)
+void set_norm_xform(int tnr, double *wn, double *vp)
 {
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -731,7 +731,7 @@ void init_norm_xform(void)
 static
 void set_xform(void)
 {
-  float a, b, c, d;
+  double a, b, c, d;
 
   a = (p->viewport[1] - p->viewport[0]) / (p->window[1] - p->window[0]);
   b = 810 / 0.288;
@@ -747,9 +747,9 @@ void set_xform(void)
 }
 
 static
-void seg_xform(float *x, float *y)
+void seg_xform(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1] + gkss->mat[2][0];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1] + gkss->mat[2][1];
@@ -757,9 +757,9 @@ void seg_xform(float *x, float *y)
 }
 
 static
-void seg_xform_rel(float *x, float *y)
+void seg_xform_rel(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1];
@@ -767,7 +767,7 @@ void seg_xform_rel(float *x, float *y)
 }
 
 static
-void set_color_rep(int color, float red, float green, float blue)
+void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
@@ -781,7 +781,7 @@ static
 void init_colors(void)
 {
   int color;
-  float red, green, blue;
+  double red, green, blue;
 
   for (color = 0; color < MAX_COLOR; color++)
     {
@@ -842,10 +842,10 @@ void open_ws(int fd, int wstype)
 }
 
 static
-void set_clip(float *clrt)
+void set_clip(double *clrt)
 {
 #if 0
-  float x0, x1, y0, y1;
+  double x0, x1, y0, y1;
 
   NDC_to_DC(clrt[0], clrt[2], x0, y0);
   NDC_to_DC(clrt[1], clrt[3], x1, y1);
@@ -931,9 +931,9 @@ void eofill(void)
 }
 
 static
-void move(float x, float y)
+void move(double x, double y)
 {
-  float xdev, ydev;
+  double xdev, ydev;
 
   stroke();
 
@@ -945,9 +945,9 @@ void move(float x, float y)
 }
 
 static
-void draw(float x, float y)
+void draw(double x, double y)
 {
-  float xdev, ydev;
+  double xdev, ydev;
 
   NDC_to_DC(x, y, xdev, ydev);
   if (xdev != p->lastx || ydev != p->lasty)
@@ -960,10 +960,10 @@ void draw(float x, float y)
 }
 
 static
-void line_routine(int n, float *px, float *py, int ltype, int tnr)
+void line_routine(int n, double *px, double *py, int ltype, int tnr)
 {
   register int i, j, m;
-  float x, y, xdev, ydev;
+  double x, y, xdev, ydev;
 
   m = ltype == DrawBorder ? n + 1 : n;
 
@@ -986,7 +986,7 @@ void line_routine(int n, float *px, float *py, int ltype, int tnr)
 }
 
 static
-void set_linetype(int ltype, float lwidth)
+void set_linetype(int ltype, double lwidth)
 {
   char dash[80];
 
@@ -1001,7 +1001,7 @@ void set_linetype(int ltype, float lwidth)
 }
 
 static
-void set_linewidth(float lwidth)
+void set_linewidth(double lwidth)
 {
   if (gkss->version > 4)
     lwidth *= p->height / 500.0;
@@ -1013,10 +1013,10 @@ void set_linewidth(float lwidth)
 }
 
 static
-void polyline(int n, float *px, float *py)
+void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  float ln_width;
+  double ln_width;
 
   ln_type = gkss->asf[0] ? gkss->ltype : gkss->lindex;
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
@@ -1032,10 +1032,10 @@ void polyline(int n, float *px, float *py)
 }
 
 static
-void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
+void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   int r, curve, i;
-  float scale, x, y, xr, yr;
+  double scale, x, y, xr, yr;
   int pc, op;
 
   static int marker[26][57] =
@@ -1116,14 +1116,14 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
       0 }
   };
 
-  static float cx[4][3] = {
+  static double cx[4][3] = {
     { 0.5523, 1, 1 },
     { 1, 0.5523, 0 },
     { -0.5523, -1, -1 },
     { -1, -0.5523, 0 }
   };
 
-  static float cy[4][3] = {
+  static double cy[4][3] = {
     { -1, -0.5523, 0 },
     { 0.5523, 1, 1 },
     { 1, 0.5523, 0 },
@@ -1255,11 +1255,11 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
 }
 
 static
-void marker_routine(int n, float *px, float *py, int mtype, float mscale,
+void marker_routine(int n, double *px, double *py, int mtype, double mscale,
 		    int mcolor)
 {
-  float x, y;
-  float *clrt = gkss->viewport[gkss->cntnr];
+  double x, y;
+  double *clrt = gkss->viewport[gkss->cntnr];
   register int i, draw;
 
   for (i = 0; i < n; i++)
@@ -1278,10 +1278,10 @@ void marker_routine(int n, float *px, float *py, int mtype, float mscale,
 }
 
 static
-void polymarker(int n, float *px, float *py)
+void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
-  float mk_size;
+  double mk_size;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
@@ -1298,8 +1298,8 @@ void polymarker(int n, float *px, float *py)
 static
 void set_font(int font)
 {
-  float ux, uy, scale;
-  float width, height;
+  double ux, uy, scale;
+  double width, height;
   PDF_page *page = p->page[p->current_page];
 
   font = abs(font);
@@ -1340,12 +1340,12 @@ void set_font(int font)
 }
 
 static
-void text_routine(float x, float y, int nchars, char *chars)
+void text_routine(double x, double y, int nchars, char *chars)
 {
   char s[BUFSIZ], *cp;
-  float xrel, yrel, xorg, yorg;
+  double xrel, yrel, xorg, yorg;
   int tx_font, tx_prec;
-  float phi, ax, ay;
+  double phi, ax, ay;
   int width, ch;
   stroke_data_t buffer;
   register int i;
@@ -1393,10 +1393,10 @@ void text_routine(float x, float y, int nchars, char *chars)
 }
 
 static
-void text(float px, float py, int nchars, char *chars)
+void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
-  float x, y;
+  double x, y;
 
   tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
@@ -1424,10 +1424,10 @@ void text(float px, float py, int nchars, char *chars)
 }
 
 static
-void fill_routine(int n, float *px, float *py, int tnr)
+void fill_routine(int n, double *px, double *py, int tnr)
 {
   int ln_type = DrawBorder, i;
-  float x, y, xdev, ydev;
+  double x, y, xdev, ydev;
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
   if (!p->pattern)
@@ -1467,7 +1467,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 }
 
 static
-void fillarea(int n, float *px, float *py)
+void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color;
 
@@ -1506,12 +1506,12 @@ void fillarea(int n, float *px, float *py)
 }
 
 static
-void cellarray(float xmin, float xmax, float ymin, float ymax,
+void cellarray(double xmin, double xmax, double ymin, double ymax,
 	       int dx, int dy, int dimx, int *colia, int true_color)
 {
-  float x1, y1, x2, y2;
+  double x1, y1, x2, y2;
   int x, y, width, height;
-  float rx1, rx2, ry1, ry2;
+  double rx1, rx2, ry1, ry2;
   register int i, j, ix, iy, ind, color;
   int swapx, swapy, count, chars_per_line;
   unsigned char data[3];
@@ -1586,7 +1586,7 @@ void cellarray(float xmin, float xmax, float ymin, float ymax,
 
 void gks_drv_pdf(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars, void **ptr)
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars, void **ptr)
 {
   p = (ws_state_list *) * ptr;
 

@@ -6,12 +6,13 @@
 extern "C" {
 #endif
 
+#define __STDC_CONSTANT_MACROS
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/mathematics.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
-#include <fitz.h>
+#include <mupdf/fitz.h>
 
 typedef struct movie_t_ *movie_t;
 typedef struct frame_t_ *frame_t;

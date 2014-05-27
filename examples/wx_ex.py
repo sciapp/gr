@@ -1,8 +1,11 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+GR / wxPython interoperability example
+"""
 
 import wx
 import os
-import Image
 import gr
 
 # get_address = lambda obj_str: obj_str[obj_str.find('0x'): obj_str.find('>', obj_str.find('0x'))]
@@ -58,15 +61,17 @@ class GrWidget(wx.Panel):
         
         x = range(1, 481)
         y = range(1, 481)
-        im = Image.open('surf.png')
-        z = list(im.getdata())
+        w, h, d = gr.readimage(
+            os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                         'surf.png'))
+        z = map(lambda x: x & 0xff, d)
 
         gr.setviewport(0, 1, 0, 1)
         gr.setwindow(1, 480, 1, 480)
         gr.setspace(1, 1000, 30, 80)
         gr.setcolormap(3)
-        gr.surface(480, 480, x, y, z, 6)
-        gr.contour(480, 480, 0, x, y, range(1), z, 0)
+        gr.surface(x, y, z, 6)
+        gr.contour(x, y, range(1), z, 0)
         gr.updatews()
         
         self.Refresh()

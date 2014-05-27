@@ -34,7 +34,7 @@
 #define BOTTOM (1<<2)
 #define TOP    (1<<3)
 
-#define FEPS 1.0E-6
+#define FEPS 1.0E-09
 
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
     xn = gkss->a[tnr] * (xw) + gkss->b[tnr]; \
@@ -569,7 +569,7 @@ int pattern[120][33] =
 };
 
 static
-float rgb[1000][3] =
+double rgb[MAX_COLOR][3] =
 {
   { 1.00000, 1.00000, 1.00000 },
   { 0.00000, 0.00000, 0.00000 },
@@ -1554,7 +1554,7 @@ float rgb[1000][3] =
   { 1.00000, 0.70196, 0.00000 },
   { 0.50196, 0.24314, 0.45882 },
   { 1.00000, 0.40784, 0.00000 },
-  { 0.65098, 0.74118, 0.84314 },
+  { 0.35156, 0.64063, 0.75391 },
   { 0.75686, 0.00000, 0.12549 },
   { 0.80784, 0.63529, 0.38431 },
   { 0.50588, 0.43922, 0.40000 },
@@ -1571,27 +1571,6 @@ float rgb[1000][3] =
   { 0.34902, 0.20000, 0.08235 },
   { 0.94510, 0.22745, 0.07451 },
   { 0.13725, 0.17255, 0.08627 }
-};
-
-static
-int pix[256] =
-{
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
 static
@@ -1663,7 +1642,7 @@ const char *symbol2utf[256] = {
 };
 
 static
-float rx = 0, ry = 0, seglen = 0;
+double rx = 0, ry = 0, seglen = 0;
 
 static
 int newseg = 0, idash = 0, dtype = 0;
@@ -1717,26 +1696,26 @@ static
 int greek[4] = { 4, 7, 10, 7 };
 
 static
-float xfac[4] = { 1, -1, 0, 0 };
+double xfac[4] = { 1, -1, 0, 0 };
 
 static
-float yfac[4] = { 0, 0, 1, -1 };
+double yfac[4] = { 0, 0, 1, -1 };
 
 static
 char Base64[] =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 static
-float cxl, cxr, cyb, cyt;
+double cxl, cxr, cyb, cyt;
 
 static
-float bx = 1, by = 0, ux = 0, uy = 1;
+double bx = 1, by = 0, ux = 0, uy = 1;
 
 static
-float sin_f = 0, cos_f = 1;
+double sin_f = 0, cos_f = 1;
 
 static
-float cur_wn[4], cur_vp[4];
+double cur_wn[4], cur_vp[4];
 
 static
 gks_state_list_t *gkss = NULL;
@@ -1854,7 +1833,7 @@ void gks_set_pattern_array(int index, int *pa)
     }
 }
 
-void gks_inq_rgb(int index, float *red, float *green, float *blue)
+void gks_inq_rgb(int index, double *red, double *green, double *blue)
 {
   if (index >= 0 && index < MAX_COLOR)
     {
@@ -1864,7 +1843,7 @@ void gks_inq_rgb(int index, float *red, float *green, float *blue)
     }
 }
 
-void gks_set_rgb(int index, float red, float green, float blue)
+void gks_set_rgb(int index, double red, double green, double blue)
 {
   if (index >= 0 && index < MAX_COLOR)
     {
@@ -1874,31 +1853,11 @@ void gks_set_rgb(int index, float red, float green, float blue)
     }
 }
 
-void gks_inq_pixel(int index, int *pixel)
-{
-  int i;
-
-  if (index >= 588)
-    i = 80 + (index - 588) / 56 * 12 + nint((index - 588) % 56 * 11.0 / 56.0);
-  else if (index >= 257)
-    i = 8 + nint((index - 257) / 330.0 * (72 - 1));
-  else
-    i = index;
-
-  if (i < 256)
-    *pixel = pix[i];
-}
-
-void gks_set_pixel(int index, int pixel)
-{
-  if (index < 256)
-    pix[index] = pixel;
-}
-
-void gks_fit_ws_viewport(float *viewport, float xmax, float ymax, float margin)
+void gks_fit_ws_viewport(double *viewport, double xmax, double ymax,
+                         double margin)
 {
   register int i;
-  float w, h, ratio, half_margin;
+  double w, h, ratio, half_margin;
 
 /* fit viewport into available device space */
 
@@ -1933,7 +1892,7 @@ void gks_fit_ws_viewport(float *viewport, float xmax, float ymax, float margin)
     }
 }
 
-void gks_set_norm_xform(int tnr, float *window, float *viewport)
+void gks_set_norm_xform(int tnr, double *window, double *viewport)
 {
   gkss->a[tnr] = (viewport[1] - viewport[0]) / (window[1] - window[0]);
   gkss->b[tnr] = viewport[0] - window[0] * gkss->a[tnr];
@@ -1941,14 +1900,14 @@ void gks_set_norm_xform(int tnr, float *window, float *viewport)
   gkss->d[tnr] = viewport[2] - window[2] * gkss->c[tnr];
 }
 
-void gks_WC_to_NDC(int tnr, float *x, float *y)
+void gks_WC_to_NDC(int tnr, double *x, double *y)
 {
   WC_to_NDC(*x, *y, tnr, *x, *y);
 }
 
-void gks_seg_xform(float *x, float *y)
+void gks_seg_xform(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1] + gkss->mat[2][0];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1] + gkss->mat[2][1];
@@ -1956,16 +1915,16 @@ void gks_seg_xform(float *x, float *y)
 }
 
 static
-void gks_seg_xform_rel(float *x, float *y)
+void gks_seg_xform_rel(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1];
   *x = xx;
 }
 
-void gks_set_dev_xform(gks_state_list_t *s, float *window, float *viewport)
+void gks_set_dev_xform(gks_state_list_t *s, double *window, double *viewport)
 {
   register int i;
   int tnr;
@@ -1998,7 +1957,7 @@ void gks_set_dev_xform(gks_state_list_t *s, float *window, float *viewport)
   cyt += FEPS;
 }
 
-void gks_inq_dev_xform(float *window, float *viewport)
+void gks_inq_dev_xform(double *window, double *viewport)
 {
   register int i;
 
@@ -2012,8 +1971,8 @@ void gks_inq_dev_xform(float *window, float *viewport)
 void gks_set_chr_xform(void)
 {
   int tnr;
-  float chux, chuy, scale, chh, chxp, slant;
-  float rad;
+  double chux, chuy, scale, chh, chxp, slant;
+  double rad;
 
   tnr = gkss->cntnr;
 
@@ -2050,9 +2009,9 @@ void gks_set_chr_xform(void)
 }
 
 static
-void gks_chr_xform(float *x, float *y, int size)
+void gks_chr_xform(double *x, double *y, int size)
 {
-  float xn, yn;
+  double xn, yn;
 
   xn = *x / size;
   yn = *y / size;
@@ -2064,9 +2023,9 @@ void gks_chr_xform(float *x, float *y, int size)
   *y = by * xn + uy * yn;
 }
 
-void gks_chr_height(float *height)
+void gks_chr_height(double *height)
 {
-  float w, h;
+  double w, h;
 
   w = 0;
   h = sqrt(ux * ux + uy * uy);
@@ -2076,11 +2035,11 @@ void gks_chr_height(float *height)
 }
 
 void
-gks_get_dash(int ltype, float scale, char *dash)
+gks_get_dash(int ltype, double scale, char *dash)
 {
   int i, len;
   char buf[20];
-  float value;
+  double value;
 
   len = dash_table[ltype + 30][0];
   strcpy(dash, "[");
@@ -2094,10 +2053,10 @@ gks_get_dash(int ltype, float scale, char *dash)
 }
 
 void
-gks_get_dash_list(int ltype, float scale, int list[10])
+gks_get_dash_list(int ltype, double scale, int list[10])
 {
   int i, len;
-  float value;
+  double value;
 
   if (scale < 1)
     scale = 1;
@@ -2112,7 +2071,7 @@ gks_get_dash_list(int ltype, float scale, int list[10])
 }
 
 void
-gks_move(float x, float y, void (*move)(float, float))
+gks_move(double x, double y, void (*move)(double, double))
 {
   rx = x;
   ry = y;
@@ -2121,12 +2080,12 @@ gks_move(float x, float y, void (*move)(float, float))
 }
 
 void
-gks_dash(
-  float x, float y, void (*move)(float, float), void (*draw)(float, float))
+gks_dash(double x, double y, void (*move)(double, double),
+         void (*draw)(double, double))
 {
-  float diag, dash, dist;
+  double diag, dash, dist;
   int dark, itempa, len;
-  float dx, dy, xd, yd;
+  double dx, dy, xd, yd;
 
   if (dtype == 1 || dtype == 0)
     {
@@ -2197,7 +2156,7 @@ gks_dash(
 }
 
 static
-int clip_code(float x, float y)
+int clip_code(double x, double y)
 {
   register int code = 0;
 
@@ -2215,10 +2174,10 @@ int clip_code(float x, float y)
 }
 
 static
-int clip_line(float *x0, float *y0, float *x1, float *y1)
+int clip_line(double *x0, double *y0, double *x1, double *y1)
 {
   register int c, c0, c1;
-  register float x = 0, y = 0;
+  register double x = 0, y = 0;
 
   c0 = clip_code(*x0, *y0);
   c1 = clip_code(*x1, *y1);
@@ -2266,10 +2225,10 @@ int clip_line(float *x0, float *y0, float *x1, float *y1)
   return 1;
 }
 
-void gks_emul_polyline(int n, float *px, float *py, int ltype, int tnr,
-  void (*move)(float x, float y), void (*draw)(float x, float y))
+void gks_emul_polyline(int n, double *px, double *py, int ltype, int tnr,
+  void (*move)(double x, double y), void (*draw)(double x, double y))
 {
-  float x0, y0, x, y, x1, y1;
+  double x0, y0, x, y, x1, y1;
   int clip = 1, visible;
   register int i, j, m;
 
@@ -2314,11 +2273,11 @@ void gks_emul_polyline(int n, float *px, float *py, int ltype, int tnr,
 }
 
 void gks_emul_polymarker(
-  int n, float *px, float *py, void (*marker)(float x, float y, int mtype))
+  int n, double *px, double *py, void (*marker)(double x, double y, int mtype))
 {
   register int i;
   int tnr, mtype;
-  float xn, yn;
+  double xn, yn;
 
   tnr = gkss->cntnr;
   mtype = gkss->mtype;
@@ -2400,17 +2359,17 @@ void inq_text_extent(
 }
 
 static
-void draw_character(float x, float y, char chr, int font,
-  void (*polyline)(int n, float *px, float *py, int ltype, int tnr),
-  void (*fillarea)(int n, float *px, float *py, int tnr),
+void draw_character(double x, double y, char chr, int font,
+  void (*polyline)(int n, double *px, double *py, int ltype, int tnr),
+  void (*fillarea)(int n, double *px, double *py, int tnr),
   int flag)
 {
   register int i;
   stroke_data_t s;
   int xmin, xmax, ymin, ymax, xc, yc, n;
-  float xn, yn, px[64], py[64];
-  float window[4], viewport[4], mszsc;
-  float scalex = 0, scaley = 0, center = 0, half = 0;
+  double xn, yn, px[64], py[64];
+  double window[4], viewport[4], mszsc;
+  double scalex = 0, scaley = 0, center = 0, half = 0;
 
   gks_lookup_font(gkss->fontfile, gkss->version, font, chr, &s);
 
@@ -2512,13 +2471,13 @@ void draw_character(float x, float y, char chr, int font,
     }
 }
 
-void gks_emul_text(float px, float py, int nchars, char *chars,
-  void (*polyline)(int n, float *px, float *py, int ltype, int tnr),
-  void (*fillarea)(int n, float *px, float *py, int tnr))
+void gks_emul_text(double px, double py, int nchars, char *chars,
+  void (*polyline)(int n, double *px, double *py, int ltype, int tnr),
+  void (*fillarea)(int n, double *px, double *py, int tnr))
 {
   register int i;
   int tnr, font, prec, alh, alv, path;
-  float xn, yn, chsp, ax, ay, spacex, spacey;
+  double xn, yn, chsp, ax, ay, spacex, spacey;
   int txx, size, bottom, base, cap, top, space;
 
   tnr = gkss->cntnr;
@@ -2605,7 +2564,7 @@ void gks_emul_text(float px, float py, int nchars, char *chars,
 }
 
 static
-void minmax(int n, float *a, float *amin, float *amax)
+void minmax(int n, double *a, double *amin, double *amax)
 {
   register int i;
 
@@ -2621,12 +2580,12 @@ void minmax(int n, float *a, float *amin, float *amax)
 
 static
 void calc_intersect(
-  float x1, float y1, float x2, float y2,
-  float x3, float y3, float x4, float y4,
-  float *xi, float *yi, int *flag)
+  double x1, double y1, double x2, double y2,
+  double x3, double y3, double x4, double y4,
+  double *xi, double *yi, int *flag)
 {
   int inf1, inf2;
-  float a1 = 0, a2 = 0;
+  double a1 = 0, a2 = 0;
 
   inf1 = fabs(x1 - x2) <= FEPS;
   if (!inf1)
@@ -2668,11 +2627,11 @@ void calc_intersect(
 }
 
 static
-void sort(int n, float *x, float *y, int inc)
+void sort(int n, double *x, double *y, int inc)
 {
   register int i, j;
   int flag;
-  float tmp;
+  double tmp;
 
   for (i = 0; i < n; i++)
     for (j = i + 1; j < n; j++)
@@ -2687,15 +2646,15 @@ void sort(int n, float *x, float *y, int inc)
 }
 
 static
-void fill(int n, float *px, float *py, int tnr,
-  float x0, float xinc, float dx, float xend,
-  float y0, float yinc, float dy, float yend,
-  void (*polyline)(int n, float *px, float *py, int ltype, int tnr))
+void fill(int n, double *px, double *py, int tnr,
+  double x0, double xinc, double dx, double xend,
+  double y0, double yinc, double dy, double yend,
+  void (*polyline)(int n, double *px, double *py, int ltype, int tnr))
 {
-  float x1, x2, x3, x4, xi, epsx;
-  float y1, y2, y3, y4, yi, epsy;
+  double x1, x2, x3, x4, xi, epsx;
+  double y1, y2, y3, y4, yi, epsy;
   int i, im1, l, ni, flag, inc;
-  float sx[128], sy[128];
+  double sx[128], sy[128];
 
   epsx = fabs((xend - x0) * 1.0E-5);
   epsy = fabs((yend - y0) * 1.0E-5);
@@ -2728,7 +2687,7 @@ void fill(int n, float *px, float *py, int tnr,
 	  calc_intersect(x1, y1, x2, y2, x3, y3, x4, y4, &xi, &yi, &flag);
           if (flag)
 	    {
-	      float xmin, xmax, ymin, ymax;
+	      double xmin, xmax, ymin, ymax;
 
 	      xmin = MIN(x3, x4);
 	      xmax = MAX(x3, x4);
@@ -2763,12 +2722,12 @@ void fill(int n, float *px, float *py, int tnr,
     }
 }
 
-void gks_emul_fillarea(int n, float *px, float *py, int tnr,
-  void (*polyline)(int n, float *px, float *py, int ltype, int tnr),
-  float yres)
+void gks_emul_fillarea(int n, double *px, double *py, int tnr,
+  void (*polyline)(int n, double *px, double *py, int ltype, int tnr),
+  double yres)
 {
   int ints, styli;
-  float xmin, xmax, ymin, ymax, inc, r;
+  double xmin, xmax, ymin, ymax, inc, r;
   int hatch;
 
   ints = gkss->ints;
@@ -2874,12 +2833,12 @@ int gks_get_ws_type(void)
   return wstype;
 }
 
-void gks_util_inq_text_extent(float px, float py, char *chars, int nchars,
-  float *cpx, float *cpy, float tx[4], float ty[4])
+void gks_util_inq_text_extent(double px, double py, char *chars, int nchars,
+  double *cpx, double *cpy, double tx[4], double ty[4])
 {
   register int i;
   int tnr, font, prec, alh, alv, path;
-  float x0, y0, xn, yn, chsp, ax, ay, aspace, spacex, spacey;
+  double x0, y0, xn, yn, chsp, ax, ay, aspace, spacex, spacey;
   int txx, size, bottom, base, cap, top, space;
 
   tnr = gkss->cntnr;
@@ -3172,4 +3131,23 @@ void gks_symbol2utf(unsigned char c, char *utf, size_t *len)
 {
   *len = strlen(symbol2utf[c]);
   memcpy(utf, symbol2utf[c], *len);
+}
+
+int *gks_resize(int *image, int width, int height, int w, int h)
+{
+  int x_ratio = (int) ((width  << 16) / w) + 1;
+  int y_ratio = (int) ((height << 16) / h) + 1;
+  int *result, i, j, x, y;
+
+  result = (int *) malloc(w * h * sizeof(int));
+  for (i = 0; i < h; i++)
+    {
+      for (j = 0; j < w; j++)
+        {
+          x = ((j * x_ratio) >> 16);
+          y = ((i * y_ratio) >> 16);
+          result[(i * w) + j] = image[(y * width) + x];
+        }                
+    }                
+  return result;
 }

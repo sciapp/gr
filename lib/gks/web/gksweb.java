@@ -55,61 +55,61 @@ public class gksweb extends Applet
   static final int GLIGKS = 4;
   static final int GKS5 = 5;
 
-  static final double FEPS = 1.0E-06;
+  static final double FEPS = 1.0E-09;
 
   private static class GKSStateList
   {
     int lindex;
     int ltype;
-    float lwidth;
+    double lwidth;
     int plcoli;
     int mindex;
     int mtype;
-    float mszsc;
+    double mszsc;
     int pmcoli;
     int tindex;
     int txfont;
     int txprec;
-    float chxp;
-    float chsp;
+    double chxp;
+    double chsp;
     int txcoli;
-    float chh;
-    float[] chup = {0, 1};
+    double chh;
+    double[] chup = {0, 1};
     int txp;
     int[] txal = {0, 0};
     int findex;
     int ints;
     int styli;
     int facoli;
-    float[][] window = new float[9][4];
-    float[][] viewport = new float[9][4];
+    double[][] window = new double[9][4];
+    double[][] viewport = new double[9][4];
     int cntnr;
     int clip;
     int opsg;
-    float[][] mat = {{1, 0}, {0, 1}, {0, 0}};
+    double[][] mat = {{1, 0}, {0, 1}, {0, 0}};
     int[] asf = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int wiss, version;
     int fontfile;
-    float txslant;
-    float shoff[] = {0, 0};
-    float blur;
-    float alpha;
-    float[] a = new float[9];
-    float[] b = new float[9];
-    float[] c = new float[9];
-    float[] d = new float[9];
+    double txslant;
+    double shoff[] = {0, 0};
+    double blur;
+    double alpha;
+    double[] a = new double[9];
+    double[] b = new double[9];
+    double[] c = new double[9];
+    double[] d = new double[9];
   }
 
   private static GKSStateList sl;
 
   private static class WSStateList
   {
-    float a, b, c, d;
+    double a, b, c, d;
     int width = 0, height = 0;
-    float[] window = new float[4];
-    float[] viewport = new float[4];
+    double[] window = new double[4];
+    double[] viewport = new double[4];
     int[][] rect = new int[9][4];
-    float cxl, cxr, cyb, cyt;
+    double cxl, cxr, cyb, cyt;
     double angle;
     double alpha;
     int capheight;
@@ -142,7 +142,7 @@ public class gksweb extends Applet
     return (int) Math.round(a);
   }
 
-  private static int[] NDCtoDC(float xn, float yn)
+  private static int[] NDCtoDC(double xn, double yn)
   {
     int xd, yd;
     xd = nint(ws.a * (xn) + ws.b);
@@ -150,29 +150,29 @@ public class gksweb extends Applet
     return new int[] {xd, yd};
   }
 
-  private static float[] WCtoNDC(float xw, float yw, int tnr)
+  private static double[] WCtoNDC(double xw, double yw, int tnr)
   {
-    float xn, yn;
+    double xn, yn;
     xn = sl.a[tnr] * xw + sl.b[tnr];
     yn = sl.c[tnr] * yw + sl.d[tnr];
-    return new float[] {xn, yn};
+    return new double[] {xn, yn};
   }
 
-  private static float[] WCtoNDCrel(float xw, float yw, int tnr)
+  private static double[] WCtoNDCrel(double xw, double yw, int tnr)
   {
-    float xn, yn;
+    double xn, yn;
     xn = sl.a[tnr] * xw;
     yn = sl.c[tnr] * yw;
-    return new float[] {xn, yn};
+    return new double[] {xn, yn};
   }
 
-  private static float[] charXform(float xrel, float yrel)
+  private static double[] charXform(double xrel, double yrel)
   {
-     float xx;
-     xx   = (float)(Math.cos(ws.alpha) * (xrel) - Math.sin(ws.alpha) * (yrel));
-     yrel = (float)(Math.sin(ws.alpha) * (xrel) + Math.cos(ws.alpha) * (yrel));
+     double xx;
+     xx   = (double)(Math.cos(ws.alpha) * (xrel) - Math.sin(ws.alpha) * (yrel));
+     yrel = (double)(Math.sin(ws.alpha) * (xrel) + Math.cos(ws.alpha) * (yrel));
      xrel = xx;
-     return new float[] {xrel, yrel};
+     return new double[] {xrel, yrel};
   }
 
   private static void initNormXform()
@@ -212,27 +212,27 @@ public class gksweb extends Applet
     ws.rect[tnr] = new int[] {xl, yb, xr, yt};
   }
 
-  private static float[] segXform(float x, float y)
+  private static double[] segXform(double x, double y)
   {
-    float xx;
+    double xx;
 
     xx = x * sl.mat[0][0] + y * sl.mat[0][1] + sl.mat[2][0];
     y  = x * sl.mat[1][0] + y * sl.mat[1][1] + sl.mat[2][1];
     x  = xx;
 
-    float result[] = {x, y};
+    double result[] = {x, y};
     return result;
   }
 
-  private static float[] segXformRel(float x, float y)
+  private static double[] segXformRel(double x, double y)
   {
-    float xx;
+    double xx;
 
     xx = x * sl.mat[0][0] + y * sl.mat[0][1];
     y  = x * sl.mat[1][0] + y * sl.mat[1][1];
     x  = xx;
 
-    float result[] = {x,y};
+    double result[] = {x,y};
     return result;
   }
 
@@ -261,7 +261,7 @@ public class gksweb extends Applet
       setClipRect(1);
   }
 
-  private static void setDevXform(float[] window, float[] viewport)
+  private static void setDevXform(double[] window, double[] viewport)
   {
     int tnr;
 
@@ -288,11 +288,11 @@ public class gksweb extends Applet
   }
 
   private static double bx = 1, by = 0, ux = 0, uy = 1;
-  private static float sin_f = 0, cos_f = 1;
+  private static double sin_f = 0, cos_f = 1;
 
-  private static float[] chrXform(float x, float y, int size)
+  private static double[] chrXform(double x, double y, int size)
   {
-    float xn, yn;
+    double xn, yn;
 
     xn = x / size;
     yn = y / size;
@@ -300,18 +300,18 @@ public class gksweb extends Applet
     xn = cos_f * xn - sin_f * yn;
     yn = cos_f * yn;
 
-    x = (float) (bx * xn + ux * yn);
-    y = (float) (by * xn + uy * yn);
+    x = (double) (bx * xn + ux * yn);
+    y = (double) (by * xn + uy * yn);
 
-    return new float[] {x,y};
+    return new double[] {x,y};
   }
 
   private static void setChrXform()
   {
     int tnr;
-    float chux, chuy, scale, chh, chxp, slant;
+    double chux, chuy, scale, chh, chxp, slant;
     double rad;
-    float[] xy;
+    double[] xy;
 
     tnr = sl.cntnr;
 
@@ -322,7 +322,7 @@ public class gksweb extends Applet
     slant = sl.txslant;
 
     /* scale to normalize the up vector */
-    scale = (float) Math.sqrt(chux * chux + chuy * chuy);
+    scale = (double) Math.sqrt(chux * chux + chuy * chuy);
     chux /= scale;
     chuy /= scale;
 
@@ -331,7 +331,7 @@ public class gksweb extends Applet
     uy = chuy * chh;
 
     /* normalize character up vector */
-    xy = WCtoNDCrel((float) ux, (float) uy, tnr);
+    xy = WCtoNDCrel((double) ux, (double) uy, tnr);
     ux = xy[0];
     uy = xy[1];
 
@@ -340,7 +340,7 @@ public class gksweb extends Applet
     by = -chux * chh;
 
     /* normalize character base vector */
-    xy = WCtoNDCrel((float) bx, (float) by, tnr);
+    xy = WCtoNDCrel((double) bx, (double) by, tnr);
     bx = xy[0];
     by = xy[1];
 
@@ -349,8 +349,8 @@ public class gksweb extends Applet
 
     rad = - slant / 180.0 * Math.PI;
 
-    cos_f = (float) Math.cos(rad);
-    sin_f = (float) Math.sin(rad);
+    cos_f = (double) Math.cos(rad);
+    sin_f = (double) Math.sin(rad);
   }
 
   static final int[] rgba =
@@ -521,7 +521,7 @@ public class gksweb extends Applet
     0xe5ffff, 0xedffff
   };
 
-  private static void setColorRep(int color, float red, float green, float blue)
+  private static void setColorRep(int color, double red, double green, double blue)
   {
     if (color >= 0 && color < rgba.length)
       rgba[color] = (nint(  red * 255) << 16) +
@@ -531,9 +531,9 @@ public class gksweb extends Applet
 
   private static int Color8Bit(int c)
   {
-    return c >= 588 ?
-           80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) :
-           c >= 257 ? 8 + nint((c - 257) / 330.0 * (72 - 1)) : c;
+    return c <= 256 || c >= 980 ? c :
+      c >= 588 ? 80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) :
+      8 + nint((c - 257) / 330.0 * (72 - 1));
   }
 
   static final int[][] dash_table =
@@ -595,28 +595,28 @@ public class gksweb extends Applet
     return list;
   }
 
-  private static void emulPolyline(int n, float[] px, float[] py,
-                                   int ltype, float lwidth, int tnr)
+  private static void emulPolyline(int n, double[] px, double[] py,
+                                   int ltype, double lwidth, int tnr)
   {
     int[] xpoints, ypoints;
     float[] dashList;
     Stroke savedStroke;
     BasicStroke stroke;
-    float[] xy;
+    double[] xy;
     int[] ixy;
 
     xpoints = new int[n];
     ypoints = new int[n];
 
-    dashList = getDashList(ltype, lwidth);
+    dashList = getDashList(ltype, (float) lwidth);
 
     Graphics2D g2 = (Graphics2D) g;
     savedStroke = g2.getStroke();
     if (ltype != 0 && ltype != 1)
-      stroke = new BasicStroke(lwidth, BasicStroke.CAP_BUTT,
+      stroke = new BasicStroke((float) lwidth, BasicStroke.CAP_BUTT,
                                BasicStroke.JOIN_MITER, 1, dashList, 0);
     else
-      stroke = new BasicStroke(lwidth);
+      stroke = new BasicStroke((float) lwidth);
     g2.setStroke(stroke);
 
     for (int i = 0; i < n; i++)
@@ -638,10 +638,10 @@ public class gksweb extends Applet
     g.setColor(color);
   }
 
-  private static void polyline(int n, float[] px, float[] py)
+  private static void polyline(int n, double[] px, double[] py)
   {
     int ln_type, ln_color;
-    float ln_width;
+    double ln_width;
     int width;
 
     ln_type  = sl.asf[0] != 0 ? sl.ltype  : sl.lindex;
@@ -649,7 +649,7 @@ public class gksweb extends Applet
     ln_color = sl.asf[2] != 0 ? Color8Bit(sl.plcoli) : 1;
 
     if (sl.version > 4)
-      width = nint(ln_width * ws.height / 500.0f);
+      width = nint(ln_width * ws.height / 500.0);
     else
       width = nint(ln_width);
 
@@ -740,22 +740,22 @@ public class gksweb extends Applet
      0}
   };
 
-  private static void drawMarker(float[] ndc, int mtype, float mscale,
+  private static void drawMarker(double[] ndc, int mtype, double mscale,
                                  int mcolor)
   {
     int r, d, i;
     int pc, op;
-    float scale, xr, yr;
-    float[] xy;
+    double scale, xr, yr;
+    double[] xy;
     int[] ixy;
     int[][] p;
 
     if (sl.version > 4)
-      mscale *= ws.height / 500.0f;
+      mscale *= ws.height / 500.0;
 
     r = (int) (3 * mscale);
     d = 2 * r;
-    scale = mscale / 3.0f;
+    scale = mscale / 3.0;
 
     xr = r;
     yr = 0;
@@ -853,12 +853,12 @@ public class gksweb extends Applet
     while (op != 0);
   }
 
-  private static void markerRoutine(int n, float[] px, float[] py,
-                                    int mtype, float mscale, int mcolor)
+  private static void markerRoutine(int n, double[] px, double[] py,
+                                    int mtype, double mscale, int mcolor)
   {
-    float[] clrt = sl.viewport[sl.cntnr];
+    double[] clrt = sl.viewport[sl.cntnr];
     int i, draw;
-    float[] ndc;
+    double[] ndc;
 
     for (i = 0; i < n; i++)
       {
@@ -881,10 +881,10 @@ public class gksweb extends Applet
       }
   }
 
-  private static void polymarker(int n,float[] px, float[] py)
+  private static void polymarker(int n,double[] px, double[] py)
   {
     int mk_type, mk_color, ln_width;
-    float mk_size;
+    double mk_size;
 
     mk_type = sl.asf[3] != 0 ? sl.mtype : sl.mindex;
     mk_size = sl.asf[4] != 0 ? sl.mszsc : 1;
@@ -892,7 +892,7 @@ public class gksweb extends Applet
 
     if (sl.version > 4)
       {
-        ln_width = nint(ws.height / 500.0f);
+        ln_width = nint(ws.height / 500.0);
         if (ln_width < 1)
           ln_width = 1;
       }
@@ -1041,7 +1041,7 @@ public class gksweb extends Applet
         l = numseg = 0;
         onoff = pattern[style][j + 1] & 0x01;
         if (onoff == 1)
-          seglen[numseg++] = 0.0f;
+          seglen[numseg++] = 0.0;
         for (k = 0; k < len; k++)
         {
           bit = (pattern[style][j + 1] >> k) & 0x01;
@@ -1065,11 +1065,11 @@ public class gksweb extends Applet
     return brush;
   }
 
-  private static void fillRoutine(int n, float[] px, float[] py,
+  private static void fillRoutine(int n, double[] px, double[] py,
                                   int tnr, int fl_inter, int fl_style)
   {
     int i;
-    float[] xy;
+    double[] xy;
     int[] ixy;
     int[][] p = new int[2][n];
     float[][] dashList;
@@ -1126,12 +1126,12 @@ public class gksweb extends Applet
       }
   }
 
-  private static void fillareaLineRoutine(int n, float[] px, float[] py,
+  private static void fillareaLineRoutine(int n, double[] px, double[] py,
                                           int linetype, int tnr)
   {
     int i, x0, y0, xi, yi, xim1, yim1;
     int[] ixy;
-    float[] xy;
+    double[] xy;
     int[][] p;
     int npoints;
 
@@ -1178,7 +1178,7 @@ public class gksweb extends Applet
   static final int[] predef_ints = { 0, 1, 3, 3, 3 };
   static final int[] predef_styli = { 1, 1, 1, 2, 3 };
 
-  private static void fillarea(int n, float[] px, float[] py)
+  private static void fillarea(int n, double[] px, double[] py)
   {
     int fl_inter, fl_style, fl_color, ln_width;
     Stroke savedStroke;
@@ -1189,7 +1189,7 @@ public class gksweb extends Applet
 
     if (sl.version > 4)
       {
-        ln_width = nint(ws.height / 500.0f);
+        ln_width = nint(ws.height / 500.0);
         if (ln_width < 1)
           ln_width = 1;
       }
@@ -1262,15 +1262,15 @@ public class gksweb extends Applet
     9120,  9124,  9130,  9126,  9131,  9132,  9133,   255
   };
 
-  private static float[] xfac = {0.0f, 0.0f, -0.5f, -1.0f};
-  private static float[] yfac = {0.0f, -1.2f, -1.0f, -0.5f, 0, 0.2f};
+  private static double[] xfac = {0.0, 0.0, -0.5, -1.0};
+  private static double[] yfac = {0.0, -1.2, -1.0, -0.5, 0, 0.2};
 
-  private static void textRoutine(float x, float y, String text)
+  private static void textRoutine(double x, double y, String text)
   {
     int i, ch, xstart, ystart, width;
-    float xrel, yrel, ax, ay;
+    double xrel, yrel, ax, ay;
     int[] ixy;
-    float[] xy;
+    double[] xy;
     String t = "";
 
     Graphics2D g2 = (Graphics2D) g;
@@ -1325,15 +1325,15 @@ public class gksweb extends Applet
     25, 12,  8, 17, 21, 29, 13,  4
   };
 
-  static final float[] capheights = {
-    0.662f, 0.660f, 0.681f, 0.662f,
-    0.729f, 0.729f, 0.729f, 0.729f,
-    0.583f, 0.583f, 0.633f, 0.633f,
-    0.667f,
-    0.681f, 0.681f, 0.681f, 0.681f,
-    0.722f, 0.722f, 0.722f, 0.722f,
-    0.739f, 0.739f, 0.739f, 0.739f,
-    0.694f, 0.693f, 0.683f, 0.683f
+  static final double[] capheights = {
+    0.662, 0.660, 0.681, 0.662,
+    0.729, 0.729, 0.729, 0.729,
+    0.583, 0.583, 0.633, 0.633,
+    0.667,
+    0.681, 0.681, 0.681, 0.681,
+    0.722, 0.722, 0.722, 0.722,
+    0.739, 0.739, 0.739, 0.739,
+    0.694, 0.693, 0.683, 0.683
   };
 
   static final String[] fonts = {
@@ -1344,11 +1344,11 @@ public class gksweb extends Applet
   private static void setFont(int font)
   {
     double scale;
-    float ux, uy;
-    float[] xy;
+    double ux, uy;
+    double[] xy;
     int fontNum, size;
     int style = Font.PLAIN;
-    float width, height, capheight;
+    double width, height, capheight;
 
     font = Math.abs(font);
     if (font >= 101 && font <= 129)
@@ -1366,19 +1366,19 @@ public class gksweb extends Applet
     if (ws.angle < 0) ws.angle += 360;
 
     scale = Math.sqrt(sl.chup[0] * sl.chup[0] + sl.chup[1] * sl.chup[1]);
-    ux = (float) (sl.chup[0] / scale * sl.chh);
-    uy = (float) (sl.chup[1] / scale * sl.chh);
+    ux = (double) (sl.chup[0] / scale * sl.chh);
+    uy = (double) (sl.chup[1] / scale * sl.chh);
     xy = WCtoNDCrel(ux, uy, sl.cntnr);
     ux = xy[0];
     uy = xy[1];
 
     width = 0;
-    height = (float) Math.sqrt(ux * ux + uy * uy);
+    height = (double) Math.sqrt(ux * ux + uy * uy);
     xy = segXformRel(width, height);
     width = xy[0];
     height = xy[1];
 
-    height = (float) Math.sqrt(width * width + height * height);
+    height = (double) Math.sqrt(width * width + height * height);
     capheight = nint(height * Math.abs(ws.c) + 1);
     ws.capheight = nint(capheight);
 
@@ -1395,18 +1395,18 @@ public class gksweb extends Applet
     g.setFont(new Font(fonts[ws.family], style, size));
   }
 
-  private static void emulText(float px, float py, int nchars, String text)
+  private static void emulText(double px, double py, int nchars, String text)
   {
     int[] xfac = { 1, -1, 0, 0 };
     int[] yfac = { 0, 0, 1, -1 };
 
     int i;
     int tnr, font, prec, alh, alv, path;
-    float xn, yn, chsp, ax, ay, spacex, spacey;
+    double xn, yn, chsp, ax, ay, spacex, spacey;
     int[] txx, size, bottom, base, cap, top;
     int space;
     char[] chars = text.toCharArray();
-    float[] xy;
+    double[] xy;
 
     tnr = sl.cntnr;
     xy = WCtoNDC(px, py, tnr);
@@ -1443,7 +1443,7 @@ public class gksweb extends Applet
     switch (alh)
       {
       case GKS_K_TEXT_HALIGN_CENTER:
-        ax = -0.5f * txx[0];
+        ax = -0.5 * txx[0];
         break;
       case GKS_K_TEXT_HALIGN_RIGHT:
         ax = -txx[0];
@@ -1468,7 +1468,7 @@ public class gksweb extends Applet
         ay = base[0] - cap[0];
         break;
       case GKS_K_TEXT_VALIGN_HALF:
-        ay = (base[0] - cap[0]) * 0.5f;
+        ay = (base[0] - cap[0]) * 0.5;
         break;
       case GKS_K_TEXT_VALIGN_BOTTOM:
         ay = base[0] - bottom[0];
@@ -1564,28 +1564,28 @@ public class gksweb extends Applet
     top[0] = s.top;
   }
 
-  private static void drawCharacter(float x, float y, char chr,
+  private static void drawCharacter(double x, double y, char chr,
                                     int font, int flag)
   {
     int i;
     int xmin, xmax, ymin, ymax, xc, yc, n;
-    float xn, yn;
-    float[] px, py;
+    double xn, yn;
+    double[] px, py;
     int[] xpoints, ypoints;
-    float[] window, viewport;
-    float mszsc;
-    float scalex = 0, scaley = 0, center = 0, half = 0;
+    double[] window, viewport;
+    double mszsc;
+    double scalex = 0, scaley = 0, center = 0, half = 0;
     int[] dcp;
-    float[] xy;
+    double[] xy;
     strokeData s = new strokeData();
 
-    window = new float[4];
-    viewport = new float[4];
+    window = new double[4];
+    viewport = new double[4];
 
     lookupFont(sl.version, font, chr, s);
 
-    px = new float[64];
-    py = new float[64];
+    px = new double[64];
+    py = new double[64];
     xpoints = new int[64];
     ypoints = new int[64];
 
@@ -1625,15 +1625,15 @@ public class gksweb extends Applet
           }
 
         mszsc = sl.mszsc;
-        scalex = 0.001f * mszsc / (xmax - xmin);
-        scaley = 0.001f * mszsc / (ymax - ymin);
+        scalex = 0.001 * mszsc / (xmax - xmin);
+        scaley = 0.001 * mszsc / (ymax - ymin);
         scalex *= (ws.window[1] - ws.window[0]) /
                   (ws.viewport[1] - ws.viewport[0]);
         scaley *= (ws.window[3] - ws.window[2]) /
                   (ws.viewport[3] - ws.viewport[2]);
 
-        center = 0.5f * (xmin + xmax);
-        half = 0.5f * (ymin + ymax);
+        center = 0.5 * (xmin + xmax);
+        half = 0.5 * (ymin + ymax);
       }
 
     n = 0;
@@ -1914,10 +1914,10 @@ public class gksweb extends Applet
   static final int[] predef_font = { 1, 1, 1, -2, -3, -4 };
   static final int[] predef_prec = { 0, 1, 2, 2, 2, 2 };
 
-  private static void text(float px, float py, String text)
+  private static void text(double px, double py, String text)
   {
     int tx_font, tx_prec, tx_color, ln_width;
-    float[] xy;
+    double[] xy;
 
     tx_font  = sl.asf[6] != 0 ? sl.txfont : predef_font[sl.tindex - 1];
     tx_prec  = sl.asf[6] != 0 ? sl.txprec : predef_prec[sl.tindex - 1];
@@ -1925,7 +1925,7 @@ public class gksweb extends Applet
 
     if (sl.version > 4)
       {
-        ln_width = nint(ws.height / 500.0f);
+        ln_width = nint(ws.height / 500.0);
         if (ln_width < 1)
           ln_width = 1;
       }
@@ -1949,7 +1949,7 @@ public class gksweb extends Applet
       emulText(px, py, text.length(), text);
   }
 
-  private static void cellarray(float xmin, float xmax, float ymin, float ymax,
+  private static void cellarray(double xmin, double xmax, double ymin, double ymax,
                                 int dx, int dy, int dimx, int[] colia,
                                 int true_color)
   {
@@ -1958,7 +1958,7 @@ public class gksweb extends Applet
     int i, j, ix, iy, ind, rgb;
     int swapx, swapy;
     BufferedImage bi;
-    float[] xy;
+    double[] xy;
     int[] ixy;
 
     xy = WCtoNDC(xmin, ymax, sl.cntnr);
@@ -2025,7 +2025,7 @@ public class gksweb extends Applet
     return arg;
   }
 
-  private static float RESOLVE_float()
+  private static double RESOLVE_double()
   {
     int nbytes = 4;
     int arg = 0;
@@ -2041,21 +2041,21 @@ public class gksweb extends Applet
   {
     sl.lindex = RESOLVE_int();
     sl.ltype = RESOLVE_int();
-    sl.lwidth = RESOLVE_float();
+    sl.lwidth = RESOLVE_double();
     sl.plcoli = RESOLVE_int();
     sl.mindex = RESOLVE_int();
     sl.mtype = RESOLVE_int();
-    sl.mszsc = RESOLVE_float();
+    sl.mszsc = RESOLVE_double();
     sl.pmcoli = RESOLVE_int();
     sl.tindex = RESOLVE_int();
     sl.txfont = RESOLVE_int();
     sl.txprec = RESOLVE_int();
-    sl.chxp = RESOLVE_float();
-    sl.chsp = RESOLVE_float();
+    sl.chxp = RESOLVE_double();
+    sl.chsp = RESOLVE_double();
     sl.txcoli = RESOLVE_int();
-    sl.chh = RESOLVE_float();
+    sl.chh = RESOLVE_double();
     for (int i = 0; i < 2; i++)
-      sl.chup[i] = RESOLVE_float();
+      sl.chup[i] = RESOLVE_double();
     sl.txp = RESOLVE_int();
     for (int i = 0; i < 2; i++)
       sl.txal[i] = RESOLVE_int();
@@ -2066,17 +2066,17 @@ public class gksweb extends Applet
 
     for (int i = 0; i < 9; i++)
       for (int j = 0; j < 4; j++)
-        sl.window[i][j] = RESOLVE_float();
+        sl.window[i][j] = RESOLVE_double();
     for (int i = 0; i < 9; i++)
       for (int j = 0; j < 4; j++)
-        sl.viewport[i][j] = RESOLVE_float();
+        sl.viewport[i][j] = RESOLVE_double();
     sl.cntnr = RESOLVE_int();
     sl.clip = RESOLVE_int();
 
     sl.opsg = RESOLVE_int();
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 2; j++)
-        sl.mat[i][j] = RESOLVE_float();
+        sl.mat[i][j] = RESOLVE_double();
 
     for (int i = 0; i < 13; i++)
       sl.asf[i] = RESOLVE_int();
@@ -2085,20 +2085,20 @@ public class gksweb extends Applet
     sl.version = RESOLVE_int();
     sl.fontfile = RESOLVE_int();
 
-    sl.txslant = RESOLVE_float();
+    sl.txslant = RESOLVE_double();
     for (int i = 0; i < 2; i++)
-      sl.shoff[i] = RESOLVE_float();
-    sl.blur = RESOLVE_float();
-    sl.alpha = RESOLVE_float();
+      sl.shoff[i] = RESOLVE_double();
+    sl.blur = RESOLVE_double();
+    sl.alpha = RESOLVE_double();
 
     for (int i = 0; i < 9; i++)
-      sl.a[i] = RESOLVE_float();
+      sl.a[i] = RESOLVE_double();
     for (int i = 0; i < 9; i++)
-      sl.b[i] = RESOLVE_float();
+      sl.b[i] = RESOLVE_double();
     for (int i = 0; i < 9; i++)
-      sl.c[i] = RESOLVE_float();
+      sl.c[i] = RESOLVE_double();
     for (int i = 0; i < 9; i++)
-      sl.d[i] = RESOLVE_float();
+      sl.d[i] = RESOLVE_double();
   }
 
   private static void interp(byte[] str)
@@ -2112,8 +2112,8 @@ public class gksweb extends Applet
     int sx = 0;
     int sy = 0;
     int len_c_arr = 0;
-    float[] f_arr_1 = null;
-    float[] f_arr_2 = null;
+    double[] f_arr_1 = null;
+    double[] f_arr_2 = null;
     byte[] c_arr = null;
     int i;
 
@@ -2138,19 +2138,19 @@ public class gksweb extends Applet
           case 15:      /* fill area */
             i_arr = new int[1];
             i_arr[0] = RESOLVE_int();
-            f_arr_1 = new float[i_arr[0]];
-            f_arr_2 = new float[i_arr[0]];
+            f_arr_1 = new double[i_arr[0]];
+            f_arr_2 = new double[i_arr[0]];
             for (i = 0; i < f_arr_1.length; i++)
-              f_arr_1[i] = RESOLVE_float();
+              f_arr_1[i] = RESOLVE_double();
             for (i = 0; i < f_arr_2.length; i++)
-              f_arr_2[i] = RESOLVE_float();
+              f_arr_2[i] = RESOLVE_double();
             break;
 
           case 14:      /* text */
-            f_arr_1 = new float[1];
-            f_arr_2 = new float[1];
-            f_arr_1[0] = RESOLVE_float();
-            f_arr_2[0] = RESOLVE_float();
+            f_arr_1 = new double[1];
+            f_arr_2 = new double[1];
+            f_arr_1[0] = RESOLVE_double();
+            f_arr_2[0] = RESOLVE_double();
             len_c_arr = RESOLVE_int();
             c_arr = new byte[132];
             for (i = 0; i < c_arr.length; i++)
@@ -2159,12 +2159,12 @@ public class gksweb extends Applet
 
           case 16:      /* cell array */
           case 201:     /* draw image */
-            f_arr_1 = new float[2];
-            f_arr_2 = new float[2];
-            f_arr_1[0] = RESOLVE_float();
-            f_arr_1[1] = RESOLVE_float();
-            f_arr_2[0] = RESOLVE_float();
-            f_arr_2[1] = RESOLVE_float();
+            f_arr_1 = new double[2];
+            f_arr_2 = new double[2];
+            f_arr_1[0] = RESOLVE_double();
+            f_arr_1[1] = RESOLVE_double();
+            f_arr_2[0] = RESOLVE_double();
+            f_arr_2[1] = RESOLVE_double();
             dx = RESOLVE_int();
             dy = RESOLVE_int();
             dimx = RESOLVE_int();
@@ -2202,15 +2202,15 @@ public class gksweb extends Applet
           case 31:      /* set character height */
           case 200:     /* set text slant */
           case 203:     /* set transparency */
-            f_arr_1 = new float[1];
-            f_arr_1[0] = RESOLVE_float();
+            f_arr_1 = new double[1];
+            f_arr_1[0] = RESOLVE_double();
             break;
 
           case 32:      /* set character up vector */
-            f_arr_1 = new float[1];
-            f_arr_2 = new float[1];
-            f_arr_1[0] = RESOLVE_float();
-            f_arr_2[0] = RESOLVE_float();
+            f_arr_1 = new double[1];
+            f_arr_2 = new double[1];
+            f_arr_1[0] = RESOLVE_double();
+            f_arr_2[0] = RESOLVE_double();
             break;
 
           case 41:      /* set aspect source flags */
@@ -2222,10 +2222,10 @@ public class gksweb extends Applet
           case 48:      /* set color representation */
             i_arr = new int[1];
             i_arr[0] = RESOLVE_int();
-            f_arr_1 = new float[3];
-            f_arr_1[0] = RESOLVE_float();
-            f_arr_1[1] = RESOLVE_float();
-            f_arr_1[2] = RESOLVE_float();
+            f_arr_1 = new double[3];
+            f_arr_1[0] = RESOLVE_double();
+            f_arr_1[1] = RESOLVE_double();
+            f_arr_1[2] = RESOLVE_double();
             break;
 
           case 49:      /* set window */
@@ -2233,13 +2233,13 @@ public class gksweb extends Applet
           case 54:      /* set workstation window */
           case 55:      /* set workstation viewport */
             i_arr = new int[1];
-            f_arr_1 = new float[2];
-            f_arr_2 = new float[2];
+            f_arr_1 = new double[2];
+            f_arr_2 = new double[2];
             i_arr[0] = RESOLVE_int();
-            f_arr_1[0] = RESOLVE_float();
-            f_arr_1[1] = RESOLVE_float();
-            f_arr_2[0] = RESOLVE_float();
-            f_arr_2[1] = RESOLVE_float();
+            f_arr_1[0] = RESOLVE_double();
+            f_arr_1[1] = RESOLVE_double();
+            f_arr_2[0] = RESOLVE_double();
+            f_arr_2[1] = RESOLVE_double();
             break;
 
           default:
@@ -2252,12 +2252,12 @@ public class gksweb extends Applet
           case 2:
             ws.width = ws.height = 500;
 
-            ws.window[0] = ws.window[2] = 0.0f;
-            ws.window[1] = ws.window[3] = 1.0f;
+            ws.window[0] = ws.window[2] = 0.0;
+            ws.window[1] = ws.window[3] = 1.0;
 
-            ws.viewport[0] = ws.viewport[2] = 0.0f;
-            ws.viewport[1] = ws.width * 0.254f / 1024;
-            ws.viewport[3] = ws.height * 0.1905f / 768;
+            ws.viewport[0] = ws.viewport[2] = 0.0;
+            ws.viewport[1] = ws.width * 0.254 / 1024;
+            ws.viewport[3] = ws.height * 0.1905 / 768;
 
             setXform();
             initNormXform();

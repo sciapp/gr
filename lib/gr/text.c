@@ -38,8 +38,8 @@ typedef struct string_tt
 {
   char *subStr;
   int font, prec;
-  float width;
-  float x, y;
+  double width;
+  double x, y;
   struct string_tt *next;
 } string_t;
 
@@ -47,9 +47,9 @@ typedef struct string_tt
 typedef struct formula_tt
 {
   string_t *string;
-  float myWidth, myHeight, myDepth;
-  float totWidth, totHeight, totDepth;
-  float x, y;
+  double myWidth, myHeight, myDepth;
+  double totWidth, totHeight, totDepth;
+  double x, y;
   int font, prec;
   token_t operator;		/* only: Plus, Minus, Mult or None  */
   struct formula_tt *next[POS_COUNT];
@@ -722,9 +722,9 @@ bool Expression(formula_t ** formula, int font, int prec)
 #define FRAC_WIDTH_FACTOR (1. / 10.)
 #define FRAC_PAINT        FRAC_THICK * PAINT_FAC
 
-static float sinphi, cosphi;
+static double sinphi, cosphi;
 
-static float scales[] = { 1.0,	/* SUB_LEVEL */
+static double scales[] = { 1.0,	/* SUB_LEVEL */
   1.0,				/* NEXT */
   5.2 / 6.4,			/* INDEX */
   5.2 / 6.4,			/* EXPONENT */
@@ -739,10 +739,10 @@ static float scales[] = { 1.0,	/* SUB_LEVEL */
 
 
 static
-float textheight(void)
+double textheight(void)
 {
   int errind;
-  float height;
+  double height;
 
   gks_inq_text_height(&errind, &height);
 
@@ -750,9 +750,9 @@ float textheight(void)
 }
 
 static
-float textwidth(char *string, int font, int prec)
+double textwidth(char *string, int font, int prec)
 {
-  float cpx, cpy, trx[5], try[5], qx = 0, qy = 0;
+  double cpx, cpy, trx[5], try[5], qx = 0, qy = 0;
   int errind = 0, n = 0, wkid = 0;
 
   gks_inq_open_ws(1, &errind, &n, &wkid);
@@ -767,9 +767,9 @@ float textwidth(char *string, int font, int prec)
 
 
 static
-float operatorLen(token_t operator, int font, int prec)
+double operatorLen(token_t operator, int font, int prec)
 {
-  float len;
+  double len;
   switch (operator)
     {
     case None:
@@ -794,9 +794,9 @@ float operatorLen(token_t operator, int font, int prec)
 }
 
 static
-float stringWidth(string_t * str)
+double stringWidth(string_t * str)
 {
-  float nxt = 0;
+  double nxt = 0;
 
   str->width = textwidth(str->subStr, str->font, str->prec);
   if (str->next != NULL)
@@ -807,12 +807,12 @@ float stringWidth(string_t * str)
 
 
 static
-void heightAndWidth(formula_t * formula, float scale)
+void heightAndWidth(formula_t * formula, double scale)
 {
   string_t *str;
   formula_t *help;
-  float txt_h = scale * textheight();
-  float w, addLeft, addRight;
+  double txt_h = scale * textheight();
+  double w, addLeft, addRight;
   int i;
 
   for (i = 0; i < POS_COUNT; i++)
@@ -955,7 +955,7 @@ void heightAndWidth(formula_t * formula, float scale)
 }
 
 static
-void xyStringPos(float x, float y, string_t * string, float scale)
+void xyStringPos(double x, double y, string_t * string, double scale)
 {
   string->x = x;
   string->y = y;
@@ -964,12 +964,12 @@ void xyStringPos(float x, float y, string_t * string, float scale)
 }
 
 static
-void xyPos(float x, float y, formula_t * formula, float scale)
+void xyPos(double x, double y, formula_t * formula, double scale)
 {
   formula_t *help;
   string_t *str;
-  float addLeft = 0, w, shift = 0;
-  float txt_h = scale * textheight();
+  double addLeft = 0, w, shift = 0;
+  double txt_h = scale * textheight();
 
   formula->x = x;
   formula->y = y;
@@ -1098,7 +1098,7 @@ void xyPos(float x, float y, formula_t * formula, float scale)
 
 
 static
-void shiftString(string_t * string, float sx, float sy)
+void shiftString(string_t * string, double sx, double sy)
 {
   string->x += sx;
   string->y += sy;
@@ -1109,7 +1109,7 @@ void shiftString(string_t * string, float sx, float sy)
 
 
 static
-void shiftFormula(formula_t * formula, float sx, float sy)
+void shiftFormula(formula_t * formula, double sx, double sy)
 {
   int i;
 
@@ -1125,10 +1125,10 @@ void shiftFormula(formula_t * formula, float sx, float sy)
 }
 
 static
-void setInnerAlignment(int align, formula_t * formula, float width)
+void setInnerAlignment(int align, formula_t * formula, double width)
 {
-  float x_shift = 0;
-  float lineWidth;
+  double x_shift = 0;
+  double lineWidth;
   int i;
   formula_t *help;
 
@@ -1172,10 +1172,10 @@ void setInnerAlignment(int align, formula_t * formula, float width)
 
 
 static
-void rotateString(float x, float y, string_t * string)
+void rotateString(double x, double y, string_t * string)
 {
-  float delta_x = string->x - x;
-  float delta_y = string->y - y;
+  double delta_x = string->x - x;
+  double delta_y = string->y - y;
 
   string->x = x + delta_x * cosphi + delta_y * sinphi;
   string->y = y - delta_x * sinphi + delta_y * cosphi;
@@ -1185,11 +1185,11 @@ void rotateString(float x, float y, string_t * string)
 }
 
 static
-void rotate(float x, float y, formula_t * formula)
+void rotate(double x, double y, formula_t * formula)
 {
   int i;
-  float delta_x = formula->x - x;
-  float delta_y = formula->y - y;
+  double delta_x = formula->x - x;
+  double delta_y = formula->y - y;
 
   formula->x = x + delta_x * cosphi + delta_y * sinphi;
   formula->y = y - delta_x * sinphi + delta_y * cosphi;
@@ -1203,7 +1203,7 @@ void rotate(float x, float y, formula_t * formula)
 }
 
 static
-void drawOperator(float x, float y, token_t operator, float txt_h, int font,
+void drawOperator(double x, double y, token_t operator, double txt_h, int font,
 		  int prec)
 {
   gks_set_text_fontprec(font, prec);
@@ -1227,7 +1227,7 @@ void drawOperator(float x, float y, token_t operator, float txt_h, int font,
 }
 
 static
-void drawString(string_t * str, float txt_h)
+void drawString(string_t * str, double txt_h)
 {
   gks_set_text_fontprec(str->font, str->prec);
   gks_set_text_height(txt_h);
@@ -1239,11 +1239,11 @@ void drawString(string_t * str, float txt_h)
 }
 
 static
-void drawFormula(formula_t * formula, float Height, float scale)
+void drawFormula(formula_t * formula, double Height, double scale)
 {
   int i;
-  float txt_h = Height * scale;
-  float x[2], y[2];
+  double txt_h = Height * scale;
+  double x[2], y[2];
 
   for (i = 0; i < POS_COUNT; i++)
     if (formula->next[i] != NULL)
@@ -1296,16 +1296,24 @@ void drawFormula(formula_t * formula, float Height, float scale)
 /*                      gr_textex                              */
 /*                                                             */
 /***************************************************************/
-int gr_textex(float x, float y, const char *string, int inquire,
-	      float *tbx, float *tby)
+int gr_textex(double x, double y, const char *string, int inquire,
+	      double *tbx, double *tby)
 {
   char *str = strdup(string);
+  int n, wkid = 0;
+  double cpx, cpy;
   formula_t *formula = NULL;
-
   int errind, font, prec;
   int align_hor, align_ver;
-  float height;
-  float x_shift, y_shift;
+  double height;
+  double x_shift, y_shift;
+
+  if (inquire && strlen(str) == 1)
+    {
+      gks_inq_open_ws(1, &errind, &n, &wkid);
+      gks_inq_text_extent(wkid, x, y, str, &errind, &cpx, &cpy, tbx, tby);
+      return 1;
+    }
 
   chin = str;
 

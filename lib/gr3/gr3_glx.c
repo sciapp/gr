@@ -55,6 +55,7 @@ int gr3_initGL_GLX_(void) {
       fbc = glXChooseFBConfig(display, DefaultScreen(display), fb_attribs,
                               &fbcount);
       if (fbcount == 0) {
+        gr3_log_("failed to find a valid a GLX FBConfig for a RGBA PBuffer");
         XFree(fbc);
         XCloseDisplay(display);
         return GR3_ERROR_INIT_FAILED;
@@ -81,6 +82,7 @@ int gr3_initGL_GLX_(void) {
       fbc = glXChooseFBConfig(display, DefaultScreen(display), fb_attribs,
                               &fbcount);
       if (fbcount == 0) {
+        gr3_log_("failed to find a valid a GLX FBConfig for a RGBA Pixmap");
         XFree(fbc);
         XCloseDisplay(display);
         return GR3_ERROR_INIT_FAILED;
@@ -97,6 +99,7 @@ int gr3_initGL_GLX_(void) {
         context_struct_.gl_is_initialized = 1;
         gr3_appendtorenderpathstring_("GLX (XPixmap)");
       } else {
+        gr3_log_("failed to make GLX OpenGL Context current with a Pixmap");
         glXDestroyContext(display, context);
         XFreePixmap(display,pixmap);
         XCloseDisplay(display);

@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 
-#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1060
+#if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1050
 
 #include <stdlib.h>
 #include <pthread.h>
@@ -59,8 +59,8 @@ typedef struct ws_state_list_t
     int state, wtype;
     int width, height;
     int swidth, sheight;
-    float a, b, c, d;
-    float window[4], viewport[4];
+    double a, b, c, d;
+    double window[4], viewport[4];
     Rect rect[MAX_TNR];
     RGBColor rgb[MAX_COLOR];
     int family, path, capheight;
@@ -77,7 +77,7 @@ char *fonts[] = {
   "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua" };
 
 static
-float capheights[29] = {
+double capheights[29] = {
   0.662, 0.660, 0.681, 0.662,
   0.729, 0.729, 0.729, 0.729,
   0.583, 0.583, 0.583, 0.583,
@@ -126,19 +126,19 @@ static
 gks_state_list_t *gkss;
 
 static
-float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 static
-float xfac[4] = { 0, 0, -0.5, -1 };
+double xfac[4] = { 0, 0, -0.5, -1 };
 
 static
-float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 static
-float sin_f[] = { 0, 1, 0, -1 };
+double sin_f[] = { 0, 1, 0, -1 };
 
 static
-float cos_f[] = { 1, 0, -1, 0 };
+double cos_f[] = { 1, 0, -1, 0 };
 
 static
 int map[32] = {
@@ -160,7 +160,7 @@ static
 int predef_styli[] = { 1, 1, 1, 2, 3 };
 
 static
-void set_norm_xform(int tnr, float *wn, float *vp)
+void set_norm_xform(int tnr, double *wn, double *vp)
 {
   Rect *rect = &p->rect[tnr];
 
@@ -194,9 +194,9 @@ void set_xform(void)
 }
 
 static
-void seg_xform(float *x, float *y)
+void seg_xform(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1] + gkss->mat[2][0];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1] + gkss->mat[2][1];
@@ -204,9 +204,9 @@ void seg_xform(float *x, float *y)
 }
 
 static
-void seg_xform_rel(float *x, float *y)
+void seg_xform_rel(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1];
@@ -214,7 +214,7 @@ void seg_xform_rel(float *x, float *y)
 }
 
 static
-void set_color_rep(int color, float red, float green, float blue)
+void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
@@ -228,7 +228,7 @@ static
 void init_colors(void)
 {
   int color;
-  float red, green, blue;
+  double red, green, blue;
 
   for (color = 0; color < MAX_COLOR; color++)
     {
@@ -303,8 +303,8 @@ void create_window(ws_state_list *p)
   p->window[0] = p->window[2] = 0.0;
   p->window[1] = p->window[3] = 1.0;
   p->viewport[0] = p->viewport[2] = 0;
-  p->viewport[1] = (float)p->width * MWIDTH / p->swidth;
-  p->viewport[3] = (float)p->height * MWIDTH / p->sheight;
+  p->viewport[1] = (double)p->width * MWIDTH / p->swidth;
+  p->viewport[3] = (double)p->height * MWIDTH / p->sheight;
 
   SetRect(&wRect, 0, 0, p->width, p->height);
   CreateNewWindow(
@@ -327,7 +327,7 @@ void create_window(ws_state_list *p)
 static
 void resize_window(void)
 {
-  float max_width, max_height;
+  double max_width, max_height;
   int width, height;
   Rect wRect;
 
@@ -383,7 +383,7 @@ void *exec(void *arg)
 }
 
 static
-void move_to(float x, float y)
+void move_to(double x, double y)
 {
   int ix, iy;
 
@@ -392,7 +392,7 @@ void move_to(float x, float y)
 }
 
 static
-void line_to(float x, float y)
+void line_to(double x, double y)
 {
   int ix, iy;
 
@@ -401,21 +401,21 @@ void line_to(float x, float y)
 }
 
 static
-void move(float x, float y)
+void move(double x, double y)
 {
   gks_move(x, y, move_to);
 }
 
 static
-void draw(float x, float y)
+void draw(double x, double y)
 {
   gks_dash(x, y, move_to, line_to);
 }
 
 static
-void line_routine(int n, float *px, float *py, int linetype, int tnr)
+void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
-  float x, y;
+  double x, y;
   int i, x0, y0, xi, yi, xim1, yim1;
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
@@ -443,10 +443,10 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 }
 
 static
-void polyline(int n, float *px, float *py)
+void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  float ln_width;
+  double ln_width;
   int width;
 
   ln_type  = gkss->asf[0] ? gkss->ltype  : gkss->lindex;
@@ -468,10 +468,10 @@ void polyline(int n, float *px, float *py)
 }
 
 static
-void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
+void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   int r, x, y, i;
-  float scale, xr, yr;
+  double scale, xr, yr;
   int pc, op;
   PolyHandle poly;
   Rect rect;
@@ -658,10 +658,10 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
 
 static
 void marker_routine(
-  int n, float *px, float *py, int mtype, float mscale, int mcolor)
+  int n, double *px, double *py, int mtype, double mscale, int mcolor)
 {
-  float x, y;
-  float *clrt = gkss->viewport[gkss->cntnr];
+  double x, y;
+  double *clrt = gkss->viewport[gkss->cntnr];
   register int i, draw;
 
   for (i = 0; i < n; i++)
@@ -680,10 +680,10 @@ void marker_routine(
 }
 
 static
-void polymarker(int n, float *px, float *py)
+void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
-  float mk_size;
+  double mk_size;
 
   mk_type  = gkss->asf[3] ? gkss->mtype  : gkss->mindex;
   mk_size  = gkss->asf[4] ? gkss->mszsc  : 1;
@@ -801,10 +801,10 @@ void draw_string(int x, int y, int width, int height, Str255 chars)
 }
 
 static
-void text_routine(float x, float y, int nchars, char *chars)
+void text_routine(double x, double y, int nchars, char *chars)
 {
   int i, ch, xstart, ystart, width, height;
-  float xrel, yrel, ax, ay;
+  double xrel, yrel, ax, ay;
   unsigned char *s;
   Str255 dst;
 
@@ -838,9 +838,9 @@ void text_routine(float x, float y, int nchars, char *chars)
 static
 void set_font(int font)
 {
-  float rad, scale, ux, uy;
+  double rad, scale, ux, uy;
   int family, size, angle;
-  float width, height, capheight;
+  double width, height, capheight;
   StyleParameter face;
   Str255 name;
 
@@ -894,13 +894,13 @@ void set_font(int font)
 }
 
 static
-void fill_routine(int n, float *px, float *py, int tnr);
+void fill_routine(int n, double *px, double *py, int tnr);
 
 static
-void text(float px, float py, int nchars, char *chars)
+void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
-  float x, y;
+  double x, y;
 
   tx_font  = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec  = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
@@ -923,11 +923,11 @@ void text(float px, float py, int nchars, char *chars)
 }
 
 static
-void fill_routine(int n, float *px, float *py, int tnr)
+void fill_routine(int n, double *px, double *py, int tnr)
 {
   PolyHandle poly;
   register int i;
-  float x, y;
+  double x, y;
   int ix, iy;
 
   poly = OpenPoly();
@@ -951,7 +951,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
 }
 
 static
-void fillarea(int n, float *px, float *py)
+void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color;
 
@@ -986,10 +986,10 @@ void fillarea(int n, float *px, float *py)
 
 static
 void cellarray(
-  float xmin, float xmax, float ymin, float ymax,
+  double xmin, double xmax, double ymin, double ymax,
   int dx, int dy, int dimx, int *colia, int true_color)
 {
-  float x1, y1, x2, y2;
+  double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
   register int i, j, ix, iy, ind;
@@ -1071,7 +1071,7 @@ void get_mouse(Point *mouse, EventModifiers *modifiers)
 }
 
 static
-void get_pointer(float *x, float *y, int *state)
+void get_pointer(double *x, double *y, int *state)
 {
   Point mouse;
   EventModifiers modifiers;
@@ -1114,7 +1114,7 @@ void get_pointer(float *x, float *y, int *state)
 
 void gks_drv_mac(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   p = (ws_state_list *) *ptr;
@@ -1319,7 +1319,7 @@ void gks_drv_mac(
 
 void gks_drv_mac(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars, void **ptr)
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars, void **ptr)
 {
   if (fctid == 2)
   {

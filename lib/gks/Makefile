@@ -1,17 +1,19 @@
        GRDIR = /usr/local/gr
-      BINDIR = $(GRDIR)/bin
-      LIBDIR = $(GRDIR)/lib
-      INCDIR = $(GRDIR)/include
-     FONTDIR = $(GRDIR)/fonts
+      BINDIR = $(DESTDIR)$(GRDIR)/bin
+      LIBDIR = $(DESTDIR)$(GRDIR)/lib
+      INCDIR = $(DESTDIR)$(GRDIR)/include
+     FONTDIR = $(DESTDIR)$(GRDIR)/fonts
 
      GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o malloc.o \
                error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
                plugin.o compress.o io.o
 
-     DEFINES = -DHAVE_ZLIB -DXFT
-    INCLUDES = -I/usr/X11R6/include
- XFTINCLUDES = -I/usr/include/freetype2
+     X11DEFS =
+      FTDEFS =
+       FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
+      X11INC = -I/usr/X11R6/include
           CC = cc
+     DEFINES = -DHAVE_ZLIB $(X11DEFS) $(FTDEFS)
       CFLAGS = -O3 -Wall -fPIC
           LD = cc
      LDFLAGS =
@@ -20,46 +22,50 @@
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
         LIBS = -lpthread -ldl -lc -lm
-     XFTLIBS = -lXft -lfreetype -lfontconfig
-       XLIBS = $(XFTLIBS) -L/usr/X11R6/lib -lXt -lX11
+      FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
+     X11LIBS = $(X11PATH) -lXft -lfontconfig -lXt -lX11
        ZLIBS = -lz
 
 .c.o:
-	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(XFTINCLUDES) $<
+	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(X11INC) $<
 
 default:
-	@make `uname`
+	@make -C ../.. Makedefs
+	@make `cat ../../Makedefs`
 
 Linux:
 	@make targets INSTALL_NAME=""
 Darwin:
 	@make targets CFLAGS="$(CFLAGS) -fpascal-strings" \
-	XFTINCLUDES="-I/usr/X11/include/freetype2" SOFLAGS="-dynamiclib"
+	SOFLAGS="-dynamiclib"
 
-targets: libGKS.a libGKS.so demo gksm plugins
+targets: prerequisites libGKS.a libGKS.so demo gksm plugins
+
+prerequisites:
+	@for d in png; do make -C ../../3rdparty/$$d; done
 
 libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?
 	$(RANLIB) $@
 
 libGKS.so: $(GKSOBJS)
-	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(XLIBS) $(LIBS) \
-	$(LDFLAGS) $(INSTALL_NAME)
+	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(FTLIBS) $(ZLIBS) $(X11LIBS) \
+	$(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGKS.a
-	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(XLIBS) $(LIBS)
+	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
 gksm: gksm.c libGKS.a
-	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(XLIBS) $(LIBS)
+	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
 plugins:
 	@make -C plugin
 
 pasdemo: default
-	fpc demo.p -g -Fl./
+	fpc -Px86_64 demo.p -g -Fl./
 
 install:
-	@if [ ! -d $(GRDIR) ]; then mkdir -m 755 $(GRDIR); fi
+	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGKS.* $(LIBDIR)
 	cp -p plugin/*plugin.so $(LIBDIR)

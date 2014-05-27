@@ -14,10 +14,10 @@
 #endif
 
 #define Integer static int
-#define Real    static float
+#define Real    static double
 
 static
-int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
+int idcldp(int *ndp, double *xd, double *yd, int *ncp, int *ipc)
 {
   Integer j1, j2, j3, j4;
   Real x1, y1, r1, r2;
@@ -48,7 +48,7 @@ int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
   jmx = 0;
   ndp0 = *ndp;
   ncp0 = *ncp;
-  dsqmn = 0.f;
+  dsqmn = 0.;
   if (ndp0 >= 2) {
     if (ncp0 >= 1 && ncp0 <= 25 && ncp0 < ndp0) {
       /* CALCULATION */
@@ -57,7 +57,7 @@ int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
         x1 = xd[ip1-1];
         y1 = yd[ip1-1];
         j1 = 0;
-        dsqmx = 0.f;
+        dsqmx = 0.;
         for (ip2 = 1; ip2 <= ndp0; ++ip2) {
           if (ip2 != ip1) {
             r1 = xd[ip2-1] - x1;
@@ -87,7 +87,7 @@ int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
               if (dsqi < dsqmx) {
                 dsq0[jmx - 1] = dsqi;
                 ipc0[jmx - 1] = ip2;
-                dsqmx = 0.f;
+                dsqmx = 0.;
                 for (j1 = 1; j1 <= ncp0; ++j1) {
                   if (dsq0[j1 - 1] > dsqmx) {
                     dsqmx = dsq0[j1 - 1];
@@ -174,8 +174,8 @@ int idcldp(int *ndp, float *xd, float *yd, int *ncp, int *ipc)
 }
 
 static
-int idgrid(float *xd, float *yd, int *nt, int *ipt,
-           int *nl, int *ipl, int *nxi, int *nyi, float *xi, float *yi,
+int idgrid(double *xd, double *yd, int *nt, int *ipt,
+           int *nl, int *ipl, int *nxi, int *nyi, double *xi, double *yi,
            int *ngp, int *igp)
 {
   Integer l;
@@ -285,24 +285,24 @@ int idgrid(float *xd, float *yd, int *nt, int *ipt,
           xii = xi[ixi-1];
           l = 0;
           expr = (x1 - xii) * (y2 - yii) - (y1 - yii) * (x2 - xii);
-          if (expr < 0.f) {
+          if (expr < 0.) {
             goto L70;
           }
-          if (expr == 0.f) {
+          if (expr == 0.) {
             l = 1;
           }
           expr = (x2 - xii) * (y3 - yii) - (y2 - yii) * (x3 - xii);
-          if (expr < 0.f) {
+          if (expr < 0.) {
             goto L70;
           }
-          if (expr == 0.f) {
+          if (expr == 0.) {
             l = 1;
           }
           expr = (x3 - xii) * (y1 - yii) - (y3 - yii) * (x1 - xii);
-          if (expr < 0.f) {
+          if (expr < 0.) {
             goto L70;
           }
-          if (expr == 0.f) {
+          if (expr == 0.) {
             l = 1;
           }
           izi = nxi0 * (iyi - 1) + ixi;
@@ -392,24 +392,24 @@ int idgrid(float *xd, float *yd, int *nt, int *ipt,
           xii = xi[ixi-1];
           l = 0;
           expr = (x1 - xii) * (y2 - yii) - (y1 - yii) * (x2 - xii);
-          if (expr > 0.f) {
+          if (expr > 0.) {
             goto L210;
           }
-          if (expr == 0.f) {
+          if (expr == 0.) {
             l = 1;
           }
           expr = (x2 - x1) * (xii - x1) + (y2 - y1) * (yii - y1);
-          if (expr < 0.f) {
+          if (expr < 0.) {
             goto L210;
           }
-          if (expr == 0.f) {
+          if (expr == 0.) {
             l = 1;
           }
           expr = (x1 - x2) * (xii - x2) + (y1 - y2) * (yii - y2);
-          if (expr < 0.f) {
+          if (expr < 0.) {
             goto L210;
           }
-          if (expr == 0.f) {
+          if (expr == 0.) {
             l = 1;
           }
           izi = nxi0 * (iyi - 1) + ixi;
@@ -493,17 +493,17 @@ int idgrid(float *xd, float *yd, int *nt, int *ipt,
           xii = xi[ixi-1];
           l = 0;
           expr = (x1 - x2) * (xii - x2) + (y1 - y2) * (yii - y2);
-          if (expr > 0.f) {
+          if (expr > 0.) {
             goto L340;
           }
-          if (expr == 0.f) {
+          if (expr == 0.) {
             l = 1;
           }
           expr = (x3 - x2) * (xii - x2) + (y3 - y2) * (yii - y2);
-          if (expr > 0.f) {
+          if (expr > 0.) {
             goto L340;
           }
-          if (expr == 0.f) {
+          if (expr == 0.) {
             l = 1;
           }
           izi = nxi0 * (iyi - 1) + ixi;
@@ -541,8 +541,8 @@ int idgrid(float *xd, float *yd, int *nt, int *ipt,
 }
 
 static
-int idpdrv(int *ndp, float *xd, float *yd, float *zd,
-           int *ncp, int *ipc, float *pd)
+int idpdrv(int *ndp, double *xd, double *yd, double *zd,
+           int *ncp, int *ipc, double *pd)
 {
   Real x0, y0, z0;
   Integer ic1, ic2, ip0;
@@ -580,9 +580,9 @@ int idpdrv(int *ndp, float *xd, float *yd, float *zd,
     x0 = xd[ip0-1];
     y0 = yd[ip0-1];
     z0 = zd[ip0-1];
-    nmx = 0.f;
-    nmy = 0.f;
-    nmz = 0.f;
+    nmx = 0.;
+    nmy = 0.;
+    nmz = 0.;
     jipc0 = ncp0 * (ip0 - 1);
     for (ic1 = 1; ic1 <= ncpm1; ++ic1) {
       jipc = jipc0 + ic1;
@@ -601,7 +601,7 @@ int idpdrv(int *ndp, float *xd, float *yd, float *zd,
           dz2 = zd[ipi-1] - z0;
           dnmx = dy1 * dz2 - dz1 * dy2;
           dnmy = dz1 * dx2 - dx1 * dz2;
-          if (dnmz < 0.f) {
+          if (dnmz < 0.) {
             dnmx = -dnmx;
             dnmy = -dnmy;
             dnmz = -dnmz;
@@ -627,11 +627,11 @@ int idpdrv(int *ndp, float *xd, float *yd, float *zd,
     y0 = yd[ip0-1];
     zx0 = pd[jpd0 - 5];
     zy0 = pd[jpd0 - 4];
-    nmxx = 0.f;
-    nmxy = 0.f;
-    nmyx = 0.f;
-    nmyy = 0.f;
-    nmz = 0.f;
+    nmxx = 0.;
+    nmxy = 0.;
+    nmyx = 0.;
+    nmyy = 0.;
+    nmz = 0.;
     jipc0 = ncp0 * (ip0 - 1);
     for (ic1 = 1; ic1 <= ncpm1; ++ic1) {
       jipc = jipc0 + ic1;
@@ -656,7 +656,7 @@ int idpdrv(int *ndp, float *xd, float *yd, float *zd,
           dnmxy = dzx1 * dx2 - dx1 * dzx2;
           dnmyx = dy1 * dzy2 - dzy1 * dy2;
           dnmyy = dzy1 * dx2 - dx1 * dzy2;
-          if (dnmz < 0.f) {
+          if (dnmz < 0.) {
             dnmxx = -dnmxx;
             dnmxy = -dnmxy;
             dnmyx = -dnmyx;
@@ -674,7 +674,7 @@ int idpdrv(int *ndp, float *xd, float *yd, float *zd,
       /* L50: */
     }
     pd[jpd0 - 3] = -nmxx / nmz;
-    pd[jpd0 - 2] = -(nmxy + nmyx) / (nmz * 2.f);
+    pd[jpd0 - 2] = -(nmxy + nmyx) / (nmz * 2.);
     pd[jpd0 - 1] = -nmyy / nmz;
     /* L40: */
   }
@@ -682,15 +682,15 @@ int idpdrv(int *ndp, float *xd, float *yd, float *zd,
 }
 
 static
-int idptip(float *xd, float *yd, float *zd, int *nt,
-           int *ipt, int *nl, int *ipl, float *pdd, int *iti,
-           float *xii, float *yii, float *zii, int *itpv)
+int idptip(double *xd, double *yd, double *zd, int *nt,
+           int *ipt, int *nl, int *ipl, double *pdd, int *iti,
+           double *xii, double *yii, double *zii, int *itpv)
 {
-  Real ap = 0.f, bp = 0.f, cp = 0.f, dp = 0.f, x0 = 0.f, y0 = 0.f;
-  Real p5 = 0.f, p00 = 0.f, p01 = 0.f, p02 = 0.f, p03 = 0.f, p04 = 0.f;
-  Real p05 = 0.f, p10 = 0.f, p11 = 0.f, p12 = 0.f, p13 = 0.f, p14 = 0.f;
-  Real p20 = 0.f, p21 = 0.f, p22 = 0.f, p23 = 0.f, p30 = 0.f, p31 = 0.f;
-  Real p32 = 0.f, p40 = 0.f, p41 = 0.f, p50 = 0.f;
+  Real ap = 0., bp = 0., cp = 0., dp = 0., x0 = 0., y0 = 0.;
+  Real p5 = 0., p00 = 0., p01 = 0., p02 = 0., p03 = 0., p04 = 0.;
+  Real p05 = 0., p10 = 0., p11 = 0., p12 = 0., p13 = 0., p14 = 0.;
+  Real p20 = 0., p21 = 0., p22 = 0., p23 = 0., p30 = 0., p31 = 0.;
+  Real p32 = 0., p40 = 0., p41 = 0., p50 = 0.;
   Real a, b, c, d;
   Integer i;
   Real u, v, x[3], y[3], z[3], g1, h1, h2, h3, g2, p0, p1, p2, p3, p4;
@@ -772,13 +772,13 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
       /* CONVERTS THE PARTIAL DERIVATIVES AT THE VERTEXES OF THE */
       /* TRIANGLE FOR THE U-V COORDINATE SYSTEM. */
       aa = a * a;
-      act2 = a * 2.f * c;
+      act2 = a * 2. * c;
       cc = c * c;
       ab = a * b;
       adbc = ad + bc;
       cd = c * d;
       bb = b * b;
-      bdt2 = b * 2.f * d;
+      bdt2 = b * 2. * d;
       dd = d * d;
       for (i = 1; i <= 3; ++i) {
         jpd = i * 5;
@@ -793,37 +793,37 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
       p00 = z[0];
       p10 = zu[0];
       p01 = zv[0];
-      p20 = zuu[0] * .5f;
+      p20 = zuu[0] * .5;
       p11 = zuv[0];
-      p02 = zvv[0] * .5f;
+      p02 = zvv[0] * .5;
       h1 = z[1] - p00 - p10 - p20;
       h2 = zu[1] - p10 - zuu[0];
       h3 = zuu[1] - zuu[0];
-      p30 = h1 * 10.f - h2 * 4.f + h3 * .5f;
-      p40 = h1 * -15.f + h2 * 7.f - h3;
-      p50 = h1 * 6.f - h2 * 3.f + h3 * .5f;
+      p30 = h1 * 10. - h2 * 4. + h3 * .5;
+      p40 = h1 * -15. + h2 * 7. - h3;
+      p50 = h1 * 6. - h2 * 3. + h3 * .5;
       p5 = p50;
       h1 = z[2] - p00 - p01 - p02;
       h2 = zv[2] - p01 - zvv[0];
       h3 = zvv[2] - zvv[0];
-      p03 = h1 * 10.f - h2 * 4.f + h3 * .5f;
-      p04 = h1 * -15.f + h2 * 7.f - h3;
-      p05 = h1 * 6.f - h2 * 3.f + h3 * .5f;
+      p03 = h1 * 10. - h2 * 4. + h3 * .5;
+      p04 = h1 * -15. + h2 * 7. - h3;
+      p05 = h1 * 6. - h2 * 3. + h3 * .5;
       lu = sqrt(aa + cc);
       lv = sqrt(bb + dd);
       thxu = atan2(c, a);
       thuv = atan2(d, b) - thxu;
       csuv = cos(thuv);
-      p41 = lv * 5.f * csuv / lu * p50;
-      p14 = lu * 5.f * csuv / lv * p05;
+      p41 = lv * 5. * csuv / lu * p50;
+      p14 = lu * 5. * csuv / lv * p05;
       h1 = zv[1] - p01 - p11 - p41;
-      h2 = zuv[1] - p11 - p41 * 4.f;
-      p21 = h1 * 3.f - h2;
-      p31 = h1 * -2.f + h2;
+      h2 = zuv[1] - p11 - p41 * 4.;
+      p21 = h1 * 3. - h2;
+      p31 = h1 * -2. + h2;
       h1 = zu[2] - p10 - p11 - p14;
-      h2 = zuv[2] - p11 - p14 * 4.f;
-      p12 = h1 * 3.f - h2;
-      p13 = h1 * -2.f + h2;
+      h2 = zuv[2] - p11 - p14 * 4.;
+      p12 = h1 * 3. - h2;
+      p13 = h1 * -2. + h2;
       thus = atan2(d - c, b - a) - thxu;
       thsv = thuv - thus;
       aa = sin(thsv) / lu;
@@ -833,12 +833,12 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
       ac = aa * cc;
       ad = aa * dd;
       bc = bb * cc;
-      g1 = aa * ac * (bc * 3.f + ad * 2.f);
-      g2 = cc * ac * (ad * 3.f + bc * 2.f);
-      h1 = -aa * aa * aa * (aa * 5.f * bb * p50 + (bc * 4.f + ad) * p41) -
-            cc * cc * cc * (cc * 5.f * dd * p05 + (ad * 4.f + bc) * p14);
-      h2 = zvv[1] * .5f - p02 - p12;
-      h3 = zuu[2] * .5f - p20 - p21;
+      g1 = aa * ac * (bc * 3. + ad * 2.);
+      g2 = cc * ac * (ad * 3. + bc * 2.);
+      h1 = -aa * aa * aa * (aa * 5. * bb * p50 + (bc * 4. + ad) * p41) -
+            cc * cc * cc * (cc * 5. * dd * p05 + (ad * 4. + bc) * p14);
+      h2 = zvv[1] * .5 - p02 - p12;
+      h3 = zuu[2] * .5 - p20 - p21;
       p22 = (g1 * h2 + g2 * h3 - h1) / (g1 + g2);
       p32 = h2 - p22;
       p23 = h3 - p22;
@@ -901,13 +901,13 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
         /* CONVERTS THE PARTIAL DERIVATIVES AT THE END POINTS OF THE */
         /* BORDER LINE SEGMENT FOR THE U-V COORDINATE SYSTEM. */
         aa = a * a;
-        act2 = a * 2.f * c;
+        act2 = a * 2. * c;
         cc = c * c;
         ab = a * b;
         adbc = ad + bc;
         cd = c * d;
         bb = b * b;
-        bdt2 = b * 2.f * d;
+        bdt2 = b * 2. * d;
         dd = d * d;
         for (i = 1; i <= 2; ++i) {
           jpd = i * 5;
@@ -922,22 +922,22 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
         p00 = z[0];
         p10 = zu[0];
         p01 = zv[0];
-        p20 = zuu[0] * .5f;
+        p20 = zuu[0] * .5;
         p11 = zuv[0];
-        p02 = zvv[0] * .5f;
+        p02 = zvv[0] * .5;
         h1 = z[1] - p00 - p01 - p02;
         h2 = zv[1] - p01 - zvv[0];
         h3 = zvv[1] - zvv[0];
-        p03 = h1 * 10.f - h2 * 4.f + h3 * .5f;
-        p04 = h1 * -15.f + h2 * 7.f - h3;
-        p05 = h1 * 6.f - h2 * 3.f + h3 * .5f;
+        p03 = h1 * 10. - h2 * 4. + h3 * .5;
+        p04 = h1 * -15. + h2 * 7. - h3;
+        p05 = h1 * 6. - h2 * 3. + h3 * .5;
         h1 = zu[1] - p10 - p11;
         h2 = zuv[1] - p11;
-        p12 = h1 * 3.f - h2;
-        p13 = h1 * -2.f + h2;
-        p21 = 0.f;
+        p12 = h1 * 3. - h2;
+        p13 = h1 * -2. + h2;
+        p21 = 0.;
         p23 = -zuu[1] + zuu[0];
-        p22 = p23 * -1.5f;
+        p22 = p23 * -1.5;
         *itpv = it0;
       }
       /* CONVERTS XII AND YII TO U-V SYSTEM. */
@@ -972,9 +972,9 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
         p00 = z[0];
         p10 = pd[0];
         p01 = pd[1];
-        p20 = pd[2] * .5f;
+        p20 = pd[2] * .5;
         p11 = pd[3];
-        p02 = pd[4] * .5f;
+        p02 = pd[4] * .5;
         *itpv = it0;
       }
       /* CONVERTS XII AND YII TO U-V SYSTEM. */
@@ -990,7 +990,7 @@ int idptip(float *xd, float *yd, float *zd, int *nt,
 }
 
 static
-int idxchg(float *x, float *y, int *i1, int *i2, int *i3, int *i4)
+int idxchg(double *x, double *y, int *i1, int *i2, int *i3, int *i4)
 {
   Integer ret_val;
   Real r1, r2;
@@ -1023,7 +1023,7 @@ int idxchg(float *x, float *y, int *i1, int *i2, int *i3, int *i4)
   idx = 0;
   u3 = (y2 - y3) * (x1 - x3) - (x2 - x3) * (y1 - y3);
   u4 = (y1 - y4) * (x2 - x4) - (x1 - x4) * (y2 - y4);
-  if (u3 * u4 > 0.f) {
+  if (u3 * u4 > 0.) {
     u1 = (y3 - y1) * (x4 - x1) - (x3 - x1) * (y4 - y1);
     u2 = (y4 - y2) * (x3 - x2) - (x4 - x2) * (y3 - y2);
     r1 = x1 - x3;
@@ -1057,8 +1057,8 @@ int idxchg(float *x, float *y, int *i1, int *i2, int *i3, int *i4)
 }
 
 static
-int idtang(int *ndp, float *xd, float *yd, int *nt,
-           int *ipt, int *nl, int *ipl, int *iwl, int *iwp, float *wk)
+int idtang(int *ndp, double *xd, double *yd, int *nt,
+           int *ipt, int *nl, int *ipl, int *iwl, int *iwp, double *wk)
 {
   Real ratio = 1e-6f;
   Integer nrep = 100;
@@ -1157,8 +1157,8 @@ int idtang(int *ndp, float *xd, float *yd, int *nt,
       /* L10: */
     }
     dsq12 = dsqmn;
-    xdmp = (xd[ipmn1-1] + xd[ipmn2-1]) / 2.f;
-    ydmp = (yd[ipmn1-1] + yd[ipmn2-1]) / 2.f;
+    xdmp = (xd[ipmn1-1] + xd[ipmn2-1]) / 2.;
+    ydmp = (yd[ipmn1-1] + yd[ipmn2-1]) / 2.;
     /* SORTS THE OTHER (NDP-2) DATA POINTS IN ASCENDING ORDER OF */
     /* DISTANCE FROM THE MIDPOINT AND STORES THE SORTED DATA POINT */
     /* NUMBERS IN THE IWP ARRAY. */
@@ -1226,7 +1226,7 @@ int idtang(int *ndp, float *xd, float *yd, int *nt,
     ip2 = ipmn2;
     ip3 = iwp[2];
     if ((yd[ip3-1] - yd[ip1-1]) * (xd[ip2-1] - xd[ip1-1]) -
-        (xd[ip3-1] - xd[ip1-1]) * (yd[ip2-1] - yd[ip1-1]) < 0.f) {
+        (xd[ip3-1] - xd[ip1-1]) * (yd[ip2-1] - yd[ip1-1]) < 0.) {
       ip1 = ipmn2;
       ip2 = ipmn1;
     }
@@ -1499,7 +1499,7 @@ int idtang(int *ndp, float *xd, float *yd, int *nt,
       ip2 = ipt[itt3 - 2];
       ip3 = ipt[itt3-1];
       if ((yd[ip3-1] - yd[ip1-1]) * (xd[ip2-1] - xd[ip1-1]) -
-          (xd[ip3-1] - xd[ip1-1]) * (yd[ip2-1] - yd[ip1-1]) < 0.f) {
+          (xd[ip3-1] - xd[ip1-1]) * (yd[ip2-1] - yd[ip1-1]) < 0.) {
         ipt[itt3 - 3] = ip2;
         ipt[itt3 - 2] = ip1;
       }
@@ -1520,7 +1520,7 @@ int idtang(int *ndp, float *xd, float *yd, int *nt,
 }
 
 static
-int idlin(float *xd, float *yd, float *zd, int *nt, int *iwk, float *wk)
+int idlin(double *xd, double *yd, double *zd, int *nt, int *iwk, double *wk)
 {
   Real x1, y1, z1, x2, y2, z2, x3, y3, z3;
   Integer ip1, ip2, ip3, itri, ipoint;
@@ -1556,8 +1556,8 @@ int idlin(float *xd, float *yd, float *zd, int *nt, int *iwk, float *wk)
 }
 
 static
-int idlcom(float *x, float *y, float *z, int *itri,
-           float *xd, float *yd, float *zd, int *nt, int *iwk, float *wk)
+int idlcom(double *x, double *y, double *z, int *itri,
+           double *xd, double *yd, double *zd, int *nt, int *iwk, double *wk)
 {
   Real x1, y1, z1;
   Integer iv, ipoint;
@@ -1577,9 +1577,9 @@ int idlcom(float *x, float *y, float *z, int *itri,
   return 0;
 }
 
-void idsfft(int *md, int *ncp, int *ndp, float *xd, float *yd, float *zd,
-            int *nxi, int *nyi, float *xi, float *yi, float *zi,
-            int *iwk, float *wk)
+void idsfft(int *md, int *ncp, int *ndp, double *xd, double *yd, double *zd,
+            int *nxi, int *nyi, double *xi, double *yi, double *zi,
+            int *iwk, double *wk)
 {
   Integer nl, nt, md0, il1, il2, iti, ixi, izi, iyi, ncp0, ndp0;
   Integer ngp0, ngp1, nxi0, nyi0, jigp, jngp, nngp, itpv;

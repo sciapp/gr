@@ -17,7 +17,7 @@ static
 int orientation = 0;
 
 static
-float factor = 1.0;
+double factor = 1.0;
 
 static
 void usage(int help)
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
 
   if (factor != 1.0)
     {
-      float transx = 0, transy = 0, mat[3][2];
+      double transx = 0, transy = 0, mat[3][2];
 
       if (factor < 1)
         {

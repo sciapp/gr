@@ -37,10 +37,10 @@ typedef struct
   int xdim, ydim;
   int wkid;
   int tnr, ndc;
-  float *z;
-  float scale_factor, aspect_ratio, vp[4], wn[4];
-  float xmin, ymin, dx, dy;
-  float zmin, zmax;
+  double *z;
+  double scale_factor, aspect_ratio, vp[4], wn[4];
+  double xmin, ymin, dx, dy;
+  double zmin, zmax;
   int start_index;
   int end_index;
   double *gradient_mag;
@@ -76,7 +76,7 @@ char *xmalloc(int bytes)
 /-----------------------------------------------------------------------------*/
 
 static
-void gradient(int ind, int n, float *xpts, float *ypts, enum contour_op op)
+void gradient(int ind, int n, double *xpts, double *ypts, enum contour_op op)
 {
   int i, j;
   static int count;
@@ -193,7 +193,7 @@ void gradient(int ind, int n, float *xpts, float *ypts, enum contour_op op)
 /-----------------------------------------------------------------------------*/
 
 static
-void variance(int ind, int n, float *xpts, float *ypts, enum contour_op op)
+void variance(int ind, int n, double *xpts, double *ypts, enum contour_op op)
 {
   double y;
   double Sxx, Syy, Sxy;
@@ -258,7 +258,7 @@ void variance(int ind, int n, float *xpts, float *ypts, enum contour_op op)
 }
 
 static
-int find_good_place(int n, float *xpts, float *ypts, double r_sqr)
+int find_good_place(int n, double *xpts, double *ypts, double r_sqr)
 {
   int i, i_ind;
   int j, j_ind;
@@ -269,7 +269,7 @@ int find_good_place(int n, float *xpts, float *ypts, double r_sqr)
   double dist, dist1;
   double min_t, t, min_var, var;
   unsigned short *ind;
-  float r;
+  double r;
 
   contour_vars.gradient_mag = (double *) xmalloc(n * sizeof(double));
   contour_vars.variance_list = (double *) xmalloc(n * sizeof(double));
@@ -428,7 +428,7 @@ avg_done:
 }
 
 static
-void label_line(int n, float *xpts, float *ypts, float *zpts, char *label)
+void label_line(int n, double *xpts, double *ypts, double *zpts, char *label)
 {
   int i, j, k;
   int error_ind;
@@ -439,10 +439,10 @@ void label_line(int n, float *xpts, float *ypts, float *zpts, char *label)
   double ox, oy;
   double dx, dy, t;
   double xtpt1, ytpt1, xtpt2, ytpt2;
-  float cpx, cpy, tx[4], ty[4];
-  float x_up_val, y_up_val;
-  float x_text_pos, y_text_pos;
-  float d, e;
+  double cpx, cpy, tx[4], ty[4];
+  double x_up_val, y_up_val;
+  double x_text_pos, y_text_pos;
+  double d, e;
 
   /*--------------------------------------------------------------------------
   / Find out how large the label is so we will know how much room to leave
@@ -593,12 +593,12 @@ void label_line(int n, float *xpts, float *ypts, float *zpts, char *label)
 }
 
 static
-void draw(float x, float y, float z, int iflag)
+void draw(double x, double y, double z, int iflag)
 {
   static int n = 0;
-  static float xpts[contour_max_pts];
-  static float ypts[contour_max_pts];
-  static float zpts[contour_max_pts];
+  static double xpts[contour_max_pts];
+  static double ypts[contour_max_pts];
+  static double zpts[contour_max_pts];
   static double line_length = 0;
   static int z_exept_flag = 0;
   double dx, dy;
@@ -734,8 +734,8 @@ void draw(float x, float y, float z, int iflag)
 
 static
 void calc_contours(
-  float *z, int nrz, int nx, int ny, float *cv, int ncv, float zmax,
-  int *bitmap, float xmin, float ymin, float dx, float dy)
+  double *z, int nrz, int nx, int ny, double *cv, int ncv, double zmax,
+  int *bitmap, double xmin, double ymin, double dx, double dy)
 {
 /*
     This subroutine draws a contour through equal values of an array.
@@ -805,12 +805,12 @@ void calc_contours(
     I1, I2 and I3 are used for subscript computations during the
     examination of lines from Z[I,J] to it's neighbors.
  
-    float xint[4]
+    double xint[4]
  
     XINT is used to mark intersections of the contour under
     consideration with the edges of the cell being examined.
   
-    float xy[2]
+    double xy[2]
  
     XY is used to compute coordinates for the draw subroutine.
  */
@@ -820,9 +820,9 @@ void calc_contours(
   static int i2[2] = { 1, -1 };
   static int i3[6] = { 1, 0, 0, 1, 1, 0 };
 
-  float cval = 0, xint[4], z1, z2, zz;
+  double cval = 0, xint[4], z1, z2, zz;
   int idir, icur, jcur, jump, k, l, iedge, iflag = 0, ibkey;
-  float xy[2];
+  double xy[2];
   int ij[2], l2[4];
   int ii, jj, ni, ks = 0, ix, nxidir, icv = 0;
 
@@ -1177,17 +1177,17 @@ L290:
 #undef BITMAP
 #undef Z
 
-void gr_draw_contours(int nx, int ny, int nh, float *px, float *py, float *h,
-		      float *z, int major_h)
+void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
+		      double *z, int major_h)
 {
-  float mmin, mmax, *cv;
+  double mmin, mmax, *cv;
   int ncv, *bitmap;
   int i, j, k, n = 0;
   int precision, max_precision;
   char *s, buffer[80];
   int eflag, error_ind = 0;
   int rotation, tilt, scale_options;
-  float char_height;
+  double char_height;
 
   gks_inq_open_ws(1, &error_ind, &n, &contour_vars.wkid);
 
@@ -1276,9 +1276,9 @@ void gr_draw_contours(int nx, int ny, int nh, float *px, float *py, float *h,
   if (nh <= 1)
     {
       ncv = contour_lines;
-      cv = (float *) xmalloc(ncv * sizeof(float));
+      cv = (double *) xmalloc(ncv * sizeof(double));
       for (i = 0; i < ncv; i++)
-	cv[i] = mmin + (float) (i) / (ncv - 1) * (mmax - mmin);
+	cv[i] = mmin + (double) (i) / (ncv - 1) * (mmax - mmin);
     }
   else
     {

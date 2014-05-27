@@ -1,4 +1,3 @@
-
 #ifndef NO_QT4
 
 #include <stdio.h>
@@ -24,22 +23,22 @@
 extern "C"
 {
 #endif
- 
+
 #else
- 
+
 #ifdef __cplusplus
 #define DLLEXPORT extern "C"
 #else
 #define DLLEXPORT
 #endif
-  
+
 #endif
-  
+
 DLLEXPORT void gks_qtplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
-  
+
 #ifdef _WIN32
 #ifdef __cplusplus
 }
@@ -53,11 +52,6 @@ DLLEXPORT void gks_qtplugin(
 #define PATTERNS 120
 #define HATCH_STYLE 108
 
-#define MWIDTH  0.254
-#define MHEIGHT 0.1905
-#define WIDTH   1024
-#define HEIGHT  768
-
 #define DrawBorder 0
 
 #define RESOLVE(arg, type, nbytes) arg = (type *)(s + sp); sp += nbytes
@@ -66,7 +60,7 @@ DLLEXPORT void gks_qtplugin(
 #define M_PI 3.14159265358979323846
 #endif
 
-#define FEPS 1.0E-06
+#define FEPS 1.0E-09
 
 #define MAX_TNR 9
 
@@ -100,7 +94,7 @@ static
 gks_state_list_t *gkss;
 
 static
-float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 typedef struct ws_state_list_t
   {
@@ -109,15 +103,15 @@ typedef struct ws_state_list_t
     QPainter *pixmap;
     int state, wtype;
     int width, height;
-    float a, b, c, d;
-    float window[4], viewport[4];
+    double a, b, c, d;
+    double window[4], viewport[4];
     QRect rect[MAX_TNR];
     QColor rgb[MAX_COLOR];
     QPolygon *points;
     int npoints, max_points;
     QFont *font;
     int family, capheight;
-    float alpha, angle;
+    double alpha, angle;
     QPixmap *pattern[PATTERNS];
   }
 ws_state_list;
@@ -132,7 +126,7 @@ const char *fonts[] = {
   };
 
 static
-float capheights[29] = {
+double capheights[29] = {
   0.662, 0.660, 0.681, 0.662,
   0.729, 0.729, 0.729, 0.729,
   0.583, 0.583, 0.583, 0.583,
@@ -185,10 +179,10 @@ int symbol2utf[256] = {
 };
 
 static
-float xfac[4] = { 0, 0, -0.5, -1 };
+double xfac[4] = { 0, 0, -0.5, -1 };
 
 static
-float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 static
 int predef_font[] = { 1, 1, 1, -2, -3, -4 };
@@ -206,7 +200,7 @@ static
 int unused_variable = 0;
 
 static
-void set_norm_xform(int tnr, float *wn, float *vp)
+void set_norm_xform(int tnr, double *wn, double *vp)
 {
   int xp1, yp1, xp2, yp2;
 
@@ -231,6 +225,15 @@ void init_norm_xform(void)
 }
 
 static
+void resize_window(void)
+{
+  p->width  = nint((p->viewport[1] - p->viewport[0]) / 2.54 *
+                    p->widget->logicalDpiX() * 100);
+  p->height = nint((p->viewport[3] - p->viewport[2]) / 2.54 *
+                    p->widget->logicalDpiY() * 100);
+}
+
+static
 void set_xform(void)
 {
   p->a = (p->width - 1) / (p->window[1] - p->window[0]);
@@ -240,9 +243,9 @@ void set_xform(void)
 }
 
 static
-void seg_xform(float *x, float *y)
+void seg_xform(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1] + gkss->mat[2][0];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1] + gkss->mat[2][1];
@@ -250,9 +253,9 @@ void seg_xform(float *x, float *y)
 }
 
 static
-void seg_xform_rel(float *x, float *y)
+void seg_xform_rel(double *x, double *y)
 {
-  float xx;
+  double xx;
 
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1];
@@ -269,7 +272,7 @@ void set_clip_rect(int tnr)
 }
 
 static
-void set_color_rep(int color, float red, float green, float blue)
+void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     p->rgb[color].setRgb(nint(red * 255), nint(green * 255), nint(blue * 255));
@@ -279,7 +282,7 @@ static
 void init_colors(void)
 {
   int color;
-  float red, green, blue;
+  double red, green, blue;
 
   for (color = 0; color < MAX_COLOR; color++)
     {
@@ -319,7 +322,7 @@ QPixmap *create_pattern(int pattern)
 }
 
 static
-void move_to(float x, float y)
+void move_to(double x, double y)
 {
   int ix, iy;
 
@@ -333,30 +336,30 @@ void move_to(float x, float y)
 }
 
 static
-void line_to(float x, float y)
+void line_to(double x, double y)
 {
   int ix, iy;
 
   NDC_to_DC(x, y, ix, iy);
   p->points->setPoint(p->npoints++, ix, iy);
 }
-  
+
 static
-void move(float x, float y)
+void move(double x, double y)
 {
   gks_move(x, y, move_to);
 }
 
 static
-void draw(float x, float y)
+void draw(double x, double y)
 {
   gks_dash(x, y, move_to, line_to);
 }
 
 static
-void line_routine(int n, float *px, float *py, int linetype, int tnr)
+void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
-  float x, y;
+  double x, y;
   int i, x0, y0, xi, yi, xim1, yim1;
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
@@ -388,10 +391,10 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
 }
 
 static
-void polyline(int n, float *px, float *py)
+void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  float ln_width;
+  double ln_width;
   int width;
 
   if (n > p->max_points)
@@ -425,11 +428,11 @@ void polyline(int n, float *px, float *py)
 }
 
 static
-void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
+void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   int r, d, x, y, i;
   int pc, op;
-  float scale, xr, yr;
+  double scale, xr, yr;
   QPolygon *points;
 
   static int marker[26][57] = {
@@ -602,10 +605,10 @@ void draw_marker(float xn, float yn, int mtype, float mscale, int mcolor)
 
 static
 void marker_routine(
-  int n, float *px, float *py, int mtype, float mscale, int mcolor)
+  int n, double *px, double *py, int mtype, double mscale, int mcolor)
 {
-  float x, y;
-  float *clrt = gkss->viewport[gkss->cntnr];
+  double x, y;
+  double *clrt = gkss->viewport[gkss->cntnr];
   register int i, draw;
 
   for (i = 0; i < n; i++)
@@ -624,10 +627,10 @@ void marker_routine(
 }
 
 static
-void polymarker(int n, float *px, float *py)
+void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color, ln_width;
-  float mk_size;
+  double mk_size;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
@@ -647,10 +650,10 @@ void polymarker(int n, float *px, float *py)
 }
 
 static
-void text_routine(float x, float y, int nchars, char *chars)
+void text_routine(double x, double y, int nchars, char *chars)
 {
   int i, ch, xstart, ystart, width;
-  float xrel, yrel, ax, ay;
+  double xrel, yrel, ax, ay;
   QFontMetrics fm = QFontMetrics(*p->font);
   QString s = QString("");
 
@@ -688,9 +691,9 @@ void text_routine(float x, float y, int nchars, char *chars)
 static
 void set_font(int font)
 {
-  float scale, ux, uy;
+  double scale, ux, uy;
   int fontNum, size, bold, italic;
-  float width, height, capheight;
+  double width, height, capheight;
 
   font = abs(font);
   if (font >= 101 && font <= 129)
@@ -717,11 +720,13 @@ void set_font(int font)
   seg_xform_rel(&width, &height);
 
   height = sqrt(width * width + height * height);
-  capheight = nint(height * (fabs(p->c) + 1));
+  capheight = height * (fabs(p->c) + 1);
   p->capheight = nint(capheight);
 
   fontNum = font - 1;
   size = nint(p->capheight / capheights[fontNum]);
+  if (size < 1)
+    size = 1;
   if (font > 13)
     font += 3;
   p->family = (font - 1) / 4;
@@ -737,13 +742,13 @@ void set_font(int font)
 }
 
 static
-void fill_routine(int n, float *px, float *py, int tnr);
+void fill_routine(int n, double *px, double *py, int tnr);
 
 static
-void text(float px, float py, int nchars, char *chars)
+void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color, ln_width;
-  float x, y;
+  double x, y;
 
   tx_font  = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec  = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
@@ -775,10 +780,10 @@ void text(float px, float py, int nchars, char *chars)
 }
 
 static
-void fill_routine(int n, float *px, float *py, int tnr)
+void fill_routine(int n, double *px, double *py, int tnr)
 {
   register int i;
-  float x, y;
+  double x, y;
   int ix, iy;
   QPolygon *points;
 
@@ -795,7 +800,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
   delete points;
 }
 
-static void fillarea(int n, float *px, float *py)
+static void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color, ln_width;
 
@@ -832,7 +837,7 @@ static void fillarea(int n, float *px, float *py)
       if (fl_style >= PATTERNS)
         fl_style = 1;
       if (p->pattern[fl_style] == NULL)
-	p->pattern[fl_style] = create_pattern(fl_style);
+        p->pattern[fl_style] = create_pattern(fl_style);
       p->pixmap->setPen(Qt::NoPen);
       p->pixmap->setBrush(QBrush(p->rgb[fl_color], *p->pattern[fl_style]));
       fill_routine(n, px, py, gkss->cntnr);
@@ -841,10 +846,10 @@ static void fillarea(int n, float *px, float *py)
 
 static
 void cellarray(
-  float xmin, float xmax, float ymin, float ymax,
+  double xmin, double xmax, double ymin, double ymax,
   int dx, int dy, int dimx, int *colia, int true_color)
 {
-  float x1, y1, x2, y2;
+  double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
   register int i, j, ix, iy, ind, rgb;
@@ -868,14 +873,7 @@ void cellarray(
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
 
-  if (!true_color)
-    {
-      img = new QImage(width, height, QImage::Format_Indexed8);
-      for (i = 0; i < 256; i++)
-        img->setColor(i, p->rgb[i].rgb());
-    }
-  else
-    img = new QImage(width, height, QImage::Format_RGB32);
+  img = new QImage(width, height, QImage::Format_RGB32);
 
   for (j = 0; j < height; j++)
     {
@@ -890,7 +888,11 @@ void cellarray(
           if (!true_color)
             {
               ind = colia[iy * dimx + ix];
-              img->setPixel(i, j, Color8Bit(ind));
+              if (ind < 0)
+                ind = 0;
+              else if (ind >= MAX_COLOR)
+                  ind = MAX_COLOR - 1;
+              img->setPixel(i, j, p->rgb[Color8Bit(ind)].rgb());
             }
           else
             {
@@ -914,7 +916,7 @@ void interp(char *str)
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
-  float *f_arr_1 = NULL, *f_arr_2 = NULL;
+  double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
 
@@ -935,21 +937,21 @@ void interp(char *str)
         case  13:               /* polymarker */
         case  15:               /* fill area */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, i_arr[0] * sizeof(float));
-          RESOLVE(f_arr_2, float, i_arr[0] * sizeof(float));
+          RESOLVE(f_arr_1, double, i_arr[0] * sizeof(double));
+          RESOLVE(f_arr_2, double, i_arr[0] * sizeof(double));
           break;
 
         case  14:               /* text */
-          RESOLVE(f_arr_1, float, sizeof(float));
-          RESOLVE(f_arr_2, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
+          RESOLVE(f_arr_2, double, sizeof(double));
           RESOLVE(len_c_arr, int, sizeof(int));
           RESOLVE(c_arr, char, 132);
           break;
 
         case  16:               /* cell array */
         case 201:               /* draw image */
-          RESOLVE(f_arr_1, float, 2 * sizeof(float));
-          RESOLVE(f_arr_2, float, 2 * sizeof(float));
+          RESOLVE(f_arr_1, double, 2 * sizeof(double));
+          RESOLVE(f_arr_2, double, 2 * sizeof(double));
           RESOLVE(dx, int, sizeof(int));
           RESOLVE(dy, int, sizeof(int));
           RESOLVE(dimx, int, sizeof(int));
@@ -982,38 +984,38 @@ void interp(char *str)
         case  31:               /* set character height */
         case 200:               /* set text slant */
         case 203:               /* set transparency */
-          RESOLVE(f_arr_1, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
         case  32:               /* set character up vector */
-          RESOLVE(f_arr_1, float, sizeof(float));
-          RESOLVE(f_arr_2, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
+          RESOLVE(f_arr_2, double, sizeof(double));
           break;
-        
+
         case  41:               /* set aspect source flags */
-          RESOLVE(i_arr, int, 13 * sizeof(int));        
-          break;  
-        
+          RESOLVE(i_arr, int, 13 * sizeof(int));
+          break;
+
         case  48:               /* set color representation */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, 3 * sizeof(float));
+          RESOLVE(f_arr_1, double, 3 * sizeof(double));
           break;
-        
+
         case  49:               /* set window */
         case  50:               /* set viewport */
         case  54:               /* set workstation window */
         case  55:               /* set workstation viewport */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, 2 * sizeof(float));
-          RESOLVE(f_arr_2, float, 2 * sizeof(float));
+          RESOLVE(f_arr_1, double, 2 * sizeof(double));
+          RESOLVE(f_arr_2, double, 2 * sizeof(double));
           break;
-        
+
         case 202:               /* set shadow */
-          RESOLVE(f_arr_1, float, 3 * sizeof(float));
+          RESOLVE(f_arr_1, double, 3 * sizeof(double));
           break;
 
         case 204:               /* set coord xform */
-          RESOLVE(f_arr_1, float, 6 * sizeof(float));
+          RESOLVE(f_arr_1, double, 6 * sizeof(double));
           break;
 
         default:
@@ -1031,8 +1033,8 @@ void interp(char *str)
           p->window[1] = p->window[3] = 1.0;
 
           p->viewport[0] = p->viewport[2] = 0.0;
-          p->viewport[1] = p->width  * MWIDTH / WIDTH;
-          p->viewport[3] = p->height * MWIDTH / HEIGHT;
+          p->viewport[1] = p->width  * 2.54 / p->widget->logicalDpiX() / 100;
+          p->viewport[3] = p->height * 2.54 / p->widget->logicalDpiY() / 100;
 
           set_xform();
           init_norm_xform();
@@ -1050,7 +1052,7 @@ void interp(char *str)
           break;
 
         case  14:
-	  unused_variable = *len_c_arr;
+          unused_variable = *len_c_arr;
           text(f_arr_1[0], f_arr_2[0], strlen(c_arr), c_arr);
           break;
 
@@ -1061,7 +1063,8 @@ void interp(char *str)
         case  16:
         case 201:
           true_color = *f == DRAW_IMAGE;
-          cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1], *dx, *dy, *dimx, i_arr, true_color);
+          cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1],
+                    *dx, *dy, *dimx, i_arr, true_color);
           break;
 
         case  19:
@@ -1134,7 +1137,7 @@ void interp(char *str)
         case  38:
           gkss->facoli = i_arr[0];
           break;
-        
+
         case  41:
           for (i = 0; i < 13; i++)
             gkss->asf[i] = i_arr[i];
@@ -1149,7 +1152,6 @@ void interp(char *str)
           gkss->window[*i_arr][1] = f_arr_1[1];
           gkss->window[*i_arr][2] = f_arr_2[0];
           gkss->window[*i_arr][3] = f_arr_2[1];
-          set_xform();
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           break;
@@ -1161,7 +1163,7 @@ void interp(char *str)
           gkss->viewport[*i_arr][3] = f_arr_2[1];
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          
+
           if (*i_arr == gkss->cntnr)
             set_clip_rect(*i_arr);
           break;
@@ -1181,21 +1183,22 @@ void interp(char *str)
           p->window[1] = f_arr_1[1];
           p->window[2] = f_arr_2[0];
           p->window[3] = f_arr_2[1];
-         
+
           set_xform();
           init_norm_xform();
           break;
-          
+
         case  55:
           p->viewport[0] = f_arr_1[0];
           p->viewport[1] = f_arr_1[1];
           p->viewport[2] = f_arr_2[0];
           p->viewport[3] = f_arr_2[1];
-          
+
+          resize_window();
           set_xform();
           init_norm_xform();
           break;
-          
+
         case 200:
           gkss->txslant = f_arr_1[0];
           break;
@@ -1228,7 +1231,7 @@ void get_pixmap(void)
 
 void gks_qtplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr)
 {
   int i;
@@ -1250,15 +1253,15 @@ void gks_qtplugin(
       p->max_points = MAX_POINTS;
 
       for (i = 0; i < PATTERNS; i++)
-	p->pattern[i] = NULL;
+        p->pattern[i] = NULL;
 
       *ptr = p;
       break;
 
     case 3:
       for (i = 0; i < PATTERNS; i++)
-	if (p->pattern[i] != NULL)
-	  free(p->pattern[i]);
+        if (p->pattern[i] != NULL)
+          free(p->pattern[i]);
 
       delete p->points;
       delete p->font;
@@ -1275,9 +1278,9 @@ void gks_qtplugin(
     case 8:
       if (i_arr[1] == GKS_K_PERFORM_FLAG)
         {
-	  get_pixmap();
-	  interp(p->dl.buffer);
-	}
+          get_pixmap();
+          interp(p->dl.buffer);
+        }
       break;
 
     default:
@@ -1294,7 +1297,7 @@ void gks_qtplugin(
 
 void gks_qtplugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2, int lc, char *chars,
+  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
   if (fctid == 2)

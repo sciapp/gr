@@ -242,6 +242,7 @@ GR3API int gr3_init(int *attrib_list) {
     gr3_init_convenience();
     gr3_setcameraprojectionparameters(45, 1, 200);
     gr3_cameralookat(0, 0, 10, 0, 0, 0, 0, 1, 0);
+    gr3_log_("init completed successfully");
     return GR3_ERROR_NONE;
 }
 
@@ -1383,6 +1384,11 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
  * \param [in] log_message  The logging message
  */
 void gr3_log_(const char *log_message) {
+    char *debug;
+    debug = getenv("GR3_DEBUG");
+    if (debug != NULL && debug[0] != 0) {
+        fprintf(stderr, "gr3: %s\n", log_message);
+    }
     if (gr3_log_func_) {
         gr3_log_func_(log_message);
     }
@@ -1509,12 +1515,14 @@ static GLuint depth_renderbuffer = 0;
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+            gr3_log_("failed to create an ARB framebuffer object (fbo wasn't complete)");
             return GR3_ERROR_OPENGL_ERR;
         }
         glViewport(0,0,_width,_height);
         glEnable(GL_DEPTH_TEST);
         if (glGetError() != GL_NO_ERROR) {
             gr3_terminateFBO_ARB_();
+            gr3_log_("failed to create an ARB framebuffer object (an OpenGL error occurred)");
             return GR3_ERROR_OPENGL_ERR;
         }
         
@@ -1590,6 +1598,7 @@ static GLuint depth_renderbuffer = 0;
         framebuffer_status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
         gr3_log_("glCheckFramebufferStatusEXT");
         if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE_EXT) {
+          gr3_log_("failed to create an EXT framebuffer object (fbo wasn't complete)");
             return GR3_ERROR_OPENGL_ERR;
         }
 #endif
@@ -1599,6 +1608,7 @@ static GLuint depth_renderbuffer = 0;
         gr3_log_("glEnable");
         if (glGetError() != GL_NO_ERROR) {
             gr3_terminateFBO_EXT_();
+            gr3_log_("failed to create an EXT framebuffer object (an OpenGL error occurred)");
             return GR3_ERROR_OPENGL_ERR;
         }
 

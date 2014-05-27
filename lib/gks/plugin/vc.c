@@ -1,3 +1,4 @@
+#ifndef NO_AV
 
 #include <stdio.h>
 
@@ -174,7 +175,7 @@ void vc_frame_free(frame_t frame)
 
 void vc_movie_finish(movie_t movie)
 {
-  int i;
+  unsigned int i;
 
   av_write_trailer(movie->fmt_ctx);
 
@@ -200,6 +201,7 @@ pdf_t vc_pdf_from_file(const char *path)
   pdf_t pdf = (pdf_t) malloc(sizeof(struct pdf_t_));
 
   pdf->ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+  fz_register_document_handlers(pdf->ctx);
   pdf->doc = fz_open_document(pdf->ctx, path);
   pdf->num_pages = fz_count_pages(pdf->doc);
   pdf->path = path;
@@ -214,6 +216,7 @@ pdf_t vc_pdf_from_memory(unsigned char *data, int len)
   pdf_t pdf = (pdf_t) malloc(sizeof(struct pdf_t_));
 
   pdf->ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
+  fz_register_document_handlers(pdf->ctx);
   stream = fz_open_memory(pdf->ctx, data, len);
   pdf->doc = fz_open_document_with_stream(pdf->ctx, "pdf", stream);
   pdf->num_pages = fz_count_pages(pdf->doc);
@@ -224,7 +227,7 @@ pdf_t vc_pdf_from_memory(unsigned char *data, int len)
 
 frame_t vc_frame_from_pdf(pdf_t pdf, int page, int width, int height)
 {
-  float transx, transy, zoom;
+  double transx, transy, zoom;
   fz_matrix transform, scale_mat, transl_mat;
   fz_rect rect;
   fz_irect bbox;
@@ -259,7 +262,7 @@ frame_t vc_frame_from_pdf(pdf_t pdf, int page, int width, int height)
    * bounds, so it will contain the entire page.
    */
 
-  pix = fz_new_pixmap(pdf->ctx, fz_device_rgb, width, height);
+  pix = fz_new_pixmap(pdf->ctx, fz_device_rgb(pdf->ctx), width, height);
   fz_clear_pixmap_with_value(pdf->ctx, pix, 0xff);
 
   /*
@@ -307,3 +310,5 @@ void vc_pdf_close(pdf_t pdf)
   fz_free_context(pdf->ctx);
   pdf->num_pages = -1;
 }
+
+#endif

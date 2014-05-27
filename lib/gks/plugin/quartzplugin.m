@@ -1,6 +1,7 @@
 
 #import <Foundation/Foundation.h>
 #import <ApplicationServices/ApplicationServices.h>
+#import <Foundation/NSFileManager.h>
 
 #include "gks.h"
 #include "gkscore.h"
@@ -32,7 +33,7 @@ extern "C"
   
 DLLEXPORT void gks_quartzplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, float *f_arr_1, int len_f_arr_2, float *f_arr_2,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
   
 #ifdef _WIN32
@@ -95,7 +96,9 @@ BOOL gks_terminal(void)
 {
   NSURL *url;
   OSStatus status;
-    
+  BOOL isDir;
+
+  NSFileManager *fm = [[NSFileManager alloc] init];
   NSString *grdir = [[[NSProcessInfo processInfo]
                       environment]objectForKey:@"GRDIR"];
   if ( grdir == NULL )
@@ -103,6 +106,8 @@ BOOL gks_terminal(void)
 
   NSString *path = [NSString stringWithFormat:@"%@/Applications/GKSTerm.app",
                     grdir];
+  if ( ! ([fm fileExistsAtPath:path isDirectory:&isDir] && isDir) )
+    path = [[NSString stringWithFormat:@"%@/../../../../bin/GKSTerm.app", grdir] stringByStandardizingPath];
   url = [NSURL fileURLWithPath: path];
   status = LSOpenCFURLRef((CFURLRef) url, NULL);
 
@@ -111,7 +116,7 @@ BOOL gks_terminal(void)
 
 void gks_quartzplugin(
   int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, float *r1, int lr2, float *r2,
+  int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
 {
   wss = (ws_state_list *) *ptr;
@@ -167,7 +172,7 @@ void gks_quartzplugin(
         }
       @catch (NSException *e)
         {
-          NSLog(@"Disconnect from GKSTerm failed.");          
+          NSLog(@"Disconnect from GKSTerm failed.");
           exit(-1);
         }
       [mutex release];

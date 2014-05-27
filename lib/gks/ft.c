@@ -4,7 +4,7 @@
 #include "gks.h"
 #include "gkscore.h"
 
-#ifdef XFT
+#ifndef NO_FT
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -54,7 +54,7 @@ const static int map[] = {
   25, 12, 8, 17, 21, 29, 13, 4
 };
 
-const static float caps[] = {
+const static double caps[] = {
   0.662, 0.660, 0.681, 0.662,
   0.729, 0.729, 0.729, 0.729,
   0.583, 0.583, 0.583, 0.583,
@@ -261,7 +261,8 @@ void gks_ft_terminate(void) {
 }
 
 unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
-                                 gks_state_list_t *gkss, const char *text, int length) {
+                                 gks_state_list_t *gkss, const char *text,
+                                 int length) {
   FT_Face face;                   /* font face */
   FT_Vector pen;                  /* glyph position */
   FT_BBox bb;                     /* bounding box */
@@ -282,7 +283,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   FT_Bitmap ftbitmap;
   FT_UInt codepoint;
   int i, j, k, textfont, dx, dy, value, pos_x, pos_y;
-  float angle;
+  double angle;
   const int windowheight = *height;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN ||
@@ -511,7 +512,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
 int *gks_ft_render(int *x, int *y, int *width, int *height,
                    gks_state_list_t *gkss, const char *text, int length) {
   FT_Byte *rgba_bitmap = NULL;
-  float red, green, blue;
+  double red, green, blue;
   int tmp, size, i, j;
   int color[3];
   unsigned char *mono_bitmap;

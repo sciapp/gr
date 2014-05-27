@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# -*- animation -*-
+"""
+3D animation of a pendulum
+"""
 
 from numpy import sin, cos, sqrt, pi, array
 import time

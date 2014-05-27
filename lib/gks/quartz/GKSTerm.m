@@ -34,10 +34,10 @@
       window[win] = [[NSWindow alloc]
                       initWithContentRect: NSMakeRect(NSMinX(screenFrame), NSMaxY(screenFrame) - 500, 500, 500)
                       styleMask: NSTitledWindowMask | NSClosableWindowMask |
-                      NSMiniaturizableWindowMask
+                      NSMiniaturizableWindowMask | NSResizableWindowMask
                       backing: NSBackingStoreBuffered defer: NO];
       [window[win] setBackgroundColor: [NSColor colorWithCalibratedWhite: 1 alpha: 1]];
-      view[win] = [[GKSView alloc] initWithFrame: NSMakeRect(0,0, 500,500)];
+      view[win] = [[GKSView alloc] initWithFrame: NSMakeRect(0, 0, 500, 500)];
       [window[win] setContentView:view[win]];
       [window[win] makeFirstResponder: view[win]];
       [window[win] makeKeyAndOrderFront: nil];

@@ -1,10 +1,15 @@
 #!/usr/bin/env python
+# -*- animation -*-
+"""
+Sample microphone input and display power spectrum
+"""
 
 import pyaudio
 import numpy
+import time
 import gr
 
-FS=44100		# Sampling frequency
+FS=44100       # Sampling frequency
 SAMPLES=1024
 
 mic = None
@@ -25,7 +30,9 @@ gr.setscale(1)
 gr.setmarkersize(1)
 gr.setmarkertype(4)
 
-while (True):
+start = time.time()
+
+while time.time() - start < 10:
     try:
         power = get_spectrum()
     except (IOError):
@@ -39,6 +46,6 @@ while (True):
     gr.text(0.47, 0.965, '1kHz')
     gr.text(0.79, 0.965, '10kHz')
     gr.setlinecolorind(4)
-    gr.polyline(SAMPLES/2, f, power)
+    gr.polyline(f, power)
     gr.updatews()
 

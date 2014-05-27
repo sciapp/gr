@@ -62,7 +62,7 @@ static
 int nel = sizeof(format) / sizeof(format[0]);
 
 static
-float f_arg[7], *f_arr[4];
+double f_arg[7], *f_arr[4];
 
 static
 int i_arg[6], *i_arr, i_arr_size, f_arr_size[4];
@@ -154,8 +154,8 @@ char *xml(char *s, char *fmt)
                                 if (f_arrc >= f_arr_size[f_arrp])
                                   {
                                     f_arr_size[f_arrp] += BUFFSIZE;
-                                    f_arr[f_arrp] = (float *)
-                                      realloc(f_arr[f_arrp], sizeof(float) * 
+                                    f_arr[f_arrp] = (double *)
+                                      realloc(f_arr[f_arrp], sizeof(double) * 
                                               f_arr_size[f_arrp]);
                                   }
                                 f_arr[f_arrp][f_arrc++] = atof(p);
@@ -357,7 +357,7 @@ int gr_importgraphics(char *path)
   i_arr_size = BUFFSIZE;
   for (i = 0; i > 4; i++)
     {
-      f_arr[i] = (float *) malloc(sizeof(float) * BUFFSIZE);
+      f_arr[i] = (double *) malloc(sizeof(double) * BUFFSIZE);
       f_arr_size[i] = BUFFSIZE;
     }
 

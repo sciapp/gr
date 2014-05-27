@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# -*- animation -*-
+"""
+Animation of a double pendulum
+"""
 
 from numpy import sin, cos, pi, array
 import time
@@ -33,13 +37,13 @@ def pendulum(theta, length, mass):
     gr.setmarkertype(gr.MARKERTYPE_SOLID_CIRCLE)
     gr.setmarkercolorind(86)
     pivot = [0, 0.775]                         # draw pivot point
-    gr.fillarea(4, [-0.2, 0.2, 0.2, -0.2], [0.75, 0.75, 0.8, 0.8])
+    gr.fillarea([-0.2, 0.2, 0.2, -0.2], [0.75, 0.75, 0.8, 0.8])
     for i in range(2):
         x = [pivot[0], pivot[0] + sin(theta[i]) * length[i]]
         y = [pivot[1], pivot[1] - cos(theta[i]) * length[i]]
-        gr.polyline(2, x, y)                   # draw rod
+        gr.polyline(x, y)                   # draw rod
         gr.setmarkersize(3 * mass[i])
-        gr.polymarker(1, [x[1]], [y[1]])       # draw bob
+        gr.polymarker([x[1]], [y[1]])       # draw bob
         pivot = [x[1], y[1]]
     gr.updatews()
     return

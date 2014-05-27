@@ -27,7 +27,7 @@ int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_
 #else
     sprintf(povray_call,"povray +I%s +O%s +W%d +H%d -D +UA +FN +A +R%d 2>/dev/null",povfile,pngfile,width,height, ssaa_factor);
 #endif
-    system(povray_call);
+    res = system(povray_call);
     free(povray_call);
     if (use_alpha) {
       res = gr3_readpngtomemory_((int *)pixels,pngfile,width,height);
@@ -88,9 +88,11 @@ int gr3_export_pov_(const char *filename, int width, int height) {
     camera_pos[0] = context_struct_.camera_x;
     camera_pos[1] = context_struct_.camera_y;
     camera_pos[2] = context_struct_.camera_z;
-    fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n",camera_pos[0], camera_pos[1],camera_pos[2]);
+    fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n", camera_pos[0], camera_pos[1], camera_pos[2]);
+    fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n", -camera_pos[0], -camera_pos[1], camera_pos[2]);
   } else {
-    fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n",context_struct_.light_dir[0], context_struct_.light_dir[1],context_struct_.light_dir[2]);
+    fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n", context_struct_.light_dir[0], context_struct_.light_dir[1], context_struct_.light_dir[2]);
+    fprintf(povfp,"light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n", -context_struct_.light_dir[0], -context_struct_.light_dir[1], context_struct_.light_dir[2]);
   }
   fprintf(povfp,"background { color rgb <%f, %f, %f> }\n", context_struct_.background_color[0], context_struct_.background_color[1], context_struct_.background_color[2]);
   draw = context_struct_.draw_list_;
@@ -102,7 +104,7 @@ int gr3_export_pov_(const char *filename, int width, int height) {
           fprintf(povfp,"sphere {\n");
           fprintf(povfp,"  <%f, %f, %f>, %f\n",draw->positions[i*3+0],draw->positions[i*3+1],draw->positions[i*3+2],draw->scales[i*3+0]);
           fprintf(povfp,"  texture {\n");
-          fprintf(povfp,"    pigment { color rgb <%f, %f, %f> }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
+          fprintf(povfp,"    pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
           fprintf(povfp,"  }\n");
           fprintf(povfp,"}\n");
         }
@@ -114,7 +116,7 @@ int gr3_export_pov_(const char *filename, int width, int height) {
           fprintf(povfp,"cylinder {\n");
           fprintf(povfp,"  <%f, %f, %f>, <%f, %f, %f>, %f\n",draw->positions[i*3+0],draw->positions[i*3+1],draw->positions[i*3+2],draw->positions[i*3+0]+draw->directions[i*3+0]/len*draw->scales[i*3+2],draw->positions[i*3+1]+draw->directions[i*3+1]/len*draw->scales[i*3+2],draw->positions[i*3+2]+draw->directions[i*3+2]/len*draw->scales[i*3+2],draw->scales[i*3+0]);
           fprintf(povfp,"  texture {\n");
-          fprintf(povfp,"    pigment { color rgb <%f, %f, %f> }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
+          fprintf(povfp,"    pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
           fprintf(povfp,"  }\n");
           fprintf(povfp,"}\n");
         }
@@ -126,7 +128,7 @@ int gr3_export_pov_(const char *filename, int width, int height) {
           fprintf(povfp,"cone {\n");
           fprintf(povfp,"  <%f, %f, %f>, %f, <%f, %f, %f>, %f\n",draw->positions[i*3+0],draw->positions[i*3+1],draw->positions[i*3+2],draw->scales[i*3+0],draw->positions[i*3+0]+draw->directions[i*3+0]/len*draw->scales[i*3+2],draw->positions[i*3+1]+draw->directions[i*3+1]/len*draw->scales[i*3+2],draw->positions[i*3+2]+draw->directions[i*3+2]/len*draw->scales[i*3+2],0.0);
           fprintf(povfp,"  texture {\n");
-          fprintf(povfp,"    pigment { color rgb <%f, %f, %f> }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
+          fprintf(povfp,"    pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 }\n",draw->colors[i*3+0],draw->colors[i*3+1],draw->colors[i*3+2]);
           fprintf(povfp,"  }\n");
           fprintf(povfp,"}\n");
         }
@@ -182,7 +184,7 @@ int gr3_export_pov_(const char *filename, int width, int height) {
           }
           fprintf(povfp,"mesh {\n");
           for (j = 0; j < context_struct_.mesh_list_[draw->mesh].data.number_of_vertices/3; j++) {
-            fprintf(povfp,"#local tex = texture { pigment { color rgb <%f, %f, %f> } }\n",draw->colors[i*3+0]*colors[j*3+0],draw->colors[i*3+1]*colors[j*3+1],draw->colors[i*3+2]*colors[j*3+2]);
+            fprintf(povfp,"#local tex = texture { pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 } }\n",draw->colors[i*3+0]*colors[j*3+0],draw->colors[i*3+1]*colors[j*3+1],draw->colors[i*3+2]*colors[j*3+2]);
             fprintf(povfp,"  smooth_triangle {\n");
             for (k = 0; k < 3; k++) {
               float vertex1[4];
@@ -200,7 +202,7 @@ int gr3_export_pov_(const char *filename, int width, int height) {
                 normal1[l] = normals[j*9+k*3+l];
               }
               vertex1[3] = 1;
-              for (l = 0; l < 4; l++) {
+              for (l = 0; l < 3; l++) {
                 normal2[l] = model_matrix[0][l]*normal1[0]+model_matrix[1][l]*normal1[1]+model_matrix[2][l]*normal1[2];
               }
               fprintf(povfp,"    <%f, %f, %f>,",vertex2[0],vertex2[1],vertex2[2]);

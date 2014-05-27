@@ -24,6 +24,8 @@
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 
+#define nint(a) (int)((a) + 0.5)
+
 #define WC_to_NDC(xw, yw, tnr, xn, yn)          \
   xn = a[tnr] * (xw) + b[tnr];                  \
   yn = c[tnr] * (yw) + d[tnr]
@@ -44,13 +46,11 @@
   x = cos(p->angle) * (xrel) - (sin(p->angle)) * (yrel);        \
   y = sin(p->angle) * (xrel) + (cos(p->angle)) * (yrel)
 
-#define nint(a) ((int)(a + 0.5))
-
 static
 gks_state_list_t gkss_, *gkss;
 
 static
-float a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 static
 int patArray[33];
@@ -96,7 +96,7 @@ CGFontRef cgfontrefs[] = {
 };
 
 static
-float capheights[29] = {
+double capheights[29] = {
   0.662, 0.660, 0.681, 0.662,
   0.729, 0.729, 0.729, 0.729,
   0.583, 0.583, 0.583, 0.583,
@@ -116,10 +116,10 @@ int map[32] = {
 };
 
 static
-float xfac[4] = { 0, 0, -0.5, -1 };
+double xfac[4] = { 0, 0, -0.5, -1 };
 
 static
-float yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 static
 int dingbats[256] = {
@@ -157,6 +157,9 @@ static
 int fontfile = 0;
 
 static
+int resizing = 0;
+
+static
 CGLayerRef patternLayer;
 
 static
@@ -175,10 +178,10 @@ static
 CGRect clipRect;
 
 static
-int cur_color = -1;
+int have_colors = 0;
 
 static
-void set_norm_xform(int tnr, float *wn, float *vp)
+void set_norm_xform(int tnr, double *wn, double *vp)
 {
   CGRect *rect = &p->rect[tnr];
 
@@ -204,7 +207,7 @@ void init_norm_xform(void)
 }
 
 static
-void set_color_rep(int color, float red, float green, float blue)
+void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR) {
     if (p->rgb[color] != 0)
@@ -219,7 +222,7 @@ static
 void init_colors(void)
 {
   int color;
-  float red, green, blue;
+  double red, green, blue;
 
   for (color = 0; color < MAX_COLOR; color++)
     {
@@ -238,12 +241,12 @@ void set_xform(void)
 }
 
 static
-void seg_xform(float *x, float *y)
+void seg_xform(double *x, double *y)
 {
 }
 
 static
-void seg_xform_rel(float *x, float *y)
+void seg_xform_rel(double *x, double *y)
 {
 }
 
@@ -255,9 +258,9 @@ void seg_xform_rel(float *x, float *y)
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr;
-  float *f_arr_1 = NULL, *f_arr_2 = NULL;
+  double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
-  float mat[3][2];
+  double mat[3][2];
   int i;
 
   s = str;
@@ -277,21 +280,21 @@ void seg_xform_rel(float *x, float *y)
         case 13:                /* polymarker */
         case 15:                /* fill area */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, i_arr[0] * sizeof(float));
-          RESOLVE(f_arr_2, float, i_arr[0] * sizeof(float));
+          RESOLVE(f_arr_1, double, i_arr[0] * sizeof(double));
+          RESOLVE(f_arr_2, double, i_arr[0] * sizeof(double));
           break;
 
         case 14:                /* text */
-          RESOLVE(f_arr_1, float, sizeof(float));
-          RESOLVE(f_arr_2, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
+          RESOLVE(f_arr_2, double, sizeof(double));
           RESOLVE(len_c_arr, int, sizeof(int));
           RESOLVE(c_arr, char, 132);
           break;
 
         case 16:                /* cell array */
         case 201:
-          RESOLVE(f_arr_1, float, 2 * sizeof(float));
-          RESOLVE(f_arr_2, float, 2 * sizeof(float));
+          RESOLVE(f_arr_1, double, 2 * sizeof(double));
+          RESOLVE(f_arr_2, double, 2 * sizeof(double));
           RESOLVE(dx, int, sizeof(int));
           RESOLVE(dy, int, sizeof(int));
           RESOLVE(dimx, int, sizeof(int));
@@ -324,12 +327,12 @@ void seg_xform_rel(float *x, float *y)
         case 31:                /* set character height */
         case 200:               /* set text slant */
         case 203:               /* set transparency */
-          RESOLVE(f_arr_1, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
         case 32:                /* set character up vector */
-          RESOLVE(f_arr_1, float, sizeof(float));
-          RESOLVE(f_arr_2, float, sizeof(float));
+          RESOLVE(f_arr_1, double, sizeof(double));
+          RESOLVE(f_arr_2, double, sizeof(double));
           break;
 
         case 41:              /* set aspect source flags */
@@ -338,7 +341,7 @@ void seg_xform_rel(float *x, float *y)
 
         case 48:                /* set color representation */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, 3 * sizeof(float));
+          RESOLVE(f_arr_1, double, 3 * sizeof(double));
           break;
 
         case 49:                /* set window */
@@ -346,12 +349,12 @@ void seg_xform_rel(float *x, float *y)
         case 54:                /* set workstation window */
         case 55:                /* set workstation viewport */
           RESOLVE(i_arr, int, sizeof(int));
-          RESOLVE(f_arr_1, float, 2 * sizeof(float));
-          RESOLVE(f_arr_2, float, 2 * sizeof(float));
+          RESOLVE(f_arr_1, double, 2 * sizeof(double));
+          RESOLVE(f_arr_2, double, 2 * sizeof(double));
           break;
 
         case 202:               /* set shadow */
-          RESOLVE(f_arr_1, float, 3* sizeof(float));
+          RESOLVE(f_arr_1, double, 3* sizeof(double));
           break;
 
         default:
@@ -370,7 +373,6 @@ void seg_xform_rel(float *x, float *y)
 
           p->width  = [self bounds].size.width;
           p->height = [self bounds].size.height;
-
           p->swidth  = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
           p->sheight = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
 
@@ -383,12 +385,16 @@ void seg_xform_rel(float *x, float *y)
 
           set_xform();
           init_norm_xform();
-          init_colors();
+
+          if (!have_colors)
+            {
+              init_colors();
+              have_colors = 1;
+            }
 
           gkss->fontfile = fontfile;
           gks_init_core(gkss);
 
-          cur_color = -1;
           [self set_clip_rect: gkss->cntnr];
           break;
 
@@ -539,7 +545,12 @@ void seg_xform_rel(float *x, float *y)
           p->viewport[2] = f_arr_2[0];
           p->viewport[3] = f_arr_2[1];
 
-          [self resize_window];
+          if (!resizing)
+            {
+              resizing = 1;
+              [self resize_window];
+              resizing = 0;
+            }
           set_xform();
           init_norm_xform();
           break;
@@ -591,6 +602,7 @@ void seg_xform_rel(float *x, float *y)
       size = 0;
       angle = 0;
       fontfile = gks_open_font();
+      resizing = 0;
     }
   return self;
 }
@@ -705,7 +717,11 @@ void seg_xform_rel(float *x, float *y)
 {
   NSSavePanel *savePanel = [NSSavePanel savePanel];
 
+#if __MAC_OS_X_VERSION_MAX_ALLOWED > 1070
+  if (![[NSBundle mainBundle] loadNibNamed:@"ExtendSavePanel" owner:self topLevelObjects:nil])
+#else
   if (![NSBundle loadNibNamed:@"ExtendSavePanel" owner:self])
+#endif
     {
       NSLog(@"Failed to load ExtendSavePanel.nib");
       return;
@@ -714,14 +730,11 @@ void seg_xform_rel(float *x, float *y)
    [[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFormat"]];
 
   [savePanel setAccessoryView: extendSavePanelView];
-
-  [savePanel beginSheetForDirectory:
-   [[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFolder"]
-             file : [[self window]title]
-             modalForWindow : [self window]
-             modalDelegate:self
-             didEndSelector:@selector(savePanelDidEnd:returnCode:contextInfo:)
-             contextInfo:saveFormatPopUp];
+  [savePanel setNameFieldStringValue: [[self window] title]];
+  [savePanel setDirectoryURL:[NSURL fileURLWithPath:[[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFolder"]]];
+  [savePanel beginSheetModalForWindow:_window completionHandler:^(NSInteger result) {
+    [self savePanelDidEnd: savePanel returnCode:result contextInfo:saveFormatPopUp];
+  }];
 }
 
 - (void)savePanelDidEnd : (NSSavePanel *)theSheet
@@ -732,10 +745,9 @@ void seg_xform_rel(float *x, float *y)
   NSData *data;
   NSBitmapImageRep *bitmap;
 
-  if (NSFileHandlingPanelOKButton == returnCode)
+  if (NSFileHandlingPanelOKButton == returnCode && [[theSheet URL] isFileURL])
     {
-      filename = [[theSheet filename] stringByDeletingPathExtension];
-
+      filename = [[[theSheet URL] path] stringByDeletingPathExtension];
       if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"PDF"])
         {
           data = [self dataWithPDFInsideRect: [self bounds]];
@@ -843,7 +855,8 @@ void seg_xform_rel(float *x, float *y)
 
           float compression = [compressionSlider floatValue];
 
-          CFDictionarySetValue(mSaveMetaAndOpts, kCGImageDestinationLossyCompressionQuality,
+          CFDictionarySetValue(mSaveMetaAndOpts,
+                               kCGImageDestinationLossyCompressionQuality,
                                [NSNumber numberWithFloat:compression]);
 
           CFURLRef url =  CFURLCreateWithFileSystemPath(kCFAllocatorDefault,
@@ -957,30 +970,24 @@ void seg_xform_rel(float *x, float *y)
 
 - (void) set_stroke_color: (int) color : (CGContextRef) context
 {
-  if (color != cur_color)
-    {
-      CGContextSetStrokeColorWithColor(context, p->rgb[color]);
-      cur_color = color;
-    }
+  CGContextSetStrokeColorWithColor(context, p->rgb[color]);
 }
 
 - (void) resize_window
 {
-  float max_width, max_height, width, height;
-  NSRect rect;
+  double max_width, max_height, width, height;
+  NSRect rect = [[self window] frame];
 
   max_width = MWIDTH;
   max_height = max_width * p->sheight / p->swidth;
 
   gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.075);
-  width  = (p->viewport[1] - p->viewport[0]) / max_width  * p->swidth;
-  height = (p->viewport[3] - p->viewport[2]) / max_height * p->sheight;
+  width  = nint((p->viewport[1] - p->viewport[0]) / max_width  * p->swidth);
+  height = nint((p->viewport[3] - p->viewport[2]) / max_height * p->sheight);
 
   if (p->width != width || p->height != height)
     {
-      rect.origin.x = [[self window] frame].origin.x;
-      rect.origin.y = [[self window] frame].origin.y + (p->height - height);
-
+      rect.origin.y   += rect.size.height - height;
       rect.size.width  = width;
       rect.size.height = height;
 
@@ -988,7 +995,7 @@ void seg_xform_rel(float *x, float *y)
       p->height = height;
 
       [self setNeedsDisplay: YES];
-      [[self window] setFrame: rect display : YES];
+      [[self window] setFrame: rect display: YES];
     }
 }
 
@@ -1024,9 +1031,9 @@ void end_context(CGContextRef context)
 }
 
 static
-void line_routine(int n, float *px, float *py, int linetype, int tnr)
+void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
-  float x, y;
+  double x, y;
   int i;
   CGPoint points[n];
 
@@ -1045,14 +1052,14 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
     CGContextClosePath(context);
 }
 
-- (void) polyline: (int) n : (float *) px : (float *) py
+- (void) polyline: (int) n : (double *) px : (double *) py
 {
   int ln_type, ln_color, i;
-  float ln_width;
+  double ln_width;
   CGPoint points[n];
   int dashlist[10];
   CGFloat lengths[10] = {0., 0., 0., 0., 0., 0., 0., 0., 0., 0. };
-  float x, y;
+  double x, y;
 
   for (i = 0; i < n; ++i)
     {
@@ -1087,11 +1094,11 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   end_context(context);
 }
 
-- (void) draw_marker: (float) xn : (float) yn : (int) mtype :
-                      (float) mscale : (int) mcolor : (CGContextRef) context
+- (void) draw_marker: (double) xn : (double) yn : (int) mtype :
+                      (double) mscale : (int) mcolor : (CGContextRef) context
 {
   int r, x, y, i;
-  float scale, xr, yr;
+  double scale, xr, yr;
   int pc, op;
 
   static int marker[26][57] =
@@ -1272,12 +1279,12 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
     }while (op != 0);
 }
 
-- (void) polymarker: (int) n : (float *) px : (float *) py
+- (void) polymarker: (int) n : (double *) px : (double *) py
 {
   int mk_type, mk_color;
-  float mk_size;
-  float x, y;
-  float *clrt = gkss->viewport[gkss->cntnr];
+  double mk_size;
+  double x, y;
+  double *clrt = gkss->viewport[gkss->cntnr];
   register int i, draw;
 
   mk_type  = gkss->asf[3] ? gkss->mtype : gkss->mindex;
@@ -1289,6 +1296,7 @@ void line_routine(int n, float *px, float *py, int linetype, int tnr)
   begin_context(context);
 
   CGContextSetLineWidth(context, 1);
+  [self set_stroke_color: mk_color : context];
   [self set_fill_color: mk_color : context];
 
   for (i = 0; i < n; i++)
@@ -1326,9 +1334,9 @@ void draw_pattern(int index, CGPathRef shape, CGContextRef context)
   int scale = (int)(0.125 * (int)(p->c + p->a) / 125);
 
   gks_inq_pattern_array(index, patArray);
-  float patHeight = patArray[0] * scale;
-  float patWidth = patHeight;
-  float i, l;
+  double patHeight = patArray[0] * scale;
+  double patWidth = patHeight;
+  double i, l;
   int k = 1, n;
 
   patternLayer = CGLayerCreateWithContext(context, CGSizeMake(patWidth, patHeight), NULL);
@@ -1373,9 +1381,9 @@ void draw_pattern(int index, CGPathRef shape, CGContextRef context)
 }
 
 static
-void fill_routine(int n, float *px, float *py, int tnr)
+void fill_routine(int n, double *px, double *py, int tnr)
 {
-  float x, y;
+  double x, y;
   int i;
   CGPoint points[n];
 
@@ -1403,10 +1411,10 @@ void fill_routine(int n, float *px, float *py, int tnr)
   CGPathRelease(shape);
 }
 
-- (void) fillarea: (int) n : (float *)px : (float *)py
+- (void) fillarea: (int) n : (double *)px : (double *)py
 {
   int fl_inter, fl_style, fl_color, i = 0;
-  float x, y;
+  double x, y;
   CGPoint points[n];
 
   for (i = 0; i < n; ++i)
@@ -1459,18 +1467,18 @@ void fill_routine(int n, float *px, float *py, int tnr)
 }
 
 -(void) cellarray:
-    (float) xmin : (float) xmax : (float) ymin : (float) ymax :
+    (double) xmin : (double) xmax : (double) ymin : (double) ymax :
     (int) dx : (int) dy : (int) dimx : (int *)colia : (int) true_color
 {
-  float x1, y1, x2, y2;
+  double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
-  int x, y, width, height, h;
+  int x, y, width, height;
   register int i, j, ix, iy, ind;
-  int swapx, swapy;
+  int swapx, swapy, *tmpptr;
   CGColorSpaceRef cs;
   CGContextRef bitmap;
   CGImageRef image;
-  register int *elptr, *epptr, *tmpptr;
+  const CGFloat *colors;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -1490,65 +1498,49 @@ void fill_routine(int n, float *px, float *py, int tnr)
   swapx = ix1 > ix2;
   swapy = iy1 > iy2;
 
-  if (swapx == 0 && true_color && dimx == dx && dx == width && dy == height)
-    {
-      if (swapy)
-        {
-          tmpptr = (int *) gks_malloc(width * sizeof(int));
-          elptr = colia;
-          epptr = colia + height * width;
-          h = height / 2;
-          for (j = 0; j < h; j++)
-            {
-              epptr -= width;
-              memcpy(tmpptr, elptr, width * sizeof(int));
-              memcpy(elptr, epptr, width * sizeof(int));
-              memcpy(epptr, tmpptr, width * sizeof(int));
-              elptr += width;
-            }
-          free(tmpptr);
-        }
+  tmpptr = (int *) gks_malloc(dx * dy * sizeof(int));
+  for (i = 0; i < dx; i++)
+    for (j = 0; j < dy; j++)
+      {
+        ix = swapx ? dx - i - 1 : i;
+        iy = swapy ? dy - j - 1 : j;
+        tmpptr[iy * dx + ix] = colia[j * dimx + i];
+      }
 
-      cs = CGColorSpaceCreateDeviceRGB();
-      bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width,
-                                     cs, kCGImageAlphaNoneSkipLast);
-      image = CGBitmapContextCreateImage(bitmap);
-      CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
-      CGImageRelease(image);
-      CGContextRelease(bitmap);
-      CGColorSpaceRelease(cs);
+  if (dx != width || dy != height)
+    {
+      colia = gks_resize(tmpptr, dx, dy, width, height);
+      free(tmpptr);
     }
   else
+    colia = tmpptr;
+
+  cs = CGColorSpaceCreateDeviceRGB();
+  if (!true_color)
     {
-      for (j = 0; j < height; j++)
+      for (i = 0; i < width * height; i++)
         {
-          iy = dy * j / height;
-          if (swapy)
-            iy = dy - 1 - iy;
-          for (i = 0; i < width; i++)
-            {
-              ix = dx * i / width;
-              if (swapx)
-                ix = dx - 1 - ix;
-              if (!true_color)
-                {
-                  ind = Color8Bit(colia[iy * dimx + ix]);
-                  [self set_fill_color: ind : context];
-                }
-              else
-                {
-                  int rgba = colia[iy * dimx + ix];
-                  CGContextSetRGBFillColor(context,
-                                           ( rgba        & 0xff) / 255.0,
-                                           ((rgba >>  8) & 0xff) / 255.0,
-                                           ((rgba >> 16) & 0xff) / 255.0,
-                                           1.0);
-                }
-              CGContextFillRect(context,
-                                CGRectMake(x + i, y + height - j - 1, 1, 1));
-            }
+          ind = Color8Bit(colia[i]);
+          if (ind >= MAX_COLOR)
+            ind = MAX_COLOR - 1;
+          colors = CGColorGetComponents(p->rgb[ind]);
+          colia[i] =  (int)(colors[0] * 255) +
+                     ((int)(colors[1] * 255) << 8) +
+                     ((int)(colors[2] * 255) << 16);
         }
     }
+
+  bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width,
+                                 cs, kCGImageAlphaNoneSkipLast);
+  image = CGBitmapContextCreateImage(bitmap);
+  CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
+
+  CGImageRelease(image);
+  CGContextRelease(bitmap);
+  CGColorSpaceRelease(cs);
+
+  free(colia);
+
   end_context(context);
 }
 
@@ -1590,10 +1582,10 @@ void fill_routine(int n, float *px, float *py, int tnr)
 }
 
 
-- (void) text: (float) px : (float) py : (char *) text
+- (void) text: (double) px : (double) py : (char *) text
 {
   int tx_font, tx_prec, tx_color, nchars;
-  float xn, yn, xstart, ystart, xrel, yrel, ax, ay;
+  double xn, yn, xstart, ystart, xrel, yrel, ax, ay;
   NSString *fontName;
   NSString *string;
 
@@ -1633,7 +1625,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
     CGPoint beforeDrawing = CGContextGetTextPosition(context);
     CGContextShowGlyphs(context, glyphs, charCount);
     CGPoint afterDrawing = CGContextGetTextPosition(context);
-    float stringWidth = afterDrawing.x-beforeDrawing.x;
+    float stringWidth = afterDrawing.x - beforeDrawing.x;
 
     WC_to_NDC(px, py, gkss->cntnr, xn, yn);
     seg_xform(&xn, &yn);
@@ -1655,7 +1647,7 @@ void fill_routine(int n, float *px, float *py, int tnr)
     CGContextSetTextMatrix(context, transform);
     CGContextShowGlyphsAtPoint(context, xstart, ystart, glyphs, charCount);
   }
-#ifdef XFT
+#ifndef NO_FT
   else if (tx_prec == GKS_K_TEXT_PRECISION_CHAR)
   {
     int *bitmap;
@@ -1687,9 +1679,9 @@ void fill_routine(int n, float *px, float *py, int tnr)
 
 - (_FontInfo) set_font: (int) font
 {
-  float scale, ux, uy;
+  double scale, ux, uy;
   int fontsize;
-  float width, height, capheight;
+  double width, height, capheight;
 
   font = abs(font);
   if (font >= 101 && font <= 129)

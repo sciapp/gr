@@ -1,4 +1,4 @@
-  CFLAGS = -O -I. -I../zlib/  -fPIC -fno-common $(ARCHS)
+  CFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(ARCHS)
     OBJS = \
 	png.o \
 	pngerror.o \
