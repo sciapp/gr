@@ -62,6 +62,8 @@ static void      gr3_dodrawmesh_(int mesh,
 static int      gr3_getpixmap_(char *bitmap, int width, int height, int use_alpha, int ssaa_factor);
 static int      gr3_drawimage_opengl_(float xmin, float xmax, float ymin, float ymax, int width, int height);
 
+static int gr3_allocate_meshdata_(int num_vertices, float **vertices, float **normals, float **colors, int num_indices, int **indices);
+
 #if GL_EXT_framebuffer_object
 static int  gr3_initFBO_EXT_(void);
 static void gr3_terminateFBO_EXT_(void);
@@ -415,8 +417,57 @@ void gr3_sortindexedmeshdata(int mesh) {
     }
 }
 
+/*
+ * allocate memory for mesh the data arrays and check for errors
+ * if indices is NULL, no memory will be allocated for that
+ * returns GR3_ERROR_NONE or GR3_ERROR_OUT_OF_MEM
+ */
+static int gr3_allocate_meshdata_(int num_vertices, float **vertices, float **normals, float **colors, int num_indices, int **indices)
+{
+    *vertices = malloc(num_vertices * 3 * sizeof(float));
+    if (*vertices == NULL) {
+        goto err0;
+    }
+    *normals = malloc(num_vertices * 3 * sizeof(float));
+    if (*normals == NULL) {
+        goto err1;
+    }
+    *colors = malloc(num_vertices * 3 * sizeof(float));
+    if (*colors == NULL) {
+        goto err2;
+    }
+    if (indices != NULL) {
+        *indices = malloc(num_indices * sizeof(int));
+        if (*indices == NULL) {
+            goto err3;
+        }
+    }
+    return GR3_ERROR_NONE;
+
+    err3:
+    free(*colors);
+    *colors = NULL;
+    err2:
+    free(*normals);
+    *normals = NULL;
+    err1:
+    free(*vertices);
+    *vertices = NULL;
+    err0:
+    return GR3_ERROR_OUT_OF_MEM;
+}
+
 /*!
- * This function creates a int from vertex position, normal and color data.
+ * This function creates a mesh from vertex position, normal and color data.
+ * The arrays are used directly without copying.
+ * The array parameters MUST be pointers to the beginning of a memory
+ * region previously allocated by malloc or calloc.
+ * Changing the data in these arrays or freeing them leads to
+ * undefined behavior.
+ * After calling this routine the arrays are owned by GR3 and will be
+ * freed by it.
+ * If unsure, use gr3_createmesh.
+ *
  * \param [out] mesh          a pointer to a int 
  * \param [in] vertices       the vertex positions
  * \param [in] normals        the vertex normals
@@ -429,9 +480,9 @@ void gr3_sortindexedmeshdata(int mesh) {
  *  - ::GR3_ERROR_OPENGL_ERR  if an OpenGL error occured
  *  - ::GR3_ERROR_OUT_OF_MEM  if a memory allocation failed
  */
-GR3API int gr3_createmesh(int *mesh, int n, const float *vertices, 
-                        const float *normals, const float *colors) {
-                        
+GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices, 
+                                 float *normals, float *colors)
+{
     int i;
     void *mem;
   
@@ -439,7 +490,6 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
     if (!context_struct_.is_initialized) {
         return GR3_ERROR_NOT_INITIALIZED;
     }
-
     gr3_getfirstfreemesh(mesh);
     
     context_struct_.mesh_list_[*mesh].data.number_of_vertices = n;
@@ -481,12 +531,10 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
         glEnd();
         glEndList();
     }
-    context_struct_.mesh_list_[*mesh].data.vertices = (float *)malloc(sizeof(float)*n*3);
-    context_struct_.mesh_list_[*mesh].data.normals = (float *)malloc(sizeof(float)*n*3);
-    context_struct_.mesh_list_[*mesh].data.colors = (float *)malloc(sizeof(float)*n*3);
-    memcpy(context_struct_.mesh_list_[*mesh].data.vertices,vertices,sizeof(float)*n*3);
-    memcpy(context_struct_.mesh_list_[*mesh].data.normals,normals,sizeof(float)*n*3);
-    memcpy(context_struct_.mesh_list_[*mesh].data.colors,colors,sizeof(float)*n*3);
+    context_struct_.mesh_list_[*mesh].data.vertices = vertices;
+    context_struct_.mesh_list_[*mesh].data.normals = normals;
+    context_struct_.mesh_list_[*mesh].data.colors = colors;
+
     if (glGetError() != GL_NO_ERROR) {
         return GR3_ERROR_OPENGL_ERR;
     } else {
@@ -495,8 +543,60 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
 }
 
 /*!
+ * This function creates a int from vertex position, normal and color data.
+ * \param [out] mesh          a pointer to a int 
+ * \param [in] vertices       the vertex positions
+ * \param [in] normals        the vertex normals
+ * \param [in] colors         the vertex colors, they should be white (1,1,1) if 
+ *                            you want to change the color for each drawn mesh
+ * \param [in] n              the number of vertices in the mesh
+ *
+ * \returns
+ *  - ::GR3_ERROR_NONE        on success
+ *  - ::GR3_ERROR_OPENGL_ERR  if an OpenGL error occured
+ *  - ::GR3_ERROR_OUT_OF_MEM  if a memory allocation failed
+ */
+GR3API int gr3_createmesh(int *mesh, int n, const float *vertices, 
+                        const float *normals, const float *colors) {
+                        
+    float *myvertices, *mynormals, *mycolors;
+    int err;
+  
+    GR3_DO_INIT;
+    if (!context_struct_.is_initialized) {
+        return GR3_ERROR_NOT_INITIALIZED;
+    }
+
+    err = gr3_allocate_meshdata_(n, &myvertices, &mynormals, &mycolors,
+                                0, NULL);
+    if (err != GR3_ERROR_NONE) {
+        return err;
+    }
+    memcpy(myvertices, vertices, 3 * n * sizeof(float));
+    memcpy(mynormals, normals, 3 * n * sizeof(float));
+    memcpy(mycolors, colors, 3 * n * sizeof(float));
+    err = gr3_createmesh_nocopy(mesh, n, myvertices, mynormals, mycolors);
+    if (err != GR3_ERROR_NONE && err != GR3_ERROR_OPENGL_ERR) {
+        free(myvertices);
+        free(mynormals);
+        free(mycolors);
+    }
+
+    return err;
+}
+
+/*!
  * This function creates an indexed mesh from vertex information (position,
  * normal and color) and triangle information (indices).
+ * The arrays are used directly without copying.
+ * The array parameters MUST be pointers to the beginning of a memory
+ * region previously allocated by malloc or calloc.
+ * Changing the data in these arrays or freeing them leads to
+ * undefined behavior.
+ * After calling this routine the arrays are owned by GR3 and will be
+ * freed by it.
+ * If unsure, use gr3_createindexedmesh.
+ *
  * \param [out] mesh              a pointer to an int
  * \param [in] number_of_vertices the number of vertices in the mesh
  * \param [in] vertices           the vertex positions
@@ -514,8 +614,11 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
  *  - ::GR3_ERROR_OPENGL_ERR  if an OpenGL error occured
  *  - ::GR3_ERROR_OUT_OF_MEM  if a memory allocation failed
  */
-GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices, const float *vertices, 
-                                 const float *normals, const float *colors, int number_of_indices, const int *indices) {
+GR3API int gr3_createindexedmesh_nocopy(int *mesh, int number_of_vertices,
+                                        float *vertices, float *normals,
+                                        float *colors, int number_of_indices,
+                                        int *indices)
+{
     int i;
     void *mem;
     
@@ -570,19 +673,72 @@ GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices, const float 
         glEndList();
     }
     
-    context_struct_.mesh_list_[*mesh].data.vertices = (float *)malloc(sizeof(float)*number_of_vertices*3);
-    context_struct_.mesh_list_[*mesh].data.normals = (float *)malloc(sizeof(float)*number_of_vertices*3);
-    context_struct_.mesh_list_[*mesh].data.colors = (float *)malloc(sizeof(float)*number_of_vertices*3);
-    context_struct_.mesh_list_[*mesh].data.indices = (int *)malloc(sizeof(int)*number_of_indices);
-    memcpy(context_struct_.mesh_list_[*mesh].data.vertices,vertices,sizeof(float)*number_of_vertices*3);
-    memcpy(context_struct_.mesh_list_[*mesh].data.normals,normals,sizeof(float)*number_of_vertices*3);
-    memcpy(context_struct_.mesh_list_[*mesh].data.colors,colors,sizeof(float)*number_of_vertices*3);
-    memcpy(context_struct_.mesh_list_[*mesh].data.indices,indices,sizeof(int)*number_of_indices);
+    context_struct_.mesh_list_[*mesh].data.vertices = vertices;
+    context_struct_.mesh_list_[*mesh].data.normals = normals;
+    context_struct_.mesh_list_[*mesh].data.colors = colors;
+    context_struct_.mesh_list_[*mesh].data.indices = indices;
+
     if (glGetError() != GL_NO_ERROR) {
         return GR3_ERROR_OPENGL_ERR;
     } else {
         return GR3_ERROR_NONE;
     }
+}
+
+/*!
+ * This function creates an indexed mesh from vertex information (position,
+ * normal and color) and triangle information (indices).
+ * \param [out] mesh              a pointer to an int
+ * \param [in] number_of_vertices the number of vertices in the mesh
+ * \param [in] vertices           the vertex positions
+ * \param [in] normals            the vertex normals
+ * \param [in] colors             the vertex colors, they should be
+ *                                white (1,1,1) if you want to change the
+ *                                color for each drawn mesh
+ * \param [in] number_of_indices  the number of indices in the mesh
+ *                                (three times the number of triangles)
+ * \param [in] indices            the index array (vertex indices for
+ *                                each triangle)
+ *
+ * \returns
+ *  - ::GR3_ERROR_NONE        on success
+ *  - ::GR3_ERROR_OPENGL_ERR  if an OpenGL error occured
+ *  - ::GR3_ERROR_OUT_OF_MEM  if a memory allocation failed
+ */
+GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices,
+                                 const float *vertices, const float *normals,
+                                 const float *colors, int number_of_indices,
+                                 const int *indices)
+{
+    float *myvertices, *mynormals, *mycolors;
+    int *myindices;
+    int err;
+  
+    GR3_DO_INIT;
+    if (!context_struct_.is_initialized) {
+        return GR3_ERROR_NOT_INITIALIZED;
+    }
+
+    err = gr3_allocate_meshdata_(number_of_vertices, &myvertices, &mynormals,
+                                 &mycolors, number_of_indices, &myindices);
+    if (err != GR3_ERROR_NONE) {
+        return err;
+    }
+    memcpy(myvertices, vertices, 3 * number_of_vertices * sizeof(float));
+    memcpy(mynormals, normals, 3 * number_of_vertices * sizeof(float));
+    memcpy(mycolors, colors, 3 * number_of_vertices * sizeof(float));
+    memcpy(myindices, indices, number_of_indices * sizeof(int));
+    err = gr3_createindexedmesh_nocopy(mesh, number_of_vertices, myvertices,
+                                       mynormals, mycolors, number_of_indices,
+                                       myindices);
+    if (err != GR3_ERROR_NONE && err != GR3_ERROR_OPENGL_ERR) {
+        free(myvertices);
+        free(mynormals);
+        free(mycolors);
+        free(myindices);
+    }
+
+    return err;
 }
 
 /*!
