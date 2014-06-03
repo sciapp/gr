@@ -292,7 +292,8 @@ static void layerblock(mcdata_t mcdata, int from, int to,
  * allocate memory, call layerblock and create a single mesh.
  * the data is divided into blocks along the x-axis.
  */
-void gr3_triangulateindexed(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel,
+GR3API void gr3_triangulateindexed(const GR3_MC_DTYPE *data,
+                       GR3_MC_DTYPE isolevel,
                        unsigned int dim_x, unsigned int dim_y,
                        unsigned int dim_z, unsigned int stride_x,
                        unsigned int stride_y, unsigned int stride_z,
@@ -446,7 +447,8 @@ vertblock, faceblock, num_vertices, num_faces, vertices, normals, indices)
  * create a mesh of single triangles (type gr3_triangle_t).
  * create an indexed mesh and copy the values
  */
-unsigned int gr3_triangulate(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel,
+GR3API unsigned int gr3_triangulate(const GR3_MC_DTYPE *data,
+                GR3_MC_DTYPE isolevel,
                 unsigned int dim_x, unsigned int dim_y, unsigned int dim_z,
                 unsigned int stride_x, unsigned int stride_y,
                 unsigned int stride_z, double step_x, double step_y,

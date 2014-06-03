@@ -26,7 +26,8 @@ __all__ = ['GR3_InitAttribute',
            'drawspheremesh',
            'drawcubemesh',
            'setbackgroundcolor',
-           'triangulate']
+           'triangulate',
+           'createisosurfacemesh']
 
 
 import sys
@@ -529,7 +530,7 @@ def setlightdirection(*xyz):
 
 def triangulate(grid, step, offset, isolevel, slices = None):
     data = grid.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort))
-    isolevel = ctypes.c_int(isolevel)
+    isolevel = ctypes.c_ushort(isolevel)
     if slices is None:
         dim_x, dim_y, dim_z = map(ctypes.c_uint, grid.shape)
         stride_x, stride_y, stride_z = (0, 0, 0)
@@ -572,6 +573,50 @@ def triangulate(grid, step, offset, isolevel, slices = None):
     normals = triangles[:,1,:,:]
     return vertices, normals
 
+def createisosurfacemesh(grid, step, offset, isolevel):
+    """
+    This function creates an isosurface from voxel data using the
+    marching cubes algorithm.
+    Returns a mesh.
+
+    **Parameters:**
+
+        `grid` : 3D numpy array of the voxel data
+
+        `step` : voxel sizes in each direction
+
+        `offset` : coordinate origin in each direction
+
+        `isolevel` : isovalue at which the surface will be created
+
+    **Raises:**
+
+    `gr3.GR3_Error.GR3_ERROR_EXPORT`: Raises GR3_Exception
+
+        +----------------------+-------------------------------+
+        | GR3_ERROR_NONE       | on success                    |
+        +----------------------+-------------------------------+
+        | GR3_ERROR_OPENGL_ERR | if an OpenGL error occured    |
+        +----------------------+-------------------------------+
+        | GR3_ERROR_OUT_OF_MEM | if a memory allocation failed |
+        +----------------------+-------------------------------+
+    """
+    _mesh = ctypes.c_uint(0)
+    data = grid.ctypes.data_as(ctypes.POINTER(ctypes.c_ushort))
+    isolevel = ctypes.c_ushort(isolevel)
+    dim_x, dim_y, dim_z = map(ctypes.c_uint, grid.shape)
+    stride_x, stride_y, stride_z = map(lambda x: ctypes.c_uint(x / grid.itemsize), grid.strides)
+    step_x, step_y, step_z = map(ctypes.c_double, step)
+    offset_x, offset_y, offset_z = map(ctypes.c_double, offset)
+    err = _gr3.gr3_createisosurfacemesh(ctypes.byref(_mesh), data, isolevel,
+                                        dim_x, dim_y, dim_z,
+                                        stride_x, stride_y, stride_z,
+                                        step_x, step_y, step_z,
+                                        offset_x, offset_y, offset_z)
+    if err:
+        raise GR3_Exception(err)
+    return _mesh
+
 _gr3.gr3_init.argtypes = [ctypes.POINTER(ctypes.c_int)]
 _gr3.gr3_terminate.argtypes = []
 _gr3.gr3_getrenderpathstring.argtypes = []
@@ -599,5 +644,12 @@ _gr3.gr3_drawcylindermesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_flo
 _gr3.gr3_drawspheremesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
 _gr3.gr3_drawcubemesh.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
 _gr3.gr3_triangulate.restype = ctypes.c_uint
-_gr3.gr3_triangulate.argtypes = (ctypes.POINTER(ctypes.c_ushort), ctypes.c_int, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.POINTER(ctypes.POINTER(ctypes.c_float)))
+_gr3.gr3_triangulate.argtypes = (ctypes.POINTER(ctypes.c_ushort), ctypes.c_ushort, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.POINTER(ctypes.POINTER(ctypes.c_float)))
 
+_gr3.gr3_createisosurfacemesh.restype = ctypes.c_int
+_gr3.gr3_createisosurfacemesh.argtypes = (ctypes.POINTER(ctypes.c_uint),
+        ctypes.POINTER(ctypes.c_ushort), ctypes.c_ushort,
+        ctypes.c_uint, ctypes.c_uint, ctypes.c_uint,
+        ctypes.c_uint, ctypes.c_uint, ctypes.c_uint,
+        ctypes.c_double, ctypes.c_double, ctypes.c_double,
+        ctypes.c_double, ctypes.c_double, ctypes.c_double)
