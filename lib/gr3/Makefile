@@ -9,10 +9,10 @@
      PNGLIBS = ../../3rdparty/png/libpng.a
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
        ZLIBS = -lz
-      CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC
+      CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR3.so
-     LDFLAGS =
+     LDFLAGS = $(EXTRA_LDFLAGS)
 
 default: gr3.c gr3.h
 	make `uname`

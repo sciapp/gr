@@ -3,11 +3,11 @@
       GRDIR = /usr/local/gr
      LIBDIR = $(DESTDIR)$(GRDIR)/lib
 
-     CFLAGS = -g -Wall -fPIC
-   CXXFLAGS = -g -Wall -fPIC
-   INCLUDES = -I.. -I../../../3rdparty/png -I/usr/local/include
+     CFLAGS = -O -Wall -fPIC $(EXTRA_CFLAGS)
+   CXXFLAGS = -O -Wall -fPIC $(EXTRA_CXXFLAGS)
+   INCLUDES = -I.. -I../../../3rdparty/png
     SOFLAGS = -shared
-    LDFLAGS =
+    LDFLAGS = $(EXTRA_LDFLAGS)
   WX_CONFIG = false
      WXDEFS =
       WXINC = `$(WX_CONFIG) --cxxflags 2>/dev/null`
@@ -49,11 +49,11 @@ endif
 .SUFFIXES: .o .m .cxx
 
 .m.o:
-	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $<
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(CXXFLAGS) $<
 .c.o:
-	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(AVDEFS) $(MUPDFDEFS) $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(AVDEFS) $(MUPDFDEFS) $(CFLAGS) $<
 .cxx.o:
-	$(CXX) -c $(CXXFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(X11DEFS) $(X11INC) $<
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $<
 
 default:
 	@make -C ../../.. Makedefs
@@ -89,23 +89,23 @@ figplugin.so: figplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gsplugin.so: gsplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(GSLIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(GSLIBS) $(X11LIBS) $(LIBS)
 
 wmfplugin.so: wmfplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(LIBS)
 
 quartzplugin.so: quartzplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LIBS) \
 	-lobjc -framework Foundation -framework ApplicationServices
 
 glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 zmqplugin.so: zmqplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(ZMQLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(ZMQLIBS) $(LIBS)
 
 movplugin.so: movplugin.o font.o afm.o util.o vc.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(AVLIBS) $(MUPDFLIBS) $(EXTRALIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(EXTRALIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)

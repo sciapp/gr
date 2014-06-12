@@ -14,9 +14,9 @@
       X11INC = -I/usr/X11R6/include
           CC = cc
      DEFINES = -DHAVE_ZLIB $(X11DEFS) $(FTDEFS)
-      CFLAGS = -O3 -Wall -fPIC
+      CFLAGS = -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           LD = cc
-     LDFLAGS =
+     LDFLAGS = $(EXTRA_LDFLAGS)
           AR = ar
       RANLIB = ar ts
      SOFLAGS = -shared
@@ -27,7 +27,7 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
        ZLIBS = -lz
 
 .c.o:
-	$(CC) -c $(CFLAGS) -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(X11INC) $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(X11INC) $(CFLAGS) $<
 
 default:
 	@make -C ../.. Makedefs

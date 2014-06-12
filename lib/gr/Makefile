@@ -10,12 +10,12 @@
      DEFINES = $(MUPDFDEFS)
     INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty/png
           CC = cc
-      CFLAGS = $(DEFINES) -O3 -Wall -fPIC
+      CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           AR = ar
       RANLIB = ar ts
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
-     LDFLAGS =
+     LDFLAGS = $(EXTRA_LDFLAGS)
         LIBS = -lc -lm
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
      PNGLIBS = ../../3rdparty/png/libpng.a
@@ -27,7 +27,7 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
        ZLIBS = -lz
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(INCLUDES) $(CFLAGS) $<
 
 default:
 	@make -C ../.. Makedefs

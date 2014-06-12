@@ -58,7 +58,7 @@ osxpkg:
 	pkgbuild --identifier de.fz-juelich.gr --root tmp --install-location /usr/local --ownership preserve gr.pkg
 	sudo rm -rf tmp
 
-sphinxdoc:
+sphinxdoc: default
 	make -C doc html
 	rsync -av --delete --exclude=/media doc/_build/html/ iffwww:/WebServer/Documents/gr/
 	rsync -av --delete doc/media/ iffwww:/WebServer/Documents/gr/media/
