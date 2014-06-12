@@ -50,7 +50,7 @@ class intarray:
         if isinstance(a, ndarray):
             if _impl == 'PyPy':
                 self.array = array(a, int32)
-                self.data = cast(self.array.__array_interface__['data'][0], POINTER(c_double))
+                self.data = cast(self.array.__array_interface__['data'][0], POINTER(c_int))
             else:
                 self.array = array(a, c_int)
                 self.data = self.array.ctypes.data_as(POINTER(c_int))
