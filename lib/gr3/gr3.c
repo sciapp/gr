@@ -494,6 +494,7 @@ GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices,
     
     context_struct_.mesh_list_[*mesh].data.number_of_vertices = n;
     gr3_meshaddreference_(*mesh);
+    context_struct_.mesh_list_[*mesh].data.type = kMTNormalMesh;
     #ifdef GR3_CAN_USE_VBO
     if (context_struct_.use_vbo) {
         glGenBuffers(1, &context_struct_.mesh_list_[*mesh].data.data.vertex_buffer_id);

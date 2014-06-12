@@ -19,6 +19,7 @@ Scene Description Functions
 .. autofunction:: gr3.setbackgroundcolor
 .. autofunction:: gr3.createmesh
 .. autofunction:: gr3.createindexedmesh
+.. autofunction:: gr3.createisosurfacemesh
 .. TODO: autofunction:: gr3.setobjectid
 .. TODO: above wrapper doesnt exist
 .. autofunction:: gr3.drawmesh

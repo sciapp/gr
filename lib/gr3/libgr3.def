@@ -9,7 +9,9 @@ EXPORTS
 	gr3_getimage
 	gr3_export
 	gr3_createmesh
+	gr3_createmesh_nocopy
 	gr3_createindexedmesh
+	gr3_createindexedmesh_nocopy
 	gr3_drawmesh
 	gr3_deletemesh
 	gr3_cameralookat
@@ -22,8 +24,10 @@ EXPORTS
 	gr3_drawcylindermesh
 	gr3_drawspheremesh
 	gr3_drawcubemesh
+    gr3_createisosurfacemesh
 	gr3_setobjectid
 	gr3_selectid
 	gr3_triangulate
+	gr3_triangulateindexed
 	gr3_free
 

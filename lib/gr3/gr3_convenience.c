@@ -676,6 +676,34 @@ GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int 
   return mesh;
 }
 
+/*!
+ * Create a mesh from an isosurface extracted from voxel data
+ * using the marching cubes algorithm.
+ *
+ * \param [out] mesh          the mesh
+ * \param [in]  data          the volume (voxel) data
+ * \param [in]  isolevel      value where the isosurface will be extracted
+ * \param [in]  dim_x         number of elements in x-direction
+ * \param [in]  dim_y         number of elements in y-direction
+ * \param [in]  dim_z         number of elements in z-direction
+ * \param [in]  stride_x      number of elements to step when traversing
+ *                            the data in x-direction
+ * \param [in]  stride_y      number of elements to step when traversing
+ *                            the data in y-direction
+ * \param [in]  stride_z      number of elements to step when traversing
+ *                            the data in z-direction
+ * \param [in]  step_x        distance between the voxels in x-direction
+ * \param [in]  step_y        distance between the voxels in y-direction
+ * \param [in]  step_z        distance between the voxels in z-direction
+ * \param [in]  offset_x      coordinate origin
+ * \param [in]  offset_y      coordinate origin
+ * \param [in]  offset_z      coordinate origin
+ * 
+ * \returns
+ *  - ::GR3_ERROR_NONE        on success
+ *  - ::GR3_ERROR_OPENGL_ERR  if an OpenGL error occured
+ *  - ::GR3_ERROR_OUT_OF_MEM  if a memory allocation failed
+ */
 GR3API int gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data,
                         GR3_MC_DTYPE isolevel,
                         unsigned int dim_x, unsigned int dim_y,
