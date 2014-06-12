@@ -7,11 +7,12 @@ import gr
 """
 
 import os
-from numpy import array, ndarray
+from numpy import array, ndarray, float64, int32
 from ctypes import c_int, c_double, c_char_p, c_void_p
 from ctypes import byref, POINTER, addressof, CDLL, CFUNCTYPE
 from ctypes import create_string_buffer, cast
 from sys import version_info, platform
+from platform import python_implementation
 
 # Detect whether this is a site-package installation
 if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
@@ -20,11 +21,17 @@ if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
     os.environ["GRDIR"] = os.getenv("GRDIR",
                                     os.path.realpath(os.path.dirname(__file__)))
 
+_impl = python_implementation()
+
 class floatarray:
     def __init__(self, n, a):
         if isinstance(a, ndarray):
-            self.array = array(a, c_double)
-            self.data = self.array.ctypes.data_as(POINTER(c_double))
+            if _impl == 'PyPy':
+                self.array = array(a, float64)
+                self.data = cast(self.array.__array_interface__['data'][0], POINTER(c_double))
+            else:
+                self.array = array(a, c_double)
+                self.data = self.array.ctypes.data_as(POINTER(c_double))
         else:
             self.data = (c_double * n)()
             status = 0
@@ -41,8 +48,12 @@ class floatarray:
 class intarray:
     def __init__(self, n, a):
         if isinstance(a, ndarray):
-            self.array = array(a, c_int)
-            self.data = self.array.ctypes.data_as(POINTER(c_int))
+            if _impl == 'PyPy':
+                self.array = array(a, int32)
+                self.data = cast(self.array.__array_interface__['data'][0], POINTER(c_double))
+            else:
+                self.array = array(a, c_int)
+                self.data = self.array.ctypes.data_as(POINTER(c_int))
         else:
             self.data = (c_int * n)()
             status = 0
