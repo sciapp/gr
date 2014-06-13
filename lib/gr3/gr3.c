@@ -1481,11 +1481,14 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
                 }
                 glPixelStorei(GL_PACK_ALIGNMENT,1); /* byte-wise alignment */
                 if (ssaa_factor == 1) {
-                    #ifdef GR3_USE_WIN
+                    #if defined(GR3_USE_WIN) || defined (GR3_USE_GLX)
                         /* There seems to be a driver error on windows considering 
                            GL_PACK_ROW_LENGTH, so I have to roll my own loop to 
                            read the pixels row-wise instead of copying whole 
                            images. 
+                           GLX seems to have the same problem sometimes.
+                           The pixels of the image are not skipped,
+                           but filled with garbage instead.
                         */
                         {
                             int i;
@@ -1501,7 +1504,7 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
                                      pixmap+bpp*(y*width*fb_height+x*fb_width));
                     #endif
                 } else {
-                    #ifdef GR3_USE_WIN
+                    #if defined(GR3_USE_WIN) || defined (GR3_USE_GLX)
                     {
                         int i;
                         for (i = 0; i < dy; i++)  {
