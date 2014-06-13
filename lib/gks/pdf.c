@@ -75,9 +75,10 @@ typedef unsigned long uLong;
 
 #define pdf_save(p)		pdf_printf(p->content, "q\n")
 #define pdf_restore(p)		pdf_printf(p->content, "Q\n")
-#define pdf_clip(p)		pdf_printf(p->content, "W\n")
+#define pdf_clip(p)		pdf_printf(p->content, "W n\n")
 #define pdf_moveto(p, x, y)	pdf_printf(p->content, "%.2f %.2f m\n", x, y)
 #define pdf_lineto(p, x, y)	pdf_printf(p->content, "%.2f %.2f l\n", x, y)
+#define pdf_closepath(p)	pdf_printf(p->content, "h\n")
 #define pdf_stroke(p)		pdf_printf(p->content, "S\n")
 #define pdf_eofill(p)		pdf_printf(p->content, "f*\n")
 #define pdf_point(p, x, y)	pdf_printf(p->content, "%.2f %.2f ", x, y)
@@ -844,7 +845,6 @@ void open_ws(int fd, int wstype)
 static
 void set_clip(double *clrt)
 {
-#if 0
   double x0, x1, y0, y1;
 
   NDC_to_DC(clrt[0], clrt[2], x0, y0);
@@ -854,8 +854,8 @@ void set_clip(double *clrt)
   pdf_lineto(p, x1, y0);
   pdf_lineto(p, x1, y1);
   pdf_lineto(p, x0, y1);
+  pdf_closepath(p);
   pdf_clip(p);
-#endif
 }
 
 static
@@ -1534,6 +1534,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   swapy = ry1 > ry2;
 
   pdf_save(p);
+  set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
   pdf_printf(p->content, "%d 0 0 %d %d %d cm\n", width, height, x, y);
   pdf_printf(p->content, "BI\n");
   pdf_printf(p->content, "/W %d\n", dx);
