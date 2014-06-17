@@ -676,4 +676,71 @@ GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int 
   return mesh;
 }
 
+/*!
+ * Create a mesh from an isosurface extracted from voxel data
+ * using the marching cubes algorithm.
+ *
+ * \param [out] mesh          the mesh
+ * \param [in]  data          the volume (voxel) data
+ * \param [in]  isolevel      value where the isosurface will be extracted
+ * \param [in]  dim_x         number of elements in x-direction
+ * \param [in]  dim_y         number of elements in y-direction
+ * \param [in]  dim_z         number of elements in z-direction
+ * \param [in]  stride_x      number of elements to step when traversing
+ *                            the data in x-direction
+ * \param [in]  stride_y      number of elements to step when traversing
+ *                            the data in y-direction
+ * \param [in]  stride_z      number of elements to step when traversing
+ *                            the data in z-direction
+ * \param [in]  step_x        distance between the voxels in x-direction
+ * \param [in]  step_y        distance between the voxels in y-direction
+ * \param [in]  step_z        distance between the voxels in z-direction
+ * \param [in]  offset_x      coordinate origin
+ * \param [in]  offset_y      coordinate origin
+ * \param [in]  offset_z      coordinate origin
+ * 
+ * \returns
+ *  - ::GR3_ERROR_NONE        on success
+ *  - ::GR3_ERROR_OPENGL_ERR  if an OpenGL error occured
+ *  - ::GR3_ERROR_OUT_OF_MEM  if a memory allocation failed
+ */
+GR3API int gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data,
+                        GR3_MC_DTYPE isolevel,
+                        unsigned int dim_x, unsigned int dim_y,
+                        unsigned int dim_z, unsigned int stride_x,
+                        unsigned int stride_y, unsigned int stride_z,
+                        double step_x, double step_y, double step_z,
+                        double offset_x, double offset_y, double offset_z)
+{
+    unsigned int num_vertices, num_indices;
+    gr3_coord_t *vertices, *normals;
+    float *colors;
+    unsigned int *indices;
+    unsigned int i;
+    int err;
+
+    gr3_triangulateindexed(data, isolevel, dim_x, dim_y, dim_z, stride_x,
+                           stride_y, stride_z, step_x, step_y, step_z,
+                           offset_x, offset_y, offset_z,
+                           &num_vertices, &vertices,
+                           &normals, &num_indices,
+                           &indices);
+    colors = malloc(num_vertices * 3 * sizeof(float));
+    for (i = 0; i < num_vertices; i++) {
+        colors[i * 3 + 0] = 1.0f;
+        colors[i * 3 + 1] = 1.0f;
+        colors[i * 3 + 2] = 1.0f;
+    }
+    err = gr3_createindexedmesh_nocopy(mesh, num_vertices, (float *) vertices,
+                                       (float *) normals, colors, num_indices,
+                                       (int *) indices);
+    if (err != GR3_ERROR_NONE && err != GR3_ERROR_OPENGL_ERR) {
+        free(vertices);
+        free(normals);
+        free(colors);
+        free(indices);
+    }
+
+    return err;
+}
 

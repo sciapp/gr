@@ -93,7 +93,10 @@ GR3API int          gr3_getimage(int width, int height, int use_alpha, char *pix
 GR3API int          gr3_export(const char *filename, int width, int height);
 GR3API int          gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type);
 
+GR3API int          gr3_createmesh_nocopy(int *mesh, int n, float *vertices, float *normals, float *colors);
 GR3API int          gr3_createmesh(int *mesh, int n, const float *vertices, const float *normals, const float *colors);
+GR3API int          gr3_createindexedmesh_nocopy(int *mesh, int number_of_vertices, float *vertices, float *normals, float *colors, int number_of_indices, int *indices);
+GR3API int          gr3_createindexedmesh(int *mesh, int number_of_vertices, const float *vertices, const float *normals, const float *colors, int number_of_indices, const int *indices);
 GR3API void         gr3_drawmesh(int mesh, int n, const float *positions, const float *directions, const float *ups, const float *colors, const float *scales);
 GR3API void         gr3_deletemesh(int mesh);
 
@@ -113,7 +116,33 @@ GR3API void         gr3_drawcubemesh(int n, const float *positions, const float 
           
 GR3API void         gr3_setobjectid(int id);
 GR3API int          gr3_selectid(int x, int y, int width, int height, int *selection_id);
-GR3API unsigned int gr3_triangulate(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel, unsigned int dim_x, unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned int stride_y, unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x, double offset_y, double offset_z, gr3_triangle_t **triangles_p);
+
+GR3API unsigned int gr3_triangulate(const GR3_MC_DTYPE *data,
+                        GR3_MC_DTYPE isolevel, unsigned int dim_x,
+                        unsigned int dim_y, unsigned int dim_z,
+                        unsigned int stride_x, unsigned int stride_y,
+                        unsigned int stride_z, double step_x, double step_y,
+                        double step_z, double offset_x, double offset_y,
+                        double offset_z, gr3_triangle_t **triangles_p);
+
+GR3API void         gr3_triangulateindexed(const GR3_MC_DTYPE *data,
+                        GR3_MC_DTYPE isolevel,
+                        unsigned int dim_x, unsigned int dim_y,
+                        unsigned int dim_z, unsigned int stride_x,
+                        unsigned int stride_y, unsigned int stride_z,
+                        double step_x, double step_y, double step_z,
+                        double offset_x, double offset_y, double offset_z,
+                        unsigned int *num_vertices, gr3_coord_t **vertices,
+                        gr3_coord_t **normals, unsigned int *num_indices,
+                        unsigned int **indices);
+
+GR3API int          gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data,
+                        GR3_MC_DTYPE isolevel,
+                        unsigned int dim_x, unsigned int dim_y,
+                        unsigned int dim_z, unsigned int stride_x,
+                        unsigned int stride_y, unsigned int stride_z,
+                        double step_x, double step_y, double step_z,
+                        double offset_x, double offset_y, double offset_z);
 
 #ifdef _WIN32
     #ifdef __cplusplus

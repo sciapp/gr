@@ -97,6 +97,7 @@ int gr3_export_pov_(const char *filename, int width, int height) {
   fprintf(povfp,"background { color rgb <%f, %f, %f> }\n", context_struct_.background_color[0], context_struct_.background_color[1], context_struct_.background_color[2]);
   draw = context_struct_.draw_list_;
   while (draw) {
+    gr3_sortindexedmeshdata(draw->mesh);
     switch(context_struct_.mesh_list_[draw->mesh].data.type) {
       case kMTSphereMesh:
         for(i = 0; i < draw->n; i++) {
@@ -132,6 +133,7 @@ int gr3_export_pov_(const char *filename, int width, int height) {
           fprintf(povfp,"}\n");
         }
         break;
+      case kMTIndexedMesh:
       case kMTNormalMesh:
         for(i = 0; i < draw->n; i++) {
           GLfloat model_matrix[4][4] = {{0}};

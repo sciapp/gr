@@ -1,5 +1,4 @@
-/*
- * gr3_mc.c
+/*!\file gr3_mc.c
  *
  * Optimized OpenMP implementation of the marching cubes algorithm.
  *
@@ -114,7 +113,7 @@ static void interpolate(mcdata_t mcdata, int px, int py, int pz,
     }
 }
 
-/*
+/*!
  * marching cubes algorithm for one x-layer.
  * created vertices are cached between calls using vindex.
  * vindex associates the intersected edge with the vertex index.
@@ -126,10 +125,10 @@ static void interpolate(mcdata_t mcdata, int px, int py, int pz,
  * py and pz are the coordinates of the lower one of both edge vertices
  */
 static void layer(mcdata_t mcdata, int x, int **vindex,
-      unsigned int *num_vertices, gr3_coord_t **vertices,
-      gr3_coord_t **normals, unsigned int *vertcapacity,
-      unsigned int *num_faces, unsigned int **indices,
-      unsigned int *facecapacity)
+                  unsigned int *num_vertices, gr3_coord_t **vertices,
+                  gr3_coord_t **normals, unsigned int *vertcapacity,
+                  unsigned int *num_faces, unsigned int **indices,
+                  unsigned int *facecapacity)
 {
     int i, j;
     int y, z;
@@ -221,13 +220,13 @@ static void layer(mcdata_t mcdata, int x, int **vindex,
     }
 }
 
-/*
+/*!
  * handle consecutive calls to layer
  */
 static void layerblock(mcdata_t mcdata, int from, int to,
-    unsigned int *num_vertices, gr3_coord_t **vertices,
-    gr3_coord_t **normals, unsigned int *num_faces,
-    unsigned int **faces)
+                       unsigned int *num_vertices, gr3_coord_t **vertices,
+                       gr3_coord_t **normals, unsigned int *num_faces,
+                       unsigned int **faces)
 {
     int x;
     int y;
@@ -286,13 +285,39 @@ static void layerblock(mcdata_t mcdata, int from, int to,
     free(vindex[0]);
 }
 
-/*
- * create an indexed mesh with the marching cubes algorithm.
- * this function manages the parallelization:
- * allocate memory, call layerblock and create a single mesh.
- * the data is divided into blocks along the x-axis.
+/*!
+ * Create an isosurface (as indexed mesh) from voxel data
+ * with the marching cubes algorithm.
+ * This function manages the parallelization:
+ * Divide the data into blocks along the x-axis. Allocate memory,
+ * call layerblock and merge the individual meshes into a single one.
+ *
+ * \param [in]  data          the volume (voxel) data
+ * \param [in]  isolevel      value where the isosurface will be extracted
+ * \param [in]  dim_x         number of elements in x-direction
+ * \param [in]  dim_y         number of elements in y-direction
+ * \param [in]  dim_z         number of elements in z-direction
+ * \param [in]  stride_x      number of elements to step when traversing
+ *                            the data in x-direction
+ * \param [in]  stride_y      number of elements to step when traversing
+ *                            the data in y-direction
+ * \param [in]  stride_z      number of elements to step when traversing
+ *                            the data in z-direction
+ * \param [in]  step_x        distance between the voxels in x-direction
+ * \param [in]  step_y        distance between the voxels in y-direction
+ * \param [in]  step_z        distance between the voxels in z-direction
+ * \param [in]  offset_x      coordinate origin
+ * \param [in]  offset_y      coordinate origin
+ * \param [in]  offset_z      coordinate origin
+ * \param [out] num_vertices  number of vertices created
+ * \param [out] vertices      array of vertex coordinates
+ * \param [out] normals       array of vertex normal vectors
+ * \param [out] num_indices   number of indices created
+ *                            (3 times the number of triangles)
+ * \param [out] indices       array of vertex indices that make the triangles
  */
-void gr3_triangulateindexed(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel,
+GR3API void gr3_triangulateindexed(const GR3_MC_DTYPE *data,
+                       GR3_MC_DTYPE isolevel,
                        unsigned int dim_x, unsigned int dim_y,
                        unsigned int dim_z, unsigned int stride_x,
                        unsigned int stride_y, unsigned int stride_z,
@@ -442,11 +467,34 @@ vertblock, faceblock, num_vertices, num_faces, vertices, normals, indices)
 #endif
 }
 
-/*
- * create a mesh of single triangles (type gr3_triangle_t).
- * create an indexed mesh and copy the values
+/*!
+ * Create an isosurface (as mesh) from voxel data
+ * with the marching cubes algorithm.
+ * This function calls gr3_triangulateindexed and copies the values.
+ *
+ * \param [in]  data          the volume (voxel) data
+ * \param [in]  isolevel      value where the isosurface will be extracted
+ * \param [in]  dim_x         number of elements in x-direction
+ * \param [in]  dim_y         number of elements in y-direction
+ * \param [in]  dim_z         number of elements in z-direction
+ * \param [in]  stride_x      number of elements to step when traversing
+ *                           the data in x-direction
+ * \param [in]  stride_y      number of elements to step when traversing
+ *                           the data in y-direction
+ * \param [in]  stride_z      number of elements to step when traversing
+ *                           the data in z-direction
+ * \param [in]  step_x        distance between the voxels in x-direction
+ * \param [in]  step_y        distance between the voxels in y-direction
+ * \param [in]  step_z        distance between the voxels in z-direction
+ * \param [in]  offset_x      coordinate origin
+ * \param [in]  offset_y      coordinate origin
+ * \param [in]  offset_z      coordinate origin
+ * \param [out] triangles_p   array of triangle data
+ *
+ * \returns the number of triangles created
  */
-unsigned int gr3_triangulate(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel,
+GR3API unsigned int gr3_triangulate(const GR3_MC_DTYPE *data,
+                GR3_MC_DTYPE isolevel,
                 unsigned int dim_x, unsigned int dim_y, unsigned int dim_z,
                 unsigned int stride_x, unsigned int stride_y,
                 unsigned int stride_z, double step_x, double step_y,
