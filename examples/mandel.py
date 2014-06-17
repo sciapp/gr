@@ -14,11 +14,16 @@ import gr
 def mandel(x, y, iters):
     c = complex(x, y)
     z = 0.0j
+    ci = 0
+    inc = 1
 
     for i in range(iters):
         z = z * z + c
         if (z.real * z.real + z.imag * z.imag) >= 4:
-            return i
+            return ci
+        ci += inc
+        if ci == 0 or ci == 255:
+            inc = -inc
 
     return 255
 

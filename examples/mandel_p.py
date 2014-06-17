@@ -10,7 +10,7 @@ from timeit import default_timer as timer
 import numpy as np
 import gr
 
-sig = 'int8(uint32, f8, f8, f8, f8, uint32, uint32, uint32)'
+sig = 'i8(uint32, f8, f8, f8, f8, uint32, uint32, uint32)'
 
 @vectorize([sig], target='parallel')
 def mandel(tid, min_x, max_x, min_y, max_y, width, height, iters):
@@ -25,11 +25,16 @@ def mandel(tid, min_x, max_x, min_y, max_y, width, height, iters):
 
     c = complex(real, imag)
     z = 0.0j
+    ci = 0
+    inc = 1
 
     for i in range(iters):
         z = z * z + c
         if (z.real * z.real + z.imag * z.imag) >= 4:
-            return i
+            return ci
+        ci += inc
+        if ci == 0 or ci == 255:
+            inc = -inc
 
     return 255
 
