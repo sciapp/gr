@@ -629,7 +629,7 @@ def createisosurfacemesh(grid, step, offset, isolevel):
         raise GR3_Exception(err)
     return _mesh
 
-def createsurfacemesh(nx, ny, px, py, pz, option=0):
+def createsurfacemesh(nx, ny, px, py, pz, surface=0, option=0):
     _mesh = c_uint(0)
     px = numpy.array(px, c_float, copy=False)
     py = numpy.array(py, c_float, copy=False)
@@ -638,7 +638,7 @@ def createsurfacemesh(nx, ny, px, py, pz, option=0):
                                      px.ctypes.data_as(POINTER(c_float)),
                                      py.ctypes.data_as(POINTER(c_float)),
                                      pz.ctypes.data_as(POINTER(c_float)),
-                                     c_int(option))
+                                     c_int(surface), c_int(option))
 
     if err:
         raise GR3_Exception(err)
@@ -734,7 +734,7 @@ _gr3.gr3_createisosurfacemesh.argtypes = [POINTER(c_uint),
 
 _gr3.gr3_createsurfacemesh.argtypes = [POINTER(c_uint), c_int, c_int,
                                        POINTER(c_float), POINTER(c_float),
-                                       POINTER(c_float), c_int]
+                                       POINTER(c_float), c_int, c_int]
 _gr3.gr3_createsurfacemesh.restype = c_int
 _gr3.gr3_drawmesh_grlike.argtypes = [c_uint, c_uint, POINTER(c_float),
                                      POINTER(c_float), POINTER(c_float),

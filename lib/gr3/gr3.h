@@ -159,7 +159,7 @@ GR3API int          gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data,
 
 GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
                                  float *px, float *py, float *pz,
-                                 int option);
+                                 int surface, int option);
 
 GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions,
                                 const float *directions, const float *ups,

@@ -19,6 +19,13 @@ typedef struct {
   double a1, a2, b, c1, c2, c3, d;
 } gr_world_xform_t;
 
+typedef enum
+{
+  OPTION_LINES, OPTION_MESH, OPTION_FILLED_MESH, OPTION_Z_SHADED_MESH,
+  OPTION_COLORED_MESH, OPTION_CELL_ARRAY, OPTION_SHADED_MESH
+}
+gr_surface_option_t;
+
 int gr3_drawimage_gks_(float xmin, float xmax, float ymin, float ymax, int width, int height) {
   double _xmin = (double) xmin, _xmax = (double) xmax;
   double _ymin = (double) ymin, _ymax = (double) ymax;
@@ -174,10 +181,12 @@ static void gr3_grtransformation_(float *a, int rotation, int tilt)
  * a new mesh has to be created.
  */
 GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
-                                     float *px, float *py, float *pz,
-                                     int option)
+                                 float *px, float *py, float *pz,
+                                 int surface, int option)
 {
-    float xrange[2], yrange[2], zrange[2];
+    float xrange[2], yrange[2];
+    double zmin, zmax;
+    int rotation, tilt;
     int i, j;
     int num_vertices;
     float *vertices, *normals, *colors;
@@ -214,12 +223,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
     xrange[1] = px[nx - 1];
     yrange[0] = py[0];
     yrange[1] = py[ny - 1];
-    zrange[0] = pz[0];
-    zrange[1] = pz[0];
-    for (i = 0; i < nx * ny; i++) {
-        if (pz[i] < zrange[0]) zrange[0] = pz[i];
-        if (pz[i] > zrange[1]) zrange[1] = pz[i];
-    }
+    gr_inqspace(&zmin, &zmax, &rotation, &tilt);
 
     for (j = 0; j < ny; j++) {
         for (i = 0; i < nx; i++) {
@@ -229,28 +233,37 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
             float *c = colors + 3 * k;
 
             v[0] = ((px[i] - xrange[0]) / (xrange[1] - xrange[0]));
-            if (option & GR3_SURFACE_FLAT) {
+            if (surface & GR3_SURFACE_FLAT) {
                 v[1] = 0.0f;
             } else {
-                v[1] = ((pz[k] - zrange[0]) / (zrange[1] - zrange[0]));
+                v[1] = ((pz[k] - zmin) / (zmax - zmin));
             }
             /* flip because y-axis is projected to the negative z-axis */
             v[2] = ((yrange[1] - py[j]) / (yrange[1] - yrange[0]));
 
-            if (option & GR3_SURFACE_FLAT || !(option & GR3_SURFACE_NORMAL)) {
+            if (surface & GR3_SURFACE_FLAT || !(surface & GR3_SURFACE_NORMAL)) {
                 n[0] = 0.0f;
                 n[1] = 1.0f;
                 n[2] = 0.0f;
             }
 
-            if (option & GR3_SURFACE_NOCOLOR) {
+            if (surface & GR3_SURFACE_NOCOLOR) {
                 c[0] = 1.0;
                 c[1] = 1.0;
                 c[2] = 1.0;
             } else {
                 int color, rgb;
-                color = (int) ((pz[k] - zrange[0]) / (zrange[1] - zrange[0])
-                               * (LAST_COLOR - FIRST_COLOR) + FIRST_COLOR);
+
+                if (option == OPTION_Z_SHADED_MESH)
+                    color = (int) pz[k] + FIRST_COLOR;
+                else
+                    color = (int) ((pz[k] - zmin) / (zmax - zmin)
+                                   * (LAST_COLOR - FIRST_COLOR) + FIRST_COLOR);
+                if (color < FIRST_COLOR)
+                    color = FIRST_COLOR;
+                else if (color > LAST_COLOR)
+                    color = LAST_COLOR;
+
                 gr_inqcolor(color, &rgb);
                 c[0] = (float) ( rgb        & 0xff) / 255;
                 c[1] = (float) ((rgb >>  8) & 0xff) / 255;
@@ -260,7 +273,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
     }
 
     /* interpolate normals */
-    if (option & GR3_SURFACE_NORMAL && !(option & GR3_SURFACE_FLAT)) {
+    if (surface & GR3_SURFACE_NORMAL && !(surface & GR3_SURFACE_FLAT)) {
         int dirx = 3, diry = 3 * nx;
 
         for (j = 0; j < ny; j++) {
@@ -326,7 +339,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
 }
 
 /*!
- * Draw a mesh with the current projection parameters (rotation, tilt) of gr.
+ * Draw a mesh with the current projection parameters (rotation, tilt).
  * This function alters the projection type, the projection parameters,
  * the viewmatrix and the light direction. If necessary, the user has to
  * save them before the call to this function and restore them after
@@ -401,12 +414,11 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz,
     int mesh;
     double xmin, xmax, ymin, ymax;
 
-    (void) option;
-    gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, 0);
+    gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, 0, option);
     gr3_drawsurface(mesh);
     gr3_deletemesh(mesh);
     gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
     /* TODO: inquire the required resolution */
-    gr3_drawimage((float) xmin, (float) xmax, (float) ymin, (float) xmax, 1000, 1000, GR3_DRAWABLE_GKS);
+    gr3_drawimage((float) xmin, (float) xmax, (float) ymin, (float) xmax, 500, 500, GR3_DRAWABLE_GKS);
 }
 
