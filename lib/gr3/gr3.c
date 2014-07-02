@@ -47,7 +47,7 @@ static int current_object_id = 0;
                                                 NULL,0,NULL,not_initialized_,\
                                                 NULL, NULL,0,0,{{0}},0,0,0,\
                                                 {0,0,0,0},0,0,0,0,0,{0,0,0,1},0,\
-                                                0,0,0,0,0,0,0,0,0, NULL,0}
+                                                0,0,0,0,0,0,0,0,0, NULL,0,0}
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
 
 /* For documentation, see the definition. */
@@ -73,6 +73,9 @@ static int  gr3_initFBO_ARB_(void);
 static void gr3_terminateFBO_ARB_(void);
 #endif
 
+static void gr3_projectionmatrix_(float left, float right, float bottom,
+                                  float top, float znear, float zfar,
+                                  GLfloat *matrix);
 
 /*!
  * This method initializes the gr3 context.
@@ -123,7 +126,7 @@ GR3API int gr3_init(int *attrib_list) {
     strcpy(context_struct_.renderpath_string, renderpath_string);
 
     do {
-	error = GR3_ERROR_INIT_FAILED;
+        error = GR3_ERROR_INIT_FAILED;
         #if defined(GR3_USE_CGL)
             error = gr3_initGL_CGL_();
             if (error == GR3_ERROR_NONE) {
@@ -197,7 +200,7 @@ GR3API int gr3_init(int *attrib_list) {
             "void main(void) {\n",
                 "vec4 Position = ViewMatrix*ModelMatrix*(Scales*vec4(in_Vertex,1));\n",
                 "gl_Position=ProjectionMatrix*Position;\n",
-                "Normal = mat3(ViewMatrix)*mat3(ModelMatrix)*in_Normal;\n",
+                "Normal = normalize(mat3(ViewMatrix)*mat3(ModelMatrix)*(in_Normal/vec3(Scales)));\n",
                 "Color = vec4(in_Color,1);\n",
                 "float diffuse = Normal.z;\n",
                 "if (dot(LightDirection,LightDirection) > 0.001) {",
@@ -782,7 +785,7 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions,
         draw->scales = malloc(sizeof(float)*n*3);
         memcpy(draw->scales,scales,sizeof(float)*n*3);
         draw->n = n;
-      draw->object_id = current_object_id;
+        draw->object_id = current_object_id;
         draw->next= NULL;
         gr3_meshaddreference_(mesh);
         if (context_struct_.draw_list_ == NULL) {
@@ -1177,6 +1180,60 @@ GR3API int gr3_setcameraprojectionparameters(float vertical_field_of_view,
 }
 
 /*!
+ * Get the projection parameters.
+ *
+ * \param [out] vfov   Vertical field of view in degrees
+ * \param [out] znear  The distance to the near clipping plane.
+ * \param [out] zfar   The distance to the far clipping plane.
+ *
+ * \returns
+ * - ::GR3_ERROR_NONE  on success
+ */
+GR3API int gr3_getcameraprojectionparameters(float *vfov, float *znear,
+                                             float *zfar)
+{
+    GR3_DO_INIT;
+    if (!context_struct_.is_initialized) {
+        return GR3_ERROR_NOT_INITIALIZED;
+    }
+
+    *vfov = context_struct_.vertical_field_of_view;
+    *znear = context_struct_.zNear;
+    *zfar = context_struct_.zFar;
+
+    return GR3_ERROR_NONE;
+}
+
+/*!
+ * Create a parallel or perspective projection
+ */
+static void gr3_projectionmatrix_(float left, float right, float bottom,
+                                  float top, float znear, float zfar,
+                                  GLfloat *matrix)
+{
+    memset(matrix, 0, 16 * sizeof(GLfloat));
+    if (context_struct_.projection_type == GR3_PROJECTION_PARALLEL) {
+        /* Source: http://www.opengl.org/sdk/docs/man2/xhtml/glOrtho.xml */
+        matrix[0 + 0 * 4] = 2.0 / (right - left);
+        matrix[0 + 3 * 4] = -(right + left) / (right - left);
+        matrix[1 + 1 * 4] = 2.0 / (top - bottom);
+        matrix[1 + 3 * 4] = -(top + bottom) / (top - bottom);
+        matrix[2 + 2 * 4] = -2.0 / (zfar - znear);
+        matrix[2 + 3 * 4] = -(zfar + znear) / (zfar - znear);
+        matrix[3 + 3 * 4] = 1.0;
+    } else {
+        /* Source: http://www.opengl.org/sdk/docs/man2/xhtml/glFrustum.xml */
+        matrix[0 + 0 * 4] = 2.0 * znear / (right - left);
+        matrix[0 + 2 * 4] = (right + left) / (right - left);
+        matrix[1 + 1 * 4] = 2.0 * znear / (top - bottom);
+        matrix[1 + 2 * 4] = (top + bottom) / (top - bottom);
+        matrix[2 + 2 * 4] = -(zfar + znear) / (zfar - znear);
+        matrix[2 + 3 * 4] = -2.0 * zfar * znear / (zfar - znear);
+        matrix[3 + 2 * 4] = -1.0;
+    }
+}
+
+/*!
  * This function iterates over the draw list and draws the image using OpenGL.
  */
 static void gr3_draw_(GLuint width, GLuint height) {
@@ -1195,18 +1252,12 @@ static void gr3_draw_(GLuint width, GLuint height) {
             GLfloat fovy = context_struct_.vertical_field_of_view;
             GLfloat zNear = context_struct_.zNear;
             GLfloat zFar = context_struct_.zFar;
-            
-            
-            {
-                /* Source: http://www.opengl.org/sdk/docs/man/xhtml/gluPerspective.xml */
-                GLfloat aspect = (GLfloat)width/height;
-                GLfloat f = 1/tan(fovy*M_PI/360.0);
-                projection_matrix[0][0] = f/aspect;
-                projection_matrix[1][1] = f;
-                projection_matrix[2][2] = (zFar+zNear)/(zNear-zFar);
-                projection_matrix[3][2] = 2*zFar*zNear/(zNear-zFar);
-                projection_matrix[2][3] = -1;
-            }
+            GLfloat aspect = (GLfloat)width/height;
+            GLfloat tfov2 = tan(fovy*M_PI/360.0);
+            GLfloat right = zNear * aspect * tfov2;
+            GLfloat top = zNear * tfov2;
+            gr3_projectionmatrix_(-right, right, -top, top, zNear, zFar,
+                                  &(projection_matrix[0][0]));
             pm = &projection_matrix[0][0];
         }
 #ifdef GR3_CAN_USE_VBO
@@ -1464,16 +1515,10 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
                     GLfloat r = left + 1.0f*(right-left)*(x*fb_width+dx)/width;
                     GLfloat b = bottom + 1.0f*(top-bottom)*(y*fb_height)/height;
                     GLfloat t = bottom + 1.0f*(top-bottom)*(y*fb_height+dy)/height;
-                    
-                    /* Source: http://www.opengl.org/sdk/docs/man/xhtml/glFrustum.xml */
-                    projection_matrix[0][0] = 2*zNear/(r - l);
-                    projection_matrix[2][0] = (r+l)/(r - l);
-                    projection_matrix[1][1] = 2*zNear/(t - b);
-                    projection_matrix[2][1] = (t+b)/(t - b);
-                    projection_matrix[2][2] = (zFar+zNear)/(zNear-zFar);
-                    projection_matrix[3][2] = 2*zFar*zNear/(zNear-zFar);
-                    projection_matrix[2][3] = -1;
-                    
+
+                    gr3_projectionmatrix_(l, r, b, t, zNear, zFar,
+                                          &(projection_matrix[0][0]));
+
                     context_struct_.projection_matrix = &projection_matrix[0][0];
                     glViewport(0, 0, dx, dy);
                     gr3_draw_(width, height);
@@ -1737,7 +1782,7 @@ static GLuint depth_renderbuffer = 0;
      */
     static int gr3_initFBO_EXT_(void) {
 #ifdef FRAMEBUFFER_STATUS
-    	GLenum framebuffer_status;
+        GLenum framebuffer_status;
 #endif
         GLenum draw_buffers[] = {GL_COLOR_ATTACHMENT0_EXT};
         GLuint _width = context_struct_.init_struct.framebuffer_width;
@@ -1899,15 +1944,8 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
             GLfloat b = bottom + 1.0f*(top-bottom)*(y*fb_height)/height;
             GLfloat t = bottom + 1.0f*(top-bottom)*(y*fb_height+dy)/height;
             
-            /* Source: http://www.opengl.org/sdk/docs/man/xhtml/glFrustum.xml */
-            projection_matrix[0][0] = 2*zNear/(r - l);
-            projection_matrix[2][0] = (r+l)/(r - l);
-            projection_matrix[1][1] = 2*zNear/(t - b);
-            projection_matrix[2][1] = (t+b)/(t - b);
-            projection_matrix[2][2] = (zFar+zNear)/(zNear-zFar);
-            projection_matrix[3][2] = 2*zFar*zNear/(zNear-zFar);
-            projection_matrix[2][3] = -1;
-            
+            gr3_projectionmatrix_(l, r, b, t, zNear, zFar,
+                                  &(projection_matrix[0][0]));
             context_struct_.projection_matrix = &projection_matrix[0][0];
             glViewport(0, 0, dx, dy);
             id = gr3_selectiondraw_(px-x*fb_width,py-y*fb_height,width, height);
@@ -2032,3 +2070,40 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
   return object_id;
 }
 
+/*!
+ * \param [out] m the 4x4 column major view matrix
+ */
+GR3API void gr3_getviewmatrix(float *m)
+{
+    memcpy(m, &context_struct_.view_matrix[0][0], 16 * sizeof(float));
+}
+
+/*!
+ * \param [in] m the 4x4 column major view matrix
+ */
+GR3API void gr3_setviewmatrix(const float *m)
+{
+    memcpy(&context_struct_.view_matrix[0][0], m, 16 * sizeof(float));
+}
+
+/*!
+ * \returns the current projection type:
+ * GR3_PROJECTION_PERSPECTIVE or GR3_PROJECTION_PARALLEL
+ */
+GR3API int gr3_getprojectiontype()
+{
+    return context_struct_.projection_type;
+}
+
+/*!
+ * \param [in] type the new projection type:
+ * GR3_PROJECTION_PERSPECTIVE or GR3_PROJECTION_PARALLEL
+ */
+GR3API void gr3_setprojectiontype(int type)
+{
+    if (type == GR3_PROJECTION_PARALLEL) {
+        context_struct_.projection_type = GR3_PROJECTION_PARALLEL;
+    } else {
+        context_struct_.projection_type = GR3_PROJECTION_PERSPECTIVE;
+    }
+}

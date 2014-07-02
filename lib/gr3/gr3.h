@@ -71,6 +71,14 @@
 
 #define GR3_MC_DTYPE unsigned short
 
+#define GR3_PROJECTION_PERSPECTIVE 0
+#define GR3_PROJECTION_PARALLEL 1
+
+#define GR3_SURFACE_DEFAULT 0
+#define GR3_SURFACE_FLAT 1
+#define GR3_SURFACE_NOCOLOR 2
+#define GR3_SURFACE_NORMAL 4
+
 typedef struct {
   float x, y, z;
 } gr3_coord_t;
@@ -102,6 +110,7 @@ GR3API void         gr3_deletemesh(int mesh);
 
 GR3API void         gr3_cameralookat(float camera_x, float camera_y, float camera_z, float center_x, float center_y, float center_z, float up_x,  float up_y,  float up_z);
 GR3API int          gr3_setcameraprojectionparameters(float vertical_field_of_view, float zNear, float zFar);
+GR3API int          gr3_getcameraprojectionparameters(float *vfov, float *znear, float *zfar);
 GR3API void         gr3_setlightdirection(float x, float y, float z);
 GR3API void         gr3_setbackgroundcolor(float red, float green, float blue, float alpha);
           
@@ -116,6 +125,10 @@ GR3API void         gr3_drawcubemesh(int n, const float *positions, const float 
           
 GR3API void         gr3_setobjectid(int id);
 GR3API int          gr3_selectid(int x, int y, int width, int height, int *selection_id);
+GR3API void         gr3_getviewmatrix(float *m);
+GR3API void         gr3_setviewmatrix(const float *m);
+GR3API int          gr3_getprojectiontype();
+GR3API void         gr3_setprojectiontype(int type);
 
 GR3API unsigned int gr3_triangulate(const GR3_MC_DTYPE *data,
                         GR3_MC_DTYPE isolevel, unsigned int dim_x,
@@ -143,6 +156,19 @@ GR3API int          gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data,
                         unsigned int stride_y, unsigned int stride_z,
                         double step_x, double step_y, double step_z,
                         double offset_x, double offset_y, double offset_z);
+
+GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
+                                 float *px, float *py, float *pz,
+                                 int option);
+
+GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions,
+                                const float *directions, const float *ups,
+                                const float *colors, const float *scales);
+
+GR3API void gr3_drawsurface(int mesh);
+
+GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz,
+                            int option);
 
 #ifdef _WIN32
     #ifdef __cplusplus

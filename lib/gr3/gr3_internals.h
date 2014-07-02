@@ -206,6 +206,7 @@ typedef struct _GR3_ContextStruct_t_ {
   float up_x;     float up_y;     float up_z;
   GLfloat *projection_matrix;
   int quality;
+  int projection_type;
 } GR3_ContextStruct_t_;
 
 extern GR3_ContextStruct_t_ context_struct_;

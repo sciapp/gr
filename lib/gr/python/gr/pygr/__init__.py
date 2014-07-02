@@ -13,6 +13,7 @@ import gr
 from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort
 from gr.pygr.helper import ColorIndexGenerator, DomainChecker
 from numpy import ndarray
+import gr3
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
@@ -1376,7 +1377,8 @@ def plot3d(z,
            contours=True,
            xtitle='',
            ytitle='',
-           ztitle=''):
+           ztitle='',
+           accelerate=False):
     gr.clearws()
     xmin, ymin = (1, 1)
     if type(z) == ndarray:
@@ -1392,18 +1394,23 @@ def plot3d(z,
     ytick = gr.tick(ymin, ymax) / 5
     x = range(1, xmax + 1)
     y = range(1, ymax + 1)
-    zmin, zmax = gr.adjustrange(zmin, zmax)
+    if not accelerate:
+        zmin, zmax = gr.adjustrange(zmin, zmax)
     ztick = gr.tick(zmin, zmax) / 5
     gr.setviewport(viewport[0], viewport[1], viewport[2], viewport[3])
     gr.setwindow(xmin, xmax, ymin, ymax)
     gr.setspace(zmin, zmax, rotation, tilt)
     charheight = 0.024 * (viewport[3] - viewport[2])
     gr.setcharheight(charheight)
+    gr.setcolormap(colormap)
+    if accelerate:
+        gr3.surface(x, y, z, option)
+    else:
+        gr.surface(x, y, z, option)
+
     if rotation != 0 or tilt != 90:
         gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 5, 0, 5, -0.01)
         gr.axes3d(0, ytick, 0, xmax, ymin, zmin, 0, 5, 0, 0.01)
-    gr.setcolormap(colormap)
-    gr.surface(x, y, z, option)
     if contours:
         gr.contour(x, y, range(1), z, 0)
     if rotation == 0 and tilt == 90:
