@@ -1394,8 +1394,7 @@ def plot3d(z,
     ytick = gr.tick(ymin, ymax) / 5
     x = range(1, xmax + 1)
     y = range(1, ymax + 1)
-    if not accelerate:
-        zmin, zmax = gr.adjustrange(zmin, zmax)
+    zmin, zmax = gr.adjustrange(zmin, zmax)
     ztick = gr.tick(zmin, zmax) / 5
     gr.setviewport(viewport[0], viewport[1], viewport[2], viewport[3])
     gr.setwindow(xmin, xmax, ymin, ymax)
