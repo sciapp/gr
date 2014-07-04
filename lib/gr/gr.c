@@ -110,6 +110,12 @@ double xfac[4] = { 0, 0, -0.5, -1 };
 static
 double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
+#define DEFAULT_FIRST_COLOR 8
+#define DEFAULT_LAST_COLOR 79
+
+static
+int first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
+
 #define check_autoinit if (autoinit) initgks()
 
 #define nint(x) (int)((x) + 0.5)
@@ -121,8 +127,6 @@ double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 #define RESOLUTION_X 4096
 #define BACKGROUND 0
-#define FIRST_COLOR 8
-#define LAST_COLOR 79
 #define MISSING_VALUE FLT_MAX
 
 #ifndef FLT_MAX
@@ -4700,12 +4704,12 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                     if (option == OPTION_Z_SHADED_MESH)
                       {
-                        color = iround(meanz) + FIRST_COLOR;
+                        color = iround(meanz) + first_color;
 
-                        if (color < FIRST_COLOR)
-                          color = FIRST_COLOR;
-                        else if (color > LAST_COLOR)
-                          color = LAST_COLOR;
+                        if (color < first_color)
+                          color = first_color;
+                        else if (color > last_color)
+                          color = last_color;
 
                         gks_set_fill_color_index(color);
                       }
@@ -4713,25 +4717,25 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     else if (option == OPTION_COLORED_MESH)
                       {
                         color = iround((meanz - wx.zmin) / (wx.zmax - wx.zmin) *
-                          (LAST_COLOR - FIRST_COLOR)) + FIRST_COLOR;
+                          (last_color - first_color)) + first_color;
 
-                        if (color < FIRST_COLOR)
-                          color = FIRST_COLOR;
-                        else if (color > LAST_COLOR)
-                          color = LAST_COLOR;
+                        if (color < first_color)
+                          color = first_color;
+                        else if (color > last_color)
+                          color = last_color;
 
                         gks_set_fill_color_index(color);
                       }
 
                     else if (option == OPTION_SHADED_MESH)
                       {
-                        color = iround(intensity * (LAST_COLOR - FIRST_COLOR)) +
-                          FIRST_COLOR;
+                        color = iround(intensity * (last_color - first_color)) +
+                          first_color;
 
-                        if (color < FIRST_COLOR)
-                          color = FIRST_COLOR;
-                        else if (color > LAST_COLOR)
-                          color = LAST_COLOR;
+                        if (color < first_color)
+                          color = first_color;
+                        else if (color > last_color)
+                          color = last_color;
 
                         gks_set_fill_color_index(color);
                       }
@@ -4761,14 +4765,14 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
               {
                 if (Z(i, j) != MISSING_VALUE)
                   {
-                    color = FIRST_COLOR + (int) (
+                    color = first_color + (int) (
                       (Z(i, j) - wx.zmin) / (wx.zmax - wx.zmin) *
-                      (LAST_COLOR - FIRST_COLOR));
+                      (last_color - first_color));
 
-                    if (color < FIRST_COLOR)
-                      color = FIRST_COLOR;
-                    else if (color > LAST_COLOR)
-                      color = LAST_COLOR;
+                    if (color < first_color)
+                      color = first_color;
+                    else if (color > last_color)
+                      color = last_color;
                   }
                 else
                   color = BACKGROUND;
@@ -4895,38 +4899,50 @@ void gr_contour(
 
 void gr_setcolormap(int index)
 {
-  int reverse, i, j;
+  int ind = index, reverse, i, j;
   double r, g, b;
 
   check_autoinit;
 
   reverse = 0;
   r = g = b = 0;
-  if (index < 0)
+  if (ind < 0)
     {
-      index = -index;
+      ind = -ind;
       reverse = 1;
-    }  
+    }
 
-  if (index >= sizeof(cmap) / sizeof(cmap[0]))
-    index = 0;
-
-  for (i = 0; i <= LAST_COLOR - FIRST_COLOR; i++)
+  if (ind >= 100)
     {
-      j = reverse ? LAST_COLOR - FIRST_COLOR - 1 - i : i;
-      r = ((cmap[index][j] >> 16) & 0xff) / 255.0;
-      g = ((cmap[index][j] >>  8) & 0xff) / 255.0;
-      b = ( cmap[index][j]        & 0xff) / 255.0;
+      ind %= 100;
+      first_color = 1000;
+      last_color = 1255;
+    }
+  else
+    {
+      first_color = DEFAULT_FIRST_COLOR;
+      last_color = DEFAULT_LAST_COLOR;
+    }
 
-      setcolorrep(FIRST_COLOR + i, r, g, b);
+  if (ind >= sizeof(cmap) / sizeof(cmap[0]))
+    ind = 0;
+
+  for (i = 0; i <= DEFAULT_LAST_COLOR - DEFAULT_FIRST_COLOR; i++)
+    {
+      j = reverse ? DEFAULT_LAST_COLOR - DEFAULT_FIRST_COLOR - 1 - i : i;
+      r = ((cmap[ind][j] >> 16) & 0xff) / 255.0;
+      g = ((cmap[ind][j] >>  8) & 0xff) / 255.0;
+      b = ( cmap[ind][j]        & 0xff) / 255.0;
+
+      setcolorrep(DEFAULT_FIRST_COLOR + i, r, g, b);
     }
 
   for (i = 0; i < 256; i++)
     {
       j = reverse ? 255 - i : i;
-      r = ((cmap_h[index][j] >> 16) & 0xff) / 255.0;
-      g = ((cmap_h[index][j] >>  8) & 0xff) / 255.0;
-      b = ( cmap_h[index][j]        & 0xff) / 255.0;
+      r = ((cmap_h[ind][j] >> 16) & 0xff) / 255.0;
+      g = ((cmap_h[ind][j] >>  8) & 0xff) / 255.0;
+      b = ( cmap_h[ind][j]        & 0xff) / 255.0;
 
       setcolorrep(1000 + i, r, g, b);
     }
@@ -4940,7 +4956,7 @@ void gr_colormap(void)
   int errind, halign, valign, clsw, tnr;
   double clrt[4], wn[4], vp[4];
   double xmin, xmax, ymin, ymax, zmin, zmax;
-  int w, h, sx, sy, nx, ny, colia[LAST_COLOR - FIRST_COLOR + 1];
+  int w, h, sx, sy, nx, ny, colia[256];
   int i, nz, ci, cells;
   double x, y, z, dy, dz;
   char text[256];
@@ -4959,9 +4975,9 @@ void gr_colormap(void)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  cells = LAST_COLOR - FIRST_COLOR + 1;
-  for (ci = FIRST_COLOR; ci <= LAST_COLOR; ci++)
-    colia[ci - FIRST_COLOR] = ci;
+  cells = last_color - first_color + 1;
+  for (ci = first_color; ci <= last_color; ci++)
+    colia[ci - first_color] = ci;
 
   xmin = lx.xmin;
   xmax = lx.xmax;

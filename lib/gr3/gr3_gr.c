@@ -184,8 +184,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
                                  float *px, float *py, float *pz,
                                  int surface, int option)
 {
-    float xrange[2], yrange[2];
-    double zmin, zmax;
+    double xmin, xmax, ymin, ymax, zmin, zmax;
     int rotation, tilt;
     int i, j;
     int num_vertices;
@@ -219,10 +218,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
         return GR3_ERROR_OUT_OF_MEM;
     }
 
-    xrange[0] = px[0];
-    xrange[1] = px[nx - 1];
-    yrange[0] = py[0];
-    yrange[1] = py[ny - 1];
+    gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
     gr_inqspace(&zmin, &zmax, &rotation, &tilt);
 
     for (j = 0; j < ny; j++) {
@@ -232,14 +228,14 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
             float *n = normals + 3 * k;
             float *c = colors + 3 * k;
 
-            v[0] = ((px[i] - xrange[0]) / (xrange[1] - xrange[0]));
+            v[0] = ((px[i] - xmin) / (xmax - xmin));
             if (surface & GR3_SURFACE_FLAT) {
                 v[1] = 0.0f;
             } else {
                 v[1] = ((pz[k] - zmin) / (zmax - zmin));
             }
             /* flip because y-axis is projected to the negative z-axis */
-            v[2] = ((yrange[1] - py[j]) / (yrange[1] - yrange[0]));
+            v[2] = ((ymax - py[j]) / (ymax - ymin));
 
             if (surface & GR3_SURFACE_FLAT || !(surface & GR3_SURFACE_NORMAL)) {
                 n[0] = 0.0f;

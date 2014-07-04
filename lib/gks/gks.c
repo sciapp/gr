@@ -960,11 +960,17 @@ void gks_text(double px, double py, char *str)
 {
   if (state >= GKS_K_WSAC)
     {
-      f_arr_1[0] = px;
-      f_arr_2[0] = py;
+      if (strlen(str) < 132)
+        {
+          f_arr_1[0] = px;
+          f_arr_2[0] = py;
 
-      /* call the device driver link routine */
-      gks_ddlk(TEXT, 0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 1, str, NULL);
+          /* call the device driver link routine */
+          gks_ddlk(TEXT, 0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 1, str, NULL);
+        }
+      else
+        /* string is too long */
+        gks_report_error(TEXT, 403);
     }
   else
     /* GKS not in proper state. GKS must be either in the state

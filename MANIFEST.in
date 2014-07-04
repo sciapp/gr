@@ -1,5 +1,5 @@
 include COPYING
-include README
+include README.rst
 recursive-include lib *
 recursive-include 3rdparty *
 recursive-include examples *
