@@ -95,6 +95,7 @@ DLLEXPORT void gr_surface(int, int, double *, double *, double *, int);
 DLLEXPORT void gr_contour(
   int, int, int, double *, double *, double *, double *, int);
 DLLEXPORT void gr_setcolormap(int);
+DLLEXPORT void gr_inqcolormap(int *);
 DLLEXPORT void gr_colormap(void);
 DLLEXPORT void gr_inqcolor(int, int *);
 DLLEXPORT double gr_tick(double, double);

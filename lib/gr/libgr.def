@@ -53,6 +53,7 @@ EXPORTS
 	gr_setcharup
 	gr_setclip
 	gr_setcolormap
+	gr_inqcolormap
 	gr_setcolorrep
 	gr_setfillcolorind
 	gr_setfillintstyle

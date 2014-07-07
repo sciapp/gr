@@ -276,6 +276,9 @@ int vertex_list[18][25] = {
 };
 
 static
+int colormap = 0;
+
+static
 int cmap[44][72] = {
   { /* COLORMAP_UNIFORM */
     0x2020df,  0x3020df,  0x4020df,  0x5020df,  0x6020df,  0x7020df,  
@@ -4902,6 +4905,8 @@ void gr_setcolormap(int index)
   int ind = index, reverse, i, j;
   double r, g, b;
 
+  colormap = index;
+
   check_autoinit;
 
   reverse = 0;
@@ -4949,6 +4954,11 @@ void gr_setcolormap(int index)
 
   if (flag_graphics)
     gr_writestream("<setcolormap index=\"%d\"/>\n", index);
+}
+
+void gr_inqcolormap(int *index)
+{
+  *index = colormap;
 }
 
 void gr_colormap(void)

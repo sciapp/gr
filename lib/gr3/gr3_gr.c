@@ -12,8 +12,8 @@
 
 #define arc(angle) (M_PI * (angle) / 180.0)
 
-#define FIRST_COLOR 8
-#define LAST_COLOR 79
+#define DEFAULT_FIRST_COLOR 8
+#define DEFAULT_LAST_COLOR 79
 
 #define OPTION_FLIP_X (1 << 3)
 #define OPTION_FLIP_Y (1 << 4)
@@ -197,6 +197,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
     int *indices;
     int result;
     int scale;
+    int cmap, first_color, last_color;
 
     num_vertices = nx * ny;
     vertices = malloc(num_vertices * 3 * sizeof(float));
@@ -226,6 +227,15 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
     gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
     gr_inqspace(&zmin, &zmax, &rotation, &tilt);
     gr_inqscale(&scale);
+    gr_inqcolormap(&cmap);
+
+    if (abs(cmap) >= 100) {
+      first_color = 1000;
+      last_color = 1255;
+    } else {
+      first_color = DEFAULT_FIRST_COLOR;
+      last_color = DEFAULT_LAST_COLOR;
+    }
 
     for (j = 0; j < ny; j++) {
         for (i = 0; i < nx; i++) {
@@ -267,14 +277,14 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
                 int color, rgb;
 
                 if (option == OPTION_Z_SHADED_MESH)
-                    color = (int) pz[k] + FIRST_COLOR;
+                    color = (int) pz[k] + first_color;
                 else
                     color = (int) ((pz[k] - zmin) / (zmax - zmin)
-                                   * (LAST_COLOR - FIRST_COLOR) + FIRST_COLOR);
-                if (color < FIRST_COLOR)
-                    color = FIRST_COLOR;
-                else if (color > LAST_COLOR)
-                    color = LAST_COLOR;
+                                   * (last_color - first_color) + first_color);
+                if (color < first_color)
+                    color = first_color;
+                else if (color > last_color)
+                    color = last_color;
 
                 gr_inqcolor(color, &rgb);
                 c[0] = (float) ( rgb        & 0xff) / 255;
