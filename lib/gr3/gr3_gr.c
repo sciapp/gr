@@ -15,6 +15,10 @@
 #define FIRST_COLOR 8
 #define LAST_COLOR 79
 
+#define OPTION_FLIP_X (1 << 3)
+#define OPTION_FLIP_Y (1 << 4)
+#define OPTION_FLIP_Z (1 << 5)
+
 typedef struct {
   double a1, a2, b, c1, c2, c3, d;
 } gr_world_xform_t;
@@ -192,6 +196,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
     int num_indices;
     int *indices;
     int result;
+    int scale;
 
     num_vertices = nx * ny;
     vertices = malloc(num_vertices * 3 * sizeof(float));
@@ -220,6 +225,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
 
     gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
     gr_inqspace(&zmin, &zmax, &rotation, &tilt);
+    gr_inqscale(&scale);
 
     for (j = 0; j < ny; j++) {
         for (i = 0; i < nx; i++) {
@@ -236,6 +242,16 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
             }
             /* flip because y-axis is projected to the negative z-axis */
             v[2] = ((ymax - py[j]) / (ymax - ymin));
+
+            if (scale & OPTION_FLIP_X) {
+                v[0] = 1.0f - v[0];
+            }
+            if (scale & OPTION_FLIP_Z) {
+                v[1] = 1.0f - v[1];
+            }
+            if (scale & OPTION_FLIP_Y) {
+                v[2] = 1.0f - v[2];
+            }
 
             if (surface & GR3_SURFACE_FLAT || !(surface & GR3_SURFACE_NORMAL)) {
                 n[0] = 0.0f;
@@ -409,12 +425,24 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz,
 {
     int mesh;
     double xmin, xmax, ymin, ymax;
+    int scale;
 
     gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, 0, option);
     gr3_drawsurface(mesh);
     gr3_deletemesh(mesh);
     gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+    gr_inqscale(&scale);
+    if (scale & OPTION_FLIP_X) {
+        double tmp = xmin;
+        xmin = xmax;
+        xmax = tmp;
+    }
+    if (scale & OPTION_FLIP_Y) {
+        double tmp = ymin;
+        ymin = ymax;
+        ymax = tmp;
+    }
     /* TODO: inquire the required resolution */
-    gr3_drawimage((float) xmin, (float) xmax, (float) ymin, (float) xmax, 500, 500, GR3_DRAWABLE_GKS);
+    gr3_drawimage((float) xmin, (float) xmax, (float) ymin, (float) ymax, 500, 500, GR3_DRAWABLE_GKS);
 }
 
