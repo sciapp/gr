@@ -10,11 +10,18 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef FLT_MAX
+#define FLT_MAX 1.701411735e+38
+#endif
+
 #define arc(angle) (M_PI * (angle) / 180.0)
 
 #define DEFAULT_FIRST_COLOR 8
 #define DEFAULT_LAST_COLOR 79
 
+#define OPTION_X_LOG (1 << 0)
+#define OPTION_Y_LOG (1 << 1)
+#define OPTION_Z_LOG (1 << 2)
 #define OPTION_FLIP_X (1 << 3)
 #define OPTION_FLIP_Y (1 << 4)
 #define OPTION_FLIP_Z (1 << 5)
@@ -29,6 +36,11 @@ typedef enum
   OPTION_COLORED_MESH, OPTION_CELL_ARRAY, OPTION_SHADED_MESH
 }
 gr_surface_option_t;
+
+typedef struct {
+    double a, b;
+    int o_log, o_flip;
+} trans_t;
 
 int gr3_drawimage_gks_(float xmin, float xmax, float ymin, float ymax, int width, int height) {
   double _xmin = (double) xmin, _xmax = (double) xmax;
@@ -179,6 +191,43 @@ static void gr3_grtransformation_(float *a, int rotation, int tilt)
     }
 }
 
+static double gr3_log10_(double x)
+{
+    if (x > 0) {
+        return log10(x);
+    } else {
+        return -FLT_MAX;
+    }
+}
+
+/* create a transformation into NDC coordinates */
+static void gr3_ndctrans_(double xmin, double xmax, trans_t *tx,
+                          int option_log, int option_flip)
+{
+    if (option_log) {
+        tx->a = 1.0 / gr3_log10_((xmax / xmin));
+        tx->b = -gr3_log10_(xmin) * tx->a;
+    } else {
+        tx->a = 1.0 / (xmax - xmin);
+        tx->b = -xmin * tx->a;
+    }
+    tx->o_log = option_log;
+    tx->o_flip = option_flip;
+}
+
+static float gr3_transform_(float x, trans_t tx)
+{
+    if (tx.o_log) {
+        x = gr3_log10_(x);
+    }
+    x = tx.a * x + tx.b;
+    if (tx.o_flip) {
+        x = 1.0 - x;
+    }
+
+    return x;
+}
+
 /*!
  * Create a mesh of a surface plot similar to gr_surface.
  * Uses the current colormap. To apply changes of the colormap
@@ -198,6 +247,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
     int result;
     int scale;
     int cmap, first_color, last_color;
+    trans_t tx, ty, tz;
 
     num_vertices = nx * ny;
     vertices = malloc(num_vertices * 3 * sizeof(float));
@@ -237,31 +287,30 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
       last_color = DEFAULT_LAST_COLOR;
     }
 
+    gr3_ndctrans_(xmin, xmax, &tx, scale & OPTION_X_LOG,
+                  scale & OPTION_FLIP_X);
+    /* flip because y-axis is projected to the negative z-axis */
+    gr3_ndctrans_(ymin, ymax, &ty, scale & OPTION_Y_LOG,
+                  !(scale & OPTION_FLIP_Y));
+    gr3_ndctrans_(zmin, zmax, &tz, scale & OPTION_Z_LOG,
+                  scale & OPTION_FLIP_Z);
+
     for (j = 0; j < ny; j++) {
         for (i = 0; i < nx; i++) {
             int k = j * nx + i;
             float *v = vertices + 3 * k;
             float *n = normals + 3 * k;
             float *c = colors + 3 * k;
+            float zvalue;
 
-            v[0] = ((px[i] - xmin) / (xmax - xmin));
+            v[0] = gr3_transform_(px[i], tx);
+            zvalue = gr3_transform_(pz[k], tz);
             if (surface & GR3_SURFACE_FLAT) {
                 v[1] = 0.0f;
             } else {
-                v[1] = ((pz[k] - zmin) / (zmax - zmin));
+                v[1] = zvalue;
             }
-            /* flip because y-axis is projected to the negative z-axis */
-            v[2] = ((ymax - py[j]) / (ymax - ymin));
-
-            if (scale & OPTION_FLIP_X) {
-                v[0] = 1.0f - v[0];
-            }
-            if (scale & OPTION_FLIP_Z) {
-                v[1] = 1.0f - v[1];
-            }
-            if (scale & OPTION_FLIP_Y) {
-                v[2] = 1.0f - v[2];
-            }
+            v[2] = gr3_transform_(py[j], ty);
 
             if (surface & GR3_SURFACE_FLAT || !(surface & GR3_SURFACE_NORMAL)) {
                 n[0] = 0.0f;
@@ -279,8 +328,8 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
                 if (option == OPTION_Z_SHADED_MESH)
                     color = (int) pz[k] + first_color;
                 else
-                    color = (int) ((pz[k] - zmin) / (zmax - zmin)
-                                   * (last_color - first_color) + first_color);
+                    color = (int) (zvalue * (last_color - first_color)
+                                   + first_color);
                 if (color < first_color)
                     color = first_color;
                 else if (color > last_color)
