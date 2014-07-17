@@ -6,6 +6,7 @@ Calculate Mandelbrot set using OpenCL (GR3 version)
 
 import pyopencl as cl
 from timeit import default_timer as timer
+from os import getenv, environ
 
 import numpy as np
 import gr
@@ -72,6 +73,9 @@ def create_fractal(min_x, max_x, min_y, max_y, width, height, iters):
     return output
 
 
+if getenv('PYOPENCL_CTX') == None:
+    environ['PYOPENCL_CTX'] = '0'
+
 x = -0.9223327810370947027656057193752719757635
 y = 0.3102598350874576432708737495917724836010
 
@@ -88,7 +92,7 @@ for i in range(200):
     gr.setcolormap(113)
     z = np.resize(pixels, (500, 500))
     gr.setwindow(0, 500, 0, 500)
-    gr.setspace(0, 255, 30, 80)
+    gr.setspace(0, 600, 30, 80)
     gr3.surface(range(500), range(500), z, 3)
     gr.updatews()
 
