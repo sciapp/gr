@@ -17,7 +17,7 @@ wf = wave.open(os.path.join(os.path.dirname(os.path.realpath(__file__)),
 pa = pyaudio.PyAudio()
 stream = pa.open(format=pa.get_format_from_width(wf.getsampwidth()),
                  channels=wf.getnchannels(), rate=wf.getframerate(), output=True)
- 
+
 spectrum = np.zeros((256, 64), dtype=float)
 t = -63
 dt = float(SAMPLES) / FS

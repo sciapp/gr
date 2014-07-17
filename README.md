@@ -3,11 +3,11 @@ GR - a universal framework for visualization applications
 
 <table>
 <tr>
-  <td>Release</td> 
+  <td>Release</td>
   <td><img src="https://pypip.in/v/gr/badge.png" alt="latest release" /></td>
 </tr>
 <tr>
-  <td>PyPI</td>  
+  <td>PyPI</td>
   <td>
     <a href="https://pypi.python.org/pypi/gr/">
     <img src="https://pypip.in/download/gr/badge.png?period=month" alt="pypi downloads" />
