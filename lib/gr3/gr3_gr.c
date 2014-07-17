@@ -232,6 +232,16 @@ static float gr3_transform_(float x, trans_t tx)
  * Create a mesh of a surface plot similar to gr_surface.
  * Uses the current colormap. To apply changes of the colormap
  * a new mesh has to be created.
+ * \param [out] mesh    the mesh handle
+ * \param [in]  nx      number of points in x-direction
+ * \param [in]  ny      number of points in y-direction
+ * \param [in]  px      an array containing the x-coordinates
+ * \param [in]  py      an array containing the y-coordinates
+ * \param [in]  pz      an array of length nx * ny containing
+ *                      the z-coordinates
+ * \param [in]  surface option for the surface mesh; the GR3_SURFACE
+ *                      constants can be combined with bitwise or.
+ * \param [in]  option  see the option parameter of gr_surface
  */
 GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
                                  float *px, float *py, float *pz,
@@ -274,9 +284,23 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
         return GR3_ERROR_OUT_OF_MEM;
     }
 
-    gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
-    gr_inqspace(&zmin, &zmax, &rotation, &tilt);
-    gr_inqscale(&scale);
+    if (surface & GR3_SURFACE_NOGR) {
+        xmin = px[0];
+        xmax = px[nx - 1];
+        ymin = py[0];
+        ymax = py[ny - 1];
+        zmin = pz[0];
+        zmax = pz[0];
+        for (i = 1; i < nx * ny; i++) {
+            if (pz[i] < zmin) zmin = pz[i];
+            if (pz[i] > zmax) zmax = pz[i];
+        }
+        scale = 0;
+    } else {
+        gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+        gr_inqspace(&zmin, &zmax, &rotation, &tilt);
+        gr_inqscale(&scale);
+    }
     gr_inqcolormap(&cmap);
 
     if (abs(cmap) >= 100) {
@@ -410,11 +434,21 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
 }
 
 /*!
- * Draw a mesh with the current projection parameters (rotation, tilt).
+ * Draw a mesh with the projection of gr. It uses the current
+ * projection parameters (rotation, tilt) of gr.
  * This function alters the projection type, the projection parameters,
  * the viewmatrix and the light direction. If necessary, the user has to
  * save them before the call to this function and restore them after
  * the call to gr3_drawimage.
+ * \param [in] mesh       the mesh to be drawn
+ * \param [in] n          the number of meshes to be drawn
+ * \param [in] positions  the positions where the meshes should be drawn
+ * \param [in] directions the forward directions the meshes should be
+ *                        facing at
+ * \param [in] ups        the up directions
+ * \param [in] colors     the colors the meshes should be drawn in,
+ *                        it will be multiplied with each vertex color
+ * \param [in] scales     the scaling factors
  */
 GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions,
                                 const float *directions, const float *ups,
@@ -465,6 +499,7 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions,
 
 /*!
  * Convenience function for drawing a surfacemesh
+ * \param [in] mesh the mesh to be drawn
  */
 GR3API void gr3_drawsurface(int mesh)
 {
@@ -479,6 +514,16 @@ GR3API void gr3_drawsurface(int mesh)
     gr3_drawmesh_grlike(mesh, 1, positions, directions, ups, colors, scales);
 }
 
+/*!
+ * Create a surface plot with gr3 and draw it with gks as cellarray
+ * \param [in]  nx      number of points in x-direction
+ * \param [in]  ny      number of points in y-direction
+ * \param [in]  px      an array containing the x-coordinates
+ * \param [in]  py      an array containing the y-coordinates
+ * \param [in]  pz      an array of length nx * ny containing
+ *                      the z-coordinates
+ * \param [in]  option  see the option parameter of gr_surface
+ */
 GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz,
                         int option)
 {

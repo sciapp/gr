@@ -27,6 +27,10 @@ Scene Description Functions
 .. autofunction:: gr3.drawconemesh
 .. autofunction:: gr3.drawcylindermesh
 .. autofunction:: gr3.drawspheremesh
+.. autofunction:: gr3.createsurfacemesh
+.. autofunction:: gr3.drawmesh_grlike
+.. autofunction:: gr3.drawsurface
+.. autofunction:: gr3.surface
 
 Export and Drawing Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

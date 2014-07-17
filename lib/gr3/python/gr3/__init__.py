@@ -105,6 +105,8 @@ class GR3_SurfaceOption(object):
     GR3_SURFACE_NOCOLOR = 2
     NORMAL = 4
     GR3_SURFACE_NORMAL = 4
+    NOGR = 8
+    GR3_SURFACE_NOGR = 8
 
 class GR3_Exception(Exception):
     def __init__(self, error_code):
@@ -630,6 +632,29 @@ def createisosurfacemesh(grid, step, offset, isolevel):
     return _mesh
 
 def createsurfacemesh(nx, ny, px, py, pz, surface=0, option=0):
+    """
+    Create a mesh of a surface plot similar to gr_surface.
+    Uses the current colormap. To apply changes of the colormap
+    a new mesh has to be created.
+
+    **Parameters:**
+
+        `mesh` :    the mesh handle
+
+        `nx` :      number of points in x-direction
+
+        `ny` :      number of points in y-direction
+
+        `px` :      an array containing the x-coordinates
+
+        `py` :      an array containing the y-coordinates
+
+        `pz` :      an array of length nx * ny containing the z-coordinates
+
+        `surface` : option for the surface mesh; the GR3_SURFACE constants can be combined with bitwise or.
+
+        `option` :  see the option parameter of gr_surface
+    """
     _mesh = c_uint(0)
     px = numpy.array(px, c_float, copy=False)
     py = numpy.array(py, c_float, copy=False)
@@ -645,6 +670,30 @@ def createsurfacemesh(nx, ny, px, py, pz, surface=0, option=0):
     return _mesh
 
 def drawmesh_grlike(mesh, n, positions, directions, ups, colors, scales):
+    """
+    Draw a mesh with the projection of gr. It uses the current
+    projection parameters (rotation, tilt) of gr.
+    This function alters the projection type, the projection parameters,
+    the viewmatrix and the light direction. If necessary, the user has to
+    save them before the call to this function and restore them after
+    the call to gr3_drawimage.
+
+    **Parameters:**
+
+        `mesh` :       the mesh to be drawn
+
+        `n` :          the number of meshes to be drawn
+
+        `positions` :  the positions where the meshes should be drawn
+
+        `directions` : the forward directions the meshes should be facing at
+
+        `ups` :        the up directions
+
+        `colors` :     the colors the meshes should be drawn in, it will be multiplied with each vertex color
+
+        `scales` :     the scaling factors
+    """
     positions = numpy.array(positions, c_float)
     directions = numpy.array(directions, c_float)
     ups = numpy.array(ups, c_float)
@@ -658,9 +707,33 @@ def drawmesh_grlike(mesh, n, positions, directions, ups, colors, scales):
                              scales.ctypes.data_as(POINTER(c_float)))
 
 def drawsurface(mesh):
+    """
+    Convenience function for drawing a surfacemesh
+
+    **Parameters:**
+
+        `mesh` : the mesh to be drawn
+    """
     _gr3.gr3_drawsurface(mesh)
 
 def surface(px, py, pz, option=0):
+    """
+    Create a surface plot with gr3 and draw it with gks as cellarray
+
+    **Parameters:**
+
+        `nx` :     number of points in x-direction
+
+        `ny` :     number of points in y-direction
+
+        `px` :     an array containing the x-coordinates
+
+        `py` :     an array containing the y-coordinates
+
+        `pz` :     an array of length nx * ny containing the z-coordinates
+
+        `option` : see the option parameter of gr_surface
+    """
     nx = len(px)
     ny = len(py)
     px = numpy.array(px, c_float, copy=False)

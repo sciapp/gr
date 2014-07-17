@@ -74,10 +74,14 @@
 #define GR3_PROJECTION_PERSPECTIVE 0
 #define GR3_PROJECTION_PARALLEL 1
 
-#define GR3_SURFACE_DEFAULT 0
-#define GR3_SURFACE_FLAT 1
-#define GR3_SURFACE_NOCOLOR 2
-#define GR3_SURFACE_NORMAL 4
+#define GR3_SURFACE_DEFAULT 0  /*!< behave like gr_surface */
+#define GR3_SURFACE_FLAT 1     /*!< set all z-coordinates to zero */
+#define GR3_SURFACE_NOCOLOR 2  /*!< set all colors to white */
+#define GR3_SURFACE_NORMAL 4   /*!< interpolate the vertex normals
+                                    from the gradient */
+#define GR3_SURFACE_NOGR 8     /*!< do not use gr_inqwindow, gr_inqspace
+                                    and gr_inqscale to determine the
+                                    bounding box of the data */
 
 typedef struct {
   float x, y, z;
