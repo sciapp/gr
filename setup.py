@@ -23,8 +23,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-05-21"
-__version__ = "0.5.1"
+__date__ = "2014-07-18"
+__version__ = "0.5.2"
 __copyright__ = """Copyright 2012 - 2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
