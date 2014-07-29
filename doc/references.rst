@@ -11,6 +11,8 @@ References
 
 **Talks**
 
+* Heinen, J. (2014), `"Scientific Visualization with GR" <https://ep2014.europython.eu/en/schedule/sessions/86/>`__. `EuroPython 2014 <https://ep2014.europython.eu>`__, Berlin (`PDF <http://iffwww.iff.kfa-juelich.de/pub/doc/Scientific_Visualization_with_GR.pdf>`__, `Video <http://www.youtube.com/watch?v=-oSAMkqbWjs>`__, `HTML <http://iffwww.iff.kfa-juelich.de/pub/doc/EP14>`__)
+
 * Heinen, J. (2013), `"Was Sie schon immer über „Visualisierung mit Python“ wissen wollten" <https://2013.de.pycon.org/schedule/sessions/45>`__. `PyCon.DE 2013 <https://2013.de.pycon.org>`__, Köln (`PDF <http://iffwww.iff.kfa-juelich.de/pub/doc/Was_Sie_schon_immer_ueber_Visualisierung_mit_Python_wissen_wollten.pdf>`__, `Video <https://www.youtube.com/watch?v=muvvgXc8Xlw>`__, `HTML <http://iffwww.iff.kfa-juelich.de/pub/doc/PyCon_DE_2013>`__)
 
 * Heinen, J. (2013), "GR Framework / MODBUS on Raspberry Pi". PythonCamp 2013, Cologne (`PDF <http://iffwww.iff.kfa-juelich.de/pub/doc/GR_Framework_&_MODBUS_on_Raspberry_Pi.pdf>`__)

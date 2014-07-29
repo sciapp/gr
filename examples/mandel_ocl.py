@@ -6,6 +6,7 @@ Calculate Mandelbrot set using OpenCL
 
 import pyopencl as cl
 from timeit import default_timer as timer
+from os import getenv, environ
 
 import numpy as np
 import gr
@@ -70,6 +71,9 @@ def create_fractal(min_x, max_x, min_y, max_y, width, height, iters):
 
     return output
 
+
+if getenv('PYOPENCL_CTX') == None:
+    environ['PYOPENCL_CTX'] = '0'
 
 x = -0.9223327810370947027656057193752719757635
 y = 0.3102598350874576432708737495917724836010

@@ -83,7 +83,7 @@ This is the documentation for the GR framework.
 
 **Other resources**
 
-* The GR framework has already been presented in a talk at PyCon DE `2012 <https://2012.de.pycon.org/programm/schedule/sessions/54>`_ and `2013 <https://2013.de.pycon.org/schedule/sessions/45/>`_, during a `poster session <https://us.pycon.org/2013/schedule/presentation/158/>`_ at PyCon US 2013, and at `PythonCamps 2013 <http://josefheinen.de/rasberry-pi.html>`_ in Cologne. The slides for the PyCon.DE 2013 talk can be found `here <http://iffwww.iff.kfa-juelich.de/pub/doc/PyCon_DE_2013>`_.
+* The GR framework has already been presented in a talk at PyCon DE `2012 <https://2012.de.pycon.org/programm/schedule/sessions/54>`_ and `2013 <https://2013.de.pycon.org/schedule/sessions/45/>`_, during a `poster session <https://us.pycon.org/2013/schedule/presentation/158/>`_ at PyCon US 2013, at `PythonCamps 2013 <http://josefheinen.de/rasberry-pi.html>`_ in Cologne and at `EuroPython 2014 <https://ep2014.europython.eu/en/schedule/sessions/86/>`_ in Berlin. The are also HTML versions of the talks at `PyCon.DE 2013 <http://iffwww.iff.kfa-juelich.de/pub/doc/PyCon_DE_2013>`_ and `EP14 <http://iffwww.iff.kfa-juelich.de/pub/doc/EP14>`_.
 
 * There is an active developer group and :doc:`list <credits>` of people who have made significant contributions. More information can be found :doc:`here <references>`.
 

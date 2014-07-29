@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- animation -*-
+# -*- no-plot -*-
 """
 Sample microphone input and display spectrogram
 """

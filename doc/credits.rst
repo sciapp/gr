@@ -8,6 +8,10 @@ the software. There is a number of active developers - special thanks to
 Florian Rhiem and Christian Felder who have made valuable contributions.
 Major contributors include the following (in alphabetical order):
 
+**Fabian Beule**
+
+  implemented the GR3 surface function
+
 **Marcel Dück**
 
   wrote the Java code and the iGR iOS App

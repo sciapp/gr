@@ -1,14 +1,16 @@
 #!/usr/bin/env python
-# -*- animation -*-
+# -*- no-plot -*-
 """
 Calculate Mandelbrot set using Numba
 """
 
+from numba import autojit
 from timeit import default_timer as timer
 
 from numpy import zeros, uint8
 import gr
 
+@autojit
 def mandel(x, y, iters):
     c = complex(x, y)
     z = 0.0j
@@ -25,6 +27,7 @@ def mandel(x, y, iters):
 
     return 255
 
+@autojit
 def create_fractal(min_x, max_x, min_y, max_y, image, iters):
     height = image.shape[0]
     width = image.shape[1]
