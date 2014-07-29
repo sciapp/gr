@@ -239,13 +239,12 @@ static float gr3_transform_(float x, trans_t tx)
  * \param [in]  py      an array containing the y-coordinates
  * \param [in]  pz      an array of length nx * ny containing
  *                      the z-coordinates
- * \param [in]  surface option for the surface mesh; the GR3_SURFACE
+ * \param [in]  option  option for the surface mesh; the GR3_SURFACE
  *                      constants can be combined with bitwise or.
- * \param [in]  option  see the option parameter of gr_surface
  */
 GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
                                  float *px, float *py, float *pz,
-                                 int surface, int option)
+                                 int option)
 {
     double xmin, xmax, ymin, ymax, zmin, zmax;
     int rotation, tilt;
@@ -284,7 +283,11 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
         return GR3_ERROR_OUT_OF_MEM;
     }
 
-    if (surface & GR3_SURFACE_NOGR) {
+    if (option & GR3_SURFACE_GRTRANSFORM) {
+        gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+        gr_inqspace(&zmin, &zmax, &rotation, &tilt);
+        gr_inqscale(&scale);
+    } else {
         xmin = px[0];
         xmax = px[nx - 1];
         ymin = py[0];
@@ -296,20 +299,18 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
             if (pz[i] > zmax) zmax = pz[i];
         }
         scale = 0;
-    } else {
-        gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
-        gr_inqspace(&zmin, &zmax, &rotation, &tilt);
-        gr_inqscale(&scale);
     }
-    gr_inqcolormap(&cmap);
+    if (option & (GR3_SURFACE_GRCOLOR | GR3_SURFACE_GRZSHADED)) {
+        gr_inqcolormap(&cmap);
+        if (abs(cmap) >= 100) {
+            first_color = 1000;
+            last_color = 1255;
+        } else {
+            first_color = DEFAULT_FIRST_COLOR;
+            last_color = DEFAULT_LAST_COLOR;
+        }
+    }
 
-    if (abs(cmap) >= 100) {
-      first_color = 1000;
-      last_color = 1255;
-    } else {
-      first_color = DEFAULT_FIRST_COLOR;
-      last_color = DEFAULT_LAST_COLOR;
-    }
 
     gr3_ndctrans_(xmin, xmax, &tx, scale & OPTION_X_LOG,
                   scale & OPTION_FLIP_X);
@@ -329,27 +330,23 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
 
             v[0] = gr3_transform_(px[i], tx);
             zvalue = gr3_transform_(pz[k], tz);
-            if (surface & GR3_SURFACE_FLAT) {
+            if (option & GR3_SURFACE_FLAT) {
                 v[1] = 0.0f;
             } else {
                 v[1] = zvalue;
             }
             v[2] = gr3_transform_(py[j], ty);
 
-            if (surface & GR3_SURFACE_FLAT || !(surface & GR3_SURFACE_NORMAL)) {
+            if (option & GR3_SURFACE_FLAT || !(option & GR3_SURFACE_NORMALS)) {
                 n[0] = 0.0f;
                 n[1] = 1.0f;
                 n[2] = 0.0f;
             }
 
-            if (surface & GR3_SURFACE_NOCOLOR) {
-                c[0] = 1.0;
-                c[1] = 1.0;
-                c[2] = 1.0;
-            } else {
+            if (option & (GR3_SURFACE_GRCOLOR | GR3_SURFACE_GRZSHADED)) {
                 int color, rgb;
 
-                if (option == OPTION_Z_SHADED_MESH)
+                if (option & GR3_SURFACE_GRZSHADED)
                     color = (int) pz[k] + first_color;
                 else
                     color = (int) (zvalue * (last_color - first_color)
@@ -363,12 +360,16 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
                 c[0] = (float) ( rgb        & 0xff) / 255;
                 c[1] = (float) ((rgb >>  8) & 0xff) / 255;
                 c[2] = (float) ((rgb >> 16) & 0xff) / 255;
+            } else {
+                c[0] = 1.0;
+                c[1] = 1.0;
+                c[2] = 1.0;
             }
         }
     }
 
-    /* interpolate normals */
-    if (surface & GR3_SURFACE_NORMAL && !(surface & GR3_SURFACE_FLAT)) {
+    /* interpolate normals from the gradient */
+    if (option & GR3_SURFACE_NORMALS && !(option & GR3_SURFACE_FLAT)) {
         int dirx = 3, diry = 3 * nx;
 
         for (j = 0; j < ny; j++) {
@@ -406,6 +407,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
         }
     }
 
+    /* create triangles */
     for (j = 0; j < ny - 1; j++) {
         for (i = 0; i < nx - 1; i++) {
             int k = j * nx + i;
@@ -531,8 +533,15 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz,
         int mesh;
         double xmin, xmax, ymin, ymax;
         int scale;
+        int surfaceoption;
 
-        gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, 0, option);
+        surfaceoption = GR3_SURFACE_GRTRANSFORM;
+        if (option == OPTION_Z_SHADED_MESH) {
+            surfaceoption |= GR3_SURFACE_GRZSHADED;
+        } else {
+            surfaceoption |= GR3_SURFACE_GRCOLOR;
+        }
+        gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, surfaceoption);
         gr3_drawsurface(mesh);
         gr3_deletemesh(mesh);
         gr_inqwindow(&xmin, &xmax, &ymin, &ymax);

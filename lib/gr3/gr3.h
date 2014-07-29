@@ -74,14 +74,18 @@
 #define GR3_PROJECTION_PERSPECTIVE 0
 #define GR3_PROJECTION_PARALLEL 1
 
-#define GR3_SURFACE_DEFAULT 0  /*!< behave like gr_surface */
-#define GR3_SURFACE_FLAT 1     /*!< set all z-coordinates to zero */
-#define GR3_SURFACE_NOCOLOR 2  /*!< set all colors to white */
-#define GR3_SURFACE_NORMAL 4   /*!< interpolate the vertex normals
-                                    from the gradient */
-#define GR3_SURFACE_NOGR 8     /*!< do not use gr_inqwindow, gr_inqspace
-                                    and gr_inqscale to determine the
-                                    bounding box of the data */
+#define GR3_SURFACE_DEFAULT     0 /*!< default behavior */
+#define GR3_SURFACE_NORMALS     1 /*!< interpolate the vertex normals
+                                       from the gradient */
+#define GR3_SURFACE_FLAT        2 /*!< set all z-coordinates to zero */
+#define GR3_SURFACE_GRTRANSFORM 4 /*!< use gr_inqwindow, gr_inqspace
+                                       and gr_inqscale to transform the
+                                       data to NDC coordinates */
+#define GR3_SURFACE_GRCOLOR     8 /*!< color the surface according to
+                                       the current gr colormap */
+#define GR3_SURFACE_GRZSHADED  16 /*!< like GR3_SURFACE_GRCOLOR, but
+                                       use the z-value directly as
+                                       color index */
 
 typedef struct {
   float x, y, z;
@@ -163,7 +167,7 @@ GR3API int          gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data,
 
 GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
                                  float *px, float *py, float *pz,
-                                 int surface, int option);
+                                 int option);
 
 GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions,
                                 const float *directions, const float *ups,

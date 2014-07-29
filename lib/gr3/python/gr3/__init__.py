@@ -98,16 +98,12 @@ class GR3_Drawable(object):
     GR3_DRAWABLE_GKS = 2
 
 class GR3_SurfaceOption(object):
-    DEFAULT = 0
-    GR3_SURFACE_DEFAULT = 0
-    FLAT = 1
-    GR3_SURFACE_FLAT = 1
-    NOCOLOR = 2
-    GR3_SURFACE_NOCOLOR = 2
-    NORMAL = 4
-    GR3_SURFACE_NORMAL = 4
-    NOGR = 8
-    GR3_SURFACE_NOGR = 8
+    GR3_SURFACE_DEFAULT     =  0
+    GR3_SURFACE_NORMALS     =  1
+    GR3_SURFACE_FLAT        =  2
+    GR3_SURFACE_GRTRANSFORM =  4
+    GR3_SURFACE_GRCOLOR     =  8
+    GR3_SURFACE_GRZSHADED   = 16
 
 class GR3_Exception(Exception):
     def __init__(self, error_code):
@@ -632,7 +628,7 @@ def createisosurfacemesh(grid, step, offset, isolevel):
         raise GR3_Exception(err)
     return _mesh
 
-def createsurfacemesh(nx, ny, px, py, pz, surface=0, option=0):
+def createsurfacemesh(nx, ny, px, py, pz, option=0):
     """
     Create a mesh of a surface plot similar to gr_surface.
     Uses the current colormap. To apply changes of the colormap
@@ -652,9 +648,21 @@ def createsurfacemesh(nx, ny, px, py, pz, surface=0, option=0):
 
         `pz` :      an array of length nx * ny containing the z-coordinates
 
-        `surface` : option for the surface mesh; the GR3_SURFACE constants can be combined with bitwise or.
+        `option` : option for the surface mesh; the GR3_SURFACE constants can be combined with bitwise or. See the table below.
 
-        `option` :  see the option parameter of gr_surface
+    +-------------------------+----+----------------------------------------------------------------------------------------+
+    | GR3_SURFACE_DEFAULT     |  0 | default behavior                                                                       |
+    +-------------------------+----+----------------------------------------------------------------------------------------+
+    | GR3_SURFACE_NORMALS     |  1 | interpolate the vertex normals from the gradient                                       |
+    +-------------------------+----+----------------------------------------------------------------------------------------+
+    | GR3_SURFACE_FLAT        |  2 | set all z-coordinates to zero                                                          |
+    +-------------------------+----+----------------------------------------------------------------------------------------+
+    | GR3_SURFACE_GRTRANSFORM |  4 | use gr_inqwindow, gr_inqspace and gr_inqscale to transform the data to NDC coordinates |
+    +-------------------------+----+----------------------------------------------------------------------------------------+
+    | GR3_SURFACE_GRCOLOR     |  8 | color the surface according to the current gr colormap                                 |
+    +-------------------------+----+----------------------------------------------------------------------------------------+
+    | GR3_SURFACE_GRZSHADED   | 16 | like GR3_SURFACE_GRCOLOR, but use the z-value directly as color index                  |
+    +-------------------------+----+----------------------------------------------------------------------------------------+
     """
     _mesh = c_uint(0)
     px = numpy.array(px, c_float, copy=False)
@@ -664,7 +672,7 @@ def createsurfacemesh(nx, ny, px, py, pz, surface=0, option=0):
                                      px.ctypes.data_as(POINTER(c_float)),
                                      py.ctypes.data_as(POINTER(c_float)),
                                      pz.ctypes.data_as(POINTER(c_float)),
-                                     c_int(surface), c_int(option))
+                                     c_int(option))
 
     if err:
         raise GR3_Exception(err)
@@ -733,7 +741,7 @@ def surface(px, py, pz, option=0):
 
         `pz` :     an array of length nx * ny containing the z-coordinates
 
-        `option` : see the option parameter of gr_surface
+        `option` : see the option parameter of gr_surface. OPTION_COLORED_MESH and OPTION_Z_SHADED_MESH are supported.
     """
     if option in (gr.OPTION_Z_SHADED_MESH, gr.OPTION_COLORED_MESH):
         nx = len(px)
@@ -811,7 +819,7 @@ _gr3.gr3_createisosurfacemesh.argtypes = [POINTER(c_uint),
 
 _gr3.gr3_createsurfacemesh.argtypes = [POINTER(c_uint), c_int, c_int,
                                        POINTER(c_float), POINTER(c_float),
-                                       POINTER(c_float), c_int, c_int]
+                                       POINTER(c_float), c_int]
 _gr3.gr3_createsurfacemesh.restype = c_int
 _gr3.gr3_drawmesh_grlike.argtypes = [c_uint, c_uint, POINTER(c_float),
                                      POINTER(c_float), POINTER(c_float),
