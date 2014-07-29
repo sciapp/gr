@@ -1455,13 +1455,13 @@ def surface(px, py, pz, option):
     +------------------+--+--------------------------------------------------------------+
     |FILLED_MESH       | 2|Applies opaque grid to surface                                |
     +------------------+--+--------------------------------------------------------------+
-    |COLORED_MESH      | 3|Applies colored grid to surface                               |
+    |Z_SHADED_MESH     | 3|Applies Z-value shading to surface                            |
     +------------------+--+--------------------------------------------------------------+
-    |CELL_ARRAY        | 4|Applies a grid of individually-colored cells to the surface   |
+    |COLORED_MESH      | 4|Applies colored grid to surface                               |
     +------------------+--+--------------------------------------------------------------+
-    |SHADED_MESH       | 5|Applies light source shading to 3-D surface                   |
+    |CELL_ARRAY        | 5|Applies a grid of individually-colored cells to the surface   |
     +------------------+--+--------------------------------------------------------------+
-    |Z_SHADED_MESH     | 6|Applies Z-value shading to surface                            |
+    |SHADED_MESH       | 6|Applies light source shading to 3-D surface                   |
     +------------------+--+--------------------------------------------------------------+
 
     """
