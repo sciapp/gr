@@ -41,6 +41,7 @@ from ctypes import c_int, c_uint, c_ushort, c_ubyte, c_float, c_double, \
 import ctypes.util
 import numpy
 import os
+import gr
 
 _gr3PkgDir = os.path.realpath(os.path.dirname(__file__))
 _gr3LibDir = os.getenv("GR3LIB", _gr3PkgDir)
@@ -734,17 +735,20 @@ def surface(px, py, pz, option=0):
 
         `option` : see the option parameter of gr_surface
     """
-    nx = len(px)
-    ny = len(py)
-    px = numpy.array(px, c_float, copy=False)
-    py = numpy.array(py, c_float, copy=False)
-    pz = numpy.array(pz, c_float, copy=False)
-    _gr3.gr3_surface(c_int(nx), c_int(ny),
-                     px.ctypes.data_as(POINTER(c_float)),
-                     py.ctypes.data_as(POINTER(c_float)),
-                     pz.ctypes.data_as(POINTER(c_float)),
-                     c_int(option))
-
+    if option in (gr.OPTION_Z_SHADED_MESH, gr.OPTION_COLORED_MESH):
+        nx = len(px)
+        ny = len(py)
+        px = numpy.array(px, c_float, copy=False)
+        py = numpy.array(py, c_float, copy=False)
+        pz = numpy.array(pz, c_float, copy=False)
+        _gr3.gr3_surface(c_int(nx), c_int(ny),
+                         px.ctypes.data_as(POINTER(c_float)),
+                         py.ctypes.data_as(POINTER(c_float)),
+                         pz.ctypes.data_as(POINTER(c_float)),
+                         c_int(option))
+    else:
+        gr.surface(px, py, pz, option)
+    return
 
 _gr3.gr3_init.argtypes = [POINTER(c_int)]
 _gr3.gr3_terminate.argtypes = []

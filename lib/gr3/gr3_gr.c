@@ -527,26 +527,50 @@ GR3API void gr3_drawsurface(int mesh)
 GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz,
                         int option)
 {
-    int mesh;
-    double xmin, xmax, ymin, ymax;
-    int scale;
+    if (option == OPTION_Z_SHADED_MESH || option == OPTION_COLORED_MESH) {
+        int mesh;
+        double xmin, xmax, ymin, ymax;
+        int scale;
 
-    gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, 0, option);
-    gr3_drawsurface(mesh);
-    gr3_deletemesh(mesh);
-    gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
-    gr_inqscale(&scale);
-    if (scale & OPTION_FLIP_X) {
-        double tmp = xmin;
-        xmin = xmax;
-        xmax = tmp;
+        gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, 0, option);
+        gr3_drawsurface(mesh);
+        gr3_deletemesh(mesh);
+        gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+        gr_inqscale(&scale);
+        if (scale & OPTION_FLIP_X) {
+            double tmp = xmin;
+            xmin = xmax;
+            xmax = tmp;
+        }
+        if (scale & OPTION_FLIP_Y) {
+            double tmp = ymin;
+            ymin = ymax;
+            ymax = tmp;
+        }
+        /* TODO: inquire the required resolution */
+        gr3_drawimage((float) xmin, (float) xmax, (float) ymin, (float) ymax, 500, 500, GR3_DRAWABLE_GKS);
+    } else {
+        double *dpx, *dpy, *dpz;
+        int i;
+
+        dpx = malloc(nx * sizeof(double));
+        dpy = malloc(ny * sizeof(double));
+        dpz = malloc(nx * ny * sizeof(double));
+        if (dpx != NULL && dpy != NULL && dpz != NULL) {
+            for (i = 0; i < nx; i++) {
+                dpx[i] = (double) px[i];
+            }
+            for (i = 0; i < ny; i++) {
+                dpy[i] = (double) py[i];
+            }
+            for (i = 0; i < nx * ny; i++) {
+                dpz[i] = (double) pz[i];
+            }
+            gr_surface(nx, ny, dpx, dpy, dpz, option);
+        }
+        free(dpz);
+        free(dpy);
+        free(dpx);
     }
-    if (scale & OPTION_FLIP_Y) {
-        double tmp = ymin;
-        ymin = ymax;
-        ymax = tmp;
-    }
-    /* TODO: inquire the required resolution */
-    gr3_drawimage((float) xmin, (float) xmax, (float) ymin, (float) ymax, 500, 500, GR3_DRAWABLE_GKS);
 }
 
