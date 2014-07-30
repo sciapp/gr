@@ -5,15 +5,16 @@ EXPORTS
 	gr_adjustrange
 	gr_axes
 	gr_axes3d
+	gr_begingraphics
 	gr_beginprint
 	gr_beginprintext
 	gr_beginselection
-	gr_begingraphics
 	gr_cellarray
 	gr_clearws
 	gr_closegks
 	gr_closeseg
 	gr_closews
+	gr_colormap
 	gr_contour
 	gr_copysegws
 	gr_createseg
@@ -21,22 +22,25 @@ EXPORTS
 	gr_drawarrow
 	gr_drawimage
 	gr_emergencyclosegks
+	gr_endgraphics
 	gr_endprint
 	gr_endselection
-	gr_endgraphics
 	gr_fillarea
 	gr_grid
 	gr_gridit
 	gr_herrorbars
 	gr_importgraphics
+	gr_inqcolor
+	gr_inqcolorfromrgb
+	gr_inqcolormap
 	gr_inqdspsize
 	gr_inqscale
 	gr_inqspace
 	gr_inqtext
 	gr_inqtextext
+	gr_mathtex
 	gr_moveselection
 	gr_ndctowc
-	gr_mathtex
 	gr_opengks
 	gr_openws
 	gr_polyline
@@ -53,7 +57,6 @@ EXPORTS
 	gr_setcharup
 	gr_setclip
 	gr_setcolormap
-	gr_inqcolormap
 	gr_setcolorrep
 	gr_setfillcolorind
 	gr_setfillintstyle

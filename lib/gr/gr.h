@@ -98,6 +98,7 @@ DLLEXPORT void gr_setcolormap(int);
 DLLEXPORT void gr_inqcolormap(int *);
 DLLEXPORT void gr_colormap(void);
 DLLEXPORT void gr_inqcolor(int, int *);
+DLLEXPORT int gr_inqcolorfromrgb(double, double, double);
 DLLEXPORT double gr_tick(double, double);
 DLLEXPORT void gr_adjustrange(double *, double *);
 DLLEXPORT void gr_beginprint(char *);

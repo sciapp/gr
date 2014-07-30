@@ -5039,6 +5039,29 @@ void gr_inqcolor(int color, int *rgb)
          ((nint(b * 255) & 0xff) << 16);
 }
 
+int gr_inqcolorfromrgb(double red, double green, double blue)
+{
+  int wkid = 1, color, errind, ind = 0;
+  double r, g, b, dmin = FLT_MAX, d;
+
+  check_autoinit;
+
+  for (color = 0; color < MAX_COLOR; color++)
+    {
+      gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
+      d = pow((  red - r) * 0.30, 2) +
+          pow((green - g) * 0.59, 2) +
+          pow(( blue - b) * 0.11, 2);
+      if (d < dmin)
+        {
+          ind = color;
+          dmin = d;
+        }
+    }
+
+  return ind;
+}
+
 double gr_tick(double amin, double amax)
 {
   double tick_unit, exponent, factor;
