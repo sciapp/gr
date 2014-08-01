@@ -96,7 +96,7 @@ wmfplugin.so: wmfplugin.o font.o afm.o util.o malloc.o error.o io.o
 
 quartzplugin.so: quartzplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LIBS) \
-	-lobjc -framework Foundation -framework ApplicationServices
+	-lobjc -framework Foundation -framework ApplicationServices -framework AppKit
 
 glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)

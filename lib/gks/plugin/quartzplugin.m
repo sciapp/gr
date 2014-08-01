@@ -2,6 +2,7 @@
 #import <Foundation/Foundation.h>
 #import <ApplicationServices/ApplicationServices.h>
 #import <Foundation/NSFileManager.h>
+#import <AppKit/AppKit.h>
 
 #include "gks.h"
 #include "gkscore.h"
@@ -163,6 +164,12 @@ void gks_quartzplugin(
       wss->win = [plugin GKSQuartzCreateWindow];
 
       *ptr = wss;
+
+      CGSize size = CGDisplayScreenSize(CGMainDisplayID());
+      r1[0] = 0.001 * size.width;
+      r2[0] = 0.001 * size.height;
+      ia[0] = (int) NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
+      ia[1] = (int) NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
       break;
   
     case 3:

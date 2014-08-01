@@ -8,8 +8,6 @@
 #define PATTERNS 120
 #define HATCH_STYLE 108
 
-#define MWIDTH 0.381
-
 #define RESOLVE(arg, type, nbytes) arg = (type *)(s + sp); sp += nbytes
 
 #ifndef M_PI
@@ -371,6 +369,9 @@ void seg_xform_rel(double *x, double *y)
           memcpy(&saved_gkss, gkss, sizeof(gks_state_list_t));
           memcpy(gkss, sl, sizeof(gks_state_list_t));
 
+          CGSize size = CGDisplayScreenSize(CGMainDisplayID());
+          double mwidth = 0.001 * size.width;
+
           p->width  = [self bounds].size.width;
           p->height = [self bounds].size.height;
           p->swidth  = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
@@ -380,8 +381,8 @@ void seg_xform_rel(double *x, double *y)
           p->window[1] = p->window[3] = 1.0;
 
           p->viewport[0] = p->viewport[2] = 0.0;
-          p->viewport[1] = p->width  * MWIDTH / p->swidth;
-          p->viewport[3] = p->height * MWIDTH / p->sheight;
+          p->viewport[1] = p->width  * mwidth / p->swidth;
+          p->viewport[3] = p->height * mwidth / p->sheight;
 
           set_xform();
           init_norm_xform();
@@ -977,8 +978,10 @@ void seg_xform_rel(double *x, double *y)
 {
   double max_width, max_height, width, height;
   NSRect rect = [[self window] frame];
+  CGSize size;
 
-  max_width = MWIDTH;
+  size = CGDisplayScreenSize(CGMainDisplayID());
+  max_width = 0.001 * size.width;
   max_height = max_width * p->sheight / p->swidth;
 
   gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.075);
