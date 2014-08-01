@@ -255,7 +255,8 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
     int *indices;
     int result;
     int scale;
-    int cmap, first_color, last_color;
+    int cmap;
+    int  first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
     trans_t tx, ty, tz;
 
     num_vertices = nx * ny;
