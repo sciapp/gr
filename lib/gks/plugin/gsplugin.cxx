@@ -1432,10 +1432,7 @@ void cell_array(
         {
           ci = colia[j * dimx + i];
           if (!true_color)
-            {
-              ci = Color8Bit(ci);
-              query_color(ci, &bufP, wtype);
-            }
+            query_color(ci, &bufP, wtype);
           else
             rgb2color(ci, &bufP, wtype);
         }

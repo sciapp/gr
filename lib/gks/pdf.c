@@ -1020,7 +1020,7 @@ void polyline(int n, double *px, double *py)
 
   ln_type = gkss->asf[0] ? gkss->ltype : gkss->lindex;
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
-  ln_color = gkss->asf[2] ? Color8Bit(gkss->plcoli) : 1;
+  ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   set_linetype(ln_type, ln_width);
   set_linewidth(ln_width);
@@ -1285,7 +1285,7 @@ void polymarker(int n, double *px, double *py)
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
-  mk_color = gkss->asf[5] ? Color8Bit(gkss->pmcoli) : 1;
+  mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
   set_linetype(GKS_K_LINETYPE_SOLID, mk_size / 2);
   set_linewidth(mk_size / 2);
@@ -1400,7 +1400,7 @@ void text(double px, double py, int nchars, char *chars)
 
   tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
-  tx_color = gkss->asf[9] ? Color8Bit(gkss->txcoli) : 1;
+  tx_color = gkss->asf[9] ? gkss->txcoli : 1;
 
   set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
   set_linewidth(1.0);
@@ -1473,7 +1473,7 @@ void fillarea(int n, double *px, double *py)
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
-  fl_color = gkss->asf[12] ? Color8Bit(gkss->facoli) : 1;
+  fl_color = gkss->asf[12] ? gkss->facoli : 1;
 
   p->pattern = 0;
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
@@ -1512,7 +1512,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   double x1, y1, x2, y2;
   int x, y, width, height;
   double rx1, rx2, ry1, ry2;
-  register int i, j, ix, iy, ind, color;
+  register int i, j, ix, iy, color;
   int swapx, swapy, count, chars_per_line;
   unsigned char data[3];
   int rgb, red, green, blue;
@@ -1553,8 +1553,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 	  ix = swapx ? dx - 1 - i : i;
 	  if (!true_color)
 	    {
-	      ind = colia[iy * dimx + ix];
-	      color = Color8Bit(ind);
+	      color = colia[iy * dimx + ix];
 	      data[0] = (Byte) (p->red[color] * 255);
 	      data[1] = (Byte) (p->green[color] * 255);
 	      data[2] = (Byte) (p->blue[color] * 255);

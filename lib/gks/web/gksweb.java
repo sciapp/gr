@@ -529,13 +529,6 @@ public class gksweb extends Applet
                     (nint( blue * 255));
   }
 
-  private static int Color8Bit(int c)
-  {
-    return c <= 256 || c >= 980 ? c :
-      c >= 588 ? 80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) :
-      8 + nint((c - 257) / 330.0 * (72 - 1));
-  }
-
   static final int[][] dash_table =
   {
     { 8,  4, 2, 4, 2, 4, 2, 4, 6, 0 },
@@ -646,7 +639,7 @@ public class gksweb extends Applet
 
     ln_type  = sl.asf[0] != 0 ? sl.ltype  : sl.lindex;
     ln_width = sl.asf[1] != 0 ? sl.lwidth : 1;
-    ln_color = sl.asf[2] != 0 ? Color8Bit(sl.plcoli) : 1;
+    ln_color = sl.asf[2] != 0 ? sl.plcoli : 1;
 
     if (sl.version > 4)
       width = nint(ln_width * ws.height / 500.0);
@@ -888,7 +881,7 @@ public class gksweb extends Applet
 
     mk_type = sl.asf[3] != 0 ? sl.mtype : sl.mindex;
     mk_size = sl.asf[4] != 0 ? sl.mszsc : 1;
-    mk_color = sl.asf[5] != 0 ? Color8Bit(sl.pmcoli) : 1;
+    mk_color = sl.asf[5] != 0 ? sl.pmcoli : 1;
 
     if (sl.version > 4)
       {
@@ -1185,7 +1178,7 @@ public class gksweb extends Applet
 
     fl_inter = sl.asf[10] != 0 ? sl.ints : predef_ints[sl.findex - 1];
     fl_style = sl.asf[11] != 0 ? sl.styli : predef_styli[sl.findex - 1];
-    fl_color = sl.asf[12] != 0 ? Color8Bit(sl.facoli) : 1;
+    fl_color = sl.asf[12] != 0 ? sl.facoli : 1;
 
     if (sl.version > 4)
       {
@@ -1921,7 +1914,7 @@ public class gksweb extends Applet
 
     tx_font  = sl.asf[6] != 0 ? sl.txfont : predef_font[sl.tindex - 1];
     tx_prec  = sl.asf[6] != 0 ? sl.txprec : predef_prec[sl.tindex - 1];
-    tx_color = sl.asf[9] != 0 ? Color8Bit(sl.txcoli) : 1;
+    tx_color = sl.asf[9] != 0 ? sl.txcoli : 1;
 
     if (sl.version > 4)
       {

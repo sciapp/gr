@@ -132,7 +132,7 @@ class Html_output(object):
         
         tx_font  = self.gkss.txfont if self.gkss.asf[6] else predef_font[self.gkss.tindex - 1]
         tx_prec  = self.gkss.txprec if self.gkss.asf[6] else predef_prec[self.gkss.tindex - 1]
-        tx_color = self.Color8Bit(self.gkss.txcoli) if self.gkss.asf[9] else 1
+        tx_color = self.gkss.txcoli if self.gkss.asf[9] else 1
         color = self.p.rgb[tx_color]
         
         if self.gkss.version > 4:
@@ -254,7 +254,7 @@ class Html_output(object):
                 if swapx:
                     ix = dx - 1 - ix
                 if not true_color:
-                    ci = self.Color8Bit(colia[iy * dimx + ix])
+                    ci = colia[iy * dimx + ix]
                     (red, green, blue) = self.p.rgb[ci]
                     alpha = 255
                     
@@ -289,7 +289,7 @@ class Html_output(object):
     def fillarea(self, n, px, py):
         self.write('// fillarea\n')
         
-        fl_color = self.Color8Bit(self.gkss.facoli) if self.gkss.asf[12] else 1
+        fl_color = self.gkss.facoli if self.gkss.asf[12] else 1
         ln_width = max(1, round(self.p.height / 500.0)) if self.gkss.version > 4 else 1
         if self.p.lineWidth != ln_width:
             self.p.lineWidth = ln_width
@@ -376,7 +376,7 @@ class Html_output(object):
         
         ln_width = self.gkss.lwidth  if self.gkss.asf[1] else 1
         ln_type  = self.gkss.ltype if self.gkss.asf[0] else self.gkss.lindex
-        ln_color = self.Color8Bit(self.gkss.plcoli) if self.gkss.asf[2] else 1
+        ln_color = self.gkss.plcoli if self.gkss.asf[2] else 1
         
         if self.gkss.version > 4:
             ln_width *= self.p.height / 500.0
@@ -627,7 +627,7 @@ class Html_output(object):
             self.write('set_dashes(c, []);\n')
         mk_type = self.gkss.mtype if self.gkss.asf[3] else self.gkss.mindex
         mk_size = self.gkss.mszsc if self.gkss.asf[4] else 1
-        mk_color = self.Color8Bit(self.gkss.pmcoli) if self.gkss.asf[5] else 1
+        mk_color = self.gkss.pmcoli if self.gkss.asf[5] else 1
         color = self.p.rgb[mk_color]
         
         if self.p.fillStyle != color:
@@ -816,5 +816,3 @@ class Html_output(object):
     def write(self, s):
         self.file.write(self.indentation*'  ' + s)
     
-    def Color8Bit(self, c):
-        return 80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) if c >= 588 else 8 + nint((c - 257) / 330.0 * (72 - 1)) if c >= 257 else c

@@ -116,6 +116,11 @@ double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 static
 int first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
 
+#define MAX_COLOR 1256
+
+static
+unsigned int rgb[MAX_COLOR];
+
 #define check_autoinit if (autoinit) initgks()
 
 #define nint(x) (int)((x) + 0.5)
@@ -1271,7 +1276,8 @@ void initialize(int state)
 static
 void initgks(void)
 {
-  int state, errfil = 0, wkid = 1, errind, conid, wtype;
+  int state, errfil = 0, wkid = 1, errind, conid, wtype, color;
+  double r, g, b;
 
   gks_inq_operating_state(&state);
   if (state == GKS_K_GKCL)
@@ -1299,6 +1305,14 @@ void initgks(void)
         }
       else
         fprintf(stderr, "%s: open failed\n", display);
+    }
+
+  for (color = 0; color < MAX_COLOR; color++)
+    {
+      gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
+      rgb[color] = ((nint(r * 255) & 0xff)      ) |
+                   ((nint(g * 255) & 0xff) <<  8) |
+                   ((nint(b * 255) & 0xff) << 16);
     }
 }
 
@@ -1985,6 +1999,11 @@ void setcolorrep(int index, double red, double green, double blue)
   color.red = red;
   color.green = green;
   color.blue = blue;
+
+  if (index >= 0 && index < MAX_COLOR)
+    rgb[index] = ((nint(red   * 255) & 0xff)      ) |
+                 ((nint(green * 255) & 0xff) <<  8) |
+                 ((nint(blue  * 255) & 0xff) << 16);
 
   foreach_activews((void (*)(int, void *)) setcolor, (void *) &color);
 }
@@ -5042,20 +5061,31 @@ void gr_inqcolor(int color, int *rgb)
 int gr_inqcolorfromrgb(double red, double green, double blue)
 {
   int wkid = 1, color, errind, ind = 0;
-  double r, g, b, dmin = FLT_MAX, d;
+  unsigned int rgbmask;
+  double r, g, b, dmin = FLT_MAX, d, dr, dg, db;
 
   check_autoinit;
 
-  for (color = 0; color < MAX_COLOR; color++)
+  rgbmask = ((nint(red   * 255) & 0xff)      ) |
+            ((nint(green * 255) & 0xff) <<  8) |
+            ((nint(blue  * 255) & 0xff) << 16);
+
+  for (color = 80; color < 980; color++)
+    if (rgb[color] == rgbmask)
+      return color;
+      
+  for (color = 80; color < 980; color++)
     {
       gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
-      d = pow((  red - r) * 0.30, 2) +
-          pow((green - g) * 0.59, 2) +
-          pow(( blue - b) * 0.11, 2);
+      dr = 0.30 * (r - red);
+      dg = 0.59 * (g - green);
+      db = 0.11 * (b - blue);
+      d = dr * dr + dg * dg + db * db;
       if (d < dmin)
         {
           ind = color;
           dmin = d;
+          if (d < FEPS) break;
         }
     }
 

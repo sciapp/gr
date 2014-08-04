@@ -1260,7 +1260,6 @@ static void cgmt_carray(int xmin, int xmax, int ymin, int ymax, int dx,
       for (ix = 0; ix < dx; ix++)
 	{
 	  c = array[dimx * iy + ix];
-	  c = Color8Bit(c);
 	  cgmt_int(c);
 
 	  if (ix < dx - 1)
@@ -2258,7 +2257,6 @@ static void cgmb_carray(int xmin, int xmax, int ymin, int ymax, int dx,
       for (ix = 0; ix < dx; ix++)
 	{
 	  c = array[dimx * iy + ix];
-	  c = Color8Bit(c);
 	  cgmb_out_bc(c);
 	}
 

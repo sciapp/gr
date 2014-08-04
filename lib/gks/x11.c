@@ -1413,7 +1413,7 @@ void set_color(int color)
 {
   int i;
 
-  i = Color8Bit(color);
+  i = color;
   if (i != p->ccolor)
     {
       XSetForeground(p->dpy, p->gc, p->color[i].pixel);
@@ -3270,10 +3270,7 @@ unsigned long rgb2pixel(int rgb)
       for (i = 0; i < MAX_COLOR; i++) \
 	{ \
 	  if (p->depth != 1) \
-	    { \
-	      j = Color8Bit(i); \
-	      pixel[i] = (type) p->color[j].pixel; \
-	    } \
+	    pixel[i] = (type) p->color[i].pixel; \
 	  else \
 	    pixel[i] = i; \
 	} \

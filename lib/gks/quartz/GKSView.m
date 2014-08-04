@@ -1073,7 +1073,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   ln_type  = gkss->asf[0] ? gkss->ltype : gkss->lindex;
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
-  ln_color = gkss->asf[2] ? Color8Bit(gkss->plcoli) : 1;
+  ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   [self set_stroke_color: ln_color : context];
 
@@ -1292,7 +1292,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   mk_type  = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size  = gkss->asf[4] ? gkss->mszsc : 1;
-  mk_color = gkss->asf[5] ? Color8Bit(gkss->pmcoli) : 1;
+  mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
   [self set_stroke_color: mk_color : context];
 
@@ -1429,7 +1429,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
-  fl_color = gkss->asf[12] ? Color8Bit(gkss->facoli) : 1;
+  fl_color = gkss->asf[12] ? gkss->facoli : 1;
 
   [self set_stroke_color: fl_color : context];
 
@@ -1523,7 +1523,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
     {
       for (i = 0; i < width * height; i++)
         {
-          ind = Color8Bit(colia[i]);
+          ind = colia[i];
           if (ind >= MAX_COLOR)
             ind = MAX_COLOR - 1;
           colors = CGColorGetComponents(p->rgb[ind]);
@@ -1596,7 +1596,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
 
   tx_font  = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec  = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
-  tx_color = gkss->asf[9] ? Color8Bit(gkss->txcoli) : 1;
+  tx_color = gkss->asf[9] ? gkss->txcoli : 1;
 
   [self set_stroke_color: tx_color : context];
 

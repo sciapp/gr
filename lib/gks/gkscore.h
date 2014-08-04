@@ -31,11 +31,6 @@ extern "C" {
 #define MAX_TNR 9	/* maximum number of normalization transformations */
 #define MAX_COLOR 1256  /* maximum number of predefined colors */
 
-#define Color8Bit(c)                                                         \
-  c <= 256 || c >= 980 ? c :                                                 \
-  c >= 588 ? 80 + (c - 588) / 56 * 12 + nint((c - 588) % 56 * 11.0 / 56.0) : \
-  8 + nint((c - 257) / 330.0 * (72 - 1))
-
 #define OPEN_GKS 0
 #define CLOSE_GKS 1
 #define OPEN_WS 2

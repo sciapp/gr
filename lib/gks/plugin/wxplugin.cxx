@@ -366,7 +366,7 @@ static void polyline(int n, double *px, double *py)
 
   ln_type  = gkss->asf[0] ? gkss->ltype  : gkss->lindex;
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
-  ln_color = gkss->asf[2] ? Color8Bit(gkss->plcoli) : 1;
+  ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   if (gkss->version > 4)
     width = nint(ln_width * p->height / 500.0);
@@ -644,7 +644,7 @@ static void polymarker(int n, double *px, double *py)
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
-  mk_color = gkss->asf[5] ? Color8Bit(gkss->pmcoli) : 1;
+  mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
   if (gkss->version > 4)
     {
       ln_width = nint(p->height / 500.0);
@@ -787,7 +787,7 @@ static void text(double px, double py, int nchars, char *chars)
 
   tx_font  = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec  = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
-  tx_color = gkss->asf[9] ? Color8Bit(gkss->txcoli) : 1;
+  tx_color = gkss->asf[9] ? gkss->txcoli : 1;
   if (gkss->version > 4)
     {
       ln_width = nint(p->height / 500.0);
@@ -870,7 +870,7 @@ static void cellarray(
 
           if (!true_color)
             {
-              ind = Color8Bit(colia[iy * dimx + ix]);
+              ind = colia[iy * dimx + ix];
               red   = p->rgb[ind].Red();
               green = p->rgb[ind].Green();
               blue  = p->rgb[ind].Blue();
@@ -940,7 +940,7 @@ static void fillarea(int n, double *px, double *py)
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
-  fl_color = gkss->asf[12] ? Color8Bit(gkss->facoli) : 1;
+  fl_color = gkss->asf[12] ? gkss->facoli : 1;
   if (gkss->version > 4)
     {
       ln_width = nint(p->height / 500.0);
