@@ -135,7 +135,7 @@ GR3API void         gr3_setobjectid(int id);
 GR3API int          gr3_selectid(int x, int y, int width, int height, int *selection_id);
 GR3API void         gr3_getviewmatrix(float *m);
 GR3API void         gr3_setviewmatrix(const float *m);
-GR3API int          gr3_getprojectiontype();
+GR3API int          gr3_getprojectiontype(void);
 GR3API void         gr3_setprojectiontype(int type);
 
 GR3API unsigned int gr3_triangulate(const GR3_MC_DTYPE *data,

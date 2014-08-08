@@ -46,7 +46,7 @@ testpypi: clean
 	python setup.py sdist upload -r https://testpypi.python.org/pypi
 
 conda: clean
-	conda build recipe
+	conda build --no-binstar-upload recipe
 
 osxpkg:
 	mkdir -p tmp/bin tmp/gr

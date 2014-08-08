@@ -62,12 +62,26 @@ need and they are very easy to update using package managers.
 
 .. note::
     Binary packages for Windows or OS X will soon be made available.
-    We are also working on a binary package for Anaconda, which may
-    be used with the ``conda install`` command and then be obtained from
+    We are also working on a packages for Anaconda, which may be
+    used with the ``conda install`` command and then be obtained from
     `conda.binstar.org <http://conda.binstar.org>`_.
 
-To use the GR framework with Anaconda, you simply have to extend
-the Python path::
+For Linux and OS X there are binary packages available on Binstar::
+
+    conda install -c https://conda.binstar.org/jheinen gr
+    python
+
+If you don't have Miniconda or Anaconda installed, you can download
+them from `Continuum <http://continuum.io/downloads>`_ and use a
+command-line installer. For Miniconda on OS X, in the shell execute::
+
+    bash Miniconda-3.x.x-MacOSX-x86_64.sh 
+    export PATH=~/miniconda/bin:$PATH
+    conda install -c https://conda.binstar.org/jheinen gr
+    python
+
+Alternatively, to use the GR framework with Anaconda, you simply have
+to extend the Python path::
 
     export GRDIR=/usr/local/gr
     export PYTHONPATH=${PYTHONPATH}:${GRDIR}/lib/python
@@ -105,7 +119,7 @@ Once you have installed the GR framework you should try whether you can import
 the gr module::
 
     > python
-    Python 2.7.6 (default, Nov 14 2013, 07:31:25) 
+    Python 2.7.8 (default, Jul  3 2014, 21:06:26) 
     [GCC 4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2336.1.00)] on darwin
     Type "help", "copyright", "credits" or "license" for more information.
     >>> import gr
