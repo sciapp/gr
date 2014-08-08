@@ -5,7 +5,7 @@
 #include <string.h>
 #include <math.h>
 
-#include <Qt/qglobal.h>
+#include <QtCore/QtGlobal>
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
 #include <QtWidgets/QWidget>
 #else
