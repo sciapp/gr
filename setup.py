@@ -529,7 +529,10 @@ int main()
             if not self.qmake:
                 self.qmake = Popen(["which", "qmake"],
                                stdout=PIPE).communicate()[0].decode().rstrip()
-            self.qtlibs = ["QtGui", "QtCore"]
+            if self.isDarwin:
+                self.qtlibs = []
+            else:
+                self.qtlibs = ["QtGui", "QtCore"]
         # -- x11 -------------------------------------
         if self.isLinux:
             x11ldflags = None
