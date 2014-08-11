@@ -62,13 +62,13 @@ static gr3_coord_t getgrad(mcdata_t mcdata, int x, int y, int z)
         else
             neigh[i][1] = v[i];
     }
-    n.x = (mcdata.data[INDEX(neigh[0][1], y, z)]
+    n.x = (float) (mcdata.data[INDEX(neigh[0][1], y, z)]
            - mcdata.data[INDEX(neigh[0][0], y, z)])
           / (neigh[0][1] - neigh[0][0]) / mcdata.step[0];
-    n.y = (mcdata.data[INDEX(x, neigh[1][1], z)]
+    n.y = (float) (mcdata.data[INDEX(x, neigh[1][1], z)]
            - mcdata.data[INDEX(x, neigh[1][0], z)])
           / (neigh[1][1] - neigh[1][0]) / mcdata.step[1];
-    n.z = (mcdata.data[INDEX(x, y, neigh[2][1])]
+    n.z = (float) (mcdata.data[INDEX(x, y, neigh[2][1])]
            - mcdata.data[INDEX(x, y, neigh[2][0])])
           / (neigh[2][1] - neigh[2][0]) / mcdata.step[2];
 
