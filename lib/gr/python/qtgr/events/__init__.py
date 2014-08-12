@@ -27,7 +27,7 @@ from gr.pygr.base import GRViewPort
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
 __date__ = "2014-02-26"
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
