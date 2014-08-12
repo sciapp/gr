@@ -214,7 +214,11 @@ class check_ext(Command):
         self.wxldflags = []
         self.wxcxx = []
         # -- qt -------------------------------------
-        self.qtdir = os.getenv("QTDIR", "")
+        if not self.isWin32:
+            self.qtdir = os.getenv("QTDIR", "/usr/local")
+        else:
+            self.qtdir = os.getenv("QTDIR", "")
+        self.qtdir = os.getenv("QTDIR", "/usr/local")
         self.qtinc = [os.path.join(self.qtdir, "include")]
         self.qtlib = [os.path.join(self.qtdir, "lib")]
         self.qtldflags = []
@@ -529,7 +533,10 @@ int main()
             if not self.qmake:
                 self.qmake = Popen(["which", "qmake"],
                                stdout=PIPE).communicate()[0].decode().rstrip()
-            self.qtlibs = ["QtGui", "QtCore"]
+            if os.path.isdir("/usr/local/Cellar"):
+                self.qtlibs = []
+            else:
+                self.qtlibs = ["QtGui", "QtCore"]
         # -- x11 -------------------------------------
         if self.isLinux:
             x11ldflags = None
