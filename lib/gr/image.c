@@ -22,7 +22,7 @@ int read_jpeg_image(char *path, int *width, int *height, int **data)
   struct jpeg_error_mgr jerr;
   JSAMPARRAY buffer;
   int row_stride, bpix;
-  unsigned int r, g, b;
+  unsigned int r, g, b, a;
   int *dataP;
 
   if ((stream = fopen(path, "rb")) != NULL)
@@ -56,7 +56,8 @@ int read_jpeg_image(char *path, int *width, int *height, int **data)
 	      r = buffer[0][i];
 	      g = buffer[0][i + 1] << 8;
 	      b = buffer[0][i + 2] << 16;
-	      *dataP++ = r | g | b;
+              a = 255 << 24;
+	      *dataP++ = r | g | b | a;
 	      x++;
 	    }
 	  y++;
@@ -165,13 +166,10 @@ int read_png_image(char *path, int *width, int *height, int **data)
 				  b = ptr[2];
 				}
 			      if (channels > 3)
-				{
-				  a = ptr[3];
-				  r = (int)(r * a / 255.0 + 0.5);
-				  g = (int)(g * a / 255.0 + 0.5);
-				  b = (int)(b * a / 255.0 + 0.5);
-				}
-			      *dataP++ = r | (g << 8) | (b << 16);
+				a = ptr[3];
+                              else
+				a = 255;
+			      *dataP++ = r | (g << 8) | (b << 16) | (a << 24);
 			    }
 			}
 

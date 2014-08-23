@@ -1533,8 +1533,9 @@ void fill_routine(int n, double *px, double *py, int tnr)
         }
     }
 
-  bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width,
-                                 cs, kCGImageAlphaNoneSkipLast);
+  bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width, cs,
+                                 true_color ? kCGImageAlphaPremultipliedLast :
+                                              kCGImageAlphaNoneSkipLast);
   image = CGBitmapContextCreateImage(bitmap);
   CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
 

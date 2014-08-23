@@ -1,23 +1,30 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+from matplotlib.cbook import maxdict
 from matplotlib.path import Path
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backend_bases import RendererBase, GraphicsContextBase,\
-     FigureManagerBase, FigureCanvasBase
+    FigureManagerBase, FigureCanvasBase
 import matplotlib.transforms as transforms
 from matplotlib.figure import Figure
-#from matplotlib.texmanager import TexManager
+from matplotlib.mathtext import MathTextParser
+from matplotlib.texmanager import TexManager
 
 import numpy as np
+import struct
 import gr
 
-linetype = { 'solid' : 1, 'dashed' : 2, 'dashdot' : 4, 'dotted' : 3 }
+linetype = {'solid': 1, 'dashed': 2, 'dashdot': 4, 'dotted': 3}
+
 
 class RendererGR(RendererBase):
     """
     Handles drawing/rendering operations using GR
     """
+
+    texd = maxdict(50)  # a cache of tex image rasters
+
     def __init__(self, dpi):
         self.dpi = dpi
         mwidth, mheight, width, height = gr.inqdspsize()
@@ -26,25 +33,31 @@ class RendererGR(RendererBase):
         gr.setwswindow(0, 1, 0, 0.75)
         gr.setviewport(0, 1, 0, 0.75)
         gr.setwindow(0, 640, 0, 480)
-        #self.texmanager = TexManager()
+        self.mathtext_parser = MathTextParser('agg')
+        self.texmanager = TexManager()
+
+    def draw(self, points, codes, primitive):
+        if codes is None:
+            primitive(points[:, 0], points[:, 1])
+            return
+        start = end = 0
+        for code in codes:
+            if code == Path.MOVETO:
+                start = end
+            elif code == Path.CLOSEPOLY:
+                primitive(points[start:end, 0], points[start:end, 1])
+            end += 1
 
     def draw_path(self, gc, path, transform, rgbFace=None):
-        codes = path.codes
         path = transform.transform_path(path)
         points = path.vertices
+        codes = path.codes
         if rgbFace is not None and len(points) > 2:
             color = gr.inqcolorfromrgb(rgbFace[0], rgbFace[1], rgbFace[2])
             gr.setcolorrep(color, rgbFace[0], rgbFace[1], rgbFace[2])
             gr.setfillintstyle(gr.INTSTYLE_SOLID)
             gr.setfillcolorind(color)
-            closed = False
-            if codes is not None:
-                if codes[-1] == Path.CLOSEPOLY:
-                    closed = True
-            if closed:
-                gr.fillarea(points[:-1, 0], points[:-1, 1])
-            else:
-                gr.fillarea(points[:, 0], points[:, 1])
+            self.draw(points, codes, gr.fillarea)
         lw = gc.get_linewidth()
         if lw != 0:
             rgb = gc.get_rgb()[:3]
@@ -53,7 +66,7 @@ class RendererGR(RendererBase):
             gr.setlinetype(linetype[gc._linestyle])
             gr.setlinewidth(lw)
             gr.setlinecolorind(color)
-            gr.polyline(points[:, 0], points[:, 1])
+            self.draw(points, codes, gr.polyline)
 
 #   def draw_markers(self, gc, marker_path, marker_trans, path, trans,
 #                    rgbFace=None):
@@ -92,30 +105,56 @@ class RendererGR(RendererBase):
         img.shape = (h, w)
         gr.drawimage(x, x + w, y + h, y, w, h, img)
 
+    def draw_mathtext(self, x, y, angle, Z):
+        h, w = Z.shape
+        img = np.zeros((h, w), np.uint32)
+        for i in range(h):
+            for j in range(w):
+                img[i, j] = (255 - Z[i, j]) << 24
+        a = int(angle)
+        if a == 90:
+            gr.drawimage(x - h, x, y, y + w, h, w,
+                         np.resize(np.rot90(img, 1), (h, w)))
+        elif a == 180:
+            gr.drawimage(x - w, x, y - h, y, w, h, np.rot90(img, 2))
+        elif a == 270:
+            gr.drawimage(x, x + h, y - w, y, h, w,
+                         nbp.resize(np.rot90(img, 3), (h, w)))
+        else:
+            gr.drawimage(x, x + w, y, y + h, w, h, img)
+
+    def draw_tex(self, gc, x, y, s, prop, angle, ismath='TeX!', mtext=None):
+        # todo, handle props, angle, origins
+        size = prop.get_size_in_points()
+        key = s, size, self.dpi, angle, self.texmanager.get_font_config()
+        im = self.texd.get(key)
+        if im is None:
+            Z = self.texmanager.get_grey(s, size, self.dpi)
+            Z = np.array(255.0 - Z * 255.0, np.uint8)
+
+        self.draw_mathtext(x, y, angle, Z)
+
+    def _draw_mathtext(self, gc, x, y, s, prop, angle):
+        ox, oy, width, height, descent, image, used_characters = \
+            self.mathtext_parser.parse(s, self.dpi, prop)
+        self.draw_mathtext(x, y, angle, 255 - image.as_array())
+
     def draw_text(self, gc, x, y, s, prop, angle, ismath=False, mtext=None):
-        x, y = gr.wctondc(x, y)
-        s = s.replace(u'\u2212', '-')
-        fontsize = prop.get_size_in_points()
-        rgb = gc.get_rgb()[:3]
-        color = gr.inqcolorfromrgb(rgb[0], rgb[1], rgb[2])
-        gr.setcharheight(fontsize * 0.0013)
-        gr.settextcolorind(color)
-        if angle != 0:
-            gr.setcharup(-np.sin(angle * np.pi/180), np.cos(angle * np.pi/180))
-        else:
-            gr.setcharup(0, 1)
         if ismath:
-            if ismath=='TeX':
-                gr.mathtex(x, y, s)
-                #x, y = gr.ndctowc(x, y)
-                #png = self.texmanager.make_png(s, fontsize=12, dpi=72)
-                #w, h, data = gr.readimage(png)
-                #gr.drawimage(x, x+h, y, y+h, w, h, data)
-            else:
-                if s[:1] == '$':
-                    s = s[1:-1]
-                gr.textext(x, y, s.encode("latin-1"))
+            self._draw_mathtext(gc, x, y, s, prop, angle)
         else:
+            x, y = gr.wctondc(x, y)
+            s = s.replace(u'\u2212', '-')
+            fontsize = prop.get_size_in_points()
+            rgb = gc.get_rgb()[:3]
+            color = gr.inqcolorfromrgb(rgb[0], rgb[1], rgb[2])
+            gr.setcharheight(fontsize * 0.0013)
+            gr.settextcolorind(color)
+            if angle != 0:
+                gr.setcharup(-np.sin(angle * np.pi/180),
+                             np.cos(angle * np.pi/180))
+            else:
+                gr.setcharup(0, 1)
             gr.text(x, y, s.encode("latin-1"))
 
     def flipy(self):
@@ -125,6 +164,19 @@ class RendererGR(RendererBase):
         return 640, 480
 
     def get_text_width_height_descent(self, s, prop, ismath):
+        if ismath == 'TeX':
+            # todo: handle props
+            fontsize = prop.get_size_in_points()
+            w, h, d = self.texmanager.get_text_width_height_descent(
+                s, fontsize, renderer=self)
+            return w, h, d
+        if ismath:
+            ox, oy, width, height, descent, fonts, used_characters = \
+                self.mathtext_parser.parse(s, self.dpi, prop)
+            return width, height, descent
+#       family =  prop.get_family()
+#       weight = prop.get_weight()
+#       style = prop.get_style()
         s = s.replace(u'\u2212', '-').encode("latin-1")
         fontsize = prop.get_size_in_points()
         gr.setcharheight(fontsize * 0.0013)

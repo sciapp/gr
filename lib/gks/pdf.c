@@ -1514,8 +1514,8 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   double rx1, rx2, ry1, ry2;
   register int i, j, ix, iy, color;
   int swapx, swapy, count, chars_per_line;
-  unsigned char data[3];
-  int rgb, red, green, blue;
+  unsigned char data[4];
+  int rgba, red, green, blue, alpha;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -1560,13 +1560,15 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 	    }
 	  else
 	    {
-	      rgb = colia[iy * dimx + ix];
-	      red = (rgb & 0xff);
-	      green = (rgb & 0xff00) >> 8;
-	      blue = (rgb & 0xff0000) >> 16;
+	      rgba = colia[iy * dimx + ix];
+	      red = (rgba & 0xff);
+	      green = (rgba & 0xff00) >> 8;
+	      blue = (rgba & 0xff0000) >> 16;
+	      alpha = (rgba & 0xff000000) >> 24;
 	      data[0] = (Byte) red;
 	      data[1] = (Byte) green;
 	      data[2] = (Byte) blue;
+	      data[3] = (Byte) alpha;
 	    }
 	  for (count = 0; count < 3; count++)
 	    {
