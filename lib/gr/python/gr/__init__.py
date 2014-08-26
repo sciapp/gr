@@ -8,7 +8,7 @@ import gr
 
 import os
 from numpy import array, ndarray, float64, int32
-from ctypes import c_int, c_double, c_char_p, c_void_p
+from ctypes import c_int, c_double, c_char_p, c_void_p, c_uint8
 from ctypes import byref, POINTER, addressof, CDLL, CFUNCTYPE
 from ctypes import create_string_buffer, cast
 from sys import version_info, platform
@@ -1780,6 +1780,45 @@ def fillarc(xmin, xmax, ymin, ymax, a1, a2):
                     c_int(a1), c_int(a2))
 
 
+def drawpath(points, codes, fill):
+    """
+    Draw simple and compound outlines consisting of line segments and bezier curves.
+
+    **Parameters:**
+
+    `points` :
+        (N, 2) array of (x, y) vertices
+    `codes` :
+        N-length array of path codes
+    `fill` :
+        A flag indication whether resulting path is to be filled or not
+
+    The following path codes are recognized:
+
+    +----------+-----------------------------------------------------------+
+    |      STOP|end the entire path                                        |
+    +----------+-----------------------------------------------------------+
+    |    MOVETO|move to the given vertex                                   |
+    +----------+-----------------------------------------------------------+
+    |    LINETO|draw a line from the current position to the given vertex  |
+    +----------+-----------------------------------------------------------+
+    |    CURVE3|draw a quadratic Bézier curve                              |
+    +----------+-----------------------------------------------------------+
+    |    CURVE4|draw a cubic Bézier curve                                  |
+    +----------+-----------------------------------------------------------+
+    | CLOSEPOLY|draw a line segment to the start point of the current path |
+    +----------+-----------------------------------------------------------+
+
+    """
+    _len = len(points)
+    _points = points.ctypes.data_as(POINTER(c_double))
+    if codes is not None:
+        _codes = codes.ctypes.data_as(POINTER(c_uint8))
+    else:
+        _codes = None
+    __gr.gr_drawpath(c_int(_len), _points, _codes, c_int(fill))
+
+
 def setarrowstyle(style):
     """
     Set the arrow style to be used for subsequent arrow commands.
@@ -2127,6 +2166,7 @@ __gr.gr_drawrect.argtypes = [c_double, c_double, c_double, c_double]
 __gr.gr_fillrect.argtypes = [c_double, c_double, c_double, c_double]
 __gr.gr_drawarc.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int]
 __gr.gr_fillarc.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int]
+__gr.gr_drawpath.argtypes = [c_int, POINTER(c_double), POINTER(c_uint8), c_int]
 __gr.gr_setarrowstyle.argtypes = [c_int]
 __gr.gr_drawarrow.argtypes = [c_double, c_double, c_double, c_double]
 __gr.gr_readimage.argtypes = [c_char_p, POINTER(c_int), POINTER(c_int),

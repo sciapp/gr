@@ -12,8 +12,8 @@ from matplotlib.mathtext import MathTextParser
 from matplotlib.texmanager import TexManager
 
 import numpy as np
-import struct
 import gr
+
 
 linetype = {'solid': 1, 'dashed': 2, 'dashdot': 4, 'dotted': 3}
 
@@ -36,18 +36,6 @@ class RendererGR(RendererBase):
         self.mathtext_parser = MathTextParser('agg')
         self.texmanager = TexManager()
 
-    def draw(self, points, codes, primitive):
-        if codes is None:
-            primitive(points[:, 0], points[:, 1])
-            return
-        start = end = 0
-        for code in codes:
-            if code == Path.MOVETO:
-                start = end
-            elif code == Path.CLOSEPOLY:
-                primitive(points[start:end, 0], points[start:end, 1])
-            end += 1
-
     def draw_path(self, gc, path, transform, rgbFace=None):
         path = transform.transform_path(path)
         points = path.vertices
@@ -57,16 +45,17 @@ class RendererGR(RendererBase):
             gr.setcolorrep(color, rgbFace[0], rgbFace[1], rgbFace[2])
             gr.setfillintstyle(gr.INTSTYLE_SOLID)
             gr.setfillcolorind(color)
-            self.draw(points, codes, gr.fillarea)
+            gr.drawpath(points, codes, fill=True)
         lw = gc.get_linewidth()
         if lw != 0:
             rgb = gc.get_rgb()[:3]
             color = gr.inqcolorfromrgb(rgb[0], rgb[1], rgb[2])
             gr.setcolorrep(color, rgb[0], rgb[1], rgb[2])
-            gr.setlinetype(linetype[gc._linestyle])
+            if type(gc._linestyle) is unicode:
+                gr.setlinetype(linetype[gc._linestyle])
             gr.setlinewidth(lw)
             gr.setlinecolorind(color)
-            self.draw(points, codes, gr.polyline)
+            gr.drawpath(points, codes, fill=False)
 
 #   def draw_markers(self, gc, marker_path, marker_trans, path, trans,
 #                    rgbFace=None):

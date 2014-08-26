@@ -130,6 +130,14 @@ unsigned int rgb[MAX_COLOR];
 
 #define POINT_INC 2048
 
+/* Path definitions */
+#define STOP      0
+#define MOVETO    1
+#define LINETO    2
+#define CURVE3    3
+#define CURVE4    4
+#define CLOSEPOLY 0x4f
+
 #define RESOLUTION_X 4096
 #define BACKGROUND 0
 #define MISSING_VALUE FLT_MAX
@@ -192,10 +200,11 @@ format_t;
 #define deg(rad) ((rad) * 180.0 / M_PI)
 
 static
-double *xpoint = NULL, *ypoint = NULL, *zpoint = NULL;
+double *xpath = NULL, *xpoint = NULL, *ypath = NULL, *ypoint = NULL,
+       *zpoint = NULL;
 
 static
-int npoints = 0, maxpoints = 0;
+int npoints = 0, maxpoints = 0, npath = 0;
 
 /*  0 - 20    21 - 45    46 - 70    71 - 90           rot/  */
 static
@@ -947,9 +956,12 @@ void reallocate(int npoints)
   while (npoints >= maxpoints)
     maxpoints += POINT_INC;
 
+  xpath = (double *) xrealloc(xpath, maxpoints * sizeof(double));
   xpoint = (double *) xrealloc(xpoint, maxpoints * sizeof(double));
+  ypath = (double *) xrealloc(ypath, maxpoints * sizeof(double));
   ypoint = (double *) xrealloc(ypoint, maxpoints * sizeof(double));
   zpoint = (double *) xrealloc(zpoint, maxpoints * sizeof(double));
+
 }
 
 static
@@ -5430,6 +5442,126 @@ void gr_fillarc(
       "<fillarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
       "a1=\"%d\" a2=\"%d\"/>\n",
       xmin, xmax, ymin, ymax, a1, a2);
+}
+
+static
+void newpath(void)
+{
+  npath = 0;
+}
+
+static
+void addpath(double x, double y)
+{
+  xpath[npath] = x;
+  ypath[npath] = y;
+  npath += 1;
+}
+
+static
+void closepath(int fill)
+{
+  if (fill)
+    gr_fillarea(npath, xpath, ypath);
+  else
+    gr_polyline(npath, xpath, ypath);
+  npath = 0;
+}
+
+static
+void quad_bezier(double x[3], double y[3], int n)
+{
+  int i;
+  double t, a, b, c;
+
+  if (npath + n >= maxpoints)
+    reallocate(npath + n);
+
+  for (i = 0; i < n; i++)
+    {
+      t = (double) i / (n - 1);
+      a = pow((1.0 - t), 2.0);
+      b = 2.0 * t * (1.0 - t);
+      c = pow(t, 2.0);
+      addpath(a * x[0] + b * x[1] + c * x[2], a * y[0] + b * y[1] + c * y[2]);
+    }
+}
+
+static
+void cubic_bezier(double x[4], double y[4], int n)
+{
+  int i;
+  double t, a, b, c, d;
+
+  if (npath + n >= maxpoints)
+    reallocate(npath + n);
+
+  for (i = 0; i < n; i++)
+    {
+      t = (double) i / (n - 1);
+      a = pow((1.0 - t), 3.0);
+      b = 3.0 * t * pow((1.0 - t), 2.0);
+      c = 3.0 * pow(t, 2.0) * (1.0 - t);
+      d = pow(t, 3.0);
+      addpath(a * x[0] + b * x[1] + c * x[2] + d * x[3],
+              a * y[0] + b * y[1] + c * y[2] + d * y[3]);
+    }
+}
+
+void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
+{
+  int i, code;
+
+  if (n >= maxpoints)
+    reallocate(n);
+
+  for (i = 0; i < n; i++)
+    {
+      xpoint[i] = vertices[i].x;
+      ypoint[i] = vertices[i].y;
+    }
+
+  newpath();
+  if (codes != NULL)
+    {
+      for (i = 0; i < n; i++)
+        {
+          code = codes[i];
+          if (code == STOP)
+            break;
+          else if (code == MOVETO)
+            {
+              if (!fill)
+                newpath();
+              addpath(xpoint[i], ypoint[i]);
+            }
+          else if (code == LINETO)
+            addpath(xpoint[i], ypoint[i]);
+          else if (code == CURVE3)
+            {
+              quad_bezier(xpoint + i - 1, ypoint + i - 1, 20);
+              i += 1;
+            }
+          else if (code == CURVE4)
+            {
+              cubic_bezier(xpoint + i - 1, ypoint + i - 1, 20);
+              i += 2;
+            }
+          else if (code == CLOSEPOLY)
+            {
+              if (!fill)
+                addpath(xpoint[i], ypoint[i]);
+              closepath(fill);
+              newpath();
+            }
+        }
+      if (npath > 0)
+        closepath(fill);
+    }
+  else if (fill)
+    gr_fillarea(n, xpoint, ypoint);
+  else
+    gr_polyline(n, xpoint, ypoint);
 }
 
 void gr_setarrowstyle(int style)
