@@ -964,6 +964,7 @@ void reallocate(int npoints)
   xpoint = (double *) xrealloc(xpoint, maxpath * sizeof(double));
   ypath = (double *) xrealloc(ypath, maxpath * sizeof(double));
   ypoint = (double *) xrealloc(ypoint, maxpath * sizeof(double));
+  zpoint = (double *) xrealloc(zpoint, maxpath * sizeof(double));
 }
 
 static
