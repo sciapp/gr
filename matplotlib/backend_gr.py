@@ -2,11 +2,10 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 from matplotlib.cbook import maxdict
-from matplotlib.path import Path
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backend_bases import RendererBase, GraphicsContextBase,\
     FigureManagerBase, FigureCanvasBase
-import matplotlib.transforms as transforms
+from matplotlib.path import Path
 from matplotlib.figure import Figure
 from matplotlib.mathtext import MathTextParser
 from matplotlib.texmanager import TexManager
@@ -57,37 +56,6 @@ class RendererGR(RendererBase):
             gr.setlinecolorind(color)
             gr.drawpath(points, codes, fill=False)
 
-#   def draw_markers(self, gc, marker_path, marker_trans, path, trans,
-#                    rgbFace=None):
-#       if rgbFace is not None:
-#           path = trans.transform_path(path)
-#           points = path.vertices
-#           gr.setmarkertype(gr.MARKERTYPE_PLUS)
-#           gr.polymarker(points[:, 0], points[:, 1])
-
-#   def draw_path_collection(self, gc, master_transform, paths, all_transforms,
-#                            offsets, offsetTrans, facecolors, edgecolors,
-#                            linewidths, linestyles, antialiaseds, urls,
-#                            offset_position):
-#       path_ids = []
-#       for path, transform in self._iter_collection_raw_paths(
-#               master_transform, paths, all_transforms):
-#           path_ids.append((path, transforms.Affine2D(transform)))
-
-#       for xo, yo, path_id, gc0, rgbFace in self._iter_collection(
-#               gc, master_transform, all_transforms, path_ids, offsets,
-#               offsetTrans, facecolors, edgecolors, linewidths, linestyles,
-#               antialiaseds, urls, offset_position):
-#           path, transform = path_id
-#           transform = transforms.Affine2D(
-#               transform.get_matrix()).translate(xo, yo)
-#           self.draw_path(gc0, path, transform, rgbFace)
-
-#   def draw_quad_mesh(self, gc, master_transform, meshWidth, meshHeight,
-#                      coordinates, offsets, offsetTrans, facecolors,
-#                      antialiased, edgecolors):
-#       pass
-
     def draw_image(self, gc, x, y, im):
         h, w, s = im.as_rgba_str()
         img = np.fromstring(s, np.uint32)
@@ -108,12 +76,11 @@ class RendererGR(RendererBase):
             gr.drawimage(x - w, x, y - h, y, w, h, np.rot90(img, 2))
         elif a == 270:
             gr.drawimage(x, x + h, y - w, y, h, w,
-                         nbp.resize(np.rot90(img, 3), (h, w)))
+                         np.resize(np.rot90(img, 3), (h, w)))
         else:
             gr.drawimage(x, x + w, y, y + h, w, h, img)
 
     def draw_tex(self, gc, x, y, s, prop, angle, ismath='TeX!', mtext=None):
-        # todo, handle props, angle, origins
         size = prop.get_size_in_points()
         key = s, size, self.dpi, angle, self.texmanager.get_font_config()
         im = self.texd.get(key)
@@ -154,7 +121,6 @@ class RendererGR(RendererBase):
 
     def get_text_width_height_descent(self, s, prop, ismath):
         if ismath == 'TeX':
-            # todo: handle props
             fontsize = prop.get_size_in_points()
             w, h, d = self.texmanager.get_text_width_height_descent(
                 s, fontsize, renderer=self)

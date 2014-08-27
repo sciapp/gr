@@ -14,6 +14,7 @@ from ctypes import create_string_buffer, cast
 from sys import version_info, platform
 from platform import python_implementation
 
+
 # Detect whether this is a site-package installation
 if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
     # Set GRDIR environment accordingly to site-package installation.
@@ -23,12 +24,14 @@ if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
 
 _impl = python_implementation()
 
+
 class floatarray:
     def __init__(self, n, a):
         if isinstance(a, ndarray):
             if _impl == 'PyPy':
                 self.array = array(a, float64)
-                self.data = cast(self.array.__array_interface__['data'][0], POINTER(c_double))
+                self.data = cast(self.array.__array_interface__['data'][0],
+                                 POINTER(c_double))
             else:
                 self.array = array(a, c_double)
                 self.data = self.array.ctypes.data_as(POINTER(c_double))
@@ -50,7 +53,8 @@ class intarray:
         if isinstance(a, ndarray):
             if _impl == 'PyPy':
                 self.array = array(a, int32)
-                self.data = cast(self.array.__array_interface__['data'][0], POINTER(c_int))
+                self.data = cast(self.array.__array_interface__['data'][0],
+                                 POINTER(c_int))
             else:
                 self.array = array(a, c_int)
                 self.data = self.array.ctypes.data_as(POINTER(c_int))
@@ -65,6 +69,23 @@ class intarray:
                         status = 1
                         print('Integer array lookup failure')
                     self.data[i] = 0
+
+
+class uint8array:
+    def __init__(self, a):
+        if _impl == 'PyPy':
+            self.array = array(a, uint8)
+            self.data = cast(self.array.__array_interface__['data'][0],
+                             POINTER(c_uint8))
+        else:
+            self.array = array(a, c_uint8)
+            self.data = self.array.ctypes.data_as(POINTER(c_uint8))
+
+
+class nothing:
+    def __init__(self):
+        self.array = None
+        self.data = None
 
 
 def char(string):
@@ -235,7 +256,7 @@ def polyline(x, y):
     n = _assertEqualLength(x, y)
     _x = floatarray(n, x)
     _y = floatarray(n, y)
-    __gr.gr_polyline(c_int(n), _x.data, _y.data) 
+    __gr.gr_polyline(c_int(n), _x.data, _y.data)
 
 
 def polymarker(x, y):
@@ -1532,9 +1553,9 @@ def inqcolor(color):
 
 def inqcolorfromrgb(red, green, blue):
     __gr.gr_inqcolorfromrgb.restype = c_int
-    return  __gr.gr_inqcolorfromrgb(c_double(red),
-                                    c_double(green),
-                                    c_double(green))
+    return __gr.gr_inqcolorfromrgb(c_double(red),
+                                   c_double(green),
+                                   c_double(green))
 
 
 def tick(amin, amax):
@@ -1811,12 +1832,12 @@ def drawpath(points, codes, fill):
 
     """
     _len = len(points)
-    _points = points.ctypes.data_as(POINTER(c_double))
+    _points = floatarray(_len, points)
     if codes is not None:
-        _codes = codes.ctypes.data_as(POINTER(c_uint8))
+        _codes = uint8array(codes)
     else:
-        _codes = None
-    __gr.gr_drawpath(c_int(_len), _points, _codes, c_int(fill))
+        _codes = nothing()
+    __gr.gr_drawpath(c_int(_len), _points.data, _codes.data, c_int(fill))
 
 
 def setarrowstyle(style):

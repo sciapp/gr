@@ -200,11 +200,14 @@ format_t;
 #define deg(rad) ((rad) * 180.0 / M_PI)
 
 static
+unsigned char *opcode = NULL;
+
+static
 double *xpath = NULL, *xpoint = NULL, *ypath = NULL, *ypoint = NULL,
        *zpoint = NULL;
 
 static
-int npoints = 0, maxpoints = 0, npath = 0;
+int npoints = 0, maxpath = 0, npath = 0;
 
 /*  0 - 20    21 - 45    46 - 70    71 - 90           rot/  */
 static
@@ -953,15 +956,14 @@ char *xrealloc(void *ptr, int size)
 static
 void reallocate(int npoints)
 {
-  while (npoints >= maxpoints)
-    maxpoints += POINT_INC;
+  while (npoints >= maxpath)
+    maxpath += POINT_INC;
 
-  xpath = (double *) xrealloc(xpath, maxpoints * sizeof(double));
-  xpoint = (double *) xrealloc(xpoint, maxpoints * sizeof(double));
-  ypath = (double *) xrealloc(ypath, maxpoints * sizeof(double));
-  ypoint = (double *) xrealloc(ypoint, maxpoints * sizeof(double));
-  zpoint = (double *) xrealloc(zpoint, maxpoints * sizeof(double));
-
+  opcode = (unsigned char *) xrealloc(opcode, maxpath * sizeof(unsigned char));
+  xpath = (double *) xrealloc(xpath, maxpath * sizeof(double));
+  xpoint = (double *) xrealloc(xpoint, maxpath * sizeof(double));
+  ypath = (double *) xrealloc(ypath, maxpath * sizeof(double));
+  ypoint = (double *) xrealloc(ypoint, maxpath * sizeof(double));
 }
 
 static
@@ -1454,7 +1456,7 @@ void gr_updatews(void)
 \
   if (lx.scale_options) \
     { \
-      if (npoints >= maxpoints) \
+      if (npoints >= maxpath) \
         reallocate(npoints); \
 \
       px = xpoint; \
@@ -2325,7 +2327,7 @@ void end_pline(void)
 static
 void pline(double x, double y)
 {
-  if (npoints >= maxpoints)
+  if (npoints >= maxpath)
     reallocate(npoints);
 
   xpoint[npoints] = x_lin(x);
@@ -2345,7 +2347,7 @@ void start_pline(double x, double y)
 static
 void pline3d(double x, double y, double z)
 {
-  if (npoints >= maxpoints)
+  if (npoints >= maxpath)
     reallocate(npoints);
 
   xpoint[npoints] = x_lin(x);
@@ -5474,7 +5476,7 @@ void quad_bezier(double x[3], double y[3], int n)
   int i;
   double t, a, b, c;
 
-  if (npath + n >= maxpoints)
+  if (npath + n >= maxpath)
     reallocate(npath + n);
 
   for (i = 0; i < n; i++)
@@ -5493,7 +5495,7 @@ void cubic_bezier(double x[4], double y[4], int n)
   int i;
   double t, a, b, c, d;
 
-  if (npath + n >= maxpoints)
+  if (npath + n >= maxpath)
     reallocate(npath + n);
 
   for (i = 0; i < n; i++)
@@ -5510,58 +5512,68 @@ void cubic_bezier(double x[4], double y[4], int n)
 
 void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 {
-  int i, code;
+  int i, j = 0, code, nan;
 
-  if (n >= maxpoints)
+  if (n >= maxpath)
     reallocate(n);
+
+  if (codes != NULL)
+    memcpy(opcode, codes, n);
+  else
+    memset(opcode, LINETO, n);
 
   for (i = 0; i < n; i++)
     {
-      xpoint[i] = vertices[i].x;
-      ypoint[i] = vertices[i].y;
+      if (isnan(vertices[i].x) || isnan(vertices[i].y))
+        {
+          nan = 1;
+          continue;
+        }
+      else
+        {
+          opcode[j] = nan ? MOVETO : opcode[i];
+          nan = 0;
+        }
+      xpoint[j] = vertices[i].x;
+      ypoint[j] = vertices[i].y;
+      j++;
     }
 
   newpath();
-  if (codes != NULL)
+  for (i = 0; i < j; i++)
     {
-      for (i = 0; i < n; i++)
+      code = opcode[i];
+      if (code == STOP)
+        break;
+      else if (code == MOVETO)
         {
-          code = codes[i];
-          if (code == STOP)
-            break;
-          else if (code == MOVETO)
-            {
-              if (!fill)
-                newpath();
-              addpath(xpoint[i], ypoint[i]);
-            }
-          else if (code == LINETO)
-            addpath(xpoint[i], ypoint[i]);
-          else if (code == CURVE3)
-            {
-              quad_bezier(xpoint + i - 1, ypoint + i - 1, 20);
-              i += 1;
-            }
-          else if (code == CURVE4)
-            {
-              cubic_bezier(xpoint + i - 1, ypoint + i - 1, 20);
-              i += 2;
-            }
-          else if (code == CLOSEPOLY)
-            {
-              if (!fill)
-                addpath(xpoint[i], ypoint[i]);
+          if (!fill)
+            if (npath > 0)
               closepath(fill);
-              newpath();
-            }
+          addpath(xpoint[i], ypoint[i]);
         }
-      if (npath > 0)
-        closepath(fill);
+      else if (code == LINETO)
+        addpath(xpoint[i], ypoint[i]);
+      else if (code == CURVE3)
+        {
+          quad_bezier(xpoint + i - 1, ypoint + i - 1, 20);
+          i += 1;
+        }
+      else if (code == CURVE4)
+        {
+          cubic_bezier(xpoint + i - 1, ypoint + i - 1, 20);
+          i += 2;
+        }
+      else if (code == CLOSEPOLY)
+        {
+          if (!fill)
+            addpath(xpoint[i], ypoint[i]);
+          closepath(fill);
+          newpath();
+        }
     }
-  else if (fill)
-    gr_fillarea(n, xpoint, ypoint);
-  else
-    gr_polyline(n, xpoint, ypoint);
+  if (npath > 0)
+    closepath(fill);
 }
 
 void gr_setarrowstyle(int style)
