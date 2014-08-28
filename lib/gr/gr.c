@@ -5513,7 +5513,7 @@ void cubic_bezier(double x[4], double y[4], int n)
 
 void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 {
-  int i, j = 0, code, nan;
+  int i, j = 0, code, nan = 0;
 
   if (n >= maxpath)
     reallocate(n);
