@@ -5525,7 +5525,11 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 
   for (i = 0; i < n; i++)
     {
+#ifdef _WIN32
+      if (_isnan(vertices[i].x) || _isnan(vertices[i].y))
+#else
       if (isnan(vertices[i].x) || isnan(vertices[i].y))
+#endif
         {
           nan = 1;
           continue;
