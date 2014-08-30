@@ -5465,8 +5465,11 @@ static
 void closepath(int fill)
 {
   if (fill)
-    gr_fillarea(npath, xpath, ypath);
-  else
+    {
+      if (npath > 2)
+        gr_fillarea(npath, xpath, ypath);
+    }
+  else if (npath > 1)
     gr_polyline(npath, xpath, ypath);
   npath = 0;
 }
@@ -5518,10 +5521,13 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
   if (n >= maxpath)
     reallocate(n);
 
-  if (codes != NULL)
-    memcpy(opcode, codes, n);
+  if (codes == NULL)
+    {
+      memset(opcode, LINETO, n);
+      opcode[0] = MOVETO;
+    }
   else
-    memset(opcode, LINETO, n);
+    memcpy(opcode, codes, n);
 
   for (i = 0; i < n; i++)
     {
@@ -5544,7 +5550,6 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
       j++;
     }
 
-  newpath();
   for (i = 0; i < j; i++)
     {
       code = opcode[i];
@@ -5553,8 +5558,8 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
       else if (code == MOVETO)
         {
           if (!fill)
-            if (npath > 0)
-              closepath(fill);
+            closepath(fill);
+          newpath();
           addpath(xpoint[i], ypoint[i]);
         }
       else if (code == LINETO)
@@ -5574,11 +5579,9 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
           if (!fill)
             addpath(xpoint[i], ypoint[i]);
           closepath(fill);
-          newpath();
         }
     }
-  if (npath > 0)
-    closepath(fill);
+  closepath(fill);
 }
 
 void gr_setarrowstyle(int style)

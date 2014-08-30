@@ -3,7 +3,7 @@ CFLAGS = /c /Zi /nologo /DNO_FT /DNO_X11 /D_DLL /MD /D_POSIX
 DEFINES = /DGRDIR=\"$(GRDIR)\"
 AR = LIB /nologo
 LINK = LINK /nologo
-DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
+DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib msimg32.lib gdi32.lib comdlg32.lib winspool.lib
 DLLLFLAGS = /nodefaultlib -dll
 DLLLINK = LINK /nologo
 SRCDIR = .\ 

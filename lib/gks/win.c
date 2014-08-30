@@ -1325,6 +1325,7 @@ void cellarray(
   HBITMAP hbm_old, hbm;
   DWORD *pix = NULL;
   LPBITMAPINFO bmi;
+  double alpha = 0;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -1377,18 +1378,33 @@ void cellarray(
         ix = dx - 1 - ix;
       ind = colia[iy * dimx + ix];
       if (true_color)
-        pix[j * width + i] = RGB((ind >> 16) & 0xff,
-                                 (ind >>  8) & 0xff,
-                                 (ind      ) & 0xff);
+        {
+          alpha = ((ind >> 24) & 0xff) / 255.0;
+          pix[j * width + i] = RGB((int)(((ind >> 16) & 0xff) * alpha),
+                                   (int)(((ind >>  8) & 0xff) * alpha),
+                                   (int)(((ind      ) & 0xff) * alpha)) +
+                                          (ind        & 0xff000000);
+        }
       else
         pix[j * width + i] = p->pixel[ind];
     }
   }
 
-  if (!p->double_buffering)
-    BitBlt(p->dc, x, y, width, height, hdc, 0, 0, SRCCOPY);  
-  if (p->bm)
-    BitBlt(p->memdc, x, y, width, height, hdc, 0, 0, SRCCOPY);  
+  if (true_color)
+    {
+      BLENDFUNCTION bf = { AC_SRC_OVER, 0, 0xff, AC_SRC_ALPHA };
+      if (!p->double_buffering)
+        AlphaBlend(p->dc, x, y, width, height, hdc, 0, 0, width, height, bf);
+      else
+        AlphaBlend(p->memdc, x, y, width, height, hdc, 0, 0, width, height, bf);
+    }
+  else
+    {
+      if (!p->double_buffering)
+        BitBlt(p->dc, x, y, width, height, hdc, 0, 0, SRCCOPY);  
+      if (p->bm)
+        BitBlt(p->memdc, x, y, width, height, hdc, 0, 0, SRCCOPY);  
+    }
 
   SelectObject(hdc, hbm_old);
   DeleteObject(hbm);

@@ -10,11 +10,14 @@ from matplotlib.figure import Figure
 from matplotlib.mathtext import MathTextParser
 from matplotlib.texmanager import TexManager
 
+from os import putenv
 import numpy as np
 import gr
 
 
 linetype = {'solid': 1, 'dashed': 2, 'dashdot': 4, 'dotted': 3}
+
+putenv('GKS_DOUBLE_BUF', '1')
 
 
 class RendererGR(RendererBase):
