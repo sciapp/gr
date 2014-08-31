@@ -5559,7 +5559,6 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
         {
           if (!fill)
             closepath(fill);
-          newpath();
           addpath(xpoint[i], ypoint[i]);
         }
       else if (code == LINETO)
