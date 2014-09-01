@@ -850,6 +850,19 @@ int highbit(unsigned long ul)
 
 
 static
+int lowbit(unsigned long ul)
+{
+  /* returns position of lowest set bit in 'ul' as an integer (0-31),
+     or -1 if none */
+
+  int i;
+  for (i = 0; ((ul & 1) == 0) && i <= 31; i++)
+    ul >>= 1;
+  return i;
+}
+
+
+static
 void alloc_color(XColor *color)
 {
   unsigned long r, g, b, rmask, gmask, bmask;
@@ -3258,6 +3271,32 @@ unsigned long rgb2pixel(int rgb)
 }
 
 
+static
+unsigned long pixel2rgb(int pixel)
+{
+  unsigned long r, g, b, rmask, gmask, bmask;
+  int rshift, gshift, bshift;
+
+  rmask = p->vis->red_mask;
+  gmask = p->vis->green_mask;
+  bmask = p->vis->blue_mask;
+
+  rshift = lowbit(rmask);
+  gshift = lowbit(gmask);
+  bshift = lowbit(bmask);
+
+  r = (pixel & rmask) >> rshift;
+  g = (pixel & gmask) >> gshift;
+  b = (pixel & bmask) >> bshift;
+  
+  r = (r & 0xff);
+  g = (g & 0xff) << 8;
+  b = (b & 0xff) << 16;
+
+  return r | g | b;
+}
+
+
 #define COPY_BODY(type) \
   register int i, j, ix, iy, nbytes; \
   register int *ilptr, *ipptr; \
@@ -3293,7 +3332,7 @@ unsigned long rgb2pixel(int rgb)
 		{ \
 		  ix = (dx * i) / w; \
 		  bpptr = blptr + ix; \
-		  *epptr = true_color ? rgb2pixel(*bpptr) : pixel[*bpptr]; \
+		  *epptr = pixel[*bpptr]; \
 		} \
 	    } \
 	} \
@@ -3303,7 +3342,7 @@ unsigned long rgb2pixel(int rgb)
 	  epptr = ba; \
 	  bpptr = packed_colia; \
 	  for (i = 0; i < nbytes; i++) \
-	    *epptr++ = true_color ? rgb2pixel(*bpptr++) : pixel[*bpptr++]; \
+	    *epptr++ = pixel[*bpptr++]; \
 	} \
     } \
   else \
@@ -3321,8 +3360,7 @@ unsigned long rgb2pixel(int rgb)
 		{ \
 		  ix = (dx * i) / w; \
 		  ipptr = ilptr + ix; \
-		  *epptr = true_color ? \
-		    rgb2pixel(*ipptr) : pixel[*ipptr % MAX_COLOR]; \
+		  *epptr = true_color ? *ipptr : pixel[*ipptr % MAX_COLOR]; \
 		} \
 	    } \
 	} \
@@ -3332,8 +3370,7 @@ unsigned long rgb2pixel(int rgb)
 	  epptr = ba; \
 	  ipptr = colia; \
 	  for (i = 0; i < nbytes; i++, ipptr++) \
-	    *epptr++ = true_color ? \
-              rgb2pixel(*ipptr) : pixel[*ipptr % MAX_COLOR]; \
+	    *epptr++ = true_color ? *ipptr : pixel[*ipptr % MAX_COLOR]; \
 	} \
     } \
 \
@@ -3536,6 +3573,49 @@ void int64to16(short int *a, int length)
 
 
 static
+void draw_image(int x, int y, int width, int height, byte *ba)
+{
+  Pixmap dest;
+  register XImage *to;
+  register int i, j;
+  register unsigned long pixel, rgb;
+  int r, g, b;
+  double a;
+
+  dest = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
+		       width, height, p->depth);
+  XCopyArea(p->dpy, p->double_buf ? p->pixmap : p->win, dest, p->gc,
+	    x, y, width, height, 0, 0);
+  to = XGetImage(p->dpy, dest, 0, 0, width, height, AllPlanes, ZPixmap);
+
+  for (j = 0; j < height; j++)
+    for (i = 0; i < width; i++)
+      {
+	pixel = XGetPixel(to, i, j);
+	rgb = pixel2rgb(pixel);
+        a = (double)ba[3] / 255.0;
+	r = (int)((double)ba[0] * a + (1 - a) * ((rgb &     0xff)      ));
+	g = (int)((double)ba[1] * a + (1 - a) * ((rgb &   0xff00) >> 8 ));
+	b = (int)((double)ba[2] * a + (1 - a) * ((rgb & 0xff0000) >> 16));
+	rgb = r + (g << 8) + (b << 16);
+	pixel = rgb2pixel(rgb);
+	XPutPixel(to, i, j, pixel);
+        ba += 4;
+      }
+
+  if (p->pixmap)
+    XPutImage(p->dpy, p->pixmap, p->gc, to, 0, 0, x, y, width, height);
+  if (p->selection)
+    XPutImage(p->dpy, p->drawable, p->gc, to, 0, 0, x, y, width, height);
+  if (!p->double_buf)
+    XPutImage(p->dpy, p->win, p->gc, to, 0, 0, x, y, width, height);
+
+  XDestroyImage(to);
+  XFreePixmap(p->dpy, dest);
+}
+
+
+static
 void cell_array(
   double xmin, double xmax, double ymin, double ymax,
   int dx, int dy, int dimx, int *colia, int true_color)
@@ -3604,6 +3684,12 @@ void cell_array(
 
       if (p->depth == 1)
 	pixmap_to_bitmap(w, h, ba);
+
+      if (true_color && bitmap_pad == 32)
+	{
+	  draw_image(x, y, w, h, ba);
+	  return;
+	}
 
 #ifdef XSHM
       if (image != NULL)

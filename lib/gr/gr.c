@@ -5448,12 +5448,6 @@ void gr_fillarc(
 }
 
 static
-void newpath(void)
-{
-  npath = 0;
-}
-
-static
 void addpath(double x, double y)
 {
   xpath[npath] = x;
