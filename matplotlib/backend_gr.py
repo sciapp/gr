@@ -42,6 +42,7 @@ class RendererGR(RendererBase):
         path = transform.transform_path(path)
         points = path.vertices
         codes = path.codes
+        bbox = gc.get_clip_rectangle()
         if bbox is not None:
             x, y, w, h = bbox.bounds
             clrt = np.array([x, x + w, y, y + h])

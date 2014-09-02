@@ -2,8 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #include "gr.h"
+
+#ifdef _MSC_VER
+#ifndef NAN
+static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
+#define NAN (*(const float *) __nan)
+#endif
+#endif
 
 #define BUFFSIZE 8192
 
@@ -18,6 +26,7 @@ char *format[] =
     "drawarc:ffffii",
     "drawarrow:ffff",
     "drawimage:ffffiiI",
+    "drawpath:iVBi",
     "drawrect:ffff",
     "fillarc:ffffii",
     "fillarea:iFF",
@@ -65,13 +74,19 @@ static
 double f_arg[7], *f_arr[4];
 
 static
-int i_arg[6], *i_arr, i_arr_size, f_arr_size[4];
+int i_arg[6], *i_arr, i_arr_size, f_arr_size[4], v_arr_size, b_arr_size;
+
+static
+vertex_t *v_arr;
+
+static
+unsigned char *b_arr;
 
 static
 char *s_arg[3];
 
 static
-int i_argc, f_argc, s_argc, i_arrc, f_arrp, f_arrc;
+int i_argc, f_argc, s_argc, i_arrc, f_arrp, f_arrc, v_arrc, b_arrc;
 
 static
 int binsearch(char *str[], int nel, char *value)
@@ -95,12 +110,23 @@ int binsearch(char *str[], int nel, char *value)
 }
 
 static
+double ascii2double(const char *s)
+{
+  if (strcmp(s, "nan") == 0 || strcmp(s, "1.#QNAN") == 0)
+    return NAN;
+  else
+    return atof(s);
+}
+
+static
 char *xml(char *s, char *fmt)
 {
   char *attr, *p;
 
   i_argc = i_arrc = 0;
   f_argc = f_arrp = f_arrc = 0;
+  v_arrc = 0;
+  b_arrc = 0;
   s_argc = 0;
 
   while (*fmt)
@@ -164,6 +190,37 @@ char *xml(char *s, char *fmt)
                             f_arrp++;
                             f_arrc = 0;
                             break;
+                          case 'V':
+                            p = strtok(attr, " \t\"");
+                            while (p != NULL)
+                              {
+                                if (v_arrc >= v_arr_size)
+                                  {
+                                    v_arr_size += BUFFSIZE;
+                                    v_arr = (vertex_t *) realloc(v_arr,
+                                      sizeof(vertex_t) * v_arr_size);
+                                  }
+                                v_arr[v_arrc].x = ascii2double(p);
+                                p = strtok(NULL, " \t\"");
+                                v_arr[v_arrc].y = ascii2double(p);
+                                p = strtok(NULL, " \t\"");
+                                v_arrc++;
+                              }
+                            break;
+                          case 'B':
+                            p = strtok(attr, " \t\"");
+                            while (p != NULL)
+                              {
+                                if (b_arrc >= b_arr_size)
+                                  {
+                                    b_arr_size += BUFFSIZE;
+                                    b_arr = (unsigned char *) realloc(b_arr,
+                                      sizeof(unsigned char) * b_arr_size);
+                                  }
+                                b_arr[b_arrc++] = (unsigned char) atoi(p);
+                                p = strtok(NULL, " \t\"");
+                              }
+                            break;
                         }
                     } 
                   else
@@ -211,117 +268,120 @@ void gr(int id)
                    i_arg[0], i_arg[1], i_arr);
       break;
     case  8:
-      gr_drawrect(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
+      gr_drawpath(i_arg[0], v_arr, b_arrc != 0 ? b_arr : NULL, i_arg[1]);
       break;
     case  9:
-      gr_fillarc(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1]);
+      gr_drawrect(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 10:
-      gr_fillarea(i_arg[0], f_arr[0], f_arr[1]);
+      gr_fillarc(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1]);
       break;
     case 11:
-      gr_fillrect(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
+      gr_fillarea(i_arg[0], f_arr[0], f_arr[1]);
       break;
     case 12:
-      gr_grid(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1]);
+      gr_fillrect(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 13:
-      gr_herrorbars(i_arg[0], f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
+      gr_grid(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1]);
       break;
     case 14:
-      gr_mathtex(f_arg[0], f_arg[1], s_arg[0]);
+      gr_herrorbars(i_arg[0], f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
       break;
     case 15:
-      gr_polyline(i_arg[0], f_arr[0], f_arr[1]);
+      gr_mathtex(f_arg[0], f_arg[1], s_arg[0]);
       break;
     case 16:
-      gr_polymarker(i_arg[0], f_arr[0], f_arr[1]);
+      gr_polyline(i_arg[0], f_arr[0], f_arr[1]);
       break;
     case 17:
-      gr_selntran(i_arg[0]);
+      gr_polymarker(i_arg[0], f_arr[0], f_arr[1]);
       break;
     case 18:
-      gr_setarrowstyle(i_arg[0]);
+      gr_selntran(i_arg[0]);
       break;
     case 19:
-      gr_setcharheight(f_arg[0]);
+      gr_setarrowstyle(i_arg[0]);
       break;
     case 20:
-      gr_setcharup(f_arg[0], f_arg[1]);
+      gr_setcharheight(f_arg[0]);
       break;
     case 21:
-      gr_setclip(i_arg[0]);
+      gr_setcharup(f_arg[0], f_arg[1]);
       break;
     case 22:
-      gr_setcolormap(i_arg[0]);
+      gr_setclip(i_arg[0]);
       break;
     case 23:
-      gr_setfillcolorind(i_arg[0]);
+      gr_setcolormap(i_arg[0]);
       break;
     case 24:
-      gr_setfillintstyle(i_arg[0]);
+      gr_setfillcolorind(i_arg[0]);
       break;
     case 25:
-      gr_setfillstyle(i_arg[0]);
+      gr_setfillintstyle(i_arg[0]);
       break;
     case 26:
-      gr_setlinecolorind(i_arg[0]);
+      gr_setfillstyle(i_arg[0]);
       break;
     case 27:
-      gr_setlinetype(i_arg[0]);
+      gr_setlinecolorind(i_arg[0]);
       break;
     case 28:
-      gr_setlinewidth(f_arg[0]);
+      gr_setlinetype(i_arg[0]);
       break;
     case 29:
-      gr_setmarkercolorind(i_arg[0]);
+      gr_setlinewidth(f_arg[0]);
       break;
     case 30:
-      gr_setmarkersize(f_arg[0]);
+      gr_setmarkercolorind(i_arg[0]);
       break;
     case 31:
-      gr_setmarkertype(i_arg[0]);
+      gr_setmarkersize(f_arg[0]);
       break;
     case 32:
-      gr_setscale(i_arg[0]);
+      gr_setmarkertype(i_arg[0]);
       break;
     case 33:
-      gr_setspace(f_arg[0], f_arg[1], i_arg[0], i_arg[1]);
+      gr_setscale(i_arg[0]);
       break;
     case 34:
-      gr_settextalign(i_arg[0], i_arg[1]);
+      gr_setspace(f_arg[0], f_arg[1], i_arg[0], i_arg[1]);
       break;
     case 35:
-      gr_settextcolorind(i_arg[0]);
+      gr_settextalign(i_arg[0], i_arg[1]);
       break;
     case 36:
-      gr_settextfontprec(i_arg[0], i_arg[1]);
+      gr_settextcolorind(i_arg[0]);
       break;
     case 37:
-      gr_settextpath(i_arg[0]);
+      gr_settextfontprec(i_arg[0], i_arg[1]);
       break;
     case 38:
-      gr_setviewport(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
+      gr_settextpath(i_arg[0]);
       break;
     case 39:
-      gr_setwindow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
+      gr_setviewport(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 40:
-      gr_spline(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2]);
+      gr_setwindow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 41:
-      gr_surface(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], i_arg[2]);
+      gr_spline(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2]);
       break;
     case 42:
-      gr_text(f_arg[0], f_arg[1], s_arg[0]);
+      gr_surface(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], i_arg[2]);
       break;
     case 43:
-      gr_textext(f_arg[0], f_arg[1], s_arg[0]);
+      gr_text(f_arg[0], f_arg[1], s_arg[0]);
       break;
     case 44:
-      gr_titles3d(s_arg[0], s_arg[1], s_arg[2]);
+      gr_textext(f_arg[0], f_arg[1], s_arg[0]);
       break;
     case 45:
+      gr_titles3d(s_arg[0], s_arg[1], s_arg[2]);
+      break;
+    case 46:
       gr_verrorbars(i_arg[0], f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
       break;
     }
@@ -360,6 +420,10 @@ int gr_importgraphics(char *path)
       f_arr[i] = (double *) malloc(sizeof(double) * BUFFSIZE);
       f_arr_size[i] = BUFFSIZE;
     }
+  v_arr = (vertex_t *) malloc(sizeof(vertex_t) * BUFFSIZE);
+  v_arr_size = BUFFSIZE;
+  b_arr = (unsigned char *) malloc(sizeof(unsigned char) * BUFFSIZE);
+  b_arr_size = BUFFSIZE;
 
   s = buff;
   s[off + ret] = '\0';

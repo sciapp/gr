@@ -1520,6 +1520,36 @@ void print_float_array(char *name, int n, double *data)
 }
 
 static
+void print_vertex_array(char *name, int n, vertex_t *vertices)
+{
+  register int i;
+
+  gr_writestream(" %s=\"", name);
+  for (i = 0; i < n; i++)
+    {
+      if (i > 0)
+        gr_writestream(" ");
+      gr_writestream("%g %g", vertices[i].x, vertices[i].y);
+    }
+  gr_writestream("\"");
+}
+
+static
+void print_byte_array(char *name, int n, unsigned char *data)
+{
+  register int i;
+
+  gr_writestream(" %s=\"", name);
+  for (i = 0; i < n; i++)
+    {
+      if (i > 0)
+        gr_writestream(" ");
+      gr_writestream("%d", data[i]);
+    }
+  gr_writestream("\"");
+}
+
+static
 void primitive(char *name, int n, double *x, double *y)
 {
   gr_writestream("<%s len=\"%d\"", name, n);
@@ -5461,10 +5491,10 @@ void closepath(int fill)
   if (fill)
     {
       if (npath > 2)
-        gr_fillarea(npath, xpath, ypath);
+        gks_fillarea(npath, xpath, ypath);
     }
   else if (npath > 1)
-    gr_polyline(npath, xpath, ypath);
+    gks_polyline(npath, xpath, ypath);
   npath = 0;
 }
 
@@ -5575,6 +5605,14 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
         }
     }
   closepath(fill);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<drawpath len=\"%d\"", n);
+      print_vertex_array("vertices", n, vertices);
+      print_byte_array("codes", codes != NULL ? n : 0, codes);
+      gr_writestream(" fill=\"%d\"/>\n", fill);
+    }
 }
 
 void gr_setarrowstyle(int style)
