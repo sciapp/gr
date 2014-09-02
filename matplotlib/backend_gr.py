@@ -42,6 +42,13 @@ class RendererGR(RendererBase):
         path = transform.transform_path(path)
         points = path.vertices
         codes = path.codes
+        if bbox is not None:
+            x, y, w, h = bbox.bounds
+            clrt = np.array([x, x + w, y, y + h])
+        else:
+            clrt = np.array([0, 640, 0, 480])
+        gr.setviewport(*clrt/640.0)
+        gr.setwindow(*clrt)
         if rgbFace is not None and len(points) > 2:
             color = gr.inqcolorfromrgb(rgbFace[0], rgbFace[1], rgbFace[2])
             gr.setcolorrep(color, rgbFace[0], rgbFace[1], rgbFace[2])
