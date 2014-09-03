@@ -13,6 +13,12 @@ static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
 #endif
 #endif
 
+#ifdef __linux__
+#ifndef NAN
+#define NAN 0.0/0.0
+#endif
+#endif
+
 #define BUFFSIZE 8192
 
 static
