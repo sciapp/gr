@@ -31,7 +31,11 @@ class RendererGR(RendererBase):
         self.dpi = dpi
         mwidth, mheight, width, height = gr.inqdspsize()
         mwidth *= 640.0 / width
-        gr.setwsviewport(0, mwidth, 0, mwidth * 0.75)
+        if (width / (mwidth / 0.0256) < 150):
+            mwidth *= 640.0 / width
+            gr.setwsviewport(0, mwidth, 0, mwidth * 0.75)
+        else:
+            gr.setwsviewport(0, 0.192, 0, 0.144)
         gr.setwswindow(0, 1, 0, 0.75)
         gr.setviewport(0, 1, 0, 0.75)
         gr.setwindow(0, 640, 0, 480)
@@ -52,15 +56,17 @@ class RendererGR(RendererBase):
         gr.setwindow(*clrt)
         if rgbFace is not None and len(points) > 2:
             color = gr.inqcolorfromrgb(rgbFace[0], rgbFace[1], rgbFace[2])
+            gr.settransparency(rgbFace[3])
             gr.setcolorrep(color, rgbFace[0], rgbFace[1], rgbFace[2])
             gr.setfillintstyle(gr.INTSTYLE_SOLID)
             gr.setfillcolorind(color)
             gr.drawpath(points, codes, fill=True)
         lw = gc.get_linewidth()
         if lw != 0:
-            rgb = gc.get_rgb()[:3]
-            color = gr.inqcolorfromrgb(rgb[0], rgb[1], rgb[2])
-            gr.setcolorrep(color, rgb[0], rgb[1], rgb[2])
+            rgba = gc.get_rgb()[:4]
+            color = gr.inqcolorfromrgb(rgba[0], rgba[1], rgba[2])
+            gr.settransparency(rgba[3])
+            gr.setcolorrep(color, rgba[0], rgba[1], rgba[2])
             if type(gc._linestyle) is unicode:
                 gr.setlinetype(linetype[gc._linestyle])
             gr.setlinewidth(lw)
