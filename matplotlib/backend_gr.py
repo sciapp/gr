@@ -30,7 +30,6 @@ class RendererGR(RendererBase):
     def __init__(self, dpi):
         self.dpi = dpi
         mwidth, mheight, width, height = gr.inqdspsize()
-        mwidth *= 640.0 / width
         if (width / (mwidth / 0.0256) < 150):
             mwidth *= 640.0 / width
             gr.setwsviewport(0, mwidth, 0, mwidth * 0.75)

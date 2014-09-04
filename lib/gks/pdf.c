@@ -27,6 +27,8 @@ typedef unsigned long uLong;
 #define MEMORY_INCREMENT 32768
 #define MAX_OBJECTS 10000
 #define MAX_PAGES 1000
+#define MAX_IMAGES 100
+
 #define NO_OF_BUFS 10
 
 #define DrawBorder 0
@@ -67,23 +69,23 @@ typedef unsigned long uLong;
   p->byte_offset[id] = p->stream->length; \
   pdf_printf(p->stream, "%ld 0 obj\n", id);
 
-#define pdf_endobj(p)		pdf_printf(p->stream, "endobj\n")
-#define pdf_dict(p)		pdf_printf(p->stream, "<<\n")
-#define pdf_enddict(p)		pdf_printf(p->stream, ">>\n")
-#define pdf_stream(p)		pdf_printf(p->stream, "stream\n")
-#define pdf_endstream(p)	pdf_printf(p->stream, "endstream\n")
+#define pdf_endobj(p)           pdf_printf(p->stream, "endobj\n")
+#define pdf_dict(p)             pdf_printf(p->stream, "<<\n")
+#define pdf_enddict(p)          pdf_printf(p->stream, ">>\n")
+#define pdf_stream(p)           pdf_printf(p->stream, "stream\n")
+#define pdf_endstream(p)        pdf_printf(p->stream, "endstream\n")
 
-#define pdf_save(p)		pdf_printf(p->content, "q\n")
-#define pdf_restore(p)		pdf_printf(p->content, "Q\n")
-#define pdf_clip(p)		pdf_printf(p->content, "W n\n")
-#define pdf_moveto(p, x, y)	pdf_printf(p->content, "%.2f %.2f m\n", x, y)
-#define pdf_lineto(p, x, y)	pdf_printf(p->content, "%.2f %.2f l\n", x, y)
-#define pdf_closepath(p)	pdf_printf(p->content, "h\n")
-#define pdf_stroke(p)		pdf_printf(p->content, "S\n")
-#define pdf_eofill(p)		pdf_printf(p->content, "f*\n")
-#define pdf_point(p, x, y)	pdf_printf(p->content, "%.2f %.2f ", x, y)
-#define pdf_curveto(p)		pdf_printf(p->content, "c\n")
-#define pdf_setdash(p, dash)	pdf_printf(p->content, "%s 0 d\n", dash)
+#define pdf_save(p)             pdf_printf(p->content, "q\n")
+#define pdf_restore(p)          pdf_printf(p->content, "Q\n")
+#define pdf_clip(p)             pdf_printf(p->content, "W n\n")
+#define pdf_moveto(p, x, y)     pdf_printf(p->content, "%.2f %.2f m\n", x, y)
+#define pdf_lineto(p, x, y)     pdf_printf(p->content, "%.2f %.2f l\n", x, y)
+#define pdf_closepath(p)        pdf_printf(p->content, "h\n")
+#define pdf_stroke(p)           pdf_printf(p->content, "S\n")
+#define pdf_eofill(p)           pdf_printf(p->content, "f*\n")
+#define pdf_point(p, x, y)      pdf_printf(p->content, "%.2f %.2f ", x, y)
+#define pdf_curveto(p)          pdf_printf(p->content, "c\n")
+#define pdf_setdash(p, dash)    pdf_printf(p->content, "%s 0 d\n", dash)
 
 #define pdf_setlinewidth(p, width) \
   pdf_printf(p->content, "%s w\n", pdf_double(width))
@@ -100,6 +102,9 @@ typedef unsigned long uLong;
   pdf_printf(p->content, "%s %s %s rg\n", \
     pdf_double(red), pdf_double(green), pdf_double(blue))
 
+#define pdf_setalpha(p, alpha) \
+  pdf_printf(p->content, "/GS%d gs\n", alpha)
+
 #define PDF ws_state_list
 
 typedef struct PDF_stream_t
@@ -109,11 +114,20 @@ typedef struct PDF_stream_t
   }
 PDF_stream;
 
+typedef struct PDF_image_t
+  {
+    long object;
+    int width, height;
+    int *data;
+  }
+PDF_image;
+
 typedef struct PDF_page_t
   {
     long object, contents, fonts[MAX_FONT];
     double width, height;
     PDF_stream *stream;
+    int first_image, last_image;
   }
 PDF_page;
 
@@ -128,7 +142,7 @@ typedef struct ws_state_list_t
     int stroke;
     double lastx, lasty;
     double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
-    int color, fillcolor, ltype, font, size, pt;
+    int color, fillcolor, alpha, ltype, font, size, pt;
     double lwidth, angle;
     PDF_stream *stream;
     long object_number;
@@ -138,9 +152,12 @@ typedef struct ws_state_list_t
     int current_page;
     PDF_stream *content;
     int compress;
+    int have_alpha[256];
     int pattern;
     int have_pattern[PATTERNS];
     int pattern_id[PATTERNS][2];
+    PDF_image *image[MAX_IMAGES];
+    int images;
   }
 ws_state_list;
 
@@ -171,7 +188,7 @@ const char *fonts[MAX_FONT] =
   };
 
 static
-int flags[MAX_FONT] = 
+int flags[MAX_FONT] =
   {
          042,     0142, 01000042, 01000142,
          040,     0140, 01000040, 01000140,
@@ -185,7 +202,7 @@ int flags[MAX_FONT] =
   };
 
 static
-int stems[MAX_FONT] = 
+int stems[MAX_FONT] =
   {
       80,  80, 160, 160,
       80,  80, 160, 160,
@@ -199,7 +216,7 @@ int stems[MAX_FONT] =
   };
 
 static
-const char *bboxes[MAX_FONT] = 
+const char *bboxes[MAX_FONT] =
   {
     "-170 -217 1024 896",
     "-176 -252 990 930",
@@ -235,7 +252,7 @@ const char *bboxes[MAX_FONT] =
   };
 
 static
-double angles[MAX_FONT] = 
+double angles[MAX_FONT] =
   {
         0, -15.5,     0,   -15,
         0,   -12,     0,   -12,
@@ -263,7 +280,7 @@ double capheights[MAX_FONT] =
   };
 
 static
-int ascenders[MAX_FONT] = 
+int ascenders[MAX_FONT] =
   {
      682,  684,  670,  682,
      729,  729,  729,  729,
@@ -279,10 +296,10 @@ int ascenders[MAX_FONT] =
 static
 int map[32] =
   {
-    22,	 9,  5, 14, 18, 26, 13,	 1,
-    24, 11,  7, 16, 20, 28, 13,	 3,
-    23, 10,  6, 15, 19, 27, 13,	 2,
-    25, 12,  8, 17, 21, 29, 13,	 4
+    22,  9,  5, 14, 18, 26, 13,  1,
+    24, 11,  7, 16, 20, 28, 13,  3,
+    23, 10,  6, 15, 19, 27, 13,  2,
+    25, 12,  8, 17, 21, 29, 13,  4
   };
 
 static
@@ -337,11 +354,11 @@ const char *pdf_double(double f)
   if (strchr(buf, 'e'))
     {
       if (fabs(f) < 1)
-	sprintf(buf, "%1.5f", f);
+        sprintf(buf, "%1.5f", f);
       else if (fabs(f) < 1000)
-	sprintf(buf, "%1.2f", f);
+        sprintf(buf, "%1.2f", f);
       else
-	sprintf(buf, "%1.0f", f);
+        sprintf(buf, "%1.0f", f);
     }
 
   return buf;
@@ -353,7 +370,7 @@ void pdf_memcpy(PDF_stream *p, char *s, size_t n)
   if (p->length + n >= p->size)
     {
       while (p->length + n >= p->size)
-	p->size += MEMORY_INCREMENT;
+        p->size += MEMORY_INCREMENT;
       p->buffer = (Byte *) realloc(p->buffer, p->size);
     }
 
@@ -403,6 +420,8 @@ long pdf_alloc_id(PDF *p)
 static
 void pdf_open(int fd)
 {
+  int image;
+
   p->fd = fd;
 
   p->stream = pdf_alloc_stream();
@@ -413,6 +432,31 @@ void pdf_open(int fd)
   p->root = pdf_alloc_id(p);
   p->outlines = pdf_alloc_id(p);
   p->pages = pdf_alloc_id(p);
+
+  p->images = 0;
+  for (image = 0; image < MAX_IMAGES; image++)
+    p->image[image] = NULL;
+}
+
+static
+PDF_image *pdf_image(PDF *p, int width, int height)
+{
+  PDF_image *image;
+
+  if (++(p->images) >= MAX_IMAGES)
+    {
+      gks_perror("too many images in document (%d)", p->images);
+      exit(-1);
+    }
+
+  image = (PDF_image *) calloc(1, sizeof(PDF_image));
+
+  image->object = pdf_alloc_id(p);
+  image->width = width;
+  image->height = height;
+  image->data = (int *) calloc(width * height, sizeof(int));
+
+  return image;
 }
 
 static
@@ -440,6 +484,8 @@ void pdf_page(PDF *p, double height, double width)
 
   for (font = 0; font < MAX_FONT; font++)
     page->fonts[font] = 0;
+
+  page->first_image = page->last_image = p->images;
 }
 
 static
@@ -449,7 +495,9 @@ void pdf_close(PDF *p)
   struct tm ltime;
   long start_xref;
   int count, object, font, pattern;
-  int filter_id, i;
+  int image, width, height, length, *rgba, alpha;
+  Byte red, green, blue, data[3];
+  int mask_id, filter_id, i;
   stroke_data_t s;
 
   pdf_printf(p->stream, "%%PDF-1.%d\n", p->compress ? 2 : 0);
@@ -462,8 +510,8 @@ void pdf_close(PDF *p)
   pdf_dict(p);
   pdf_printf(p->stream, "/Creator (GKS)\n");
   pdf_printf(p->stream, "/CreationDate (D:%04d%02d%02d%02d%02d%02d)\n",
-	     ltime.tm_year + 1900, ltime.tm_mon + 1, ltime.tm_mday,
-	     ltime.tm_hour, ltime.tm_min, ltime.tm_sec);
+             ltime.tm_year + 1900, ltime.tm_mon + 1, ltime.tm_mday,
+             ltime.tm_hour, ltime.tm_min, ltime.tm_sec);
   pdf_printf(p->stream, "/Producer (%s)\n", "GKS 5 PDF driver");
   pdf_enddict(p);
   pdf_endobj(p);
@@ -493,7 +541,7 @@ void pdf_close(PDF *p)
     {
       pdf_printf(p->stream, "%ld 0 R", p->page[count]->object);
       if (count < p->current_page)
-	pdf_printf(p->stream, count % 6 ? (char *) " " : (char *) "\n");
+        pdf_printf(p->stream, count % 6 ? (char *) " " : (char *) "\n");
     }
 
   pdf_printf(p->stream, "]\n");
@@ -511,48 +559,48 @@ void pdf_close(PDF *p)
   for (pattern = 0; pattern < PATTERNS; pattern++)
     {
       if (p->have_pattern[pattern])
-	{
-	  pdf_obj(p, p->pattern_id[pattern][0]);
-	  pdf_dict(p);
-	  pdf_printf(p->stream, "/Subtype/Image\n");
-	  pdf_printf(p->stream, "/Width 8\n");
-	  pdf_printf(p->stream, "/Height 8\n");
-	  pdf_printf(p->stream, "/BitsPerComponent 1\n");
-	  pdf_printf(p->stream, "/ColorSpace [/Indexed/DeviceRGB 1 %d 0 R]\n",
-		     filter_id);
-	  pdf_printf(p->stream, "/Filter/ASCIIHexDecode\n");
-	  pdf_printf(p->stream, "/Length 16\n");
-	  pdf_enddict(p);
-	  pdf_stream(p);
-	  pdf_printf(p->stream, bitmap[pattern]);
-	  pdf_printf(p->stream, "\n");
-	  pdf_endstream(p);
-	  pdf_endobj(p);
+        {
+          pdf_obj(p, p->pattern_id[pattern][0]);
+          pdf_dict(p);
+          pdf_printf(p->stream, "/Subtype/Image\n");
+          pdf_printf(p->stream, "/Width 8\n");
+          pdf_printf(p->stream, "/Height 8\n");
+          pdf_printf(p->stream, "/BitsPerComponent 1\n");
+          pdf_printf(p->stream, "/ColorSpace [/Indexed/DeviceRGB 1 %d 0 R]\n",
+                     filter_id);
+          pdf_printf(p->stream, "/Filter/ASCIIHexDecode\n");
+          pdf_printf(p->stream, "/Length 16\n");
+          pdf_enddict(p);
+          pdf_stream(p);
+          pdf_printf(p->stream, bitmap[pattern]);
+          pdf_printf(p->stream, "\n");
+          pdf_endstream(p);
+          pdf_endobj(p);
 
-	  pdf_obj(p, p->pattern_id[pattern][1]);
-	  pdf_dict(p);
-	  pdf_printf(p->stream, "/PatternType 1\n");
-	  pdf_printf(p->stream, "/PaintType 1\n");
-	  pdf_printf(p->stream, "/TilingType 1\n");
-	  pdf_printf(p->stream, "/BBox[0 0 8 8]\n");
-	  pdf_printf(p->stream, "/XStep 8\n");
-	  pdf_printf(p->stream, "/YStep 8\n");
-	  pdf_printf(p->stream, "/Resources ");
-	  pdf_printf(p->stream, "<<");
-	  pdf_printf(p->stream,
-		  "/ProcSet[/PDF/ImageB/ImageC/ImageI/Text]\n/XObject<<\n");
-	  pdf_printf(p->stream, "/I%03d %d 0 R\n",
-		     pattern, p->pattern_id[pattern][0]);
-	  pdf_printf(p->stream, ">>>>\n");
-	  pdf_printf(p->stream, "/Length 44\n");
-	  pdf_enddict(p);
-	  pdf_stream(p);
-	  pdf_printf(p->stream,
-		     "q\n1 0 0 1 0 8 cm\n8 0 0 -8 0 0 cm\n/I%03d Do\nQ\n\n",
-		     pattern);
-	  pdf_endstream(p);
-	  pdf_endobj(p);
-	}
+          pdf_obj(p, p->pattern_id[pattern][1]);
+          pdf_dict(p);
+          pdf_printf(p->stream, "/PatternType 1\n");
+          pdf_printf(p->stream, "/PaintType 1\n");
+          pdf_printf(p->stream, "/TilingType 1\n");
+          pdf_printf(p->stream, "/BBox[0 0 8 8]\n");
+          pdf_printf(p->stream, "/XStep 8\n");
+          pdf_printf(p->stream, "/YStep 8\n");
+          pdf_printf(p->stream, "/Resources ");
+          pdf_printf(p->stream, "<<");
+          pdf_printf(p->stream,
+                  "/ProcSet[/PDF/ImageB/ImageC/ImageI/Text]\n/XObject<<\n");
+          pdf_printf(p->stream, "/I%03d %d 0 R\n",
+                     pattern, p->pattern_id[pattern][0]);
+          pdf_printf(p->stream, ">>>>\n");
+          pdf_printf(p->stream, "/Length 44\n");
+          pdf_enddict(p);
+          pdf_stream(p);
+          pdf_printf(p->stream,
+                     "q\n1 0 0 1 0 8 cm\n8 0 0 -8 0 0 cm\n/I%03d Do\nQ\n\n",
+                     pattern);
+          pdf_endstream(p);
+          pdf_endobj(p);
+        }
     }
 
   for (count = 1; count <= p->current_page; count++)
@@ -565,25 +613,40 @@ void pdf_close(PDF *p)
       pdf_printf(p->stream, "/Parent %ld 0 R\n", p->pages);
       pdf_printf(p->stream, "/Resources << /Font <<");
       for (font = 0; font < MAX_FONT; font++)
-	{
-	  if (page->fonts[font])
-	    pdf_printf(p->stream, " /F%d %ld 0 R", font, page->fonts[font]);
-	}
+        {
+          if (page->fonts[font])
+            pdf_printf(p->stream, " /F%d %ld 0 R", font, page->fonts[font]);
+        }
+      pdf_printf(p->stream, " >>\n");
 
-      pdf_printf(p->stream, ">>");
-      pdf_printf(p->stream, "/Pattern<<\n");
+      pdf_printf(p->stream, "/ExtGState <<\n");
+      for (alpha = 0; alpha < 256; alpha++)
+        {
+          if (p->have_alpha[alpha])
+            pdf_printf(p->stream, "/GS%d << /CA %g /ca %g >>\n",
+                       alpha, alpha / 255.0, alpha / 255.0);
+        }
+      pdf_printf(p->stream, ">>\n");
+
+      pdf_printf(p->stream, "/Pattern <<\n");
       for (pattern = 0; pattern < PATTERNS; pattern++)
-	{
-	  if (p->have_pattern[pattern])
-	    {
-	      pdf_printf(p->stream, "/P%d %d 0 R\n",
-			 pattern, p->pattern_id[pattern][1]);
-	    }
-	}
-      pdf_printf(p->stream, ">>>>\n");
+        {
+          if (p->have_pattern[pattern])
+            {
+              pdf_printf(p->stream, "/P%d %d 0 R\n",
+                         pattern, p->pattern_id[pattern][1]);
+            }
+        }
+      pdf_printf(p->stream, ">>\n");
+
+      pdf_printf(p->stream, "/XObject <<\n");
+      for (image = page->first_image + 1; image <= page->last_image; image++)
+          pdf_printf(p->stream, "/Im%d %d 0 R\n",
+                     image, p->image[image]->object);
+      pdf_printf(p->stream, ">>\n>>\n");
 
       pdf_printf(p->stream, "/MediaBox [0 0 %g %g]\n",
-		 page->height, page->width);
+                 page->height, page->width);
       pdf_printf(p->stream, "/Contents %ld 0 R\n", page->contents);
       pdf_enddict(p);
       pdf_endobj(p);
@@ -594,31 +657,31 @@ void pdf_close(PDF *p)
 
 #ifdef HAVE_ZLIB
       if (p->compress)
-	{
-	  Byte *buffer;
-	  uLong length;
-	  int err;
+        {
+          Byte *buffer;
+          uLong length;
+          int err;
 
-	  length = p->content->length + 1024;
-	  buffer = (Byte *) calloc((int) length, 1);
-	  if ((err = compress(buffer, &length, p->content->buffer,
-			      p->content->length)) != Z_OK)
-	    {
-	      gks_perror("compression failed (err=%d)", err);
-	      exit(-1);
-	    }
-	  free(p->content->buffer);
+          length = p->content->length + 1024;
+          buffer = (Byte *) calloc((int) length, 1);
+          if ((err = compress(buffer, &length, p->content->buffer,
+                              p->content->length)) != Z_OK)
+            {
+              gks_perror("compression failed (err=%d)", err);
+              exit(-1);
+            }
+          free(p->content->buffer);
 
-	  p->content->buffer = buffer;
-	  p->content->size = p->content->length = length;
-	  pdf_printf(p->stream, "/Length %ld\n", p->content->length);
-	  pdf_printf(p->stream, "/Filter [/FlateDecode]\n");
-	  buffer[p->content->length++] = '\n';
-	}
+          p->content->buffer = buffer;
+          p->content->size = p->content->length = length;
+          pdf_printf(p->stream, "/Length %ld\n", p->content->length);
+          pdf_printf(p->stream, "/Filter [/FlateDecode]\n");
+          buffer[p->content->length++] = '\n';
+        }
       else
-	{
-	  pdf_printf(p->stream, "/Length %ld\n", p->content->length);
-	}
+        {
+          pdf_printf(p->stream, "/Length %ld\n", p->content->length);
+        }
 #else
       pdf_printf(p->stream, "/Length %ld\n", p->content->length);
 #endif
@@ -630,47 +693,108 @@ void pdf_close(PDF *p)
       pdf_endobj(p);
 
       for (font = 0; font < MAX_FONT; font++)
-	{
-	  if (page->fonts[font])
-	    {
-	      pdf_obj(p, page->fonts[font]);
-	      pdf_dict(p);
-	      pdf_printf(p->stream, "/Type /Font\n");
-	      pdf_printf(p->stream, "/Subtype /Type1\n");
-	      pdf_printf(p->stream, "/Name /F%d\n", font);
-	      pdf_printf(p->stream, "/BaseFont /%s\n", fonts[font]);
-	      pdf_printf(p->stream, "/FirstChar 0\n");
-	      pdf_printf(p->stream, "/LastChar 255\n");
-	      pdf_printf(p->stream, "/Widths [");
-	      for (i = 0; i < 256; i++)
-		{
-		  gks_lookup_afm(rmap[font], i, &s);
-		  pdf_printf(p->stream, "%d ", s.right - s.left);
-		}
-	      pdf_printf(p->stream, "]\n");
-	      pdf_printf(p->stream, "/FontDescriptor %d 0 R\n",
-			 page->fonts[font] + 1);
-	      if (font != 12) 
-		pdf_printf(p->stream, "/Encoding /WinAnsiEncoding\n");
-	      pdf_enddict(p);
-	      pdf_endobj(p);
-	      
-	      pdf_obj(p, page->fonts[font] + 1);
-	      pdf_dict(p);
-	      pdf_printf(p->stream, "/Type /FontDescriptor\n");
-	      pdf_printf(p->stream, "/FontName /%s\n", fonts[font]);
-	      pdf_printf(p->stream, "/Flags %d\n", flags[font]);
-	      pdf_printf(p->stream, "/FontBBox [%s]\n", bboxes[font]);
-	      pdf_printf(p->stream, "/StemV %d\n", stems[font]);
-	      pdf_printf(p->stream, "/CapHeight %d\n", s.cap);
-	      pdf_printf(p->stream, "/Ascent %d\n", ascenders[font]);
-	      pdf_printf(p->stream, "/Descent %d\n", s.bottom);
-	      pdf_printf(p->stream, "/ItalicAngle %.1f\n", angles[font]);
-	      pdf_enddict(p);
-	      pdf_endobj(p);
-	   }
-	}
+        {
+          if (page->fonts[font])
+            {
+              pdf_obj(p, page->fonts[font]);
+              pdf_dict(p);
+              pdf_printf(p->stream, "/Type /Font\n");
+              pdf_printf(p->stream, "/Subtype /Type1\n");
+              pdf_printf(p->stream, "/Name /F%d\n", font);
+              pdf_printf(p->stream, "/BaseFont /%s\n", fonts[font]);
+              pdf_printf(p->stream, "/FirstChar 0\n");
+              pdf_printf(p->stream, "/LastChar 255\n");
+              pdf_printf(p->stream, "/Widths [");
+              for (i = 0; i < 256; i++)
+                {
+                  gks_lookup_afm(rmap[font], i, &s);
+                  pdf_printf(p->stream, "%d ", s.right - s.left);
+                }
+              pdf_printf(p->stream, "]\n");
+              pdf_printf(p->stream, "/FontDescriptor %d 0 R\n",
+                         page->fonts[font] + 1);
+              if (font != 12)
+                pdf_printf(p->stream, "/Encoding /WinAnsiEncoding\n");
+              pdf_enddict(p);
+              pdf_endobj(p);
+
+              pdf_obj(p, page->fonts[font] + 1);
+              pdf_dict(p);
+              pdf_printf(p->stream, "/Type /FontDescriptor\n");
+              pdf_printf(p->stream, "/FontName /%s\n", fonts[font]);
+              pdf_printf(p->stream, "/Flags %d\n", flags[font]);
+              pdf_printf(p->stream, "/FontBBox [%s]\n", bboxes[font]);
+              pdf_printf(p->stream, "/StemV %d\n", stems[font]);
+              pdf_printf(p->stream, "/CapHeight %d\n", s.cap);
+              pdf_printf(p->stream, "/Ascent %d\n", ascenders[font]);
+              pdf_printf(p->stream, "/Descent %d\n", s.bottom);
+              pdf_printf(p->stream, "/ItalicAngle %.1f\n", angles[font]);
+              pdf_enddict(p);
+              pdf_endobj(p);
+           }
+        }
       free(p->content->buffer);
+    }
+
+  for (image = 1; image <= p->images; image++)
+    {
+      width = p->image[image]->width;
+      height = p->image[image]->height;
+      length = width * height;
+      rgba = p->image[image]->data;
+
+      mask_id = pdf_alloc_id(p);
+      pdf_obj(p, mask_id);
+      pdf_dict(p);
+      pdf_printf(p->stream, "/Type /XObject\n");
+      pdf_printf(p->stream, "/Subtype /Image\n");
+      pdf_printf(p->stream, "/BitsPerComponent 8\n");
+      pdf_printf(p->stream, "/ColorSpace /DeviceGray\n");
+      pdf_printf(p->stream, "/Height %d\n",height);
+      pdf_printf(p->stream, "/Width %d\n", width);
+      pdf_printf(p->stream, "/Length %d\n", length);
+      pdf_enddict(p);
+
+      pdf_stream(p);
+      for (i = 0; i < length; i++)
+        {
+          alpha = (*rgba & 0xff000000) >> 24;
+          rgba++;
+          pdf_memcpy(p->stream, (char *) &alpha, 1);
+        }
+      pdf_printf(p->stream, "\n");
+      pdf_endstream(p);
+      pdf_endobj(p);
+
+      rgba = p->image[image]->data;
+
+      pdf_obj(p, p->image[image]->object);
+      pdf_dict(p);
+      pdf_printf(p->stream, "/Type /XObject\n");
+      pdf_printf(p->stream, "/Subtype /Image\n");
+      pdf_printf(p->stream, "/BitsPerComponent 8\n");
+      pdf_printf(p->stream, "/ColorSpace /DeviceRGB\n");
+      pdf_printf(p->stream, "/Height %d\n", height);
+      pdf_printf(p->stream, "/Width %d\n", width);
+      pdf_printf(p->stream, "/SMask %d 0 R\n", mask_id);
+      pdf_printf(p->stream, "/Length %d\n", length * 3);
+      pdf_enddict(p);
+
+      pdf_stream(p);
+      for (i = 0; i < length; i++)
+        {
+          red = (*rgba & 0xff);
+          green = (*rgba & 0xff00) >> 8;
+          blue = (*rgba & 0xff0000) >> 16;
+          rgba++;
+          data[0] = (Byte) red;
+          data[1] = (Byte) green;
+          data[2] = (Byte) blue;
+          pdf_memcpy(p->stream, (char *) data, 3);
+        }
+      pdf_printf(p->stream, "\n");
+      pdf_endstream(p);
+      pdf_endobj(p);
     }
 
   start_xref = p->stream->length;
@@ -706,9 +830,9 @@ void pdf_text_ex(PDF *p, double xorg, double yorg, char *text)
   s = sin(rad);
 
   pdf_printf(p->content,
-	     "BT\n/F%d %d Tf\n%s %s %s %s %.2f %.2f Tm\n(%s) Tj\nET\n",
-	     p->font, p->pt, pdf_double(c), pdf_double(s), pdf_double(-s),
-	     pdf_double(c), xorg, yorg, text);
+             "BT\n/F%d %d Tf\n%s %s %s %s %.2f %.2f Tm\n(%s) Tj\nET\n",
+             p->font, p->pt, pdf_double(c), pdf_double(s), pdf_double(-s),
+             pdf_double(c), xorg, yorg, text);
 }
 
 static
@@ -791,6 +915,8 @@ void init_colors(void)
       p->green[color] = green;
       p->blue[color] = blue;
     }
+  for (color = 0; color < 256; color++)
+    p->have_alpha[color] = 0;
 }
 
 static
@@ -804,11 +930,11 @@ void create_patterns(void)
       pattern = i;
       gks_inq_pattern_array(pattern, parray);
       for (j = 0, k = 1; j < 16; j += 2)
-	{
-	  sprintf(bitmap[i] + j, "%02x", parray[k]);
-	  if (++k > *parray)
-	    k = 1;
-	}
+        {
+          sprintf(bitmap[i] + j, "%02x", parray[k]);
+          if (++k > *parray)
+            k = 1;
+        }
       bitmap[i][16] = '\0';
       p->have_pattern[i] = 0;
     }
@@ -833,6 +959,7 @@ void open_ws(int fd, int wstype)
   p->lastx = p->lasty = -1;
 
   p->color = p->fillcolor = -1;
+  p->alpha = 0;
   p->ltype = -999; p->lwidth = -1.0;
   p->font = 1; p->size = 24; p->angle = 0;
   p->pt = nint(p->size / capheights[0]);
@@ -864,10 +991,10 @@ void set_color(int color)
   if (color < MAX_COLOR)
     {
       if (p->color != color)
-	{
-	  pdf_setrgbcolor(p, p->red[color], p->green[color], p->blue[color]);
-	  p->color = color;
-	}
+        {
+          pdf_setrgbcolor(p, p->red[color], p->green[color], p->blue[color]);
+          p->color = color;
+        }
     }
 }
 
@@ -877,11 +1004,19 @@ void set_fillcolor(int color)
   if (color < MAX_COLOR)
     {
       if (p->fillcolor != color)
-	{
-	  pdf_setfillcolor(p, p->red[color], p->green[color], p->blue[color]);
-	  p->fillcolor = color;
-	}
+        {
+          pdf_setfillcolor(p, p->red[color], p->green[color], p->blue[color]);
+          p->fillcolor = color;
+        }
     }
+}
+
+static
+void set_transparency(int alpha)
+{
+  pdf_setalpha(p, alpha);
+  p->alpha = alpha;
+  p->have_alpha[alpha] = 1;
 }
 
 static
@@ -892,6 +1027,7 @@ void begin_page(void)
   p->empty = 0;
 
   p->color = p->fillcolor = -1;
+  p->alpha = 0;
   set_color(1);
   set_fillcolor(1);
 }
@@ -976,9 +1112,9 @@ void line_routine(int n, double *px, double *py, int ltype, int tnr)
       NDC_to_DC(x, y, xdev, ydev);
 
       if (i == 0)
-	pdf_moveto(p, xdev, ydev);
+        pdf_moveto(p, xdev, ydev);
       else
-	pdf_lineto(p, xdev, ydev);
+        pdf_lineto(p, xdev, ydev);
     }
 
   p->stroke = 1;
@@ -1024,6 +1160,7 @@ void polyline(int n, double *px, double *py)
 
   set_linetype(ln_type, ln_width);
   set_linewidth(ln_width);
+  set_transparency(p->alpha);
   set_color(ln_color);
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
@@ -1040,79 +1177,79 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
   static int marker[26][57] =
   {
-    { 5, 9, -4, 7, 4, 7, 7, 4, 7, -4,	/* omark */
-      4, -7, -4, -7, -7, -4, -7, 4, 
-      -4, 7,  3, 9, -4, 7, 4, 7, 7, 4, 
-      7, -4, 4, -7, -4, -7, -7, -4, 
-      -7, 4, -4, 7,  0 }, 
-    { 5, 13, -2, 8, 2, 8, 2, 2, 8, 2,	/* hollow plus */
-      8, -2, 2, -2, 2, -8, -2, -8, 
-      -2, -2, -8, -2, -8, 2, -2, 2, 
-      -2, 8,  3, 13, -2, 8, 2, 8, 
-      2, 2, 8, 2, 8, -2, 2, -2, 2, -8, 
-      -2, -8, -2, -2, -8, -2, -8, 2, 
-      -2, 2, -2, 8,  0 }, 
-    { 4, 4, -8, 0, 4, 7, 4, -7,		/* solid triangle right */
-      -8, 0,  0 }, 
-    { 4, 4, 8, 0, -4, -7, -4, 7,	/* solid triangle left */
-      8, 0,  0 }, 
-    { 5, 4, 0, 8, 7, -4, -7, -4, 0, 8,	/* triangle up down */
-      5, 4, 0, -8, -7, 4, 7, 4, 0, -8, 
-      3, 4, 0, 8, 7, -4, -7, -4, 0, 8, 
-      3, 4, 0, -8, -7, 4, 7, 4, 0, -8, 
-      0 }, 
-    { 4, 11, 0, 9, 2, 2, 9, 3, 3, -1,	/* solid star */
-      6, -8, 0, -3, -6, -8, -3, -1, 
-      -9, 3, -2, 2, 0, 9,  0 }, 
-    { 5, 11, 0, 9, 2, 2, 9, 3, 3, -1,	/* hollow star */
-      6, -8, 0, -3, -6, -8, -3, -1, 
-      -9, 3, -2, 2, 0, 9, 
-      3, 11, 0, 9, 2, 2, 9, 3, 3, -1, 
-      6, -8, 0, -3, -6, -8, -3, -1, 
-      -9, 3, -2, 2, 0, 9,  0 }, 
-    { 4, 5, 0, 9, 9, 0, 0, -9, -9, 0,	/* solid diamond */
-      0, 9,  0 }, 
-    { 5, 5, 0, 9, 9, 0, 0, -9, -9, 0,	/* hollow diamond */
-      0, 9,  3, 5, 0, 9, 9, 0, 0, -9, 
-      -9, 0, 0, 9,  0 }, 
+    { 5, 9, -4, 7, 4, 7, 7, 4, 7, -4,   /* omark */
+      4, -7, -4, -7, -7, -4, -7, 4,
+      -4, 7,  3, 9, -4, 7, 4, 7, 7, 4,
+      7, -4, 4, -7, -4, -7, -7, -4,
+      -7, 4, -4, 7,  0 },
+    { 5, 13, -2, 8, 2, 8, 2, 2, 8, 2,   /* hollow plus */
+      8, -2, 2, -2, 2, -8, -2, -8,
+      -2, -2, -8, -2, -8, 2, -2, 2,
+      -2, 8,  3, 13, -2, 8, 2, 8,
+      2, 2, 8, 2, 8, -2, 2, -2, 2, -8,
+      -2, -8, -2, -2, -8, -2, -8, 2,
+      -2, 2, -2, 8,  0 },
+    { 4, 4, -8, 0, 4, 7, 4, -7,         /* solid triangle right */
+      -8, 0,  0 },
+    { 4, 4, 8, 0, -4, -7, -4, 7,        /* solid triangle left */
+      8, 0,  0 },
+    { 5, 4, 0, 8, 7, -4, -7, -4, 0, 8,  /* triangle up down */
+      5, 4, 0, -8, -7, 4, 7, 4, 0, -8,
+      3, 4, 0, 8, 7, -4, -7, -4, 0, 8,
+      3, 4, 0, -8, -7, 4, 7, 4, 0, -8,
+      0 },
+    { 4, 11, 0, 9, 2, 2, 9, 3, 3, -1,   /* solid star */
+      6, -8, 0, -3, -6, -8, -3, -1,
+      -9, 3, -2, 2, 0, 9,  0 },
+    { 5, 11, 0, 9, 2, 2, 9, 3, 3, -1,   /* hollow star */
+      6, -8, 0, -3, -6, -8, -3, -1,
+      -9, 3, -2, 2, 0, 9,
+      3, 11, 0, 9, 2, 2, 9, 3, 3, -1,
+      6, -8, 0, -3, -6, -8, -3, -1,
+      -9, 3, -2, 2, 0, 9,  0 },
+    { 4, 5, 0, 9, 9, 0, 0, -9, -9, 0,   /* solid diamond */
+      0, 9,  0 },
+    { 5, 5, 0, 9, 9, 0, 0, -9, -9, 0,   /* hollow diamond */
+      0, 9,  3, 5, 0, 9, 9, 0, 0, -9,
+      -9, 0, 0, 9,  0 },
     { 4, 5, 9, 9, -9, -9, 9, -9, -9, 9, /* solid hourglass */
-      9, 9,  0 }, 
+      9, 9,  0 },
     { 5, 5, 9, 9, -9, -9, 9, -9, -9, 9, /* hollow hourglass */
-      9, 9,  3, 5, 9, 9, -9, -9, 9, -9, 
-      -9, 9, 9, 9,  0 }, 
+      9, 9,  3, 5, 9, 9, -9, -9, 9, -9,
+      -9, 9, 9, 9,  0 },
     { 4, 5, 9, 9, 9, -9, -9, 9, -9, -9, /* solid bowtie */
-      9, 9,  0 }, 
+      9, 9,  0 },
     { 5, 5, 9, 9, 9, -9, -9, 9, -9, -9, /* hollow bowtie */
-      9, 9,  3, 5, 9, 9, 9, -9, -9, 9, 
-      -9, -9, 9, 9,  0 }, 
+      9, 9,  3, 5, 9, 9, 9, -9, -9, 9,
+      -9, -9, 9, 9,  0 },
     { 4, 5, 9, 9, 9, -9, -9, -9, -9, 9, /* solid square */
-      9, 9,  0 }, 
+      9, 9,  0 },
     { 5, 5, 9, 9, 9, -9, -9, -9, -9, 9, /* hollow square */
-      9, 9,  3, 5, 9, 9, 9, -9, -9, -9, 
-      -9, 9, 9, 9,  0 }, 
-    { 4, 4, -9, 9, 9, 9, 0, -9, -9, 9,	/* solid triangle down */
-      0 }, 
-    { 5, 4, -9, 9, 9, 9, 0, -9, -9, 9,	/* hollow triangle down */
-      3, 4, -9, 9, 9, 9, 0, -9, -9, 9, 
-      0 }, 
-    { 4, 4, 0, 9, 9, -9, -9, -9, 0, 9,	/* solid triangle up */
-      0 }, 
-    { 5, 4, 0, 9, 9, -9, -9, -9, 0, 9,	/* hollow triangle up */
+      9, 9,  3, 5, 9, 9, 9, -9, -9, -9,
+      -9, 9, 9, 9,  0 },
+    { 4, 4, -9, 9, 9, 9, 0, -9, -9, 9,  /* solid triangle down */
+      0 },
+    { 5, 4, -9, 9, 9, 9, 0, -9, -9, 9,  /* hollow triangle down */
+      3, 4, -9, 9, 9, 9, 0, -9, -9, 9,
+      0 },
+    { 4, 4, 0, 9, 9, -9, -9, -9, 0, 9,  /* solid triangle up */
+      0 },
+    { 5, 4, 0, 9, 9, -9, -9, -9, 0, 9,  /* hollow triangle up */
       3, 4, 0, 9, 9, -9, -9, -9, 0, 9,
-      0 }, 
-    { 7,  0 },				/* solid circle */
-    { 0 },				/* not used */
-    { 1,  0 },				/* dot */
-    { 2,  0, 0, 0, 9,  2, 0, 0, 9, 0,	/* plus */
-      2, 0, 0, 0, -9,  2, 0, 0, -9, 0,	
-      0 }, 
-    { 2, 0, 0, 0, 9,  2, 0, 0, 9, 3,	/* asterisk */
-      2, 0, 0, 6, -9,  2, 0, 0, -6, -9,	 
+      0 },
+    { 7,  0 },                          /* solid circle */
+    { 0 },                              /* not used */
+    { 1,  0 },                          /* dot */
+    { 2,  0, 0, 0, 9,  2, 0, 0, 9, 0,   /* plus */
+      2, 0, 0, 0, -9,  2, 0, 0, -9, 0,
+      0 },
+    { 2, 0, 0, 0, 9,  2, 0, 0, 9, 3,    /* asterisk */
+      2, 0, 0, 6, -9,  2, 0, 0, -6, -9,
       2, 0, 0, -9, 3,
-      0 }, 
-    { 8,  6,  0 },			/* circle */
-    { 2, 0, 0, 9, 9,  2, 0, 0, 9, -9,	/* diagonal cross */
-      2, 0, 0, -9, -9,	2, 0, 0, -9, 9, 
+      0 },
+    { 8,  6,  0 },                      /* circle */
+    { 2, 0, 0, 9, 9,  2, 0, 0, 9, -9,   /* diagonal cross */
+      2, 0, 0, -9, -9,  2, 0, 0, -9, 9,
       0 }
   };
 
@@ -1142,112 +1279,112 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
   NDC_to_DC(xn, yn, x, y);
 
-  pc = 0;    
+  pc = 0;
   mtype = (r > 0) ? mtype + 20 : 21;
 
-  do 
+  do
   {
     op = marker[mtype][pc];
     switch (op)
     {
       case 1: /* point */
-	pdf_moveto(p, x, y);
-	pdf_lineto(p, x, y);
-	pdf_stroke(p);
-	break;
+        pdf_moveto(p, x, y);
+        pdf_lineto(p, x, y);
+        pdf_stroke(p);
+        break;
 
       case 2: /* line */
-	for (i = 0; i < 2; i++)
-	{
-	  xr =	scale * marker[mtype][pc + 2 * i + 1];
-	  yr = -scale * marker[mtype][pc + 2 * i + 2];
-	  seg_xform_rel(&xr, &yr);
-	  if (i == 0)
-	    pdf_moveto(p, x - xr, y - yr);
-	  else
-	    pdf_lineto(p, x - xr, y - yr);
-	}
-	pdf_stroke(p);
-	pc += 4;
-	break;
+        for (i = 0; i < 2; i++)
+        {
+          xr =  scale * marker[mtype][pc + 2 * i + 1];
+          yr = -scale * marker[mtype][pc + 2 * i + 2];
+          seg_xform_rel(&xr, &yr);
+          if (i == 0)
+            pdf_moveto(p, x - xr, y - yr);
+          else
+            pdf_lineto(p, x - xr, y - yr);
+        }
+        pdf_stroke(p);
+        pc += 4;
+        break;
 
       case 3: /* polyline */
-	for (i = 0; i < marker[mtype][pc + 1]; i++)
-	{
-	  xr =	scale * marker[mtype][pc + 2 + 2 * i];
-	  yr = -scale * marker[mtype][pc + 3 + 2 * i];
-	  seg_xform_rel(&xr, &yr);
-	  if (i == 0)
-	    pdf_moveto(p, x - xr, y - yr);
-	  else
-	    pdf_lineto(p, x - xr, y - yr);
-	}
-	pdf_stroke(p);
-	pc += 1 + 2 * marker[mtype][pc + 1];
-	break;
+        for (i = 0; i < marker[mtype][pc + 1]; i++)
+        {
+          xr =  scale * marker[mtype][pc + 2 + 2 * i];
+          yr = -scale * marker[mtype][pc + 3 + 2 * i];
+          seg_xform_rel(&xr, &yr);
+          if (i == 0)
+            pdf_moveto(p, x - xr, y - yr);
+          else
+            pdf_lineto(p, x - xr, y - yr);
+        }
+        pdf_stroke(p);
+        pc += 1 + 2 * marker[mtype][pc + 1];
+        break;
 
       case 4: /* filled polygon */
       case 5: /* hollow polygon */
-	if (op == 5)
-	  set_fillcolor(0);
-	for (i = 0; i < marker[mtype][pc + 1]; i++)
-	{
-	  xr =	scale * marker[mtype][pc + 2 + 2 * i];
-	  yr = -scale * marker[mtype][pc + 3 + 2 * i];
-	  seg_xform_rel(&xr, &yr);
-	  if (i == 0)
-	    pdf_moveto(p, x - xr, y - yr);
-	  else
-	    pdf_lineto(p, x - xr, y - yr);
-	}
-	pdf_eofill(p);
-	pc += 1 + 2 * marker[mtype][pc + 1];
-	if (op == 5)
-	  set_fillcolor(mcolor);
-	break;
+        if (op == 5)
+          set_fillcolor(0);
+        for (i = 0; i < marker[mtype][pc + 1]; i++)
+        {
+          xr =  scale * marker[mtype][pc + 2 + 2 * i];
+          yr = -scale * marker[mtype][pc + 3 + 2 * i];
+          seg_xform_rel(&xr, &yr);
+          if (i == 0)
+            pdf_moveto(p, x - xr, y - yr);
+          else
+            pdf_lineto(p, x - xr, y - yr);
+        }
+        pdf_eofill(p);
+        pc += 1 + 2 * marker[mtype][pc + 1];
+        if (op == 5)
+          set_fillcolor(mcolor);
+        break;
 
       case 6: /* arc */
-	xr =  0;
-	yr =  -r;
-	seg_xform_rel(&xr, &yr);
-	pdf_moveto(p, x - xr, y - yr);
-	for (curve = 0; curve < 4; curve++)
-	{
-	  for (i = 0; i < 3; i++)
-	  {
-	    xr = r * cx[curve][i];
-	    yr = r * cy[curve][i];
-	    seg_xform_rel(&xr, &yr);
-	    pdf_point(p, x - xr, y - yr);
-	  }
-	  pdf_curveto(p);	 
-	}
-	pdf_stroke(p);
-	break;
+        xr =  0;
+        yr =  -r;
+        seg_xform_rel(&xr, &yr);
+        pdf_moveto(p, x - xr, y - yr);
+        for (curve = 0; curve < 4; curve++)
+        {
+          for (i = 0; i < 3; i++)
+          {
+            xr = r * cx[curve][i];
+            yr = r * cy[curve][i];
+            seg_xform_rel(&xr, &yr);
+            pdf_point(p, x - xr, y - yr);
+          }
+          pdf_curveto(p);
+        }
+        pdf_stroke(p);
+        break;
 
       case 7: /* filled arc */
       case 8: /* hollow arc */
-	if (op == 8)
-	  set_fillcolor(0);
-	xr =  0;
-	yr =  -r;
-	seg_xform_rel(&xr, &yr);
-	pdf_moveto(p, x - xr, y - yr);
-	for (curve = 0; curve < 4; curve++)
-	{
-	  for (i = 0; i < 3; i++)
-	  {
-	    xr = r * cx[curve][i];
-	    yr = r * cy[curve][i];
-	    seg_xform_rel(&xr, &yr);
-	    pdf_point(p, x - xr, y - yr);
-	  }
-	  pdf_curveto(p);	 
-	}
-	pdf_eofill(p);
-	if (op == 8)
-	  set_fillcolor(mcolor);
-	break;
+        if (op == 8)
+          set_fillcolor(0);
+        xr =  0;
+        yr =  -r;
+        seg_xform_rel(&xr, &yr);
+        pdf_moveto(p, x - xr, y - yr);
+        for (curve = 0; curve < 4; curve++)
+        {
+          for (i = 0; i < 3; i++)
+          {
+            xr = r * cx[curve][i];
+            yr = r * cy[curve][i];
+            seg_xform_rel(&xr, &yr);
+            pdf_point(p, x - xr, y - yr);
+          }
+          pdf_curveto(p);
+        }
+        pdf_eofill(p);
+        if (op == 8)
+          set_fillcolor(mcolor);
+        break;
     }
     pc++;
   }
@@ -1256,7 +1393,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
 static
 void marker_routine(int n, double *px, double *py, int mtype, double mscale,
-		    int mcolor)
+                    int mcolor)
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
@@ -1268,12 +1405,12 @@ void marker_routine(int n, double *px, double *py, int mtype, double mscale,
       seg_xform(&x, &y);
 
       if (gkss->clip == GKS_K_CLIP)
-	draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
+        draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
       else
-	draw = 1;
+        draw = 1;
 
       if (draw)
-	draw_marker(x, y, mtype, mscale, mcolor);
+        draw_marker(x, y, mtype, mscale, mcolor);
     }
 }
 
@@ -1289,6 +1426,7 @@ void polymarker(int n, double *px, double *py)
 
   set_linetype(GKS_K_LINETYPE_SOLID, mk_size / 2);
   set_linewidth(mk_size / 2);
+  set_transparency(p->alpha);
   set_color(mk_color);
   set_fillcolor(mk_color);
 
@@ -1359,11 +1497,11 @@ void text_routine(double x, double y, int nchars, char *chars)
     {
       width = 0;
       for (i = 0; i < nchars; i++)
-	{
-	  ch = chars[i];
-	  gks_lookup_afm(tx_font, ch, &buffer);
-	  width += buffer.right - buffer.left;
-	}
+        {
+          ch = chars[i];
+          gks_lookup_afm(tx_font, ch, &buffer);
+          width += buffer.right - buffer.left;
+        }
       width = (int) (width * p->size / buffer.size);
 
       phi = p->angle * M_PI / 180;
@@ -1381,7 +1519,7 @@ void text_routine(double x, double y, int nchars, char *chars)
     {
       ch = chars[i];
       if (ch == '(' || ch == ')' || ch == '\\')
-	*cp++ = '\\';
+        *cp++ = '\\';
       *cp++ = ch;
     }
   *cp = '\0';
@@ -1439,30 +1577,30 @@ void fill_routine(int n, double *px, double *py, int tnr)
     {
       pdf_printf(p->content, "/Pattern cs/P%d scn\n", p->pattern);
       for (i = 0; i < n; i++)
-	{
-	  WC_to_NDC(px[i], py[i], tnr, x, y);
-	  seg_xform(&x, &y);
-	  NDC_to_DC(x, y, xdev, ydev);
+        {
+          WC_to_NDC(px[i], py[i], tnr, x, y);
+          seg_xform(&x, &y);
+          NDC_to_DC(x, y, xdev, ydev);
 
-	  if (i == 0)
-	    pdf_moveto(p, xdev, ydev);
-	  else
-	    pdf_lineto(p, xdev, ydev);
-	}
+          if (i == 0)
+            pdf_moveto(p, xdev, ydev);
+          else
+            pdf_lineto(p, xdev, ydev);
+        }
       pdf_printf(p->content, "f/Pattern cs/P0 scn\n");
 
       if (!p->have_pattern[p->pattern])
-	{
-	  p->have_pattern[p->pattern] = 1;
-	  p->pattern_id[p->pattern][0] = pdf_alloc_id(p);
-	  p->pattern_id[p->pattern][1] = pdf_alloc_id(p);
-	}
+        {
+          p->have_pattern[p->pattern] = 1;
+          p->pattern_id[p->pattern][0] = pdf_alloc_id(p);
+          p->pattern_id[p->pattern][1] = pdf_alloc_id(p);
+        }
       if (!p->have_pattern[0])
-	{
-	  p->have_pattern[0] = 1;
-	  p->pattern_id[0][0] = pdf_alloc_id(p);
-	  p->pattern_id[0][1] = pdf_alloc_id(p);
-	}
+        {
+          p->have_pattern[0] = 1;
+          p->pattern_id[0][0] = pdf_alloc_id(p);
+          p->pattern_id[0][1] = pdf_alloc_id(p);
+        }
     }
 }
 
@@ -1480,25 +1618,28 @@ void fillarea(int n, double *px, double *py)
     {
       set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
       set_linewidth(1.0);
+      set_transparency(p->alpha);
       set_color(fl_color);
 
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
+      set_transparency(p->alpha);
       set_fillcolor(fl_color);
 
       fill_routine(n, px, py, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
-	   fl_inter == GKS_K_INTSTYLE_HATCH)
+           fl_inter == GKS_K_INTSTYLE_HATCH)
     {
+      set_transparency(p->alpha);
       set_fillcolor(fl_color);
 
       if (fl_inter == GKS_K_INTSTYLE_HATCH)
-	fl_style += HATCH_STYLE;
+        fl_style += HATCH_STYLE;
       if (fl_style >= PATTERNS)
-	fl_style = 1;
+        fl_style = 1;
       p->pattern = fl_style;
 
       fill_routine(n, px, py, gkss->cntnr);
@@ -1507,15 +1648,15 @@ void fillarea(int n, double *px, double *py)
 
 static
 void cellarray(double xmin, double xmax, double ymin, double ymax,
-	       int dx, int dy, int dimx, int *colia, int true_color)
+               int dx, int dy, int dimx, int *colia, int true_color)
 {
   double x1, y1, x2, y2;
   int x, y, width, height;
   double rx1, rx2, ry1, ry2;
   register int i, j, ix, iy, color;
+  PDF_image *image;
   int swapx, swapy, count, chars_per_line;
-  unsigned char data[4];
-  int rgba, red, green, blue, alpha;
+  unsigned char data[3];
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -1536,53 +1677,61 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   pdf_save(p);
   set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
   pdf_printf(p->content, "%d 0 0 %d %d %d cm\n", width, height, x, y);
-  pdf_printf(p->content, "BI\n");
-  pdf_printf(p->content, "/W %d\n", dx);
-  pdf_printf(p->content, "/H %d\n", dy);
-  pdf_printf(p->content, "/BPC %d\n", 8);
-  pdf_printf(p->content, "/CS /RGB\n");
-  pdf_printf(p->content, "/F /AHx\n");
-  pdf_printf(p->content, "ID ");
 
-  chars_per_line = 0;
-  for (j = 0; j < dy; j++)
+  if (true_color)
     {
-      iy = swapy ? dy - 1 - j : j;
-      for (i = 0; i < dx; i++)
-	{
-	  ix = swapx ? dx - 1 - i : i;
-	  if (!true_color)
-	    {
-	      color = colia[iy * dimx + ix];
-	      data[0] = (Byte) (p->red[color] * 255);
-	      data[1] = (Byte) (p->green[color] * 255);
-	      data[2] = (Byte) (p->blue[color] * 255);
-	    }
-	  else
-	    {
-	      rgba = colia[iy * dimx + ix];
-	      red = (rgba & 0xff);
-	      green = (rgba & 0xff00) >> 8;
-	      blue = (rgba & 0xff0000) >> 16;
-	      alpha = (rgba & 0xff000000) >> 24;
-	      data[0] = (Byte) red;
-	      data[1] = (Byte) green;
-	      data[2] = (Byte) blue;
-	      data[3] = (Byte) alpha;
-	    }
-	  for (count = 0; count < 3; count++)
-	    {
-	      pdf_printf(p->content, "%02x", data[count]);
-	      if ((chars_per_line += 2) >= 64)
-		{
-		  pdf_printf(p->content, "\n");
-		  chars_per_line = 0;
-		}
-	    }
-	}
+      image = pdf_image(p, dx, dy);
+      p->image[p->images] = image;
+
+      for (j = 0; j < dy; j++)
+        {
+          iy = swapy ? dy - 1 - j : j;
+          for (i = 0; i < dx; i++)
+            {
+              ix = swapx ? dx - 1 - i : i;
+              image->data[j * dx + i] = colia[iy * dimx + ix];
+            }
+        }
+
+      pdf_printf(p->content, "/Im%d Do\n", p->images);
+      p->page[p->current_page]->last_image = p->images;
+    }
+  else
+    {
+      pdf_printf(p->content, "BI\n");
+      pdf_printf(p->content, "/W %d\n", dx);
+      pdf_printf(p->content, "/H %d\n", dy);
+      pdf_printf(p->content, "/BPC %d\n", 8);
+      pdf_printf(p->content, "/CS /RGB\n");
+      pdf_printf(p->content, "/F /AHx\n");
+      pdf_printf(p->content, "ID ");
+
+      chars_per_line = 0;
+      for (j = 0; j < dy; j++)
+        {
+          iy = swapy ? dy - 1 - j : j;
+          for (i = 0; i < dx; i++)
+            {
+              ix = swapx ? dx - 1 - i : i;
+              color = colia[iy * dimx + ix];
+              data[0] = (Byte) (p->red[color] * 255);
+              data[1] = (Byte) (p->green[color] * 255);
+              data[2] = (Byte) (p->blue[color] * 255);
+              for (count = 0; count < 3; count++)
+                {
+                  pdf_printf(p->content, "%02x", data[count]);
+                  if ((chars_per_line += 2) >= 64)
+                    {
+                      pdf_printf(p->content, "\n");
+                      chars_per_line = 0;
+                    }
+                }
+            }
+        }
+
+      pdf_printf(p->content, ">EI\n");
     }
 
-  pdf_printf(p->content, ">EI\n");
   pdf_restore(p);
 }
 
@@ -1633,57 +1782,57 @@ void gks_drv_pdf(
     case 12:
 /* polyline */
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (p->empty)
-	    begin_page();
-	  polyline(ia[0], r1, r2);
-	}
+        {
+          if (p->empty)
+            begin_page();
+          polyline(ia[0], r1, r2);
+        }
       break;
 
     case 13:
 /* polymarker */
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (p->empty)
-	    begin_page();
-	  polymarker(ia[0], r1, r2);
-	}
+        {
+          if (p->empty)
+            begin_page();
+          polymarker(ia[0], r1, r2);
+        }
       break;
 
     case 14:
 /* text */
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  int nchars = strlen(chars);
-	  if (nchars > 0)
-	    {
-	      if (p->empty)
-		begin_page();
-	      text(r1[0], r2[0], nchars, chars);
-	    }
-	}
+        {
+          int nchars = strlen(chars);
+          if (nchars > 0)
+            {
+              if (p->empty)
+                begin_page();
+              text(r1[0], r2[0], nchars, chars);
+            }
+        }
       break;
 
     case 15:
 /* fill area */
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (p->empty)
-	    begin_page();
-	  fillarea(ia[0], r1, r2);
-	}
+        {
+          if (p->empty)
+            begin_page();
+          fillarea(ia[0], r1, r2);
+        }
       break;
 
     case 16:
     case DRAW_IMAGE:
 /* cell array */
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  int true_color = fctid == DRAW_IMAGE;
-	  if (p->empty)
-	    begin_page();
-	  cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
-	}
+        {
+          int true_color = fctid == DRAW_IMAGE;
+          if (p->empty)
+            begin_page();
+          cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+        }
       break;
 
     case 48:
@@ -1711,7 +1860,7 @@ void gks_drv_pdf(
       set_xform();
       init_norm_xform();
       if (!p->empty)
-	set_clip(p->window);
+        set_clip(p->window);
       break;
 
     case 55:
@@ -1723,6 +1872,11 @@ void gks_drv_pdf(
 
       set_xform();
       init_norm_xform();
+      break;
+
+    case 203:
+/* set transparency */
+      p->alpha = (int) (r1[0] * 255.0);
       break;
 
     default:
