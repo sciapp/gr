@@ -899,6 +899,7 @@ void set_color_rep(int color, double red, double green, double blue)
       p->red[color] = red;
       p->green[color] = green;
       p->blue[color] = blue;
+      p->color = p->fillcolor = -1;
     }
 }
 
@@ -959,7 +960,7 @@ void open_ws(int fd, int wstype)
   p->lastx = p->lasty = -1;
 
   p->color = p->fillcolor = -1;
-  p->alpha = 0;
+  p->alpha = 0xff;
   p->ltype = -999; p->lwidth = -1.0;
   p->font = 1; p->size = 24; p->angle = 0;
   p->pt = nint(p->size / capheights[0]);
@@ -1025,11 +1026,6 @@ void begin_page(void)
   pdf_page(p, p->width, p->height);
   set_clip(p->window);
   p->empty = 0;
-
-  p->color = p->fillcolor = -1;
-  p->alpha = 0;
-  set_color(1);
-  set_fillcolor(1);
 }
 
 static
@@ -1542,6 +1538,7 @@ void text(double px, double py, int nchars, char *chars)
 
   set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
   set_linewidth(1.0);
+  set_transparency(p->alpha);
   set_color(tx_color);
   set_fillcolor(tx_color);
 
@@ -1657,6 +1654,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   PDF_image *image;
   int swapx, swapy, count, chars_per_line;
   unsigned char data[3];
+  int have_alpha;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -1678,7 +1676,19 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
   pdf_printf(p->content, "%d 0 0 %d %d %d cm\n", width, height, x, y);
 
+  have_alpha = 0;
   if (true_color)
+    {
+      for (j = 0; j < dy; j++)
+        for (i = 0; i < dx; i++)
+          if ((colia[j * dimx + i] & 0xff000000) != 0xff000000)
+            {
+              have_alpha = 1;
+              break;
+            }
+    }
+
+  if (true_color && have_alpha)
     {
       image = pdf_image(p, dx, dy);
       p->image[p->images] = image;
@@ -1714,9 +1724,18 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
             {
               ix = swapx ? dx - 1 - i : i;
               color = colia[iy * dimx + ix];
-              data[0] = (Byte) (p->red[color] * 255);
-              data[1] = (Byte) (p->green[color] * 255);
-              data[2] = (Byte) (p->blue[color] * 255);
+              if (!true_color)
+                {
+                  data[0] = (Byte) (p->red[color]   * 255);
+                  data[1] = (Byte) (p->green[color] * 255);
+                  data[2] = (Byte) (p->blue[color]  * 255);
+                }
+              else
+                {
+                  data[0] = (Byte) ( color & 0xff           );
+                  data[1] = (Byte) ((color & 0xff00)   >>  8);
+                  data[2] = (Byte) ((color & 0xff0000) >> 16);
+                }
               for (count = 0; count < 3; count++)
                 {
                   pdf_printf(p->content, "%02x", data[count]);

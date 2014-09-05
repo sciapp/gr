@@ -118,8 +118,10 @@ class RendererGR(RendererBase):
             x, y = gr.wctondc(x, y)
             s = s.replace(u'\u2212', '-')
             fontsize = prop.get_size_in_points()
-            rgb = gc.get_rgb()[:3]
-            color = gr.inqcolorfromrgb(rgb[0], rgb[1], rgb[2])
+            rgba = gc.get_rgb()[:4]
+            color = gr.inqcolorfromrgb(rgba[0], rgba[1], rgba[2])
+            gr.settransparency(rgba[3])
+            gr.setcolorrep(color, rgba[0], rgba[1], rgba[2])
             gr.setcharheight(fontsize * 0.0013)
             gr.settextcolorind(color)
             if angle != 0:

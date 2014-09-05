@@ -1168,6 +1168,7 @@ void set_color_rep(int color, double red, double green, double blue)
       p->red[color] = red;
       p->green[color] = green;
       p->blue[color] = blue;
+      p->color = -1;
     }
 }
 
