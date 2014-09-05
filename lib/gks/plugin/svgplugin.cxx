@@ -123,7 +123,7 @@ typedef struct ws_state_list_t
   char rgb[MAX_COLOR][7];
   int width, height;
   int color, linewidth;
-  double alpha, angle;
+  double angle;
   int family, capheight;
   int pattern, have_pattern[PATTERNS];
   SVG_stream *stream;
@@ -133,6 +133,7 @@ typedef struct ws_state_list_t
   int cxl[MAX_TNR], cxr[MAX_TNR], cyb[MAX_TNR], cyt[MAX_TNR];
   int cx[MAX_TNR], cy[MAX_TNR], cwidth[MAX_TNR], cheight[MAX_TNR];
   int clip_index, path_index, path_counter;
+  double alpha;
 }
 ws_state_list;
 
@@ -639,8 +640,8 @@ void stroke(void)
   int i;
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d)\" style=\""
-	     "stroke:#%s; stroke-width:%d; fill:none\" ",
-	     p->path_index, p->rgb[p->color], p->linewidth);
+	     "stroke:#%s; stroke-width:%d; stroke-opacity:%g; fill:none\" ",
+	     p->path_index, p->rgb[p->color], p->linewidth, p->alpha);
   svg_printf(p->stream, "points=\"\n  ");
   for (i = 0; i < p->npoints; i++)
     {
@@ -695,7 +696,8 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   NDC_to_DC(x, y, x0, y0);
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d)\" style=\""
-	     "stroke:#%s; fill:none\" ", p->path_index, p->rgb[p->color]);
+	     "stroke:#%s stroke-opacity:%g; fill:none\" ",
+             p->path_index, p->rgb[p->color], p->alpha);
   svg_printf(p->stream, "points=\"\n  %d,%d ", x0, y0);
 
   xim1 = x0;
@@ -809,7 +811,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
   if (p->pattern)
     svg_printf(p->stream, "\n  \" fill=\"url(#pattern%d)\"", p->pattern + 1);
   else
-    svg_printf(p->stream, "\n  \" fill=\"#%s\"", p->rgb[p->color]);
+    svg_printf(p->stream, "\n  \" fill=\"#%s\" fill-opacity=\"%g\"",
+               p->rgb[p->color], p->alpha);
   svg_printf(p->stream, "/>\n");
 }
 
@@ -963,8 +966,7 @@ void set_font(int font)
   WC_to_NDC_rel(gkss->chup[0], gkss->chup[1], gkss->cntnr, ux, uy);
   seg_xform_rel(&ux, &uy);
 
-  p->alpha = -atan2(ux, uy);
-  angle = p->alpha * 180 / M_PI;
+  angle = -atan2(ux, uy) * 180 / M_PI;
   if (angle < 0)
     angle += 360;
   p->angle = -angle;
@@ -1034,11 +1036,11 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
-  int red, green, blue;
+  int red, green, blue, alpha;
   register int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   png_byte bit_depth = 8;
-  png_byte color_type = PNG_COLOR_TYPE_RGB;
+  png_byte color_type = PNG_COLOR_TYPE_RGBA;
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep *row_pointers;
@@ -1071,7 +1073,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * height);
   for (j = 0; j < height; ++j)
     {
-      row_pointers[j] = (png_byte *) malloc(width * 3);
+      row_pointers[j] = (png_byte *) malloc(width * 4);
     }
   for (j = 0; j < height; j++)
     {
@@ -1081,7 +1083,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 	iy = dy - 1 - iy;
       for (i = 0; i < width; i++)
 	{
-	  png_byte *ptr = &(row[i * 3]);
+	  png_byte *ptr = &(row[i * 4]);
 	  ix = dx * i / width;
 	  if (swapx)
 	    ix = dx - 1 - ix;
@@ -1089,17 +1091,20 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 	    {
 	      ind = colia[iy * dimx + ix];
 	      sscanf(p->rgb[ind], "%02x%02x%02x", &red, &green, &blue);
+              alpha = 0xff;
 	    }
 	  else
 	    {
-	      rgb = colia[iy * dimx + ix];
-	      red = (rgb & 0xff);
+	      rgb   = colia[iy * dimx + ix];
+	      red   = (rgb & 0xff);
 	      green = (rgb & 0xff00) >> 8;
-	      blue = (rgb & 0xff0000) >> 16;
+	      blue  = (rgb & 0xff0000) >> 16;
+	      alpha = (rgb & 0xff000000) >> 24;
 	    }
 	  ptr[0] = red;
 	  ptr[1] = green;
 	  ptr[2] = blue;
+	  ptr[3] = alpha;
 	}
     }
 
@@ -1291,6 +1296,8 @@ void gks_svgplugin(
       p->page_counter = 0;
       p->offset = 0;
 
+      p->alpha = 1.0;
+
       set_xform();
       init_norm_xform();
       init_colors();
@@ -1430,6 +1437,11 @@ void gks_svgplugin(
       resize_window();
       set_xform();
       init_norm_xform();
+      break;
+
+    case 203:
+/* set transparency */
+      p->alpha = r1[0];
       break;
 
     default:
