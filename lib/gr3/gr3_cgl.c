@@ -25,7 +25,10 @@ int gr3_initGL_CGL_(void) {
     kCGLPFAAlphaSize, 8,
     kCGLPFADepthSize, 24,
     /*kCGLPFAOffScreen,*//* Using a PBuffer is hardware accelerated, so */
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     kCGLPFAPBuffer,    /* we want to use that. */
+#pragma clang diagnostic pop
     0, 0
   };
   gr3_log_("gr3_initGL_CGL_();");

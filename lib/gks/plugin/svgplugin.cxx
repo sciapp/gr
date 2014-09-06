@@ -80,8 +80,8 @@ DLLEXPORT void gks_svgplugin(
   yn = c[tnr] * (yw)
 
 #define NDC_to_DC(xn, yn, xd, yd) \
-  xd = (int) (p->a * (xn) + p->b); \
-  yd = (int) (p->c * (yn) + p->d)
+  xd = (p->a * (xn) + p->b); \
+  yd = (p->c * (yn) + p->d)
 
 #define CharXform(xrel, yrel, x, y) \
   x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
@@ -111,7 +111,7 @@ SVG_stream;
 
 typedef struct SVG_point_t
 {
-  int x, y;
+  double x, y;
 }
 SVG_point;
 
@@ -389,8 +389,8 @@ void resize_window(void)
 static
 void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
-  int r, x, y, i;
-  double scale, xr, yr;
+  int r, i;
+  double scale, x, y, xr, yr;
   int pc, op;
 
   static int marker[26][57] = {
@@ -490,8 +490,8 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 	{
 	case 1:		/* point */
 	  svg_printf(p->stream,
-		     "<line clip-path=\"url(#clip%02d)\" x1=\"%d\" y1=\"%d\" "
-		     "x2=\"%d\" y2=\"%d\" style=\"stroke:#%s;\"/>\n",
+		     "<line clip-path=\"url(#clip%02d)\" x1=\"%g\" y1=\"%g\" "
+		     "x2=\"%g\" y2=\"%g\" style=\"stroke:#%s;\"/>\n",
 		     p->path_index, x, y, x + 1, y, p->rgb[mcolor]);
 	  break;
 
@@ -504,11 +504,11 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 	      if (i == 0)
 		svg_printf(p->stream,
 			   "<line clip-path=\"url(#clip%02d)\" x1="
-			   "\"%d\" y1=\"%d\" ", p->path_index,
+			   "\"%g\" y1=\"%g\" ", p->path_index,
 			   (int) (x - xr), (int) (y - yr));
 	      else
 		svg_printf(p->stream,
-			   "x2=\"%d\" y2=\"%d\" style=\"stroke:#%s;\"/>\n",
+			   "x2=\"%g\" y2=\"%g\" style=\"stroke:#%s;\"/>\n",
 			   (int) (x - xr), (int) (y + yr), p->rgb[mcolor]);
 	    }
 	  pc += 4;
@@ -524,12 +524,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 	      xr = scale * marker[mtype][pc + 2 + 2 * i];
 	      yr = -scale * marker[mtype][pc + 3 + 2 * i];
 	      seg_xform_rel(&xr, &yr);
-	      if (i == 0)
-		svg_printf(p->stream, "%d,%d ", (int) (x - xr),
-			   (int) (y + yr));
-	      else
-		svg_printf(p->stream, "%d, %d ", (int) (x - xr),
-			   (int) (y + yr));
+	      svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
 	      if (!((i + 1) % 10))
 		{
 		  svg_printf(p->stream, "\n  ");
@@ -556,12 +551,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 	      xr = scale * marker[mtype][pc + 2 + 2 * i];
 	      yr = -scale * marker[mtype][pc + 3 + 2 * i];
 	      seg_xform_rel(&xr, &yr);
-	      if (i == 0)
-		svg_printf(p->stream, "%d,%d ", (int) (x - xr),
-			   (int) (y + yr));
-	      else
-		svg_printf(p->stream, "%d,%d ", (int) (x - xr),
-			   (int) (y + yr));
+	      svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
 	      if (!((i + 1) % 10))
 		{
 		  svg_printf(p->stream, "\n  ");
@@ -575,8 +565,8 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
 	case 6:		/* arc */
 	  svg_printf(p->stream,
-		     "<circle style=\"stroke:#%s;fill:none\" cx=\"%d\" cy=\""
-		     "%d\" r=\"%d\"/>\n", p->rgb[mcolor], x, y, r);
+		     "<circle style=\"stroke:#%s;fill:none\" cx=\"%g\" cy=\""
+		     "%g\" r=\"%d\"/>\n", p->rgb[mcolor], x, y, r);
 	  break;
 
 	case 7:		/* filled arc */
@@ -584,12 +574,12 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 	  if (op == 8)
 	    svg_printf(p->stream,
 		       "<circle clip-path=\"url(#clip%02d)\" style=\"fill:none;"
-		       "stroke:#%s\" cx=\"%d\" cy=\"%d\" r=\"%d\"/>\n",
+		       "stroke:#%s\" cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
 		       p->path_index, p->rgb[mcolor], x, y, r);
 	  else
 	    svg_printf(p->stream,
 		       "<circle clip-path=\"url(#clip%02d)\" style=\"fill:#%s;"
-		       "stroke:none\" cx=\"%d\" cy=\"%d\" r=\"%d\"/>\n",
+		       "stroke:none\" cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
 		       p->path_index, p->rgb[mcolor], x, y, r);
 	  break;
 	}
@@ -645,7 +635,7 @@ void stroke(void)
   svg_printf(p->stream, "points=\"\n  ");
   for (i = 0; i < p->npoints; i++)
     {
-      svg_printf(p->stream, "%d,%d ", p->points[i].x, p->points[i].y);
+      svg_printf(p->stream, "%g,%g ", p->points[i].x, p->points[i].y);
       if (!((i + 1) % 10))
 	{
 	  svg_printf(p->stream, "\n  ");
@@ -689,7 +679,8 @@ static
 void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y;
-  int i, x0, y0, xi, yi, xim1, yim1;
+  int i;
+  double x0, y0, xi, yi, xim1, yim1;
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   seg_xform(&x, &y);
@@ -698,7 +689,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d)\" style=\""
 	     "stroke:#%s stroke-opacity:%g; fill:none\" ",
              p->path_index, p->rgb[p->color], p->alpha);
-  svg_printf(p->stream, "points=\"\n  %d,%d ", x0, y0);
+  svg_printf(p->stream, "points=\"\n  %g,%g ", x0, y0);
 
   xim1 = x0;
   yim1 = y0;
@@ -710,7 +701,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
       if (i == 1 || xi != xim1 || yi != yim1)
 	{
-	  svg_printf(p->stream, "%d,%d ", xi, yi);
+	  svg_printf(p->stream, "%g,%g ", xi, yi);
 	  xim1 = xi;
 	  yim1 = yi;
 	}
@@ -720,7 +711,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 	}
     }
   if (linetype == 0)
-    svg_printf(p->stream, "%d,%d", x0, y0);
+    svg_printf(p->stream, "%g,%g", x0, y0);
   svg_printf(p->stream, "\n  \"/>\n");
 }
 
@@ -761,8 +752,7 @@ static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
   register int i, j;
-  double x, y;
-  int ix, iy;
+  double x, y, ix, iy;
   char *s, line[80];
 
   if (p->pattern && !p->have_pattern[p->pattern])
@@ -799,10 +789,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
       seg_xform(&x, &y);
       NDC_to_DC(x, y, ix, iy);
 
-      if (i == 0)
-	svg_printf(p->stream, "%d,%d ", ix, iy);
-      else
-	svg_printf(p->stream, "%d,%d ", ix, iy);
+      svg_printf(p->stream, "%g,%g ", ix, iy);
       if (!((i + 1) % 10))
 	{
 	  svg_printf(p->stream, "\n  ");

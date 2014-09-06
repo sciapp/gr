@@ -5790,7 +5790,10 @@ void latex2image(char *string, int pointSize, double *rgb,
       tmp = cache;
       temp = ".";
 #else
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
       tmp = tempnam(temp, NULL);
+#pragma clang diagnostic pop
 #endif
       sprintf(tex, "%s.tex", tmp);
       sprintf(dvi, "%s.dvi", tmp);

@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 from matplotlib.cbook import maxdict
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backend_bases import RendererBase, GraphicsContextBase,\
-    FigureManagerBase, FigureCanvasBase
+    FigureManagerBase, FigureCanvasBase, register_backend
 from matplotlib.path import Path
 from matplotlib.figure import Figure
 from matplotlib.mathtext import MathTextParser
@@ -29,15 +29,17 @@ class RendererGR(RendererBase):
 
     def __init__(self, dpi):
         self.dpi = dpi
+        self.width = 640.0 * dpi / 80
+        self.height = 480.0 * dpi / 80
         mwidth, mheight, width, height = gr.inqdspsize()
         if (width / (mwidth / 0.0256) < 150):
-            mwidth *= 640.0 / width
+            mwidth *= self.width / width
             gr.setwsviewport(0, mwidth, 0, mwidth * 0.75)
         else:
             gr.setwsviewport(0, 0.192, 0, 0.144)
         gr.setwswindow(0, 1, 0, 0.75)
         gr.setviewport(0, 1, 0, 0.75)
-        gr.setwindow(0, 640, 0, 480)
+        gr.setwindow(0, self.width, 0, self.height)
         self.mathtext_parser = MathTextParser('agg')
         self.texmanager = TexManager()
 
@@ -50,8 +52,8 @@ class RendererGR(RendererBase):
             x, y, w, h = bbox.bounds
             clrt = np.array([x, x + w, y, y + h])
         else:
-            clrt = np.array([0, 640, 0, 480])
-        gr.setviewport(*clrt/640.0)
+            clrt = np.array([0, self.width, 0, self.height])
+        gr.setviewport(*clrt/self.width)
         gr.setwindow(*clrt)
         if rgbFace is not None and len(points) > 2:
             color = gr.inqcolorfromrgb(rgbFace[0], rgbFace[1], rgbFace[2])
@@ -135,7 +137,7 @@ class RendererGR(RendererBase):
         return False
 
     def get_canvas_width_height(self):
-        return 640, 480
+        return self.width, self.height
 
     def get_text_width_height_descent(self, s, prop, ismath):
         if ismath == 'TeX':
@@ -202,6 +204,8 @@ class FigureCanvasGR(FigureCanvasBase):
     methods, creates the renderers, etc...
     """
 
+    register_backend('gr', 'backend_gr', 'GR File Format')
+
     def draw(self):
         """
         Draw the figure using the renderer
@@ -210,6 +214,11 @@ class FigureCanvasGR(FigureCanvasBase):
         renderer = RendererGR(self.figure.dpi)
         self.figure.draw(renderer)
         gr.updatews()
+
+    def print_gr(self, filename, *args, **kwargs):
+        gr.begingraphics(filename)
+        self.draw()
+        gr.endgraphics()
 
 
 class FigureManagerGR(FigureManagerBase):
