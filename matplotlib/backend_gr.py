@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+from matplotlib import __version__
 from matplotlib.cbook import maxdict
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backend_bases import RendererBase, GraphicsContextBase,\
@@ -32,7 +33,7 @@ class RendererGR(RendererBase):
         self.width = 640.0 * dpi / 80
         self.height = 480.0 * dpi / 80
         mwidth, mheight, width, height = gr.inqdspsize()
-        if (width / (mwidth / 0.0256) < 150):
+        if (width / (mwidth / 0.0256) < 200):
             mwidth *= self.width / width
             gr.setwsviewport(0, mwidth, 0, mwidth * 0.75)
         else:
@@ -204,7 +205,10 @@ class FigureCanvasGR(FigureCanvasBase):
     methods, creates the renderers, etc...
     """
 
-    register_backend('gr', 'backend_gr', 'GR File Format')
+    if __version__ >= '1.4':
+        register_backend('gr', 'backend_gr', 'GR File Format')
+    else:
+        register_backend('gr', 'backend_gr')
 
     def draw(self):
         """
