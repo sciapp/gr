@@ -253,6 +253,10 @@ class CoordConverter(object):
         self.setNDC(ndcX, ndcY)
         return self
 
+    def setWCforPlotAxes(self, x, y, axes):
+        self.setWC(x, y, axes.viewport, axes.getWindow())
+        return self
+
     def getDC(self):
         self._checkRaiseXY()
         return self._p
