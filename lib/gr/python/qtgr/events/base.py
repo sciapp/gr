@@ -21,10 +21,10 @@ except ImportError:
 # local library
 import gr
 import qtgr
-from gr.pygr import CoordConverter
+from gr.pygr import DeviceCoordConverter
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-02-26"
+__date__ = "2014-09-10"
 __version__ = "0.5.4"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
@@ -68,7 +68,7 @@ class MouseLocationEventMeta(EventMeta):
 
     def __init__(self, type, width, height, x, y, window=None):
         super(MouseLocationEventMeta, self).__init__(type)
-        self._coords = CoordConverter(width, height, window=window)
+        self._coords = DeviceCoordConverter(width, height, window=window)
         self._coords.setDC(x, y)
 
     def getWindow(self):

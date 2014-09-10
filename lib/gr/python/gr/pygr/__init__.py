@@ -17,7 +17,7 @@ import gr3
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
-__date__ = "2014-04-23"
+__date__ = "2014-09-10"
 __version__ = "0.5.4"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
@@ -192,17 +192,9 @@ class RegionOfInterest(object):
 
 class CoordConverter(object):
 
-    def __init__(self, width, height, sizex=None, sizey=None, window=None):
-        self._width, self._height, self._window = width, height, window
-        self._sizex, self._sizey = sizex, sizey
+    def __init__(self, sizex, sizey, window=None):
+        self._sizex, self._sizey, self._window = sizex, sizey, window
         self._p = None # always stored in NDC
-        if self._sizex is None and self._sizey is None:
-            if self._width > self._height:
-                self._sizex = 1.
-                self._sizey = float(self._height) / self._width
-            else:
-                self._sizex = float(self._width) / self._height
-                self._sizey = 1.
 
     def _checkRaiseXY(self):
         if self._p.x is None or self._p.y is None:
@@ -221,11 +213,6 @@ class CoordConverter(object):
             return list(self._window)
         else:
             return None
-
-    def setDC(self, x, y):
-        self._p = Point(float(x) / self._width * self._sizex,
-                        (1. - float(y) / self._height) * self._sizey)
-        return self
 
     def setNDC(self, x, y):
         self._p = Point(x, y)
@@ -257,11 +244,6 @@ class CoordConverter(object):
         self.setWC(x, y, axes.viewport, axes.getWindow())
         return self
 
-    def getDC(self):
-        self._checkRaiseXY()
-        return Point(self._p.x / self._sizex * self._width,
-                     (1. - self._p.y / self._sizey) * self._height)
-
     def getNDC(self):
         self._checkRaiseXY()
         return self._p
@@ -289,6 +271,31 @@ class CoordConverter(object):
         if scale & gr.OPTION_X_LOG:
             wcX = 10 ** wcX
         return Point(wcX, wcY)
+
+
+class DeviceCoordConverter(CoordConverter):
+
+    def __init__(self, width, height, sizex=None, sizey=None, window=None):
+        self._width, self._height = width, height
+        if sizex is None and sizey is None:
+            if self._width > self._height:
+                sizex = 1.
+                sizey = float(self._height) / self._width
+            else:
+                sizex = float(self._width) / self._height
+                sizey = 1.
+        CoordConverter.__init__(self, sizex, sizey, window)
+
+    def setDC(self, x, y):
+        self._p = Point(float(x) / self._width * self._sizex,
+                        (1. - float(y) / self._height) * self._sizey)
+        return self
+
+    def getDC(self):
+        self._checkRaiseXY()
+        return Point(self._p.x / self._sizex * self._width,
+                     (1. - self._p.y / self._sizey) * self._height)
+
 
 class ErrorBar(GRDrawAttributes, GRMeta):
 
@@ -570,7 +577,8 @@ class Plot(GRViewPort, GRMeta):
         coord, axes, curve = None, None, None
         window = gr.inqwindow()
         if self._lstAxes:
-            coord = CoordConverter(width, height, self._sizex, self._sizey)
+            coord = DeviceCoordConverter(width, height, self._sizex,
+                                         self._sizey)
             points = []
             lstAxes = []
             lstCurves = []
@@ -604,7 +612,7 @@ class Plot(GRViewPort, GRMeta):
 
     def select(self, p0, p1, width, height):
         window = gr.inqwindow()
-        coord = CoordConverter(width, height, self._sizex, self._sizey)
+        coord = CoordConverter(self._sizex, self._sizey)
         for axes in self._lstAxes:
             win = axes.getWindow()
             gr.setwindow(*win)
@@ -619,7 +627,7 @@ class Plot(GRViewPort, GRMeta):
 
     def pan(self, dp, width, height):
         window = gr.inqwindow()
-        coord = CoordConverter(width, height, self._sizex, self._sizey)
+        coord = CoordConverter(self._sizex, self._sizey)
         for axes in self._lstAxes:
             win = axes.getWindow()
             xmin, xmax, ymin, ymax = win
@@ -636,7 +644,7 @@ class Plot(GRViewPort, GRMeta):
 
     def zoom(self, dpercent, p0=None, width=None, height=None):
         window = gr.inqwindow()
-        coord = CoordConverter(width, height, self._sizex, self._sizey)
+        coord = CoordConverter(self._sizex, self._sizey)
         for axes in self._lstAxes:
             win = axes.getWindow()
             xmin, xmax, ymin, ymax = win
