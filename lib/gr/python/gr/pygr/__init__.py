@@ -195,7 +195,7 @@ class CoordConverter(object):
     def __init__(self, width, height, sizex=None, sizey=None, window=None):
         self._width, self._height, self._window = width, height, window
         self._sizex, self._sizey = sizex, sizey
-        self._p = None # always stored in DC
+        self._p = None # always stored in NDC
         if self._sizex is None and self._sizey is None:
             if self._width > self._height:
                 self._sizex = 1.
@@ -223,12 +223,12 @@ class CoordConverter(object):
             return None
 
     def setDC(self, x, y):
-        self._p = Point(x, y)
+        self._p = Point(float(x) / self._width * self._sizex,
+                        (1. - float(y) / self._height) * self._sizey)
         return self
 
     def setNDC(self, x, y):
-        self._p = Point(x / self._sizex * self._width,
-                        (1. - y / self._sizey) * self._height)
+        self._p = Point(x, y)
         return self
 
     def setWC(self, x, y, viewport, window=None):
@@ -259,12 +259,12 @@ class CoordConverter(object):
 
     def getDC(self):
         self._checkRaiseXY()
-        return self._p
+        return Point(self._p.x / self._sizex * self._width,
+                     (1. - self._p.y / self._sizey) * self._height)
 
     def getNDC(self):
         self._checkRaiseXY()
-        return Point(float(self._p.x) / self._width * self._sizex,
-                     (1. - float(self._p.y) / self._height) * self._sizey)
+        return self._p
 
     def getWC(self, viewport):
         scale = gr.inqscale()
