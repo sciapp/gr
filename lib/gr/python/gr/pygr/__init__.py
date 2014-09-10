@@ -4,6 +4,7 @@
 Exported Classes:
 
 """
+
 # standard library
 import math
 import time
@@ -295,6 +296,193 @@ class DeviceCoordConverter(CoordConverter):
         self._checkRaiseXY()
         return Point(self._p.x / self._sizex * self._width,
                      (1. - self._p.y / self._sizey) * self._height)
+
+
+class Text(GRMeta):
+
+    DEFAULT_CHARHEIGHT_FACTOR = .027
+    DEFAULT_VSPACE_FACTOR = .005
+
+    def __init__(self, x, y, text, axes=None,
+                 charheight=DEFAULT_CHARHEIGHT_FACTOR, charup=(0, 1),
+                 halign=gr.TEXT_HALIGN_LEFT, valign=gr.TEXT_VALIGN_TOP,
+                 textcolor=1, font=None, precision=None,
+                 textpath=gr.TEXT_PATH_RIGHT, charexpan=1.,
+                 hideviewport=True):
+        self._font, self._precision = None, None
+        self._visible = True
+        self._x, self._y, self._text, self._axes = x, y, text, axes
+        self._charheight = charheight
+        self._charup, self._halign, self._valign = charup, halign, valign
+        self._textcolor = textcolor
+        self._textpath, self._charexpan = textpath, charexpan
+        self._hideviewport = hideviewport
+        if font is not None and precision is not None:
+            self._font, self._precision = font, precision
+        self._textlines = text.split('\n')
+
+    @property
+    def x(self):
+        """Get the current x value (NDC)."""
+        return self._x
+
+    @x.setter
+    def x(self, value):
+        self._x = value
+
+    @property
+    def y(self):
+        """Get the current y value (NDC)."""
+        return self._y
+
+    @y.setter
+    def y(self, value):
+        self._y = value
+
+    @property
+    def text(self):
+        """Return the current text string."""
+        return self._text
+
+    @text.setter
+    def text(self, text):
+        self._text = text
+        self._textlines = text.split('\n')
+
+    @property
+    def charheight(self):
+        """Return the current charheight factor."""
+        return self._charheight
+
+    @charheight.setter
+    def charheight(self, height):
+        self._charheight = height
+
+    @property
+    def charup(self):
+        """Return the current charup vector (ux, uy)."""
+        return self._charup
+
+    @charup.setter
+    def charup(self, vector):
+        self._charup = vector
+
+    @property
+    def halign(self):
+        """Return the horizontal alignment."""
+        return self._halign
+
+    @halign.setter
+    def halign(self, horizontal):
+        self._halign = horizontal
+
+    @property
+    def valign(self):
+        """Return the vertical alignment."""
+        return self._valign
+
+    @valign.setter
+    def valign(self, vertical):
+        self._valign = vertical
+
+    @property
+    def textcolor(self):
+        """Return the color index for the text color."""
+        return self._textcolor
+
+    @textcolor.setter
+    def textcolor(self, colorind):
+        self._textcolor = colorind
+
+    @property
+    def textpath(self):
+        """Return the current text path (direction in which text will be drawn)."""
+        return self._textpath
+
+    @textpath.setter
+    def textpath(self, direction):
+        self._textpath = direction
+
+    @property
+    def charexpan(self):
+        """Return the current character expansion factor (width to height ratio)."""
+        return self._charexpan
+
+    @charexpan.setter
+    def charexpan(self, factor):
+        self._charexpan = factor
+
+    def setFont(self, font, precision=gr.TEXT_PRECISION_STRING):
+        """Set the font and the precision of the text representation."""
+        self._font, self._precision = font, precision
+
+    @property
+    def hideviewport(self):
+        """Return the current hide outside viewport state."""
+        return self._hideviewport
+
+    @hideviewport.setter
+    def hideviewport(self, flag):
+        self._hideviewport = flag
+
+    @property
+    def visible(self):
+        return self._visible
+
+    @visible.setter
+    def visible(self, bool):
+        self._visible = bool
+
+
+    def drawGR(self):
+        if self.visible:
+            isInViewport = True
+            if self._axes:
+                axes = self._axes
+                coord = CoordConverter(self._axes.sizex, self._axes.sizey,
+                                       self._axes.getWindow())
+                coord.setWCforPlotAxes(self.x, self.y, self._axes)
+                p0 = coord.getNDC()
+                x, y = p0.x, p0.y
+                charHeight = self.charheight * self._axes.sizey
+                vspace = Text.DEFAULT_VSPACE_FACTOR * self._axes.sizey
+                window = gr.inqwindow()
+                # set viewport and window to NDC to allow 'line-drawing'
+                # in all regions and in NDC coordinates
+                # if hideviewport is False.
+                gr.setviewport(0, self._axes.sizex, 0, self._axes.sizey)
+                gr.setwindow(0, self._axes.sizex, 0, self._axes.sizey)
+            else:
+                x, y = self.x, self.y
+                charHeight = self.charheight
+                vspace = Text.DEFAULT_VSPACE_FACTOR
+
+            gr.setcharheight(charHeight)
+            gr.setcharup(*self.charup)
+            gr.settextalign(self.halign, self.valign)
+            gr.settextpath(self.textpath)
+            gr.setcharexpan(self.charexpan)
+            if self._font is not None and self._precision is not None:
+                gr.settextfontprec(self._font, self._precision)
+            gr.settextcolorind(self.textcolor)
+
+            if self._axes:
+                tbx, tby = gr.inqtext(x, y, self.text)
+                tbxmin, tbxmax = min(tbx), max(tbx)
+                tbymin, tbymax = min(tby), max(tby)
+                xmin, xmax, ymin, ymax = self._axes.viewportscaled
+                if (tbxmin < xmin or tbxmax > xmax
+                    or tbymin < ymin or tbymax > ymax):
+                    isInViewport = False
+
+            if not self.hideviewport or isInViewport:
+                gr.text(x, y, self.text)
+#                gr.polyline(tbx, tby)
+
+            if self._axes:
+                gr.setviewport(*self._axes.viewportscaled)
+                gr.setwindow(*window)
+            gr.settextcolorind(1)
 
 
 class ErrorBar(GRDrawAttributes, GRMeta):
