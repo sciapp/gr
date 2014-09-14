@@ -130,7 +130,7 @@ typedef struct ws_state_list_t
   SVG_point *points;
   int npoints, max_points;
   int empty, page_counter, offset;
-  int cxl[MAX_TNR], cxr[MAX_TNR], cyb[MAX_TNR], cyt[MAX_TNR];
+  double cxl[MAX_TNR], cxr[MAX_TNR], cyb[MAX_TNR], cyt[MAX_TNR];
   int cx[MAX_TNR], cy[MAX_TNR], cwidth[MAX_TNR], cheight[MAX_TNR];
   int clip_index, path_index, path_counter;
   double alpha;
@@ -873,7 +873,8 @@ void polyline(int n, double *px, double *py)
 static
 void text_routine(double x, double y, int nchars, char *chars)
 {
-  int xstart, ystart, width, height, ch;
+  double xstart, ystart;
+  int width, height, ch;
   double xrel, yrel, ax, ay;
   char utf[4];
   size_t len;
@@ -886,8 +887,8 @@ void text_routine(double x, double y, int nchars, char *chars)
   xrel = width * xfac[gkss->txal[0]];
   yrel = height * yfac[gkss->txal[1]];
   CharXform(xrel, yrel, ax, ay);
-  xstart += (int) ax;
-  ystart -= (int) ay;
+  xstart += ax;
+  ystart -= ay;
 
   if (gkss->txal[0] == GKS_K_TEXT_HALIGN_CENTER)
     svg_printf(p->stream, "text-anchor:middle;");
@@ -897,8 +898,8 @@ void text_routine(double x, double y, int nchars, char *chars)
     svg_printf(p->stream, "text-anchor:start;");
   svg_printf(p->stream, "\" ");
   svg_printf(p->stream, "transform=\"rotate(%.4g", p->angle);
-  svg_printf(p->stream, ", %d, %d)\" ", xstart, ystart);
-  svg_printf(p->stream, "x=\"%d\" y=\"%d\"", xstart, ystart);
+  svg_printf(p->stream, ", %g, %g)\" ", xstart, ystart);
+  svg_printf(p->stream, "x=\"%g\" y=\"%g\"", xstart, ystart);
   svg_printf(p->stream, ">");
 
   for (int i = 0; i < nchars; ++i)
@@ -1021,7 +1022,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 	       int dx, int dy, int dimx, int *colia, int true_color)
 {
   double x1, y1, x2, y2;
-  int ix1, ix2, iy1, iy2;
+  double ix1, ix2, iy1, iy2;
   int x, y, width, height;
   int red, green, blue, alpha;
   register int i, j, ix, iy, ind, rgb;
@@ -1049,10 +1050,10 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, ix2, iy2);
 
-  width = abs(ix2 - ix1) + 1;
-  height = abs(iy2 - iy1) + 1;
-  x = min(ix1, ix2);
-  y = min(iy1, iy2);
+  width = (int) fabs(ix2 - ix1) + 1;
+  height = (int) fabs(iy2 - iy1) + 1;
+  x = (int) min(ix1, ix2);
+  y = (int) min(iy1, iy2);
 
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
@@ -1140,17 +1141,17 @@ void set_clip_path(int tnr)
 
   if (gkss->clip == GKS_K_CLIP)
     {
-      x = p->cxl[tnr];
-      y = p->cyt[tnr];
-      width = p->cxr[tnr] - p->cxl[tnr];
-      height = p->cyb[tnr] - p->cyt[tnr];
+      x = (int) p->cxl[tnr];
+      y = (int) p->cyt[tnr];
+      width = (int) (p->cxr[tnr] - p->cxl[tnr]);
+      height = (int) (p->cyb[tnr] - p->cyt[tnr]);
     }
   else
     {
-      x = p->cxl[0];
-      y = p->cyt[0];
-      width = p->cxr[0] - p->cxl[0];
-      height = p->cyb[0] - p->cyt[0];
+      x = (int) p->cxl[0];
+      y = (int) p->cyt[0];
+      width = (int) (p->cxr[0] - p->cxl[0]);
+      height = (int) (p->cyb[0] - p->cyt[0]);
     }
 
   for (i = 0; i < p->clip_index && !found; i++)

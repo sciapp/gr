@@ -1576,7 +1576,9 @@ void gr_polymarker(int n, double *x, double *y)
 
 void gr_text(double x, double y, char *string)
 {
-  int errind, tnr;
+  int errind, tnr, halign, valign, n;
+  char *s, *t;
+  double ux, uy, angle, height, sx, sy;
 
   check_autoinit;
 
@@ -1584,7 +1586,48 @@ void gr_text(double x, double y, char *string)
   if (tnr != NDC)
     gks_select_xform(NDC);
 
-  gks_text(x, y, string);
+  if (strchr(string, '\n') != NULL)
+    {
+      gks_inq_text_align(&errind, &halign, &valign);
+      gks_inq_text_upvec(&errind, &ux, &uy);
+      angle = -atan2(ux, uy);
+      gks_inq_text_height(&errind, &height);
+      height *= 1.5;
+
+      n = 0;
+      s = string;
+      while (*s)
+        if (*s++ == '\n')
+          n++;
+
+      switch (valign)
+        {
+          case 3:
+            x = x - sin(angle) * 0.5 * n * height;
+            y = y + cos(angle) * 0.5 * n * height;
+            break;
+          case 4:
+          case 5:
+            x = x - sin(angle) * n * height;
+            y = y + cos(angle) * n * height;
+            break;
+        }
+
+      t = strdup(string);
+      n = 0;
+      s = strtok(t, "\n");
+      while (s != NULL)
+        {
+          sx = x + sin(angle) * n * height;
+          sy = y - cos(angle) * n * height;
+          gks_text(sx, sy, s);
+          s = strtok(NULL, "\n");
+          n++;
+        }
+      free(t);
+    }
+  else
+    gks_text(x, y, string);
 
   if (tnr != NDC)
     gks_select_xform(tnr);

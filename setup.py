@@ -1347,7 +1347,7 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
                 "clean": clean},
       name="gr",
       version=__version__,
-      description="GR framework",
+      description="Python visualization framework",
       long_description="""
         GR is a universal framework for cross-platform visualization
         applications. It offers developers a compact, portable and consistent
