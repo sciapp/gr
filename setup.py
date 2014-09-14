@@ -1066,7 +1066,8 @@ int main()
                 inc = list(gksinc)
                 libs = ["objc"]
                 ldflags = ["-framework", "Foundation",
-                           "-framework", "ApplicationServices"]
+                           "-framework", "ApplicationServices",
+                           "-framework", "AppKit"]
                 ldflags.extend(self.platform_ldflags)
                 gksQuartzExt = Extension("gr.quartzplugin",
                                          _plugins_path["quartzplugin.m"],
