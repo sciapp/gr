@@ -23,8 +23,8 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-08-12"
-__version__ = "0.5.3"
+__date__ = "2014-09-14"
+__version__ = "0.5.4"
 __copyright__ = """Copyright 2012 - 2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
@@ -47,7 +47,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
- 
+
 """
 
 
@@ -674,7 +674,7 @@ int main()
             self.wxlibs = ["wxmsw29ud_core", "wxbase29ud"]
             self.wxinc = [os.path.join(self.wxdir, "include", "msvc"),
                           os.path.join(self.wxdir, "include")]
-        # -- qt -------------------------------------    
+        # -- qt -------------------------------------
         if not self.disable_qt:
             # do not use _msvc_extra_link_args because /nodefaultlib causes
             # error LNK2019: unresolved external symbol ""__declspec(dllimport)
@@ -1171,7 +1171,7 @@ class build_ext(_build_ext, check_ext, build_static):
         """Return the list of symbols that a shared extension has to
         export. This overloaded function does not append "init" + module_name
         to the exported symbols (default in superclass function).
-        
+
         """
         return ext.export_symbols
 
@@ -1181,7 +1181,7 @@ class build_ext(_build_ext, check_ext, build_static):
         r"""Convert the name of an extension (eg. "foo.bar") into the name
         of the file from which it will be loaded (eg. "foo/bar.so", or
         "foo\bar.dll not foo\bar.pyd (default in superclass function)").
-        
+
         """
         ret = _build_ext.get_ext_filename(self, ext_name)
         (pathNoExt, ext) = os.path.splitext(ret)
