@@ -1578,7 +1578,8 @@ void gr_text(double x, double y, char *string)
 {
   int errind, tnr, halign, valign, n;
   char *s, *t;
-  double ux, uy, angle, height, sx, sy;
+  double ux, uy, angle, height;
+  double rx, ry, sx, sy;
 
   check_autoinit;
 
@@ -1600,16 +1601,18 @@ void gr_text(double x, double y, char *string)
         if (*s++ == '\n')
           n++;
 
+      rx = x;
+      ry = y;
       switch (valign)
         {
           case 3:
-            x = x - sin(angle) * 0.5 * n * height;
-            y = y + cos(angle) * 0.5 * n * height;
+            rx = x - sin(angle) * 0.5 * n * height;
+            ry = y + cos(angle) * 0.5 * n * height;
             break;
           case 4:
           case 5:
-            x = x - sin(angle) * n * height;
-            y = y + cos(angle) * n * height;
+            rx = x - sin(angle) * n * height;
+            ry = y + cos(angle) * n * height;
             break;
         }
 
@@ -1618,8 +1621,8 @@ void gr_text(double x, double y, char *string)
       s = strtok(t, "\n");
       while (s != NULL)
         {
-          sx = x + sin(angle) * n * height;
-          sy = y - cos(angle) * n * height;
+          sx = rx + sin(angle) * n * height;
+          sy = ry - cos(angle) * n * height;
           gks_text(sx, sy, s);
           s = strtok(NULL, "\n");
           n++;
