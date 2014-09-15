@@ -1638,10 +1638,12 @@ void gr_text(double x, double y, char *string)
 
 void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
 {
-  int errind, tnr;
+  int errind, tnr, halign, valign;
+  char *s, *t;
+  double ux, uy, angle, width = 0.0, height, chh;
   register int i;
   int n, wkid = 0;
-  double cpx, cpy;
+  double rx, ry, xx, yy, cpx, cpy;
 
   check_autoinit;
 
@@ -1650,7 +1652,68 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
     gks_select_xform(NDC);
 
   gks_inq_open_ws(1, &errind, &n, &wkid);
-  gks_inq_text_extent(wkid, x, y, string, &errind, &cpx, &cpy, tbx, tby);
+
+  if (strchr(string, '\n') != NULL)
+    {
+      gks_inq_text_align(&errind, &halign, &valign);
+      gks_inq_text_upvec(&errind, &ux, &uy);
+ 
+      gks_set_text_upvec(0.0, 1.0);
+
+      t = strdup(string);
+      n = 0;
+      s = strtok(t, "\n");
+      while (s != NULL)
+        {
+          gks_inq_text_extent(wkid, x, y, s, &errind, &cpx, &cpy, tbx, tby);
+          s = strtok(NULL, "\n");
+          width = max(tbx[1] - tbx[0], width);
+          n++;
+        }
+      free(t);
+
+      gks_set_text_upvec(ux, uy);
+
+      angle = -atan2(ux, uy);
+      gks_inq_text_height(&errind, &chh);
+      height = chh * n * 1.5;
+
+      rx = x;
+      switch (halign)
+        {
+          case 2: rx -= 0.5 * width; break;
+          case 3: rx -= width; break;
+        }
+      ry = y;
+      switch (valign)
+        {
+          case 1: ry -= height - chh * 0.04; break;
+          case 2: ry -= height; break;
+          case 3: ry -= 0.5 * height; break;
+          case 5: ry -= chh * 0.04; break;
+        }
+      tbx[0] = rx;
+      tbx[1] = rx + width;
+      tbx[2] = tbx[1];
+      tbx[3] = tbx[0];
+      tby[0] = ry;
+      tby[1] = tby[0];
+      tby[2] = ry + height;
+      tby[3] = tby[2];
+
+      for (i = 0; i < 4; i++)
+        {
+          xx = tbx[i] - x;
+          yy = tby[i] - y;
+          tbx[i] = x + cos(angle) * xx - sin(angle) * yy;
+          tby[i] = y + sin(angle) * xx + cos(angle) * yy;
+        }
+
+      cpx = tbx[1];
+      cpy = tby[1];
+    }
+  else
+    gks_inq_text_extent(wkid, x, y, string, &errind, &cpx, &cpy, tbx, tby);
 
   if (tnr != NDC)
     {
