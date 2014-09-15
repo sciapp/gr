@@ -19,7 +19,25 @@ from distutils.ccompiler import new_compiler
 from distutils.sysconfig import get_config_var
 from distutils.sysconfig import get_python_lib
 from distutils.util import get_platform
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import PIPE, STDOUT
+if str == bytes:
+    from subprocess import Popen
+else:
+    # since python 3.x str and bytes type are not equal.
+    # the bytes type has no read attribute which is needed,
+    # e.g. for rstrip calls
+    from subprocess import Popen as _Popen
+
+
+    class Popen(_Popen):
+
+        def communicate(self, input=None, timeout=None):
+            stdout, stderr = _Popen.communicate(self, input, timeout)
+            if stdout is not None:
+                stdout = stdout.decode()
+            if stderr is not None:
+                stderr = stderr.decode()
+            return (stdout, stderr)
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
@@ -520,19 +538,19 @@ int main()
         # -- wx -------------------------------------
         if not self.disable_wx and not self.wxconfig:
             self.wxconfig = Popen(["which", "wx-config"],
-                              stdout=PIPE).communicate()[0].decode().rstrip()
+                              stdout=PIPE).communicate()[0].rstrip()
             if not os.path.isfile(self.wxconfig):
                 self.disable_wx = True
             else:
                 self.wxldflags = shlex.split(Popen([self.wxconfig, "--libs"],
-                                stdout=PIPE).communicate()[0].decode().rstrip())
+                                stdout=PIPE).communicate()[0].rstrip())
                 self.wxcxx = shlex.split(Popen([self.wxconfig, "--cxxflags"],
-                               stdout=PIPE).communicate()[0].decode().rstrip())
+                               stdout=PIPE).communicate()[0].rstrip())
         # -- qt -------------------------------------
         if not self.disable_qt:
             if not self.qmake:
                 self.qmake = Popen(["which", "qmake"],
-                               stdout=PIPE).communicate()[0].decode().rstrip()
+                               stdout=PIPE).communicate()[0].rstrip()
             if os.path.isdir("/usr/local/Cellar"):
                 self.qtlibs = []
             else:
@@ -542,14 +560,14 @@ int main()
             x11ldflags = None
             try:
                 x11ldflags = shlex.split(Popen(["pkg-config", "x11", "--libs"],
-                   stdout=PIPE, stderr=PIPE).communicate()[0].decode().rstrip())
+                   stdout=PIPE, stderr=PIPE).communicate()[0].rstrip())
             except OSError:
                 pass
             if x11ldflags:
                 self.x11ldflags = x11ldflags
                 self.x11cflags = shlex.split(Popen(["pkg-config", "x11",
                                                     "--cflags"], stdout=PIPE,
-                               stderr=PIPE).communicate()[0].decode().rstrip())
+                               stderr=PIPE).communicate()[0].rstrip())
             else:
                 self.disable_x11 = True
         else:
@@ -581,14 +599,14 @@ int main()
         # -- freetype -------------------------------------
         if not self.disable_freetype:
             ftconfig = Popen(["which", "freetype-config"],
-                             stdout=PIPE).communicate()[0].decode().rstrip()
+                             stdout=PIPE).communicate()[0].rstrip()
             self.disable_freetype = not bool(ftconfig)
             if not self.disable_freetype:
                 self.ftconfig = ftconfig
                 self.ftldflags = shlex.split(Popen([self.ftconfig, "--libs"],
-                               stdout=PIPE).communicate()[0].decode().rstrip())
+                               stdout=PIPE).communicate()[0].rstrip())
                 self.ftcflags = shlex.split(Popen([self.ftconfig, "--cflags"],
-                              stdout=PIPE).communicate()[0].decode().rstrip())
+                              stdout=PIPE).communicate()[0].rstrip())
             self.disable_freetype = (
                              not self._test_freetype(ftcflags=self.ftcflags,
                                                      ftldflags=self.ftldflags))
@@ -615,14 +633,14 @@ int main()
             try:
                 gtkcflags = shlex.split(Popen(["pkg-config", self.gtk_package,
                                                "--cflags"], stdout=PIPE,
-                              stderr=PIPE).communicate()[0].decode().rstrip())
+                              stderr=PIPE).communicate()[0].rstrip())
             except OSError:
                 pass
             if gtkcflags:
                 self.gtkcflags = gtkcflags
                 self.gtkldflags = shlex.split(Popen(["pkg-config",
                                      self.gtk_package, "--libs"], stdout=PIPE,
-                                stderr=PIPE).communicate()[0].decode().rstrip())
+                                stderr=PIPE).communicate()[0].rstrip())
             else:
                 self.disable_gtk = True
         # -- mupdf -------------------------------------
@@ -710,7 +728,7 @@ int main()
                 self.disable_qt = True
             else:
                 qtversion = Popen([self.qmake, "-v"], stdout=PIPE,
-                              stderr=STDOUT).communicate()[0].decode().rstrip()
+                              stderr=STDOUT).communicate()[0].rstrip()
                 match = re.search("\d\.\d\.\d", qtversion)
                 if match:
                     self.qtversion = list(map(lambda s: int(s),
@@ -722,12 +740,12 @@ int main()
                                     stdout=PIPE)
                     std = qquery.communicate()
                     if qquery.returncode == 0:
-                        self.qtinc = [std[0].decode().rstrip()]
+                        self.qtinc = [std[0].rstrip()]
                     qquery = Popen([self.qmake, "-query", "QT_INSTALL_LIBS"],
                                     stdout=PIPE)
                     std = qquery.communicate()
                     if qquery.returncode == 0:
-                        self.qtlib = [std[0].decode().rstrip()]
+                        self.qtlib = [std[0].rstrip()]
 
         # -- platform independend tests -------------------------------------
 #        if not self.disable_gs:
