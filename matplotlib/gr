@@ -1,2 +1,0 @@
-#!/bin/sh
-/usr/local/bin/gr -i $* -dmodule://backend_gr

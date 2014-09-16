@@ -9,6 +9,10 @@ done
 name="${PWD}/$(basename "${0}")"
 cd "${cwd}"
 GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
+if [ -z "${GROPTS}" ]
+then
+  GROPTS="-dmodule://gr.matplotlib.backend_gr"
+fi
 if [ -f /usr/local/bin/python ]
 then
   PYTHONHOME=/usr/local
@@ -22,4 +26,4 @@ else
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${GRDIR}/lib
 fi
 export PYTHONPATH=${PYTHONPATH}:${GRDIR}/lib/python
-exec ${PYTHONHOME}/bin/python $*
+exec ${PYTHONHOME}/bin/python $* ${GROPTS}

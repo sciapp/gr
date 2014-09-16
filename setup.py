@@ -1381,7 +1381,8 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       package_dir={'': "lib/gr/python",
                    "gr3": "lib/gr3/python/gr3"},
       requires=["numpy"],
-      packages=["gr", "gr.pygr", "gr3", "qtgr", "qtgr.events"],
+      packages=["gr", "gr.pygr", "gr.matplotlib", "gr3",
+                "qtgr", "qtgr.events"],
       # ext_modules dummy entry
       # check_ext dynamically generates a list of Extensions
       ext_modules=[Extension("", [""])],
