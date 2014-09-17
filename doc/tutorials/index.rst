@@ -8,4 +8,5 @@ Tutorials
 .. toctree::
 
    gr3_wx.rst
+   matplotlib.rst
 
