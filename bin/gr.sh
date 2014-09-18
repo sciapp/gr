@@ -1,4 +1,10 @@
 #!/bin/sh
+if [ $# -gt 1 ]
+then
+  args="$*"
+else
+  args="-"
+fi
 cwd="${PWD}"
 cd "$(dirname "${0}")"
 dir=$(readlink "$(basename "${0}")")
@@ -26,4 +32,4 @@ else
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${GRDIR}/lib
 fi
 export PYTHONPATH=${PYTHONPATH}:${GRDIR}/lib/python
-exec ${PYTHONHOME}/bin/python $* ${GROPTS}
+exec ${PYTHONHOME}/bin/python ${args} ${GROPTS}

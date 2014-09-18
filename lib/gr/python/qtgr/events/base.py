@@ -25,7 +25,7 @@ from gr.pygr import DeviceCoordConverter
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
 __date__ = "2014-09-10"
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.

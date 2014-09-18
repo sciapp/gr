@@ -1,4 +1,10 @@
 #!/bin/sh
+if [ $# -gt 1 ]
+then
+  args="$*"
+else
+  args="-"
+fi
 cwd="${PWD}"
 cd "$(dirname "${0}")"
 dir=$(readlink "$(basename "${0}")")
@@ -9,6 +15,10 @@ done
 name="${PWD}/$(basename "${0}")"
 cd "${cwd}"
 GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
+if [ -z "${GROPTS}" ]
+then
+  GROPTS="-dmodule://gr.matplotlib.backend_gr"
+fi
 if [ -d /opt/anaconda ]
 then
   PYTHONHOME=/opt/anaconda
@@ -22,4 +32,4 @@ else
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${GRDIR}/lib
 fi
 export PYTHONPATH=${PYTHONPATH}:${GRDIR}/lib/python
-exec ${PYTHONHOME}/bin/python $*
+exec ${PYTHONHOME}/bin/python ${args} ${GROPTS}
