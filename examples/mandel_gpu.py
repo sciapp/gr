@@ -4,32 +4,20 @@
 Calculate Mandelbrot set using NumbaPro (GPU version)
 """
 
-from numbapro import vectorize
-import numbapro.cuda
+from numbapro import *
 from timeit import default_timer as timer
 
 import numpy as np
 import gr
 
-sig = 'i8(uint32, f8, f8, f8, f8, uint32, uint32, uint32)'
-
-@vectorize([sig], target='gpu')
-def mandel(tid, min_x, max_x, min_y, max_y, width, height, iters):
-    pixel_size_x = (max_x - min_x) / width
-    pixel_size_y = (max_y - min_y) / height
-
-    x = tid % width
-    y = tid / width
-
-    real = min_x + x * pixel_size_x
-    imag = min_y + y * pixel_size_y
-
-    c = complex(real, imag)
+@cuda.jit(restype=uint32, argtypes=[f8, f8, uint32], device=True)
+def mandel(x, y, max_iters):
+    c = complex(x, y)
     z = 0.0j
     ci = 0
     inc = 1
 
-    for i in range(iters):
+    for i in range(max_iters):
         z = z * z + c
         if (z.real * z.real + z.imag * z.imag) >= 4:
             return ci
@@ -39,24 +27,43 @@ def mandel(tid, min_x, max_x, min_y, max_y, width, height, iters):
 
     return 255
 
+@cuda.jit(argtypes=[f8, f8, f8, f8, uint8[:,:], uint32])
+def mandel_kernel(min_x, max_x, min_y, max_y, image, max_iters):
+    height = image.shape[0]
+    width = image.shape[1]
 
-def create_fractal(min_x, max_x, min_y, max_y, width, height, iters):
-    tids = np.arange(width * height, dtype=np.uint32)
-    return mandel(tids, np.float64(min_x), np.float64(max_x), np.float64(min_y),
-                  np.float64(max_y), np.uint32(height), np.uint32(width),
-                  np.uint32(iters))
+    pixel_size_x = (max_x - min_x) / width
+    pixel_size_y = (max_y - min_y) / height
+
+    startX = cuda.blockDim.x * cuda.blockIdx.x + cuda.threadIdx.x
+    startY = cuda.blockDim.y * cuda.blockIdx.y + cuda.threadIdx.y
+    gridX = cuda.gridDim.x * cuda.blockDim.x;
+    gridY = cuda.gridDim.y * cuda.blockDim.y;
+
+    for x in range(startX, width, gridX):
+        real = min_x + x * pixel_size_x
+        for y in range(startY, height, gridY):
+            imag = min_y + y * pixel_size_y 
+            image[y, x] = mandel(real, imag, max_iters)
+
 
 x = -0.9223327810370947027656057193752719757635
 y = 0.3102598350874576432708737495917724836010
 
+image = np.zeros((500, 500), dtype = np.uint8)
+blockdim = (32, 8)
+griddim = (32, 16)
+
 f = 0.5
 for i in range(200):
     start = timer()
-    pixels = create_fractal(x-f, x+f, y-f, y+f, 500, 500, 400)
+    d_image = cuda.to_device(image)
+    mandel_kernel[griddim, blockdim](x-f, x+f, y-f, y+f, d_image, 400) 
+    d_image.to_host()
     dt = timer() - start
 
     print("Mandelbrot created in %f s" % dt)
-    ca = 1000.0 + pixels.ravel()
+    ca = 1000.0 + image.ravel()
 
     gr.clearws()
     gr.setviewport(0, 1, 0, 1)
