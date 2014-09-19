@@ -1,5 +1,11 @@
 #!/bin/sh
-if [ $# -gt 1 ]
+if [ "$1" = "-t" ]
+then
+  shift
+  export GKS_WSTYPE="$1"
+  shift
+fi
+if [ $# -gt 0 ]
 then
   args="$*"
 else

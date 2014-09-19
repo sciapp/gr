@@ -135,11 +135,11 @@ def create_examples(examples):
                 mov_file = os.path.join(MEDIA_DIR, name + '.mov')
                 if not os.access(mov_file, os.R_OK):
                     print('Create MOV animation for example %s' % name)
-                    os.popen('gr -t=mov %s.py' % os.path.join(EXAMPLES_DIR, name))
+                    os.popen('gr -t mov %s.py' % os.path.join(EXAMPLES_DIR, name))
                     shutil.move('gks.mov', mov_file)
             else:
                 print('Create PNG figure for example %s' % name)
-                os.popen('gr -t=png %s.py' % os.path.join(EXAMPLES_DIR, name))
+                os.popen('gr -t png %s.py' % os.path.join(EXAMPLES_DIR, name))
                 shutil.move('gks_p001.png', '%s.png' % os.path.join(OUTPUT_DIR, name))
         contents.append([filename, name, infoline])
 
