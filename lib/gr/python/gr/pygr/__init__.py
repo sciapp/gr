@@ -1367,6 +1367,30 @@ class PlotAxes(GRViewPort, GRMeta):
                                 xmin = win[0]
                         ymin = ylmin if ylmin < win[2] else win[2]
                         ymax = ylmax if ylmax > win[3] else win[3]
+
+                # take error bars into account
+                # if error bar's center is in current window
+                # adjust window margins to contain error bars.
+                for curve in visibleCurves:
+                    for bar in [curve.errorBar1, curve.errorBar2]:
+                        if bar:
+                            if bar.direction == ErrorBar.HORIZONTAL:
+                                for i, x in enumerate(bar.x):
+                                    if x >= xmin and x <= xmax:
+                                        bneg, bpos = bar._dneg[i], bar._dpos[i]
+                                        if bneg < xmin:
+                                            xmin = bneg
+                                        if bpos > xmax:
+                                            xmax = bpos
+                            elif bar.direction == ErrorBar.VERTICAL:
+                                for i, y in enumerate(bar.y):
+                                    if y >= ymin and y <= ymax:
+                                        bneg, bpos = bar._dneg[i], bar._dpos[i]
+                                        if bneg < ymin:
+                                            ymin = bneg
+                                        if bpos > ymax:
+                                            ymax = bpos
+
                 if ((not self.autoscale
                      or math.fabs(xmax - xmin) < DomainChecker._EPSILON)
                     and self.scale & gr.OPTION_X_LOG == 0):
