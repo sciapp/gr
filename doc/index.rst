@@ -38,6 +38,12 @@ It was developed by Florian Rhiem as part of his bachelor's thesis.
 *GR3* is written in C and can also be used from Python through a wrapper
 module. 
 
+Starting with release 0.6 *GR* can be used as a backend
+for `Matplotlib <http://matplotlib.org>`_ and significantly improve
+the performance of existing Matplotlib applications.
+In :doc:`this <tutorials/matplotlib>` tutorial section you can find
+some examples.
+
 Getting Started
 ---------------
 

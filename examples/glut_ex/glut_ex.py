@@ -6,13 +6,13 @@ import math
 import numpy
 import numpy.linalg
 from itertools import combinations
+import math, time
+import gr
+import gr3
 from OpenGL.GLUT import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
-import gr
-import gr3
 from gr import * 
-import math, time
 
 def display():
     global window_width, window_height, rx
@@ -204,7 +204,7 @@ def on_main_menu(entry):
     return 0
 
 if __name__ == "__main__":
-    if not len(sys.argv) == 2:
+    if not len(sys.argv) >= 2:
         print "Usage: python %s <filename>" % sys.argv[0]
         sys.exit()
 

@@ -1461,7 +1461,8 @@ def surface(px, py, pz, option):
     `y` :
         A list containing the Y coordinates
     `z` :
-        A list of length `len(x)` * `len(y)` containing the Z coordinates
+        A list of length `len(x)` * `len(y)` or an appropriately dimensioned
+        array containing the Z coordinates
     `option` :
         Surface display option (see table below)
 
@@ -1489,15 +1490,20 @@ def surface(px, py, pz, option):
     nx = len(px)
     ny = len(py)
     nz = len(pz)
-    if nz == nx * ny:
+    if len(pz.shape) == 1:
+        check = pz == nx * ny
+    elif len(pz.shape) == 2:
+        check = pz.shape[0] == nx and pz.shape[1] == ny
+    else:
+        check = False
+    if (check):
         _px = floatarray(nx, px)
         _py = floatarray(ny, py)
         _pz = floatarray(nx * ny, pz)
         __gr.gr_surface(c_int(nx), c_int(ny), _px.data, _py.data, _pz.data,
                         c_int(option))
     else:
-        raise AttributeError("Sequences have incorrect length. " +
-                             "Assert len(z) = len(x) * len(y) failed.")
+        raise AttributeError("Sequences have incorrect length or dimension.")
 
 
 def contour(px, py, h, pz, major_h):
@@ -1514,7 +1520,8 @@ def contour(px, py, h, pz, major_h):
     `h` :
         A list containing the Z coordinate for the height values
     `z` :
-        A list of length `len(x)` * `len(y)` containing the Z coordinates
+        A list of length `len(x)` * `len(y)` or an appropriately dimensioned
+        array containing the Z coordinates
     `major_h` :
         Directs GR to label contour lines. For example, a value of 3 would label
         every third line. A value of 1 will label every line. A value of 0
@@ -1525,7 +1532,13 @@ def contour(px, py, h, pz, major_h):
     ny = len(py)
     nz = len(pz)
     nh = len(h)
-    if nz == nx * ny:
+    if len(pz.shape) == 1:
+        check = pz == nx * ny
+    elif len(pz.shape) == 2:
+        check = pz.shape[0] == nx and pz.shape[1] == ny
+    else:
+        check = False
+    if (check):
         _px = floatarray(nx, px)
         _py = floatarray(ny, py)
         _h = floatarray(nh, h)
@@ -1533,8 +1546,7 @@ def contour(px, py, h, pz, major_h):
         __gr.gr_contour(c_int(nx), c_int(ny), c_int(nh),
                         _px.data, _py.data, _h.data, _pz.data, c_int(major_h))
     else:
-        raise AttributeError("Sequences have incorrect length. " +
-                             "Assert len(z) = len(x) * len(y) failed.")
+        raise AttributeError("Sequences have incorrect length or dimension.")
 
 
 def setcolormap(index):

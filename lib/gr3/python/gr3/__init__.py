@@ -35,13 +35,21 @@ if any([module.startswith('OpenGL') for module in sys.modules]):
     import warnings
     warnings.warn("Importing gr3 after importing pyOpenGL (or any of its modules) might cause problems on some platforms. Please import gr3 first to avoid this.")
 
+from sys import version_info, platform
+from platform import python_implementation
+
 from ctypes import c_int, c_uint, c_ushort, c_ubyte, c_float, c_double, \
                    c_char, c_char_p, c_ulong, py_object, POINTER, byref, \
-                   CFUNCTYPE, CDLL, pythonapi
+                   CFUNCTYPE, CDLL, create_string_buffer, cast
 import ctypes.util
 import numpy
 import os
 import gr
+
+
+_impl = python_implementation()
+if _impl != 'PyPy':
+    from ctypes import pythonapi
 
 _gr3PkgDir = os.path.realpath(os.path.dirname(__file__))
 _gr3LibDir = os.getenv("GR3LIB", _gr3PkgDir)
@@ -62,6 +70,33 @@ if not os.getenv("GR3LIB") and not os.access(_gr3Lib, os.R_OK):
     _gr3LibDir = os.path.join(_gr3PkgDir, "..", "..")
     _gr3Lib = os.path.join(_gr3LibDir, "libGR3" + libext)
 _gr3 = CDLL(_gr3Lib)
+
+class intarray:
+    def __init__(self, a):
+        if _impl == 'PyPy':
+            self.array = numpy.array(a, numpy.int32)
+            self.data = cast(self.array.__array_interface__['data'][0],
+                             POINTER(c_int))
+        else:
+            self.array = numpy.array(a, c_int)
+            self.data = self.array.ctypes.data_as(POINTER(c_int))
+
+class floatarray:
+    def __init__(self, a, copy=False):
+        if _impl == 'PyPy':
+            self.array = numpy.array(a, numpy.float32, copy=copy)
+            self.data = cast(self.array.__array_interface__['data'][0],
+                             POINTER(c_float))
+        else:
+            self.array = numpy.array(a, c_float)
+            self.data = self.array.ctypes.data_as(POINTER(c_float))
+
+def char(string):
+    if version_info[0] == 3:
+        s = create_string_buffer(string.encode('iso8859-15'))
+    else:
+        s = create_string_buffer(string)
+    return cast(s, c_char_p)
 
 class GR3_InitAttribute(object):
     GR3_IA_END_OF_LIST = 0
@@ -134,14 +169,14 @@ def init(attrib_list=[]):
 
     """
     global _gr3
-    _attrib_list = numpy.array(list(attrib_list)+[GR3_InitAttribute.GR3_IA_END_OF_LIST], c_uint)
+    _attrib_list = intarray(list(attrib_list)+[GR3_InitAttribute.GR3_IA_END_OF_LIST])
     if py_log_callback:
         lib_found = ctypes.util.find_library(os.path.join(os.path.dirname(os.path.realpath(__file__)),"libGR3.so"))
         if lib_found:
             py_log_callback("Loaded dynamic library from "+lib_found)
         else:
             py_log_callback("Loaded dynamic library unknown.")
-    err = _gr3.gr3_init(_attrib_list.ctypes.data_as(POINTER(c_int)))
+    err = _gr3.gr3_init(_attrib_list.data)
     if err:
         raise GR3_Exception(err)
 
@@ -188,8 +223,8 @@ def getimage(width, height, use_alpha = True):
 
 def export(filename, width, height):
     global _gr3
-    _filename = numpy.array(filename+'\0', c_char)
-    err = _gr3.gr3_export(_filename.ctypes.data_as(POINTER(c_char)), c_uint(width), c_uint(height))
+    _filename = char(filename)
+    err = _gr3.gr3_export(_filename, c_uint(width), c_uint(height))
     if err:
         raise GR3_Exception(err)
 
@@ -271,10 +306,10 @@ def createmesh(n, vertices, normals, colors):
         +----------------------+-------------------------------+
     """
     _mesh = c_uint(0)
-    vertices = numpy.array(vertices, c_float)
-    normals = numpy.array(normals, c_float)
-    colors = numpy.array(colors, c_float)
-    err = _gr3.gr3_createmesh(byref(_mesh), c_uint(n), vertices.ctypes.data_as(POINTER(c_float)), normals.ctypes.data_as(POINTER(c_float)), colors.ctypes.data_as(POINTER(c_float)))
+    vertices = floatarray(vertices)
+    normals = floatarray(normals)
+    colors = floatarray(colors)
+    err = _gr3.gr3_createmesh(byref(_mesh), c_uint(n), vertices.data, normals.data, colors.data)
     if err:
         raise GR3_Exception(err)
     return _mesh
@@ -312,24 +347,24 @@ def createindexedmesh(num_vertices, vertices, normals, colors, num_indices, indi
         +----------------------+-------------------------------+
     """
     _mesh = c_uint(0)
-    vertices = numpy.array(vertices, c_float)
-    normals = numpy.array(normals, c_float)
-    colors = numpy.array(colors, c_float)
-    indices = numpy.array(indices, c_int)
-    err = _gr3.gr3_createindexedmesh(byref(_mesh), c_uint(num_vertices), vertices.ctypes.data_as(POINTER(c_float)), normals.ctypes.data_as(POINTER(c_float)), colors.ctypes.data_as(POINTER(c_float)), c_uint(num_indices), indices.ctypes.data_as(POINTER(c_int)))
+    vertices = floatarray(vertices)
+    normals = floatarray(normals)
+    colors = floatarray(colors)
+    indices = intarray(indices)
+    err = _gr3.gr3_createindexedmesh(byref(_mesh), c_uint(num_vertices), vertices.data, normals.data, colors.data, c_uint(num_indices), indices.data)
     if err:
         raise GR3_Exception(err)
     return _mesh
 
 def createheightmapmesh(heightmap, num_columns, num_rows):
-    heightmap = numpy.array(heightmap, c_float)
-    return _gr3.gr3_createheightmapmesh(heightmap.ctypes.data_as(POINTER(c_float)), c_int(num_columns), c_int(num_rows))
+    heightmap = floatarray(heightmap)
+    return _gr3.gr3_createheightmapmesh(heightmap.data, c_int(num_columns), c_int(num_rows))
 
 def drawheightmap(heightmap, num_columns, num_rows, positions, scales):
-    heightmap = numpy.array(heightmap, c_float)
-    positions = numpy.array(positions, c_float)
-    scales = numpy.array(scales, c_float)
-    _gr3.gr3_drawheightmap(heightmap.ctypes.data_as(POINTER(c_float)), c_int(num_columns), c_int(num_rows), positions.ctypes.data_as(POINTER(c_float)), scales.ctypes.data_as(POINTER(c_float)))
+    heightmap = floatarray(heightmap)
+    positions = floatarray(positions)
+    scales = floatarray(scales)
+    _gr3.gr3_drawheightmap(heightmap.data, c_int(num_columns), c_int(num_rows), positions.data, scales.data)
 
 
 
@@ -341,12 +376,12 @@ def drawcylindermesh(n, positions, directions, colors, radii, lengths):
 
         Function :py:func:`gr.drawmesh()`
     """
-    positions = numpy.array(positions, c_float)
-    directions = numpy.array(directions, c_float)
-    colors = numpy.array(colors, c_float)
-    radii = numpy.array(radii, c_float)
-    lengths = numpy.array(lengths, c_float)
-    _gr3.gr3_drawcylindermesh(c_uint(n), positions.ctypes.data_as(POINTER(c_float)), directions.ctypes.data_as(POINTER(c_float)), colors.ctypes.data_as(POINTER(c_float)), radii.ctypes.data_as(POINTER(c_float)), lengths.ctypes.data_as(POINTER(c_float)))
+    positions = floatarray(positions)
+    directions = floatarray(directions)
+    colors = floatarray(colors)
+    radii = floatarray(radii)
+    lengths = floatarray(lengths)
+    _gr3.gr3_drawcylindermesh(c_uint(n), positions.data, directions.data, colors.data, radii.data, lengths.data)
 
 def drawconemesh(n, positions, directions, colors, radii, lengths):
     """
@@ -356,12 +391,12 @@ def drawconemesh(n, positions, directions, colors, radii, lengths):
 
         Function :py:func:`gr.drawmesh()`
     """
-    positions = numpy.array(positions, c_float)
-    directions = numpy.array(directions, c_float)
-    colors = numpy.array(colors, c_float)
-    radii = numpy.array(radii, c_float)
-    lengths = numpy.array(lengths, c_float)
-    _gr3.gr3_drawconemesh(c_uint(n), positions.ctypes.data_as(POINTER(c_float)), directions.ctypes.data_as(POINTER(c_float)), colors.ctypes.data_as(POINTER(c_float)), radii.ctypes.data_as(POINTER(c_float)), lengths.ctypes.data_as(POINTER(c_float)))
+    positions = floatarray(positions)
+    directions = floatarray(directions)
+    colors = floatarray(colors)
+    radii = floatarray(radii)
+    lengths = floatarray(lengths)
+    _gr3.gr3_drawconemesh(c_uint(n), positions.data, directions.data, colors.data, radii.data, lengths.data)
 
 def drawspheremesh(n, positions, colors, radii):
     """
@@ -371,10 +406,10 @@ def drawspheremesh(n, positions, colors, radii):
 
         Function :py:func:`gr.drawmesh()`
     """
-    positions = numpy.array(positions, c_float)
-    colors = numpy.array(colors, c_float)
-    radii = numpy.array(radii, c_float)
-    _gr3.gr3_drawspheremesh(c_uint(n), positions.ctypes.data_as(POINTER(c_float)), colors.ctypes.data_as(POINTER(c_float)), radii.ctypes.data_as(POINTER(c_float)))
+    positions = floatarray(positions)
+    colors = floatarray(colors)
+    radii = floatarray(radii)
+    _gr3.gr3_drawspheremesh(c_uint(n), positions.data, colors.data, radii.data)
 
 def drawmesh(mesh, n, positions, directions, ups, colors, scales):
     """
@@ -400,20 +435,20 @@ def drawmesh(mesh, n, positions, directions, ups, colors, scales):
 
         This function does not return an error code, because of its asynchronous nature. If gr3.getpixmap_() returns a `GR3_ERROR_OPENGL_ERR`, this might be caused by this function saving unuseable data into the draw list.
     """
-    positions = numpy.array(positions, c_float)
-    directions = numpy.array(directions, c_float)
-    ups = numpy.array(ups, c_float)
-    colors = numpy.array(colors, c_float)
-    scales = numpy.array(scales, c_float)
-    _gr3.gr3_drawmesh(mesh, c_uint(n), positions.ctypes.data_as(POINTER(c_float)), directions.ctypes.data_as(POINTER(c_float)), ups.ctypes.data_as(POINTER(c_float)), colors.ctypes.data_as(POINTER(c_float)), scales.ctypes.data_as(POINTER(c_float)))
+    positions = floatarray(positions)
+    directions = floatarray(directions)
+    ups = floatarray(ups)
+    colors = floatarray(colors)
+    scales = floatarray(scales)
+    _gr3.gr3_drawmesh(mesh, c_uint(n), positions.data, directions.data, ups.data, colors.data, scales.data)
 
 def drawcubemesh(n, positions, directions, ups, colors, scales):
-    positions = numpy.array(positions, c_float)
-    directions = numpy.array(directions, c_float)
-    ups = numpy.array(ups, c_float)
-    colors = numpy.array(colors, c_float)
-    scales = numpy.array(scales, c_float)
-    _gr3.gr3_drawcubemesh(c_uint(n), positions.ctypes.data_as(POINTER(c_float)), directions.ctypes.data_as(POINTER(c_float)), ups.ctypes.data_as(POINTER(c_float)), colors.ctypes.data_as(POINTER(c_float)), scales.ctypes.data_as(POINTER(c_float)))
+    positions = floatarray(positions)
+    directions = floatarray(directions)
+    ups = floatarray(ups)
+    colors = floatarray(colors)
+    scales = floatarray(scales)
+    _gr3.gr3_drawcubemesh(c_uint(n), positions.data, directions.data, ups.data, colors.data, scales.data)
 
 
 def deletemesh(mesh):
@@ -539,6 +574,9 @@ def setlightdirection(*xyz):
     else:
         raise TypeError("gr3_setlightdirection() takes exactly 1 or exactly 3 arguments (%d given)" %len(xyz))
 
+def PyBuffer_FromMemory(address, length):
+    return buffer((c_char * length).from_address(address))
+
 def triangulate(grid, step, offset, isolevel, slices = None):
     data = grid.ctypes.data_as(POINTER(c_ushort))
     isolevel = c_ushort(isolevel)
@@ -574,7 +612,10 @@ def triangulate(grid, step, offset, isolevel, slices = None):
                                     step_x, step_y, step_z,
                                     offset_x, offset_y, offset_z,
                                     byref(triangles_p))
-    buffer_from_memory = pythonapi.PyBuffer_FromMemory
+    if _impl != 'PyPy':
+        buffer_from_memory = pythonapi.PyBuffer_FromMemory
+    else:
+        buffer_from_memory = PyBuffer_FromMemory
     buffer_from_memory.restype = py_object
     buffer = buffer_from_memory(triangles_p, 4*3*3*2*num_triangles)
     triangles = numpy.frombuffer(buffer, numpy.float32).copy()
@@ -592,7 +633,7 @@ def createisosurfacemesh(grid, step, offset, isolevel):
 
     **Parameters:**
 
-        `grid` : 3D numpy array of the voxel data
+        `grid` : 3D numpy array containing the voxel data
 
         `step` : voxel sizes in each direction
 
@@ -665,13 +706,13 @@ def createsurfacemesh(nx, ny, px, py, pz, option=0):
     +-------------------------+----+----------------------------------------------------------------------------------------+
     """
     _mesh = c_uint(0)
-    px = numpy.array(px, c_float, copy=False)
-    py = numpy.array(py, c_float, copy=False)
-    pz = numpy.array(pz, c_float, copy=False)
+    px = floatarray(px, copy=False)
+    py = floatarray(py, copy=False)
+    pz = floatarray(pz, copy=False)
     err = _gr3.gr3_createsurfacemesh(byref(_mesh), c_int(nx), c_int(ny),
-                                     px.ctypes.data_as(POINTER(c_float)),
-                                     py.ctypes.data_as(POINTER(c_float)),
-                                     pz.ctypes.data_as(POINTER(c_float)),
+                                     px.data,
+                                     py.data,
+                                     pz.data,
                                      c_int(option))
 
     if err:
@@ -703,17 +744,17 @@ def drawmesh_grlike(mesh, n, positions, directions, ups, colors, scales):
 
         `scales` :     the scaling factors
     """
-    positions = numpy.array(positions, c_float)
-    directions = numpy.array(directions, c_float)
-    ups = numpy.array(ups, c_float)
-    colors = numpy.array(colors, c_float)
-    scales = numpy.array(scales, c_float)
+    positions = floatarray(positions)
+    directions = floatarray(directions)
+    ups = floatarray(ups)
+    colors = floatarray(colors)
+    scales = floatarray(scales)
     _gr3.gr3_drawmesh_grlike(mesh, c_uint(n),
-                             positions.ctypes.data_as(POINTER(c_float)),
-                             directions.ctypes.data_as(POINTER(c_float)),
-                             ups.ctypes.data_as(POINTER(c_float)),
-                             colors.ctypes.data_as(POINTER(c_float)),
-                             scales.ctypes.data_as(POINTER(c_float)))
+                             positions.data,
+                             directions.data,
+                             ups.data,
+                             colors.data,
+                             scales.data)
 
 def drawsurface(mesh):
     """
@@ -746,13 +787,13 @@ def surface(px, py, pz, option=0):
     if option in (gr.OPTION_Z_SHADED_MESH, gr.OPTION_COLORED_MESH):
         nx = len(px)
         ny = len(py)
-        px = numpy.array(px, c_float, copy=False)
-        py = numpy.array(py, c_float, copy=False)
-        pz = numpy.array(pz, c_float, copy=False)
+        px = floatarray(px, copy=False)
+        py = floatarray(py, copy=False)
+        pz = floatarray(pz, copy=False)
         _gr3.gr3_surface(c_int(nx), c_int(ny),
-                         px.ctypes.data_as(POINTER(c_float)),
-                         py.ctypes.data_as(POINTER(c_float)),
-                         pz.ctypes.data_as(POINTER(c_float)),
+                         px.data,
+                         py.data,
+                         pz.data,
                          c_int(option))
     else:
         gr.surface(px, py, pz, option)
