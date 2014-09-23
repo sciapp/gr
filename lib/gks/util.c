@@ -76,6 +76,8 @@ struct wstypes_t wstypes[] = {
   { "wmf", 390 },
   { "quartz", 400 },
   { "socket", 410 },
+  { "sock", 410 },
+  { "zmq", 415 },
   { "gl", 420 },
   { "opengl", 420 }
 };

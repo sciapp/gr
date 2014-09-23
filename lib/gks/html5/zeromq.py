@@ -5,7 +5,8 @@ from struct import unpack
 
 context = zmq.Context()
 socket = context.socket(zmq.PULL)
-socket.connect ("tcp://localhost:5556")
+socket.connect("tcp://localhost:5556")
+
 while True:
     len_data = socket.recv()
     length = unpack('i', len_data)[0]

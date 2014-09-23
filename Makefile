@@ -3,7 +3,11 @@
 
 UNAME := $(shell uname)
 
-default: Makedefs
+default: pre-check Makedefs
+
+pre-check:
+	@lib/Precheck "${GRDIR}"  || \
+	( echo "FATAL: Source and target directory are identical"; exit 1 )
 	@make `uname`
 
 Makedefs:
