@@ -1492,14 +1492,14 @@ def surface(px, py, pz, option):
     nz = len(pz)
     if isinstance(pz, ndarray):
         if len(pz.shape) == 1:
-            out_of_bounds = pz != nx * ny
+            out_of_bounds = nz != nx * ny
         elif len(pz.shape) == 2:
             out_of_bounds = pz.shape[0] != nx or pz.shape[1] != ny
         else:
             out_of_bounds = True
     else:
-        out_of_bounds = False
-    if (not out_of_bounds):
+        out_of_bounds = nz != nx * ny
+    if not out_of_bounds:
         _px = floatarray(nx, px)
         _py = floatarray(ny, py)
         _pz = floatarray(nx * ny, pz)
@@ -1537,14 +1537,14 @@ def contour(px, py, h, pz, major_h):
     nh = len(h)
     if isinstance(pz, ndarray):
         if len(pz.shape) == 1:
-            out_of_bounds = pz != nx * ny
+            out_of_bounds = nz != nx * ny
         elif len(pz.shape) == 2:
             out_of_bounds = pz.shape[0] != nx or pz.shape[1] != ny
         else:
             out_of_bounds = True
     else:
-        out_of_bounds = False
-    if (not out_of_bounds):
+        out_of_bounds = nz != nx * ny
+    if not out_of_bounds:
         _px = floatarray(nx, px)
         _py = floatarray(ny, py)
         _h = floatarray(nh, h)
