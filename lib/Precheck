@@ -1,4 +1,7 @@
 #!/bin/sh
+if [ "$(basename "${1}")" = '.' ]; then
+  exit 1
+fi
 cwd="${PWD}"
 cd "$(dirname "${1}")"
 dir=$(readlink "$(basename "${1}")")

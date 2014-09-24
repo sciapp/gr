@@ -1,4 +1,4 @@
-#ifndef NO_AV
+#if !defined(NO_AV) && !defined(NO_MUPDF)
 
 #include <stdio.h>
 

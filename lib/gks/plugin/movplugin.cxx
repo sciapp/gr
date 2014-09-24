@@ -1,5 +1,5 @@
 
-#ifndef NO_AV
+#if !defined(NO_AV) && !defined(NO_MUPDF)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +36,7 @@ extern "C"
 
 #endif
 
-#ifndef NO_AV
+#if !defined(NO_AV) && !defined(NO_MUPDF)
 
 DLLEXPORT void gks_movplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
