@@ -81,6 +81,7 @@ class Html_output(object):
         self.indentation = 0
         self.p.rect = [() for i in range(MAX_TNR)]
         self.p.clip_rect = ()
+        self.transparency = 1.0
 
         self.set_xform()
         self.init_norm_xform()
@@ -135,12 +136,11 @@ class Html_output(object):
 
     def text(self, xst, yst, n, text):
 
-        self.write('// text: {0}\n'.format(text))
-
         tx_font = self.gkss.txfont if self.gkss.asf[6] else predef_font[self.gkss.tindex - 1]
         tx_prec = self.gkss.txprec if self.gkss.asf[6] else predef_prec[self.gkss.tindex - 1]
         tx_color = self.gkss.txcoli if self.gkss.asf[9] else 1
         color = self.p.rgb[tx_color]
+        color.append(self.transparency)
 
         if self.gkss.version > 4:
             ln_width = round(self.p.height / 500.0)
@@ -152,10 +152,10 @@ class Html_output(object):
             ln_width = 1
         if self.p.fillStyle != color:
             self.p.fillStyle = color
-            self.write('c.fillStyle="rgb({0}, {1}, {2})";\n'.format(*color))
+            self.write('c.fillStyle="rgba({0},{1},{2},{3})";\n'.format(*color))
         if self.p.strokeStyle != color:
             self.p.strokeStyle = color
-            self.write('c.strokeStyle="rgb({0}, {1}, {2})";\n'.format(*color))
+            self.write('c.strokeStyle="rgba({0},{1},{2},{3})";\n'.format(*color))
         if tx_prec == GKS_K_TEXT_PRECISION_STRING:
             self.set_font(tx_font)
             (x, y) = self.WC_to_NDC(xst, yst, self.gkss.cntnr)
@@ -205,22 +205,17 @@ class Html_output(object):
             self.write('c.fillText("{0}", {1}, {2});\n'.format(text, xs, ys))
 
     def cellarray(self, xmin, xmax, ymin, ymax, dx, dy, dimx, colia):
-        self.write('// cellarray\n')
         self.image_routine(xmin, xmax, ymin, ymax, dx, dy, dimx, colia, False)
 
     def draw_image(self, xmin, xmax, ymin, ymax, dx, dy, dimx, colia):
-        self.write('// draw_image\n')
         self.image_routine(xmin, xmax, ymin, ymax, dx, dy, dimx, colia, True)
 
     def write_png(self, buf, width, height):
         width_byte_4 = width * 4
-        raw_data = b"".join(b'\x00' + bytes(bytearray(buf[span:span + width_byte_4])) for span in
-                            range(0, height * width * 4, width_byte_4))
-
+        raw_data = b"".join(b'\x00' + bytes(bytearray(buf[span:span + width_byte_4])) for span in range(0, height * width * 4, width_byte_4))
         def png_pack(png_tag, data):
             chunk_head = png_tag + data
             return struct.pack("!I", len(data)) + chunk_head + struct.pack("!I", 0xFFFFFFFF & zlib.crc32(chunk_head))
-
         return b"".join([
             b'\x89PNG\r\n\x1a\n',
             png_pack(b'IHDR', struct.pack("!2I5B", width, height, 8, 6, 0, 0, 0)),
@@ -228,7 +223,6 @@ class Html_output(object):
             png_pack(b'IEND', b'')])
 
     def image_routine(self, xmin, xmax, ymin, ymax, dx, dy, dimx, colia, true_color):
-
         (x1, y1) = self.WC_to_NDC(xmin, ymax, self.gkss.cntnr)
         (x1, y1) = self.seg_xform(x1, y1)
         (ix1, iy1) = self.NDC_to_DC(x1, y1)
@@ -263,28 +257,23 @@ class Html_output(object):
                     ix = dx - 1 - ix
                 if not true_color:
                     ci = colia[iy * dimx + ix]
-                    (red, green, blue) = self.p.rgb[ci]
-                    alpha = 255
-
-                    pix_buf.append(red)
-                    pix_buf.append(green)
-                    pix_buf.append(blue)
-                    pix_buf.append(alpha)
+                    (red, green, blue) = self.p.rgb[ci][:3]
+                    alpha = int(self.transparency * 255)
                 else:
                     rgb = colia[iy * dimx + ix]
                     red = (rgb & 0xff)
                     green = (rgb & 0xff00) >> 8
                     blue = (rgb & 0xff0000) >> 16
-                    alpha = 255
+                    alpha = (rgb & 0xff000000) >> 24
 
-                    pix_buf.append(red)
-                    pix_buf.append(green)
-                    pix_buf.append(blue)
-                    pix_buf.append(alpha)
+                pix_buf.append(red)
+                pix_buf.append(green)
+                pix_buf.append(blue)
+                pix_buf.append(alpha)
 
         png = self.write_png(pix_buf, width, height)
-        import base64
 
+        import base64
         enc_png = base64.b64encode(png)
         data_uri = 'data:image/png;base64, {0}'.format(enc_png)
         self.write('var imageObj = new Image();\n')
@@ -296,17 +285,16 @@ class Html_output(object):
         self.footer = (self.indentation - 1) * '  ' + '};\n' + self.footer
 
     def fillarea(self, n, px, py):
-        self.write('// fillarea\n')
-
         fl_color = self.gkss.facoli if self.gkss.asf[12] else 1
         ln_width = max(1, round(self.p.height / 500.0)) if self.gkss.version > 4 else 1
         if self.p.lineWidth != ln_width:
             self.p.lineWidth = ln_width
             self.write('c.lineWidth = {0};\n'.format(ln_width))
         color = self.p.rgb[fl_color]
+        color.append(self.transparency)
         if self.p.fillStyle != color:
             self.p.fillStyle = color
-            self.write('c.fillStyle="rgb({0}, {1}, {2})";\n'.format(*color))
+            self.write('c.fillStyle="rgba({0},{1},{2},{3})";\n'.format(*color))
         self.fill_routine(n, px, py, self.gkss.cntnr)
 
     def fill_routine(self, n, px, py, tnr):
@@ -340,7 +328,7 @@ class Html_output(object):
             self.write('pcan.height = {0};\n'.format(len(pattern)))
             self.write('var pctx = pcan.getContext("2d");\n')
             if self.p.fillStyle != [0, 0, 0]:
-                self.write('c.fillStyle="rgb({0}, {1}, {2})";\n'.format(*self.p.fillStyle))
+                self.write('c.fillStyle="rgba({0},{1},{2},{3})";\n'.format(*self.p.fillStyle))
             for j in range(len(pattern)):
                 for i in range(8):
                     a = (1 << i) & pattern[j]
@@ -364,7 +352,6 @@ class Html_output(object):
 
         self.set_xform()
         self.set_norm_xform(tnr, self.gkss.window[tnr], self.gkss.viewport[tnr])
-        gks.set_norm_xform(tnr, self.gkss.window[tnr], self.gkss.viewport[tnr])
 
     def set_viewport(self, tnr, xmin, xmax, ymin, ymax):
         self.gkss.viewport[tnr][0] = xmin
@@ -372,8 +359,8 @@ class Html_output(object):
         self.gkss.viewport[tnr][2] = ymin
         self.gkss.viewport[tnr][3] = ymax
 
-        self.set_norm_xform(tnr, self.gkss.window[tnr], self.gkss.window[tnr])
-        gks.set_norm_xform(tnr, self.gkss.window[tnr], self.gkss.window[tnr])
+        self.set_xform()
+        self.set_norm_xform(tnr, self.gkss.window[tnr], self.gkss.viewport[tnr])
         if tnr == self.gkss.cntnr:
             self.set_clip_rect(tnr)
 
@@ -382,8 +369,6 @@ class Html_output(object):
             self.gkss.asf[i] = asf[i]
 
     def polyline(self, n, px, py):
-        self.write('// polyline\n')
-
         ln_width = self.gkss.lwidth if self.gkss.asf[1] else 1
         ln_type = self.gkss.ltype if self.gkss.asf[0] else self.gkss.lindex
         ln_color = self.gkss.plcoli if self.gkss.asf[2] else 1
@@ -395,9 +380,10 @@ class Html_output(object):
         ln_width = max(1, round(ln_width))
 
         color = self.p.rgb[ln_color]
+        color.append(self.transparency)
         if self.p.strokeStyle != color:
             self.p.strokeStyle = color
-            self.write('c.strokeStyle="rgb({0}, {1}, {2})";\n'.format(*color))
+            self.write('c.strokeStyle="rgba({0},{1},{2},{3})";\n'.format(*color))
         if self.p.lineWidth != ln_width:
             self.p.lineWidth = ln_width
             self.write('c.lineWidth = {0};\n'.format(ln_width))
@@ -407,8 +393,6 @@ class Html_output(object):
         if self.p.dashes != dashes:
             self.p.dashes = dashes
             self.write('set_dashes(c, {0});\n'.format(str(dashes)))
-
-        gks.set_dev_xform(self.gkss, self.p.window, self.p.viewport)
 
         (xn, yn) = self.WC_to_NDC(px[0], py[0], self.gkss.cntnr)
         (xn, yn) = self.seg_xform(xn, yn)
@@ -422,10 +406,10 @@ class Html_output(object):
         self.write('c.stroke();\n')
 
     def line_routine(self, n, px, py, ltype, tnr):
-        self.write('c.beginPath();\n')
         (xn, yn) = self.WC_to_NDC(px[0], py[0], self.gkss.cntnr)
         (xn, yn) = self.seg_xform(xn, yn)
         (xd, yd) = self.NDC_to_DC(xn, yn)
+        self.write('c.beginPath();\n')
         self.write('c.moveTo({0}, {1});\n'.format(xd, yd))
         for i in range(1, n):
             (xn, yn) = self.WC_to_NDC(px[i], py[i], self.gkss.cntnr)
@@ -442,6 +426,7 @@ class Html_output(object):
         self.write('c.fillRect({0}, {1}, 1, 1);\n'.format(x, y))
 
     def draw_line(self, x1, y1, x2, y2):
+        self.write('c.beginPath();\n')
         self.write('c.moveTo({0}, {1});\n'.format(x1, y1))
         self.write('c.lineTo({0}, {1});\n'.format(x2, y2))
         self.write('c.stroke();\n')
@@ -555,8 +540,8 @@ class Html_output(object):
                 yr = scale * marker[mtype][pc + 3]
                 (xr, yr) = self.seg_xform_rel(xr, yr)
 
-                self.write('c.moveTo({0}, {1});\n'.format(xr, yr))
                 self.write('c.beginPath();\n')
+                self.write('c.moveTo({0}, {1});\n'.format(x - xr, y - yr))
 
                 for i in range(1, marker[mtype][pc + 1]):
                     xr = scale * marker[mtype][pc + 2 + 2 * i]
@@ -625,12 +610,11 @@ class Html_output(object):
         self.gkss.pmcoli = idx
 
     def draw_arc(self, x, y, r, start_angle, end_angle):
-        self.write('c.arc({0}, {1}, {2}, {3}, {4}, true);\n'.format(x, y, r, start_angle, end_angle))
+        self.write('c.beginPath();\n')
+        self.write('c.arc({0},{1},{2},{3}, {4}, true);\n'.format(x, y, r, start_angle, end_angle))
         self.write('c.stroke();\n')
 
     def polymarker(self, n, px, py):
-
-        self.write('// polymarker \n')
         if self.p.dashes != []:
             self.p.dashes = []
             self.write('set_dashes(c, []);\n')
@@ -638,13 +622,14 @@ class Html_output(object):
         mk_size = self.gkss.mszsc if self.gkss.asf[4] else 1
         mk_color = self.gkss.pmcoli if self.gkss.asf[5] else 1
         color = self.p.rgb[mk_color]
+        color.append(self.transparency)
 
         if self.p.fillStyle != color:
             self.p.fillStyle = color
-            self.write('c.fillStyle="rgb({0}, {1}, {2})";\n'.format(*color))
+            self.write('c.fillStyle="rgba({0},{1},{2},{3})";\n'.format(*color))
         if self.p.strokeStyle != color:
             self.p.strokeStyle = color
-            self.write('c.strokeStyle="rgb({0}, {1}, {2})";\n'.format(*color))
+            self.write('c.strokeStyle="rgba({0},{1},{2},{3})";\n'.format(*color))
 
         ln_width = max(1, round(self.p.height / 500.0)) if self.gkss.version > 4 else 1
         if self.p.lineWidth != ln_width:
@@ -713,8 +698,8 @@ class Html_output(object):
     def set_text_slant(self, slant):
         self.gkss.txslant = slant
 
-    def set_clipping(self, idx):
-        self.gkss.clip = idx
+    def set_clipping(self, clip):
+        self.gkss.clip = clip
         self.set_clip_rect(self.gkss.cntnr)
 
     def set_clip_rect(self, tnr):
@@ -727,6 +712,7 @@ class Html_output(object):
         if self.gkss.clip == GKS_K_CLIP:
             self.p.clip_rect = self.p.rect[tnr]
             self.write('c.save();\n')
+            self.write('c.beginPath();\n')
             self.write('c.rect({}, {}, {}, {});\n'.format(self.p.clip_rect[0][0], self.p.clip_rect[0][1],
                                                           self.p.clip_rect[1][0], self.p.clip_rect[1][1]))
             self.write('c.clip();\n')
@@ -787,7 +773,11 @@ class Html_output(object):
 
     def set_color_rep(self, color, red, green, blue):
         if color >= 0 and color < MAX_COLOR:
-            self.p.rgb[color] = [int(round(red * 255)), int(round(green * 255)), int(round(blue * 255))]
+            self.p.rgb[color] = [int(255 * red), int(255 * green), int(255 * blue), 255]
+
+    def set_transparency(self, val):
+        self.write('c.globalAlpha = {0};'.format(val))
+        self.transparency = val
 
     def init_colors(self):
         for color in range(MAX_COLOR):
