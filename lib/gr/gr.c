@@ -5739,20 +5739,30 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
 {
   double xs, ys, xe, ye;
   int errind, ltype, intstyle, tnr;
-  double a, c, xc, yc, f;
+  double a, c, xc, yc, f, fh;
   int fill, i, j, n;
   double xi, yi, x[10], y[10];
 
   check_autoinit;
 
-  xs = nx.a * x_lin(x1) + nx.b;
-  ys = nx.c * y_lin(y1) + nx.d;
-  xe = nx.a * x_lin(x2) + nx.b;
-  ye = nx.c * y_lin(y2) + nx.d;
-
   gks_inq_pline_linetype(&errind, &ltype);
   gks_inq_fill_int_style(&errind, &intstyle);
   gks_inq_current_xformno(&errind, &tnr);
+
+  if (tnr != NDC)
+    {
+      xs = nx.a * x_lin(x1) + nx.b;
+      ys = nx.c * y_lin(y1) + nx.d;
+      xe = nx.a * x_lin(x2) + nx.b;
+      ye = nx.c * y_lin(y2) + nx.d;
+    }
+  else
+    {
+      xs = x1;
+      ys = y1;
+      xe = x2;
+      ye = y2;
+    }
 
   gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
   gks_select_xform(NDC);
@@ -5771,6 +5781,7 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
   xc = (xs + xe) / 2;
   yc = (ys + ye) / 2;
   f = 0.01 * c / 2;
+  fh = 0.15 / c;
 
   j = 0;
   while ((n = vertex_list[arrow_style][j++]) != 0)
@@ -5780,8 +5791,15 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
       gks_set_pline_linetype(n > 2 ? GKS_K_LINETYPE_SOLID : ltype);
       for (i = 0; i < n; i++)
         {
-          xi = f * vertex_list[arrow_style][j++];
-          yi = f * vertex_list[arrow_style][j++];
+          xi = vertex_list[arrow_style][j++];
+          yi = vertex_list[arrow_style][j++];
+          xi *= fh; 
+          if (yi < 0)
+             yi = (yi + 100) * fh - 100;
+          else
+             yi = (yi - 100) * fh + 100;
+          xi *= f;
+          yi *= f;
           x[i] = xc + cos(a) * xi - sin(a) * yi;
           y[i] = yc + sin(a) * xi + cos(a) * yi;
         }
