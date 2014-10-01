@@ -301,7 +301,6 @@ class DeviceCoordConverter(CoordConverter):
 class Text(GRMeta):
 
     DEFAULT_CHARHEIGHT_FACTOR = .027
-    DEFAULT_VSPACE_FACTOR = .005
 
     def __init__(self, x, y, text, axes=None,
                  charheight=DEFAULT_CHARHEIGHT_FACTOR, charup=(0, 1),
@@ -433,19 +432,16 @@ class Text(GRMeta):
     def visible(self, bool):
         self._visible = bool
 
-
     def drawGR(self):
         if self.visible:
             isInViewport = True
             if self._axes:
-                axes = self._axes
                 coord = CoordConverter(self._axes.sizex, self._axes.sizey,
                                        self._axes.getWindow())
                 coord.setWCforPlotAxes(self.x, self.y, self._axes)
                 p0 = coord.getNDC()
                 x, y = p0.x, p0.y
                 charHeight = self.charheight * self._axes.sizey
-                vspace = Text.DEFAULT_VSPACE_FACTOR * self._axes.sizey
                 window = gr.inqwindow()
                 # set viewport and window to NDC to allow 'line-drawing'
                 # in all regions and in NDC coordinates
@@ -455,7 +451,6 @@ class Text(GRMeta):
             else:
                 x, y = self.x, self.y
                 charHeight = self.charheight
-                vspace = Text.DEFAULT_VSPACE_FACTOR
 
             gr.setcharheight(charHeight)
             gr.setcharup(*self.charup)
