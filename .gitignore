@@ -12,5 +12,6 @@ MANIFEST
 .settings
 .pydevproject
 .project
+.idea
 *.pyc
 *.pdb

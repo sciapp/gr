@@ -171,9 +171,6 @@ unsigned int rgb[MAX_COLOR];
 #define GR_HEADER  "<gr>\n"
 #define GR_TRAILER "</gr>\n"
 
-#define nominalWindowHeight 500
-#define printQualityFactor 4
-
 typedef enum
 {
   OPTION_LINES, OPTION_MESH, OPTION_FILLED_MESH, OPTION_Z_SHADED_MESH,
@@ -870,6 +867,9 @@ int cmap[44][72] = {
     0xb09a95,  0xb7a39f,  0xbeaca8,  0xc6b5b2,  0xcdbfbc,  0xd4c8c5,  
     0xdbd1cf,  0xe2dad8,  0xe9e3e2,  0xf1edec,  0xf8f6f5,  0xffffff }
 };    
+
+static
+double sizex = 0;
 
 #ifdef _WIN32
 
@@ -2288,6 +2288,8 @@ void gr_setwsviewport(double xmin, double xmax, double ymin, double ymax)
   check_autoinit;
 
   foreach_activews((void (*)(int, void *)) wsviewport, (void *) &rect);
+
+  sizex = xmax - xmin;
 }
 
 void gr_createseg(int segment)
@@ -5982,7 +5984,8 @@ void latex2image(char *string, int pointSize, double *rgb,
 
 void gr_mathtex(double x, double y, char *string)
 {
-  int wkid = 1, errind, pointSize, qualityFactor = 1, color;
+  int wkid = 1, errind, conid, wtype, dcunit;
+  int pointSize, pixels, color;
   double chh, rgb[3];
   int width, height, *data = NULL;
   double w, h, xmin, xmax, ymin, ymax;
@@ -5990,21 +5993,27 @@ void gr_mathtex(double x, double y, char *string)
 
   check_autoinit;
 
-  gks_inq_text_height(&errind, &chh);
-  if (flag_printing)
-    qualityFactor = printQualityFactor;
-  pointSize = chh * qualityFactor * nominalWindowHeight;
+  gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
+  gks_inq_max_ds_size(wtype, &errind, &dcunit, &w, &h, &width, &height);
+  if (sizex > 0)
+    pixels = sizex / h * height;
+  else
+    pixels = 500;
+  if (wtype == 101 || wtype == 102 || wtype == 120 || wtype == 382)
+    pixels *= 8;
 
+  gks_inq_text_height(&errind, &chh);
   gks_inq_text_color_index(&errind, &color);
   gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET,
                     &errind, &rgb[0], &rgb[1], &rgb[2]);
 
+  pointSize = chh * pixels;
   latex2image(string, pointSize, rgb, &width, &height, &data);
 
   if (data != NULL)
     {
-      w =  width / (double) (qualityFactor * nominalWindowHeight);
-      h = height / (double) (qualityFactor * nominalWindowHeight);
+      w =  width / (double) pixels;
+      h = height / (double) pixels;
 
       gks_inq_text_align(&errind, &halign, &valign);
 
