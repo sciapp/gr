@@ -1149,7 +1149,7 @@ class PlotAxes(GRViewPort, GRMeta):
         self._window = None
         self._scale = 0
         self._grid = True
-        self._resetWindow = True
+        self._resetWindow = False
         self._autoscale = False
         PlotAxes.COUNT += 1
         self._id = PlotAxes.COUNT
@@ -1305,7 +1305,7 @@ class PlotAxes(GRViewPort, GRMeta):
         self._resetWindow = True
 
     def isReset(self):
-        return self._resetWindow
+        return self._resetWindow or self.getWindow() is None
 
     @property
     def autoscale(self):
