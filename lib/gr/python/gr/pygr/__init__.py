@@ -431,6 +431,40 @@ class Text(GRMeta):
     def visible(self, bool):
         self._visible = bool
 
+    def getBoundingBox(self):
+        if self._axes:
+            coord = CoordConverter(self._axes.sizex, self._axes.sizey,
+                                   self._axes.getWindow())
+            coord.setWCforPlotAxes(self.x, self.y, self._axes)
+            p0 = coord.getNDC()
+            x, y = p0.x, p0.y
+
+            charHeight = self.charheight * self._axes.sizey
+            window = gr.inqwindow()
+            # set viewport and window to NDC to allow 'line-drawing'
+            # in all regions and in NDC coordinates
+            # if hideviewport is False.
+            gr.setviewport(0, self._axes.sizex, 0, self._axes.sizey)
+            gr.setwindow(0, self._axes.sizex, 0, self._axes.sizey)
+        else:
+            x, y = self.x, self.y
+            charHeight = self.charheight
+
+        gr.setcharheight(charHeight)
+        gr.setcharup(*self.charup)
+        gr.settextalign(self.halign, self.valign)
+        gr.settextpath(self.textpath)
+        gr.setcharexpan(self.charexpan)
+        if self._font is not None and self._precision is not None:
+            gr.settextfontprec(self._font, self._precision)
+
+        tbx, tby = gr.inqtext(x, y, self.text)
+
+        if self._axes:
+            gr.setviewport(*self._axes.viewportscaled)
+            gr.setwindow(*window)
+        return tbx, tby
+
     def drawGR(self):
         if self.visible:
             isInViewport = True
@@ -471,7 +505,6 @@ class Text(GRMeta):
 
             if not self.hideviewport or isInViewport:
                 gr.text(x, y, self.text)
-#                gr.polyline(tbx, tby)
 
             if self._axes:
                 gr.setviewport(*self._axes.viewportscaled)
