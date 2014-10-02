@@ -886,11 +886,11 @@ class Plot(GRViewPort, GRMeta):
          # display all legend items.
         redraw = False
         # -- draw title and subtitle -----------------------------------------
+        charHeight = .027 * (ymax - ymin)
+        charHeightUnscaled = .027 * (self.viewport[3] - self.viewport[2])
         if self.title or self.subTitle:
             dyTitle = 0
             dySubTitle = 0
-            charHeight = .027 * (ymax - ymin)
-            charHeightUnscaled = .027 * (self.viewport[3] - self.viewport[2])
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_BOTTOM)
             gr.setcharup(0., 1.)
             gr.setcharheight(charHeight)
