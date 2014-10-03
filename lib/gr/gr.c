@@ -5941,11 +5941,11 @@ void latex2image(char *string, int pointSize, double *rgb,
 \\documentclass{article}\n\
 \\pagestyle{empty}\n\
 \\usepackage[dvips]{color}\n\
-\\color[rgb]{%.3f,%.3f,%.3f}\n\
 \\begin{document}\n\
-\\[\n", rgb[0], rgb[1], rgb[2]);
+\\[\n\
+\\color[rgb]{%.3f,%.3f,%.3f} {\n", rgb[0], rgb[1], rgb[2]);\
       fwrite(string, strlen(string), 1, stream);
-      fprintf(stream, "\n\
+      fprintf(stream, "}\n\
 \\]\n\
 \\end{document}");
       fclose(stream);
@@ -5956,7 +5956,7 @@ void latex2image(char *string, int pointSize, double *rgb,
 
       if (ret == 0 && access(dvi, R_OK) == 0)
         {
-          sprintf(cmd, "dvipng -q -T tight -x %d %s -o %s >%s",
+          sprintf(cmd, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s",
                   pointSize * 100, dvi, png, null);
           ret = system(cmd);
           if (ret == 0)

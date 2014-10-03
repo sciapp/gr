@@ -121,7 +121,7 @@ double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 static
 int dingbats[256] = {
-      0,     1,     2,     3,     4,     5,     6,     7,     8,     9, 
+      0,     1,     2,     3,     4,     5,     6,     7,     8,     9,
      10,    11,    12,    13,    14,    15,    16,    17,    18,    19,
      20,    21,    22,    23,    24,    25,    26,    27,    28,    29,
      30,    31,    32,  9985,  9986,  9987,  9988,  9742,  9990,  9991,
@@ -376,7 +376,7 @@ void seg_xform_rel(double *x, double *y)
           p->height = [self bounds].size.height;
           p->swidth  = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
           p->sheight = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
-
+ 
           p->window[0] = p->window[2] = 0.0;
           p->window[1] = p->window[3] = 1.0;
 
@@ -984,7 +984,7 @@ void seg_xform_rel(double *x, double *y)
   max_width = 0.001 * size.width;
   max_height = max_width * p->sheight / p->swidth;
 
-  gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.075);
+  gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.0075);
   width  = nint((p->viewport[1] - p->viewport[0]) / max_width  * p->swidth);
   height = nint((p->viewport[3] - p->viewport[2]) / max_height * p->sheight);
 

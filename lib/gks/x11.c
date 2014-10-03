@@ -4786,7 +4786,7 @@ void gks_drv_x11(
 	    max_height = 10.0;
 	  }
 	if (p->uil < 0)
-	  gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.075);
+	  gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.0075);
 
 	resize_window();
 	set_WM_hints();

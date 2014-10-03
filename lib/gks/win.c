@@ -493,7 +493,7 @@ void resize_window(void)
   max_width = p->mwidth;
   max_height = p->mheight;
 
-  gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.075);
+  gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.0075);
   width = nint((p->viewport[1] - p->viewport[0]) / p->mwidth * p->swidth);
   height = nint((p->viewport[3] - p->viewport[2]) / p->mheight * p->sheight);
 
