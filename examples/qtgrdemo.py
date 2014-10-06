@@ -95,14 +95,18 @@ class MainWindow(QtGui.QMainWindow):
         dpos = map(lambda y: y + 0.25 * abs(y), y)
         self._errBar = ErrorBar(x, y, dneg, dpos)
 
-        self._curveFoo = PlotCurve(x, y, legend="foo bar")
-        axes = PlotAxes().addCurves(self._curveFoo)
-        axes.setXtickCallback(self._xtickCallBack)
-        self._plot = Plot((.1, .92, .2, .88)).addAxes(axes,
-                                    PlotAxes(drawX=False).plot(x2, y2))
+        self._plot = Plot((.1, .92, .2, .88))
         self._plot.offsetXLabel = -.1
-        self._plot2 = Plot((.1, .95, .15, .88)).addAxes(PlotAxes().addCurves(PlotCurve(x2, y2,
-                                                           legend="second")))
+
+        self._curveFoo = PlotCurve(x, y, legend="foo bar")
+        axes = PlotAxes(self._plot.viewport).addCurves(self._curveFoo)
+        axes.setXtickCallback(self._xtickCallBack)
+        self._plot.addAxes(axes, PlotAxes(self._plot.viewport,
+                                          drawX=False).plot(x2, y2))
+
+        self._plot2 = Plot((.1, .95, .15, .88))
+        self._plot2.addAxes(PlotAxes(self._plot2.viewport).addCurves(
+                                         PlotCurve(x2, y2, legend="second")))
 
         self._plot.title = "QtGR Demo"
         self._plot.subTitle = "Multiple Axes Example"

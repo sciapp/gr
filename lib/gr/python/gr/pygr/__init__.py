@@ -1132,9 +1132,8 @@ class PlotAxes(GRViewPort, GRMeta):
 
     COUNT = 0
 
-    def __init__(self, xtick=None, ytick=None, majorx=None, majory=None,
-                 viewport=GRViewPort.DEFAULT_VIEWPORT, drawX=True,
-                 drawY=True):
+    def __init__(self, viewport, xtick=None, ytick=None, majorx=None,
+                 majory=None, drawX=True, drawY=True):
         super(PlotAxes, self).__init__(viewport)
         self._xtick, self._ytick = xtick, ytick
         self.majorx, self.majory = majorx, majory

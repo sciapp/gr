@@ -440,8 +440,8 @@ if __name__ == "__main__":
     x2 = [i * pi2_n for i in range(0, n + 1)]
     y2 = map(lambda xi: math.sin(xi), x2)
 
-    plot = Plot(viewport).addAxes(PlotAxes().plot(x, y),
-                                  PlotAxes().plot(x2, y2))
+    plot = Plot(viewport).addAxes(PlotAxes(viewport).plot(x, y),
+                                  PlotAxes(viewport).plot(x2, y2))
     plot.title, plot.subTitle = "foo", "bar"
     plot.xlabel, plot.ylabel = "x", "f(x)"
 
