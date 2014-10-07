@@ -13,7 +13,8 @@ from ctypes import byref, POINTER, addressof, CDLL, CFUNCTYPE
 from ctypes import create_string_buffer, cast
 from sys import version_info, platform
 from platform import python_implementation
-
+# local library
+from gr._version import __version__, __revision__
 
 # Detect whether this is a site-package installation
 if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):

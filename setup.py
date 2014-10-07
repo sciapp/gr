@@ -38,11 +38,14 @@ else:
             if stderr is not None:
                 stderr = stderr.decode()
             return (stdout, stderr)
+import vcversioner
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-09-19"
-__version__ = "0.6.2"
+__version__ = vcversioner.find_version(
+                   version_module_paths=[os.path.join("lib", "gr", "python",
+                                                      "gr",
+                                                      "_version.py")]).version
 __copyright__ = """Copyright 2012 - 2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.

@@ -11,15 +11,14 @@ import time
 import logging
 # local library
 import gr
+import gr3
 from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort
 from gr.pygr.helper import ColorIndexGenerator, DomainChecker
 from numpy import ndarray
-import gr3
+from gr._version import __version__, __revision__
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
 Josef Heinen <j.heinen@fz-juelich.de>"""
-__date__ = "2014-09-19"
-__version__ = "0.6.2"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.

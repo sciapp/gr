@@ -2,6 +2,7 @@ build/
 dist/
 doc/media/
 recipe/
+lib/gr/python/gr/_version.py
 MANIFEST
 *.o
 *.obj
@@ -15,3 +16,4 @@ MANIFEST
 .idea
 *.pyc
 *.pdb
+version.txt

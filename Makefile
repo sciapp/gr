@@ -22,7 +22,11 @@ ifeq ($(UNAME), Darwin)
 	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj
 endif
 
-install: default
+version:
+	lib/Version >lib/gr/python/gr/_version.py
+	@chmod 644 lib/gr/python/gr/_version.py
+
+install: default version
 	@for d in $(DIRS); do make -C $$d GRDIR=$(GRDIR) install; done
 ifeq ($(UNAME), Darwin)
 	@if [ ! -d $(DESTDIR)$(GRDIR)/Applications ]; then \
@@ -40,8 +44,10 @@ ifeq ($(UNAME), Darwin)
 	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean
 endif
 	cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
+	rm -f lib/gr/python/gr/_version.py
 	rm -f gr.pkg
 	rm -rf doc/_build/*
+	rm -f `find . -type f -name \*.pyc`
 
 pypi: clean
 	python setup.py sdist upload -r https://pypi.python.org/pypi

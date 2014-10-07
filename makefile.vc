@@ -4,10 +4,15 @@ default:
 	@cd lib\gr && $(MAKE) $(MAKE_FLAGS) /f makefile.vc && cd ..\..
 	@cd lib\gr3 && $(MAKE) $(MAKE_FLAGS) /f makefile.vc && cd ..\..
 
-install: default
+version:
+	python -c "import vcversioner; vcversioner.find_version(version_module_paths=['lib/gr/python/gr/_version.py'])"
+
+install: default version
 	@cd lib\gr && $(MAKE) $(MAKE_FLAGS) /f makefile.vc install && cd ..\..
 	@cd lib\gr3 && $(MAKE) $(MAKE_FLAGS) /f makefile.vc install && cd ..\..
 
 clean:
 	@cd lib\gr && $(MAKE) $(MAKE_FLAGS) /f makefile.vc clean && cd ..\..
 	@cd lib\gr3 && $(MAKE) $(MAKE_FLAGS) /f makefile.vc clean && cd ..\..
+	DEL lib\gr\python\gr\_version.py
+	DEL *.pyc

@@ -7,10 +7,10 @@ The default backend order (PySide, PyQt4) can be overwritten with:
 """
 
 import sys
+# local library
+from gr._version import __version__, __revision__
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__date__ = "2014-09-19"
-__version__ = "0.6.2"
 __copyright__ = """Copyright 2012-2014 Forschungszentrum Juelich GmbH
 
 This file is part of GR, a universal framework for visualization applications.
