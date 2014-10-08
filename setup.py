@@ -683,7 +683,8 @@ int main()
                 self.gllibs, self.glldflags = gllibs, glldflags
         # -- platform extra link args -------------------------------------
         if self.isDarwin:
-            self.platform_ldflags = ["-Wl,-rpath,@loader_path/."]
+            self.platform_ldflags = ["-mmacosx-version-min=10.6",
+                                     "-Wl,-rpath,@loader_path/."]
         elif self.isLinux:
             self.platform_ldflags = ["-Wl,-rpath,$ORIGIN"]
 
@@ -871,6 +872,7 @@ int main()
                 cflags.extend(_msvc_extra_compile_args)
             ldflags.extend(self.platform_ldflags)
             if self.isDarwin:
+                cflags.append("-mmacosx-version-min=10.6")
                 ldflags.append("-Wl,-install_name,@rpath/libGKS.so")
             if not self.disable_freetype:
                 libs.append("fontconfig")
