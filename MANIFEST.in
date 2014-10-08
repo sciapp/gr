@@ -5,4 +5,5 @@ recursive-include 3rdparty *
 recursive-include examples *
 recursive-include doc *
 recursive-exclude *.vc Makefile makefile Preflight
+exclude lib/gks/quartz/build/*
 prune doc/media
