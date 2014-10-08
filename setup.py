@@ -862,6 +862,7 @@ int main()
             cflags.extend(self.ftcflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
+                libs.append("msimg32")
                 ldflags.append("/nodefaultlib")
                 ldflags.append("-def:lib\gks\libgks.def")
                 cflags.extend(_msvc_extra_compile_args)
