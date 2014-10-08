@@ -56,6 +56,8 @@ testpypi: clean
 	python setup.py sdist upload -r https://testpypi.python.org/pypi
 
 conda: clean
+	@recipe/Build || \
+	( echo "FATAL: Error building conda recipe"; exit 1 )
 	conda build --no-binstar-upload recipe
 
 osxpkg:
@@ -68,7 +70,7 @@ osxpkg:
 	pkgbuild --identifier de.fz-juelich.gr --root tmp --install-location /usr/local --ownership preserve gr.pkg
 	sudo rm -rf tmp
 
-sphinxdoc: default
+sphinxdoc: default version
 	make -C doc html
 	rsync -av --delete --exclude=/media doc/_build/html/ iffwww:/WebServer/Documents/gr/
 	rsync -av --delete doc/media/ iffwww:/WebServer/Documents/gr/media/
