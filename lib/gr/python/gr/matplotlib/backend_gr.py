@@ -13,9 +13,7 @@ from matplotlib.texmanager import TexManager
 
 from os import putenv
 import numpy as np
-# local library
 import gr
-from gr._version import __version__, __revision__
 
 
 linetype = {'solid': 1, 'dashed': 2, 'dashdot': 4, 'dotted': 3}
