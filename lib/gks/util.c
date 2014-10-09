@@ -79,7 +79,8 @@ struct wstypes_t wstypes[] = {
   { "sock", 410 },
   { "zmq", 415 },
   { "gl", 420 },
-  { "opengl", 420 }
+  { "opengl", 420 },
+  { "html", 430 }
 };
 
 static

@@ -178,6 +178,8 @@ def openws(workstation_id, connection, workstation_type):
     +-------------+------------------------------------------------------+
     |          420|OpenGL                                                |
     +-------------+------------------------------------------------------+
+    |          430|HTML5 Canvas                                          |
+    +-------------+------------------------------------------------------+
 
     """
     __gr.gr_openws(c_int(workstation_id), char(connection), c_int(workstation_type))

@@ -5335,10 +5335,12 @@ int gks_wstype(char *type)
     wstype = 382;
   else if (!str_casecmp(type, "wmf"))
     wstype = 390;
+  else if (!str_casecmp(type, "html"))
+    wstype = 430;
   else
     {
       fprintf(stderr, "%s: unrecognized file type\nAvailable formats: \
-bmp, eps, fig, jpeg, mov, pdf, png, ps, svg, tiff or wmf\n", type);
+bmp, eps, fig, html, jpeg, mov, pdf, png, ps, svg, tiff or wmf\n", type);
       wstype = -1;
     }
 
