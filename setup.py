@@ -170,7 +170,7 @@ class check_ext(Command):
                     ('disable-svg', None, "Disable svg plugin"),
                     ('disable-wmf', None, "Disable wmf plugin"),
                     ('disable-mov', None, "Disable mov plugin"),
-                    ('disable-htm', None, "Disable htm plugin"),
+                    ('disable-html', None, "Disable html plugin"),
                     ('disable-opengl', None, "Disable OpenGL libraries"),
                     ('disable-quartz', None,
                      "Disable quartz plugin (OSX only)"),
@@ -963,7 +963,7 @@ int main()
                 if self.isWin32:
                     libs.extend(_libs_msvc)
                     cflags.extend(_msvc_extra_compile_args)
-                gksSvgExt = Extension("gr.htmplugin",
+                gksHtmExt = Extension("gr.htmplugin",
                                       _plugins_path["htmplugin.cxx"],
                                       define_macros=defines,
                                       include_dirs=inc,
@@ -971,7 +971,7 @@ int main()
                                       libraries=libs,
                                       extra_link_args=ldflags,
                                       extra_compile_args=cflags)
-                self.ext_modules.append(gksSvgExt)
+                self.ext_modules.append(gksHtmExt)
 
             # -- fig -------------------------------------
             if not self.disable_fig:

@@ -304,13 +304,13 @@ void htm_write_footer(const char *args, ...)
 {
   va_list ap;
   char fmt[BUFSIZ], s[BUFSIZ];
-  
+
   strcpy(fmt, args);
-  
+
   va_start(ap, args);
   vsprintf (s, fmt, ap);
   va_end(ap);
-  
+
   htm_memcpy(p->footer, s, strlen(s));
 }
 
@@ -526,7 +526,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
           else
             draw_arc(x, y, r, end_angle, start_angle);
           htm_write("c.closePath();\n");
-            
+
           if (op == 7)
               htm_write("c.fill();\n");
           else
@@ -779,7 +779,7 @@ void image_routine(double xmin, double xmax, double ymin, double ymax,
 
   htm_write("imageObj%d.onload = function() {\n", img_count);
   htm_write("c.drawImage(imageObj%d, %.3f, %.3f);\n", img_count, x, y);
-  
+
   htm_write_footer("};\n");
   free(data_uri);
 }
