@@ -1,6 +1,7 @@
 include COPYING
 include README.*
 include version.txt
+include vcversioner.py
 recursive-include lib *
 recursive-include 3rdparty *
 recursive-include examples *
