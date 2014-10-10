@@ -288,7 +288,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
+        cmd = [self.cc, "-o", tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(gscflags)
         cmd.extend(ldflags)
@@ -339,7 +339,7 @@ int main(int argc, char **argv)
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
+        cmd = [self.cc, "-o", tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(mupdfcflags)
         cmd.extend(ldflags)
@@ -375,7 +375,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
+        cmd = [self.cc, "-o", tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(mupdfcflags)
         cmd.extend(ldflags)
@@ -409,7 +409,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
+        cmd = [self.cc, "-o", tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(glcflags)
         cmd.extend(ldflags)
@@ -447,7 +447,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
+        cmd = [self.cc, "-o", tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(xftcflags)
         cmd.extend(ldflags)
@@ -485,7 +485,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
+        cmd = [self.cc, "-o", tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(xtcflags)
         cmd.extend(ldflags)
@@ -516,7 +516,7 @@ int main()
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o%s" % tmpout, tmpsrc]
+        cmd = [self.cc, "-o", tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(ftcflags)
         cmd.extend(ldflags)
