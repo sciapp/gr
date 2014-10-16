@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Draw text at an arbitrary position on the Axes using gr.pygr.
+"""
 
 # local library
 import gr
@@ -33,3 +36,4 @@ if __name__ == '__main__':
     gr.setviewport(0, axes.sizex, 0, axes.sizey)
     gr.setwindow(0, axes.sizex, 0, axes.sizey)
     gr.fillarea(tbx, tby)
+
