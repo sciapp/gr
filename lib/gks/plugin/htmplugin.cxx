@@ -116,7 +116,7 @@ typedef unsigned long uLong;
 typedef struct HTM_stream_t
 {
   char *buffer;
-  int size, length;
+  size_t size, length;
 }
 HTM_stream;
 

@@ -364,7 +364,9 @@ rm -f $tmpsrc $tmpout $tmpver
 
 tmpout=`mktemp /tmp/a.out.XXXXX`
 tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+tmpver=`mktemp /tmp/a$$XXXXX.txt`
 cat >$tmpsrc << eof
+#include <stdio.h>
 #include <mupdf/fitz.h>
 
 int main(int argc, char **argv)
@@ -391,20 +393,25 @@ int main(int argc, char **argv)
   fz_drop_pixmap(ctx, pix);
   fz_free_page(doc, page);
   fz_free_context(ctx);
+
+#ifdef FZ_VERSION
+  fprintf(stderr, "version %s\n", FZ_VERSION);
+#endif
 }
 eof
 ftlibs=`$ftconfig --libs`
-cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lmupdf $ftlibs -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lssl -lcrypto -lz -lm"
-$cmd >/dev/null 2>&1
+cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lmupdf $ftlibs -ljbig2dec -ljpeg -lopenjp2 -lbz2 -lz -lm"
+$cmd >$tmpver 2>&1
 if [ $? -ne 0 ]; then
-  info="${red} no${normal} [MuPDF 1.4 API not found]"
+  info="${red} no${normal} [MuPDF API >=1.4 not found]"
   mupdfdefs="MUPDFDEFS=-DNO_MUPDF MUPDFLIBS="
   ret=1
 else
-  info="${green}yes${normal}"
+  $tmpout >$tmpver 2>&1
+  info="${green}yes${normal} [`cat $tmpver | head -1`]"
 fi
 printf "%12s: %s\n" "MuPDF" "$info" >&2
-rm -f $tmpout $tmpsrc
+rm -f $tmpsrc $tmpout $tmpver
 
 echo "" >&2
 echo $target $wxdefs $ftdefs $qtdefs $gtkdefs $x11defs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $extradefs

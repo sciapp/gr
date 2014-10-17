@@ -49,14 +49,24 @@ endif
 	rm -rf doc/_build/*
 	rm -f `find . -type f -name \*.pyc`
 
+condaclean: clean
+	rm -f recipe/meta.yaml
+	rm -rf $(HOME)/conda-bld
+	rm -rf $(HOME)/envs/_build
+
 pypi: clean
 	python setup.py sdist upload -r https://pypi.python.org/pypi
 
 testpypi: clean
 	python setup.py sdist upload -r https://testpypi.python.org/pypi
 
-conda: clean
-	@recipe/Build || \
+conda: condaclean
+	@recipe/Build in || \
+	( echo "FATAL: Error building conda recipe"; exit 1 )
+	conda build --no-binstar-upload recipe
+
+testconda: condaclean
+	@recipe/Build test || \
 	( echo "FATAL: Error building conda recipe"; exit 1 )
 	conda build --no-binstar-upload recipe
 

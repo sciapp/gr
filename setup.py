@@ -263,6 +263,7 @@ class check_ext(Command):
         # -- mupdf -------------------------------------
         self.mupdfinc = []
         self.mupdflibs = []
+        self.mupdfldflags = []
         # -- opengl -------------------------------------
         self.gllibs = []
         self.glldflags = []
@@ -590,7 +591,7 @@ int main()
                       os.path.join(os.sep, "usr", "include")]:
                 ghost = os.path.join(p, "ghostscript")
                 if os.path.isdir(ghost):
-                    self.gsinc = [ghost]
+                    self.gsinc = [p]
                     break
             if not self.gsinc:
                 self.disable_gs = True
@@ -599,6 +600,7 @@ int main()
                                                            "iconv"]
                 if self.isDarwin:
                     self.gsldflags = ["-L" + ldir for ldir in self.x11lib]
+                    self.gsldflags.append("-L/usr/local/lib")
                 self.disable_gs = not self._test_gs(self.gsinc, self.gslibs,
                                                     gsldflags=self.gsldflags)
         # -- freetype -------------------------------------
@@ -659,18 +661,21 @@ int main()
             if not self.mupdfinc:
                 self.disable_mupdf = True
             else:
-                self.mupdflibs = ["mupdf",
-                              "jbig2dec", "jpeg", "openjp2", "ssl", "crypto"]
+                self.mupdflibs = ["mupdf", "jbig2dec", "jpeg", "openjp2"]
+                self.mupdfldflags = self.ftldflags
+                if self.isDarwin:
+                    self.mupdfldflags.append("-L/usr/local/lib")
                 self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
                                                           self.mupdflibs,
-                                                  mupdfldflags=self.ftldflags)
+                                                          mupdfldflags=self.mupdfldflags)
                 if self.disable_mupdf:
                     self.mupdfinc = []
                     self.mupdflibs = []
+                    self.mupdfldflags = []
         # -- mov -------------------------------------
         if not self.disable_mov:
             self.disable_mov = not self._test_mov(self.mupdfinc, self.mupdflibs,
-                                                  mupdfldflags=self.ftldflags)
+                                                  mupdfldflags=self.mupdfldflags)
         # -- opengl --------------------------------------------------
         if not self.disable_opengl:
             gllibs, glldflags = [], []

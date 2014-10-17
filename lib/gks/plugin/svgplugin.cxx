@@ -727,7 +727,7 @@ char *base64_stream(const char *path)
   if ((stream = fopen(path, "rb")) == NULL)
     {
       gks_perror("can't open image file");
-      perror("open");
+      perror("fopen");
       return NULL;
     }
 
@@ -735,7 +735,12 @@ char *base64_stream(const char *path)
   srclen = buf.st_size;
   src = (unsigned char *) gks_malloc(srclen);
 
-  fread(src, srclen, 1, stream);
+  if (fread(src, srclen, 1, stream) == 0)
+    {
+      gks_perror("can't read image file");
+      perror("fread");
+      return NULL;
+    }
   fclose(stream);
 
   destlen = buf.st_size * 4 / 3 + 4;

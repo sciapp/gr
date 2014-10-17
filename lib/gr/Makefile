@@ -17,12 +17,16 @@
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
      LDFLAGS = $(EXTRA_LDFLAGS)
         LIBS = -lc -lm
+ifeq ($(MUPDFDEFS), -DNO_MUPDF)
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
+else
+    JPEGLIBS = 
+endif
      PNGLIBS = ../../3rdparty/png/libpng.a
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
      XFTLIBS = -lXft -lfontconfig
-   MUPDFLIBS = -lmupdf $(FTLIBS) -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lssl -lcrypto
+   MUPDFLIBS = -lmupdf $(FTLIBS) -lbz2 -ljbig2dec -ljpeg -lopenjp2
      X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
        ZLIBS = -lz
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-if [ `basename $0` == "igr" ]
+if [ `basename $0` = "igr" ]
 then
   python=ipython
 else
