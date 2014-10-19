@@ -171,6 +171,7 @@ class check_ext(Command):
                     ('disable-wmf', None, "Disable wmf plugin"),
                     ('disable-mov', None, "Disable mov plugin"),
                     ('disable-html', None, "Disable html plugin"),
+                    ('disable-pgf', None, "Disable pgf plugin"),
                     ('disable-opengl', None, "Disable OpenGL libraries"),
                     ('disable-quartz', None,
                      "Disable quartz plugin (OSX only)"),
@@ -199,6 +200,7 @@ class check_ext(Command):
         self.disable_fig = False
         self.disable_svg = False
         self.disable_html = False
+        self.disable_pgf = False
         self.disable_wmf = False
         self.disable_opengl = False
         # only available on OS X
@@ -846,6 +848,7 @@ int main()
             print("     disable-fig: ", self.disable_fig)
             print("     disable-svg: ", self.disable_svg)
             print("    disable-html: ", self.disable_html)
+            print("     disable-pgf: ", self.disable_pgf)
             print("     disable-wmf: ", self.disable_wmf)
             print("     disable-mov: ", self.disable_mov)
             print("  disable-opengl: ", self.disable_opengl)
@@ -977,6 +980,30 @@ int main()
                                       extra_link_args=ldflags,
                                       extra_compile_args=cflags)
                 self.ext_modules.append(gksHtmExt)
+
+            # -- pgf -------------------------------------
+            if not self.disable_pgf:
+                inc = list(gksinc)
+                inc.extend(pnginc)
+                inc.extend(zinc)
+                lib = [_build_3rdparty]
+                libs = list(_pnglibs) # w32ERR: __imp_
+                libs.extend(_zlibs)   # w32ERR: __imp_
+                ldflags = []
+                cflags = []
+                ldflags.extend(self.platform_ldflags)
+                if self.isWin32:
+                    libs.extend(_libs_msvc)
+                    cflags.extend(_msvc_extra_compile_args)
+                gksPgfExt = Extension("gr.pgfplugin",
+                                      _plugins_path["pgfplugin.cxx"],
+                                      define_macros=defines,
+                                      include_dirs=inc,
+                                      library_dirs=lib,
+                                      libraries=libs,
+                                      extra_link_args=ldflags,
+                                      extra_compile_args=cflags)
+                self.ext_modules.append(gksPgfExt)
 
             # -- fig -------------------------------------
             if not self.disable_fig:
@@ -1331,7 +1358,7 @@ _gks_plugin_src = ["font.cxx", "afm.cxx", "util.cxx", "dl.cxx",
 _gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "gtkplugin.cxx",
                 "quartzplugin.m", "svgplugin.cxx", "figplugin.cxx",
                 "gsplugin.cxx", "wmfplugin.cxx", "movplugin.cxx",
-                "htmplugin.cxx"]
+                "htmplugin.cxx", "pgfplugin.cxx"]
 
 _libz_src = ["adler32.c", "compress.c", "crc32.c", "deflate.c", "gzclose.c",
              "gzlib.c", "gzread.c", "gzwrite.c", "infback.c", "inffast.c",

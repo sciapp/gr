@@ -62,7 +62,7 @@ default:
 targets: prerequisites \
          wxplugin.so qtplugin.so svgplugin.so gtkplugin.so figplugin.so \
          gsplugin.so wmfplugin.so glplugin.so zmqplugin.so movplugin.so \
-         htmplugin.so
+         htmplugin.so pgfplugin.so
 
 prerequisites:
 	@for d in png; do make -C ../../../3rdparty/$$d; done
@@ -109,6 +109,9 @@ movplugin.so: movplugin.o font.o afm.o util.o vc.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(EXTRALIBS) $(LIBS)
 
 htmplugin.so: htmplugin.o font.o afm.o util.o malloc.o error.o io.o
+	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
+
+pgfplugin.so: pgfplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 install: default $(TARGETS)

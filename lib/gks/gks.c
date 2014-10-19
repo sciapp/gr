@@ -54,6 +54,7 @@ ws_descr_t ws_types[] = {
   { 217, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, NULL, NULL },
   { 218, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, "gks.gif", NULL },
   { 301, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, NULL, NULL },
+  { 314, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "gks.tex", NULL },
   { 320, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL },
   { 321, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL },
   { 322, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL },
@@ -302,6 +303,12 @@ void gks_ddlk(
 
 	    case 430:
 	      gks_htm_plugin(fctid, dx, dy, dimx, i_arr,
+		len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
+		ptr);
+	      break;
+
+	    case 314:
+	      gks_pgf_plugin(fctid, dx, dy, dimx, i_arr,
 		len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
 		ptr);
 	      break;

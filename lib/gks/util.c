@@ -62,6 +62,7 @@ struct wstypes_t wstypes[] = {
   { "pdf", 102 },
   { "mov", 120 },
   { "x11", 211 },
+  { "pgf", 314 },
   { "bmp", 320 },
   { "jpeg", 321 },
   { "jpg", 321 },
