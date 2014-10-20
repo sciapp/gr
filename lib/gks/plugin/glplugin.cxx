@@ -1228,12 +1228,12 @@ void gks_glplugin(
     case 6:
       p->dl.buffer[0] = '\0';
       p->dl.nbytes = 0;
+      glClear(GL_COLOR_BUFFER_BIT);
       break;
 
     case 8:
       if (i_arr[1] == GKS_K_PERFORM_FLAG)
         {
-          glClear(GL_COLOR_BUFFER_BIT);
           interp(p->dl.buffer);
           update();
         }
