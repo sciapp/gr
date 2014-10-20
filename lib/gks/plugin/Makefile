@@ -25,7 +25,11 @@
      GSLIBS = -lgs
    GLFWDEFS =
     GLFWINC =
-   GLFWLIBS = -lglfw -lGL
+ifeq ($(UNAME_S),Darwin)
+   GLFWLIBS = -lglfw.3 -framework OpenGL -framework Cocoa -framework IOKit
+else
+   GLFWLIBS = -lglfw.3 -lGL
+endif
      FTDEFS =
       FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
      FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`

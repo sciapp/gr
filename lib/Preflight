@@ -266,7 +266,7 @@ int main(void)
     return 0;
 }
 eof
-cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lglfw"
+cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lglfw.3"
 if [ `uname` = "Darwin" ]; then
   libs="-framework OpenGL -framework Cocoa -framework IOKit"
   ret=1
