@@ -284,7 +284,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   FT_UInt codepoint;
   int i, j, k, textfont, dx, dy, value, pos_x, pos_y;
   double angle;
-  const int windowheight = *height;
+  const int windowwidth = *width;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN ||
                             direction == GKS_K_TEXT_PATH_UP);
@@ -359,7 +359,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
     utf_to_unicode((FT_Bytes)text, unicode_string, &num_glyphs);
   }
 
-  textheight = nint(gkss->chh * windowheight * 64 / caps[map[textfont-1] - 1]);
+  textheight = nint(gkss->chh * windowwidth * 64 / caps[map[textfont-1] - 1]);
   error = FT_Set_Char_Size(face, nint(textheight * gkss->chxp), textheight,
                            72, 72);
   if (error) gks_perror("cannot set text height");
@@ -472,7 +472,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
 
   align.x = align.y = 0;
   if (valign != GKS_K_TEXT_VALIGN_BASE) {
-    align.y = nint(gkss->chh * windowheight * 64);
+    align.y = nint(gkss->chh * windowwidth * 64);
     FT_Vector_Transform(&align, &rotation);
     if (valign == GKS_K_TEXT_VALIGN_HALF) {
       align.x = nint(0.5 * align.x);
@@ -527,12 +527,10 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   rgba_bitmap = (FT_Byte *) safe_realloc(rgba_bitmap, 4 * size);
   memset(rgba_bitmap, 0, 4 * size);
   for (i = 0; i < size; i++) {
-    for (j = 0; j < 3; j++) {
+    for (j = 0; j < 4; j++) {
       tmp = rgba_bitmap[4*i + j] + color[j] * mono_bitmap[i] / 255;
       rgba_bitmap[4*i + j] = (FT_Byte) min(tmp, 255);
     }
-    tmp = rgba_bitmap[4*i + 3] + mono_bitmap[i];
-    rgba_bitmap[4*i + 3] = (FT_Byte) min(tmp, 255);
   }
 
   free(mono_bitmap);

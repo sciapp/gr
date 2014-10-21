@@ -578,7 +578,7 @@ void gks_open_ws(int wkid, char *path, int wtype)
 			    s->wiss = 1;
 
 			  if ((wtype >= 210 && wtype <= 213) || wtype == 218 ||
-                               wtype == 400)
+                               wtype == 400 || wtype == 420)
 			    {
 			      ws_descr_t *p = (ws_descr_t *) element->ptr;
 

@@ -63,13 +63,6 @@ DLLEXPORT void gks_glplugin(
 #define PATTERNS 120
 #define HATCH_STYLE 108
 
-#define MWIDTH  0.254
-#define MHEIGHT 0.1905
-#define WIDTH   1024
-#define HEIGHT  768
-
-#define DrawBorder 0
-
 #define RESOLVE(arg, type, nbytes) arg = (type *)(s + sp); sp += nbytes
 
 #ifndef M_PI
@@ -122,13 +115,16 @@ double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 typedef struct ws_state_list_t
 {
-  int state, empty;
+  int state;
   gks_display_list_t dl;
   GLFWwindow *win;
+  double mwidth, mheight;
+  int swidth, sheight;
   int width, height;
   double a, b, c, d;
   double window[4], viewport[4];
   float rgb[MAX_COLOR][3];
+  float transparency;
   int rect[MAX_TNR][4];
 }
 ws_state_list;
@@ -150,14 +146,17 @@ int predef_styli[] = { 1, 1, 1, 2, 3 };
 static
 void resize_window(void)
 {
-  p->width  = nint((p->viewport[1] - p->viewport[0]) / MWIDTH  * WIDTH);
-  p->height = nint((p->viewport[3] - p->viewport[2]) / MHEIGHT * HEIGHT);
+  p->width  = nint((p->viewport[1] - p->viewport[0]) / p->mwidth * p->swidth);
+  p->height = nint((p->viewport[3] - p->viewport[2]) / p->mheight * p->sheight);
+  glfwSetWindowSize(p->win, p->width, p->height);
+  glViewport(0, 0, p->width, p->height);
 }
 
 static
 void set_norm_xform(int tnr, double *wn, double *vp)
 {
   int xp1, yp1, xp2, yp2;
+
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
   c[tnr] = (vp[3] - vp[2]) / (wn[3] - wn[2]);
@@ -228,11 +227,11 @@ static
 void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
-  {
-    p->rgb[color][0] = (float) red;
-    p->rgb[color][1] = (float) green;
-    p->rgb[color][2] = (float) blue;
-  }
+    {
+      p->rgb[color][0] = (float) red;
+      p->rgb[color][1] = (float) green;
+      p->rgb[color][2] = (float) blue;
+    }
 }
 
 static
@@ -242,10 +241,21 @@ void init_colors(void)
   double red, green, blue;
 
   for (color = 0; color < MAX_COLOR; color++)
-  {
-    gks_inq_rgb(color, &red, &green, &blue);
-    set_color_rep(color, red, green, blue);
-  }
+    {
+      gks_inq_rgb(color, &red, &green, &blue);
+      set_color_rep(color, red, green, blue);
+    }
+}
+
+static
+void set_color(int index)
+{
+  float rgba[4];
+
+  memcpy(rgba, p->rgb[index], 3 * sizeof(float));
+  rgba[3] = p->transparency;
+
+  glColor4fv(rgba);
 }
 
 static
@@ -275,8 +285,22 @@ void error_callback(int error, const char *description)
 static
 void open_window(void)
 {
+  GLFWmonitor *monitor;
+  int width, height;
+  const GLFWvidmode *vidmode;
+
   glfwSetErrorCallback(error_callback);
   glfwInit();
+
+  monitor = glfwGetPrimaryMonitor();
+  glfwGetMonitorPhysicalSize(monitor, &width, &height);
+  p->mwidth  = 0.001 * width;
+  p->mheight = 0.001 * height;
+
+  vidmode = glfwGetVideoMode(monitor);
+  p->swidth  = vidmode->width;
+  p->sheight = vidmode->height;
+
   p->win = glfwCreateWindow(p->width, p->height, "GKS GL", NULL, NULL);
   glfwWindowHint(GLFW_RED_BITS, 8);
   glfwWindowHint(GLFW_GREEN_BITS, 8);
@@ -285,10 +309,13 @@ void open_window(void)
   glfwWindowHint(GLFW_DEPTH_BITS, 0);
   glfwWindowHint(GLFW_STENCIL_BITS, 0);
   glfwMakeContextCurrent(p->win);
+
   gl_init();
   glClearColor(1, 1, 1, 1);
   glClear(GL_COLOR_BUFFER_BIT);
-  glColor3d(0, 0, 0);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  set_color(1);
 }
 
 static
@@ -366,11 +393,11 @@ void polyline(int num_points, double *x, double *y)
   glLineWidth(ln_width);
   glLineStipple(nint(ln_width * factor[ln_type + 8]), pattern[ln_type + 8]);
   glEnable(GL_LINE_STIPPLE);
-  glColor3fv(p->rgb[ln_color]);
+  set_color(ln_color);
 
   line_routine(num_points, x, y, ln_type, gkss->cntnr);
 
-  glColor3d(0, 0, 0);
+  set_color(1);
   glDisable(GL_LINE_STIPPLE);
   glLineWidth(1.0);
 }
@@ -485,7 +512,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
   glMatrixMode(GL_MODELVIEW);
   glLoadTransposeMatrixd(modelview_matrix);
-  glColor3fv(p->rgb[mcolor]);
+  set_color(mcolor);
 
   do
     {
@@ -517,7 +544,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
           if (op == 4) {
             glBegin(GL_TRIANGLE_FAN);
           } else if (op == 5) {
-            glColor3d(1, 1, 1);
+            set_color(0);
             glBegin(GL_TRIANGLE_FAN);
           } else {
             glBegin(GL_LINE_LOOP);
@@ -532,7 +559,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
               glVertex2d(x - xr, y + yr);
             }
           glEnd();
-          if (op == 5) glColor3fv(p->rgb[mcolor]);
+          if (op == 5) set_color(mcolor);
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
@@ -549,7 +576,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
             if (op == 7) {
               glBegin(GL_TRIANGLE_FAN);
             } else if (op == 8) {
-              glColor3d(1, 1, 1);
+              set_color(0);
               glBegin(GL_TRIANGLE_FAN);
             } else {
               glBegin(GL_LINE_LOOP);
@@ -561,7 +588,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
               yr = s * tmp + c * yr;
             }
             glEnd();
-            if (op == 8) glColor3fv(p->rgb[mcolor]);
+            if (op == 8) set_color(mcolor);
           }
           pc += 2;
           break;
@@ -665,8 +692,6 @@ void fill_routine (int n, double *px, double *py, int tnr)
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   }
 
   glMatrixMode(GL_MODELVIEW);
@@ -689,7 +714,6 @@ void fill_routine (int n, double *px, double *py, int tnr)
     glDrawArrays(GL_POLYGON, 0, n);
     glDisable(GL_TEXTURE_2D);
     glDeleteTextures(1, &texture);
-    glDisable(GL_BLEND);
   } else if (fl_inter == GKS_K_INTSTYLE_HOLLOW) {
     glDrawArrays(GL_LINE_LOOP, 0, n);
   } else if (fl_inter == GKS_K_INTSTYLE_SOLID) {
@@ -704,11 +728,11 @@ void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  glColor3fv(p->rgb[fl_color]);
+  set_color(fl_color);
 
   fill_routine(n, px, py, gkss->cntnr);
 
-  glColor3d(0, 0, 0);
+  set_color(1);
 }
 
 static
@@ -752,18 +776,16 @@ void cellarray(
         bitmap[i][j][0] = (rgb & 0xff) / 255.;
         bitmap[i][j][1] = ((rgb & 0xff00) >> 8) / 255.;
         bitmap[i][j][2] = ((rgb & 0xff0000) >> 16) / 255.;
-        bitmap[i][j][3] = 1.0; // TODO: ((rgb & 0xff000000) >> 24) / 255.;
+        bitmap[i][j][3] = ((rgb & 0xff000000) >> 24) / 255.;
       } else {
-        index = colia[ix*dy+iy];
+        index = colia[ix * dy + iy];
         for (k = 0; k < 3; k++) {
           bitmap[i][j][k] = p->rgb[index][k];
         }
-        bitmap[i][j][3] = 1.0;
+        bitmap[i][j][3] = p->transparency;
       }
     }
   }
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, dx, dy, 0, GL_RGBA, GL_FLOAT, bitmap);
@@ -788,13 +810,12 @@ void cellarray(
   glVertexPointer(2, GL_FLOAT, 0, 0);
   glBindBuffer(GL_ARRAY_BUFFER, buffer);
   glTexCoordPointer(2, GL_FLOAT, 0, 0);
-  glColor3d(1, 1, 1);
+  set_color(0);
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
   glDisable(GL_TEXTURE_2D);
-  glDisable(GL_BLEND);
   glDeleteTextures(1, &texture);
 }
 
@@ -829,10 +850,8 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glBindTexture(GL_TEXTURE_2D, texture);
 
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_TEXTURE_2D);
-  glColor3fv(p->rgb[tx_color]);
+  set_color(tx_color);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadTransposeMatrixd(modelview_matrix);
@@ -856,7 +875,6 @@ void gl_drawimage(int x, int y, int w, int h, unsigned char *bitmap)
 
   glLoadIdentity();
   glDisable(GL_TEXTURE_2D);
-  glDisable(GL_BLEND);
   glDeleteTextures(1, &texture);
 }
 
@@ -876,14 +894,14 @@ void text(double x_pos, double y_pos, int nchars, char *text)
     tx_color = gkss->asf[9] ? gkss->txcoli : 1;
     if (tx_color <= 0 || tx_color >= MAX_COLOR) tx_color = 1;
 
-    glColor3fv(p->rgb[tx_color]);
+    set_color(tx_color);
     gks_emul_text(x_pos, y_pos, nchars, text, line_routine, fill_routine);
-    glColor3d(0, 0, 0);
+    set_color(1);
 
 #ifndef NO_FT
   } else {
     NDC_to_DC(x_pos, y_pos, x, y);
-    h = p->height;
+    w = p->width;
     y = p->height - y;  /* in FT y-axis is in up direction */
     bitmap = gks_ft_get_bitmap(&x, &y, &w, &h, gkss, text, nchars);
     if (bitmap != NULL) {
@@ -1019,34 +1037,32 @@ void interp(char *str)
           p->window[0] = p->window[2] = 0.0;
           p->window[1] = p->window[3] = 1.0;
           p->viewport[0] = p->viewport[2] = 0;
-          p->viewport[1] = (double) p->width * MWIDTH / WIDTH;
-          p->viewport[3] = (double) p->height * MHEIGHT / HEIGHT;
-          p->empty = 1;
+          p->viewport[1] = (double) p->width * p->mwidth / p->swidth;
+          p->viewport[3] = (double) p->height * p->mheight / p->sheight;
+
+          p->transparency = 1.0;
 
           set_xform();
           init_norm_xform();
           init_colors();
+
           gks_init_core(gkss);
           break;
 
         case  12:
           polyline(i_arr[0], f_arr_1, f_arr_2);
-          p->empty = 0;
           break;
 
         case  13:
           polymarker(i_arr[0], f_arr_1, f_arr_2);
-          p->empty = 0;
           break;
 
         case  14:
           text(f_arr_1[0], f_arr_2[0], strlen(c_arr), c_arr);
-          p->empty = 0;
           break;
 
         case  15:
           fillarea(i_arr[0], f_arr_1, f_arr_2);
-          p->empty = 0;
           break;
 
         case  16:
@@ -1054,7 +1070,6 @@ void interp(char *str)
           true_color = *f == DRAW_IMAGE;
           cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1],
                     *dx, *dy, *dimx, i_arr, true_color);
-          p->empty = 0;
           break;
 
         case  19:
@@ -1144,8 +1159,6 @@ void interp(char *str)
           gkss->window[*i_arr][3] = f_arr_2[1];
           set_xform();
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          gks_set_norm_xform(
-            *i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           break;
 
         case  50:
@@ -1153,9 +1166,8 @@ void interp(char *str)
           gkss->viewport[*i_arr][1] = f_arr_1[1];
           gkss->viewport[*i_arr][2] = f_arr_2[0];
           gkss->viewport[*i_arr][3] = f_arr_2[1];
+          set_xform();
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          gks_set_norm_xform(
-            *i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           if (*i_arr == gkss->cntnr) {
             set_clip_rect(*i_arr);
           }
@@ -1177,7 +1189,6 @@ void interp(char *str)
           p->window[2] = f_arr_2[0];
           p->window[3] = f_arr_2[1];
           set_xform();
-          init_norm_xform();
           break;
 
         case  55:
@@ -1188,11 +1199,14 @@ void interp(char *str)
 
           resize_window();
           set_xform();
-          init_norm_xform();
           break;
 
         case 200:
           gkss->txslant = f_arr_1[0];
+          break;
+
+        case 203:
+          p->transparency = f_arr_1[0];
           break;
         }
 
@@ -1212,10 +1226,18 @@ void gks_glplugin(
     {
     case 2:
       gkss = (gks_state_list_t *) *ptr;
+
       p = (ws_state_list *) gks_malloc(sizeof(ws_state_list));
+
       p->height = 500;
       p->width = 500;
       open_window();
+
+      f_arr_1[0] = p->mwidth;
+      f_arr_2[0] = p->mheight;
+      i_arr[0] = p->swidth;
+      i_arr[1] = p->sheight;
+
       *ptr = p;
       break;
 
