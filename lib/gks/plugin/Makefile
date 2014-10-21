@@ -26,9 +26,9 @@
    GLFWDEFS =
     GLFWINC =
 ifeq ($(UNAME_S),Darwin)
-   GLFWLIBS = -lglfw.3 -framework OpenGL -framework Cocoa -framework IOKit
+   GLFWLIBS = -lglfw -framework OpenGL -framework Cocoa -framework IOKit
 else
-   GLFWLIBS = -lglfw.3 -lGL
+   GLFWLIBS = -lglfw -lGL
 endif
      FTDEFS =
       FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
