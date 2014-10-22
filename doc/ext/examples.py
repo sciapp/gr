@@ -17,6 +17,8 @@ def clean():
 def get_example_filenames(examples_dir):
 
     for (dirpath, dirnames, filenames) in os.walk(examples_dir):
+        if dirpath.endswith('animation'):
+            continue
         for fname in filenames:
             if not fname.endswith('.py'):
                 continue
