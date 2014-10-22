@@ -243,9 +243,9 @@ class check_ext(Command):
             self.qtdir = os.getenv("QTDIR", "/usr/local")
         else:
             self.qtdir = os.getenv("QTDIR", "")
-        self.qtdir = os.getenv("QTDIR", "/usr/local")
         self.qtinc = [os.path.join(self.qtdir, "include")]
         self.qtlib = [os.path.join(self.qtdir, "lib")]
+        self.qtlibs = []
         self.qtldflags = []
         self.qmake = ""
         self.qtversion = None
