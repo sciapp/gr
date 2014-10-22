@@ -719,6 +719,8 @@ int main()
             if (not os.path.isdir(self.gsinc[0]) or
                 not os.path.isdir(self.gslib[0])):
                 self.disable_gs = True
+        else:
+            self.disable_gs = True
         # -- opengl --------------------------------------------------
         if not self.disable_opengl:
             self.gllibs.append("opengl32")
