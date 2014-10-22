@@ -88,6 +88,10 @@ DLLEXPORT void gks_pgfplugin(
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
+#ifndef max
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#endif
+
 static
 gks_state_list_t *gkss;
 
@@ -500,7 +504,7 @@ void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  ln_width = gkss->version > 4 ? fmax(1, nint(p->height/500.0)) : 1;
+  ln_width = gkss->version > 4 ? max(1, nint(p->height/500.0)) : 1;
   p->linewidth = ln_width;
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n",
@@ -657,7 +661,7 @@ void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = gkss->version > 4 ? fmax(nint(p->height/500.0), 1) : 1;
+  p->linewidth = gkss->version > 4 ? max(nint(p->height/500.0), 1) : 1;
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n",
              p->rgb[fl_color]);

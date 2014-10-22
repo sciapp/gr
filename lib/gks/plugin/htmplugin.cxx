@@ -17,6 +17,7 @@
 #include <unistd.h>
 #else
 #include <windows.h>
+#include <io.h>
 #endif
 
 #define PORT 8410
@@ -102,6 +103,10 @@ DLLEXPORT void gks_htmplugin(
 
 #ifndef min
 #define min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef max
+#define max(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 
 static
@@ -560,7 +565,7 @@ void polymarker(int n, double *px, double *py)
   htm_write("c.strokeStyle = \"rgba(%d,%d,%d,%f)\";\n", p->rgb[mk_color][0],
             p->rgb[mk_color][1], p->rgb[mk_color][2], p->transparency);
 
-  ln_width = gkss->version > 4 ? fmax(1, nint(p->height/500.0)) : 1;
+  ln_width = gkss->version > 4 ? max(1, nint(p->height/500.0)) : 1;
   if (p->linewidth != ln_width)
     {
       p->linewidth = ln_width;
@@ -937,7 +942,7 @@ void fillarea(int n, double *px, double *py)
   int fl_color, ln_width;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  ln_width = gkss->version > 4 ? fmax(nint(p->height/500.0), 1) : 1;
+  ln_width = gkss->version > 4 ? max(nint(p->height/500.0), 1) : 1;
 
   if (p->linewidth != ln_width)
     {
