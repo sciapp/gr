@@ -663,13 +663,21 @@ int main()
             if not self.mupdfinc:
                 self.disable_mupdf = True
             else:
+                # mupdf compiled without ssl support
                 self.mupdflibs = ["mupdf", "jbig2dec", "jpeg", "openjp2"]
                 self.mupdfldflags = self.ftldflags
                 if self.isDarwin:
                     self.mupdfldflags.append("-L/usr/local/lib")
                 self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
                                                           self.mupdflibs,
-                                                          mupdfldflags=self.mupdfldflags)
+                                              mupdfldflags=self.mupdfldflags)
+                if self.disable_mupdf:
+                    # mupdf compiled with ssl support
+                    self.mupdflibs.append("ssl")
+                    self.mupdflibs.append("crypto")
+                    self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
+                                                              self.mupdflibs,
+                                              mupdfldflags=self.mupdfldflags)
                 if self.disable_mupdf:
                     self.mupdfinc = []
                     self.mupdflibs = []
@@ -677,7 +685,7 @@ int main()
         # -- mov -------------------------------------
         if not self.disable_mov:
             self.disable_mov = not self._test_mov(self.mupdfinc, self.mupdflibs,
-                                                  mupdfldflags=self.mupdfldflags)
+                                              mupdfldflags=self.mupdfldflags)
         # -- opengl --------------------------------------------------
         if not self.disable_opengl:
             gllibs, glldflags = [], []
