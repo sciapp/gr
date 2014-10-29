@@ -2427,3 +2427,8 @@ PRINT_TYPE[PRINT_TIF] = PRINT_TYPE[PRINT_TIFF]
 GRAPHIC_GRX = "grx"
 
 GRAPHIC_TYPE = {GRAPHIC_GRX: "Graphics Format (*.grx)"}
+
+# settings for the matplotlib backend
+mpl_clearws = 1
+mpl_updatews = 1
+

@@ -214,10 +214,12 @@ class FigureCanvasGR(FigureCanvasBase):
         """
         Draw the figure using the renderer
         """
-        gr.clearws()
+        if gr.mpl_clearws:
+            gr.clearws()
         renderer = RendererGR(self.figure.dpi)
         self.figure.draw(renderer)
-        gr.updatews()
+        if gr.mpl_updatews:
+            gr.updatews()
 
     def print_gr(self, filename, *args, **kwargs):
         gr.begingraphics(filename)
