@@ -30,8 +30,8 @@ prerequisites:
 	@make -C ../gr
 
 libGR3.so: gr3.c $(GR3_PLATFORM_SPECIFIC_C) gr3_convenience.c gr3_html.c gr3_povray.c gr3_png.c gr3_jpeg.c gr3_gr.c gr3_mc.c
-	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) ${ZLIBS} $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
-	$(JPEGLIBS) $(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
+	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) ${ZLIBS} $(JPEGLIBS) $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
+	$(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
 
 gr3.c: gr3.h gr3_internals.h
 gr3_internals.h: gr3.h gr3_glx.h gr3_cgl.h
