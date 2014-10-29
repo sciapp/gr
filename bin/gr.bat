@@ -6,11 +6,15 @@ IF "%1"=="" (
 ) ELSE (
   set args=%1 %2 %3 %4 %5 %6 %7 %8
 )
-IF "%GROPTS%"=="" SET GROPTS="-dmodule://gr.matplotlib.backend_gr"
+IF "%MPLBACKEND%"=="gr" (
+  set opts="-dmodule://gr.matplotlib.backend_gr"
+) ELSE (
+  set opts=""
+)
 set GSBIN=S:\gs\gs9.06\bin
 set GSLIB=S:\gs\gs9.06\lib
 set WXLIB=S:\wxWidgets\lib\vc100_dll
 set PYTHONPATH=%GRDIR%\python
 set PATH=%GRDIR%;%GSBIN%;%WXLIB%;%PATH%
-S:\Python27\python %args% %GROPTS%
+S:\Python27\python %args% %opts%
 endlocal

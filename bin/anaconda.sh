@@ -1,5 +1,5 @@
 #!/bin/sh
-if [ "$1" = "-t" ]
+if [ "$1" = "-o" ]
 then
   shift
   export GKS_WSTYPE="$1"
@@ -21,9 +21,11 @@ done
 name="${PWD}/$(basename "${0}")"
 cd "${cwd}"
 GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
-if [ -z "${GROPTS}" ]
+if [ "${MPLBACKEND}" == "gr" ]
 then
-  GROPTS="-dmodule://gr.matplotlib.backend_gr"
+  opts="-dmodule://gr.matplotlib.backend_gr"
+else
+  opts=""
 fi
 if [ -d /opt/anaconda ]
 then
@@ -38,4 +40,4 @@ else
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${GRDIR}/lib
 fi
 export PYTHONPATH=${PYTHONPATH}:${GRDIR}/lib/python
-exec ${PYTHONHOME}/bin/python ${args} ${GROPTS}
+exec ${PYTHONHOME}/bin/python ${args} ${opts}

@@ -5,7 +5,7 @@ then
 else
   python=python
 fi
-if [ "$1" = "-t" ]
+if [ "$1" = "-o" ]
 then
   shift
   export GKS_WSTYPE="$1"
@@ -32,11 +32,12 @@ done
 name="${PWD}/$(basename "${0}")"
 cd "${cwd}"
 GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
-if [ -z "${GROPTS}" ]
+opts=""
+if [ "${MPLBACKEND}" == "gr" ]
 then
   if [ ${python} != "ipython" ]
   then
-    GROPTS="-dmodule://gr.matplotlib.backend_gr"
+    opts="-dmodule://gr.matplotlib.backend_gr"
   fi
 fi
 if [ -f /usr/local/bin/python ]
@@ -56,4 +57,4 @@ if [ -f ${GRDIR}/etc/grrc ]
 then
   . ${GRDIR}/etc/grrc
 fi
-exec ${PYTHONHOME}/bin/${python} ${args} ${GROPTS}
+exec ${PYTHONHOME}/bin/${python} ${args} ${opts}
