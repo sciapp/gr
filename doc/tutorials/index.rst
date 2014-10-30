@@ -9,4 +9,4 @@ Tutorials
 
    gr3_wx.rst
    matplotlib.rst
-
+   mpl_interop.rst
