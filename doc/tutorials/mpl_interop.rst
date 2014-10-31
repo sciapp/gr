@@ -61,8 +61,8 @@ neither for the Matplotlib part nor for the *GR*/*GR3* part. The *GR* Matplotlib
 backend can be activated by setting the ``MPLBACKEND`` environment variable
 previous before starting Python::
 
-        export MPLBACKEND=gr
-        python ...
+        % export MPLBACKEND=gr
+        % python ...
 
 Even if you'd like to create animations no further module (like *Matplotlib*'s
 animation toolkit) or any post-processing is required. To create an
@@ -70,12 +70,40 @@ MPEG video, you simply have to redirect the *GR* output to the movie
 device driver by setting the ``GKS_WSTYPE`` (= *GKS* workstation type)
 environment variable)::
 
-        export GKS_WSTYPE=mov
-        python ...
+        % export GKS_WSTYPE=mov
+        % python ...
 
 .. raw:: html
 
-   <iframe width="640" height="480"
-     src="/media/mpl_interop/700K_460.mov"
-     frameborder="0" allowfullscreen>
-   </iframe>
+    <video width="640" height="480" autoplay controls>
+    <source src="/media/mpl_interop/700K_460.mp4" type="video/mp4">
+    <source src="/media/mpl_interop/700K_460.ogg" type="video/ogg">
+    <source src="/media/mpl_interop/700K_460.webm" type="video/webm">
+    </video>
+
+----
+
+To view the animation in a browser window, first start *GR*'s *Bottle* server::
+
+        % cd lib/gks/html5
+        % python server.py 
+        Bottle v0.13-dev server starting up (using GeventServer())...
+        Listening on http://127.0.0.1:8080/
+        Hit Ctrl-C to quit.
+
+Then, open the above URL (http://127.0.0.1:8080/) in a browser and start
+the animation with the output redirected to the *GR*'s HTML5 device driver::
+
+        % export MPLBACKEND=gr
+        % python -o html ...
+
+You can then watch the animation in your browser window.
+
+.. raw:: html
+
+    <video width="478" height="540" autoplay controls>
+    <source src="/media/mpl_interop/700K_460-browser.mp4" type="video/mp4">
+    <source src="/media/mpl_interop/700K_460-browser.ogg" type="video/ogg">
+    <source src="/media/mpl_interop/700K_460-browser.webm" type="video/webm">
+    </video>
+
