@@ -51,6 +51,8 @@ DLLEXPORT void gks_movplugin(
 
 #include "vc.h"
 
+#include "gif.h"
+
 #ifdef HAVE_ZLIB
 #include <zlib.h>
 #else
@@ -376,6 +378,9 @@ double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
 
 static
 void fill_routine(int n, double *px, double *py, int tnr);
+
+static
+void pdf_to_memory(pdf_t pdf, int page, int width, int height, unsigned char *rgb_image);
 
 static char buf_array[NO_OF_BUFS][20];
 static int current_buf = 0;
@@ -864,20 +869,99 @@ void pdf_close(PDF *p)
   if (framerate <= 0)
     framerate = 25;
 
-  movie = vc_movie_create("gks.mov", framerate, 4000000);
+  // TODO: Add a real condition here so that gif files may be produced instead of mov files.
+  if (1) {
+    movie = vc_movie_create("gks.mov", framerate, 4000000);
 
-  pdf = vc_pdf_from_memory(p->stream->buffer, p->stream->length);
-  frames = vc_pdf_to_frames(pdf, p->width, p->height);
+    pdf = vc_pdf_from_memory(p->stream->buffer, p->stream->length);
+    frames = vc_pdf_to_frames(pdf, p->width, p->height);
 
-  for (i = 0; i <= vc_pdf_get_number_of_pages(pdf) - 1; i++) {
-    vc_movie_append_frame(movie, frames[i]);
-    vc_frame_free(frames[i]);
+    for (i = 0; i <= vc_pdf_get_number_of_pages(pdf) - 1; i++) {
+      vc_movie_append_frame(movie, frames[i]);
+      vc_frame_free(frames[i]);
+    }
+
+    vc_pdf_close(pdf);
+    vc_movie_finish(movie);
+  } else {
+    const char *file_name = "gks.gif";
+    unsigned char *rgb_image;
+    int delay = 100/framerate;
+    int num_frames;
+    gif_writer gw;
+    gif_open(&gw, file_name);
+    pdf = vc_pdf_from_memory(p->stream->buffer, p->stream->length);
+    num_frames = vc_pdf_get_number_of_pages(pdf);
+    rgb_image = (unsigned char *) malloc(p->width * p->height * 4 * sizeof(unsigned char));
+    assert(rgb_image);
+    for (i = 1; i <= num_frames; i++) {
+      fprintf(stderr, "\rWriting frame %d/%d...", i, num_frames);
+      pdf_to_memory(pdf, i, p->width, p->height, rgb_image);
+      gif_write(&gw, rgb_image, p->width, p->height, FORMAT_RGBA, delay);
+    }
+    free(rgb_image);
+    gif_close(&gw);
+    fprintf(stderr, "\rFinished writing %s.\n", file_name);
+
+    fz_close_document(pdf->doc);
+    fz_free_context(pdf->ctx);
+    pdf->num_pages = -1;
   }
 
-  vc_pdf_close(pdf);
-  vc_movie_finish(movie);
-
   free(p->stream->buffer);
+}
+
+static void pdf_to_memory(pdf_t pdf, int page, int width, int height, unsigned char *rgb_image) {
+  double transx, transy, zoom;
+  fz_matrix transform, scale_mat, transl_mat;
+  fz_rect rect;
+  fz_irect bbox;
+  fz_pixmap *pix;
+  fz_device *dev;
+  fz_page *page_o;
+  unsigned char *data;
+
+  page_o = fz_load_page(pdf->doc, page - 1);
+
+  transx = 0;
+  transy = 0;
+  zoom = 1.0;
+  fz_scale(&scale_mat, zoom, zoom);
+  fz_translate(&transl_mat, transx, transy);
+  fz_concat(&transform, &scale_mat, &transl_mat);
+
+  /*
+   * Take the page bounds and transform them by the same matrix that
+   * we will use to render the page.
+   */
+
+  fz_bound_page(pdf->doc, page_o, &rect);
+  fz_transform_rect(&rect, &transform);
+  fz_round_rect(&bbox, &rect);
+
+  /*
+   * Create a blank pixmap to hold the result of rendering. The
+   * pixmap bounds used here are the same as the transformed page
+   * bounds, so it will contain the entire page.
+   */
+
+  pix = fz_new_pixmap(pdf->ctx, fz_device_rgb(pdf->ctx), width, height);
+  fz_clear_pixmap_with_value(pdf->ctx, pix, 0xff);
+
+  /*
+   * Create a draw device with the pixmap as its target.
+   * Run the page with the transform.
+   */
+
+  dev = fz_new_draw_device(pdf->ctx, pix);
+  fz_run_page(pdf->doc, page_o, dev, &transform, NULL);
+
+  data = fz_pixmap_samples(pdf->ctx, pix);
+  memcpy(rgb_image, data, width * height * 4 * sizeof(unsigned char));
+
+  fz_free_device(dev);
+  fz_drop_pixmap(pdf->ctx, pix);
+  fz_free_page(pdf->doc, page_o);
 }
 
 static

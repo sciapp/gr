@@ -109,7 +109,7 @@ glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
 zmqplugin.so: zmqplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(ZMQLIBS) $(LIBS)
 
-movplugin.so: movplugin.o font.o afm.o util.o vc.o dl.o malloc.o error.o io.o
+movplugin.so: movplugin.o font.o afm.o util.o vc.o gif.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(EXTRALIBS) $(LIBS)
 
 htmplugin.so: htmplugin.o font.o afm.o util.o malloc.o error.o io.o
