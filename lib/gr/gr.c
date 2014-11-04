@@ -5321,6 +5321,8 @@ int gks_wstype(char *type)
     wstype = 102;
   else if (!str_casecmp(type, "mov"))
     wstype = 120;
+  else if (!str_casecmp(type, "gif"))
+    wstype = 130;
   else if (!str_casecmp(type, "bmp"))
     wstype = 320;
   else if (!str_casecmp(type, "jpeg") || !str_casecmp(type, "jpg"))

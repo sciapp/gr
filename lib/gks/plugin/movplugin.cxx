@@ -50,7 +50,6 @@ DLLEXPORT void gks_movplugin(
 #endif
 
 #include "vc.h"
-
 #include "gif.h"
 
 #ifdef HAVE_ZLIB
@@ -175,6 +174,7 @@ typedef struct ws_state_list_t
   {
     int state;
     int fd;
+    int wstype;
     double window[4], viewport[4];
     int empty;
     int width, height;
@@ -869,8 +869,7 @@ void pdf_close(PDF *p)
   if (framerate <= 0)
     framerate = 25;
 
-  // TODO: Add a real condition here so that gif files may be produced instead of mov files.
-  if (1) {
+  if (p->wstype == 120) {
     movie = vc_movie_create("gks.mov", framerate, 4000000);
 
     pdf = vc_pdf_from_memory(p->stream->buffer, p->stream->length);
@@ -886,20 +885,24 @@ void pdf_close(PDF *p)
   } else {
     const char *file_name = "gks.gif";
     unsigned char *rgb_image;
-    int delay = 100/framerate;
+    int delay = 100 / framerate;
     int num_frames;
     gif_writer gw;
+
     gif_open(&gw, file_name);
+
     pdf = vc_pdf_from_memory(p->stream->buffer, p->stream->length);
     num_frames = vc_pdf_get_number_of_pages(pdf);
     rgb_image = (unsigned char *) malloc(p->width * p->height * 4 * sizeof(unsigned char));
     assert(rgb_image);
+
     for (i = 1; i <= num_frames; i++) {
-      fprintf(stderr, "\rWriting frame %d/%d...", i, num_frames);
+      fprintf(stderr, "\rWriting frame %d/%d ...", i, num_frames);
       pdf_to_memory(pdf, i, p->width, p->height, rgb_image);
       gif_write(&gw, rgb_image, p->width, p->height, FORMAT_RGBA, delay);
     }
     free(rgb_image);
+
     gif_close(&gw);
     fprintf(stderr, "\rFinished writing %s.\n", file_name);
 
@@ -1090,7 +1093,9 @@ void open_ws(int fd, int wstype)
 {
   p = (ws_state_list *) calloc(1, sizeof(struct ws_state_list_t));
 
-  p->compress = wstype == 102;
+  p->wstype = wstype;
+
+  p->compress = wstype != 101;
 
   p->window[0] = p->window[2] = 0.0;
   p->window[1] = p->window[3] = 1.0;
