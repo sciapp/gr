@@ -103,6 +103,8 @@ DLLEXPORT void gr_inqcolormap(int *);
 DLLEXPORT void gr_colormap(void);
 DLLEXPORT void gr_inqcolor(int, int *);
 DLLEXPORT int gr_inqcolorfromrgb(double, double, double);
+DLLEXPORT void gr_hsvtorgb(
+  double h, double s, double v, double *r, double *g, double *b);
 DLLEXPORT double gr_tick(double, double);
 DLLEXPORT void gr_adjustrange(double *, double *);
 DLLEXPORT void gr_beginprint(char *);
@@ -118,7 +120,8 @@ DLLEXPORT void gr_drawpath(int, vertex_t *, unsigned char *, int);
 DLLEXPORT void gr_setarrowstyle(int);
 DLLEXPORT void gr_drawarrow(double, double, double, double);
 DLLEXPORT int gr_readimage(char *, int *, int *, int **);
-DLLEXPORT void gr_drawimage(double, double, double, double, int, int, int *);
+DLLEXPORT void gr_drawimage(
+  double, double, double, double, int, int, int *, int);
 DLLEXPORT int gr_importgraphics(char *);
 DLLEXPORT void gr_setshadow(double, double, double);
 DLLEXPORT void gr_settransparency(double);

@@ -57,7 +57,7 @@ int gr3_drawimage_gks_(float xmin, float xmax, float ymin, float ymax, int width
     free(pixels);
     return err;
   }
-  gr_drawimage(_xmin, _xmax, _ymax, _ymin, width, height, (int *)pixels);
+  gr_drawimage(_xmin, _xmax, _ymax, _ymin, width, height, (int *)pixels, 0);
   free(pixels);
   return GR3_ERROR_NONE;
 }

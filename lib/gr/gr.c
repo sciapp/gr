@@ -178,6 +178,12 @@ typedef enum
 }
 surface_option_t;
 
+typedef enum
+{
+  MODEL_RGB, MODEL_HSV
+}
+color_model_t;
+
 typedef struct
 {
   char *format;
@@ -5248,6 +5254,36 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
   return ind;
 }
 
+void gr_hsvtorgb(double h, double s, double v, double *r, double *g, double *b)
+{
+  int i;
+  double f, p, q, t;
+
+  if (s == 0)
+    {
+      *r = *g = *b = v;
+    }
+  else
+    {
+      h *= 6;
+      i = floor(h);
+      f = h - i;
+      p = v * (1 - s);
+      q = v * (1 - s * f);
+      t = v * (1 - s * (1 - f));
+
+      switch (i)
+        {
+        case  0: *r = v; *g = t; *b = p; break;
+        case  1: *r = q; *g = v; *b = p; break;
+        case  2: *r = p; *g = v; *b = t; break;
+        case  3: *r = p; *g = q; *b = v; break;
+        case  4: *r = t; *g = p; *b = v; break;
+        case  5: *r = v; *g = p; *b = q; break;
+        }
+    }
+}
+
 double gr_tick(double amin, double amax)
 {
   double tick_unit, exponent, factor;
@@ -5828,14 +5864,33 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
 
 void gr_drawimage(
   double xmin, double xmax, double ymin, double ymax,
-  int width, int height, int *data)
+  int width, int height, int *data, int model)
 {
-  register int n;
+  register int n, i;
+  int *img = data;
+  double h, s, v, r, g, b;
 
   check_autoinit;
 
+  if (model == MODEL_HSV)
+    {
+      n = width * height;
+      img = (int *) xmalloc(n * sizeof(int));
+      for (i = 0; i < n; i++)
+        {
+          h = ( data[i] & 0xff             ) / 255.0;
+          s = ((data[i] & 0xff00)     >>  8) / 255.0;
+          v = ((data[i] & 0xff0000)   >> 16) / 255.0;
+          gr_hsvtorgb(h, s, v, &r, &g, &b);
+          img[i] = (data[i] & 0xff000000) |
+                   ((int) (r * 255) << 16) |
+                   ((int) (g * 255) <<  8) |
+                   ((int) (b * 255));
+        }
+    }
+
   gks_draw_image(
-    x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), width, height, data);
+    x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), width, height, img);
 
   if (flag_graphics)
     {
@@ -5845,8 +5900,11 @@ void gr_drawimage(
         "width=\"%d\" height=\"%d\"",
         xmin, xmax, ymin, ymax, width, height);
       print_int_array("data", n, data);
-      gr_writestream("/>\n");
+      gr_writestream("model=\"%d\"/>\n", model);
     }
+
+  if (model == MODEL_HSV)
+    free(img);
 }
 
 void gr_setshadow(double offsetx, double offsety, double blur)

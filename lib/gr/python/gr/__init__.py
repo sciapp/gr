@@ -1578,6 +1578,13 @@ def inqcolorfromrgb(red, green, blue):
                                    c_double(green),
                                    c_double(green))
 
+def hsvtorgb(h, s, v):
+    r = c_double()
+    g = c_double()
+    b = c_double()
+    __gr.gr_hsvtorgb(c_double(h), c_double(s), c_double(v),
+                     byref(r), byref(g), byref(b))
+    return [r.value, g.value, b.value]
 
 def tick(amin, amax):
     __gr.gr_tick.restype = c_double
@@ -1947,7 +1954,7 @@ def readimage(path):
     return [width.value, height.value, data]
 
 
-def drawimage(xmin, xmax, ymin, ymax, width, height, data):
+def drawimage(xmin, xmax, ymin, ymax, width, height, data, model=0):
     """
     Draw an image into a given rectangular area.
 
@@ -1960,7 +1967,18 @@ def drawimage(xmin, xmax, ymin, ymax, width, height, data):
     `width`, `height` :
         The width and the height of the image
     `data` :
-        An array of RGB values dimensioned `width` by `height`
+        An array of color values dimensioned `width` by `height`
+    `model` :
+        Color model (default=0)
+
+    The available color models are:
+
+    +-----------------------+---+-----------+
+    |MODEL_RGB              |  0|   AARRGGBB|
+    +-----------------------+---+-----------+
+    |MODEL_HSV              |  1|   AAVVSSHH|
+    +-----------------------+---+-----------+
+
 
     The points (`xminx`, `ymin`) and (`xmax`, `ymax`) are world coordinates defining
     diagonally opposite corner points of a rectangle. This rectangle is divided into
@@ -1970,7 +1988,7 @@ def drawimage(xmin, xmax, ymin, ymax, width, height, data):
     """
     _data = intarray(width * height, data)
     __gr.gr_drawimage(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax),
-                      c_int(width), c_int(height), _data.data)
+                      c_int(width), c_int(height), _data.data, c_int(model))
 
 
 def importgraphics(path):
@@ -2197,6 +2215,7 @@ __gr.gr_setcolormap.argtypes = [c_int]
 __gr.gr_colormap.argtypes = []
 __gr.gr_inqcolor.argtypes = [c_int, POINTER(c_int)]
 __gr.gr_inqcolorfromrgb.argtypes = [c_double, c_double, c_double]
+__gr.gr_hsvtorgb.argtypes = [c_double, c_double, c_double]
 __gr.gr_tick.argtypes = [c_double, c_double]
 __gr.gr_adjustrange.argtypes = [POINTER(c_double), POINTER(c_double)]
 __gr.gr_beginprint.argtypes = [c_char_p]
@@ -2213,8 +2232,8 @@ __gr.gr_setarrowstyle.argtypes = [c_int]
 __gr.gr_drawarrow.argtypes = [c_double, c_double, c_double, c_double]
 __gr.gr_readimage.argtypes = [c_char_p, POINTER(c_int), POINTER(c_int),
                               POINTER(POINTER(c_int))]
-__gr.gr_drawimage.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int,
-                              POINTER(c_int)]
+__gr.gr_drawimage.argtypes = [c_double, c_double, c_double, c_double,
+                              c_int, c_int, POINTER(c_int), c_int]
 __gr.gr_importgraphics.argtypes = [c_char_p]
 __gr.gr_setshadow.argtypes = [c_double, c_double, c_double]
 __gr.gr_settransparency.argtypes = [c_double]
@@ -2316,6 +2335,9 @@ OPTION_Z_SHADED_MESH = 3
 OPTION_COLORED_MESH = 4
 OPTION_CELL_ARRAY = 5
 OPTION_SHADED_MESH = 6
+
+MODEL_RGB = 0
+MODEL_HSV = 1
 
 COLORMAP_UNIFORM = 0
 COLORMAP_TEMPERATURE = 1

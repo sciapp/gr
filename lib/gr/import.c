@@ -31,7 +31,7 @@ char *format[] =
     "contour:iiiFFFFi",
     "drawarc:ffffii",
     "drawarrow:ffff",
-    "drawimage:ffffiiI",
+    "drawimage:ffffiiIi",
     "drawpath:iVBi",
     "drawrect:ffff",
     "fillarc:ffffii",
@@ -271,7 +271,7 @@ void gr(int id)
       break;
     case  7:
       gr_drawimage(f_arg[0], f_arg[1], f_arg[2], f_arg[3],
-                   i_arg[0], i_arg[1], i_arr);
+                   i_arg[0], i_arg[1], i_arr, i_arg[2]);
       break;
     case  8:
       gr_drawpath(i_arg[0], v_arr, b_arrc != 0 ? b_arr : NULL, i_arg[1]);
