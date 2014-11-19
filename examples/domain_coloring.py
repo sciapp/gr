@@ -48,6 +48,7 @@ def plot_domain(color_func, f, re=[-1, 1], im=[-1, 1], N=100, n=15):
     domc = np.append(domc, np.ones((width, height, 1)) * 255, axis=2)
     domc = domc.astype(np.uint8)
     domc = domc.view('<i4')
+    gr.clearws()
     gr.setviewport(0, 1, 0, 1)
     gr.drawimage(0, 1, 0, 1, width, height, domc, model=gr.MODEL_HSV)
     gr.updatews()
