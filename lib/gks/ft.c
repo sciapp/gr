@@ -514,7 +514,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   FT_Byte *rgba_bitmap = NULL;
   double red, green, blue;
   int tmp, size, i, j;
-  int color[3];
+  int color[4];
   unsigned char *mono_bitmap;
 
   mono_bitmap = gks_ft_get_bitmap(x, y, width, height, gkss, text, length);
@@ -522,6 +522,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   color[0] = (int)(red * 255);
   color[1] = (int)(green * 255);
   color[2] = (int)(blue * 255);
+  color[3] = (int)(gkss->alpha * 255);
 
   size = *width * *height;
   rgba_bitmap = (FT_Byte *) safe_realloc(rgba_bitmap, 4 * size);
