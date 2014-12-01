@@ -243,6 +243,8 @@ class InteractiveGRWidget(GRWidget):
         self._logYinDomain = None
         self._pickMode = False
         self._pickEvent = None
+        self._selectEnabled, self._panEnabled = True, True
+        self._zoomEnabled = True
         self._lstPlot = []
 
     def draw(self, clear=False, update=True):
@@ -290,7 +292,7 @@ class InteractiveGRWidget(GRWidget):
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
         self._painter.begin(self)
-        if self._mouseLeft:
+        if self._mouseLeft and self.getMouseSelectionEnabled():
             startDC = self._startPoint.getDC()
             endDC = self._curPoint.getDC()
             rect = QtCore.QRect(QtCore.QPoint(startDC.x, startDC.y),
@@ -311,6 +313,24 @@ class InteractiveGRWidget(GRWidget):
     def setPickMode(self, bool):
         self._pickMode = bool
         self.modePick.emit(self._pickMode)
+
+    def getMouseSelectionEnabled(self):
+        return self._selectEnabled
+
+    def setMouseSelectionEnabled(self, flag):
+        self._selectEnabled = flag
+
+    def getMousePanEnabled(self):
+        return self._panEnabled
+
+    def setMousePanEnabled(self, flag):
+        self._panEnabled = flag
+
+    def getMouseZoomEnabled(self):
+        return self._zoomEnabled
+
+    def setMouseZoomEnabled(self, flag):
+        self._zoomEnabled = flag
 
     def _pick(self, p0, type):
         for plot in self._lstPlot:
@@ -384,7 +404,8 @@ class InteractiveGRWidget(GRWidget):
             p0 = self._startPoint.getNDC()
             p1 = self._curPoint.getNDC()
             if p0 != p1:
-                self._select(p0, p1)
+                if self.getMouseSelectionEnabled():
+                    self._select(p0, p1)
             else:
                 self._roi(p0, ROIEvent.ROI_CLICKED, event.getButtons(),
                           event.getModifiers())
@@ -405,14 +426,16 @@ class InteractiveGRWidget(GRWidget):
             p1 = event.getNDC()
             dp = p1 - p0
             self._curPoint = event
-            self._pan(dp)
+            if self.getMousePanEnabled():
+                self._pan(dp)
         self._roi(event.getNDC(), ROIEvent.ROI_OVER, event.getButtons(),
                   event.getModifiers())
 
     def wheelMove(self, event):
-        # delta percent
-        dpercent = event.getSteps() * .1
-        self._zoom(dpercent, event.getNDC())
+        if self.getMouseZoomEnabled():
+            # delta percent
+            dpercent = event.getSteps() * .1
+            self._zoom(dpercent, event.getNDC())
 
     def pickMove(self, event):
         self._pickEvent = event
