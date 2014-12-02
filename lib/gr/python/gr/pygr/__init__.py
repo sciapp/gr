@@ -1138,7 +1138,7 @@ class PlotCurve(GRDrawAttributes, GRMeta):
             lcolor = gr.inqlinecolorind()
             mcolor = gr.inqmarkercolorind()
 
-            if self.linetype is not None:
+            if self.linetype is not None and len(self.x) > 1:
                 gr.setlinecolorind(self.linecolor)
                 gr.setmarkercolorind(self.markercolor)
                 gr.setlinetype(self.linetype)
