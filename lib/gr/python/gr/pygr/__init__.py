@@ -1148,6 +1148,7 @@ class PlotCurve(GRDrawAttributes, GRMeta):
                     gr.setmarkertype(self.markertype)
                     gr.polymarker(self.x, self.y)
             elif self.markertype is not None:
+                gr.setmarkercolorind(self.markercolor)
                 gr.setmarkertype(self.markertype)
                 gr.polymarker(self.x, self.y)
             if self.errorBar1:
