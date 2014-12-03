@@ -1609,28 +1609,29 @@ void fill_routine(int n, double *px, double *py, int tnr)
     fontName = info.fontfamily;
     string = [self stringForText:text withFontFamilyID:p->family];
     const char *cString = [string cStringUsingEncoding:NSUnicodeStringEncoding];
-    int charCount = [string length];
     float fontsize = info.fontsize;
 
-    // Calculate string width (this is the recommended way: https://developer.apple.com/library/mac/#documentation/graphicsimaging/conceptual/drawingwithquartz2d/dq_text/dq_text.html )
     CGFontRef cgfont; // Check if CGFont is already cached
     if (cgfontrefs[p->family] == NULL) {
       cgfontrefs[p->family] = CGFontCreateWithFontName((CFStringRef)fontName);
     }
     cgfont = cgfontrefs[p->family];
-    CGContextSetFont(context, cgfont);
-    CGContextSetFontSize(context, fontsize);
     CTFontRef font = CTFontCreateWithGraphicsFont(cgfont, fontsize, &CGAffineTransformIdentity, NULL);
-    CGGlyph glyphs[charCount];
-    CTFontGetGlyphsForCharacters(font, (const unichar*)cString, glyphs, charCount);
-    CFRelease(font);
-    CGContextSetTextMatrix(context, CGAffineTransformIdentity);
-    CGContextSetTextDrawingMode(context, kCGTextInvisible);
-    CGPoint beforeDrawing = CGContextGetTextPosition(context);
-    CGContextShowGlyphs(context, glyphs, charCount);
-    CGPoint afterDrawing = CGContextGetTextPosition(context);
-    float stringWidth = afterDrawing.x - beforeDrawing.x;
+    CFStringRef cfstring = CFStringCreateWithCString(kCFAllocatorDefault, cString, kCFStringEncodingISOLatin1);
+    CFStringRef keys[] = {kCTFontAttributeName};
+    CFTypeRef values[] = {font};
+    CFDictionaryRef attributes = CFDictionaryCreate(kCFAllocatorDefault,
+                                                    (const void**)&keys,
+                                                    (const void**)&values,
+                                                    sizeof(keys) / sizeof(keys[0]),
+                                                    &kCFTypeDictionaryKeyCallBacks,
+                                                    &kCFTypeDictionaryValueCallBacks);
+    CFAttributedStringRef attrString = CFAttributedStringCreate(kCFAllocatorDefault, cfstring, attributes);
+    CTLineRef line = CTLineCreateWithAttributedString(attrString);
+    CGRect bounds = CTLineGetImageBounds(line, context);
+    double stringWidth = bounds.size.width;
 
+    // Calculate the required transformation
     WC_to_NDC(px, py, gkss->cntnr, xn, yn);
     seg_xform(&xn, &yn);
     NDC_to_DC(xn, yn, xstart, ystart);
@@ -1639,17 +1640,24 @@ void fill_routine(int n, double *px, double *py, int tnr)
     CharXform(xrel, yrel, ax, ay);
     xstart += ax;
     ystart += ay;
-
-    // Setup the rendering properties:
-    CGContextSetTextDrawingMode(context, kCGTextFill);
-    CGContextSetFillColorWithColor(context, p->rgb[tx_color]);
-    CGContextSetStrokeColorWithColor(context, p->rgb[tx_color]);
     CGAffineTransform transform;
     transform = CGAffineTransformMakeTranslation(xstart, ystart);
     transform = CGAffineTransformRotate(transform, p->angle);
     transform = CGAffineTransformTranslate(transform, -xstart, -ystart);
+
+    // Setup the rendering properties and draw the text line
+    CGContextSetTextDrawingMode(context, kCGTextFill);
+    CGContextSetFillColorWithColor(context, p->rgb[tx_color]);
+    CGContextSetStrokeColorWithColor(context, p->rgb[tx_color]);
     CGContextSetTextMatrix(context, transform);
-    CGContextShowGlyphsAtPoint(context, xstart, ystart, glyphs, charCount);
+    CGContextSetTextPosition(context, xstart, ystart);
+    CTLineDraw(line, context);
+
+    CFRelease(cfstring);
+    CFRelease(attributes);
+    CFRelease(attrString);
+    CFRelease(line);
+    CFRelease(font);
   }
 #ifndef NO_FT
   else if (tx_prec == GKS_K_TEXT_PRECISION_CHAR)
