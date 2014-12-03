@@ -369,8 +369,8 @@ void seg_xform_rel(double *x, double *y)
           memcpy(&saved_gkss, gkss, sizeof(gks_state_list_t));
           memcpy(gkss, sl, sizeof(gks_state_list_t));
 
-          CGSize size = CGDisplayScreenSize(CGMainDisplayID());
-          double mwidth = 0.001 * size.width;
+          CGSize screen_size = CGDisplayScreenSize(CGMainDisplayID());
+          double mwidth = 0.001 * screen_size.width;
 
           p->width  = [self bounds].size.width;
           p->height = [self bounds].size.height;
@@ -978,10 +978,10 @@ void seg_xform_rel(double *x, double *y)
 {
   double max_width, max_height, width, height;
   NSRect rect = [[self window] frame];
-  CGSize size;
+  CGSize screen_size;
 
-  size = CGDisplayScreenSize(CGMainDisplayID());
-  max_width = 0.001 * size.width;
+  screen_size = CGDisplayScreenSize(CGMainDisplayID());
+  max_width = 0.001 * screen_size.width;
   max_height = max_width * p->sheight / p->swidth;
 
   gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.0075);
