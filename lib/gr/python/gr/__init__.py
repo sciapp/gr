@@ -91,9 +91,16 @@ class nothing:
 
 def char(string):
     if version_info[0] == 3:
-        s = create_string_buffer(string.encode('iso8859-15'))
+        s = create_string_buffer(string.encode('latin-1'))
     else:
-        s = create_string_buffer(string)
+        if chr(0xc2) in string or chr(0xc3) in string:
+            try:
+                chars = unicode(string, 'utf-8').encode('latin-1', 'replace')
+            except:
+                chars = string
+        else:
+            chars = string
+        s = create_string_buffer(chars)
     return cast(s, c_char_p)
 
 
