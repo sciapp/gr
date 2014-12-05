@@ -505,11 +505,11 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 		svg_printf(p->stream,
 			   "<line clip-path=\"url(#clip%02d)\" x1="
 			   "\"%g\" y1=\"%g\" ", p->path_index,
-			   (int) (x - xr), (int) (y - yr));
+		           x - xr, y - yr);
 	      else
 		svg_printf(p->stream,
 			   "x2=\"%g\" y2=\"%g\" style=\"stroke:#%s;\"/>\n",
-			   (int) (x - xr), (int) (y + yr), p->rgb[mcolor]);
+		           x - xr, y + yr, p->rgb[mcolor]);
 	    }
 	  pc += 4;
 	  break;
