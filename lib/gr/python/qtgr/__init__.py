@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""PyQt GR module
+"""PyQt, PySide GR module
 
 Exported Classes:
 
@@ -75,7 +75,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
- 
+
 """
 
 _log = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ class GRWidget(QtGui.QWidget):
         self._painter = QtGui.QPainter()
         self._painter.begin(self)
         self._painter.fillRect(0, 0, self.width(), self.height(), self._bgColor)
-        os.environ["GKSconid"] = getGKSConnectionId(self, self._painter) 
+        os.environ["GKSconid"] = getGKSConnectionId(self, self._painter)
         self.draw(self._clear, self._update)
         gr.updatews()
         self._painter.end()
@@ -268,6 +268,7 @@ class InteractiveGRWidget(GRWidget):
 
         if self._pickEvent:
             event = self._pickEvent
+            gr.setviewport(*event.viewport)
             wcPoint = event.getWC(event.viewport)
             window = gr.inqwindow()
             gr.setwindow(*event.getWindow())
@@ -332,8 +333,16 @@ class InteractiveGRWidget(GRWidget):
     def setMouseZoomEnabled(self, flag):
         self._zoomEnabled = flag
 
-    def _pick(self, p0, type):
+    def _getPlotsForPoint(self, p0):
+        res = []
         for plot in self._lstPlot:
+            xmin, xmax, ymin, ymax = plot.viewport
+            if p0.x >= xmin and p0.x <= xmax and p0.y >= ymin and p0.y <= ymax:
+                res.append(plot)
+        return res
+
+    def _pick(self, p0, type):
+        for plot in self._getPlotsForPoint(p0):
             (coord, _axes, _curve) = plot.pick(p0, self.dwidth, self.dheight)
             if coord:
                 dcPoint = coord.getDC()
@@ -347,24 +356,33 @@ class InteractiveGRWidget(GRWidget):
 
     def _select(self, p0, p1):
         self._pickEvent = None
-        for plot in self._lstPlot:
+        change = False
+        for plot in self._getPlotsForPoint(p0):
             plot.select(p0, p1, self.dwidth, self.dheight)
-        self._draw(True)
-        self.update()
+            change = True
+        if change:
+            self._draw(True)
+            self.update()
 
-    def _pan(self, dp):
+    def _pan(self, p0, dp):
         self._pickEvent = None
-        for plot in self._lstPlot:
+        change = False
+        for plot in self._getPlotsForPoint(p0):
             plot.pan(dp, self.dwidth, self.dheight)
-        self._draw(True)
-        self.update()
+            change = True
+        if change:
+            self._draw(True)
+            self.update()
 
     def _zoom(self, dpercent, p0):
         self._pickEvent = None
-        for plot in self._lstPlot:
+        change = False
+        for plot in self._getPlotsForPoint(p0):
             plot.zoom(dpercent, p0, self.dwidth, self.dheight)
-        self._draw(True)
-        self.update()
+            change = True
+        if change:
+            self._draw(True)
+            self.update()
 
     def _roi(self, p0, type, buttons, modifiers):
         for plot in self._lstPlot:
@@ -390,7 +408,7 @@ class InteractiveGRWidget(GRWidget):
             else:
                 if event.getModifiers() & MouseEvent.CONTROL_MODIFIER:
                     self.setPickMode(True)
-                else:
+                elif self._getPlotsForPoint(event.getNDC()):
                     self._mouseLeft = True
         elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
             self._mouseRight = True
@@ -427,7 +445,7 @@ class InteractiveGRWidget(GRWidget):
             dp = p1 - p0
             self._curPoint = event
             if self.getMousePanEnabled():
-                self._pan(dp)
+                self._pan(self._startPoint.getNDC(), dp)
         self._roi(event.getNDC(), ROIEvent.ROI_OVER, event.getButtons(),
                   event.getModifiers())
 
@@ -451,7 +469,8 @@ if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     grw = InteractiveGRWidget()
     grw.resize(QtCore.QSize(500, 500))
-    viewport = [0.1, 0.9, 0.1, 0.88]
+    viewport = [0.1, 0.45, 0.1, 0.88]
+    vp2 = [.6, .95, .1, .88]
 
     x = [-3.3 + t * .1 for t in range(66)]
     y = [t ** 5 - 13 * t ** 3 + 36 * t for t in x]
@@ -466,7 +485,12 @@ if __name__ == "__main__":
     plot.title, plot.subTitle = "foo", "bar"
     plot.xlabel, plot.ylabel = "x", "f(x)"
 
+    plot2 = Plot(vp2).addAxes(PlotAxes(vp2).plot(x2, y2))
+    plot2.title, plot2.subTitle = "Title", "Subtitle"
+    plot2.xlabel = "x"
+
     grw.addPlot(plot)
+    grw.addPlot(plot2)
     grw.show()
     grw.update()
 
