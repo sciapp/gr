@@ -28,6 +28,14 @@ Major contributors include the following (in alphabetical order):
 
   implemented the GKS wxWidgets plugin
 
+**Daniel Kaiser**
+
+  developed the *Swift* binding and improved the HTML5 stuff
+
+**Philip Klinkhammer**
+
+  implemented the GKS PGF device driver
+
 **David Knodt**
 
   wrote the video converter routines
