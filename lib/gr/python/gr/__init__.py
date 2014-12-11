@@ -90,6 +90,7 @@ class nothing:
 
 
 def char(string):
+    string = str(string) # ensure type str, e.g. convert unicode to str
     if version_info[0] == 3:
         s = create_string_buffer(string.encode('latin-1'))
     else:
