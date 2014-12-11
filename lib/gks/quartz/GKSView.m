@@ -1607,8 +1607,6 @@ void fill_routine(int n, double *px, double *py, int tnr)
   {
     _FontInfo info = [self set_font:tx_font];
     fontName = info.fontfamily;
-    string = [self stringForText:text withFontFamilyID:p->family];
-    const char *cString = [string cStringUsingEncoding:NSUnicodeStringEncoding];
     float fontsize = info.fontsize;
 
     CGFontRef cgfont; // Check if CGFont is already cached
@@ -1617,7 +1615,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
     }
     cgfont = cgfontrefs[p->family];
     CTFontRef font = CTFontCreateWithGraphicsFont(cgfont, fontsize, &CGAffineTransformIdentity, NULL);
-    CFStringRef cfstring = CFStringCreateWithCString(kCFAllocatorDefault, cString, kCFStringEncodingISOLatin1);
+    CFStringRef cfstring = CFStringCreateWithCString(kCFAllocatorDefault, text, kCFStringEncodingISOLatin1);
     CFStringRef keys[] = {kCTFontAttributeName};
     CFTypeRef values[] = {font};
     CFDictionaryRef attributes = CFDictionaryCreate(kCFAllocatorDefault,
