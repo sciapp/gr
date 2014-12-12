@@ -257,6 +257,10 @@ DLLEXPORT void gks_dl_write_item(gks_display_list_t *d,
   int lr1, double *r1, int lr2, double *r2, int lc, char *c,
   gks_state_list_t *gkss);
 
+void gks_wiss_dispatch(int fctid, int wkid, int segn);
+
+#ifndef EMSCRIPTEN
+
 void gks_drv_mo(
   int fctid,
   int dx, int dy, int dimx, int *i_arr,
@@ -274,8 +278,6 @@ void gks_drv_wiss(
   int dx, int dy, int dimx, int *i_arr,
   int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
-
-void gks_wiss_dispatch(int fctid, int wkid, int segn);
 
 void gks_drv_cgm(
   int fctid,
@@ -402,6 +404,16 @@ DLLEXPORT void gks_pgf_plugin(
   int dx, int dy, int dimx, int *i_arr,
   int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
+
+#else
+
+void gks_drv_js(
+  int fctid,
+  int dx, int dy, int dimx, int *i_arr,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
+  int len_c_arr, char *c_arr, void **ptr);
+
+#endif
 
 void gks_compress(
   int bits, unsigned char *in, int in_len, unsigned char *out, int *out_len);

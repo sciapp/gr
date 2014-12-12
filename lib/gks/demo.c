@@ -274,6 +274,7 @@ int main(int argc, char *argv[])
   else
     {
       gks_update_ws(2, GKS_K_PERFORM_FLAG);
+#ifndef EMSCRIPTEN
       puts("Press RETURN to continue ...");
       getchar();
 
@@ -285,6 +286,7 @@ int main(int argc, char *argv[])
 	  gks_request_locator(2, 1, &inp_status, &tnr, x, y);
 	}
       printf("%g %g\n", x[0], y[0]);
+#endif
     }
 
   gks_emergency_close();

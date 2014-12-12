@@ -166,6 +166,7 @@ void gks_ddlk(
 	    }
 	  ptr = &ws->ptr;
 
+#ifndef EMSCRIPTEN
 	  switch (ws->wtype)
 	    {
 	    case   2:
@@ -319,6 +320,10 @@ void gks_ddlk(
 	      printf("GKS: %s\n", gks_function_name(fctid));
 	      break;
 	    }
+#else
+	  gks_drv_js(fctid, dx, dy, dimx, i_arr,
+	    len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr, ptr);
+#endif
 	}
       list = list->next;
     }
