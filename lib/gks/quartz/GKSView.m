@@ -1591,7 +1591,6 @@ void fill_routine(int n, double *px, double *py, int tnr)
   int tx_font, tx_prec, tx_color, nchars;
   double xn, yn, xstart, ystart, xrel, yrel, ax, ay;
   NSString *fontName;
-  NSString *string;
 
   nchars = strlen(text);
 
@@ -1638,16 +1637,16 @@ void fill_routine(int n, double *px, double *py, int tnr)
     CharXform(xrel, yrel, ax, ay);
     xstart += ax;
     ystart += ay;
-    CGAffineTransform transform;
-    transform = CGAffineTransformMakeTranslation(xstart, ystart);
-    transform = CGAffineTransformRotate(transform, p->angle);
-    transform = CGAffineTransformTranslate(transform, -xstart, -ystart);
 
     // Setup the rendering properties and draw the text line
     CGContextSetTextDrawingMode(context, kCGTextFill);
     CGContextSetFillColorWithColor(context, p->rgb[tx_color]);
     CGContextSetStrokeColorWithColor(context, p->rgb[tx_color]);
-    CGContextSetTextMatrix(context, transform);
+    if (p->angle != 0) {
+      CGContextTranslateCTM(context, xstart, ystart);
+      CGContextRotateCTM(context, p->angle);
+      CGContextTranslateCTM(context, -xstart, -ystart);
+    }
     CGContextSetTextPosition(context, xstart, ystart);
     CTLineDraw(line, context);
 
