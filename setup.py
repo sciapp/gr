@@ -1304,6 +1304,19 @@ class build_ext(_build_ext, check_ext, build_static):
                       os.path.join(_build_scripts, "GKSTerm.app"))
 
 
+class run_tests(build_ext):
+
+    def run(self):
+        build_ext.run(self)
+        sys.path.insert(0, os.path.join("lib", "gr", "python"))
+        os.environ["GRLIB"] = os.path.join(_build_lib, "gr")
+        import nose
+        import gr
+        print("gr version:", gr.__version__)
+        print()
+        nose.run(argv=[sys.argv[0], "tests.gr", "-v"])
+
+
 # check wether this is a Debian based system, e.g. Ubuntu
 if "deb_system" in distutils.command.install.INSTALL_SCHEMES:
     # Overwrite all site-packages paths with dist-packages in INSTALL_SCHEMES
@@ -1439,7 +1452,7 @@ else:
 
 setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
                 "build_static": build_static, "clean_static": clean_static,
-                "clean": clean},
+                "clean": clean, "tests": run_tests},
       name="gr",
       version=__version__,
       description="Python visualization framework",
