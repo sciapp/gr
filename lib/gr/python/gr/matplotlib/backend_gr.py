@@ -28,21 +28,30 @@ class RendererGR(RendererBase):
 
     texd = maxdict(50)  # a cache of tex image rasters
 
-    def __init__(self, dpi):
+    def __init__(self, dpi, width, height):
         self.dpi = dpi
-        self.width = 640.0 * dpi / 80
-        self.height = 480.0 * dpi / 80
-        mwidth, mheight, width, height = gr.inqdspsize()
-        if (width / (mwidth / 0.0256) < 200):
-            mwidth *= self.width / width
-            gr.setwsviewport(0, mwidth, 0, mwidth * 0.75)
-        else:
-            gr.setwsviewport(0, 0.192, 0, 0.144)
-        gr.setwswindow(0, 1, 0, 0.75)
-        gr.setviewport(0, 1, 0, 0.75)
-        gr.setwindow(0, self.width, 0, self.height)
+        self.width = float(width) * dpi / 80
+        self.height = float(height) * dpi / 80
         self.mathtext_parser = MathTextParser('agg')
         self.texmanager = TexManager()
+
+    def configure(self):
+        aspect_ratio = self.width / self.height
+        if aspect_ratio > 1:
+            rect = np.array([0, 1, 0, 1.0 / aspect_ratio])
+            self.size = self.width
+        else:
+            rect = np.array([0, aspect_ratio, 0, 1])
+            self.size = self.height
+        mwidth, mheight, width, height = gr.inqdspsize()
+        if width / (mwidth / 0.0256) < 200:
+            mwidth *= self.width / width
+            gr.setwsviewport(*rect * mwidth)
+        else:
+            gr.setwsviewport(*rect * 0.192)
+        gr.setwswindow(*rect)
+        gr.setviewport(*rect)
+        gr.setwindow(0, self.width, 0, self.height)
 
     def draw_path(self, gc, path, transform, rgbFace=None):
         path = transform.transform_path(path)
@@ -54,7 +63,7 @@ class RendererGR(RendererBase):
             clrt = np.array([x, x + w, y, y + h])
         else:
             clrt = np.array([0, self.width, 0, self.height])
-        gr.setviewport(*clrt/self.width)
+        gr.setviewport(*clrt / self.size)
         gr.setwindow(*clrt)
         if rgbFace is not None and len(points) > 2:
             color = gr.inqcolorfromrgb(rgbFace[0], rgbFace[1], rgbFace[2])
@@ -210,14 +219,19 @@ class FigureCanvasGR(FigureCanvasBase):
     else:
         register_backend('gr', 'backend_gr')
 
+    def __init__(self, figure):
+        FigureCanvasBase.__init__(self, figure)
+        width, height = self.get_width_height()
+        self.renderer = RendererGR(figure.dpi, width, height)
+
     def draw(self):
         """
         Draw the figure using the renderer
         """
         if gr.mpl_clearws:
             gr.clearws()
-        renderer = RendererGR(self.figure.dpi)
-        self.figure.draw(renderer)
+        self.renderer.configure()
+        self.figure.draw(self.renderer)
         if gr.mpl_updatews:
             gr.updatews()
 
