@@ -3,6 +3,7 @@
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
    PYTHONDIR = $(LIBDIR)/python
+    JULIADIR = $(LIBDIR)/julia
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                md5.o import.o grforbnd.o
@@ -68,6 +69,8 @@ install:
 	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
 	cp -a python/gr $(PYTHONDIR)
 	cp -a python/qtgr $(PYTHONDIR)
+	@if [ ! -d $(JULIADIR) ]; then mkdir -m 755 $(JULIADIR); fi
+	cp -p julia/* $(JULIADIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr.h $(INCDIR)
 
