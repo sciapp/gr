@@ -75,30 +75,31 @@ gr.setviewport(0, 1, 0, 1)
 gr.setmarkertype(gr.MARKERTYPE_SOLID_CIRCLE)
 gr.setmarkersize(1.0)
 
-now = time.time()
+start = time.time()
+t0 = start
 
+n = 0
 t = 0
 worker = 'CPython'
 
-while t < 20:
-    gr.clearws()
+while t < 6:
 
-    start = now
-    if t > 10:
+    if t > 3:
+        if worker == 'CPython':
+            t0 = now
+            n = 0
         a = step_numba(dt, size, a)
         worker = 'Numba'
     else:
         a = step(dt, size, a)
-    now = time.time()
-    t = t + now - start
 
-    x = a[0, :, 0]
-    y = a[0, :, 1]
+    gr.clearws()
     gr.setmarkercolorind(75)
-    gr.polymarker(x, y)
-    gr.text(0.01, 0.95, '%10s: %6.2f fps' % (worker, (1.0 / (now - start))))
+    gr.polymarker(a[0, :, 0], a[0, :, 1])
+    if n > 0:
+        gr.text(0.01, 0.95, '%10s: %4d fps' % (worker, int(n / (now - t0))))
     gr.updatews()
 
-    if start + dt > now:
-        time.sleep(start + dt - now)
-
+    now = time.time()
+    n += 1
+    t = now - start
