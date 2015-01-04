@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- animation -*-
 """
-Calculate Mandelbrot set using Numba
+Calculate Mandelbrot set
 """
 
 from timeit import default_timer as timer
