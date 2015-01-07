@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 # -*- no-plot -*-
 """
-Calculate Mandelbrot in Julia
+Calculate Mandelbrot set in Julia
 """
 
 import gr
@@ -13,8 +13,8 @@ function mandel(x, y, iters)
     inc = 1
 
     for i in 0:iters
-        z = z * z + c
-        if z.re ^ 2 + z.im ^ 2 >= 4
+        z = z^2 + c
+        if abs2(z) >= 4
             return ci
         end
         ci += inc
