@@ -296,11 +296,12 @@ class InteractiveGRWidget(GRWidget):
         if self._mouseLeft and self.getMouseSelectionEnabled():
             startDC = self._startPoint.getDC()
             endDC = self._curPoint.getDC()
-            rect = QtCore.QRect(QtCore.QPoint(startDC.x, startDC.y),
-                                QtCore.QPoint(endDC.x, endDC.y)).normalized()
-            self._painter.setOpacity(.75)
-            self._painter.drawRect(rect)
-            self._painter.setOpacity(1.)
+            if self._getPlotsForPoint(self._startPoint.getNDC()):
+                rect = QtCore.QRect(QtCore.QPoint(startDC.x, startDC.y),
+                                    QtCore.QPoint(endDC.x, endDC.y)).normalized()
+                self._painter.setOpacity(.75)
+                self._painter.drawRect(rect)
+                self._painter.setOpacity(1.)
 
         self._painter.end()
 
@@ -408,7 +409,7 @@ class InteractiveGRWidget(GRWidget):
             else:
                 if event.getModifiers() & MouseEvent.CONTROL_MODIFIER:
                     self.setPickMode(True)
-                elif self._getPlotsForPoint(event.getNDC()):
+                else:
                     self._mouseLeft = True
         elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
             self._mouseRight = True
@@ -422,7 +423,8 @@ class InteractiveGRWidget(GRWidget):
             p0 = self._startPoint.getNDC()
             p1 = self._curPoint.getNDC()
             if p0 != p1:
-                if self.getMouseSelectionEnabled():
+                if (self.getMouseSelectionEnabled()
+                    and self._getPlotsForPoint(p0)):
                     self._select(p0, p1)
             else:
                 self._roi(p0, ROIEvent.ROI_CLICKED, event.getButtons(),
