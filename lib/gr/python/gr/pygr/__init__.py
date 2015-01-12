@@ -1016,6 +1016,7 @@ class Plot(GRViewPort, GRMeta):
                                     gr.setmarkertype(curve.markertype)
                                     gr.polymarker([x + .1 / 2.], [ys])
                             elif curve.markertype is not None:
+                                ys = y * self.sizey # scaled y value
                                 gr.setmarkertype(curve.markertype)
                                 gr.polymarker([x + .1 / 2.], [ys])
 
