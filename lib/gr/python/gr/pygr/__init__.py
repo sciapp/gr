@@ -1005,8 +1005,8 @@ class Plot(GRViewPort, GRMeta):
                                     break
                             gr.setmarkertype(curve.markertype)
                             gr.setmarkercolorind(curve.markercolor)
+                            ys = y * self.sizey # scaled y value
                             if curve.linetype is not None:
-                                ys = y * self.sizey # scaled y value
                                 gr.setlinecolorind(curve.linecolor)
                                 gr.setmarkercolorind(curve.markercolor)
                                 gr.setlinetype(curve.linetype)
