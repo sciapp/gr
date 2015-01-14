@@ -4,7 +4,7 @@
 Calculate Mandelbrot set in Julia
 """
 
-import gr
+import GR
 
 function mandel(x, y, iters)
     c = complex(x, y)
@@ -54,11 +54,11 @@ for i in 0:200
 
     println(@sprintf("Mandelbrot created in %f s", dt))
 
-    gr.clearws()
-    gr.setviewport(0, 1, 0, 1)
-    gr.setcolormap(13)
-    gr.cellarray(0, 1, 0, 1, 500, 500, reshape(image, 500 * 500) + 1000)
-    gr.updatews()
+    GR.clearws()
+    GR.setviewport(0, 1, 0, 1)
+    GR.setcolormap(13)
+    GR.cellarray(0, 1, 0, 1, 500, 500, reshape(image, 500 * 500) + 1000)
+    GR.updatews()
 
     f *= 0.9
 end

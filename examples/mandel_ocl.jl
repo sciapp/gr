@@ -6,7 +6,7 @@
 import OpenCL
 const cl = OpenCL
 
-import gr
+import GR
 
 function calc_fractal(q, min_x, max_x, min_y, max_y, width, height, iters)
     ctx   = cl.Context(cl.devices()[1])
@@ -79,11 +79,11 @@ for i in 1:200
 
     @printf("Mandelbrot created in %f s\n", dt)
 
-    gr.clearws()
-    gr.setviewport(0, 1, 0, 1)
-    gr.setcolormap(13)
-    gr.cellarray(0, 1, 0, 1, 500, 500, reshape(image, 500 * 500) + 1000)
-    gr.updatews()
+    GR.clearws()
+    GR.setviewport(0, 1, 0, 1)
+    GR.setcolormap(13)
+    GR.cellarray(0, 1, 0, 1, 500, 500, reshape(image, 500 * 500) + 1000)
+    GR.updatews()
 
     f *= 0.9
 end

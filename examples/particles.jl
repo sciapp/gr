@@ -1,4 +1,4 @@
-using gr
+using GR
 
 # Simple particle simulation
 
@@ -60,7 +60,7 @@ end
 
 setwindow(-2, 2, -2, 2)
 setviewport(0, 1, 0, 1)
-setmarkertype(gr.MARKERTYPE_SOLID_CIRCLE)
+setmarkertype(GR.MARKERTYPE_SOLID_CIRCLE)
 setmarkersize(1.0)
 
 n = 0
