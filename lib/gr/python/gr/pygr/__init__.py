@@ -14,7 +14,7 @@ import gr
 import gr3
 from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort
 from gr.pygr.helper import ColorIndexGenerator, DomainChecker
-from numpy import ndarray
+from numpy import ndarray, asarray
 from gr._version import __version__, __revision__
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
@@ -517,12 +517,13 @@ class ErrorBar(GRDrawAttributes, GRMeta):
     HORIZONTAL = 0
     VERTICAL = 1
 
-    def __init__(self, x, y, dneg, dpos, direction=VERTICAL,
+    def __init__(self, x, y, dneg, dpos=None, direction=VERTICAL,
                  linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_OMARK,
                  linecolor=1, markercolor=1):
         super(ErrorBar, self).__init__(linetype, markertype, linecolor,
                                        markercolor)
-        self._x, self._y, self._dneg, self._dpos = x, y, dneg, dpos
+        self._x = asarray(x)
+        self._y = asarray(y)
         self._direction = direction
         self._grerror = None
         if direction == ErrorBar.VERTICAL:
@@ -531,6 +532,15 @@ class ErrorBar(GRDrawAttributes, GRMeta):
             self._grerror = gr.herrorbars
         else:
             raise AttributeError("unsupported value for direction.")
+        self.dneg, self.dpos = dneg, dpos if dpos is not None else dneg
+
+    def _updateErrors(self):
+        if self.direction == ErrorBar.VERTICAL:
+            self._eneg = self.y - self._dneg
+            self._epos = self.y + self._dpos
+        else: # HORIZONTAL
+            self._eneg = self.x - self._dneg
+            self._epos = self.x + self._dpos
 
     @property
     def direction(self):
@@ -539,27 +549,49 @@ class ErrorBar(GRDrawAttributes, GRMeta):
 
     @property
     def x(self):
-        """Get the current list/ndarray of x values."""
+        """Get the current ndarray of x values."""
         return self._x
 
     @x.setter
-    def x(self, lst):
-        if self.direction == ErrorBar.HORIZONTAL:
-            self._dneg = self._dneg - self.x + lst
-            self._dpos = self._dpos - self.x + lst
-        self._x = lst
+    def x(self, seq):
+        self._x = asarray(seq)
+        self._updateErrors()
 
     @property
     def y(self):
-        """Get the current list/ndarray of y values."""
+        """Get the current ndarray of y values."""
         return self._y
 
     @y.setter
-    def y(self, lst):
+    def y(self, seq):
+        self._y = asarray(seq)
+        self._updateErrors()
+
+    @property
+    def dneg(self):
+        """Get the current ndarray of absolute deviation in negative direction."""
+        return self._dneg
+
+    @dneg.setter
+    def dneg(self, seq):
+        self._dneg = asarray(seq)
         if self.direction == ErrorBar.VERTICAL:
-            self._dneg = self._dneg - self.y + lst
-            self._dpos = self._dpos - self.y + lst
-        self._y = lst
+            self._eneg = self.y - self._dneg
+        else: # HORIZONTAL
+            self._eneg = self.x - self._dneg
+
+    @property
+    def dpos(self):
+        """Get the current ndarray of absolute deviation in positive direction."""
+        return self._dpos
+
+    @dpos.setter
+    def dpos(self, seq):
+        self._dpos = asarray(seq)
+        if self.direction == ErrorBar.VERTICAL:
+            self._epos = self.y + self._dpos
+        else: # HORIZONTAL
+            self._epos = self.x + self._dpos
 
     def drawGR(self):
         # preserve old values
@@ -577,7 +609,7 @@ class ErrorBar(GRDrawAttributes, GRMeta):
         else:
             gr.setmarkertype(gr.MARKERTYPE_DOT)
 
-        self._grerror(self._x, self._y, self._dneg, self._dpos)
+        self._grerror(self._x, self._y, self._eneg, self._epos)
 
         # restore old values
         gr.setlinecolorind(lcolor)

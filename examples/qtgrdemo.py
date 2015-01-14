@@ -89,9 +89,8 @@ class MainWindow(QtGui.QMainWindow):
         x2 = [-3.5 + i * .5 for i in range(0, 15)]
         y2 = x2
 
-        dneg = map(lambda y: y - 0.25 * abs(y), y)
-        dpos = map(lambda y: y + 0.25 * abs(y), y)
-        self._errBar = ErrorBar(x, y, dneg, dpos)
+        derr = [0.25 * abs(yi) for yi in y]
+        self._errBar = ErrorBar(x, y, derr)
 
         self._plot = Plot((.1, .92, .2, .88))
         self._plot.offsetXLabel = -.1
