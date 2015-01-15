@@ -1436,7 +1436,8 @@ class PlotAxes(GRViewPort, GRMeta):
                             if bar.direction == ErrorBar.HORIZONTAL:
                                 for i, x in enumerate(bar.x):
                                     if x >= xmin and x <= xmax:
-                                        bneg, bpos = bar._dneg[i], bar._dpos[i]
+                                        bneg = x - bar.dneg[i]
+                                        bpos = x + bar.dpos[i]
                                         if bneg < xmin:
                                             xmin = bneg
                                         if bpos > xmax:
@@ -1444,7 +1445,8 @@ class PlotAxes(GRViewPort, GRMeta):
                             elif bar.direction == ErrorBar.VERTICAL:
                                 for i, y in enumerate(bar.y):
                                     if y >= ymin and y <= ymax:
-                                        bneg, bpos = bar._dneg[i], bar._dpos[i]
+                                        bneg = y - bar.dneg[i]
+                                        bpos = y + bar.dpos[i]
                                         if bneg < ymin:
                                             ymin = bneg
                                         if bpos > ymax:
