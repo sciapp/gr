@@ -1377,9 +1377,9 @@ def verrorbars(px, py, e1, e2):
     `py` :
         A list of length N containing the Y coordinates
     `e1` :
-         The absolute value of the negative deviation at the given point
+         The absolute values of the lower error bar data
     `e2` :
-        The absolute value of the positive deviation at the given point
+         The absolute values of the upper error bar data
 
     """
     n = _assertEqualLength(px, py, e1, e2)
@@ -1401,9 +1401,9 @@ def herrorbars(px, py, e1, e2):
     `py` :
         A list of length N containing the Y coordinates
     `e1` :
-        The absolute value of the negative deviation at the given point
+         The absolute values of the lower error bar data
     `e2` :
-        The absolute value of the positive deviation at the given point
+         The absolute values of the upper error bar data
 
     """
     n = _assertEqualLength(px, py, e1, e2)
@@ -2428,6 +2428,7 @@ FONT_ZAPFDINGBATS = 131
 PRINT_PS = "ps"
 PRINT_EPS = "eps"
 PRINT_PDF = "pdf"
+PRINT_PGF = "pgf"
 PRINT_BMP = "bmp"
 PRINT_JPEG = "jpeg"
 PRINT_JPG = "jpg"
@@ -2441,6 +2442,7 @@ PRINT_WMF = "wmf"
 PRINT_TYPE = {PRINT_PS: "PostScript (*.ps)",
               PRINT_EPS: "Encapsulated PostScript (*.eps)",
               PRINT_PDF: "Portable Document Format (*.pdf)",
+              PRINT_PGF: "PGF/TikZ Graphics Format for TeX (*.pgf)",
               PRINT_BMP: "Windows Bitmap (*.bmp)",
               PRINT_JPEG: "JPEG image (*.jpg *.jpeg)",
               PRINT_PNG: "Portable Network Graphics (*.png)",
