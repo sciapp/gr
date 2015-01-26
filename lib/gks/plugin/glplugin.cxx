@@ -118,6 +118,7 @@ typedef struct ws_state_list_t
   int state;
   gks_display_list_t dl;
   GLFWwindow *win;
+  int existing_context_used;
   double mwidth, mheight;
   int swidth, sheight;
   int width, height;
@@ -292,6 +293,21 @@ void open_window(void)
   glfwSetErrorCallback(error_callback);
   glfwInit();
 
+  p->win = glfwGetCurrentContext();
+  if (p->win) {
+    p->existing_context_used = 1;
+  } else {
+    p->existing_context_used = 0;
+    glfwDefaultWindowHints();
+    glfwWindowHint(GLFW_RED_BITS, 8);
+    glfwWindowHint(GLFW_GREEN_BITS, 8);
+    glfwWindowHint(GLFW_BLUE_BITS, 8);
+    glfwWindowHint(GLFW_ALPHA_BITS, 0);
+    glfwWindowHint(GLFW_DEPTH_BITS, 0);
+    glfwWindowHint(GLFW_STENCIL_BITS, 0);
+    p->win = glfwCreateWindow(p->width, p->height, "GKS GL", NULL, NULL);
+    glfwMakeContextCurrent(p->win);
+  }
   monitor = glfwGetPrimaryMonitor();
   glfwGetMonitorPhysicalSize(monitor, &width, &height);
   p->mwidth  = 0.001 * width;
@@ -300,15 +316,6 @@ void open_window(void)
   vidmode = glfwGetVideoMode(monitor);
   p->swidth  = vidmode->width;
   p->sheight = vidmode->height;
-
-  p->win = glfwCreateWindow(p->width, p->height, "GKS GL", NULL, NULL);
-  glfwWindowHint(GLFW_RED_BITS, 8);
-  glfwWindowHint(GLFW_GREEN_BITS, 8);
-  glfwWindowHint(GLFW_BLUE_BITS, 8);
-  glfwWindowHint(GLFW_ALPHA_BITS, 0);
-  glfwWindowHint(GLFW_DEPTH_BITS, 0);
-  glfwWindowHint(GLFW_STENCIL_BITS, 0);
-  glfwMakeContextCurrent(p->win);
 
   gl_init();
   glClearColor(1, 1, 1, 1);
@@ -321,8 +328,10 @@ void open_window(void)
 static
 void close_window(void)
 {
-  glfwDestroyWindow(p->win);
-  glfwTerminate();
+  if (!p->existing_context_used) {
+    glfwDestroyWindow(p->win);
+    glfwTerminate();
+  }
 }
 
 static
