@@ -296,7 +296,7 @@ void create_bitmap(void)
 }
 
 static
-LONG FAR PASCAL wndproc(HWND win, UINT message, UINT wParam, LONG lParam)
+LRESULT CALLBACK wndproc(HWND win, UINT message, WPARAM wParam, LPARAM lParam)
 { 
   RECT rc;
   HDC dc;
@@ -397,7 +397,7 @@ DWORD WINAPI create_window(LPVOID parm)
     {
       p->win = (HWND)parm;
       p->wndproc = (WNDPROC) GetWindowLongPtr(p->win, GWLP_WNDPROC);
-      SetWindowLongPtr(p->win, GWLP_WNDPROC, (DWORD) wndproc);
+      SetWindowLongPtr(p->win, GWLP_WNDPROC, (LRESULT) wndproc);
     }
   
   GetClientRect(p->win, &rc);

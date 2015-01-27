@@ -28,7 +28,7 @@ int gks_open_file(const char *path, const char *mode)
   switch (*mode)
     {
     case 'r':
-#if defined(_WIN32) && !defined(__GNUC__)
+#if defined(_WIN32)
       flags = O_RDONLY | O_BINARY;
 #else
       flags = O_RDONLY;
@@ -37,7 +37,7 @@ int gks_open_file(const char *path, const char *mode)
       break;
 
     case 'w':
-#if defined(_WIN32) && !defined(__GNUC__)
+#if defined(_WIN32)
       flags = O_CREAT | O_TRUNC | O_WRONLY | O_BINARY;
       omode = S_IREAD | S_IWRITE;
 #else

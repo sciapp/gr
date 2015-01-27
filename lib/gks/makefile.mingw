@@ -1,0 +1,29 @@
+GRDIR="S:\\GR"
+CC = gcc
+CFLAGS = -DNO_FT -DNO_X11
+DEFINES = -DGRDIR=\"$(GRDIR)\"
+AR = ar
+OBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o \
+       malloc.o error.o mf.o wiss.o cgm.o win.o mac.o ps.o \
+       pdf.o x11.o socket.o plugin.o compress.o io.o
+LIBS = -lmsvcrt -lkernel32 -lwsock32 -ladvapi32 -luser32 -lmsimg32 -lgdi32 -lcomdlg32 -lwinspool
+
+.SUFFIXES: .o .c .f
+
+.c.o:
+	$(CC) -c $(CFLAGS) $(DEFINES) $<
+
+all: libgks.a demo.exe
+
+libgks.a: $(OBJS)
+	$(AR) cr $@ $?
+
+demo.o: demo.c
+	$(CC) -c demo.c
+demo.exe: demo.o libgks.a
+	$(CC) -o $@ demo.o libgks.a ${LIBS}
+
+clean:
+	DEL demo.exe
+	DEL libgks.a
+	DEL *.o
