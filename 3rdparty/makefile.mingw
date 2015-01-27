@@ -1,0 +1,15 @@
+   MAKE = mingw32-make -f makefile.mingw
+
+default:
+	@$(MAKE) -C jbig2dec
+	@$(MAKE) -C jpeg
+	@$(MAKE) -C openjpeg
+	@$(MAKE) -C png
+	@$(MAKE) -C zlib
+	
+clean:
+	@$(MAKE) -C jbig2dec clean
+	@$(MAKE) -C jpeg clean
+	@$(MAKE) -C openjpeg clean
+	@$(MAKE) -C png clean
+	@$(MAKE) -C zlib clean

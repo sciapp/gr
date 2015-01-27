@@ -27,6 +27,8 @@ libz.a: $(OBJS)
 	$(AR) $@ $(OBJS)
 	-@ ($(RANLIB) $@ || true) >/dev/null 2>&1
 
+distclean: clean
+
 clean:
 	rm -f libz.a *.o
 

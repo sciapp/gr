@@ -1,0 +1,41 @@
+    CC = gcc
+CFLAGS = -O -I. -DDLL_EXPORT -fno-common -Wno-attributes $(ARCHS)
+    AR = ar
+  OBJS = \
+        bio.o \
+        cio.o \
+        dwt.o \
+        event.o \
+        image.o \
+        j2k.o \
+        j2k_lib.o \
+        jp2.o \
+        jpt.o \
+        mct.o \
+        mqc.o \
+        openjpeg.o \
+        pi.o \
+        raw.o \
+        t1.o \
+        t2.o \
+        tcd.o \
+        tgt.o \
+        cidx_manager.o \
+        phix_manager.o \
+        ppix_manager.o \
+        thix_manager.o \
+        tpix_manager.o
+
+.SUFFIXES: .o .c
+
+.c.o:
+	$(CC) -c $(CFLAGS) $(DEFINES) $<
+
+libopenjpeg.a: $(OBJS)
+	$(AR) crv $@ $?
+	$(AR) ts $@
+
+distclean: clean
+
+clean:
+	DEL libopenjpeg.a *.o *.bak

@@ -19,17 +19,15 @@
 #define PACKAGE "jbig2dec"
 #define VERSION "0.3"
 
-#if defined(_MSC_VER) || (defined(__BORLANDC__) && defined(__WIN32__))
-  /* Microsoft Visual C++ or Borland C++ */
+#if defined(_MSC_VER) || (defined(__BORLANDC__) && defined(__WIN32__)) || (defined(_WIN32) && defined(__GNUC__))
+  /* Microsoft Visual C++ or Borland C++ or MinGW */
   typedef signed char             int8_t;
   typedef short int               int16_t;
   typedef int                     int32_t;
-  typedef __int64                 int64_t;
 
   typedef unsigned char             uint8_t;
   typedef unsigned short int        uint16_t;
   typedef unsigned int              uint32_t;
-  /* no uint64_t */
 
 #  if defined(_MSC_VER)
 #   if _MSC_VER < 1500	/* VS 2008 has vsnprintf */

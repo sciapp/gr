@@ -1,0 +1,33 @@
+    CC = gcc
+CFLAGS = -O -I. -fno-common $(ARCHS)
+    AR = ar
+  OBJS = \
+        jbig2.o \
+        jbig2_arith.o \
+        jbig2_arith_iaid.o \
+        jbig2_arith_int.o \
+        jbig2_generic.o \
+        jbig2_halftone.o \
+        jbig2_huffman.o \
+        jbig2_image.o \
+        jbig2_metadata.o \
+        jbig2_mmr.o \
+        jbig2_page.o \
+        jbig2_refinement.o \
+        jbig2_segment.o \
+        jbig2_symbol_dict.o \
+        jbig2_text.o
+
+.SUFFIXES: .o .c
+
+.c.o:
+	$(CC) -c $(CFLAGS) $(DEFINES) $<
+
+libjbig2dec.a: $(OBJS)
+	$(AR) crv $@ $?
+	$(AR) ts $@
+
+distclean: clean
+
+clean:
+	DEL libjbig2dec.a *.o *.bak

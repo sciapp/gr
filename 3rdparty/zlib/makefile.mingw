@@ -1,0 +1,33 @@
+    CC = gcc
+CFLAGS = -O -DHAVE_HIDDEN -Wno-attributes $(ARCHS)
+    AR = ar
+  OBJS = \
+        adler32.o \
+        crc32.o \
+        deflate.o \
+        infback.o \
+        inffast.o \
+        inflate.o \
+        inftrees.o \
+        trees.o \
+        zutil.o \
+        compress.o \
+        uncompr.o \
+        gzclose.o \
+        gzlib.o \
+        gzread.o \
+        gzwrite.o
+
+.SUFFIXES: .o .c
+
+.c.o:
+	$(CC) -c $(CFLAGS) $(DEFINES) $<
+
+libz.a: $(OBJS)
+	$(AR) crv $@ $?
+	$(AR) ts $@
+
+distclean: clean
+
+clean:
+	DEL libz.a *.o
