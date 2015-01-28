@@ -31,8 +31,8 @@ else:
 
     class Popen(_Popen):
 
-        def communicate(self, input=None, timeout=None):
-            stdout, stderr = _Popen.communicate(self, input, timeout)
+        def communicate(self, *args, **kwargs):
+            stdout, stderr = _Popen.communicate(self, *args, **kwargs)
             if stdout is not None:
                 stdout = stdout.decode()
             if stderr is not None:
