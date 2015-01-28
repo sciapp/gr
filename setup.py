@@ -1271,17 +1271,21 @@ class build_ext(_build_ext, check_ext, build_static):
 
     # workaround do not use pyd files in this project because we have our
     # own ctypes wrapper. Use dll files instead.
+    # Replace "cpython-34m" -> get_config_var("SOABI") because we are not
+    # providing a real python extension.
     def get_ext_filename(self, ext_name):
         r"""Convert the name of an extension (eg. "foo.bar") into the name
         of the file from which it will be loaded (eg. "foo/bar.so", or
         "foo\bar.dll not foo\bar.pyd (default in superclass function)").
+        Remove SOABI part from the filename because no python extension will be
+        provided. Instead a ctypes wrapper will be used.
 
         """
         ret = _build_ext.get_ext_filename(self, ext_name)
-        (pathNoExt, ext) = os.path.splitext(ret)
+        (_pathNoExt, ext) = os.path.splitext(ret)
         if ext == ".pyd":
-            ret = pathNoExt + ".dll"
-        return ret
+            ext = ".dll"
+        return ret.replace(get_config_var("SO"), ext)
 
     def initialize_options(self):
         check_ext.initialize_options(self)
