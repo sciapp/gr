@@ -729,7 +729,7 @@ class Plot(GRViewPort, GRMeta):
                                            visibleCurves))
                             if xmin <= 0:
                                 # 3 constant
-                                xmin = 1 / 10 ** max(0, 3 - math.log10(xmax))
+                                xmin = 1. / 10 ** max(0, 3 - math.log10(xmax))
 
                             window[0] = xmin
                             axes.setWindow(*window)
@@ -766,7 +766,7 @@ class Plot(GRViewPort, GRMeta):
                                            visibleCurves))
                             if ymin <= 0:
                                 # 3 constant
-                                ymin = 1 / 10 ** max(0, 3 - math.log10(ymax))
+                                ymin = 1. / 10 ** max(0, 3 - math.log10(ymax))
 
                             window[2] = ymin
                             axes.setWindow(*window)
@@ -1327,7 +1327,7 @@ class PlotAxes(GRViewPort, GRMeta):
             if xmin < wmin:
                 res = False
                 if self.autoscale:
-                    xmin = 1 / 10 ** max(0, 3 - math.log10(xmax))
+                    xmin = 1. / 10 ** max(0, 3 - math.log10(xmax))
                 else:
                     xmin = wmin
         # stay in log y domain
@@ -1338,7 +1338,7 @@ class PlotAxes(GRViewPort, GRMeta):
             if ymin < wmin:
                 res = False
                 if self.autoscale:
-                    ymin = 1 / 10 ** max(0, 3 - math.log10(ymax))
+                    ymin = 1. / 10 ** max(0, 3 - math.log10(ymax))
                 else:
                     ymin = wmin
         if DomainChecker.isInWindowDomain(xmin, xmax, ymin, ymax):
@@ -1535,7 +1535,7 @@ class PlotAxes(GRViewPort, GRMeta):
     def plot(self, *args, **kwargs):
         if len(args) > 0 and len(args) % 2 == 0:
             self._lstPlotCurve = []
-            for i in range(0, len(args) / 2):
+            for i in range(0, len(args) // 2):
                 x = args[2 * i]
                 y = args[2 * i + 1]
                 self._lstPlotCurve.append(PlotCurve(x, y))
@@ -1577,7 +1577,7 @@ def _guessdimension(len):
     x = int(math.sqrt(len))
     d = []
     while x >= 1:
-        y = len / x
+        y = len // x
         if x * y == len:
             d.append((x, y))
         x -= 1
