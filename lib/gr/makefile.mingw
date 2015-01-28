@@ -1,0 +1,39 @@
+     MAKE = mingw32-make -f makefile.mingw
+       CC = gcc
+ INCLUDES = -I..\..\3rdparty\jpeg -I..\..\3rdparty\png -I..\..\3rdparty\zlib -I..\gks -I.
+   CFLAGS = -c -DNO_MUPDF -DNO_X11 -D_POSIX $(INCLUDES)
+  DEFINES = -DGRDIR=\"$(GRDIR)\" -DXMD_H
+ JPEGLIBS = ..\..\3rdparty\jpeg\libjpeg.a
+  PNGLIBS = ..\..\3rdparty\png\libpng.a
+    ZLIBS = ..\..\3rdparty\zlib\libz.a
+  GKSLIBS = ..\gks\libgks.a
+     LIBS = -lmsvcrt -lkernel32 -lwsock32 -ladvapi32 -luser32 -lmsimg32 -lgdi32 -lcomdlg32 -lwinspool
+
+DESTDIR = $(GRDIR)
+
+.SUFFIXES: .o .c
+
+.c.o:
+	$(CC) $(CFLAGS) $(DEFINES) $<
+
+default: prerequisites libgr.so
+
+prerequisites:
+	@$(MAKE) -C ..\gks
+	@$(MAKE) -C ..\..\3rdparty\zlib
+	@$(MAKE) -C ..\..\3rdparty\png
+	@$(MAKE) -C ..\..\3rdparty\jpeg
+
+libgr.so: gr.o text.o contour.o spline.o gridit.o strlib.o io.o \
+          image.o md5.o import.o
+	$(CC) -shared -o $@ $* \
+	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(LIBS)
+
+clean:
+	@$(MAKE) -C ..\gks clean
+	@$(MAKE) -C ..\..\3rdparty\zlib clean
+	@$(MAKE) -C ..\..\3rdparty\png clean
+	@$(MAKE) -C ..\..\3rdparty\jpeg clean
+	DEL libgr.so
+	DEL *.o
+	DEL *.bak
