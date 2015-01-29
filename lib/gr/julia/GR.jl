@@ -89,9 +89,33 @@ export
   setcoordxform,
   begingraphics,
   endgraphics,
-  mathtex
+  mathtex,
+  # Convenience functions
+  jlgr,
+  plot,
+  plot3d
 
-const libGR = "/usr/local/gr/lib/libGR.so"
+function __init__()
+    global libGR
+    if "GRDIR" in keys(ENV)
+        grdir = ENV["GRDIR"]
+    else
+        grdir = joinpath(homedir(), "gr")
+        if !isdir(grdir)
+            grdir = "/usr/local/gr"
+        end
+    end
+    if contains(grdir, "site-packages")
+        const libGR = joinpath(grdir, "libGR.so")
+        ENV["GKS_FONTPATH"] = grdir
+    else
+        const libGR = joinpath(grdir, "lib", "libGR.so")
+    end
+    if !isfile(libGR)
+        println("Unable to load GR framework runtime environment")
+        exit(-1)
+    end
+end
 
 function opengks()
   ccall( (:gr_opengks, libGR),
@@ -458,10 +482,10 @@ function updategks()
         )
 end
 
-function setspace(zmin::Real, zmax::Real, rotation::Real, tilt::Real)
+function setspace(zmin::Real, zmax::Real, rotation::Int, tilt::Int)
   ccall( (:gr_setspace, libGR),
         Void,
-        (Float64, Float64, Float64, Float64),
+        (Float64, Float64, Int32, Int32),
         zmin, zmax, rotation, tilt)
 end
 
@@ -946,6 +970,14 @@ FONT_ZAPFCHANCERY_MEDIUMITALIC = 130
 FONT_ZAPFDINGBATS = 131
 
 # Convenience functions
-include("plot.jl")
+include("jlgr.jl")
+
+function plot(x, y; kwargs...)
+  jlgr.plot(x, y; kwargs...)
+end
+
+function plot3d(z; kwargs...)
+  jlgr.plot3d(z; kwargs...)
+end
 
 end # module
