@@ -8,43 +8,46 @@ const cl = OpenCL
 
 import GR
 
-function calc_fractal(q, min_x, max_x, min_y, max_y, width, height, iters)
-    ctx   = cl.Context(cl.devices()[1])
-    queue = cl.CmdQueue(ctx)
+ctx   = cl.Context(cl.devices()[2])
+queue = cl.CmdQueue(ctx)
 
-    prg = cl.Program(ctx, source = """
-    #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-    __kernel void mandelbrot(__global double2 *q, __global ushort *output,
-                             double const min_x, double const max_x,
-                             double const min_y, double const max_y,
-                             ushort const width, ushort const height,
-                             ushort const iters)
-    {
-        int ci = 0, inc = 1;
-        int gid = get_global_id(0);
-        double nreal, real = 0;
-        double imag = 0;
+prg = cl.Program(ctx, source = """
+#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
+__kernel void mandelbrot(__global double2 *q, __global ushort *output,
+                         double const min_x, double const max_x,
+                         double const min_y, double const max_y,
+                         ushort const width, ushort const height,
+                         ushort const iters)
+{
+    int ci = 0, inc = 1;
+    int gid = get_global_id(0);
+    double nreal, real = 0;
+    double imag = 0;
 
-        q[gid].x = min_x + (gid % width) * (max_x - min_x) / width;
-        q[gid].y = min_y + (gid / width) * (max_y - min_y) / height;
+    q[gid].x = min_x + (gid % width) * (max_x - min_x) / width;
+    q[gid].y = min_y + (gid / width) * (max_y - min_y) / height;
 
-        output[gid] = iters;
+    output[gid] = iters;
 
-        for (int curiter = 0; curiter < iters; curiter++) {
-            nreal = real * real - imag * imag + q[gid].x;
-            imag = 2 * real * imag + q[gid].y;
-            real = nreal;
+    for (int curiter = 0; curiter < iters; curiter++) {
+        nreal = real * real - imag * imag + q[gid].x;
+        imag = 2 * real * imag + q[gid].y;
+        real = nreal;
 
-            if (real * real + imag * imag >= 4) {
-                 output[gid] = ci;
-                 return;
-            }
-            ci += inc;
-            if (ci == 0 || ci == 255)
-                inc = -inc;
+        if (real * real + imag * imag >= 4) {
+            output[gid] = ci;
+            return;
         }
+        ci += inc;
+        if (ci == 0 || ci == 255)
+            inc = -inc;
     }
-    """) |> cl.build!
+}
+""") |> cl.build!
+
+
+function calc_fractal(q, min_x, max_x, min_y, max_y, width, height, iters)
+    global ctx, queue, prg
 
     output = Array(Uint16, size(q))
 
@@ -82,7 +85,7 @@ for i in 1:200
     GR.clearws()
     GR.setviewport(0, 1, 0, 1)
     GR.setcolormap(13)
-    GR.cellarray(0, 1, 0, 1, 500, 500, reshape(image, 500 * 500) + 1000)
+    GR.cellarray(0, 1, 0, 1, 500, 500, image + 1000)
     GR.updatews()
 
     f *= 0.9

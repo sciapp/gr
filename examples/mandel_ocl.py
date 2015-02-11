@@ -6,48 +6,54 @@ Calculate Mandelbrot set using OpenCL
 
 import pyopencl as cl
 from timeit import default_timer as timer
-from os import getenv, environ
 
 import numpy as np
 import gr
 
-def calc_fractal(q, min_x, max_x, min_y, max_y, width, height, iters):
-    ctx = cl.create_some_context()
-    queue = cl.CommandQueue(ctx)
 
-    prg = cl.Program(ctx, """
-    #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-    __kernel void mandelbrot(__global double2 *q, __global ushort *output,
-                             double const min_x, double const max_x,
-                             double const min_y, double const max_y,
-                             ushort const width, ushort const height,
-                             ushort const iters)
-    {
-        int ci = 0, inc = 1;
-        int gid = get_global_id(0);
-        double nreal, real = 0;
-        double imag = 0;
+platform = cl.get_platforms()
+gpu_devices = platform[0].get_devices(device_type=cl.device_type.GPU)
+ctx = cl.Context(devices=gpu_devices)
 
-        q[gid].x = min_x + (gid % width) * (max_x - min_x) / width;
-        q[gid].y = min_y + (gid / width) * (max_y - min_y) / height;
+queue = cl.CommandQueue(ctx)
 
-        output[gid] = iters;
+prg = cl.Program(ctx, """
+#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
+__kernel void mandelbrot(__global double2 *q, __global ushort *output,
+                         double const min_x, double const max_x,
+                         double const min_y, double const max_y,
+                         ushort const width, ushort const height,
+                         ushort const iters)
+{
+    int ci = 0, inc = 1;
+    int gid = get_global_id(0);
+    double nreal, real = 0;
+    double imag = 0;
 
-        for (int curiter = 0; curiter < iters; curiter++) {
-            nreal = real * real - imag * imag + q[gid].x;
-            imag = 2 * real * imag + q[gid].y;
-            real = nreal;
+    q[gid].x = min_x + (gid % width) * (max_x - min_x) / width;
+    q[gid].y = min_y + (gid / width) * (max_y - min_y) / height;
 
-            if (real * real + imag * imag >= 4) {
-                 output[gid] = ci;
-                 return;
-            }
-            ci += inc;
-            if (ci == 0 || ci == 255)
-                inc = -inc;
+    output[gid] = iters;
+
+    for (int curiter = 0; curiter < iters; curiter++) {
+        nreal = real * real - imag * imag + q[gid].x;
+        imag = 2 * real * imag + q[gid].y;
+        real = nreal;
+
+        if (real * real + imag * imag >= 4) {
+            output[gid] = ci;
+            return;
         }
+        ci += inc;
+        if (ci == 0 || ci == 255)
+            inc = -inc;
     }
-    """).build()
+}
+""").build()
+
+
+def calc_fractal(q, min_x, max_x, min_y, max_y, width, height, iters):
+    global ctx, queue, prg
 
     output = np.empty(q.shape, dtype=np.uint16)
 
@@ -71,9 +77,6 @@ def create_fractal(min_x, max_x, min_y, max_y, width, height, iters):
 
     return output
 
-
-if getenv('PYOPENCL_CTX') == None:
-    environ['PYOPENCL_CTX'] = '0'
 
 x = -0.9223327810370947027656057193752719757635
 y = 0.3102598350874576432708737495917724836010
