@@ -18,7 +18,7 @@ Major contributors include the following (in alphabetical order):
 
 **Christian Felder**
 
-  provided the qtgr module, the setup.py script and the GKS iOS App. As part of a collaboration there are plans to integrate the GR framework into `NICOS <http://cdn.frm2.tum.de/fileadmin/stuff/services/ITServices/nicos-2.0/dirhtml/>`_ (a network-based control system completely written in Python) as a replacement for PyQwt.
+  provided the qtgr module, the setup.py script and the GKS iOS App. As part of a collaboration there are plans to integrate the GR framework into `NICOS <http://www.nicos-controls.org>`_ (a network-based control system completely written in Python) as a replacement for PyQwt.
 
 **Marvin Goblet**
 
