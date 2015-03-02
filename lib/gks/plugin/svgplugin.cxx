@@ -687,7 +687,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   NDC_to_DC(x, y, x0, y0);
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d)\" style=\""
-	     "stroke:#%s stroke-opacity:%g; fill:none\" ",
+	     "stroke:#%s; stroke-opacity:%g; fill:none\" ",
              p->path_index, p->rgb[p->color], p->alpha);
   svg_printf(p->stream, "points=\"\n  %g,%g ", x0, y0);
 
