@@ -9,6 +9,7 @@ movie_t vc_movie_create(const char *path, int framerate, int bitrate)
   movie_t movie = (movie_t) malloc(sizeof(struct movie_t_));
 
   av_register_all();
+  av_log_set_level(AV_LOG_QUIET);
 
   movie->path = path;
 
