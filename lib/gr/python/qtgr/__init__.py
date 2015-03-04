@@ -337,7 +337,7 @@ class InteractiveGRWidget(GRWidget):
     def _getPlotsForPoint(self, p0):
         res = []
         for plot in self._lstPlot:
-            xmin, xmax, ymin, ymax = plot.viewport
+            xmin, xmax, ymin, ymax = plot.viewportscaled
             if p0.x >= xmin and p0.x <= xmax and p0.y >= ymin and p0.y <= ymax:
                 res.append(plot)
         return res
