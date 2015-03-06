@@ -26,6 +26,15 @@ if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
 _impl = python_implementation()
 
 
+try:
+    from IPython.display import SVG, Image, HTML
+    from base64 import b64encode
+except:
+    _mime_type = ""
+else:
+    _mime_type = None
+
+
 class floatarray:
     def __init__(self, n, a):
         if isinstance(a, ndarray):
@@ -2112,6 +2121,33 @@ def inqbbox():
     ymax = c_double()
     __gr.gr_inqbbox(byref(xmin), byref(xmax), byref(ymin), byref(ymax))
     return [xmin.value, xmax.value, ymin.value, ymax.value]
+
+
+def isinteractive():
+    global _mime_type
+    return _mime_type == None or _mime_type == "mov"
+
+
+def inline(mime="svg"):
+    global _mime_type
+    if _mime_type == None:
+        os.environ["GKS_WSTYPE"] = mime
+        emergencyclosegks()
+        _mime_type = mime
+
+
+def show():
+    global _mime_type
+    emergencyclosegks()
+    if _mime_type == 'svg':
+        content = SVG(data=open('gks.svg', 'rb').read())
+    elif _mime_type == 'png':
+        content = Image(data=open('gks_p001.png', 'rb').read(), width=465, height=465)
+    elif _mime_type == 'mov':
+        content = HTML(data='<video controls autoplay type="video/mp4" src="data:video/mp4;base64,{0}">'.format(b64encode(open('gks.mov', 'rb').read())))
+    else:
+        content = None
+    return content
 
 
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))

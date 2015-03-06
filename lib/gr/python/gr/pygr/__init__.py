@@ -1652,6 +1652,9 @@ def plot(x, y,
         gr.polymarker(x, y)
     if update:
         gr.updatews()
+    if not gr.isinteractive():
+        return gr.show()
+
 
 def plot3d(z,
            viewport=(0.1, 0.9, 0.1, 0.9),
@@ -1702,6 +1705,8 @@ def plot3d(z,
     if xtitle != '' or ytitle != '' or ztitle != '':
         gr.titles3d(xtitle, ytitle, ztitle)
     gr.updatews()
+    if not gr.isinteractive():
+        return gr.show()
 
 def imshow(data, cmap=gr.COLORMAP_GRAYSCALE):
     height, width = data.shape
@@ -1725,6 +1730,8 @@ def imshow(data, cmap=gr.COLORMAP_GRAYSCALE):
     gr.setcolormap(cmap)
     gr.cellarray(xmin, xmax, ymin, ymax, width, height, ca)
     gr.updatews()
+    if not gr.isinteractive():
+        return gr.show()
 
 def delay(seconds):
     time.sleep(seconds)
