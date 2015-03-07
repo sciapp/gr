@@ -2123,6 +2123,11 @@ def inqbbox():
     return [xmin.value, xmax.value, ymin.value, ymax.value]
 
 
+def mimetype():
+    global _mime_type
+    return _mime_type
+
+
 def isinteractive():
     global _mime_type
     return _mime_type == None or _mime_type == "mov"

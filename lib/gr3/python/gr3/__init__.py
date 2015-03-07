@@ -47,6 +47,14 @@ import os
 import gr
 
 
+try:
+    from IPython.display import HTML, Image
+except:
+    _have_ipython = False
+else:
+    _have_ipython = True
+
+
 _impl = python_implementation()
 if _impl != 'PyPy':
     from ctypes import pythonapi
@@ -225,8 +233,18 @@ def export(filename, width, height):
     global _gr3
     _filename = char(filename)
     err = _gr3.gr3_export(_filename, c_uint(width), c_uint(height))
+    content = None
     if err:
         raise GR3_Exception(err)
+    elif gr.mimetype() != None and _have_ipython:
+        _, _fileextension = os.path.splitext(filename)
+        if _fileextension == '.html':
+            content = HTML('<iframe src="%s" width=%d height=%d></iframe>' %
+                           (filename, width, height))
+        elif _fileextension in ['.png', '.jpg', '.jpeg']:
+            content = Image(data=open(filename, 'rb').read(),
+                            width=width, height=height)
+    return content
 
 def geterrorstring(error_code):
     """
