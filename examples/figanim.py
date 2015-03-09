@@ -4,6 +4,8 @@
 Compare figure output performance of Matplotlib vs. GR
 """
 
+from __future__ import print_function
+
 from numpy import arange, sin, pi
 from time import time
 from os import environ
@@ -27,7 +29,7 @@ for i in arange(1, 100):
     plot(sin(x + i / 10.0))
     savefig('mpl%04d.%s' % (i, dev))
     if i % 2 == 0:
-        print '\b.',
+        print('.', end="")
         stdout.flush()
 
 
@@ -36,12 +38,12 @@ print('fps (mpl): %4d' % fps_mpl)
 
 from gr.pygr import plot
 
-tstart = time() 
+tstart = time()
 environ["GKS_WSTYPE"] = dev
 for i in arange(1, 100):
     plot(x, sin(x + i / 10.0))
     if i % 2 == 0:
-        print '\b.',
+        print('.', end="")
         stdout.flush()
 
 fps_gr = int(100 / (time() - tstart))
