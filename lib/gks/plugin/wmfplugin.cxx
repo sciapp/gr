@@ -1412,7 +1412,6 @@ void set_clip_path(int tnr)
 static
 void write_page(void)
 {
-  const char *env;
   char path[MAXPATHLEN];
   FILE *stream;
 
@@ -1420,17 +1419,7 @@ void write_page(void)
 
   if (p->conid == 0)
     {
-      env = gks_getenv("GKS_CONID");
-      if (env != NULL)
-        {
-          char *s = strdup(env);
-          strtok(s, ".");
-          sprintf(path, "%s_p%03d.wmf", s, p->page_counter);
-          free(s);
-        }
-      else
-        sprintf(path, "gks_p%03d.wmf", p->page_counter);
-
+      gks_filepath(path, "wmf", p->page_counter, 0);
       stream = fopen(path, "wb");
     }
   else

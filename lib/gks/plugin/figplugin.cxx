@@ -871,19 +871,8 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   png_bytep *row_pointers;
   char path[MAXPATHLEN];
   FILE *stream;
-  const char *env;
 
-  env = gks_getenv("GKS_CONID");
-  if (env != NULL)
-    {
-      char *s = strdup(env);
-      strtok(s, ".");
-      sprintf(path, "%s_%03d.png", s, p->img_counter);
-      free(s);
-    }
-  else
-    sprintf(path, "gks_fig_%03d.png", p->img_counter);
-
+  gks_filepath(path, "fig", p->page_counter, p->img_counter);
   if ((stream = fopen(path, "wb")) == NULL)
     {
       gks_perror("can't open image file");
@@ -970,7 +959,6 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 static
 void write_page(void)
 {
-  const char *env;
   char path[MAXPATHLEN];
   int fd;
 
@@ -978,17 +966,7 @@ void write_page(void)
 
   if (p->conid == 0)
     {
-      env = gks_getenv("GKS_CONID");
-      if (env != NULL)
-        {
-          char *s = strdup(env);
-          strtok(s, ".");
-          sprintf(path, "%s_p%03d.fig", s, p->page_counter);
-          free(s);
-        }
-      else
-        sprintf(path, "gks_p%03d.fig", p->page_counter);
-
+      gks_filepath(path, "fig", p->page_counter, 0);
       fd = gks_open_file(path, "w");
     }
   else

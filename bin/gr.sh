@@ -8,7 +8,14 @@ fi
 if [ "$1" = "-o" ]
 then
   shift
-  export GKS_WSTYPE="$1"
+  if [ `echo $1 | grep '\.'` != "" ]
+  then
+    type=`echo $1 | awk -F. '{print $NF}'`
+    export GKS_FILEPATH="$1"
+    export GKS_WSTYPE="$type"
+  else
+    export GKS_WSTYPE="$1"
+  fi
   shift
 fi
 if [ $# -gt 0 ]

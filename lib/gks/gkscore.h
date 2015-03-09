@@ -167,7 +167,7 @@ typedef struct
     double sizex, sizey;
     int unitsx, unitsy;
     int wscat;
-    char *path;
+    char *type;
     char *env;
   }
 ws_descr_t;
@@ -251,6 +251,7 @@ const char *gks_getenv(const char *env);
 void gks_iso2utf(unsigned char c, char *utf, size_t *len);
 void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
 int *gks_resize(int *image, int width, int height, int w, int h);
+void gks_filepath(char *path, const char *type, int page, int index);
 
 DLLEXPORT void gks_dl_write_item(gks_display_list_t *d,
   int fctid, int dx, int dy, int dimx, int *ia,

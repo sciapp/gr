@@ -164,24 +164,6 @@ static const char *dc[3][3] = {
   {"H", "A", "B"}
 };
 
-typedef struct
-  {
-    const char *type;
-    const char *device;
-  }
-gs_devs_t;
-
-static gs_devs_t gs_devs[] = {
-  { ".bmp", "bmp256" },
-  { ".jpg", "jpeg" },
-  { ".jpeg", "jpeg" },
-  { ".png", "pngalpha" },
-  { ".tif", "tiff24nc" },
-  { ".tiff", "tiff24nc" }
-};
-
-static int num_gs_devs = sizeof(gs_devs) / sizeof(gs_devs[0]);
-
 typedef struct ws_state_list_t
   {
     int conid, gs_dev, wtype, state;
@@ -1580,7 +1562,6 @@ int GSDLLCALL gsdll_stderr(void *instance, const char *buf, int len)
 static
 void init_arguments(void)
 {
-  const char *env;
   char path[MAXPATHLEN];
   const char *device = "jpeg", *type = ".jpg";
   int i;
@@ -1589,44 +1570,13 @@ void init_arguments(void)
 
   switch (p->gs_dev)
     {
-      case 320: device = "bmp256";   type = ".bmp"; break;
-      case 321: device = "jpeg";     type = ".jpg"; break;
-      case 322: device = "pngalpha"; type = ".png"; break;
-      case 323: device = "tiff24nc"; type = ".tif"; break;
+      case 320: device = "bmp256";   type = "bmp"; break;
+      case 321: device = "jpeg";     type = "jpg"; break;
+      case 322: device = "pngalpha"; type = "png"; break;
+      case 323: device = "tiff24nc"; type = "tif"; break;
     }
 
-  env = gks_getenv("GKS_CONID");
-  if (env)
-    if (!*env)
-      env = NULL;
-
-  if (env != NULL)
-    {
-      char *name = strdup(env), *dot;
-
-      dot = strrchr(name, '.');
-      if (dot)
-        {
-          for (i = 0; i < num_gs_devs; i++)
-            if (strcmp(dot, gs_devs[i].type) == 0)
-              {
-                type = gs_devs[i].type;
-                device = gs_devs[i].device;
-                break;
-              }
-          *dot = '\0';
-        }
-
-      sprintf(path, "%s_p%03d%s", name, p->page_counter, type);
-      free(name);
-    }
-  else
-    {
-      if (p->path)
-        strcpy(path, p->path);
-      else
-        sprintf(path, "gks_p%03d%s", p->page_counter, type);
-    }
+  gks_filepath(path, type, p->page_counter, 0);
 
   p->gs_argc = NUM_GS_ARGS;
   for (i = 0; i < NUM_GS_ARGS; ++i)

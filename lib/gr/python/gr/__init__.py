@@ -2147,7 +2147,7 @@ def show():
     if _mime_type == 'svg':
         content = SVG(data=open('gks.svg', 'rb').read())
     elif _mime_type == 'png':
-        content = Image(data=open('gks_p001.png', 'rb').read(), width=465, height=465)
+        content = Image(data=open('gks.png', 'rb').read(), width=465, height=465)
     elif _mime_type == 'mov':
         content = HTML(data='<video controls autoplay type="video/mp4" src="data:video/mp4;base64,{0}">'.format(b64encode(open('gks.mov', 'rb').read())))
     else:

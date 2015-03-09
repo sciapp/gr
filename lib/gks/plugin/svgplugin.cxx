@@ -1203,7 +1203,6 @@ void set_clip_path(int tnr)
 static
 void write_page(void)
 {
-  const char *env;
   char path[MAXPATHLEN], buf[256];
   int fd;
 
@@ -1211,17 +1210,7 @@ void write_page(void)
 
   if (p->conid == 0)
     {
-      env = gks_getenv("GKS_CONID");
-      if (env != NULL)
-        {
-          char *s = strdup(env);
-          strtok(s, ".");
-          sprintf(path, "%s_p%03d.svg", s, p->page_counter);
-          free(s);
-        }
-      else
-        sprintf(path, "gks_p%03d.svg", p->page_counter);
-
+      gks_filepath(path, "svg", p->page_counter, 0);
       fd = gks_open_file(path, "w");
     }
   else

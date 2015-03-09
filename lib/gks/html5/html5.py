@@ -66,7 +66,10 @@ class Html_output(object):
         if n >= 250:
             print("Maximum number of HTML output files reached")
             sys.exit(0)
-        self.filename = 'gks_p%03d.html' % (n)
+        if n > 1:
+            self.filename = 'gks-%d.html' % (n)
+        else:
+            self.filename = 'gks.html'
         self.title = 'GKS'
         self.gkss = gks_state_list
         self.p = ws_state_list()

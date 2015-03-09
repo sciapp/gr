@@ -912,11 +912,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   FILE *stream;
   char filename[MAXPATHLEN];
 
-  if (strcmp(p->path, "") != 0)
-    sprintf(filename, "%s_img%03d.png", p->path, p->png_counter);
-  else
-    sprintf(filename, "gks_p%03d_img%03d.png", p->page_counter, p->png_counter);
-
+  gks_filepath(filename, "png", p->page_counter, p->png_counter);
   if ((stream = fopen(filename, "wb")) == NULL)
     {
       gks_perror("can't open temporary file");
@@ -1037,7 +1033,8 @@ void write_page(void)
 
   if (p->conid == 0)
     {
-      fd = gks_open_file(strcat(p->path, ".tex"), "w");
+      gks_filepath(p->path, "tex", p->page_counter, 0);
+      fd = gks_open_file(p->path, "w");
     }
   else
     fd = p->conid;
@@ -1118,7 +1115,6 @@ void gks_pgfplugin(
     int lc, char *chars, void **ptr)
 {
   register int i;
-  const char *env;
 
   p = (ws_state_list *) *ptr;
 
@@ -1152,20 +1148,6 @@ void gks_pgfplugin(
       p->empty = 1;
       p->page_counter = 0;
       p->offset = 0;
-
-      if (p->conid == 0)
-        {
-          env = gks_getenv("GKS_CONID");
-          if (env != NULL)
-            {
-              char *s = strdup(env);
-              strtok(s, ".");
-              sprintf(p->path, "%s_p%03d", s, p->page_counter);
-              free(s);
-            }
-          else
-            sprintf(p->path, "gks_p%03d", p->page_counter);
-        }
 
       p->png_counter = 0;
       p->pattern_counter = 0;

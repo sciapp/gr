@@ -11,6 +11,10 @@
 #include "gks.h"
 #include "gkscore.h"
 
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
+#endif
+
 #define FEPS 1.0E-09
 
 #define OK          0
@@ -30,42 +34,42 @@ gks_list_t *open_ws = NULL, *active_ws = NULL, *av_ws_types = NULL;
 
 static
 ws_descr_t ws_types[] = {
-  {   2, GKS_K_METERS, 1.00000, 1.00000,65536,65536, 4, "gks.mf", NULL },
-  {   3, GKS_K_METERS, 1.00000, 1.00000,65536,65536, 5, "gks.mf", NULL },
+  {   2, GKS_K_METERS, 1.00000, 1.00000,65536,65536, 4, "mf", NULL },
+  {   3, GKS_K_METERS, 1.00000, 1.00000,65536,65536, 5, "mf", NULL },
   {   5, GKS_K_METERS, 1.00000, 1.00000,32767,32767, 3, NULL, NULL },
-  {   7, GKS_K_METERS, 1.00000, 1.00000,65536,65536, 4, "gks.cgm", NULL },
-  {   8, GKS_K_METERS, 1.00000, 1.00000,65536,65536, 4, "gks.cgm", NULL },
+  {   7, GKS_K_METERS, 1.00000, 1.00000,65536,65536, 4, "cgm", NULL },
+  {   8, GKS_K_METERS, 1.00000, 1.00000,65536,65536, 4, "cgm", NULL },
   {  41, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 2, NULL, NULL },
   {  51, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 2, NULL, NULL },
-  {  61, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "gks.ps", NULL },
-  {  62, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "gks.ps", NULL },
-  {  63, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "gks.ps", NULL },
-  {  64, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "gks.ps", NULL },
-  { 101, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "gks.pdf", NULL },
-  { 102, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "gks.pdf", NULL },
-  { 120, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "gks.mov", NULL },
-  { 130, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "gks.gif", NULL },
+  {  61, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL },
+  {  62, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL },
+  {  63, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL },
+  {  64, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL },
+  { 101, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "pdf", NULL },
+  { 102, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "pdf", NULL },
+  { 120, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "mov", NULL },
+  { 130, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "gif", NULL },
   { 210, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, NULL, NULL },
   { 211, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 2, NULL, NULL },
   { 212, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 2, NULL, NULL },
   { 213, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 2, NULL, NULL },
-  { 214, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, "gks.rf", "GKS_RF" },
-  { 215, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, "gks.gif", "GKS_GIF" },
-  { 216, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, "gks.uil", "GKS_UIL" },
+  { 214, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, "rf", "GKS_RF" },
+  { 215, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, "gif", "GKS_GIF" },
+  { 216, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, "uil", "GKS_UIL" },
   { 217, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, NULL, NULL },
-  { 218, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, "gks.gif", NULL },
+  { 218, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, "gif", NULL },
   { 301, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, NULL, NULL },
-  { 314, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "gks.tex", NULL },
+  { 314, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "tex", NULL },
   { 320, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL },
   { 321, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL },
   { 322, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL },
   { 323, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL },
-  { 370, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "gks.fig", NULL },
+  { 370, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "fig", NULL },
   { 371, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, NULL, NULL },
   { 380, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, NULL, NULL },
   { 381, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, NULL, NULL },
-  { 382, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "gks.svg", NULL },
-  { 390, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "gks.wmf", NULL },
+  { 382, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "svg", NULL },
+  { 390, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "wmf", NULL },
   { 400, GKS_K_METERS, 0.28560, 0.17850, 1280,  800, 0, NULL, NULL },
   { 410, GKS_K_METERS, 0.28560, 0.17850, 1280,  800, 0, NULL, NULL },
   { 415, GKS_K_METERS, 0.28560, 0.17850, 1280,  800, 0, NULL, NULL },
@@ -534,8 +538,20 @@ void gks_open_ws(int wkid, char *path, int wtype)
 			gks_malloc(sizeof(ws_list_t));
 
 		      ws->wkid = wkid;
-		      ws->path = path ? strdup(path) : descr->path ?
-				 strdup(descr->path) : NULL;
+                      if (path == NULL)
+                        {
+                          if (descr->type != NULL)
+                            {
+                              path = (char *) malloc(MAXPATHLEN * sizeof(char));
+                              gks_filepath(path, descr->type, 1, 0);
+                              ws->path = strdup(path);
+                              free(path);
+                            }
+                          else
+                            ws->path = NULL;
+                        }
+                      else
+                        ws->path = strdup(path);
 		      ws->wtype = wtype;
 
 		      if (wtype < 320 || wtype > 323)

@@ -16,6 +16,10 @@
 #include "gks.h"
 #include "gkscore.h"
 
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
+#endif
+
 #define nint(a) ((int)(a + 0.5))
 
 #ifndef MIN
@@ -3152,7 +3156,37 @@ int *gks_resize(int *image, int width, int height, int w, int h)
           x = ((j * x_ratio) >> 16);
           y = ((i * y_ratio) >> 16);
           result[(i * w) + j] = image[(y * width) + x];
-        }                
-    }                
+        }
+    }
   return result;
+}
+
+void gks_filepath(char *path, const char *type, int page, int index)
+{
+  char number[20];
+  const char *env;
+
+  env = gks_getenv("GKS_FILEPATH");
+  if (env)
+    {
+      strcpy(path, env);
+      strtok(path, ".");
+    }
+  else
+    strcpy(path, "gks");
+
+  if (page > 1)
+    {
+       strcat(path, "-");
+       sprintf(number, "%d", page);
+       strcat(path, number);
+     }
+  if (index != 0)
+    {
+       strcat(path, "_");
+       sprintf(number, "%d", index);
+       strcat(path, number);
+     }
+  strcat(path, ".");
+  strcat(path, type);
 }
