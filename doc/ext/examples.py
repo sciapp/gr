@@ -142,7 +142,7 @@ def create_examples(examples):
             else:
                 print('Create PNG figure for example %s' % name)
                 os.popen('gr -o png %s.py' % os.path.join(EXAMPLES_DIR, name))
-                shutil.move('gks_p001.png', '%s.png' % os.path.join(OUTPUT_DIR, name))
+                shutil.move('gks.png', '%s.png' % os.path.join(OUTPUT_DIR, name))
         contents.append([filename, name, infoline])
 
     return contents

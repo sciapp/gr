@@ -8,7 +8,7 @@ fi
 if [ "$1" = "-o" ]
 then
   shift
-  if [ `echo $1 | grep '\.'` != "" ]
+  if [ "`echo $1 | grep '\.'`" != "" ]
   then
     type=`echo $1 | awk -F. '{print $NF}'`
     export GKS_FILEPATH="$1"
