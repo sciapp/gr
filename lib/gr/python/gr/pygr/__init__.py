@@ -626,7 +626,7 @@ class Plot(GRViewPort, GRMeta):
         self._lblX, self._lblY = None, None
         self._offsetLblX, self._offsetLblY = 0., 0.
         self._legend, self._legendROI = False, None
-        self._autoscale = False
+        self._autoscale = 0x0
         self._countAxes = 0
 
     def getAxes(self, idx=None):
@@ -799,10 +799,10 @@ class Plot(GRViewPort, GRMeta):
         return self._autoscale
 
     @autoscale.setter
-    def autoscale(self, bool):
-        self._autoscale = bool
+    def autoscale(self, mask):
+        self._autoscale = mask
         for axes in self._lstAxes:
-            axes.autoscale = bool
+            axes.autoscale = mask
 
     def reset(self):
         for axes in self._lstAxes:
@@ -1196,6 +1196,8 @@ class PlotCurve(GRDrawAttributes, GRMeta):
 class PlotAxes(GRViewPort, GRMeta):
 
     COUNT = 0
+    SCALE_X = 0x1
+    SCALE_Y = 0x2
 
     def __init__(self, viewport, xtick=None, ytick=None, majorx=None,
                  majory=None, drawX=True, drawY=True):
@@ -1209,7 +1211,7 @@ class PlotAxes(GRViewPort, GRMeta):
         self._scale = 0
         self._grid = True
         self._resetWindow = False
-        self._autoscale = False
+        self._autoscale = 0x0
         PlotAxes.COUNT += 1
         self._id = PlotAxes.COUNT
         self._xtick_callback, self._ytick_callback = None, None
@@ -1326,7 +1328,7 @@ class PlotAxes(GRViewPort, GRMeta):
                 xmax = wmax
             if xmin < wmin:
                 res = False
-                if self.autoscale:
+                if self.autoscale & PlotAxes.SCALE_X:
                     xmin = 1. / 10 ** max(0, 3 - math.log10(xmax))
                 else:
                     xmin = wmin
@@ -1337,7 +1339,7 @@ class PlotAxes(GRViewPort, GRMeta):
                 ymax = wmax
             if ymin < wmin:
                 res = False
-                if self.autoscale:
+                if self.autoscale & PlotAxes.SCALE_Y:
                     ymin = 1. / 10 ** max(0, 3 - math.log10(ymax))
                 else:
                     ymin = wmin
@@ -1371,8 +1373,8 @@ class PlotAxes(GRViewPort, GRMeta):
         return self._autoscale
 
     @autoscale.setter
-    def autoscale(self, bool):
-        self._autoscale = bool
+    def autoscale(self, mask):
+        self._autoscale = mask
 
     def getId(self):
         return self._id
@@ -1412,20 +1414,28 @@ class PlotAxes(GRViewPort, GRMeta):
                 elif self.autoscale:
                     win = self.getWindow()
                     if win:
-                        if xmin < xpmin:
-                            # growing in negative direction
-                            # hold max value
-                            if xmax >= win[1]:
-                                # win[1]: user max value
-                                xmax = win[1]
-                        elif xmax > xpmax:
-                            # growing in positive direction
-                            # hold min value
-                            if xmin <= win[0]:
-                                # win[0]: user min value
-                                xmin = win[0]
-                        ymin = ylmin if ylmin < win[2] else win[2]
-                        ymax = ylmax if ylmax > win[3] else win[3]
+                        if self.autoscale & PlotAxes.SCALE_X:
+                            if xmin < xpmin:
+                                # growing in negative direction
+                                # hold max value
+                                if xmax >= win[1]:
+                                    # win[1]: user max value
+                                    xmax = win[1]
+                            elif xmax > xpmax:
+                                # growing in positive direction
+                                # hold min value
+                                if xmin <= win[0]:
+                                    # win[0]: user min value
+                                    xmin = win[0]
+                        else:
+                            # no auto scaling in x keep previous values
+                            xmin, xmax = win[0], win[1]
+                        if self.autoscale & PlotAxes.SCALE_Y:
+                            ymin = ylmin if ylmin < win[2] else win[2]
+                            ymax = ylmax if ylmax > win[3] else win[3]
+                        else:
+                            # no auto scaling in x keep previous values
+                            ymin, ymax = win[2], win[3]
 
                 # take error bars into account
                 # if error bar's center is in current window

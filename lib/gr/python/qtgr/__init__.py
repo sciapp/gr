@@ -305,9 +305,9 @@ class InteractiveGRWidget(GRWidget):
 
         self._painter.end()
 
-    def setAutoScale(self, bool):
+    def setAutoScale(self, mask):
         for plot in self._lstPlot:
-            plot.autoscale = bool
+            plot.autoscale = mask
 
     def getPickMode(self):
         return self._pickMode
