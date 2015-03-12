@@ -41,7 +41,7 @@ ifneq ($(AVLIBS),)
 endif
 endif
   MUPDFDEFS = 
-  MUPDFLIBS = -lmupdf $(FTLIBS) -lbz2 -ljbig2dec -ljpeg -lopenjp2 -lz
+  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec -ljpeg -lopenjp2 -lz
     X11DEFS =
     X11LIBS = $(X11PATH) -lfontconfig -lXt -lX11
     ZMQDEFS = 
