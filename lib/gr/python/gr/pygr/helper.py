@@ -56,7 +56,7 @@ class DomainChecker(object):
         if (math.isnan(xmin) or math.isinf(xmin) or math.isnan(xmax)
             or math.isinf(xmax) or math.isnan(ymin) or math.isinf(ymin) or
             math.isnan(ymax) or math.isinf(ymax) or
-            xmin > max or ymin > ymax or abs(xmax - xmin) < DomainChecker._EPSILON or
+            xmin > xmax or ymin > ymax or abs(xmax - xmin) < DomainChecker._EPSILON or
             abs(ymax - ymin) < DomainChecker._EPSILON):
             res = False
         return res
