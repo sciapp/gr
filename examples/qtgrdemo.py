@@ -61,7 +61,10 @@ class MainWindow(QtGui.QMainWindow):
         self._saveTypes = (";;".join(dictPrintType.values()) + ";;" +
                            ";;".join(gr.GRAPHIC_TYPE.values()))
         self._saveName = None
-        self._title = unicode(self.windowTitle())
+        if sys.version_info[0] == 2:
+            self._title = unicode(self.windowTitle())
+        else:
+            self._title = str(self.windowTitle())
         self._startupTime = time.time()
 
         self._chkLogX.stateChanged.connect(self._logXClicked)
@@ -124,7 +127,10 @@ class MainWindow(QtGui.QMainWindow):
         qpath = QtGui.QFileDialog.getSaveFileName(self, "", "", self._saveTypes,
                                                   gr.PRINT_TYPE[gr.PRINT_PDF])
         if qpath:
-            path = unicode(qpath)
+            if sys.version_info[0] == 2:
+                path = unicode(qpath)
+            else:
+                path = str(qpath)
             (_p, suffix) = os.path.splitext(path)
             suffix = suffix.lower()
             if suffix and (suffix[1:] in gr.PRINT_TYPE.keys() or
@@ -221,7 +227,7 @@ class MainWindow(QtGui.QMainWindow):
     @QtCore.pyqtSlot()
     def _shellEx(self):
         input = str(self._shell.text())
-        exec input
+        exec(input)
         self._shell.clear()
         self._gr.update()
 

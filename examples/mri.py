@@ -132,8 +132,8 @@ class GrWidget(QtGui.QWidget):
         self.painter.begin(self)
         if have_pyside:
             environ['GKSconid'] = "%x!%x" % (
-                long(shiboken.getCppPointer(self)[0]),
-                long(shiboken.getCppPointer(self.painter)[0]))
+                int(shiboken.getCppPointer(self)[0]),
+                int(shiboken.getCppPointer(self.painter)[0]))
         else:
             environ["GKSconid"] = "%x!%x" % (unwrapinstance(self),
                                              unwrapinstance(self.painter))

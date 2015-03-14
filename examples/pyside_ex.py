@@ -90,7 +90,7 @@ class GrWidget(QtGui.QWidget) :
         self.painter = QtGui.QPainter()
         self.painter.begin(self)
         self.painter.drawText(15, 15, "Contour Example using PySide ...")
-        os.environ['GKSconid'] = "%x!%x" % (long(shiboken.getCppPointer(self)[0]), long(shiboken.getCppPointer(self.painter)[0]))
+        os.environ['GKSconid'] = "%x!%x" % (int(shiboken.getCppPointer(self)[0]), int(shiboken.getCppPointer(self.painter)[0]))
         gr.updatews()
         self.painter.end()
 
