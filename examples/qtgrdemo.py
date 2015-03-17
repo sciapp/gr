@@ -179,16 +179,13 @@ class MainWindow(QtGui.QMainWindow):
     def legendOver(self, event):
         self._lblOverLegend.setText(event.curve.legend)
 
-    def _xtickCallBack(self, x, y, svalue):
+    def _xtickCallBack(self, x, y, svalue, value):
         gr.setcharup(1., 1.)
         gr.settextalign(gr.TEXT_HALIGN_LEFT, gr.TEXT_VALIGN_TOP)
-        try:
-            gr.text(x, y, "%s (%s)"
-                    % (time.strftime("%H:%M:%S",
-                                     time.localtime(self._startupTime
-                                                    + float(svalue))), svalue))
-        except ValueError:
-            gr.text(x, y, svalue)
+        gr.text(x, y, "%s (%s)"
+                % (time.strftime("%H:%M:%S",
+                                 time.localtime(self._startupTime
+                                                + value)), svalue))
         gr.setcharup(0., 1.)
 
     def _errorsClicked(self, state):

@@ -1298,7 +1298,7 @@ def inqtextext(x, y, string):
             [tby[0], tby[1], tby[2], tby[3]]]
 
 
-_axeslbl_callback = CFUNCTYPE(c_void_p, c_double, c_double, c_char_p)
+_axeslbl_callback = CFUNCTYPE(c_void_p, c_double, c_double, c_char_p, c_double)
 
 
 def axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size,

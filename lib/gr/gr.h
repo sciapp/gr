@@ -87,7 +87,8 @@ DLLEXPORT int gr_textext(double, double, char *);
 DLLEXPORT void gr_inqtextext(double, double, char *, double *, double *);
 DLLEXPORT void gr_axes(double, double, double, double, int, int, double);
 DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
-  void (*)(double, double, const char*), void (*)(double, double, const char*));
+                          void (*)(double, double, const char*, double),
+                          void (*)(double, double, const char*, double));
 DLLEXPORT void gr_grid(double, double, double, double, int, int);
 DLLEXPORT void gr_verrorbars(int, double *, double *, double *, double *);
 DLLEXPORT void gr_herrorbars(int, double *, double *, double *, double *);

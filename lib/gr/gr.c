@@ -2574,8 +2574,8 @@ void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
 }
 
 static
-void text2dlbl(double x, double y, const char *chars,
-               void (*fp)(double, double, const char*))
+void text2dlbl(double x, double y, const char *chars, double value,
+               void (*fp)(double, double, const char*, double))
 {
   int errind, tnr;
 
@@ -2596,7 +2596,7 @@ void text2dlbl(double x, double y, const char *chars,
   if (fp == NULL)
     gr_textex(x, y, chars, 0, NULL, NULL);
   else
-    fp(x, y, chars);
+    fp(x, y, chars, value);
 
   if (tnr != NDC)
     gks_select_xform(tnr);
@@ -2605,13 +2605,13 @@ void text2dlbl(double x, double y, const char *chars,
 static
 void text2d(double x, double y, const char *chars)
 {
-  text2dlbl(x, y, chars, NULL);
+  text2dlbl(x, y, chars, NAN, NULL);
 }
 
 void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                 int major_x, int major_y, double tick_size,
-                void (*fpx)(double, double, const char*),
-                void (*fpy)(double, double, const char*))
+                void (*fpx)(double, double, const char*, double),
+                void (*fpy)(double, double, const char*, double))
 {
   int errind, tnr;
   int ltype, halign, valign, clsw;
@@ -2718,11 +2718,11 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                             {
                               exponent = iround(log10(yi));
                               sprintf(string, "10^{%d}", exponent);
-                              text2dlbl(x_label, yi, string, fpy);
+                              text2dlbl(x_label, yi, string, yi, fpy);
                             }
                           else
                             text2dlbl(x_label, yi,
-                                      str_ftoa(string, yi, 0.), fpy);
+                                      str_ftoa(string, yi, 0.), yi, fpy);
                         }
                 }
               else
@@ -2774,7 +2774,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                       if (yi != y_org || y_org == y_min || y_org == y_max)
                         if (major_y > 0)
                           text2dlbl(x_label, yi,
-                                    str_ftoa(string, yi, y_tick * major_y),
+                                    str_ftoa(string, yi, y_tick * major_y), yi,
                                     fpy);
                     }
                   else
@@ -2851,11 +2851,11 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                             {
                               exponent = iround(log10(xi));
                               sprintf(string, "10^{%d}", exponent);
-                              text2dlbl(xi, y_label, string, fpx);
+                              text2dlbl(xi, y_label, string, xi, fpx);
                             }
                           else
                             text2dlbl(xi, y_label,
-                                      str_ftoa(string, xi, 0.), fpx);
+                                      str_ftoa(string, xi, 0.), xi, fpx);
                         }
                 }
               else
@@ -2907,7 +2907,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                       if (xi != x_org || x_org == x_min || x_org == x_max)
                         if (major_x > 0)
                           text2dlbl(xi, y_label,
-                                    str_ftoa(string, xi, x_tick * major_x),
+                                    str_ftoa(string, xi, x_tick * major_x), xi,
                                     fpx);
                     }
                   else
