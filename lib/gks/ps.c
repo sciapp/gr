@@ -34,8 +34,6 @@
 
 #define SIZE_INCREMENT 32768
 
-#define FEPS 1.0E-09
-
 #define PATTERNS 120
 
 #define LLX 16

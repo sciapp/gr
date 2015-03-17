@@ -600,6 +600,8 @@ DLLEXPORT void gks_inq_bbox(
   int *errind, double *xmin, double *xmax, double *ymin, double *ymax);
 DLLEXPORT void gks_inq_text_slant(int *errind, double *slant);
 
+DLLEXPORT double gks_precision(void);
+
 /* Entry point definitions */
 
 #define gsetlinecolorind gsetlinecolourind

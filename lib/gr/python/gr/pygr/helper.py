@@ -7,6 +7,7 @@ Exported Classes:
 # standard library
 import math
 # local library
+import gr
 from gr._version import __version__, __revision__
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
@@ -38,14 +39,11 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
 
 class DomainChecker(object):
 
-    _ZERO = 1e-8
-    _EPSILON = 1e-8
-
     @staticmethod
     def isInLogDomain(*args):
         res = True
         for value in args:
-            if value <= DomainChecker._ZERO:
+            if value <= gr.precision:
                 res = False
                 break
         return res
@@ -56,8 +54,8 @@ class DomainChecker(object):
         if (math.isnan(xmin) or math.isinf(xmin) or math.isnan(xmax)
             or math.isinf(xmax) or math.isnan(ymin) or math.isinf(ymin) or
             math.isnan(ymax) or math.isinf(ymax) or
-            xmin > xmax or ymin > ymax or abs(xmax - xmin) < DomainChecker._EPSILON or
-            abs(ymax - ymin) < DomainChecker._EPSILON):
+            xmin > xmax or ymin > ymax or abs(xmax - xmin) < gr.precision or
+            abs(ymax - ymin) < gr.precision):
             res = False
         return res
 

@@ -2296,6 +2296,9 @@ __gr.gr_moveselection.argtypes = [c_double, c_double]
 __gr.gr_resizeselection.argtypes = [c_int, c_double, c_double]
 __gr.gr_inqbbox.argtypes = [POINTER(c_double), POINTER(c_double),
                             POINTER(c_double), POINTER(c_double)]
+__gr.gr_precision.argtypes = []
+__gr.gr_precision.restype = c_double
+precision = __gr.gr_precision()
 
 ASF_BUNDLED = 0
 ASF_INDIVIDUAL = 1

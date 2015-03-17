@@ -38,8 +38,6 @@
 #define BOTTOM (1<<2)
 #define TOP    (1<<3)
 
-#define FEPS 1.0E-09
-
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
     xn = gkss->a[tnr] * (xw) + gkss->b[tnr]; \
     yn = gkss->c[tnr] * (yw) + gkss->d[tnr]

@@ -70,8 +70,6 @@ DLLEXPORT void gks_wxplugin(
 #define M_PI 3.14159265358979323846
 #endif
 
-#define FEPS 1.0E-09
-
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
   xn = a[tnr] * (xw) + b[tnr]; \
   yn = c[tnr] * (yw) + d[tnr]

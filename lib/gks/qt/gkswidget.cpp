@@ -31,8 +31,6 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#define FEPS 1.0E-09
-
 #define MAX_TNR 9
 
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \

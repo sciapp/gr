@@ -23,6 +23,8 @@ extern "C" {
 
 #endif
 
+#define FEPS 1.0E-09
+
 #define GRALGKS 3
 #define GLIGKS 4
 #define GKS5 5

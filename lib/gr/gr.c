@@ -150,8 +150,6 @@ unsigned int rgb[MAX_COLOR];
 #define M_PI 3.14159265358979323846
 #endif
 
-#define FEPS 1.0E-09
-
 #define OPTION_X_LOG (1 << 0)
 #define OPTION_Y_LOG (1 << 1)
 #define OPTION_Z_LOG (1 << 2)
@@ -6138,4 +6136,9 @@ void gr_inqbbox(double *xmin, double *xmax, double *ymin, double *ymax)
   check_autoinit;
 
   gks_inq_bbox(&errind, xmin, xmax, ymin, ymax);
+}
+
+double gr_precision(void)
+{
+  return gks_precision();
 }

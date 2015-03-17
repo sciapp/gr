@@ -15,8 +15,6 @@
 #define MAXPATHLEN 1024
 #endif
 
-#define FEPS 1.0E-09
-
 #define OK          0
 #define MAX_POINTS  2048
 
@@ -3890,4 +3888,9 @@ int gemergencyclosegks(void)
   gks_emergency_close();
 
   return OK;
+}
+
+double gks_precision(void)
+{
+  return FEPS;
 }
