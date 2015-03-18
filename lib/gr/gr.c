@@ -2425,12 +2425,12 @@ void gr_inqspace(double *zmin, double *zmax, int *rotation, int *tilt)
 }
 
 static
-int iround(double x)
+long iround(double x)
 {
   if (x < 0)
-    return ((int) (x - 0.5));
+    return ((long) (x - 0.5));
   else
-    return ((int) (x + 0.5));
+    return ((long) (x + 0.5));
 }
 
 static
@@ -2613,7 +2613,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
   double x_min, x_max, y_min, y_max, feps;
 
   double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
-  int decade, exponent;
+  long decade, exponent;
   long i;
   char string[256];
 
@@ -2711,7 +2711,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                           if (y_tick > 1)
                             {
                               exponent = iround(log10(yi));
-                              sprintf(string, "10^{%d}", exponent);
+                              sprintf(string, "10^{%ld}", exponent);
                               text2dlbl(x_label, yi, string, fpy);
                             }
                           else
@@ -2843,7 +2843,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                           if (x_tick > 1)
                             {
                               exponent = iround(log10(xi));
-                              sprintf(string, "10^{%d}", exponent);
+                              sprintf(string, "10^{%ld}", exponent);
                               text2dlbl(xi, y_label, string, fpx);
                             }
                           else
@@ -3443,7 +3443,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
   double tick, minor_tick, major_tick, x_label, y_label;
   double x0, y0, z0, xi, yi, zi;
-  int decade, exponent;
+  long decade, exponent;
   long i;
   char string[256];
 
@@ -3576,7 +3576,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
                         if (z_tick > 1)
                           {
                             exponent = iround(log10(zi));
-                            sprintf(string, "10^{%d}", exponent);
+                            sprintf(string, "10^{%ld}", exponent);
                             text3d(x_org, y_label, zi, string);
                           }
                         else
@@ -3707,7 +3707,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
                         if (y_tick > 1)
                           {
                             exponent = iround(log10(yi));
-                            sprintf(string, "10^{%d}", exponent);
+                            sprintf(string, "10^{%ld}", exponent);
                             text3d(x_label, yi, z_org, string);
                           }
                         else
@@ -3838,7 +3838,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
                         if (x_tick > 1)
                           {
                             exponent = iround(log10(xi));
-                            sprintf(string, "10^{%d}", exponent);
+                            sprintf(string, "10^{%ld}", exponent);
                             text3d(xi, y_label, z_org, string);
                           }
                         else
@@ -5317,7 +5317,7 @@ double gr_tick(double amin, double amax)
 static
 double fract(double x)
 {
-  return (x - (int) x);
+  return (x - (long) x);
 }
 
 void gr_adjustrange(double *amin, double *amax)
