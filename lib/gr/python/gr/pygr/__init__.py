@@ -1259,7 +1259,7 @@ class PlotAxes(GRViewPort, GRMeta):
 
     @majorx.setter
     def majorx(self, minorCount):
-        self._majorx = minorCount if minorCount > 0 or minorCount is None else 1
+        self._majorx = minorCount if minorCount is None or minorCount > 0 else 1
 
     @property
     def majory(self):
@@ -1269,7 +1269,7 @@ class PlotAxes(GRViewPort, GRMeta):
 
     @majory.setter
     def majory(self, minorCount):
-        self._majory = minorCount if minorCount > 0 or minorCount is None else 1
+        self._majory = minorCount if minorCount is None or minorCount > 0 else 1
 
     @property
     def scale(self):
