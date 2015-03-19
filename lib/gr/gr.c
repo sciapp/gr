@@ -125,6 +125,10 @@ unsigned int rgb[MAX_COLOR];
 #define check_autoinit if (autoinit) initgks()
 
 #define nint(x) (int)((x) + 0.5)
+#define round(x) (x < 0 ? ceil(x - .5) : floor(x + .5))
+#define iround(x) ((int) round(x))
+#define gauss(x) floor(x)
+#define igauss(x) ((int) gauss(x))
 
 #define NDC 0
 #define WC  1
@@ -2425,40 +2429,43 @@ void gr_inqspace(double *zmin, double *zmax, int *rotation, int *tilt)
   *tilt = wx.delta;
 }
 
-static
-int iround(double x)
+double intpart(double x)
 {
-  if (x < 0)
-    return ((int) (x - 0.5));
-  else
-    return ((int) (x + 0.5));
+  double ipart;
+  modf(x, &ipart);
+  return ipart;
 }
 
 static
-int gauss(double x)
+double pred(double x)
 {
-  if (x >= 0 || x == (int) x)
-    return ((int) x);
+  double ipart;
+  ipart = intpart(x);
+  if (x == ipart)
+    return ipart - 1;
   else
-    return ((int) x - 1);
+    return gauss(x);
 }
 
-static
-int ipred(double x)
+#define ipred(x) ((int) pred(x))
+
+double succ(double x)
 {
-  if (x == (int) x)
-    return ((int) x - 1);
+  double ipart;
+  ipart = intpart(x);
+  if (x == ipart)
+    return ipart;
   else
-    return (gauss(x));
+    return gauss(x) + 1;
 }
 
+#define isucc(x) ((int) succ(x))
+
 static
-int isucc(double x)
+double fract(double x)
 {
-  if (x == (int) x)
-    return ((int) x);
-  else
-    return (gauss(x) + 1);
+  double _intpart;
+  return modf(x, &_intpart);
 }
 
 static
@@ -2685,9 +2692,9 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, (double) gauss(log10(y_min)));
+          y0 = pow(10.0, gauss(log10(y_min)));
 
-          i = ipred((double) (y_min / y0));
+          i = ipred(y_min / y0);
           yi = y0 + i * y0;
           decade = 0;
 
@@ -2748,7 +2755,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
         {
           feps = FEPS * (y_max - y_min);
 
-          i = isucc((double) (y_min / y_tick));
+          i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
           /* draw Y-axis */
@@ -2818,9 +2825,9 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, (double) gauss(log10(x_min)));
+          x0 = pow(10.0, gauss(log10(x_min)));
 
-          i = ipred((double) (x_min / x0));
+          i = ipred(x_min / x0);
           xi = x0 + i * x0;
           decade = 0;
 
@@ -2881,7 +2888,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
         {
           feps = FEPS * (x_max - x_min);
 
-          i = isucc((double) (x_min / x_tick));
+          i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
           /* draw X-axis */
@@ -3007,9 +3014,9 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
     {
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, (double) gauss(log10(y_min)));
+          y0 = pow(10.0, gauss(log10(y_min)));
 
-          i = ipred((double) (y_min / y0));
+          i = ipred(y_min / y0);
           yi = y0 + i * y0;
 
           /* draw horizontal grid lines */
@@ -3040,7 +3047,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
         }
       else
         {
-          i = isucc((double) ((y_min - y_org) / y_tick));
+          i = isucc((y_min - y_org) / y_tick);
           yi = y_org + i * y_tick;
 
           /* draw horizontal grid lines */
@@ -3070,9 +3077,9 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
     {
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, (double) gauss(log10(x_min)));
+          x0 = pow(10.0, gauss(log10(x_min)));
 
-          i = ipred((double) (x_min / x0));
+          i = ipred(x_min / x0);
           xi = x0 + i * x0;
 
           /* draw vertical grid lines */
@@ -3103,7 +3110,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
         }
       else
         {
-          i = isucc((double) ((x_min - x_org) / x_tick));
+          i = isucc((x_min - x_org) / x_tick);
           xi = x_org + i * x_tick;
 
           /* draw vertical grid lines */
@@ -3550,9 +3557,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
       if (OPTION_Z_LOG & lx.scale_options)
         {
-          z0 = pow(10.0, (double) gauss(log10(z_min)));
+          z0 = pow(10.0, gauss(log10(z_min)));
 
-          i = ipred((double) (z_min / z0));
+          i = ipred(z_min / z0);
           zi = z0 + i * z0;
           decade = 0;
 
@@ -3607,7 +3614,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         }
       else
         {
-          i = isucc((double) (z_min / z_tick));
+          i = isucc(z_min / z_tick);
           zi = i * z_tick;
 
           /* draw Z-axis */
@@ -3681,9 +3688,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, (double) gauss(log10(y_min)));
+          y0 = pow(10.0, gauss(log10(y_min)));
 
-          i = ipred((double) (y_min / y0));
+          i = ipred(y_min / y0);
           yi = y0 + i * y0;
           decade = 0;
 
@@ -3738,7 +3745,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         }
       else
         {
-          i = isucc((double) (y_min / y_tick));
+          i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
           /* draw Y-axis */
@@ -3812,9 +3819,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, (double) gauss(log10(x_min)));
+          x0 = pow(10.0, gauss(log10(x_min)));
 
-          i = ipred((double) (x_min / x0));
+          i = ipred(x_min / x0);
           xi = x0 + i * x0;
           decade = 0;
 
@@ -3869,7 +3876,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         }
       else
         {
-          i = isucc((double) (x_min / x_tick));
+          i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
           /* draw X-axis */
@@ -5316,12 +5323,6 @@ double gr_tick(double amin, double amax)
 }
 
 static
-double fract(double x)
-{
-  return (x - (int) x);
-}
-
-static
 int check_epsilon(double x)
 {
   if (x * (1 + DBL_EPSILON) != x)
@@ -5352,7 +5353,7 @@ void gr_adjustrange(double *amin, double *amax)
       if (*amin == *amax)
         {
           if (*amin != 0)
-            tick = pow(10.0, (double) fract(log10(fabs(*amin))));
+            tick = pow(10.0, fract(log10(fabs(*amin))));
           else
             tick = 0.1;
 
