@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <float.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -13,6 +14,10 @@
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 1024
+#endif
+
+#ifndef DBL_EPSILON
+#define DBL_EPSILON 2.2204460492503131e-16
 #endif
 
 #define OK          0
@@ -1618,7 +1623,8 @@ void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
     {
       if (tnr > 0 && tnr < MAX_TNR)
 	{
-	  if (xmin < xmax && ymin < ymax)
+	  if (xmin < xmax && fabs(xmax - xmin) * 0.0001 > DBL_EPSILON &&
+	      ymin < ymax && fabs(ymax - ymin) * 0.0001 > DBL_EPSILON)
 	    {
 	      i_arr[0] = tnr;
 	      s->window[tnr][0] = f_arr_1[0] = xmin;
