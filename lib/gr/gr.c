@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -2425,37 +2426,37 @@ void gr_inqspace(double *zmin, double *zmax, int *rotation, int *tilt)
 }
 
 static
-long iround(double x)
+int iround(double x)
 {
   if (x < 0)
-    return ((long) (x - 0.5));
+    return ((int) (x - 0.5));
   else
-    return ((long) (x + 0.5));
+    return ((int) (x + 0.5));
 }
 
 static
-long gauss(double x)
+int gauss(double x)
 {
-  if (x >= 0 || x == (long) x)
-    return ((long) x);
+  if (x >= 0 || x == (int) x)
+    return ((int) x);
   else
-    return ((long) x - 1);
+    return ((int) x - 1);
 }
 
 static
-long ipred(double x)
+int ipred(double x)
 {
-  if (x == (long) x)
-    return ((long) x - 1);
+  if (x == (int) x)
+    return ((int) x - 1);
   else
     return (gauss(x));
 }
 
 static
-long isucc(double x)
+int isucc(double x)
 {
-  if (x == (long) x)
-    return ((long) x);
+  if (x == (int) x)
+    return ((int) x);
   else
     return (gauss(x) + 1);
 }
@@ -2613,8 +2614,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
   double x_min, x_max, y_min, y_max, feps;
 
   double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
-  long decade, exponent;
-  long i;
+  int i, decade, exponent;
   char string[256];
 
   if (x_tick < 0 || y_tick < 0)
@@ -2660,7 +2660,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
   if (y_tick != 0)
     {
-      feps = FEPS * (y_max - y_min);
       tick = tick_size * (x_max - x_min) / (vp[1] - vp[0]);
 
       minor_tick = x_log(x_lin(x_org) + tick);
@@ -2696,7 +2695,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           start_pline(x_org, y_min);
 
-          while (yi <= y_max + feps)
+          while (yi <= y_max)
             {
               pline(x_org, yi);
 
@@ -2711,7 +2710,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                           if (y_tick > 1)
                             {
                               exponent = iround(log10(yi));
-                              sprintf(string, "10^{%ld}", exponent);
+                              sprintf(string, "10^{%d}", exponent);
                               text2dlbl(x_label, yi, string, fpy);
                             }
                           else
@@ -2740,13 +2739,15 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               yi = y0 + i * y0;
             }
 
-          if (yi > y_max + feps)
+          if (yi > y_max)
             pline(x_org, y_max);
 
           end_pline();
         }
       else
         {
+          feps = FEPS * (y_max - y_min);
+
           i = isucc((double) (y_min / y_tick));
           yi = i * y_tick;
 
@@ -2791,7 +2792,6 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
   if (x_tick != 0)
     {
-      feps = FEPS * (x_max - x_min);
       tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
       minor_tick = y_log(y_lin(y_org) + tick);
@@ -2828,7 +2828,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           start_pline(x_min, y_org);
 
-          while (xi <= x_max + feps)
+          while (xi <= x_max)
             {
               pline(xi, y_org);
 
@@ -2843,7 +2843,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                           if (x_tick > 1)
                             {
                               exponent = iround(log10(xi));
-                              sprintf(string, "10^{%ld}", exponent);
+                              sprintf(string, "10^{%d}", exponent);
                               text2dlbl(xi, y_label, string, fpx);
                             }
                           else
@@ -2872,13 +2872,15 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               xi = x0 + i * x0;
             }
 
-          if (xi > x_max + feps)
+          if (xi > x_max)
             pline(x_max, y_org);
 
           end_pline();
         }
       else
         {
+          feps = FEPS * (x_max - x_min);
+
           i = isucc((double) (x_min / x_tick));
           xi = i * x_tick;
 
@@ -2962,7 +2964,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
   int ltype, color, clsw;
 
   double clrt[4], wn[4], vp[4];
-  double x_min, x_max, y_min, y_max, feps;
+  double x_min, x_max, y_min, y_max;
 
   double x0, y0, xi, yi, tick;
 
@@ -3003,8 +3005,6 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
 
   if (y_tick != 0)
     {
-      feps = FEPS * (y_max - y_min);
-
       if (OPTION_Y_LOG & lx.scale_options)
         {
           y0 = pow(10.0, (double) gauss(log10(y_min)));
@@ -3023,7 +3023,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
                   else
                     tick = x_tick;
 
-                  if (fabs(yi - y_min) > feps)
+                  if (fabs(yi - y_min) > FEPS * yi)
                     grid_line(x_min, yi, x_max, yi, tick);
                 }
 
@@ -3057,7 +3057,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               else
                 tick = -1.;
 
-              if (fabs(yi - y_min) > feps)
+              if (fabs(yi - y_min) > FEPS * yi)
                 grid_line(x_min, yi, x_max, yi, tick);
 
               i++;
@@ -3068,8 +3068,6 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
 
   if (x_tick != 0)
     {
-      feps = FEPS * (x_max - x_min);
-
       if (OPTION_X_LOG & lx.scale_options)
         {
           x0 = pow(10.0, (double) gauss(log10(x_min)));
@@ -3088,7 +3086,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
                   else
                     tick = x_tick;
 
-                  if (fabs(xi - x_min) > feps)
+                  if (fabs(xi - x_min) > FEPS * xi)
                     grid_line(xi, y_min, xi, y_max, tick);
                 }
 
@@ -3122,7 +3120,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               else
                 tick = -1.;
 
-              if (fabs(xi - x_min) > feps)
+              if (fabs(xi - x_min) > FEPS * xi)
                 grid_line(xi, y_min, xi, y_max, tick);
 
               i++;
@@ -3443,8 +3441,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
   double tick, minor_tick, major_tick, x_label, y_label;
   double x0, y0, z0, xi, yi, zi;
-  long decade, exponent;
-  long i;
+  int i, decade, exponent;
   char string[256];
 
   if (x_tick < 0 || y_tick < 0 || z_tick < 0)
@@ -3576,7 +3573,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
                         if (z_tick > 1)
                           {
                             exponent = iround(log10(zi));
-                            sprintf(string, "10^{%ld}", exponent);
+                            sprintf(string, "10^{%d}", exponent);
                             text3d(x_org, y_label, zi, string);
                           }
                         else
@@ -3707,7 +3704,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
                         if (y_tick > 1)
                           {
                             exponent = iround(log10(yi));
-                            sprintf(string, "10^{%ld}", exponent);
+                            sprintf(string, "10^{%d}", exponent);
                             text3d(x_label, yi, z_org, string);
                           }
                         else
@@ -3838,7 +3835,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
                         if (x_tick > 1)
                           {
                             exponent = iround(log10(xi));
-                            sprintf(string, "10^{%ld}", exponent);
+                            sprintf(string, "10^{%d}", exponent);
                             text3d(xi, y_label, z_org, string);
                           }
                         else
@@ -5284,13 +5281,14 @@ void gr_hsvtorgb(double h, double s, double v, double *r, double *g, double *b)
 
 double gr_tick(double amin, double amax)
 {
-  double tick_unit, exponent, factor;
+  double exponent, fractpart, intpart, factor, tick_unit;
   int n;
 
   if (amax > amin)
     {
       exponent = log10(amax - amin);
-      n = gauss(exponent);
+      fractpart = modf(exponent, &intpart);
+      n = (int) intpart;
 
       factor = pow(10.0, (double) (exponent - n));
 
@@ -5308,7 +5306,10 @@ double gr_tick(double amin, double amax)
       tick_unit = tick_unit * pow(10.0, (double) n);
     }
   else
-    tick_unit = 0;
+    {
+      fprintf(stderr, "invalid range\n");
+      tick_unit = 0;
+    }
 
   return (tick_unit); /* return a tick unit that evenly divides into the
                          difference between the minimum and maximum value */
@@ -5317,7 +5318,16 @@ double gr_tick(double amin, double amax)
 static
 double fract(double x)
 {
-  return (x - (long) x);
+  return (x - (int) x);
+}
+
+static
+int check_epsilon(double x)
+{
+  if (x * (1 + DBL_EPSILON) != x)
+    return 1;
+  else
+    return 0;
 }
 
 int gr_validaterange(double amin, double amax)
@@ -5336,24 +5346,30 @@ void gr_adjustrange(double *amin, double *amax)
 {
   double tick;
 
-  if (*amin == *amax)
+  if (check_epsilon(*amin) && check_epsilon(*amax) &&
+      check_epsilon(*amax - *amin))
     {
-      if (*amin != 0)
-        tick = pow(10.0, (double) fract(log10(fabs(*amin))));
-      else
-        tick = 0.1;
+      if (*amin == *amax)
+        {
+          if (*amin != 0)
+            tick = pow(10.0, (double) fract(log10(fabs(*amin))));
+          else
+            tick = 0.1;
 
-      *amin = *amin - tick;
-      *amax = *amax + tick;
+          *amin = *amin - tick;
+          *amax = *amax + tick;
+        }
+
+      tick = gr_tick(*amin, *amax);
+
+      if (fract(*amin / tick) != 0)
+        *amin = tick * gauss(*amin / tick);
+
+      if (fract(*amax / tick) != 0)
+        *amax = tick * (gauss(*amax / tick) + 1);
     }
-
-  tick = gr_tick(*amin, *amax);
-
-  if (fract(*amin / tick) != 0)
-    *amin = tick * gauss(*amin / tick);
-
-  if (fract(*amax / tick) != 0)
-    *amax = tick * (gauss(*amax / tick) + 1);
+  else
+    fprintf(stderr, "loss of precision when adjusting range\n");
 }
 
 static
