@@ -12,9 +12,10 @@
 
 #define STR_MAX 31
 
-#ifndef FLT_DIG
-#define FLT_DIG 9
-#endif
+/*
+ * maximum number of digits to be used in standard notation
+ */
+#define NDIGITS 9
 
 
 char *str_remove(char *str, char ch)
@@ -74,11 +75,11 @@ char *str_ftoa(char *result, double value, double reference)
     {
       abs_val = fabs(value);
 
-      exponent = (int) (log10(abs_val) + pow(10.0, -FLT_DIG));
+      exponent = (int) (log10(abs_val) + pow(10.0, -NDIGITS));
       if (exponent < 0)
 	exponent--;
 
-      factor = (FLT_DIG - 1) - exponent;
+      factor = (NDIGITS - 1) - exponent;
       mantissa = (int) (abs_val * pow(10.0, factor) + 0.5);
 
       strcpy(result, "");
@@ -104,9 +105,9 @@ char *str_ftoa(char *result, double value, double reference)
 
 	  mantissa = mantissa / 10;
 	}
-      while (count != FLT_DIG);
+      while (count != NDIGITS);
 
-      scientific_notation = (exponent <= 1 - FLT_DIG) || (exponent >= FLT_DIG);
+      scientific_notation = (exponent <= 1 - NDIGITS) || (exponent >= NDIGITS);
 
       if (scientific_notation || exponent < 0)
 	{
