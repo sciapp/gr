@@ -5297,18 +5297,20 @@ double gr_tick(double amin, double amax)
       fractpart = modf(exponent, &intpart);
       n = (int) intpart;
 
-      factor = pow(10.0, (double) (exponent - n));
+      factor = pow(10.0, exponent - n);
 
       if (factor > 5)
         tick_unit = 2;
-      else
-       if (factor > 2.5)
+      else if (factor > 2.5)
         tick_unit = 1;
-      else
-       if (factor > 1)
+      else if (factor > 1)
         tick_unit = 0.5;
-      else
+      else if (factor > 0.5)
         tick_unit = 0.2;
+      else if (factor > 0.25)
+        tick_unit = 0.1;
+      else
+        tick_unit = 0.05;
 
       tick_unit = tick_unit * pow(10.0, (double) n);
     }
@@ -5323,12 +5325,10 @@ double gr_tick(double amin, double amax)
 }
 
 static
-int check_epsilon(double x)
+double fract(double x)
 {
-  if (x * (1 + DBL_EPSILON) != x)
-    return 1;
-  else
-    return 0;
+  double _intpart;
+  return modf(x, &_intpart);
 }
 
 int gr_validaterange(double amin, double amax)
@@ -5347,30 +5347,24 @@ void gr_adjustrange(double *amin, double *amax)
 {
   double tick;
 
-  if (check_epsilon(*amin) && check_epsilon(*amax) &&
-      check_epsilon(*amax - *amin))
+  if (*amin == *amax)
     {
-      if (*amin == *amax)
-        {
-          if (*amin != 0)
-            tick = pow(10.0, fract(log10(fabs(*amin))));
-          else
-            tick = 0.1;
+      if (*amin != 0)
+        tick = pow(10.0, fract(log10(fabs(*amin))));
+      else
+        tick = 0.1;
 
-          *amin = *amin - tick;
-          *amax = *amax + tick;
-        }
-
-      tick = gr_tick(*amin, *amax);
-
-      if (fract(*amin / tick) != 0)
-        *amin = tick * gauss(*amin / tick);
-
-      if (fract(*amax / tick) != 0)
-        *amax = tick * (gauss(*amax / tick) + 1);
+      *amin = *amin - tick;
+      *amax = *amax + tick;
     }
-  else
-    fprintf(stderr, "loss of precision when adjusting range\n");
+
+  tick = gr_tick(*amin, *amax);
+
+  if (fract(*amin / tick) != 0)
+    *amin = tick * gauss(*amin / tick);
+
+  if (fract(*amax / tick) != 0)
+    *amax = tick * (gauss(*amax / tick) + 1);
 }
 
 static
