@@ -1590,7 +1590,6 @@ def inqcolor(color):
 
 
 def inqcolorfromrgb(red, green, blue):
-    __gr.gr_inqcolorfromrgb.restype = c_int
     return __gr.gr_inqcolorfromrgb(c_double(red),
                                    c_double(green),
                                    c_double(green))
@@ -1604,7 +1603,6 @@ def hsvtorgb(h, s, v):
     return [r.value, g.value, b.value]
 
 def tick(amin, amax):
-    __gr.gr_tick.restype = c_double
     return __gr.gr_tick(c_double(amin), c_double(amax))
 
 
@@ -2268,8 +2266,10 @@ __gr.gr_setcolormap.argtypes = [c_int]
 __gr.gr_colormap.argtypes = []
 __gr.gr_inqcolor.argtypes = [c_int, POINTER(c_int)]
 __gr.gr_inqcolorfromrgb.argtypes = [c_double, c_double, c_double]
+__gr.gr_inqcolorfromrgb.restype = c_int
 __gr.gr_hsvtorgb.argtypes = [c_double, c_double, c_double]
 __gr.gr_tick.argtypes = [c_double, c_double]
+__gr.gr_tick.restype = c_double
 __gr.gr_validaterange.argtypes = [c_double, c_double]
 __gr.gr_validaterange.restype = c_int
 __gr.gr_adjustrange.argtypes = [POINTER(c_double), POINTER(c_double)]
@@ -2304,6 +2304,7 @@ __gr.gr_inqbbox.argtypes = [POINTER(c_double), POINTER(c_double),
                             POINTER(c_double), POINTER(c_double)]
 __gr.gr_precision.argtypes = []
 __gr.gr_precision.restype = c_double
+
 precision = __gr.gr_precision()
 
 ASF_BUNDLED = 0
