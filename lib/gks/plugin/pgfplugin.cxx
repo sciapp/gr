@@ -701,18 +701,15 @@ void polyline(int n, double *px, double *py)
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n",
              p->rgb[ln_color]);
 
-  if (p->dashes)
+  pgf_printf(p->stream, "\\begin{scope}[dash pattern=");
+  for (i = 1; i <= dashes[0]; i++)
     {
-      pgf_printf(p->stream, "\\begin{scope}[dash pattern=");
-      for (i = 1; i <= dashes[0]; i++)
-        {
-          if (i % 2 == 1)
-            pgf_printf(p->stream, " on %dpt", dashes[i]);
-          else
-            pgf_printf(p->stream, " off %dpt", dashes[i]);
-        }
-      pgf_printf(p->stream, "]\n");
+      if (i % 2 == 1)
+        pgf_printf(p->stream, " on %dpt", dashes[i]);
+      else
+        pgf_printf(p->stream, " off %dpt", dashes[i]);
     }
+  pgf_printf(p->stream, "]\n");
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
   gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
