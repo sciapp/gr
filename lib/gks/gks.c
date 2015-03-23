@@ -1623,6 +1623,10 @@ void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
     {
       if (tnr > 0 && tnr < MAX_TNR)
 	{
+	  /* Check whether the given coordinate range does not lead
+	     to loss of precision in subsequent GKS functions. It must
+	     be ensured that there are at least 4 significant digits
+	     when applying normalization or device transformations */
 	  if (xmin < xmax && fabs(xmax - xmin) * 0.0001 > DBL_EPSILON &&
 	      ymin < ymax && fabs(ymax - ymin) * 0.0001 > DBL_EPSILON)
 	    {
