@@ -87,5 +87,6 @@ EXPORTS
 	gr_titles3d
 	gr_updategks
 	gr_updatews
+	gr_validaterange
 	gr_verrorbars
 	gr_wctondc

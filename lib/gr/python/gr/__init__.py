@@ -1608,6 +1608,10 @@ def tick(amin, amax):
     return __gr.gr_tick(c_double(amin), c_double(amax))
 
 
+def validaterange(amin, amax):
+    return __gr.gr_validaterange(c_double(amin), c_double(amax))
+
+
 def adjustrange(amin, amax):
     _amin = c_double(amin)
     _amax = c_double(amax)
@@ -2266,6 +2270,8 @@ __gr.gr_inqcolor.argtypes = [c_int, POINTER(c_int)]
 __gr.gr_inqcolorfromrgb.argtypes = [c_double, c_double, c_double]
 __gr.gr_hsvtorgb.argtypes = [c_double, c_double, c_double]
 __gr.gr_tick.argtypes = [c_double, c_double]
+__gr.gr_validaterange.argtypes = [c_double, c_double]
+__gr.gr_validaterange.restype = c_int
 __gr.gr_adjustrange.argtypes = [POINTER(c_double), POINTER(c_double)]
 __gr.gr_beginprint.argtypes = [c_char_p]
 __gr.gr_beginprintext.argtypes = [c_char_p, c_char_p, c_char_p, c_char_p]

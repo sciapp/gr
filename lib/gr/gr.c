@@ -5320,6 +5320,18 @@ double fract(double x)
   return (x - (long) x);
 }
 
+int gr_validaterange(double amin, double amax)
+{
+  /* Check whether the given coordinate range does not lead
+     to loss of precision in subsequent GR functions. It must
+     be ensured that there are at least 4 significant digits
+     when applying normalization or device transformations. */
+  if (amin < amax && fabs(amax - amin) * 0.0001 > DBL_EPSILON)
+    return 1;
+  else
+    return 0;
+}
+
 void gr_adjustrange(double *amin, double *amax)
 {
   double tick;

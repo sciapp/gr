@@ -436,6 +436,11 @@ double FORTRAN(gr_tick)(double *amin, double *amax)
   return gr_tick(*amin, *amax);
 }
 
+int FORTRAN(gr_validaterange)(double amin, double amax)
+{
+  return gr_validaterange(amin, amax);
+}
+
 void FORTRAN(gr_adjustrange)(double *amin, double *amax)
 {
   gr_adjustrange(amin, amax);
