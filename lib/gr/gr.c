@@ -5324,13 +5324,6 @@ double gr_tick(double amin, double amax)
                          difference between the minimum and maximum value */
 }
 
-static
-double fract(double x)
-{
-  double _intpart;
-  return modf(x, &_intpart);
-}
-
 int gr_validaterange(double amin, double amax)
 {
   /* Check whether the given coordinate range does not lead
