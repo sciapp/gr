@@ -17,7 +17,7 @@ def mandel(x, y, max_iters):
     ci = 0
     inc = 1
 
-    for i in range(max_iters):
+    for i in xrange(max_iters):
         z = z * z + c
         if (z.real * z.real + z.imag * z.imag) >= 4:
             return ci
@@ -40,9 +40,9 @@ def mandel_kernel(min_x, max_x, min_y, max_y, image, max_iters):
     gridX = cuda.gridDim.x * cuda.blockDim.x;
     gridY = cuda.gridDim.y * cuda.blockDim.y;
 
-    for x in range(startX, width, gridX):
+    for x in xrange(startX, width, gridX):
         real = min_x + x * pixel_size_x
-        for y in range(startY, height, gridY):
+        for y in xrange(startY, height, gridY):
             imag = min_y + y * pixel_size_y 
             image[y, x] = mandel(real, imag, max_iters)
 

@@ -28,7 +28,7 @@ def mandel(tid, min_x, max_x, min_y, max_y, width, height, iters):
     ci = 0
     inc = 1
 
-    for i in range(iters):
+    for i in xrange(iters):
         z = z * z + c
         if (z.real * z.real + z.imag * z.imag) >= 4:
             return ci
