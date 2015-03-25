@@ -13,8 +13,13 @@ import gr
 
 platform = cl.get_platforms()
 gpu_devices = platform[0].get_devices(device_type=cl.device_type.GPU)
-ctx = cl.Context(devices=gpu_devices)
 
+info_value = gpu_devices[0].get_info(getattr(cl.device_info, 'EXTENSIONS'))
+if not 'cl_khr_fp64' in info_value:
+  print("GPU has no support for double floating-point precision")
+  exit(-1)
+
+ctx = cl.Context(devices=gpu_devices)
 queue = cl.CommandQueue(ctx)
 
 prg = cl.Program(ctx, """
