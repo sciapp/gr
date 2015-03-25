@@ -719,14 +719,13 @@ class Plot(GRViewPort, GRMeta):
                     if rescale:
                         lstPlotCurves = axes.getCurves()
                         if lstPlotCurves:
-                            visibleCurves = filter(lambda curve: curve.visible,
-                                                   lstPlotCurves)
+                            visibleCurves = [c for c in lstPlotCurves
+                                             if c.visible]
                             if not visibleCurves:
                                 visibleCurves = lstPlotCurves
                             window = axes.getWindow()
                             xmax = window[1]
-                            xmin = min(map(lambda curve: min(curve.x),
-                                           visibleCurves))
+                            xmin = min(min(c.x) for c in visibleCurves)
                             if xmin <= 0:
                                 # 3 constant
                                 xmin = 1. / 10 ** max(0, 3 - math.log10(xmax))
@@ -756,14 +755,13 @@ class Plot(GRViewPort, GRMeta):
                     if rescale:
                         lstPlotCurves = axes.getCurves()
                         if lstPlotCurves:
-                            visibleCurves = filter(lambda curve: curve.visible,
-                                                   lstPlotCurves)
+                            visibleCurves = [c for c in lstPlotCurves
+                                             if c.visible]
                             if not visibleCurves:
                                 visibleCurves = lstPlotCurves
                             window = axes.getWindow()
                             ymax = window[3]
-                            ymin = min(map(lambda curve: min(curve.y),
-                                           visibleCurves))
+                            ymin = min(min(c.y) for c in visibleCurves)
                             if ymin <= 0:
                                 # 3 constant
                                 ymin = 1. / 10 ** max(0, 3 - math.log10(ymax))
@@ -833,7 +831,7 @@ class Plot(GRViewPort, GRMeta):
                 gr.setwindow(*axes.getWindow())
                 coord.setNDC(p0.x, p0.y)
                 wcPick = coord.getWC(axes.viewport)
-                curves = filter(lambda c: c.visible, axes.getCurves())
+                curves = [c for c in axes.getCurves() if c.visible]
                 for curve in curves:
                     for idx, x in enumerate(curve.x):
                         if x >= wcPick.x:
@@ -844,7 +842,7 @@ class Plot(GRViewPort, GRMeta):
                     lstCurves.append(curve)
             if points:
                 # calculate distance between p0 and point on curve
-                norms = map(lambda p: (p0 - p).norm(), points)
+                norms = [(p0 - p).norm() for p in points]
                 # nearest point
                 idx = norms.index(min(norms))
                 p = points[idx]
@@ -992,7 +990,7 @@ class Plot(GRViewPort, GRMeta):
             gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
             gr.setcharup(-1., 0.)
             tbx = gr.inqtext(0, 0, self.ylabel)[0]
-            tbx = map(lambda y: gr.wctondc(0, y)[0], tbx)
+            tbx = [gr.wctondc(0, yi)[0] for yi in tbx]
             dxYLabel = max(tbx) - min(tbx)
             gr.text(self.offsetYLabel + xmin - dxYLabel / 2. - .075,
                     ymin + (ymax - ymin) / 2., self.ylabel)
@@ -1385,27 +1383,22 @@ class PlotAxes(GRViewPort, GRMeta):
         if lstPlotCurve:
             if self.isReset() or self.autoscale:
                 # global xmin, xmax, ymin, ymax
-                visibleCurves = filter(lambda curve: curve.visible,
-                                       lstPlotCurve)
+                visibleCurves = [c for c in lstPlotCurve if c.visible]
                 if not visibleCurves:
                     visibleCurves = lstPlotCurve
                 # calculate previous xmin, xmax
-                xpmin = min(map(lambda curve: min(curve.x[:-1])
-                                if len(curve.x) > 1 else curve.x[-1],
-                                visibleCurves))
-                xpmax = max(map(lambda curve: max(curve.x[:-1])
-                                if len(curve.x) > 1 else curve.x[-1],
-                                visibleCurves))
+                xpmin = min(min(c.x[:-1]) if len(c.x) > 1 else c.x[-1]
+                             for c in visibleCurves)
+                xpmax = max(max(c.x[:-1]) if len(c.x) > 1 else c.x[-1]
+                             for c in visibleCurves)
                 # calculate xmin, xmax
                 xl = [curve.x[-1] for curve in visibleCurves]
                 yl = [curve.y[-1] for curve in visibleCurves]
                 xmin = min(xpmin, *xl)
                 xmax = max(xpmax, *xl)
                 # calculate ymin, ymax
-                ymin = min(map(lambda curve: min(curve.y),
-                               visibleCurves))
-                ymax = max(map(lambda curve: max(curve.y),
-                               visibleCurves))
+                ymin = min(min(curve.y) for curve in visibleCurves)
+                ymax = max(max(curve.y) for curve in visibleCurves)
                 # calculate ymin, ymax for last (added) point.
                 ylmin, ylmax = min(yl), max(yl)
 
@@ -1561,27 +1554,29 @@ def ndctowc(x, y):
     try:
         iter(x)
         iter(y)
+    except TypeError:
+        return gr.ndctowc(x, y)
+    else:
         resX = []
         resY = []
-        for xi, yi in map(lambda x, y: gr.ndctowc(x, y), x, y):
+        for xi, yi in map(gr.ndctowc, x, y): # pylint: disable=bad-builtin
             resX.append(xi)
             resY.append(yi)
         return resX, resY
-    except TypeError:
-        return gr.ndctowc(x, y)
 
 def wctondc(x, y):
     try:
         iter(x)
         iter(y)
+    except TypeError:
+        return gr.wctondc(x, y)
+    else:
         resX = []
         resY = []
-        for xi, yi in map(lambda x, y: gr.wctondc(x, y), x, y):
+        for xi, yi in map(gr.wctondc, x, y): # pylint: disable=bad-builtin
             resX.append(xi)
             resY.append(yi)
         return resX, resY
-    except TypeError:
-        return gr.wctondc(x, y)
 
 def _guessdimension(len):
     x = int(math.sqrt(len))
