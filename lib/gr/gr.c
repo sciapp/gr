@@ -2461,7 +2461,7 @@ double pred(double x)
     return gauss(x);
 }
 
-#define ipred(x) ((int) pred(x))
+#define ipred(x) ((long) pred(x))
 
 double succ(double x)
 {
@@ -2473,7 +2473,7 @@ double succ(double x)
     return gauss(x) + 1;
 }
 
-#define isucc(x) ((int) succ(x))
+#define isucc(x) ((long) succ(x))
 
 static
 double fract(double x)
@@ -2635,7 +2635,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
   double x_min, x_max, y_min, y_max, feps;
 
   double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
-  int i, decade, exponent;
+  long i;
+  int decade, exponent;
   char string[256];
 
   if (x_tick < 0 || y_tick < 0)
@@ -3462,7 +3463,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
   double tick, minor_tick, major_tick, x_label, y_label;
   double x0, y0, z0, xi, yi, zi;
-  int i, decade, exponent;
+  long i;
+  int decade, exponent;
   char string[256];
 
   if (x_tick < 0 || y_tick < 0 || z_tick < 0)
