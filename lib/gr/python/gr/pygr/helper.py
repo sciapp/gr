@@ -50,14 +50,7 @@ class DomainChecker(object):
 
     @staticmethod
     def isInWindowDomain(xmin, xmax, ymin, ymax):
-        res = True
-        if (math.isnan(xmin) or math.isinf(xmin) or math.isnan(xmax)
-            or math.isinf(xmax) or math.isnan(ymin) or math.isinf(ymin) or
-            math.isnan(ymax) or math.isinf(ymax) or
-            xmin > xmax or ymin > ymax or abs(xmax - xmin) < gr.precision or
-            abs(ymax - ymin) < gr.precision):
-            res = False
-        return res
+        return gr.validaterange(xmin, xmax) and gr.validaterange(ymin, ymax)
 
 
 class ColorIndexGenerator(object):
