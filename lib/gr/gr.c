@@ -136,7 +136,16 @@ int first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
 static
 unsigned int rgb[MAX_COLOR];
 
+#define MAX_TICKS 500
+
 #define check_autoinit if (autoinit) initgks()
+
+#define check_tick_marks(amin, amax, atick, axis) \
+  if ((amax - amin) / atick > MAX_TICKS) \
+    { \
+      atick = gr_tick(amin, amax); \
+      fprintf(stderr, "auto-adjust %c tick marks\n", axis); \
+    }
 
 #define nint(x) (int)((x) + 0.5)
 #define round(x) (x < 0 ? ceil(x - .5) : floor(x + .5))
@@ -2770,6 +2779,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
         {
           feps = FEPS * (y_max - y_min);
 
+          check_tick_marks(y_min, y_max, y_tick, 'Y')
+
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
@@ -2902,6 +2913,8 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
       else
         {
           feps = FEPS * (x_max - x_min);
+
+          check_tick_marks(x_min, x_max, x_tick, 'X')
 
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
@@ -3062,6 +3075,8 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
         }
       else
         {
+          check_tick_marks(y_min, y_max, y_tick, 'Y')
+
           i = isucc((y_min - y_org) / y_tick);
           yi = y_org + i * y_tick;
 
@@ -3125,6 +3140,8 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
         }
       else
         {
+          check_tick_marks(x_min, x_max, x_tick, 'X')
+
           i = isucc((x_min - x_org) / x_tick);
           xi = x_org + i * x_tick;
 
@@ -3630,6 +3647,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         }
       else
         {
+          check_tick_marks(z_min, z_max, z_tick, 'Z')
+
           i = isucc(z_min / z_tick);
           zi = i * z_tick;
 
@@ -3761,6 +3780,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         }
       else
         {
+          check_tick_marks(y_min, y_max, y_tick, 'Y')
+
           i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
@@ -3892,6 +3913,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         }
       else
         {
+          check_tick_marks(x_min, x_max, x_tick, 'X')
+
           i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
