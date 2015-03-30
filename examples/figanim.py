@@ -4,6 +4,8 @@
 Compare figure output performance of Matplotlib vs. GR
 """
 
+from __future__ import print_function
+
 from numpy import arange, sin, pi
 from time import time
 from os import environ

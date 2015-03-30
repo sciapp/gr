@@ -4,6 +4,8 @@
 Sample microphone input and display power spectrum
 """
 
+from __future__ import print_function
+
 import pyaudio
 import numpy
 from scipy import signal
@@ -59,7 +61,7 @@ while time.time() - start < 10:
             gr.setlinewidth(2)
             gr.setlinecolorind(2)
             xe, ye = parabolic(f[p], power, p)
-            print((xe, ye))
+            print(xe, ye)
             gr.polyline([xe] * 2, [0, ye])
     gr.updatews()
 
