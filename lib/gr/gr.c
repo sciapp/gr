@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
-#include <limits.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -33,19 +32,6 @@
 
 #ifndef R_OK
 #define R_OK 4
-#endif
-
-#ifdef _MSC_VER
-#ifndef NAN
-static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
-#define NAN (*(const float *) __nan)
-#endif
-#endif
-
-#ifdef __linux__
-#ifndef NAN
-#define NAN 0.0/0.0
-#endif
 #endif
 
 typedef struct
@@ -2628,7 +2614,8 @@ void text2dlbl(double x, double y, const char *chars, double value,
 static
 void text2d(double x, double y, const char *chars)
 {
-  text2dlbl(x, y, chars, NAN, NULL);
+  /* 42. dummy value will not be interpreted until last argument fp != NULL */
+  text2dlbl(x, y, chars, 42., NULL);
 }
 
 void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
