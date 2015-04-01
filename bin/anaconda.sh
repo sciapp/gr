@@ -33,9 +33,9 @@ if [ "${MPLBACKEND}" == "gr" ]
 then
   opts="-dmodule://gr.matplotlib.backend_gr"
 fi
-if [ -d /opt/anaconda ]
+if [ -d ${HOME}/anaconda ]
 then
-  PYTHONHOME=/opt/anaconda
+  PYTHONHOME=${HOME}/anaconda
 elif [ -d /usr/local/anaconda ]
 then
   PYTHONHOME=/usr/local/anaconda
