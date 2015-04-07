@@ -1273,7 +1273,7 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
 	}
     }
 
-  if (nh <= 1)
+  if (nh < 1)
     {
       ncv = contour_lines;
       cv = (double *) xmalloc(ncv * sizeof(double));
