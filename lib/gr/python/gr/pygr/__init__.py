@@ -12,7 +12,7 @@ import logging
 # local library
 import gr
 import gr3
-from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort
+from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort, GRVisibility
 from gr.pygr.helper import ColorIndexGenerator, DomainChecker
 from numpy import ndarray, asarray
 from gr._version import __version__, __revision__
@@ -297,7 +297,7 @@ class DeviceCoordConverter(CoordConverter):
                      (1. - self._p.y / self._sizey) * self._height)
 
 
-class Text(GRMeta):
+class Text(GRVisibility, GRMeta):
 
     DEFAULT_CHARHEIGHT_FACTOR = .027
 
@@ -307,8 +307,8 @@ class Text(GRMeta):
                  textcolor=1, font=None, precision=None,
                  textpath=gr.TEXT_PATH_RIGHT, charexpan=1.,
                  hideviewport=True):
+        GRVisibility.__init__(self, True)
         self._font, self._precision = None, None
-        self._visible = True
         self._x, self._y, self._text, self._axes = x, y, text, axes
         self._charheight = charheight
         self._charup, self._halign, self._valign = charup, halign, valign
@@ -422,14 +422,6 @@ class Text(GRMeta):
     @hideviewport.setter
     def hideviewport(self, flag):
         self._hideviewport = flag
-
-    @property
-    def visible(self):
-        return self._visible
-
-    @visible.setter
-    def visible(self, bool):
-        self._visible = bool
 
     def getBoundingBox(self):
         if self._axes:
@@ -1087,15 +1079,16 @@ class Plot(GRViewPort, GRMeta):
             gr.clearws()
             self.drawGR()
 
-class PlotCurve(GRDrawAttributes, GRMeta):
+class PlotCurve(GRDrawAttributes, GRVisibility, GRMeta):
 
     COUNT = 0
 
     def __init__(self, x, y, errBar1=None, errBar2=None,
                  linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_DOT,
                  linecolor=None, markercolor=1, legend=None):
-        super(PlotCurve, self).__init__(linetype, markertype, linecolor,
-                                       markercolor)
+        GRDrawAttributes.__init__(self, linetype, markertype, linecolor,
+                                  markercolor)
+        GRVisibility.__init__(self, True)
         self._x, self._y = x, y
         self._e1, self._e2 = errBar1, errBar2
         self._linetype, self._markertype = linetype, markertype
@@ -1105,7 +1098,6 @@ class PlotCurve(GRDrawAttributes, GRMeta):
         self._id = PlotCurve.COUNT
         if legend is None:
             self._legend = "curve %d" % self._id
-        self._visible = True
 
     @property
     def errorBar1(self):
@@ -1152,14 +1144,6 @@ class PlotCurve(GRDrawAttributes, GRMeta):
     def legend(self, s):
         self._legend = s
 
-    @property
-    def visible(self):
-        return self._visible
-
-    @visible.setter
-    def visible(self, bool):
-        self._visible = bool
-
     def drawGR(self):
         if self.visible:
             # preserve old values
@@ -1192,16 +1176,16 @@ class PlotCurve(GRDrawAttributes, GRMeta):
             gr.setmarkertype(mtype)
 
 
-class PlotSurface(GRMeta):
+class PlotSurface(GRVisibility, GRMeta):
 
     def __init__(self, x, y, z, colormap=gr.COLORMAP_TEMPERATURE,
                  option=gr.OPTION_CELL_ARRAY, nx=None, ny=None):
+        GRVisibility.__init__(self, True)
         self._colormap, self._option = colormap, option
         if nx and ny:
             self._x, self._y, self._z = gr.gridit(x, y, z, nx, ny)
         else:
             self._x, self._y, self._z = x, y, z
-        self._visible = True
 
     @property
     def colormap(self):
@@ -1248,29 +1232,22 @@ class PlotSurface(GRMeta):
     def z(self, lst):
         self._z = lst
 
-    @property
-    def visible(self):
-        return self._visible
-
-    @visible.setter
-    def visible(self, flag):
-        self._visible = flag
-
     def drawGR(self):
-        gr.setspace(min(self.z), max(self.z), 0, 90)
-        gr.setcolormap(self.colormap)
-        gr3.surface(self.x, self.y, self.z, self.option)
+        if self.visible:
+            gr.setspace(min(self.z), max(self.z), 0, 90)
+            gr.setcolormap(self.colormap)
+            gr3.surface(self.x, self.y, self.z, self.option)
 
 
-class PlotContour(GRMeta):
+class PlotContour(GRVisibility, GRMeta):
 
-    def __init__(self, x, y, z, h=[], majorh=0, nx=None, ny=None):
-        self._h, self._majorh = h, majorh
+    def __init__(self, x, y, z, h=None, majorh=0, nx=None, ny=None):
+        GRVisibility.__init__(self, True)
+        self._h, self._majorh = h or [], majorh
         if nx and ny:
             self._x, self._y, self._z = gr.gridit(x, y, z, nx, ny)
         else:
             self._x, self._y, self._z = x, y, z
-        self._visible = True
 
     @property
     def x(self):
@@ -1319,18 +1296,10 @@ class PlotContour(GRMeta):
     def majorh(self, mh):
         self._majorh = mh
 
-    @property
-    def visible(self):
-        return self._visible
-
-    @visible.setter
-    def visible(self, bool):
-        self._visible = bool
-
-
     def drawGR(self):
-        gr.setspace(min(self.z), max(self.z), 0, 90)
-        gr.contour(self.x, self.y, self.h, self.z, self.majorh)
+        if self.visible:
+            gr.setspace(min(self.z), max(self.z), 0, 90)
+            gr.contour(self.x, self.y, self.h, self.z, self.majorh)
 
 
 class PlotAxes(GRViewPort, GRMeta):

@@ -133,3 +133,17 @@ class GRViewPort(object):
         vp[3] *= self.sizey
         return vp
 
+
+class GRVisibility(object):
+
+    def __init__(self, visible=True):
+        self._visible = visible
+
+    @property
+    def visible(self):
+        """Get visibility flag for this GR object."""
+        return self._visible
+
+    @visible.setter
+    def visible(self, flag):
+        self._visible = flag
