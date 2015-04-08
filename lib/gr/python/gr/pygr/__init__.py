@@ -1192,6 +1192,76 @@ class PlotCurve(GRDrawAttributes, GRMeta):
             gr.setmarkertype(mtype)
 
 
+class PlotSurface(GRMeta):
+
+    def __init__(self, x, y, z, colormap=gr.COLORMAP_TEMPERATURE,
+                 option=gr.OPTION_CELL_ARRAY, nx=None, ny=None):
+        self._colormap, self._option = colormap, option
+        if nx and ny:
+            self._x, self._y, self._z = gr.gridit(x, y, z, nx, ny)
+        else:
+            self._x, self._y, self._z = x, y, z
+        self._visible = True
+
+    @property
+    def colormap(self):
+        """Get the current colormap."""
+        return self._colormap
+
+    @colormap.setter
+    def colormap(self, cmap):
+        self._colormap = cmap
+
+    @property
+    def option(self):
+        """Get current surface display option."""
+        return self._option
+
+    @option.setter
+    def option(self, opt):
+        self._option = opt
+
+    @property
+    def x(self):
+        """Get the current list/ndarray of x values."""
+        return self._x
+
+    @x.setter
+    def x(self, lst):
+        self._x = lst
+
+    @property
+    def y(self):
+        """Get the current list/ndarray of y values."""
+        return self._y
+
+    @y.setter
+    def y(self, lst):
+        self._y = lst
+
+    @property
+    def z(self):
+        """Get the current list/ndarray of z values."""
+        return self._z
+
+    @z.setter
+    def z(self, lst):
+        self._z = lst
+
+    @property
+    def visible(self):
+        return self._visible
+
+    @visible.setter
+    def visible(self, flag):
+        self._visible = flag
+
+    def drawGR(self):
+        gr.setspace(min(self.z), max(self.z), 0, 90)
+        gr.setcolormap(self.colormap)
+        gr3.surface(self.x, self.y, self.z, self.option)
+
+
 class PlotContour(GRMeta):
 
     def __init__(self, x, y, z, h=[], majorh=0, nx=None, ny=None):
