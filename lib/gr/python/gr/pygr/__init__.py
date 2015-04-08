@@ -1191,6 +1191,78 @@ class PlotCurve(GRDrawAttributes, GRMeta):
             gr.setlinetype(ltype)
             gr.setmarkertype(mtype)
 
+
+class PlotContour(GRMeta):
+
+    def __init__(self, x, y, z, h=[], majorh=0, nx=None, ny=None):
+        self._h, self._majorh = h, majorh
+        if nx and ny:
+            self._x, self._y, self._z = gr.gridit(x, y, z, nx, ny)
+        else:
+            self._x, self._y, self._z = x, y, z
+        self._visible = True
+
+    @property
+    def x(self):
+        """Get the current list/ndarray of x values."""
+        return self._x
+
+    @x.setter
+    def x(self, lst):
+        self._x = lst
+
+    @property
+    def y(self):
+        """Get the current list/ndarray of y values."""
+        return self._y
+
+    @y.setter
+    def y(self, lst):
+        self._y = lst
+
+    @property
+    def z(self):
+        """Get the current list/ndarray of z values."""
+        return self._z
+
+    @z.setter
+    def z(self, lst):
+        self._z = lst
+
+    @property
+    def h(self):
+        """Get the current list/ndarray of z values for the height."""
+        return self._h
+
+    @h.setter
+    def h(self, lst):
+        self._h = lst
+
+    @property
+    def majorh(self):
+        """Get the interval of labeled contour lines majorh. A value of 1 will
+        label every line. A value of 2 every second line and so on. A value of
+        0 disables labeling"""
+        return self._majorh
+
+    @majorh.setter
+    def majorh(self, mh):
+        self._majorh = mh
+
+    @property
+    def visible(self):
+        return self._visible
+
+    @visible.setter
+    def visible(self, bool):
+        self._visible = bool
+
+
+    def drawGR(self):
+        gr.setspace(min(self.z), max(self.z), 0, 90)
+        gr.contour(self.x, self.y, self.h, self.z, self.majorh)
+
+
 class PlotAxes(GRViewPort, GRMeta):
 
     COUNT = 0
@@ -1434,26 +1506,27 @@ class PlotAxes(GRViewPort, GRMeta):
                 # if error bar's center is in current window
                 # adjust window margins to contain error bars.
                 for curve in visibleCurves:
-                    for bar in [curve.errorBar1, curve.errorBar2]:
-                        if bar:
-                            if bar.direction == ErrorBar.HORIZONTAL:
-                                for i, x in enumerate(bar.x):
-                                    if x >= xmin and x <= xmax:
-                                        bneg = x - bar.dneg[i]
-                                        bpos = x + bar.dpos[i]
-                                        if bneg < xmin:
-                                            xmin = bneg
-                                        if bpos > xmax:
-                                            xmax = bpos
-                            elif bar.direction == ErrorBar.VERTICAL:
-                                for i, y in enumerate(bar.y):
-                                    if y >= ymin and y <= ymax:
-                                        bneg = y - bar.dneg[i]
-                                        bpos = y + bar.dpos[i]
-                                        if bneg < ymin:
-                                            ymin = bneg
-                                        if bpos > ymax:
-                                            ymax = bpos
+                    if isinstance(curve, PlotCurve):
+                        for bar in [curve.errorBar1, curve.errorBar2]:
+                            if bar:
+                                if bar.direction == ErrorBar.HORIZONTAL:
+                                    for i, x in enumerate(bar.x):
+                                        if x >= xmin and x <= xmax:
+                                            bneg = x - bar.dneg[i]
+                                            bpos = x + bar.dpos[i]
+                                            if bneg < xmin:
+                                                xmin = bneg
+                                            if bpos > xmax:
+                                                xmax = bpos
+                                elif bar.direction == ErrorBar.VERTICAL:
+                                    for i, y in enumerate(bar.y):
+                                        if y >= ymin and y <= ymax:
+                                            bneg = y - bar.dneg[i]
+                                            bpos = y + bar.dpos[i]
+                                            if bneg < ymin:
+                                                ymin = bneg
+                                            if bpos > ymax:
+                                                ymax = bpos
 
                 if ((not self.autoscale
                      or math.fabs(xmax - xmin) < gr.precision)
