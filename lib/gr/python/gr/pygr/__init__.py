@@ -1704,7 +1704,7 @@ def plot3d(z,
         gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 5, 0, 5, -0.01)
         gr.axes3d(0, ytick, 0, xmax, ymin, zmin, 0, 5, 0, 0.01)
     if contours:
-        gr.contour(x, y, range(1), z, 0)
+        gr.contour(x, y, [], z, 0)
     if rotation == 0 and tilt == 90:
         gr.axes(xtick, ytick, xmin, ymin, 5, 5, -0.01)
     if xtitle != '' or ytitle != '' or ztitle != '':
