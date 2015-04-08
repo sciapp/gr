@@ -46,6 +46,56 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
 
 _log = logging.getLogger(__name__)
 
+
+class Coords2D(object):
+
+    def __init__(self, x, y):
+        self._x, self._y = x, y
+
+    @property
+    def x(self):
+        """Get the current list/ndarray of x values."""
+        return self._x
+
+    @x.setter
+    def x(self, lst):
+        self._x = lst
+
+    @property
+    def y(self):
+        """Get the current list/ndarray of y values."""
+        return self._y
+
+    @y.setter
+    def y(self, lst):
+        self._y = lst
+
+
+class Coords3D(Coords2D):
+
+    def __init__(self, x, y, z):
+        Coords2D.__init__(self, x, y)
+        self._z = z
+
+    @property
+    def z(self):
+        """Get the current list/ndarray of z values."""
+        return self._z
+
+    @z.setter
+    def z(self, lst):
+        self._z = lst
+
+
+class GridCoords3D(Coords3D):
+
+    def __init__(self, x, y, z, nx=None, ny=None):
+        if nx and ny:
+            Coords3D.__init__(self, *gr.gridit(x, y, z, nx, ny))
+        else:
+            Coords3D.__init__(self, x, y, z)
+
+
 class Point(object):
 
     def __init__(self, x, y):
@@ -297,7 +347,7 @@ class DeviceCoordConverter(CoordConverter):
                      (1. - self._p.y / self._sizey) * self._height)
 
 
-class Text(GRVisibility, GRMeta):
+class Text(GRVisibility, Point, GRMeta):
 
     DEFAULT_CHARHEIGHT_FACTOR = .027
 
@@ -308,6 +358,7 @@ class Text(GRVisibility, GRMeta):
                  textpath=gr.TEXT_PATH_RIGHT, charexpan=1.,
                  hideviewport=True):
         GRVisibility.__init__(self, True)
+        Point.__init__(self, x, y)
         self._font, self._precision = None, None
         self._x, self._y, self._text, self._axes = x, y, text, axes
         self._charheight = charheight
@@ -318,24 +369,6 @@ class Text(GRVisibility, GRMeta):
         if font is not None and precision is not None:
             self._font, self._precision = font, precision
         self._textlines = text.split('\n')
-
-    @property
-    def x(self):
-        """Get the current x value (NDC)."""
-        return self._x
-
-    @x.setter
-    def x(self, value):
-        self._x = value
-
-    @property
-    def y(self):
-        """Get the current y value (NDC)."""
-        return self._y
-
-    @y.setter
-    def y(self, value):
-        self._y = value
 
     @property
     def text(self):
@@ -504,7 +537,7 @@ class Text(GRVisibility, GRMeta):
             gr.settextcolorind(1)
 
 
-class ErrorBar(GRDrawAttributes, GRMeta):
+class ErrorBar(GRDrawAttributes, Coords2D, GRMeta):
 
     HORIZONTAL = 0
     VERTICAL = 1
@@ -512,10 +545,9 @@ class ErrorBar(GRDrawAttributes, GRMeta):
     def __init__(self, x, y, dneg, dpos=None, direction=VERTICAL,
                  linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_OMARK,
                  linecolor=1, markercolor=1):
-        super(ErrorBar, self).__init__(linetype, markertype, linecolor,
-                                       markercolor)
-        self._x = asarray(x)
-        self._y = asarray(y)
+        GRDrawAttributes.__init__(self, linetype, markertype, linecolor,
+                                  markercolor)
+        Coords2D.__init__(self, asarray(x), asarray(y))
         self._direction = direction
         self._grerror = None
         if direction == ErrorBar.VERTICAL:
@@ -539,22 +571,12 @@ class ErrorBar(GRDrawAttributes, GRMeta):
         """Get ErrorBars direction."""
         return self._direction
 
-    @property
-    def x(self):
-        """Get the current ndarray of x values."""
-        return self._x
-
-    @x.setter
+    @Coords2D.x.setter
     def x(self, seq):
         self._x = asarray(seq)
         self._updateErrors()
 
-    @property
-    def y(self):
-        """Get the current ndarray of y values."""
-        return self._y
-
-    @y.setter
+    @Coords2D.y.setter
     def y(self, seq):
         self._y = asarray(seq)
         self._updateErrors()
@@ -1079,7 +1101,8 @@ class Plot(GRViewPort, GRMeta):
             gr.clearws()
             self.drawGR()
 
-class PlotCurve(GRDrawAttributes, GRVisibility, GRMeta):
+
+class PlotCurve(GRDrawAttributes, GRVisibility, Coords2D, GRMeta):
 
     COUNT = 0
 
@@ -1089,7 +1112,7 @@ class PlotCurve(GRDrawAttributes, GRVisibility, GRMeta):
         GRDrawAttributes.__init__(self, linetype, markertype, linecolor,
                                   markercolor)
         GRVisibility.__init__(self, True)
-        self._x, self._y = x, y
+        Coords2D.__init__(self, x, y)
         self._e1, self._e2 = errBar1, errBar2
         self._linetype, self._markertype = linetype, markertype
         self._markercolor = markercolor
@@ -1116,24 +1139,6 @@ class PlotCurve(GRDrawAttributes, GRVisibility, GRMeta):
     @errorBar2.setter
     def errorBar2(self, value):
         self._e2 = value
-
-    @property
-    def x(self):
-        """Get the current list/ndarray of x values."""
-        return self._x
-
-    @x.setter
-    def x(self, lst):
-        self._x = lst
-
-    @property
-    def y(self):
-        """Get the current list/ndarray of y values."""
-        return self._y
-
-    @y.setter
-    def y(self, lst):
-        self._y = lst
 
     @property
     def legend(self):
@@ -1176,16 +1181,13 @@ class PlotCurve(GRDrawAttributes, GRVisibility, GRMeta):
             gr.setmarkertype(mtype)
 
 
-class PlotSurface(GRVisibility, GRMeta):
+class PlotSurface(GRVisibility, GridCoords3D, GRMeta):
 
     def __init__(self, x, y, z, colormap=gr.COLORMAP_TEMPERATURE,
                  option=gr.OPTION_CELL_ARRAY, nx=None, ny=None):
         GRVisibility.__init__(self, True)
+        GridCoords3D.__init__(self, x, y, z, nx, ny)
         self._colormap, self._option = colormap, option
-        if nx and ny:
-            self._x, self._y, self._z = gr.gridit(x, y, z, nx, ny)
-        else:
-            self._x, self._y, self._z = x, y, z
 
     @property
     def colormap(self):
@@ -1205,33 +1207,6 @@ class PlotSurface(GRVisibility, GRMeta):
     def option(self, opt):
         self._option = opt
 
-    @property
-    def x(self):
-        """Get the current list/ndarray of x values."""
-        return self._x
-
-    @x.setter
-    def x(self, lst):
-        self._x = lst
-
-    @property
-    def y(self):
-        """Get the current list/ndarray of y values."""
-        return self._y
-
-    @y.setter
-    def y(self, lst):
-        self._y = lst
-
-    @property
-    def z(self):
-        """Get the current list/ndarray of z values."""
-        return self._z
-
-    @z.setter
-    def z(self, lst):
-        self._z = lst
-
     def drawGR(self):
         if self.visible:
             gr.setspace(min(self.z), max(self.z), 0, 90)
@@ -1239,42 +1214,12 @@ class PlotSurface(GRVisibility, GRMeta):
             gr3.surface(self.x, self.y, self.z, self.option)
 
 
-class PlotContour(GRVisibility, GRMeta):
+class PlotContour(GRVisibility, GridCoords3D, GRMeta):
 
     def __init__(self, x, y, z, h=None, majorh=0, nx=None, ny=None):
         GRVisibility.__init__(self, True)
+        GridCoords3D.__init__(self, x, y, z, nx, ny)
         self._h, self._majorh = h or [], majorh
-        if nx and ny:
-            self._x, self._y, self._z = gr.gridit(x, y, z, nx, ny)
-        else:
-            self._x, self._y, self._z = x, y, z
-
-    @property
-    def x(self):
-        """Get the current list/ndarray of x values."""
-        return self._x
-
-    @x.setter
-    def x(self, lst):
-        self._x = lst
-
-    @property
-    def y(self):
-        """Get the current list/ndarray of y values."""
-        return self._y
-
-    @y.setter
-    def y(self, lst):
-        self._y = lst
-
-    @property
-    def z(self):
-        """Get the current list/ndarray of z values."""
-        return self._z
-
-    @z.setter
-    def z(self, lst):
-        self._z = lst
 
     @property
     def h(self):
