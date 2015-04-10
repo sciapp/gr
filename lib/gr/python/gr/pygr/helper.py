@@ -17,8 +17,8 @@ This file is part of GR, a universal framework for visualization applications.
 Visit http://gr-framework.org for the latest
 version.
 
-GR was developed by the Scientific IT-Systems group at the Peter Gr�nberg
-Institute at Forschunsgzentrum J�lich. The main development has been done
+GR was developed by the Scientific IT-Systems group at the Peter Grünberg
+Institute at Forschunsgzentrum Jülich. The main development has been done
 by Josef Heinen who currently maintains the software.
 
 GR is free software: you can redistribute it and/or modify
