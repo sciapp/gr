@@ -336,41 +336,6 @@ void resize_window(void)
 }
 
 static
-void move_to(double x, double y)
-{
-  int ix, iy;
-
-  NDC_to_DC(x, y, ix, iy);
-  if (p->npoints)
-    {
-      p->pixmap->drawPolyline(p->points->constData(), p->npoints);
-      p->npoints = 0;
-    }
-  p->points->setPoint(p->npoints++, ix, iy);
-}
-
-static
-void line_to(double x, double y)
-{
-  int ix, iy;
-
-  NDC_to_DC(x, y, ix, iy);
-  p->points->setPoint(p->npoints++, ix, iy);
-}
-
-static
-void move(double x, double y)
-{
-  gks_move(x, y, move_to);
-}
-
-static
-void draw(double x, double y)
-{
-  gks_dash(x, y, move_to, line_to);
-}
-
-static
 void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y;
@@ -409,7 +374,7 @@ void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
   double ln_width;
-  int width;
+  int width, i, list[10];
 
   if (n > p->max_points)
     {
@@ -430,17 +395,24 @@ void polyline(int n, double *px, double *py)
     ln_color = 1;
 
   p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter:: Antialiasing);
-  p->pixmap->setPen(QPen(p->rgb[ln_color], width, Qt::SolidLine));
+  p->pixmap->setRenderHint(QPainter::Antialiasing);
 
-  gks_set_dev_xform(gkss, p->window, p->viewport);
-  gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
-
-  if (p->npoints)
+  if (ln_type != GKS_K_LINETYPE_SOLID)
     {
-      p->pixmap->drawPolyline(p->points->constData(), p->npoints);
-      p->npoints = 0;
+      gks_get_dash_list(ln_type, 1.0, list);
+      QVector<qreal> dashPattern(list[0]);
+      for (i = 0; i < list[0]; i++)
+        dashPattern[i] = (double) list[i + 1];
+
+      QPen pen(QPen(p->rgb[ln_color], width, Qt::CustomDashLine));
+      pen.setDashPattern(dashPattern);
+      p->pixmap->setPen(pen);
     }
+  else
+    p->pixmap->setPen(QPen(p->rgb[ln_color], width, Qt::SolidLine));
+
+  line_routine(n, px, py, ln_type, gkss->cntnr);
+
   p->pixmap->restore();
 }
 
@@ -662,7 +634,7 @@ void polymarker(int n, double *px, double *py)
     ln_width = 1;
 
   p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter:: Antialiasing);
+  p->pixmap->setRenderHint(QPainter::Antialiasing);
   p->pixmap->setPen(QPen(p->rgb[mk_color], ln_width, Qt::SolidLine));
   p->pixmap->setBrush(QBrush(p->rgb[mk_color], Qt::SolidPattern));
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
@@ -785,7 +757,7 @@ void text(double px, double py, int nchars, char *chars)
     ln_width = 1;
 
   p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter:: Antialiasing);
+  p->pixmap->setRenderHint(QPainter::Antialiasing);
   p->pixmap->setPen(QPen(p->rgb[tx_color], ln_width, Qt::SolidLine));
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
@@ -843,7 +815,7 @@ static void fillarea(int n, double *px, double *py)
     ln_width = 1;
 
   p->pixmap->save();
-  p->pixmap->setRenderHint(QPainter:: Antialiasing);
+  p->pixmap->setRenderHint(QPainter::Antialiasing);
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
