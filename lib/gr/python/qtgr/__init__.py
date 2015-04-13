@@ -47,7 +47,7 @@ except ImportError:
 # local library
 import gr
 import qtgr.events
-from gr.pygr import Plot, PlotAxes, RegionOfInterest
+from gr.pygr import Plot, PlotAxes, RegionOfInterest, DeviceCoordConverter
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent, \
     LegendEvent
 from gr._version import __version__, __revision__
@@ -290,15 +290,25 @@ class InteractiveGRWidget(GRWidget):
         plot.addAxes(axes)
         return self.addPlot(plot)
 
+    def adjustSelectRect(self, p0, p1):
+        # can be used to restrict select rectangle, e.g. to given aspect ratio
+        return p0, p1
+
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
         self._painter.begin(self)
         if self._mouseLeft and self.getMouseSelectionEnabled():
-            startDC = self._startPoint.getDC()
-            endDC = self._curPoint.getDC()
-            if self._getPlotsForPoint(self._startPoint.getNDC()):
-                rect = QtCore.QRect(QtCore.QPoint(startDC.x, startDC.y),
-                                    QtCore.QPoint(endDC.x, endDC.y)).normalized()
+            p0 = self._startPoint.getNDC()
+            p1 = self._curPoint.getNDC()
+            p0, p1 = self.adjustSelectRect(p0, p1)
+            coords = DeviceCoordConverter(self.dwidth, self.dheight)
+            coords.setNDC(p0.x, p0.y)
+            p0dc = coords.getDC()
+            coords.setNDC(p1.x, p1.y)
+            p1dc = coords.getDC()
+            if self._getPlotsForPoint(p0):
+                rect = QtCore.QRect(QtCore.QPoint(p0dc.x, p0dc.y),
+                                    QtCore.QPoint(p1dc.x, p1dc.y)).normalized()
                 self._painter.setOpacity(.75)
                 self._painter.drawRect(rect)
                 self._painter.setOpacity(1.)
@@ -425,6 +435,7 @@ class InteractiveGRWidget(GRWidget):
             if p0 != p1:
                 if (self.getMouseSelectionEnabled()
                     and self._getPlotsForPoint(p0)):
+                    p0, p1 = self.adjustSelectRect(p0, p1)
                     self._select(p0, p1)
             else:
                 self._roi(p0, ROIEvent.ROI_CLICKED, event.getButtons(),
