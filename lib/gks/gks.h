@@ -474,7 +474,7 @@ DLLEXPORT void gks_polymarker(int n, double *pxa, double *pya);
 DLLEXPORT void gks_text(double px, double py, char *str);
 DLLEXPORT void gks_fillarea(int n, double *pxa, double *pya);
 DLLEXPORT void gks_cellarray(
-  double xmin, double xmax, double ymin, double ymax,
+  double qx, double qy, double rx, double ry,
   int dimx, int dimy, int scol, int srow, int ncol, int nrow, int *colia);
 
 DLLEXPORT void gks_set_pline_index(int index);

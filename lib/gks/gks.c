@@ -1041,22 +1041,31 @@ void gks_fillarea(int n, double *pxa, double *pya)
 }
 
 void gks_cellarray(
-  double xmin, double xmax, double ymin, double ymax,
+  double qx, double qy, double rx, double ry,
   int dimx, int dimy, int scol, int srow, int ncol, int nrow, int *colia)
 {
   if (state >= GKS_K_WSAC)
     {
       if (scol >= 1 && srow >= 1 && ncol <= dimx && nrow <= dimy)
 	{
-	  f_arr_1[0] = xmin;
-	  f_arr_2[0] = xmax;
-	  f_arr_1[1] = ymin;
-	  f_arr_2[1] = ymax;
+          /* Check whether the given coordinate range does not lead
+             to loss of precision */
+          if (fabs(qx - rx) * 0.0001 > DBL_EPSILON &&
+              fabs(qy - ry) * 0.0001 > DBL_EPSILON)
+            {
+	      f_arr_1[0] = qx;
+	      f_arr_2[0] = qy;
+	      f_arr_1[1] = rx;
+	      f_arr_2[1] = ry;
 
-	  /* call the device driver link routine */
-	  gks_ddlk(
-	    CELLARRAY, ncol, nrow, dimx, colia + (scol - 1) * dimx + srow - 1,
-	    2, f_arr_1, 2, f_arr_2, 0, c_arr, NULL);
+	      /* call the device driver link routine */
+	      gks_ddlk(CELLARRAY,
+	        ncol, nrow, dimx, colia + (scol - 1) * dimx + srow - 1,
+	        2, f_arr_1, 2, f_arr_2, 0, c_arr, NULL);
+            }
+          else
+            /* rectangle definition is invalid */
+            gks_report_error(CELLARRAY, 51);
 	}
       else
 	/* dimensions of color index array are invalid */

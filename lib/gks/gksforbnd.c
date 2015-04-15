@@ -185,13 +185,13 @@ void STDCALL GFA(int *n, float *pxa, float *pya)
 }
 
 void STDCALL GCA(
-  float *xmin, float *xmax, float *ymin, float *ymax,
+  float *qx, float *qy, float *rx, float *ry,
   int *dimx, int *dimy, int *scol, int *srow, int *ncol, int *nrow, int *colia)
 {
-  double _xmin = (double) *xmin, _xmax = (double) *xmax;
-  double _ymin = (double) *ymin, _ymax = (double) *ymax;
+  double _qx = (double) *qx, _qy = (double) *qy;
+  double _rx = (double) *rx, _ry = (double) *ry;
 
-  gks_cellarray(_xmin, _xmax, _ymin, _ymax,
+  gks_cellarray(_qx, _qy, _rx, _ry,
 		*dimx, *dimy, *scol, *srow, *ncol, *nrow, colia);
 }
 
