@@ -254,6 +254,9 @@ void gks_iso2utf(unsigned char c, char *utf, size_t *len);
 void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
 int *gks_resize(int *image, int width, int height, int w, int h);
 void gks_filepath(char *path, const char *type, int page, int index);
+void gks_adjust_cellarray(
+  double *qx, double *qy, double *rx, double *ry,
+  int *scol, int *srow, int *ncol, int *nrow, int dimx, int dimy);
 
 DLLEXPORT void gks_dl_write_item(gks_display_list_t *d,
   int fctid, int dx, int dy, int dimx, int *ia,

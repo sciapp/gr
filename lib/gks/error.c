@@ -218,6 +218,7 @@ void gks_report_error(int routine, int errnum)
     case 401: message = "Dimensions of image are invalid in routine %s"; break;
     case 402: message = "Invalid image data pointer in routine %s"; break;
     case 403: message = "String is too long in routine %s"; break;
+    case 404: message = "Subimage limitation reached in routine %s"; break;
     case 901: message = "Open failed in routine %s"; break;
      default: message = "unknown error";
     }

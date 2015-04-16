@@ -1046,22 +1046,32 @@ void gks_cellarray(
 {
   if (state >= GKS_K_WSAC)
     {
-      if (scol >= 1 && srow >= 1 && ncol <= dimx && nrow <= dimy)
+      if (scol >= 1 && srow >= 1 &&
+          scol + ncol - 1 <= dimx && srow + nrow - 1 <= dimy)
 	{
           /* Check whether the given coordinate range does not lead
              to loss of precision */
           if (fabs(qx - rx) * 0.0001 > DBL_EPSILON &&
               fabs(qy - ry) * 0.0001 > DBL_EPSILON)
             {
-	      f_arr_1[0] = qx;
-	      f_arr_2[0] = qy;
-	      f_arr_1[1] = rx;
-	      f_arr_2[1] = ry;
+	      gks_adjust_cellarray(&qx, &qy, &rx, &ry,
+				   &scol, &srow, &ncol, &nrow, dimx, dimy);
 
-	      /* call the device driver link routine */
-	      gks_ddlk(CELLARRAY,
-	        ncol, nrow, dimx, colia + (scol - 1) * dimx + srow - 1,
-	        2, f_arr_1, 2, f_arr_2, 0, c_arr, NULL);
+	      if (ncol >= 1 && nrow >= 1)
+		{
+		  f_arr_1[0] = qx;
+		  f_arr_2[0] = qy;
+		  f_arr_1[1] = rx;
+		  f_arr_2[1] = ry;
+
+		  /* call the device driver link routine */
+		  gks_ddlk(CELLARRAY,
+		    ncol, nrow, dimx, colia + (srow - 1) * dimx + scol - 1,
+		    2, f_arr_1, 2, f_arr_2, 0, c_arr, NULL);
+		}
+	      else
+		/* subimage limitation reached */
+		gks_report_error(CELLARRAY, 404);
             }
           else
             /* rectangle definition is invalid */
@@ -2870,7 +2880,7 @@ void gks_end_selection(void)
     {
       /* call the device driver link routine */
       gks_ddlk(END_SELECTION,
-	0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL); 
+	0, 0, 0, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
     }
   else
     /* GKS not in proper state. GKS must be either in the state
@@ -2887,7 +2897,7 @@ void gks_move_selection(double x, double y)
 
       /* call the device driver link routine */
       gks_ddlk(MOVE_SELECTION,
-	0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, NULL); 
+	0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, NULL);
     }
   else
     /* GKS not in proper state. GKS must be either in the state
@@ -2905,7 +2915,7 @@ void gks_resize_selection(int kind, double x, double y)
 
       /* call the device driver link routine */
       gks_ddlk(RESIZE_SELECTION,
-	1, 1, 1, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, NULL); 
+	1, 1, 1, i_arr, 1, f_arr_1, 1, f_arr_2, 0, c_arr, NULL);
     }
   else
     /* GKS not in proper state. GKS must be either in the state

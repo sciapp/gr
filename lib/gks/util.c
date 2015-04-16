@@ -3188,3 +3188,72 @@ void gks_filepath(char *path, const char *type, int page, int index)
   strcat(path, ".");
   strcat(path, type);
 }
+
+void gks_adjust_cellarray(
+  double *qx, double *qy, double *rx, double *ry,
+  int *scol, int *srow, int *ncol, int *nrow, int dimx, int dimy)
+{
+  double xmin, xmax, ymin, ymax, tmp, dx, dy;
+
+  WC_to_NDC(*qx, *qy, gkss->cntnr, xmin, ymin);
+  WC_to_NDC(*rx, *ry, gkss->cntnr, xmax, ymax);
+
+  if (*rx < *qx)
+    {
+      tmp = xmax; xmax = xmin; xmin = tmp;
+    }
+  if (*ry < *qy)
+    {
+      tmp = ymax; ymax = ymin; ymin = tmp;
+    }
+
+  dx = (xmax - xmin) / *ncol;
+  dy = (ymax - ymin) / *nrow;
+
+  while (xmin + dx < 0 && *ncol > 0)
+    {
+      xmin += dx;
+      *scol += 1;
+      *ncol -= 1;
+      if (xmin >= xmax || *scol + *ncol - 1 > dimx)
+        *ncol = 0;
+    }
+  while (xmax - dx > 1 && *ncol > 0)
+    {
+      xmax -= dx;
+      *ncol -= 1;
+      if (xmin >= xmax)
+        *ncol = 0;
+    }
+
+  while (ymin + dy < 0 && *ncol > 0 && *nrow > 0)
+    {
+      ymin += dy;
+      *srow += 1;
+      *nrow -= 1;
+      if (ymin >= ymax || *srow + *nrow - 1 > dimy)
+        *nrow = 0;
+    }
+  while (ymax - dy > 1 && *ncol > 0 && *nrow > 0)
+    {
+      ymax -= dy;
+      *nrow -= 1;
+      if (ymin >= ymax)
+        *nrow = 0;
+    }
+
+  if (xmax - xmin > 3 || ymax - ymin > 3)
+     *ncol = *nrow = 0;
+
+  if (*rx < *qx)
+    {
+      tmp = xmax; xmax = xmin; xmin = tmp;
+    }
+  if (*ry < *qy)
+    {
+      tmp = ymax; ymax = ymin; ymin = tmp;
+    }
+
+  NDC_to_WC(xmin, ymin, gkss->cntnr, *qx, *qy);
+  NDC_to_WC(xmax, ymax, gkss->cntnr, *rx, *ry);
+}
