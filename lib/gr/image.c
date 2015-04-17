@@ -40,11 +40,9 @@ int read_jpeg_image(char *path, int *width, int *height, int **data)
 	(int *) malloc(cinfo.output_width * cinfo.output_height *
 		       sizeof(int));
 
-      row_stride =
-	cinfo.output_width * cinfo.output_height * 3 * sizeof(char);
-      buffer =
-	(*cinfo.mem->alloc_sarray) ((j_common_ptr) & cinfo, JPOOL_IMAGE,
-				    row_stride, 1);
+      row_stride = cinfo.output_width * cinfo.output_components;
+      buffer = (*cinfo.mem->alloc_sarray) ((j_common_ptr) & cinfo, JPOOL_IMAGE,
+					   row_stride, 1);
       bpix = cinfo.output_components;
       y = 0;
       while (cinfo.output_scanline < cinfo.output_height)
@@ -56,7 +54,10 @@ int read_jpeg_image(char *path, int *width, int *height, int **data)
 	      r = buffer[0][i];
 	      g = buffer[0][i + 1] << 8;
 	      b = buffer[0][i + 2] << 16;
-              a = 255 << 24;
+	      if (bpix == 4)
+		a = buffer[0][i + 3] << 24;
+	      else
+		a = 255 << 24;
 	      *dataP++ = r | g | b | a;
 	      x++;
 	    }
@@ -167,7 +168,7 @@ int read_png_image(char *path, int *width, int *height, int **data)
 				}
 			      if (channels > 3)
 				a = ptr[3];
-                              else
+			      else
 				a = 255;
 			      *dataP++ = r | (g << 8) | (b << 16) | (a << 24);
 			    }
