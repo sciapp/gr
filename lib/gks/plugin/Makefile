@@ -19,6 +19,7 @@
     GTKDEFS =
      GTKINC = `$(GTK_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
     GTKLIBS = `$(GTK_CONFIG) gtk+-2.0 --libs 2>/dev/null`
+   JPEGLIBS = -L../../../3rdparty/jpeg -ljpeg
     PNGLIBS = -L../../../3rdparty/png -lpng
      GSDEFS = 
       GSINC =
@@ -41,7 +42,7 @@ ifneq ($(AVLIBS),)
 endif
 endif
   MUPDFDEFS = 
-  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec -ljpeg -lopenjp2 -lz
+  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 -lz
     X11DEFS =
     X11LIBS = $(X11PATH) -lfontconfig -lXt -lX11
     ZMQDEFS = 
