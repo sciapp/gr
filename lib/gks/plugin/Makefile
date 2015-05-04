@@ -12,8 +12,18 @@
      WXDEFS =
       WXINC = `$(WX_CONFIG) --cxxflags 2>/dev/null`
      WXLIBS = `$(WX_CONFIG) --libs 2>/dev/null`
+ifeq ($(UNAME_S),Darwin)
+ifneq ($(WXLIBS),)
+     WXLIBS += -mmacosx-version-min=10.5
+endif
+endif
      QTDEFS =
       QTINC = -I$(QTDIR)/include
+ifeq ($(UNAME_S),Darwin)
+ifneq ($(QTINC),)
+     QTINC += -mmacosx-version-min=10.5
+endif
+endif
      QTLIBS = -L$(QTDIR)/lib -lQtGui -lQtCore
  GTK_CONFIG = false
     GTKDEFS =

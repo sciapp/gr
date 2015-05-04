@@ -19,7 +19,7 @@ Darwin: all
 all:
 	@for d in $(DIRS); do make -C $$d GRDIR=$(GRDIR); done
 ifeq ($(UNAME), Darwin)
-	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj
+	(env CC=cc xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj)
 endif
 
 version:
@@ -41,7 +41,7 @@ clean:
 	rm -f Makedefs
 	@for d in $(DIRS); do make -C $$d clean; done
 ifeq ($(UNAME), Darwin)
-	xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean
+	(env CC=cc xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean)
 endif
 	cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
 	rm -f lib/gr/python/gr/_version.py
