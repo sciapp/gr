@@ -57,4 +57,5 @@ install: targets
 clean:
 	@make -C ../gr clean
 	rm -rf libGR3.so*
+	rm -f *.o
 	rm -f *.pyc
