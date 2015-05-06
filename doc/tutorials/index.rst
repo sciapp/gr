@@ -10,6 +10,7 @@ Tutorials
    gr3_wx.rst
    matplotlib.rst
    mpl_interop.rst
+   docker.rst
 
 Here you can find some interesting Jupyter notebooks:
 
