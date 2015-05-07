@@ -5600,7 +5600,7 @@ void gr_drawarc(
   double xmin, double xmax, double ymin, double ymax, int a1, int a2)
 {
   double xcenter, ycenter, width, height;
-  int a, n;
+  int start, end, a, n;
   double x[361], y[361];
 
   check_autoinit;
@@ -5610,13 +5610,12 @@ void gr_drawarc(
   width   = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
   height  = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
 
-  a1 %= 360;
-  a2 %= 360;
-  if (a2 <= a1)
-    a2 += 360;
+  start  = min(a1, a2);
+  end    = max(a1, a2);
+  start += (end - start) / 360 * 360;
 
   n = 0;
-  for (a = a1; a <= a2; a++)
+  for (a = start; a <= end; a++)
     {
       x[n] = x_log(xcenter + width  * cos(a * M_PI / 180));
       y[n] = y_log(ycenter + height * sin(a * M_PI / 180));
@@ -5637,7 +5636,7 @@ void gr_fillarc(
   double xmin, double xmax, double ymin, double ymax, int a1, int a2)
 {
   double xcenter, ycenter, width, height;
-  int a, n;
+  int start, end, a, n;
   double x[361], y[361];
 
   check_autoinit;
@@ -5647,13 +5646,12 @@ void gr_fillarc(
   width   = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
   height  = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
 
-  a1 %= 360;
-  a2 %= 360;
-  if (a2 <= a1)
-    a2 += 360;
+  start  = min(a1, a2);
+  end    = max(a1, a2);
+  start += (end - start) / 360 * 360;
 
   n = 0;
-  for (a = a1; a <= a2; a++)
+  for (a = start; a <= end; a++)
     {
       x[n] = x_log(xcenter + width  * cos(a * M_PI / 180));
       y[n] = y_log(ycenter + height * sin(a * M_PI / 180));
