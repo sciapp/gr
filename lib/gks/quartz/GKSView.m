@@ -230,6 +230,15 @@ void init_colors(void)
 }
 
 static
+void update_color(int color)
+{
+  if (CGColorGetAlpha(p->rgb[color]) != gkss->alpha)
+    {
+      p->rgb[color] = CGColorCreateCopyWithAlpha(p->rgb[color], gkss->alpha);
+    }
+}
+
+static
 void set_xform(void)
 {
   p->a = (p->width) / (p->window[1] - p->window[0]);
@@ -966,11 +975,13 @@ void seg_xform_rel(double *x, double *y)
 
 - (void) set_fill_color: (int) color : (CGContextRef) context
 {
+  update_color(color);
   CGContextSetFillColorWithColor(context, p->rgb[color]);
 }
 
 - (void) set_stroke_color: (int) color : (CGContextRef) context
 {
+  update_color(color);
   CGContextSetStrokeColorWithColor(context, p->rgb[color]);
 }
 
@@ -1615,8 +1626,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
     cgfont = cgfontrefs[p->family];
     CTFontRef font = CTFontCreateWithGraphicsFont(cgfont, fontsize, &CGAffineTransformIdentity, NULL);
     CFStringRef cfstring = CFStringCreateWithCString(kCFAllocatorDefault, text, kCFStringEncodingISOLatin1);
-    CFStringRef keys[] = {kCTFontAttributeName};
-    CFTypeRef values[] = {font};
+    CFStringRef keys[] = {kCTFontAttributeName, kCTForegroundColorFromContextAttributeName};
+    CFTypeRef values[] = {font, kCFBooleanTrue};
     CFDictionaryRef attributes = CFDictionaryCreate(kCFAllocatorDefault,
                                                     (const void**)&keys,
                                                     (const void**)&values,
@@ -1637,6 +1648,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
     CharXform(xrel, yrel, ax, ay);
     xstart += ax;
     ystart += ay;
+
+    update_color(tx_color);
 
     // Setup the rendering properties and draw the text line
     CGContextSetTextDrawingMode(context, kCGTextFill);
