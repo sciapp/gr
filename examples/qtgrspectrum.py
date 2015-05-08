@@ -7,7 +7,6 @@ Sample microphone input and display power spectrum in QtGR.
 
 # standard library
 import sys
-setattr(sys, "QT_BACKEND_ORDER", ["PyQt4", "PySide"])
 # third party
 import pyaudio
 import numpy

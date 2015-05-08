@@ -1,27 +1,9 @@
 # -*- coding: utf-8 -*-
 
 # standard library
-import math
 import logging
-# third party
-def _importPySide():
-    global QtCore
-    from PySide import QtCore
-
-def _importPyQt4():
-    global QtCore
-    from PyQt4 import QtCore
-
-from qtgr.backend import QT_BACKEND_ORDER, QT_PYSIDE, QT_PYQT4
-_imp = {QT_PYSIDE: _importPySide,
-        QT_PYQT4: _importPyQt4}
-try:
-    _imp[QT_BACKEND_ORDER[0]]()
-except ImportError:
-    _imp[QT_BACKEND_ORDER[1]]()
 # local library
-import gr
-import qtgr
+from qtgr.backend import QtCore
 from qtgr.events.base import EventMeta, MouseLocationEventMeta
 from gr.pygr.base import GRViewPort
 from gr._version import __version__, __revision__
@@ -49,7 +31,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
- 
+
 """
 
 _log = logging.getLogger(__name__)
@@ -232,10 +214,10 @@ class CallbackManager(object):
 
     def removeHandler(self, type, handle):
         """
-        
+
         @raise   KeyError: if type not in self._handler
         @raise ValueError: if handle not in self._handler[type]
-        
+
         """
         self._handler[type].remove(handle)
         if not self._handler[type]: # if empty
@@ -243,9 +225,9 @@ class CallbackManager(object):
 
     def getHandler(self, type):
         """
-        
+
         @raise KeyError: if type not in self._handler
-        
+
         """
         return self._handler[type]
 

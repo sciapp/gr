@@ -7,7 +7,6 @@ Plotting two-dimensional live data using QtGR.
 
 # standard library
 import sys
-setattr(sys, "QT_BACKEND_ORDER", ["PyQt4", "PySide"])
 # third party
 from PyQt4 import QtCore
 from PyQt4 import QtGui

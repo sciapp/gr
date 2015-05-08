@@ -7,7 +7,6 @@ Demo showing the capabilities of qtgr
 
 # standard library
 import sys
-setattr(sys, "QT_BACKEND_ORDER", ["PyQt4", "PySide"])
 import os
 import time
 import logging

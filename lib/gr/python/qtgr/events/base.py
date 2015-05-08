@@ -2,25 +2,8 @@
 """..."""
 # standard library
 import logging
-# third party
-def _importPySide():
-    global QtCore
-    from PySide import QtCore
-
-def _importPyQt4():
-    global QtCore
-    from PyQt4 import QtCore
-
-from qtgr.backend import QT_BACKEND_ORDER, QT_PYSIDE, QT_PYQT4
-_imp = {QT_PYSIDE: _importPySide,
-        QT_PYQT4: _importPyQt4}
-try:
-    _imp[QT_BACKEND_ORDER[0]]()
-except ImportError:
-    _imp[QT_BACKEND_ORDER[1]]()
 # local library
-import gr
-import qtgr
+from qtgr.backend import QtCore
 from gr.pygr import DeviceCoordConverter
 from gr._version import __version__, __revision__
 
@@ -47,7 +30,7 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GR. If not, see <http://www.gnu.org/licenses/>.
- 
+
 """
 
 _log = logging.getLogger(__name__)

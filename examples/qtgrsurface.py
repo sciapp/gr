@@ -8,7 +8,6 @@ Plot surface and contour lines using QtGR.
 # standard library
 import sys
 import os
-setattr(sys, "QT_BACKEND_ORDER", ["PyQt4", "PySide"])
 # third party
 from PyQt4 import QtCore
 from PyQt4 import QtGui

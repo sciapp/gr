@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """PyQt, PySide GR module
 
@@ -9,44 +8,10 @@ Exported Classes:
 import os
 import math
 import logging
-# third party
-getGKSConnectionId = None
-def _getGKSConnectionIdPySide(widget, painter):
-    return "%x!%x" % (long(shiboken.getCppPointer(widget)[0]),
-                      long(shiboken.getCppPointer(painter)[0]))
-
-def _getGKSConnectionIdPyQt4(widget, painter):
-    return "%x!%x" % (sip.unwrapinstance(widget),
-                      sip.unwrapinstance(painter))
-
-def _importPySide():
-    global QtCore, QtGui, shiboken, getGKSConnectionId
-    from PySide import QtCore
-    from PySide import QtGui
-    try:
-        from PySide import shiboken
-    except ImportError:
-        import shiboken # Anaconda
-    getGKSConnectionId = _getGKSConnectionIdPySide
-
-def _importPyQt4():
-    global QtCore, QtGui, sip, getGKSConnectionId
-    from PyQt4 import QtCore
-    from PyQt4 import QtGui
-    import sip
-    getGKSConnectionId = _getGKSConnectionIdPyQt4
-    QtCore.Signal = QtCore.pyqtSignal
-
-from qtgr.backend import QT_BACKEND_ORDER, QT_PYSIDE, QT_PYQT4
-_imp = {QT_PYSIDE: _importPySide,
-        QT_PYQT4: _importPyQt4}
-try:
-    _imp[QT_BACKEND_ORDER[0]]()
-except ImportError:
-    _imp[QT_BACKEND_ORDER[1]]()
 # local library
 import gr
 import qtgr.events
+from qtgr.backend import QtCore, QtGui, getGKSConnectionId
 from gr.pygr import Plot, PlotAxes, RegionOfInterest, DeviceCoordConverter
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent, \
     LegendEvent
@@ -194,20 +159,19 @@ class GRWidget(QtGui.QWidget):
         dlg = QtGui.QPrintDialog(printer)
         if dlg.exec_() == QtGui.QPrintDialog.Accepted:
             painter.begin(printer)
-            os.environ["GKSconid"] = "%x!%x" % (sip.unwrapinstance(self),
-                                               sip.unwrapinstance(painter))
+            os.environ["GKSconid"] = getGKSConnectionId(self, painter)
 
             # upscaling to paper size and
             # alignment (horizontal and vertical centering)
-            xscale = printer.pageRect().width() / float(self.width());
-            yscale = printer.pageRect().height() / float(self.height());
-            scale = min(xscale, yscale);
+            xscale = printer.pageRect().width() / float(self.width())
+            yscale = printer.pageRect().height() / float(self.height())
+            scale = min(xscale, yscale)
             painter.translate(printer.paperRect().x() +
                               printer.pageRect().width() / 2,
                               printer.paperRect().y() +
                               printer.pageRect().height() / 2)
-            painter.scale(scale, scale);
-            painter.translate(-self.width() / 2, -self.height() / 2);
+            painter.scale(scale, scale)
+            painter.translate(-self.width() / 2, -self.height() / 2)
 
             self.draw(True)
             gr.updatews()
