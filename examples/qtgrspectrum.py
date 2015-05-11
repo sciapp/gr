@@ -10,13 +10,12 @@ import sys
 # third party
 import pyaudio
 import numpy
-from PyQt4 import QtCore
-from PyQt4 import QtGui
 from numpy import arange, sin, pi
 from scipy import signal
 # local library
 import gr
 from gr.pygr import Plot, PlotAxes, PlotCurve
+from qtgr.backend import QtCore, QtGui
 from qtgr import InteractiveGRWidget
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
@@ -176,3 +175,4 @@ def main(*args):
 
 if __name__ == "__main__":
     main(sys.argv)
+

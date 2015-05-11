@@ -8,11 +8,10 @@ Plotting two-dimensional live data using QtGR.
 # standard library
 import sys
 # third party
-from PyQt4 import QtCore
-from PyQt4 import QtGui
 from numpy import arange, sin, pi
 # local library
 from gr.pygr import Plot, PlotAxes, PlotCurve
+from qtgr.backend import QtCore, QtGui
 from qtgr import InteractiveGRWidget
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
@@ -84,3 +83,4 @@ def main(*args):
 
 if __name__ == "__main__":
     main(sys.argv)
+
