@@ -2968,11 +2968,12 @@ void gr_axes(double x_tick, double y_tick, double x_org, double y_org,
 }
 
 static
-void grid_line(double x0, double y0, double x1, double y1, double tick)
+void grid_line(double x0, double y0, double x1, double y1, int color, int major)
 {
-  int color = tick < 0 ? 88 : 90;
-
-  gks_set_pline_color_index(color);
+  if (color != 0)
+    gks_set_pline_color_index(major ? 88 : 90);
+  else
+    gks_set_pline_linewidth(major ? 2.0 : 1.0);
 
   start_pline(x0, y0);
   pline(x1, y1);
@@ -2983,12 +2984,13 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
              int major_x, int major_y)
 {
   int errind, tnr;
-  int ltype, color, clsw;
+  int ltype, color, clsw, major;
+  double width;
 
   double clrt[4], wn[4], vp[4];
   double x_min, x_max, y_min, y_max;
 
-  double x0, y0, xi, yi, tick;
+  double x0, y0, xi, yi;
 
   int i;
 
@@ -3016,9 +3018,10 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
       return;
     }
 
-  /* save linetype, line color and clipping indicator */
+  /* save linetype, line width, line color and clipping indicator */
 
   gks_inq_pline_linetype(&errind, &ltype);
+  gks_inq_pline_linewidth(&errind, &width);
   gks_inq_pline_color_index(&errind, &color);
   gks_inq_clip(&errind, &clsw, clrt);
 
@@ -3040,13 +3043,9 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
             {
               if (i == 0 || major_y == 1)
                 {
-                  if (i == 0)
-                    tick = -1.;
-                  else
-                    tick = x_tick;
-
+                  major = i == 0;
                   if (fabs(yi - y_min) > FEPS * yi)
-                    grid_line(x_min, yi, x_max, yi, tick);
+                    grid_line(x_min, yi, x_max, yi, color, major);
                 }
 
               if (i == 9)
@@ -3072,17 +3071,12 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
           while (yi <= y_max)
             {
               if (major_y > 0)
-                {
-                  if (i % major_y == 0)
-                    tick = -1.;
-                  else
-                    tick = y_tick;
-                }
+                major = i % major_y == 0;
               else
-                tick = -1.;
+                major = 0;
 
               if (fabs(yi - y_min) > FEPS * yi)
-                grid_line(x_min, yi, x_max, yi, tick);
+                grid_line(x_min, yi, x_max, yi, color, major);
 
               i++;
               yi = y_org + i * y_tick;
@@ -3105,13 +3099,9 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
             {
               if (i == 0 || major_x == 1)
                 {
-                  if (i == 0)
-                    tick = -1.;
-                  else
-                    tick = x_tick;
-
+                  major = i == 0;
                   if (fabs(xi - x_min) > FEPS * xi)
-                    grid_line(xi, y_min, xi, y_max, tick);
+                    grid_line(xi, y_min, xi, y_max, color, major);
                 }
 
               if (i == 9)
@@ -3137,17 +3127,12 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
           while (xi <= x_max)
             {
               if (major_x > 0)
-                {
-                  if (i % major_x == 0)
-                    tick = -1.;
-                  else
-                    tick = x_tick;
-                }
+                major = i % major_x == 0;
               else
-                tick = -1.;
+                major = 0;
 
               if (fabs(xi - x_min) > FEPS * xi)
-                grid_line(xi, y_min, xi, y_max, tick);
+                grid_line(xi, y_min, xi, y_max, color, major);
 
               i++;
               xi = x_org + i * x_tick;
@@ -3155,9 +3140,10 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
         }
     }
 
-  /* restore linetype, line color and clipping indicator */
+  /* restore linetype, line width, line color and clipping indicator */
 
   gks_set_pline_linetype(ltype);
+  gks_set_pline_linewidth(width);
   gks_set_pline_color_index(color);
   gks_set_clipping(clsw);
 
