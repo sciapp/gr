@@ -156,20 +156,25 @@ class Point(object):
         """Calculate euclidean norm."""
         return math.sqrt(self * self)
 
+
 class RegionOfInterest(object):
 
     LEGEND = 0x1
+    TEXT = 0x2
 
     def __init__(self, *args, **kwargs):
         self._poly, self._x, self._y = None, None, None
         self._ref = None
         self._regionType = None
+        self._axes = None
         for p in args:
             self.append(p)
         if "reference" in kwargs:
             self._ref = kwargs["reference"]
         if "regionType" in kwargs:
             self._regionType = kwargs["regionType"]
+        if "axes" in kwargs:
+            self._axes = kwargs["axes"]
 
     @property
     def x(self):
@@ -209,6 +214,19 @@ class RegionOfInterest(object):
             self._x.append(p0.x)
             self._y.append(p0.y)
 
+    def _getNDCPoly(self):
+        poly = []
+        if self._poly:
+            if self._axes:
+                coord = CoordConverter(self._axes.sizex, self._axes.sizey,
+                                       self._axes.getWindow())
+                for pWC in self._poly:
+                    coord.setWCforPlotAxes(pWC.x, pWC.y, self._axes)
+                    poly.append(coord.getNDC())
+            else:
+                poly = self._poly
+        return poly
+
     def isPointInside(self, p0):
         """
         
@@ -218,11 +236,12 @@ class RegionOfInterest(object):
         # count intersections along this ray.
         # If odd inside - outside otherwise.
         res = False
-        if self._poly:
-            n = len(self._poly)
+        poly = self._getNDCPoly()
+        if poly:
+            n = len(poly)
             j = n - 1
             for i in range(n):
-                pi, pj = self._poly[i], self._poly[j]
+                pi, pj = poly[i], poly[j]
                 # if testpoint y component between pi, pj
                 # => intersection possible
                 if (((pi.y > p0.y) != (pj.y > p0.y)) and
@@ -639,7 +658,9 @@ class Plot(GRViewPort, GRMeta):
         self._title, self._subTitle = None, None
         self._lblX, self._lblY = None, None
         self._offsetLblX, self._offsetLblY = 0., 0.
-        self._legend, self._legendROI = False, None
+        self._legend = False
+        self._legendROI = []
+        self._rois = []
         self._autoscale = 0x0
         self._countAxes = 0
 
@@ -938,12 +959,18 @@ class Plot(GRViewPort, GRMeta):
                 self.reset()
                 break
 
+    def addROI(self, roi):
+        if roi not in self._rois:
+            self._rois.append(roi)
+            _log.debug("#rois: %d", len(self._rois))
+        else:
+            _log.debug("found existing roi")
+
     def getROI(self, p0):
         res = None
-        if self._legendROI:
-            for roi in self._legendROI:
-                if roi.isPointInside(p0):
-                    res = roi
+        for roi in self._legendROI + self._rois:
+            if roi.isPointInside(p0):
+                res = roi
         return res
 
     def addAxes(self, *args, **kwargs):
@@ -1085,8 +1112,6 @@ class Plot(GRViewPort, GRMeta):
                             tbx = gr.inqtext(0, 0, "X")[0]
                             charWidth = max(tbx) - min(tbx)
                             x += charWidth
-                if not self._legendROI:
-                    self._legendROI = None
                 # restore old values
                 gr.setlinecolorind(lcolor)
                 gr.setmarkercolorind(mcolor)
