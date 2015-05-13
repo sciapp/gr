@@ -132,9 +132,16 @@ class EventFilter(QtCore.QObject):
         self._last_btn_mask = None
 
     def handleEvent(self, event):
-        if self._manager.hasHandler(event.type()):
-            for handle in self._manager.getHandler(event.type()):
-                handle(event)
+        etype = event.type()
+        cls = type(event)
+        if self._manager.hasHandler(etype):
+            handles = self._manager.getHandler(etype)
+        elif self._manager.hasHandler(etype, cls):
+            handles = self._manager.getHandler(etype, cls)
+        else:
+            handles = []
+        for handle in handles:
+            handle(event)
 
     def wheelEvent(self, type, target, event):
         """transform QWheelEvent to WheelEvent"""
@@ -203,33 +210,33 @@ class CallbackManager(object):
     def __init__(self):
         self._handler = {}
 
-    def hasHandler(self, type):
-        return type in self._handler
+    def hasHandler(self, type, cls=None):
+        return (type, cls) in self._handler
 
-    def addHandler(self, type, handle):
-        if self.hasHandler(type):
-            self._handler[type].append(handle)
+    def addHandler(self, type, handle, cls=None):
+        if self.hasHandler(type, cls):
+            self._handler[type, cls].append(handle)
         else:
-            self._handler[type] = [handle]
+            self._handler[type, cls] = [handle]
 
-    def removeHandler(self, type, handle):
+    def removeHandler(self, type, handle, cls=None):
         """
 
         @raise   KeyError: if type not in self._handler
         @raise ValueError: if handle not in self._handler[type]
 
         """
-        self._handler[type].remove(handle)
-        if not self._handler[type]: # if empty
-            self._handler.pop(type)
+        self._handler[type, cls].remove(handle)
+        if not self._handler[type, cls]: # if empty
+            self._handler.pop((type, cls))
 
-    def getHandler(self, type):
+    def getHandler(self, type, cls=None):
         """
 
         @raise KeyError: if type not in self._handler
 
         """
-        return self._handler[type]
+        return self._handler[type, cls]
 
 class GUIConnector(object):
 
@@ -238,8 +245,8 @@ class GUIConnector(object):
         self._eventFilter = EventFilter(parent, self._manager)
         parent.installEventFilter(self._eventFilter)
 
-    def connect(self, type, handle):
-        self._manager.addHandler(type, handle)
+    def connect(self, type, handle, cls=None):
+        self._manager.addHandler(type, handle, cls)
 
-    def disconnect(self, type, handle):
-        self._manager.removeHandler(type, handle)
+    def disconnect(self, type, handle, cls=None):
+        self._manager.removeHandler(type, handle, cls)
