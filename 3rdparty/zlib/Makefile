@@ -1,10 +1,5 @@
-CC=cc
 CFLAGS=-O -fPIC -DHAVE_HIDDEN $(ARCHS)
 LIBS=libz.a
-AR=ar rc
-RANLIB=ranlib
-TAR=tar
-SHELL=/bin/sh
 
 OBJS = \
         adler32.o \
@@ -24,8 +19,8 @@ OBJS = \
         gzwrite.o
 
 libz.a: $(OBJS)
-	$(AR) $@ $(OBJS)
-	-@ ($(RANLIB) $@ || true) >/dev/null 2>&1
+	$(AR) crv $@ $?
+	$(AR) ts $@
 
 distclean: clean
 
