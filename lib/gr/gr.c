@@ -3012,12 +3012,6 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
   y_min = wn[2];
   y_max = wn[3];
 
-  if (x_min > x_org || x_org > x_max || y_min > y_org || y_org > y_max)
-    {
-      fprintf(stderr, "origin outside current window\n");
-      return;
-    }
-
   /* save linetype, line width, line color and clipping indicator */
 
   gks_inq_pline_linetype(&errind, &ltype);
