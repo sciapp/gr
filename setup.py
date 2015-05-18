@@ -1454,20 +1454,22 @@ if sys.platform == "darwin":
 else:
     _scripts = None
 
+_long_description = None
+try:
+    with open("README.rst", 'r') as fd:
+        _long_description = fd.read()
+except IOError as e:
+    print("WARNING: long_description could not be read from file. Error message was:\n", e, file=sys.stderr)
+
+
 setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
                 "build_static": build_static, "clean_static": clean_static,
                 "clean": clean, "tests": run_tests},
       name="gr",
       version=__version__,
       description="Python visualization framework",
-      long_description="""
-        GR is a universal framework for cross-platform visualization
-        applications. It offers developers a compact, portable and consistent
-        graphics library for their programs. Applications range from
-        publication quality 2D graphs to the representation of complex 3D
-        scenes.
-        """,
-      author="Scientific IT-Systems",
+      long_description=_long_description,
+      author="Scientific IT Systems",
       author_email="j.heinen@fz-juelich.de",
       license="GNU General Public License",
       url="http://gr-framework.org",
