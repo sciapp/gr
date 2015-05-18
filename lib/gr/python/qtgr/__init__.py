@@ -407,7 +407,7 @@ class InteractiveGRWidget(GRWidget):
             else:
                 self._roi(p0, ROIEvent.ROI_CLICKED, event.getButtons(),
                           event.getModifiers())
-        elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
+        elif event.getButtons() & MouseEvent.RIGHT_BUTTON and self._mouseRight:
             self._mouseRight = False
             self._roi(event.getNDC(), ROIEvent.ROI_CLICKED, event.getButtons(),
                       event.getModifiers())
@@ -426,6 +426,7 @@ class InteractiveGRWidget(GRWidget):
             self._curPoint = event
             if self.getMousePanEnabled():
                 self._pan(self._startPoint.getNDC(), dp)
+                self._mouseRight = False
         self._roi(event.getNDC(), ROIEvent.ROI_OVER, event.getButtons(),
                   event.getModifiers())
 
