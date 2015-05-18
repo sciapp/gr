@@ -659,6 +659,7 @@ class Plot(GRViewPort, GRMeta):
         self._lblX, self._lblY = None, None
         self._offsetLblX, self._offsetLblY = 0., 0.
         self._legend = False
+        self._legendWidth = 0.1
         self._legendROI = []
         self._rois = []
         self._autoscale = 0x0
@@ -826,6 +827,9 @@ class Plot(GRViewPort, GRMeta):
 
     def setLegend(self, bool):
         self._legend = bool
+
+    def setLegendWidth(self, width):
+        self._legendWidth = width
 
     @property
     def autoscale(self):
@@ -1063,7 +1067,7 @@ class Plot(GRViewPort, GRMeta):
                         if curve.legend:
                             tbx, tby = gr.inqtext(0, 0, curve.legend)
                             textWidth = max(tbx) - min(tbx)
-                            lineWidth = .1
+                            lineWidth = self._legendWidth
                             if x + lineWidth + textWidth > self.sizex:
                                 x = xmin
                                 y -= 2 * charHeightUnscaled
