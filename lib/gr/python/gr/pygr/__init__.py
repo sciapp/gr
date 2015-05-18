@@ -1085,10 +1085,10 @@ class Plot(GRViewPort, GRMeta):
                                 if (curve.markertype != gr.MARKERTYPE_DOT
                                     and curve.markertype is not None):
                                     gr.setmarkertype(curve.markertype)
-                                    gr.polymarker([x + .1 / 2.], [ys])
+                                    gr.polymarker([x + lineWidth / 2.], [ys])
                             elif curve.markertype is not None:
                                 gr.setmarkertype(curve.markertype)
-                                gr.polymarker([x + .1 / 2.], [ys])
+                                gr.polymarker([x + lineWidth / 2.], [ys])
 
                             ybase = (y - charHeightUnscaled / 2) * self.sizey
                             ytop = (y + charHeightUnscaled / 2) * self.sizey
@@ -1096,7 +1096,7 @@ class Plot(GRViewPort, GRMeta):
                                                    Point(x, ytop),
                                                    reference=curve,
                                            regionType=RegionOfInterest.LEGEND)
-                            x += .11
+                            x += lineWidth + .01
                             if curve.visible:
                                 gr.settextcolorind(1)
                             else:
