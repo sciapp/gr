@@ -367,11 +367,14 @@ class InteractiveGRWidget(GRWidget):
                     eventObj = LegendEvent
                 else:
                     eventObj = ROIEvent
+                coords = DeviceCoordConverter(self.dwidth, self.dheight)
+                coords.setNDC(p0.x, p0.y)
+                p0dc = coords.getDC()
                 QtGui.QApplication.sendEvent(self,
                                              eventObj(type,
                                                       self.dwidth,
                                                       self.dheight,
-                                                      p0.x, p0.y,
+                                                      p0dc.x, p0dc.y,
                                                       buttons, modifiers,
                                                       roi))
 
