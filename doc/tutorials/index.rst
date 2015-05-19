@@ -7,6 +7,7 @@ Tutorials
 
 .. toctree::
 
+   using_gr.rst
    gr3_wx.rst
    matplotlib.rst
    mpl_interop.rst
