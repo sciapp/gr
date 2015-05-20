@@ -1239,7 +1239,11 @@ void write_page(void)
     }
 }
 
+#ifndef EMSCRIPTEN
 void gks_svgplugin(
+#else
+void gks_drv_js(
+#endif
   int fctid, int dx, int dy, int dimx, int *ia,
   int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
