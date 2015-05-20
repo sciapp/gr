@@ -13,7 +13,7 @@ INCLUDES = -I$(GRDIR) -I$(GKSDIR) -I$(PNGDIR) -I$(ZLIBDIR)
     LIBS = $(PNGDIR)/libpng.a $(ZLIBDIR)/libz.a
  BACKEND = $(GKSDIR)/pdf.c
 
-.PHONY: .SECONDARY
+.PHONY: default svg clean js.c .SECONDARY
 
 .SECONDARY:
 
@@ -54,3 +54,4 @@ clean:
 	rm -rf fonts
 	cd $(PNGDIR) && make clean
 	cd $(ZLIBDIR) && make clean
+	rm -rf $(OBJS)
