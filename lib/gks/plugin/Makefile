@@ -52,7 +52,7 @@ ifneq ($(AVLIBS),)
 endif
 endif
   MUPDFDEFS = 
-  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 -lz
+  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 -lssl -lcrypto -lz
     X11DEFS =
     X11LIBS = $(X11PATH) -lfontconfig -lXt -lX11
     ZMQDEFS = 

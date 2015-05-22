@@ -23,7 +23,7 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
      XFTLIBS = -lXft -lfontconfig
-   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2
+   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 -lssl -lcrypto
      X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
        ZLIBS = -lz
 
