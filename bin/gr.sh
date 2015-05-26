@@ -18,16 +18,9 @@ then
   fi
   shift
 fi
-if [ $# -gt 0 ]
+if [ $# -eq 0 -a ${python} != "ipython" ]
 then
-  args="$*"
-else
-  if [ ${python} != "ipython" ]
-  then
-    args="-"
-  else
-    args=""
-  fi
+  set -- "-"
 fi
 cwd="${PWD}"
 cd "$(dirname "${0}")"
@@ -40,7 +33,7 @@ name="${PWD}/$(basename "${0}")"
 cd "${cwd}"
 GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
 opts=""
-if [ "${MPLBACKEND}" == "gr" ]
+if [ "${MPLBACKEND}" = "gr" ]
 then
   if [ ${python} != "ipython" ]
   then
@@ -64,4 +57,4 @@ if [ -f ${GRDIR}/etc/grrc ]
 then
   . ${GRDIR}/etc/grrc
 fi
-exec ${PYTHONHOME}/bin/${python} ${args} ${opts}
+exec ${PYTHONHOME}/bin/${python} "$@" ${opts}
