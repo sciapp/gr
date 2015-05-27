@@ -25,22 +25,22 @@ DESTDIR = $(GRDIR)
 default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) libgr.lib
 
 $(GKSLIBS):
-	@cd ../gks
+	@cd ..\gks
 	@$(MAKE) /f makefile.vc
-	@cd ../gr
+	@cd ..\gr
 
 $(JPEGLIBS):
-	@cd ../../3rdparty/jpeg
+	@cd ..\..\3rdparty/jpeg
 	@$(MAKE) /f makefile.vc
 	@cd ..\..\lib\gr
 
 $(PNGLIBS):
-	@cd ../../3rdparty/png
+	@cd ..\..\3rdparty\png
 	@$(MAKE) /f makefile.vc
 	@cd ..\..\lib\gr
 
 $(ZLIBS):
-	@cd ../../3rdparty/zlib
+	@cd ..\..\3rdparty\zlib
 	@$(MAKE) /f makefile.vc
 	@cd ..\..\lib\gr
 
@@ -71,17 +71,18 @@ install: default
 	COPY /Y ..\gks\libgks.dll $(DESTDIR)
 	COPY /Y ..\gks\libgks.lib $(DESTDIR)
 	COPY /Y ..\gks\gks.h $(DESTDIR)
+	COPY /Y ..\gks\plugin\*.dll $(DESTDIR)
 	IF NOT EXIST $(DESTDIR)\fonts MKDIR $(DESTDIR)\fonts
 	COPY /Y ..\gks\gksfont.dat $(DESTDIR)\fonts
 
 clean:
-	@cd ../gks
+	@cd ..\gks
 	@$(MAKE) /f makefile.vc clean
-	@cd ../../3rdparty/zlib
+	@cd ..\..\3rdparty\zlib
 	@$(MAKE) /f makefile.vc clean
-	@cd ../../3rdparty/png
+	@cd ..\..\3rdparty\png
 	@$(MAKE) /f makefile.vc clean
-	@cd ../../3rdparty/jpeg
+	@cd ..\..\3rdparty/jpeg
 	@$(MAKE) /f makefile.vc clean
 	@cd ..\..\lib\gr
 	DEL libgr.dll

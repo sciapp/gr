@@ -3,11 +3,13 @@ QTDIR = S:\Qt\4.8.5
 GSDIR = S:\gs\gs9.06
 WXDIR = S:\wxWidgets
 DEFINES = /DGRDIR=\"$(GRDIR)\" /DNO_FT /DNO_X11 /D_DLL /MD /D_POSIX /DWXUSINGDLL /DwxMSVC_VERSION_AUTO /D_UNICODE
-INCLUDES = /I.. /I$(QTDIR)\include /I$(WXDIR)\include\msvc /I$(WXDIR)\include /I$(GSDIR)\include
+INCLUDES = /I.. /I$(QTDIR)\include /I$(WXDIR)\include\msvc /I$(WXDIR)\include /I$(GSDIR)\include /I..\..\..\3rdparty\png /I..\..\..\3rdparty\zlib
 CXXFLAGS = /Zi /EHsc /nologo $(DEFINES) $(INCLUDES)
 QTLIBS = $(QTDIR)\lib\QtGui4.lib $(QTDIR)\lib\QtCore4.lib
 WXLIBS = $(WXDIR)\lib\vc100_dll\wxmsw29ud_core.lib $(WXDIR)\lib\vc100_dll\wxbase29ud.lib
 GSLIBS = $(GSDIR)\bin\gsdll32.lib
+PNGLIBS = ..\..\..\3rdparty\png\libpng.lib
+ZLIBS = ..\..\..\3rdparty\zlib\libz.lib
 DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
 DLLLFLAGS = /nodefaultlib -dll
 DLLLINK = LINK /nologo
@@ -18,37 +20,59 @@ SRCDIR = .\
 .cxx.obj:
 	$(CXX) /c $(CXXFLAGS) $<
 
-all: qtplugin.dll wxplugin.dll gsplugin.dll wmfplugin.dll
+default: $(PNGLIBS) $(ZLIBS) qtplugin.dll svgplugin.dll wxplugin.dll gsplugin.dll wmfplugin.dll htmplugin.dll pgfplugin.dll
+
+$(PNGLIBS):
+	@cd ..\..\..\3rdparty\png
+	@$(MAKE) /f makefile.vc
+	@cd ..\..\lib\gks\plugin
+
+$(ZLIBS):
+	@cd ..\..\..\3rdparty\zlib
+	@$(MAKE) /f makefile.vc
+	@cd ..\..\lib\gks\plugin
 
 qtplugin.dll: qtplugin.obj font.obj afm.obj util.obj dl.obj malloc.obj error.obj io.obj
-        $(DLLLINK) /out:$@ $** $(QTLIBS) $(DLLLFLAGS) $(DLLLIBS)
+	$(DLLLINK) /out:$@ $** $(QTLIBS) $(DLLLFLAGS) $(DLLLIBS)
+
+svgplugin.dll: svgplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.obj
+	$(DLLLINK) /out:$@ $** $(PNGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
 wxplugin.dll: wxplugin.obj font.obj afm.obj util.obj dl.obj malloc.obj error.obj io.obj
-        $(DLLLINK) /out:$@ $** $(WXLIBS) $(DLLLFLAGS) $(DLLLIBS)
+	$(DLLLINK) /out:$@ $** $(WXLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
 gsplugin.dll: gsplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.obj
-        $(DLLLINK) /out:$@ $** $(GSLIBS) $(DLLLFLAGS) $(DLLLIBS)
+	$(DLLLINK) /out:$@ $** $(GSLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
 wmfplugin.dll: wmfplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.obj
-        $(DLLLINK) /out:$@ $** $(DLLLFLAGS) $(DLLLIBS)
+	$(DLLLINK) /out:$@ $** $(DLLLFLAGS) $(DLLLIBS)
+
+htmplugin.dll: htmplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.obj
+	$(DLLLINK) /out:$@ $** $(PNGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
+
+pgfplugin.dll: pgfplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.obj
+	$(DLLLINK) /out:$@ $** $(PNGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
 font.obj: ..\font.c
-        $(CXX) /c $(CXXFLAGS) ..\font.c
+	$(CXX) /c $(CXXFLAGS) ..\font.c
 afm.obj: ..\afm.c
-        $(CXX) /c $(CXXFLAGS) ..\afm.c
+	$(CXX) /c $(CXXFLAGS) ..\afm.c
 util.obj: ..\util.c
-        $(CXX) /c $(CXXFLAGS) ..\util.c
+	$(CXX) /c $(CXXFLAGS) ..\util.c
 dl.obj: ..\dl.c
-        $(CXX) /c $(CXXFLAGS) ..\dl.c
+	$(CXX) /c $(CXXFLAGS) ..\dl.c
 malloc.obj: ..\malloc.c
-        $(CXX) /c $(CXXFLAGS) ..\malloc.c
+	$(CXX) /c $(CXXFLAGS) ..\malloc.c
 error.obj: ..\error.c
-        $(CXX) /c $(CXXFLAGS) ..\error.c
+	$(CXX) /c $(CXXFLAGS) ..\error.c
 io.obj: ..\io.c
-        $(CXX) /c $(CXXFLAGS) ..\io.c
+	$(CXX) /c $(CXXFLAGS) ..\io.c
 
 qtplugin.obj: qtplugin.cxx
 	$(CXX) /c $(CXXFLAGS) qtplugin.cxx
+
+svgplugin.obj: svgplugin.cxx
+	$(CXX) /c $(CXXFLAGS) svgplugin.cxx
 
 wxplugin.obj: wxplugin.cxx
 	$(CXX) /c $(CXXFLAGS) wxplugin.cxx
@@ -58,6 +82,12 @@ gsplugin.obj: gsplugin.cxx
 
 wmfplugin.obj: wmfplugin.cxx
 	$(CXX) /c $(CXXFLAGS) wmfplugin.cxx
+
+htmplugin.obj: htmplugin.cxx
+	$(CXX) /c $(CXXFLAGS) htmplugin.cxx
+
+pgfplugin.obj: pgfplugin.cxx
+	$(CXX) /c $(CXXFLAGS) pgfplugin.cxx
 
 clean:
 	DEL *.dll

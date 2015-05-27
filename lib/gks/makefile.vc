@@ -13,7 +13,7 @@ SRCDIR = .\
 {$(SRCDIR)}.c.obj:
 	$(CC) $(CFLAGS) $(DEFINES) $<
 
-all: libgks.lib demo.exe
+default: libgks.lib demo.exe plugins
 
 libgks.lib: libgks.dll
 
@@ -27,7 +27,15 @@ demo.obj: demo.c
 demo.exe: demo.obj libgks.lib
 	$(LINK) /out:$@ demo.obj libgks.lib
 
+plugins:
+	@cd plugin
+	@$(MAKE) /f makefile.vc
+	@cd ..
+
 clean:
+	@cd plugin
+	@$(MAKE) /f makefile.vc clean
+	@cd ..
 	DEL demo.exe
 	DEL libgks.dll
 	DEL libgks.exp
