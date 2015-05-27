@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
+#include <stdint.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -2456,7 +2457,7 @@ double pred(double x)
     return gauss(x);
 }
 
-#define ipred(x) ((long) pred(x))
+#define ipred(x) ((int64_t) pred(x))
 
 double succ(double x)
 {
@@ -2468,7 +2469,7 @@ double succ(double x)
     return gauss(x) + 1;
 }
 
-#define isucc(x) ((long) succ(x))
+#define isucc(x) ((int64_t) succ(x))
 
 static
 double fract(double x)
@@ -2631,7 +2632,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
   double x_min, x_max, y_min, y_max, feps;
 
   double tick, minor_tick, major_tick, x_label, y_label, x0, y0, xi, yi;
-  long i;
+  int64_t i;
   int decade, exponent;
   char string[256];
 
@@ -3447,7 +3448,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
   double tick, minor_tick, major_tick, x_label, y_label;
   double x0, y0, z0, xi, yi, zi;
-  long i;
+  int64_t i;
   int decade, exponent;
   char string[256];
 
