@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
+#include <locale.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -467,6 +468,9 @@ void gks_open_gks(int errfil)
 
       if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL)
         atexit(gks_emergency_close);
+
+      /* ensure that floats are printed with dots */
+      setlocale(LC_NUMERIC, "C");
     }
   else
     /* GKS not in proper state. GKS must be in the state GKCL */
