@@ -8,13 +8,13 @@ import os
 import shlex
 import re
 import tempfile
+import shutil
 import distutils.command
 import distutils.command.install
 from distutils.core import Command
 from distutils.command.build_ext import build_ext as _build_ext
 from distutils.command.build import build as _build
 from distutils.command.clean import clean as _clean
-from distutils.core import setup, Extension
 from distutils.ccompiler import new_compiler
 from distutils.sysconfig import get_config_var
 from distutils.sysconfig import get_python_lib
@@ -27,8 +27,6 @@ else:
     # the bytes type has no read attribute which is needed,
     # e.g. for rstrip calls
     from subprocess import Popen as _Popen
-
-
     class Popen(_Popen):
 
         def communicate(self, *args, **kwargs):
@@ -38,6 +36,8 @@ else:
             if stderr is not None:
                 stderr = stderr.decode()
             return (stdout, stderr)
+from setuptools import setup, Extension
+from setuptools.dist import Distribution
 import vcversioner
 
 
@@ -138,19 +138,19 @@ class clean_static(Command):
         pass
 
     def run(self):
-        print("removing '", _build_3rdparty, "' (and everything under it)")
-        try:
-            map(lambda p: os.remove(os.path.join(_build_3rdparty, p)),
-                os.listdir(_build_3rdparty))
-            os.rmdir(_build_3rdparty)
-        except OSError:
-            pass
+        print("removing '", _build_3rdparty, "' (and everything under it)",
+              sep='')
+        shutil.rmtree(_build_3rdparty, ignore_errors=True)
 
 
 class clean(_clean, clean_static):
 
     def run(self):
+        gregg = os.path.join("lib", "gr", "python", "gr.egg-info")
         clean_static.run(self)
+        print("removing '", gregg, "' (and everything under it)", sep='')
+        if os.path.isdir(gregg):
+            shutil.rmtree(gregg, ignore_errors=True)
         _clean.run(self)
         if sys.platform == "darwin":
             os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean")
