@@ -39,7 +39,7 @@ endif
 
 clean:
 	rm -f Makedefs
-	@for d in $(DIRS); do make -C $$d clean; done
+	@for d in $(DIRS) 3rdparty; do make -C $$d clean; done
 ifeq ($(UNAME), Darwin)
 	(env CC=cc xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean)
 endif
