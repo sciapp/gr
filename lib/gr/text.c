@@ -111,9 +111,14 @@ void freeFormula(formula_t * formula)
 
   if (formula->string != NULL)
     {
+      if (formula->string->subStr != NULL)
+        free(formula->string->subStr);
+
       free(formula->string);
       formula->string = NULL;
     }
+
+  free(formula);
 }
 
 static
