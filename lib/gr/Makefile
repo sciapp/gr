@@ -41,7 +41,7 @@ Darwin:
 	@make targets LD="$(CC)" \
 	SOFLAGS="-dynamiclib"
 
-targets: prerequisites libGR.a libGR.so
+targets: prerequisites libGR.a libGR.so demo
 
 prerequisites:
 	@for d in jpeg png; do make -C ../../3rdparty/$$d; done
@@ -55,6 +55,11 @@ libGR.so: $(GROBJS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
 	$(MUPDFLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS) \
 	$(INSTALL_NAME)
+
+demo: demo.c libGR.a $(GKSLIBS)
+	$(CC) -o demo $(INCLUDES) $(CFLAGS) demo.c libGR.a \
+	$(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
+        $(MUPDFLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS)
 
 install:
 	@make -C ../gks install
@@ -73,7 +78,7 @@ install:
 clean:
 	@for d in gks gks/plugin; do make -C ../$$d clean; done
 	@for d in jpeg png; do make -C ../../3rdparty/$$d clean; done
-	rm -f so_locations *.so *.a *.o *.bak *~
+	rm -f so_locations demo *.so *.a *.o *.bak *~
 
 depend:
 	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \
@@ -81,7 +86,7 @@ depend:
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-gr.o: gr.h text.h spline.h contour.h strlib.h io.h md5.h
+gr.o: gr.h text.h spline.h gridit.h contour.h strlib.h io.h md5.h cm.h
 contour.o: gr.h contour.h
 spline.o: spline.h
 gridit.o: gridit.h
