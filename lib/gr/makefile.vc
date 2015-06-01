@@ -22,7 +22,7 @@ DESTDIR = $(GRDIR)
 	$(CC) $(CFLAGS) $(DEFINES) $<
 
 #default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) libgr.lib gr.pyd
-default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) libgr.lib
+default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) libgr.lib demo.exe
 
 $(GKSLIBS):
 	@cd ..\gks
@@ -50,6 +50,11 @@ libgr.dll: gr.obj text.obj contour.obj spline.obj gridit.obj strlib.obj io.obj \
 	   image.obj md5.obj import.obj
 	$(DLLLINK) /out:$@ $** -def:libgr.def \
 	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(DLLLFLAGS) $(DLLLIBS)
+
+demo.obj: demo.c
+        $(CC) $(CFLAGS) demo.c
+demo.exe: demo.obj libgr.lib
+        $(LINK) /out:$@ demo.obj libgr.lib
 
 gr.pyd: py_gr.obj
 	$(DLLLINK) /out:$@ $** -def:gr.def \
@@ -85,6 +90,7 @@ clean:
 	@cd ..\..\3rdparty/jpeg
 	@$(MAKE) /f makefile.vc clean
 	@cd ..\..\lib\gr
+	DEL demo.exe
 	DEL libgr.dll
 	DEL libgr.exp
 	DEL libgr.lib

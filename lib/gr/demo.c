@@ -24,7 +24,7 @@ int main(void)
   srand(0);
   for (j = 0; j < CURVES; j++)
     {
-      x[i] = y[j][0] = 0;
+      x[0] = y[j][0] = 0;
       for (i = 1; i < POINTS; i++)
         {
           x[i] = i;
