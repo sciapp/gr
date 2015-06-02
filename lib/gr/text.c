@@ -96,6 +96,18 @@ void saveString(string_t ** string, char *s, int font, int prec)
 }
 
 
+static
+void freeString(string_t * string)
+{
+  if (string->next != NULL)
+    freeString(string->next);
+
+  if (string->subStr != NULL)
+    free(string->subStr);
+
+  free(string);
+}
+
 
 static
 void freeFormula(formula_t * formula)
@@ -105,21 +117,16 @@ void freeFormula(formula_t * formula)
   for (i = 0; i < POS_COUNT; i++)
     if (formula->next[i] != NULL)
       {
-	freeFormula(formula->next[i]);
-	formula->next[i] = NULL;
+        freeFormula(formula->next[i]);
+        formula->next[i] = NULL;
       }
 
   if (formula->string != NULL)
-    {
-      if (formula->string->subStr != NULL)
-        free(formula->string->subStr);
-
-      free(formula->string);
-      formula->string = NULL;
-    }
+    freeString(formula->string);
 
   free(formula);
 }
+
 
 static
 void saveFormula(formula_t ** formula, formula_t * toSave, int pos,
@@ -173,12 +180,12 @@ void increaseNominator(formula_t ** formula, formula_t * denom, int font,
 
 /* |----> Expression     --------->   next
    |         |                        newline
-   |         | 
+   |         |
    |         |
    |         v
    |   simpleExpression  --------->   next   ( '+' or '-' )
    |         |
-   |	     | 
+   |	     |
    |	     |
    |	     v
    |       term          --------->   next  ( when '*' )
@@ -186,7 +193,7 @@ void increaseNominator(formula_t ** formula, formula_t * denom, int font,
    |	     |
    |	     |
    |	     v
-   |      factor         --------->   exponent 
+   |      factor         --------->   exponent
    |	     |                        index
    |	     |                        sub
    |	     |                        over
