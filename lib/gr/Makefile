@@ -17,13 +17,14 @@
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
      LDFLAGS = $(EXTRA_LDFLAGS)
-        LIBS = -lc -lm
+        LIBS = -lpthread -ldl -lc -lm
     JPEGLIBS = -L../../3rdparty/jpeg -ljpeg
      PNGLIBS = -L../../3rdparty/png -lpng
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
      XFTLIBS = -lXft -lfontconfig
-   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 -lssl -lcrypto
+   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2
+     SSLLIBS = -lssl -lcrypto
      X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
        ZLIBS = -lz
 
@@ -53,13 +54,13 @@ libGR.a: $(GROBJS)
 
 libGR.so: $(GROBJS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
-	$(MUPDFLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS) \
+	$(MUPDFLIBS) $(SSLLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS) \
 	$(INSTALL_NAME)
 
 demo: demo.c libGR.a $(GKSLIBS)
 	$(CC) -o demo $(INCLUDES) $(CFLAGS) demo.c libGR.a \
 	$(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
-        $(MUPDFLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS)
+        $(MUPDFLIBS) $(SSLLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS)
 
 install:
 	@make -C ../gks install

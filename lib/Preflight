@@ -27,6 +27,7 @@ glfwdefs=""
 zmqdefs=""
 avdefs=""
 mupdfdefs=""
+ssldefs=""
 extradefs=""
 if [ `uname` = "Darwin" ]; then
   if [ -z "${EXTRA_CFLAGS}" ]; then
@@ -466,10 +467,17 @@ int main(int argc, char **argv)
 }
 eof
   ftlibs=`$ftconfig --libs`
-  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lmupdf $ftlibs -ljbig2dec -ljpeg -lopenjp2 -lssl -lcrypto -lz -lm"
-  $cmd >$tmpver 2>&1
+  libs="-lz -lm"
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lmupdf $ftlibs -ljbig2dec -ljpeg -lopenjp2"
+  $cmd $libs >$tmpver 2>&1
+  if [ $? -ne 0 ]; then
+    $cmd -lssl -lcrypto $libs >$tmpver 2>&1
+  else
+    ssldefs="SSLLIBS="
+  fi
   if [ $? -ne 0 ]; then
     mupdfdefs="MUPDFDEFS=-DNO_MUPDF MUPDFLIBS="
+    ssldefs="SSLLIBS="
     info="${red} no${normal} [MuPDF API >=1.4 not found]"
     ret=1
   else
@@ -479,10 +487,11 @@ eof
 else
   info="${yellow} no${normal} [disabled]"
   mupdfdefs="MUPDFDEFS=-DNO_MUPDF MUPDFLIBS="
+  ssldefs="SSLLIBS="
   ret=1
 fi
 printf "%12s: %s\n" "MuPDF" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
 echo "" >&2
-echo $target $wxdefs $ftdefs $qtdefs $gtkdefs $x11defs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $extradefs
+echo $target $wxdefs $ftdefs $qtdefs $gtkdefs $x11defs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $extradefs
