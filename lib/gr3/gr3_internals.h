@@ -5,8 +5,13 @@
 #define M_PI 3.141592653589793238462643383279
 #endif
 
-
-#if defined(__APPLE__)
+#if defined(EMSCRIPTEN)
+  #define GL_GLEXT_LEGACY
+  #define GL_GLEXT_PROTOTYPES
+  #include <GL/gl.h>
+  #include <GL/glext.h>
+  #include <unistd.h>
+#elif defined(__APPLE__)
   /* Core OpenGL (CGL) on Mac OS X */
   #define GR3_USE_CGL
   #include "gr3_cgl.h"
