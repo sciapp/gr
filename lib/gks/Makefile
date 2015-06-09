@@ -4,6 +4,8 @@
       INCDIR = $(DESTDIR)$(GRDIR)/include
      FONTDIR = $(DESTDIR)$(GRDIR)/fonts
 
+UNAME := $(shell uname)
+
      GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o malloc.o \
                error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
                plugin.o compress.o io.o
@@ -11,7 +13,11 @@
      X11DEFS =
       FTDEFS =
        FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
+ifeq ($(UNAME), Darwin)
+      X11INC = -I/opt/X11/include
+else
       X11INC = -I/usr/X11R6/include
+endif
           CC = cc
      DEFINES = -DHAVE_ZLIB $(X11DEFS) $(FTDEFS)
       CFLAGS = -O3 -Wall -fPIC $(EXTRA_CFLAGS)

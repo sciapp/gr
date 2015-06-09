@@ -224,6 +224,9 @@ int main(int argc, char **argv)
     return 0;
 }
 eof
+  if [ `uname` = "Darwin" ]; then
+    x11path="/opt/X11"
+  fi
   if [ -d /usr/X11R6 ]; then
     x11path="/usr/X11R6"
   else
