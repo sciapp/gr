@@ -25,7 +25,7 @@ modules can be combined to produce a single animated plot:
     angles = np.load('700K_460.npy')
     lens = []
 
-    gr.mpl_updatews = 0
+    gr.setregenflags(gr.MPL_POSTPONE_UPDATE)
 
     for t in range(100):
 

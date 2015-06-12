@@ -137,6 +137,8 @@ DLLEXPORT void gr_moveselection(double, double);
 DLLEXPORT void gr_resizeselection(int, double, double);
 DLLEXPORT void gr_inqbbox(double *, double *, double *, double *);
 DLLEXPORT double gr_precision(void);
+DLLEXPORT void gr_setregenflags(int);
+DLLEXPORT int gr_inqregenflags(void);
 
 #ifdef _WIN32
 #ifdef __cplusplus

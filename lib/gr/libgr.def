@@ -35,6 +35,7 @@ EXPORTS
 	gr_inqcolorfromrgb
 	gr_inqcolormap
 	gr_inqdspsize
+	gr_inqregenflags
 	gr_inqscale
 	gr_inqspace
 	gr_inqtext
@@ -47,6 +48,7 @@ EXPORTS
 	gr_polyline
 	gr_polyline3d
 	gr_polymarker
+	gr_precision
 	gr_readimage
 	gr_redrawsegws
 	gr_resizeselection
@@ -68,6 +70,7 @@ EXPORTS
 	gr_setmarkercolorind
 	gr_setmarkersize
 	gr_setmarkertype
+	gr_setregenflags
 	gr_setscale
 	gr_setsegtran
 	gr_setspace

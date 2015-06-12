@@ -890,6 +890,9 @@ int cmap[44][72] = {
 static
 double sizex = 0;
 
+static
+int regeneration_flags = 0;
+
 #ifdef _WIN32
 
 LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
@@ -6162,4 +6165,18 @@ void gr_inqbbox(double *xmin, double *xmax, double *ymin, double *ymax)
 double gr_precision(void)
 {
   return gks_precision();
+}
+
+void gr_setregenflags(int flags)
+{
+  check_autoinit;
+
+  regeneration_flags = flags;
+}
+
+int gr_inqregenflags(void)
+{
+  check_autoinit;
+
+  return regeneration_flags;
 }

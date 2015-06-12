@@ -2157,6 +2157,15 @@ def show():
     return content
 
 
+def setregenflags(flags):
+    __gr.gr_setregenflags(c_int(flags))
+
+
+def inqregenflags():
+    return __gr.gr_inqregenflags()
+
+
+
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
 _grLibDir = os.getenv("GRLIB", _grPkgDir)
 _gksFontPath = os.path.join(_grPkgDir, "fonts")
@@ -2304,6 +2313,9 @@ __gr.gr_inqbbox.argtypes = [POINTER(c_double), POINTER(c_double),
                             POINTER(c_double), POINTER(c_double)]
 __gr.gr_precision.argtypes = []
 __gr.gr_precision.restype = c_double
+__gr.gr_setregenflags.argtypes = [c_int]
+__gr.gr_inqregenflags.argtypes = []
+__gr.gr_inqregenflags.restype = c_int
 
 precision = __gr.gr_precision()
 
@@ -2511,7 +2523,7 @@ GRAPHIC_GRX = "grx"
 
 GRAPHIC_TYPE = {GRAPHIC_GRX: "Graphics Format (*.grx)"}
 
-# settings for the matplotlib backend
-mpl_clearws = 1
-mpl_updatews = 1
+# regeneration flags
+MPL_SUPPRESS_CLEAR = 1
+MPL_POSTPONE_UPDATE = 2
 

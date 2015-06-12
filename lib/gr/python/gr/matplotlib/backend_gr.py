@@ -228,11 +228,12 @@ class FigureCanvasGR(FigureCanvasBase):
         """
         Draw the figure using the renderer
         """
-        if gr.mpl_clearws:
+        flags = gr.inqregenflags()
+        if not flags & gr.MPL_SUPPRESS_CLEAR:
             gr.clearws()
         self.renderer.configure()
         self.figure.draw(self.renderer)
-        if gr.mpl_updatews:
+        if not flags & gr.MPL_POSTPONE_UPDATE:
             gr.updatews()
 
     def print_gr(self, filename, *args, **kwargs):
