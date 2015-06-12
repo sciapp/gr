@@ -239,6 +239,8 @@ static void read_dat(void) {
             }
             if (!strcmp(option, "-atoms")) {
                 num_atoms = atoi(*arg);
+                if (num_atoms >= 40000)
+                    bonds = False;
             } else if (!strcmp(option, "-bonds")) {
                 if (!strcmp(*arg, "yes")) {
                     bonds = True;
@@ -655,6 +657,7 @@ void read_cycle() {
         atom_positions[2+3*i] -= meanz;
         atom_radii[i] = atom_numbers[i] > 0 ? radius * element_radii[atom_numbers[i] - 1] : 0;
     }
+    if (atom_adjacency_matrix != NULL)
     {
         double del = delta * delta;
         double tol = tolerance * tolerance;
@@ -1006,7 +1009,10 @@ static void allocate_atom_memory(void) {
         atom_spins = (float *) malloc(max_atoms * 3 * sizeof(float));
         atom_colors = (float *) malloc(max_atoms * 3 * sizeof(float));
         atom_radii = (float *) malloc(max_atoms * sizeof(float));
-        atom_adjacency_matrix = (char *) malloc(max_atoms * max_atoms * sizeof(char));
+        if (max_atoms < 40000)
+            atom_adjacency_matrix = (char *) malloc(max_atoms * max_atoms * sizeof(char));
+        else
+            atom_adjacency_matrix = NULL;
         
         atom_names = (char **) malloc(max_atoms * sizeof(char *));
         *atom_names = (char *) malloc(max_atoms * 4 * sizeof(char));
@@ -1015,7 +1021,7 @@ static void allocate_atom_memory(void) {
             atom_names[i] = atom_names[i - 1] + 4;
         }
         
-        if (atom_numbers == NULL || atom_numbers2 == NULL || atom_positions == NULL || atom_radii == NULL || atom_adjacency_matrix == NULL) {
+        if (atom_numbers == NULL || atom_numbers2 == NULL || atom_positions == NULL || atom_radii == NULL || (atom_adjacency_matrix == NULL && num_atoms < 40000)) {
             moldyn_error("can't allocate memory");
         }
     }
@@ -1028,7 +1034,8 @@ static void free_atom_memory(void) {
     free(atom_spins);
     free(atom_radii);
     free(atom_colors);
-    free(atom_adjacency_matrix);
+    if (atom_adjacency_matrix != NULL)
+        free(atom_adjacency_matrix);
     if (atom_names != NULL) {
         free(*atom_names);
         free(atom_names);
