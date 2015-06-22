@@ -84,8 +84,8 @@ DLLEXPORT void gks_svgplugin(
   yd = (p->c * (yn) + p->d)
 
 #define CharXform(xrel, yrel, x, y) \
-  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
-  y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
+  x = cos(p->phi) * (xrel) - sin(p->phi) * (yrel); \
+  y = sin(p->phi) * (xrel) + cos(p->phi) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
 
@@ -123,7 +123,7 @@ typedef struct ws_state_list_t
   char rgb[MAX_COLOR][7];
   int width, height;
   int color, linewidth;
-  double angle;
+  double phi, angle;
   int family, capheight;
   int pattern, have_pattern[PATTERNS];
   SVG_stream *stream;
@@ -133,7 +133,7 @@ typedef struct ws_state_list_t
   double cxl[MAX_TNR], cxr[MAX_TNR], cyb[MAX_TNR], cyt[MAX_TNR];
   int cx[MAX_TNR], cy[MAX_TNR], cwidth[MAX_TNR], cheight[MAX_TNR];
   int clip_index, path_index, path_counter;
-  double alpha;
+  double transparency;
 }
 ws_state_list;
 
@@ -631,7 +631,7 @@ void stroke(void)
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d)\" style=\""
 	     "stroke:#%s; stroke-width:%d; stroke-opacity:%g; fill:none\" ",
-	     p->path_index, p->rgb[p->color], p->linewidth, p->alpha);
+	     p->path_index, p->rgb[p->color], p->linewidth, p->transparency);
   svg_printf(p->stream, "points=\"\n  ");
   for (i = 0; i < p->npoints; i++)
     {
@@ -688,7 +688,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d)\" style=\""
 	     "stroke:#%s; stroke-opacity:%g; fill:none\" ",
-             p->path_index, p->rgb[p->color], p->alpha);
+             p->path_index, p->rgb[p->color], p->transparency);
   svg_printf(p->stream, "points=\"\n  %g,%g ", x0, y0);
 
   xim1 = x0;
@@ -804,7 +804,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
     svg_printf(p->stream, "\n  \" fill=\"url(#pattern%d)\"", p->pattern + 1);
   else
     svg_printf(p->stream, "\n  \" fill=\"#%s\" fill-opacity=\"%g\"",
-               p->rgb[p->color], p->alpha);
+               p->rgb[p->color], p->transparency);
   svg_printf(p->stream, "/>\n");
 }
 
@@ -959,7 +959,8 @@ void set_font(int font)
   WC_to_NDC_rel(gkss->chup[0], gkss->chup[1], gkss->cntnr, ux, uy);
   seg_xform_rel(&ux, &uy);
 
-  angle = -atan2(ux, uy) * 180 / M_PI;
+  p->phi = -atan2(ux, uy);
+  angle = p->phi * 180 / M_PI;
   if (angle < 0)
     angle += 360;
   p->angle = -angle;
@@ -1282,7 +1283,7 @@ void gks_drv_js(
       p->page_counter = 0;
       p->offset = 0;
 
-      p->alpha = 1.0;
+      p->transparency = 1.0;
 
       set_xform();
       init_norm_xform();
@@ -1427,7 +1428,7 @@ void gks_drv_js(
 
     case 203:
 /* set transparency */
-      p->alpha = r1[0];
+      p->transparency = r1[0];
       break;
 
     default:
