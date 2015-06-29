@@ -488,6 +488,12 @@ def setlinewidth(width):
     __gr.gr_setlinewidth(c_double(width))
 
 
+def inqlinewidth():
+    width = c_double()
+    __gr.gr_inqlinewidth(byref(width))
+    return width.value
+
+
 def setlinecolorind(color):
     """
     Define the color of subsequent polyline output primitives.
@@ -2209,6 +2215,7 @@ __gr.gr_gridit.argtypes = [
 __gr.gr_setlinetype.argtypes = [c_int]
 __gr.gr_inqlinetype.argtypes = [POINTER(c_int)]
 __gr.gr_setlinewidth.argtypes = [c_double]
+__gr.gr_inqlinewidth.argtypes = [POINTER(c_double)]
 __gr.gr_setlinecolorind.argtypes = [c_int]
 __gr.gr_inqlinecolorind.argtypes = [POINTER(c_int)]
 __gr.gr_setmarkertype.argtypes = [c_int]

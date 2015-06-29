@@ -1993,6 +1993,12 @@ void gr_setlinewidth(double width)
     gr_writestream("<setlinewidth width=\"%g\"/>\n", width);
 }
 
+void gr_inqlinewidth(double *width)
+{
+  int errind;
+  gks_inq_pline_linewidth(&errind, width);
+}
+
 void gr_setlinecolorind(int color)
 {
   check_autoinit;

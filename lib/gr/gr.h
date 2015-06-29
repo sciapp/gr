@@ -45,6 +45,7 @@ DLLEXPORT void gr_gridit(
 DLLEXPORT void gr_setlinetype(int);
 DLLEXPORT void gr_inqlinetype(int *);
 DLLEXPORT void gr_setlinewidth(double);
+DLLEXPORT void gr_inqlinewidth(double *);
 DLLEXPORT void gr_setlinecolorind(int);
 DLLEXPORT void gr_inqlinecolorind(int *);
 DLLEXPORT void gr_setmarkertype(int);
