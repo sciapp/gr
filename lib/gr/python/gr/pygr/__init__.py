@@ -563,9 +563,9 @@ class ErrorBar(GRDrawAttributes, Coords2D, GRMeta):
 
     def __init__(self, x, y, dneg, dpos=None, direction=VERTICAL,
                  linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_OMARK,
-                 linecolor=1, markercolor=1):
+                 linecolor=1, markercolor=1, linewidth=1):
         GRDrawAttributes.__init__(self, linetype, markertype, linecolor,
-                                  markercolor)
+                                  markercolor, linewidth)
         Coords2D.__init__(self, asarray(x), asarray(y))
         self._direction = direction
         self._grerror = None
@@ -632,11 +632,13 @@ class ErrorBar(GRDrawAttributes, Coords2D, GRMeta):
         mtype = gr.inqmarkertype()
         lcolor = gr.inqlinecolorind()
         mcolor = gr.inqmarkercolorind()
+        lwidth = gr.inqlinewidth()
 
         if self.linetype is not None:
             gr.setlinecolorind(self.linecolor)
             gr.setmarkercolorind(self.markercolor)
             gr.setlinetype(self.linetype)
+            gr.setlinewidth(self.linewidth)
         if self.markertype is not None:
             gr.setmarkertype(self.markertype)
         else:
@@ -649,6 +651,7 @@ class ErrorBar(GRDrawAttributes, Coords2D, GRMeta):
         gr.setmarkercolorind(mcolor)
         gr.setlinetype(ltype)
         gr.setmarkertype(mtype)
+        gr.setlinewidth(lwidth)
 
 class Plot(GRViewPort, GRMeta):
 
@@ -1055,6 +1058,7 @@ class Plot(GRViewPort, GRMeta):
                 mtype = gr.inqmarkertype()
                 lcolor = gr.inqlinecolorind()
                 mcolor = gr.inqmarkercolorind()
+                lwidth = gr.inqlinewidth()
                 window = gr.inqwindow()
                 scale = gr.inqscale()
                 gr.setviewport(0, self.sizex, 0, self.sizey)
@@ -1085,6 +1089,7 @@ class Plot(GRViewPort, GRMeta):
                                 gr.setlinecolorind(curve.linecolor)
                                 gr.setmarkercolorind(curve.markercolor)
                                 gr.setlinetype(curve.linetype)
+                                gr.setlinewidth(curve.linewidth)
                                 gr.polyline([x, x + lineWidth], [ys, ys])
                                 if (curve.markertype != gr.MARKERTYPE_DOT
                                     and curve.markertype is not None):
@@ -1121,6 +1126,7 @@ class Plot(GRViewPort, GRMeta):
                 gr.setmarkercolorind(mcolor)
                 gr.setlinetype(ltype)
                 gr.setmarkertype(mtype)
+                gr.setlinewidth(lwidth)
                 # restore viewport and window
                 gr.setviewport(*self.viewportscaled)
                 gr.setwindow(*window)
@@ -1137,14 +1143,12 @@ class PlotCurve(GRDrawAttributes, GRVisibility, Coords2D, GRMeta):
 
     def __init__(self, x, y, errBar1=None, errBar2=None,
                  linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_DOT,
-                 linecolor=None, markercolor=1, legend=None):
+                 linecolor=None, markercolor=1, legend=None, linewidth=1):
         GRDrawAttributes.__init__(self, linetype, markertype, linecolor,
-                                  markercolor)
+                                  markercolor, linewidth)
         GRVisibility.__init__(self, True)
         Coords2D.__init__(self, x, y)
         self._e1, self._e2 = errBar1, errBar2
-        self._linetype, self._markertype = linetype, markertype
-        self._markercolor = markercolor
         self._legend = legend
         PlotCurve.COUNT += 1
         self._id = PlotCurve.COUNT
@@ -1185,11 +1189,13 @@ class PlotCurve(GRDrawAttributes, GRVisibility, Coords2D, GRMeta):
             mtype = gr.inqmarkertype()
             lcolor = gr.inqlinecolorind()
             mcolor = gr.inqmarkercolorind()
+            lwidth = gr.inqlinewidth()
 
             if self.linetype is not None and len(self.x) > 1:
                 gr.setlinecolorind(self.linecolor)
                 gr.setmarkercolorind(self.markercolor)
                 gr.setlinetype(self.linetype)
+                gr.setlinewidth(self.linewidth)
                 gr.polyline(self.x, self.y)
                 if (self.markertype != gr.MARKERTYPE_DOT and
                     self.markertype is not None):
@@ -1208,6 +1214,7 @@ class PlotCurve(GRDrawAttributes, GRVisibility, Coords2D, GRMeta):
             gr.setmarkercolorind(mcolor)
             gr.setlinetype(ltype)
             gr.setmarkertype(mtype)
+            gr.setlinewidth(lwidth)
 
 
 class PlotSurface(GRVisibility, GridCoords3D, GRMeta):

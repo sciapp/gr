@@ -45,9 +45,10 @@ class GRMeta(object):
 class GRDrawAttributes(object):
 
     def __init__(self, linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_DOT,
-                 linecolor=None, markercolor=1):
+                 linecolor=None, markercolor=1, linewidth=1):
         self._linetype, self._markertype = linetype, markertype
         self._linecolor, self._markercolor = linecolor, markercolor
+        self._linewidth = linewidth
         if linecolor is None:
             self._linecolor = ColorIndexGenerator.nextColorIndex()
         else:
@@ -61,6 +62,15 @@ class GRDrawAttributes(object):
     @linetype.setter
     def linetype(self, value):
         self._linetype = value
+
+    @property
+    def linewidth(self):
+        """Get current linewidth."""
+        return self._linewidth
+
+    @linewidth.setter
+    def linewidth(self, value):
+        self._linewidth = value
 
     @property
     def markertype(self):
