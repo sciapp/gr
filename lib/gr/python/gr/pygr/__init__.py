@@ -1553,8 +1553,7 @@ class PlotAxes(GRViewPort, GRMeta):
     def isGridEnabled(self):
         return self._grid
 
-    def setWindow(self, xmin, xmax, ymin, ymax):
-        res = True
+    def _adjustWindow(self, xmin, xmax, ymin, ymax):
         # minimum window borders for log scale
         wmin, wmax = gr.precision * 10, gr.precision * 100
         # stay in log x domain
@@ -1580,8 +1579,15 @@ class PlotAxes(GRViewPort, GRMeta):
                 else:
                     ymin = wmin
         if DomainChecker.isInWindowDomain(xmin, xmax, ymin, ymax):
-            self._window = [xmin, xmax, ymin, ymax]
+            return xmin, xmax, ymin, ymax
         else:
+            raise ValueError("xmin, xmax, ymin, ymax not in window domain.")
+
+    def setWindow(self, xmin, xmax, ymin, ymax):
+        res = True
+        try:
+            self._window = self._adjustWindow(xmin, xmax, ymin, ymax)
+        except ValueError:
             res = False
             _log.debug("xmin, xmax, ymin, ymax not in window domain.")
         return res
@@ -1649,8 +1655,10 @@ class PlotAxes(GRViewPort, GRMeta):
                 ymin, ymax = gr.adjustrange(ymin, ymax)
 
             self.setWindow(xmin, xmax, ymin, ymax)
+            if self.autoscale:
+                self.doAutoScale()
 
-    def doAutoScale(self, curvechanged):
+    def doAutoScale(self, curvechanged=None):
         win = self.getWindow()
         # global xmin, xmax, ymin, ymax
         vc = self.getVisibleCurves()
@@ -1661,21 +1669,28 @@ class PlotAxes(GRViewPort, GRMeta):
             xpmin, xpmax = vc.xmin, vc.xmax
             # update vc min max / calculate current xmin, xmax[, ymin, ymax]
             vc.updateMinMax(reset=True)
-            xmin, xmax = vc.xmin, vc.xmax
+            xmin, xmax, ymin, ymax = vc.xmin, vc.xmax, vc.ymin, vc.ymax
+            yl = curvechanged.y[-1] if curvechanged else vc.ymax
 
-            if self.autoscale & PlotAxes.SCALE_X:
+            # scaled values for xmin, xmax and last added y point
+            sxmin, sxmax, symin, symax = self._scaleWindow(xmin, xmax,
+                                                           self.xtick, yl,
+                                                           yl, self.ytick)
+            if self.autoscale & PlotAxes.SCALE_X and xmin != xmax:
                 if xmin < xpmin:
                     # growing in negative direction
                     # hold max value
                     if xmax >= win[1]:
                         # win[1]: user max value
                         xmax = win[1]
+                    xmin = sxmin
                 elif xmax > xpmax:
                     # growing in positive direction
                     # hold min value
                     if xmin <= win[0]:
                         # win[0]: user min value
                         xmin = win[0]
+                    xmax = sxmax
                 else:
                     # no auto scaling in x keep previous values
                     xmin, xmax = win[0], win[1]
@@ -1687,17 +1702,36 @@ class PlotAxes(GRViewPort, GRMeta):
             else:
                 xmin, xmax = win[0], win[1]
 
-            if self.autoscale & PlotAxes.SCALE_Y:
+            if self.autoscale & PlotAxes.SCALE_Y and ymin != ymax:
                 # compare y components of current window with last added y point
-                yl = curvechanged.y[-1]
-                ymin = yl if yl < win[2] else win[2]
-                ymax = yl if yl > win[3] else win[3]
+                ymin = symin if symin < win[2] else win[2]
+                ymax = symax if symax > win[3] else win[3]
             else:
                 # no auto scaling in x keep previous values
                 ymin, ymax = win[2], win[3]
 
+            # add border to calculated global curves min max
+            # taking error bars into account.
+            vxmin, vxmax, vymin, vymax = self._calcWindowForCurves(vc, vc.xmin,
+                                                                   vc.xmax,
+                                                                   vc.ymin,
+                                                                   vc.ymax)
+            bxmin, bxmax, bymin, bymax = self._scaleWindow(vxmin, vxmax,
+                                                           self.xtick, vymin,
+                                                           vymax, self.ytick)
+            # check whether the calculated window is in the border area
+            # and ensure minimal border widths and heights.
+            if xmin <= vc.xmin and xmin > bxmin:
+                xmin = bxmin
+            if xmax >= vc.xmax and xmax < bxmax:
+                xmax = bxmax
+            if ymin <= vc.ymin and ymin > bymin:
+                ymin = bymin
+            if ymax >= vc.ymax and ymax < bymax:
+                ymax = bymax
+
             xmin, xmax, ymin, ymax = self._calcWindowForCurves(vc, xmin, xmax,
-                                                               ymin, ymax)
+                                                                ymin, ymax)
             self.setWindow(xmin, xmax, ymin, ymax)
         else:
             # update vc min max / calculate current xmin, xmax, ymin, ymax
@@ -1717,6 +1751,20 @@ class PlotAxes(GRViewPort, GRMeta):
     @autoscale.setter
     def autoscale(self, mask):
         self._autoscale = mask
+
+    def _scaleWindow(self, xmin, xmax, xtick, ymin, ymax, ytick):
+        try:
+            return self._adjustWindow(*self.scaleWindow(xmin, xmax, xtick,
+                                                        ymin, ymax, ytick))
+        except ValueError as e:
+            _log.debug("got error in _adjustWindow: %s" % e)
+            _log.debug("falling back to input window")
+            return xmin, xmax, ymin, ymax
+
+    def scaleWindow(self, xmin, xmax, xtick, ymin, ymax, ytick):
+        # can be used to rescale the current window when in autoscale mode,
+        # e.g. adding a delta to the bounding box
+        return xmin, xmax, ymin, ymax
 
     def getId(self):
         return self._id
