@@ -9,12 +9,14 @@ Exported Classes:
 import math
 import time
 import logging
+import collections
+# third party
+from numpy import ndarray, asarray
 # local library
 import gr
 import gr3
 from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort, GRVisibility
 from gr.pygr.helper import ColorIndexGenerator, DomainChecker
-from numpy import ndarray, asarray
 from gr._version import __version__, __revision__
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
@@ -1134,6 +1136,91 @@ class Plot(GRViewPort, GRMeta):
         if redraw:
             gr.clearws()
             self.drawGR()
+
+
+def isCoords2D(other):
+    if not isinstance(other, Coords2D):
+        raise ValueError("%s is not an instance of Coords2D." % type(other))
+
+
+def islistofCoords2D(otheriter):
+    if isinstance(otheriter, collections.Iterable):
+        for other in otheriter:
+            if not isinstance(other, Coords2D):
+                raise ValueError("Iterable contains %s " % type(other) +
+                                 "which is not an instance of Coords2D.")
+
+
+class Coords2DList(list):
+
+    def __init__(self, *args, **kwargs):
+        list.__init__(self, *args, **kwargs)
+        islistofCoords2D(self)
+        self.xmin, self.xmax, self.ymin, self.ymax = None, None, None, None
+        self.updateMinMax(reset=True)
+
+    def _calcMinMax(self, coords2d, *args):
+        coords = (coords2d, ) + args
+        xmin = min(min(coord.x) for coord in coords)
+        xmax = max(max(coord.x) for coord in coords)
+        ymin = min(min(coord.y) for coord in coords)
+        ymax = max(max(coord.y) for coord in coords)
+        return xmin, xmax, ymin, ymax
+
+    def updateMinMax(self, *coords, **kwargs):
+        reset = kwargs.pop("reset", False)
+        if not coords:
+            coords = self
+        if coords:
+            xmin, xmax, ymin, ymax = self._calcMinMax(*coords)
+            if reset:
+                self.xmin, self.xmax = xmin, xmax
+                self.ymin, self.ymax = ymin, ymax
+            else:
+                self.xmin = (min(self.xmin, xmin) if self.xmin is not None
+                             else xmin)
+                self.xmax = (max(self.xmax, xmax) if self.xmax is not None
+                             else xmax)
+                self.ymin = (min(self.ymin, ymin) if self.ymin is not None
+                             else ymin)
+                self.ymax = (max(self.ymax, ymax) if self.ymax is not None
+                             else ymax)
+        else:
+            self.xmin, self.xmax, self.ymin, self.ymax = None, None, None, None
+
+    def __iadd__(self, otheriter):
+        islistofCoords2D(otheriter)
+        res = list.__iadd__(self, otheriter)
+        self.updateMinMax(*otheriter)
+        return res
+
+    def append(self, other):
+        isCoords2D(other)
+        res = list.append(self, other)
+        self.updateMinMax(other)
+        return res
+
+    def extend(self, otheriter):
+        islistofCoords2D(otheriter)
+        res = list.extend(self, otheriter)
+        self.updateMinMax(*otheriter)
+        return res
+
+    def insert(self, index, other):
+        isCoords2D(other)
+        res = list.insert(self, index, other)
+        self.updateMinMax(other)
+        return res
+
+    def pop(self, *args, **kwargs):
+        other = list.pop(self, *args, **kwargs)
+        self.updateMinMax(reset=True)
+        return other
+
+    def remove(self, other):
+        res = list.remove(self, other)
+        self.updateMinMax(reset=True)
+        return res
 
 
 class PlotCurve(GRDrawAttributes, GRVisibility, Coords2D, GRMeta):
