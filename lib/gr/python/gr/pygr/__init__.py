@@ -592,12 +592,12 @@ class ErrorBar(GRDrawAttributes, Coords2D, GRMeta):
 
     @Coords2D.x.setter
     def x(self, seq):
-        self._x = asarray(seq)
+        Coords2D.x.__set__(self, asarray(seq))
         self._updateErrors()
 
     @Coords2D.y.setter
     def y(self, seq):
-        self._y = asarray(seq)
+        Coords2D.y.__set__(self, asarray(seq))
         self._updateErrors()
 
     @property
@@ -732,20 +732,19 @@ class Plot(GRViewPort, GRMeta):
 
     @GRViewPort.viewport.setter
     def viewport(self, viewport):
-        self._viewport = list(viewport)
-#        GRViewPort.viewport = viewport
+        GRViewPort.viewport.__set__(self, viewport)
         for axes in self._lstAxes:
             axes.viewport = viewport
 
     @GRViewPort.sizex.setter
     def sizex(self, value):
-        self._sizex = value
+        GRViewPort.sizex.__set__(self, value)
         for axes in self._lstAxes:
             axes.sizex = value
 
     @GRViewPort.sizey.setter
     def sizey(self, value):
-        self._sizey = value
+        GRViewPort.sizey.__set__(self, value)
         for axes in self._lstAxes:
             axes.sizey = value
 

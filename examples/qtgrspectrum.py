@@ -100,7 +100,7 @@ class DependentPlotCurve(PlotCurve):
     # pylint: disable=W0221
     @PlotCurve.visible.setter
     def visible(self, flag):
-        self._visible = flag
+        PlotCurve.visible.__set__(self, flag)
         for dep in self.dependent:
             dep.visible = flag
 
