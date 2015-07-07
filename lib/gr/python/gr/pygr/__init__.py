@@ -51,8 +51,10 @@ _log = logging.getLogger(__name__)
 
 class Coords2D(object):
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, updatex_callback=None, updatey_callback=None):
         self._x, self._y = x, y
+        self._updatex_callback = updatex_callback
+        self._updatey_callback = updatey_callback
 
     @property
     def x(self):
@@ -62,6 +64,8 @@ class Coords2D(object):
     @x.setter
     def x(self, lst):
         self._x = lst
+        if self._updatex_callback:
+            self._updatex_callback(self)
 
     @property
     def y(self):
@@ -71,6 +75,14 @@ class Coords2D(object):
     @y.setter
     def y(self, lst):
         self._y = lst
+        if self._updatey_callback:
+            self._updatey_callback(self)
+
+    def setUpdateXCallback(self, fp):
+        self._updatex_callback = fp
+
+    def setUpdateYCallback(self, fp):
+        self._updatey_callback = fp
 
 
 class Coords3D(Coords2D):
