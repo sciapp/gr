@@ -1246,6 +1246,7 @@ class PlotCurve(GRDrawAttributes, GRVisibility, Coords2D, GRMeta):
                                   markercolor, linewidth)
         GRVisibility.__init__(self, True)
         Coords2D.__init__(self, x, y)
+        self._visible_callback = None
         self._e1, self._e2 = errBar1, errBar2
         self._legend = legend
         PlotCurve.COUNT += 1
@@ -1279,6 +1280,15 @@ class PlotCurve(GRDrawAttributes, GRVisibility, Coords2D, GRMeta):
     @legend.setter
     def legend(self, s):
         self._legend = s
+
+    @GRVisibility.visible.setter
+    def visible(self, flag):
+        GRVisibility.visible.__set__(self, flag)
+        if self._visible_callback:
+            self._visible_callback(self, flag)
+
+    def setVisibleCallback(self, fp):
+        self._visible_callback = fp
 
     def drawGR(self):
         if self.visible:
