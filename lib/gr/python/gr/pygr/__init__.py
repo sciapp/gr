@@ -1403,19 +1403,22 @@ class PlotAxes(GRViewPort, GRMeta):
         self._xtick, self._ytick = xtick, ytick
         self.majorx, self.majory = majorx, majory
         self._drawX, self._drawY = drawX, drawY
-        self._lstPlotCurve = []
+        self._curves = Coords2DList()
+        self._visibleCurves = Coords2DList()
         self._backgroundColor = 0
         self._window = None
         self._scale = 0
         self._grid = True
-        self._resetWindow = False
         self._autoscale = 0x0
         PlotAxes.COUNT += 1
         self._id = PlotAxes.COUNT
         self._xtick_callback, self._ytick_callback = None, None
 
+    def getVisibleCurves(self):
+        return self._visibleCurves
+
     def getCurves(self):
-        return self._lstPlotCurve
+        return self._curves
 
     def isXLogDomain(self):
         window = self.getWindow()
@@ -1560,11 +1563,116 @@ class PlotAxes(GRViewPort, GRMeta):
     def setYtickCallback(self, fp):
         self._ytick_callback = fp
 
+    def _calcWindowForCurves(self, curves, xmin, xmax, ymin, ymax):
+        # take error bars into account
+        # if error bar's center is in current window
+        # adjust window margins to contain error bars.
+        for curve in curves:
+            if isinstance(curve, PlotCurve):
+                for bar in [curve.errorBar1, curve.errorBar2]:
+                    if bar:
+                        if bar.direction == ErrorBar.HORIZONTAL:
+                            for i, x in enumerate(bar.x):
+                                if x >= xmin and x <= xmax:
+                                    bneg = x - bar.dneg[i]
+                                    bpos = x + bar.dpos[i]
+                                    if bneg < xmin:
+                                        xmin = bneg
+                                    if bpos > xmax:
+                                        xmax = bpos
+                        elif bar.direction == ErrorBar.VERTICAL:
+                            for i, y in enumerate(bar.y):
+                                if y >= ymin and y <= ymax:
+                                    bneg = y - bar.dneg[i]
+                                    bpos = y + bar.dpos[i]
+                                    if bneg < ymin:
+                                        ymin = bneg
+                                    if bpos > ymax:
+                                        ymax = bpos
+        return xmin, xmax, ymin, ymax
+
+    def getBoundingBox(self):
+        res = None
+        vcurves = self.getVisibleCurves() or self.getCurves()
+        if vcurves:
+            res = self._calcWindowForCurves(vcurves, vcurves.xmin, vcurves.xmax,
+                                            vcurves.ymin, vcurves.ymax)
+        return res
+
     def reset(self):
-        self._resetWindow = True
+        bbox = self.getBoundingBox()
+        if bbox:
+            xmin, xmax, ymin, ymax = bbox
+
+            if ((not self.autoscale
+                 or math.fabs(xmax - xmin) < gr.precision)
+                and self.scale & gr.OPTION_X_LOG == 0):
+                xmin, xmax = gr.adjustrange(xmin, xmax)
+            if ((not self.autoscale or
+                 math.fabs(ymax - ymin) < gr.precision)
+                and self.scale & gr.OPTION_Y_LOG == 0):
+                ymin, ymax = gr.adjustrange(ymin, ymax)
+
+            self.setWindow(xmin, xmax, ymin, ymax)
+
+    def doAutoScale(self, curvechanged):
+        win = self.getWindow()
+        # global xmin, xmax, ymin, ymax
+        vc = self.getVisibleCurves()
+        if not vc:
+            vc = self.getCurves()
+        if win:
+            # calculate previous xmin, xmax
+            xpmin, xpmax = vc.xmin, vc.xmax
+            # update vc min max / calculate current xmin, xmax[, ymin, ymax]
+            vc.updateMinMax(reset=True)
+            xmin, xmax = vc.xmin, vc.xmax
+
+            if self.autoscale & PlotAxes.SCALE_X:
+                if xmin < xpmin:
+                    # growing in negative direction
+                    # hold max value
+                    if xmax >= win[1]:
+                        # win[1]: user max value
+                        xmax = win[1]
+                elif xmax > xpmax:
+                    # growing in positive direction
+                    # hold min value
+                    if xmin <= win[0]:
+                        # win[0]: user min value
+                        xmin = win[0]
+                else:
+                    # no auto scaling in x keep previous values
+                    xmin, xmax = win[0], win[1]
+
+                if xmin > win[0]:
+                    xmin = win[0]
+                if xmax < win[1]:
+                    xmax = win[1]
+            else:
+                xmin, xmax = win[0], win[1]
+
+            if self.autoscale & PlotAxes.SCALE_Y:
+                # compare y components of current window with last added y point
+                yl = curvechanged.y[-1]
+                ymin = yl if yl < win[2] else win[2]
+                ymax = yl if yl > win[3] else win[3]
+            else:
+                # no auto scaling in x keep previous values
+                ymin, ymax = win[2], win[3]
+
+            xmin, xmax, ymin, ymax = self._calcWindowForCurves(vc, xmin, xmax,
+                                                               ymin, ymax)
+            self.setWindow(xmin, xmax, ymin, ymax)
+        else:
+            # update vc min max / calculate current xmin, xmax, ymin, ymax
+            vc.updateMinMax(reset=True)
+            self.reset()
 
     def isReset(self):
-        return self._resetWindow or self.getWindow() is None
+        # obsolete / deprecated
+        # reset() now performs the reset immediately.
+        return False
 
     @property
     def autoscale(self):
@@ -1578,178 +1686,110 @@ class PlotAxes(GRViewPort, GRMeta):
         return self._id
 
     def drawGR(self):
-        lstPlotCurve = self.getCurves()
+        curves = self.getCurves()
         viewport = self.viewportscaled
-        if lstPlotCurve:
-            if self.isReset() or self.autoscale:
-                # global xmin, xmax, ymin, ymax
-                visibleCurves = [c for c in lstPlotCurve if c.visible]
-                if not visibleCurves:
-                    visibleCurves = lstPlotCurve
-                # calculate previous xmin, xmax
-                xpmin = min(min(c.x[:-1]) if len(c.x) > 1 else c.x[-1]
-                             for c in visibleCurves)
-                xpmax = max(max(c.x[:-1]) if len(c.x) > 1 else c.x[-1]
-                             for c in visibleCurves)
-                # calculate xmin, xmax
-                xl = [curve.x[-1] for curve in visibleCurves]
-                yl = [curve.y[-1] for curve in visibleCurves]
-                xmin = min(xpmin, *xl)
-                xmax = max(xpmax, *xl)
-                # calculate ymin, ymax
-                ymin = min(min(curve.y) for curve in visibleCurves)
-                ymax = max(max(curve.y) for curve in visibleCurves)
-                # calculate ymin, ymax for last (added) point.
-                ylmin, ylmax = min(yl), max(yl)
-
-                if self.isReset():
-                    self._resetWindow = False
-                elif self.autoscale:
-                    win = self.getWindow()
-                    if win:
-                        if self.autoscale & PlotAxes.SCALE_X:
-                            if xmin < xpmin:
-                                # growing in negative direction
-                                # hold max value
-                                if xmax >= win[1]:
-                                    # win[1]: user max value
-                                    xmax = win[1]
-                            elif xmax > xpmax:
-                                # growing in positive direction
-                                # hold min value
-                                if xmin <= win[0]:
-                                    # win[0]: user min value
-                                    xmin = win[0]
-                        else:
-                            # no auto scaling in x keep previous values
-                            xmin, xmax = win[0], win[1]
-                        if self.autoscale & PlotAxes.SCALE_Y:
-                            ymin = ylmin if ylmin < win[2] else win[2]
-                            ymax = ylmax if ylmax > win[3] else win[3]
-                        else:
-                            # no auto scaling in x keep previous values
-                            ymin, ymax = win[2], win[3]
-
-                # take error bars into account
-                # if error bar's center is in current window
-                # adjust window margins to contain error bars.
-                for curve in visibleCurves:
-                    if isinstance(curve, PlotCurve):
-                        for bar in [curve.errorBar1, curve.errorBar2]:
-                            if bar:
-                                if bar.direction == ErrorBar.HORIZONTAL:
-                                    for i, x in enumerate(bar.x):
-                                        if x >= xmin and x <= xmax:
-                                            bneg = x - bar.dneg[i]
-                                            bpos = x + bar.dpos[i]
-                                            if bneg < xmin:
-                                                xmin = bneg
-                                            if bpos > xmax:
-                                                xmax = bpos
-                                elif bar.direction == ErrorBar.VERTICAL:
-                                    for i, y in enumerate(bar.y):
-                                        if y >= ymin and y <= ymax:
-                                            bneg = y - bar.dneg[i]
-                                            bpos = y + bar.dpos[i]
-                                            if bneg < ymin:
-                                                ymin = bneg
-                                            if bpos > ymax:
-                                                ymax = bpos
-
-                if ((not self.autoscale
-                     or math.fabs(xmax - xmin) < gr.precision)
-                    and self.scale & gr.OPTION_X_LOG == 0):
-                    xmin, xmax = gr.adjustrange(xmin, xmax)
-                if ((not self.autoscale or
-                     math.fabs(ymax - ymin) < gr.precision)
-                    and self.scale & gr.OPTION_Y_LOG == 0):
-                    ymin, ymax = gr.adjustrange(ymin, ymax)
-
-                window = [xmin, xmax, ymin, ymax]
-                self.setWindow(*window)
-            else:
-                window = self.getWindow()
-                xmin, xmax, ymin, ymax = window
-
-            if (window[0] > xmin or xmin > window[1] or window[2] > ymin or
-                ymin > window[3]):
-                #GKS: Rectangle definition is invalid in routine SET_WINDOW
-                #origin outside current window
+        if curves:
+            window = self.getWindow()
+            if not window:
                 self.reset()
-                self.drawGR()
-            else:
-                if self.scale & gr.OPTION_X_LOG:
-                    xtick = majorx = 1
-                else:
-                    majorx = self._majorx if self._majorx is not None else 5
-                    if self._xtick is not None:
-                        xtick = self._xtick
-                    else:
-                        xtick = gr.tick(xmin, xmax) / majorx
-                if self.scale & gr.OPTION_Y_LOG:
-                    ytick = majory = 1
-                else:
-                    majory = self._majory if self._majory is not None else 5
-                    if self._ytick is not None:
-                        ytick = self._ytick
-                    else:
-                        ytick = gr.tick(ymin, ymax) / majory
-                # window may has been modified - get most recent window
                 window = self.getWindow()
-                xmin, xmax, ymin, ymax = window
-                gr.setviewport(*self.viewportscaled)
-                gr.setwindow(*window)
-                gr.setscale(self.scale)
-                if self.backgroundColor and self.getId() == 1:
-                    gr.setfillintstyle(1)
-                    gr.setfillcolorind(self.backgroundColor)
-                    gr.fillrect(*window)
-                charHeight = .024 * (viewport[3] - viewport[2])
-                gr.setcharheight(charHeight)
-                if self.isGridEnabled() and self.getId() == 1:
-                    # delta majorx, delta majory
-                    dmx = xtick * majorx
-                    dmy = ytick * majory
-                    # xorg, yorg
-                    i = int(xmin / dmx) if xmin < 0 else int(xmin / dmx + 1)
-                    j = int(ymin / dmy) if ymin < 0 else int(ymin / dmy + 1)
-                    xorg = i * dmx
-                    yorg = j * dmy
-                    gr.grid(xtick, ytick, xorg, yorg, majorx, majory)
-                if self.getId() == 1:
-                    # first x, y axis
-                    if not self.isXDrawingEnabled():
-                        majorx = -majorx
-                    if not self.isYDrawingEnabled():
-                        majory = -majory
-                    gr.axeslbl(xtick, ytick, xmin, ymin, majorx, majory,
-                               0.01, self._xtick_callback, self._ytick_callback)
-                elif self.getId() == 2:
-                    # second x, y axis
-                    if not self.isXDrawingEnabled():
-                        majorx = -majorx
-                    if not self.isYDrawingEnabled():
-                        majory = -majory
-                    gr.axeslbl(xtick, ytick, xmax, ymax, majorx, majory,
-                               - 0.01, self._xtick_callback,
-                               self._ytick_callback)
-                for curve in lstPlotCurve:
-                    curve.drawGR()
+            xmin, xmax, ymin, ymax = window
+
+            if self.scale & gr.OPTION_X_LOG:
+                xtick = majorx = 1
+            else:
+                majorx = self._majorx if self._majorx is not None else 5
+                if self._xtick is not None:
+                    xtick = self._xtick
+                else:
+                    xtick = gr.tick(xmin, xmax) / majorx
+            if self.scale & gr.OPTION_Y_LOG:
+                ytick = majory = 1
+            else:
+                majory = self._majory if self._majory is not None else 5
+                if self._ytick is not None:
+                    ytick = self._ytick
+                else:
+                    ytick = gr.tick(ymin, ymax) / majory
+
+            gr.setviewport(*self.viewportscaled)
+            gr.setwindow(*window)
+            gr.setscale(self.scale)
+            if self.backgroundColor and self.getId() == 1:
+                gr.setfillintstyle(1)
+                gr.setfillcolorind(self.backgroundColor)
+                gr.fillrect(*window)
+            charHeight = .024 * (viewport[3] - viewport[2])
+            gr.setcharheight(charHeight)
+            if self.isGridEnabled() and self.getId() == 1:
+                # delta majorx, delta majory
+                dmx = xtick * majorx
+                dmy = ytick * majory
+                # xorg, yorg
+                i = int(xmin / dmx) if xmin < 0 else int(xmin / dmx + 1)
+                j = int(ymin / dmy) if ymin < 0 else int(ymin / dmy + 1)
+                xorg = i * dmx
+                yorg = j * dmy
+                gr.grid(xtick, ytick, xorg, yorg, majorx, majory)
+            if self.getId() == 1:
+                # first x, y axis
+                if not self.isXDrawingEnabled():
+                    majorx = -majorx
+                if not self.isYDrawingEnabled():
+                    majory = -majory
+                gr.axeslbl(xtick, ytick, xmin, ymin, majorx, majory,
+                           0.01, self._xtick_callback, self._ytick_callback)
+            elif self.getId() == 2:
+                # second x, y axis
+                if not self.isXDrawingEnabled():
+                    majorx = -majorx
+                if not self.isYDrawingEnabled():
+                    majory = -majory
+                gr.axeslbl(xtick, ytick, xmax, ymax, majorx, majory,
+                           - 0.01, self._xtick_callback,
+                           self._ytick_callback)
+            for curve in curves:
+                curve.drawGR()
 
     def plot(self, *args, **kwargs):
         if len(args) > 0 and len(args) % 2 == 0:
-            self._lstPlotCurve = []
+            self._curves = Coords2DList()
+            self._visibleCurves = Coords2DList()
             for i in range(0, len(args) // 2):
                 x = args[2 * i]
                 y = args[2 * i + 1]
-                self._lstPlotCurve.append(PlotCurve(x, y))
+                self.addCurves(PlotCurve(x, y))
         return self
 
     def addCurves(self, *args, **kwargs):
         for plotCurve in args:
-            if plotCurve and plotCurve not in self._lstPlotCurve:
-                self._lstPlotCurve.append(plotCurve)
+            if plotCurve and plotCurve not in self._curves:
+                self._curves.append(plotCurve)
+            if plotCurve.visible and plotCurve not in self._visibleCurves:
+                self._visibleCurves.append(plotCurve)
+            plotCurve.setVisibleCallback(self.curveVisibilityChanged)
+            plotCurve.setUpdateXCallback(self.curveDataChanged)
+            plotCurve.setUpdateYCallback(self.curveDataChanged)
         return self
+
+    def curveVisibilityChanged(self, curve, flag):
+        if curve in self._visibleCurves:
+            if not flag:
+                self._visibleCurves.remove(curve)
+        elif flag:
+            self._visibleCurves.append(curve)
+
+    def curveDataChanged(self, curve):
+        if len(curve.x) and len(curve.y):
+            curves = self.getCurves()
+            curves.updateMinMax(reset=True)
+            if curve.visible:
+                if self.autoscale:
+                    self.doAutoScale(curve)
+                else:
+                    vc = self.getVisibleCurves()
+                    vc.updateMinMax(reset=True)
+
 
 def ndctowc(x, y):
     try:
