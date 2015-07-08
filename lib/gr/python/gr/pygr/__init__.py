@@ -1401,6 +1401,7 @@ class PlotAxes(GRViewPort, GRMeta):
                  majory=None, drawX=True, drawY=True):
         super(PlotAxes, self).__init__(viewport)
         self._xtick, self._ytick = xtick, ytick
+        self._majorx, self._majory = None, None
         self.majorx, self.majory = majorx, majory
         self._drawX, self._drawY = drawX, drawY
         self._curves = Coords2DList()
@@ -1437,7 +1438,18 @@ class PlotAxes(GRViewPort, GRMeta):
     @property
     def xtick(self):
         """get current user-defined interval between minor x ticks"""
-        return self._xtick
+        if self.scale & gr.OPTION_X_LOG:
+            xtick = 1
+        elif self._xtick is not None:
+            xtick = self._xtick
+        else:
+            win = self.getWindow()
+            if win:
+                xmin, xmax = win[:2]
+                xtick = gr.tick(xmin, xmax) / self.majorx
+            else:
+                xtick = None
+        return xtick
 
     @xtick.setter
     def xtick(self, tickInterval):
@@ -1446,7 +1458,18 @@ class PlotAxes(GRViewPort, GRMeta):
     @property
     def ytick(self):
         """get current user-defined interval between minor y ticks"""
-        return self._ytick
+        if self.scale & gr.OPTION_Y_LOG:
+            ytick = 1
+        elif self._ytick is not None:
+            ytick = self._ytick
+        else:
+            win = self.getWindow()
+            if win:
+                ymin, ymax = win[2:]
+                ytick = gr.tick(ymin, ymax) / self.majory
+            else:
+                ytick = None
+        return ytick
 
     @ytick.setter
     def ytick(self, tickInterval):
@@ -1456,7 +1479,13 @@ class PlotAxes(GRViewPort, GRMeta):
     def majorx(self):
         """get current user-defined number of minor tick intervals between
         major x tick marks"""
-        return self._majorx
+        if self.scale & gr.OPTION_X_LOG:
+            mx = 1
+        elif self._majorx is not None:
+            mx = self._majorx
+        else:
+            mx = 5
+        return mx
 
     @majorx.setter
     def majorx(self, minorCount):
@@ -1466,7 +1495,13 @@ class PlotAxes(GRViewPort, GRMeta):
     def majory(self):
         """get current user-defined number of minor tick intervals between
         major y tick marks"""
-        return self._majory
+        if self.scale & gr.OPTION_Y_LOG:
+            my = 1
+        elif self._majory is not None:
+            my = self._majory
+        else:
+            my = 5
+        return my
 
     @majory.setter
     def majory(self, minorCount):
@@ -1668,6 +1703,7 @@ class PlotAxes(GRViewPort, GRMeta):
             # update vc min max / calculate current xmin, xmax, ymin, ymax
             vc.updateMinMax(reset=True)
             self.reset()
+        return self.getWindow()
 
     def isReset(self):
         # obsolete / deprecated
@@ -1695,23 +1731,6 @@ class PlotAxes(GRViewPort, GRMeta):
                 window = self.getWindow()
             xmin, xmax, ymin, ymax = window
 
-            if self.scale & gr.OPTION_X_LOG:
-                xtick = majorx = 1
-            else:
-                majorx = self._majorx if self._majorx is not None else 5
-                if self._xtick is not None:
-                    xtick = self._xtick
-                else:
-                    xtick = gr.tick(xmin, xmax) / majorx
-            if self.scale & gr.OPTION_Y_LOG:
-                ytick = majory = 1
-            else:
-                majory = self._majory if self._majory is not None else 5
-                if self._ytick is not None:
-                    ytick = self._ytick
-                else:
-                    ytick = gr.tick(ymin, ymax) / majory
-
             gr.setviewport(*self.viewportscaled)
             gr.setwindow(*window)
             gr.setscale(self.scale)
@@ -1723,29 +1742,32 @@ class PlotAxes(GRViewPort, GRMeta):
             gr.setcharheight(charHeight)
             if self.isGridEnabled() and self.getId() == 1:
                 # delta majorx, delta majory
-                dmx = xtick * majorx
-                dmy = ytick * majory
+                dmx = self.xtick * self.majorx
+                dmy = self.ytick * self.majory
                 # xorg, yorg
                 i = int(xmin / dmx) if xmin < 0 else int(xmin / dmx + 1)
                 j = int(ymin / dmy) if ymin < 0 else int(ymin / dmy + 1)
                 xorg = i * dmx
                 yorg = j * dmy
-                gr.grid(xtick, ytick, xorg, yorg, majorx, majory)
+                gr.grid(self.xtick, self.ytick, xorg, yorg, self.majorx,
+                        self.majory)
             if self.getId() == 1:
                 # first x, y axis
+                majorx, majory = self.majorx, self.majory
                 if not self.isXDrawingEnabled():
                     majorx = -majorx
                 if not self.isYDrawingEnabled():
                     majory = -majory
-                gr.axeslbl(xtick, ytick, xmin, ymin, majorx, majory,
+                gr.axeslbl(self.xtick, self.ytick, xmin, ymin, majorx, majory,
                            0.01, self._xtick_callback, self._ytick_callback)
             elif self.getId() == 2:
                 # second x, y axis
+                majorx, majory = self.majorx, self.majory
                 if not self.isXDrawingEnabled():
                     majorx = -majorx
                 if not self.isYDrawingEnabled():
                     majory = -majory
-                gr.axeslbl(xtick, ytick, xmax, ymax, majorx, majory,
+                gr.axeslbl(self.xtick, self.ytick, xmax, ymax, majorx, majory,
                            - 0.01, self._xtick_callback,
                            self._ytick_callback)
             for curve in curves:
