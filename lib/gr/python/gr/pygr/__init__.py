@@ -1645,13 +1645,15 @@ class PlotAxes(GRViewPort, GRMeta):
         if bbox:
             xmin, xmax, ymin, ymax = bbox
 
-            if ((not self.autoscale
-                 or math.fabs(xmax - xmin) < gr.precision)
-                and self.scale & gr.OPTION_X_LOG == 0):
+            if math.fabs(xmax - xmin) < gr.precision:
+                xmin -= gr.precision
+                xmax += gr.precision
+            elif not self.autoscale and self.scale & gr.OPTION_X_LOG == 0:
                 xmin, xmax = gr.adjustrange(xmin, xmax)
-            if ((not self.autoscale or
-                 math.fabs(ymax - ymin) < gr.precision)
-                and self.scale & gr.OPTION_Y_LOG == 0):
+            if math.fabs(ymax - ymin) < gr.precision:
+                ymin -= gr.precision
+                ymax += gr.precision
+            elif not self.autoscale and self.scale & gr.OPTION_Y_LOG == 0:
                 ymin, ymax = gr.adjustrange(ymin, ymax)
 
             self.setWindow(xmin, xmax, ymin, ymax)
