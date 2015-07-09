@@ -61,14 +61,14 @@ Those distributions provide more packages that you can think you will ever
 need and they are very easy to update using package managers.
 
 .. note::
-    Binary packages for Windows or OS X will soon be made available.
-    We are also working on a packages for Anaconda, which may be
-    used with the ``conda install`` command and then be obtained from
-    `conda.binstar.org <http://conda.binstar.org>`_.
+    We are providing binary packages for Anaconda, which can be
+    obtained from `conda.anaconda.org <http://conda.anaconda.org>`_ and
+    then be installed with the ``conda install`` command.
 
-For Linux and OS X there are binary packages available on Binstar::
+For Linux, Windows or OS X you can download and install ready-to-use
+packages with a single command::
 
-    conda install -c https://conda.binstar.org/jheinen gr
+    conda install -c https://conda.anaconda.org/jheinen gr
     python
 
 If you don't have Miniconda or Anaconda installed, you can download
@@ -77,7 +77,7 @@ command-line installer. For Miniconda on OS X, in the shell execute::
 
     bash Miniconda-3.x.x-MacOSX-x86_64.sh 
     export PATH=~/miniconda/bin:$PATH
-    conda install -c https://conda.binstar.org/jheinen gr
+    conda install -c https://conda.anaconda.org/jheinen gr
     python
 
 Alternatively, to use the GR framework with Anaconda, you simply have
