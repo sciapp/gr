@@ -8,6 +8,7 @@ Exported Classes:
 import os
 import math
 import logging
+import warnings
 # local library
 import gr
 import qtgr.events
@@ -50,7 +51,6 @@ class GRWidget(QtGui.QWidget):
 
     def __init__(self, *args, **kwargs):
         super(GRWidget, self).__init__(*args, **kwargs)
-        self._clear, self._update = False, False
         self._sizex, self._sizey = 1., 1.
         self._dwidth, self._dheight = self.width(), self.height()
         self._mwidth = self.width() * .0254 / self.logicalDpiX()
@@ -65,7 +65,8 @@ class GRWidget(QtGui.QWidget):
         self._painter.begin(self)
         self._painter.fillRect(0, 0, self.width(), self.height(), self._bgColor)
         os.environ["GKSconid"] = getGKSConnectionId(self, self._painter)
-        self.draw(self._clear, self._update)
+        gr.clearws()
+        self.draw()
         gr.updatews()
         self._painter.end()
 
@@ -133,12 +134,14 @@ class GRWidget(QtGui.QWidget):
         self.resizeEvent(None)
         self.update()
 
-    def _draw(self, clear=False, update=True):
-        self._clear, self._update = clear, update
-
-    def draw(self, clear=False, update=True):
-        # put gr commands in here
-        pass
+    def draw(self, clear=None, update=None):
+        # obsolete kwargs clear, update (unused) just kept for compatibility
+        if clear is not None or update is not None:
+            warnings.warn("Clear and update kwargs do not affect draw "
+                          "method anymore and will be removed in future "
+                          "versions. Please remove these arguments from your "
+                          "draw calls. A clear and update will be done "
+                          "internally for each paintEvent.", FutureWarning)
 
     def save(self, path):
         (p, ext) = os.path.splitext(path)
@@ -172,8 +175,8 @@ class GRWidget(QtGui.QWidget):
                               printer.pageRect().height() / 2)
             painter.scale(scale, scale)
             painter.translate(-self.width() / 2, -self.height() / 2)
-
-            self.draw(True)
+            gr.clearws()
+            self.draw()
             gr.updatews()
             painter.end()
 
@@ -211,9 +214,9 @@ class InteractiveGRWidget(GRWidget):
         self._zoomEnabled = True
         self._lstPlot = []
 
-    def draw(self, clear=False, update=True):
-        if clear:
-            gr.clearws()
+    def draw(self, clear=None, update=None):
+        # obsolete kwargs clear, update (unused) just kept for compatibility
+        GRWidget.draw(self, clear, update)
         gr.setwsviewport(0, self.mwidth, 0, self.mheight)
         gr.setwswindow(0, self.sizex, 0, self.sizey)
 
@@ -244,7 +247,7 @@ class InteractiveGRWidget(GRWidget):
         for plot in args:
             if plot and plot not in self._lstPlot:
                 self._lstPlot.append(plot)
-        self._draw(clear=True, update=True)
+        self.update()
         return self._lstPlot
 
     def plot(self, *args, **kwargs):
@@ -336,7 +339,6 @@ class InteractiveGRWidget(GRWidget):
             plot.select(p0, p1, self.dwidth, self.dheight)
             change = True
         if change:
-            self._draw(True)
             self.update()
 
     def _pan(self, p0, dp):
@@ -346,7 +348,6 @@ class InteractiveGRWidget(GRWidget):
             plot.pan(dp, self.dwidth, self.dheight)
             change = True
         if change:
-            self._draw(True)
             self.update()
 
     def _zoom(self, dpercent, p0):
@@ -356,7 +357,6 @@ class InteractiveGRWidget(GRWidget):
             plot.zoom(dpercent, p0, self.dwidth, self.dheight)
             change = True
         if change:
-            self._draw(True)
             self.update()
 
     def _roi(self, p0, type, buttons, modifiers):
