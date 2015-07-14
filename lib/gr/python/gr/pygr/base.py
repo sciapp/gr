@@ -148,6 +148,7 @@ class GRVisibility(object):
 
     def __init__(self, visible=True):
         self._visible = visible
+        self._visible_callback = None
 
     @property
     def visible(self):
@@ -157,3 +158,8 @@ class GRVisibility(object):
     @visible.setter
     def visible(self, flag):
         self._visible = flag
+        if self._visible_callback:
+            self._visible_callback(self, flag)
+
+    def setVisibleCallback(self, fp):
+        self._visible_callback = fp
