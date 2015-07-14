@@ -41,6 +41,17 @@ along with GR. If not, see <http://www.gnu.org/licenses/>.
 """
 
 
+class ScaledPlotAxes(PlotAxes):
+
+    def doAutoScale(self, curvechanged=None):
+        xmin, xmax, ymin, ymax = PlotAxes.doAutoScale(self, curvechanged)
+        bxmin, _bxmax, _bymin, _bymax = self.getBoundingBox()
+        if xmin < bxmin:
+            xmin = bxmin
+        self.setWindow(xmin, xmax, ymin, ymax)
+        return self.getWindow()
+
+
 class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, *args, **kwargs):
@@ -53,7 +64,7 @@ class MainWindow(QtGui.QMainWindow):
         y = sin(x)
 
         self.curve = PlotCurve(x, y)
-        axes = PlotAxes(viewport)
+        axes = ScaledPlotAxes(viewport)
         axes.addCurves(self.curve)
         plot = Plot(viewport).addAxes(axes)
         plot.title = "QtGR Timer example"
