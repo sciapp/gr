@@ -3034,13 +3034,15 @@ int gks_base64(unsigned char *src, size_t srclen, char *dest, size_t destsize)
 
 LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
 {
-  LPSTR lpEnvSearch;
+  LPSTR lpEnvSearch, lpEnvBlock;
   LPSTR lpszVarSearch;
+  static char *env = NULL;
 
   if (!*lpszVariableName)
     return NULL;
 
-  lpEnvSearch = GetEnvironmentStrings();
+  lpEnvBlock = GetEnvironmentStrings();
+  lpEnvSearch = lpEnvBlock;
 
   while (*lpEnvSearch)
     {
@@ -3066,7 +3068,13 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
        *  reaches the end of the current variable string.
        */
       if (*lpEnvSearch == '=' && *lpszVarSearch == '\0')
-	return (lpEnvSearch + 1);
+        {
+          if (env != NULL)
+            free(env);
+          env = strdup(lpEnvSearch + 1);
+          FreeEnvironmentStrings(lpEnvBlock);
+	  return env;
+        }
       else
 	while (*lpEnvSearch)
 	  lpEnvSearch++;
@@ -3079,6 +3087,9 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
        */
       lpEnvSearch++;
     }
+
+  if (lpEnvBlock != NULL)
+    FreeEnvironmentStrings(lpEnvBlock);
 
   return getenv(lpszVariableName);	/*
 					 * If this section of code is reached,
