@@ -27,7 +27,7 @@ _impl = python_implementation()
 
 
 try:
-    from IPython.display import SVG, Image, HTML
+    from IPython.display import clear_output, display, SVG, Image, HTML
     from base64 import b64encode
 except:
     _mime_type = ""
@@ -242,6 +242,8 @@ def deactivatews(workstation_id):
 
 
 def clearws():
+    if isinline():
+        clear_output(wait=True)
     __gr.gr_clearws()
 
 
@@ -2136,9 +2138,9 @@ def mimetype():
     return _mime_type
 
 
-def isinteractive():
+def isinline():
     global _mime_type
-    return _mime_type == None or _mime_type == "mov"
+    return _mime_type != None and _mime_type != "mov"
 
 
 def inline(mime="svg"):
@@ -2154,13 +2156,15 @@ def show():
     emergencyclosegks()
     if _mime_type == 'svg':
         content = SVG(data=open('gks.svg', 'rb').read())
+        display(content)
     elif _mime_type == 'png':
         content = Image(data=open('gks.png', 'rb').read(), width=465, height=465)
+        display(content)
+
     elif _mime_type == 'mov':
         content = HTML(data='<video controls autoplay type="video/mp4" src="data:video/mp4;base64,{0}">'.format(b64encode(open('gks.mov', 'rb').read())))
-    else:
-        content = None
-    return content
+        return content
+    return None
 
 
 def setregenflags(flags):
