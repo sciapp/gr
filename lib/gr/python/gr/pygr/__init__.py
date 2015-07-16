@@ -1417,6 +1417,7 @@ class PlotAxes(GRViewPort, GRMeta):
     COUNT = 0
     SCALE_X = 0x1
     SCALE_Y = 0x2
+    COORDLIST_CLASS = Coords2DList
 
     def __init__(self, viewport, xtick=None, ytick=None, majorx=None,
                  majory=None, drawX=True, drawY=True):
@@ -1425,8 +1426,8 @@ class PlotAxes(GRViewPort, GRMeta):
         self._majorx, self._majory = None, None
         self.majorx, self.majory = majorx, majory
         self._drawX, self._drawY = drawX, drawY
-        self._curves = Coords2DList()
-        self._visibleCurves = Coords2DList()
+        self._curves = self.COORDLIST_CLASS()
+        self._visibleCurves = self.COORDLIST_CLASS()
         self._backgroundColor = 0
         self._window = None
         self._scale = 0
