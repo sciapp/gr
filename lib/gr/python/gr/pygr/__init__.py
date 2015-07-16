@@ -1150,24 +1150,28 @@ class Plot(GRViewPort, GRMeta):
             self.drawGR()
 
 
-def isCoords2D(other):
-    if not isinstance(other, Coords2D):
-        raise ValueError("%s is not an instance of Coords2D." % type(other))
+def isinstanceof(other, cls):
+    if not isinstance(other, cls):
+        raise ValueError("%s is not an instance of %s." % (type(other),
+                                                           cls.__name__))
 
 
-def islistofCoords2D(otheriter):
+def islistof(otheriter, cls):
     if isinstance(otheriter, collections.Iterable):
         for other in otheriter:
-            if not isinstance(other, Coords2D):
+            if not isinstance(other, cls):
                 raise ValueError("Iterable contains %s " % type(other) +
-                                 "which is not an instance of Coords2D.")
+                                 "which is not an instance of %s."
+                                 % cls.__name__)
 
 
 class Coords2DList(list):
 
+    TYPE = Coords2D
+
     def __init__(self, *args, **kwargs):
         list.__init__(self, *args, **kwargs)
-        islistofCoords2D(self)
+        islistof(self, self.TYPE)
         self.xmin, self.xmax, self.ymin, self.ymax = None, None, None, None
         self.updateMinMax(reset=True)
 
@@ -1201,25 +1205,25 @@ class Coords2DList(list):
             self.xmin, self.xmax, self.ymin, self.ymax = None, None, None, None
 
     def __iadd__(self, otheriter):
-        islistofCoords2D(otheriter)
+        islistof(otheriter, self.TYPE)
         res = list.__iadd__(self, otheriter)
         self.updateMinMax(*otheriter)
         return res
 
     def append(self, other):
-        isCoords2D(other)
+        isinstanceof(other, self.TYPE)
         res = list.append(self, other)
         self.updateMinMax(other)
         return res
 
     def extend(self, otheriter):
-        islistofCoords2D(otheriter)
+        islistof(otheriter, self.TYPE)
         res = list.extend(self, otheriter)
         self.updateMinMax(*otheriter)
         return res
 
     def insert(self, index, other):
-        isCoords2D(other)
+        isinstanceof(other, self.TYPE)
         res = list.insert(self, index, other)
         self.updateMinMax(other)
         return res
@@ -1233,6 +1237,33 @@ class Coords2DList(list):
         res = list.remove(self, other)
         self.updateMinMax(reset=True)
         return res
+
+
+class Coords3DList(Coords2DList):
+
+    TYPE = Coords3D
+
+    def __init__(self, *args, **kwargs):
+        self.zmin, self.zmax = None, None
+        Coords2DList.__init__(self, *args, **kwargs)
+
+    def updateMinMax(self, *coords, **kwargs):
+        Coords2DList.updateMinMax(self, *coords, **kwargs)
+        reset = kwargs.pop("reset", False)
+        if not coords:
+            coords = self
+        if coords:
+            zmin = min(min(coord.z) for coord in coords)
+            zmax = max(max(coord.z) for coord in coords)
+            if reset:
+                self.zmin, self.zmax = zmin, zmax
+            else:
+                self.zmin = (min(self.zmin, zmin) if self.zmin is not None
+                             else zmin)
+                self.zmax = (max(self.zmax, zmax) if self.zmax is not None
+                             else zmax)
+        else:
+            self.zmin, self.zmax, = None, None
 
 
 class PlotCurve(GRDrawAttributes, GRVisibility, Coords2D, GRMeta):

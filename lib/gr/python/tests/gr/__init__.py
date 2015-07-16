@@ -7,7 +7,7 @@ import nose
 from nose.tools import assert_equal
 # local library
 import gr
-from gr.pygr import Coords2DList, Coords2D
+from gr.pygr import Coords2DList, Coords2D, Coords3DList, Coords3D
 
 def test_char():
     gr.char("t")
@@ -105,3 +105,12 @@ def test_coords2DList_update():
     assert_equal(coords.xmax, 15)
     assert_equal(coords.ymin, 25)
     assert_equal(coords.ymax, 25)
+
+def test_coords3DList_minmax():
+    coords = Coords3DList([Coords3D([1, 2], [1, 2], [-42, 42])])
+    assert_equal(coords.xmin, 1)
+    assert_equal(coords.xmax, 2)
+    assert_equal(coords.ymin, 1)
+    assert_equal(coords.ymax, 2)
+    assert_equal(coords.zmin, -42)
+    assert_equal(coords.zmax, 42)
