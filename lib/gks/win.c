@@ -701,7 +701,7 @@ void polyline(int n, double *px, double *py)
 }
 
 static
-void draw_marker(double xn, double yn, int mtype, int mscale, int mcolor)
+void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   int r, x, y, i;
   int pc, op;
