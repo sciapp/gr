@@ -25,10 +25,12 @@ if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
 
 _impl = python_implementation()
 
+_have_clear_output = False
 
 try:
     from IPython.display import clear_output, display, SVG, Image, HTML
     from base64 import b64encode
+    _have_clear_output = True
 except:
     _mime_type = ""
 else:
@@ -242,7 +244,8 @@ def deactivatews(workstation_id):
 
 
 def clearws():
-    if isinline():
+    global _have_clear_output
+    if isinline() and _have_clear_output:
         clear_output(wait=True)
     __gr.gr_clearws()
 
