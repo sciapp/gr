@@ -9,6 +9,7 @@ from __future__ import print_function
 import pyaudio
 import numpy
 from scipy import signal
+import scipy.fftpack
 import time
 import gr
 
@@ -23,7 +24,7 @@ def get_spectrum():
         mic = pa.open(format=pyaudio.paInt16, channels=1, rate=FS,
                       input=True, frames_per_buffer=SAMPLES)
     amplitudes = numpy.fromstring(mic.read(SAMPLES), dtype=numpy.short)
-    return abs(numpy.fft.fft(amplitudes / 32768.0))[:SAMPLES/2]
+    return abs(scipy.fftpack.fft(amplitudes / 32768.0))[:SAMPLES/2]
 
 def parabolic(x, f, i):
     xe = 1/2. * (f[i-1] - f[i+1]) / (f[i-1] - 2 * f[i] + f[i+1]) + x
@@ -64,4 +65,3 @@ while time.time() - start < 10:
             print(xe, ye)
             gr.polyline([xe] * 2, [0, ye])
     gr.updatews()
-

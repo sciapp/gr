@@ -8,6 +8,7 @@ import os, wave, pyaudio
 import numpy as np
 import gr
 import gr3
+import scipy.fftpack
 
 FS=44100       # Sampling frequency
 SAMPLES = 2048
@@ -27,7 +28,7 @@ data = wf.readframes(SAMPLES)
 while data != '' and len(data) == SAMPLES * wf.getsampwidth():
     stream.write(data)
     amplitudes = np.fromstring(data, dtype=np.short)
-    power = abs(np.fft.fft(amplitudes / 32768.0))[:SAMPLES/2]
+    power = abs(scipy.fftpack.fft(amplitudes / 32768.0))[:SAMPLES/2]
 
     gr.clearws()
     spectrum[:, 63] = power[:256]
