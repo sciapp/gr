@@ -78,7 +78,7 @@ install: default
 	COPY /Y ..\gks\gks.h $(DESTDIR)
 	COPY /Y ..\gks\plugin\*.dll $(DESTDIR)
 	IF NOT EXIST $(DESTDIR)\fonts MKDIR $(DESTDIR)\fonts
-	COPY /Y ..\gks\gksfont.dat $(DESTDIR)\fonts
+	COPY /Y ..\gks\fonts\gksfont.dat $(DESTDIR)\fonts
 
 clean:
 	@cd ..\gks

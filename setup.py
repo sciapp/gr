@@ -37,6 +37,7 @@ else:
                 stderr = stderr.decode()
             return (stdout, stderr)
 from setuptools import setup, Extension
+from setuptools.command.build_py import build_py as _build_py
 from setuptools.dist import Distribution
 import vcversioner
 
@@ -215,9 +216,18 @@ class check_ext(Command):
         self.disable_mov = False if self.isLinuxOrDarwin else True
         # -- environment -------------------------------------
         self.cc = os.getenv("CC", "cc")
-        self.grdir = os.getenv("GRDIR",
-                               os.path.join(get_python_lib(plat_specific=True,
-                                                           prefix=''), "gr"))
+
+        pylib = get_python_lib(plat_specific=True, prefix='')
+        eggname = (self.distribution.get_fullname() + "-py%d.%d-%s"
+                   % (sys.version_info[0], sys.version_info[1],
+                      get_platform()) + ".egg")
+        grdir = os.path.join(pylib, eggname, "gr")
+        options_install = self.distribution.get_option_dict("install")
+        if options_install and ("old_and_unmanageable" in options_install or
+                                "single_version_externally_managed" in
+                                options_install):
+            grdir = os.path.join(pylib, "gr")
+        self.grdir = os.getenv("GRDIR", grdir)
         # -- x11 -------------------------------------
         self.x11lib = []
         self.x11inc = []
@@ -1308,6 +1318,26 @@ class build_ext(_build_ext, check_ext, build_static):
                       os.path.join(_build_scripts, "GKSTerm.app"))
 
 
+class build_py(_build_py):
+
+    def _get_data_files(self):
+        data = _build_py._get_data_files(self)
+        # special case: search also in gks for gr data files.
+        # (needed for gksfonts)
+        package = "gr"
+        gks_src = self.get_package_dir("gks")
+        # Compute package build directory
+        build_dir = os.path.join(*([self.build_lib] + package.split('.')))
+        # Length of path to strip from found files
+        plen = len(gks_src) + 1
+        # Strip directory from globbed filenames
+        filenames = [
+            file[plen:] for file in self.find_data_files(package, gks_src)
+        ]
+        data.append((package, gks_src, build_dir, filenames))
+        return data
+
+
 class run_tests(build_ext):
 
     def run(self):
@@ -1346,14 +1376,6 @@ _build_3rdparty = os.path.join("build", "3rdparty." + _uPlatformId)
 _build_temp = os.path.join("build", "temp." + _uPlatformId)
 _build_scripts = os.path.join("build", "scripts-%d.%d" % (sys.version_info[0],
                                                           sys.version_info[1]))
-
-# additional data files in the distribtion
-_gks_fonts = os.path.join("lib", "gks", "fonts")
-_gks_fonts_path = list(map(lambda f: os.path.join(_gks_fonts, f),
-                           os.listdir(_gks_fonts)))
-_gks_fonts_path.append(os.path.join("lib", "gks", "gksfont.dat"))
-_data_files = [(os.path.join(get_python_lib(plat_specific=True, prefix=''),
-                             "gr", "fonts"), _gks_fonts_path)]
 
 # prerequisites: static 3rdparty libraries
 if sys.platform == "win32":
@@ -1463,8 +1485,9 @@ except IOError as e:
 
 
 setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
-                "build_static": build_static, "clean_static": clean_static,
-                "clean": clean, "tests": run_tests},
+                "build_static": build_static, "build_py": build_py,
+                "clean_static": clean_static, "clean": clean,
+                "tests": run_tests},
       name="gr",
       version=__version__,
       description="Python visualization framework",
@@ -1474,7 +1497,9 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       license="GNU General Public License",
       url="http://gr-framework.org",
       package_dir={'': "lib/gr/python",
-                   "gr3": "lib/gr3/python/gr3"},
+                   "gr3": "lib/gr3/python/gr3",
+                   "gks": "lib/gks" # needed for gksfonts in gr package
+                  },
       requires=["numpy"],
       packages=["gr", "gr.pygr", "gr.matplotlib", "gr3",
                 "qtgr", "qtgr.events"],
@@ -1482,4 +1507,8 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       # check_ext dynamically generates a list of Extensions
       ext_modules=[Extension("", [""])],
       scripts=_scripts,
-      data_files=_data_files)
+      package_data={
+          "gr": ["fonts/*.afm", "fonts/*.pfb", "fonts/gksfont.dat"],
+      },
+      include_package_data=True,
+     )

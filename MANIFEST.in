@@ -3,10 +3,10 @@ include README.*
 include version.txt
 include vcversioner.py
 include requirements.txt
-recursive-include lib *
-recursive-include 3rdparty *
-recursive-include examples *
-recursive-include doc *
-recursive-exclude *.vc Makefile makefile Preflight
+graft lib
+graft 3rdparty
+graft examples
+graft doc
+global-exclude *.vc Makefile makefile Preflight *.py[cod] __pycache__
 exclude lib/gks/quartz/build/*
 prune doc/media

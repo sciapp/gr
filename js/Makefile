@@ -40,7 +40,7 @@ js.c: fonts
 
 fonts:
 	mkdir fonts
-	cp -p $(GKSDIR)/gksfont.dat fonts/
+	cp -p $(GKSDIR)/fonts/gksfont.dat fonts/
 
 $(JPEGDIR)/libjpeg.a:
 	emmake make -C $(JPEGDIR)
