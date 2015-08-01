@@ -37,7 +37,7 @@ void *load_library(const char *name)
   HINSTANCE handle;
 #else
   void *handle;
-  const char *error;
+  const char *grdir, *error;
 #endif
   void *entry = NULL;
 
@@ -53,7 +53,10 @@ void *load_library(const char *name)
     }
   if (handle == NULL)
     {
-      sprintf(pathname, "%s/lib/%s.%s", GRDIR, name, EXTENSION);
+      grdir = gks_getenv("GRDIR");
+      if (grdir == NULL)
+        grdir = GRDIR;
+      sprintf(pathname, "%s/lib/%s.%s", grdir, name, EXTENSION);
       handle = dlopen(pathname, RTLD_LAZY);
     }
 #endif
