@@ -22,6 +22,7 @@ if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
     # (needed for finding GKSTerm on OSX)
     os.environ["GRDIR"] = os.getenv("GRDIR",
                                     os.path.realpath(os.path.dirname(__file__)))
+    os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", os.environ["GRDIR"])
 
 _impl = python_implementation()
 
