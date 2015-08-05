@@ -108,11 +108,20 @@ BOOL gks_terminal(void)
   NSString *path = [NSString stringWithFormat:@"%@/Applications/GKSTerm.app",
                     grdir];
   if ( ! ([fm fileExistsAtPath:path isDirectory:&isDir] && isDir) )
-    path = [[NSString stringWithFormat:@"%@/../../../../bin/GKSTerm.app", grdir] stringByStandardizingPath];
-  url = [NSURL fileURLWithPath: path];
-  status = LSOpenCFURLRef((CFURLRef) url, NULL);
+    path = [[NSString stringWithFormat:@"%@/../../../../bin/GKSTerm.app",
+             grdir] stringByStandardizingPath];
+  if ( ! ([fm fileExistsAtPath:path isDirectory:&isDir] && isDir) )
+    path = [[NSString stringWithFormat:@"%@/../../../../../bin/GKSTerm.app",
+             grdir] stringByStandardizingPath];
 
-  return (status == noErr);
+  if ( [fm fileExistsAtPath:path isDirectory:&isDir] && isDir )
+  {
+     url = [NSURL fileURLWithPath: path];
+     status = LSOpenCFURLRef((CFURLRef) url, NULL);
+     return (status == noErr);
+  }
+  NSLog(@"Could not locate GKSTerm.app.");
+  return false;
 }
 
 void gks_quartzplugin(
