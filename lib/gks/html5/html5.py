@@ -241,8 +241,8 @@ class Html_output(object):
         ix2 = int(ix2)
         iy2 = int(iy2)
 
-        width = abs(ix2 - ix1) + 1
-        height = abs(iy2 - iy1) + 1
+        width = abs(ix2 - ix1)
+        height = abs(iy2 - iy1)
 
         x = min(ix1, ix2)
         y = min(iy1, iy2)

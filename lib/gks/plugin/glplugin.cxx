@@ -764,8 +764,8 @@ void cellarray(
 
   x = (int) min(x1, x2);
   y = (int) min(y1, y2);
-  width  = (int) fabs(x2 - x1) + 1;
-  height = (int) fabs(y2 - y1) + 1;
+  width  = (int) fabs(x2 - x1);
+  height = (int) fabs(y2 - y1);
 
   const double modelview_matrix[16] = {
     2.0*width/p->width, 0,                     0, 2.0*x/p->width-1,

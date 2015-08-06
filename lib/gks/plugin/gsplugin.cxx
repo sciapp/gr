@@ -1351,10 +1351,10 @@ void cell_array(
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, x2, y2);
 
-  w = NINT(fabs(x2 - x1));
-  h = NINT(fabs(y2 - y1));
-  x = NINT(MIN(x1, x2));
-  y = NINT(MIN(y1, y2));
+  w = (int) fabs(x2 - x1);
+  h = (int) fabs(y2 - y1);
+  x = (int) MIN(x1, x2);
+  y = (int) MIN(y1, y2);
 
   packb("gsave");
 

@@ -1056,8 +1056,8 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, ix2, iy2);
 
-  width = (int) fabs(ix2 - ix1) + 1;
-  height = (int) fabs(iy2 - iy1) + 1;
+  width = (int) fabs(ix2 - ix1);
+  height = (int) fabs(iy2 - iy1);
   x = (int) min(ix1, ix2);
   y = (int) min(iy1, iy2);
 

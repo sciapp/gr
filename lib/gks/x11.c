@@ -3636,8 +3636,8 @@ void cell_array(
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, ix2, iy2);
 
-  w = abs(ix2 - ix1) + 1;
-  h = abs(iy2 - iy1) + 1;
+  w = abs(ix2 - ix1);
+  h = abs(iy2 - iy1);
   x = min(ix1, ix2);
   y = min(iy1, iy2);
 
