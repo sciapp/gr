@@ -762,10 +762,11 @@ void cellarray(
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, x2, y2);
 
-  x = (int) min(x1, x2);
-  y = (int) min(y1, y2);
   width  = (int) fabs(x2 - x1);
   height = (int) fabs(y2 - y1);
+  if (width == 0 || height == 0) return;
+  x = (int) min(x1, x2);
+  y = (int) min(y1, y2);
 
   const double modelview_matrix[16] = {
     2.0*width/p->width, 0,                     0, 2.0*x/p->width-1,

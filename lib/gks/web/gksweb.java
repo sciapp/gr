@@ -1968,6 +1968,7 @@ public class gksweb extends Applet
 
     width = Math.abs(ix2 - ix1);
     height = Math.abs(iy2 - iy1);
+    if (width == 0 || height == 0) return;
     x = Math.min(ix1, ix2);
     y = Math.min(iy1, iy2);
 

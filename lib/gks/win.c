@@ -1337,6 +1337,7 @@ void cellarray(
 
   width = abs(ix2 - ix1);
   height = abs(iy2 - iy1);
+  if (width == 0 || height == 0) return;
   x = min(ix1, ix2);
   y = min(iy1, iy2);
 

@@ -1502,10 +1502,10 @@ void fill_routine(int n, double *px, double *py, int tnr)
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, ix2, iy2);
 
-  begin_context(context);
-
   width = abs(ix2 - ix1);
   height = abs(iy2 - iy1);
+  if (width == 0 || height == 0) return;
+
   x = min(ix1, ix2);
   y = min(iy1, iy2);
 
@@ -1528,6 +1528,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
     }
   else
     colia = tmpptr;
+
+  begin_context(context);
 
   cs = CGColorSpaceCreateDeviceRGB();
   if (!true_color)

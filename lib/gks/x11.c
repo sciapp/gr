@@ -3638,6 +3638,7 @@ void cell_array(
 
   w = abs(ix2 - ix1);
   h = abs(iy2 - iy1);
+  if (w == 0 || h == 0) return;
   x = min(ix1, ix2);
   y = min(iy1, iy2);
 

@@ -1813,6 +1813,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 
   width = (int) (fabs(rx2 - rx1));
   height = (int) (fabs(ry2 - ry1));
+  if (width == 0 || height == 0) return;
   x = (int) min(rx1, rx2);
   y = (int) min(ry1, ry2);
 

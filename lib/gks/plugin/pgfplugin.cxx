@@ -909,14 +909,6 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   FILE *stream;
   char filename[MAXPATHLEN];
 
-  gks_filepath(filename, "png", p->page_counter, p->png_counter);
-  if ((stream = fopen(filename, "wb")) == NULL)
-    {
-      gks_perror("can't open temporary file");
-      perror("open");
-      return;
-    }
-
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
   NDC_to_DC(x1, y1, ix1, iy1);
@@ -927,8 +919,17 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 
   width = abs(ix2 - ix1);
   height = abs(iy2 - iy1);
+  if (width == 0 || height == 0) return;
   x = min(ix1, ix2);
   y = min(iy1, iy2);
+
+  gks_filepath(filename, "png", p->page_counter, p->png_counter);
+  if ((stream = fopen(filename, "wb")) == NULL)
+    {
+      gks_perror("can't open temporary file");
+      perror("open");
+      return;
+    }
 
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;

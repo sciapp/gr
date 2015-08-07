@@ -1296,6 +1296,7 @@ void cell_array(
 
   w = (int) fabs(x2 - x1);
   h = (int) fabs(y2 - y1);
+  if (w == 0 || h == 0) return;
   x = (int) MIN(x1, x2);
   y = (int) MIN(y1, y2);
 
