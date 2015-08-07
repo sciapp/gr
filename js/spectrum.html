@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en-us">
+
+<head>
+    <meta charset="utf-8">
+</head>
+
+<body>
+
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <script type="text/javascript" src="gr.js"></script>
+
+    <script type="text/javascript">
+        var gr = new GR(gr);
+
+        var audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+        // fork getUserMedia for multiple browser versions, for those
+        // that need prefixes
+
+        navigator.getUserMedia = (navigator.getUserMedia ||
+            navigator.webkitGetUserMedia ||
+            navigator.mozGetUserMedia ||
+            navigator.msGetUserMedia);
+
+        var fs = 44100;
+        var SAMPLES = 4096;
+
+        var f = new Array(Math.floor(SAMPLES / 2));
+        for (var j = 0; j < Math.floor(SAMPLES / 2); j++) {
+            f[j] = fs / SAMPLES * j;
+        }
+
+        function parabolic(x, f, i) {
+            var xe = 1 / 2. * (f[i - 1] - f[i + 1]) / (f[i - 1] - 2 * f[i] + f[i + 1]) + x;
+            var ye = f[i] - 1 / 4. * (f[i - 1] - f[i + 1]) * (xe - x);
+            var result = new Array(2);
+            result[0] = xe;
+            result[1] = ye;
+            return result;
+        }
+
+        function startRecord() {
+            navigator.getUserMedia(
+                // constraints: audio and video for this app
+                {
+                    audio: true,
+                    video: false
+                },
+                // Success callback
+                function(stream) {
+                    // Create a MediaStreamAudioSourceNode
+                    // Feed the HTMLMediaElement into it
+                    var source = audioCtx.createMediaStreamSource(stream);
+                    window.source = source;
+                    // Create a biquadfilter
+                    var analyser = audioCtx.createAnalyser();
+                    analyser.fftSize = 4096;
+                    var bufferLength = analyser.frequencyBinCount;
+                    console.log(bufferLength);
+                    var dataArray = new Uint8Array(bufferLength);
+                    source.connect(analyser);
+
+                    function analyze() {
+                        requestAnimationFrame(analyze);
+                        analyser.getByteFrequencyData(dataArray);
+                        console.log('.');
+                        gr.clearws();
+                        gr.setviewport(0.1, 0.95, 0.1, 0.95);
+                        gr.setwindow(50, 23000, 0, 255);
+                        gr.setscale(1);
+                        gr.setlinewidth(1);
+                        gr.setlinecolorind(1);
+                        gr.grid(1, 10, 50, 0, 1, 2);
+                        gr.axes(1, 10, 50, 0, 1, 2, -0.008);
+                        gr.setcharheight(0.020);
+                        gr.text(0.47, 0.965, "1 kHz");
+                        gr.text(0.15, 0.965, '100 Hz');
+                        gr.text(0.79, 0.965, '10 kHz');
+                        gr.setlinecolorind(4);
+                        gr.polyline(dataArray.length - 2, f.slice(1, dataArray.length - 1), dataArray.slice(1, dataArray.length - 1));
+                        gr.updatews();
+                    }
+                    analyze();
+                },
+
+                // Error callback
+                function(err) {
+                    console.log('The following gUM error occured: ' + err);
+                }
+            );
+
+        }
+
+        GR.ready(function() {
+            if (navigator.getUserMedia) {
+                console.log('getUserMedia supported.');
+                startRecord();
+            } else {
+                console.log('getUserMedia not supported on your browser!');
+            }
+        });
+    </script>
+</body>
+
+</html>

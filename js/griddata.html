@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en-us">
+
+<head>
+    <meta charset="utf-8">
+</head>
+
+<body>
+
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <script type="text/javascript" src="gr.js"></script>
+
+    <script type="text/javascript">
+        GR.ready(function() {
+            var gr = new GR();
+
+            gr.setviewport(0.1, 0.95, 0.1, 0.95);
+            gr.setwindow(-2, 2, -2, 2);
+            gr.setfillintstyle(2);
+            gr.setfillstyle(3);
+            gr.setspace(-0.5, 0.5, 0, 90);
+            gr.setmarkersize(1);
+            gr.setmarkertype(-1);
+            gr.setcharheight(0.024);
+            gr.settextalign(2, 0);
+            gr.settextfontprec(3, 0);
+
+            var xd = new Array(100);
+            var yd = new Array(100);
+            var zd = new Array(100);
+            for (var i = 0; i < 100; i++) {
+                xd[i] = -2 + 4.0 * Math.random();
+                yd[i] = -2 + 4.0 * Math.random();
+                zd[i] = xd[i] * Math.exp(-xd[i] * xd[i] - yd[i] * yd[i]);
+            }
+            var result = gr.gridit(100, xd, yd, zd, 200, 200);
+            var x = result[0];
+            var y = result[1];
+            var z = result[2];
+            gr.surface(200, 200, x, y, z, 5);
+
+            var h = new Array(20);
+            for (var i = 0; i < 20; i++) {
+                h[i] = -0.5 + i / 19.0;
+            }
+            gr.contour(200, 200, 20, x, y, h, z, 0);
+            gr.polymarker(100, xd, yd);
+            gr.axes(0.25, 0.25, -2, -2, 2, 2, 0.01);
+        });
+    </script>
+</body>
+
+</html>
