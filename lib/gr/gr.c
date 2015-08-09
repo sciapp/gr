@@ -2195,6 +2195,11 @@ void gr_setcolorrep(int index, double red, double green, double blue)
   check_autoinit;
 
   setcolorrep(index, red, green, blue);
+
+  if (flag_graphics)
+    gr_writestream(
+      "<setcolorrep index=\"%d\" red=\"%g\" green=\"%g\" blue=\"%g\"/>\n",
+      index, red, green, blue);
 }
 
 int gr_setscale(int options)
