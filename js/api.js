@@ -123,7 +123,7 @@ floatarray = function(a) {
     var ptr = Module._malloc(a.length * 8);
     var data = Module.HEAPF64.subarray(ptr / 8, ptr / 8 + a.length);
     
-    for (i = 0; i < a.length;i ++){
+    for (i = 0; i < a.length; i++){
 	data[i] = a[i];
     }       
     
@@ -134,7 +134,7 @@ intarray = function(a) {
     var ptr = Module._malloc(a.length * 4);
     var data = Module.HEAP32.subarray(ptr / 4, ptr / 4 + a.length);
     
-    for (i = 0; i < a.length;i ++) {
+    for (i = 0; i < a.length; i++) {
 	data[i] = a[i];
     }       
     
@@ -142,13 +142,14 @@ intarray = function(a) {
 }
 
 uint8array = function(a) {
-    var ptr = Module._malloc(a.length);
+    var ptr = Module._malloc(a.length + 1);
     a = intArrayFromString(a, true);
-    var data = Module.HEAPU8.subarray(ptr, ptr + a.length);
+    var data = Module.HEAPU8.subarray(ptr, ptr + a.length + 1);
 
-    for (i = 0; i < a.length;i ++) {
+    for (i = 0; i < a.length; i++) {
 	data[i] = a[i];
-    } 
+    }
+    data[a.length] = 0x00;
 
     return ptr;
 }
