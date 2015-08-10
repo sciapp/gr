@@ -9,6 +9,7 @@
 
 #define COPY(s, n) memcpy(d->buffer + d->nbytes, (void *) s, n); d->nbytes += n
 
+
 static
 void reallocate(gks_display_list_t *d, int len)
 {
@@ -18,13 +19,38 @@ void reallocate(gks_display_list_t *d, int len)
   d->buffer = (char *) gks_realloc(d->buffer, d->size + 1);
 }
 
+static
+int purge(gks_display_list_t *d, char *t)
+/* Clear display list preserving workstation specific functions.
+   Return purged display list (t) and length (in bytes) */
+{
+  char *s;
+  int sp = 0, tp = 0, *len, *fctid;
+
+  s = d->buffer;
+  len = (int *) (s + sp);
+  while (*len)
+    {
+      fctid = (int *) (s + sp + sizeof(int));
+      /* 48: setcolorrep, 54: setwswindow, 55: setwsviewport */
+      if (*fctid == 48 || *fctid == 54 || *fctid == 55)
+        {
+          memcpy(t + tp, s + sp, *len);
+          tp += *len;
+        }
+      sp += *len;
+      len = (int *) (s + sp);
+    }
+  return tp;
+}
+
 void gks_dl_write_item(gks_display_list_t *d,
   int fctid, int dx, int dy, int dimx, int *ia,
   int lr1, double *r1, int lr2, double *r2, int lc, char *c,
   gks_state_list_t *gkss)
 {
-  char s[132];
-  int len, slen;
+  char s[132], *t;
+  int len, slen, tp;
 
   switch (fctid)
     {
@@ -60,6 +86,9 @@ void gks_dl_write_item(gks_display_list_t *d,
 
     case   6:                        /* clear workstation */
 
+      t = gks_malloc(d->size);
+      tp = purge(d, t);
+
       d->nbytes = d->position = 0;
 
       len = 2 * sizeof(int) + sizeof(gks_state_list_t);
@@ -68,6 +97,11 @@ void gks_dl_write_item(gks_display_list_t *d,
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
       COPY(gkss, sizeof(gks_state_list_t));
+
+      if (tp != 0)
+        COPY(t, tp);
+
+      free(t);
       break;
 
     case  12:                        /* polyline */
