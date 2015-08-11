@@ -5,7 +5,7 @@ GR.ready = function(callback){
 
 Module['onRuntimeInitialized'] = function() {
     GR.ready_callbacks.forEach(function (callback) {
-      	callback();
+        callback();
     })
 };
 
@@ -122,22 +122,22 @@ function GR() {
 floatarray = function(a) {
     var ptr = Module._malloc(a.length * 8);
     var data = Module.HEAPF64.subarray(ptr / 8, ptr / 8 + a.length);
-    
+
     for (i = 0; i < a.length; i++){
-	data[i] = a[i];
-    }       
-    
+        data[i] = a[i];
+    }
+
     return ptr;
 }
 
 intarray = function(a) {
     var ptr = Module._malloc(a.length * 4);
     var data = Module.HEAP32.subarray(ptr / 4, ptr / 4 + a.length);
-    
+
     for (i = 0; i < a.length; i++) {
-	data[i] = a[i];
-    }       
-    
+        data[i] = a[i];
+    }
+
     return ptr;
 }
 
@@ -147,7 +147,7 @@ uint8array = function(a) {
     var data = Module.HEAPU8.subarray(ptr, ptr + a.length + 1);
 
     for (i = 0; i < a.length; i++) {
-	data[i] = a[i];
+        data[i] = a[i];
     }
     data[a.length] = 0x00;
 
@@ -165,19 +165,15 @@ gr_closegks = Module.cwrap('gr_closegks', '', []);
 gr_inqdspsize_c = Module.cwrap('gr_inqdspsize', '', ['number', 'number', 'number', 'number', ]);
 gr_inqdspsize = function() {
     var _mwidth = Module._malloc(8);
-    var mwidth = Module.HEAPF64.subarray(_mwidth / 8, _mwidth / 8 + 1);
     var _mheight = Module._malloc(8);
-    var mheight = Module.HEAPF64.subarray(_mheight / 8, _mheight / 8 + 1);
     var _width = Module._malloc(4);
-    var width = Module.HEAP32.subarray(_width / 4, _width / 4 + 1);
     var _height = Module._malloc(4);
-    var height = Module.HEAP32.subarray(_height / 4, _height / 4 + 1);
     gr_inqdspsize_c(_mwidth, _mheight, _width, _height);
     var result = new Array(4);
-    result[0] = mwidth[0];
-    result[1] = mheight[0];
-    result[2] = width[0];
-    result[3] = height[0];
+    result[0] = Module.HEAPF64.subarray(_mwidth / 8, _mwidth / 8 + 1)[0];
+    result[1] = Module.HEAPF64.subarray(_mheight / 8, _mheight / 8 + 1)[0];
+    result[2] = Module.HEAP32.subarray(_width / 4, _width / 4 + 1)[0];
+    result[3] = Module.HEAP32.subarray(_height / 4, _height / 4 + 1)[0];
     freearray(_mwidth);
     freearray(_mheight);
     freearray(_width);
@@ -231,13 +227,11 @@ gr_inqtext_c = Module.cwrap('gr_inqtext', '', ['number', 'number', 'number', 'nu
 gr_inqtext = function(x, y, string) {
     _string = uint8array(string);
     var _tbx = Module._malloc(8);
-    var tbx = Module.HEAPF64.subarray(_tbx / 8, _tbx / 8 + 1);
     var _tby = Module._malloc(8);
-    var tby = Module.HEAPF64.subarray(_tby / 8, _tby / 8 + 1);
     gr_inqtext_c(x, y, _string, _tbx, _tby);
     var result = new Array(2);
-    result[0] = tbx[0];
-    result[1] = tby[0];
+    result[0] = Module.HEAPF64.subarray(_tbx / 8, _tbx / 8 + 1)[0];
+    result[1] = Module.HEAPF64.subarray(_tby / 8, _tby / 8 + 1)[0];
     freearray(_string);
     freearray(_tbx);
     freearray(_tby);
@@ -283,12 +277,12 @@ gr_gridit = function(nd, xd, yd, zd, nx, ny) {
     var z = Module.HEAPF64.subarray(_z / 8, _z / 8 + nx*ny);
     gr_gridit_c(nd, _xd, _yd, _zd, nx, ny, _x, _y, _z);
     var result = new Array(3);
-    result[0] = new Float64Array(new ArrayBuffer(nx * 8));
-    result[0].set(x);
-    result[1] = new Float64Array(new ArrayBuffer(ny * 8));
-    result[1].set(y);
-    result[2] = new Float64Array(new ArrayBuffer(nx*ny * 8));
-    result[2].set(z);
+    result[0] = new Float64Array(new ArrayBuffer(nx * 8));
+    result[0].set(x);
+    result[1] = new Float64Array(new ArrayBuffer(ny * 8));
+    result[1].set(y);
+    result[2] = new Float64Array(new ArrayBuffer(nx*ny * 8));
+    result[2].set(z);
     freearray(_xd);
     freearray(_yd);
     freearray(_zd);
@@ -303,10 +297,8 @@ gr_setlinetype = Module.cwrap('gr_setlinetype', '', ['number', ]);
 gr_inqlinetype_c = Module.cwrap('gr_inqlinetype', '', ['number', ]);
 gr_inqlinetype = function() {
     var _ltype = Module._malloc(4);
-    var ltype = Module.HEAP32.subarray(_ltype / 4, _ltype / 4 + 1);
     gr_inqlinetype_c(_ltype);
-    var result = new Array(1);
-    result[0] = ltype[0];
+    result = Module.HEAP32.subarray(_ltype / 4, _ltype / 4 + 1)[0];
     freearray(_ltype);
     return result;
 }
@@ -316,10 +308,8 @@ gr_setlinewidth = Module.cwrap('gr_setlinewidth', '', ['number', ]);
 gr_inqlinewidth_c = Module.cwrap('gr_inqlinewidth', '', ['number', ]);
 gr_inqlinewidth = function() {
     var _width = Module._malloc(8);
-    var width = Module.HEAPF64.subarray(_width / 8, _width / 8 + 1);
     gr_inqlinewidth_c(_width);
-    var result = new Array(1);
-    result[0] = width[0];
+    result = Module.HEAPF64.subarray(_width / 8, _width / 8 + 1)[0];
     freearray(_width);
     return result;
 }
@@ -329,10 +319,8 @@ gr_setlinecolorind = Module.cwrap('gr_setlinecolorind', '', ['number', ]);
 gr_inqlinecolorind_c = Module.cwrap('gr_inqlinecolorind', '', ['number', ]);
 gr_inqlinecolorind = function() {
     var _coli = Module._malloc(4);
-    var coli = Module.HEAP32.subarray(_coli / 4, _coli / 4 + 1);
     gr_inqlinecolorind_c(_coli);
-    var result = new Array(1);
-    result[0] = coli[0];
+    result = Module.HEAP32.subarray(_coli / 4, _coli / 4 + 1)[0];
     freearray(_coli);
     return result;
 }
@@ -342,10 +330,8 @@ gr_setmarkertype = Module.cwrap('gr_setmarkertype', '', ['number', ]);
 gr_inqmarkertype_c = Module.cwrap('gr_inqmarkertype', '', ['number', ]);
 gr_inqmarkertype = function() {
     var _mtype = Module._malloc(4);
-    var mtype = Module.HEAP32.subarray(_mtype / 4, _mtype / 4 + 1);
     gr_inqmarkertype_c(_mtype);
-    var result = new Array(1);
-    result[0] = mtype[0];
+    result = Module.HEAP32.subarray(_mtype / 4, _mtype / 4 + 1)[0];
     freearray(_mtype);
     return result;
 }
@@ -357,10 +343,8 @@ gr_setmarkercolorind = Module.cwrap('gr_setmarkercolorind', '', ['number', ]);
 gr_inqmarkercolorind_c = Module.cwrap('gr_inqmarkercolorind', '', ['number', ]);
 gr_inqmarkercolorind = function() {
     var _coli = Module._malloc(4);
-    var coli = Module.HEAP32.subarray(_coli / 4, _coli / 4 + 1);
     gr_inqmarkercolorind_c(_coli);
-    var result = new Array(1);
-    result[0] = coli[0];
+    result = Module.HEAP32.subarray(_coli / 4, _coli / 4 + 1)[0];
     freearray(_coli);
     return result;
 }
@@ -394,10 +378,8 @@ gr_setscale = Module.cwrap('gr_setscale', 'number', ['number', ]);
 gr_inqscale_c = Module.cwrap('gr_inqscale', '', ['number', ]);
 gr_inqscale = function() {
     var _options = Module._malloc(4);
-    var options = Module.HEAP32.subarray(_options / 4, _options / 4 + 1);
     gr_inqscale_c(_options);
-    var result = new Array(1);
-    result[0] = options[0];
+    result = Module.HEAP32.subarray(_options / 4, _options / 4 + 1)[0];
     freearray(_options);
     return result;
 }
@@ -407,19 +389,15 @@ gr_setwindow = Module.cwrap('gr_setwindow', '', ['number', 'number', 'number', '
 gr_inqwindow_c = Module.cwrap('gr_inqwindow', '', ['number', 'number', 'number', 'number', ]);
 gr_inqwindow = function() {
     var _xmin = Module._malloc(8);
-    var xmin = Module.HEAPF64.subarray(_xmin / 8, _xmin / 8 + 1);
     var _xmax = Module._malloc(8);
-    var xmax = Module.HEAPF64.subarray(_xmax / 8, _xmax / 8 + 1);
     var _ymin = Module._malloc(8);
-    var ymin = Module.HEAPF64.subarray(_ymin / 8, _ymin / 8 + 1);
     var _ymax = Module._malloc(8);
-    var ymax = Module.HEAPF64.subarray(_ymax / 8, _ymax / 8 + 1);
     gr_inqwindow_c(_xmin, _xmax, _ymin, _ymax);
     var result = new Array(4);
-    result[0] = xmin[0];
-    result[1] = xmax[0];
-    result[2] = ymin[0];
-    result[3] = ymax[0];
+    result[0] = Module.HEAPF64.subarray(_xmin / 8, _xmin / 8 + 1)[0];
+    result[1] = Module.HEAPF64.subarray(_xmax / 8, _xmax / 8 + 1)[0];
+    result[2] = Module.HEAPF64.subarray(_ymin / 8, _ymin / 8 + 1)[0];
+    result[3] = Module.HEAPF64.subarray(_ymax / 8, _ymax / 8 + 1)[0];
     freearray(_xmin);
     freearray(_xmax);
     freearray(_ymin);
@@ -456,19 +434,15 @@ gr_setspace = Module.cwrap('gr_setspace', 'number', ['number', 'number', 'number
 gr_inqspace_c = Module.cwrap('gr_inqspace', '', ['number', 'number', 'number', 'number', ]);
 gr_inqspace = function() {
     var _zmin = Module._malloc(8);
-    var zmin = Module.HEAPF64.subarray(_zmin / 8, _zmin / 8 + 1);
     var _zmax = Module._malloc(8);
-    var zmax = Module.HEAPF64.subarray(_zmax / 8, _zmax / 8 + 1);
     var _rotation = Module._malloc(4);
-    var rotation = Module.HEAP32.subarray(_rotation / 4, _rotation / 4 + 1);
     var _tilt = Module._malloc(4);
-    var tilt = Module.HEAP32.subarray(_tilt / 4, _tilt / 4 + 1);
     gr_inqspace_c(_zmin, _zmax, _rotation, _tilt);
     var result = new Array(4);
-    result[0] = zmin[0];
-    result[1] = zmax[0];
-    result[2] = rotation[0];
-    result[3] = tilt[0];
+    result[0] = Module.HEAPF64.subarray(_zmin / 8, _zmin / 8 + 1)[0];
+    result[1] = Module.HEAPF64.subarray(_zmax / 8, _zmax / 8 + 1)[0];
+    result[2] = Module.HEAP32.subarray(_rotation / 4, _rotation / 4 + 1)[0];
+    result[3] = Module.HEAP32.subarray(_tilt / 4, _tilt / 4 + 1)[0];
     freearray(_zmin);
     freearray(_zmax);
     freearray(_rotation);
@@ -487,13 +461,11 @@ gr_inqtextext_c = Module.cwrap('gr_inqtextext', '', ['number', 'number', 'number
 gr_inqtextext = function(x, y, string) {
     _string = uint8array(string);
     var _tbx = Module._malloc(8);
-    var tbx = Module.HEAPF64.subarray(_tbx / 8, _tbx / 8 + 1);
     var _tby = Module._malloc(8);
-    var tby = Module.HEAPF64.subarray(_tby / 8, _tby / 8 + 1);
     gr_inqtextext_c(x, y, _string, _tbx, _tby);
     var result = new Array(2);
-    result[0] = tbx[0];
-    result[1] = tby[0];
+    result[0] = Module.HEAPF64.subarray(_tbx / 8, _tbx / 8 + 1)[0];
+    result[1] = Module.HEAPF64.subarray(_tby / 8, _tby / 8 + 1)[0];
     freearray(_string);
     freearray(_tbx);
     freearray(_tby);
@@ -583,10 +555,8 @@ gr_setcolormap = Module.cwrap('gr_setcolormap', '', ['number', ]);
 gr_inqcolormap_c = Module.cwrap('gr_inqcolormap', '', ['number', ]);
 gr_inqcolormap = function() {
     var _index = Module._malloc(4);
-    var index = Module.HEAP32.subarray(_index / 4, _index / 4 + 1);
     gr_inqcolormap_c(_index);
-    var result = new Array(1);
-    result[0] = index[0];
+    result = Module.HEAP32.subarray(_index / 4, _index / 4 + 1)[0];
     freearray(_index);
     return result;
 }
@@ -596,10 +566,8 @@ gr_colormap = Module.cwrap('gr_colormap', '', []);
 gr_inqcolor_c = Module.cwrap('gr_inqcolor', '', ['number', 'number', ]);
 gr_inqcolor = function(color) {
     var _rgb = Module._malloc(4);
-    var rgb = Module.HEAP32.subarray(_rgb / 4, _rgb / 4 + 1);
     gr_inqcolor_c(color, _rgb);
-    var result = new Array(1);
-    result[0] = rgb[0];
+    result = Module.HEAP32.subarray(_rgb / 4, _rgb / 4 + 1)[0];
     freearray(_rgb);
     return result;
 }
@@ -712,16 +680,13 @@ gr_readimage_c = Module.cwrap('gr_readimage', 'number', ['number', 'number', 'nu
 gr_readimage = function(path) {
     _path = uint8array(path);
     var _width = Module._malloc(4);
-    var width = Module.HEAP32.subarray(_width / 4, _width / 4 + 1);
     var _height = Module._malloc(4);
-    var height = Module.HEAP32.subarray(_height / 4, _height / 4 + 1);
     var _data = Module._malloc(4);
-    var data = Module.HEAP32.subarray(_data / 4, _data / 4 + 1);
     gr_readimage_c(_path, _width, _height, _data);
     var result = new Array(3);
-    result[0] = width[0];
-    result[1] = height[0];
-    result[2] = data[0];
+    result[0] = Module.HEAP32.subarray(_width / 4, _width / 4 + 1)[0];
+    result[1] = Module.HEAP32.subarray(_height / 4, _height / 4 + 1)[0];
+    result[2] = Module.HEAP32.subarray(_data / 4, _data / 4 + 1)[0];
     freearray(_path);
     freearray(_width);
     freearray(_height);
@@ -776,19 +741,15 @@ gr_resizeselection = Module.cwrap('gr_resizeselection', '', ['number', 'number',
 gr_inqbbox_c = Module.cwrap('gr_inqbbox', '', ['number', 'number', 'number', 'number', ]);
 gr_inqbbox = function() {
     var _xmin = Module._malloc(8);
-    var xmin = Module.HEAPF64.subarray(_xmin / 8, _xmin / 8 + 1);
     var _xmax = Module._malloc(8);
-    var xmax = Module.HEAPF64.subarray(_xmax / 8, _xmax / 8 + 1);
     var _ymin = Module._malloc(8);
-    var ymin = Module.HEAPF64.subarray(_ymin / 8, _ymin / 8 + 1);
     var _ymax = Module._malloc(8);
-    var ymax = Module.HEAPF64.subarray(_ymax / 8, _ymax / 8 + 1);
     gr_inqbbox_c(_xmin, _xmax, _ymin, _ymax);
     var result = new Array(4);
-    result[0] = xmin[0];
-    result[1] = xmax[0];
-    result[2] = ymin[0];
-    result[3] = ymax[0];
+    result[0] = Module.HEAPF64.subarray(_xmin / 8, _xmin / 8 + 1)[0];
+    result[1] = Module.HEAPF64.subarray(_xmax / 8, _xmax / 8 + 1)[0];
+    result[2] = Module.HEAPF64.subarray(_ymin / 8, _ymin / 8 + 1)[0];
+    result[3] = Module.HEAPF64.subarray(_ymax / 8, _ymax / 8 + 1)[0];
     freearray(_xmin);
     freearray(_xmax);
     freearray(_ymin);
