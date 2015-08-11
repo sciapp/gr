@@ -1270,6 +1270,9 @@ int main()
 
 class build_ext(_build_ext, check_ext, build_static):
 
+    user_options = (_build_ext.user_options + check_ext.user_options +
+                    build_static.user_options)
+
     # workaround for libGKS on win32 no "init" + module_name function
     def get_export_symbols (self, ext):
         """Return the list of symbols that a shared extension has to
