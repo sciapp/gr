@@ -179,6 +179,7 @@ typedef struct
     int state;
     char *buffer;
     int size, nbytes, position;
+    int empty;
   }
 gks_display_list_t;
 

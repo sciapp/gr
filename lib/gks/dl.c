@@ -21,8 +21,10 @@ void reallocate(gks_display_list_t *d, int len)
 
 static
 int purge(gks_display_list_t *d, char *t)
-/* Clear display list preserving workstation specific functions.
-   Return purged display list (t) and length (in bytes) */
+/*
+   Clear display list preserving workstation specific functions.
+   Return purged display list (t) and length (in bytes)
+ */
 {
   char *s;
   int sp = 0, tp = 0, *len, *fctid;
@@ -60,6 +62,7 @@ void gks_dl_write_item(gks_display_list_t *d,
       d->buffer = (char *) gks_malloc(SEGM_SIZE + 1);
       d->size = SEGM_SIZE;
       d->nbytes = d->position = 0;
+      d->empty = 1;
 
       len = 2 * sizeof(int) + sizeof(gks_state_list_t);
 
@@ -86,9 +89,11 @@ void gks_dl_write_item(gks_display_list_t *d,
 
     case   6:                        /* clear workstation */
 
-      t = gks_malloc(d->size);
-      tp = purge(d, t);
-
+      if (d->empty)
+        {
+          t = gks_malloc(d->size);
+          tp = purge(d, t);
+        }
       d->nbytes = d->position = 0;
 
       len = 2 * sizeof(int) + sizeof(gks_state_list_t);
@@ -98,10 +103,11 @@ void gks_dl_write_item(gks_display_list_t *d,
       COPY(&fctid, sizeof(int));
       COPY(gkss, sizeof(gks_state_list_t));
 
-      if (tp != 0)
-        COPY(t, tp);
-
-      free(t);
+      if (d->empty)
+        {
+          COPY(t, tp);
+          free(t);
+        }
       break;
 
     case  12:                        /* polyline */
@@ -118,6 +124,8 @@ void gks_dl_write_item(gks_display_list_t *d,
           COPY(ia, sizeof(int));
           COPY(r1, ia[0] * sizeof(double));
           COPY(r2, ia[0] * sizeof(double));
+
+          d->empty = 0;
         }
       break;
 
@@ -139,6 +147,8 @@ void gks_dl_write_item(gks_display_list_t *d,
           COPY(r2, sizeof(double));
           COPY(&slen, sizeof(int));
           COPY(s, 132);
+
+          d->empty = 0;
         }
       break;
 
@@ -159,6 +169,8 @@ void gks_dl_write_item(gks_display_list_t *d,
           COPY(&dy, sizeof(int));
           COPY(&dimx, sizeof(int));
           COPY(ia, dimx * dy * sizeof(int));
+
+          d->empty = 0;
         }
       break;
 
