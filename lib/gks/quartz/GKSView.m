@@ -620,6 +620,7 @@ void seg_xform_rel(double *x, double *y)
 - (void) drawRect: (NSRect) rect
 {
   CGContextRef c;
+  CGFloat centerx, centery;
 
   if (contextStack == NULL)
     {
@@ -640,9 +641,11 @@ void seg_xform_rel(double *x, double *y)
 
     if (angle != 0)
       {
-        CGContextTranslateCTM (context, 250, 250);
+        centerx = self.bounds.size.width / 2;
+        centery = self.bounds.size.height / 2;
+        CGContextTranslateCTM (context, centerx, centery);
         CGContextRotateCTM (context, (angle) * M_PI/180);
-        CGContextTranslateCTM (context, -250, -250);
+        CGContextTranslateCTM (context, -centerx, -centery);
       }
 
     [self interp: buffer];
