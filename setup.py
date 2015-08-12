@@ -1304,7 +1304,7 @@ class build_ext(_build_ext, check_ext, build_static):
 
     def finalize_options(self):
         check_ext.finalize_options(self)
-        build_static.initialize_options(self)
+        build_static.finalize_options(self)
         _build_ext.finalize_options(self)
         self.extensions = self.ext_modules
 
