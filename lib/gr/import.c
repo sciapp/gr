@@ -22,7 +22,7 @@ static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
 #define BUFFSIZE 8192
 
 static
-char *format[] = 
+char *format[] =
   {
     "axes:ffffiif",
     "axes3d:ffffffiiif",
@@ -94,6 +94,30 @@ char *s_arg[3];
 
 static
 int i_argc, f_argc, s_argc, i_arrc, f_arrp, f_arrc, v_arrc, b_arrc;
+
+static
+char *xmalloc(int size)
+{
+  char *result = (char *) malloc(size);
+  if (!result)
+    {
+      fprintf(stderr, "out of virtual memory\n");
+      abort();
+    }
+  return (result);
+}
+
+static
+char *xrealloc(void *ptr, int size)
+{
+  char *result = (char *) realloc(ptr, size);
+  if (!result)
+    {
+      fprintf(stderr, "out of virtual memory\n");
+      abort();
+    }
+  return (result);
+}
 
 static
 int binsearch(char *str[], int nel, char *value)
@@ -173,8 +197,8 @@ char *xml(char *s, char *fmt)
                                 if (i_arrc >= i_arr_size)
                                   {
                                     i_arr_size += BUFFSIZE;
-                                    i_arr = (int *) realloc(i_arr, sizeof(int) *
-                                                            i_arr_size);
+                                    i_arr = (int *) xrealloc(i_arr,
+                                      sizeof(int) * i_arr_size);
                                   }
                                 i_arr[i_arrc++] = atoi(p);
                                 p = strtok(NULL, " \t\"");
@@ -188,8 +212,8 @@ char *xml(char *s, char *fmt)
                                   {
                                     f_arr_size[f_arrp] += BUFFSIZE;
                                     f_arr[f_arrp] = (double *)
-                                      realloc(f_arr[f_arrp], sizeof(double) * 
-                                              f_arr_size[f_arrp]);
+                                      xrealloc(f_arr[f_arrp], sizeof(double) *
+                                               f_arr_size[f_arrp]);
                                   }
                                 f_arr[f_arrp][f_arrc++] = atof(p);
                                 p = strtok(NULL, " \t\"");
@@ -204,7 +228,7 @@ char *xml(char *s, char *fmt)
                                 if (v_arrc >= v_arr_size)
                                   {
                                     v_arr_size += BUFFSIZE;
-                                    v_arr = (vertex_t *) realloc(v_arr,
+                                    v_arr = (vertex_t *) xrealloc(v_arr,
                                       sizeof(vertex_t) * v_arr_size);
                                   }
                                 v_arr[v_arrc].x = ascii2double(p);
@@ -221,7 +245,7 @@ char *xml(char *s, char *fmt)
                                 if (b_arrc >= b_arr_size)
                                   {
                                     b_arr_size += BUFFSIZE;
-                                    b_arr = (unsigned char *) realloc(b_arr,
+                                    b_arr = (unsigned char *) xrealloc(b_arr,
                                       sizeof(unsigned char) * b_arr_size);
                                   }
                                 b_arr[b_arrc++] = (unsigned char) atoi(p);
@@ -229,12 +253,12 @@ char *xml(char *s, char *fmt)
                               }
                             break;
                         }
-                    } 
+                    }
                   else
                     fprintf(stderr, "'\"' expected\n");
                 }
             }
-        } 
+        }
       fmt++;
     }
   return s;
@@ -406,14 +430,14 @@ int gr_importgraphics(char *path)
   stream = fopen(path, "r");
   if (stream != NULL)
     {
-      buff = (char *) calloc(BUFSIZ, 1);
+      buff = (char *) xmalloc(BUFSIZ);
       off = 0;
       nbytes = BUFSIZ;
       while ((ret = fread(buff + off, 1, BUFSIZ, stream)) > 0)
         {
           nbytes += BUFSIZ;
           off += ret;
-          buff = (char *) realloc(buff, nbytes);
+          buff = (char *) xrealloc(buff, nbytes);
         }
       fclose(stream);
     }
@@ -423,23 +447,23 @@ int gr_importgraphics(char *path)
       return -1;
     }
 
-  i_arr = (int *) malloc(sizeof(int) * BUFFSIZE);
+  i_arr = (int *) xmalloc(sizeof(int) * BUFFSIZE);
   i_arr_size = BUFFSIZE;
   for (i = 0; i > 4; i++)
     {
-      f_arr[i] = (double *) malloc(sizeof(double) * BUFFSIZE);
+      f_arr[i] = (double *) xmalloc(sizeof(double) * BUFFSIZE);
       f_arr_size[i] = BUFFSIZE;
     }
-  v_arr = (vertex_t *) malloc(sizeof(vertex_t) * BUFFSIZE);
+  v_arr = (vertex_t *) xmalloc(sizeof(vertex_t) * BUFFSIZE);
   v_arr_size = BUFFSIZE;
-  b_arr = (unsigned char *) malloc(sizeof(unsigned char) * BUFFSIZE);
+  b_arr = (unsigned char *) xmalloc(sizeof(unsigned char) * BUFFSIZE);
   b_arr_size = BUFFSIZE;
 
   s = buff;
   s[off + ret] = '\0';
 
   while (*s)
-    { 
+    {
       if (*s == '<')
         {
           el = ++s;
@@ -465,6 +489,8 @@ int gr_importgraphics(char *path)
         s++;
     }
 
+  free(b_arr);
+  free(v_arr);
   for (i = 0; i < 4; i++)
     free(f_arr[i]);
   free(i_arr);
