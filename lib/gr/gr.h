@@ -131,6 +131,8 @@ DLLEXPORT void gr_settransparency(double);
 DLLEXPORT void gr_setcoordxform(double [3][2]);
 DLLEXPORT void gr_begingraphics(char *);
 DLLEXPORT void gr_endgraphics(void);
+DLLEXPORT char *gr_getgraphics(void);
+DLLEXPORT int gr_drawgraphics(char *);
 DLLEXPORT void gr_mathtex(double, double, char *);
 DLLEXPORT void gr_beginselection(int, int);
 DLLEXPORT void gr_endselection(void);

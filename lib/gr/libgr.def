@@ -20,12 +20,14 @@ EXPORTS
 	gr_createseg
 	gr_deactivatews
 	gr_drawarrow
+        gr_drawgraphics
 	gr_drawimage
 	gr_emergencyclosegks
 	gr_endgraphics
 	gr_endprint
 	gr_endselection
 	gr_fillarea
+        gr_getgraphics
 	gr_grid
 	gr_gridit
 	gr_herrorbars

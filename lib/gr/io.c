@@ -16,6 +16,7 @@
 
 #define PORT 0x1234
 
+#include "gr.h"
 #include "io.h"
 
 static
@@ -28,7 +29,7 @@ static
 int s = -1;
 
 static
-char *buffer = NULL;
+char *buffer = NULL, *static_buffer = NULL;
 
 static
 char *hostname = NULL;
@@ -37,7 +38,7 @@ static
 int port = PORT;
 
 static
-int nbytes = 0, size = 0;
+int nbytes = 0, size = 0, static_size = 0;
 
 static
 void close_socket(int s)
@@ -51,6 +52,17 @@ void close_socket(int s)
 #if defined(_WIN32) && !defined(__GNUC__)
   WSACleanup();
 #endif
+}
+
+static
+void save(char *string, int nbytes)
+{
+  if (nbytes > static_size)
+    {
+      static_buffer = (char *) realloc(static_buffer, nbytes + 1);
+      static_size = nbytes + 1;
+    }
+  strcpy(static_buffer, string);
 }
 
 static
@@ -192,6 +204,8 @@ int gr_openstream(char *path)
     {
       if (strcmp(path, "-") == 0)
         stream = stdout;
+      else if (*path == '\0')
+        status = -1;
       else if (strchr(path, ':') == NULL)
         {
           stream = fopen(path, "w");
@@ -235,8 +249,10 @@ void gr_flushstream(int discard)
         {
           if (stream != NULL)
             fwrite(buffer, nbytes, 1, stream);
-          else
+          else if (status != -1)
             sendstream(buffer);
+          else
+            save(buffer, nbytes);
         }
       nbytes = 0;
       *buffer = '\0';
@@ -253,4 +269,9 @@ void gr_closestream(void)
 
   free(buffer);
   buffer = NULL;
+}
+
+char *gr_getgraphics(void)
+{
+  return static_buffer;
 }

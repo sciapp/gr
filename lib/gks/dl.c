@@ -51,8 +51,8 @@ void gks_dl_write_item(gks_display_list_t *d,
   int lr1, double *r1, int lr2, double *r2, int lc, char *c,
   gks_state_list_t *gkss)
 {
-  char s[132], *t;
-  int len, slen, tp;
+  char s[132], *t = NULL;
+  int len, slen, tp = 0;
 
   switch (fctid)
     {

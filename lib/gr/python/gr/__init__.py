@@ -2023,7 +2023,7 @@ def drawimage(xmin, xmax, ymin, ymax, width, height, data, model=0):
 
 
 def importgraphics(path):
-    __gr.gr_importgraphics(char(path))
+    return __gr.gr_importgraphics(char(path))
 
 
 def setshadow(offsetx, offsety, blur):
@@ -2094,6 +2094,16 @@ def begingraphics(path):
 
 def endgraphics():
     __gr.gr_endgraphics()
+
+
+def getgraphics():
+    _string = c_char_p();
+    _string = __gr.gr_getgraphics()
+    return _string
+
+
+def drawgraphics(string):
+    return __gr.gr_drawgraphics(char(string))
 
 
 def mathtex(x, y, string):
@@ -2314,11 +2324,16 @@ __gr.gr_readimage.argtypes = [c_char_p, POINTER(c_int), POINTER(c_int),
 __gr.gr_drawimage.argtypes = [c_double, c_double, c_double, c_double,
                               c_int, c_int, POINTER(c_int), c_int]
 __gr.gr_importgraphics.argtypes = [c_char_p]
+__gr.gr_importgraphics.restype = c_int
 __gr.gr_setshadow.argtypes = [c_double, c_double, c_double]
 __gr.gr_settransparency.argtypes = [c_double]
 __gr.gr_setcoordxform.argtypes = [POINTER(c_double)]
 __gr.gr_begingraphics.argtypes = [c_char_p]
 __gr.gr_endgraphics.argtypes = []
+__gr.gr_getgraphics.argtypes = []
+__gr.gr_getgraphics.restype = c_char_p
+__gr.gr_drawgraphics.argtypes = [c_char_p]
+__gr.gr_drawgraphics.restype = c_int
 __gr.gr_mathtex.argtypes = [c_double, c_double, c_char_p]
 __gr.gr_beginselection.argtypes = [c_int, c_int]
 __gr.gr_endselection.argtypes = []

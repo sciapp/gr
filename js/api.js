@@ -108,6 +108,7 @@ function GR() {
     this.setcoordxform = gr_setcoordxform;
     this.begingraphics = gr_begingraphics;
     this.endgraphics = gr_endgraphics;
+    this.drawgraphics = gr_drawgraphics;
     this.mathtex = gr_mathtex;
     this.beginselection = gr_beginselection;
     this.endselection = gr_endselection;
@@ -722,6 +723,13 @@ gr_begingraphics = function(path) {
 }
 
 gr_endgraphics = Module.cwrap('gr_endgraphics', '', []);
+
+gr_drawgraphics_c = Module.cwrap('gr_drawgraphics', 'number', ['number', ]);
+gr_drawgraphics = function(string) {
+    _string = uint8array(string);
+    gr_drawgraphics_c(_string);
+    freearray(_string);
+}
 
 gr_mathtex_c = Module.cwrap('gr_mathtex', '', ['number', 'number', 'number', ]);
 gr_mathtex = function(x, y, string) {

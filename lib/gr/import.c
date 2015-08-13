@@ -421,31 +421,10 @@ void gr(int id)
     }
 }
 
-int gr_importgraphics(char *path)
+int gr_drawgraphics(char *string)
 {
-  FILE *stream;
-  char *buff, *s, *el, *fmt;
-  int i, nbytes, off, ret, id;
-
-  stream = fopen(path, "r");
-  if (stream != NULL)
-    {
-      buff = (char *) xmalloc(BUFSIZ);
-      off = 0;
-      nbytes = BUFSIZ;
-      while ((ret = fread(buff + off, 1, BUFSIZ, stream)) > 0)
-        {
-          nbytes += BUFSIZ;
-          off += ret;
-          buff = (char *) xrealloc(buff, nbytes);
-        }
-      fclose(stream);
-    }
-  else
-    {
-      fprintf(stderr, "%s: can't import GR file\n", path);
-      return -1;
-    }
+  char *s = string, *el, *fmt;
+  int i, id;
 
   i_arr = (int *) xmalloc(sizeof(int) * BUFFSIZE);
   i_arr_size = BUFFSIZE;
@@ -458,9 +437,6 @@ int gr_importgraphics(char *path)
   v_arr_size = BUFFSIZE;
   b_arr = (unsigned char *) xmalloc(sizeof(unsigned char) * BUFFSIZE);
   b_arr_size = BUFFSIZE;
-
-  s = buff;
-  s[off + ret] = '\0';
 
   while (*s)
     {
@@ -494,7 +470,38 @@ int gr_importgraphics(char *path)
   for (i = 0; i < 4; i++)
     free(f_arr[i]);
   free(i_arr);
-  free(buff);
 
   return 0;
+}
+
+int gr_importgraphics(char *path)
+{
+  FILE *stream;
+  char *buff;
+  int nbytes, off, ret;
+
+  stream = fopen(path, "r");
+  if (stream != NULL)
+    {
+      buff = (char *) xmalloc(BUFSIZ);
+      off = 0;
+      nbytes = BUFSIZ;
+      while ((ret = fread(buff + off, 1, BUFSIZ, stream)) > 0)
+        {
+          nbytes += BUFSIZ;
+          off += ret;
+          buff = (char *) xrealloc(buff, nbytes);
+        }
+      fclose(stream);
+      buff[off + ret] = '\0';
+
+      ret = gr_drawgraphics(buff);
+      free(buff);
+    }
+  else
+    {
+      fprintf(stderr, "%s: can't import GR file\n", path);
+      ret = -1;
+    }
+  return ret;
 }
