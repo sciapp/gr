@@ -428,7 +428,7 @@ int gr_drawgraphics(char *string)
 
   i_arr = (int *) xmalloc(sizeof(int) * BUFFSIZE);
   i_arr_size = BUFFSIZE;
-  for (i = 0; i > 4; i++)
+  for (i = 0; i < 4; i++)
     {
       f_arr[i] = (double *) xmalloc(sizeof(double) * BUFFSIZE);
       f_arr_size[i] = BUFFSIZE;
