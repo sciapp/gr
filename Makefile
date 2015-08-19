@@ -63,12 +63,14 @@ testpypi: clean
 conda: condaclean
 	@recipe/Build in || \
 	( echo "FATAL: Error building conda recipe"; exit 1 )
-	conda build --no-binstar-upload recipe
+	( source /usr/local/anaconda/bin/activate root && \
+	conda build --no-binstar-upload recipe )
 
 testconda: condaclean
 	@recipe/Build test || \
 	( echo "FATAL: Error building conda recipe"; exit 1 )
-	conda build --no-binstar-upload recipe
+	( source /usr/local/anaconda/bin/activate root && \
+	conda build --no-binstar-upload recipe )
 
 osxpkg:
 	mkdir -p tmp/bin tmp/gr
