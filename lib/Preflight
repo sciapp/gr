@@ -131,6 +131,7 @@ then
     info="${green}yes${normal} [$QTDIR, version $version]"
   fi
 else
+  qtdefs="QTDEFS=-DNO_QT4 QTINC= QTLIBS="
   info="${yellow} no${normal} [disabled]"
   ret=1
 fi

@@ -6,8 +6,8 @@
     INCLUDES = -I../../3rdparty/png -I../../3rdparty/jpeg -I../gr
       GRLIBS = -L../gr -lGR
       GLLIBS = -lGL -lX11
-     PNGLIBS = -L../../3rdparty/png -lpng
-    JPEGLIBS = -L../../3rdparty/jpeg -ljpeg
+     PNGLIBS = ../../3rdparty/png/libpng.a
+    JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
        ZLIBS = -lz
       CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)
      SOFLAGS = -shared

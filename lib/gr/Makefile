@@ -18,8 +18,8 @@
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
      LDFLAGS = $(EXTRA_LDFLAGS)
         LIBS = -lpthread -ldl -lc -lm
-    JPEGLIBS = -L../../3rdparty/jpeg -ljpeg
-     PNGLIBS = -L../../3rdparty/png -lpng
+    JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
+     PNGLIBS = ../../3rdparty/png/libpng.a
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
      XFTLIBS = -lXft -lfontconfig

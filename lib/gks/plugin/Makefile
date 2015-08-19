@@ -29,8 +29,8 @@ endif
     GTKDEFS =
      GTKINC = `$(GTK_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
     GTKLIBS = `$(GTK_CONFIG) gtk+-2.0 --libs 2>/dev/null`
-   JPEGLIBS = -L../../../3rdparty/jpeg -ljpeg
-    PNGLIBS = -L../../../3rdparty/png -lpng
+   JPEGLIBS = ../../../3rdparty/jpeg/libjpeg.a
+    PNGLIBS = ../../../3rdparty/png/libpng.a
      GSDEFS = 
       GSINC =
      GSLIBS = -lgs
