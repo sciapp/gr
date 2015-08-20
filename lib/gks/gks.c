@@ -49,6 +49,7 @@ ws_descr_t ws_types[] = {
   {  62, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL },
   {  63, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL },
   {  64, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL },
+  { 100, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, NULL, NULL },
   { 101, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "pdf", NULL },
   { 102, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "pdf", NULL },
   { 120, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "mov", NULL },
@@ -217,6 +218,9 @@ void gks_ddlk(
 	      gks_drv_ps(fctid, dx, dy, dimx, i_arr,
 		len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
 		ptr);
+	      break;
+
+	    case 100:
 	      break;
 
 	    case 101: case 102:

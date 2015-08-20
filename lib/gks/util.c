@@ -61,6 +61,7 @@ struct wstypes_t wstypes[] = {
   { "win", 42 },
   { "ps", 62 },
   { "eps", 62 },
+  { "nul", 100 },
   { "pdf", 102 },
   { "mov", 120 },
   { "gif", 130 },
