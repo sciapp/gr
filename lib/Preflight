@@ -32,16 +32,22 @@ extradefs=""
 if [ `uname` = "Darwin" ]; then
   if [ -z "${EXTRA_CFLAGS}" ]; then
     EXTRA_CFLAGS="-I/usr/local/include"
-    extradefs="EXTRA_CFLAGS=$EXTRA_CFLAGS"
   fi
   if [ -z "${EXTRA_CXXFLAGS}" ]; then
     EXTRA_CXXFLAGS="-I/usr/local/include"
-    extradefs="$extradefs EXTRA_CXXFLAGS=$EXTRA_CXXFLAGS"
   fi
   if [ -z "${EXTRA_LDFLAGS}" ]; then
     EXTRA_LDFLAGS="-L/usr/local/lib"
-    extradefs="$extradefs EXTRA_LDFLAGS=$EXTRA_LDFLAGS"
   fi
+fi
+if [ ! -z "${EXTRA_CFLAGS}" ]; then
+  extradefs="EXTRA_CFLAGS=$EXTRA_CFLAGS"
+fi
+if [ ! -z "${EXTRA_CXXFLAGS}" ]; then
+ extradefs="$extradefs EXTRA_CXXFLAGS=$EXTRA_CXXFLAGS"
+fi
+if [ ! -z "${EXTRA_LDFLAGS}" ]; then
+  extradefs="$extradefs EXTRA_LDFLAGS=$EXTRA_LDFLAGS"
 fi
 ret=0
 
@@ -88,7 +94,7 @@ if [ "`which dvipng 2>/dev/null`" = "" ]
 then
   info="${red} no${normal} [not found]"
 else
-  info="${green}yes${normal} [version `dvipng --version|grep ^dvipng|awk '{print $2}'`]"
+  info="${green}yes${normal} [version `dvipng --version|grep ^dvipng|awk '{print $NF}'`]"
 fi
 printf "%12s: %s\n" "dvipng" "$info" >&2
 
@@ -317,19 +323,25 @@ int main(void)
     return 0;
 }
 eof
-  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lglfw"
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc"
   if [ `uname` = "Darwin" ]; then
-    libs="-framework OpenGL -framework Cocoa -framework IOKit"
+    libs="-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo"
     ret=1
   else
     libs="-lGL -lXrandr -lX11 -lrt"
   fi
-  $cmd $libs >/dev/null 2>&1
+  glfwlib="glfw3"
+  $cmd -l$glfwlib $libs >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    glfwlib="glfw"
+    $cmd -l$glfwlib $libs >/dev/null 2>&1
+  fi
   if [ $? -ne 0 ]; then
     glfwdefs="GLFWDEFS=-DNO_GLFW GLFWLIBS="
     info="${red} no${normal} [GLFW 3.x API not found]"
     ret=1
   else
+    glfwdefs="GLFWLIB=$glfwlib"
     $tmpout >$tmpver 2>&1
     info="${green}yes${normal} [version `cat $tmpver`]"
   fi

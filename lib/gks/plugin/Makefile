@@ -36,10 +36,11 @@ endif
      GSLIBS = -lgs
    GLFWDEFS =
     GLFWINC =
+    GLFWLIB = glfw
 ifeq ($(UNAME_S),Darwin)
-   GLFWLIBS = -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+   GLFWLIBS = -l$(GLFWLIB) -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
 else
-   GLFWLIBS = -lglfw -lGL
+   GLFWLIBS = -l$(GLFWLIB) -lGL
 endif
      FTDEFS =
       FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
