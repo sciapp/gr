@@ -13,7 +13,7 @@ tar xf ${src}.tar.gz
 
 cd ${src}
 
-./configure --prefix=${dest} --disable-yasm --enable-libvpx --enable-libtheora
+./configure --prefix=${dest} --disable-yasm
 make -j4
 make install
 make distclean
