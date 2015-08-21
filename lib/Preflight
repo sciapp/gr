@@ -38,7 +38,7 @@ if [ `uname` = "Darwin" ]; then
     EXTRA_CXXFLAGS="-I/usr/local/include"
     extradefs="$extradefs EXTRA_CXXFLAGS=$EXTRA_CXXFLAGS"
   fi
-  if [ -z "${EXTRA_LDLAGS}" ]; then
+  if [ -z "${EXTRA_LDFLAGS}" ]; then
     EXTRA_LDFLAGS="-L/usr/local/lib"
     extradefs="$extradefs EXTRA_LDFLAGS=$EXTRA_LDFLAGS"
   fi
