@@ -13,7 +13,7 @@ tar xf ${src}.tar.gz
 
 patch -p0 <mupdf.patch
 
-opts="prefix=${dest} HAVE_MUJS=no HAVE_CURL=no"
+opts="prefix=${dest} HAVE_MUJS=no HAVE_CURL=no XCFLAGS=-fPIC"
 make -C ${src} ${opts}
 make -C ${src} ${opts} install
 make -C ${src} ${opts} clean

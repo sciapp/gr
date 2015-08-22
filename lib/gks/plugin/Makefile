@@ -58,7 +58,7 @@ endif
     X11DEFS =
     X11LIBS = $(X11PATH) -lfontconfig -lXt -lX11
     ZMQDEFS = 
-    ZMQLIBS = -lzmq
+    ZMQLIBS = -lzmq -lpthread
   EXTRALIBS =
        LIBS = -lc -lm
       ZLIBS = -lz
@@ -89,7 +89,7 @@ Darwin:
 	EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation" LIBS="-liconv"
 Linux:
 	@make targets \
-	SOFLAGS="-shared" LDFLAGS="-Wl,-rpath=$(QTDIR)/lib"
+	SOFLAGS="-shared" LDFLAGS="$(EXTRA_LDFLAGS) -Wl,-rpath=$(QTDIR)/lib"
 
 wxplugin.so: wxplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(WXLIBS) $(LDFLAGS) $(X11LIBS) $(LIBS)

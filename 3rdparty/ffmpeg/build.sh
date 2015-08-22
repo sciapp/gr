@@ -13,7 +13,7 @@ tar xf ${src}.tar.gz
 
 cd ${src}
 
-./configure --prefix=${dest} --disable-yasm
+./configure --prefix=${dest} --disable-yasm --disable-asm --enable-pic
 make -j4
 make install
 make distclean

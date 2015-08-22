@@ -37,7 +37,7 @@ default:
 
 Linux:
 	@make targets \
-	INSTALL_NAME="" LDFLAGS="-Wl,-rpath=$(LIBDIR)"
+	INSTALL_NAME="" LDFLAGS="$(EXTRA_LDFLAGS) -Wl,-rpath=$(LIBDIR)"
 Darwin:
 	@make targets LD="$(CC)" \
 	SOFLAGS="-dynamiclib"

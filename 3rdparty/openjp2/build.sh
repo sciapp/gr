@@ -1,24 +1,23 @@
 #!/bin/sh
 
-src="zeromq-4.0.4"
+src="openjpeg-2.0.0"
 if [ "$1" = "" ]; then
   dest=`pwd`/../build
 else
   dest=$1
 fi
 
-curl -O http://download.zeromq.org/zeromq-4.0.4.tar.gz
+curl -O https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
 
 tar xf ${src}.tar.gz
 
 cd ${src}
 
 export CFLAGS=-fPIC
-export CXXFLAGS=-fPIC
-./configure --prefix=${dest} --disable-shared
+cmake -DCMAKE_INSTALL_PREFIX:PATH=${dest} -DBUILD_SHARED_LIBS=OFF
 make -j4
 make install
-make distclean
+make clean
 
 cd ..
 

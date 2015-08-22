@@ -1,5 +1,5 @@
- TARGETS = jbig2dec jpeg openjpeg png zlib
-  EXTRAS = mupdf ffmpeg glfw zeromq
+ TARGETS = jpeg png zlib
+  EXTRAS = mupdf ffmpeg glfw zeromq openjp2
      DIR = 
 
 default:
