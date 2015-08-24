@@ -10,6 +10,7 @@ fi
 
 make -C 3rdparty extras
 extras=`pwd`/3rdparty/build
+export PATH=${PATH}:${extras}/bin
 make EXTRA_CFLAGS=-I${extras}/include \
      EXTRA_CXXFLAGS=-I${extras}/include \
      EXTRA_LDFLAGS=-L${extras}/lib ${opts}

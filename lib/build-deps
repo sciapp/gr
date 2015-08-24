@@ -59,7 +59,7 @@ eof
 elif [ "$ID" = "Red Hat" -o "$ID" = "CentOS" ] ; then
   cat <<eof
 yum install gcc gcc-c++ gcc-gfortran PyQt4-devel ghostscript-devel \
-texlive-collection-latex texlive-dvipng
+texlive-collection-latex texlive-dvipng cmake patch
 eof
 
 elif [ "$ID" = "Fedora" ] ; then
@@ -74,7 +74,7 @@ elif [ "$ID" = "Debian" ] ; then
 apt-get install libx11-dev libxft-dev libxt-dev python2.7-dev \
 libgl1-mesa-dev libgs-dev texlive-latex3 dvipng qt4-dev-tools \
 libgtk2.0-dev pyqt4-dev-tools libwxgtk3.0-dev python-wxgtk3.0 \
-libglfw3-dev libzmq3-dev python-pyaudio python-opengl
+libglfw3-dev libzmq3-dev python-pyaudio python-opengl cmake
 
 The packages libmupdf-dev and libopenjp2-7-dev cannot be linked due
 to relocation problems (libmupdf.a was not built with -fPIC)
@@ -85,7 +85,7 @@ elif [ "$ID" = "Ubuntu" ] ; then
 apt-get install libx11-dev libxft-dev libxt-dev python2.7-dev \
 libgl1-mesa-dev libgs-dev texlive-latex3 dvipng qt4-dev-tools \
 libgtk2.0-dev pyqt4-dev-tools libwxgtk2.8-dev python-wxgtk2.8 \
-libzmq3-dev python-pyaudio python-opengl
+libzmq3-dev python-pyaudio python-opengl cmake
 
 The packages libglfw-dev and libmupdf-dev are too old.
 eof
@@ -94,7 +94,7 @@ elif [ "$ID" = "openSUSE project" ] ; then
   cat <<eof
 zypper install gcc gcc-c++ gcc-fortran libX11-devel \
 texlive-latex texlive-dvipng python-qt4-devel wxWidgets-devel \
-python-wxWidgets-devel ghostscript-devel
+python-wxWidgets-devel ghostscript-devel cmake patch
 eof
 
 fi
