@@ -1967,7 +1967,7 @@ def plot(x, y,
 def plot3d(z,
            viewport=(0.1, 0.9, 0.1, 0.9),
            rotation=30,
-           tilt=70,
+           tilt=50,
            colormap=gr.COLORMAP_TEMPERATURE,
            option=gr.OPTION_COLORED_MESH,
            contours=True,
@@ -2004,12 +2004,12 @@ def plot3d(z,
         gr.surface(x, y, z, option)
 
     if rotation != 0 or tilt != 90:
-        gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 5, 0, 5, -0.01)
-        gr.axes3d(0, ytick, 0, xmax, ymin, zmin, 0, 5, 0, 0.01)
+        gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 2, 0, 2, -0.01)
+        gr.axes3d(0, ytick, 0, xmax, ymin, zmin, 0, 2, 0, 0.01)
     if contours:
         gr.contour(x, y, [], z, 0)
     if rotation == 0 and tilt == 90:
-        gr.axes(xtick, ytick, xmin, ymin, 5, 5, -0.01)
+        gr.axes(xtick, ytick, xmin, ymin, 2, 2, -0.01)
     if xtitle != '' or ytitle != '' or ztitle != '':
         gr.titles3d(xtitle, ytitle, ztitle)
     gr.updatews()
