@@ -664,20 +664,21 @@ int main()
                 self.disable_gtk = True
         # -- mupdf -------------------------------------
         if not self.disable_mupdf:
-            for p in [os.path.join(os.sep, "usr", "local", "include"),
-                      os.path.join(os.sep, "usr", "include")]:
-                mupdf = os.path.join(p, "mupdf")
+            srcdir = os.path.split(os.path.realpath(__file__))[0]
+            for p in [os.path.join(srcdir, "3rdparty", "build"),
+                      os.path.join(os.sep, "usr", "local"),
+                      os.path.join(os.sep, "usr")]:
+                mupdf = os.path.join(p, "include", "mupdf")
                 if os.path.isdir(mupdf):
-                    self.mupdfinc = [p]
+                    self.mupdfinc = [os.path.join(p, "include")]
+                    self.mupdfldflags.append("-L%s" % os.path.join(p, "lib"))
                     break
             if not self.mupdfinc:
                 self.disable_mupdf = True
             else:
                 # mupdf compiled without ssl support
                 self.mupdflibs = ["mupdf", "jbig2dec", "jpeg", "openjp2"]
-                self.mupdfldflags = self.ftldflags
-                if self.isDarwin:
-                    self.mupdfldflags.append("-L/usr/local/lib")
+                self.mupdfldflags = self.mupdfldflags + self.ftldflags
                 self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
                                                           self.mupdflibs,
                                               mupdfldflags=self.mupdfldflags)

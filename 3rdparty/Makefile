@@ -1,5 +1,5 @@
  TARGETS = jpeg png zlib
-  EXTRAS = mupdf ffmpeg glfw zeromq openjp2
+  EXTRAS = mupdf ffmpeg cmake glfw zeromq openjp2
      DIR = 
 
 default:

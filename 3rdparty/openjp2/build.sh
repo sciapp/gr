@@ -1,5 +1,7 @@
 #!/bin/sh
 
+if [ ! `which cmake` ]; then exit 0; fi
+
 src="openjpeg-2.0.0"
 if [ "$1" = "" ]; then
   dest=`pwd`/../build

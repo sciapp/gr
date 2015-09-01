@@ -4,13 +4,14 @@ opts="gtk=no wx=no"
 if [ `uname` = 'Darwin' ]; then
   opts="${opts} x11=no"
 fi
-if [ -d /usr/local/anaconda ]; then
-  export QTDIR=/usr/local/anaconda
+if [ -d /opt/anaconda ]; then
+  export QTDIR=/opt/anaconda
 fi
 
-make -C 3rdparty extras
 extras=`pwd`/3rdparty/build
 export PATH=${PATH}:${extras}/bin
+
+make -C 3rdparty extras
 make EXTRA_CFLAGS=-I${extras}/include \
      EXTRA_CXXFLAGS=-I${extras}/include \
      EXTRA_LDFLAGS=-L${extras}/lib ${opts}

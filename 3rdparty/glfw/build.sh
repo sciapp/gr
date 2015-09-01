@@ -1,5 +1,7 @@
 #!/bin/sh
 
+if [ ! `which cmake` ]; then exit 0; fi
+
 src="3.1.1"
 if [ "$1" = "" ]; then
   dest=`pwd`/../build
