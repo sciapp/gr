@@ -10,4 +10,6 @@ extras:
 
 clean:
 	@for d in $(TARGETS); do make -C $$d clean; done
+
+realclean: clean
 	rm -rf ./build

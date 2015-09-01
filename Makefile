@@ -49,6 +49,10 @@ endif
 	rm -rf doc/_build/*
 	rm -f `find . -type f -name \*.pyc`
 
+realclean: clean
+	make -C 3rdparty realclean
+	rm -rf build
+
 condaclean: clean
 	rm -f recipe/meta.yaml
 	rm -rf $(HOME)/conda-bld
