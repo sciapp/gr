@@ -84,7 +84,7 @@ int read_png_image(char *path, int *width, int *height, int **data)
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep *row_pointers;
-  int x, y, channels;
+  int x, y, channels, color_type;
   unsigned int r, g, b, a;
   int *dataP;
   int ret = -1;
@@ -114,12 +114,14 @@ int read_png_image(char *path, int *width, int *height, int **data)
 		  png_set_sig_bytes(png_ptr, PNG_BYTES_TO_CHECK);
 
 		  png_read_info(png_ptr, info_ptr);
-		  if (info_ptr->color_type == PNG_COLOR_TYPE_PALETTE)
+                  color_type = png_get_color_type(png_ptr, info_ptr);
+
+		  if (color_type == PNG_COLOR_TYPE_PALETTE)
 		    png_set_palette_to_rgb(png_ptr);
 
-		  if (info_ptr->color_type == PNG_COLOR_TYPE_GRAY)
+		  if (color_type == PNG_COLOR_TYPE_GRAY)
 		    channels = 1;
-		  else if (info_ptr->color_type == PNG_COLOR_TYPE_RGBA)
+		  else if (color_type == PNG_COLOR_TYPE_RGBA)
 		    channels = 4;
 		  else
 		    channels = 3;
@@ -130,16 +132,15 @@ int read_png_image(char *path, int *width, int *height, int **data)
 		      channels += 1;
 		    }
 
-		  if (info_ptr->color_type == PNG_COLOR_TYPE_GRAY ||
-		      info_ptr->color_type == PNG_COLOR_TYPE_PALETTE ||
-		      info_ptr->color_type == PNG_COLOR_TYPE_RGB ||
-		      info_ptr->color_type == PNG_COLOR_TYPE_RGBA)
+		  if (color_type == PNG_COLOR_TYPE_GRAY ||
+		      color_type == PNG_COLOR_TYPE_PALETTE ||
+		      color_type == PNG_COLOR_TYPE_RGB ||
+		      color_type == PNG_COLOR_TYPE_RGBA)
 		    {
-		      *width = info_ptr->width;
-		      *height = info_ptr->height;
+		      *width = png_get_image_width(png_ptr, info_ptr);
+		      *height = png_get_image_height(png_ptr, info_ptr);
 		      *data = dataP =
-			(int *) malloc(info_ptr->width * info_ptr->height *
-				       sizeof(int));
+			(int *) malloc(*width * *height * sizeof(int));
 
 		      (void) png_set_interlace_handling(png_ptr);
 		      png_read_update_info(png_ptr, info_ptr);
@@ -147,8 +148,8 @@ int read_png_image(char *path, int *width, int *height, int **data)
 		      row_pointers =
 			(png_bytep *) malloc(sizeof(png_bytep) * *height);
 		      for (y = 0; y < *height; y++)
-			row_pointers[y] =
-			  (png_byte *) malloc(info_ptr->rowbytes);
+			row_pointers[y] = (png_byte *)
+			  malloc(png_get_rowbytes(png_ptr, info_ptr));
 
 		      png_read_image(png_ptr, row_pointers);
 
