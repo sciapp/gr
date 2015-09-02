@@ -4,9 +4,13 @@ opts="gtk=no wx=no"
 if [ `uname` = 'Darwin' ]; then
   opts="${opts} x11=no"
 fi
-if [ -d /opt/anaconda ]; then
-  export QTDIR=/opt/anaconda
-fi
+for dir in ${HOME}/anaconda /opt/anaconda /usr/local/anaconda
+do
+  if [ -d ${dir} ]; then
+    export QTDIR=${dir}
+    break
+  fi
+done
 
 extras=`pwd`/3rdparty/build
 export PATH=${PATH}:${extras}/bin
