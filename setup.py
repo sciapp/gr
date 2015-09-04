@@ -177,8 +177,7 @@ class check_ext(Command):
                     ('disable-quartz', None,
                      "Disable quartz plugin (OSX only)"),
                     ('disable-x11', None, "Disable X11 libraries"),
-                    ('disable-freetype', None,
-                     "Disable freetype libraries (disables also mupdf)"),
+                    ('disable-freetype', None, "Disable freetype libraries"),
                     ('disable-xft', None,
                      "Disable Xft libraries (disables also freetype)"),
                     ('disable-xt', None,
@@ -577,15 +576,16 @@ int main()
         if self.isLinux:
             x11ldflags = None
             try:
-                x11ldflags = shlex.split(Popen(["pkg-config", "x11", "--libs"],
+                x11ldflags = shlex.split(Popen(["pkg-config", "x11",
+                                                "--libs"],
                    stdout=PIPE, stderr=PIPE).communicate()[0].rstrip())
             except OSError:
                 pass
             if x11ldflags:
                 self.x11ldflags = x11ldflags
                 self.x11cflags = shlex.split(Popen(["pkg-config", "x11",
-                                                    "--cflags"], stdout=PIPE,
-                               stderr=PIPE).communicate()[0].rstrip())
+                                                    "--cflags"],
+                   stdout=PIPE, stderr=PIPE).communicate()[0].rstrip())
             else:
                 self.disable_x11 = True
         else:
@@ -677,8 +677,8 @@ int main()
                 self.disable_mupdf = True
             else:
                 # mupdf compiled without ssl support
-                self.mupdflibs = ["mupdf", "jbig2dec", "jpeg", "openjp2"]
-                self.mupdfldflags = self.mupdfldflags + self.ftldflags
+                self.mupdflibs = ["mupdf", "freetype", "jbig2dec", "jpeg",
+                                  "openjp2", "z"]
                 self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
                                                           self.mupdflibs,
                                               mupdfldflags=self.mupdfldflags)
@@ -1080,8 +1080,8 @@ int main()
                     ffmpeglibs.extend(["theora", "ogg", "pvx"])
                 libs.extend(_zlibs)
                 libs.append("pthread")
-                ldflags = list(self.ftldflags)
-                cflags = list(self.ftcflags)
+                ldflags = list(self.mupdfldflags)
+                cflags = []
                 ldflags.extend(self.platform_ldflags)
                 if self.isWin32:
                     libs.extend(_libs_msvc)
@@ -1202,9 +1202,9 @@ int main()
             ldflags.extend(self.ftldflags)
             # important: lib ordering png, jpeg, z
             staticlibs = [_libpng, _libjpeg, _libz]
+            ldflags.extend(self.mupdfldflags)
             ldflags.extend(staticlibs)
             cflags = list(self.x11cflags)
-            cflags.extend(self.ftcflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
@@ -1232,7 +1232,7 @@ int main()
                 libs = list(grlibs)
                 libs.extend(self.gllibs)
                 ldflags = list(self.x11ldflags)
-                ldflags.extend(self.ftldflags)
+                ldflags.extend(self.mupdfldflags)
                 ldflags.extend(self.platform_ldflags)
                 ldflags.extend(self.glldflags)
                 # important: lib ordering png, jpeg, z
@@ -1512,7 +1512,14 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       ext_modules=[Extension("", [""])],
       scripts=_scripts,
       package_data={
-          "gr": ["fonts/*.afm", "fonts/*.pfb", "fonts/gksfont.dat"],
+          "gr": ["fonts/*.afm", "fonts/*.pfb", "fonts/gksfont.dat",
+                 "quartz/build/Release/GKSTerm.app/Contents/Info.plist",
+                 "quartz/build/Release/GKSTerm.app/Contents/MacOS/GKSTerm",
+                 "quartz/build/Release/GKSTerm.app/Contents/PkgInfo",
+                 "quartz/build/Release/GKSTerm.app/Contents/Resources/English.lproj/ExtendSavePanel.nib",
+                 "quartz/build/Release/GKSTerm.app/Contents/Resources/English.lproj/InfoPlist.strings",
+                 "quartz/build/Release/GKSTerm.app/Contents/Resources/English.lproj/MainMenu.nib",
+                 "quartz/build/Release/GKSTerm.app/Contents/Resources/GKSTerm.icns"]
       },
       include_package_data=True,
      )

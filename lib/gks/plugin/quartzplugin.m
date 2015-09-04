@@ -113,6 +113,9 @@ BOOL gks_terminal(void)
   if ( ! ([fm fileExistsAtPath:path isDirectory:&isDir] && isDir) )
     path = [[NSString stringWithFormat:@"%@/../../../../../bin/GKSTerm.app",
              grdir] stringByStandardizingPath];
+  if ( ! ([fm fileExistsAtPath:path isDirectory:&isDir] && isDir) )
+    path = [[NSString stringWithFormat:@"%@/quartz/build/Release/GKSTerm.app",
+             grdir] stringByStandardizingPath];
 
   if ( [fm fileExistsAtPath:path isDirectory:&isDir] && isDir )
   {
