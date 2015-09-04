@@ -5,7 +5,7 @@
 
      CFLAGS = -O -Wall -fPIC $(EXTRA_CFLAGS)
    CXXFLAGS = -O -Wall -fPIC $(EXTRA_CXXFLAGS)
-   INCLUDES = -I.. -I../../../3rdparty/png
+   INCLUDES = -I.. -I../../../3rdparty
     SOFLAGS = -shared
     LDFLAGS = $(EXTRA_LDFLAGS)
   WX_CONFIG = false
@@ -30,7 +30,7 @@ endif
      GTKINC = `$(GTK_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
     GTKLIBS = `$(GTK_CONFIG) gtk+-2.0 --libs 2>/dev/null`
    JPEGLIBS = ../../../3rdparty/jpeg/libjpeg.a
-    PNGLIBS = ../../../3rdparty/png/libpng.a
+    PNGLIBS = ../../../3rdparty/libpng16/libpng.a
      GSDEFS = 
       GSINC =
      GSLIBS = -lgs
@@ -82,7 +82,7 @@ targets: prerequisites \
          htmplugin.so pgfplugin.so
 
 prerequisites:
-	@for d in png; do make -C ../../../3rdparty/$$d; done
+	@for d in libpng16; do make -C ../../../3rdparty/$$d; done
 
 Darwin:
 	@make targets quartzplugin.so \

@@ -3,10 +3,10 @@
       INCDIR = $(DESTDIR)$(GRDIR)/include
    PYTHONDIR = $(LIBDIR)/python
 
-    INCLUDES = -I../../3rdparty/png -I../../3rdparty/jpeg -I../gr
+    INCLUDES = -I../../3rdparty -I../../3rdparty/jpeg -I../gr
       GRLIBS = -L../gr -lGR
       GLLIBS = -lGL -lX11
-     PNGLIBS = ../../3rdparty/png/libpng.a
+     PNGLIBS = ../../3rdparty/libpng16/libpng.a
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
        ZLIBS = -lz
       CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)

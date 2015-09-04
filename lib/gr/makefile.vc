@@ -1,10 +1,10 @@
 CC = CL
-INCLUDES = /I..\..\3rdparty\jpeg /I..\..\3rdparty\png /I..\..\3rdparty\zlib /I..\gks /I.
+INCLUDES = /I..\..\3rdparty\jpeg /I..\..\3rdparty /I..\..\3rdparty\zlib /I..\gks /I.
 CFLAGS = /c /nologo /DNO_MUPDF /DNO_X11 /D_DLL /MD /D_POSIX $(INCLUDES)
 DEFINES = /DGRDIR=\"$(GRDIR)\"
 LINK = LINK /nologo
 JPEGLIBS = ..\..\3rdparty\jpeg\libjpeg.lib
-PNGLIBS = ..\..\3rdparty\png\libpng.lib
+PNGLIBS = ..\..\3rdparty\libpng16\libpng.lib
 ZLIBS = ..\..\3rdparty\zlib\libz.lib
 GRLIBS = libgr.lib
 GKSLIBS = ..\gks\libgks.lib
@@ -30,12 +30,12 @@ $(GKSLIBS):
 	@cd ..\gr
 
 $(JPEGLIBS):
-	@cd ..\..\3rdparty/jpeg
+	@cd ..\..\3rdparty\jpeg
 	@$(MAKE) /f makefile.vc
 	@cd ..\..\lib\gr
 
 $(PNGLIBS):
-	@cd ..\..\3rdparty\png
+	@cd ..\..\3rdparty\libpng16
 	@$(MAKE) /f makefile.vc
 	@cd ..\..\lib\gr
 
@@ -85,9 +85,9 @@ clean:
 	@$(MAKE) /f makefile.vc clean
 	@cd ..\..\3rdparty\zlib
 	@$(MAKE) /f makefile.vc clean
-	@cd ..\..\3rdparty\png
+	@cd ..\..\3rdparty\libpng16
 	@$(MAKE) /f makefile.vc clean
-	@cd ..\..\3rdparty/jpeg
+	@cd ..\..\3rdparty\jpeg
 	@$(MAKE) /f makefile.vc clean
 	@cd ..\..\lib\gr
 	DEL demo.exe

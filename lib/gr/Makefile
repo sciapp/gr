@@ -9,7 +9,7 @@
                md5.o import.o grforbnd.o
    MUPDFDEFS = 
      DEFINES = $(MUPDFDEFS)
-    INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty/png
+    INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           AR = ar
@@ -19,7 +19,7 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
      LDFLAGS = $(EXTRA_LDFLAGS)
         LIBS = -lpthread -ldl -lc -lm
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
-     PNGLIBS = ../../3rdparty/png/libpng.a
+     PNGLIBS = ../../3rdparty/libpng16/libpng.a
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
      XFTLIBS = -lXft -lfontconfig
@@ -45,7 +45,7 @@ Darwin:
 targets: prerequisites libGR.a libGR.so demo
 
 prerequisites:
-	@for d in jpeg png; do make -C ../../3rdparty/$$d; done
+	@for d in jpeg libpng16; do make -C ../../3rdparty/$$d; done
 	@for d in gks gks/plugin; do make -C ../$$d; done
 
 libGR.a: $(GROBJS)
@@ -78,7 +78,7 @@ install:
 
 clean:
 	@for d in gks gks/plugin; do make -C ../$$d clean; done
-	@for d in jpeg png; do make -C ../../3rdparty/$$d clean; done
+	@for d in jpeg libpng16; do make -C ../../3rdparty/$$d clean; done
 	rm -f so_locations demo *.so *.a *.o *.bak *~
 
 depend:

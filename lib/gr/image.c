@@ -5,7 +5,7 @@
 
 #include <jpeglib.h>
 #include <jerror.h>
-#include <png.h>
+#include <libpng16/png.h>
 
 #ifndef NO_MUPDF
 #include <mupdf/fitz.h>

@@ -2,7 +2,7 @@
     OPTS = -s LEGACY_GL_EMULATION=1
  DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\"
  JPEGDIR = ../3rdparty/jpeg
-  PNGDIR = ../3rdparty/png
+  PNGDIR = ../3rdparty/libpng16
  ZLIBDIR = ../3rdparty/zlib
   GKSDIR = ../lib/gks
    GRDIR = ../lib/gr

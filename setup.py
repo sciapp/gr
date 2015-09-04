@@ -925,7 +925,7 @@ int main()
             # GKS include path (needed for GKS plugins)
             gksinc = [os.path.join("lib", "gks")]
             # 3rdparty include paths (needed for some GKS plugins)
-            pnginc = [os.path.join("3rdparty", "png")]
+            pnginc = [os.path.join("3rdparty")]
             zinc = [os.path.join("3rdparty", "zlib")]
             jpeginc = [os.path.join("3rdparty", "jpeg")]
 
@@ -959,9 +959,8 @@ int main()
                 inc = list(gksinc)
                 inc.extend(pnginc)
                 inc.extend(zinc)
-                lib = [_build_3rdparty]
-                libs = list(_pnglibs) # w32ERR: __imp_
-                libs.extend(_zlibs)   # w32ERR: __imp_
+                lib = []
+                libs = [_libpng, _libz]
                 ldflags = []
                 cflags = []
                 ldflags.extend(self.platform_ldflags)
@@ -983,9 +982,8 @@ int main()
                 inc = list(gksinc)
                 inc.extend(pnginc)
                 inc.extend(zinc)
-                lib = [_build_3rdparty]
-                libs = list(_pnglibs) # w32ERR: __imp_
-                libs.extend(_zlibs)   # w32ERR: __imp_
+                lib = []
+                libs = [_libpng, _libz]
                 ldflags = []
                 cflags = []
                 ldflags.extend(self.platform_ldflags)
@@ -1007,9 +1005,8 @@ int main()
                 inc = list(gksinc)
                 inc.extend(pnginc)
                 inc.extend(zinc)
-                lib = [_build_3rdparty]
-                libs = list(_pnglibs) # w32ERR: __imp_
-                libs.extend(_zlibs)   # w32ERR: __imp_
+                lib = []
+                libs = [_libpng, _libz]
                 ldflags = []
                 cflags = []
                 ldflags.extend(self.platform_ldflags)
@@ -1031,9 +1028,8 @@ int main()
                 inc = list(gksinc)
                 inc.extend(pnginc)
                 inc.extend(zinc)
-                lib = [_build_3rdparty]
-                libs = list(_pnglibs) # w32ERR: __imp_
-                libs.extend(_zlibs)   # w32ERR: __imp_
+                lib = []
+                libs = [_libpng, _libz]
                 ldflags = []
                 cflags = []
                 ldflags.extend(self.platform_ldflags)
@@ -1078,7 +1074,7 @@ int main()
                               "swscale", "avutil"]
                 if self.isDarwin:
                     ffmpeglibs.extend(["theora", "ogg", "pvx"])
-                libs.extend(_zlibs)
+                libs.extend("z")
                 libs.append("pthread")
                 ldflags = list(self.mupdfldflags)
                 cflags = []
@@ -1455,7 +1451,7 @@ _gks_plugin_src_path = list(map(lambda p: os.path.join("lib", "gks", "plugin",
                                                        p), _gks_plugin_src))
 _libz_src_path = list(map(lambda p: os.path.join("3rdparty", "zlib", p),
                           _libz_src))
-_libpng_src_path = list(map(lambda p: os.path.join("3rdparty", "png", p),
+_libpng_src_path = list(map(lambda p: os.path.join("3rdparty", "libpng16", p),
                             _libpng_src))
 _libjpeg_src_path = list(map(lambda p: os.path.join("3rdparty", "jpeg", p),
                              _libjpeg_src))
@@ -1467,10 +1463,6 @@ for plugin_src in _gks_plugins:
     _plugins_path[plugin_src] = list(_gks_plugin_src_path)
     _plugins_path[plugin_src].append(os.path.join("lib", "gks", "plugin",
                                                   plugin_src))
-
-_zlibs = ["z"]
-_pnglibs = ["png"]
-_jpeglibs = ["jpeg"]
 
 
 # -- setup -----------------------------------------------------------------

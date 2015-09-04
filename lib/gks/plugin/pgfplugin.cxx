@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <math.h>
-#include <png.h>
+#include <libpng16/png.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
