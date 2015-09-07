@@ -19,7 +19,7 @@ framework is especially suitable for real-time or signal processing
 environments.
 
 *GR* was developed by the Scientific IT-Systems group at the Peter
-Grünberg Institute at Forschunsgzentrum Jülich. The main development has
+Gruenberg Institute at Forschunsgzentrum Juelich. The main development has
 been done by Josef Heinen who currently maintains the software, but
 there are other developers who currently make valuable contributions.
 Special thanks to Florian Rhiem (*GR3*] and Christian Felder (qtgr,
