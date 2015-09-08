@@ -1940,6 +1940,7 @@ def plot(x, y,
         ytick = gr.tick(ymin, ymax) / majory
     else:
         ytick = majory = 1
+    ticksize = 0.0125 * (viewport[1] - viewport[0])
     gr.setviewport(viewport[0], viewport[1], viewport[2], viewport[3])
     gr.setwindow(xmin, xmax, ymin, ymax)
     gr.setscale(scale)
@@ -1951,8 +1952,8 @@ def plot(x, y,
     gr.setcharheight(charheight)
     if grid:
          gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
-    gr.axes(xtick, ytick, xmin, ymin, majorx, majory, 0.01)
-    gr.axes(xtick, ytick, xmax, ymax, -majorx, -majory, -0.01)
+    gr.axes(xtick, ytick, xmin, ymin, majorx, majory, ticksize)
+    gr.axes(xtick, ytick, xmax, ymax, -majorx, -majory, -ticksize)
     gr.setlinetype(linetype)
     gr.polyline(x, y)
     if markertype != gr.MARKERTYPE_DOT:
@@ -1974,8 +1975,11 @@ def plot3d(z,
            xtitle='',
            ytitle='',
            ztitle='',
-           accelerate=False):
-    gr.clearws()
+           accelerate=False,
+           clear=True,
+           update=True):
+    if clear:
+        gr.clearws()
     xmin, ymin = (1, 1)
     if type(z) == ndarray:
         xmax, ymax = z.shape
@@ -2003,16 +2007,18 @@ def plot3d(z,
     else:
         gr.surface(x, y, z, option)
 
+    ticksize = 0.0125 * (viewport[1] - viewport[0])
     if rotation != 0 or tilt != 90:
-        gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 2, 0, 2, -0.01)
-        gr.axes3d(0, ytick, 0, xmax, ymin, zmin, 0, 2, 0, 0.01)
+        gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 2, 0, 2, -ticksize)
+        gr.axes3d(0, ytick, 0, xmax, ymin, zmin, 0, 2, 0, ticksize)
     if contours:
         gr.contour(x, y, [], z, 0)
     if rotation == 0 and tilt == 90:
-        gr.axes(xtick, ytick, xmin, ymin, 2, 2, -0.01)
+        gr.axes(xtick, ytick, xmin, ymin, 2, 2, -ticksize)
     if xtitle != '' or ytitle != '' or ztitle != '':
         gr.titles3d(xtitle, ytitle, ztitle)
-    gr.updatews()
+    if update:
+        gr.updatews()
     if gr.isinline():
         return gr.show()
 
