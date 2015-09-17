@@ -58,6 +58,9 @@ condaclean: clean
 	rm -rf $(HOME)/conda-bld
 	rm -rf $(HOME)/envs/_build
 
+self:
+	sh 3rdparty/makeself.sh
+
 pypi: clean
 	python setup.py sdist upload -r https://pypi.python.org/pypi
 

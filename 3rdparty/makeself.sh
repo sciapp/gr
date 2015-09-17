@@ -1,6 +1,11 @@
 #!/bin/sh
 
-opts="gtk=no wx=no"
+if [ $# = 0 ]
+then
+  opts="gtk=no wx=no"
+else
+  opts="$*"
+fi
 if [ `uname` = 'Darwin' ]; then
   opts="${opts} x11=no"
 fi
@@ -18,4 +23,4 @@ export PATH=${PATH}:${extras}/bin
 make -C 3rdparty extras
 make EXTRA_CFLAGS=-I${extras}/include \
      EXTRA_CXXFLAGS=-I${extras}/include \
-     EXTRA_LDFLAGS=-L${extras}/lib ${opts}
+     EXTRA_LDFLAGS=-L${extras}/lib ${opts} install

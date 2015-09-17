@@ -1,5 +1,5 @@
  TARGETS = jpeg libpng16 zlib
-  EXTRAS = mupdf ffmpeg cmake glfw zeromq openjp2
+  EXTRAS = mupdf ffmpeg cmake glfw zeromq openjp2 theora ogg yasm vpx
      DIR = 
 
 default:
