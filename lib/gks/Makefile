@@ -12,7 +12,7 @@ UNAME := $(shell uname)
 
      X11DEFS =
       FTDEFS =
-       FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
+       FTINC = -I../../3rdparty/freetype/include
 ifeq ($(UNAME), Darwin)
       X11INC = -I/opt/X11/include
 else
@@ -28,9 +28,9 @@ endif
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
         LIBS = -lpthread -ldl -lc -lm
-      FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
+      FTLIBS = ../../3rdparty/freetype/libfreetype.a
      X11LIBS = $(X11PATH) -lXft -lfontconfig -lXt -lX11
-       ZLIBS = -lz
+       ZLIBS = ../../3rdparty/zlib/libz.a
 
 .c.o:
 	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(X11INC) $(CFLAGS) $<
@@ -48,7 +48,7 @@ Darwin:
 targets: prerequisites libGKS.a libGKS.so demo gksm plugins
 
 prerequisites:
-	@for d in libpng16; do make -C ../../3rdparty/$$d; done
+	@for d in bzip2 freetype libpng16 zlib; do make -C ../../3rdparty/$$d; done
 
 libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?

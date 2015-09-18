@@ -31,6 +31,7 @@ endif
     GTKLIBS = `$(GTK_CONFIG) gtk+-2.0 --libs 2>/dev/null`
    JPEGLIBS = ../../../3rdparty/jpeg/libjpeg.a
     PNGLIBS = ../../../3rdparty/libpng16/libpng.a
+    BZ2LIBS = ../../../3rdparty/bzip2/libbz2.a
      GSDEFS = 
       GSINC =
      GSLIBS = -lgs
@@ -43,8 +44,8 @@ else
    GLFWLIBS = -l$(GLFWLIB) -lGL
 endif
      FTDEFS =
-      FTINC = `$(FT_CONFIG) --cflags 2>/dev/null`
-     FTLIBS = `$(FT_CONFIG) --libs 2>/dev/null`
+      FTINC = -I../../../3rdparty/freetype/include
+     FTLIBS = ../../../3rdparty/freetype/libfreetype.a
      AVDEFS = 
      AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil
 ifeq ($(UNAME_S),Darwin)
@@ -53,7 +54,7 @@ ifneq ($(AVLIBS),)
 endif
 endif
   MUPDFDEFS = 
-  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2
+  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
     SSLLIBS = -lssl -lcrypto
     X11DEFS =
     X11LIBS = $(X11PATH) -lfontconfig -lXt -lX11
@@ -61,7 +62,7 @@ endif
     ZMQLIBS = -lzmq -lpthread
   EXTRALIBS =
        LIBS = -lc -lm
-      ZLIBS = -lz
+      ZLIBS = ../../../3rdparty/zlib/libz.a
 
 .SUFFIXES: .o .m .cxx
 

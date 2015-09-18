@@ -8,7 +8,7 @@
       GLLIBS = -lGL -lX11
      PNGLIBS = ../../3rdparty/libpng16/libpng.a
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
-       ZLIBS = -lz
+       ZLIBS = ../../3rdparty/zlib/libz.a
       CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)
      SOFLAGS = -shared
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR3.so
