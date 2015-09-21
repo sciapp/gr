@@ -1638,11 +1638,15 @@ class PlotAxes(GRViewPort, GRMeta):
             if math.fabs(xmax - xmin) < gr.precision:
                 xmin -= gr.precision
                 xmax += gr.precision
+                if not gr.validaterange(xmin, xmax):
+                    xmin, xmax = gr.adjustrange(xmin, xmax)
             elif not self.autoscale and self.scale & gr.OPTION_X_LOG == 0:
                 xmin, xmax = gr.adjustrange(xmin, xmax)
             if math.fabs(ymax - ymin) < gr.precision:
                 ymin -= gr.precision
                 ymax += gr.precision
+                if not gr.validaterange(ymin, ymax):
+                    ymin, ymax = gr.adjustrange(ymin, ymax)
             elif not self.autoscale and self.scale & gr.OPTION_Y_LOG == 0:
                 ymin, ymax = gr.adjustrange(ymin, ymax)
 
