@@ -1317,7 +1317,7 @@ class build_ext(_build_ext, check_ext, build_static):
             os.system("xcodebuild MACOSX_DEPLOYMENT_TARGET=10.6 "
                       "-project lib/gks/quartz/GKSTerm.xcodeproj")
             os.system("ditto lib/gks/quartz/build/Release/GKSTerm.app " +
-                      os.path.join(_build_scripts, "GKSTerm.app"))
+                      os.path.join(_build_lib_grpkg, "GKSTerm.app"))
 
 
 class build_py(_build_py):
@@ -1376,8 +1376,6 @@ _build_lib = os.path.join("build", "lib." + _uPlatformId)
 _build_lib_grpkg = os.path.join(_build_lib, "gr")
 _build_3rdparty = os.path.join("build", "3rdparty." + _uPlatformId)
 _build_temp = os.path.join("build", "temp." + _uPlatformId)
-_build_scripts = os.path.join("build", "scripts-%d.%d" % (sys.version_info[0],
-                                                          sys.version_info[1]))
 
 # prerequisites: static 3rdparty libraries
 if sys.platform == "win32":
@@ -1468,12 +1466,6 @@ for plugin_src in _gks_plugins:
 
 
 # -- setup -----------------------------------------------------------------
-# [OSX] Install GSKTerm.app.
-if sys.platform == "darwin":
-    _scripts = [os.path.join(_build_scripts, "GKSTerm.app")]
-else:
-    _scripts = None
-
 _long_description = None
 try:
     with open("README.rst", 'r') as fd:
@@ -1504,16 +1496,8 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       # ext_modules dummy entry
       # check_ext dynamically generates a list of Extensions
       ext_modules=[Extension("", [""])],
-      scripts=_scripts,
       package_data={
-          "gr": ["fonts/*.afm", "fonts/*.pfb", "fonts/gksfont.dat",
-                 "quartz/build/Release/GKSTerm.app/Contents/Info.plist",
-                 "quartz/build/Release/GKSTerm.app/Contents/MacOS/GKSTerm",
-                 "quartz/build/Release/GKSTerm.app/Contents/PkgInfo",
-                 "quartz/build/Release/GKSTerm.app/Contents/Resources/English.lproj/ExtendSavePanel.nib",
-                 "quartz/build/Release/GKSTerm.app/Contents/Resources/English.lproj/InfoPlist.strings",
-                 "quartz/build/Release/GKSTerm.app/Contents/Resources/English.lproj/MainMenu.nib",
-                 "quartz/build/Release/GKSTerm.app/Contents/Resources/GKSTerm.icns"]
+          "gr": ["fonts/*.afm", "fonts/*.pfb", "fonts/gksfont.dat"],
       },
       include_package_data=True,
      )
