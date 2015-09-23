@@ -1,4 +1,4 @@
-include COPYING
+include LICENSE.md
 include README.*
 include version.txt
 include vcversioner.py
