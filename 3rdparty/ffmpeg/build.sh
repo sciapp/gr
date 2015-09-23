@@ -13,7 +13,10 @@ tar xf ${src}.tar.gz
 
 cd ${src}
 
-./configure --prefix=${dest} --disable-yasm --disable-asm --enable-pic
+./configure --prefix=${dest} --disable-yasm --disable-asm --enable-pic \
+  --enable-libvpx --enable-libtheora --extra-cflags=-I${dest}/include \
+  --extra-cxxflags=-I${dest}/include --extra-ldflags=-L${dest}/lib
+
 make -j4
 make install
 make distclean

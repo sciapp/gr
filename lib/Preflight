@@ -413,13 +413,13 @@ int main(void)
    exit(0);
 }
 eof
-  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -lz"
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx -lz"
   if [ `uname` = "Linux" ]
   then
     cmd="$cmd -lpthread -lm"
   elif [ `uname` = "Darwin" ]
   then
-    cmd="$cmd -ltheora -logg -lvpx -liconv"
+    cmd="$cmd -liconv"
   fi
   $cmd >/dev/null 2>&1
   if [ $? -ne 0 ]; then

@@ -47,12 +47,7 @@ endif
       FTINC = -I../../../3rdparty/freetype/include
      FTLIBS = ../../../3rdparty/freetype/libfreetype.a
      AVDEFS = 
-     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil
-ifeq ($(UNAME_S),Darwin)
-ifneq ($(AVLIBS),)
-     AVLIBS += -ltheora -logg -lvpx
-endif
-endif
+     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
   MUPDFDEFS = 
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
     SSLLIBS = -lssl -lcrypto

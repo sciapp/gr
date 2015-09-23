@@ -2,22 +2,22 @@
 
 export PATH=`pwd`/../build/bin:${PATH}
 
-src="libvpx-v1.3.0"
+src="libvpx-1.4.0"
 if [ "$1" = "" ]; then
   dest=`pwd`/../build
 else
   dest=$1
 fi
 
-curl -O https://webm.googlecode.com/files/${src}.tar.bz2
+curl -O http://downloads.webmproject.org/releases/webm/${src}.tar.bz2
 
 tar xf ${src}.tar.bz2
 
-patch -p0 <vpx.patch
-
 cd ${src}
 
-./configure --prefix=${dest} --disable-unit-tests --as=yasm
+export CFLAGS="-fPIC"
+./configure --prefix=${dest} --disable-unit-tests --target=generic-gnu \
+  --enable-pic
 make -j4
 make install
 make clean

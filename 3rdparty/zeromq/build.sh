@@ -15,10 +15,11 @@ cd ${src}
 
 export CFLAGS=-fPIC
 export CXXFLAGS=-fPIC
+opts="SUBDIRS=src"
 ./configure --prefix=${dest} --disable-shared
-make -j4
-make install
-make distclean
+make ${opts} -j4
+make ${opts} install
+make ${opts} distclean
 
 cd ..
 
