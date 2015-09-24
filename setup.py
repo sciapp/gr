@@ -1074,7 +1074,7 @@ int main()
                               "swscale", "avutil"]
                 if self.isDarwin:
                     ffmpeglibs.extend(["theora", "ogg", "pvx"])
-                libs.extend("z")
+                libs.append("z") # link dynamic zlib
                 libs.append("pthread")
                 ldflags = list(self.mupdfldflags)
                 cflags = []
