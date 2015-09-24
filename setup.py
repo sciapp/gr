@@ -678,8 +678,8 @@ int main()
                 self.disable_mupdf = True
             else:
                 # mupdf compiled without ssl support
-                self.mupdflibs = ["mupdf", "freetype", "jbig2dec", "jpeg",
-                                  "openjp2", "z"]
+                self.mupdflibs = ["mupdf", "jbig2dec", "jpeg", "openjp2", "z"]
+                self.mupdfldflags = self.mupdfldflags + self.ftldflags
                 self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
                                                           self.mupdflibs,
                                               mupdfldflags=self.mupdfldflags)
