@@ -154,7 +154,8 @@ class clean(_clean, clean_static):
             shutil.rmtree(gregg, ignore_errors=True)
         _clean.run(self)
         if sys.platform == "darwin":
-            os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean")
+            os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj "
+                      "clean")
 
 
 class check_ext(Command):
@@ -1313,7 +1314,8 @@ class build_ext(_build_ext, check_ext, build_static):
         build_static.run(self)
         _build_ext.run(self)
         if not self.disable_quartz:
-            os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj")
+            os.system("xcodebuild MACOSX_DEPLOYMENT_TARGET=10.6 "
+                      "-project lib/gks/quartz/GKSTerm.xcodeproj")
             os.system("ditto lib/gks/quartz/build/Release/GKSTerm.app " +
                       os.path.join(_build_scripts, "GKSTerm.app"))
 
