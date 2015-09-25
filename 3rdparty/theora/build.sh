@@ -18,7 +18,7 @@ tar xf ${src}.tar.gz
 
 cd ${src}
 
-./configure --prefix=${dest} --disable-shared --with-pic \
+./configure --prefix=${dest} --libdir=${dest}/lib --disable-shared --with-pic \
   --with-ogg-includes=`pwd`/../../build/include \
   --with-ogg-libraries=`pwd`/../../build/lib
 make -j4
