@@ -18,7 +18,7 @@ tar xf ${src}.tar.gz
 
 cd ${src}
 
-./configure --prefix=${dest} --disable-shared --with-pic
+./configure --prefix=${dest} --libdir=${dest}/lib --disable-shared --with-pic
 make -j4
 make install
 make clean

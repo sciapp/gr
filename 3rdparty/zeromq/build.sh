@@ -21,7 +21,7 @@ cd ${src}
 export CFLAGS=-fPIC
 export CXXFLAGS=-fPIC
 opts="SUBDIRS=src"
-./configure --prefix=${dest} --disable-shared
+./configure --prefix=${dest} --libdir=${dest}/lib --disable-shared
 make ${opts} -j4
 make ${opts} install
 make ${opts} distclean
