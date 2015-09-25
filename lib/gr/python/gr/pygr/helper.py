@@ -11,7 +11,7 @@ import gr
 from gr._version import __version__, __revision__
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
-__copyright__ = """Copyright (c) 20012-2015: Josef Heinen, Florian Rhiem, Christian Felder,
+__copyright__ = """Copyright (c) 2012-2015: Josef Heinen, Florian Rhiem, Christian Felder,
 and other contributors:
 
 http://gr-framework.org/credits.html
