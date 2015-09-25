@@ -57,6 +57,7 @@ endif
     ZMQLIBS = -lzmq -lpthread
   EXTRALIBS =
        LIBS = -lc -lm
+       ZINC = -I../../../3rdparty/zlib
       ZLIBS = ../../../3rdparty/zlib/libz.a
 
 .SUFFIXES: .o .m .cxx
@@ -66,7 +67,7 @@ endif
 .c.o:
 	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(AVDEFS) $(MUPDFDEFS) $(CFLAGS) $<
 .cxx.o:
-	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $<
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 default:
 	@make -C ../../.. Makedefs

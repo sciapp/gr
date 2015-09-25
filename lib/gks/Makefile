@@ -30,10 +30,11 @@ INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
         LIBS = -lpthread -ldl -lc -lm
       FTLIBS = ../../3rdparty/freetype/libfreetype.a
      X11LIBS = $(X11PATH) -lXft -lfontconfig -lXt -lX11
+        ZINC = -I../../3rdparty/zlib
        ZLIBS = ../../3rdparty/zlib/libz.a
 
 .c.o:
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(X11INC) $(CFLAGS) $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(X11INC) $(ZINC) $(CFLAGS) $<
 
 default:
 	@make -C ../.. Makedefs
