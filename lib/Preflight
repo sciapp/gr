@@ -211,7 +211,6 @@ then
 else
   ftdefs="FT_CONFIG=false FTDEFS=-DNO_FT FTINC= FTLIBS="
   info="${yellow} no${normal} [disabled]"
-  mupdf="no"
   ret=1
 fi
 printf "%12s: %s\n" "FreeType" "$info" >&2
@@ -482,9 +481,8 @@ int main(int argc, char **argv)
 #endif
 }
 eof
-  ftlibs=`$ftconfig --libs`
   libs="-lz -lm"
-  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lmupdf $ftlibs -ljbig2dec -ljpeg -lopenjp2"
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lmupdf -lfreetype -ljbig2dec -ljpeg -lopenjp2"
   $cmd $libs >$tmpver 2>&1
   if [ $? -ne 0 ]; then
     $cmd -lssl -lcrypto $libs >$tmpver 2>&1
