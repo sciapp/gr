@@ -9,7 +9,12 @@ else
   dest=$1
 fi
 
-curl -O http://downloads.webmproject.org/releases/webm/${src}.tar.bz2
+if [ `which curl` ]; then
+  cmd="curl -O"
+else
+  cmd="wget"
+fi
+${cmd} http://downloads.webmproject.org/releases/webm/${src}.tar.bz2
 
 tar xf ${src}.tar.bz2
 

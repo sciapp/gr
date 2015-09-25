@@ -9,7 +9,12 @@ else
   dest=$1
 fi
 
-curl -O -L https://github.com/glfw/glfw/archive/${src}.tar.gz
+if [ `which curl` ]; then
+  cmd="curl -O -L"
+else
+  cmd="wget"
+fi
+${cmd} https://github.com/glfw/glfw/archive/${src}.tar.gz
 
 tar xf ${src}.tar.gz
 

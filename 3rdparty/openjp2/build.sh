@@ -9,7 +9,12 @@ else
   dest=$1
 fi
 
-curl -O https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
+if [ `which curl` ]; then
+  cmd="curl -O"
+else
+  cmd="wget"
+fi
+${cmd} https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
 
 tar xf ${src}.tar.gz
 

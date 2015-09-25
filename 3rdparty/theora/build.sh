@@ -7,7 +7,12 @@ else
   dest=$1
 fi
 
-curl -O http://downloads.xiph.org/releases/theora/${src}.tar.gz
+if [ `which curl` ]; then
+  cmd="curl -O"
+else
+  cmd="wget"
+fi
+${cmd} http://downloads.xiph.org/releases/theora/${src}.tar.gz
 
 tar xf ${src}.tar.gz
 

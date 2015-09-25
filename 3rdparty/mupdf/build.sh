@@ -7,7 +7,12 @@ else
   dest=$1
 fi
 
-curl -O http://mupdf.com/downloads/archive/${src}.tar.gz
+if [ `which curl` ]; then
+  cmd="curl -O"
+else
+  cmd="wget"
+fi
+${cmd} http://mupdf.com/downloads/archive/${src}.tar.gz
 
 tar xf ${src}.tar.gz
 

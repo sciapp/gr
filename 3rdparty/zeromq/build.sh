@@ -7,7 +7,12 @@ else
   dest=$1
 fi
 
-curl -O http://download.zeromq.org/zeromq-4.0.4.tar.gz
+if [ `which curl` ]; then
+  cmd="curl -O"
+else
+  cmd="wget"
+fi
+${cmd} http://download.zeromq.org/zeromq-4.0.4.tar.gz
 
 tar xf ${src}.tar.gz
 

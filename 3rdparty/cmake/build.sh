@@ -9,7 +9,12 @@ else
   dest=$1
 fi
 
-curl -O http://www.cmake.org/files/v2.8/${src}.tar.gz
+if [ `which curl` ]; then
+  cmd="curl -O"
+else
+  cmd="wget"
+fi
+${cmd} http://www.cmake.org/files/v2.8/${src}.tar.gz
 
 tar xf ${src}.tar.gz
 

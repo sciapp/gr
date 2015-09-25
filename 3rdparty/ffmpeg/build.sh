@@ -7,7 +7,12 @@ else
   dest=$1
 fi
 
-curl -O https://ffmpeg.org/releases/${src}.tar.gz
+if [ `which curl` ]; then
+  cmd="curl -O"
+else
+  cmd="wget"
+fi
+${cmd} https://ffmpeg.org/releases/${src}.tar.gz
 
 tar xf ${src}.tar.gz
 
