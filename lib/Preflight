@@ -18,7 +18,6 @@ do
   shift
 done
 wxdefs=""
-ftdefs=""
 qtdefs=""
 gtkdefs=""
 x11defs=""
@@ -183,37 +182,6 @@ else
   ret=1
 fi
 printf "%12s: %s\n" "GTK+" "$info" >&2
-
-if [ "$ft" != "no" ]
-then
-  ftconfig=freetype-config
-  if [ "$FT_CONFIG" != "" ]
-  then
-    ftconfig=$FT_CONFIG
-  fi
-  if [ "`which $ftconfig 2>/dev/null`" = "" ]
-  then
-    ftconfig=false
-    ftdefs="FT_CONFIG=false FTDEFS=-DNO_FT FTINC= FTLIBS="
-    info="${red} no${normal} [freetype-config not found]"
-    ret=1
-  else
-    ftdefs="FT_CONFIG=$ftconfig"
-    if [ `uname` = "Linux" ]; then
-      ftlib="`$ftconfig --prefix`/lib/libfreetype.a"
-      if [ -f ${ftlib} ]
-      then
-        ftdefs="${ftdefs} FTLIBS=${ftlib}"
-      fi
-    fi
-    info="${green}yes${normal} [version `$ftconfig --version`]"
-  fi
-else
-  ftdefs="FT_CONFIG=false FTDEFS=-DNO_FT FTINC= FTLIBS="
-  info="${yellow} no${normal} [disabled]"
-  ret=1
-fi
-printf "%12s: %s\n" "FreeType" "$info" >&2
 
 if [ "$x11" != "no" ]
 then
@@ -508,4 +476,4 @@ printf "%12s: %s\n" "MuPDF" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
 echo "" >&2
-echo $target $wxdefs $ftdefs $qtdefs $gtkdefs $x11defs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $extradefs
+echo $target $wxdefs $qtdefs $gtkdefs $x11defs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $extradefs
