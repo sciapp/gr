@@ -16,6 +16,8 @@ ${cmd} http://downloads.xiph.org/releases/theora/${src}.tar.gz
 
 tar xf ${src}.tar.gz
 
+patch -p0 <libtheora.patch
+
 cd ${src}
 
 ./configure --prefix=${dest} --libdir=${dest}/lib --disable-shared --with-pic \
