@@ -78,10 +78,10 @@ class build_static(Command):
     # prerequisites: build static 3rdparty libraries
     description = "build static 3rdparty libraries"
 
-    user_options = []
+    user_options = [('static-extras', None, "Build static extra libraries")]
 
     def initialize_options(self):
-        pass
+        self.static_extras = False
 
     def finalize_options(self):
         pass
@@ -111,29 +111,22 @@ class build_static(Command):
             obj = compiler.compile(_libjpeg_src_path,
                                    extra_preargs=_extra_preargs)
             compiler.create_static_lib(obj, "jpeg", output_dir=_build_3rdparty)
-#        # create batch scripts
-#        if sys.platform == "win32":
-#            _grvarsallbat = os.path.join(_build_temp, "grvarsall.bat")
-#            with open(_grvarsallbat, "wb") as fd:
-#                paths = ["%PATH%"]
-#                fd.write("@echo off\r\n")
-#                if _wxlib:
-#                    fd.write("set WXLIB=%s\r\n" %_wxlib)
-#                    paths.append("%WXLIB%")
-#                if _gsdir:
-#                    fd.write("set GSDIR=%s\r\n" %_gsdir)
-#                    paths.append("%GSDIR%\\bin")
-#                fd.write("set PATH=%s\r\n" %(';'.join(paths)))
+        if self.static_extras:
+            if os.system("make -C 3rdparty extras DIR=" +
+                         os.path.realpath(_build_3rdparty)):
+                # building static libraries failed
+                sys.exit(-4)
 
 
 class clean_static(Command):
 
     description = "clean up temporary files from 'build_static' command"
 
-    user_options = []
+    user_options = [('no-static-extras', None, "Do not clean static extra "
+                                               "libraries")]
 
     def initialize_options(self):
-        pass
+        self.no_static_extras = False
 
     def finalize_options(self):
         pass
@@ -142,9 +135,22 @@ class clean_static(Command):
         print("removing '", _build_3rdparty, "' (and everything under it)",
               sep='')
         shutil.rmtree(_build_3rdparty, ignore_errors=True)
+        if not self.no_static_extras:
+            print("cleaning static extras")
+            os.system("make -C 3rdparty clean")
 
 
 class clean(_clean, clean_static):
+
+    user_options = (_clean.user_options + clean_static.user_options)
+
+    def initialize_options(self):
+        clean_static.initialize_options(self)
+        _clean.initialize_options(self)
+
+    def finalize_options(self):
+        clean_static.finalize_options(self)
+        _clean.finalize_options(self)
 
     def run(self):
         gregg = os.path.join("lib", "gr", "python", "gr.egg-info")
@@ -158,7 +164,7 @@ class clean(_clean, clean_static):
                       "clean")
 
 
-class check_ext(Command):
+class check_ext(Command, build_static):
 
     description = "dynamically generate list of C/C++ extensions for build_ext"
 
@@ -184,9 +190,10 @@ class check_ext(Command):
                     ('disable-xt', None,
                      "Disable Xt libraries (disables also x11 and freetype)"),
                     ('disable-mupdf', None, "Disable mupdf libraries"),
-                   ]
+                   ] + build_static.user_options
 
     def initialize_options(self):
+        build_static.initialize_options(self)
         self.isLinuxOrDarwin = any(s in sys.platform for s in
                                    ["linux", "darwin"])
         self.isLinux = ("linux" in sys.platform)
@@ -750,6 +757,9 @@ int main()
                                 "gr").replace('\\', "\\\\")))
 
     def finalize_options(self):
+        # build static dependencies before testing
+        build_static.finalize_options(self)
+        build_static.run(self)
         # -- platform finalizers (pre) -------------------------------------
         if self.isLinuxOrDarwin:
             self._finalize_LinuxOrDarwinPre()
@@ -1266,10 +1276,9 @@ int main()
             sys.exit(-3)
 
 
-class build_ext(_build_ext, check_ext, build_static):
+class build_ext(_build_ext, check_ext):
 
-    user_options = (_build_ext.user_options + check_ext.user_options +
-                    build_static.user_options)
+    user_options = (_build_ext.user_options + check_ext.user_options)
 
     # workaround for libGKS on win32 no "init" + module_name function
     def get_export_symbols (self, ext):
@@ -1300,18 +1309,15 @@ class build_ext(_build_ext, check_ext, build_static):
 
     def initialize_options(self):
         check_ext.initialize_options(self)
-        build_static.initialize_options(self)
         _build_ext.initialize_options(self)
 
     def finalize_options(self):
         check_ext.finalize_options(self)
-        build_static.finalize_options(self)
         _build_ext.finalize_options(self)
         self.extensions = self.ext_modules
 
     def run(self):
         check_ext.run(self)
-        build_static.run(self)
         _build_ext.run(self)
         if not self.disable_quartz:
             os.system("xcodebuild MACOSX_DEPLOYMENT_TARGET=10.6 "
