@@ -625,15 +625,21 @@ int main()
                                                     gsldflags=self.gsldflags)
         # -- freetype -------------------------------------
         if not self.disable_freetype:
-            ftconfig = Popen(["which", "freetype-config"],
-                             stdout=PIPE).communicate()[0].rstrip()
-            self.disable_freetype = not bool(ftconfig)
-            if not self.disable_freetype:
-                self.ftconfig = ftconfig
-                self.ftldflags = shlex.split(Popen([self.ftconfig, "--libs"],
-                               stdout=PIPE).communicate()[0].rstrip())
-                self.ftcflags = shlex.split(Popen([self.ftconfig, "--cflags"],
-                              stdout=PIPE).communicate()[0].rstrip())
+            if not self.static_extras:
+                ftconfig = Popen(["which", "freetype-config"],
+                                 stdout=PIPE).communicate()[0].rstrip()
+                self.disable_freetype = not bool(ftconfig)
+                if not self.disable_freetype:
+                    self.ftconfig = ftconfig
+                    self.ftldflags = shlex.split(Popen([self.ftconfig, "--libs"],
+                                   stdout=PIPE).communicate()[0].rstrip())
+                    self.ftcflags = shlex.split(Popen([self.ftconfig, "--cflags"],
+                                  stdout=PIPE).communicate()[0].rstrip())
+            else:
+                self.ftcflags = ["-I" + os.path.join("3rdparty", "freetype",
+                                                     "include")]
+                self.ftldflags = [os.path.join(_build_3rdparty, "lib",
+                                               "libfreetype.a")]
             self.disable_freetype = (
                              not self._test_freetype(ftcflags=self.ftcflags,
                                                      ftldflags=self.ftldflags))
@@ -672,21 +678,31 @@ int main()
                 self.disable_gtk = True
         # -- mupdf -------------------------------------
         if not self.disable_mupdf:
-            srcdir = os.path.split(os.path.realpath(__file__))[0]
-            for p in [os.path.join(srcdir, "3rdparty", "build"),
-                      os.path.join(os.sep, "usr", "local"),
-                      os.path.join(os.sep, "usr")]:
-                mupdf = os.path.join(p, "include", "mupdf")
-                if os.path.isdir(mupdf):
-                    self.mupdfinc = [os.path.join(p, "include")]
-                    self.mupdfldflags.append("-L%s" % os.path.join(p, "lib"))
-                    break
-            if not self.mupdfinc:
-                self.disable_mupdf = True
+            if not self.static_extras:
+                srcdir = os.path.split(os.path.realpath(__file__))[0]
+                for p in [os.path.join(os.sep, "usr", "local"),
+                          os.path.join(os.sep, "usr")]:
+                    mupdf = os.path.join(p, "include", "mupdf")
+                    if os.path.isdir(mupdf):
+                        self.mupdfinc = [os.path.join(p, "include")]
+                        self.mupdfldflags.append("-L%s" % os.path.join(p, "lib"))
+                        break
+                if not self.mupdfinc:
+                    self.disable_mupdf = True
+                else:
+                    # mupdf compiled without ssl support
+                    self.mupdflibs.extend(["mupdf", "jbig2dec", "jpeg",
+                                          "openjp2", "z", "m"])
+                    self.mupdfldflags = self.mupdfldflags + self.ftldflags
             else:
-                # mupdf compiled without ssl support
-                self.mupdflibs = ["mupdf", "jbig2dec", "jpeg", "openjp2", "z"]
-                self.mupdfldflags = self.mupdfldflags + self.ftldflags
+                mupdflibs = ["mupdf", "freetype", "jbig2dec", "jpeg",
+                             "openjp2", "z"]
+                _libs_3rdparty = os.path.join(_build_3rdparty, "lib")
+                self.mupdfldflags = [os.path.join(_libs_3rdparty,
+                                                  "lib" + name + ".a")
+                                     for name in mupdflibs]
+                self.mupdfldflags.append("-lm")
+                self.mupdfinc = [os.path.join(_build_3rdparty, "include")]
                 self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
                                                           self.mupdflibs,
                                               mupdfldflags=self.mupdfldflags)
@@ -866,6 +882,7 @@ int main()
             print("")
             print("        mupdfinc: ", self.mupdfinc)
             print("       mupdflibs: ", self.mupdflibs)
+            print("    mupdfldflags: ", self.mupdfldflags)
             print("")
             print("      opengllibs: ", self.gllibs)
             print("    opengldflags: ", self.glldflags)
@@ -1085,7 +1102,14 @@ int main()
                               "swscale", "avutil"]
                 if self.isDarwin:
                     ffmpeglibs.extend(["theora", "ogg", "vpx"])
-                libs.append("z") # link dynamic zlib
+                ffmpeglibs.append("z")
+                if not self.static_extras:
+                    libs.extend(ffmpeglibs)
+                else:
+                    _libs_3rdparty = os.path.join(_build_3rdparty, "lib")
+                    libs.extend([os.path.join(_libs_3rdparty,
+                                              "lib" + name + ".a")
+                                 for name in ffmpeglibs])
                 libs.append("pthread")
                 ldflags = list(self.mupdfldflags)
                 cflags = []
