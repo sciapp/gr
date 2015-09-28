@@ -1074,7 +1074,7 @@ int main()
                 ffmpeglibs = ["avdevice", "avformat", "avfilter", "avcodec",
                               "swscale", "avutil"]
                 if self.isDarwin:
-                    ffmpeglibs.extend(["theora", "ogg", "pvx"])
+                    ffmpeglibs.extend(["theora", "ogg", "vpx"])
                 libs.append("z") # link dynamic zlib
                 libs.append("pthread")
                 ldflags = list(self.mupdfldflags)
