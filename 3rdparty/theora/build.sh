@@ -23,7 +23,7 @@ fi
 cd ${src}
 
 ./configure --prefix=${dest} --libdir=${dest}/lib --disable-shared --with-pic \
-  --disable-spec --includedir=${dest}/include \
+  --disable-spec --disable-examples --includedir=${dest}/include \
   --with-ogg-includes=${dest}/include --with-ogg-libraries=${dest}/lib
 make -j4
 make install
