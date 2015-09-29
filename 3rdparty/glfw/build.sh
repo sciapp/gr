@@ -14,7 +14,7 @@ cd ${dest}/src
 
 if [ ! -d "${src}" ]; then
   if [ `which curl` ]; then
-    cmd="curl -O"
+    cmd="curl -O -L"
   else
     cmd="wget"
   fi
