@@ -17,12 +17,13 @@ if [ ! -d "${src}" ]; then
   fi
   ${cmd} http://downloads.xiph.org/releases/theora/${src}.tar.gz
   tar -xf ${src}.tar.gz
-
-patch -p0 <libtheora.patch
+  patch -p0 <${cwd}/libtheora.patch
+fi
 
 cd ${src}
 
 ./configure --prefix=${dest} --libdir=${dest}/lib --disable-shared --with-pic \
+  --disable-spec \
   --with-ogg-includes=`pwd`/../../build/include \
   --with-ogg-libraries=`pwd`/../../build/lib
 make -j4
