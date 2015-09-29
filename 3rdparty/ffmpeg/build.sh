@@ -1,20 +1,23 @@
 #!/bin/sh
-
+cwd=`pwd`
 src="ffmpeg-2.1.4"
 if [ "$1" = "" ]; then
   dest=`pwd`/../build
 else
   dest=$1
 fi
+mkdir -p ${dest}/src
+cd ${dest}/src
 
-if [ `which curl` ]; then
-  cmd="curl -O"
-else
-  cmd="wget"
+if [ ! -d "${src}" ]; then
+  if [ `which curl` ]; then
+    cmd="curl -O"
+  else
+    cmd="wget"
+  fi
+  ${cmd} https://ffmpeg.org/releases/${src}.tar.gz
+  tar -xf ${dest}/src/${src}.tar.gz
 fi
-${cmd} https://ffmpeg.org/releases/${src}.tar.gz
-
-tar xf ${src}.tar.gz
 
 cd ${src}
 
@@ -24,9 +27,6 @@ cd ${src}
 
 make -j4
 make install
-make distclean
 
-cd ..
-
-rm -rf ${src} *.tar.gz
+cd ${cwd}
 

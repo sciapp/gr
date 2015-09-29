@@ -1,5 +1,5 @@
 #!/bin/sh
-
+cwd=`pwd`
 if [ ! `which cmake` ]; then exit 0; fi
 
 src="openjpeg-2.0.0"
@@ -8,15 +8,19 @@ if [ "$1" = "" ]; then
 else
   dest=$1
 fi
+export PATH=${dest}/bin:${PATH}
+mkdir -p ${dest}/src
+cd ${dest}/src
 
-if [ `which curl` ]; then
-  cmd="curl -O"
-else
-  cmd="wget"
+if [ ! -d "${src}" ]; then
+  if [ `which curl` ]; then
+    cmd="curl -O"
+  else
+    cmd="wget"
+  fi
+  ${cmd} https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
+  tar -xf ${src}.tar.gz
 fi
-${cmd} https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
-
-tar xf ${src}.tar.gz
 
 cd ${src}
 
@@ -24,9 +28,6 @@ export CFLAGS=-fPIC
 cmake -DCMAKE_INSTALL_PREFIX:PATH=${dest} -DBUILD_SHARED_LIBS=OFF
 make -j4
 make install
-make clean
 
-cd ..
-
-rm -rf ${src} *.tar.gz
+cd ${cwd}
 

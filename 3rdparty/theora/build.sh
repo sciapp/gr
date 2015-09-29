@@ -1,20 +1,22 @@
 #!/bin/sh
-
+cwd=`pwd`
 src="libtheora-1.1.1"
 if [ "$1" = "" ]; then
   dest=`pwd`/../build
 else
   dest=$1
 fi
+mkdir -p ${dest}/src
+cd ${dest}/src
 
-if [ `which curl` ]; then
-  cmd="curl -O"
-else
-  cmd="wget"
-fi
-${cmd} http://downloads.xiph.org/releases/theora/${src}.tar.gz
-
-tar xf ${src}.tar.gz
+if [ ! -d "${src}" ]; then
+  if [ `which curl` ]; then
+    cmd="curl -O"
+  else
+    cmd="wget"
+  fi
+  ${cmd} http://downloads.xiph.org/releases/theora/${src}.tar.gz
+  tar -xf ${src}.tar.gz
 
 patch -p0 <libtheora.patch
 
@@ -25,9 +27,6 @@ cd ${src}
   --with-ogg-libraries=`pwd`/../../build/lib
 make -j4
 make install
-make clean
 
-cd ..
-
-rm -rf ${src} *.tar.gz
+cd ${cwd}
 

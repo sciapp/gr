@@ -1,6 +1,5 @@
 #!/bin/sh
-
-export PATH=`pwd`/../build/bin:${PATH}
+cwd=`pwd`
 
 src="libvpx-1.4.0"
 if [ "$1" = "" ]; then
@@ -8,15 +7,19 @@ if [ "$1" = "" ]; then
 else
   dest=$1
 fi
+export PATH=${dest}/bin:${PATH}
+mkdir -p ${dest}/src
+cd ${dest}/src
 
-if [ `which curl` ]; then
-  cmd="curl -O"
-else
-  cmd="wget"
+if [ ! -d "${src}" ]; then
+  if [ `which curl` ]; then
+    cmd="curl -O"
+  else
+    cmd="wget"
+  fi
+  ${cmd} http://downloads.webmproject.org/releases/webm/${src}.tar.bz2
+  tar -xf ${src}.tar.bz2
 fi
-${cmd} http://downloads.webmproject.org/releases/webm/${src}.tar.bz2
-
-tar xf ${src}.tar.bz2
 
 cd ${src}
 
@@ -25,9 +28,6 @@ export CFLAGS="-fPIC"
   --enable-pic
 make -j4
 make install
-make clean
 
-cd ..
-
-rm -rf ${src} *.tar.bz2
+cd ${cwd}
 

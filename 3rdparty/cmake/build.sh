@@ -1,5 +1,5 @@
 #!/bin/sh
-
+cwd=`pwd`
 if [ `which cmake` ]; then exit 0; fi
 
 src="cmake-2.8.12.2"
@@ -8,24 +8,24 @@ if [ "$1" = "" ]; then
 else
   dest=$1
 fi
+mkdir -p ${dest}/src
+cd ${dest}/src
 
-if [ `which curl` ]; then
-  cmd="curl -O"
-else
-  cmd="wget"
+if [ ! -d "${src}" ]; then
+  if [ `which curl` ]; then
+    cmd="curl -O"
+  else
+    cmd="wget"
+  fi
+  ${cmd} http://www.cmake.org/files/v2.8/${src}.tar.gz
+  tar -xf ${dest}/src/${src}.tar.gz
 fi
-${cmd} http://www.cmake.org/files/v2.8/${src}.tar.gz
-
-tar xf ${src}.tar.gz
 
 cd ${src}
 
 ./bootstrap --prefix=${dest}
 make -j4
 make install
-make clean
 
-cd ..
-
-rm -rf ${src} *.tar.gz
+cd ${cwd}
 
