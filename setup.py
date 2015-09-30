@@ -13,7 +13,6 @@ import distutils.command
 import distutils.command.install
 from distutils.core import Command
 from distutils.command.build_ext import build_ext as _build_ext
-from distutils.command.build import build as _build
 from distutils.command.clean import clean as _clean
 from distutils.ccompiler import new_compiler
 from distutils.sysconfig import get_config_var
@@ -27,8 +26,8 @@ else:
     # the bytes type has no read attribute which is needed,
     # e.g. for rstrip calls
     from subprocess import Popen as _Popen
-    class Popen(_Popen):
 
+    class Popen(_Popen):
         def communicate(self, *args, **kwargs):
             stdout, stderr = _Popen.communicate(self, *args, **kwargs)
             if stdout is not None:
@@ -36,17 +35,16 @@ else:
             if stderr is not None:
                 stderr = stderr.decode()
             return (stdout, stderr)
+
 from setuptools import setup, Extension
 from setuptools.command.build_py import build_py as _build_py
-from setuptools.dist import Distribution
 import vcversioner
 
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
 __version__ = vcversioner.find_version(
-                   version_module_paths=[os.path.join("lib", "gr", "python",
-                                                      "gr",
-                                                      "_version.py")]).version
+    version_module_paths=[os.path.join("lib", "gr", "python",
+                                       "gr", "_version.py")]).version
 __copyright__ = """Copyright (c) 2012-2015: Josef Heinen, Florian Rhiem,
 Christian Felder and other contributors:
 
@@ -79,6 +77,14 @@ following projects, which have their own licenses:
 - FFmpeg - a multimedia framework (LGPL / GPLv2)
 
 """
+
+
+def get_output(*command):
+    return Popen(list(command), stdout=PIPE).communicate()[0].rstrip()
+
+
+def get_words(*command):
+    return shlex.split(get_output(*command))
 
 
 class build_static(Command):
@@ -589,20 +595,16 @@ int main()
     def _finalize_LinuxOrDarwinPre(self):
         # -- wx -------------------------------------
         if not self.disable_wx and not self.wxconfig:
-            self.wxconfig = Popen(["which", "wx-config"],
-                              stdout=PIPE).communicate()[0].rstrip()
+            self.wxconfig = get_output("which", "wx-config")
             if not os.path.isfile(self.wxconfig):
                 self.disable_wx = True
             else:
-                self.wxldflags = shlex.split(Popen([self.wxconfig, "--libs"],
-                                stdout=PIPE).communicate()[0].rstrip())
-                self.wxcxx = shlex.split(Popen([self.wxconfig, "--cxxflags"],
-                               stdout=PIPE).communicate()[0].rstrip())
+                self.wxldflags = get_words(self.wxconfig, "--libs")
+                self.wxcxx = get_words(self.wxconfig, "--cxxflags")
         # -- qt -------------------------------------
         if not self.disable_qt:
             if not self.qmake:
-                self.qmake = Popen(["which", "qmake"],
-                               stdout=PIPE).communicate()[0].rstrip()
+                self.qmake = get_output("which", "qmake")
             if os.path.isdir("/usr/local/Cellar"):
                 self.qtlibs = []
             else:
@@ -611,16 +613,12 @@ int main()
         if self.isLinux:
             x11ldflags = None
             try:
-                x11ldflags = shlex.split(Popen(["pkg-config", "x11",
-                                                "--libs"],
-                   stdout=PIPE, stderr=PIPE).communicate()[0].rstrip())
+                x11ldflags = get_words("pkg-config", "x11", "--libs")
             except OSError:
                 pass
             if x11ldflags:
                 self.x11ldflags = x11ldflags
-                self.x11cflags = shlex.split(Popen(["pkg-config", "x11",
-                                                    "--cflags"],
-                   stdout=PIPE, stderr=PIPE).communicate()[0].rstrip())
+                self.x11cflags = get_words("pkg-config", "x11", "--cflags")
             else:
                 self.disable_x11 = True
         else:
@@ -653,15 +651,12 @@ int main()
         # -- freetype -------------------------------------
         if not self.disable_freetype:
             if not self.static_extras:
-                ftconfig = Popen(["which", "freetype-config"],
-                                 stdout=PIPE).communicate()[0].rstrip()
+                ftconfig = get_output("which", "freetype-config")
                 self.disable_freetype = not bool(ftconfig)
                 if not self.disable_freetype:
                     self.ftconfig = ftconfig
-                    self.ftldflags = shlex.split(Popen([self.ftconfig, "--libs"],
-                                   stdout=PIPE).communicate()[0].rstrip())
-                    self.ftcflags = shlex.split(Popen([self.ftconfig, "--cflags"],
-                                  stdout=PIPE).communicate()[0].rstrip())
+                    self.ftldflags = get_words(self.ftconfig, "--libs")
+                    self.ftcflags = get_words(self.ftconfig, "--cflags")
             else:
                 self.ftcflags = ["-I" + os.path.join("3rdparty", "freetype",
                                                      "include")]
@@ -691,22 +686,17 @@ int main()
         if not self.disable_gtk:
             gtkcflags = None
             try:
-                gtkcflags = shlex.split(Popen(["pkg-config", self.gtk_package,
-                                               "--cflags"], stdout=PIPE,
-                              stderr=PIPE).communicate()[0].rstrip())
+                gtkcflags = get_words("pkg-config", self.gtk_package, "--cflags")
             except OSError:
                 pass
             if gtkcflags:
                 self.gtkcflags = gtkcflags
-                self.gtkldflags = shlex.split(Popen(["pkg-config",
-                                     self.gtk_package, "--libs"], stdout=PIPE,
-                                stderr=PIPE).communicate()[0].rstrip())
+                self.gtkldflags = get_words("pkg-config", self.gtk_package, "--libs")
             else:
                 self.disable_gtk = True
         # -- mupdf -------------------------------------
         if not self.disable_mupdf:
             if not self.static_extras:
-                srcdir = os.path.split(os.path.realpath(__file__))[0]
                 for p in [os.path.join(os.sep, "usr", "local"),
                           os.path.join(os.sep, "usr")]:
                     mupdf = os.path.join(p, "include", "mupdf")
@@ -816,8 +806,7 @@ int main()
             if not os.path.isfile(self.qmake):
                 self.disable_qt = True
             else:
-                qtversion = Popen([self.qmake, "-v"], stdout=PIPE,
-                              stderr=STDOUT).communicate()[0].rstrip()
+                qtversion = get_output(self.qmake, "-v")
                 match = re.search("\d\.\d\.\d", qtversion)
                 if match:
                     self.qtversion = list(map(lambda s: int(s),
@@ -826,12 +815,12 @@ int main()
                     self.disable_qt = True
                 else:
                     qquery = Popen([self.qmake, "-query", "QT_INSTALL_HEADERS"],
-                                    stdout=PIPE)
+                                   stdout=PIPE)
                     std = qquery.communicate()
                     if qquery.returncode == 0:
                         self.qtinc = [std[0].rstrip()]
                     qquery = Popen([self.qmake, "-query", "QT_INSTALL_LIBS"],
-                                    stdout=PIPE)
+                                   stdout=PIPE)
                     std = qquery.communicate()
                     if qquery.returncode == 0:
                         self.qtlib = [std[0].rstrip()]
@@ -1337,7 +1326,7 @@ class build_ext(_build_ext, check_ext):
     user_options = (_build_ext.user_options + check_ext.user_options)
 
     # workaround for libGKS on win32 no "init" + module_name function
-    def get_export_symbols (self, ext):
+    def get_export_symbols(self, ext):
         """Return the list of symbols that a shared extension has to
         export. This overloaded function does not append "init" + module_name
         to the exported symbols (default in superclass function).
@@ -1534,7 +1523,8 @@ try:
     with open("README.rst", 'r') as fd:
         _long_description = fd.read()
 except IOError as e:
-    print("WARNING: long_description could not be read from file. Error message was:\n", e, file=sys.stderr)
+    print("WARNING: long_description could not be read from file. Error message was:\n",
+          e, file=sys.stderr)
 
 
 setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
