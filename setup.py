@@ -854,471 +854,471 @@ int main()
                 self.disable_x11 = True
 
     def run(self):
-        if self.isLinuxOrDarwin or self.isWin32:
-            print(" isLinuxOrDarwin: ", self.isLinuxOrDarwin)
-            print("         isLinux: ", self.isLinux)
-            print("        isDarwin: ", self.isDarwin)
-            print("         isWin32: ", self.isWin32)
-            print("")
-            if self.isDarwin:
-                print("      OSX target: ", self.macosx_deployment_target)
-                print("")
-            print("          x11lib: ", self.x11lib)
-            print("          x11inc: ", self.x11inc)
-            print("         x11libs: ", self.x11libs)
-            print("      x11ldflags: ", self.x11ldflags)
-            print("       x11cflags: ", self.x11cflags)
-            print("")
-            print("        wxconfig: ", self.wxconfig)
-            print("           wxdir: ", self.wxdir)
-            print("           wxlib: ", self.wxlib)
-            print("           wxinc: ", self.wxinc)
-            print("          wxlibs: ", self.wxlibs)
-            print("       wxldflags: ", self.wxldflags)
-            print("           wxcxx: ", self.wxcxx)
-            print("")
-            print("      gtkldflags: ", self.gtkldflags)
-            print("       gtkcflags: ", self.gtkcflags)
-            print("")
-            print("           qmake: ", self.qmake)
-            print("           qtdir: ", self.qtdir)
-            print("           qtinc: ", self.qtinc)
-            print("           qtlib: ", self.qtlib)
-            print("          qtlibs: ", self.qtlibs)
-            print("       qtldflags: ", self.qtldflags)
-            print("      Qt version: ", self.qtversion)
-            print("")
-            print("           gsdir: ", self.gsdir)
-            print("           gsinc: ", self.gsinc)
-            print("           gslib: ", self.gslib)
-            print("          gslibs: ", self.gslibs)
-            print("       gsldflags: ", self.gsldflags)
-            print("")
-            print("           grdir: ", self.grdir)
-            print("")
-            print(" freetype-config: ", self.ftconfig)
-            print("       ftldflags: ", self.ftldflags)
-            print("        ftcflags: ", self.ftcflags)
-            print("")
-            print("        mupdfinc: ", self.mupdfinc)
-            print("       mupdflibs: ", self.mupdflibs)
-            print("    mupdfldflags: ", self.mupdfldflags)
-            print("")
-            print("      opengllibs: ", self.gllibs)
-            print("    opengldflags: ", self.glldflags)
-            print("")
-            print("     disable-x11: ", self.disable_x11)
-            print("      disable-xt: ", self.disable_xt)
-            print("     disable-xft: ", self.disable_xft)
-            print("      disable-wx: ", self.disable_wx)
-            print("      disable-qt: ", self.disable_qt)
-            print("     disable-gtk: ", self.disable_gtk)
-            print("      disable-gs: ", self.disable_gs)
-            print("     disable-fig: ", self.disable_fig)
-            print("     disable-svg: ", self.disable_svg)
-            print("    disable-html: ", self.disable_html)
-            print("     disable-pgf: ", self.disable_pgf)
-            print("     disable-wmf: ", self.disable_wmf)
-            print("     disable-mov: ", self.disable_mov)
-            print("  disable-opengl: ", self.disable_opengl)
-            print("  disable-quartz: ", self.disable_quartz)
-            print("disable-freetype: ", self.disable_freetype)
-            print("   disable-mupdf: ", self.disable_mupdf)
-            print("")
+        if not (self.isLinuxOrDarwin or self.isWin32):
+            print("Platform \"", sys.platform, "\" is not supported.",
+                  file=sys.stderr)
+            sys.exit(-3)
 
-            zinc = [os.path.join("3rdparty", "zlib")]
-            defines = [("HAVE_ZLIB",), ("GRDIR", "\"%s\"" % self.grdir)]
-            if self.disable_x11:
-                defines.append(("NO_X11", 1))
-            if self.disable_freetype:
-                defines.append(("NO_FT", 1))
-            if self.disable_mupdf:
-                defines.append(("NO_MUPDF", 1))
+        print(" isLinuxOrDarwin: ", self.isLinuxOrDarwin)
+        print("         isLinux: ", self.isLinux)
+        print("        isDarwin: ", self.isDarwin)
+        print("         isWin32: ", self.isWin32)
+        print("")
+        if self.isDarwin:
+            print("      OSX target: ", self.macosx_deployment_target)
+            print("")
+        print("          x11lib: ", self.x11lib)
+        print("          x11inc: ", self.x11inc)
+        print("         x11libs: ", self.x11libs)
+        print("      x11ldflags: ", self.x11ldflags)
+        print("       x11cflags: ", self.x11cflags)
+        print("")
+        print("        wxconfig: ", self.wxconfig)
+        print("           wxdir: ", self.wxdir)
+        print("           wxlib: ", self.wxlib)
+        print("           wxinc: ", self.wxinc)
+        print("          wxlibs: ", self.wxlibs)
+        print("       wxldflags: ", self.wxldflags)
+        print("           wxcxx: ", self.wxcxx)
+        print("")
+        print("      gtkldflags: ", self.gtkldflags)
+        print("       gtkcflags: ", self.gtkcflags)
+        print("")
+        print("           qmake: ", self.qmake)
+        print("           qtdir: ", self.qtdir)
+        print("           qtinc: ", self.qtinc)
+        print("           qtlib: ", self.qtlib)
+        print("          qtlibs: ", self.qtlibs)
+        print("       qtldflags: ", self.qtldflags)
+        print("      Qt version: ", self.qtversion)
+        print("")
+        print("           gsdir: ", self.gsdir)
+        print("           gsinc: ", self.gsinc)
+        print("           gslib: ", self.gslib)
+        print("          gslibs: ", self.gslibs)
+        print("       gsldflags: ", self.gsldflags)
+        print("")
+        print("           grdir: ", self.grdir)
+        print("")
+        print(" freetype-config: ", self.ftconfig)
+        print("       ftldflags: ", self.ftldflags)
+        print("        ftcflags: ", self.ftcflags)
+        print("")
+        print("        mupdfinc: ", self.mupdfinc)
+        print("       mupdflibs: ", self.mupdflibs)
+        print("    mupdfldflags: ", self.mupdfldflags)
+        print("")
+        print("      opengllibs: ", self.gllibs)
+        print("    opengldflags: ", self.glldflags)
+        print("")
+        print("     disable-x11: ", self.disable_x11)
+        print("      disable-xt: ", self.disable_xt)
+        print("     disable-xft: ", self.disable_xft)
+        print("      disable-wx: ", self.disable_wx)
+        print("      disable-qt: ", self.disable_qt)
+        print("     disable-gtk: ", self.disable_gtk)
+        print("      disable-gs: ", self.disable_gs)
+        print("     disable-fig: ", self.disable_fig)
+        print("     disable-svg: ", self.disable_svg)
+        print("    disable-html: ", self.disable_html)
+        print("     disable-pgf: ", self.disable_pgf)
+        print("     disable-wmf: ", self.disable_wmf)
+        print("     disable-mov: ", self.disable_mov)
+        print("  disable-opengl: ", self.disable_opengl)
+        print("  disable-quartz: ", self.disable_quartz)
+        print("disable-freetype: ", self.disable_freetype)
+        print("   disable-mupdf: ", self.disable_mupdf)
+        print("")
 
-            # -- GKS -------------------------------------
-            inc = list(self.x11inc)
-            inc.extend(zinc)
-            lib = list(self.x11lib)
-            libs = list(self.x11libs)
-            ldflags = list(self.x11ldflags)
-            ldflags.extend(self.ftldflags)
-            cflags = list(self.x11cflags)
-            cflags.extend(self.ftcflags)
+        zinc = [os.path.join("3rdparty", "zlib")]
+        defines = [("HAVE_ZLIB",), ("GRDIR", "\"%s\"" % self.grdir)]
+        if self.disable_x11:
+            defines.append(("NO_X11", 1))
+        if self.disable_freetype:
+            defines.append(("NO_FT", 1))
+        if self.disable_mupdf:
+            defines.append(("NO_MUPDF", 1))
+
+        # -- GKS -------------------------------------
+        inc = list(self.x11inc)
+        inc.extend(zinc)
+        lib = list(self.x11lib)
+        libs = list(self.x11libs)
+        ldflags = list(self.x11ldflags)
+        ldflags.extend(self.ftldflags)
+        cflags = list(self.x11cflags)
+        cflags.extend(self.ftcflags)
+        if self.isWin32:
+            libs.extend(_libs_msvc)
+            libs.append("msimg32")
+            ldflags.append("/nodefaultlib")
+            ldflags.append("-def:lib\gks\libgks.def")
+            cflags.extend(_msvc_extra_compile_args)
+        ldflags.extend(self.platform_ldflags)
+        if self.isDarwin:
+            cflags.append("-mmacosx-version-min=" +
+                          self.macosx_deployment_target)
+            ldflags.append("-Wl,-install_name,@rpath/libGKS.so")
+        if not self.disable_freetype:
+            libs.append("fontconfig")
+            libs.append("Xft")
+        if not self.disable_freetype or not self.disable_xt:
+            libs.append("Xt")
+        gksExt = Extension("gr.libGKS", _gks_src_path,
+                           define_macros=defines,
+                           include_dirs=inc,
+                           library_dirs=lib,
+                           libraries=libs,
+                           extra_link_args=ldflags,
+                           extra_compile_args=cflags,
+                           export_symbols=None)
+        self.ext_modules.append(gksExt)
+
+        # -- includes -------------------------------------
+        # GKS include path (needed for GKS plugins)
+        gksinc = [os.path.join("lib", "gks")]
+        # 3rdparty include paths (needed for some GKS plugins)
+        pnginc = [os.path.join("3rdparty")]
+        zinc = [os.path.join("3rdparty", "zlib")]
+        jpeginc = [os.path.join("3rdparty", "jpeg")]
+
+        ##
+        # -- GKS plugins -------------------------------------
+
+        # -- ghostscript -------------------------------------
+        if not self.disable_gs:
+            inc = list(self.gsinc)
+            inc.extend(gksinc)
+            lib = list(self.gslib)
+            libs = list(self.gslibs)
+            ldflags = list(self.gsldflags)
+            cflags = []
+            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
-                libs.append("msimg32")
-                ldflags.append("/nodefaultlib")
-                ldflags.append("-def:lib\gks\libgks.def")
                 cflags.extend(_msvc_extra_compile_args)
+            gksGsExt = Extension("gr.gsplugin",
+                                 _plugins_path["gsplugin.cxx"],
+                                 define_macros=defines,
+                                 include_dirs=inc,
+                                 library_dirs=lib,
+                                 libraries=libs,
+                                 extra_link_args=ldflags,
+                                 extra_compile_args=cflags)
+            self.ext_modules.append(gksGsExt)
+
+        # -- svg -------------------------------------
+        if not self.disable_svg:
+            inc = list(gksinc)
+            inc.extend(pnginc)
+            inc.extend(zinc)
+            lib = []
+            libs = [_libpng, _libz]
+            ldflags = []
+            cflags = []
             ldflags.extend(self.platform_ldflags)
+            if self.isWin32:
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+            gksSvgExt = Extension("gr.svgplugin",
+                                  _plugins_path["svgplugin.cxx"],
+                                  define_macros=defines,
+                                  include_dirs=inc,
+                                  library_dirs=lib,
+                                  libraries=libs,
+                                  extra_link_args=ldflags,
+                                  extra_compile_args=cflags)
+            self.ext_modules.append(gksSvgExt)
+
+        # -- htm -------------------------------------
+        if not self.disable_html:
+            inc = list(gksinc)
+            inc.extend(pnginc)
+            inc.extend(zinc)
+            lib = []
+            libs = [_libpng, _libz]
+            ldflags = []
+            cflags = []
+            ldflags.extend(self.platform_ldflags)
+            if self.isWin32:
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+            gksHtmExt = Extension("gr.htmplugin",
+                                  _plugins_path["htmplugin.cxx"],
+                                  define_macros=defines,
+                                  include_dirs=inc,
+                                  library_dirs=lib,
+                                  libraries=libs,
+                                  extra_link_args=ldflags,
+                                  extra_compile_args=cflags)
+            self.ext_modules.append(gksHtmExt)
+
+        # -- pgf -------------------------------------
+        if not self.disable_pgf:
+            inc = list(gksinc)
+            inc.extend(pnginc)
+            inc.extend(zinc)
+            lib = []
+            libs = [_libpng, _libz]
+            ldflags = []
+            cflags = []
+            ldflags.extend(self.platform_ldflags)
+            if self.isWin32:
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+            gksPgfExt = Extension("gr.pgfplugin",
+                                  _plugins_path["pgfplugin.cxx"],
+                                  define_macros=defines,
+                                  include_dirs=inc,
+                                  library_dirs=lib,
+                                  libraries=libs,
+                                  extra_link_args=ldflags,
+                                  extra_compile_args=cflags)
+            self.ext_modules.append(gksPgfExt)
+
+        # -- fig -------------------------------------
+        if not self.disable_fig:
+            inc = list(gksinc)
+            inc.extend(pnginc)
+            inc.extend(zinc)
+            lib = []
+            libs = [_libpng, _libz]
+            ldflags = []
+            cflags = []
+            ldflags.extend(self.platform_ldflags)
+            if self.isWin32:
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+            gksFigExt = Extension("gr.figplugin",
+                                  _plugins_path["figplugin.cxx"],
+                                  define_macros=defines,
+                                  include_dirs=inc,
+                                  library_dirs=lib,
+                                  libraries=libs,
+                                  extra_link_args=ldflags,
+                                  extra_compile_args=cflags)
+            self.ext_modules.append(gksFigExt)
+
+        # -- wmf -------------------------------------
+        if not self.disable_wmf:
+            inc = list(gksinc)
+            libs = []
+            ldflags = []
+            cflags = []
+            ldflags.extend(self.platform_ldflags)
+            if self.isWin32:
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+            gksWmfExt = Extension("gr.wmfplugin",
+                                  _plugins_path["wmfplugin.cxx"],
+                                  define_macros=defines,
+                                  include_dirs=inc,
+                                  libraries=libs,
+                                  extra_link_args=ldflags,
+                                  extra_compile_args=cflags)
+            self.ext_modules.append(gksWmfExt)
+
+        # -- mov -------------------------------------
+        if not self.disable_mov:
+            inc = list(self.mupdfinc)
+            inc.extend(gksinc)
+            libs = list(self.mupdflibs)
+            ffmpeglibs = ["avdevice", "avformat", "avfilter", "avcodec",
+                          "swscale", "avutil"]
             if self.isDarwin:
-                cflags.append("-mmacosx-version-min=" +
-                              self.macosx_deployment_target)
-                ldflags.append("-Wl,-install_name,@rpath/libGKS.so")
-            if not self.disable_freetype:
-                libs.append("fontconfig")
-                libs.append("Xft")
-            if not self.disable_freetype or not self.disable_xt:
-                libs.append("Xt")
-            gksExt = Extension("gr.libGKS", _gks_src_path,
+                ffmpeglibs.extend(["theora", "ogg", "vpx"])
+            ffmpeglibs.append("z")
+            if not self.static_extras:
+                libs.extend(ffmpeglibs)
+            else:
+                _libs_3rdparty = os.path.join(_build_3rdparty, "lib")
+                libs.extend([os.path.join(_libs_3rdparty,
+                                          "lib" + name + ".a")
+                             for name in ffmpeglibs])
+            libs.append("pthread")
+            ldflags = list(self.mupdfldflags)
+            cflags = []
+            ldflags.extend(self.platform_ldflags)
+            if self.isWin32:
+                libs.extend(_libs_msvc)
+#                    ldflags.extend(_msvc_extra_link_args)   # necessary?
+                cflags.extend(_msvc_extra_compile_args)
+            gksMovExt = Extension("gr.movplugin",
+                                  _plugins_path["movplugin.cxx"],
+                                  define_macros=defines,
+                                  include_dirs=inc,
+                                  libraries=libs,
+                                  extra_link_args=ldflags,
+                                  extra_compile_args=cflags)
+            self.ext_modules.append(gksMovExt)
+
+        # -- wx -------------------------------------
+        if not self.disable_wx:
+            inc = list(self.wxinc)
+            inc.extend(gksinc)
+            lib = list(self.wxlib)
+            libs = list(self.wxlibs)
+            ldflags = list(self.wxldflags)
+            cflags = list(self.wxcxx)
+            ldflags.extend(self.platform_ldflags)
+            if self.isWin32:
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+                cflags.append("/DWXUSINGDLL")
+                cflags.append("/DwxMSVC_VERSION_AUTO")
+                cflags.append("/D_UNICODE")
+            gksWxExt = Extension("gr.wxplugin",
+                                 _plugins_path["wxplugin.cxx"],
+                                 define_macros=defines,
+                                 include_dirs=inc,
+                                 library_dirs=lib,
+                                 libraries=libs,
+                                 extra_link_args=ldflags,
+                                 extra_compile_args=cflags)
+            self.ext_modules.append(gksWxExt)
+
+        # -- qt -------------------------------------
+        if not self.disable_qt:
+            inc = list(self.qtinc)
+            inc.extend(gksinc)
+            lib = list(self.qtlib)
+            libs = list(self.qtlibs)
+            ldflags = list(self.qtldflags)
+            cflags = []
+            ldflags.extend(self.platform_ldflags)
+            if self.isWin32:
+# do not use _msvc_extra_link_args because /nodefaultlib causes
+# error LNK2019: unresolved external symbol ""__declspec(dllimport)
+#                void __cdecl std::_Xbad_alloc(void)" ...
+                ldflags.append("-dll")
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+            gksQtExt = Extension("gr.qtplugin",
+                                 _plugins_path["qtplugin.cxx"],
+                                 define_macros=defines,
+                                 include_dirs=inc,
+                                 library_dirs=lib,
+                                 libraries=libs,
+                                 extra_link_args=ldflags,
+                                 extra_compile_args=cflags)
+            self.ext_modules.append(gksQtExt)
+
+        # -- gtk -------------------------------------
+        if not self.disable_gtk:
+            inc = list(gksinc)
+#                inc.extend(self.x11inc)
+            ldflags = list(self.gtkldflags)
+            cflags = list(self.gtkcflags)
+            ldflags.extend(self.platform_ldflags)
+            if self.isWin32:
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+            gksGtkExt = Extension("gr.gtkplugin",
+                                  _plugins_path["gtkplugin.cxx"],
+                                  define_macros=defines,
+                                  include_dirs=inc,
+                                  extra_compile_args=cflags,
+                                  extra_link_args=ldflags)
+            self.ext_modules.append(gksGtkExt)
+
+        # -- quartz -------------------------------------
+        if not self.disable_quartz:
+            inc = list(gksinc)
+            libs = ["objc"]
+            ldflags = ["-framework", "Foundation",
+                       "-framework", "ApplicationServices",
+                       "-framework", "AppKit"]
+            ldflags.extend(self.platform_ldflags)
+            gksQuartzExt = Extension("gr.quartzplugin",
+                                     _plugins_path["quartzplugin.m"],
+                                     define_macros=defines,
+                                     include_dirs=inc,
+                                     libraries=libs,
+                                     extra_link_args=ldflags)
+            self.ext_modules.append(gksQuartzExt)
+
+        # -- GR -------------------------------------
+        inc = list(gksinc)
+        inc.extend(zinc)
+        inc.extend(pnginc)
+        inc.extend(jpeginc)
+        inc.extend(self.mupdfinc)
+        inc.extend(self.x11inc) # at least because this includes wrong png.h
+        lib = list(self.x11lib)
+        lib.append(_build_lib_grpkg)
+        lib.append(_build_3rdparty)
+        if self.isLinuxOrDarwin:
+            libs = ["GKS"]
+        else:
+            libs = ["libGKS"]
+            lib.append(os.path.join(_build_temp, "Release", "lib", "gks"))
+        libs.extend(self.x11libs)
+        libs.extend(self.mupdflibs)
+        ldflags = list(self.x11ldflags)
+        ldflags.extend(self.ftldflags)
+        # important: lib ordering png, jpeg, z
+        staticlibs = [_libpng, _libjpeg, _libz]
+        ldflags.extend(self.mupdfldflags)
+        ldflags.extend(staticlibs)
+        cflags = list(self.x11cflags)
+        if self.isWin32:
+            libs.extend(_libs_msvc)
+            cflags.extend(_msvc_extra_compile_args)
+#                ldflags.extend(_msvc_extra_link_args)
+        ldflags.extend(self.platform_ldflags)
+        if self.isDarwin:
+            ldflags.append("-Wl,-install_name,@rpath/libGR.so")
+        grExt = Extension("gr.libGR", _gr_src_path,
+                          define_macros=defines,
+                          include_dirs=inc,
+                          library_dirs=lib,
+                          libraries=libs,
+                          extra_link_args=ldflags,
+                          extra_compile_args=cflags)
+        self.ext_modules.append(grExt)
+        grinc = inc
+        grlib = lib
+        grlibs = libs
+
+        # -- GR3 -------------------------------------
+        if not self.disable_opengl:
+            inc = list(grinc)
+            inc.append(os.path.join("lib", "gr"))
+            lib = list(grlib)
+            libs = list(grlibs)
+            libs.extend(self.gllibs)
+            ldflags = list(self.x11ldflags)
+            ldflags.extend(self.mupdfldflags)
+            ldflags.extend(self.platform_ldflags)
+            ldflags.extend(self.glldflags)
+            # important: lib ordering png, jpeg, z
+            staticlibs = [_libpng, _libjpeg, _libz]
+            ldflags.extend(staticlibs)
+            if self.isLinuxOrDarwin:
+                libs.append("GR")
+            if self.isDarwin:
+                ldflags.append("-Wl,-install_name,@rpath/libGR3.so")
+                ldflags.append("-Wl,-rpath,@loader_path/../gr/.")
+            elif self.isLinux:
+                ldflags.append("-Wl,-rpath,$ORIGIN/../gr")
+            elif self.isWin32:
+                inc.append("3rdparty")
+                lib.append(os.path.join(_build_temp, "Release", "lib",
+                                        "gks"))
+                lib.append(os.path.join(_build_temp, "Release", "lib",
+                                        "gr"))
+                libs.append("libGR")
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+                ldflags.append("-dll")
+            gr3Ext = Extension("gr3.libGR3", _gr3_src_path,
                                define_macros=defines,
                                include_dirs=inc,
                                library_dirs=lib,
                                libraries=libs,
                                extra_link_args=ldflags,
-                               extra_compile_args=cflags,
-                               export_symbols=None)
-            self.ext_modules.append(gksExt)
-
-            # -- includes -------------------------------------
-            # GKS include path (needed for GKS plugins)
-            gksinc = [os.path.join("lib", "gks")]
-            # 3rdparty include paths (needed for some GKS plugins)
-            pnginc = [os.path.join("3rdparty")]
-            zinc = [os.path.join("3rdparty", "zlib")]
-            jpeginc = [os.path.join("3rdparty", "jpeg")]
-
-            ##
-            # -- GKS plugins -------------------------------------
-
-            # -- ghostscript -------------------------------------
-            if not self.disable_gs:
-                inc = list(self.gsinc)
-                inc.extend(gksinc)
-                lib = list(self.gslib)
-                libs = list(self.gslibs)
-                ldflags = list(self.gsldflags)
-                cflags = []
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                gksGsExt = Extension("gr.gsplugin",
-                                     _plugins_path["gsplugin.cxx"],
-                                     define_macros=defines,
-                                     include_dirs=inc,
-                                     library_dirs=lib,
-                                     libraries=libs,
-                                     extra_link_args=ldflags,
-                                     extra_compile_args=cflags)
-                self.ext_modules.append(gksGsExt)
-
-            # -- svg -------------------------------------
-            if not self.disable_svg:
-                inc = list(gksinc)
-                inc.extend(pnginc)
-                inc.extend(zinc)
-                lib = []
-                libs = [_libpng, _libz]
-                ldflags = []
-                cflags = []
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                gksSvgExt = Extension("gr.svgplugin",
-                                      _plugins_path["svgplugin.cxx"],
-                                      define_macros=defines,
-                                      include_dirs=inc,
-                                      library_dirs=lib,
-                                      libraries=libs,
-                                      extra_link_args=ldflags,
-                                      extra_compile_args=cflags)
-                self.ext_modules.append(gksSvgExt)
-
-            # -- htm -------------------------------------
-            if not self.disable_html:
-                inc = list(gksinc)
-                inc.extend(pnginc)
-                inc.extend(zinc)
-                lib = []
-                libs = [_libpng, _libz]
-                ldflags = []
-                cflags = []
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                gksHtmExt = Extension("gr.htmplugin",
-                                      _plugins_path["htmplugin.cxx"],
-                                      define_macros=defines,
-                                      include_dirs=inc,
-                                      library_dirs=lib,
-                                      libraries=libs,
-                                      extra_link_args=ldflags,
-                                      extra_compile_args=cflags)
-                self.ext_modules.append(gksHtmExt)
-
-            # -- pgf -------------------------------------
-            if not self.disable_pgf:
-                inc = list(gksinc)
-                inc.extend(pnginc)
-                inc.extend(zinc)
-                lib = []
-                libs = [_libpng, _libz]
-                ldflags = []
-                cflags = []
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                gksPgfExt = Extension("gr.pgfplugin",
-                                      _plugins_path["pgfplugin.cxx"],
-                                      define_macros=defines,
-                                      include_dirs=inc,
-                                      library_dirs=lib,
-                                      libraries=libs,
-                                      extra_link_args=ldflags,
-                                      extra_compile_args=cflags)
-                self.ext_modules.append(gksPgfExt)
-
-            # -- fig -------------------------------------
-            if not self.disable_fig:
-                inc = list(gksinc)
-                inc.extend(pnginc)
-                inc.extend(zinc)
-                lib = []
-                libs = [_libpng, _libz]
-                ldflags = []
-                cflags = []
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                gksFigExt = Extension("gr.figplugin",
-                                      _plugins_path["figplugin.cxx"],
-                                      define_macros=defines,
-                                      include_dirs=inc,
-                                      library_dirs=lib,
-                                      libraries=libs,
-                                      extra_link_args=ldflags,
-                                      extra_compile_args=cflags)
-                self.ext_modules.append(gksFigExt)
-
-            # -- wmf -------------------------------------
-            if not self.disable_wmf:
-                inc = list(gksinc)
-                libs = []
-                ldflags = []
-                cflags = []
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                gksWmfExt = Extension("gr.wmfplugin",
-                                      _plugins_path["wmfplugin.cxx"],
-                                      define_macros=defines,
-                                      include_dirs=inc,
-                                      libraries=libs,
-                                      extra_link_args=ldflags,
-                                      extra_compile_args=cflags)
-                self.ext_modules.append(gksWmfExt)
-
-            # -- mov -------------------------------------
-            if not self.disable_mov:
-                inc = list(self.mupdfinc)
-                inc.extend(gksinc)
-                libs = list(self.mupdflibs)
-                ffmpeglibs = ["avdevice", "avformat", "avfilter", "avcodec",
-                              "swscale", "avutil"]
-                if self.isDarwin:
-                    ffmpeglibs.extend(["theora", "ogg", "vpx"])
-                ffmpeglibs.append("z")
-                if not self.static_extras:
-                    libs.extend(ffmpeglibs)
-                else:
-                    _libs_3rdparty = os.path.join(_build_3rdparty, "lib")
-                    libs.extend([os.path.join(_libs_3rdparty,
-                                              "lib" + name + ".a")
-                                 for name in ffmpeglibs])
-                libs.append("pthread")
-                ldflags = list(self.mupdfldflags)
-                cflags = []
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-                    libs.extend(_libs_msvc)
-#                    ldflags.extend(_msvc_extra_link_args)   # necessary?
-                    cflags.extend(_msvc_extra_compile_args)
-                gksMovExt = Extension("gr.movplugin",
-                                      _plugins_path["movplugin.cxx"],
-                                      define_macros=defines,
-                                      include_dirs=inc,
-                                      libraries=libs,
-                                      extra_link_args=ldflags,
-                                      extra_compile_args=cflags)
-                self.ext_modules.append(gksMovExt)
-
-            # -- wx -------------------------------------
-            if not self.disable_wx:
-                inc = list(self.wxinc)
-                inc.extend(gksinc)
-                lib = list(self.wxlib)
-                libs = list(self.wxlibs)
-                ldflags = list(self.wxldflags)
-                cflags = list(self.wxcxx)
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                    cflags.append("/DWXUSINGDLL")
-                    cflags.append("/DwxMSVC_VERSION_AUTO")
-                    cflags.append("/D_UNICODE")
-                gksWxExt = Extension("gr.wxplugin",
-                                     _plugins_path["wxplugin.cxx"],
-                                     define_macros=defines,
-                                     include_dirs=inc,
-                                     library_dirs=lib,
-                                     libraries=libs,
-                                     extra_link_args=ldflags,
-                                     extra_compile_args=cflags)
-                self.ext_modules.append(gksWxExt)
-
-            # -- qt -------------------------------------
-            if not self.disable_qt:
-                inc = list(self.qtinc)
-                inc.extend(gksinc)
-                lib = list(self.qtlib)
-                libs = list(self.qtlibs)
-                ldflags = list(self.qtldflags)
-                cflags = []
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-# do not use _msvc_extra_link_args because /nodefaultlib causes
-# error LNK2019: unresolved external symbol ""__declspec(dllimport)
-#                void __cdecl std::_Xbad_alloc(void)" ...
-                    ldflags.append("-dll")
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                gksQtExt = Extension("gr.qtplugin",
-                                     _plugins_path["qtplugin.cxx"],
-                                     define_macros=defines,
-                                     include_dirs=inc,
-                                     library_dirs=lib,
-                                     libraries=libs,
-                                     extra_link_args=ldflags,
-                                     extra_compile_args=cflags)
-                self.ext_modules.append(gksQtExt)
-
-            # -- gtk -------------------------------------
-            if not self.disable_gtk:
-                inc = list(gksinc)
-#                inc.extend(self.x11inc)
-                ldflags = list(self.gtkldflags)
-                cflags = list(self.gtkcflags)
-                ldflags.extend(self.platform_ldflags)
-                if self.isWin32:
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                gksGtkExt = Extension("gr.gtkplugin",
-                                      _plugins_path["gtkplugin.cxx"],
-                                      define_macros=defines,
-                                      include_dirs=inc,
-                                      extra_compile_args=cflags,
-                                      extra_link_args=ldflags)
-                self.ext_modules.append(gksGtkExt)
-
-            # -- quartz -------------------------------------
-            if not self.disable_quartz:
-                inc = list(gksinc)
-                libs = ["objc"]
-                ldflags = ["-framework", "Foundation",
-                           "-framework", "ApplicationServices",
-                           "-framework", "AppKit"]
-                ldflags.extend(self.platform_ldflags)
-                gksQuartzExt = Extension("gr.quartzplugin",
-                                         _plugins_path["quartzplugin.m"],
-                                         define_macros=defines,
-                                         include_dirs=inc,
-                                         libraries=libs,
-                                         extra_link_args=ldflags)
-                self.ext_modules.append(gksQuartzExt)
-
-            # -- GR -------------------------------------
-            inc = list(gksinc)
-            inc.extend(zinc)
-            inc.extend(pnginc)
-            inc.extend(jpeginc)
-            inc.extend(self.mupdfinc)
-            inc.extend(self.x11inc) # at least because this includes wrong png.h
-            lib = list(self.x11lib)
-            lib.append(_build_lib_grpkg)
-            lib.append(_build_3rdparty)
-            if self.isLinuxOrDarwin:
-                libs = ["GKS"]
-            else:
-                libs = ["libGKS"]
-                lib.append(os.path.join(_build_temp, "Release", "lib", "gks"))
-            libs.extend(self.x11libs)
-            libs.extend(self.mupdflibs)
-            ldflags = list(self.x11ldflags)
-            ldflags.extend(self.ftldflags)
-            # important: lib ordering png, jpeg, z
-            staticlibs = [_libpng, _libjpeg, _libz]
-            ldflags.extend(self.mupdfldflags)
-            ldflags.extend(staticlibs)
-            cflags = list(self.x11cflags)
-            if self.isWin32:
-                libs.extend(_libs_msvc)
-                cflags.extend(_msvc_extra_compile_args)
-#                ldflags.extend(_msvc_extra_link_args)
-            ldflags.extend(self.platform_ldflags)
-            if self.isDarwin:
-                ldflags.append("-Wl,-install_name,@rpath/libGR.so")
-            grExt = Extension("gr.libGR", _gr_src_path,
-                              define_macros=defines,
-                              include_dirs=inc,
-                              library_dirs=lib,
-                              libraries=libs,
-                              extra_link_args=ldflags,
-                              extra_compile_args=cflags)
-            self.ext_modules.append(grExt)
-            grinc = inc
-            grlib = lib
-            grlibs = libs
-
-            # -- GR3 -------------------------------------
-            if not self.disable_opengl:
-                inc = list(grinc)
-                inc.append(os.path.join("lib", "gr"))
-                lib = list(grlib)
-                libs = list(grlibs)
-                libs.extend(self.gllibs)
-                ldflags = list(self.x11ldflags)
-                ldflags.extend(self.mupdfldflags)
-                ldflags.extend(self.platform_ldflags)
-                ldflags.extend(self.glldflags)
-                # important: lib ordering png, jpeg, z
-                staticlibs = [_libpng, _libjpeg, _libz]
-                ldflags.extend(staticlibs)
-                if self.isLinuxOrDarwin:
-                    libs.append("GR")
-                if self.isDarwin:
-                    ldflags.append("-Wl,-install_name,@rpath/libGR3.so")
-                    ldflags.append("-Wl,-rpath,@loader_path/../gr/.")
-                elif self.isLinux:
-                    ldflags.append("-Wl,-rpath,$ORIGIN/../gr")
-                elif self.isWin32:
-                    inc.append("3rdparty")
-                    lib.append(os.path.join(_build_temp, "Release", "lib",
-                                            "gks"))
-                    lib.append(os.path.join(_build_temp, "Release", "lib",
-                                            "gr"))
-                    libs.append("libGR")
-                    libs.extend(_libs_msvc)
-                    cflags.extend(_msvc_extra_compile_args)
-                    ldflags.append("-dll")
-                gr3Ext = Extension("gr3.libGR3", _gr3_src_path,
-                                   define_macros=defines,
-                                   include_dirs=inc,
-                                   library_dirs=lib,
-                                   libraries=libs,
-                                   extra_link_args=ldflags,
-                                   extra_compile_args=cflags)
-                self.ext_modules.append(gr3Ext)
-        else:
-            print("Platform \"", sys.platform, "\" is not supported.",
-                  file=sys.stderr)
-            sys.exit(-3)
+                               extra_compile_args=cflags)
+            self.ext_modules.append(gr3Ext)
 
 
 class build_ext(_build_ext, check_ext):
