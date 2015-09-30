@@ -352,7 +352,7 @@ int main(int argc, char **argv)
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-o", tmpout, tmpsrc]
+        cmd = [self.cc, "-fPIC", "-shared", "-o", tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(mupdfcflags)
         cmd.extend(ldflags)
