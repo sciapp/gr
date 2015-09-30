@@ -719,20 +719,20 @@ int main()
                                      for name in mupdflibs]
                 self.mupdfldflags.append("-lm")
                 self.mupdfinc = [os.path.join(_build_3rdparty, "include")]
+            self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
+                                                      self.mupdflibs,
+                                          mupdfldflags=self.mupdfldflags)
+            if self.disable_mupdf:
+                # mupdf compiled with ssl support
+                self.mupdflibs.append("ssl")
+                self.mupdflibs.append("crypto")
                 self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
                                                           self.mupdflibs,
-                                              mupdfldflags=self.mupdfldflags)
-                if self.disable_mupdf:
-                    # mupdf compiled with ssl support
-                    self.mupdflibs.append("ssl")
-                    self.mupdflibs.append("crypto")
-                    self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
-                                                              self.mupdflibs,
-                                              mupdfldflags=self.mupdfldflags)
-                if self.disable_mupdf:
-                    self.mupdfinc = []
-                    self.mupdflibs = []
-                    self.mupdfldflags = []
+                                          mupdfldflags=self.mupdfldflags)
+            if self.disable_mupdf:
+                self.mupdfinc = []
+                self.mupdflibs = []
+                self.mupdfldflags = []
         # -- mov -------------------------------------
         if not self.disable_mov:
             self.disable_mov = not self._test_mov(self.mupdfinc, self.mupdflibs,
