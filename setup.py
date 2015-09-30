@@ -78,44 +78,52 @@ class build_static(Command):
     # prerequisites: build static 3rdparty libraries
     description = "build static 3rdparty libraries"
 
-    user_options = [('static-extras', None, "Build static extra libraries")]
+    user_options = [('static-extras', None, "Build static extra libraries"),
+                    ('skip-static-build', None, "Do not compile static "
+                                                "libraries"),
+                   ]
 
     def initialize_options(self):
         self.static_extras = False
+        self.skip_static_build = False
 
     def finalize_options(self):
         pass
 
     def run(self):
-        if sys.platform == "win32":
-            _extra_preargs = list(_msvc_extra_compile_args)
-        else:
-            _extra_preargs = ["-fPIC"]
-        if not os.path.isdir("build"):
-            os.mkdir("build")
-        if not os.path.isdir(_build_3rdparty):
-            os.mkdir(_build_3rdparty)
-        if not os.path.isdir(_build_temp):
-            os.mkdir(_build_temp)
-        compiler = new_compiler()
-        if not os.path.isfile(_libz):
-            obj = compiler.compile(_libz_src_path, extra_preargs=_extra_preargs)
-            compiler.create_static_lib(obj, "z", output_dir=_build_3rdparty)
-        if not os.path.isfile(_libpng):
-            _png_extra_preargs = list(_extra_preargs)
-            _png_extra_preargs.append("-I3rdparty/zlib")
-            obj = compiler.compile(_libpng_src_path,
-                                   extra_preargs=_png_extra_preargs)
-            compiler.create_static_lib(obj, "png", output_dir=_build_3rdparty)
-        if not os.path.isfile(_libjpeg):
-            obj = compiler.compile(_libjpeg_src_path,
-                                   extra_preargs=_extra_preargs)
-            compiler.create_static_lib(obj, "jpeg", output_dir=_build_3rdparty)
-        if self.static_extras:
-            if os.system("make -C 3rdparty extras DIR=" +
-                         os.path.realpath(_build_3rdparty)):
-                # building static libraries failed
-                sys.exit(-4)
+        if not self.skip_static_build:
+            if sys.platform == "win32":
+                _extra_preargs = list(_msvc_extra_compile_args)
+            else:
+                _extra_preargs = ["-fPIC"]
+            if not os.path.isdir("build"):
+                os.mkdir("build")
+            if not os.path.isdir(_build_3rdparty):
+                os.mkdir(_build_3rdparty)
+            if not os.path.isdir(_build_temp):
+                os.mkdir(_build_temp)
+            compiler = new_compiler()
+            if not os.path.isfile(_libz):
+                obj = compiler.compile(_libz_src_path,
+                                       extra_preargs=_extra_preargs)
+                compiler.create_static_lib(obj, "z", output_dir=_build_3rdparty)
+            if not os.path.isfile(_libpng):
+                _png_extra_preargs = list(_extra_preargs)
+                _png_extra_preargs.append("-I3rdparty/zlib")
+                obj = compiler.compile(_libpng_src_path,
+                                       extra_preargs=_png_extra_preargs)
+                compiler.create_static_lib(obj, "png",
+                                           output_dir=_build_3rdparty)
+            if not os.path.isfile(_libjpeg):
+                obj = compiler.compile(_libjpeg_src_path,
+                                       extra_preargs=_extra_preargs)
+                compiler.create_static_lib(obj, "jpeg",
+                                           output_dir=_build_3rdparty)
+            if self.static_extras:
+                if os.system("make -C 3rdparty extras DIR=" +
+                             os.path.realpath(_build_3rdparty)):
+                    # building static libraries failed
+                    sys.exit(-4)
 
 
 class clean_static(Command):
