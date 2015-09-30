@@ -89,16 +89,27 @@ class build_static(Command):
     user_options = [('static-extras', None, "Build static extra libraries"),
                     ('skip-static-build', None, "Do not compile static "
                                                 "libraries"),
+                    ('macosx-deployment-target=', None,
+                     "The earliest version of MacOS X this package will run on"
+                     " (OSX only)"),
                    ]
 
     def initialize_options(self):
+        self.isDarwin = (sys.platform == "darwin")
         self.static_extras = False
         self.skip_static_build = False
+        self.macosx_deployment_target = None
 
     def finalize_options(self):
-        pass
+        # -- macosx-deployment-target ---------------
+        if self.isDarwin:
+            self.macosx_deployment_target = (
+                os.getenv("MACOSX_DEPLOYMENT_TARGET", "10.6"))
 
     def run(self):
+        if self.isDarwin:
+            os.environ['MACOSX_DEPLOYMENT_TARGET'] = (
+                self.macosx_deployment_target)
         if not self.skip_static_build:
             if sys.platform == "win32":
                 _extra_preargs = list(_msvc_extra_compile_args)
@@ -751,7 +762,8 @@ int main()
                 self.gllibs, self.glldflags = gllibs, glldflags
         # -- platform extra link args -------------------------------------
         if self.isDarwin:
-            self.platform_ldflags = ["-mmacosx-version-min=10.6",
+            self.platform_ldflags = ["-mmacosx-version-min="
+                                     + self.macosx_deployment_target,
                                      "-Wl,-rpath,@loader_path/."]
         elif self.isLinux:
             self.platform_ldflags = ["-Wl,-rpath,$ORIGIN"]
@@ -859,6 +871,9 @@ int main()
             print("        isDarwin: ", self.isDarwin)
             print("         isWin32: ", self.isWin32)
             print("")
+            if self.isDarwin:
+                print("      OSX target: ", self.macosx_deployment_target)
+                print("")
             print("          x11lib: ", self.x11lib)
             print("          x11inc: ", self.x11inc)
             print("         x11libs: ", self.x11libs)
@@ -948,7 +963,8 @@ int main()
                 cflags.extend(_msvc_extra_compile_args)
             ldflags.extend(self.platform_ldflags)
             if self.isDarwin:
-                cflags.append("-mmacosx-version-min=10.6")
+                cflags.append("-mmacosx-version-min=" +
+                              self.macosx_deployment_target)
                 ldflags.append("-Wl,-install_name,@rpath/libGKS.so")
             if not self.disable_freetype:
                 libs.append("fontconfig")
@@ -1360,8 +1376,9 @@ class build_ext(_build_ext, check_ext):
         check_ext.run(self)
         _build_ext.run(self)
         if not self.disable_quartz:
-            os.system("xcodebuild MACOSX_DEPLOYMENT_TARGET=10.6 "
-                      "-project lib/gks/quartz/GKSTerm.xcodeproj")
+            os.system("xcodebuild MACOSX_DEPLOYMENT_TARGET=" +
+                      self.macosx_deployment_target +
+                      " -project lib/gks/quartz/GKSTerm.xcodeproj")
             os.system("ditto lib/gks/quartz/build/Release/GKSTerm.app " +
                       os.path.join(_build_lib_grpkg, "GKSTerm.app"))
 
