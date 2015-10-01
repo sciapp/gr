@@ -352,6 +352,7 @@ typedef struct ws_state_list_struct
     XColor color[MAX_COLOR];
 #ifndef NO_FT
     XftColor rendercolor[MAX_COLOR];
+    Bool havecolor[MAX_COLOR];
 #endif
     unsigned long pixels[MAX_COLOR];
     int ccolor;
@@ -982,8 +983,8 @@ void allocate_rendercolors(void)
       rendercolor.blue  = p->color[i].blue;
       rendercolor.alpha = 65535;
 
-      XftColorAllocValue(p->dpy, p->vis, p->cmap, &rendercolor,
-			 &p->rendercolor[i]);
+      p->havecolor[i] = XftColorAllocValue(p->dpy, p->vis, p->cmap,
+                                           &rendercolor, &p->rendercolor[i]);
     }
 }
 
@@ -998,7 +999,8 @@ void free_rendercolors(void)
   register int i;
 
   for (i = 0; i < MAX_COLOR; i++)
-    XftColorFree(p->dpy, p->vis, p->cmap, &p->rendercolor[i]);
+    if (p->havecolor[i])
+      XftColorFree(p->dpy, p->vis, p->cmap, &p->rendercolor[i]);
 }
 
 #endif
@@ -2283,10 +2285,13 @@ void x_draw_string(
 {
 #ifndef NO_FT
   XftDraw *draw;
+  XftColor *color = NULL;
   unsigned int *s32;
   register int i, j;
 
   draw = XftDrawCreate(display, d, p->vis, p->cmap);
+  if (p->havecolor[p->ccolor])
+    color = &p->rendercolor[p->ccolor];
 
   if (p->font == 12) /* Symbol */
     {
@@ -2298,12 +2303,11 @@ void x_draw_string(
 	    j += 256;
 	  s32[i] = adobe2utf[j];
 	}
-      XftDrawString32(draw, &p->rendercolor[p->ccolor], p->cfont,
-		      x, y, s32, length);
+      XftDrawString32(draw, color, p->cfont, x, y, s32, length);
       free(s32);
     }
   else
-    XftDrawString8(draw, &p->rendercolor[p->ccolor], p->cfont,
+    XftDrawString8(draw, color, p->cfont,
 		   x, y, (unsigned char *) string, length);
 
   XftDrawDestroy(draw);
