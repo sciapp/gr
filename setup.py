@@ -1012,8 +1012,8 @@ int main()
             inc = list(gksinc)
             inc.extend(pnginc)
             inc.extend(zinc)
-            lib = []
-            libs = [_libpng, _libz]
+            lib = [_build_3rdparty]
+            libs = ["png", "z"]
             ldflags = []
             cflags = []
             ldflags.extend(self.platform_ldflags)
@@ -1035,8 +1035,8 @@ int main()
             inc = list(gksinc)
             inc.extend(pnginc)
             inc.extend(zinc)
-            lib = []
-            libs = [_libpng, _libz]
+            lib = [_build_3rdparty]
+            libs = ["png", "z"]
             ldflags = []
             cflags = []
             ldflags.extend(self.platform_ldflags)
@@ -1058,8 +1058,8 @@ int main()
             inc = list(gksinc)
             inc.extend(pnginc)
             inc.extend(zinc)
-            lib = []
-            libs = [_libpng, _libz]
+            lib = [_build_3rdparty]
+            libs = ["png", "z"]
             ldflags = []
             cflags = []
             ldflags.extend(self.platform_ldflags)
@@ -1081,8 +1081,8 @@ int main()
             inc = list(gksinc)
             inc.extend(pnginc)
             inc.extend(zinc)
-            lib = []
-            libs = [_libpng, _libz]
+            lib = [_build_3rdparty]
+            libs = ["png", "z"]
             ldflags = []
             cflags = []
             ldflags.extend(self.platform_ldflags)
