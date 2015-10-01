@@ -1,5 +1,5 @@
-  CFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(ARCHS)
-    OBJS = \
+ PNGCFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(ARCHS)
+      OBJS = \
 	png.o \
 	pngerror.o \
 	pngget.o \
@@ -15,6 +15,9 @@
 	pngwrite.o \
 	pngwtran.o \
 	pngwutil.o
+
+.c.o:
+	$(CC) $(PNGCFLAGS) -o $@ -c $<
 
 libpng.a: $(OBJS)
 	$(AR) crv $@ $?

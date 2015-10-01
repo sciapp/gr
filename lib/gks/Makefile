@@ -49,7 +49,7 @@ Darwin:
 targets: prerequisites libGKS.a libGKS.so demo gksm plugins
 
 prerequisites:
-	@for d in bzip2 freetype libpng16 zlib; do make -C ../../3rdparty/$$d; done
+	@for d in bzip2 freetype jpeg libpng16 zlib; do make -C ../../3rdparty/$$d; done
 
 libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?
