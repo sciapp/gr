@@ -392,7 +392,7 @@ int main(int argc, char **argv)
 
 """)
         os.close(fd)
-        cmd = [self.cc, "-fPIC", "-shared", "-o", tmpout, tmpsrc]
+        cmd = [self.cc, "-o", tmpout, tmpsrc]
         cmd.extend(cflags)
         cmd.extend(mupdfcflags)
         cmd.extend(ldflags)
@@ -730,6 +730,12 @@ int main()
                 self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
                                                           self.mupdflibs,
                                           mupdfldflags=self.mupdfldflags)
+            if not self.disable_mupdf:
+                # test shared library build
+                self.disable_mupdf = not self._test_mupdf(self.mupdfinc,
+                                                          self.mupdflibs,
+                                                          ["-fPIC", "-shared"],
+                                                          self.mupdfldflags)
             if self.disable_mupdf:
                 self.mupdfinc = []
                 self.mupdflibs = []
