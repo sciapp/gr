@@ -50,7 +50,6 @@ class GRWidget(QtGui.QWidget):
 
     def __init__(self, *args, **kwargs):
         super(GRWidget, self).__init__(*args, **kwargs)
-        self.setAttribute(QtCore.Qt.WA_NoMousePropagation)
         self._clear, self._update = False, False
         self._sizex, self._sizey = 1., 1.
         self._dwidth, self._dheight = self.width(), self.height()

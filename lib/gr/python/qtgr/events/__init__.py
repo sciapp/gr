@@ -151,9 +151,8 @@ class EventFilter(QtCore.QObject):
         if event.buttons() & QtCore.Qt.RightButton:
             btn_mask |= MouseEvent.RIGHT_BUTTON
 
-        wEvent = WheelEvent(type, target.dwidth, target.dheight, event.x(),
-                            event.y(), btn_mask, event.delta())
-        self.handleEvent(wEvent)
+        return WheelEvent(type, target.dwidth, target.dheight, event.x(),
+                          event.y(), btn_mask, event.delta())
 
     def mouseEvent(self, type, target, event):
         """transform QMouseEvent to MouseEvent"""
@@ -185,24 +184,26 @@ class EventFilter(QtCore.QObject):
 
         mEvent = MouseEvent(type, target.dwidth, target.dheight,
                             event.x(), event.y(), btn_mask, mod_mask)
-        self.handleEvent(mEvent)
         # special case:
         # save last btn_mask for handling in MouseEvent.MOUSE_RELEASE
         self._last_btn_mask = btn_mask
+        return mEvent
 
     def eventFilter(self, target, event):
         type = event.type()
+        newevent = None
         if type == QtCore.QEvent.MouseMove:
-            self.mouseEvent(MouseEvent.MOUSE_MOVE, target, event)
+            newevent = self.mouseEvent(MouseEvent.MOUSE_MOVE, target, event)
         elif type == QtCore.QEvent.MouseButtonPress:
-            self.mouseEvent(MouseEvent.MOUSE_PRESS, target, event)
+            newevent = self.mouseEvent(MouseEvent.MOUSE_PRESS, target, event)
         elif type == QtCore.QEvent.MouseButtonRelease:
-            self.mouseEvent(MouseEvent.MOUSE_RELEASE, target, event)
+            newevent = self.mouseEvent(MouseEvent.MOUSE_RELEASE, target, event)
         elif type == QtCore.QEvent.Wheel:
-            self.wheelEvent(WheelEvent.WHEEL_MOVE, target, event)
+            newevent = self.wheelEvent(WheelEvent.WHEEL_MOVE, target, event)
         else:
             self.handleEvent(event)
-
+        if newevent:
+            return QtCore.QCoreApplication.sendEvent(target, newevent)
         return False
 
 class CallbackManager(object):
