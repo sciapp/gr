@@ -1,7 +1,6 @@
 build/
 dist/
 doc/media/
-recipe/
 lib/gr/python/gr/_version.py
 lib/gr/python/gr.egg-info
 MANIFEST

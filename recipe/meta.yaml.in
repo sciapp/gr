@@ -1,0 +1,31 @@
+package:
+  name: gr
+  version: !!str VERSION
+
+source:
+  fn: gr-VERSION.tar.gz
+  url: https://pypi.python.org/packages/source/g/gr/gr-VERSION.tar.gz
+  md5: MD5
+
+build:
+  binary_relocation: false
+
+requirements:
+  build:
+    - python
+
+  run:
+    - python
+    - numpy
+
+test:
+  imports:
+    - gr
+    - gr.pygr
+    - gr3
+
+about:
+  home: http://gr-framework.org
+  license: GNU General Public License
+  summary: 'GR, a universal framework for visualization applications'
+
