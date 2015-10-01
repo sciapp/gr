@@ -1,14 +1,15 @@
 #!/bin/sh
 cwd=`pwd`
-if [ ! `which cmake` ]; then exit 0; fi
-
 src="openjpeg-2.0.0"
 if [ "$1" = "" ]; then
   dest=`pwd`/../build
 else
   dest=$1
 fi
+
 export PATH=${dest}/bin:${PATH}
+if [ ! `which cmake` ]; then exit 0; fi
+
 mkdir -p ${dest}/src
 cd ${dest}/src
 
