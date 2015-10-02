@@ -12,13 +12,17 @@ Major contributors include the following (in alphabetical order):
 
   implemented the GR3 surface function
 
+**Georg Brandl**
+
+  made several contributions to qtgr and the setup.py script
+
 **Marcel Dück**
 
   wrote the Java code and the iGR iOS App
 
 **Christian Felder**
 
-  provided the qtgr module, the setup.py script and the GKS iOS App. As part of a collaboration there are plans to integrate the GR framework into `NICOS <http://www.nicos-controls.org>`_ (a network-based control system completely written in Python) as a replacement for PyQwt.
+  provided the qtgr module, the setup.py script and the GKS iOS App. As part of a collaboration the GR framework has been integrated into `NICOS <http://www.nicos-controls.org>`_ (a network-based control system completely written in Python) as a replacement for PyQwt.
 
 **Marvin Goblet**
 

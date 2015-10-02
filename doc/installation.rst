@@ -4,6 +4,25 @@ Installation
 Prerequisites
 ^^^^^^^^^^^^^
 
+The GR distribution contains a script (``build_deps``) which may help
+you to prepare your system for the installation of the GR framework::
+
+    % lib/build-deps
+
+          OS name: Linux
+     Distribution: Red Hat
+      Description: Fedora 20 (Heisenbug)
+          Release: 20
+           Kernel: 3.19.8-100.fc20.x86_64
+     Architecture: x86_64
+
+    The following pre-installation steps are required for a GR framework
+    software installation:
+
+    yum install gcc gcc-c++ gcc-gfortran PyQt4-devel ghostscript-devel \
+    texlive-collection-latex texlive-dvipng cmake patch
+
+
 The following table shows which packages are required to support the different
 features:
 
@@ -75,7 +94,7 @@ If you don't have Miniconda or Anaconda installed, you can download
 them from `Continuum <http://continuum.io/downloads>`_ and use a
 command-line installer. For Miniconda on OS X, in the shell execute::
 
-    bash Miniconda-3.x.x-MacOSX-x86_64.sh 
+    bash Miniconda-3.x.x-MacOSX-x86_64.sh
     export PATH=~/miniconda/bin:$PATH
     conda install -c https://conda.anaconda.org/jheinen gr
     python
@@ -108,6 +127,14 @@ choose any other destination by specifying the ``GRDIR`` variable, e.g.::
 
     make GRDIR=/opt/gr
 
+To create a self-contained GR distribution you can use the ``self`` target::
+
+    make self
+
+On slow systems, you can have a coffee now, as the system will download
+and build several static libraries.
+
+
 Install from PyPi
 ^^^^^^^^^^^^^^^^^
 
@@ -119,7 +146,7 @@ Once you have installed the GR framework you should try whether you can import
 the gr module::
 
     > python
-    Python 2.7.8 (default, Jul  3 2014, 21:06:26) 
+    Python 2.7.8 (default, Jul  3 2014, 21:06:26)
     [GCC 4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2336.1.00)] on darwin
     Type "help", "copyright", "credits" or "license" for more information.
     >>> import gr
