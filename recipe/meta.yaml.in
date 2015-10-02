@@ -26,6 +26,6 @@ test:
 
 about:
   home: http://gr-framework.org
-  license: GNU General Public License
+  license: MIT License
   summary: 'GR, a universal framework for visualization applications'
 
