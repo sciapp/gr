@@ -7,6 +7,6 @@ graft lib
 graft 3rdparty
 graft examples
 graft doc
-global-exclude *.vc Makefile makefile Preflight *.py[cod] __pycache__ .DS_Store
+global-exclude Preflight *.py[cod] __pycache__ .DS_Store
 exclude lib/gks/quartz/build/*
 prune doc/media
