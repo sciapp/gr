@@ -110,7 +110,6 @@ BOOL gks_terminal(void)
   if ( ! ([fm fileExistsAtPath:path isDirectory:&isDir] && isDir) )
     path = [[NSString stringWithFormat:@"%@/GKSTerm.app",
              grdir] stringByStandardizingPath];
-    NSLog(@"GKSTERM: %@", path);
   if ( [fm fileExistsAtPath:path isDirectory:&isDir] && isDir )
   {
      url = [NSURL fileURLWithPath: path];
