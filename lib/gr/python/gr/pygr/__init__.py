@@ -1417,6 +1417,10 @@ class PlotAxes(GRViewPort, GRMeta):
     COUNT = 0
     SCALE_X = 0x1
     SCALE_Y = 0x2
+    OPTION  = {
+        SCALE_X: gr.OPTION_X_LOG,
+        SCALE_Y: gr.OPTION_Y_LOG,
+    }
     COORDLIST_CLASS = Coords2DList
 
     def __init__(self, viewport, xtick=None, ytick=None, majorx=None,
@@ -1575,35 +1579,27 @@ class PlotAxes(GRViewPort, GRMeta):
     def isGridEnabled(self):
         return self._grid
 
-    def _adjustWindow(self, xmin, xmax, ymin, ymax):
+    def _adjustLogRange(self, amin, amax, scale):
         # minimum window borders for log scale
         wmin, wmax = gr.precision * 10, gr.precision * 100
-        # stay in log x domain
-        if self.scale & gr.OPTION_X_LOG:
-            if xmax < wmax:
-                res = False
-                xmax = wmax
-            if xmin < wmin:
-                res = False
-                if self.autoscale & PlotAxes.SCALE_X:
-                    xmin = 1. / 10 ** max(0, 3 - math.log10(xmax))
-                else:
-                    xmin = wmin
-        # stay in log y domain
-        if self.scale & gr.OPTION_Y_LOG:
-            if ymax < wmax:
-                res = False
-                ymax = wmax
-            if ymin < wmin:
-                res = False
-                if self.autoscale & PlotAxes.SCALE_Y:
-                    ymin = 1. / 10 ** max(0, 3 - math.log10(ymax))
-                else:
-                    ymin = wmin
-        if DomainChecker.isInWindowDomain(xmin, xmax, ymin, ymax):
-            return xmin, xmax, ymin, ymax
-        else:
-            raise ValueError("xmin, xmax, ymin, ymax not in window domain.")
+        if scale in PlotAxes.OPTION:
+            if self.scale & PlotAxes.OPTION[scale]:
+                if amax < wmax:
+                    amax = wmax
+                if amin < wmin:
+                    if self.autoscale & scale:
+                        amin = 1. / 10 ** max(0, 3 - math.log10(amax))
+                    else:
+                        amin = wmin
+            if gr.validaterange(amin, amax):
+                return amin, amax
+            raise ValueError("amin, amax not in window domain.")
+        raise ValueError("Unknown value '%s' for argument scale." % scale)
+
+    def _adjustWindow(self, xmin, xmax, ymin, ymax):
+        xmin, xmax = self._adjustLogRange(xmin, xmax, PlotAxes.SCALE_X)
+        ymin, ymax = self._adjustLogRange(ymin, ymax, PlotAxes.SCALE_Y)
+        return xmin, xmax, ymin, ymax
 
     def setWindow(self, xmin, xmax, ymin, ymax):
         res = True
