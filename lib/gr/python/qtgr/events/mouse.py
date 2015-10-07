@@ -128,3 +128,16 @@ class LegendEvent(ROIEvent):
     def curve(self):
         """Get PlotCurve instance referenced by this legend item."""
         return self._roi.reference
+
+
+class MousePanEvent(MouseEvent):
+
+    MOUSE_PAN = QtCore.QEvent.registerEventType()
+
+    def __init__(self, type, width, height, x, y, buttons, modifiers, offset):
+        MouseEvent.__init__(self, type, width, height, x, y, buttons, modifiers)
+        self._offset = offset
+
+    def getOffset(self):
+        """Get current offset in NDC space."""
+        return self._offset

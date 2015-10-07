@@ -5,7 +5,8 @@ import logging
 # local library
 from qtgr.backend import QtCore
 from qtgr.events.mouse import MouseEvent, WheelEvent, PickEvent, LegendEvent,\
-    ROIEvent
+    ROIEvent, MousePanEvent
+from qtgr.events.gestures import PanGesture
 from gr._version import __version__, __revision__
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
@@ -102,6 +103,21 @@ class EventFilter(QtCore.QObject):
         self._last_btn_mask = btn_mask
         return mEvent
 
+    def handleGesture(self, target, event):
+        """Intercept `QtCore.QEvent.Gesture` events and post new events to the
+        Event-Loop."""
+        gestures = event.gestures()
+        _log.debug("handleGesture: gestures: %r", gestures)
+        for g in gestures:
+            if isinstance(g, PanGesture):
+                p0 = g.startPoint.getDC()
+                mpEvent = MousePanEvent(MousePanEvent.MOUSE_PAN, target.dwidth,
+                                        target.dheight, p0.x, p0.y,
+                                        MouseEvent.NO_BUTTON,
+                                        MouseEvent.NO_MODIFIER,
+                                        g.offset)
+                QtCore.QCoreApplication.postEvent(target, mpEvent)
+
     def eventFilter(self, target, event):
         type = event.type()
         newevent = None
@@ -113,11 +129,17 @@ class EventFilter(QtCore.QObject):
             newevent = self.mouseEvent(MouseEvent.MOUSE_RELEASE, target, event)
         elif type == QtCore.QEvent.Wheel:
             newevent = self.wheelEvent(WheelEvent.WHEEL_MOVE, target, event)
+        elif type == QtCore.QEvent.Gesture:
+            self.handleGesture(target, event)
+            # Intercept Gesture events only once otherwise new events may be
+            # posted multiple times to the Event-Loop.
+            return True
         else:
             self.handleEvent(event)
         if newevent:
             return QtCore.QCoreApplication.sendEvent(target, newevent)
         return False
+
 
 class CallbackManager(object):
 
