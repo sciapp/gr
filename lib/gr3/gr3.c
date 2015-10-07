@@ -1727,7 +1727,7 @@ static GLuint depth_renderbuffer = 0;
         glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, _width, _height);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, color_renderbuffer);
         
-        glGenRenderbuffers(2, &depth_renderbuffer);
+        glGenRenderbuffers(1, &depth_renderbuffer);
         glBindRenderbuffer(GL_RENDERBUFFER, depth_renderbuffer);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, _width, _height);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_renderbuffer);
