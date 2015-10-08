@@ -12,10 +12,11 @@ import warnings
 # local library
 import gr
 import qtgr.events
-from qtgr.backend import QtCore, QtGui, getGKSConnectionId
 from gr.pygr import Plot, PlotAxes, RegionOfInterest, DeviceCoordConverter
+from qtgr.backend import QtCore, QtGui, getGKSConnectionId
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent, \
-    LegendEvent
+    LegendEvent, MouseGestureEvent, WheelEvent
+from qtgr.events.gestures import PanGestureRecognizer, SelectGestureRecognizer
 from gr._version import __version__, __revision__
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
@@ -193,24 +194,30 @@ class InteractiveGRWidget(GRWidget):
     logYinDomain = QtCore.Signal(bool)
     modePick = QtCore.Signal(bool)
 
+    GESTURE_RECOGNIZERS = [PanGestureRecognizer, SelectGestureRecognizer]
+
     def __init__(self, *args, **kwargs):
         super(InteractiveGRWidget, self).__init__(*args, **kwargs)
+        # register gesture recognizers
+        for recognizer in self.GESTURE_RECOGNIZERS:
+            self.grabGesture(recognizer.registerRecognizer(recognizer()))
+
         guiConn = GUIConnector(self)
-        guiConn.connect(qtgr.events.MouseEvent.MOUSE_MOVE, self.mouseMove)
-        guiConn.connect(qtgr.events.MouseEvent.MOUSE_PRESS, self.mousePress)
-        guiConn.connect(qtgr.events.MouseEvent.MOUSE_RELEASE, self.mouseRelease)
-        guiConn.connect(qtgr.events.WheelEvent.WHEEL_MOVE, self.wheelMove)
-        guiConn.connect(qtgr.events.PickEvent.PICK_MOVE, self.pickMove)
+        guiConn.connect(MouseEvent.MOUSE_MOVE, self.mouseMove)
+        guiConn.connect(MouseEvent.MOUSE_PRESS, self.mousePress)
+        guiConn.connect(MouseEvent.MOUSE_RELEASE, self.mouseRelease)
+        guiConn.connect(WheelEvent.WHEEL_MOVE, self.wheelMove)
+        guiConn.connect(PickEvent.PICK_MOVE, self.pickMove)
+        guiConn.connect(MouseGestureEvent.MOUSE_PAN, self._mousePan)
+        guiConn.connect(MouseGestureEvent.MOUSE_SELECT, self._mouseSelect)
         self.setMouseTracking(True)
-        self._mouseLeft = False
-        self._mouseRight = False
-        self._startPoint = None
-        self._curPoint = None
+        self._tselect = None  # select point tuple
         self._logXinDomain = None
         self._logYinDomain = None
         self._pickMode = False
         self._pickEvent = None
         self._selectEnabled, self._panEnabled = True, True
+        self._roiEnabled = True
         self._zoomEnabled = True
         self._lstPlot = []
 
@@ -264,10 +271,8 @@ class InteractiveGRWidget(GRWidget):
     def paintEvent(self, event):
         super(InteractiveGRWidget, self).paintEvent(event)
         self._painter.begin(self)
-        if self._mouseLeft and self.getMouseSelectionEnabled():
-            p0 = self._startPoint.getNDC()
-            p1 = self._curPoint.getNDC()
-            p0, p1 = self.adjustSelectRect(p0, p1)
+        if self.getMouseSelectionEnabled() and self._tselect:
+            p0, p1 = self._tselect
             coords = DeviceCoordConverter(self.dwidth, self.dheight)
             coords.setNDC(p0.x, p0.y)
             p0dc = coords.getDC()
@@ -341,6 +346,19 @@ class InteractiveGRWidget(GRWidget):
         if change:
             self.update()
 
+    def mouseSelect(self, event):
+        p0 = event.getNDC()
+        p0, p1 = self.adjustSelectRect(p0, p0 + event.getOffset())
+        self._tselect = (p0, p1)
+        if event.isFinished():
+            self._tselect = None
+            self._select(p0, p1)
+        self.update()
+
+    def _mouseSelect(self, event):
+        if self.getMouseSelectionEnabled():
+            self.mouseSelect(event)
+
     def _pan(self, p0, dp):
         self._pickEvent = None
         change = False
@@ -349,6 +367,15 @@ class InteractiveGRWidget(GRWidget):
             change = True
         if change:
             self.update()
+
+    def mousePan(self, event):
+        self._pan(event.getNDC(), event.getOffset())
+
+    def _mousePan(self, event):
+        if self.getMousePanEnabled():
+            self.mousePan(event)
+            # disable roi recognition during pannning
+            self._roiEnabled = event.isFinished()
 
     def _zoom(self, dpercent, p0):
         self._pickEvent = None
@@ -360,23 +387,24 @@ class InteractiveGRWidget(GRWidget):
             self.update()
 
     def _roi(self, p0, type, buttons, modifiers):
-        for plot in self._lstPlot:
-            roi = plot.getROI(p0)
-            if roi:
-                if roi.regionType == RegionOfInterest.LEGEND:
-                    eventObj = LegendEvent
-                else:
-                    eventObj = ROIEvent
-                coords = DeviceCoordConverter(self.dwidth, self.dheight)
-                coords.setNDC(p0.x, p0.y)
-                p0dc = coords.getDC()
-                QtGui.QApplication.sendEvent(self,
-                                             eventObj(type,
-                                                      self.dwidth,
-                                                      self.dheight,
-                                                      p0dc.x, p0dc.y,
-                                                      buttons, modifiers,
-                                                      roi))
+        if self._roiEnabled:
+            for plot in self._lstPlot:
+                roi = plot.getROI(p0)
+                if roi:
+                    if roi.regionType == RegionOfInterest.LEGEND:
+                        eventObj = LegendEvent
+                    else:
+                        eventObj = ROIEvent
+                    coords = DeviceCoordConverter(self.dwidth, self.dheight)
+                    coords.setNDC(p0.x, p0.y)
+                    p0dc = coords.getDC()
+                    QtGui.QApplication.sendEvent(self,
+                                                 eventObj(type,
+                                                          self.dwidth,
+                                                          self.dheight,
+                                                          p0dc.x, p0dc.y,
+                                                          buttons, modifiers,
+                                                          roi))
 
     def mousePress(self, event):
         if event.getButtons() & MouseEvent.LEFT_BUTTON:
@@ -386,47 +414,14 @@ class InteractiveGRWidget(GRWidget):
             else:
                 if event.getModifiers() & MouseEvent.CONTROL_MODIFIER:
                     self.setPickMode(True)
-                else:
-                    self._mouseLeft = True
-        elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
-            self._mouseRight = True
-        self._curPoint = event
-        self._startPoint = event
 
     def mouseRelease(self, event):
-        if event.getButtons() & MouseEvent.LEFT_BUTTON and self._mouseLeft:
-            self._mouseLeft = False
-            self._curPoint = event
-            p0 = self._startPoint.getNDC()
-            p1 = self._curPoint.getNDC()
-            if p0 != p1:
-                if (self.getMouseSelectionEnabled()
-                    and self._getPlotsForPoint(p0)):
-                    p0, p1 = self.adjustSelectRect(p0, p1)
-                    self._select(p0, p1)
-            else:
-                self._roi(p0, ROIEvent.ROI_CLICKED, event.getButtons(),
-                          event.getModifiers())
-        elif event.getButtons() & MouseEvent.RIGHT_BUTTON and self._mouseRight:
-            self._mouseRight = False
-            self._roi(event.getNDC(), ROIEvent.ROI_CLICKED, event.getButtons(),
-                      event.getModifiers())
-        self._curPoint = event
+        self._roi(event.getNDC(), ROIEvent.ROI_CLICKED, event.getButtons(),
+                  event.getModifiers())
 
     def mouseMove(self, event):
         if self.getPickMode():
             self._pick(event.getNDC(), PickEvent.PICK_MOVE)
-        if event.getButtons() & MouseEvent.LEFT_BUTTON:
-            self._curPoint = event
-            super(InteractiveGRWidget, self).update()
-        elif event.getButtons() & MouseEvent.RIGHT_BUTTON:
-            p0 = self._curPoint.getNDC() # point before now
-            p1 = event.getNDC()
-            dp = p1 - p0
-            self._curPoint = event
-            if self.getMousePanEnabled():
-                self._pan(self._startPoint.getNDC(), dp)
-                self._mouseRight = False
         self._roi(event.getNDC(), ROIEvent.ROI_OVER, event.getButtons(),
                   event.getModifiers())
 
