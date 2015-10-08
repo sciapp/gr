@@ -5,8 +5,8 @@ import logging
 # local library
 from qtgr.backend import QtCore
 from qtgr.events.mouse import MouseEvent, WheelEvent, PickEvent, LegendEvent,\
-    ROIEvent, MousePanEvent
-from qtgr.events.gestures import PanGesture
+    ROIEvent, MouseGestureEvent
+from qtgr.events.gestures import MouseGestureBase, PanGesture, SelectGesture
 from gr._version import __version__, __revision__
 
 __author__ = "Christian Felder <c.felder@fz-juelich.de>"
@@ -109,13 +109,21 @@ class EventFilter(QtCore.QObject):
         gestures = event.gestures()
         _log.debug("handleGesture: gestures: %r", gestures)
         for g in gestures:
-            if isinstance(g, PanGesture):
+            if isinstance(g, MouseGestureBase):
+                etype = None
+                finish = (g.state() == QtCore.Qt.GestureFinished)
                 p0 = g.startPoint.getDC()
-                mpEvent = MousePanEvent(MousePanEvent.MOUSE_PAN, target.dwidth,
-                                        target.dheight, p0.x, p0.y,
-                                        MouseEvent.NO_BUTTON,
-                                        MouseEvent.NO_MODIFIER,
-                                        g.offset)
+                if isinstance(g, PanGesture):
+                    etype = MouseGestureEvent.MOUSE_PAN
+                elif isinstance(g, SelectGesture):
+                    etype = MouseGestureEvent.MOUSE_SELECT
+                else:
+                    raise ValueError("Unknown MouseGestureBase type")
+                mpEvent = MouseGestureEvent(etype, target.dwidth,
+                                            target.dheight, p0.x, p0.y,
+                                            MouseEvent.NO_BUTTON,
+                                            MouseEvent.NO_MODIFIER,
+                                            g.offset, finish)
                 QtCore.QCoreApplication.postEvent(target, mpEvent)
 
     def eventFilter(self, target, event):

@@ -130,14 +130,20 @@ class LegendEvent(ROIEvent):
         return self._roi.reference
 
 
-class MousePanEvent(MouseEvent):
+class MouseGestureEvent(MouseEvent):
 
     MOUSE_PAN = QtCore.QEvent.registerEventType()
+    MOUSE_SELECT = QtCore.QEvent.registerEventType()
 
-    def __init__(self, type, width, height, x, y, buttons, modifiers, offset):
+    def __init__(self, type, width, height, x, y, buttons, modifiers, offset,
+                 finish=None):
         MouseEvent.__init__(self, type, width, height, x, y, buttons, modifiers)
         self._offset = offset
+        self._finish = finish
 
     def getOffset(self):
         """Get current offset in NDC space."""
         return self._offset
+
+    def isFinished(self):
+        return self._finish
