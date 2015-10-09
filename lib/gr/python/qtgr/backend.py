@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Qt backend GR module
 
-The default backend order (PySide, PyQt4) can be overwritten with:
-    gr.QT_BACKEND_ORDER = ["PyQt4", "PySide"]
+The default backend order (PyQt4, PySide) can be overwritten with:
+    gr.QT_BACKEND_ORDER = ["PySide", "PyQt4"]
 """
 
 import sys
@@ -57,7 +57,7 @@ elif 'PyQt4' in sys.modules and 'PySide' not in sys.modules:
     QT_BACKEND_ORDER = [QT_PYQT4, QT_PYSIDE]
 else:
     # fallback on default order
-    QT_BACKEND_ORDER = [QT_PYSIDE, QT_PYQT4]
+    QT_BACKEND_ORDER = [QT_PYQT4, QT_PYSIDE]
 
 
 def _importPySide():
