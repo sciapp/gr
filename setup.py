@@ -18,6 +18,7 @@ from distutils.ccompiler import new_compiler
 from distutils.sysconfig import get_config_var
 from distutils.sysconfig import get_python_lib
 from distutils.util import get_platform
+from platform import architecture
 from subprocess import PIPE, STDOUT
 if str == bytes:
     from subprocess import Popen
@@ -232,6 +233,7 @@ class check_ext(Command, build_static):
         self.isLinux = ("linux" in sys.platform)
         self.isDarwin = (sys.platform == "darwin")
         self.isWin32 = (sys.platform == "win32")
+        self.is64bit = (architecture()[0] == "64bit")
         # extensions list
         self.ext_modules = []
         # -- user options -------------------------------------
@@ -769,7 +771,10 @@ int main()
         if not (self.wxdir and self.wxlib):
             self.disable_wx = True
         else:
-            self.wxlibs = ["wxmsw29ud_core", "wxbase29ud"]
+            if self.is64bit:
+                self.wxlibs = ["wxmsw30ud_core", "wxbase30ud"]
+            else:
+                self.wxlibs = ["wxmsw29ud_core", "wxbase29ud"]
             self.wxinc = [os.path.join(self.wxdir, "include", "msvc"),
                           os.path.join(self.wxdir, "include")]
         # -- qt -------------------------------------
@@ -782,7 +787,10 @@ int main()
         if not self.disable_gs and self.gsdir:
             self.gsinc = [os.path.join(self.gsdir, "include")]
             self.gslib = [os.path.join(self.gsdir, "bin")]
-            self.gslibs = ["gsdll32"]
+            if self.is64bit:
+                self.gslibs = ["gsdll64"]
+            else:
+                self.gslibs = ["gsdll32"]
             if (not os.path.isdir(self.gsinc[0]) or
                 not os.path.isdir(self.gslib[0])):
                 self.disable_gs = True

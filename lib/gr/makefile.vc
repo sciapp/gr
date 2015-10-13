@@ -48,7 +48,7 @@ libgr.lib: libgr.dll
 
 libgr.dll: gr.obj text.obj contour.obj spline.obj gridit.obj strlib.obj io.obj \
 	   image.obj md5.obj import.obj
-	$(DLLLINK) /out:$@ $** -def:libgr.def \
+	$(DLLLINK) /out:$@ $** \
 	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
 demo.obj: demo.c
@@ -57,7 +57,7 @@ demo.exe: demo.obj libgr.lib
         $(LINK) /out:$@ demo.obj libgr.lib
 
 gr.pyd: py_gr.obj
-	$(DLLLINK) /out:$@ $** -def:gr.def \
+	$(DLLLINK) /out:$@ $** \
 	$(PYHOME)\libs\python27.lib $(GRLIBS) \
 	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(DLLLFLAGS) $(DLLLIBS)
 

@@ -29,7 +29,7 @@ $(GRLIBS):
 libgr3.lib: libgr3.dll
 
 libgr3.dll: gr3.obj gr3_win.obj gr3_convenience.obj gr3_html.obj gr3_povray.obj gr3_png.obj gr3_jpeg.obj gr3_gr.obj gr3_mc.obj
-	$(DLLLINK) /out:$@ $** -def:libgr3.def \
+	$(DLLLINK) /out:$@ $** \
 	$(GRLIBS) $(PNGLIBS) $(JPEGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
 install: default
