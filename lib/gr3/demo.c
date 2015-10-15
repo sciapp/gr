@@ -1,5 +1,27 @@
 /* 
-  cc demo.c -I/usr/local/gr/include -L/usr/local/gr/lib -lGR3 -lGR
+
+ Linux:
+
+t=../../3rdparty
+for d in libpng16 jpeg zlib; do make -C ${t}/${d}; done
+cc -g demo.c gr3.c gr3_glx.c gr3_convenience.c gr3_gr.c \
+ gr3_html.c gr3_jpeg.c gr3_mc.c gr3_png.c gr3_povray.c \
+ -I${t} -I${t}/jpeg -I${t}/zlib -I/usr/local/gr/include \
+ -L/usr/local/gr/lib -lGR -Wl,-rpath,/usr/local/gr/lib \
+ ${t}/libpng16/libpng.a ${t}/jpeg/libjpeg.a ${t}/zlib/libz.a \
+ -lGL -lX11 -lm
+
+ Darwin:
+
+t=../../3rdparty
+for d in libpng16 jpeg zlib; do make -C ${t}/${d}; done
+cc -g demo.c gr3.c gr3_cgl.c gr3_convenience.c gr3_gr.c \
+ gr3_html.c gr3_jpeg.c gr3_mc.c gr3_png.c gr3_povray.c \
+ -I${t} -I${t}/jpeg -I${t}/zlib -I/usr/local/gr/include \
+ -L/usr/local/gr/lib -lGR -framework OpenGL \
+ ${t}/libpng16/libpng.a ${t}/jpeg/libjpeg.a ${t}/zlib/libz.a \
+ -framework OpenGL
+
  */
 
 #include "gr.h"
