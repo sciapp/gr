@@ -28,8 +28,11 @@ int gks_open_font(void)
 
   path = gks_getenv("GKS_FONTPATH");
   if (path == NULL)
-    path = GRDIR;
-
+    {
+      path = gks_getenv("GRDIR");
+      if (path == NULL)
+        path = GRDIR;
+    }
   strcpy(fontdb, (char *) path);
 #ifndef _WIN32
   strcat(fontdb, "/fonts/gksfont.dat");

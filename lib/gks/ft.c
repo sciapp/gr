@@ -319,7 +319,9 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   }
   prefix = gks_getenv("GKS_FONTPATH");
   if (prefix == NULL) {
-    prefix = GRDIR;
+    prefix = gks_getenv("GRDIR");
+    if (prefix == NULL)
+      prefix = GRDIR;
   }
   file = (FT_String *) malloc(strlen(prefix) + 7 + strlen(font) + 4 + 1);
   strcpy(file, prefix);
