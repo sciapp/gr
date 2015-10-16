@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ $# = 0 ]; then
-  opts=""
+  opts="xft=no"
   if [ "`which wx-config 2>/dev/null`" = "" ]; then
     opts="wx=no"
   fi

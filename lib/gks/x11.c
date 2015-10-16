@@ -32,7 +32,7 @@ int usleep(useconds_t);
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
 
-#ifndef NO_FT
+#ifndef NO_XFT
 #include <X11/Xft/Xft.h>
 #endif
 
@@ -195,7 +195,7 @@ static char *urw_fonts[] =
   "-urw-dingbats-medium-r-normal--*-%d0-%d-%d-*-*-*-*"
 };
 
-#ifndef NO_FT
+#ifndef NO_XFT
 
 static char *base_fonts[] =
 {
@@ -227,7 +227,7 @@ static double capheights[31] =
   0.587, 0.692
 };
 
-#ifndef NO_FT
+#ifndef NO_XFT
 
 static
 int adobe2utf[256] =
@@ -340,7 +340,7 @@ typedef struct ws_state_list_struct
     int state, mapped;
     Bool empty;
     int path;
-#ifndef NO_FT
+#ifndef NO_XFT
     XftFont *fstr[31][MAX_SIZE + 1], *cfont;
 #else
     XFontStruct *fstr[31][MAX_SIZE + 1], *cfont;
@@ -350,7 +350,7 @@ typedef struct ws_state_list_struct
     Pixmap stipple[MAX_COLOR][PATTERNS];
     Bool ored_patterns;
     XColor color[MAX_COLOR];
-#ifndef NO_FT
+#ifndef NO_XFT
     XftColor rendercolor[MAX_COLOR];
     Bool havecolor[MAX_COLOR];
 #endif
@@ -968,7 +968,7 @@ void allocate_colors(void)
 }
 
 
-#ifndef NO_FT
+#ifndef NO_XFT
 
 static
 void allocate_rendercolors(void)
@@ -991,7 +991,7 @@ void allocate_rendercolors(void)
 #endif
 
 
-#ifndef NO_FT
+#ifndef NO_XFT
 
 static
 void free_rendercolors(void)
@@ -1339,7 +1339,7 @@ void initialize_arrays(void)
       have_patterns = True;
     }
 
-#ifndef NO_FT
+#ifndef NO_XFT
   memset((void *) p->fstr, 0, n_font * (MAX_SIZE + 1) * sizeof(XftFont *));
 #else
   memset((void *) p->fstr, 0, n_font * (MAX_SIZE + 1) * sizeof(XFontStruct *));
@@ -2283,7 +2283,7 @@ static
 void x_draw_string(
   Display *display, Drawable d, GC gc, int x, int y, char *string, int length)
 {
-#ifndef NO_FT
+#ifndef NO_XFT
   XftDraw *draw;
   XftColor *color = NULL;
   unsigned int *s32;
@@ -2456,7 +2456,7 @@ void text_routine(double x, double y, int nchars, char *chars)
   int xorg, yorg, width, height;
   double xrel, yrel, ax, ay;
   int tx_prec;
-#ifndef NO_FT
+#ifndef NO_XFT
   XGlyphInfo extents;
   unsigned int *s32;
   register int i, j;
@@ -2466,7 +2466,7 @@ void text_routine(double x, double y, int nchars, char *chars)
 
   /* Compute text extent */
 
-#ifndef NO_FT
+#ifndef NO_XFT
   if (p->font == 12) /* Symbol */
     {
       s32 = (unsigned int *) gks_malloc(nchars * sizeof(unsigned int));
@@ -2514,7 +2514,7 @@ void text_routine(double x, double y, int nchars, char *chars)
 }
 
 
-#ifndef NO_FT
+#ifndef NO_XFT
 #define load_font(d, f) XftFontOpenXlfd(d, DefaultScreen(p->dpy), f)
 #else
 #define load_font(d, f) XLoadQueryFont(d, f)
@@ -2526,7 +2526,7 @@ void try_load_font(int font, int size)
 {
   char fontname[256];
   int f; 
-#ifndef NO_FT
+#ifndef NO_XFT
   int family, weight, slant;
   XftPattern *font_pattern;
   XftPattern *match_pattern;
@@ -2547,7 +2547,7 @@ void try_load_font(int font, int size)
 	    break;
 	}
     }
-#ifndef NO_FT
+#ifndef NO_XFT
   f = font + 1;
   if (f < 30)
     {
@@ -2581,7 +2581,7 @@ static
 void verify_font_capabilities(void)
 {
   int font = 2, size = MAX_SIZE;
-#ifndef NO_FT
+#ifndef NO_XFT
   XGlyphInfo extents;
   unsigned int s32[1];
 #endif
@@ -2590,7 +2590,7 @@ void verify_font_capabilities(void)
 
   p->scalable_fonts = p->fstr[font][size] != NULL;
 
-#ifndef NO_FT
+#ifndef NO_XFT
   if (p->scalable_fonts)
     {
       for (font = 0; font < n_font; font++)
@@ -2707,7 +2707,7 @@ void set_font(int font)
   if (p->fstr[font][size] != NULL)
     {
       p->cfont = p->fstr[font][size];
-#ifdef NO_FT
+#ifdef NO_XFT
       XSetFont(p->dpy, p->gc, p->cfont->fid);
 #endif
     }
@@ -4375,7 +4375,7 @@ void gks_drv_x11(
 
       set_colors();
       allocate_colors();
-#ifndef NO_FT
+#ifndef NO_XFT
       allocate_rendercolors();
 #endif
 
@@ -4515,7 +4515,7 @@ void gks_drv_x11(
 	free(p->bbox);
 
       free_GC();
-#ifndef NO_FT
+#ifndef NO_XFT
       free_rendercolors();
 #endif
 

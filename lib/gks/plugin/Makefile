@@ -43,6 +43,7 @@ ifeq ($(UNAME_S),Darwin)
 else
    GLFWLIBS = -l$(GLFWLIB) -lGL
 endif
+    XFTDEFS =
      FTDEFS =
       FTINC = -I../../../3rdparty/freetype/include
      FTLIBS = ../../../3rdparty/freetype/libfreetype.a
@@ -52,7 +53,8 @@ endif
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
     SSLLIBS = -lssl -lcrypto
     X11DEFS =
-    X11LIBS = $(X11PATH) -lfontconfig -lXt -lX11
+    XFTLIBS = -lXft -lfontconfig
+    X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
     ZMQDEFS = 
     ZMQLIBS = -lzmq -lpthread
   EXTRALIBS =
@@ -67,7 +69,7 @@ endif
 .c.o:
 	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(AVDEFS) $(MUPDFDEFS) $(CFLAGS) $<
 .cxx.o:
-	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 default:
 	@make -C ../../.. Makedefs

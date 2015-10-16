@@ -11,6 +11,7 @@ UNAME := $(shell uname)
                plugin.o compress.o io.o
 
      X11DEFS =
+     XFTDEFS =
       FTDEFS =
        FTINC = -I../../3rdparty/freetype/include
 ifeq ($(UNAME), Darwin)
@@ -19,7 +20,7 @@ else
       X11INC = -I/usr/X11R6/include
 endif
           CC = cc
-     DEFINES = -DHAVE_ZLIB $(X11DEFS) $(FTDEFS)
+     DEFINES = -DHAVE_ZLIB $(X11DEFS) $(XFTDEFS) $(FTDEFS)
       CFLAGS = -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           LD = cc
      LDFLAGS = $(EXTRA_LDFLAGS)
@@ -29,7 +30,8 @@ endif
 INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
         LIBS = -lpthread -ldl -lc -lm
       FTLIBS = ../../3rdparty/freetype/libfreetype.a
-     X11LIBS = $(X11PATH) -lXft -lfontconfig -lXt -lX11
+     XFTLIBS = -lXft -lfontconfig
+     X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
         ZINC = -I../../3rdparty/zlib
        ZLIBS = ../../3rdparty/zlib/libz.a
 

@@ -21,6 +21,7 @@ wxdefs=""
 qtdefs=""
 gtkdefs=""
 x11defs=""
+xftdefs=""
 gsdefs=""
 glfwdefs=""
 zmqdefs=""
@@ -219,6 +220,7 @@ eof
 else
   x11defs="X11DEFS=-DNO_X11 X11INC= X11LIBS="
   info="${yellow} no${normal} [disabled]"
+  xft="no"
   gs="no"
   ret=1
 fi
@@ -232,6 +234,38 @@ if [ `uname` = "Darwin" ]; then
     cp -p $dir/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/project.pbxproj
   fi
 fi
+
+if [ "$xft" != "no" ]
+then
+  tmpout=`mktemp /tmp/a.out.XXXXX`
+  tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+  tmpver=`mktemp /tmp/a$$XXXXX.txt`
+  cat >$tmpsrc << eof
+#include <stdio.h>
+#include <X11/Xft/Xft.h>
+int main(void)
+{
+    printf("%d.%d.%d\n", XFT_MAJOR, XFT_MINOR, XFT_REVISION);
+    return 0;
+}
+eof
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -I$x11path/include `freetype-config --cflags`"
+  $cmd >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    xftdefs="XFTDEFS=-DNO_XFT XFTLIBS="
+    info="${red} no${normal} [Xft API not found]"
+    ret=1
+  else
+    $tmpout >$tmpver 2>&1
+    info="${green}yes${normal} [version `cat $tmpver`]"
+  fi
+else
+  xftdefs="XFTDEFS=-DNO_XFT XFTLIBS="
+  info="${yellow} no${normal} [disabled]"
+  ret=1
+fi
+printf "%12s: %s\n" "Xft" "$info" >&2
+rm -f $tmpout $tmpsrc $tmpver
 
 if [ "$gs" != "no" ]
 then
@@ -476,4 +510,4 @@ printf "%12s: %s\n" "MuPDF" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
 echo "" >&2
-echo $target $wxdefs $qtdefs $gtkdefs $x11defs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $extradefs
+echo $target $wxdefs $qtdefs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $extradefs
