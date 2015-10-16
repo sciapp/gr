@@ -8,7 +8,7 @@
 
 static Display *display; /*!< The used X display */
 static Pixmap pixmap; /*!< The XPixmap (GLX < 1.4)*/
-static GLXPbuffer pbuffer; /*!< The GLX Pbuffer (GLX >=1.4) */
+static GLXPbuffer pbuffer = NULL; /*!< The GLX Pbuffer (GLX >=1.4) */
 static GLXContext context; /*!< The GLX context */
 
 /*!
@@ -38,6 +38,7 @@ int gr3_initGL_GLX_(void) {
   } else {
     glXQueryVersion(display,&major,&minor);
     if (major > 1 || minor >=4) {
+      int i;
       int fb_attribs[] =
       {
         GLX_DRAWABLE_TYPE   , GLX_PBUFFER_BIT,
@@ -60,9 +61,16 @@ int gr3_initGL_GLX_(void) {
         XCloseDisplay(display);
         return GR3_ERROR_INIT_FAILED;
       }
-      fbconfig = fbc[0];
+      for (i = 0; i < fbcount && !pbuffer; i++) {
+        fbconfig = fbc[i];
+        pbuffer = glXCreatePbuffer(display, fbconfig, pbuffer_attribs);
+      }
       XFree(fbc);
-      pbuffer = glXCreatePbuffer(display, fbconfig, pbuffer_attribs);
+      if (!pbuffer) {
+        gr3_log_("failed to create a RGBA PBuffer");
+        XCloseDisplay(display);
+        return GR3_ERROR_INIT_FAILED;
+      }
       
       context = glXCreateNewContext(display, fbconfig, GLX_RGBA_TYPE, None, True);
       glXMakeContextCurrent(display,pbuffer,pbuffer,context);
