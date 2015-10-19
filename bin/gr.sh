@@ -31,7 +31,7 @@ while [ "${dir}" ]; do
 done
 name="${PWD}/$(basename "${0}")"
 cd "${cwd}"
-GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
+export GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
 opts=""
 if [ "${MPLBACKEND}" = "gr" ]
 then
