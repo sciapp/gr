@@ -3,7 +3,7 @@
 if [ $# = 0 ]; then
   opts="xft=no"
   if [ "`which wx-config 2>/dev/null`" = "" ]; then
-    opts="wx=no"
+    opts="${opts} wx=no"
   fi
   if [ "`which gtk-demo 2>/dev/null`" = "" ]; then
     opts="${opts} gtk=no"
