@@ -16,4 +16,6 @@ MANIFEST
 .idea
 *.pyc
 *.pdb
+gr*.deb
+gr*.rpm
 version.txt

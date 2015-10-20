@@ -14,6 +14,13 @@ fi
 if [ `uname` = 'Darwin' ]; then
   opts="${opts} x11=no"
 fi
+if [ ! -z "${DESTDIR}" ]; then
+  opts="${opts} DESTDIR=${DESTDIR}"
+  unset DESTDIR     # important because DESTDIR is also used by 3rd party build scripts
+fi
+if [ ! -z "${GRDIR}" ]; then
+  opts="${opts} GRDIR=${GRDIR}"
+fi
 if [ -z "${QTDIR}" ]; then
   for dir in ${HOME}/anaconda /opt/anaconda /usr/local/anaconda
   do

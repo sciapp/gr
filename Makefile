@@ -1,5 +1,9 @@
- GRDIR = /usr/local/gr
-  DIRS = lib/gr lib/gr3
+      GRDIR = /usr/local/gr
+       DIRS = lib/gr lib/gr3
+ALL_DISTROS = centos centos6 debian suse
+ifeq ($(DISTROS),all)
+	override DISTROS = $(ALL_DISTROS)
+endif
 
 UNAME := $(shell uname)
 
@@ -52,6 +56,10 @@ endif
 realclean: clean
 	make -C 3rdparty realclean
 	rm -rf build
+	for DIR in $(ALL_DISTROS); do \
+		rm -rf packaging/$${DIR}; \
+	done
+	rm -rf tmp
 
 condaclean: clean
 	rm -f recipe/meta.yaml
@@ -88,6 +96,23 @@ osxpkg:
 	sudo chown -R -h root:wheel tmp/
 	pkgbuild --identifier de.fz-juelich.gr --root tmp --install-location /usr/local --ownership preserve gr.pkg
 	sudo rm -rf tmp
+
+linuxpackages: DESTDIR=$(shell pwd)/tmp
+linuxpackages: GRDIR=/opt/gr
+linuxpackages:
+	echo $(DISTROS)
+	@which fpm >/dev/null 2>&1 || \
+	( echo "FATAL: fpm could not be found in PATH.\n       Visit https://github.com/jordansissel/fpm for more information on fpm."; exit 1 )
+	mkdir -p $(DESTDIR)$(GRDIR)
+	env DESTDIR=$(DESTDIR) GRDIR=$(GRDIR) sh 3rdparty/makeself.sh
+ifndef DISTROS
+	@./packaging/create_package.sh
+else
+	@for DISTRO in $(DISTROS); do \
+		./packaging/create_package.sh "$${DISTRO}"; \
+	done
+endif
+	rm -rf $(DESTDIR)
 
 sphinxdoc: default version
 	make -C doc html
