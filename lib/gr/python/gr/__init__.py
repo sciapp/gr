@@ -1387,6 +1387,32 @@ def grid(x_tick, y_tick, x_org, y_org, major_x, major_y):
                  c_int(major_x), c_int(major_y))
 
 
+def grid3d(x_tick, y_tick, z_tick, x_org, y_org, z_org,
+           major_x, major_y, major_z):
+    """
+    Draw a linear and/or logarithmic grid.
+
+    **Parameters:**
+
+    `x_tick`, `y_tick`, `z_tick` :
+        The length in world coordinates of the interval between minor grid
+        lines.
+    `x_org`, `y_org`, `z_org` :
+        The world coordinates of the origin (point of intersection) of the grid.
+    `major_x`, `major_y`, `major_z` :
+        Unitless integer values specifying the number of minor grid lines
+        between major grid lines. Values of 0 or 1 imply no grid lines.
+
+    Major grid lines correspond to the axes origin and major tick marks whether visible
+    or not. Minor grid lines are drawn at points equal to minor tick marks. Major grid
+    lines are drawn using black lines and minor grid lines are drawn using gray lines.
+
+    """
+    __gr.gr_grid3d(c_double(x_tick), c_double(y_tick), c_double(z_tick),
+                   c_double(x_org), c_double(y_org), c_double(z_org),
+                   c_int(major_x), c_int(major_y), c_int(major_z))
+
+
 def verrorbars(px, py, e1, e2):
     """
     Draw a standard vertical error bar graph.
@@ -1463,6 +1489,35 @@ def polyline3d(px, py, pz):
 
 def axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org,
            major_x, major_y, major_z, tick_size):
+    """
+    Draw X, Y and Z coordinate axes with linearly and/or logarithmically
+    spaced tick marks.
+
+    **Parameters:**
+
+    `x_tick`, `y_tick`, `z_tick` :
+        The interval between minor tick marks on each axis.
+    `x_org`, `y_org`, `z_org` :
+        The world coordinates of the origin (point of intersection) of the X
+        and Y axes.
+    `major_x`, `major_y`, `major_z` :
+        Unitless integer values specifying the number of minor tick intervals
+        between major tick marks. Values of 0 or 1 imply no minor ticks.
+        Negative values specify no labels will be drawn for the associated axis.
+    `tick_size` :
+        The length of minor tick marks specified in a normalized device
+        coordinate unit. Major tick marks are twice as long as minor tick marks.
+        A negative value reverses the tick marks on the axes from inward facing
+        to outward facing (or vice versa).
+
+    Tick marks are positioned along each axis so that major tick marks fall on the axes
+    origin (whether visible or not). Major tick marks are labeled with the corresponding
+    data values. Axes are drawn according to the scale of the window. Axes and tick marks
+    are drawn using solid lines; line color and width can be modified using the
+    `setlinetype` and `setlinewidth` functions. Axes are drawn according to
+    the linear or logarithmic transformation established by the `setscale` function.
+
+    """
     __gr.gr_axes3d(c_double(x_tick), c_double(y_tick), c_double(z_tick),
                    c_double(x_org), c_double(y_org), c_double(z_org),
                    c_int(major_x), c_int(major_y), c_int(major_z),
@@ -1764,6 +1819,14 @@ def wctondc(x, y):
     _y = c_double(y)
     __gr.gr_wctondc(byref(_x), byref(_y))
     return [_x.value, _y.value]
+
+
+def wc3towc(x, y, z):
+    _x = c_double(x)
+    _y = c_double(y)
+    _z = c_double(z)
+    __gr.gr_wc3towc(byref(_x), byref(_y), byref(_z))
+    return [_x.value, _y.value, _z.value]
 
 
 def drawrect(xmin, xmax, ymin, ymax):
@@ -2290,6 +2353,8 @@ __gr.gr_polyline3d.argtypes = [c_int, POINTER(c_double), POINTER(c_double),
 __gr.gr_axes3d.argtypes = [
     c_double, c_double, c_double, c_double, c_double, c_double, c_int, c_int, c_int,
     c_double]
+__gr.gr_grid3d.argtypes = [
+    c_double, c_double, c_double, c_double, c_double, c_double, c_int, c_int, c_int]
 __gr.gr_titles3d.argtypes = [c_char_p, c_char_p, c_char_p]
 __gr.gr_surface.argtypes = [c_int, c_int, POINTER(c_double), POINTER(c_double),
                             POINTER(c_double), c_int]
@@ -2312,6 +2377,7 @@ __gr.gr_beginprintext.argtypes = [c_char_p, c_char_p, c_char_p, c_char_p]
 __gr.gr_endprint.argtypes = []
 __gr.gr_ndctowc.argtypes = [POINTER(c_double), POINTER(c_double)]
 __gr.gr_wctondc.argtypes = [POINTER(c_double), POINTER(c_double)]
+__gr.gr_wc3towc.argtypes = [POINTER(c_double), POINTER(c_double), POINTER(c_double)]
 __gr.gr_drawrect.argtypes = [c_double, c_double, c_double, c_double]
 __gr.gr_fillrect.argtypes = [c_double, c_double, c_double, c_double]
 __gr.gr_drawarc.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int]

@@ -29,6 +29,7 @@ EXPORTS
 	gr_fillarea
         gr_getgraphics
 	gr_grid
+	gr_grid3d
 	gr_gridit
 	gr_herrorbars
         gr_hsvtorgb
@@ -94,4 +95,5 @@ EXPORTS
 	gr_updatews
 	gr_validaterange
 	gr_verrorbars
+	gr_wc3twco
 	gr_wctondc

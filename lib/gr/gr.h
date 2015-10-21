@@ -91,6 +91,8 @@ DLLEXPORT void gr_axeslbl(double, double, double, double, int, int, double,
                           void (*)(double, double, const char*, double),
                           void (*)(double, double, const char*, double));
 DLLEXPORT void gr_grid(double, double, double, double, int, int);
+DLLEXPORT void gr_grid3d(double, double, double, double, double, double,
+                         int, int, int);
 DLLEXPORT void gr_verrorbars(int, double *, double *, double *, double *);
 DLLEXPORT void gr_herrorbars(int, double *, double *, double *, double *);
 DLLEXPORT void gr_polyline3d(int, double *, double *, double *);
@@ -115,6 +117,7 @@ DLLEXPORT void gr_beginprintext(char *, char *, char *, char *);
 DLLEXPORT void gr_endprint(void);
 DLLEXPORT void gr_ndctowc(double *, double *);
 DLLEXPORT void gr_wctondc(double *, double *);
+DLLEXPORT void gr_wc3towc(double *, double *, double *);
 DLLEXPORT void gr_drawrect(double, double, double, double);
 DLLEXPORT void gr_fillrect(double, double, double, double);
 DLLEXPORT void gr_drawarc(double, double, double, double, int, int);

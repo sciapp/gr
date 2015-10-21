@@ -3163,6 +3163,281 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
       x_tick, y_tick, x_org, y_org, major_x, major_y);
 }
 
+static
+void grid_line3d(double x0, double y0, double z0,
+                 double x1, double y1, double z1, int color, int major)
+{
+  if (color != 0)
+    gks_set_pline_color_index(major ? 88 : 90);
+  else
+    gks_set_pline_linewidth(major ? 2.0 : 1.0);
+
+  start_pline3d(x0, y0, z0);
+  pline3d(x1, y1, z1);
+  end_pline();
+}
+
+void gr_grid3d(double x_tick, double y_tick, double z_tick,
+               double x_org, double y_org, double z_org,
+               int major_x, int major_y, int major_z)
+{
+  int errind, tnr;
+  int ltype, color, clsw, major;
+  double width;
+
+  double clrt[4], wn[4], vp[4];
+  double x_min, x_max, y_min, y_max, z_min, z_max;
+
+  double x0, y0, z0, xi, yi, zi;
+
+  int i;
+
+  if (x_tick < 0 || y_tick < 0 || z_tick < 0)
+    {
+      fprintf(stderr, "invalid interval length for major tick-marks\n");
+      return;
+    }
+
+  check_autoinit;
+
+  setscale(lx.scale_options);
+
+  /* inquire current normalization transformation */
+
+  gks_inq_current_xformno(&errind, &tnr);
+  gks_inq_xform(tnr, &errind, wn, vp);
+
+  x_min = wn[0];
+  x_max = wn[1];
+  y_min = wn[2];
+  y_max = wn[3];
+
+  z_min = wx.zmin;
+  z_max = wx.zmax;
+
+  /* save linetype, line width, line color and clipping indicator */
+
+  gks_inq_pline_linetype(&errind, &ltype);
+  gks_inq_pline_linewidth(&errind, &width);
+  gks_inq_pline_color_index(&errind, &color);
+  gks_inq_clip(&errind, &clsw, clrt);
+
+  gks_set_pline_linetype(GKS_K_LINETYPE_SOLID);
+  gks_set_clipping(GKS_K_NOCLIP);
+
+  if (z_tick != 0)
+    {
+      if (OPTION_Y_LOG & lx.scale_options)
+        {
+          z0 = pow(10.0, gauss(log10(z_min)));
+
+          i = ipred(z_min / z0);
+          zi = z0 + i * z0;
+
+          /* draw horizontal grid lines */
+
+          while (zi <= z_max)
+            {
+              if (i == 0 || major_z == 1)
+                {
+                  major = i == 0;
+                  if (fabs(zi - z_min) > FEPS * zi)
+                    {
+                      grid_line3d(x_min, y_min, zi, x_min, y_max, zi,
+                                  color, major);
+                      grid_line3d(x_min, y_max, zi, x_max, y_max, zi,
+                                  color, major);
+                    }
+                }
+
+              if (i == 9)
+                {
+                  z0 = z0 * 10.;
+                  i = 0;
+                }
+              else
+                i++;
+
+              zi = z0 + i * z0;
+            }
+        }
+      else
+        {
+          check_tick_marks(z_min, z_max, z_tick, 'Z')
+
+          i = isucc(z_min / z_tick);
+          zi = i * z_tick;
+
+          /* draw horizontal grid lines */
+
+          while (zi <= z_max)
+            {
+              if (major_z > 0)
+                major = i % major_z == 0;
+              else
+                major = 0;
+
+              if (fabs(zi - z_min) > FEPS * zi)
+                {
+                  grid_line3d(x_min, y_min, zi, x_min, y_max, zi,
+                              color, major);
+                  grid_line3d(x_min, y_max, zi, x_max, y_max, zi,
+                              color, major);
+                }
+
+              i++;
+              zi = i * z_tick;
+            }
+        }
+    }
+
+  if (y_tick != 0)
+    {
+      if (OPTION_Y_LOG & lx.scale_options)
+        {
+          y0 = pow(10.0, gauss(log10(y_min)));
+
+          i = ipred(y_min / y0);
+          yi = y0 + i * y0;
+
+          /* draw horizontal grid lines */
+
+          while (yi <= y_max)
+            {
+              if (i == 0 || major_y == 1)
+                {
+                  major = i == 0;
+                  if (fabs(yi - y_min) > FEPS * yi)
+                    {
+                      grid_line3d(x_min, yi, z_min, x_max, yi, z_min,
+                                  color, major);
+                      grid_line3d(x_min, yi, z_min, x_min, yi, z_max,
+                                  color, major);
+                    }
+                }
+
+              if (i == 9)
+                {
+                  y0 = y0 * 10.;
+                  i = 0;
+                }
+              else
+                i++;
+
+              yi = y0 + i * y0;
+            }
+        }
+      else
+        {
+          check_tick_marks(y_min, y_max, y_tick, 'Y')
+
+          i = isucc(y_min / y_tick);
+          yi = i * y_tick;
+
+          /* draw horizontal grid lines */
+
+          while (yi <= y_max)
+            {
+              if (major_y > 0)
+                major = i % major_y == 0;
+              else
+                major = 0;
+
+              if (fabs(yi - y_min) > FEPS * yi)
+                {
+                  grid_line3d(x_min, yi, z_min, x_max, yi, z_min,
+                              color, major);
+                  grid_line3d(x_min, yi, z_min, x_min, yi, z_max,
+                              color, major);
+                }
+
+              i++;
+              yi = i * y_tick;
+            }
+        }
+    }
+
+  if (x_tick != 0)
+    {
+      if (OPTION_X_LOG & lx.scale_options)
+        {
+          x0 = pow(10.0, gauss(log10(x_min)));
+
+          i = ipred(x_min / x0);
+          xi = x0 + i * x0;
+
+          /* draw vertical grid lines */
+
+          while (xi <= x_max)
+            {
+              if (i == 0 || major_x == 1)
+                {
+                  major = i == 0;
+                  if (fabs(xi - x_min) > FEPS * xi)
+                    {
+                      grid_line3d(xi, y_min, z_min, xi, y_max, z_min,
+                                  color, major);
+                      grid_line3d(xi, y_max, z_min, xi, y_max, z_max,
+                                  color, major);
+                    }
+                }
+
+              if (i == 9)
+                {
+                  x0 = x0 * 10.;
+                  i = 0;
+                }
+              else
+                i++;
+
+              xi = x0 + i * x0;
+            }
+        }
+      else
+        {
+          check_tick_marks(x_min, x_max, x_tick, 'X')
+
+          i = isucc(x_min / x_tick);
+          xi = i * x_tick;
+
+          /* draw vertical grid lines */
+
+          while (xi <= x_max)
+            {
+              if (major_x > 0)
+                major = i % major_x == 0;
+              else
+                major = 0;
+
+              if (fabs(xi - x_min) > FEPS * xi)
+                {
+                      grid_line3d(xi, y_min, z_min, xi, y_max, z_min,
+                                  color, major);
+                      grid_line3d(xi, y_max, z_min, xi, y_max, z_max,
+                                  color, major);
+                }
+
+              i++;
+              xi = i * x_tick;
+            }
+        }
+    }
+
+  /* restore linetype, line width, line color and clipping indicator */
+
+  gks_set_pline_linetype(ltype);
+  gks_set_pline_linewidth(width);
+  gks_set_pline_color_index(color);
+  gks_set_clipping(clsw);
+
+  if (flag_graphics)
+    gr_writestream(
+      "<grid3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
+      "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
+      "majorx=\"%d\" majory=\"%d\" majorz=\"%d\"/>\n",
+      x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z);
+}
+
 void gr_verrorbars(int n, double *px, double *py, double *e1, double *e2)
 {
   int errind, i;
@@ -5549,6 +5824,13 @@ void gr_wctondc(double *x, double *y)
 
   *x = nx.a * x_lin(*x) + nx.b;
   *y = nx.c * y_lin(*y) + nx.d;
+}
+
+void gr_wc3towc(double *x, double *y, double *z)
+{
+  check_autoinit;
+
+  apply_world_xform(x, y, z);
 }
 
 void gr_drawrect(double xmin, double xmax, double ymin, double ymax)

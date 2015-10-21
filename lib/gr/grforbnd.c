@@ -357,6 +357,15 @@ void FORTRAN(gr_grid)(
   gr_grid(*x_tick, *y_tick, *x_org, *y_org, *major_x, *major_y);
 }
 
+void FORTRAN(gr_grid3d)(
+  double *x_tick, double *y_tick, double *z_tick,
+  double *x_org, double *y_org, double *z_org,
+  int *major_x, int *major_y, int *major_z)
+{
+  gr_grid3d(*x_tick, *y_tick, *z_tick, *x_org, *y_org, *z_org,
+            *major_x, *major_y, *major_z);
+}
+
 void FORTRAN(gr_verrorbars)(int *n, double *px, double *py, double *e1, double *e2)
 {
   gr_verrorbars(*n, px, py, e1, e2);
@@ -496,6 +505,11 @@ void FORTRAN(gr_ndctowc)(double *x, double *y)
 void FORTRAN(gr_wctondc)(double *x, double *y)
 {
   gr_wctondc(x, y);
+}
+
+void FORTRAN(gr_wc3towc)(double *x, double *y, double *z)
+{
+  gr_wc3towc(x, y, z);
 }
 
 void FORTRAN(gr_drawrect)(double *xmin, double *xmax, double *ymin, double *ymax)
