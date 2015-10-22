@@ -1541,6 +1541,21 @@ except IOError as e:
           e, file=sys.stderr)
 
 
+classifiers = [
+    'Framework :: IPython',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: POSIX :: Linux',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 2',
+    'Programming Language :: Python :: 3',
+    'Topic :: Multimedia :: Graphics',
+    'Topic :: Scientific/Engineering :: Visualization',
+    ]
+
+
 setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
                 "build_static": build_static, "build_py": build_py,
                 "clean_static": clean_static, "clean": clean,
@@ -1551,7 +1566,8 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       long_description=_long_description,
       author="Scientific IT Systems",
       author_email="j.heinen@fz-juelich.de",
-      license="GNU General Public License",
+      maintainer="Josef Heinen",
+      license="MIT License",
       url="http://gr-framework.org",
       package_dir={'': "lib/gr/python",
                    "gr3": "lib/gr3/python/gr3",
@@ -1560,6 +1576,7 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       requires=["numpy"],
       packages=["gr", "gr.pygr", "gr.matplotlib", "gr3",
                 "qtgr", "qtgr.events"],
+      platforms=["Linux", "OS X", "Windows"],
       # ext_modules dummy entry
       # check_ext dynamically generates a list of Extensions
       ext_modules=[Extension("", [""])],
@@ -1567,4 +1584,5 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
           "gr": ["fonts/*.afm", "fonts/*.pfb", "fonts/gksfont.dat"],
       },
       include_package_data=True,
+      classifiers=classifiers,
      )
