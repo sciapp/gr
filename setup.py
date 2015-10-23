@@ -324,12 +324,37 @@ class check_ext(Command, build_static):
         # -- platform extra link args -------------------------------------
         self.platform_ldflags = []
 
+
+    def _test_c_compile(self, src, inc=[], lib=[], libs=[], cflags=[],
+                        ldflags=[], caller=None):
+        cflags.extend("-I" + i for i in inc)
+        ldflags.extend("-L" + ld for ld in lib)
+        ldflags.extend("-l" + lib for lib in libs)
+        fd, tmpsrc = tempfile.mkstemp(suffix=".c", prefix="a")
+        _, tmpout = tempfile.mkstemp(suffix=".out", prefix="a")
+        os.write(fd, src)
+        os.close(fd)
+        cmd = [self.cc, "-o", tmpout, tmpsrc]
+        cmd.extend(cflags)
+        cmd.extend(ldflags)
+        cc = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+        out, err = cc.communicate()
+        try:
+            os.remove(tmpsrc)
+            os.remove(tmpout)
+        except OSError:
+            pass
+        # report if verbose (default) and compilation failed
+        if self.verbose and cc.returncode != 0:
+            print("Test: ", caller.__name__ if caller else "[unknown]")
+            print(' '.join(cmd))
+            print(out)
+            print()
+        return cc.returncode == 0
+
     def _test_gs(self, gsinc=[], gslibs=[], gscflags=[], gsldflags=[]):
-        cflags = ["-I" + i for i in gsinc]
-        ldflags = ["-l" + l for l in gslibs]
-        (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
-        (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, b"""#include <stdio.h>
+        return self._test_c_compile(b"""
+#include <stdio.h>
 #include <stdlib.h>
 #include <ghostscript/iapi.h>
 
@@ -341,29 +366,14 @@ int main()
   exit(0);
 }
 
-""")
-        os.close(fd)
-        cmd = [self.cc, "-o", tmpout, tmpsrc]
-        cmd.extend(cflags)
-        cmd.extend(gscflags)
-        cmd.extend(ldflags)
-        cmd.extend(gsldflags)
-        gscc = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        gscc.communicate()
-        try:
-            os.remove(tmpsrc)
-            os.remove(tmpout)
-        except OSError:
-            pass
-        return gscc.returncode == 0
+""",
+            gsinc, [], gslibs, gscflags, gsldflags, self._test_gs
+        )
 
     def _test_mupdf(self, mupdfinc=[], mupdflibs=[], mupdfcflags=[],
                     mupdfldflags=[]):
-        cflags = ["-I" + i for i in mupdfinc]
-        ldflags = ["-l" + l for l in mupdflibs]
-        (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
-        (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, b"""#include <mupdf/fitz.h>
+        return self._test_c_compile(b"""
+#include <mupdf/fitz.h>
 
 int main(int argc, char **argv)
 {
@@ -392,29 +402,12 @@ int main(int argc, char **argv)
   return 0;
 }
 
-""")
-        os.close(fd)
-        cmd = [self.cc, "-o", tmpout, tmpsrc]
-        cmd.extend(cflags)
-        cmd.extend(mupdfcflags)
-        cmd.extend(ldflags)
-        cmd.extend(mupdfldflags)
-        gscc = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        gscc.communicate()
-        try:
-            os.remove(tmpsrc)
-            os.remove(tmpout)
-        except OSError:
-            pass
-        return gscc.returncode == 0
+""", mupdfinc, [], mupdflibs, mupdfcflags, mupdfldflags, self._test_mupdf)
 
     def _test_mov(self, mupdfinc=[], mupdflibs=[], mupdfcflags=[],
                   mupdfldflags=[]):
-        cflags = ["-I" + i for i in mupdfinc]
-        ldflags = ["-l" + l for l in mupdflibs]
-        (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
-        (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, b"""#include <stdio.h>
+        return self._test_c_compile(b"""
+#include <stdio.h>
 #include <stdlib.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -428,28 +421,11 @@ int main()
   exit(0);
 }
 
-""")
-        os.close(fd)
-        cmd = [self.cc, "-o", tmpout, tmpsrc]
-        cmd.extend(cflags)
-        cmd.extend(mupdfcflags)
-        cmd.extend(ldflags)
-        cmd.extend(mupdfldflags)
-        gscc = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        gscc.communicate()
-        try:
-            os.remove(tmpsrc)
-            os.remove(tmpout)
-        except OSError:
-            pass
-        return gscc.returncode == 0
+""", mupdfinc, [], mupdflibs, mupdfcflags, mupdfldflags, self._test_mupdf)
 
     def _test_opengl(self, glinc=[], gllibs=[], glcflags=[], glldflags=[]):
-        cflags = ["-I" + i for i in glinc]
-        ldflags = ["-l" + l for l in gllibs]
-        (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
-        (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, b"""#include <stdio.h>
+        return self._test_c_compile(b"""
+#include <stdio.h>
 #include <stdlib.h>
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -462,31 +438,12 @@ int main()
   exit(0);
 }
 
-""")
-        os.close(fd)
-        cmd = [self.cc, "-o", tmpout, tmpsrc]
-        cmd.extend(cflags)
-        cmd.extend(glcflags)
-        cmd.extend(ldflags)
-        cmd.extend(glldflags)
-        gscc = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        gscc.communicate()
-        try:
-            os.remove(tmpsrc)
-            os.remove(tmpout)
-        except OSError:
-            pass
-        return gscc.returncode == 0
+""", glinc, [], gllibs, glcflags, glldflags, self._test_opengl)
 
     def _test_xft(self, xftinc=[], xftlib=[], xftlibs=[], xftcflags=[],
                   xftldflags=[]):
-        cflags = ["-I" + i for i in xftinc]
-        ldflags = ["-L" + ld for ld in xftlib]
-        ld = ["-l" + l for l in xftlibs]
-        ldflags.extend(ld)
-        (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
-        (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, b"""#include <stdio.h>
+        return self._test_c_compile(b"""
+#include <stdio.h>
 #include <stdlib.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -500,31 +457,12 @@ int main()
   exit(0);
 }
 
-""")
-        os.close(fd)
-        cmd = [self.cc, "-o", tmpout, tmpsrc]
-        cmd.extend(cflags)
-        cmd.extend(xftcflags)
-        cmd.extend(ldflags)
-        cmd.extend(xftldflags)
-        gscc = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        gscc.communicate()
-        try:
-            os.remove(tmpsrc)
-            os.remove(tmpout)
-        except OSError:
-            pass
-        return gscc.returncode == 0
+""", xftinc, xftlib, xftlibs, xftcflags, xftldflags, self._test_xft)
 
     def _test_xt(self, xtinc=[], xtlib=[], xtlibs=[], xtcflags=[],
                  xtldflags=[]):
-        cflags = ["-I" + i for i in xtinc]
-        ldflags = ["-L" + ld for ld in xtlib]
-        ld = ["-l" + l for l in xtlibs]
-        ldflags.extend(ld)
-        (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
-        (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, b"""#include <stdio.h>
+        return self._test_c_compile(b"""
+#include <stdio.h>
 #include <stdlib.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -538,28 +476,11 @@ int main()
   exit(0);
 }
 
-""")
-        os.close(fd)
-        cmd = [self.cc, "-o", tmpout, tmpsrc]
-        cmd.extend(cflags)
-        cmd.extend(xtcflags)
-        cmd.extend(ldflags)
-        cmd.extend(xtldflags)
-        gscc = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        gscc.communicate()
-        try:
-            os.remove(tmpsrc)
-            os.remove(tmpout)
-        except OSError:
-            pass
-        return gscc.returncode == 0
+""", xtinc, xtlib, xtlibs, xtcflags, xtldflags, self._test_xt)
 
     def _test_freetype(self, ftinc=[], ftlibs=[], ftcflags=[], ftldflags=[]):
-        cflags = ["-I" + i for i in ftinc]
-        ldflags = ["-l" + l for l in ftlibs]
-        (fd, tmpsrc) = tempfile.mkstemp(suffix=".c", prefix="a")
-        (_fd2, tmpout) = tempfile.mkstemp(suffix=".out", prefix="a")
-        os.write(fd, b"""#include <stdio.h>
+        return self._test_c_compile(b"""
+#include <stdio.h>
 #include <stdlib.h>
 
 #include <ft2build.h>
@@ -569,21 +490,7 @@ int main()
   exit(0);
 }
 
-""")
-        os.close(fd)
-        cmd = [self.cc, "-o", tmpout, tmpsrc]
-        cmd.extend(cflags)
-        cmd.extend(ftcflags)
-        cmd.extend(ldflags)
-        cmd.extend(ftldflags)
-        gscc = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        gscc.communicate()
-        try:
-            os.remove(tmpsrc)
-            os.remove(tmpout)
-        except OSError:
-            pass
-        return gscc.returncode == 0
+""", ftinc, [], ftlibs, ftcflags, ftldflags, self._test_freetype)
 
     def _finalize_LinuxOrDarwinPost(self):
         pass
