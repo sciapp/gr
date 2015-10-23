@@ -6,7 +6,7 @@ case $1 in
     ;;
   in)
     version=`cat version.txt | awk -F- '{print $1}' | sed 's/^v//'` || exit 1
-    md5=`md5 -q dist/gr-${version}.tar.gz` || exit 1
+    md5=`python recipe/md5sum.py dist/gr-${version}.tar.gz` || exit 1
     cat recipe/meta.yaml.$1 | sed "s/VERSION/${version}/g" | sed "s/MD5/${md5}/" >recipe/meta.yaml
     ;;
 esac
