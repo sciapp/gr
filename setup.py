@@ -225,6 +225,7 @@ class check_ext(Command, build_static):
                     ('disable-xt', None,
                      "Disable Xt libraries (disables also x11 and freetype)"),
                     ('disable-mupdf', None, "Disable mupdf libraries"),
+                    ('qmake=', None, "Qt4 qmake executable"),
                    ] + build_static.user_options
 
     def initialize_options(self):
@@ -292,21 +293,17 @@ class check_ext(Command, build_static):
         self.wxldflags = []
         self.wxcxx = []
         # -- qt -------------------------------------
-        if not self.isWin32:
-            self.qtdir = os.getenv("QTDIR", "/usr/local")
-        else:
-            self.qtdir = os.getenv("QTDIR", "")
+        self.qtdir = os.getenv("QTDIR", "")
         self.qtinc = [os.path.join(self.qtdir, "include")]
         self.qtlib = [os.path.join(self.qtdir, "lib")]
         self.qtlibs = []
         self.qtldflags = []
-        self.qmake = ""
         self.qtversion = None
-        qmake = os.path.join(self.qtdir, "bin", "qmake")
+        self.qmake = os.path.join(self.qtdir, "bin", "qmake")
         if self.isWin32:
-            qmake += ".exe"
-        if os.path.isfile(qmake):
-            self.qmake = qmake
+            self.qmake += ".exe"
+        if not os.path.isfile(self.qmake):
+            self.qmake = ""
         # -- freetype -------------------------------------
         self.ftconfig = None
         self.ftldflags = []
@@ -513,8 +510,8 @@ int main()
                 self.wxcxx = get_words(self.wxconfig, "--cxxflags")
         # -- qt -------------------------------------
         if not self.disable_qt:
-            if not self.qmake:
-                self.qmake = get_output("which", "qmake")
+            if self.qmake:
+                self.qmake = get_output("which", self.qmake)
             if os.path.isdir("/usr/local/Cellar"):
                 self.qtlibs = []
             else:
