@@ -124,27 +124,28 @@ class build_static(Command):
                 _extra_preargs = ["-fPIC"]
             if not os.path.isdir("build"):
                 os.mkdir("build")
-            if not os.path.isdir(_build_3rdparty):
-                os.mkdir(_build_3rdparty)
+            if not os.path.isdir(_build_3rdparty_lib):
+                os.makedirs(_build_3rdparty_lib)
             if not os.path.isdir(_build_temp):
                 os.mkdir(_build_temp)
             compiler = new_compiler()
             if not os.path.isfile(_libz):
                 obj = compiler.compile(_libz_src_path,
                                        extra_preargs=_extra_preargs)
-                compiler.create_static_lib(obj, "z", output_dir=_build_3rdparty)
+                compiler.create_static_lib(obj, "z",
+                                           output_dir=_build_3rdparty_lib)
             if not os.path.isfile(_libpng):
                 _png_extra_preargs = list(_extra_preargs)
                 _png_extra_preargs.append("-I3rdparty/zlib")
                 obj = compiler.compile(_libpng_src_path,
                                        extra_preargs=_png_extra_preargs)
                 compiler.create_static_lib(obj, "png",
-                                           output_dir=_build_3rdparty)
+                                           output_dir=_build_3rdparty_lib)
             if not os.path.isfile(_libjpeg):
                 obj = compiler.compile(_libjpeg_src_path,
                                        extra_preargs=_extra_preargs)
                 compiler.create_static_lib(obj, "jpeg",
-                                           output_dir=_build_3rdparty)
+                                           output_dir=_build_3rdparty_lib)
             if self.static_extras:
                 if os.system("make -C 3rdparty extras DIR=" +
                              os.path.realpath(_build_3rdparty)):
@@ -569,7 +570,7 @@ int main()
             else:
                 self.ftcflags = ["-I" + os.path.join("3rdparty", "freetype",
                                                      "include")]
-                self.ftldflags = [os.path.join(_build_3rdparty, "lib",
+                self.ftldflags = [os.path.join(_build_3rdparty_lib,
                                                "libfreetype.a")]
             self.disable_freetype = (
                              not self._test_freetype(ftcflags=self.ftcflags,
@@ -623,8 +624,7 @@ int main()
             else:
                 mupdflibs = ["mupdf", "freetype", "jbig2dec", "jpeg",
                              "openjp2", "z"]
-                _libs_3rdparty = os.path.join(_build_3rdparty, "lib")
-                self.mupdfldflags = [os.path.join(_libs_3rdparty,
+                self.mupdfldflags = [os.path.join(_build_3rdparty_lib,
                                                   "lib" + name + ".a")
                                      for name in mupdflibs]
                 self.mupdfldflags.append("-lm")
@@ -933,7 +933,7 @@ int main()
             inc = list(gksinc)
             inc.extend(pnginc)
             inc.extend(zinc)
-            lib = [_build_3rdparty]
+            lib = [_build_3rdparty_lib]
             libs = ["png", "z"]
             ldflags = []
             cflags = []
@@ -956,7 +956,7 @@ int main()
             inc = list(gksinc)
             inc.extend(pnginc)
             inc.extend(zinc)
-            lib = [_build_3rdparty]
+            lib = [_build_3rdparty_lib]
             libs = ["png", "z"]
             ldflags = []
             cflags = []
@@ -979,7 +979,7 @@ int main()
             inc = list(gksinc)
             inc.extend(pnginc)
             inc.extend(zinc)
-            lib = [_build_3rdparty]
+            lib = [_build_3rdparty_lib]
             libs = ["png", "z"]
             ldflags = []
             cflags = []
@@ -1002,7 +1002,7 @@ int main()
             inc = list(gksinc)
             inc.extend(pnginc)
             inc.extend(zinc)
-            lib = [_build_3rdparty]
+            lib = [_build_3rdparty_lib]
             libs = ["png", "z"]
             ldflags = []
             cflags = []
@@ -1052,8 +1052,7 @@ int main()
             if not self.static_extras:
                 libs.extend(ffmpeglibs)
             else:
-                _libs_3rdparty = os.path.join(_build_3rdparty, "lib")
-                libs.extend([os.path.join(_libs_3rdparty,
+                libs.extend([os.path.join(_build_3rdparty_lib,
                                           "lib" + name + ".a")
                              for name in ffmpeglibs])
             libs.append("pthread")
@@ -1167,7 +1166,7 @@ int main()
         inc.extend(self.x11inc) # at least because this includes wrong png.h
         lib = list(self.x11lib)
         lib.append(_build_lib_grpkg)
-        lib.append(_build_3rdparty)
+        lib.append(_build_3rdparty_lib)
         if self.isLinuxOrDarwin:
             libs = ["GKS"]
         else:
@@ -1348,14 +1347,15 @@ _uPlatformId = "%s-%d.%d" % (get_platform(), sys.version_info[0],
 _build_lib = os.path.join("build", "lib." + _uPlatformId)
 _build_lib_grpkg = os.path.join(_build_lib, "gr")
 _build_3rdparty = os.path.join("build", "3rdparty." + _uPlatformId)
+_build_3rdparty_lib = os.path.join(_build_3rdparty, "lib")
 _build_temp = os.path.join("build", "temp." + _uPlatformId)
 
 # prerequisites: static 3rdparty libraries
 if sys.platform == "win32":
     # if linking against png, jpeg and zlib use this ordering!
-    _libpng = os.path.join(_build_3rdparty, "png.lib")
-    _libjpeg = os.path.join(_build_3rdparty, "jpeg.lib")
-    _libz = os.path.join(_build_3rdparty, "z.lib")
+    _libpng = os.path.join(_build_3rdparty_lib, "png.lib")
+    _libjpeg = os.path.join(_build_3rdparty_lib, "jpeg.lib")
+    _libz = os.path.join(_build_3rdparty_lib, "z.lib")
 
     _libs_msvc = ["msvcrt", "oldnames", "kernel32", "wsock32", "advapi32",
                   "user32", "gdi32", "comdlg32", "winspool"]
@@ -1363,9 +1363,9 @@ if sys.platform == "win32":
     _msvc_extra_compile_args = ["/Zi", "/D_DLL", "/D_POSIX", "/nologo"]
     _msvc_extra_link_args = ["/nodefaultlib", "-dll"]
 else:
-    _libz = os.path.join(_build_3rdparty, "libz.a")
-    _libpng = os.path.join(_build_3rdparty, "libpng.a")
-    _libjpeg = os.path.join(_build_3rdparty, "libjpeg.a")
+    _libz = os.path.join(_build_3rdparty_lib, "libz.a")
+    _libpng = os.path.join(_build_3rdparty_lib, "libpng.a")
+    _libjpeg = os.path.join(_build_3rdparty_lib, "libjpeg.a")
 
     _libs_msvc = []
     _msvc_extra_compile_args = []
