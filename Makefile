@@ -70,13 +70,13 @@ testpypi: clean
 conda: condaclean
 	@recipe/Build in || \
 	( echo "FATAL: Error building conda recipe"; exit 1 )
-	( source /usr/local/anaconda/bin/activate root && \
+	( source $(HOME)/anaconda/bin/activate root && \
 	conda build --no-binstar-upload recipe )
 
 testconda: condaclean
 	@recipe/Build test || \
 	( echo "FATAL: Error building conda recipe"; exit 1 )
-	( source /usr/local/anaconda/bin/activate root && \
+	( source $(HOME)/anaconda/bin/activate root && \
 	conda build --no-binstar-upload recipe )
 
 osxpkg:
