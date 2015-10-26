@@ -940,6 +940,19 @@ void create_patterns(void)
 }
 
 static
+void init_context(void)
+{
+  p->stroke = 0;
+  p->lastx = p->lasty = -1;
+
+  p->color = p->fillcolor = -1;
+  p->alpha = 0xff;
+  p->ltype = -999; p->lwidth = -1.0;
+  p->font = 1; p->size = 24; p->angle = 0;
+  p->pt = nint(p->size / capheights[0]);
+}
+
+static
 void open_ws(int fd, int wstype)
 {
   p = (ws_state_list *) calloc(1, sizeof(struct ws_state_list_t));
@@ -954,14 +967,7 @@ void open_ws(int fd, int wstype)
 
   p->empty = 1;
 
-  p->stroke = 0;
-  p->lastx = p->lasty = -1;
-
-  p->color = p->fillcolor = -1;
-  p->alpha = 0xff;
-  p->ltype = -999; p->lwidth = -1.0;
-  p->font = 1; p->size = 24; p->angle = 0;
-  p->pt = nint(p->size / capheights[0]);
+  init_context();
 
   set_xform();
 
@@ -1021,6 +1027,7 @@ void set_transparency(int alpha)
 static
 void begin_page(void)
 {
+  init_context();
   pdf_page(p, p->width, p->height);
   set_clip(p->window);
   p->empty = 0;
