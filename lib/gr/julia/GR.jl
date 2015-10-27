@@ -1182,5 +1182,25 @@ function inqregenflags()
   return flags
 end
 
+function savestate()
+  ccall( (:gr_savestate, libGR),
+        Void,
+        ()
+        )
+end
+
+function restorestate()
+  ccall( (:gr_restorestate, libGR),
+        Void,
+        ()
+        )
+end
+
+function uselinespec(linespec)
+  ccall( (:gr_uselinespec, libGR),
+        Void,
+        (Ptr{Cchar}, ),
+        linespec)
+end
 
 end # module

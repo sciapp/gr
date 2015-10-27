@@ -2252,6 +2252,17 @@ def inqregenflags():
     return __gr.gr_inqregenflags()
 
 
+def savestate():
+    __gr.gr_savestate()
+
+
+def restorestate():
+    __gr.gr_restorestate()
+
+
+def uselinespec(linespec):
+    __gr.gr_uselinespec(char(linespec))
+
 
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
 _grLibDir = os.getenv("GRLIB", _grPkgDir)
@@ -2412,6 +2423,10 @@ __gr.gr_precision.restype = c_double
 __gr.gr_setregenflags.argtypes = [c_int]
 __gr.gr_inqregenflags.argtypes = []
 __gr.gr_inqregenflags.restype = c_int
+__gr.gr_savestate.argtypes = []
+__gr.gr_restorestate.argtypes = []
+__gr.gr_uselinespec.argtypes = [c_char_p]
+
 
 precision = __gr.gr_precision()
 

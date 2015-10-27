@@ -145,6 +145,9 @@ DLLEXPORT void gr_inqbbox(double *, double *, double *, double *);
 DLLEXPORT double gr_precision(void);
 DLLEXPORT void gr_setregenflags(int);
 DLLEXPORT int gr_inqregenflags(void);
+DLLEXPORT void gr_savestate(void);
+DLLEXPORT void gr_restorestate(void);
+DLLEXPORT void gr_uselinespec(char *);
 
 #ifdef _WIN32
 #ifdef __cplusplus

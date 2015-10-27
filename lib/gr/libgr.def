@@ -55,6 +55,8 @@ EXPORTS
 	gr_readimage
 	gr_redrawsegws
 	gr_resizeselection
+	gr_restorestate
+	gr_savestate
 	gr_selntran
 	gr_setarrowstyle
 	gr_setcharexpan
@@ -93,6 +95,7 @@ EXPORTS
 	gr_titles3d
 	gr_updategks
 	gr_updatews
+	gr_uselinespec
 	gr_validaterange
 	gr_verrorbars
 	gr_wc3twco

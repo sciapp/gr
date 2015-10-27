@@ -79,6 +79,29 @@ typedef struct
 }
 hlr_t;
 
+typedef struct
+{
+  int ltype;
+  double lwidth;
+  int plcoli;
+  int mtype;
+  double mszsc;
+  int pmcoli;
+  int txfont, txprec;
+  double chxp;
+  double chsp;
+  int txcoli;
+  double chh;
+  double chup[2];
+  int txp;
+  int txal[2];
+  int ints;
+  int styli;
+  int facoli;
+  int scale_options;
+}
+state_list;
+
 static
 norm_xform nx = { 1, 0, 1, 0 };
 
@@ -92,7 +115,15 @@ static
 hlr_t hlr = { 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, NULL, NULL, NULL };
 
 static
-int autoinit = 1, double_buf = 0;
+state_list s = {
+  GKS_K_LINETYPE_SOLID, 1.0, 1, GKS_K_MARKERTYPE_ASTERISK, 2.0, 1,
+  1, GKS_K_TEXT_PRECISION_STRING, 1.0, 0.0, 1, 0.027, {0, 1},
+  GKS_K_TEXT_PATH_RIGHT, {GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BASE},
+  GKS_K_INTSTYLE_HOLLOW, 1, 1, 0
+};
+
+static
+int autoinit = 1, double_buf = 0, state_saved = 0;
 
 static
 char *display = NULL;
@@ -6472,4 +6503,125 @@ int gr_inqregenflags(void)
   check_autoinit;
 
   return regeneration_flags;
+}
+
+void gr_savestate(void)
+{
+  int errind;
+
+  check_autoinit;
+
+  if (!state_saved)
+    {
+      gks_inq_pline_linetype(&errind, &s.ltype);
+      gks_inq_pline_linewidth(&errind, &s.lwidth);
+      gks_inq_pline_color_index(&errind, &s.plcoli);
+      gks_inq_pmark_type(&errind, &s.mtype);
+      gks_inq_pmark_size(&errind, &s.mszsc);
+      gks_inq_pmark_color_index(&errind, &s.pmcoli);
+      gks_inq_text_fontprec(&errind, &s.txfont, &s.txprec);
+      gks_inq_text_expfac(&errind, &s.chxp);
+      gks_inq_text_spacing(&errind, &s.chsp);
+      gks_inq_text_color_index(&errind, &s.txcoli);
+      gks_inq_text_height(&errind, &s.chh);
+      gks_inq_text_upvec(&errind, &s.chup[0], &s.chup[1]);
+      gks_inq_text_path(&errind, &s.txp);
+      gks_inq_text_align(&errind, &s.txal[0], &s.txal[1]);
+      gks_inq_fill_int_style(&errind, &s.ints);
+      gks_inq_fill_style_index(&errind, &s.styli);
+      gks_inq_fill_color_index(&errind, &s.facoli);
+
+      s.scale_options = lx.scale_options;
+
+      state_saved = !state_saved;
+    }
+  else
+    fprintf(stderr, "attempt to save state twice\n");
+}
+
+void gr_restorestate(void)
+{
+  check_autoinit;
+
+  if (state_saved)
+    {
+      gks_set_pline_linetype(s.ltype);
+      gks_set_pline_linewidth(s.lwidth);
+      gks_set_pline_color_index(s.plcoli);
+      gks_set_pmark_type(s.mtype);
+      gks_set_pmark_size(s.mszsc);
+      gks_set_pmark_color_index(s.pmcoli);
+      gks_set_text_fontprec(s.txfont, s.txprec);
+      gks_set_text_expfac(s.chxp);
+      gks_set_text_spacing(s.chsp);
+      gks_set_text_color_index(s.txcoli);
+      gks_set_text_height(s.chh);
+      gks_set_text_upvec(s.chup[0], s.chup[1]);
+      gks_set_text_path(s.txp);
+      gks_set_text_align(s.txal[0], s.txal[1]);
+      gks_set_fill_int_style(s.ints);
+      gks_set_fill_style_index(s.styli);
+      gks_set_fill_color_index(s.facoli);
+
+      setscale(s.scale_options);
+
+      state_saved = !state_saved;
+    }
+  else
+    fprintf(stderr, "attempt to restore unsaved state\n");
+}
+
+void gr_uselinespec(char *linespec)
+{
+  char *spec = linespec, lastspec = ' ';
+  int color = -1;
+
+  while (*spec)
+    {
+      switch (*spec)
+        {
+          case '-':
+            if (lastspec == '-')
+              gr_setlinetype(GKS_K_LINETYPE_DASHED);
+            else
+              gr_setlinetype(GKS_K_LINETYPE_SOLID);
+            break;
+          case ':': gr_setlinetype(GKS_K_LINETYPE_DOTTED); break;
+          case '.':
+            if (lastspec == '-')
+              gr_setlinetype(GKS_K_LINETYPE_DASHED_DOTTED);
+            else
+              gr_setmarkertype(GKS_K_MARKERTYPE_DOT);
+            break;
+
+          case '+': gr_setmarkertype(GKS_K_MARKERTYPE_PLUS); break;
+          case 'o': gr_setmarkertype(GKS_K_MARKERTYPE_CIRCLE); break;
+          case '*': gr_setmarkertype(GKS_K_MARKERTYPE_ASTERISK); break;
+          case 'x': gr_setmarkertype(GKS_K_MARKERTYPE_DIAGONAL_CROSS); break;
+          case 's': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_SQUARE); break;
+          case 'd': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_DIAMOND); break;
+          case '^': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_TRI_UP); break;
+          case 'v': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_TRI_DOWN); break;
+          case '>': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_TRI_RIGHT); break;
+          case '<': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_TRI_LEFT); break;
+          case 'p': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_STAR); break;
+          case 'h': gr_setmarkertype(GKS_K_MARKERTYPE_TRI_UP_DOWN); break;
+
+          case 'r': color = 2; break;
+          case 'g': color = 3; break;
+          case 'b': color = 4; break;
+          case 'c': color = 5; break;
+          case 'm': color = 7; break;
+          case 'y': color = 6; break;
+          case 'k': color = 1; break;
+          case 'w': color = 0; break;
+        }
+      lastspec = *spec++;
+    }
+
+  if (color >= 0)
+    {
+      gr_setlinecolorind(color);
+      gr_setmarkercolorind(color);
+    }
 }
