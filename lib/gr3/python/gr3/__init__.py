@@ -27,7 +27,9 @@ __all__ = ['GR3_InitAttribute',
            'drawcubemesh',
            'setbackgroundcolor',
            'triangulate',
-           'createisosurfacemesh']
+           'createisosurfacemesh',
+           'drawtubemesh',
+           'createtubemesh']
 
 
 import sys
@@ -478,6 +480,8 @@ def deletemesh(mesh):
         `mesh` : The mesh that should be marked for deletion
 
     """
+    if hasattr(mesh, 'value'):
+        mesh = mesh.value
     _gr3.gr3_deletemesh(mesh)
 
 def clear():
@@ -737,6 +741,64 @@ def createsurfacemesh(nx, ny, px, py, pz, option=0):
         raise GR3_Exception(err)
     return _mesh
 
+
+def drawtubemesh(n, points, colors, radii, num_steps=10, num_segments=20):
+    """
+    Draw a tube following a path given by a list of points. The colors and
+    radii arrays specify the color and radius at each point.
+
+    **Parameters:**
+
+        `n` :            the number of points given
+
+        `points` :       the points the tube should go through
+
+        `colors` :       the color at each point
+
+        `radii` :        the desired tube radius at each point
+
+        `num_steps` :    the number of steps between each point, allowing for a more smooth tube
+
+        `num_segments` : the number of segments each ring of the tube consists of, e.g. 3 would yield a triangular tube
+    """
+    points = floatarray(points)
+    colors = floatarray(colors)
+    radii = floatarray(radii)
+    err = _gr3.gr3_drawtubemesh(c_uint(n), points.data, colors.data, radii.data, c_int(num_steps), c_int(num_segments))
+    if err:
+        raise GR3_Exception(err)
+
+
+def createtubemesh(n, points, colors, radii, num_steps=10, num_segments=20):
+    """
+    Create a mesh object in the shape of a tube following a path given by a
+    list of points. The colors and radii arrays specify the color and radius at
+    each point.
+
+    **Parameters:**
+
+        `n` :            the number of points given
+
+        `points` :       the points the tube should go through
+
+        `colors` :       the color at each point
+
+        `radii` :        the desired tube radius at each point
+
+        `num_steps` :    the number of steps between each point, allowing for a more smooth tube
+
+        `num_segments` : the number of segments each ring of the tube consists of, e.g. 3 would yield a triangular tube
+    """
+    _mesh = c_uint(0)
+    points = floatarray(points)
+    colors = floatarray(colors)
+    radii = floatarray(radii)
+    err = _gr3.gr3_createtubemesh(byref(_mesh), c_uint(n), points.data, colors.data, radii.data, c_int(num_steps), c_int(num_segments))
+    if err:
+        raise GR3_Exception(err)
+    return _mesh
+
+
 def drawmesh_grlike(mesh, n, positions, directions, ups, colors, scales):
     """
     Draw a mesh with the projection of gr. It uses the current
@@ -774,6 +836,7 @@ def drawmesh_grlike(mesh, n, positions, directions, ups, colors, scales):
                              colors.data,
                              scales.data)
 
+
 def drawsurface(mesh):
     """
     Convenience function for drawing a surfacemesh
@@ -783,6 +846,7 @@ def drawsurface(mesh):
         `mesh` : the mesh to be drawn
     """
     _gr3.gr3_drawsurface(mesh)
+
 
 def surface(px, py, pz, option=0):
     """
@@ -889,3 +953,12 @@ _gr3.gr3_drawsurface.restype = None
 _gr3.gr3_surface.argtype = [c_int, c_int, POINTER(c_float),
                             POINTER(c_float), POINTER(c_float), c_int]
 _gr3.gr3_surface.restype =  None
+
+_gr3.gr3_drawtubemesh.argtype = [c_uint, POINTER(c_float), POINTER(c_float),
+                                 POINTER(c_float), c_int, c_int]
+_gr3.gr3_drawtubemesh.restype = c_int
+
+_gr3.gr3_createtubemesh.argtype = [POINTER(c_uint), c_uint, POINTER(c_float),
+                                   POINTER(c_float), POINTER(c_float), c_int,
+                                   c_int]
+_gr3.gr3_createtubemesh.restype = c_int

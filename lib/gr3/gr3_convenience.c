@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include <math.h>
 #include "gr.h"
 
@@ -744,3 +745,379 @@ GR3API int gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data,
     return err;
 }
 
+#define INDEX(stride, offset, index) ((index)*(stride)+(offset))
+#define IN(index) in[INDEX(in_stride, in_offset, (index))]
+#define OUT(index) out[INDEX(out_stride, out_offset, (index))]
+static int cupic_interp(const float *in, int in_offset, int in_stride, float *out, int out_offset, int out_stride, int num_points, int num_steps) {
+  int i;
+  int num_new_points = num_points * (1 + num_steps) - num_steps;
+  double *right_side = (double *)malloc(sizeof(double) * num_points);
+  double *diagonal = (double *)malloc(sizeof(double) * num_points);
+  double *derivatives = NULL;
+  assert(right_side);
+  assert(diagonal);
+  assert(in);
+  assert(out);
+  
+  right_side[0] = 3*(IN(1)-IN(0));
+  diagonal[0] = 2;
+  for (i = 1; i < num_points-1; i++) {
+    right_side[i] = 3*(IN(i+1)-IN(i-1));
+    diagonal[i] = 4;
+  }
+  right_side[num_points-1] = 3*(IN(num_points-1)-IN(num_points-2));
+  diagonal[num_points-1] = 2;
+  
+  for (i = 0; i < num_points-1; i++) {
+    diagonal[i+1] -= 1/diagonal[i];
+    right_side[i+1] -= right_side[i]/diagonal[i];
+  }
+  
+  for (i = num_points-1; i > 0; i--) {
+    right_side[i] /= diagonal[i];
+    right_side[i-1] -= right_side[i];
+  }
+  right_side[0] /= diagonal[0];
+  
+  free(diagonal);
+  
+  derivatives = right_side;
+  for (i = 0; i < num_new_points; i++) {
+    div_t j = div(i, num_steps+1);
+    int section = j.quot;
+    int step = j.rem;
+    double t = (double)step/(num_steps+1);
+    if (t == 0) {
+      OUT(i) = IN(section);
+    } else {
+      double a = IN(section);
+      double b = derivatives[section];
+      double c = 3*(IN(section+1)-IN(section))-2*derivatives[section]-derivatives[section+1];
+      double d = 2*(IN(section)-IN(section+1))+derivatives[section]+derivatives[section+1];
+      OUT(i) = a+(b+(c+d*t)*t)*t;
+    }
+  }
+  free(derivatives);
+  return num_new_points;
+}
+
+static int linear_interp(const float *in, int in_offset, int in_stride, float *out, int out_offset, int out_stride, int num_points, int num_steps) {
+  int i;
+  int num_new_points = num_points * (1 + num_steps) - num_steps;
+  for (i = 0; i < num_new_points; i++) {
+    div_t j = div(i, num_steps+1);
+    int section = j.quot;
+    int step = j.rem;
+    double t = (double)step/(num_steps+1);
+    if (t == 0) {
+      OUT(i) = IN(section);
+    } else {
+      double a = IN(section);
+      double b = IN(section+1)-IN(section);
+      OUT(i) = a+b*t;
+    }
+  }
+  return num_new_points;
+}
+#undef OUT
+#undef IN
+#undef INDEX
+
+static float *generic_interp_nd(const float *points, int n, int num_points, int num_steps, int *p_num_new_points, int (*interp)(const float *, int, int, float *, int, int, int, int)) {
+  int i;
+  int num_new_points = num_points * (1 + num_steps) - num_steps;
+  float *points2 = (float *)malloc(n * sizeof(float) * num_new_points);
+  assert(points2);
+  for (i = 0; i < n; i++) {
+    interp(points, i, n, points2, i, n, num_points, num_steps);
+  }
+  if (p_num_new_points) {
+    *p_num_new_points = num_new_points;
+  }
+  return points2;
+}
+
+static float *cubic_interp_nd(const float *points, int n, int num_points, int num_steps, int *p_num_new_points) {
+  return generic_interp_nd(points, n, num_points, num_steps, p_num_new_points, cupic_interp);
+}
+
+static float *linear_interp_nd(const float *points, int n, int num_points, int num_steps, int *p_num_new_points) {
+  return generic_interp_nd(points, n, num_points, num_steps, p_num_new_points, linear_interp);
+}
+
+static double dot(double left[3], double right[3]) {
+  return left[0]*right[0]+left[1]*right[1]+left[2]*right[2];
+}
+
+static void normalize(double a[3]) {
+  double length = sqrt(dot(a, a));
+  a[0] /= length;
+  a[1] /= length;
+  a[2] /= length;
+}
+
+static void cross(const double left[3], const double right[3], double out[3]) {
+  out[0] = left[1]*right[2]-left[2]*right[1];
+  out[1] = left[2]*right[0]-left[0]*right[2];
+  out[2] = left[0]*right[1]-left[1]*right[0];
+}
+
+int gr3_createtubemesh(int *mesh, int n, const float *points, const float *colors, const float *radii, int num_steps, int num_segments) {
+  int result;
+  int num_points = n;
+  int i;
+  int num_new_points = 0;
+  float (*points2)[3] = (float (*)[3])cubic_interp_nd(points, 3, num_points, num_steps, &num_new_points);
+  float (*colors2)[3] = (float (*)[3])linear_interp_nd(colors, 3, num_points, num_steps, NULL);
+  float *radii2 = linear_interp_nd(radii, 1, num_points, num_steps, NULL);
+  double (*directions)[3] = (double (*)[3])malloc(sizeof(double) * 3 * num_new_points);
+  double (*tangents)[3] = (double (*)[3])malloc(sizeof(double) * 3 * num_new_points);
+  /* aliases to avoid two useless allocations */
+  double (*normals)[3] = directions;
+  double (*binormals)[3] = tangents;
+  
+  double longest_direction_cross[3];
+  double longest_direction_cross_length_squared = 0;
+  int longest_direction_cross_index = 0;
+  
+  for (i = 0; i < num_new_points-1; i++) {
+    directions[i][0] = points2[i+1][0] - points2[i][0];
+    directions[i][1] = points2[i+1][1] - points2[i][1];
+    directions[i][2] = points2[i+1][2] - points2[i][2];
+    normalize(directions[i]);
+  }
+  tangents[0][0] = directions[0][0];
+  tangents[0][1] = directions[0][1];
+  tangents[0][2] = directions[0][2];
+  for (i = 1; i < num_new_points-1; i++) {
+    tangents[i][0] = directions[i-1][0]+directions[i][0];
+    tangents[i][1] = directions[i-1][1]+directions[i][1];
+    tangents[i][2] = directions[i-1][2]+directions[i][2];
+    normalize(tangents[i]);
+  }
+  tangents[num_new_points-1][0] = directions[num_new_points-2][0];
+  tangents[num_new_points-1][1] = directions[num_new_points-2][1];
+  tangents[num_new_points-1][2] = directions[num_new_points-2][2];
+  
+  for (i = 0; i < num_new_points-2; i++) {
+    double direction_cross[3];
+    double direction_cross_length_squared;
+    cross(directions[i], directions[i+1], direction_cross);
+    direction_cross_length_squared = dot(direction_cross, direction_cross);
+    if (direction_cross_length_squared > longest_direction_cross_length_squared) {
+      longest_direction_cross_index = i;
+      longest_direction_cross_length_squared = direction_cross_length_squared;
+      longest_direction_cross[0] = direction_cross[0];
+      longest_direction_cross[1] = direction_cross[1];
+      longest_direction_cross[2] = direction_cross[2];
+    }
+  }
+  
+  if (longest_direction_cross_length_squared > 1e-12) {
+    normals[longest_direction_cross_index+1][0] = longest_direction_cross[0];
+    normals[longest_direction_cross_index+1][1] = longest_direction_cross[1];
+    normals[longest_direction_cross_index+1][2] = longest_direction_cross[2];
+  } else {
+    if (fabs(directions[0][0]) < fabs(directions[0][1])) {
+      double tmp[3] = {1, 0, 0};
+      cross(directions[0], tmp, normals[longest_direction_cross_index+1]);
+    } else {
+      double tmp[3] = {0, 1, 0};
+      cross(directions[0], tmp, normals[longest_direction_cross_index+1]);
+    }
+  }
+  normalize(normals[longest_direction_cross_index+1]);
+  for (i = longest_direction_cross_index; i >= 0; i--) {
+    double tmp[3];
+    cross(tangents[i], normals[i+1], tmp);
+    cross(tmp, tangents[i], normals[i]);
+    normalize(normals[i]);
+  }
+  for (i = longest_direction_cross_index+2; i < num_new_points; i++) {
+    double tmp[3];
+    cross(tangents[i], normals[i-1], tmp);
+    cross(tmp, tangents[i], normals[i]);
+    normalize(normals[i]);
+  }
+  for (i = 0; i < num_new_points; i++) {
+    double tmp[3];
+    cross(tangents[i], normals[i], tmp);
+    binormals[i][0] = tmp[0];
+    binormals[i][1] = tmp[1];
+    binormals[i][2] = tmp[2];
+    normalize(binormals[i]);
+  }
+  
+  {
+    double (*vertices_2d)[2] = (double (*)[2])malloc(sizeof(double) * 2 * num_segments);
+    float (*vertices_3d)[3] = (float (*)[3])malloc(sizeof(float) * 3 * 6 * num_segments * num_new_points);
+    float (*normals_3d)[3] = (float (*)[3])malloc(sizeof(float) * 3 * 6 * num_segments * num_new_points);
+    float (*colors_3d)[3] = (float (*)[3])malloc(sizeof(float) * 3 * 6 * num_segments * num_new_points);
+    for (i = 0; i < num_segments; i++) {
+      vertices_2d[i][0] = cos(i*2*3.1415/num_segments);
+      vertices_2d[i][1] = sin(i*2*3.1415/num_segments);
+    }
+    for (i = 0; i < num_new_points-1; i++) {
+      int j;
+      for (j = 0; j < num_segments; j++) {
+        normals_3d[(i*num_segments+j)*6+0][0] = vertices_2d[j][0]*normals[i][0]+vertices_2d[j][1]*binormals[i][0];
+        normals_3d[(i*num_segments+j)*6+0][1] = vertices_2d[j][0]*normals[i][1]+vertices_2d[j][1]*binormals[i][1];
+        normals_3d[(i*num_segments+j)*6+0][2] = vertices_2d[j][0]*normals[i][2]+vertices_2d[j][1]*binormals[i][2];
+        vertices_3d[(i*num_segments+j)*6+0][0] = points2[i][0]+radii2[i]*normals_3d[(i*num_segments+j)*6+0][0];
+        vertices_3d[(i*num_segments+j)*6+0][1] = points2[i][1]+radii2[i]*normals_3d[(i*num_segments+j)*6+0][1];
+        vertices_3d[(i*num_segments+j)*6+0][2] = points2[i][2]+radii2[i]*normals_3d[(i*num_segments+j)*6+0][2];
+        colors_3d[(i*num_segments+j)*6+0][0] = colors2[i][0];
+        colors_3d[(i*num_segments+j)*6+0][1] = colors2[i][1];
+        colors_3d[(i*num_segments+j)*6+0][2] = colors2[i][2];
+        
+        normals_3d[(i*num_segments+j)*6+1][0] = vertices_2d[(j+1)%num_segments][0]*normals[i][0]+vertices_2d[(j+1)%num_segments][1]*binormals[i][0];
+        normals_3d[(i*num_segments+j)*6+1][1] = vertices_2d[(j+1)%num_segments][0]*normals[i][1]+vertices_2d[(j+1)%num_segments][1]*binormals[i][1];
+        normals_3d[(i*num_segments+j)*6+1][2] = vertices_2d[(j+1)%num_segments][0]*normals[i][2]+vertices_2d[(j+1)%num_segments][1]*binormals[i][2];
+        vertices_3d[(i*num_segments+j)*6+1][0] = points2[i][0]+radii2[i]*normals_3d[(i*num_segments+j)*6+1][0];
+        vertices_3d[(i*num_segments+j)*6+1][1] = points2[i][1]+radii2[i]*normals_3d[(i*num_segments+j)*6+1][1];
+        vertices_3d[(i*num_segments+j)*6+1][2] = points2[i][2]+radii2[i]*normals_3d[(i*num_segments+j)*6+1][2];
+        colors_3d[(i*num_segments+j)*6+1][0] = colors2[i][0];
+        colors_3d[(i*num_segments+j)*6+1][1] = colors2[i][1];
+        colors_3d[(i*num_segments+j)*6+1][2] = colors2[i][2];
+        
+        normals_3d[(i*num_segments+j)*6+2][0] = vertices_2d[j][0]*normals[i+1][0]+vertices_2d[j][1]*binormals[i+1][0];
+        normals_3d[(i*num_segments+j)*6+2][1] = vertices_2d[j][0]*normals[i+1][1]+vertices_2d[j][1]*binormals[i+1][1];
+        normals_3d[(i*num_segments+j)*6+2][2] = vertices_2d[j][0]*normals[i+1][2]+vertices_2d[j][1]*binormals[i+1][2];
+        vertices_3d[(i*num_segments+j)*6+2][0] = points2[i+1][0]+radii2[i+1]*normals_3d[(i*num_segments+j)*6+2][0];
+        vertices_3d[(i*num_segments+j)*6+2][1] = points2[i+1][1]+radii2[i+1]*normals_3d[(i*num_segments+j)*6+2][1];
+        vertices_3d[(i*num_segments+j)*6+2][2] = points2[i+1][2]+radii2[i+1]*normals_3d[(i*num_segments+j)*6+2][2];
+        colors_3d[(i*num_segments+j)*6+2][0] = colors2[i+1][0];
+        colors_3d[(i*num_segments+j)*6+2][1] = colors2[i+1][1];
+        colors_3d[(i*num_segments+j)*6+2][2] = colors2[i+1][2];
+        
+        normals_3d[(i*num_segments+j)*6+3][0] = normals_3d[(i*num_segments+j)*6+2][0];
+        normals_3d[(i*num_segments+j)*6+3][1] = normals_3d[(i*num_segments+j)*6+2][1];
+        normals_3d[(i*num_segments+j)*6+3][2] = normals_3d[(i*num_segments+j)*6+2][2];
+        vertices_3d[(i*num_segments+j)*6+3][0] = vertices_3d[(i*num_segments+j)*6+2][0];
+        vertices_3d[(i*num_segments+j)*6+3][1] = vertices_3d[(i*num_segments+j)*6+2][1];
+        vertices_3d[(i*num_segments+j)*6+3][2] = vertices_3d[(i*num_segments+j)*6+2][2];
+        colors_3d[(i*num_segments+j)*6+3][0] = colors2[i+1][0];
+        colors_3d[(i*num_segments+j)*6+3][1] = colors2[i+1][1];
+        colors_3d[(i*num_segments+j)*6+3][2] = colors2[i+1][2];
+        
+        normals_3d[(i*num_segments+j)*6+4][0] = normals_3d[(i*num_segments+j)*6+1][0];
+        normals_3d[(i*num_segments+j)*6+4][1] = normals_3d[(i*num_segments+j)*6+1][1];
+        normals_3d[(i*num_segments+j)*6+4][2] = normals_3d[(i*num_segments+j)*6+1][2];
+        vertices_3d[(i*num_segments+j)*6+4][0] = vertices_3d[(i*num_segments+j)*6+1][0];
+        vertices_3d[(i*num_segments+j)*6+4][1] = vertices_3d[(i*num_segments+j)*6+1][1];
+        vertices_3d[(i*num_segments+j)*6+4][2] = vertices_3d[(i*num_segments+j)*6+1][2];
+        colors_3d[(i*num_segments+j)*6+4][0] = colors2[i][0];
+        colors_3d[(i*num_segments+j)*6+4][1] = colors2[i][1];
+        colors_3d[(i*num_segments+j)*6+4][2] = colors2[i][2];
+        
+        normals_3d[(i*num_segments+j)*6+5][0] = vertices_2d[(j+1)%num_segments][0]*normals[i+1][0]+vertices_2d[(j+1)%num_segments][1]*binormals[i+1][0];
+        normals_3d[(i*num_segments+j)*6+5][1] = vertices_2d[(j+1)%num_segments][0]*normals[i+1][1]+vertices_2d[(j+1)%num_segments][1]*binormals[i+1][1];
+        normals_3d[(i*num_segments+j)*6+5][2] = vertices_2d[(j+1)%num_segments][0]*normals[i+1][2]+vertices_2d[(j+1)%num_segments][1]*binormals[i+1][2];
+        vertices_3d[(i*num_segments+j)*6+5][0] = points2[i+1][0]+radii2[i+1]*normals_3d[(i*num_segments+j)*6+5][0];
+        vertices_3d[(i*num_segments+j)*6+5][1] = points2[i+1][1]+radii2[i+1]*normals_3d[(i*num_segments+j)*6+5][1];
+        vertices_3d[(i*num_segments+j)*6+5][2] = points2[i+1][2]+radii2[i+1]*normals_3d[(i*num_segments+j)*6+5][2];
+        colors_3d[(i*num_segments+j)*6+5][0] = colors2[i+1][0];
+        colors_3d[(i*num_segments+j)*6+5][1] = colors2[i+1][1];
+        colors_3d[(i*num_segments+j)*6+5][2] = colors2[i+1][2];
+      }
+    }
+    
+    {
+      int index_offset = (num_new_points-1)*num_segments * 6;
+      double normal[3];
+      cross(normals[0], binormals[0], normal);
+      for (i = 0; i < num_segments; i++) {
+        normals_3d[index_offset+i*3+0][0] = normal[0];
+        normals_3d[index_offset+i*3+0][1] = normal[1];
+        normals_3d[index_offset+i*3+0][2] = normal[2];
+        vertices_3d[index_offset+i*3+0][0] = points2[0][0] + radii2[0]*(vertices_2d[i][0]*normals[0][0]+vertices_2d[i][1]*binormals[0][0]);
+        vertices_3d[index_offset+i*3+0][1] = points2[0][1] + radii2[0]*(vertices_2d[i][0]*normals[0][1]+vertices_2d[i][1]*binormals[0][1]);
+        vertices_3d[index_offset+i*3+0][2] = points2[0][2] + radii2[0]*(vertices_2d[i][0]*normals[0][2]+vertices_2d[i][1]*binormals[0][2]);
+        colors_3d[index_offset+i*3+0][0] = colors2[0][0];
+        colors_3d[index_offset+i*3+0][1] = colors2[0][1];
+        colors_3d[index_offset+i*3+0][2] = colors2[0][2];
+        
+        normals_3d[index_offset+i*3+1][0] = normal[0];
+        normals_3d[index_offset+i*3+1][1] = normal[1];
+        normals_3d[index_offset+i*3+1][2] = normal[2];
+        vertices_3d[index_offset+i*3+1][0] = points2[0][0] + radii2[0]*(vertices_2d[(i+1) % num_segments][0]*normals[0][0]+vertices_2d[(i+1) % num_segments][1]*binormals[0][0]);
+        vertices_3d[index_offset+i*3+1][1] = points2[0][1] + radii2[0]*(vertices_2d[(i+1) % num_segments][0]*normals[0][1]+vertices_2d[(i+1) % num_segments][1]*binormals[0][1]);
+        vertices_3d[index_offset+i*3+1][2] = points2[0][2] + radii2[0]*(vertices_2d[(i+1) % num_segments][0]*normals[0][2]+vertices_2d[(i+1) % num_segments][1]*binormals[0][2]);
+        colors_3d[index_offset+i*3+1][0] = colors2[0][0];
+        colors_3d[index_offset+i*3+1][1] = colors2[0][1];
+        colors_3d[index_offset+i*3+1][2] = colors2[0][2];
+        
+        normals_3d[index_offset+i*3+2][0] = normal[0];
+        normals_3d[index_offset+i*3+2][1] = normal[1];
+        normals_3d[index_offset+i*3+2][2] = normal[2];
+        vertices_3d[index_offset+i*3+2][0] = points2[0][0];
+        vertices_3d[index_offset+i*3+2][1] = points2[0][1];
+        vertices_3d[index_offset+i*3+2][2] = points2[0][2];
+        colors_3d[index_offset+i*3+2][0] = colors2[0][0];
+        colors_3d[index_offset+i*3+2][1] = colors2[0][1];
+        colors_3d[index_offset+i*3+2][2] = colors2[0][2];
+      }
+      index_offset += 3 * num_segments;
+      cross(normals[num_new_points-1], binormals[num_new_points-1], normal);
+      
+      for (i = 0; i < num_segments; i++) {
+        normals_3d[index_offset+i*3+0][0] = normal[0];
+        normals_3d[index_offset+i*3+0][1] = normal[1];
+        normals_3d[index_offset+i*3+0][2] = normal[2];
+        vertices_3d[index_offset+i*3+0][0] = points2[num_new_points-1][0] + radii2[num_new_points-1]*(vertices_2d[i][0]*normals[num_new_points-1][0]+vertices_2d[i][1]*binormals[num_new_points-1][0]);
+        vertices_3d[index_offset+i*3+0][1] = points2[num_new_points-1][1] + radii2[num_new_points-1]*(vertices_2d[i][0]*normals[num_new_points-1][1]+vertices_2d[i][1]*binormals[num_new_points-1][1]);
+        vertices_3d[index_offset+i*3+0][2] = points2[num_new_points-1][2] + radii2[num_new_points-1]*(vertices_2d[i][0]*normals[num_new_points-1][2]+vertices_2d[i][1]*binormals[num_new_points-1][2]);
+        colors_3d[index_offset+i*3+0][0] = colors2[num_new_points-1][0];
+        colors_3d[index_offset+i*3+0][1] = colors2[num_new_points-1][1];
+        colors_3d[index_offset+i*3+0][2] = colors2[num_new_points-1][2];
+        
+        normals_3d[index_offset+i*3+1][0] = normal[0];
+        normals_3d[index_offset+i*3+1][1] = normal[1];
+        normals_3d[index_offset+i*3+1][2] = normal[2];
+        vertices_3d[index_offset+i*3+1][0] = points2[num_new_points-1][0] + radii2[num_new_points-1]*(vertices_2d[(i+1) % num_segments][0]*normals[num_new_points-1][0]+vertices_2d[(i+1) % num_segments][1]*binormals[num_new_points-1][0]);
+        vertices_3d[index_offset+i*3+1][1] = points2[num_new_points-1][1] + radii2[num_new_points-1]*(vertices_2d[(i+1) % num_segments][0]*normals[num_new_points-1][1]+vertices_2d[(i+1) % num_segments][1]*binormals[num_new_points-1][1]);
+        vertices_3d[index_offset+i*3+1][2] = points2[num_new_points-1][2] + radii2[num_new_points-1]*(vertices_2d[(i+1) % num_segments][0]*normals[num_new_points-1][2]+vertices_2d[(i+1) % num_segments][1]*binormals[num_new_points-1][2]);
+        colors_3d[index_offset+i*3+1][0] = colors2[num_new_points-1][0];
+        colors_3d[index_offset+i*3+1][1] = colors2[num_new_points-1][1];
+        colors_3d[index_offset+i*3+1][2] = colors2[num_new_points-1][2];
+        
+        normals_3d[index_offset+i*3+2][0] = normal[0];
+        normals_3d[index_offset+i*3+2][1] = normal[1];
+        normals_3d[index_offset+i*3+2][2] = normal[2];
+        vertices_3d[index_offset+i*3+2][0] = points2[num_new_points-1][0];
+        vertices_3d[index_offset+i*3+2][1] = points2[num_new_points-1][1];
+        vertices_3d[index_offset+i*3+2][2] = points2[num_new_points-1][2];
+        colors_3d[index_offset+i*3+2][0] = colors2[num_new_points-1][0];
+        colors_3d[index_offset+i*3+2][1] = colors2[num_new_points-1][1];
+        colors_3d[index_offset+i*3+2][2] = colors2[num_new_points-1][2];
+      }
+      
+    }
+    
+    free(vertices_2d);
+    free(points2);
+    free(radii2);
+    free(colors2);
+    free(tangents);
+    free(directions);
+    
+    result = gr3_createmesh(mesh, num_new_points*num_segments*6, (float *)vertices_3d, (float *)normals_3d, (float *)colors_3d);
+    free(vertices_3d);
+    free(normals_3d);
+    free(colors_3d);
+  }
+  return result;
+}
+
+int gr3_drawtubemesh(int n, float *points, float *colors, float *radii, int num_steps, int num_segments) {
+  int result;
+  int mesh;
+  float position[] = {0, 0, 0};
+  float direction[] = {0, 0, 1};
+  float up[] = {0, 1, 0};
+  float color[] = {1, 1, 1};
+  result = gr3_createtubemesh(&mesh, n, points, colors, radii, num_steps, num_segments);
+  gr3_drawmesh(mesh, 1, position, direction, up, color, color);
+  gr3_deletemesh(mesh);
+  return result;
+}
