@@ -60,7 +60,7 @@ features:
 +---------------+----------------------+----------------------+
 |MOV export     |        ffmpeg-2.x (source build)            |
 +---------------+----------------------+----------------------+
-|wxWidgets      |- libgtk2.0-devs      |- wxBase.x86_64       |
+|wxWidgets      |- libgtk2.0-dev      |- wxBase.x86_64       |
 |               |- libwxgtk2.8-dev     |- wxGTK-devel.x86_64  |
 |               |- python-wxgtk2.8     |- wxPython            |
 +---------------+----------------------+----------------------+
