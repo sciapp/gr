@@ -2261,7 +2261,7 @@ def restorestate():
 
 
 def uselinespec(linespec):
-    __gr.gr_uselinespec(char(linespec))
+    return __gr.gr_uselinespec(char(linespec))
 
 
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
@@ -2426,6 +2426,7 @@ __gr.gr_inqregenflags.restype = c_int
 __gr.gr_savestate.argtypes = []
 __gr.gr_restorestate.argtypes = []
 __gr.gr_uselinespec.argtypes = [c_char_p]
+__gr.gr_uselinespec.restype = c_int
 
 
 precision = __gr.gr_precision()

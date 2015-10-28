@@ -211,6 +211,10 @@ unsigned int rgb[MAX_COLOR];
 #define BOTTOM (1<<4)
 #define TOP    (1<<5)
 
+#define SPEC_LINE    (1<<0)
+#define SPEC_MARKER  (1<<1)
+#define SPEC_COLOR   (1<<2)
+
 #define XML_HEADER "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
 #define GR_HEADER  "<gr>\n"
 #define GR_TRAILER "</gr>\n"
@@ -6571,10 +6575,10 @@ void gr_restorestate(void)
     fprintf(stderr, "attempt to restore unsaved state\n");
 }
 
-void gr_uselinespec(char *linespec)
+int gr_uselinespec(char *linespec)
 {
   char *spec = linespec, lastspec = ' ';
-  int color = -1;
+  int result, linetype = 0, markertype = 0, color = -1;
 
   while (*spec)
     {
@@ -6582,46 +6586,60 @@ void gr_uselinespec(char *linespec)
         {
           case '-':
             if (lastspec == '-')
-              gr_setlinetype(GKS_K_LINETYPE_DASHED);
+              linetype = GKS_K_LINETYPE_DASHED;
             else
-              gr_setlinetype(GKS_K_LINETYPE_SOLID);
+              linetype = GKS_K_LINETYPE_SOLID;
             break;
-          case ':': gr_setlinetype(GKS_K_LINETYPE_DOTTED); break;
+          case ':': linetype = GKS_K_LINETYPE_DOTTED; break;
           case '.':
             if (lastspec == '-')
-              gr_setlinetype(GKS_K_LINETYPE_DASHED_DOTTED);
+              linetype = GKS_K_LINETYPE_DASHED_DOTTED;
             else
-              gr_setmarkertype(GKS_K_MARKERTYPE_DOT);
+              markertype = GKS_K_MARKERTYPE_DOT;
             break;
 
-          case '+': gr_setmarkertype(GKS_K_MARKERTYPE_PLUS); break;
-          case 'o': gr_setmarkertype(GKS_K_MARKERTYPE_CIRCLE); break;
-          case '*': gr_setmarkertype(GKS_K_MARKERTYPE_ASTERISK); break;
-          case 'x': gr_setmarkertype(GKS_K_MARKERTYPE_DIAGONAL_CROSS); break;
-          case 's': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_SQUARE); break;
-          case 'd': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_DIAMOND); break;
-          case '^': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_TRI_UP); break;
-          case 'v': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_TRI_DOWN); break;
-          case '>': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_TRI_RIGHT); break;
-          case '<': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_TRI_LEFT); break;
-          case 'p': gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_STAR); break;
-          case 'h': gr_setmarkertype(GKS_K_MARKERTYPE_TRI_UP_DOWN); break;
+          case '+': markertype = GKS_K_MARKERTYPE_PLUS; break;
+          case 'o': markertype = GKS_K_MARKERTYPE_CIRCLE; break;
+          case '*': markertype = GKS_K_MARKERTYPE_ASTERISK; break;
+          case 'x': markertype = GKS_K_MARKERTYPE_DIAGONAL_CROSS; break;
+          case 's': markertype = GKS_K_MARKERTYPE_SOLID_SQUARE; break;
+          case 'd': markertype = GKS_K_MARKERTYPE_SOLID_DIAMOND; break;
+          case '^': markertype = GKS_K_MARKERTYPE_SOLID_TRI_UP; break;
+          case 'v': markertype = GKS_K_MARKERTYPE_SOLID_TRI_DOWN; break;
+          case '>': markertype = GKS_K_MARKERTYPE_SOLID_TRI_RIGHT; break;
+          case '<': markertype = GKS_K_MARKERTYPE_SOLID_TRI_LEFT; break;
+          case 'p': markertype = GKS_K_MARKERTYPE_SOLID_STAR; break;
+          case 'h': markertype = GKS_K_MARKERTYPE_TRI_UP_DOWN; break;
 
-          case 'r': color = 2; break;
-          case 'g': color = 3; break;
-          case 'b': color = 4; break;
-          case 'c': color = 5; break;
-          case 'm': color = 7; break;
-          case 'y': color = 6; break;
+          case 'r': color = 984; break;
+          case 'g': color = 987; break;
+          case 'b': color = 989; break;
+          case 'c': color = 983; break;
+          case 'm': color = 988; break;
+          case 'y': color = 994; break;
           case 'k': color = 1; break;
           case 'w': color = 0; break;
         }
       lastspec = *spec++;
     }
 
+  result = 0;
+  if (linetype != 0)
+    {
+      result |= SPEC_LINE;
+      gr_setlinetype(linetype);
+    }
+  if (markertype != 0)
+    {
+      result |= SPEC_MARKER;
+      gr_setmarkertype(markertype);
+    }
   if (color >= 0)
     {
+      result |= SPEC_COLOR;
       gr_setlinecolorind(color);
       gr_setmarkercolorind(color);
     }
+
+  return result;
 }

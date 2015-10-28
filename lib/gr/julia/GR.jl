@@ -1197,10 +1197,10 @@ function restorestate()
 end
 
 function uselinespec(linespec)
-  ccall( (:gr_uselinespec, libGR),
-        Void,
-        (Ptr{Cchar}, ),
-        linespec)
+  return ccall( (:gr_uselinespec, libGR),
+               Int32,
+               (Ptr{Cchar}, ),
+               linespec)
 end
 
 end # module

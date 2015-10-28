@@ -147,7 +147,7 @@ DLLEXPORT void gr_setregenflags(int);
 DLLEXPORT int gr_inqregenflags(void);
 DLLEXPORT void gr_savestate(void);
 DLLEXPORT void gr_restorestate(void);
-DLLEXPORT void gr_uselinespec(char *);
+DLLEXPORT int gr_uselinespec(char *);
 
 #ifdef _WIN32
 #ifdef __cplusplus
