@@ -13,7 +13,7 @@ if [ ! `which cmake` ]; then exit 0; fi
 mkdir -p ${dest}/src
 cd ${dest}/src
 
-if [ ! -d "${src}" ]; then
+if [ ! -d "glfw-${src}" ]; then
   if [ `which curl` ]; then
     cmd="curl -O -L"
   else
