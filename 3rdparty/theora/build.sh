@@ -17,8 +17,9 @@ if [ ! -d "${src}" ]; then
   fi
   ${cmd} http://downloads.xiph.org/releases/theora/${src}.tar.gz
   tar -xf ${src}.tar.gz
-  patch -p0 <${cwd}/libtheora.patch
 fi
+patch -N -p0 --dry-run --silent &>/dev/null <${cwd}/libtheora.patch &&\
+patch -p0 <${cwd}/libtheora.patch
 
 cd ${src}
 

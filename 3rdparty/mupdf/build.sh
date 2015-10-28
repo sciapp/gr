@@ -17,8 +17,9 @@ if [ ! -d "${src}" ]; then
   fi
   ${cmd} http://mupdf.com/downloads/archive/${src}.tar.gz
   tar -xf ${src}.tar.gz
-  patch -p0 <${cwd}/mupdf.patch
 fi
+patch -N -p0 --dry-run --silent &>/dev/null <${cwd}/mupdf.patch &&\
+patch -p0 <${cwd}/mupdf.patch
 
 opts="prefix=${dest} HAVE_MUJS=no HAVE_CURL=no XCFLAGS=-fPIC"
 if [ `uname` = "Darwin" ]; then
