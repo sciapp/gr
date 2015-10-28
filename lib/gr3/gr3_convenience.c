@@ -851,9 +851,11 @@ static double dot(double left[3], double right[3]) {
 
 static void normalize(double a[3]) {
   double length = sqrt(dot(a, a));
-  a[0] /= length;
-  a[1] /= length;
-  a[2] /= length;
+  if (length > 0) {
+    a[0] /= length;
+    a[1] /= length;
+    a[2] /= length;
+  }
 }
 
 static void cross(const double left[3], const double right[3], double out[3]) {
@@ -867,25 +869,78 @@ int gr3_createtubemesh(int *mesh, int n, const float *points, const float *color
   int num_points = n;
   int i;
   int num_new_points = 0;
-  float (*points2)[3] = (float (*)[3])cubic_interp_nd(points, 3, num_points, num_steps, &num_new_points);
-  float (*colors2)[3] = (float (*)[3])linear_interp_nd(colors, 3, num_points, num_steps, NULL);
-  float *radii2 = linear_interp_nd(radii, 1, num_points, num_steps, NULL);
-  double (*directions)[3] = (double (*)[3])malloc(sizeof(double) * 3 * num_new_points);
-  double (*tangents)[3] = (double (*)[3])malloc(sizeof(double) * 3 * num_new_points);
-  /* aliases to avoid two useless allocations */
-  double (*normals)[3] = directions;
-  double (*binormals)[3] = tangents;
+  float (*points2)[3];
+  float (*colors2)[3];
+  float *radii2;
+  double (*directions)[3];
+  double (*tangents)[3];
+  double (*normals)[3];
+  double (*binormals)[3];
+  float (*points_filtered)[3];
+  float (*colors_filtered)[3];
+  float *radii_filtered;
   
   double longest_direction_cross[3];
   double longest_direction_cross_length_squared = 0;
   int longest_direction_cross_index = 0;
   
+  int *filtered_indices = (int *)malloc(sizeof(int) * num_points);
+  int j = 1;
+  filtered_indices[0] = 0;
+  for (i = 1; i < num_points; i++) {
+    double distance[3];
+    distance[0] = points[3*i+0]-points[3*i-3+0];
+    distance[1] = points[3*i+1]-points[3*i-3+1];
+    distance[2] = points[3*i+2]-points[3*i-3+2];
+    if (dot(distance, distance) > 0) {
+      filtered_indices[j++] = i;
+    }
+  }
+
+  num_points = j;
+  if (num_points < 2) {
+    float v[9] = {0,0,0,0,0,0,0,0,0};
+    free(filtered_indices);
+    return gr3_createmesh(mesh, 3, (float *)v, (float *)v, (float *)v);
+  };
+  points_filtered = (float (*)[3])malloc(sizeof(float) * 3 * num_points);
+  colors_filtered = (float (*)[3])malloc(sizeof(float) * 3 * num_points);
+  radii_filtered = (float *)malloc(sizeof(float) * num_points);
+  assert(points_filtered);
+  assert(colors_filtered);
+  assert(radii_filtered);
+
+  for (i = 0; i < num_points; i++) {
+    points_filtered[i][0] = points[filtered_indices[i]*3+0];
+    points_filtered[i][1] = points[filtered_indices[i]*3+1];
+    points_filtered[i][2] = points[filtered_indices[i]*3+2];
+    colors_filtered[i][0] = colors[filtered_indices[i]*3+0];
+    colors_filtered[i][1] = colors[filtered_indices[i]*3+1];
+    colors_filtered[i][2] = colors[filtered_indices[i]*3+2];
+    radii_filtered[i] = radii[filtered_indices[i]];
+  }
+  free(filtered_indices);
+
+  points2 = (float (*)[3])cubic_interp_nd((float *)points_filtered, 3, num_points, num_steps, &num_new_points);
+  colors2 = (float (*)[3])linear_interp_nd((float *)colors_filtered, 3, num_points, num_steps, NULL);
+  radii2 = linear_interp_nd(radii_filtered, 1, num_points, num_steps, NULL);
+  directions = (double (*)[3])malloc(sizeof(double) * 3 * num_new_points);
+  tangents = (double (*)[3])malloc(sizeof(double) * 3 * num_new_points);
+  /* aliases to avoid two useless allocations */
+  normals = directions;
+  binormals = tangents;
+
+  free(points_filtered);
+  free(colors_filtered);
+  free(radii_filtered);
+
   for (i = 0; i < num_new_points-1; i++) {
     directions[i][0] = points2[i+1][0] - points2[i][0];
     directions[i][1] = points2[i+1][1] - points2[i][1];
     directions[i][2] = points2[i+1][2] - points2[i][2];
     normalize(directions[i]);
   }
+
   tangents[0][0] = directions[0][0];
   tangents[0][1] = directions[0][1];
   tangents[0][2] = directions[0][2];
