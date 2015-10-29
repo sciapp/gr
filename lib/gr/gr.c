@@ -115,6 +115,11 @@ static
 hlr_t hlr = { 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, NULL, NULL, NULL };
 
 static
+int predef_colors[20] = {
+  9, 2, 0, 1, 16, 3, 15, 8, 6, 10, 11, 4, 12, 13, 14, 7, 5, 17, 18, 19
+};
+
+static
 state_list s = {
   GKS_K_LINETYPE_SOLID, 1.0, 1, GKS_K_MARKERTYPE_ASTERISK, 2.0, 1,
   1, GKS_K_TEXT_PRECISION_STRING, 1.0, 0.0, 1, 0.027, {0, 1},
@@ -123,7 +128,7 @@ state_list s = {
 };
 
 static
-int autoinit = 1, double_buf = 0, state_saved = 0;
+int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
 
 static
 char *display = NULL;
@@ -1474,6 +1479,8 @@ void gr_clearws(void)
       gr_writestream(XML_HEADER);
       gr_writestream(GR_HEADER);
     }
+
+  def_color = 0;
 }
 
 static
@@ -6634,12 +6641,16 @@ int gr_uselinespec(char *linespec)
       result |= SPEC_MARKER;
       gr_setmarkertype(markertype);
     }
-  if (color >= 0)
+  if (color == -1)
     {
-      result |= SPEC_COLOR;
-      gr_setlinecolorind(color);
-      gr_setmarkercolorind(color);
+      color = 980 + predef_colors[def_color];
+      def_color = (def_color + 1) % 20;
     }
+  else
+    result |= SPEC_COLOR;
+
+  gr_setlinecolorind(color);
+  gr_setmarkercolorind(color);
 
   return result;
 }
