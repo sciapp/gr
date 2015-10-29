@@ -363,13 +363,37 @@ const char *pdf_double(double f)
 }
 
 static
+char *pdf_calloc(size_t count, size_t size)
+{
+  char *p;
+
+  p = gks_malloc(count * size);
+  if (p == NULL)
+    exit(-1);
+
+  return p;
+}
+
+static
+char *pdf_realloc(void *ptr, size_t size)
+{
+  char *p;
+
+  p = gks_realloc(ptr, size);
+  if (p == NULL)
+    exit(-1);
+
+  return p;
+}
+
+static
 void pdf_memcpy(PDF_stream *p, char *s, size_t n)
 {
   if (p->length + n >= p->size)
     {
       while (p->length + n >= p->size)
         p->size += MEMORY_INCREMENT;
-      p->buffer = (Byte *) realloc(p->buffer, p->size);
+      p->buffer = (Byte *) pdf_realloc(p->buffer, p->size);
     }
 
   memcpy(p->buffer + p->length, s, n);
@@ -396,7 +420,7 @@ PDF_stream *pdf_alloc_stream(void)
 {
   PDF_stream *p;
 
-  p = (PDF_stream *) calloc(1, sizeof(PDF_stream));
+  p = (PDF_stream *) pdf_calloc(1, sizeof(PDF_stream));
   p->buffer = NULL;
   p->size = p->length = 0;
 
@@ -447,12 +471,12 @@ PDF_image *pdf_image(PDF *p, int width, int height)
       exit(-1);
     }
 
-  image = (PDF_image *) calloc(1, sizeof(PDF_image));
+  image = (PDF_image *) pdf_calloc(1, sizeof(PDF_image));
 
   image->object = pdf_alloc_id(p);
   image->width = width;
   image->height = height;
-  image->data = (int *) calloc(width * height, sizeof(int));
+  image->data = (int *) pdf_calloc(width * height, sizeof(int));
 
   return image;
 }
@@ -469,7 +493,7 @@ void pdf_page(PDF *p, double height, double width)
       exit(-1);
     }
 
-  page = (PDF_page *) calloc(1, sizeof(PDF_page));
+  page = (PDF_page *) pdf_calloc(1, sizeof(PDF_page));
 
   page->object = pdf_alloc_id(p);
   page->contents = pdf_alloc_id(p);
@@ -661,7 +685,7 @@ void pdf_close(PDF *p)
           int err;
 
           length = p->content->length + 1024;
-          buffer = (Byte *) calloc((int) length, 1);
+          buffer = (Byte *) pdf_calloc((int) length, 1);
           if ((err = compress(buffer, &length, p->content->buffer,
                               p->content->length)) != Z_OK)
             {
@@ -955,7 +979,7 @@ void init_context(void)
 static
 void open_ws(int fd, int wstype)
 {
-  p = (ws_state_list *) calloc(1, sizeof(struct ws_state_list_t));
+  p = (ws_state_list *) pdf_calloc(1, sizeof(struct ws_state_list_t));
 
   p->compress = wstype == 102;
 
