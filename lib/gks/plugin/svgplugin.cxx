@@ -645,40 +645,13 @@ void stroke(void)
 }
 
 static
-void move_to(double x, double y)
-{
-  if (p->npoints > 0)
-    stroke();
-
-  NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
-  p->npoints++;
-}
-
-static
-void line_to(double x, double y)
-{
-  NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
-  p->npoints++;
-}
-
-static
-void move(double x, double y)
-{
-  gks_move(x, y, move_to);
-}
-
-static
-void draw(double x, double y)
-{
-  gks_dash(x, y, move_to, line_to);
-}
-
-static
 void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y;
-  int i;
+  int i, len;
   double x0, y0, xi, yi, xim1, yim1;
+  int dash_list[10];
+  char s[100], buf[20];
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   seg_xform(&x, &y);
@@ -687,6 +660,18 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d)\" style=\""
 	     "stroke:#%s; stroke-opacity:%g; fill:none\" ",
              p->path_index, p->rgb[p->color], p->transparency);
+  if (linetype < 0 || linetype > 1)
+    {
+      gks_get_dash_list(linetype, gkss->lwidth, dash_list);
+      len = dash_list[0];
+      *s = '\0';
+      for (i = 1; i <= len; i++)
+        {
+          sprintf(buf, "%d%s", dash_list[i], i < len ? ", " : "");
+          strcat(s, buf);
+        }
+      svg_printf(p->stream, "stroke-dasharray=\"%s\" ", s);
+    }
   svg_printf(p->stream, "points=\"\n  %g,%g ", x0, y0);
 
   xim1 = x0;
@@ -866,8 +851,7 @@ void polyline(int n, double *px, double *py)
   p->linewidth = width;
   p->color = ln_color;
 
-  gks_set_dev_xform(gkss, p->window, p->viewport);
-  gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
+  line_routine(n, px, py, ln_type, gkss->cntnr);
 
   if (p->npoints > 0)
     stroke();
