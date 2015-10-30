@@ -84,6 +84,7 @@ export
   hsvtorgb,
   tick,
   validaterange,
+  adjustlimits,
   adjustrange,
   beginprint,
   beginprintext,
@@ -715,6 +716,16 @@ function validaterange(amin::Real, amax::Real)
                Int32,
                (Float64, Float64),
                amin, amax)
+end
+
+function adjustlimits(amin::Real, amax::Real)
+  _amin = Cdouble[amin]
+  _amax = Cdouble[amax]
+  ccall( (:gr_adjustlimits, libGR),
+        Void,
+        (Ptr{Float64}, Ptr{Float64}),
+        _amin, _amax)
+  return _amin[1], _amax[1]
 end
 
 function adjustrange(amin::Real, amax::Real)

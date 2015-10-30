@@ -111,6 +111,7 @@ DLLEXPORT void gr_hsvtorgb(
   double h, double s, double v, double *r, double *g, double *b);
 DLLEXPORT double gr_tick(double, double);
 DLLEXPORT int gr_validaterange(double, double);
+DLLEXPORT void gr_adjustlimits(double *, double *);
 DLLEXPORT void gr_adjustrange(double *, double *);
 DLLEXPORT void gr_beginprint(char *);
 DLLEXPORT void gr_beginprintext(char *, char *, char *, char *);

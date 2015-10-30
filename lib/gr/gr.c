@@ -6654,3 +6654,49 @@ int gr_uselinespec(char *linespec)
 
   return result;
 }
+
+void gr_adjustlimits(double *amin, double *amax)
+{
+  double a = log10(*amax - *amin), b = 1;
+  double quotient, remainder, exponent, scale;
+
+  if (*amin == *amax)
+    {
+      *amin -= 1;
+      *amax += 1;
+    }
+
+  remainder = fmod(a, b);
+  quotient = (a - remainder) / b;
+  if (remainder)
+    {
+      if ((b < 0) != (remainder < 0))
+        {
+          remainder += b;
+          quotient -= 1;
+        }
+    }
+  else
+    {
+      remainder *= remainder;
+      if (b < 0)
+        remainder = -remainder;
+    }
+  if (quotient)
+    {
+      exponent = floor(quotient);
+      if (quotient - exponent > 0.5)
+        exponent += 1;
+    }
+  else
+    {
+      quotient *= quotient;
+      exponent = quotient * a / b;
+    }
+  if (remainder < 0.5)
+    exponent -= 1;
+
+  scale = pow(10.0, -exponent);
+  *amin = floor(*amin * scale) / scale;
+  *amax = ceil(*amax * scale) / scale;
+}

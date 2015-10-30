@@ -2,6 +2,7 @@ LIBRARY libgr.dll
 
 EXPORTS
 	gr_activatews
+	gr_adjustlimits
 	gr_adjustrange
 	gr_axes
 	gr_axes3d
