@@ -93,6 +93,10 @@ DLLEXPORT void gks_svgplugin(
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
+#ifndef max
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#endif
+
 static
 gks_state_list_t *gkss;
 
@@ -130,7 +134,6 @@ typedef struct ws_state_list_t
   SVG_point *points;
   int npoints, max_points;
   int empty, page_counter, offset;
-  double cxl[MAX_TNR], cxr[MAX_TNR], cyb[MAX_TNR], cyt[MAX_TNR];
   int cx[MAX_TNR], cy[MAX_TNR], cwidth[MAX_TNR], cheight[MAX_TNR];
   int clip_index, path_index, path_counter;
   double transparency;
@@ -232,11 +235,6 @@ void set_norm_xform(int tnr, double *wn, double *vp)
   b[tnr] = vp[0] - wn[0] * a[tnr];
   c[tnr] = (vp[3] - vp[2]) / (wn[3] - wn[2]);
   d[tnr] = vp[2] - wn[2] * c[tnr];
-
-  NDC_to_DC(vp[0], vp[3], p->cxl[tnr], p->cyt[tnr]);
-  NDC_to_DC(vp[1], vp[2], p->cxr[tnr], p->cyb[tnr]);
-  p->cxr[tnr] += 1;
-  p->cyb[tnr] += 1;
 }
 
 static
@@ -1143,23 +1141,28 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 static
 void set_clip_path(int tnr)
 {
+  double *vp;
   int x, y, width, height;
+  double cxl, cxr, cyb, cyt;
   int i, found = 0, index;
 
   if (gkss->clip == GKS_K_CLIP)
-    {
-      x = (int) p->cxl[tnr];
-      y = (int) p->cyt[tnr];
-      width = (int) (p->cxr[tnr] - p->cxl[tnr]);
-      height = (int) (p->cyb[tnr] - p->cyt[tnr]);
-    }
+    vp = gkss->viewport[tnr];
   else
-    {
-      x = (int) p->cxl[0];
-      y = (int) p->cyt[0];
-      width = (int) (p->cxr[0] - p->cxl[0]);
-      height = (int) (p->cyb[0] - p->cyt[0]);
-    }
+    vp = gkss->viewport[0];
+
+  NDC_to_DC(vp[0], vp[2], cxl, cyb);
+  NDC_to_DC(vp[1], vp[3], cxr, cyt);
+
+  x = (int) cxl;
+  y = (int) cyt;
+  width = (int) (cxr - cxl);
+  height = (int) (cyb - cyt);
+
+  x = max(0, x);
+  width = min(p->width, width + 1);
+  y = max(0, y);
+  height = min(p->height, height + 1);
 
   for (i = 0; i < p->clip_index && !found; i++)
     {

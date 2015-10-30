@@ -6626,6 +6626,7 @@ int gr_uselinespec(char *linespec)
           case 'y': color = 994; break;
           case 'k': color = 1; break;
           case 'w': color = 0; break;
+           default: break;
         }
       lastspec = *spec++;
     }
