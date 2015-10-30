@@ -1624,13 +1624,15 @@ void fill_routine(int n, double *px, double *py, int tnr)
     fontName = info.fontfamily;
     float fontsize = info.fontsize;
 
+
     CGFontRef cgfont; // Check if CGFont is already cached
     if (cgfontrefs[p->family] == NULL) {
       cgfontrefs[p->family] = CGFontCreateWithFontName((CFStringRef)fontName);
     }
     cgfont = cgfontrefs[p->family];
     CTFontRef font = CTFontCreateWithGraphicsFont(cgfont, fontsize, &CGAffineTransformIdentity, NULL);
-    CFStringRef cfstring = CFStringCreateWithCString(kCFAllocatorDefault, text, kCFStringEncodingISOLatin1);
+    NSString *string = [self stringForText:text withFontFamilyID:p->family];
+    CFStringRef cfstring =  (__bridge CFStringRef)string;
     CFStringRef keys[] = {kCTFontAttributeName, kCTForegroundColorFromContextAttributeName};
     CFTypeRef values[] = {font, kCFBooleanTrue};
     CFDictionaryRef attributes = CFDictionaryCreate(kCFAllocatorDefault,
@@ -1668,7 +1670,6 @@ void fill_routine(int n, double *px, double *py, int tnr)
     CGContextSetTextPosition(context, xstart, ystart);
     CTLineDraw(line, context);
 
-    CFRelease(cfstring);
     CFRelease(attributes);
     CFRelease(attrString);
     CFRelease(line);
