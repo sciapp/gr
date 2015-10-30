@@ -32,13 +32,9 @@ done
 name="${PWD}/$(basename "${0}")"
 cd "${cwd}"
 export GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
-opts=""
 if [ "${MPLBACKEND}" = "gr" ]
 then
-  if [ ${python} != "ipython" ]
-  then
-    opts="-dmodule://gr.matplotlib.backend_gr"
-  fi
+  export MPLBACKEND="module://gr.matplotlib.backend_gr"
 fi
 if [ -f /usr/local/bin/python ]
 then
@@ -57,4 +53,4 @@ if [ -f ${GRDIR}/etc/grrc ]
 then
   . ${GRDIR}/etc/grrc
 fi
-exec ${PYTHONHOME}/bin/${python} "$@" ${opts}
+exec ${PYTHONHOME}/bin/${python} "$@"

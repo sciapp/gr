@@ -28,10 +28,9 @@ done
 name="${PWD}/$(basename "${0}")"
 cd "${cwd}"
 GRDIR=`dirname ${name} | sed -e 's;/bin;;'`
-opts=""
 if [ "${MPLBACKEND}" == "gr" ]
 then
-  opts="-dmodule://gr.matplotlib.backend_gr"
+  export MPLBACKEND="module://gr.matplotlib.backend_gr"
 fi
 if [ -d ${HOME}/anaconda ]
 then
@@ -53,4 +52,4 @@ if [ -f ${GRDIR}/etc/grrc ]
 then
   . ${GRDIR}/etc/grrc
 fi
-exec ${PYTHONHOME}/bin/python ${args} ${opts}
+exec ${PYTHONHOME}/bin/python ${args}
