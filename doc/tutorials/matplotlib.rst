@@ -12,6 +12,11 @@ Matplotlib applications, e.g.::
 
     python artist_reference.py -dmodule://gr.matplotlib.backend_gr
 
+With Matplotlib 1.5 you can set the backend using the ``MPLBACKEND``
+environment variable::
+
+    export MPLBACKEND="module://gr.matplotlib.backend_gr"
+
 Some of the Matplotlib examples (along with the unmodified Python code)
 are shown below.
 
