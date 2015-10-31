@@ -9,8 +9,10 @@ import gr
 import gr3
 
 gr.setviewport(0, 1, 0, 1)
-for t in range(300):
-    f = 0.0375 * (math.cos(t*0.05) * 0.995**t + 1.3)
+gr3.setbackgroundcolor(1, 1, 1, 1)
+
+for t in range(200):
+    f = 0.0375 * (math.cos(t*0.2) * 0.995**t + 1.3)
     n = 90
     points = [(math.sin(i*math.pi/8), n*0.035-i*f, math.cos(i*math.pi/8)) for i in range(n-5)]
     points.append((0, points[-1][1], 0))
