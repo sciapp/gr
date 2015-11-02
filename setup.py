@@ -917,7 +917,6 @@ int main()
             libs = list(self.gslibs)
             ldflags = list(self.gsldflags)
             cflags = []
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
@@ -940,7 +939,6 @@ int main()
             libs = ["png", "z"]
             ldflags = []
             cflags = []
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
@@ -963,7 +961,6 @@ int main()
             libs = ["png", "z"]
             ldflags = []
             cflags = []
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
@@ -986,7 +983,6 @@ int main()
             libs = ["png", "z"]
             ldflags = []
             cflags = []
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
@@ -1009,7 +1005,6 @@ int main()
             libs = ["png", "z"]
             ldflags = []
             cflags = []
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
@@ -1029,7 +1024,6 @@ int main()
             libs = []
             ldflags = []
             cflags = []
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
@@ -1061,7 +1055,6 @@ int main()
             libs.append("pthread")
             ldflags = list(self.mupdfldflags)
             cflags = []
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
 #                    ldflags.extend(_msvc_extra_link_args)   # necessary?
@@ -1083,7 +1076,6 @@ int main()
             libs = list(self.wxlibs)
             ldflags = list(self.wxldflags)
             cflags = list(self.wxcxx)
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
@@ -1108,7 +1100,6 @@ int main()
             libs = list(self.qtlibs)
             ldflags = list(self.qtldflags)
             cflags = []
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
 # do not use _msvc_extra_link_args because /nodefaultlib causes
 # error LNK2019: unresolved external symbol ""__declspec(dllimport)
@@ -1132,7 +1123,6 @@ int main()
 #                inc.extend(self.x11inc)
             ldflags = list(self.gtkldflags)
             cflags = list(self.gtkcflags)
-            ldflags.extend(self.platform_ldflags)
             if self.isWin32:
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
