@@ -25,9 +25,18 @@ if [ -z "${QTDIR}" ]; then
 fi
 
 extras=`pwd`/3rdparty/build
+extras_lib=${extras}/lib
 export PATH=${PATH}:${extras}/bin
+
+mkdir -p ${extras_lib}
+make -C 3rdparty
+cp -p 3rdparty/freetype/libfreetype.a ${extras_lib}/
+cp -p 3rdparty/jpeg/libjpeg.a ${extras_lib}/
+cp -p 3rdparty/libpng16/libpng.a ${extras_lib}/
+cp -p 3rdparty/zlib/libz.a ${extras_lib}/
 
 make -C 3rdparty extras
 make EXTRA_CFLAGS=-I${extras}/include \
      EXTRA_CXXFLAGS=-I${extras}/include \
-     EXTRA_LDFLAGS=-L${extras}/lib ${opts} install
+     EXTRA_LDFLAGS=-L${extras_lib} ${opts} install
+
