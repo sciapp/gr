@@ -1,15 +1,3 @@
-diff -Naur mupdf-1.6-source/Makefile mupdf/Makefile
---- mupdf-1.6-source/Makefile	2014-09-30 13:25:12.000000000 +0200
-+++ mupdf/Makefile	2015-08-21 10:16:10.000000000 +0200
-@@ -132,7 +132,7 @@
- 
- $(MUPDF_LIB) : $(FITZ_OBJ) $(PDF_OBJ) $(XPS_OBJ) $(CBZ_OBJ) $(IMG_OBJ) $(TIFF_OBJ)
- 
--INSTALL_LIBS := $(MUPDF_LIB)
-+INSTALL_LIBS := $(MUPDF_LIB) $(THIRD_LIBS)
- 
- # --- Rules ---
- 
 diff -Naur mupdf-1.6-source/Makerules mupdf/Makerules
 --- mupdf-1.6-source/Makerules	2014-09-30 13:25:12.000000000 +0200
 +++ mupdf/Makerules	2015-08-21 10:15:04.000000000 +0200

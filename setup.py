@@ -147,10 +147,16 @@ class build_static(Command):
                 compiler.create_static_lib(obj, "jpeg",
                                            output_dir=_build_3rdparty_lib)
             if self.static_extras:
-                if os.system("make -C 3rdparty extras DIR=" +
-                             os.path.realpath(_build_3rdparty)):
-                    # building static libraries failed
-                    sys.exit(-4)
+                real_build_3rdparty = os.path.realpath(_build_3rdparty)
+                freetype = os.path.join("3rdparty", "freetype")
+                if not os.system("make -C " + freetype + " DIR=" +
+                                 real_build_3rdparty):
+                    shutil.copy(os.path.join(freetype, "libfreetype.a"),
+                                os.path.join(real_build_3rdparty, "lib"))
+                    if os.system("make -C 3rdparty extras DIR=" +
+                                 real_build_3rdparty):
+                        # building static libraries failed
+                        sys.exit(-4)
 
 
 class clean_static(Command):
