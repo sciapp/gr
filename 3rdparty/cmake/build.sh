@@ -1,6 +1,6 @@
 #!/bin/sh
 cwd=`pwd`
-if [ `which cmake` ]; then exit 0; fi
+if [ `which cmake >/dev/null 2>&1` ]; then exit 0; fi
 
 src="cmake-2.8.12.2"
 if [ "$1" = "" ]; then
@@ -17,7 +17,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget"
   fi
-  ${cmd} http://www.cmake.org/files/v2.8/${src}.tar.gz
+  ${cmd} https://cmake.org/files/v2.8/${src}.tar.gz
   tar -xf ${dest}/src/${src}.tar.gz
 fi
 
