@@ -1,0 +1,101 @@
+%{!?__python: %global __python /usr/bin/python}
+%global python_platform %(%{__python} -c "from distutils.util import get_platform ; print get_platform()")
+%define THIRDPARTY build/3rdparty.%{python_platform}-%{python_version}
+%define THIRDPARTY_SRC %{THIRDPARTY}/src
+%define THIRDPARTY_LIB %{THIRDPARTY}/lib
+
+%define qmake qmake-qt4
+
+Summary:			GR, a universal framework for visualization applications
+Name:				python-gr
+Version:			0.17.2
+Release:			1%{?dist}
+License:			MIT License
+Group:				Development/Libraries
+Source:				gr-%{version}.tar.gz
+Source1:			http://mupdf.com/downloads/archive/mupdf-1.6-source.tar.gz
+Source2:			http://downloads.xiph.org/releases/ogg/libogg-1.3.2.tar.gz
+Source3:			http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.gz
+Source4:			http://downloads.webmproject.org/releases/webm/libvpx-1.4.0.tar.bz2
+Source5:			https://ffmpeg.org/releases/ffmpeg-2.1.4.tar.gz
+Source6:			https://github.com/glfw/glfw/archive/3.1.1.tar.gz
+Source7:			http://download.zeromq.org/zeromq-4.0.4.tar.gz
+Source8:			https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
+Source9:			https://cmake.org/files/v2.8/cmake-2.8.12.2.tar.gz
+BuildRequires:		gcc-c++
+BuildRequires:		python
+BuildRequires:		python-devel
+BuildRequires:		python-setuptools
+BuildRequires:		libX11-devel
+BuildRequires:		libXt-devel
+BuildRequires:		libXft-devel
+BuildRequires:		gtk2-devel
+BuildRequires:		qt-devel
+
+%if 0%{?suse_version}
+%define qmake qmake
+BuildRequires:		Mesa-libGL-devel
+BuildRequires:		libqt4-devel
+%else
+BuildRequires:		mesa-libGL-devel
+%endif
+
+%if 0%{?rhel_version}
+BuildRequires:		ghostscript
+%else
+# RHEL: unresolvable package(s)
+BuildRequires:		ghostscript-devel
+%endif
+
+# Scientific Linux 6: have choice for libjpeg-devel needed by qt-devel: libjpeg-devel libjpeg-turbo-devel
+%if 0%{?scientificlinux_version} == 600
+BuildRequires:		libjpeg-turbo-devel
+%endif
+
+# RHEL 6 and Scientific Linux 6 have too old cmake version (build internal)
+%if 0%{?rhel_version} == 600 || 0%{?scientificlinux_version} == 600
+%else
+BuildRequires:		cmake
+%endif
+
+# wxWidgets BuildRequires
+%if 0%{?fedora_version}
+BuildRequires:		wxGTK-devel
+%endif
+%if 0%{?suse_version}
+BuildRequires:		wxWidgets-devel
+%endif
+
+Requires:			python
+Requires:			numpy
+
+%description
+GR, a universal framework for visualization applications
+
+%prep
+%setup -n gr-%{version}
+%{_bindir}/python setup.py clean --all
+mkdir -p %{THIRDPARTY_SRC}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE1}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE2}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE3}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE4}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE5}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE6}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE7}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE8}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE9}
+
+%build
+%{__python} setup.py build_ext --static-extras --qmake=%{qmake}
+
+%install
+%{__python} setup.py build_ext --static-extras --qmake=%{qmake} install --root=$RPM_BUILD_ROOT
+
+%clean
+%{__python} setup.py clean --all
+
+%files
+%defattr(-,root,root)
+%{_prefix}/*
+
