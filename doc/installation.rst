@@ -1,6 +1,18 @@
 Installation
 ------------
 
+Linux packages
+^^^^^^^^^^^^^^
+
+Since GR v0.17.2 we provide `python-gr` `.rpm` and `.deb` packages for various
+Linux distributions using
+`openSUSE Build Service <http://build.opensuse.org>`_. Your operating systems
+package manager will cope with package dependencies.
+
+Please follow the installation instructions for your operating system described
+`here <http://software.opensuse.org/download.html?project=science:gr-framework&package=python-gr>`_.
+
+
 Prerequisites
 ^^^^^^^^^^^^^
 
