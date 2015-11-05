@@ -9,7 +9,15 @@ References
 
 * Heinen, J. (2013), `"GR - a universal framework for visualization applications" <https://us.pycon.org/2013/schedule/presentation/158>`__. `PyCon US 2013 <https://us.pycon.org/2013>`__, Santa Clara, CA (`PDF <http://iffwww.iff.kfa-juelich.de/pub/doc/GR-A_Universal_Framework_for_Visualization_Applications.pdf>`__, `Poster <http://iffwww.iff.kfa-juelich.de/pub/doc/PyCon_US_2013_GR-A_Universal_Framework_for_Visualization_Applications.pdf>`__, `Video <https://www.youtube.com/watch?v=LqX_ZHwWRW8>`__)
 
+* Felder, C. (2015), `"Embedding Visualization Applications with PyGR" <https://ep2015.europython.eu/conference/talks/embedding-visualization-applications-with-pygr>`__. `EuroPython 2015 <https://ep2015.europython.eu/>`__, Bilbao, (`Poster <https://ep2015.europython.eu/media/conference/slides/embedding-visualization-applications-with-pygr.pdf>`__)
+
 **Talks**
+
+* Heinen, J. (2015), `"Getting more out of Matplotlib with GR" <https://www.euroscipy.org/2015/schedule/presentation/12/>`__. `EuroSciPy 2015 <https://www.euroscipy.org/2015/>`__, Cambridge, UK (`PDF <https://pgi-jcns.fz-juelich.de/pub/doc/EuroSciPy_2015/EuroSciPy_2015-Getting_more_out_of_Matplotlib_with_GR.pdf>`__, `Video <https://www.youtube.com/watch?v=CnL9DESPqF8>`__, `HTML <https://pgi-jcns.fz-juelich.de/pub/doc/EuroSciPy_2015/00-talk/>`__)
+
+* Heinen, J. (2015), `"Getting more out of Matplotlib with GR" <https://ep2015.europython.eu/conference/talks/speeding-up-matplotlib-with-gr>`__. `EuroPython 2015 <https://ep2015.europython.eu/>`__, Bilbao (`PDF <https://ep2015.europython.eu/media/conference/slides/speeding-up-matplotlib-with-gr.pdf>`__, `Video <https://www.youtube.com/watch?v=XaoT65DUbYA>`__, `HTML <https://pgi-jcns.fz-juelich.de/pub/doc/EP15/talk/>`__)
+
+* Heinen, J. (2015), `"GR.jl - Plotting for Julia based on GR" <http://juliacon.org/2015/talks.html#thursday>`__. `JuliaCon 2015 <http://juliacon.org/2015/>`__, Cambridge, Massachusetts (`PDF <http://pgi-jcns.fz-juelich.de/pub/doc/JuliaCon_2015/talk.pdf>`__, `Video <https://www.youtube.com/watch?v=RVnYRk_6wvE>`__, `HTML <http://pgi-jcns.fz-juelich.de/pub/doc/JuliaCon_2015/html/>`__)
 
 * Heinen, J. (2014), `"Scientific Visualization with GR" <https://ep2014.europython.eu/en/schedule/sessions/86/>`__. `EuroPython 2014 <https://ep2014.europython.eu>`__, Berlin (`PDF <http://iffwww.iff.kfa-juelich.de/pub/doc/Scientific_Visualization_with_GR.pdf>`__, `Video <http://www.youtube.com/watch?v=-oSAMkqbWjs>`__, `HTML <http://iffwww.iff.kfa-juelich.de/pub/doc/EP14>`__)
 
