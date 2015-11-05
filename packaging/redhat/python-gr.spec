@@ -1,4 +1,5 @@
 %{!?__python: %global __python /usr/bin/python}
+%{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True)")}
 %global python_platform %(%{__python} -c "from distutils.util import get_platform ; print get_platform()")
 %define THIRDPARTY build/3rdparty.%{python_platform}-%{python_version}
 %define THIRDPARTY_SRC %{THIRDPARTY}/src
@@ -9,8 +10,8 @@
 Summary:			GR, a universal framework for visualization applications
 Name:				python-gr
 Version:			0.17.2
-Release:			1%{?dist}
-License:			MIT License
+Release:			2%{?dist}
+License:			MIT
 Group:				Development/Libraries
 Source:				gr-%{version}.tar.gz
 Source1:			http://mupdf.com/downloads/archive/mupdf-1.6-source.tar.gz
@@ -97,5 +98,5 @@ tar -C %{THIRDPARTY_SRC} -xf %{SOURCE9}
 
 %files
 %defattr(-,root,root)
-%{_prefix}/*
+%{python_sitearch}/*
 
