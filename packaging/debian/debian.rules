@@ -29,3 +29,5 @@ override_dh_auto_install:
 	--force --root=/usr/src/packages/BUILD/debian/python-gr \
 	--no-compile -O0 --install-layout=deb
 
+override_dh_python2:
+	dh_python2 --no-guessing-versions

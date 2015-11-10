@@ -9,7 +9,7 @@
 
 Summary:			GR, a universal framework for visualization applications
 Name:				python-gr
-Version:			0.17.2
+Version:			0.17.3
 Release:			2%{?dist}
 License:			MIT
 Group:				Development/Libraries
