@@ -205,7 +205,7 @@ class clean(_clean, clean_static):
                       "clean")
 
 
-class check_ext(Command, build_static):
+class check_ext(build_static, Command):
 
     description = "dynamically generate list of C/C++ extensions for build_ext"
 
