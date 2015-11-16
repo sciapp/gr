@@ -1,1 +1,1 @@
-../error.c
+#include "../error.c"

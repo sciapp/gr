@@ -1,1 +1,1 @@
-../dl.c
+#include "../dl.c"

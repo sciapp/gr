@@ -1,1 +1,1 @@
-../malloc.c
+#include "../malloc.c"

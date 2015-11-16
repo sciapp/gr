@@ -1,1 +1,1 @@
-../util.c
+#include "../util.c"

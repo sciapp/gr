@@ -1,1 +1,1 @@
-../ft.c
+#include "../ft.c"

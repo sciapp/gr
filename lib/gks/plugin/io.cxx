@@ -1,1 +1,1 @@
-../io.c
+#include "../io.c"

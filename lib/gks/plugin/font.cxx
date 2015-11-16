@@ -1,1 +1,1 @@
-../font.c
+#include "../font.c"

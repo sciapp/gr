@@ -1,1 +1,1 @@
-../afm.c
+#include "../afm.c"
