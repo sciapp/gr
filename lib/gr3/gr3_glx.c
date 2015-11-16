@@ -8,7 +8,7 @@
 
 static Display *display; /*!< The used X display */
 static Pixmap pixmap; /*!< The XPixmap (GLX < 1.4)*/
-static GLXPbuffer pbuffer = NULL; /*!< The GLX Pbuffer (GLX >=1.4) */
+static GLXPbuffer pbuffer = (GLXPbuffer) NULL; /*!< The GLX Pbuffer (GLX >=1.4) */
 static GLXContext context; /*!< The GLX context */
 
 /*!
@@ -23,7 +23,7 @@ int gr3_initGL_GLX_(void) {
   int major, minor;
   int fbcount;
   GLXFBConfig *fbc;
-  GLXFBConfig fbconfig;
+  GLXFBConfig fbconfig = (GLXFBConfig) NULL;
   gr3_log_("gr3_initGL_GLX_();");
   
   display = XOpenDisplay(0);

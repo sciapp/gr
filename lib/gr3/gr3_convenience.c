@@ -880,7 +880,7 @@ int gr3_createtubemesh(int *mesh, int n, const float *points, const float *color
   float (*colors_filtered)[3];
   float *radii_filtered;
   
-  double longest_direction_cross[3];
+  double longest_direction_cross[3] = {0, 0, 0};
   double longest_direction_cross_length_squared = 0;
   int longest_direction_cross_index = 0;
   

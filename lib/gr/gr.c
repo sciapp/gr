@@ -35,6 +35,8 @@
 #define R_OK 4
 #endif
 
+#define GR_UNUSED(param) (void)param
+
 typedef struct
 {
   int index;
@@ -5633,6 +5635,7 @@ double gr_tick(double amin, double amax)
     {
       exponent = log10(amax - amin);
       fractpart = modf(exponent, &intpart);
+      GR_UNUSED(fractpart); /* silence compiler warning */
       n = (int) intpart;
 
       factor = pow(10.0, exponent - n);
