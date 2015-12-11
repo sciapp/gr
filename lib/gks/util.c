@@ -2664,6 +2664,7 @@ void fill(int n, double *px, double *py, int tnr,
   int i, im1, l, ni, flag, inc;
   double sx[128], sy[128];
 
+  xi = yi = 0.0;
   epsx = fabs((xend - x0) * 1.0E-5);
   epsy = fabs((yend - y0) * 1.0E-5);
 

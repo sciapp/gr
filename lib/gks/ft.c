@@ -282,7 +282,8 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   FT_Vector align;
   FT_Bitmap ftbitmap;
   FT_UInt codepoint;
-  int i, j, k, textfont, dx, dy, value, pos_x, pos_y;
+  int i, textfont, dx, dy, value, pos_x, pos_y;
+  unsigned int j, k;
   double angle;
   const int windowwidth = *width;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
