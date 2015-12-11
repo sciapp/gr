@@ -575,10 +575,6 @@
 #define PNG_STRUCT_PNG   0x0001
 #define PNG_STRUCT_INFO  0x0002
 
-/* Scaling factor for filter heuristic weighting calculations */
-#define PNG_WEIGHT_FACTOR (1<<(PNG_WEIGHT_SHIFT))
-#define PNG_COST_FACTOR (1<<(PNG_COST_SHIFT))
-
 /* Flags for the png_ptr->flags rather than declaring a byte for each one */
 #define PNG_FLAG_ZLIB_CUSTOM_STRATEGY     0x0001
 #define PNG_FLAG_ZSTREAM_INITIALIZED      0x0002 /* Added to libpng-1.6.0 */
@@ -669,7 +665,7 @@
 /* The fixed point conversion performs range checking and evaluates
  * its argument multiple times, so must be used with care.  The
  * range checking uses the PNG specification values for a signed
- * 32 bit fixed point value except that the values are deliberately
+ * 32-bit fixed point value except that the values are deliberately
  * rounded-to-zero to an integral value - 21474 (21474.83 is roughly
  * (2^31-1) * 100000). 's' is a string that describes the value being
  * converted.
@@ -816,7 +812,7 @@
     */
 #endif
 
-/* This is used for 16 bit gamma tables -- only the top level pointers are
+/* This is used for 16-bit gamma tables -- only the top level pointers are
  * const; this could be changed:
  */
 typedef const png_uint_16p * png_const_uint_16pp;
@@ -1218,6 +1214,14 @@ PNG_INTERNAL_FUNCTION(void,png_read_finish_row,(png_structrp png_ptr),
 
 /* Initialize the row buffers, etc. */
 PNG_INTERNAL_FUNCTION(void,png_read_start_row,(png_structrp png_ptr),PNG_EMPTY);
+
+#if PNG_ZLIB_VERNUM >= 0x1240
+PNG_INTERNAL_FUNCTION(int,png_zlib_inflate,(png_structrp png_ptr, int flush),
+      PNG_EMPTY);
+#  define PNG_INFLATE(pp, flush) png_zlib_inflate(pp, flush)
+#else /* Zlib < 1.2.4 */
+#  define PNG_INFLATE(pp, flush) inflate(&(pp)->zstream, flush)
+#endif /* Zlib < 1.2.4 */
 
 #ifdef PNG_READ_TRANSFORMS_SUPPORTED
 /* Optional call to update the users info structure */
