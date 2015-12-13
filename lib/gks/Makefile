@@ -27,7 +27,7 @@ endif
           AR = ar
       RANLIB = ar ts
      SOFLAGS = -shared
-INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGKS.so
+INSTALL_NAME = -Wl,-install_name,@rpath/libGKS.so -Wl,-rpath,@loader_path/.
         LIBS = -lpthread -ldl -lc -lm
       FTLIBS = ../../3rdparty/freetype/libfreetype.a
      XFTLIBS = -lXft -lfontconfig

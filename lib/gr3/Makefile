@@ -11,7 +11,7 @@
        ZLIBS = ../../3rdparty/zlib/libz.a
       CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)
      SOFLAGS = -shared
-INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR3.so
+INSTALL_NAME = -Wl,-install_name,@rpath/libGR3.so -Wl,-rpath,@loader_path/.
      LDFLAGS = $(EXTRA_LDFLAGS)
 
 default: gr3.c gr3.h

@@ -15,7 +15,7 @@
           AR = ar
       RANLIB = ar ts
      SOFLAGS = -shared
-INSTALL_NAME = -Wl,-install_name,$(LIBDIR)/libGR.so
+INSTALL_NAME = -Wl,-install_name,@rpath/libGR.so -Wl,-rpath,@loader_path/.
      LDFLAGS = $(EXTRA_LDFLAGS)
         LIBS = -lpthread -ldl -lc -lm
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
