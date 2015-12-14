@@ -1,8 +1,21 @@
-GRDIR="S:\\GR"
-CC = gcc
+ifeq ($(OS),Windows_NT)
+  GRDIR="S:\\GR"
+  CC = gcc
+  AR = ar
+else
+  GRDIR="S:/GR"
+  ifeq ($(ARCH),x86_64)
+    CC=x86_64-w64-mingw32-gcc
+    AR=x86_64-w64-mingw32-ar
+  else
+    CC=i686-w64-mingw32-gcc
+    AR=i686-w64-mingw32-ar
+  endif
+endif
+
 CFLAGS = -DNO_FT -DNO_X11
 DEFINES = -DGRDIR=\"$(GRDIR)\"
-AR = ar
+
 OBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o \
        malloc.o error.o mf.o wiss.o cgm.o win.o mac.o ps.o \
        pdf.o x11.o socket.o plugin.o compress.o io.o
@@ -18,12 +31,15 @@ all: libgks.a demo.exe
 libgks.a: $(OBJS)
 	$(AR) cr $@ $?
 
+libgks.dll: $(OBJS)
+	$(CC) -shared -o $@ $? -Wl,--out-implib,$(@:.dll=.a) $(LIBS)
+
 demo.o: demo.c
 	$(CC) -c demo.c
 demo.exe: demo.o libgks.a
 	$(CC) -o $@ demo.o libgks.a ${LIBS}
 
 clean:
-	DEL demo.exe
-	DEL libgks.a
-	DEL *.o
+	$(RM) demo.exe
+	$(RM) libgks.a
+	$(RM) *.o
