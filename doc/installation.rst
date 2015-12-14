@@ -44,14 +44,16 @@ features:
 +===============+======================+======================+
 |**required:**                                                |
 +---------------+----------------------+----------------------+
-|               |                      |Development Tools     |
+|               |- make                |Development Tools     |
+|               |- gcc                 |                      |
+|               |- g++                 |                      |
 +---------------+----------------------+----------------------+
 |               |- libx11-dev          |Basic X Window System |
 |               |- libxft-dev          |                      |
 |               |- libxt-dev           |                      |
 +---------------+----------------------+----------------------+
 |Python support |- python2.7-dev       |- python-devel        |
-|               |- numpy               |- numpy               |
+|               |- python-numpy        |- numpy               |
 +---------------+----------------------+----------------------+
 |**recommended:**                                             |
 +---------------+----------------------+----------------------+
@@ -68,7 +70,7 @@ features:
 +---------------+----------------------+----------------------+
 |Image output   |libgs-dev             |ghostscript-devel     |
 +---------------+----------------------+----------------------+
-|PDF import     |mupdf-dev             |mupdf-devel           |
+|PDF import     |libmupdf-dev          |mupdf-devel           |
 +---------------+----------------------+----------------------+
 |MOV export     |        ffmpeg-2.x (source build)            |
 +---------------+----------------------+----------------------+
@@ -76,7 +78,9 @@ features:
 |               |- libwxgtk2.8-dev     |- wxGTK-devel.x86_64  |
 |               |- python-wxgtk2.8     |- wxPython            |
 +---------------+----------------------+----------------------+
-|GLFW           |                      |glfw-devel            |
+|GLFW           |libglfw3-dev          |glfw-devel            |
++---------------+----------------------+----------------------+
+|ØMQ            |libzmq3-dev           |zeromq3-devel         |
 +---------------+----------------------+----------------------+
 |**for the demos:**                                           |
 +---------------+----------------------+----------------------+
@@ -260,7 +264,7 @@ On slow systems, you can have a coffee now, as the system will download
 and build several static libraries.
 
 
-Install from PyPi
+Install from PyPI
 ^^^^^^^^^^^^^^^^^
 
 ::
