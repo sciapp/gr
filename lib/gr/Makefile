@@ -5,18 +5,26 @@
    PYTHONDIR = $(LIBDIR)/python
     JULIADIR = $(LIBDIR)/julia
 
+UNAME := $(shell uname)
+
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                md5.o import.o grforbnd.o
-   MUPDFDEFS = 
+   MUPDFDEFS =
      DEFINES = $(MUPDFDEFS)
     INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           AR = ar
       RANLIB = ar ts
+ifeq ($(UNAME), Darwin)
+INSTALL_NAME = -Wl,-install_name,@rpath/libGR.so
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/.
+     SOFLAGS = -dynamiclib
+else
+INSTALL_NAME =
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
      SOFLAGS = -shared
-INSTALL_NAME = -Wl,-install_name,@rpath/libGR.so -Wl,-rpath,@loader_path/.
-     LDFLAGS = $(EXTRA_LDFLAGS)
+endif
         LIBS = -lpthread -ldl -lc -lm
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
      BZ2LIBS = ../../3rdparty/bzip2/libbz2.a
@@ -37,11 +45,9 @@ default:
 	@make `cat ../../Makedefs`
 
 Linux:
-	@make targets \
-	INSTALL_NAME="" LDFLAGS="$(EXTRA_LDFLAGS) -Wl,-rpath=$(LIBDIR)"
+	@make targets
 Darwin:
-	@make targets LD="$(CC)" \
-	SOFLAGS="-dynamiclib"
+	@make targets
 
 targets: prerequisites libGR.a libGR.so demo
 

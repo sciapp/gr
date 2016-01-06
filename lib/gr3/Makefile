@@ -3,25 +3,33 @@
       INCDIR = $(DESTDIR)$(GRDIR)/include
    PYTHONDIR = $(LIBDIR)/python
 
+UNAME := $(shell uname)
+
     INCLUDES = -I../../3rdparty -I../../3rdparty/jpeg -I../gr
       GRLIBS = -L../gr -lGR
-      GLLIBS = -lGL -lX11
      PNGLIBS = ../../3rdparty/libpng16/libpng.a
     JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
        ZLIBS = ../../3rdparty/zlib/libz.a
       CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)
+ifeq ($(UNAME), Darwin)
+      GLLIBS = -framework OpenGL -framework Cocoa
+INSTALL_NAME = -Wl,-install_name,@rpath/libGR3.so
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/.
+     SOFLAGS = -dynamiclib
+else
+      GLLIBS = -lGL -lX11
+INSTALL_NAME =
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
      SOFLAGS = -shared
-INSTALL_NAME = -Wl,-install_name,@rpath/libGR3.so -Wl,-rpath,@loader_path/.
-     LDFLAGS = $(EXTRA_LDFLAGS)
+endif
 
 default: gr3.c gr3.h
 	make `uname`
 Linux:
-	make targets INSTALL_NAME="" LDFLAGS="-Wl,-rpath=$(LIBDIR)" \
+	make targets \
 	GR3_PLATFORM_SPECIFIC_C="gr3_glx.c"
 Darwin:
-	make targets SOFLAGS="-dynamiclib" \
-	GLLIBS="-framework OpenGL -framework Cocoa" SOFLAGS="-dynamiclib" \
+	make targets \
 	GR3_PLATFORM_SPECIFIC_C="gr3_cgl.c"
 
 targets: prerequisites libGR3.so

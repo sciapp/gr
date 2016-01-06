@@ -23,11 +23,17 @@ endif
      DEFINES = -DHAVE_ZLIB $(X11DEFS) $(XFTDEFS) $(FTDEFS)
       CFLAGS = -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           LD = cc
-     LDFLAGS = $(EXTRA_LDFLAGS)
           AR = ar
       RANLIB = ar ts
+ifeq ($(UNAME), Darwin)
+INSTALL_NAME = -Wl,-install_name,@rpath/libGKS.so
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/.
+     SOFLAGS = -dynamiclib
+else
+INSTALL_NAME =
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
      SOFLAGS = -shared
-INSTALL_NAME = -Wl,-install_name,@rpath/libGKS.so -Wl,-rpath,@loader_path/.
+endif
         LIBS = -lpthread -ldl -lc -lm
       FTLIBS = ../../3rdparty/freetype/libfreetype.a
      XFTLIBS = -lXft -lfontconfig
@@ -43,10 +49,9 @@ default:
 	@make `cat ../../Makedefs`
 
 Linux:
-	@make targets INSTALL_NAME=""
+	@make targets
 Darwin:
-	@make targets CFLAGS="$(CFLAGS) -fpascal-strings" \
-	SOFLAGS="-dynamiclib"
+	@make targets CFLAGS="$(CFLAGS) -fpascal-strings"
 
 targets: prerequisites libGKS.a libGKS.so demo gksm plugins
 
