@@ -6594,6 +6594,9 @@ int gr_uselinespec(char *linespec)
     {
       switch (*spec)
         {
+          case ' ':
+            def_color = 0;
+            break;
           case '-':
             if (lastspec == '-')
               linetype = GKS_K_LINETYPE_DASHED;
