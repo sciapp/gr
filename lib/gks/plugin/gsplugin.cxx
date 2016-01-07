@@ -1590,9 +1590,9 @@ void init_arguments(void)
 #endif
   sprintf(p->gs_argv[1], "-sDEVICE=%s", device);
   sprintf(p->gs_argv[2], "-g%dx%d",
-          (int) (p->viewpt[1] * 100.0 * 300.0 / 2.54),
-          (int) (p->viewpt[3] * 100.0 * 300.0 / 2.54));
-  sprintf(p->gs_argv[3], "-r300x300");
+          (int) (p->viewpt[1] * 100.0 * 600.0 / 2.54),
+          (int) (p->viewpt[3] * 100.0 * 600.0 / 2.54));
+  sprintf(p->gs_argv[3], "-r600x600");
   sprintf(p->gs_argv[4], "-sOutputFile=%s", path);
   sprintf(p->gs_argv[5], "-dGraphicsAlphaBits=4");
   sprintf(p->gs_argv[6], "-dTextAlphaBits=4");
