@@ -1008,6 +1008,10 @@ void seg_xform_rel(double *x, double *y)
       rect.size.width  = width;
       rect.size.height = height;
 
+      NSSize contentSize = [[self window] contentRectForFrameRect: rect].size;
+      rect.size.width += width - contentSize.width;
+      rect.size.height += height - contentSize.height;
+
       p->width  = width;
       p->height = height;
 
