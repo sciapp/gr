@@ -645,8 +645,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
               if (!(k))
                 {
                   pgf_printf(p->patternstream, "\\pgfpathrectangle"
-                             "{\\pgfpointxy{%d}{%d}}{\\pgfpointxy{1}{1}}\n",
-                             (i + 7) % 8, (j - 1 + (size -1)) % size);
+                             "{\\pgfpointxy{%d}{%d}}{\\pgfpointxy{1}{-1}}\n",
+                             (i + 7) % 8, size - (j - 1 + (size -1)) % size);
                 }
             }
         }
