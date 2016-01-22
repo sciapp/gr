@@ -126,7 +126,8 @@ typedef struct ws_state_list_t
   double window[4], viewport[4];
   char rgb[MAX_COLOR][7];
   int width, height;
-  int color, linewidth;
+  int color;
+  double linewidth;
   double phi, angle;
   int family, capheight;
   int pattern, have_pattern[PATTERNS];
@@ -628,7 +629,7 @@ void stroke(void)
   int i;
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d)\" style=\""
-	     "stroke:#%s; stroke-width:%d; stroke-opacity:%g; fill:none\" ",
+	     "stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
 	     p->path_index, p->rgb[p->color], p->linewidth, p->transparency);
   svg_printf(p->stream, "points=\"\n  ");
   for (i = 0; i < p->npoints; i++)
@@ -658,11 +659,11 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   NDC_to_DC(x, y, x0, y0);
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d)\" style=\""
-	     "stroke:#%s; stroke-opacity:%g; fill:none\" ",
-             p->path_index, p->rgb[p->color], p->transparency);
+	     "stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
+	     p->path_index, p->rgb[p->color], p->linewidth, p->transparency);
   if (linetype < 0 || linetype > 1)
     {
-      gks_get_dash_list(linetype, gkss->lwidth, dash_list);
+      gks_get_dash_list(linetype, 0.5 * p->linewidth, dash_list);
       len = dash_list[0];
       *s = '\0';
       for (i = 1; i <= len; i++)
@@ -828,8 +829,7 @@ static
 void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  double ln_width;
-  int width;
+  double ln_width, width;
 
   if (n > p->max_points)
   {
@@ -842,11 +842,9 @@ void polyline(int n, double *px, double *py)
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   if (gkss->version > 4)
-    width = nint(ln_width * p->height / 500.0);
+    width = ln_width * p->height / 500.0;
   else
-    width = nint(ln_width);
-  if (width < 1)
-    width = 0;
+    width = ln_width;
 
   p->linewidth = width;
   p->color = ln_color;
