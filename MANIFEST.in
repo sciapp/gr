@@ -3,6 +3,7 @@ include README.*
 include version.txt
 include vcversioner.py
 include requirements.txt
+include Makefile
 graft lib
 graft 3rdparty
 graft examples
