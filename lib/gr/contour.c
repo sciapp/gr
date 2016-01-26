@@ -34,6 +34,7 @@ typedef struct
   char lblfmt[10];
   int lblmjh;
   int txtflg;
+  int use_color;
   int xdim, ydim;
   int wkid;
   int tnr, ndc;
@@ -602,7 +603,7 @@ void draw(double x, double y, double z, int iflag)
   static double line_length = 0;
   static int z_exept_flag = 0;
   double dx, dy;
-  int linetype;
+  int linetype, colorind;
   char label[20];
 
   switch (iflag % 10)
@@ -653,6 +654,12 @@ void draw(double x, double y, double z, int iflag)
 		    {
 		      gks_set_pline_linetype(linetype);
 		    }
+                  if (contour_vars.use_color)
+                    {
+                      colorind = (int)(1000 + (z - contour_vars.zmin) /
+                        (contour_vars.zmax - contour_vars.zmin) * 255);
+                      gr_setlinecolorind(colorind);
+                    }
 		  gr_polyline3d(n, xpts, ypts, zpts);
 		}
 	      xpts[0] = x;
@@ -725,6 +732,12 @@ void draw(double x, double y, double z, int iflag)
 		{
 		  gks_set_pline_linetype(linetype);
 		}
+              if (contour_vars.use_color)
+                {
+                  colorind = (int)(1000 + (z - contour_vars.zmin) /
+                    (contour_vars.zmax - contour_vars.zmin) * 255);
+                  gr_setlinecolorind(colorind);
+                }
 	      gr_polyline3d(n, xpts, ypts, zpts);
 	    }
 	}
@@ -1205,8 +1218,9 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
 
   contour_vars.xdim = nx;
   contour_vars.ydim = ny;
-  contour_vars.lblmjh = major_h;
+  contour_vars.lblmjh = major_h % 1000;
   contour_vars.label_map = NULL;
+  contour_vars.use_color = major_h >= 1000;
 
   /* Don't label any lines if a 3D-transformation */
   /* or if any scale options are in effect.       */

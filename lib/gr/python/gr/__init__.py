@@ -1615,7 +1615,8 @@ def contour(px, py, h, pz, major_h):
     `major_h` :
         Directs GR to label contour lines. For example, a value of 3 would label
         every third line. A value of 1 will label every line. A value of 0
-        produces no labels.
+        produces no labels. To produce colored contour lines, add an offset
+        of 1000 to `major_h`.
 
     """
     nx = len(px)

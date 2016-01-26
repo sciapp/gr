@@ -5367,7 +5367,7 @@ void gr_contour(
   int major_h)
 {
   int i, j;
-  int errind, ltype, halign, valign;
+  int errind, ltype, color, halign, valign;
   double chux, chuy;
 
   if ((nx <= 0) || (ny <= 0))
@@ -5396,9 +5396,10 @@ void gr_contour(
 
   setscale(lx.scale_options);
 
-  /* save linetype, text alignment and character-up vector */
+  /* save linetype, line color, text alignment and character-up vector */
 
   gks_inq_pline_linetype(&errind, &ltype);
+  gks_inq_pline_color_index(&errind, &color);
   gks_inq_text_align(&errind, &halign, &valign);
   gks_inq_text_upvec(&errind, &chux, &chuy);
 
@@ -5406,9 +5407,10 @@ void gr_contour(
 
   gr_draw_contours(nx, ny, nh, px, py, h, pz, major_h);
 
-  /* restore linetype, character-up vector and text alignment */
+  /* restore linetype, line color, character-up vector and text alignment */
 
   gks_set_pline_linetype(ltype);
+  gks_set_pline_color_index(color);
   gks_set_text_align(halign, valign);
   gks_set_text_upvec(chux, chuy);
 
