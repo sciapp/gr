@@ -1269,6 +1269,7 @@ void gks_drv_js(
       p->page_counter = 0;
       p->offset = 0;
 
+      p->linewidth = 1.0;
       p->transparency = 1.0;
 
       set_xform();
