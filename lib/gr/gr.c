@@ -6531,7 +6531,7 @@ void gr_savestate(void)
         state = (state_list *) xmalloc(sizeof(state_list) * MAX_SAVESTATE);
 
       s = state + state_saved;
-      state_saved += 1
+      state_saved += 1;
 
       gks_inq_pline_linetype(&errind, &s->ltype);
       gks_inq_pline_linewidth(&errind, &s->lwidth);
@@ -6565,7 +6565,7 @@ void gr_restorestate(void)
 
   if (state_saved > 0)
     {
-      state_saved -= 1
+      state_saved -= 1;
       s = state + state_saved;
 
       gks_set_pline_linetype(s->ltype);
