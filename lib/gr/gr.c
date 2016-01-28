@@ -121,13 +121,10 @@ int predef_colors[20] = {
   9, 2, 0, 1, 16, 3, 15, 8, 6, 10, 11, 4, 12, 13, 14, 7, 5, 17, 18, 19
 };
 
+#define MAX_SAVESTATE 16
+
 static
-state_list s = {
-  GKS_K_LINETYPE_SOLID, 1.0, 1, GKS_K_MARKERTYPE_ASTERISK, 2.0, 1,
-  1, GKS_K_TEXT_PRECISION_STRING, 1.0, 0.0, 1, 0.027, {0, 1},
-  GKS_K_TEXT_PATH_RIGHT, {GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BASE},
-  GKS_K_INTSTYLE_HOLLOW, 1, 1, 0
-};
+state_list *state = NULL;
 
 static
 int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
@@ -6524,64 +6521,72 @@ int gr_inqregenflags(void)
 void gr_savestate(void)
 {
   int errind;
+  state_list *s = NULL;
 
   check_autoinit;
 
-  if (!state_saved)
+  if (state_saved < MAX_SAVESTATE)
     {
-      gks_inq_pline_linetype(&errind, &s.ltype);
-      gks_inq_pline_linewidth(&errind, &s.lwidth);
-      gks_inq_pline_color_index(&errind, &s.plcoli);
-      gks_inq_pmark_type(&errind, &s.mtype);
-      gks_inq_pmark_size(&errind, &s.mszsc);
-      gks_inq_pmark_color_index(&errind, &s.pmcoli);
-      gks_inq_text_fontprec(&errind, &s.txfont, &s.txprec);
-      gks_inq_text_expfac(&errind, &s.chxp);
-      gks_inq_text_spacing(&errind, &s.chsp);
-      gks_inq_text_color_index(&errind, &s.txcoli);
-      gks_inq_text_height(&errind, &s.chh);
-      gks_inq_text_upvec(&errind, &s.chup[0], &s.chup[1]);
-      gks_inq_text_path(&errind, &s.txp);
-      gks_inq_text_align(&errind, &s.txal[0], &s.txal[1]);
-      gks_inq_fill_int_style(&errind, &s.ints);
-      gks_inq_fill_style_index(&errind, &s.styli);
-      gks_inq_fill_color_index(&errind, &s.facoli);
+      if (state == NULL)
+        state = (state_list *) xmalloc(sizeof(state_list) * MAX_SAVESTATE);
 
-      s.scale_options = lx.scale_options;
+      s = state + state_saved;
+      state_saved += 1
 
-      state_saved = !state_saved;
+      gks_inq_pline_linetype(&errind, &s->ltype);
+      gks_inq_pline_linewidth(&errind, &s->lwidth);
+      gks_inq_pline_color_index(&errind, &s->plcoli);
+      gks_inq_pmark_type(&errind, &s->mtype);
+      gks_inq_pmark_size(&errind, &s->mszsc);
+      gks_inq_pmark_color_index(&errind, &s->pmcoli);
+      gks_inq_text_fontprec(&errind, &s->txfont, &s->txprec);
+      gks_inq_text_expfac(&errind, &s->chxp);
+      gks_inq_text_spacing(&errind, &s->chsp);
+      gks_inq_text_color_index(&errind, &s->txcoli);
+      gks_inq_text_height(&errind, &s->chh);
+      gks_inq_text_upvec(&errind, &s->chup[0], &s->chup[1]);
+      gks_inq_text_path(&errind, &s->txp);
+      gks_inq_text_align(&errind, &s->txal[0], &s->txal[1]);
+      gks_inq_fill_int_style(&errind, &s->ints);
+      gks_inq_fill_style_index(&errind, &s->styli);
+      gks_inq_fill_color_index(&errind, &s->facoli);
+
+      s->scale_options = lx.scale_options;
     }
   else
-    fprintf(stderr, "attempt to save state twice\n");
+    fprintf(stderr, "attempt to save state beyond implementation limit\n");
 }
 
 void gr_restorestate(void)
 {
+  state_list *s = NULL;
+
   check_autoinit;
 
-  if (state_saved)
+  if (state_saved > 0)
     {
-      gks_set_pline_linetype(s.ltype);
-      gks_set_pline_linewidth(s.lwidth);
-      gks_set_pline_color_index(s.plcoli);
-      gks_set_pmark_type(s.mtype);
-      gks_set_pmark_size(s.mszsc);
-      gks_set_pmark_color_index(s.pmcoli);
-      gks_set_text_fontprec(s.txfont, s.txprec);
-      gks_set_text_expfac(s.chxp);
-      gks_set_text_spacing(s.chsp);
-      gks_set_text_color_index(s.txcoli);
-      gks_set_text_height(s.chh);
-      gks_set_text_upvec(s.chup[0], s.chup[1]);
-      gks_set_text_path(s.txp);
-      gks_set_text_align(s.txal[0], s.txal[1]);
-      gks_set_fill_int_style(s.ints);
-      gks_set_fill_style_index(s.styli);
-      gks_set_fill_color_index(s.facoli);
+      state_saved -= 1
+      s = state + state_saved;
 
-      setscale(s.scale_options);
+      gks_set_pline_linetype(s->ltype);
+      gks_set_pline_linewidth(s->lwidth);
+      gks_set_pline_color_index(s->plcoli);
+      gks_set_pmark_type(s->mtype);
+      gks_set_pmark_size(s->mszsc);
+      gks_set_pmark_color_index(s->pmcoli);
+      gks_set_text_fontprec(s->txfont, s->txprec);
+      gks_set_text_expfac(s->chxp);
+      gks_set_text_spacing(s->chsp);
+      gks_set_text_color_index(s->txcoli);
+      gks_set_text_height(s->chh);
+      gks_set_text_upvec(s->chup[0], s->chup[1]);
+      gks_set_text_path(s->txp);
+      gks_set_text_align(s->txal[0], s->txal[1]);
+      gks_set_fill_int_style(s->ints);
+      gks_set_fill_style_index(s->styli);
+      gks_set_fill_color_index(s->facoli);
 
-      state_saved = !state_saved;
+      setscale(s->scale_options);
     }
   else
     fprintf(stderr, "attempt to restore unsaved state\n");
