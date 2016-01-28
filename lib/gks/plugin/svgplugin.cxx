@@ -1000,7 +1000,10 @@ void text(double px, double py, int nchars, char *chars)
       svg_printf(p->stream, "/text>\n</g>\n");
     }
   else
-    gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
+    {
+      p->linewidth = 1;
+      gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
+    }
 }
 
 static
