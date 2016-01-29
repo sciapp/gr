@@ -441,8 +441,8 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
     pos_x = ( pen.x + bearing.x - bb.xMin) / 64;
     pos_y = (-pen.y - bearing.y + bb.yMax) / 64;
     ftbitmap = face->glyph->bitmap;
-    for (j = 0; j < ftbitmap.rows; j++) {
-      for (k = 0; k < ftbitmap.width; k++) {
+    for (j = 0; j < (unsigned int) ftbitmap.rows; j++) {
+      for (k = 0; k < (unsigned int) ftbitmap.width; k++) {
         dx = k + pos_x;
         dy = j + pos_y;
         value = mono_bitmap[dy * *width + dx];
