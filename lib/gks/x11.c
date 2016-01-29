@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <errno.h>
+#include <signal.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -323,6 +324,8 @@ typedef struct ws_state_list_struct
     Colormap cmap;
     Window win;
     Bool new_win;
+    Atom wmDeleteMessage;
+    pthread_t master_thread;
     Pixmap pixmap, drawable, icon_pixmap;
     Bool double_buf;
     int shape;
@@ -1134,6 +1137,15 @@ void create_window(int win)
 	sprintf(icon_name, "GKSwk %d", p->conid);
       else
 	strcpy(icon_name, "GKSterm");
+
+      if (gks_getenv("GKS_IGNORE_WM_DELETE_WINDOW") == NULL)
+        {
+          p->master_thread = pthread_self();
+          p->wmDeleteMessage = XInternAtom(p->dpy, "WM_DELETE_WINDOW", False);
+          XSetWMProtocols(p->dpy, p->win, &p->wmDeleteMessage, 1);
+        }
+      else
+        p->master_thread = 0;
 
       XSetStandardProperties(p->dpy, p->win, WindowName, icon_name,
 			     p->icon_pixmap, argv, argc, hints);
@@ -4279,6 +4291,13 @@ void *event_loop(void *arg)
 	    {
 	      if (XCheckTypedWindowEvent(p->dpy, p->win, Expose, &event))
 		handle_expose_event(p);
+              else if (XCheckTypedWindowEvent(p->dpy, p->win, ClientMessage,
+                                              &event))
+                {
+                  if (event.xclient.data.l[0] == p->wmDeleteMessage)
+                    if (p->master_thread != 0)
+                      pthread_kill(p->master_thread, SIGTERM);
+                }
 	      pthread_mutex_unlock(&p->mutex);
 	    }
 	}
