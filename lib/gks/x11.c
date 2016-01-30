@@ -4295,8 +4295,13 @@ void *event_loop(void *arg)
                                               &event))
                 {
                   if (event.xclient.data.l[0] == p->wmDeleteMessage)
-                    if (p->master_thread != 0)
-                      pthread_kill(p->master_thread, SIGTERM);
+                    {
+                      if (p->master_thread != 0)
+                        {
+                          pthread_kill(p->master_thread, SIGTERM);
+                          p->run = 0;
+                        }
+                    }
                 }
 	      pthread_mutex_unlock(&p->mutex);
 	    }

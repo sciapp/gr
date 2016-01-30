@@ -5,6 +5,7 @@
 #include <math.h>
 #include <float.h>
 #include <stdint.h>
+#include <signal.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -1350,6 +1351,13 @@ void initialize(int state)
 }
 
 static
+void resetgks(int sig)
+{
+  if (sig == SIGTERM)
+    gr_emergencyclosegks();
+}
+
+static
 void initgks(void)
 {
   int state, errfil = 0, wkid = 1, errind, conid, wtype, color;
@@ -1390,6 +1398,8 @@ void initgks(void)
                    ((nint(g * 255) & 0xff) <<  8) |
                    ((nint(b * 255) & 0xff) << 16);
     }
+
+  signal(SIGTERM, resetgks);
 }
 
 void gr_opengks(void)
