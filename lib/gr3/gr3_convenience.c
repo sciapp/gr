@@ -745,9 +745,9 @@ GR3API int gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data,
     return err;
 }
 
-#define INDEX(stride, offset, index) ((index)*(stride)+(offset))
-#define IN(index) in[INDEX(in_stride, in_offset, (index))]
-#define OUT(index) out[INDEX(out_stride, out_offset, (index))]
+#define GR3_INDEX(stride, offset, index) ((index)*(stride)+(offset))
+#define GR3_IN(index) in[GR3_INDEX(in_stride, in_offset, (index))]
+#define GR3_OUT(index) out[GR3_INDEX(out_stride, out_offset, (index))]
 static int cupic_interp(const float *in, int in_offset, int in_stride, float *out, int out_offset, int out_stride, int num_points, int num_steps) {
   int i;
   int num_new_points = num_points * (1 + num_steps) - num_steps;
@@ -759,13 +759,13 @@ static int cupic_interp(const float *in, int in_offset, int in_stride, float *ou
   assert(in);
   assert(out);
   
-  right_side[0] = 3*(IN(1)-IN(0));
+  right_side[0] = 3*(GR3_IN(1)-GR3_IN(0));
   diagonal[0] = 2;
   for (i = 1; i < num_points-1; i++) {
-    right_side[i] = 3*(IN(i+1)-IN(i-1));
+    right_side[i] = 3*(GR3_IN(i+1)-GR3_IN(i-1));
     diagonal[i] = 4;
   }
-  right_side[num_points-1] = 3*(IN(num_points-1)-IN(num_points-2));
+  right_side[num_points-1] = 3*(GR3_IN(num_points-1)-GR3_IN(num_points-2));
   diagonal[num_points-1] = 2;
   
   for (i = 0; i < num_points-1; i++) {
@@ -788,13 +788,13 @@ static int cupic_interp(const float *in, int in_offset, int in_stride, float *ou
     int step = j.rem;
     double t = (double)step/(num_steps+1);
     if (t == 0) {
-      OUT(i) = IN(section);
+      GR3_OUT(i) = GR3_IN(section);
     } else {
-      double a = IN(section);
+      double a = GR3_IN(section);
       double b = derivatives[section];
-      double c = 3*(IN(section+1)-IN(section))-2*derivatives[section]-derivatives[section+1];
-      double d = 2*(IN(section)-IN(section+1))+derivatives[section]+derivatives[section+1];
-      OUT(i) = a+(b+(c+d*t)*t)*t;
+      double c = 3*(GR3_IN(section+1)-GR3_IN(section))-2*derivatives[section]-derivatives[section+1];
+      double d = 2*(GR3_IN(section)-GR3_IN(section+1))+derivatives[section]+derivatives[section+1];
+      GR3_OUT(i) = a+(b+(c+d*t)*t)*t;
     }
   }
   free(derivatives);
@@ -810,18 +810,18 @@ static int linear_interp(const float *in, int in_offset, int in_stride, float *o
     int step = j.rem;
     double t = (double)step/(num_steps+1);
     if (t == 0) {
-      OUT(i) = IN(section);
+      GR3_OUT(i) = GR3_IN(section);
     } else {
-      double a = IN(section);
-      double b = IN(section+1)-IN(section);
-      OUT(i) = a+b*t;
+      double a = GR3_IN(section);
+      double b = GR3_IN(section+1)-GR3_IN(section);
+      GR3_OUT(i) = a+b*t;
     }
   }
   return num_new_points;
 }
-#undef OUT
-#undef IN
-#undef INDEX
+#undef GR3_OUT
+#undef GR3_IN
+#undef GR3_INDEX
 
 static float *generic_interp_nd(const float *points, int n, int num_points, int num_steps, int *p_num_new_points, int (*interp)(const float *, int, int, float *, int, int, int, int)) {
   int i;
