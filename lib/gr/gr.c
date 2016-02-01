@@ -2350,6 +2350,11 @@ void gr_setwswindow(double xmin, double xmax, double ymin, double ymax)
   check_autoinit;
 
   foreach_activews((void (*)(int, void *)) wswindow, (void *) &rect);
+
+  if (flag_graphics)
+    gr_writestream(
+      "<setwswindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
+      xmin, xmax, ymin, ymax);
 }
 
 static
@@ -2374,6 +2379,11 @@ void gr_setwsviewport(double xmin, double xmax, double ymin, double ymax)
   foreach_activews((void (*)(int, void *)) wsviewport, (void *) &rect);
 
   sizex = xmax - xmin;
+
+  if (flag_graphics)
+    gr_writestream(
+      "<setwsviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
+      xmin, xmax, ymin, ymax);
 }
 
 void gr_createseg(int segment)
@@ -6565,6 +6575,9 @@ void gr_savestate(void)
     }
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
+
+  if (flag_graphics)
+    gr_writestream("<savestate/>\n");
 }
 
 void gr_restorestate(void)
@@ -6600,6 +6613,9 @@ void gr_restorestate(void)
     }
   else
     fprintf(stderr, "attempt to restore unsaved state\n");
+
+  if (flag_graphics)
+    gr_writestream("<restorestate/>\n");
 }
 
 int gr_uselinespec(char *linespec)
@@ -6675,6 +6691,9 @@ int gr_uselinespec(char *linespec)
 
   gr_setlinecolorind(color);
   gr_setmarkercolorind(color);
+
+  if (flag_graphics)
+    gr_writestream("<uselinespec linespec=\"%s\"/>\n", linespec);
 
   return result;
 }
