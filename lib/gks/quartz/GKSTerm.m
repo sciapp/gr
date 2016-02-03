@@ -8,7 +8,9 @@
 @implementation GKSTerm
 
 - (void) awakeFromNib
-{  
+{ 
+  int win;
+
   [[NSNotificationCenter defaultCenter] addObserver:self 
                                         selector:@selector(keepOnDisplay:) 
                                         name:@"GKSViewKeepOnDisplayNotification" object:nil];   
@@ -21,6 +23,8 @@
       [connection registerName:@"GKSQuartz"];
       num_windows = 0;
       curr_win_id = 0;
+      for (win = 0; win < MAX_WINDOWS; win++)
+        window[win] = nil;
     }
 }
 
@@ -68,6 +72,11 @@
       window[win] = nil;
     }
   }
+}
+
+- (int) GKSQuartzIsAlive: (int) win
+{
+  return window[win] != nil ? 1 : 0;
 }
 
 - (void) GKSQuartzDraw: (int) win displayList: (id) displayList

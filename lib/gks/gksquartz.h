@@ -11,11 +11,13 @@ typedef struct
     int family, capheight;
     double angle;
     CGRect rect[MAX_TNR];
+    pthread_t master_thread;
  }
 ws_state_list;
 
 @protocol gks_protocol
 - (int) GKSQuartzCreateWindow;
 - (void) GKSQuartzDraw: (int) win displayList: (id) displayList;
+- (int) GKSQuartzIsAlive: (int) win;
 - (void) GKSQuartzCloseWindow: (int) win;
 @end

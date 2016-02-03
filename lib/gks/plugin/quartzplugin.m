@@ -4,6 +4,8 @@
 #import <Foundation/NSFileManager.h>
 #import <AppKit/AppKit.h>
 
+#include <pthread.h>
+
 #include "gks.h"
 #include "gkscore.h"
 #include "gksquartz.h"
@@ -86,7 +88,21 @@ int inactivity_counter = -1;
       if (inactivity_counter >= 0)
         inactivity_counter++;
       [mutex unlock];
+
       usleep(100000);
+      @try
+        {
+          if ([plugin GKSQuartzIsAlive: wss->win] == 0)
+            {
+              pthread_kill(wss->master_thread, SIGTERM);
+              didDie = 1;
+            }
+        }
+      @catch (NSException *e)
+        {
+          pthread_kill(wss->master_thread, SIGTERM);
+          didDie = 1;
+        }
     }
   [pool drain];
 }
@@ -141,6 +157,8 @@ void gks_quartzplugin(
                 @"GKSQuartz" host: nil];
       mutex = [[NSLock alloc] init];
 
+      wss->master_thread = pthread_self();
+
       if (plugin == nil)
         {
           if (!gks_terminal())
@@ -184,8 +202,7 @@ void gks_quartzplugin(
         }
       @catch (NSException *e)
         {
-          NSLog(@"Disconnect from GKSTerm failed.");
-          exit(-1);
+          ;
         }
       [mutex release];
       [plugin release];
@@ -211,8 +228,7 @@ void gks_quartzplugin(
             }
           @catch (NSException *e)
             {
-              NSLog(@"Connection to GKSTerm lost.");          
-              exit(-1);
+              ;
             }
           [mutex unlock];
         }
