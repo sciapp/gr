@@ -3,8 +3,6 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
 
-#define MAX_WINDOWS 50
-
 #import "gkscore.h"
 #import "gksquartz.h"
 

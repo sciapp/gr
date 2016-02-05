@@ -34,6 +34,8 @@
  
   if (win < MAX_WINDOWS)
     {
+      curr_win_id = win;
+      num_windows++;
       NSRect screenFrame = [[[NSScreen screens] objectAtIndex:0] frame];
       window[win] = [[NSWindow alloc]
                       initWithContentRect: NSMakeRect(NSMinX(screenFrame), NSMaxY(screenFrame) - 500, 500, 500)
@@ -52,7 +54,7 @@
       
       cascadingPoint = [window[win] cascadeTopLeftFromPoint: cascadingPoint];
       
-      close_window[win]=YES;
+      close_window[win] = YES;
       [[NSNotificationCenter defaultCenter] addObserver:self
               selector:@selector(windowWillClose:) name:NSWindowWillCloseNotification
               object:window[win]];
@@ -80,7 +82,7 @@
 }
 
 - (void) GKSQuartzDraw: (int) win displayList: (id) displayList
-{ 
+{
   [view[win] setDisplayList: displayList];
 }
 
@@ -131,21 +133,12 @@
 
 - (int) getNextWindowID
 {
-  int i = 0;
+  /* Search unused window */
+  int unused_win_id;
+  for (unused_win_id = 0; unused_win_id < MAX_WINDOWS && window[unused_win_id]; unused_win_id++);
   
-  do
-    {
-      if (!window[curr_win_id])
-        {
-          num_windows++;
-          return curr_win_id;
-        }
-      i++;
-      curr_win_id = curr_win_id++ % MAX_WINDOWS;
-    }
-  while (i < MAX_WINDOWS);
-  
-  return i;
+  /* Either return the index of an unused window or MAX_WINDOWS */
+  return unused_win_id;
 }
 
 @end

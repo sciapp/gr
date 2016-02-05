@@ -48,15 +48,23 @@ DLLEXPORT void gks_quartzplugin(
 static
 gks_state_list_t *gkss;
 
-static
-ws_state_list *wss;
-
-id displayList;
 id plugin;
 NSLock *mutex;
 
-static
-int inactivity_counter = -1;
+int num_windows = 0;
+
+
+@interface wss_wrapper:NSObject
+{
+  ws_state_list *wss;
+}
+
+@property ws_state_list *wss;
+@end
+
+@implementation wss_wrapper
+@synthesize wss;
+@end
 
 @interface gks_quartz_thread : NSObject
 + (void) update: (id) param;
@@ -66,35 +74,45 @@ int inactivity_counter = -1;
 + (void) update: (id) param
 {
   int didDie = 0;
+  wss_wrapper *wrapper = (wss_wrapper *)param;
+  ws_state_list *wss = [wrapper wss];
+  [wrapper release];
 
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
   while (!didDie && wss != NULL)
-    {
+  {
       [mutex lock];
-      if (inactivity_counter == 3)
+      if (wss->inactivity_counter == 3)
 	{
-          [displayList initWithBytesNoCopy: wss->dl.buffer
+          [wss->displayList initWithBytesNoCopy: wss->dl.buffer
                        length: wss->dl.nbytes freeWhenDone: NO];
           @try
             {
-              [plugin GKSQuartzDraw: wss->win displayList: displayList];
-	      inactivity_counter = -1;
+              [plugin GKSQuartzDraw: wss->win displayList: wss->displayList];
+	      wss->inactivity_counter = -1;
             }
           @catch (NSException *e)
             {
               didDie = 1;
             }
         }
-      if (inactivity_counter >= 0)
-        inactivity_counter++;
-      [mutex unlock];
-
-      usleep(100000);
+      if (wss->inactivity_counter >= 0)
+        wss->inactivity_counter++;
       @try
         {
           if ([plugin GKSQuartzIsAlive: wss->win] == 0)
             {
-              pthread_kill(wss->master_thread, SIGTERM);
+              /* This process should die when the user closes the last window */
+              if (!wss->closed_by_api) {
+                bool all_dead = YES;
+                int win;
+                for (win = 0; all_dead && win < MAX_WINDOWS; win++) {
+                  all_dead = [plugin GKSQuartzIsAlive: win] == 0;
+                }
+                if (all_dead) {
+                  pthread_kill(wss->master_thread, SIGTERM);
+                }
+              }
               didDie = 1;
             }
         }
@@ -103,6 +121,13 @@ int inactivity_counter = -1;
           pthread_kill(wss->master_thread, SIGTERM);
           didDie = 1;
         }
+
+    if (didDie) {
+      wss->thread_alive = NO;
+    }
+    [mutex unlock];
+
+    usleep(100000);
     }
   [pool drain];
 }
@@ -141,22 +166,26 @@ void gks_quartzplugin(
   int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
 {
-  wss = (ws_state_list *) *ptr;
+  
+  ws_state_list *wss = (ws_state_list *) *ptr;
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
   switch (fctid)
     {
-    case 2:
+    case OPEN_WS:
       gkss = (gks_state_list_t *) *ptr;      
 
       wss = (ws_state_list *) calloc(1, sizeof(ws_state_list));
-      displayList = [[NSData alloc] initWithBytesNoCopy: wss
+      wss->displayList = [[NSData alloc] initWithBytesNoCopy: wss
                                     length: sizeof(ws_state_list)
-                                    freeWhenDone: NO];  
-      plugin = [NSConnection rootProxyForConnectionWithRegisteredName:
-                @"GKSQuartz" host: nil];
-      mutex = [[NSLock alloc] init];
-
+                                    freeWhenDone: NO];
+      if (plugin == nil) {
+        plugin = [NSConnection rootProxyForConnectionWithRegisteredName:
+                  @"GKSQuartz" host: nil];
+      }
+      if (mutex == nil) {
+        mutex = [[NSLock alloc] init];
+      }
       wss->master_thread = pthread_self();
 
       if (plugin == nil)
@@ -178,13 +207,19 @@ void gks_quartzplugin(
             }
         }
 
+        wss->win = [plugin GKSQuartzCreateWindow];
+        num_windows++;
+
       if (plugin)
         {
-          [NSThread detachNewThreadSelector: @selector(update:) toTarget:[gks_quartz_thread class] withObject:nil];
+          wss_wrapper *wrapper = [wss_wrapper alloc];
+          [wrapper init];
+          wrapper.wss = wss;
+          wss->thread_alive = YES;
+          wss->closed_by_api = NO;
+          [NSThread detachNewThreadSelector: @selector(update:) toTarget:[gks_quartz_thread class] withObject:wrapper];
           [plugin setProtocolForProxy: @protocol(gks_protocol)];
         }
-
-      wss->win = [plugin GKSQuartzCreateWindow];
 
       *ptr = wss;
 
@@ -195,19 +230,36 @@ void gks_quartzplugin(
       ia[1] = (int) NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
       break;
   
-    case 3:
-      @try
-        {
-          [plugin GKSQuartzCloseWindow: wss->win];
+    case CLOSE_WS:
+        
+        [mutex lock];
+        wss->closed_by_api = YES;
+        [mutex unlock];
+        @try
+      {
+        [plugin GKSQuartzCloseWindow: wss->win];
+        num_windows--;
+      }
+        @catch (NSException *e)
+      {
+        ;
+      }
+        
+        [mutex lock];
+        while (wss->thread_alive) {
+          [mutex unlock];
+          usleep(100000);
+          [mutex lock];
         }
-      @catch (NSException *e)
-        {
-          ;
-        }
-      [mutex release];
-      [plugin release];
-      [displayList release];
-
+        [mutex unlock];
+        
+      if (num_windows == 0) {
+        [mutex release];
+        mutex = nil;
+        [plugin release];
+        plugin = nil;
+      }
+      [wss->displayList release];
       free(wss);
       wss = NULL;
       break;
@@ -215,16 +267,16 @@ void gks_quartzplugin(
       case 6:
       break;
 
-    case 8:
+      case UPDATE_WS:
       if (ia[1] == GKS_K_PERFORM_FLAG)
         {
           [mutex lock];
-          [displayList initWithBytesNoCopy: wss->dl.buffer
+          [wss->displayList initWithBytesNoCopy: wss->dl.buffer
                        length: wss->dl.nbytes freeWhenDone: NO];
           @try
             {
-              [plugin GKSQuartzDraw: wss->win displayList: displayList];
-              inactivity_counter = -1;
+              [plugin GKSQuartzDraw: wss->win displayList: wss->displayList];
+              wss->inactivity_counter = -1;
             }
           @catch (NSException *e)
             {
@@ -234,14 +286,14 @@ void gks_quartzplugin(
         }
       break;
 
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-    case 16:
+    case POLYLINE:
+    case POLYMARKER:
+    case TEXT:
+    case FILLAREA:
+    case CELLARRAY:
     case DRAW_IMAGE:
       [mutex lock];
-      inactivity_counter = 0;
+      wss->inactivity_counter = 0;
       [mutex unlock];
       break;
     }

@@ -1,3 +1,6 @@
+
+#define MAX_WINDOWS 50
+
 typedef struct
   {
     int state;
@@ -12,6 +15,10 @@ typedef struct
     double angle;
     CGRect rect[MAX_TNR];
     pthread_t master_thread;
+    int inactivity_counter;
+    bool thread_alive;
+    bool closed_by_api;
+    NSData *displayList;
  }
 ws_state_list;
 
