@@ -65,13 +65,15 @@ function plot_domain(color_func, f; re=[-1, 1], im=[-1, 1], N=100, n=15)
 
     GR.clearws()
     GR.setviewport(0.3725, 0.6275, 0.1, 0.95)
-    GR.setwindow(-6, 6, -20, 20)
-    GR.drawimage(-6, 6, -20, 20, height, width, c, GR.MODEL_HSV)
+    GR.setwindow(re[1], re[2], im[1], im[2])
+    GR.drawimage(re[1], re[2], im[1], im[2], height, width, c, GR.MODEL_HSV)
     GR.settextalign(GR.TEXT_HALIGN_CENTER, GR.TEXT_VALIGN_HALF)
     GR.setcharheight(0.018)
     GR.mathtex(0.825, 0.575, "\\zeta \\left({s}\\right) := \\sum_{n=1}^\\infty \\frac{1}{n^s} \\quad \\sigma = \\Re(s) > 1")
     GR.mathtex(0.825, 0.475, "\\zeta \\left({s}\\right) := \\frac{1}{\\Gamma(s)} \\int_{0}^\\infty \\frac{x^{s-1}}{e^x-1} dx")
-    GR.axes(1, 1, -6, -20, 3, 10, -0.005)
+    xtick = GR.tick(re[1], re[2]) / 5
+    ytick = GR.tick(im[1], im[2]) / 5
+    GR.axes(xtick, ytick, re[1], im[1], 5, 5, -0.005)
     GR.setcharheight(0.024)
     GR.mathtex(0.5, 0.975, "\\zeta \\left({s}\\right)")
     GR.mathtex(0.5, 0.025, "\\Re(z)")
