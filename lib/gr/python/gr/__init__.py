@@ -102,13 +102,17 @@ class nothing:
 
 
 def char(string):
-    string = str(string) # ensure type str, e.g. convert unicode to str
+    # string = str(string) # ensure type str, e.g. convert unicode to str
     if version_info[0] == 3:
+        string = string.replace(u'\u2212', '-')
         s = create_string_buffer(string.encode('latin-1'))
     else:
+        if isinstance(string, unicode):
+            string = string.encode('utf-8')
         if chr(0xc2) in string or chr(0xc3) in string:
             try:
                 chars = unicode(string, 'utf-8').encode('latin-1', 'replace')
+                chars = chars.replace(u'\u2212', '-')
             except:
                 chars = string
         else:

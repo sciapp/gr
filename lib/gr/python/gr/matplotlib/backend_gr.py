@@ -78,7 +78,7 @@ class RendererGR(RendererBase):
             color = gr.inqcolorfromrgb(rgba[0], rgba[1], rgba[2])
             gr.settransparency(rgba[3])
             gr.setcolorrep(color, rgba[0], rgba[1], rgba[2])
-            if type(gc._linestyle) is unicode:
+            if isinstance(gc._linestyle, str):
                 gr.setlinetype(linetype[gc._linestyle])
             gr.setlinewidth(lw)
             gr.setlinecolorind(color)
@@ -141,7 +141,7 @@ class RendererGR(RendererBase):
                              np.cos(angle * np.pi/180))
             else:
                 gr.setcharup(0, 1)
-            gr.text(x, y, s.encode("latin-1"))
+            gr.text(x, y, s)
 
     def flipy(self):
         return False
@@ -162,7 +162,6 @@ class RendererGR(RendererBase):
 #       family =  prop.get_family()
 #       weight = prop.get_weight()
 #       style = prop.get_style()
-        s = s.replace(u'\u2212', '-').encode("latin-1")
         fontsize = prop.get_size_in_points()
         gr.setcharheight(fontsize * 0.0013)
         gr.setcharup(0, 1)
