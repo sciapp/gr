@@ -6684,7 +6684,8 @@ int gr_uselinespec(char *linespec)
   if (color == -1)
     {
       color = 980 + predef_colors[def_color];
-      def_color = (def_color + 1) % 20;
+      if (strcmp(linespec, " "))
+        def_color = (def_color + 1) % 20;
     }
   else
     result |= SPEC_COLOR;
