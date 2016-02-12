@@ -554,7 +554,7 @@ void gks_open_ws(int wkid, char *path, int wtype)
                           if (descr->type != NULL)
                             {
                               path = (char *) malloc(MAXPATHLEN * sizeof(char));
-                              gks_filepath(path, descr->type, 1, 0);
+                              gks_filepath(path, NULL, descr->type, 1, 0);
                               ws->path = strdup(path);
                               free(path);
                             }

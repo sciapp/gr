@@ -134,6 +134,7 @@ WMF_point;
 typedef struct ws_state_list_t
 {
   int conid, state, wtype;
+  char *path;
   double a, b, c, d;
   double window[4], viewport[4];
   char rgb[MAX_COLOR][7];
@@ -1420,7 +1421,7 @@ void write_page(void)
 
   if (p->conid == 0)
     {
-      gks_filepath(path, "wmf", p->page_counter, 0);
+      gks_filepath(path, p->path, "wmf", p->page_counter, 0);
       stream = fopen(path, "wb");
     }
   else
@@ -1453,8 +1454,11 @@ void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia,
       gkss = (gks_state_list_t *) * ptr;
 
       gks_init_core(gkss);
+
       p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
+
       p->conid = ia[1];
+      p->path = chars;
 
       p->height = 500;
       p->width = 500;

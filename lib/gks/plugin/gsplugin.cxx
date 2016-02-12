@@ -1575,7 +1575,7 @@ void init_arguments(void)
       case 323: device = "tiff24nc"; type = "tif"; break;
     }
 
-  gks_filepath(path, type, p->page_counter, 0);
+  gks_filepath(path, p->path, type, p->page_counter, 0);
 
   p->gs_argc = NUM_GS_ARGS;
   for (i = 0; i < NUM_GS_ARGS; ++i)

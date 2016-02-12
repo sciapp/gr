@@ -120,6 +120,7 @@ FIG_point;
 typedef struct ws_state_list_t
 {
   int conid, state, wtype;
+  char *path;
   double a, b, c, d;
   double window[4], viewport[4];
   char rgb[MAX_COLOR][7];
@@ -886,7 +887,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   x = min(ix1, ix2);
   y = min(iy1, iy2);
 
-  gks_filepath(path, "fig", p->page_counter, p->img_counter);
+  gks_filepath(path, p->path, "fig", p->page_counter, p->img_counter);
   if ((stream = fopen(path, "wb")) == NULL)
     {
       gks_perror("can't open image file");
@@ -967,7 +968,7 @@ void write_page(void)
 
   if (p->conid == 0)
     {
-      gks_filepath(path, "fig", p->page_counter, 0);
+      gks_filepath(path, p->path, "fig", p->page_counter, 0);
       fd = gks_open_file(path, "w");
     }
   else
@@ -1006,6 +1007,7 @@ void gks_figplugin(
       p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
 
       p->conid = ia[1];
+      p->path = chars;
 
       p->height = 640;
       p->width = 640;

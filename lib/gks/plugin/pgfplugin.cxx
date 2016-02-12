@@ -117,6 +117,7 @@ PGF_point;
 typedef struct ws_state_list_t
 {
   int conid, state, wtype;
+  char *path;
   double a, b, c, d;
   double window[4], viewport[4];
   char rgb[MAX_COLOR][7];
@@ -135,7 +136,6 @@ typedef struct ws_state_list_t
   double rect[MAX_TNR][2][2];
   int scoped, png_counter, pattern_counter, usesymbols;
   int dashes[10];
-  char path[MAXPATHLEN];
 }
 ws_state_list;
 
@@ -923,7 +923,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   x = min(ix1, ix2);
   y = min(iy1, iy2);
 
-  gks_filepath(filename, "png", p->page_counter, p->png_counter);
+  gks_filepath(filename, p->path, "png", p->page_counter, p->png_counter);
   if ((stream = fopen(filename, "wb")) == NULL)
     {
       gks_perror("can't open temporary file");
@@ -1024,6 +1024,7 @@ void set_clipping(int idx)
 static
 void write_page(void)
 {
+  char filename[MAXPATHLEN];
   char buf[256];
   int fd;
 
@@ -1031,8 +1032,8 @@ void write_page(void)
 
   if (p->conid == 0)
     {
-      gks_filepath(p->path, "tex", p->page_counter, 0);
-      fd = gks_open_file(p->path, "w");
+      gks_filepath(filename, p->path, "tex", p->page_counter, 0);
+      fd = gks_open_file(filename, "w");
     }
   else
     fd = p->conid;
@@ -1127,6 +1128,7 @@ void gks_pgfplugin(
       p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
 
       p->conid = ia[1];
+      p->path = chars;
 
       p->height = 500;
       p->width = 500;

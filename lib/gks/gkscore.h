@@ -254,7 +254,8 @@ const char *gks_getenv(const char *env);
 void gks_iso2utf(unsigned char c, char *utf, size_t *len);
 void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
 int *gks_resize(int *image, int width, int height, int w, int h);
-void gks_filepath(char *path, const char *type, int page, int index);
+void gks_filepath(
+  char *path, char *defpath, const char *type, int page, int index);
 void gks_adjust_cellarray(
   double *qx, double *qy, double *rx, double *ry,
   int *scol, int *srow, int *ncol, int *nrow, int dimx, int dimy);

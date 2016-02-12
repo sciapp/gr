@@ -122,6 +122,7 @@ SVG_point;
 typedef struct ws_state_list_t
 {
   int conid, state, wtype;
+  char *path;
   double a, b, c, d;
   double window[4], viewport[4];
   char rgb[MAX_COLOR][7];
@@ -1200,7 +1201,7 @@ void write_page(void)
 
   if (p->conid == 0)
     {
-      gks_filepath(path, "svg", p->page_counter, 0);
+      gks_filepath(path, p->path, "svg", p->page_counter, 0);
       fd = gks_open_file(path, "w");
     }
   else
@@ -1253,6 +1254,7 @@ void gks_drv_js(
       p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
 
       p->conid = ia[1];
+      p->path = chars;
 
       p->height = 500;
       p->width = 500;
