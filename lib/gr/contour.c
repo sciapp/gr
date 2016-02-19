@@ -854,8 +854,8 @@ void calc_contours(
 
   xy[0] = 1.0;
   xy[1] = 1.0;
-  icur = max(1, min((int) xy[0], nx));
-  jcur = max(1, min((int) xy[1], ny));
+  icur = 1;
+  jcur = 1;
 
 /*  Clear the bitmap. */
 
