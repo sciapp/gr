@@ -759,6 +759,9 @@ void calc_contours(
     of Z are assumed to lie upon the nodes of a topologically
     rectangular coordinate system - e.g. cartesian, polar (except
     the origin), etc.
+
+    The Z array is assumed to be organized in column-major order (as
+    is in Fortran).
  
     NRZ is the number of rows declared for z in the calling program.
 
