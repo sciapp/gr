@@ -112,8 +112,12 @@ export
   mathtex,
   # Convenience functions
   jlgr,
+  figure,
+  subplot,
   plot,
   histogram,
+  contourf,
+  wireframe,
   title,
   xlabel,
   ylabel,
@@ -121,9 +125,6 @@ export
   xlim,
   ylim,
   savefig,
-  plot2d,
-  plot3d,
-  imshow,
   libGR3,
   gr3,
   isinline,
@@ -640,6 +641,9 @@ function surface(px, py, pz, option::Int)
     out_of_bounds = true
   end
   if !out_of_bounds
+    if ndims(pz) == 2
+      pz = reshape(pz, nx * ny)
+    end
     ccall( (:gr_surface, libGR),
           Void,
           (Int32, Int32, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Int32),
@@ -662,6 +666,9 @@ function contour(px, py, h, pz, major_h::Int)
     out_of_bounds = true
   end
   if !out_of_bounds
+    if ndims(pz) == 2
+      pz = reshape(pz, nx * ny)
+    end
     ccall( (:gr_contour, libGR),
           Void,
           (Int32, Int32, Int32, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Int32),
@@ -1123,8 +1130,14 @@ const gr3 = GR.GR3
 # Convenience functions
 include("jlgr.jl")
 
+figure(; kwargs...) = jlgr.figure(; kwargs...)
+subplot(m, n, p) = jlgr.subplot(m, n, p)
 plot(args...; kwargs...) = jlgr.plot(args...; kwargs...)
-histogram(X; kwargs...) = jlgr.histogram(X; kwargs...)
+histogram(x; kwargs...) = jlgr.histogram(x; kwargs...)
+contour(x, y, z; kwargs...) = jlgr.contour(x, y, z; kwargs...)
+contourf(x, y, z; kwargs...) = jlgr.contourf(x, y, z; kwargs...)
+wireframe(x, y, z; kwargs...) = jlgr.wireframe(x, y, z; kwargs...)
+surface(x, y, z; kwargs...) = jlgr.surface(x, y, z; kwargs...)
 title(s) = jlgr.title(s)
 xlabel(s) = jlgr.xlabel(s)
 ylabel(s) = jlgr.ylabel(s)
@@ -1132,10 +1145,6 @@ legend(args...; kwargs...) = jlgr.legend(args...; kwargs...)
 xlim(a) = jlgr.xlim(a)
 ylim(a) = jlgr.ylim(a)
 savefig(filename) = jlgr.savefig(filename)
-
-plot2d(x, y; kwargs...) = jlgr.plot2d(x, y; kwargs...)
-plot3d(z; kwargs...) = jlgr.plot3d(z; kwargs...)
-imshow(data; kwargs...) = jlgr.imshow(data; kwargs...)
 
 type SVG
    s::Array{UInt8}
