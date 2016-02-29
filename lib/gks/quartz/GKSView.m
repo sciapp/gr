@@ -7,6 +7,7 @@
 #define MEMORY_INCREMENT 262144
 #define PATTERNS 120
 #define HATCH_STYLE 108
+#define NUM_POINTS 10000
 
 #define RESOLVE(arg, type, nbytes) arg = (type *)(s + sp); sp += nbytes
 
@@ -156,6 +157,12 @@ int fontfile = 0;
 
 static
 int resizing = 0;
+
+static
+CGPoint *points = NULL;
+
+static
+int num_points = 0;
 
 static
 CGLayerRef patternLayer;
@@ -669,7 +676,7 @@ void seg_xform_rel(double *x, double *y)
     {
       while (len + sizeof(int) > size)
         size += MEMORY_INCREMENT;
-      buffer = (char *) realloc(buffer, size);
+      buffer = (char *) gks_realloc(buffer, size);
     }
 
   memcpy(buffer, (char *) [display_list bytes], len);
@@ -720,7 +727,15 @@ void seg_xform_rel(double *x, double *y)
 {
   gks_close_font(fontfile);
   if (buffer)
-    free(buffer);
+    {
+      free(buffer);
+      buffer = NULL;
+    }
+  if (points)
+    {
+      free(points);
+      points = NULL;
+    }
   [self release];
 }
 
@@ -1056,7 +1071,13 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y;
   int i;
-  CGPoint points[n];
+
+  if (n > num_points)
+    {
+      while (n > num_points)
+        num_points += NUM_POINTS;
+      points = (CGPoint *) gks_realloc(points, num_points * sizeof(CGPoint));
+    }
 
   for (i = 0; i < n; ++i)
     {
@@ -1077,10 +1098,16 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   int ln_type, ln_color, i;
   double ln_width;
-  CGPoint points[n];
   int dashlist[10];
   CGFloat lengths[10] = {0., 0., 0., 0., 0., 0., 0., 0., 0., 0. };
   double x, y;
+
+  if (n > num_points)
+    {
+      while (n > num_points)
+        num_points += NUM_POINTS;
+      points = (CGPoint *) gks_realloc(points, num_points * sizeof(CGPoint));
+    }
 
   for (i = 0; i < n; ++i)
     {
@@ -1406,7 +1433,13 @@ void fill_routine(int n, double *px, double *py, int tnr)
 {
   double x, y;
   int i;
-  CGPoint points[n];
+
+  if (n > num_points)
+    {
+      while (n > num_points)
+        num_points += NUM_POINTS;
+      points = (CGPoint *) gks_realloc(points, num_points * sizeof(CGPoint));
+    }
 
   for (i = 0; i < n; ++i)
     {
@@ -1436,7 +1469,13 @@ void fill_routine(int n, double *px, double *py, int tnr)
 {
   int fl_inter, fl_style, fl_color, i = 0;
   double x, y;
-  CGPoint points[n];
+
+  if (n > num_points)
+    {
+      while (n > num_points)
+        num_points += NUM_POINTS;
+      points = (CGPoint *) gks_realloc(points, num_points * sizeof(CGPoint));
+    }
 
   for (i = 0; i < n; ++i)
     {
