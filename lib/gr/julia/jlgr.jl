@@ -20,6 +20,8 @@ const gr3 = GR.gr3
 
 const plot_kind = [:line, :scatter, :hist, :contour, :contourf, :wireframe, :surface]
 
+const arg_fmt = [:xys, :xyzs]
+
 type PlotObject
     args
     kvs
@@ -44,7 +46,12 @@ isvector(x::AbstractMatrix) = size(x, 1) == 1
 
 function set_viewport(kind, subplot)
     mwidth, mheight, width, height = GR.inqdspsize()
-    w, h = plt.kvs[:size]
+    if haskey(plt.kvs, :figsize)
+        w = 0.0254 *  width * plt.kvs[:figsize][1] / mwidth
+        h = 0.0254 * height * plt.kvs[:figsize][2] / mheight
+    else
+        w, h = plt.kvs[:size]
+    end
     viewport = zeros(4)
     if w > h
         ratio = float(h) / w
@@ -190,8 +197,12 @@ function set_window(kind)
     plt.kvs[:window] = xmin, xmax, ymin, ymax
     GR.setwindow(xmin, xmax, ymin, ymax)
     if kind in (:wireframe, :surface)
-        GR.setspace(zmin, zmax, 40, 70)
+        rotation = get(plt.kvs, :rotation, 40)
+        tilt = get(plt.kvs, :tilt, 70)
+        GR.setspace(zmin, zmax, rotation, tilt)
     end
+
+    plt.kvs[:scale] = scale
     GR.setscale(scale)
 end
 
@@ -225,7 +236,7 @@ function draw_axes(kind, pass=1)
     if haskey(plt.kvs, :title)
         GR.savestate()
         GR.settextalign(GR.TEXT_HALIGN_CENTER, GR.TEXT_VALIGN_TOP)
-        GR.text(0.5 * (viewport[1] + viewport[2]), min(ratio, 1), plt.kvs[:title])
+        GR.textext(0.5 * (viewport[1] + viewport[2]), min(ratio, 1), plt.kvs[:title])
         GR.restorestate()
     end
     if kind in (:wireframe, :surface)
@@ -237,14 +248,14 @@ function draw_axes(kind, pass=1)
         if haskey(plt.kvs, :xlabel)
             GR.savestate()
             GR.settextalign(GR.TEXT_HALIGN_CENTER, GR.TEXT_VALIGN_BOTTOM)
-            GR.text(0.5 * (viewport[1] + viewport[2]), 0, plt.kvs[:xlabel])
+            GR.textext(0.5 * (viewport[1] + viewport[2]), 0, plt.kvs[:xlabel])
             GR.restorestate()
         end
         if haskey(plt.kvs, :ylabel)
             GR.savestate()
             GR.settextalign(GR.TEXT_HALIGN_CENTER, GR.TEXT_VALIGN_TOP)
             GR.setcharup(-1, 0)
-            GR.text(0, 0.5 * (viewport[3] + viewport[4]), plt.kvs[:ylabel])
+            GR.textext(0, 0.5 * (viewport[3] + viewport[4]), plt.kvs[:ylabel])
             GR.restorestate()
         end
     end
@@ -258,7 +269,7 @@ function draw_legend()
     GR.setscale(0)
     w = 0
     for label in plt.kvs[:labels]
-        tbx, tby = GR.inqtext(0, 0, label)
+        tbx, tby = GR.inqtextext(0, 0, label)
         w = max(w, tbx[3])
     end
     px = viewport[2] - 0.05 - w
@@ -281,7 +292,7 @@ function draw_legend()
         GR.settextalign(GR.TEXT_HALIGN_LEFT, GR.TEXT_VALIGN_HALF)
         if i < num_labels
             i += 1
-            GR.text(px, py, plt.kvs[:labels][i])
+            GR.textext(px, py, plt.kvs[:labels][i])
         end
         py -= 0.03
     end
@@ -290,6 +301,7 @@ function draw_legend()
 end
 
 function colorbar(off=0, colors=256)
+    GR.savestate()
     viewport = plt.kvs[:viewport]
     zmin, zmax = plt.kvs[:zrange]
     GR.setwindow(0, 1, zmin, zmax)
@@ -301,13 +313,20 @@ function colorbar(off=0, colors=256)
     diag = sqrt((viewport[2] - viewport[1])^2 + (viewport[4] - viewport[3])^2)
     charheight = max(0.016 * diag, 0.01)
     GR.setcharheight(charheight)
-    ztick = 0.5 * GR.tick(zmin, zmax)
-    GR.axes(0, ztick, 1, zmin, 0, 1, 0.005)
+    if plt.kvs[:scale] & GR.OPTION_Z_LOG == 0
+        ztick = 0.5 * GR.tick(zmin, zmax)
+        GR.axes(0, ztick, 1, zmin, 0, 1, 0.005)
+    else
+        GR.setscale(GR.OPTION_Y_LOG)
+        GR.axes(0, 2, 1, zmin, 0, 1, 0.005)
+    end
+    GR.restorestate()
 end
 
 function figure(; kv...)
     global plt
     plt = Figure()
+    merge!(plt.kvs, Dict(kv))
     plt
 end
 
@@ -379,6 +398,9 @@ function plot_data(; kv...)
                 x, y, z = GR.gridit(x, y, z, 200, 200)
                 z = reshape(z, 200, 200)
             end
+            if plt.kvs[:scale] & GR.OPTION_Z_LOG != 0
+                z = log(z)
+            end
             width, height = size(z)
             data = (z - minimum(z)) / (maximum(z) - minimum(z))
             data = round(Int32, 1000 + data * 255)
@@ -414,7 +436,7 @@ function plot_data(; kv...)
     end
 end
 
-function plot_args(args)
+function plot_args(args; fmt=:xys)
     args = Any[args...]
     parsed_args = Any[]
 
@@ -428,23 +450,35 @@ function plot_args(args)
                 y = imag(a)
                 z = Void
             elseif elt <: Real
-                if length(args) >= 2 &&
-                    isa(args[1], AbstractVecOrMat) && eltype(args[1]) <: Real &&
-                   (isa(args[2], AbstractVecOrMat) && eltype(args[2]) <: Real ||
-                    typeof(args[2]) == Function)
-                    x = a
-                    y = shift!(args);
-                    z = shift!(args);
-                elseif length(args) >= 1 &&
-                    isa(args[1], AbstractVecOrMat) && eltype(args[1]) <: Real
-                    x = a
-                    y = shift!(args);
-                    z = Void
+                if fmt == :xys
+                    if length(args) >= 1 &&
+                       (isa(args[1], AbstractVecOrMat) && eltype(args[1]) <: Real ||
+                        typeof(args[1]) == Function)
+                        x = a
+                        y = shift!(args);
+                        z = Void
+                    else
+                        y = a
+                        n = isrowvec(y) ? size(y, 2) : size(y, 1)
+                        x = linspace(1, n, n)
+                        z = Void
+                    end
                 else
-                    y = a
-                    n = isrowvec(y) ? size(y, 2) : size(y, 1)
-                    x = linspace(1, n, n)
-                    z = Void
+                    if length(args) >= 2 &&
+                        isa(args[1], AbstractVecOrMat) && eltype(args[1]) <: Real &&
+                       (isa(args[2], AbstractVecOrMat) && eltype(args[2]) <: Real ||
+                        typeof(args[2]) == Function)
+                        x = a
+                        y = shift!(args);
+                        z = shift!(args);
+                    elseif length(args) == 0
+                        z = a
+                        nx, ny = size(z)
+                        x = linspace(1, nx, nx)
+                        y = linspace(1, ny, ny)
+                    else
+                        error("expected String")
+                    end
                 end
             else
                 error("expected Real or Complex")
@@ -469,7 +503,11 @@ function plot_args(args)
         isa(z, UnitRange) && (z = collect(z))
 
         isvector(x) && (x = vec(x))
-        isvector(y) && (y = vec(y))
+        if typeof(y) == Function
+            y = [y(a) for a in x]
+        else
+            isvector(y) && (y = vec(y))
+        end
         if z != Void
             if typeof(z) == Function
                 z = [z(a,b) for a in x, b in y]
@@ -495,7 +533,8 @@ function plot_args(args)
                 xyz = [ (sub(x,:,j), sub(y,:,j), Void) for j = 1:size(y, 2) ]
             end
         elseif isa(x, AbstractVector) && isa(y, AbstractVector) &&
-               (isa(z, AbstractVector) || typeof(z) == Array{Any,2})
+               (isa(z, AbstractVector) || typeof(z) == Array{Float64,2} ||
+                typeof(z) == Array{Int32,2} || typeof(z) == Array{Any,2})
             xyz = [ (x, y, z) ]
         end
         for (x, y, z) in xyz
@@ -524,34 +563,34 @@ function histogram(x; kv...)
     plot_data(kind=:hist)
 end
 
-function contour(x, y, z; kv...)
+function contour(args...; kv...)
     merge!(plt.kvs, Dict(kv))
 
-    plt.args = plot_args((x, y, z))
+    plt.args = plot_args(args, fmt=:xyzs)
 
     plot_data(kind=:contour)
 end
 
-function contourf(x, y, z; kv...)
+function contourf(args...; kv...)
     merge!(plt.kvs, Dict(kv))
 
-    plt.args = plot_args((x, y, z))
+    plt.args = plot_args(args, fmt=:xyzs)
 
     plot_data(kind=:contourf)
 end
 
-function wireframe(x, y, z; kv...)
+function wireframe(args...; kv...)
     merge!(plt.kvs, Dict(kv))
 
-    plt.args = plot_args((x, y, z))
+    plt.args = plot_args(args, fmt=:xyzs)
 
     plot_data(kind=:wireframe)
 end
 
-function surface(x, y, z; kv...)
+function surface(args...; kv...)
     merge!(plt.kvs, Dict(kv))
 
-    plt.args = plot_args((x, y, z))
+    plt.args = plot_args(args, fmt=:xyzs)
 
     plot_data(kind=:surface)
 end
@@ -584,6 +623,20 @@ function savefig(filename)
     GR.beginprint(filename)
     plot_data()
     GR.endprint()
+end
+
+function meshgrid{T}(vx::AbstractVector{T}, vy::AbstractVector{T})
+    m, n = length(vy), length(vx)
+    vx = reshape(vx, 1, n)
+    vy = reshape(vy, m, 1)
+    (repmat(vx, m, 1), repmat(vy, 1, n))
+end
+
+function peaks(n=49)
+    x = linspace(-2.5, 2.5, n)
+    y = x
+    x, y = meshgrid(x, y)
+    3*(1-x).^2.*exp(-(x.^2) - (y+1).^2) - 10*(x/5 - x.^3 - y.^5).*exp(-x.^2-y.^2) - 1/3*exp(-(x+1).^2 - y.^2)
 end
 
 end # module
