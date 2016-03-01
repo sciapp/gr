@@ -280,7 +280,7 @@ void seg_xform_rel(double *x, double *y)
   s = str;
 
   RESOLVE(len, int, sizeof(int));
-  while (*len)
+  while (*len > 0)
     {
       RESOLVE(f, int, sizeof(int));
 
@@ -730,11 +730,13 @@ void seg_xform_rel(double *x, double *y)
     {
       free(buffer);
       buffer = NULL;
+      size = 0;
     }
   if (points)
     {
       free(points);
       points = NULL;
+      num_points = 0;
     }
   [self release];
 }
