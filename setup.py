@@ -1483,6 +1483,5 @@ setup(cmdclass={"build_ext": build_ext, "check_ext": check_ext,
       package_data={
           "gr": ["fonts/*.afm", "fonts/*.pfb", "fonts/gksfont.dat"],
       },
-      include_package_data=True,
       classifiers=classifiers,
      )
