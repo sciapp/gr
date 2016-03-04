@@ -4,10 +4,11 @@ include version.txt
 include vcversioner.py
 include requirements.txt
 include Makefile
+graft bin
 graft lib
 graft 3rdparty
 graft examples
 graft doc
-global-exclude Preflight *.py[cod] __pycache__ .DS_Store
+global-exclude *.py[cod] __pycache__ .DS_Store
 exclude lib/gks/quartz/build/*
 prune doc/media
