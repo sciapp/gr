@@ -5,15 +5,23 @@
 %define THIRDPARTY_SRC %{THIRDPARTY}/src
 %define THIRDPARTY_LIB %{THIRDPARTY}/lib
 
+%if 0%{?__jcns}
+%define fixedversion %{version}
+%else
+# use fixedversion for builds on build.opensuse.org - needed for deb builds.
+%define fixedversion fixed
+%endif
+
 %define qmake qmake-qt4
+%define grdir %{_prefix}/gr
 
 Summary:			GR, a universal framework for visualization applications
 Name:				python-gr
-Version:			0.17.3
+Version:			0.17.3.post55
 Release:			2%{?dist}
 License:			MIT
 Group:				Development/Libraries
-Source:				gr-%{version}.tar.gz
+Source:				gr-%{fixedversion}.tar.gz
 Source1:			http://mupdf.com/downloads/archive/mupdf-1.6-source.tar.gz
 Source2:			http://downloads.xiph.org/releases/ogg/libogg-1.3.2.tar.gz
 Source3:			http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.gz
@@ -23,7 +31,10 @@ Source6:			https://github.com/glfw/glfw/archive/3.1.1.tar.gz
 Source7:			http://download.zeromq.org/zeromq-4.0.4.tar.gz
 Source8:			https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
 Source9:			https://cmake.org/files/v2.8/cmake-2.8.12.2.tar.gz
-Source10:			http://cairographics.org/releases/cairo-1.14.6.tar.xz
+Source10:			https://cairographics.org/releases/cairo-1.14.6.tar.xz
+Source11:			https://cairographics.org/releases/pixman-0.34.0.tar.gz
+# for vcversioner
+BuildRequires:		git
 BuildRequires:		gcc-c++
 BuildRequires:		python
 BuildRequires:		python-devel
@@ -75,8 +86,7 @@ Requires:			numpy
 GR, a universal framework for visualization applications
 
 %prep
-%setup -n gr-%{version}
-%{_bindir}/python setup.py clean --all
+%setup -n gr-%{fixedversion}
 mkdir -p %{THIRDPARTY_SRC}
 tar -C %{THIRDPARTY_SRC} -xf %{SOURCE1}
 tar -C %{THIRDPARTY_SRC} -xf %{SOURCE2}
@@ -88,17 +98,32 @@ tar -C %{THIRDPARTY_SRC} -xf %{SOURCE7}
 tar -C %{THIRDPARTY_SRC} -xf %{SOURCE8}
 tar -C %{THIRDPARTY_SRC} -xf %{SOURCE9}
 tar -C %{THIRDPARTY_SRC} -xf %{SOURCE10}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE11}
+
+
+%package -n gr
+Summary:			GR, a universal framework for visualization applications
+%description -n gr
+GR, a universal framework for visualization applications
+
 
 %build
 %{__python} setup.py build_ext --static-extras --qmake=%{qmake}
+make -C 3rdparty GRDIR=%{grdir} DIR=%{THIRDPARTY}
+make -C 3rdparty extras GRDIR=%{grdir} DIR=%{THIRDPARTY}
+make GRDIR=%{grdir}
 
 %install
 %{__python} setup.py build_ext --static-extras --qmake=%{qmake} install --root=$RPM_BUILD_ROOT
+make install GRDIR=%{grdir} DESTDIR=${RPM_BUILD_ROOT}
 
 %clean
 %{__python} setup.py clean --all
 
 %files
 %defattr(-,root,root)
-%{python_sitearch}/*
+%{python_sitearch}
 
+%files -n gr
+%defattr(-,root,root)
+%{grdir}

@@ -711,6 +711,7 @@ int main()
                                      for name in cairolibs]
                 self.cairoldflags.append("-lm")
                 self.cairoinc = [os.path.join(_build_3rdparty, "include")]
+            self.cairolibs.append("pthread")
             self.disable_cairo = not self._test_cairo(self.cairoinc,
                                                       self.cairolibs,
                                           cairoldflags=self.cairoldflags)

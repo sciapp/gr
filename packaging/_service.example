@@ -1,0 +1,24 @@
+<services>
+  <service name="tar_scm">
+    <param name="scm">git</param>
+    <param name="url">https://iffwww.iff.kfa-juelich.de/review/gr</param>
+    <param name="revision">refs/changes/18/518/23</param>
+    <param name="version">fixed</param>
+    <param name="sslverify">disable</param>
+    <param name="package-meta">yes</param>
+  </service>
+  <service name="recompress">
+    <param name="file">*fixed.tar</param>
+    <param name="compression">gz</param>
+  </service>
+  <service name="extract_file">
+    <param name="archive">*gr-fixed.tar.gz</param>
+    <param name="files">*/packaging/redhat/python-gr.spec</param>
+    <param name="files">*/packaging/debian/python-gr.dsc</param>
+    <param name="files">*/packaging/debian/debian.*</param>
+  </service>
+  <service name="set_version">
+    <param name="version">0.18.0~57.38bc479</param>
+  </service>
+  <service name="download_files"/>
+</services>
