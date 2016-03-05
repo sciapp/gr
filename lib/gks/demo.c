@@ -141,14 +141,14 @@ int main(int argc, char *argv[])
     }
 
   /* Markertypes */
-  gks_set_pmark_size(4.0);
+  gks_set_pmark_size(3.5);
 
   x[0] = 0.3;
   y[0] = 0.95;
   for (j = -29; j <= -19; j++)
     {
       gks_set_pmark_type(j);
-      x[0] += 0.065;
+      x[0] += 0.06;
       gks_polymarker(1, x, y);
     }
 
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
   for (j = -18; j <= -8; j++)
     {
       gks_set_pmark_type(j);
-      x[0] += 0.065;
+      x[0] += 0.06;
       gks_polymarker(1, x, y);
     }
 
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
       if (j != 0)
 	{
 	  gks_set_pmark_type(j);
-	  x[0] += 0.065;
+	  x[0] += 0.06;
 	  gks_polymarker(1, x, y);
 	}
     }

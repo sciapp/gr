@@ -123,14 +123,14 @@ begin
       end;
 
   { Markertypes }
-  gks_set_pmark_size(4.0);
+  gks_set_pmark_size(3.5);
 
   x[1] := 0.3;
   y[1] := 0.95;
   for j := -29 to -19 do
     begin
     gks_set_pmark_type(j);
-    x[1] := x[1] + 0.065;
+    x[1] := x[1] + 0.06;
     gks_polymarker(1, x, y);
     end;
 
@@ -139,7 +139,7 @@ begin
   for j := -18 to -8 do
     begin
     gks_set_pmark_type(j);
-    x[1] := x[1] + 0.065;
+    x[1] := x[1] + 0.06;
     gks_polymarker(1, x, y);
     end;
 
@@ -149,7 +149,7 @@ begin
     if j <> 0 then
       begin
       gks_set_pmark_type(j);
-      x[1] := x[1] + 0.065;
+      x[1] := x[1] + 0.06;
       gks_polymarker(1, x, y);
       end;
 

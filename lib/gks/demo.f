@@ -108,13 +108,13 @@ C* linetypes
  100    CONTINUE 
 
 C* markertypes
-        CALL GSMKSC(4.0)
+        CALL GSMKSC(3.5)
 
         X(1) = 0.3
         Y(1) = 0.95
         DO 150, J = -29, -19
           CALL GSMK(J)
-          X(1) = X(1)+0.065
+          X(1) = X(1)+0.06
           CALL GPM(1, X, Y)
  150    CONTINUE 
 
@@ -123,7 +123,7 @@ C* markertypes
 
         DO 160, J = -18, -8
           CALL GSMK(J)
-          X(1) = X(1)+0.065
+          X(1) = X(1)+0.06
           CALL GPM(1, X, Y)
  160    CONTINUE 
 
@@ -133,7 +133,7 @@ C* markertypes
         DO 170, J = -7, 4
           IF (J .EQ. 0) GOTO 170
           CALL GSMK(J)
-          X(1) = X(1)+0.065
+          X(1) = X(1)+0.06
           CALL GPM(1, X, Y)
  170    CONTINUE 
 
