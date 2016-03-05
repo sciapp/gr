@@ -18,9 +18,9 @@ end
 
 const gr3 = GR.gr3
 
-const plot_kind = [:line, :scatter, :hist, :contour, :contourf, :wireframe, :surface]
+const plot_kind = [:line, :scatter, :hist, :contour, :contourf, :wireframe, :surface, :plot3]
 
-const arg_fmt = [:xys, :xyzs]
+const arg_fmt = [:xys, :xyac, :xyzc]
 
 type PlotObject
     args
@@ -31,6 +31,7 @@ function Figure(width=600, height=450)
     args = @_tuple(Any)
     kvs = Dict()
     kvs[:size] = (width, height)
+    kvs[:ax] = false
     kvs[:subplot] = [0, 1, 0, 1]
     kvs[:clear] = true
     kvs[:update] = true
@@ -72,7 +73,7 @@ function set_viewport(kind, subplot)
         viewport[3] = subplot[3] + 0.125 * (subplot[4] - subplot[3])
         viewport[4] = subplot[3] + 0.95  * (subplot[4] - subplot[3])
     end
-    if kind in (:wireframe, :surface)
+    if kind in (:wireframe, :surface, :plot3)
         viewport[2] -= 0.0525
     end
     if kind in (:contour, :contourf, :surface)
@@ -103,7 +104,7 @@ end
 function minmax()
     xmin = ymin = zmin = typemax(Float64)
     xmax = ymax = zmax = typemin(Float64)
-    for (x, y, z, spec) in plt.args
+    for (x, y, z, c, spec) in plt.args
         xmin = min(minimum(x), xmin)
         xmax = max(maximum(x), xmax)
         ymin = min(minimum(y), ymin)
@@ -141,7 +142,7 @@ function set_window(kind)
 
     minmax()
 
-    if kind in (:wireframe, :surface)
+    if kind in (:wireframe, :surface, plot3)
         major_count = 2
     else
         major_count = 5
@@ -177,7 +178,7 @@ function set_window(kind)
     end
     plt.kvs[:yaxis] = ytick, yorg, majory
 
-    if kind in (:wireframe, :surface)
+    if kind in (:wireframe, :surface, :plot3)
         zmin, zmax = plt.kvs[:zrange]
         if scale & GR.OPTION_Y_LOG == 0
             zmin, zmax = GR.adjustlimits(zmin, zmax)
@@ -196,7 +197,7 @@ function set_window(kind)
 
     plt.kvs[:window] = xmin, xmax, ymin, ymax
     GR.setwindow(xmin, xmax, ymin, ymax)
-    if kind in (:wireframe, :surface)
+    if kind in (:wireframe, :surface, :plot3)
         rotation = get(plt.kvs, :rotation, 40)
         tilt = get(plt.kvs, :tilt, 70)
         GR.setspace(zmin, zmax, rotation, tilt)
@@ -218,13 +219,13 @@ function draw_axes(kind, pass=1)
     charheight = max(0.018 * diag, 0.01)
     GR.setcharheight(charheight)
     ticksize = 0.0075 * diag
-    if kind in (:wireframe, :surface)
+    if kind in (:wireframe, :surface, :plot3)
         ztick, zorg, majorz = plt.kvs[:zaxis]
         if pass == 1
             GR.grid3d(xtick, 0, ztick, xorg[1], yorg[1], zorg[1], 2, 0, 2)
             GR.grid3d(0, ytick, 0, xorg[2], yorg[1], zorg[1], 0, 2, 0)
         else
-           GR.axes3d(xtick, 0, ztick, xorg[1], yorg[1], zorg[1], majorx, 0, majorz, -ticksize)
+            GR.axes3d(xtick, 0, ztick, xorg[1], yorg[1], zorg[1], majorx, 0, majorz, -ticksize)
             GR.axes3d(0, ytick, 0, xorg[2], yorg[1], zorg[1], 0, majory, 0, ticksize)
         end
     else
@@ -239,7 +240,7 @@ function draw_axes(kind, pass=1)
         GR.textext(0.5 * (viewport[1] + viewport[2]), min(ratio, 1), plt.kvs[:title])
         GR.restorestate()
     end
-    if kind in (:wireframe, :surface)
+    if kind in (:wireframe, :surface, :plot3)
         xlabel = get(plt.kvs, :xlabel, "")
         ylabel = get(plt.kvs, :ylabel, "")
         zlabel = get(plt.kvs, :zlabel, "")
@@ -283,7 +284,7 @@ function draw_legend()
     GR.drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_labels)
     i = 0
     GR.uselinespec(" ")
-    for (x, y, z, spec) in plt.args
+    for (x, y, z, c, spec) in plt.args
         GR.savestate()
         mask = GR.uselinespec(spec)
         mask in (0, 1, 3, 4, 5) && GR.polyline([px - 0.07, px - 0.01], [py, py])
@@ -330,6 +331,11 @@ function figure(; kv...)
     plt
 end
 
+function hold(flag)
+    plt.kvs[:ax] = flag
+    plt.kvs[:clear] = !flag
+end
+
 function subplot(nr, nc, p)
     xmin, xmax, ymin, ymax = 1, 0, 1, 0
     for i in collect(p)
@@ -355,9 +361,11 @@ function plot_data(; kv...)
 
     plt.kvs[:clear] && GR.clearws()
 
-    set_viewport(kind, plt.kvs[:subplot])
-    set_window(kind)
-    draw_axes(kind)
+    if !plt.kvs[:ax]
+        set_viewport(kind, plt.kvs[:subplot])
+        set_window(kind)
+        draw_axes(kind)
+    end
 
     if haskey(plt.kvs, :colormap)
         GR.setcolormap(plt.kvs[:colormap])
@@ -366,12 +374,30 @@ function plot_data(; kv...)
     end
 
     GR.uselinespec(" ")
-    for (x, y, z, spec) in plt.args
+    for (x, y, z, c, spec) in plt.args
         GR.savestate()
+        if haskey(plt.kvs, :alpha)
+            GR.settransparency(plt.kvs[:alpha])
+        end
         if kind == :line
             mask = GR.uselinespec(spec)
             mask in (0, 1, 3, 4, 5) && GR.polyline(x, y)
             mask & 0x02 != 0 && GR.polymarker(x, y)
+        elseif kind == :scatter
+            GR.setmarkertype(GR.MARKERTYPE_SOLID_CIRCLE)
+            if z != Void || c != Void
+                if c != Void
+                    c = (c - minimum(c)) / (maximum(c) - minimum(c))
+                    cind = round(Int64, 1000 + c * 255)
+                end
+                for i in 1:length(x)
+                    (z != Void) && GR.setmarkersize(z[i] / 100.0)
+                    (c != Void )&& GR.setmarkercolorind(cind[i])
+                    GR.polymarker([x[i]], [y[i]])
+                end
+            else
+                GR.polymarker(x, y)
+            end
         elseif kind == :hist
             ymin = plt.kvs[:window][3]
             for i = 2:length(y)
@@ -420,11 +446,14 @@ function plot_data(; kv...)
             GR.gr3.surface(x, y, z, GR.OPTION_COLORED_MESH)
             draw_axes(kind, 2)
             colorbar(0.05)
+        elseif kind == :plot3
+            GR.polyline3d(x, y, z)
+            draw_axes(kind, 2)
         end
         GR.restorestate()
     end
 
-    if kind == :line && haskey(plt.kvs, :labels)
+    if kind in (:line, :scatter) && haskey(plt.kvs, :labels)
         draw_legend()
     end
 
@@ -441,43 +470,58 @@ function plot_args(args; fmt=:xys)
     parsed_args = Any[]
 
     while length(args) > 0
-        local x, y, z
-        a = shift!(args);
+        local x, y, z, c
+        a = shift!(args)
         if isa(a, AbstractVecOrMat)
             elt = eltype(a)
             if elt <: Complex
                 x = real(a)
                 y = imag(a)
                 z = Void
+                c = Void
             elseif elt <: Real
                 if fmt == :xys
                     if length(args) >= 1 &&
-                       (isa(args[1], AbstractVecOrMat) && eltype(args[1]) <: Real ||
-                        typeof(args[1]) == Function)
+                       (isa(args[1], AbstractVecOrMat) && eltype(args[1]) <: Real || typeof(args[1]) == Function)
                         x = a
-                        y = shift!(args);
+                        y = shift!(args)
                         z = Void
+                        c = Void
                     else
                         y = a
                         n = isrowvec(y) ? size(y, 2) : size(y, 1)
                         x = linspace(1, n, n)
                         z = Void
+                        c = Void
                     end
-                else
-                    if length(args) >= 2 &&
+                elseif fmt == :xyac || fmt == :xyzc
+                    if length(args) >= 3 &&
                         isa(args[1], AbstractVecOrMat) && eltype(args[1]) <: Real &&
-                       (isa(args[2], AbstractVecOrMat) && eltype(args[2]) <: Real ||
-                        typeof(args[2]) == Function)
+                       (isa(args[2], AbstractVecOrMat) && eltype(args[2]) <: Real || typeof(args[2]) == Function) &&
+                       (isa(args[3], AbstractVecOrMat) && eltype(args[3]) <: Real || typeof(args[3]) == Function)
                         x = a
-                        y = shift!(args);
-                        z = shift!(args);
-                    elseif length(args) == 0
+                        y = shift!(args)
+                        z = shift!(args)
+                        c = shift!(args)
+                    elseif length(args) >= 2 &&
+                        isa(args[1], AbstractVecOrMat) && eltype(args[1]) <: Real &&
+                       (isa(args[2], AbstractVecOrMat) && eltype(args[2]) <: Real || typeof(args[2]) == Function)
+                        x = a
+                        y = shift!(args)
+                        z = shift!(args)
+                        c = Void
+                    elseif fmt == :xyac && length(args) >= 1 &&
+                       (isa(args[1], AbstractVecOrMat) && eltype(args[1]) <: Real || typeof(args[1]) == Function)
+                        x = a
+                        y = shift!(args)
+                        z = Void
+                        c = Void
+                    elseif fmt == :xyzc && length(args) == 0
                         z = a
                         nx, ny = size(z)
                         x = linspace(1, nx, nx)
                         y = linspace(1, ny, ny)
-                    else
-                        error("expected String")
+                        c = Void
                     end
                 end
             else
@@ -487,20 +531,21 @@ function plot_args(args; fmt=:xys)
             error("expected array or function")
         end
         spec = ""
-        if length(args) > 0 && isa(args[1], AbstractString)
-            spec = shift!(args);
+        if fmt == :xys && length(args) > 0 && isa(args[1], AbstractString)
+            spec = shift!(args)
         end
-        push!(parsed_args, (x, y, z, spec))
+        push!(parsed_args, (x, y, z, c, spec))
     end
 
     pltargs = Any[]
 
-    for (a, b, c, spec) in parsed_args
-        x, y, z = a, b, c
+    for arg in parsed_args
+        x, y, z, c, spec = arg
 
         isa(x, UnitRange) && (x = collect(x))
         isa(y, UnitRange) && (y = collect(y))
         isa(z, UnitRange) && (z = collect(z))
+        isa(c, UnitRange) && (c = collect(c))
 
         isvector(x) && (x = vec(x))
         if typeof(y) == Function
@@ -509,36 +554,39 @@ function plot_args(args; fmt=:xys)
             isvector(y) && (y = vec(y))
         end
         if z != Void
-            if typeof(z) == Function
+            if fmt == :xyzc && typeof(z) == Function
                 z = [z(a,b) for a in x, b in y]
             else
                 isvector(z) && (z = vec(z))
             end
         end
+        if c != Void
+            isvector(c) && (c = vec(c))
+        end
 
-        local xyz
+        local xyzc
         if z == Void
             if isa(x, AbstractVector) && isa(y, AbstractVector)
-                xyz = [ (x, y, Void) ]
+                xyzc = [ (x, y, z, c) ]
             elseif isa(x, AbstractVector)
-                xyz = length(x) == size(y, 1) ?
-                      [ (x, sub(y,:,j), Void) for j = 1:size(y, 2) ] :
-                      [ (x, sub(y,i,:), Void) for i = 1:size(y, 1) ]
+                xyzc = length(x) == size(y, 1) ?
+                       [ (x, sub(y,:,j), z, c) for j = 1:size(y, 2) ] :
+                       [ (x, sub(y,i,:), z, c) for i = 1:size(y, 1) ]
             elseif isa(y, AbstractVector)
-                xyz = size(x, 1) == length(y) ?
-                      [ (sub(x,:,j), y, Void) for j = 1:size(x, 2) ] :
-                      [ (sub(x,i,:), y, Void) for i = 1:size(x, 1) ]
+                xyzc = size(x, 1) == length(y) ?
+                       [ (sub(x,:,j), y, z, c) for j = 1:size(x, 2) ] :
+                       [ (sub(x,i,:), y, z, c) for i = 1:size(x, 1) ]
             else
                 @assert size(x) == size(y)
-                xyz = [ (sub(x,:,j), sub(y,:,j), Void) for j = 1:size(y, 2) ]
+                xyzc = [ (sub(x,:,j), sub(y,:,j), z, c) for j = 1:size(y, 2) ]
             end
         elseif isa(x, AbstractVector) && isa(y, AbstractVector) &&
                (isa(z, AbstractVector) || typeof(z) == Array{Float64,2} ||
                 typeof(z) == Array{Int32,2} || typeof(z) == Array{Any,2})
-            xyz = [ (x, y, z) ]
+            xyzc = [ (x, y, z, c) ]
         end
-        for (x, y, z) in xyz
-            push!(pltargs, (x, y, z, spec))
+        for (x, y, z, c) in xyzc
+            push!(pltargs, (x, y, z, c, spec))
         end
     end
 
@@ -548,9 +596,21 @@ end
 function plot(args::PlotArg...; kv...)
     merge!(plt.kvs, Dict(kv))
 
-    plt.args = plot_args(args)
+    if plt.kvs[:ax]
+        plt.args = append!(plt.args, plot_args(args))
+    else
+        plt.args = plot_args(args)
+    end
 
     plot_data()
+end
+
+function scatter(args...; kv...)
+    merge!(plt.kvs, Dict(kv))
+
+    plt.args = plot_args(args, fmt=:xyac)
+
+    plot_data(kind=:scatter)
 end
 
 function histogram(x; kv...)
@@ -558,7 +618,7 @@ function histogram(x; kv...)
 
     h = Base.hist(x)
     x, y = float(collect(h[1])), float(h[2])
-    plt.args = [(x, y, Void, "")]
+    plt.args = [(x, y, Void, Void, "")]
 
     plot_data(kind=:hist)
 end
@@ -566,7 +626,7 @@ end
 function contour(args...; kv...)
     merge!(plt.kvs, Dict(kv))
 
-    plt.args = plot_args(args, fmt=:xyzs)
+    plt.args = plot_args(args, fmt=:xyzc)
 
     plot_data(kind=:contour)
 end
@@ -574,7 +634,7 @@ end
 function contourf(args...; kv...)
     merge!(plt.kvs, Dict(kv))
 
-    plt.args = plot_args(args, fmt=:xyzs)
+    plt.args = plot_args(args, fmt=:xyzc)
 
     plot_data(kind=:contourf)
 end
@@ -582,7 +642,7 @@ end
 function wireframe(args...; kv...)
     merge!(plt.kvs, Dict(kv))
 
-    plt.args = plot_args(args, fmt=:xyzs)
+    plt.args = plot_args(args, fmt=:xyzc)
 
     plot_data(kind=:wireframe)
 end
@@ -590,9 +650,17 @@ end
 function surface(args...; kv...)
     merge!(plt.kvs, Dict(kv))
 
-    plt.args = plot_args(args, fmt=:xyzs)
+    plt.args = plot_args(args, fmt=:xyzc)
 
     plot_data(kind=:surface)
+end
+
+function plot3(args...; kv...)
+    merge!(plt.kvs, Dict(kv))
+
+    plt.args = plot_args(args, fmt=:xyzc)
+
+    plot_data(kind=:plot3)
 end
 
 function title(s)

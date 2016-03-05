@@ -15,9 +15,9 @@ C* initialize color index array
  300      CONTINUE
  200    CONTINUE
 
-	CALL GOPKS(5, -1)
-	CALL GOPWK(1, 0, 0)
-	CALL GACWK(1)
+        CALL GOPKS(5, -1)
+        CALL GOPWK(1, 0, 0)
+        CALL GACWK(1)
 
         CALL GSASF(ASF)
         CALL GQCNTN(JERR, TNR)
@@ -112,7 +112,7 @@ C* markertypes
 
         X(1) = 0.3
         Y(1) = 0.95
-        DO 150, J = -20, -13
+        DO 150, J = -29, -19
           CALL GSMK(J)
           X(1) = X(1)+0.065
           CALL GPM(1, X, Y)
@@ -121,7 +121,7 @@ C* markertypes
         X(1) = 0.3
         Y(1) = 0.875
 
-        DO 160, J = -12, -5
+        DO 160, J = -18, -8
           CALL GSMK(J)
           X(1) = X(1)+0.065
           CALL GPM(1, X, Y)
@@ -130,7 +130,7 @@ C* markertypes
         X(1) = 0.3
         Y(1) = 0.8
 
-        DO 170, J = -4, 4
+        DO 170, J = -7, 4
           IF (J .EQ. 0) GOTO 170
           CALL GSMK(J)
           X(1) = X(1)+0.065
@@ -189,26 +189,26 @@ C* more text
         CALL GSTXFP(12, 2)
         CALL GTX(.5, .05, 'Hello World')
 
-	CALL GQTXX(1, .5, .05, 'Hello World', JERR, CPX, CPY, TX, TY)
-	IF (JERR .EQ. 0) THEN
-	  CALL GSFAIS(0)
-	  CALL GFA(4, TX, TY)
-	END IF
+        CALL GQTXX(1, .5, .05, 'Hello World', JERR, CPX, CPY, TX, TY)
+        IF (JERR .EQ. 0) THEN
+          CALL GSFAIS(0)
+          CALL GFA(4, TX, TY)
+        END IF
 
-	CALL GSCHH(0.024)
-	CALL GSTXAL(1, 1)
-	CALL GSTXFP(3, 0)
-	CALL GSCHUP(-1., 0.)
-	CALL GTX(.05, .15, 'up')
-	CALL GSCHUP(0., -1.)
-	CALL GTX(.05, .15, 'left')
-	CALL GSCHUP(1., 0.)
-	CALL GTX(.05, .15, 'down')
-	CALL GSCHUP(0., 1.)
-	CALL GTX(.05, .15, 'right')
+        CALL GSCHH(0.024)
+        CALL GSTXAL(1, 1)
+        CALL GSTXFP(3, 0)
+        CALL GSCHUP(-1., 0.)
+        CALL GTX(.05, .15, 'up')
+        CALL GSCHUP(0., -1.)
+        CALL GTX(.05, .15, 'left')
+        CALL GSCHUP(1., 0.)
+        CALL GTX(.05, .15, 'down')
+        CALL GSCHUP(0., 1.)
+        CALL GTX(.05, .15, 'right')
 
         CALL GUWK(1, 0)
-	READ(*, *)
+        READ(*, *)
 
         CALL GECLKS
         

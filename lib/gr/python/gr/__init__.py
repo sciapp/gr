@@ -585,6 +585,24 @@ def setmarkertype(style):
     +-----------------------------+-----+------------------------------------------------+
     |MARKERTYPE_SOLID PLUS        |  -20|Solid plus sign                                 |
     +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_PENTAGON          |  -21|Pentagon                                        |
+    +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_HEXAGON           |  -22|Hexagon                                         |
+    +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_HEPTAGON          |  -23|Heptagon                                        |
+    +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_OCTAGON           |  -24|Octagon                                         |
+    +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_STAR_4            |  -25|4-pointed star                                  |
+    +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_STAR_5            |  -26|5-pointed star (pentagram)                      |
+    +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_STAR_6            |  -27|6-pointed star (hexagram)                       |
+    +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_STAR_7            |  -28|7-pointed star (heptagram)                      |
+    +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_STAR_8            |  -29|8-pointed star (octagram)                       |
+    +-----------------------------+-----+------------------------------------------------+
 
     Polymarkers appear centered over their specified coordinates.
 
@@ -2516,6 +2534,15 @@ MARKERTYPE_SOLID_TRI_RIGHT = -17
 MARKERTYPE_SOLID_TRI_LEFT = -18
 MARKERTYPE_HOLLOW_PLUS = -19
 MARKERTYPE_OMARK = -20
+MARKERTYPE_PENTAGON = -21
+MARKERTYPE_HEXAGON = -22
+MARKERTYPE_HEPTAGON = -23
+MARKERTYPE_OCTAGON = -24
+MARKERTYPE_STAR_4 = -25
+MARKERTYPE_STAR_5 = -26
+MARKERTYPE_STAR_6 = -27
+MARKERTYPE_STAR_7 = -28
+MARKERTYPE_STAR_8 = -29
 
 OPTION_X_LOG = 1
 OPTION_Y_LOG = 2

@@ -412,81 +412,11 @@ void polyline(int num_points, double *x, double *y)
 static
 void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
-  static int marker[26][57] = {
-    { 5, 9, -4, 7, 4, 7, 7, 4, 7, -4,   /* omark */
-      4, -7, -4, -7, -7, -4, -7, 4,
-      -4, 7, 3, 9, -4, 7, 4, 7, 7, 4,
-      7, -4, 4, -7, -4, -7, -7, -4,
-      -7, 4, -4, 7, 0 },
-    { 5, 13, -2, 8, 2, 8, 2, 2, 8, 2,   /* hollow plus */
-      8, -2, 2, -2, 2, -8, -2, -8,
-      -2, -2, -8, -2, -8, 2, -2, 2,
-      -2, 8, 3, 13, -2, 8, 2, 8,
-      2, 2, 8, 2, 8, -2, 2, -2, 2, -8,
-      -2, -8, -2, -2, -8, -2, -8, 2,
-      -2, 2, -2, 8, 0 },
-    { 4, 4, -8, 0, 4, 7, 4, -7,         /* solid triangle right */
-      -8, 0, 0 },
-    { 4, 4, 8, 0, -4, -7, -4, 7,        /* solid triangle left */
-      8, 0, 0 },
-    { 5, 4, 0, 8, 7, -4, -7, -4, 0, 8,  /* triangle up down */
-      5, 4, 0, -8, -7, 4, 7, 4, 0, -8,
-      3, 4, 0, 8, 7, -4, -7, -4, 0, 8,
-      3, 4, 0, -8, -7, 4, 7, 4, 0, -8,
-      0 },
-    { 4, 11, 0, 9, 2, 2, 9, 3, 3, -1,   /* solid star */
-      6, -8, 0, -3, -6, -8, -3, -1,
-      -9, 3, -2, 2, 0, 9, 0 },
-    { 5, 11, 0, 9, 2, 2, 9, 3, 3, -1,   /* hollow star */
-      6, -8, 0, -3, -6, -8, -3, -1,
-      -9, 3, -2, 2, 0, 9,
-      3, 11, 0, 9, 2, 2, 9, 3, 3, -1,
-      6, -8, 0, -3, -6, -8, -3, -1,
-      -9, 3, -2, 2, 0, 9, 0 },
-    { 4, 5, 0, 9, 9, 0, 0, -9, -9, 0,   /* solid diamond */
-      0, 9, 0 },
-    { 5, 5, 0, 9, 9, 0, 0, -9, -9, 0,   /* hollow diamond */
-      0, 9, 3, 5, 0, 9, 9, 0, 0, -9,
-      -9, 0, 0, 9, 0 },
-    { 4, 5, 9, 9, -9, -9, 9, -9, -9, 9, /* solid hourglass */
-      9, 9, 0 },
-    { 5, 5, 9, 9, -9, -9, 9, -9, -9, 9, /* hollow hourglass */
-      9, 9, 3, 5, 9, 9, -9, -9, 9, -9,
-      -9, 9, 9, 9, 0 },
-    { 4, 5, 9, 9, 9, -9, -9, 9, -9, -9, /* solid bowtie */
-      9, 9, 0 },
-    { 5, 5, 9, 9, 9, -9, -9, 9, -9, -9, /* hollow bowtie */
-      9, 9, 3, 5, 9, 9, 9, -9, -9, 9,
-      -9, -9, 9, 9, 0 },
-    { 4, 5, 9, 9, 9, -9, -9, -9, -9, 9, /* solid square */
-      9, 9, 0 },
-    { 5, 5, 9, 9, 9, -9, -9, -9, -9, 9, /* hollow square */
-      9, 9, 3, 5, 9, 9, 9, -9, -9, -9,
-      -9, 9, 9, 9, 0 },
-    { 4, 4, -9, 9, 9, 9, 0, -9, -9, 9,  /* solid triangle down */
-      0 },
-    { 5, 4, -9, 9, 9, 9, 0, -9, -9, 9,  /* hollow triangle down */
-      3, 4, -9, 9, 9, 9, 0, -9, -9, 9,
-      0 },
-    { 4, 4, 0, 9, 9, -9, -9, -9, 0, 9,  /* solid triangle up */
-      0 },
-    { 5, 4, 0, 9, 9, -9, -9, -9, 0, 9,  /* hollow triangle up */
-      3, 4, 0, 9, 9, -9, -9, -9, 0, 9, 0 },
-    { 7, 0, 360, 0 },                   /* solid circle */
-    { 0 },                              /* not used */
-    { 1, 0 },                           /* dot */
-    { 2, 0, 0, 0, 9, 2, 0, 0, 9, 0,     /* plus */
-      2, 0, 0, 0, -9, 2, 0, 0, -9, 0,
-      0 },
-    { 2, 0, 0, 0, 9, 2, 0, 0, 9, 3,     /* asterisk */
-      2, 0, 0, 6, -9, 2, 0, 0, -6, -9,
-      2, 0, 0, -9, 3, 0 },
-    { 8, 0, 360, 6, 0, 360, 0 },        /* circle */
-    { 2, 0, 0, 9, 9, 2, 0, 0, 9, -9,    /* diagonal cross */
-      2, 0, 0, -9, -9, 2, 0, 0, -9, 9,
-      0 }
-  };
-  static int is_concav[26] = {
+
+#include "marker.h"
+
+  static int is_concav[35] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
     0,
     0, 0, 0, 0, 0 };
@@ -505,7 +435,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
   if (gkss->version > 4)
     mscale *= p->height / 500.0;
   r = (int) (3 * mscale);
-  scale = mscale / 3.0;
+  scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
@@ -515,7 +445,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
   NDC_to_DC(xn, yn, x, y);
 
   pc = 0;
-  mtype = (2 * r > 1) ? mtype + 20 : 21;
+  mtype = (2 * r > 1) ? mtype + marker_off : marker_off + 1;
 
   glMatrixMode(GL_MODELVIEW);
   glLoadTransposeMatrixd(modelview_matrix);

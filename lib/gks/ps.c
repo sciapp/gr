@@ -182,7 +182,7 @@ void seg_xform_rel(double *x, double *y)
 }
 
 static
-int lastop(char *op)
+int lastop(const char *op)
 {
   int len;
 
@@ -990,6 +990,42 @@ void ps_init(int *pages)
       packb("/dc {sxy np x y m fg -24 24 srl 48 -48 srl\
  -24 24 srl -24 -24 srl 48 48 srl");
       packb("sk gr} def");
+      packb("/e5 {np x y m 0 25 srm 23.775 -17.275 srl -9.075 -27.95 srl\
+ -29.4 0 srl -9.075 27.95 srl} def");
+      packb("/e6 {np x y m 0 -25 srm 21.65 12.5 srl 0 25 srl -21.65 12.5 srl\
+ -21.65 -12.5 srl 0 -25 srl} def");
+      packb("/e7 {np x y m 0 25 srm 19.55 -9.425 srl 4.825 -21.15 srl\
+ -13.525 -16.95 srl -21.7 0 srl -13.525 16.95 srl 4.825 21.15 srl} def");
+      packb("/e8 {np x y m 0 -25 srm 17.675 7.325 srl 7.325 17.675 srl\
+ -7.325 17.675 srl -17.675 7.325 srl -17.675 -7.325 srl -7.325 -17.675 srl\
+ 7.325 -17.675 srl} def");
+      packb("/s4 {np x y m 0 -25 srm 7.075 17.925 srl 17.925 7.075 srl\
+ -17.925 7.075 srl -7.075 17.925 srl -7.075 -17.925 srl -17.925 -7.075 srl\
+ 17.925 -7.075 srl} def");
+      packb("/s5 {np x y m 0 25 srm 5.875 -16.9 srl 17.9 -0.375 srl\
+ -14.275 -10.825 srl 5.2 -17.125 srl -14.7 10.225 srl -14.7 -10.225 srl\
+ 5.2 17.125 srl -14.275 10.825 srl 17.9 0.375 srl} def");
+      packb("/s6 {np x y m 0 -25 srm 5 16.35 srl 16.65 -3.85 srl\
+ -11.65 12.5 srl 11.65 12.5 srl -16.65 -3.85 srl -5 16.35 srl -5 -16.35 srl\
+ -16.65 3.85 srl 11.65 -12.5 srl -11.65 -12.5 srl 16.65 3.85 srl} def");
+      packb("/s7 {np x y m 0 25 srm 4.35 -16 srl 15.2 6.575 srl\
+ -9.8 -13.35 srl 14.625 -7.8 srl -16.55 -0.65 srl 3.025 -16.3 srl\
+ -10.85 12.525 srl -10.85 -12.525 srl 3.025 16.3 srl -16.55 0.65 srl\
+ 14.625 7.8 srl -9.8 13.35 srl 15.2 -6.575 srl} def");
+      packb("/s8 {np x y m 0 -25 srm 3.825 15.75 srl 13.85 -8.425 srl\
+ -8.425 13.85 srl 15.75 3.825 srl -15.75 3.825 srl 8.425 13.85 srl\
+ -13.85 -8.425 srl -3.825 15.75 srl -3.825 -15.75 srl -13.85 8.425 srl\
+ 8.425 -13.85 srl -15.75 -3.825 srl 15.75 -3.825 srl -8.425 -13.85 srl\
+ 13.85 8.425 srl} def");
+      packb("/ed5 {sxy fg e5 fill fg e5 csk gr} def");
+      packb("/ed6 {sxy fg e6 fill fg e6 csk gr} def");
+      packb("/ed7 {sxy fg e7 fill fg e7 csk gr} def");
+      packb("/ed8 {sxy fg e8 fill fg e8 csk gr} def");
+      packb("/st4 {sxy fg s4 fill fg s4 csk gr} def");
+      packb("/st5 {sxy fg s5 fill fg s5 csk gr} def");
+      packb("/st6 {sxy fg s6 fill fg s6 csk gr} def");
+      packb("/st7 {sxy fg s7 fill fg s7 csk gr} def");
+      packb("/st8 {sxy fg s8 fill fg s8 csk gr} def");
       packb("/sq {np x y m 0 24 srm 24 0 srl 0 -48 srl\
  -48 0 srl 0 48 srl 24 0 srl} def");
       packb("/nsq {sxy bg sq fi fg sq csk gr} def");
@@ -1257,6 +1293,7 @@ void marker_routine(double x, double y, int marker)
   char buffer[50];
   static const char *macro[] =
   {
+    "st8", "st7", "st6", "st5", "st4", "ed8", "ed7", "ed7", "ed5",
     "nom", "npl", "ftr", "ftl", "tud", "fst", " st", "fdm", "ndm", "fhg",
     "nhg", "fbt", "nbt", "fsq", "nsq", "ftd", "ntd", "ftu", "ntu", "fci",
     " dt", " dt", " pl", "fas", "nci", " dc"
@@ -1266,7 +1303,7 @@ void marker_routine(double x, double y, int marker)
 
   p->ix = NINT(dx);
   p->iy = NINT(dy);
-  sprintf(buffer, "%d %d %s", p->ix, p->iy, macro[marker + 20]);
+  sprintf(buffer, "%d %d %s", p->ix, p->iy, macro[marker + 29]);
   packb(buffer);
 }
 

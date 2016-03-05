@@ -127,7 +127,7 @@ begin
 
   x[1] := 0.3;
   y[1] := 0.95;
-  for j := -20 to -13 do
+  for j := -29 to -19 do
     begin
     gks_set_pmark_type(j);
     x[1] := x[1] + 0.065;
@@ -136,7 +136,7 @@ begin
 
   x[1] := 0.3;
   y[1] := 0.875;
-  for j := -12 to -5 do
+  for j := -18 to -8 do
     begin
     gks_set_pmark_type(j);
     x[1] := x[1] + 0.065;
@@ -145,7 +145,7 @@ begin
 
   x[1] := 0.3;
   y[1] := 0.8;
-  for j := -4 to 4 do
+  for j := -7 to 4 do
     if j <> 0 then
       begin
       gks_set_pmark_type(j);

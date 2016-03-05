@@ -42,6 +42,7 @@
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		32CA4F630368D1EE00C91783 /* GKSTerm_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GKSTerm_Prefix.pch; sourceTree = "<group>"; };
+		4BF11C1A1C89ED700018E037 /* marker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = marker.h; path = ../marker.h; sourceTree = "<group>"; };
 		6625B75B10298C790059B278 /* afm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = afm.c; path = ../afm.c; sourceTree = SOURCE_ROOT; };
 		6625B75C10298C790059B278 /* error.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = error.c; path = ../error.c; sourceTree = SOURCE_ROOT; };
 		6625B75D10298C790059B278 /* malloc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = malloc.c; path = ../malloc.c; sourceTree = SOURCE_ROOT; };
@@ -135,6 +136,7 @@
 				6625B75D10298C790059B278 /* malloc.c */,
 				6625B75E10298C790059B278 /* util.c */,
 				2093412D10285A27004FC05A /* gkscore.h */,
+				4BF11C1A1C89ED700018E037 /* marker.h */,
 				2093412E10285A27004FC05A /* gksquartz.h */,
 				32CA4F630368D1EE00C91783 /* GKSTerm_Prefix.pch */,
 			);
