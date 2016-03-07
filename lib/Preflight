@@ -329,7 +329,7 @@ eof
     libs="-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo"
     ret=1
   else
-    libs="-lGL -lXrandr -lX11 -lrt"
+    libs="-lGL -lXrandr -lXxf86vm -lXinerama -lXcursor -lXi -lX11 -lrt -lpthread -lm"
   fi
   glfwlib="glfw3"
   $cmd -l$glfwlib $libs >/dev/null 2>&1
