@@ -263,6 +263,11 @@ To create a self-contained GR distribution you can use the ``self`` target::
 On slow systems, you can have a coffee now, as the system will download
 and build several static libraries.
 
+The GR distribution provides some wrapper scripts for python and anaconda environments.
+You can change the default locations for the corresponding python interpreter by
+specifying the ``PYTHONBIN`` and ``ANACONDABIN`` variables, e.g.::
+
+    make install GRDIR=/opt/gr PYTHONBIN=/usr/local/bin ANACONDABIN=/usr/local/anaconda2/bin
 
 Install from PyPI
 ^^^^^^^^^^^^^^^^^

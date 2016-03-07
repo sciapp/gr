@@ -1,4 +1,6 @@
 #!/bin/sh
+# PYTHONBIN - do not delete this line
+
 if [ `basename $0` = "igr" ]
 then
   python=ipython
@@ -36,11 +38,14 @@ if [ "${MPLBACKEND}" = "gr" ]
 then
   export MPLBACKEND="module://gr.matplotlib.backend_gr"
 fi
-if [ -f /usr/local/bin/python ]
+if [ -z "${pybin}" ]
 then
-  PYTHONHOME=/usr/local
-else
-  PYTHONHOME=/usr
+  if [ -f /usr/local/bin/python ]
+  then
+    pybin=/usr/local/bin
+  else
+    pybin=/usr/bin
+  fi
 fi
 if [ `uname` = "Darwin" ]
 then
@@ -53,4 +58,5 @@ if [ -f ${GRDIR}/etc/grrc ]
 then
   . ${GRDIR}/etc/grrc
 fi
-exec ${PYTHONHOME}/bin/${python} "$@"
+exec ${pybin}/${python} "$@"
+

@@ -1,5 +1,7 @@
       GRDIR = /usr/local/gr
        DIRS = lib/gr lib/gr3
+  PYTHONBIN = $(shell dirname `which python`)
+ANACONDABIN = /usr/local/anaconda2/bin
 ALL_DISTROS = centos centos6 debian suse
 ifeq ($(DISTROS),all)
 	override DISTROS = $(ALL_DISTROS)
@@ -38,8 +40,11 @@ ifeq ($(UNAME), Darwin)
 	@ditto lib/gks/quartz/build/Release/GKSTerm.app \
 	$(DESTDIR)$(GRDIR)/Applications/GKSTerm.app 
 endif
-	cp -p bin/gr.sh $(DESTDIR)$(GRDIR)/bin/gr
-	cp -p bin/anaconda.sh $(DESTDIR)$(GRDIR)/bin/anaconda
+	sed 's%#\ PYTHONBIN.*%pybin=$${PYTHONBIN:-$(PYTHONBIN)}%' bin/gr.sh \
+	> $(DESTDIR)$(GRDIR)/bin/gr
+	sed 's%#\ PYTHONBIN.*%pybin=$${PYTHONBIN:-$(ANACONDABIN)}%' \
+	bin/anaconda.sh > $(DESTDIR)$(GRDIR)/bin/anaconda
+	@chmod 755 $(DESTDIR)$(GRDIR)/bin/gr $(DESTDIR)$(GRDIR)/bin/anaconda
 
 clean:
 	rm -f Makedefs

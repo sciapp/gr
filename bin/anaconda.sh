@@ -1,4 +1,6 @@
 #!/bin/sh
+# PYTHONBIN - do not delete this line
+
 if [ "$1" = "-o" ]
 then
   shift
@@ -32,14 +34,17 @@ if [ "${MPLBACKEND}" == "gr" ]
 then
   export MPLBACKEND="module://gr.matplotlib.backend_gr"
 fi
-if [ -d ${HOME}/anaconda ]
+if [ -z ${pybin} ]
 then
-  PYTHONHOME=${HOME}/anaconda
-elif [ -d /usr/local/anaconda ]
-then
-  PYTHONHOME=/usr/local/anaconda
-else
-  PYTHONHOME=/usr
+  if [ -d ${HOME}/anaconda2 ]
+  then
+    pybin=${HOME}/anaconda2/bin
+  elif [ -d /usr/local/anaconda2 ]
+  then
+    pybin=/usr/local/anaconda2/bin
+  else
+    pybin=/usr/bin
+  fi
 fi
 if [ `uname` = "Darwin" ]
 then
@@ -52,4 +57,5 @@ if [ -f ${GRDIR}/etc/grrc ]
 then
   . ${GRDIR}/etc/grrc
 fi
-exec ${PYTHONHOME}/bin/python ${args}
+exec ${pybin}/python ${args}
+
