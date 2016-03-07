@@ -603,6 +603,10 @@ def setmarkertype(style):
     +-----------------------------+-----+------------------------------------------------+
     |MARKERTYPE_STAR_8            |  -29|8-pointed star (octagram)                       |
     +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_VLINE             |  -30|verical line                                    |
+    +-----------------------------+-----+------------------------------------------------+
+    |MARKERTYPE_HLINE             |  -31|horizontal line                                 |
+    +-----------------------------+-----+------------------------------------------------+
 
     Polymarkers appear centered over their specified coordinates.
 
@@ -2543,6 +2547,8 @@ MARKERTYPE_STAR_5 = -26
 MARKERTYPE_STAR_6 = -27
 MARKERTYPE_STAR_7 = -28
 MARKERTYPE_STAR_8 = -29
+MARKERTYPE_VLINE = -30
+MARKERTYPE_HLINE = -31
 
 OPTION_X_LOG = 1
 OPTION_Y_LOG = 2

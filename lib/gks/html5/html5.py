@@ -438,6 +438,10 @@ class Html_output(object):
 
     def draw_marker(self, xn, yn, mtype, mscale, mcolor):
         marker = [
+            # hline
+            [ 2, -1000, 0, 1000, 0, 0 ],
+            # vline
+            [ 2, 0, -1000, 0, 1000, 0 ],
             # star8
             [ 4, 16,  0, -1000, 153, -370, 707, -707, 370, -153, 1000, 0, 370, 153,
               707, 707, 153, 370, 0, 1000, -153, 370, -707, 707, -370, 153, -1000, 0,
@@ -558,7 +562,7 @@ class Html_output(object):
         (x, y) = self.NDC_to_DC(xn, yn)
 
         pc = 0
-        mtype = mtype + 29 if (2 * r > 1) else 30
+        mtype = mtype + 31 if (2 * r > 1) else 32
         while (True):
             op = marker[mtype][pc]
             if op == 1:  # point

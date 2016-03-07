@@ -111,8 +111,8 @@ int main(int argc, char *argv[])
   gks_text(.45, .14, "Magenta");
 
   /* Linetypes */
-  x[0] = 0.12;
-  x[1] = 0.28;
+  x[0] = 0.10;
+  x[1] = 0.26;
   y[1] = y[0] = 0.95;
 
   for (j = -8; j <= 4; j++)
@@ -143,25 +143,25 @@ int main(int argc, char *argv[])
   /* Markertypes */
   gks_set_pmark_size(3.5);
 
-  x[0] = 0.3;
+  x[0] = 0.25;
   y[0] = 0.95;
-  for (j = -29; j <= -19; j++)
+  for (j = -31; j <= -20; j++)
     {
       gks_set_pmark_type(j);
       x[0] += 0.06;
       gks_polymarker(1, x, y);
     }
 
-  x[0] = 0.3;
+  x[0] = 0.25;
   y[0] = 0.875;
-  for (j = -18; j <= -8; j++)
+  for (j = -19; j <= -8; j++)
     {
       gks_set_pmark_type(j);
       x[0] += 0.06;
       gks_polymarker(1, x, y);
     }
 
-  x[0] = 0.3;
+  x[0] = 0.25;
   y[0] = 0.8;
   for (j = -7; j <= 4; j++)
     {
@@ -198,10 +198,10 @@ int main(int argc, char *argv[])
     }
 
   /* Patterns */
-  x[0] = 0.05;
-  x[1] = 0.1;
-  x[2] = 0.1;
-  x[3] = 0.05;
+  x[0] = 0.02;
+  x[1] = 0.07;
+  x[2] = 0.07;
+  x[3] = 0.02;
   x[4] = x[0];
   y[0] = 0.2;
   y[1] = 0.2;

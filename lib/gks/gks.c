@@ -1212,7 +1212,7 @@ void gks_set_pmark_type(int mtype)
       if (mtype >= -114 && mtype <= -101)
 	mtype = gksgral_marker_types[mtype + 114];
 
-      if (mtype >= -29 && mtype <= GKS_K_MARKERTYPE_DIAGONAL_CROSS && mtype)
+      if (mtype >= -31 && mtype <= GKS_K_MARKERTYPE_DIAGONAL_CROSS && mtype)
 	{
 	  if (mtype != s->mtype)
 	    {

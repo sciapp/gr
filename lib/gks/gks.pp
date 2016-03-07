@@ -158,6 +158,8 @@ interface
      GKS_K_MARKERTYPE_STAR_6 = -(27);
      GKS_K_MARKERTYPE_STAR_7 = -(28);
      GKS_K_MARKERTYPE_STAR_8 = -(29);
+     GKS_K_MARKERTYPE_VLINE -(30);
+     GKS_K_MARKERTYPE_HLINE -(31);
 
   { GKS error codes }
      GKS_K_NO_ERROR = 0;     

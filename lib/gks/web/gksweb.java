@@ -659,6 +659,10 @@ public class gksweb extends Applet
 
   static final int[][] marker =
   {
+    /* hline */
+    { 2, -1000, 0, 1000, 0, 0 },
+    /* vline */
+    { 2, 0, -1000, 0, 1000, 0 },
     /* star8 */
     { 4, 16,  0, -1000, 153, -370, 707, -707, 370, -153, 1000, 0, 370, 153,
       707, 707, 153, 370, 0, 1000, -153, 370, -707, 707, -370, 153, -1000, 0,
@@ -793,7 +797,7 @@ public class gksweb extends Applet
     ixy = NDCtoDC(ndc[0], ndc[1]);
 
     pc = 0;
-    mtype = (d > 1) ? mtype + 29 : 30;
+    mtype = (d > 1) ? mtype + 31 : 32;
 
     do
       {

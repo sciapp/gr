@@ -108,8 +108,8 @@ begin
   gks_text(0.45, 0.14, 'Magenta');
 
   { Linetypes }
-  x[1] := 0.18;
-  x[2] := 0.28;
+  x[1] := 0.10;
+  x[2] := 0.26;
   y[1] := 0.95;
   y[2] := y[1];
 
@@ -125,25 +125,25 @@ begin
   { Markertypes }
   gks_set_pmark_size(3.5);
 
-  x[1] := 0.3;
+  x[1] := 0.25;
   y[1] := 0.95;
-  for j := -29 to -19 do
+  for j := -31 to -20 do
     begin
     gks_set_pmark_type(j);
     x[1] := x[1] + 0.06;
     gks_polymarker(1, x, y);
     end;
 
-  x[1] := 0.3;
+  x[1] := 0.25;
   y[1] := 0.875;
-  for j := -18 to -8 do
+  for j := -19 to -8 do
     begin
     gks_set_pmark_type(j);
     x[1] := x[1] + 0.06;
     gks_polymarker(1, x, y);
     end;
 
-  x[1] := 0.3;
+  x[1] := 0.25;
   y[1] := 0.8;
   for j := -7 to 4 do
     if j <> 0 then
@@ -178,10 +178,10 @@ begin
     end;
 
   { Patterns }
-  x[1] := 0.05;
-  x[2] := 0.1;
-  x[3] := 0.1;
-  x[4] := 0.05;
+  x[1] := 0.02;
+  x[2] := 0.07;
+  x[3] := 0.07;
+  x[4] := 0.02;
   x[5] := x[1];
   y[1] := 0.2;
   y[2] := 0.2;

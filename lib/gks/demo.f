@@ -94,8 +94,8 @@ C* colors
         CALL GTX(.45, .14, 'Magenta')
 
 C* linetypes
-        X(1) = 0.18
-        X(2) = 0.28
+        X(1) = 0.10
+        X(2) = 0.26
         Y(1) = 0.95
         Y(2) = Y(1)
 
@@ -110,24 +110,24 @@ C* linetypes
 C* markertypes
         CALL GSMKSC(3.5)
 
-        X(1) = 0.3
+        X(1) = 0.25
         Y(1) = 0.95
-        DO 150, J = -29, -19
+        DO 150, J = -31, -20
           CALL GSMK(J)
           X(1) = X(1)+0.06
           CALL GPM(1, X, Y)
  150    CONTINUE 
 
-        X(1) = 0.3
+        X(1) = 0.25
         Y(1) = 0.875
 
-        DO 160, J = -18, -8
+        DO 160, J = -19, -8
           CALL GSMK(J)
           X(1) = X(1)+0.06
           CALL GPM(1, X, Y)
  160    CONTINUE 
 
-        X(1) = 0.3
+        X(1) = 0.25
         Y(1) = 0.8
 
         DO 170, J = -7, 4
@@ -160,10 +160,10 @@ C* fill areas
   20    CONTINUE
 
 C* patterns
-        X(1) = 0.05
-        X(2) = 0.1
-        X(3) = 0.1
-        X(4) = 0.05
+        X(1) = 0.02
+        X(2) = 0.07
+        X(3) = 0.07
+        X(4) = 0.02
         X(5) = X(1)
         Y(1) = 0.2
         Y(2) = 0.2
