@@ -5978,7 +5978,7 @@ void gr_fillarc(
 {
   double xcenter, ycenter, width, height;
   int start, end, a, n;
-  double x[361], y[361];
+  double x[362], y[362];
 
   check_autoinit;
 
@@ -5991,7 +5991,9 @@ void gr_fillarc(
   end    = max(a1, a2);
   start += (end - start) / 360 * 360;
 
-  n = 0;
+  x[0] = x_log(xcenter);
+  y[0] = x_log(ycenter);
+  n = 1;
   for (a = start; a <= end; a++)
     {
       x[n] = x_log(xcenter + width  * cos(a * M_PI / 180));
