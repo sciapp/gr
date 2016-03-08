@@ -23,6 +23,7 @@ Source6:			https://github.com/glfw/glfw/archive/3.1.1.tar.gz
 Source7:			http://download.zeromq.org/zeromq-4.0.4.tar.gz
 Source8:			https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
 Source9:			https://cmake.org/files/v2.8/cmake-2.8.12.2.tar.gz
+Source10:			http://cairographics.org/releases/cairo-1.14.6.tar.xz
 BuildRequires:		gcc-c++
 BuildRequires:		python
 BuildRequires:		python-devel
@@ -86,6 +87,7 @@ tar -C %{THIRDPARTY_SRC} -xf %{SOURCE6}
 tar -C %{THIRDPARTY_SRC} -xf %{SOURCE7}
 tar -C %{THIRDPARTY_SRC} -xf %{SOURCE8}
 tar -C %{THIRDPARTY_SRC} -xf %{SOURCE9}
+tar -C %{THIRDPARTY_SRC} -xf %{SOURCE10}
 
 %build
 %{__python} setup.py build_ext --static-extras --qmake=%{qmake}

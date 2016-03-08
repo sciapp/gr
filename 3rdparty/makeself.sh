@@ -45,5 +45,5 @@ cp -p 3rdparty/zlib/libz.a ${extras_lib}/
 make -C 3rdparty extras
 make EXTRA_CFLAGS=-I${extras}/include \
      EXTRA_CXXFLAGS=-I${extras}/include \
-     EXTRA_LDFLAGS=-L${extras_lib} ${opts} install
-
+     EXTRA_LDFLAGS=-L${extras_lib} \
+     DEPLOYMENT_STYLE=monolithic ${opts} install

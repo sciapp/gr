@@ -231,6 +231,7 @@ class check_ext(build_static, Command):
                     ('disable-xt', None,
                      "Disable Xt libraries (disables also x11 and freetype)"),
                     ('disable-mupdf', None, "Disable mupdf libraries"),
+                    ('disable-cairo', None, "Disable cairo libraries"),
                     ('qmake=', None, "Qt4 qmake executable"),
                    ] + build_static.user_options
 
@@ -264,6 +265,7 @@ class check_ext(build_static, Command):
         self.disable_freetype = False if self.isLinuxOrDarwin else True
         self.disable_mupdf = False if self.isLinuxOrDarwin else True
         self.disable_mov = False if self.isLinuxOrDarwin else True
+        self.disable_cairo = False if self.isLinuxOrDarwin else True
         # -- environment -------------------------------------
         self.cc = os.getenv("CC", "cc")
 
@@ -290,6 +292,12 @@ class check_ext(build_static, Command):
         self.gslib = []
         self.gslibs = []
         self.gsldflags = []
+        # -- cairo -------------------------------------
+        self.cairodir = os.getenv("CAIRODIR")
+        self.cairoinc = []
+        self.cairolib = []
+        self.cairolibs = []
+        self.cairoldflags = []
         # -- wx -------------------------------------
         self.wxconfig = os.getenv("WX_CONFIG")
         self.wxdir = os.getenv("WXDIR")
@@ -331,6 +339,8 @@ class check_ext(build_static, Command):
 
     def _test_c_compile(self, src, inc=[], lib=[], libs=[], cflags=[],
                         ldflags=[], caller=None):
+        cflags = cflags[:]
+        ldflags = ldflags[:]
         cflags.extend("-I" + i for i in inc)
         ldflags.extend("-L" + ld for ld in lib)
         ldflags.extend("-l" + lib for lib in libs)
@@ -407,6 +417,29 @@ int main(int argc, char **argv)
 }
 
 """, mupdfinc, [], mupdflibs, mupdfcflags, mupdfldflags, self._test_mupdf)
+
+    def _test_cairo(self, cairoinc=[], cairolibs=[], cairocflags=[],
+                    cairoldflags=[]):
+        return self._test_c_compile(b"""
+#include <cairo/cairo.h>
+
+int main(int argc, char **argv) {
+    cairo_t *cr;
+    cairo_surface_t *surface;
+
+    surface = (cairo_surface_t *) cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 500, 500);
+    cr = cairo_create(surface);
+
+    cairo_move_to(cr, 0, 0);
+    cairo_line_to(cr, 500, 500);
+    cairo_stroke(cr);
+
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+    return 0;
+}
+
+""", cairoinc, [], cairolibs, cairocflags, cairoldflags, self._test_cairo)
 
     def _test_mov(self, mupdfinc=[], mupdflibs=[], mupdfcflags=[],
                   mupdfldflags=[]):
@@ -652,6 +685,40 @@ int main()
                 self.mupdfinc = []
                 self.mupdflibs = []
                 self.mupdfldflags = []
+        # -- cairo -------------------------------------
+        if not self.disable_cairo:
+            if not self.static_extras:
+                for p in [os.path.join(os.sep, "usr", "local"),
+                          os.path.join(os.sep, "usr")]:
+                    cairo = os.path.join(p, "include", "cairo")
+                    if os.path.isdir(cairo):
+                        self.cairoinc = [os.path.join(p, "include")]
+                        self.cairoldflags.append("-L%s" % os.path.join(p, "lib"))
+                        break
+                if not self.cairoinc:
+                    self.disable_cairo = True
+                else:
+                    self.cairolibs.extend(["cairo", "pixman-1"])
+            else:
+                cairolibs = ["cairo", "pixman-1"]
+                self.cairoldflags = [os.path.join(_build_3rdparty_lib,
+                                                  "lib" + name + ".a")
+                                     for name in cairolibs]
+                self.cairoldflags.append("-lm")
+                self.cairoinc = [os.path.join(_build_3rdparty, "include")]
+            self.disable_cairo = not self._test_cairo(self.cairoinc,
+                                                      self.cairolibs,
+                                          cairoldflags=self.cairoldflags)
+            if not self.disable_cairo:
+                # test shared library build
+                self.disable_cairo = not self._test_cairo(self.cairoinc,
+                                                          self.cairolibs,
+                                                          ["-fPIC", "-shared"],
+                                                          self.cairoldflags)
+            if self.disable_cairo:
+                self.cairoinc = []
+                self.cairolibs = []
+                self.cairoldflags = []
         # -- mov -------------------------------------
         if not self.disable_mov:
             self.disable_mov = not self._test_mov(self.mupdfinc, self.mupdflibs,
@@ -832,6 +899,11 @@ int main()
         print("       mupdflibs: ", self.mupdflibs)
         print("    mupdfldflags: ", self.mupdfldflags)
         print("")
+        print("        cairoinc: ", self.cairoinc)
+        print("        cairolib: ", self.cairolib)
+        print("       cairolibs: ", self.cairolibs)
+        print("    cairoldflags: ", self.cairoldflags)
+        print("")
         print("      opengllibs: ", self.gllibs)
         print("    opengldflags: ", self.glldflags)
         print("")
@@ -852,6 +924,7 @@ int main()
         print("  disable-quartz: ", self.disable_quartz)
         print("disable-freetype: ", self.disable_freetype)
         print("   disable-mupdf: ", self.disable_mupdf)
+        print("   disable-cairo: ", self.disable_cairo)
         print("")
 
         zinc = [os.path.join("3rdparty", "zlib")]
@@ -862,6 +935,8 @@ int main()
             defines.append(("NO_FT", 1))
         if self.disable_mupdf:
             defines.append(("NO_MUPDF", 1))
+        if self.disable_cairo:
+            defines.append(("NO_CAIRO", 1))
 
         # -- GKS -------------------------------------
         inc = list(self.x11inc)
@@ -929,6 +1004,29 @@ int main()
                                  extra_link_args=ldflags,
                                  extra_compile_args=cflags)
             self.ext_modules.append(gksGsExt)
+
+        # -- cairo ----------------------------------
+        if not self.disable_cairo:
+            inc = list(self.cairoinc)
+            inc.extend(gksinc)
+            inc.extend(pnginc)
+            inc.extend(zinc)
+            lib = list(self.cairolib)
+            libs = list(self.cairolibs)
+            ldflags = list(self.cairoldflags)
+            cflags = []
+            if self.isWin32:
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+            gksCairoExt = Extension("gr.cairoplugin",
+                                    _plugins_path["cairoplugin.cxx"],
+                                    define_macros=defines,
+                                    include_dirs=inc,
+                                    library_dirs=lib,
+                                    libraries=libs,
+                                    extra_link_args=ldflags,
+                                    extra_compile_args=cflags)
+            self.ext_modules.append(gksCairoExt)
 
         # -- svg -------------------------------------
         if not self.disable_svg:
@@ -1373,7 +1471,7 @@ _gks_plugin_src = ["font.cxx", "afm.cxx", "util.cxx", "dl.cxx",
 _gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "gtkplugin.cxx",
                 "quartzplugin.m", "svgplugin.cxx", "figplugin.cxx",
                 "gsplugin.cxx", "wmfplugin.cxx", "movplugin.cxx",
-                "htmplugin.cxx", "pgfplugin.cxx"]
+                "htmplugin.cxx", "pgfplugin.cxx", "cairoplugin.cxx"]
 
 _libz_src = ["adler32.c", "compress.c", "crc32.c", "deflate.c", "gzclose.c",
              "gzlib.c", "gzread.c", "gzwrite.c", "infback.c", "inffast.c",

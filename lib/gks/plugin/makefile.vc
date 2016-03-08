@@ -2,12 +2,13 @@ CXX = CL
 QTDIR = S:\Qt\4.8.7
 GSDIR = S:\gs\gs9.18
 WXDIR = S:\wxWidgets
-DEFINES = /DGRDIR=\"$(GRDIR)\" /DNO_FT /DNO_X11 /D_DLL /MD /D_POSIX /DWXUSINGDLL /DwxMSVC_VERSION_AUTO /D_UNICODE
+DEFINES = /DGRDIR=\"$(GRDIR)\" /DNO_FT /DNO_X11 /DNO_CAIRO /D_DLL /MD /D_POSIX /DWXUSINGDLL /DwxMSVC_VERSION_AUTO /D_UNICODE
 INCLUDES = /I.. /I$(QTDIR)\include /I$(WXDIR)\include\msvc /I$(WXDIR)\include /I$(GSDIR)\include /I..\..\..\3rdparty /I..\..\..\3rdparty\zlib
 CXXFLAGS = /Zi /EHsc /nologo $(DEFINES) $(INCLUDES)
 QTLIBS = $(QTDIR)\lib\QtGui4.lib $(QTDIR)\lib\QtCore4.lib
 WXLIBS = $(WXDIR)\lib\vc100_x64_dll\wxmsw30ud_core.lib $(WXDIR)\lib\vc100_x64_dll\wxbase30ud.lib
 GSLIBS = $(GSDIR)\bin\gsdll64.lib
+CAIROLIBS =
 PNGLIBS = ..\..\..\3rdparty\libpng16\libpng.lib
 ZLIBS = ..\..\..\3rdparty\zlib\libz.lib
 DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
@@ -20,7 +21,7 @@ SRCDIR = .\
 .cxx.obj:
 	$(CXX) /c $(CXXFLAGS) $<
 
-default: $(PNGLIBS) $(ZLIBS) qtplugin.dll svgplugin.dll wxplugin.dll gsplugin.dll wmfplugin.dll htmplugin.dll pgfplugin.dll
+default: $(PNGLIBS) $(ZLIBS) qtplugin.dll svgplugin.dll wxplugin.dll gsplugin.dll wmfplugin.dll htmplugin.dll pgfplugin.dll cairoplugin.dll
 
 $(PNGLIBS):
 	@cd ..\..\..\3rdparty\libpng16
@@ -52,6 +53,9 @@ htmplugin.dll: htmplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.o
 
 pgfplugin.dll: pgfplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.obj
 	$(DLLLINK) /out:$@ $** $(PNGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
+
+cairoplugin.dll: cairoplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.obj
+	$(DLLLINK) /out:$@ $** $(CAIROLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
 font.obj: ..\font.c
 	$(CXX) /c $(CXXFLAGS) ..\font.c
@@ -88,6 +92,9 @@ htmplugin.obj: htmplugin.cxx
 
 pgfplugin.obj: pgfplugin.cxx
 	$(CXX) /c $(CXXFLAGS) pgfplugin.cxx
+
+cairoplugin.obj: cairoplugin.cxx
+	$(CXX) /c $(CXXFLAGS) cairoplugin.cxx
 
 clean:
 	DEL *.dll

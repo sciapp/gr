@@ -54,6 +54,7 @@ ws_descr_t ws_types[] = {
   { 102, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "pdf", NULL },
   { 120, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "mov", NULL },
   { 130, GKS_K_METERS, 0.28800, 0.19840,  810,  558, 0, "gif", NULL },
+  { 140, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "png", NULL },
   { 210, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, NULL, NULL },
   { 211, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 2, NULL, NULL },
   { 212, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 2, NULL, NULL },
@@ -312,6 +313,12 @@ void gks_ddlk(
 	    case 120:
 	    case 130:
 	      gks_mov_plugin(fctid, dx, dy, dimx, i_arr,
+		len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
+		ptr);
+	      break;
+
+	    case 140:
+	      gks_cairo_plugin(fctid, dx, dy, dimx, i_arr,
 		len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
 		ptr);
 	      break;

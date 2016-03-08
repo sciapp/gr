@@ -61,9 +61,7 @@ endif
 realclean: clean
 	make -C 3rdparty realclean
 	rm -rf build
-	for DIR in $(ALL_DISTROS); do \
-		rm -rf packaging/$${DIR}; \
-	done
+	find packaging -type f \( -name '*.deb' -o -name '*.rpm' \) -exec rm \{\} \;
 	rm -rf tmp
 
 condaclean: clean

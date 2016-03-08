@@ -51,6 +51,12 @@ endif
      AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
   MUPDFDEFS = 
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
+  CAIRODEFS =
+ifeq ($(DEPLOYMENT_STYLE),monolithic)
+  CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a -lpthread
+else
+  CAIROLIBS = -lcairo -lpixman-1 -lpthread
+endif
     SSLLIBS = -lssl -lcrypto
     X11DEFS =
     XFTLIBS = -lXft -lfontconfig
@@ -69,7 +75,7 @@ endif
 .c.o:
 	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(AVDEFS) $(MUPDFDEFS) $(CFLAGS) $<
 .cxx.o:
-	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 default:
 	@make -C ../../.. Makedefs
@@ -78,7 +84,7 @@ default:
 targets: prerequisites \
          wxplugin.so qtplugin.so svgplugin.so gtkplugin.so figplugin.so \
          gsplugin.so wmfplugin.so glplugin.so zmqplugin.so movplugin.so \
-         htmplugin.so pgfplugin.so
+         htmplugin.so pgfplugin.so cairoplugin.so
 
 prerequisites:
 	@for d in libpng16; do make -C ../../../3rdparty/$$d; done
@@ -129,6 +135,9 @@ htmplugin.so: htmplugin.o font.o afm.o util.o malloc.o error.o io.o
 
 pgfplugin.so: pgfplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
+
+cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o
+	$(CXX) -o $@ $(SOFLAGS) $? $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)

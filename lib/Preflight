@@ -27,6 +27,7 @@ glfwdefs=""
 zmqdefs=""
 avdefs=""
 mupdfdefs=""
+cairodefs=""
 ssldefs=""
 extradefs=""
 if [ `uname` = "Darwin" ]; then
@@ -509,5 +510,52 @@ fi
 printf "%12s: %s\n" "MuPDF" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
+if [ "$cairo" != "no" ]
+then
+  tmpout=`mktemp /tmp/a.out.XXXXX`
+  tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+  tmpver=`mktemp /tmp/a$$XXXXX.txt`
+  cat >$tmpsrc << eof
+#include <stdio.h>
+#include <cairo/cairo.h>
+
+int main(int argc, char **argv) {
+    cairo_t *cr;
+    cairo_surface_t *surface;
+
+    surface = (cairo_surface_t *) cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 500, 500);
+    cr = cairo_create(surface);
+
+    cairo_move_to(cr, 0, 0);
+    cairo_line_to(cr, 500, 500);
+    cairo_stroke(cr);
+
+    cairo_destroy(cr);
+    cairo_surface_destroy(surface);
+
+    puts(CAIRO_VERSION_STRING);
+
+    return 0;
+}
+eof
+  libs="-lm"
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lcairo -lpixman-1 -lpthread"
+  $cmd ${libs} >$tmpver
+  if [ $? -ne 0 ]; then
+    cairodefs="CAIRODEFS=-DNO_CAIRO CAIROLIBS="
+    info="${red} no${normal} [Cairo not found]"
+    ret=1
+  else
+    $tmpout >$tmpver 2>&1
+    info="${green}yes${normal} [version `cat $tmpver | head -1`]"
+  fi
+else
+  info="${yellow} no${normal} [disabled]"
+  cairodefs="CAIRODEFS=-DNO_CAIRO CAIROLIBS="
+  ret=1
+fi
+printf "%12s: %s\n" "Cairo" "$info" >&2
+rm -f $tmpsrc $tmpout $tmpver
+
 echo "" >&2
-echo $target $wxdefs $qtdefs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $extradefs
+echo $target $wxdefs $qtdefs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $cairodefs $extradefs
