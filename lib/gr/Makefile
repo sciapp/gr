@@ -60,14 +60,14 @@ libGR.a: $(GROBJS)
 	$(RANLIB) $@
 
 libGR.so: $(GROBJS)
-	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
-	$(MUPDFLIBS) $(SSLLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS) \
+	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) \
+	$(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS) \
 	$(INSTALL_NAME)
 
 demo: demo.c libGR.a $(GKSLIBS)
 	$(CC) -o demo $(INCLUDES) $(CFLAGS) demo.c libGR.a \
-	$(JPEGLIBS) $(PNGLIBS) $(GKSLIBS) \
-        $(MUPDFLIBS) $(SSLLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS)
+	$(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) \
+	$(X11LIBS) $(LIBS) $(LDFLAGS)
 
 install:
 	@make -C ../gks install
