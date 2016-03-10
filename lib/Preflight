@@ -104,15 +104,22 @@ then
   info=""
   if [ "$QTDIR" = "" ]
   then
-    if [ -d /usr/lib64/qt4 ] # Red Hat
+    QTDIR=`qmake -query QT_INSTALL_PREFIX 2>/dev/null`
+    if [ "$QTDIR" = "" ]
     then
-      QTDIR=/usr/lib64/qt4
-    elif [ -d /usr/share/qt4 ] # Debian / Ubuntu
-    then
-      QTDIR=/usr/share/qt4
-    elif [ -d /usr/local/qt4 ]
-    then
-      QTDIR=/usr/local/qt4
+      if [ -d /usr/lib64/qt4 ] # Red Hat / SuSE
+      then
+        QTDIR=/usr/lib64/qt4
+      elif [ -d /usr/lib/qt4 ]
+      then
+        QTDIR=/usr/lib/qt4
+      elif [ -d /usr/share/qt4 ] # Debian / Ubuntu
+      then
+        QTDIR=/usr/share/qt4
+      elif [ -d /usr/local/qt4 ]
+      then
+        QTDIR=/usr/local/qt4
+      fi
     fi
     qtdefs="QTDIR=$QTDIR"
   fi
@@ -250,7 +257,7 @@ int main(void)
     return 0;
 }
 eof
-  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -I$x11path/include `freetype-config --cflags`"
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -I$x11path/include `freetype-config --cflags 2>/dev/null`"
   $cmd >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     xftdefs="XFTDEFS=-DNO_XFT XFTLIBS="
@@ -486,9 +493,9 @@ int main(int argc, char **argv)
 eof
   libs="-lz -lm"
   cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lmupdf -lfreetype -ljbig2dec -ljpeg -lopenjp2"
-  $cmd $libs >$tmpver 2>&1
+  $cmd $libs >/dev/null 2>&1
   if [ $? -ne 0 ]; then
-    $cmd -lssl -lcrypto $libs >$tmpver 2>&1
+    $cmd -lssl -lcrypto $libs >/dev/null 2>&1
   else
     ssldefs="SSLLIBS="
   fi
