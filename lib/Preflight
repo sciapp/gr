@@ -547,7 +547,7 @@ int main(int argc, char **argv) {
 eof
   libs="-lm"
   cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lcairo -lpixman-1 -lpthread"
-  $cmd ${libs} >$tmpver
+  $cmd $libs >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     cairodefs="CAIRODEFS=-DNO_CAIRO CAIROLIBS="
     info="${red} no${normal} [Cairo not found]"
