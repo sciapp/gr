@@ -52,10 +52,10 @@ endif
   MUPDFDEFS = 
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
   CAIRODEFS =
-ifeq ($(DEPLOYMENT_STYLE),monolithic)
-  CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a -lpthread
-else
+ifeq ($(UNAME_S),Darwin)
   CAIROLIBS = -lcairo -lpixman-1 -lpthread
+else
+  CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a
 endif
     SSLLIBS = -lssl -lcrypto
     X11DEFS =
@@ -97,19 +97,19 @@ Linux:
 	SOFLAGS="-shared" LDFLAGS="$(EXTRA_LDFLAGS) -Wl,-rpath=$(QTDIR)/lib"
 
 wxplugin.so: wxplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(WXLIBS) $(LDFLAGS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(WXLIBS) $(X11LIBS) $(LIBS)
 
 qtplugin.so: qtplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(QTLIBS) $(LDFLAGS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(QTLIBS) $(X11LIBS) $(LIBS)
 
 svgplugin.so: svgplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gtkplugin.so: gtkplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(GTKLIBS) $(LDFLAGS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(GTKLIBS) $(X11LIBS) $(LIBS)
 
 figplugin.so: figplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gsplugin.so: gsplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(GSLIBS) $(X11LIBS) $(LIBS)
@@ -131,13 +131,13 @@ movplugin.so: movplugin.o font.o afm.o util.o vc.o gif.o dl.o malloc.o error.o i
 	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 htmplugin.so: htmplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 pgfplugin.so: pgfplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)

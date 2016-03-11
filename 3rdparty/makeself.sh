@@ -20,6 +20,9 @@ if [ ! -z "${DESTDIR}" ]; then
 fi
 if [ ! -z "${GRDIR}" ]; then
   opts="${opts} GRDIR=${GRDIR}"
+  gr_lib="${GRDIR}/lib"
+else
+  gr_lib="/usr/local/gr/lib"
 fi
 if [ -z "${QTDIR}" ]; then
   for dir in ${HOME}/anaconda /opt/anaconda /usr/local/anaconda
@@ -46,4 +49,9 @@ make -C 3rdparty extras
 make EXTRA_CFLAGS=-I${extras}/include \
      EXTRA_CXXFLAGS=-I${extras}/include \
      EXTRA_LDFLAGS=-L${extras_lib} \
-     DEPLOYMENT_STYLE=monolithic ${opts} install
+     ${opts} install
+
+if [ "`uname`" = "Darwin" ]; then
+  cp -p ${extras_lib}/libcairo.2.dylib ${gr_lib}/
+  install_name_tool -id @rpath/libcairo.2.dylib ${gr_lib}/libcairo.2.dylib
+fi
