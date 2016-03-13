@@ -4,7 +4,7 @@
 Calculate Mandelbrot set using NumbaPro (vectorized version)
 """
 
-from numbapro import vectorize
+from numba import vectorize
 from timeit import default_timer as timer
 
 import numpy as np
