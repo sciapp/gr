@@ -52,10 +52,10 @@ endif
   MUPDFDEFS = 
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
   CAIRODEFS =
-ifeq ($(UNAME_S),Darwin)
-  CAIROLIBS = -lcairo -lpixman-1 -lpthread
-else
+ifdef USE_STATIC_CAIRO_LIBS
   CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a
+else
+  CAIROLIBS = -lcairo -lpixman-1 -lpthread
 endif
     SSLLIBS = -lssl -lcrypto
     X11DEFS =

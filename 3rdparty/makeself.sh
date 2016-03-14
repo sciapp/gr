@@ -38,6 +38,10 @@ extras=`pwd`/3rdparty/build
 extras_lib=${extras}/lib
 export PATH=${PATH}:${extras}/bin
 
+if [ "`uname`" != "Darwin" ]; then
+  opts="${opts} USE_STATIC_CAIRO_LIBS=1"
+fi
+
 mkdir -p ${extras_lib}
 make -C 3rdparty
 cp -p 3rdparty/freetype/libfreetype.a ${extras_lib}/
