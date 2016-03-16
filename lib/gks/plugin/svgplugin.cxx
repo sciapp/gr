@@ -436,7 +436,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 	      else
 		svg_printf(p->stream,
 			   "x2=\"%g\" y2=\"%g\" style=\"stroke:#%s;\"/>\n",
-		           x - xr, y + yr, p->rgb[mcolor]);
+		           x - xr, y - yr, p->rgb[mcolor]);
 	    }
 	  pc += 4;
 	  break;
