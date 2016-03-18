@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <math.h>
-#include <png.h>
+#include <libpng16/png.h>
 
 typedef struct JS_point_t
 {
