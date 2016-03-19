@@ -779,7 +779,7 @@ gr_savestate = Module.cwrap('gr_savestate', '', []);
 gr_restorestate = Module.cwrap('gr_restorestate', '', []);
 
 gr_uselinespec_c = Module.cwrap('gr_uselinespec', '', ['number', ]);
-gr_userlinespec = function(string) {
+gr_uselinespec = function(string) {
     _string = uint8array(string);
     gr_uselinespec_c(_string);
     freearray(_string);
