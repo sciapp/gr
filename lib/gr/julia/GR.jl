@@ -130,6 +130,7 @@ export
   ylim,
   savefig,
   peaks,
+  imshow,
   libGR3,
   gr3,
   isinline,
@@ -138,6 +139,7 @@ export
 
 
 mime_type = None
+msgs = None
 have_clear_output = isinteractive() && isdefined(Main, :IJulia) &&
                     isdefined(Main.IJulia, :clear_output)
 
@@ -228,12 +230,16 @@ function deactivatews(workstation_id::Int)
 end
 
 function clearws()
+  global msgs
   try
     if isinline() && have_clear_output
       IJulia.clear_output(true)
     end
   catch
     have_clear_output = false
+  end
+  if msgs != None
+    begingraphics("")
   end
   ccall( (:gr_clearws, libGR),
         Void,
@@ -242,6 +248,10 @@ function clearws()
 end
 
 function updatews()
+  global msgs
+  if msgs != None
+    endgraphics()
+  end
   ccall( (:gr_updatews, libGR),
         Void,
         ()
@@ -888,8 +898,12 @@ function readimage(path)
         Void,
         (Ptr{Cchar}, Ptr{Int32}, Ptr{Int32}, Ptr{Ptr{UInt32}}),
         path, width, height, data)
-  data = pointer_to_array(data[1], width[1] * height[1])
-  return width[1], height[1], data
+  if width[1] > 0 && height[1] > 0
+    img = pointer_to_array(data[1], (width[1], height[1]))
+    return Int(width[1]), Int(height[1]), img
+  else
+    return 0, 0, zeros(UInt32, 0)
+  end
 end
 
 function drawimage(xmin::Real, xmax::Real, ymin::Real, ymax::Real, width::Int, height::Int, data, model::Int = 0)
@@ -1185,6 +1199,7 @@ xlim(a) = jlgr.xlim(a)
 ylim(a) = jlgr.ylim(a)
 savefig(filename) = jlgr.savefig(filename)
 peaks(n...) = jlgr.peaks(n...)
+imshow(I; kwargs...) = jlgr.imshow(I; kwargs...)
 
 type SVG
    s::Array{UInt8}
@@ -1212,19 +1227,78 @@ function isinline()
     return !(mime_type in (None, "mov"))
 end
 
+function startserver()
+    global msgs
+
+    @eval import WebSockets
+    @eval import HttpServer
+
+    msgs = []
+    app = WebSockets.WebSocketHandler() do req, client
+        while true
+            msg = WebSockets.read(client)
+            if startswith(bytestring(msg), "ready")
+                if length(msgs) != 0
+                    WebSockets.write(client, msgs[1])
+                    shift!(msgs)
+                else
+                    WebSockets.write(client, "busy")
+                end
+            end
+        end
+    end
+
+    server = HttpServer.Server(app)
+    @async begin
+        HttpServer.run(server, 8889)
+    end
+
+    if !isfile("gr.js")
+        symlink(joinpath(dirname(@__FILE__), "gr.js"), "gr.js") 
+    end
+
+    return HTML("""\
+<canvas id="canvas" width="600" height="450"></canvas>\
+<script type="text/javascript" src="gr.js"></script>\
+<script>GR.ready(\
+  function() {\
+    var ws = new WebSocket("ws://localhost:8889/");\
+    ws.onopen = function() {\
+      ws.send("ready");\
+    };\
+    ws.onmessage = function(ev) {\
+      if (ev.data == "busy") {\
+        setTimeout(function() {ws.send("ready");}, 10);\
+      } else {\
+        gr_clearws();\
+        gr_drawgraphics(window.atob(ev.data));\
+        ws.send("ready");\
+      };\
+    };\
+  }\
+);</script>""")
+end
+
 function inline(mime="svg")
-    global mime_type
+    global mime_type, msgs
     if mime_type != mime
-        ENV["GKS_WSTYPE"] = mime
-        GR.emergencyclosegks()
+        if mime != "js"
+            ENV["GKS_WSTYPE"] = mime
+        else
+            ENV["GKS_WSTYPE"] = "nul"
+        end
+        emergencyclosegks()
         mime_type = mime
+        if mime == "js"
+            startserver()
+        end
     end
 end
 
 function show()
-    global mime_type
+    global mime_type, msgs
 
-    GR.emergencyclosegks()
+    emergencyclosegks()
     if mime_type == "svg"
         content = SVG(_readfile("gks.svg"))
         return content
@@ -1234,6 +1308,11 @@ function show()
     elseif mime_type == "mov"
         content = HTML(string("""<video autoplay controls><source type="video/mp4" src="data:video/mp4;base64,""", base64(open(readbytes,"gks.mov")),""""></video>"""))
         return content
+    elseif mime_type == "js"
+        if msgs != None
+            endgraphics()
+            push!(msgs, Base.base64encode(getgraphics()))
+        end
     end
     return None
 end
