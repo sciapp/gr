@@ -305,7 +305,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
   if (gkss->version > 4)
     mscale *= p->height / 500.0;
   r = (int) (3 * mscale);
-  scale = mscale / 3.0;
+  scale = 0.01 * mscale / 3.0;
 
   xr = r;
   yr = 0;
