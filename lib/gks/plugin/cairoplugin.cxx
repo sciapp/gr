@@ -947,20 +947,23 @@ void *event_loop(void *arg)
         {
           if (pthread_mutex_trylock(&p->mutex) == 0)
             {
-              XNextEvent(p->dpy, &event);
-              if (event.type == ClientMessage)
+              while (XPending(p->dpy))
                 {
-                  if (event.xclient.data.l[0] == p->wmDeleteMessage)
+                  XNextEvent(p->dpy, &event);
+                  if (event.type == ClientMessage)
                     {
-                      pthread_kill(p->master_thread, SIGTERM);
-                      p->run = 0;
+                      if (event.xclient.data.l[0] == p->wmDeleteMessage)
+                        {
+                          pthread_kill(p->master_thread, SIGTERM);
+                          p->run = 0;
+                        }
                     }
-                }
-              else if (event.type == ConfigureNotify)
-                {
-                  cairo_xlib_surface_set_size(p->surface,
-                                              event.xconfigure.width,
-                                              event.xconfigure.height);
+                  else if (event.type == ConfigureNotify)
+                    {
+                      cairo_xlib_surface_set_size(p->surface,
+                                                  event.xconfigure.width,
+                                                  event.xconfigure.height);
+                    }
                 }
               pthread_mutex_unlock(&p->mutex);
             }
@@ -1031,6 +1034,8 @@ void open_page(void)
 static
 void close_page(void)
 {
+  cairo_destroy(p->cr);
+  cairo_surface_destroy(p->surface);
 #ifndef NO_X11
   if (p->wtype == 141)
     {
@@ -1048,8 +1053,6 @@ void close_page(void)
       XCloseDisplay(p->dpy);
     }
 #endif
-  cairo_destroy(p->cr);
-  cairo_surface_destroy(p->surface);
 }
 
 static
