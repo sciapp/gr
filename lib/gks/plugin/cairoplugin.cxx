@@ -13,6 +13,16 @@
 
 #endif
 
+#ifndef NO_X11
+#include <cairo/cairo-xlib.h>
+
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Intrinsic.h>
+
+#include <pthread.h>
+#endif
+
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
 #endif
@@ -128,6 +138,15 @@ typedef struct ws_state_list_t
   cairo_surface_t *surface;
   cairo_t *cr;
   cairo_point *points;
+#ifndef NO_X11
+  Display *dpy;
+  Window win;
+  pthread_t thread;
+  pthread_mutex_t mutex;
+  int run, done;
+  Atom wmDeleteMessage;
+  pthread_t master_thread;
+#endif
   int npoints, max_points;
   int empty, page_counter;
   double rect[MAX_TNR][2][2];
@@ -139,6 +158,9 @@ ws_state_list;
 
 static
 ws_state_list *p;
+
+static
+int idle = 0;
 
 static
 const char *fonts[] = {
@@ -893,16 +915,139 @@ void set_clipping(int index)
 }
 
 static
+void lock(void)
+{
+#ifndef NO_X11
+  pthread_mutex_lock(&p->mutex);
+#endif
+}
+
+static
+void unlock(void)
+{
+#ifndef NO_X11
+  pthread_mutex_unlock(&p->mutex);
+#endif
+}
+
+#ifndef NO_X11
+
+static
+void *event_loop(void *arg)
+{
+  ws_state_list *p = (ws_state_list *) arg;
+  XEvent event;
+
+  p->run = 1;
+  while (p->run)
+    {
+      usleep(10000);
+
+      if (idle && p->run)
+        {
+          if (pthread_mutex_trylock(&p->mutex) == 0)
+            {
+              XNextEvent(p->dpy, &event);
+              if (event.type == ClientMessage)
+                {
+                  if (event.xclient.data.l[0] == p->wmDeleteMessage)
+                    {
+                      pthread_kill(p->master_thread, SIGTERM);
+                      p->run = 0;
+                    }
+                }
+              else if (event.type == ConfigureNotify)
+                {
+                  cairo_xlib_surface_set_size(p->surface,
+                                              event.xconfigure.width,
+                                              event.xconfigure.height);
+                }
+              pthread_mutex_unlock(&p->mutex);
+            }
+        }
+    }
+  p->done = 1;
+
+  pthread_exit(0);
+}
+
+static
+void create_window(void)
+{
+  int screen;
+  pthread_attr_t attr;
+
+  if (!(p->dpy = XOpenDisplay(NULL))) {
+    gks_perror("Could not open display");
+    exit(1);
+  }
+
+  screen = DefaultScreen(p->dpy);
+  p->win = XCreateSimpleWindow(p->dpy, RootWindow(p->dpy, screen),
+                               1, 1, p->width, p->height, 0,
+                               BlackPixel(p->dpy, screen), WhitePixel(p->dpy, screen));
+
+  p->master_thread = pthread_self();
+  p->wmDeleteMessage = XInternAtom(p->dpy, "WM_DELETE_WINDOW", False);
+  XSetWMProtocols(p->dpy, p->win, &p->wmDeleteMessage, 1);
+
+  XStoreName(p->dpy, p->win, "GKS");
+  XSelectInput(p->dpy, p->win, StructureNotifyMask | ExposureMask);
+  XMapWindow(p->dpy, p->win);
+
+  pthread_mutex_init(&p->mutex, NULL);
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+  if (pthread_create(&p->thread, &attr, event_loop, (void *) p))
+    perror("pthread_create");
+  pthread_attr_destroy(&attr);
+}
+
+#endif
+
+static
 void open_page(void)
 {
-  p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-                                          p->width, p->height);
+  if (p->wtype == 141)
+    {
+#ifndef NO_X11
+      create_window();
+      p->surface = cairo_xlib_surface_create(p->dpy, p->win,
+                                             DefaultVisual(p->dpy, 0),
+                                             p->width, p->height);
+#else
+      gks_perror("Cairo X11 support not compiled in");
+      exit(1);
+#endif
+    }
+  else
+    {
+      p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+                                              p->width, p->height);
+    }
   p->cr = cairo_create(p->surface);
 }
 
 static
 void close_page(void)
 {
+#ifndef NO_X11
+  if (p->wtype == 141)
+    {
+      if (p->run)
+        {
+          /* pthread_join didn't work for some reason */
+          p->done = 0;
+          while (!p->done)
+            {
+              p->run = 0;
+              usleep(10000);
+            }
+        }
+      XDestroyWindow(p->dpy, p->win);
+      XCloseDisplay(p->dpy);
+    }
+#endif
   cairo_destroy(p->cr);
   cairo_surface_destroy(p->surface);
 }
@@ -911,7 +1056,14 @@ static
 void write_page(void)
 {
   p->page_counter++;
-  cairo_surface_write_to_png(p->surface, "gks.png");
+  cairo_show_page(p->cr);
+
+  if (p->wtype == 140)
+    cairo_surface_write_to_png(p->surface, "gks.png");
+#ifndef NO_X11
+  else if (p->wtype == 141)
+    XSync(p->dpy, False);
+#endif
 }
 
 static
@@ -960,6 +1112,8 @@ void gks_cairoplugin(
 {
   p = (ws_state_list *) *ptr;
 
+  idle = 0;
+
   switch (fctid)
     {
     case 2:
@@ -972,6 +1126,7 @@ void gks_cairoplugin(
 
       p->conid = ia[1];
       p->path = chars;
+      p->wtype = ia[2];
 
       p->width = 500;
       p->height = 500;
@@ -1028,21 +1183,33 @@ void gks_cairoplugin(
       /* clear workstation */
       if (!p->empty)
         {
+          lock();
+          cairo_set_source_rgb(p->cr, 255, 255,255);
+          cairo_rectangle(p->cr, 0, 0, p->width, p->height);
+          cairo_fill(p->cr);
           p->empty = 1;
-          write_page();
+          unlock();
         }
       break;
 
     case 8:
       /* update workstation */
+      if (ia[1] == GKS_K_PERFORM_FLAG)
+        {
+          lock();
+          write_page();
+          unlock();
+        }
       break;
 
     case 12:
       /* polyline */
       if (p->state == GKS_K_WS_ACTIVE)
         {
+          lock();
           polyline(ia[0], r1, r2);
           p->empty = 0;
+          unlock();
         }
       break;
 
@@ -1050,8 +1217,10 @@ void gks_cairoplugin(
       /* polymarker */
       if (p->state == GKS_K_WS_ACTIVE)
         {
+          lock();
           polymarker(ia[0], r1, r2);
           p->empty = 0;
+          unlock();
         }
       break;
 
@@ -1059,8 +1228,10 @@ void gks_cairoplugin(
       /* text */
       if (p->state == GKS_K_WS_ACTIVE)
         {
+          lock();
           text(r1[0], r2[0], strlen(chars), chars);
           p->empty = 0;
+          unlock();
         }
       break;
 
@@ -1068,8 +1239,10 @@ void gks_cairoplugin(
       /* fill area */
       if (p->state == GKS_K_WS_ACTIVE)
         {
+          lock();
           fillarea(ia[0], r1, r2);
           p->empty = 0;
+          unlock();
         }
       break;
 
@@ -1080,8 +1253,10 @@ void gks_cairoplugin(
         {
           int true_color = fctid == DRAW_IMAGE;
 
+          lock();
           cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
           p->empty = 0;
+          unlock();
         }
       break;
 
@@ -1089,32 +1264,43 @@ void gks_cairoplugin(
       /* set color representation */
       if (p->state == GKS_K_WS_ACTIVE)
         {
+          lock();
           set_color_rep(ia[1], r1[0], r1[1], r1[2]);
+          unlock();
         }
       break;
 
     case 49:
       /* set window */
+      lock();
       set_window(gkss->cntnr, r1[0], r1[1], r2[0], r2[1]);
+      unlock();
       break;
 
     case 50:
       /* set viewport */
+      lock();
       set_viewport(gkss->cntnr, r1[0], r1[1], r2[0], r2[1]);
+      unlock();
       break;
 
     case 52:
       /* select normalization transformation */
+      lock();
       select_xform(ia[0]);
+      unlock();
       break;
 
     case 53:
       /* set clipping inidicator */
+      lock();
       set_clipping(ia[0]);
+      unlock();
       break;
 
     case 54:
       /* set workstation window */
+      lock();
       p->window[0] = r1[0];
       p->window[1] = r1[1];
       p->window[2] = r2[0];
@@ -1122,10 +1308,12 @@ void gks_cairoplugin(
 
       set_xform();
       init_norm_xform();
+      unlock();
       break;
 
     case 55:
       /* set workstation viewport */
+      lock();
       p->viewport[0] = 0;
       p->viewport[1] = r1[1] - r1[0];
       p->viewport[2] = 0;
@@ -1140,16 +1328,21 @@ void gks_cairoplugin(
       set_xform();
       init_norm_xform();
       set_clip_rect(gkss->cntnr);
+      unlock();
       break;
 
     case 203:
       /* set transparency */
+      lock();
       set_transparency(r1[0]);
+      unlock();
       break;
 
     default:
       ;
     }
+
+  idle = 1;
 }
 
 #else
@@ -1160,10 +1353,10 @@ void gks_cairoplugin(
   int lc, char *chars, void **ptr)
 {
   if (fctid == 2)
-  {
-    gks_perror("Cairo support not compiled in");
-    ia[0] = 0;
-  }
+    {
+      gks_perror("Cairo support not compiled in");
+      ia[0] = 0;
+    }
 }
 
 #endif

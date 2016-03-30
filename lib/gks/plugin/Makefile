@@ -59,6 +59,11 @@ else
 endif
     SSLLIBS = -lssl -lcrypto
     X11DEFS =
+ifeq ($(UNAME), Darwin)
+     X11INC = -I/opt/X11/include
+else
+     X11INC = -I/usr/X11R6/include
+endif
     XFTLIBS = -lXft -lfontconfig
     X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
     ZMQDEFS = 
@@ -137,7 +142,7 @@ pgfplugin.so: pgfplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)
