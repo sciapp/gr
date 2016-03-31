@@ -21,6 +21,7 @@
 #include <X11/Intrinsic.h>
 
 #include <pthread.h>
+#include <signal.h>
 #endif
 
 #if !defined(VMS) && !defined(_WIN32)
@@ -952,7 +953,7 @@ void *event_loop(void *arg)
                   XNextEvent(p->dpy, &event);
                   if (event.type == ClientMessage)
                     {
-                      if (event.xclient.data.l[0] == p->wmDeleteMessage)
+                      if ((Atom) event.xclient.data.l[0] == p->wmDeleteMessage)
                         {
                           pthread_kill(p->master_thread, SIGTERM);
                           p->run = 0;
