@@ -9,12 +9,14 @@
 #include <math.h>
 
 #include <cairo/cairo.h>
+#ifndef NO_X11
+#include <cairo/cairo-xlib.h>
+#endif
 #include <libpng16/png.h>
 
 #endif
 
 #ifndef NO_X11
-#include <cairo/cairo-xlib.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -255,6 +257,21 @@ void seg_xform_rel(double *x, double *y)
   xx = *x * gkss->mat[0][0] + *y * gkss->mat[0][1];
   *y = *x * gkss->mat[1][0] + *y * gkss->mat[1][1];
   *x = xx;
+}
+
+static
+void resize(int width, int height)
+{
+  p->width = width;
+  p->height = height;
+  p->window[0] = p->window[2] = 0.0;
+  p->window[1] = p->window[3] = 1.0;
+  p->viewport[0] = p->viewport[2] = 0;
+  p->viewport[1] = (double) p->width * MWIDTH / WIDTH;
+  p->viewport[3] = (double) p->height * MHEIGHT / HEIGHT;
+
+  set_xform();
+  init_norm_xform();
 }
 
 static
@@ -1012,6 +1029,8 @@ void create_window(void)
 static
 void open_page(void)
 {
+  char *env;
+
   if (p->wtype == 141)
     {
 #ifndef NO_X11
@@ -1024,19 +1043,37 @@ void open_page(void)
       exit(1);
 #endif
     }
-  else
+  else if (p->wtype == 140)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
                                               p->width, p->height);
     }
-  p->cr = cairo_create(p->surface);
+  if (p->wtype == 142)
+    {
+      env = (char *) gks_getenv("GKS_CONID");
+      if (!env)
+        env = (char *) gks_getenv("GKSconid");
+
+      if (env != NULL)
+        sscanf(env, "%lu", (unsigned long *) &p->cr);
+      else
+        {
+          gks_perror("can't obtain Gtk drawable");
+          exit(1);
+        }
+    }
+  else
+    p->cr = cairo_create(p->surface);
 }
 
 static
 void close_page(void)
 {
-  cairo_destroy(p->cr);
-  cairo_surface_destroy(p->surface);
+  if (p->wtype != 142)
+    {
+      cairo_destroy(p->cr);
+      cairo_surface_destroy(p->surface);
+    }
 #ifndef NO_X11
   if (p->wtype == 141)
     {
@@ -1132,13 +1169,7 @@ void gks_cairoplugin(
       p->path = chars;
       p->wtype = ia[2];
 
-      p->width = 500;
-      p->height = 500;
-      p->window[0] = p->window[2] = 0.0;
-      p->window[1] = p->window[3] = 1.0;
-      p->viewport[0] = p->viewport[2] = 0;
-      p->viewport[1] = (double) p->width * MWIDTH / WIDTH;
-      p->viewport[3] = (double) p->height * MHEIGHT / HEIGHT;
+      resize(500, 500);
 
       p->max_points = MAX_POINTS;
       p->points = (cairo_point *) gks_malloc(p->max_points * sizeof(cairo_point));
@@ -1150,8 +1181,6 @@ void gks_cairoplugin(
       p->transparency = 1.0;
       p->linewidth = 1;
 
-      set_xform();
-      init_norm_xform();
       init_colors();
 
       open_page();
