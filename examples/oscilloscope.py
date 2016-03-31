@@ -30,5 +30,5 @@ while time.time() - start < 10:
         amplitudes = get_audio_data()
     except (IOError):
         continue
-    plot(range(SAMPLES), amplitudes, window=[0, SAMPLES, -1, 1])
+    plot(range(SAMPLES), amplitudes, xlim=(0, SAMPLES), ylim=(-1, 1))
 

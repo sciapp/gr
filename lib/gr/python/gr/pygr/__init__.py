@@ -17,10 +17,15 @@ import gr
 import gr3
 from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort, GRVisibility
 from gr.pygr.helper import ColorIndexGenerator, DomainChecker
+from gr.pygr.mlab import plot, oplot, scatter, histogram, imshow
+from gr.pygr.mlab import contour, contourf, surface, wireframe, plot3
+from gr.pygr.mlab import legend, title, xlabel, ylabel, xlim, ylim
+from gr.pygr.mlab import figure, hold, subplot
 from gr._version import __version__, __revision__
 
 __author__ = """Christian Felder <c.felder@fz-juelich.de>,
-Josef Heinen <j.heinen@fz-juelich.de>"""
+Josef Heinen <j.heinen@fz-juelich.de>,
+Florian Rhiem <f.rhiem@fz-juelich.de>"""
 __copyright__ = """Copyright (c) 2012-2015: Josef Heinen, Florian Rhiem, Christian Felder,
 and other contributors:
 
@@ -1939,145 +1944,6 @@ def readfile(path, separator=''):
     fp.close()
     return data
 
-def plot(x, y,
-         bgcolor=0,
-         viewport=(0.1, 0.95, 0.1, 0.95),
-         window=None,
-         scale=0,
-         grid=True,
-         linetype=gr.LINETYPE_SOLID,
-         markertype=gr.MARKERTYPE_DOT,
-         clear=True,
-         update=True):
-    if clear:
-        gr.clearws()
-    if window == None:
-        if scale & gr.OPTION_X_LOG == 0:
-            xmin, xmax = gr.adjustrange(min(x), max(x))
-        else:
-            xmin, xmax = (min(x), max(x))
-        if scale & gr.OPTION_Y_LOG == 0:
-            ymin, ymax = gr.adjustrange(min(y), max(y))
-        else:
-            ymin, ymax = (min(y), max(y))
-    else:
-        xmin, xmax, ymin, ymax = window
-    if scale & gr.OPTION_X_LOG == 0:
-        majorx = 5
-        xtick = gr.tick(xmin, xmax) / majorx
-    else:
-        xtick = majorx = 1
-    if scale & gr.OPTION_Y_LOG == 0:
-        majory = 5
-        ytick = gr.tick(ymin, ymax) / majory
-    else:
-        ytick = majory = 1
-    ticksize = 0.0125 * (viewport[1] - viewport[0])
-    gr.setviewport(viewport[0], viewport[1], viewport[2], viewport[3])
-    gr.setwindow(xmin, xmax, ymin, ymax)
-    gr.setscale(scale)
-    if bgcolor != 0:
-        gr.setfillintstyle(1)
-        gr.setfillcolorind(bgcolor)
-        gr.fillrect(xmin, xmax, ymin, ymax)
-    charheight = 0.024 * (viewport[3] - viewport[2])
-    gr.setcharheight(charheight)
-    if grid:
-         gr.grid(xtick, ytick, xmax, ymax, majorx, majory)
-    gr.axes(xtick, ytick, xmin, ymin, majorx, majory, ticksize)
-    gr.axes(xtick, ytick, xmax, ymax, -majorx, -majory, -ticksize)
-    gr.setlinetype(linetype)
-    gr.polyline(x, y)
-    if markertype != gr.MARKERTYPE_DOT:
-        gr.setmarkertype(markertype)
-        gr.polymarker(x, y)
-    if update:
-        gr.updatews()
-    if gr.isinline():
-        return gr.show()
-
-
-def plot3d(z,
-           viewport=(0.1, 0.9, 0.1, 0.9),
-           rotation=30,
-           tilt=50,
-           colormap=gr.COLORMAP_TEMPERATURE,
-           option=gr.OPTION_COLORED_MESH,
-           contours=True,
-           xtitle='',
-           ytitle='',
-           ztitle='',
-           accelerate=False,
-           clear=True,
-           update=True):
-    if clear:
-        gr.clearws()
-    xmin, ymin = (1, 1)
-    if type(z) == ndarray:
-        xmax, ymax = z.shape
-        zmin = z.min()
-        zmax = z.max()
-        z = z.ravel()
-    else:
-        xmax, ymax = _guessdimension(len(z))[0]
-        zmin = min(z)
-        zmax = max(z)
-    xtick = gr.tick(xmin, xmax) / 5
-    ytick = gr.tick(ymin, ymax) / 5
-    x = range(1, xmax + 1)
-    y = range(1, ymax + 1)
-    zmin, zmax = gr.adjustrange(zmin, zmax)
-    ztick = gr.tick(zmin, zmax) / 5
-    gr.setviewport(viewport[0], viewport[1], viewport[2], viewport[3])
-    gr.setwindow(xmin, xmax, ymin, ymax)
-    gr.setspace(zmin, zmax, rotation, tilt)
-    charheight = 0.024 * (viewport[3] - viewport[2])
-    gr.setcharheight(charheight)
-    gr.setcolormap(colormap)
-    if accelerate:
-        gr3.surface(x, y, z, option)
-    else:
-        gr.surface(x, y, z, option)
-
-    ticksize = 0.0125 * (viewport[1] - viewport[0])
-    if rotation != 0 or tilt != 90:
-        gr.axes3d(xtick, 0, ztick, xmin, ymin, zmin, 2, 0, 2, -ticksize)
-        gr.axes3d(0, ytick, 0, xmax, ymin, zmin, 0, 2, 0, ticksize)
-    if contours:
-        gr.contour(x, y, [], z, 0)
-    if rotation == 0 and tilt == 90:
-        gr.axes(xtick, ytick, xmin, ymin, 2, 2, -ticksize)
-    if xtitle != '' or ytitle != '' or ztitle != '':
-        gr.titles3d(xtitle, ytitle, ztitle)
-    if update:
-        gr.updatews()
-    if gr.isinline():
-        return gr.show()
-
-def imshow(data, cmap=gr.COLORMAP_GRAYSCALE):
-    height, width = data.shape
-    d = data.reshape(width * height).astype(float)
-    d = 8 + 72 * (d - min(d)) / (max(d) - min(d))
-    ca = d.astype(int)
-    gr.clearws()
-    if width < height:
-        ratio = float(width) / height
-        xmin = max(0.5 * (1 - ratio), 0)
-        xmax = min(xmin + ratio, 1)
-        ymin = 0
-        ymax = 1
-    else:
-        ratio = float(height) / width
-        xmin = 0
-        xmax = 1
-        ymin = max(0.5 * (1 - ratio), 0)
-        ymax = min(ymin + ratio, 1)
-    gr.selntran(0)
-    gr.setcolormap(cmap)
-    gr.cellarray(xmin, xmax, ymin, ymax, width, height, ca)
-    gr.updatews()
-    if gr.isinline():
-        return gr.show()
 
 def delay(seconds):
     time.sleep(seconds)
