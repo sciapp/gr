@@ -2251,7 +2251,7 @@ def mimetype():
 
 def isinline():
     global _mime_type
-    return _mime_type != None and _mime_type != "mov"
+    return _mime_type not in (None, "", "mov")
 
 
 def inline(mime="svg"):
