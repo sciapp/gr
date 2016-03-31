@@ -2,11 +2,12 @@
 Simulation demo: movie of growing particles on substrate
 '''
 
-import os, sys, numpy
+import os, sys
+import numpy
 import gr
 from gr.pygr import imshow
-
-from libBornAgainCore import *
+import math
+from bornagain import *
 
 Nframes = 50
 
@@ -44,7 +45,7 @@ def RunSimulation():
     multi_layer.addLayer(substrate_layer)
 
     # build and run experiment
-    simulation = Simulation()
+    simulation = GISASSimulation()
     simulation.setDetectorParameters(100, -4.0 * degree, 4.0 * degree, 100, 0.0 * degree, 8.0 * degree)
     simulation.setBeamParameters(1.0 * angstrom, 0.2 * degree, 0.0 * degree)
     simulation.setSample(multi_layer)
@@ -68,6 +69,5 @@ if __name__ == '__main__':
     for i in range(Nframes):
         SetParameters(i)
         result = RunSimulation() + 1 # for log scale
-        result = numpy.log10(numpy.rot90(result, 1))
+        result = numpy.log10(result)
         imshow(result, cmap=gr.COLORMAP_PILATUS)
-
