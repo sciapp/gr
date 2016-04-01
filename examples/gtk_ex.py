@@ -1,8 +1,12 @@
-#! /usr/bin/env python
-import pygtk
-pygtk.require('2.0')
-import gtk, gobject, cairo
-import os, ctypes
+#!/usr/bin/python
+
+import gtk
+
+import ctypes
+from os import environ
+
+from numpy.random import uniform, seed
+import numpy as np
 import gr
 
 class PyCairoContext(ctypes.Structure):
@@ -10,46 +14,57 @@ class PyCairoContext(ctypes.Structure):
               ("ctx", ctypes.c_void_p),
               ("base", ctypes.c_void_p)]
 
-# Create a GTK+ widget on which we will draw using Cairo
-class Screen(gtk.DrawingArea):
+class PyApp(gtk.Window):
 
-    # Draw in response to an expose-event
-    __gsignals__ = { "expose-event": "override" }
+    def __init__(self):
+        super(PyApp, self).__init__()
 
-    # Handle the expose-event by drawing
-    def do_expose_event(self, event):
+        self.set_title("Gtk example")
+        self.resize(500, 500)
+        self.set_position(gtk.WIN_POS_CENTER)
 
-        # Create the cairo context
-        cr = self.window.cairo_create()
+        self.connect("destroy", gtk.main_quit)
 
-        os.environ["GKS_WSTYPE"] = "142"
-        os.environ["GKS_DOUBLE_BUF"] = "True"
+        drawable = gtk.DrawingArea()
+        drawable.connect("expose-event", self.expose)
+        self.add(drawable)
+
+        self.show_all()
+
+    def expose(self, widget, event):
+
+        cr = widget.window.cairo_create()
+
+        environ["GKS_WSTYPE"] = "142"
         pc = PyCairoContext.from_address(id(cr))
-        os.environ['GKSconid'] = "%lu" % pc.ctx
+        environ['GKSconid'] = "%lu" % pc.ctx
 
-        # Restrict Cairo to the exposed area; avoid extra work
-        cr.rectangle(event.area.x, event.area.y,
-                event.area.width, event.area.height)
-        cr.clip()
+        cr.move_to(15, 15)
+        cr.set_font_size(14)
+        cr.show_text("Contour Plot using Gtk ...")
 
-        self.draw(cr, *self.window.get_size())
+        seed(0)
+        xd = uniform(-2, 2, 100)
+        yd = uniform(-2, 2, 100)
+        zd = xd * np.exp(-xd**2 - yd**2)
 
-    def draw(self, cr, width, height):
-        # Fill the background with gray
-        cr.set_source_rgb(0.5, 0.5, 0.5)
-        cr.rectangle(0, 0, width, height)
-        gr.text(0.1, 0.9, "Hello World")
-        cr.fill()
+        gr.setviewport(0.15, 0.95, 0.1, 0.9)
+        gr.setwindow(-2, 2, -2, 2)
+        gr.setspace(-0.5, 0.5, 0, 90)
+        gr.setmarkersize(1)
+        gr.setmarkertype(gr.MARKERTYPE_SOLID_CIRCLE)
+        gr.setcharheight(0.024)
+        gr.settextalign(2, 0)
+        gr.settextfontprec(3, 0)
 
-# GTK mumbo-jumbo to show the widget in a window and quit when it's closed
-def run(Widget):
-    window = gtk.Window()
-    window.connect("delete-event", gtk.main_quit)
-    widget = Widget()
-    widget.show()
-    window.add(widget)
-    window.present()
-    gtk.main()
+        x, y, z = gr.gridit(xd, yd, zd, 200, 200)
+        h = np.linspace(-0.5, 0.5, 20)
+        gr.surface(x, y, z, 5)
+        gr.contour(x, y, h, z, 0)
+        gr.polymarker(xd, yd)
+        gr.axes(0.25, 0.25, -2, -2, 2, 2, 0.01)
 
-if __name__ == "__main__":
-    run(Screen)
+        gr.updatews()
+
+PyApp()
+gtk.main()
