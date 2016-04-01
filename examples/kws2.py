@@ -6,15 +6,16 @@
 
 import os
 from gr.pygr import *
+import numpy as np
 
 os.environ["GR_DISPLAY"] = "localhost:"
 os.system("glgr")
 delay(2)
 
-counts = readfile(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                               "kws2.dat"),
-                  separator='$')
-surface(range(128), range(128), counts,
+counts = np.loadtxt(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                 "kws2.dat"),
+                    skiprows=70).reshape(128, 128)
+surface(counts,
         rotation=45, tilt=30,
         colormap=4,
         xlabel='X',

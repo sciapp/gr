@@ -5,7 +5,8 @@
 
 import os
 from gr.pygr import *
+import numpy as np
 
-z = readfile(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                          "fecr.dat"))
-contourf(range(200), range(200), z)
+z = np.loadtxt(os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                            "fecr.dat")).reshape(200, 200)
+contour(z)
