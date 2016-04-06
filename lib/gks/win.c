@@ -456,9 +456,12 @@ void open_ws(void)
   if (env != NULL)
     {
       if (strchr(env, '!') != NULL)
-	sscanf(env, "%lx!%lx!%lx", &gksw.instance, &gksw.previnstance, &p->win);
+	sscanf(env, "%lx!%lx!%lx",
+               (unsigned long *)&gksw.instance,
+               (unsigned long *)&gksw.previnstance,
+               (unsigned long *)&p->win);
       else
-	sscanf(env, "%lx", &p->win);
+	sscanf(env, "%lx", (unsigned long *)&p->win);
 
       create_window(p->win);
       p->thread = 0;
@@ -489,7 +492,6 @@ void resize_window(void)
 {
   double max_width, max_height;
   int width, height;
-  RECT rc;
 
   max_width = p->mwidth;
   max_height = p->mheight;
@@ -516,7 +518,7 @@ void resize_window(void)
 static
 void close_ws(void)
 {
-  int i, tnr;
+  int i;
 
   for (i = 0; i < MAX_BITMAP; i++)
     DeleteObject(bitmap[i]);
@@ -1010,7 +1012,7 @@ static
 void create_font(int font)
 {
   double rad, scale, ux, uy;
-  int family, size, angle;
+  int family, angle;
   double width, height, capheight;
   LOGFONT lf;
 
@@ -1059,7 +1061,6 @@ void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color, ln_width;
   double x, y;
-  unsigned short chars_len = nchars;
   HPEN pen, dc_pen, memdc_pen;
   HFONT dc_font, memdc_font;
 

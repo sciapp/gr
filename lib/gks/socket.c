@@ -105,7 +105,11 @@ int send_socket(int s, char *buf, int size)
 static
 int close_socket(int s)
 {
+#if defined(_WIN32)
+  closesocket(s);
+#else
   close(s);
+#endif
 #if defined(_WIN32) && !defined(__GNUC__)
   WSACleanup();
 #endif
