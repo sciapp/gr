@@ -659,6 +659,7 @@ void text_routine(double x, double y, int nchars, char *chars)
   double xrel, yrel, ax, ay;
   double xstart, ystart;
   cairo_text_extents_t extents;
+  char *str;
 
   NDC_to_DC(x, y, xstart, ystart);
 
@@ -671,7 +672,15 @@ void text_routine(double x, double y, int nchars, char *chars)
   xstart += ax;
   ystart -= ay;
 
-  cairo_text_extents(p->cr, chars, &extents);
+  /* Ugly workaround to avoid Cairo crashes when getting the text extent
+     for a string that contains only a single character */
+  str = (char *) gks_malloc(nchars + 3);
+  strncpy(str, chars, nchars);
+  strcat(str, "  ");
+
+  cairo_text_extents(p->cr, str, &extents);
+
+  free(str);
 
   if (gkss->txal[0] == GKS_K_TEXT_HALIGN_RIGHT) {
     xstart -= (extents.width + extents.x_bearing);
