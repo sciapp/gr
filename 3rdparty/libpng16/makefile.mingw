@@ -1,6 +1,4 @@
-    CC = gcc
-CFLAGS = -O -I..\zlib -fno-common $(ARCHS)
-    AR = ar
+CFLAGS = -O -I../zlib -fno-common
   OBJS = \
 	png.o \
 	pngerror.o \
@@ -20,14 +18,16 @@ CFLAGS = -O -I..\zlib -fno-common $(ARCHS)
 
 .SUFFIXES: .o .c
 
+default: libpng.lib
+
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFINES) $<
 
-libpng.a: $(OBJS)
-	$(AR) crv $@ $?
-	$(AR) ts $@
-
-distclean: clean
+libpng.lib: $(OBJS)
+	$(AR) crs $@ $?
 
 clean:
-	DEL libpng.a *.o *.bak
+	$(RM) *.o
+	$(RM) libpng.lib
+
+.PHONY: clean default

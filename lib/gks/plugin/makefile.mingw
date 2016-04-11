@@ -1,0 +1,51 @@
+DEFINES = -DNO_FT -DNO_X11 -DGRDIR=\"$(GRDIR)\"
+ZLIB = ../../../3rdparty/zlib/libz.lib
+PNGLIB = ../../../3rdparty/libpng16/libpng.lib
+PIXMANLIB = ../../../3rdparty/pixman/libpixman-1.lib
+CAIROLIB = ../../../3rdparty/cairo/libcairo.lib
+CAIROINCLUDES = -I../../../3rdparty/build/src/
+INCLUDES = -I../ -I../../../3rdparty/ $(CAIROINCLUDES)
+CFLAGS = -Wall $(DEFINES) $(INCLUDES)
+CXXFLAGS = -Wall $(DEFINES) $(INCLUDES)
+GDILIB = -lgdi32
+OBJS = font.o afm.o util.o malloc.o error.o io.o
+
+all: svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll
+
+.SUFFIXES: .c .cxx .o
+
+.c.o:
+	$(CC) -c $(CFLAGS) $<
+
+.cxx.o:
+	$(CXX) -c $(CXXFLAGS) $<
+
+$(PNGLIB):
+	$(MAKE) -C ../../../3rdparty/libpng16 libpng.lib
+
+$(ZLIB):
+	$(MAKE) -C ../../../3rdparty/zlib libz.lib
+
+$(PIXMANLIB):
+	$(MAKE) -C ../../../3rdparty/pixman libpixman-1.lib
+
+$(CAIROLIB):
+	$(MAKE) -C ../../../3rdparty/cairo libcairo.lib
+
+svgplugin.dll: svgplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+pgfplugin.dll: pgfplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+htmplugin.dll: htmplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -lwsock32
+
+cairoplugin.o: $(CAIROLIB)
+
+cairoplugin.dll: cairoplugin.o $(OBJS) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
+
+clean:
+	$(RM) *.dll
+	$(RM) *.o

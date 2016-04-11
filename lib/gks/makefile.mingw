@@ -1,45 +1,35 @@
-ifeq ($(OS),Windows_NT)
-  GRDIR="S:\\GR"
-  CC = gcc
-  AR = ar
-else
-  GRDIR="S:/GR"
-  ifeq ($(ARCH),x86_64)
-    CC=x86_64-w64-mingw32-gcc
-    AR=x86_64-w64-mingw32-ar
-  else
-    CC=i686-w64-mingw32-gcc
-    AR=i686-w64-mingw32-ar
-  endif
-endif
-
 CFLAGS = -DNO_FT -DNO_X11
 DEFINES = -DGRDIR=\"$(GRDIR)\"
 
 OBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o \
        malloc.o error.o mf.o wiss.o cgm.o win.o mac.o ps.o \
        pdf.o x11.o socket.o plugin.o compress.o io.o
-LIBS = -lmsvcrt -lkernel32 -lwsock32 -ladvapi32 -luser32 -lmsimg32 -lgdi32 -lcomdlg32 -lwinspool
 
-.SUFFIXES: .o .c .f
+LIBS = -lwsock32 -lmsimg32 -lgdi32
+
+.SUFFIXES: .o .c
+
+all: libgks.lib libgks.dll demo.exe
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFINES) $<
 
-all: libgks.a demo.exe
-
-libgks.a: $(OBJS)
-	$(AR) cr $@ $?
+libgks.lib: $(OBJS)
+	$(AR) crs $@ $?
 
 libgks.dll: $(OBJS)
-	$(CC) -shared -o $@ $? -Wl,--out-implib,$(@:.dll=.a) $(LIBS)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(LIBS)
+
+libkgs.a: libgks.dll
 
 demo.o: demo.c
 	$(CC) -c demo.c
-demo.exe: demo.o libgks.a
-	$(CC) -o $@ demo.o libgks.a ${LIBS}
+
+demo.exe: demo.o libgks.lib
+	$(CC) -o $@ demo.o libgks.lib ${LIBS}
 
 clean:
 	$(RM) demo.exe
-	$(RM) libgks.a
+	$(RM) libgks.dll
+	$(RM) libgks.lib
 	$(RM) *.o

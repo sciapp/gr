@@ -1,0 +1,13 @@
+GRDIR = /usr/local/gr
+
+self:
+	$(MAKE) -C lib/gks
+	$(MAKE) -C lib/gks/plugin
+	$(MAKE) -C lib/gr
+
+clean:
+	$(MAKE) -C lib/gks clean
+	$(MAKE) -C lib/gks/plugin clean
+	$(MAKE) -C lib/gr clean
+
+.PHONY: clean self

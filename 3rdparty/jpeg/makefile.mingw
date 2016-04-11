@@ -1,6 +1,4 @@
-    CC = gcc
-CFLAGS = -O -I. -fno-common $(ARCHS)
-    AR = ar
+CFLAGS = -O -I. -fno-common
   OBJS = \
         jaricom.o \
         jcapimin.o \
@@ -51,14 +49,16 @@ CFLAGS = -O -I. -fno-common $(ARCHS)
 
 .SUFFIXES: .o .c
 
+default: libjpeg.lib
+
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFINES) $<
 
-libjpeg.a: $(OBJS)
-	$(AR) crv $@ $?
-	$(AR) ts $@
-
-distclean: clean
+libjpeg.lib: $(OBJS)
+	$(AR) crs $@ $?
 
 clean:
-	DEL libjpeg.a *.o *.bak
+	$(RM) *.o
+	$(RM) libjpeg.lib
+
+.PHONY: clean default
