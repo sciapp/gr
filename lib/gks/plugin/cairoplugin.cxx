@@ -12,7 +12,6 @@
 #ifndef NO_X11
 #include <cairo/cairo-xlib.h>
 #endif
-#include <libpng16/png.h>
 
 #endif
 
@@ -154,7 +153,7 @@ typedef struct ws_state_list_t
   int empty, page_counter;
   double rect[MAX_TNR][2][2];
   unsigned char *patterns;
-  int png_counter, pattern_counter, use_symbols;
+  int pattern_counter, use_symbols;
   double dashes[10];
 }
 ws_state_list;
@@ -820,15 +819,10 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   int ix1, ix2, iy1, iy2;
   int width, height;
   int red, green, blue, alpha;
-  register int i, j, ix, iy, ind, rgb;
+  int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
-  png_byte bit_depth = 8;
-  png_byte color_type = PNG_COLOR_TYPE_RGBA;
-  png_structp png_ptr;
-  png_infop info_ptr;
-  png_bytep *row_pointers;
-  FILE *stream;
-  char filename[MAXPATHLEN];
+  int stride;
+  unsigned char *data;
   cairo_surface_t *image;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
@@ -845,78 +839,52 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   x = min(ix1, ix2);
   y = min(iy1, iy2);
 
-  gks_filepath(filename, p->path, "png", p->page_counter, p->png_counter);
-  if ((stream = fopen(filename, "wb")) == NULL)
-    {
-      gks_perror("can't open temporary file");
-      perror("open");
-      return;
-    }
-
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
 
-  row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * height);
-  for (j = 0; j < height; j++)
-    {
-      row_pointers[j] = (png_byte *) malloc(width * 4);
-    }
-  for (j = 0; j < height; j++)
-    {
-      png_byte *row = row_pointers[j];
-      iy = dy * j / height;
-      if (swapy)
-        iy = dy - 1 - iy;
-      for (i = 0; i < width; i++)
-        {
-          png_byte *ptr = &(row[i * 4]);
-          ix = dx * i / width;
-          if (swapx)
-            ix = dx - 1 - ix;
-          if (!true_color)
-            {
-              ind = colia[iy * dimx + ix];
-              red = (int) 255 * p->rgb[ind][0];
-              green = (int) 255 * p->rgb[ind][1];
-              blue = (int) 255 * p->rgb[ind][2];
-              alpha = (int) 255 * p->transparency;
-            }
-          else
-            {
-              rgb = colia[iy * dimx + ix];
-              red = (rgb & 0xff);
-              green = (rgb & 0xff00) >> 8;
-              blue = (rgb & 0xff0000) >> 16;
-              alpha = (rgb & 0xff000000) >>24;
-            }
-          ptr[0] = red;
-          ptr[1] = green;
-          ptr[2] = blue;
-          ptr[3] = alpha;
-        }
-    }
+  stride = cairo_format_stride_for_width (CAIRO_FORMAT_ARGB32, width);
+  data = (unsigned char *)gks_malloc(stride * height);
 
-  png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  info_ptr = png_create_info_struct(png_ptr);
-  png_init_io(png_ptr, stream);
-  png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type,
-               PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
-               PNG_FILTER_TYPE_BASE);
-  png_write_info(png_ptr, info_ptr);
-  png_write_image(png_ptr, row_pointers);
-  png_write_end(png_ptr, NULL);
-  for (j = 0; j < height; j++)
-    {
-      free(row_pointers[j]);
+  for (j = 0; j < height; j++) {
+    iy = dy * j / height;
+    if (swapy) {
+      iy = dy - 1 - iy;
     }
-  free(row_pointers);
-  fclose(stream);
+    for (i = 0; i < width; i++) {
+      ix = dx * i / width;
+      if (swapx) {
+        ix = dx - 1 - ix;
+      }
+      if (!true_color) {
+        ind = colia[iy * dimx + ix];
+        red = (int) 255 * p->rgb[ind][0];
+        green = (int) 255 * p->rgb[ind][1];
+        blue = (int) 255 * p->rgb[ind][2];
+        alpha = (int) 255 * p->transparency;
+      } else {
+        rgb = colia[iy * dimx + ix];
+        red = (rgb & 0xff);
+        green = (rgb & 0xff00) >> 8;
+        blue = (rgb & 0xff0000) >> 16;
+        alpha = (rgb & 0xff000000) >>24;
+      }
+      // ARGB32 format requires pre-multiplied alpha
+      red = red * alpha / 255;
+      green = green * alpha / 255;
+      blue = blue * alpha / 255;
+      data[j * stride + i * 4 + 0] = blue;
+      data[j * stride + i * 4 + 1] = green;
+      data[j * stride + i * 4 + 2] = red;
+      data[j * stride + i * 4 + 3] = alpha;
+    }
+  }
 
-  image = cairo_image_surface_create_from_png(filename);
+  image = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32,
+                                              width, height, stride);
   cairo_set_source_surface(p->cr, image, x, y);
   cairo_paint(p->cr);
   cairo_surface_destroy(image);
-  p->png_counter++;
+  free(data);
 }
 
 static
