@@ -1075,7 +1075,9 @@ void write_page(void)
 {
   char path[MAXPATHLEN];
 
+  p->empty = 1;
   p->page_counter++;
+
   cairo_show_page(p->cr);
 
   if (p->wtype == 140)
@@ -1212,7 +1214,8 @@ void gks_cairoplugin(
       if (ia[1] == GKS_K_PERFORM_FLAG)
         {
           lock();
-          write_page();
+          if (!p->empty)
+            write_page();
           unlock();
         }
       break;
