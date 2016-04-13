@@ -1105,11 +1105,16 @@ void close_page(void)
 static
 void write_page(void)
 {
+  char path[MAXPATHLEN];
+
   p->page_counter++;
   cairo_show_page(p->cr);
 
   if (p->wtype == 140)
-    cairo_surface_write_to_png(p->surface, "gks.png");
+    {
+      gks_filepath(path, p->path, "png", p->page_counter, 0);
+      cairo_surface_write_to_png(p->surface, path);
+    }
 #ifndef NO_X11
   else if (p->wtype == 141)
     XSync(p->dpy, False);

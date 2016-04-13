@@ -5738,7 +5738,11 @@ int gks_wstype(char *type)
   else if (!str_casecmp(type, "jpeg") || !str_casecmp(type, "jpg"))
     wstype = 321;
   else if (!str_casecmp(type, "png"))
+#ifndef NO_GS
     wstype = 322;
+#else
+    wstype = 140;
+#endif
   else if (!str_casecmp(type, "tiff") || !str_casecmp(type, "tif"))
     wstype = 323;
   else if (!str_casecmp(type, "fig"))
