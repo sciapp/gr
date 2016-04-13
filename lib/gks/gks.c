@@ -614,7 +614,7 @@ void gks_open_ws(int wkid, char *path, int wtype)
 
 		      /* call the device driver link routine */
 		      gks_ddlk(OPEN_WS,
-			3, 1, 3, i_arr, 0, f_arr_1, 0, f_arr_2, 1, path,
+			3, 1, 3, i_arr, 0, f_arr_1, 0, f_arr_2, 1, ws->path,
 			&ws->ptr);
 
 		      if (i_arr[0] != 0 || i_arr[1] != 0)
