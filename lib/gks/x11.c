@@ -1672,7 +1672,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   int r, d, x, y, i;
   int pc, op;
-  XPoint points[13];
+  XPoint points[16];
   double scale, xr, yr;
 
 #include "marker.h"
@@ -1718,7 +1718,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 	      yr = -scale * marker[mtype][pc + 2 * i + 2];
 	      seg_xform_rel(&xr, &yr);
 	      points[i].x = nint(x - xr);
-	      points[i].y = nint(y + yr);
+	      points[i].y = nint(y - yr);
 	    }
 	  if (p->pixmap)
 	    XDrawLines(p->dpy, p->pixmap, p->gc, points, 2,

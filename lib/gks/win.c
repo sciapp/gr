@@ -709,7 +709,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
   int r, x, y, i;
   int pc, op;
   double scale, xr, yr;
-  POINT points[13];
+  POINT points[16];
 
 #include "marker.h"
 
