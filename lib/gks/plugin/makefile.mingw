@@ -33,18 +33,18 @@ $(CAIROLIB):
 	$(MAKE) -C ../../../3rdparty/cairo libcairo.lib
 
 svgplugin.dll: svgplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
-	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 pgfplugin.dll: pgfplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
-	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 htmplugin.dll: htmplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
-	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -lwsock32
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -lwsock32
 
 cairoplugin.o: $(CAIROLIB)
 
 cairoplugin.dll: cairoplugin.o $(OBJS) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB)
-	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
 
 clean:
 	$(RM) *.dll

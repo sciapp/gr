@@ -33,9 +33,9 @@ export pixman_LIBS=${dest}/lib/libpixman-1.a
 export MAKE=make
 
 ./configure --prefix=${dest} --libdir=${dest}/lib \
-  --enable-static --disable-shared --with-pic --disable-quartz --disable-ft --host=x86_64-w64-mingw32 --disable-ps --disable-pdf --disable-interpreter
+  --enable-static --disable-shared --with-pic --disable-quartz --disable-ft --host=x86_64-w64-mingw32 --disable-ps --disable-pdf --disable-xlib --disable-interpreter --disable-valgrind
 make
 make install
 export MAKE="make -f makefile.mingw"
 cd ${cwd}
-ln -s ${dest}/src/${src}/src ${dest}/src/cairo
+ln -s -f ${dest}/src/${src}/src ${dest}/src/cairo
