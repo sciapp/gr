@@ -25,6 +25,7 @@ cp -p lib/gr/demo.exe build/grdemo.exe
 cp -p lib/gr/libgr.lib build/
 cp -p lib/gr/libgr.dll build/
 cp -p ${MINGWHOME}/x86_64-w64-mingw32/lib/libgcc_s_seh-1.dll build/
+cp -p ${MINGWHOME}/x86_64-w64-mingw32/lib/libstdc++-6.dll build/
 
 for dir in lib 3rdparty
 do
