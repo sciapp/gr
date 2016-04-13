@@ -10,7 +10,8 @@ UNAME := $(shell uname)
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                md5.o import.o grforbnd.o
    MUPDFDEFS =
-     DEFINES = $(MUPDFDEFS)
+      GSDEFS =
+     DEFINES = $(MUPDFDEFS) $(GSDEFS)
     INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)
