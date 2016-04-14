@@ -58,4 +58,7 @@ make EXTRA_CFLAGS=-I${extras}/include \
 if [ "`uname`" = "Darwin" ]; then
   cp -p ${extras_lib}/libcairo.2.dylib ${gr_lib}/
   install_name_tool -id @rpath/libcairo.2.dylib ${gr_lib}/libcairo.2.dylib
+  old=`otool -L ${gr_lib}/cairoplugin.so|grep libcairo.2.dylib|awk '{print $1}'`
+  install_name_tool -change ${old} @rpath/libcairo.2.dylib \
+    ${gr_lib}/cairoplugin.so
 fi
