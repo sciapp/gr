@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #include <math.h>
 
 #define MAX(a,b) (a)>(b) ? (a) : (b)
@@ -1302,6 +1303,52 @@ void drawFormula(formula_t * formula, double Height, double scale)
 
 }
 
+static char *pre_parse_escape(const char *string) {
+  const char *c;
+  char *escaped_string;
+  char *ec;
+  int escapable_parentheses = 0;
+  int escapable_braces = 0;
+  int max_len = strlen(string)*3;
+  escaped_string = malloc(max_len+1);
+  assert(escaped_string);
+  for (c = string, ec=escaped_string; c[0] != 0; c++, ec++) {
+    ec[0] = c[0];
+    if (c[0] == '\\' && c[1] == '\\') {
+      ec[1] = '\\';
+      c++;
+    } else if (c[0] == '\\' && c[1] == ' ') {
+      ec[0] = ' ';
+      c++;
+    } else if (c[0] == ' ' && (c[1] == '+' || c[1] == '-' || c[1] == '/' || c[1] == '*' || c[1] == '^' || c[1] == '_' || c[1] == '(' || c[1] == ')' || c[1] == '{' || c[1] == '}')) {
+      ec[1] = '\\';
+      ec[2] = c[1];
+      c++;
+      ec += 2;
+      if (c[0] == '(') {
+        escapable_parentheses++;
+      } else if (c[0] == '{') {
+        escapable_braces++;
+      } else if (c[0] == ')') {
+        escapable_parentheses--;
+      } else if (c[0] == '}') {
+        escapable_braces--;
+      }
+    } else if (escapable_parentheses && c[0] == ')') {
+      ec[0] = '\\';
+      ec[1] = ')';
+      ec++;
+      escapable_parentheses--;
+    } else if (escapable_braces && c[0] == '}') {
+      ec[0] = '\\';
+      ec[1] = '}';
+      ec++;
+      escapable_braces--;
+    }
+  }
+  ec[0] = 0;
+  return escaped_string;
+}
 
 /***************************************************************/
 /*                                                             */
@@ -1311,7 +1358,7 @@ void drawFormula(formula_t * formula, double Height, double scale)
 int gr_textex(double x, double y, const char *string, int inquire,
 	      double *tbx, double *tby)
 {
-  char *str = strdup(string);
+  char *str = pre_parse_escape(string);
   int n, wkid = 0;
   double cpx, cpy;
   formula_t *formula = NULL;
