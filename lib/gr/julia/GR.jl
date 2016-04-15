@@ -118,6 +118,7 @@ export
   plot,
   oplot,
   scatter,
+  stem,
   histogram,
   contourf,
   wireframe,
@@ -131,6 +132,7 @@ export
   savefig,
   peaks,
   imshow,
+  isosurface,
   libGR3,
   gr3,
   isinline,
@@ -1185,6 +1187,7 @@ subplot(m, n, p) = jlgr.subplot(m, n, p)
 plot(args...; kwargs...) = jlgr.plot(args...; kwargs...)
 oplot(args...; kwargs...) = jlgr.oplot(args...; kwargs...)
 scatter(args...; kwargs...) = jlgr.scatter(args...; kwargs...)
+stem(args...; kwargs...) = jlgr.stem(args...; kwargs...)
 histogram(x; kwargs...) = jlgr.histogram(x; kwargs...)
 contour(args...; kwargs...) = jlgr.contour(args...; kwargs...)
 contourf(args...; kwargs...) = jlgr.contourf(args...; kwargs...)
@@ -1200,6 +1203,7 @@ ylim(a) = jlgr.ylim(a)
 savefig(filename) = jlgr.savefig(filename)
 peaks(n...) = jlgr.peaks(n...)
 imshow(I; kwargs...) = jlgr.imshow(I; kwargs...)
+isosurface(V; kwargs...) = jlgr.isosurface(V; kwargs...)
 
 type SVG
    s::Array{UInt8}
@@ -1306,7 +1310,7 @@ function show()
         content = PNG(_readfile("gks.png"))
         return content
     elseif mime_type == "mov"
-        content = HTML(string("""<video autoplay controls><source type="video/mp4" src="data:video/mp4;base64,""", base64(open(readbytes,"gks.mov")),""""></video>"""))
+        content = HTML(string("""<video autoplay controls><source type="video/mp4" src="data:video/mp4;base64,""", base64encode(open(readbytes,"gks.mov")),""""></video>"""))
         return content
     elseif mime_type == "js"
         if msgs != None

@@ -18,7 +18,7 @@ end
 
 const gr3 = GR.gr3
 
-const plot_kind = [:line, :scatter, :hist, :contour, :contourf, :wireframe, :surface, :plot3]
+const plot_kind = [:line, :scatter, :stem, :hist, :contour, :contourf, :wireframe, :surface, :plot3]
 
 const arg_fmt = [:xys, :xyac, :xyzc]
 
@@ -170,7 +170,7 @@ function set_window(kind)
     plt.kvs[:xaxis] = xtick, xorg, majorx
 
     ymin, ymax = plt.kvs[:yrange]
-    if kind == :hist && !haskey(plt.kvs, :ylim)
+    if kind in (:stem, :hist) && !haskey(plt.kvs, :ylim)
         ymin = 0
     end
     if scale & GR.OPTION_Y_LOG == 0
@@ -408,6 +408,15 @@ function plot_data(; kv...)
             else
                 GR.polymarker(x, y)
             end
+        elseif kind == :stem
+            GR.setlinecolorind(1)
+            GR.polyline([plt.kvs[:window][1]; plt.kvs[:window][2]], [0; 0])
+            GR.setmarkertype(GR.MARKERTYPE_SOLID_CIRCLE)
+            GR.uselinespec(spec)
+            for i = 1:length(y)
+                GR.polyline([x[i]; x[i]], [0; y[i]])
+                GR.polymarker([x[i]], [y[i]])
+            end
         elseif kind == :hist
             ymin = plt.kvs[:window][3]
             for i = 2:length(y)
@@ -467,7 +476,7 @@ function plot_data(; kv...)
         GR.restorestate()
     end
 
-    if kind in (:line, :scatter) && haskey(plt.kvs, :labels)
+    if kind in (:line, :scatter, :stem) && haskey(plt.kvs, :labels)
         draw_legend()
     end
 
@@ -635,6 +644,14 @@ function scatter(args...; kv...)
     plot_data(kind=:scatter)
 end
 
+function stem(args...; kv...)
+    merge!(plt.kvs, Dict(kv))
+
+    plt.args = plot_args(args)
+
+    plot_data(kind=:stem)
+end
+
 function histogram(x; kv...)
     merge!(plt.kvs, Dict(kv))
 
@@ -782,6 +799,33 @@ function imshow(I; kv...)
         GR.textext(0.5 * (viewport[1] + viewport[2]), vp[4], plt.kvs[:title])
         GR.restorestate()
     end
+    GR.selntran(1)
+
+    if plt.kvs[:update]
+        GR.updatews()
+        if GR.isinline()
+            return GR.show()
+        end
+    end
+end
+
+function isosurface(V; kv...)
+    merge!(plt.kvs, Dict(kv))
+
+    plt.kvs[:clear] && GR.clearws()
+
+    GR.selntran(0)
+    values = round(UInt16, (V-minimum(V)) / (maximum(V)-minimum(V)) * (2^16-1))
+    nx, ny, nz = size(V)
+    isovalue = get(plt.kvs, :isovalue, 0.5)
+    rotation = get(plt.kvs, :rotation, 40) * pi / 180.0
+    mesh = gr3.createisosurfacemesh(values, (2/(nx-1), 2/(ny-1), 2/(nz-1)),
+                                    (-1., -1., -1.),
+                                    round(Int64, isovalue * (2^16-1)))
+    gr3.drawmesh(mesh, 1, (0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 0.5, 0.8), (1, 1, 1))
+    gr3.cameralookat(2*sin(rotation), 1, 2*cos(rotation), 0, 0, 0, 0, 1, 0)
+    gr3.drawimage(0, 1, 0, 1, 500, 500, gr3.DRAWABLE_GKS)
+    gr3.deletemesh(mesh)
     GR.selntran(1)
 
     if plt.kvs[:update]
