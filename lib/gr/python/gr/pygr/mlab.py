@@ -15,6 +15,19 @@ import gr
 import gr3
 
 
+def isosurface(grid, isovalue=None, color=None, camera_position=(0, 0, -3)):
+    gr3.drawisosurfacemesh(grid, isovalue=isovalue, color=color)
+    gr.setviewport(0, 1, 0, 1)
+    gr.clearws()
+    x, y, z = camera_position
+    gr3.setbackgroundcolor(0, 0, 0, 1)
+    gr3.cameralookat(x, y, z, 0, 0, 0, 0, 1, 0)
+    gr3.drawimage(0, 1, 0, 1, 500, 500, gr3.GR3_Drawable.GR3_DRAWABLE_GKS)
+    gr.updatews()
+    if gr.isinline():
+        return gr.show()
+
+
 def plot(*args, **kwargs):
     global _plt
     _plt.kwargs.update(kwargs)
