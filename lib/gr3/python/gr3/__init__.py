@@ -28,6 +28,7 @@ __all__ = ['GR3_InitAttribute',
            'setbackgroundcolor',
            'triangulate',
            'createisosurfacemesh',
+           'drawisosurfacemesh',
            'drawtubemesh',
            'createtubemesh']
 
@@ -647,7 +648,7 @@ def triangulate(grid, step, offset, isolevel, slices = None):
     normals = triangles[:, 1, :, :]
     return vertices, normals
 
-def createisosurfacemesh(grid, step, offset, isolevel):
+def createisosurfacemesh(grid, step=None, offset=None, isolevel=None):
     """
     This function creates an isosurface from voxel data using the
     marching cubes algorithm.
@@ -675,6 +676,34 @@ def createisosurfacemesh(grid, step, offset, isolevel):
         | GR3_ERROR_OUT_OF_MEM | if a memory allocation failed |
         +----------------------+-------------------------------+
     """
+    try:
+        # integral values
+        input_max = numpy.iinfo(grid.dtype).max
+    except ValueError:
+        # floating point values are expected to be in range [0, 1]
+        input_max = 1
+        grid[grid > 1] = 1
+    if isolevel is None:
+        isolevel = 0.5 * input_max
+    elif isolevel < 0:
+        isolevel = 0
+    elif isolevel > input_max:
+        isolevel = input_max
+    scaling_factor = 1.0 * numpy.iinfo(numpy.uint16).max / input_max
+    isolevel = numpy.uint16(isolevel * scaling_factor)
+    grid = (grid * scaling_factor).astype(numpy.uint16)
+    nz, ny, nx = grid.shape
+    if step is None and offset is None:
+        step = (2.0/(nx-1), 2.0/(ny-1), 2.0/(nz-1))
+        offset = (-1.0, -1.0, -1.0)
+    elif offset is None:
+        offset = (-step[0] * (nx-1) / 2.0,
+                  -step[1] * (ny-1) / 2.0,
+                  -step[2] * (nz-1) / 2.0)
+    elif step is None:
+        step = (-offset[0] * 2.0 / (nx-1),
+                -offset[1] * 2.0 / (ny-1),
+                -offset[2] * 2.0 / (nz-1))
     _mesh = c_uint(0)
     data = grid.ctypes.data_as(POINTER(c_ushort))
     isolevel = c_ushort(isolevel)
@@ -690,6 +719,16 @@ def createisosurfacemesh(grid, step, offset, isolevel):
     if err:
         raise GR3_Exception(err)
     return _mesh
+
+
+def drawisosurfacemesh(grid, step=None, offset=None, isovalue=None, position=(0, 0, 0), direction=(0, 0, 1), up=(0, 1, 0), color=(1, 1, 1), scale=(1, 1, 1)):
+    """
+    This function creates and draws an isosurface from voxel data using the
+    marching cubes algorithm.
+    """
+    mesh = createisosurfacemesh(grid, step, offset, isovalue)
+    drawmesh(mesh, 1, position, direction, up, color, scale)
+    deletemesh(mesh)
 
 def createsurfacemesh(nx, ny, px, py, pz, option=0):
     """
