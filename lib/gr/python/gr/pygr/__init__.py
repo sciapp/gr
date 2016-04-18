@@ -17,7 +17,7 @@ import gr
 import gr3
 from gr.pygr.base import GRDrawAttributes, GRMeta, GRViewPort, GRVisibility
 from gr.pygr.helper import ColorIndexGenerator, DomainChecker
-from gr.pygr.mlab import plot, oplot, scatter, histogram, imshow
+from gr.pygr.mlab import plot, oplot, scatter, histogram, imshow, stem
 from gr.pygr.mlab import contour, contourf, surface, wireframe, plot3
 from gr.pygr.mlab import legend, title, xlabel, ylabel, xlim, ylim
 from gr.pygr.mlab import figure, hold, subplot

@@ -52,6 +52,13 @@ def scatter(*args, **kwargs):
     _plot_data(kind='scatter')
 
 
+def stem(*args, **kwargs):
+    global _plt
+    _plt.kwargs.update(kwargs)
+    _plt.args = _plot_args(args)
+    _plot_data(kind='stem')
+
+
 def histogram(x, **kwargs):
     global _plt
     _plt.kwargs.update(kwargs)
@@ -329,7 +336,7 @@ def _set_window(kind):
     _plt.kwargs['xaxis'] = x_tick, xorg, x_major_count
 
     y_min, y_max = _plt.kwargs['yrange']
-    if kind == 'hist' and 'ylim' not in _plt.kwargs:
+    if kind in ('hist', 'stem') and 'ylim' not in _plt.kwargs:
         y_min = 0
     if not scale & gr.OPTION_Y_LOG:
         y_min, y_max = gr.adjustlimits(y_min, y_max)
@@ -522,6 +529,14 @@ def _plot_data(**kwargs):
                     gr.polymarker([x[i]], [y[i]])
             else:
                 gr.polymarker(x, y)
+        elif kind == 'stem':
+            gr.setlinecolorind(1)
+            gr.polyline(_plt.kwargs['window'][:2], [0, 0])
+            gr.setmarkertype(gr.MARKERTYPE_SOLID_CIRCLE)
+            gr.uselinespec(spec)
+            for xi, yi in zip(x, y):
+                gr.polyline([xi, xi], [0, yi])
+            gr.polymarker(x, y)
         elif kind == 'hist':
             y_min = _plt.kwargs['window'][2]
             for i in range(1, len(y)):
@@ -574,7 +589,7 @@ def _plot_data(**kwargs):
             gr.polyline3d(x, y, z)
             _draw_axes(kind, 2)
         gr.restorestate()
-    if kind in ('line', 'scatter') and 'labels' in _plt.kwargs:
+    if kind in ('line', 'scatter', 'stem') and 'labels' in _plt.kwargs:
         _draw_legend()
 
     if _plt.kwargs['update']:
