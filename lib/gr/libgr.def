@@ -52,6 +52,7 @@ EXPORTS
 	gr_polyline
 	gr_polyline3d
 	gr_polymarker
+	gr_polymarker3d
 	gr_precision
 	gr_readimage
 	gr_redrawsegws

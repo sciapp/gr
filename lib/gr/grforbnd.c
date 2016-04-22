@@ -381,6 +381,11 @@ void FORTRAN(gr_polyline3d)(int *n, double *px, double *py, double *pz)
   gr_polyline3d(*n, px, py, pz);
 }
 
+void FORTRAN(gr_polymarker3d)(int *n, double *px, double *py, double *pz)
+{
+  gr_polymarker3d(*n, px, py, pz);
+}
+
 void FORTRAN(gr_axes3d)(
   double *x_tick, double *y_tick, double *z_tick,
   double *x_org, double *y_org, double *z_org,

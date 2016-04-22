@@ -301,7 +301,7 @@ def polymarker(x, y):
         A list containing the Y coordinates
 
     The values for `x` and `y` are in world coordinates. The attributes that
-    control the appearance of a polyline are marker type, marker size
+    control the appearance of a polymarker are marker type, marker size
     scale factor and color index.
 
     """
@@ -1513,6 +1513,31 @@ def polyline3d(px, py, pz):
     __gr.gr_polyline3d(c_int(n), _px.data, _py.data, _pz.data)
 
 
+def polymarker3d(px, py, pz):
+    """
+    Draw marker symbols centered at the given 3D data points.
+
+    **Parameters:**
+
+    `x` :
+        A list of length N containing the X coordinates
+    `y` :
+        A list of length N containing the Y coordinates
+    `z` :
+        A list of length N containing the Z coordinates
+
+    The values for `x`, `y` and `z` are in world coordinates. The attributes
+    that control the appearance of a polymarker are marker type, marker size
+    scale factor and color index.
+
+    """
+    n = _assertEqualLength(px, py, pz)
+    _px = floatarray(n, px)
+    _py = floatarray(n, py)
+    _pz = floatarray(n, pz)
+    __gr.gr_polymarker3d(c_int(n), _px.data, _py.data, _pz.data)
+
+
 def axes3d(x_tick, y_tick, z_tick, x_org, y_org, z_org,
            major_x, major_y, major_z, tick_size):
     """
@@ -2395,6 +2420,8 @@ __gr.gr_herrorbars.argtypes = [c_int, POINTER(c_double), POINTER(c_double),
                                POINTER(c_double), POINTER(c_double)]
 __gr.gr_polyline3d.argtypes = [c_int, POINTER(c_double), POINTER(c_double),
                                POINTER(c_double)]
+__gr.gr_polymarker3d.argtypes = [c_int, POINTER(c_double), POINTER(c_double),
+                                 POINTER(c_double)]
 __gr.gr_axes3d.argtypes = [
     c_double, c_double, c_double, c_double, c_double, c_double, c_int, c_int, c_int,
     c_double]

@@ -102,6 +102,13 @@ def plot3(*args, **kwargs):
     _plot_data(kind='plot3')
 
 
+def scatter3(*args, **kwargs):
+    global _plt
+    _plt.kwargs.update(kwargs)
+    _plt.args = _plot_args(args, fmt='xyac')
+    _plot_data(kind='scatter3')
+
+
 def title(s):
     _plot_data(title=s)
 
@@ -263,7 +270,7 @@ def _set_viewport(kind, subplot):
 
     if width > height:
         viewport[2] += (1 - (subplot[3] - subplot[2])**2) * 0.02
-    if kind in ('wireframe', 'surface', 'plot3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
         viewport[1] -= 0.0525
     if kind in ('contour', 'contourf', 'surface'):
         viewport[1] -= 0.1
@@ -317,7 +324,7 @@ def _set_window(kind):
     scale |= gr.OPTION_FLIP_Z if _plt.kwargs.get('zflip', False) else 0
 
     _minmax()
-    if kind in ('wireframe', 'surface', 'plot3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
         major_count = 2
     else:
         major_count = 5
@@ -353,7 +360,7 @@ def _set_window(kind):
     _plt.kwargs['window'] = (x_min, x_max, y_min, y_max)
     gr.setwindow(x_min, x_max, y_min, y_max)
 
-    if kind in ('wireframe', 'surface', 'plot3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
         z_min, z_max = _plt.kwargs['zrange']
         if not scale & gr.OPTION_Z_LOG:
             z_min, z_max = gr.adjustlimits(z_min, z_max)
@@ -387,7 +394,7 @@ def _draw_axes(kind, pass_=1):
     charheight = max(0.018 * diag, 0.012)
     gr.setcharheight(charheight)
     ticksize = 0.0075 * diag
-    if kind in ('wireframe', 'surface', 'plot3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
         z_tick, z_org, z_major_count = _plt.kwargs['zaxis']
         if pass_ == 1:
             gr.grid3d(x_tick, 0, z_tick, x_org[0], y_org[0], z_org[0], 2, 0, 2)
@@ -406,7 +413,7 @@ def _draw_axes(kind, pass_=1):
         gr.textext(0.5*(viewport[0] + viewport[1]), vp[3], _plt.kwargs['title'])
         gr.restorestate()
 
-    if kind in ('wireframe', 'surface', 'plot3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
         x_label = _plt.kwargs.get('xlabel', '')
         y_label = _plt.kwargs.get('ylabel', '')
         z_label = _plt.kwargs.get('zlabel', '')
@@ -587,6 +594,9 @@ def _plot_data(**kwargs):
             _colorbar(0.05)
         elif kind == 'plot3':
             gr.polyline3d(x, y, z)
+            _draw_axes(kind, 2)
+        elif kind == 'scatter3':
+            gr.polymarker3d(x, y, z)
             _draw_axes(kind, 2)
         gr.restorestate()
     if kind in ('line', 'scatter', 'stem') and 'labels' in _plt.kwargs:

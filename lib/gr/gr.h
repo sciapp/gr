@@ -96,6 +96,7 @@ DLLEXPORT void gr_grid3d(double, double, double, double, double, double,
 DLLEXPORT void gr_verrorbars(int, double *, double *, double *, double *);
 DLLEXPORT void gr_herrorbars(int, double *, double *, double *, double *);
 DLLEXPORT void gr_polyline3d(int, double *, double *, double *);
+DLLEXPORT void gr_polymarker3d(int, double *, double *, double *);
 DLLEXPORT void gr_axes3d(
   double, double, double, double, double, double, int, int, int, double);
 DLLEXPORT void gr_titles3d(char *, char *, char *);

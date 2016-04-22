@@ -18,7 +18,7 @@ end
 
 const gr3 = GR.gr3
 
-const plot_kind = [:line, :scatter, :stem, :hist, :contour, :contourf, :wireframe, :surface, :plot3]
+const plot_kind = [:line, :scatter, :stem, :hist, :contour, :contourf, :wireframe, :surface, :plot3, :scatter3]
 
 const arg_fmt = [:xys, :xyac, :xyzc]
 
@@ -78,7 +78,7 @@ function set_viewport(kind, subplot)
     if w > h
         viewport[3] += (1 - (subplot[4] - subplot[3])^2) * 0.02
     end
-    if kind in (:wireframe, :surface, :plot3)
+    if kind in (:wireframe, :surface, :plot3, :scatter3)
         viewport[2] -= 0.0525
     end
     if kind in (:contour, :contourf, :surface)
@@ -148,7 +148,7 @@ function set_window(kind)
 
     minmax()
 
-    if kind in (:wireframe, :surface, plot3)
+    if kind in (:wireframe, :surface, :plot3, :scatter3)
         major_count = 2
     else
         major_count = 5
@@ -187,7 +187,7 @@ function set_window(kind)
     end
     plt.kvs[:yaxis] = ytick, yorg, majory
 
-    if kind in (:wireframe, :surface, :plot3)
+    if kind in (:wireframe, :surface, :plot3, :scatter3)
         zmin, zmax = plt.kvs[:zrange]
         if scale & GR.OPTION_Y_LOG == 0
             zmin, zmax = GR.adjustlimits(zmin, zmax)
@@ -206,7 +206,7 @@ function set_window(kind)
 
     plt.kvs[:window] = xmin, xmax, ymin, ymax
     GR.setwindow(xmin, xmax, ymin, ymax)
-    if kind in (:wireframe, :surface, :plot3)
+    if kind in (:wireframe, :surface, :plot3, :scatter3)
         rotation = get(plt.kvs, :rotation, 40)
         tilt = get(plt.kvs, :tilt, 70)
         GR.setspace(zmin, zmax, rotation, tilt)
@@ -229,7 +229,7 @@ function draw_axes(kind, pass=1)
     charheight = max(0.018 * diag, 0.012)
     GR.setcharheight(charheight)
     ticksize = 0.0075 * diag
-    if kind in (:wireframe, :surface, :plot3)
+    if kind in (:wireframe, :surface, :plot3, :scatter3)
         ztick, zorg, majorz = plt.kvs[:zaxis]
         if pass == 1
             GR.grid3d(xtick, 0, ztick, xorg[1], yorg[1], zorg[1], 2, 0, 2)
@@ -250,7 +250,7 @@ function draw_axes(kind, pass=1)
         GR.textext(0.5 * (viewport[1] + viewport[2]), vp[4], plt.kvs[:title])
         GR.restorestate()
     end
-    if kind in (:wireframe, :surface, :plot3)
+    if kind in (:wireframe, :surface, :plot3, :scatter3)
         xlabel = get(plt.kvs, :xlabel, "")
         ylabel = get(plt.kvs, :ylabel, "")
         zlabel = get(plt.kvs, :zlabel, "")
@@ -471,6 +471,9 @@ function plot_data(; kv...)
             colorbar(0.05)
         elseif kind == :plot3
             GR.polyline3d(x, y, z)
+            draw_axes(kind, 2)
+        elseif kind == :scatter3
+            GR.polymarker3d(x, y, z)
             draw_axes(kind, 2)
         end
         GR.restorestate()
@@ -702,6 +705,14 @@ function plot3(args...; kv...)
     plot_data(kind=:plot3)
 end
 
+function scatter3(args...; kv...)
+    merge!(plt.kvs, Dict(kv))
+
+    plt.args = plot_args(args, fmt=:xyzc)
+
+    plot_data(kind=:scatter3)
+end
+
 function title(s)
     plot_data(title=s)
 end
@@ -814,6 +825,27 @@ function isosurface(V; kv...)
 
     plt.kvs[:clear] && GR.clearws()
 
+    if !plt.kvs[:ax]
+        set_viewport(:line, plt.kvs[:subplot])
+    end
+    viewport = plt.kvs[:viewport]
+
+    if viewport[4] - viewport[3] < viewport[2] - viewport[1]
+        width = viewport[4] - viewport[3]
+        centerx = 0.5 * (viewport[1] + viewport[2])
+        xmin = max(centerx - 0.5 * width, viewport[1])
+        xmax = min(centerx + 0.5 * width, viewport[2])
+        ymin = viewport[3]
+        ymax = viewport[4]
+    else
+        height = viewport[2] - viewport[1]
+        centery = 0.5 * (viewport[3] + viewport[4])
+        xmin = viewport[1]
+        xmax = viewport[2]
+        ymin = max(centery - 0.5 * height, viewport[3])
+        ymax = min(centery + 0.5 * height, viewport[4])
+    end
+
     GR.selntran(0)
     values = round(UInt16, (V-minimum(V)) / (maximum(V)-minimum(V)) * (2^16-1))
     nx, ny, nz = size(V)
@@ -822,9 +854,15 @@ function isosurface(V; kv...)
     mesh = gr3.createisosurfacemesh(values, (2/(nx-1), 2/(ny-1), 2/(nz-1)),
                                     (-1., -1., -1.),
                                     round(Int64, isovalue * (2^16-1)))
-    gr3.drawmesh(mesh, 1, (0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 0.5, 0.8), (1, 1, 1))
-    gr3.cameralookat(2*sin(rotation), 1, 2*cos(rotation), 0, 0, 0, 0, 1, 0)
-    gr3.drawimage(0, 1, 0, 1, 500, 500, gr3.DRAWABLE_GKS)
+    if haskey(plt.kvs, :color)
+        color = plt.kvs[:color]
+    else
+        color = (0.0, 0.5, 0.8)
+    end
+    gr3.setbackgroundcolor(1, 1, 1, 0)
+    gr3.drawmesh(mesh, 1, (0, 0, 0), (0, 0, 1), (0, 1, 0), color, (1, 1, 1))
+    gr3.cameralookat(sin(rotation), 1, cos(rotation), 0, 0, 0, 0, 1, 0)
+    gr3.drawimage(xmin, xmax, ymin, ymax, 500, 500, gr3.DRAWABLE_GKS)
     gr3.deletemesh(mesh)
     GR.selntran(1)
 
@@ -834,6 +872,20 @@ function isosurface(V; kv...)
             return GR.show()
         end
     end
+end
+
+function cart2sph(x, y, z)
+    azimuth = atan2(y, x)
+    elevation = atan2(z, sqrt(x.^2 + y.^2))
+    r = sqrt(x.^2 + y.^2 + z.^2)
+    azimuth, elevation, r
+end
+
+function sph2cart(azimuth, elevation, r)
+    x = r .* cos(elevation) .* cos(azimuth)
+    y = r .* cos(elevation) .* sin(azimuth)
+    z = r .* sin(elevation)
+    x, y, z
 end
 
 end # module

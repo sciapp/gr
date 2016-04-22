@@ -330,6 +330,11 @@ public func polyline3d(px: [Double], py: [Double], pz: [Double]) {
   gr_polyline3d(CInt(n), UnsafeMutablePointer<Double>(px), UnsafeMutablePointer<Double>(py), UnsafeMutablePointer<Double>(pz))
 }
 
+public func polymarker3d(px: [Double], py: [Double], pz: [Double]) {
+  var n = _assertEqualLength(px, py, pz)
+  gr_polymarker3d(CInt(n), UnsafeMutablePointer<Double>(px), UnsafeMutablePointer<Double>(py), UnsafeMutablePointer<Double>(pz))
+}
+
 public func axes3d(x_tick: Double, y_tick: Double, z_tick: Double, x_org: Double, y_org: Double, z_org: Double, major_x: Int, major_y: Int, major_z: Int, tick_size: Double) {
   gr_axes3d(CDouble(x_tick), CDouble(y_tick), CDouble(z_tick), CDouble(x_org), CDouble(y_org), CDouble(z_org), CInt(major_x), CInt(major_y), CInt(major_z), CDouble(tick_size))
 }
