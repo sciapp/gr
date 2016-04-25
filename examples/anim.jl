@@ -26,7 +26,7 @@ import GR
 tic()
 for i = 1:200
     GR.plot(x, sin(x + i / 10.0))
-    sleep(0.0001)
+    sleep(0.0001) # unnecessary
 end
 
 fps_gr = round(200 / toq())
