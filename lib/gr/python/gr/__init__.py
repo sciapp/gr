@@ -1075,6 +1075,15 @@ def setviewport(xmin, xmax, ymin, ymax):
     __gr.gr_setviewport(c_double(xmin), c_double(xmax), c_double(ymin), c_double(ymax))
 
 
+def inqviewport():
+    xmin = c_double()
+    xmax = c_double()
+    ymin = c_double()
+    ymax = c_double()
+    __gr.gr_inqviewport(byref(xmin), byref(xmax), byref(ymin), byref(ymax))
+    return [xmin.value, xmax.value, ymin.value, ymax.value]
+
+
 def selntran(transform):
     """
     `selntran` selects a predefined transformation from world coordinates to normalized
@@ -2387,9 +2396,11 @@ __gr.gr_setfillstyle.argtypes = [c_int]
 __gr.gr_setfillcolorind.argtypes = [c_int]
 __gr.gr_setcolorrep.argtypes = [c_int, c_double, c_double, c_double]
 __gr.gr_setwindow.argtypes = [c_double, c_double, c_double, c_double]
-__gr.gr_inqwindow.argtypes = [POINTER(c_double), POINTER(c_double), POINTER(c_double),
-                              POINTER(c_double)]
+__gr.gr_inqwindow.argtypes = [POINTER(c_double), POINTER(c_double),
+                              POINTER(c_double), POINTER(c_double)]
 __gr.gr_setviewport.argtypes = [c_double, c_double, c_double, c_double]
+__gr.gr_inqviewport.argtypes = [POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_double)]
 __gr.gr_selntran.argtypes = [c_int]
 __gr.gr_setclip.argtypes = [c_int]
 __gr.gr_setwswindow.argtypes = [c_double, c_double, c_double, c_double]

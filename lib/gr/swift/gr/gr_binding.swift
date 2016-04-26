@@ -225,6 +225,15 @@ public func setviewport(xmin: Double, xmax: Double, ymin: Double, ymax: Double) 
   gr_setviewport(CDouble(xmin), CDouble(xmax), CDouble(ymin), CDouble(ymax))
 }
 
+public func inqviewport() -> Array<Double> {
+  var xmin = CDouble()
+  var xmax = CDouble()
+  var ymin = CDouble()
+  var ymax = CDouble()
+  gr_inqviewport(&xmin, &xmax, &ymin, &ymax)
+  return [Double(xmin), Double(xmax), Double(ymin), Double(ymax)]
+}
+
 public func selntran(transform: Int) {
   gr_selntran(CInt(transform))
 }

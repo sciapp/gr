@@ -234,6 +234,11 @@ void FORTRAN(gr_setviewport)(double *xmin, double *xmax, double *ymin, double *y
   gr_setviewport(*xmin, *xmax, *ymin, *ymax);
 }
 
+void FORTRAN(gr_inqviewport)(double *xmin, double *xmax, double *ymin, double *ymax)
+{
+  gr_inqviewport(xmin, xmax, ymin, ymax);
+}
+
 void FORTRAN(gr_selntran)(int *transform)
 {
   gr_selntran(*transform);

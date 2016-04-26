@@ -140,6 +140,9 @@ static
 char *display = NULL;
 
 static
+double vxmin, vxmax, vymin, vymax;
+
+static
 double cxl, cxr, cyf, cyb, czb, czt;
 
 static
@@ -2310,10 +2313,23 @@ void gr_setviewport(double xmin, double xmax, double ymin, double ymax)
   gks_set_viewport(tnr, xmin, xmax, ymin, ymax);
   setscale(lx.scale_options);
 
+  vxmin = xmin;
+  vxmax = xmax;
+  vymin = ymin;
+  vymax = ymax;
+
   if (flag_graphics)
     gr_writestream(
       "<setviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
       xmin, xmax, ymin, ymax);
+}
+
+void gr_inqviewport(double *xmin, double *xmax, double *ymin, double *ymax)
+{
+  *xmin = vxmin;
+  *xmax = vxmax;
+  *ymin = vymin;
+  *ymax = vymax;
 }
 
 void gr_selntran(int transform)

@@ -68,6 +68,7 @@ DLLEXPORT void gr_setcolorrep(int, double, double, double);
 DLLEXPORT void gr_setwindow(double, double, double, double);
 DLLEXPORT void gr_inqwindow(double *, double *, double *, double *);
 DLLEXPORT void gr_setviewport(double, double, double, double);
+DLLEXPORT void gr_inqviewport(double *, double *, double *, double *);
 DLLEXPORT void gr_selntran(int);
 DLLEXPORT void gr_setclip(int);
 DLLEXPORT void gr_setwswindow(double, double, double, double);

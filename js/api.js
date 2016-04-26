@@ -55,6 +55,7 @@ function GR() {
     this.setwindow = gr_setwindow;
     this.inqwindow = gr_inqwindow;
     this.setviewport = gr_setviewport;
+    this.inqviewport = gr_inqviewport;
     this.selntran = gr_selntran;
     this.setclip = gr_setclip;
     this.setwswindow = gr_setwswindow;
@@ -410,6 +411,25 @@ gr_inqwindow = function() {
 }
 
 gr_setviewport = Module.cwrap('gr_setviewport', '', ['number', 'number', 'number', 'number', ]);
+
+gr_inqviewport_c = Module.cwrap('gr_inqviewport', '', ['number', 'number', 'number', 'number', ]);
+gr_inqviewport = function() {
+    var _xmin = Module._malloc(8);
+    var _xmax = Module._malloc(8);
+    var _ymin = Module._malloc(8);
+    var _ymax = Module._malloc(8);
+    gr_inqviewport_c(_xmin, _xmax, _ymin, _ymax);
+    var result = new Array(4);
+    result[0] = Module.HEAPF64.subarray(_xmin / 8, _xmin / 8 + 1)[0];
+    result[1] = Module.HEAPF64.subarray(_xmax / 8, _xmax / 8 + 1)[0];
+    result[2] = Module.HEAPF64.subarray(_ymin / 8, _ymin / 8 + 1)[0];
+    result[3] = Module.HEAPF64.subarray(_ymax / 8, _ymax / 8 + 1)[0];
+    freearray(_xmin);
+    freearray(_xmax);
+    freearray(_ymin);
+    freearray(_ymax);
+    return result;
+}
 
 gr_selntran = Module.cwrap('gr_selntran', '', ['number', ]);
 
