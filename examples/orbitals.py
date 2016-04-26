@@ -82,8 +82,8 @@ def main():
     values = f(radii, theta, phi).reshape(nz, ny, nx)
     # Show rotating orbital
     if values.max() > 0:
-        for alpha in np.linspace(0, 2*np.pi, 300):
-            isosurface(values/values.max(), isovalue=0.25, color=(0, 0.5, 0.8), camera_position=(2*np.sin(alpha), 1, 2*np.cos(alpha)))
+        for rotation in range(360):
+            isosurface(values/values.max(), isovalue=0.25, color=(0, 0.5, 0.8), rotation=rotation)
 
 if __name__ == '__main__':
     main()

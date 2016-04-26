@@ -15,19 +15,6 @@ import gr
 import gr3
 
 
-def isosurface(grid, isovalue=None, color=None, camera_position=(0, 0, -3)):
-    gr3.drawisosurfacemesh(grid, isovalue=isovalue, color=color)
-    gr.setviewport(0, 1, 0, 1)
-    gr.clearws()
-    x, y, z = camera_position
-    gr3.setbackgroundcolor(0, 0, 0, 1)
-    gr3.cameralookat(x, y, z, 0, 0, 0, 0, 1, 0)
-    gr3.drawimage(0, 1, 0, 1, 500, 500, gr3.GR3_Drawable.GR3_DRAWABLE_GKS)
-    gr.updatews()
-    if gr.isinline():
-        return gr.show()
-
-
 def plot(*args, **kwargs):
     global _plt
     _plt.kwargs.update(kwargs)
@@ -109,6 +96,20 @@ def scatter3(*args, **kwargs):
     _plot_data(kind='scatter3')
 
 
+def isosurface(v, **kwargs):
+    global _plt
+    _plt.kwargs.update(kwargs)
+    _plt.args = [(None, None, v, None, '')]
+    _plot_data(kind='isosurface')
+
+
+def imshow(image, **kwargs):
+    global _plt
+    _plt.kwargs.update(kwargs)
+    _plt.args = [(None, None, image, None, "")]
+    _plot_data(kind='imshow')
+
+
 def title(s):
     _plot_data(title=s)
 
@@ -133,59 +134,6 @@ def savefig(filename):
     gr.beginprint(filename)
     _plot_data()
     gr.endprint()
-
-
-def imshow(I, **kwargs):
-    global _plt
-    _plt.kwargs.update(kwargs)
-
-    if isinstance(I, basestring):
-        width, height, data = gr.readimage(I)
-    else:
-        I = np.array(I)
-        width, height = I.shape
-        data = np.array(1000+(1.0*I - I.min()) / I.ptp() * 255, np.int32)
-
-    if _plt.kwargs['clear']:
-        gr.clearws()
-
-    if not _plt.kwargs['ax']:
-        _set_viewport('line', _plt.kwargs['subplot'])
-
-    viewport = _plt.kwargs['viewport']
-    vp = _plt.kwargs['vp']
-
-    if width * (viewport[3] - viewport[2]) < height * (viewport[1] - viewport[0]):
-        aspect_ratio = width / height
-        x_min = max(0.5 * (viewport[1] - aspect_ratio), viewport[0])
-        x_max = min(x_min + aspect_ratio, viewport[1])
-        y_min = viewport[2]
-        y_max = viewport[3]
-    else:
-        aspect_ratio = height / width
-        x_min = viewport[0]
-        x_max = viewport[1]
-        y_min = max(0.5 * (viewport[3] - aspect_ratio), viewport[2])
-        y_max = min(y_min + aspect_ratio, viewport[3])
-
-    gr.setcolormap(_plt.kwargs.get('cmap', 1))
-    gr.selntran(0)
-    if isinstance(I, basestring):
-        gr.drawimage(x_min, x_max, y_min, y_max, width, height, data)
-    else:
-        gr.cellarray(x_min, x_max, y_min, y_max, width, height, data)
-
-    if 'title' in _plt.kwargs:
-        gr.savestate()
-        gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
-        gr.textext(0.5 * (viewport[0] + viewport[1]), vp[3], _plt.kwargs['title'])
-        gr.restorestate()
-    gr.selntran(1)
-
-    if _plt.kwargs['update']:
-        gr.updatews()
-        if gr.isinline():
-            return gr.show()
 
 
 def legend(*args, **kwargs):
@@ -504,7 +452,9 @@ def _plot_data(**kwargs):
     kind = _plt.kwargs.get('kind', 'line')
     if _plt.kwargs['clear']:
         gr.clearws()
-    if not _plt.kwargs['ax']:
+    if kind in ('imshow', 'isosurface'):
+        _set_viewport(kind, _plt.kwargs['subplot'])
+    elif not _plt.kwargs['ax']:
         _set_viewport(kind, _plt.kwargs['subplot'])
         _set_window(kind)
         _draw_axes(kind)
@@ -598,6 +548,10 @@ def _plot_data(**kwargs):
         elif kind == 'scatter3':
             gr.polymarker3d(x, y, z)
             _draw_axes(kind, 2)
+        elif kind == 'imshow':
+            _plot_img(z)
+        elif kind == 'isosurface':
+            _plot_iso(z)
         gr.restorestate()
     if kind in ('line', 'scatter', 'stem') and 'labels' in _plt.kwargs:
         _draw_legend()
@@ -606,6 +560,101 @@ def _plot_data(**kwargs):
         gr.updatews()
         if gr.isinline():
             return gr.show()
+
+
+def _plot_img(I):
+    global _plt
+
+    if isinstance(I, basestring):
+        width, height, data = gr.readimage(I)
+        if width == 0 or height == 0:
+            return
+    else:
+        I = np.array(I)
+        width, height = I.shape
+        data = np.array(1000+(1.0*I - I.min()) / I.ptp() * 255, np.int32)
+
+    if _plt.kwargs['clear']:
+        gr.clearws()
+
+    if not _plt.kwargs['ax']:
+        _set_viewport('line', _plt.kwargs['subplot'])
+
+    viewport = _plt.kwargs['viewport']
+    vp = _plt.kwargs['vp']
+
+    if width * (viewport[3] - viewport[2]) < height * (viewport[1] - viewport[0]):
+        w = width / height * (viewport[3] - viewport[2])
+        x_min = max(0.5 * (viewport[0] + viewport[1] - w), viewport[0])
+        x_max = min(0.5 * (viewport[0] + viewport[1] + w), viewport[1])
+        y_min = viewport[2]
+        y_max = viewport[3]
+    else:
+        h = height / width * (viewport[1] - viewport[0])
+        x_min = viewport[0]
+        x_max = viewport[1]
+        y_min = max(0.5 * (viewport[3] + viewport[2] - h), viewport[2])
+        y_max = min(0.5 * (viewport[3] + viewport[2] + h), viewport[3])
+
+    gr.setcolormap(_plt.kwargs.get('cmap', 1))
+    gr.selntran(0)
+    if isinstance(I, basestring):
+        gr.drawimage(x_min, x_max, y_min, y_max, width, height, data)
+    else:
+        gr.cellarray(x_min, x_max, y_min, y_max, width, height, data)
+
+    if 'title' in _plt.kwargs:
+        gr.savestate()
+        gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_TOP)
+        gr.textext(0.5 * (viewport[0] + viewport[1]), vp[3], _plt.kwargs['title'])
+        gr.restorestate()
+    gr.selntran(1)
+
+
+def _plot_iso(v):
+    global _plt
+    viewport = _plt.kwargs['viewport']
+    if viewport[3] - viewport[2] < viewport[1] - viewport[0]:
+        width = viewport[3] - viewport[2]
+        center_x = 0.5 * (viewport[0] + viewport[1])
+        x_min = max(center_x - 0.5 * width, viewport[0])
+        x_max = min(center_x + 0.5 * width, viewport[1])
+        y_min = viewport[2]
+        y_max = viewport[3]
+    else:
+        height = viewport[1] - viewport[0]
+        center_y = 0.5 * (viewport[2] + viewport[3])
+        x_min = viewport[0]
+        x_max = viewport[1]
+        y_min = max(center_y - 0.5 * height, viewport[2])
+        y_max = min(center_y + 0.5 * height, viewport[3])
+
+    gr.selntran(0)
+    usable_vs = v[np.abs(v) != np.inf]
+    if np.prod(usable_vs.shape) == 0:
+        return
+    v_max = usable_vs.max()
+    v_min = usable_vs.min()
+    if v_min == v_max:
+        return
+    uint16_max = np.iinfo(np.uint16).max
+    v = (np.clip(v, v_min, v_max) - v_min) / (v_max - v_min) * uint16_max
+    values = v.astype(np.uint16)
+    nx, ny, nz = v.shape
+    isovalue = _plt.kwargs.get('isovalue', 0.5)
+    rotation = np.radians(_plt.kwargs.get('rotation', 40))
+    tilt = np.radians(_plt.kwargs.get('tilt', 70))
+    mesh = gr3.createisosurfacemesh(values, (2/(nx-1), 2/(ny-1), 2/(nz-1)),
+                                    (-1., -1., -1.),
+                                    int(isovalue * uint16_max))
+    color = _plt.kwargs.get('color', (0.0, 0.5, 0.8))
+    gr3.setbackgroundcolor(1, 1, 1, 0)
+    gr3.drawmesh(mesh, 1, (0, 0, 0), (0, 0, 1), (0, 1, 0), color, (1, 1, 1))
+    r = 2.5
+    gr3.cameralookat(r*np.sin(tilt)*np.sin(rotation), r*np.cos(tilt), r*np.sin(tilt)*np.cos(rotation), 0, 0, 0, 0, 1, 0)
+    gr3.drawimage(x_min, x_max, y_min, y_max, 500, 500, gr3.GR3_Drawable.GR3_DRAWABLE_GKS)
+    gr3.deletemesh(mesh)
+    gr.selntran(1)
 
 
 def _convert_to_array(obj, may_be_2d=False, xvalues=None, always_flatten=False):
