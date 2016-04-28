@@ -1045,6 +1045,8 @@ void ps_init(int *pages)
       packb("/dc {sxy np x y m fg -24 24 srl 48 -48 srl\
  -24 24 srl -24 -24 srl 48 48 srl");
       packb("sk gr} def");
+      packb("/hl {sxy np x y m fg -24 0 srm 48 0 srl sk gr} def");
+      packb("/vl {sxy np x y m fg 0 -24 srm 0 48 srl sk gr} def");
       packb("/e5 {np x y m 0 25 srm 23.775 -17.275 srl -9.075 -27.95 srl\
  -29.4 0 srl -9.075 27.95 srl} def");
       packb("/e6 {np x y m 0 -25 srm 21.65 12.5 srl 0 25 srl -21.65 12.5 srl\
@@ -1351,7 +1353,7 @@ void marker_routine(double x, double y, int marker)
   char buffer[50];
   static const char *macro[] =
   {
-    "st8", "st7", "st6", "st5", "st4", "ed8", "ed7", "ed7", "ed5",
+    " hl", " vl", "st8", "st7", "st6", "st5", "st4", "ed8", "ed7", "ed7", "ed5",
     "nom", "npl", "ftr", "ftl", "tud", "fst", " st", "fdm", "ndm", "fhg",
     "nhg", "fbt", "nbt", "fsq", "nsq", "ftd", "ntd", "ftu", "ntu", "fci",
     " dt", " dt", " pl", "fas", "nci", " dc"
@@ -1361,7 +1363,7 @@ void marker_routine(double x, double y, int marker)
 
   p->ix = NINT(dx);
   p->iy = NINT(dy);
-  sprintf(buffer, "%d %d %s", p->ix, p->iy, macro[marker + 29]);
+  sprintf(buffer, "%d %d %s", p->ix, p->iy, macro[marker + 31]);
   packb(buffer);
 }
 
