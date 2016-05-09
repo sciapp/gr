@@ -3163,7 +3163,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
           while (yi <= y_max)
             {
               if (major_y > 0)
-                major = i % major_y == 0;
+                major = i % major_y == 0 && major_y > 1;
               else
                 major = 0;
 
@@ -3219,7 +3219,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
           while (xi <= x_max)
             {
               if (major_x > 0)
-                major = i % major_x == 0;
+                major = i % major_x == 0 && major_x > 1;
               else
                 major = 0;
 
@@ -3356,7 +3356,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
           while (zi <= z_max)
             {
               if (major_z > 0)
-                major = i % major_z == 0;
+                major = i % major_z == 0 && major_z > 1;
               else
                 major = 0;
 
@@ -3422,7 +3422,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
           while (yi <= y_max)
             {
               if (major_y > 0)
-                major = i % major_y == 0;
+                major = i % major_y == 0 && major_y > 1;
               else
                 major = 0;
 
@@ -3488,7 +3488,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
           while (xi <= x_max)
             {
               if (major_x > 0)
-                major = i % major_x == 0;
+                major = i % major_x == 0 && major_x > 1;
               else
                 major = 0;
 
