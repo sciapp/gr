@@ -39,6 +39,20 @@ def scatter(*args, **kwargs):
     _plot_data(kind='scatter')
 
 
+def polar(*args, **kwargs):
+    global _plt
+    _plt.kwargs.update(kwargs)
+    _plt.args = _plot_args(args)
+    _plot_data(kind='polar')
+
+
+def trisurf(*args, **kwargs):
+    global _plt
+    _plt.kwargs.update(kwargs)
+    _plt.args = _plot_args(args, fmt='xyzc')
+    _plot_data(kind='trisurf')
+
+
 def stem(*args, **kwargs):
     global _plt
     _plt.kwargs.update(kwargs)
@@ -218,9 +232,9 @@ def _set_viewport(kind, subplot):
 
     if width > height:
         viewport[2] += (1 - (subplot[3] - subplot[2])**2) * 0.02
-    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3', 'trisurf'):
         viewport[1] -= 0.0525
-    if kind in ('contour', 'contourf', 'surface'):
+    if kind in ('contour', 'contourf', 'surface', 'trisurf'):
         viewport[1] -= 0.1
     gr.setviewport(*viewport)
     _plt.kwargs['viewport'] = viewport
@@ -240,6 +254,14 @@ def _set_viewport(kind, subplot):
                         subplot[2], subplot[3])
         gr.selntran(1)
         gr.restorestate()
+
+    if kind == 'polar':
+        x_min, x_max, y_min, y_max = viewport
+        x_center = 0.5 * (x_min + x_max)
+        y_center = 0.5 * (y_min + y_max)
+        r = 0.5 * min(x_max - x_min, y_max - y_min)
+        gr.setviewport(x_center - r, x_center + r, y_center - r, y_center + r)
+
 
 
 def _minmax():
@@ -264,15 +286,16 @@ def _minmax():
 def _set_window(kind):
     global _plt
     scale = 0
-    scale |= gr.OPTION_X_LOG if _plt.kwargs.get('xlog', False) else 0
-    scale |= gr.OPTION_Y_LOG if _plt.kwargs.get('ylog', False) else 0
-    scale |= gr.OPTION_Z_LOG if _plt.kwargs.get('zlog', False) else 0
-    scale |= gr.OPTION_FLIP_X if _plt.kwargs.get('xflip', False) else 0
-    scale |= gr.OPTION_FLIP_Y if _plt.kwargs.get('yflip', False) else 0
-    scale |= gr.OPTION_FLIP_Z if _plt.kwargs.get('zflip', False) else 0
+    if kind != 'polar':
+        scale |= gr.OPTION_X_LOG if _plt.kwargs.get('xlog', False) else 0
+        scale |= gr.OPTION_Y_LOG if _plt.kwargs.get('ylog', False) else 0
+        scale |= gr.OPTION_Z_LOG if _plt.kwargs.get('zlog', False) else 0
+        scale |= gr.OPTION_FLIP_X if _plt.kwargs.get('xflip', False) else 0
+        scale |= gr.OPTION_FLIP_Y if _plt.kwargs.get('yflip', False) else 0
+        scale |= gr.OPTION_FLIP_Z if _plt.kwargs.get('zflip', False) else 0
 
     _minmax()
-    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3', 'polar', 'trisurf'):
         major_count = 2
     else:
         major_count = 5
@@ -306,9 +329,12 @@ def _set_window(kind):
     _plt.kwargs['yaxis'] = y_tick, yorg, y_major_count
 
     _plt.kwargs['window'] = (x_min, x_max, y_min, y_max)
-    gr.setwindow(x_min, x_max, y_min, y_max)
+    if kind == 'polar':
+        gr.setwindow(-1, 1, -1, 1)
+    else:
+        gr.setwindow(x_min, x_max, y_min, y_max)
 
-    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3', 'trisurf'):
         z_min, z_max = _plt.kwargs['zrange']
         if not scale & gr.OPTION_Z_LOG:
             z_min, z_max = gr.adjustlimits(z_min, z_max)
@@ -342,7 +368,7 @@ def _draw_axes(kind, pass_=1):
     charheight = max(0.018 * diag, 0.012)
     gr.setcharheight(charheight)
     ticksize = 0.0075 * diag
-    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3', 'trisurf'):
         z_tick, z_org, z_major_count = _plt.kwargs['zaxis']
         if pass_ == 1:
             gr.grid3d(x_tick, 0, z_tick, x_org[0], y_org[0], z_org[0], 2, 0, 2)
@@ -361,7 +387,7 @@ def _draw_axes(kind, pass_=1):
         gr.textext(0.5*(viewport[0] + viewport[1]), vp[3], _plt.kwargs['title'])
         gr.restorestate()
 
-    if kind in ('wireframe', 'surface', 'plot3', 'scatter3'):
+    if kind in ('wireframe', 'surface', 'plot3', 'scatter3', 'trisurf'):
         x_label = _plt.kwargs.get('xlabel', '')
         y_label = _plt.kwargs.get('ylabel', '')
         z_label = _plt.kwargs.get('zlabel', '')
@@ -380,6 +406,43 @@ def _draw_axes(kind, pass_=1):
             gr.restorestate()
 
 
+def _draw_polar_axes():
+    global _plt
+    viewport = _plt.kwargs['viewport']
+    diag = ((viewport[1]-viewport[0])**2 + (viewport[3]-viewport[2])**2)**0.5
+    charheight = max(0.018 * diag, 0.012)
+
+
+    window = _plt.kwargs['window']
+    r_min, r_max = window[2], window[3]
+
+    gr.savestate()
+    gr.setcharheight(charheight)
+    gr.setlinetype(gr.LINETYPE_SOLID)
+
+    tick = 0.5 * gr.tick(r_min, r_max)
+    n = int(round((r_max - r_min) / tick + 0.5))
+    for i in range(n+1):
+        r = i / n
+        if i % 2 == 0:
+            gr.setlinecolorind(88)
+            if i > 0:
+                gr.drawarc(-r, r, -r, r, 0, 359)
+            gr.settextalign(gr.TEXT_HALIGN_LEFT, gr.TEXT_VALIGN_HALF)
+            x, y = gr.wctondc(0.05, r)
+            gr.text(x, y, "%g" % (r_min + i * tick))
+        else:
+            gr.setlinecolorind(90)
+            gr.drawarc(-r, r, -r, r, 0, 359)
+    for alpha in range(0, 360, 45):
+        sinf = np.sin(np.radians(alpha+90))
+        cosf = np.cos(np.radians(alpha+90))
+        gr.polyline([sinf, 0], [cosf, 0])
+        gr.settextalign(gr.TEXT_HALIGN_CENTER, gr.TEXT_VALIGN_HALF)
+        x, y = gr.wctondc(1.1 * sinf, 1.1 * cosf)
+        gr.textext(x, y, "%d^o" % alpha)
+    gr.restorestate()
+
 def _draw_legend():
     global _plt
     viewport = _plt.kwargs['viewport']
@@ -397,7 +460,7 @@ def _draw_legend():
     gr.setfillintstyle(gr.INTSTYLE_SOLID)
     gr.setfillcolorind(0)
     gr.fillrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_labels)
-    gr.setlinetype(1)
+    gr.setlinetype(gr.LINETYPE_SOLID)
     gr.setlinecolorind(1)
     gr.setlinewidth(1)
     gr.drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_labels)
@@ -457,7 +520,10 @@ def _plot_data(**kwargs):
     elif not _plt.kwargs['ax']:
         _set_viewport(kind, _plt.kwargs['subplot'])
         _set_window(kind)
-        _draw_axes(kind)
+        if kind == 'polar':
+            _draw_polar_axes()
+        else:
+            _draw_axes(kind)
 
     gr.setcolormap(_plt.kwargs.get('colormap', gr.COLORMAP_COOLWARM))
     gr.uselinespec(" ")
@@ -552,6 +618,13 @@ def _plot_data(**kwargs):
             _plot_img(z)
         elif kind == 'isosurface':
             _plot_iso(z)
+        elif kind == 'polar':
+            gr.uselinespec(spec)
+            _plot_polar(x, y)
+        elif kind == 'trisurf':
+            gr.trisurface(x, y, z)
+            _draw_axes(kind, 2)
+            _colorbar(0.05)
         gr.restorestate()
     if kind in ('line', 'scatter', 'stem') and 'labels' in _plt.kwargs:
         _draw_legend()
@@ -655,6 +728,16 @@ def _plot_iso(v):
     gr3.drawimage(x_min, x_max, y_min, y_max, 500, 500, gr3.GR3_Drawable.GR3_DRAWABLE_GKS)
     gr3.deletemesh(mesh)
     gr.selntran(1)
+
+
+def _plot_polar(theta, rho):
+    global _plt
+    window = _plt.kwargs['window']
+    r_min, r_max = window[2:]
+    rho = (rho - r_min) / (r_max - r_min)
+    x = rho * np.cos(theta)
+    y = rho * np.sin(theta)
+    gr.polyline(x, y)
 
 
 def _convert_to_array(obj, may_be_2d=False, xvalues=None, always_flatten=False):
@@ -763,7 +846,8 @@ def _plot_args(args, fmt='xys'):
                             xy = np.stack((xy_x, xy_y), axis=1)
                             if fmt == 'xyzc':
                                 z = _convert_to_array(args[1], xvalues=xy, always_flatten=True)
-                                z.shape = (len(x), len(y))
+                                if z.shape != x.shape or z.shape != y.shape:
+                                    z.shape = (len(x), len(y))
                             else:
                                 z = _convert_to_array(args[1], xvalues=x)
                         if len(args) >= 3:
@@ -795,9 +879,9 @@ def _plot_args(args, fmt='xys'):
                     z = z[:len(x), :]
                 elif z.shape[0] < len(x):
                     x = x[:z.shape[0]]
-                if z.shape[1] > len(y):
+                if len(z.shape) > 1 and z.shape[1] > len(y):
                     z = z[:, len(y)]
-                elif z.shape[1] < len(y):
+                elif len(z.shape) > 1 and z.shape[1] < len(y):
                     y = y[:z.shape[1]]
                 if c is not None:
                     if c.shape[0] > len(x):
