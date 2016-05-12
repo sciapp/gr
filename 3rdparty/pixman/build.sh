@@ -15,7 +15,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget"
   fi
-  ${cmd} http://cairographics.org/releases/${src}.tar.gz
+  ${cmd} https://cairographics.org/releases/${src}.tar.gz
   tar -xf ${src}.tar.gz
 fi
 
