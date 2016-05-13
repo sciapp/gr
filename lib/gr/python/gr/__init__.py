@@ -1618,19 +1618,21 @@ def surface(px, py, pz, option):
     Data is ordered as shown in the following table:
 
     +------------------+--+--------------------------------------------------------------+
-    |LINES             | 0|Use X Y polylines to denote surface                           |
+    |LINES             | 0|Use X Y polylines to denote the surface                       |
     +------------------+--+--------------------------------------------------------------+
-    |MESH              | 1|Use wire grid to denote surface                               |
+    |MESH              | 1|Use a wire grid to denote the surface                         |
     +------------------+--+--------------------------------------------------------------+
-    |FILLED_MESH       | 2|Applies opaque grid to surface                                |
+    |FILLED_MESH       | 2|Applies an opaque grid to the surface                         |
     +------------------+--+--------------------------------------------------------------+
-    |Z_SHADED_MESH     | 3|Applies Z-value shading to surface                            |
+    |Z_SHADED_MESH     | 3|Applies Z-value shading to the surface                        |
     +------------------+--+--------------------------------------------------------------+
-    |COLORED_MESH      | 4|Applies colored grid to surface                               |
+    |COLORED_MESH      | 4|Applies a colored grid to the surface                         |
     +------------------+--+--------------------------------------------------------------+
     |CELL_ARRAY        | 5|Applies a grid of individually-colored cells to the surface   |
     +------------------+--+--------------------------------------------------------------+
-    |SHADED_MESH       | 6|Applies light source shading to 3-D surface                   |
+    |SHADED_MESH       | 6|Applies light source shading to the 3-D surface               |
+    +------------------+--+--------------------------------------------------------------+
+    |HEATMAP           | 7|Applies a heatmap to the surface                              |
     +------------------+--+--------------------------------------------------------------+
 
     """
@@ -2602,6 +2604,7 @@ OPTION_Z_SHADED_MESH = 3
 OPTION_COLORED_MESH = 4
 OPTION_CELL_ARRAY = 5
 OPTION_SHADED_MESH = 6
+OPTION_HEATMAP = 7
 
 MODEL_RGB = 0
 MODEL_HSV = 1

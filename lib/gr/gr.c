@@ -236,7 +236,7 @@ unsigned int rgb[MAX_COLOR];
 typedef enum
 {
   OPTION_LINES, OPTION_MESH, OPTION_FILLED_MESH, OPTION_Z_SHADED_MESH,
-  OPTION_COLORED_MESH, OPTION_CELL_ARRAY, OPTION_SHADED_MESH
+  OPTION_COLORED_MESH, OPTION_CELL_ARRAY, OPTION_SHADED_MESH, OPTION_HEATMAP
 }
 surface_option_t;
 
@@ -5108,7 +5108,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   int color;
 
   double *xn, *yn, *zn, *x, *y, *z;
-  double facex[4], facey[4], facez[4], intensity = 0;
+  double facex[4], facey[4], facez[4], intensity = 0, meanz;
   double a, b, c, d, e, f;
 
   double ymin, ymax, zmin, zmax;
@@ -5328,38 +5328,28 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
             gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
 
-            while (j >= 0)
+            while (j > 0)
               {
-                for (i = 0; i < nx; i++)
+                for (i = 1; i < nx; i++)
                   {
-                    if ((i == 0 || j == 0) && (wx.phi != 0 || wx.delta != 90))
-                      continue;
+                    xn[0] = x[i - 1];
+                    yn[0] = y[j];
+                    zn[0] = Z(i - 1, j);
 
-                    if (i == 0)
-                      xn[0] = xn[1] = xn[4] = x[i];
-                    else
-                      xn[0] = xn[1] = xn[4] = 0.5 * (x[i - 1] + x[i]);
-                    if (i == nx - 1)
-                      xn[2] = xn[3] = x[i];
-                    else
-                      xn[2] = xn[3] = 0.5 * (x[i] + x[i + 1]);
+                    xn[1] = x[i - 1];
+                    yn[1] = y[j - 1];
+                    zn[1] = Z(i - 1, j - 1);
 
-                    if (j == ny - 1)
-                      yn[0] = yn[3] = yn[4] = y[j];
-                    else
-                      yn[0] = yn[3] = yn[4] = 0.5 * (y[j] + y[j + 1]);
-                    if (j == 0)
-                      yn[1] = yn[2] = y[j];
-                    else
-                      yn[1] = yn[2] = 0.5 * (y[j - 1] + y[j]);
+                    xn[2] = x[i];
+                    yn[2] = y[j - 1];
+                    zn[2] = Z(i, j - 1);
 
-                    ii = max(min(i, nx - 1), 0);
-                    jj = max(min(j, ny - 1), 0);
+                    xn[3] = x[i];
+                    yn[3] = y[j];
+                    zn[3] = Z(i, j);
 
-                    zn[0] = Z(ii - 1, jj);
-                    zn[1] = Z(ii - 1, jj - 1);
-                    zn[2] = Z(ii, jj - 1);
-                    zn[3] = Z(ii, jj);
+                    xn[4] = xn[0];
+                    yn[4] = yn[0];
                     zn[4] = zn[0];
 
                     if (option == OPTION_SHADED_MESH)
@@ -5377,9 +5367,12 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     for (k = 0; k <= 4; k++)
                       apply_world_xform(xn + k, yn + k, zn + k);
 
+                    meanz = 0.25 * (Z(i - 1, j - 1) + Z(i, j - 1) +
+                                    Z(i, j) + Z(i - 1, j));
+
                     if (option == OPTION_Z_SHADED_MESH)
                       {
-                        color = iround(Z(i, j)) + first_color;
+                        color = iround(meanz) + first_color;
 
                         if (color < first_color)
                           color = first_color;
@@ -5391,7 +5384,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                     else if (option == OPTION_COLORED_MESH)
                       {
-                        color = iround((Z(i,j) - wx.zmin)/(wx.zmax - wx.zmin) *
+                        color = iround((meanz - wx.zmin) / (wx.zmax - wx.zmin) *
                           (last_color - first_color)) + first_color;
 
                         if (color < first_color)
@@ -5479,6 +5472,75 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
           free(colia);
 
           break;
+
+        case OPTION_HEATMAP:
+          {
+            j = ny - 1;
+
+            gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+
+            while (j >= 0)
+              {
+                for (i = 0; i < nx; i++)
+                  {
+                    if ((i == 0 || j == 0) && (wx.phi != 0 || wx.delta != 90))
+                      continue;
+
+                    if (i == 0)
+                      xn[0] = xn[1] = xn[4] = x[i];
+                    else
+                      xn[0] = xn[1] = xn[4] = 0.5 * (x[i - 1] + x[i]);
+                    if (i == nx - 1)
+                      xn[2] = xn[3] = x[i];
+                    else
+                      xn[2] = xn[3] = 0.5 * (x[i] + x[i + 1]);
+
+                    if (j == ny - 1)
+                      yn[0] = yn[3] = yn[4] = y[j];
+                    else
+                      yn[0] = yn[3] = yn[4] = 0.5 * (y[j] + y[j + 1]);
+                    if (j == 0)
+                      yn[1] = yn[2] = y[j];
+                    else
+                      yn[1] = yn[2] = 0.5 * (y[j - 1] + y[j]);
+
+                    ii = max(min(i, nx - 1), 0);
+                    jj = max(min(j, ny - 1), 0);
+
+                    zn[0] = Z(ii - 1, jj);
+                    zn[1] = Z(ii - 1, jj - 1);
+                    zn[2] = Z(ii, jj - 1);
+                    zn[3] = Z(ii, jj);
+                    zn[4] = zn[0];
+
+                    for (k = 0; k <= 4; k++)
+                      apply_world_xform(xn + k, yn + k, zn + k);
+
+                    color = iround((Z(i,j) - wx.zmin)/(wx.zmax - wx.zmin) *
+                      (last_color - first_color)) + first_color;
+
+                    if (color < first_color)
+                      color = first_color;
+                    else if (color > last_color)
+                      color = last_color;
+
+                    gks_set_fill_color_index(color);
+
+                    np = 4;
+                    gks_fillarea(np, xn, yn);
+
+                    if (option == OPTION_FILLED_MESH)
+                      {
+                        np = 5;
+                        gks_polyline(np, xn, yn);
+                      }
+                  }
+
+                j--;
+              }
+
+            break;
+          }
         }
 
       gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_SOLID :
