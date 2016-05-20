@@ -1,0 +1,37 @@
+OBJS = \
+        global.obj \
+        stat.obj \
+        geom2.obj \
+        poly2.obj \
+        merge.obj \
+        libqhull.obj \
+        geom.obj \
+        poly.obj \
+        qset.obj \
+        mem.obj \
+        random.obj \
+        usermem.obj \
+        userprintf.obj \
+        io.obj \
+        user.obj \
+        rboxlib.obj \
+        userprintf_rbox.obj
+
+CC = CL
+CFLAGS = /c /Zi /nologo /MD /D_POSIX
+AR = LIB /nologo
+SRCDIR = .\ 
+
+.SUFFIXES: .obj .c
+
+{$(SRCDIR)}.c.obj:
+	$(CC) $(CFLAGS) $<
+
+libqhull.lib: $(OBJS)
+	$(AR) /out:$@ $**
+
+clean:
+	DEL libqhull.lib
+	DEL *.pdb
+	DEL *.obj
+	DEL *.bak
