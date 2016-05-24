@@ -4,11 +4,12 @@
  JPEGLIBS = ../../3rdparty/jpeg/libjpeg.lib
   PNGLIBS = ../../3rdparty/libpng16/libpng.lib
     ZLIBS = ../../3rdparty/zlib/libz.lib
+   QHLIBS = ../../3rdparty/qhull/libqhull.lib
   GKSLIBS = -L../gks/ -lgks
      LIBS = -lwsock32 -lmsimg32 -lgdi32
 
 OBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
-	md5.o import.o
+	delaunay.o md5.o import.o
 
 .SUFFIXES: .o .c
 
@@ -19,6 +20,7 @@ all: prerequisites libgr.dll libgr.lib demo.exe
 
 prerequisites:
 	@$(MAKE) -C ../gks
+	@$(MAKE) -C ../../3rdparty/qhull
 	@$(MAKE) -C ../../3rdparty/zlib
 	@$(MAKE) -C ../../3rdparty/libpng16
 	@$(MAKE) -C ../../3rdparty/jpeg
@@ -28,13 +30,14 @@ libgr.lib: $(OBJS)
 
 libgr.dll: $(OBJS)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) \
-	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(LIBS)
+	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) $(GKSLIBS) $(LIBS)
 
 demo.exe: demo.o libgr.dll
 	$(CC) -o $@ demo.o -L. -lgr
 
 clean:
 	@$(MAKE) -C ../gks clean
+	@$(MAKE) -C ../../3rdparty/qhull clean
 	@$(MAKE) -C ../../3rdparty/zlib clean
 	@$(MAKE) -C ../../3rdparty/libpng16 clean
 	@$(MAKE) -C ../../3rdparty/jpeg clean

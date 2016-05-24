@@ -20,6 +20,7 @@ EXPORTS
 	gr_copysegws
 	gr_createseg
 	gr_deactivatews
+	gr_delaunay
 	gr_drawarrow
         gr_drawgraphics
 	gr_drawimage
@@ -95,6 +96,7 @@ EXPORTS
 	gr_textext
 	gr_tick
 	gr_titles3d
+	gr_trisurface
 	gr_updategks
 	gr_updatews
 	gr_uselinespec

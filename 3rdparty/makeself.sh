@@ -48,6 +48,7 @@ cp -p 3rdparty/freetype/libfreetype.a ${extras_lib}/
 cp -p 3rdparty/jpeg/libjpeg.a ${extras_lib}/
 cp -p 3rdparty/libpng16/libpng.a ${extras_lib}/
 cp -p 3rdparty/zlib/libz.a ${extras_lib}/
+cp -p 3rdparty/qhull/libqhull.a ${extras_lib}/
 
 make -C 3rdparty extras
 make EXTRA_CFLAGS=-I${extras}/include \

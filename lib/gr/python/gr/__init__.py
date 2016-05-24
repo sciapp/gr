@@ -2334,6 +2334,30 @@ def uselinespec(linespec):
     return __gr.gr_uselinespec(char(linespec))
 
 
+def trisurface(px, py, pz):
+    """
+    Draw a triangular surface plot for the given data points.
+
+    **Parameters:**
+
+    `x` :
+        A list containing the X coordinates
+    `y` :
+        A list containing the Y coordinates
+    `z` :
+        A list containing the Z coordinates
+
+    """
+    nx = len(px)
+    ny = len(py)
+    nz = len(pz)
+    _px = floatarray(nx, px)
+    _py = floatarray(ny, py)
+    _pz = floatarray(nz, pz)
+    n = min(nx, ny, nz)
+    __gr.gr_trisurface(c_int(n), _px.data, _py.data, _pz.data)
+
+
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
 _grLibDir = os.getenv("GRLIB", _grPkgDir)
 _gksFontPath = os.path.join(_grPkgDir, "fonts")
@@ -2502,6 +2526,9 @@ __gr.gr_savestate.argtypes = []
 __gr.gr_restorestate.argtypes = []
 __gr.gr_uselinespec.argtypes = [c_char_p]
 __gr.gr_uselinespec.restype = c_int
+__gr.gr_trisurface.argtypes = [
+    c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double)]
+
 
 
 precision = __gr.gr_precision()

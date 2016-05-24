@@ -6,6 +6,16 @@ module GR
 
 import Base.writemime
 
+if VERSION > v"0.5-"
+  if Sys.KERNEL == :NT
+    const os = :Windows
+  else
+    const os = Sys.KERNEL
+  end
+else
+  const os = OS_NAME
+end
+
 if VERSION < v"0.4-"
   typealias AbstractString String
   typealias UInt8 Uint8
@@ -111,6 +121,7 @@ export
   getgraphics,
   drawgraphics,
   mathtex,
+  trisurface,
   # Convenience functions
   jlgr,
   figure,
@@ -139,6 +150,7 @@ export
   cart2sph,
   sph2cart,
   polar,
+  trisurf,
   libGR3,
   gr3,
   isinline,
@@ -171,7 +183,7 @@ function __init__()
     if contains(grdir, "site-packages")
         const libGR = joinpath(grdir, "libGR.so")
         ENV["GKS_FONTPATH"] = grdir
-    elseif OS_NAME != :Windows
+    elseif os != :Windows
         const libGR = joinpath(grdir, "lib", "libGR.so")
     else
         const libGR = joinpath(grdir, "libGR.dll")
@@ -1226,6 +1238,7 @@ isosurface(V; kwargs...) = jlgr.isosurface(V; kwargs...)
 cart2sph(x, y, z) = jlgr.cart2sph(x, y, z)
 sph2cart(θ, ϕ, r) = jlgr.sph2cart(θ, ϕ, r)
 polar(args...; kwargs...) = jlgr.polar(args...; kwargs...)
+trisurf(args...; kwargs...) = jlgr.trisurf(args...; kwargs...)
 
 type SVG
    s::Array{UInt8}
@@ -1377,6 +1390,17 @@ function uselinespec(linespec)
                Int32,
                (Ptr{Cchar}, ),
                linespec)
+end
+
+function trisurface(x, y, z)
+  nx = length(x)
+  ny = length(y)
+  nz = length(z)
+  n = min(nx, ny, nz)
+  ccall( (:gr_trisurface, libGR),
+        Void,
+        (Int32, Ptr{Float64}, Ptr{Float64}, Ptr{Float64}),
+        n, convert(Vector{Float64}, x), convert(Vector{Float64}, y), convert(Vector{Float64}, z))
 end
 
 end # module

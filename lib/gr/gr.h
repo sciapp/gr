@@ -151,6 +151,8 @@ DLLEXPORT int gr_inqregenflags(void);
 DLLEXPORT void gr_savestate(void);
 DLLEXPORT void gr_restorestate(void);
 DLLEXPORT int gr_uselinespec(char *);
+DLLEXPORT void gr_delaunay(int, const double *, const double *, int *, int **);
+DLLEXPORT void gr_trisurface(int, double *, double *, double *);
 
 #ifdef _WIN32
 #ifdef __cplusplus

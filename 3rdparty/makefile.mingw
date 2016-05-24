@@ -6,6 +6,7 @@ default:
 	@$(MAKE) -C openjpeg
 	@$(MAKE) -C libpng16
 	@$(MAKE) -C zlib
+	@$(MAKE) -C qhull
 	
 clean:
 	@$(MAKE) -C jbig2dec clean
@@ -13,3 +14,4 @@ clean:
 	@$(MAKE) -C openjpeg clean
 	@$(MAKE) -C libpng16 clean
 	@$(MAKE) -C zlib clean
+	@$(MAKE) -C qhull clean

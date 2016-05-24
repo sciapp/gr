@@ -8,7 +8,7 @@
 UNAME := $(shell uname)
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
-               md5.o import.o grforbnd.o
+               delaunay.o md5.o import.o grforbnd.o
    MUPDFDEFS =
       GSDEFS =
      DEFINES = $(MUPDFDEFS) $(GSDEFS)
@@ -37,6 +37,7 @@ endif
      SSLLIBS = -lssl -lcrypto
      X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
        ZLIBS = ../../3rdparty/zlib/libz.a
+      QHLIBS = ../../3rdparty/qhull/libqhull.a
 
 .c.o:
 	$(CC) -c $(INCLUDES) $(CFLAGS) $<
@@ -53,7 +54,7 @@ Darwin:
 targets: prerequisites libGR.a libGR.so demo
 
 prerequisites:
-	@for d in bzip2 freetype jpeg libpng16 zlib; do make -C ../../3rdparty/$$d; done
+	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do make -C ../../3rdparty/$$d; done
 	@for d in gks gks/plugin; do make -C ../$$d; done
 
 libGR.a: $(GROBJS)
@@ -62,13 +63,13 @@ libGR.a: $(GROBJS)
 
 libGR.so: $(GROBJS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) \
-	$(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS) \
-	$(INSTALL_NAME)
+	$(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(QHLIBS) $(X11LIBS) $(LIBS) \
+	$(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGR.a $(GKSLIBS)
 	$(CC) -o demo $(INCLUDES) $(CFLAGS) demo.c libGR.a \
 	$(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) \
-	$(X11LIBS) $(LIBS) $(LDFLAGS)
+	$(QHLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS)
 
 install:
 	@make -C ../gks install
@@ -86,12 +87,12 @@ install:
 
 clean:
 	@for d in gks gks/plugin; do make -C ../$$d clean; done
-	@for d in bzip2 freetype jpeg libpng16 zlib; do make -C ../../3rdparty/$$d clean; done
+	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do make -C ../../3rdparty/$$d clean; done
 	rm -f so_locations demo *.so *.a *.o *.bak *~
 
 depend:
 	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \
-	image.c md5.c import.c grforbnd.c 2> /dev/null
+	image.c md5.c import.c delaunay.c grforbnd.c 2> /dev/null
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
@@ -100,8 +101,9 @@ contour.o: gr.h contour.h
 spline.o: spline.h
 gridit.o: gridit.h
 strlib.o: strlib.h
-io.o: io.h
+io.o: gr.h io.h
 image.o: gr.h
 md5.o: md5.h
 import.o: gr.h
+delaunay.o: gr.h
 grforbnd.o: gr.h

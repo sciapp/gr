@@ -1,4 +1,4 @@
- TARGETS = freetype jpeg libpng16 zlib
+ TARGETS = freetype jpeg libpng16 zlib qhull
   EXTRAS = jbig2dec cmake openjp2 mupdf ogg theora vpx ffmpeg glfw zeromq pixman cairo
      DIR = 
 

@@ -5573,6 +5573,74 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
     }
 }
 
+void gr_trisurface(int n, double *px, double *py, double *pz)
+{
+  int errind, coli, int_style;
+  int ntri, *triangles = NULL;
+  double x[3], y[3], z[3], meanz;
+  int i, j, color;
+
+  if (n < 3)
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return;
+    }
+
+  check_autoinit;
+
+  setscale(lx.scale_options);
+
+  /* save fill area interior style and color index */
+
+  gks_inq_fill_int_style(&errind, &int_style);
+  gks_inq_fill_color_index(&errind, &coli);
+
+  gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+
+  gr_delaunay(n, px, py, &ntri, &triangles);
+
+  for (i = 0; i < ntri; i++)
+    {
+      meanz = 0.0;
+      for (j = 0; j < 3; j++)
+        {
+          x[j] = x_lin(px[triangles[3*i+j]]);
+          y[j] = y_lin(py[triangles[3*i+j]]);
+          z[j] = z_lin(pz[triangles[3*i+j]]);
+          meanz += z[j];
+
+          apply_world_xform(x + j, y + j, z + j);
+        }
+      meanz /= 3.0;
+
+      color = iround((meanz - wx.zmin)/(wx.zmax - wx.zmin) *
+                     (last_color - first_color)) + first_color;
+
+      if (color < first_color)
+        color = first_color;
+      else if (color > last_color)
+        color = last_color;
+
+      gks_set_fill_color_index(color);
+      gks_fillarea(3, x, y);
+    }
+
+  /* restore fill area interior style and color index */
+  gks_set_fill_int_style(int_style);
+  gks_set_fill_color_index(coli);
+
+  free(triangles);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<trisurface len=\"%d\"", n);
+      print_float_array("x", n, px);
+      print_float_array("y", n, py);
+      print_float_array("z", n, pz);
+      gr_writestream("/>\n");
+    }
+}
+
 void gr_contour(
   int nx, int ny, int nh, double *px, double *py, double *h, double *pz,
   int major_h)

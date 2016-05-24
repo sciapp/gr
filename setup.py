@@ -146,6 +146,11 @@ class build_static(Command):
                                        extra_preargs=_extra_preargs)
                 compiler.create_static_lib(obj, "jpeg",
                                            output_dir=_build_3rdparty_lib)
+            if not os.path.isfile(_libqhull):
+                obj = compiler.compile(_libqhull_src_path,
+                                       extra_preargs=_extra_preargs)
+                compiler.create_static_lib(obj, "qhull",
+                                           output_dir=_build_3rdparty_lib)
             if self.static_extras:
                 real_build_3rdparty = os.path.realpath(_build_3rdparty)
                 freetype = os.path.join("3rdparty", "freetype")
@@ -1303,7 +1308,7 @@ int main()
             ldflags.extend(self.platform_ldflags)
             ldflags.extend(self.glldflags)
             # important: lib ordering png, jpeg, z
-            staticlibs = [_libpng, _libjpeg, _libz]
+            staticlibs = [_libqhull, _libpng, _libjpeg, _libz]
             ldflags.extend(staticlibs)
             if self.isLinuxOrDarwin:
                 libs.append("GR")
@@ -1447,6 +1452,7 @@ if sys.platform == "win32":
     _libpng = os.path.join(_build_3rdparty_lib, "png.lib")
     _libjpeg = os.path.join(_build_3rdparty_lib, "jpeg.lib")
     _libz = os.path.join(_build_3rdparty_lib, "z.lib")
+    _libqhull = os.path.join(_build_3rdparty_lib, "qhull.lib")
 
     _libs_msvc = ["msvcrt", "oldnames", "kernel32", "wsock32", "advapi32",
                   "user32", "gdi32", "comdlg32", "winspool"]
@@ -1457,6 +1463,7 @@ else:
     _libz = os.path.join(_build_3rdparty_lib, "libz.a")
     _libpng = os.path.join(_build_3rdparty_lib, "libpng.a")
     _libjpeg = os.path.join(_build_3rdparty_lib, "libjpeg.a")
+    _libqhull = os.path.join(_build_3rdparty_lib, "libqhull.a")
 
     _libs_msvc = []
     _msvc_extra_compile_args = []
@@ -1494,6 +1501,11 @@ _libjpeg_src = ["jaricom.c", "jcapimin.c", "jcapistd.c", "jcarith.c",
                 "jfdctint.c", "jidctflt.c", "jidctfst.c", "jidctint.c",
                 "jmemmgr.c", "jmemnobs.c", "jquant1.c", "jquant2.c", "jutils.c"]
 
+_libqhull_src = ["global.c", "stat.c", "geom2.c", "poly2.c", "merge.c",
+                 "libqhull.c", "geom.c", "poly.c", "qset.c", "mem.c",
+                 "random.c", "usermem.c", "userprintf.c", "io.c", "user.c",
+                 "rboxlib.c", "userprintf_rbox.c"]
+
 _gr_src = ["gr.c", "text.c", "contour.c", "spline.c", "gridit.c", "strlib.c",
            "io.c", "image.c", "md5.c", "import.c", "grforbnd.c"]
 
@@ -1519,6 +1531,8 @@ _libpng_src_path = list(map(lambda p: os.path.join("3rdparty", "libpng16", p),
                             _libpng_src))
 _libjpeg_src_path = list(map(lambda p: os.path.join("3rdparty", "jpeg", p),
                              _libjpeg_src))
+_libqhull_src_path = list(map(lambda p: os.path.join("3rdparty", "qhull", p),
+                              _libqhull_src))
 _gr_src_path = list(map(lambda p: os.path.join("lib", "gr", p), _gr_src))
 _gr3_src_path = list(map(lambda p: os.path.join("lib", "gr3", p), _gr3_src))
 
