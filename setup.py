@@ -1016,8 +1016,10 @@ int main()
             inc.extend(gksinc)
             inc.extend(pnginc)
             inc.extend(zinc)
+            inc.extend(self.x11inc)
             lib = list(self.cairolib)
             libs = list(self.cairolibs)
+            libs.extend(self.x11libs)
             ldflags = list(self.cairoldflags)
             cflags = []
             if self.isWin32:
