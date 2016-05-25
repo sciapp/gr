@@ -14,7 +14,7 @@ int compar(const void *a, const void *b)
   int ret = -1;
   if (xp[*(int *) a] > xp[*(int *) b])
     ret = 1;
-  if (yp[*(int *) a] < xp[*(int *) b])
+  if (yp[*(int *) a] < yp[*(int *) b])
     ret = 1;
   return ret;
 }
