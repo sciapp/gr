@@ -21,7 +21,8 @@ fi
 
 cd ${src}
 
-./configure --prefix=${dest} --libdir=${dest}/lib --disable-shared --with-pic
+./configure --prefix=${dest} --libdir=${dest}/lib --disable-shared --with-pic \
+  ${OGG_EXTRA_CONFIGURE_FLAGS}
 make -j4
 make install
 

@@ -23,7 +23,8 @@ cd ${src}
 
 ./configure --prefix=${dest} --disable-yasm --disable-asm --enable-pic \
   --enable-libvpx --enable-libtheora --extra-cflags=-I${dest}/include \
-  --extra-cxxflags=-I${dest}/include --extra-ldflags=-L${dest}/lib
+  --extra-cxxflags=-I${dest}/include --extra-ldflags=-L${dest}/lib \
+  ${FFMPEG_EXTRA_CONFIGURE_FLAGS}
 
 make -j4
 make install

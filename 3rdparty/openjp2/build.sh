@@ -26,7 +26,8 @@ fi
 cd ${src}
 
 export CFLAGS=-fPIC
-cmake -DCMAKE_INSTALL_PREFIX:PATH=${dest} -DBUILD_SHARED_LIBS=OFF
+cmake -DCMAKE_INSTALL_PREFIX:PATH=${dest} -DBUILD_SHARED_LIBS=OFF \
+  ${OPENJP2_EXTRA_CONFIGURE_FLAGS}
 make -j4
 make install
 

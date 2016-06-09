@@ -1,6 +1,5 @@
-    CC = gcc
 CFLAGS = -O -I. -fno-common $(ARCHS)
-    AR = ar
+    RM = rm -rf
   OBJS = \
         jbig2.o \
         jbig2_arith.o \
@@ -20,14 +19,16 @@ CFLAGS = -O -I. -fno-common $(ARCHS)
 
 .SUFFIXES: .o .c
 
+default: libjbig2dec.lib
+
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFINES) $<
 
-libjbig2dec.a: $(OBJS)
-	$(AR) crv $@ $?
-	$(AR) ts $@
-
-distclean: clean
+libjbig2dec.lib: $(OBJS)
+	$(AR) crs $@ $?
 
 clean:
-	DEL libjbig2dec.a *.o *.bak
+	$(RM) *.o
+	$(RM) libjbig2dec.lib
+
+.PHONY: clean default

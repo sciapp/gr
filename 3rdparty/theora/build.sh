@@ -25,7 +25,8 @@ cd ${src}
 
 ./configure --prefix=${dest} --libdir=${dest}/lib --disable-shared --with-pic \
   --disable-spec --disable-examples --includedir=${dest}/include \
-  --with-ogg-includes=${dest}/include --with-ogg-libraries=${dest}/lib
+  --with-ogg-includes=${dest}/include --with-ogg-libraries=${dest}/lib \
+  ${THEORA_EXTRA_CONFIGURE_FLAGS}
 make -j4
 make install
 

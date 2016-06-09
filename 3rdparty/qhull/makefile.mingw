@@ -1,4 +1,3 @@
-    CC = gcc
 CFLAGS = -O -fno-common $(ARCHS)
   OBJS = \
         global.o \

@@ -25,7 +25,10 @@ opts="prefix=${dest} HAVE_MUJS=no HAVE_CURL=no XCFLAGS=-fPIC"
 if [ `uname` = "Darwin" ]; then
   opts="${opts} HAVE_X11=no"
 fi
-
+if [ "${MUPDF_CROSS_COMPILE}" != "" ]; then
+  opts="${opts} OS=w64_amd64-cross-mingw32"
+  CC=gcc CXX=g++ AR=ar make -C ${src} generate
+fi
 make -C ${src} ${opts}
 make -C ${src} ${opts} install
 

@@ -1,0 +1,63 @@
+ FTDEFINES = -DFT2_BUILD_LIBRARY -DDARWIN_NO_CARBON \
+             '-DFT_CONFIG_MODULES_H="slimftmodules.h"' \
+             '-DFT_CONFIG_OPTIONS_H="slimftoptions.h"'
+FTINCLUDES = -Isrc -Iinclude
+  FTCFLAGS = -O -fPIC -fno-common $(FTINCLUDES) $(FTDEFINES) $(ARCHS)
+
+      OBJS = \
+        ftbase.o \
+        ftbbox.o \
+        ftbitmap.o \
+        ftdebug.o \
+        ftgasp.o \
+        ftglyph.o \
+        ftinit.o \
+        ftstroke.o \
+        ftsynth.o \
+        ftsystem.o \
+        fttype1.o \
+        ftxf86.o \
+        cff.o \
+        psaux.o \
+        pshinter.o \
+        psnames.o \
+        raster.o \
+        sfnt.o \
+        smooth.o \
+        truetype.o \
+        type1.o \
+        type1cid.o
+
+default: libfreetype.lib
+
+libfreetype.lib: $(OBJS)
+	$(AR) crs $@ $?
+
+%.o: src/base/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/cff/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/cid/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/psaux/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/pshinter/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/psnames/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/raster/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/smooth/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/sfnt/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/truetype/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+%.o: src/type1/%.c
+	$(CC) $(FTCFLAGS) -o $@ -c $<
+
+clean:
+	rm -f *.o
+	rm -f libfreetype.lib
+
+.PHONY: clean
