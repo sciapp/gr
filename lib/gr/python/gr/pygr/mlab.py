@@ -579,16 +579,14 @@ def _plot_data(**kwargs):
             gr.contour(x, y, h, z, 1000)
             _colorbar(0, 20)
         elif kind == 'contourf':
+            z_min, z_max = _plt.kwargs['zrange']
+            gr.setspace(z_min, z_max, 0, 90)
             if x.shape == y.shape == z.shape:
                 x, y, z = gr.gridit(x, y, z, 200, 200)
                 z.shape = (200, 200)
             if _plt.kwargs['scale'] & gr.OPTION_Z_LOG != 0:
                 z = np.log(z)
-            width, height = z.shape
-            data = np.array(1000+(z-z.min()) / z.ptp() * 255, np.int32)
-            x_min, x_max = _plt.kwargs['xrange']
-            y_min, y_max = _plt.kwargs['yrange']
-            gr.cellarray(x_min, x_max, y_max, y_min, width, height, data)
+            gr.surface(x, y, z, gr.OPTION_CELL_ARRAY)
             _colorbar()
         elif kind == 'wireframe':
             if x.shape == y.shape == z.shape:
