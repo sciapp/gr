@@ -59,7 +59,7 @@ else
 endif
     SSLLIBS = -lssl -lcrypto
     X11DEFS =
-ifeq ($(UNAME), Darwin)
+ifeq ($(UNAME_S), Darwin)
      X11INC = -I/opt/X11/include
 else
      X11INC = -I/usr/X11R6/include
