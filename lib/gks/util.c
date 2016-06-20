@@ -2820,6 +2820,9 @@ int gks_get_ws_type(void)
             if (strcmp(wstypes[i].name, env) == 0)
               {
                 wstype = wstypes[i].wstype;
+#if defined(NO_GS) && !defined(NO_CAIRO)
+                if (wstype == 322) wstype = 140;
+#endif
                 break;
               }
         }
