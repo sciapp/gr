@@ -10,6 +10,8 @@ UNAME := $(shell uname)
                error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
                plugin.o compress.o io.o
 
+      GSDEFS =
+   CAIRODEFS =
      X11DEFS =
      XFTDEFS =
       FTDEFS =
@@ -20,7 +22,7 @@ else
       X11INC = -I/usr/X11R6/include
 endif
           CC = cc
-     DEFINES = -DHAVE_ZLIB $(X11DEFS) $(XFTDEFS) $(FTDEFS)
+     DEFINES = -DHAVE_ZLIB $(GSDEFS) $(CAIRODEFS) $(X11DEFS) $(XFTDEFS) $(FTDEFS)
       CFLAGS = -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           LD = cc
           AR = ar
