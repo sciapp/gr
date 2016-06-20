@@ -69,11 +69,6 @@ DLLEXPORT void gks_cairoplugin(
 #define PATTERNS 120
 #define HATCH_STYLE 108
 
-#define MWIDTH  0.254
-#define MHEIGHT 0.1905
-#define WIDTH   1024
-#define HEIGHT  768
-
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -128,6 +123,8 @@ cairo_point;
 typedef struct ws_state_list_t
 {
   int conid, state, wtype;
+  double mw, mh;
+  int w, h;
   char *path;
   double a, b, c, d;
   double window[4], viewport[4];
@@ -266,8 +263,8 @@ void resize(int width, int height)
   p->window[0] = p->window[2] = 0.0;
   p->window[1] = p->window[3] = 1.0;
   p->viewport[0] = p->viewport[2] = 0;
-  p->viewport[1] = (double) p->width * MWIDTH / WIDTH;
-  p->viewport[3] = (double) p->height * MHEIGHT / HEIGHT;
+  p->viewport[1] = (double) p->width * p->mw / p->w;
+  p->viewport[3] = (double) p->height * p->mh / p->h;
 
   set_xform();
   init_norm_xform();
@@ -1153,6 +1150,17 @@ void gks_cairoplugin(
       p->path = chars;
       p->wtype = ia[2];
 
+      if (p->wtype == 140)
+        {
+          p->mw = 0.28575; p->mh = 0.19685;
+          p->w = 6750; p->h = 4650;
+        }
+      else
+        {
+          p->mw = 0.25400; p->mh = 0.19050;
+          p->w = 1024; p->h = 768;
+        }
+
       resize(500, 500);
 
       p->max_points = MAX_POINTS;
@@ -1337,8 +1345,8 @@ void gks_cairoplugin(
       p->viewport[2] = 0;
       p->viewport[3] = r2[1] - r2[0];
 
-      p->width = p->viewport[1] * WIDTH / MWIDTH;
-      p->height = p->viewport[3] * HEIGHT / MHEIGHT;
+      p->width = p->viewport[1] * p->w / p->mw;
+      p->height = p->viewport[3] * p->h / p->mh;
 
       close_page();
       open_page();
