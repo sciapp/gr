@@ -25,17 +25,13 @@ if os.path.isdir(os.path.join(os.path.dirname(__file__), "fonts")):
     os.environ["GKS_FONTPATH"] = os.getenv("GKS_FONTPATH", os.environ["GRDIR"])
 
 _impl = python_implementation()
-
-_have_clear_output = False
+_mime_type = None
 
 try:
     from IPython.display import clear_output, display, SVG, Image, HTML
     from base64 import b64encode
-    _have_clear_output = True
-except:
-    _mime_type = ""
-else:
-    _mime_type = None
+except ImportError:
+    clear_output = None
 
 
 class floatarray:
@@ -249,8 +245,7 @@ def deactivatews(workstation_id):
 
 
 def clearws():
-    global _have_clear_output
-    if isinline() and _have_clear_output:
+    if isinline() and clear_output:
         clear_output(wait=True)
     __gr.gr_clearws()
 
@@ -2287,12 +2282,13 @@ def mimetype():
 
 def isinline():
     global _mime_type
-    return _mime_type not in (None, "", "mov")
+    return (_mimetype and _mimetype != "mov")
 
 
 def inline(mime="svg"):
     global _mime_type
-    if _mime_type == None:
+    # initialize inline mode
+    if _mime_type != mime:
         os.environ["GKS_WSTYPE"] = mime
         emergencyclosegks()
         _mime_type = mime
@@ -2307,7 +2303,6 @@ def show():
     elif _mime_type == 'png':
         content = Image(data=open('gks.png', 'rb').read(), width=465, height=465)
         display(content)
-
     elif _mime_type == 'mov':
         content = HTML(data='<video controls autoplay type="video/mp4" src="data:video/mp4;base64,{0}">'.format(b64encode(open('gks.mov', 'rb').read())))
         return content
