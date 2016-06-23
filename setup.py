@@ -1275,7 +1275,7 @@ int main()
         ldflags = list(self.x11ldflags)
         ldflags.extend(self.ftldflags)
         # important: lib ordering png, jpeg, z
-        staticlibs = [_libpng, _libjpeg, _libz]
+        staticlibs = [_libqhull, _libpng, _libjpeg, _libz]
         ldflags.extend(self.mupdfldflags)
         ldflags.extend(staticlibs)
         cflags = list(self.x11cflags)
@@ -1310,7 +1310,7 @@ int main()
             ldflags.extend(self.platform_ldflags)
             ldflags.extend(self.glldflags)
             # important: lib ordering png, jpeg, z
-            staticlibs = [_libqhull, _libpng, _libjpeg, _libz]
+            staticlibs = [_libpng, _libjpeg, _libz]
             ldflags.extend(staticlibs)
             if self.isLinuxOrDarwin:
                 libs.append("GR")
@@ -1509,7 +1509,8 @@ _libqhull_src = ["global.c", "stat.c", "geom2.c", "poly2.c", "merge.c",
                  "rboxlib.c", "userprintf_rbox.c"]
 
 _gr_src = ["gr.c", "text.c", "contour.c", "spline.c", "gridit.c", "strlib.c",
-           "io.c", "image.c", "md5.c", "import.c", "grforbnd.c"]
+           "io.c", "image.c", "md5.c", "import.c", "grforbnd.c", "delaunay.c",
+          ]
 
 _gr3_src = ["gr3.c", "gr3_convenience.c", "gr3_html.c", "gr3_povray.c",
             "gr3_png.c", "gr3_jpeg.c", "gr3_gr.c", "gr3_mc.c"]
