@@ -31,7 +31,7 @@ int purge(gks_display_list_t *d, char *t)
 
   s = d->buffer;
   len = (int *) (s + sp);
-  while (*len > 0)
+  while (*len)
     {
       fctid = (int *) (s + sp + sizeof(int));
       /* 48: setcolorrep, 54: setwswindow, 55: setwsviewport */

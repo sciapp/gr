@@ -841,7 +841,7 @@ void interp(char *str)
   s = str;
 
   RESOLVE(len, int, sizeof(int));
-  while (*len > 0)
+  while (*len)
     {
       RESOLVE(f, int, sizeof(int));
 
