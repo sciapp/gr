@@ -18,7 +18,19 @@ do
   shift
 done
 wxdefs=""
-qtdefs=""
+qt4defs=""
+qt5defs=""
+if [ "`uname -m`" = "x86_64" ]; then
+  qt_lib_suffix="64"
+  qt_arch="x86_64"
+else
+  qt_lib_suffix=""
+  qt_arch="i386"   # using 'uname -p' does not work in that case; for ubuntu it returns i686, but i386 is set as path prefix
+fi
+qt4_qmake_names=("qmake-qt4" "qmake")
+qt4_qmake_dirs=("/usr/lib/${qt_arch}-linux-gnu/qt4/bin" "/usr/bin" "/usr/lib${qt_lib_suffix}/qt4/bin")
+qt5_qmake_names=("qmake-qt5" "qmake")
+qt5_qmake_dirs=("/usr/lib/${qt_arch}-linux-gnu/qt5/bin" "/usr/bin" "/usr/lib${qt_lib_suffix}/qt5/bin")
 gtkdefs=""
 x11defs=""
 xftdefs=""
@@ -101,55 +113,80 @@ printf "%12s: %s\n" "dvipng" "$info" >&2
 
 if [ "$qt" != "no" ]
 then
-  info=""
-  if [ "$QTDIR" = "" ]
-  then
-    QTDIR=`qmake -query QT_INSTALL_PREFIX 2>/dev/null`
-    if [ "$QTDIR" = "" ]
+  for qt_major_version in 4 5
+  do
+    eval current_qt="$qt${qt_major_version}"
+    if [ "${current_qt}" != "no" ]
     then
-      if [ -d /usr/lib64/qt4 ] # Red Hat / SuSE
+      found_qmake=false
+      eval qmake_path="\${QT${qt_major_version}_QMAKE}"
+      if [ "${qmake_path}" != "" ]
       then
-        QTDIR=/usr/lib64/qt4
-      elif [ -d /usr/lib/qt4 ]
-      then
-        QTDIR=/usr/lib/qt4
-      elif [ -d /usr/share/qt4 ] # Debian / Ubuntu
-      then
-        QTDIR=/usr/share/qt4
-      elif [ -d /usr/local/qt4 ]
-      then
-        QTDIR=/usr/local/qt4
+        if [ -x "${qmake_path}" ] || [ "`which ${qmake_path} 2>/dev/null`" != "" ]
+        then
+          qmake_qt_version="`${qmake_path} -query QT_VERSION`"
+          if [ "${qmake_qt_version%%.*}" = "${qt_major_version}" ]
+          then
+            found_qmake=true
+          fi
+        fi
+      else
+        eval current_qmake_names=( "\${qt${qt_major_version}_qmake_names[@]}" )
+        eval current_qmake_dirs=( "\${qt${qt_major_version}_qmake_dirs[@]}" )
+        for qmake_name in "${current_qmake_names[@]}"
+        do
+          if [ "`which ${qmake_name} 2>/dev/null`" != "" ]
+          then
+            qmake_qt_version="`${qmake_name} -query QT_VERSION`"
+            if [ "${qmake_qt_version%%.*}" = "${qt_major_version}" ]
+            then
+              found_qmake=true
+              qmake_path="${qmake_name}"
+              break
+            fi
+          fi
+        done
+        if [ "${found_qmake}" = "false" ]
+        then
+          for qmake_dir in "${current_qmake_dirs[@]}"
+          do
+            for qmake_name in "${current_qmake_names[@]}"
+            do
+              qmake_path="${qmake_dir}/${qmake_name}"
+              if [ -x "${qmake_path}" ]
+              then
+                qmake_qt_version="`${qmake_path} -query QT_VERSION`"
+                if [ "${qmake_qt_version%%.*}" = "${qt_major_version}" ]
+                then
+                  found_qmake=true
+                  break
+                fi
+              fi
+            done
+            if [ "${found_qmake}" = "true" ]
+            then
+              break
+            fi
+          done
+        fi
       fi
-    fi
-    qtdefs="QTDIR=$QTDIR"
-  fi
-  if [ "$QTDIR" = "" ]
-  then
-    info="${red} no${normal} [QTDIR not set]"
-  else
-    if [ -f $QTDIR/include/QtCore/qglobal.h ]; then
-      version=`cat $QTDIR/include/QtCore/qglobal.h|grep QT_VERSION_STR|awk '{print $3}'|sed s/\"//g`
-    elif [ -f /usr/include/QtCore/qglobal.h ]; then
-      version=`cat /usr/include/QtCore/qglobal.h|grep QT_VERSION_STR|awk '{print $3}'|sed s/\"//g`
+      if [ "${found_qmake}" = "false" ]
+      then
+        info="${red} no${normal} [Qt${qt_major_version} API not found]"
+        eval qt${qt_major_version}defs="QT${qt_major_version}_QMAKE=false\ QT${qt_major_version}DEFS=-DNO_QT${qt_major_version}"
+        ret=1
+      else
+        info="${green}yes${normal} [version ${qmake_qt_version}]"
+        eval qt${qt_major_version}defs="QT${qt_major_version}_QMAKE=${qmake_path}"
+      fi
     else
-      info="${red} no${normal} [Qt4 API not found]"
+      eval qt${qt_major_version}defs="QT${qt_major_version}_QMAKE=false\ QT${qt_major_version}DEFS=-DNO_QT${qt_major_version}"
+      info="${yellow} no${normal} [disabled]"
+      ret=1
     fi
-    if [ "`echo $version|grep ^3\.`" != "" ]; then
-      info="${red} no${normal} [QTDIR points to an old Qt version]"
-    fi
-  fi
-  if [ "$info" != "" ]; then
-    qtdefs="QTDEFS=-DNO_QT4 QTINC= QTLIBS="
-    ret=1
-  else
-    info="${green}yes${normal} [$QTDIR, version $version]"
-  fi
-else
-  qtdefs="QTDEFS=-DNO_QT4 QTINC= QTLIBS="
-  info="${yellow} no${normal} [disabled]"
-  ret=1
+    printf "%12s: %s\n" "Qt${qt_major_version}" "$info" >&2
+  done
 fi
-printf "%12s: %s\n" "Qt4" "$info" >&2
 
 if [ "$wx" != "no" ]
 then
@@ -564,4 +601,4 @@ printf "%12s: %s\n" "Cairo" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
 echo "" >&2
-echo $target $wxdefs $qtdefs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $cairodefs $extradefs
+echo $target $wxdefs $qt4defs $qt5defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $cairodefs $extradefs

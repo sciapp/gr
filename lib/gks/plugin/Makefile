@@ -17,14 +17,36 @@ ifneq ($(WXLIBS),)
      WXLIBS += -mmacosx-version-min=10.5
 endif
 endif
-     QTDEFS =
-      QTINC = -I$(QTDIR)/include
+ifneq ($(QT4_QMAKE),false)
+     QT4DEFS =
+   QT4INCDIR = `$(QT4_QMAKE) -query QT_INSTALL_HEADERS`
+      QT4INC = -I$(QT4INCDIR) -I$(QT4INCDIR)/QtCore -I$(QT4INCDIR)/QtGui
 ifeq ($(UNAME_S),Darwin)
-ifneq ($(QTINC),)
-     QTINC += -mmacosx-version-min=10.5
+ifneq ($(QT4INC),)
+     QT4INC += -mmacosx-version-min=10.5
 endif
 endif
-     QTLIBS = -L$(QTDIR)/lib -lQtGui -lQtCore
+   QT4LIBDIR = `$(QT4_QMAKE) -query QT_INSTALL_LIBS`
+     QT4LIBS = -L$(QT4LIBDIR) -lQtGui -lQtCore
+endif
+ifneq ($(QT5_QMAKE),false)
+     QT5DEFS =
+   QT5INCDIR = `$(QT5_QMAKE) -query QT_INSTALL_HEADERS`
+ifeq ($(UNAME_S),Darwin)
+      QT5INC = -I$(QT5INCDIR) -I$(QT5LIBDIR)/QtCore.framework/Versions/5/Headers -I$(QT5LIBDIR)/QtGui.framework/Versions/5/Headers -I$(QT5LIBDIR)/QtWidgets.framework/Versions/5/Headers -F$(QT5LIBDIR)
+ifneq ($(QT5INC),)
+     QT5INC += -mmacosx-version-min=10.5
+endif
+else
+      QT5INC = -I$(QT5INCDIR) -I$(QT5INCDIR)/QtCore -I$(QT5INCDIR)/QtGui -I$(QT5INCDIR)/QtWidgets
+endif
+   QT5LIBDIR = `$(QT5_QMAKE) -query QT_INSTALL_LIBS`
+ifeq ($(UNAME_S),Darwin)
+     QT5LIBS = -F$(QT5LIBDIR) -framework QtWidgets -framework QtGui -framework QtCore
+else
+     QT5LIBS = -L$(QT5LIBDIR) -lQt5Widgets -lQt5Gui -lQt5Core
+endif
+endif
  GTK_CONFIG = false
     GTKDEFS =
      GTKINC = `$(GTK_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
@@ -32,7 +54,7 @@ endif
    JPEGLIBS = ../../../3rdparty/jpeg/libjpeg.a
     PNGLIBS = ../../../3rdparty/libpng16/libpng.a
     BZ2LIBS = ../../../3rdparty/bzip2/libbz2.a
-     GSDEFS = 
+     GSDEFS =
       GSINC =
      GSLIBS = -lgs
    GLFWDEFS =
@@ -47,9 +69,9 @@ endif
      FTDEFS =
       FTINC = -I../../../3rdparty/freetype/include
      FTLIBS = ../../../3rdparty/freetype/libfreetype.a
-     AVDEFS = 
+     AVDEFS =
      AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
-  MUPDFDEFS = 
+  MUPDFDEFS =
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
   CAIRODEFS =
 ifdef USE_STATIC_CAIRO_LIBS
@@ -66,7 +88,7 @@ else
 endif
     XFTLIBS = -lXft -lfontconfig
     X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
-    ZMQDEFS = 
+    ZMQDEFS =
     ZMQLIBS = -lzmq -lpthread
   EXTRALIBS =
        LIBS = -lc -lm
@@ -80,16 +102,16 @@ endif
 .c.o:
 	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(AVDEFS) $(MUPDFDEFS) $(CFLAGS) $<
 .cxx.o:
-	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QTDEFS) $(QTINC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 default:
 	@make -C ../../.. Makedefs
 	@make `cat ../../../Makedefs`
 
 targets: prerequisites \
-         wxplugin.so qtplugin.so svgplugin.so gtkplugin.so figplugin.so \
-         gsplugin.so wmfplugin.so glplugin.so zmqplugin.so movplugin.so \
-         htmplugin.so pgfplugin.so cairoplugin.so
+         wxplugin.so qtplugin.so qt5plugin.so svgplugin.so gtkplugin.so \
+         figplugin.so gsplugin.so wmfplugin.so glplugin.so zmqplugin.so \
+         movplugin.so htmplugin.so pgfplugin.so cairoplugin.so
 
 prerequisites:
 	@for d in libpng16; do make -C ../../../3rdparty/$$d; done
@@ -99,13 +121,25 @@ Darwin:
 	EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation" LIBS="-liconv"
 Linux:
 	@make targets \
-	SOFLAGS="-shared" LDFLAGS="$(EXTRA_LDFLAGS) -Wl,-rpath=$(QTDIR)/lib"
+	SOFLAGS="-shared" \
+	LDFLAGS="$(EXTRA_LDFLAGS)" \
+	EXTRA_LDFLAGS_QT4="-Wl,-rpath=$(QT4LIBDIR)" \
+	EXTRA_LDFLAGS_QT5="-Wl,-rpath=$(QT5LIBDIR)"
+
+qtplugin.o: qtplugin.cxx
+	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
+
+qt5plugin.o: qt5plugin.cxx
+	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT5DEFS) $(QT5INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 wxplugin.so: wxplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(WXLIBS) $(X11LIBS) $(LIBS)
 
 qtplugin.so: qtplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(QTLIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(EXTRA_LDFLAGS_QT4) $(QT4LIBS) $(X11LIBS) $(LIBS)
+
+qt5plugin.so: qt5plugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
+	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(EXTRA_LDFLAGS_QT5) $(QT5LIBS) $(X11LIBS) $(LIBS)
 
 svgplugin.so: svgplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)

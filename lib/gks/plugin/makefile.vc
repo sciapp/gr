@@ -1,11 +1,15 @@
 CXX = CL
-QTDIR = S:\Qt\4.8.7
+QT4DIR = S:\Qt\4.8.7
+QT5DIR = S:\Qt\5.7.0
 GSDIR = S:\gs\gs9.18
 WXDIR = S:\wxWidgets
 DEFINES = /DGRDIR=\"$(GRDIR)\" /DNO_FT /DNO_X11 /DNO_CAIRO /D_DLL /MD /D_POSIX /DWXUSINGDLL /DwxMSVC_VERSION_AUTO /D_UNICODE
-INCLUDES = /I.. /I$(QTDIR)\include /I$(WXDIR)\include\msvc /I$(WXDIR)\include /I$(GSDIR)\include /I..\..\..\3rdparty /I..\..\..\3rdparty\zlib
+QT4INC = /I$(QT4DIR)\include
+QT5INC = /I$(QT5DIR)\include
+INCLUDES = /I.. /I$(WXDIR)\include\msvc /I$(WXDIR)\include /I$(GSDIR)\include /I..\..\..\3rdparty /I..\..\..\3rdparty\zlib
 CXXFLAGS = /Zi /EHsc /nologo $(DEFINES) $(INCLUDES)
-QTLIBS = $(QTDIR)\lib\QtGui4.lib $(QTDIR)\lib\QtCore4.lib
+QT4LIBS = $(QT4DIR)\lib\QtGui4.lib $(QT4DIR)\lib\QtCore4.lib
+QT5LIBS = $(QT5DIR)\lib\Qt5Widgets.lib $(QT5DIR)\lib\Qt5Gui.lib $(QT5DIR)\lib\Qt5Core.lib
 WXLIBS = $(WXDIR)\lib\vc100_x64_dll\wxmsw30ud_core.lib $(WXDIR)\lib\vc100_x64_dll\wxbase30ud.lib
 GSLIBS = $(GSDIR)\bin\gsdll64.lib
 CAIROLIBS =
@@ -14,14 +18,14 @@ ZLIBS = ..\..\..\3rdparty\zlib\libz.lib
 DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
 DLLLFLAGS = /nodefaultlib -dll
 DLLLINK = LINK /nologo
-SRCDIR = .\ 
+SRCDIR = .\
 
 .SUFFIXES: .obj .cxx .c
 
 .cxx.obj:
 	$(CXX) /c $(CXXFLAGS) $<
 
-default: $(PNGLIBS) $(ZLIBS) qtplugin.dll svgplugin.dll wxplugin.dll gsplugin.dll wmfplugin.dll htmplugin.dll pgfplugin.dll cairoplugin.dll
+default: $(PNGLIBS) $(ZLIBS) qtplugin.dll qt5plugin.dll svgplugin.dll wxplugin.dll gsplugin.dll wmfplugin.dll htmplugin.dll pgfplugin.dll cairoplugin.dll
 
 $(PNGLIBS):
 	@cd ..\..\..\3rdparty\libpng16
@@ -34,7 +38,10 @@ $(ZLIBS):
 	@cd ..\..\lib\gks\plugin
 
 qtplugin.dll: qtplugin.obj font.obj afm.obj util.obj dl.obj malloc.obj error.obj io.obj
-	$(DLLLINK) /out:$@ $** $(QTLIBS) $(DLLLFLAGS) $(DLLLIBS)
+	$(DLLLINK) /out:$@ $** $(QT4LIBS) $(DLLLFLAGS) $(DLLLIBS)
+
+qt5plugin.dll: qt5plugin.obj font.obj afm.obj util.obj dl.obj malloc.obj error.obj io.obj
+	$(DLLLINK) /out:$@ $** $(QT5LIBS) $(DLLLFLAGS) $(DLLLIBS)
 
 svgplugin.dll: svgplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.obj
 	$(DLLLINK) /out:$@ $** $(PNGLIBS) $(ZLIBS) $(DLLLFLAGS) $(DLLLIBS)
@@ -57,6 +64,12 @@ pgfplugin.dll: pgfplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.o
 cairoplugin.dll: cairoplugin.obj font.obj afm.obj util.obj malloc.obj error.obj io.obj
 	$(DLLLINK) /out:$@ $** $(CAIROLIBS) $(DLLLFLAGS) $(DLLLIBS)
 
+qtplugin.obj: qtplugin.cxx
+	$(CXX) /Fo$@ /c $(CXXFLAGS) $(QT4INC) $**
+
+qt5plugin.obj: qt5plugin.cxx
+	$(CXX) /Fo$@ /c $(CXXFLAGS) $(QT5INC) $**
+
 font.obj: ..\font.c
 	$(CXX) /c $(CXXFLAGS) ..\font.c
 afm.obj: ..\afm.c
@@ -71,9 +84,6 @@ error.obj: ..\error.c
 	$(CXX) /c $(CXXFLAGS) ..\error.c
 io.obj: ..\io.c
 	$(CXX) /c $(CXXFLAGS) ..\io.c
-
-qtplugin.obj: qtplugin.cxx
-	$(CXX) /c $(CXXFLAGS) qtplugin.cxx
 
 svgplugin.obj: svgplugin.cxx
 	$(CXX) /c $(CXXFLAGS) svgplugin.cxx

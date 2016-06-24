@@ -92,6 +92,24 @@ void *load_library(const char *name)
   return entry;
 }
 
+static
+const char *get_qt_version_string()
+{
+  const char *(*qVersion)() = NULL;
+
+#ifdef _WIN32
+  void *handle = GetModuleHandle("Qt5Core.dll");
+  if(handle != NULL)
+    qVersion = GetProcAddress(handle, "qVersion");
+#else
+  qVersion = dlsym(dlopen(NULL, RTLD_LAZY), "qVersion");
+#endif
+  if(qVersion != NULL)
+    return qVersion();
+
+  return NULL;
+}
+
 void gks_drv_plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
@@ -193,10 +211,20 @@ void gks_qt_plugin(
 {
   static char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
+  const char *qt_version_string;
+  int qt_major_version;
 
   if (name == NULL)
     {
-      name = "qtplugin";
+      qt_version_string = get_qt_version_string();
+      if(qt_version_string != NULL)
+      {
+        qt_major_version = atoi(qt_version_string);
+        if(qt_major_version == 5)
+          name = "qt5plugin";
+      }
+      if(name == NULL)
+        name = "qtplugin";
       *(void **)(&entry) = load_library(name);
     }
 
@@ -365,4 +393,3 @@ void gks_pgf_plugin(
   if (entry != NULL)
     (*entry) (fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, ptr);
 }
-
