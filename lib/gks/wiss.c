@@ -304,7 +304,7 @@ void delete_seg(char *str, int segn)
   saved_sp = sp;
   RESOLVE(len, int, sizeof(int));
 
-  while (*len)
+  while (*len > 0)
     {
       RESOLVE(sgnum, int, sizeof(int));
       sp = saved_sp;
@@ -476,7 +476,7 @@ void interp(char *str, int segn)
   saved_sp = sp;
   RESOLVE(len, int, sizeof(int));
 
-  while (*len)
+  while (*len > 0)
     {
       RESOLVE(sgnum, int, sizeof(int));
       RESOLVE(fctid, int, sizeof(int));
