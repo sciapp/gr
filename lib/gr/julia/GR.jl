@@ -159,6 +159,7 @@ export
 
 
 mime_type = None
+figure_count = None
 msgs = None
 have_clear_output = isinteractive() && isdefined(Main, :IJulia) &&
                     isdefined(Main.IJulia, :clear_output)
@@ -1318,16 +1319,19 @@ function startserver()
 );</script>""")
 end
 
-function inline(mime="svg")
-    global mime_type, msgs
+function inline(mime="svg", scroll=true)
+    global mime_type, figure_count, msgs
     if mime_type != mime
-        if mime != "js"
-            ENV["GKS_WSTYPE"] = mime
-        else
+        if mime == "iterm"
+            ENV["GKS_WSTYPE"] = "pdf"
+        elseif mime == "js"
             ENV["GKS_WSTYPE"] = "nul"
+        else
+            ENV["GKS_WSTYPE"] = mime
         end
         emergencyclosegks()
         mime_type = mime
+        figure_count = scroll ? None : 0
         if mime == "js"
             startserver()
         end
@@ -1335,7 +1339,7 @@ function inline(mime="svg")
 end
 
 function show()
-    global mime_type, msgs
+    global mime_type, figure_count, msgs
 
     emergencyclosegks()
     if mime_type == "svg"
@@ -1347,6 +1351,14 @@ function show()
     elseif mime_type == "mov"
         content = HTML(string("""<video autoplay controls><source type="video/mp4" src="data:video/mp4;base64,""", base64encode(open(readbytes,"gks.mov")),""""></video>"""))
         return content
+    elseif mime_type == "iterm"
+        content = string("\033]1337;File=inline=1;preserveAspectRatio=0:", base64encode(open(readbytes,"gks.pdf")), "\a")
+        if figure_count != None
+            figure_count += 1
+            (figure_count > 1) && print("\e[24A")
+        end
+        println(content)
+        return nothing
     elseif mime_type == "js"
         if msgs != None
             endgraphics()
