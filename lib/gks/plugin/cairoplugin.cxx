@@ -893,8 +893,8 @@ void set_clip_rect(int tnr)
     {
       cairo_rectangle(p->cr,
                       p->rect[tnr][0][0], p->rect[tnr][0][1],
-                      p->rect[tnr][0][0] + p->rect[tnr][1][0],
-                      p->rect[tnr][0][1] + p->rect[tnr][1][1]);
+                      p->rect[tnr][1][0] - p->rect[tnr][0][0],
+                      p->rect[tnr][1][1] - p->rect[tnr][0][1]);
       cairo_clip(p->cr);
     }
 }
@@ -910,7 +910,8 @@ static
 void lock(void)
 {
 #ifndef NO_X11
-  pthread_mutex_lock(&p->mutex);
+  if (p->wtype == 141)
+    pthread_mutex_lock(&p->mutex);
 #endif
 }
 
@@ -918,7 +919,8 @@ static
 void unlock(void)
 {
 #ifndef NO_X11
-  pthread_mutex_unlock(&p->mutex);
+  if (p->wtype == 141)
+    pthread_mutex_unlock(&p->mutex);
 #endif
 }
 
