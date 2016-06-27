@@ -1276,6 +1276,8 @@ void gks_wxplugin(
       break;
 
     case 6:
+      /* set display list length to zero */
+      memset(p->dl.buffer, 0, sizeof(int));
       p->dl.buffer[0] = '\0';
       p->dl.nbytes = 0;
       break;

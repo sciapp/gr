@@ -1189,7 +1189,8 @@ void gks_qtplugin(
       break;
 
     case 6:
-      p->dl.buffer[0] = '\0';
+      /* set display list length to zero */
+      memset(p->dl.buffer, 0, sizeof(int));
       p->dl.nbytes = 0;
       break;
 
