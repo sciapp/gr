@@ -1230,6 +1230,9 @@ GR3API void gr3_drawmolecule(int n, const float *positions, const float *colors,
     cylinder_colors = malloc(sizeof(float) * num_bonds * 3);
     cylinder_radii = malloc(sizeof(float) * num_bonds);
     cylinder_lengths = malloc(sizeof(float) * num_bonds);
+    assert(cylinder_colors);
+    assert(cylinder_radii);
+    assert(cylinder_lengths);
     for (i = 0; i < num_bonds; i++) {
         cylinder_directions[3*i+0] -= cylinder_positions[3*i+0];
         cylinder_directions[3*i+1] -= cylinder_positions[3*i+1];
@@ -1337,8 +1340,8 @@ static unsigned int calculate_bonds(float3 *particles, uchar3* cells, int3 dim, 
                             assert(*bond_start);
                             assert(*bond_end);
                         }
-                        (*bond_start)[number_of_bonds] = p;
-                        (*bond_end)[number_of_bonds] = p2;
+                        (*bond_start)[number_of_bonds-1] = p;
+                        (*bond_end)[number_of_bonds-1] = p2;
                     }
                 }
             }
