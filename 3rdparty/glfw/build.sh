@@ -17,7 +17,7 @@ if [ ! -d "glfw-${src}" ]; then
   if [ `which curl` ]; then
     cmd="curl -O -L"
   else
-    cmd="wget"
+    cmd="wget --no-check-certificate"
   fi
   ${cmd} https://github.com/glfw/glfw/archive/${src}.tar.gz
   tar -xf ${src}.tar.gz

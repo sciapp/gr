@@ -13,7 +13,7 @@ if [ ! -d "${src}" ]; then
   if [ `which curl` ]; then
     cmd="curl -O"
   else
-    cmd="wget"
+    cmd="wget --no-check-certificate"
   fi
   ${cmd} https://ffmpeg.org/releases/${src}.tar.gz
   tar -xf ${dest}/src/${src}.tar.gz

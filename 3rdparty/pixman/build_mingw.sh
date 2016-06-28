@@ -13,9 +13,9 @@ if [ ! -d "${src}" ]; then
   if [ `which curl` ]; then
     cmd="curl -O"
   else
-    cmd="wget"
+    cmd="wget --no-check-certificate"
   fi
-  ${cmd} http://cairographics.org/releases/${src}.tar.gz
+  ${cmd} https://cairographics.org/releases/${src}.tar.gz
   tar -xf ${src}.tar.gz
 fi
 
