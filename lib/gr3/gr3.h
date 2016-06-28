@@ -185,6 +185,21 @@ GR3API int gr3_createtubemesh(int *mesh, int n, const float *points,
                               const float *colors, const float *radii,
                               int num_steps, int num_segments);
 
+GR3API void gr3_drawspins(int n,
+                          const float *positions,
+                          const float *directions,
+                          const float *colors,
+                          float cone_radius, float cylinder_radius,
+                          float cone_height, float cylinder_height);
+
+GR3API void gr3_drawmolecule(int n,
+                             const float *positions,
+                             const float *colors,
+                             const float *radii,
+                             float bond_radius,
+                             const float bond_color[3],
+                             float bond_delta);
+
 #ifdef _WIN32
     #ifdef __cplusplus
         }

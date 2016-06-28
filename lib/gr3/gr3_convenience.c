@@ -1176,3 +1176,251 @@ int gr3_drawtubemesh(int n, float *points, float *colors, float *radii, int num_
   gr3_deletemesh(mesh);
   return result;
 }
+
+GR3API void gr3_drawspins(int n, const float *positions, const float *directions, const float *colors, float cone_radius, float cylinder_radius, float cone_height, float cylinder_height) {
+    int i;
+    float zOffset = 0.5*(cylinder_height-cone_height);
+    float *cone_positions = malloc(sizeof(float) * n * 3);
+    float *cylinder_positions = malloc(sizeof(float) * n * 3);
+    float *cone_radii = malloc(sizeof(float) * n);
+    float *cylinder_radii = malloc(sizeof(float) * n);
+    float *cone_lengths = malloc(sizeof(float) * n);
+    float *cylinder_lengths = malloc(sizeof(float) * n);
+    assert(cone_positions);
+    assert(cylinder_positions);
+    assert(cone_radii);
+    assert(cylinder_radii);
+    assert(cone_lengths);
+    assert(cylinder_lengths);
+    for (i = 0; i < 3*n; i++) {
+        float t = sqrt(directions[i/3*3+0]*directions[i/3*3+0]+directions[i/3*3+1]*directions[i/3*3+1]+directions[i/3*3+2]*directions[i/3*3+2]);
+        cone_positions[i] = positions[i]+zOffset*directions[i]/t;
+        cylinder_positions[i] = positions[i]+(zOffset-cylinder_height)*directions[i]/t;
+    }
+    for (i = 0; i < n; i++) {
+        cone_radii[i] = cone_radius;
+        cylinder_radii[i] = cylinder_radius;
+        cone_lengths[i] = cone_height;
+        cylinder_lengths[i] = cylinder_height;
+    }
+    gr3_drawconemesh(n, cone_positions, directions, colors, cone_radii, cone_lengths);
+    gr3_drawcylindermesh(n, cylinder_positions, directions, colors, cylinder_radii, cylinder_lengths);
+    free(cone_positions);
+    free(cylinder_positions);
+    free(cone_radii);
+    free(cylinder_radii);
+    free(cone_lengths);
+    free(cylinder_lengths);
+}
+
+static int calc_bonds(const float *positions, int num_atoms, float bond_length, float **start, float **end);
+
+GR3API void gr3_drawmolecule(int n, const float *positions, const float *colors, const float *radii, float bond_radius, const float bond_color[3], float bond_delta) {
+    int i;
+    int num_bonds;
+    float *cylinder_positions;
+    float *cylinder_directions;
+    float *cylinder_colors;
+    float *cylinder_radii;
+    float *cylinder_lengths;
+    gr3_drawspheremesh(n, positions, colors, radii);
+    if (bond_delta < 0) return;
+    num_bonds = calc_bonds(positions, n, bond_delta, &cylinder_positions, &cylinder_directions);
+    if (num_bonds < 0) return;
+    cylinder_colors = malloc(sizeof(float) * num_bonds * 3);
+    cylinder_radii = malloc(sizeof(float) * num_bonds);
+    cylinder_lengths = malloc(sizeof(float) * num_bonds);
+    for (i = 0; i < num_bonds; i++) {
+        cylinder_directions[3*i+0] -= cylinder_positions[3*i+0];
+        cylinder_directions[3*i+1] -= cylinder_positions[3*i+1];
+        cylinder_directions[3*i+2] -= cylinder_positions[3*i+2];
+        cylinder_colors[3*i+0] = bond_color[0];
+        cylinder_colors[3*i+1] = bond_color[1];
+        cylinder_colors[3*i+2] = bond_color[2];
+        cylinder_radii[i] = bond_radius;
+        cylinder_lengths[i] = sqrt(cylinder_directions[3*i+0]*cylinder_directions[3*i+0]+cylinder_directions[3*i+1]*cylinder_directions[3*i+1]+cylinder_directions[3*i+2]*cylinder_directions[3*i+2]);
+    }
+    gr3_drawcylindermesh(num_bonds, cylinder_positions, cylinder_directions, cylinder_colors, cylinder_radii, cylinder_lengths);
+    free(cylinder_positions);
+    free(cylinder_directions);
+    free(cylinder_colors);
+    free(cylinder_radii);
+    free(cylinder_lengths);
+}
+
+/* Bond calculation code by Daniel Kaiser <d.kaiser@fz-juelich.de> */
+#define CELL_IDX(cell, dim) cell.z*dim.x*dim.y+cell.y*dim.x+cell.x
+
+#define EPS 0.001
+
+typedef struct{
+    double x;
+    double y;
+    double z;
+} double3;
+
+typedef struct{
+    float x;
+    float y;
+    float z;
+} float3;
+
+typedef struct{
+    unsigned char x;
+    unsigned char y;
+    unsigned char z;
+} uchar3;
+
+typedef struct {
+    int x;
+    int y;
+    int z;
+} int3;
+
+static void put_in_cells(const float *positions, double3 min, uchar3 *cells, unsigned int *position_in_cell, unsigned int *atoms_per_cell, double3 cell_size, int3 dim, int n) {
+    uchar3 c;
+    int i;
+    unsigned int cell;
+    for (i = 0; i < n; i++) {
+        c.x = (int)((positions[3*i+0]-min.x)/cell_size.x);
+        c.y = (int)((positions[3*i+1]-min.y)/cell_size.y);
+        c.z = (int)((positions[3*i+2]-min.z)/cell_size.z);
+        cell = CELL_IDX(c, dim);
+        position_in_cell[i] = (*(atoms_per_cell + cell))++;
+        cells[i]=c;
+    }
+}
+
+static void sort_atoms(const float *positions, float3 *particles, uchar3 *cells_ordered, uchar3 *cells, int3 dim, unsigned int *cell_offset, unsigned int *position_in_cell, int n) {
+    int i;
+    int c;
+    for (i = 0; i < n; i++) {
+        float3 p;
+        p.x = positions[3*i+0];
+        p.y = positions[3*i+1];
+        p.z = positions[3*i+2];
+        c = CELL_IDX(cells[i], dim);
+        particles[cell_offset[c]+position_in_cell[i]] = p;
+        cells_ordered[cell_offset[c]+position_in_cell[i]] = cells[i];
+    }
+}
+
+static unsigned int calculate_bonds(float3 *particles, uchar3* cells, int3 dim, float bond_length, float3 **bond_start, float3 **bond_end, unsigned int *cell_offset, unsigned int n) {
+    int ix, iy, iz;
+    unsigned int i, ic, c2_index, allocated = 0, number_of_bonds = 0;
+    float3 p, p2;
+    float d;
+    uchar3 c, c2;
+    for (i = 0; i < n; i++) {
+        p = particles[i];
+        c = cells[i];
+        for (iz=c.z-1; iz<=c.z+1; iz++) {
+            if (iz<0 || iz>=dim.z) continue;
+            for (iy=c.y-1; iy<=c.y+1; iy++) {
+                if (iy<0 || iy>=dim.y) continue;
+                for (ix=c.x-1; ix<=c.x+1; ix++) {
+                    if (ix<0 || ix>=dim.x) continue;
+                    c2.x = ix;
+                    c2.y = iy;
+                    c2.z = iz;
+                    c2_index = CELL_IDX(c2, dim);
+                    for (ic=cell_offset[c2_index]; ic<cell_offset[c2_index+1]; ic++) {
+                        p2 = particles[ic];
+                        if(i<=ic) continue;
+                        d = (p.x-p2.x) * (p.x-p2.x) + (p.y-p2.y) * (p.y-p2.y) + (p.z-p2.z) * (p.z-p2.z);
+                        if (d + EPS > bond_length)
+                            continue;
+                        if (++number_of_bonds >= allocated * n) {
+                            allocated++;
+                            *bond_start = realloc(*bond_start, n * allocated * sizeof(float3));
+                            *bond_end = realloc(*bond_end, n * allocated * sizeof(float3));
+                            assert(*bond_start);
+                            assert(*bond_end);
+                        }
+                        (*bond_start)[number_of_bonds] = p;
+                        (*bond_end)[number_of_bonds] = p2;
+                    }
+                }
+            }
+        }
+    }
+    return number_of_bonds;
+}
+
+
+static float min(const float *values, int n, int offset) {
+    int i;
+    float cur_min;
+    cur_min = values[offset];
+    for (i=0; i<n; i++) {
+        if (values[3*i+offset] < cur_min) {
+            cur_min = values[3*i+offset];
+        }
+    }
+    return cur_min;
+}
+
+static float max(const float *values, int n, int offset) {
+    int i;
+    float cur_max;
+    cur_max = values[offset];
+    for (i=0; i<n; i++) {
+        if (values[3*i+offset] > cur_max) {
+            cur_max = values[3*i+offset];
+        }
+    }
+    return cur_max;
+}
+
+static int calc_bonds(const float *positions, int num_atoms, float bond_length, float **start, float **end) {
+    int3 dim;
+    int i, num_cells, num_bonds = 0;
+    unsigned int *position_in_cell, *atoms_per_cell, *cell_offset;
+    uchar3 *cells_ordered, *cells;
+    float3 *particles;
+    double3 _min, cell_size;
+
+    assert(num_atoms > 0);
+    cells = calloc(num_atoms, sizeof(uchar3));
+    _min.x = min(positions, num_atoms, 0);
+    _min.y = min(positions, num_atoms, 1);
+    _min.z = min(positions, num_atoms, 2);
+    dim.x = (max(positions, num_atoms, 0) - _min.x) / bond_length + 1;
+    dim.y = (max(positions, num_atoms, 1) - _min.y) / bond_length + 1;
+    dim.z = (max(positions, num_atoms, 2) - _min.z) / bond_length + 1;
+    num_cells = dim.x * dim.y * dim.z;
+
+    position_in_cell = calloc(num_atoms, sizeof(unsigned int));
+    atoms_per_cell = calloc(num_cells, sizeof(unsigned int));
+
+    cell_size.x = bond_length;
+    cell_size.y = bond_length;
+    cell_size.z = bond_length;
+
+    put_in_cells(positions, _min, cells, position_in_cell, atoms_per_cell, cell_size, dim, num_atoms);
+
+    cell_offset = (unsigned int *)malloc((num_cells + 1) * sizeof(unsigned int));
+    cell_offset[0] = 0;
+    for (i=1; i <= num_cells; i++) {
+        cell_offset[i] = atoms_per_cell[i-1] + cell_offset[i-1];
+    }
+
+    cells_ordered = (uchar3 *)malloc(num_atoms * sizeof(uchar3));
+    particles = calloc(num_atoms, sizeof(float3));
+    sort_atoms(positions, particles, cells_ordered, cells, dim, cell_offset, position_in_cell, num_atoms);
+
+    *start = NULL;
+    *end = NULL;
+    num_bonds = calculate_bonds(particles, cells_ordered, dim, bond_length * bond_length, (float3 **)start, (float3 **)end, cell_offset, num_atoms);
+
+    free(cells);
+    free(position_in_cell);
+    free(atoms_per_cell);
+    free(cell_offset);
+    free(cells_ordered);
+    free(particles);
+
+    return num_bonds;
+}
+#undef EPS
+#undef CELL_IDX

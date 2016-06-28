@@ -1,3 +1,4 @@
+# coding: utf-8
 __all__ = ['GR3_InitAttribute',
            'GR3_Error',
            'GR3_Exception',
@@ -30,7 +31,9 @@ __all__ = ['GR3_InitAttribute',
            'createisosurfacemesh',
            'drawisosurfacemesh',
            'drawtubemesh',
-           'createtubemesh']
+           'createtubemesh',
+           'drawspins',
+           'drawmolecule']
 
 
 import sys
@@ -920,6 +923,212 @@ def surface(px, py, pz, option=0):
         gr.surface(px, py, pz, option)
     return
 
+
+def drawspins(positions, directions, colors=None,
+              cone_radius=0.4, cylinder_radius=0.2,
+              cone_height=1.0, cylinder_height=1.0):
+    positions = numpy.array(positions, numpy.float32)
+    positions.shape = (numpy.prod(positions.shape)/3, 3)
+    n = len(positions)
+    directions = numpy.array(directions, numpy.float32)
+    directions.shape = (n, 3)
+    if colors is None:
+        colors = numpy.ones((n, 3), numpy.float32)
+    else:
+        colors = numpy.array(colors, numpy.float32)
+        colors.shape = (n, 3)
+    _gr3.gr3_drawspins(n, positions.ctypes.data_as(POINTER(c_float)),
+                       directions.ctypes.data_as(POINTER(c_float)),
+                       colors.ctypes.data_as(POINTER(c_float)), c_float(cone_radius),
+                       c_float(cylinder_radius), c_float(cone_height), c_float(cylinder_height))
+
+
+# Atom color rgb tuples (used for rendering, may be changed by users)
+ATOM_COLORS = numpy.array([(0, 0, 0),  # Avoid atomic number to index conversion
+                        (255, 255, 255), (217, 255, 255), (204, 128, 255),
+                        (194, 255, 0), (255, 181, 181), (144, 144, 144),
+                        (48, 80, 248), (255, 13, 13), (144, 224, 80),
+                        (179, 227, 245), (171, 92, 242), (138, 255, 0),
+                        (191, 166, 166), (240, 200, 160), (255, 128, 0),
+                        (255, 255, 48), (31, 240, 31), (128, 209, 227),
+                        (143, 64, 212), (61, 225, 0), (230, 230, 230),
+                        (191, 194, 199), (166, 166, 171), (138, 153, 199),
+                        (156, 122, 199), (224, 102, 51), (240, 144, 160),
+                        (80, 208, 80), (200, 128, 51), (125, 128, 176),
+                        (194, 143, 143), (102, 143, 143), (189, 128, 227),
+                        (225, 161, 0), (166, 41, 41), (92, 184, 209),
+                        (112, 46, 176), (0, 255, 0), (148, 255, 255),
+                        (148, 224, 224), (115, 194, 201), (84, 181, 181),
+                        (59, 158, 158), (36, 143, 143), (10, 125, 140),
+                        (0, 105, 133), (192, 192, 192), (255, 217, 143),
+                        (166, 117, 115), (102, 128, 128), (158, 99, 181),
+                        (212, 122, 0), (148, 0, 148), (66, 158, 176),
+                        (87, 23, 143), (0, 201, 0), (112, 212, 255),
+                        (255, 255, 199), (217, 225, 199), (199, 225, 199),
+                        (163, 225, 199), (143, 225, 199), (97, 225, 199),
+                        (69, 225, 199), (48, 225, 199), (31, 225, 199),
+                        (0, 225, 156), (0, 230, 117), (0, 212, 82),
+                        (0, 191, 56), (0, 171, 36), (77, 194, 255),
+                        (77, 166, 255), (33, 148, 214), (38, 125, 171),
+                        (38, 102, 150), (23, 84, 135), (208, 208, 224),
+                        (255, 209, 35), (184, 184, 208), (166, 84, 77),
+                        (87, 89, 97), (158, 79, 181), (171, 92, 0),
+                        (117, 79, 69), (66, 130, 150), (66, 0, 102),
+                        (0, 125, 0), (112, 171, 250), (0, 186, 255),
+                        (0, 161, 255), (0, 143, 255), (0, 128, 255),
+                        (0, 107, 255), (84, 92, 242), (120, 92, 227),
+                        (138, 79, 227), (161, 54, 212), (179, 31, 212),
+                        (179, 31, 186), (179, 13, 166), (189, 13, 135),
+                        (199, 0, 102), (204, 0, 89), (209, 0, 79),
+                        (217, 0, 69), (224, 0, 56), (230, 0, 46),
+                        (235, 0, 38), (255, 0, 255), (255, 0, 255),
+                        (255, 0, 255), (255, 0, 255), (255, 0, 255),
+                        (255, 0, 255), (255, 0, 255), (255, 0, 255),
+                        (255, 0, 255)], dtype=numpy.float32)/255.0
+
+# Atom numbers mapped to their symbols
+ATOM_NUMBERS = {"H": 1, "HE": 2, "LI": 3, "BE": 4, "B": 5, "C": 6, "N": 7,
+                "O": 8, "F": 9, "NE": 10, "NA": 11, "MG": 12, "AL": 13,
+                "SI": 14, "P": 15, "S": 16, "CL": 17, "AR": 18, "K": 19,
+                "CA": 20, "SC": 21, "TI": 22, "V": 23, "CR": 24, "MN": 25,
+                "FE": 26, "CO": 27, "NI": 28, "CU": 29, "ZN": 30, "GA": 31,
+                "GE": 32, "AS": 33, "SE": 34, "BR": 35, "KR": 36, "RB": 37,
+                "SR": 38, "Y": 39, "ZR": 40, "NB": 41, "MO": 42, "TC": 43,
+                "RU": 44, "RH": 45, "PD": 46, "AG": 47, "CD": 48, "IN": 49,
+                "SN": 50, "SB": 51, "TE": 52, "I": 53, "XE": 54, "CS": 55,
+                "BA": 56, "LA": 57, "CE": 58, "PR": 59, "ND": 60, "PM": 61,
+                "SM": 62, "EU": 63, "GD": 64, "TB": 65, "DY": 66, "HO": 67,
+                "ER": 68, "TM": 69, "YB": 70, "LU": 71, "HF": 72, "TA": 73,
+                "W": 74, "RE": 75, "OS": 76, "IR": 77, "PT": 78, "AU": 79,
+                "HG": 80, "TL": 81, "PB": 82, "BI": 83, "PO": 84, "AT": 85,
+                "RN": 86, "FR": 87, "RA": 88, "AC": 89, "TH": 90, "PA": 91,
+                "U": 92, "NP": 93, "PU": 94, "AM": 95, "CM": 96, "BK": 97,
+                "CF": 98, "ES": 99, "FM": 100, "MD": 101, "NO": 102,
+                "LR": 103, "RF": 104, "DB": 105, "SG": 106, "BH": 107,
+                "HS": 108, "MT": 109, "DS": 110, "RG": 111, "CN": 112,
+                "UUB": 112, "UUT": 113, "UUQ": 114, "UUP": 115, "UUH": 116,
+                "UUS": 117, "UUO": 118}
+
+# Atom valence radii in Å (used for bond calculation)
+ATOM_VALENCE_RADII = numpy.array([0,  # Avoid atomic number to index conversion
+                               230, 930, 680, 350, 830, 680, 680, 680, 640,
+                               1120, 970, 1100, 1350, 1200, 750, 1020, 990,
+                               1570, 1330, 990, 1440, 1470, 1330, 1350, 1350,
+                               1340, 1330, 1500, 1520, 1450, 1220, 1170, 1210,
+                               1220, 1210, 1910, 1470, 1120, 1780, 1560, 1480,
+                               1470, 1350, 1400, 1450, 1500, 1590, 1690, 1630,
+                               1460, 1460, 1470, 1400, 1980, 1670, 1340, 1870,
+                               1830, 1820, 1810, 1800, 1800, 1990, 1790, 1760,
+                               1750, 1740, 1730, 1720, 1940, 1720, 1570, 1430,
+                               1370, 1350, 1370, 1320, 1500, 1500, 1700, 1550,
+                               1540, 1540, 1680, 1700, 2400, 2000, 1900, 1880,
+                               1790, 1610, 1580, 1550, 1530, 1510, 1500, 1500,
+                               1500, 1500, 1500, 1500, 1500, 1500, 1600, 1600,
+                               1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
+                               1600, 1600, 1600, 1600, 1600, 1600],
+                              dtype=numpy.float32)/1000.0
+
+
+# Atom radii in Å (used for rendering, scaled down by factor 0.4, may be
+# changed by users)
+ATOM_RADII = numpy.array(ATOM_VALENCE_RADII, copy=True)*0.4
+
+
+def _readxyzfile(filename):
+    with open(filename, 'r') as xyzfile:
+        n = None
+        has_spins = None
+        atoms = []
+        skip = 0
+        for line in xyzfile.readlines():
+            if skip > 0:
+                skip -= 1
+                continue
+            if line.strip().startswith('#'):
+                continue
+            if n is None:
+                n = int(line.strip())
+                skip = 1
+                continue
+            atoms.append(line.strip().split())
+            if has_spins is None:
+                has_spins = len(atoms[-1]) == 7
+            if has_spins:
+                if len(atoms[-1]) != 7:
+                    raise RuntimeError("line '%s' is invalid for xyz file with spins" % line)
+            else:
+                if len(atoms[-1]) != 4:
+                    raise RuntimeError("line '%s' is invalid for xyz file" % line)
+            if len(atoms) >= n:
+                break
+    positions = []
+    colors = []
+    radii = []
+    if has_spins:
+        spins = []
+    else:
+        spins = None
+    for i, atom in enumerate(atoms):
+        element = atom[0].upper()
+        positions.append(tuple(map(float, atom[1:4])))
+        if has_spins:
+            spins.append(tuple(map(float, atom[4:7])))
+        atom_number = ATOM_NUMBERS[element]
+        colors.append(ATOM_COLORS[atom_number])
+        radii.append(ATOM_RADII[atom_number])
+    return positions, colors, radii, spins
+
+
+def drawmolecule(positions_or_filename, colors=None, radii=None, spins=None,
+                 bond_radius=0.1, bond_color=(0.8, 0.8, 0.8), bond_delta=1.0,
+                 set_camera=True, rotation=0, tilt=0):
+    if type(positions_or_filename) in (str, unicode):
+        filename = positions_or_filename
+        positions, colors, radii, spins = _readxyzfile(filename)
+    else:
+        positions = positions_or_filename
+    positions = numpy.array(positions, numpy.float32)
+    positions.shape = (numpy.prod(positions.shape)/3, 3)
+    n = len(positions)
+    if colors is None:
+        colors = numpy.ones((n, 3), numpy.float32)
+    else:
+        colors = numpy.array(colors, numpy.float32)
+        colors.shape = (n, 3)
+    if radii is None:
+        radii = 0.3*numpy.ones(n, numpy.float32)
+    else:
+        radii = numpy.array(radii, numpy.float32)
+        radii.shape = n
+    bond_color = numpy.array(bond_color, numpy.float32)
+    bond_color.shape = 3
+
+    if set_camera:
+        cx, cy, cz = numpy.mean(positions, axis=0)
+        dx, dy, dz = positions.ptp(axis=0)
+        d = max(dx, dy)/2 / 0.4142 + 3
+        r = dz/2+d
+        rx = r*numpy.sin(numpy.radians(tilt))*numpy.sin(numpy.radians(rotation))
+        ry = r*numpy.sin(numpy.radians(tilt))*numpy.cos(numpy.radians(rotation))
+        rz = r*numpy.cos(numpy.radians(tilt))
+        ux = numpy.sin(numpy.radians(tilt+90))*numpy.sin(numpy.radians(rotation))
+        uy = numpy.sin(numpy.radians(tilt+90))*numpy.cos(numpy.radians(rotation))
+        uz = numpy.cos(numpy.radians(tilt+90))
+        cameralookat(cx+rx, cy+ry, cz+rz, cx, cy, cz, ux, uy, uz)
+        setcameraprojectionparameters(45, d-radii.max()-3, d+dz+radii.max()+3)
+
+    _gr3.gr3_drawmolecule(n, positions.ctypes.data_as(POINTER(c_float)),
+                          colors.ctypes.data_as(POINTER(c_float)),
+                          radii.ctypes.data_as(POINTER(c_float)),
+                          c_float(bond_radius),
+                          bond_color.ctypes.data_as(POINTER(c_float)),
+                          c_float(bond_delta))
+
+    if spins is not None and spins is not False:
+        spins = numpy.array(spins, numpy.float32)
+        spins.shape = (n, 3)
+        drawspins(positions, spins, colors)
+
 _gr3.gr3_init.argtypes = [POINTER(c_int)]
 _gr3.gr3_terminate.argtypes = []
 _gr3.gr3_getrenderpathstring.argtypes = []
@@ -1001,3 +1210,13 @@ _gr3.gr3_createtubemesh.argtype = [POINTER(c_uint), c_uint, POINTER(c_float),
                                    POINTER(c_float), POINTER(c_float), c_int,
                                    c_int]
 _gr3.gr3_createtubemesh.restype = c_int
+
+_gr3.gr3_drawspins.argtype = [c_int, POINTER(c_float), POINTER(c_float),
+                              POINTER(c_float), c_float, c_float, c_float,
+                              c_float]
+_gr3.gr3_drawspins.restype = None
+
+_gr3.gr3_drawmolecule.argtype = [c_int, POINTER(c_float), POINTER(c_float),
+                                 POINTER(c_float), c_float, POINTER(c_float),
+                                 c_float]
+_gr3.gr3_drawmolecule.restype = None
