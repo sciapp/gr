@@ -1,4 +1,4 @@
-%{!?__python: %global __python /usr/bin/python}
+%{!?__python: %global __python %{_bindir}/python}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True)")}
 %global python_platform %(%{__python} -c "from distutils.util import get_platform ; print get_platform()")
 %define THIRDPARTY build/3rdparty.%{python_platform}-%{python_version}
@@ -7,16 +7,17 @@
 
 %if 0%{?__jcns}
 %define fixedversion %{version}
+Name:          python-gr-local
 %else
 # use fixedversion for builds on build.opensuse.org - needed for deb builds.
 %define fixedversion fixed
+Name:          python-gr
 %endif
 
 %define qmake qmake-qt4
 %define grdir %{_prefix}/gr
 
 Summary:			GR, a universal framework for visualization applications
-Name:				python-gr
 Version:			0.17.3.post55
 Release:			2%{?dist}
 License:			MIT
@@ -36,14 +37,24 @@ Source11:			https://cairographics.org/releases/pixman-0.34.0.tar.gz
 # for vcversioner
 BuildRequires:		git
 BuildRequires:		gcc-c++
-BuildRequires:		python
-BuildRequires:		python-devel
-BuildRequires:		python-setuptools
 BuildRequires:		libX11-devel
 BuildRequires:		libXt-devel
 BuildRequires:		libXft-devel
 BuildRequires:		gtk2-devel
-BuildRequires:		qt-devel
+%if 0%{?__jcns}
+%define qmake %{_prefix}/qt4/bin/qmake
+BuildRequires: python-local
+BuildRequires: python-setuptools-local
+BuildRequires: qt4-local
+Requires:      python-local
+Requires:      numpy-local
+%else
+BuildRequires: python-devel
+BuildRequires: python-setuptools
+BuildRequires: qt-devel
+Requires:      python
+Requires:      numpy
+%endif
 
 %if 0%{?suse_version}
 %define qmake qmake
@@ -78,9 +89,6 @@ BuildRequires:		wxGTK-devel
 %if 0%{?suse_version}
 BuildRequires:		wxWidgets-devel
 %endif
-
-Requires:			python
-Requires:			numpy
 
 %description
 GR, a universal framework for visualization applications
@@ -127,3 +135,4 @@ make install GRDIR=%{grdir} DESTDIR=${RPM_BUILD_ROOT}
 %files -n gr
 %defattr(-,root,root)
 %{grdir}
+
