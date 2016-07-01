@@ -1351,7 +1351,7 @@ static unsigned int calculate_bonds(float3 *particles, uchar3* cells, int3 dim, 
 }
 
 
-static float min(const float *values, int n, int offset) {
+static float gr3_min(const float *values, int n, int offset) {
     int i;
     float cur_min;
     cur_min = values[offset];
@@ -1363,7 +1363,7 @@ static float min(const float *values, int n, int offset) {
     return cur_min;
 }
 
-static float max(const float *values, int n, int offset) {
+static float gr3_max(const float *values, int n, int offset) {
     int i;
     float cur_max;
     cur_max = values[offset];
@@ -1385,12 +1385,12 @@ static int calc_bonds(const float *positions, int num_atoms, float bond_length, 
 
     assert(num_atoms > 0);
     cells = calloc(num_atoms, sizeof(uchar3));
-    _min.x = min(positions, num_atoms, 0);
-    _min.y = min(positions, num_atoms, 1);
-    _min.z = min(positions, num_atoms, 2);
-    dim.x = (max(positions, num_atoms, 0) - _min.x) / bond_length + 1;
-    dim.y = (max(positions, num_atoms, 1) - _min.y) / bond_length + 1;
-    dim.z = (max(positions, num_atoms, 2) - _min.z) / bond_length + 1;
+    _min.x = gr3_min(positions, num_atoms, 0);
+    _min.y = gr3_min(positions, num_atoms, 1);
+    _min.z = gr3_min(positions, num_atoms, 2);
+    dim.x = (gr3_max(positions, num_atoms, 0) - _min.x) / bond_length + 1;
+    dim.y = (gr3_max(positions, num_atoms, 1) - _min.y) / bond_length + 1;
+    dim.z = (gr3_max(positions, num_atoms, 2) - _min.z) / bond_length + 1;
     num_cells = dim.x * dim.y * dim.z;
 
     position_in_cell = calloc(num_atoms, sizeof(unsigned int));
