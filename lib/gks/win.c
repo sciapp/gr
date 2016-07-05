@@ -1424,6 +1424,11 @@ void gks_drv_win(
       create_patterns();
 
       *ptr = p;
+
+      r1[0] = p->mwidth;
+      r2[0] = p->mheight;
+      ia[0] = p->swidth;
+      ia[1] = p->sheight;
       break;
 
     case  3:
