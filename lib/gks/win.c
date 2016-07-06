@@ -307,7 +307,7 @@ LRESULT CALLBACK wndproc(HWND win, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
       if (wParam)
       {
-        MoveWindow(p->win, 50, 50, LOWORD(lParam) + 7, HIWORD(lParam) + 26,
+        MoveWindow(p->win, 50, 50, LOWORD(lParam) + 7, HIWORD(lParam) + 13,
           TRUE);
         UpdateWindow(p->win);
         create_bitmap();
@@ -510,7 +510,7 @@ void resize_window(void)
       DeleteObject(p->bm);
       p->bm = p->bm_old = NULL;
       DeleteDC(p->memdc);
-      SendMessage(p->win, WM_SIZE, 1, MAKELONG(p->width, p->height));
+      SendMessage(p->win, WM_SIZE, 1, MAKELONG(p->width + 7, p->height + 26));
     }
   }
 }
