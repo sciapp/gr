@@ -307,7 +307,7 @@ LRESULT CALLBACK wndproc(HWND win, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
       if (wParam)
       {
-        MoveWindow(p->win, 50, 50, LOWORD(lParam) + 7, HIWORD(lParam) + 13,
+        MoveWindow(p->win, 50, 50, LOWORD(lParam) + 8, HIWORD(lParam) + 14,
           TRUE);
         UpdateWindow(p->win);
         create_bitmap();
@@ -392,7 +392,7 @@ DWORD WINAPI create_window(LPVOID parm)
     {
       p->wndproc = (WNDPROC) NULL;
       p->win = CreateWindow("GKS", "GKS 5", WS_OVERLAPPEDWINDOW,
-	50, 50, p->width + 7, p->height + 26, NULL, NULL, gksw.instance, NULL);
+	50, 50, p->width + 8, p->height + 26, NULL, NULL, gksw.instance, NULL);
     }
   else
     {
@@ -510,7 +510,7 @@ void resize_window(void)
       DeleteObject(p->bm);
       p->bm = p->bm_old = NULL;
       DeleteDC(p->memdc);
-      SendMessage(p->win, WM_SIZE, 1, MAKELONG(p->width + 7, p->height + 26));
+      SendMessage(p->win, WM_SIZE, 1, MAKELONG(p->width + 8, p->height + 26));
     }
   }
 }
