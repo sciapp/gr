@@ -307,7 +307,7 @@ LRESULT CALLBACK wndproc(HWND win, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
       if (wParam)
       {
-        MoveWindow(p->win, 50, 50, LOWORD(lParam) + 8, HIWORD(lParam) + 14,
+        MoveWindow(p->win, 50, 50, LOWORD(lParam) + 8, HIWORD(lParam) + 13,
           TRUE);
         UpdateWindow(p->win);
         create_bitmap();
