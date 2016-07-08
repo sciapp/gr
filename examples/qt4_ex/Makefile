@@ -3,7 +3,7 @@ QMAKE = qmake
 QTINCDIR := $(shell $(QMAKE) -query QT_INSTALL_HEADERS)
 QTLIBDIR := $(shell $(QMAKE) -query QT_INSTALL_LIBS)
 CXXFLAGS = -I$(QTINCDIR) -I$(QTINCDIR)/QtCore -I$(QTINCDIR)/QtGui -I$(GRDIR)/include
-LIBS = -L$(QTLIBDIR) -L$(GRDIR)/lib -lQtGui -lQtCore -lGR -Xlinker -rpath -Xlinker $(QTLIBDIR) -Xlinker -rpath -Xlinker $(GRDIR)/lib
+LIBS = -L$(QTLIBDIR) -L$(GRDIR)/lib -lQtGui -lQtCore -lGR -lqt4gr -Xlinker -rpath -Xlinker $(QTLIBDIR) -Xlinker -rpath -Xlinker $(GRDIR)/lib
 
 
 all: main

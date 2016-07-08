@@ -51,7 +51,7 @@ Linux:
 Darwin:
 	@make targets
 
-targets: prerequisites libGR.a libGR.so demo
+targets: prerequisites libGR.a libGR.so demo libqtgr
 
 prerequisites:
 	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do make -C ../../3rdparty/$$d; done
@@ -71,6 +71,9 @@ demo: demo.c libGR.a $(GKSLIBS)
 	$(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) \
 	$(QHLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS)
 
+libqtgr:
+	@make -C qtgr
+
 install:
 	@make -C ../gks install
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
@@ -84,8 +87,10 @@ install:
 	cp -p julia/* $(JULIADIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr.h $(INCDIR)
+	@make -C qtgr install
 
 clean:
+	@make -C qtgr clean
 	@for d in gks gks/plugin; do make -C ../$$d clean; done
 	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do make -C ../../3rdparty/$$d clean; done
 	rm -f so_locations demo *.so *.a *.o *.bak *~

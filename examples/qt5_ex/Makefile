@@ -5,10 +5,10 @@ QTINCDIR := $(shell $(QMAKE) -query QT_INSTALL_HEADERS)
 QTLIBDIR := $(shell $(QMAKE) -query QT_INSTALL_LIBS)
 ifeq ($(UNAME_S),Darwin)
 	CXXFLAGS = -fPIC -I$(QTINCDIR) -I$(QTLIBDIR)/QtCore.framework/Versions/5/Headers -I$(QTLIBDIR)/QtGui.framework/Versions/5/Headers -I$(QTLIBDIR)/QtWidgets.framework/Versions/5/Headers -I$(GRDIR)/include -F$(QTLIBDIR)
-	LIBS = -F$(QTLIBDIR) -L$(GRDIR)/lib -framework QtWidgets -framework QtGui -framework QtCore -lGR -Xlinker -rpath -Xlinker $(QTLIBDIR) -Xlinker -rpath -Xlinker $(GRDIR)/lib
+	LIBS = -F$(QTLIBDIR) -L$(GRDIR)/lib -framework QtWidgets -framework QtGui -framework QtCore -lGR -lqt5gr -Xlinker -rpath -Xlinker $(QTLIBDIR) -Xlinker -rpath -Xlinker $(GRDIR)/lib
 else
 	CXXFLAGS = -fPIC -I$(QTINCDIR) -I$(QTINCDIR)/QtCore -I$(QTINCDIR)/QtGui -I$(QTINCDIR)/QtWidgets -I$(GRDIR)/include
-	LIBS = -L$(QTLIBDIR) -L$(GRDIR)/lib -lQt5Widgets -lQt5Gui -lQt5Core -lGR -Xlinker -rpath -Xlinker $(QTLIBDIR) -Xlinker -rpath -Xlinker $(GRDIR)/lib
+	LIBS = -L$(QTLIBDIR) -L$(GRDIR)/lib -lQt5Widgets -lQt5Gui -lQt5Core -lGR -lqt5gr -Xlinker -rpath -Xlinker $(QTLIBDIR) -Xlinker -rpath -Xlinker $(GRDIR)/lib
 endif
 
 

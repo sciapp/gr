@@ -1,16 +1,14 @@
 #ifndef MAIN_WINDOW_H_INCLUDED
 #define MAIN_WINDOW_H_INCLUDED
 
-#include <QMainWindow>
-#include <QPaintEvent>
+#include "grwidget.h"
 
-class MainWindow : public QMainWindow {
+class MainWindow : public GRWidget {
     public:
         MainWindow();
 
     protected:
-        void paintEvent(QPaintEvent *event);
-        void draw();
+        virtual void draw();
 
 };
 

@@ -1,0 +1,40 @@
+CXX = CL
+QT4DIR = S:\Qt\4.8.7
+QT5DIR = S:\Qt\5.7.0
+QT4INC = /I$(QT4DIR)\include /I$(QT4DIR)\include\QtCore /I$(QT4DIR)\include\QtGui
+QT5INC = /I$(QT5DIR)\include /I$(QT5DIR)\include\QtCore /I$(QT5DIR)\include\QtGui /I$(QT5DIR)\include\QtWidgets
+DEFINES = /DGRDIR=\"$(GRDIR)\" /DNO_FT /DNO_X11 /DNO_CAIRO /D_DLL /MD /D_POSIX /DWXUSINGDLL /DwxMSVC_VERSION_AUTO /D_UNICODE
+INCLUDES = /I..
+CXXFLAGS = /Zi /EHsc /nologo $(DEFINES) $(INCLUDES)
+QT4LIBS = /LIBPATH:$(QT4DIR)\lib QtGui4.lib QtCore4.lib
+QT5LIBS = /LIBPATH:$(QT5DIR)\lib Qt5Widgets.lib Qt5Gui.lib Qt5Core.lib
+DLLLIBS = /LIBPATH:.. libgr.lib msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
+DLLLFLAGS = /nodefaultlib -dll
+DLLLINK = LINK /nologo
+
+
+default: qt4gr.dll qt5gr.dll
+
+qt4gr.dll: qt4gr.obj
+	$(DLLLINK) /out:$@ $** $(QT4LIBS) $(DLLLIBS) $(DLLLFLAGS)
+
+qt5gr.dll: qt5gr.obj
+	$(DLLLINK) /out:$@ $** $(QT5LIBS) $(DLLLIBS) $(DLLLFLAGS)
+
+qt4gr.obj: grwidget.cxx
+	$(CXX) /Fo$@ /c $(CXXFLAGS) $(QT4INC) $**
+
+qt5gr.obj: grwidget.cxx
+	$(CXX) /Fo$@ /c $(CXXFLAGS) $(QT5INC) $**
+
+
+clean:
+	DEL *.dll
+	DEL *.lib
+	DEL *.exp
+	DEL *.pdb
+	DEL moc_*.cxx
+	DEL *.ilk
+	DEL *.obj
+	DEL *.bak
+	DEL *.manifest

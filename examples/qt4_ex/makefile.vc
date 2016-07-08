@@ -1,7 +1,7 @@
 GRDIR = S:\gr
 QTDIR = S:\Qt\4.8.7
 CXXFLAGS = /I$(QTDIR)\include /I$(QTDIR)\include\QtCore /I$(QTDIR)\include\QtGui /I$(GRDIR)
-LIBS = /LIBPATH:$(QTDIR)\lib /LIBPATH:$(GRDIR) QtGui4.lib QtCore4.lib libgr.lib
+LIBS = /LIBPATH:$(QTDIR)\lib /LIBPATH:$(GRDIR) QtGui4.lib QtCore4.lib libgr.lib qt4gr.lib
 OBJ = main.obj main_window.obj
 
 

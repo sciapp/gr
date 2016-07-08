@@ -23,7 +23,7 @@ DESTDIR = $(GRDIR)
 	$(CC) $(CFLAGS) $(DEFINES) $<
 
 #default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) libgr.lib gr.pyd
-default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) libgr.lib demo.exe
+default: $(GKSLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) libgr.lib demo.exe libqtgr
 
 $(GKSLIBS):
 	@cd ..\gks
@@ -63,6 +63,11 @@ demo.obj: demo.c
 demo.exe: demo.obj libgr.lib
         $(LINK) /out:$@ demo.obj libgr.lib
 
+libqtgr:
+	@cd qtgr
+	@$(MAKE) /f makefile.vc
+	@cd ..
+
 gr.pyd: py_gr.obj
 	$(DLLLINK) /out:$@ $** \
 	$(PYHOME)\libs\python27.lib $(GRLIBS) \
@@ -75,12 +80,17 @@ py_gr.obj: python\py_gr.c
 install: default
 	COPY /Y ..\gr\libgr.dll $(DESTDIR)
 	COPY /Y ..\gr\libgr.lib $(DESTDIR)
+	COPY /Y ..\gr\qtgr\qt4gr.dll $(DESTDIR)
+	COPY /Y ..\gr\qtgr\qt4gr.lib $(DESTDIR)
+	COPY /Y ..\gr\qtgr\qt5gr.dll $(DESTDIR)
+	COPY /Y ..\gr\qtgr\qt5gr.lib $(DESTDIR)
 	IF NOT EXIST $(DESTDIR)\python MKDIR $(DESTDIR)\python
 	IF NOT EXIST $(DESTDIR)\python\gr MKDIR $(DESTDIR)\python\gr
 	XCOPY /I /S /Y python\gr $(DESTDIR)\python\gr
 	IF NOT EXIST $(DESTDIR)\python\qtgr MKDIR $(DESTDIR)\python\qtgr
 	XCOPY /I /S /Y python\qtgr $(DESTDIR)\python\qtgr
 	COPY /Y ..\gr\gr.h $(DESTDIR)
+	COPY /Y ..\gr\qtgr\grwidget.h $(DESTDIR)
 	COPY /Y ..\gks\libgks.dll $(DESTDIR)
 	COPY /Y ..\gks\libgks.lib $(DESTDIR)
 	COPY /Y ..\gks\gks.h $(DESTDIR)
@@ -89,6 +99,9 @@ install: default
 	COPY /Y ..\gks\fonts\gksfont.dat $(DESTDIR)\fonts
 
 clean:
+	@cd qtgr
+	@$(MAKE) /f makefile.vc clean
+	@cd ..
 	@cd ..\gks
 	@$(MAKE) /f makefile.vc clean
 	@cd ..\..\3rdparty\qhull
