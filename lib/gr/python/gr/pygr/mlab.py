@@ -515,7 +515,6 @@ def _plot_data(**kwargs):
     kind = _plt.kwargs.get('kind', 'line')
     if _plt.kwargs['clear']:
         gr.clearws()
-    gr3.clear()
     if kind in ('imshow', 'isosurface'):
         _set_viewport(kind, _plt.kwargs['subplot'])
     elif not _plt.kwargs['ax']:
@@ -602,6 +601,7 @@ def _plot_data(**kwargs):
                 x, y, z = gr.gridit(x, y, z, 200, 200)
             z.shape = np.prod(z.shape)
             if _plt.kwargs.get('accelerate', True):
+                gr3.clear()
                 gr3.surface(x, y, z, gr.OPTION_COLORED_MESH)
             else:
                 gr.surface(x, y, z, gr.OPTION_COLORED_MESH)
@@ -716,6 +716,7 @@ def _plot_iso(v):
     isovalue = _plt.kwargs.get('isovalue', 0.5)
     rotation = np.radians(_plt.kwargs.get('rotation', 40))
     tilt = np.radians(_plt.kwargs.get('tilt', 70))
+    gr3.clear()
     mesh = gr3.createisosurfacemesh(values, (2/(nx-1), 2/(ny-1), 2/(nz-1)),
                                     (-1., -1., -1.),
                                     int(isovalue * uint16_max))

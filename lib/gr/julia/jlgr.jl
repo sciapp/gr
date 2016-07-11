@@ -505,6 +505,7 @@ function plot_iso(V)
     rotation = get(plt.kvs, :rotation, 40) * π / 180.0
     tilt = get(plt.kvs, :tilt, 70) * π / 180.0
     r = 2.5
+    gr3.clear()
     mesh = gr3.createisosurfacemesh(values, (2/(nx-1), 2/(ny-1), 2/(nz-1)),
                                     (-1., -1., -1.),
                                     round(Int64, isovalue * (2^16-1)))
@@ -543,7 +544,6 @@ function plot_data(; kv...)
     kind = get(plt.kvs, :kind, :line)
 
     plt.kvs[:clear] && GR.clearws()
-    gr3.clear()
 
     if kind in (:imshow, :isosurface)
         set_viewport(kind, plt.kvs[:subplot])
@@ -640,6 +640,7 @@ function plot_data(; kv...)
                 x, y, z = GR.gridit(x, y, z, 200, 200)
             end
             if get(plt.kvs, :accelerate, true)
+                gr3.clear()
                 GR.gr3.surface(x, y, z, GR.OPTION_COLORED_MESH)
             else
                 GR.surface(x, y, z, GR.OPTION_COLORED_MESH)
