@@ -543,6 +543,7 @@ function plot_data(; kv...)
     kind = get(plt.kvs, :kind, :line)
 
     plt.kvs[:clear] && GR.clearws()
+    gr3.clear()
 
     if kind in (:imshow, :isosurface)
         set_viewport(kind, plt.kvs[:subplot])

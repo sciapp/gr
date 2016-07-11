@@ -515,6 +515,7 @@ def _plot_data(**kwargs):
     kind = _plt.kwargs.get('kind', 'line')
     if _plt.kwargs['clear']:
         gr.clearws()
+    gr3.clear()
     if kind in ('imshow', 'isosurface'):
         _set_viewport(kind, _plt.kwargs['subplot'])
     elif not _plt.kwargs['ax']:
