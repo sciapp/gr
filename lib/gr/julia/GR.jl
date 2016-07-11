@@ -4,7 +4,7 @@ end
 
 module GR
 
-import Base.writemime
+using Compat
 
 if VERSION > v"0.5-"
   if Sys.KERNEL == :NT
@@ -1248,17 +1248,17 @@ trisurf(args...; kwargs...) = jlgr.trisurf(args...; kwargs...)
 type SVG
    s::Array{UInt8}
 end
-writemime(io::IO, ::MIME"image/svg+xml", x::SVG) = write(io, x.s)
+@compat Base.show(io::IO, ::MIME"image/svg+xml", x::SVG) = write(io, x.s)
 
 type PNG
    s::Array{UInt8}
 end
-writemime(io::IO, ::MIME"image/png", x::PNG) = write(io, x.s)
+@compat Base.show(io::IO, ::MIME"image/png", x::PNG) = write(io, x.s)
 
 type HTML
    s::AbstractString
 end
-writemime(io::IO, ::MIME"text/html", x::HTML) = print(io, x.s)
+@compat Base.show(io::IO, ::MIME"text/html", x::HTML) = print(io, x.s)
 
 function _readfile(path)
     data = Array(UInt8, filesize(path))
@@ -1354,10 +1354,10 @@ function show()
         content = PNG(_readfile("gks.png"))
         return content
     elseif mime_type == "mov"
-        content = HTML(string("""<video autoplay controls><source type="video/mp4" src="data:video/mp4;base64,""", base64encode(open(readbytes,"gks.mov")),""""></video>"""))
+        content = HTML(string("""<video autoplay controls><source type="video/mp4" src="data:video/mp4;base64,""", base64encode(open(read,"gks.mov")),""""></video>"""))
         return content
     elseif mime_type == "iterm"
-        content = string("\033]1337;File=inline=1;preserveAspectRatio=0:", base64encode(open(readbytes,"gks.pdf")), "\a")
+        content = string("\033]1337;File=inline=1;height=24;preserveAspectRatio=0:", base64encode(open(read,"gks.pdf")), "\a")
         if figure_count != None
             figure_count += 1
             (figure_count > 1) && print("\e[24A")
