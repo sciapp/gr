@@ -39,7 +39,7 @@ $(FTLIB):
 	$(MAKE) -C ../../../3rdparty/freetype libfreetype.lib
 
 $(OPENJP2LIB):
-	cd ../../../3rdparty/openjp2/ && OPENJP2_EXTRA_CONFIGURE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/mingw_toolchain.cmake MAKE=make ./build.sh
+	cd ../../../3rdparty/openjp2/ && OPENJP2_EXTRA_CONFIGURE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/${PREFIX}.cmake MAKE=make ./build.sh
 	mv ../../../3rdparty/build/lib/libopenjp2.a ../../../3rdparty/build/lib/libopenjp2.lib
 
 $(ZLIB):
@@ -55,13 +55,13 @@ VPXLIBS:
 	cd ../../../3rdparty/vpx && MAKE=make ./build.sh
 
 OGGLIBS:
-	cd ../../../3rdparty/ogg && OGG_EXTRA_CONFIGURE_FLAGS="--host=x86_64-w64-mingw32" MAKE=make ./build.sh
+	cd ../../../3rdparty/ogg && OGG_EXTRA_CONFIGURE_FLAGS="--host=${PREFIX}" MAKE=make ./build.sh
 
 THEORALIBS: OGGLIBS
-	cd ../../../3rdparty/theora && THEORA_EXTRA_CONFIGURE_FLAGS="--host=x86_64-w64-mingw32" MAKE=make ./build.sh
+	cd ../../../3rdparty/theora && THEORA_EXTRA_CONFIGURE_FLAGS="--host=${PREFIX}" MAKE=make ./build.sh
 
 AVLIBS: VPXLIBS THEORALIBS
-	cd ../../../3rdparty/ffmpeg/ &&	FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32" MAKE=make ./build.sh
+	cd ../../../3rdparty/ffmpeg/ &&	FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=${PREFIX}- --arch=${ARCHITECTURE} --target-os=mingw32" MAKE=make ./build.sh
 
 MUPDFLIBS:
 	cd ../../../3rdparty/mupdf && MUPDF_CROSS_COMPILE=yes ./build.sh
