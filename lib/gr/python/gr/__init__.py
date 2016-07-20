@@ -2282,12 +2282,11 @@ def mimetype():
 
 def isinline():
     global _mime_type
-    return (_mimetype and _mimetype != "mov")
+    return (_mime_type and _mime_type != "mov")
 
 
 def inline(mime="svg"):
     global _mime_type
-    # initialize inline mode
     if _mime_type != mime:
         os.environ["GKS_WSTYPE"] = mime
         emergencyclosegks()
