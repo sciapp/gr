@@ -21,6 +21,8 @@ fi
 
 cd ${src}
 
+export CFLAGS=-I${dest}/../zlib
+export LIBS=${dest}/../zlib/libz.a
 export png_REQUIRES=libpng16
 export png_CFLAGS=-I${dest}/../libpng16
 export png_LIBS=${dest}/../libpng16/libpng.a
@@ -30,7 +32,8 @@ export pixman_CFLAGS=-I${dest}/include/pixman-1
 export pixman_LIBS=${dest}/lib/libpixman-1.a
 
 ./configure --prefix=${dest} --libdir=${dest}/lib \
-  --enable-static --with-pic --disable-quartz --disable-ft
+  --enable-static --with-pic --disable-quartz --disable-ft --disable-ps \
+  --disable-pdf --disable-interpreter
 make -j4
 make install
 
