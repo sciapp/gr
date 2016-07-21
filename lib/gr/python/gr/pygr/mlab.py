@@ -207,7 +207,11 @@ def _set_viewport(kind, subplot):
         width = _plt.kwargs['figsize'][0] * horizontal_pixels_per_inch
         height = _plt.kwargs['figsize'][1] * vertical_pixels_per_inch
     else:
-        width, height = _plt.kwargs['size']
+        dpi = pixel_width / metric_width * 0.0254
+        if dpi > 200:
+            width, height = tuple(x * dpi / 100 for x in _plt.kwargs['size'])
+        else:
+            width, height = _plt.kwargs['size']
 
     viewport = [0, 0, 0, 0]
     vp = subplot[:]
