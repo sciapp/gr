@@ -1,4 +1,4 @@
-DEFINES = -DNO_FT -DNO_X11 -DGRDIR=\"$(GRDIR)\"
+DEFINES = -DNO_FT -DNO_X11 -DNO_GLFW -DNO_GS -DNO_QT4 -DNO_GTK -DNO_WX -DNO_ZMQ -DGRDIR=\"$(GRDIR)\"
 ZLIB = ../../../3rdparty/zlib/libz.lib
 PNGLIB = ../../../3rdparty/libpng16/libpng.lib
 JBIG2DECLIB = ../../../3rdparty/jbig2dec/libjbig2dec.lib
@@ -16,7 +16,7 @@ CXXFLAGS = -Wall $(DEFINES) $(INCLUDES)
 GDILIB = -lgdi32
 OBJS = font.o afm.o util.o malloc.o error.o io.o
 
-all: svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll movplugin.dll
+all: svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll movplugin.dll wxplugin.dll qtplugin.dll gtkplugin.dll figplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll
 
 .SUFFIXES: .c .cxx .o
 
@@ -84,6 +84,30 @@ cairoplugin.o: $(CAIROLIB)
 
 cairoplugin.dll: cairoplugin.o $(OBJS) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
+
+wxplugin.dll: wxplugin.o $(OBJS)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+qtplugin.dll: qtplugin.o $(OBJS)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+gtkplugin.dll: gtkplugin.o $(OBJS)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+figplugin.dll: figplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+gsplugin.dll: gsplugin.o $(OBJS)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+wmfplugin.dll: wmfplugin.o $(OBJS)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+glplugin.dll: glplugin.o $(OBJS)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+
+zmqplugin.dll: zmqplugin.o $(OBJS)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 clean:
 	$(RM) *.dll

@@ -28,6 +28,8 @@ extern "C"
 #define DLLEXPORT
 #endif
 
+#endif
+
 DLLEXPORT void gks_zmqplugin(
   int fctid, int dx, int dy, int dimx, int *ia,
   int lr1, double *r1, int lr2, double *r2,
@@ -39,7 +41,6 @@ DLLEXPORT void gks_zmqplugin(
 #endif
 #endif
 
-#endif
 
 typedef struct
   {
