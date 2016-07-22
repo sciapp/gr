@@ -1,0 +1,40 @@
+       GRDIR = /usr/local/gr
+      LIBDIR = $(DESTDIR)$(GRDIR)/lib
+      INCDIR = $(DESTDIR)$(GRDIR)/include
+   PYTHONDIR = $(LIBDIR)/python
+
+    INCLUDES = -I../../3rdparty -I../../3rdparty/jpeg -I../gr
+      GRLIBS = -L../gr -lgr
+     PNGLIBS = ../../3rdparty/libpng16/libpng.lib
+    JPEGLIBS = ../../3rdparty/jpeg/libjpeg.lib
+       ZLIBS = ../../3rdparty/zlib/libz.lib
+      CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)
+      GLLIBS = -lopengl32 -lgdi32
+     SOFLAGS = -shared
+     LDFLAGS = -Wl,--out-implib,$(@:.dll=.a)
+
+default: targets
+
+targets: libGR3.dll
+
+libGR3.dll: gr3.c gr3_win.c gr3_convenience.c gr3_html.c gr3_povray.c gr3_png.c gr3_jpeg.c gr3_gr.c gr3_mc.c
+	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) $(JPEGLIBS) $(GRLIBS) $(GLLIBS) $(PNGLIBS) $(ZLIBS) \
+	-shared -Wl,--out-implib,$(@:.dll=.a)
+
+gr3.c: gr3.h gr3_internals.h
+gr3_internals.h: gr3.h gr3_glx.h gr3_cgl.h
+gr3_glx.c: gr3_glx.h
+gr3_cgl.c: gr3_cgl.h
+gr3_convenience.c: gr3_internals.h
+gr3_html.c: gr3_internals.h
+gr3_povray.c: gr3_internals.h
+gr3_png.c: gr3_internals.h
+gr3_jpeg.c: gr3_internals.h
+gr3_gr.c: gr3_internals.h
+gr3_mc.c: gr3.h gr3_mc_data.h
+
+clean:
+	$(RM) libGR3.dylib*
+	$(RM) libGR3.a*
+	$(RM) *.o
+	$(RM) *.pyc

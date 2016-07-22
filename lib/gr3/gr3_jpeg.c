@@ -1,9 +1,9 @@
+#include "gr3.h"
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <jpeglib.h>
-#include "gr3.h"
 #include "gr3_internals.h"
 
 int gr3_export_jpeg_(const char *filename, int width, int height) {
