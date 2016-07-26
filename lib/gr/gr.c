@@ -149,6 +149,9 @@ static
 int arrow_style = 0;
 
 static
+double arrow_size = 1;
+
+static
 int flag_printing = 0, flag_graphics = 0;
 
 static
@@ -6478,6 +6481,17 @@ void gr_setarrowstyle(int style)
     gr_writestream("<setarrowstyle style=\"%d\"/>\n", style);
 }
 
+void gr_setarrowsize(double size)
+{
+  check_autoinit;
+
+  if (arrow_size > 0)
+    arrow_size = size;
+
+  if (flag_graphics)
+    gr_writestream("<setarrowsize size=\"%g\"/>\n", size);
+}
+
 void gr_drawarrow(double x1, double y1, double x2, double y2)
 {
   double xs, ys, xe, ye;
@@ -6524,7 +6538,7 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
   xc = (xs + xe) / 2;
   yc = (ys + ye) / 2;
   f = 0.01 * c / 2;
-  fh = 0.15 / c;
+  fh = 0.15 / c * arrow_size;
 
   j = 0;
   while ((n = vertex_list[arrow_style][j++]) != 0)

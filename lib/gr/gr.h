@@ -127,6 +127,7 @@ DLLEXPORT void gr_drawarc(double, double, double, double, int, int);
 DLLEXPORT void gr_fillarc(double, double, double, double, int, int);
 DLLEXPORT void gr_drawpath(int, vertex_t *, unsigned char *, int);
 DLLEXPORT void gr_setarrowstyle(int);
+DLLEXPORT void gr_setarrowsize(double);
 DLLEXPORT void gr_drawarrow(double, double, double, double);
 DLLEXPORT int gr_readimage(char *, int *, int *, int **);
 DLLEXPORT void gr_drawimage(

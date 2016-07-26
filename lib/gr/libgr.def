@@ -61,6 +61,7 @@ EXPORTS
 	gr_restorestate
 	gr_savestate
 	gr_selntran
+	gr_setarrowsize
 	gr_setarrowstyle
 	gr_setcharexpan
 	gr_setcharheight

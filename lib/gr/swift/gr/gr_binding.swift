@@ -472,6 +472,10 @@ public func setarrowstyle(style: Int) {
   gr_setarrowstyle(CInt(style))
 }
 
+public func setarrowsize(size: Double) {
+  gr_setarrowsize(CDouble(size))
+}
+
 public func drawarrow(x1: Double, y1: Double, x2: Double, y2: Double) {
   gr_drawarrow(CDouble(x1), CDouble(y1), CDouble(x2), CDouble(y2))
 }

@@ -549,6 +549,11 @@ void FORTRAN(gr_setarrowstyle)(int *style)
   gr_setarrowstyle(*style);
 }
 
+void FORTRAN(gr_setarrowsize)(double *size)
+{
+  gr_setarrowsize(*size);
+}
+
 void FORTRAN(gr_drawarrow)(double *x1, double *y1, double *x2, double *y2)
 {
   gr_drawarrow(*x1, *y1, *x2, *y2);

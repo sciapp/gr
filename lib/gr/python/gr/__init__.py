@@ -2081,6 +2081,22 @@ def setarrowstyle(style):
     __gr.gr_setarrowstyle(c_int(style))
 
 
+def setarrowsize(size):
+    """
+    Set the arrow size to be used for subsequent arrow commands.
+
+    **Parameters:**
+
+    `size` :
+        The arrow size to be used
+
+    `setarrowsize` defines the arrow size for subsequent arrow primitives.
+    The default arrow size is 1.
+
+    """
+    __gr.gr_setarrowsize(c_double(size))
+
+
 def drawarrow(x1, y1, x2, y2):
     """
     Draw an arrow between two points.
@@ -2488,6 +2504,7 @@ __gr.gr_drawarc.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int
 __gr.gr_fillarc.argtypes = [c_double, c_double, c_double, c_double, c_int, c_int]
 __gr.gr_drawpath.argtypes = [c_int, POINTER(c_double), POINTER(c_uint8), c_int]
 __gr.gr_setarrowstyle.argtypes = [c_int]
+__gr.gr_setarrowsize.argtypes = [c_double]
 __gr.gr_drawarrow.argtypes = [c_double, c_double, c_double, c_double]
 __gr.gr_readimage.argtypes = [c_char_p, POINTER(c_int), POINTER(c_int),
                               POINTER(POINTER(c_int))]
