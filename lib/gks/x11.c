@@ -3524,6 +3524,8 @@ void draw_image(int x, int y, int width, int height, byte *ba)
   int r, g, b;
   double a;
 
+  set_clipping(False);
+
   dest = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
 		       width, height, p->depth);
   XCopyArea(p->dpy, p->double_buf ? p->pixmap : p->win, dest, p->gc,
@@ -3554,6 +3556,8 @@ void draw_image(int x, int y, int width, int height, byte *ba)
 
   XDestroyImage(to);
   XFreePixmap(p->dpy, dest);
+
+  set_clipping(True);
 }
 
 
