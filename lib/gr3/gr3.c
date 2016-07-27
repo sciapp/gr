@@ -31,6 +31,9 @@ static GLuint framebuffer = 0;
 
 static int current_object_id = 0;
 
+int gr3_error_ = GR3_ERROR_NONE;
+int gr3_error_line_ = 0;
+const char *gr3_error_file_ = "";
 
 /*!
  * The default values for the instances of GR3_InitStruct_t_:\n
@@ -108,15 +111,15 @@ GR3API int gr3_init(int *attrib_list) {
                 case GR3_IA_FRAMEBUFFER_WIDTH:
                     init_struct.framebuffer_width = attrib_list[++i];
                     if (attrib_list[i] <= 0) 
-                        return GR3_ERROR_INVALID_VALUE;
+                        RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
                     break;
                 case GR3_IA_FRAMEBUFFER_HEIGHT:
                     init_struct.framebuffer_height = attrib_list[++i];
                     if (attrib_list[i] <= 0) 
-                        return GR3_ERROR_INVALID_VALUE;
+                        RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
                     break;
                 default:
-                    return GR3_ERROR_INVALID_ATTRIBUTE;
+                    RETURN_ERROR(GR3_ERROR_INVALID_ATTRIBUTE);
             }
         }
     }
@@ -146,7 +149,7 @@ GR3API int gr3_init(int *attrib_list) {
             }
         #endif
         gr3_terminate();
-        return error;
+        RETURN_ERROR(error);
     } while (0);
     
     /* GL_ARB_framebuffer_object is core since OpenGL 3.0 */
@@ -172,7 +175,7 @@ GR3API int gr3_init(int *attrib_list) {
     #endif 
     {
         gr3_terminate();
-        return GR3_ERROR_OPENGL_ERR;
+        RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
     }
 
     #ifdef GR3_CAN_USE_VBO
@@ -248,7 +251,32 @@ GR3API int gr3_init(int *attrib_list) {
     gr3_setcameraprojectionparameters(45, 1, 200);
     gr3_cameralookat(0, 0, 10, 0, 0, 0, 0, 1, 0);
     gr3_log_("init completed successfully");
-    return GR3_ERROR_NONE;
+    RETURN_ERROR(GR3_ERROR_NONE);
+}
+
+
+
+/*!
+ * This function returns information on the most recent GR3 error.
+ * \param [in] clear 1 if the error information should be cleared
+ * \param [out] line the code line the error was returned from
+ * \param [out] file the code file the error was returned from
+ * \returns the last non-zero error code
+ */
+GR3API int gr3_geterror(int clear, int *line, const char **file) {
+    if (gr3_error_ && line) {
+        *line = gr3_error_line_;
+    }
+    if (gr3_error_ && file) {
+        *file = gr3_error_file_;
+    }
+    int error = gr3_error_;
+    if (clear) {
+        gr3_error_ = GR3_ERROR_NONE;
+        gr3_error_file_ = "";
+        gr3_error_line_ = 0;
+    }
+    return error;
 }
 
 /*!
@@ -328,7 +356,8 @@ GR3API void gr3_terminate(void) {
  *                                calling gr3_init() first
  */
 GR3API int gr3_clear(void) {
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     gr3_log_("gr3_clear();");
     
     if (context_struct_.is_initialized) {
@@ -346,12 +375,12 @@ GR3API int gr3_clear(void) {
         }
         
         if (glGetError() == GL_NO_ERROR) {
-            return GR3_ERROR_NONE;
+            RETURN_ERROR(GR3_ERROR_NONE);
         } else {
-            return GR3_ERROR_OPENGL_ERR;
+            RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
         }
     } else {
-        return GR3_ERROR_NOT_INITIALIZED;
+        RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
 }
 
@@ -359,7 +388,8 @@ GR3API int gr3_clear(void) {
  * This function sets the background color.
  */
 GR3API void gr3_setbackgroundcolor(float red, float green, float blue, float alpha) {
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return;
     if (context_struct_.is_initialized) {
         context_struct_.background_color[0] = red;
         context_struct_.background_color[1] = green;
@@ -445,7 +475,7 @@ static int gr3_allocate_meshdata_(int num_vertices, float **vertices, float **no
             goto err3;
         }
     }
-    return GR3_ERROR_NONE;
+    RETURN_ERROR(GR3_ERROR_NONE);
 
     err3:
     free(*colors);
@@ -457,7 +487,7 @@ static int gr3_allocate_meshdata_(int num_vertices, float **vertices, float **no
     free(*vertices);
     *vertices = NULL;
     err0:
-    return GR3_ERROR_OUT_OF_MEM;
+    RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
 }
 
 /*!
@@ -490,8 +520,9 @@ GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices,
     void *mem;
   
     GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     if (!context_struct_.is_initialized) {
-        return GR3_ERROR_NOT_INITIALIZED;
+        RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
     gr3_getfirstfreemesh(mesh);
     
@@ -504,7 +535,7 @@ GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices,
         glBindBuffer(GL_ARRAY_BUFFER, context_struct_.mesh_list_[*mesh].data.data.vertex_buffer_id);
         mem = malloc(n*3*3*sizeof(GLfloat));
         if (mem == NULL) {
-            return GR3_ERROR_OUT_OF_MEM;
+            RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
         }
         for (i = 0; i < n; i++) {
             GLfloat *data = ((GLfloat *)mem)+i*3*3;
@@ -540,9 +571,9 @@ GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices,
     context_struct_.mesh_list_[*mesh].data.colors = colors;
 
     if (glGetError() != GL_NO_ERROR) {
-        return GR3_ERROR_OPENGL_ERR;
+        RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
     } else {
-        return GR3_ERROR_NONE;
+        RETURN_ERROR(GR3_ERROR_NONE);
     }
 }
 
@@ -567,26 +598,24 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
     int err;
   
     GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     if (!context_struct_.is_initialized) {
-        return GR3_ERROR_NOT_INITIALIZED;
+        RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
 
     err = gr3_allocate_meshdata_(n, &myvertices, &mynormals, &mycolors,
-                                0, NULL);
-    if (err != GR3_ERROR_NONE) {
-        return err;
-    }
+                                 0, NULL);
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     memcpy(myvertices, vertices, 3 * n * sizeof(float));
     memcpy(mynormals, normals, 3 * n * sizeof(float));
     memcpy(mycolors, colors, 3 * n * sizeof(float));
-    err = gr3_createmesh_nocopy(mesh, n, myvertices, mynormals, mycolors);
-    if (err != GR3_ERROR_NONE && err != GR3_ERROR_OPENGL_ERR) {
+    gr3_createmesh_nocopy(mesh, n, myvertices, mynormals, mycolors);
+    if (gr3_geterror(0, NULL, NULL)) {
         free(myvertices);
         free(mynormals);
         free(mycolors);
     }
-
-    return err;
+    return gr3_geterror(0, NULL, NULL);
 }
 
 /*!
@@ -627,8 +656,9 @@ GR3API int gr3_createindexedmesh_nocopy(int *mesh, int number_of_vertices,
     void *mem;
     
     GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     if (!context_struct_.is_initialized) {
-        return GR3_ERROR_NOT_INITIALIZED;
+        RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
     
     gr3_getfirstfreemesh(mesh);
@@ -645,7 +675,7 @@ GR3API int gr3_createindexedmesh_nocopy(int *mesh, int number_of_vertices,
         glBindBuffer(GL_ARRAY_BUFFER, context_struct_.mesh_list_[*mesh].data.data.buffers.vertex_buffer_id);
         mem = malloc(number_of_vertices*3*3*sizeof(GLfloat));
         if (mem == NULL) {
-            return GR3_ERROR_OUT_OF_MEM;
+            RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
         }
         for (i = 0; i < number_of_vertices; i++) {
             GLfloat *data = ((GLfloat *)mem)+i*3*3;
@@ -683,9 +713,9 @@ GR3API int gr3_createindexedmesh_nocopy(int *mesh, int number_of_vertices,
     context_struct_.mesh_list_[*mesh].data.indices = indices;
 
     if (glGetError() != GL_NO_ERROR) {
-        return GR3_ERROR_OPENGL_ERR;
+        RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
     } else {
-        return GR3_ERROR_NONE;
+        RETURN_ERROR(GR3_ERROR_NONE);
     }
 }
 
@@ -719,8 +749,9 @@ GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices,
     int err;
   
     GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     if (!context_struct_.is_initialized) {
-        return GR3_ERROR_NOT_INITIALIZED;
+        RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
 
     err = gr3_allocate_meshdata_(number_of_vertices, &myvertices, &mynormals,
@@ -765,38 +796,37 @@ GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices,
 GR3API void gr3_drawmesh(int mesh, int n, const float *positions, 
                   const float *directions, const float *ups, 
                   const float *colors, const float *scales) {
-  
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return;
     if (!context_struct_.is_initialized) {
         return;
+    }
+    GR3_DrawList_t_ *p;
+    
+    GR3_DrawList_t_ *draw = malloc(sizeof(GR3_DrawList_t_));
+    draw->mesh = mesh;
+    draw->positions = malloc(sizeof(float)*n*3);
+    memcpy(draw->positions,positions,sizeof(float)*n*3);
+    draw->directions = malloc(sizeof(float)*n*3);
+    memcpy(draw->directions,directions,sizeof(float)*n*3);
+    draw->ups = malloc(sizeof(float)*n*3);
+    memcpy(draw->ups,ups,sizeof(float)*n*3);
+    draw->colors = malloc(sizeof(float)*n*3);
+    memcpy(draw->colors,colors,sizeof(float)*n*3);
+    draw->scales = malloc(sizeof(float)*n*3);
+    memcpy(draw->scales,scales,sizeof(float)*n*3);
+    draw->n = n;
+    draw->object_id = current_object_id;
+    draw->next= NULL;
+    gr3_meshaddreference_(mesh);
+    if (context_struct_.draw_list_ == NULL) {
+        context_struct_.draw_list_ = draw;
     } else {
-        GR3_DrawList_t_ *p;
-        
-        GR3_DrawList_t_ *draw = malloc(sizeof(GR3_DrawList_t_));
-        draw->mesh = mesh;
-        draw->positions = malloc(sizeof(float)*n*3);
-        memcpy(draw->positions,positions,sizeof(float)*n*3);
-        draw->directions = malloc(sizeof(float)*n*3);
-        memcpy(draw->directions,directions,sizeof(float)*n*3);
-        draw->ups = malloc(sizeof(float)*n*3);
-        memcpy(draw->ups,ups,sizeof(float)*n*3);
-        draw->colors = malloc(sizeof(float)*n*3);
-        memcpy(draw->colors,colors,sizeof(float)*n*3);
-        draw->scales = malloc(sizeof(float)*n*3);
-        memcpy(draw->scales,scales,sizeof(float)*n*3);
-        draw->n = n;
-        draw->object_id = current_object_id;
-        draw->next= NULL;
-        gr3_meshaddreference_(mesh);
-        if (context_struct_.draw_list_ == NULL) {
-            context_struct_.draw_list_ = draw;
-        } else {
-            p = context_struct_.draw_list_;
-            while(p->next) {
-                p = p->next;
-            }
-            p->next = draw;
+        p = context_struct_.draw_list_;
+        while(p->next) {
+            p = p->next;
         }
+        p->next = draw;
     }
 }
 
@@ -936,7 +966,8 @@ static void gr3_dodrawmesh_(int mesh,
  * \param [in] mesh     The mesh that should be marked for deletion
  */
 GR3API void gr3_deletemesh(int mesh) {
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return;
     gr3_log_("gr3_deletemesh_();");
     if (!context_struct_.is_initialized) {
         return;
@@ -1016,7 +1047,8 @@ static void gr3_meshremovereference_(int mesh) {
  * 
  */
 GR3API void gr3_setlightdirection(float x, float y, float z) {
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return;
     if (!context_struct_.is_initialized) {
         return;
     }
@@ -1059,7 +1091,8 @@ GR3API void gr3_cameralookat(float camera_x, float camera_y, float camera_z,
     GLfloat s[3];
     GLfloat u[3];
     GLfloat tmp;
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return;
     
     if (!context_struct_.is_initialized) {
         return;
@@ -1165,18 +1198,19 @@ GR3API void gr3_cameralookat(float camera_x, float camera_y, float camera_z,
  */
 GR3API int gr3_setcameraprojectionparameters(float vertical_field_of_view, 
                                              float zNear, float zFar) {
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     if (!context_struct_.is_initialized) {
-        return GR3_ERROR_NOT_INITIALIZED;
+        RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
     
     if (zFar < zNear || zNear <= 0 || vertical_field_of_view >= 180 || vertical_field_of_view <= 0) {
-        return GR3_ERROR_INVALID_VALUE;
+        RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
     }
     context_struct_.vertical_field_of_view = vertical_field_of_view;
     context_struct_.zNear = zNear;
     context_struct_.zFar = zFar;
-    return GR3_ERROR_NONE;
+    RETURN_ERROR(GR3_ERROR_NONE);
 }
 
 /*!
@@ -1193,15 +1227,16 @@ GR3API int gr3_getcameraprojectionparameters(float *vfov, float *znear,
                                              float *zfar)
 {
     GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     if (!context_struct_.is_initialized) {
-        return GR3_ERROR_NOT_INITIALIZED;
+        RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
 
     *vfov = context_struct_.vertical_field_of_view;
     *znear = context_struct_.zNear;
     *zfar = context_struct_.zFar;
 
-    return GR3_ERROR_NONE;
+    RETURN_ERROR(GR3_ERROR_NONE);
 }
 
 /*!
@@ -1323,14 +1358,15 @@ static void gr3_draw_(GLuint width, GLuint height) {
 }
 
 GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type) {
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     switch (drawable_type) {
         case GR3_DRAWABLE_OPENGL:
             return gr3_drawimage_opengl_(xmin, xmax, ymin, ymax, width, height);
         case GR3_DRAWABLE_GKS:
             return gr3_drawimage_gks_(xmin, xmax, ymin, ymax, width, height);
         default:
-            return GR3_ERROR_INVALID_VALUE;
+            RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
     }
 }
 
@@ -1343,7 +1379,7 @@ static int gr3_drawimage_opengl_(float xmin, float xmax, float ymin, float ymax,
     #endif
     glViewport(xmin,ymin,xmax-xmin,ymax-ymin);
     gr3_draw_(width, height);
-    return GR3_ERROR_NONE;
+    RETURN_ERROR(GR3_ERROR_NONE);
 }
 
 
@@ -1357,9 +1393,10 @@ static int gr3_strendswith_(const char *str, const char *ending) {
 GR3API int gr3_setquality(int quality) {
     int ssaa_factor = quality & ~1;
     int i;
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     if (quality > 33 || quality < 0) {
-        return GR3_ERROR_INVALID_VALUE;
+        RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
     }
     if (ssaa_factor == 0) ssaa_factor = 1;
     i = ssaa_factor;
@@ -1367,10 +1404,10 @@ GR3API int gr3_setquality(int quality) {
         i = i/2;
     }
     if (i != 1) {
-        return GR3_ERROR_INVALID_VALUE;
+        RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
     }
     context_struct_.quality = quality;
-    return GR3_ERROR_NONE;
+    RETURN_ERROR(GR3_ERROR_NONE);
 }
 
 GR3API int gr3_getimage(int width, int height, int use_alpha, char *pixels) {
@@ -1378,7 +1415,8 @@ GR3API int gr3_getimage(int width, int height, int use_alpha, char *pixels) {
     int quality = context_struct_.quality;
     int ssaa_factor = quality & ~1;
     int use_povray = quality & 1;
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     if (ssaa_factor == 0) ssaa_factor = 1;
     if (use_povray) {
         err = gr3_getpovray_(pixels,width, height, use_alpha, ssaa_factor);
@@ -1389,8 +1427,8 @@ GR3API int gr3_getimage(int width, int height, int use_alpha, char *pixels) {
 }
 
 GR3API int gr3_export(const char *filename, int width, int height) {
-  
-  GR3_DO_INIT;
+    GR3_DO_INIT;
+    if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     gr3_log_(filename);
     
     if (gr3_strendswith_(filename, ".html")) {
@@ -1406,8 +1444,7 @@ GR3API int gr3_export(const char *filename, int width, int height) {
         gr3_log_("export as jpeg file");
         return gr3_export_jpeg_(filename, width, height);
     }
-    
-    return GR3_ERROR_UNKNOWN_FILE_EXTENSION;
+    RETURN_ERROR(GR3_ERROR_UNKNOWN_FILE_EXTENSION);
 }
 
 
@@ -1455,7 +1492,7 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
 
     if (context_struct_.is_initialized) {
         if (width == 0 || height == 0 || pixmap == NULL) {
-            return GR3_ERROR_INVALID_VALUE;
+            RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
         }
         view_matrix_all_zeros = 1;
         for (x = 0; x < 4; x++) {
@@ -1467,7 +1504,7 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
         }
         if (view_matrix_all_zeros) {
             /* gr3_cameralookat has not been called */
-            return GR3_ERROR_CAMERA_NOT_INITIALIZED;
+            RETURN_ERROR(GR3_ERROR_CAMERA_NOT_INITIALIZED);
         }
         if (context_struct_.zFar < context_struct_.zNear || 
             context_struct_.zNear <= 0 || 
@@ -1475,7 +1512,7 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
             context_struct_.vertical_field_of_view <= 0
         ) {
             /* gr3_setcameraprojectionparameters has not been called */
-            return GR3_ERROR_CAMERA_NOT_INITIALIZED;
+            RETURN_ERROR(GR3_ERROR_CAMERA_NOT_INITIALIZED);
         }
         
         fb_width = context_struct_.init_struct.framebuffer_width;
@@ -1483,7 +1520,7 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
         if (ssaa_factor != 1) {
             raw_pixels = malloc((size_t)fb_width*fb_height*ssaa_factor*ssaa_factor*bpp);
             if (!raw_pixels) {
-                return GR3_ERROR_OUT_OF_MEM;
+                RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
             }
             width = width*ssaa_factor;
             height = height*ssaa_factor;
@@ -1588,12 +1625,12 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
             free(raw_pixels);
         }
         if (glGetError() == GL_NO_ERROR) {
-            return GR3_ERROR_NONE;
+            RETURN_ERROR(GR3_ERROR_NONE);
         } else {
-            return GR3_ERROR_OPENGL_ERR;
+            RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
         }
     } else {
-        return GR3_ERROR_NOT_INITIALIZED;
+        RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
 }
 
@@ -1672,7 +1709,7 @@ GR3API const char *gr3_geterrorstring(int error) {
  *          If gr3 is not initialized "Not initialized" is returned.
  */
 GR3API const char *gr3_getrenderpathstring(void) {
-  GR3_DO_INIT;
+    GR3_DO_INIT;
     return context_struct_.renderpath_string;
 }
 
@@ -1737,20 +1774,20 @@ static GLuint depth_renderbuffer = 0;
         framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
             gr3_log_("failed to create an ARB framebuffer object (fbo wasn't complete)");
-            return GR3_ERROR_OPENGL_ERR;
+            RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
         }
         glViewport(0,0,_width,_height);
         glEnable(GL_DEPTH_TEST);
         if (glGetError() != GL_NO_ERROR) {
             gr3_terminateFBO_ARB_();
             gr3_log_("failed to create an ARB framebuffer object (an OpenGL error occurred)");
-            return GR3_ERROR_OPENGL_ERR;
+            RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
         }
         
         context_struct_.terminateFBO = gr3_terminateFBO_ARB_;
         context_struct_.fbo_is_initialized = 1;
         gr3_appendtorenderpathstring_("GL_ARB_framebuffer_object");
-        return GR3_ERROR_NONE;
+        RETURN_ERROR(GR3_ERROR_NONE);
     }
 
     /*!
@@ -1820,7 +1857,7 @@ static GLuint depth_renderbuffer = 0;
         gr3_log_("glCheckFramebufferStatusEXT");
         if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE_EXT) {
           gr3_log_("failed to create an EXT framebuffer object (fbo wasn't complete)");
-            return GR3_ERROR_OPENGL_ERR;
+            RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
         }
 #endif
         glViewport(0,0,_width,_height);
@@ -1830,13 +1867,13 @@ static GLuint depth_renderbuffer = 0;
         if (glGetError() != GL_NO_ERROR) {
             gr3_terminateFBO_EXT_();
             gr3_log_("failed to create an EXT framebuffer object (an OpenGL error occurred)");
-            return GR3_ERROR_OPENGL_ERR;
+            RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
         }
 
         context_struct_.terminateFBO = gr3_terminateFBO_EXT_;
         context_struct_.fbo_is_initialized = 1;
         gr3_appendtorenderpathstring_("GL_EXT_framebuffer_object");
-        return GR3_ERROR_NONE;
+        RETURN_ERROR(GR3_ERROR_NONE);
     }
 
     /*!
@@ -1885,12 +1922,13 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
   GLfloat bottom = -top;
   int id;
   GR3_DO_INIT;
+  if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
   
   *object_id = 0;
 
   if (context_struct_.is_initialized) {
     if (width == 0 || height == 0) {
-      return GR3_ERROR_INVALID_VALUE;
+      RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
     }
     view_matrix_all_zeros = 1;
     for (x = 0; x < 4; x++) {
@@ -1902,7 +1940,7 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
     }
     if (view_matrix_all_zeros) {
       /* gr3_cameralookat has not been called */
-      return GR3_ERROR_CAMERA_NOT_INITIALIZED;
+      RETURN_ERROR(GR3_ERROR_CAMERA_NOT_INITIALIZED);
     }
     if (context_struct_.zFar < context_struct_.zNear ||
         context_struct_.zNear <= 0 ||
@@ -1910,7 +1948,7 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
         context_struct_.vertical_field_of_view <= 0
         ) {
       /* gr3_setcameraprojectionparameters has not been called */
-      return GR3_ERROR_CAMERA_NOT_INITIALIZED;
+      RETURN_ERROR(GR3_ERROR_CAMERA_NOT_INITIALIZED);
     }
     
     fb_width = context_struct_.init_struct.framebuffer_width;
@@ -1958,12 +1996,12 @@ GR3API int         gr3_selectid(int px, int py, int width, int height, int *obje
       }
     }
     if (glGetError() == GL_NO_ERROR) {
-      return GR3_ERROR_NONE;
+      RETURN_ERROR(GR3_ERROR_NONE);
     } else {
-      return GR3_ERROR_OPENGL_ERR;
+      RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
     }
   } else {
-    return GR3_ERROR_NOT_INITIALIZED;
+    RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
   }
 }
 

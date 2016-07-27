@@ -99,6 +99,7 @@ typedef struct {
 GR3API int          gr3_init(int *attrib_list);
 GR3API void         gr3_free(void *pointer);
 GR3API void         gr3_terminate(void);
+GR3API int          gr3_geterror(int clear, int *line, const char **file);
 GR3API const char  *gr3_getrenderpathstring(void);
 GR3API const char  *gr3_geterrorstring(int error);
 GR3API void         gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));

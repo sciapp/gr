@@ -50,7 +50,7 @@ int gr3_drawimage_gks_(float xmin, float xmax, float ymin, float ymax, int width
   gr3_log_("gr3_drawimage_gks_();");
   pixels = (char *)malloc(sizeof(int)*width*height);
   if (!pixels) {
-    return GR3_ERROR_OUT_OF_MEM;
+    RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
   }
   err = gr3_getimage(width,height,1,pixels);
   if (err != GR3_ERROR_NONE) {
@@ -262,18 +262,18 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
     num_vertices = nx * ny;
     vertices = malloc(num_vertices * 3 * sizeof(float));
     if (!vertices) {
-        return GR3_ERROR_OUT_OF_MEM;
+        RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
     }
     normals = malloc(num_vertices * 3 * sizeof(float));
     if (!normals) {
         free(vertices);
-        return GR3_ERROR_OUT_OF_MEM;
+        RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
     }
     colors = malloc(num_vertices * 3 * sizeof(float));
     if (!colors) {
         free(vertices);
         free(normals);
-        return GR3_ERROR_OUT_OF_MEM;
+        RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
     }
     num_indices = (nx - 1) * (ny - 1) * 6; /* 2 triangles per square */
     indices = malloc(num_indices * sizeof(int));
@@ -281,7 +281,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny,
         free(vertices);
         free(normals);
         free(colors);
-        return GR3_ERROR_OUT_OF_MEM;
+        RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
     }
 
     if (option & GR3_SURFACE_GRTRANSFORM) {
@@ -465,8 +465,11 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions,
     int i, j;
 
     gr3_setprojectiontype(GR3_PROJECTION_PARALLEL);
+    if (gr3_geterror(0, NULL, NULL)) return;
     gr3_setcameraprojectionparameters(90.0f, 1.0f, 200.0f);
+    if (gr3_geterror(0, NULL, NULL)) return;
     gr3_setlightdirection(0.0f, 1.0f, 0.0f);
+    if (gr3_geterror(0, NULL, NULL)) return;
 
     gr_inqspace(&zmin, &zmax, &rotation, &tilt);
     gr3_grtransformation_(grmatrix, rotation, tilt);
@@ -513,8 +516,11 @@ GR3API void gr3_drawsurface(int mesh)
     float scales[3] = {2.0f, 2.0f, 2.0f};
 
     gr3_setbackgroundcolor(1.0f, 1.0f, 1.0f, 0.0f);
+    if (gr3_geterror(0, NULL, NULL)) return;
     gr3_clear();
+    if (gr3_geterror(0, NULL, NULL)) return;
     gr3_drawmesh_grlike(mesh, 1, positions, directions, ups, colors, scales);
+    if (gr3_geterror(0, NULL, NULL)) return;
 }
 
 /*!
@@ -543,8 +549,11 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz,
             surfaceoption |= GR3_SURFACE_GRCOLOR;
         }
         gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, surfaceoption);
+        if (gr3_geterror(0, NULL, NULL)) return;
         gr3_drawsurface(mesh);
+        if (gr3_geterror(0, NULL, NULL)) return;
         gr3_deletemesh(mesh);
+        if (gr3_geterror(0, NULL, NULL)) return;
         gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
         gr_inqscale(&scale);
         if (scale & OPTION_FLIP_X) {
@@ -559,6 +568,7 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz,
         }
         /* TODO: inquire the required resolution */
         gr3_drawimage((float) xmin, (float) xmax, (float) ymin, (float) ymax, 500, 500, GR3_DRAWABLE_GKS);
+        if (gr3_geterror(0, NULL, NULL)) return;
     } else {
         double *dpx, *dpy, *dpz;
         int i;

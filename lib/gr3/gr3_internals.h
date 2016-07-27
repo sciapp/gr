@@ -29,7 +29,7 @@
 
 #define GR3_DO_INIT do { if (!context_struct_.is_initialized) { gr3_log_("auto-init"); gr3_init(NULL); } } while(0)
 
-
+#define RETURN_ERROR(error) return _return_error_helper(error, __LINE__, __FILE__)
 
 
 /*!
@@ -215,6 +215,19 @@ typedef struct _GR3_ContextStruct_t_ {
 } GR3_ContextStruct_t_;
 
 extern GR3_ContextStruct_t_ context_struct_;
+
+extern int gr3_error_;
+extern int gr3_error_line_;
+extern const char *gr3_error_file_;
+
+static int _return_error_helper(int error, int line, const char *file) {
+    if(error) {
+        gr3_error_ = error;
+        gr3_error_line_ = line;
+        gr3_error_file_ = file;
+    }
+    return error;
+}
 
 void gr3_log_(const char *log_message);
 void gr3_appendtorenderpathstring_(const char *string);

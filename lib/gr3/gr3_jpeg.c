@@ -16,12 +16,12 @@ int gr3_export_jpeg_(const char *filename, int width, int height) {
   
   jpegfp = fopen(filename, "wb");
   if (!jpegfp) {
-    return GR3_ERROR_CANNOT_OPEN_FILE;
+    RETURN_ERROR(GR3_ERROR_CANNOT_OPEN_FILE);
   }
   
   pixels = (char *)malloc(width * height * 3);
   if (!pixels) {
-    return GR3_ERROR_OUT_OF_MEM;
+    RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
   }
   
   err = gr3_getimage(width, height, FALSE, pixels);

@@ -32,17 +32,17 @@ int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_
     if (use_alpha) {
       res = gr3_readpngtomemory_((int *)pixels,pngfile,width,height);
       if (res) {
-        return GR3_ERROR_EXPORT;
+        RETURN_ERROR(GR3_ERROR_EXPORT);
       }
     } else {
       char *raw_pixels = malloc(width*height*4);
       if (!raw_pixels) {
-        return GR3_ERROR_OUT_OF_MEM;
+        RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
       }
       res = gr3_readpngtomemory_((int *)raw_pixels,pngfile,width,height);
       if (res) {
         free(raw_pixels);
-        return GR3_ERROR_EXPORT;
+        RETURN_ERROR(GR3_ERROR_EXPORT);
       }
       for (i = 0; i < width*height; i++) {
         pixels[3*i+0] = raw_pixels[4*i+0];
@@ -68,7 +68,7 @@ int gr3_export_pov_(const char *filename, int width, int height) {
   
   povfp = fopen(filename, "w");
   if (!povfp) {
-    return GR3_ERROR_CANNOT_OPEN_FILE;
+    RETURN_ERROR(GR3_ERROR_CANNOT_OPEN_FILE);
   }
   
   fprintf(povfp,"camera {\n");

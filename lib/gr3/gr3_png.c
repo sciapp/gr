@@ -18,11 +18,11 @@ int gr3_export_png_(const char *filename, int width, int height) {
   
   pngfp = fopen(filename, "wb");
   if (!pngfp) {
-    return GR3_ERROR_CANNOT_OPEN_FILE;
+    RETURN_ERROR(GR3_ERROR_CANNOT_OPEN_FILE);
   }
   pixels = (int *)malloc(width * height * sizeof(int));
   if (!pixels) {
-    return GR3_ERROR_OUT_OF_MEM;
+    RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
   }
   
   err = gr3_getimage(width, height, 1, (char *)pixels);
@@ -36,14 +36,14 @@ int gr3_export_png_(const char *filename, int width, int height) {
   if (!png_ptr) {
     fclose(pngfp);
     free(pixels);
-    return GR3_ERROR_EXPORT;
+    RETURN_ERROR(GR3_ERROR_EXPORT);
   }
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr) {
     fclose(pngfp);
     free(pixels);
     png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
-    return GR3_ERROR_EXPORT;
+    RETURN_ERROR(GR3_ERROR_EXPORT);
   }
   png_init_io(png_ptr, pngfp);
   png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);

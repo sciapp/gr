@@ -46,7 +46,7 @@ from platform import python_implementation
 
 from ctypes import c_int, c_uint, c_ushort, c_ubyte, c_float, c_double, \
                    c_char, c_char_p, c_ulong, py_object, POINTER, byref, \
-                   CFUNCTYPE, CDLL, create_string_buffer, cast
+                   CFUNCTYPE, CDLL, create_string_buffer, cast, pointer
 import ctypes.util
 import numpy
 import os
@@ -112,10 +112,12 @@ def char(string):
         s = create_string_buffer(string)
     return cast(s, c_char_p)
 
+
 class GR3_InitAttribute(object):
     GR3_IA_END_OF_LIST = 0
     GR3_IA_FRAMEBUFFER_WIDTH = 1
     GR3_IA_FRAMEBUFFER_HEIGHT = 2
+
 
 class GR3_Error(object):
     GR3_ERROR_NONE = 0
@@ -130,6 +132,7 @@ class GR3_Error(object):
     GR3_ERROR_CANNOT_OPEN_FILE = 9
     GR3_ERROR_EXPORT = 10
 
+
 class GR3_Quality(object):
     GR3_QUALITY_OPENGL_NO_SSAA  = 0
     GR3_QUALITY_OPENGL_2X_SSAA  = 2
@@ -142,9 +145,11 @@ class GR3_Quality(object):
     GR3_QUALITY_POVRAY_8X_SSAA  = 8+1
     GR3_QUALITY_POVRAY_16X_SSAA = 16+1
 
+
 class GR3_Drawable(object):
     GR3_DRAWABLE_OPENGL = 1
     GR3_DRAWABLE_GKS = 2
+
 
 class GR3_SurfaceOption(object):
     GR3_SURFACE_DEFAULT     =  0
@@ -154,9 +159,24 @@ class GR3_SurfaceOption(object):
     GR3_SURFACE_GRCOLOR     =  8
     GR3_SURFACE_GRZSHADED   = 16
 
+
 class GR3_Exception(Exception):
-    def __init__(self, error_code):
-        Exception.__init__(self, geterrorstring(error_code))
+    def __init__(self, error_code, line=0, file=""):
+        message = geterrorstring(error_code)
+        if line and file:
+            message = "{} (l. {}): {}".format(file, line, message)
+        Exception.__init__(self, message)
+
+
+def _error_check(result, *args):
+    line = c_int(0)
+    file = c_char_p()
+    error_code = _gr3.gr3_geterror(1, pointer(line), pointer(file))
+    if error_code:
+        exception = GR3_Exception(error_code, line.value, file.value)
+        raise exception
+    return result
+
 
 def init(attrib_list=[]):
     """
@@ -190,17 +210,14 @@ def init(attrib_list=[]):
             py_log_callback("Loaded dynamic library from "+lib_found)
         else:
             py_log_callback("Loaded dynamic library unknown.")
-    err = _gr3.gr3_init(_attrib_list.data)
-    if err:
-        raise GR3_Exception(err)
+    _gr3.gr3_init(_attrib_list.data)
 
 def drawimage(xmin, xmax, ymin, ymax, pixel_width, pixel_height, window):
     global _gr3
-    err = _gr3.gr3_drawimage(c_float(xmin), c_float(xmax),
+    _gr3.gr3_drawimage(c_float(xmin), c_float(xmax),
                        c_float(ymin), c_float(ymax),
                          c_int(pixel_width), c_int(pixel_height), c_int(window))
-    if err:
-        raise GR3_Exception(err)
+
 
 def terminate():
     """
@@ -222,27 +239,24 @@ def setquality(quality):
             The quality to set
     """
     global _gr3
-    err = _gr3.gr3_setquality(quality)
-    if err:
-        raise GR3_Exception(err)
+    _gr3.gr3_setquality(quality)
+
 
 def getimage(width, height, use_alpha = True):
     global _gr3
     bpp = 4 if use_alpha else 3
     _bitmap = numpy.zeros((width*height*bpp), c_ubyte)
-    err = _gr3.gr3_getimage(c_uint(width), c_uint(height), c_uint(use_alpha), _bitmap.ctypes.data_as(POINTER(c_ubyte)))
-    if err:
-        raise GR3_Exception(err)
+    _gr3.gr3_getimage(c_uint(width), c_uint(height), c_uint(use_alpha), _bitmap.ctypes.data_as(POINTER(c_ubyte)))
+
     return _bitmap
 
 def export(filename, width, height):
     global _gr3
     _filename = char(filename)
-    err = _gr3.gr3_export(_filename, c_uint(width), c_uint(height))
+    _gr3.gr3_export(_filename, c_uint(width), c_uint(height))
     content = None
-    if err:
-        raise GR3_Exception(err)
-    elif gr.mimetype() != None and _have_ipython:
+
+    if gr.mimetype() != None and _have_ipython:
         _, _fileextension = os.path.splitext(filename)
         if _fileextension == '.html':
             content = HTML('<iframe src="%s" width=%d height=%d></iframe>' %
@@ -333,9 +347,8 @@ def createmesh(n, vertices, normals, colors):
     vertices = floatarray(vertices)
     normals = floatarray(normals)
     colors = floatarray(colors)
-    err = _gr3.gr3_createmesh(byref(_mesh), c_uint(n), vertices.data, normals.data, colors.data)
-    if err:
-        raise GR3_Exception(err)
+    _gr3.gr3_createmesh(byref(_mesh), c_uint(n), vertices.data, normals.data, colors.data)
+
     return _mesh
 
 def createindexedmesh(num_vertices, vertices, normals, colors, num_indices, indices):
@@ -375,9 +388,8 @@ def createindexedmesh(num_vertices, vertices, normals, colors, num_indices, indi
     normals = floatarray(normals)
     colors = floatarray(colors)
     indices = intarray(indices)
-    err = _gr3.gr3_createindexedmesh(byref(_mesh), c_uint(num_vertices), vertices.data, normals.data, colors.data, c_uint(num_indices), indices.data)
-    if err:
-        raise GR3_Exception(err)
+    _gr3.gr3_createindexedmesh(byref(_mesh), c_uint(num_vertices), vertices.data, normals.data, colors.data, c_uint(num_indices), indices.data)
+
     return _mesh
 
 def createheightmapmesh(heightmap, num_columns, num_rows):
@@ -633,11 +645,11 @@ def triangulate(grid, step, offset, isolevel, slices = None):
     offset_x, offset_y, offset_z = map(c_double, offset)
     triangles_p = POINTER(c_float)()
     num_triangles = _gr3.gr3_triangulate(data, isolevel,
-                                    dim_x, dim_y, dim_z,
-                                    stride_x, stride_y, stride_z,
-                                    step_x, step_y, step_z,
-                                    offset_x, offset_y, offset_z,
-                                    byref(triangles_p))
+                                         dim_x, dim_y, dim_z,
+                                         stride_x, stride_y, stride_z,
+                                         step_x, step_y, step_z,
+                                         offset_x, offset_y, offset_z,
+                                         byref(triangles_p))
     if _impl != 'PyPy':
         buffer_from_memory = pythonapi.PyBuffer_FromMemory
     else:
@@ -714,13 +726,12 @@ def createisosurfacemesh(grid, step=None, offset=None, isolevel=None):
     stride_x, stride_y, stride_z = map(lambda x: c_uint(x / grid.itemsize), grid.strides)
     step_x, step_y, step_z = map(c_double, step)
     offset_x, offset_y, offset_z = map(c_double, offset)
-    err = _gr3.gr3_createisosurfacemesh(byref(_mesh), data, isolevel,
-                                        dim_x, dim_y, dim_z,
-                                        stride_x, stride_y, stride_z,
-                                        step_x, step_y, step_z,
-                                        offset_x, offset_y, offset_z)
-    if err:
-        raise GR3_Exception(err)
+    _gr3.gr3_createisosurfacemesh(byref(_mesh), data, isolevel,
+                                  dim_x, dim_y, dim_z,
+                                  stride_x, stride_y, stride_z,
+                                  step_x, step_y, step_z,
+                                  offset_x, offset_y, offset_z)
+
     return _mesh
 
 
@@ -773,14 +784,13 @@ def createsurfacemesh(nx, ny, px, py, pz, option=0):
     px = floatarray(px, copy=False)
     py = floatarray(py, copy=False)
     pz = floatarray(pz, copy=False)
-    err = _gr3.gr3_createsurfacemesh(byref(_mesh), c_int(nx), c_int(ny),
-                                     px.data,
-                                     py.data,
-                                     pz.data,
-                                     c_int(option))
+    _gr3.gr3_createsurfacemesh(byref(_mesh), c_int(nx), c_int(ny),
+                               px.data,
+                               py.data,
+                               pz.data,
+                               c_int(option))
 
-    if err:
-        raise GR3_Exception(err)
+
     return _mesh
 
 
@@ -806,9 +816,8 @@ def drawtubemesh(n, points, colors, radii, num_steps=10, num_segments=20):
     points = floatarray(points)
     colors = floatarray(colors)
     radii = floatarray(radii)
-    err = _gr3.gr3_drawtubemesh(c_uint(n), points.data, colors.data, radii.data, c_int(num_steps), c_int(num_segments))
-    if err:
-        raise GR3_Exception(err)
+    _gr3.gr3_drawtubemesh(c_uint(n), points.data, colors.data, radii.data, c_int(num_steps), c_int(num_segments))
+
 
 
 def createtubemesh(n, points, colors, radii, num_steps=10, num_segments=20):
@@ -835,9 +844,8 @@ def createtubemesh(n, points, colors, radii, num_steps=10, num_segments=20):
     points = floatarray(points)
     colors = floatarray(colors)
     radii = floatarray(radii)
-    err = _gr3.gr3_createtubemesh(byref(_mesh), c_uint(n), points.data, colors.data, radii.data, c_int(num_steps), c_int(num_segments))
-    if err:
-        raise GR3_Exception(err)
+    _gr3.gr3_createtubemesh(byref(_mesh), c_uint(n), points.data, colors.data, radii.data, c_int(num_steps), c_int(num_segments))
+
     return _mesh
 
 
@@ -1220,3 +1228,10 @@ _gr3.gr3_drawmolecule.argtype = [c_int, POINTER(c_float), POINTER(c_float),
                                  POINTER(c_float), c_float, POINTER(c_float),
                                  c_float]
 _gr3.gr3_drawmolecule.restype = None
+
+_gr3.gr3_geterror.argtype = [c_int, POINTER(c_int), POINTER(c_char_p)]
+_gr3.gr3_geterror.restype = c_int
+
+for symbol in dir(_gr3):
+    if symbol.startswith('gr3_') and symbol != 'gr3_geterror':
+        getattr(_gr3, symbol).errcheck = _error_check

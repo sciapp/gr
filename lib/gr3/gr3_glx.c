@@ -20,8 +20,8 @@ static GLXContext context; /*!< The GLX context */
  * - ::GR3_ERROR_INIT_FAILED  if initialization failed
  */
 int gr3_initGL_GLX_(void) {
-  int major, minor;
-  int fbcount;
+  int major = 0, minor = 0;
+  int fbcount = 0;
   GLXFBConfig *fbc;
   GLXFBConfig fbconfig = (GLXFBConfig) NULL;
   gr3_log_("gr3_initGL_GLX_();");
@@ -29,14 +29,21 @@ int gr3_initGL_GLX_(void) {
   display = XOpenDisplay(0);
   if (!display) {
     gr3_log_("Not connected to an X server!");
-    return GR3_ERROR_INIT_FAILED;
+    RETURN_ERROR(GR3_ERROR_INIT_FAILED);
+  }
+  if (!glXQueryExtension(display, NULL, NULL)) {
+    gr3_log_("GLX not supported!");
+    RETURN_ERROR(GR3_ERROR_INIT_FAILED);
   }
   
   context = glXGetCurrentContext();
   if (context != NULL) {
     gr3_appendtorenderpathstring_("GLX (existing context)");
   } else {
-    glXQueryVersion(display,&major,&minor);
+    /* call glXQueryVersion twice to prevent bugs in virtualbox */
+    if (!glXQueryVersion(display,&major,&minor) && !glXQueryVersion(display,&major,&minor)) {
+      RETURN_ERROR(GR3_ERROR_INIT_FAILED);
+    }
     if (major > 1 || minor >=4) {
       int i;
       int fb_attribs[] =
@@ -59,7 +66,7 @@ int gr3_initGL_GLX_(void) {
         gr3_log_("failed to find a valid a GLX FBConfig for a RGBA PBuffer");
         XFree(fbc);
         XCloseDisplay(display);
-        return GR3_ERROR_INIT_FAILED;
+        RETURN_ERROR(GR3_ERROR_INIT_FAILED);
       }
       for (i = 0; i < fbcount && !pbuffer; i++) {
         fbconfig = fbc[i];
@@ -69,7 +76,7 @@ int gr3_initGL_GLX_(void) {
       if (!pbuffer) {
         gr3_log_("failed to create a RGBA PBuffer");
         XCloseDisplay(display);
-        return GR3_ERROR_INIT_FAILED;
+        RETURN_ERROR(GR3_ERROR_INIT_FAILED);
       }
       
       context = glXCreateNewContext(display, fbconfig, GLX_RGBA_TYPE, None, True);
@@ -93,7 +100,7 @@ int gr3_initGL_GLX_(void) {
         gr3_log_("failed to find a valid a GLX FBConfig for a RGBA Pixmap");
         XFree(fbc);
         XCloseDisplay(display);
-        return GR3_ERROR_INIT_FAILED;
+        RETURN_ERROR(GR3_ERROR_INIT_FAILED);
       }
       fbconfig = fbc[0];
       XFree(fbc);
@@ -111,7 +118,7 @@ int gr3_initGL_GLX_(void) {
         glXDestroyContext(display, context);
         XFreePixmap(display,pixmap);
         XCloseDisplay(display);
-        return GR3_ERROR_INIT_FAILED;
+        RETURN_ERROR(GR3_ERROR_INIT_FAILED);
       }
     }
   }

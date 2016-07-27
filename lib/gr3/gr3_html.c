@@ -51,7 +51,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
   
   htmlfp = fopen(filename, "w");
   if (!htmlfp) {
-    return GR3_ERROR_CANNOT_OPEN_FILE;
+    RETURN_ERROR(GR3_ERROR_CANNOT_OPEN_FILE);
   }
   fprintf(htmlfp, "<!DOCTYPE html>\n");
   fprintf(htmlfp, "<html>\n");
