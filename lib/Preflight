@@ -124,7 +124,7 @@ then
       then
         if [ -x "${qmake_path}" ] || [ "`which ${qmake_path} 2>/dev/null`" != "" ]
         then
-          qmake_qt_version="`${qmake_path} -query QT_VERSION`"
+          qmake_qt_version="`${qmake_path} -query QT_VERSION 2>/dev/null`"
           if [ "${qmake_qt_version%%.*}" = "${qt_major_version}" ]
           then
             found_qmake=true
@@ -137,7 +137,7 @@ then
         do
           if [ "`which ${qmake_name} 2>/dev/null`" != "" ]
           then
-            qmake_qt_version="`${qmake_name} -query QT_VERSION`"
+            qmake_qt_version="`${qmake_name} -query QT_VERSION 2>/dev/null`"
             if [ "${qmake_qt_version%%.*}" = "${qt_major_version}" ]
             then
               found_qmake=true
@@ -155,7 +155,7 @@ then
               qmake_path="${qmake_dir}/${qmake_name}"
               if [ -x "${qmake_path}" ]
               then
-                qmake_qt_version="`${qmake_path} -query QT_VERSION`"
+                qmake_qt_version="`${qmake_path} -query QT_VERSION 2>/dev/null`"
                 if [ "${qmake_qt_version%%.*}" = "${qt_major_version}" ]
                 then
                   found_qmake=true
