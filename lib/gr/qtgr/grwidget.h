@@ -5,16 +5,16 @@
 
 #ifdef _WIN32
 #ifdef COMPILING_DLL
-#define DLLEXPORT __declspec(dllexport)
+#define DLL __declspec(dllexport)
 #else
-#define DLLEXPORT __declspec(dllimport)
+#define DLL __declspec(dllimport)
 #endif
 #else
-#define DLLEXPORT
+#define DLL
 #endif
 
 
-class DLLEXPORT GRWidget : public QWidget {
+class DLL GRWidget : public QWidget {
     public:
         GRWidget(QWidget *parent = 0);
 
@@ -26,5 +26,5 @@ class DLLEXPORT GRWidget : public QWidget {
         void init_gks();
 };
 
-#undef DLLEXPORT
+#undef DLL
 #endif /* ifndef GRWIDGET_H_INCLUDED */

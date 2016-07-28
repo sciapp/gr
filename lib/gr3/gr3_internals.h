@@ -220,6 +220,11 @@ extern int gr3_error_;
 extern int gr3_error_line_;
 extern const char *gr3_error_file_;
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
 static int _return_error_helper(int error, int line, const char *file) {
     if(error) {
         gr3_error_ = error;
@@ -228,6 +233,10 @@ static int _return_error_helper(int error, int line, const char *file) {
     }
     return error;
 }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 void gr3_log_(const char *log_message);
 void gr3_appendtorenderpathstring_(const char *string);
