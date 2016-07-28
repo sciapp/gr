@@ -264,13 +264,14 @@ GR3API int gr3_init(int *attrib_list) {
  * \returns the last non-zero error code
  */
 GR3API int gr3_geterror(int clear, int *line, const char **file) {
+    int error;
     if (gr3_error_ && line) {
         *line = gr3_error_line_;
     }
     if (gr3_error_ && file) {
         *file = gr3_error_file_;
     }
-    int error = gr3_error_;
+    error = gr3_error_;
     if (clear) {
         gr3_error_ = GR3_ERROR_NONE;
         gr3_error_file_ = "";
@@ -796,14 +797,15 @@ GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices,
 GR3API void gr3_drawmesh(int mesh, int n, const float *positions, 
                   const float *directions, const float *ups, 
                   const float *colors, const float *scales) {
+    GR3_DrawList_t_ *p, *draw;
+
     GR3_DO_INIT;
     if (gr3_geterror(0, NULL, NULL)) return;
     if (!context_struct_.is_initialized) {
         return;
     }
-    GR3_DrawList_t_ *p;
     
-    GR3_DrawList_t_ *draw = malloc(sizeof(GR3_DrawList_t_));
+    draw = malloc(sizeof(GR3_DrawList_t_));
     draw->mesh = mesh;
     draw->positions = malloc(sizeof(float)*n*3);
     memcpy(draw->positions,positions,sizeof(float)*n*3);
