@@ -14,7 +14,7 @@
   <service name="extract_file">
     <param name="archive">*gr-fixed.tar.gz</param>
     <param name="files">*/packaging/redhat/python-gr.spec</param>
-    <param name="files">*/packaging/debian/python-gr.dsc</param>
+    <param name="files">*/packaging/debian/python-gr*.dsc</param>
     <param name="files">*/packaging/debian/debian.*</param>
   </service>
   <service name="set_version">

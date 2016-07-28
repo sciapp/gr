@@ -60,6 +60,7 @@ Requires:      numpy
 %define qmake qmake
 BuildRequires:		Mesa-libGL-devel
 BuildRequires:		libqt4-devel
+BuildRequires:		libqt5-qtbase-devel
 %else
 BuildRequires:		mesa-libGL-devel
 %endif
@@ -88,6 +89,11 @@ BuildRequires:		wxGTK-devel
 %endif
 %if 0%{?suse_version}
 BuildRequires:		wxWidgets-devel
+%endif
+
+# Qt5 BuildRequires for Fedora
+%if 0%{?fedora_version} >= 23
+BuildRequires:		qt5-qtbase-devel
 %endif
 
 %description
