@@ -6522,7 +6522,6 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
     }
 
   gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
-  gks_select_xform(NDC);
 
   c = sqrt((xe - xs) * (xe - xs) + (ye - ys) * (ye - ys));
   if (ys != ye)
@@ -6559,6 +6558,16 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
           yi *= f;
           x[i] = xc + cos(a) * xi - sin(a) * yi;
           y[i] = yc + sin(a) * xi + cos(a) * yi;
+          if (tnr != NDC)
+            {
+              x[i] = (x[i] - nx.b) / nx.a;
+              y[i] = (y[i] - nx.d) / nx.c;
+              if (lx.scale_options)
+                {
+                  x[i] = x_log(x[i]);
+                  y[i] = y_log(y[i]);
+                }
+            }
         }
       if (fill)
         gks_fillarea(n, x, y);
@@ -6566,7 +6575,6 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
         gks_polyline(n, x, y);
     }
 
-  gks_select_xform(tnr);
   gks_set_fill_int_style(intstyle);
   gks_set_pline_linetype(ltype);
 
