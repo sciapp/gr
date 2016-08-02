@@ -5559,8 +5559,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                     else
                       yn[1] = yn[2] = 0.5 * (y[j - 1] + y[j]);
 
-                    ii = max(min(i, nx - 1), 0);
-                    jj = max(min(j, ny - 1), 0);
+                    ii = max(min(i, nx - 1), 1);
+                    jj = max(min(j, ny - 1), 1);
 
                     zn[0] = Z(ii - 1, jj);
                     zn[1] = Z(ii - 1, jj - 1);
@@ -5593,7 +5593,6 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                 j--;
               }
-
             break;
           }
         }
