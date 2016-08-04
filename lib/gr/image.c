@@ -222,12 +222,21 @@ int read_pdf_image(char *path, int *width, int *height, int **data)
   ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
   fz_register_document_handlers(ctx);
   doc = fz_open_document(ctx, path);
+#ifdef MUPDF_API_VERSION_17
+  page = fz_load_page(ctx, doc, page_number);
+  fz_bound_page(ctx, page, &rect);
+#else
   page = fz_load_page(doc, page_number);
   fz_bound_page(doc, page, &rect);
+#endif
   fz_round_rect(&bbox, &rect);
   pix = fz_new_pixmap_with_bbox(ctx, fz_device_rgb(ctx), &bbox);
   dev = fz_new_draw_device(ctx, pix);
+#ifdef MUPDF_API_VERSION_17
+  fz_run_page(ctx, page, dev, &fz_identity, NULL);
+#else
   fz_run_page(doc, page, dev, &fz_identity, NULL);
+#endif
 
   *width  = fz_pixmap_width (ctx, pix);
   *height = fz_pixmap_height(ctx, pix);
@@ -235,10 +244,19 @@ int read_pdf_image(char *path, int *width, int *height, int **data)
   *data = (int *) malloc(*width * *height * sizeof(int));
   memcpy((void *) *data, (const void *) rgba, *width * *height * sizeof(int));
 
+#ifdef MUPDF_API_VERSION_17
+  fz_drop_device(ctx, dev);
+  fz_drop_pixmap(ctx, pix);
+  fz_drop_page(ctx, page);
+  fz_drop_document(ctx, doc);
+  fz_drop_context(ctx);
+#else
   fz_free_device(dev);
   fz_drop_pixmap(ctx, pix);
   fz_free_page(doc, page);
+  fz_close_document(doc);
   fz_free_context(ctx);
+#endif
 
   return ret;
 }

@@ -904,8 +904,13 @@ void pdf_close(PDF *p)
     gif_close(&gw);
     fprintf(stderr, "\rFinished writing %s.\n", file_name);
 
+#ifdef MUPDF_API_VERSION_17
+    fz_drop_document(pdf->ctx, pdf->doc);
+    fz_drop_context(pdf->ctx);
+#else
     fz_close_document(pdf->doc);
     fz_free_context(pdf->ctx);
+#endif
     pdf->num_pages = -1;
   }
 
@@ -922,7 +927,11 @@ static void pdf_to_memory(pdf_t pdf, int page, int width, int height, unsigned c
   fz_page *page_o;
   unsigned char *data;
 
+#ifdef MUPDF_API_VERSION_17
+  page_o = fz_load_page(pdf->ctx, pdf->doc, page - 1);
+#else
   page_o = fz_load_page(pdf->doc, page - 1);
+#endif
 
   transx = 0;
   transy = 0;
@@ -936,7 +945,11 @@ static void pdf_to_memory(pdf_t pdf, int page, int width, int height, unsigned c
    * we will use to render the page.
    */
 
+#ifdef MUPDF_API_VERSION_17
+  fz_bound_page(pdf->ctx, page_o, &rect);
+#else
   fz_bound_page(pdf->doc, page_o, &rect);
+#endif
   fz_transform_rect(&rect, &transform);
   fz_round_rect(&bbox, &rect);
 
@@ -955,14 +968,24 @@ static void pdf_to_memory(pdf_t pdf, int page, int width, int height, unsigned c
    */
 
   dev = fz_new_draw_device(pdf->ctx, pix);
+#ifdef MUPDF_API_VERSION_17
+  fz_run_page(pdf->ctx, page_o, dev, &transform, NULL);
+#else
   fz_run_page(pdf->doc, page_o, dev, &transform, NULL);
+#endif
 
   data = fz_pixmap_samples(pdf->ctx, pix);
   memcpy(rgb_image, data, width * height * 4 * sizeof(unsigned char));
 
+#ifdef MUPDF_API_VERSION_17
+  fz_drop_device(pdf->ctx, dev);
+  fz_drop_pixmap(pdf->ctx, pix);
+  fz_drop_page(pdf->ctx, page_o);
+#else
   fz_free_device(dev);
   fz_drop_pixmap(pdf->ctx, pix);
   fz_free_page(pdf->doc, page_o);
+#endif
 }
 
 static
