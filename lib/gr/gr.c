@@ -107,6 +107,8 @@ typedef struct
   int ints;
   int styli;
   int facoli;
+  int tnr;
+  double wn[4], vp[4];
   int scale_options;
 }
 state_list;
@@ -7051,6 +7053,9 @@ void gr_savestate(void)
       gks_inq_fill_style_index(&errind, &s->styli);
       gks_inq_fill_color_index(&errind, &s->facoli);
 
+      gks_inq_current_xformno(&errind, &s->tnr);
+      gks_inq_xform(s->tnr, &errind, s->wn, s->vp);
+
       s->scale_options = lx.scale_options;
     }
   else
@@ -7088,6 +7093,10 @@ void gr_restorestate(void)
       gks_set_fill_int_style(s->ints);
       gks_set_fill_style_index(s->styli);
       gks_set_fill_color_index(s->facoli);
+
+      gks_select_xform(s->tnr);
+      gks_set_window(s->tnr, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
+      gks_set_viewport(s->tnr, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
 
       setscale(s->scale_options);
     }
