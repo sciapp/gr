@@ -154,6 +154,9 @@ DLLEXPORT void gr_restorestate(void);
 DLLEXPORT int gr_uselinespec(char *);
 DLLEXPORT void gr_delaunay(int, const double *, const double *, int *, int **);
 DLLEXPORT void gr_trisurface(int, double *, double *, double *);
+DLLEXPORT void gr_gradient(
+  int, int, double *, double *, double *, double *, double *);
+DLLEXPORT void gr_quiver(int, int, double *, double *, double *, double *, int);
 
 #ifdef _WIN32
 #ifdef __cplusplus

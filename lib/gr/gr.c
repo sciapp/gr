@@ -5695,6 +5695,145 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
     }
 }
 
+void gr_gradient(int nx, int ny, double *x, double *y, double *z, double *u, double *v)
+{
+  int im1, i, ip1, jm1, j, jp1;
+  double dx, dy, sx, sy;
+
+  if ((nx <= 0) || (ny <= 0))
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return;
+    }
+
+  /* be sure that points ordinates are sorted in ascending order */
+
+  for (i = 1; i < nx; i++)
+    if (x[i - 1] >= x[i])
+      {
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
+      }
+
+  for (j = 1; j < ny; j++)
+    if (y[j - 1] >= y[j])
+      {
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
+      }
+
+#define Z(i,j) (z[(nx*(j)+(i))])
+#define U(i,j) (u[(nx*(j)+(i))])
+#define V(i,j) (v[(nx*(j)+(i))])
+
+  dx = (x[nx - 1] - x[0]) / (nx - 1);
+  dy = (y[ny - 1] - y[0]) / (ny - 1);
+
+  for (j = 0; j < ny; j++)
+    {
+      jm1 = j > 0 ? j - 1 : 0;
+      jp1 = j < ny - 1 ? j + 1 : ny - 1;
+      sy = j > 0 && j < ny - 1 ? 2 * dy : dy;
+      for (i = 0; i < nx; i++)
+        {
+          im1 = i > 0 ? i - 1 : 0;
+          ip1 = i < nx - 1 ? i + 1 : nx - 1;
+          sx = i > 0 && i < nx - 1 ? 2 * dx : dx;
+          U(i, j) = (Z(ip1, j) - Z(im1, j)) / sx;
+          V(i, j) = (Z(i, jp1) - Z(i, jm1)) / sy;
+        }
+    }
+
+#undef V
+#undef U
+#undef Z
+}
+
+void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int color)
+{
+  int i, j, ci;
+  double gnorm, gmax = 0;
+  double dx, dy;
+  int errind, linecolor, fillcolor;
+
+  if ((nx <= 0) || (ny <= 0))
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return;
+    }
+
+  /* be sure that points ordinates are sorted in ascending order */
+
+  for (i = 1; i < nx; i++)
+    if (x[i - 1] >= x[i])
+      {
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
+      }
+
+  for (j = 1; j < ny; j++)
+    if (y[j - 1] >= y[j])
+      {
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
+      }
+
+  check_autoinit;
+
+  setscale(lx.scale_options);
+
+  /* save line color and fill color */
+
+  gks_inq_pline_color_index(&errind, &linecolor);
+  gks_inq_fill_color_index(&errind, &fillcolor);
+
+#define Z(i,j) (z[(nx*(j)+(i))])
+#define U(i,j) (u[(nx*(j)+(i))])
+#define V(i,j) (v[(nx*(j)+(i))])
+
+  for (j = 0; j < ny; j++)
+    for (i = 0; i < nx; i++) {
+      gmax = max(U(i, j) * U(i, j) + V(i, j) * V(i, j), gmax);
+    }
+  gmax = sqrt(gmax);
+
+  dx = (x[nx - 1] - x[0]) / (nx - 1);
+  dy = (y[ny - 1] - y[0]) / (ny - 1);
+
+  for (j = 0; j < ny; j++)
+    for (i = 0; i < nx; i++) {
+      gnorm = sqrt(U(i, j) * U(i, j) + V(i, j) * V(i, j)) / gmax;
+      if (color)
+        {
+          ci = first_color + (int)((last_color - first_color) * gnorm);
+          gr_setlinecolorind(ci);
+          gr_setfillcolorind(ci);
+        }
+      gr_setarrowsize(gnorm);
+      gr_drawarrow(x[i], y[j],
+                   x[i] + dx * U(i, j) / gmax, y[j] + dy * V(i, j) / gmax);
+    }
+
+#undef V
+#undef U
+#undef Z
+
+  /* restore line color and fill color */
+
+  gks_set_pline_color_index(linecolor);
+  gks_set_fill_color_index(fillcolor);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<quiver nx=\"%d\" ny=\"%d\"", nx, ny);
+      print_float_array("x", nx, x);
+      print_float_array("y", ny, y);
+      print_float_array("u", nx * ny, u);
+      print_float_array("v", nx * ny, v);
+      gr_writestream(" color=\"%d\"/>\n", color);
+    }
+}
+
 void gr_contour(
   int nx, int ny, int nh, double *px, double *py, double *h, double *pz,
   int major_h)

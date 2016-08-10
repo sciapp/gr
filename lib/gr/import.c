@@ -44,6 +44,7 @@ char *format[] =
     "polyline:iFF",
     "polyline3d:iFFF",
     "polymarker:iFF",
+    "quiver:iiFFFFi",
     "restorestate:",
     "savestate:",
     "selntran:i",
@@ -81,6 +82,7 @@ char *format[] =
     "text:ffs",
     "textext:ffs",
     "titles3d:sss",
+    "trisurf:iFFF",
     "uselinespec:s",
     "verrorbars:iFFFF",
   };
@@ -347,120 +349,127 @@ void gr(int id)
       gr_polymarker(i_arg[0], f_arr[0], f_arr[1]);
       break;
     case 20:
-      gr_restorestate();
+      gr_quiver(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], f_arr[3],
+                i_arg[2]);
       break;
     case 21:
-      gr_savestate();
+      gr_restorestate();
       break;
     case 22:
-      gr_selntran(i_arg[0]);
+      gr_savestate();
       break;
     case 23:
-      gr_setarrowsize(f_arg[0]);
+      gr_selntran(i_arg[0]);
       break;
     case 24:
-      gr_setarrowstyle(i_arg[0]);
+      gr_setarrowsize(f_arg[0]);
       break;
     case 25:
-      gr_setcharexpan(f_arg[0]);
+      gr_setarrowstyle(i_arg[0]);
       break;
     case 26:
-      gr_setcharheight(f_arg[0]);
+      gr_setcharexpan(f_arg[0]);
       break;
     case 27:
-      gr_setcharspace(f_arg[0]);
+      gr_setcharheight(f_arg[0]);
       break;
     case 28:
-      gr_setcharup(f_arg[0], f_arg[1]);
+      gr_setcharspace(f_arg[0]);
       break;
     case 29:
-      gr_setclip(i_arg[0]);
+      gr_setcharup(f_arg[0], f_arg[1]);
       break;
     case 30:
-      gr_setcolormap(i_arg[0]);
+      gr_setclip(i_arg[0]);
       break;
     case 31:
-      gr_setcolorrep(i_arg[0], f_arg[0], f_arg[1], f_arg[2]);
+      gr_setcolormap(i_arg[0]);
       break;
     case 32:
-      gr_setfillcolorind(i_arg[0]);
+      gr_setcolorrep(i_arg[0], f_arg[0], f_arg[1], f_arg[2]);
       break;
     case 33:
-      gr_setfillintstyle(i_arg[0]);
+      gr_setfillcolorind(i_arg[0]);
       break;
     case 34:
-      gr_setfillstyle(i_arg[0]);
+      gr_setfillintstyle(i_arg[0]);
       break;
     case 35:
-      gr_setlinecolorind(i_arg[0]);
+      gr_setfillstyle(i_arg[0]);
       break;
     case 36:
-      gr_setlinetype(i_arg[0]);
+      gr_setlinecolorind(i_arg[0]);
       break;
     case 37:
-      gr_setlinewidth(f_arg[0]);
+      gr_setlinetype(i_arg[0]);
       break;
     case 38:
-      gr_setmarkercolorind(i_arg[0]);
+      gr_setlinewidth(f_arg[0]);
       break;
     case 39:
-      gr_setmarkersize(f_arg[0]);
+      gr_setmarkercolorind(i_arg[0]);
       break;
     case 40:
-      gr_setmarkertype(i_arg[0]);
+      gr_setmarkersize(f_arg[0]);
       break;
     case 41:
-      gr_setscale(i_arg[0]);
+      gr_setmarkertype(i_arg[0]);
       break;
     case 42:
-      gr_setspace(f_arg[0], f_arg[1], i_arg[0], i_arg[1]);
+      gr_setscale(i_arg[0]);
       break;
     case 43:
-      gr_settextalign(i_arg[0], i_arg[1]);
+      gr_setspace(f_arg[0], f_arg[1], i_arg[0], i_arg[1]);
       break;
     case 44:
-      gr_settextcolorind(i_arg[0]);
+      gr_settextalign(i_arg[0], i_arg[1]);
       break;
     case 45:
-      gr_settextfontprec(i_arg[0], i_arg[1]);
+      gr_settextcolorind(i_arg[0]);
       break;
     case 46:
-      gr_settextpath(i_arg[0]);
+      gr_settextfontprec(i_arg[0], i_arg[1]);
       break;
     case 47:
-      gr_settransparency(f_arg[0]);
+      gr_settextpath(i_arg[0]);
       break;
     case 48:
-      gr_setviewport(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
+      gr_settransparency(f_arg[0]);
       break;
     case 49:
-      gr_setwindow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
+      gr_setviewport(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 50:
-      gr_setwsviewport(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
+      gr_setwindow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 51:
-      gr_setwswindow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
+      gr_setwsviewport(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 52:
-      gr_spline(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2]);
+      gr_setwswindow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 53:
-      gr_surface(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], i_arg[2]);
+      gr_spline(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2]);
       break;
     case 54:
-      gr_text(f_arg[0], f_arg[1], s_arg[0]);
+      gr_surface(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], i_arg[2]);
       break;
     case 55:
-      gr_textext(f_arg[0], f_arg[1], s_arg[0]);
+      gr_text(f_arg[0], f_arg[1], s_arg[0]);
       break;
     case 56:
-      gr_titles3d(s_arg[0], s_arg[1], s_arg[2]);
+      gr_textext(f_arg[0], f_arg[1], s_arg[0]);
       break;
     case 57:
-      gr_uselinespec(s_arg[0]);
+      gr_titles3d(s_arg[0], s_arg[1], s_arg[2]);
       break;
     case 58:
+      gr_trisurface(i_arg[0], f_arr[0], f_arr[1], f_arr[2]);
+      break;
+    case 59:
+      gr_uselinespec(s_arg[0]);
+      break;
+    case 60:
       gr_verrorbars(i_arg[0], f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
       break;
     }
