@@ -76,6 +76,10 @@ typedef unsigned long uLong;
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
+#endif
+
 #ifndef min
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
@@ -171,6 +175,7 @@ PDF_page;
 typedef struct ws_state_list_t
   {
     int state;
+    char *path;
     int fd;
     int wstype;
     double window[4], viewport[4];
@@ -545,6 +550,7 @@ void pdf_close(PDF *p)
   frame_t *frames;
   char *env = NULL;
   int framerate = 25;
+  char path[MAXPATHLEN];
 
   pdf_printf(p->stream, "%%PDF-1.%d\n", p->compress ? 2 : 0);
   pdf_printf(p->stream, "%%\344\343\317\322\n");  /* %âãÏÓ\n */
@@ -868,7 +874,9 @@ void pdf_close(PDF *p)
     framerate = 25;
 
   if (p->wstype == 120) {
-    movie = vc_movie_create("gks.mov", framerate, 4000000);
+    gks_filepath(path, p->path, "mov", 0, 0);
+
+    movie = vc_movie_create(path, framerate, 4000000);
 
     pdf = vc_pdf_from_memory(p->stream->buffer, p->stream->length);
     frames = vc_pdf_to_frames(pdf, p->width, p->height);
@@ -1110,10 +1118,11 @@ void create_patterns(void)
 }
 
 static
-void open_ws(int fd, int wstype)
+void open_ws(int fd, char *path, int wstype)
 {
   p = (ws_state_list *) calloc(1, sizeof(struct ws_state_list_t));
 
+  p->path = path;
   p->wstype = wstype;
 
   p->compress = wstype != 101;
@@ -1859,7 +1868,7 @@ void gks_movplugin(
     {
     case 2:
 /* open workstation */
-      open_ws(ia[1], ia[2]);
+      open_ws(ia[1], chars, ia[2]);
       gkss = (gks_state_list_t *) * ptr;
 
       init_norm_xform();
