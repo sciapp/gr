@@ -7095,8 +7095,11 @@ void gr_restorestate(void)
       gks_set_fill_color_index(s->facoli);
 
       gks_select_xform(s->tnr);
-      gks_set_window(s->tnr, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
-      gks_set_viewport(s->tnr, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
+      if (s->tnr != NDC)
+        {
+          gks_set_window(s->tnr, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
+          gks_set_viewport(s->tnr, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
+        }
 
       setscale(s->scale_options);
     }
