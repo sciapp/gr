@@ -95,14 +95,15 @@ void *load_library(const char *name)
 static
 const char *get_qt_version_string()
 {
-  const char *(*qVersion)() = NULL;
+  typedef const char *qversion_t();
+  qversion_t *qVersion = NULL;
 
 #ifdef _WIN32
   void *handle = GetModuleHandle("Qt5Core.dll");
   if(handle != NULL)
-    qVersion = GetProcAddress(handle, "qVersion");
+    qVersion = (qversion_t *) GetProcAddress(handle, "qVersion");
 #else
-  qVersion = dlsym(dlopen(NULL, RTLD_LAZY), "qVersion");
+  qVersion = (qversion_t *) dlsym(dlopen(NULL, RTLD_LAZY), "qVersion");
 #endif
   if(qVersion != NULL)
     return qVersion();
