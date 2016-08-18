@@ -82,7 +82,9 @@ void *load_library(const char *name)
   else
     {
 #ifdef _WIN32
-      gks_perror("%s: can't load library", pathname);
+      DWORD ec = 0;
+      ec = GetLastError();
+      gks_perror("%s: can't load library, error %d (0x%x)", pathname, ec, ec);
 #else
       if ((error = dlerror()) != NULL)
 	gks_perror((char *) error);
