@@ -4,7 +4,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
+#ifdef _MSC_VER
+typedef __int64 int64_t;
+#else
 #include <stdint.h>
+#endif
 #include <signal.h>
 
 #if !defined(VMS) && !defined(_WIN32)
