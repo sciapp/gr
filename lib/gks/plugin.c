@@ -35,6 +35,7 @@ void *load_library(const char *name)
   char pathname[MAXPATHLEN], symbol[255];
 #ifdef _WIN32
   HINSTANCE handle;
+  LPCTSTR grdir;
 #else
   void *handle;
   const char *grdir, *error;
@@ -44,6 +45,14 @@ void *load_library(const char *name)
   sprintf(pathname, "%s.%s", name, EXTENSION);
 #ifdef _WIN32
   handle = LoadLibrary(pathname);
+  if (handle == NULL)
+    {
+      grdir = gks_getenv("GRDIR");
+      if (grdir == NULL)
+        grdir = GRDIR;
+      SetDllDirectory(grdir);
+      handle = LoadLibrary(pathname);
+    }
 #else
   handle = dlopen(pathname, RTLD_LAZY);
   if (handle == NULL)
