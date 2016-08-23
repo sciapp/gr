@@ -9,7 +9,6 @@ import shlex
 import re
 import tempfile
 import shutil
-import sysconfig
 import distutils.command
 import distutils.command.install
 from distutils.core import Command
@@ -112,7 +111,7 @@ class build_static(Command):
         # -- macosx-deployment-target ---------------
         if self.isDarwin:
             # check for interpreters MACOSX_DEPLOYMENT_TARGET setting
-            version = map(int, sysconfig.get_config_var(
+            version = map(int, get_config_var(
                                "MACOSX_DEPLOYMENT_TARGET").split('.'))
             # require at least 10.6
             if version[0] == 10 and version[1] < 6:
