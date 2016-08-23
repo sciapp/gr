@@ -562,7 +562,12 @@ int main()
         # -- qt -------------------------------------
         if not self.disable_qt:
             if self.qmake:
+                # use full qualified path for self.qmake
                 self.qmake = get_output("which", self.qmake)
+            else:
+                # try to determine qmake version automatically
+                self.qmake = (get_output("which", "qmake-qt4") or
+                              get_output("which", "qmake"))
             if os.path.isdir("/usr/local/Cellar"):
                 self.qtlibs = []
             else:
