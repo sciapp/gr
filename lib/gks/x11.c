@@ -2460,9 +2460,8 @@ void text_routine(double x, double y, int nchars, char *chars)
 
 
 static
-void try_load_font(int font, int size)
+void try_load_font(int font, int size, char *fontname)
 {
-  char fontname[256];
   int f; 
 #ifndef NO_XFT
   int family, weight, slant;
@@ -2519,12 +2518,13 @@ static
 void verify_font_capabilities(void)
 {
   int font = 2, size = MAX_SIZE;
+  char fontname[256];
 #ifndef NO_XFT
   XGlyphInfo extents;
   unsigned int s32[1];
 #endif
 
-  try_load_font(font, size);
+  try_load_font(font, size, fontname);
 
   p->scalable_fonts = p->fstr[font][size] != NULL;
 
@@ -2534,7 +2534,7 @@ void verify_font_capabilities(void)
       for (font = 0; font < n_font; font++)
 	{
 	  if (p->fstr[font][size] == NULL)
-	    try_load_font(font, size);
+	    try_load_font(font, size, fontname);
 
 	  if (p->fstr[font][size] != NULL)
 	    {
@@ -2630,7 +2630,7 @@ void set_font(int font)
 
   if (p->fstr[font][size] == NULL)
     {
-      try_load_font(font, size);
+      try_load_font(font, size, fontname);
 
       if (p->fstr[font][size] == NULL)
 	{
