@@ -1332,7 +1332,7 @@ void draw_pattern(int index, CGPathRef shape, CGContextRef context)
     }
 
   CGColorSpaceRef patternSpace;
-  CGFloat         alpha = 1;
+  CGFloat         alpha = gkss->alpha;
   static const    CGPatternCallbacks callbacks = {0, &drawPatternCell, NULL};
 
   patternSpace = CGColorSpaceCreatePattern (NULL);
@@ -1512,15 +1512,15 @@ void fill_routine(int n, double *px, double *py, int tnr)
           if (ind >= MAX_COLOR)
             ind = MAX_COLOR - 1;
           colors = CGColorGetComponents(p->rgb[ind]);
-          colia[i] =  (int)(colors[0] * 255) +
-                     ((int)(colors[1] * 255) << 8) +
-                     ((int)(colors[2] * 255) << 16);
+          colia[i] =  (int)(gkss->alpha * colors[0] * 255) +
+                     ((int)(gkss->alpha * colors[1] * 255) << 8) +
+                     ((int)(gkss->alpha * colors[2] * 255) << 16) +
+                     ((int)(gkss->alpha * 255) << 24);
         }
     }
 
   bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width, cs,
-                                 true_color ? kCGImageAlphaPremultipliedLast :
-                                              kCGImageAlphaNoneSkipLast);
+                                 kCGImageAlphaPremultipliedLast);
   image = CGBitmapContextCreateImage(bitmap);
   CGContextDrawImage(context, CGRectMake(x, y, width, height), image);
 
