@@ -9,7 +9,12 @@ Module['onRuntimeInitialized'] = function() {
     })
 };
 
-function GR() {
+select_canvas = function() {
+    Module.canvas = this.current_canvas;
+    Module.context = this.current_context;
+}
+
+function GR(canvas_id) {
     this.opengks = gr_opengks;
     this.closegks = gr_closegks;
     this.inqdspsize = gr_inqdspsize;
@@ -122,7 +127,14 @@ function GR() {
     this.savestate = gr_savestate;
     this.restorestate = gr_restorestate;
     this.uselinespec = gr_uselinespec;
+
+    // set canvas and context
+    Module.set_canvas(canvas_id);
+    this.current_canvas = Module.canvas;
+    this.current_context = Module.context;
+    this.select_canvas = select_canvas;
 }
+
 
 floatarray = function(a) {
     var ptr = Module._malloc(a.length * 8);
@@ -205,8 +217,10 @@ gr_updatews = Module.cwrap('gr_updatews', '', []);
 
 gr_polyline_c = Module.cwrap('gr_polyline', '', ['number', 'number', 'number', ]);
 gr_polyline = function(n, x, y) {
+    this.select_canvas();
     _x = floatarray(x);
     _y = floatarray(y);
+
     gr_polyline_c(n, _x, _y);
     freearray(_x);
     freearray(_y);
@@ -214,8 +228,10 @@ gr_polyline = function(n, x, y) {
 
 gr_polymarker_c = Module.cwrap('gr_polymarker', '', ['number', 'number', 'number', ]);
 gr_polymarker = function(n, x, y) {
+    this.select_canvas();
     _x = floatarray(x);
     _y = floatarray(y);
+
     gr_polymarker_c(n, _x, _y);
     freearray(_x);
     freearray(_y);
@@ -223,6 +239,7 @@ gr_polymarker = function(n, x, y) {
 
 gr_text_c = Module.cwrap('gr_text', '', ['number', 'number', 'number', ]);
 gr_text = function(x, y, string) {
+    this.select_canvas();
     _string = uint8array(string);
     gr_text_c(x, y, _string);
     freearray(_string);
@@ -245,8 +262,10 @@ gr_inqtext = function(x, y, string) {
 
 gr_fillarea_c = Module.cwrap('gr_fillarea', '', ['number', 'number', 'number', ]);
 gr_fillarea = function(n, x, y) {
+    this.select_canvas();
     _x = floatarray(x);
     _y = floatarray(y);
+
     gr_fillarea_c(n, _x, _y);
     freearray(_x);
     freearray(_y);
@@ -254,6 +273,7 @@ gr_fillarea = function(n, x, y) {
 
 gr_cellarray_c = Module.cwrap('gr_cellarray', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', ]);
 gr_cellarray = function(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow, color) {
+    this.select_canvas();
     _color = intarray(color);
     gr_cellarray_c(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow, _color);
     freearray(_color);
@@ -263,6 +283,7 @@ gr_spline_c = Module.cwrap('gr_spline', '', ['number', 'number', 'number', 'numb
 gr_spline = function(n, px, py, m, method) {
     _px = floatarray(px);
     _py = floatarray(py);
+
     gr_spline_c(n, _px, _py, m, method);
     freearray(_px);
     freearray(_py);
@@ -280,6 +301,7 @@ gr_gridit = function(nd, xd, yd, zd, nx, ny) {
     var y = Module.HEAPF64.subarray(_y / 8, _y / 8 + ny);
     var _z = Module._malloc(nx*ny * 8);
     var z = Module.HEAPF64.subarray(_z / 8, _z / 8 + nx*ny);
+
     gr_gridit_c(nd, _xd, _yd, _zd, nx, ny, _x, _y, _z);
     var result = new Array(3);
     result[0] = new Float64Array(new ArrayBuffer(nx * 8));
@@ -506,6 +528,7 @@ gr_verrorbars = function(n, px, py, e1, e2) {
     _py = floatarray(py);
     _e1 = floatarray(e1);
     _e2 = floatarray(e2);
+
     gr_verrorbars_c(n, _px, _py, _e1, _e2);
     freearray(_px);
     freearray(_py);
@@ -519,6 +542,7 @@ gr_herrorbars = function(n, px, py, e1, e2) {
     _py = floatarray(py);
     _e1 = floatarray(e1);
     _e2 = floatarray(e2);
+
     gr_herrorbars_c(n, _px, _py, _e1, _e2);
     freearray(_px);
     freearray(_py);
@@ -531,6 +555,7 @@ gr_polyline3d = function(n, px, py, pz) {
     _px = floatarray(px);
     _py = floatarray(py);
     _pz = floatarray(pz);
+
     gr_polyline3d_c(n, _px, _py, _pz);
     freearray(_px);
     freearray(_py);
@@ -720,6 +745,7 @@ gr_readimage = function(path) {
 
 gr_drawimage_c = Module.cwrap('gr_drawimage', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', ]);
 gr_drawimage = function(xmin, xmax, ymin, ymax, width, height, data, model) {
+    this.select_canvas();
     _data = intarray(data);
     gr_drawimage_c(xmin, xmax, ymin, ymax, width, height, _data, model);
     freearray(_data);
