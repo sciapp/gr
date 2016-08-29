@@ -415,8 +415,8 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
 #include "marker.h"
 
-  static int is_concav[35] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
+  static int is_concav[37] = {
+    0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0,
     0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
     0,
     0, 0, 0, 0, 0 };
