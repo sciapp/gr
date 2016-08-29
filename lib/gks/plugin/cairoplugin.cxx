@@ -302,16 +302,10 @@ void set_color(int index)
 }
 
 static
-void draw_arc(double x, double y, int r, double start_angle, double end_angle)
-{
-  cairo_arc(p->cr, x, y, r * 1.0, start_angle, end_angle);
-}
-
-static
 void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   double x, y;
-  double scale, xr, yr, x1, x2, y1, y2, start_angle, end_angle;
+  double scale, xr, yr, x1, x2, y1, y2;
   int pc, op, r, i;
 
 #include "marker.h"
@@ -389,17 +383,12 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
         case 6:         /* arc */
         case 7:         /* filled arc */
         case 8:         /* hollow arc */
-          start_angle = marker[mtype][pc + 1];
-          end_angle = marker[mtype][pc + 2];
-
-          draw_arc(x, y, r, start_angle*M_PI/180, end_angle*M_PI/180);
+          cairo_arc(p->cr, x, y, r * 1.0, 0, 2 * M_PI);
 
           if (op == 7)
             cairo_fill(p->cr);
           else
             cairo_stroke(p->cr);
-
-          pc += 2;
           break;
 
         default:

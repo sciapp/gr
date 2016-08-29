@@ -430,7 +430,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
   int r, i, num_segments;
   int pc, op;
-  double scale, x, y, xr, yr, angle, c, s, tmp;
+  double scale, x, y, xr, yr, c, s, tmp;
 
   if (gkss->version > 4)
     mscale *= p->height / 500.0;
@@ -505,11 +505,10 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
         case 8:         /* hollow arc */
           {
             num_segments = 4 * r;
-            angle = (marker[mtype][pc + 2] - marker[mtype][pc + 1]) * M_PI/180;
-            c = cosf(angle / (num_segments - 1));
-            s = sinf(angle / (num_segments - 1));
-            xr = r * cosf(marker[mtype][pc + 1]);
-            yr = r * sinf(marker[mtype][pc + 1]);
+            c = cosf(2 * M_PI / (num_segments - 1));
+            s = sinf(2 * M_PI / (num_segments - 1));
+            xr = r;
+            yr = 0;
             if (op == 7) {
               glBegin(GL_TRIANGLE_FAN);
             } else if (op == 8) {
@@ -527,7 +526,6 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
             glEnd();
             if (op == 8) set_color(mcolor);
           }
-          pc += 2;
           break;
         }
       pc++;

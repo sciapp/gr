@@ -478,18 +478,14 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
           break;
 
         case 6:         /* arc */
-          p->pixmap->drawArc(x - r, y - r, d, d, marker[mtype][pc + 1] * 16,
-                             marker[mtype][pc + 2] * 16);
-          pc += 2;
+          p->pixmap->drawArc(x - r, y - r, d, d, 0, 360 * 16);
           break;
 
         case 7:         /* filled arc */
         case 8:         /* hollow arc */
           if (op == 8)
             set_color(0);
-          p->pixmap->drawChord(x - r, y - r, d, d, marker[mtype][pc + 1] * 16,
-                               marker[mtype][pc + 2] * 16);
-          pc += 2;
+          p->pixmap->drawChord(x - r, y - r, d, d, 0, 360 * 16);
           if (op == 8)
             set_color(mcolor);
           break;

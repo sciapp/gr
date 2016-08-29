@@ -301,17 +301,10 @@ void init_colors(void)
 }
 
 static
-void draw_arc(double x, double y, int r, double start_angle, double end_angle)
-{
-  pgf_printf(p->stream, " (%f, %f) arc [start angle=%f, end angle=%f, "
-             "radius=%d];\n", x + r, y, start_angle, end_angle, r);
-}
-
-static
 void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   double x, y;
-  double scale, xr, yr, x1, x2, y1, y2, start_angle, end_angle;
+  double scale, xr, yr, x1, x2, y1, y2;
   int pc, op, r, i;
 
 #include "marker.h"
@@ -396,9 +389,6 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
         case 6:         /* arc */
         case 7:         /* filled arc */
         case 8:         /* hollow arc */
-          start_angle = marker[mtype][pc + 1];
-          end_angle = marker[mtype][pc + 2];
-
           if(op == 7)
             pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt]",
                        p->linewidth);
@@ -406,9 +396,8 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
             pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt]",
                        p->linewidth);
 
-          draw_arc(x, y, r, start_angle, end_angle);
-
-          pc += 2;
+          pgf_printf(p->stream, " (%f, %f) arc [start angle=%f, end angle=%f, "
+             "radius=%d];\n", x + r, y, 0, 2 * M_PI, r);
           break;
 
         default:

@@ -516,10 +516,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 #else
           p->pixmap->SetBrush(wxBrush(*wxBLACK, wxTRANSPARENT));
 #endif
-          p->pixmap->DrawEllipticArc(x - r, y - r, d, d, marker[mtype][pc + 1],
-                                     marker[mtype][pc + 1] + marker[mtype][pc + 2]);
+          p->pixmap->DrawEllipticArc(x - r, y - r, d, d, 0, 360);
           p->pixmap->SetBrush(*saveBrush);
-          pc += 2;
           break;
 
         case 7:         /* filled arc */
@@ -527,10 +525,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 8)
             set_color(0);
 
-          p->pixmap->DrawEllipticArc(x - r, y - r, d, d, marker[mtype][pc + 1],
-                                     marker[mtype][pc + 1] + marker[mtype][pc + 2]);
+          p->pixmap->DrawEllipticArc(x - r, y - r, d, d, 0, 360);
 
-          pc += 2;
           if (op == 8)
             set_color(mcolor);
           break;

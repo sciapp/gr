@@ -1718,7 +1718,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 	      yr = -scale * marker[mtype][pc + 2 * i + 2];
 	      seg_xform_rel(&xr, &yr);
 	      points[i].x = nint(x - xr);
-	      points[i].y = nint(y - yr);
+	      points[i].y = nint(y + yr);
 	    }
 	  if (p->pixmap)
 	    XDrawLines(p->dpy, p->pixmap, p->gc, points, 2,
@@ -1798,40 +1798,34 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 	case 6:		/* arc */
 	  if (p->pixmap)
 	    XDrawArc(p->dpy, p->pixmap, p->gc, x - r, y - r, d, d,
-		     marker[mtype][pc + 1] * 64, marker[mtype][pc + 2] * 64);
+		     0, 360 * 64);
 	  if (p->selection)
 	    XDrawArc(p->dpy, p->drawable, p->gc, x - r, y - r, d, d,
-		     marker[mtype][pc + 1] * 64, marker[mtype][pc + 2] * 64);
+		     0, 360 * 64);
 	  if (!p->double_buf)
-	    XDrawArc(p->dpy, p->win, p->gc, x - r, y - r, d, d,
-		     marker[mtype][pc + 1] * 64, marker[mtype][pc + 2] * 64);
-	  pc += 2;
+	    XDrawArc(p->dpy, p->win, p->gc, x - r, y - r, d, d, 0, 360 * 64);
 	  break;
 
 	case 7:		/* filled arc */
 	  if (p->pixmap)
 	    XFillArc(p->dpy, p->pixmap, p->gc, x - r, y - r, d, d,
-		     marker[mtype][pc + 1] * 64, marker[mtype][pc + 2] * 64);
+		     0, 360 * 64);
 	  if (p->selection)
 	    XFillArc(p->dpy, p->drawable, p->gc, x - r, y - r, d, d,
-		     marker[mtype][pc + 1] * 64, marker[mtype][pc + 2] * 64);
+		     0, 360 * 64);
 	  if (!p->double_buf)
-	    XFillArc(p->dpy, p->win, p->gc, x - r, y - r, d, d,
-		     marker[mtype][pc + 1] * 64, marker[mtype][pc + 2] * 64);
-	  pc += 2;
+	    XFillArc(p->dpy, p->win, p->gc, x - r, y - r, d, d, 0, 360 * 64);
 	  break;
 
 	case 8:		/* hollow arc */
 	  if (p->pixmap)
 	    XFillArc(p->dpy, p->pixmap, p->clear, x - r, y - r, d, d,
-		     marker[mtype][pc + 1] * 64, marker[mtype][pc + 2] * 64);
+		     0, 360 * 64);
 	  if (p->selection)
 	    XFillArc(p->dpy, p->drawable, p->clear, x - r, y - r, d, d,
-		     marker[mtype][pc + 1] * 64, marker[mtype][pc + 2] * 64);
+		     0, 360 *64);
 	  if (!p->double_buf)
-	    XFillArc(p->dpy, p->win, p->clear, x - r, y - r, d, d,
-		     marker[mtype][pc + 1] * 64, marker[mtype][pc + 2] * 64);
-	  pc += 2;
+	    XFillArc(p->dpy, p->win, p->clear, x - r, y - r, d, d, 0, 360 * 64);
 	  break;
 	}
       pc++;

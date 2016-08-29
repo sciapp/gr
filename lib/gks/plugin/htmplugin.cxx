@@ -352,14 +352,6 @@ void seg_xform_rel(double *x, double *y)
 }
 
 static
-void draw_arc(double x, double y, int r, double start_angle, double end_angle)
-{
-  htm_write("c.arc(%.3f, %.3f, %d, %.3f, %.3f, 1);\n",
-            x, y, r, start_angle, end_angle);
-  htm_write("c.stroke();\n");
-}
-
-static
 void draw_line(double x1, double y1, double x2, double y2)
 {
   htm_write("c.moveTo(%.3f, %.3f);\n", x1, y1);
@@ -377,7 +369,7 @@ static
 void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   int r;
-  double x, y, start_angle, end_angle;
+  double x, y;
   double scale, xr, yr, x1, y1, x2, y2;
   int i, pc, op;
 
@@ -450,20 +442,15 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
         case 6:             /* arc */
         case 7:             /* filled arc */
         case 8:             /* hollow arc */
-          start_angle = marker[mtype][pc + 1] * M_PI/180.;
-          end_angle = marker[mtype][pc + 2] * M_PI/180.;
           htm_write("c.beginPath();\n");
-          if (start_angle > end_angle)
-            draw_arc(x, y, r, start_angle, end_angle);
-          else
-            draw_arc(x, y, r, end_angle, start_angle);
+          htm_write("c.arc(%.3f, %.3f, %d, %.3f, %.3f, 1);\n",
+                    x, y, r, 0.0, 2 * M_PI);
           htm_write("c.closePath();\n");
 
           if (op == 7)
-              htm_write("c.fill();\n");
+            htm_write("c.fill();\n");
           else
             htm_write("c.stroke();\n");
-          pc += 2;
           break;
 
         default:
