@@ -47,6 +47,14 @@ const static FT_String *gks_font_list[] = {
   "Dingbats"                    /* 31: Zapf Dingbats */
 };
 
+static
+FT_Face font_face_cache[] = {
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+};
+
 const static int map[] = {
   22, 9, 5, 14, 18, 26, 13, 1,
   24, 11, 7, 16, 20, 28, 13, 3,
@@ -313,35 +321,21 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   if (textfont >= 101 && textfont <= 131)
     textfont -= 100;
   if (textfont <= 32) {
-    font = gks_font_list[map[textfont - 1] - 1];
+    textfont = map[textfont - 1] - 1;
   } else {
+    textfont = 0;
     gks_perror("invalid font index: %d", gkss->txfont);
-    font = gks_font_list[0];
   }
-  prefix = gks_getenv("GKS_FONTPATH");
-  if (prefix == NULL) {
-    prefix = gks_getenv("GRDIR");
-    if (prefix == NULL)
-      prefix = GRDIR;
-  }
-  file = (FT_String *) malloc(strlen(prefix) + 7 + strlen(font) + 4 + 1);
-  strcpy(file, prefix);
-#ifndef _WIN32
-  strcat(file, "/fonts/");
-#else
-  strcat(fontdb, "\\FONTS\\");
-#endif
-  strcat(file, font);
-  strcat(file, ".pfb");
-  error = FT_New_Face(library, file, 0, &face);
-  if (error == FT_Err_Unknown_File_Format) {
-    gks_perror("unknown file format: %s", file);
-    return NULL;
-  } else if (error) {
-    gks_perror("could not open font file: %s", file);
-    return NULL;
-  }
-  if (strcmp(FT_Get_X11_Font_Format(face), "Type 1") == 0) {
+  font = gks_font_list[textfont];
+
+  if (font_face_cache[textfont] == NULL) {
+    prefix = gks_getenv("GKS_FONTPATH");
+    if (prefix == NULL) {
+      prefix = gks_getenv("GRDIR");
+      if (prefix == NULL)
+        prefix = GRDIR;
+    }
+    file = (FT_String *) malloc(strlen(prefix) + 7 + strlen(font) + 4 + 1);
     strcpy(file, prefix);
 #ifndef _WIN32
     strcat(file, "/fonts/");
@@ -349,20 +343,41 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
     strcat(fontdb, "\\FONTS\\");
 #endif
     strcat(file, font);
-    strcat(file, suffix_type1);
-    FT_Attach_File(face, file);
+    strcat(file, ".pfb");
+    error = FT_New_Face(library, file, 0, &face);
+    if (error == FT_Err_Unknown_File_Format) {
+      gks_perror("unknown file format: %s", file);
+      return NULL;
+    } else if (error) {
+      gks_perror("could not open font file: %s", file);
+      return NULL;
+    }
+    if (strcmp(FT_Get_X11_Font_Format(face), "Type 1") == 0) {
+      strcpy(file, prefix);
+#ifndef _WIN32
+      strcat(file, "/fonts/");
+#else
+      strcat(fontdb, "\\FONTS\\");
+#endif
+      strcat(file, font);
+      strcat(file, suffix_type1);
+      FT_Attach_File(face, file);
+    }
+    free(file);
+    font_face_cache[textfont] = face;
+  } else {
+    face = font_face_cache[textfont];
   }
-  free(file);
 
   num_glyphs = length;
   unicode_string = (FT_UInt *) malloc(length * sizeof(FT_UInt) + 1);
-  if (map[textfont - 1] == 13) {
+  if (textfont + 1 == 13) {
     symbol_to_unicode((FT_Bytes)text, unicode_string, num_glyphs);
   } else {
     utf_to_unicode((FT_Bytes)text, unicode_string, &num_glyphs);
   }
 
-  textheight = nint(gkss->chh * windowwidth * 64 / caps[map[textfont-1] - 1]);
+  textheight = nint(gkss->chh * windowwidth * 64 / caps[textfont]);
   error = FT_Set_Char_Size(face, nint(textheight * gkss->chxp), textheight,
                            72, 72);
   if (error) gks_perror("cannot set text height");
