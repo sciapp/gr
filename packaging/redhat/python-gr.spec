@@ -30,7 +30,7 @@ Source4:			http://downloads.webmproject.org/releases/webm/libvpx-1.4.0.tar.bz2
 Source5:			https://ffmpeg.org/releases/ffmpeg-2.1.4.tar.gz
 Source6:			https://github.com/glfw/glfw/archive/3.1.1.tar.gz
 Source7:			http://download.zeromq.org/zeromq-4.0.4.tar.gz
-Source8:			https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
+Source8:			https://pgi-jcns.fz-juelich.de/files/openjpeg-2.0.0.tar.gz
 Source9:			https://cmake.org/files/v2.8/cmake-2.8.12.2.tar.gz
 Source10:			https://cairographics.org/releases/cairo-1.14.6.tar.xz
 Source11:			https://cairographics.org/releases/pixman-0.34.0.tar.gz

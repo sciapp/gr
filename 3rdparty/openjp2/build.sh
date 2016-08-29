@@ -19,7 +19,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget --no-check-certificate"
   fi
-  ${cmd} https://openjpeg.googlecode.com/files/openjpeg-2.0.0.tar.gz
+  ${cmd} https://pgi-jcns.fz-juelich.de/files/${src}.tar.gz
   tar -xf ${src}.tar.gz
 fi
 
