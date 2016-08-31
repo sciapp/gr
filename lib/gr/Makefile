@@ -33,7 +33,7 @@ endif
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = ../../3rdparty/freetype/libfreetype.a
      XFTLIBS = -lXft -lfontconfig
-   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
+   MUPDFLIBS = -lmupdf -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
      SSLLIBS = -lssl -lcrypto
      X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
        ZLIBS = ../../3rdparty/zlib/libz.a
@@ -63,13 +63,13 @@ libGR.a: $(GROBJS)
 
 libGR.so: $(GROBJS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) \
-	$(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(QHLIBS) $(X11LIBS) $(LIBS) \
+	$(FTLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(QHLIBS) $(X11LIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGR.a $(GKSLIBS)
 	$(CC) -o demo $(INCLUDES) $(CFLAGS) demo.c libGR.a \
-	$(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) \
-	$(QHLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS)
+	$(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) $(FTLIBS) $(JPEGLIBS) $(SSLLIBS) \
+	$(ZLIBS) $(QHLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS)
 
 libqtgr:
 	@make -C qtgr
