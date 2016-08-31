@@ -320,12 +320,12 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   textfont = abs(gkss->txfont);
   if (textfont >= 101 && textfont <= 131)
     textfont -= 100;
-  if (textfont <= 32) {
-    textfont = map[textfont - 1] - 1;
-  } else {
-    textfont = 0;
-    gks_perror("invalid font index: %d", gkss->txfont);
-  }
+  else if (textfont > 1 && textfont <= 32)
+    textfont = map[textfont - 1];
+  else
+    textfont = 9;
+
+  textfont = textfont - 1;
   font = gks_font_list[textfont];
 
   if (font_face_cache[textfont] == NULL) {
