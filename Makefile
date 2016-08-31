@@ -1,4 +1,5 @@
       GRDIR = /usr/local/gr
+     CONFIG = xft=no
        DIRS = lib/gr lib/gr3
   PYTHONBIN = $(shell dirname `which python`)
 ANACONDABIN = /usr/local/anaconda2/bin
@@ -17,7 +18,7 @@ pre-check:
 	@make `uname`
 
 Makedefs:
-	@lib/Preflight >Makedefs
+	@lib/Preflight $(CONFIG) >Makedefs
 
 Linux: all
 Darwin: all
