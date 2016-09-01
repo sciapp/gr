@@ -3181,7 +3181,7 @@ int *gks_resize(int *image, int width, int height, int w, int h)
 void gks_filepath(
   char *path, char *defpath, const char *type, int page, int index)
 {
-  char number[20];
+  char number[20], *p;
   const char *env;
 
   env = gks_getenv("GKS_FILEPATH");
@@ -3191,7 +3191,9 @@ void gks_filepath(
     strcpy(path, defpath);
   else
     strcpy(path, "gks");
-  strtok(path, ".");
+
+  p = strrchr(path, '.');
+  if (p) *p = '\0';
 
   if (page > 1)
     {
