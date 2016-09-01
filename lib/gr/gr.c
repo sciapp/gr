@@ -5637,7 +5637,7 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 {
   int errind, coli, int_style;
   int ntri, *triangles = NULL;
-  double x[3], y[3], z[3], meanz;
+  double x[4], y[4], z[4], meanz;
   int i, j, color;
 
   if (n < 3)
@@ -5683,6 +5683,10 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
       gks_set_fill_color_index(color);
       gks_fillarea(3, x, y);
+
+      x[3] = x[0];
+      y[3] = y[0];
+      gks_polyline(4, x, y);
     }
 
   /* restore fill area interior style and color index */
