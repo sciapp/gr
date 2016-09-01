@@ -2820,9 +2820,6 @@ int gks_get_ws_type(void)
             if (strcmp(wstypes[i].name, env) == 0)
               {
                 wstype = wstypes[i].wstype;
-#if defined(NO_GS) && !defined(NO_CAIRO)
-                if (wstype == 322) wstype = 140;
-#endif
                 break;
               }
         }
@@ -2832,6 +2829,10 @@ int gks_get_ws_type(void)
       if (wstype == 0)
         gks_perror("invalid workstation type (%s)", env);
     }
+
+#if defined(NO_GS) && !defined(NO_CAIRO)
+  if (wstype == 322) wstype = 140;
+#endif
 
   if (wstype == 0)
 #ifndef _WIN32
