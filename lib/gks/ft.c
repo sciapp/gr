@@ -82,14 +82,14 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous,
                           FT_Vector *pen, FT_Bool vertical, FT_Matrix *rotation,
                           FT_Vector *bearing, FT_Int halign);
 static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int *length);
-static FT_Long min(FT_Long a, FT_Long b);
-static FT_Long max(FT_Long a, FT_Long b);
+static FT_Long ft_min(FT_Long a, FT_Long b);
+static FT_Long ft_max(FT_Long a, FT_Long b);
 
-static FT_Long min(FT_Long a, FT_Long b) {
+static FT_Long ft_min(FT_Long a, FT_Long b) {
   return a > b ? b : a;
 }
 
-static FT_Long max(FT_Long a, FT_Long b) {
+static FT_Long ft_max(FT_Long a, FT_Long b) {
   return a > b ? a : b;
 }
 
@@ -340,7 +340,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
 #ifndef _WIN32
     strcat(file, "/fonts/");
 #else
-    strcat(fontdb, "\\FONTS\\");
+    strcat(file, "\\FONTS\\");
 #endif
     strcat(file, font);
     strcat(file, ".pfb");
@@ -357,7 +357,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
 #ifndef _WIN32
       strcat(file, "/fonts/");
 #else
-      strcat(fontdb, "\\FONTS\\");
+      strcat(file, "\\FONTS\\");
 #endif
       strcat(file, font);
       strcat(file, suffix_type1);
@@ -417,10 +417,10 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
                       &bearing, halign);
     if (error) continue;
 
-    bb.xMin = min(bb.xMin, pen.x + bearing.x);
-    bb.xMax = max(bb.xMax, pen.x + bearing.x + 64 * face->glyph->bitmap.width);
-    bb.yMin = min(bb.yMin, pen.y + bearing.y - 64 * face->glyph->bitmap.rows);
-    bb.yMax = max(bb.yMax, pen.y + bearing.y);
+    bb.xMin = ft_min(bb.xMin, pen.x + bearing.x);
+    bb.xMax = ft_max(bb.xMax, pen.x + bearing.x + 64*face->glyph->bitmap.width);
+    bb.yMin = ft_min(bb.yMin, pen.y + bearing.y - 64*face->glyph->bitmap.rows);
+    bb.yMax = ft_max(bb.yMax, pen.y + bearing.y);
 
     if (direction == GKS_K_TEXT_PATH_DOWN) {
       pen.x -= face->glyph->advance.x + spacing.x;
@@ -548,7 +548,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height,
   for (i = 0; i < size; i++) {
     for (j = 0; j < 4; j++) {
       tmp = rgba_bitmap[4*i + j] + color[j] * mono_bitmap[i] / 255;
-      rgba_bitmap[4*i + j] = (FT_Byte) min(tmp, 255);
+      rgba_bitmap[4*i + j] = (FT_Byte) ft_min(tmp, 255);
     }
   }
 

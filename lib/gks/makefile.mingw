@@ -1,5 +1,7 @@
-CFLAGS = -DNO_FT -DNO_X11
-DEFINES = -DGRDIR=\"$(GRDIR)\"
+FTLIB = ../../3rdparty/freetype/libfreetype.lib
+INCLUDES = -I../../3rdparty/freetype/include
+DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11
+CFLAGS = $(DEFINES) $(INCLUDES)
 
 OBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o \
        malloc.o error.o mf.o wiss.o cgm.o win.o mac.o ps.o \
@@ -9,7 +11,10 @@ LIBS = -lwsock32 -lmsimg32 -lgdi32
 
 .SUFFIXES: .o .c
 
-all: libgks.lib libgks.dll demo.exe
+all: prerequisites libgks.lib libgks.dll demo.exe
+
+prerequisites:
+	@$(MAKE) -C ../../3rdparty/freetype
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFINES) $<
@@ -18,7 +23,7 @@ libgks.lib: $(OBJS)
 	$(AR) crs $@ $?
 
 libgks.dll: $(OBJS)
-	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(LIBS)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(FTLIB) $(LIBS)
 
 libkgs.a: libgks.dll
 
@@ -29,6 +34,7 @@ demo.exe: demo.o libgks.lib
 	$(CC) -o $@ demo.o libgks.lib ${LIBS}
 
 clean:
+	@$(MAKE) -C ../../3rdparty/freetype clean
 	$(RM) demo.exe
 	$(RM) libgks.dll
 	$(RM) libgks.lib

@@ -1,4 +1,4 @@
-DEFINES = -DNO_FT -DNO_X11 -DNO_GLFW -DNO_GS -DNO_QT4 -DNO_QT5 -DNO_GTK -DNO_WX -DNO_ZMQ -DGRDIR=\"$(GRDIR)\"
+DEFINES = -DNO_X11 -DNO_GLFW -DNO_GS -DNO_QT4 -DNO_QT5 -DNO_GTK -DNO_WX -DNO_ZMQ -DGRDIR=\"$(GRDIR)\"
 ZLIB = ../../../3rdparty/zlib/libz.lib
 PNGLIB = ../../../3rdparty/libpng16/libpng.lib
 JBIG2DECLIB = ../../../3rdparty/jbig2dec/libjbig2dec.lib
