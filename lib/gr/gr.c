@@ -7199,7 +7199,7 @@ void gr_selectcontext(int context)
       id = context - 1;
       if (app_context[id] == NULL)
         {
-          app_context[id] = (state_list *) gks_malloc(sizeof(state_list));
+          app_context[id] = (state_list *) xmalloc(sizeof(state_list));
           ctx = app_context[id];
 
           gks_inq_pline_linetype(&errind, &ctx->ltype);
@@ -7255,7 +7255,10 @@ void gr_selectcontext(int context)
         }
     }
   else
-    ctx = NULL;
+    {
+      fprintf(stderr, "invalid context id\n");
+      ctx = NULL;
+    }
 }
 
 int gr_uselinespec(char *linespec)
