@@ -126,6 +126,7 @@ function GR(canvas_id) {
     this.inqregenflags = gr_inqregenflags;
     this.savestate = gr_savestate;
     this.restorestate = gr_restorestate;
+    this.selectcontext = gr_selectcontext;
     this.uselinespec = gr_uselinespec;
 
     // set canvas and context
@@ -823,6 +824,8 @@ gr_inqregenflags = Module.cwrap('gr_inqregenflags', 'number', ['number', ]);
 gr_savestate = Module.cwrap('gr_savestate', '', []);
 
 gr_restorestate = Module.cwrap('gr_restorestate', '', []);
+
+gr_selectcontext = Module.cwrap('gr_selectcontext', '', ['number', ]);
 
 gr_uselinespec_c = Module.cwrap('gr_uselinespec', '', ['number', ]);
 gr_uselinespec = function(string) {

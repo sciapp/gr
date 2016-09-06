@@ -60,6 +60,7 @@ EXPORTS
 	gr_resizeselection
 	gr_restorestate
 	gr_savestate
+	gr_selectcontext
 	gr_selntran
 	gr_setarrowsize
 	gr_setarrowstyle

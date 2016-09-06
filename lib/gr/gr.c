@@ -139,6 +139,13 @@ int predef_colors[20] = {
 static
 state_list *state = NULL;
 
+#define MAX_CONTEXT 8
+
+static
+state_list *ctx, *app_context[MAX_CONTEXT] = {
+  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+};
+
 static
 int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
 
@@ -2093,6 +2100,8 @@ void gr_setlinetype(int type)
   check_autoinit;
 
   gks_set_pline_linetype(type);
+  if (ctx)
+    ctx->ltype = type;
 
   if (flag_graphics)
     gr_writestream("<setlinetype type=\"%d\"/>\n", type);
@@ -2109,6 +2118,8 @@ void gr_setlinewidth(double width)
   check_autoinit;
 
   gks_set_pline_linewidth(width);
+  if (ctx)
+    ctx->lwidth = width;
 
   if (flag_graphics)
     gr_writestream("<setlinewidth width=\"%g\"/>\n", width);
@@ -2125,6 +2136,8 @@ void gr_setlinecolorind(int color)
   check_autoinit;
 
   gks_set_pline_color_index(color);
+  if (ctx)
+    ctx->plcoli = color;
 
   if (flag_graphics)
     gr_writestream("<setlinecolorind color=\"%d\"/>\n", color);
@@ -2141,6 +2154,8 @@ void gr_setmarkertype(int type)
   check_autoinit;
 
   gks_set_pmark_type(type);
+  if (ctx)
+    ctx->mtype = type;
 
   if (flag_graphics)
     gr_writestream("<setmarkertype type=\"%d\"/>\n", type);
@@ -2157,6 +2172,8 @@ void gr_setmarkersize(double size)
   check_autoinit;
 
   gks_set_pmark_size(size);
+  if (ctx)
+    ctx->mszsc = size;
 
   if (flag_graphics)
     gr_writestream("<setmarkersize size=\"%g\"/>\n", size);
@@ -2167,6 +2184,8 @@ void gr_setmarkercolorind(int color)
   check_autoinit;
 
   gks_set_pmark_color_index(color);
+  if (ctx)
+    ctx->pmcoli = color;
 
   if (flag_graphics)
     gr_writestream("<setmarkercolorind color=\"%d\"/>\n", color);
@@ -2183,6 +2202,11 @@ void gr_settextfontprec(int font, int precision)
   check_autoinit;
 
   gks_set_text_fontprec(font, precision);
+  if (ctx)
+    {
+      ctx->txfont = font;
+      ctx->txprec = precision;
+    }
 
   if (flag_graphics)
     gr_writestream("<settextfontprec font=\"%d\" precision=\"%d\"/>\n",
@@ -2194,6 +2218,11 @@ void gr_setcharexpan(double factor)
   check_autoinit;
 
   gks_set_text_expfac(factor);
+  if (ctx)
+    ctx->chxp = factor;
+
+  if (flag_graphics)
+    gr_writestream("<setcharexpan factor=\"%g\"/>\n", factor);
 }
 
 void gr_setcharspace(double spacing)
@@ -2201,6 +2230,12 @@ void gr_setcharspace(double spacing)
   check_autoinit;
 
   gks_set_text_spacing(spacing);
+  if (ctx)
+    ctx->chsp = spacing;
+
+  if (flag_graphics)
+    gr_writestream("<setcharspace spacingr=\"%g\"/>\n", spacing);
+
 }
 
 void gr_settextcolorind(int color)
@@ -2208,6 +2243,8 @@ void gr_settextcolorind(int color)
   check_autoinit;
 
   gks_set_text_color_index(color);
+  if (ctx)
+    ctx->txcoli = color;
 
   if (flag_graphics)
     gr_writestream("<settextcolorind color=\"%d\"/>\n", color);
@@ -2218,6 +2255,8 @@ void gr_setcharheight(double height)
   check_autoinit;
 
   gks_set_text_height(height);
+  if (ctx)
+    ctx->chh = height;
 
   if (flag_graphics)
     gr_writestream("<setcharheight height=\"%g\"/>\n", height);
@@ -2228,6 +2267,11 @@ void gr_setcharup(double ux, double uy)
   check_autoinit;
 
   gks_set_text_upvec(ux, uy);
+  if (ctx)
+    {
+      ctx->chup[0] = ux;
+      ctx->chup[1] = uy;
+    }
 
   if (flag_graphics)
     gr_writestream("<setcharup x=\"%g\" y=\"%g\"/>\n", ux, uy);
@@ -2238,6 +2282,8 @@ void gr_settextpath(int path)
   check_autoinit;
 
   gks_set_text_path(path);
+  if (ctx)
+    ctx->txp = path;
 
   if (flag_graphics)
     gr_writestream("<settextpath path=\"%d\"/>\n", path);
@@ -2248,6 +2294,11 @@ void gr_settextalign(int horizontal, int vertical)
   check_autoinit;
 
   gks_set_text_align(horizontal, vertical);
+  if (ctx)
+    {
+      ctx->txal[0] = horizontal;
+      ctx->txal[1] = vertical;
+    }
 
   if (flag_graphics)
     gr_writestream("<settextalign halign=\"%d\" valign=\"%d\"/>\n",
@@ -2259,6 +2310,8 @@ void gr_setfillintstyle(int style)
   check_autoinit;
 
   gks_set_fill_int_style(style);
+  if (ctx)
+    ctx->ints = style;
 
   if (flag_graphics)
     gr_writestream("<setfillintstyle intstyle=\"%d\"/>\n", style);
@@ -2269,6 +2322,8 @@ void gr_setfillstyle(int index)
   check_autoinit;
 
   gks_set_fill_style_index(index);
+  if (ctx)
+    ctx->styli = index;
 
   if (flag_graphics)
     gr_writestream("<setfillstyle style=\"%d\"/>\n", index);
@@ -2279,6 +2334,8 @@ void gr_setfillcolorind(int color)
   check_autoinit;
 
   gks_set_fill_color_index(color);
+  if (ctx)
+    ctx->facoli = color;
 
   if (flag_graphics)
     gr_writestream("<setfillcolorind color=\"%d\"/>\n", color);
@@ -2330,6 +2387,8 @@ int gr_setscale(int options)
   check_autoinit;
 
   result = setscale(options);
+  if (ctx)
+    ctx->scale_options = options;
 
   if (flag_graphics)
     gr_writestream("<setscale scale=\"%d\"/>\n", options);
@@ -2349,6 +2408,13 @@ void gr_setwindow(double xmin, double xmax, double ymin, double ymax)
   check_autoinit;
 
   gks_set_window(tnr, xmin, xmax, ymin, ymax);
+  if (ctx)
+    {
+      ctx->wn[0] = xmin;
+      ctx->wn[1] = xmax;
+      ctx->wn[2] = ymin;
+      ctx->wn[3] = ymax;
+    }
   setscale(lx.scale_options);
 
   if (flag_graphics)
@@ -2372,6 +2438,13 @@ void gr_setviewport(double xmin, double xmax, double ymin, double ymax)
   check_autoinit;
 
   gks_set_viewport(tnr, xmin, xmax, ymin, ymax);
+  if (ctx)
+    {
+      ctx->vp[0] = xmin;
+      ctx->vp[1] = xmax;
+      ctx->vp[2] = ymin;
+      ctx->vp[3] = ymax;
+    }
   setscale(lx.scale_options);
 
   vxmin = xmin;
@@ -7062,7 +7135,7 @@ void gr_savestate(void)
       gks_inq_fill_color_index(&errind, &s->facoli);
 
       gks_inq_current_xformno(&errind, &s->tnr);
-      gks_inq_xform(s->tnr, &errind, s->wn, s->vp);
+      gks_inq_xform(WC, &errind, s->wn, s->vp);
 
       s->scale_options = lx.scale_options;
     }
@@ -7103,11 +7176,8 @@ void gr_restorestate(void)
       gks_set_fill_color_index(s->facoli);
 
       gks_select_xform(s->tnr);
-      if (s->tnr != NDC)
-        {
-          gks_set_window(s->tnr, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
-          gks_set_viewport(s->tnr, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
-        }
+      gks_set_window(WC, s->wn[0], s->wn[1], s->wn[2], s->wn[3]);
+      gks_set_viewport(WC, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
 
       setscale(s->scale_options);
     }
@@ -7116,6 +7186,76 @@ void gr_restorestate(void)
 
   if (flag_graphics)
     gr_writestream("<restorestate/>\n");
+}
+
+void gr_selectcontext(int context)
+{
+  int id, errind;
+
+  check_autoinit;
+
+  if (context >= 1 && context <= MAX_CONTEXT)
+    {
+      id = context - 1;
+      if (app_context[id] == NULL)
+        {
+          app_context[id] = (state_list *) gks_malloc(sizeof(state_list));
+          ctx = app_context[id];
+
+          gks_inq_pline_linetype(&errind, &ctx->ltype);
+          gks_inq_pline_linewidth(&errind, &ctx->lwidth);
+          gks_inq_pline_color_index(&errind, &ctx->plcoli);
+          gks_inq_pmark_type(&errind, &ctx->mtype);
+          gks_inq_pmark_size(&errind, &ctx->mszsc);
+          gks_inq_pmark_color_index(&errind, &ctx->pmcoli);
+          gks_inq_text_fontprec(&errind, &ctx->txfont, &ctx->txprec);
+          gks_inq_text_expfac(&errind, &ctx->chxp);
+          gks_inq_text_spacing(&errind, &ctx->chsp);
+          gks_inq_text_color_index(&errind, &ctx->txcoli);
+          gks_inq_text_height(&errind, &ctx->chh);
+          gks_inq_text_upvec(&errind, &ctx->chup[0], &ctx->chup[1]);
+          gks_inq_text_path(&errind, &ctx->txp);
+          gks_inq_text_align(&errind, &ctx->txal[0], &ctx->txal[1]);
+          gks_inq_fill_int_style(&errind, &ctx->ints);
+          gks_inq_fill_style_index(&errind, &ctx->styli);
+          gks_inq_fill_color_index(&errind, &ctx->facoli);
+
+          gks_inq_current_xformno(&errind, &ctx->tnr);
+          gks_inq_xform(WC, &errind, ctx->wn, ctx->vp);
+
+          ctx->scale_options = lx.scale_options;
+        }
+      else
+        {
+          ctx = app_context[id];
+
+          gks_set_pline_linetype(ctx->ltype);
+          gks_set_pline_linewidth(ctx->lwidth);
+          gks_set_pline_color_index(ctx->plcoli);
+          gks_set_pmark_type(ctx->mtype);
+          gks_set_pmark_size(ctx->mszsc);
+          gks_set_pmark_color_index(ctx->pmcoli);
+          gks_set_text_fontprec(ctx->txfont, ctx->txprec);
+          gks_set_text_expfac(ctx->chxp);
+          gks_set_text_spacing(ctx->chsp);
+          gks_set_text_color_index(ctx->txcoli);
+          gks_set_text_height(ctx->chh);
+          gks_set_text_upvec(ctx->chup[0], ctx->chup[1]);
+          gks_set_text_path(ctx->txp);
+          gks_set_text_align(ctx->txal[0], ctx->txal[1]);
+          gks_set_fill_int_style(ctx->ints);
+          gks_set_fill_style_index(ctx->styli);
+          gks_set_fill_color_index(ctx->facoli);
+
+          gks_select_xform(ctx->tnr);
+          gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
+          gks_set_viewport(WC, ctx->vp[0], ctx->vp[1], ctx->vp[2], ctx->vp[3]);
+
+          setscale(ctx->scale_options);
+        }
+    }
+  else
+    ctx = NULL;
 }
 
 int gr_uselinespec(char *linespec)
