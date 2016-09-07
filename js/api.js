@@ -827,9 +827,10 @@ gr_restorestate = Module.cwrap('gr_restorestate', '', []);
 
 gr_selectcontext = Module.cwrap('gr_selectcontext', '', ['number', ]);
 
-gr_uselinespec_c = Module.cwrap('gr_uselinespec', '', ['number', ]);
+gr_uselinespec_c = Module.cwrap('gr_uselinespec', 'number', ['number', ]);
 gr_uselinespec = function(string) {
     _string = uint8array(string);
-    gr_uselinespec_c(_string);
+    result = gr_uselinespec_c(_string);
     freearray(_string);
+    return result;
 }
