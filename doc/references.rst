@@ -3,6 +3,8 @@ References
 
 **Workshops**
 
+* Heinen, J. (2016), "Scientific computing platforms at PGI / JCNS". Workshop, PGI/JCNS, Forschungszentrum Jülich (`PDF <https://pgi-jcns.fz-juelich.de/pub/doc/Scientific_computing_platforms_at_PGI_JCNS.pdf>`__)
+
 * Heinen, J. (2014), "Scientific Visualization". Workshop, PGI/JCNS, Forschungszentrum Jülich (`PDF <http://iffwww.iff.kfa-juelich.de/pub/doc/sci-vis.pdf>`__, `HTML <http://iffwww.iff.kfa-juelich.de/pub/doc/sci-vis/>`__)
 
 **Poster Sessions**
@@ -12,6 +14,10 @@ References
 * Felder, C. (2015), `"Embedding Visualization Applications with PyGR" <https://ep2015.europython.eu/conference/talks/embedding-visualization-applications-with-pygr>`__. `EuroPython 2015 <https://ep2015.europython.eu/>`__, Bilbao, (`Poster <https://ep2015.europython.eu/media/conference/slides/embedding-visualization-applications-with-pygr.pdf>`__)
 
 **Talks**
+
+* Heinen, J. (2016), `"GR: Plotting with Python or Julia" <http://scipy2016.scipy.org/ehome/146062/332965/>`__. `SciPy 2016 <http://scipy2016.scipy.org/>`__, Austin, Texas (`PDF <http://pgi-jcns.fz-juelich.de/pub/doc/SciPy_2016/GR-Plotting_with_Python_or_Julia.pdf>`__, `Video <https://www.youtube.com/watch?v=BzM0Wa3eWcQ>`__, `HTML <http://pgi-jcns.fz-juelich.de/pub/doc/SciPy_2016/html/>`__)
+
+* Heinen, J. (2016), `"State of the GR Framework" <http://juliacon.org/abstracts.html#GR>`__. `JuliaCon 2016 <http://juliacon.org>`__, Cambridge, Massachusetts (`PDF <http://pgi-jcns.fz-juelich.de/pub/doc/JuliaCon_2016/talk.pdf>`__, `Video <https://www.youtube.com/watch?v=HvhjogGF6aQ>`__, `HTML <http://pgi-jcns.fz-juelich.de/pub/doc/JuliaCon_2016/html/>`__)
 
 * Heinen, J. (2015), `"Getting more out of Matplotlib with GR" <https://www.euroscipy.org/2015/schedule/presentation/12/>`__. `EuroSciPy 2015 <https://www.euroscipy.org/2015/>`__, Cambridge, UK (`PDF <https://pgi-jcns.fz-juelich.de/pub/doc/EuroSciPy_2015/EuroSciPy_2015-Getting_more_out_of_Matplotlib_with_GR.pdf>`__, `Video <https://www.youtube.com/watch?v=CnL9DESPqF8>`__, `HTML <https://pgi-jcns.fz-juelich.de/pub/doc/EuroSciPy_2015/00-talk/>`__)
 
