@@ -1,9 +1,15 @@
+GR.is_ready = false;
 GR.ready_callbacks = [];
 GR.ready = function(callback){
-    GR.ready_callbacks.push(callback);
+    if(!GR.is_ready) {
+        GR.ready_callbacks.push(callback);
+    } else {
+        callback();
+    }
 };
 
 Module['onRuntimeInitialized'] = function() {
+    GR.is_ready = true;
     GR.ready_callbacks.forEach(function (callback) {
         callback();
     })

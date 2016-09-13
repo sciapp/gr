@@ -31,7 +31,7 @@ var Module = {
         if (0) {
             dump(text + '\n');
         } else {
-            console.error(text);
+            console.warn(text);
         }
     },
     canvas: null,
