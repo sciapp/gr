@@ -527,8 +527,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
       gks_inq_pattern_array(fl_style, gks_pattern);
       size = gks_pattern[0];
 
-      p->patterns = (unsigned char*) realloc(p->patterns,
-                                             size * 8 * sizeof(unsigned char));
+      p->patterns = (unsigned char*) gks_realloc(p->patterns,
+                                                 size * 8 * sizeof(unsigned char));
       memset(p->patterns, 0, size * 8 * sizeof(unsigned char));
 
       for (j = 1; j < size + 1; j++)
@@ -587,7 +587,7 @@ void polyline(int n, double *px, double *py)
 
   if (n > p->max_points)
     {
-      p->points = (cairo_point *) realloc(p->points, n * sizeof(cairo_point));
+      p->points = (cairo_point *) gks_realloc(p->points, n * sizeof(cairo_point));
       p->max_points = n;
     }
 
@@ -623,7 +623,7 @@ static
 void symbol_text(int nchars, char *chars)
 {
   int i, ic;
-  char *temp = (char *) malloc(4);
+  char *temp = (char *) gks_malloc(4);
 
   for (i = 0; i < nchars; i++) {
     ic = chars[i];
@@ -829,7 +829,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   swapy = iy1 < iy2;
 
   stride = cairo_format_stride_for_width (CAIRO_FORMAT_ARGB32, width);
-  data = (unsigned char *)gks_malloc(stride * height);
+  data = (unsigned char *) gks_malloc(stride * height);
 
   for (j = 0; j < height; j++) {
     iy = dy * j / height;
@@ -852,7 +852,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
         red = (rgb & 0xff);
         green = (rgb & 0xff00) >> 8;
         blue = (rgb & 0xff0000) >> 16;
-        alpha = (rgb & 0xff000000) >>24;
+        alpha = (rgb & 0xff000000) >> 24;
       }
       // ARGB32 format requires pre-multiplied alpha
       red = red * alpha / 255;
@@ -1008,7 +1008,7 @@ void open_page(void)
       exit(1);
 #endif
     }
-  else if (p->wtype == 140)
+  else if (p->wtype == 140 || p->wtype == 150)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
                                               p->width, p->height);
@@ -1058,10 +1058,326 @@ void close_page(void)
 #endif
 }
 
+#define ON_INHEAP 1
+
+typedef struct oct_node_t oct_node_t, *oct_node;
+
+struct oct_node_t {
+  int64_t r, g, b; /* sum of all child node colors */
+  int count, heap_idx;
+  unsigned char n_kids, kid_idx, flags, depth;
+  oct_node kids[8], parent;
+};
+
+typedef struct {
+  int alloc, n;
+  oct_node *buf;
+} node_heap;
+
+static
+int cmp_node(oct_node a, oct_node b)
+{
+  int ac, bc;
+
+  if (a->n_kids < b->n_kids) return -1;
+  if (a->n_kids > b->n_kids) return 1;
+
+  ac = a->count >> a->depth;
+  bc = b->count >> b->depth;
+
+  return ac < bc ? -1 : ac > bc;
+}
+
+static
+void down_heap(node_heap *h, oct_node p)
+{
+  int n = p->heap_idx, m;
+
+  while (1) {
+    m = n * 2;
+    if (m >= h->n) break;
+    if (m + 1 < h->n && cmp_node(h->buf[m], h->buf[m + 1]) > 0) m++;
+
+    if (cmp_node(p, h->buf[m]) <= 0) break;
+
+    h->buf[n] = h->buf[m];
+    h->buf[n]->heap_idx = n;
+    n = m;
+  }
+  h->buf[n] = p;
+  p->heap_idx = n;
+}
+
+static
+void up_heap(node_heap *h, oct_node p)
+{
+  int n = p->heap_idx;
+  oct_node prev;
+
+  while (n > 1) {
+    prev = h->buf[n / 2];
+    if (cmp_node(p, prev) >= 0) break;
+
+    h->buf[n] = prev;
+    prev->heap_idx = n;
+    n /= 2;
+  }
+  h->buf[n] = p;
+  p->heap_idx = n;
+}
+
+static
+void heap_add(node_heap *h, oct_node p)
+{
+  if ((p->flags & ON_INHEAP)) {
+    down_heap(h, p);
+    up_heap(h, p);
+    return;
+  }
+
+  p->flags |= ON_INHEAP;
+  if (!h->n) h->n = 1;
+  if (h->n >= h->alloc) {
+    while (h->n >= h->alloc) h->alloc += 1024;
+    h->buf = (oct_node *) gks_realloc(h->buf, sizeof(oct_node) * h->alloc);
+  }
+
+  p->heap_idx = h->n;
+  h->buf[h->n++] = p;
+  up_heap(h, p);
+}
+
+static
+oct_node pop_heap(node_heap *h)
+{
+  oct_node ret;
+
+  if (h->n <= 1) return NULL;
+
+  ret = h->buf[1];
+  h->buf[1] = h->buf[--h->n];
+
+  h->buf[h->n] = NULL;
+
+  h->buf[1]->heap_idx = 1;
+  down_heap(h, h->buf[1]);
+
+  return ret;
+}
+
+static
+oct_node pool = NULL;
+
+static
+oct_node node_new(unsigned char idx, unsigned char depth, oct_node p)
+{
+  static int len = 0;
+  oct_node x, n;
+
+  if (len <= 1) {
+    n = (oct_node) gks_malloc(sizeof(oct_node_t) * 2048);
+    n->parent = pool;
+    pool = n;
+    len = 2047;
+  }
+
+  x = pool + len--;
+  x->kid_idx = idx;
+  x->depth = depth;
+  x->parent = p;
+  if (p) p->n_kids++;
+
+  return x;
+}
+
+static
+void node_free()
+{
+  oct_node p;
+
+  while (pool) {
+    p = pool->parent;
+    free(pool);
+    pool = p;
+  }
+}
+
+static
+oct_node node_insert(oct_node root, unsigned char *pix)
+{
+  unsigned char i, bit, depth = 0;
+
+  for (bit = 1 << 7; ++depth < 8; bit >>= 1) {
+    i = !!(pix[1] & bit) * 4 + !!(pix[0] & bit) * 2 + !!(pix[2] & bit);
+    if (!root->kids[i])
+      root->kids[i] = node_new(i, depth, root);
+
+    root = root->kids[i];
+  }
+
+  root->r += pix[0];
+  root->g += pix[1];
+  root->b += pix[2];
+  root->count++;
+
+  return root;
+}
+
+static
+oct_node node_fold(oct_node p)
+{
+  oct_node q;
+
+  if (p->n_kids) abort();
+  q = p->parent;
+  q->count += p->count;
+
+  q->r += p->r;
+  q->g += p->g;
+  q->b += p->b;
+  q->n_kids--;
+  q->kids[p->kid_idx] = NULL;
+
+  return q;
+}
+
+static
+int color_replace(oct_node root, unsigned char *pix)
+{
+  unsigned char i, bit;
+
+  for (bit = 1 << 7; bit; bit >>= 1) {
+    i = !!(pix[1] & bit) * 4 + !!(pix[0] & bit) * 2 + !!(pix[2] & bit);
+    if (!root->kids[i]) break;
+    root = root->kids[i];
+  }
+
+  pix[0] = root->r;
+  pix[1] = root->g;
+  pix[2] = root->b;
+
+  return root->heap_idx;
+}
+
+#define N_COLORS 256
+
+#define WRITE_SIXEL_DATA \
+  if (cache == -1) \
+    c = 0x3f; \
+  else { \
+    c = 0x3f + n; \
+    if (slots[cache] == 0) { \
+      r = palette[cache * 3 - 3] * 100 / 256; \
+      g = palette[cache * 3 - 2] * 100 / 256; \
+      b = palette[cache * 3 - 1] * 100 / 256; \
+      slots[cache] = 1; \
+      fprintf(stream, "#%d;2;%d;%d;%d", cache, r, g, b); \
+    } \
+    fprintf(stream, "#%d", cache); \
+  } \
+  if (count < 3) \
+    for (i = 0; i < count; i++) \
+      fprintf(stream, "%c", c); \
+  else \
+    fprintf(stream, "!%d%c", count, c);
+
+static
+void write_sixels(char *path, int width, int height, int *palette, int *data)
+{
+  int i, slots[257];
+  FILE *stream;
+  int n, x, y, p, cache, count, c, color;
+  int r, g, b;
+
+  for (i = 0; i <= 256; i++)
+    slots[i] = 0;
+
+  stream = fopen(path, "w");
+
+  fprintf(stream, "%c%s", 0x1b, "P");
+  fprintf(stream, "%d;%d;%dq\"1;1;%d;%d", 7, 1, 75, width, height);
+
+  n = 1;
+  for (y = 0; y < height; y++) {
+    p = y * width;
+    cache = data[p];
+    count = 1;
+    c = -1;
+    for (x = 0; x < width; x++) {
+      color = data[p + x];
+      if (color == cache)
+        count += 1;
+      else {
+        WRITE_SIXEL_DATA;
+        count = 1;
+        cache = color;
+      }
+    }
+    if (c != -1 && count > 1) {
+      WRITE_SIXEL_DATA;
+    }
+    if (n == 32) {
+      n = 1;
+      fprintf(stream, "-");
+    } else {
+      n <<= 1;
+      fprintf(stream, "$");
+    }
+  }
+  fprintf(stream, "%c\\", 0x1b);
+  fclose(stream);
+}
+
+static
+void write_to_six(char *path, int width, int height, unsigned char *data)
+{
+  unsigned char *pix = data;
+  oct_node root, got;
+  int i, j;
+  node_heap heap = { 0, 0, NULL };
+  double c;
+  int r, g, b, *palette, *ca;
+
+  root = node_new(0, 0, NULL);
+  for (i = 0; i < width * height; i++, pix += 4)
+    heap_add(&heap, node_insert(root, pix));
+
+  while (heap.n > N_COLORS + 1)
+    heap_add(&heap, node_fold(pop_heap(&heap)));
+
+  palette = (int *) gks_malloc(heap.n * 3 * sizeof(int));
+  for (i = 1, j = 0; i < heap.n; i++) {
+    got = heap.buf[i];
+    c = got->count;
+    got->r = got->r / c + 0.5;
+    got->g = got->g / c + 0.5;
+    got->b = got->b / c + 0.5;
+    r = (int) got->r & 0xff;
+    g = (int) got->g & 0xff;
+    b = (int) got->b & 0xff;
+    palette[j++] = r;
+    palette[j++] = g;
+    palette[j++] = b;
+  }
+
+  ca = (int *) gks_malloc(width * height * sizeof(int));
+  for (i = 0, pix = data; i < width * height; i++, pix += 4)
+    ca[i] = color_replace(root, pix);
+
+  write_sixels(path, width, height, palette, ca);
+
+  node_free();
+  free(heap.buf);
+}
+
 static
 void write_page(void)
 {
   char path[MAXPATHLEN];
+  unsigned char *data, *pix;
+  int width, height, stride;
+  double alpha;
+  int i, j, k, l, bg[3] = { 255, 255, 255 };
 
   p->empty = 1;
   p->page_counter++;
@@ -1077,6 +1393,31 @@ void write_page(void)
   else if (p->wtype == 141)
     XSync(p->dpy, False);
 #endif
+  else if (p->wtype == 150)
+    {
+      cairo_surface_flush(p->surface);
+
+      data = cairo_image_surface_get_data(p->surface);
+      width = cairo_image_surface_get_width(p->surface);
+      height = cairo_image_surface_get_height(p->surface);
+      stride = cairo_image_surface_get_stride(p->surface);
+
+      pix = (unsigned char *) gks_malloc(width * height * 4);
+      l = 0;
+      for (j = 0; j < height; j++) {
+        for (i = 0; i < width; i++) {
+          k = j * stride + i * 4;
+          alpha =           data[k + 3] / 255.0;
+          pix[l++] = (int) (data[k + 2] * alpha + bg[0] * (1 - alpha) + 0.5);
+          pix[l++] = (int) (data[k + 1] * alpha + bg[1] * (1 - alpha) + 0.5);
+          pix[l++] = (int) (data[k + 0] * alpha + bg[2] * (1 - alpha) + 0.5);
+          pix[l++] = 255;
+        }
+      }
+      gks_filepath(path, p->path, "six", p->page_counter, 0);
+      write_to_six(path, width, height, pix);
+      free(pix);
+    }
 }
 
 static
@@ -1135,7 +1476,7 @@ void gks_cairoplugin(
 
       gks_init_core(gkss);
 
-      p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
+      p = (ws_state_list *) gks_malloc(sizeof(ws_state_list));
 
       p->conid = ia[1];
       p->path = chars;
@@ -1145,14 +1486,20 @@ void gks_cairoplugin(
         {
           p->mw = 0.28575; p->mh = 0.19685;
           p->w = 6750; p->h = 4650;
+          resize(2400, 2400);
+        }
+      else if (p->wtype == 150)
+        {
+          p->mw = 0.20320; p->mh = 0.15240;
+          p->w = 560; p->h = 420;
+          resize(400, 400);
         }
       else
         {
           p->mw = 0.25400; p->mh = 0.19050;
           p->w = 1024; p->h = 768;
+          resize(500, 500);
         }
-
-      resize(500, 500);
 
       p->max_points = MAX_POINTS;
       p->points = (cairo_point *) gks_malloc(p->max_points * sizeof(cairo_point));

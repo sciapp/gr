@@ -67,6 +67,7 @@ struct wstypes_t wstypes[] = {
   { "gif", 130 },
   { "cairopng", 140 },
   { "cairox11", 141 },
+  { "six", 150 },
   { "x11", 211 },
   { "pgf", 314 },
   { "bmp", 320 },
