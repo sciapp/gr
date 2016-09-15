@@ -4,7 +4,11 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#ifdef _MSC_VER
+typedef __int64 int64_t;
+#else
 #include <stdint.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <math.h>
