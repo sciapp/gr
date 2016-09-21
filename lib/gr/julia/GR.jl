@@ -1,6 +1,4 @@
-if VERSION >= v"0.4-"
-  __precompile__()
-end
+__precompile__()
 
 module GR
 
@@ -16,13 +14,7 @@ else
   const os = OS_NAME
 end
 
-if VERSION < v"0.4-"
-  typealias AbstractString String
-  typealias UInt8 Uint8
-  typealias UInt32 Uint32
-else
-  const None = Union{}
-end
+const None = Union{}
 
 export
   opengks,
@@ -1019,7 +1011,7 @@ function getgraphics()
                  Ptr{Cchar},
                  (),
                  )
-  return bytestring(string)
+  return Compat.String(string)
 end
 
 function drawgraphics(string)
@@ -1291,7 +1283,7 @@ end
 function _readfile(path)
     data = Array(UInt8, filesize(path))
     s = open(path, "r")
-    bytestring(read!(s, data))
+    Compat.String(read!(s, data))
 end
 
 function isinline()
@@ -1309,7 +1301,7 @@ function startserver()
     app = WebSockets.WebSocketHandler() do req, client
         while true
             msg = WebSockets.read(client)
-            if startswith(bytestring(msg), "ready")
+            if startswith(Compat.String(msg), "ready")
                 if length(msgs) != 0
                     WebSockets.write(client, msgs[1])
                     shift!(msgs)
