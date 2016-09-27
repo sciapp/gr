@@ -679,36 +679,36 @@ gr_endprint = Module.cwrap('gr_endprint', '', []);
 
 gr_ndctowc_c = Module.cwrap('gr_ndctowc', '', ['number', 'number', ]);
 gr_ndctowc = function(x, y) {
-    var _x = Module._malloc(8);
-    var x = Module.HEAPF64.subarray(_x / 8, _x / 8 + 1);
-    x[0] = x;
-    var _y = Module._malloc(8);
-    var y = Module.HEAPF64.subarray(_y / 8, _y / 8 + 1);
-    y[0] = y;
-    gr_ndctowc_c(_x, _y);
+    var __x = Module._malloc(8);
+    var _x = Module.HEAPF64.subarray(__x / 8, __x / 8 + 1);
+    _x[0] = x;
+    var __y = Module._malloc(8);
+    var _y = Module.HEAPF64.subarray(__y / 8, __y / 8 + 1);
+    _y[0] = y;
+    gr_ndctowc_c(__x, __y);
     result = new Array(2);
-    result[0] = x[0];
-    result[1] = y[0];
-    freearray(_x);
-    freearray(_y);
+    result[0] = _x[0];
+    result[1] = _y[0];
+    freearray(__x);
+    freearray(__y);
     return result;
 }
 
 
 gr_wctondc_c = Module.cwrap('gr_wctondc', '', ['number', 'number', ]);
 gr_wctondc = function(x, y) {
-    var _x = Module._malloc(8);
-    var x = Module.HEAPF64.subarray(_x / 8, _x / 8 + 1);
-    x[0] = x;
-    var _y = Module._malloc(8);
-    var y = Module.HEAPF64.subarray(_y / 8, _y / 8 + 1);
-    y[0] = y;
-    gr_wctondc_c(_x, _y);
+    var __x = Module._malloc(8);
+    var _x = Module.HEAPF64.subarray(__x / 8, __x / 8 + 1);
+    _x[0] = x;
+    var __y = Module._malloc(8);
+    var _y = Module.HEAPF64.subarray(__y / 8, __y / 8 + 1);
+    _y[0] = y;
+    gr_wctondc_c(__x, __y);
     result = new Array(2);
-    result[0] = x[0];
-    result[1] = y[0];
-    freearray(_x);
-    freearray(_y);
+    result[0] = _x[0];
+    result[1] = _y[0];
+    freearray(__x);
+    freearray(__y);
     return result;
 }
 
