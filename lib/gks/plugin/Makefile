@@ -35,7 +35,7 @@ ifneq ($(QT5_QMAKE),false)
 ifeq ($(UNAME_S),Darwin)
       QT5INC = -I$(QT5INCDIR) -I$(QT5LIBDIR)/QtCore.framework/Versions/5/Headers -I$(QT5LIBDIR)/QtGui.framework/Versions/5/Headers -I$(QT5LIBDIR)/QtWidgets.framework/Versions/5/Headers -F$(QT5LIBDIR)
 ifneq ($(QT5INC),)
-     QT5INC += -mmacosx-version-min=10.5
+     QT5INC += -std=c++11
 endif
 else
       QT5INC = -I$(QT5INCDIR) -I$(QT5INCDIR)/QtCore -I$(QT5INCDIR)/QtGui -I$(QT5INCDIR)/QtWidgets
