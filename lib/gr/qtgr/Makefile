@@ -11,7 +11,7 @@ QT4INCDIR = `$(QT4_QMAKE) -query QT_INSTALL_HEADERS`
 QT4INC = -I$(QT4INCDIR) -I$(QT4INCDIR)/QtCore -I$(QT4INCDIR)/QtGui
 ifeq ($(UNAME_S),Darwin)
 ifneq ($(QT4INC),)
-	QT4INC += -mmacosx-version-min=10.5
+	QT4INC += -mmacosx-version-min=10.7
 endif
 endif
 QT4LIBDIR = `$(QT4_QMAKE) -query QT_INSTALL_LIBS`
