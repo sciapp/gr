@@ -153,7 +153,7 @@ static
 char *display = NULL;
 
 static
-double vxmin, vxmax, vymin, vymax;
+double vxmin = 0.2, vxmax = 0.9, vymin = 0.2, vymax = 0.9;
 
 static
 double cxl, cxr, cyf, cyb, czb, czt;
