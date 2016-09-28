@@ -75,7 +75,7 @@ endif
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
   CAIRODEFS =
 ifdef USE_STATIC_CAIRO_LIBS
-  CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a
+  CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a -lXrender -lXext
 else
   CAIROLIBS = -lcairo -lpixman-1 -lpthread
 endif
