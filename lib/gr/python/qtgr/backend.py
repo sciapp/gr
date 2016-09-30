@@ -5,6 +5,7 @@ The default backend order (PyQt4, PySide) can be overwritten with:
     gr.QT_BACKEND_ORDER = ["PySide", "PyQt4"]
 """
 
+import collections
 import sys
 
 # local library
@@ -39,11 +40,23 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 QT_PYSIDE = "PySide"
 QT_PYQT4 = "PyQt4"
+QT_PYQT5 = "PyQt5"
 
-# modules and functions that we provide
+# modules, functions and classes that we provide
 QtCore = None
 QtGui = None
+QtWidgets = None
+QtPrintSupport = None
+QApplication = None
+QWidget = None
+QGesture = None
+QGestureRecognizer = None
+QPainter = None
+QPrinter = None
+QPrintDialog = None
+
 getGKSConnectionId = None
+QtVersionTuple = None
 
 # selecting the backend order:
 if hasattr(gr, "QT_BACKEND_ORDER"):
@@ -56,19 +69,33 @@ elif 'PyQt4' in sys.modules and 'PySide' not in sys.modules:
     # only PyQt already loaded, use it
     QT_BACKEND_ORDER = [QT_PYQT4, QT_PYSIDE]
 else:
-    # fallback on default order
-    QT_BACKEND_ORDER = [QT_PYQT4, QT_PYSIDE]
+    # check which backend is already imported
+    # fallback to default order if no import can be detected
+    QT_BACKEND_ORDER = [QT_PYQT4, QT_PYSIDE, QT_PYQT5]
+    for i, backend in enumerate(QT_BACKEND_ORDER[:]):
+        if backend in sys.modules:
+            QT_BACKEND_ORDER.insert(0, QT_BACKEND_ORDER.pop(i))
+            break
+
+
+VersionTuple = collections.namedtuple('VersionTuple', ['major', 'minor', 'patch'])
 
 
 def _importPySide():
-    global QtCore, QtGui, getGKSConnectionId
+    global QApplication, QtCore, QtGui, QWidget, QGesture, QGestureRecognizer,\
+        QPainter, QPrinter, QPrintDialog, getGKSConnectionId
+    global QtVersionTuple
 
     from PySide import QtCore
     from PySide import QtGui
+    from PySide.QtGui import QApplication, QWidget, QGesture, \
+        QGestureRecognizer, QPainter, QPrinter, QPrintDialog
     try:
         from PySide import shiboken
     except ImportError:
-        import shiboken # Anaconda
+        import shiboken  # Anaconda
+
+    QtVersionTuple = VersionTuple(*QtCore.__version_info__)
 
     def getGKSConnectionId(widget, painter):
         return "%x!%x" % (long(shiboken.getCppPointer(widget)[0]),
@@ -76,14 +103,44 @@ def _importPySide():
 
 
 def _importPyQt4():
-    global QtCore, QtGui, getGKSConnectionId
+    global QApplication, QtCore, QtGui, QWidget, QGesture, QGestureRecognizer,\
+        QPainter, QPrinter, QPrintDialog, getGKSConnectionId
+    global QtVersionTuple
 
     from PyQt4 import QtCore
     from PyQt4 import QtGui
+    from PyQt4.QtGui import QApplication, QWidget, QGesture, \
+        QGestureRecognizer, QPainter, QPrinter, QPrintDialog
     import sip
 
     # a bit of compatibility...
     QtCore.Signal = QtCore.pyqtSignal
+
+    QtVersionTuple = VersionTuple(*map(int, QtCore.QT_VERSION_STR.split('.')))
+
+    def getGKSConnectionId(widget, painter):
+        return "%x!%x" % (sip.unwrapinstance(widget),
+                          sip.unwrapinstance(painter))
+
+
+def _importPyQt5():
+    global QApplication, QtCore, QtGui, QtWidgets, QtPrintSupport, QWidget, \
+        QGesture, QGestureRecognizer, QPainter, QPrinter, QPrintDialog
+    global getGKSConnectionId, QtVersionTuple
+
+    from PyQt5 import QtCore
+    from PyQt5 import QtGui
+    from PyQt5 import QtWidgets
+    from PyQt5 import QtPrintSupport
+    from PyQt5.QtGui import QPainter
+    from PyQt5.QtWidgets import QApplication, QWidget, QGesture, QGestureRecognizer
+    from PyQt5.QtPrintSupport import QPrinter, QPrintDialog
+    import sip
+
+    # a bit of compatibility...
+    QtCore.Signal = QtCore.pyqtSignal
+
+    QtVersionTuple = VersionTuple(*map(int, QtCore.QT_VERSION_STR.split('.')))
 
     def getGKSConnectionId(widget, painter):
         return "%x!%x" % (sip.unwrapinstance(widget),
@@ -91,12 +148,13 @@ def _importPyQt4():
 
 
 _importers = {QT_PYSIDE: _importPySide,
-              QT_PYQT4:  _importPyQt4}
+              QT_PYQT4:  _importPyQt4,
+              QT_PYQT5:  _importPyQt5}
 
 for backend in QT_BACKEND_ORDER:
     try:
         _importers[backend]()
-    except ImportError:
+    except (ImportError, RuntimeError):
         pass
     else:
         break

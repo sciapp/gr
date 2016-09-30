@@ -11,9 +11,10 @@ import logging
 import warnings
 # local library
 import gr
-import qtgr.events
 from gr.pygr import Plot, PlotAxes, RegionOfInterest, DeviceCoordConverter
-from qtgr.backend import QtCore, QtGui, getGKSConnectionId
+from qtgr.backend import QtCore, QtGui
+from qtgr.backend import QApplication, QWidget, QPainter, QPrinter, \
+    QPrintDialog, getGKSConnectionId
 from qtgr.events import GUIConnector, MouseEvent, PickEvent, ROIEvent, \
     LegendEvent, MouseGestureEvent, WheelEvent
 from qtgr.events.gestures import PanGestureRecognizer, SelectGestureRecognizer
@@ -48,7 +49,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 _log = logging.getLogger(__name__)
 
 
-class GRWidget(QtGui.QWidget):
+class GRWidget(QWidget):
 
     def __init__(self, *args, **kwargs):
         super(GRWidget, self).__init__(*args, **kwargs)
@@ -62,7 +63,7 @@ class GRWidget(QtGui.QWidget):
         os.environ["GKS_DOUBLE_BUF"] = "True"
 
     def paintEvent(self, event):
-        self._painter = QtGui.QPainter()
+        self._painter = QPainter()
         self._painter.begin(self)
         self._painter.fillRect(0, 0, self.width(), self.height(), self._bgColor)
         os.environ["GKSconid"] = getGKSConnectionId(self, self._painter)
@@ -157,11 +158,11 @@ class GRWidget(QtGui.QWidget):
         self.repaint()
 
     def printDialog(self, documentName="qtgr-untitled"):
-        printer = QtGui.QPrinter(QtGui.QPrinter.HighResolution)
+        printer = QPrinter(QPrinter.HighResolution)
         printer.setDocName(documentName)
-        painter = QtGui.QPainter()
-        dlg = QtGui.QPrintDialog(printer)
-        if dlg.exec_() == QtGui.QPrintDialog.Accepted:
+        painter = QPainter()
+        dlg = QPrintDialog(printer)
+        if dlg.exec_() == QPrintDialog.Accepted:
             painter.begin(printer)
             os.environ["GKSconid"] = getGKSConnectionId(self, painter)
 
@@ -329,7 +330,7 @@ class InteractiveGRWidget(GRWidget):
             (coord, _axes, _curve) = plot.pick(p0, self.dwidth, self.dheight)
             if coord:
                 dcPoint = coord.getDC()
-                QtGui.QApplication.sendEvent(self, PickEvent(type,
+                QApplication.sendEvent(self, PickEvent(type,
                                                              self.dwidth,
                                                              self.dheight,
                                                              dcPoint.x,
@@ -398,7 +399,7 @@ class InteractiveGRWidget(GRWidget):
                     coords = DeviceCoordConverter(self.dwidth, self.dheight)
                     coords.setNDC(p0.x, p0.y)
                     p0dc = coords.getDC()
-                    QtGui.QApplication.sendEvent(self,
+                    QApplication.sendEvent(self,
                                                  eventObj(type,
                                                           self.dwidth,
                                                           self.dheight,
@@ -442,7 +443,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.CRITICAL)
     for name in [__name__, pygr.base.__name__, pygr.__name__]:
         logging.getLogger(name).setLevel(logging.DEBUG)
-    app = QtGui.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     grw = InteractiveGRWidget()
     grw.resize(QtCore.QSize(500, 500))
     viewport = [0.1, 0.45, 0.1, 0.88]

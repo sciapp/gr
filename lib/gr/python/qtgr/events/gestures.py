@@ -3,7 +3,8 @@
 # standard library
 import logging
 # local library
-from qtgr.backend import QtGui, QtCore
+from qtgr.backend import QtCore
+from qtgr.backend import QGesture, QGestureRecognizer
 from qtgr.events.mouse import MouseEvent
 from gr._version import __version__, __revision__
 
@@ -32,9 +33,6 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-
-QGesture = QtGui.QGesture
-QGestureRecognizer = QtGui.QGestureRecognizer
 
 _log = logging.getLogger(__name__)
 
