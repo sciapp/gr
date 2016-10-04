@@ -28,6 +28,7 @@ static char not_initialized_[] = "Not initialized";
  * The id of the framebuffer object used for rendering.
  */
 static GLuint framebuffer = 0;
+static GLuint user_framebuffer = 0;
 
 static int current_object_id = 0;
 
@@ -248,6 +249,7 @@ GR3API int gr3_init(int *attrib_list) {
     gr3_appendtorenderpathstring_((const char *)glGetString(GL_VERSION));
     gr3_appendtorenderpathstring_((const char *)glGetString(GL_RENDERER));
     gr3_init_convenience();
+    gr3_useframebuffer(0);
     gr3_setcameraprojectionparameters(45, 1, 200);
     gr3_cameralookat(0, 0, 10, 0, 0, 0, 0, 1, 0);
     gr3_log_("init completed successfully");
@@ -383,6 +385,17 @@ GR3API int gr3_clear(void) {
     } else {
         RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
+}
+
+
+GR3API void gr3_usecurrentframebuffer() {
+    GLuint framebuffer = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
+    gr3_useframebuffer(framebuffer);
+}
+
+GR3API void gr3_useframebuffer(unsigned int framebuffer) {
+    user_framebuffer = framebuffer;
 }
 
 /*!
@@ -1375,9 +1388,9 @@ GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int wid
 static int gr3_drawimage_opengl_(float xmin, float xmax, float ymin, float ymax, int width, int height) {
     gr3_log_("gr3_drawimage_opengl_();");
     #if GL_ARB_framebuffer_object
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, user_framebuffer);
     #else
-        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+        glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, user_framebuffer);
     #endif
     glViewport(xmin,ymin,xmax-xmin,ymax-ymin);
     gr3_draw_(width, height);

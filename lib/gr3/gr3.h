@@ -104,6 +104,8 @@ GR3API const char  *gr3_getrenderpathstring(void);
 GR3API const char  *gr3_geterrorstring(int error);
 GR3API void         gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
 GR3API int          gr3_clear(void);
+GR3API void         gr3_usecurrentframebuffer();
+GR3API void         gr3_useframebuffer(unsigned int framebuffer);
 
 GR3API int          gr3_setquality(int quality);
 GR3API int          gr3_getimage(int width, int height, int use_alpha, char *pixels);

@@ -6,6 +6,8 @@ __all__ = ['GR3_InitAttribute',
            'GR3_Drawable',
            'init',
            'terminate',
+           'useframebuffer',
+           'usecurrentframebuffer',
            'getimage',
            'export',
            'getrenderpathstring',
@@ -229,6 +231,25 @@ def terminate():
     """
     global _gr3
     _gr3.gr3_terminate()
+
+def useframebuffer(framebuffer):
+    """
+    Set the framebuffer used for drawing to OpenGL (using gr3.drawimage). This function is only needed when you do not want to render to 0, the default framebuffer.
+
+    **Parameters:**
+
+        `framebuffer`: the framebuffer object GR3 should render to.
+
+    """
+    global _gr3
+    _gr3.gr3_useframebuffer(c_uint(framebuffer))
+
+def usecurrentframebuffer():
+    """
+    Use the currently bound framebuffer as the framebuffer used for drawing to OpenGL (using gr3.drawimage). This function is only needed when you do not want to render to 0, the default framebuffer.
+    """
+    global _gr3
+    _gr3.gr3_usecurrentframebuffer()
 
 def setquality(quality):
     """
@@ -1139,6 +1160,8 @@ def drawmolecule(positions_or_filename, colors=None, radii=None, spins=None,
 
 _gr3.gr3_init.argtypes = [POINTER(c_int)]
 _gr3.gr3_terminate.argtypes = []
+_gr3.gr3_useframebuffer.argtypes = [c_uint]
+_gr3.gr3_usecurrentframebuffer.argtypes = []
 _gr3.gr3_getrenderpathstring.argtypes = []
 _gr3.gr3_geterrorstring.argtypes = [c_int]
 _gr3.gr3_setlogcallback.argtypes = [CFUNCTYPE(None, c_char_p)]
