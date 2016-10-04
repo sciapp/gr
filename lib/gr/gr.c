@@ -3460,9 +3460,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
                   major = i == 0;
                   if (fabs(zi - z_min) > FEPS * zi)
                     {
-                      grid_line3d(x_min, y_min, zi, x_min, y_max, zi,
+                      grid_line3d(x_org, y_min, zi, x_org, y_max, zi,
                                   color, major);
-                      grid_line3d(x_min, y_max, zi, x_max, y_max, zi,
+                      grid_line3d(x_min, y_org, zi, x_max, y_org, zi,
                                   color, major);
                     }
                 }
@@ -3496,9 +3496,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
 
               if (fabs(zi - z_min) > FEPS * zi)
                 {
-                  grid_line3d(x_min, y_min, zi, x_min, y_max, zi,
+                  grid_line3d(x_org, y_min, zi, x_org, y_max, zi,
                               color, major);
-                  grid_line3d(x_min, y_max, zi, x_max, y_max, zi,
+                  grid_line3d(x_min, y_org, zi, x_max, y_org, zi,
                               color, major);
                 }
 
@@ -3526,9 +3526,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
                   major = i == 0;
                   if (fabs(yi - y_min) > FEPS * yi)
                     {
-                      grid_line3d(x_min, yi, z_min, x_max, yi, z_min,
+                      grid_line3d(x_min, yi, z_org, x_max, yi, z_org,
                                   color, major);
-                      grid_line3d(x_min, yi, z_min, x_min, yi, z_max,
+                      grid_line3d(x_org, yi, z_min, x_org, yi, z_max,
                                   color, major);
                     }
                 }
@@ -3562,9 +3562,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
 
               if (fabs(yi - y_min) > FEPS * yi)
                 {
-                  grid_line3d(x_min, yi, z_min, x_max, yi, z_min,
+                  grid_line3d(x_min, yi, z_org, x_max, yi, z_org,
                               color, major);
-                  grid_line3d(x_min, yi, z_min, x_min, yi, z_max,
+                  grid_line3d(x_org, yi, z_min, x_org, yi, z_max,
                               color, major);
                 }
 
@@ -3592,9 +3592,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
                   major = i == 0;
                   if (fabs(xi - x_min) > FEPS * xi)
                     {
-                      grid_line3d(xi, y_min, z_min, xi, y_max, z_min,
+                      grid_line3d(xi, y_min, z_org, xi, y_max, z_org,
                                   color, major);
-                      grid_line3d(xi, y_max, z_min, xi, y_max, z_max,
+                      grid_line3d(xi, y_org, z_min, xi, y_org, z_max,
                                   color, major);
                     }
                 }
@@ -3628,10 +3628,10 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
 
               if (fabs(xi - x_min) > FEPS * xi)
                 {
-                      grid_line3d(xi, y_min, z_min, xi, y_max, z_min,
-                                  color, major);
-                      grid_line3d(xi, y_max, z_min, xi, y_max, z_max,
-                                  color, major);
+                  grid_line3d(xi, y_min, z_org, xi, y_max, z_org,
+                              color, major);
+                  grid_line3d(xi, y_org, z_min, xi, y_org, z_max,
+                              color, major);
                 }
 
               i++;
