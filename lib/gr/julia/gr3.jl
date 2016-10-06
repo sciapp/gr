@@ -11,7 +11,7 @@ macro triplet(t)
 end
 
 macro ArrayToVector(ctype, data)
-	return :( convert(Vector{$ctype}, vec($data)) )
+    return :( convert(Vector{$ctype}, vec($data)) )
 end
 
 type PNG
