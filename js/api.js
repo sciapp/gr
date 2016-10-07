@@ -647,11 +647,14 @@ gr_validaterange = Module.cwrap('gr_validaterange', 'number', ['number', 'number
 
 gr_adjustrange_c = Module.cwrap('gr_adjustrange', '', ['number', 'number', ]);
 gr_adjustrange = function(amin, amax) {
-    _amin = floatarray(amin);
-    _amax = floatarray(amax);
+    _amin = floatarray([amin]);
+    _amax = floatarray([amax]);
     gr_adjustrange_c(_amin, _amax);
+    amin = Module.HEAPF64[_amin/8];
+    amax = Module.HEAPF64[_amax/8];
     freearray(_amin);
     freearray(_amax);
+    return [amin, amax];
 }
 
 gr_beginprint_c = Module.cwrap('gr_beginprint', '', ['number', ]);
