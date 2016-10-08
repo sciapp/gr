@@ -309,7 +309,7 @@ void init_colors(void)
 static
 void init_clippaths(void)
 {
-  p->path_counter = 0;
+  p->path_counter = MAX_TNR;
   p->clip_index = 0;
   for (int i = 0; i < MAX_TNR; i++)
     {
