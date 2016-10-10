@@ -34,12 +34,10 @@ ifneq ($(QT5_QMAKE),false)
    QT5INCDIR = `$(QT5_QMAKE) -query QT_INSTALL_HEADERS`
 ifeq ($(UNAME_S),Darwin)
       QT5INC = -I$(QT5INCDIR) -I$(QT5LIBDIR)/QtCore.framework/Versions/5/Headers -I$(QT5LIBDIR)/QtGui.framework/Versions/5/Headers -I$(QT5LIBDIR)/QtWidgets.framework/Versions/5/Headers -F$(QT5LIBDIR)
-ifneq ($(QT5INC),)
-     QT5INC += -std=c++11
-endif
 else
       QT5INC = -I$(QT5INCDIR) -I$(QT5INCDIR)/QtCore -I$(QT5INCDIR)/QtGui -I$(QT5INCDIR)/QtWidgets
 endif
+   QT5INC += -std=c++11
    QT5LIBDIR = `$(QT5_QMAKE) -query QT_INSTALL_LIBS`
 ifeq ($(UNAME_S),Darwin)
      QT5LIBS = -F$(QT5LIBDIR) -framework QtWidgets -framework QtGui -framework QtCore
