@@ -296,7 +296,7 @@ frame_t vc_frame_from_pdf(pdf_t pdf, int page, int width, int height)
 
   frame->data = (unsigned char *) malloc(width * height * 4 * sizeof(unsigned char));
   data = fz_pixmap_samples(pdf->ctx, pix);
-  memcpy(frame->data, data, width * height * 4 * sizeof(unsigned char));
+  memmove(frame->data, data, width * height * 4 * sizeof(unsigned char));
   frame->width  = width;
   frame->height = height;
 

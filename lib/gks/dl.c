@@ -7,7 +7,7 @@
 
 #define SEGM_SIZE 262144 /* 256K */
 
-#define COPY(s, n) memcpy(d->buffer + d->nbytes, (void *) s, n); d->nbytes += n
+#define COPY(s, n) memmove(d->buffer + d->nbytes, (void *) s, n); d->nbytes += n
 
 
 static
@@ -37,7 +37,7 @@ int purge(gks_display_list_t *d, char *t)
       /* 48: setcolorrep, 54: setwswindow, 55: setwsviewport */
       if (*fctid == 48 || *fctid == 54 || *fctid == 55)
         {
-          memcpy(t + tp, s + sp, *len);
+          memmove(t + tp, s + sp, *len);
           tp += *len;
         }
       sp += *len;

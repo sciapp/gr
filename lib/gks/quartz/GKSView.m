@@ -382,8 +382,8 @@ void seg_xform_rel(double *x, double *y)
           gkss = &gkss_;
           p = &p_;
 
-          memcpy(&saved_gkss, gkss, sizeof(gks_state_list_t));
-          memcpy(gkss, sl, sizeof(gks_state_list_t));
+          memmove(&saved_gkss, gkss, sizeof(gks_state_list_t));
+          memmove(gkss, sl, sizeof(gks_state_list_t));
 
           CGSize screen_size = CGDisplayScreenSize(CGMainDisplayID());
           double mwidth = 0.001 * screen_size.width;
@@ -606,7 +606,7 @@ void seg_xform_rel(double *x, double *y)
     }
 
   if (gkss != NULL)
-    memcpy(gkss, &saved_gkss, sizeof(gks_state_list_t));
+    memmove(gkss, &saved_gkss, sizeof(gks_state_list_t));
 }
 
 - (id) initWithFrame: (NSRect) frame
@@ -679,7 +679,7 @@ void seg_xform_rel(double *x, double *y)
       buffer = (char *) gks_realloc(buffer, size);
     }
 
-  memcpy(buffer, (char *) [display_list bytes], len);
+  memmove(buffer, (char *) [display_list bytes], len);
   memset(buffer + len, 0, sizeof(int));
 
   [self setNeedsDisplay: YES];

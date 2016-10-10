@@ -931,8 +931,8 @@ void interp(char *str)
       switch (*f)
         {
         case   2:
-          memcpy(&saved_gkss, gkss, sizeof(gks_state_list_t));
-          memcpy(gkss, sl, sizeof(gks_state_list_t));
+          memmove(&saved_gkss, gkss, sizeof(gks_state_list_t));
+          memmove(gkss, sl, sizeof(gks_state_list_t));
 
           p->window[0] = p->window[2] = 0.0;
           p->window[1] = p->window[3] = 1.0;
@@ -1112,7 +1112,7 @@ void interp(char *str)
       RESOLVE(len, int, sizeof(int));
     }
 
-  memcpy(gkss, &saved_gkss, sizeof(gks_state_list_t));
+  memmove(gkss, &saved_gkss, sizeof(gks_state_list_t));
 }
 
 void get_pixmap(void)

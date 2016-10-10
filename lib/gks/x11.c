@@ -641,7 +641,7 @@ void set_clipping(Bool state)
 
   if (state && gksl->clip == GKS_K_CLIP)
     {
-      memcpy(clrt, gksl->viewport[gksl->cntnr], 4 * sizeof(double));
+      memmove(clrt, gksl->viewport[gksl->cntnr], 4 * sizeof(double));
       seg_xform(&clrt[0], &clrt[2]);
       seg_xform(&clrt[1], &clrt[3]);
       i = clrt[0] < clrt[1] ? 0 : 1;
@@ -1887,7 +1887,7 @@ void marker_routine(
     {
       if (gksl->clip == GKS_K_CLIP)
         {
-          memcpy(clrt, gksl->viewport[gksl->cntnr], 4 * sizeof(double));
+          memmove(clrt, gksl->viewport[gksl->cntnr], 4 * sizeof(double));
           seg_xform(&clrt[0], &clrt[2]);
           seg_xform(&clrt[1], &clrt[3]);
         }
@@ -3464,9 +3464,9 @@ stop:
       for (j = 0; j < h; j++) \
         { \
           epptr -= bytes_per_line; \
-          memcpy(tmpptr, elptr, w * sizeof(type)); \
-          memcpy(elptr, epptr, w * sizeof(type)); \
-          memcpy(epptr, tmpptr, w * sizeof(type)); \
+          memmove(tmpptr, elptr, w * sizeof(type)); \
+          memmove(elptr, epptr, w * sizeof(type)); \
+          memmove(epptr, tmpptr, w * sizeof(type)); \
           elptr += bytes_per_line; \
         } \
 \

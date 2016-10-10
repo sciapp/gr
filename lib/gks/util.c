@@ -3157,7 +3157,7 @@ void gks_iso2utf(unsigned char c, char *utf, size_t *len)
 void gks_symbol2utf(unsigned char c, char *utf, size_t *len)
 {
   *len = strlen(symbol2utf[c]);
-  memcpy(utf, symbol2utf[c], *len);
+  memmove(utf, symbol2utf[c], *len);
 }
 
 int *gks_resize(int *image, int width, int height, int w, int h)

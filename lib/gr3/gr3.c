@@ -448,9 +448,9 @@ void gr3_sortindexedmeshdata(int mesh) {
         float *colors = (float *)malloc(sizeof(float)*context_struct_.mesh_list_[mesh].data.number_of_indices*3);
         float *normals = (float *)malloc(sizeof(float)*context_struct_.mesh_list_[mesh].data.number_of_indices*3);
         for (i = 0; i < context_struct_.mesh_list_[mesh].data.number_of_indices; i++) {
-            memcpy(vertices+i*3, context_struct_.mesh_list_[mesh].data.vertices+context_struct_.mesh_list_[mesh].data.indices[i]*3, sizeof(float)*3);
-            memcpy(normals+i*3, context_struct_.mesh_list_[mesh].data.normals+context_struct_.mesh_list_[mesh].data.indices[i]*3, sizeof(float)*3);
-            memcpy(colors+i*3, context_struct_.mesh_list_[mesh].data.colors+context_struct_.mesh_list_[mesh].data.indices[i]*3, sizeof(float)*3);
+            memmove(vertices+i*3, context_struct_.mesh_list_[mesh].data.vertices+context_struct_.mesh_list_[mesh].data.indices[i]*3, sizeof(float)*3);
+            memmove(normals+i*3, context_struct_.mesh_list_[mesh].data.normals+context_struct_.mesh_list_[mesh].data.indices[i]*3, sizeof(float)*3);
+            memmove(colors+i*3, context_struct_.mesh_list_[mesh].data.colors+context_struct_.mesh_list_[mesh].data.indices[i]*3, sizeof(float)*3);
         }
         context_struct_.mesh_list_[mesh].data.number_of_vertices = context_struct_.mesh_list_[mesh].data.number_of_indices;
         free(context_struct_.mesh_list_[mesh].data.vertices);
@@ -620,9 +620,9 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
     err = gr3_allocate_meshdata_(n, &myvertices, &mynormals, &mycolors,
                                  0, NULL);
     if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
-    memcpy(myvertices, vertices, 3 * n * sizeof(float));
-    memcpy(mynormals, normals, 3 * n * sizeof(float));
-    memcpy(mycolors, colors, 3 * n * sizeof(float));
+    memmove(myvertices, vertices, 3 * n * sizeof(float));
+    memmove(mynormals, normals, 3 * n * sizeof(float));
+    memmove(mycolors, colors, 3 * n * sizeof(float));
     gr3_createmesh_nocopy(mesh, n, myvertices, mynormals, mycolors);
     if (gr3_geterror(0, NULL, NULL)) {
         free(myvertices);
@@ -773,10 +773,10 @@ GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices,
     if (err != GR3_ERROR_NONE) {
         return err;
     }
-    memcpy(myvertices, vertices, 3 * number_of_vertices * sizeof(float));
-    memcpy(mynormals, normals, 3 * number_of_vertices * sizeof(float));
-    memcpy(mycolors, colors, 3 * number_of_vertices * sizeof(float));
-    memcpy(myindices, indices, number_of_indices * sizeof(int));
+    memmove(myvertices, vertices, 3 * number_of_vertices * sizeof(float));
+    memmove(mynormals, normals, 3 * number_of_vertices * sizeof(float));
+    memmove(mycolors, colors, 3 * number_of_vertices * sizeof(float));
+    memmove(myindices, indices, number_of_indices * sizeof(int));
     err = gr3_createindexedmesh_nocopy(mesh, number_of_vertices, myvertices,
                                        mynormals, mycolors, number_of_indices,
                                        myindices);
@@ -821,15 +821,15 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions,
     draw = malloc(sizeof(GR3_DrawList_t_));
     draw->mesh = mesh;
     draw->positions = malloc(sizeof(float)*n*3);
-    memcpy(draw->positions,positions,sizeof(float)*n*3);
+    memmove(draw->positions,positions,sizeof(float)*n*3);
     draw->directions = malloc(sizeof(float)*n*3);
-    memcpy(draw->directions,directions,sizeof(float)*n*3);
+    memmove(draw->directions,directions,sizeof(float)*n*3);
     draw->ups = malloc(sizeof(float)*n*3);
-    memcpy(draw->ups,ups,sizeof(float)*n*3);
+    memmove(draw->ups,ups,sizeof(float)*n*3);
     draw->colors = malloc(sizeof(float)*n*3);
-    memcpy(draw->colors,colors,sizeof(float)*n*3);
+    memmove(draw->colors,colors,sizeof(float)*n*3);
     draw->scales = malloc(sizeof(float)*n*3);
-    memcpy(draw->scales,scales,sizeof(float)*n*3);
+    memmove(draw->scales,scales,sizeof(float)*n*3);
     draw->n = n;
     draw->object_id = current_object_id;
     draw->next= NULL;
@@ -1192,7 +1192,7 @@ GR3API void gr3_cameralookat(float camera_x, float camera_y, float camera_z,
             view_matrix[3][i] -= view_matrix[j][i]*camera_pos[j];
         }
     }
-    memcpy(&context_struct_.view_matrix[0][0],&view_matrix[0][0],sizeof(view_matrix));
+    memmove(&context_struct_.view_matrix[0][0],&view_matrix[0][0],sizeof(view_matrix));
 }
 
 /*!
@@ -2128,7 +2128,7 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height) {
  */
 GR3API void gr3_getviewmatrix(float *m)
 {
-    memcpy(m, &context_struct_.view_matrix[0][0], 16 * sizeof(float));
+    memmove(m, &context_struct_.view_matrix[0][0], 16 * sizeof(float));
 }
 
 /*!
@@ -2136,7 +2136,7 @@ GR3API void gr3_getviewmatrix(float *m)
  */
 GR3API void gr3_setviewmatrix(const float *m)
 {
-    memcpy(&context_struct_.view_matrix[0][0], m, 16 * sizeof(float));
+    memmove(&context_struct_.view_matrix[0][0], m, 16 * sizeof(float));
 }
 
 /*!

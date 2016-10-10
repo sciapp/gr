@@ -435,12 +435,12 @@ vertblock, faceblock, num_vertices, num_faces, vertices, normals, indices)
                 realloc(*indices, num_faces * 3 * sizeof(unsigned int));
         }
         /* copy thread meshes into the arrays */
-        memcpy(*vertices + vertblock[thread_id],
-               t_vertices[thread_id],
-               num_t_vertices[thread_id] * sizeof(gr3_coord_t));
-        memcpy(*normals + vertblock[thread_id],
-               t_normals[thread_id],
-               num_t_vertices[thread_id] * sizeof(gr3_coord_t));
+        memmove(*vertices + vertblock[thread_id],
+                t_vertices[thread_id],
+                num_t_vertices[thread_id] * sizeof(gr3_coord_t));
+        memmove(*normals + vertblock[thread_id],
+                t_normals[thread_id],
+                num_t_vertices[thread_id] * sizeof(gr3_coord_t));
         /* translate thread indices to global indices */
         for (i = 0; i < num_t_faces[thread_id]; i++) {
             (*indices)[(faceblock[thread_id] + i) * 3 + 0]

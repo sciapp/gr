@@ -420,7 +420,7 @@ void pdf_memcpy(PDF_stream *p, char *s, size_t n)
       p->buffer = (Byte *) realloc(p->buffer, p->size);
     }
 
-  memcpy(p->buffer + p->length, s, n);
+  memmove(p->buffer + p->length, s, n);
   p->length += n;
 }
 
@@ -983,7 +983,7 @@ static void pdf_to_memory(pdf_t pdf, int page, int width, int height, unsigned c
 #endif
 
   data = fz_pixmap_samples(pdf->ctx, pix);
-  memcpy(rgb_image, data, width * height * 4 * sizeof(unsigned char));
+  memmove(rgb_image, data, width * height * 4 * sizeof(unsigned char));
 
 #ifdef MUPDF_API_VERSION_17
   fz_drop_device(pdf->ctx, dev);

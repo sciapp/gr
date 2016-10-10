@@ -237,9 +237,9 @@ void set_color(int color, double red, double green, double blue)
     g = (BYTE)(green * 255);
     b = (BYTE)(blue * 255);
     p->palette[color] = RGB(r, g, b);
-    memcpy(c, p->palette + color, 4);
+    memmove(c, p->palette + color, 4);
     tmp = c[0]; c[0] = c[2]; c[2] = tmp;
-    memcpy(p->pixel + color, c, 4);
+    memmove(p->pixel + color, c, 4);
   }
 }
 
@@ -257,9 +257,9 @@ void init_colors(void)
     g = (BYTE)(green * 255);
     b = (BYTE)(blue * 255);
     p->palette[color] = RGB(r, g, b);
-    memcpy(c, p->palette + color, 4);
+    memmove(c, p->palette + color, 4);
     tmp = c[0]; c[0] = c[2]; c[2] = tmp;
-    memcpy(p->pixel + color, c, 4);
+    memmove(p->pixel + color, c, 4);
   }
   p->bg = GetStockObject(WHITE_BRUSH);
 }

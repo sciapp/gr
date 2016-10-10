@@ -385,7 +385,7 @@ void gks_open_gks(int errfil)
       for (i = 0; i < num_ws_types; i++)
 	{
 	  ws = (ws_descr_t *) gks_malloc(sizeof(ws_descr_t));
-	  memcpy(ws, ws_types + i, sizeof(ws_descr_t));
+	  memmove(ws, ws_types + i, sizeof(ws_descr_t));
 	  av_ws_types = gks_list_add(av_ws_types, ws_types[i].wtype, ws);
 	}
 
@@ -852,8 +852,8 @@ void gks_redraw_seg_on_ws(int wkid)
 	      if (gks_list_find(active_ws, wkid) != NULL)
 		{
 		  /* save GKS state, restore segment state */
-		  memcpy(&sl, s, sizeof(gks_state_list_t));
-		  memcpy(s, seg_state, sizeof(gks_state_list_t));
+		  memmove(&sl, s, sizeof(gks_state_list_t));
+		  memmove(s, seg_state, sizeof(gks_state_list_t));
 
 		  id = wkid;
 
@@ -863,7 +863,7 @@ void gks_redraw_seg_on_ws(int wkid)
 		  id = 0;
 
 		  /* restore GKS state */
-		  memcpy(s, &sl, sizeof(gks_state_list_t));
+		  memmove(s, &sl, sizeof(gks_state_list_t));
 		}
 	      else
 		/* specified workstation is not active */
@@ -1875,7 +1875,7 @@ void gks_create_seg(int segn)
 
       /* save segment state */
       seg_state = (gks_state_list_t *) gks_malloc(sizeof(gks_state_list_t));
-      memcpy(seg_state, s, sizeof(gks_state_list_t));
+      memmove(seg_state, s, sizeof(gks_state_list_t));
     }
   else
     /* GKS not in proper state. GKS must be either in the state WSAC */
@@ -1927,8 +1927,8 @@ void gks_assoc_seg_with_ws(int wkid, int segn)
 	      if (gks_list_find(active_ws, wkid) != NULL)
 		{
 		  /* save GKS state, restore segment state */
-		  memcpy(&sl, s, sizeof(gks_state_list_t));
-		  memcpy(s, seg_state, sizeof(gks_state_list_t));
+		  memmove(&sl, s, sizeof(gks_state_list_t));
+		  memmove(s, seg_state, sizeof(gks_state_list_t));
 
 		  id = wkid;
 
@@ -1938,7 +1938,7 @@ void gks_assoc_seg_with_ws(int wkid, int segn)
 		  id = 0;
 
 		  /* restore GKS state */
-		  memcpy(s, &sl, sizeof(gks_state_list_t));
+		  memmove(s, &sl, sizeof(gks_state_list_t));
 		}
 	      else
 		/* specified workstation is not active */
@@ -1971,8 +1971,8 @@ void gks_copy_seg_to_ws(int wkid, int segn)
 	      if (gks_list_find(active_ws, wkid) != NULL)
 		{
 		  /* save GKS state, restore segment state */
-		  memcpy(&sl, s, sizeof(gks_state_list_t));
-		  memcpy(s, seg_state, sizeof(gks_state_list_t));
+		  memmove(&sl, s, sizeof(gks_state_list_t));
+		  memmove(s, seg_state, sizeof(gks_state_list_t));
 
 		  id = wkid;
 
@@ -1982,7 +1982,7 @@ void gks_copy_seg_to_ws(int wkid, int segn)
 		  id = 0;
 
 		  /* restore GKS state */
-		  memcpy(s, &sl, sizeof(gks_state_list_t));
+		  memmove(s, &sl, sizeof(gks_state_list_t));
 		}
 	      else
 		/* specified workstation is not active */

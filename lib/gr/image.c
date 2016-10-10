@@ -242,7 +242,7 @@ int read_pdf_image(char *path, int *width, int *height, int **data)
   *height = fz_pixmap_height(ctx, pix);
   rgba = fz_pixmap_samples(ctx, pix);
   *data = (int *) malloc(*width * *height * sizeof(int));
-  memcpy((void *) *data, (const void *) rgba, *width * *height * sizeof(int));
+  memmove((void *) *data, (const void *) rgba, *width * *height * sizeof(int));
 
 #ifdef MUPDF_API_VERSION_17
   fz_drop_device(ctx, dev);

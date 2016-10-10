@@ -6627,7 +6627,7 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
       opcode[0] = MOVETO;
     }
   else
-    memcpy(opcode, codes, n);
+    memmove(opcode, codes, n);
 
   for (i = 0; i < n; i++)
     {

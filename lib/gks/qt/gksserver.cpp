@@ -9,7 +9,7 @@
 
 #define MAXCONN (int)10
 
-GKSServer::GKSServer(QObject *parent) 
+GKSServer::GKSServer(QObject *parent)
   : QTcpServer(parent)
 {
   setMaxPendingConnections(MAXCONN);
@@ -43,7 +43,7 @@ void GKSServer::connectSocket()
 void GKSServer::readClient()
 {
   qint64 cc;
-  
+
   if (nbyte == 0)
     {
       if (s->bytesAvailable() < (int) sizeof(int))
@@ -67,7 +67,7 @@ void GKSServer::readClient()
 	  ba = (char *) realloc(ba, nbyte + 1);
 	  ba_size = nbyte;
 	}
-      memcpy(ba, dl, nbyte + 1);
+      memmove(ba, dl, nbyte + 1);
       if (!s->bytesAvailable())
 	emit(data(ba));
       nbyte = 0;
@@ -77,7 +77,7 @@ void GKSServer::readClient()
 void GKSServer::killSocket()
 {
   if (!keepOnDisplay)
-    exit(0); 
+    exit(0);
 }
 
 void GKSServer::setKeepOnDisplay(const bool flag)

@@ -205,7 +205,7 @@ void svg_memcpy(SVG_stream *p, char *s, size_t n)
       p->buffer = (Byte *) realloc(p->buffer, p->size);
     }
 
-  memcpy(p->buffer + p->length, s, n);
+  memmove(p->buffer + p->length, s, n);
   p->length += n;
 }
 

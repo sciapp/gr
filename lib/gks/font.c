@@ -161,7 +161,7 @@ void gks_lookup_font(int fd, int version, int font, int chr, stroke_data_t *s)
 	  else
 	    gks_fatal_error("GKS (gksio): file position error");
 	}
-      memcpy((void *) s, (void *) bufcache[chr], 256 * sizeof(int));
+      memmove((void *) s, (void *) bufcache[chr], 256 * sizeof(int));
 
       if (umlaut && (s->length < 120 - 20))
 	s->length += 10;

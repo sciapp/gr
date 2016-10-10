@@ -225,7 +225,7 @@ void gif_write(gif_writer *gwp, const unsigned char *rgb_image, unsigned short w
     unsigned char *rgb_copy = (unsigned char *)malloc(width*height*format);
     assert(rgb_copy);
     memset(color_table, 0, 256*3);
-    memcpy(rgb_copy, rgb_image, width*height*format);
+    memmove(rgb_copy, rgb_image, width*height*format);
     median_cut(rgb_copy, color_table, width*height, 256, format);
     free(rgb_copy);
     fwrite(color_table, 3, 256, gwp->fp);

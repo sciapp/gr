@@ -93,7 +93,7 @@ int gr3_readpngtomemory_(int *pixels, const char *pngfile, int width, int height
   png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
   row_pointers = png_get_rows(png_ptr, info_ptr);
   for (i = 0; i < height; i++) {
-    memcpy(pixels+(height-1-i)*width,row_pointers[i],width*sizeof(int));
+    memmove(pixels+(height-1-i)*width,row_pointers[i],width*sizeof(int));
   }
   png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
   fclose(png_fp);

@@ -18,7 +18,7 @@
 
 #ifndef HAVE_BIG_ENDIAN
 #define COPY(s, nmemb, size) \
-  memcpy(p->buffer + p->nbytes, (void *) s, nmemb * size); \
+  memmove(p->buffer + p->nbytes, (void *) s, nmemb * size); \
   p->nbytes += nmemb * size
 #else
 #define COPY(s, nmemb, size) copy((char *) s, nmemb, size)
@@ -54,7 +54,7 @@ void copy(char *s, int nmemb, int size)
 {
   register int i;
 
-  memcpy(p->buffer + p->nbytes, (void *) s, nmemb * size);
+  memmove(p->buffer + p->nbytes, (void *) s, nmemb * size);
   if (size == 4)
     {
       for (i = 0; i < nmemb; i++)
@@ -312,7 +312,7 @@ void delete_seg(char *str, int segn)
       if (*sgnum != 0 && segn != *sgnum)
 	{
 	  if (sp > dp)
-	    memcpy(d + dp, s + sp, *len);
+	    memmove(d + dp, s + sp, *len);
 	  dp += *len;
 	}
       sp += *len;

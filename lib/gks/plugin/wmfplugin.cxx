@@ -232,7 +232,7 @@ void wmf_memcpy(WMF_stream *p, int src, size_t n)
 	break;
     }
 
-  memcpy(p->buffer + p->length, s, n);
+  memmove(p->buffer + p->length, s, n);
   p->length += n;
 }
 
@@ -531,14 +531,14 @@ void wmf_trailer(void)
   s[1] = (src >> 8) & 0xff;
   s[2] = (src >> 16) & 0xff;
   s[3] = (src >> 24) & 0xff;
-  memcpy(p->stream->buffer + 28, s, SIZE_LONG);
+  memmove(p->stream->buffer + 28, s, SIZE_LONG);
 
   src = p->maxrecord;
   s[0] = src & 0xff;
   s[1] = (src >> 8) & 0xff;
   s[2] = (src >> 16) & 0xff;
   s[3] = (src >> 24) & 0xff;
-  memcpy(p->stream->buffer + 34, s, SIZE_LONG);
+  memmove(p->stream->buffer + 34, s, SIZE_LONG);
 
   p->maxrecord = 0;
 }

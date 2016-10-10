@@ -39,7 +39,7 @@ typedef struct
 
 #define OP1(a, b, c, d, b_p, c_p, s, T)          \
      do {                                        \
-       memcpy(c_p, b_p, sizeof(md5_uint32));     \
+       memmove(c_p, b_p, sizeof(md5_uint32));    \
        *c_p = SWAP(*c_p);                        \
        a += FF (b, c, d) + *c_p + T;             \
        a = CYCLIC (a, s);                        \
@@ -176,19 +176,19 @@ void md5_get_result(const md5_t *md5_p, void *result)
   void *res_p = result;
 
   hold = SWAP(md5_p->md_A);
-  memcpy(res_p, &hold, sizeof(md5_uint32));
+  memmove(res_p, &hold, sizeof(md5_uint32));
   res_p = (char *)res_p + sizeof(md5_uint32);
 
   hold = SWAP(md5_p->md_B);
-  memcpy(res_p, &hold, sizeof(md5_uint32));
+  memmove(res_p, &hold, sizeof(md5_uint32));
   res_p = (char *)res_p + sizeof(md5_uint32);
 
   hold = SWAP(md5_p->md_C);
-  memcpy(res_p, &hold, sizeof(md5_uint32));
+  memmove(res_p, &hold, sizeof(md5_uint32));
   res_p = (char *)res_p + sizeof(md5_uint32);
 
   hold = SWAP(md5_p->md_D);
-  memcpy(res_p, &hold, sizeof(md5_uint32));
+  memmove(res_p, &hold, sizeof(md5_uint32));
 }
 
 static
@@ -218,14 +218,14 @@ void md5_process(md5_t *md5_p, const void *buffer, const unsigned int buf_len)
       else
         add = len;
 
-      memcpy (md5_p->md_buffer + in_block, buffer, add);
+      memmove(md5_p->md_buffer + in_block, buffer, add);
       md5_p->md_buf_len += add;
       in_block += add;
 
       if (in_block > MD5_BLOCK_SIZE)
         {
           process_block (md5_p, md5_p->md_buffer, in_block & ~BLOCK_SIZE_MASK);
-          memcpy (md5_p->md_buffer,
+          memmove(md5_p->md_buffer,
                   md5_p->md_buffer + (in_block & ~BLOCK_SIZE_MASK),
                   in_block & BLOCK_SIZE_MASK);
           md5_p->md_buf_len = in_block & BLOCK_SIZE_MASK;
@@ -244,7 +244,7 @@ void md5_process(md5_t *md5_p, const void *buffer, const unsigned int buf_len)
 
   if (len > 0)
     {
-      memcpy (md5_p->md_buffer, buffer, len);
+      memmove(md5_p->md_buffer, buffer, len);
       md5_p->md_buf_len = len;
     }
 }
@@ -278,12 +278,12 @@ void md5_finish(md5_t *md5_p, void *signature)
     }
 
   hold = SWAP((md5_p->md_total[0] & 0x1FFFFFFF) << 3);
-  memcpy(md5_p->md_buffer + bytes, &hold, sizeof(md5_uint32));
+  memmove(md5_p->md_buffer + bytes, &hold, sizeof(md5_uint32));
   bytes += sizeof(md5_uint32);
 
   hold = SWAP((md5_p->md_total[1] << 3) |
               ((md5_p->md_total[0] & 0xE0000000) >> 29));
-  memcpy(md5_p->md_buffer + bytes, &hold, sizeof(md5_uint32));
+  memmove(md5_p->md_buffer + bytes, &hold, sizeof(md5_uint32));
   bytes += sizeof(md5_uint32);
 
   process_block(md5_p, md5_p->md_buffer, bytes);

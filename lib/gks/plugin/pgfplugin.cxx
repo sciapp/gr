@@ -196,7 +196,7 @@ void pgf_memcpy(PGF_stream *p, char *s, size_t n)
       p->buffer = (Byte *) realloc(p->buffer, p->size);
     }
 
-  memcpy(p->buffer + p->length, s, n);
+  memmove(p->buffer + p->length, s, n);
   p->length += n;
 }
 
@@ -613,7 +613,7 @@ void polyline(int n, double *px, double *py)
   p->linewidth = width;
   p->color = ln_color;
   gks_get_dash_list(ln_type, ln_width, dashes);
-  memcpy(p->dashes, dashes, sizeof(dashes));
+  memmove(p->dashes, dashes, sizeof(dashes));
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n",
              p->rgb[ln_color]);
 

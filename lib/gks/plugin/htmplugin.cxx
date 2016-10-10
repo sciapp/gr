@@ -285,7 +285,7 @@ void htm_memcpy(HTM_stream *p, char *s, size_t n)
       p->buffer = (char *) gks_realloc(p->buffer, p->size);
     }
 
-  memcpy(p->buffer + p->length, s, n);
+  memmove(p->buffer + p->length, s, n);
   p->length += n;
 }
 
@@ -563,7 +563,7 @@ mem_png_write_data(png_structp png_ptr, png_bytep data, png_size_t length)
   if(!mem_png->buffer)
     png_error(png_ptr, "Write Error");
 
-  memcpy(mem_png->buffer + mem_png->size, data, length);
+  memmove(mem_png->buffer + mem_png->size, data, length);
   mem_png->size += length;
 }
 

@@ -15,7 +15,7 @@
 
 #define SEGM_SIZE 262144 /* 256K */
 
-#define COPY(s, n) memcpy(p->buffer + p->nbytes, (void *) s, n); p->nbytes += n
+#define COPY(s, n) memmove(p->buffer + p->nbytes, (void *) s, n); p->nbytes += n
 
 #define RESOLVE(arg, type, nbytes) arg = (type *)(s + sp); sp += nbytes
 
@@ -765,7 +765,7 @@ void gks_drv_mi(
       len = *(int *) (p->buffer + p->position);
       if (len < i_arr[2] * 80)
 	{
-	  memcpy(s, p->buffer + p->position, len);
+	  memmove(s, p->buffer + p->position, len);
 	  s[len] = '\0';
 	}
       else
