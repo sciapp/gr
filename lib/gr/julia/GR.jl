@@ -133,6 +133,7 @@ export
   stem,
   histogram,
   contourf,
+  heatmap,
   wireframe,
   plot3,
   scatter3,
@@ -2842,6 +2843,7 @@ stem(args...; kwargs...) = jlgr.stem(args...; kwargs...)
 histogram(x; kwargs...) = jlgr.histogram(x; kwargs...)
 contour(args...; kwargs...) = jlgr.contour(args...; kwargs...)
 contourf(args...; kwargs...) = jlgr.contourf(args...; kwargs...)
+heatmap(D; kwargs...) = jlgr.heatmap(D; kwargs...)
 wireframe(args...; kwargs...) = jlgr.wireframe(args...; kwargs...)
 surface(args...; kwargs...) = jlgr.surface(args...; kwargs...)
 plot3(args...; kwargs...) = jlgr.plot3(args...; kwargs...)
