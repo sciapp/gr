@@ -5606,7 +5606,6 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
           free(colia);
 
           break;
-          }
         }
 
       gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_SOLID :
