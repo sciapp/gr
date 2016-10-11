@@ -574,42 +574,6 @@ void update_ws(void)
 }
 
 static
-void move_to(double x, double y)
-{
-  int ix, iy;
-
-  NDC_to_DC(x, y, ix, iy);
-  if (!p->double_buffering)
-    MoveToEx(p->dc, ix, iy, NULL);
-  if (p->bm)
-    MoveToEx(p->memdc, ix, iy, NULL);
-}
-
-static
-void line_to(double x, double y)
-{
-  int ix, iy;
-
-  NDC_to_DC(x, y, ix, iy);
-  if (!p->double_buffering)
-    LineTo(p->dc, ix, iy);
-  if (p->bm)
-    LineTo(p->memdc, ix, iy);
-}
-
-static
-void move(double x, double y)
-{
-  gks_move(x, y, move_to);
-}
-
-static
-void draw(double x, double y)
-{
-  gks_dash(x, y, move_to, line_to);
-}
-
-static
 void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y;
@@ -651,6 +615,10 @@ void polyline(int n, double *px, double *py)
   int ln_type, ln_color;
   double ln_width;
   HPEN pen, dc_pen, memdc_pen;
+  DWORD pen_style, style_count = 0;
+  LOGBRUSH lb;
+  DWORD style[10];
+  int i, list[10];
 
   ln_type  = gkss->asf[0] ? gkss->ltype  : gkss->lindex;
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
@@ -664,16 +632,21 @@ void polyline(int n, double *px, double *py)
 
   if (gkss->version > 4)
     ln_width *= p->height / 500.0;
-  if (ln_width > 1)
+  if (ln_width > 1 || ln_type != 1)
   {
-    DWORD style = PS_GEOMETRIC | PS_COSMETIC | PS_ENDCAP_FLAT | PS_JOIN_ROUND;
-    LOGBRUSH lb;
+    pen_style = PS_GEOMETRIC | PS_COSMETIC | PS_ENDCAP_FLAT | PS_JOIN_ROUND |
+                PS_USERSTYLE;
 
     lb.lbStyle = BS_SOLID;
     lb.lbColor = p->palette[ln_color];
     lb.lbHatch = 0;
 
-    pen = ExtCreatePen(style, ln_width, &lb, 0, NULL);
+    gks_get_dash_list(ln_type, ln_width, list);
+    style_count = list[0];
+    for (i = 0; i < style_count; i++)
+        style[i] = list[i + 1];
+
+    pen = ExtCreatePen(pen_style, ln_width, &lb, style_count, style);
   }
   else
     pen = CreatePen(PS_SOLID, ln_width, p->palette[ln_color]);
@@ -687,13 +660,7 @@ void polyline(int n, double *px, double *py)
     memdc_pen = SelectObject(p->memdc, pen);
     SetBkMode(p->memdc, TRANSPARENT);
   }
-  if (ln_type < 0 || ln_type > 1)
-  {
-    gks_set_dev_xform(gkss, p->window, p->viewport);
-    gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
-  }
-  else
-    line_routine(n, px, py, ln_type, gkss->cntnr);
+  line_routine(n, px, py, ln_type, gkss->cntnr);
 
   if (!p->double_buffering)
     SelectObject(p->dc, dc_pen);
