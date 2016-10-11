@@ -1627,8 +1627,6 @@ def surface(px, py, pz, option):
     +------------------+--+--------------------------------------------------------------+
     |SHADED_MESH       | 6|Applies light source shading to the 3-D surface               |
     +------------------+--+--------------------------------------------------------------+
-    |HEATMAP           | 7|Applies a heatmap to the surface                              |
-    +------------------+--+--------------------------------------------------------------+
 
     """
     nx = len(px)
@@ -2647,7 +2645,6 @@ OPTION_Z_SHADED_MESH = 3
 OPTION_COLORED_MESH = 4
 OPTION_CELL_ARRAY = 5
 OPTION_SHADED_MESH = 6
-OPTION_HEATMAP = 7
 
 MODEL_RGB = 0
 MODEL_HSV = 1
