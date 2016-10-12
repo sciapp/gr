@@ -390,8 +390,8 @@ public func setcolormap(index: Int) {
   gr_setcolormap(CInt(index))
 }
 
-public func colormap() -> Int {
-  return Int(gr_colormap())
+public func colorbar() -> Int {
+  return Int(gr_colorbar())
 }
 
 public func inqcolor(color: Int) -> Int {

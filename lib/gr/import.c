@@ -27,7 +27,7 @@ char *format[] =
     "axes:ffffiif",
     "axes3d:ffffffiiif",
     "cellarray:ffffiiiiiiI",
-    "colormap:",
+    "colorbar:",
     "contour:iiiFFFFi",
     "drawarc:ffffii",
     "drawarrow:ffff",
@@ -296,7 +296,7 @@ void gr(int id)
                    i_arg[2], i_arg[3], i_arg[4], i_arg[5], i_arr);
       break;
     case  3:
-      gr_colormap();
+      gr_colorbar();
       break;
     case  4:
       gr_contour(i_arg[0], i_arg[1], i_arg[2],

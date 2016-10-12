@@ -1702,8 +1702,8 @@ def setcolormap(index):
     __gr.gr_setcolormap(c_int(index))
 
 
-def colormap():
-    __gr.gr_colormap()
+def colorbar():
+    __gr.gr_colorbar()
 
 
 def inqcolor(color):
@@ -2483,7 +2483,7 @@ __gr.gr_contour.argtypes = [
     c_int, c_int, c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double),
     POINTER(c_double), c_int]
 __gr.gr_setcolormap.argtypes = [c_int]
-__gr.gr_colormap.argtypes = []
+__gr.gr_colorbar.argtypes = []
 __gr.gr_inqcolor.argtypes = [c_int, POINTER(c_int)]
 __gr.gr_inqcolorfromrgb.argtypes = [c_double, c_double, c_double]
 __gr.gr_inqcolorfromrgb.restype = c_int

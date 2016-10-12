@@ -5973,7 +5973,7 @@ void gr_inqcolormap(int *index)
   *index = colormap;
 }
 
-void gr_colormap(void)
+void gr_colorbar(void)
 {
   int errind, halign, valign, clsw, tnr;
   double clrt[4], wn[4], vp[4];

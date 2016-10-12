@@ -93,7 +93,7 @@ function GR(canvas_id) {
     this.contour = gr_contour;
     this.setcolormap = gr_setcolormap;
     this.inqcolormap = gr_inqcolormap;
-    this.colormap = gr_colormap;
+    this.colormap = gr_colorbar;
     this.inqcolor = gr_inqcolor;
     this.inqcolorfromrgb = gr_inqcolorfromrgb;
     this.hsvtorgb = gr_hsvtorgb;
@@ -815,7 +815,7 @@ gr_inqcolormap = function() {
     return result;
 }
 
-gr_colormap = Module.cwrap('gr_colormap', '', []);
+gr_colorbar = Module.cwrap('gr_colorbar', '', []);
 
 gr_inqcolor_c = Module.cwrap('gr_inqcolor', '', ['number', 'number', ]);
 gr_inqcolor = function(color) {

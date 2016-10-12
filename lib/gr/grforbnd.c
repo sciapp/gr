@@ -440,9 +440,9 @@ void FORTRAN(gr_setcolormap)(int *index)
   gr_setcolormap(*index);
 }
 
-void FORTRAN(gr_colormap)(void)
+void FORTRAN(gr_colorbar)(void)
 {
-  gr_colormap();
+  gr_colorbar();
 }
 
 void FORTRAN(gr_inqcolor)(int *color, int *rgb)

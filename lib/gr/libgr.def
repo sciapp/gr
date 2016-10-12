@@ -15,7 +15,7 @@ EXPORTS
 	gr_closegks
 	gr_closeseg
 	gr_closews
-	gr_colormap
+	gr_colorbar
 	gr_contour
 	gr_copysegws
 	gr_createseg
