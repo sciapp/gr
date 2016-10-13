@@ -2835,6 +2835,10 @@ int gks_get_ws_type(void)
   if (wstype == 322) wstype = 140;
 #endif
 
+#ifndef NO_CAIRO
+  if (wstype == 322 && gks_getenv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
+#endif
+
   if (wstype == 0)
 #ifndef _WIN32
 #ifdef __APPLE__

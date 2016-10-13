@@ -6232,6 +6232,14 @@ bmp, eps, fig, html, jpeg, mov, pdf, pgf, png, ps, svg, tiff or wmf\n", type);
       wstype = -1;
     }
 
+#ifndef NO_CAIRO
+#ifdef _WIN32
+  if (wstype == 322 && DLLGetEnv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
+#else
+  if (wstype == 322 && getenv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
+#endif
+#endif
+
   return wstype;
 }
 
