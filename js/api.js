@@ -335,7 +335,7 @@ function GR(canvas_id) {
     this.PRINT_TIF = "tif";
     this.PRINT_FIG = "fig";
     this.PRINT_SVG = "svg";
-    this.PRINT_WMF = "wmf”;
+    this.PRINT_WMF = "wmf";
 }
 
 
