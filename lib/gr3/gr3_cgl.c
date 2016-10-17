@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "gr3.h"
 #include "gr3_cgl.h"
+#define DONT_USE_RETURN_ERROR
 #include "gr3_internals.h"
 
 /* OpenGL Context creation using CGL */

@@ -10,8 +10,8 @@ int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_
 #ifdef GR3_USE_WIN
   char *povfile = malloc(40);
   char *pngfile = malloc(40);
-  sprintf(povfile,"./gr3.%d.pov",getpid());
-  sprintf(pngfile,"./gr3.%d.png",getpid());
+  sprintf(povfile,"./gr3.%lu.pov",(long unsigned)GetCurrentProcessId());
+  sprintf(pngfile,"./gr3.%lu.png",(long unsigned)GetCurrentProcessId());
 #else
   char *povfile = malloc(40);
   char *pngfile = malloc(40);

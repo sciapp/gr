@@ -29,7 +29,9 @@
 
 #define GR3_DO_INIT do { if (!context_struct_.is_initialized) { gr3_log_("auto-init"); gr3_init(NULL); } } while(0)
 
+#ifndef DONT_USE_RETURN_ERROR
 #define RETURN_ERROR(error) return _return_error_helper(error, __LINE__, __FILE__)
+#endif
 
 
 /*!
@@ -220,11 +222,7 @@ extern int gr3_error_;
 extern int gr3_error_line_;
 extern const char *gr3_error_file_;
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#endif
-
+#ifndef DONT_USE_RETURN_ERROR
 static int _return_error_helper(int error, int line, const char *file) {
     if(error) {
         gr3_error_ = error;
@@ -233,9 +231,6 @@ static int _return_error_helper(int error, int line, const char *file) {
     }
     return error;
 }
-
-#ifdef __clang__
-#pragma clang diagnostic pop
 #endif
 
 void gr3_log_(const char *log_message);

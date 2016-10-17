@@ -390,7 +390,7 @@ GR3API int gr3_clear(void) {
 
 GR3API void gr3_usecurrentframebuffer() {
     GLuint framebuffer = 0;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebuffer);
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *)&framebuffer);
     gr3_useframebuffer(framebuffer);
 }
 
@@ -609,7 +609,6 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
                         const float *normals, const float *colors) {
                         
     float *myvertices, *mynormals, *mycolors;
-    int err;
   
     GR3_DO_INIT;
     if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
@@ -617,8 +616,7 @@ GR3API int gr3_createmesh(int *mesh, int n, const float *vertices,
         RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
 
-    err = gr3_allocate_meshdata_(n, &myvertices, &mynormals, &mycolors,
-                                 0, NULL);
+    gr3_allocate_meshdata_(n, &myvertices, &mynormals, &mycolors, 0, NULL);
     if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
     memmove(myvertices, vertices, 3 * n * sizeof(float));
     memmove(mynormals, normals, 3 * n * sizeof(float));

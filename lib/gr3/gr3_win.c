@@ -12,6 +12,7 @@ static HDC dc;
 static HGLRC glrc;
 
 BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD  fdwReason, LPVOID lpvReserved) {
+  (void)lpvReserved;
   if (fdwReason == DLL_PROCESS_ATTACH) {
     g_hInstance = hInstance;
     /*fprintf(stderr,"DLL attached to a process\n");*/

@@ -7,6 +7,7 @@
 #include "gr.h"
 
 #include "gr3.h"
+#define DONT_USE_RETURN_ERROR
 #include "gr3_internals.h"
 
 
@@ -1213,44 +1214,6 @@ GR3API void gr3_drawspins(int n, const float *positions, const float *directions
     free(cylinder_lengths);
 }
 
-static int calc_bonds(const float *positions, int num_atoms, float bond_length, float **start, float **end);
-
-GR3API void gr3_drawmolecule(int n, const float *positions, const float *colors, const float *radii, float bond_radius, const float bond_color[3], float bond_delta) {
-    int i;
-    int num_bonds;
-    float *cylinder_positions;
-    float *cylinder_directions;
-    float *cylinder_colors;
-    float *cylinder_radii;
-    float *cylinder_lengths;
-    gr3_drawspheremesh(n, positions, colors, radii);
-    if (bond_delta < 0) return;
-    num_bonds = calc_bonds(positions, n, bond_delta, &cylinder_positions, &cylinder_directions);
-    if (num_bonds < 0) return;
-    cylinder_colors = malloc(sizeof(float) * num_bonds * 3);
-    cylinder_radii = malloc(sizeof(float) * num_bonds);
-    cylinder_lengths = malloc(sizeof(float) * num_bonds);
-    assert(cylinder_colors);
-    assert(cylinder_radii);
-    assert(cylinder_lengths);
-    for (i = 0; i < num_bonds; i++) {
-        cylinder_directions[3*i+0] -= cylinder_positions[3*i+0];
-        cylinder_directions[3*i+1] -= cylinder_positions[3*i+1];
-        cylinder_directions[3*i+2] -= cylinder_positions[3*i+2];
-        cylinder_colors[3*i+0] = bond_color[0];
-        cylinder_colors[3*i+1] = bond_color[1];
-        cylinder_colors[3*i+2] = bond_color[2];
-        cylinder_radii[i] = bond_radius;
-        cylinder_lengths[i] = sqrt(cylinder_directions[3*i+0]*cylinder_directions[3*i+0]+cylinder_directions[3*i+1]*cylinder_directions[3*i+1]+cylinder_directions[3*i+2]*cylinder_directions[3*i+2]);
-    }
-    gr3_drawcylindermesh(num_bonds, cylinder_positions, cylinder_directions, cylinder_colors, cylinder_radii, cylinder_lengths);
-    free(cylinder_positions);
-    free(cylinder_directions);
-    free(cylinder_colors);
-    free(cylinder_radii);
-    free(cylinder_lengths);
-}
-
 /* Bond calculation code by Daniel Kaiser <d.kaiser@fz-juelich.de> */
 #define CELL_IDX(cell, dim) cell.z*dim.x*dim.y+cell.y*dim.x+cell.x
 
@@ -1280,6 +1243,48 @@ typedef struct {
     int z;
 } int3;
 
+static int calc_bonds(const float *positions, int num_atoms, float bond_length, float3 **start, float3 **end);
+
+GR3API void gr3_drawmolecule(int n, const float *positions, const float *colors, const float *radii, float bond_radius, const float bond_color[3], float bond_delta) {
+  int i;
+  int num_bonds;
+  float3 *bond_positions;
+  float3 *bond_directions;
+  float *cylinder_positions;
+  float *cylinder_directions;
+  float *cylinder_colors;
+  float *cylinder_radii;
+  float *cylinder_lengths;
+  gr3_drawspheremesh(n, positions, colors, radii);
+  if (bond_delta < 0) return;
+  num_bonds = calc_bonds(positions, n, bond_delta, &bond_positions, &bond_directions);
+  if (num_bonds < 0) return;
+  cylinder_positions = &(bond_positions[0].x);
+  cylinder_directions = &(bond_directions[0].x);
+  cylinder_colors = malloc(sizeof(float) * num_bonds * 3);
+  cylinder_radii = malloc(sizeof(float) * num_bonds);
+  cylinder_lengths = malloc(sizeof(float) * num_bonds);
+  assert(cylinder_colors);
+  assert(cylinder_radii);
+  assert(cylinder_lengths);
+  for (i = 0; i < num_bonds; i++) {
+    cylinder_directions[3*i+0] -= cylinder_positions[3*i+0];
+    cylinder_directions[3*i+1] -= cylinder_positions[3*i+1];
+    cylinder_directions[3*i+2] -= cylinder_positions[3*i+2];
+    cylinder_colors[3*i+0] = bond_color[0];
+    cylinder_colors[3*i+1] = bond_color[1];
+    cylinder_colors[3*i+2] = bond_color[2];
+    cylinder_radii[i] = bond_radius;
+    cylinder_lengths[i] = sqrt(cylinder_directions[3*i+0]*cylinder_directions[3*i+0]+cylinder_directions[3*i+1]*cylinder_directions[3*i+1]+cylinder_directions[3*i+2]*cylinder_directions[3*i+2]);
+  }
+  gr3_drawcylindermesh(num_bonds, cylinder_positions, cylinder_directions, cylinder_colors, cylinder_radii, cylinder_lengths);
+  free(cylinder_positions);
+  free(cylinder_directions);
+  free(cylinder_colors);
+  free(cylinder_radii);
+  free(cylinder_lengths);
+}
+
 static void put_in_cells(const float *positions, double3 min, uchar3 *cells, unsigned int *position_in_cell, unsigned int *atoms_per_cell, double3 cell_size, int3 dim, int n) {
     uchar3 c;
     int i;
@@ -1308,12 +1313,14 @@ static void sort_atoms(const float *positions, float3 *particles, uchar3 *cells_
     }
 }
 
-static unsigned int calculate_bonds(float3 *particles, uchar3* cells, int3 dim, float bond_length, float3 **bond_start, float3 **bond_end, unsigned int *cell_offset, unsigned int n) {
+static unsigned int calculate_bonds(float3 *particles, uchar3* cells, int3 dim, float bond_length, float3 **bond_start_ptr, float3 **bond_end_ptr, unsigned int *cell_offset, unsigned int n) {
     int ix, iy, iz;
     unsigned int i, ic, c2_index, allocated = 0, number_of_bonds = 0;
     float3 p, p2;
     float d;
     uchar3 c, c2;
+    float3 *bond_start = NULL;
+    float3 *bond_end = NULL;
     for (i = 0; i < n; i++) {
         p = particles[i];
         c = cells[i];
@@ -1335,18 +1342,20 @@ static unsigned int calculate_bonds(float3 *particles, uchar3* cells, int3 dim, 
                             continue;
                         if (++number_of_bonds >= allocated * n) {
                             allocated++;
-                            *bond_start = realloc(*bond_start, n * allocated * sizeof(float3));
-                            *bond_end = realloc(*bond_end, n * allocated * sizeof(float3));
-                            assert(*bond_start);
-                            assert(*bond_end);
+                            bond_start = (float3*)realloc(bond_start, n * allocated * sizeof(float3));
+                            bond_end = (float3*)realloc(bond_end, n * allocated * sizeof(float3));
+                            assert(bond_start);
+                            assert(bond_end);
                         }
-                        (*bond_start)[number_of_bonds-1] = p;
-                        (*bond_end)[number_of_bonds-1] = p2;
+                        bond_start[number_of_bonds-1] = p;
+                        bond_end[number_of_bonds-1] = p2;
                     }
                 }
             }
         }
     }
+    bond_start_ptr[0] = bond_start;
+    bond_end_ptr[0] = bond_end;
     return number_of_bonds;
 }
 
@@ -1375,7 +1384,7 @@ static float gr3_max(const float *values, int n, int offset) {
     return cur_max;
 }
 
-static int calc_bonds(const float *positions, int num_atoms, float bond_length, float **start, float **end) {
+static int calc_bonds(const float *positions, int num_atoms, float bond_length, float3 **start, float3 **end) {
     int3 dim;
     int i, num_cells, num_bonds = 0;
     unsigned int *position_in_cell, *atoms_per_cell, *cell_offset;
