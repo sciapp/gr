@@ -2939,7 +2939,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
-          decade = 0;
+          decade = igauss(log10(y_min / y_org));
 
           /* draw Y-axis */
 
@@ -3074,7 +3074,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
-          decade = 0;
+          decade = igauss(log10(x_min / x_org));
 
           /* draw X-axis */
 
@@ -4171,7 +4171,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
           i = ipred(z_min / z0);
           zi = z0 + i * z0;
-          decade = 0;
+          decade = igauss(log10(z_min / z_org));
 
           /* draw Z-axis */
 
@@ -4304,7 +4304,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
-          decade = 0;
+          decade = igauss(log10(y_min / y_org));
 
           /* draw Y-axis */
 
@@ -4437,7 +4437,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
-          decade = 0;
+          decade = igauss(log10(x_min / x_org));
 
           /* draw X-axis */
 
