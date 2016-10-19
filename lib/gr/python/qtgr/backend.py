@@ -6,6 +6,7 @@ The default backend order (PyQt4, PySide) can be overwritten with:
 """
 
 import collections
+import ctypes
 import sys
 
 # local library
@@ -97,6 +98,12 @@ def _importPySide():
 
     QtVersionTuple = VersionTuple(*QtCore.__version_info__)
 
+    # Load QtCore module (which is a c++ extension module) and export all
+    # symbols globally
+    # -> The gks plugin loader can load the "qVersion" function with dlsym and
+    # determine the correct qt version
+    ctypes.CDLL(QtCore.__file__, ctypes.RTLD_GLOBAL)
+
     def getGKSConnectionId(widget, painter):
         return "%x!%x" % (long(shiboken.getCppPointer(widget)[0]),
                           long(shiboken.getCppPointer(painter)[0]))
@@ -117,6 +124,12 @@ def _importPyQt4():
     QtCore.Signal = QtCore.pyqtSignal
 
     QtVersionTuple = VersionTuple(*map(int, QtCore.QT_VERSION_STR.split('.')))
+
+    # Load QtCore module (which is a c++ extension module) and export all
+    # symbols globally
+    # -> The gks plugin loader can load the "qVersion" function with dlsym and
+    # determine the correct qt version
+    ctypes.CDLL(QtCore.__file__, ctypes.RTLD_GLOBAL)
 
     def getGKSConnectionId(widget, painter):
         return "%x!%x" % (sip.unwrapinstance(widget),
@@ -141,6 +154,12 @@ def _importPyQt5():
     QtCore.Signal = QtCore.pyqtSignal
 
     QtVersionTuple = VersionTuple(*map(int, QtCore.QT_VERSION_STR.split('.')))
+
+    # Load QtCore module (which is a c++ extension module) and export all
+    # symbols globally
+    # -> The gks plugin loader can load the "qVersion" function with dlsym and
+    # determine the correct qt version
+    ctypes.CDLL(QtCore.__file__, ctypes.RTLD_GLOBAL)
 
     def getGKSConnectionId(widget, painter):
         return "%x!%x" % (sip.unwrapinstance(widget),
