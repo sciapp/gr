@@ -20,7 +20,7 @@ end
 
 const gr3 = GR.gr3
 
-const plot_kind = [:line, :scatter, :stem, :hist, :contour, :contourf, :heatmap, :wireframe, :surface, :plot3, :scatter3, :imshow, :isosurface, :polar, :trisurf]
+const plot_kind = [:line, :scatter, :stem, :hist, :contour, :contourf, :heatmap, :wireframe, :surface, :plot3, :scatter3, :imshow, :isosurface, :isovalue, :polar, :rotation, :tilt, :trisurf]
 
 const arg_fmt = [:xys, :xyac, :xyzc]
 
