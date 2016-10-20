@@ -20,11 +20,11 @@ end
 
 const gr3 = GR.gr3
 
-const plot_kind = [:line, :scatter, :stem, :hist, :contour, :contourf, :heatmap, :wireframe, :surface, :plot3, :scatter3, :imshow, :isosurface, :isovalue, :polar, :rotation, :tilt, :trisurf]
+const plot_kind = [:line, :scatter, :stem, :hist, :contour, :contourf, :heatmap, :wireframe, :surface, :plot3, :scatter3, :imshow, :isosurface, :polar, :trisurf]
 
 const arg_fmt = [:xys, :xyac, :xyzc]
 
-const kw_args = [:alpha, :backgroundcolor, :color, :colormap, :figsize, :labels, :size, :title, :xflip, :xlabel, :xlim, :xlog, :yflip, :ylabel, :ylim, :ylog, :zflip, :zlim, :zlog]
+const kw_args = [:alpha, :backgroundcolor, :color, :colormap, :figsize, :isovalue, :labels, :rotation, :size, :tilt, :title, :xflip, :xlabel, :xlim, :xlog, :yflip, :ylabel, :ylim, :ylog, :zflip, :zlim, :zlog]
 
 type PlotObject
     obj
@@ -138,10 +138,18 @@ function minmax()
     xmin = ymin = zmin = typemax(Float64)
     xmax = ymax = zmax = typemin(Float64)
     for (x, y, z, c, spec) in plt.args
-        xmin = min(minimum(x), xmin)
-        xmax = max(maximum(x), xmax)
-        ymin = min(minimum(y), ymin)
-        ymax = max(maximum(y), ymax)
+        if x != Void
+            xmin = min(minimum(x), xmin)
+            xmax = max(maximum(x), xmax)
+        else
+            xmin, xmax = 0, 1
+        end
+        if y != Void
+            ymin = min(minimum(y), ymin)
+            ymax = max(maximum(y), ymax)
+        else
+            ymin, ymax = 0, 1
+        end
         if z != Void
             zmin = min(minimum(z), zmin)
             zmax = max(maximum(z), zmax)
@@ -622,7 +630,7 @@ function plot_data(flag=true)
         set_window(kind)
         if kind == :polar
             draw_polar_axes()
-        else
+        elseif kind != :isosurface
             draw_axes(kind)
         end
     end
