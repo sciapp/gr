@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# -*- no-plot -*-
 """
 GR / PyQt4 interoperability example
 """

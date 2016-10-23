@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# -*- no-plot -*-
 """
 GR / PySide (Qt4) interoperability example
 """
