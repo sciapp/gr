@@ -21,6 +21,7 @@ EXPORTS
 	gr_createseg
 	gr_deactivatews
 	gr_delaunay
+	gr_destroycontext
 	gr_drawarrow
         gr_drawgraphics
 	gr_drawimage

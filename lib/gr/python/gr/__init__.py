@@ -2342,6 +2342,10 @@ def selectcontext(context):
     __gr.gr_selectcontext(c_int(context))
 
 
+def destroycontext(context):
+    __gr.gr_destroycontext(c_int(context))
+
+
 def uselinespec(linespec):
     return __gr.gr_uselinespec(char(linespec))
 
@@ -2538,6 +2542,7 @@ __gr.gr_inqregenflags.restype = c_int
 __gr.gr_savestate.argtypes = []
 __gr.gr_restorestate.argtypes = []
 __gr.gr_selectcontext.argtypes = [c_int]
+__gr.gr_destroycontext.argtypes = [c_int]
 __gr.gr_uselinespec.argtypes = [c_char_p]
 __gr.gr_uselinespec.restype = c_int
 __gr.gr_trisurface.argtypes = [

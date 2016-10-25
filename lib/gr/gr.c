@@ -7201,6 +7201,27 @@ void gr_selectcontext(int context)
     }
 }
 
+void gr_destroycontext(int context)
+{
+  int id;
+
+  check_autoinit;
+
+  if (context >= 1 && context <= MAX_CONTEXT)
+    {
+      id = context - 1;
+      if (app_context[id] != NULL)
+        free(app_context[id]);
+
+      app_context[id] = NULL;
+    }
+  else
+    {
+      fprintf(stderr, "invalid context id\n");
+      ctx = NULL;
+    }
+}
+
 int gr_uselinespec(char *linespec)
 {
   char *spec = linespec, lastspec = ' ';
