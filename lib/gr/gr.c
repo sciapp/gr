@@ -6048,7 +6048,7 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
 
   jmax = floor(nbins + 1.5001);
   c1 = 2 * floor((nbins * shape) / sqrt(3) + 1.5001);
-  imax = trunc((jmax * c1 - 1) / jmax + 1);
+  imax = floor((jmax * c1 - 1) / jmax + 1);
   lmax = jmax * imax;
 
   d = (xmax - xmin) / nbins;
