@@ -6016,7 +6016,7 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
   int bnd[2];
   int nc, cntmax;
   int i, j;
-  double xlist[6], ylist[6], xdelta[6], ydelta[6];
+  double xlist[7], ylist[7], xdelta[6], ydelta[6];
 
   if (n <= 2)
     {
@@ -6086,10 +6086,13 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
           xlist[j] = xcm[i] + xdelta[j];
           ylist[j] = ycm[i] + ydelta[j];
         }
+      xlist[6] = xlist[0];
+      ylist[6] = ylist[0];
+
       gks_set_fill_color_index(first_color + (last_color - first_color) *
                                ((double) cnt[i] / cntmax));
       gks_fillarea(6, xlist, ylist);
-      gks_polyline(6, xlist, ylist);
+      gks_polyline(7, xlist, ylist);
     }
 
   free(ycm);
