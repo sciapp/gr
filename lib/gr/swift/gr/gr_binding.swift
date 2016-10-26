@@ -386,6 +386,11 @@ public func contour(px: [Double], py: [Double], h: [Double], pz: [Double], major
   gr_contour(CInt(nx), CInt(ny), CInt(nh), UnsafeMutablePointer<Double>(px), UnsafeMutablePointer<Double>(py), UnsafeMutablePointer<Double>(h), UnsafeMutablePointer<Double>(pz), CInt(major_h))
 }
 
+public func hexbin(x: [Double], y: [Double], nbins: Int) {
+  var n = _assertEqualLength(x, y)
+  return Int(gr_hexbin(CInt(n), UnsafeMutablePointer<Double>(x), UnsafeMutablePointer<Double>(y), CInt(nbins)))
+}
+
 public func setcolormap(index: Int) {
   gr_setcolormap(CInt(index))
 }

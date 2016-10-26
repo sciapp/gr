@@ -104,6 +104,7 @@ DLLEXPORT void gr_titles3d(char *, char *, char *);
 DLLEXPORT void gr_surface(int, int, double *, double *, double *, int);
 DLLEXPORT void gr_contour(
   int, int, int, double *, double *, double *, double *, int);
+DLLEXPORT int gr_hexbin(int, double *, double *, int);
 DLLEXPORT void gr_setcolormap(int);
 DLLEXPORT void gr_inqcolormap(int *);
 DLLEXPORT void gr_colorbar(void);

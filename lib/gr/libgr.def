@@ -35,6 +35,7 @@ EXPORTS
 	gr_grid3d
 	gr_gridit
 	gr_herrorbars
+	gr_hexbin
         gr_hsvtorgb
 	gr_importgraphics
 	gr_inqcolor

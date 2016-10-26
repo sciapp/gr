@@ -1698,6 +1698,13 @@ def contour(px, py, h, pz, major_h):
         raise AttributeError("Sequences have incorrect length or dimension.")
 
 
+def hexbin(x, y, nbins):
+    n = _assertEqualLength(x, y)
+    _x = floatarray(n, x)
+    _y = floatarray(n, y)
+    return __gr.gr_hexbin(c_int(n), _x.data, _y.data, c_int(nbins))
+
+
 def setcolormap(index):
     __gr.gr_setcolormap(c_int(index))
 
@@ -2486,6 +2493,8 @@ __gr.gr_surface.argtypes = [c_int, c_int, POINTER(c_double), POINTER(c_double),
 __gr.gr_contour.argtypes = [
     c_int, c_int, c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double),
     POINTER(c_double), c_int]
+__gr.gr_hexbin.argtypes = [c_int, POINTER(c_double), POINTER(c_double), c_int]
+__gr.gr_hexbin.restype = c_int
 __gr.gr_setcolormap.argtypes = [c_int]
 __gr.gr_colorbar.argtypes = []
 __gr.gr_inqcolor.argtypes = [c_int, POINTER(c_int)]

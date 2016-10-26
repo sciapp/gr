@@ -91,6 +91,7 @@ function GR(canvas_id) {
     this.titles3d = gr_titles3d;
     this.surface = gr_surface;
     this.contour = gr_contour;
+    this.hexbin = gr_hexbin;
     this.setcolormap = gr_setcolormap;
     this.inqcolormap = gr_inqcolormap;
     this.colormap = gr_colorbar;
@@ -803,6 +804,16 @@ gr_contour = function(nx, ny, nh, px, py, h, pz, major_h) {
     freearray(_py);
     freearray(_h);
     freearray(_pz);
+}
+
+gr_hexbin_c = Module.cwrap('gr_hexbin', 'number', ['number', 'number', 'number', 'number', ]);
+gr_hexbin = function(n, x, y, nbins) {
+    _x = floatarray(x);
+    _y = floatarray(y);
+    cntmax = gr_hexbin_c(n, _x, _y, nbins);
+    freearray(_x);
+    freearray(_y);
+    return cntmax;
 }
 
 gr_setcolormap = Module.cwrap('gr_setcolormap', '', ['number', ]);

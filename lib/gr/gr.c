@@ -5912,6 +5912,207 @@ void gr_contour(
     }
 }
 
+static
+int binning(
+  double x[], double y[], int *cell, int *cnt, double size, double shape,
+  double rx[2], double ry[2], int bnd[2], int n, double ycorr)
+{
+  int nc;
+  int i, i1, i2, iinc;
+  int j1, j2, jinc;
+  int L, lmax, lat;
+  double c1, c2, con1, con2, dist1;
+  double sx, sy, xmin, ymin, xr, yr;
+
+  xmin = rx[0];
+  ymin = ry[0] + ycorr;
+  xr = rx[1] - xmin;
+  yr = ry[1] + ycorr - ymin;
+  c1 = size / xr;
+  c2 = size * shape / (yr * sqrt(3.));
+
+  jinc = bnd[1];
+  lat = jinc + 1;
+  iinc = 2 * jinc;
+  lmax = bnd[0] * bnd[1];
+  con1 = 0.25;
+  con2 = 1./3.;
+
+  for (i = 0; i < n; i++)
+    {
+      sx = c1 * (x[i] - xmin);
+      sy = c2 * (y[i] - ymin);
+      j1 = sx + 0.5;
+      i1 = sy + 0.5;
+      dist1 = pow((sx - j1), 2) + 3.0 * pow((sy - i1), 2);
+      if (dist1 < con1)
+        L = i1 * iinc + j1 + 1;
+      else if (dist1 > con2)
+        L = (int) sy * iinc + (int) sx + lat;
+      else
+        {
+          j2 = sx;
+          i2 = sy;
+          if (dist1 <= pow((sx - j2 - 0.5), 2) + 3.0 * pow((sy - i2 - 0.5), 2))
+            L = i1 * iinc + j1 + 1;
+          else
+            L = i2 * iinc + j2 + lat;
+        }
+
+      cnt[L] = cnt[L] + 1;
+    }
+
+  nc = 0;
+  for (L = 1; L <= lmax; L++)
+    {
+      if (cnt[L] > 0)
+        {
+          nc++;
+          cell[nc] = L;
+          cnt[nc] = cnt[L];
+        }
+    }
+  bnd[0] = (cell[nc] - 1) / bnd[1] + 1;
+  return nc;
+}
+
+static
+int hcell2xy(int nbins, double rx[2], double ry[2], double shape, int bnd[2],
+             int *cell, double *x, double *y, int *cnt, double ycorr)
+{
+  double c3, c4, tmp;
+  int jmax, lmax, L;
+  int cntmax;
+
+  c3 = (rx[1] - rx[0]) / nbins;
+  c4 = ((ry[1] - ry[0]) * sqrt(3)) / (2 * shape * nbins);
+  jmax = bnd[1];
+  lmax = bnd[0] * bnd[1];
+
+  cntmax = 0;
+  for (L = 0; L <= lmax; L++)
+    {
+      y[L] = c4 * ((cell[L] - 1)/jmax) + ry[0] + ycorr;
+      tmp = ((cell[L] - 1)/jmax) % 2 == 0 ? ((cell[L] - 1) % jmax) :
+        ((cell[L] - 1) % jmax + 0.5);
+      x[L] = c3 * tmp + rx[0];
+      if (cnt[L] > cntmax)
+        cntmax = cnt[L];
+    }
+  return cntmax;
+}
+
+int gr_hexbin(int n, double *x, double *y, int nbins)
+{
+  int errind, int_style, coli;
+  double xmin, xmax, ymin, ymax;
+  int jmax, c1, imax, lmax;
+  double size, shape;
+  double d, R;
+  double ycorr;
+  int *cell, *cnt;
+  double *xcm, *ycm;
+  double rx[2], ry[2];
+  int bnd[2];
+  int nc, cntmax;
+  int i, j;
+  double xlist[6], ylist[6], xdelta[6], ydelta[6];
+
+  if (n <= 2)
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return -1;
+    }
+  else if (nbins <= 2)
+    {
+      fprintf(stderr, "invalid number of bins\n");
+      return -1;
+    }
+
+  check_autoinit;
+
+  setscale(lx.scale_options);
+
+  /* save fill area interior style and color index */
+
+  gks_inq_fill_int_style(&errind, &int_style);
+  gks_inq_fill_color_index(&errind, &coli);
+
+  xmin = lx.xmin;
+  xmax = lx.xmax;
+  ymin = lx.ymin;
+  ymax = lx.ymax;
+
+  size = nbins;
+  shape = (ymax - ymin) / (xmax - xmin);
+
+  jmax = floor(nbins + 1.5001);
+  c1 = 2 * floor((nbins * shape) / sqrt(3) + 1.5001);
+  imax = trunc((jmax * c1 - 1) / jmax + 1);
+  lmax = jmax * imax;
+
+  d = (xmax - xmin) / nbins;
+  R = 1. / sqrt(3) * d;
+
+  ycorr = (ymax - ymin) - ((imax - 2) * 1.5 * R + (imax % 2) * R);
+  ycorr = ycorr / 2;
+
+  cell = (int *) calloc(lmax + 1, sizeof(int));
+  cnt  = (int *) calloc(lmax + 1, sizeof(int));
+  xcm = (double *) calloc(lmax + 1, sizeof(double));
+  ycm = (double *) calloc(lmax + 1, sizeof(double));
+
+  rx[0] = xmin; rx[1] = xmax;
+  ry[0] = ymin; ry[1] = ymax;
+
+  bnd[0] = imax; bnd[1] = jmax;
+
+  nc = binning(x, y, cell, cnt, size, shape, rx, ry, bnd, n, ycorr);
+
+  cntmax = hcell2xy(nbins, rx, ry, shape, bnd, cell, xcm, ycm, cnt, ycorr);
+
+  for (j = 0; j < 6; j++)
+    {
+      xdelta[j] = sin(M_PI / 3 * j) * R;
+      ydelta[j] = cos(M_PI / 3 * j) * R;
+    }
+
+  gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+
+  for (i = 1; i <= nc; i++)
+    {
+      for (j = 0; j < 6; j++)
+        {
+          xlist[j] = xcm[i] + xdelta[j];
+          ylist[j] = ycm[i] + ydelta[j];
+        }
+      gks_set_fill_color_index(first_color + (last_color - first_color) *
+                               ((double) cnt[i] / cntmax));
+      gks_fillarea(6, xlist, ylist);
+      gks_polyline(6, xlist, ylist);
+    }
+
+  free(ycm);
+  free(xcm);
+  free(cnt);
+  free(cell);
+
+  /* restore fill area interior style and color index */
+
+  gks_set_fill_int_style(int_style);
+  gks_set_fill_color_index(coli);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<hexbin len=\"%d\"", n);
+      print_float_array("x", n, x);
+      print_float_array("y", n, y);
+      gr_writestream(" nbins=\"%d\"/>\n", nbins);
+    }
+
+  return cntmax;
+}
+
 void gr_setcolormap(int index)
 {
   int ind = index, reverse, i, j;

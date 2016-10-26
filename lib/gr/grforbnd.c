@@ -435,6 +435,12 @@ void FORTRAN(gr_contour)(
   gr_contour(*nx, *ny, *nh, px, py, h, pz, *major_h);
 }
 
+int FORTRAN(gr_hexbin)(
+  int *n, double *x, double *y, int *nbins)
+{
+  return gr_hexbin(*n, x, y, *nbins);
+}
+
 void FORTRAN(gr_setcolormap)(int *index)
 {
   gr_setcolormap(*index);
