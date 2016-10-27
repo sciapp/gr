@@ -7331,7 +7331,7 @@ void gr_restorestate(void)
 
 void gr_selectcontext(int context)
 {
-  int id, errind;
+  int id;
 
   check_autoinit;
 
@@ -7343,57 +7343,63 @@ void gr_selectcontext(int context)
           app_context[id] = (state_list *) xmalloc(sizeof(state_list));
           ctx = app_context[id];
 
-          gks_inq_pline_linetype(&errind, &ctx->ltype);
-          gks_inq_pline_linewidth(&errind, &ctx->lwidth);
-          gks_inq_pline_color_index(&errind, &ctx->plcoli);
-          gks_inq_pmark_type(&errind, &ctx->mtype);
-          gks_inq_pmark_size(&errind, &ctx->mszsc);
-          gks_inq_pmark_color_index(&errind, &ctx->pmcoli);
-          gks_inq_text_fontprec(&errind, &ctx->txfont, &ctx->txprec);
-          gks_inq_text_expfac(&errind, &ctx->chxp);
-          gks_inq_text_spacing(&errind, &ctx->chsp);
-          gks_inq_text_color_index(&errind, &ctx->txcoli);
-          gks_inq_text_height(&errind, &ctx->chh);
-          gks_inq_text_upvec(&errind, &ctx->chup[0], &ctx->chup[1]);
-          gks_inq_text_path(&errind, &ctx->txp);
-          gks_inq_text_align(&errind, &ctx->txal[0], &ctx->txal[1]);
-          gks_inq_fill_int_style(&errind, &ctx->ints);
-          gks_inq_fill_style_index(&errind, &ctx->styli);
-          gks_inq_fill_color_index(&errind, &ctx->facoli);
+          ctx->ltype = GKS_K_LINETYPE_SOLID;
+          ctx->lwidth = 1;
+          ctx->plcoli = 1;
+          ctx->mtype = GKS_K_MARKERTYPE_ASTERISK;
+          ctx->mszsc = 2;
+          ctx->pmcoli = 1;
+          ctx->txfont = 3;
+          ctx->txprec = GKS_K_TEXT_PRECISION_STRING;
+          ctx->chxp = 1;
+          ctx->chsp = 0;
+          ctx->txcoli = 1;
+          ctx->chh = 0.027;
+          ctx->chup[0] = 0;
+          ctx->chup[1] = 1;
+          ctx->txp = GKS_K_TEXT_PATH_RIGHT;
+          ctx->txal[0] = GKS_K_TEXT_HALIGN_LEFT;
+          ctx->txal[1] = GKS_K_TEXT_VALIGN_BASE;
+          ctx->ints = GKS_K_INTSTYLE_HOLLOW;
+          ctx->styli = 1;
+          ctx->facoli = 1;
 
-          gks_inq_current_xformno(&errind, &ctx->tnr);
-          gks_inq_xform(WC, &errind, ctx->wn, ctx->vp);
+          ctx->tnr = WC;
+          ctx->wn[0] = ctx->wn[2] = 0;
+          ctx->wn[1] = ctx->wn[3] = 1;
+          ctx->vp[0] = ctx->vp[2] = 0.2;
+          ctx->vp[1] = ctx->vp[3] = 0.9;
 
-          ctx->scale_options = lx.scale_options;
+          ctx->scale_options = 0;
         }
       else
         {
           ctx = app_context[id];
-
-          gks_set_pline_linetype(ctx->ltype);
-          gks_set_pline_linewidth(ctx->lwidth);
-          gks_set_pline_color_index(ctx->plcoli);
-          gks_set_pmark_type(ctx->mtype);
-          gks_set_pmark_size(ctx->mszsc);
-          gks_set_pmark_color_index(ctx->pmcoli);
-          gks_set_text_fontprec(ctx->txfont, ctx->txprec);
-          gks_set_text_expfac(ctx->chxp);
-          gks_set_text_spacing(ctx->chsp);
-          gks_set_text_color_index(ctx->txcoli);
-          gks_set_text_height(ctx->chh);
-          gks_set_text_upvec(ctx->chup[0], ctx->chup[1]);
-          gks_set_text_path(ctx->txp);
-          gks_set_text_align(ctx->txal[0], ctx->txal[1]);
-          gks_set_fill_int_style(ctx->ints);
-          gks_set_fill_style_index(ctx->styli);
-          gks_set_fill_color_index(ctx->facoli);
-
-          gks_select_xform(ctx->tnr);
-          gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
-          gks_set_viewport(WC, ctx->vp[0], ctx->vp[1], ctx->vp[2], ctx->vp[3]);
-
-          setscale(ctx->scale_options);
         }
+
+      gks_set_pline_linetype(ctx->ltype);
+      gks_set_pline_linewidth(ctx->lwidth);
+      gks_set_pline_color_index(ctx->plcoli);
+      gks_set_pmark_type(ctx->mtype);
+      gks_set_pmark_size(ctx->mszsc);
+      gks_set_pmark_color_index(ctx->pmcoli);
+      gks_set_text_fontprec(ctx->txfont, ctx->txprec);
+      gks_set_text_expfac(ctx->chxp);
+      gks_set_text_spacing(ctx->chsp);
+      gks_set_text_color_index(ctx->txcoli);
+      gks_set_text_height(ctx->chh);
+      gks_set_text_upvec(ctx->chup[0], ctx->chup[1]);
+      gks_set_text_path(ctx->txp);
+      gks_set_text_align(ctx->txal[0], ctx->txal[1]);
+      gks_set_fill_int_style(ctx->ints);
+      gks_set_fill_style_index(ctx->styli);
+      gks_set_fill_color_index(ctx->facoli);
+
+      gks_select_xform(ctx->tnr);
+      gks_set_window(WC, ctx->wn[0], ctx->wn[1], ctx->wn[2], ctx->wn[3]);
+      gks_set_viewport(WC, ctx->vp[0], ctx->vp[1], ctx->vp[2], ctx->vp[3]);
+
+      setscale(ctx->scale_options);
     }
   else
     {
