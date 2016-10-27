@@ -5918,6 +5918,7 @@ int binning(
   double rx[2], double ry[2], int bnd[2], int n, double ycorr)
 {
   int nc;
+  double xi, yi;
   int i, i1, i2, iinc;
   int j1, j2, jinc;
   int L, lmax, lat;
@@ -5940,8 +5941,10 @@ int binning(
 
   for (i = 0; i < n; i++)
     {
-      sx = c1 * (x[i] - xmin);
-      sy = c2 * (y[i] - ymin);
+      xi = nx.a * x_lin(x[i]) + nx.b;
+      yi = nx.c * y_lin(y[i]) + nx.d;
+      sx = c1 * (xi - xmin);
+      sy = c2 * (yi - ymin);
       j1 = sx + 0.5;
       i1 = sy + 0.5;
       dist1 = pow((sx - j1), 2) + 3.0 * pow((sy - i1), 2);
@@ -6005,7 +6008,6 @@ int hcell2xy(int nbins, double rx[2], double ry[2], double shape, int bnd[2],
 int gr_hexbin(int n, double *x, double *y, int nbins)
 {
   int errind, int_style, coli;
-  double xmin, xmax, ymin, ymax;
   int jmax, c1, imax, lmax;
   double size, shape;
   double d, R;
@@ -6038,23 +6040,18 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
   gks_inq_fill_int_style(&errind, &int_style);
   gks_inq_fill_color_index(&errind, &coli);
 
-  xmin = lx.xmin;
-  xmax = lx.xmax;
-  ymin = lx.ymin;
-  ymax = lx.ymax;
-
   size = nbins;
-  shape = (ymax - ymin) / (xmax - xmin);
+  shape = (vymax - vymin) / (vxmax - vxmin);
 
   jmax = floor(nbins + 1.5001);
   c1 = 2 * floor((nbins * shape) / sqrt(3) + 1.5001);
   imax = floor((jmax * c1 - 1) / jmax + 1);
   lmax = jmax * imax;
 
-  d = (xmax - xmin) / nbins;
+  d = (vxmax - vxmin) / nbins;
   R = 1. / sqrt(3) * d;
 
-  ycorr = (ymax - ymin) - ((imax - 2) * 1.5 * R + (imax % 2) * R);
+  ycorr = (vymax - vymin) - ((imax - 2) * 1.5 * R + (imax % 2) * R);
   ycorr = ycorr / 2;
 
   cell = (int *) calloc(lmax + 1, sizeof(int));
@@ -6062,8 +6059,8 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
   xcm = (double *) calloc(lmax + 1, sizeof(double));
   ycm = (double *) calloc(lmax + 1, sizeof(double));
 
-  rx[0] = xmin; rx[1] = xmax;
-  ry[0] = ymin; ry[1] = ymax;
+  rx[0] = vxmin; rx[1] = vxmax;
+  ry[0] = vymin; ry[1] = vymax;
 
   bnd[0] = imax; bnd[1] = jmax;
 
@@ -6083,8 +6080,8 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
     {
       for (j = 0; j < 6; j++)
         {
-          xlist[j] = xcm[i] + xdelta[j];
-          ylist[j] = ycm[i] + ydelta[j];
+          xlist[j] = x_log(xcm[i] + xdelta[j] - nx.b) / nx.a;
+          ylist[j] = y_log(ycm[i] + ydelta[j] - nx.d) / nx.c;
         }
       xlist[6] = xlist[0];
       ylist[6] = ylist[0];
