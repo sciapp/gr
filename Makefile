@@ -83,13 +83,13 @@ conda: condaclean
 	@recipe/Build in || \
 	( echo "FATAL: Error building conda recipe"; exit 1 )
 	( source $(HOME)/anaconda/bin/activate root && \
-	conda build --no-binstar-upload recipe )
+	conda build --no-anaconda-upload recipe )
 
 testconda: condaclean
 	@recipe/Build test || \
 	( echo "FATAL: Error building conda recipe"; exit 1 )
 	( source $(HOME)/anaconda/bin/activate root && \
-	conda build --no-binstar-upload recipe )
+	conda build --no-anaconda-upload recipe )
 
 osxpkg:
 	mkdir -p tmp/bin tmp/gr
