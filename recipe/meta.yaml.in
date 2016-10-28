@@ -3,9 +3,8 @@ package:
   version: !!str VERSION
 
 source:
-  fn: gr-VERSION.tar.gz
-  url: https://pypi.python.org/packages/source/g/gr/gr-VERSION.tar.gz
-  md5: MD5
+  git_url: https://github.com/jheinen/gr.git
+  git_rev: VERSION
 
 build:
   binary_relocation: false

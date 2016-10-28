@@ -1,12 +1,11 @@
 #!/bin/sh
 case $1 in
   test)
-    version=`git describe | awk -F- '{print $1}' | sed 's/^v//'`
+    version=`git describe | awk -F- '{print $1}'`
     cat recipe/meta.yaml.$1 | sed "s/VERSION/${version}/g" >recipe/meta.yaml
     ;;
   in)
-    version=`git tag | grep "^v[0-9]\+\.[0-9]\+\.[0-9]\+$" | sort -t. -k 1,1n -k 2,2n -k 3,3n | tail -1 | sed 's/^v//'`
-    md5=`python recipe/md5sum.py dist/gr-${version}.tar.gz` || exit 1
-    cat recipe/meta.yaml.$1 | sed "s/VERSION/${version}/g" | sed "s/MD5/${md5}/" >recipe/meta.yaml
+    version=`git tag | grep "[0-9]\+\.[0-9]\+\.[0-9]\+$" | sort -t. -k 1,1n -k 2,2n -k 3,3n | tail -1`
+    cat recipe/meta.yaml.$1 | sed "s/VERSION/${version}/g" >recipe/meta.yaml
     ;;
 esac
