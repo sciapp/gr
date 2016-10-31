@@ -6549,8 +6549,11 @@ void gr_endprint(void)
 
   if (flag_printing)
     {
-      gks_deactivate_ws(wkid);
-      gks_close_ws(wkid);
+      if (!autoinit) /* GKS may have been closed by gr_emergencyclosegks() */
+        {
+          gks_deactivate_ws(wkid);
+          gks_close_ws(wkid);
+        }
       flag_printing = 0;
     }
   else
