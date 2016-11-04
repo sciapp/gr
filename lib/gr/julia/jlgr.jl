@@ -38,6 +38,7 @@ function Figure(width=600, height=450)
 end
 
 plt = Figure()
+ctx = Dict()
 
 isrowvec(x::AbstractArray) = ndims(x) == 2 && size(x, 1) == 1 && size(x, 2) > 1
 
@@ -282,7 +283,7 @@ function draw_axes(kind, pass=1)
             GR.axes3d(0, ytick, 0, xorg[2], yorg[1], zorg[1], 0, majory, 0, ticksize)
         end
     else
-        if kind in (:heatmap, :imshow)
+        if kind == :heatmap
             ticksize = -ticksize
         else
             GR.grid(xtick, ytick, 0, 0, majorx, majory)
@@ -481,6 +482,8 @@ function create_context(kind, dict)
 end
 
 function restore_context()
+    global ctx
+    ctx = copy(plt.kvs)
     plt.kvs = copy(plt.obj)
 end
 
@@ -492,8 +495,19 @@ function figure(; kv...)
 end
 
 function hold(flag)
-    plt.kvs[:ax] = flag
-    plt.kvs[:clear] = !flag
+    global ctx
+    if plt.args != @_tuple(Any)
+        plt.kvs[:ax] = flag
+        plt.kvs[:clear] = !flag
+        for k in (:window, :scale, :xaxis, :yaxis, :zaxis)
+            if haskey(ctx, k)
+                plt.kvs[k] = ctx[k]
+            end
+        end
+    else
+        println("Invalid hold state")
+    end
+    flag
 end
 
 function subplot(nr, nc, p)
@@ -623,7 +637,7 @@ function plot_data(flag=true)
         set_window(kind)
         if kind == :polar
             draw_polar_axes()
-        elseif kind != :isosurface
+        elseif kind != :imshow && kind != :isosurface
             draw_axes(kind)
         end
     end
