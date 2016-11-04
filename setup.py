@@ -113,9 +113,9 @@ class build_static(Command):
             # check for interpreters MACOSX_DEPLOYMENT_TARGET setting
             version = map(int, get_config_var(
                                "MACOSX_DEPLOYMENT_TARGET").split('.'))
-            # require at least 10.6
-            if version[0] == 10 and version[1] < 6:
-                version[1] = 6
+            # require at least 10.7
+            if version[0] == 10 and version[1] < 7:
+                version[1] = 7
             self.macosx_deployment_target = (
                 os.getenv("MACOSX_DEPLOYMENT_TARGET", "%d.%d" % (version[0],
                                                                  version[1])))
@@ -224,7 +224,8 @@ class check_ext(build_static, Command):
     # List of option tuples: long name, short name (None if no short
     # name), and help string.
     user_options = [('disable-wx', None, "Disable wx plugin"),
-                    ('disable-qt', None, "Disable qt plugin"),
+                    ('disable-qt4', None, "Disable qt4 plugin"),
+                    ('disable-qt5', None, "Disable qt5 plugin"),
                     ('disable-gtk', None, "Disable gtk plugin"),
                     ('disable-gs', None, "Disable gs plugin"),
                     ('disable-fig', None, "Disable fig plugin"),
@@ -244,7 +245,8 @@ class check_ext(build_static, Command):
                      "Disable Xt libraries (disables also x11 and freetype)"),
                     ('disable-mupdf', None, "Disable mupdf libraries"),
                     ('disable-cairo', None, "Disable cairo libraries"),
-                    ('qmake=', None, "Qt4 qmake executable"),
+                    ('qmake-qt4=', None, "Qt4 qmake executable"),
+                    ('qmake-qt5=', None, "Qt5 qmake executable"),
                    ] + build_static.user_options
 
     def initialize_options(self):
@@ -259,7 +261,8 @@ class check_ext(build_static, Command):
         self.ext_modules = []
         # -- user options -------------------------------------
         self.disable_wx = False
-        self.disable_qt = False
+        self.disable_qt4 = False
+        self.disable_qt5 = False if self.isLinuxOrDarwin else True
         self.disable_gs = False
         self.disable_fig = False
         self.disable_svg = False
@@ -318,18 +321,30 @@ class check_ext(build_static, Command):
         self.wxlibs = []
         self.wxldflags = []
         self.wxcxx = []
-        # -- qt -------------------------------------
-        self.qtdir = os.getenv("QTDIR", "")
-        self.qtinc = [os.path.join(self.qtdir, "include")]
-        self.qtlib = [os.path.join(self.qtdir, "lib")]
-        self.qtlibs = []
-        self.qtldflags = []
-        self.qtversion = None
-        self.qmake = os.path.join(self.qtdir, "bin", "qmake")
+        # -- qt4 -------------------------------------
+        self.qt4dir = os.getenv("QT4DIR", "")
+        self.qt4inc = [os.path.join(self.qt4dir, "include")]
+        self.qt4lib = [os.path.join(self.qt4dir, "lib")]
+        self.qt4libs = []
+        self.qt4ldflags = []
+        self.qt4version = None
+        self.qmake_qt4 = os.path.join(self.qt4dir, "bin", "qmake")
         if self.isWin32:
-            self.qmake += ".exe"
-        if not os.path.isfile(self.qmake):
-            self.qmake = ""
+            self.qmake_qt4 += ".exe"
+        if not os.path.isfile(self.qmake_qt4):
+            self.qmake_qt4 = ""
+        # -- qt5 -------------------------------------
+        self.qt5dir = os.getenv("QT5DIR", "")
+        self.qt5inc = [os.path.join(self.qt5dir, "include")]
+        self.qt5lib = [os.path.join(self.qt5dir, "lib")]
+        self.qt5libs = []
+        self.qt5ldflags = []
+        self.qt5version = None
+        self.qmake_qt5 = os.path.join(self.qt5dir, "bin", "qmake")
+        if self.isWin32:
+            self.qmake_qt5 += ".exe"
+        if not os.path.isfile(self.qmake_qt5):
+            self.qmake_qt5 = ""
         # -- freetype -------------------------------------
         self.ftconfig = None
         self.ftldflags = []
@@ -545,10 +560,14 @@ int main()
         pass
 
     def _finalize_Win32Post(self):
-        # -- qt -------------------------------------
-        if not self.disable_qt:
-            self.qtlibs = ["QtGui%d" % self.qtversion[0],
-                           "QtCore%d" % self.qtversion[0]]
+        # -- qt4 -------------------------------------
+        if not self.disable_qt4:
+            self.qt4libs = ["QtGui%d" % self.qt4version[0],
+                            "QtCore%d" % self.qt4version[0]]
+        # -- qt5 -------------------------------------
+        if not self.disable_qt5:
+            self.qt5libs = ["Qt%dGui" % self.qt5version[0],
+                            "Qt%dCore" % self.qt5version[0]]
 
     def _finalize_LinuxOrDarwinPre(self):
         # -- wx -------------------------------------
@@ -560,18 +579,35 @@ int main()
                 self.wxldflags = get_words(self.wxconfig, "--libs")
                 self.wxcxx = get_words(self.wxconfig, "--cxxflags")
         # -- qt -------------------------------------
-        if not self.disable_qt:
-            if self.qmake:
-                # use full qualified path for self.qmake
-                self.qmake = get_output("which", self.qmake)
+        def set_qmake_path(major_version=4):
+            qmake = getattr(self, "qmake_qt{:d}".format(major_version))
+            if qmake:
+                # use full qualified path for self.qmake_qt4
+                qmake = get_output("which", self.qmake_qt4)
             else:
                 # try to determine qmake version automatically
-                self.qmake = (get_output("which", "qmake-qt4") or
-                              get_output("which", "qmake"))
+                qmake = get_output("which", "qmake-qt{:d}".format(major_version))
+                if not qmake:
+                    qmake = get_output("which", "qmake")
+                    if qmake:
+                        qt_version = get_output(qmake, "-query", "QT_VERSION")
+                        if not qt_version.startswith("{:d}.".format(major_version)):
+                            qmake = ""
+            if qmake:
+                setattr(self, "qmake_qt{:d}".format(major_version), qmake)
+
+        if not self.disable_qt4:
+            set_qmake_path(major_version=4)
             if os.path.isdir("/usr/local/Cellar"):
-                self.qtlibs = []
+                self.qt4libs = []
             else:
-                self.qtlibs = ["QtGui", "QtCore"]
+                self.qt4libs = ["QtGui", "QtCore"]
+        if not self.disable_qt5:
+            set_qmake_path(major_version=5)
+            if self.isDarwin:
+                self.qt5libs = []
+            else:
+                self.qt5libs = ["Qt5Widgets", "Qt5Gui", "Qt5Core"]
         # -- x11 -------------------------------------
         if self.isLinux:
             x11ldflags = None
@@ -772,12 +808,18 @@ int main()
                 self.wxlibs = ["wxmsw29ud_core", "wxbase29ud"]
             self.wxinc = [os.path.join(self.wxdir, "include", "msvc"),
                           os.path.join(self.wxdir, "include")]
-        # -- qt -------------------------------------
-        if not self.disable_qt:
+        # -- qt4 -------------------------------------
+        if not self.disable_qt4:
             # do not use _msvc_extra_link_args because /nodefaultlib causes
             # error LNK2019: unresolved external symbol ""__declspec(dllimport)
             #                void __cdecl std::_Xbad_alloc(void)" ...
-            self.qtldflags = ["-dll"]
+            self.qt4ldflags = ["-dll"]
+        # -- qt5 -------------------------------------
+        if not self.disable_qt5:
+            # do not use _msvc_extra_link_args because /nodefaultlib causes
+            # error LNK2019: unresolved external symbol ""__declspec(dllimport)
+            #                void __cdecl std::_Xbad_alloc(void)" ...
+            self.qt5ldflags = ["-dll"]
         # -- gs -------------------------------------
         if not self.disable_gs and self.gsdir:
             self.gsinc = [os.path.join(self.gsdir, "include")]
@@ -811,28 +853,45 @@ int main()
 
         # -- platform independend finalizers -------------------------------
         # qt
-        if not self.disable_qt:
-            if not os.path.isfile(self.qmake):
-                self.disable_qt = True
+        def set_qt_flags(major_version=4):
+            qmake = getattr(self, "qmake_qt{:d}".format(major_version))
+            disable_qt = False
+            if not os.path.isfile(qmake):
+                disable_qt = True
             else:
-                qtversion = get_output(self.qmake, "-v")
-                match = re.search("\d\.\d\.\d", qtversion)
-                if match:
-                    self.qtversion = list(map(lambda s: int(s),
-                                              match.group(0).split('.')))
-                if not self.qtversion or self.qtversion[0] < 4:
-                    self.disable_qt = True
+                qtversion = get_output(qmake, "-query", "QT_VERSION")
+                if qtversion:
+                    qtversion = [int(s) for s in qtversion.split('.')]
+                if not qtversion or qtversion[0] != major_version:
+                    disable_qt = True
                 else:
-                    qquery = Popen([self.qmake, "-query", "QT_INSTALL_HEADERS"],
+                    qquery = Popen([qmake, "-query", "QT_INSTALL_HEADERS"],
                                    stdout=PIPE)
                     std = qquery.communicate()
                     if qquery.returncode == 0:
-                        self.qtinc = [std[0].rstrip()]
-                    qquery = Popen([self.qmake, "-query", "QT_INSTALL_LIBS"],
+                        qtinc = [std[0].rstrip()]
+                    qquery = Popen([qmake, "-query", "QT_INSTALL_LIBS"],
                                    stdout=PIPE)
                     std = qquery.communicate()
                     if qquery.returncode == 0:
-                        self.qtlib = [std[0].rstrip()]
+                        qtlib = [std[0].rstrip()]
+            if disable_qt:
+                qtinc = []
+                qtlib = []
+                qtlibs = []
+            for attr_name in ("disable_qt", "qtversion", "qtinc", "qtlib",
+                              "qtlibs"):
+                attr_value = locals()[
+                    attr_name] if attr_name in locals() else None
+                if attr_value is not None:
+                    attr_name = attr_name.replace("qt", "qt{:d}".format(
+                        major_version))
+                    setattr(self, attr_name, attr_value)
+
+        if not self.disable_qt4:
+            set_qt_flags(major_version=4)
+        if not self.disable_qt5:
+            set_qt_flags(major_version=5)
 
         # -- platform independend tests -------------------------------------
 #        if not self.disable_gs:
@@ -893,13 +952,21 @@ int main()
         print("      gtkldflags: ", self.gtkldflags)
         print("       gtkcflags: ", self.gtkcflags)
         print("")
-        print("           qmake: ", self.qmake)
-        print("           qtdir: ", self.qtdir)
-        print("           qtinc: ", self.qtinc)
-        print("           qtlib: ", self.qtlib)
-        print("          qtlibs: ", self.qtlibs)
-        print("       qtldflags: ", self.qtldflags)
-        print("      Qt version: ", self.qtversion)
+        print("       qmake-qt4: ", self.qmake_qt4)
+        print("          qt4dir: ", self.qt4dir)
+        print("          qt4inc: ", self.qt4inc)
+        print("          qt4lib: ", self.qt4lib)
+        print("         qt4libs: ", self.qt4libs)
+        print("      qt4ldflags: ", self.qt4ldflags)
+        print("     Qt4 version: ", self.qt4version)
+        print("")
+        print("       qmake-qt5: ", self.qmake_qt5)
+        print("          qt5dir: ", self.qt5dir)
+        print("          qt5inc: ", self.qt5inc)
+        print("          qt5lib: ", self.qt5lib)
+        print("         qt5libs: ", self.qt5libs)
+        print("      qt5ldflags: ", self.qt5ldflags)
+        print("     Qt5 version: ", self.qt5version)
         print("")
         print("           gsdir: ", self.gsdir)
         print("           gsinc: ", self.gsinc)
@@ -929,7 +996,8 @@ int main()
         print("      disable-xt: ", self.disable_xt)
         print("     disable-xft: ", self.disable_xft)
         print("      disable-wx: ", self.disable_wx)
-        print("      disable-qt: ", self.disable_qt)
+        print("     disable-qt4: ", self.disable_qt4)
+        print("     disable-qt5: ", self.disable_qt5)
         print("     disable-gtk: ", self.disable_gtk)
         print("      disable-gs: ", self.disable_gs)
         print("     disable-fig: ", self.disable_fig)
@@ -1210,13 +1278,13 @@ int main()
                                  extra_compile_args=cflags)
             self.ext_modules.append(gksWxExt)
 
-        # -- qt -------------------------------------
-        if not self.disable_qt:
-            inc = list(self.qtinc)
+        # -- qt4 -------------------------------------
+        if not self.disable_qt4:
+            inc = list(self.qt4inc)
             inc.extend(gksinc)
-            lib = list(self.qtlib)
-            libs = list(self.qtlibs)
-            ldflags = list(self.qtldflags)
+            lib = list(self.qt4lib)
+            libs = list(self.qt4libs)
+            ldflags = list(self.qt4ldflags)
             cflags = []
             if self.isWin32:
 # do not use _msvc_extra_link_args because /nodefaultlib causes
@@ -1225,15 +1293,49 @@ int main()
                 ldflags.append("-dll")
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
-            gksQtExt = Extension("gr.qtplugin",
-                                 _plugins_path["qtplugin.cxx"],
-                                 define_macros=defines,
-                                 include_dirs=inc,
-                                 library_dirs=lib,
-                                 libraries=libs,
-                                 extra_link_args=ldflags,
-                                 extra_compile_args=cflags)
-            self.ext_modules.append(gksQtExt)
+            gksQt4Ext = Extension("gr.qtplugin",
+                                  _plugins_path["qtplugin.cxx"],
+                                  define_macros=defines,
+                                  include_dirs=inc,
+                                  library_dirs=lib,
+                                  libraries=libs,
+                                  extra_link_args=ldflags,
+                                  extra_compile_args=cflags)
+            self.ext_modules.append(gksQt4Ext)
+
+        # -- qt5 -------------------------------------
+        if not self.disable_qt5:
+            inc = list(self.qt5inc)
+            inc.extend(gksinc)
+            lib = list(self.qt5lib)
+            libs = list(self.qt5libs)
+            ldflags = list(self.qt5ldflags)
+            cflags = ["-std=c++11"]
+            if self.isWin32:
+# do not use _msvc_extra_link_args because /nodefaultlib causes
+# error LNK2019: unresolved external symbol ""__declspec(dllimport)
+#                void __cdecl std::_Xbad_alloc(void)" ...
+                ldflags.append("-dll")
+                libs.extend(_libs_msvc)
+                cflags.extend(_msvc_extra_compile_args)
+            elif self.isDarwin:
+                for l in self.qt5lib:
+                    ldflags.extend(["-F", l])
+                    cflags.extend(["-F", l])
+                ldflags.extend(["-framework", "QtWidgets",
+                                "-framework", "QtGui",
+                                "-framework", "QtCore",
+                                "-stdlib=libc++"])
+                cflags.append("-stdlib=libc++")
+            gksQt5Ext = Extension("gr.qt5plugin",
+                                  _plugins_path["qt5plugin.cxx"],
+                                  define_macros=defines,
+                                  include_dirs=inc,
+                                  library_dirs=lib,
+                                  libraries=libs,
+                                  extra_link_args=ldflags,
+                                  extra_compile_args=cflags)
+            self.ext_modules.append(gksQt5Ext)
 
         # -- gtk -------------------------------------
         if not self.disable_gtk:
@@ -1490,10 +1592,11 @@ _gks_src = ["gks.c", "gksforbnd.c", "font.c", "afm.c", "util.c", "ft.c", "dl.c",
             "io.c"]
 _gks_plugin_src = ["font.cxx", "afm.cxx", "util.cxx", "dl.cxx",
                    "malloc.cxx", "error.cxx", "io.cxx"]
-_gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "gtkplugin.cxx",
-                "quartzplugin.m", "svgplugin.cxx", "figplugin.cxx",
-                "gsplugin.cxx", "wmfplugin.cxx", "movplugin.cxx",
-                "htmplugin.cxx", "pgfplugin.cxx", "cairoplugin.cxx"]
+_gks_plugins = ["wxplugin.cxx", "qtplugin.cxx", "qt5plugin.cxx",
+                "gtkplugin.cxx", "quartzplugin.m", "svgplugin.cxx",
+                "figplugin.cxx", "gsplugin.cxx", "wmfplugin.cxx",
+                "movplugin.cxx", "htmplugin.cxx", "pgfplugin.cxx",
+                "cairoplugin.cxx"]
 
 _libz_src = ["adler32.c", "compress.c", "crc32.c", "deflate.c", "gzclose.c",
              "gzlib.c", "gzread.c", "gzwrite.c", "infback.c", "inffast.c",
