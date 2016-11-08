@@ -51,7 +51,7 @@ void GKSServer::readClient()
       cc = s->read((char *) &nbyte, sizeof(int));
       if (nbyte > dl_size)
 	{
-	  dl = (char *) realloc(dl, nbyte + 1);
+	  dl = (char *) realloc(dl, nbyte);
           dl_size = nbyte;
 	}
     }
@@ -61,13 +61,13 @@ void GKSServer::readClient()
   cc = s->read(dl, nbyte);
   if (cc == nbyte)
     {
-      dl[nbyte] = '\0';
-      if (nbyte > ba_size)
+      if (nbyte + 4 > ba_size)
 	{
-	  ba = (char *) realloc(ba, nbyte + 1);
-	  ba_size = nbyte;
+	  ba = (char *) realloc(ba, nbyte + 4);
+	  ba_size = nbyte + 4;
 	}
-      memmove(ba, dl, nbyte + 1);
+      memmove(ba, dl, nbyte);
+      memset(ba + nbyte, 0, 4);
       if (!s->bytesAvailable())
 	emit(data(ba));
       nbyte = 0;
