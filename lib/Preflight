@@ -585,7 +585,7 @@ eof
     info="${green}yes${normal} [`cat $tmpver | head -1`]"
     if [ `uname` = "Linux" ]; then
       # check whether the MuPDF library is built with -fPIC
-      ${CXX} -shared -o /dev/null -Wl,--whole-archive -lmupdf -Wl,--no-whole-archive >/dev/null 2>&1
+      ${CXX} -shared -o /dev/null ${EXTRA_LDFLAGS} -Wl,--whole-archive -lmupdf -Wl,--no-whole-archive >/dev/null 2>&1
       if [ $? -ne 0 ]; then
         mupdfdefs="MUPDFDEFS=-DNO_MUPDF MUPDFLIBS="
         ssldefs="SSLLIBS="
