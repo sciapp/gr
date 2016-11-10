@@ -3970,8 +3970,10 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
                   np++;
                   *state = GKS_K_STATUS_OK;
                 }
-              else
-                *state = GKS_K_STATUS_NONE;
+              else if (event.xbutton.button == Button2 || event.xbutton.button == Button3)
+                {
+                  *state = GKS_K_STATUS_NONE;
+                }
               break;
 
             case MotionNotify:
