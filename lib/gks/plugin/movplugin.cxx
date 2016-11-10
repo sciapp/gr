@@ -36,8 +36,6 @@ extern "C"
 
 #endif
 
-#if !defined(NO_AV) && !defined(NO_MUPDF)
-
 DLLEXPORT void gks_movplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
   int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
@@ -48,6 +46,8 @@ DLLEXPORT void gks_movplugin(
 }
 #endif
 #endif
+
+#if !defined(NO_AV) && !defined(NO_MUPDF)
 
 #include "vc.h"
 #include "gif.h"
