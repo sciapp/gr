@@ -582,8 +582,8 @@ int main()
         def set_qmake_path(major_version=4):
             qmake = getattr(self, "qmake_qt{0:d}".format(major_version))
             if qmake:
-                # use full qualified path for self.qmake_qt4
-                qmake = get_output("which", self.qmake_qt4)
+                # use full qualified path for qmake
+                qmake = get_output("which", qmake)
             else:
                 # try to determine qmake version automatically
                 qmake = get_output("which", "qmake-qt{0:d}".format(major_version))
@@ -604,7 +604,7 @@ int main()
                 self.qt4libs = ["QtGui", "QtCore"]
         if not self.disable_qt5:
             set_qmake_path(major_version=5)
-            if self.isDarwin:
+            if os.path.isdir("/usr/local/Cellar"):
                 self.qt5libs = []
             else:
                 self.qt5libs = ["Qt5Widgets", "Qt5Gui", "Qt5Core"]
@@ -1293,6 +1293,15 @@ int main()
                 ldflags.append("-dll")
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
+            elif self.isDarwin:
+                # check if Qt is built as a framework
+                if lib and os.path.isdir(os.path.join(lib[0], 'QtCore.framework')):
+                    libs = []
+                    for l in self.qt5lib:
+                        ldflags.extend(["-F", l])
+                        cflags.extend(["-F", l])
+                    ldflags.extend(["-framework", "QtGui",
+                                    "-framework", "QtCore"])
             gksQt4Ext = Extension("gr.qtplugin",
                                   _plugins_path["qtplugin.cxx"],
                                   define_macros=defines,
@@ -1319,13 +1328,16 @@ int main()
                 libs.extend(_libs_msvc)
                 cflags.extend(_msvc_extra_compile_args)
             elif self.isDarwin:
-                for l in self.qt5lib:
-                    ldflags.extend(["-F", l])
-                    cflags.extend(["-F", l])
-                ldflags.extend(["-framework", "QtWidgets",
-                                "-framework", "QtGui",
-                                "-framework", "QtCore",
-                                "-stdlib=libc++"])
+                # check if Qt is built as a framework
+                if lib and os.path.isdir(os.path.join(lib[0], 'QtCore.framework')):
+                    libs = []
+                    for l in self.qt5lib:
+                        ldflags.extend(["-F", l])
+                        cflags.extend(["-F", l])
+                    ldflags.extend(["-framework", "QtWidgets",
+                                    "-framework", "QtGui",
+                                    "-framework", "QtCore"])
+                ldflags.append("-stdlib=libc++")
                 cflags.append("-stdlib=libc++")
             gksQt5Ext = Extension("gr.qt5plugin",
                                   _plugins_path["qt5plugin.cxx"],
