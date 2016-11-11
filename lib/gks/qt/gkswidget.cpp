@@ -1,15 +1,18 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <QtGui>
+#include <QtGlobal>
+#if QT_VERSION >= 0x050000
+    #include <QtWidgets>
+#else
+    #include <QtGui>
+#endif
 #include <qpainter.h>
 #include <qpixmap.h>
 #include <qimage.h>
 
 #include "gkswidget.h"
-
 #include "gks.h"
 #include "gkscore.h"
 
@@ -58,6 +61,8 @@
 #ifndef min
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
+
+int GKSWidget::lastWidgetNumber = 0;
 
 static
 gks_state_list_t gkss_, *gkss;
@@ -264,7 +269,7 @@ static
 QPixmap *create_pattern(int pattern)
 {
   int parray[33];
-  register int i, j;
+  int i, j;
   QPixmap *pm;
 
   gks_inq_pattern_array(pattern, parray);
@@ -525,7 +530,7 @@ void marker_routine(
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
-  register int i, draw;
+  int i, draw;
 
   for (i = 0; i < n; i++)
     {
@@ -705,7 +710,7 @@ void text(double px, double py, int nchars, char *chars)
 static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
-  register int i;
+  int i;
   double x, y;
   int ix, iy;
   QPolygon *points;
@@ -780,7 +785,7 @@ void cellarray(
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
-  register int i, j, ix, iy, ind, rgb;
+  int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   QImage *img;
   int red, green, blue;
@@ -837,6 +842,10 @@ void cellarray(
 
   delete img;
 }
+
+
+
+
 
 static
 void interp(char *str)
@@ -1169,6 +1178,7 @@ GKSQtWindow::GKSQtWindow(QWidget *parent)
   activeWidget = NULL;
 
   server = new GKSServer();
+  connect(server, SIGNAL(openWindow()), this, SLOT(openWindow()));
   connect(server, SIGNAL(data(char *)), this, SLOT(interpret(char *)));
 
   p = &p_;
@@ -1502,23 +1512,35 @@ void GKSQtWindow::createMenubar()
   QMetaObject::connectSlotsByName(this);
 }
 
-void GKSQtWindow::interpret(char *dl)
+void GKSQtWindow::openWindow()
 {
   numWidgets++;
 
-  GKSWidget *widget =  new GKSWidget(NULL, Qt::Window);
+  GKSWidget *widget = new GKSWidget(NULL, Qt::Window);
+  activeWidget = widget;
+
   widget->setAttribute(Qt::WA_DeleteOnClose);
   mdiArea->addSubWindow(widget, Qt::Window);
 
-  activeWidget = widget;
-
   widget->setWidgetNumber(numWidgets);
+  widget->setLastWidgetNumber(numWidgets);
   widget->setRotation(rotation);
   widget->setRotateBy(rotateBy);
-
-  widget->setDisplayList(dl);
   widget->show();
-  widget->repaint();
+}
+
+void GKSQtWindow::interpret(char *dl)
+{
+  int sp = 0, *len;
+  char *s;
+
+  s = dl;
+
+  RESOLVE(len, int, sizeof(int));
+
+  activeWidget->setDisplayList(dl);
+  activeWidget->show();
+  activeWidget->repaint();
 }
 
 void GKSQtWindow::on_actionQuitGKSQt_triggered()
@@ -1723,7 +1745,7 @@ void GKSQtWindow::SaveFileAs (const QString fname)
   }
 
   QFileInfo *fi = new QFileInfo(fname);
-  bool fmtOk = supportedFileFmtList.contains(fi->suffix().toAscii());
+  bool fmtOk = supportedFileFmtList.contains(fi->suffix().toLatin1());
 
   if (fmtOk) {
     bool ok           = false;
@@ -1760,7 +1782,21 @@ void GKSWidget::setWidgetNumber(int number)
 {
   widgetNumber = number;
   this->setWindowTitle(QString("GKS Window %1").arg(widgetNumber));
+}
 
+void GKSWidget::setLastWidgetNumber(int number)
+{
+  lastWidgetNumber = number;
+}
+
+int GKSWidget::getWidgetNumber()
+{
+  return widgetNumber;
+}
+
+int GKSWidget::getLastWidgetNumber()
+{
+  return lastWidgetNumber;
 }
 
 QPixmap* GKSWidget::getPixmap()
@@ -1791,6 +1827,13 @@ void GKSWidget::paintEvent(QPaintEvent *)
         interp(dl);
         pm = new QPixmap(* (p->pm));
         first = false;
+      } else {
+        if (widgetNumber == GKSWidget::getLastWidgetNumber()) {
+        p->pm->fill(Qt::white);
+        interp(dl);
+        pm = new QPixmap(* (p->pm));
+        } else {
+        }
       }
 
       painter.drawPixmap(0, 0, *pm);

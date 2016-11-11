@@ -13,6 +13,7 @@
 #include <QSignalMapper>
 #include <QPainter>
 #include <QIcon>
+#include <QPrinter>
 
 #include "gksserver.h"
 
@@ -25,6 +26,9 @@ class GKSWidget: public QWidget
   ~GKSWidget();
 
   void setWidgetNumber(int number = 0);
+  void setLastWidgetNumber(int number = 0);
+  int getWidgetNumber();
+  int getLastWidgetNumber();
   QPixmap* getPixmap();
 
  protected:
@@ -32,6 +36,7 @@ class GKSWidget: public QWidget
 
  private:
   int widgetNumber;
+  static int lastWidgetNumber;
   int rotation;
   qreal rotateBy;
   char *dl;
@@ -144,6 +149,7 @@ class GKSQtWindow : public QMainWindow
 
 public slots:
   void interpret(char *dl);
+  void openWindow();
   void updateMenus();
   void setActiveSubWindow(QWidget *window);
 };

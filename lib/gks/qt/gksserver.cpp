@@ -13,6 +13,7 @@ GKSServer::GKSServer(QObject *parent)
   : QTcpServer(parent)
 {
   setMaxPendingConnections(MAXCONN);
+  connect(this, SIGNAL(newConnection()), this, SLOT(open()));
   connect(this, SIGNAL(newConnection()), this, SLOT(connectSocket()));
   s = NULL;
   bool ok = listen(QHostAddress::Any, PORT);
@@ -29,10 +30,16 @@ GKSServer::GKSServer(QObject *parent)
   keepOnDisplay = false;
 }
 
+void GKSServer::open()
+{
+  emit(openWindow());
+}
+
 void GKSServer::connectSocket()
 {
-  if (s != NULL)
+  if (s != NULL) {
     s->disconnectFromHost();
+  }
 
   s = this->nextPendingConnection();
 
@@ -43,34 +50,43 @@ void GKSServer::connectSocket()
 void GKSServer::readClient()
 {
   qint64 cc;
+  int length;
 
-  if (nbyte == 0)
-    {
-      if (s->bytesAvailable() < (int) sizeof(int))
-	return;
-      cc = s->read((char *) &nbyte, sizeof(int));
-      if (nbyte > dl_size)
-	{
-	  dl = (char *) realloc(dl, nbyte);
-          dl_size = nbyte;
-	}
-    }
-  if (s->bytesAvailable() < nbyte)
-    return;
+  length = s->bytesAvailable();
 
-  cc = s->read(dl, nbyte);
-  if (cc == nbyte)
+  while (length > 0)
     {
-      if (nbyte + 4 > ba_size)
-	{
-	  ba = (char *) realloc(ba, nbyte + 4);
-	  ba_size = nbyte + 4;
-	}
-      memmove(ba, dl, nbyte);
-      memset(ba + nbyte, 0, 4);
-      if (!s->bytesAvailable())
-	emit(data(ba));
-      nbyte = 0;
+      if (nbyte == 0)
+        {
+          if (s->bytesAvailable() < (int) sizeof(int))
+            return;
+          cc = s->read((char *) &nbyte, sizeof(int));
+
+          if (nbyte > dl_size)
+            {
+              dl = (char *) realloc(dl, nbyte);
+              dl_size = nbyte;
+            }
+        }
+      if (s->bytesAvailable() < nbyte)
+        return;
+
+      cc = s->read(dl, nbyte);
+      if (cc == nbyte)
+        {
+          if (nbyte + 4 > ba_size)
+            {
+              ba = (char *) realloc(ba, nbyte + 4);
+              ba_size = nbyte + 4;
+            }
+          memmove(ba, dl, nbyte);
+          memset(ba + nbyte, 0, 4);
+
+          emit(data(ba));
+          nbyte = 0;
+
+          length = s->bytesAvailable();
+        }
     }
 }
 

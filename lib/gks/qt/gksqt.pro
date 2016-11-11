@@ -1,3 +1,6 @@
+contains(QT_VERSION, ^5\\..*) {
+QT += widgets printsupport gui network
+}
 INCLUDEPATH	+= ../
 HEADERS		= gkswidget.h gksserver.h
 SOURCES		= gksqt.cpp gkswidget.cpp gksserver.cpp \
