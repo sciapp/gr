@@ -313,6 +313,7 @@ static
 void resize_window(void)
 {
   int width, height;
+  QWidget *parentWidget;
 
   width  = nint((p->viewport[1] - p->viewport[0]) / 2.54 *
                  activeWidget->logicalDpiX() * 100);
@@ -321,7 +322,9 @@ void resize_window(void)
 
   if (p->width != width || p->height != height)
     {
-      activeWidget->setFixedSize(width, height);
+      parentWidget = activeWidget->parentWidget();
+      parentWidget->resize(width + parentWidget->width() - p->width,
+                           height + parentWidget->height() - p->height);
 
       p->width = width;
       p->height = height;
@@ -1772,7 +1775,8 @@ GKSWidget::GKSWidget(QWidget *parent, Qt::WindowFlags f)
   rotation = 0;
   rotateBy = 90.0;
   widgetNumber = 1;
-  this->setFixedSize(p->width, p->height);
+  this->resize(p->width, p->height);
+  this->setMinimumSize(p->width, p->height);
 }
 
 GKSWidget::~GKSWidget() {
@@ -1838,6 +1842,31 @@ void GKSWidget::paintEvent(QPaintEvent *)
 
       painter.drawPixmap(0, 0, *pm);
     }
+}
+
+void GKSWidget::resizeEvent(QResizeEvent *)
+{
+  p->width = this->width();
+  p->height = this->height();
+
+  p->viewport[0] = 0;
+  p->viewport[1] = p->width * 2.54 / activeWidget->logicalDpiX() * 0.01;
+  p->viewport[2] = 0;
+  p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() * 0.01;
+
+  if (p->pm)
+    {
+      delete p->pixmap;
+      delete p->pm;
+
+      p->pm = new QPixmap(p->width, p->height);
+      p->pm->fill(Qt::white);
+
+      p->pixmap = new QPainter(p->pm);
+      p->pixmap->setClipRect(0, 0, p->width, p->height);
+    }
+
+  this->repaint();
 }
 
 void GKSWidget::rotate()

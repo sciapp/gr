@@ -33,6 +33,7 @@ class GKSWidget: public QWidget
 
  protected:
   void paintEvent(QPaintEvent *event);
+  void resizeEvent(QResizeEvent *event);
 
  private:
   int widgetNumber;
