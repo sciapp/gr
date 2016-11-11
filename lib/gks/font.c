@@ -72,8 +72,8 @@ void gks_lookup_font(int fd, int version, int font, int chr, stroke_data_t *s)
 
   char buf[256];
   int umlaut, sharp_s, offset;
-  register int i, *elptr;
-  register char *ebptr;
+  int i, *elptr;
+  char *ebptr;
 
   if (gks == -1)
     {

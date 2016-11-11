@@ -52,7 +52,7 @@ int swabint(char p[4])
 static
 void copy(char *s, int nmemb, int size)
 {
-  register int i;
+  int i;
 
   memmove(p->buffer + p->nbytes, (void *) s, nmemb * size);
   if (size == 4)

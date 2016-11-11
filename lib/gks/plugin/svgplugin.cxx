@@ -339,7 +339,7 @@ int reverse(int value)
 static
 void create_pattern(void)
 {
-  register int i, j, height;
+  int i, j, height;
   int parray[33];
   png_byte bit_depth = 1;
   png_byte color_type = PNG_COLOR_TYPE_GRAY;
@@ -531,7 +531,7 @@ void marker_routine(int n, double *px, double *py, int mtype, double mscale,
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
-  register int i, draw;
+  int i, draw;
 
   for (i = 0; i < n; i++)
     {
@@ -678,7 +678,7 @@ char *base64_stream(const char *path)
 static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
-  register int i, j;
+  int i, j;
   double x, y, ix, iy;
   char *s, line[80];
 
@@ -953,7 +953,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   double ix1, ix2, iy1, iy2;
   int x, y, width, height;
   int red, green, blue, alpha;
-  register int i, j, ix, iy, ind, rgb;
+  int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   png_byte bit_depth = 8;
   png_byte color_type = PNG_COLOR_TYPE_RGBA;
@@ -1177,7 +1177,7 @@ void gks_drv_js(
   int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
 {
-  register int i;
+  int i;
 
   p = (ws_state_list *) *ptr;
 

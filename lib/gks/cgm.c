@@ -254,8 +254,8 @@ static void cgmt_string(char *cptr, int slen)
 static void cgmt_int(int xin)
 {
   static char buf[max_pwrs + 2];
-  register char *cptr;
-  register int is_neg, j;
+  char *cptr;
+  int is_neg, j;
 
   cptr = buf + max_pwrs + 1;
   *cptr = '\0';
@@ -1979,8 +1979,8 @@ static void cgmb_mfellist(void)
 
 static void cgmb_fontlist(void)
 {
-  register int i, slen;
-  register char *s;
+  int i, slen;
+  char *s;
   int font;
 
   for (i = 0, slen = 0; i < max_std_textfont; i++)

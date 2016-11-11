@@ -497,7 +497,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
-  register int i, j, k;
+  int i, j, k;
   double x, y, ix, iy;
   int fl_inter, fl_style, size;
   int pattern[33];
@@ -815,7 +815,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   int ix1, ix2, iy1, iy2;
   int width, height;
   int red, green, blue;
-  register int i, j, ix, iy, ind, rgb;
+  int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   png_byte bit_depth = 8;
   png_byte color_type = PNG_COLOR_TYPE_RGB;
@@ -1029,7 +1029,7 @@ void gks_pgfplugin(
     int lr1, double *r1, int lr2, double *r2,
     int lc, char *chars, void **ptr)
 {
-  register int i;
+  int i;
 
   p = (ws_state_list *) *ptr;
 

@@ -1867,7 +1867,7 @@ void gks_set_rgb(int index, double red, double green, double blue)
 void gks_fit_ws_viewport(double *viewport, double xmax, double ymax,
                          double margin)
 {
-  register int i;
+  int i;
   double w, h, ratio, half_margin;
 
 /* fit viewport into available device space */
@@ -1937,7 +1937,7 @@ void gks_seg_xform_rel(double *x, double *y)
 
 void gks_set_dev_xform(gks_state_list_t *s, double *window, double *viewport)
 {
-  register int i;
+  int i;
   int tnr;
 
   for (i = 0; i < 4; i++)
@@ -1970,7 +1970,7 @@ void gks_set_dev_xform(gks_state_list_t *s, double *window, double *viewport)
 
 void gks_inq_dev_xform(double *window, double *viewport)
 {
-  register int i;
+  int i;
 
   for (i = 0; i < 4; i++)
     {
@@ -2169,7 +2169,7 @@ gks_dash(double x, double y, void (*move)(double, double),
 static
 int clip_code(double x, double y)
 {
-  register int code = 0;
+  int code = 0;
 
   if (x < cxl)
     code = LEFT;
@@ -2187,8 +2187,8 @@ int clip_code(double x, double y)
 static
 int clip_line(double *x0, double *y0, double *x1, double *y1)
 {
-  register int c, c0, c1;
-  register double x = 0, y = 0;
+  int c, c0, c1;
+  double x = 0, y = 0;
 
   c0 = clip_code(*x0, *y0);
   c1 = clip_code(*x1, *y1);
@@ -2241,7 +2241,7 @@ void gks_emul_polyline(int n, double *px, double *py, int ltype, int tnr,
 {
   double x0, y0, x, y, x1, y1;
   int clip = 1, visible;
-  register int i, j, m;
+  int i, j, m;
 
   dtype = ltype;
   seglen = 0;
@@ -2286,7 +2286,7 @@ void gks_emul_polyline(int n, double *px, double *py, int ltype, int tnr,
 void gks_emul_polymarker(
   int n, double *px, double *py, void (*marker)(double x, double y, int mtype))
 {
-  register int i;
+  int i;
   int tnr, mtype;
   double xn, yn;
 
@@ -2327,7 +2327,7 @@ void inq_text_extent(
   char *chars, int nchars, int font, int prec,
   int *txx, int *size, int *bottom, int *base, int *cap, int *top)
 {
-  register int i;
+  int i;
   stroke_data_t s;
 
   *txx = 0;
@@ -2375,7 +2375,7 @@ void draw_character(double x, double y, char chr, int font,
   void (*fillarea)(int n, double *px, double *py, int tnr),
   int flag)
 {
-  register int i;
+  int i;
   stroke_data_t s;
   int xmin, xmax, ymin, ymax, xc, yc, n;
   double xn, yn, px[64], py[64];
@@ -2486,7 +2486,7 @@ void gks_emul_text(double px, double py, int nchars, char *chars,
   void (*polyline)(int n, double *px, double *py, int ltype, int tnr),
   void (*fillarea)(int n, double *px, double *py, int tnr))
 {
-  register int i;
+  int i;
   int tnr, font, prec, alh, alv, path;
   double xn, yn, chsp, ax, ay, spacex, spacey;
   int txx, size, bottom, base, cap, top, space;
@@ -2577,7 +2577,7 @@ void gks_emul_text(double px, double py, int nchars, char *chars,
 static
 void minmax(int n, double *a, double *amin, double *amax)
 {
-  register int i;
+  int i;
 
   *amin = *amax = a[0];
   for (i = 1; i < n; i++)
@@ -2640,7 +2640,7 @@ void calc_intersect(
 static
 void sort(int n, double *x, double *y, int inc)
 {
-  register int i, j;
+  int i, j;
   int flag;
   double tmp;
 
@@ -2856,7 +2856,7 @@ int gks_get_ws_type(void)
 void gks_util_inq_text_extent(double px, double py, char *chars, int nchars,
   double *cpx, double *cpy, double tx[4], double ty[4])
 {
-  register int i;
+  int i;
   int tnr, font, prec, alh, alv, path;
   double x0, y0, xn, yn, chsp, ax, ay, aspace, spacex, spacey;
   int txx, size, bottom, base, cap, top, space;

@@ -308,7 +308,7 @@ static
 char *Ascii85Tuple(unsigned char *data)
 {
   static char tuple[6];
-  register long i, x;
+  long i, x;
   unsigned long code, quantum;
 
   code = ((((unsigned long) data[0] << 8) | (unsigned long) data[1]) << 16) |
@@ -342,7 +342,7 @@ void Ascii85Initialize(void)
 static
 void Ascii85Flush(void)
 {
-  register char *tuple;
+  char *tuple;
 
   packb(p->a85line);
   if (p->a85offset > 0)
@@ -360,8 +360,8 @@ static
 void Ascii85Encode(unsigned char code)
 {
   long n, i = 0;
-  register char *q;
-  register unsigned char *c;
+  char *q;
+  unsigned char *c;
   char b[100];
 
   p->ascii85_buffer[p->a85offset] = code;
@@ -411,7 +411,7 @@ unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
   } TableType;
 
   long index;
-  register long i;
+  long i;
   TableType *table;
   unsigned long accumulator, number_bits, code_width, last_code, next_index;
 

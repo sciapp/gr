@@ -541,7 +541,7 @@ static void marker_routine(
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
-  register int i, draw;
+  int i, draw;
 
   for (i = 0; i < n; i++)
     {
@@ -682,7 +682,7 @@ static void set_font(int font)
 
 static void fill_routine(int n, double *px, double *py, int tnr)
 {
-  register int i;
+  int i;
   double x, y;
   int ix, iy;
   wxPoint *points;
@@ -747,7 +747,7 @@ static void cellarray(
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
-  register int i, j, ix, iy, ind, rgb;
+  int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   int red, green, blue;
 
@@ -818,7 +818,7 @@ static void cellarray(
 static wxBitmap *create_pattern(int pattern)
 {
   int parray[33];
-  register int i, j;
+  int i, j;
 
   gks_inq_pattern_array(pattern, parray);
 

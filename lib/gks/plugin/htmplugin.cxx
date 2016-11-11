@@ -467,7 +467,7 @@ void polymarker(int n, double *px, double *py)
   int mk_type, mk_color, ln_width;
   double mk_size;
   double x, y;
-  register int i;
+  int i;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
@@ -576,7 +576,7 @@ void image_routine(double xmin, double xmax, double ymin, double ymax,
   int ix1, ix2, iy1, iy2, ci, i;
   int width, height, j;
   int red, green, blue,alpha;
-  register int ix, iy, rgb;
+  int ix, iy, rgb;
   int swapx, swapy;
   png_byte bit_depth = 8;
   png_byte color_type = PNG_COLOR_TYPE_RGBA;
@@ -782,7 +782,7 @@ int reverse(int value)
 static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
-  register int i, j, k;
+  int i, j, k;
   double x, y, ix, iy;
   int fl_inter, fl_style;
   int pattern[33], size;
@@ -1127,7 +1127,7 @@ void gks_htmplugin(
   int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
 {
-  register int i;
+  int i;
 
   p = (ws_state_list *) *ptr;
 

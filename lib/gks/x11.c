@@ -987,7 +987,7 @@ static
 void allocate_rendercolors(void)
 {
   XRenderColor rendercolor;
-  register int i;
+  int i;
 
   for (i = 0; i < MAX_COLOR; i++)
     {
@@ -1009,7 +1009,7 @@ void allocate_rendercolors(void)
 static
 void free_rendercolors(void)
 {
-  register int i;
+  int i;
 
   for (i = 0; i < MAX_COLOR; i++)
     if (p->havecolor[i])
@@ -1345,7 +1345,7 @@ void initialize_arrays(void)
  */
 
 {
-  register int i, j;
+  int i, j;
   int pat, pa[33];
 
   if (!have_patterns)
@@ -1849,7 +1849,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 static
 void draw_points(int n, double *px, double *py, int tnr)
 {
-  register int i;
+  int i;
   double xn, yn;
 
   if (n > max_points)
@@ -1880,8 +1880,8 @@ void marker_routine(
 {
   double clrt[4] = {0, 1, 0, 1};
   double x, y;
-  register int i, xd, yd;
-  register Bool draw;
+  int i, xd, yd;
+  Bool draw;
 
   if (gksl->clip == GKS_K_CLIP || mtype != GKS_K_MARKERTYPE_DOT)
     {
@@ -1955,7 +1955,7 @@ void set_line_attr(int linetype, double linewidth)
 static
 int clip_code(int x, int y)
 {
-  register int code = 0;
+  int code = 0;
 
   if (x < 0)
     code = LEFT;
@@ -1974,8 +1974,8 @@ int clip_code(int x, int y)
 static
 void clip_line(int *x0, int *x1, int *y0, int *y1, Bool *visible, Bool *clip)
 {
-  register int c, c0, c1;
-  register int x = 0, y = 0;
+  int c, c0, c1;
+  int x = 0, y = 0;
 
   c0 = clip_code(*x0, *y0);
   c1 = clip_code(*x1, *y1);
@@ -2031,7 +2031,7 @@ static
 void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x1, y1;
-  register int i, j, npoints, m;
+  int i, j, npoints, m;
   int ix0, iy0, ix1, iy1, x, y;
   Bool visible, clip;
 
@@ -2157,7 +2157,7 @@ static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
   double x, y;
-  register int i, npoints;
+  int i, npoints;
 
   if (n > max_points)
     {
@@ -2231,7 +2231,7 @@ void x_draw_string(
   XftDraw *draw;
   XftColor *color = NULL;
   unsigned int *s32;
-  register int i, j;
+  int i, j;
 
   draw = XftDrawCreate(display, d, p->vis, p->cmap);
   if (p->havecolor[p->ccolor])
@@ -2267,10 +2267,10 @@ static
 void draw_string(int x, int y, int width, int height, char *chars, int nchars)
 {
   Pixmap src, dest;
-  register XImage *from, *to;
-  register int ascent, descent, w = 0, h = 0;
-  register int i, j, ii = 0, jj = 0;
-  register unsigned long pixel;
+  XImage *from, *to;
+  int ascent, descent, w = 0, h = 0;
+  int i, j, ii = 0, jj = 0;
+  unsigned long pixel;
 
   height += p->cfont->descent + 2;
   ascent = p->cfont->ascent;
@@ -2405,7 +2405,7 @@ void text_routine(double x, double y, int nchars, char *chars)
 #ifndef NO_XFT
   XGlyphInfo extents;
   unsigned int *s32;
-  register int i, j;
+  int i, j;
 #endif
 
   NDC_to_DC(x, y, xorg, yorg);
@@ -2734,9 +2734,9 @@ static
 void draw_image(int x, int y, int width, int height, byte *ba, Bool true_color)
 {
   Pixmap dest;
-  register XImage *to;
-  register int i, j;
-  register unsigned long pixel, rgb;
+  XImage *to;
+  int i, j;
+  unsigned long pixel, rgb;
   int r, g, b;
   double a, red, green, blue;
 
@@ -2921,7 +2921,7 @@ void pixmap_to_gif(void)
 {
   int size, besize;
   byte c, r, g, b, *pix, *ppix, *beimage;
-  register int i, j, k, coli, mcolor;
+  int i, j, k, coli, mcolor;
   XImage *image;
   int BitsPerPixel, ColorMapSize, InitCodeSize;
   unsigned long pixel;
@@ -3053,8 +3053,8 @@ void pixmap_to_gif(void)
 static
 int compress_rle(byte *pix, int size, byte *beimage)
 {
-  register byte c = 0, pc = 0;
-  register int besize, count, i, j;
+  byte c = 0, pc = 0;
+  int besize, count, i, j;
 
   besize = 0;
   count = 0;
@@ -3146,7 +3146,7 @@ void pixmap_to_rf(void)
   XImage *image;
   int linesize, size, besize, depth = 8;
   byte *pix, *ppix, *beimage;
-  register int i, j, k, coli;
+  int i, j, k, coli;
   byte rmap[MAX_COLOR], gmap[MAX_COLOR], bmap[MAX_COLOR];
   unsigned long pixel;
 
@@ -3361,10 +3361,10 @@ stop:
 
 
 #define COPY_BODY(type) \
-  register int i, j, ix, iy, nbytes; \
-  register int *ilptr, *ipptr; \
-  register byte *blptr, *bpptr, *packed_colia; \
-  register type *elptr, *epptr, tmp, *tmpptr; \
+  int i, j, ix, iy, nbytes; \
+  int *ilptr, *ipptr; \
+  byte *blptr, *bpptr, *packed_colia; \
+  type *elptr, *epptr, tmp, *tmpptr; \
   type pixel[MAX_COLOR]; \
 \
   if (!true_color) \
@@ -3510,8 +3510,8 @@ void copy8(
 static
 void pixmap_to_bitmap(int w, int h, byte *ba)
 {
-  register byte *pix, *mbuffer, *bbuffer, mvalue, *first;
-  register int i, j, k, graylevel, error, bit, row_size;
+  byte *pix, *mbuffer, *bbuffer, mvalue, *first;
+  int i, j, k, graylevel, error, bit, row_size;
   int *lerr, *cerr, *terr, *error1, *error2;
 
   static unsigned char bit_flag[] =
@@ -3602,7 +3602,7 @@ void pixmap_to_bitmap(int w, int h, byte *ba)
 static
 void int64to32(int *a, int length)
 {
-  register int i;
+  int i;
   char *from, *to;
 
   to = from = (char *) a;
@@ -3621,7 +3621,7 @@ void int64to32(int *a, int length)
 static
 void int64to16(short int *a, int length)
 {
-  register int i;
+  int i;
   char *from, *to;
 
   to = from = (char *) a;
@@ -4086,7 +4086,7 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
 static
 int lookup_string(char *str)
 {
-  register int i;
+  int i;
   char s1[3], s2[3];
 
   s1[0] = str[0];

@@ -1259,7 +1259,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   double mk_size;
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
-  register int i, draw;
+  int i, draw;
 
   mk_type  = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size  = gkss->asf[4] ? gkss->mszsc : 1;
@@ -1459,7 +1459,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
-  register int i, j, ix, iy, ind;
+  int i, j, ix, iy, ind;
   int swapx, swapy, *tmpptr;
   CGColorSpaceRef cs;
   CGContextRef bitmap;

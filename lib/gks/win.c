@@ -267,7 +267,7 @@ void init_colors(void)
 static
 void create_patterns(void)
 {
-  register int i, j;
+  int i, j;
   int pattern, parray[33], width, height;
   short int bits[32];
 
@@ -812,7 +812,7 @@ void marker_routine(
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
-  register int i, draw;
+  int i, draw;
 
   for (i = 0; i < n; i++)
   {
@@ -882,8 +882,8 @@ void draw_text(int x, int y, int width, char *chars, int nchars)
   HBITMAP src, dest;
   RECT rc;
   COLORREF pixel, bg;
-  register int height, descent, w, h;
-  register int i, j, ii, jj;
+  int height, descent, w, h;
+  int i, j, ii, jj;
 
   if (p->path != 0)
   {
@@ -1101,7 +1101,7 @@ void text(double px, double py, int nchars, char *chars)
 static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
-  register int i;
+  int i;
   double x, y;
 
   if (n > max_points)
@@ -1212,7 +1212,7 @@ void cellarray(
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
-  register int i, j, ix, iy, ind;
+  int i, j, ix, iy, ind;
   int swapx, swapy;
   HDC hdc;
   HBITMAP hbm_old, hbm;

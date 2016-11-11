@@ -374,7 +374,7 @@ void gks_parse_env(void)
 
 void gks_open_gks(int errfil)
 {
-  register int i, tnr;
+  int i, tnr;
   ws_descr_t *ws;
 
   if (state == GKS_K_GKCL)
@@ -1592,7 +1592,7 @@ void gks_set_fill_color_index(int coli)
 
 void gks_set_asf(int *flag)
 {
-  register int i;
+  int i;
 
   if (state >= GKS_K_GKOP)
     {
@@ -2004,7 +2004,7 @@ void gks_copy_seg_to_ws(int wkid, int segn)
 
 void gks_set_seg_xform(int segn, double mat[3][2])
 {
-  register int i, j;
+  int i, j;
 
   if (state >= GKS_K_GKOP)
     {
@@ -2691,7 +2691,7 @@ void gks_inq_current_xformno(int *errind, int *tnr)
 
 void gks_inq_xform(int tnr, int *errind, double *wn, double *vp)
 {
-  register int i;
+  int i;
 
   if (tnr >= 0 && tnr < MAX_TNR)
     {
@@ -2709,7 +2709,7 @@ void gks_inq_xform(int tnr, int *errind, double *wn, double *vp)
 
 void gks_inq_clip(int *errind, int *clsw, double *clrt)
 {
-  register int i, tnr;
+  int i, tnr;
 
   *errind = GKS_K_NO_ERROR;
   *clsw = s->clip;

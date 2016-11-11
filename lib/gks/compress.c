@@ -64,7 +64,7 @@ static char accum[256];
  */
 static void flush_char()
 {
-  register int i;
+  int i;
 
   if (a_count > 0) {
     *s++ = a_count;
@@ -144,7 +144,7 @@ static void output(int code)
 
 static void cl_hash(register long hsize) /* reset code table */
 {
-  register int i;
+  int i;
 
   for (i = 0; i < hsize; i++)
     htab[i] = -1;
@@ -165,13 +165,13 @@ static void cl_block ()			/* table clear for block compress */
 
 void gks_compress(int bits, byte *in, int in_len, byte *out, int *out_len)
 {
-  register long fcode;
-  register int i = 0;
-  register int c;
-  register int ent;
-  register int disp;
-  register int hsize_reg;
-  register int hshift;
+  long fcode;
+  int i = 0;
+  int c;
+  int ent;
+  int disp;
+  int hsize_reg;
+  int hshift;
 
   init_bits = bits;
 

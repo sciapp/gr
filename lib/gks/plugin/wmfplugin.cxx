@@ -853,7 +853,7 @@ static
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
-  register int i, draw;
+  int i, draw;
 
   for (i = 0; i < n; i++)
     {
@@ -1011,7 +1011,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
-  register int i;
+  int i;
   double x, y;
   int ix, iy;
 
@@ -1242,7 +1242,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
-  register int i, j, ix, iy, ind;
+  int i, j, ix, iy, ind;
   int swapx, swapy, fill;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);

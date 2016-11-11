@@ -230,7 +230,7 @@ FIG_stream *fig_alloc_stream(void)
 static
 void fig_header(void)
 {
-  register int i;
+  int i;
 
   fig_printf(p->stream, "#FIG 3.2\nLandscape\nCenter\nMetric\nLetter"
 	     "\n100.00\nSingle\n-2\n%d 2\n", RESOLUTION);
@@ -450,7 +450,7 @@ void marker_routine(int n, double *px, double *py, int mtype, double mscale,
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
-  register int i, draw;
+  int i, draw;
 
   for (i = 0; i < n; i++)
     {
@@ -561,7 +561,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
-  register int i;
+  int i;
   double x, y;
   int ix, iy;
   int pat;
@@ -672,7 +672,7 @@ void text_routine(double x, double y, int nchars, char *chars)
 {
   int xstart, ystart, width, height, ch;
   double xrel, yrel, ax, ay;
-  register int i;
+  int i;
 
   NDC_to_DC(x, y, xstart, ystart);
 
@@ -790,7 +790,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
   int red, green, blue;
-  register int i, j, ix, iy, ind, rgb;
+  int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   png_byte bit_depth = 8;
   png_byte color_type = PNG_COLOR_TYPE_RGB;

@@ -1601,7 +1601,7 @@ void gr_updatews(void)
 #define gks(primitive) \
   int npoints = n; \
   double *px = x, *py = y; \
-  register int i; \
+  int i; \
 \
   check_autoinit; \
 \
@@ -1642,7 +1642,7 @@ void fillarea(int n, double *x, double *y)
 static
 void print_int_array(char *name, int n, int *data)
 {
-  register int i;
+  int i;
 
   gr_writestream(" %s=\"", name);
   for (i = 0; i < n; i++)
@@ -1657,7 +1657,7 @@ void print_int_array(char *name, int n, int *data)
 static
 void print_float_array(char *name, int n, double *data)
 {
-  register int i;
+  int i;
 
   gr_writestream(" %s=\"", name);
   for (i = 0; i < n; i++)
@@ -1672,7 +1672,7 @@ void print_float_array(char *name, int n, double *data)
 static
 void print_vertex_array(char *name, int n, vertex_t *vertices)
 {
-  register int i;
+  int i;
 
   gr_writestream(" %s=\"", name);
   for (i = 0; i < n; i++)
@@ -1687,7 +1687,7 @@ void print_vertex_array(char *name, int n, vertex_t *vertices)
 static
 void print_byte_array(char *name, int n, unsigned char *data)
 {
-  register int i;
+  int i;
 
   gr_writestream(" %s=\"", name);
   for (i = 0; i < n; i++)
@@ -1794,7 +1794,7 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
   int errind, tnr, halign, valign;
   char *s, *t;
   double ux, uy, angle, width = 0.0, height, chh;
-  register int i;
+  int i;
   int n, wkid = 0;
   double rx, ry, xx, yy, cpx, cpy;
 
@@ -2787,7 +2787,7 @@ int gr_textext(double x, double y, char *string)
 void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
 {
   int errind, tnr;
-  register int i;
+  int i;
 
   check_autoinit;
 
@@ -4880,8 +4880,8 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 static
 void init_hlr(void)
 {
-  register int sign, i, j, x1, x2;
-  register double *hide, a, b, m = 0;
+  int sign, i, j, x1, x2;
+  double *hide, a, b, m = 0;
   double x[3], y[3], z[3], yj;
   double eps;
 
@@ -4956,9 +4956,9 @@ void init_hlr(void)
 static
 void pline_hlr(int n, double *x, double *y, double *z)
 {
-  register int i, j, x1, x2;
-  register int visible, draw;
-  register double *hide, a, b, c, m = 0;
+  int i, j, x1, x2;
+  int visible, draw;
+  double *hide, a, b, c, m = 0;
 
   int saved_scale_options;
   double xj, yj;
@@ -6952,7 +6952,7 @@ void gr_drawimage(
   double xmin, double xmax, double ymin, double ymax,
   int width, int height, int *data, int model)
 {
-  register int n, i;
+  int n, i;
   int *img = data;
   double h, s, v, r, g, b;
 

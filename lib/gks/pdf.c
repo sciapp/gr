@@ -945,7 +945,7 @@ void init_colors(void)
 static
 void create_patterns(void)
 {
-  register int i, j, k;
+  int i, j, k;
   int pattern, parray[33];
 
   for (i = 0; i < PATTERNS; i++)
@@ -1123,7 +1123,7 @@ void draw(double x, double y)
 static
 void line_routine(int n, double *px, double *py, int ltype, int tnr)
 {
-  register int i, j, m;
+  int i, j, m;
   double x, y, xdev, ydev;
 
   m = ltype == DrawBorder ? n + 1 : n;
@@ -1346,7 +1346,7 @@ void marker_routine(int n, double *px, double *py, int mtype, double mscale,
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
-  register int i, draw;
+  int i, draw;
 
   for (i = 0; i < n; i++)
     {
@@ -1435,7 +1435,7 @@ void text_routine(double x, double y, int nchars, char *chars)
   double phi, ax, ay;
   int width, ch;
   stroke_data_t buffer;
-  register int i;
+  int i;
 
   NDC_to_DC(x, y, xorg, yorg);
 
@@ -1603,7 +1603,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   double x1, y1, x2, y2;
   int x, y, width, height;
   double rx1, rx2, ry1, ry2;
-  register int i, j, ix, iy, color;
+  int i, j, ix, iy, color;
   PDF_image *image;
   int swapx, swapy, count, chars_per_line;
   unsigned char data[3];

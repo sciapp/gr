@@ -246,7 +246,7 @@ void set_color(int color)
 static
 void create_patterns(void)
 {
-  register int i, j, height;
+  int i, j, height;
   int pattern, parray[33];
 
   for (i = 0; i < PATTERNS; i++)
@@ -586,7 +586,7 @@ void marker_routine(
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
-  register int i, draw;
+  int i, draw;
 
   for (i = 0; i < n; i++)
   {
@@ -630,8 +630,8 @@ void draw_string(int x, int y, int width, int height, Str255 chars)
   Rect fromrect, torect, onrect;
   PixMapHandle frompix, topix, onpix;
   int *from, *to, from_width, to_width;
-  register int descent, w = 0, h = 0;
-  register int i, j, ii = 0, jj = 0;
+  int descent, w = 0, h = 0;
+  int i, j, ii = 0, jj = 0;
 
   if (p->path != 0)
     {
@@ -850,7 +850,7 @@ static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
   PolyHandle poly;
-  register int i;
+  int i;
   double x, y;
   int ix, iy;
 
@@ -916,7 +916,7 @@ void cellarray(
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
-  register int i, j, ix, iy, ind;
+  int i, j, ix, iy, ind;
   int swapx, swapy;
   RGBColor color;
   int rgb, red, green, blue;

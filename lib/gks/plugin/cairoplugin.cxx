@@ -489,7 +489,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
-  register int i, j, k;
+  int i, j, k;
   double x, y, ix, iy;
   int fl_inter, fl_style, size;
   int gks_pattern[33];
