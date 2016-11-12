@@ -645,22 +645,10 @@ void symbol_text(int nchars, char *chars)
 static
 void text_routine(double x, double y, int nchars, char *chars)
 {
-  int width, height;
   double xrel, yrel, ax, ay;
   double xstart, ystart;
   cairo_text_extents_t extents;
   char *str;
-
-  NDC_to_DC(x, y, xstart, ystart);
-
-  width = 0;
-  height = p->capheight;
-
-  xrel = width * xfac[gkss->txal[0]];
-  yrel = height * yfac[gkss->txal[1]];
-  CharXform(xrel, yrel, ax, ay);
-  xstart += ax;
-  ystart -= ay;
 
   /* Ugly workaround to avoid Cairo crashes when getting the text extent
      for a string that contains only a single character */
@@ -669,17 +657,15 @@ void text_routine(double x, double y, int nchars, char *chars)
   strcat(str, "  ");
 
   cairo_text_extents(p->cr, str, &extents);
-
   free(str);
 
-  if (gkss->txal[0] == GKS_K_TEXT_HALIGN_RIGHT) {
-    xstart -= (extents.width + extents.x_bearing);
-    ystart -= (extents.height + extents.y_bearing);
-  }
-  else if (gkss->txal[0] == GKS_K_TEXT_HALIGN_CENTER) {
-    xstart -= (extents.width/2 + extents.x_bearing);
-    ystart -= (extents.height/2 + extents.y_bearing);
-  }
+  NDC_to_DC(x, y, xstart, ystart);
+
+  xrel = (extents.width + extents.x_bearing) * xfac[gkss->txal[0]];
+  yrel = p->capheight * yfac[gkss->txal[1]];
+  CharXform(xrel, yrel, ax, ay);
+  xstart += ax;
+  ystart -= ay;
 
   if (p->angle != 0) {
     cairo_translate(p->cr, xstart, ystart);
