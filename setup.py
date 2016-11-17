@@ -111,8 +111,8 @@ class build_static(Command):
         # -- macosx-deployment-target ---------------
         if self.isDarwin:
             # check for interpreters MACOSX_DEPLOYMENT_TARGET setting
-            version = map(int, get_config_var(
-                               "MACOSX_DEPLOYMENT_TARGET").split('.'))
+            version = list(map(int, get_config_var(
+                                    "MACOSX_DEPLOYMENT_TARGET").split('.')))
             # require at least 10.7
             if version[0] == 10 and version[1] < 7:
                 version[1] = 7
