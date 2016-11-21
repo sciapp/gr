@@ -580,21 +580,21 @@ int main()
                 self.wxcxx = get_words(self.wxconfig, "--cxxflags")
         # -- qt -------------------------------------
         def set_qmake_path(major_version=4):
-            qmake = getattr(self, "qmake_qt{:d}".format(major_version))
+            qmake = getattr(self, "qmake_qt{0:d}".format(major_version))
             if qmake:
                 # use full qualified path for self.qmake_qt4
                 qmake = get_output("which", self.qmake_qt4)
             else:
                 # try to determine qmake version automatically
-                qmake = get_output("which", "qmake-qt{:d}".format(major_version))
+                qmake = get_output("which", "qmake-qt{0:d}".format(major_version))
                 if not qmake:
                     qmake = get_output("which", "qmake")
                     if qmake:
                         qt_version = get_output(qmake, "-query", "QT_VERSION")
-                        if not qt_version.startswith("{:d}.".format(major_version)):
+                        if not qt_version.startswith("{0:d}.".format(major_version)):
                             qmake = ""
             if qmake:
-                setattr(self, "qmake_qt{:d}".format(major_version), qmake)
+                setattr(self, "qmake_qt{0:d}".format(major_version), qmake)
 
         if not self.disable_qt4:
             set_qmake_path(major_version=4)
@@ -854,7 +854,7 @@ int main()
         # -- platform independend finalizers -------------------------------
         # qt
         def set_qt_flags(major_version=4):
-            qmake = getattr(self, "qmake_qt{:d}".format(major_version))
+            qmake = getattr(self, "qmake_qt{0:d}".format(major_version))
             disable_qt = False
             if not os.path.isfile(qmake):
                 disable_qt = True
@@ -884,7 +884,7 @@ int main()
                 attr_value = locals()[
                     attr_name] if attr_name in locals() else None
                 if attr_value is not None:
-                    attr_name = attr_name.replace("qt", "qt{:d}".format(
+                    attr_name = attr_name.replace("qt", "qt{0:d}".format(
                         major_version))
                     setattr(self, attr_name, attr_value)
 
