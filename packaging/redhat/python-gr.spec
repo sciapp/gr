@@ -14,7 +14,7 @@ Name:          python-gr-local
 Name:          python-gr
 %endif
 
-%define qmake qmake-qt4
+%define qmake_qt4 qmake-qt4
 %define grdir %{_prefix}/gr
 
 Summary:			GR, a universal framework for visualization applications
@@ -42,10 +42,12 @@ BuildRequires:		libXt-devel
 BuildRequires:		libXft-devel
 BuildRequires:		gtk2-devel
 %if 0%{?__jcns}
-%define qmake %{_prefix}/qt4/bin/qmake
+%define qmake_qt4 %{_prefix}/qt4/bin/qmake
+%define qmake_qt5 %{_prefix}/qt5/bin/qmake
 BuildRequires: python-local
 BuildRequires: python-setuptools-local
 BuildRequires: qt4-local
+BuildRequires: qt5-local
 Requires:      python-local
 Requires:      numpy-local
 %else
@@ -57,7 +59,8 @@ Requires:      numpy
 %endif
 
 %if 0%{?suse_version}
-%define qmake qmake
+%define qmake_qt4 qmake
+%define qmake_qt5 qmake-qt5
 BuildRequires:		Mesa-libGL-devel
 BuildRequires:		libqt4-devel
 BuildRequires:		libqt5-qtbase-devel
@@ -93,8 +96,10 @@ BuildRequires:		wxWidgets-devel
 
 # Qt5 BuildRequires for Fedora
 %if 0%{?fedora_version} >= 23
+%define qmake_qt5 qmake-qt5
 BuildRequires:		qt5-qtbase-devel
 %endif
+
 
 %description
 GR, a universal framework for visualization applications
@@ -122,13 +127,16 @@ GR, a universal framework for visualization applications
 
 
 %build
-%{__python} setup.py build_ext --static-extras --qmake-qt4=%{qmake}
+%{__python} setup.py build_ext --static-extras --qmake-qt4=%{qmake_qt4} \
+                               %{-qmake_qt5:--qmake-qt5=%{-qmake_qt5}}
 make -C 3rdparty GRDIR=%{grdir} DIR=%{THIRDPARTY}
 make -C 3rdparty extras GRDIR=%{grdir} DIR=%{THIRDPARTY}
 make GRDIR=%{grdir}
 
 %install
-%{__python} setup.py build_ext --static-extras --qmake-qt4=%{qmake} install --root=$RPM_BUILD_ROOT
+%{__python} setup.py build_ext --static-extras --qmake-qt4=%{qmake_qt4} \
+                               %{-qmake_qt5:--qmake-qt5=%{-qmake_qt5}} \
+                     install --root=$RPM_BUILD_ROOT
 make install GRDIR=%{grdir} DESTDIR=${RPM_BUILD_ROOT}
 
 %clean
@@ -141,4 +149,3 @@ make install GRDIR=%{grdir} DESTDIR=${RPM_BUILD_ROOT}
 %files -n gr
 %defattr(-,root,root)
 %{grdir}
-

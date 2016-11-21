@@ -11,6 +11,14 @@ export GRDIR=/usr/gr
 export DEB_BUILD_ROOT=/usr/src/packages/BUILD/debian
 #export DEB_BUILD_ROOT=/home/felder/dpkg/gr/debian
 
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+ifeq ( $(wildcard /usr/lib/$(DEB_HOST_MULTIARCH)/qt5/bin/qmake), )
+	QMAKE_QT5=qmake-qt5
+else
+	QMAKE_QT5=/usr/lib/$(DEB_HOST_MULTIARCH)/qt5/bin/qmake
+endif
+
+
 %:
 	dh $@ --with python2 --buildsystem=python_distutils
 
@@ -28,14 +36,17 @@ override_dh_auto_configure:
 	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/pixman-0.34.0.tar.gz
 
 override_dh_auto_build:
-	python setup.py build_ext --static-extras --qmake-qt4=qmake-qt4
+	python setup.py build_ext --static-extras --qmake-qt4=qmake-qt4 \
+				  --qmake-qt5=${QMAKE_QT5}
 	make -C 3rdparty GRDIR=${GRDIR} DIR=${THIRDPARTY}
 	make -C 3rdparty extras GRDIR=${GRDIR} DIR=${THIRDPARTY}
 	make GRDIR=${GRDIR}
 
 override_dh_auto_install:
 	mkdir -p ${DEB_BUILD_ROOT}/gr${GRDIR}
-	python setup.py build_ext --static-extras --qmake-qt4=qmake-qt4 install \
+	python setup.py build_ext --static-extras --qmake-qt4=qmake-qt4 \
+				  --qmake-qt5=${QMAKE_QT5} \
+			install \
 	--force --root=${DEB_BUILD_ROOT}/python-gr \
 	--no-compile -O0 --install-layout=deb
 	make install GRDIR=${GRDIR} DESTDIR=${DEB_BUILD_ROOT}/gr
