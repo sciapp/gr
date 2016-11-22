@@ -593,8 +593,7 @@ int main()
                         qt_version = get_output(qmake, "-query", "QT_VERSION")
                         if not qt_version.startswith("{0:d}.".format(major_version)):
                             qmake = ""
-            if qmake:
-                setattr(self, "qmake_qt{0:d}".format(major_version), qmake)
+            setattr(self, "qmake_qt{0:d}".format(major_version), qmake)
 
         if not self.disable_qt4:
             set_qmake_path(major_version=4)
