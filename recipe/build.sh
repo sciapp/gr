@@ -3,7 +3,7 @@
 opts="--static-extras"
 if [ `uname` = 'Darwin' ]
 then
-  opts="${opts} --disable-gtk --disable-x11 --disable-wx"
+  opts="${opts} --disable-gtk --disable-x11 --disable-wx --qmake-qt5=qmake"
 fi
 
 $PYTHON setup.py build_ext ${opts} install
