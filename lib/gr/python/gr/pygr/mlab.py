@@ -566,13 +566,13 @@ def _plot_data(**kwargs):
             gr.polymarker(x, y)
         elif kind == 'hist':
             y_min = _plt.kwargs['window'][2]
-            for i in range(1, len(y)):
+            for i in range(1, len(y)+1):
                 gr.setfillcolorind(989)
                 gr.setfillintstyle(gr.INTSTYLE_SOLID)
-                gr.fillrect(x[i-1], x[i], y_min, y[i])
+                gr.fillrect(x[i-1], x[i], y_min, y[i-1])
                 gr.setfillcolorind(1)
                 gr.setfillintstyle(gr.INTSTYLE_HOLLOW)
-                gr.fillrect(x[i-1], x[i], y_min, y[i])
+                gr.fillrect(x[i-1], x[i], y_min, y[i-1])
         elif kind == 'contour':
             z_min, z_max = _plt.kwargs['zrange']
             gr.setspace(z_min, z_max, 0, 90)
