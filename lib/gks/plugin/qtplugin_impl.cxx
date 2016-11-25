@@ -96,7 +96,7 @@ typedef struct ws_state_list_t
     QWidget *widget;
     QPainter *pixmap;
     int state, wtype;
-    int width, height;
+    int width, height, dpiX, dpiY;
     double a, b, c, d;
     double window[4], viewport[4];
     QRect rect[MAX_TNR];
@@ -221,10 +221,8 @@ void init_norm_xform(void)
 static
 void resize_window(void)
 {
-  p->width  = nint((p->viewport[1] - p->viewport[0]) / 2.54 *
-                    p->widget->logicalDpiX() * 100);
-  p->height = nint((p->viewport[3] - p->viewport[2]) / 2.54 *
-                    p->widget->logicalDpiY() * 100);
+  p->width  = nint((p->viewport[1] - p->viewport[0]) / 2.54 * p->dpiX * 100);
+  p->height = nint((p->viewport[3] - p->viewport[2]) / 2.54 * p->dpiY * 100);
 }
 
 static
@@ -938,8 +936,8 @@ void interp(char *str)
           p->window[1] = p->window[3] = 1.0;
 
           p->viewport[0] = p->viewport[2] = 0.0;
-          p->viewport[1] = p->width  * 2.54 / p->widget->logicalDpiX() / 100;
-          p->viewport[3] = p->height * 2.54 / p->widget->logicalDpiY() / 100;
+          p->viewport[1] = p->width  * 2.54 / p->dpiX / 100;
+          p->viewport[3] = p->height * 2.54 / p->dpiY / 100;
 
           set_xform();
           init_norm_xform();
@@ -1124,14 +1122,35 @@ void get_pixmap(void)
     env = (char *) gks_getenv("GKSconid");
 
   if (env != NULL)
-    sscanf(env, "%p!%p", (void **) &p->widget, (void **) &p->pixmap);
+    {
+      if (strchr(env, '!') == NULL)
+        {
+          p->widget = NULL;
+          sscanf(env, "%p", (void **) &p->pixmap);
+        }
+      else
+        sscanf(env, "%p!%p", (void **) &p->widget, (void **) &p->pixmap);
+    }
   else
     {
       gks_perror("can't obtain Qt drawable");
       exit(1);
     }
-  p->width = p->widget->width();
-  p->height = p->widget->height();
+
+  if (p->widget != NULL)
+    {
+      p->width  = p->widget->width();
+      p->height = p->widget->height();
+      p->dpiX   = p->widget->logicalDpiX();
+      p->dpiY   = p->widget->logicalDpiY();
+    }
+  else
+    {
+      p->width  = p->pixmap->device()->width();
+      p->height = p->pixmap->device()->height();
+      p->dpiX   = p->pixmap->device()->logicalDpiX();
+      p->dpiY   = p->pixmap->device()->logicalDpiY();
+    }
 }
 
 void QT_PLUGIN_ENTRY_NAME(
