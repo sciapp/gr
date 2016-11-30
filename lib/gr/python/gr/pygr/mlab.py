@@ -82,6 +82,17 @@ def contourf(*args, **kwargs):
     _plot_data(kind='contourf')
 
 
+def heatmap(d, **kwargs):
+    global _plt
+    d = np.array(d, copy=False)
+    if len(d.shape) != 2:
+        raise ValueError('expected 2-D array')
+    width, height = d.shape
+    _plt.kwargs.update(kwargs)
+    _plt.args = [(np.arange(width), np.arange(height), d, None, "")]
+    _plot_data(kind='heatmap')
+
+
 def wireframe(*args, **kwargs):
     global _plt
     _plt.kwargs.update(kwargs)
@@ -198,6 +209,16 @@ class _Figure(object):
 _plt = _Figure()
 
 
+def _colormap():
+    rgba = np.ones((256, 4), np.float32)
+    for color_index in range(256):
+        color = gr.inqcolor(1000+color_index)
+        rgba[color_index, 0] = ( color        % 256) / 255.0
+        rgba[color_index, 1] = ((color >> 8)  % 256) / 255.0
+        rgba[color_index, 2] = ((color >> 16) % 256) / 255.0
+    return rgba
+
+
 def _set_viewport(kind, subplot):
     global _plt
     metric_width, metric_height, pixel_width, pixel_height = gr.inqdspsize()
@@ -238,7 +259,7 @@ def _set_viewport(kind, subplot):
         viewport[2] += (1 - (subplot[3] - subplot[2])**2) * 0.02
     if kind in ('wireframe', 'surface', 'plot3', 'scatter3', 'trisurf'):
         viewport[1] -= 0.0525
-    if kind in ('contour', 'contourf', 'surface', 'trisurf'):
+    if kind in ('contour', 'contourf', 'surface', 'trisurf', 'heatmap'):
         viewport[1] -= 0.1
     gr.setviewport(*viewport)
     _plt.kwargs['viewport'] = viewport
@@ -381,7 +402,10 @@ def _draw_axes(kind, pass_=1):
             gr.axes3d(x_tick, 0, z_tick, x_org[0], y_org[0], z_org[0], x_major_count, 0, z_major_count, -ticksize)
             gr.axes3d(0, y_tick, 0, x_org[1], y_org[0], z_org[0], 0, y_major_count, 0, ticksize)
     else:
-        gr.grid(x_tick, y_tick, 0, 0, x_major_count, y_major_count)
+        if kind == 'heatmap':
+            ticksize = -ticksize
+        else:
+            gr.grid(x_tick, y_tick, 0, 0, x_major_count, y_major_count)
         gr.axes(x_tick, y_tick, x_org[0], y_org[0], x_major_count, y_major_count, ticksize)
         gr.axes(x_tick, y_tick, x_org[1], y_org[1], -x_major_count, -y_major_count, -ticksize)
 
@@ -591,6 +615,25 @@ def _plot_data(**kwargs):
             if _plt.kwargs['scale'] & gr.OPTION_Z_LOG != 0:
                 z = np.log(z)
             gr.surface(x, y, z, gr.OPTION_CELL_ARRAY)
+            _colorbar()
+        elif kind == 'heatmap':
+            x_min, x_max, y_min, y_max = _plt.kwargs['window']
+            width, height = z.shape
+            cmap = _colormap()
+            icmap = np.zeros(256, np.uint32)
+            for i in range(256):
+                r, g, b, a = cmap[i]
+                icmap[i] = (int(r*255) << 0) + (int(g*255) << 8) + (int(b*255) << 16) + (int(a*255) << 24)
+            z_range = np.ptp(z)
+            if z_range > 0:
+                data = (z - np.min(z)) / z_range * 255
+            else:
+                data = np.zeros((width, height))
+            rgba = np.zeros((width, height), np.uint32)
+            for x in range(width):
+                for y in range(height):
+                    rgba[x, y] = icmap[int(data[x, y])]
+            gr.drawimage(x_min, x_max, y_min, y_max, width, height, rgba)
             _colorbar()
         elif kind == 'wireframe':
             if x.shape == y.shape == z.shape:
