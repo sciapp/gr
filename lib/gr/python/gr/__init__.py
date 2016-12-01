@@ -2154,7 +2154,7 @@ def drawimage(xmin, xmax, ymin, ymax, width, height, data, model=0):
     The available color models are:
 
     +-----------------------+---+-----------+
-    |MODEL_RGB              |  0|   AARRGGBB|
+    |MODEL_RGB              |  0|   AABBGGRR|
     +-----------------------+---+-----------+
     |MODEL_HSV              |  1|   AAVVSSHH|
     +-----------------------+---+-----------+
