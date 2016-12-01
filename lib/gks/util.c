@@ -3222,8 +3222,8 @@ void gks_adjust_cellarray(
 {
   double xmin, xmax, ymin, ymax, tmp, dx, dy;
 
-  WC_to_NDC(*qx, *qy, gkss->cntnr, xmin, ymin);
-  WC_to_NDC(*rx, *ry, gkss->cntnr, xmax, ymax);
+  WC_to_NDC(*qx, *qy, gkss->cntnr, xmin, ymax);
+  WC_to_NDC(*rx, *ry, gkss->cntnr, xmax, ymin);
 
   if (*rx < *qx)
     {
@@ -3281,6 +3281,6 @@ void gks_adjust_cellarray(
       tmp = ymax; ymax = ymin; ymin = tmp;
     }
 
-  NDC_to_WC(xmin, ymin, gkss->cntnr, *qx, *qy);
-  NDC_to_WC(xmax, ymax, gkss->cntnr, *rx, *ry);
+  NDC_to_WC(xmin, ymax, gkss->cntnr, *qx, *qy);
+  NDC_to_WC(xmax, ymin, gkss->cntnr, *rx, *ry);
 }
