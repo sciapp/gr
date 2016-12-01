@@ -82,6 +82,13 @@ def contourf(*args, **kwargs):
     _plot_data(kind='contourf')
 
 
+def hexbin(*args, **kwargs):
+    global _plt
+    _plt.kwargs.update(kwargs)
+    _plt.args = _plot_args(args)
+    _plot_data(kind='hexbin')
+
+
 def heatmap(d, **kwargs):
     global _plt
     d = np.array(d, copy=False)
@@ -259,7 +266,7 @@ def _set_viewport(kind, subplot):
         viewport[2] += (1 - (subplot[3] - subplot[2])**2) * 0.02
     if kind in ('wireframe', 'surface', 'plot3', 'scatter3', 'trisurf'):
         viewport[1] -= 0.0525
-    if kind in ('contour', 'contourf', 'surface', 'trisurf', 'heatmap'):
+    if kind in ('contour', 'contourf', 'surface', 'trisurf', 'heatmap', 'hexbin'):
         viewport[1] -= 0.1
     gr.setviewport(*viewport)
     _plt.kwargs['viewport'] = viewport
@@ -616,6 +623,12 @@ def _plot_data(**kwargs):
                 z = np.log(z)
             gr.surface(x, y, z, gr.OPTION_CELL_ARRAY)
             _colorbar()
+        elif kind == 'hexbin':
+            nbins = _plt.kwargs.get('nbins', 40)
+            cntmax = gr.hexbin(x, y, nbins)
+            if cntmax > 0:
+                _plt.kwargs['zrange'] = (0, cntmax)
+                _colorbar()
         elif kind == 'heatmap':
             x_min, x_max, y_min, y_max = _plt.kwargs['window']
             width, height = z.shape
