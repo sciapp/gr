@@ -184,7 +184,10 @@ int gr3_export_pov_(const char *filename, int width, int height) {
           }
           fprintf(povfp,"mesh {\n");
           for (j = 0; j < context_struct_.mesh_list_[draw->mesh].data.number_of_vertices/3; j++) {
-            fprintf(povfp,"#local tex = texture { pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 } }\n",draw->colors[i*3+0]*colors[j*3+0],draw->colors[i*3+1]*colors[j*3+1],draw->colors[i*3+2]*colors[j*3+2]);
+            float red = (colors[j*9+0]+colors[j*9+3]+colors[j*9+6])/3.0;
+            float green = (colors[j*9+1]+colors[j*9+4]+colors[j*9+7])/3.0;
+            float blue = (colors[j*9+2]+colors[j*9+5]+colors[j*9+8])/3.0;
+            fprintf(povfp,"#local tex = texture { pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 } }\n",draw->colors[i*3+0]*red,draw->colors[i*3+1]*green,draw->colors[i*3+2]*blue);
             fprintf(povfp,"  smooth_triangle {\n");
             for (k = 0; k < 3; k++) {
               float vertex1[4];
