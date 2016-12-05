@@ -203,6 +203,49 @@ GR3API void gr3_drawmolecule(int n,
                              const float bond_color[3],
                              float bond_delta);
 
+            
+GR3API void gr3_createxslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned int ix,
+                                 unsigned int dim_x, unsigned int dim_y,
+                                 unsigned int dim_z, unsigned int stride_x,
+                                 unsigned int stride_y, unsigned int stride_z,
+                                 double step_x, double step_y, double step_z,
+                                 double offset_x, double offset_y, double offset_z);
+
+GR3API void gr3_createyslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned int iy,
+                                 unsigned int dim_x, unsigned int dim_y,
+                                 unsigned int dim_z, unsigned int stride_x,
+                                 unsigned int stride_y, unsigned int stride_z,
+                                 double step_x, double step_y, double step_z,
+                                 double offset_x, double offset_y, double offset_z);
+
+GR3API void gr3_createzslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned int iz,
+                                 unsigned int dim_x, unsigned int dim_y,
+                                 unsigned int dim_z, unsigned int stride_x,
+                                 unsigned int stride_y, unsigned int stride_z,
+                                 double step_x, double step_y, double step_z,
+                                 double offset_x, double offset_y, double offset_z);
+
+GR3API void gr3_drawxslicemesh(const GR3_MC_DTYPE *data, unsigned int ix,
+                               unsigned int dim_x, unsigned int dim_y,
+                               unsigned int dim_z, unsigned int stride_x,
+                               unsigned int stride_y, unsigned int stride_z,
+                               double step_x, double step_y, double step_z,
+                               double offset_x, double offset_y, double offset_z);
+
+GR3API void gr3_drawyslicemesh(const GR3_MC_DTYPE *data, unsigned int iy,
+                               unsigned int dim_x, unsigned int dim_y,
+                               unsigned int dim_z, unsigned int stride_x,
+                               unsigned int stride_y, unsigned int stride_z,
+                               double step_x, double step_y, double step_z,
+                               double offset_x, double offset_y, double offset_z);
+
+GR3API void gr3_drawzslicemesh(const GR3_MC_DTYPE *data, unsigned int iz,
+                               unsigned int dim_x, unsigned int dim_y,
+                               unsigned int dim_z, unsigned int stride_x,
+                               unsigned int stride_y, unsigned int stride_z,
+                               double step_x, double step_y, double step_z,
+                               double offset_x, double offset_y, double offset_z);
+
 #ifdef _WIN32
     #ifdef __cplusplus
         }

@@ -37,7 +37,7 @@ targets: prerequisites libGR3.so
 prerequisites:
 	@make -C ../gr
 
-libGR3.so: gr3.c $(GR3_PLATFORM_SPECIFIC_C) gr3_convenience.c gr3_html.c gr3_povray.c gr3_png.c gr3_jpeg.c gr3_gr.c gr3_mc.c
+libGR3.so: gr3.c $(GR3_PLATFORM_SPECIFIC_C) gr3_convenience.c gr3_html.c gr3_povray.c gr3_png.c gr3_jpeg.c gr3_gr.c gr3_mc.c gr3_slices.c
 	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) ${ZLIBS} $(JPEGLIBS) $(GRLIBS) $(GLLIBS) $(PNGLIBS) \
 	$(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
 
@@ -52,6 +52,7 @@ gr3_png.c: gr3_internals.h
 gr3_jpeg.c: gr3_internals.h
 gr3_gr.c: gr3_internals.h
 gr3_mc.c: gr3.h gr3_mc_data.h
+gr3_slices.c: gr3.h
 
 install: targets
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi

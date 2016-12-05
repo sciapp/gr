@@ -35,7 +35,15 @@ __all__ = ['GR3_InitAttribute',
            'drawtubemesh',
            'createtubemesh',
            'drawspins',
-           'drawmolecule']
+           'drawmolecule',
+           'drawxslicemesh',
+           'drawyslicemesh',
+           'drawzslicemesh',
+           'createxslicemesh',
+           'createyslicemesh',
+           'createzslicemesh',
+           'drawslicemeshes',
+           'createslicemeshes']
 
 
 import sys
@@ -728,7 +736,7 @@ def createisosurfacemesh(grid, step=None, offset=None, isolevel=None):
     scaling_factor = 1.0 * numpy.iinfo(numpy.uint16).max / input_max
     isolevel = numpy.uint16(isolevel * scaling_factor)
     grid = (grid * scaling_factor).astype(numpy.uint16)
-    nz, ny, nx = grid.shape
+    nx, ny, nz = grid.shape
     if step is None and offset is None:
         step = (2.0/(nx-1), 2.0/(ny-1), 2.0/(nz-1))
         offset = (-1.0, -1.0, -1.0)
@@ -1158,6 +1166,293 @@ def drawmolecule(positions_or_filename, colors=None, radii=None, spins=None,
         spins.shape = (n, 3)
         drawspins(positions, spins, colors)
 
+
+def drawxslicemesh(grid, x=0.5, step=None, offset=None, position=(0, 0, 0), direction=(0, 0, 1), up=(0, 1, 0), color=(1, 1, 1), scale=(1, 1, 1)):
+    """
+    Draw a yz-slice through the given data, using the current GR colormap.
+
+    **Parameters:**
+
+        `grid` :      3D numpy array containing the voxel data
+
+        `x` :         the position of the slice through the yz-plane (0 to 1)
+
+        `step` :      voxel sizes in each direction
+
+        `offset` :    coordinate origin in each direction
+
+        `position` :  the positions where the meshes should be drawn
+
+        `direction` : the forward directions the meshes should be facing at
+
+        `up` :        the up directions
+
+        `color` :     the colors the meshes should be drawn in, it will be multiplied with each vertex color
+
+        `scale` :     the scaling factors
+    """
+    mesh = createxslicemesh(grid, x, step, offset)
+    drawmesh(mesh, 1, position, direction, up, color, scale)
+    deletemesh(mesh)
+
+
+def drawyslicemesh(grid, y=0.5, step=None, offset=None, position=(0, 0, 0), direction=(0, 0, 1), up=(0, 1, 0), color=(1, 1, 1), scale=(1, 1, 1)):
+    """
+    Draw a xz-slice through the given data, using the current GR colormap.
+
+    **Parameters:**
+
+        `grid` :      3D numpy array containing the voxel data
+
+        `y` :         the position of the slice through the xz-plane (0 to 1)
+
+        `step` :      voxel sizes in each direction
+
+        `offset` :    coordinate origin in each direction
+
+        `position` :  the positions where the meshes should be drawn
+
+        `direction` : the forward directions the meshes should be facing at
+
+        `up` :        the up directions
+
+        `color` :     the colors the meshes should be drawn in, it will be multiplied with each vertex color
+
+        `scale` :     the scaling factors
+    """
+    mesh = createyslicemesh(grid, y, step, offset)
+    drawmesh(mesh, 1, position, direction, up, color, scale)
+    deletemesh(mesh)
+
+
+def drawzslicemesh(grid, z=0.5, step=None, offset=None, position=(0, 0, 0), direction=(0, 0, 1), up=(0, 1, 0), color=(1, 1, 1), scale=(1, 1, 1)):
+    """
+    Draw a xy-slice through the given data, using the current GR colormap.
+
+    **Parameters:**
+
+        `grid` :      3D numpy array containing the voxel data
+
+        `x` :         the position of the slice through the yz-plane (0 to 1)
+
+        `y` :         the position of the slice through the xz-plane (0 to 1)
+
+        `z` :         the position of the slice through the xy-plane (0 to 1)
+
+        `step` :      voxel sizes in each direction
+
+        `offset` :    coordinate origin in each direction
+
+        `position` :  the positions where the meshes should be drawn
+
+        `direction` : the forward directions the meshes should be facing at
+
+        `up` :        the up directions
+
+        `color` :     the colors the meshes should be drawn in, it will be multiplied with each vertex color
+
+        `scale` :     the scaling factors
+    """
+    mesh = createzslicemesh(grid, z, step, offset)
+    drawmesh(mesh, 1, position, direction, up, color, scale)
+    deletemesh(mesh)
+
+
+def createxslicemeshes(grid, x=0.5, step=None, offset=None):
+    """
+    Creates a meshes for a slices through the yz-plane of the given data,
+    using the current GR colormap. Use the x parameter to set the position of
+    the yz-slice.
+    Returns a mesh for the yz-slice.
+
+    **Parameters:**
+
+        `grid` :      3D numpy array containing the voxel data
+
+        `x` :         the position of the slice through the yz-plane (0 to 1)
+
+        `step` :      voxel sizes in each direction
+
+        `offset` :    coordinate origin in each direction
+    """
+    return createslicemeshes(grid, step, offset, x=x)[0]
+
+
+def createyslicemeshes(grid, y=0.5, step=None, offset=None):
+    """
+    Creates a meshes for a slices through the xz-plane of the given data,
+    using the current GR colormap. Use the y parameter to set the position of
+    the xz-slice.
+    Returns a mesh for the xz-slice.
+
+    **Parameters:**
+
+        `grid` :      3D numpy array containing the voxel data
+
+        `y` :         the position of the slice through the xz-plane (0 to 1)
+
+        `step` :      voxel sizes in each direction
+
+        `offset` :    coordinate origin in each direction
+    """
+    return createslicemeshes(grid, step, offset, y=y)[1]
+
+
+def createzslicemeshes(grid, z=0.5, step=None, offset=None):
+    """
+    Creates a meshes for a slices through the xy-plane of the given data,
+    using the current GR colormap. Use the z parameter to set the position of
+    the xy-slice.
+    Returns a mesh for the xy-slice.
+
+    **Parameters:**
+
+        `grid` :      3D numpy array containing the voxel data
+
+        `z` :         the position of the slice through the xy-plane (0 to 1)
+
+        `step` :      voxel sizes in each direction
+
+        `offset` :    coordinate origin in each direction
+    """
+    return createslicemeshes(grid, step, offset, z=z)[2]
+
+
+def drawslicemeshes(grid, x=None, y=None, z=None, step=None, offset=None, position=(0, 0, 0), direction=(0, 0, 1), up=(0, 1, 0), color=(1, 1, 1), scale=(1, 1, 1)):
+    """
+    Draw slices through the given data, using the current GR colormap.
+    Use the parameters x, y or z to specify what slices should be drawn and at
+    which positions they should go through the data. If neither x nor y nor
+    z are set, 0.5 will be used for all three.
+
+    **Parameters:**
+
+        `grid` :      3D numpy array containing the voxel data
+
+        `x` :         the position of the slice through the yz-plane (0 to 1)
+
+        `y` :         the position of the slice through the xz-plane (0 to 1)
+
+        `z` :         the position of the slice through the xy-plane (0 to 1)
+
+        `step` :      voxel sizes in each direction
+
+        `offset` :    coordinate origin in each direction
+
+        `position` :  the positions where the meshes should be drawn
+
+        `direction` : the forward directions the meshes should be facing at
+
+        `up` :        the up directions
+
+        `color` :     the colors the meshes should be drawn in, it will be multiplied with each vertex color
+
+        `scale` :     the scaling factors
+    """
+    meshes = createslicemeshes(grid, x, y, z, step, offset)
+    for mesh in meshes:
+        if mesh is not None:
+            drawmesh(mesh, 1, position, direction, up, color, scale)
+            deletemesh(mesh)
+
+
+def createslicemeshes(grid, x=None, y=None, z=None, step=None, offset=None):
+    """
+    Creates meshes for slices through the given data, using the current GR
+    colormap. Use the parameters x, y or z to specify what slices should be
+    drawn and at which positions they should go through the data. If neither
+    x nor y nor z are set, 0.5 will be used for all three.
+    Returns meshes for the yz-slice, the xz-slice and the xy-slice.
+
+    **Parameters:**
+
+        `grid` :      3D numpy array containing the voxel data
+
+        `x` :         the position of the slice through the yz-plane (0 to 1)
+
+        `y` :         the position of the slice through the xz-plane (0 to 1)
+
+        `z` :         the position of the slice through the xy-plane (0 to 1)
+
+        `step` :      voxel sizes in each direction
+
+        `offset` :    coordinate origin in each direction
+    """
+    if x is None and y is None and z is None:
+        x = 0.5
+        y = 0.5
+        z = 0.5
+    try:
+        # integral values
+        input_max = numpy.iinfo(grid.dtype).max
+    except ValueError:
+        # floating point values are expected to be in range [0, 1]
+        input_max = 1
+        grid[grid > 1] = 1
+    scaling_factor = 1.0 * numpy.iinfo(numpy.uint16).max / input_max
+    grid = (grid * scaling_factor).astype(numpy.uint16)
+    nx, ny, nz = grid.shape
+    if step is None and offset is None:
+        step = (2.0/(nx-1), 2.0/(ny-1), 2.0/(nz-1))
+        offset = (-1.0, -1.0, -1.0)
+    elif offset is None:
+        offset = (-step[0] * (nx-1) / 2.0,
+                  -step[1] * (ny-1) / 2.0,
+                  -step[2] * (nz-1) / 2.0)
+    elif step is None:
+        step = (-offset[0] * 2.0 / (nx-1),
+                -offset[1] * 2.0 / (ny-1),
+                -offset[2] * 2.0 / (nz-1))
+    data = grid.ctypes.data_as(POINTER(c_ushort))
+    dim_x, dim_y, dim_z = map(c_uint, grid.shape)
+    stride_x, stride_y, stride_z = map(lambda x: c_uint(x / grid.itemsize), grid.strides)
+    step_x, step_y, step_z = map(c_double, step)
+    offset_x, offset_y, offset_z = map(c_double, offset)
+    if x is not None:
+        if x > 1:
+            x = 1
+        if x < 0:
+            x = 0
+        x = c_uint(int(x*dim_x.value))
+        _mesh_x = c_uint(0)
+        _gr3.gr3_createxslicemesh(byref(_mesh_x), data, x,
+                                  dim_x, dim_y, dim_z,
+                                  stride_x, stride_y, stride_z,
+                                  step_x, step_y, step_z,
+                                  offset_x, offset_y, offset_z)
+    else:
+        _mesh_x = None
+    if y is not None:
+        if z > 1:
+            z = 1
+        if z < 0:
+            z = 0
+        y = c_uint(int(y*dim_y.value))
+        _mesh_y = c_uint(0)
+        _gr3.gr3_createyslicemesh(byref(_mesh_y), data, y,
+                                  dim_x, dim_y, dim_z,
+                                  stride_x, stride_y, stride_z,
+                                  step_x, step_y, step_z,
+                                  offset_x, offset_y, offset_z)
+    else:
+        _mesh_y = None
+    if z is not None:
+        if z > 1:
+            z = 1
+        if z < 0:
+            z = 0
+        z = c_uint(int(z*dim_z.value))
+        _mesh_z = c_uint(0)
+        _gr3.gr3_createzslicemesh(byref(_mesh_z), data, z,
+                                  dim_x, dim_y, dim_z,
+                                  stride_x, stride_y, stride_z,
+                                  step_x, step_y, step_z,
+                                  offset_x, offset_y, offset_z)
+    else:
+        _mesh_z = None
+    return _mesh_x, _mesh_y, _mesh_z
+
+
 _gr3.gr3_init.argtypes = [POINTER(c_int)]
 _gr3.gr3_terminate.argtypes = []
 _gr3.gr3_useframebuffer.argtypes = [c_uint]
@@ -1254,6 +1549,51 @@ _gr3.gr3_drawmolecule.restype = None
 
 _gr3.gr3_geterror.argtype = [c_int, POINTER(c_int), POINTER(c_char_p)]
 _gr3.gr3_geterror.restype = c_int
+
+_gr3.gr3_createxslicemesh.restype = None
+_gr3.gr3_createxslicemesh.argtypes = [POINTER(c_uint),
+                                      POINTER(c_ushort), c_uint,
+                                      c_uint, c_uint, c_uint,
+                                      c_uint, c_uint, c_uint,
+                                      c_double, c_double, c_double,
+                                      c_double, c_double, c_double]
+
+_gr3.gr3_createyslicemesh.restype = None
+_gr3.gr3_createyslicemesh.argtypes = [POINTER(c_uint),
+                                      POINTER(c_ushort), c_uint,
+                                      c_uint, c_uint, c_uint,
+                                      c_uint, c_uint, c_uint,
+                                      c_double, c_double, c_double,
+                                      c_double, c_double, c_double]
+
+_gr3.gr3_createzslicemesh.restype = None
+_gr3.gr3_createzslicemesh.argtypes = [POINTER(c_uint),
+                                      POINTER(c_ushort), c_uint,
+                                      c_uint, c_uint, c_uint,
+                                      c_uint, c_uint, c_uint,
+                                      c_double, c_double, c_double,
+                                      c_double, c_double, c_double]
+
+_gr3.gr3_drawxslicemesh.restype = None
+_gr3.gr3_drawxslicemesh.argtypes = [POINTER(c_ushort), c_uint,
+                                    c_uint, c_uint, c_uint,
+                                    c_uint, c_uint, c_uint,
+                                    c_double, c_double, c_double,
+                                    c_double, c_double, c_double]
+
+_gr3.gr3_drawyslicemesh.restype = None
+_gr3.gr3_drawyslicemesh.argtypes = [POINTER(c_ushort), c_uint,
+                                    c_uint, c_uint, c_uint,
+                                    c_uint, c_uint, c_uint,
+                                    c_double, c_double, c_double,
+                                    c_double, c_double, c_double]
+
+_gr3.gr3_drawzslicemesh.restype = None
+_gr3.gr3_drawzslicemesh.argtypes = [POINTER(c_ushort), c_uint,
+                                    c_uint, c_uint, c_uint,
+                                    c_uint, c_uint, c_uint,
+                                    c_double, c_double, c_double,
+                                    c_double, c_double, c_double]
 
 for symbol in dir(_gr3):
     if symbol.startswith('gr3_') and symbol != 'gr3_geterror':
