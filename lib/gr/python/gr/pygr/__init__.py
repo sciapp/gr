@@ -240,6 +240,7 @@ class RegionOfInterest(object):
             if self._axes:
                 coord = CoordConverter(self._axes.sizex, self._axes.sizey,
                                        self._axes.getWindow())
+                gr.setscale(self._axes.scale)
                 for pWC in self._poly:
                     coord.setWCforPlotAxes(pWC.x, pWC.y, self._axes)
                     poly.append(coord.getNDC())
@@ -497,6 +498,7 @@ class Text(GRVisibility, Point, GRMeta):
 
     def getBoundingBox(self):
         if self._axes:
+            gr.setscale(self._axes.scale)
             coord = CoordConverter(self._axes.sizex, self._axes.sizey,
                                    self._axes.getWindow())
             coord.setWCforPlotAxes(self.x, self.y, self._axes)
@@ -922,6 +924,7 @@ class Plot(GRViewPort, GRMeta):
         for axes in self._lstAxes:
             win = axes.getWindow()
             gr.setwindow(*win)
+            gr.setscale(axes.scale)
             p0World = coord.setNDC(p0.x, p0.y).getWC(self.viewport)
             p1World = coord.setNDC(p1.x, p1.y).getWC(self.viewport)
             xmin = min(p0World.x, p1World.x)
@@ -938,6 +941,7 @@ class Plot(GRViewPort, GRMeta):
             win = axes.getWindow()
             xmin, xmax, ymin, ymax = win
             gr.setwindow(*win)
+            gr.setscale(axes.scale)
             pmin = coord.setWC(xmin, ymin, axes.viewport, win).getNDC()
             pmax = coord.setWC(xmax, ymax, axes.viewport, win).getNDC()
             ndcWin = [pmin.x - dp.x, pmax.x - dp.x,
@@ -955,6 +959,7 @@ class Plot(GRViewPort, GRMeta):
             win = axes.getWindow()
             xmin, xmax, ymin, ymax = win
             gr.setwindow(*win)
+            gr.setscale(axes.scale)
             # zoom from center
             pmin = coord.setWC(xmin, ymin, axes.viewport, win).getNDC()
             pmax = coord.setWC(xmax, ymax, axes.viewport, win).getNDC()
