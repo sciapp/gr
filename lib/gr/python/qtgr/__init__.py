@@ -199,9 +199,16 @@ class InteractiveGRWidget(GRWidget):
 
     def __init__(self, *args, **kwargs):
         super(InteractiveGRWidget, self).__init__(*args, **kwargs)
+        self._recognizers = []
         # register gesture recognizers
         for recognizer in self.GESTURE_RECOGNIZERS:
-            self.grabGesture(recognizer.registerRecognizer(recognizer()))
+            instance = recognizer()
+            self.grabGesture(recognizer.registerRecognizer(instance))
+            # keep a reference on existing QGestureRecognizers in order
+            # to circumvent that they will be accidentially freed when
+            # using PyQt4 versions which will not handle the membership
+            # correctly, e.g. PyQt4 4.9.1 shipped with Ubuntu 12.04.
+            self._recognizers.append(instance)
 
         guiConn = GUIConnector(self)
         guiConn.connect(MouseEvent.MOUSE_MOVE, self.mouseMove)
