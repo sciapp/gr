@@ -39,4 +39,9 @@ EXPORTS
 	gr3_drawmesh_grlike
 	gr3_drawsurface
 	gr3_surface
-
+	gr3_createxslicemesh
+	gr3_createyslicemesh
+	gr3_createzslicemesh
+	gr3_drawxslicemesh
+	gr3_drawyslicemesh
+	gr3_drawzslicemesh
