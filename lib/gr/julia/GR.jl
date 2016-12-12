@@ -125,6 +125,7 @@ export
   jlgr,
   colormap,
   figure,
+  gcf,
   hold,
   usecolorscheme,
   subplot,
@@ -2488,7 +2489,7 @@ Draw an image into a given rectangular area.
 The available color models are:
 
     +-----------------------+---+-----------+
-    |MODEL_RGB              |  0|   AARRGGBB|
+    |MODEL_RGB              |  0|   AABBGGRR|
     +-----------------------+---+-----------+
     |MODEL_HSV              |  1|   AAVVSSHH|
     +-----------------------+---+-----------+
@@ -2850,6 +2851,7 @@ include("jlgr.jl")
 
 colormap() = jlgr.colormap()
 figure(; kwargs...) = jlgr.figure(; kwargs...)
+gcf() = jlgr.gcf()
 hold(flag) = jlgr.hold(flag)
 usecolorscheme(index) = jlgr.usecolorscheme(index)
 subplot(m, n, p) = jlgr.subplot(m, n, p)
@@ -2904,7 +2906,7 @@ end
 function _readfile(path)
     data = Array(UInt8, filesize(path))
     s = open(path, "r")
-    Compat.unsafe_string(read!(s, data))
+    read!(s, data)
 end
 
 function isinline()
