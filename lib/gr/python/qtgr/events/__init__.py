@@ -3,6 +3,8 @@
 # standard library
 import logging
 # local library
+import gr
+from gr.pygr import DeviceCoordConverter
 from qtgr.backend import QtCore
 from qtgr.events.mouse import MouseEvent, WheelEvent, PickEvent, LegendEvent,\
     ROIEvent, MouseGestureEvent
@@ -96,8 +98,23 @@ class EventFilter(QtCore.QObject):
         if event.modifiers() & QtCore.Qt.GroupSwitchModifier:
             mod_mask |= MouseEvent.GROUP_SWITCH_MODIFIER
 
+        # In order to support multiple plots in one widget
+        # it is necessary to set the window in respect to the current
+        # `PlotAxes` below the cursor. Otherwise the window will be determined
+        # using the internal state machine of ``gr``.
+        coords = DeviceCoordConverter(target.dwidth, target.dheight)
+        coords.setDC(event.x(), event.y())
+        plots = target._getPlotsForPoint(coords.getNDC())
+        window = None
+        if plots and len(plots) == 1:  # unambitious plot
+            axes = plots[0].getAxes(0)  # use first `PlotAxes`
+            if axes:
+                window = axes.getWindow()
+                gr.setscale(axes.scale)
+
         mEvent = MouseEvent(type, target.dwidth, target.dheight,
-                            event.x(), event.y(), btn_mask, mod_mask)
+                            event.x(), event.y(), btn_mask, mod_mask,
+                            window=window)
         # special case:
         # save last btn_mask for handling in MouseEvent.MOUSE_RELEASE
         self._last_btn_mask = btn_mask

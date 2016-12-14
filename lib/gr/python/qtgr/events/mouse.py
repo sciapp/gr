@@ -55,8 +55,10 @@ class MouseEvent(MouseLocationEventMeta):
     KEYPAD_MODIFIER = 0x20
     GROUP_SWITCH_MODIFIER = 0x40
 
-    def __init__(self, type, width, height, x, y, buttons, modifiers):
-        super(MouseEvent, self).__init__(type, width, height, x, y)
+    def __init__(self, type, width, height, x, y, buttons, modifiers,
+                 window=None):
+        super(MouseEvent, self).__init__(type, width, height, x, y,
+                                         window=window)
         self._buttons = buttons
         self._modifiers = modifiers
 
