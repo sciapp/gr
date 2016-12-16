@@ -60,10 +60,23 @@ def stem(*args, **kwargs):
     _plot_data(kind='stem')
 
 
+def _hist(x, nbins=0):
+    x = np.array(x)
+    x_min = x.min()
+    x_max = x.max()
+    if nbins <= 1:
+        nbins = int(np.round(3.3*np.log10(len(x))))+1
+    binned_x = np.array(np.floor((x - x_min) / (x_max - x_min) * nbins), dtype=int)
+    binned_x[binned_x == nbins] = nbins-1
+    counts = np.bincount(binned_x)
+    edges = np.linspace(x_min, x_max, nbins + 1)
+    return counts, edges
+
+
 def histogram(x, **kwargs):
     global _plt
     _plt.kwargs.update(kwargs)
-    hist, bins = np.histogram(x)
+    hist, bins = _hist(x)
     _plt.args = [(np.array(bins), np.array(hist), None, None, "")]
     _plot_data(kind='hist')
 
