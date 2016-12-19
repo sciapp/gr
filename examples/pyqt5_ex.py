@@ -19,6 +19,7 @@ class GrWidget(QtWidgets.QWidget) :
 
         os.environ["GKS_WSTYPE"] = "381"
         os.environ["GKS_DOUBLE_BUF"] = "True"
+        os.environ["GKS_QT_VERSION"] = "5"
 
         self.DrawButton.clicked.connect(self.draw)
         self.QuitButton.clicked.connect(self.quit)

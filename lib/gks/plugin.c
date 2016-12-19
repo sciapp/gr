@@ -228,7 +228,10 @@ void gks_qt_plugin(
 
   if (name == NULL)
     {
-      qt_version_string = get_qt_version_string();
+      qt_version_string = getenv("GKS_QT_VERSION");
+      if (!qt_version_string) {
+        qt_version_string = get_qt_version_string();
+      }
       if(qt_version_string != NULL)
       {
         qt_major_version = atoi(qt_version_string);

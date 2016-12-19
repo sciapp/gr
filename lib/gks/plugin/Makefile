@@ -131,53 +131,56 @@ qt5plugin.o: qt5plugin.cxx
 	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT5DEFS) $(QT5INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 wxplugin.so: wxplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(WXLIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(WXLIBS) $(X11LIBS) $(LIBS)
 
 qtplugin.so: qtplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(EXTRA_LDFLAGS_QT4) $(QT4LIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(EXTRA_LDFLAGS_QT4) $(QT4LIBS) $(X11LIBS) $(LIBS)
 
 qt5plugin.so: qt5plugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(EXTRA_LDFLAGS_QT5) $(QT5LIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(EXTRA_LDFLAGS_QT5) $(QT5LIBS) $(X11LIBS) $(LIBS)
 
 svgplugin.so: svgplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gtkplugin.so: gtkplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(GTKLIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GTKLIBS) $(X11LIBS) $(LIBS)
 
 figplugin.so: figplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gsplugin.so: gsplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(GSLIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GSLIBS) $(X11LIBS) $(LIBS)
 
 wmfplugin.so: wmfplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(LIBS)
 
 quartzplugin.so: quartzplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LIBS) \
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LIBS) \
 	-lobjc -framework Foundation -framework ApplicationServices -framework AppKit
 
 glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 zmqplugin.so: zmqplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(ZMQLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(ZMQLIBS) $(LIBS)
 
 movplugin.so: movplugin.o font.o afm.o util.o vc.o gif.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 htmplugin.so: htmplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 pgfplugin.so: pgfplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $? $(LDFLAGS) $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)
 
 clean:
 	rm -f so_locations *.so *.o *.bak *~ *.tmp
+
+qtplugin.o: qtplugin_impl.cxx
+qt5plugin.o: qtplugin_impl.cxx
