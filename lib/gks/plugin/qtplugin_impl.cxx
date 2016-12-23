@@ -96,6 +96,7 @@ typedef struct ws_state_list_t
     QWidget *widget;
     QPainter *pixmap;
     int state, wtype;
+    double mwidth, mheight;
     int width, height, dpiX, dpiY;
     double a, b, c, d;
     double window[4], viewport[4];
@@ -1139,17 +1140,21 @@ void get_pixmap(void)
 
   if (p->widget != NULL)
     {
-      p->width  = p->widget->width();
-      p->height = p->widget->height();
-      p->dpiX   = p->widget->logicalDpiX();
-      p->dpiY   = p->widget->logicalDpiY();
+      p->mwidth  = p->widget->widthMM()  * 0.001;
+      p->mheight = p->widget->heightMM() * 0.001;
+      p->width   = p->widget->width();
+      p->height  = p->widget->height();
+      p->dpiX    = p->widget->logicalDpiX();
+      p->dpiY    = p->widget->logicalDpiY();
     }
   else
     {
-      p->width  = p->pixmap->device()->width();
-      p->height = p->pixmap->device()->height();
-      p->dpiX   = p->pixmap->device()->logicalDpiX();
-      p->dpiY   = p->pixmap->device()->logicalDpiY();
+      p->mwidth  = p->pixmap->device()->widthMM()  * 0.001;
+      p->mheight = p->pixmap->device()->heightMM() * 0.001;
+      p->width   = p->pixmap->device()->width();
+      p->height  = p->pixmap->device()->height();
+      p->dpiX    = p->pixmap->device()->logicalDpiX();
+      p->dpiY    = p->pixmap->device()->logicalDpiY();
     }
 }
 
@@ -1178,6 +1183,13 @@ void QT_PLUGIN_ENTRY_NAME(
 
       for (i = 0; i < PATTERNS; i++)
         p->pattern[i] = NULL;
+
+      get_pixmap();
+
+      f_arr_1[0] = p->mwidth;
+      f_arr_2[0] = p->mheight;
+      i_arr[0] = p->width;
+      i_arr[1] = p->height;
 
       *ptr = p;
       break;
