@@ -495,6 +495,7 @@ def _draw_legend():
     global _plt
     viewport = _plt.kwargs['viewport']
     num_labels = len(_plt.kwargs['labels'])
+    location = _plt.kwargs.get('location', 1)
     gr.savestate()
     gr.selntran(0)
     gr.setscale(0)
@@ -503,15 +504,28 @@ def _draw_legend():
         tbx, tby = gr.inqtextext(0, 0, label)
         w = max(w, tbx[2])
 
-    px = viewport[1] - 0.05 - w
-    py = viewport[3] - 0.06
+    num_lines = len(_plt.args)
+    h = (num_lines + 1) * 0.03
+    if location in (8, 9, 10):
+        px = 0.5 * (viewport[0] + viewport[1] - w)
+    elif location in (2, 3, 6):
+        px = viewport[0] + 0.11
+    else:
+        px = viewport[1] - 0.05 - w
+    if location in (5, 6, 7, 10):
+        py = 0.5 * (viewport[2] + viewport[3] + h) - 0.03
+    elif location in (3, 4, 8):
+        py = viewport[2] + h
+    else:
+        py = viewport[3] - 0.06
+
     gr.setfillintstyle(gr.INTSTYLE_SOLID)
     gr.setfillcolorind(0)
-    gr.fillrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_labels)
+    gr.fillrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_lines)
     gr.setlinetype(gr.LINETYPE_SOLID)
     gr.setlinecolorind(1)
     gr.setlinewidth(1)
-    gr.drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_labels)
+    gr.drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_lines)
     i = 0
     gr.uselinespec(" ")
     for (x, y, z, c, spec) in _plt.args:
