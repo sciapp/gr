@@ -632,7 +632,7 @@ void polyline(int n, double *px, double *py)
 
   if (gkss->version > 4)
     ln_width *= p->height / 500.0;
-  if (ln_width > 1 || ln_type != 1)
+  if (ln_type != 1)
   {
     pen_style = PS_GEOMETRIC | PS_COSMETIC | PS_ENDCAP_FLAT | PS_JOIN_ROUND |
                 PS_USERSTYLE;
