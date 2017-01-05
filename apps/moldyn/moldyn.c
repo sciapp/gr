@@ -977,7 +977,6 @@ int main(int argc, char **argv) {
     }
     
     read_cycle();
-    moldyn_update_graphics();
     
     range = fabs(zmax) + fabs(zmin);
     if (range < fabs(xmax) + fabs(xmin))
@@ -989,6 +988,8 @@ int main(int argc, char **argv) {
     magnification = pow(1.2, (double) magstep);
     zeye = -2.0 * range * magnification;
     
+    moldyn_update_graphics();
+
     if (povray <= 0) {
         start_mainloop();
     } else {
