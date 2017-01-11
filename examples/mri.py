@@ -63,6 +63,7 @@ class GrWidget(QtGui.QWidget):
         self.painter = QtGui.QPainter()
         self.isolevel = (data.min() + data.max()) // 2
         self.export = False
+        self.needs_refresh = True
         
     @staticmethod
     def setup_ui(form):
@@ -70,6 +71,9 @@ class GrWidget(QtGui.QWidget):
         form.resize(QtCore.QSize(500, 500).expandedTo(form.minimumSizeHint()))
 
     def draw_image(self):
+        if not self.needs_refresh:
+            return
+        self.needs_refresh = False
         w, h = (self.w, self.h)
         clearws()
         setwindow(0, self.w, 0, self.h)
@@ -98,7 +102,7 @@ class GrWidget(QtGui.QWidget):
         self.y -= event.pos().y() - self.beginy
         self.beginx = event.pos().x()
         self.beginy = event.pos().y()
-        self.draw_image()
+        self.needs_refresh = True
         self.update()
 
     def mousePressEvent(self, event):
@@ -110,7 +114,7 @@ class GrWidget(QtGui.QWidget):
             self.close()
         elif event.text() == 'h':
             self.export = True
-        self.draw_image()
+        self.needs_refresh = True
         self.update()
 
     def wheelEvent(self, ev):
@@ -121,11 +125,11 @@ class GrWidget(QtGui.QWidget):
             if self.isolevel * 0.99 > data.min():
                 self.isolevel *= 0.99
         self.isolevel = int(self.isolevel + 0.5)
-        self.draw_image()
+        self.needs_refresh = True
         self.update()
 
     def resizeEvent(self, event):
-        self.draw_image()
+        self.needs_refresh = True
         self.update()
 
     def paintEvent(self, ev):
@@ -137,6 +141,7 @@ class GrWidget(QtGui.QWidget):
         else:
             environ["GKSconid"] = "%x!%x" % (unwrapinstance(self),
                                              unwrapinstance(self.painter))
+        self.draw_image()
         updatews()
         self.painter.end()
 
