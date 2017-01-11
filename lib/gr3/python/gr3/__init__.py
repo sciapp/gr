@@ -1,4 +1,7 @@
 # coding: utf-8
+
+from __future__ import division
+
 __all__ = ['GR3_InitAttribute',
            'GR3_Error',
            'GR3_Exception',
@@ -95,6 +98,7 @@ if not os.getenv("GR3LIB") and not os.access(_gr3Lib, os.R_OK):
     _gr3Lib = os.path.join(_gr3LibDir, "libGR3" + libext)
 _gr3 = CDLL(_gr3Lib)
 
+
 class intarray:
     def __init__(self, a):
         if _impl == 'PyPy':
@@ -104,6 +108,7 @@ class intarray:
         else:
             self.array = numpy.array(a, c_int)
             self.data = self.array.ctypes.data_as(POINTER(c_int))
+
 
 class floatarray:
     def __init__(self, a, copy=False):
@@ -115,12 +120,18 @@ class floatarray:
             self.array = numpy.array(a, c_float)
             self.data = self.array.ctypes.data_as(POINTER(c_float))
 
+
 def char(string):
     if version_info[0] == 3:
         s = create_string_buffer(string.encode('iso8859-15'))
     else:
         s = create_string_buffer(string)
     return cast(s, c_char_p)
+
+
+_string_types = [str]
+if version_info[0] == 2:
+    _string_types.append(unicode)
 
 
 class GR3_InitAttribute(object):
@@ -641,8 +652,10 @@ def setlightdirection(*xyz):
     else:
         raise TypeError("gr3_setlightdirection() takes exactly 1 or exactly 3 arguments (%d given)" %len(xyz))
 
+
 def PyBuffer_FromMemory(address, length):
     return buffer((c_char * length).from_address(address))
+
 
 def triangulate(grid, step, offset, isolevel, slices = None):
     data = grid.ctypes.data_as(POINTER(c_ushort))
@@ -752,7 +765,7 @@ def createisosurfacemesh(grid, step=None, offset=None, isolevel=None):
     data = grid.ctypes.data_as(POINTER(c_ushort))
     isolevel = c_ushort(isolevel)
     dim_x, dim_y, dim_z = map(c_uint, grid.shape)
-    stride_x, stride_y, stride_z = map(lambda x: c_uint(x / grid.itemsize), grid.strides)
+    stride_x, stride_y, stride_z = [c_uint(stride // grid.itemsize) for stride in grid.strides]
     step_x, step_y, step_z = map(c_double, step)
     offset_x, offset_y, offset_z = map(c_double, offset)
     _gr3.gr3_createisosurfacemesh(byref(_mesh), data, isolevel,
@@ -965,7 +978,7 @@ def drawspins(positions, directions, colors=None,
               cone_radius=0.4, cylinder_radius=0.2,
               cone_height=1.0, cylinder_height=1.0):
     positions = numpy.array(positions, numpy.float32)
-    positions.shape = (numpy.prod(positions.shape)/3, 3)
+    positions.shape = (numpy.prod(positions.shape) // 3, 3)
     n = len(positions)
     directions = numpy.array(directions, numpy.float32)
     directions.shape = (n, 3)
@@ -1119,13 +1132,13 @@ def _readxyzfile(filename):
 def drawmolecule(positions_or_filename, colors=None, radii=None, spins=None,
                  bond_radius=0.1, bond_color=(0.8, 0.8, 0.8), bond_delta=1.0,
                  set_camera=True, rotation=0, tilt=0):
-    if type(positions_or_filename) in (str, unicode):
+    if type(positions_or_filename) in _string_types:
         filename = positions_or_filename
         positions, colors, radii, spins = _readxyzfile(filename)
     else:
         positions = positions_or_filename
     positions = numpy.array(positions, numpy.float32)
-    positions.shape = (numpy.prod(positions.shape)/3, 3)
+    positions.shape = (numpy.prod(positions.shape) // 3, 3)
     n = len(positions)
     if colors is None:
         colors = numpy.ones((n, 3), numpy.float32)
@@ -1405,7 +1418,7 @@ def createslicemeshes(grid, x=None, y=None, z=None, step=None, offset=None):
                 -offset[2] * 2.0 / (nz-1))
     data = grid.ctypes.data_as(POINTER(c_ushort))
     dim_x, dim_y, dim_z = map(c_uint, grid.shape)
-    stride_x, stride_y, stride_z = map(lambda x: c_uint(x / grid.itemsize), grid.strides)
+    stride_x, stride_y, stride_z = [c_uint(stride // grid.itemsize) for stride in grid.strides]
     step_x, step_y, step_z = map(c_double, step)
     offset_x, offset_y, offset_z = map(c_double, offset)
     if x is not None:
