@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# coding: utf-8
-# no-plot
+# -*- coding: utf-8 -*-
+# -*- no-plot -*-
 """
 Rendering slices and an isosurface of MRI data.
 """
