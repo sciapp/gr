@@ -1114,7 +1114,8 @@ void interp(char *str)
   memmove(gkss, &saved_gkss, sizeof(gks_state_list_t));
 }
 
-void get_pixmap(void)
+static
+int get_pixmap(void)
 {
   char *env;
 
@@ -1135,7 +1136,7 @@ void get_pixmap(void)
   else
     {
       gks_perror("can't obtain Qt drawable");
-      exit(1);
+      return 1;
     }
 
   if (p->widget != NULL)
@@ -1156,6 +1157,7 @@ void get_pixmap(void)
       p->dpiX    = p->pixmap->device()->logicalDpiX();
       p->dpiY    = p->pixmap->device()->logicalDpiY();
     }
+  return 0;
 }
 
 void QT_PLUGIN_ENTRY_NAME(
@@ -1174,6 +1176,7 @@ void QT_PLUGIN_ENTRY_NAME(
       p = new ws_state_list;
 
       p->width = p->height = 500;
+      p->dpiX = p->dpiY = 100;
 
       p->font = new QFont();
 
@@ -1184,12 +1187,20 @@ void QT_PLUGIN_ENTRY_NAME(
       for (i = 0; i < PATTERNS; i++)
         p->pattern[i] = NULL;
 
-      get_pixmap();
-
-      f_arr_1[0] = p->mwidth;
-      f_arr_2[0] = p->mheight;
-      i_arr[0] = p->width;
-      i_arr[1] = p->height;
+      if (get_pixmap() == 0)
+        {
+          f_arr_1[0] = p->mwidth;
+          f_arr_2[0] = p->mheight;
+          i_arr[0] = p->width;
+          i_arr[1] = p->height;
+        }
+      else
+        {
+          f_arr_1[0] = 0.25400;
+          f_arr_2[0] = 0.19050;
+          i_arr[0] = 1024;
+          i_arr[1] = 768;
+        }
 
       *ptr = p;
       break;
