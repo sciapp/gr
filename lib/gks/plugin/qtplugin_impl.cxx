@@ -108,6 +108,7 @@ typedef struct ws_state_list_t
     int family, capheight;
     double alpha, angle;
     QPixmap *pattern[PATTERNS];
+    int empty;
   }
 ws_state_list;
 
@@ -698,7 +699,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
   delete points;
 }
 
-static void fillarea(int n, double *px, double *py)
+static
+void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color, ln_width;
 
@@ -1134,10 +1136,7 @@ int get_pixmap(void)
         sscanf(env, "%p!%p", (void **) &p->widget, (void **) &p->pixmap);
     }
   else
-    {
-      gks_perror("can't obtain Qt drawable");
       return 1;
-    }
 
   if (p->widget != NULL)
     {
@@ -1187,6 +1186,8 @@ void QT_PLUGIN_ENTRY_NAME(
       for (i = 0; i < PATTERNS; i++)
         p->pattern[i] = NULL;
 
+      p->empty = 1;
+
       if (get_pixmap() == 0)
         {
           f_arr_1[0] = p->mwidth;
@@ -1221,14 +1222,27 @@ void QT_PLUGIN_ENTRY_NAME(
       /* set display list length to zero */
       memset(p->dl.buffer, 0, sizeof(int));
       p->dl.nbytes = 0;
+
+      p->empty = 1;
       break;
 
     case 8:
       if (i_arr[1] == GKS_K_PERFORM_FLAG)
         {
-          get_pixmap();
-          interp(p->dl.buffer);
+          if (get_pixmap() == 0)
+            interp(p->dl.buffer);
+          else if (!p->empty)
+            gks_perror("can't obtain Qt drawable");
         }
+      break;
+
+    case  12:  /* polyline */
+    case  13:  /* polymarker */
+    case  14:  /* text */
+    case  15:  /* fill area */
+    case  16:  /* cell array */
+    case 201:  /* draw image */
+      p->empty = 0;
       break;
 
     default:
