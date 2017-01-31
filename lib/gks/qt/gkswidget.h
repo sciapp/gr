@@ -14,6 +14,11 @@
 #include <QPainter>
 #include <QIcon>
 #include <QPrinter>
+#include <QMouseEvent>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QRubberBand>
+#include <QSpacerItem>
 
 #include "gksserver.h"
 
@@ -34,6 +39,9 @@ class GKSWidget: public QWidget
  protected:
   void paintEvent(QPaintEvent *event);
   void resizeEvent(QResizeEvent *event);
+  void mouseMoveEvent(QMouseEvent *event);
+  void mousePressEvent(QMouseEvent *event);
+  void mouseReleaseEvent(QMouseEvent *event);
 
  private:
   int widgetNumber;
@@ -42,6 +50,12 @@ class GKSWidget: public QWidget
   qreal rotateBy;
   char *dl;
   QPixmap *pm;
+  QVBoxLayout *layout;
+  QStatusBar *sb;
+  QLabel *sb_label;
+  QRubberBand *rubberBand;
+  QSpacerItem *spacer;
+  bool leftButton;
   bool first;
 
  public:

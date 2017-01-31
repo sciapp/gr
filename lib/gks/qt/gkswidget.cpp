@@ -4,9 +4,9 @@
 
 #include <QtGlobal>
 #if QT_VERSION >= 0x050000
-    #include <QtWidgets>
+#include <QtWidgets>
 #else
-    #include <QtGui>
+#include <QtGui>
 #endif
 #include <qpainter.h>
 #include <qpixmap.h>
@@ -36,30 +36,38 @@
 
 #define MAX_TNR 9
 
-#define WC_to_NDC(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw) + b[tnr]; \
+#define WC_to_NDC(xw, yw, tnr, xn, yn)          \
+  xn = a[tnr] * (xw) + b[tnr];                  \
   yn = c[tnr] * (yw) + d[tnr]
 
-#define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw); \
+#define WC_to_NDC_rel(xw, yw, tnr, xn, yn)      \
+  xn = a[tnr] * (xw);                           \
   yn = c[tnr] * (yw)
 
-#define NDC_to_DC(xn, yn, xd, yd) \
-  xd = (int) (p->a * (xn) + p->b); \
+#define NDC_to_WC(xw, yw, tnr, xn, yn)          \
+  xn = ((xw) - b[tnr]) / a[tnr];                \
+  yn = ((yw) - d[tnr]) / c[tnr]
+
+#define NDC_to_DC(xn, yn, xd, yd)               \
+  xd = (int) (p->a * (xn) + p->b);              \
   yd = (int) (p->c * (yn) + p->d);
 
-#define DC_to_NDC(xd, yd, xn, yn) \
-  xn = ((xd) - p->b) / p->a; \
+#define DC_to_NDC(xd, yd, xn, yn)               \
+  xn = ((xd) - p->b) / p->a;                    \
   yn = ((yd) - p->d) / p->c;
 
-#define CharXform(xrel, yrel, x, y) \
-  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
+#define CharXform(xrel, yrel, x, y)                     \
+  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel);  \
   y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
 
 #ifndef min
 #define min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef max
+#define max(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 
 int GKSWidget::lastWidgetNumber = 0;
@@ -76,6 +84,7 @@ typedef struct ws_state_list_t
     QPainter *pixmap;
     int state, wtype;
     int width, height;
+    int saved_width, saved_height;
     double a, b, c, d;
     double window[4], viewport[4];
     QRect rect[MAX_TNR];
@@ -86,6 +95,9 @@ typedef struct ws_state_list_t
     int family, capheight;
     double alpha, angle;
     QPixmap *pattern[PATTERNS];
+    int trans_x, trans_y;
+    bool zooming;
+    QPoint zoom_start;
   }
 ws_state_list;
 
@@ -99,7 +111,7 @@ static
 const char *fonts[] = {
   "Times New Roman", "Arial", "Courier", "Open Symbol",
   "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua"
-  };
+};
 
 static
 double capheights[29] = {
@@ -119,6 +131,7 @@ int map[32] = {
   23, 10,  6, 15, 19, 27, 13,  2,
   25, 12,  8, 17, 21, 29, 13,  4 };
 
+static
 int symbol2utf[256] = {
      0,     1,     2,     3,     4,     5,     6,     7,
      8,     9,    10,    11,    12,    13,    14,    15,
@@ -316,9 +329,9 @@ void resize_window(void)
   QWidget *parentWidget;
 
   width  = nint((p->viewport[1] - p->viewport[0]) / 2.54 *
-                 activeWidget->logicalDpiX() * 100);
+                activeWidget->logicalDpiX() * 100);
   height = nint((p->viewport[3] - p->viewport[2]) / 2.54 *
-                 activeWidget->logicalDpiY() * 100);
+                activeWidget->logicalDpiY() * 100);
 
   if (p->width != width || p->height != height)
     {
@@ -328,18 +341,6 @@ void resize_window(void)
 
       p->width = width;
       p->height = height;
-
-      if (p->pm)
-        {
-          delete p->pixmap;
-          delete p->pm;
-
-          p->pm = new QPixmap(p->width, p->height);
-          p->pm->fill(Qt::white);
-
-          p->pixmap = new QPainter(p->pm);
-          p->pixmap->setClipRect(0, 0, p->width, p->height);
-        }
     }
 }
 
@@ -529,7 +530,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
 static
 void marker_routine(
-  int n, double *px, double *py, int mtype, double mscale, int mcolor)
+                    int n, double *px, double *py, int mtype, double mscale, int mcolor)
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
@@ -731,7 +732,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
   delete points;
 }
 
-static void fillarea(int n, double *px, double *py)
+static
+void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color, ln_width;
 
@@ -781,9 +783,8 @@ static void fillarea(int n, double *px, double *py)
 }
 
 static
-void cellarray(
-  double xmin, double xmax, double ymin, double ymax,
-  int dx, int dy, int dimx, int *colia, int true_color)
+void cellarray(double xmin, double xmax, double ymin, double ymax,
+               int dx, int dy, int dimx, int *colia, int true_color)
 {
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
@@ -828,7 +829,7 @@ void cellarray(
               if (ind < 0)
                 ind = 0;
               else if (ind >= MAX_COLOR)
-                  ind = MAX_COLOR - 1;
+                ind = MAX_COLOR - 1;
               img->setPixel(i, j, p->rgb[ind].rgb());
             }
           else
@@ -845,10 +846,6 @@ void cellarray(
 
   delete img;
 }
-
-
-
-
 
 static
 void interp(char *str)
@@ -1156,6 +1153,9 @@ void interp(char *str)
       RESOLVE(len, int, sizeof(int));
     }
 
+  if (gkss)
+    gks_close_font(gkss->fontfile);
+
   memmove(gkss, &saved_gkss, sizeof(gks_state_list_t));
 }
 
@@ -1213,8 +1213,6 @@ void GKSQtWindow::setActiveSubWindow(QWidget *window)
     return;
   mdiArea->setActiveSubWindow(qobject_cast<QMdiSubWindow *>(window));
 }
-
-
 
 void GKSQtWindow::updateMenuWindow()
 {
@@ -1297,7 +1295,6 @@ void GKSQtWindow::createToolbar()
   act = toolBarWindow->toggleViewAction();
   act->setText("Window toolbar");
   menuView->addAction(act);
-
 }
 
 void GKSQtWindow::createMenubar()
@@ -1380,7 +1377,6 @@ void GKSQtWindow::createMenubar()
   actionRotate_by_90->setIcon(QIcon(":/images/rotateright.png"));
   actionRotate_by_90->setIconText(actionRotate_by_90->text());
 
-
   actionSpecial_Characters = new QAction(this);
   actionSpecial_Characters->setObjectName(QString::fromUtf8("actionSpecial_Characters"));
   actionSpecial_Characters->setText(QString::fromUtf8("Special Characters ..."));
@@ -1455,7 +1451,6 @@ void GKSQtWindow::createMenubar()
   menuTabPosition->addAction(actionTabPositionEast);
   menuTabPosition->addAction(actionTabPositionSouth);
   menuTabPosition->addAction(actionTabPositionWest);
-
 
   actionTile = new QAction(this);
   actionTile->setObjectName(QString::fromUtf8("actionTile"));
@@ -1579,7 +1574,7 @@ void GKSQtWindow::on_actionSave_As_triggered()
 
   int i = 0;
   QStringList nameFilters;
-  foreach(const QByteArray &sff, supportedFileFmtList)
+  foreach (const QByteArray &sff, supportedFileFmtList)
     {
       ++i;
       nameFilters << sff;
@@ -1751,8 +1746,9 @@ void GKSQtWindow::SaveFileAs (const QString fname)
   bool fmtOk = supportedFileFmtList.contains(fi->suffix().toLatin1());
 
   if (fmtOk) {
-    bool ok           = false;
-    int quality = QInputDialog::getInt(this, QString("Enter quality"), QString("Quality [%1,%2]:").arg(1).arg(100),100, 1, 100, 1, &ok);
+    bool ok = false;
+    int quality = QInputDialog::getInt(this, QString("Enter quality"),
+                                       QString("Quality [%1,%2]:").arg(1).arg(100), 100, 1, 100, 1, &ok);
 
     QPixmap *pm = new QPixmap(* (activeWidget->getPixmap()));
     pm->save(fname, 0, quality);
@@ -1769,14 +1765,34 @@ GKSWidget::GKSWidget(QWidget *parent, Qt::WindowFlags f)
 
   p = &p_;
   p->width = p->height = 500;
+  p->saved_width = p->width;
+  p->saved_height = p->height;
+  p->trans_x = p->trans_y = 0;
+
   first = true;
   create_window(p);
+
+  layout = new QVBoxLayout(this);
+  layout->setContentsMargins(0,0,0,0);
+  sb = new QStatusBar;
+  sb_label = new QLabel;
+  sb_label->setAutoFillBackground(true);
+  sb->setSizeGripEnabled(false);
+  sb->setFixedHeight(20);
+  sb->addWidget(sb_label);
+
+  rubberBand = NULL;
+  spacer = new QSpacerItem(p->width, p->height, QSizePolicy::MinimumExpanding,
+                           QSizePolicy::MinimumExpanding);
+
+  layout->addSpacerItem(spacer);
+  layout->addWidget(sb);
+  setMouseTracking(true);
+  setLayout(layout);
 
   rotation = 0;
   rotateBy = 90.0;
   widgetNumber = 1;
-  this->resize(p->width, p->height);
-  this->setMinimumSize(p->width, p->height);
 }
 
 GKSWidget::~GKSWidget() {
@@ -1833,40 +1849,146 @@ void GKSWidget::paintEvent(QPaintEvent *)
         first = false;
       } else {
         if (widgetNumber == GKSWidget::getLastWidgetNumber()) {
-        p->pm->fill(Qt::white);
-        interp(dl);
-        pm = new QPixmap(* (p->pm));
+          p->pm->fill(Qt::white);
+          interp(dl);
+          pm = new QPixmap(* (p->pm));
         } else {
         }
       }
 
-      painter.drawPixmap(0, 0, *pm);
+      painter.translate(p->trans_x, p->trans_y);
+      if (p->zooming) {
+        painter.drawPixmap(QPoint(0, 0), *pm);
+      }
+      else {
+        painter.setClipRect(0, 0, p->width, p->height);
+        painter.drawPixmap(QPoint(0, 0), *pm);
+      }
     }
 }
 
-void GKSWidget::resizeEvent(QResizeEvent *)
+void GKSWidget::resizeEvent(QResizeEvent *e)
 {
-  p->width = this->width();
-  p->height = this->height();
+  double fac;
+  p->zooming = false;
+
+  fac = min((double) max(1., this->spacer->geometry().width()) / p->width,
+            (double) max(1., this->spacer->geometry().height()) / p->width );
+  p->width = nint(p->width * fac);
+  p->height = nint(p->height * fac);
+  p->saved_width = p->width;
+  p->saved_height = p->height;
+
+  delete p->pixmap;
+  delete p->pm;
+
+  p->pm = new QPixmap(p->width, p->height);
+  p->pm->fill(Qt::white);
+
+  p->pixmap = new QPainter(p->pm);
+  p->pixmap->setClipRect(0, 0, p->width, p->height);
 
   p->viewport[0] = 0;
   p->viewport[1] = p->width * 2.54 / activeWidget->logicalDpiX() * 0.01;
   p->viewport[2] = 0;
   p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() * 0.01;
 
-  if (p->pm)
-    {
-      delete p->pixmap;
-      delete p->pm;
+  resize_window();
+  set_xform();
 
-      p->pm = new QPixmap(p->width, p->height);
-      p->pm->fill(Qt::white);
+  p->trans_x = (this->spacer->geometry().width() - p->pm->width()) / 2;
+  p->trans_y = (this->spacer->geometry().height() - p->pm->height()) / 2;
+}
 
-      p->pixmap = new QPainter(p->pm);
-      p->pixmap->setClipRect(0, 0, p->width, p->height);
+void GKSWidget::mouseMoveEvent(QMouseEvent *e) {
+  double x, xf;
+  double y, yf;
+  int xi = e->pos().x() - p->trans_x;
+  int yi = e->pos().y() - p->trans_y;
+
+  DC_to_NDC(xi, yi, x, y);
+  NDC_to_WC(x, y, 1, xf, yf);
+
+  this->sb_label->setText(QString(tr("(%1, %2)")).arg(xf).arg(yf));
+  if (e->buttons() == Qt::LeftButton) {
+    rubberBand->setGeometry(QRect(p->zoom_start, e->pos()).normalized());
+    update();
+  }
+}
+
+void GKSWidget::mousePressEvent(QMouseEvent *e) {
+  if (p->zooming) {
+    p->zooming = false;
+    p->width = p->saved_width;
+    p->height = p->saved_height;
+
+    p->viewport[0] = 0;
+    p->viewport[1] = p->width * 2.54 / activeWidget->logicalDpiX() * 0.01;
+    p->viewport[2] = 0;
+    p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() * 0.01;
+
+    resize_window();
+    set_xform();
+
+    delete p->pixmap;
+    delete p->pm;
+
+    p->pm = new QPixmap(p->width, p->height);
+    p->pm->fill(Qt::white);
+
+    p->pixmap = new QPainter(p->pm);
+    p->pixmap->setClipRect(0, 0, p->width, p->height);
+  }
+
+  if (e->buttons() == Qt::LeftButton) {
+    leftButton = true;
+    p->zoom_start = e->pos();
+    if (!rubberBand)
+      rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
+    rubberBand->setGeometry(QRect(p->zoom_start, QSize()));
+    rubberBand->show();
+  }
+  if (e->buttons() == Qt::RightButton) {
+    leftButton = false;
+  }
+}
+
+void GKSWidget::mouseReleaseEvent(QMouseEvent *e) {
+  double fac;
+  QRect rect;
+
+  if (leftButton) {
+    p->zooming = true;
+
+    rect = QRect(0, 0, p->width, p->height).intersected(rubberBand->geometry());
+    rect.translate(-p->trans_x, -p->trans_y);
+
+    if (!(rect.isNull())) {
+      fac = min((double) p->width / max(1, rect.width()),
+                (double) p->height / max(1, rect.height()));
+
+      p->saved_width = p->width;
+      p->saved_height = p->height;
+      p->width = nint(p->width * fac);
+      p->height = nint(p->height * fac);
+
+      rubberBand->hide();
+      rect.setRect(nint(rect.x() * fac), nint(rect.y() * fac),
+                        nint(rect.width() * fac), nint(rect.height() * fac));
+
+      p->pixmap->setClipRect(rect);
+      p->pixmap->translate(-rect.left(), -rect.top());
+
+      p->viewport[0] = 0;
+      p->viewport[1] = p->width * 2.54 / activeWidget->logicalDpiX() * 0.01;
+      p->viewport[2] = 0;
+      p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() * 0.01;
+
+      resize_window();
+      set_xform();
     }
-
-  this->repaint();
+    this->repaint();
+  }
 }
 
 void GKSWidget::rotate()
