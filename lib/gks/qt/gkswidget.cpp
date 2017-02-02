@@ -382,8 +382,8 @@ static
 void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  double ln_width;
-  int width, i, list[10];
+  double ln_width, width;
+  int i, list[10];
 
   if (n > p->max_points)
     {
@@ -394,12 +394,16 @@ void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4)
-    width = nint(ln_width * p->height / 500.0);
+  if (gkss->version > 4 && n < 0.5 * ln_width * p->height)
+  /*                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     Note: we don't adjust the linewidth to the window height for lines with a
+     large number of points because this leads to performance issues in Qt */
+    width = ln_width * p->height / 500.0;
   else
-    width = nint(ln_width);
+    width = ln_width;
   if (width < 1)
     width = 1;
+
   if (ln_color <= 0 || ln_color >= MAX_COLOR)
     ln_color = 1;
 
@@ -507,18 +511,14 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
           break;
 
         case 6:         /* arc */
-          p->pixmap->drawArc(x - r, y - r, d, d, marker[mtype][pc + 1] * 16,
-                             marker[mtype][pc + 2] * 16);
-          pc += 2;
+          p->pixmap->drawArc(x - r, y - r, d, d, 0, 360 * 16);
           break;
 
         case 7:         /* filled arc */
         case 8:         /* hollow arc */
           if (op == 8)
             set_color(0);
-          p->pixmap->drawChord(x - r, y - r, d, d, marker[mtype][pc + 1] * 16,
-                               marker[mtype][pc + 2] * 16);
-          pc += 2;
+          p->pixmap->drawChord(x - r, y - r, d, d, 0, 360 * 16);
           if (op == 8)
             set_color(mcolor);
           break;
@@ -554,15 +554,15 @@ void marker_routine(
 static
 void polymarker(int n, double *px, double *py)
 {
-  int mk_type, mk_color, ln_width;
-  double mk_size;
+  int mk_type, mk_color;
+  double mk_size, ln_width;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
   if (gkss->version > 4)
     {
-      ln_width = nint(p->height / 500.0);
+      ln_width = p->height / 500.0;
       if (ln_width < 1)
         ln_width = 1;
     }
@@ -675,15 +675,15 @@ void fill_routine(int n, double *px, double *py, int tnr);
 static
 void text(double px, double py, int nchars, char *chars)
 {
-  int tx_font, tx_prec, tx_color, ln_width;
-  double x, y;
+  int tx_font, tx_prec, tx_color;
+  double ln_width, x, y;
 
   tx_font  = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec  = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? gkss->txcoli : 1;
   if (gkss->version > 4)
     {
-      ln_width = nint(p->height / 500.0);
+      ln_width = p->height / 500.0;
       if (ln_width < 1)
         ln_width = 1;
     }
@@ -735,14 +735,15 @@ void fill_routine(int n, double *px, double *py, int tnr)
 static
 void fillarea(int n, double *px, double *py)
 {
-  int fl_inter, fl_style, fl_color, ln_width;
+  int fl_inter, fl_style, fl_color;
+  double ln_width;
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
   if (gkss->version > 4)
     {
-      ln_width = nint(p->height / 500.0);
+      ln_width = p->height / 500.0;
       if (ln_width < 1)
         ln_width = 1;
     }
@@ -783,8 +784,9 @@ void fillarea(int n, double *px, double *py)
 }
 
 static
-void cellarray(double xmin, double xmax, double ymin, double ymax,
-               int dx, int dy, int dimx, int *colia, int true_color)
+void cellarray(
+  double xmin, double xmax, double ymin, double ymax,
+  int dx, int dy, int dimx, int *colia, int true_color)
 {
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
