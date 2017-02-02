@@ -134,7 +134,6 @@ class RendererGR(RendererBase):
             self._draw_mathtext(gc, x, y, s, prop, angle)
         else:
             x, y = gr.wctondc(x, y)
-            s = s.replace(u'\u2212', '-')
             fontsize = prop.get_size_in_points()
             rgba = gc.get_rgb()[:4]
             color = gr.inqcolorfromrgb(rgba[0], rgba[1], rgba[2])
@@ -171,7 +170,6 @@ class RendererGR(RendererBase):
         fontsize = prop.get_size_in_points()
         gr.setcharheight(fontsize * self.nominal_fontsize)
         gr.setcharup(0, 1)
-        s = s.replace(u'\u2212', '-')
         (tbx, tby) = gr.inqtextext(0, 0, s)
         width, height, descent = tbx[1], tby[2], 0.2 * tby[2]
         return width, height, descent
