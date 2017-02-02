@@ -30,8 +30,14 @@ class RendererGR(RendererBase):
 
     def __init__(self, dpi, width, height):
         self.dpi = dpi
-        self.width = float(width) * dpi / 80
-        self.height = float(height) * dpi / 80
+        if __version__[0] >= '2':
+            self.nominal_fontsize = 0.001625
+            default_dpi = 100
+        else:
+            self.nominal_fontsize = 0.0013
+            default_dpi = 80
+        self.width = float(width) * dpi / default_dpi
+        self.height = float(height) * dpi / default_dpi
         self.mathtext_parser = MathTextParser('agg')
         self.texmanager = TexManager()
 
@@ -134,7 +140,7 @@ class RendererGR(RendererBase):
             color = gr.inqcolorfromrgb(rgba[0], rgba[1], rgba[2])
             gr.settransparency(rgba[3])
             gr.setcolorrep(color, rgba[0], rgba[1], rgba[2])
-            gr.setcharheight(fontsize * 0.0013)
+            gr.setcharheight(fontsize * self.nominal_fontsize)
             gr.settextcolorind(color)
             if angle != 0:
                 gr.setcharup(-np.sin(angle * np.pi/180),
@@ -163,10 +169,11 @@ class RendererGR(RendererBase):
 #       weight = prop.get_weight()
 #       style = prop.get_style()
         fontsize = prop.get_size_in_points()
-        gr.setcharheight(fontsize * 0.0013)
+        gr.setcharheight(fontsize * self.nominal_fontsize)
         gr.setcharup(0, 1)
+        s = s.replace(u'\u2212', '-')
         (tbx, tby) = gr.inqtextext(0, 0, s)
-        width, height, descent = tbx[1], tby[2], 0
+        width, height, descent = tbx[1], tby[2], 0.2 * tby[2]
         return width, height, descent
 
     def new_gc(self):
