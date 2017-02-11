@@ -96,8 +96,9 @@ typedef struct ws_state_list_t
     double alpha, angle;
     QPixmap *pattern[PATTERNS];
     int trans_x, trans_y;
-    bool zooming;
-    QPoint zoom_start;
+    bool selecting, have_selection;
+    QPoint start;
+    QRect area;
   }
 ws_state_list;
 
@@ -202,6 +203,8 @@ void set_norm_xform(int tnr, double *wn, double *vp)
   NDC_to_DC(vp[1], vp[2], xp2, yp2);
 
   p->rect[tnr].setCoords(xp1, yp1, xp2, yp2);
+
+  gks_set_norm_xform(tnr, wn, vp);
 }
 
 static
@@ -784,6 +787,90 @@ void fillarea(int n, double *px, double *py)
 }
 
 static
+void adjust_cellarray(
+  double *qx, double *qy, double *rx, double *ry,
+  int *scol, int *srow, int *ncol, int *nrow, int dimx, int dimy)
+{
+  double xmin, xmax, ymin, ymax, tmp, dx, dy;
+  double left, bottom, right, top;
+
+  WC_to_NDC(*qx, *qy, gkss->cntnr, xmin, ymax);
+  WC_to_NDC(*rx, *ry, gkss->cntnr, xmax, ymin);
+
+  if (p->have_selection)
+    {
+      DC_to_NDC(p->area.left(), p->area.right(), left, right);
+      DC_to_NDC(p->area.bottom(), p->area.top(), bottom, top);
+    }
+  else
+    {
+      left = 0;
+      right = 1;
+      bottom = 0;
+      top = 1;
+    }
+
+  if (*rx < *qx)
+    {
+      tmp = xmax; xmax = xmin; xmin = tmp;
+    }
+  if (*ry < *qy)
+    {
+      tmp = ymax; ymax = ymin; ymin = tmp;
+    }
+
+  dx = (xmax - xmin) / *ncol;
+  dy = (ymax - ymin) / *nrow;
+
+  while (xmin + dx < left && *ncol > 0)
+    {
+      xmin += dx;
+      *scol += 1;
+      *ncol -= 1;
+      if (xmin >= xmax || *scol + *ncol - 1 > dimx)
+        *ncol = 0;
+    }
+  while (xmax - dx > right && *ncol > 0)
+    {
+      xmax -= dx;
+      *ncol -= 1;
+      if (xmin >= xmax)
+        *ncol = 0;
+    }
+
+  while (ymin + dy < bottom && *ncol > 0 && *nrow > 0)
+    {
+      ymin += dy;
+      *srow += 1;
+      *nrow -= 1;
+      if (ymin >= ymax || *srow + *nrow - 1 > dimy)
+        *nrow = 0;
+    }
+  while (ymax - dy > top && *ncol > 0 && *nrow > 0)
+    {
+      ymax -= dy;
+      *nrow -= 1;
+      if (ymin >= ymax)
+        *nrow = 0;
+    }
+
+  if (xmax - xmin > 3 || ymax - ymin > 3)
+    *ncol = *nrow = 0;
+
+  if (*rx < *qx)
+    {
+      tmp = xmax; xmax = xmin; xmin = tmp;
+    }
+  if (*ry < *qy)
+    {
+      tmp = ymax; ymax = ymin; ymin = tmp;
+    }
+
+  NDC_to_WC(xmin, ymax, gkss->cntnr, *qx, *qy);
+  NDC_to_WC(xmax, ymin, gkss->cntnr, *rx, *ry);
+}
+
+static
 void cellarray(
   double xmin, double xmax, double ymin, double ymax,
   int dx, int dy, int dimx, int *colia, int true_color)
@@ -814,6 +901,11 @@ void cellarray(
   swapy = iy1 < iy2;
 
   img = new QImage(width, height, QImage::Format_RGB32);
+  if (img->isNull())
+    {
+      gks_perror("memory for %dx%d QImage cannot be allocated", width, height);
+      exit(1);
+    }
 
   for (j = 0; j < height; j++)
     {
@@ -859,6 +951,8 @@ void interp(char *str)
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
+  int scol, srow, ncol, nrow;
+  double qx, qy, rx, ry;
 
   s = str;
 
@@ -979,12 +1073,16 @@ void interp(char *str)
           p->viewport[1] = p->width  * 2.54 / activeWidget->logicalDpiX() / 100;
           p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() / 100;
 
+          p->selecting = false;
+          p->have_selection = false;
+
+          gks_init_core(gkss);
+
           set_xform();
           init_norm_xform();
           init_colors();
 
           gkss->fontfile = gks_open_font();
-          gks_init_core(gkss);
           break;
 
         case   3:
@@ -1011,8 +1109,22 @@ void interp(char *str)
         case  16:
         case 201:
           true_color = *f == DRAW_IMAGE;
-          cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1],
-                    *dx, *dy, *dimx, i_arr, true_color);
+
+          qx = f_arr_1[0];
+          qy = f_arr_2[0];
+          rx = f_arr_1[1];
+          ry = f_arr_2[1];
+          scol = 1;
+          srow = 1;
+          ncol = *dx;
+          nrow = *dy;
+          adjust_cellarray(&qx, &qy, &rx, &ry,
+                           &scol, &srow, &ncol, &nrow, *dimx, *dy);
+
+          true_color = *f == DRAW_IMAGE;
+          cellarray(qx, rx, qy, ry,
+                    ncol, nrow, *dimx, i_arr + (srow - 1) * *dimx + scol - 1,
+                    true_color);
           break;
 
         case  19:
@@ -1101,7 +1213,6 @@ void interp(char *str)
           gkss->window[*i_arr][2] = f_arr_2[0];
           gkss->window[*i_arr][3] = f_arr_2[1];
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
           break;
 
         case  50:
@@ -1110,7 +1221,6 @@ void interp(char *str)
           gkss->viewport[*i_arr][2] = f_arr_2[0];
           gkss->viewport[*i_arr][3] = f_arr_2[1];
           set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
-          gks_set_norm_xform(*i_arr, gkss->window[*i_arr], gkss->viewport[*i_arr]);
 
           if (*i_arr == gkss->cntnr)
             set_clip_rect(*i_arr);
@@ -1859,7 +1969,7 @@ void GKSWidget::paintEvent(QPaintEvent *)
       }
 
       painter.translate(p->trans_x, p->trans_y);
-      if (p->zooming) {
+      if (p->selecting) {
         painter.drawPixmap(QPoint(0, 0), *pm);
       }
       else {
@@ -1872,10 +1982,11 @@ void GKSWidget::paintEvent(QPaintEvent *)
 void GKSWidget::resizeEvent(QResizeEvent *e)
 {
   double fac;
-  p->zooming = false;
+
+  p->selecting = false;
 
   fac = min((double) max(1., this->spacer->geometry().width()) / p->width,
-            (double) max(1., this->spacer->geometry().height()) / p->width );
+            (double) max(1., this->spacer->geometry().height()) / p->width);
   p->width = nint(p->width * fac);
   p->height = nint(p->height * fac);
   p->saved_width = p->width;
@@ -1913,14 +2024,14 @@ void GKSWidget::mouseMoveEvent(QMouseEvent *e) {
 
   this->sb_label->setText(QString(tr("(%1, %2)")).arg(xf).arg(yf));
   if (e->buttons() == Qt::LeftButton) {
-    rubberBand->setGeometry(QRect(p->zoom_start, e->pos()).normalized());
+    rubberBand->setGeometry(QRect(p->start, e->pos()).normalized());
     update();
   }
 }
 
 void GKSWidget::mousePressEvent(QMouseEvent *e) {
-  if (p->zooming) {
-    p->zooming = false;
+  if (p->selecting) {
+    p->selecting = false;
     p->width = p->saved_width;
     p->height = p->saved_height;
 
@@ -1944,10 +2055,10 @@ void GKSWidget::mousePressEvent(QMouseEvent *e) {
 
   if (e->buttons() == Qt::LeftButton) {
     leftButton = true;
-    p->zoom_start = e->pos();
+    p->start = e->pos();
     if (!rubberBand)
       rubberBand = new QRubberBand(QRubberBand::Rectangle, this);
-    rubberBand->setGeometry(QRect(p->zoom_start, QSize()));
+    rubberBand->setGeometry(QRect(p->start, QSize()));
     rubberBand->show();
   }
   if (e->buttons() == Qt::RightButton) {
@@ -1957,17 +2068,17 @@ void GKSWidget::mousePressEvent(QMouseEvent *e) {
 
 void GKSWidget::mouseReleaseEvent(QMouseEvent *e) {
   double fac;
-  QRect rect;
 
   if (leftButton) {
-    p->zooming = true;
+    p->selecting = false;
 
-    rect = QRect(0, 0, p->width, p->height).intersected(rubberBand->geometry());
-    rect.translate(-p->trans_x, -p->trans_y);
+    p->area = QRect(0, 0, p->width, p->height).intersected(rubberBand->geometry());
+    p->have_selection = true;
+    p->area.translate(-p->trans_x, -p->trans_y);
 
-    if (!(rect.isNull())) {
-      fac = min((double) p->width / max(1, rect.width()),
-                (double) p->height / max(1, rect.height()));
+    if (!(p->area.isNull())) {
+      fac = min((double) p->width / max(1, p->area.width()),
+                (double) p->height / max(1, p->area.height()));
 
       p->saved_width = p->width;
       p->saved_height = p->height;
@@ -1975,11 +2086,11 @@ void GKSWidget::mouseReleaseEvent(QMouseEvent *e) {
       p->height = nint(p->height * fac);
 
       rubberBand->hide();
-      rect.setRect(nint(rect.x() * fac), nint(rect.y() * fac),
-                        nint(rect.width() * fac), nint(rect.height() * fac));
+      p->area.setRect(nint(p->area.x() * fac), nint(p->area.y() * fac),
+                      nint(p->area.width() * fac), nint(p->area.height() * fac));
 
-      p->pixmap->setClipRect(rect);
-      p->pixmap->translate(-rect.left(), -rect.top());
+      p->pixmap->setClipRect(p->area);
+      p->pixmap->translate(-p->area.left(), -p->area.top());
 
       p->viewport[0] = 0;
       p->viewport[1] = p->width * 2.54 / activeWidget->logicalDpiX() * 0.01;
