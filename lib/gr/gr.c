@@ -5638,6 +5638,20 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
     }
 }
 
+static
+const double *xp, *yp;
+
+static
+int compar(const void *a, const void *b)
+{
+  int ret = -1;
+  if (xp[*(int *) a] > xp[*(int *) b])
+    ret = 1;
+  if (yp[*(int *) a] < yp[*(int *) b])
+    ret = 1;
+  return ret;
+}
+
 void gr_trisurface(int n, double *px, double *py, double *pz)
 {
   int errind, coli, int_style;
@@ -5663,6 +5677,10 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
   gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
 
   gr_delaunay(n, px, py, &ntri, &triangles);
+
+  xp = px;
+  yp = py;
+  qsort(triangles, ntri, 3 * sizeof(int), compar);
 
   for (i = 0; i < ntri; i++)
     {

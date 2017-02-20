@@ -5,20 +5,6 @@
 
 #include "gr.h"
 
-static
-const double *xp, *yp;
-
-static
-int compar(const void *a, const void *b)
-{
-  int ret = -1;
-  if (xp[*(int *) a] > xp[*(int *) b])
-    ret = 1;
-  if (yp[*(int *) a] < yp[*(int *) b])
-    ret = 1;
-  return ret;
-}
-
 void gr_delaunay(int npoints, const double *x, const double *y,
                  int *ntri, int **triangles)
 {
@@ -82,10 +68,6 @@ void gr_delaunay(int npoints, const double *x, const double *y,
             else
               tri_indices[facet->id] = -1;
           }
-
-          xp = x;
-          yp = y;
-          qsort(*triangles, *ntri, 3 * sizeof(int), compar);
         }
         else
           fprintf(stderr, "Could not allocate triangle array\n");
