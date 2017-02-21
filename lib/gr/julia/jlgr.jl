@@ -9,11 +9,11 @@ macro _tuple(t)
     :( Tuple{$t} )
 end
 
-@compat typealias PlotArg Union{AbstractString, AbstractVector, AbstractMatrix, Function}
+const PlotArg = Union{AbstractString, AbstractVector, AbstractMatrix, Function}
 
 const gr3 = GR.gr3
 
-const plot_kind = [:line, :scatter, :stem, :hist, :contour, :contourf, :hexbin, :heatmap, :wireframe, :surface, :plot3, :scatter3, :imshow, :isosurface, :polar, :trisurf]
+const plot_kind = [:line, :scatter, :stem, :hist, :contour, :contourf, :hexbin, :heatmap, :wireframe, :surface, :plot3, :scatter3, :imshow, :isosurface, :polar, :trisurf, :tricont]
 
 const arg_fmt = [:xys, :xyac, :xyzc]
 
@@ -87,17 +87,20 @@ function set_viewport(kind, subplot)
         vp[1] *= ratio
         vp[2] *= ratio
     end
-    viewport[1] = vp[1] + 0.125 * (vp[2] - vp[1])
-    viewport[2] = vp[1] + 0.925 * (vp[2] - vp[1])
-    viewport[3] = vp[3] + 0.125 * (vp[4] - vp[3])
-    viewport[4] = vp[3] + 0.925 * (vp[4] - vp[3])
-
-    if w > h
-        viewport[3] += (1 - (subplot[4] - subplot[3])^2) * 0.02
-    end
     if kind in (:wireframe, :surface, :plot3, :scatter3, :trisurf)
-        viewport[2] -= 0.0525
+        extent = min(vp[2] - vp[1], vp[4] - vp[3])
+        vp1 = 0.5 * (vp[1] + vp[2] - extent)
+        vp2 = 0.5 * (vp[1] + vp[2] + extent)
+        vp3 = 0.5 * (vp[3] + vp[4] - extent)
+        vp4 = 0.5 * (vp[3] + vp[4] + extent)
+    else
+        vp1, vp2, vp3, vp4 = vp
     end
+    viewport[1] = vp1 + 0.125 * (vp2 - vp1)
+    viewport[2] = vp1 + 0.925 * (vp2 - vp1)
+    viewport[3] = vp3 + 0.125 * (vp4 - vp3)
+    viewport[4] = vp3 + 0.925 * (vp4 - vp3)
+
     if kind in (:contour, :contourf, :hexbin, :heatmap, :surface, :trisurf)
         viewport[2] -= 0.1
     end
@@ -455,7 +458,7 @@ function colorbar(off=0, colors=256)
     GR.setviewport(viewport[2] + 0.02 + off, viewport[2] + 0.05 + off,
                    viewport[3], viewport[4])
     l = zeros(Int32, 1, colors)
-    l[1,:] = round(Int32, linspace(1000, 1255, colors))
+    l[1,:] = Int[round(Int, _i) for _i in linspace(1000, 1255, colors)]
     GR.cellarray(0, 1, zmax, zmin, 1, colors, l)
     GR.setlinecolorind(1)
     diag = sqrt((viewport[2] - viewport[1])^2 + (viewport[4] - viewport[3])^2)
@@ -570,7 +573,7 @@ function plot_img(I)
     else
         width, height = size(I)
         data = (float(I) - minimum(I)) / (maximum(I) - minimum(I))
-        data = round(Int32, 1000 + data * 255)
+        data = Int32[round(Int32, 1000 + _i * 255) for _i in data]
     end
 
     if width  * (viewport[4] - viewport[3]) <
@@ -624,7 +627,11 @@ function plot_iso(V)
     end
 
     GR.selntran(0)
+if VERSION > v"0.6-"
+    values = round.(UInt16, (V-minimum(V)) / (maximum(V)-minimum(V)) * (2^16-1))
+else
     values = round(UInt16, (V-minimum(V)) / (maximum(V)-minimum(V)) * (2^16-1))
+end
     nx, ny, nz = size(V)
     isovalue = get(plt.kvs, :isovalue, 0.5)
     rotation = get(plt.kvs, :rotation, 40) * π / 180.0
@@ -728,7 +735,7 @@ function plot_data(flag=true)
             if z != Void || c != Void
                 if c != Void
                     c = (c - minimum(c)) / (maximum(c) - minimum(c))
-                    cind = round(Int64, 1000 + c * 255)
+                    cind = Int[round(Int, 1000 + _i * 255) for _i in c]
                 end
                 for i in 1:length(x)
                     (z != Void) && GR.setmarkersize(z[i] / 100.0)
@@ -826,6 +833,10 @@ function plot_data(flag=true)
             GR.trisurface(x, y, z)
             draw_axes(kind, 2)
             colorbar(0.05)
+        elseif kind == :tricont
+            zmin, zmax = plt.kvs[:zrange]
+            levels = linspace(zmin, zmax, 20)
+            GR.tricontour(x, y, z, levels)
         end
         GR.restorestate()
     end
@@ -1191,7 +1202,7 @@ function peaks(n=49)
     x = linspace(-2.5, 2.5, n)
     y = x
     x, y = meshgrid(x, y)
-    3*(1-x).^2.*exp(-(x.^2) - (y+1).^2) - 10*(x/5 - x.^3 - y.^5).*exp(-x.^2-y.^2) - 1/3*exp(-(x+1).^2 - y.^2)
+    3*(1-x).^2.*exp.(-(x.^2) - (y+1).^2) - 10*(x/5 - x.^3 - y.^5).*exp.(-x.^2-y.^2) - 1/3*exp.(-(x+1).^2 - y.^2)
 end
 
 function imshow(I; kv...)
@@ -1211,16 +1222,16 @@ function isosurface(V; kv...)
 end
 
 function cart2sph(x, y, z)
-    azimuth = atan2(y, x)
-    elevation = atan2(z, sqrt(x.^2 + y.^2))
-    r = sqrt(x.^2 + y.^2 + z.^2)
+    azimuth = atan2.(y, x)
+    elevation = atan2.(z, sqrt.(x.^2 + y.^2))
+    r = sqrt.(x.^2 + y.^2 + z.^2)
     azimuth, elevation, r
 end
 
 function sph2cart(azimuth, elevation, r)
-    x = r .* cos(elevation) .* cos(azimuth)
-    y = r .* cos(elevation) .* sin(azimuth)
-    z = r .* sin(elevation)
+    x = r .* cos.(elevation) .* cos.(azimuth)
+    y = r .* cos.(elevation) .* sin.(azimuth)
+    z = r .* sin.(elevation)
     x, y, z
 end
 
@@ -1234,6 +1245,14 @@ end
 
 function trisurf(args...; kv...)
     create_context(:trisurf, Dict(kv))
+
+    plt.args = plot_args(args, fmt=:xyzc)
+
+    plot_data()
+end
+
+function tricont(args...; kv...)
+    create_context(:tricont, Dict(kv))
 
     plt.args = plot_args(args, fmt=:xyzc)
 
