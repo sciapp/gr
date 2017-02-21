@@ -5930,6 +5930,38 @@ void gr_contour(
     }
 }
 
+void gr_tricontour(
+  int npoints, double *x, double *y, double *z, int nlevels, double *levels)
+{
+  if (npoints < 3)
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return;
+    }
+
+  if (nlevels < 1)
+    {
+      fprintf(stderr, "invalid number of iso levels\n");
+      return;
+    }
+
+  check_autoinit;
+
+  setscale(lx.scale_options);
+
+  gr_draw_tricont(npoints, x, y, z, nlevels, levels);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<tricont npoints=\"%d\"", npoints);
+      print_float_array("x", npoints, x);
+      print_float_array("y", npoints, y);
+      print_float_array("z", npoints, z);
+      print_float_array("levels", nlevels, levels);
+      gr_writestream("/>\n");
+    }
+}
+
 static
 int binning(
   double x[], double y[], int *cell, int *cnt, double size, double shape,

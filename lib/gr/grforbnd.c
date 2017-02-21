@@ -435,6 +435,12 @@ void FORTRAN(gr_contour)(
   gr_contour(*nx, *ny, *nh, px, py, h, pz, *major_h);
 }
 
+void FORTRAN(gr_tricontour)(
+  int *npoints, double *x, double *y, double *z, int *nlevels, double *levels)
+{
+  gr_tricontour(*npoints, x, y, z, *nlevels, levels);
+}
+
 int FORTRAN(gr_hexbin)(
   int *n, double *x, double *y, int *nbins)
 {

@@ -5,6 +5,7 @@
 #include <math.h>
 
 #include "gks.h"
+#include "gkscore.h"
 #include "gr.h"
 #include "contour.h"
 
@@ -55,6 +56,22 @@ contour_vars_t;
 static contour_vars_t contour_vars;
 
 #define Z(i, j) (contour_vars.z[(i) + contour_vars.xdim*(j)])
+
+typedef struct {
+  int npoints;
+  double *x;
+  double *y;
+} polyline_t;
+
+static
+int lookup_table[6][3][2] = {
+  { {0, 1}, {0, 2} },
+  { {0, 1}, {1, 2} },
+  { {0, 2}, {1, 2} },
+  { {0, 2}, {1, 2} },
+  { {0, 1}, {1, 2} },
+  { {0, 1}, {0, 2} }
+};
 
 static
 char *xmalloc(int bytes)
@@ -1349,3 +1366,230 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
   if (cv != h)
     free(cv);
 }
+
+static
+int get_lookup_table_index(int *triangle, double *z, double isolevel) {
+  int index, i;
+
+  index = 0;
+  for (i = 0; i < 3; ++i) {
+    index |= (z[triangle[i]] > isolevel ? 1 : 0) << i;
+  }
+  return index;
+}
+
+static
+void interpolate_line_segment(double *x, double *y, double *z, int *triangle,
+                              double isolevel, int *nlines, vertex_t *lines)
+{
+  int indices[2];
+  int index, i, j;
+
+  index = get_lookup_table_index(triangle, z, isolevel);
+  if (index > 0 && index < 7) {
+    for (i = 0; i < 2; ++i) {
+      for (j = 0; j < 2; ++j) {
+        indices[j] = triangle[lookup_table[index-1][i][j]];
+      }
+      lines[i].x = x[indices[0]] + (x[indices[1]] - x[indices[0]]) *
+        ((isolevel - z[indices[0]]) / (z[indices[1]] - z[indices[0]]));
+      lines[i].y = y[indices[0]] + (y[indices[1]] - y[indices[0]]) *
+        ((isolevel - z[indices[0]]) / (z[indices[1]] - z[indices[0]]));
+    }
+    *nlines = 1;
+  }
+  else {
+    *nlines = 0;
+  }
+}
+
+static
+void convert_segments_to_polylines(
+  int nsegments, vertex_t *segments, int *nlines, polyline_t **lines) {
+  polyline_t *lin;
+  int nlin;
+  polyline_t *cur_lin;
+  vertex_t *points;
+  static int start;
+  static int end;
+  static int capacity;
+  static vertex_t *first_point;
+  vertex_t **pointp;
+  int *used_segments;
+  int nfree_segments;
+  int found_point;
+  int line_segment_fits;
+  int closed_segment;
+  int i, j;
+
+  lin = (polyline_t *) malloc(nsegments * sizeof(polyline_t));
+  if (lin == NULL) {
+    fprintf(stderr, "out of virtual memory\n");
+    return;
+  }
+  nlin = 0;
+  cur_lin = lin;
+  points = (vertex_t *) malloc((nsegments + 2) * sizeof(vertex_t));
+  if (points == NULL) {
+    fprintf(stderr, "out of virtual memory\n");
+    free(lin);
+    return;
+  }
+  nlin = 0;
+  start = -1;
+  end = 0;
+  capacity = nsegments + 2;
+  first_point = NULL;
+  used_segments = calloc(nsegments, sizeof(int));
+  if (used_segments == NULL) {
+    fprintf(stderr, "out of virtual memory\n");
+    free(lin);
+    free(points);
+    return;
+  }
+  nfree_segments = nsegments;
+
+  while (nfree_segments > 0) {
+    /* each iteration generates a new polyline */
+    found_point = 1;
+    while (found_point) {
+      /* each iteration adds a new point to the polyline */
+      found_point = 0;
+      for (i = 0; i < nsegments; i++) {
+        /* each iteration tests if a line segment can be added to the current
+           polyline */
+        if (!used_segments[i]) {
+          if (start >= 0) {
+            /* the current line has already points */
+            line_segment_fits = 0;
+            for ((j = 0, pointp = &first_point); *pointp != NULL;
+                 (j++, pointp++)) {
+              if (fabs(segments[2*i].x - (*pointp)->x) < FEPS &&
+                  fabs(segments[2*i].y - (*pointp)->y) < FEPS) {
+                line_segment_fits = 1;
+                closed_segment = (pointp == &first_point) ? 0 : 1;
+                break;
+              }
+              else if (fabs(segments[2*i + 1].x - (*pointp)->x) < FEPS &&
+                       fabs(segments[2*i + 1].y - (*pointp)->y) < FEPS) {
+                line_segment_fits = 1;
+                closed_segment = (pointp != &first_point) ? 0 : 1;
+                break;
+              }
+            }
+            if (line_segment_fits) {
+              if (pointp == &first_point) {
+                /* line segment fits at the beginning of the current polyline */
+                points[start] = segments[2*i + (1-closed_segment)];
+                first_point = &points[start];
+                start = (start - 1 + capacity) % capacity;
+              }
+              else {
+                /* line segment fits at the end of the current polyline */
+                points[end] = segments[2*i + closed_segment];
+                end = (end + 1 + capacity) % capacity;
+              }
+              used_segments[i] = 1;
+              --nfree_segments;
+              found_point = 1;
+              break;
+            }
+          }
+          else {
+            /* empty polyline */
+            start = (start + capacity) % capacity;
+            points[start] = segments[2*i];
+            points[end] = segments[2*i + 1];
+            first_point = &points[start];
+            start = (start - 1 + capacity) % capacity;
+            end = (end + 1 + capacity) % capacity;
+            used_segments[i] = 1;
+            --nfree_segments;
+            found_point = 1;
+            break;
+          }
+        }
+      }
+    }
+    cur_lin->npoints = 0;
+    cur_lin->x = (double *) malloc((end-start + capacity-1) * sizeof(double));
+    cur_lin->y = (double *) malloc((end-start + capacity-1) * sizeof(double));
+    if (cur_lin->x == NULL || cur_lin->y == NULL) {
+      fprintf(stderr, "out of virtual memory\n");
+      free(cur_lin->x);
+      free(cur_lin->y);
+      return;
+    }
+    for (i = start+1; i != end; i = (i + 1) % capacity) {
+      cur_lin->x[cur_lin->npoints] = points[i].x;
+      cur_lin->y[cur_lin->npoints] = points[i].y;
+      ++(cur_lin->npoints);
+    }
+    ++nlin;
+    ++cur_lin;
+    start = -1;
+    end = 0;
+  }
+
+  lin = realloc(lin, nlin * sizeof(polyline_t));
+  free(points);
+  free(used_segments);
+
+  *nlines = nlin;
+  *lines = lin;
+}
+
+static
+void march_triangles(
+  double *x, double *y, double *z, int ntri, int *triangles,
+  double isolevel, int *nlines, polyline_t **lines)
+{
+  int i, j;
+  vertex_t cur_line[2];
+  int cur_nlines;
+  vertex_t *lin;
+  double nlin;
+  int cur_lin_index;
+
+  lin = (vertex_t *) malloc(ntri * 2 * sizeof(vertex_t));
+  if (lin == NULL) {
+    fprintf(stderr, "out of virtual memory\n");
+    return;
+  }
+  cur_lin_index = 0;
+  for (i = 0; i < ntri; ++i) {
+    interpolate_line_segment(x, y, z, &triangles[3*i],
+                             isolevel, &cur_nlines, cur_line);
+    for (j = 0; j < 2*cur_nlines; (j++, cur_lin_index++)) {
+      lin[cur_lin_index].x = cur_line[j].x;
+      lin[cur_lin_index].y = cur_line[j].y;
+    }
+  }
+  lin = realloc(lin, cur_lin_index * sizeof(vertex_t));
+  nlin = cur_lin_index / 2;
+
+  convert_segments_to_polylines(nlin, lin, nlines, lines);
+}
+
+void gr_draw_tricont(int npoints, double *x, double *y, double *z,
+                     int nlevels, double *levels)
+{
+  int i, l;
+  int ntri, *triangles;
+  int nlines;
+  polyline_t *lines;
+
+  gr_delaunay(npoints, x, y, &ntri, &triangles);
+
+  for (l = 0; l < nlevels; l++)
+    {
+      march_triangles(x, y, z, ntri, triangles, levels[l], &nlines, &lines);
+
+      for (i = 0; i < nlines; i++)
+        gr_polyline(lines[i].npoints, lines[i].x, lines[i].y);
+
+      free(lines);
+    }
+  free(triangles);
+}
+

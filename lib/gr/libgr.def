@@ -100,8 +100,9 @@ EXPORTS
 	gr_textext
 	gr_tick
 	gr_titles3d
-	gr_trisurface
 	gr_updategks
+	gr_tricontour
+	gr_trisurface
 	gr_updatews
 	gr_uselinespec
 	gr_validaterange
