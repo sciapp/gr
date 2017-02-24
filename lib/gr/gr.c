@@ -5933,6 +5933,8 @@ void gr_contour(
 void gr_tricontour(
   int npoints, double *x, double *y, double *z, int nlevels, double *levels)
 {
+  int i, *colors;
+
   if (npoints < 3)
     {
       fprintf(stderr, "invalid number of points\n");
@@ -5949,7 +5951,14 @@ void gr_tricontour(
 
   setscale(lx.scale_options);
 
-  gr_draw_tricont(npoints, x, y, z, nlevels, levels);
+  colors = (int *) xmalloc(nlevels * sizeof(int));
+  for (i = 0; i < nlevels; i++)
+    colors[i] = (int)((double)i / (nlevels - 1) * (last_color - first_color)) +
+                first_color;
+
+  gr_draw_tricont(npoints, x, y, z, nlevels, levels, colors);
+
+  free(colors);
 
   if (flag_graphics)
     {

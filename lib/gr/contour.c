@@ -1572,7 +1572,7 @@ void march_triangles(
 }
 
 void gr_draw_tricont(int npoints, double *x, double *y, double *z,
-                     int nlevels, double *levels)
+                     int nlevels, double *levels, int *colors)
 {
   int i, l;
   int ntri, *triangles;
@@ -1585,6 +1585,7 @@ void gr_draw_tricont(int npoints, double *x, double *y, double *z,
     {
       march_triangles(x, y, z, ntri, triangles, levels[l], &nlines, &lines);
 
+      gr_setlinecolorind(colors[l]);
       for (i = 0; i < nlines; i++)
         gr_polyline(lines[i].npoints, lines[i].x, lines[i].y);
 
