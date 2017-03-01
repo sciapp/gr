@@ -246,6 +246,8 @@ GR3API void gr3_drawzslicemesh(const GR3_MC_DTYPE *data, unsigned int iz,
                                double step_x, double step_y, double step_z,
                                double offset_x, double offset_y, double offset_z);
 
+GR3API void gr3_drawtrianglesurface(int n, const float *triangles);
+
 #ifdef _WIN32
     #ifdef __cplusplus
         }

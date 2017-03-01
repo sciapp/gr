@@ -1352,9 +1352,10 @@ static void gr3_draw_(GLuint width, GLuint height) {
             glLightfv(GL_LIGHT0, GL_POSITION, &context_struct_.light_dir[0]);
         }
     }
-    // The depth test should already be enabled, but it is re-enabled here,
-    // as the user might have disabled it when GR3 is using an already existing
-    // OpenGL context, e.g. when using an QOpenGLWidget in Qt5.
+    /* The depth test should already be enabled, but it is re-enabled here,
+     * as the user might have disabled it when GR3 is using an already existing
+     * OpenGL context, e.g. when using an QOpenGLWidget in Qt5.
+     */
     glEnable(GL_DEPTH_TEST);
     glClearColor(context_struct_.background_color[0], context_struct_.background_color[1], context_struct_.background_color[2], context_struct_.background_color[3]);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

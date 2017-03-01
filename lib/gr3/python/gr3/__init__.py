@@ -46,7 +46,8 @@ __all__ = ['GR3_InitAttribute',
            'createyslicemesh',
            'createzslicemesh',
            'drawslicemeshes',
-           'createslicemeshes']
+           'createslicemeshes',
+           'drawtrianglesurface']
 
 
 import sys
@@ -1466,6 +1467,30 @@ def createslicemeshes(grid, x=None, y=None, z=None, step=None, offset=None):
     return _mesh_x, _mesh_y, _mesh_z
 
 
+def drawtrianglesurface(vertices):
+    """
+    Renders a triangle mesh using the current GR colormap and projection.
+
+    **Parameters:**
+
+        `vertices` : the vertices of the triangle mesh
+    """
+    global _gr3
+    vertices = numpy.array(vertices, copy=False)
+    assert len(vertices.shape) <= 3
+    if len(vertices.shape) == 3:
+        assert vertices.shape[1:3] == (3, 3)
+        n = len(vertices)
+    elif len(vertices.shape) == 2:
+        assert vertices.shape[1:] == (3,)
+        n = len(vertices) // 3
+    else:
+        n = len(vertices) // 3 // 3
+    vertices.shape = (n, 3, 3)
+    vertices = numpy.array(vertices, numpy.float32)
+    _gr3.gr3_drawtrianglesurface(n, vertices.ctypes.data_as(POINTER(c_float)))
+
+
 _gr3.gr3_init.argtypes = [POINTER(c_int)]
 _gr3.gr3_terminate.argtypes = []
 _gr3.gr3_useframebuffer.argtypes = [c_uint]
@@ -1607,6 +1632,10 @@ _gr3.gr3_drawzslicemesh.argtypes = [POINTER(c_ushort), c_uint,
                                     c_uint, c_uint, c_uint,
                                     c_double, c_double, c_double,
                                     c_double, c_double, c_double]
+
+_gr3.gr3_drawtrianglesurface.restype = None
+_gr3.gr3_drawtrianglesurface.argtypes = [c_int, POINTER(c_float)]
+
 
 for symbol in dir(_gr3):
     if symbol.startswith('gr3_') and symbol != 'gr3_geterror':

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -594,3 +595,93 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz,
     }
 }
 
+
+/*!
+ * Draw the given triangles using the current GR colormap
+ * \param [in]  n          number of triangles
+ * \param [in]  triangles  pointer to an array of 3*3*n float values
+ */
+GR3API void gr3_drawtrianglesurface(int n, const float *positions) {
+    int i;
+    int j;
+    int mesh;
+    int scale;
+    double z_min;
+    double z_max;
+    struct {
+        double x_min;
+        double x_max;
+        double y_min;
+        double y_max;
+    } window;
+    float *normals;
+    float *colors;
+    if (n < 1) {
+        return;
+    }
+    z_min = positions[2];
+    z_max = positions[2];
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < 3; j++) {
+            if (z_min > positions[(i*3+j)*3+2]) {
+                z_min = positions[(i*3+j)*3+2];
+            }
+            if (z_max < positions[(i*3+j)*3+2]) {
+                z_max = positions[(i*3+j)*3+2];
+            }
+        }
+    }
+    if (z_min == z_max) {
+        /* if all z are equal, use the central color of the colormap */
+        z_max += 0.5;
+        z_min -= 0.5;
+    }
+
+    normals = (float *)malloc(n * 3 * 3 * sizeof(float));
+    colors = (float *)malloc(n * 3 * 3 * sizeof(float));
+    assert(positions);
+    assert(normals);
+    assert(colors);
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < 3; j++) {
+            int color;
+            int rgb;
+            /* light direction in gr3_drawmesh_grlike() is fixed to (0, 1, 0) */
+            normals[(i*3+j)*3+0] = 0;
+            normals[(i*3+j)*3+1] = 1;
+            normals[(i*3+j)*3+2] = 0;
+            color = 1000 + 255 * (positions[(i*3+j)*3+2] - z_min) / (z_max - z_min);
+            gr_inqcolor(color, &rgb);
+            colors[(i*3+j)*3+0] = (float) ( rgb        & 0xff) / 255;
+            colors[(i*3+j)*3+1] = (float) ((rgb >>  8) & 0xff) / 255;
+            colors[(i*3+j)*3+2] = (float) ((rgb >> 16) & 0xff) / 255;
+        }
+    }
+    mesh = 0;
+    gr3_createmesh(&mesh, 3 * n, positions, normals, colors);
+    free(normals);
+    free(colors);
+
+    if (gr3_geterror(0, NULL, NULL)) return;
+    gr3_drawsurface(mesh);
+    if (gr3_geterror(0, NULL, NULL)) return;
+    gr3_deletemesh(mesh);
+    if (gr3_geterror(0, NULL, NULL)) return;
+    gr_inqwindow(&window.x_min, &window.x_max, &window.y_min, &window.y_max);
+    scale = 0;
+    gr_inqscale(&scale);
+    if (scale & OPTION_FLIP_X) {
+        double tmp = window.x_min;
+        window.x_min = window.x_max;
+        window.x_max = tmp;
+    }
+    if (scale & OPTION_FLIP_Y) {
+        double tmp = window.y_min;
+        window.y_min = window.y_max;
+        window.y_max = tmp;
+    }
+
+    /* TODO: inquire the required resolution */
+    gr3_drawimage((float)window.x_min, (float)window.x_max, (float)window.y_min, (float)window.y_max, 500, 500, GR3_DRAWABLE_GKS);
+    if (gr3_geterror(0, NULL, NULL)) return;
+}
