@@ -53,6 +53,13 @@ def trisurf(*args, **kwargs):
     _plot_data(kind='trisurf')
 
 
+def tricont(*args, **kwargs):
+    global _plt
+    _plt.kwargs.update(kwargs)
+    _plt.args = _plot_args(args, fmt='xyzc')
+    _plot_data(kind='tricont')
+
+
 def stem(*args, **kwargs):
     global _plt
     _plt.kwargs.update(kwargs)
@@ -416,8 +423,8 @@ def _draw_axes(kind, pass_=1):
     if kind in ('wireframe', 'surface', 'plot3', 'scatter3', 'trisurf'):
         z_tick, z_org, z_major_count = _plt.kwargs['zaxis']
         if pass_ == 1:
-            gr.grid3d(x_tick, 0, z_tick, x_org[0], y_org[0], z_org[0], 2, 0, 2)
-            gr.grid3d(0, y_tick, 0, x_org[1], y_org[0], z_org[0], 0, 2, 0)
+            gr.grid3d(x_tick, 0, z_tick, x_org[0], y_org[1], z_org[0], 2, 0, 2)
+            gr.grid3d(0, y_tick, 0, x_org[0], y_org[1], z_org[0], 0, 2, 0)
         else:
             gr.axes3d(x_tick, 0, z_tick, x_org[0], y_org[0], z_org[0], x_major_count, 0, z_major_count, -ticksize)
             gr.axes3d(0, y_tick, 0, x_org[1], y_org[0], z_org[0], 0, y_major_count, 0, ticksize)
@@ -711,6 +718,10 @@ def _plot_data(**kwargs):
             gr.trisurface(x, y, z)
             _draw_axes(kind, 2)
             _colorbar(0.05)
+        elif kind == 'tricont':
+            zmin, zmax = _plt.kwargs['zrange']
+            levels = np.linspace(zmin, zmax, 20)
+            gr.tricontour(x, y, z, levels)
         gr.restorestate()
     if kind in ('line', 'scatter', 'stem') and 'labels' in _plt.kwargs:
         _draw_legend()

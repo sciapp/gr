@@ -2373,6 +2373,34 @@ def trisurface(px, py, pz):
     __gr.gr_trisurface(c_int(n), _px.data, _py.data, _pz.data)
 
 
+def tricontour(px, py, pz, levels):
+    """
+    Draw a contour plot for the given triangle mesh.
+
+    **Parameters:**
+
+    `x` :
+        A list containing the X coordinates
+    `y` :
+        A list containing the Y coordinates
+    `z` :
+        A list containing the Z coordinates
+    `levels` :
+        A list containing the contour levels
+
+    """
+    nx = len(px)
+    ny = len(py)
+    nz = len(pz)
+    nlevels = len(levels)
+    _px = floatarray(nx, px)
+    _py = floatarray(ny, py)
+    _pz = floatarray(nz, pz)
+    _levels = floatarray(nlevels, levels)
+    n = min(nx, ny, nz)
+    __gr.gr_tricontour(c_int(n), _px.data, _py.data, _pz.data, c_int(nlevels), _levels.data)
+
+
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
 _grLibDir = os.getenv("GRLIB", _grPkgDir)
 _gksFontPath = os.path.join(_grPkgDir, "fonts")
@@ -2548,7 +2576,9 @@ __gr.gr_uselinespec.argtypes = [c_char_p]
 __gr.gr_uselinespec.restype = c_int
 __gr.gr_trisurface.argtypes = [
     c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double)]
-
+__gr.gr_tricontour.argtypes = [
+    c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double),
+    c_int, POINTER(c_double)]
 
 
 precision = __gr.gr_precision()
