@@ -171,6 +171,12 @@ mergeInto(LibraryManager.library, {
         context.clip();
     },
 
+    js_reset_clipping: function() {
+        var context = Module.context;
+        context.restore();
+        context.save();
+    },
+
     js_clear: function() {
         var context = Module.context;
         context.restore();

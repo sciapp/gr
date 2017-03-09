@@ -27,6 +27,7 @@ extern void js_circle(double x, double y, double r, int fill, unsigned char *rgb
 extern void js_fill_routine(int n, double *px, double *py, unsigned char *color);
 extern void js_pattern_routine(int n, double *px, double *py, int *rgb);
 extern void js_clip_path(int x, int y, int width, int height);
+extern void js_reset_clipping(void);
 extern void js_clear(void);
 
 #ifdef __cplusplus
@@ -176,6 +177,9 @@ int predef_ints[] = { 0, 1, 3, 3, 3 };
 static
 int predef_styli[] = { 1, 1, 1, 2, 3 };
 
+
+static void set_clip_path(int tnr);
+
 static
 void set_norm_xform(int tnr, double *wn, double *vp)
 {
@@ -263,6 +267,7 @@ void init_clippaths(void)
       p->cx[i] = p->cy[i] = -1;
       p->cwidth[i] = p->cheight[i] = 0;
     }
+  set_clip_path(0);
 }
 
 static
@@ -787,10 +792,8 @@ void set_clip_path(int tnr)
     }
   else
     {
-      x = (int) p->cxl[0];
-      y = (int) p->cyt[0];
-      width = (int) (p->cxr[0] - p->cxl[0]);
-      height = (int) (p->cyb[0] - p->cyt[0]);
+      js_reset_clipping();
+      return;
     }
     
   for (i = 0; i < p->clip_index && !found; i++)
