@@ -136,6 +136,7 @@ function GR(canvas_id) {
     this.selectcontext = gr_selectcontext;
     this.destroycontext = gr_destroycontext;
     this.uselinespec = gr_uselinespec;
+    this.selntran = gr_selntran;
 
     // set canvas and context
     Module.set_canvas(canvas_id);
@@ -1055,3 +1056,5 @@ gr_uselinespec = function(string) {
     freearray(_string);
     return result;
 }
+
+gr_selntran = Module.cwrap('gr_selntran', '', ['number']);
