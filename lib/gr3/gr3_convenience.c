@@ -549,7 +549,7 @@ GR3API void gr3_drawheightmap(const float *heightmap, int num_columns, int num_r
 
 GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int num_rows) {
   int mesh;
-  float colormap[72][3];
+  float colormap[256][3];
   
   /* Find the range of height values */
   int row;
@@ -569,9 +569,9 @@ GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int 
   
   {
     int i;
-    for (i = 0; i < 72; i++) {
+    for (i = 0; i < 256; i++) {
       int color;
-      gr_inqcolor(i+8,&color);
+      gr_inqcolor(1000+i, &color);
       colormap[i][0] =  (color        & 0xff) / 255.0;
       colormap[i][1] = ((color >>  8) & 0xff) / 255.0;
       colormap[i][2] = ((color >> 16) & 0xff) / 255.0;
@@ -659,10 +659,14 @@ GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int 
             normals[array_offset+2] = vector3[2];
           }
           /* Use fake colors */
-          
-          colors[array_offset+0] = colormap[(int)(height*71.5)][0];
-          colors[array_offset+1] = colormap[(int)(height*71.5)][1];
-          colors[array_offset+2] = colormap[(int)(height*71.5)][2];
+          {
+              int color = height * 256;
+              if (color < 0) color = 0;
+              if (color > 255) color = 255;
+              colors[array_offset+0] = colormap[color][0];
+              colors[array_offset+1] = colormap[color][1];
+              colors[array_offset+2] = colormap[color][2];
+          }
         }
       }
     }
