@@ -6473,6 +6473,16 @@ int gr_validaterange(double amin, double amax)
     return 0;
 }
 
+#ifdef _MSC_VER
+#if _MSC_VER < 1700
+static
+double trunc(double d)
+{
+  return (d > 0) ? floor(d) : ceil(d);
+}
+#endif
+#endif
+
 void gr_adjustrange(double *amin, double *amax)
 {
   double tick;
