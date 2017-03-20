@@ -6480,7 +6480,7 @@ void gr_adjustrange(double *amin, double *amax)
   if (*amin == *amax)
     {
       if (*amin != 0)
-        tick = pow(10.0, fract(log10(fabs(*amin))));
+        tick = pow(10.0, trunc(log10(fabs(*amin))));
       else
         tick = 0.1;
 
