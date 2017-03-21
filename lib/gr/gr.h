@@ -161,6 +161,10 @@ DLLEXPORT void gr_trisurface(int, double *, double *, double *);
 DLLEXPORT void gr_gradient(
   int, int, double *, double *, double *, double *, double *);
 DLLEXPORT void gr_quiver(int, int, double *, double *, double *, double *, int);
+DLLEXPORT void gr_interp2(
+  int nx, int ny, const double *x, const double *y, const double *z,
+  int nxq, int nyq, const double *xq, const double *yq, double *zq,
+  int method, double extrapval);
 
 #ifdef _WIN32
 #ifdef __cplusplus

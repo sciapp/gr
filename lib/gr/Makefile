@@ -8,7 +8,7 @@
 UNAME := $(shell uname)
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
-               delaunay.o md5.o import.o grforbnd.o
+               delaunay.o interp2.o md5.o import.o grforbnd.o
    MUPDFDEFS =
       GSDEFS =
      DEFINES = $(MUPDFDEFS) $(GSDEFS)
@@ -97,7 +97,7 @@ clean:
 
 depend:
 	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \
-	image.c md5.c import.c delaunay.c grforbnd.c 2> /dev/null
+	image.c delaunay.c interp2.c md5.c import.c grforbnd.c 2> /dev/null
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
@@ -108,7 +108,8 @@ gridit.o: gridit.h
 strlib.o: strlib.h
 io.o: gr.h io.h
 image.o: gr.h
+delaunay.o: gr.h
+interp2.o: gr.h
 md5.o: md5.h
 import.o: gr.h
-delaunay.o: gr.h
 grforbnd.o: gr.h

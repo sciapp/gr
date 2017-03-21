@@ -47,6 +47,7 @@ EXPORTS
 	gr_inqspace
 	gr_inqtext
 	gr_inqtextext
+	gr_interp2
 	gr_mathtex
 	gr_moveselection
 	gr_ndctowc

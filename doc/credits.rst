@@ -16,6 +16,10 @@ Major contributors include the following (in alphabetical order):
 
   made several contributions to qtgr and the setup.py script
 
+**Malte Deckers**
+
+  implemented an interpolation function
+
 **Marcel Dück**
 
   wrote the Java code and the iGR iOS App
