@@ -1637,6 +1637,7 @@ _libqhull_src = ["global.c", "stat.c", "geom2.c", "poly2.c", "merge.c",
 
 _gr_src = ["gr.c", "text.c", "contour.c", "spline.c", "gridit.c", "strlib.c",
            "io.c", "image.c", "md5.c", "import.c", "grforbnd.c", "delaunay.c",
+           "interp2.c"
           ]
 
 _gr3_src = ["gr3.c", "gr3_convenience.c", "gr3_html.c", "gr3_povray.c",
