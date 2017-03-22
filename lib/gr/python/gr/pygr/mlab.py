@@ -650,11 +650,11 @@ def _plot_data(**kwargs):
         elif kind == 'contourf':
             z_min, z_max = _plt.kwargs['zrange']
             gr.setspace(z_min, z_max, 0, 90)
+            scale = _plt.kwargs['scale']
+            gr.setscale(scale)
             if x.shape == y.shape == z.shape:
                 x, y, z = gr.gridit(x, y, z, 200, 200)
                 z.shape = (200, 200)
-            if _plt.kwargs['scale'] & gr.OPTION_Z_LOG != 0:
-                z = np.log(z)
             gr.surface(x, y, z, gr.OPTION_CELL_ARRAY)
             _colorbar()
         elif kind == 'hexbin':
