@@ -182,12 +182,6 @@ class GRWidget(QWidget):
             gr.updatews()
             painter.end()
 
-    def __del__(self):
-        if gr:
-            gr.emergencyclosegks()
-        # super destructor not available
-#        super(GRWidget, self).__del__()
-
 
 class InteractiveGRWidget(GRWidget):
 
