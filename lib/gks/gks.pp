@@ -11,144 +11,144 @@ interface
   const
 
   { default connection identifier }
-     GKS_K_CONID_DEFAULT = '';     
+     GKS_K_CONID_DEFAULT = '';
 
   { default workstation type }
-     GKS_K_WSTYPE_DEFAULT = 0;     
+     GKS_K_WSTYPE_DEFAULT = 0;
 
   { aspect source flag }
-     GKS_K_ASF_BUNDLED = 0;     
-     GKS_K_ASF_INDIVIDUAL = 1;     
+     GKS_K_ASF_BUNDLED = 0;
+     GKS_K_ASF_INDIVIDUAL = 1;
 
   { clear control flag }
-     GKS_K_CLEAR_CONDITIONALLY = 0;     
-     GKS_K_CLEAR_ALWAYS = 1;     
+     GKS_K_CLEAR_CONDITIONALLY = 0;
+     GKS_K_CLEAR_ALWAYS = 1;
 
   { clipping indicator }
-     GKS_K_NOCLIP = 0;     
-     GKS_K_CLIP = 1;     
+     GKS_K_NOCLIP = 0;
+     GKS_K_CLIP = 1;
 
   { coordinate switch }
-     GKS_K_COORDINATES_WC = 0;     
-     GKS_K_COORDINATES_NDC = 1;     
+     GKS_K_COORDINATES_WC = 0;
+     GKS_K_COORDINATES_NDC = 1;
 
   { device coordinate units }
-     GKS_K_METERS = 0;     
-     GKS_K_OTHER_UNITS = 1;     
+     GKS_K_METERS = 0;
+     GKS_K_OTHER_UNITS = 1;
 
   { fill area interior style }
-     GKS_K_INTSTYLE_HOLLOW = 0;     
-     GKS_K_INTSTYLE_SOLID = 1;     
-     GKS_K_INTSTYLE_PATTERN = 2;     
-     GKS_K_INTSTYLE_HATCH = 3;     
+     GKS_K_INTSTYLE_HOLLOW = 0;
+     GKS_K_INTSTYLE_SOLID = 1;
+     GKS_K_INTSTYLE_PATTERN = 2;
+     GKS_K_INTSTYLE_HATCH = 3;
 
   { input device status }
-     GKS_K_STATUS_NONE = 0;     
-     GKS_K_STATUS_OK = 1;     
+     GKS_K_STATUS_NONE = 0;
+     GKS_K_STATUS_OK = 1;
 
   { level of GKS }
-     GKS_K_LEVEL_0A = 0;     
-     GKS_K_LEVEL_0B = 1;     
-     GKS_K_LEVEL_0C = 2;     
-     GKS_K_LEVEL_1A = 3;     
-     GKS_K_LEVEL_1B = 4;     
-     GKS_K_LEVEL_1C = 5;     
-     GKS_K_LEVEL_2A = 6;     
-     GKS_K_LEVEL_2B = 7;     
-     GKS_K_LEVEL_2C = 8;     
+     GKS_K_LEVEL_0A = 0;
+     GKS_K_LEVEL_0B = 1;
+     GKS_K_LEVEL_0C = 2;
+     GKS_K_LEVEL_1A = 3;
+     GKS_K_LEVEL_1B = 4;
+     GKS_K_LEVEL_1C = 5;
+     GKS_K_LEVEL_2A = 6;
+     GKS_K_LEVEL_2B = 7;
+     GKS_K_LEVEL_2C = 8;
 
   { operating state value }
-     GKS_K_GKCL = 0;     
-     GKS_K_GKOP = 1;     
-     GKS_K_WSOP = 2;     
-     GKS_K_WSAC = 3;     
-     GKS_K_SGOP = 4;     
+     GKS_K_GKCL = 0;
+     GKS_K_GKOP = 1;
+     GKS_K_WSOP = 2;
+     GKS_K_WSAC = 3;
+     GKS_K_SGOP = 4;
 
   { regeneration flag }
-     GKS_K_POSTPONE_FLAG = 0;     
-     GKS_K_PERFORM_FLAG = 1;     
+     GKS_K_POSTPONE_FLAG = 0;
+     GKS_K_PERFORM_FLAG = 1;
 
   { text alignment horizontal }
-     GKS_K_TEXT_HALIGN_NORMAL = 0;     
-     GKS_K_TEXT_HALIGN_LEFT = 1;     
-     GKS_K_TEXT_HALIGN_CENTER = 2;     
-     GKS_K_TEXT_HALIGN_RIGHT = 3;     
+     GKS_K_TEXT_HALIGN_NORMAL = 0;
+     GKS_K_TEXT_HALIGN_LEFT = 1;
+     GKS_K_TEXT_HALIGN_CENTER = 2;
+     GKS_K_TEXT_HALIGN_RIGHT = 3;
 
   { text alignment vertical }
-     GKS_K_TEXT_VALIGN_NORMAL = 0;     
-     GKS_K_TEXT_VALIGN_TOP = 1;     
-     GKS_K_TEXT_VALIGN_CAP = 2;     
-     GKS_K_TEXT_VALIGN_HALF = 3;     
-     GKS_K_TEXT_VALIGN_BASE = 4;     
-     GKS_K_TEXT_VALIGN_BOTTOM = 5;     
+     GKS_K_TEXT_VALIGN_NORMAL = 0;
+     GKS_K_TEXT_VALIGN_TOP = 1;
+     GKS_K_TEXT_VALIGN_CAP = 2;
+     GKS_K_TEXT_VALIGN_HALF = 3;
+     GKS_K_TEXT_VALIGN_BASE = 4;
+     GKS_K_TEXT_VALIGN_BOTTOM = 5;
 
   { text path }
-     GKS_K_TEXT_PATH_RIGHT = 0;     
-     GKS_K_TEXT_PATH_LEFT = 1;     
-     GKS_K_TEXT_PATH_UP = 2;     
-     GKS_K_TEXT_PATH_DOWN = 3;     
+     GKS_K_TEXT_PATH_RIGHT = 0;
+     GKS_K_TEXT_PATH_LEFT = 1;
+     GKS_K_TEXT_PATH_UP = 2;
+     GKS_K_TEXT_PATH_DOWN = 3;
 
   { text precision }
-     GKS_K_TEXT_PRECISION_STRING = 0;     
-     GKS_K_TEXT_PRECISION_CHAR = 1;     
-     GKS_K_TEXT_PRECISION_STROKE = 2;     
+     GKS_K_TEXT_PRECISION_STRING = 0;
+     GKS_K_TEXT_PRECISION_CHAR = 1;
+     GKS_K_TEXT_PRECISION_STROKE = 2;
 
   { workstation category }
-     GKS_K_WSCAT_OUTPUT = 0;     
-     GKS_K_WSCAT_INPUT = 1;     
-     GKS_K_WSCAT_OUTIN = 2;     
-     GKS_K_WSCAT_WISS = 3;     
-     GKS_K_WSCAT_MO = 4;     
-     GKS_K_WSCAT_MI = 5;     
+     GKS_K_WSCAT_OUTPUT = 0;
+     GKS_K_WSCAT_INPUT = 1;
+     GKS_K_WSCAT_OUTIN = 2;
+     GKS_K_WSCAT_WISS = 3;
+     GKS_K_WSCAT_MO = 4;
+     GKS_K_WSCAT_MI = 5;
 
   { workstation state }
-     GKS_K_WS_INACTIVE = 0;     
-     GKS_K_WS_ACTIVE = 1;     
+     GKS_K_WS_INACTIVE = 0;
+     GKS_K_WS_ACTIVE = 1;
 
   { standard linetypes }
-     GKS_K_LINETYPE_SOLID = 1;     
-     GKS_K_LINETYPE_DASHED = 2;     
-     GKS_K_LINETYPE_DOTTED = 3;     
-     GKS_K_LINETYPE_DASHED_DOTTED = 4;     
+     GKS_K_LINETYPE_SOLID = 1;
+     GKS_K_LINETYPE_DASHED = 2;
+     GKS_K_LINETYPE_DOTTED = 3;
+     GKS_K_LINETYPE_DASHED_DOTTED = 4;
 
   { GKS specific linetypes }
-     GKS_K_LINETYPE_DASH_2_DOT = -(1);     
-     GKS_K_LINETYPE_DASH_3_DOT = -(2);     
-     GKS_K_LINETYPE_LONG_DASH = -(3);     
-     GKS_K_LINETYPE_LONG_SHORT_DASH = -(4);     
-     GKS_K_LINETYPE_SPACED_DASH = -(5);     
-     GKS_K_LINETYPE_SPACED_DOT = -(6);     
-     GKS_K_LINETYPE_DOUBLE_DOT = -(7);     
-     GKS_K_LINETYPE_TRIPLE_DOT = -(8);     
+     GKS_K_LINETYPE_DASH_2_DOT = -(1);
+     GKS_K_LINETYPE_DASH_3_DOT = -(2);
+     GKS_K_LINETYPE_LONG_DASH = -(3);
+     GKS_K_LINETYPE_LONG_SHORT_DASH = -(4);
+     GKS_K_LINETYPE_SPACED_DASH = -(5);
+     GKS_K_LINETYPE_SPACED_DOT = -(6);
+     GKS_K_LINETYPE_DOUBLE_DOT = -(7);
+     GKS_K_LINETYPE_TRIPLE_DOT = -(8);
 
   { standard markertypes }
-     GKS_K_MARKERTYPE_DOT = 1;     
-     GKS_K_MARKERTYPE_PLUS = 2;     
-     GKS_K_MARKERTYPE_ASTERISK = 3;     
-     GKS_K_MARKERTYPE_CIRCLE = 4;     
-     GKS_K_MARKERTYPE_DIAGONAL_CROSS = 5;     
+     GKS_K_MARKERTYPE_DOT = 1;
+     GKS_K_MARKERTYPE_PLUS = 2;
+     GKS_K_MARKERTYPE_ASTERISK = 3;
+     GKS_K_MARKERTYPE_CIRCLE = 4;
+     GKS_K_MARKERTYPE_DIAGONAL_CROSS = 5;
 
   { GKS specific markertypes }
-     GKS_K_MARKERTYPE_SOLID_CIRCLE = -(1);     
-     GKS_K_MARKERTYPE_TRIANGLE_UP = -(2);     
-     GKS_K_MARKERTYPE_SOLID_TRI_UP = -(3);     
-     GKS_K_MARKERTYPE_TRIANGLE_DOWN = -(4);     
-     GKS_K_MARKERTYPE_SOLID_TRI_DOWN = -(5);     
-     GKS_K_MARKERTYPE_SQUARE = -(6);     
-     GKS_K_MARKERTYPE_SOLID_SQUARE = -(7);     
-     GKS_K_MARKERTYPE_BOWTIE = -(8);     
-     GKS_K_MARKERTYPE_SOLID_BOWTIE = -(9);     
-     GKS_K_MARKERTYPE_HOURGLASS = -(10);     
-     GKS_K_MARKERTYPE_SOLID_HGLASS = -(11);     
-     GKS_K_MARKERTYPE_DIAMOND = -(12);     
-     GKS_K_MARKERTYPE_SOLID_DIAMOND = -(13);     
-     GKS_K_MARKERTYPE_STAR = -(14);     
-     GKS_K_MARKERTYPE_SOLID_STAR = -(15);     
-     GKS_K_MARKERTYPE_TRI_UP_DOWN = -(16);     
-     GKS_K_MARKERTYPE_SOLID_TRI_RIGHT = -(17);     
-     GKS_K_MARKERTYPE_SOLID_TRI_LEFT = -(18);     
-     GKS_K_MARKERTYPE_HOLLOW_PLUS = -(19);     
-     GKS_K_MARKERTYPE_OMARK = -(20);     
+     GKS_K_MARKERTYPE_SOLID_CIRCLE = -(1);
+     GKS_K_MARKERTYPE_TRIANGLE_UP = -(2);
+     GKS_K_MARKERTYPE_SOLID_TRI_UP = -(3);
+     GKS_K_MARKERTYPE_TRIANGLE_DOWN = -(4);
+     GKS_K_MARKERTYPE_SOLID_TRI_DOWN = -(5);
+     GKS_K_MARKERTYPE_SQUARE = -(6);
+     GKS_K_MARKERTYPE_SOLID_SQUARE = -(7);
+     GKS_K_MARKERTYPE_BOWTIE = -(8);
+     GKS_K_MARKERTYPE_SOLID_BOWTIE = -(9);
+     GKS_K_MARKERTYPE_HOURGLASS = -(10);
+     GKS_K_MARKERTYPE_SOLID_HGLASS = -(11);
+     GKS_K_MARKERTYPE_DIAMOND = -(12);
+     GKS_K_MARKERTYPE_SOLID_DIAMOND = -(13);
+     GKS_K_MARKERTYPE_STAR = -(14);
+     GKS_K_MARKERTYPE_SOLID_STAR = -(15);
+     GKS_K_MARKERTYPE_TRI_UP_DOWN = -(16);
+     GKS_K_MARKERTYPE_SOLID_TRI_RIGHT = -(17);
+     GKS_K_MARKERTYPE_SOLID_TRI_LEFT = -(18);
+     GKS_K_MARKERTYPE_HOLLOW_PLUS = -(19);
+     GKS_K_MARKERTYPE_SOLID_PLUS = -(20);
      GKS_K_MARKERTYPE_PENTAGON = -(21);
      GKS_K_MARKERTYPE_HEXAGON = -(22);
      GKS_K_MARKERTYPE_HEPTAGON = -(23);
@@ -162,8 +162,8 @@ interface
      GKS_K_MARKERTYPE_HLINE -(31);
 
   { GKS error codes }
-     GKS_K_NO_ERROR = 0;     
-     GKS_K_ERROR = 1;     
+     GKS_K_NO_ERROR = 0;
+     GKS_K_ERROR = 1;
 
   { GKS function prototypes }
 
