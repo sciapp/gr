@@ -332,9 +332,9 @@ void resize_window(void)
   QWidget *parentWidget;
 
   width  = nint((p->viewport[1] - p->viewport[0]) / 2.54 *
-                activeWidget->logicalDpiX() * 100);
+                activeWidget->physicalDpiX() * 100);
   height = nint((p->viewport[3] - p->viewport[2]) / 2.54 *
-                activeWidget->logicalDpiY() * 100);
+                activeWidget->physicalDpiY() * 100);
 
   if (p->width != width || p->height != height)
     {
@@ -1070,8 +1070,8 @@ void interp(char *str)
           p->window[1] = p->window[3] = 1.0;
 
           p->viewport[0] = p->viewport[2] = 0.0;
-          p->viewport[1] = p->width  * 2.54 / activeWidget->logicalDpiX() / 100;
-          p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() / 100;
+          p->viewport[1] = p->width  * 2.54 / activeWidget->physicalDpiX() / 100;
+          p->viewport[3] = p->height * 2.54 / activeWidget->physicalDpiY() / 100;
 
           p->selecting = false;
           p->have_selection = false;
@@ -2002,9 +2002,9 @@ void GKSWidget::resizeEvent(QResizeEvent *e)
   p->pixmap->setClipRect(0, 0, p->width, p->height);
 
   p->viewport[0] = 0;
-  p->viewport[1] = p->width * 2.54 / activeWidget->logicalDpiX() * 0.01;
+  p->viewport[1] = p->width * 2.54 / activeWidget->physicalDpiX() * 0.01;
   p->viewport[2] = 0;
-  p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() * 0.01;
+  p->viewport[3] = p->height * 2.54 / activeWidget->physicalDpiY() * 0.01;
 
   resize_window();
   set_xform();
@@ -2036,9 +2036,9 @@ void GKSWidget::mousePressEvent(QMouseEvent *e) {
     p->height = p->saved_height;
 
     p->viewport[0] = 0;
-    p->viewport[1] = p->width * 2.54 / activeWidget->logicalDpiX() * 0.01;
+    p->viewport[1] = p->width * 2.54 / activeWidget->physicalDpiX() * 0.01;
     p->viewport[2] = 0;
-    p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() * 0.01;
+    p->viewport[3] = p->height * 2.54 / activeWidget->physicalDpiY() * 0.01;
 
     resize_window();
     set_xform();
@@ -2093,9 +2093,9 @@ void GKSWidget::mouseReleaseEvent(QMouseEvent *e) {
       p->pixmap->translate(-p->area.left(), -p->area.top());
 
       p->viewport[0] = 0;
-      p->viewport[1] = p->width * 2.54 / activeWidget->logicalDpiX() * 0.01;
+      p->viewport[1] = p->width * 2.54 / activeWidget->physicalDpiX() * 0.01;
       p->viewport[2] = 0;
-      p->viewport[3] = p->height * 2.54 / activeWidget->logicalDpiY() * 0.01;
+      p->viewport[3] = p->height * 2.54 / activeWidget->physicalDpiY() * 0.01;
 
       resize_window();
       set_xform();

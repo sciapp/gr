@@ -1149,8 +1149,8 @@ int get_pixmap(void)
       p->mheight = p->widget->heightMM() * 0.001;
       p->width   = p->widget->width();
       p->height  = p->widget->height();
-      p->dpiX    = p->widget->logicalDpiX();
-      p->dpiY    = p->widget->logicalDpiY();
+      p->dpiX    = p->widget->physicalDpiX();
+      p->dpiY    = p->widget->physicalDpiY();
     }
   else
     {
