@@ -146,7 +146,7 @@ class Html_output(object):
         color.append(self.transparency)
 
         if self.gkss.version > 4:
-            ln_width = round(self.p.height / 500.0)
+            ln_width = round((self.p.width + self.p.height) * 0.001)
             if ln_width < 1:
                 ln_width = 1
         else:
@@ -291,7 +291,7 @@ class Html_output(object):
 
     def fillarea(self, n, px, py):
         fl_color = self.gkss.facoli if self.gkss.asf[12] else 1
-        ln_width = max(1, round(self.p.height / 500.0)) if self.gkss.version > 4 else 1
+        ln_width = max(1, round((self.p.width + self.p.height) * 0.001)) if self.gkss.version > 4 else 1
         if self.p.lineWidth != ln_width:
             self.p.lineWidth = ln_width
             self.write('c.lineWidth = {0};\n'.format(ln_width))
@@ -379,7 +379,7 @@ class Html_output(object):
         ln_color = self.gkss.plcoli if self.gkss.asf[2] else 1
 
         if self.gkss.version > 4:
-            ln_width *= self.p.height / 500.0
+            ln_width *= (self.p.width + self.p.height) * 0.001
         if ln_color <= 0 or ln_color >= MAX_COLOR:
             ln_color = 1
         ln_width = max(1, round(ln_width))
@@ -550,7 +550,7 @@ class Html_output(object):
           ]
 
         if self.gkss.version > 4:
-            mscale *= self.p.height / 500.0
+            mscale *= (self.p.width + self.p.height) * 0.001
         r = int(3 * mscale)
         scale = 0.01 * mscale / 3.0
 
@@ -675,7 +675,7 @@ class Html_output(object):
             self.p.strokeStyle = color
             self.write('c.strokeStyle="rgba({0},{1},{2},{3})";\n'.format(*color))
 
-        ln_width = max(1, round(self.p.height / 500.0)) if self.gkss.version > 4 else 1
+        ln_width = max(1, round((self.p.width + self.p.height) * 0.001)) if self.gkss.version > 4 else 1
         if self.p.lineWidth != ln_width:
             self.p.lineWidth = ln_width
             self.write('c.lineWidth = {0};\n'.format(ln_width))

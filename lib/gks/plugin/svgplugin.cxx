@@ -402,7 +402,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 #include "marker.h"
 
   if (gkss->version > 4)
-    mscale *= p->height / 500.0;
+    mscale *= (p->width + p->height) * 0.001;
   r = (int) (3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -780,7 +780,7 @@ void polyline(int n, double *px, double *py)
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   if (gkss->version > 4)
-    width = ln_width * p->height / 500.0;
+    width = ln_width * (p->width + p->height) * 0.001;
   else
     width = ln_width;
 

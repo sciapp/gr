@@ -631,7 +631,7 @@ void polyline(int n, double *px, double *py)
     SelectClipRgn(p->memdc, p->rgn);
 
   if (gkss->version > 4)
-    ln_width *= p->height / 500.0;
+    ln_width *= (p->width + p->height) * 0.001;
   if (ln_type != 1)
   {
     pen_style = PS_GEOMETRIC | PS_COSMETIC | PS_ENDCAP_FLAT | PS_JOIN_ROUND |
@@ -681,7 +681,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 #include "marker.h"
 
   if (gkss->version > 4)
-    mscale *= p->height / 500.0;
+    mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 

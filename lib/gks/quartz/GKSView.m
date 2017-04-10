@@ -1153,7 +1153,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
 #include "marker.h"
 
-  mscale *= p->height / 500.0;
+  mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 

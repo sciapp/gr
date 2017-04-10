@@ -1690,7 +1690,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 #include "marker.h"
 
   if (gksl->version > 4)
-    mscale *= p->height / 500.0;
+    mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   d = 2 * r;
   scale = 0.01 * mscale / 3.0;
@@ -1923,7 +1923,7 @@ void set_line_attr(int linetype, double linewidth)
   int n;
 
   if (gksl->version > 4)
-    linewidth *= p->height / 500.0;
+    linewidth *= (p->width + p->height) * 0.001;
   if (linewidth > 1)
     width = (unsigned int)(linewidth + 0.5);
   else

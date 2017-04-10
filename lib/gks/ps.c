@@ -489,7 +489,7 @@ void bounding_box(int landscape, double magstep)
     p->ytrans = landscape ? iy2 : iy1;
   else
     p->ytrans = -ix2;
-  p->res = iy2 - iy1;
+  p->res = (ix2 - ix1) + (iy2 - iy1);
 
   sprintf(buffer, "%%%%BoundingBox: %d %d %d %d", ix1, iy1, ix2, iy2);
   packb(buffer);
@@ -589,7 +589,7 @@ void set_linetype(int ltype, double lwidth)
   char buffer[100], dash[80];
 
   if (gkss->version > 4)
-    lwidth *= p->res / 500.0;
+    lwidth *= p->res * 0.001;
   if (ltype != p->ltype || (fabs(lwidth - p->cwidth) > FEPS))
     {
       p->ltype = ltype;
@@ -605,7 +605,7 @@ void set_linewidth(double width)
   char buffer[20];
 
   if (gkss->version > 4)
-    width *= p->res / 500.0;
+    width *= p->res * 0.001;
   if (fabs(width - p->cwidth) > FEPS)
     {
       p->cwidth = fabs(width);
@@ -621,7 +621,7 @@ void set_markersize(double size)
   char buffer[20];
 
   if (gkss->version > 4)
-    size *= p->res / 500.0;
+    size *= p->res * 0.001;
   if (fabs(size - p->csize) > FEPS)
     {
       p->csize = fabs(size);

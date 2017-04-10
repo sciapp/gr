@@ -316,7 +316,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 #include "marker.h"
 
   if (gkss->version > 4)
-    mscale *= p->height / 500.0;
+    mscale *= (p->width + p->height) * 0.001;
   r = (int) (3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -414,7 +414,7 @@ void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  ln_width = gkss->version > 4 ? max(1, nint(p->height / 500.0)) : 1;
+  ln_width = gkss->version > 4 ? max(1, nint((p->width + p->height) * 0.001)) : 1;
   p->linewidth = ln_width;
 
   cairo_set_line_width(p->cr, ln_width);
@@ -575,7 +575,7 @@ void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = gkss->version > 4 ? max(nint(p->height / 500.0), 1) : 1;
+  p->linewidth = gkss->version > 4 ? max(nint((p->width + p->height) * 0.001), 1) : 1;
 
   set_color(fl_color);
 
@@ -601,7 +601,7 @@ void polyline(int n, double *px, double *py)
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   if (gkss->version > 4)
-    width = nint(ln_width * p->height / 500.0);
+    width = nint(ln_width * (p->width + p->height) * 0.001);
   else
     width = nint(ln_width);
   if (width < 1)

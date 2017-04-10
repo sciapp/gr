@@ -1302,7 +1302,7 @@ void set_linetype(int ltype, double lwidth)
   char dash[80];
 
   if (gkss->version > 4)
-    lwidth *= p->height / 500.0;
+    lwidth *= (p->width + p->height) * 0.001;
   if (p->ltype != ltype || p->lwidth != lwidth)
     {
       gks_get_dash(ltype, lwidth, dash);
@@ -1315,7 +1315,7 @@ static
 void set_linewidth(double lwidth)
 {
   if (gkss->version > 4)
-    lwidth *= p->height / 500.0;
+    lwidth *= (p->width + p->height) * 0.001;
   if (p->lwidth != lwidth)
     {
       pdf_setlinewidth(p, lwidth);
@@ -1367,7 +1367,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
   };
 
   if (gkss->version > 4)
-    mscale *= p->height / 500.0;
+    mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 

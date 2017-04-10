@@ -394,7 +394,7 @@ void polyline(int num_points, double *x, double *y)
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   if (gkss->version > 4)
-    ln_width *= p->height / 500.0;
+    ln_width *= (p->width + p->height) * 0.001;
   ln_width = max(1, nint(ln_width));
 
   glLineWidth(ln_width);
@@ -433,7 +433,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
   double scale, x, y, xr, yr, c, s, tmp;
 
   if (gkss->version > 4)
-    mscale *= p->height / 500.0;
+    mscale *= (p->width + p->height) * 0.001;
   r = (int) (3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -547,7 +547,7 @@ void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  ln_width = (gkss->version > 4) ? max(1, nint(p->height / 500.0)) : 1;
+  ln_width = (gkss->version > 4) ? max(1, nint((p->width + p->height) * 0.001)) : 1;
   glLineWidth(ln_width);
 
   clrt = gkss->viewport[gkss->cntnr];
@@ -598,7 +598,7 @@ void fill_routine (int n, double *px, double *py, int tnr)
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
 
-  ln_width = (gkss->version > 4) ? max(1, nint(p->height / 500.0)) : 1;
+  ln_width = (gkss->version > 4) ? max(1, nint((p->width + p->height) * 0.001)) : 1;
   glLineWidth(ln_width);
 
   draw_pattern = (fl_inter == GKS_K_INTSTYLE_PATTERN ||

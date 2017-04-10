@@ -367,7 +367,7 @@ static void polyline(int n, double *px, double *py)
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   if (gkss->version > 4)
-    width = nint(ln_width * p->height / 500.0);
+    width = nint(ln_width * (p->width + p->height) * 0.001);
   else
     width = nint(ln_width);
   if (width < 1)
@@ -436,7 +436,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 #include "marker.h"
 
   if (gkss->version > 4)
-    mscale *= p->height / 500.0;
+    mscale *= (p->width + p->height) * 0.001;
   r = (int) (3 * mscale);
   d = 2 * r;
   scale = 0.01 * mscale / 3.0;
@@ -568,7 +568,7 @@ static void polymarker(int n, double *px, double *py)
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
   if (gkss->version > 4)
     {
-      ln_width = nint(p->height / 500.0);
+      ln_width = nint((p->width + p->height) * 0.001);
       if (ln_width < 1)
         ln_width = 1;
     }
@@ -711,7 +711,7 @@ static void text(double px, double py, int nchars, char *chars)
   tx_color = gkss->asf[9] ? gkss->txcoli : 1;
   if (gkss->version > 4)
     {
-      ln_width = nint(p->height / 500.0);
+      ln_width = nint((p->width + p->height) * 0.001);
       if (ln_width < 1)
         ln_width = 1;
     }
@@ -865,7 +865,7 @@ static void fillarea(int n, double *px, double *py)
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
   if (gkss->version > 4)
     {
-      ln_width = nint(p->height / 500.0);
+      ln_width = nint((p->width + p->height) * 0.001);
       if (ln_width < 1)
         ln_width = 1;
     }

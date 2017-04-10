@@ -642,7 +642,7 @@ public class gksweb extends Applet
     ln_color = sl.asf[2] != 0 ? sl.plcoli : 1;
 
     if (sl.version > 4)
-      width = nint(ln_width * ws.height / 500.0);
+      width = nint(ln_width * (ws.width + ws.height) * 0.001);
     else
       width = nint(ln_width);
 
@@ -781,7 +781,7 @@ public class gksweb extends Applet
     int[][] p;
 
     if (sl.version > 4)
-      mscale *= ws.height / 500.0;
+      mscale *= (ws.width + ws.height) * 0.001;
 
     r = (int) (3 * mscale);
     d = 2 * r;
@@ -922,7 +922,7 @@ public class gksweb extends Applet
 
     if (sl.version > 4)
       {
-        ln_width = nint(ws.height / 500.0);
+        ln_width = nint((ws.width + ws.height) * 0.001);
         if (ln_width < 1)
           ln_width = 1;
       }
@@ -1219,7 +1219,7 @@ public class gksweb extends Applet
 
     if (sl.version > 4)
       {
-        ln_width = nint(ws.height / 500.0);
+        ln_width = nint((ws.width + ws.height) * 0.001);
         if (ln_width < 1)
           ln_width = 1;
       }
@@ -1955,7 +1955,7 @@ public class gksweb extends Applet
 
     if (sl.version > 4)
       {
-        ln_width = nint(ws.height / 500.0);
+        ln_width = nint((ws.width + ws.height) * 0.001);
         if (ln_width < 1)
           ln_width = 1;
       }
