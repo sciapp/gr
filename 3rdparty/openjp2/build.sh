@@ -15,7 +15,7 @@ cd ${dest}/src
 
 if [ ! -d "${src}" ]; then
   if [ `which curl` ]; then
-    cmd="curl -O"
+    cmd="curl -k -O"
   else
     cmd="wget --no-check-certificate"
   fi

@@ -15,7 +15,7 @@ cd ${dest}/src
 
 if [ ! -d "glfw-${src}" ]; then
   if [ `which curl` ]; then
-    cmd="curl -O -L"
+    cmd="curl -k -O -L"
   else
     cmd="wget --no-check-certificate"
   fi
