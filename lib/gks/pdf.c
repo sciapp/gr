@@ -25,9 +25,10 @@ typedef unsigned long uLong;
 #define PATTERNS 120
 
 #define MEMORY_INCREMENT 32768
-#define MAX_OBJECTS 10000
-#define MAX_PAGES 1000
-#define MAX_IMAGES 10000
+
+#define MAX_OBJECTS 2500
+#define MAX_PAGES 250
+#define MAX_IMAGES 2500
 
 #define NO_OF_BUFS 10
 
@@ -145,17 +146,18 @@ typedef struct ws_state_list_t
     PDF_stream *stream;
     long object_number;
     long info, root, outlines, pages;
-    long byte_offset[MAX_OBJECTS];
-    PDF_page *page[MAX_PAGES];
-    int current_page;
+    long *byte_offset;
+    int max_objects;
+    PDF_page **page;
+    int current_page, max_pages;
     PDF_stream *content;
     int compress;
     int have_alpha[256];
     int pattern;
     int have_pattern[PATTERNS];
     int pattern_id[PATTERNS][2];
-    PDF_image *image[MAX_IMAGES];
-    int images;
+    PDF_image **image;
+    int images, max_images;
   }
 ws_state_list;
 
@@ -430,34 +432,37 @@ PDF_stream *pdf_alloc_stream(void)
 static
 long pdf_alloc_id(PDF *p)
 {
-  if (p->object_number >= MAX_OBJECTS)
+  if (p->object_number >= p->max_objects)
     {
-      gks_perror("too many objects (%ld)", p->object_number);
-      exit(-1);
+      p->max_objects += MAX_OBJECTS;
+      p->byte_offset = (long *) pdf_realloc(p->byte_offset,
+                                            p->max_objects * sizeof(long));
     }
-
   return ++(p->object_number);
 }
 
 static
 void pdf_open(int fd)
 {
-  int image;
-
   p->fd = fd;
 
   p->stream = pdf_alloc_stream();
 
   p->object_number = p->current_page = 0;
+  p->max_objects = MAX_OBJECTS;
+  p->byte_offset = (long *) pdf_calloc(p->max_objects, sizeof(long));
 
   p->info = pdf_alloc_id(p);
   p->root = pdf_alloc_id(p);
   p->outlines = pdf_alloc_id(p);
+
   p->pages = pdf_alloc_id(p);
+  p->max_pages = MAX_PAGES;
+  p->page = (PDF_page **) pdf_calloc(p->max_pages, sizeof(PDF_page *));
 
   p->images = 0;
-  for (image = 0; image < MAX_IMAGES; image++)
-    p->image[image] = NULL;
+  p->max_images = MAX_IMAGES;
+  p->image = (PDF_image **) pdf_calloc(p->max_images, sizeof(PDF_image *));
 }
 
 static
@@ -465,10 +470,11 @@ PDF_image *pdf_image(PDF *p, int width, int height)
 {
   PDF_image *image;
 
-  if (++(p->images) >= MAX_IMAGES)
+  if (p->images + 1 >= MAX_IMAGES)
     {
-      gks_perror("too many images in document (%d)", p->images);
-      exit(-1);
+      p->max_images += MAX_IMAGES;
+      p->image = (PDF_image **) pdf_realloc(
+        p->image, p->max_images * sizeof(PDF_image *));
     }
 
   image = (PDF_image *) pdf_calloc(1, sizeof(PDF_image));
@@ -487,10 +493,11 @@ void pdf_page(PDF *p, double height, double width)
   PDF_page *page;
   int font;
 
-  if (++(p->current_page) >= MAX_PAGES)
+  if (p->current_page + 1 >= MAX_PAGES)
     {
-      gks_perror("too many pages in document (%d)", p->current_page);
-      exit(-1);
+      p->max_pages += MAX_PAGES;
+      p->page = (PDF_page **) pdf_realloc(p->page,
+                                          p->max_pages * sizeof(PDF_page *));
     }
 
   page = (PDF_page *) pdf_calloc(1, sizeof(PDF_page));
@@ -501,7 +508,7 @@ void pdf_page(PDF *p, double height, double width)
   page->height = height;
   page->stream = pdf_alloc_stream();
 
-  p->page[p->current_page] = page;
+  p->page[p->current_page++] = page;
   p->content = page->stream;
 
   for (font = 0; font < MAX_FONT; font++)
@@ -559,10 +566,10 @@ void pdf_close(PDF *p)
   pdf_printf(p->stream, "/Count %d\n", p->current_page);
   pdf_printf(p->stream, "/Kids [");
 
-  for (count = 1; count <= p->current_page; count++)
+  for (count = 0; count < p->current_page; count++)
     {
       pdf_printf(p->stream, "%ld 0 R", p->page[count]->object);
-      if (count < p->current_page)
+      if (count < p->current_page - 1)
         pdf_printf(p->stream, count % 6 ? (char *) " " : (char *) "\n");
     }
 
@@ -625,7 +632,7 @@ void pdf_close(PDF *p)
         }
     }
 
-  for (count = 1; count <= p->current_page; count++)
+  for (count = 0; count < p->current_page; count++)
     {
       PDF_page *page = p->page[count];
 
@@ -662,9 +669,9 @@ void pdf_close(PDF *p)
       pdf_printf(p->stream, ">>\n");
 
       pdf_printf(p->stream, "/XObject <<\n");
-      for (image = page->first_image + 1; image <= page->last_image; image++)
+      for (image = page->first_image; image < page->last_image; image++)
           pdf_printf(p->stream, "/Im%d %d 0 R\n",
-                     image, p->image[image]->object);
+                     image + 1, p->image[image]->object);
       pdf_printf(p->stream, ">>\n>>\n");
 
       pdf_printf(p->stream, "/MediaBox [0 0 %g %g]\n",
@@ -758,7 +765,7 @@ void pdf_close(PDF *p)
       free(p->content->buffer);
     }
 
-  for (image = 1; image <= p->images; image++)
+  for (image = 0; image < p->images; image++)
     {
       width = p->image[image]->width;
       height = p->image[image]->height;
@@ -840,6 +847,10 @@ void pdf_close(PDF *p)
   gks_write_file(p->fd, p->stream->buffer, p->stream->length);
 
   free(p->stream->buffer);
+
+  free(p->image);
+  free(p->page);
+  free(p->byte_offset);
 }
 
 static
@@ -1387,7 +1398,7 @@ void set_font(int font)
 {
   double ux, uy, scale;
   double width, height;
-  PDF_page *page = p->page[p->current_page];
+  PDF_page *page = p->page[p->current_page - 1];
 
   font = abs(font);
   if (font >= 101 && font <= 131)
@@ -1645,7 +1656,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   if (true_color && have_alpha)
     {
       image = pdf_image(p, dx, dy);
-      p->image[p->images] = image;
+      p->image[p->images++] = image;
 
       for (j = 0; j < dy; j++)
         {
@@ -1658,7 +1669,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
         }
 
       pdf_printf(p->content, "/Im%d Do\n", p->images);
-      p->page[p->current_page]->last_image = p->images;
+      p->page[p->current_page - 1]->last_image = p->images;
     }
   else
     {
