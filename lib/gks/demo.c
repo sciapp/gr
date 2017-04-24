@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
 
   x[0] = 0.25;
   y[0] = 0.95;
-  for (j = -31; j <= -20; j++)
+  for (j = -32; j <= -21; j++)
     {
       gks_set_pmark_type(j);
       x[0] += 0.06;
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 
   x[0] = 0.25;
   y[0] = 0.875;
-  for (j = -19; j <= -8; j++)
+  for (j = -20; j <= -9; j++)
     {
       gks_set_pmark_type(j);
       x[0] += 0.06;
@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
 
   x[0] = 0.25;
   y[0] = 0.8;
-  for (j = -7; j <= 4; j++)
+  for (j = -8; j <= 4; j++)
     {
       if (j != 0)
 	{

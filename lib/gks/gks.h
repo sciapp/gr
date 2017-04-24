@@ -198,6 +198,7 @@ extern "C" {
 #define GKS_K_MARKERTYPE_STAR_8 -29
 #define GKS_K_MARKERTYPE_VLINE -30
 #define GKS_K_MARKERTYPE_HLINE -31
+#define GKS_K_MARKERTYPE_OMARK -32
 
 /* Type of output values set */
 

@@ -1115,11 +1115,12 @@ void ps_init(int *pages)
       packb("/ftl {sxy fg tl fi fg tl csk gr} def");
       packb("/tr {np x y m 28 0 srm -42 -24 srl 0 48 srl 42 -24 srl} def");
       packb("/ftr {sxy fg tr fi fg tr csk gr} def");
-      packb("/hpl {np x y m 0 24 srm 8 0 srl\
+      packb("/opl {np x y m 0 24 srm 8 0 srl\
  0 -16 srl 16 0 srl 0 -16 srl -16 0 srl");
       packb("0 -16 srl -16 0 srl 0 16 srl -16 0 srl\
  0 16 srl 16 0 srl 0 16 srl 8 0 srl} def");
-      packb("/npl {sxy bg hpl fi fg hpl csk gr} def");
+      packb("/npl {sxy bg opl fi fg opl csk gr} def");
+      packb("/fpl {sxy fg opl fi fg opl csk gr} def");
       packb("/om {np x y m 0 24 srm 16 0 srl\
  8 -8 srl 0 -32 srl -8 -8 srl -32 0 srl");
       packb("-8 8 srl 0 32 srl 8 8 srl 16 0 srl} def");
@@ -1353,17 +1354,17 @@ void marker_routine(double x, double y, int marker)
   char buffer[50];
   static const char *macro[] =
   {
-    " hl", " vl", "st8", "st7", "st6", "st5", "st4", "ed8", "ed7", "ed7", "ed5",
-    "nom", "npl", "ftr", "ftl", "tud", "fst", " st", "fdm", "ndm", "fhg",
-    "nhg", "fbt", "nbt", "fsq", "nsq", "ftd", "ntd", "ftu", "ntu", "fci",
-    " dt", " dt", " pl", "fas", "nci", " dc"
+    "nom", " hl", " vl", "st8", "st7", "st6", "st5", "st4", "ed8", "ed7",
+    "ed6", "ed5", "fpl", "npl", "ftr", "ftl", "tud", "fst", " st", "fdm",
+    "ndm", "fhg", "nhg", "fbt", "nbt", "fsq", "nsq", "ftd", "ntd", "ftu",
+    "ntu", "fci", " dt", " dt", " pl", "fas", "nci", " dc"
   };
 
   NDC_to_DC(x, y, dx, dy);
 
   p->ix = NINT(dx);
   p->iy = NINT(dy);
-  sprintf(buffer, "%d %d %s", p->ix, p->iy, macro[marker + 31]);
+  sprintf(buffer, "%d %d %s", p->ix, p->iy, macro[marker + 32]);
   packb(buffer);
 }
 

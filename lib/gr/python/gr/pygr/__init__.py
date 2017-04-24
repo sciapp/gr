@@ -584,7 +584,7 @@ class ErrorBar(GRDrawAttributes, Coords2D, GRMeta):
     VERTICAL = 1
 
     def __init__(self, x, y, dneg, dpos=None, direction=VERTICAL,
-                 linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_SOLID_PLUS,
+                 linetype=gr.LINETYPE_SOLID, markertype=gr.MARKERTYPE_OMARK,
                  linecolor=1, markercolor=1, linewidth=1):
         GRDrawAttributes.__init__(self, linetype, markertype, linecolor,
                                   markercolor, linewidth)

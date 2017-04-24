@@ -112,7 +112,7 @@ C* markertypes
 
         X(1) = 0.25
         Y(1) = 0.95
-        DO 150, J = -31, -20
+        DO 150, J = -32, -21
           CALL GSMK(J)
           X(1) = X(1)+0.06
           CALL GPM(1, X, Y)
@@ -121,7 +121,7 @@ C* markertypes
         X(1) = 0.25
         Y(1) = 0.875
 
-        DO 160, J = -19, -8
+        DO 160, J = -20, -9
           CALL GSMK(J)
           X(1) = X(1)+0.06
           CALL GPM(1, X, Y)
@@ -130,7 +130,7 @@ C* markertypes
         X(1) = 0.25
         Y(1) = 0.8
 
-        DO 170, J = -7, 4
+        DO 170, J = -8, 4
           IF (J .EQ. 0) GOTO 170
           CALL GSMK(J)
           X(1) = X(1)+0.06

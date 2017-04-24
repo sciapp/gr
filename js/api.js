@@ -225,6 +225,7 @@ function GR(canvas_id) {
     this.MARKERTYPE_STAR_8 = -29;
     this.MARKERTYPE_VLINE = -30;
     this.MARKERTYPE_HLINE = -31;
+    this.MARKERTYPE_OMARK = -32;
 
     this.OPTION_X_LOG = 1;
     this.OPTION_Y_LOG = 2;
