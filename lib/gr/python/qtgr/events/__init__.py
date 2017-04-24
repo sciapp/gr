@@ -105,16 +105,17 @@ class EventFilter(QtCore.QObject):
         coords = DeviceCoordConverter(target.dwidth, target.dheight)
         coords.setDC(event.x(), event.y())
         plots = target._getPlotsForPoint(coords.getNDC())
-        window = None
+        window, scale = None, None
         if plots and len(plots) == 1:  # unambitious plot
             axes = plots[0].getAxes(0)  # use first `PlotAxes`
             if axes:
                 window = axes.getWindow()
+                scale = axes.scale
                 gr.setscale(axes.scale)
 
         mEvent = MouseEvent(type, target.dwidth, target.dheight,
                             event.x(), event.y(), btn_mask, mod_mask,
-                            window=window)
+                            window=window, scale=scale)
         # special case:
         # save last btn_mask for handling in MouseEvent.MOUSE_RELEASE
         self._last_btn_mask = btn_mask

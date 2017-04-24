@@ -48,9 +48,10 @@ class EventMeta(QtCore.QEvent):
 
 class MouseLocationEventMeta(EventMeta):
 
-    def __init__(self, type, width, height, x, y, window=None):
+    def __init__(self, type, width, height, x, y, window=None, scale=None):
         super(MouseLocationEventMeta, self).__init__(type)
-        self._coords = DeviceCoordConverter(width, height, window=window)
+        self._coords = DeviceCoordConverter(width, height, window=window,
+                                            scale=scale)
         self._coords.setDC(x, y)
 
     def getWindow(self):

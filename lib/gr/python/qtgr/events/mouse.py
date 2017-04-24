@@ -56,9 +56,9 @@ class MouseEvent(MouseLocationEventMeta):
     GROUP_SWITCH_MODIFIER = 0x40
 
     def __init__(self, type, width, height, x, y, buttons, modifiers,
-                 window=None):
+                 window=None, scale=None):
         super(MouseEvent, self).__init__(type, width, height, x, y,
-                                         window=window)
+                                         window=window, scale=scale)
         self._buttons = buttons
         self._modifiers = modifiers
 
@@ -99,8 +99,10 @@ class PickEvent(MouseLocationEventMeta, GRViewPort):
     PICK_MOVE = QtCore.QEvent.registerEventType()
     PICK_PRESS = QtCore.QEvent.registerEventType()
 
-    def __init__(self, type, width, height, x, y, viewport, window=None):
-        super(PickEvent, self).__init__(type, width, height, x, y, window)
+    def __init__(self, type, width, height, x, y, viewport, window=None,
+                 scale=None):
+        super(PickEvent, self).__init__(type, width, height, x, y,
+                                        window=window, scale=scale)
         GRViewPort.__init__(self, viewport)
 
 

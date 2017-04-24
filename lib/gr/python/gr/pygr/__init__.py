@@ -282,9 +282,10 @@ class RegionOfInterest(object):
 
 class CoordConverter(object):
 
-    def __init__(self, sizex, sizey, window=None):
+    def __init__(self, sizex, sizey, window=None, scale=None):
         self._sizex, self._sizey, self._window = sizex, sizey, window
-        self._p = None # always stored in NDC
+        self._scale = scale
+        self._p = None  # always stored in NDC
 
     def _checkRaiseXY(self):
         if self._p.x is None or self._p.y is None:
@@ -304,12 +305,21 @@ class CoordConverter(object):
         else:
             return None
 
+    def setScale(self, scale):
+        self._scale = scale
+
+    def getScale(self):
+        return self._scale
+
     def setNDC(self, x, y):
         self._p = Point(x, y)
         return self
 
     def setWC(self, x, y, viewport, window=None):
-        scale = gr.inqscale()
+        if self.getScale() is not None:
+            scale = self.getScale()
+        else:
+            scale = gr.inqscale()
         if window:
             self.setWindow(*window)
         if self.getWindow():
@@ -339,7 +349,10 @@ class CoordConverter(object):
         return self._p
 
     def getWC(self, viewport):
-        scale = gr.inqscale()
+        if self.getScale() is not None:
+            scale = self.getScale()
+        else:
+            scale = gr.inqscale()
         self._checkRaiseXY()
         ndcPoint = self.getNDC()
         ndcPoint = Point(ndcPoint.x, ndcPoint.y)
@@ -365,7 +378,8 @@ class CoordConverter(object):
 
 class DeviceCoordConverter(CoordConverter):
 
-    def __init__(self, width, height, sizex=None, sizey=None, window=None):
+    def __init__(self, width, height, sizex=None, sizey=None, window=None,
+                 scale=None):
         self._width, self._height = width, height
         if sizex is None and sizey is None:
             if self._width > self._height:
@@ -374,7 +388,7 @@ class DeviceCoordConverter(CoordConverter):
             else:
                 sizex = float(self._width) / self._height
                 sizey = 1.
-        CoordConverter.__init__(self, sizex, sizey, window)
+        CoordConverter.__init__(self, sizex, sizey, window, scale)
 
     def setDC(self, x, y):
         self._p = Point(float(x) / self._width * self._sizex,
@@ -892,6 +906,8 @@ class Plot(GRViewPort, GRMeta):
             lstCurves = []
             for axes in self._lstAxes:
                 gr.setwindow(*axes.getWindow())
+                coord.setWindow(*axes.getWindow())
+                coord.setScale(axes.scale)
                 coord.setNDC(p0.x, p0.y)
                 wcPick = coord.getWC(axes.viewport)
                 curves = [c for c in axes.getCurves() if c.visible]
@@ -913,6 +929,7 @@ class Plot(GRViewPort, GRMeta):
                 curve = lstCurves[idx]
                 coord.setNDC(p.x, p.y)
                 coord.setWindow(*axes.getWindow())
+                coord.setScale(axes.scale)
             else:
                 coord, axes, curve = None, None, None
         gr.setwindow(*window)
@@ -923,6 +940,8 @@ class Plot(GRViewPort, GRMeta):
         coord = CoordConverter(self._sizex, self._sizey)
         for axes in self._lstAxes:
             win = axes.getWindow()
+            coord.setWindow(*win)
+            coord.setScale(axes.scale)
             gr.setwindow(*win)
             gr.setscale(axes.scale)
             p0World = coord.setNDC(p0.x, p0.y).getWC(self.viewport)
@@ -939,6 +958,8 @@ class Plot(GRViewPort, GRMeta):
         coord = CoordConverter(self._sizex, self._sizey)
         for axes in self._lstAxes:
             win = axes.getWindow()
+            coord.setWindow(*win)
+            coord.setScale(axes.scale)
             xmin, xmax, ymin, ymax = win
             gr.setwindow(*win)
             gr.setscale(axes.scale)
@@ -958,6 +979,8 @@ class Plot(GRViewPort, GRMeta):
         for axes in self._lstAxes:
             win = axes.getWindow()
             xmin, xmax, ymin, ymax = win
+            coord.setWindow(*win)
+            coord.setScale(axes.scale)
             gr.setwindow(*win)
             gr.setscale(axes.scale)
             # zoom from center
