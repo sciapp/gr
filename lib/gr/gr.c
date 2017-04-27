@@ -182,7 +182,7 @@ int first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
 #define MAX_COLOR 1256
 
 static
-unsigned int rgb[MAX_COLOR];
+unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 
 #define MAX_TICKS 500
 
@@ -1521,6 +1521,7 @@ void initgks(void)
       rgb[color] = ((nint(r * 255) & 0xff)      ) |
                    ((nint(g * 255) & 0xff) <<  8) |
                    ((nint(b * 255) & 0xff) << 16);
+      used[color] = 0;
     }
 
   signal(SIGTERM, resetgks);
@@ -6372,7 +6373,20 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
 
   for (color = 80; color < 980; color++)
     if (rgb[color] == rgbmask)
-      return color;
+      {
+        used[color] = 1;
+        return color;
+      }
+
+  for (color = 80; color < 980; color++)
+    {
+      if (!used[color])
+        {
+          setcolorrep(color, red, green, blue);
+          used[color] = 1;
+          return color;
+        }
+    }
 
   for (color = 80; color < 980; color++)
     {
