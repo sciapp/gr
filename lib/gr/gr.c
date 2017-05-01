@@ -6374,6 +6374,7 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
   for (color = 80; color < 980; color++)
     if (rgb[color] == rgbmask)
       {
+        setcolorrep(color, red, green, blue);
         used[color] = 1;
         return color;
       }
