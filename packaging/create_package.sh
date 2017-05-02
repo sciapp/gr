@@ -154,7 +154,7 @@ create_package_scripts() {
 #!/bin/bash
 ldconfig
 EOF
-    chmod +x scripts/after_install.sh 
+    chmod +x scripts/after_install.sh
 }
 
 create_package() {
@@ -166,8 +166,8 @@ create_package() {
     for DIR in ${PACKAGE_DIRS[@]}; do
         FPM_PACKAGE_DIRS="${FPM_PACKAGE_DIRS} .${DIR}"
     done
-    
-    fpm -s dir -t "${PACKAGE_FORMAT}" -n "${NAME}" -v "${VERSION}" --directories ${OWNED_DIRS[@]} --after-install scripts/after_install.sh ${DEPENDENCIES_STRING} ${FPM_PACKAGE_DIRS}
+
+    fpm --verbose -s dir -t "${PACKAGE_FORMAT}" -n "${NAME}" -v "${VERSION}" --directories ${OWNED_DIRS[@]} --after-install scripts/after_install.sh ${DEPENDENCIES_STRING} ${FPM_PACKAGE_DIRS}
 
     if [ "${DISTRO}" != "unspecified_distro" ]; then
         mkdir "${DISTRO}"
