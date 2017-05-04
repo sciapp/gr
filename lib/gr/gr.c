@@ -19,9 +19,11 @@ typedef __int64 int64_t;
 #include <windows.h>
 #define TMPDIR "C:\\Users\\%USERNAME%\\AppData\\Local\\Temp"
 #define DIRDELIM "\\"
+#define is_nan(a) _isnan(a)
 #else
 #define TMPDIR "/tmp"
 #define DIRDELIM "/"
+#define is_nan(a) isnan(a)
 #endif
 
 #include "gks.h"
@@ -3935,6 +3937,7 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
       x1 = px[i];
       y1 = py[i];
       z1 = pz[i];
+      if (is_nan(x1) || is_nan(y1) || is_nan(z1)) break;
 
       x = x1;
       y = y1;
@@ -6906,11 +6909,7 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 
   for (i = 0; i < n; i++)
     {
-#ifdef _WIN32
-      if (_isnan(vertices[i].x) || _isnan(vertices[i].y))
-#else
-      if (isnan(vertices[i].x) || isnan(vertices[i].y))
-#endif
+      if (is_nan(vertices[i].x) || is_nan(vertices[i].y))
         {
           nan = 1;
           continue;
