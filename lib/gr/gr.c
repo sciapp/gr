@@ -6346,7 +6346,7 @@ void gr_colorbar(void)
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    gr_writestream("<colormap/>\n");
+    gr_writestream("<colorbar/>\n");
 }
 
 void gr_inqcolor(int color, int *rgb)
