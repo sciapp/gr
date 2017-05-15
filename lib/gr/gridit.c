@@ -1621,7 +1621,7 @@ void idsfft(int *md, int *ncp, int *ndp, double *xd, double *yd, double *zd,
   /*     IWK = INTEGER ARRAY OF DIMENSION */
   /*              MAX0(31,27+NCP)*NDP+NXI*NYI */
   /*           USED INTERNALLY AS A WORK AREA, */
-  /*     WK  = ARRAY OF DIMENSION 5*NDP USED INTERNALLY AS A */
+  /*     WK  = ARRAY OF DIMENSION 6*(NDP+1) USED INTERNALLY AS A */
   /*           WORK AREA. */
   /* THE VERY FIRST CALL TO THIS SUBROUTINE AND THE CALL WITH A NEW */
   /* NCP VALUE, A NEW NDP VALUE, AND/OR NEW CONTENTS OF THE XD AND */

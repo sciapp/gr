@@ -2137,7 +2137,7 @@ void gr_gridit(int nd, double *xd, double *yd, double *zd,
   md = 1;
   ncp = 4;
   iwk = (int *) calloc(31 * nd + nx * ny, sizeof(int));
-  wk = (double *) calloc(5 * nd, sizeof(double));
+  wk = (double *) calloc(6 * (nd + 1), sizeof(double));
 
   idsfft(&md, &ncp, &nd, xd, yd, zd, &nx, &ny, x, y, z, iwk, wk);
 
