@@ -2154,7 +2154,7 @@ def drawimage(xmin, xmax, ymin, ymax, width, height, data, model=0):
     +-----------------------+---+-----------+
 
 
-    The points (`xminx`, `ymin`) and (`xmax`, `ymax`) are world coordinates defining
+    The points (`xmin`, `ymin`) and (`xmax`, `ymax`) are world coordinates defining
     diagonally opposite corner points of a rectangle. This rectangle is divided into
     `width` by `height` cells. The two-dimensional array `data` specifies colors
     for each cell.
