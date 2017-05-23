@@ -8,6 +8,7 @@
 #define SEGM_SIZE 262144 /* 256K */
 
 #define COPY(s, n) memmove(d->buffer + d->nbytes, (void *) s, n); d->nbytes += n
+#define PAD(n) memset(d->buffer + d->nbytes, 0, n); d->nbytes += n
 
 
 static
@@ -168,7 +169,9 @@ void gks_dl_write_item(gks_display_list_t *d,
           COPY(&dx, sizeof(int));
           COPY(&dy, sizeof(int));
           COPY(&dimx, sizeof(int));
-          COPY(ia, dimx * dy * sizeof(int));
+          tp = dimx * (dy - 1) + dx;
+          COPY(ia, tp * sizeof(int));
+          PAD((dimx -dx) * sizeof(int));
 
           d->empty = 0;
         }
