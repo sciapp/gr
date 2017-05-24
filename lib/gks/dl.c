@@ -171,7 +171,7 @@ void gks_dl_write_item(gks_display_list_t *d,
           COPY(&dimx, sizeof(int));
           tp = dimx * (dy - 1) + dx;
           COPY(ia, tp * sizeof(int));
-          PAD((dimx -dx) * sizeof(int));
+          PAD((dimx - dx) * sizeof(int)); /* (dimx * dy - tp) elements */
 
           d->empty = 0;
         }
