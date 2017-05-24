@@ -1093,16 +1093,6 @@ void stroke(void)
 }
 
 static
-void eofill(void)
-{
-  if (p->stroke)
-    {
-      pdf_eofill(p);
-      p->stroke = 0;
-    }
-}
-
-static
 void move(double x, double y)
 {
   double xdev, ydev;
@@ -1525,29 +1515,28 @@ void text(double px, double py, int nchars, char *chars)
 static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
-  int ln_type = DrawBorder, i;
+  int i;
   double x, y, xdev, ydev;
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
-  if (!p->pattern)
-    {
-      gks_emul_polyline(n, px, py, ln_type, tnr, move, draw);
-      eofill();
-    }
-  else
-    {
-      pdf_printf(p->content, "/Pattern cs/P%d scn\n", p->pattern);
-      for (i = 0; i < n; i++)
-        {
-          WC_to_NDC(px[i], py[i], tnr, x, y);
-          seg_xform(&x, &y);
-          NDC_to_DC(x, y, xdev, ydev);
 
-          if (i == 0)
-            pdf_moveto(p, xdev, ydev);
-          else
-            pdf_lineto(p, xdev, ydev);
-        }
+  if (p->pattern)
+    pdf_printf(p->content, "/Pattern cs/P%d scn\n", p->pattern);
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(px[i], py[i], tnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, xdev, ydev);
+
+      if (i == 0)
+        pdf_moveto(p, xdev, ydev);
+      else
+        pdf_lineto(p, xdev, ydev);
+    }
+
+  if (p->pattern)
+    {
       pdf_printf(p->content, "f/Pattern cs/P0 scn\n");
 
       if (!p->have_pattern[p->pattern])
@@ -1562,6 +1551,10 @@ void fill_routine(int n, double *px, double *py, int tnr)
           p->pattern_id[0][0] = pdf_alloc_id(p);
           p->pattern_id[0][1] = pdf_alloc_id(p);
         }
+    }
+  else
+    {
+      pdf_eofill(p);
     }
 }
 
@@ -1589,7 +1582,12 @@ void fillarea(int n, double *px, double *py)
       set_transparency(p->alpha);
       set_fillcolor(fl_color);
 
+      pdf_save(p);
+      set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
+
       fill_routine(n, px, py, gkss->cntnr);
+
+      pdf_restore(p);
     }
   else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
            fl_inter == GKS_K_INTSTYLE_HATCH)
@@ -1603,7 +1601,12 @@ void fillarea(int n, double *px, double *py)
         fl_style = 1;
       p->pattern = fl_style;
 
+      pdf_save(p);
+      set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
+
       fill_routine(n, px, py, gkss->cntnr);
+
+      pdf_restore(p);
     }
 }
 

@@ -553,7 +553,7 @@ void draw(double x, double y)
               packb(buffer);
               p->np = 1;
             }
-          else 
+          else
             p->stroke = 1;
         }
     }
@@ -1383,7 +1383,7 @@ void cell_array(
     wtype % 2 == 0 ? " 0 1 0 1" : "");
   packb(buffer);
 
-  packb(">> image Data closefile RawData flushfile } exec"); 
+  packb(">> image Data closefile RawData flushfile } exec");
 
   len = dx * dy;
   if (wtype % 2 == 0) len = len * 3;
@@ -1465,9 +1465,59 @@ void text_routine(double *x, double *y, int *nchars, char *chars)
 }
 
 static
+void fill_routine(int n, double *px, double *py, int tnr)
+{
+  int clsw;
+  double clrt[4], x, y;
+  char buffer[50];
+  int i, jx, jy, rx, ry;
+
+  packb("gsave");
+
+  clsw = gkss->clip;
+  for (i = 0; i < 4; i++)
+    clrt[i] = gkss->viewport[clsw == GKS_K_CLIP ? tnr : 0][i];
+
+  set_clipping(clrt);
+
+  WC_to_NDC(px[0], py[0], tnr, x, y);
+  NDC_to_DC(x, y, p->ix, p->iy);
+
+  sprintf(buffer, "np %d %d m", p->ix, p->iy);
+  packb(buffer);
+  p->np = 1;
+
+  for (i = 1; i < n; i++)
+    {
+      jx = p->ix;
+      jy = p->iy;
+      WC_to_NDC(px[i], py[i], tnr, x, y);
+      NDC_to_DC(x, y, p->ix, p->iy);
+
+      if (i == 1 || p->ix != jx || p->iy != jy)
+        {
+          rx = p->ix - jx;
+          ry = p->iy - jy;
+          if (abs(rx) > 1 || abs(ry) > 1)
+            {
+              sprintf(buffer, "%d %d rl", rx, ry);
+              packb(buffer);
+            }
+          else
+            packb(dc[rx + 1][ry + 1]);
+          p->np++;
+        }
+    }
+
+  if (p->np > 2)
+    packb("fi");
+
+  packb("grestore");
+}
+
+static
 void fillpattern_routine(int n, double *px, double *py, int tnr, int pattern)
 {
-  int ltype = 0;
   char buffer[100];
 
   sprintf(buffer,
@@ -1476,21 +1526,8 @@ void fillpattern_routine(int n, double *px, double *py, int tnr, int pattern)
           p->red[p->color], p->green[p->color], p->blue[p->color], pattern);
   packb(buffer);
 
-  p->limit = 0;
-  gks_emul_polyline(n, px, py, ltype, tnr, move, draw);
-  if (p->np > 1)
-    packb("fi gr");
-}
-
-static
-void fill_routine(int n, double *px, double *py, int tnr)
-{
-  int ltype = 0;
-
-  p->limit = 0;
-  gks_emul_polyline(n, px, py, ltype, tnr, move, draw);
-  if (p->np > 1)
-    packb("fi");
+  fill_routine(n, px, py, tnr);
+  packb("gr");
 }
 
 static
