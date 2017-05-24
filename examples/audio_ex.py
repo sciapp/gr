@@ -7,6 +7,8 @@ Play an audio file and display signal and power spectrum in realtime
 import os, wave, pyaudio
 import numpy
 import gr
+import scipy.fftpack
+
 
 SAMPLES = 2048
 
@@ -15,7 +17,7 @@ wf = wave.open(os.path.join(os.path.dirname(os.path.realpath(__file__)),
 pa = pyaudio.PyAudio()
 stream = pa.open(format=pa.get_format_from_width(wf.getsampwidth()),
                  channels=wf.getnchannels(), rate=wf.getframerate(), output=True)
- 
+
 gr.setwindow(0, SAMPLES, -30000, 30000)
 gr.setviewport(0.05, 0.95, 0.05, 0.95)
 gr.setlinecolorind(218)
@@ -26,7 +28,7 @@ data = wf.readframes(SAMPLES)
 while data != '' and len(data) == SAMPLES * wf.getsampwidth():
     stream.write(data)
     amplitudes = numpy.fromstring(data, dtype=numpy.short)
-    power = abs(numpy.fft.fft(amplitudes / 512.0))[:SAMPLES/2:2] - 30000
+    power = abs(scipy.fftpack.fft(amplitudes / 512.0))[:SAMPLES/2:2] - 30000
 
     gr.clearws()
     gr.fillrect(0, SAMPLES, -30000, 30000)

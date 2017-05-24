@@ -12,6 +12,7 @@ import pyaudio
 import numpy
 from numpy import arange, sin, pi
 from scipy import signal
+import scipy.fftpack
 # local library
 import gr
 from gr.pygr import Plot, PlotAxes, PlotCurve
@@ -64,7 +65,7 @@ def get_spectrum():
         mic = pa.open(format=pyaudio.paInt16, channels=1, rate=FS,
                       input=True, frames_per_buffer=SAMPLES)
     amplitudes = numpy.fromstring(mic.read(SAMPLES), dtype=numpy.short)
-    return abs(numpy.fft.fft(amplitudes / 32768.0))[:SAMPLES/2]
+    return abs(scipy.fftpack.fft(amplitudes / 32768.0))[:SAMPLES/2]
 
 
 def parabolic(x, f, i):
@@ -183,4 +184,3 @@ def main(*args):
 
 if __name__ == "__main__":
     main(sys.argv)
-

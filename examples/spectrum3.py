@@ -6,6 +6,7 @@ Sample microphone input and display spectrogram
 
 import pyaudio
 import numpy as np
+import scipy.fftpack
 import time
 import gr
 import gr3
@@ -21,7 +22,7 @@ def get_spectrum():
         mic = pa.open(format=pyaudio.paInt16, channels=1, rate=FS,
                       input=True, frames_per_buffer=SAMPLES)
     amplitudes = np.fromstring(mic.read(SAMPLES), dtype=np.short)
-    return abs(np.fft.fft(amplitudes / 32768.0))[:SAMPLES/2]
+    return abs(scipy.fftpack.fft(amplitudes / 32768.0))[:SAMPLES/2]
 
 spectrum = np.zeros((256, 256), dtype=float)
 t = -255
