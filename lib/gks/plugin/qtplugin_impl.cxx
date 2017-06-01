@@ -765,7 +765,8 @@ void cellarray(
   int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   QImage *img;
-  int red, green, blue;
+  QImage::Format format;
+  int red, green, blue, alpha;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -784,7 +785,12 @@ void cellarray(
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
 
-  img = new QImage(width, height, QImage::Format_RGB32);
+  if (!true_color) {
+    format = QImage::Format_RGB32;
+  } else {
+    format = QImage::Format_ARGB32;
+  }
+  img = new QImage(width, height, format);
 
   for (j = 0; j < height; j++)
     {
@@ -811,7 +817,8 @@ void cellarray(
               red = (rgb & 0xff);
               green = (rgb & 0xff00) >> 8;
               blue = (rgb & 0xff0000) >> 16;
-              img->setPixel(i, j, qRgb(red, green, blue));
+              alpha = (rgb & 0xff000000) >> 24;
+              img->setPixel(i, j, qRgba(red, green, blue, alpha));
             }
         }
     }
