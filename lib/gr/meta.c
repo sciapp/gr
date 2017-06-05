@@ -46,7 +46,7 @@ typedef struct {
       struct sockaddr_in server_address;
     } socket;
   };
-} handle_t;
+} metahandle_t;
 
 enum {
   member_name, data_type
@@ -749,7 +749,7 @@ int tojson_is_complete() {
 }
 
 static
-int init_for_socket(handle_t *handle, va_list vl) {
+int init_for_socket(metahandle_t *handle, va_list vl) {
   const char *hostname;
   unsigned int port;
   struct hostent *he;
@@ -793,7 +793,7 @@ int init_for_socket(handle_t *handle, va_list vl) {
 }
 
 static
-int init_for_jupyter(handle_t *handle, va_list vl) {
+int init_for_jupyter(metahandle_t *handle, va_list vl) {
   jupyter_send_callback_t jupyter_send_callback;
 
   jupyter_send_callback = va_arg(vl, jupyter_send_callback_t);
@@ -808,13 +808,13 @@ int init_for_jupyter(handle_t *handle, va_list vl) {
 }
 
 static
-int finalize_for_jupyter(handle_t *handle) {
+int finalize_for_jupyter(metahandle_t *handle) {
   /* TODO: implement me! */
   return 0;
 }
 
 static
-int finalize_for_socket(handle_t *handle) {
+int finalize_for_socket(metahandle_t *handle) {
   int result;
   int error = 0;
 
@@ -835,7 +835,7 @@ int finalize_for_socket(handle_t *handle) {
 
 static
 int post_serialize_socket(void *p) {
-  handle_t *handle = (handle_t *) p;
+  metahandle_t *handle = (metahandle_t *) p;
   char *buf;
   size_t buf_size;
 
@@ -853,7 +853,7 @@ int post_serialize_socket(void *p) {
 
 static
 int post_serialize_jupyter(void *p) {
-  handle_t *handle = (handle_t *) p;
+  metahandle_t *handle = (metahandle_t *) p;
   char *buf;
   size_t buf_size;
 
@@ -869,10 +869,10 @@ int post_serialize_jupyter(void *p) {
 
 void *gr_openmeta(int target, ...) {
   va_list vl;
-  handle_t *handle;
+  metahandle_t *handle;
   int error;
 
-  handle = malloc(sizeof(handle_t));
+  handle = malloc(sizeof(metahandle_t));
   handle->target = target;
   va_start(vl, target);
   switch (target) {
@@ -894,7 +894,7 @@ void *gr_openmeta(int target, ...) {
 }
 
 void gr_closemeta(const void *p) {
-  handle_t *handle = (handle_t *) p;
+  metahandle_t *handle = (metahandle_t *) p;
 
   switch (handle->target) {
   case GR_TARGET_JUPYTER:
@@ -909,7 +909,7 @@ void gr_closemeta(const void *p) {
 }
 
 int gr_send(const void *p, const char *data_desc, ...) {
-  handle_t *handle = (handle_t *) p;
+  metahandle_t *handle = (metahandle_t *) p;
   va_list vl;
   int error;
   int was_successful;
