@@ -19,6 +19,9 @@ extern "C" {
 
 #endif
 
+#define GR_TARGET_JUPYTER 0
+#define GR_TARGET_SOCKET 1
+
 typedef struct {
   double x, y;
 } vertex_t;
@@ -165,6 +168,9 @@ DLLEXPORT void gr_interp2(
   int nx, int ny, const double *x, const double *y, const double *z,
   int nxq, int nyq, const double *xq, const double *yq, double *zq,
   int method, double extrapval);
+DLLEXPORT void *gr_openmeta(int, ...);
+DLLEXPORT int gr_send(const void *, const char *, ...);
+DLLEXPORT void gr_closemeta(const void *);
 
 #ifdef _WIN32
 #ifdef __cplusplus

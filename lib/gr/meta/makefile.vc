@@ -1,0 +1,17 @@
+GRDIR = S:\gr
+INCLUDES = /I..
+CFLAGS = /Zi $(INCLUDES)
+LIBS = /LIBPATH:$(GRDIR) libgr.lib
+LINKFLAGS = /link $(LIBS)
+
+
+all: main.exe
+
+main.exe: main.obj
+	$(CC) /Fe$@ main.obj $(LINKFLAGS)
+
+.c.obj:
+	$(CC) /c $(CFLAGS) $<
+
+clean:
+	del main.exe *.obj *.ilk *.pdb

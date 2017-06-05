@@ -53,7 +53,7 @@ $(QHLIBS):
 libgr.lib: libgr.dll
 
 libgr.dll: gr.obj text.obj contour.obj spline.obj gridit.obj strlib.obj io.obj \
-	   image.obj delaunay.obj interp2.obj md5.obj import.obj
+	   image.obj delaunay.obj interp2.obj md5.obj meta.obj import.obj
 	$(DLLLINK) /out:$@ $** \
 	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) $(GKSLIBS) \
 	$(DLLLFLAGS) $(DLLLIBS)

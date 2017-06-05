@@ -13,6 +13,7 @@ EXPORTS
 	gr_cellarray
 	gr_clearws
 	gr_closegks
+	gr_closemeta
 	gr_closeseg
 	gr_closews
 	gr_colorbar
@@ -52,6 +53,7 @@ EXPORTS
 	gr_moveselection
 	gr_ndctowc
 	gr_opengks
+	gr_openmeta
 	gr_openws
 	gr_polyline
 	gr_polyline3d
@@ -65,6 +67,7 @@ EXPORTS
 	gr_savestate
 	gr_selectcontext
 	gr_selntran
+	gr_send
 	gr_setarrowsize
 	gr_setarrowstyle
 	gr_setcharexpan
