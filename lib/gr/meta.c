@@ -908,7 +908,7 @@ void gr_closemeta(const void *p) {
   free(handle);
 }
 
-int gr_send(const void *p, const char *data_desc, ...) {
+int gr_sendmeta(const void *p, const char *data_desc, ...) {
   metahandle_t *handle = (metahandle_t *) p;
   va_list vl;
   int error;

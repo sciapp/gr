@@ -17,8 +17,8 @@ int main(void) {
         return -1;
     }
 
-    gr_send(handle, "s(data:s(x:npD,y:pD)", n, x, y);
-    gr_send(handle, "color:ddd)", 1.0, 0.0, 0.5);
+    gr_sendmeta(handle, "s(data:s(x:npD,y:pD)", n, x, y);
+    gr_sendmeta(handle, "color:ddd)", 1.0, 0.0, 0.5);
 
     printf("\tsent\n");
 

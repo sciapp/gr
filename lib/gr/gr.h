@@ -169,7 +169,7 @@ DLLEXPORT void gr_interp2(
   int nxq, int nyq, const double *xq, const double *yq, double *zq,
   int method, double extrapval);
 DLLEXPORT void *gr_openmeta(int, ...);
-DLLEXPORT int gr_send(const void *, const char *, ...);
+DLLEXPORT int gr_sendmeta(const void *, const char *, ...);
 DLLEXPORT void gr_closemeta(const void *);
 
 #ifdef _WIN32

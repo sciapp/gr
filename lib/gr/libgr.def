@@ -67,7 +67,7 @@ EXPORTS
 	gr_savestate
 	gr_selectcontext
 	gr_selntran
-	gr_send
+	gr_sendmeta
 	gr_setarrowsize
 	gr_setarrowstyle
 	gr_setcharexpan
