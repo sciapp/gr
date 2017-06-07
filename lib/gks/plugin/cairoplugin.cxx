@@ -648,7 +648,29 @@ void text_routine(double x, double y, int nchars, char *chars)
   double xrel, yrel, ax, ay;
   double xstart, ystart;
   cairo_text_extents_t extents;
+  unsigned char ch, *s, *buf = NULL;
+  int i;
   char *str;
+
+  if (!p->use_symbols)
+    {
+      /* convert latin1 to utf8 */
+      s = buf = (unsigned char *) gks_malloc(2 * nchars + 1);
+      for (i = 0; i < nchars; i++)
+        {
+          ch = (unsigned char) chars[i];
+          if (ch < 0x80)
+            *s++ = chars[i];
+          else
+            {
+              *s++ = 0xc0 | (ch & 0xc0) >> 6;
+              *s++ = 0x80 | (ch & 0x3f);
+            }
+        }
+      *s++ = '\0';
+      chars = (char *) buf;
+      nchars = strlen(chars);
+    }
 
   /* Ugly workaround to avoid Cairo crashes when getting the text extent
      for a string that contains only a single character */
@@ -685,6 +707,9 @@ void text_routine(double x, double y, int nchars, char *chars)
     else
       cairo_show_text(p->cr, chars);
   }
+
+  if (!p->use_symbols)
+    free(buf);
 }
 
 static
