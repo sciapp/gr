@@ -102,6 +102,7 @@ typedef struct ws_state_list_t
     double window[4], viewport[4];
     QRect rect[MAX_TNR];
     QColor rgb[MAX_COLOR];
+    int transparency;
     QPolygon *points;
     int npoints, max_points;
     QFont *font;
@@ -288,8 +289,10 @@ void init_colors(void)
 static
 void set_color(int color)
 {
-  p->pixmap->setPen(p->rgb[color]);
-  p->pixmap->setBrush(p->rgb[color]);
+  QColor transparent_color(p->rgb[color]);
+  transparent_color.setAlpha(p->transparency);
+  p->pixmap->setPen(transparent_color);
+  p->pixmap->setBrush(transparent_color);
 }
 
 static
@@ -378,6 +381,9 @@ void polyline(int n, double *px, double *py)
   if (ln_color <= 0 || ln_color >= MAX_COLOR)
     ln_color = 1;
 
+  QColor transparent_color(p->rgb[ln_color]);
+  transparent_color.setAlpha(p->transparency);
+
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
 
@@ -388,12 +394,12 @@ void polyline(int n, double *px, double *py)
       for (i = 0; i < list[0]; i++)
         dashPattern[i] = (double) list[i + 1];
 
-      QPen pen(QPen(p->rgb[ln_color], width, Qt::CustomDashLine));
+      QPen pen(QPen(transparent_color, width, Qt::CustomDashLine));
       pen.setDashPattern(dashPattern);
       p->pixmap->setPen(pen);
     }
   else
-    p->pixmap->setPen(QPen(p->rgb[ln_color], width, Qt::SolidLine));
+    p->pixmap->setPen(QPen(transparent_color, width, Qt::SolidLine));
 
   line_routine(n, px, py, ln_type, gkss->cntnr);
 
@@ -467,6 +473,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
           points = new QPolygon(marker[mtype][pc + 1]);
           if (op == 5)
             set_color(0);
+          p->pixmap->setPen(Qt::NoPen);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -476,8 +483,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
             }
           p->pixmap->drawPolygon(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
-          if (op == 5)
-            set_color(mcolor);
+          set_color(mcolor);
           delete points;
           break;
 
@@ -489,9 +495,9 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
         case 8:         /* hollow arc */
           if (op == 8)
             set_color(0);
+          p->pixmap->setPen(Qt::NoPen);
           p->pixmap->drawChord(x - r, y - r, d, d, 0, 360 * 16);
-          if (op == 8)
-            set_color(mcolor);
+          set_color(mcolor);
           break;
         }
       pc++;
@@ -542,8 +548,10 @@ void polymarker(int n, double *px, double *py)
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
-  p->pixmap->setPen(QPen(p->rgb[mk_color], ln_width, Qt::SolidLine));
-  p->pixmap->setBrush(QBrush(p->rgb[mk_color], Qt::SolidPattern));
+  QColor transparent_color(p->rgb[mk_color]);
+  transparent_color.setAlpha(p->transparency);
+  p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
+  p->pixmap->setBrush(QBrush(transparent_color, Qt::SolidPattern));
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
   p->pixmap->restore();
 }
@@ -665,7 +673,9 @@ void text(double px, double py, int nchars, char *chars)
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
-  p->pixmap->setPen(QPen(p->rgb[tx_color], ln_width, Qt::SolidLine));
+  QColor transparent_color(p->rgb[tx_color]);
+  transparent_color.setAlpha(p->transparency);
+  p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
     {
@@ -723,18 +733,21 @@ void fillarea(int n, double *px, double *py)
   if (ln_width < 1)
     ln_width = 1;
 
+  QColor transparent_color(p->rgb[fl_color]);
+  transparent_color.setAlpha(p->transparency);
+
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
-      p->pixmap->setPen(QPen(p->rgb[fl_color], ln_width, Qt::SolidLine));
+      p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
       p->pixmap->setPen(Qt::NoPen);
-      p->pixmap->setBrush(QBrush(p->rgb[fl_color], Qt::SolidPattern));
+      p->pixmap->setBrush(QBrush(transparent_color, Qt::SolidPattern));
       fill_routine(n, px, py, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
@@ -747,7 +760,7 @@ void fillarea(int n, double *px, double *py)
       if (p->pattern[fl_style] == NULL)
         p->pattern[fl_style] = create_pattern(fl_style);
       p->pixmap->setPen(Qt::NoPen);
-      p->pixmap->setBrush(QBrush(p->rgb[fl_color], *p->pattern[fl_style]));
+      p->pixmap->setBrush(QBrush(transparent_color, *p->pattern[fl_style]));
       fill_routine(n, px, py, gkss->cntnr);
     }
 
@@ -809,7 +822,9 @@ void cellarray(
                 ind = 0;
               else if (ind >= MAX_COLOR)
                   ind = MAX_COLOR - 1;
-              img->setPixel(i, j, p->rgb[ind].rgb());
+              QColor transparent_color(p->rgb[ind]);
+              transparent_color.setAlpha(p->transparency);
+              img->setPixel(i, j, transparent_color.rgba());
             }
           else
             {
@@ -1120,6 +1135,9 @@ void interp(char *str)
         case 200:
           gkss->txslant = f_arr_1[0];
           break;
+
+        case 203:
+          p->transparency = (int) (f_arr_1[0] * 255);
         }
 
       RESOLVE(len, int, sizeof(int));
@@ -1199,6 +1217,8 @@ void QT_PLUGIN_ENTRY_NAME(
         p->pattern[i] = NULL;
 
       p->empty = 1;
+
+      p->transparency = 255;
 
       if (get_pixmap() == 0)
         {
