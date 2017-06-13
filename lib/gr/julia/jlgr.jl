@@ -142,23 +142,27 @@ function fix_minmax(a, b)
     a, b
 end
 
+function given(a)
+    a != Void && a != "Void"
+end
+
 function minmax()
     xmin = ymin = zmin = typemax(Float64)
     xmax = ymax = zmax = typemin(Float64)
     for (x, y, z, c, spec) in plt.args
-        if x != Void
+        if given(x)
             xmin = min(minimum(x), xmin)
             xmax = max(maximum(x), xmax)
         else
             xmin, xmax = 0, 1
         end
-        if y != Void
+        if given(y)
             ymin = min(minimum(y), ymin)
             ymax = max(maximum(y), ymax)
         else
             ymin, ymax = 0, 1
         end
-        if z != Void
+        if given(z)
             zmin = min(minimum(z), zmin)
             zmax = max(maximum(z), zmax)
         end
@@ -676,9 +680,21 @@ end
 
 function plot_data(flag=true)
     global scheme, background
+
     if plt.args == @_tuple(Any)
         return
     end
+
+    if flag && GR.displayname() != None
+        @eval import JSON
+        handle = connect(GR.displayname(), 8001)
+        io = IOBuffer()
+        JSON.print(io, Dict("kvs" => plt.kvs, "args" => plt.args))
+        write(handle, io.data)
+        close(handle)
+        return
+    end
+
     kind = get(plt.kvs, :kind, :line)
 
     plt.kvs[:clear] && GR.clearws()
@@ -731,14 +747,14 @@ function plot_data(flag=true)
             mask & 0x02 != 0 && GR.polymarker(x, y)
         elseif kind == :scatter
             GR.setmarkertype(GR.MARKERTYPE_SOLID_CIRCLE)
-            if z != Void || c != Void
-                if c != Void
+            if given(z) || given(c)
+                if given(c)
                     c = (c - minimum(c)) / (maximum(c) - minimum(c))
                     cind = Int[round(Int, 1000 + _i * 255) for _i in c]
                 end
                 for i in 1:length(x)
-                    (z != Void) && GR.setmarkersize(z[i] / 100.0)
-                    (c != Void )&& GR.setmarkercolorind(cind[i])
+                    given(z) && GR.setmarkersize(z[i] / 100.0)
+                    given(c) && GR.setmarkercolorind(cind[i])
                     GR.polymarker([x[i]], [y[i]])
                 end
             else
@@ -970,19 +986,19 @@ function plot_args(args; fmt=:xys)
         else
             isvector(y) && (y = vec(y))
         end
-        if z != Void
+        if given(z)
             if fmt == :xyzc && typeof(z) == Function
                 z = [z(a,b) for a in x, b in y]
             else
                 isvector(z) && (z = vec(z))
             end
         end
-        if c != Void
+        if given(c)
             isvector(c) && (c = vec(c))
         end
 
         local xyzc
-        if z == Void
+        if !given(z)
             if isa(x, AbstractVector) && isa(y, AbstractVector)
                 xyzc = [ (x, y, z, c) ]
             elseif isa(x, AbstractVector)
@@ -1049,19 +1065,17 @@ function stem(args...; kv...)
 end
 
 function hist(x, nbins::Integer=0)
-    xmin, xmax = minimum(x), maximum(x)
     if nbins <= 1
         nbins = round(Int, 3.3 * log10(length(x))) + 1
     end
 
+    xmin, xmax = extrema(x)
     edges = linspace(xmin, xmax, nbins + 1)
     counts = zeros(nbins)
-
-    for v in x
-        idx = round(Int, (v - xmin) / (xmax - xmin) * (nbins - 1)) + 1
-        counts[idx] += 1
+    buckets = Int[max(2, min(searchsortedfirst(edges, xᵢ), length(edges)))-1 for xᵢ in x]
+    for b in buckets
+        counts[b] += 1
     end
-
     collect(edges), counts
 end
 
@@ -1150,32 +1164,26 @@ end
 
 function title(s)
     plt.kvs[:title] = s
-    plot_data(false)
 end
 
 function xlabel(s)
     plt.kvs[:xlabel] = s
-    plot_data(false)
 end
 
 function ylabel(s)
     plt.kvs[:ylabel] = s
-    plot_data(false)
 end
 
 function legend(args::AbstractString...; kv...)
     plt.kvs[:labels] = args
-    plot_data(false)
 end
 
 function xlim(a)
     plt.kvs[:xlim] = a
-    plot_data(false)
 end
 
 function ylim(a)
     plt.kvs[:ylim] = a
-    plot_data(false)
 end
 
 function savefig(filename)
@@ -1262,6 +1270,23 @@ function tricont(args...; kv...)
     plt.args = plot_args(args, fmt=:xyzc)
 
     plot_data()
+end
+
+function mainloop()
+    @eval import JSON
+
+    server = listen(8001)
+    while true
+        sock = accept(server)
+        while isopen(sock)
+            obj = JSON.parse(String(read(sock)); dicttype=Dict)
+
+            merge!(plt.kvs, obj["kvs"])
+            plt.args = obj["args"]
+
+            plot_data(false)
+        end
+    end
 end
 
 end # module
