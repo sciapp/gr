@@ -971,11 +971,11 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, ix2, iy2);
 
-  width = (int) fabs(ix2 - ix1);
-  height = (int) fabs(iy2 - iy1);
+  width = nint(fabs(ix2 - ix1));
+  height = nint(fabs(iy2 - iy1));
   if (width == 0 || height == 0) return;
-  x = (int) min(ix1, ix2);
-  y = (int) min(iy1, iy2);
+  x = nint(min(ix1, ix2));
+  y = nint(min(iy1, iy2));
 
   if ((stream = fopen(TMP_NAME, "wb")) == NULL)
     {
@@ -1080,8 +1080,8 @@ void set_clip_path(int tnr)
 
   x = (int) cxl;
   y = (int) cyt;
-  width = (int) (cxr - cxl);
-  height = (int) (cyb - cyt);
+  width = nint(cxr - cxl);
+  height = nint(cyb - cyt);
 
   x = max(0, x);
   width = min(p->width, width + 1);
