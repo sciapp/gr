@@ -397,7 +397,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
                        p->linewidth);
 
           pgf_printf(p->stream, " (%f, %f) arc [start angle=%f, end angle=%f, "
-             "radius=%d];\n", x + r, y, 0, 2 * M_PI, r);
+             "radius=%d];\n", x + r, y, 0.0, 2 * M_PI, r);
           break;
 
         default:
