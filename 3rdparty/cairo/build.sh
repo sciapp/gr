@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 cwd=`pwd`
 src="cairo-1.14.6"
 if [ "$1" = "" ]; then
@@ -11,7 +12,7 @@ cd ${dest}/src
 
 if [ ! -d "${src}" ]; then
   if [ `which curl` ]; then
-    cmd="curl -k -O"
+    cmd="curl -k -O -L"
   else
     cmd="wget --no-check-certificate"
   fi

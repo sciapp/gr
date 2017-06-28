@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 cwd=`pwd`
 
 src="libvpx-1.4.0"
@@ -13,7 +14,7 @@ cd ${dest}/src
 
 if [ ! -d "${src}" ]; then
   if [ `which curl` ]; then
-    cmd="curl -k -O"
+    cmd="curl -k -O -L"
   else
     cmd="wget"
   fi

@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 cwd=`pwd`
 if [ `which cmake >/dev/null 2>&1` ]; then exit 0; fi
 
@@ -13,7 +14,7 @@ cd ${dest}/src
 
 if [ ! -d "${src}" ]; then
   if [ `which curl` ]; then
-    cmd="curl -k -O"
+    cmd="curl -k -O -L"
   else
     cmd="wget --no-check-certificate"
   fi

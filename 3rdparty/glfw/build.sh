@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 cwd=`pwd`
 src="3.1.1"
 if [ "$1" = "" ]; then
