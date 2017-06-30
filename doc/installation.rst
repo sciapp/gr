@@ -6,11 +6,11 @@ Linux packages
 
 Since GR v0.17.2 we provide `python-gr` `.rpm` and `.deb` packages for various
 Linux distributions using
-`openSUSE Build Service <http://build.opensuse.org>`_. Your operating systems
+`openSUSE Build Service <https://build.opensuse.org>`_. Your operating systems
 package manager will cope with package dependencies.
 
 Please follow the installation instructions for your operating system described
-`here <http://software.opensuse.org/download.html?project=science:gr-framework&package=python-gr>`_.
+`here <https://software.opensuse.org/download.html?project=science:gr-framework&package=python-gr>`_.
 
 
 Prerequisites
@@ -89,7 +89,7 @@ features:
 
 Instead of manually installing Python and required modules it's highly
 recommended to use a python bundle, eg.
-`Anaconda <http://continuum.io/downloads>`_, instead. This is
+`Anaconda <https://continuum.io/downloads>`_, instead. This is
 especially true for Windows and OS X.
 
 Those distributions provide more packages that you can think you will ever
@@ -97,7 +97,7 @@ need and they are very easy to update using package managers.
 
 .. note::
     We are providing binary packages for Anaconda, which can be
-    obtained from `conda.anaconda.org <http://conda.anaconda.org>`_ and
+    obtained from `conda.anaconda.org <https://conda.anaconda.org>`_ and
     then be installed with the ``conda install`` command.
 
 For Linux, Windows or OS X you can download and install ready-to-use
@@ -107,7 +107,7 @@ packages with a single command::
     python
 
 If you don't have Miniconda or Anaconda installed, you can download
-them from `Continuum <http://continuum.io/downloads>`_ and use a
+them from `Continuum <https://continuum.io/downloads>`_ and use a
 command-line installer. For Miniconda on OS X, in the shell execute::
 
     bash Miniconda-3.x.x-MacOSX-x86_64.sh

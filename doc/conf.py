@@ -278,10 +278,10 @@ texinfo_documents = [
 numpydoc_show_class_members = False
 
 # -- intersphinx ----------------------------------------------------------
-_python_doc_base = 'http://docs.python.org/2.7'
+_python_doc_base = 'https://docs.python.org/2.7'
 intersphinx_mapping = {
     _python_doc_base: None,
-    'http://docs.scipy.org/doc/numpy': None,
-    'http://docs.scipy.org/doc/scipy/reference': None
+    'https://docs.scipy.org/doc/numpy': None,
+    'https://docs.scipy.org/doc/scipy/reference': None
 }
 

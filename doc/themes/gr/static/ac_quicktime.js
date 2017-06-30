@@ -216,14 +216,14 @@ function _QTGenerate(callingFcnName, generateXHTML, args)
 	gTagAttrs["type"] = "video/quicktime";
 	gTagAttrs["classid"] = "clsid:02BF25D5-8C17-4B23-BC80-D3488ABDDC6B";
 		//Impportant note: It is recommended that you use this exact classid in order to ensure a seamless experience for all viewers
-	gTagAttrs["pluginspage"] = "http://www.apple.com/quicktime/download/";
+	gTagAttrs["pluginspage"] = "https://www.apple.com/quicktime/download/";
 
 	// set up codebase attribute with specified or default version before parsing args so
 	//  anything passed in will override
 	var activexVers = args[3]
 	if ( (null == activexVers) || ("" == activexVers) )
 		activexVers = "7,3,0,0";
-	gTagAttrs["codebase"] = "http://www.apple.com/qtactivex/qtplugin.cab#version=" + activexVers;
+	gTagAttrs["codebase"] = "https://www.apple.com/qtactivex/qtplugin.cab#version=" + activexVers;
 
 	var	attrName,
 		attrValue;
