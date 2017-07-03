@@ -18,7 +18,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget --no-check-certificate"
   fi
-  ${cmd} https://cmake.org/files/v2.8/${src}.tar.gz
+  ${cmd} https://gr-framework.org/downloads/3rdparty/${src}.tar.gz
   tar -xf ${dest}/src/${src}.tar.gz
 fi
 

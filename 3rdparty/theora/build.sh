@@ -16,7 +16,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget"
   fi
-  ${cmd} http://downloads.xiph.org/releases/theora/${src}.tar.gz
+  ${cmd} https://gr-framework.org/downloads/3rdparty/${src}.tar.gz
   tar -xf ${src}.tar.gz
 fi
 patch -N -p0 --dry-run --silent &>/dev/null <${cwd}/libtheora.patch &&\

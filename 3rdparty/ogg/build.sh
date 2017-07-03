@@ -16,7 +16,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget"
   fi
-  ${cmd} http://downloads.xiph.org/releases/ogg/${src}.tar.gz
+  ${cmd} https://gr-framework.org/downloads/3rdparty/${src}.tar.gz
   tar -xf ${src}.tar.gz
 fi
 

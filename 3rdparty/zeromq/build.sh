@@ -16,7 +16,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget"
   fi
-  ${cmd} http://download.zeromq.org/zeromq-4.0.4.tar.gz
+  ${cmd} https://gr-framework.org/downloads/3rdparty/zeromq-4.0.4.tar.gz
   tar -xf ${src}.tar.gz
 fi
 

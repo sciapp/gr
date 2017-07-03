@@ -16,7 +16,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget --no-check-certificate"
   fi
-  ${cmd} https://ffmpeg.org/releases/${src}.tar.gz
+  ${cmd} https://gr-framework.org/downloads/3rdparty/${src}.tar.gz
   tar -xf ${dest}/src/${src}.tar.gz
 fi
 

@@ -18,7 +18,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget"
   fi
-  ${cmd} http://downloads.webmproject.org/releases/webm/${src}.tar.bz2
+  ${cmd} https://gr-framework.org/downloads/3rdparty/${src}.tar.bz2
   tar -xf ${src}.tar.bz2
 fi
 
