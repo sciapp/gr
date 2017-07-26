@@ -1,5 +1,6 @@
 %{!?__python: %global __python %{_bindir}/python}
 %{!?python_sitearch: %global python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(True)")}
+%{!?python_version: %global python_version %(%{__python} -c "import sys; sys.stdout.write(sys.version[:3])")}
 %global python_platform %(%{__python} -c "from distutils.util import get_platform ; print get_platform()")
 %define THIRDPARTY build/3rdparty.%{python_platform}-%{python_version}
 %define THIRDPARTY_SRC %{THIRDPARTY}/src
