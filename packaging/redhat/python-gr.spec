@@ -128,14 +128,16 @@ GR, a universal framework for visualization applications
 
 %build
 %{__python} setup.py build_ext --static-extras --qmake-qt4=%{qmake_qt4} \
-                               %{-qmake_qt5:--qmake-qt5=%{-qmake_qt5}}
+                               %{?qmake_qt5:--qmake-qt5=%{-qmake_qt5}}
+%{?qmake_qt4:export QT4_QMAKE=%{qmake_qt4}}
+%{?qmake_qt5:export QT5_QMAKE=%{qmake_qt5}}
 make -C 3rdparty GRDIR=%{grdir} DIR=%{THIRDPARTY}
 make -C 3rdparty extras GRDIR=%{grdir} DIR=%{THIRDPARTY}
 make GRDIR=%{grdir}
 
 %install
 %{__python} setup.py build_ext --static-extras --qmake-qt4=%{qmake_qt4} \
-                               %{-qmake_qt5:--qmake-qt5=%{-qmake_qt5}} \
+                               %{?qmake_qt5:--qmake-qt5=%{-qmake_qt5}} \
                      install --root=$RPM_BUILD_ROOT
 make install GRDIR=%{grdir} DESTDIR=${RPM_BUILD_ROOT}
 
