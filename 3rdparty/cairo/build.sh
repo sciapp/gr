@@ -22,8 +22,15 @@ fi
 
 cd ${src}
 
-export CFLAGS="-I${dest}/../zlib -O"
-export LIBS=${dest}/../zlib/libz.a
+export CFLAGS="-I${cwd}/../zlib -O"
+if [ -f "${cwd}/../zlib/libz.a" ]; then
+  export LIBS=${cwd}/../zlib/libz.a
+elif [ -f "${dest}/lib/libz.a" ]; then
+  export LIBS=${dest}/lib/libz.a
+else
+  echo "libz.a not found."
+  exit 1
+fi
 export png_REQUIRES=libpng16
 export png_CFLAGS=-I${dest}/../libpng16
 export png_LIBS=${dest}/../libpng16/libpng.a
