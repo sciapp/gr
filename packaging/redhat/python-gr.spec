@@ -4,6 +4,7 @@
 %global python_platform %(%{__python} -c "from distutils.util import get_platform ; print get_platform()")
 %define THIRDPARTY build/3rdparty.%{python_platform}-%{python_version}
 %define THIRDPARTY_SRC %{THIRDPARTY}/src
+%define THIRDPARTY_INC %{THIRDPARTY}/include
 %define THIRDPARTY_LIB %{THIRDPARTY}/lib
 
 %if 0%{?__jcns}
@@ -130,11 +131,14 @@ GR, a universal framework for visualization applications
 %build
 %{__python} setup.py build_ext --static-extras --qmake-qt4=%{qmake_qt4} \
                                %{?qmake_qt5:--qmake-qt5=%{-qmake_qt5}}
-%{?qmake_qt4:export QT4_QMAKE=%{qmake_qt4}}
-%{?qmake_qt5:export QT5_QMAKE=%{qmake_qt5}}
-make -C 3rdparty GRDIR=%{grdir} DIR=%{THIRDPARTY}
-make -C 3rdparty extras GRDIR=%{grdir} DIR=%{THIRDPARTY}
-make GRDIR=%{grdir}
+make -C 3rdparty GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
+make -C 3rdparty extras GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
+make GRDIR=%{grdir} \
+     EXTRA_CFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
+     EXTRA_CXXFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
+     EXTRA_LDFLAGS=-L`pwd`/%{THIRDPARTY_LIB} \
+     %{?qmake_qt4:QT4_QMAKE=%{qmake_qt4}} \
+     %{?qmake_qt5:QT5_QMAKE=%{qmake_qt5}}
 
 %install
 %{__python} setup.py build_ext --static-extras --qmake-qt4=%{qmake_qt4} \
