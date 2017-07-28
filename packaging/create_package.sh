@@ -67,20 +67,22 @@ get_dependencies() {
 
     case ${TMP_DISTRO} in
     debian)
-        DEPENDENCIES=( "python-numpy" )
+        DEPENDENCIES=( "libxt6" "python-numpy" )
         ;;
     centos)
-        DEPENDENCIES=( "numpy" )
+        DEPENDENCIES=( "libXt" "numpy" )
         ;;
     centos6)
-        DEPENDENCIES=( "numpy" )
+        DEPENDENCIES=( "libXt" "numpy" )
         ;;
     suse)
-        DEPENDENCIES=( "python-numpy" )
+        DEPENDENCIES=( "libXt6" "python-numpy" )
         ;;
     unspecified_distro)
-        if [ -f /etc/debian_version ] || [ -f /etc/SuSE-release ]; then
+        if [ -f /etc/debian_version ]; then
             get_dependencies "debian"
+        elif [ -f /etc/SuSE-release ]; then
+            get_dependencies "suse"
         else
             get_dependencies "centos"
         fi
