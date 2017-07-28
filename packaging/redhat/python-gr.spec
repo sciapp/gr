@@ -45,11 +45,13 @@ BuildRequires:		libXft-devel
 BuildRequires:		gtk2-devel
 %if 0%{?__jcns}
 %define qmake_qt4 %{_prefix}/qt4/bin/qmake
-%define qmake_qt5 %{_prefix}/qt5/bin/qmake
+#%define qmake_qt5 %{_prefix}/qt5/bin/qmake
 BuildRequires: python-local
 BuildRequires: python-setuptools-local
 BuildRequires: qt4-local
-BuildRequires: qt5-local
+#BuildRequires: qt5-local
+#BuildRequires: gcc-local
+## TODO: build qt5-plugin using CC, CXX with gcc-local
 Requires:      python-local
 Requires:      numpy-local
 %else
