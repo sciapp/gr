@@ -1,5 +1,6 @@
 stages:
 - build
+- install
 - deploy
 
 ubuntu-self-contained:
@@ -163,11 +164,9 @@ packages:
   - apt-get update
   - apt-get install -y wget build-essential mesa-common-dev gfortran libqt4-dev qtdeclarative5-dev libgs-dev texlive-latex-base dvipng cmake patch libpython2.7-dev rpm ruby-dev xorg-dev git
   - gem install fpm
-  - make DISTROS=all linuxpackages
+  - make "DISTROS=centos debian suse" linuxpackages
   - mkdir -p artifacts/linux/centos
   - cp packaging/centos/gr-*-1.x86_64.rpm artifacts/linux/centos/
-  - mkdir -p artifacts/linux/centos6
-  - cp packaging/centos6/gr-*-1.x86_64.rpm artifacts/linux/centos6/
   - mkdir -p artifacts/linux/debian
   - cp packaging/debian/gr_*_amd64.deb artifacts/linux/debian/
   - mkdir -p artifacts/linux/suse
@@ -225,3 +224,66 @@ deploy:
   - sshpass -p $RSYNC_PASSWORD rsync -av --delete ./Ubuntu-x86_64/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/Ubuntu-x86_64/gr/
   - sshpass -p $RSYNC_PASSWORD rsync -av --delete ./CentOS-x86_64/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/CentOS-x86_64/gr/
   - sshpass -p $RSYNC_PASSWORD rsync -av --delete ./Linux-x86_64/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/Linux-x86_64/gr/
+
+debian9-install:
+  stage: install
+  image: debian:9
+  script:
+  - apt-get -q update
+  - apt-get -q install -y gdebi-core
+  # Install gr DEB
+  - gdebi -n artifacts-packages/linux/debian/gr*.deb
+  - gr -c "import gr; import gr3"
+    
+ubuntu16.04-install:
+  stage: install
+  image: ubuntu:16.04
+  script:
+  - apt-get -q update
+  - apt-get -q install -y gdebi-core
+  # Install gr DEB
+  - gdebi -n artifacts-packages/linux/debian/gr*.deb
+  - gr -c "import gr; import gr3"
+
+ubuntu17.04-install:
+  stage: install
+  image: ubuntu:17.04
+  script:
+  - apt-get -q update
+  - apt-get -q install -y gdebi-core
+  # Install gr DEB
+  - gdebi -n artifacts-packages/linux/debian/gr*.deb
+  - gr -c "import gr; import gr3"
+
+centos7-install:
+  stage: install
+  image: centos:7
+  script:
+  - yum install -y epel-release
+  # Install gr RPM
+  - yum localinstall -y artifacts-packages/linux/centos/gr*.rpm
+  - gr -c "import gr; import gr3"
+
+opensuse42.1-install:
+  stage: install
+  image: opensuse:42.1
+  script:
+  # Install gr RPM
+  - zypper install -y artifacts-packages/linux/suse/gr*.rpm
+  - gr -c "import gr; import gr3"
+    
+opensuse42.2-install:
+  stage: install
+  image: opensuse:42.2
+  script:
+  # Install gr RPM
+  - zypper install -y artifacts-packages/linux/suse/gr*.rpm
+  - gr -c "import gr; import gr3"
+    
+opensuse42.3-install:
+  stage: install
+  image: opensuse:42.3
+  script:
+  # Install gr RPM
+  - zypper install -y artifacts-packages/linux/suse/gr*.rpm
+  - gr -c "import gr; import gr3"

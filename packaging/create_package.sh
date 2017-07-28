@@ -67,16 +67,16 @@ get_dependencies() {
 
     case ${TMP_DISTRO} in
     debian)
-        DEPENDENCIES=( "libxt6" "python-numpy" )
+        DEPENDENCIES=( "libxt6" "python-numpy" "libgl1-mesa-glx" )
         ;;
     centos)
-        DEPENDENCIES=( "libXt" "numpy" )
+        DEPENDENCIES=( "libXt" "numpy" "mesa-libGL" )
         ;;
     centos6)
-        DEPENDENCIES=( "libXt" "numpy" )
+        DEPENDENCIES=( "libXt" "numpy" "mesa-libGL" )
         ;;
     suse)
-        DEPENDENCIES=( "libXt6" "python-numpy" )
+        DEPENDENCIES=( "libXt6" "python-numpy" "Mesa-libGL1" )
         ;;
     unspecified_distro)
         if [ -f /etc/debian_version ]; then
@@ -135,16 +135,16 @@ create_directory_structure_for_suse() {
 
 copy_src_and_setup_startup() {
     cp -r ${SRC_DIR}/* ".${GRDIR}/"
-    for LINK in ${BIN_LINKS[@]}; do
+    for LINK in "${BIN_LINKS[@]}"; do
         ln -s "${GRDIR}/bin/${LINK}" ".${BIN_DIR}/${LINK}"
     done
-    for LINK in ${LIB_LINKS[@]}; do
+    for LINK in "${LIB_LINKS[@]}"; do
         ln -s "${GRDIR}/lib/${LINK}" ".${LIB_DIR}/${LINK}"
     done
-    for LINK in ${INC_LINKS[@]}; do
+    for LINK in "${INC_LINKS[@]}"; do
         ln -s "${GRDIR}/include/${LINK}" ".${INC_DIR}/${LINK}"
     done
-    for LINK in ${PY_LINKS[@]}; do
+    for LINK in "${PY_LINKS[@]}"; do
         ln -s "${GRDIR}/${PYTHON_REL_SRC_DIR}/${LINK}" ".${PYTHON_DIR}/${LINK}"
     done
     python -m compileall ".${GRDIR}/${PYTHON_REL_SRC_DIR}"
@@ -161,15 +161,15 @@ EOF
 
 create_package() {
     local DEPENDENCIES_STRING=""
-    for DEP in ${DEPENDENCIES}; do
+    for DEP in "${DEPENDENCIES[@]}"; do
         DEPENDENCIES_STRING="${DEPENDENCIES_STRING} -d ${DEP}"
     done
     local FPM_PACKAGE_DIRS=""
-    for DIR in ${PACKAGE_DIRS[@]}; do
+    for DIR in "${PACKAGE_DIRS[@]}"; do
         FPM_PACKAGE_DIRS="${FPM_PACKAGE_DIRS} .${DIR}"
     done
 
-    fpm --verbose -s dir -t "${PACKAGE_FORMAT}" -n "${NAME}" -v "${VERSION}" --directories ${OWNED_DIRS[@]} --after-install scripts/after_install.sh ${DEPENDENCIES_STRING} ${FPM_PACKAGE_DIRS}
+    fpm --verbose -s dir -t "${PACKAGE_FORMAT}" -n "${NAME}" -v "${VERSION}" --directories "${OWNED_DIRS[@]}" --after-install scripts/after_install.sh ${DEPENDENCIES_STRING} ${FPM_PACKAGE_DIRS}
 
     if [ "${DISTRO}" != "unspecified_distro" ]; then
         mkdir "${DISTRO}"
@@ -208,7 +208,7 @@ create_package_for_suse() {
 }
 
 cleanup() {
-    for DIR in ${CLEANUP_DIRS[@]}; do
+    for DIR in "${CLEANUP_DIRS[@]}"; do
         rm -rf ".${DIR}"
     done
 }
