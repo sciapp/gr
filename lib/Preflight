@@ -422,7 +422,10 @@ int main(void)
     return 0;
 }
 eof
-  cmd="${CXX} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lzmq -lpthread -lrt"
+  cmd="${CXX} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lzmq -lpthread"
+  if [ `uname` != "Darwin" ]; then
+    cmd="${cmd} -lrt"
+  fi
   $cmd >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     zmqdefs="ZMQDEFS=-DNO_ZMQ ZMQLIBS="
