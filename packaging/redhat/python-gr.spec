@@ -13,6 +13,7 @@ Name:          python-gr-local
 %else
 # use fixedversion for builds on build.opensuse.org - needed for deb builds.
 %define fixedversion fixed
+%define compression gz
 Name:          python-gr
 %endif
 
@@ -24,7 +25,7 @@ Version:			0.17.3.post55
 Release:			2%{?dist}
 License:			MIT
 Group:				Development/Libraries
-Source:				gr-%{fixedversion}.tar
+Source:				gr-%{fixedversion}.tar%{?compression:.%{compression}}
 Source1:			http://mupdf.com/downloads/archive/mupdf-1.6-source.tar.gz
 Source2:			http://downloads.xiph.org/releases/ogg/libogg-1.3.2.tar.gz
 Source3:			http://downloads.xiph.org/releases/theora/libtheora-1.1.1.tar.gz
