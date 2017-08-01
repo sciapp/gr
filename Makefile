@@ -74,10 +74,10 @@ self:
 	sh 3rdparty/makeself.sh
 
 pypi: clean
-	python setup.py sdist upload -r https://pypi.python.org/pypi
+	python setup.py sdist upload
 
 testpypi: clean
-	python setup.py sdist upload -r https://testpypi.python.org/pypi
+	python setup.py sdist upload
 
 conda: condaclean
 	@recipe/Build in || \
