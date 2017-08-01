@@ -24,10 +24,22 @@ const colors = [
 
 const distinct_cmap = [ 0, 1, 984, 987, 989, 983, 994, 988 ]
 
-type PlotObject
-    obj
-    args
-    kvs
+@static if VERSION < v"0.7-"
+  include_string("""
+    type PlotObject
+      obj
+      args
+      kvs
+    end
+    """)
+else
+  include_string(jlgr, """
+    mutable struct PlotObject
+      obj
+      args
+      kvs
+    end
+    """)
 end
 
 function Figure(width=600, height=450)
@@ -806,12 +818,11 @@ function plot_data(flag=true)
                 colorbar()
             end
         elseif kind == :heatmap
-            xmin, xmax, ymin, ymax = plt.kvs[:window]
-            width, height = size(z)
+            w, h = size(z)
             cmap = colormap()
             data = (float(z) - minimum(z)) / (maximum(z) - minimum(z))
             rgba = [to_rgba(value, cmap) for value = data]
-            GR.drawimage(xmin, xmax, ymax, ymin, width, height, rgba)
+            GR.drawimage(0.5, w + 0.5, h + 0.5, 0.5, w, h, rgba)
             colorbar()
         elseif kind == :wireframe
             if length(x) == length(y) == length(z)
@@ -1214,7 +1225,7 @@ function peaks(n=49)
     x = linspace(-2.5, 2.5, n)
     y = x
     x, y = meshgrid(x, y)
-    3*(1-x).^2.*exp.(-(x.^2) - (y+1).^2) - 10*(x/5 - x.^3 - y.^5).*exp.(-x.^2-y.^2) - 1/3*exp.(-(x+1).^2 - y.^2)
+    3*(1-x).^2 .* exp.(-(x.^2) - (y+1).^2) - 10*(x/5 - x.^3 - y.^5) .* exp.(-x.^2-y.^2) - 1/3 * exp.(-(x+1).^2 - y.^2)
 end
 
 function imshow(I; kv...)

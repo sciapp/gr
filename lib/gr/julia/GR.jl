@@ -203,9 +203,12 @@ function __init__()
         const libGR = joinpath(grdir, "libGR.dll")
     end
     if !isfile(libGR)
-        println("Unable to load GR framework runtime environment")
-        println("$(libGR): No such file")
-        exit(-1)
+        error("""
+            Unable to load GR framework runtime environment
+            $(libGR): No such file
+            Please restart Julia then run
+            rm(Pkg.dir("GR","deps","downloads"),recursive=true,force=true); Pkg.build("GR")
+            """)
     end
     const libGR3 = replace(libGR, "libGR", "libGR3")
     ENV["GKS_USE_CAIRO_PNG"] = "true"
@@ -2898,19 +2901,22 @@ trisurf(args...; kwargs...) = jlgr.trisurf(args...; kwargs...)
 tricont(args...; kwargs...) = jlgr.tricont(args...; kwargs...)
 mainloop() = jlgr.mainloop()
 
-type SVG
-   s::Array{UInt8}
+@static if VERSION < v"0.7-"
+  include_string("""
+    type SVG s::Array{UInt8} end
+    type PNG s::Array{UInt8} end
+    type HTML s::AbstractString end
+    """)
+else
+  include_string(GR, """
+    mutable struct SVG s::Array{UInt8} end
+    mutable struct PNG s::Array{UInt8} end
+    mutable struct HTML s::AbstractString end
+    """)
 end
+
 Base.show(io::IO, ::MIME"image/svg+xml", x::SVG) = write(io, x.s)
-
-type PNG
-   s::Array{UInt8}
-end
 Base.show(io::IO, ::MIME"image/png", x::PNG) = write(io, x.s)
-
-type HTML
-   s::AbstractString
-end
 Base.show(io::IO, ::MIME"text/html", x::HTML) = print(io, x.s)
 
 function _readfile(path)
@@ -2959,25 +2965,25 @@ function startserver()
         symlink(joinpath(dirname(@__FILE__), "gr.js"), "gr.js")
     end
 
-    return HTML("""\
-<canvas id="canvas" width="600" height="450"></canvas>\
-<script type="text/javascript" src="gr.js"></script>\
-<script>GR.ready(\
-  function() {\
-    var ws = new WebSocket("ws://localhost:8889/");\
-    ws.onopen = function() {\
-      ws.send("ready");\
-    };\
-    ws.onmessage = function(ev) {\
-      if (ev.data == "busy") {\
-        setTimeout(function() {ws.send("ready");}, 10);\
-      } else {\
-        gr_clearws();\
-        gr_drawgraphics(window.atob(ev.data));\
-        ws.send("ready");\
-      };\
-    };\
-  }\
+    return HTML("""
+<canvas id="canvas" width="600" height="450"></canvas>
+<script type="text/javascript" src="gr.js"></script>
+<script>GR.ready(
+  function() {
+    var ws = new WebSocket("ws://localhost:8889/");
+    ws.onopen = function() {
+      ws.send("ready");
+    };
+    ws.onmessage = function(ev) {
+      if (ev.data == "busy") {
+        setTimeout(function() {ws.send("ready");}, 10);
+      } else {
+        gr_clearws();
+        gr_drawgraphics(window.atob(ev.data));
+        ws.send("ready");
+      };
+    };
+  }
 );</script>""")
 end
 
