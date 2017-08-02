@@ -75,9 +75,7 @@ self:
 
 pypi: clean
 	python setup.py sdist upload
-
-testpypi: clean
-	python setup.py sdist upload
+	# twine upload dist/gr-VERSION.tar.gz
 
 conda: condaclean
 	@recipe/Build in || \
