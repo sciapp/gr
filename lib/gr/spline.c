@@ -352,7 +352,7 @@ void spfit1(double *x, double *avh, double *dy, int *n, double *rho, double *p,
     {
       R(i - 2, 2) = g * R(i - 2, 0);
       R(i - 1, 1) = f * R(i - 1, 0);
-      R(i, 0) = 1 / (*p * C(i - 1, 0) + *q * T(i, 0) - f * R(i - 1, 1) + g *
+      R(i, 0) = 1 / (*p * C(i - 1, 0) + *q * T(i, 0) - f * R(i - 1, 1) - g *
 	R(i - 2, 2));
       f = (*p) * C(i - 1, 1) + (*q) * T(i, 1) - h * R(i - 1, 1);
       g = h;
