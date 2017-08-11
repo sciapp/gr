@@ -156,9 +156,6 @@ static
 int fontfile = 0;
 
 static
-int resizing = 0;
-
-static
 CGPoint *points = NULL;
 
 static
@@ -248,10 +245,29 @@ void update_color(int color)
 static
 void set_xform(void)
 {
-  p->a = (p->width) / (p->window[1] - p->window[0]);
-  p->b = -p->window[0] * p->a;
-  p->c = (p->height) / (p->window[3] - p->window[2]);
-  p->d = p->window[2] * p->c;
+  double aspect_ratio, w, h, x, y;
+
+  aspect_ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]);
+
+  if (p->width > p->height * aspect_ratio)
+    {
+      w = p->height * aspect_ratio;
+      h = p->height;
+      x = 0.5 * (p->width - w);
+      y = 0;
+    }
+  else
+    {
+      w = p->width;
+      h = p->width / aspect_ratio;
+      x = 0;
+      y = 0.5 * (p->height - h);
+    }
+
+  p->a = w / (p->window[1] - p->window[0]);
+  p->b = x - p->window[0] * p->a;
+  p->c = h / (p->window[3] - p->window[2]);
+  p->d = y + p->window[2] * p->c;
 }
 
 static
@@ -392,7 +408,7 @@ void seg_xform_rel(double *x, double *y)
           p->height = [self bounds].size.height;
           p->swidth  = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
           p->sheight = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
- 
+
           p->window[0] = p->window[2] = 0.0;
           p->window[1] = p->window[3] = 1.0;
 
@@ -557,17 +573,16 @@ void seg_xform_rel(double *x, double *y)
           break;
 
         case  55:
-          p->viewport[0] = f_arr_1[0];
-          p->viewport[1] = f_arr_1[1];
-          p->viewport[2] = f_arr_2[0];
-          p->viewport[3] = f_arr_2[1];
-
-          if (!resizing)
+          if (!has_been_resized)
             {
-              resizing = 1;
-              [self resize_window];
-              resizing = 0;
+              p->viewport[0] = f_arr_1[0];
+              p->viewport[1] = f_arr_1[1];
+              p->viewport[2] = f_arr_2[0];
+              p->viewport[3] = f_arr_2[1];
             }
+
+          [self resize_window];
+
           set_xform();
           init_norm_xform();
           break;
@@ -618,8 +633,8 @@ void seg_xform_rel(double *x, double *y)
       buffer = NULL;
       size = 0;
       angle = 0;
+      has_been_resized = 0;
       fontfile = gks_open_font();
-      resizing = 0;
     }
   return self;
 }
@@ -628,6 +643,9 @@ void seg_xform_rel(double *x, double *y)
 {
   CGContextRef c;
   CGFloat centerx, centery;
+
+  if ([self inLiveResize])
+    has_been_resized = 1;
 
   if (contextStack == NULL)
     {
@@ -705,7 +723,18 @@ void seg_xform_rel(double *x, double *y)
 
 - (IBAction) rotate: (id)sender
 {
+  NSRect rect = [[self window] frame];
+
   angle = (int)(angle + 90) % 360;
+  if (angle == 90 || angle == 270)
+    {
+      double tmp = rect.size.width;
+      rect.size.width = rect.size.height;
+      rect.size.height = tmp;
+    }
+  has_been_resized = 1;
+
+  [[self window] setFrame: rect display: YES];
   [self setNeedsDisplay: YES];
 }
 
@@ -1015,9 +1044,20 @@ void seg_xform_rel(double *x, double *y)
   max_width = 0.001 * screen_size.width;
   max_height = max_width * p->sheight / p->swidth;
 
-  gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.0075);
-  width  = nint((p->viewport[1] - p->viewport[0]) / max_width  * p->swidth);
-  height = nint((p->viewport[3] - p->viewport[2]) / max_height * p->sheight);
+  if (!has_been_resized)
+    {
+      gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.0075);
+      width  = (p->viewport[1] - p->viewport[0]) / max_width  * p->swidth;
+      height = (p->viewport[3] - p->viewport[2]) / max_height * p->sheight;
+    }
+  else
+    {
+      width  = [self bounds].size.width;
+      height = [self bounds].size.height;
+      p->viewport[0] = p->viewport[2] = 0;
+      p->viewport[1] = width  * max_width  / p->swidth;
+      p->viewport[3] = height * max_height / p->sheight;
+    }
 
   if (p->width != width || p->height != height)
     {
