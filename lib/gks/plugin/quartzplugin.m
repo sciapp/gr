@@ -23,22 +23,22 @@
 extern "C"
 {
 #endif
-  
+
 #else
-  
+
 #ifdef __cplusplus
 #define DLLEXPORT extern "C"
 #else
 #define DLLEXPORT
 #endif
-  
+
 #endif
-  
+
 DLLEXPORT void gks_quartzplugin(
   int fctid, int dx, int dy, int dimx, int *i_arr,
   int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
-  
+
 #ifdef _WIN32
 #ifdef __cplusplus
 }
@@ -48,10 +48,17 @@ DLLEXPORT void gks_quartzplugin(
 static
 gks_state_list_t *gkss;
 
+static
 id plugin;
+
+static
 NSLock *mutex;
 
+static
 int num_windows = 0;
+
+static
+NSTask *task = NULL;
 
 
 @interface wss_wrapper:NSObject
@@ -155,6 +162,15 @@ BOOL gks_terminal(void)
   {
      url = [NSURL fileURLWithPath: path];
      status = LSOpenCFURLRef((CFURLRef) url, NULL);
+     if (status != noErr)
+     {
+       task = [[NSTask alloc] init];
+       task.launchPath = [NSString stringWithFormat:@"%@/Contents/MacOS/GKSTerm",
+                          path];
+       [task launch];
+       if (task.isRunning)
+         status = noErr;
+     }
      return (status == noErr);
   }
   NSLog(@"Could not locate GKSTerm.app.");
@@ -166,14 +182,14 @@ void gks_quartzplugin(
   int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
 {
-  
+
   ws_state_list *wss = (ws_state_list *) *ptr;
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
   switch (fctid)
     {
     case OPEN_WS:
-      gkss = (gks_state_list_t *) *ptr;      
+      gkss = (gks_state_list_t *) *ptr;
 
       wss = (ws_state_list *) calloc(1, sizeof(ws_state_list));
       wss->displayList = [[NSData alloc] initWithBytesNoCopy: wss
@@ -192,7 +208,7 @@ void gks_quartzplugin(
         {
           if (!gks_terminal())
             {
-               NSLog(@"Launching GKSTerm failed.");          
+               NSLog(@"Launching GKSTerm failed.");
                exit(-1);
             }
           else
@@ -203,7 +219,7 @@ void gks_quartzplugin(
                   [NSThread sleepUntilDate:[NSDate dateWithTimeIntervalSinceNow: 1.0]];
                   plugin = [NSConnection rootProxyForConnectionWithRegisteredName:
                             @"GKSQuartz" host: nil];
-                }            
+                }
             }
         }
 
@@ -229,30 +245,30 @@ void gks_quartzplugin(
       ia[0] = (int) NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
       ia[1] = (int) NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
       break;
-  
+
     case CLOSE_WS:
-        
-        [mutex lock];
-        wss->closed_by_api = YES;
-        [mutex unlock];
-        @try
-      {
-        [plugin GKSQuartzCloseWindow: wss->win];
-        num_windows--;
-      }
-        @catch (NSException *e)
-      {
-        ;
-      }
-        
-        [mutex lock];
-        while (wss->thread_alive) {
-          [mutex unlock];
-          usleep(100000);
-          [mutex lock];
+
+      [mutex lock];
+      wss->closed_by_api = YES;
+      [mutex unlock];
+      @try
+        {
+          [plugin GKSQuartzCloseWindow: wss->win];
+          num_windows--;
         }
+      @catch (NSException *e)
+        {
+          ;
+        }
+
+      [mutex lock];
+      while (wss->thread_alive) {
         [mutex unlock];
-        
+        usleep(100000);
+        [mutex lock];
+      }
+      [mutex unlock];
+
       if (num_windows == 0) {
         [mutex release];
         mutex = nil;
@@ -262,6 +278,12 @@ void gks_quartzplugin(
       [wss->displayList release];
       free(wss);
       wss = NULL;
+
+      if (task != NULL)
+      {
+        [task terminate];
+        task = NULL;
+      }
       break;
 
       case 6:
@@ -301,6 +323,6 @@ void gks_quartzplugin(
   if (wss != NULL)
     gks_dl_write_item(&wss->dl,
       fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, gkss);
-  
+
   [pool drain];
 }
