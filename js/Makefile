@@ -1,5 +1,5 @@
      JSC = /System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Resources/jsc
-    OPTS = -s LEGACY_GL_EMULATION=1
+    OPTS = -s LEGACY_GL_EMULATION=1 -s ASSERTIONS=2 -s SAFE_HEAP=1
  DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\"
  JPEGDIR = ../3rdparty/jpeg
   PNGDIR = ../3rdparty/libpng16
