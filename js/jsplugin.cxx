@@ -321,7 +321,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
               seg_xform_rel(&xr, &yr);
               if (i == 0){
                 x1 = x - xr;
-                y1 = y - yr;
+                y1 = y + yr;
               }
               else{
                 x2 = x - xr;
@@ -358,7 +358,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
             fill=1;
           }
           px= malloc(marker[mtype][pc + 1]*sizeof(double));
-          px= malloc(marker[mtype][pc + 1]*sizeof(double));
+          py= malloc(marker[mtype][pc + 1]*sizeof(double));
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
