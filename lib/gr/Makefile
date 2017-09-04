@@ -74,6 +74,14 @@ demo: demo.c libGR.a $(GKSLIBS)
 libqtgr:
 	@make -C qtgr
 
+gr_version.h: .FORCE
+	../../lib/Version --c > $@
+	@chmod 644 $@
+
+.FORCE:
+
+gr.o: gr_version.h
+
 install:
 	@make -C ../gks install
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
@@ -93,7 +101,7 @@ clean:
 	@make -C qtgr clean
 	@for d in gks gks/plugin; do make -C ../$$d clean; done
 	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do make -C ../../3rdparty/$$d clean; done
-	rm -f so_locations demo *.so *.a *.o *.bak *~
+	rm -f so_locations demo *.so *.a *.o *.bak *~ gr_version.h
 
 depend:
 	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \

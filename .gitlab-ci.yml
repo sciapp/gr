@@ -8,7 +8,7 @@ ubuntu-self-contained:
   image: ubuntu:16.04
   script:
   - apt-get update
-  - apt-get install -y wget make gcc g++ libgl1-mesa-dev libglu1-mesa-dev xorg-dev
+  - apt-get install -y wget make gcc g++ libgl1-mesa-dev libglu1-mesa-dev xorg-dev git
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -27,7 +27,7 @@ ubuntu-system-dependencies:
   image: ubuntu:16.04
   script:
   - apt-get update
-  - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7-dev python-numpy texlive-latex3 dvipng python-opengl libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev python-wxgtk3.0 libglfw3-dev libzmq3-dev python-pyaudio cmake
+  - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7-dev python-numpy texlive-latex3 dvipng python-opengl libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev python-wxgtk3.0 libglfw3-dev libzmq3-dev python-pyaudio cmake git
   - make install GRDIR=/tmp/gr PYTHONBIN=/usr/local/bin/
 
 debian-self-contained:
@@ -35,7 +35,7 @@ debian-self-contained:
   image: debian:9
   script:
   - apt-get update
-  - apt-get install -y wget make patch gcc g++ xz-utils lbzip2 libgl1-mesa-dev libglu1-mesa-dev xorg-dev
+  - apt-get install -y wget make patch gcc g++ xz-utils lbzip2 libgl1-mesa-dev libglu1-mesa-dev xorg-dev git
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -54,7 +54,7 @@ debian-system-dependencies:
   image: debian:9
   script:
   - apt-get update
-  - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7-dev python-numpy texlive-latex3 dvipng python-opengl libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev python-wxgtk3.0 libglfw3-dev libzmq3-dev python-pyaudio cmake
+  - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7-dev python-numpy texlive-latex3 dvipng python-opengl libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev python-wxgtk3.0 libglfw3-dev libzmq3-dev python-pyaudio cmake git
   - make install GRDIR=/tmp/gr PYTHONBIN=/usr/local/bin/
 
 centos7-self-contained:
@@ -87,7 +87,7 @@ centos7-system-dependencies:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which
-  - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel
+  - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel git
   - make install GRDIR=/tmp/gr PYTHONBIN=/usr/local/bin/
 
 centos6-self-contained:
@@ -98,7 +98,7 @@ centos6-self-contained:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which
-  - yum install -y gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
+  - yum install -y gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel git
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -120,7 +120,7 @@ centos6-system-dependencies:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which
-  - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel
+  - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel git
   - make install GRDIR=/tmp/gr PYTHONBIN=/usr/local/bin/
 
 windows-32bit-cross:

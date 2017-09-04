@@ -211,6 +211,7 @@ class clean(_clean, clean_static):
         print("removing '", gregg, "' (and everything under it)", sep='')
         if os.path.isdir(gregg):
             shutil.rmtree(gregg, ignore_errors=True)
+        os.remove(os.path.join('lib', 'gr', 'gr_version.h'))
         _clean.run(self)
         if sys.platform == "darwin":
             os.system("xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj "
@@ -1382,6 +1383,12 @@ int main()
             self.ext_modules.append(gksQuartzExt)
 
         # -- GR -------------------------------------
+
+        with open(os.path.join('lib', 'gr', 'gr_version.h'), 'w') as version_header:
+            version_header.write('#ifndef GR_VERSION\n')
+            version_header.write('#define GR_VERSION "'+__version__+'"\n')
+            version_header.write('#endif\n')
+
         inc = list(gksinc)
         inc.extend(zinc)
         inc.extend(pnginc)

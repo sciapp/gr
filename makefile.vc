@@ -6,6 +6,7 @@ default:
 
 version:
 	python -c "import vcversioner; vcversioner.find_version(version_module_paths=['lib/gr/python/gr/_version.py'])"
+	python -c "import sys; import os.path; sys.path.append(os.path.join('lib', 'gr', 'python', 'gr')); import _version; open(os.path.join('lib', 'gr', 'gr_version.h'), 'w').write('#ifndef GR_VERSION\n#define GR_VERSION \"'+_version.__version__+'\"\n#endif')"
 
 install: default version
 	@cd lib\gr && $(MAKE) $(MAKE_FLAGS) /f makefile.vc install && cd ..\..

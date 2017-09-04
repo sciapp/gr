@@ -29,6 +29,7 @@ typedef __int64 int64_t;
 #include "gks.h"
 #include "gkscore.h"
 #include "gr.h"
+#include "gr_version.h"
 #include "text.h"
 #include "spline.h"
 #include "gridit.h"
@@ -7722,4 +7723,9 @@ void gr_adjustlimits(double *amin, double *amax)
   scale = pow(10.0, -exponent);
   *amin = floor(*amin * scale) / scale;
   *amax = ceil(*amax * scale) / scale;
+}
+
+const char *gr_version(void) {
+    static const char *gr_version_str = GR_VERSION;
+    return gr_version_str;
 }

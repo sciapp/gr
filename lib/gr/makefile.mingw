@@ -39,6 +39,12 @@ python/gr/_version.py:
 	../../lib/Version > $@
 	@chmod 644 $@
 
+gr_version.h: .FORCE
+	../../lib/Version --c > $@
+	@chmod 644 $@
+
+gr.o: gr_version.h
+
 clean:
 	@$(MAKE) -C ../gks clean
 	@$(MAKE) -C ../../3rdparty/qhull clean
@@ -47,5 +53,7 @@ clean:
 	@$(MAKE) -C ../../3rdparty/jpeg clean
 	$(RM) libgr.so
 	$(RM) *.o
+	$(RM) gr_version.h
 
 .PHONY: default prerequisites clean
+.FORCE:
