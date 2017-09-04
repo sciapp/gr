@@ -136,7 +136,7 @@ windows-32bit-cross:
   - cp lib/gks/libgks.lib lib/gks/libgks.dll lib/gks/libgks.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libgr.lib lib/gr/libgr.dll lib/gr/libgr.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
-  - cp /usr/lib/gcc/x86_64-w64-mingw32/4.9-win32/libgcc_s_seh-1.dll artifacts/
+  - cp /usr/lib/gcc/i686-w64-mingw32/4.9-win32/libgcc_s_sjlj-1.dll artifacts/
   - mv artifacts artifacts-windows32
   artifacts:
     expire_in: 1 week
