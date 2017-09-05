@@ -25,6 +25,7 @@ extern "C" {
 typedef struct {
   double x, y;
 } vertex_t;
+typedef struct _gr_meta_args_t gr_meta_args_t;
 
 DLLEXPORT void gr_opengks(void);
 DLLEXPORT void gr_closegks(void);
@@ -168,8 +169,19 @@ DLLEXPORT void gr_interp2(
   int nx, int ny, const double *x, const double *y, const double *z,
   int nxq, int nyq, const double *xq, const double *yq, double *zq,
   int method, double extrapval);
+DLLEXPORT gr_meta_args_t *gr_meta_args_new();
+DLLEXPORT void gr_meta_args_delete(gr_meta_args_t *);
+DLLEXPORT void gr_meta_args_push_arg(gr_meta_args_t *, const char *, ...);
+DLLEXPORT void gr_meta_args_push_arg_buf(
+  gr_meta_args_t *, const char *, const void *, int);
+DLLEXPORT void gr_meta_args_push_kwarg(
+  gr_meta_args_t *, const char *, const char *, ...);
+DLLEXPORT void gr_meta_args_push_kwarg_buf(
+  gr_meta_args_t *, const char *, const char *, const void *, int);
 DLLEXPORT void *gr_openmeta(int, ...);
 DLLEXPORT int gr_sendmeta(const void *, const char *, ...);
+DLLEXPORT int gr_sendmeta_buf(const void *, const char *, const void *, int);
+DLLEXPORT int gr_sendmeta_args(const void *p, const gr_meta_args_t *args);
 DLLEXPORT void gr_closemeta(const void *);
 
 #ifdef _WIN32

@@ -6,13 +6,17 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import SocketServer
-
+import sys
+PY2 = (sys.version_info.major < 3)
+if PY2:
+    import SocketServer as socketserver
+else:
+    import socketserver  # pylint: disable=import-error
 
 ETB = b'\027'
 
 
-class TCPHandler(SocketServer.BaseRequestHandler):
+class TCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         data = b''
         while ETB not in data:
@@ -22,7 +26,7 @@ class TCPHandler(SocketServer.BaseRequestHandler):
 
 def main():
     host, port = "localhost", 8001
-    server = SocketServer.TCPServer((host, port), TCPHandler)
+    server = socketserver.TCPServer((host, port), TCPHandler)
     server.serve_forever()
 
 
