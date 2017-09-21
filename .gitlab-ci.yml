@@ -284,5 +284,6 @@ opensuse42.3-install:
   image: opensuse:42.3
   script:
   # Install gr RPM
+  - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
   - zypper install -y artifacts-packages/linux/suse/gr*.rpm
   - gr -c "import gr; import gr3"
