@@ -6931,8 +6931,7 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
         break;
       else if (code == MOVETO)
         {
-          if (!fill)
-            closepath(fill);
+          closepath(fill);
           addpath(xpoint[i], ypoint[i]);
         }
       else if (code == LINETO)
@@ -6949,8 +6948,7 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
         }
       else if (code == CLOSEPOLY)
         {
-          if (!fill)
-            addpath(xpoint[i], ypoint[i]);
+          addpath(xpoint[i], ypoint[i]);
           closepath(fill);
         }
     }
