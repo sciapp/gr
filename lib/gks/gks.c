@@ -1657,6 +1657,21 @@ void gks_set_color_rep(int wkid, int index,
     gks_report_error(SET_COLOR_REP, 8);
 }
 
+static
+int check_axis_limits(double a, double b)
+{
+  double d;
+
+  if (a != 0)
+    d = a;
+  else if (b != 0)
+    d = b;
+  else
+    d = 1;
+
+  return a < b && fabs((b - a) / d) * 0.000001 > DBL_EPSILON;
+}
+
 void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
 {
   if (state >= GKS_K_GKOP)
@@ -1667,8 +1682,7 @@ void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
 	     to loss of precision in subsequent GKS functions. It must
 	     be ensured that there are at least 4 significant digits
 	     when applying normalization or device transformations */
-	  if (xmin < xmax && fabs(xmax - xmin) * 0.0001 > DBL_EPSILON &&
-	      ymin < ymax && fabs(ymax - ymin) * 0.0001 > DBL_EPSILON)
+	  if (check_axis_limits(xmin, xmax) && check_axis_limits(ymin, ymax))
 	    {
 	      i_arr[0] = tnr;
 	      s->window[tnr][0] = f_arr_1[0] = xmin;
