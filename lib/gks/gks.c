@@ -1061,6 +1061,21 @@ void gks_fillarea(int n, double *pxa, double *pya)
     gks_report_error(FILLAREA, 5);
 }
 
+static
+int check_range(double a, double b)
+{
+  double d;
+
+  if (a != 0)
+    d = a;
+  else if (b != 0)
+    d = b;
+  else
+    d = 1;
+
+  return fabs((b - a) / d) * 0.000001 > DBL_EPSILON;
+}
+
 void gks_cellarray(
   double qx, double qy, double rx, double ry,
   int dimx, int dimy, int scol, int srow, int ncol, int nrow, int *colia)
@@ -1072,8 +1087,7 @@ void gks_cellarray(
 	{
           /* Check whether the given coordinate range does not lead
              to loss of precision */
-          if (fabs(qx - rx) * 0.0001 > DBL_EPSILON &&
-              fabs(qy - ry) * 0.0001 > DBL_EPSILON)
+          if (check_range(qx, rx) && check_range(qy, ry))
             {
 	      gks_adjust_cellarray(&qx, &qy, &rx, &ry,
 				   &scol, &srow, &ncol, &nrow, dimx, dimy);
@@ -1657,21 +1671,6 @@ void gks_set_color_rep(int wkid, int index,
     gks_report_error(SET_COLOR_REP, 8);
 }
 
-static
-int check_axis_limits(double a, double b)
-{
-  double d;
-
-  if (a != 0)
-    d = a;
-  else if (b != 0)
-    d = b;
-  else
-    d = 1;
-
-  return a < b && fabs((b - a) / d) * 0.000001 > DBL_EPSILON;
-}
-
 void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
 {
   if (state >= GKS_K_GKOP)
@@ -1682,7 +1681,8 @@ void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
 	     to loss of precision in subsequent GKS functions. It must
 	     be ensured that there are at least 4 significant digits
 	     when applying normalization or device transformations */
-	  if (check_axis_limits(xmin, xmax) && check_axis_limits(ymin, ymax))
+	  if (xmin < xmax && check_range(xmin, xmax) &&
+              ymin < ymax && check_range(ymin, ymax))
 	    {
 	      i_arr[0] = tnr;
 	      s->window[tnr][0] = f_arr_1[0] = xmin;
