@@ -152,7 +152,7 @@ void STDCALL GTX(float *px, float *py, char *chars, unsigned short len)
     n = 255;
   strncpy(s, chars, n);
   s[n] = '\0';
- 
+
   gks_text(_x, _y, s);
 }
 
@@ -167,7 +167,7 @@ void STDCALL GTXS(
     n = 255;
   strncpy(s, chars, n);
   s[n] = '\0';
- 
+
   gks_text(_x, _y, s);
 }
 
@@ -193,6 +193,20 @@ void STDCALL GCA(
 
   gks_cellarray(_qx, _qy, _rx, _ry,
 		*dimx, *dimy, *scol, *srow, *ncol, *nrow, colia);
+}
+
+void STDCALL GGDP(
+  int *n, float *px, float *py, int *primid, int *ldr, int *datrec)
+{
+  int i;
+
+  gksrealloc(*n);
+  for (i = 0; i < *n; i++)
+    {
+      x[i] = px[i];
+      y[i] = py[i];
+    }
+  gks_gdp(*n, x, y, *primid, *ldr, datrec);
 }
 
 void STDCALL GSPLI(int *index)
@@ -433,7 +447,7 @@ void STDCALL GRQSK(
   int *stat, int *tnr, int *np, float *pxa, float *pya)
 {
   int i;
-  
+
   gksrealloc(*n);
   gks_request_stroke(*wkid, *skdnr, *n, stat, tnr, np, x, y);
   for (i = 0; i < *np; i++)
@@ -533,7 +547,7 @@ void STDCALL GQLN(int *errind, int *ltype)
 void STDCALL GQLWSC(int *errind, float *lwidth)
 {
   double _lwidth;
-  
+
   gks_inq_pline_linewidth(errind, &_lwidth);
   *lwidth = (float) _lwidth;
 }
@@ -551,7 +565,7 @@ void STDCALL GQMK(int *errind, int *mtype)
 void STDCALL GQMKSC(int *errind, float *mszsc)
 {
   double _mszsc;
-  
+
   gks_inq_pmark_size(errind, &_mszsc);
   *mszsc = (float) _mszsc;
 }
@@ -577,7 +591,7 @@ void STDCALL GQCHXP(int *errind, float *chxp)
 void STDCALL GQCHSP(int *errind, float *chsp)
 {
   double _chsp;
-  
+
   gks_inq_text_spacing(errind, &_chsp);
   *chsp = _chsp;
 }
@@ -590,7 +604,7 @@ void STDCALL GQTXCI(int *errind, int *coli)
 void STDCALL GQCHH(int *errind, float *chh)
 {
   double _chh;
-  
+
   gks_inq_text_height(errind, &_chh);
   *chh = _chh;
 }
@@ -598,7 +612,7 @@ void STDCALL GQCHH(int *errind, float *chh)
 void STDCALL GQCHUP(int *errind, float *chux, float *chuy)
 {
   double _chux, _chuy;
-  
+
   gks_inq_text_upvec(errind, &_chux, &_chuy);
   *chux = _chux;
   *chuy = _chuy;
@@ -738,7 +752,7 @@ void STDCALL GQDSP(
   int *wtype, int *errind, int *dcunit, float *rx, float *ry, int *lx, int *ly)
 {
   double _rx, _ry;
-  
+
   gks_inq_max_ds_size(*wtype, errind, dcunit, &_rx, &_ry, lx, ly);
   *rx = _rx;
   *ry = _ry;

@@ -313,6 +313,7 @@ void gks_quartzplugin(
     case TEXT:
     case FILLAREA:
     case CELLARRAY:
+    case GDP:
     case DRAW_IMAGE:
       [mutex lock];
       wss->inactivity_counter = 0;

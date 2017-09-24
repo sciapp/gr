@@ -200,6 +200,9 @@ interface
     dimx : longint; dimy : longint; scol : longint; srow : longint;
     ncol : longint; nrow : longint; colia : array of longint);
     cdecl; external 'GKS';
+  procedure gks_gdp(
+    n : longint; pxa, pya : array of double; primid : longint;
+    ldr : longint; datrec : array of longint); cdecl; external 'GKS';
 
   procedure gks_set_pline_index(index : longint); cdecl; external 'GKS';
   procedure gks_set_pline_linetype(ltype : longint); cdecl; external 'GKS';

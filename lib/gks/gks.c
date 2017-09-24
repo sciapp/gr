@@ -1122,6 +1122,36 @@ void gks_cellarray(
     gks_report_error(CELLARRAY, 5);
 }
 
+void gks_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
+{
+  int *dr, len;
+
+  if (state >= GKS_K_WSAC)
+    {
+      if (n >= 1)
+        {
+          len = ldr + 3;
+          dr = (int *) gks_malloc(len * sizeof(int));
+          dr[0] = n;
+          dr[1] = primid;
+          dr[2] = ldr;
+          memmove(dr + 3, datrec, ldr * sizeof(int));
+
+          /* call the device driver link routine */
+          gks_ddlk(GDP, len, 1, len, dr, n, px, n, py, 0, c_arr, NULL);
+
+          free(dr);
+        }
+      else
+        /* number of points is invalid */
+        gks_report_error(GDP, 100);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSAC or in the state SGOP */
+    gks_report_error(GDP, 5);
+}
+
 void gks_set_pline_index(int index)
 {
   if (state >= GKS_K_GKOP)

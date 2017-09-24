@@ -18,6 +18,7 @@ EXPORTS
 	gks_text
 	gks_fillarea
 	gks_cellarray
+	gks_gdp
 	gks_set_pline_index
 	gks_set_pline_linetype
 	gks_set_pline_linewidth

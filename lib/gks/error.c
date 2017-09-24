@@ -77,6 +77,7 @@ const char *gks_function_name(int routine)
     case  14: name = "TEXT"; break;
     case  15: name = "FILLAREA"; break;
     case  16: name = "CELLARRAY"; break;
+    case  17: name = "GDP"; break;
     case  18: name = "SET_PLINE_INDEX"; break;
     case  19: name = "SET_PLINE_LINETYPE"; break;
     case  20: name = "SET_PLINE_LINEWIDTH"; break;

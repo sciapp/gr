@@ -50,6 +50,7 @@ extern "C" {
 #define TEXT 14
 #define FILLAREA 15
 #define CELLARRAY 16
+#define GDP 17
 #define SET_PLINE_INDEX 18
 #define SET_PLINE_LINETYPE 19
 #define SET_PLINE_LINEWIDTH 20

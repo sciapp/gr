@@ -1965,6 +1965,41 @@ void gr_cellarray(
     }
 }
 
+void gr_gdp(int n, double *x, double *y, int primid, int ldr, int *datrec)
+{
+  int npoints = n;
+  double *px = x, *py = y;
+  int i;
+
+  check_autoinit;
+
+  if (lx.scale_options)
+    {
+      if (npoints >= maxpath)
+        reallocate(npoints);
+
+      px = xpoint;
+      py = ypoint;
+      for (i = 0; i < npoints; i++)
+        {
+          px[i] = x_lin(x[i]);
+          py[i] = y_lin(y[i]);
+        }
+    }
+
+  gks_gdp(npoints, px, py, primid, ldr, datrec);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<gdp len=\"%d\"", n);
+      print_float_array("x", n, x);
+      print_float_array("y", n, y);
+      gr_writestream(" primid=\"%d\"", primid);
+      print_int_array("datrec", ldr, datrec);
+      gr_writestream("/>\n");
+    }
+}
+
 void gr_spline(int n, double *px, double *py, int m, int method)
 {
   int err = 0, i, j;

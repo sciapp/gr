@@ -19,6 +19,7 @@ functionTable = {
     14: ('text', 'ddis'),
     15: ('fillarea', 'iDD'),
     16: ('cellarray', 'ddddiiiI'),
+    17: ('gdp', 'iDDiiC'),
     19: ('set_pline_linetype', 'i'),
     20: ('set_pline_linewidth', 'd'),
     21: ('set_pline_color_index', 'i'),
@@ -63,6 +64,9 @@ def unpackargs(format, data):
             n = args[-1]
         elif fmt == 'I':
             n = args[-2] * args[-1]
+            args.append(unpack('%di' % n, data[:n * 4]))
+            data = data[n * 4:]
+        elif fmt == 'C':
             args.append(unpack('%di' % n, data[:n * 4]))
             data = data[n * 4:]
         elif fmt == 'D':
