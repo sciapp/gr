@@ -6896,6 +6896,8 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 {
   int i, j = 0, code, nan = 0;
 
+  check_autoinit;
+
   if (n >= maxpath)
     reallocate(n);
 
