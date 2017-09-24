@@ -1994,7 +1994,7 @@ void gr_gdp(int n, double *x, double *y, int primid, int ldr, int *datrec)
       gr_writestream("<gdp len=\"%d\"", n);
       print_float_array("x", n, x);
       print_float_array("y", n, y);
-      gr_writestream(" primid=\"%d\"", primid);
+      gr_writestream(" primid=\"%d\" ldr=\"%d\"", primid, ldr);
       print_int_array("datrec", ldr, datrec);
       gr_writestream("/>\n");
     }
