@@ -10,6 +10,7 @@ end
 
 const None = Union{}
 
+
 export
   opengks,
   closegks,
@@ -26,6 +27,7 @@ export
   inqtext,
   fillarea,
   cellarray,
+  gdp,
   spline,
   gridit,
   setlinetype,
@@ -163,16 +165,19 @@ export
   mainloop
 
 
+display_name = None
 mime_type = None
+file_path = None
 figure_count = None
 msgs = None
-have_clear_output = isinteractive() && isdefined(Main, :IJulia) &&
-                    isdefined(Main.IJulia, :clear_output)
-display_name = None
+
+
+isijulia() = isdefined(Main, :IJulia) && isdefined(Main.IJulia, :clear_output)
+isatom() = isdefined(Main, :Atom) && Main.Atom.isconnected()
 
 
 function __init__()
-    global libGR, libGR3, display_name
+    global libGR, libGR3, display_name, mime_type, file_path
     if "GRDIR" in keys(ENV)
         grdir = ENV["GRDIR"]
         if grdir == ""
@@ -214,6 +219,20 @@ function __init__()
     ENV["GKS_USE_CAIRO_PNG"] = "true"
     if "GRDISPLAY" in keys(ENV)
         display_name = ENV["GRDISPLAY"]
+    elseif isijulia()
+        mime_type = "svg"
+        file_path = tempname() * ".svg"
+        ENV["GKSwstype"] = "svg"
+        ENV["GKS_FILEPATH"] = file_path
+        @eval import IJulia
+        IJulia.clear_output(true)
+    elseif isatom()
+        mime_type = "atom"
+        file_path = tempname() * ".svg"
+        ENV["GKSwstype"] = "svg"
+        ENV["GKS_FILEPATH"] = file_path
+        @eval using Atom
+        @eval import Atom: Media, PlotPane
     end
 end
 
@@ -375,13 +394,6 @@ end
 
 function clearws()
   global msgs
-  try
-    if isinline() && have_clear_output
-      IJulia.clear_output(true)
-    end
-  catch
-    have_clear_output = false
-  end
   if msgs != None
     begingraphics("")
   end
@@ -456,11 +468,21 @@ function polymarker(x, y)
 end
 
 function latin1(string)
-  b = convert(Array{UInt8}, string)
-  s = zeros(UInt8, length(string))
+  b = Vector{UInt8}(string)
+  s = zeros(UInt8, length(string) * 2)
   len = 0
   mask = 0
   for c in b
+    if mask == -1
+      mask = 0
+      continue
+    end
+    if c == 0xce || c == 0xcf
+      len += 1
+      s[len] = 0x3f
+      mask = -1
+      continue
+    end
     if c != 0xc2 && c != 0xc3
       len += 1
       s[len] = c | mask
@@ -471,7 +493,7 @@ function latin1(string)
       mask = 0
     end
   end
-  return s
+  return s[1:len]
 end
 
 """
@@ -566,6 +588,36 @@ function cellarray(xmin::Real, xmax::Real, ymin::Real, ymax::Real, dimx::Int, di
         Void,
         (Float64, Float64, Float64, Float64, Int32, Int32, Int32, Int32, Int32, Int32, Ptr{Int32}),
         xmin, xmax, ymin, ymax, dimx, dimy, 1, 1, dimx, dimy, convert(Vector{Int32}, color))
+end
+
+"""
+    gdp(x, y, primid, datrec)
+
+Generates a generalized drawing primitive (GDP) of the type you specify,
+using specified points and any additional information contained in a data
+record.
+
+**Parameters:**
+
+`x` :
+    A list containing the X coordinates
+`y` :
+    A list containing the Y coordinates
+`primid` :
+    Primitive identifier
+`datrec` :
+    Primitive data record
+
+"""
+function gdp(x, y, primid, datrec)
+  assert(length(x) == length(y))
+  n = length(x)
+  ldr = length(datrec)
+  ccall( (:gr_gdp, libGR),
+        Void,
+        (Int32, Ptr{Float64}, Ptr{Float64}, Int32, Int32, Ptr{Int32}),
+        n, convert(Vector{Float64}, x), convert(Vector{Float64}, y),
+        primid, ldr, convert(Vector{Int32}, datrec))
 end
 
 """
@@ -2351,7 +2403,7 @@ The following path codes are recognized:
 
 """
 function drawpath(points, codes, fill::Int)
-  len = length(points)
+  len = length(codes)
   ccall( (:gr_drawpath, libGR),
         Void,
         (Int32, Ptr{Float64}, Ptr{UInt8}, Int32),
@@ -2988,20 +3040,28 @@ function startserver()
 end
 
 function inline(mime="svg", scroll=true)
-    global mime_type, figure_count, msgs
+    global mime_type, file_path, figure_count, msgs
     if mime_type != mime
         if mime == "iterm"
+            file_path = tempname() * ".pdf"
             ENV["GKS_WSTYPE"] = "pdf"
         elseif mime == "mlterm"
+            file_path = tempname() * ".six"
             ENV["GKS_WSTYPE"] = "six"
         elseif mime == "atom"
+            file_path = tempname() * ".svg"
             ENV["GKS_WSTYPE"] = "svg"
             @eval using Atom
             @eval import Atom: Media, PlotPane
         elseif mime == "js"
+            file_path = None
             ENV["GKS_WSTYPE"] = "nul"
         else
+            file_path = tempname() * "." * mime
             ENV["GKS_WSTYPE"] = mime
+        end
+        if file_path != None
+            ENV["GKS_FILEPATH"] = file_path
         end
         emergencyclosegks()
         mime_type = mime
@@ -3014,34 +3074,40 @@ function inline(mime="svg", scroll=true)
 end
 
 function show()
-    global mime_type, figure_count, msgs
+    global mime_type, file_path, figure_count, msgs
 
     emergencyclosegks()
     if mime_type == "svg"
-        content = SVG(_readfile("gks.svg"))
+        content = SVG(_readfile(file_path))
+        rm(file_path)
         return content
     elseif mime_type == "png"
-        content = PNG(_readfile("gks.png"))
+        content = PNG(_readfile(file_path))
+        rm(file_path)
         return content
     elseif mime_type == "mov"
-        content = HTML(string("""<video autoplay controls><source type="video/mp4" src="data:video/mp4;base64,""", base64encode(open(read,"gks.mov")),""""></video>"""))
+        content = HTML(string("""<video autoplay controls><source type="video/mp4" src="data:video/mp4;base64,""", base64encode(open(read,file_path)),""""></video>"""))
+        rm(file_path)
         return content
     elseif mime_type == "iterm"
-        content = string("\033]1337;File=inline=1;height=24;preserveAspectRatio=0:", base64encode(open(read,"gks.pdf")), "\a")
+        content = string("\033]1337;File=inline=1;height=24;preserveAspectRatio=0:", base64encode(open(read,file_path)), "\a")
         if figure_count != None
             figure_count += 1
             (figure_count > 1) && print("\e[24A")
         end
         println(content)
+        rm(file_path)
         return nothing
     elseif mime_type == "mlterm"
-        content = read("gks.six")
+        content = read(file_path)
         write(content)
+        rm(file_path)
         return nothing
     elseif mime_type == "atom"
         bg = jlgr.background
-        content = Base.HTML(string("""<div style="display: inline-block; background: #""", hex(bg, 6), """;">""", readstring("gks.svg"), """</div>"""))
+        content = Base.HTML(string("""<div style="display: inline-block; background: #""", hex(bg, 6), """;">""", readstring(file_path), """</div>"""))
         Atom.render(Atom.PlotPane(), content)
+        rm(file_path)
         return nothing
     elseif mime_type == "js"
         if msgs != None

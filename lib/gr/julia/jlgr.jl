@@ -580,7 +580,10 @@ function subplot(nr, nc, p)
 end
 
 function plot_img(I)
-    viewport = plt.kvs[:viewport]
+    viewport = plt.kvs[:vp][:]
+    if haskey(plt.kvs, :title)
+        viewport[4] -= 0.05
+    end
     vp = plt.kvs[:vp]
 
     if isa(I, AbstractString)
@@ -607,6 +610,13 @@ function plot_img(I)
     end
 
     GR.selntran(0)
+    GR.setscale(0)
+    if get(plt.kvs, :xflip, false)
+        tmp = xmax; xmax = xmin; xmin = tmp;
+    end
+    if get(plt.kvs, :yflip, false)
+        tmp = ymax; ymax = ymin; ymin = tmp;
+    end
     if isa(I, AbstractString)
         GR.drawimage(xmin, xmax, ymin, ymax, width, height, data)
     else
@@ -1202,15 +1212,14 @@ function savefig(filename)
     GR.endprint()
 end
 
-function meshgrid{T}(vx::AbstractVector{T}, vy::AbstractVector{T})
+function meshgrid(vx, vy)
     m, n = length(vy), length(vx)
     vx = reshape(vx, 1, n)
     vy = reshape(vy, m, 1)
     (repmat(vx, m, 1), repmat(vy, 1, n))
 end
 
-function meshgrid{T}(vx::AbstractVector{T}, vy::AbstractVector{T},
-                     vz::AbstractVector{T})
+function meshgrid(vx, vy, vz)
     m, n, o = length(vy), length(vx), length(vz)
     vx = reshape(vx, 1, n, 1)
     vy = reshape(vy, m, 1, 1)
