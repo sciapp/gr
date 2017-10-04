@@ -1,6 +1,7 @@
 stages:
 - build
 - install
+- package
 - deploy
 
 ubuntu-self-contained:
@@ -163,7 +164,7 @@ windows-64bit-cross:
     paths:
     - artifacts-windows64/
 
-packages:
+packages-fpm:
   stage: build
   image: debian:8
   script:
@@ -183,6 +184,66 @@ packages:
     paths:
     - artifacts-packages/
 
+packages-tar:
+  stage: package
+  image: ubuntu:16.04
+  variables:
+    GIT_STRATEGY: none
+  script:
+  - mkdir -p Windows-i686/gr
+  - mv artifacts-windows32/*.dll Windows-i686/gr/
+  - mv artifacts-windows32/fonts Windows-i686/gr/
+  - mv artifacts-windows32/python Windows-i686/gr/
+  - rm -rf artifacts-windows32
+  - mkdir -p Windows-x86_64/gr
+  - mv artifacts-windows64/*.dll Windows-x86_64/gr/
+  - mv artifacts-windows64/fonts Windows-x86_64/gr/
+  - mv artifacts-windows64/python Windows-x86_64/gr/
+  - rm -rf artifacts-windows64
+  - mkdir -p Debian-x86_64/gr/lib
+  - mv artifacts-debian9/*.so Debian-x86_64/gr/lib/
+  - mv artifacts-debian9/fonts Debian-x86_64/gr/
+  - mv artifacts-debian9/python Debian-x86_64/gr/
+  - rm -rf artifacts-debian9
+  - mkdir -p Ubuntu-x86_64/gr/lib
+  - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/gr/lib/
+  - mv artifacts-ubuntu1604/fonts Ubuntu-x86_64/gr/
+  - mv artifacts-ubuntu1604/python Ubuntu-x86_64/gr/
+  - rm -rf artifacts-ubuntu1604
+  - mkdir -p CentOS-x86_64/gr/lib
+  - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
+  - mv artifacts-centos7/fonts CentOS-x86_64/gr/
+  - mv artifacts-centos7/python CentOS-x86_64/gr/
+  - rm -rf artifacts-centos7
+  - mkdir -p Linux-x86_64/gr/lib
+  - mv artifacts-centos6/*.so Linux-x86_64/gr/lib/
+  - mv artifacts-centos6/fonts Linux-x86_64/gr/
+  - mv artifacts-centos6/python Linux-x86_64/gr/
+  - rm -rf artifacts-centos6
+  - cd Windows-i686 && tar czf gr.tar.gz gr && cd -
+  - cd Windows-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd Debian-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd Ubuntu-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd CentOS-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd Linux-x86_64 && tar czf gr.tar.gz gr && cd -
+  - mkdir Downloads
+  - cp Windows-i686/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-i686.tar.gz
+  - cp Windows-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-x86_64.tar.gz
+  - cp Debian-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-x86_64.tar.gz
+  - cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Ubuntu-x86_64.tar.gz
+  - cp CentOS-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz
+  - cp Linux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-x86_64.tar.gz
+  - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then cp Windows-i686/gr.tar.gz Downloads/gr-$CI_COMMIT_TAG-Windows-i686.tar.gz; fi
+  - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then cp Windows-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_TAG-Windows-x86_64.tar.gz; fi
+  - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then cp Debian-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_TAG-Debian-x86_64.tar.gz; fi
+  - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_TAG-Ubuntu-x86_64.tar.gz; fi
+  - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then cp CentOS-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_TAG-CentOS-x86_64.tar.gz; fi
+  - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then cp Linux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_TAG-Linux-x86_64.tar.gz; fi
+  artifacts:
+    expire_in: 1 week
+    paths:
+    - Downloads/
+
 deploy:
   stage: deploy
   image: ubuntu:16.04
@@ -190,46 +251,12 @@ deploy:
     GIT_STRATEGY: none
   only:
     - master@Scientific-IT-Systems/gr
+    - tags@Scientific-IT-Systems/gr
   script:
-  - mkdir Windows-i686
-  - mv artifacts-windows32/*.dll Windows-i686/
-  - mv artifacts-windows32/fonts Windows-i686/
-  - mv artifacts-windows32/python Windows-i686/
-  - rm -rf artifacts-windows32
-  - mkdir Windows-x86_64
-  - mv artifacts-windows64/*.dll Windows-x86_64/
-  - mv artifacts-windows64/fonts Windows-x86_64/
-  - mv artifacts-windows64/python Windows-x86_64/
-  - rm -rf artifacts-windows64
-  - mkdir -p Debian-x86_64/lib
-  - mv artifacts-debian9/*.so Debian-x86_64/lib/
-  - mv artifacts-debian9/fonts Debian-x86_64/
-  - mv artifacts-debian9/python Debian-x86_64/
-  - rm -rf artifacts-debian9
-  - mkdir -p Ubuntu-x86_64/lib
-  - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/lib/
-  - mv artifacts-ubuntu1604/fonts Ubuntu-x86_64/
-  - mv artifacts-ubuntu1604/python Ubuntu-x86_64/
-  - rm -rf artifacts-ubuntu1604
-  - mkdir -p CentOS-x86_64/lib
-  - mv artifacts-centos7/*.so CentOS-x86_64/lib/
-  - mv artifacts-centos7/fonts CentOS-x86_64/
-  - mv artifacts-centos7/python CentOS-x86_64/
-  - rm -rf artifacts-centos7
-  - mkdir -p Linux-x86_64/lib
-  - mv artifacts-centos6/*.so Linux-x86_64/lib/
-  - mv artifacts-centos6/fonts Linux-x86_64/
-  - mv artifacts-centos6/python Linux-x86_64/lib/
-  - rm -rf artifacts-centos6
   - apt-get update
   - apt-get install -y sshpass rsync
   - set +x
-  - sshpass -p $RSYNC_PASSWORD rsync -av --delete ./Windows-i686/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/Windows-i686/gr/
-  - sshpass -p $RSYNC_PASSWORD rsync -av --delete ./Windows-x86_64/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/Windows-x86_64/gr/
-  - sshpass -p $RSYNC_PASSWORD rsync -av --delete ./Debian-x86_64/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/Debian-x86_64/gr/
-  - sshpass -p $RSYNC_PASSWORD rsync -av --delete ./Ubuntu-x86_64/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/Ubuntu-x86_64/gr/
-  - sshpass -p $RSYNC_PASSWORD rsync -av --delete ./CentOS-x86_64/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/CentOS-x86_64/gr/
-  - sshpass -p $RSYNC_PASSWORD rsync -av --delete ./Linux-x86_64/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/Linux-x86_64/gr/
+  - sshpass -p $RSYNC_PASSWORD rsync -av ./Downloads/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/
 
 debian9-install:
   stage: install
