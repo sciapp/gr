@@ -2403,6 +2403,13 @@ def tricontour(px, py, pz, levels):
     __gr.gr_tricontour(c_int(n), _px.data, _py.data, _pz.data, c_int(nlevels), _levels.data)
 
 
+def version():
+    """
+    Returns the version string of the GR shared library. In most cases, this
+    will be the same as gr.__version__.
+    """
+    return str(__gr.gr_version().decode('ascii'))
+
 _grPkgDir = os.path.realpath(os.path.dirname(__file__))
 _grLibDir = os.getenv("GRLIB", _grPkgDir)
 _gksFontPath = os.path.join(_grPkgDir, "fonts")
@@ -2581,6 +2588,8 @@ __gr.gr_trisurface.argtypes = [
 __gr.gr_tricontour.argtypes = [
     c_int, POINTER(c_double), POINTER(c_double), POINTER(c_double),
     c_int, POINTER(c_double)]
+__gr.gr_version.argtypes = []
+__gr.gr_version.restype = c_char_p
 
 
 precision = __gr.gr_precision()

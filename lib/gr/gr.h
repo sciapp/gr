@@ -184,6 +184,7 @@ DLLEXPORT int gr_sendmeta(const void *, const char *, ...);
 DLLEXPORT int gr_sendmeta_buf(const void *, const char *, const void *, int);
 DLLEXPORT int gr_sendmeta_args(const void *p, const gr_meta_args_t *args);
 DLLEXPORT void gr_closemeta(const void *);
+DLLEXPORT const char *gr_version(void);
 
 #ifdef _WIN32
 #ifdef __cplusplus

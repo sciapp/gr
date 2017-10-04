@@ -112,5 +112,7 @@ EXPORTS
 	gr_uselinespec
 	gr_validaterange
 	gr_verrorbars
+	gr_version
 	gr_wc3twco
 	gr_wctondc
+
