@@ -471,7 +471,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   seg_xform(&x, &y);
   NDC_to_DC(x, y, x0, y0);
 
-  cairo_set_line_width(p->cr, p->linewidth);
+  cairo_set_line_width(p->cr, p->linewidth * fmin(p->width, p->height) / 500.0);
 
   cairo_move_to(p->cr, x0, y0);
 
@@ -497,6 +497,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
   int stride = cairo_format_stride_for_width(format, 8);
   cairo_pattern_t *pattern;
   cairo_surface_t *image;
+  cairo_matrix_t pattern_matrix;
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   seg_xform(&x, &y);
@@ -554,6 +555,9 @@ void fill_routine(int n, double *px, double *py, int tnr)
 
       pattern = cairo_pattern_create_for_surface(image);
       cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
+      cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
+      cairo_matrix_init_scale(&pattern_matrix, 500.0/fmin(p->width, p->height), 500.0/fmin(p->width, p->height));
+      cairo_pattern_set_matrix(pattern, &pattern_matrix);
 
       cairo_set_source(p->cr, pattern);
     }
@@ -614,7 +618,7 @@ void polyline(int n, double *px, double *py)
 
   gks_get_dash_list(ln_type, ln_width, gks_dashes);
   for (i = 0; i < gks_dashes[0]; i++)
-    p->dashes[i] = gks_dashes[i + 1];
+    p->dashes[i] = gks_dashes[i + 1] * fmin(p->width, p->height) / 500.0;
   cairo_set_dash(p->cr, p->dashes, gks_dashes[0], 0);
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
