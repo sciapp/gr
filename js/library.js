@@ -122,9 +122,8 @@ mergeInto(LibraryManager.library, {
         if (linetype == 0) {
             context.lineTo(px[0], py[0]);
         }
-        if (fill == 0) {
-            context.stroke();
-        } else {
+        context.stroke();
+        if (fill != 0) {
             context.fill();
         }
     },
