@@ -3166,8 +3166,8 @@ void gks_symbol2utf(unsigned char c, char *utf, size_t *len)
 
 int *gks_resize(int *image, int width, int height, int w, int h)
 {
-  int x_ratio = (int) ((width  << 16) / w) + 1;
-  int y_ratio = (int) ((height << 16) / h) + 1;
+  int x_ratio = (int) ((width  << 16) / w);
+  int y_ratio = (int) ((height << 16) / h);
   int *result, i, j, x, y;
 
   result = (int *) malloc(w * h * sizeof(int));
