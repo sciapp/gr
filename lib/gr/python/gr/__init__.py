@@ -2318,7 +2318,7 @@ def show():
         content = Image(data=open('gks.png', 'rb').read(), width=465, height=465)
         display(content)
     elif _mime_type == 'mov':
-        content = HTML(data='<video controls autoplay type="video/mp4" src="data:video/mp4;base64,{0}">'.format(b64encode(open('gks.mov', 'rb').read())))
+        content = HTML(data='<video controls autoplay type=\"video/mp4\" src=\"data:video/mp4;base64,{0}\">'.format(b64encode(open('gks.mov', 'rb').read()).decode('ASCII')))
         return content
     return None
 
