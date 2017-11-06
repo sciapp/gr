@@ -5954,6 +5954,46 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
     }
 }
 
+static
+int islinspace(int n, double *a)
+{
+  double step, feps;
+  int i;
+
+  if (n < 2) return 0;
+  step = (a[n - 1] - a[0]) / (n - 1);
+  feps = step * FEPS;
+  for (i = 1; i < n; i++)
+    if (fabs(a[i] - a[i-1] - step) > feps) return 0;
+
+  return 1;
+}
+
+static
+void rebin(int nx, int ny, double *px, double *py, double *pz,
+           int *nxq, int *nyq, double **xq, double **yq, double **zq)
+{
+  double step, *x, *y, *z;
+  int i;
+
+  *nxq = 500;
+  *nyq = 500;
+
+  x = *xq = (double *) xmalloc(sizeof(double) * *nxq);
+  y = *yq = (double *) xmalloc(sizeof(double) * *nyq);
+  z = *zq = (double *) xmalloc(sizeof(double) * *nxq * *nyq);
+
+  step = (px[nx - 1] - px[0]) / (*nxq - 1);
+  for (i = 0; i < *nxq; i++)
+    x[i] = px[0] + i * step;
+
+  step = (py[ny - 1] - py[0]) / (*nyq - 1);
+  for (i = 0; i < *nyq; i++)
+    y[i] = py[0] + i * step;
+
+  gr_interp2(nx, ny, px, py, pz, *nxq, *nyq, x, y, z, 1, 0.0);
+}
+
 void gr_contour(
   int nx, int ny, int nh, double *px, double *py, double *h, double *pz,
   int major_h)
@@ -5961,6 +6001,8 @@ void gr_contour(
   int i, j;
   int errind, ltype, color, halign, valign;
   double chux, chuy;
+  int nxq, nyq;
+  double *xq = NULL, *yq = NULL, *zq = NULL;
 
   if ((nx <= 0) || (ny <= 0))
     {
@@ -5997,7 +6039,18 @@ void gr_contour(
 
   gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
 
-  gr_draw_contours(nx, ny, nh, px, py, h, pz, major_h);
+  if (!islinspace(nx, px) || !islinspace(ny, py))
+    {
+      rebin(nx, ny, px, py, pz, &nxq, &nyq, &xq, &yq, &zq);
+
+      gr_draw_contours(nxq, nyq, nh, xq, yq, h, zq, major_h);
+
+      free(zq);
+      free(yq);
+      free(xq);
+    }
+  else
+    gr_draw_contours(nx, ny, nh, px, py, h, pz, major_h);
 
   /* restore linetype, line color, character-up vector and text alignment */
 
