@@ -1,5 +1,9 @@
      JSC = /System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Resources/jsc
-    OPTS = -s LEGACY_GL_EMULATION=1 -s ASSERTIONS=2 -s SAFE_HEAP=1
+ifndef DEBUG
+    OPTS = -s LEGACY_GL_EMULATION=1 -O3
+else
+	OPTS = -s LEGACY_GL_EMULATION=1 -s ASSERTIONS=2 -s SAFE_HEAP=1
+endif
  DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\"
  JPEGDIR = ../3rdparty/jpeg
   PNGDIR = ../3rdparty/libpng16
@@ -25,7 +29,7 @@ INCLUDES = -I$(GR3DIR) -I$(GRDIR) -I$(GKSDIR) -I$(JPEGDIR) -I$(PNGDIR)/.. -I$(ZL
 
 .SECONDARY:
 
-default: gksdemo.pdf gr3demo.pdf
+default: gr.js gksdemo.pdf gr3demo.pdf
 
 svg:
 	make grdemo.svg BACKEND=$(GKSDIR)/plugin/svgplugin.cxx
@@ -78,7 +82,7 @@ libGR.js: $(OBJS) $(LIBS) library.js
 	--embed-file fonts/gksfont.dat --js-library library.js -o $@ $< $(OBJS) $(LIBS)
 
 clean:
-	rm -f *demo.js js.c *.o *.pdf *.svg *.png libGR.js gr.js
+	rm -f *demo.js js.c *.o *.pdf *.svg *.png libGR.js gr.js *.js.mem
 	rm -rf fonts
 	cd $(JPEGDIR) && make clean
 	cd $(PNGDIR) && make clean

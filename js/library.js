@@ -1,6 +1,6 @@
 mergeInto(LibraryManager.library, {
     js_stroke: function(n, points, colia, linewidth) {
-        var points = Module.HEAPF64.subarray(points / 8, points / 8 + n * 2);
+        points = Module.HEAPF64.subarray(points / 8, points / 8 + n * 2);
         var rgb = Module.HEAPU8.subarray(colia, colia + 4);
         var context = Module.context;
         context.beginPath();
@@ -14,9 +14,9 @@ mergeInto(LibraryManager.library, {
     },
 
     js_pattern_routine: function(n, px, py, colia) {
-        var colia = Module.HEAPU8.subarray(colia, colia + 64 * 4);
-        var px = Module.HEAPF64.subarray(px / 8, px / 8 + n);
-        var py = Module.HEAPF64.subarray(py / 8, py / 8 + n);
+        colia = Module.HEAPU8.subarray(colia, colia + 64 * 4);
+        px = Module.HEAPF64.subarray(px / 8, px / 8 + n);
+        py = Module.HEAPF64.subarray(py / 8, py / 8 + n);
         var context = Module.context;
         context.beginPath();
         context.moveTo(px[0], py[0]);
@@ -39,8 +39,8 @@ mergeInto(LibraryManager.library, {
     js_fill_routine: function(n, px, py, color) {
 
         var rgba = Module.HEAPU8.subarray(colia, colia + 4);
-        var px = Module.HEAPF64.subarray(px / 8, px / 8 + n);
-        var py = Module.HEAPF64.subarray(py / 8, py / 8 + n);
+        px = Module.HEAPF64.subarray(px / 8, px / 8 + n);
+        py = Module.HEAPF64.subarray(py / 8, py / 8 + n);
         var context = Module.context;
         context.beginPath();
         context.moveTo(px[0], py[0]);
@@ -55,7 +55,7 @@ mergeInto(LibraryManager.library, {
     js_cellarray: function(x, y, width, height, colia) {
         var context = Module.context;
         context.beginPath();
-        var colia = Module.HEAPU8.subarray(colia, colia + width * height * 4);
+        colia = Module.HEAPU8.subarray(colia, colia + width * height * 4);
         var imageData = context.createImageData(width, height);
         imageData.data.set(colia);
         var img = document.createElement('canvas');
@@ -90,7 +90,7 @@ mergeInto(LibraryManager.library, {
         } else if (valign == 3) {
             valg = 0.5;
         } else if (valign == 5) {
-            valg = -0.2
+            valg = -0.2;
         }
         context.translate(x, y);
         context.rotate(angle * Math.PI / 180);
@@ -107,9 +107,9 @@ mergeInto(LibraryManager.library, {
     },
 
     js_line_routine: function(n, px, py, linetype, fill, width, rgb) {
-        var px = Module.HEAPF64.subarray(px / 8, px / 8 + n);
-        var py = Module.HEAPF64.subarray(py / 8, py / 8 + n);
-        var rgb = Module.HEAPU8.subarray(rgb, rgb + 4);
+        px = Module.HEAPF64.subarray(px / 8, px / 8 + n);
+        py = Module.HEAPF64.subarray(py / 8, py / 8 + n);
+        rgb = Module.HEAPU8.subarray(rgb, rgb + 4);
         var context = Module.context;
         context.beginPath();
         context.strokeStyle = "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + rgb[3] + ")";
@@ -122,9 +122,8 @@ mergeInto(LibraryManager.library, {
         if (linetype == 0) {
             context.lineTo(px[0], py[0]);
         }
-        if (fill == 0) {
-            context.stroke();
-        } else {
+        context.stroke();
+        if (fill != 0) {
             context.fill();
         }
     },
