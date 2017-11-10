@@ -25,11 +25,13 @@ INCLUDES = -I$(GR3DIR) -I$(GRDIR) -I$(GKSDIR) -I$(JPEGDIR) -I$(PNGDIR)/.. -I$(ZL
 
  BACKEND = $(GKSDIR)/pdf.c
 
-.PHONY: default svg clean js.c .SECONDARY
+.PHONY: default svg clean js.c .SECONDARY .FORCE
 
 .SECONDARY:
 
 default: gr.js gksdemo.pdf gr3demo.pdf
+
+.FORCE:
 
 svg:
 	make grdemo.svg BACKEND=$(GKSDIR)/plugin/svgplugin.cxx
@@ -37,7 +39,11 @@ svg:
 html:
 	make grdemo.html BACKEND=$(GKSDIR)/plugin/svgplugin.cxx
 
-gr.js:
+../lib/gr/gr_version.h: .FORCE
+	../lib/Version --c > $@
+	@chmod 644 $@
+
+gr.js: ../lib/gr/gr_version.h
 	make libGR.js BACKEND=jsplugin.cxx
 	cat module.js libGR.js api.js >gr.js
 
