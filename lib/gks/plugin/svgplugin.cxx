@@ -1130,9 +1130,9 @@ void set_clip_path(int tnr)
 	  p->cheight[p->clip_index] = height;
 	  p->path_index = p->clip_index;
 	  svg_printf(p->stream,
-		     "<defs>\n  <clipPath id=\"clip%02d\">\n    <rect"
+		     "<defs>\n  <clipPath id=\"clip%02d%02d\">\n    <rect"
 		     " x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"/>\n  </clip"
-		     "Path>\n</defs>\n", p->path_index, x, y, width,
+		     "Path>\n</defs>\n", path_id, p->path_index, x, y, width,
 		     height);
 	  p->clip_index++;
 	}
