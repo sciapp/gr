@@ -951,6 +951,7 @@ void cellarray(
       if (!true_color)
 	{
 	  ind = colia[iy * dimx + ix];
+          ind = FIX_COLORIND(ind);
 	  color.red = p->rgb[ind].red;
 	  color.green = p->rgb[ind].green;
 	  color.blue = p->rgb[ind].blue;

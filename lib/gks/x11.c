@@ -3423,7 +3423,7 @@ stop:
                 { \
                   ix = (dx * i) / w; \
                   ipptr = ilptr + ix; \
-                  *epptr = true_color ? *ipptr : pixel[*ipptr % MAX_COLOR]; \
+                  *epptr = true_color ? *ipptr : pixel[FIX_COLORIND(*ipptr)]; \
                 } \
             } \
         } \
@@ -3433,7 +3433,7 @@ stop:
           epptr = ba; \
           ipptr = colia; \
           for (i = 0; i < nbytes; i++, ipptr++) \
-            *epptr++ = true_color ? *ipptr : pixel[*ipptr % MAX_COLOR]; \
+            *epptr++ = true_color ? *ipptr : pixel[FIX_COLORIND(*ipptr)]; \
         } \
     } \
 \

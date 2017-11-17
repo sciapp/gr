@@ -1549,8 +1549,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
       for (i = 0; i < width * height; i++)
         {
           ind = colia[i];
-          if (ind >= MAX_COLOR)
-            ind = MAX_COLOR - 1;
+          ind = FIX_COLORIND(ind);
           colors = CGColorGetComponents(p->rgb[ind]);
           colia[i] =  (int)(gkss->alpha * colors[0] * 255) +
                      ((int)(gkss->alpha * colors[1] * 255) << 8) +

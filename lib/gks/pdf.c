@@ -1696,6 +1696,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
               color = colia[iy * dimx + ix];
               if (!true_color)
                 {
+                  color = FIX_COLORIND(color);
                   data[0] = (Byte) (p->red[color]   * 255);
                   data[1] = (Byte) (p->green[color] * 255);
                   data[2] = (Byte) (p->blue[color]  * 255);

@@ -715,6 +715,7 @@ void cellarray(
         bitmap[i][j][3] = ((rgb & 0xff000000) >> 24) / 255.;
       } else {
         index = colia[ix * dy + iy];
+        index = FIX_COLORIND(index);
         for (k = 0; k < 3; k++) {
           bitmap[i][j][k] = p->rgb[index][k];
         }

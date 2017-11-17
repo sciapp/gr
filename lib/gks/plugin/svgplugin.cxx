@@ -1026,6 +1026,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 	  if (!true_color)
 	    {
 	      ind = colia[iy * dimx + ix];
+              ind = FIX_COLORIND(ind);
 	      sscanf(p->rgb[ind], "%02x%02x%02x", &red, &green, &blue);
               alpha = 0xff;
 	    }

@@ -818,10 +818,7 @@ void cellarray(
           if (!true_color)
             {
               ind = colia[iy * dimx + ix];
-              if (ind < 0)
-                ind = 0;
-              else if (ind >= MAX_COLOR)
-                  ind = MAX_COLOR - 1;
+              ind = FIX_COLORIND(ind);
               QColor transparent_color(p->rgb[ind]);
               transparent_color.setAlpha(p->transparency);
               img->setPixel(i, j, transparent_color.rgba());

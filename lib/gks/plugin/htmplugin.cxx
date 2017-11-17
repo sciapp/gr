@@ -634,6 +634,7 @@ void image_routine(double xmin, double xmax, double ymin, double ymax,
           if (!true_color)
             {
               ci = colia[iy * dimx + ix];
+              ci = FIX_COLORIND(ci);
               red = p->rgb[ci][0];
               green = p->rgb[ci][1];
               blue = p->rgb[ci][2];

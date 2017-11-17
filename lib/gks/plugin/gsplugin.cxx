@@ -1269,7 +1269,7 @@ void query_color(int index, unsigned char **buf, int wtype)
 {
   double grey;
 
-  index %= MAX_COLOR;
+  index = FIX_COLORIND(index);
 
   if (wtype % 2)
     {

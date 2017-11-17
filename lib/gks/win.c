@@ -1280,7 +1280,10 @@ void cellarray(
                                           (ind        & 0xff000000);
         }
       else
-        pix[j * width + i] = p->pixel[ind];
+        {
+          ind = FIX_COLORIND(ind);
+          pix[j * width + i] = p->pixel[ind];
+        }
     }
   }
 

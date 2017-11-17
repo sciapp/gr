@@ -33,6 +33,8 @@ extern "C" {
 #define MAX_TNR 9	/* maximum number of normalization transformations */
 #define MAX_COLOR 1256  /* maximum number of predefined colors */
 
+#define FIX_COLORIND(c) (c) < 0 ? 0 : (c) < MAX_COLOR ? (c) : MAX_COLOR - 1
+
 #define OPEN_GKS 0
 #define CLOSE_GKS 1
 #define OPEN_WS 2

@@ -863,6 +863,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
       }
       if (!true_color) {
         ind = colia[iy * dimx + ix];
+        ind = FIX_COLORIND(ind);
         red = (int) 255 * p->rgb[ind][0];
         green = (int) 255 * p->rgb[ind][1];
         blue = (int) 255 * p->rgb[ind][2];

@@ -1300,6 +1300,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 	  if (swapx)
 	    ix = dx - 1 - ix;
 	  ind = colia[iy * dimx + ix];
+          ind = FIX_COLORIND(ind);
 	  wmf_memcpy(p->stream, p->blue[ind], SIZE_BYTE);
 	  wmf_memcpy(p->stream, p->green[ind], SIZE_BYTE);
 	  wmf_memcpy(p->stream, p->red[ind], SIZE_BYTE);
