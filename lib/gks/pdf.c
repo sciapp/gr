@@ -1640,6 +1640,8 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   swapx = rx1 > rx2;
   swapy = ry1 > ry2;
 
+  set_transparency(p->alpha);
+
   pdf_save(p);
   set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
   pdf_printf(p->content, "%d 0 0 %d %d %d cm\n", width, height, x, y);
