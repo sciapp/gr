@@ -920,13 +920,13 @@ void pdf_close(PDF *p)
     vc_pdf_close(pdf);
     vc_movie_finish(movie);
   } else {
-    const char *file_name = "gks.gif";
+    gks_filepath(path, p->path, "gif", 0, 0);
     unsigned char *rgb_image;
     int delay = 100 / framerate;
     int num_frames;
     gif_writer gw;
 
-    gif_open(&gw, file_name);
+    gif_open(&gw, path);
 
     pdf = vc_pdf_from_memory(p->stream->buffer, p->stream->length);
     num_frames = vc_pdf_get_number_of_pages(pdf);
@@ -941,7 +941,7 @@ void pdf_close(PDF *p)
     free(rgb_image);
 
     gif_close(&gw);
-    fprintf(stderr, "\rFinished writing %s.\n", file_name);
+    fprintf(stderr, "\rFinished writing %s.\n", path);
 
 #ifdef MUPDF_API_VERSION_17
     fz_drop_document(pdf->ctx, pdf->doc);
