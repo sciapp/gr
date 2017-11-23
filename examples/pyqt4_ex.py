@@ -58,8 +58,8 @@ class GrWidget(QtGui.QWidget) :
         h = [min(z) + i * 0.025 * zrange for i in range(0, 40)]
 
         gr.clearws()
-        mwidth  = self.w * 2.54 / self.logicalDpiX() / 100
-        mheight = self.h * 2.54 / self.logicalDpiY() / 100
+        mwidth  = self.w * 2.54 / self.physicalDpiX() / 100
+        mheight = self.h * 2.54 / self.physicalDpiY() / 100
         gr.setwsviewport(0, mwidth, 0, mheight)
         gr.setwswindow(0, self.sizex, 0, self.sizey)
         gr.setviewport(0.075 * self.sizex, 0.95 * self.sizex, 0.075 * self.sizey, 0.95 * self.sizey)
