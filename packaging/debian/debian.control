@@ -1,44 +1,18 @@
 Source: gr
 Maintainer: Josef Heinen <j.heinen@fz-juelich.de>
-Section: python
+Section: science
 Priority: optional
-X-Python-Version: >= 2.6
-Build-Depends: python-setuptools (>= 0.6b3), python-all-dev (>= 2.6.6-3),
+Build-Depends:
  debhelper (>= 7), cmake, libx11-dev, libxft-dev, libxt-dev, libgs-dev,
  libgtk2.0-dev, libgl1-mesa-dev, libqt4-dev, qt4-qmake,
  libjpeg-dev, git, ncurses-bin
 # libjpeg-dev needed for Debian 8 by libgs-dev (multiple choices)
 Standards-Version: 3.9.1
 
-Package: python-gr
-Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}, python-numpy
-Description: Python visualization framework
- GR - a universal framework for visualization applications
- =========================================================
- .
- *GR* is a universal framework for cross-platform visualization
- applications. It offers developers a compact, portable and consistent
- graphics library for their programs. Applications range from publication
- quality 2D graphs to the representation of complex 3D scenes.
- .
- *GR* is essentially based on an implementation of a Graphical Kernel
- System (GKS) and OpenGL. As a self-contained system it can quickly and
- easily be integrated into existing applications (i.e. using the
- ``ctypes`` mechanism in Python or ``ccall`` in Julia).
- .
- The *GR* framework can be used in imperative programming systems or
- integrated into modern object-oriented systems, in particular those
- based on GUI toolkits. *GR* is characterized by its high
- interoperability and can be used with modern web technologies. The *GR*
- framework is especially suitable for real-time or signal processing
- environments.
- .
-
 Package: gr
 Architecture: any
-Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}, python-numpy
-Description: Python visualization framework
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Visualization framework
  GR - a universal framework for visualization applications
  =========================================================
  .
