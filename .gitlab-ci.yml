@@ -9,7 +9,7 @@ ubuntu-self-contained:
   image: ubuntu:16.04
   script:
   - apt-get update
-  - apt-get install -y wget make gcc g++ libgl1-mesa-dev libglu1-mesa-dev xorg-dev git
+  - apt-get install -y wget make gcc g++ libgl1-mesa-dev libglu1-mesa-dev xorg-dev git libgtk2.0-dev libwxgtk3.0-dev qt4-dev-tools qtbase5-dev
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -36,7 +36,7 @@ debian-self-contained:
   image: debian:9
   script:
   - apt-get update
-  - apt-get install -y wget make patch gcc g++ xz-utils lbzip2 libgl1-mesa-dev libglu1-mesa-dev xorg-dev git
+  - apt-get install -y wget make patch gcc g++ xz-utils lbzip2 libgl1-mesa-dev libglu1-mesa-dev xorg-dev git libgtk2.0-dev libwxgtk3.0-dev qt4-dev-tools qtbase5-dev
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -65,8 +65,7 @@ centos7-self-contained:
   - yum update -y
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
-  - yum install -y which
-  - yum install -y gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
+  - yum install -y which gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel gtk2-devel qt-devel qt5-qtbase-devel
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
@@ -99,7 +98,7 @@ centos6-self-contained:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which
-  - yum install -y gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel git
+  - yum install -y gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel git gtk2-devel qt-devel
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
