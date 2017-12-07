@@ -251,7 +251,7 @@ static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
 
-static void *argparse_read_params(const char *format, const void *buffer, va_list vl, int apply_padding);
+static void *argparse_read_params(const char *format, const void *buffer, va_list *vl, int apply_padding);
 static void argparse_read_int(argparse_state_t *state);
 static void argparse_read_double(argparse_state_t *state);
 static void argparse_read_char(argparse_state_t *state);
@@ -267,7 +267,7 @@ static const char *argparse_skip_option(const char *format);
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
-static arg_t *args_create_args(const char *key, const char *value_format, const void *buffer, va_list vl,
+static arg_t *args_create_args(const char *key, const char *value_format, const void *buffer, va_list *vl,
                                int apply_padding);
 static int args_validate_format_string(const char *format);
 static const char *args_skip_option(const char *format);
@@ -299,18 +299,18 @@ static void *args_values_as_array(const arg_t *arg);
 static void args_init(gr_meta_args_t *args);
 static void args_finalize(gr_meta_args_t *args);
 
-static void args_push_arg_common(gr_meta_args_t *args, const char *value_format, const void *buffer, va_list vl,
+static void args_push_arg_common(gr_meta_args_t *args, const char *value_format, const void *buffer, va_list *vl,
                                  int apply_padding);
-static void args_push_arg_vl(gr_meta_args_t *args, const char *value_format, va_list vl);
+static void args_push_arg_vl(gr_meta_args_t *args, const char *value_format, va_list *vl);
 static void args_push_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                                   va_list vl, int apply_padding);
-static void args_push_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list vl);
+                                   va_list *vl, int apply_padding);
+static void args_push_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
 static void args_update_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format,
-                                     const void *buffer, va_list vl, int apply_padding);
+                                     const void *buffer, va_list *vl, int apply_padding);
 static void args_update_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...);
 static void args_update_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
                                   int apply_padding);
-static void args_update_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list vl);
+static void args_update_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
 static void args_push_args(gr_meta_args_t *args, const gr_meta_args_t *update_args);
 static void args_update_kwargs(gr_meta_args_t *args, const gr_meta_args_t *update_args);
 
@@ -411,8 +411,8 @@ static size_t memwriter_size(const memwriter_t *memwriter);
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
-static int sender_init_for_socket(metahandle_t *handle, va_list vl);
-static int sender_init_for_jupyter(metahandle_t *handle, va_list vl);
+static int sender_init_for_socket(metahandle_t *handle, va_list *vl);
+static int sender_init_for_jupyter(metahandle_t *handle, va_list *vl);
 static int sender_finalize_for_socket(metahandle_t *handle);
 static int sender_finalize_for_jupyter(metahandle_t *handle);
 
@@ -436,10 +436,10 @@ void *gr_openmeta(int target, ...) {
   va_start(vl, target);
   switch (target) {
   case GR_TARGET_JUPYTER:
-    error = sender_init_for_jupyter(handle, vl);
+    error = sender_init_for_jupyter(handle, &vl);
     break;
   case GR_TARGET_SOCKET:
-    error = sender_init_for_socket(handle, vl);
+    error = sender_init_for_socket(handle, &vl);
     break;
   }
   va_end(vl);
@@ -577,7 +577,7 @@ void gr_meta_args_push_arg(gr_meta_args_t *args, const char *value_format, ...) 
   va_list vl;
   va_start(vl, value_format);
 
-  args_push_arg_vl(args, value_format, vl);
+  args_push_arg_vl(args, value_format, &vl);
 
   va_end(vl);
 }
@@ -594,7 +594,7 @@ void gr_meta_args_push_kwarg(gr_meta_args_t *args, const char *key, const char *
   va_list vl;
   va_start(vl, value_format);
 
-  args_push_kwarg_vl(args, key, value_format, vl);
+  args_push_kwarg_vl(args, key, value_format, &vl);
 
   va_end(vl);
 }
@@ -611,7 +611,7 @@ void gr_meta_args_push_kwarg_buf(gr_meta_args_t *args, const char *key, const ch
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
 
-void *argparse_read_params(const char *format, const void *buffer, va_list vl, int apply_padding) {
+void *argparse_read_params(const char *format, const void *buffer, va_list *vl, int apply_padding) {
   char *fmt, *current_format;
   size_t needed_buffer_size;
   void *save_buffer;
@@ -636,7 +636,7 @@ void *argparse_read_params(const char *format, const void *buffer, va_list vl, i
   }
 
   /* initialize state object */
-  state.vl = (va_list *)vl;
+  state.vl = vl;
   state.in_buffer = buffer;
   state.apply_padding = apply_padding;
   state.data_offset = 0;
@@ -985,7 +985,7 @@ const char *argparse_skip_option(const char *format) {
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
-arg_t *args_create_args(const char *key, const char *value_format, const void *buffer, va_list vl, int apply_padding) {
+arg_t *args_create_args(const char *key, const char *value_format, const void *buffer, va_list *vl, int apply_padding) {
   arg_t *arg;
 
   if (!args_validate_format_string(value_format)) {
@@ -1260,7 +1260,7 @@ void args_finalize(gr_meta_args_t *args) {
   }
 }
 
-void args_push_arg_common(gr_meta_args_t *args, const char *value_format, const void *buffer, va_list vl,
+void args_push_arg_common(gr_meta_args_t *args, const char *value_format, const void *buffer, va_list *vl,
                           int apply_padding) {
   arg_t *arg;
   args_node_t *args_node;
@@ -1292,12 +1292,12 @@ void args_push_arg_common(gr_meta_args_t *args, const char *value_format, const 
   ++(args->count);
 }
 
-void args_push_arg_vl(gr_meta_args_t *args, const char *value_format, va_list vl) {
+void args_push_arg_vl(gr_meta_args_t *args, const char *value_format, va_list *vl) {
   args_push_arg_common(args, value_format, NULL, vl, 0);
 }
 
 void args_push_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                            va_list vl, int apply_padding) {
+                            va_list *vl, int apply_padding) {
   /*
    * warning! this function does not check if a given key already exists in the container
    * -> use `args_update_kwarg` instead
@@ -1336,12 +1336,12 @@ void args_push_kwarg_common(gr_meta_args_t *args, const char *key, const char *v
   ++(args->count);
 }
 
-void args_push_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list vl) {
+void args_push_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
   args_push_kwarg_common(args, key, value_format, NULL, vl, 0);
 }
 
 void args_update_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                              va_list vl, int apply_padding) {
+                              va_list *vl, int apply_padding) {
   args_node_t *args_node;
   arg_t *arg;
 
@@ -1359,7 +1359,7 @@ void args_update_kwarg(gr_meta_args_t *args, const char *key, const char *value_
   va_list vl;
   va_start(vl, value_format);
 
-  args_push_kwarg_vl(args, key, value_format, vl);
+  args_push_kwarg_vl(args, key, value_format, &vl);
 
   va_end(vl);
 }
@@ -1369,7 +1369,7 @@ void args_update_kwarg_buf(gr_meta_args_t *args, const char *key, const char *va
   args_update_kwarg_common(args, key, value_format, buffer, NULL, apply_padding);
 }
 
-void args_update_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list vl) {
+void args_update_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
   args_update_kwarg_common(args, key, value_format, NULL, vl, 0);
 }
 
@@ -2550,7 +2550,7 @@ size_t memwriter_size(const memwriter_t *memwriter) {
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
-int sender_init_for_socket(metahandle_t *handle, va_list vl) {
+int sender_init_for_socket(metahandle_t *handle, va_list *vl) {
   const char *hostname;
   unsigned int port;
   struct hostent *he;
@@ -2558,8 +2558,8 @@ int sender_init_for_socket(metahandle_t *handle, va_list vl) {
   WSADATA wsa_data;
 #endif
 
-  hostname = va_arg(vl, const char *);
-  port = va_arg(vl, unsigned int);
+  hostname = va_arg(*vl, const char *);
+  port = va_arg(*vl, unsigned int);
 
 #if defined(_WIN32) && !defined(__GNUC__)
   /* Initialize Winsock */
@@ -2592,10 +2592,10 @@ int sender_init_for_socket(metahandle_t *handle, va_list vl) {
   return 0;
 }
 
-int sender_init_for_jupyter(metahandle_t *handle, va_list vl) {
+int sender_init_for_jupyter(metahandle_t *handle, va_list *vl) {
   jupyter_send_callback_t jupyter_send_callback;
 
-  jupyter_send_callback = va_arg(vl, jupyter_send_callback_t);
+  jupyter_send_callback = va_arg(*vl, jupyter_send_callback_t);
 
   handle->comm.jupyter.send = jupyter_send_callback;
   handle->memwriter = memwriter_new();
