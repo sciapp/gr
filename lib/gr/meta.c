@@ -926,7 +926,7 @@ size_t argparse_calculate_needed_padding(void *buffer, char current_format) {
 
   size_for_current_specifier = argparse_format_specifier_to_size[(unsigned char)current_format];
   if (size_for_current_specifier > 0) {
-    needed_padding = size_for_current_specifier - ((uintptr_t)buffer) % size_for_current_specifier;
+    needed_padding = size_for_current_specifier - ((char *)buffer - (char *)0) % size_for_current_specifier;
     if (needed_padding == size_for_current_specifier) {
       needed_padding = 0;
     }
