@@ -176,6 +176,29 @@ windows-64bit-cross:
     paths:
     - artifacts-windows64/
 
+darwin-self-contained:
+  stage: build
+  script:
+  - rm -rf /tmp/gr
+  - make self GRDIR=/tmp/gr
+  - mkdir artifacts
+  - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gr/demo artifacts/grdemo
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
+  - cp -r lib/gks/fonts lib/gr/python artifacts/
+  - cp -r lib/gr3/python/gr3 artifacts/python/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mkdir artifacts/Applications/
+  - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
+  - mv artifacts artifacts-darwin
+  tags:
+  - macos
+  artifacts:
+    expire_in: 1 week
+    paths:
+    - artifacts-darwin/
+
 packages-fpm:
   stage: build
   image: debian:8
@@ -238,12 +261,20 @@ packages-tar:
   - mv artifacts-centos6/python Linux-x86_64/gr/
   - mv artifacts-centos6/include Linux-x86_64/gr/
   - rm -rf artifacts-centos6
+  - mkdir -p Darwin-x86_64/gr/lib
+  - mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/
+  - mv artifacts-darwin/fonts Darwin-x86_64/gr/
+  - mv artifacts-darwin/python Darwin-x86_64/gr/
+  - mv artifacts-darwin/include Darwin-x86_64/gr/
+  - mv artifacts-darwin/Applications Darwin-x86_64/gr/
+  - rm -rf artifacts-darwin
   - cd Windows-i686 && tar czf gr.tar.gz gr && cd -
   - cd Windows-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Debian-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Ubuntu-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd CentOS-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Linux-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd Darwin-x86_64 && tar czf gr.tar.gz gr && cd -
   - mkdir Downloads
   - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
       export VERSION=`echo "$CI_COMMIT_TAG" | sed 's/^v//'`;
@@ -253,6 +284,7 @@ packages-tar:
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$VERSION-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$VERSION-CentOS-x86_64.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$VERSION-Linux-x86_64.tar.gz;
+      cp Darwin-x86_64/gr.tar.gz Downloads/gr-$VERSION-Darwin-x86_64.tar.gz;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$VERSION.sha512.txt && cd -;
     else
       cp Windows-i686/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-i686.tar.gz;
@@ -261,6 +293,7 @@ packages-tar:
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-x86_64.tar.gz;
+      cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$CI_COMMIT_SHA.sha512.txt && cd -;
     fi
   artifacts:
