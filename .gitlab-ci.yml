@@ -18,7 +18,7 @@ ubuntu-self-contained:
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-ubuntu1604
   artifacts:
     expire_in: 1 week
@@ -47,7 +47,7 @@ debian-self-contained:
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-debian9
   artifacts:
     expire_in: 1 week
@@ -79,7 +79,7 @@ centos7-self-contained:
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-centos7
   artifacts:
     expire_in: 1 week
@@ -114,7 +114,7 @@ centos6-self-contained:
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-centos6
   artifacts:
     expire_in: 1 week
@@ -147,7 +147,7 @@ windows-32bit-cross:
   - cp -r lib/gr3/python/gr3 artifacts/python/
   - cp /usr/lib/gcc/i686-w64-mingw32/4.9-win32/libgcc_s_sjlj-1.dll artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-windows32
   artifacts:
     expire_in: 1 week
@@ -169,7 +169,7 @@ windows-64bit-cross:
   - cp -r lib/gr3/python/gr3 artifacts/python/
   - cp /usr/lib/gcc/x86_64-w64-mingw32/4.9-win32/libgcc_s_seh-1.dll artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-windows64
   artifacts:
     expire_in: 1 week
