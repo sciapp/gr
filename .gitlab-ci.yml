@@ -17,6 +17,8 @@ ubuntu-self-contained:
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-ubuntu1604
   artifacts:
     expire_in: 1 week
@@ -44,6 +46,8 @@ debian-self-contained:
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-debian9
   artifacts:
     expire_in: 1 week
@@ -74,6 +78,8 @@ centos7-self-contained:
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-centos7
   artifacts:
     expire_in: 1 week
@@ -107,6 +113,8 @@ centos6-self-contained:
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-centos6
   artifacts:
     expire_in: 1 week
@@ -138,6 +146,8 @@ windows-32bit-cross:
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
   - cp /usr/lib/gcc/i686-w64-mingw32/4.9-win32/libgcc_s_sjlj-1.dll artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-windows32
   artifacts:
     expire_in: 1 week
@@ -158,6 +168,8 @@ windows-64bit-cross:
   - cp -r lib/gks/fonts lib/gr/python artifacts/
   - cp -r lib/gr3/python/gr3 artifacts/python/
   - cp /usr/lib/gcc/x86_64-w64-mingw32/4.9-win32/libgcc_s_seh-1.dll artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-windows64
   artifacts:
     expire_in: 1 week
@@ -194,31 +206,37 @@ packages-tar:
   - mv artifacts-windows32/*.dll Windows-i686/gr/
   - mv artifacts-windows32/fonts Windows-i686/gr/
   - mv artifacts-windows32/python Windows-i686/gr/
+  - mv artifacts-windows32/include Windows-i686/gr/
   - rm -rf artifacts-windows32
   - mkdir -p Windows-x86_64/gr
   - mv artifacts-windows64/*.dll Windows-x86_64/gr/
   - mv artifacts-windows64/fonts Windows-x86_64/gr/
   - mv artifacts-windows64/python Windows-x86_64/gr/
+  - mv artifacts-windows64/include Windows-x86_64/gr/
   - rm -rf artifacts-windows64
   - mkdir -p Debian-x86_64/gr/lib
   - mv artifacts-debian9/*.so Debian-x86_64/gr/lib/
   - mv artifacts-debian9/fonts Debian-x86_64/gr/
   - mv artifacts-debian9/python Debian-x86_64/gr/
+  - mv artifacts-debian9/include Debian-x86_64/gr/
   - rm -rf artifacts-debian9
   - mkdir -p Ubuntu-x86_64/gr/lib
   - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/gr/lib/
   - mv artifacts-ubuntu1604/fonts Ubuntu-x86_64/gr/
   - mv artifacts-ubuntu1604/python Ubuntu-x86_64/gr/
+  - mv artifacts-ubuntu1604/include Ubuntu-x86_64/gr/
   - rm -rf artifacts-ubuntu1604
   - mkdir -p CentOS-x86_64/gr/lib
   - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
   - mv artifacts-centos7/fonts CentOS-x86_64/gr/
   - mv artifacts-centos7/python CentOS-x86_64/gr/
+  - mv artifacts-centos7/include CentOS-x86_64/gr/
   - rm -rf artifacts-centos7
   - mkdir -p Linux-x86_64/gr/lib
   - mv artifacts-centos6/*.so Linux-x86_64/gr/lib/
   - mv artifacts-centos6/fonts Linux-x86_64/gr/
   - mv artifacts-centos6/python Linux-x86_64/gr/
+  - mv artifacts-centos6/include Linux-x86_64/gr/
   - rm -rf artifacts-centos6
   - cd Windows-i686 && tar czf gr.tar.gz gr && cd -
   - cd Windows-x86_64 && tar czf gr.tar.gz gr && cd -
