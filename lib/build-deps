@@ -58,23 +58,22 @@ eof
 
 elif [ "$ID" = "Red Hat" -o "$ID" = "CentOS" ] ; then
   cat <<eof
-yum install gcc gcc-c++ gcc-gfortran PyQt4-devel ghostscript-devel \
+yum install gcc gcc-c++ gcc-gfortran ghostscript-devel python2 \
 texlive-collection-latex texlive-dvipng cmake patch
 eof
 
 elif [ "$ID" = "Fedora" ] ; then
   cat <<eof
-yum install gcc gcc-c++ gcc-gfortran PyQt4-devel ghostscript-devel \
+yum install gcc gcc-c++ gcc-gfortran ghostscript-devel python2 \
 texlive-collection-latex texlive-dvipng wxGTK-devel glfw-devel zeromq3-devel \
 mupdf-devel jbig2dec-devel openjpeg2-devel libjpeg-turbo-devel
 eof
 
 elif [ "$ID" = "Debian" ] ; then
   cat <<eof
-apt-get install libx11-dev libxft-dev libxt-dev python2.7-dev \
+apt-get install libx11-dev libxft-dev libxt-dev python2.7 \
 libgl1-mesa-dev libgs-dev texlive-latex3 dvipng qt4-dev-tools \
-libgtk2.0-dev pyqt4-dev-tools libwxgtk3.0-dev python-wxgtk3.0 \
-libglfw3-dev libzmq3-dev python-pyaudio python-opengl cmake
+libgtk2.0-dev libwxgtk3.0-dev libglfw3-dev libzmq3-dev cmake
 
 The packages libmupdf-dev and libopenjp2-7-dev cannot be linked due
 to relocation problems (libmupdf.a was not built with -fPIC)
@@ -82,19 +81,17 @@ eof
 
 elif [ "$ID" = "Ubuntu" ] ; then
   cat <<eof
-apt-get install libx11-dev libxft-dev libxt-dev python2.7-dev \
+apt-get install libx11-dev libxft-dev libxt-dev python2.7 \
 libgl1-mesa-dev libgs-dev texlive-latex3 dvipng qt4-dev-tools \
-libgtk2.0-dev pyqt4-dev-tools libwxgtk2.8-dev python-wxgtk2.8 \
-libzmq3-dev python-pyaudio python-opengl cmake
+libgtk2.0-dev libwxgtk2.8-dev libzmq3-dev cmake
 
 The packages libglfw-dev and libmupdf-dev are too old.
 eof
 
 elif [ "$ID" = "openSUSE project" ] ; then
   cat <<eof
-zypper install gcc gcc-c++ gcc-fortran libX11-devel \
-texlive-latex texlive-dvipng python-qt4-devel wxWidgets-devel \
-python-wxWidgets-devel ghostscript-devel cmake patch
+zypper install gcc gcc-c++ gcc-fortran libX11-devel python2 \
+texlive-latex texlive-dvipng wxWidgets-devel ghostscript-devel cmake patch
 eof
 
 fi

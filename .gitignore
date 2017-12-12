@@ -1,8 +1,6 @@
 build/
 dist/
 doc/media/
-lib/gr/python/gr/_version.py
-lib/gr/python/gr.egg-info
 MANIFEST
 *.o
 *.obj

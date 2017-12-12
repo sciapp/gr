@@ -12,7 +12,6 @@ GKSLIBS = ..\gks\libgks.lib
 DLLLIBS = msvcrt.lib oldnames.lib kernel32.lib wsock32.lib advapi32.lib user32.lib gdi32.lib comdlg32.lib winspool.lib
 DLLLFLAGS = /nodefaultlib -dll
 DLLLINK = LINK /nologo
-PYHOME = S:\Python27
 SRCDIR = .\
 
 DESTDIR = $(GRDIR)
@@ -70,12 +69,8 @@ libqtgr:
 
 gr.pyd: py_gr.obj
 	$(DLLLINK) /out:$@ $** \
-	$(PYHOME)\libs\python27.lib $(GRLIBS) \
 	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) $(GKSLIBS) \
 	$(DLLLFLAGS) $(DLLLIBS)
-
-py_gr.obj: python\py_gr.c
-	$(CC) $(CFLAGS) /I$(PYHOME)\include $**
 
 install: default
 	COPY /Y ..\gr\libgr.dll $(DESTDIR)
@@ -84,11 +79,6 @@ install: default
 	COPY /Y ..\gr\qtgr\qt4gr.lib $(DESTDIR)
 	COPY /Y ..\gr\qtgr\qt5gr.dll $(DESTDIR)
 	COPY /Y ..\gr\qtgr\qt5gr.lib $(DESTDIR)
-	IF NOT EXIST $(DESTDIR)\python MKDIR $(DESTDIR)\python
-	IF NOT EXIST $(DESTDIR)\python\gr MKDIR $(DESTDIR)\python\gr
-	XCOPY /I /S /Y python\gr $(DESTDIR)\python\gr
-	IF NOT EXIST $(DESTDIR)\python\qtgr MKDIR $(DESTDIR)\python\qtgr
-	XCOPY /I /S /Y python\qtgr $(DESTDIR)\python\qtgr
 	COPY /Y ..\gr\gr.h $(DESTDIR)
 	COPY /Y ..\gr\qtgr\grwidget.h $(DESTDIR)
 	COPY /Y ..\gks\libgks.dll $(DESTDIR)

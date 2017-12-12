@@ -35,9 +35,6 @@ libgr3.dll: gr3.obj gr3_win.obj gr3_convenience.obj gr3_html.obj gr3_povray.obj 
 install: default
 	COPY /Y libgr3.lib $(DESTDIR)
 	COPY /Y libgr3.dll $(DESTDIR)
-        IF NOT EXIST $(DESTDIR)\python MKDIR $(DESTDIR)\python
-        IF NOT EXIST $(DESTDIR)\python\gr3 MKDIR $(DESTDIR)\python\gr3
-        XCOPY /I /S /Y python\gr3 $(DESTDIR)\python\gr3
 
 clean:
 	@cd ../gr
