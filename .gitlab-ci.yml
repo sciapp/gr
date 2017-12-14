@@ -289,7 +289,7 @@ packages-tar:
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$VERSION-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$VERSION-CentOS-x86_64.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$VERSION-Linux-x86_64.tar.gz;
-      if [ -d artifacts-darwin ]; then
+      if [ -d Darwin-x86_64 ]; then
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$VERSION-Darwin-x86_64.tar.gz;
       fi;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$VERSION.sha512.txt && cd -;
@@ -300,7 +300,7 @@ packages-tar:
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-x86_64.tar.gz;
-      if [ -d artifacts-darwin ]; then
+      if [ -d Darwin-x86_64 ]; then
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
       fi;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$CI_COMMIT_SHA.sha512.txt && cd -;
