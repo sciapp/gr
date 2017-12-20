@@ -315,39 +315,47 @@ debian9-install:
   image: debian:9
   script:
   - apt-get -q update
-  - apt-get -q install -y gdebi-core
+  - apt-get -q install -y gdebi-core gcc
   # Install gr DEB
   - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - gr -c "import gr; import gr3"
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
     
 ubuntu16.04-install:
   stage: install
   image: ubuntu:16.04
   script:
   - apt-get -q update
-  - apt-get -q install -y gdebi-core
+  - apt-get -q install -y gdebi-core gcc
   # Install gr DEB
   - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - gr -c "import gr; import gr3"
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
 
 ubuntu17.04-install:
   stage: install
   image: ubuntu:17.04
   script:
   - apt-get -q update
-  - apt-get -q install -y gdebi-core
+  - apt-get -q install -y gdebi-core gcc
   # Install gr DEB
   - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - gr -c "import gr; import gr3"
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
 
 centos7-install:
   stage: install
   image: centos:7
   script:
-  - yum install -y epel-release
+  - yum install -y epel-release gcc
   # Install gr RPM
   - yum localinstall -y artifacts-packages/linux/centos/gr*.rpm
-  - gr -c "import gr; import gr3"
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
 
 opensuse42.2-install:
   stage: install
@@ -355,8 +363,10 @@ opensuse42.2-install:
   script:
   # Install gr RPM
   - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
-  - zypper install -y artifacts-packages/linux/suse/gr*.rpm
-  - gr -c "import gr; import gr3"
+  - zypper install -y artifacts-packages/linux/suse/gr*.rpm gcc
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
     
 opensuse42.3-install:
   stage: install
@@ -364,5 +374,7 @@ opensuse42.3-install:
   script:
   # Install gr RPM
   - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
-  - zypper install -y artifacts-packages/linux/suse/gr*.rpm
-  - gr -c "import gr; import gr3"
+  - zypper install -y artifacts-packages/linux/suse/gr*.rpm gcc
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
