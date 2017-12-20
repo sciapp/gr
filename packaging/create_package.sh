@@ -25,7 +25,7 @@ get_first_directory() {
 
 NAME="gr"
 SRC_DIR="${DESTDIR}${GRDIR}"
-VERSION=$(GRDIR=${SRC_DIR} ./_get_version.py ${SRC_DIR})
+VERSION="$(./_get_version.py ..)"
 PYTHON_REL_SRC_DIR="lib/python"
 BIN_DIR="/usr/bin"
 LIB_DIR="/usr/lib"
