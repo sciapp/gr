@@ -15,8 +15,7 @@ ubuntu-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
-  - cp -r lib/gks/fonts lib/gr/python artifacts/
-  - cp -r lib/gr3/python/gr3 artifacts/python/
+  - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-ubuntu1604
@@ -30,8 +29,8 @@ ubuntu-system-dependencies:
   image: ubuntu:16.04
   script:
   - apt-get update
-  - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7-dev python-numpy texlive-latex3 dvipng python-opengl libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev python-wxgtk3.0 libglfw3-dev libzmq3-dev python-pyaudio cmake git
-  - make install GRDIR=/tmp/gr PYTHONBIN=/usr/local/bin/
+  - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7 texlive-latex3 dvipng libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev libglfw3-dev libzmq3-dev cmake git
+  - make install GRDIR=/tmp/gr
 
 debian-self-contained:
   stage: build
@@ -44,8 +43,7 @@ debian-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
-  - cp -r lib/gks/fonts lib/gr/python artifacts/
-  - cp -r lib/gr3/python/gr3 artifacts/python/
+  - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-debian9
@@ -59,8 +57,8 @@ debian-system-dependencies:
   image: debian:9
   script:
   - apt-get update
-  - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7-dev python-numpy texlive-latex3 dvipng python-opengl libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev python-wxgtk3.0 libglfw3-dev libzmq3-dev python-pyaudio cmake git
-  - make install GRDIR=/tmp/gr PYTHONBIN=/usr/local/bin/
+  - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7 texlive-latex3 dvipng libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev libglfw3-dev libzmq3-dev cmake git
+  - make install GRDIR=/tmp/gr
 
 centos7-self-contained:
   stage: build
@@ -76,8 +74,7 @@ centos7-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
-  - cp -r lib/gks/fonts lib/gr/python artifacts/
-  - cp -r lib/gr3/python/gr3 artifacts/python/
+  - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-centos7
@@ -95,7 +92,7 @@ centos7-system-dependencies:
   - yum groupinstall -y "X Window System"
   - yum install -y which
   - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel git
-  - make install GRDIR=/tmp/gr PYTHONBIN=/usr/local/bin/
+  - make install GRDIR=/tmp/gr
 
 centos6-self-contained:
   stage: build
@@ -111,8 +108,7 @@ centos6-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
-  - cp -r lib/gks/fonts lib/gr/python artifacts/
-  - cp -r lib/gr3/python/gr3 artifacts/python/
+  - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mv artifacts artifacts-centos6
@@ -130,7 +126,7 @@ centos6-system-dependencies:
   - yum groupinstall -y "X Window System"
   - yum install -y which
   - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel git
-  - make install GRDIR=/tmp/gr PYTHONBIN=/usr/local/bin/
+  - make install GRDIR=/tmp/gr
 
 windows-32bit-cross:
   stage: build
@@ -143,8 +139,7 @@ windows-32bit-cross:
   - cp lib/gks/demo.exe artifacts/gksdemo.exe
   - cp lib/gr/demo.exe artifacts/grdemo.exe
   - cp lib/gks/libgks.lib lib/gks/libgks.dll lib/gks/libgks.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libgr.lib lib/gr/libgr.dll lib/gr/libgr.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
-  - cp -r lib/gks/fonts lib/gr/python artifacts/
-  - cp -r lib/gr3/python/gr3 artifacts/python/
+  - cp -r lib/gks/fonts artifacts/
   - cp /usr/lib/gcc/i686-w64-mingw32/4.9-win32/libgcc_s_sjlj-1.dll artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -165,8 +160,7 @@ windows-64bit-cross:
   - cp lib/gks/demo.exe artifacts/gksdemo.exe
   - cp lib/gr/demo.exe artifacts/grdemo.exe
   - cp lib/gks/libgks.lib lib/gks/libgks.dll lib/gks/libgks.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libgr.lib lib/gr/libgr.dll lib/gr/libgr.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
-  - cp -r lib/gks/fonts lib/gr/python artifacts/
-  - cp -r lib/gr3/python/gr3 artifacts/python/
+  - cp -r lib/gks/fonts artifacts/
   - cp /usr/lib/gcc/x86_64-w64-mingw32/4.9-win32/libgcc_s_seh-1.dll artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -188,8 +182,7 @@ darwin-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
-  - cp -r lib/gks/fonts lib/gr/python artifacts/
-  - cp -r lib/gr3/python/gr3 artifacts/python/
+  - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/Applications/
@@ -207,7 +200,7 @@ packages-fpm:
   image: debian:8
   script:
   - apt-get update
-  - apt-get install -y wget build-essential mesa-common-dev gfortran libqt4-dev qtdeclarative5-dev libgs-dev texlive-latex-base dvipng cmake patch libpython2.7-dev rpm ruby-dev xorg-dev git
+  - apt-get install -y wget build-essential mesa-common-dev gfortran libqt4-dev qtdeclarative5-dev libgs-dev texlive-latex-base dvipng cmake patch python2.7 rpm ruby-dev xorg-dev git
   - gem install fpm
   - make "DISTROS=centos debian suse" linuxpackages
   - mkdir -p artifacts/linux/centos
@@ -231,44 +224,37 @@ packages-tar:
   - mkdir -p Windows-i686/gr
   - mv artifacts-windows32/*.dll Windows-i686/gr/
   - mv artifacts-windows32/fonts Windows-i686/gr/
-  - mv artifacts-windows32/python Windows-i686/gr/
   - mv artifacts-windows32/include Windows-i686/gr/
   - rm -rf artifacts-windows32
   - mkdir -p Windows-x86_64/gr
   - mv artifacts-windows64/*.dll Windows-x86_64/gr/
   - mv artifacts-windows64/fonts Windows-x86_64/gr/
-  - mv artifacts-windows64/python Windows-x86_64/gr/
   - mv artifacts-windows64/include Windows-x86_64/gr/
   - rm -rf artifacts-windows64
   - mkdir -p Debian-x86_64/gr/lib
   - mv artifacts-debian9/*.so Debian-x86_64/gr/lib/
   - mv artifacts-debian9/fonts Debian-x86_64/gr/
-  - mv artifacts-debian9/python Debian-x86_64/gr/
   - mv artifacts-debian9/include Debian-x86_64/gr/
   - rm -rf artifacts-debian9
   - mkdir -p Ubuntu-x86_64/gr/lib
   - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/gr/lib/
   - mv artifacts-ubuntu1604/fonts Ubuntu-x86_64/gr/
-  - mv artifacts-ubuntu1604/python Ubuntu-x86_64/gr/
   - mv artifacts-ubuntu1604/include Ubuntu-x86_64/gr/
   - rm -rf artifacts-ubuntu1604
   - mkdir -p CentOS-x86_64/gr/lib
   - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
   - mv artifacts-centos7/fonts CentOS-x86_64/gr/
-  - mv artifacts-centos7/python CentOS-x86_64/gr/
   - mv artifacts-centos7/include CentOS-x86_64/gr/
   - rm -rf artifacts-centos7
   - mkdir -p Linux-x86_64/gr/lib
   - mv artifacts-centos6/*.so Linux-x86_64/gr/lib/
   - mv artifacts-centos6/fonts Linux-x86_64/gr/
-  - mv artifacts-centos6/python Linux-x86_64/gr/
   - mv artifacts-centos6/include Linux-x86_64/gr/
   - rm -rf artifacts-centos6
   - if [ -d artifacts-darwin ]; then
       mkdir -p Darwin-x86_64/gr/lib;
       mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/;
       mv artifacts-darwin/fonts Darwin-x86_64/gr/;
-      mv artifacts-darwin/python Darwin-x86_64/gr/;
       mv artifacts-darwin/include Darwin-x86_64/gr/;
       mv artifacts-darwin/Applications Darwin-x86_64/gr/;
       rm -rf artifacts-darwin;
@@ -329,39 +315,47 @@ debian9-install:
   image: debian:9
   script:
   - apt-get -q update
-  - apt-get -q install -y gdebi-core
+  - apt-get -q install -y gdebi-core gcc
   # Install gr DEB
   - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - gr -c "import gr; import gr3"
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
     
 ubuntu16.04-install:
   stage: install
   image: ubuntu:16.04
   script:
   - apt-get -q update
-  - apt-get -q install -y gdebi-core
+  - apt-get -q install -y gdebi-core gcc
   # Install gr DEB
   - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - gr -c "import gr; import gr3"
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
 
 ubuntu17.04-install:
   stage: install
   image: ubuntu:17.04
   script:
   - apt-get -q update
-  - apt-get -q install -y gdebi-core
+  - apt-get -q install -y gdebi-core gcc
   # Install gr DEB
   - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - gr -c "import gr; import gr3"
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
 
 centos7-install:
   stage: install
   image: centos:7
   script:
-  - yum install -y epel-release
+  - yum install -y epel-release gcc
   # Install gr RPM
   - yum localinstall -y artifacts-packages/linux/centos/gr*.rpm
-  - gr -c "import gr; import gr3"
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
 
 opensuse42.2-install:
   stage: install
@@ -369,8 +363,10 @@ opensuse42.2-install:
   script:
   # Install gr RPM
   - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
-  - zypper install -y artifacts-packages/linux/suse/gr*.rpm
-  - gr -c "import gr; import gr3"
+  - zypper install -y artifacts-packages/linux/suse/gr*.rpm gcc
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test
     
 opensuse42.3-install:
   stage: install
@@ -378,5 +374,7 @@ opensuse42.3-install:
   script:
   # Install gr RPM
   - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
-  - zypper install -y artifacts-packages/linux/suse/gr*.rpm
-  - gr -c "import gr; import gr3"
+  - zypper install -y artifacts-packages/linux/suse/gr*.rpm gcc
+  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
+  - gcc -o test test.c -lGR
+  - ./test

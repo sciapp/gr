@@ -13,7 +13,7 @@ OBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
 
 .SUFFIXES: .o .c
 
-all: prerequisites libgr.dll libgr.lib demo.exe python/gr/_version.py
+all: prerequisites libgr.dll libgr.lib demo.exe
 
 .c.o:
 	$(CC) $(CFLAGS) $(DEFINES) -c $<
@@ -34,10 +34,6 @@ libgr.dll: $(OBJS)
 
 demo.exe: demo.o libgr.dll
 	$(CC) -o $@ demo.o -L. -lgr
-
-python/gr/_version.py:
-	../../lib/Version > $@
-	@chmod 644 $@
 
 gr_version.h: .FORCE
 	../../lib/Version --c > $@

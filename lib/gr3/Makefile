@@ -1,7 +1,6 @@
        GRDIR = /usr/local/gr
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
-   PYTHONDIR = $(LIBDIR)/python
 
 UNAME := $(shell uname)
 
@@ -58,8 +57,6 @@ install: targets
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGR3.so $(LIBDIR)
-	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
-	cp -a python/gr3 $(PYTHONDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr3.h $(INCDIR)
 
@@ -67,4 +64,3 @@ clean:
 	@make -C ../gr clean
 	rm -rf libGR3.so*
 	rm -f *.o
-	rm -f *.pyc

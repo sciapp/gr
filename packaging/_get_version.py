@@ -8,33 +8,41 @@ from __future__ import unicode_literals
 
 import re
 import os
-import os.path
+import subprocess
 import sys
 
-
-if 'GRDIR' in os.environ:
-    GRDIR = os.environ['GRDIR']
-else:
-    GRDIR = '../tmp/gr'
-REL_GR_PACKAGE_PATH = 'lib/python/gr'
-VERSION_MODULE = '_version'
+REL_VERSION_SCRIPT_PATH = 'lib/Version'
 
 
-def get_version():
-    sys.path.append(os.path.join(GRDIR, REL_GR_PACKAGE_PATH))
-    version_module = __import__(VERSION_MODULE, globals(), locals(), [], -1)
-    version_string = version_module.__version__
-    sys.path.pop()
-    match_obj = re.match('(\d+\.){2}\d+', version_string)
-    if match_obj is not None:
-        version_tuple_string = match_obj.group()
-    else:
-        version_tuple_string = ''
-    return version_tuple_string
+def get_version(gr_source_directory_path):
+    version_script_path = os.path.join(gr_source_directory_path, REL_VERSION_SCRIPT_PATH)
+    if not os.path.isfile(version_script_path):
+        return None
+    try:
+        version_script_output = subprocess.check_output(version_script_path)
+    except subprocess.CalledProcessError:
+        return None
+    version_script_output_lines = version_script_output.split('\n')
+    for line in version_script_output_lines:
+        match_obj = re.match(r'^\s*__version__\s*=\s*[\'"]([^\'"]+)[\'"]\s*$', line)
+        if match_obj is not None:
+            version_string = match_obj.group(1)
+            return version_string
+    return None
 
 
 def main():
-    print(get_version())
+    if len(sys.argv) < 2:
+        print('No GR source directory path specified!', file=sys.stderr)
+        sys.exit(2)
+    gr_source_directory_path = sys.argv[1]
+    version = get_version(gr_source_directory_path)
+    if version is not None:
+        print(version)
+        sys.exit(0)
+    else:
+        print('No GR version found! (Did you specify the correct GR source directory location?)', file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == '__main__':

@@ -25,15 +25,13 @@ get_first_directory() {
 
 NAME="gr"
 SRC_DIR="${DESTDIR}${GRDIR}"
-VERSION=$(GRDIR=${SRC_DIR} ./_get_version.py ${SRC_DIR})
-PYTHON_REL_SRC_DIR="lib/python"
+VERSION="$(./_get_version.py ..)"
 BIN_DIR="/usr/bin"
 LIB_DIR="/usr/lib"
 INC_DIR="/usr/include"
 BIN_LINKS=( "gr" "gksm" )
 INC_LINKS=( "gks.h" "gr.h" "gr3.h" )
 LIB_LINKS=( "libGKS.a" "libGKS.so" "libGR.a" "libGR.so" "libGR3.a" "libGR3.so" )
-PY_LINKS=( "gr gr3 qtgr" )
 GRDIR_FIRST_DIR="$(get_first_directory ${GRDIR})"
 if [ "${GRDIR_FIRST_DIR}" == "/usr" ]; then
     PACKAGE_DIRS=( "/usr" )
@@ -67,16 +65,16 @@ get_dependencies() {
 
     case ${TMP_DISTRO} in
     debian)
-        DEPENDENCIES=( "libxt6" "python-numpy" "libgl1-mesa-glx" )
+        DEPENDENCIES=( "libxt6" "libgl1-mesa-glx" )
         ;;
     centos)
-        DEPENDENCIES=( "libXt" "numpy" "mesa-libGL" )
+        DEPENDENCIES=( "libXt" "mesa-libGL" )
         ;;
     centos6)
-        DEPENDENCIES=( "libXt" "numpy" "mesa-libGL" )
+        DEPENDENCIES=( "libXt" "mesa-libGL" )
         ;;
     suse)
-        DEPENDENCIES=( "libXt6" "python-numpy" "Mesa-libGL1" )
+        DEPENDENCIES=( "libXt6" "Mesa-libGL1" )
         ;;
     unspecified_distro)
         if [ -f /etc/debian_version ]; then
@@ -98,33 +96,25 @@ create_directory_structure() {
 }
 
 create_directory_structure_for_unspecified_distro() {
-    PYTHON_VERSION=$(python -c 'import platform; print ".".join(platform.python_version_tuple()[:2])')
-    PYTHON_DIR=$(python -c 'from distutils.sysconfig import get_python_lib; print get_python_lib()')
-    local DIRECTORIES=( ".${GRDIR}" ".${BIN_DIR}" ".${LIB_DIR}" ".${INC_DIR}" ".${PYTHON_DIR}" )
+    local DIRECTORIES=( ".${GRDIR}" ".${BIN_DIR}" ".${LIB_DIR}" ".${INC_DIR}" )
 
     create_directory_structure "${DIRECTORIES[@]}"
 }
 
 create_directory_structure_for_debian() {
-    PYTHON_VERSION="2.7"
-    PYTHON_DIR="/usr/lib/python${PYTHON_VERSION}/dist-packages"
-    local DIRECTORIES=( ".${GRDIR}" ".${BIN_DIR}" ".${LIB_DIR}" ".${INC_DIR}" ".${PYTHON_DIR}" )
+    local DIRECTORIES=( ".${GRDIR}" ".${BIN_DIR}" ".${LIB_DIR}" ".${INC_DIR}" )
 
     create_directory_structure "${DIRECTORIES[@]}"
 }
 
 create_directory_structure_for_centos() {
-    PYTHON_VERSION="2.7"
-    PYTHON_DIR="/usr/lib/python${PYTHON_VERSION}/site-packages"
-    local DIRECTORIES=( ".${GRDIR}" ".${BIN_DIR}" ".${LIB_DIR}" ".${INC_DIR}" ".${PYTHON_DIR}" )
+    local DIRECTORIES=( ".${GRDIR}" ".${BIN_DIR}" ".${LIB_DIR}" ".${INC_DIR}" )
 
     create_directory_structure "${DIRECTORIES[@]}"
 }
 
 create_directory_structure_for_centos6() {
-    PYTHON_VERSION="2.6"
-    PYTHON_DIR="/usr/lib/python${PYTHON_VERSION}/site-packages"
-    local DIRECTORIES=( ".${GRDIR}" ".${BIN_DIR}" ".${LIB_DIR}" ".${INC_DIR}" ".${PYTHON_DIR}" )
+    local DIRECTORIES=( ".${GRDIR}" ".${BIN_DIR}" ".${LIB_DIR}" ".${INC_DIR}" )
 
     create_directory_structure "${DIRECTORIES[@]}"
 }
@@ -144,10 +134,6 @@ copy_src_and_setup_startup() {
     for LINK in "${INC_LINKS[@]}"; do
         ln -s "${GRDIR}/include/${LINK}" ".${INC_DIR}/${LINK}"
     done
-    for LINK in "${PY_LINKS[@]}"; do
-        ln -s "${GRDIR}/${PYTHON_REL_SRC_DIR}/${LINK}" ".${PYTHON_DIR}/${LINK}"
-    done
-    python -m compileall ".${GRDIR}/${PYTHON_REL_SRC_DIR}"
 }
 
 create_package_scripts() {

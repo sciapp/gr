@@ -1,7 +1,6 @@
        GRDIR = /usr/local/gr
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
-   PYTHONDIR = $(LIBDIR)/python
 
     INCLUDES = -I../../3rdparty -I../../3rdparty/jpeg -I../gr
       GRLIBS = -L../gr -lgr
@@ -38,4 +37,3 @@ clean:
 	$(RM) libGR3.dylib*
 	$(RM) libGR3.a*
 	$(RM) *.o
-	$(RM) *.pyc

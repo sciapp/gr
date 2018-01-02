@@ -1,5 +1,5 @@
 # Install dependencies
-sudo yum install -y gcc gcc-c++ mesa-libGL-devel gcc-gfortran PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cmake patch python-devel rpm-build ruby-devel rubygems
+sudo yum install -y gcc gcc-c++ mesa-libGL-devel gcc-gfortran ghostscript-devel texlive-collection-latex texlive-dvipng cmake patch python2.7 rpm-build ruby-devel rubygems
 sudo gem install fpm
 
 # Build gr and linux packages

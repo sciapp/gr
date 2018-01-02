@@ -2,8 +2,6 @@
       BINDIR = $(DESTDIR)$(GRDIR)/bin
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
-   PYTHONDIR = $(LIBDIR)/python
-    JULIADIR = $(LIBDIR)/julia
 
 UNAME := $(shell uname)
 
@@ -88,11 +86,6 @@ install:
 	@if [ ! -d $(BINDIR) ]; then mkdir -m 755 $(BINDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGR.* $(LIBDIR)
-	@if [ ! -d $(PYTHONDIR) ]; then mkdir -m 755 $(PYTHONDIR); fi
-	cp -a python/gr $(PYTHONDIR)
-	cp -a python/qtgr $(PYTHONDIR)
-	@if [ ! -d $(JULIADIR) ]; then mkdir -m 755 $(JULIADIR); fi
-	cp -p julia/* $(JULIADIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr.h $(INCDIR)
 	@make -C qtgr install
