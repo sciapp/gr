@@ -195,6 +195,15 @@ void gks_quartzplugin(
       wss->displayList = [[NSData alloc] initWithBytesNoCopy: wss
                                     length: sizeof(ws_state_list)
                                     freeWhenDone: NO];
+      if (plugin != nil) {
+        /* verify that the plugin connection is still alive */
+        @try {
+          [plugin GKSQuartzIsAlive: 0];
+        } @catch (NSException *) {
+          [plugin release];
+          plugin = nil;
+        }
+      }
       if (plugin == nil) {
         plugin = [NSConnection rootProxyForConnectionWithRegisteredName:
                   @"GKSQuartz" host: nil];
