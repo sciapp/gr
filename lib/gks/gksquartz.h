@@ -1,5 +1,13 @@
+#ifndef GKSQUARTZ_H
+#define GKSQUARTZ_H
 
 #define MAX_WINDOWS 50
+
+#define GKSTERM_FUNCTION_UNKNOWN 0
+#define GKSTERM_FUNCTION_CREATE_WINDOW 1
+#define GKSTERM_FUNCTION_DRAW 2
+#define GKSTERM_FUNCTION_IS_ALIVE 3
+#define GKSTERM_FUNCTION_CLOSE_WINDOW 4
 
 typedef struct
   {
@@ -18,13 +26,7 @@ typedef struct
     int inactivity_counter;
     bool thread_alive;
     bool closed_by_api;
-    NSData *displayList;
  }
 ws_state_list;
 
-@protocol gks_protocol
-- (int) GKSQuartzCreateWindow;
-- (void) GKSQuartzDraw: (int) win displayList: (id) displayList;
-- (int) GKSQuartzIsAlive: (int) win;
-- (void) GKSQuartzCloseWindow: (int) win;
-@end
+#endif

@@ -87,7 +87,7 @@ endif
     XFTLIBS = -lXft -lfontconfig
     X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
     ZMQDEFS =
-    ZMQLIBS = -lzmq -lpthread
+    ZMQLIBS = -L../../../3rdparty/build/lib/ -lzmq -lpthread
   EXTRALIBS =
        LIBS = -lc -lm
        ZINC = -I../../../3rdparty/zlib
@@ -155,7 +155,7 @@ wmfplugin.so: wmfplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(LIBS)
 
 quartzplugin.so: quartzplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LIBS) \
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LIBS) $(ZMQLIBS) \
 	-lobjc -framework Foundation -framework ApplicationServices -framework AppKit
 
 glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
