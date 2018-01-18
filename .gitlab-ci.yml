@@ -334,9 +334,9 @@ ubuntu16.04-install:
   - gcc -o test test.c -lGR
   - ./test
 
-ubuntu17.04-install:
+ubuntu17.10-install:
   stage: install
-  image: ubuntu:17.04
+  image: ubuntu:17.10
   script:
   - apt-get -q update
   - apt-get -q install -y gdebi-core gcc
