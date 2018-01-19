@@ -356,17 +356,6 @@ centos7-install:
   - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
   - gcc -o test test.c -lGR
   - ./test
-
-opensuse42.2-install:
-  stage: install
-  image: opensuse:42.2
-  script:
-  # Install gr RPM
-  - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
-  - zypper install -y artifacts-packages/linux/suse/gr*.rpm gcc
-  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
-  - gcc -o test test.c -lGR
-  - ./test
     
 opensuse42.3-install:
   stage: install
