@@ -164,6 +164,7 @@ static void gksterm_close_window(int window) {
 static void gksterm_draw(int window, void*displaylist, size_t displaylist_len) {
   size_t request_len = 1 + sizeof(int) + sizeof(size_t) + displaylist_len;
   char *request = (char *)malloc(request_len);
+  assert(request != NULL);
   request[0] = GKSTERM_FUNCTION_DRAW;
   *(int*)(request+1) = window;
   *(size_t*)(request+1+sizeof(int)) = displaylist_len;

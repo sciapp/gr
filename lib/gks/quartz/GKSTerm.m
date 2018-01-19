@@ -26,8 +26,8 @@ static void handle_create_window(GKSTerm *gksterm, void *socket, unsigned char *
   });
   char reply[1+sizeof(int)];
   reply[0] = GKSTERM_FUNCTION_CREATE_WINDOW;
-  *(int*)&(reply[1]) = result;
-  send_message(socket, &(reply[0]), sizeof(reply));
+  *(int*)(reply+1) = result;
+  send_message(socket, reply, sizeof(reply));
 }
 
 static void handle_is_alive(GKSTerm *gksterm, void *socket, unsigned char *data) {
@@ -39,14 +39,14 @@ static void handle_is_alive(GKSTerm *gksterm, void *socket, unsigned char *data)
   char reply[2];
   reply[0] = GKSTERM_FUNCTION_IS_ALIVE;
   reply[1] = result ? 1 : 0;
-  send_message(socket, &(reply[0]), sizeof(reply));
+  send_message(socket, reply, sizeof(reply));
 }
 
 static void handle_draw(GKSTerm *gksterm, void *socket, unsigned char *data) {
   // Send acknowledgement before actually drawing to avoid timeout
   char reply[1];
   reply[0] = GKSTERM_FUNCTION_DRAW;
-  send_message(socket, &(reply[0]), sizeof(reply));
+  send_message(socket, reply, sizeof(reply));
 
   int window = *(int*)data;
   size_t displaylist_len = *(size_t*)(data+sizeof(int));
@@ -64,7 +64,7 @@ static void handle_close_window(GKSTerm *gksterm, void *socket, unsigned char *d
   });
   char reply[1];
   reply[0] = GKSTERM_FUNCTION_CLOSE_WINDOW;
-  send_message(socket, &(reply[0]), sizeof(reply));
+  send_message(socket, reply, sizeof(reply));
 }
 
 static void handle_unknown(void *socket, unsigned char *data) {
@@ -72,7 +72,7 @@ static void handle_unknown(void *socket, unsigned char *data) {
   char reply[1];
   reply[0] = GKSTERM_FUNCTION_UNKNOWN;
   NSLog(@"ZeroMQ message with unknown function code");
-  send_message(socket, &(reply[0]), sizeof(reply));
+  send_message(socket, reply, sizeof(reply));
 }
 
 static void handle_message(GKSTerm *gksterm, void *socket) {
@@ -117,28 +117,28 @@ static void forward_message(void *input_socket, void *output_socket) {
 + (void) run: (GKSTerm *)gksterm
 {
   // Handle requests incoming via ZeroMQ
-  void *context = zmq_ctx_new ();
-  void *frontend = zmq_socket (context, ZMQ_ROUTER);
-  void *backend  = zmq_socket (context, ZMQ_DEALER);
+  void *context = zmq_ctx_new();
+  void *frontend = zmq_socket(context, ZMQ_ROUTER);
+  void *backend  = zmq_socket(context, ZMQ_DEALER);
   void *worker = zmq_socket(context, ZMQ_REP);
   zmq_bind(frontend, "ipc:///tmp/GKSTerm.sock");
   zmq_bind(backend,  "inproc://:gksterm:");
   zmq_connect(worker, "inproc://:gksterm:");
 
-  zmq_pollitem_t items [] = {
-    { frontend, 0, ZMQ_POLLIN, 0 },
-    { backend,  0, ZMQ_POLLIN, 0 },
-    { worker,  0, ZMQ_POLLIN, 0 }
+  zmq_pollitem_t items[] = {
+    {frontend, 0, ZMQ_POLLIN, 0},
+    {backend, 0, ZMQ_POLLIN, 0},
+    {worker, 0, ZMQ_POLLIN, 0}
   };
-  while (1) {
+  while(YES) {
     zmq_poll(items, 3, -1);
-    if (items [0].revents & ZMQ_POLLIN) {
+    if (items[0].revents & ZMQ_POLLIN) {
       forward_message(frontend, backend);
     }
-    if (items [1].revents & ZMQ_POLLIN) {
+    if (items[1].revents & ZMQ_POLLIN) {
       forward_message(backend, frontend);
     }
-    if (items [2].revents & ZMQ_POLLIN) {
+    if (items[2].revents & ZMQ_POLLIN) {
       handle_message(gksterm, worker);
     }
   }
