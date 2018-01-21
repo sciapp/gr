@@ -4304,7 +4304,7 @@ void *event_loop(void *arg)
                     {
                       if (p->master_thread != 0)
                         {
-                          pthread_kill(p->master_thread, SIGTERM);
+                          pthread_kill(p->master_thread, SIGINT);
                           p->run = 0;
                         }
                     }
