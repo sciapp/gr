@@ -1484,7 +1484,6 @@ void resetgks(int sig)
     {
       signal(SIGINT, SIG_DFL);
       gr_emergencyclosegks();
-      raise(SIGINT);
     }
 }
 
