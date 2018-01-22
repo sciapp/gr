@@ -117,7 +117,7 @@ NSTask *task = NULL;
                   all_dead = [plugin GKSQuartzIsAlive: win] == 0;
                 }
                 if (all_dead) {
-                  pthread_kill(wss->master_thread, SIGINT);
+                  pthread_kill(wss->master_thread, SIGTERM);
                 }
               }
               didDie = 1;
@@ -125,7 +125,7 @@ NSTask *task = NULL;
         }
       @catch (NSException *e)
         {
-          pthread_kill(wss->master_thread, SIGINT);
+          pthread_kill(wss->master_thread, SIGTERM);
           didDie = 1;
         }
 

@@ -150,6 +150,9 @@ state_list *ctx, *app_context[MAX_CONTEXT] = {
 };
 
 static
+void (*previous_handler)(int);
+
+static
 int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
 
 static
@@ -1480,11 +1483,10 @@ void initialize(int state)
 static
 void resetgks(int sig)
 {
-  if (sig == SIGINT)
+  if (sig == SIGTERM)
     {
-      signal(SIGINT, SIG_DFL);
       gr_emergencyclosegks();
-      raise(SIGINT);
+      signal(SIGTERM, previous_handler);
     }
 }
 
@@ -1531,7 +1533,7 @@ void initgks(void)
       used[color] = 0;
     }
 
-  signal(SIGINT, resetgks);
+  previous_handler = signal(SIGTERM, resetgks);
 }
 
 void gr_opengks(void)

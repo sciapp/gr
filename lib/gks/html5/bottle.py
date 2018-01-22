@@ -2799,7 +2799,7 @@ class GeventServer(ServerAdapter):
         server = wsgi.WSGIServer(address, handler, **self.options)
         if 'BOTTLE_CHILD' in os.environ:
             import signal
-            signal.signal(signal.SIGINT, lambda s, f: server.stop())
+            signal.signal(signal.SIGTERM, lambda s, f: server.stop())
         server.serve_forever()
 
 

@@ -958,7 +958,7 @@ void *event_loop(void *arg)
                     {
                       if ((Atom) event.xclient.data.l[0] == p->wmDeleteMessage)
                         {
-                          pthread_kill(p->master_thread, SIGINT);
+                          pthread_kill(p->master_thread, SIGTERM);
                           p->run = 0;
                         }
                     }
