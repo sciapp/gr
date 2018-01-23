@@ -116,16 +116,20 @@ NSTask *task = NULL;
                 for (win = 0; all_dead && win < MAX_WINDOWS; win++) {
                   all_dead = [plugin GKSQuartzIsAlive: win] == 0;
                 }
+#ifdef SIGUSR1
                 if (all_dead) {
-                  pthread_kill(wss->master_thread, SIGTERM);
+                  pthread_kill(wss->master_thread, SIGUSR1);
                 }
+#endif
               }
               didDie = 1;
             }
         }
       @catch (NSException *e)
         {
-          pthread_kill(wss->master_thread, SIGTERM);
+#ifdef SIGUSR1
+          pthread_kill(wss->master_thread, SIGUSR1);
+#endif
           didDie = 1;
         }
 
