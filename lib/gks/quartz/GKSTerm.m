@@ -1,9 +1,156 @@
 
 #include "gks.h"
 #include "gkscore.h"
+#include "gksquartz.h"
+#include "zmq.h"
 
 #import "GKSTerm.h"
 #import "GKSView.h"
+
+@interface GKSNetworkingThread : NSObject
++ (void) run: (GKSTerm *)gksterm;
+@end
+
+static void send_message(void* socket, void* data, size_t data_len) {
+  zmq_msg_t message;
+  zmq_msg_init_data(&message, data, data_len, NULL, NULL);
+  zmq_msg_send(&message, socket, 0);
+  zmq_msg_close(&message);
+}
+
+static void handle_create_window(GKSTerm *gksterm, void *socket, unsigned char *data) {
+  (void)data;
+  __block int result = 0;
+  dispatch_sync(dispatch_get_main_queue(), ^{
+    result = [gksterm GKSQuartzCreateWindow];
+  });
+  char reply[1+sizeof(int)];
+  reply[0] = GKSTERM_FUNCTION_CREATE_WINDOW;
+  *(int*)(reply+1) = result;
+  send_message(socket, reply, sizeof(reply));
+}
+
+static void handle_is_alive(GKSTerm *gksterm, void *socket, unsigned char *data) {
+  int window = *(int*)data;
+  __block bool result = NO;
+  dispatch_sync(dispatch_get_main_queue(), ^{
+    result = [gksterm GKSQuartzIsAlive: window];
+  });
+  char reply[2];
+  reply[0] = GKSTERM_FUNCTION_IS_ALIVE;
+  reply[1] = result ? 1 : 0;
+  send_message(socket, reply, sizeof(reply));
+}
+
+static void handle_draw(GKSTerm *gksterm, void *socket, unsigned char *data) {
+  // Send acknowledgement before actually drawing to avoid timeout
+  char reply[1];
+  reply[0] = GKSTERM_FUNCTION_DRAW;
+  send_message(socket, reply, sizeof(reply));
+
+  int window = *(int*)data;
+  size_t displaylist_len = *(size_t*)(data+sizeof(int));
+  void *displaylist = (void*)(data+sizeof(int)+sizeof(size_t));
+  dispatch_sync(dispatch_get_main_queue(), ^{
+    NSData *displaylist_objc = [NSData dataWithBytesNoCopy: displaylist length: displaylist_len freeWhenDone: NO];
+    [gksterm GKSQuartzDraw: window displayList: displaylist_objc];
+  });
+}
+
+static void handle_close_window(GKSTerm *gksterm, void *socket, unsigned char *data) {
+  int window = *(int*)data;
+  dispatch_sync(dispatch_get_main_queue(), ^{
+    [gksterm GKSQuartzCloseWindow: window];
+  });
+  char reply[1];
+  reply[0] = GKSTERM_FUNCTION_CLOSE_WINDOW;
+  send_message(socket, reply, sizeof(reply));
+}
+
+static void handle_unknown(void *socket, unsigned char *data) {
+  (void)data;
+  char reply[1];
+  reply[0] = GKSTERM_FUNCTION_UNKNOWN;
+  NSLog(@"ZeroMQ message with unknown function code");
+  send_message(socket, reply, sizeof(reply));
+}
+
+static void handle_message(GKSTerm *gksterm, void *socket) {
+  zmq_msg_t message;
+  zmq_msg_init(&message);
+  zmq_msg_recv(&message, socket, 0);
+  unsigned char *data = (unsigned char *)zmq_msg_data(&message);
+  switch(data[0]) {
+    case GKSTERM_FUNCTION_CREATE_WINDOW:
+      handle_create_window(gksterm, socket, data+1);
+      break;
+    case GKSTERM_FUNCTION_DRAW:
+      handle_draw(gksterm, socket, data+1);
+      break;
+    case GKSTERM_FUNCTION_IS_ALIVE:
+      handle_is_alive(gksterm, socket, data+1);
+      break;
+    case GKSTERM_FUNCTION_CLOSE_WINDOW:
+      handle_close_window(gksterm, socket, data+1);
+      break;
+    default:
+      handle_unknown(socket, data+1);
+      break;
+  }
+  zmq_msg_close(&message);
+}
+
+static void forward_message(void *input_socket, void *output_socket) {
+  //Forward a multipart message from one zeromq socket to another.
+  zmq_msg_t message;
+  int more;
+  do {
+    zmq_msg_init(&message);
+    zmq_msg_recv(&message, input_socket, 0);
+    more = zmq_msg_more(&message);
+    zmq_msg_send(&message, output_socket, more ? ZMQ_SNDMORE : 0);
+    zmq_msg_close(&message);
+  } while (more);
+}
+
+@implementation GKSNetworkingThread
++ (void) run: (GKSTerm *)gksterm
+{
+  // Handle requests incoming via ZeroMQ
+  void *context = zmq_ctx_new();
+  void *frontend = zmq_socket(context, ZMQ_ROUTER);
+  void *backend  = zmq_socket(context, ZMQ_DEALER);
+  void *worker = zmq_socket(context, ZMQ_REP);
+  zmq_bind(frontend, "ipc:///tmp/GKSTerm.sock");
+  zmq_bind(backend,  "inproc://:gksterm:");
+  zmq_connect(worker, "inproc://:gksterm:");
+
+  zmq_pollitem_t items[] = {
+    {frontend, 0, ZMQ_POLLIN, 0},
+    {backend, 0, ZMQ_POLLIN, 0},
+    {worker, 0, ZMQ_POLLIN, 0}
+  };
+  while(YES) {
+    zmq_poll(items, 3, -1);
+    if (items[0].revents & ZMQ_POLLIN) {
+      forward_message(frontend, backend);
+    }
+    if (items[1].revents & ZMQ_POLLIN) {
+      forward_message(backend, frontend);
+    }
+    if (items[2].revents & ZMQ_POLLIN) {
+      handle_message(gksterm, worker);
+    }
+  }
+  zmq_close(frontend);
+  zmq_close(backend);
+  zmq_close(worker);
+  zmq_ctx_term(context);
+}
+@end
+
+
+static bool initialized = NO;
 
 @implementation GKSTerm
 
@@ -13,14 +160,13 @@
 
   [[NSNotificationCenter defaultCenter] addObserver:self 
                                         selector:@selector(keepOnDisplay:) 
-                                        name:@"GKSViewKeepOnDisplayNotification" object:nil];   
-  if (!connection)
+                                        name:@"GKSViewKeepOnDisplayNotification" object:nil];
+
+  if (!initialized)
     {
-      // Deprecated in Mac OS X v10.6
-      //connection = [NSConnection defaultConnection];
-      connection = [NSConnection new];
-      [connection setRootObject:self];
-      [connection registerName:@"GKSQuartz"];
+      // Start networking thread
+      [NSThread detachNewThreadSelector: @selector(run:) toTarget:[GKSNetworkingThread class] withObject:self];
+
       num_windows = 0;
       curr_win_id = 0;
       for (win = 0; win < MAX_WINDOWS; win++)
