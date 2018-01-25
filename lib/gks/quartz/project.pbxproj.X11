@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		13C7C4E3200F4851007A6396 /* libzmq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 13C7C4E2200F4851007A6396 /* libzmq.a */; };
 		202DC483101F0B9F00A39179 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 202DC482101F0B9F00A39179 /* QuartzCore.framework */; };
 		20A794F5106BB92800D5CF6E /* GKSTerm.icns in Resources */ = {isa = PBXBuildFile; fileRef = 20A794F4106BB92800D5CF6E /* GKSTerm.icns */; };
 		20A87F351062253500F6E07D /* ExtendSavePanel.nib in Resources */ = {isa = PBXBuildFile; fileRef = 20A87F331062253500F6E07D /* ExtendSavePanel.nib */; };
@@ -29,6 +30,8 @@
 /* Begin PBXFileReference section */
 		089C165DFE840E0CC02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
+		13C7C4E1200F47A4007A6396 /* zmq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zmq.h; path = ../../../3rdparty/build/include/zmq.h; sourceTree = "<group>"; };
+		13C7C4E2200F4851007A6396 /* libzmq.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libzmq.a; path = ../../../3rdparty/build/lib/libzmq.a; sourceTree = "<group>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
 		202DC482101F0B9F00A39179 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = /System/Library/Frameworks/QuartzCore.framework; sourceTree = "<absolute>"; };
 		2093412D10285A27004FC05A /* gkscore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gkscore.h; path = ../gkscore.h; sourceTree = SOURCE_ROOT; };
@@ -63,6 +66,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				13C7C4E3200F4851007A6396 /* libzmq.a in Frameworks */,
 				8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */,
 				202DC483101F0B9F00A39179 /* QuartzCore.framework in Frameworks */,
 			);
@@ -125,6 +129,7 @@
 		29B97315FDCFA39411CA2CEA /* Other Sources */ = {
 			isa = PBXGroup;
 			children = (
+				13C7C4E1200F47A4007A6396 /* zmq.h */,
 				6629D22816E0F03F009E93C2 /* ft.c */,
 				20F444700FCC0F0000FC6780 /* main.m */,
 				6641A633102AC967001FB593 /* dl.c */,
@@ -157,6 +162,7 @@
 		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				13C7C4E2200F4851007A6396 /* libzmq.a */,
 				1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */,
 				1058C7A2FEA54F0111CA2CBB /* Other Frameworks */,
 			);
@@ -289,10 +295,13 @@
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = $SRCROOT/../../../3rdparty/build/lib;
+				"LIBRARY_SEARCH_PATHS[arch=*]" = $SRCROOT/../../../3rdparty/build/lib;
 				"OTHER_CFLAGS[arch=*]" = "-DXFT";
 				OTHER_LDFLAGS = (
 					"-L/usr/X11/lib",
 					"-lfreetype",
+					"-lc++",
 				);
 				PRODUCT_NAME = GKSTerm;
 				WRAPPER_EXTENSION = app;
@@ -316,10 +325,13 @@
 				);
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = $SRCROOT/../../../3rdparty/build/lib;
+				"LIBRARY_SEARCH_PATHS[arch=*]" = $SRCROOT/../../../3rdparty/build/lib;
 				"OTHER_CFLAGS[arch=*]" = "-DXFT";
 				OTHER_LDFLAGS = (
 					"-L/usr/X11/lib",
 					"-lfreetype",
+					"-lc++",
 				);
 				PRODUCT_NAME = GKSTerm;
 				WRAPPER_EXTENSION = app;
