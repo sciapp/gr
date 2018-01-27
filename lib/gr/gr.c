@@ -7383,14 +7383,53 @@ void latex2image(char *string, int pointSize, double *rgb,
     gr_readimage(path, width, height, data);
 }
 
+int *rotl90(int m, int n, int *mat)
+{
+  int *trans = (int *) xmalloc(m * n * sizeof(int));
+  int i, j;
+
+  for (j = 0; j < n; j++)
+    for (i = 0; i < m; i++)
+      trans[(m-1-i)*n + j] = mat[j*m + i];
+
+  return trans;
+}
+
+static
+int *rot180(int m, int n, int *mat)
+{
+  int *trans = (int *) xmalloc(m * n * sizeof(int));
+  int i, j;
+
+  for (j = 0; j < n; j++)
+    for (i = 0; i < m; i++)
+      trans[(n-1-j)*m + m-1-i] = mat[j*m + i];
+
+  return trans;
+}
+
+static
+int *rotr90(int m, int n, int *mat)
+{
+  int *trans = (int *) xmalloc(m * n * sizeof(int));
+  int i, j;
+
+  for (j = 0; j < n; j++)
+    for (i = 0; i < m; i++)
+      trans[i*n + n-1-j] = mat[j*m + i];
+
+  return trans;
+}
+
 void gr_mathtex(double x, double y, char *string)
 {
   int wkid = 1, errind, conid, wtype, dcunit;
   int pointSize, pixels, color;
-  double chh, rgb[3];
-  int width, height, *data = NULL;
-  double w, h, xmin, xmax, ymin, ymax;
-  int halign, valign, tnr;
+  double chh, rgb[3], ux, uy;
+  int width, height, *data = NULL, *trans = NULL;
+  double rad, w, h, xmin, xmax, ymin, ymax, xcenter, ycenter;
+  double x1, x2, y1, y2;
+  int angle, path, halign, valign, tnr;
 
   check_autoinit;
 
@@ -7411,6 +7450,16 @@ void gr_mathtex(double x, double y, char *string)
   pointSize = chh * pixels;
   latex2image(string, pointSize, rgb, &width, &height, &data);
 
+  gks_inq_text_upvec(&errind, &ux, &uy);
+  ux = nx.a * x_lin(ux);
+  uy = nx.c * y_lin(uy);
+
+  rad = -atan2(ux, uy);
+  angle = (int)(rad * 180 / M_PI + 0.5);
+  if (angle < 0)
+    angle += 360;
+  path = ((angle + 45) / 90) % 4;
+
   if (data != NULL)
     {
       w =  width / (double) pixels;
@@ -7418,17 +7467,44 @@ void gr_mathtex(double x, double y, char *string)
 
       gks_inq_text_align(&errind, &halign, &valign);
 
-      xmin = x + xfac[halign] * w;
+      xmin = x_lin(x) + xfac[halign] * w;
       xmax = xmin + w;
-      ymin = y + yfac[valign] * h;
+      ymin = y_lin(y) + yfac[valign] * h;
       ymax = ymin + h;
+
+      xcenter = 0.5 * (xmin + xmax);
+      ycenter = 0.5 * (ymin + ymax);
+
+      x1 = xcenter + (xmin - xcenter) * cos(rad) - (ymin - ycenter) * sin(rad);
+      y1 = ycenter + (xmin - xcenter) * sin(rad) + (ymin - ycenter) * cos(rad);
+      x2 = xcenter + (xmax - xcenter) * cos(rad) - (ymax - ycenter) * sin(rad);
+      y2 = ycenter + (xmax - xcenter) * sin(rad) + (ymax - ycenter) * cos(rad);
 
       gks_inq_current_xformno(&errind, &tnr);
       if (tnr != NDC)
         gks_select_xform(NDC);
 
-      gks_draw_image(x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin),
-                     width, height, data);
+      switch (path)
+        {
+          case 0:
+            gks_draw_image(x1, y2, x2, y1, width, height, data);
+            break;
+          case 1:
+            trans = rotl90(width, height, data);
+            gks_draw_image(x2, y2, x1, y1, height, width, trans);
+            free(trans);
+            break;
+          case 2:
+            trans = rot180(width, height, data);
+            gks_draw_image(x2, y1, x1, y2, width, height, trans);
+            free(trans);
+            break;
+          case 3:
+            trans = rotr90(width, height, data);
+            gks_draw_image(x1, y1, x2, y2, height, width, trans);
+            free(trans);
+            break;
+        }
 
       if (tnr != NDC)
         gks_select_xform(tnr);
