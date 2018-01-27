@@ -7421,7 +7421,9 @@ int *rotr90(int m, int n, int *mat)
   return trans;
 }
 
-void gr_mathtex(double x, double y, char *string)
+static
+void mathtex(double x, double y, char *string,
+             int inquire, double *tbx, double *tby)
 {
   int wkid = 1, errind, conid, wtype, dcunit;
   int pointSize, pixels, color;
@@ -7480,40 +7482,60 @@ void gr_mathtex(double x, double y, char *string)
       x2 = xcenter + (xmax - xcenter) * cos(rad) - (ymax - ycenter) * sin(rad);
       y2 = ycenter + (xmax - xcenter) * sin(rad) + (ymax - ycenter) * cos(rad);
 
-      gks_inq_current_xformno(&errind, &tnr);
-      if (tnr != NDC)
-        gks_select_xform(NDC);
-
-      switch (path)
+      if (inquire)
         {
-          case 0:
-            gks_draw_image(x1, y2, x2, y1, width, height, data);
-            break;
-          case 1:
-            trans = rotl90(width, height, data);
-            gks_draw_image(x2, y2, x1, y1, height, width, trans);
-            free(trans);
-            break;
-          case 2:
-            trans = rot180(width, height, data);
-            gks_draw_image(x2, y1, x1, y2, width, height, trans);
-            free(trans);
-            break;
-          case 3:
-            trans = rotr90(width, height, data);
-            gks_draw_image(x1, y1, x2, y2, height, width, trans);
-            free(trans);
-            break;
+          tbx[0] = x1; tby[0] = y1;
+          tbx[1] = x2; tby[1] = y1;
+          tbx[2] = x2; tby[2] = y2;
+          tbx[3] = x1; tby[3] = y2;
         }
+      else
+        {
+          gks_inq_current_xformno(&errind, &tnr);
+          if (tnr != NDC)
+            gks_select_xform(NDC);
 
-      if (tnr != NDC)
-        gks_select_xform(tnr);
+          switch (path)
+            {
+              case 0:
+                gks_draw_image(x1, y2, x2, y1, width, height, data);
+                break;
+              case 1:
+                trans = rotl90(width, height, data);
+                gks_draw_image(x2, y2, x1, y1, height, width, trans);
+                free(trans);
+                break;
+              case 2:
+                trans = rot180(width, height, data);
+                gks_draw_image(x2, y1, x1, y2, width, height, trans);
+                free(trans);
+                break;
+              case 3:
+                trans = rotr90(width, height, data);
+                gks_draw_image(x1, y1, x2, y2, height, width, trans);
+                free(trans);
+                break;
+            }
+
+          if (tnr != NDC)
+            gks_select_xform(tnr);
+        }
 
       free(data);
     }
+}
+
+void gr_mathtex(double x, double y, char *string)
+{
+  mathtex(x, y, string, 0, NULL, NULL);
 
   if (flag_graphics)
     gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+}
+
+void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
+{
+  mathtex(x, y, string, 1, tbx, tby);
 }
 
 void gr_beginselection(int index, int type)

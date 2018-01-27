@@ -148,6 +148,7 @@ DLLEXPORT void gr_endgraphics(void);
 DLLEXPORT char *gr_getgraphics(void);
 DLLEXPORT int gr_drawgraphics(char *);
 DLLEXPORT void gr_mathtex(double, double, char *);
+DLLEXPORT void gr_inqmathtex(double, double, char *, double *, double *);
 DLLEXPORT void gr_beginselection(int, int);
 DLLEXPORT void gr_endselection(void);
 DLLEXPORT void gr_moveselection(double, double);

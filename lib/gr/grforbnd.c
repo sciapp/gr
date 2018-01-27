@@ -601,3 +601,16 @@ void FORTRAN(gr_mathtex)(
   free(_string);
 }
 
+void FORTRAN(gr_inqmathtex)(
+  double *x, double *y, char *string, double *tbx, double *tby,
+  unsigned short string_len)
+{
+  char *_string;
+
+  _string = (char *) calloc(1, sizeof(char) * string_len);
+  strncpy(_string, string, string_len);
+
+  gr_inqmathtex(*x, *y, _string, tbx, tby);
+
+  free(_string);
+}
