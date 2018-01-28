@@ -7429,9 +7429,9 @@ void mathtex(double x, double y, char *string,
   int pointSize, pixels, color;
   double chh, rgb[3], ux, uy;
   int width, height, *data = NULL, *trans = NULL;
-  double rad, w, h, xmin, xmax, ymin, ymax, xcenter, ycenter;
+  double rad, w, h, rx, ry, xx, yy, bbx[4], bby[4];
   double x1, x2, y1, y2;
-  int angle, path, halign, valign, tnr;
+  int i, angle, path, halign, valign, tnr;
 
   check_autoinit;
 
@@ -7469,28 +7469,52 @@ void mathtex(double x, double y, char *string,
 
       gks_inq_text_align(&errind, &halign, &valign);
 
-      xmin = x_lin(x) + xfac[halign] * w;
-      xmax = xmin + w;
-      ymin = y_lin(y) + yfac[valign] * h;
-      ymax = ymin + h;
+      rx = x;
+      switch (halign)
+        {
+          case 2: rx -= 0.5 * w; break;
+          case 3: rx -= w; break;
+        }
+      ry = y;
+      switch (valign)
+        {
+          case 1: ry -= h - chh * 0.04; break;
+          case 2: ry -= h; break;
+          case 3: ry -= 0.5 * h; break;
+          case 5: ry -= chh * 0.04; break;
+        }
+      bbx[0] = rx;
+      bbx[1] = rx + w;
+      bbx[2] = bbx[1];
+      bbx[3] = bbx[0];
+      bby[0] = ry;
+      bby[1] = bby[0];
+      bby[2] = ry + h;
+      bby[3] = bby[2];
 
-      xcenter = 0.5 * (xmin + xmax);
-      ycenter = 0.5 * (ymin + ymax);
-
-      x1 = xcenter + (xmin - xcenter) * cos(rad) - (ymin - ycenter) * sin(rad);
-      y1 = ycenter + (xmin - xcenter) * sin(rad) + (ymin - ycenter) * cos(rad);
-      x2 = xcenter + (xmax - xcenter) * cos(rad) - (ymax - ycenter) * sin(rad);
-      y2 = ycenter + (xmax - xcenter) * sin(rad) + (ymax - ycenter) * cos(rad);
+      for (i = 0; i < 4; i++)
+        {
+          xx = bbx[i] - x;
+          yy = bby[i] - y;
+          bbx[i] = x + cos(rad) * xx - sin(rad) * yy;
+          bby[i] = y + sin(rad) * xx + cos(rad) * yy;
+        }
 
       if (inquire)
         {
-          tbx[0] = x1; tby[0] = y1;
-          tbx[1] = x2; tby[1] = y1;
-          tbx[2] = x2; tby[2] = y2;
-          tbx[3] = x1; tby[3] = y2;
+          for (i = 0; i < 4; i++)
+            {
+              tbx[i] = bbx[i];
+              tby[i] = bby[i];
+            }
         }
       else
         {
+          x1 = bbx[0];
+          x2 = bbx[2];
+          y1 = bby[0];
+          y2 = bby[2];
+
           gks_inq_current_xformno(&errind, &tnr);
           if (tnr != NDC)
             gks_select_xform(NDC);
