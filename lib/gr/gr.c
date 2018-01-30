@@ -1116,6 +1116,18 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
 #endif
 
 static
+char *xcalloc(int count, int size)
+{
+  char *result = (char *) calloc(count, size);
+  if (!result)
+    {
+      fprintf(stderr, "out of virtual memory\n");
+      abort();
+    }
+  return (result);
+}
+
+static
 char *xmalloc(int size)
 {
   char *result = (char *) malloc(size);
@@ -7390,7 +7402,7 @@ void latex2image(char *string, int pointSize, double *rgb,
 
 int *rotl90(int m, int n, int *mat)
 {
-  int *trans = (int *) xmalloc(m * n * sizeof(int));
+  int *trans = (int *) xcalloc(m * n, sizeof(int));
   int i, j;
 
   for (j = 0; j < n; j++)
@@ -7403,7 +7415,7 @@ int *rotl90(int m, int n, int *mat)
 static
 int *rot180(int m, int n, int *mat)
 {
-  int *trans = (int *) xmalloc(m * n * sizeof(int));
+  int *trans = (int *) xcalloc(m * n, sizeof(int));
   int i, j;
 
   for (j = 0; j < n; j++)
@@ -7416,7 +7428,7 @@ int *rot180(int m, int n, int *mat)
 static
 int *rotr90(int m, int n, int *mat)
 {
-  int *trans = (int *) xmalloc(m * n * sizeof(int));
+  int *trans = (int *) xcalloc(m * n, sizeof(int));
   int i, j;
 
   for (j = 0; j < n; j++)
@@ -7433,17 +7445,17 @@ void mathtex(double x, double y, char *string,
   int wkid = 1, errind, conid, wtype, dcunit;
   int pointSize, pixels, color;
   double chh, rgb[3], ux, uy;
-  int width, height, *data = NULL, *trans = NULL;
-  double rad, w, h, rx, ry, xx, yy, bbx[4], bby[4];
-  double x1, x2, y1, y2;
-  int i, angle, path, halign, valign, tnr;
+  int width, height, *data = NULL, w, h, *trans = NULL;
+  double rad, rw, rh, rx, ry, xx, yy, bbx[4], bby[4];
+  double x1, x2, y1, y2, midx, midy, sinf, cosf;
+  int i, j, ii, jj, angle, path, halign, valign, tnr;
 
   check_autoinit;
 
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
-  gks_inq_max_ds_size(wtype, &errind, &dcunit, &w, &h, &width, &height);
+  gks_inq_max_ds_size(wtype, &errind, &dcunit, &rw, &rh, &width, &height);
   if (sizex > 0)
-    pixels = sizex / h * height;
+    pixels = sizex / rh * height;
   else
     pixels = 500;
   if (wtype == 101 || wtype == 102 || wtype == 120 || wtype == 382)
@@ -7469,32 +7481,32 @@ void mathtex(double x, double y, char *string,
 
   if (data != NULL)
     {
-      w =  width / (double) pixels;
-      h = height / (double) pixels;
+      rw =  width / (double) pixels;
+      rh = height / (double) pixels;
 
       gks_inq_text_align(&errind, &halign, &valign);
 
       rx = x;
       switch (halign)
         {
-          case 2: rx -= 0.5 * w; break;
-          case 3: rx -= w; break;
+          case 2: rx -= 0.5 * rw; break;
+          case 3: rx -= rw; break;
         }
       ry = y;
       switch (valign)
         {
-          case 1: ry -= h - chh * 0.04; break;
-          case 2: ry -= h; break;
-          case 3: ry -= 0.5 * h; break;
+          case 1: ry -= rh - chh * 0.04; break;
+          case 2: ry -= rh; break;
+          case 3: ry -= 0.5 * rh; break;
           case 5: ry -= chh * 0.04; break;
         }
       bbx[0] = rx;
-      bbx[1] = rx + w;
+      bbx[1] = rx + rw;
       bbx[2] = bbx[1];
       bbx[3] = bbx[0];
       bby[0] = ry;
       bby[1] = bby[0];
-      bby[2] = ry + h;
+      bby[2] = ry + rh;
       bby[3] = bby[2];
 
       x1 = y1 = FLT_MAX;
@@ -7527,26 +7539,51 @@ void mathtex(double x, double y, char *string,
           if (tnr != NDC)
             gks_select_xform(NDC);
 
-          switch (path)
+          if (angle % 90 == 0)
             {
-              case 0:
-                gks_draw_image(x1, y2, x2, y1, width, height, data);
-                break;
-              case 1:
-                trans = rotl90(width, height, data);
-                gks_draw_image(x1, y2, x2, y1, height, width, trans);
-                free(trans);
-                break;
-              case 2:
-                trans = rot180(width, height, data);
-                gks_draw_image(x1, y2, x2, y1, width, height, trans);
-                free(trans);
-                break;
-              case 3:
-                trans = rotr90(width, height, data);
-                gks_draw_image(x1, y2, x2, y1, height, width, trans);
-                free(trans);
-                break;
+              switch (path)
+                {
+                  case 0:
+                    gks_draw_image(x1, y2, x2, y1, width, height, data);
+                    break;
+                  case 1:
+                    trans = rotl90(width, height, data);
+                    gks_draw_image(x1, y2, x2, y1, height, width, trans);
+                    free(trans);
+                    break;
+                  case 2:
+                    trans = rot180(width, height, data);
+                    gks_draw_image(x1, y2, x2, y1, width, height, trans);
+                    free(trans);
+                    break;
+                  case 3:
+                    trans = rotr90(width, height, data);
+                    gks_draw_image(x1, y2, x2, y1, height, width, trans);
+                    free(trans);
+                    break;
+                }
+            }
+          else
+            {
+              w = (int)((x2 - x1) * pixels + 0.5),
+              h = (int)((y2 - y1) * pixels + 0.5);
+              trans = (int *) xcalloc(w * h, sizeof(int));
+              midx = ceil(0.5 * w);
+              midy = ceil(0.5 * h);
+              sinf = sin(rad);
+              cosf = cos(rad);
+              for (j = 0; j < h; j++)
+                for (i = 0; i < w; i++)
+                  {
+                    xx = (i - midx) * cosf - (j - midy) * sinf;
+                    yy = (i - midx) * sinf + (j - midy) * cosf;
+                    ii = round(xx) + ceil(0.5 * width);
+                    jj = round(yy) + ceil(0.5 * height);
+                    if (ii >= 0 && jj >= 0 && ii < width && jj < height)
+                      trans[j * w + i] = data[jj * width + ii];
+                  }
+              gks_draw_image(x1, y2, x2, y1, w, h, trans);
+              free(trans);
             }
 
           if (tnr != NDC)
