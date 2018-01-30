@@ -6594,16 +6594,27 @@ double gr_tick(double amin, double amax)
                          difference between the minimum and maximum value */
 }
 
+static
+int check_range(double a, double b)
+{
+  double d;
+
+  if (a != 0)
+    d = a;
+  else if (b != 0)
+    d = b;
+  else
+    d = 1;
+
+  return fabs((b - a) / d) * 0.000001 > DBL_EPSILON;
+}
+
 int gr_validaterange(double amin, double amax)
 {
   /* Check whether the given coordinate range does not lead
-     to loss of precision in subsequent GR functions. It must
-     be ensured that there are at least 4 significant digits
+     to loss of precision in subsequent GR functions, e.g.
      when applying normalization or device transformations. */
-  if (amin < amax && fabs(amax - amin) * 0.0001 > DBL_EPSILON)
-    return 1;
-  else
-    return 0;
+  return check_range(amin, amax);
 }
 
 #ifdef _MSC_VER
