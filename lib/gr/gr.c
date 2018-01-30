@@ -173,12 +173,6 @@ double arrow_size = 1;
 static
 int flag_printing = 0, flag_graphics = 0;
 
-static
-double xfac[4] = { 0, 0, -0.5, -1 };
-
-static
-double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
-
 #define DEFAULT_FIRST_COLOR 8
 #define DEFAULT_LAST_COLOR 79
 
@@ -7492,12 +7486,20 @@ void mathtex(double x, double y, char *string,
       bby[2] = ry + h;
       bby[3] = bby[2];
 
+      x1 = y1 = FLT_MAX;
+      x2 = y2 = -FLT_MAX;
+
       for (i = 0; i < 4; i++)
         {
           xx = bbx[i] - x;
           yy = bby[i] - y;
           bbx[i] = x + cos(rad) * xx - sin(rad) * yy;
           bby[i] = y + sin(rad) * xx + cos(rad) * yy;
+
+          x1 = min(x1, bbx[i]);
+          x2 = max(x2, bbx[i]);
+          y1 = min(y1, bby[i]);
+          y2 = max(y2, bby[i]);
         }
 
       if (inquire)
@@ -7510,11 +7512,6 @@ void mathtex(double x, double y, char *string,
         }
       else
         {
-          x1 = bbx[0];
-          x2 = bbx[2];
-          y1 = bby[0];
-          y2 = bby[2];
-
           gks_inq_current_xformno(&errind, &tnr);
           if (tnr != NDC)
             gks_select_xform(NDC);
