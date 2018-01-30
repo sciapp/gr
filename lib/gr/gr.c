@@ -7534,17 +7534,17 @@ void mathtex(double x, double y, char *string,
                 break;
               case 1:
                 trans = rotl90(width, height, data);
-                gks_draw_image(x2, y2, x1, y1, height, width, trans);
+                gks_draw_image(x1, y2, x2, y1, height, width, trans);
                 free(trans);
                 break;
               case 2:
                 trans = rot180(width, height, data);
-                gks_draw_image(x2, y1, x1, y2, width, height, trans);
+                gks_draw_image(x1, y2, x2, y1, width, height, trans);
                 free(trans);
                 break;
               case 3:
                 trans = rotr90(width, height, data);
-                gks_draw_image(x1, y1, x2, y2, height, width, trans);
+                gks_draw_image(x1, y2, x2, y1, height, width, trans);
                 free(trans);
                 break;
             }
