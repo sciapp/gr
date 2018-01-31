@@ -61,8 +61,10 @@ endif
 
 targets: prerequisites libGKS.a libGKS.so demo gksm plugins
 
-prerequisites:
+prerequisites: ../../3rdparty/build/include/zmq.h
 	@for d in bzip2 freetype jpeg libpng16 zlib; do make -C ../../3rdparty/$$d; done
+
+../../3rdparty/build/include/zmq.h:
 	@cd ../../3rdparty/zeromq && ./build.sh
 
 libGKS.a: $(GKSOBJS)
