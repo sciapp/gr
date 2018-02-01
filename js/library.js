@@ -36,8 +36,7 @@ mergeInto(LibraryManager.library, {
 
     },
 
-    js_fill_routine: function(n, px, py, color) {
-
+    js_fill_routine: function(n, px, py, colia) {
         var rgba = Module.HEAPU8.subarray(colia, colia + 4);
         px = Module.HEAPF64.subarray(px / 8, px / 8 + n);
         py = Module.HEAPF64.subarray(py / 8, py / 8 + n);
