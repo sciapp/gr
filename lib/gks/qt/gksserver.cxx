@@ -13,7 +13,6 @@ GKSServer::GKSServer(QObject *parent)
   : QTcpServer(parent)
 {
   setMaxPendingConnections(MAXCONN);
-  connect(this, SIGNAL(newConnection()), this, SLOT(open()));
   connect(this, SIGNAL(newConnection()), this, SLOT(connectSocket()));
   s = NULL;
   bool ok = listen(QHostAddress::Any, PORT);
@@ -28,11 +27,6 @@ GKSServer::GKSServer(QObject *parent)
   ba = (char *) malloc(SIZE);
   ba_size = SIZE;
   keepOnDisplay = false;
-}
-
-void GKSServer::open()
-{
-  emit(openWindow());
 }
 
 void GKSServer::connectSocket()
