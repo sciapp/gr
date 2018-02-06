@@ -14,22 +14,6 @@ char *gks_a_error_info = NULL;		/* for compatibility with GLI/GKS */
 int gks_errno = 0;
 FILE *gks_a_error_file = NULL;
 
-#ifdef _WIN32
-
-void gks_perror(const char *format, ...)
-{
-  va_list ap;
-  char s[BUFSIZ];
-
-  va_start(ap, format);
-  vsprintf(s, format, ap);
-  va_end(ap);
-
-  MessageBox(NULL, s, "GKS", MB_OK | MB_ICONHAND);
-}
-
-#else
-
 void gks_perror(const char *format, ...)
 {
   va_list ap;
@@ -45,8 +29,6 @@ void gks_perror(const char *format, ...)
 
   fprintf(gks_a_error_file, "\n");
 }
-
-#endif
 
 void gks_fatal_error(const char *args, ...)
 {

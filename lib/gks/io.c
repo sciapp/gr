@@ -50,7 +50,11 @@ int gks_open_file(const char *path, const char *mode)
       return -1;
     }
 
+#ifdef _WIN32
+  fd = _open(path, flags, omode);
+#else
   fd = open(path, flags, omode);
+#endif
   if (fd < 0)
     {
       gks_perror("file open error (%s)", path);
@@ -64,7 +68,11 @@ int gks_read_file(int fd, void *buf, int count)
 {
   int cc;
 
+#ifdef _WIN32
+  cc = _read(fd, buf, count);
+#else
   cc = read(fd, buf, count);
+#endif
   if (cc != count)
     {
       gks_perror("file read error (fd=%d, cc=%d)", fd, cc);
@@ -79,7 +87,11 @@ int gks_write_file(int fd, void *buf, int count)
 {
   int cc;
 
+#ifdef _WIN32
+  cc = _write(fd, buf, count);
+#else
   cc = write(fd, buf, count);
+#endif
   if (cc != count)
     {
       gks_perror("file write error (fd=%d, cc=%d)", fd, cc);
@@ -94,7 +106,11 @@ int gks_close_file(int fd)
 {
   int result;
 
+#ifdef _WIN32
+  result = _close(fd);
+#else
   result = close(fd);
+#endif
   if (result < 0)
     {
       gks_perror("file close error (fd=%d)", fd);

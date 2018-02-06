@@ -1,5 +1,10 @@
 
-#include <QtWidgets/QWidget>
+#include <QtGlobal>
+#if QT_VERSION >= 0x050000
+    #include <QtWidgets/QWidget>
+#else
+    #include <QtGui/QWidget>
+#endif
 #include <QtCore/QMutex>
 
 #include "gksserver.h"
