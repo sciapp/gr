@@ -55,9 +55,9 @@ int connect_socket()
 	     IPPROTO_TCP);  /* use TCP protocol        */
   if (s == -1) {
     perror("socket");
-    return -1;   
+    return -1;
   }
-    
+
   opt = 1;
 #ifdef SO_REUSEADDR
   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt));
@@ -84,7 +84,7 @@ int connect_socket()
     perror("connect");
     return -1;
   }
- 
+
   return s;
 }
 
@@ -122,19 +122,34 @@ void gks_drv_socket(
   int lc, char *chars, void **ptr)
 {
   ws_state_list *wss;
-  
+  const char *command;
+
   wss = (ws_state_list *) *ptr;
 
   switch (fctid)
     {
     case 2:
-      gkss = (gks_state_list_t *) *ptr;      
+      gkss = (gks_state_list_t *) *ptr;
       wss = (ws_state_list *) gks_malloc(sizeof(ws_state_list));
 
+      if (ia[2] == 411)
+        {
+          command = gks_getenv("GKS_TERM_COMMAND");
+          if (command == NULL)
+            command = "gksterm &";
+
+          if (system(command) != 0)
+	    gks_perror("could not auto-start GKS terminal application");
+          else
+            sleep(2);
+        }
+
       wss->s = connect_socket();
+
       if (wss->s == -1)
 	{
-	  gks_perror("can't connect to GKS socket application\nDid you start 'gksqt or gkswebapp'?\n");
+	  gks_perror("can't connect to GKS socket application\n"
+                     "Did you start 'gksterm'?\n");
 
 	  gks_free(wss);
 	  wss = NULL;

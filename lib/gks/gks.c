@@ -81,6 +81,7 @@ ws_descr_t ws_types[] = {
   { 390, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "wmf", NULL },
   { 400, GKS_K_METERS, 0.28560, 0.17850, 1280,  800, 0, NULL, NULL },
   { 410, GKS_K_METERS, 0.28560, 0.17850, 1280,  800, 0, NULL, NULL },
+  { 411, GKS_K_METERS, 0.28560, 0.17850, 1280,  800, 0, NULL, NULL },
   { 415, GKS_K_METERS, 0.28560, 0.17850, 1280,  800, 0, NULL, NULL },
   { 420, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, NULL, NULL },
   { 430, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, NULL, NULL }
@@ -242,6 +243,7 @@ void gks_ddlk(
 	      break;
 
 	    case 410:
+	    case 411:
 	      gks_drv_socket(fctid, dx, dy, dimx, i_arr,
 		len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
 		ptr);

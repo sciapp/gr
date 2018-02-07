@@ -156,10 +156,10 @@ void gks_lookup_font(int fd, int version, int font, int chr, stroke_data_t *s)
 		    *elptr++ = *ebptr++;
 		}
 	      else
-		gks_fatal_error("GKS (gksio): file read error");
+		gks_fatal_error("font file read error");
 	    }
 	  else
-	    gks_fatal_error("GKS (gksio): file position error");
+	    gks_fatal_error("font file positioning error");
 	}
       memmove((void *) s, (void *) bufcache[chr], 256 * sizeof(int));
 
@@ -168,7 +168,7 @@ void gks_lookup_font(int fd, int version, int font, int chr, stroke_data_t *s)
     }
   else
     {
-      gks_fatal_error("GKS (gksio): can't access font database");
+      gks_fatal_error("can't access font database");
     }
 }
 
