@@ -200,7 +200,7 @@ packages-fpm:
   image: debian:8
   script:
   - apt-get update
-  - apt-get install -y wget build-essential mesa-common-dev gfortran libqt4-dev qtdeclarative5-dev libgs-dev texlive-latex-base dvipng cmake patch python2.7 rpm ruby-dev xorg-dev git
+  - apt-get install -y wget build-essential mesa-common-dev gfortran libqt4-dev qtdeclarative5-dev libgs-dev texlive-latex-base dvipng cmake patch python2.7 rpm ruby-dev xorg-dev git automake libtool
   - gem install fpm
   - make "DISTROS=centos debian suse" linuxpackages
   - mkdir -p artifacts/linux/centos
