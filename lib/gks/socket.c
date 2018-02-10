@@ -134,12 +134,12 @@ void gks_drv_socket(
 
       if (ia[2] == 411)
         {
-          command = gks_getenv("GKS_TERM_COMMAND");
+          command = gks_getenv("GKS_QT");
           if (command == NULL)
-            command = "gksterm &";
+            command = "gksqt";
 
           if (system(command) != 0)
-	    gks_perror("could not auto-start GKS terminal application");
+	    gks_perror("could not auto-start GKS Qt application");
           else
             sleep(2);
         }
@@ -149,7 +149,7 @@ void gks_drv_socket(
       if (wss->s == -1)
 	{
 	  gks_perror("can't connect to GKS socket application\n"
-                     "Did you start 'gksterm'?\n");
+                     "Did you start 'gksqt'?\n");
 
 	  gks_free(wss);
 	  wss = NULL;

@@ -16,7 +16,7 @@
 #endif
 
 #define QT_NAME_STRING "Qt5"
-#define QT_PLUGIN_ENTRY_NAME gksterm
+#define QT_PLUGIN_ENTRY_NAME gksqt
 
 #include "qtplugin_impl.cxx"
 
