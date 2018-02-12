@@ -414,14 +414,13 @@ void polyline(int n, double *px, double *py)
   if (width < 1)
     width = 1;
 
-  if (ln_color <= 0 || ln_color >= MAX_COLOR)
+  if (ln_color < 0 || ln_color >= MAX_COLOR)
     ln_color = 1;
-
-  QColor transparent_color(p->rgb[ln_color]);
-  transparent_color.setAlpha(p->transparency);
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
+  QColor transparent_color(p->rgb[ln_color]);
+  transparent_color.setAlpha(p->transparency);
 
   if (ln_type != GKS_K_LINETYPE_SOLID)
     {
@@ -573,6 +572,7 @@ void polymarker(int n, double *px, double *py)
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
+
   if (gkss->version > 4)
     {
       ln_width = (p->width + p->height) * 0.001;
@@ -581,6 +581,9 @@ void polymarker(int n, double *px, double *py)
     }
   else
     ln_width = 1;
+
+  if (mk_color < 0 || mk_color >= MAX_COLOR)
+    mk_color = 1;
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
@@ -696,6 +699,7 @@ void text(double px, double py, int nchars, char *chars)
   tx_font  = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec  = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? gkss->txcoli : 1;
+
   if (gkss->version > 4)
     {
       ln_width = (p->width + p->height) * 0.001;
@@ -706,6 +710,9 @@ void text(double px, double py, int nchars, char *chars)
     ln_width = 1;
   if (ln_width < 1)
     ln_width = 1;
+
+  if (tx_color < 0 || tx_color >= MAX_COLOR)
+    tx_color = 1;
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
@@ -758,6 +765,7 @@ void fillarea(int n, double *px, double *py)
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
+
   if (gkss->version > 4)
     {
       ln_width = (p->width + p->height) * 0.001;
@@ -769,11 +777,13 @@ void fillarea(int n, double *px, double *py)
   if (ln_width < 1)
     ln_width = 1;
 
-  QColor transparent_color(p->rgb[fl_color]);
-  transparent_color.setAlpha(p->transparency);
+  if (fl_color < 0 || fl_color >= MAX_COLOR)
+    fl_color = 1;
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
+  QColor transparent_color(p->rgb[fl_color]);
+  transparent_color.setAlpha(p->transparency);
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
