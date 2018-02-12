@@ -995,6 +995,8 @@ void interp(char *str)
           memmove(&saved_gkss, gkss, sizeof(gks_state_list_t));
           memmove(gkss, sl, sizeof(gks_state_list_t));
 
+          gkss->fontfile = saved_gkss.fontfile;
+
           if (!p->has_been_resized)
             {
               p->window[0] = p->window[2] = 0.0;

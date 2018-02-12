@@ -11,7 +11,6 @@
 
 int main(int argc, char *argv[])
 {
-    daemon(0, 0);
     QApplication app(argc, argv);
     GKSWidget widget;
     return app.exec();

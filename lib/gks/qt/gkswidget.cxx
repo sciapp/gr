@@ -60,11 +60,13 @@ void resize_pixmap(int width, int height)
 GKSWidget::GKSWidget(QWidget *parent)
   : QWidget(parent)
 {
-  dl = NULL;
   is_mapped = 0;
+  dl = NULL;
 
   GKSServer *server = new GKSServer();
   connect(server, SIGNAL(data(char *)), this, SLOT(interpret(char *)));
+
+  gkss->fontfile = gks_open_font();
 
   p->width = 500; p->height = 500;
   p->dpiX = p->dpiY = 100;
