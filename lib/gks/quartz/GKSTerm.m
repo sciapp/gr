@@ -42,6 +42,13 @@ static void handle_is_alive(GKSTerm *gksterm, void *socket, unsigned char *data)
   send_message(socket, reply, sizeof(reply));
 }
 
+static void handle_is_running(GKSTerm *gksterm, void *socket, unsigned char *data) {
+  (void)data;
+  char reply[1];
+  reply[0] = GKSTERM_FUNCTION_IS_RUNNING;
+  send_message(socket, reply, sizeof(reply));
+}
+
 static void handle_draw(GKSTerm *gksterm, void *socket, unsigned char *data) {
   // Send acknowledgement before actually drawing to avoid timeout
   char reply[1];
@@ -92,6 +99,9 @@ static void handle_message(GKSTerm *gksterm, void *socket) {
       break;
     case GKSTERM_FUNCTION_CLOSE_WINDOW:
       handle_close_window(gksterm, socket, data+1);
+      break;
+    case GKSTERM_FUNCTION_IS_RUNNING:
+      handle_is_running(gksterm, socket, data+1);
       break;
     default:
       handle_unknown(socket, data+1);
