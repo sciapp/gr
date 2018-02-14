@@ -1,13 +1,9 @@
  BINDIR = $(DESTDIR)$(GRDIR)/bin
-  QMAKE =
-
-ifneq ($(QT5_QMAKE),false)
-  QMAKE = $(QT5_QMAKE)
-endif
+  QMAKE ?= $(shell which qmake 2>/dev/null || which qmake-qt5 2>/dev/null || which qmake-qt4 2>/dev/null || echo '')
 
 default:
 	@if [ "$(QMAKE)" != "" ]; then $(QMAKE) -o QMakefile; \
-	make -f Qmakefile; fi
+	make -f QMakefile; fi
 
 install:
 	@if [ -f gksqt ]; then cp -p gksqt $(BINDIR); fi

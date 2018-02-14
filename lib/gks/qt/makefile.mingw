@@ -1,0 +1,14 @@
+default: gksqt.exe
+
+gksqt.exe: afm.cxx dl.cxx error.cxx font.cxx gksqt.cxx gksserver.cxx gkswidget.cxx io.cxx malloc.cxx util.cxx
+	wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-i686.tar.gz
+	tar xzf qt5-runtime-Windows-i686.tar.gz
+	moc -DGRDIR=\"$(GRDIR)\" -Iinclude gkswidget.h -o moc_gkswidget.cxx
+	moc -DGRDIR=\"$(GRDIR)\" -Iinclude gksserver.h -o moc_gksserver.cxx
+	$(CXX) -fno-exceptions -std=c++11 -DGRDIR=\"$(GRDIR)\" -Iinclude -Iinclude/QtCore -Iinclude/QtNetwork -Iinclude/QtWidgets -I../ -o $@ $^ moc_gkswidget.cxx moc_gksserver.cxx Qt5Core.dll Qt5Gui.dll Qt5Widgets.dll Qt5Network.dll
+
+clean:
+	$(RM) include
+	$(RM) *.dll
+	$(RM) moc_*.cxx
+	$(RM) gksqt.exe

@@ -9,10 +9,11 @@ ubuntu-self-contained:
   image: ubuntu:16.04
   script:
   - apt-get update
-  - apt-get install -y wget make gcc g++ libgl1-mesa-dev libglu1-mesa-dev xorg-dev git
+  - apt-get install -y wget make gcc g++ libgl1-mesa-dev libglu1-mesa-dev xorg-dev git qt5-default
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts artifacts/
@@ -37,10 +38,11 @@ debian-self-contained:
   image: debian:9
   script:
   - apt-get update
-  - apt-get install -y wget make patch gcc g++ xz-utils lbzip2 libgl1-mesa-dev libglu1-mesa-dev xorg-dev git
+  - apt-get install -y wget make patch gcc g++ xz-utils lbzip2 libgl1-mesa-dev libglu1-mesa-dev xorg-dev git qt5-default
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts artifacts/
@@ -68,10 +70,11 @@ centos7-self-contained:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which
-  - yum install -y gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
+  - yum install -y gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel qt5-qtbase-devel
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts artifacts/
@@ -102,10 +105,11 @@ centos6-self-contained:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which
-  - yum install -y gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel git
+  - yum install -y gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel git qt-devel
   - make self GRDIR=/tmp/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts artifacts/
@@ -135,9 +139,13 @@ windows-32bit-cross:
   - apt-get update
   - apt-get install -y wget make mingw-w64 pkg-config xorg-dev g++ gcc cmake xz-utils lbzip2 patch git
   - PREFIX=i686-w64-mingw32 ARCHITECTURE=i686 OS=w64_x86-cross-mingw32 CC=i686-w64-mingw32-gcc CXX=i686-w64-mingw32-g++ AR=i686-w64-mingw32-ar RM="rm -f" MAKE="make -f makefile.mingw" make -f makefile.mingw self GRDIR=./
+  - apt-get install -y qtbase5-dev-tools qt5-default
+  - PREFIX=i686-w64-mingw32 ARCHITECTURE=i686 OS=w64_x86-cross-mingw32 CC=i686-w64-mingw32-gcc CXX=i686-w64-mingw32-g++ AR=i686-w64-mingw32-ar RM="rm -f" MAKE="make -f makefile.mingw" make -C lib/gks/qt -f makefile.mingw GRDIR=./
   - mkdir artifacts
   - cp lib/gks/demo.exe artifacts/gksdemo.exe
   - cp lib/gr/demo.exe artifacts/grdemo.exe
+  - cp lib/gks/qt/gksqt.exe artifacts/
+  - cp lib/gks/qt/*.dll artifacts/
   - cp lib/gks/libgks.lib lib/gks/libgks.dll lib/gks/libgks.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libgr.lib lib/gr/libgr.dll lib/gr/libgr.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
   - cp -r lib/gks/fonts artifacts/
   - cp /usr/lib/gcc/i686-w64-mingw32/4.9-win32/libgcc_s_sjlj-1.dll artifacts/
@@ -177,12 +185,14 @@ darwin-self-contained:
     - tags@Scientific-IT-Systems/gr
   script:
   - rm -rf /tmp/gr
-  - make self GRDIR=/tmp/gr
+  - make self GRDIR=/tmp/gr QMAKE=/usr/local/qt5/bin/qmake
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
+  - cp -r lib/gks/qt/gksqt.app artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts artifacts/
+  - cp -r lib/gks/qt/gksqt.app artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/Applications/
@@ -223,6 +233,7 @@ packages-tar:
   script:
   - mkdir -p Windows-i686/gr
   - mv artifacts-windows32/*.dll Windows-i686/gr/
+  - mv artifacts-windows32/gksqt.exe Windows-i686/gr/
   - mv artifacts-windows32/fonts Windows-i686/gr/
   - mv artifacts-windows32/include Windows-i686/gr/
   - rm -rf artifacts-windows32
@@ -233,27 +244,32 @@ packages-tar:
   - rm -rf artifacts-windows64
   - mkdir -p Debian-x86_64/gr/lib
   - mv artifacts-debian9/*.so Debian-x86_64/gr/lib/
+  - mv artifacts-debian9/gksqt Debian-x86_64/gr/
   - mv artifacts-debian9/fonts Debian-x86_64/gr/
   - mv artifacts-debian9/include Debian-x86_64/gr/
   - rm -rf artifacts-debian9
   - mkdir -p Ubuntu-x86_64/gr/lib
   - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/gr/lib/
+  - mv artifacts-ubuntu1604/gksqt Ubuntu-x86_64/gr/
   - mv artifacts-ubuntu1604/fonts Ubuntu-x86_64/gr/
   - mv artifacts-ubuntu1604/include Ubuntu-x86_64/gr/
   - rm -rf artifacts-ubuntu1604
   - mkdir -p CentOS-x86_64/gr/lib
   - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
+  - mv artifacts-centos7/gksqt CentOS-x86_64/gr/
   - mv artifacts-centos7/fonts CentOS-x86_64/gr/
   - mv artifacts-centos7/include CentOS-x86_64/gr/
   - rm -rf artifacts-centos7
   - mkdir -p Linux-x86_64/gr/lib
   - mv artifacts-centos6/*.so Linux-x86_64/gr/lib/
+  - mv artifacts-centos6/gksqt Linux-x86_64/gr/
   - mv artifacts-centos6/fonts Linux-x86_64/gr/
   - mv artifacts-centos6/include Linux-x86_64/gr/
   - rm -rf artifacts-centos6
   - if [ -d artifacts-darwin ]; then
       mkdir -p Darwin-x86_64/gr/lib;
       mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/;
+      mv artifacts-darwin/gksqt.app Darwin-x86_64/gr/;
       mv artifacts-darwin/fonts Darwin-x86_64/gr/;
       mv artifacts-darwin/include Darwin-x86_64/gr/;
       mv artifacts-darwin/Applications Darwin-x86_64/gr/;
@@ -321,7 +337,7 @@ debian9-install:
   - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
   - gcc -o test test.c -lGR
   - ./test
-    
+
 ubuntu16.04-install:
   stage: install
   image: ubuntu:16.04
@@ -356,7 +372,7 @@ centos7-install:
   - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
   - gcc -o test test.c -lGR
   - ./test
-    
+
 opensuse42.3-install:
   stage: install
   image: opensuse:42.3
