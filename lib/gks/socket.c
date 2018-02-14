@@ -11,6 +11,7 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <pthread.h>
 #else
 #include <windows.h>
 #endif
@@ -116,13 +117,46 @@ int close_socket(int s)
   return 0;
 }
 
+#ifndef _WIN32
+static
+void *thread_func(void *arg)
+{
+  system((char *) arg);
+  return NULL;
+}
+#endif
+
+static
+int start(char *cmd)
+{
+#ifdef _WIN32
+  PROCESS_INFORMATION processInformation = {0};
+  STARTUPINFO startupInfo = {0};
+
+  startupInfo.cb = sizeof(startupInfo);
+  if (!CreateProcess(NULL, cmd,
+                     NULL, NULL, FALSE,
+                     NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW,
+                     NULL, NULL, &startupInfo, &processInformation))
+    return -1;
+#else
+  pthread_t thread;
+
+  if (pthread_create(&thread, NULL, thread_func, (void *) cmd))
+    return -1;
+
+  pthread_join(thread, NULL);
+#endif
+  return 0;
+}
+
 void gks_drv_socket(
   int fctid, int dx, int dy, int dimx, int *ia,
   int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr)
 {
   ws_state_list *wss;
-  const char *command;
+  char *command;
 
   wss = (ws_state_list *) *ptr;
 
@@ -138,10 +172,8 @@ void gks_drv_socket(
           if (command == NULL)
             command = "gksqt";
 
-          if (system(command) != 0)
+          if (start(command) != 0)
 	    gks_perror("could not auto-start GKS Qt application");
-          else
-            sleep(2);
         }
 
       wss->s = connect_socket();
