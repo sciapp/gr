@@ -127,7 +127,7 @@ void *thread_func(void *arg)
 #endif
 
 static
-int start(char *cmd)
+int start(const char *cmd)
 {
 #ifdef _WIN32
   PROCESS_INFORMATION processInformation = {0};
@@ -144,8 +144,6 @@ int start(char *cmd)
 
   if (pthread_create(&thread, NULL, thread_func, (void *) cmd))
     return -1;
-
-  pthread_join(thread, NULL);
 #endif
   return 0;
 }
@@ -156,7 +154,8 @@ void gks_drv_socket(
   int lc, char *chars, void **ptr)
 {
   ws_state_list *wss;
-  char *command;
+  const char *command;
+  int retry_count;
 
   wss = (ws_state_list *) *ptr;
 
@@ -176,7 +175,17 @@ void gks_drv_socket(
 	    gks_perror("could not auto-start GKS Qt application");
         }
 
-      wss->s = connect_socket();
+      for (retry_count = 0; retry_count < 10; retry_count++)
+        {
+          if ((wss->s = connect_socket()) == -1)
+#ifndef _WIN32
+            usleep(300000);
+#else
+            Sleep(300);
+#endif
+          else
+            break;
+        }
 
       if (wss->s == -1)
 	{
