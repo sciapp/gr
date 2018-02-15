@@ -32,7 +32,7 @@ static
 gks_state_list_t *gkss;
 
 static
-int connect_socket()
+int connect_socket(int quiet)
 {
   int s;
   char *env;
@@ -55,7 +55,7 @@ int connect_socket()
 	     SOCK_STREAM,   /* stream socket           */
 	     IPPROTO_TCP);  /* use TCP protocol        */
   if (s == -1) {
-    perror("socket");
+    if (!quiet) perror("socket");
     return -1;
   }
 
@@ -72,7 +72,7 @@ int connect_socket()
     env = (char *) gks_getenv("GKSconid");
 
   if ((hp = gethostbyname(env != NULL ? env : "127.0.0.1")) == 0) {
-    perror("gethostbyname");
+    if (!quiet) perror("gethostbyname");
     return -1;
   }
 
@@ -82,7 +82,7 @@ int connect_socket()
   sin.sin_port = htons(PORT);
 
   if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) == -1) {
-    perror("connect");
+    if (!quiet) perror("connect");
     return -1;
   }
 
@@ -175,9 +175,9 @@ void gks_drv_socket(
 	    gks_perror("could not auto-start GKS Qt application");
         }
 
-      for (retry_count = 0; retry_count < 10; retry_count++)
+      for (retry_count = 1; retry_count <= 10; retry_count++)
         {
-          if ((wss->s = connect_socket()) == -1)
+          if ((wss->s = connect_socket(retry_count != 10)) == -1)
 #ifndef _WIN32
             usleep(300000);
 #else
