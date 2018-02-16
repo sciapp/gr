@@ -146,6 +146,7 @@ windows-32bit-cross:
   - cp lib/gr/demo.exe artifacts/grdemo.exe
   - cp lib/gks/qt/gksqt.exe artifacts/
   - cp lib/gks/qt/*.dll artifacts/
+  - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libgks.lib lib/gks/libgks.dll lib/gks/libgks.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libgr.lib lib/gr/libgr.dll lib/gr/libgr.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
   - cp -r lib/gks/fonts artifacts/
   - cp /usr/lib/gcc/i686-w64-mingw32/4.9-win32/libgcc_s_sjlj-1.dll artifacts/
@@ -234,6 +235,7 @@ packages-tar:
   - mkdir -p Windows-i686/gr
   - mv artifacts-windows32/*.dll Windows-i686/gr/
   - mv artifacts-windows32/gksqt.exe Windows-i686/gr/
+  - mv artifacts-windows32/platforms Windows-i686/gr/
   - mv artifacts-windows32/fonts Windows-i686/gr/
   - mv artifacts-windows32/include Windows-i686/gr/
   - rm -rf artifacts-windows32
