@@ -193,11 +193,11 @@ darwin-self-contained:
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts artifacts/
-  - cp -r lib/gks/qt/gksqt.app artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
   - mkdir artifacts/Applications/
   - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
+  - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
   - mv artifacts artifacts-darwin
   tags:
   - macos
@@ -232,46 +232,49 @@ packages-tar:
   variables:
     GIT_STRATEGY: none
   script:
-  - mkdir -p Windows-i686/gr
-  - mv artifacts-windows32/*.dll Windows-i686/gr/
-  - mv artifacts-windows32/gksqt.exe Windows-i686/gr/
-  - mv artifacts-windows32/platforms Windows-i686/gr/
+  - mkdir -p Windows-i686/gr/bin
+  - mv artifacts-windows32/*.dll Windows-i686/gr/bin/
+  - mv artifacts-windows32/gksqt.exe Windows-i686/gr/bin/
+  - mv artifacts-windows32/platforms Windows-i686/gr/bin/
   - mv artifacts-windows32/fonts Windows-i686/gr/
   - mv artifacts-windows32/include Windows-i686/gr/
   - rm -rf artifacts-windows32
-  - mkdir -p Windows-x86_64/gr
-  - mv artifacts-windows64/*.dll Windows-x86_64/gr/
+  - mkdir -p Windows-x86_64/gr/bin
+  - mv artifacts-windows64/*.dll Windows-x86_64/gr/bin/
   - mv artifacts-windows64/fonts Windows-x86_64/gr/
   - mv artifacts-windows64/include Windows-x86_64/gr/
   - rm -rf artifacts-windows64
+  - mkdir -p Debian-x86_64/gr/bin
   - mkdir -p Debian-x86_64/gr/lib
   - mv artifacts-debian9/*.so Debian-x86_64/gr/lib/
-  - mv artifacts-debian9/gksqt Debian-x86_64/gr/
+  - mv artifacts-debian9/gksqt Debian-x86_64/gr/bin/
   - mv artifacts-debian9/fonts Debian-x86_64/gr/
   - mv artifacts-debian9/include Debian-x86_64/gr/
   - rm -rf artifacts-debian9
+  - mkdir -p Ubuntu-x86_64/gr/bin
   - mkdir -p Ubuntu-x86_64/gr/lib
   - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/gr/lib/
-  - mv artifacts-ubuntu1604/gksqt Ubuntu-x86_64/gr/
+  - mv artifacts-ubuntu1604/gksqt Ubuntu-x86_64/gr/bin/
   - mv artifacts-ubuntu1604/fonts Ubuntu-x86_64/gr/
   - mv artifacts-ubuntu1604/include Ubuntu-x86_64/gr/
   - rm -rf artifacts-ubuntu1604
+  - mkdir -p CentOS-x86_64/gr/bin
   - mkdir -p CentOS-x86_64/gr/lib
   - mv artifacts-centos7/*.so CentOS-x86_64/gr/lib/
-  - mv artifacts-centos7/gksqt CentOS-x86_64/gr/
+  - mv artifacts-centos7/gksqt CentOS-x86_64/gr/bin/
   - mv artifacts-centos7/fonts CentOS-x86_64/gr/
   - mv artifacts-centos7/include CentOS-x86_64/gr/
   - rm -rf artifacts-centos7
+  - mkdir -p Linux-x86_64/gr/bin
   - mkdir -p Linux-x86_64/gr/lib
   - mv artifacts-centos6/*.so Linux-x86_64/gr/lib/
-  - mv artifacts-centos6/gksqt Linux-x86_64/gr/
+  - mv artifacts-centos6/gksqt Linux-x86_64/gr/bin/
   - mv artifacts-centos6/fonts Linux-x86_64/gr/
   - mv artifacts-centos6/include Linux-x86_64/gr/
   - rm -rf artifacts-centos6
   - if [ -d artifacts-darwin ]; then
       mkdir -p Darwin-x86_64/gr/lib;
       mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/;
-      mv artifacts-darwin/gksqt.app Darwin-x86_64/gr/;
       mv artifacts-darwin/fonts Darwin-x86_64/gr/;
       mv artifacts-darwin/include Darwin-x86_64/gr/;
       mv artifacts-darwin/Applications Darwin-x86_64/gr/;
