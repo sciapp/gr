@@ -187,7 +187,6 @@ darwin-self-contained:
   - make self GRDIR=/tmp/gr QMAKE=/usr/local/qt5/bin/qmake
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
-  - cp -r lib/gks/qt/gksqt.app artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
   - cp -r lib/gks/fonts artifacts/
@@ -196,6 +195,17 @@ darwin-self-contained:
   - mkdir artifacts/Applications/
   - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
   - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
+  - mkdir -p artifacts/Applications/gksqt.app/Contents/Frameworks
+  - mkdir -p artifacts/Applications/gksqt.app/Contents/plugins/platforms
+  - cp /usr/local/qt5/plugins/platforms/libqcocoa.dylib artifacts/Applications/gksqt.app/Contents/plugins/platforms
+  - cd artifacts/Applications
+  - for BINARY in gksqt.app/Contents/plugins/platforms/libqcocoa.dylib gksqt.app/Contents/MacOS/gksqt; do
+      for QT_FRAMEWORK in `otool -L $BINARY | tr '/' '\n' | grep -E 'Qt.*\.framework' | cut -d. -f1`; do
+        rsync -a --exclude Headers --exclude *_debug* /usr/local/qt5/lib/$QT_FRAMEWORK.framework gksqt.app/Contents/Frameworks/;
+        install_name_tool -change `otool -L $BINARY | grep $QT_FRAMEWORK | cut -d\( -f1` @executable_path/../Frameworks/$QT_FRAMEWORK.framework/Versions/Current/$QT_FRAMEWORK $BINARY;
+      done;
+    done
+  - cd ../../
   - mv artifacts artifacts-darwin
   tags:
   - macos
