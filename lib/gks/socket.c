@@ -19,6 +19,10 @@
 #include "gks.h"
 #include "gkscore.h"
 
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
+#endif
+
 #define PORT 8410
 
 typedef struct
@@ -154,8 +158,9 @@ void gks_drv_socket(
   int lc, char *chars, void **ptr)
 {
   ws_state_list *wss;
-  const char *command;
+  const char *command, *env;
   int retry_count;
+  char *cmd = NULL;
 
   wss = (ws_state_list *) *ptr;
 
@@ -169,23 +174,46 @@ void gks_drv_socket(
         {
           command = gks_getenv("GKS_QT");
           if (command == NULL)
-            command = "gksqt";
+            {
+              env = gks_getenv("GRDIR");
+              if (env == NULL)
+                env = GRDIR;
 
-          if (start(command) != 0)
-	    gks_perror("could not auto-start GKS Qt application");
+              cmd = (char *) gks_malloc(MAXPATHLEN);
+#ifndef _WIN32
+#ifdef __APPLE__
+              sprintf(cmd, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
+#else
+              sprintf(cmd, "%s/bin/gksqt", env);
+#endif
+#else
+              sprintf(cmd, "%s\\bin\\gksqt.exe", env);
+#endif
+              command = cmd;
+            }
         }
 
       for (retry_count = 1; retry_count <= 10; retry_count++)
         {
           if ((wss->s = connect_socket(retry_count != 10)) == -1)
+            {
+              if (retry_count == 1)
+                {
+                  if (start(command) != 0)
+                    gks_perror("could not auto-start GKS Qt application");
+                }
 #ifndef _WIN32
-            usleep(300000);
+              usleep(300000);
 #else
-            Sleep(300);
+              Sleep(300);
 #endif
+            }
           else
             break;
         }
+
+      if (cmd != NULL)
+        free(cmd);
 
       if (wss->s == -1)
 	{
