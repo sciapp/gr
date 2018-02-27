@@ -1,8 +1,10 @@
-       GRDIR = /usr/local/gr
-      BINDIR = $(DESTDIR)$(GRDIR)/bin
-      LIBDIR = $(DESTDIR)$(GRDIR)/lib
-      INCDIR = $(DESTDIR)$(GRDIR)/include
-     FONTDIR = $(DESTDIR)$(GRDIR)/fonts
+            GRDIR = /usr/local/gr
+           BINDIR = $(DESTDIR)$(GRDIR)/bin
+           LIBDIR = $(DESTDIR)$(GRDIR)/lib
+           INCDIR = $(DESTDIR)$(GRDIR)/include
+          FONTDIR = $(DESTDIR)$(GRDIR)/fonts
+   THIRDPARTYDIR ?= $(shell pwd)/../../3rdparty/build
+THIRDPARTYINCDIR ?= $(THIRDPARTYDIR)/include
 
 UNAME := $(shell uname)
 
@@ -61,11 +63,11 @@ endif
 
 targets: prerequisites libGKS.a libGKS.so demo gksm plugins gksqt
 
-prerequisites: ../../3rdparty/build/include/zmq.h
+prerequisites: $(THIRDPARTYINCDIR)/zmq.h
 	@for d in bzip2 freetype jpeg libpng16 zlib; do make -C ../../3rdparty/$$d; done
 
-../../3rdparty/build/include/zmq.h:
-	@cd ../../3rdparty/zeromq && ./build.sh
+$(THIRDPARTYINCDIR)/zmq.h:
+	@cd ../../3rdparty/zeromq && ./build.sh $(THIRDPARTYDIR)
 
 libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?
