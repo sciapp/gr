@@ -36,10 +36,19 @@ var Module = {
     },
     canvas: null,
     context: null,
-    setStatus: function(text) {
-    },
+    setStatus: function(text) {},
     totalDependencies: 0,
+    get_dash_list: function(linetype) {
+        var list = Module._malloc(10 * 16);
+        this.ccall('gks_get_dash_list', '', ['number', 'number', 'number'], [linetype, 1.0, list]);
+        var result = [];
+        var len = Module.getValue(list, 'i16');
+        for (var i = 1; i < len + 1; i++) {
+            result.push(Module.getValue(list + i * 4, 'i16'));
+        }
+        Module._free(list);
+        return result;
+    }
 };
 
-window.onerror = function(event) {
-};
+window.onerror = function(event) {};

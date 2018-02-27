@@ -628,7 +628,7 @@ void polyline(int n, double *px, double *py)
   p->color = ln_color;
     
   gks_set_dev_xform(gkss, p->window, p->viewport);
-  gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
+  line_routine_with_transform(n, px, py, ln_type, gkss->cntnr);
     
   if (p->npoints > 0)
     stroke();

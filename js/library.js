@@ -33,7 +33,6 @@ mergeInto(LibraryManager.library, {
         var pattern = context.createPattern(img, "repeat");
         context.fillStyle = pattern;
         context.fill();
-
     },
 
     js_fill_routine: function(n, px, py, colia) {
@@ -111,6 +110,7 @@ mergeInto(LibraryManager.library, {
         rgb = Module.HEAPU8.subarray(rgb, rgb + 4);
         var context = Module.context;
         context.beginPath();
+        context.setLineDash(Module.get_dash_list(linetype));
         context.strokeStyle = "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + rgb[3] + ")";
         context.fillStyle = "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + rgb[3] + ")";
         context.lineWidth = width;
