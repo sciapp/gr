@@ -7,11 +7,11 @@
     #include <QtGui/QApplication>
 #endif
 
-#include "gkswidget.h"
+#include "gksserver.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    GKSWidget widget;
+    GKSServer server;
     return app.exec();
 }

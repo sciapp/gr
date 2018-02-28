@@ -3,6 +3,8 @@
 #include <QTcpSocket>
 #include <qstring.h>
 
+#include "gkswidget.h"
+
 class GKSServer : public QTcpServer
 {
   Q_OBJECT
@@ -14,13 +16,13 @@ public slots:
   void readClient();
   void killSocket();
   void connectSocket();
-  void setKeepOnDisplay(const bool flag);
+  void newWidget();
  
 private:
-  QTcpSocket *s;
+  QTcpSocket *socket;
   char *dl, *ba;
   int nbyte, dl_size, ba_size;
-  bool keepOnDisplay;
+  GKSWidget *widget;
 
 signals:
   void data(char *);

@@ -7,8 +7,6 @@
 #endif
 #include <QtCore/QMutex>
 
-#include "gksserver.h"
-
 class GKSWidget : public QWidget
 {
   Q_OBJECT

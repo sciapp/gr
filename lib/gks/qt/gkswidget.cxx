@@ -63,9 +63,6 @@ GKSWidget::GKSWidget(QWidget *parent)
   is_mapped = 0;
   dl = NULL;
 
-  GKSServer *server = new GKSServer();
-  connect(server, SIGNAL(data(char *)), this, SLOT(interpret(char *)));
-
   gkss->fontfile = gks_open_font();
 
   p->width = 500; p->height = 500;
