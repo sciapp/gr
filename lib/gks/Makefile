@@ -103,6 +103,7 @@ install:
 	cp -a fonts/* $(FONTDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gks.h $(INCDIR)
+	@make -C qt -f makefile.mak install
 
 clean:
 	@make -C plugin clean
