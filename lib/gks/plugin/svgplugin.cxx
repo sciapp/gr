@@ -708,7 +708,8 @@ void fill_routine(int n, double *px, double *py, int tnr)
       svg_printf(p->stream,
 		"<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
 		"Use\" x=\"0\" y=\"0\" width=\"8\" height=\"8\">\n"
-		"<image width=\"8\" height=\"8\" xlink:href=\"data:;base64,\n",\
+		"<image width=\"8\" height=\"8\" "
+                "xlink:href=\"data:image/png;base64,\n",\
 		p->pattern + 1);
       s = base64_stream(TMP_NAME);
       remove(TMP_NAME);
@@ -1065,7 +1066,8 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   remove(TMP_NAME);
   svg_printf(p->stream,
 	     "<g clip-path=\"url(#clip%02d%02d)\">\n"
-	     "<image width=\"%d\" height=\"%d\" xlink:href=\"data:;base64,\n",
+	     "<image width=\"%d\" height=\"%d\" "
+             "xlink:href=\"data:image/png;base64,\n",
 	     path_id, p->path_index, width, height);
   i = j = 0;
   while (s[j])
