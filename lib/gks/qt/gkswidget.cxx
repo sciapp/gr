@@ -12,6 +12,7 @@
 #endif
 #include <QtGui/QPainter>
 #include <QtGui/QImage>
+#include <QIcon>
 
 #endif
 
@@ -71,6 +72,7 @@ GKSWidget::GKSWidget(QWidget *parent)
   initialize_data();
 
   setWindowTitle(tr("GKS QtTerm"));
+  setWindowIcon(QIcon(":/images/gksqt.png"));
 }
 
 void GKSWidget::paintEvent(QPaintEvent *)
