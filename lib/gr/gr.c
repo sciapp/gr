@@ -1491,9 +1491,15 @@ void initialize(int state)
 static
 void resetgks(int sig)
 {
+  static int exiting = 0;
+
   if (sig == SIGUSR1)
     {
-      gr_emergencyclosegks();
+      if (!exiting)
+        {
+          exiting = 1;
+          gr_emergencyclosegks();
+        }
 
       signal(SIGUSR1, previous_handler);
       if (previous_handler != SIG_DFL)
