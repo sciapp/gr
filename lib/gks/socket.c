@@ -44,7 +44,7 @@ int connect_socket(int quiet)
   struct sockaddr_in sin;
   int opt;
 
-#if defined(_WIN32) && !defined(__GNUC__)
+#if defined(_WIN32)
   WORD wVersionRequested = MAKEWORD(1, 1);
   WSADATA wsaData;
 
