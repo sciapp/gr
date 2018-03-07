@@ -2834,23 +2834,32 @@ void gks_inq_max_ds_size(
 
 void gks_emergency_close(void)
 {
-  if (state == GKS_K_SGOP)
-    gks_close_seg();
+  static int closing = 0;
 
-  if (state == GKS_K_WSAC)
+  if (!closing)
     {
-      while (active_ws != NULL)
-	gks_deactivate_ws(active_ws->item);
-    }
+      closing = 1;
 
-  if (state == GKS_K_WSOP)
-    {
-      while (open_ws != NULL)
-	gks_close_ws(open_ws->item);
-    }
+      if (state == GKS_K_SGOP)
+        gks_close_seg();
 
-  if (state == GKS_K_GKOP)
-    gks_close_gks();
+      if (state == GKS_K_WSAC)
+        {
+          while (active_ws != NULL)
+            gks_deactivate_ws(active_ws->item);
+        }
+
+      if (state == GKS_K_WSOP)
+        {
+          while (open_ws != NULL)
+            gks_close_ws(open_ws->item);
+        }
+
+      if (state == GKS_K_GKOP)
+        gks_close_gks();
+
+    closing = 0;
+  }
 }
 
 void gks_set_text_slant(double slant)
