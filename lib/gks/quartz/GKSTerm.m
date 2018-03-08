@@ -15,9 +15,12 @@
 + (void) run: (GKSTerm *)gksterm;
 @end
 
+static void *context = NULL;
+
 static void send_message(void* socket, void* data, size_t data_len) {
   zmq_msg_t message;
-  zmq_msg_init_data(&message, data, data_len, NULL, NULL);
+  zmq_msg_init_size(&message, data_len);
+  memcpy(zmq_msg_data(&message), data, data_len);
   zmq_msg_send(&message, socket, 0);
   zmq_msg_close(&message);
 }
@@ -116,21 +119,25 @@ static void handle_message(GKSTerm *gksterm, void *socket) {
 
 static void forward_message(void *input_socket, void *output_socket) {
   // Forward a multipart message from one zeromq socket to another.
-  // Handle IS_RUNNING requests instead of forwarding them to the worker.
-  zmq_msg_t message;
-  int more;
-  for (int part; more; part++) {
-    zmq_msg_init(&message);
-    zmq_msg_recv(&message, input_socket, 0);
-    more = zmq_msg_more(&message);
-    if (part == 0 && *(unsigned char *)zmq_msg_data(&message) == GKSTERM_FUNCTION_IS_RUNNING) {
-      char reply[1];
-      reply[0] = GKSTERM_FUNCTION_IS_RUNNING;
-      send_message(input_socket, reply, sizeof(reply));
-    } else {
-      zmq_msg_send(&message, output_socket, more ? ZMQ_SNDMORE : 0);
+  zmq_msg_t messages[3];
+  int more = 1;
+  int num_parts = 0;
+  for (int part = 0; part < 3 && more; part++) {
+    zmq_msg_init(&messages[part]);
+    zmq_msg_recv(&messages[part], input_socket, 0);
+    more = zmq_msg_more(&messages[part]);
+    num_parts++;
+  }
+  // Return IS_RUNNING messages to ROUTER
+  if (zmq_msg_size(&messages[num_parts-1]) > 0) {
+    unsigned char *data = (unsigned char *)zmq_msg_data(&messages[num_parts-1]);
+    if (data[0] == GKSTERM_FUNCTION_IS_RUNNING) {
+      output_socket = input_socket;
     }
-    zmq_msg_close(&message);
+  }
+  for (int part = 0; part < num_parts; part++) {
+    zmq_msg_send(&messages[part], output_socket, (part + 1 < num_parts) ? ZMQ_SNDMORE : 0);
+    zmq_msg_close(&messages[part]);
   }
 }
 
@@ -138,7 +145,6 @@ static void forward_message(void *input_socket, void *output_socket) {
 + (void) run: (GKSTerm *)gksterm
 {
   // Handle requests incoming via ZeroMQ
-  void *context = zmq_ctx_new();
   void *frontend = zmq_socket(context, ZMQ_ROUTER);
   void *backend  = zmq_socket(context, ZMQ_DEALER);
   zmq_bind(frontend, "ipc:///tmp/GKSTerm.sock");
@@ -159,7 +165,6 @@ static void forward_message(void *input_socket, void *output_socket) {
   }
   zmq_close(frontend);
   zmq_close(backend);
-  zmq_ctx_term(context);
 }
 @end
 
@@ -167,8 +172,6 @@ static void forward_message(void *input_socket, void *output_socket) {
 @implementation GKSNetworkingWorkerThread
 + (void) run: (GKSTerm *)gksterm
 {
-  // Handle requests incoming via ZeroMQ
-  void *context = zmq_ctx_new();
   void *worker = zmq_socket(context, ZMQ_REP);
   zmq_connect(worker, "inproc://:gksterm:");
 
@@ -182,7 +185,6 @@ static void forward_message(void *input_socket, void *output_socket) {
     }
   }
   zmq_close(worker);
-  zmq_ctx_term(context);
 }
 @end
 
@@ -201,9 +203,9 @@ static bool initialized = NO;
 
   if (!initialized)
     {
-      // Start networking thread
+      // Start networking threads
+      context = zmq_ctx_new();
       [NSThread detachNewThreadSelector: @selector(run:) toTarget:[GKSNetworkingForwarderThread class] withObject:self];
-
       [NSThread detachNewThreadSelector: @selector(run:) toTarget:[GKSNetworkingWorkerThread class] withObject:self];
 
       num_windows = 0;

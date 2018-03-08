@@ -96,13 +96,13 @@ static void gksterm_communicate(const char *request, size_t request_len, int tim
     if ((only_if_running && !gksterm_is_running()) || (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0 > timeout) {
       zmq_msg_close(&message);
       zmq_close(socket);
-      zmq_ctx_destroy(context);
+      zmq_ctx_term(context);
       @throw  [NSException exceptionWithName:@"GKSTermHasDiedException"
                                       reason:@"The connection to GKSTerm has timed out."
                                     userInfo:nil];
     }
     if (rc == -1 && errno == EAGAIN) {
-      usleep(100000);
+      usleep(10000);
     }
     rc = zmq_msg_send(&message, socket, ZMQ_DONTWAIT);
   } while (rc == -1 && (errno == EINTR || errno == EAGAIN));
@@ -114,13 +114,13 @@ static void gksterm_communicate(const char *request, size_t request_len, int tim
     if ((only_if_running && !gksterm_is_running()) || (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0 > timeout) {
       zmq_msg_close(&message);
       zmq_close(socket);
-      zmq_ctx_destroy(context);
+      zmq_ctx_term(context);
       @throw  [NSException exceptionWithName:@"GKSTermHasDiedException"
                                       reason:@"The connection to GKSTerm has timed out."
                                     userInfo:nil];
     }
     if (rc == -1 && errno == EAGAIN) {
-      usleep(100000);
+      usleep(10000);
     }
     rc = zmq_msg_recv(&message, socket, ZMQ_DONTWAIT);
   } while (rc == -1 && (errno == EINTR || errno == EAGAIN));
@@ -133,7 +133,7 @@ static void gksterm_communicate(const char *request, size_t request_len, int tim
 
   zmq_msg_close(&message);
   zmq_close(socket);
-  zmq_ctx_destroy(context);
+  zmq_ctx_term(context);
 }
 
 static bool gksterm_is_running() {
