@@ -1059,13 +1059,14 @@ void seg_xform_rel(double *x, double *y)
       p->viewport[3] = height * max_height / p->sheight;
     }
 
-  if (p->width != width || p->height != height)
+  if (fabs(p->width - width) > 0.5 || fabs(p->height - height) > 0.5)
     {
       rect.origin.y   += rect.size.height - height;
       rect.size.width  = width;
       rect.size.height = height;
 
       NSSize contentSize = [[self window] contentRectForFrameRect: rect].size;
+      rect.origin.y -= height - contentSize.height;
       rect.size.width += width - contentSize.width;
       rect.size.height += height - contentSize.height;
 
