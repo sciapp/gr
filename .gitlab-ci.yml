@@ -189,6 +189,8 @@ darwin-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
   - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
+  - cp 3rdparty/build/lib/libcairo.2.dylib artifacts/
+  - install_name_tool -change `otool -L artifacts/cairoplugin.so | grep libcairo.2.dylib | cut -d\( -f1` @loader_path/libcairo.2.dylib artifacts/cairoplugin.so
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -284,6 +286,7 @@ packages-tar:
   - if [ -d artifacts-darwin ]; then
       mkdir -p Darwin-x86_64/gr/lib;
       mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/;
+      mv artifacts-darwin/*.dylib Darwin-x86_64/gr/lib/;
       mv artifacts-darwin/fonts Darwin-x86_64/gr/;
       mv artifacts-darwin/include Darwin-x86_64/gr/;
       mv artifacts-darwin/Applications Darwin-x86_64/gr/;
