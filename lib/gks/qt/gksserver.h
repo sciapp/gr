@@ -8,16 +8,17 @@
 class GKSServer : public QTcpServer
 {
   Q_OBJECT
-    
+
 public:
   GKSServer(QObject *parent = 0);
-  
+
 public slots:
   void readClient();
   void killSocket();
   void connectSocket();
+  void disconnectSocket();
   void newWidget();
- 
+
 private:
   QTcpSocket *socket;
   char *dl, *ba;

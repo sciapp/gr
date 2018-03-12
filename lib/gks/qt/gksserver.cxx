@@ -1,3 +1,4 @@
+#include <stdio.h>
 
 #include <QtNetwork>
 #include <qapplication.h>
@@ -38,7 +39,7 @@ void GKSServer::connectSocket()
 {
   socket = this->nextPendingConnection();
   connect(socket, SIGNAL(readyRead()), this, SLOT(readClient()));
-  connect(socket, SIGNAL(disconnected()), this, SLOT(killSocket()));
+  connect(socket, SIGNAL(disconnected()), this, SLOT(disconnectSocket()));
 
   newWidget();
 }
@@ -88,5 +89,13 @@ void GKSServer::readClient()
 
 void GKSServer::killSocket()
 {
+  widget->close();
   newWidget();
 }
+
+void GKSServer::disconnectSocket()
+{
+  widget->close();
+  exit(0);
+}
+
