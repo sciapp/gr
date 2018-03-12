@@ -10,7 +10,7 @@
 #endif
 
 #ifdef _WIN32
-#include <windows.h>
+#include <io.h>
 #endif
 
 #ifdef __APPLE__
@@ -19,6 +19,10 @@
 
 #include "gks.h"
 #include "gkscore.h"
+
+#ifndef R_OK
+#define R_OK 4
+#endif
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 1024
@@ -2835,7 +2839,11 @@ int have_gksqt(void)
   else
     path = (char *) env;
 
+#ifdef _WIN32
+  result = _access(path, R_OK);
+#else
   result = access(path, R_OK);
+#endif
 
   if (path != env)
     gks_free(path);
