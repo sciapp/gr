@@ -1499,6 +1499,7 @@ void resetgks(int sig)
         {
           exiting = 1;
           gr_emergencyclosegks();
+          exiting = 0;
         }
 
       signal(SIGUSR1, previous_handler);
@@ -1518,6 +1519,7 @@ void resetgks(void)
     {
       exiting = 1;
       gr_emergencyclosegks();
+      exiting = 0;
     }
 }
 
