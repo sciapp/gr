@@ -394,6 +394,7 @@ void create_pattern(void)
       free(row_pointers[j]);
     }
   free(row_pointers);
+  png_destroy_write_struct(&png_ptr, &info_ptr);
 }
 
 static
@@ -1061,7 +1062,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
     }
   free(row_pointers);
   fclose(stream);
-
+  png_destroy_write_struct(&png_ptr, &info_ptr);
   s = base64_stream(TMP_NAME);
   remove(TMP_NAME);
   svg_printf(p->stream,
