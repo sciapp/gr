@@ -9,7 +9,7 @@
      LIBS = -lwsock32 -lmsimg32 -lgdi32
 
 OBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
-	delaunay.o interp2.o md5.o import.o meta.o
+	delaunay.o datashading.o interp2.o md5.o import.o meta.o
 
 .SUFFIXES: .o .c
 

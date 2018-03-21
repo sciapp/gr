@@ -163,6 +163,7 @@ DLLEXPORT void gr_selectcontext(int);
 DLLEXPORT void gr_destroycontext(int);
 DLLEXPORT int gr_uselinespec(char *);
 DLLEXPORT void gr_delaunay(int, const double *, const double *, int *, int **);
+DLLEXPORT void gr_reduce_points(int, const double *, const double *, int, double *, double *);
 DLLEXPORT void gr_trisurface(int, double *, double *, double *);
 DLLEXPORT void gr_gradient(
   int, int, double *, double *, double *, double *, double *);
