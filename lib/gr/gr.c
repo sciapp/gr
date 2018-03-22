@@ -7989,3 +7989,59 @@ const char *gr_version(void) {
     static const char *gr_version_str = GR_VERSION;
     return gr_version_str;
 }
+
+/*!
+ * Finds the index of the minimum and maximum value in array.
+ *
+ * \param[out] min_index the index of the minimum value in array
+ * \param[out] max_index the index of the maximum value in array
+ * \param[in] n the number of values in array
+ * \param[in] array the value array
+ */
+static void arg_min_max(int *min_index, int *max_index, int n, const double *array) {
+  int i;
+  *min_index = 0;
+  *max_index = 0;
+  for (i = 1; i < n; i++) {
+    if (array[i] < array[*min_index])
+      *min_index = i;
+    if (array[i] > array[*max_index])
+      *max_index = i;
+  }
+}
+
+/*!
+ * Reduces the number of points of the x and y array.
+ *
+ * @param[in] n the number of points of the x and y arrays
+ * @param[in] x the x value array
+ * @param[in] y the y value array
+ * @param[in] points the requested number of points
+ * @param[out] x_array the return array for the x values
+ * @param[out] y_array the return array for the y values
+ */
+void gr_reducepoints(int n, const double *x, const double *y, int points, double *x_array, double *y_array) {
+  int append_index = 0;
+  int num_intervals = points / 2;
+  double exact_interval_width = (double) n / num_intervals;
+  int interval_width = n / num_intervals;
+  int interval;
+  if (n < points) {
+    // Copy the original array
+    memcpy(x_array, x, sizeof(double) * n);
+    memcpy(y_array, y, sizeof(double) * n);
+    fprintf(stderr, "Not enough points provided.\n");
+    return;
+  }
+  for (interval = 0; interval < num_intervals; interval++) {
+    int index = interval * exact_interval_width;
+    int min_index, max_index;
+    arg_min_max(&min_index, &max_index, min(interval_width, n - index - 1), y + index);
+    x_array[append_index] = x[min_index + index];
+    y_array[append_index] = y[min_index + index];
+    append_index++;
+    x_array[append_index] = x[max_index + index];
+    y_array[append_index] = y[max_index + index];
+    append_index++;
+  }
+}
