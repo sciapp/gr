@@ -23,7 +23,7 @@ EXPORTS
 	gr_createseg
 	gr_deactivatews
 	gr_delaunay
-	gr_reduce_points
+	gr_reducepoints
 	gr_destroycontext
 	gr_drawarrow
         gr_drawgraphics
