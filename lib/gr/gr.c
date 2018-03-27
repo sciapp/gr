@@ -9400,7 +9400,7 @@ void gr_reducepoints(int n, const double *x, const double *y, int points, double
   int interval_width = n / num_intervals;
   int interval;
   if (n < points) {
-    // Copy the original array
+    /* Copy the original array */
     memcpy(x_array, x, sizeof(double) * n);
     memcpy(y_array, y, sizeof(double) * n);
     fprintf(stderr, "Not enough points provided.\n");

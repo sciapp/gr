@@ -21,6 +21,15 @@ char *xmalloc(int size)
   return result;
 }
 
+/*!
+ * Cubic interpolation at position `x = xq` using four supporting points.
+ *
+ * \param[in] x Pointer to the supporting points' x-values
+ * \param[in] y Pointer to the supporting points' y-values
+ * \param[in] xq The x-coordinate to interpolate at
+ *
+ * \returns The resulting y-value
+ */
 static
 double cubic_interp(const double *x, const double *y, double xq)
 {
@@ -28,7 +37,8 @@ double cubic_interp(const double *x, const double *y, double xq)
 
   a[0] = y[0];
   a[1] = (y[1] - a[0])/(x[1] - x[0]);
-  a[2] = (y[2] - a[0] - a[1] * (x[2] - x[0])) / ((x[2] - x[0]) * (x[2] - x[1]));
+  a[2] = (y[2] - a[0] - a[1] * (x[2] - x[0])) / 
+         ((x[2] - x[0]) * (x[2] - x[1]));
   a[3] = (y[3] - a[0] - a[1] * (x[3] - x[0]) - a[2] * (x[3] - x[0]) *
          (x[3] - x[1])) / ((x[3] - x[0]) * (x[3] - x[1]) * (x[3] - x[2]));
   /* Horner's method */
@@ -40,6 +50,20 @@ double cubic_interp(const double *x, const double *y, double xq)
   return result;
 }
 
+/*!
+ * Bilinear interpolation at position (`xq`, `yq`).
+ *
+ * \param[in] x Pointer to the supporting points' x-values
+ * \param[in] y Pointer to the supporting points' y-values
+ * \param[in] z Pointer to the supporting points' z-values
+ * \param[in] ix Index of next x-value less than `xq`
+ * \param[in] iy Index of next y-value less than `yq`
+ * \param[in] nx Number of given x-values
+ * \param[in] xq x-coordinate to interpolate at
+ * \param[in] yq y-coordinate to interpolate at
+ *
+ * \returns The resulting y-value
+ */
 static
 double bilinear_interp(const double *x, const double *y, const double *z,
                        int ix, int iy, int nx, double xq, double yq)
@@ -55,12 +79,39 @@ double bilinear_interp(const double *x, const double *y, const double *z,
          (y[iy + 1] - y[iy])) * f2;
 }
 
+/*!
+ * Linear interpolation of the value at `x = xq`, using two supporting points.
+ *
+ * \param[in] x Pointer to left neighbour's x-value in supporting points,
+ *              `x + 1` has to be a pointer to the left neighbour's x-value
+ * \param[in] y Pointer to left neighbour's y-value in supporting points,
+ *              `y + 1` has to be a pointer to the left neighbour's y-value
+ * \param[in] xq The x-coordinate to interpolate at
+ *
+ * \returns The resulting y-value
+ */
 static
 double linear_interp(const double *x, const double *y, double xq)
 {
   return y[0] + ((y[1] - y[0]) / (x[1] - x[0])) * (xq - x[0]);
 }
 
+/*!
+ * Bicubic interpolation at (`xq`, `yq`).  Uses linear interpolation as a
+ * fallback if cubic interpolation is not applicable.
+ *
+ * \param[in] x Pointer to the supporting points' x-values
+ * \param[in] y Pointer to the supporting points' y-values
+ * \param[in] z Pointer to the supporting points' z-values
+ * \param[in] ix Index of next x-value less than `xq`
+ * \param[in] iy Index of next y-value less than `yq`
+ * \param[in] nx Number of given x-values
+ * \param[in] ny Number of given y-values
+ * \param[in] xq The x-coordinate to interpolate at
+ * \param[in] yq The y-coordinate to interpolate at
+ *
+ * \returns The resulting z-value
+ */
 static
 double bicubic_interp(const double *x, const double *y, const double *z,
                       int ix, int iy, int nx, int ny, double xq, double yq)
@@ -96,6 +147,15 @@ double bicubic_interp(const double *x, const double *y, const double *z,
   }
 }
 
+/*!
+ * Creation of natural cubic splines
+ *
+ * \param[in] x Pointer to the x-values (nodes/supporting points)
+ * \param[in] y Pointer to the y-values (nodes/supporting points)
+ * \param[in] n Number of nodes/supporting points
+ * \param[out] spline Memory location of the `n * 4`
+ *                    target-array containing the splines
+ */
 static
 void create_splines(const double *x, const double *y, int n, double **spline)
 {
@@ -140,6 +200,41 @@ void create_splines(const double *x, const double *y, int n, double **spline)
   free(alpha);
 }
 
+/*!
+ * Interpolation in two dimensions using one of four different methods.
+ * The input points are located on a grid, described by `nx`, `ny`, `x`, `y` and `z`.
+ * The target grid ist described by `nxq`, `nyq`, `xq` and `yq` and the output
+ * is written to `zq` as a field of `nxq * nyq` values.
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * The available methods for interpolation are the following:
+ *
+ * +-----------------+---+-------------------------------------------+
+ * | INTERP2_NEAREST | 0 | Nearest neighbour interpolation           |
+ * +-----------------+---+-------------------------------------------+
+ * | INTERP2_LINEAR  | 1 | Linear interpolation                      |
+ * +-----------------+---+-------------------------------------------+
+ * | INTERP_2_SPLINE | 2 | Interpolation using natural cubic splines |
+ * +-----------------+---+-------------------------------------------+
+ * | INTERP2_CUBIC   | 3 | Cubic interpolation                       |
+ * +-----------------+---+-------------------------------------------+
+ *
+ * \endverbatim
+ *
+ * \param[in] nx The number of the input grid's x-values
+ * \param[in] ny The number of the input grid's y-values
+ * \param[in] x Pointer to the input grid's x-values
+ * \param[in] y Pointer to the input grid's y-values
+ * \param[in] z Pointer to the input grid's z-values (num. of values: nx * ny)
+ * \param[in] nxq The number of the target grid's x-values
+ * \param[in] nyq The number of the target grid's y-values
+ * \param[in] xq Pointer to the target grid's x-values
+ * \param[in] yq Pointer to the target grid's y-values
+ * \param[out] zq Pointer to the target grids's z-values, used for output
+ * \param[in] method Used method for interpolation
+ * \param[in] extrapval The extrapolation value
+ */
 void gr_interp2(
   int nx, int ny, const double *x, const double *y, const double *z,
   int nxq, int nyq, const double *xq, const double *yq, double *zq,
