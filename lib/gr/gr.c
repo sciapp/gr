@@ -8557,9 +8557,9 @@ void gr_drawimage(
   double xmin, double xmax, double ymin, double ymax,
   int width, int height, int *data, int model)
 {
-  int n, i;
-  int *img = data;
-  double h, s, v, r, g, b;
+  int *img = data, *imgT;
+  int n, i, j, w, h;
+  double hue, saturation, value, red, green, blue, x, y;
 
   check_autoinit;
 
@@ -8569,19 +8569,51 @@ void gr_drawimage(
       img = (int *) xmalloc(n * sizeof(int));
       for (i = 0; i < n; i++)
         {
-          h = ( data[i] & 0xff             ) / 255.0;
-          s = ((data[i] & 0xff00)     >>  8) / 255.0;
-          v = ((data[i] & 0xff0000)   >> 16) / 255.0;
-          gr_hsvtorgb(h, s, v, &r, &g, &b);
+          hue        = ( data[i] & 0xff             ) / 255.0;
+          saturation = ((data[i] & 0xff00)     >>  8) / 255.0;
+          value      = ((data[i] & 0xff0000)   >> 16) / 255.0;
+          gr_hsvtorgb(hue, saturation, value, &red, &green, &blue);
           img[i] = (data[i] & 0xff000000) |
-                   ((int) (r * 255) << 16) |
-                   ((int) (g * 255) <<  8) |
-                   ((int) (b * 255));
+                   ((int) (red   * 255) << 16) |
+                   ((int) (green * 255) <<  8) |
+                   ((int) (blue  * 255));
         }
     }
 
-  gks_draw_image(
-    x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), width, height, img);
+  if (lx.scale_options != 0)
+    {
+      w = max(width,  500);
+      h = max(height, 500);
+      imgT = (int *) xmalloc(w * h * sizeof(int));
+      for (i = 0; i < w; i++)
+        {
+          if (w > 1)
+            {
+              x = (x_log(xmin + i * (xmax-xmin) / (w-1)) - xmin) / (xmax-xmin);
+              if (x < 0) x = 0; else if (x > 1) x = 1;
+            }
+          else
+            x = 0;
+          for (j = 0; j < h; j++)
+            {
+              if (h > 1)
+                {
+                  y = (y_log(ymin + (h-1-j) * (ymax-ymin) / (h-1)) - ymin) /
+                      (ymax-ymin);
+                  if (y < 0) y = 0; else if (y > 1) y = 1;
+                }
+              else
+                y = 0;
+              imgT[i + j * w] = img[(int)(x * width) +
+                                    (int)((1-y) * height) * width];
+            }
+        }
+      gks_draw_image(
+        x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), w, h, imgT);
+      free(imgT);
+    }
+  else
+    gks_draw_image(xmin, ymax, xmax, ymin, width, height, img);
 
   if (flag_graphics)
     {
