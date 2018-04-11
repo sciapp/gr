@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 cwd=`pwd`
-if [ `which cmake >/dev/null 2>&1` ]; then exit 0; fi
+if [ `which cmake` ]; then exit 0; fi
 
 src="cmake-2.8.12.2"
 if [ "$1" = "" ]; then
