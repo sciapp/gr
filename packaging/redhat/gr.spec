@@ -16,7 +16,7 @@
 
 Name:				gr
 Summary:			GR, a universal framework for visualization applications
-Version:			0.27.0
+Version:			0.28.1
 Release:			3%{?dist}
 License:			MIT
 Group:				Development/Libraries
@@ -40,12 +40,13 @@ BuildRequires:		libXt-devel
 BuildRequires:		libXft-devel
 BuildRequires:		gtk2-devel
 %if 0%{?__jcns}
+%define debug_package %{nil}
 %define qmake_qt4 %{_prefix}/qt4/bin/qmake
-#%define qmake_qt5 %{_prefix}/qt5/bin/qmake
+%define qmake_qt5 %{_prefix}/qt5/bin/qmake
 BuildRequires: qt4-local
-#BuildRequires: qt5-local
-#BuildRequires: gcc-local
-## TODO: build qt5-plugin using CC, CXX with gcc-local
+BuildRequires: qt5-local
+BuildRequires: gcc-local
+BuildRequires: cmake-local
 %else
 BuildRequires: qt-devel
 %endif
@@ -114,6 +115,10 @@ tar -C %{THIRDPARTY_SRC} -xf %{SOURCE11}
 %build
 make -C 3rdparty GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
 make -C 3rdparty extras GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
+%if 0%{?__jcns}
+export CC=/usr/local/gcc/bin/gcc49
+export CXX=/usr/local/gcc/bin/g++49
+%endif
 make GRDIR=%{grdir} \
      EXTRA_CFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
      EXTRA_CXXFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
