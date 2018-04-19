@@ -96,7 +96,41 @@ centos7-system-dependencies:
   - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel git
   - make install GRDIR=/tmp/gr
 
-centos6-self-contained:
+centos6-32bit-self-contained:
+  stage: build
+  image: i386/centos:6
+  script:
+  - yum update -y
+  - yum groupinstall -y "Development Tools"
+  - yum groupinstall -y "X Window System"
+  - yum install -y which gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel git qt-devel gtk2-devel
+  - make self GRDIR=/tmp/gr
+  - mkdir artifacts
+  - cp lib/gks/demo artifacts/gksdemo
+  - cp lib/gks/qt/gksqt artifacts/gksqt
+  - cp lib/gr/demo artifacts/grdemo
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
+  - cp -r lib/gks/fonts artifacts/
+  - mkdir artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mv artifacts artifacts-centos6-32bit
+  artifacts:
+    expire_in: 1 week
+    paths:
+    - artifacts-centos6-32bit/
+
+centos6-32bit-system-dependencies:
+  stage: build
+  image: i386/centos:6
+  script:
+  - yum update -y
+  - yum groupinstall -y "Development Tools"
+  - yum groupinstall -y "X Window System"
+  - yum install -y which
+  - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel git
+  - make install GRDIR=/tmp/gr
+
+centos6-64bit-self-contained:
   stage: build
   image: centos:6
   script:
@@ -113,15 +147,15 @@ centos6-self-contained:
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mv artifacts artifacts-centos6
+  - mv artifacts artifacts-centos6-64bit
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-centos6/
+    - artifacts-centos6-64bit/
 
-centos6-system-dependencies:
+centos6-64bit-system-dependencies:
   stage: build
-  image: centos:7
+  image: centos:6
   script:
   - yum update -y
   - yum groupinstall -y "Development Tools"
@@ -276,13 +310,20 @@ packages-tar:
   - mv artifacts-centos7/fonts CentOS-x86_64/gr/
   - mv artifacts-centos7/include CentOS-x86_64/gr/
   - rm -rf artifacts-centos7
+  - mkdir -p Linux-i386/gr/bin
+  - mkdir -p Linux-i386/gr/lib
+  - mv artifacts-centos6-32bit/*.so Linux-i386/gr/lib/
+  - mv artifacts-centos6-32bit/gksqt Linux-i386/gr/bin/
+  - mv artifacts-centos6-32bit/fonts Linux-i386/gr/
+  - mv artifacts-centos6-32bit/include Linux-i386/gr/
+  - rm -rf artifacts-centos6-32bit
   - mkdir -p Linux-x86_64/gr/bin
   - mkdir -p Linux-x86_64/gr/lib
-  - mv artifacts-centos6/*.so Linux-x86_64/gr/lib/
-  - mv artifacts-centos6/gksqt Linux-x86_64/gr/bin/
-  - mv artifacts-centos6/fonts Linux-x86_64/gr/
-  - mv artifacts-centos6/include Linux-x86_64/gr/
-  - rm -rf artifacts-centos6
+  - mv artifacts-centos6-64bit/*.so Linux-x86_64/gr/lib/
+  - mv artifacts-centos6-64bit/gksqt Linux-x86_64/gr/bin/
+  - mv artifacts-centos6-64bit/fonts Linux-x86_64/gr/
+  - mv artifacts-centos6-64bit/include Linux-x86_64/gr/
+  - rm -rf artifacts-centos6-64bit
   - if [ -d artifacts-darwin ]; then
       mkdir -p Darwin-x86_64/gr/lib;
       mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/;
@@ -298,6 +339,7 @@ packages-tar:
   - cd Debian-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Ubuntu-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd CentOS-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd Linux-i386 && tar czf gr.tar.gz gr && cd -
   - cd Linux-x86_64 && tar czf gr.tar.gz gr && cd -
   - mkdir Downloads
   - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -307,6 +349,7 @@ packages-tar:
       cp Debian-x86_64/gr.tar.gz Downloads/gr-$VERSION-Debian-x86_64.tar.gz;
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$VERSION-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$VERSION-CentOS-x86_64.tar.gz;
+      cp Linux-i386/gr.tar.gz Downloads/gr-$VERSION-Linux-i386.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$VERSION-Linux-x86_64.tar.gz;
       if [ -d Darwin-x86_64 ]; then
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$VERSION-Darwin-x86_64.tar.gz;
@@ -318,6 +361,7 @@ packages-tar:
       cp Debian-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-x86_64.tar.gz;
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz;
+      cp Linux-i386/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-i386.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-x86_64.tar.gz;
       if [ -d Darwin-x86_64 ]; then
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
