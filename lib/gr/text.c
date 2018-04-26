@@ -64,23 +64,24 @@ static
 char *greek[] = {
   "alpha", "beta", "gamma", "Gamma", "delta", "Delta", "epsilon",
   "varepsilon", "zeta", "eta", "theta", "Theta", "vartheta", "iota",
-  "kappa", "lambda", "Lambda", "mu", "nu", "xi", "Xi", "pi", "Pi",
+  "kappa", "lambda", "Lambda", "mu", "xi", "Xi", "pi", "Pi",
   "varpi", "rho", "varrho", "sigma", "Sigma", "varsigma", "tau",
   "upsilon", "Upsilon", "phi", "Phi", "varphi", "chi", "psi", "Psi",
   "omega", "Omega", "Alpha", "Beta", "Epsilon", "Zeta", "Eta", "Iota",
-  "Kappa", "Mu", "Nu", "Rho", "Tau", "Chi", "omicron", "Omicron"
+  "Kappa", "Mu", "Nu", "Rho", "Tau", "Chi", "omicron", "Omicron",
+  "v" /* replacement for 'nu' which would conflict with '\n' (newline) */
 };
 
 static
 int greekcode[] = {
   97, 98, 103, 71, 100, 68, 101,
   101, 122, 104, 113, 81, 74, 105,
-  107, 108, 76, 109, 110, 120, 88, 112, 80,
+  107, 108, 76, 109, 120, 88, 112, 80,
   118, 114, 114, 115, 83, 86, 116,
   117, 85, 102, 70, 102, 99, 121, 89,
   119, 87, 'A', 'B', 'E', 'Z', 'H', 'I',
   'K', 'M', 'N', 'R', 'T', 'C', 'o', 'O',
-  0
+  110, 0
 };
 
 

@@ -3668,7 +3668,7 @@ void start_pline3d(double x, double y, double z)
  * +----------------------------------+--------+
  * |:math:`M` :math:`\mu`             |mu      |
  * +----------------------------------+--------+
- * |:math:`N` :math:`\nu`             |nu      |
+ * |:math:`N` :math:`\nu`             |v       |
  * +----------------------------------+--------+
  * |:math:`\Xi` :math:`\xi`           |xi      |
  * +----------------------------------+--------+
@@ -3697,6 +3697,8 @@ void start_pline3d(double x, double y, double z)
  *
  * For more sophisticated mathematical formulas, you should use the gr_mathtex
  * function.
+ *
+ * Note: 'v' is a replacement for 'nu' which would conflict with '\n' (newline)
  */
 int gr_textext(double x, double y, char *string)
 {
