@@ -631,19 +631,15 @@ void polyline(int n, double *px, double *py)
 static
 void symbol_text(int nchars, char *chars)
 {
-  int i, ic;
-  char *temp = (char *) gks_malloc(4);
+  int i;
+  char temp[4];
+  size_t len;
 
   for (i = 0; i < nchars; i++) {
-    ic = chars[i];
-    if ((ic >= 'A'  && ic <= 'Z') || (ic >= 'a' && ic < 'p'))
-      ic += 52816;
-    else if (ic >= 'p' && ic <= 'z')
-      ic += 53008;
-    sprintf(temp, "%c%c", (ic>>8), (ic & 255));
+    gks_symbol2utf(chars[i], temp, &len);
+    temp[len] = 0;
     cairo_show_text(p->cr, temp);
   }
-  free(temp);
 }
 
 static
@@ -723,6 +719,7 @@ void set_font(int font)
   int size;
   double width, height, capheight;
   int bold, italic;
+  int family;
 
   font = abs(font);
   if (font >= 101 && font <= 129)
@@ -761,29 +758,32 @@ void set_font(int font)
   bold = (font % 4 == 1 || font % 4 == 2) ? 0 : 1;
   italic = (font % 4 == 2 || font % 4 == 0);
 
-  if (p->family != 3)
-    {
-      if (italic && bold)
-        cairo_select_font_face(p->cr, fonts[p->family],
-                               CAIRO_FONT_SLANT_ITALIC,
-                               CAIRO_FONT_WEIGHT_BOLD);
-      else if (bold)
-        cairo_select_font_face(p->cr, fonts[p->family],
-                               CAIRO_FONT_SLANT_NORMAL,
-                               CAIRO_FONT_WEIGHT_BOLD);
-      else if (italic)
-        cairo_select_font_face(p->cr, fonts[p->family],
-                               CAIRO_FONT_SLANT_ITALIC,
-                               CAIRO_FONT_WEIGHT_NORMAL);
-      else
-        cairo_select_font_face(p->cr, fonts[p->family],
-                               CAIRO_FONT_SLANT_NORMAL,
-                               CAIRO_FONT_WEIGHT_NORMAL);
-      cairo_set_font_size(p->cr, size);
-      p->use_symbols = 0;
-    }
-  else
+
+  if (p->family != 3) {
+    p->use_symbols = 0;
+    family = p->family;
+  } else {
     p->use_symbols = 1;
+    family = 0;
+  }
+
+  if (italic && bold)
+    cairo_select_font_face(p->cr, fonts[family],
+                           CAIRO_FONT_SLANT_ITALIC,
+                           CAIRO_FONT_WEIGHT_BOLD);
+  else if (bold)
+    cairo_select_font_face(p->cr, fonts[family],
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_BOLD);
+  else if (italic)
+    cairo_select_font_face(p->cr, fonts[family],
+                           CAIRO_FONT_SLANT_ITALIC,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+  else
+    cairo_select_font_face(p->cr, fonts[family],
+                           CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+  cairo_set_font_size(p->cr, size);
 }
 
 static
