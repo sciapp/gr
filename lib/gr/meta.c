@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -31,6 +32,11 @@
 /* ######################### private interface ###################################################################### */
 
 /* ========================= macros ================================================================================= */
+
+/* ------------------------- constants ------------------------------------------------------------------------------ */
+
+#define NEXT_VALUE_TYPE_SIZE 80
+
 
 /* ------------------------- error ---------------------------------------------------------------------------------- */
 
@@ -66,6 +72,8 @@ static void debug_printf(const char *format, ...) {
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
+#define is_string_delimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr)-1) != '\\'))
+
 #define UNUSED(param) \
   do {                \
     (void)(param);    \
@@ -99,11 +107,12 @@ struct _argparse_state_t {
   char current_format;
   unsigned int next_is_array;
   unsigned int default_array_length;
-  unsigned int next_array_length;
+  int next_array_length;
 };
 typedef struct _argparse_state_t argparse_state_t;
 
 typedef void (*read_param_t)(argparse_state_t *state);
+typedef void (*delete_value_t)(void *value_ptr);
 
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
@@ -122,6 +131,7 @@ struct _gr_meta_args_t {
   unsigned int kwargs_count;
   unsigned int count;
 };
+typedef gr_meta_args_t *gr_meta_args_ptr_t;
 
 
 /* ------------------------- argument iterator ---------------------------------------------------------------------- */
@@ -153,6 +163,35 @@ typedef struct _gr_meta_args_value_iterator_t {
   int array_length;
   args_value_iterator_private_t *priv;
 } args_value_iterator_t;
+
+
+/* ------------------------- json deserializer ---------------------------------------------------------------------- */
+
+typedef enum {
+  JSON_DATATYPE_UNKNOWN,
+  JSON_DATATYPE_NULL,
+  JSON_DATATYPE_BOOL,
+  JSON_DATATYPE_NUMBER,
+  JSON_DATATYPE_STRING,
+  JSON_DATATYPE_ARRAY,
+  JSON_DATATYPE_OBJECT
+} fromjson_datatype_t;
+
+typedef struct {
+  char *json_ptr;
+  int parsed_any_value_before;
+} fromjson_shared_state_t;
+
+typedef struct {
+  fromjson_datatype_t datatype;
+  int parsing_object;
+  void *value_buffer;
+  int value_buffer_pointer_level;
+  void *next_value_memory;
+  char *next_value_type;
+  gr_meta_args_t *args;
+  fromjson_shared_state_t *shared_state;
+} fromjson_state_t;
 
 
 /* ------------------------- json serializer ------------------------------------------------------------------------ */
@@ -225,27 +264,6 @@ typedef struct {
 } metahandle_t;
 
 
-/* ========================= static variables ======================================================================= */
-
-/* ------------------------- argument parsing ----------------------------------------------------------------------- */
-
-static int argparse_valid_format_specifier[128];
-static read_param_t argparse_format_specifier_to_read_callback[128];
-static size_t argparse_format_specifier_to_size[128];
-static int argparse_static_variables_initialized = 0;
-
-
-/* ------------------------- argument container --------------------------------------------------------------------- */
-
-static const char *const ARGS_VALID_FORMAT_SPECIFIERS = "niIdDcCsS";
-static const char *const ARGS_VALID_DATA_FORMAT_SPECIFIERS = "idcs"; /* Each specifier is also valid in upper case */
-
-
-/* ------------------------- json serializer ------------------------------------------------------------------------ */
-
-static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
-
-
 /* ========================= functions ============================================================================== */
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
@@ -283,6 +301,8 @@ static int sender_post_serialize_jupyter(void *p);
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
+static int is_int_number(const char *str);
+static int uppercase_count(const char *str);
 static unsigned int str_to_uint(const char *str, int *was_successful);
 
 
@@ -358,6 +378,28 @@ static void args_value_iterator_finalize(args_value_iterator_t *args_value_itera
 static void *args_value_iterator_next(args_value_iterator_t *args_value_iterator);
 
 
+/* ------------------------- json deserializer ---------------------------------------------------------------------- */
+
+static int fromjson_read(gr_meta_args_t *args, const char *json_string);
+
+static int fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_shared_state_t *shared_state);
+static int fromjson_parse_null(fromjson_state_t *state);
+static int fromjson_parse_bool(fromjson_state_t *state);
+static int fromjson_parse_number(fromjson_state_t *state);
+static int fromjson_parse_int(fromjson_state_t *state);
+static int fromjson_parse_double(fromjson_state_t *state);
+static int fromjson_parse_string(fromjson_state_t *state);
+static int fromjson_parse_array(fromjson_state_t *state);
+static int fromjson_parse_object(fromjson_state_t *state);
+
+static int fromjson_check_type(const fromjson_state_t *state);
+static int fromjson_copy_and_filter_json_string(char **dest, const char *src);
+static int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int include_start);
+static int fromjson_get_outer_array_length(const char *str);
+static double fromjson_str_to_double(const char **str, int *was_successful);
+static int fromjson_str_to_int(const char **str, int *was_successful);
+
+
 /* ------------------------- json serializer ------------------------------------------------------------------------ */
 
 #define DECLARE_STRINGIFY_SINGLE(type, promoted_type, format_specifier) \
@@ -414,6 +456,44 @@ static int sender_init_for_socket(metahandle_t *handle, va_list *vl);
 static int sender_init_for_jupyter(metahandle_t *handle, va_list *vl);
 static int sender_finalize_for_socket(metahandle_t *handle);
 static int sender_finalize_for_jupyter(metahandle_t *handle);
+
+
+/* ========================= static variables ======================================================================= */
+
+/* ------------------------- argument parsing ----------------------------------------------------------------------- */
+
+static int argparse_valid_format_specifier[128];
+static read_param_t argparse_format_specifier_to_read_callback[128];
+static delete_value_t argparse_format_specifier_to_delete_callback[128];
+static size_t argparse_format_specifier_to_size[128];
+static int argparse_static_variables_initialized = 0;
+
+
+/* ------------------------- argument container --------------------------------------------------------------------- */
+
+static const char *const ARGS_VALID_FORMAT_SPECIFIERS = "niIdDcCsSaA";
+static const char *const ARGS_VALID_DATA_FORMAT_SPECIFIERS = "idcsa"; /* Each specifier is also valid in upper case */
+
+
+/* ------------------------- json deserializer ---------------------------------------------------------------------- */
+
+static const char FROMJSON_VALID_DELIMITERS[] = ",]}";
+
+static int (*fromjson_datatype_to_func[])(fromjson_state_t *) = {NULL,
+                                                                 fromjson_parse_null,
+                                                                 fromjson_parse_bool,
+                                                                 fromjson_parse_number,
+                                                                 fromjson_parse_string,
+                                                                 fromjson_parse_array,
+                                                                 fromjson_parse_object};
+
+static const char *const fromjson_datatype_to_string[] = {"unknown", "null",  "bool",  "number",
+                                                          "string",  "array", "object"};
+
+
+/* ------------------------- json serializer ------------------------------------------------------------------------ */
+
+static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 
 
 /* ######################### public implementation ################################################################## */
@@ -627,11 +707,15 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
 
   /* get needed save_buffer size to store all parameters and allocate memory */
   needed_buffer_size = argparse_calculate_needed_buffer_size(fmt);
-  save_buffer = malloc(needed_buffer_size);
-  if (save_buffer == NULL) {
-    debug_print_malloc_error();
-    free(fmt);
-    return NULL;
+  if (needed_buffer_size > 0) {
+    save_buffer = malloc(needed_buffer_size);
+    if (save_buffer == NULL) {
+      debug_print_malloc_error();
+      free(fmt);
+      return NULL;
+    }
+  } else {
+    save_buffer = NULL;
   }
 
   /* initialize state object */
@@ -642,7 +726,7 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
   state.save_buffer = save_buffer;
   state.next_is_array = 0;
   state.default_array_length = 1;
-  state.next_array_length = 0;
+  state.next_array_length = -1;
 
   current_format = fmt;
   while (*current_format) {
@@ -655,7 +739,7 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
       ((char *)state.save_buffer) + argparse_calculate_needed_padding(state.save_buffer, state.current_format);
     argparse_format_specifier_to_read_callback[(unsigned char)state.current_format](&state);
     state.next_is_array = 0;
-    state.next_array_length = 0;
+    state.next_array_length = -1;
     ++current_format;
   }
 
@@ -674,50 +758,64 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
     }                                                                 \
   } while (0)
 
-#define READ_TYPE(type)                                                                                         \
-  void argparse_read_##type(argparse_state_t *state) {                                                          \
-    size_t *size_t_typed_buffer;                                                                                \
-    type *typed_buffer, **pointer_typed_buffer, *src_ptr;                                                       \
-    size_t current_array_length;                                                                                \
-                                                                                                                \
-    if (state->next_is_array) {                                                                                 \
-      current_array_length = state->next_array_length ? state->next_array_length : state->default_array_length; \
-      if (state->in_buffer != NULL) {                                                                           \
-        CHECK_PADDING(type **);                                                                                 \
-        src_ptr = *(type **)state->in_buffer;                                                                   \
-      } else {                                                                                                  \
-        src_ptr = va_arg(*state->vl, type *);                                                                   \
-      }                                                                                                         \
-      size_t_typed_buffer = state->save_buffer;                                                                 \
-      *size_t_typed_buffer = current_array_length;                                                              \
-      pointer_typed_buffer = (type **)++size_t_typed_buffer;                                                    \
-      *pointer_typed_buffer = malloc(current_array_length * sizeof(type));                                      \
-      if (*pointer_typed_buffer != NULL) {                                                                      \
-        memcpy(*pointer_typed_buffer, src_ptr, current_array_length * sizeof(type));                            \
-      } else {                                                                                                  \
-        debug_print_malloc_error();                                                                             \
-      }                                                                                                         \
-      if (state->in_buffer != NULL) {                                                                           \
-        state->in_buffer = ((type **)state->in_buffer) + 1;                                                     \
-        state->data_offset += sizeof(type *);                                                                   \
-      }                                                                                                         \
-      state->save_buffer = ++pointer_typed_buffer;                                                              \
-    } else {                                                                                                    \
-      typed_buffer = state->save_buffer;                                                                        \
-      if (state->in_buffer != NULL) {                                                                           \
-        CHECK_PADDING(type);                                                                                    \
-        *typed_buffer = *((type *)state->in_buffer);                                                            \
-        state->in_buffer = ((type *)state->in_buffer) + 1;                                                      \
-        state->data_offset += sizeof(type);                                                                     \
-      } else {                                                                                                  \
-        *typed_buffer = va_arg(*state->vl, type);                                                               \
-      }                                                                                                         \
-      state->save_buffer = ++typed_buffer;                                                                      \
-    }                                                                                                           \
+#define READ_TYPE(type, terminate_array)                                                                               \
+  void argparse_read_##type(argparse_state_t *state) {                                                                 \
+    size_t *size_t_typed_buffer;                                                                                       \
+    type *typed_buffer, **pointer_typed_buffer, *src_ptr;                                                              \
+    size_t current_array_length;                                                                                       \
+                                                                                                                       \
+    if (state->next_is_array) {                                                                                        \
+      current_array_length = (state->next_array_length >= 0) ? state->next_array_length : state->default_array_length; \
+      size_t_typed_buffer = state->save_buffer;                                                                        \
+      *size_t_typed_buffer = current_array_length;                                                                     \
+      pointer_typed_buffer = (type **)++size_t_typed_buffer;                                                           \
+      if (current_array_length + (terminate_array ? 1 : 0) > 0) {                                                      \
+        *pointer_typed_buffer = malloc((current_array_length + (terminate_array ? 1 : 0)) * sizeof(type));             \
+      } else {                                                                                                         \
+        *pointer_typed_buffer = NULL;                                                                                  \
+      }                                                                                                                \
+      if (current_array_length > 0) {                                                                                  \
+        if (state->in_buffer != NULL) {                                                                                \
+          CHECK_PADDING(type **);                                                                                      \
+          src_ptr = *(type **)state->in_buffer;                                                                        \
+        } else {                                                                                                       \
+          src_ptr = va_arg(*state->vl, type *);                                                                        \
+        }                                                                                                              \
+        if (*pointer_typed_buffer != NULL) {                                                                           \
+          memcpy(*pointer_typed_buffer, src_ptr, current_array_length * sizeof(type));                                 \
+          if (terminate_array) {                                                                                       \
+            /* cast to `type ***` instead of `type **` to ensure that `= NULL` is always a syntactical                 \
+             * valid statement (it wouldn't for primary types like `int` and `double`);                                \
+             * for non-pointer types the following statement is never executed, so it should be fine                   \
+             */                                                                                                        \
+            (*(type ***)pointer_typed_buffer)[current_array_length] = NULL; /* array terminator */                     \
+          }                                                                                                            \
+        } else {                                                                                                       \
+          debug_print_malloc_error();                                                                                  \
+        }                                                                                                              \
+        if (state->in_buffer != NULL) {                                                                                \
+          state->in_buffer = ((type **)state->in_buffer) + 1;                                                          \
+          state->data_offset += sizeof(type *);                                                                        \
+        }                                                                                                              \
+        state->save_buffer = ++pointer_typed_buffer;                                                                   \
+      }                                                                                                                \
+    } else {                                                                                                           \
+      typed_buffer = state->save_buffer;                                                                               \
+      if (state->in_buffer != NULL) {                                                                                  \
+        CHECK_PADDING(type);                                                                                           \
+        *typed_buffer = *((type *)state->in_buffer);                                                                   \
+        state->in_buffer = ((type *)state->in_buffer) + 1;                                                             \
+        state->data_offset += sizeof(type);                                                                            \
+      } else {                                                                                                         \
+        *typed_buffer = va_arg(*state->vl, type);                                                                      \
+      }                                                                                                                \
+      state->save_buffer = ++typed_buffer;                                                                             \
+    }                                                                                                                  \
   }
 
-READ_TYPE(int)
-READ_TYPE(double)
+READ_TYPE(int, 0)
+READ_TYPE(double, 0)
+READ_TYPE(gr_meta_args_ptr_t, 1)
 
 #undef READ_TYPE
 
@@ -746,10 +844,10 @@ void argparse_read_string(argparse_state_t *state) {
     const char **src_ptr;
     size_t current_array_length;
 
-    current_array_length = state->next_array_length ? state->next_array_length : state->default_array_length;
+    current_array_length = (state->next_array_length >= 0) ? state->next_array_length : state->default_array_length;
     if (state->in_buffer != NULL) {
       CHECK_PADDING(char **);
-      src_ptr = (const char **)state->in_buffer;
+      src_ptr = *(const char ***)state->in_buffer;
     } else {
       src_ptr = va_arg(*state->vl, const char **);
     }
@@ -819,11 +917,11 @@ void argparse_read_char_array(argparse_state_t *state, int store_array_length) {
 
   if (state->in_buffer != NULL) {
     CHECK_PADDING(char *);
-    src_ptr = state->in_buffer;
+    src_ptr = *(char **)state->in_buffer;
   } else {
     src_ptr = va_arg(*state->vl, char *);
   }
-  current_array_length = state->next_array_length ? state->next_array_length : strlen(src_ptr);
+  current_array_length = (state->next_array_length >= 0) ? state->next_array_length : strlen(src_ptr);
   if (store_array_length) {
     size_t *size_t_typed_buffer = state->save_buffer;
     *size_t_typed_buffer = current_array_length;
@@ -858,12 +956,18 @@ void argparse_init_static_variables() {
     argparse_valid_format_specifier['C'] = 1;
     argparse_valid_format_specifier['s'] = 1;
     argparse_valid_format_specifier['S'] = 1;
+    argparse_valid_format_specifier['a'] = 1;
+    argparse_valid_format_specifier['A'] = 1;
 
     argparse_format_specifier_to_read_callback['i'] = argparse_read_int;
     argparse_format_specifier_to_read_callback['d'] = argparse_read_double;
     argparse_format_specifier_to_read_callback['c'] = argparse_read_char;
     argparse_format_specifier_to_read_callback['s'] = argparse_read_string;
+    argparse_format_specifier_to_read_callback['a'] = argparse_read_gr_meta_args_ptr_t;
     argparse_format_specifier_to_read_callback['n'] = argparse_read_default_array_length;
+
+    argparse_format_specifier_to_delete_callback['s'] = free;
+    argparse_format_specifier_to_delete_callback['a'] = (delete_value_t)gr_meta_args_delete;
 
     argparse_format_specifier_to_size['i'] = sizeof(int);
     argparse_format_specifier_to_size['I'] = sizeof(int *);
@@ -873,6 +977,8 @@ void argparse_init_static_variables() {
     argparse_format_specifier_to_size['C'] = sizeof(char *);
     argparse_format_specifier_to_size['s'] = sizeof(char *);
     argparse_format_specifier_to_size['S'] = sizeof(char **);
+    argparse_format_specifier_to_size['a'] = sizeof(gr_meta_args_t *);
+    argparse_format_specifier_to_size['A'] = sizeof(gr_meta_args_t **);
     argparse_format_specifier_to_size['n'] = 0; /* size for array length is reserved by an array call itself */
     argparse_format_specifier_to_size['#'] = sizeof(size_t); /* only used internally */
   }
@@ -913,8 +1019,6 @@ size_t argparse_calculate_needed_buffer_size(const char *format) {
     }
     ++format;
   }
-
-  assert(needed_size > 0); /* needed_size must be > 0, otherwise there is an internal logical error */
 
   return needed_size;
 }
@@ -1046,7 +1150,7 @@ int args_validate_format_string(const char *format) {
   char *option_start;
   int is_valid;
 
-  if (format == NULL || *format == '\0') {
+  if (format == NULL) {
     return 0;
   }
   fmt = strdup(format);
@@ -1161,16 +1265,20 @@ void args_decrease_arg_reference_count(args_node_t *args_node) {
   if (--(args_node->arg->priv->reference_count) == 0) {
     args_value_iterator_t *value_it = args_value_iter(args_node->arg);
     while (value_it->next(value_it) != NULL) {
-      if (value_it->format == 's' && value_it->is_array) {
-        char **current_string_ptr = *(char ***)value_it->value_ptr;
-        while (*current_string_ptr != NULL) {
-          free(*current_string_ptr);
-          ++current_string_ptr;
+      /* use a char pointer since chars have no memory alignment restrictions */
+      if (value_it->is_array) {
+        if (argparse_format_specifier_to_delete_callback[(int)value_it->format] != NULL) {
+          char **current_value_ptr = *(char ***)value_it->value_ptr;
+          while (*current_value_ptr != NULL) {
+            argparse_format_specifier_to_delete_callback[(int)value_it->format](*current_value_ptr);
+            /* cast to (char *) to allow pointer increment by bytes */
+            current_value_ptr =
+              (char **)((char *)current_value_ptr + argparse_format_specifier_to_size[(int)value_it->format]);
+          }
         }
         free(*(char ***)value_it->value_ptr);
-      } else if (value_it->format == 's' || value_it->is_array) {
-        /* assume an char pointer since chars have no memory alignment restrictions */
-        free(*(char **)value_it->value_ptr);
+      } else if (argparse_format_specifier_to_delete_callback[(int)value_it->format] != NULL) {
+        argparse_format_specifier_to_delete_callback[(int)value_it->format](*(char **)value_it->value_ptr);
       }
     }
     args_value_iterator_delete(value_it);
@@ -1180,39 +1288,6 @@ void args_decrease_arg_reference_count(args_node_t *args_node) {
     free(args_node->arg->value_ptr);
     free(args_node->arg);
   }
-}
-
-
-/* ------------------------- sender --------------------------------------------------------------------------------- */
-
-int sender_post_serialize_socket(void *p) {
-  metahandle_t *handle = (metahandle_t *)p;
-  char *buf;
-  size_t buf_size;
-
-  memwriter_putc(handle->memwriter, ETB);
-
-  buf = memwriter_buf(handle->memwriter);
-  buf_size = memwriter_size(handle->memwriter);
-
-  send(handle->comm.socket.client_socket_fd, buf, buf_size, 0);
-
-  memwriter_clear(handle->memwriter);
-
-  return 0;
-}
-
-int sender_post_serialize_jupyter(void *p) {
-  metahandle_t *handle = (metahandle_t *)p;
-  char *buf;
-
-  buf = memwriter_buf(handle->memwriter);
-
-  handle->comm.jupyter.send(buf);
-
-  memwriter_clear(handle->memwriter);
-
-  return 0;
 }
 
 
@@ -1242,6 +1317,22 @@ unsigned int str_to_uint(const char *str, int *was_successful) {
   }
 
   return (unsigned int)conversion_result;
+}
+
+int is_int_number(const char *str) {
+  return strchr(FROMJSON_VALID_DELIMITERS, str[strspn(str, "0123456789-+")]) != NULL;
+}
+
+int uppercase_count(const char *str) {
+  int uppercase_count = 0;
+
+  while (*str) {
+    if (isupper(*str)) {
+      ++uppercase_count;
+    }
+    ++str;
+  }
+  return uppercase_count;
 }
 
 
@@ -1888,6 +1979,522 @@ void *args_value_iterator_next(args_value_iterator_t *args_value_iterator) {
   args_value_iterator->priv->value_buffer = value_buffer;
   args_value_iterator->value_ptr = value_ptr;
   return value_ptr;
+}
+
+
+/* ------------------------- json deserializer ---------------------------------------------------------------------- */
+
+int fromjson_read(gr_meta_args_t *args, const char *json_string) {
+  return fromjson_parse(args, json_string, NULL);
+}
+
+int fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_shared_state_t *shared_state) {
+  char *filtered_json_string = NULL;
+  fromjson_state_t state;
+  int allocated_shared_state_mem = 0;
+  int was_successful = 1;
+
+  state.datatype = JSON_DATATYPE_UNKNOWN;
+  state.value_buffer = NULL;
+  state.value_buffer_pointer_level = 0;
+  state.next_value_memory = NULL;
+  state.next_value_type = malloc(NEXT_VALUE_TYPE_SIZE);
+  if (state.next_value_type == NULL) {
+    debug_print_malloc_error();
+    return 0;
+  }
+  state.args = args;
+  if (shared_state == NULL) {
+    shared_state = malloc(sizeof(fromjson_shared_state_t));
+    if (shared_state == NULL) {
+      free(state.next_value_type);
+      debug_print_malloc_error();
+      return 0;
+    }
+    if (!fromjson_copy_and_filter_json_string(&filtered_json_string, json_string)) {
+      free(state.next_value_type);
+      free(shared_state);
+      return 0;
+    }
+    shared_state->json_ptr = filtered_json_string;
+    shared_state->parsed_any_value_before = 0;
+    allocated_shared_state_mem = 1;
+  }
+  state.shared_state = shared_state;
+  state.parsing_object = (*state.shared_state->json_ptr == '{');
+  if (state.parsing_object) {
+    ++state.shared_state->json_ptr;
+  }
+
+  while (strchr("}", *state.shared_state->json_ptr) == NULL) {
+    const char *current_key = NULL;
+
+    if (state.parsing_object) {
+      fromjson_parse_string(&state);
+      current_key = *(const char **)state.value_buffer;
+      free(state.value_buffer);
+      state.value_buffer = NULL;
+      ++(state.shared_state->json_ptr);
+    }
+    state.datatype = fromjson_check_type(&state);
+    if (state.datatype) {
+      if (!fromjson_datatype_to_func[state.datatype](&state)) {
+        was_successful = 0;
+        break;
+      }
+      if (state.parsing_object) {
+        gr_meta_args_push_kwarg_buf(args, current_key, state.next_value_type, state.value_buffer, 0);
+      } else {
+        gr_meta_args_push_arg_buf(args, state.next_value_type, state.value_buffer, 0);
+      }
+      if (*state.shared_state->json_ptr) {
+        if (strchr(FROMJSON_VALID_DELIMITERS, *state.shared_state->json_ptr) != NULL) {
+          ++state.shared_state->json_ptr;
+        } else {
+          was_successful = 0;
+          break;
+        }
+      }
+    } else {
+      was_successful = 0;
+      break;
+    }
+    if (state.value_buffer_pointer_level > 1) {
+      int i, outer_array_length = uppercase_count(state.next_value_type);
+      for (i = 0; i < outer_array_length; ++i) {
+        free(((char **)state.value_buffer)[i]);
+      }
+    }
+    free(state.value_buffer);
+    state.value_buffer = NULL;
+    state.value_buffer_pointer_level = 0;
+  }
+  if (state.parsing_object && *state.shared_state->json_ptr == '\0') {
+    was_successful = 0;
+  }
+
+  free(state.value_buffer);
+  free(filtered_json_string);
+  free(state.next_value_type);
+
+  if (allocated_shared_state_mem) {
+    free(shared_state);
+  }
+
+  return was_successful;
+}
+
+#define CHECK_AND_ALLOCATE_MEMORY(type, length)            \
+  do {                                                     \
+    if (state->value_buffer == NULL) {                     \
+      state->value_buffer = malloc(length * sizeof(type)); \
+      if (state->value_buffer == NULL) {                   \
+        debug_print_malloc_error();                        \
+        return 0;                                          \
+      }                                                    \
+      state->value_buffer_pointer_level = 1;               \
+      state->next_value_memory = state->value_buffer;      \
+    }                                                      \
+  } while (0)
+
+int fromjson_parse_null(fromjson_state_t *state) {
+  if (strncmp(state->shared_state->json_ptr, "null", 4) != 0) {
+    return 0;
+  }
+  strcpy(state->next_value_type, "");
+  state->shared_state->json_ptr += 4;
+  return 1;
+}
+
+int fromjson_parse_bool(fromjson_state_t *state) {
+  int bool_value;
+
+  if (strncmp(state->shared_state->json_ptr, "true", 4) == 0) {
+    bool_value = 1;
+  } else if (strncmp(state->shared_state->json_ptr, "false", 5) == 0) {
+    bool_value = 0;
+  } else {
+    return 0;
+  }
+  CHECK_AND_ALLOCATE_MEMORY(int, 1);
+  *((int *)state->next_value_memory) = bool_value;
+  strcpy(state->next_value_type, "i");
+  state->shared_state->json_ptr += bool_value ? 4 : 5;
+  return 1;
+}
+
+int fromjson_parse_number(fromjson_state_t *state) {
+  int was_successful;
+
+  if (is_int_number(state->shared_state->json_ptr)) {
+    was_successful = fromjson_parse_int(state);
+  } else {
+    was_successful = fromjson_parse_double(state);
+  }
+  return was_successful;
+}
+
+int fromjson_parse_int(fromjson_state_t *state) {
+  int was_successful;
+  int int_value;
+
+  int_value = fromjson_str_to_int((const char **)&state->shared_state->json_ptr, &was_successful);
+  if (!was_successful) {
+    return 0;
+  }
+  CHECK_AND_ALLOCATE_MEMORY(int, 1);
+  *((int *)state->next_value_memory) = int_value;
+  strcpy(state->next_value_type, "i");
+  return 1;
+}
+
+int fromjson_parse_double(fromjson_state_t *state) {
+  int was_successful;
+  double double_value;
+
+  double_value = fromjson_str_to_double((const char **)&state->shared_state->json_ptr, &was_successful);
+  if (!was_successful) {
+    return 0;
+  }
+  CHECK_AND_ALLOCATE_MEMORY(double, 1);
+  *((double *)state->next_value_memory) = double_value;
+  strcpy(state->next_value_type, "d");
+  return 1;
+}
+
+int fromjson_parse_string(fromjson_state_t *state) {
+  char *string_value;
+  char *json_ptr;
+  const char *src_ptr;
+  char *dest_ptr;
+  int string_is_complete;
+  int skipped_char;
+
+  CHECK_AND_ALLOCATE_MEMORY(char *, 1);
+  json_ptr = state->shared_state->json_ptr;
+  string_value = ++json_ptr;
+  while (*json_ptr && !is_string_delimiter(json_ptr, string_value)) {
+    ++json_ptr;
+  }
+  string_is_complete = (*json_ptr != '\0');
+  *json_ptr = '\0';
+  /* Unescape '"' and '\' (since '\' is the escape character) */
+  src_ptr = dest_ptr = string_value;
+  skipped_char = 0;
+  while (*src_ptr) {
+    if (*src_ptr == '\\' && !skipped_char) {
+      ++src_ptr;
+      skipped_char = 1;
+    } else {
+      *dest_ptr = *src_ptr;
+      ++src_ptr;
+      ++dest_ptr;
+      skipped_char = 0;
+    }
+  }
+  *dest_ptr = '\0';
+
+  *((const char **)state->next_value_memory) = string_value;
+  strcpy(state->next_value_type, "s");
+  ++json_ptr;
+  state->shared_state->json_ptr = json_ptr;
+
+  return string_is_complete;
+}
+
+int fromjson_parse_array(fromjson_state_t *state) {
+  fromjson_datatype_t json_datatype;
+  const char *next_delim_ptr;
+  char array_type[NEXT_VALUE_TYPE_SIZE];
+
+#define PARSE_VALUES(parse_suffix, c_type)                                                                      \
+  do {                                                                                                          \
+    c_type *values;                                                                                             \
+    c_type *current_value_ptr;                                                                                  \
+    CHECK_AND_ALLOCATE_MEMORY(c_type *, 1);                                                                     \
+    values = malloc(array_length * sizeof(c_type));                                                             \
+    if (values == NULL) {                                                                                       \
+      debug_print_malloc_error();                                                                               \
+      return 0;                                                                                                 \
+    }                                                                                                           \
+    current_value_ptr = values;                                                                                 \
+    *(c_type **)state->next_value_memory = values;                                                              \
+    state->value_buffer_pointer_level = 2;                                                                      \
+    state->next_value_memory = values;                                                                          \
+    --state->shared_state->json_ptr;                                                                            \
+    while (was_successful && strchr("]", *state->shared_state->json_ptr) == NULL) {                             \
+      ++state->shared_state->json_ptr;                                                                          \
+      was_successful = fromjson_parse_##parse_suffix(state);                                                    \
+      ++current_value_ptr;                                                                                      \
+      state->next_value_memory = current_value_ptr;                                                             \
+    }                                                                                                           \
+    snprintf(array_type + strlen(array_type), NEXT_VALUE_TYPE_SIZE, "%c(%u)", toupper(*state->next_value_type), \
+             array_length);                                                                                     \
+  } while (0)
+
+  if (strchr("]", *(state->shared_state->json_ptr + 1)) == NULL) {
+    unsigned int outer_array_length = 0;
+    int is_nested_array = (*(state->shared_state->json_ptr + 1) == '[');
+    unsigned int current_outer_array_index = 0;
+    if (is_nested_array) {
+      outer_array_length = fromjson_get_outer_array_length(state->shared_state->json_ptr);
+      /* `char *` is only used as a generic type since all pointers to values have the same storage size */
+      CHECK_AND_ALLOCATE_MEMORY(char *, outer_array_length);
+    }
+    array_type[0] = '\0';
+    do {
+      int was_successful = 1;
+      unsigned int array_length = 0;
+      state->shared_state->json_ptr += is_nested_array ? 2 : 1;
+      next_delim_ptr = state->shared_state->json_ptr;
+      while (*next_delim_ptr != ']' && fromjson_find_next_delimiter(&next_delim_ptr, next_delim_ptr, 0)) {
+        ++array_length;
+      }
+      if (*next_delim_ptr != ']') {
+        state->shared_state->json_ptr -= is_nested_array ? 2 : 1;
+        return 0;
+      }
+      assert(array_length > 0);
+      json_datatype = fromjson_check_type(state);
+      switch (json_datatype) {
+      case JSON_DATATYPE_NUMBER:
+        if (is_int_number(state->shared_state->json_ptr)) {
+          PARSE_VALUES(int, int);
+        } else {
+          PARSE_VALUES(double, double);
+        }
+        break;
+      case JSON_DATATYPE_STRING:
+        PARSE_VALUES(string, char *);
+        break;
+      case JSON_DATATYPE_ARRAY:
+        debug_print_error(("Arrays only support one level of nesting!\n"));
+        state->shared_state->json_ptr -= is_nested_array ? 2 : 1;
+        return 0;
+        break;
+      default:
+        debug_print_error(
+          ("The datatype \"%s\" is currently not supported in arrays!\n", fromjson_datatype_to_string[json_datatype]));
+        state->shared_state->json_ptr -= is_nested_array ? 2 : 1;
+        return 0;
+        break;
+      }
+      ++(state->shared_state->json_ptr);
+      if (is_nested_array) {
+        ++current_outer_array_index;
+        /* `char **` is only used as a generic type since all pointers to values have the same storage size */
+        state->next_value_memory = ((char **)state->value_buffer) + current_outer_array_index;
+      }
+    } while (is_nested_array && current_outer_array_index < outer_array_length &&
+             strchr("]", *state->shared_state->json_ptr) == NULL);
+    if (is_nested_array) {
+      ++state->shared_state->json_ptr;
+    }
+    strcpy(state->next_value_type, array_type);
+  } else {
+    strcpy(state->next_value_type, "I(0)");
+  }
+
+  return 1;
+
+#undef PARSE_VALUES
+}
+
+int fromjson_parse_object(fromjson_state_t *state) {
+  int was_successful;
+  gr_meta_args_t *args;
+
+  CHECK_AND_ALLOCATE_MEMORY(gr_meta_args_t *, 1);
+  args = gr_meta_args_new();
+  was_successful = fromjson_parse(args, state->shared_state->json_ptr, state->shared_state);
+  *((gr_meta_args_t **)state->next_value_memory) = args;
+  strcpy(state->next_value_type, "a");
+  return was_successful;
+}
+
+#undef CHECK_AND_ALLOCATE_MEMORY
+
+int fromjson_check_type(const fromjson_state_t *state) {
+  fromjson_datatype_t datatype;
+
+  datatype = JSON_DATATYPE_UNKNOWN;
+  switch (*state->shared_state->json_ptr) {
+  case '"':
+    datatype = JSON_DATATYPE_STRING;
+    break;
+  case '[':
+    datatype = JSON_DATATYPE_ARRAY;
+    break;
+  case '{':
+    datatype = JSON_DATATYPE_OBJECT;
+    break;
+  default:
+    break;
+  }
+  if (datatype == JSON_DATATYPE_UNKNOWN) {
+    if (*state->shared_state->json_ptr == 'n') {
+      datatype = JSON_DATATYPE_NULL;
+    } else if (strchr("ft", *state->shared_state->json_ptr) != NULL) {
+      datatype = JSON_DATATYPE_BOOL;
+    } else {
+      datatype = JSON_DATATYPE_NUMBER;
+    }
+  }
+  return datatype;
+}
+
+int fromjson_copy_and_filter_json_string(char **dest, const char *src) {
+  const char *src_ptr;
+  char *dest_buffer, *dest_ptr;
+  int in_string;
+
+  src_ptr = src;
+  dest_buffer = malloc(strlen(src) + 1);
+  if (dest_buffer == NULL) {
+    debug_print_malloc_error();
+    return 0;
+  }
+  dest_ptr = dest_buffer;
+
+  in_string = 0;
+  while (*src_ptr) {
+    if (is_string_delimiter(src_ptr, src)) {
+      in_string = !in_string;
+    }
+    if (in_string || !isspace(*src_ptr)) {
+      *dest_ptr = *src_ptr;
+      ++dest_ptr;
+    }
+    ++src_ptr;
+  }
+  *dest_ptr = '\0';
+
+  *dest = dest_buffer;
+
+  return 1;
+}
+
+int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int include_start) {
+  size_t segment_length;
+
+  if (*src == '\0') {
+    return 0;
+  }
+  if (!include_start) {
+    ++src;
+  }
+  segment_length = strcspn(src, FROMJSON_VALID_DELIMITERS);
+  if (*(src + segment_length) != '\0') {
+    *delim_ptr = src + segment_length;
+    return 1;
+  }
+  return 0;
+}
+
+int fromjson_get_outer_array_length(const char *str) {
+  int outer_array_length = 0;
+  int current_array_level = 1;
+
+  if (*str != '[') {
+    return outer_array_length;
+  }
+  ++str;
+  while (current_array_level > 0 && *str) {
+    switch (*str) {
+    case '[':
+      ++current_array_level;
+      break;
+    case ']':
+      --current_array_level;
+      break;
+    case ',':
+      if (current_array_level == 1) {
+        ++outer_array_length;
+      }
+      break;
+    default:
+      break;
+    }
+    ++str;
+  }
+  ++outer_array_length;
+  return outer_array_length;
+}
+
+double fromjson_str_to_double(const char **str, int *was_successful) {
+  char *conversion_end = NULL;
+  double conversion_result;
+  int success = 0;
+  const char *next_delim_ptr = NULL;
+
+  errno = 0;
+  if (*str != NULL) {
+    conversion_result = strtod(*str, &conversion_end);
+  } else {
+    conversion_result = 0.0;
+  }
+  if (conversion_end == NULL) {
+    debug_print_error(("No number conversion was executed (the string is NULL)!\n"));
+  } else if (*str == conversion_end || strchr(FROMJSON_VALID_DELIMITERS, *conversion_end) == NULL) {
+    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1);
+    debug_print_error(("The parameter \"%.*s\" is not a valid number!\n", next_delim_ptr - *str, *str));
+  } else if (errno == ERANGE) {
+    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1);
+    if (conversion_result == HUGE_VAL || conversion_result == -HUGE_VAL) {
+      debug_print_error(("The parameter \"%.*s\" caused an overflow, the number has been clamped to \"%lf\"\n",
+                         next_delim_ptr - *str, *str, conversion_result));
+    } else {
+      debug_print_error(("The parameter \"%.*s\" caused an underflow, the number has been clamped to \"%lf\"\n",
+                         next_delim_ptr - *str, *str, conversion_result));
+    }
+  } else {
+    success = 1;
+    *str = conversion_end;
+  }
+  if (was_successful != NULL) {
+    *was_successful = success;
+  }
+
+  return conversion_result;
+}
+
+int fromjson_str_to_int(const char **str, int *was_successful) {
+  char *conversion_end = NULL;
+  long conversion_result;
+  int success = 0;
+  const char *next_delim_ptr = NULL;
+
+  errno = 0;
+  if (*str != NULL) {
+    conversion_result = strtol(*str, &conversion_end, 10);
+  } else {
+    conversion_result = 0;
+  }
+  if (conversion_end == NULL) {
+    debug_print_error(("No number conversion was executed (the string is NULL)!\n"));
+  } else if (*str == conversion_end || strchr(FROMJSON_VALID_DELIMITERS, *conversion_end) == NULL) {
+    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1);
+    debug_print_error(("The parameter \"%.*s\" is not a valid number!\n", next_delim_ptr - *str, *str));
+  } else if (errno == ERANGE || conversion_result > INT_MAX || conversion_result < INT_MIN) {
+    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1);
+    if (conversion_result > INT_MAX) {
+      debug_print_error(("The parameter \"%.*s\" is too big, the number has been clamped to \"%d\"\n",
+                         next_delim_ptr - *str, *str, INT_MAX));
+      conversion_result = INT_MAX;
+    } else {
+      debug_print_error(("The parameter \"%.*s\" is too small, the number has been clamped to \"%d\"\n",
+                         next_delim_ptr - *str, *str, INT_MIN));
+      conversion_result = INT_MIN;
+    }
+  } else {
+    success = 1;
+    *str = conversion_end;
+  }
+  if (was_successful != NULL) {
+    *was_successful = success;
+  }
+
+  return (int)conversion_result;
 }
 
 
