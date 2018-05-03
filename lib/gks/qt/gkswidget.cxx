@@ -66,8 +66,10 @@ GKSWidget::GKSWidget(QWidget *parent)
 
   gkss->fontfile = gks_open_font();
 
-  p->width = 500; p->height = 500;
-  p->dpiX = p->dpiY = 100;
+  p->width = this->width();
+  p->height = this->height();
+  p->mwidth = this->widthMM() * 0.001;
+  p->mheight = this->heightMM() * 0.001;
 
   initialize_data();
 
@@ -77,10 +79,10 @@ GKSWidget::GKSWidget(QWidget *parent)
 
 void GKSWidget::paintEvent(QPaintEvent *)
 {
-  QPainter painter(this);
 
   if (dl)
     {
+      QPainter painter(this);
       p->pm->fill(Qt::white);
       interp(dl);
       painter.drawPixmap(0, 0, *(p->pm));
@@ -89,6 +91,8 @@ void GKSWidget::paintEvent(QPaintEvent *)
 
 void GKSWidget::resizeEvent(QResizeEvent *event)
 {
+  p->mwidth = this->widthMM() * 0.001;
+  p->mheight = this->heightMM() * 0.001;
   resize_pixmap(this->size().width(), this->size().height());
   repaint();
 }
@@ -98,7 +102,6 @@ void set_window_size(char *s)
 {
   int sp = 0, *len, *f;
   double *vp;
-
   len = (int *) (s + sp);
   while (*len)
     {
@@ -106,8 +109,8 @@ void set_window_size(char *s)
       if (*f == 55)
         {
           vp = (double *) (s + sp + 3 * sizeof(int));
-          p->width  = nint((vp[1] - vp[0]) / 2.54 * p->dpiX * 100);
-          p->height = nint((vp[3] - vp[2]) / 2.54 * p->dpiY * 100);
+          p->width = nint((vp[1] - vp[0]) / p->mwidth * p->width);
+          p->height = nint((vp[3] - vp[2]) / p->mheight * p->height);
         }
       sp += *len;
       len = (int *) (s + sp);

@@ -1,5 +1,7 @@
+GRDIR           = /usr/local/gr
+
 QT		+= widgets network
-QMAKE_CXXFLAGS	+= -DGRDIR=\\\"/usr/local/gr\\\"
+DEFINES	        += GRDIR=\\\"$(GRDIR)\\\"
 INCLUDEPATH	+= ../
 HEADERS		= gkswidget.h gksserver.h
 SOURCES		= gksqt.cxx gkswidget.cxx gksserver.cxx \
