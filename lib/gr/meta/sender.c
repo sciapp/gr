@@ -18,7 +18,7 @@ int test_sendmeta(void) {
   gr_meta_args_t *args;
   void *handle;
 
-  printf("filling argument container...");
+  printf("filling argument container...\n");
 
   data.n = n;
   data.x = x;
@@ -28,10 +28,11 @@ int test_sendmeta(void) {
   gr_meta_args_push_kwarg(args, "color", "ddd", 1.0, 0.0, 0.5);
 
   printf("sending data...");
+  fflush(stdout);
 
   handle = gr_openmeta(GR_TARGET_SOCKET, "localhost", 8001);
   if (handle == NULL) {
-    fprintf(stderr, "Sender could not be created\n");
+    fprintf(stderr, "sender could not be created\n");
     return -1;
   }
 

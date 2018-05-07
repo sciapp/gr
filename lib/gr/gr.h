@@ -1,3 +1,4 @@
+#include <stdio.h>
 #ifdef _WIN32
 
 #define HAVE_BOOLEAN
@@ -19,8 +20,10 @@ extern "C" {
 
 #endif
 
-#define GR_TARGET_JUPYTER 0
-#define GR_TARGET_SOCKET 1
+#define GR_SOURCE_JUPYTER 0
+#define GR_SOURCE_SOCKET 1
+#define GR_TARGET_JUPYTER 2
+#define GR_TARGET_SOCKET 3
 
 typedef struct {
   double x, y;
@@ -182,10 +185,14 @@ DLLEXPORT void gr_meta_args_push_kwarg(
 DLLEXPORT void gr_meta_args_push_kwarg_buf(
   gr_meta_args_t *, const char *, const char *, const void *, int);
 DLLEXPORT void *gr_openmeta(int, ...);
+DLLEXPORT int gr_recvmeta(const void *p, gr_meta_args_t *);
 DLLEXPORT int gr_sendmeta(const void *, const char *, ...);
 DLLEXPORT int gr_sendmeta_buf(const void *, const char *, const void *, int);
-DLLEXPORT int gr_sendmeta_args(const void *p, const gr_meta_args_t *args);
+DLLEXPORT int gr_sendmeta_args(const void *p, const gr_meta_args_t *);
 DLLEXPORT void gr_closemeta(const void *);
+#ifndef NDEBUG
+DLLEXPORT void gr_printmeta(const gr_meta_args_t *, FILE *);
+#endif
 DLLEXPORT const char *gr_version(void);
 
 #ifdef _WIN32

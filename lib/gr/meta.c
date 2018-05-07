@@ -14,6 +14,7 @@
 #include <string.h>
 #ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #else
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -24,9 +25,10 @@
 
 #include "gr.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 /* allow the use of posix functions on windows with msvc */
 #define strdup _strdup
+#define snprintf(buf, len, format, ...) _snprintf_s(buf, len, len, format, __VA_ARGS__)
 #endif
 
 /* ######################### private interface ###################################################################### */
@@ -51,8 +53,21 @@ static void debug_printf(const char *format, ...) {
   do {                                             \
     debug_printf error_message_arguments;          \
   } while (0)
+#ifdef _WIN32
+#define psocketerror(prefix_message)                                                                                  \
+  do {                                                                                                                \
+    wchar_t *message = NULL;                                                                                          \
+    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, \
+                   WSAGetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&message, 0, NULL);          \
+    fprintf(stderr, "%s: %S", prefix_message, message);                                                               \
+    LocalFree(message);                                                                                               \
+  } while (0)
+#else
+#define psocketerror(prefix_message) perror(prefix_message)
+#endif
 #else
 #define debug_print_error(error_message_arguments)
+#define psocketerror(prefix_message)
 #endif
 #define debug_print_malloc_error() debug_print_error(("Memory allocation failed -> out of virtual memory.\n"))
 
@@ -63,6 +78,13 @@ static void debug_printf(const char *format, ...) {
 #define MEMWRITER_SIZE_INCREMENT 32768
 
 #define ETB '\027'
+
+
+/* ------------------------- receiver / sender----------------------------------------------------------------------- */
+
+#define SOCKET_RECV_BUF_SIZE (MEMWRITER_INITIAL_SIZE - 1)
+#define is_source(source_or_target) ((source_or_target) < GR_TARGET_JUPYTER)
+#define is_target(source_or_target) (!is_source(source_or_target))
 
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
@@ -242,25 +264,46 @@ struct _memwriter_t {
 typedef struct _memwriter_t memwriter_t;
 
 
-/* ------------------------- sender --------------------------------------------------------------------------------- */
+/* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
-typedef int (*post_serialize_callback_t)(void *handle);
+typedef int (*recv_callback_t)(void *handle);
+typedef int (*send_callback_t)(void *handle);
+typedef const char *(*jupyter_recv_callback_t)(void);
 typedef int (*jupyter_send_callback_t)(const char *);
+typedef int (*finalize_callback_t)(void *handle);
 
-typedef struct {
-  int target;
-  memwriter_t *memwriter;
-  post_serialize_callback_t post_serialize;
-  union {
-    struct {
-      /* callback to a function that handles jupyter communication */
-      jupyter_send_callback_t send;
-    } jupyter;
-    struct {
-      int client_socket_fd;
-      struct sockaddr_in server_address;
-    } socket;
-  } comm;
+typedef union {
+  struct {
+    int source;
+    memwriter_t *memwriter;
+    size_t message_size;
+    recv_callback_t recv;
+    union {
+      struct {
+        jupyter_recv_callback_t recv;
+      } jupyter;
+      struct {
+        int client_socket_fd;
+        int server_socket_fd;
+      } socket;
+    } comm;
+  } receiver;
+  struct {
+    int target;
+    memwriter_t *memwriter;
+    send_callback_t send;
+    union {
+      struct {
+        /* callback to a function that handles jupyter communication */
+        jupyter_send_callback_t send;
+      } jupyter;
+      struct {
+        int client_socket_fd;
+        struct sockaddr_in server_address;
+      } socket;
+    } comm;
+  } sender;
+  finalize_callback_t finalize;
 } metahandle_t;
 
 
@@ -291,12 +334,6 @@ static const char *args_skip_option(const char *format);
 static void args_copy_format_string_for_arg(char *dst, const char *format);
 static void args_copy_format_string_for_parsing(char *dst, const char *format);
 static void args_decrease_arg_reference_count(args_node_t *args_node);
-
-
-/* ------------------------- sender --------------------------------------------------------------------------------- */
-
-static int sender_post_serialize_socket(void *p);
-static int sender_post_serialize_jupyter(void *p);
 
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
@@ -442,12 +479,26 @@ static int tojson_is_complete();
 static memwriter_t *memwriter_new();
 static void memwriter_delete(memwriter_t *memwriter);
 static void memwriter_clear(memwriter_t *memwriter);
-static int memwriter_enlarge_buf(memwriter_t *memwriter);
+static int memwriter_replace(memwriter_t *memwriter, int index, int count, const char *replacement_str);
+static int memwriter_erase(memwriter_t *memwriter, int index, int count);
+static int memwriter_insert(memwriter_t *memwriter, int index, const char *str);
+static int memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment);
+static int memwriter_ensure_buf(memwriter_t *memwriter, size_t needed_additional_size);
 static int memwriter_printf(memwriter_t *memwriter, const char *format, ...);
 static int memwriter_puts(memwriter_t *memwriter, const char *s);
 static int memwriter_putc(memwriter_t *memwriter, char c);
 static char *memwriter_buf(const memwriter_t *memwriter);
 static size_t memwriter_size(const memwriter_t *memwriter);
+
+
+/* ------------------------- receiver ------------------------------------------------------------------------------- */
+
+static int receiver_init_for_socket(metahandle_t *handle, va_list *vl);
+static int receiver_init_for_jupyter(metahandle_t *handle, va_list *vl);
+static int receiver_finalize_for_socket(metahandle_t *handle);
+static int receiver_finalize_for_jupyter(metahandle_t *handle);
+static int receiver_recv_for_socket(void *p);
+static int receiver_recv_for_jupyter(void *p);
 
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
@@ -456,6 +507,8 @@ static int sender_init_for_socket(metahandle_t *handle, va_list *vl);
 static int sender_init_for_jupyter(metahandle_t *handle, va_list *vl);
 static int sender_finalize_for_socket(metahandle_t *handle);
 static int sender_finalize_for_jupyter(metahandle_t *handle);
+static int sender_send_for_socket(void *p);
+static int sender_send_for_jupyter(void *p);
 
 
 /* ========================= static variables ======================================================================= */
@@ -500,9 +553,9 @@ static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 
 /* ========================= functions ============================================================================== */
 
-/* ------------------------- sender --------------------------------------------------------------------------------- */
+/* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
-void *gr_openmeta(int target, ...) {
+void *gr_openmeta(int source_or_target, ...) {
   va_list vl;
   metahandle_t *handle;
   int error = 0;
@@ -511,9 +564,15 @@ void *gr_openmeta(int target, ...) {
   if (handle == NULL) {
     return NULL;
   }
-  handle->target = target;
-  va_start(vl, target);
-  switch (target) {
+  handle->receiver.source = source_or_target;
+  va_start(vl, source_or_target);
+  switch (source_or_target) {
+  case GR_SOURCE_JUPYTER:
+    error = receiver_init_for_jupyter(handle, &vl);
+    break;
+  case GR_SOURCE_SOCKET:
+    error = receiver_init_for_socket(handle, &vl);
+    break;
   case GR_TARGET_JUPYTER:
     error = sender_init_for_jupyter(handle, &vl);
     break;
@@ -534,17 +593,36 @@ void *gr_openmeta(int target, ...) {
 void gr_closemeta(const void *p) {
   metahandle_t *handle = (metahandle_t *)p;
 
-  switch (handle->target) {
-  case GR_TARGET_JUPYTER:
-    sender_finalize_for_jupyter(handle);
-    break;
-  case GR_TARGET_SOCKET:
-    sender_finalize_for_socket(handle);
-    break;
-  }
-  memwriter_delete(handle->memwriter);
+  handle->finalize(handle);
+  memwriter_delete(handle->sender.memwriter);
   free(handle);
 }
+
+
+/* ------------------------- receiver ------------------------------------------------------------------------------- */
+
+int gr_recvmeta(const void *p, gr_meta_args_t *args) {
+  metahandle_t *handle = (metahandle_t *)p;
+
+  /* TODO: use error codes consistently -> != 0 is an error! */
+
+  if (handle->receiver.recv(handle)) {
+    return 0;
+  }
+  debug_printf("received the json string: '%s'\n", memwriter_buf(handle->receiver.memwriter));
+  if (fromjson_read(args, memwriter_buf(handle->receiver.memwriter))) {
+    return 0;
+  }
+
+  if (!memwriter_erase(handle->receiver.memwriter, 0, handle->receiver.message_size + 1)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+
+/* ------------------------- sender --------------------------------------------------------------------------------- */
 
 int gr_sendmeta(const void *p, const char *data_desc, ...) {
   metahandle_t *handle = (metahandle_t *)p;
@@ -552,9 +630,9 @@ int gr_sendmeta(const void *p, const char *data_desc, ...) {
   int was_successful;
 
   va_start(vl, data_desc);
-  was_successful = !tojson_write_vl(handle->memwriter, data_desc, &vl);
-  if (was_successful && tojson_is_complete() && handle->post_serialize != NULL) {
-    int error = handle->post_serialize(handle);
+  was_successful = !tojson_write_vl(handle->sender.memwriter, data_desc, &vl);
+  if (was_successful && tojson_is_complete() && handle->sender.send != NULL) {
+    int error = handle->sender.send(handle);
     was_successful = was_successful && (error == 0);
   }
   va_end(vl);
@@ -566,9 +644,9 @@ int gr_sendmeta_buf(const void *p, const char *data_desc, const void *buffer, in
   metahandle_t *handle = (metahandle_t *)p;
   int was_successful;
 
-  was_successful = !tojson_write_buf(handle->memwriter, data_desc, buffer, apply_padding);
-  if (was_successful && tojson_is_complete() && handle->post_serialize != NULL) {
-    int error = handle->post_serialize(handle);
+  was_successful = !tojson_write_buf(handle->sender.memwriter, data_desc, buffer, apply_padding);
+  if (was_successful && tojson_is_complete() && handle->sender.send != NULL) {
+    int error = handle->sender.send(handle);
     was_successful = was_successful && (error == 0);
   }
 
@@ -3101,17 +3179,55 @@ void memwriter_clear(memwriter_t *memwriter) {
   *memwriter->buf = '\0';
 }
 
-int memwriter_enlarge_buf(memwriter_t *memwriter) {
+int memwriter_replace(memwriter_t *memwriter, int index, int count, const char *replacement_str) {
+  int replacement_str_len = (replacement_str != NULL) ? strlen(replacement_str) : 0;
+  if (!memwriter_ensure_buf(memwriter, replacement_str_len - count)) {
+    return 0;
+  }
+  if (count != replacement_str_len) {
+    memmove(memwriter->buf + index + replacement_str_len, memwriter->buf + index + count,
+            memwriter->size - (index + count));
+  }
+  if (replacement_str != NULL) {
+    memcpy(memwriter->buf + index, replacement_str, replacement_str_len);
+  }
+  memwriter->size += replacement_str_len - count;
+
+  return 1;
+}
+
+int memwriter_erase(memwriter_t *memwriter, int index, int count) {
+  return memwriter_replace(memwriter, index, count, NULL);
+}
+
+int memwriter_insert(memwriter_t *memwriter, int index, const char *str) {
+  return memwriter_replace(memwriter, index, 0, str);
+}
+
+int memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment) {
   void *new_buf;
 
-  new_buf = realloc(memwriter->buf, memwriter->capacity + MEMWRITER_SIZE_INCREMENT);
+  if (size_increment == 0) {
+    size_increment = MEMWRITER_SIZE_INCREMENT;
+  } else {
+    /* round up to the next `MEMWRITER_SIZE_INCREMENT` step */
+    size_increment = ((size_increment - 1) / MEMWRITER_SIZE_INCREMENT + 1) * MEMWRITER_SIZE_INCREMENT;
+  }
+  new_buf = realloc(memwriter->buf, memwriter->capacity + size_increment);
   if (new_buf == NULL) {
     debug_print_malloc_error();
     return 0;
   }
   memwriter->buf = new_buf;
-  memwriter->capacity += MEMWRITER_SIZE_INCREMENT;
+  memwriter->capacity += size_increment;
 
+  return 1;
+}
+
+int memwriter_ensure_buf(memwriter_t *memwriter, size_t needed_additional_size) {
+  if (memwriter->size + needed_additional_size > memwriter->capacity) {
+    return memwriter_enlarge_buf(memwriter, memwriter->size + needed_additional_size - memwriter->capacity);
+  }
   return 1;
 }
 
@@ -3125,12 +3241,13 @@ int memwriter_printf(memwriter_t *memwriter, const char *format, ...) {
     va_start(vl, format);
     chars_needed = vsnprintf(&memwriter->buf[memwriter->size], memwriter->capacity - memwriter->size, format, vl);
     va_end(vl);
+    /* we need one more char because `vsnprintf` does exclude the trailing '\0' character in its calculations */
     if (chars_needed < (int)(memwriter->capacity - memwriter->size)) {
       memwriter->size += chars_needed;
       was_successful = 1;
       break;
     }
-    if (!memwriter_enlarge_buf(memwriter)) {
+    if (!memwriter_ensure_buf(memwriter, chars_needed + 1)) {
       break;
     }
   }
@@ -3155,20 +3272,183 @@ size_t memwriter_size(const memwriter_t *memwriter) {
 }
 
 
+/* ------------------------- receiver ------------------------------------------------------------------------------- */
+
+int receiver_init_for_jupyter(metahandle_t *handle, va_list *vl) {
+  /* TODO: implement me! */
+  return -1;
+}
+
+int receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
+  unsigned int port;
+  struct sockaddr_in server_addr;
+  struct sockaddr_in client_addr;
+  socklen_t client_addrlen = sizeof(client_addr);
+#ifdef _WIN32
+  int wsa_startup_error = 0;
+  WSADATA wsa_data;
+#endif
+
+  port = va_arg(*vl, unsigned int);
+
+#ifdef _WIN32
+  /* Initialize winsock */
+  /* TODO: use another error code for WSAStartup fails since WSACleanup must not be called in that case */
+  if ((wsa_startup_error = WSAStartup(MAKEWORD(2, 2), &wsa_data))) {
+#ifndef NDEBUG
+    /* on WSAStartup failure `WSAGetLastError` should not be called (see MSDN), use the error code directly instead
+     */
+    wchar_t *message = NULL;
+    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+                   wsa_startup_error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&message, 0, NULL);
+    debug_printf("winsock initialization failed: %S\n", message);
+    LocalFree(message);
+#endif
+    return -1;
+  }
+#endif
+
+  server_addr.sin_family = AF_INET;
+  /* TODO: allow binding to other interfaces (by setting an environment variable) */
+  server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  server_addr.sin_port = htons(port);
+
+  /* Create a socket for listening */
+  if ((handle->receiver.comm.socket.server_socket_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+    psocketerror("socket creation failed");
+    return -1;
+  }
+
+  /* Bind the socket to given ip address and port */
+  if (bind(handle->receiver.comm.socket.server_socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr))) {
+    psocketerror("bind failed");
+    return -1;
+  }
+
+  /* Listen for incoming connections */
+  if (listen(handle->receiver.comm.socket.server_socket_fd, 1)) {
+    psocketerror("listen failed");
+    return -1;
+  }
+
+  /* Accecpt an incoming connection and get a new socket instance for communication */
+  if ((handle->receiver.comm.socket.client_socket_fd =
+         accept(handle->receiver.comm.socket.server_socket_fd, (struct sockaddr *)&client_addr, &client_addrlen)) < 0) {
+    psocketerror("accept failed");
+    return -1;
+  }
+
+  handle->receiver.memwriter = memwriter_new();
+  if (handle->receiver.memwriter == NULL) {
+    return -1;
+  }
+  handle->receiver.recv = receiver_recv_for_socket;
+  handle->finalize = receiver_finalize_for_socket;
+
+  return 0;
+}
+
+int receiver_finalize_for_jupyter(metahandle_t *handle) {
+  /* TODO: implement me! */
+  return -1;
+}
+
+int receiver_finalize_for_socket(metahandle_t *handle) {
+  int error = 0;
+
+#ifdef _WIN32
+  if (handle->receiver.comm.socket.client_socket_fd >= 0) {
+    if (closesocket(handle->receiver.comm.socket.client_socket_fd)) {
+      psocketerror("client socket shutdown failed");
+      error = 1;
+    }
+  }
+  if (handle->receiver.comm.socket.server_socket_fd >= 0) {
+    if (closesocket(handle->receiver.comm.socket.server_socket_fd)) {
+      psocketerror("server socket shutdown failed");
+      error = 1;
+    }
+  }
+  /* TODO: check if WSAStartup was successful */
+  if (WSACleanup()) {
+    psocketerror("Winsocket shutdown failed");
+    error = 1;
+  }
+#else
+  if (handle->receiver.comm.socket.client_socket_fd >= 0) {
+    if (close(handle->receiver.comm.socket.client_socket_fd)) {
+      psocketerror("client socket shutdown failed");
+      error = 1;
+    }
+  }
+  if (handle->receiver.comm.socket.server_socket_fd >= 0) {
+    if (close(handle->receiver.comm.socket.server_socket_fd)) {
+      psocketerror("server socket shutdown failed");
+      error = 1;
+    }
+  }
+#endif
+
+  return error;
+}
+
+int receiver_recv_for_socket(void *p) {
+  metahandle_t *handle = (metahandle_t *)p;
+  int search_start_index = 0;
+  char *end_ptr;
+  static char recv_buf[SOCKET_RECV_BUF_SIZE];
+
+  memwriter_clear(handle->receiver.memwriter);
+  while ((end_ptr = memchr(memwriter_buf(handle->receiver.memwriter) + search_start_index, ETB,
+                           memwriter_size(handle->receiver.memwriter) - search_start_index)) == NULL) {
+    int bytes_received;
+    search_start_index = memwriter_size(handle->receiver.memwriter);
+    if ((bytes_received = recv(handle->receiver.comm.socket.client_socket_fd, recv_buf, SOCKET_RECV_BUF_SIZE, 0)) < 0) {
+      psocketerror("error while receiving data");
+      return -1;
+    }
+    memwriter_printf(handle->receiver.memwriter, "%.*s", bytes_received, recv_buf);
+  }
+  *end_ptr = '\0';
+  handle->receiver.message_size = end_ptr - memwriter_buf(handle->receiver.memwriter);
+
+  return 0;
+}
+
+int receiver_recv_for_jupyter(void *p) {
+  /* TODO: implement me! */
+  return -1;
+}
+
+
 /* ------------------------- sender --------------------------------------------------------------------------------- */
+
+int sender_init_for_jupyter(metahandle_t *handle, va_list *vl) {
+  jupyter_send_callback_t jupyter_send_callback;
+
+  jupyter_send_callback = va_arg(*vl, jupyter_send_callback_t);
+
+  handle->sender.comm.jupyter.send = jupyter_send_callback;
+  handle->sender.memwriter = memwriter_new();
+  if (handle->sender.memwriter == NULL) {
+    return -1;
+  }
+  handle->sender.send = sender_send_for_jupyter;
+  return 0;
+}
 
 int sender_init_for_socket(metahandle_t *handle, va_list *vl) {
   const char *hostname;
   unsigned int port;
   struct hostent *he;
-#if defined(_WIN32) && !defined(__GNUC__)
+#ifdef _WIN32
   WSADATA wsa_data;
 #endif
 
   hostname = va_arg(*vl, const char *);
   port = va_arg(*vl, unsigned int);
 
-#if defined(_WIN32) && !defined(__GNUC__)
+#ifdef _WIN32
   /* Initialize Winsock */
   if (WSAStartup(MAKEWORD(2, 2), &wsa_data)) {
     debug_print_error(("Winsock initialization failed."));
@@ -3181,35 +3461,23 @@ int sender_init_for_socket(metahandle_t *handle, va_list *vl) {
     perror("gethostbyname");
     return -1;
   }
-  handle->comm.socket.client_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-  memcpy(&handle->comm.socket.server_address.sin_addr, he->h_addr_list[0], sizeof(struct in_addr));
-  handle->comm.socket.server_address.sin_family = AF_INET;
-  handle->comm.socket.server_address.sin_port = htons(port);
-  if (connect(handle->comm.socket.client_socket_fd, (struct sockaddr *)&handle->comm.socket.server_address,
-              sizeof(handle->comm.socket.server_address)) < 0) {
+  handle->sender.comm.socket.client_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+  memcpy(&handle->sender.comm.socket.server_address.sin_addr, he->h_addr_list[0], sizeof(struct in_addr));
+  handle->sender.comm.socket.server_address.sin_family = AF_INET;
+  handle->sender.comm.socket.server_address.sin_port = htons(port);
+  if (connect(handle->sender.comm.socket.client_socket_fd,
+              (struct sockaddr *)&handle->sender.comm.socket.server_address,
+              sizeof(handle->sender.comm.socket.server_address)) < 0) {
     perror("connect");
     return -1;
   }
-  handle->memwriter = memwriter_new();
-  if (handle->memwriter == NULL) {
+  handle->sender.memwriter = memwriter_new();
+  if (handle->sender.memwriter == NULL) {
     return -1;
   }
-  handle->post_serialize = sender_post_serialize_socket;
+  handle->sender.send = sender_send_for_socket;
+  handle->finalize = sender_finalize_for_socket;
 
-  return 0;
-}
-
-int sender_init_for_jupyter(metahandle_t *handle, va_list *vl) {
-  jupyter_send_callback_t jupyter_send_callback;
-
-  jupyter_send_callback = va_arg(*vl, jupyter_send_callback_t);
-
-  handle->comm.jupyter.send = jupyter_send_callback;
-  handle->memwriter = memwriter_new();
-  if (handle->memwriter == NULL) {
-    return -1;
-  }
-  handle->post_serialize = sender_post_serialize_jupyter;
   return 0;
 }
 
@@ -3222,12 +3490,12 @@ int sender_finalize_for_socket(metahandle_t *handle) {
   int result;
   int error = 0;
 
-#if defined(_WIN32)
-  result = closesocket(handle->comm.socket.client_socket_fd);
+#ifdef _WIN32
+  result = closesocket(handle->sender.comm.socket.client_socket_fd);
 #else
-  result = close(handle->comm.socket.client_socket_fd);
+  result = close(handle->sender.comm.socket.client_socket_fd);
 #endif
-#if defined(_WIN32) && !defined(__GNUC__)
+#ifdef _WIN32
   result |= WSACleanup();
 #endif
   if (result != 0) {
@@ -3236,3 +3504,180 @@ int sender_finalize_for_socket(metahandle_t *handle) {
   }
   return error;
 }
+
+int sender_send_for_socket(void *p) {
+  metahandle_t *handle = (metahandle_t *)p;
+  char *buf;
+  size_t buf_size;
+
+  memwriter_putc(handle->sender.memwriter, ETB);
+
+  buf = memwriter_buf(handle->sender.memwriter);
+  buf_size = memwriter_size(handle->sender.memwriter);
+
+  send(handle->sender.comm.socket.client_socket_fd, buf, buf_size, 0);
+
+  memwriter_clear(handle->sender.memwriter);
+
+  return 0;
+}
+
+int sender_send_for_jupyter(void *p) {
+  metahandle_t *handle = (metahandle_t *)p;
+  char *buf;
+
+  buf = memwriter_buf(handle->sender.memwriter);
+
+  handle->sender.comm.jupyter.send(buf);
+
+  memwriter_clear(handle->sender.memwriter);
+
+  return 0;
+}
+
+#ifndef NDEBUG
+void gr_printmeta(const gr_meta_args_t *args, FILE *f) {
+  args_iterator_t *it;
+  args_value_iterator_t *value_it;
+  arg_t *arg;
+  int i;
+
+  fprintf(f, "=== container contents ===\n");
+
+  fprintf(f, "\n--- value only ---\n");
+  it = args_iter_args(args);
+  while ((arg = it->next(it)) != NULL) {
+    if (*arg->value_format) {
+      value_it = args_value_iter(arg);
+      while (value_it->next(value_it) != NULL) {
+        switch (value_it->format) {
+        case 'i':
+          if (value_it->is_array) {
+            fprintf(f, "int array: [");
+            for (i = 0; i < value_it->array_length; i++) {
+              fprintf(f, "%d, ", (*((int **)value_it->value_ptr))[i]);
+            }
+            if (value_it->array_length > 0) {
+              fprintf(f, "\b\b");
+            }
+            fprintf(f, "]\n");
+          } else {
+            fprintf(f, "int: %d\n", *((int *)value_it->value_ptr));
+          }
+          break;
+        case 'd':
+          if (value_it->is_array) {
+            fprintf(f, "double array: [");
+            for (i = 0; i < value_it->array_length; i++) {
+              fprintf(f, "%lf, ", (*((double **)value_it->value_ptr))[i]);
+            }
+            if (value_it->array_length > 0) {
+              fprintf(f, "\b\b");
+            }
+            fprintf(f, "]\n");
+          } else {
+            fprintf(f, "double: %lf\n", *((double *)value_it->value_ptr));
+          }
+          break;
+        case 'c':
+          fprintf(f, "char: %c\n", *((char *)value_it->value_ptr));
+          break;
+        case 's':
+          if (value_it->is_array) {
+            fprintf(f, "string array: [");
+            for (i = 0; i < value_it->array_length; i++) {
+              fprintf(f, "%s, ", (*((char ***)value_it->value_ptr))[i]);
+            }
+            if (value_it->array_length > 0) {
+              fprintf(f, "\b\b");
+            }
+            fprintf(f, "]\n");
+          } else {
+            fprintf(f, "string: %s\n", *((char **)value_it->value_ptr));
+          }
+          break;
+        case 'a':
+          fprintf(f, "%s: container\n", arg->key);
+          gr_printmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
+          break;
+        default:
+          break;
+        }
+      }
+      args_value_iterator_delete(value_it);
+    } else {
+      fprintf(f, "null: (none)\n");
+    }
+  }
+  args_iterator_delete(it);
+
+  fprintf(f, "\n--- with keys ---\n");
+  it = args_iter_kwargs(args);
+  while ((arg = it->next(it)) != NULL) {
+    if (*arg->value_format) {
+      value_it = args_value_iter(arg);
+      while (value_it->next(value_it) != NULL) {
+        switch (value_it->format) {
+        case 'i':
+          if (value_it->is_array) {
+            fprintf(f, "%s: [", arg->key);
+            for (i = 0; i < value_it->array_length; i++) {
+              fprintf(f, "%d, ", (*((int **)value_it->value_ptr))[i]);
+            }
+            if (value_it->array_length > 0) {
+              fprintf(f, "\b\b");
+            }
+            fprintf(f, "]\n");
+          } else {
+            fprintf(f, "%s: %d\n", arg->key, *((int *)value_it->value_ptr));
+          }
+          break;
+        case 'd':
+          if (value_it->is_array) {
+            fprintf(f, "%s: [", arg->key);
+            for (i = 0; i < value_it->array_length; i++) {
+              fprintf(f, "%lf, ", (*((double **)value_it->value_ptr))[i]);
+            }
+            if (value_it->array_length > 0) {
+              fprintf(f, "\b\b");
+            }
+            fprintf(f, "]\n");
+          } else {
+            fprintf(f, "%s: %lf\n", arg->key, *((double *)value_it->value_ptr));
+          }
+          break;
+        case 'c':
+          fprintf(f, "%s: %c\n", arg->key, *((char *)value_it->value_ptr));
+          break;
+        case 's':
+          if (value_it->is_array) {
+            fprintf(f, "%s: [", arg->key);
+            for (i = 0; i < value_it->array_length; i++) {
+              fprintf(f, "%s, ", (*((char ***)value_it->value_ptr))[i]);
+            }
+            if (value_it->array_length > 0) {
+              fprintf(f, "\b\b");
+            }
+            fprintf(f, "]\n");
+          } else {
+            fprintf(f, "%s: %s\n", arg->key, *((char **)value_it->value_ptr));
+          }
+          break;
+        case 'a':
+          fprintf(f, "%s: container\n", arg->key);
+          gr_printmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
+          break;
+        default:
+          break;
+        }
+      }
+      args_value_iterator_delete(value_it);
+    } else {
+      fprintf(f, "%s: (none)\n", arg->key);
+    }
+  }
+  args_iterator_delete(it);
+
+  fprintf(f, "=== container contents end ===\n");
+}
+#endif

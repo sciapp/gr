@@ -5,15 +5,18 @@ LIBS = -L$(GRDIR)/lib -lGR
 LDFLAGS = $(LIBS) -Wl,-rpath,$(GRDIR)/lib
 
 
-all: main
+all: receiver sender
 
-main: main.o
+receiver: receiver.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+sender: sender.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $^
 
 clean:
-	rm -f main *.o *.a *.so
+	rm -f receiver sender *.o *.a *.so
 
 .PHONY: all clean
