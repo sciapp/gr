@@ -35,11 +35,6 @@
 
 /* ========================= macros ================================================================================= */
 
-/* ------------------------- constants ------------------------------------------------------------------------------ */
-
-#define NEXT_VALUE_TYPE_SIZE 80
-
-
 /* ------------------------- error ---------------------------------------------------------------------------------- */
 
 #ifndef NDEBUG
@@ -70,6 +65,11 @@ static void debug_printf(const char *format, ...) {
 #define psocketerror(prefix_message)
 #endif
 #define debug_print_malloc_error() debug_print_error(("Memory allocation failed -> out of virtual memory.\n"))
+
+
+/* ------------------------- json deserializer ---------------------------------------------------------------------- */
+
+#define NEXT_VALUE_TYPE_SIZE 80
 
 
 /* ------------------------- memwriter ------------------------------------------------------------------------------ */
@@ -266,13 +266,16 @@ typedef struct _memwriter_t memwriter_t;
 
 /* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
+union _metahandle_t;
+typedef union _metahandle_t metahandle_t;
+
 typedef int (*recv_callback_t)(void *handle);
 typedef int (*send_callback_t)(void *handle);
 typedef const char *(*jupyter_recv_callback_t)(void);
 typedef int (*jupyter_send_callback_t)(const char *);
-typedef int (*finalize_callback_t)(void *handle);
+typedef int (*finalize_callback_t)(metahandle_t *handle);
 
-typedef union {
+union _metahandle_t {
   struct {
     int source;
     memwriter_t *memwriter;
@@ -304,7 +307,7 @@ typedef union {
     } comm;
   } sender;
   finalize_callback_t finalize;
-} metahandle_t;
+};
 
 
 /* ========================= functions ============================================================================== */
@@ -318,7 +321,7 @@ static void argparse_read_char(argparse_state_t *state);
 static void argparse_read_string(argparse_state_t *state);
 static void argparse_read_default_array_length(argparse_state_t *state);
 static void argparse_read_char_array(argparse_state_t *state, int store_array_length);
-static void argparse_init_static_variables();
+static void argparse_init_static_variables(void);
 static size_t argparse_calculate_needed_buffer_size(const char *format);
 static size_t argparse_calculate_needed_padding(void *buffer, char current_format);
 static void argparse_read_next_option(argparse_state_t *state, char **format);
@@ -471,12 +474,12 @@ static int tojson_init_variables(int *add_data, int *add_data_without_separator,
                                  const char *data_desc);
 static int tojson_write_vl(memwriter_t *memwriter, const char *data_desc, va_list *vl);
 static int tojson_write_buf(memwriter_t *memwriter, const char *data_desc, const void *buffer, int apply_padding);
-static int tojson_is_complete();
+static int tojson_is_complete(void);
 
 
 /* ------------------------- memwriter ------------------------------------------------------------------------------ */
 
-static memwriter_t *memwriter_new();
+static memwriter_t *memwriter_new(void);
 static void memwriter_delete(memwriter_t *memwriter);
 static void memwriter_clear(memwriter_t *memwriter);
 static int memwriter_replace(memwriter_t *memwriter, int index, int count, const char *replacement_str);
@@ -551,7 +554,56 @@ static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 
 /* ######################### public implementation ################################################################## */
 
-/* ========================= functions ============================================================================== */
+/* ========================= methods ================================================================================ */
+
+/* ------------------------- argument container --------------------------------------------------------------------- */
+
+gr_meta_args_t *gr_meta_args_new() {
+  gr_meta_args_t *args = malloc(sizeof(gr_meta_args_t));
+  if (args == NULL) {
+    debug_print_malloc_error();
+    return NULL;
+  }
+  args_init(args);
+  return args;
+}
+
+void gr_meta_args_delete(gr_meta_args_t *args) {
+  args_finalize(args);
+  free(args);
+}
+
+void gr_meta_args_push_arg(gr_meta_args_t *args, const char *value_format, ...) {
+  va_list vl;
+  va_start(vl, value_format);
+
+  args_push_arg_vl(args, value_format, &vl);
+
+  va_end(vl);
+}
+
+void gr_meta_args_push_arg_buf(gr_meta_args_t *args, const char *value_format, const void *buffer, int apply_padding) {
+  args_push_arg_common(args, value_format, buffer, NULL, apply_padding);
+}
+
+void gr_meta_args_push_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
+  /*
+   * warning! this function does not check if a given key already exists in the container
+   * -> use `args_update_kwarg` instead
+   */
+  va_list vl;
+  va_start(vl, value_format);
+
+  args_push_kwarg_vl(args, key, value_format, &vl);
+
+  va_end(vl);
+}
+
+void gr_meta_args_push_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                                 int apply_padding) {
+  args_push_kwarg_common(args, key, value_format, buffer, NULL, apply_padding);
+}
+
 
 /* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
@@ -708,57 +760,6 @@ int gr_sendmeta_args(const void *p, const gr_meta_args_t *args) {
   args_iterator_delete(it);
 
   return 0;
-}
-
-
-/* ========================= methods ================================================================================ */
-
-/* ------------------------- argument container --------------------------------------------------------------------- */
-
-gr_meta_args_t *gr_meta_args_new() {
-  gr_meta_args_t *args = malloc(sizeof(gr_meta_args_t));
-  if (args == NULL) {
-    debug_print_malloc_error();
-    return NULL;
-  }
-  args_init(args);
-  return args;
-}
-
-void gr_meta_args_delete(gr_meta_args_t *args) {
-  args_finalize(args);
-  free(args);
-}
-
-void gr_meta_args_push_arg(gr_meta_args_t *args, const char *value_format, ...) {
-  va_list vl;
-  va_start(vl, value_format);
-
-  args_push_arg_vl(args, value_format, &vl);
-
-  va_end(vl);
-}
-
-void gr_meta_args_push_arg_buf(gr_meta_args_t *args, const char *value_format, const void *buffer, int apply_padding) {
-  args_push_arg_common(args, value_format, buffer, NULL, apply_padding);
-}
-
-void gr_meta_args_push_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
-  /*
-   * warning! this function does not check if a given key already exists in the container
-   * -> use `args_update_kwarg` instead
-   */
-  va_list vl;
-  va_start(vl, value_format);
-
-  args_push_kwarg_vl(args, key, value_format, &vl);
-
-  va_end(vl);
-}
-
-void gr_meta_args_push_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                                 int apply_padding) {
-  args_push_kwarg_common(args, key, value_format, buffer, NULL, apply_padding);
 }
 
 
@@ -2283,7 +2284,6 @@ int fromjson_parse_string(fromjson_state_t *state) {
 int fromjson_parse_array(fromjson_state_t *state) {
   fromjson_datatype_t json_datatype;
   const char *next_delim_ptr;
-  char array_type[NEXT_VALUE_TYPE_SIZE];
 
 #define PARSE_VALUES(parse_suffix, c_type)                                                                      \
   do {                                                                                                          \
@@ -2311,6 +2311,7 @@ int fromjson_parse_array(fromjson_state_t *state) {
   } while (0)
 
   if (strchr("]", *(state->shared_state->json_ptr + 1)) == NULL) {
+    char array_type[NEXT_VALUE_TYPE_SIZE];
     unsigned int outer_array_length = 0;
     int is_nested_array = (*(state->shared_state->json_ptr + 1) == '[');
     unsigned int current_outer_array_index = 0;
@@ -3275,6 +3276,8 @@ size_t memwriter_size(const memwriter_t *memwriter) {
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
 int receiver_init_for_jupyter(metahandle_t *handle, va_list *vl) {
+  UNUSED(handle);
+  UNUSED(vl);
   /* TODO: implement me! */
   return -1;
 }
@@ -3349,6 +3352,7 @@ int receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
 }
 
 int receiver_finalize_for_jupyter(metahandle_t *handle) {
+  UNUSED(handle);
   /* TODO: implement me! */
   return -1;
 }
@@ -3416,6 +3420,7 @@ int receiver_recv_for_socket(void *p) {
 }
 
 int receiver_recv_for_jupyter(void *p) {
+  UNUSED(p);
   /* TODO: implement me! */
   return -1;
 }
