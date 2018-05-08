@@ -98,7 +98,7 @@ typedef struct ws_state_list_t
     QPainter *pixmap;
     int state, wtype;
     double mwidth, mheight;
-    int width, height, dpiX, dpiY;
+    int width, height;
     double a, b, c, d;
     double window[4], viewport[4];
     QRect rect[MAX_TNR];
@@ -225,9 +225,8 @@ void init_norm_xform(void)
 static
 void resize_window(void)
 {
-  p->width  = nint((p->viewport[1] - p->viewport[0]) / 2.54 * p->dpiX * 100);
-  p->height = nint((p->viewport[3] - p->viewport[2]) / 2.54 * p->dpiY * 100);
-
+  p->width = nint((p->viewport[1] - p->viewport[0]) / p->mwidth * p->width);
+  p->height = nint((p->viewport[3] - p->viewport[2]) / p->mheight * p->height);
   if (p->pm)
     {
       if (p->width  != p->pm->size().width() ||
@@ -1014,8 +1013,8 @@ void interp(char *str)
             }
 
           p->viewport[0] = p->viewport[2] = 0.0;
-          p->viewport[1] = p->width  * 2.54 / p->dpiX / 100;
-          p->viewport[3] = p->height * 2.54 / p->dpiY / 100;
+          p->viewport[1] = p->mwidth;
+          p->viewport[3] = p->mheight;
 
           set_xform();
           init_norm_xform();
@@ -1263,8 +1262,6 @@ int get_pixmap(void)
       p->mheight = p->widget->heightMM() * 0.001;
       p->width   = p->widget->width();
       p->height  = p->widget->height();
-      p->dpiX    = p->widget->physicalDpiX();
-      p->dpiY    = p->widget->physicalDpiY();
     }
   else
     {
@@ -1272,8 +1269,6 @@ int get_pixmap(void)
       p->mheight = p->pixmap->device()->heightMM() * 0.001;
       p->width   = p->pixmap->device()->width();
       p->height  = p->pixmap->device()->height();
-      p->dpiX    = p->pixmap->device()->logicalDpiX();
-      p->dpiY    = p->pixmap->device()->logicalDpiY();
     }
   return 0;
 }
@@ -1292,7 +1287,6 @@ void QT_PLUGIN_ENTRY_NAME(
       p = new ws_state_list;
 
       p->width = p->height = 500;
-      p->dpiX = p->dpiY = 100;
 
       initialize_data();
 

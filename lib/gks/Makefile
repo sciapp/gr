@@ -84,7 +84,7 @@ gksm: gksm.c libGKS.a
 	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
 gksqt:
-	@make -C qt -f makefile.mak
+	@make -C qt -f makefile.mak GRDIR=$(GRDIR)
 
 plugins:
 	@make -C plugin
