@@ -6,7 +6,7 @@
     ZLIBS = ../../3rdparty/zlib/libz.lib
    QHLIBS = ../../3rdparty/qhull/libqhull.lib
   GKSLIBS = -L../gks/ -lgks
-     LIBS = -lwsock32 -lmsimg32 -lgdi32
+     LIBS = -lws2_32 -lmsimg32 -lgdi32
 
 OBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
 	delaunay.o interp2.o md5.o import.o meta.o

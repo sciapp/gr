@@ -1,5 +1,5 @@
 #ifdef __unix__
-#define _XOPEN_SOURCE 500
+#define _XOPEN_SOURCE 600
 #endif
 
 #include <assert.h>
@@ -89,6 +89,7 @@ static void debug_printf(const char *format, ...) {
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
+#define PORT_MAX_STRING_LENGTH 80
 #define SENDARGS_FORMAT_MAX_LENGTH 100
 
 
@@ -286,8 +287,8 @@ union _metahandle_t {
         jupyter_recv_callback_t recv;
       } jupyter;
       struct {
-        int client_socket_fd;
-        int server_socket_fd;
+        int client_socket;
+        int server_socket;
       } socket;
     } comm;
   } receiver;
@@ -301,7 +302,7 @@ union _metahandle_t {
         jupyter_send_callback_t send;
       } jupyter;
       struct {
-        int client_socket_fd;
+        int client_socket;
         struct sockaddr_in server_address;
       } socket;
     } comm;
@@ -3313,30 +3314,37 @@ int receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
 
   server_addr.sin_family = AF_INET;
   /* TODO: allow binding to other interfaces (by setting an environment variable) */
+#if defined(_WIN32) && !defined(__MINGW32__)
+  if (InetPton(AF_INET, "127.0.0.1", &server_addr.sin_addr.s_addr) < 1) {
+    psocketerror("InetPton call failed");
+    return -1;
+  }
+#else
   server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+#endif
   server_addr.sin_port = htons(port);
 
   /* Create a socket for listening */
-  if ((handle->receiver.comm.socket.server_socket_fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+  if ((handle->receiver.comm.socket.server_socket = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
     psocketerror("socket creation failed");
     return -1;
   }
 
   /* Bind the socket to given ip address and port */
-  if (bind(handle->receiver.comm.socket.server_socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr))) {
+  if (bind(handle->receiver.comm.socket.server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr))) {
     psocketerror("bind failed");
     return -1;
   }
 
   /* Listen for incoming connections */
-  if (listen(handle->receiver.comm.socket.server_socket_fd, 1)) {
+  if (listen(handle->receiver.comm.socket.server_socket, 1)) {
     psocketerror("listen failed");
     return -1;
   }
 
   /* Accecpt an incoming connection and get a new socket instance for communication */
-  if ((handle->receiver.comm.socket.client_socket_fd =
-         accept(handle->receiver.comm.socket.server_socket_fd, (struct sockaddr *)&client_addr, &client_addrlen)) < 0) {
+  if ((handle->receiver.comm.socket.client_socket =
+         accept(handle->receiver.comm.socket.server_socket, (struct sockaddr *)&client_addr, &client_addrlen)) < 0) {
     psocketerror("accept failed");
     return -1;
   }
@@ -3361,32 +3369,32 @@ int receiver_finalize_for_socket(metahandle_t *handle) {
   int error = 0;
 
 #ifdef _WIN32
-  if (handle->receiver.comm.socket.client_socket_fd >= 0) {
-    if (closesocket(handle->receiver.comm.socket.client_socket_fd)) {
+  if (handle->receiver.comm.socket.client_socket >= 0) {
+    if (closesocket(handle->receiver.comm.socket.client_socket)) {
       psocketerror("client socket shutdown failed");
       error = 1;
     }
   }
-  if (handle->receiver.comm.socket.server_socket_fd >= 0) {
-    if (closesocket(handle->receiver.comm.socket.server_socket_fd)) {
+  if (handle->receiver.comm.socket.server_socket >= 0) {
+    if (closesocket(handle->receiver.comm.socket.server_socket)) {
       psocketerror("server socket shutdown failed");
       error = 1;
     }
   }
   /* TODO: check if WSAStartup was successful */
   if (WSACleanup()) {
-    psocketerror("Winsocket shutdown failed");
+    psocketerror("winsock shutdown failed");
     error = 1;
   }
 #else
-  if (handle->receiver.comm.socket.client_socket_fd >= 0) {
-    if (close(handle->receiver.comm.socket.client_socket_fd)) {
+  if (handle->receiver.comm.socket.client_socket >= 0) {
+    if (close(handle->receiver.comm.socket.client_socket)) {
       psocketerror("client socket shutdown failed");
       error = 1;
     }
   }
-  if (handle->receiver.comm.socket.server_socket_fd >= 0) {
-    if (close(handle->receiver.comm.socket.server_socket_fd)) {
+  if (handle->receiver.comm.socket.server_socket >= 0) {
+    if (close(handle->receiver.comm.socket.server_socket)) {
       psocketerror("server socket shutdown failed");
       error = 1;
     }
@@ -3407,7 +3415,7 @@ int receiver_recv_for_socket(void *p) {
                            memwriter_size(handle->receiver.memwriter) - search_start_index)) == NULL) {
     int bytes_received;
     search_start_index = memwriter_size(handle->receiver.memwriter);
-    if ((bytes_received = recv(handle->receiver.comm.socket.client_socket_fd, recv_buf, SOCKET_RECV_BUF_SIZE, 0)) < 0) {
+    if ((bytes_received = recv(handle->receiver.comm.socket.client_socket, recv_buf, SOCKET_RECV_BUF_SIZE, 0)) < 0) {
       psocketerror("error while receiving data");
       return -1;
     }
@@ -3445,37 +3453,84 @@ int sender_init_for_jupyter(metahandle_t *handle, va_list *vl) {
 int sender_init_for_socket(metahandle_t *handle, va_list *vl) {
   const char *hostname;
   unsigned int port;
-  struct hostent *he;
+  char port_str[PORT_MAX_STRING_LENGTH];
+  struct addrinfo *addr_result = NULL, *addr_ptr = NULL, addr_hints;
+  int error;
 #ifdef _WIN32
+  int wsa_startup_error = 0;
   WSADATA wsa_data;
 #endif
 
   hostname = va_arg(*vl, const char *);
   port = va_arg(*vl, unsigned int);
+  snprintf(port_str, PORT_MAX_STRING_LENGTH, "%u", port);
 
 #ifdef _WIN32
-  /* Initialize Winsock */
-  if (WSAStartup(MAKEWORD(2, 2), &wsa_data)) {
-    debug_print_error(("Winsock initialization failed."));
+  /* Initialize winsock */
+  /* TODO: use another error code for WSAStartup fails since WSACleanup must not be called in that case */
+  if ((wsa_startup_error = WSAStartup(MAKEWORD(2, 2), &wsa_data))) {
+#ifndef NDEBUG
+    /* on WSAStartup failure `WSAGetLastError` should not be called (see MSDN), use the error code directly instead
+     */
+    wchar_t *message = NULL;
+    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+                   wsa_startup_error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&message, 0, NULL);
+    debug_printf("winsock initialization failed: %S\n", message);
+    LocalFree(message);
+#endif
     return -1;
   }
 #endif
 
-  he = gethostbyname(hostname);
-  if (he == NULL || he->h_addr_list == NULL) {
-    perror("gethostbyname");
+  memset(&addr_hints, 0, sizeof(addr_hints));
+  addr_hints.ai_family = AF_UNSPEC;
+  addr_hints.ai_socktype = SOCK_STREAM;
+  addr_hints.ai_protocol = IPPROTO_TCP;
+
+  /* Query a list of ip addresses for the given hostname */
+  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_result))) {
+#ifdef _WIN32
+    psocketerror("getaddrinfo failed with error");
+#else
+    if (error == EAI_SYSTEM) {
+      perror("getaddrinfo failed with error");
+    } else {
+      fprintf(stderr, "getaddrinfo failed with error: %s\n", gai_strerror(error));
+    }
+#endif
     return -1;
   }
-  handle->sender.comm.socket.client_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-  memcpy(&handle->sender.comm.socket.server_address.sin_addr, he->h_addr_list[0], sizeof(struct in_addr));
-  handle->sender.comm.socket.server_address.sin_family = AF_INET;
-  handle->sender.comm.socket.server_address.sin_port = htons(port);
-  if (connect(handle->sender.comm.socket.client_socket_fd,
-              (struct sockaddr *)&handle->sender.comm.socket.server_address,
-              sizeof(handle->sender.comm.socket.server_address)) < 0) {
-    perror("connect");
+
+  /* Attempt to connect to an address until one succeeds */
+  handle->sender.comm.socket.client_socket = -1;
+  for (addr_ptr = addr_result; addr_ptr != NULL && handle->sender.comm.socket.client_socket < 0;
+       addr_ptr = addr_ptr->ai_next) {
+    /* Create a socket for connecting to server */
+    handle->sender.comm.socket.client_socket =
+      socket(addr_ptr->ai_family, addr_ptr->ai_socktype, addr_ptr->ai_protocol);
+    if (handle->sender.comm.socket.client_socket < 0) {
+      psocketerror("socket creation failed");
+      return -1;
+    }
+    /* Connect to server */
+    if (connect(handle->sender.comm.socket.client_socket, addr_ptr->ai_addr, (int)addr_ptr->ai_addrlen)) {
+#ifdef _WIN32
+      closesocket(handle->sender.comm.socket.client_socket);
+#else
+      close(handle->sender.comm.socket.client_socket);
+#endif
+      handle->sender.comm.socket.client_socket = -1;
+    }
+  }
+  freeaddrinfo(addr_result);
+  addr_result = NULL;
+
+  if (handle->sender.comm.socket.client_socket < 0) {
+    fprintf(stderr, "cannot connect to host %s port %u", hostname, port);
+    psocketerror("");
     return -1;
   }
+
   handle->sender.memwriter = memwriter_new();
   if (handle->sender.memwriter == NULL) {
     return -1;
@@ -3492,35 +3547,54 @@ int sender_finalize_for_jupyter(metahandle_t *handle) {
 }
 
 int sender_finalize_for_socket(metahandle_t *handle) {
-  int result;
   int error = 0;
 
 #ifdef _WIN32
-  result = closesocket(handle->sender.comm.socket.client_socket_fd);
-#else
-  result = close(handle->sender.comm.socket.client_socket_fd);
-#endif
-#ifdef _WIN32
-  result |= WSACleanup();
-#endif
-  if (result != 0) {
-    debug_print_error(("Winsocket shutdown failed."));
-    error = -1;
+  if (handle->sender.comm.socket.client_socket >= 0) {
+    if (closesocket(handle->sender.comm.socket.client_socket)) {
+      psocketerror("client socket shutdown failed");
+      error = 1;
+    }
   }
+  /* TODO: check if WSAStartup was successful */
+  if (WSACleanup()) {
+    psocketerror("winsock shutdown failed");
+    error = 1;
+  }
+#else
+  if (handle->sender.comm.socket.client_socket >= 0) {
+    if (close(handle->sender.comm.socket.client_socket)) {
+      psocketerror("client socket shutdown failed");
+      error = 1;
+    }
+  }
+#endif
+
   return error;
 }
 
 int sender_send_for_socket(void *p) {
   metahandle_t *handle = (metahandle_t *)p;
-  char *buf;
+  const char *buf, *send_ptr;
   size_t buf_size;
+  int bytes_left;
 
   memwriter_putc(handle->sender.memwriter, ETB);
 
   buf = memwriter_buf(handle->sender.memwriter);
   buf_size = memwriter_size(handle->sender.memwriter);
 
-  send(handle->sender.comm.socket.client_socket_fd, buf, buf_size, 0);
+  send_ptr = buf;
+  bytes_left = buf_size;
+  while (bytes_left) {
+    int bytes_sent = send(handle->sender.comm.socket.client_socket, buf, bytes_left, 0);
+    if (bytes_sent < 0) {
+      psocketerror("could not send any data");
+      return -1;
+    }
+    send_ptr += bytes_sent;
+    bytes_left -= bytes_sent;
+  }
 
   memwriter_clear(handle->sender.memwriter);
 
