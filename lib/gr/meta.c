@@ -180,7 +180,6 @@ typedef struct {
 } tojson_shared_state_t;
 
 typedef struct {
-  int next_is_ptr;
   char *data_type_ptr;
   char current_data_type;
   char *additional_type_info;
@@ -380,7 +379,6 @@ static void tojson_stringify_bool(memwriter_t *memwriter, tojson_state_t *state)
 static int tojson_get_member_count(const char *data_desc);
 static int tojson_is_json_array_needed(const char *data_desc);
 static int tojson_read_datatype(tojson_state_t *state);
-static void tojson_read_next_is_ptr(tojson_state_t *state);
 static void tojson_skip_bytes(tojson_state_t *state);
 static void tojson_close_object(memwriter_t *memwriter, tojson_state_t *state);
 static void tojson_read_array_length(tojson_state_t *state);
@@ -1879,47 +1877,31 @@ void *args_value_iterator_next(args_value_iterator_t *args_value_iterator) {
     }                                                                  \
   } while (0)
 
-#define INIT_MULTI_VALUE(vars, type)               \
-  do {                                             \
-    if (state->shared->data_ptr != NULL) {         \
-      if (state->next_is_ptr) {                    \
-        CHECK_PADDING(type *);                     \
-        vars = *(type **)state->shared->data_ptr;  \
-      } else {                                     \
-        CHECK_PADDING(type);                       \
-        vars = (type *)state->shared->data_ptr;    \
-      }                                            \
-    } else {                                       \
-      if (state->next_is_ptr) {                    \
-        vars = va_arg(*state->shared->vl, type *); \
-      }                                            \
-    }                                              \
+#define INIT_MULTI_VALUE(vars, type)             \
+  do {                                           \
+    if (state->shared->data_ptr != NULL) {       \
+      CHECK_PADDING(type *);                     \
+      vars = *(type **)state->shared->data_ptr;  \
+    } else {                                     \
+      vars = va_arg(*state->shared->vl, type *); \
+    }                                            \
   } while (0)
 
-#define RETRIEVE_NEXT_VALUE(var, vars, type)    \
-  do {                                          \
-    if (state->shared->data_ptr != NULL) {      \
-      var = *vars++;                            \
-    } else {                                    \
-      if (state->next_is_ptr) {                 \
-        var = *vars++;                          \
-      } else {                                  \
-        var = va_arg(*state->shared->vl, type); \
-      }                                         \
-    }                                           \
+#define RETRIEVE_NEXT_VALUE(var, vars, type) \
+  do {                                       \
+    if (state->shared->data_ptr != NULL) {   \
+      var = *vars++;                         \
+    } else {                                 \
+      var = *vars++;                         \
+    }                                        \
   } while (0)
 
-#define FIN_MULTI_VALUE(type)                                                 \
-  do {                                                                        \
-    if (state->shared->data_ptr != NULL) {                                    \
-      if (state->next_is_ptr) {                                               \
-        state->shared->data_ptr = ((type **)state->shared->data_ptr) + 1;     \
-        state->shared->data_offset += sizeof(type *);                         \
-      } else {                                                                \
-        state->shared->data_ptr = ((type *)state->shared->data_ptr) + length; \
-        state->shared->data_offset += length * sizeof(type);                  \
-      }                                                                       \
-    }                                                                         \
+#define FIN_MULTI_VALUE(type)                                           \
+  do {                                                                  \
+    if (state->shared->data_ptr != NULL) {                              \
+      state->shared->data_ptr = ((type **)state->shared->data_ptr) + 1; \
+      state->shared->data_offset += sizeof(type *);                     \
+    }                                                                   \
   } while (0)
 
 #define DEF_STRINGIFY_SINGLE(type, promoted_type, format_specifier)             \
@@ -1961,7 +1943,6 @@ void *args_value_iterator_next(args_value_iterator_t *args_value_iterator) {
     memwriter_putc(memwriter, ']');                                                                                 \
     FIN_MULTI_VALUE(type);                                                                                          \
     state->shared->wrote_output = 1;                                                                                \
-    state->next_is_ptr = 0;                                                                                         \
   }
 
 DEF_STRINGIFY_SINGLE(int, int, "%d")
@@ -1977,20 +1958,11 @@ void tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *state) 
   char *chars;
   int length;
 
-  if (state->shared->data_ptr == NULL && !state->next_is_ptr) {
-    debug_print_error(("Serializing strings from single chars is not supported when using variable argument lists."));
-  }
-
-  if (state->next_is_ptr) {
-    if (state->shared->data_ptr != NULL) {
-      CHECK_PADDING(char *);
-      chars = *(char **)state->shared->data_ptr;
-    } else {
-      chars = va_arg(*state->shared->vl, char *);
-    }
+  if (state->shared->data_ptr != NULL) {
+    CHECK_PADDING(char *);
+    chars = *(char **)state->shared->data_ptr;
   } else {
-    CHECK_PADDING(char);
-    chars = (char *)state->shared->data_ptr;
+    chars = va_arg(*state->shared->vl, char *);
   }
 
   if (state->additional_type_info != NULL) {
@@ -2008,7 +1980,6 @@ void tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *state) 
 
   FIN_MULTI_VALUE(char);
   state->shared->wrote_output = 1;
-  state->next_is_ptr = 0;
 }
 
 void tojson_stringify_bool(memwriter_t *memwriter, tojson_state_t *state) {
@@ -2099,10 +2070,6 @@ int tojson_read_datatype(tojson_state_t *state) {
   }
   state->additional_type_info = additional_type_info;
   return 0;
-}
-
-void tojson_read_next_is_ptr(tojson_state_t *state) {
-  state->next_is_ptr = 1;
 }
 
 void tojson_skip_bytes(tojson_state_t *state) {
@@ -2280,7 +2247,6 @@ int tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *data, 
   int json_array_needed = 0;
   int allocated_shared_state_mem = 0;
 
-  state.next_is_ptr = 0;
   state.data_type_ptr = data_desc;
   state.current_data_type = 0;
   state.additional_type_info = NULL;
@@ -2326,9 +2292,6 @@ int tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *data, 
     switch (state.current_data_type) {
     case 'n':
       tojson_read_array_length(&state);
-      break;
-    case 'p':
-      tojson_read_next_is_ptr(&state);
       break;
     case 'e':
       tojson_skip_bytes(&state);
