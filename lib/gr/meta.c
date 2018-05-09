@@ -271,6 +271,7 @@ static arg_t *args_create_args(const char *key, const char *value_format, const 
 static int args_validate_format_string(const char *format);
 static const char *args_skip_option(const char *format);
 static void args_copy_format_string_for_arg(char *dst, const char *format);
+static void args_copy_format_string_for_parsing(char *dst, const char *format);
 static void args_decrease_arg_reference_count(args_node_t *args_node);
 
 
@@ -985,6 +986,7 @@ const char *argparse_skip_option(const char *format) {
 
 arg_t *args_create_args(const char *key, const char *value_format, const void *buffer, va_list *vl, int apply_padding) {
   arg_t *arg;
+  char *parsing_format;
 
   if (!args_validate_format_string(value_format)) {
     return NULL;
@@ -1005,15 +1007,25 @@ arg_t *args_create_args(const char *key, const char *value_format, const void *b
   } else {
     arg->key = NULL;
   }
-  arg->value_format = malloc(strlen(value_format) + 1);
+  arg->value_format = malloc(2 * strlen(value_format) + 1);
   if (arg->value_format == NULL) {
     debug_print_malloc_error();
     free((char *)arg->key);
     free(arg);
     return NULL;
   }
+  parsing_format = malloc(strlen(value_format) + 1);
+  if (parsing_format == NULL) {
+    debug_print_malloc_error();
+    free((char *)arg->key);
+    free((char *)arg->value_format);
+    free(arg);
+    return NULL;
+  }
   args_copy_format_string_for_arg((char *)arg->value_format, value_format);
-  arg->value_ptr = argparse_read_params(arg->value_format, buffer, vl, apply_padding);
+  args_copy_format_string_for_parsing(parsing_format, value_format);
+  arg->value_ptr = argparse_read_params(parsing_format, buffer, vl, apply_padding);
+  free(parsing_format);
   arg->priv = malloc(sizeof(arg_private_t));
   if (arg->priv == NULL) {
     debug_print_malloc_error();
@@ -1105,7 +1117,7 @@ const char *args_skip_option(const char *format) {
   return format;
 }
 
-void args_copy_format_string_for_arg(char *dst, const char *format) {
+void args_copy_format_string_for_parsing(char *dst, const char *format) {
   while (*format) {
     if (*format == 'C') {
       /* char arrays and strings are the same -> store them as strings for unified data handling */
@@ -1116,6 +1128,31 @@ void args_copy_format_string_for_arg(char *dst, const char *format) {
     } else {
       *dst++ = *format++;
     }
+  }
+  *dst = '\0';
+}
+
+void args_copy_format_string_for_arg(char *dst, const char *format) {
+  /* `dst` should have twice as much memory as `format` to ensure that no buffer overun can occur */
+  while (*format) {
+    if (*format == 'n') {
+      /* Skip `n` since it is added for arrays anyway when needed */
+      ++format;
+      continue;
+    }
+    if (isupper(*format) || *format == 's') {
+      /* all array formats get an internal size value */
+      *dst++ = 'n';
+    }
+    if (*format == 'C') {
+      /* char arrays and strings are the same -> store them as strings for unified data handling */
+      *dst++ = 's';
+      ++format;
+    } else {
+      *dst++ = *format++;
+    }
+    /* Skip an optional array length since it already saved in the argument buffer itself (-> `n` format) */
+    format = args_skip_option(format);
   }
   *dst = '\0';
 }
@@ -1541,7 +1578,7 @@ int(args_get_first_value_by_keyword)(const gr_meta_args_t *args, const char *key
   if (arg == NULL) {
     return 0;
   }
-  transformed_first_value_format = malloc(strlen(first_value_format) + 1);
+  transformed_first_value_format = malloc(2 * strlen(first_value_format) + 1);
   if (transformed_first_value_format == NULL) {
     debug_print_malloc_error();
     return 0;
