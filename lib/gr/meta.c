@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <float.h>
 #include <limits.h>
 #include <math.h>
 #include <stdarg.h>
@@ -2728,14 +2729,19 @@ int fromjson_str_to_int(const char **str, int *was_successful) {
     return error;                                                                                                   \
   }
 
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
 DEF_STRINGIFY_SINGLE(int, int, "%d")
 DEF_STRINGIFY_MULTI(int, "%d")
-DEF_STRINGIFY_SINGLE(double, double, "%f")
-DEF_STRINGIFY_MULTI(double, "%f")
+DEF_STRINGIFY_SINGLE(double, double, "%." XSTR(DBL_DECIMAL_DIG) "g")
+DEF_STRINGIFY_MULTI(double, "%." XSTR(DBL_DECIMAL_DIG) "g")
 DEF_STRINGIFY_SINGLE(char, int, "%c")
 
 #undef DEF_STRINGIFY_SINGLE
 #undef DEF_STRINGIFY_MULTI
+#undef XSTR
+#undef STR
 
 error_t tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *state) {
   char *chars;
