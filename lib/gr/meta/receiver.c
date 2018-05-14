@@ -22,7 +22,7 @@ int test_recvmeta(void) {
     return -2;
   }
 
-  gr_printmeta(args, stdout);
+  gr_dumpmeta(args, stdout);
 
   return 0;
 }

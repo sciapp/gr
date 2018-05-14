@@ -164,8 +164,8 @@ typedef struct {
   const args_node_t *end;
 } args_iterator_private_t;
 
-typedef struct _gr_meta_args_iterator_t {
-  arg_t *(*next)(struct _gr_meta_args_iterator_t *it);
+typedef struct _args_iterator_t {
+  arg_t *(*next)(struct _args_iterator_t *it);
   arg_t *arg;
   args_iterator_private_t *priv;
 } args_iterator_t;
@@ -3734,7 +3734,7 @@ error_t sender_send_for_jupyter(void *p) {
 }
 
 #ifndef NDEBUG
-void gr_printmeta(const gr_meta_args_t *args, FILE *f) {
+void gr_dumpmeta(const gr_meta_args_t *args, FILE *f) {
   args_iterator_t *it;
   args_value_iterator_t *value_it;
   arg_t *arg;
@@ -3796,7 +3796,7 @@ void gr_printmeta(const gr_meta_args_t *args, FILE *f) {
           break;
         case 'a':
           fprintf(f, "%s: container\n", arg->key);
-          gr_printmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
+          gr_dumpmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
           break;
         default:
           break;
@@ -3863,7 +3863,7 @@ void gr_printmeta(const gr_meta_args_t *args, FILE *f) {
           break;
         case 'a':
           fprintf(f, "%s: container\n", arg->key);
-          gr_printmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
+          gr_dumpmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
           break;
         default:
           break;
