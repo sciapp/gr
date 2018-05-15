@@ -699,7 +699,6 @@ int gr_recvmeta(const void *p, gr_meta_args_t *args) {
   if (handle->receiver.recv(handle) != NO_ERROR) {
     return 0;
   }
-  debug_printf("received the json string: '%s'\n", memwriter_buf(handle->receiver.memwriter));
   if (fromjson_read(args, memwriter_buf(handle->receiver.memwriter)) != NO_ERROR) {
     return 0;
   }
@@ -3433,7 +3432,7 @@ error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
     wchar_t *message = NULL;
     FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
                    wsa_startup_error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&message, 0, NULL);
-    debug_printf("winsock initialization failed: %S\n", message);
+    debug_print_error(("winsock initialization failed: %S\n", message));
     LocalFree(message);
 #endif
     return ERROR_NETWORK_WINSOCK_INIT;
@@ -3605,7 +3604,7 @@ error_t sender_init_for_socket(metahandle_t *handle, va_list *vl) {
     wchar_t *message = NULL;
     FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
                    wsa_startup_error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&message, 0, NULL);
-    debug_printf("winsock initialization failed: %S\n", message);
+    debug_print_error(("winsock initialization failed: %S\n", message));
     LocalFree(message);
 #endif
     return ERROR_NETWORK_WINSOCK_INIT;
