@@ -50,13 +50,13 @@ static void debug_printf(const char *format, ...) {
     debug_printf error_message_arguments;          \
   } while (0)
 #ifdef _WIN32
-#define psocketerror(prefix_message)                                                                                  \
-  do {                                                                                                                \
-    wchar_t *message = NULL;                                                                                          \
-    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, \
-                   WSAGetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&message, 0, NULL);          \
-    fprintf(stderr, "%s: %S", prefix_message, message);                                                               \
-    LocalFree(message);                                                                                               \
+#define psocketerror(prefix_message)                                                                                 \
+  do {                                                                                                               \
+    char *message = NULL;                                                                                            \
+    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, \
+                  WSAGetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&message, 0, NULL);           \
+    fprintf(stderr, "%s: %s", prefix_message, message);                                                              \
+    LocalFree(message);                                                                                              \
   } while (0)
 #else
 #define psocketerror(prefix_message) perror(prefix_message)
