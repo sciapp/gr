@@ -33,16 +33,18 @@ int test_sendmeta(void) {
   handle = gr_openmeta(GR_TARGET_SOCKET, "localhost", 8001);
   if (handle == NULL) {
     fprintf(stderr, "sender could not be created\n");
-    return -1;
+    gr_meta_args_delete(args);
+    return 1;
   }
 
   gr_sendmeta(handle, "s(content:s(");
   gr_sendmeta_args(handle, args);
   gr_sendmeta(handle, ")");
 
-  gr_closemeta(handle);
-
   printf("\tsent\n");
+
+  gr_closemeta(handle);
+  gr_meta_args_delete(args);
 
   return 0;
 }

@@ -68,6 +68,12 @@ static void debug_printf(const char *format, ...) {
 #define debug_print_malloc_error() debug_print_error(("Memory allocation failed -> out of virtual memory.\n"))
 
 
+/* ------------------------- general -------------------------------------------------------------------------------- */
+
+#ifndef DBL_DECIMAL_DIG
+#define DBL_DECIMAL_DIG 17
+#endif
+
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
 #define NEXT_VALUE_TYPE_SIZE 80
@@ -223,6 +229,16 @@ typedef struct _gr_meta_args_value_iterator_t {
 } args_value_iterator_t;
 
 
+/* ------------------------- memwriter ------------------------------------------------------------------------------ */
+
+struct _memwriter_t {
+  char *buf;
+  size_t size;
+  size_t capacity;
+};
+typedef struct _memwriter_t memwriter_t;
+
+
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
 typedef enum {
@@ -253,6 +269,8 @@ typedef struct {
 
 
 /* ------------------------- json serializer ------------------------------------------------------------------------ */
+
+typedef error_t (*tojson_post_processing_callback_t)(memwriter_t *, unsigned int, const char *);
 
 enum { member_name, data_type };
 
@@ -288,16 +306,6 @@ typedef struct {
   tojson_serialization_result_t serial_result;
   unsigned int struct_nested_level;
 } tojson_permanent_state_t;
-
-
-/* ------------------------- memwriter ------------------------------------------------------------------------------ */
-
-struct _memwriter_t {
-  char *buf;
-  size_t size;
-  size_t capacity;
-};
-typedef struct _memwriter_t memwriter_t;
 
 
 /* ------------------------- receiver / sender ---------------------------------------------------------------------- */
@@ -478,16 +486,16 @@ static int fromjson_str_to_int(const char **str, int *was_successful);
 
 /* ------------------------- json serializer ------------------------------------------------------------------------ */
 
-#define DECLARE_STRINGIFY_SINGLE(type, promoted_type, format_specifier) \
+#define DECLARE_STRINGIFY_SINGLE(type) \
   static error_t tojson_stringify_##type(memwriter_t *memwriter, tojson_state_t *state);
-#define DECLARE_STRINGIFY_MULTI(type, format_specifier) \
+#define DECLARE_STRINGIFY_MULTI(type) \
   static error_t tojson_stringify_##type##_array(memwriter_t *memwriter, tojson_state_t *state);
 
-DECLARE_STRINGIFY_SINGLE(int, int, "%d")
-DECLARE_STRINGIFY_MULTI(int, "%d")
-DECLARE_STRINGIFY_SINGLE(double, double, "%f")
-DECLARE_STRINGIFY_MULTI(double, "%f")
-DECLARE_STRINGIFY_SINGLE(char, int, "%c")
+DECLARE_STRINGIFY_SINGLE(int)
+DECLARE_STRINGIFY_MULTI(int)
+DECLARE_STRINGIFY_SINGLE(double)
+DECLARE_STRINGIFY_MULTI(double)
+DECLARE_STRINGIFY_SINGLE(char)
 
 #undef DECLARE_STRINGIFY_SINGLE
 #undef DECLARE_STRINGIFY_MULTI
@@ -495,6 +503,9 @@ DECLARE_STRINGIFY_SINGLE(char, int, "%c")
 static error_t tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *state);
 static error_t tojson_stringify_bool(memwriter_t *memwriter, tojson_state_t *state);
 static error_t tojson_stringify_struct(memwriter_t *memwriter, tojson_state_t *state);
+
+static error_t tojson_double_post_processing(memwriter_t *memwriter, unsigned int string_start_index,
+                                             const char *unprocessed_string);
 
 static int tojson_get_member_count(const char *data_desc);
 static int tojson_is_json_array_needed(const char *data_desc);
@@ -686,7 +697,6 @@ void gr_closemeta(const void *p) {
   metahandle_t *handle = (metahandle_t *)p;
 
   handle->finalize(handle);
-  memwriter_delete(handle->sender.memwriter);
   free(handle);
 }
 
@@ -2674,68 +2684,90 @@ int fromjson_str_to_int(const char **str, int *was_successful) {
     }                                                                   \
   } while (0)
 
-#define DEF_STRINGIFY_SINGLE(type, promoted_type, format_specifier)                   \
-  error_t tojson_stringify_##type(memwriter_t *memwriter, tojson_state_t *state) {    \
-    type value;                                                                       \
-    error_t error = NO_ERROR;                                                         \
-    RETRIEVE_SINGLE_VALUE(value, type, promoted_type);                                \
-    if ((error = memwriter_printf(memwriter, format_specifier, value)) != NO_ERROR) { \
-      return error;                                                                   \
-    }                                                                                 \
-    state->shared->wrote_output = 1;                                                  \
-    return error;                                                                     \
+#define DEF_STRINGIFY_SINGLE(type, promoted_type, format_specifier, post_processing_callback)                        \
+  error_t tojson_stringify_##type(memwriter_t *memwriter, tojson_state_t *state) {                                   \
+    type value;                                                                                                      \
+    unsigned int string_start_index;                                                                                 \
+    error_t error = NO_ERROR;                                                                                        \
+    RETRIEVE_SINGLE_VALUE(value, type, promoted_type);                                                               \
+    string_start_index = memwriter_size(memwriter);                                                                  \
+    if ((error = memwriter_printf(memwriter, format_specifier, value)) != NO_ERROR) {                                \
+      return error;                                                                                                  \
+    }                                                                                                                \
+    if (post_processing_callback != NULL) {                                                                          \
+      const char *unprocessed_string = memwriter_buf(memwriter) + string_start_index;                                \
+      if ((error = ((tojson_post_processing_callback_t)post_processing_callback)(memwriter, string_start_index,      \
+                                                                                 unprocessed_string)) != NO_ERROR) { \
+        return error;                                                                                                \
+      }                                                                                                              \
+    }                                                                                                                \
+    state->shared->wrote_output = 1;                                                                                 \
+    return error;                                                                                                    \
   }
 
-#define DEF_STRINGIFY_MULTI(type, format_specifier)                                                                 \
-  error_t tojson_stringify_##type##_array(memwriter_t *memwriter, tojson_state_t *state) {                          \
-    type *values;                                                                                                   \
-    type current_value;                                                                                             \
-    int length;                                                                                                     \
-    int remaining_elements;                                                                                         \
-    error_t error = NO_ERROR;                                                                                       \
-    INIT_MULTI_VALUE(values, type);                                                                                 \
-    if (state->additional_type_info != NULL) {                                                                      \
-      int was_successful;                                                                                           \
-      length = str_to_uint(state->additional_type_info, &was_successful);                                           \
-      if (!was_successful) {                                                                                        \
-        debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.", \
-                           state->additional_type_info));                                                           \
-        length = 0;                                                                                                 \
-      }                                                                                                             \
-    } else {                                                                                                        \
-      length = state->shared->array_length;                                                                         \
-    }                                                                                                               \
-    remaining_elements = length;                                                                                    \
-    /* write array start */                                                                                         \
-    if ((error = memwriter_putc(memwriter, '[')) != NO_ERROR) {                                                     \
-      return error;                                                                                                 \
-    }                                                                                                               \
-    /* write array content */                                                                                       \
-    while (remaining_elements) {                                                                                    \
-      RETRIEVE_NEXT_VALUE(current_value, values, type);                                                             \
-      if ((error = memwriter_printf(memwriter, format_specifier "%s", current_value,                                \
-                                    ((remaining_elements > 1) ? "," : ""))) != NO_ERROR) {                          \
-        return error;                                                                                               \
-      }                                                                                                             \
-      --remaining_elements;                                                                                         \
-    }                                                                                                               \
-    /* write array end */                                                                                           \
-    if ((error = memwriter_putc(memwriter, ']')) != NO_ERROR) {                                                     \
-      return error;                                                                                                 \
-    }                                                                                                               \
-    FIN_MULTI_VALUE(type);                                                                                          \
-    state->shared->wrote_output = 1;                                                                                \
-    return error;                                                                                                   \
+#define DEF_STRINGIFY_MULTI(type, format_specifier, post_processing_callback)                                          \
+  error_t tojson_stringify_##type##_array(memwriter_t *memwriter, tojson_state_t *state) {                             \
+    type *values;                                                                                                      \
+    type current_value;                                                                                                \
+    int length;                                                                                                        \
+    int remaining_elements;                                                                                            \
+    error_t error = NO_ERROR;                                                                                          \
+    INIT_MULTI_VALUE(values, type);                                                                                    \
+    if (state->additional_type_info != NULL) {                                                                         \
+      int was_successful;                                                                                              \
+      length = str_to_uint(state->additional_type_info, &was_successful);                                              \
+      if (!was_successful) {                                                                                           \
+        debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",    \
+                           state->additional_type_info));                                                              \
+        length = 0;                                                                                                    \
+      }                                                                                                                \
+    } else {                                                                                                           \
+      length = state->shared->array_length;                                                                            \
+    }                                                                                                                  \
+    remaining_elements = length;                                                                                       \
+    /* write array start */                                                                                            \
+    if ((error = memwriter_putc(memwriter, '[')) != NO_ERROR) {                                                        \
+      return error;                                                                                                    \
+    }                                                                                                                  \
+    /* write array content */                                                                                          \
+    while (remaining_elements) {                                                                                       \
+      unsigned int string_start_index;                                                                                 \
+      RETRIEVE_NEXT_VALUE(current_value, values, type);                                                                \
+      string_start_index = memwriter_size(memwriter);                                                                  \
+      if ((error = memwriter_printf(memwriter, format_specifier, current_value)) != NO_ERROR) {                        \
+        return error;                                                                                                  \
+      }                                                                                                                \
+      if (post_processing_callback != NULL) {                                                                          \
+        const char *unprocessed_string = memwriter_buf(memwriter) + string_start_index;                                \
+        if ((error = ((tojson_post_processing_callback_t)post_processing_callback)(memwriter, string_start_index,      \
+                                                                                   unprocessed_string)) != NO_ERROR) { \
+          return error;                                                                                                \
+        }                                                                                                              \
+      }                                                                                                                \
+      if (remaining_elements > 1) {                                                                                    \
+        if ((error = memwriter_putc(memwriter, ',')) != NO_ERROR) {                                                    \
+          return error;                                                                                                \
+        }                                                                                                              \
+      }                                                                                                                \
+      --remaining_elements;                                                                                            \
+    }                                                                                                                  \
+    /* write array end */                                                                                              \
+    if ((error = memwriter_putc(memwriter, ']')) != NO_ERROR) {                                                        \
+      return error;                                                                                                    \
+    }                                                                                                                  \
+    FIN_MULTI_VALUE(type);                                                                                             \
+    state->shared->wrote_output = 1;                                                                                   \
+    return error;                                                                                                      \
   }
 
 #define STR(x) #x
 #define XSTR(x) STR(x)
 
-DEF_STRINGIFY_SINGLE(int, int, "%d")
-DEF_STRINGIFY_MULTI(int, "%d")
-DEF_STRINGIFY_SINGLE(double, double, "%." XSTR(DBL_DECIMAL_DIG) "g")
-DEF_STRINGIFY_MULTI(double, "%." XSTR(DBL_DECIMAL_DIG) "g")
-DEF_STRINGIFY_SINGLE(char, int, "%c")
+DEF_STRINGIFY_SINGLE(int, int, "%d", NULL)
+DEF_STRINGIFY_MULTI(int, "%d", NULL)
+DEF_STRINGIFY_SINGLE(double, double, "%." XSTR(DBL_DECIMAL_DIG) "g", tojson_double_post_processing)
+DEF_STRINGIFY_MULTI(double, "%." XSTR(DBL_DECIMAL_DIG) "g", tojson_double_post_processing)
+DEF_STRINGIFY_SINGLE(char, int, "%c", NULL)
 
 #undef DEF_STRINGIFY_SINGLE
 #undef DEF_STRINGIFY_MULTI
@@ -2866,6 +2898,17 @@ cleanup:
 
   state->shared->wrote_output = 1;
 
+  return NO_ERROR;
+}
+
+error_t tojson_double_post_processing(memwriter_t *memwriter, unsigned int string_start_index,
+                                      const char *unprocessed_string) {
+  error_t error;
+  if (strspn(unprocessed_string, "0123456789-") == memwriter_size(memwriter) - string_start_index) {
+    if ((error = memwriter_putc(memwriter, '.')) != NO_ERROR) {
+      return error;
+    }
+  }
   return NO_ERROR;
 }
 
@@ -3364,8 +3407,11 @@ error_t memwriter_printf(memwriter_t *memwriter, const char *format, ...) {
     va_start(vl, format);
     chars_needed = vsnprintf(&memwriter->buf[memwriter->size], memwriter->capacity - memwriter->size, format, vl);
     va_end(vl);
+    if (chars_needed < 0) {
+      return ERROR_UNSPECIFIED;
+    }
     /* we need one more char because `vsnprintf` does exclude the trailing '\0' character in its calculations */
-    if (chars_needed < (int)(memwriter->capacity - memwriter->size)) {
+    if ((size_t)chars_needed < (memwriter->capacity - memwriter->size)) {
       memwriter->size += chars_needed;
       break;
     }
@@ -3416,10 +3462,9 @@ error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
 
   port = va_arg(*vl, unsigned int);
 
-  handle->receiver.memwriter = memwriter_new();
-  if (handle->receiver.memwriter == NULL) {
-    return ERROR_MALLOC;
-  }
+  handle->receiver.memwriter = NULL;
+  handle->receiver.comm.socket.server_socket = -1;
+  handle->receiver.comm.socket.client_socket = -1;
   handle->receiver.recv = receiver_recv_for_socket;
   handle->finalize = receiver_finalize_for_socket;
 
@@ -3476,6 +3521,11 @@ error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
     return ERROR_NETWORK_CONNECTION_ACCEPT;
   }
 
+  handle->receiver.memwriter = memwriter_new();
+  if (handle->receiver.memwriter == NULL) {
+    return ERROR_MALLOC;
+  }
+
   return NO_ERROR;
 }
 
@@ -3488,6 +3538,7 @@ error_t receiver_finalize_for_jupyter(metahandle_t *handle) {
 error_t receiver_finalize_for_socket(metahandle_t *handle) {
   error_t error = NO_ERROR;
 
+  memwriter_delete(handle->receiver.memwriter);
 #ifdef _WIN32
   if (handle->receiver.comm.socket.client_socket >= 0) {
     if (closesocket(handle->receiver.comm.socket.client_socket)) {
@@ -3588,10 +3639,8 @@ error_t sender_init_for_socket(metahandle_t *handle, va_list *vl) {
   port = va_arg(*vl, unsigned int);
   snprintf(port_str, PORT_MAX_STRING_LENGTH, "%u", port);
 
-  handle->sender.memwriter = memwriter_new();
-  if (handle->sender.memwriter == NULL) {
-    return ERROR_MALLOC;
-  }
+  handle->sender.memwriter = NULL;
+  handle->sender.comm.socket.client_socket = -1;
   handle->sender.send = sender_send_for_socket;
   handle->finalize = sender_finalize_for_socket;
 
@@ -3655,9 +3704,14 @@ error_t sender_init_for_socket(metahandle_t *handle, va_list *vl) {
   addr_result = NULL;
 
   if (handle->sender.comm.socket.client_socket < 0) {
-    fprintf(stderr, "cannot connect to host %s port %u", hostname, port);
+    fprintf(stderr, "cannot connect to host %s port %u: ", hostname, port);
     psocketerror("");
     return ERROR_NETWORK_CONNECT;
+  }
+
+  handle->sender.memwriter = memwriter_new();
+  if (handle->sender.memwriter == NULL) {
+    return ERROR_MALLOC;
   }
 
   return NO_ERROR;
@@ -3671,6 +3725,7 @@ error_t sender_finalize_for_jupyter(metahandle_t *handle) {
 error_t sender_finalize_for_socket(metahandle_t *handle) {
   error_t error = NO_ERROR;
 
+  memwriter_delete(handle->sender.memwriter);
 #ifdef _WIN32
   if (handle->sender.comm.socket.client_socket >= 0) {
     if (closesocket(handle->sender.comm.socket.client_socket)) {
