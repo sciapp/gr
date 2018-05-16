@@ -3407,8 +3407,11 @@ error_t memwriter_printf(memwriter_t *memwriter, const char *format, ...) {
     va_start(vl, format);
     chars_needed = vsnprintf(&memwriter->buf[memwriter->size], memwriter->capacity - memwriter->size, format, vl);
     va_end(vl);
+    if (chars_needed < 0) {
+      return ERROR_UNSPECIFIED;
+    }
     /* we need one more char because `vsnprintf` does exclude the trailing '\0' character in its calculations */
-    if (chars_needed < (int)(memwriter->capacity - memwriter->size)) {
+    if ((size_t)chars_needed < (memwriter->capacity - memwriter->size)) {
       memwriter->size += chars_needed;
       break;
     }
