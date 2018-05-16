@@ -691,7 +691,6 @@ void gr_closemeta(const void *p) {
   metahandle_t *handle = (metahandle_t *)p;
 
   handle->finalize(handle);
-  memwriter_delete(handle->sender.memwriter);
   free(handle);
 }
 
@@ -3454,10 +3453,9 @@ error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
 
   port = va_arg(*vl, unsigned int);
 
-  handle->receiver.memwriter = memwriter_new();
-  if (handle->receiver.memwriter == NULL) {
-    return ERROR_MALLOC;
-  }
+  handle->receiver.memwriter = NULL;
+  handle->receiver.comm.socket.server_socket = -1;
+  handle->receiver.comm.socket.client_socket = -1;
   handle->receiver.recv = receiver_recv_for_socket;
   handle->finalize = receiver_finalize_for_socket;
 
@@ -3514,6 +3512,11 @@ error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
     return ERROR_NETWORK_CONNECTION_ACCEPT;
   }
 
+  handle->receiver.memwriter = memwriter_new();
+  if (handle->receiver.memwriter == NULL) {
+    return ERROR_MALLOC;
+  }
+
   return NO_ERROR;
 }
 
@@ -3526,6 +3529,7 @@ error_t receiver_finalize_for_jupyter(metahandle_t *handle) {
 error_t receiver_finalize_for_socket(metahandle_t *handle) {
   error_t error = NO_ERROR;
 
+  memwriter_delete(handle->receiver.memwriter);
 #ifdef _WIN32
   if (handle->receiver.comm.socket.client_socket >= 0) {
     if (closesocket(handle->receiver.comm.socket.client_socket)) {
@@ -3626,10 +3630,8 @@ error_t sender_init_for_socket(metahandle_t *handle, va_list *vl) {
   port = va_arg(*vl, unsigned int);
   snprintf(port_str, PORT_MAX_STRING_LENGTH, "%u", port);
 
-  handle->sender.memwriter = memwriter_new();
-  if (handle->sender.memwriter == NULL) {
-    return ERROR_MALLOC;
-  }
+  handle->sender.memwriter = NULL;
+  handle->sender.comm.socket.client_socket = -1;
   handle->sender.send = sender_send_for_socket;
   handle->finalize = sender_finalize_for_socket;
 
@@ -3693,9 +3695,14 @@ error_t sender_init_for_socket(metahandle_t *handle, va_list *vl) {
   addr_result = NULL;
 
   if (handle->sender.comm.socket.client_socket < 0) {
-    fprintf(stderr, "cannot connect to host %s port %u", hostname, port);
+    fprintf(stderr, "cannot connect to host %s port %u: ", hostname, port);
     psocketerror("");
     return ERROR_NETWORK_CONNECT;
+  }
+
+  handle->sender.memwriter = memwriter_new();
+  if (handle->sender.memwriter == NULL) {
+    return ERROR_MALLOC;
   }
 
   return NO_ERROR;
@@ -3709,6 +3716,7 @@ error_t sender_finalize_for_jupyter(metahandle_t *handle) {
 error_t sender_finalize_for_socket(metahandle_t *handle) {
   error_t error = NO_ERROR;
 
+  memwriter_delete(handle->sender.memwriter);
 #ifdef _WIN32
   if (handle->sender.comm.socket.client_socket >= 0) {
     if (closesocket(handle->sender.comm.socket.client_socket)) {
