@@ -68,6 +68,12 @@ static void debug_printf(const char *format, ...) {
 #define debug_print_malloc_error() debug_print_error(("Memory allocation failed -> out of virtual memory.\n"))
 
 
+/* ------------------------- general -------------------------------------------------------------------------------- */
+
+#ifndef DBL_DECIMAL_DIG
+#define DBL_DECIMAL_DIG 17
+#endif
+
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
 #define NEXT_VALUE_TYPE_SIZE 80
