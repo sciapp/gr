@@ -20,7 +20,7 @@ int test_sendmeta_ref(void) {
   printf("sending data...");
   fflush(stdout);
 
-  handle = gr_openmeta(GR_TARGET_SOCKET, "localhost", 8001);
+  handle = gr_openmeta(GR_TARGET_SOCKET, "localhost", 8002);
   if (handle == NULL) {
     fprintf(stderr, "sender could not be created\n");
     return 1;
@@ -55,7 +55,7 @@ int test_sendmeta_args(void) {
   printf("sending data...");
   fflush(stdout);
 
-  handle = gr_openmeta(GR_TARGET_SOCKET, "localhost", 8001);
+  handle = gr_openmeta(GR_TARGET_SOCKET, "localhost", 8002);
   if (handle == NULL) {
     fprintf(stderr, "sender could not be created\n");
     gr_meta_args_delete(args);

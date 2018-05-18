@@ -3480,6 +3480,9 @@ error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
   struct sockaddr_in server_addr;
   struct sockaddr_in client_addr;
   socklen_t client_addrlen = sizeof(client_addr);
+#ifdef SO_REUSEADDR
+  int socket_opt;
+#endif
 #ifdef _WIN32
   int wsa_startup_error = 0;
   WSADATA wsa_data;
@@ -3526,6 +3529,15 @@ error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
     psocketerror("socket creation failed");
     return ERROR_NETWORK_SOCKET_CREATION;
   }
+  /* Set SO_REUSEADDR if available on this system */
+#ifdef SO_REUSEADDR
+  socket_opt = 1;
+  if (setsockopt(handle->receiver.comm.socket.server_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&socket_opt,
+                 sizeof(socket_opt)) < 0) {
+    psocketerror("setting socket options failed");
+    return ERROR_NETWORK_SOCKET_CREATION;
+  }
+#endif
 
   /* Bind the socket to given ip address and port */
   if (bind(handle->receiver.comm.socket.server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr))) {
