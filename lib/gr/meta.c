@@ -77,6 +77,7 @@ static void debug_printf(const char *format, ...) {
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
 #define NEXT_VALUE_TYPE_SIZE 80
+#define SINGLE_FORMAT_MAX_LENGTH 100
 
 
 /* ------------------------- memwriter ------------------------------------------------------------------------------ */
@@ -523,6 +524,7 @@ static error_t tojson_init_variables(int *add_data, int *add_data_without_separa
 static error_t tojson_write_vl(memwriter_t *memwriter, const char *data_desc, va_list *vl);
 static error_t tojson_write_buf(memwriter_t *memwriter, const char *data_desc, const void *buffer, int apply_padding);
 static int tojson_is_complete(void);
+static int tojson_struct_nested_level(void);
 
 
 /* ------------------------- memwriter ------------------------------------------------------------------------------ */
@@ -745,6 +747,25 @@ int gr_sendmeta_buf(const void *p, const char *data_desc, const void *buffer, in
   error = tojson_write_buf(handle->sender.memwriter, data_desc, buffer, apply_padding);
   if (error == NO_ERROR && tojson_is_complete() && handle->sender.send != NULL) {
     error = handle->sender.send(handle);
+  }
+
+  return (error == NO_ERROR);
+}
+
+int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref, int len) {
+  metahandle_t *handle = (metahandle_t *)p;
+  char format_string[SINGLE_FORMAT_MAX_LENGTH];
+  error_t error;
+
+  if (tojson_struct_nested_level() == 0) {
+    gr_sendmeta(handle, "s(");
+  }
+  if (islower(format) && format != 'n') {
+    snprintf(format_string, SINGLE_FORMAT_MAX_LENGTH, "%s:%c,", key, format);
+    error = gr_sendmeta_buf(handle, format_string, ref, 1);
+  } else {
+    snprintf(format_string, SINGLE_FORMAT_MAX_LENGTH, "%s:n%c,", key, format);
+    error = gr_sendmeta(handle, format_string, len, ref);
   }
 
   return (error == NO_ERROR);
@@ -3305,8 +3326,12 @@ error_t tojson_write_buf(memwriter_t *memwriter, const char *data_desc, const vo
   return error;
 }
 
-int tojson_is_complete() {
+int tojson_is_complete(void) {
   return tojson_permanent_state.serial_result == complete;
+}
+
+int tojson_struct_nested_level(void) {
+  return tojson_permanent_state.struct_nested_level;
 }
 
 

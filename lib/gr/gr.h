@@ -188,6 +188,7 @@ DLLEXPORT void *gr_openmeta(int, ...);
 DLLEXPORT int gr_recvmeta(const void *p, gr_meta_args_t *);
 DLLEXPORT int gr_sendmeta(const void *, const char *, ...);
 DLLEXPORT int gr_sendmeta_buf(const void *, const char *, const void *, int);
+DLLEXPORT int gr_sendmeta_ref(const void *, const char *, char, const void *, int);
 DLLEXPORT int gr_sendmeta_args(const void *p, const gr_meta_args_t *);
 DLLEXPORT void gr_closemeta(const void *);
 #ifndef NDEBUG

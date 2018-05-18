@@ -9,11 +9,36 @@ typedef struct {
   double *y;
 } data_t;
 
+static double x[3] = {0.0, 0.5, 1.0};
+static double y[3] = {0.1, 0.25, 0.9};
+static int n = sizeof(x) / sizeof(x[0]);
 
-int test_sendmeta(void) {
-  double x[3] = {0.0, 0.5, 1.0};
-  double y[3] = {0.1, 0.25, 0.9};
-  int n = sizeof(x) / sizeof(x[0]);
+
+int test_sendmeta_ref(void) {
+  void *handle;
+
+  printf("sending data...");
+  fflush(stdout);
+
+  handle = gr_openmeta(GR_TARGET_SOCKET, "localhost", 8001);
+  if (handle == NULL) {
+    fprintf(stderr, "sender could not be created\n");
+    return 1;
+  }
+
+  gr_sendmeta_ref(handle, "n", 'i', &n, 1);
+  gr_sendmeta_ref(handle, "x", 'D', &x, n);
+  gr_sendmeta_ref(handle, "y", 'D', &y, n);
+  gr_sendmeta(handle, ")");
+
+  printf("\tsent\n");
+
+  gr_closemeta(handle);
+
+  return 0;
+}
+
+int test_sendmeta_args(void) {
   data_t data;
   gr_meta_args_t *args;
   void *handle;
@@ -50,5 +75,6 @@ int test_sendmeta(void) {
 }
 
 int main(void) {
-  return test_sendmeta();
+  return test_sendmeta_ref();
+  /* return test_sendmeta_args(); */
 }
