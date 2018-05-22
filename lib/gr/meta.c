@@ -285,6 +285,7 @@ typedef enum {
 typedef struct {
   int apply_padding;
   int array_length;
+  int read_length_from_string;
   const void *data_ptr;
   va_list *vl;
   int data_offset;
@@ -503,7 +504,7 @@ DECLARE_STRINGIFY_SINGLE(char)
 
 static error_t tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *state);
 static error_t tojson_stringify_bool(memwriter_t *memwriter, tojson_state_t *state);
-static error_t tojson_stringify_struct(memwriter_t *memwriter, tojson_state_t *state);
+static error_t tojson_stringify_object(memwriter_t *memwriter, tojson_state_t *state);
 
 static error_t tojson_double_post_processing(memwriter_t *memwriter, unsigned int string_start_index,
                                              const char *unprocessed_string);
@@ -758,11 +759,14 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
   error_t error;
 
   if (tojson_struct_nested_level() == 0) {
-    gr_sendmeta(handle, "s(");
+    gr_sendmeta(handle, "o(");
   }
-  if (islower(format) && format != 'n') {
+  if (islower(format) && strchr("ns", format) == NULL) {
     snprintf(format_string, SINGLE_FORMAT_MAX_LENGTH, "%s:%c,", key, format);
     error = gr_sendmeta_buf(handle, format_string, ref, 1);
+  } else if (format == 's') {
+    snprintf(format_string, SINGLE_FORMAT_MAX_LENGTH, "%s:s,", key);
+    error = gr_sendmeta(handle, format_string, ref);
   } else {
     snprintf(format_string, SINGLE_FORMAT_MAX_LENGTH, "%s:n%c,", key, format);
     error = gr_sendmeta(handle, format_string, len, ref);
@@ -792,7 +796,7 @@ int gr_sendmeta_args(const void *p, const gr_meta_args_t *args) {
     int had_enough_memory = 1;
     size_t length;
     if (is_first_kwarg) {
-      memcpy(format_ptr, "s(", 2);
+      memcpy(format_ptr, "o(", 2);
       format_ptr += 2;
       format_remaining_size -= 2;
       is_first_kwarg = 0;
@@ -2816,7 +2820,11 @@ error_t tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *stat
       length = 0;
     }
   } else {
-    length = state->shared->array_length;
+    if (state->shared->read_length_from_string) {
+      length = strlen(chars);
+    } else {
+      length = state->shared->array_length;
+    }
   }
   if ((error = memwriter_printf(memwriter, "\"%s\"", chars)) != NO_ERROR) {
     return error;
@@ -2841,7 +2849,7 @@ error_t tojson_stringify_bool(memwriter_t *memwriter, tojson_state_t *state) {
   return error;
 }
 
-error_t tojson_stringify_struct(memwriter_t *memwriter, tojson_state_t *state) {
+error_t tojson_stringify_object(memwriter_t *memwriter, tojson_state_t *state) {
   char **member_names = NULL;
   char **data_types = NULL;
   char **member_name_ptr;
@@ -3124,13 +3132,14 @@ error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *da
    * memwriter: memwriter handle
    * data_desc: data description
    *      i: int
-   *      I: int array -> I(count) or nI for variable length (see 'n' below); 'pI' indicates a pointer to an array
+   *      I: int array -> I(count) or nI for variable length (see 'n' below)
    *      d: double
    *      D: double array
    *      c: char
-   *      C: string (char array)
+   *      C: char array (fixed-width string)
+   *      s: string ('\0'-terminated)
    *      n: array length (for all following arrays)
-   *      s: struct -> s(name:type, name:type, ...)
+   *      o: object -> o(name:type, name:type, ...)
    *      e: empty byte (ignored memory) -> e(count) to specify multiple bytes
    * data: pointer to the buffer that shall be serialized
    * vl: if data is NULL the needed values are read from the va_list vl
@@ -3153,6 +3162,7 @@ error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *da
     }
     shared_state->apply_padding = apply_padding;
     shared_state->array_length = 0;
+    shared_state->read_length_from_string = 0;
     shared_state->data_ptr = data;
     shared_state->vl = vl;
     shared_state->data_offset = 0;
@@ -3209,13 +3219,18 @@ error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *da
       error = tojson_stringify_char(memwriter, &state);
       break;
     case 'C':
+      shared_state->read_length_from_string = 0;
+      error = tojson_stringify_char_array(memwriter, &state);
+      break;
+    case 's':
+      shared_state->read_length_from_string = 1;
       error = tojson_stringify_char_array(memwriter, &state);
       break;
     case 'b':
       error = tojson_stringify_bool(memwriter, &state);
       break;
-    case 's':
-      error = tojson_stringify_struct(memwriter, &state);
+    case 'o':
+      error = tojson_stringify_object(memwriter, &state);
       break;
     case ')':
       error = tojson_close_object(memwriter, &state);
@@ -3278,8 +3293,8 @@ error_t tojson_init_variables(int *add_data, int *add_data_without_separator, ch
       return ERROR_MALLOC;
     }
     data_desc_ptr = *_data_desc;
-    if (strncmp(data_desc, "s(", 2) != 0) {
-      memcpy(data_desc_ptr, "s(", 2);
+    if (strncmp(data_desc, "o(", 2) != 0) {
+      memcpy(data_desc_ptr, "o(", 2);
       data_desc_ptr += 2;
     }
     memcpy(data_desc_ptr, data_desc, data_desc_len);
@@ -3799,6 +3814,8 @@ error_t sender_send_for_socket(void *p) {
 
   buf = memwriter_buf(handle->sender.memwriter);
   buf_size = memwriter_size(handle->sender.memwriter);
+
+  fprintf(stderr, "json string: '%s'\n", buf);
 
   send_ptr = buf;
   bytes_left = buf_size;

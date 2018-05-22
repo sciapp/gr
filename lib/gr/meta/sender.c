@@ -27,8 +27,9 @@ int test_sendmeta_ref(void) {
   }
 
   gr_sendmeta_ref(handle, "n", 'i', &n, 1);
-  gr_sendmeta_ref(handle, "x", 'D', &x, n);
-  gr_sendmeta_ref(handle, "y", 'D', &y, n);
+  gr_sendmeta_ref(handle, "x", 'D', x, n);
+  gr_sendmeta_ref(handle, "y", 'D', y, n);
+  gr_sendmeta_ref(handle, "kind", 's', "line", 0);
   gr_sendmeta(handle, ")");
 
   printf("\tsent\n");
