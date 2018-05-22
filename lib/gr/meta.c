@@ -2826,7 +2826,7 @@ error_t tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *stat
       length = state->shared->array_length;
     }
   }
-  if ((error = memwriter_printf(memwriter, "\"%s\"", chars)) != NO_ERROR) {
+  if ((error = memwriter_printf(memwriter, "\"%.*s\"", length, chars)) != NO_ERROR) {
     return error;
   }
 
@@ -3814,8 +3814,6 @@ error_t sender_send_for_socket(void *p) {
 
   buf = memwriter_buf(handle->sender.memwriter);
   buf_size = memwriter_size(handle->sender.memwriter);
-
-  fprintf(stderr, "json string: '%s'\n", buf);
 
   send_ptr = buf;
   bytes_left = buf_size;
