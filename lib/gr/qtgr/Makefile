@@ -30,8 +30,12 @@ QT5INC += -std=c++11
 QT5LIBDIR = `$(QT5_QMAKE) -query QT_INSTALL_LIBS`
 ifeq ($(UNAME_S),Darwin)
 	QT5LIBS = -F$(QT5LIBDIR) -framework QtWidgets -framework QtGui -framework QtCore
+	LIBQT4GR_INSTALL_NAME = -Wl,-install_name,@rpath/libqt4gr.so
+	LIBQT5GR_INSTALL_NAME = -Wl,-install_name,@rpath/libqt5gr.so
 else
 	QT5LIBS = -L$(QT5LIBDIR) -lQt5Widgets -lQt5Gui -lQt5Core
+	LIBQT4GR_INSTALL_NAME =
+	LIBQT5GR_INSTALL_NAME =
 endif
 endif
 
@@ -52,7 +56,7 @@ targets: libqt4gr.so libqt5gr.so
 
 ifneq ($(QT4_QMAKE),false)
 libqt4gr.so: grwidget_qt4.o
-	$(CXX) -shared -o $@ $^ $(LDFLAGS) $(QT4LIBS) $(GRLIBS)
+	$(CXX) -shared -o $@ $^ $(LDFLAGS) $(QT4LIBS) $(GRLIBS) $(LIBQT4GR_INSTALL_NAME)
 
 grwidget_qt4.o: grwidget.cxx
 	$(CXX) -o $@ -c $(CFLAGS) $(QT4INC) $(GRINC) $<
@@ -62,7 +66,7 @@ endif
 
 ifneq ($(QT5_QMAKE),false)
 libqt5gr.so: grwidget_qt5.o
-	$(CXX) -shared -o $@ $^ $(LDFLAGS) $(QT5LIBS) $(GRLIBS)
+	$(CXX) -shared -o $@ $^ $(LDFLAGS) $(QT5LIBS) $(GRLIBS) $(LIBQT5GR_INSTALL_NAME)
 
 grwidget_qt5.o: grwidget.cxx
 	$(CXX) -o $@ -c $(CFLAGS) $(QT5INC) $(GRINC) $<
