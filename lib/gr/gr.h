@@ -193,6 +193,7 @@ DLLEXPORT int gr_sendmeta_args(const void *p, const gr_meta_args_t *);
 DLLEXPORT void gr_closemeta(const void *);
 #ifndef NDEBUG
 DLLEXPORT void gr_dumpmeta(const gr_meta_args_t *, FILE *);
+DLLEXPORT void gr_dumpmeta_json(const gr_meta_args_t *, FILE *);
 #endif
 DLLEXPORT const char *gr_version(void);
 
