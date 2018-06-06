@@ -24,7 +24,10 @@ int test_recvmeta(void) {
     return 2;
   }
 
+  printf("received\n");
   gr_dumpmeta(args, stdout);
+  printf("\njson dump:\n");
+  gr_dumpmeta_json(args, stdout);
 
   gr_closemeta(handle);
   gr_meta_args_delete(args);

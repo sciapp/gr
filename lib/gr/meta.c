@@ -68,6 +68,12 @@ static void debug_printf(const char *format, ...) {
 #define debug_print_malloc_error() debug_print_error(("Memory allocation failed -> out of virtual memory.\n"))
 
 
+/* ------------------------- dynamic args array --------------------------------------------------------------------- */
+
+#define DYNAMIC_ARGS_ARRAY_INITIAL_SIZE 10
+#define DYNAMIC_ARGS_ARRAY_SIZE_INCREMENT 10
+
+
 /* ------------------------- general -------------------------------------------------------------------------------- */
 
 #ifndef DBL_DECIMAL_DIG
@@ -77,7 +83,6 @@ static void debug_printf(const char *format, ...) {
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
 #define NEXT_VALUE_TYPE_SIZE 80
-#define SINGLE_FORMAT_MAX_LENGTH 100
 
 
 /* ------------------------- memwriter ------------------------------------------------------------------------------ */
@@ -97,8 +102,8 @@ static void debug_printf(const char *format, ...) {
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
+#define SENDMETA_REF_FORMAT_MAX_LENGTH 100
 #define PORT_MAX_STRING_LENGTH 80
-#define SENDARGS_FORMAT_MAX_LENGTH 100
 
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
@@ -136,14 +141,14 @@ struct _argparse_state_t {
   ptrdiff_t data_offset;
   void *save_buffer;
   char current_format;
-  unsigned int next_is_array;
-  unsigned int default_array_length;
+  int next_is_array;
+  int default_array_length;
   int next_array_length;
 };
 typedef struct _argparse_state_t argparse_state_t;
 
-typedef void (*read_param_t)(argparse_state_t *state);
-typedef void (*delete_value_t)(void *value_ptr);
+typedef void (*read_param_t)(argparse_state_t *);
+typedef void (*delete_value_t)(void *);
 
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
@@ -173,10 +178,38 @@ typedef struct {
 } args_iterator_private_t;
 
 typedef struct _args_iterator_t {
-  arg_t *(*next)(struct _args_iterator_t *it);
+  arg_t *(*next)(struct _args_iterator_t *);
   arg_t *arg;
   args_iterator_private_t *priv;
 } args_iterator_t;
+
+
+/* ------------------------- dynamic args array --------------------------------------------------------------------- */
+
+typedef struct {
+  gr_meta_args_t **buf;
+  size_t size;
+  size_t capacity;
+} dynamic_args_array_t;
+
+
+/* ------------------------- args / dynamic args array stack -------------------------------------------------------- */
+
+#define DEFINE_STACK_DATATYPES(prefix, type) \
+  typedef struct _##prefix##_stack_node_t {  \
+    type value;                              \
+    struct _##prefix##_stack_node_t *next;   \
+  } prefix##_stack_node_t;                   \
+                                             \
+  typedef struct {                           \
+    prefix##_stack_node_t *head;             \
+  } prefix##_stack_t;
+
+DEFINE_STACK_DATATYPES(args, gr_meta_args_t *)
+DEFINE_STACK_DATATYPES(dynamic_args_array, dynamic_args_array_t *)
+DEFINE_STACK_DATATYPES(string, const char *)
+
+#undef DEFINE_STACK_DATATYPES
 
 
 /* ------------------------- error handling ------------------------------------------------------------------------- */
@@ -188,6 +221,7 @@ typedef enum {
   ERROR_UNSPECIFIED = 1,
   ERROR_MALLOC,
   ERROR_UNSUPPORTED_OPERATION,
+  ERROR_UNSUPPORTED_DATATYPE,
   ERROR_PARSE_NULL,
   ERROR_PARSE_BOOL,
   ERROR_PARSE_INT,
@@ -221,7 +255,7 @@ typedef struct {
 } args_value_iterator_private_t;
 
 typedef struct _gr_meta_args_value_iterator_t {
-  void *(*next)(struct _gr_meta_args_value_iterator_t *it);
+  void *(*next)(struct _gr_meta_args_value_iterator_t *);
   void *value_ptr;
   char format;
   int is_array;
@@ -291,16 +325,17 @@ typedef struct {
   int data_offset;
   int wrote_output;
   int add_data;
-  int add_data_without_separator;
   tojson_serialization_result_t serial_result;
   unsigned int struct_nested_level;
 } tojson_shared_state_t;
 
 typedef struct {
+  memwriter_t *memwriter;
   char *data_type_ptr;
   char current_data_type;
   char *additional_type_info;
   int is_type_info_incomplete;
+  int add_data_without_separator;
   tojson_shared_state_t *shared;
 } tojson_state_t;
 
@@ -315,11 +350,11 @@ typedef struct {
 union _metahandle_t;
 typedef union _metahandle_t metahandle_t;
 
-typedef error_t (*recv_callback_t)(void *handle);
-typedef error_t (*send_callback_t)(void *handle);
+typedef error_t (*recv_callback_t)(void *);
+typedef error_t (*send_callback_t)(void *);
 typedef const char *(*jupyter_recv_callback_t)(void);
 typedef error_t (*jupyter_send_callback_t)(const char *);
-typedef error_t (*finalize_callback_t)(metahandle_t *handle);
+typedef error_t (*finalize_callback_t)(metahandle_t *);
 
 union _metahandle_t {
   struct {
@@ -464,6 +499,31 @@ static void args_value_iterator_finalize(args_value_iterator_t *args_value_itera
 static void *args_value_iterator_next(args_value_iterator_t *args_value_iterator);
 
 
+/* ------------------------- args / dynamic args array stack -------------------------------------------------------- */
+
+#define DECLARE_STACK_METHODS(prefix, type)                                          \
+  static prefix##_stack_t *prefix##_stack_new(void);                                 \
+  static void prefix##_stack_delete(prefix##_stack_t *prefix##_stack);               \
+  static void prefix##_stack_delete_with_elements(prefix##_stack_t *prefix##_stack); \
+  static error_t prefix##_stack_push(prefix##_stack_t *prefix##_stack, type value);  \
+  static type prefix##_stack_pop(prefix##_stack_t *prefix##_stack);                  \
+  static int prefix##_stack_empty(prefix##_stack_t *prefix##_stack);
+
+DECLARE_STACK_METHODS(args, gr_meta_args_t *)
+DECLARE_STACK_METHODS(dynamic_args_array, dynamic_args_array_t *)
+DECLARE_STACK_METHODS(string, const char *)
+
+#undef DECLARE_STACK_METHODS
+
+
+/* ------------------------- dynamic args array --------------------------------------------------------------------- */
+
+static dynamic_args_array_t *dynamic_args_array_new(void);
+static void dynamic_args_array_delete(dynamic_args_array_t *args_array);
+static void dynamic_args_array_delete_with_elements(dynamic_args_array_t *args_array);
+static error_t dynamic_args_array_push_back(dynamic_args_array_t *args_array, gr_meta_args_t *args);
+
+
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
 static error_t fromjson_read(gr_meta_args_t *args, const char *json_string);
@@ -480,7 +540,8 @@ static error_t fromjson_parse_object(fromjson_state_t *state);
 
 static fromjson_datatype_t fromjson_check_type(const fromjson_state_t *state);
 static error_t fromjson_copy_and_filter_json_string(char **dest, const char *src);
-static int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int include_start);
+static int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int include_start,
+                                        int exclude_nested_structures);
 static int fromjson_get_outer_array_length(const char *str);
 static double fromjson_str_to_double(const char **str, int *was_successful);
 static int fromjson_str_to_int(const char **str, int *was_successful);
@@ -488,42 +549,41 @@ static int fromjson_str_to_int(const char **str, int *was_successful);
 
 /* ------------------------- json serializer ------------------------------------------------------------------------ */
 
-#define DECLARE_STRINGIFY_SINGLE(type) \
-  static error_t tojson_stringify_##type(memwriter_t *memwriter, tojson_state_t *state);
-#define DECLARE_STRINGIFY_MULTI(type) \
-  static error_t tojson_stringify_##type##_array(memwriter_t *memwriter, tojson_state_t *state);
+#define DECLARE_STRINGIFY(name, type)                                    \
+  static error_t tojson_stringify_##name(tojson_state_t *state);         \
+  static error_t tojson_stringify_##name##_array(tojson_state_t *state); \
+  static error_t tojson_stringify_##name##_value(memwriter_t *memwriter, type value);
 
-DECLARE_STRINGIFY_SINGLE(int)
-DECLARE_STRINGIFY_MULTI(int)
-DECLARE_STRINGIFY_SINGLE(double)
-DECLARE_STRINGIFY_MULTI(double)
-DECLARE_STRINGIFY_SINGLE(char)
+static error_t tojson_read_array_length(tojson_state_t *state);
+static error_t tojson_skip_bytes(tojson_state_t *state);
+DECLARE_STRINGIFY(int, int)
+DECLARE_STRINGIFY(double, double)
+DECLARE_STRINGIFY(char, char)
+DECLARE_STRINGIFY(string, char *)
+DECLARE_STRINGIFY(bool, int)
+static error_t tojson_stringify_object(tojson_state_t *state);
+DECLARE_STRINGIFY(args, gr_meta_args_t *)
+static error_t tojson_close_object(tojson_state_t *state);
 
 #undef DECLARE_STRINGIFY_SINGLE
 #undef DECLARE_STRINGIFY_MULTI
 
-static error_t tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *state);
-static error_t tojson_stringify_bool(memwriter_t *memwriter, tojson_state_t *state);
-static error_t tojson_stringify_object(memwriter_t *memwriter, tojson_state_t *state);
-
-static error_t tojson_double_post_processing(memwriter_t *memwriter, unsigned int string_start_index,
-                                             const char *unprocessed_string);
-
 static int tojson_get_member_count(const char *data_desc);
 static int tojson_is_json_array_needed(const char *data_desc);
 static void tojson_read_datatype(tojson_state_t *state);
-static error_t tojson_skip_bytes(tojson_state_t *state);
-static error_t tojson_close_object(memwriter_t *memwriter, tojson_state_t *state);
-static error_t tojson_read_array_length(tojson_state_t *state);
 static error_t tojson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_name_ptr, char ***data_type_ptr);
+static error_t tojson_escape_special_chars(char **escaped_string, const char *unescaped_string, unsigned int *length);
 static error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *data, va_list *vl,
                                 int apply_padding, int add_data, int add_data_without_separator,
                                 unsigned int *struct_nested_level, tojson_serialization_result_t *serial_result,
                                 tojson_shared_state_t *shared_state);
+static void tojson_init_static_variables(void);
 static error_t tojson_init_variables(int *add_data, int *add_data_without_separator, char **_data_desc,
                                      const char *data_desc);
 static error_t tojson_write_vl(memwriter_t *memwriter, const char *data_desc, va_list *vl);
 static error_t tojson_write_buf(memwriter_t *memwriter, const char *data_desc, const void *buffer, int apply_padding);
+static error_t tojson_write_arg(memwriter_t *memwriter, const arg_t *arg);
+static error_t tojson_write_args(memwriter_t *memwriter, const gr_meta_args_t *args);
 static int tojson_is_complete(void);
 static int tojson_struct_nested_level(void);
 
@@ -600,6 +660,8 @@ static const char *const fromjson_datatype_to_string[] = {"unknown", "null",  "b
 
 /* ------------------------- json serializer ------------------------------------------------------------------------ */
 
+static error_t (*tojson_datatype_to_func[128])(tojson_state_t *);
+static int tojson_static_variables_initialized = 0;
 static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 
 
@@ -682,6 +744,8 @@ void *gr_openmeta(int source_or_target, ...) {
   case GR_TARGET_SOCKET:
     error = sender_init_for_socket(handle, &vl);
     break;
+  default:
+    break;
   }
   va_end(vl);
 
@@ -738,7 +802,7 @@ int gr_sendmeta(const void *p, const char *data_desc, ...) {
   }
   va_end(vl);
 
-  return (error == NO_ERROR);
+  return error == NO_ERROR;
 }
 
 int gr_sendmeta_buf(const void *p, const char *data_desc, const void *buffer, int apply_padding) {
@@ -750,86 +814,225 @@ int gr_sendmeta_buf(const void *p, const char *data_desc, const void *buffer, in
     error = handle->sender.send(handle);
   }
 
-  return (error == NO_ERROR);
+  return error == NO_ERROR;
 }
 
 int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref, int len) {
+  static const char VALID_OPENING_BRACKETS[] = "([{";
+  static const char VALID_CLOSING_BRACKETS[] = ")]}";
+  static const char VALID_SEPARATOR[] = ",";
+  static gr_meta_args_t *current_args = NULL;
+  static dynamic_args_array_t *current_args_array = NULL;
+  const char *_key = NULL;
   metahandle_t *handle = (metahandle_t *)p;
-  char format_string[SINGLE_FORMAT_MAX_LENGTH];
-  error_t error;
+  char format_string[SENDMETA_REF_FORMAT_MAX_LENGTH];
+  error_t error = NO_ERROR;
 
   if (tojson_struct_nested_level() == 0) {
     gr_sendmeta(handle, "o(");
   }
-  if (islower(format) && strchr("ns", format) == NULL) {
-    snprintf(format_string, SINGLE_FORMAT_MAX_LENGTH, "%s:%c,", key, format);
-    error = gr_sendmeta_buf(handle, format_string, ref, 1);
-  } else if (format == 's') {
-    snprintf(format_string, SINGLE_FORMAT_MAX_LENGTH, "%s:s,", key);
-    error = gr_sendmeta(handle, format_string, ref);
+  if (strchr("soO", format) == NULL) {
+    /* handle general cases (values and arrays) */
+    if (islower(format)) {
+      if (current_args_array == NULL) {
+        snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "%s:%c,", key, format);
+        error = gr_sendmeta_buf(handle, format_string, ref, 1);
+      } else {
+        snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "%c", format);
+        /* TODO: add error return value to `gr_meta_args_push_arg` (?) */
+        gr_meta_args_push_kwarg_buf(current_args, key, format_string, ref, 1);
+      }
+    } else {
+      if (current_args_array == NULL) {
+        snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "%s:n%c,", key, format);
+        error = gr_sendmeta(handle, format_string, len, ref);
+      } else {
+        snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "n%c", format);
+        gr_meta_args_push_kwarg(current_args, key, format_string, len, ref);
+      }
+    }
   } else {
-    snprintf(format_string, SINGLE_FORMAT_MAX_LENGTH, "%s:n%c,", key, format);
-    error = gr_sendmeta(handle, format_string, len, ref);
+    static args_stack_t *args_stack = NULL;
+    static dynamic_args_array_stack_t *args_array_stack = NULL;
+    static string_stack_t *key_stack = NULL;
+    /* handle special cases (strings, objects and arrays of objects) */
+    switch (format) {
+    case 's':
+      if (current_args_array == NULL) {
+        snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "%s:s,", key);
+        error = gr_sendmeta(handle, format_string, ref);
+      } else {
+        gr_meta_args_push_kwarg(current_args, key, "s", ref);
+      }
+      break;
+    case 'o':
+      if (strchr(VALID_OPENING_BRACKETS, *(const char *)ref)) {
+        if (current_args_array == NULL) {
+          snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "%s:o(,", key);
+          gr_sendmeta(handle, format_string);
+        } else {
+          if ((_key = strdup(key)) == NULL) {
+            error = ERROR_MALLOC;
+            break;
+          }
+          if (args_stack == NULL) {
+            args_stack = args_stack_new();
+            if (args_stack == NULL) {
+              error = ERROR_MALLOC;
+              break;
+            }
+          }
+          if (key_stack == NULL) {
+            key_stack = string_stack_new();
+            if (key_stack == NULL) {
+              error = ERROR_MALLOC;
+              break;
+            }
+          }
+          if ((error = args_stack_push(args_stack, current_args)) != NO_ERROR) {
+            break;
+          }
+          if ((error = string_stack_push(key_stack, _key)) != NO_ERROR) {
+            break;
+          }
+          _key = NULL; /* avoid deletion at the end of this function */
+          current_args = gr_meta_args_new();
+          if (current_args == NULL) {
+            error = ERROR_MALLOC;
+            break;
+          }
+        }
+      } else if (strchr(VALID_CLOSING_BRACKETS, *(const char *)ref)) {
+        if (current_args_array == NULL) {
+          gr_sendmeta(handle, ")");
+        } else {
+          gr_meta_args_t *previous_args = args_stack_pop(args_stack);
+          _key = string_stack_pop(key_stack);
+          gr_meta_args_push_kwarg(previous_args, _key, "a", current_args);
+          current_args = previous_args;
+          if (args_stack_empty(args_stack)) {
+            args_stack_delete(args_stack);
+            args_stack = NULL;
+          }
+          if (string_stack_empty(key_stack)) {
+            string_stack_delete(key_stack);
+            key_stack = NULL;
+          }
+        }
+      }
+      break;
+    case 'O':
+      if (strchr(VALID_OPENING_BRACKETS, *(const char *)ref)) {
+        if ((_key = strdup(key)) == NULL) {
+          error = ERROR_MALLOC;
+          break;
+        }
+        if (current_args_array != NULL) {
+          if (args_array_stack == NULL) {
+            args_array_stack = dynamic_args_array_stack_new();
+            if (args_array_stack == NULL) {
+              error = ERROR_MALLOC;
+              break;
+            }
+          }
+          if ((error = dynamic_args_array_stack_push(args_array_stack, current_args_array)) != NO_ERROR) {
+            break;
+          }
+        }
+        if (current_args != NULL) {
+          if (args_stack == NULL) {
+            args_stack = args_stack_new();
+            if (args_stack == NULL) {
+              error = ERROR_MALLOC;
+              break;
+            }
+          }
+          if ((error = args_stack_push(args_stack, current_args)) != NO_ERROR) {
+            break;
+          }
+        }
+        if (key_stack == NULL) {
+          key_stack = string_stack_new();
+          if (key_stack == NULL) {
+            error = ERROR_MALLOC;
+            break;
+          }
+        }
+        if ((error = string_stack_push(key_stack, _key)) != NO_ERROR) {
+          break;
+        }
+        _key = NULL;
+        current_args_array = dynamic_args_array_new();
+        if (current_args_array == NULL) {
+          error = ERROR_MALLOC;
+          break;
+        }
+        current_args = gr_meta_args_new();
+        if (current_args == NULL) {
+          error = ERROR_MALLOC;
+          break;
+        }
+        if ((error = dynamic_args_array_push_back(current_args_array, current_args)) != NO_ERROR) {
+          break;
+        }
+      } else if (strchr(VALID_SEPARATOR, *(const char *)ref)) {
+        current_args = gr_meta_args_new();
+        if (current_args == NULL) {
+          error = ERROR_MALLOC;
+          break;
+        }
+        assert(current_args_array != NULL);
+        if ((error = dynamic_args_array_push_back(current_args_array, current_args)) != NO_ERROR) {
+          break;
+        }
+      } else if (strchr(VALID_CLOSING_BRACKETS, *(const char *)ref)) {
+        assert(key_stack != NULL);
+        _key = string_stack_pop(key_stack);
+        if (args_array_stack != NULL) {
+          current_args = args_stack_pop(args_stack);
+          gr_meta_args_push_kwarg(current_args, _key, "nA", current_args_array->size, current_args_array->buf);
+          dynamic_args_array_delete(current_args_array);
+          current_args_array = dynamic_args_array_stack_pop(args_array_stack);
+          if (dynamic_args_array_stack_empty(args_array_stack)) {
+            dynamic_args_array_stack_delete(args_array_stack);
+            args_array_stack = NULL;
+          }
+        } else {
+          snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "%s:nA,", _key);
+          gr_sendmeta(handle, format_string, current_args_array->size, current_args_array->buf);
+          dynamic_args_array_delete_with_elements(current_args_array);
+          current_args_array = NULL;
+          current_args = NULL;
+        }
+        if (string_stack_empty(key_stack)) {
+          string_stack_delete(key_stack);
+          key_stack = NULL;
+        }
+      }
+      break;
+    case '\0':
+      gr_sendmeta(handle, ")");
+      break;
+    default:
+      break;
+    }
   }
 
-  return (error == NO_ERROR);
+  free((void *)_key);
+
+  return error == NO_ERROR;
 }
 
 int gr_sendmeta_args(const void *p, const gr_meta_args_t *args) {
   metahandle_t *handle = (metahandle_t *)p;
-  args_iterator_t *it;
-  arg_t *arg;
-  char format[SENDARGS_FORMAT_MAX_LENGTH];
-  int is_first_kwarg;
+  error_t error;
 
-  it = args_iter_args(args);
-  while ((arg = it->next(it))) {
-    gr_sendmeta_buf(handle, arg->value_format, arg->value_ptr, 1);
+  error = tojson_write_args(handle->sender.memwriter, args);
+  if (error == NO_ERROR && tojson_is_complete() && handle->sender.send != NULL) {
+    error = handle->sender.send(handle);
   }
-  args_iterator_delete(it);
 
-  it = args_iter_kwargs(args);
-  is_first_kwarg = 1;
-  while ((arg = it->next(it))) {
-    char *format_ptr = format;
-    size_t format_remaining_size = SENDARGS_FORMAT_MAX_LENGTH;
-    int had_enough_memory = 1;
-    size_t length;
-    if (is_first_kwarg) {
-      memcpy(format_ptr, "o(", 2);
-      format_ptr += 2;
-      format_remaining_size -= 2;
-      is_first_kwarg = 0;
-    }
-    length = strlen(arg->key);
-    if (length + 2 < format_remaining_size) { /* strlen + ':' + 1 or more characters for format description */
-      memcpy(format_ptr, arg->key, length);
-      format_ptr += length;
-      *format_ptr++ = ':';
-      format_remaining_size -= length + 1;
-      length = strlen(arg->value_format);
-      if (length < format_remaining_size) {
-        memcpy(format_ptr, arg->value_format, length);
-        format_ptr += length;
-        *format_ptr = '\0';
-      } else {
-        had_enough_memory = 0;
-      }
-    } else {
-      had_enough_memory = 0;
-    }
-    if (had_enough_memory) {
-      gr_sendmeta_buf(handle, format, arg->value_ptr, 1);
-    } else {
-      debug_print_error(("Out of local memory for creating a format string -> aborting"));
-      args_iterator_delete(it);
-      return -1;
-    }
-  }
-  gr_sendmeta(handle, ")");
-  args_iterator_delete(it);
-
-  return 0;
+  return error == NO_ERROR;
 }
 
 
@@ -1070,7 +1273,7 @@ void argparse_read_char_array(argparse_state_t *state, int store_array_length) {
   } else {
     src_ptr = va_arg(*state->vl, char *);
   }
-  current_array_length = (state->next_array_length >= 0) ? state->next_array_length : strlen(src_ptr);
+  current_array_length = (state->next_array_length >= 0) ? state->next_array_length : (int)strlen(src_ptr);
   if (store_array_length) {
     size_t *size_t_typed_buffer = state->save_buffer;
     *size_t_typed_buffer = current_array_length;
@@ -1130,8 +1333,9 @@ void argparse_init_static_variables() {
     argparse_format_specifier_to_size['A'] = sizeof(gr_meta_args_t **);
     argparse_format_specifier_to_size['n'] = 0; /* size for array length is reserved by an array call itself */
     argparse_format_specifier_to_size['#'] = sizeof(size_t); /* only used internally */
+
+    argparse_static_variables_initialized = 1;
   }
-  argparse_static_variables_initialized = 1;
 }
 
 size_t argparse_calculate_needed_buffer_size(const char *format) {
@@ -1393,7 +1597,7 @@ void args_copy_format_string_for_arg(char *dst, const char *format) {
       ++format;
       continue;
     }
-    if (isupper(*format) || *format == 's') {
+    if (isupper(*format)) {
       /* all array formats get an internal size value */
       *dst++ = 'n';
     }
@@ -2144,6 +2348,130 @@ void *args_value_iterator_next(args_value_iterator_t *args_value_iterator) {
 }
 
 
+/* ------------------------- args / dynamic args array stack -------------------------------------------------------- */
+
+#define DEFINE_STACK_METHODS(prefix, type, free_elem_func)                         \
+  prefix##_stack_t *prefix##_stack_new(void) {                                     \
+    prefix##_stack_t *prefix##_stack;                                              \
+                                                                                   \
+    prefix##_stack = malloc(sizeof(prefix##_stack_t));                             \
+    if (prefix##_stack == NULL) {                                                  \
+      return NULL;                                                                 \
+    }                                                                              \
+    prefix##_stack->head = NULL;                                                   \
+                                                                                   \
+    return prefix##_stack;                                                         \
+  }                                                                                \
+                                                                                   \
+  void prefix##_stack_delete(prefix##_stack_t *prefix##_stack) {                   \
+    prefix##_stack_node_t *current_node = prefix##_stack->head, *next_node = NULL; \
+                                                                                   \
+    while (current_node != NULL) {                                                 \
+      next_node = current_node->next;                                              \
+      free(current_node);                                                          \
+      current_node = next_node;                                                    \
+    }                                                                              \
+    free(prefix##_stack);                                                          \
+  }                                                                                \
+                                                                                   \
+  void prefix##_stack_delete_with_elements(prefix##_stack_t *prefix##_stack) {     \
+    prefix##_stack_node_t *current_node = prefix##_stack->head, *next_node = NULL; \
+                                                                                   \
+    while (current_node != NULL) {                                                 \
+      next_node = current_node->next;                                              \
+      free_elem_func(next_node->value);                                            \
+      free(current_node);                                                          \
+      current_node = next_node;                                                    \
+    }                                                                              \
+    free(prefix##_stack);                                                          \
+  }                                                                                \
+                                                                                   \
+  error_t prefix##_stack_push(prefix##_stack_t *prefix##_stack, type value) {      \
+    prefix##_stack_node_t *prefix##_stack_node;                                    \
+                                                                                   \
+    if ((prefix##_stack_node = malloc(sizeof(prefix##_stack_node_t))) == NULL) {   \
+      return ERROR_MALLOC;                                                         \
+    }                                                                              \
+    prefix##_stack_node->value = value;                                            \
+    prefix##_stack_node->next = prefix##_stack->head;                              \
+    prefix##_stack->head = prefix##_stack_node;                                    \
+                                                                                   \
+    return NO_ERROR;                                                               \
+  }                                                                                \
+                                                                                   \
+  type prefix##_stack_pop(prefix##_stack_t *prefix##_stack) {                      \
+    prefix##_stack_node_t *head_node;                                              \
+    type value = NULL;                                                             \
+                                                                                   \
+    head_node = prefix##_stack->head;                                              \
+    if (head_node != NULL) {                                                       \
+      value = head_node->value;                                                    \
+      prefix##_stack->head = head_node->next;                                      \
+      free(head_node);                                                             \
+    }                                                                              \
+                                                                                   \
+    return value;                                                                  \
+  }                                                                                \
+                                                                                   \
+  int prefix##_stack_empty(prefix##_stack_t *prefix##_stack) { return (prefix##_stack->head == NULL); }
+
+DEFINE_STACK_METHODS(args, gr_meta_args_t *, gr_meta_args_delete)
+DEFINE_STACK_METHODS(dynamic_args_array, dynamic_args_array_t *, dynamic_args_array_delete)
+DEFINE_STACK_METHODS(string, const char *, free)
+
+#undef DEFINE_STACK_METHODS
+
+
+/* ------------------------- dynamic args array --------------------------------------------------------------------- */
+
+dynamic_args_array_t *dynamic_args_array_new(void) {
+  dynamic_args_array_t *args_array;
+
+  args_array = malloc(sizeof(dynamic_args_array_t));
+  if (args_array == NULL) {
+    return NULL;
+  }
+  args_array->buf = malloc(DYNAMIC_ARGS_ARRAY_INITIAL_SIZE * sizeof(gr_meta_args_t *));
+  if (args_array->buf == NULL) {
+    free(args_array);
+    return NULL;
+  }
+  args_array->capacity = DYNAMIC_ARGS_ARRAY_INITIAL_SIZE;
+  args_array->size = 0;
+
+  return args_array;
+}
+
+void dynamic_args_array_delete(dynamic_args_array_t *args_array) {
+  free(args_array->buf);
+  free(args_array);
+}
+
+void dynamic_args_array_delete_with_elements(dynamic_args_array_t *args_array) {
+  size_t i;
+  for (i = 0; i < args_array->size; ++i) {
+    gr_meta_args_delete(args_array->buf[i]);
+  }
+  dynamic_args_array_delete(args_array);
+}
+
+error_t dynamic_args_array_push_back(dynamic_args_array_t *args_array, gr_meta_args_t *args) {
+  if (args_array->size == args_array->capacity) {
+    gr_meta_args_t **enlarged_buf =
+      realloc(args_array->buf, (args_array->capacity + DYNAMIC_ARGS_ARRAY_SIZE_INCREMENT) * sizeof(gr_meta_args_t *));
+    if (enlarged_buf == NULL) {
+      return ERROR_MALLOC;
+    }
+    args_array->buf = enlarged_buf;
+    args_array->capacity += DYNAMIC_ARGS_ARRAY_SIZE_INCREMENT;
+  }
+  args_array->buf[args_array->size] = args;
+  ++args_array->size;
+
+  return NO_ERROR;
+}
+
+
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
 error_t fromjson_read(gr_meta_args_t *args, const char *json_string) {
@@ -2208,13 +2536,13 @@ error_t fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_s
       } else {
         gr_meta_args_push_arg_buf(args, state.next_value_type, state.value_buffer, 0);
       }
-      if (*state.shared_state->json_ptr) {
-        if (strchr(FROMJSON_VALID_DELIMITERS, *state.shared_state->json_ptr) != NULL) {
+      if (strchr(FROMJSON_VALID_DELIMITERS, *state.shared_state->json_ptr) != NULL) {
+        if (*state.shared_state->json_ptr == ',') {
           ++state.shared_state->json_ptr;
-        } else {
-          error = ERROR_PARSE_INVALID_DELIMITER;
-          break;
         }
+      } else {
+        error = ERROR_PARSE_INVALID_DELIMITER;
+        break;
       }
     } else {
       error = ERROR_PARSE_UNKNOWN_DATATYPE;
@@ -2232,6 +2560,9 @@ error_t fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_s
   }
   if (state.parsing_object && *state.shared_state->json_ptr == '\0') {
     error = ERROR_PARSE_INCOMPLETE_STRING;
+  }
+  if (*state.shared_state->json_ptr) {
+    ++state.shared_state->json_ptr;
   }
 
   free(state.value_buffer);
@@ -2408,7 +2739,8 @@ error_t fromjson_parse_array(fromjson_state_t *state) {
       unsigned int array_length = 0;
       state->shared_state->json_ptr += is_nested_array ? 2 : 1;
       next_delim_ptr = state->shared_state->json_ptr;
-      while (*next_delim_ptr != ']' && fromjson_find_next_delimiter(&next_delim_ptr, next_delim_ptr, 0)) {
+      while (*next_delim_ptr != ']' &&
+             fromjson_find_next_delimiter(&next_delim_ptr, next_delim_ptr, array_length == 0, 1)) {
         ++array_length;
       }
       if (*next_delim_ptr != ']') {
@@ -2427,6 +2759,9 @@ error_t fromjson_parse_array(fromjson_state_t *state) {
         break;
       case JSON_DATATYPE_STRING:
         PARSE_VALUES(string, char *);
+        break;
+      case JSON_DATATYPE_OBJECT:
+        PARSE_VALUES(object, gr_meta_args_t *);
         break;
       case JSON_DATATYPE_ARRAY:
         debug_print_error(("Arrays only support one level of nesting!\n"));
@@ -2448,7 +2783,7 @@ error_t fromjson_parse_array(fromjson_state_t *state) {
       }
     } while (is_nested_array && current_outer_array_index < outer_array_length &&
              strchr("]", *state->shared_state->json_ptr) == NULL);
-    if (is_nested_array) {
+    if (is_nested_array && *state->shared_state->json_ptr == ']') {
       ++state->shared_state->json_ptr;
     }
     strcpy(state->next_value_type, array_type);
@@ -2535,19 +2870,42 @@ error_t fromjson_copy_and_filter_json_string(char **dest, const char *src) {
   return NO_ERROR;
 }
 
-int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int include_start) {
-  size_t segment_length;
-
+int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int include_start,
+                                 int exclude_nested_structures) {
   if (*src == '\0') {
     return 0;
   }
   if (!include_start) {
     ++src;
   }
-  segment_length = strcspn(src, FROMJSON_VALID_DELIMITERS);
-  if (*(src + segment_length) != '\0') {
-    *delim_ptr = src + segment_length;
-    return 1;
+  if (exclude_nested_structures) {
+    const char *src_ptr = src;
+    int nested_level = 0;
+
+    while (*src_ptr) {
+      if (strchr("[{", *src_ptr)) {
+        ++nested_level;
+      } else if (strchr("]}", *src_ptr)) {
+        if (nested_level > 0) {
+          --nested_level;
+        } else {
+          break;
+        }
+      } else if (*src_ptr == ',' && nested_level == 0) {
+        break;
+      }
+      ++src_ptr;
+    }
+    if (*src_ptr != '\0') {
+      *delim_ptr = src_ptr;
+      return 1;
+    }
+  } else {
+    size_t segment_length = strcspn(src, FROMJSON_VALID_DELIMITERS);
+    if (*(src + segment_length) != '\0') {
+      *delim_ptr = src + segment_length;
+      return 1;
+    }
   }
   return 0;
 }
@@ -2597,10 +2955,10 @@ double fromjson_str_to_double(const char **str, int *was_successful) {
   if (conversion_end == NULL) {
     debug_print_error(("No number conversion was executed (the string is NULL)!\n"));
   } else if (*str == conversion_end || strchr(FROMJSON_VALID_DELIMITERS, *conversion_end) == NULL) {
-    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1);
+    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1, 0);
     debug_print_error(("The parameter \"%.*s\" is not a valid number!\n", next_delim_ptr - *str, *str));
   } else if (errno == ERANGE) {
-    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1);
+    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1, 0);
     if (conversion_result == HUGE_VAL || conversion_result == -HUGE_VAL) {
       debug_print_error(("The parameter \"%.*s\" caused an overflow, the number has been clamped to \"%lf\"\n",
                          next_delim_ptr - *str, *str, conversion_result));
@@ -2634,10 +2992,10 @@ int fromjson_str_to_int(const char **str, int *was_successful) {
   if (conversion_end == NULL) {
     debug_print_error(("No number conversion was executed (the string is NULL)!\n"));
   } else if (*str == conversion_end || strchr(FROMJSON_VALID_DELIMITERS, *conversion_end) == NULL) {
-    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1);
+    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1, 0);
     debug_print_error(("The parameter \"%.*s\" is not a valid number!\n", next_delim_ptr - *str, *str));
   } else if (errno == ERANGE || conversion_result > INT_MAX || conversion_result < INT_MIN) {
-    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1);
+    fromjson_find_next_delimiter(&next_delim_ptr, *str, 1, 0);
     if (conversion_result > INT_MAX) {
       debug_print_error(("The parameter \"%.*s\" is too big, the number has been clamped to \"%d\"\n",
                          next_delim_ptr - *str, *str, INT_MAX));
@@ -2692,15 +3050,6 @@ int fromjson_str_to_int(const char **str, int *was_successful) {
     }                                            \
   } while (0)
 
-#define RETRIEVE_NEXT_VALUE(var, vars, type) \
-  do {                                       \
-    if (state->shared->data_ptr != NULL) {   \
-      var = *vars++;                         \
-    } else {                                 \
-      var = *vars++;                         \
-    }                                        \
-  } while (0)
-
 #define FIN_MULTI_VALUE(type)                                           \
   do {                                                                  \
     if (state->shared->data_ptr != NULL) {                              \
@@ -2709,107 +3058,117 @@ int fromjson_str_to_int(const char **str, int *was_successful) {
     }                                                                   \
   } while (0)
 
-#define DEF_STRINGIFY_SINGLE(type, promoted_type, format_specifier, post_processing_callback)                        \
-  error_t tojson_stringify_##type(memwriter_t *memwriter, tojson_state_t *state) {                                   \
-    type value;                                                                                                      \
-    unsigned int string_start_index;                                                                                 \
-    error_t error = NO_ERROR;                                                                                        \
-    RETRIEVE_SINGLE_VALUE(value, type, promoted_type);                                                               \
-    string_start_index = memwriter_size(memwriter);                                                                  \
-    if ((error = memwriter_printf(memwriter, format_specifier, value)) != NO_ERROR) {                                \
-      return error;                                                                                                  \
-    }                                                                                                                \
-    if (post_processing_callback != NULL) {                                                                          \
-      const char *unprocessed_string = memwriter_buf(memwriter) + string_start_index;                                \
-      if ((error = ((tojson_post_processing_callback_t)post_processing_callback)(memwriter, string_start_index,      \
-                                                                                 unprocessed_string)) != NO_ERROR) { \
-        return error;                                                                                                \
-      }                                                                                                              \
-    }                                                                                                                \
-    state->shared->wrote_output = 1;                                                                                 \
-    return error;                                                                                                    \
+#define DEFINE_STRINGIFY_VALUE(name, type, format_specifier)                    \
+  error_t tojson_stringify_##name##_value(memwriter_t *memwriter, type value) { \
+    return memwriter_printf(memwriter, format_specifier, value);                \
   }
 
-#define DEF_STRINGIFY_MULTI(type, format_specifier, post_processing_callback)                                          \
-  error_t tojson_stringify_##type##_array(memwriter_t *memwriter, tojson_state_t *state) {                             \
-    type *values;                                                                                                      \
-    type current_value;                                                                                                \
-    int length;                                                                                                        \
-    int remaining_elements;                                                                                            \
-    error_t error = NO_ERROR;                                                                                          \
-    INIT_MULTI_VALUE(values, type);                                                                                    \
-    if (state->additional_type_info != NULL) {                                                                         \
-      int was_successful;                                                                                              \
-      length = str_to_uint(state->additional_type_info, &was_successful);                                              \
-      if (!was_successful) {                                                                                           \
-        debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",    \
-                           state->additional_type_info));                                                              \
-        length = 0;                                                                                                    \
-      }                                                                                                                \
-    } else {                                                                                                           \
-      length = state->shared->array_length;                                                                            \
-    }                                                                                                                  \
-    remaining_elements = length;                                                                                       \
-    /* write array start */                                                                                            \
-    if ((error = memwriter_putc(memwriter, '[')) != NO_ERROR) {                                                        \
-      return error;                                                                                                    \
-    }                                                                                                                  \
-    /* write array content */                                                                                          \
-    while (remaining_elements) {                                                                                       \
-      unsigned int string_start_index;                                                                                 \
-      RETRIEVE_NEXT_VALUE(current_value, values, type);                                                                \
-      string_start_index = memwriter_size(memwriter);                                                                  \
-      if ((error = memwriter_printf(memwriter, format_specifier, current_value)) != NO_ERROR) {                        \
-        return error;                                                                                                  \
-      }                                                                                                                \
-      if (post_processing_callback != NULL) {                                                                          \
-        const char *unprocessed_string = memwriter_buf(memwriter) + string_start_index;                                \
-        if ((error = ((tojson_post_processing_callback_t)post_processing_callback)(memwriter, string_start_index,      \
-                                                                                   unprocessed_string)) != NO_ERROR) { \
-          return error;                                                                                                \
-        }                                                                                                              \
-      }                                                                                                                \
-      if (remaining_elements > 1) {                                                                                    \
-        if ((error = memwriter_putc(memwriter, ',')) != NO_ERROR) {                                                    \
-          return error;                                                                                                \
-        }                                                                                                              \
-      }                                                                                                                \
-      --remaining_elements;                                                                                            \
-    }                                                                                                                  \
-    /* write array end */                                                                                              \
-    if ((error = memwriter_putc(memwriter, ']')) != NO_ERROR) {                                                        \
-      return error;                                                                                                    \
-    }                                                                                                                  \
-    FIN_MULTI_VALUE(type);                                                                                             \
-    state->shared->wrote_output = 1;                                                                                   \
-    return error;                                                                                                      \
+#define DEFINE_STRINGIFY_SINGLE(name, type, promoted_type)                                \
+  error_t tojson_stringify_##name(tojson_state_t *state) {                                \
+    type value;                                                                           \
+    error_t error = NO_ERROR;                                                             \
+    RETRIEVE_SINGLE_VALUE(value, type, promoted_type);                                    \
+    if ((error = tojson_stringify_##name##_value(state->memwriter, value)) != NO_ERROR) { \
+      return error;                                                                       \
+    }                                                                                     \
+    state->shared->wrote_output = 1;                                                      \
+    return error;                                                                         \
   }
+
+#define DEFINE_STRINGIFY_MULTI(name, type)                                                                          \
+  error_t tojson_stringify_##name##_array(tojson_state_t *state) {                                                  \
+    type *values;                                                                                                   \
+    type current_value;                                                                                             \
+    int length;                                                                                                     \
+    int remaining_elements;                                                                                         \
+    error_t error = NO_ERROR;                                                                                       \
+    INIT_MULTI_VALUE(values, type);                                                                                 \
+    if (state->additional_type_info != NULL) {                                                                      \
+      int was_successful;                                                                                           \
+      length = str_to_uint(state->additional_type_info, &was_successful);                                           \
+      if (!was_successful) {                                                                                        \
+        debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.", \
+                           state->additional_type_info));                                                           \
+        length = 0;                                                                                                 \
+      }                                                                                                             \
+    } else {                                                                                                        \
+      length = state->shared->array_length;                                                                         \
+    }                                                                                                               \
+    remaining_elements = length;                                                                                    \
+    /* write array start */                                                                                         \
+    if ((error = memwriter_putc(state->memwriter, '[')) != NO_ERROR) {                                              \
+      return error;                                                                                                 \
+    }                                                                                                               \
+    /* write array content */                                                                                       \
+    while (remaining_elements) {                                                                                    \
+      current_value = *values++;                                                                                    \
+      if ((error = tojson_stringify_##name##_value(state->memwriter, current_value)) != NO_ERROR) {                 \
+        return error;                                                                                               \
+      }                                                                                                             \
+      if (remaining_elements > 1) {                                                                                 \
+        if ((error = memwriter_putc(state->memwriter, ',')) != NO_ERROR) {                                          \
+          return error;                                                                                             \
+        }                                                                                                           \
+      }                                                                                                             \
+      --remaining_elements;                                                                                         \
+    }                                                                                                               \
+    /* write array end */                                                                                           \
+    if ((error = memwriter_putc(state->memwriter, ']')) != NO_ERROR) {                                              \
+      return error;                                                                                                 \
+    }                                                                                                               \
+    FIN_MULTI_VALUE(type);                                                                                          \
+    state->shared->wrote_output = 1;                                                                                \
+    return error;                                                                                                   \
+  }
+
+DEFINE_STRINGIFY_SINGLE(int, int, int)
+DEFINE_STRINGIFY_MULTI(int, int)
+DEFINE_STRINGIFY_VALUE(int, int, "%d")
+DEFINE_STRINGIFY_SINGLE(double, double, double)
+DEFINE_STRINGIFY_MULTI(double, double)
+DEFINE_STRINGIFY_SINGLE(char, char, int)
+DEFINE_STRINGIFY_VALUE(char, char, "%c")
+DEFINE_STRINGIFY_SINGLE(string, char *, char *)
+DEFINE_STRINGIFY_MULTI(string, char *)
+DEFINE_STRINGIFY_SINGLE(bool, int, int)
+DEFINE_STRINGIFY_MULTI(bool, int)
+DEFINE_STRINGIFY_SINGLE(args, gr_meta_args_t *, gr_meta_args_t *)
+DEFINE_STRINGIFY_MULTI(args, gr_meta_args_t *)
+
+#undef DEFINE_STRINGIFY_SINGLE
+#undef DEFINE_STRINGIFY_MULTI
 
 #define STR(x) #x
 #define XSTR(x) STR(x)
 
-DEF_STRINGIFY_SINGLE(int, int, "%d", NULL)
-DEF_STRINGIFY_MULTI(int, "%d", NULL)
-DEF_STRINGIFY_SINGLE(double, double, "%." XSTR(DBL_DECIMAL_DIG) "g", tojson_double_post_processing)
-DEF_STRINGIFY_MULTI(double, "%." XSTR(DBL_DECIMAL_DIG) "g", tojson_double_post_processing)
-DEF_STRINGIFY_SINGLE(char, int, "%c", NULL)
+error_t tojson_stringify_double_value(memwriter_t *memwriter, double value) {
+  error_t error;
+  size_t string_start_index;
+  const char *unprocessed_string;
 
-#undef DEF_STRINGIFY_SINGLE
-#undef DEF_STRINGIFY_MULTI
+  string_start_index = memwriter_size(memwriter);
+  unprocessed_string = memwriter_buf(memwriter) + string_start_index;
+  if ((error = memwriter_printf(memwriter, "%." XSTR(DBL_DECIMAL_DIG) "g", value)) != NO_ERROR) {
+    return error;
+  }
+  if (strspn(unprocessed_string, "0123456789-") == memwriter_size(memwriter) - string_start_index) {
+    if ((error = memwriter_putc(memwriter, '.')) != NO_ERROR) {
+      return error;
+    }
+  }
+  return NO_ERROR;
+}
+
 #undef XSTR
 #undef STR
 
-error_t tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *state) {
+error_t tojson_stringify_char_array(tojson_state_t *state) {
   char *chars;
-  int length;
-  error_t error;
+  char *escaped_chars = NULL;
+  unsigned int length;
+  error_t error = NO_ERROR;
 
-  if (state->shared->data_ptr != NULL) {
-    CHECK_PADDING(char *);
-    chars = *(char **)state->shared->data_ptr;
-  } else {
-    chars = va_arg(*state->shared->vl, char *);
-  }
+  INIT_MULTI_VALUE(chars, char);
 
   if (state->additional_type_info != NULL) {
     int was_successful;
@@ -2817,39 +3176,52 @@ error_t tojson_stringify_char_array(memwriter_t *memwriter, tojson_state_t *stat
     if (!was_successful) {
       debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
                          state->additional_type_info));
-      length = 0;
+      goto cleanup;
     }
   } else {
     if (state->shared->read_length_from_string) {
-      length = strlen(chars);
+      length = 0;
     } else {
       length = state->shared->array_length;
     }
   }
-  if ((error = memwriter_printf(memwriter, "\"%.*s\"", length, chars)) != NO_ERROR) {
-    return error;
+  if ((error = tojson_escape_special_chars(&escaped_chars, chars, &length)) != NO_ERROR) {
+    goto cleanup;
   }
+  if ((error = memwriter_printf(state->memwriter, "\"%.*s\"", length, escaped_chars)) != NO_ERROR) {
+    goto cleanup;
+  }
+  state->shared->wrote_output = 1;
 
   FIN_MULTI_VALUE(char);
-  state->shared->wrote_output = 1;
 
+cleanup:
+  free(escaped_chars);
   return error;
 }
 
-error_t tojson_stringify_bool(memwriter_t *memwriter, tojson_state_t *state) {
-  int value;
+error_t tojson_stringify_string_value(memwriter_t *memwriter, char *value) {
+  char *escaped_chars = NULL;
+  unsigned int length = 0;
   error_t error = NO_ERROR;
 
-  RETRIEVE_SINGLE_VALUE(value, int, int);
-  if ((error = memwriter_puts(memwriter, value ? "true" : "false")) != NO_ERROR) {
-    return error;
+  if ((error = tojson_escape_special_chars(&escaped_chars, value, &length))) {
+    goto cleanup;
   }
-  state->shared->wrote_output = 1;
+  if ((error = memwriter_printf(memwriter, "\"%s\"", escaped_chars)) != NO_ERROR) {
+    goto cleanup;
+  }
 
+cleanup:
+  free(escaped_chars);
   return error;
 }
 
-error_t tojson_stringify_object(memwriter_t *memwriter, tojson_state_t *state) {
+error_t tojson_stringify_bool_value(memwriter_t *memwriter, int value) {
+  return memwriter_puts(memwriter, value ? "true" : "false");
+}
+
+error_t tojson_stringify_object(tojson_state_t *state) {
   char **member_names = NULL;
   char **data_types = NULL;
   char **member_name_ptr;
@@ -2868,35 +3240,37 @@ error_t tojson_stringify_object(memwriter_t *memwriter, tojson_state_t *state) {
   has_members =
     (member_name_ptr != NULL && *member_name_ptr != NULL && data_type_ptr != NULL && *data_type_ptr != NULL);
   /* write object start */
-  if (!state->shared->add_data_without_separator) {
+  if (!state->add_data_without_separator) {
     if (state->shared->add_data && has_members) {
-      if ((error = memwriter_putc(memwriter, ',')) != NO_ERROR) {
+      if ((error = memwriter_putc(state->memwriter, ',')) != NO_ERROR) {
         goto cleanup;
       }
-      state->shared->add_data = 0;
     } else if (!state->shared->add_data) {
-      if ((error = memwriter_putc(memwriter, '{')) != NO_ERROR) {
+      if ((error = memwriter_putc(state->memwriter, '{')) != NO_ERROR) {
         goto cleanup;
       }
       ++(state->shared->struct_nested_level);
     }
   }
+  /* `add_data` is only relevant for the first object start; reset it to default afterwards since nested objects can
+   * follow*/
+  state->shared->add_data = 0;
   if (has_members) {
     /* write object content */
     int serialized_all_members = 0;
     while (!serialized_all_members) {
-      if ((error = memwriter_printf(memwriter, "\"%s\":", *member_name_ptr)) != NO_ERROR) {
+      if ((error = memwriter_printf(state->memwriter, "\"%s\":", *member_name_ptr)) != NO_ERROR) {
         goto cleanup;
       }
-      if ((error = tojson_serialize(memwriter, *data_type_ptr, NULL, NULL, -1, -1, -1, NULL, NULL, state->shared)) !=
-          NO_ERROR) {
+      if ((error = tojson_serialize(state->memwriter, *data_type_ptr, NULL, NULL, -1, -1, 0, NULL, NULL,
+                                    state->shared)) != NO_ERROR) {
         goto cleanup;
       }
       ++member_name_ptr;
       ++data_type_ptr;
       if (*member_name_ptr != NULL && *data_type_ptr != NULL) {
         /* write JSON separator */
-        if ((error = memwriter_putc(memwriter, ',')) != NO_ERROR) {
+        if ((error = memwriter_putc(state->memwriter, ',')) != NO_ERROR) {
           goto cleanup;
         }
       } else {
@@ -2907,15 +3281,13 @@ error_t tojson_stringify_object(memwriter_t *memwriter, tojson_state_t *state) {
   /* write object end if the type info is complete */
   if (!state->is_type_info_incomplete) {
     --(state->shared->struct_nested_level);
-    if ((error = memwriter_putc(memwriter, '}')) != NO_ERROR) {
+    if ((error = memwriter_putc(state->memwriter, '}')) != NO_ERROR) {
       goto cleanup;
     }
   }
   /* Only set serial result if not set before */
-  if (state->shared->serial_result == 0) {
-    if ((state->is_type_info_incomplete)) {
-      state->shared->serial_result = has_members ? incomplete : incomplete_at_struct_beginning;
-    }
+  if (state->shared->serial_result == 0 && state->is_type_info_incomplete) {
+    state->shared->serial_result = has_members ? incomplete : incomplete_at_struct_beginning;
   }
 
 cleanup:
@@ -2930,14 +3302,17 @@ cleanup:
   return NO_ERROR;
 }
 
-error_t tojson_double_post_processing(memwriter_t *memwriter, unsigned int string_start_index,
-                                      const char *unprocessed_string) {
-  error_t error;
-  if (strspn(unprocessed_string, "0123456789-") == memwriter_size(memwriter) - string_start_index) {
-    if ((error = memwriter_putc(memwriter, '.')) != NO_ERROR) {
-      return error;
-    }
+error_t tojson_stringify_args_value(memwriter_t *memwriter, gr_meta_args_t *args) {
+  error_t error = NO_ERROR;
+
+  if ((error = memwriter_putc(memwriter, '{')) != NO_ERROR) {
+    return error;
   }
+  tojson_permanent_state.serial_result = incomplete_at_struct_beginning;
+  if ((error = tojson_write_args(memwriter, args)) != NO_ERROR) {
+    return error;
+  }
+
   return NO_ERROR;
 }
 
@@ -2973,20 +3348,12 @@ int tojson_is_json_array_needed(const char *data_desc) {
   int count_relevant_data_types = 0;
 
   while (*data_desc != 0 && count_relevant_data_types < 2) {
-    switch (*data_desc) {
-    case '(':
+    if (*data_desc == '(') {
       ++nested_level;
-      break;
-    case ')':
+    } else if (*data_desc == ')') {
       --nested_level;
-      break;
-    default:
-      if (nested_level == 0) {
-        if (strchr(relevant_data_types, *data_desc)) {
-          ++count_relevant_data_types;
-        }
-      }
-      break;
+    } else if (nested_level == 0 && strchr(relevant_data_types, *data_desc)) {
+      ++count_relevant_data_types;
     }
     ++data_desc;
   }
@@ -3001,13 +3368,10 @@ void tojson_read_datatype(tojson_state_t *state) {
     int nested_level = 1;
     additional_type_info = ++(state->data_type_ptr);
     while (*state->data_type_ptr != 0 && nested_level > 0) {
-      switch (*state->data_type_ptr) {
-      case '(':
+      if (*state->data_type_ptr == '(') {
         ++nested_level;
-        break;
-      case ')':
+      } else if (*state->data_type_ptr == ')') {
         --nested_level;
-        break;
       }
       if (nested_level > 0) {
         ++(state->data_type_ptr);
@@ -3047,10 +3411,10 @@ error_t tojson_skip_bytes(tojson_state_t *state) {
   return NO_ERROR;
 }
 
-error_t tojson_close_object(memwriter_t *memwriter, tojson_state_t *state) {
+error_t tojson_close_object(tojson_state_t *state) {
   error_t error;
   --(state->shared->struct_nested_level);
-  if ((error = memwriter_putc(memwriter, '}')) != NO_ERROR) {
+  if ((error = memwriter_putc(state->memwriter, '}')) != NO_ERROR) {
     return error;
   }
   return NO_ERROR;
@@ -3094,13 +3458,10 @@ error_t tojson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_n
       /* extract one name or one type */
       while (*mixed_ptr != 0 && (nested_type_level > 0 || *mixed_ptr != separators[current_array_index])) {
         if (current_array_index == data_type) {
-          switch (*mixed_ptr) {
-          case '(':
+          if (*mixed_ptr == '(') {
             ++nested_type_level;
-            break;
-          case ')':
+          } else if (*mixed_ptr == ')') {
             --nested_type_level;
-            break;
           }
         }
         if (nested_type_level >= 0) {
@@ -3119,10 +3480,52 @@ error_t tojson_unzip_membernames_and_datatypes(char *mixed_ptr, char ***member_n
   return NO_ERROR;
 }
 
+error_t tojson_escape_special_chars(char **escaped_string, const char *unescaped_string, unsigned int *length) {
+  /* characters '\' and '"' must be escaped before written to a json string value */
+  /* length can be `0` -> use `strlen(unescaped_string)` instead */
+  const char *src_ptr;
+  char *dest_ptr;
+  size_t needed_memory;
+  unsigned int remaining_chars;
+  unsigned int len;
+  const char *chars_to_escape = "\\\"";
+
+  len = (length != NULL && *length != 0) ? *length : strlen(unescaped_string);
+  needed_memory = len + 1; /* reserve memory for the terminating `\0` character */
+  src_ptr = unescaped_string;
+  remaining_chars = len;
+  while (remaining_chars) {
+    if (strchr(chars_to_escape, *src_ptr) != NULL) {
+      ++needed_memory;
+    }
+    ++src_ptr;
+    --remaining_chars;
+  }
+  dest_ptr = malloc(needed_memory);
+  if (dest_ptr == NULL) {
+    return ERROR_MALLOC;
+  }
+  *escaped_string = dest_ptr;
+  src_ptr = unescaped_string;
+  remaining_chars = len;
+  while (remaining_chars) {
+    if (strchr(chars_to_escape, *src_ptr) != NULL) {
+      *dest_ptr++ = '\\';
+    }
+    *dest_ptr++ = *src_ptr++;
+    --remaining_chars;
+  }
+  *dest_ptr = '\0';
+  if (length != NULL) {
+    *length = needed_memory - 1;
+  }
+
+  return NO_ERROR;
+}
+
 #undef CHECK_PADDING
 #undef RETRIEVE_SINGLE_VALUE
 #undef INIT_MULTI_VALUE
-#undef RETRIEVE_NEXT_VALUE
 #undef FIN_MULTI_VALUE
 
 error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *data, va_list *vl, int apply_padding,
@@ -3150,15 +3553,17 @@ error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *da
   int allocated_shared_state_mem = 0;
   error_t error = NO_ERROR;
 
+  state.memwriter = memwriter;
   state.data_type_ptr = data_desc;
   state.current_data_type = 0;
   state.additional_type_info = NULL;
+  state.add_data_without_separator = add_data_without_separator;
   state.is_type_info_incomplete = 0;
   if (shared_state == NULL) {
     shared_state = malloc(sizeof(tojson_shared_state_t));
     if (shared_state == NULL) {
       debug_print_malloc_error();
-      return ERROR_MALLOC;
+      goto cleanup;
     }
     shared_state->apply_padding = apply_padding;
     shared_state->array_length = 0;
@@ -3168,7 +3573,6 @@ error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *da
     shared_state->data_offset = 0;
     shared_state->wrote_output = 0;
     shared_state->add_data = add_data;
-    shared_state->add_data_without_separator = add_data_without_separator;
     shared_state->serial_result = 0;
     shared_state->struct_nested_level = *struct_nested_level;
     allocated_shared_state_mem = 1;
@@ -3189,74 +3593,33 @@ error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *da
   /* write list head if needed */
   if (json_array_needed) {
     if ((error = memwriter_putc(memwriter, '[')) != NO_ERROR) {
-      return error;
+      goto cleanup;
     }
   }
   while (*state.data_type_ptr != 0) {
     shared_state->wrote_output = 0;
     tojson_read_datatype(&state);
-    /* TODO: replace `switch` with a map for shorter code */
-    switch (state.current_data_type) {
-    case 'n':
-      error = tojson_read_array_length(&state);
-      break;
-    case 'e':
-      error = tojson_skip_bytes(&state);
-      break;
-    case 'i':
-      error = tojson_stringify_int(memwriter, &state);
-      break;
-    case 'I':
-      error = tojson_stringify_int_array(memwriter, &state);
-      break;
-    case 'd':
-      error = tojson_stringify_double(memwriter, &state);
-      break;
-    case 'D':
-      error = tojson_stringify_double_array(memwriter, &state);
-      break;
-    case 'c':
-      error = tojson_stringify_char(memwriter, &state);
-      break;
-    case 'C':
-      shared_state->read_length_from_string = 0;
-      error = tojson_stringify_char_array(memwriter, &state);
-      break;
-    case 's':
-      shared_state->read_length_from_string = 1;
-      error = tojson_stringify_char_array(memwriter, &state);
-      break;
-    case 'b':
-      error = tojson_stringify_bool(memwriter, &state);
-      break;
-    case 'o':
-      error = tojson_stringify_object(memwriter, &state);
-      break;
-    case ')':
-      error = tojson_close_object(memwriter, &state);
-      break;
-    default:
-      debug_print_error(("WARNING: %c (ASCII code %d) is not a valid type identifier\n", state.current_data_type,
+    if (tojson_datatype_to_func[state.current_data_type]) {
+      error = tojson_datatype_to_func[state.current_data_type](&state);
+    } else {
+      debug_print_error(("WARNING: '%c' (ASCII code %d) is not a valid type identifier\n", state.current_data_type,
                          state.current_data_type));
-      break;
+      error = ERROR_UNSUPPORTED_DATATYPE;
     }
     if (error != NO_ERROR) {
-      if (allocated_shared_state_mem) {
-        free(shared_state);
-      }
-      return error;
+      goto cleanup;
     }
     if (*state.data_type_ptr != 0 && *state.data_type_ptr != ')' && shared_state->wrote_output) {
       /* write JSON separator, if data was written and the object is not closed in the next step */
       if ((error = memwriter_putc(memwriter, ',')) != NO_ERROR) {
-        return error;
+        goto cleanup;
       }
     }
   }
   /* write list tail if needed */
   if (json_array_needed) {
     if ((error = memwriter_putc(memwriter, ']')) != NO_ERROR) {
-      return error;
+      goto cleanup;
     }
   }
 
@@ -3272,7 +3635,7 @@ error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *da
     *struct_nested_level = shared_state->struct_nested_level;
   }
 
-  /* cleanup */
+cleanup:
   if (allocated_shared_state_mem) {
     free(shared_state);
   }
@@ -3280,8 +3643,32 @@ error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *da
   return error;
 }
 
+void tojson_init_static_variables(void) {
+  if (!tojson_static_variables_initialized) {
+    tojson_datatype_to_func['n'] = tojson_read_array_length;
+    tojson_datatype_to_func['e'] = tojson_skip_bytes;
+    tojson_datatype_to_func['i'] = tojson_stringify_int;
+    tojson_datatype_to_func['I'] = tojson_stringify_int_array;
+    tojson_datatype_to_func['d'] = tojson_stringify_double;
+    tojson_datatype_to_func['D'] = tojson_stringify_double_array;
+    tojson_datatype_to_func['c'] = tojson_stringify_char;
+    tojson_datatype_to_func['C'] = tojson_stringify_char_array;
+    tojson_datatype_to_func['s'] = tojson_stringify_string;
+    tojson_datatype_to_func['S'] = tojson_stringify_string_array;
+    tojson_datatype_to_func['b'] = tojson_stringify_bool;
+    tojson_datatype_to_func['B'] = tojson_stringify_bool_array;
+    tojson_datatype_to_func['o'] = tojson_stringify_object;
+    tojson_datatype_to_func['a'] = tojson_stringify_args;
+    tojson_datatype_to_func['A'] = tojson_stringify_args_array;
+    tojson_datatype_to_func[')'] = tojson_close_object;
+
+    tojson_static_variables_initialized = 1;
+  }
+}
+
 error_t tojson_init_variables(int *add_data, int *add_data_without_separator, char **_data_desc,
                               const char *data_desc) {
+  tojson_init_static_variables();
   *add_data = (tojson_permanent_state.serial_result != complete);
   *add_data_without_separator = (tojson_permanent_state.serial_result == incomplete_at_struct_beginning);
   if (*add_data) {
@@ -3339,6 +3726,63 @@ error_t tojson_write_buf(memwriter_t *memwriter, const char *data_desc, const vo
   free(_data_desc);
 
   return error;
+}
+
+error_t tojson_write_arg(memwriter_t *memwriter, const arg_t *arg) {
+  error_t error = NO_ERROR;
+
+  if (arg->key == NULL) {
+    if ((error = tojson_write_buf(memwriter, arg->value_format, arg->value_ptr, 1)) != NO_ERROR) {
+      return error;
+    }
+  } else {
+    char *format, *format_ptr;
+    size_t key_length, value_format_length;
+    key_length = strlen(arg->key);
+    value_format_length = strlen(arg->value_format);
+    format = malloc(key_length + value_format_length + 2); /* 2 = 1 ':' + 1 '\0' */
+    if (format == NULL) {
+      debug_print_malloc_error();
+      return ERROR_MALLOC;
+    }
+    format_ptr = format;
+    memcpy(format_ptr, arg->key, key_length);
+    format_ptr += key_length;
+    *format_ptr++ = ':';
+    memcpy(format_ptr, arg->value_format, value_format_length);
+    format_ptr += value_format_length;
+    *format_ptr = '\0';
+    if ((error = tojson_write_buf(memwriter, format, arg->value_ptr, 1)) != NO_ERROR) {
+      free(format);
+      return error;
+    }
+    free(format);
+  }
+
+  return error;
+}
+
+error_t tojson_write_args(memwriter_t *memwriter, const gr_meta_args_t *args) {
+  args_iterator_t *it;
+  arg_t *arg;
+
+  it = args_iter_args(args);
+  while ((arg = it->next(it))) {
+    tojson_write_arg(memwriter, arg);
+  }
+  args_iterator_delete(it);
+
+  it = args_iter_kwargs(args);
+  if ((arg = it->next(it))) {
+    tojson_write_buf(memwriter, "o(", NULL, 1);
+    do {
+      tojson_write_arg(memwriter, arg);
+    } while ((arg = it->next(it)));
+    tojson_write_buf(memwriter, ")", NULL, 1);
+  }
+  args_iterator_delete(it);
+
+  return 0;
 }
 
 int tojson_is_complete(void) {
@@ -3907,8 +4351,19 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f) {
           }
           break;
         case 'a':
-          fprintf(f, "%s: container\n", arg->key);
-          gr_dumpmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
+          if (value_it->is_array) {
+            fprintf(f, "container: [\n");
+            for (i = 0; i < value_it->array_length; i++) {
+              gr_dumpmeta((*((gr_meta_args_t ***)value_it->value_ptr))[i], f);
+            }
+            if (value_it->array_length > 0) {
+              fprintf(f, "\b\b");
+            }
+            fprintf(f, "]\n");
+          } else {
+            fprintf(f, "container\n");
+            gr_dumpmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
+          }
           break;
         default:
           break;
@@ -3974,8 +4429,19 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f) {
           }
           break;
         case 'a':
-          fprintf(f, "%s: container\n", arg->key);
-          gr_dumpmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
+          if (value_it->is_array) {
+            fprintf(f, "%s: [\n", arg->key);
+            for (i = 0; i < value_it->array_length; i++) {
+              gr_dumpmeta((*((gr_meta_args_t ***)value_it->value_ptr))[i], f);
+            }
+            if (value_it->array_length > 0) {
+              fprintf(f, "\b\b");
+            }
+            fprintf(f, "]\n");
+          } else {
+            fprintf(f, "%s: container\n", arg->key);
+            gr_dumpmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
+          }
           break;
         default:
           break;
@@ -3989,5 +4455,20 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f) {
   args_iterator_delete(it);
 
   fprintf(f, "=== container contents end ===\n");
+}
+
+void gr_dumpmeta_json(const gr_meta_args_t *args, FILE *f) {
+  static memwriter_t *memwriter = NULL;
+
+  if (memwriter == NULL) {
+    memwriter = memwriter_new();
+  }
+  tojson_write_args(memwriter, args);
+  if (tojson_is_complete()) {
+    memwriter_putc(memwriter, '\0');
+    fprintf(f, "%s\n", memwriter_buf(memwriter));
+    memwriter_delete(memwriter);
+    memwriter = NULL;
+  }
 }
 #endif
