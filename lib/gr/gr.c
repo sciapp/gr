@@ -4504,8 +4504,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
         {
           check_tick_marks(z_min, z_max, z_tick, 'Z')
 
-          i = isucc(z_min / z_tick);
-          zi = i * z_tick;
+          i = 0;
+          z0 = succ(z_min / z_tick) * z_tick;
+          zi = z0;
 
           /* draw horizontal grid lines */
 
@@ -4525,7 +4526,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
                 }
 
               i++;
-              zi = i * z_tick;
+              zi = z0 + i * z_tick;
             }
         }
     }
@@ -4570,8 +4571,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
         {
           check_tick_marks(y_min, y_max, y_tick, 'Y')
 
-          i = isucc(y_min / y_tick);
-          yi = i * y_tick;
+          i = 0;
+          y0 = succ(y_min / y_tick) * y_tick;
+          yi = y0;
 
           /* draw horizontal grid lines */
 
@@ -4591,7 +4593,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
                 }
 
               i++;
-              yi = i * y_tick;
+              yi = y0 + i * y_tick;
             }
         }
     }
@@ -4636,8 +4638,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
         {
           check_tick_marks(x_min, x_max, x_tick, 'X')
 
-          i = isucc(x_min / x_tick);
-          xi = i * x_tick;
+          i = 0;
+          x0 = succ(x_min / x_tick) * x_tick;
+          xi = x0;
 
           /* draw vertical grid lines */
 
@@ -4657,7 +4660,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
                 }
 
               i++;
-              xi = i * x_tick;
+              xi = x0 + i * x_tick;
             }
         }
     }
