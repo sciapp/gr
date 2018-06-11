@@ -8718,7 +8718,7 @@ void latex2image(char *string, int pointSize, double *rgb,
   char *tmp, *temp, *null, cmd[1024];
   char tex[FILENAME_MAX], dvi[FILENAME_MAX], png[FILENAME_MAX];
   FILE *stream;
-  int ret;
+  int math, ret;
 
   color = ((int)(rgb[0] / 255)      ) +
           ((int)(rgb[1] / 255) <<  8) +
@@ -8735,6 +8735,7 @@ void latex2image(char *string, int pointSize, double *rgb,
 
   if (access(path, R_OK) != 0)
     {
+      math = strstr(string, "\\(") == NULL;
 #ifdef _WIN32
       tmp = cache;
       temp = ".";
@@ -8761,13 +8762,14 @@ void latex2image(char *string, int pointSize, double *rgb,
 \\documentclass{article}\n\
 \\pagestyle{empty}\n\
 \\usepackage[dvips]{color}\n\
-\\begin{document}\n\
-\\[\n\
-\\color[rgb]{%.3f,%.3f,%.3f} {\n", rgb[0], rgb[1], rgb[2]);\
+\\begin{document}\n");
+      if (math) fprintf(stream, "\\[\n");
+      fprintf(stream, "\\color[rgb]{%.3f,%.3f,%.3f} {\n",
+        rgb[0], rgb[1], rgb[2]);
       fwrite(string, strlen(string), 1, stream);
-      fprintf(stream, "}\n\
-\\]\n\
-\\end{document}");
+      fprintf(stream, "}\n");
+      if (math) fprintf(stream, "\\]\n");
+      fprintf(stream, "\\end{document}");
       fclose(stream);
 
       sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s",
