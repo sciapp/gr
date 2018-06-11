@@ -1557,6 +1557,17 @@ void fill_routine(int n, double *px, double *py, int tnr)
                      ((int)(gkss->alpha * colors[2] * 255) << 16) +
                      ((int)(gkss->alpha * 255) << 24);
         }
+    } else {
+      for (i = 0; i < width * height; i++)
+        {
+          /* Combine pixel alpha component and global transparency */
+          float alpha = gkss->alpha * ((colia[i] >> 24) & 0xff) / 255.0f;
+          /* Pre-multiply alpha */
+          colia[i] =  (int)(alpha * ((colia[i] >> 0) & 0xff)) +
+                     ((int)(alpha * ((colia[i] >> 8) & 0xff)) << 8) +
+                     ((int)(alpha * ((colia[i] >> 16) & 0xff)) << 16) +
+                     ((int)(alpha * 255) << 24);
+        }
     }
 
   bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width, cs,
