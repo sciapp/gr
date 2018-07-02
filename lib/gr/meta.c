@@ -712,22 +712,20 @@ static size_t memwriter_size(const memwriter_t *memwriter);
 
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
-static error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl);
-static error_t receiver_init_for_jupyter(metahandle_t *handle, va_list *vl);
+static error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port);
+static error_t receiver_init_for_jupyter(metahandle_t *handle, const char *hostname, unsigned int port);
 static error_t receiver_finalize_for_socket(metahandle_t *handle);
 static error_t receiver_finalize_for_jupyter(metahandle_t *handle);
 static error_t receiver_recv_for_socket(void *p);
-static error_t receiver_recv_for_jupyter(void *p);
 
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
-static error_t sender_init_for_socket(metahandle_t *handle, va_list *vl);
-static error_t sender_init_for_jupyter(metahandle_t *handle, va_list *vl);
+static error_t sender_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port);
+static error_t sender_init_for_jupyter(metahandle_t *handle, const char *hostname, unsigned int port);
 static error_t sender_finalize_for_socket(metahandle_t *handle);
 static error_t sender_finalize_for_jupyter(metahandle_t *handle);
 static error_t sender_send_for_socket(void *p);
-static error_t sender_send_for_jupyter(void *p);
 
 
 /* ========================= static variables ======================================================================= */
@@ -849,8 +847,7 @@ void gr_plotmeta(const gr_meta_args_t *args) {
 
 /* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
-void *gr_openmeta(int source_or_target, ...) {
-  va_list vl;
+void *gr_openmeta(int source_or_target, const char *hostname, unsigned int port) {
   metahandle_t *handle;
   error_t error = NO_ERROR;
 
@@ -859,24 +856,22 @@ void *gr_openmeta(int source_or_target, ...) {
     return NULL;
   }
   handle->receiver.source = source_or_target;
-  va_start(vl, source_or_target);
   switch (source_or_target) {
   case GR_SOURCE_JUPYTER:
-    error = receiver_init_for_jupyter(handle, &vl);
+    error = receiver_init_for_jupyter(handle, hostname, port);
     break;
   case GR_SOURCE_SOCKET:
-    error = receiver_init_for_socket(handle, &vl);
+    error = receiver_init_for_socket(handle, hostname, port);
     break;
   case GR_TARGET_JUPYTER:
-    error = sender_init_for_jupyter(handle, &vl);
+    error = sender_init_for_jupyter(handle, hostname, port);
     break;
   case GR_TARGET_SOCKET:
-    error = sender_init_for_socket(handle, &vl);
+    error = sender_init_for_socket(handle, hostname, port);
     break;
   default:
     break;
   }
-  va_end(vl);
 
   if (error != NO_ERROR) {
     if (error != ERROR_NETWORK_WINSOCK_INIT) {
@@ -4851,16 +4846,16 @@ size_t memwriter_size(const memwriter_t *memwriter) {
 
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
-error_t receiver_init_for_jupyter(metahandle_t *handle, va_list *vl) {
+error_t receiver_init_for_jupyter(metahandle_t *handle, const char *hostname, unsigned int port) {
   UNUSED(handle);
-  UNUSED(vl);
+  UNUSED(hostname);
+  UNUSED(port);
   /* TODO: implement me! */
   handle->finalize = receiver_finalize_for_jupyter;
   return ERROR_NOT_IMPLEMENTED;
 }
 
-error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
-  unsigned int port;
+error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port) {
   struct sockaddr_in server_addr;
   struct sockaddr_in client_addr;
   socklen_t client_addrlen = sizeof(client_addr);
@@ -4871,8 +4866,6 @@ error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
   int wsa_startup_error = 0;
   WSADATA wsa_data;
 #endif
-
-  port = va_arg(*vl, unsigned int);
 
   handle->receiver.memwriter = NULL;
   handle->receiver.comm.socket.server_socket = -1;
@@ -4897,14 +4890,13 @@ error_t receiver_init_for_socket(metahandle_t *handle, va_list *vl) {
 #endif
 
   server_addr.sin_family = AF_INET;
-  /* TODO: allow binding to other interfaces (by setting an environment variable) */
 #if defined(_WIN32) && !defined(__MINGW32__)
-  if (InetPton(AF_INET, "127.0.0.1", &server_addr.sin_addr.s_addr) < 1) {
+  if (InetPton(AF_INET, hostname, &server_addr.sin_addr.s_addr) < 1) {
     psocketerror("InetPton call failed");
     return ERROR_NETWORK_SOCKET_CREATION;
   }
 #else
-  server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  server_addr.sin_addr.s_addr = inet_addr(hostname);
 #endif
   server_addr.sin_port = htons(port);
 
@@ -5021,33 +5013,19 @@ error_t receiver_recv_for_socket(void *p) {
   return error;
 }
 
-error_t receiver_recv_for_jupyter(void *p) {
-  UNUSED(p);
-  /* TODO: implement me! */
-  return ERROR_NOT_IMPLEMENTED;
-}
-
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
-error_t sender_init_for_jupyter(metahandle_t *handle, va_list *vl) {
-  jupyter_send_callback_t jupyter_send_callback;
-
-  jupyter_send_callback = va_arg(*vl, jupyter_send_callback_t);
-
-  handle->sender.comm.jupyter.send = jupyter_send_callback;
-  handle->sender.memwriter = memwriter_new();
-  if (handle->sender.memwriter == NULL) {
-    return ERROR_MALLOC;
-  }
-  handle->sender.send = sender_send_for_jupyter;
+error_t sender_init_for_jupyter(metahandle_t *handle, const char *hostname, unsigned int port) {
+  UNUSED(handle);
+  UNUSED(hostname);
+  UNUSED(port);
+  /* TODO: implement me! */
   handle->finalize = sender_finalize_for_jupyter;
   return NO_ERROR;
 }
 
-error_t sender_init_for_socket(metahandle_t *handle, va_list *vl) {
-  const char *hostname;
-  unsigned int port;
+error_t sender_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port) {
   char port_str[PORT_MAX_STRING_LENGTH];
   struct addrinfo *addr_result = NULL, *addr_ptr = NULL, addr_hints;
   int error;
@@ -5056,8 +5034,6 @@ error_t sender_init_for_socket(metahandle_t *handle, va_list *vl) {
   WSADATA wsa_data;
 #endif
 
-  hostname = va_arg(*vl, const char *);
-  port = va_arg(*vl, unsigned int);
   snprintf(port_str, PORT_MAX_STRING_LENGTH, "%u", port);
 
   handle->sender.memwriter = NULL;
@@ -5199,19 +5175,6 @@ error_t sender_send_for_socket(void *p) {
   memwriter_clear(handle->sender.memwriter);
 
   return error;
-}
-
-error_t sender_send_for_jupyter(void *p) {
-  metahandle_t *handle = (metahandle_t *)p;
-  char *buf;
-
-  buf = memwriter_buf(handle->sender.memwriter);
-
-  handle->sender.comm.jupyter.send(buf);
-
-  memwriter_clear(handle->sender.memwriter);
-
-  return NO_ERROR;
 }
 
 #ifndef NDEBUG
