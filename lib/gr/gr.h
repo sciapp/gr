@@ -184,7 +184,7 @@ DLLEXPORT void gr_meta_args_push_kwarg(
   gr_meta_args_t *, const char *, const char *, ...);
 DLLEXPORT void gr_meta_args_push_kwarg_buf(
   gr_meta_args_t *, const char *, const char *, const void *, int);
-DLLEXPORT void *gr_openmeta(int, ...);
+DLLEXPORT void *gr_openmeta(int, const char *, unsigned int);
 DLLEXPORT int gr_recvmeta(const void *p, gr_meta_args_t *);
 DLLEXPORT int gr_sendmeta(const void *, const char *, ...);
 DLLEXPORT int gr_sendmeta_buf(const void *, const char *, const void *, int);
