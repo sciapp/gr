@@ -4856,9 +4856,12 @@ error_t receiver_init_for_jupyter(metahandle_t *handle, const char *hostname, un
 }
 
 error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port) {
+  char port_str[PORT_MAX_STRING_LENGTH];
+  struct addrinfo *addr_result = NULL, *addr_ptr = NULL, addr_hints;
   struct sockaddr_in server_addr;
   struct sockaddr_in client_addr;
   socklen_t client_addrlen = sizeof(client_addr);
+  int error;
 #ifdef SO_REUSEADDR
   int socket_opt;
 #endif
@@ -4866,6 +4869,8 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
   int wsa_startup_error = 0;
   WSADATA wsa_data;
 #endif
+
+  snprintf(port_str, PORT_MAX_STRING_LENGTH, "%u", port);
 
   handle->receiver.memwriter = NULL;
   handle->receiver.comm.socket.server_socket = -1;
@@ -4889,20 +4894,31 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
   }
 #endif
 
-  server_addr.sin_family = AF_INET;
-#if defined(_WIN32) && !defined(__MINGW32__)
-  if (InetPton(AF_INET, hostname, &server_addr.sin_addr.s_addr) < 1) {
-    psocketerror("InetPton call failed");
-    return ERROR_NETWORK_SOCKET_CREATION;
-  }
+  memset(&addr_hints, 0, sizeof(addr_hints));
+  addr_hints.ai_family = AF_UNSPEC;
+  addr_hints.ai_socktype = SOCK_STREAM;
+  addr_hints.ai_protocol = 0;
+  addr_hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
+
+  /* Query a list of ip addresses for the given hostname */
+  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_result)) != 0) {
+#ifdef _WIN32
+    psocketerror("getaddrinfo failed with error");
 #else
-  server_addr.sin_addr.s_addr = inet_addr(hostname);
+    if (error == EAI_SYSTEM) {
+      perror("getaddrinfo failed with error");
+    } else {
+      fprintf(stderr, "getaddrinfo failed with error: %s\n", gai_strerror(error));
+    }
 #endif
-  server_addr.sin_port = htons(port);
+    return ERROR_NETWORK_HOSTNAME_RESOLUTION;
+  }
 
   /* Create a socket for listening */
-  if ((handle->receiver.comm.socket.server_socket = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+  if ((handle->receiver.comm.socket.server_socket =
+         socket(addr_result->ai_family, addr_result->ai_socktype, addr_result->ai_protocol)) < 0) {
     psocketerror("socket creation failed");
+    freeaddrinfo(addr_result);
     return ERROR_NETWORK_SOCKET_CREATION;
   }
   /* Set SO_REUSEADDR if available on this system */
@@ -4911,15 +4927,18 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
   if (setsockopt(handle->receiver.comm.socket.server_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&socket_opt,
                  sizeof(socket_opt)) < 0) {
     psocketerror("setting socket options failed");
+    freeaddrinfo(addr_result);
     return ERROR_NETWORK_SOCKET_CREATION;
   }
 #endif
 
   /* Bind the socket to given ip address and port */
-  if (bind(handle->receiver.comm.socket.server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr))) {
+  if (bind(handle->receiver.comm.socket.server_socket, addr_result->ai_addr, addr_result->ai_addrlen)) {
     psocketerror("bind failed");
+    freeaddrinfo(addr_result);
     return ERROR_NETWORK_SOCKET_BIND;
   }
+  freeaddrinfo(addr_result);
 
   /* Listen for incoming connections */
   if (listen(handle->receiver.comm.socket.server_socket, 1)) {
@@ -5063,7 +5082,7 @@ error_t sender_init_for_socket(metahandle_t *handle, const char *hostname, unsig
   addr_hints.ai_protocol = IPPROTO_TCP;
 
   /* Query a list of ip addresses for the given hostname */
-  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_result))) {
+  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_result)) != 0) {
 #ifdef _WIN32
     psocketerror("getaddrinfo failed with error");
 #else
@@ -5098,7 +5117,6 @@ error_t sender_init_for_socket(metahandle_t *handle, const char *hostname, unsig
     }
   }
   freeaddrinfo(addr_result);
-  addr_result = NULL;
 
   if (handle->sender.comm.socket.client_socket < 0) {
     fprintf(stderr, "cannot connect to host %s port %u: ", hostname, port);

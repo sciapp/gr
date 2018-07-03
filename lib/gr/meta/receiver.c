@@ -12,7 +12,7 @@ int test_recvmeta(void) {
   printf("waiting for data... ");
   fflush(stdout);
 
-  handle = gr_openmeta(GR_SOURCE_SOCKET, "127.0.0.1", 8002);
+  handle = gr_openmeta(GR_SOURCE_SOCKET, "localhost", 8002);
   if (handle == NULL) {
     fprintf(stderr, "receiver could not be created\n");
     gr_meta_args_delete(args);
