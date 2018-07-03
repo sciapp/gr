@@ -175,8 +175,8 @@ DLLEXPORT void gr_interp2(
   int nx, int ny, const double *x, const double *y, const double *z,
   int nxq, int nyq, const double *xq, const double *yq, double *zq,
   int method, double extrapval);
-DLLEXPORT gr_meta_args_t *gr_meta_args_new(void);
-DLLEXPORT void gr_meta_args_delete(gr_meta_args_t *);
+DLLEXPORT gr_meta_args_t *gr_newmeta(void);
+DLLEXPORT void gr_deletemeta(gr_meta_args_t *);
 DLLEXPORT void gr_meta_args_push_arg(gr_meta_args_t *, const char *, ...);
 DLLEXPORT void gr_meta_args_push_arg_buf(
   gr_meta_args_t *, const char *, const void *, int);

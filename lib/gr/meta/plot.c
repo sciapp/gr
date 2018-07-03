@@ -31,12 +31,12 @@ int test_plotmeta(void) {
   }
 
   for (i = 0; i < 2; ++i) {
-    series[i] = gr_meta_args_new();
+    series[i] = gr_newmeta();
     gr_meta_args_push_kwarg(series[i], "x", "nD", n, plots[i][0]);
     gr_meta_args_push_kwarg(series[i], "y", "nD", n, plots[i][1]);
   }
 
-  args = gr_meta_args_new();
+  args = gr_newmeta();
   gr_meta_args_push_kwarg(args, "series", "nA", 2, series);
   gr_meta_args_push_kwarg(args, "labels", "nS", 2, labels);
   gr_meta_args_push_kwarg(args, "kind", "s", "line");
@@ -48,7 +48,7 @@ int test_plotmeta(void) {
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_meta_args_delete(args);
+  gr_deletemeta(args);
 
   return 0;
 }

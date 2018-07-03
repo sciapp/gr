@@ -17,7 +17,7 @@ int test_recvmeta(void) {
   }
 
   if ((args = gr_recvmeta(handle, NULL)) == NULL) {
-    gr_meta_args_delete(args);
+    gr_deletemeta(args);
     return 2;
   }
 
@@ -27,7 +27,7 @@ int test_recvmeta(void) {
   gr_dumpmeta_json(args, stdout);
 
   gr_closemeta(handle);
-  gr_meta_args_delete(args);
+  gr_deletemeta(args);
 
   return 0;
 }

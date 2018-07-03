@@ -774,7 +774,7 @@ static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
-gr_meta_args_t *gr_meta_args_new() {
+gr_meta_args_t *gr_newmeta() {
   gr_meta_args_t *args = malloc(sizeof(gr_meta_args_t));
   if (args == NULL) {
     debug_print_malloc_error();
@@ -784,7 +784,7 @@ gr_meta_args_t *gr_meta_args_new() {
   return args;
 }
 
-void gr_meta_args_delete(gr_meta_args_t *args) {
+void gr_deletemeta(gr_meta_args_t *args) {
   args_finalize(args);
   free(args);
 }
@@ -831,7 +831,7 @@ void gr_plotmeta(const gr_meta_args_t *args) {
   /* --------------------- translation of mlab.py ------------------------- */
   /* TODO: copy arguments from user into new internal data container */
   /* TODO: make `current_subplot_args` static? */
-  current_subplot_args = gr_meta_args_new();
+  current_subplot_args = gr_newmeta();
   plot_store_and_normalize_plot_data(current_subplot_args, args);
   plot_store_plot_attributes(current_subplot_args, args);
   args_get_first_value_by_keyword(current_subplot_args, "kind", "s", &kind, NULL);
@@ -899,7 +899,7 @@ gr_meta_args_t *gr_recvmeta(const void *p, gr_meta_args_t *args) {
   int created_args = 0;
 
   if (args == NULL) {
-    args = gr_meta_args_new();
+    args = gr_newmeta();
     if (args == NULL) {
       goto error_cleanup;
     }
@@ -921,7 +921,7 @@ gr_meta_args_t *gr_recvmeta(const void *p, gr_meta_args_t *args) {
 
 error_cleanup:
   if (created_args) {
-    gr_meta_args_delete(args);
+    gr_deletemeta(args);
   }
 
   return NULL;
@@ -1036,7 +1036,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
             break;
           }
           _key = NULL; /* avoid deletion at the end of this function */
-          current_args = gr_meta_args_new();
+          current_args = gr_newmeta();
           if (current_args == NULL) {
             error = ERROR_MALLOC;
             break;
@@ -1107,7 +1107,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
           error = ERROR_MALLOC;
           break;
         }
-        current_args = gr_meta_args_new();
+        current_args = gr_newmeta();
         if (current_args == NULL) {
           error = ERROR_MALLOC;
           break;
@@ -1116,7 +1116,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
           break;
         }
       } else if (strchr(VALID_SEPARATOR, *(const char *)ref)) {
-        current_args = gr_meta_args_new();
+        current_args = gr_newmeta();
         if (current_args == NULL) {
           error = ERROR_MALLOC;
           break;
@@ -1475,7 +1475,7 @@ void argparse_init_static_variables() {
     argparse_format_specifier_to_read_callback['n'] = argparse_read_default_array_length;
 
     argparse_format_specifier_to_delete_callback['s'] = free;
-    argparse_format_specifier_to_delete_callback['a'] = (delete_value_t)gr_meta_args_delete;
+    argparse_format_specifier_to_delete_callback['a'] = (delete_value_t)gr_deletemeta;
 
     argparse_format_specifier_to_size['i'] = sizeof(int);
     argparse_format_specifier_to_size['I'] = sizeof(int *);
@@ -3350,7 +3350,7 @@ void *args_value_iterator_next(args_value_iterator_t *args_value_iterator) {
                                                                                    \
   int prefix##_stack_empty(prefix##_stack_t *prefix##_stack) { return (prefix##_stack->head == NULL); }
 
-DEFINE_STACK_METHODS(args, gr_meta_args_t *, gr_meta_args_delete)
+DEFINE_STACK_METHODS(args, gr_meta_args_t *, gr_deletemeta)
 DEFINE_STACK_METHODS(dynamic_args_array, dynamic_args_array_t *, dynamic_args_array_delete)
 DEFINE_STACK_METHODS(string, const char *, free)
 
@@ -3385,7 +3385,7 @@ void dynamic_args_array_delete(dynamic_args_array_t *args_array) {
 void dynamic_args_array_delete_with_elements(dynamic_args_array_t *args_array) {
   size_t i;
   for (i = 0; i < args_array->size; ++i) {
-    gr_meta_args_delete(args_array->buf[i]);
+    gr_deletemeta(args_array->buf[i]);
   }
   dynamic_args_array_delete(args_array);
 }
@@ -3736,7 +3736,7 @@ error_t fromjson_parse_object(fromjson_state_t *state) {
   error_t error;
 
   CHECK_AND_ALLOCATE_MEMORY(gr_meta_args_t *, 1);
-  args = gr_meta_args_new();
+  args = gr_newmeta();
   error = fromjson_parse(args, state->shared_state->json_ptr, state->shared_state);
   *((gr_meta_args_t **)state->next_value_memory) = args;
   strcpy(state->next_value_type, "a");
