@@ -774,7 +774,7 @@ static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
-gr_meta_args_t *gr_meta_args_new() {
+gr_meta_args_t *gr_newmeta() {
   gr_meta_args_t *args = malloc(sizeof(gr_meta_args_t));
   if (args == NULL) {
     debug_print_malloc_error();
@@ -784,7 +784,7 @@ gr_meta_args_t *gr_meta_args_new() {
   return args;
 }
 
-void gr_meta_args_delete(gr_meta_args_t *args) {
+void gr_deletemeta(gr_meta_args_t *args) {
   args_finalize(args);
   free(args);
 }
@@ -831,7 +831,7 @@ void gr_plotmeta(const gr_meta_args_t *args) {
   /* --------------------- translation of mlab.py ------------------------- */
   /* TODO: copy arguments from user into new internal data container */
   /* TODO: make `current_subplot_args` static? */
-  current_subplot_args = gr_meta_args_new();
+  current_subplot_args = gr_newmeta();
   plot_store_and_normalize_plot_data(current_subplot_args, args);
   plot_store_plot_attributes(current_subplot_args, args);
   args_get_first_value_by_keyword(current_subplot_args, "kind", "s", &kind, NULL);
@@ -894,21 +894,37 @@ void gr_closemeta(const void *p) {
 
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
-int gr_recvmeta(const void *p, gr_meta_args_t *args) {
+gr_meta_args_t *gr_recvmeta(const void *p, gr_meta_args_t *args) {
   metahandle_t *handle = (metahandle_t *)p;
+  int created_args = 0;
+
+  if (args == NULL) {
+    args = gr_newmeta();
+    if (args == NULL) {
+      goto error_cleanup;
+    }
+    created_args = 1;
+  }
 
   if (handle->receiver.recv(handle) != NO_ERROR) {
-    return 0;
+    goto error_cleanup;
   }
   if (fromjson_read(args, memwriter_buf(handle->receiver.memwriter)) != NO_ERROR) {
-    return 0;
+    goto error_cleanup;
   }
 
   if (memwriter_erase(handle->receiver.memwriter, 0, handle->receiver.message_size + 1) != NO_ERROR) {
-    return 0;
+    goto error_cleanup;
   }
 
-  return 1;
+  return args;
+
+error_cleanup:
+  if (created_args) {
+    gr_deletemeta(args);
+  }
+
+  return NULL;
 }
 
 
@@ -1020,7 +1036,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
             break;
           }
           _key = NULL; /* avoid deletion at the end of this function */
-          current_args = gr_meta_args_new();
+          current_args = gr_newmeta();
           if (current_args == NULL) {
             error = ERROR_MALLOC;
             break;
@@ -1091,7 +1107,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
           error = ERROR_MALLOC;
           break;
         }
-        current_args = gr_meta_args_new();
+        current_args = gr_newmeta();
         if (current_args == NULL) {
           error = ERROR_MALLOC;
           break;
@@ -1100,7 +1116,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
           break;
         }
       } else if (strchr(VALID_SEPARATOR, *(const char *)ref)) {
-        current_args = gr_meta_args_new();
+        current_args = gr_newmeta();
         if (current_args == NULL) {
           error = ERROR_MALLOC;
           break;
@@ -1459,7 +1475,7 @@ void argparse_init_static_variables() {
     argparse_format_specifier_to_read_callback['n'] = argparse_read_default_array_length;
 
     argparse_format_specifier_to_delete_callback['s'] = free;
-    argparse_format_specifier_to_delete_callback['a'] = (delete_value_t)gr_meta_args_delete;
+    argparse_format_specifier_to_delete_callback['a'] = (delete_value_t)gr_deletemeta;
 
     argparse_format_specifier_to_size['i'] = sizeof(int);
     argparse_format_specifier_to_size['I'] = sizeof(int *);
@@ -3334,7 +3350,7 @@ void *args_value_iterator_next(args_value_iterator_t *args_value_iterator) {
                                                                                    \
   int prefix##_stack_empty(prefix##_stack_t *prefix##_stack) { return (prefix##_stack->head == NULL); }
 
-DEFINE_STACK_METHODS(args, gr_meta_args_t *, gr_meta_args_delete)
+DEFINE_STACK_METHODS(args, gr_meta_args_t *, gr_deletemeta)
 DEFINE_STACK_METHODS(dynamic_args_array, dynamic_args_array_t *, dynamic_args_array_delete)
 DEFINE_STACK_METHODS(string, const char *, free)
 
@@ -3369,7 +3385,7 @@ void dynamic_args_array_delete(dynamic_args_array_t *args_array) {
 void dynamic_args_array_delete_with_elements(dynamic_args_array_t *args_array) {
   size_t i;
   for (i = 0; i < args_array->size; ++i) {
-    gr_meta_args_delete(args_array->buf[i]);
+    gr_deletemeta(args_array->buf[i]);
   }
   dynamic_args_array_delete(args_array);
 }
@@ -3720,7 +3736,7 @@ error_t fromjson_parse_object(fromjson_state_t *state) {
   error_t error;
 
   CHECK_AND_ALLOCATE_MEMORY(gr_meta_args_t *, 1);
-  args = gr_meta_args_new();
+  args = gr_newmeta();
   error = fromjson_parse(args, state->shared_state->json_ptr, state->shared_state);
   *((gr_meta_args_t **)state->next_value_memory) = args;
   strcpy(state->next_value_type, "a");
@@ -4856,9 +4872,12 @@ error_t receiver_init_for_jupyter(metahandle_t *handle, const char *hostname, un
 }
 
 error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port) {
+  char port_str[PORT_MAX_STRING_LENGTH];
+  struct addrinfo *addr_result = NULL, *addr_ptr = NULL, addr_hints;
   struct sockaddr_in server_addr;
   struct sockaddr_in client_addr;
   socklen_t client_addrlen = sizeof(client_addr);
+  int error;
 #ifdef SO_REUSEADDR
   int socket_opt;
 #endif
@@ -4866,6 +4885,8 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
   int wsa_startup_error = 0;
   WSADATA wsa_data;
 #endif
+
+  snprintf(port_str, PORT_MAX_STRING_LENGTH, "%u", port);
 
   handle->receiver.memwriter = NULL;
   handle->receiver.comm.socket.server_socket = -1;
@@ -4889,20 +4910,31 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
   }
 #endif
 
-  server_addr.sin_family = AF_INET;
-#if defined(_WIN32) && !defined(__MINGW32__)
-  if (InetPton(AF_INET, hostname, &server_addr.sin_addr.s_addr) < 1) {
-    psocketerror("InetPton call failed");
-    return ERROR_NETWORK_SOCKET_CREATION;
-  }
+  memset(&addr_hints, 0, sizeof(addr_hints));
+  addr_hints.ai_family = AF_UNSPEC;
+  addr_hints.ai_socktype = SOCK_STREAM;
+  addr_hints.ai_protocol = 0;
+  addr_hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
+
+  /* Query a list of ip addresses for the given hostname */
+  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_result)) != 0) {
+#ifdef _WIN32
+    psocketerror("getaddrinfo failed with error");
 #else
-  server_addr.sin_addr.s_addr = inet_addr(hostname);
+    if (error == EAI_SYSTEM) {
+      perror("getaddrinfo failed with error");
+    } else {
+      fprintf(stderr, "getaddrinfo failed with error: %s\n", gai_strerror(error));
+    }
 #endif
-  server_addr.sin_port = htons(port);
+    return ERROR_NETWORK_HOSTNAME_RESOLUTION;
+  }
 
   /* Create a socket for listening */
-  if ((handle->receiver.comm.socket.server_socket = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+  if ((handle->receiver.comm.socket.server_socket =
+         socket(addr_result->ai_family, addr_result->ai_socktype, addr_result->ai_protocol)) < 0) {
     psocketerror("socket creation failed");
+    freeaddrinfo(addr_result);
     return ERROR_NETWORK_SOCKET_CREATION;
   }
   /* Set SO_REUSEADDR if available on this system */
@@ -4911,15 +4943,18 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
   if (setsockopt(handle->receiver.comm.socket.server_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&socket_opt,
                  sizeof(socket_opt)) < 0) {
     psocketerror("setting socket options failed");
+    freeaddrinfo(addr_result);
     return ERROR_NETWORK_SOCKET_CREATION;
   }
 #endif
 
   /* Bind the socket to given ip address and port */
-  if (bind(handle->receiver.comm.socket.server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr))) {
+  if (bind(handle->receiver.comm.socket.server_socket, addr_result->ai_addr, addr_result->ai_addrlen)) {
     psocketerror("bind failed");
+    freeaddrinfo(addr_result);
     return ERROR_NETWORK_SOCKET_BIND;
   }
+  freeaddrinfo(addr_result);
 
   /* Listen for incoming connections */
   if (listen(handle->receiver.comm.socket.server_socket, 1)) {
@@ -5063,7 +5098,7 @@ error_t sender_init_for_socket(metahandle_t *handle, const char *hostname, unsig
   addr_hints.ai_protocol = IPPROTO_TCP;
 
   /* Query a list of ip addresses for the given hostname */
-  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_result))) {
+  if ((error = getaddrinfo(hostname, port_str, &addr_hints, &addr_result)) != 0) {
 #ifdef _WIN32
     psocketerror("getaddrinfo failed with error");
 #else
@@ -5098,7 +5133,6 @@ error_t sender_init_for_socket(metahandle_t *handle, const char *hostname, unsig
     }
   }
   freeaddrinfo(addr_result);
-  addr_result = NULL;
 
   if (handle->sender.comm.socket.client_socket < 0) {
     fprintf(stderr, "cannot connect to host %s port %u: ", hostname, port);

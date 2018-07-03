@@ -1,5 +1,5 @@
  INCLUDES = -I../../3rdparty/jpeg -I../../3rdparty -I../../3rdparty/zlib -I../gks -I.
-   CFLAGS = -DXMD_H -D_POSIX $(INCLUDES)
+   CFLAGS = -DXMD_H -D_POSIX -D_WIN32_WINNT=0x0600 $(INCLUDES)
   DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_MUPDF -DNO_GS -DNO_X11
  JPEGLIBS = ../../3rdparty/jpeg/libjpeg.lib
   PNGLIBS = ../../3rdparty/libpng16/libpng.lib

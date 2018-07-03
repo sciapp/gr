@@ -175,8 +175,8 @@ DLLEXPORT void gr_interp2(
   int nx, int ny, const double *x, const double *y, const double *z,
   int nxq, int nyq, const double *xq, const double *yq, double *zq,
   int method, double extrapval);
-DLLEXPORT gr_meta_args_t *gr_meta_args_new(void);
-DLLEXPORT void gr_meta_args_delete(gr_meta_args_t *);
+DLLEXPORT gr_meta_args_t *gr_newmeta(void);
+DLLEXPORT void gr_deletemeta(gr_meta_args_t *);
 DLLEXPORT void gr_meta_args_push_arg(gr_meta_args_t *, const char *, ...);
 DLLEXPORT void gr_meta_args_push_arg_buf(
   gr_meta_args_t *, const char *, const void *, int);
@@ -185,7 +185,7 @@ DLLEXPORT void gr_meta_args_push_kwarg(
 DLLEXPORT void gr_meta_args_push_kwarg_buf(
   gr_meta_args_t *, const char *, const char *, const void *, int);
 DLLEXPORT void *gr_openmeta(int, const char *, unsigned int);
-DLLEXPORT int gr_recvmeta(const void *p, gr_meta_args_t *);
+DLLEXPORT gr_meta_args_t *gr_recvmeta(const void *p, gr_meta_args_t *);
 DLLEXPORT int gr_sendmeta(const void *, const char *, ...);
 DLLEXPORT int gr_sendmeta_buf(const void *, const char *, const void *, int);
 DLLEXPORT int gr_sendmeta_ref(const void *, const char *, char, const void *, int);
