@@ -894,21 +894,37 @@ void gr_closemeta(const void *p) {
 
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
-int gr_recvmeta(const void *p, gr_meta_args_t *args) {
+gr_meta_args_t *gr_recvmeta(const void *p, gr_meta_args_t *args) {
   metahandle_t *handle = (metahandle_t *)p;
+  int created_args = 0;
+
+  if (args == NULL) {
+    args = gr_meta_args_new();
+    if (args == NULL) {
+      goto error_cleanup;
+    }
+    created_args = 1;
+  }
 
   if (handle->receiver.recv(handle) != NO_ERROR) {
-    return 0;
+    goto error_cleanup;
   }
   if (fromjson_read(args, memwriter_buf(handle->receiver.memwriter)) != NO_ERROR) {
-    return 0;
+    goto error_cleanup;
   }
 
   if (memwriter_erase(handle->receiver.memwriter, 0, handle->receiver.message_size + 1) != NO_ERROR) {
-    return 0;
+    goto error_cleanup;
   }
 
-  return 1;
+  return args;
+
+error_cleanup:
+  if (created_args) {
+    gr_meta_args_delete(args);
+  }
+
+  return NULL;
 }
 
 
