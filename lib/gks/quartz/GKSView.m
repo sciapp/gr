@@ -661,6 +661,10 @@ void seg_xform_rel(double *x, double *y)
       CGSizeMake(self.bounds.size.width, self.bounds.size.height), NULL);
     context = CGLayerGetContext(layer);
 
+    // Clear the layer with white before drawing
+    CGContextSetFillColorWithColor(context, CGColorGetConstantColor(kCGColorWhite));
+    CGContextFillRect(context, CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height));
+
     [contextStack addObject: (id)context];
     [layerStack addObject: (id)layer];
 

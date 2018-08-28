@@ -100,6 +100,7 @@ centos6-32bit-self-contained:
   stage: build
   image: i386/centos:6
   script:
+  - echo "i386" > /etc/yum/vars/basearch
   - yum update -y
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
@@ -123,6 +124,7 @@ centos6-32bit-system-dependencies:
   stage: build
   image: i386/centos:6
   script:
+  - echo "i386" > /etc/yum/vars/basearch
   - yum update -y
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
