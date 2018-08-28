@@ -302,7 +302,7 @@ double angles[MAX_FONT] =
         0, -15.5,     0,   -15,
         0,   -12,     0,   -12,
         0,   -12,     0,   -12,
-        0,   
+        0,
         0,   -10,     0,   -10,
         0,   -16,     0,   -16,
         0, -10.5,     0, -10.5,
@@ -1816,6 +1816,8 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 
   swapx = rx1 > rx2;
   swapy = ry1 > ry2;
+
+  set_transparency(p->alpha);
 
   pdf_save(p);
   set_clip(gkss->viewport[gkss->clip == GKS_K_CLIP ? gkss->cntnr : 0]);
