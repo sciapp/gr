@@ -1,15 +1,73 @@
 #define GR3_GLX_C
-#include <stdlib.h>
-#include "gr3.h"
 #include "gr3_glx.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <dlfcn.h>
+#include "gr3.h"
+#define DONT_USE_RETURN_ERROR
 #include "gr3_internals.h"
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
+#endif
 
-/* OpenGL Context creation using GLX */
+struct platform_ {
+  void (*terminate)(void);
+  void (*(*getProcAddress)(const char*))();
+};
+static struct platform_ *platform;
+static void *platform_library = NULL;
+static struct platform_ *(*platform_loader)(void(*log_callback)(const char *), void(*appendtorenderpathstring_callback)(const char *)) = NULL;
 
-static Display *display; /*!< The used X display */
-static Pixmap pixmap; /*!< The XPixmap (GLX < 1.4)*/
-static GLXPbuffer pbuffer = (GLXPbuffer) NULL; /*!< The GLX Pbuffer (GLX >=1.4) */
-static GLXContext context; /*!< The GLX context */
+static void gr3_terminateGL_(void) {
+  gr3_log_("gr3_terminateGL_();");
+  context_struct_.gl_is_initialized = 0;
+  platform->terminate();
+  platform_loader = NULL;
+  platform = NULL;
+  dlclose(platform_library);
+  platform_library = NULL;
+}
+
+int gr3_platform_initGL_(void) {
+  gr3_log_("gr3_platform_initGL_();");
+  if (!platform_library) {
+    const char *grdir = getenv("GRDIR");
+    if (grdir == NULL) {
+      grdir = GRDIR;
+    }
+    if (strlen(grdir) + strlen("libGR3platform.so") < MAXPATHLEN) {
+      char pathname[MAXPATHLEN];
+      sprintf(pathname, "%s/lib/libGR3platform.so", grdir);
+      platform_library = dlopen(pathname, RTLD_NOW | RTLD_LOCAL);
+    }
+  }
+  if (!platform_library) {
+    platform_library = dlopen("libGR3platform.so", RTLD_NOW | RTLD_LOCAL);
+  }
+  if (!platform_library) {
+    char *error_message = dlerror();
+    gr3_log_("Failed to load GR3 platform library");
+    gr3_log_(error_message);
+    return GR3_ERROR_INIT_FAILED;
+  }
+  platform_loader = (struct platform_* (*)(void (*)(const char *), void (*)(const char *)))dlsym(platform_library, "gr3_platform_initGL_dynamic_");
+  if (!platform_loader) {
+    char *error_message = dlerror();
+    gr3_log_("Failed to load GR3 platform loader");
+    gr3_log_(error_message);
+    dlclose(platform_library);
+    platform_library = NULL;
+    return GR3_ERROR_INIT_FAILED;
+  }
+  platform = platform_loader(gr3_log_, gr3_appendtorenderpathstring_);
+  if (!platform) {
+    return GR3_ERROR_INIT_FAILED;
+  }
+  context_struct_.gl_is_initialized = 1;
+  context_struct_.terminateGL = gr3_terminateGL_;
+  return GR3_ERROR_NONE;
+}
 
 /*!
  * This function implements OpenGL context creation using GLX
@@ -20,181 +78,96 @@ static GLXContext context; /*!< The GLX context */
  * - ::GR3_ERROR_INIT_FAILED  if initialization failed
  */
 int gr3_initGL_GLX_(void) {
-  int major = 0, minor = 0;
-  int fbcount = 0;
-  GLXFBConfig *fbc;
-  GLXFBConfig fbconfig = (GLXFBConfig) NULL;
-  gr3_log_("gr3_initGL_GLX_();");
-  
-  display = XOpenDisplay(0);
-  if (!display) {
-    gr3_log_("Not connected to an X server!");
-    RETURN_ERROR(GR3_ERROR_INIT_FAILED);
-  }
-  if (!glXQueryExtension(display, NULL, NULL)) {
-    gr3_log_("GLX not supported!");
-    RETURN_ERROR(GR3_ERROR_INIT_FAILED);
+  int error = GR3_ERROR_NONE;
+  gr3_log_("gr3_initGL_CGL_();");
+  error = gr3_platform_initGL_();
+  if (error != GR3_ERROR_NONE) {
+    return error;
   }
   
-  context = glXGetCurrentContext();
-  if (context != NULL) {
-    gr3_appendtorenderpathstring_("GLX (existing context)");
-  } else {
-    /* call glXQueryVersion twice to prevent bugs in virtualbox */
-    if (!glXQueryVersion(display,&major,&minor) && !glXQueryVersion(display,&major,&minor)) {
-      RETURN_ERROR(GR3_ERROR_INIT_FAILED);
-    }
-    if (major > 1 || minor >=4) {
-      int i;
-      int fb_attribs[] =
-      {
-        GLX_DRAWABLE_TYPE   , GLX_PBUFFER_BIT,
-        GLX_RENDER_TYPE     , GLX_RGBA_BIT,
-        None
-      };
-      int pbuffer_attribs[] =
-      {
-        GLX_PBUFFER_WIDTH   , 1,
-        GLX_PBUFFER_HEIGHT   , 1,
-        None
-      };
-      gr3_log_("(Pbuffer)");
-      
-      fbc = glXChooseFBConfig(display, DefaultScreen(display), fb_attribs,
-                              &fbcount);
-      if (fbcount == 0) {
-        gr3_log_("failed to find a valid a GLX FBConfig for a RGBA PBuffer");
-        XFree(fbc);
-        XCloseDisplay(display);
-        RETURN_ERROR(GR3_ERROR_INIT_FAILED);
-      }
-      for (i = 0; i < fbcount && !pbuffer; i++) {
-        fbconfig = fbc[i];
-        pbuffer = glXCreatePbuffer(display, fbconfig, pbuffer_attribs);
-      }
-      XFree(fbc);
-      if (!pbuffer) {
-        gr3_log_("failed to create a RGBA PBuffer");
-        XCloseDisplay(display);
-        RETURN_ERROR(GR3_ERROR_INIT_FAILED);
-      }
-      
-      context = glXCreateNewContext(display, fbconfig, GLX_RGBA_TYPE, None, True);
-      glXMakeContextCurrent(display,pbuffer,pbuffer,context);
-      
-      context_struct_.terminateGL = gr3_terminateGL_GLX_Pbuffer_;
-      context_struct_.gl_is_initialized = 1;
-      gr3_appendtorenderpathstring_("GLX (Pbuffer)");
-    } else {
-      XVisualInfo *visual;
-      int fb_attribs[] =
-      {
-        GLX_DRAWABLE_TYPE   , GLX_PIXMAP_BIT,
-        GLX_RENDER_TYPE     , GLX_RGBA_BIT,
-        None
-      };
-      gr3_log_("(XPixmap)");
-      fbc = glXChooseFBConfig(display, DefaultScreen(display), fb_attribs,
-                              &fbcount);
-      if (fbcount == 0) {
-        gr3_log_("failed to find a valid a GLX FBConfig for a RGBA Pixmap");
-        XFree(fbc);
-        XCloseDisplay(display);
-        RETURN_ERROR(GR3_ERROR_INIT_FAILED);
-      }
-      fbconfig = fbc[0];
-      XFree(fbc);
-      
-      context = glXCreateNewContext(display, fbconfig, GLX_RGBA_TYPE, None, True);
-      visual = glXGetVisualFromFBConfig(display,fbconfig);
-      pixmap = XCreatePixmap(display,XRootWindow(display,DefaultScreen(display)),1,1,visual->depth);
-      
-      if (glXMakeContextCurrent(display,pixmap,pixmap,context)) {
-        context_struct_.terminateGL = gr3_terminateGL_GLX_Pixmap_;
-        context_struct_.gl_is_initialized = 1;
-        gr3_appendtorenderpathstring_("GLX (XPixmap)");
-      } else {
-        gr3_log_("failed to make GLX OpenGL Context current with a Pixmap");
-        glXDestroyContext(display, context);
-        XFreePixmap(display,pixmap);
-        XCloseDisplay(display);
-        RETURN_ERROR(GR3_ERROR_INIT_FAILED);
-      }
-    }
-  }
+
   /* Load Function pointers */ {
 #ifdef GR3_CAN_USE_VBO
-    gr3_glBufferData = (PFNGLBUFFERDATAPROC)glXGetProcAddress((const GLubyte *)"glBufferData");
-    gr3_glBindBuffer = (PFNGLBINDBUFFERPROC)glXGetProcAddress((const GLubyte *)"glBindBuffer");
-    gr3_glGenBuffers = (PFNGLGENBUFFERSPROC)glXGetProcAddress((const GLubyte *)"glGenBuffers");
-    gr3_glDeleteBuffers = (PFNGLGENBUFFERSPROC)glXGetProcAddress((const GLubyte *)"glDeleteBuffers");
-    gr3_glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)glXGetProcAddress((const GLubyte *)"glVertexAttribPointer");
-    gr3_glGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)glXGetProcAddress((const GLubyte *)"glGetAttribLocation");
-    gr3_glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)glXGetProcAddress((const GLubyte *)"glEnableVertexAttribArray");
-    gr3_glUseProgram = (PFNGLUSEPROGRAMPROC)glXGetProcAddress((const GLubyte *)"glUseProgram");
-    gr3_glDeleteShader = (PFNGLDELETESHADERPROC)glXGetProcAddress((const GLubyte *)"glDeleteShader");
-    gr3_glLinkProgram = (PFNGLLINKPROGRAMPROC)glXGetProcAddress((const GLubyte *)"glLinkProgram");
-    gr3_glAttachShader = (PFNGLATTACHSHADERPROC)glXGetProcAddress((const GLubyte *)"glAttachShader");
-    gr3_glCreateShader = (PFNGLCREATESHADERPROC)glXGetProcAddress((const GLubyte *)"glCreateShader");
-    gr3_glCompileShader = (PFNGLCOMPILESHADERPROC)glXGetProcAddress((const GLubyte *)"glCompileShader");
-    gr3_glCreateProgram = (PFNGLCREATEPROGRAMPROC)glXGetProcAddress((const GLubyte *)"glCreateProgram");
-    gr3_glDeleteProgram = (PFNGLDELETEPROGRAMPROC)glXGetProcAddress((const GLubyte *)"glDeleteProgram");
-    gr3_glUniform3f = (PFNGLUNIFORM3FPROC)glXGetProcAddress((const GLubyte *)"glUniform3f");
-    gr3_glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)glXGetProcAddress((const GLubyte *)"glUniformMatrix4fv");
-    gr3_glUniform4f = (PFNGLUNIFORM4FPROC)glXGetProcAddress((const GLubyte *)"glUniform4f");
-    gr3_glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)glXGetProcAddress((const GLubyte *)"glGetUniformLocation");
-    gr3_glShaderSource = (PFNGLSHADERSOURCEPROC)glXGetProcAddress((const GLubyte *)"glShaderSource");
+    gr3_glBufferData = (PFNGLBUFFERDATAPROC)platform->getProcAddress("glBufferData");
+    gr3_glBindBuffer = (PFNGLBINDBUFFERPROC)platform->getProcAddress("glBindBuffer");
+    gr3_glGenBuffers = (PFNGLGENBUFFERSPROC)platform->getProcAddress("glGenBuffers");
+    gr3_glDeleteBuffers = (PFNGLGENBUFFERSPROC)platform->getProcAddress("glDeleteBuffers");
+    gr3_glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)platform->getProcAddress("glVertexAttribPointer");
+    gr3_glGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)platform->getProcAddress("glGetAttribLocation");
+    gr3_glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)platform->getProcAddress("glEnableVertexAttribArray");
+    gr3_glUseProgram = (PFNGLUSEPROGRAMPROC)platform->getProcAddress("glUseProgram");
+    gr3_glDeleteShader = (PFNGLDELETESHADERPROC)platform->getProcAddress("glDeleteShader");
+    gr3_glLinkProgram = (PFNGLLINKPROGRAMPROC)platform->getProcAddress("glLinkProgram");
+    gr3_glAttachShader = (PFNGLATTACHSHADERPROC)platform->getProcAddress("glAttachShader");
+    gr3_glCreateShader = (PFNGLCREATESHADERPROC)platform->getProcAddress("glCreateShader");
+    gr3_glCompileShader = (PFNGLCOMPILESHADERPROC)platform->getProcAddress("glCompileShader");
+    gr3_glCreateProgram = (PFNGLCREATEPROGRAMPROC)platform->getProcAddress("glCreateProgram");
+    gr3_glDeleteProgram = (PFNGLDELETEPROGRAMPROC)platform->getProcAddress("glDeleteProgram");
+    gr3_glUniform3f = (PFNGLUNIFORM3FPROC)platform->getProcAddress("glUniform3f");
+    gr3_glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)platform->getProcAddress("glUniformMatrix4fv");
+    gr3_glUniform4f = (PFNGLUNIFORM4FPROC)platform->getProcAddress("glUniform4f");
+    gr3_glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)platform->getProcAddress("glGetUniformLocation");
+    gr3_glShaderSource = (PFNGLSHADERSOURCEPROC)platform->getProcAddress("glShaderSource");
 #endif
-    gr3_glDrawBuffers = (PFNGLDRAWBUFFERSPROC)glXGetProcAddress((const GLubyte *)"glDrawBuffers");
-    /*glBlendColor = (PFNGLBLENDCOLORPROC)glXGetProcAddress((const GLubyte *)"glBlendColor");*/
+    gr3_glDrawBuffers = (PFNGLDRAWBUFFERSPROC)platform->getProcAddress("glDrawBuffers");
+    /*glBlendColor = (PFNGLBLENDCOLORPROC)platform->getProcAddress("glBlendColor");*/
 #ifdef GL_ARB_framebuffer_object
-    gr3_glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC)glXGetProcAddress((const GLubyte *)"glBindRenderbuffer");
-    gr3_glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)glXGetProcAddress((const GLubyte *)"glCheckFramebufferStatus");
-    gr3_glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)glXGetProcAddress((const GLubyte *)"glFramebufferRenderbuffer");
-    gr3_glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC)glXGetProcAddress((const GLubyte *)"glRenderbufferStorage");
-    gr3_glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)glXGetProcAddress((const GLubyte *)"glBindFramebuffer");
-    gr3_glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)glXGetProcAddress((const GLubyte *)"glGenFramebuffers");
-    gr3_glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC)glXGetProcAddress((const GLubyte *)"glGenRenderbuffers");
-    gr3_glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)glXGetProcAddress((const GLubyte *)"glDeleteFramebuffers");
-    gr3_glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC)glXGetProcAddress((const GLubyte *)"glDeleteRenderbuffers");
+    gr3_glBindRenderbuffer = (PFNGLBINDRENDERBUFFERPROC)platform->getProcAddress("glBindRenderbuffer");
+    gr3_glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)platform->getProcAddress("glCheckFramebufferStatus");
+    gr3_glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)platform->getProcAddress("glFramebufferRenderbuffer");
+    gr3_glRenderbufferStorage = (PFNGLRENDERBUFFERSTORAGEPROC)platform->getProcAddress("glRenderbufferStorage");
+    gr3_glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)platform->getProcAddress("glBindFramebuffer");
+    gr3_glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)platform->getProcAddress("glGenFramebuffers");
+    gr3_glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC)platform->getProcAddress("glGenRenderbuffers");
+    gr3_glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)platform->getProcAddress("glDeleteFramebuffers");
+    gr3_glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC)platform->getProcAddress("glDeleteRenderbuffers");
 #endif
 #ifdef GL_EXT_framebuffer_object
-    gr3_glBindRenderbufferEXT = (PFNGLBINDRENDERBUFFEREXTPROC)glXGetProcAddress((const GLubyte *)"glBindRenderbufferEXT");
-    gr3_glCheckFramebufferStatusEXT = (PFNGLCHECKFRAMEBUFFERSTATUSEXTPROC)glXGetProcAddress((const GLubyte *)"glCheckFramebufferStatusEXT");
-    gr3_glFramebufferRenderbufferEXT = (PFNGLFRAMEBUFFERRENDERBUFFEREXTPROC)glXGetProcAddress((const GLubyte *)"glFramebufferRenderbufferEXT");
-    gr3_glRenderbufferStorageEXT = (PFNGLRENDERBUFFERSTORAGEEXTPROC)glXGetProcAddress((const GLubyte *)"glRenderbufferStorageEXT");
-    gr3_glBindFramebufferEXT = (PFNGLBINDFRAMEBUFFEREXTPROC)glXGetProcAddress((const GLubyte *)"glBindFramebufferEXT");
-    gr3_glGenFramebuffersEXT = (PFNGLGENFRAMEBUFFERSEXTPROC)glXGetProcAddress((const GLubyte *)"glGenFramebuffersEXT");
-    gr3_glGenRenderbuffersEXT = (PFNGLGENRENDERBUFFERSEXTPROC)glXGetProcAddress((const GLubyte *)"glGenRenderbuffersEXT");
-    gr3_glDeleteFramebuffersEXT = (PFNGLDELETEFRAMEBUFFERSEXTPROC)glXGetProcAddress((const GLubyte *)"glDeleteFramebuffersEXT");
-    gr3_glDeleteRenderbuffersEXT = (PFNGLDELETERENDERBUFFERSEXTPROC)glXGetProcAddress((const GLubyte *)"glDeleteRenderbuffersEXT");
+    gr3_glBindRenderbufferEXT = (PFNGLBINDRENDERBUFFEREXTPROC)platform->getProcAddress("glBindRenderbufferEXT");
+    gr3_glCheckFramebufferStatusEXT = (PFNGLCHECKFRAMEBUFFERSTATUSEXTPROC)platform->getProcAddress("glCheckFramebufferStatusEXT");
+    gr3_glFramebufferRenderbufferEXT = (PFNGLFRAMEBUFFERRENDERBUFFEREXTPROC)platform->getProcAddress("glFramebufferRenderbufferEXT");
+    gr3_glRenderbufferStorageEXT = (PFNGLRENDERBUFFERSTORAGEEXTPROC)platform->getProcAddress("glRenderbufferStorageEXT");
+    gr3_glBindFramebufferEXT = (PFNGLBINDFRAMEBUFFEREXTPROC)platform->getProcAddress("glBindFramebufferEXT");
+    gr3_glGenFramebuffersEXT = (PFNGLGENFRAMEBUFFERSEXTPROC)platform->getProcAddress("glGenFramebuffersEXT");
+    gr3_glGenRenderbuffersEXT = (PFNGLGENRENDERBUFFERSEXTPROC)platform->getProcAddress("glGenRenderbuffersEXT");
+    gr3_glDeleteFramebuffersEXT = (PFNGLDELETEFRAMEBUFFERSEXTPROC)platform->getProcAddress("glDeleteFramebuffersEXT");
+    gr3_glDeleteRenderbuffersEXT = (PFNGLDELETERENDERBUFFERSEXTPROC)platform->getProcAddress("glDeleteRenderbuffersEXT");
 #endif
+  gr3_glBegin = (void(*)(GLenum))platform->getProcAddress("glBegin");
+  gr3_glBlendColor = (void(*)(GLclampf, GLclampf, GLclampf, GLclampf))platform->getProcAddress("glBlendColor");
+  gr3_glBlendFunc = (void(*)(GLenum, GLenum))platform->getProcAddress("glBlendFunc");
+  gr3_glCallList = (void(*)(GLuint))platform->getProcAddress("glCallList");
+  gr3_glClear = (void(*)(GLenum))platform->getProcAddress("glClear");
+  gr3_glClearColor = (void(*)(GLclampf, GLclampf, GLclampf, GLclampf))platform->getProcAddress("glClearColor");
+  gr3_glColor3fv = (void(*)(const GLfloat*))platform->getProcAddress("glColor3fv");
+  gr3_glColorMaterial = (void(*)(GLenum, GLenum))platform->getProcAddress("glColorMaterial");
+  gr3_glDeleteLists = (void(*)(GLuint, GLsizei))platform->getProcAddress("glDeleteLists");
+  gr3_glDisable = (void(*)(GLenum))platform->getProcAddress("glDisable");
+  gr3_glDrawArrays = (void(*)(GLenum, GLint, GLsizei))platform->getProcAddress("glDrawArrays");
+  gr3_glDrawElements = (void(*)(GLenum, GLsizei, GLenum, const GLvoid*))platform->getProcAddress("glDrawElements");
+  gr3_glEnable = (void(*)(GLenum))platform->getProcAddress("glEnable");
+  gr3_glEnd = (void(*)(void))platform->getProcAddress("glEnd");
+  gr3_glEndList = (void(*)(void))platform->getProcAddress("glEndList");
+  gr3_glGenLists = (GLuint(*)(GLsizei))platform->getProcAddress("glGenLists");
+  gr3_glGetError = (GLenum(*)(void))platform->getProcAddress("glGetError");
+  gr3_glGetIntegerv = (void(*)(GLenum, GLint*))platform->getProcAddress("glGetIntegerv");
+  gr3_glGetString = (const GLubyte*(*)(GLenum))platform->getProcAddress("glGetString");
+  gr3_glLightfv = (void(*)(GLenum, GLenum, const GLfloat*))platform->getProcAddress("glLightfv");
+  gr3_glLoadIdentity = (void(*)(void))platform->getProcAddress("glLoadIdentity");
+  gr3_glLoadMatrixf = (void(*)(const GLfloat*))platform->getProcAddress("glLoadMatrixf");
+  gr3_glMaterialfv = (void(*)(GLenum, GLenum, const GLfloat*))platform->getProcAddress("glMaterialfv");
+  gr3_glMatrixMode = (void(*)(GLenum))platform->getProcAddress("glMatrixMode");
+  gr3_glMultMatrixf = (void(*)(const GLfloat*))platform->getProcAddress("glMultMatrixf");
+  gr3_glNewList = (void(*)(GLuint, GLenum))platform->getProcAddress("glNewList");
+  gr3_glNormal3fv = (void(*)(const GLfloat*))platform->getProcAddress("glNormal3fv");
+  gr3_glPixelStorei = (void(*)(GLenum, GLint))platform->getProcAddress("glPixelStorei");
+  gr3_glPopMatrix = (void(*)(void))platform->getProcAddress("glPopMatrix");
+  gr3_glPushMatrix = (void(*)(void))platform->getProcAddress("glPushMatrix");
+  gr3_glReadBuffer = (void(*)(GLenum))platform->getProcAddress("glReadBuffer");
+  gr3_glReadPixels = (void(*)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, GLvoid*))platform->getProcAddress("glReadPixels");
+  gr3_glVertex3fv = (void(*)(const GLfloat*))platform->getProcAddress("glVertex3fv");
+  gr3_glViewport = (void(*)(GLint, GLint, GLsizei, GLsizei))platform->getProcAddress("glViewport");
   }
   return GR3_ERROR_NONE;
 }
 
-/*!
- * This function destroys the OpenGL context using GLX with a Pbuffer.
- */
-void gr3_terminateGL_GLX_Pbuffer_(void) {
-  gr3_log_("gr3_terminateGL_GLX_Pbuffer_();");
-  
-  glXMakeContextCurrent(display,None,None,NULL);
-  glXDestroyContext(display, context);
-  /*glXDestroyPbuffer(display, pbuffer);*/
-  XCloseDisplay(display);
-  context_struct_.gl_is_initialized = 0;
-}
-
-/*!
- * This function destroys the OpenGL context using GLX with a XPixmap.
- */
-void gr3_terminateGL_GLX_Pixmap_(void) {
-  gr3_log_("gr3_terminateGL_GLX_Pixmap_();");
-  
-  glXMakeContextCurrent(display,None,None,NULL);
-  glXDestroyContext(display, context);
-  XFreePixmap(display,pixmap);
-  XCloseDisplay(display);
-  context_struct_.gl_is_initialized = 0;
-}

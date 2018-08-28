@@ -338,6 +338,7 @@ GR3API void gr3_terminate(void) {
             context_struct_.terminateFBO();
         }
         context_struct_.terminateGL();
+        context_struct_.gl_is_initialized = 0;
     }
     context_struct_.is_initialized = 0;
     if (context_struct_.renderpath_string != not_initialized_) {
