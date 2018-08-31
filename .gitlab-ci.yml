@@ -15,7 +15,7 @@ ubuntu-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -44,7 +44,7 @@ debian-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -75,7 +75,7 @@ centos7-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -110,7 +110,7 @@ centos6-32bit-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -145,7 +145,7 @@ centos6-64bit-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -397,8 +397,8 @@ debian9-install:
   - apt-get -q install -y gdebi-core gcc
   # Install gr DEB
   - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
-  - gcc -o test test.c -lGR
+  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
+  - gcc -o test test.c -lGR -lGR3
   - ./test
 
 ubuntu16.04-install:
@@ -409,8 +409,8 @@ ubuntu16.04-install:
   - apt-get -q install -y gdebi-core gcc
   # Install gr DEB
   - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
-  - gcc -o test test.c -lGR
+  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
+  - gcc -o test test.c -lGR -lGR3
   - ./test
 
 ubuntu17.10-install:
@@ -421,8 +421,8 @@ ubuntu17.10-install:
   - apt-get -q install -y gdebi-core gcc
   # Install gr DEB
   - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
-  - gcc -o test test.c -lGR
+  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
+  - gcc -o test test.c -lGR -lGR3
   - ./test
 
 centos7-install:
@@ -432,17 +432,28 @@ centos7-install:
   - yum install -y epel-release gcc
   # Install gr RPM
   - yum localinstall -y artifacts-packages/linux/centos/gr*.rpm
-  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
-  - gcc -o test test.c -lGR
+  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
+  - gcc -o test test.c -lGR -lGR3
   - ./test
 
 opensuse42.3-install:
   stage: install
-  image: opensuse:42.3
+  image: opensuse/leap:42.3
   script:
   # Install gr RPM
   - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
   - zypper install -y artifacts-packages/linux/suse/gr*.rpm gcc
-  - "echo -e '#include <gr.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); return 0; }' > test.c"
-  - gcc -o test test.c -lGR
+  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
+  - gcc -o test test.c -lGR -lGR3
+  - ./test
+
+opensuse15-install:
+  stage: install
+  image: opensuse/leap:15
+  script:
+  # Install gr RPM
+  - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
+  - zypper install -y artifacts-packages/linux/suse/gr*.rpm gcc
+  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
+  - gcc -o test test.c -lGR -lGR3
   - ./test

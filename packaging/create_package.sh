@@ -31,7 +31,7 @@ LIB_DIR="/usr/lib"
 INC_DIR="/usr/include"
 BIN_LINKS=( "gr" "gksm" )
 INC_LINKS=( "gks.h" "gr.h" "gr3.h" )
-LIB_LINKS=( "libGKS.a" "libGKS.so" "libGR.a" "libGR.so" "libGR3.a" "libGR3.so" )
+LIB_LINKS=( "libGKS.a" "libGKS.so" "libGR.a" "libGR.so" "libGR3.a" "libGR3.so" "libGR3platform.so" )
 GRDIR_FIRST_DIR="$(get_first_directory ${GRDIR})"
 if [ "${GRDIR_FIRST_DIR}" == "/usr" ]; then
     PACKAGE_DIRS=( "/usr" )
