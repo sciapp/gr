@@ -8111,6 +8111,10 @@ void gr_drawarc(
   start  = min(a1, a2);
   end    = max(a1, a2);
   start += (end - start) / 360 * 360;
+  /* Ensure that two equivalent but unequal angles result in a full arc. */
+  if (start == end && a1 != a2) {
+    end += 360;
+  }
 
   n = 0;
   for (a = start; a <= end; a++)
