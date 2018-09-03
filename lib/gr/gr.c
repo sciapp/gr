@@ -8613,8 +8613,8 @@ void gr_drawimage(
                 }
               else
                 y = 0;
-              imgT[i + j * w] = img[(int)(x * width) +
-                                    (int)((1-y) * height) * width];
+              imgT[i + j * w] = img[(int)min(x * width, width-1) +
+                                    (int)min((1-y) * height, height-1) * width];
             }
         }
       gks_draw_image(
