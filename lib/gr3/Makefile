@@ -72,4 +72,5 @@ install: targets
 clean:
 	@make -C ../gr clean
 	rm -rf libGR3.so*
+	rm -rf libGR3platform.so*
 	rm -f *.o
