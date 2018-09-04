@@ -8,23 +8,13 @@ THIRDPARTYINCDIR ?= $(THIRDPARTYDIR)/include
 
 UNAME := $(shell uname)
 
-     GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o malloc.o \
-               error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o x11.o socket.o \
+     GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o dl.o malloc.o \
+               error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o socket.o \
                plugin.o compress.o io.o
 
       GSDEFS =
-   CAIRODEFS =
-     X11DEFS =
-     XFTDEFS =
-      FTDEFS =
-       FTINC = -I../../3rdparty/freetype/include
-ifeq ($(UNAME), Darwin)
-      X11INC = -I/opt/X11/include
-else
-      X11INC = -I/usr/X11R6/include
-endif
           CC = cc
-     DEFINES = -DHAVE_ZLIB $(GSDEFS) $(CAIRODEFS) $(X11DEFS) $(XFTDEFS) $(FTDEFS)
+     DEFINES = -DHAVE_ZLIB $(GSDEFS)
       CFLAGS = -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           LD = cc
           AR = ar
@@ -39,14 +29,11 @@ INSTALL_NAME =
      SOFLAGS = -shared
 endif
         LIBS = -lpthread -ldl -lc -lm
-      FTLIBS = ../../3rdparty/freetype/libfreetype.a
-     XFTLIBS = -lXft -lfontconfig
-     X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
         ZINC = -I../../3rdparty/zlib
        ZLIBS = ../../3rdparty/zlib/libz.a
 
 .c.o:
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(X11INC) $(ZINC) $(CFLAGS) $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(ZINC) $(CFLAGS) $<
 
 default:
 	@make -C ../.. Makedefs
@@ -74,14 +61,14 @@ libGKS.a: $(GKSOBJS)
 	$(RANLIB) $@
 
 libGKS.so: $(GKSOBJS)
-	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(FTLIBS) $(ZLIBS) $(X11LIBS) \
-	$(LIBS) $(LDFLAGS) $(INSTALL_NAME)
+	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(LIBS) \
+	$(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGKS.a
-	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(LIBS)
 
 gksm: gksm.c libGKS.a
-	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(LIBS)
 
 gksqt:
 	@make -C qt -f makefile.mak GRDIR=$(GRDIR)
@@ -114,7 +101,7 @@ clean:
 depend:
 	makedepend -Y -- \
 	gks.c gksforbnd.c font.c afm.c util.c dl.c malloc.c error.c \
-	mf.c wiss.c cgm.c win.c mac.c ps.c pdf.c x11.c socket.c plugin.c \
+	mf.c wiss.c cgm.c win.c mac.c ps.c pdf.c socket.c plugin.c \
 	compress.c io.c 2> /dev/null
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
@@ -134,7 +121,6 @@ win.o: gks.h gkscore.h
 mac.o: gks.h gkscore.h
 ps.o: gks.h gkscore.h
 pdf.o: gks.h gkscore.h
-x11.o: gks.h gkscore.h icon.bm
 socket.o: gks.h gkscore.h
 plugin.o: gkscore.h
 compress.o: gkscore.h

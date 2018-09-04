@@ -27,6 +27,10 @@
 #include "gks.h"
 #include "gr.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #if defined(_WIN32) && !defined(__MINGW32__)
 /* allow the use of posix functions on windows with msvc */
 #define strdup _strdup
@@ -2382,7 +2386,7 @@ void plot_draw_polar_axes(gr_meta_args_t *args) {
   gr_setlinetype(GKS_K_LINETYPE_SOLID);
 
   tick = 0.5 * gr_tick(r_min, r_max);
-  n = (int)rint((r_max - r_min) / tick + 0.5);
+  n = (int)ceil((r_max - r_min) / tick);
   for (i = 0; i < n + 1; i++) {
     r = i / n;
     if (i % 2 == 0) {

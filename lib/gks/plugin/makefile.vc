@@ -3,7 +3,7 @@ QT4DIR = S:\Qt\4.8.7
 QT5DIR = S:\Qt\5.7.0
 GSDIR = S:\gs\gs9.18
 WXDIR = S:\wxWidgets
-DEFINES = /DGRDIR=\"$(GRDIR)\" /DNO_FT /DNO_X11 /DNO_CAIRO /D_DLL /MD /D_POSIX /DWXUSINGDLL /DwxMSVC_VERSION_AUTO /D_UNICODE
+DEFINES = /DGRDIR=\"$(GRDIR)\" /DNO_FT /DNO_X11 /DNO_CAIRO /DNO_QT4 /DNO_QT5 /D_DLL /MD /D_POSIX /DWXUSINGDLL /DwxMSVC_VERSION_AUTO /D_UNICODE
 QT4INC = /I$(QT4DIR)\include
 QT5INC = /I$(QT5DIR)\include
 INCLUDES = /I.. /I$(WXDIR)\include\msvc /I$(WXDIR)\include /I$(GSDIR)\include /I..\..\..\3rdparty /I..\..\..\3rdparty\zlib
@@ -25,7 +25,7 @@ SRCDIR = .\
 .cxx.obj:
 	$(CXX) /c $(CXXFLAGS) $<
 
-default: $(PNGLIBS) $(ZLIBS) qtplugin.dll qt5plugin.dll svgplugin.dll wxplugin.dll gsplugin.dll wmfplugin.dll htmplugin.dll pgfplugin.dll cairoplugin.dll
+default: $(PNGLIBS) $(ZLIBS) x11plugin.dll qtplugin.dll qt5plugin.dll svgplugin.dll wxplugin.dll gsplugin.dll wmfplugin.dll htmplugin.dll pgfplugin.dll cairoplugin.dll
 
 $(PNGLIBS):
 	@cd ..\..\..\3rdparty\libpng16
@@ -36,6 +36,9 @@ $(ZLIBS):
 	@cd ..\..\..\3rdparty\zlib
 	@$(MAKE) /f makefile.vc
 	@cd ..\..\lib\gks\plugin
+
+x11plugin.dll: x11plugin.obj font.obj afm.obj util.obj dl.obj malloc.obj error.obj io.obj
+	$(DLLLINK) /out:$@ $** $(DLLLFLAGS) $(DLLLIBS)
 
 qtplugin.dll: qtplugin.obj font.obj afm.obj util.obj dl.obj malloc.obj error.obj io.obj
 	$(DLLLINK) /out:$@ $** $(QT4LIBS) $(DLLLFLAGS) $(DLLLIBS)
@@ -84,6 +87,9 @@ error.obj: ..\error.c
 	$(CXX) /c $(CXXFLAGS) ..\error.c
 io.obj: ..\io.c
 	$(CXX) /c $(CXXFLAGS) ..\io.c
+
+x11plugin.obj: x11plugin.cxx
+	$(CXX) /c $(CXXFLAGS) x11plugin.cxx
 
 svgplugin.obj: svgplugin.cxx
 	$(CXX) /c $(CXXFLAGS) svgplugin.cxx

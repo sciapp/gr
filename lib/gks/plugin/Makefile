@@ -107,9 +107,9 @@ default:
 	@make `cat ../../../Makedefs`
 
 targets: prerequisites \
-         wxplugin.so qtplugin.so qt5plugin.so svgplugin.so gtkplugin.so \
-         figplugin.so gsplugin.so wmfplugin.so glplugin.so zmqplugin.so \
-         movplugin.so htmplugin.so pgfplugin.so cairoplugin.so
+         x11plugin.so wxplugin.so qtplugin.so qt5plugin.so svgplugin.so \
+         gtkplugin.so figplugin.so gsplugin.so wmfplugin.so glplugin.so \
+         zmqplugin.so movplugin.so htmplugin.so pgfplugin.so cairoplugin.so
 
 prerequisites:
 	@for d in libpng16; do make -C ../../../3rdparty/$$d; done
@@ -129,6 +129,9 @@ qtplugin.o: qtplugin.cxx
 
 qt5plugin.o: qt5plugin.cxx
 	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT5DEFS) $(QT5INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
+
+x11plugin.so: x11plugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o compress.o io.o
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 wxplugin.so: wxplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(WXLIBS) $(X11LIBS) $(LIBS)

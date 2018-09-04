@@ -237,7 +237,7 @@ void gks_ddlk(
 	    case 210: case 211: case 212: case 213:
 	    case 214: case 215: case 216: case 217:
 	    case 218:
-	      gks_drv_x11(fctid, dx, dy, dimx, i_arr,
+	      gks_x11_plugin(fctid, dx, dy, dimx, i_arr,
 		len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
 		ptr);
 	      break;

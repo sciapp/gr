@@ -32,7 +32,6 @@ Source8:			https://gr-framework.org/downloads/3rdparty/openjpeg-2.0.0.tar.gz
 Source9:			https://gr-framework.org/downloads/3rdparty/cmake-2.8.12.2.tar.gz
 Source10:			https://gr-framework.org/downloads/3rdparty/cairo-1.14.6.tar.xz
 Source11:			https://gr-framework.org/downloads/3rdparty/pixman-0.34.0.tar.gz
-# for vcversioner
 BuildRequires:		git
 BuildRequires:		gcc-c++
 BuildRequires:		libX11-devel

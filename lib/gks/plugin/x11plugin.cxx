@@ -4,6 +4,38 @@
 #include "gks.h"
 #include "gkscore.h"
 
+#ifdef _WIN32
+
+#include <windows.h>
+#define DLLEXPORT __declspec(dllexport)
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+#else
+
+#ifdef __cplusplus
+#define DLLEXPORT extern "C"
+#else
+#define DLLEXPORT
+#endif
+
+#endif
+
+DLLEXPORT void gks_x11plugin(
+  int fctid, int dx, int dy, int dimx, int *i_arr,
+  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
+  int len_c_arr, char *c_arr, void **ptr);
+
+#ifdef _WIN32
+#ifdef __cplusplus
+}
+#endif
+#endif
+
+
 #if !defined(NO_X11)
 
 #include <string.h>
@@ -774,11 +806,9 @@ Display *open_display(void)
         {
           if (p->dpy == NULL)
             {
-              if (!env)
-                env = "";
               gks_perror("can't open display on \"%s\"\n\
      Is your DISPLAY environment variable set correctly?\n\
-     Did you enable X11 and TCP forwarding?\n", env);
+     Did you enable X11 and TCP forwarding?\n", env != NULL ? env : "");
               return (NULL);
             }
         }
@@ -1569,7 +1599,7 @@ void configure_event(XConfigureEvent *event)
       setup_xform(p->window, p->viewport);
       set_clipping(True);
 
-      gks_redraw_seg_on_ws(p->wkid);
+      //gks_redraw_seg_on_ws(p->wkid);
       return;
     }
   else
@@ -2910,9 +2940,9 @@ void write_gif_word(int w)
   byte c;
 
   c = (w & 0xff);
-  gks_write_file(p->gif, &c, 1);
+  gks_write_file(p->gif, (void *) &c, 1);
   c = ((w >> 8) & 0xff);
-  gks_write_file(p->gif, &c, 1);
+  gks_write_file(p->gif, (void *) &c, 1);
 }
 
 
@@ -3264,18 +3294,18 @@ void pixmap_to_uil(void)
   {'`', 'd', 'r', 'g', 'b', 'c', 'y', 'm'};
 
   icon_name = (char *) gks_getenv("GKS_ICON");
-  if (!icon_name)
-    icon_name = "(unknown)";
-
   image = XGetImage(p->dpy, p->pixmap, 0, 0, p->width, p->height,
                     AllPlanes, ZPixmap);
 
-  gks_write_file(p->uil, "\n", 1);
-  gks_write_file(p->uil, icon_name, strlen(icon_name));
-  gks_write_file(p->uil, " : icon (color_table = color_map", 32);
+  gks_write_file(p->uil, (void *) "\n", 1);
+  if (icon_name != NULL)
+    gks_write_file(p->uil, icon_name, strlen(icon_name));
+  else
+    gks_write_file(p->uil, (void *) "(unknown)", 9);
+  gks_write_file(p->uil, (void *) " : icon (color_table = color_map", 32);
   for (j = 0; j < p->height; j++)
     {
-      gks_write_file(p->uil, ",\n    '", 7);
+      gks_write_file(p->uil, (void *) ",\n    '", 7);
       for (i = 0; i < p->width; i++)
         {
           pixel = XGetPixel(image, i, j);
@@ -3290,9 +3320,9 @@ void pixmap_to_uil(void)
             }
           gks_write_file(p->uil, &letter[pix], 1);
         }
-      gks_write_file(p->uil, "'", 1);
+      gks_write_file(p->uil, (void *) "'", 1);
     }
-  gks_write_file(p->uil, "\n    );\n", 8);
+  gks_write_file(p->uil, (void *) "\n    );\n", 8);
 
   XDestroyImage(image);
 }
@@ -4321,7 +4351,7 @@ void *event_loop(void *arg)
 }
 
 
-void gks_drv_x11(
+void gks_x11plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
@@ -4342,6 +4372,8 @@ void gks_drv_x11(
       /* Get GKS state list address */
 
       gksl = (gks_state_list_t *) *ptr;
+
+      gks_init_core(gksl);
 
       p = (ws_state_list *) gks_malloc(sizeof(ws_state_list));
 
@@ -4418,7 +4450,7 @@ void gks_drv_x11(
       else if (p->wstype == 216)
         {
           p->uil = p->conid;
-          gks_write_file(p->uil, UIL_HEADER, sizeof(UIL_HEADER));
+          gks_write_file(p->uil, (void *) UIL_HEADER, sizeof(UIL_HEADER));
         }
 
       create_window(win);
@@ -4991,7 +5023,7 @@ void gks_drv_x11(
 
 #else
 
-void gks_drv_x11(
+void gks_x11plugin(
   int fctid, int dx, int dy, int dimx, int *ia,
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
