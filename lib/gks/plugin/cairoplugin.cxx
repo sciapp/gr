@@ -1660,14 +1660,14 @@ void gks_cairoplugin(
     case 49:
       /* set window */
       lock();
-      set_window(gkss->cntnr, r1[0], r1[1], r2[0], r2[1]);
+      set_window(ia[0], r1[0], r1[1], r2[0], r2[1]);
       unlock();
       break;
 
     case 50:
       /* set viewport */
       lock();
-      set_viewport(gkss->cntnr, r1[0], r1[1], r2[0], r2[1]);
+      set_viewport(ia[0], r1[0], r1[1], r2[0], r2[1]);
       unlock();
       break;
 
