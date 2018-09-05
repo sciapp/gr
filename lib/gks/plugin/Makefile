@@ -176,8 +176,11 @@ htmplugin.so: htmplugin.o font.o afm.o util.o malloc.o error.o io.o
 pgfplugin.so: pgfplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
+cairoplugin.o: cairoplugin.cxx
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) -DNO_X11 $(CXXFLAGS) $(ZINC) $<
+
 cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) -DNO_X11 $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)

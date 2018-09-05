@@ -110,6 +110,10 @@ DLLEXPORT void gks_cairoplugin(
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 
+
+/* set this flag so that the exit handler won't try to use Cairo X11 support */
+static int exit_due_to_x11_support_ = 0;
+
 static
 gks_state_list_t *gkss;
 
@@ -1018,6 +1022,7 @@ static
 void open_page(void)
 {
   char *env;
+  exit_due_to_x11_support_ = 0;
 
   if (p->wtype == 141)
     {
@@ -1028,6 +1033,7 @@ void open_page(void)
                                              p->width, p->height);
 #else
       gks_perror("Cairo X11 support not compiled in");
+      exit_due_to_x11_support_ = 1;
       exit(1);
 #endif
     }
@@ -1545,14 +1551,15 @@ void gks_cairoplugin(
 
     case 3:
       /* close workstation */
-      if (!p->empty)
-        write_page();
+      if (!exit_due_to_x11_support_) {
+        if (!p->empty)
+          write_page();
 
-      close_page();
-
-      free(p->patterns);
-      free(p->points);
-      free(p);
+        close_page();
+        free(p->patterns);
+        free(p->points);
+        free(p);
+      }
       break;
 
     case 4:

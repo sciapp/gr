@@ -41,7 +41,8 @@ export pixman_LIBS=${dest}/lib/libpixman-1.a
 
 ./configure --prefix=${dest} --libdir=${dest}/lib \
   --enable-static --with-pic --disable-quartz --disable-ft --disable-ps \
-  --disable-pdf --disable-interpreter
+  --disable-pdf --disable-interpreter  --without-x --disable-xlib \
+  --disable-xlib-xrender --disable-xcb --disable-xlib-xcb
 # Building the Cairo test suite may fail
 make -j4 || true
 make install || true
