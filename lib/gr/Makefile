@@ -30,10 +30,8 @@ endif
      PNGLIBS = ../../3rdparty/libpng16/libpng.a
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = ../../3rdparty/freetype/libfreetype.a
-     XFTLIBS = -lXft -lfontconfig
    MUPDFLIBS = -lmupdf -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
      SSLLIBS = -lssl -lcrypto
-     X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
        ZLIBS = ../../3rdparty/zlib/libz.a
       QHLIBS = ../../3rdparty/qhull/libqhull.a
 
@@ -61,13 +59,13 @@ libGR.a: $(GROBJS)
 
 libGR.so: $(GROBJS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) \
-	$(FTLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(QHLIBS) $(X11LIBS) $(LIBS) \
+	$(FTLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(QHLIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGR.a $(GKSLIBS)
 	$(CC) -o demo $(INCLUDES) $(CFLAGS) demo.c libGR.a \
 	$(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) $(FTLIBS) $(JPEGLIBS) $(SSLLIBS) \
-	$(ZLIBS) $(QHLIBS) $(X11LIBS) $(LIBS) $(LDFLAGS)
+	$(ZLIBS) $(QHLIBS) $(LIBS) $(LDFLAGS)
 
 libqtgr:
 	@make -C qtgr
