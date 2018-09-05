@@ -268,56 +268,8 @@ void gks_ft_terminate(void) {
   init = 0;
 }
 
-unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
-                                 gks_state_list_t *gkss, const char *text,
-                                 int length) {
-  FT_Face face;                   /* font face */
-  FT_Vector pen;                  /* glyph position */
-  FT_BBox bb;                     /* bounding box */
-  FT_Vector bearing;              /* individual glyph translation */
-  FT_UInt previous;               /* previous glyph index */
-  FT_Vector spacing;              /* amount of additional space between glyphs */
-  FT_ULong textheight;            /* textheight in FreeType convention */
-  FT_Error error;                 /* error code */
-  FT_Matrix rotation;             /* text rotation matrix */
-  FT_UInt size;                   /* number of pixels of the bitmap */
-  FT_String *file;                /* concatenated font path */
-  const FT_String *font, *prefix; /* font file name and directory */
-  FT_UInt *unicode_string;        /* unicode text string */
-  FT_Int halign, valign;          /* alignment */
-  FT_Byte *mono_bitmap = NULL;    /* target for rendered text */
-  FT_Int num_glyphs;              /* number of glyphs */
-  FT_Vector align;
-  FT_Bitmap ftbitmap;
-  FT_UInt codepoint;
-  int i, textfont, dx, dy, value, pos_x, pos_y;
-  unsigned int j, k;
-  double angle;
-  const int windowwidth = *width;
-  const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
-  const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN ||
-                            direction == GKS_K_TEXT_PATH_UP);
-  const FT_String *suffix_type1 = ".afm";
-
-  if (!init) gks_ft_init();
-
-  if (gkss->txal[0] != GKS_K_TEXT_HALIGN_NORMAL) {
-    halign = gkss->txal[0];
-  } else if (vertical) {
-    halign = GKS_K_TEXT_HALIGN_CENTER;
-  } else if (direction == GKS_K_TEXT_PATH_LEFT) {
-    halign = GKS_K_TEXT_HALIGN_RIGHT;
-  } else {
-    halign = GKS_K_TEXT_HALIGN_LEFT;
-  }
-  valign = gkss->txal[1];
-  if (valign != GKS_K_TEXT_VALIGN_NORMAL) {
-    valign = gkss->txal[1];
-  } else {
-    valign = GKS_K_TEXT_VALIGN_BASE;
-  }
-
-  textfont = abs(gkss->txfont);
+static int gks_ft_convert_textfont(int textfont) {
+  textfont = abs(textfont);
   if (textfont >= 101 && textfont <= 131)
     textfont -= 100;
   else if (textfont > 1 && textfont <= 32)
@@ -326,6 +278,20 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
     textfont = 9;
 
   textfont = textfont - 1;
+  return textfont;
+}
+
+void *gks_ft_get_face(int textfont) {
+  FT_Error error;
+  FT_Face face;
+  const FT_String *font;
+  const FT_String *prefix;
+  FT_String *file;
+  const FT_String *suffix_type1 = ".afm";
+
+  if (!init) gks_ft_init();
+
+  textfont = gks_ft_convert_textfont(textfont);
   font = gks_font_list[textfont];
 
   if (font_face_cache[textfont] == NULL) {
@@ -368,6 +334,60 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
   } else {
     face = font_face_cache[textfont];
   }
+  return (void *)face;
+}
+
+unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height,
+                                 gks_state_list_t *gkss, const char *text,
+                                 int length) {
+  FT_Face face;                   /* font face */
+  FT_Vector pen;                  /* glyph position */
+  FT_BBox bb;                     /* bounding box */
+  FT_Vector bearing;              /* individual glyph translation */
+  FT_UInt previous;               /* previous glyph index */
+  FT_Vector spacing;              /* amount of additional space between glyphs */
+  FT_ULong textheight;            /* textheight in FreeType convention */
+  FT_Error error;                 /* error code */
+  FT_Matrix rotation;             /* text rotation matrix */
+  FT_UInt size;                   /* number of pixels of the bitmap */
+  FT_UInt *unicode_string;        /* unicode text string */
+  FT_Int halign, valign;          /* alignment */
+  FT_Byte *mono_bitmap = NULL;    /* target for rendered text */
+  FT_Int num_glyphs;              /* number of glyphs */
+  FT_Vector align;
+  FT_Bitmap ftbitmap;
+  FT_UInt codepoint;
+  int i, textfont, dx, dy, value, pos_x, pos_y;
+  unsigned int j, k;
+  double angle;
+  const int windowwidth = *width;
+  const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
+  const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN ||
+                            direction == GKS_K_TEXT_PATH_UP);
+
+  if (!init) gks_ft_init();
+
+  if (gkss->txal[0] != GKS_K_TEXT_HALIGN_NORMAL) {
+    halign = gkss->txal[0];
+  } else if (vertical) {
+    halign = GKS_K_TEXT_HALIGN_CENTER;
+  } else if (direction == GKS_K_TEXT_PATH_LEFT) {
+    halign = GKS_K_TEXT_HALIGN_RIGHT;
+  } else {
+    halign = GKS_K_TEXT_HALIGN_LEFT;
+  }
+  valign = gkss->txal[1];
+  if (valign != GKS_K_TEXT_VALIGN_NORMAL) {
+    valign = gkss->txal[1];
+  } else {
+    valign = GKS_K_TEXT_VALIGN_BASE;
+  }
+
+  face = (FT_Face)gks_ft_get_face(gkss->txfont);
+  if (!face) {
+    return NULL;
+  }
+  textfont = gks_ft_convert_textfont(gkss->txfont);
 
   num_glyphs = length;
   unicode_string = (FT_UInt *) malloc(length * sizeof(FT_UInt) + 1);

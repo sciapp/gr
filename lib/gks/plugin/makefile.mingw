@@ -10,7 +10,8 @@ FTLIB = ../../../3rdparty/freetype/libfreetype.lib
 MUPDFLIBS = -lmupdf $(FTLIBS) $(JBIG2DECLIB) $(JPEGLIBS) $(OPENJP2LIB) $(BZ2LIBS) -lws2_32
 AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
 CAIROINCLUDES = -I../../../3rdparty/build/src/
-INCLUDES = -I../ -I../../../3rdparty/ -I../../../3rdparty/build/include -I/usr/local/include $(CAIROINCLUDES)
+FTINCLUDES = -I../../../3rdparty/freetype/include/
+INCLUDES = -I../ -I../../../3rdparty/ -I../../../3rdparty/build/include -I/usr/local/include $(CAIROINCLUDES) $(FTINCLUDES)
 CFLAGS = -Wall $(DEFINES) $(INCLUDES)
 CXXFLAGS = -Wall $(DEFINES) $(INCLUDES)
 GDILIB = -lgdi32
@@ -85,7 +86,7 @@ movplugin.dll: movplugin.o font.o afm.o util.o vc.o gif.o dl.o malloc.o error.o 
 
 cairoplugin.o: $(CAIROLIB)
 
-cairoplugin.dll: cairoplugin.o $(OBJS) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB)
+cairoplugin.dll: cairoplugin.o ft.o $(OBJS) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB) $(FTLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
 
 wxplugin.dll: wxplugin.o $(OBJS)

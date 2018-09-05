@@ -14,6 +14,9 @@ typedef __int64 int64_t;
 #include <math.h>
 
 #include <cairo/cairo.h>
+#ifndef NO_FT
+#include <cairo/cairo-ft.h>
+#endif
 #ifndef NO_X11
 #include <cairo/cairo-xlib.h>
 #endif
@@ -724,6 +727,7 @@ void set_font(int font)
   double width, height, capheight;
   int bold, italic;
   int family;
+  void *ft_face;
 
   font = abs(font);
   if (font >= 101 && font <= 129)
@@ -771,22 +775,35 @@ void set_font(int font)
     family = 0;
   }
 
-  if (italic && bold)
-    cairo_select_font_face(p->cr, fonts[family],
-                           CAIRO_FONT_SLANT_ITALIC,
-                           CAIRO_FONT_WEIGHT_BOLD);
-  else if (bold)
-    cairo_select_font_face(p->cr, fonts[family],
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_BOLD);
-  else if (italic)
-    cairo_select_font_face(p->cr, fonts[family],
-                           CAIRO_FONT_SLANT_ITALIC,
-                           CAIRO_FONT_WEIGHT_NORMAL);
-  else
-    cairo_select_font_face(p->cr, fonts[family],
-                           CAIRO_FONT_SLANT_NORMAL,
-                           CAIRO_FONT_WEIGHT_NORMAL);
+#ifndef NO_FT
+  ft_face = gks_ft_get_face(gkss->txfont);
+  if (ft_face) {
+    /* use cairo FreeType API */
+    cairo_font_face_t *font_face = cairo_ft_font_face_create_for_ft_face((FT_Face)ft_face, 0);
+    cairo_set_font_face(p->cr, font_face);
+    cairo_font_face_destroy(font_face);
+  } else
+#endif
+  {
+    /* fall back to cairo "toy" API */
+    if (italic && bold)
+      cairo_select_font_face(p->cr, fonts[family],
+                             CAIRO_FONT_SLANT_ITALIC,
+                             CAIRO_FONT_WEIGHT_BOLD);
+    else if (bold)
+      cairo_select_font_face(p->cr, fonts[family],
+                             CAIRO_FONT_SLANT_NORMAL,
+                             CAIRO_FONT_WEIGHT_BOLD);
+    else if (italic)
+      cairo_select_font_face(p->cr, fonts[family],
+                             CAIRO_FONT_SLANT_ITALIC,
+                             CAIRO_FONT_WEIGHT_NORMAL);
+    else {
+      cairo_select_font_face(p->cr, fonts[family],
+                             CAIRO_FONT_SLANT_NORMAL,
+                             CAIRO_FONT_WEIGHT_NORMAL);
+    }
+  }
   cairo_set_font_size(p->cr, size);
 }
 

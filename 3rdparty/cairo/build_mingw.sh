@@ -30,10 +30,12 @@ export png_NONPKGCONFIG_CFLAGS=-I${dest}/../libpng16
 export png_NONPKGCONFIG_LIBS=${dest}/../libpng16/libpng.lib
 export pixman_CFLAGS=-I${dest}/include/pixman-1
 export pixman_LIBS=${dest}/lib/libpixman-1.a
+export FREETYPE_CFLAGS=-I${cwd}/../freetype/include/
+export FREETYPE_LIBS=${dest}/lib/libfreetype.lib
 export MAKE=make
 
 ./configure --prefix=${dest} --libdir=${dest}/lib \
-  --enable-static --disable-shared --with-pic --disable-quartz --disable-ft --host=x86_64-w64-mingw32 --disable-ps --disable-pdf --disable-xlib --disable-interpreter --disable-valgrind
+  --enable-static --disable-shared --with-pic --disable-quartz --enable-ft --disable-fc --host=x86_64-w64-mingw32 --disable-ps --disable-pdf --disable-xlib --disable-interpreter --disable-valgrind
 make
 make install
 export MAKE="make -f makefile.mingw"

@@ -38,9 +38,11 @@ export png_NONPKGCONFIG_CFLAGS=-I${dest}/../libpng16
 export png_NONPKGCONFIG_LIBS=${dest}/../libpng16/libpng.a
 export pixman_CFLAGS=-I${dest}/include/pixman-1
 export pixman_LIBS=${dest}/lib/libpixman-1.a
+export FREETYPE_CFLAGS=-I${cwd}/../freetype/include/
+export FREETYPE_LIBS=${dest}/lib/libfreetype.a
 
 ./configure --prefix=${dest} --libdir=${dest}/lib \
-  --enable-static --with-pic --disable-quartz --disable-ft --disable-ps \
+  --enable-static --with-pic --disable-quartz --enable-ft --disable-fc --disable-ps \
   --disable-pdf --disable-interpreter  --without-x --disable-xlib \
   --disable-xlib-xrender --disable-xcb --disable-xlib-xcb
 # Building the Cairo test suite may fail

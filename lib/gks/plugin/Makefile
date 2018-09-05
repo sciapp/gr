@@ -73,7 +73,7 @@ endif
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
   CAIRODEFS =
 ifdef USE_STATIC_CAIRO_LIBS
-  CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a -lXrender -lXext
+  CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a
 else
   CAIROLIBS = -lcairo -lpixman-1 -lpthread
 endif
@@ -177,10 +177,10 @@ pgfplugin.so: pgfplugin.o font.o afm.o util.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.o: cairoplugin.cxx
-	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) -DNO_X11 $(CXXFLAGS) $(ZINC) $<
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
 
-cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(PNGLIBS) $(ZLIBS) -DNO_X11 $(LIBS)
+cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o ft.o
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)
