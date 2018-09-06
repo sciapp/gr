@@ -447,6 +447,7 @@ int *gks_ft_render(
 unsigned char *gks_ft_get_bitmap(
   int *x, int *y, int *width, int *height,
   gks_state_list_t *gkss, const char *text, int length);
+void *gks_ft_get_face(int);
 void gks_ft_terminate(void);
 
 #ifdef _WIN32
