@@ -24,8 +24,8 @@
 
 #define MWIDTH  0.254
 #define MHEIGHT 0.1905
-#define WIDTH   1024
-#define HEIGHT  768
+#define WIDTH   4096
+#define HEIGHT  3072
 
 #define DrawBorder 0
 
@@ -1173,8 +1173,8 @@ void write_page(void)
       sprintf(buf, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
               "<svg xmlns=\"http://www.w3.org/2000/svg\" "
 	      "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
-	      "width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\">\n",
-	     p->width, p->height, p->width, p->height);
+	      "width=\"%g\" height=\"%g\" viewBox=\"0 0 %d %d\">\n",
+	      p->width / 4.0, p->height / 4.0, p->width, p->height);
       gks_write_file(fd, buf, strlen(buf));
       gks_write_file(fd, p->stream->buffer, p->stream->length);
       sprintf(buf, "</svg>\n");
@@ -1217,8 +1217,8 @@ void gks_drv_js(
       p->conid = ia[1];
       p->path = chars;
 
-      p->height = 500;
-      p->width = 500;
+      p->height = 2000;
+      p->width = 2000;
       p->window[0] = p->window[2] = 0.0;
       p->window[1] = p->window[3] = 1.0;
       p->viewport[0] = p->viewport[2] = 0;
