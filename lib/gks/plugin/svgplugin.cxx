@@ -27,6 +27,9 @@
 #define WIDTH   4096
 #define HEIGHT  3072
 
+#define NOMINAL_LINEWIDTH 4.0
+#define NOMINAL_POINTSIZE 4
+
 #define DrawBorder 0
 
 #define TMP_NAME "gks_svg.tmp"
@@ -205,7 +208,7 @@ void svg_memcpy(SVG_stream *p, char *s, size_t n)
   if (p->length + n >= p->size)
     {
       while (p->length + n >= p->size)
-	p->size += MEMORY_INCREMENT;
+        p->size += MEMORY_INCREMENT;
       p->buffer = (Byte *) realloc(p->buffer, p->size);
     }
 
@@ -293,7 +296,7 @@ void set_color_rep(int color, double red, double green, double blue)
   if (color >= 0 && color < MAX_COLOR)
     {
       sprintf(p->rgb[color], "%02x%02x%02x", (int) (red * 255),
-	      (int) (green * 255), (int) (blue * 255));
+              (int) (green * 255), (int) (blue * 255));
     }
 }
 
@@ -339,9 +342,9 @@ int reverse(int value)
   for (i = 0, j = 7; i < 8; i++, j--)
     {
       if (c & (1 << i))
-	{
-	  result |= (1 << j);
-	}
+        {
+          result |= (1 << j);
+        }
     }
 
   return result;
@@ -383,8 +386,8 @@ void create_pattern(void)
   info_ptr = png_create_info_struct(png_ptr);
   png_init_io(png_ptr, stream);
   png_set_IHDR(png_ptr, info_ptr, 8, 8, bit_depth, color_type,
-	       PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
-	       PNG_FILTER_TYPE_BASE);
+               PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
+               PNG_FILTER_TYPE_BASE);
   png_write_info(png_ptr, info_ptr);
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, NULL);
@@ -432,112 +435,115 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
     {
       op = marker[mtype][pc];
       switch (op)
-	{
-	case 1:		/* point */
-	  svg_printf(p->stream,
-		     "<line clip-path=\"url(#clip%02d%02d)\" "
-                     "x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\" "
-		     "style=\"stroke:#%s; stroke-opacity:%g\"/>\n",
-		     path_id, p->path_index, x, y, x + 1, y, p->rgb[mcolor],
-                     p->transparency);
-	  break;
-
-	case 2:		/* line */
-	  for (i = 0; i < 2; i++)
-	    {
-	      xr = scale * marker[mtype][pc + 2 * i + 1];
-	      yr = -scale * marker[mtype][pc + 2 * i + 2];
-	      seg_xform_rel(&xr, &yr);
-	      if (i == 0)
-		svg_printf(p->stream,
-			   "<line clip-path=\"url(#clip%02d%02d)\" "
-			   "x1=\"%g\" y1=\"%g\" ", path_id, p->path_index,
-		           x - xr, y - yr);
-	      else
-		svg_printf(p->stream, "x2=\"%g\" y2=\"%g\" "
-                           "style=\"stroke:#%s; stroke-opacity:%g\"/>\n",
-		           x - xr, y - yr, p->rgb[mcolor], p->transparency);
-	    }
-	  pc += 4;
-	  break;
-
-	case 3:		/* polyline */
-	  svg_printf(p->stream,
-		     "<polyline clip-path=\"url(#clip%02d%02d)\" "
-		     "style=\"stroke:#%s; stroke-opacity:%g; fill:none\" "
-                     "points=\"\n  ", path_id, p->path_index,
-		     p->rgb[mcolor], p->transparency);
-	  for (i = 0; i < marker[mtype][pc + 1]; i++)
-	    {
-	      xr = scale * marker[mtype][pc + 2 + 2 * i];
-	      yr = -scale * marker[mtype][pc + 3 + 2 * i];
-	      seg_xform_rel(&xr, &yr);
-	      svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
-	      if (!((i + 1) % 10))
-		{
-		  svg_printf(p->stream, "\n  ");
-		}
-	    }
-	  svg_printf(p->stream, "\n  \"/>\n");
-	  pc += 1 + 2 * marker[mtype][pc + 1];
-	  break;
-
-	case 4:		/* filled polygon */
-	case 5:		/* hollow polygon */
-	  if (op == 5)
-	    svg_printf(p->stream,
-		       "<polygon clip-path=\"url(#clip%02d%02d)\" "
-		       "style=\"fill:#%s; fill-opacity:%g\" points=\"",
-                       path_id, p->path_index, p->rgb[0], p->transparency);
-	  else
-	    svg_printf(p->stream,
-		       "<polygon clip-path=\"url(#clip%02d%02d)\" "
-		       "style=\"fill:#%s; fill-opacity:%g\" points=\"\n  ",
-                       path_id, p->path_index, p->rgb[mcolor], p->transparency);
-	  for (i = 0; i < marker[mtype][pc + 1]; i++)
-	    {
-	      xr = scale * marker[mtype][pc + 2 + 2 * i];
-	      yr = -scale * marker[mtype][pc + 3 + 2 * i];
-	      seg_xform_rel(&xr, &yr);
-	      svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
-	      if (!((i + 1) % 10))
-		{
-		  svg_printf(p->stream, "\n  ");
-		}
-	    }
-	  svg_printf(p->stream, "\n  \"/>\n");
-	  pc += 1 + 2 * marker[mtype][pc + 1];
-	  if (op == 5)
-	    p->color = mcolor;
-	  break;
-
-	case 6:		/* arc */
-	  svg_printf(p->stream,
-		     "<circle clip-path=\"url(#clip%02d%02d)\" "
-		     "style=\"fill:none; stroke:#%s; stroke-opacity:%g\" "
+        {
+        case 1:         /* point */
+          svg_printf(p->stream,
+                     "<circle clip-path=\"url(#clip%02d%02d)\" "
+                     "style=\"fill:#%s; stroke:none; fill-opacity:%g\" "
                      "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-		     path_id, p->path_index, p->rgb[mcolor], p->transparency,
-                     x, y, r);
-	  break;
+                     path_id, p->path_index, p->rgb[mcolor], p->transparency,
+                     x, y, NOMINAL_POINTSIZE / 2);
+          break;
 
-	case 7:		/* filled arc */
-	case 8:		/* hollow arc */
-	  if (op == 8)
-	    svg_printf(p->stream,
-		       "<circle clip-path=\"url(#clip%02d%02d)\" "
-		       "style=\"fill:none; stroke:#%s; stroke-opacity:%g\" "
+        case 2:         /* line */
+          for (i = 0; i < 2; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 * i + 1];
+              yr = -scale * marker[mtype][pc + 2 * i + 2];
+              seg_xform_rel(&xr, &yr);
+              if (i == 0)
+                svg_printf(p->stream,
+                           "<line clip-path=\"url(#clip%02d%02d)\" "
+                           "x1=\"%g\" y1=\"%g\" ", path_id, p->path_index,
+                           x - xr, y - yr);
+              else
+                svg_printf(p->stream, "x2=\"%g\" y2=\"%g\" "
+                           "style=\"stroke:#%s; stroke-width:%g; stroke-opacity:%g\"/>\n",
+                           x - xr, y - yr, p->rgb[mcolor],
+                           p->linewidth, p->transparency);
+            }
+          pc += 4;
+          break;
+
+        case 3:         /* polyline */
+          svg_printf(p->stream,
+                     "<polyline clip-path=\"url(#clip%02d%02d)\" "
+                     "style=\"stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" "
+                     "points=\"\n  ", path_id, p->path_index,
+                     p->rgb[mcolor], p->linewidth, p->transparency);
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 + 2 * i];
+              yr = -scale * marker[mtype][pc + 3 + 2 * i];
+              seg_xform_rel(&xr, &yr);
+              svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
+              if (!((i + 1) % 10))
+                {
+                  svg_printf(p->stream, "\n  ");
+                }
+            }
+          svg_printf(p->stream, "\n  \"/>\n");
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          break;
+
+        case 4:         /* filled polygon */
+        case 5:         /* hollow polygon */
+          if (op == 5)
+            svg_printf(p->stream,
+                       "<polygon clip-path=\"url(#clip%02d%02d)\" "
+                       "style=\"fill:#%s; fill-opacity:%g\" points=\"",
+                       path_id, p->path_index, p->rgb[0], p->transparency);
+          else
+            svg_printf(p->stream,
+                       "<polygon clip-path=\"url(#clip%02d%02d)\" "
+                       "style=\"fill:#%s; fill-opacity:%g\" points=\"\n  ",
+                       path_id, p->path_index, p->rgb[mcolor], p->transparency);
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 + 2 * i];
+              yr = -scale * marker[mtype][pc + 3 + 2 * i];
+              seg_xform_rel(&xr, &yr);
+              svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
+              if (!((i + 1) % 10))
+                {
+                  svg_printf(p->stream, "\n  ");
+                }
+            }
+          svg_printf(p->stream, "\n  \"/>\n");
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          if (op == 5)
+            p->color = mcolor;
+          break;
+
+        case 6:         /* arc */
+          svg_printf(p->stream,
+                     "<circle clip-path=\"url(#clip%02d%02d)\" "
+                     "style=\"fill:none; stroke:#%s; stroke-width:%g; stroke-opacity:%g\" "
+                     "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
+                     path_id, p->path_index, p->rgb[mcolor],
+                     p->linewidth, p->transparency,
+                     x, y, r);
+          break;
+
+        case 7:         /* filled arc */
+        case 8:         /* hollow arc */
+          if (op == 8)
+            svg_printf(p->stream,
+                       "<circle clip-path=\"url(#clip%02d%02d)\" "
+                       "style=\"fill:none; stroke:#%s; stroke-width:%g; stroke-opacity:%g\" "
                        "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-		       path_id, p->path_index, p->rgb[0], p->transparency,
+                       path_id, p->path_index, p->rgb[0],
+                       p->linewidth, p->transparency,
                        x, y, r);
-	  else
-	    svg_printf(p->stream,
-		       "<circle clip-path=\"url(#clip%02d%02d)\" "
-		       "style=\"fill:#%s; stroke:none; fill-opacity:%g\" "
+          else
+            svg_printf(p->stream,
+                       "<circle clip-path=\"url(#clip%02d%02d)\" "
+                       "style=\"fill:#%s; stroke:none; fill-opacity:%g\" "
                        "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-		       path_id, p->path_index, p->rgb[mcolor], p->transparency,
+                       path_id, p->path_index, p->rgb[mcolor], p->transparency,
                        x, y, r);
-	  break;
-	}
+          break;
+        }
       pc++;
     }
   while (op != 0);
@@ -545,11 +551,13 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
 static
 void marker_routine(int n, double *px, double *py, int mtype, double mscale,
-		    int mcolor)
+                    int mcolor)
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
   int i, draw;
+
+  p->linewidth = NOMINAL_LINEWIDTH;
 
   for (i = 0; i < n; i++)
     {
@@ -557,12 +565,12 @@ void marker_routine(int n, double *px, double *py, int mtype, double mscale,
       seg_xform(&x, &y);
 
       if (gkss->clip == GKS_K_CLIP)
-	draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
+        draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
       else
-	draw = 1;
+        draw = 1;
 
       if (draw)
-	draw_marker(x, y, mtype, mscale, mcolor);
+        draw_marker(x, y, mtype, mscale, mcolor);
     }
 }
 
@@ -585,17 +593,17 @@ void stroke(void)
   int i;
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d%02d)\" style=\""
-	     "stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
-	     path_id, p->path_index, p->rgb[p->color], p->linewidth,
+             "stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
+             path_id, p->path_index, p->rgb[p->color], p->linewidth,
              p->transparency);
   svg_printf(p->stream, "points=\"\n  ");
   for (i = 0; i < p->npoints; i++)
     {
       svg_printf(p->stream, "%g,%g ", p->points[i].x, p->points[i].y);
       if (!((i + 1) % 10))
-	{
-	  svg_printf(p->stream, "\n  ");
-	}
+        {
+          svg_printf(p->stream, "\n  ");
+        }
     }
   svg_printf(p->stream, "\n  \"/>\n");
 
@@ -616,8 +624,8 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   NDC_to_DC(x, y, x0, y0);
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d%02d)\" style=\""
-	     "stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
-	     path_id, p->path_index, p->rgb[p->color], p->linewidth,
+             "stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
+             path_id, p->path_index, p->rgb[p->color], p->linewidth,
              p->transparency);
   if (linetype < 0 || linetype > 1)
     {
@@ -642,15 +650,15 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
       NDC_to_DC(x, y, xi, yi);
 
       if (i == 1 || xi != xim1 || yi != yim1)
-	{
-	  svg_printf(p->stream, "%g,%g ", xi, yi);
-	  xim1 = xi;
-	  yim1 = yi;
-	}
+        {
+          svg_printf(p->stream, "%g,%g ", xi, yi);
+          xim1 = xi;
+          yim1 = yi;
+        }
       if (!((i + 1) % 10))
-	{
-	  svg_printf(p->stream, "\n  ");
-	}
+        {
+          svg_printf(p->stream, "\n  ");
+        }
     }
   if (linetype == 0)
     svg_printf(p->stream, "%g,%g", x0, y0);
@@ -707,30 +715,30 @@ void fill_routine(int n, double *px, double *py, int tnr)
       create_pattern();
       p->have_pattern[p->pattern] = 1;
       svg_printf(p->stream,
-		"<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
-		"Use\" x=\"0\" y=\"0\" width=\"8\" height=\"8\">\n"
-		"<image width=\"8\" height=\"8\" "
+                "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
+                "Use\" x=\"0\" y=\"0\" width=\"8\" height=\"8\">\n"
+                "<image width=\"8\" height=\"8\" "
                 "xlink:href=\"data:image/png;base64,\n",\
-		p->pattern + 1);
+                p->pattern + 1);
       s = base64_stream(TMP_NAME);
       remove(TMP_NAME);
       i = j = 0;
       while (s[j])
-	{
-	  line[i++] = s[j++];
-	  if (i == 76 || s[j] == '\0')
-	    {
-	      line[i] = '\0';
-	      svg_printf(p->stream, "%s\n", line);
-	      i = 0;
-	    }
-	}
+        {
+          line[i++] = s[j++];
+          if (i == 76 || s[j] == '\0')
+            {
+              line[i] = '\0';
+              svg_printf(p->stream, "%s\n", line);
+              i = 0;
+            }
+        }
       free(s);
       svg_printf(p->stream, "\"/>\n  </pattern>\n</defs>\n");
     }
 
   svg_printf(p->stream, "<polygon clip-path=\"url(#clip%02d%02d)\" points=\"\n",
-	     path_id, p->path_index);
+             path_id, p->path_index);
   for (i = 0; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], tnr, x, y);
@@ -739,9 +747,9 @@ void fill_routine(int n, double *px, double *py, int tnr)
 
       svg_printf(p->stream, "%g,%g ", ix, iy);
       if (!((i + 1) % 10))
-	{
-	  svg_printf(p->stream, "\n  ");
-	}
+        {
+          svg_printf(p->stream, "\n  ");
+        }
     }
   if (p->pattern)
     svg_printf(p->stream, "\n  \" fill=\"url(#pattern%d)\"", p->pattern + 1);
@@ -764,6 +772,7 @@ void fillarea(int n, double *px, double *py)
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
       p->color = fl_color;
+      p->linewidth = NOMINAL_LINEWIDTH;
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
@@ -772,13 +781,13 @@ void fillarea(int n, double *px, double *py)
       fill_routine(n, px, py, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
-	   fl_inter == GKS_K_INTSTYLE_HATCH)
+           fl_inter == GKS_K_INTSTYLE_HATCH)
     {
       p->color = fl_color;
       if (fl_inter == GKS_K_INTSTYLE_HATCH)
-	fl_style += HATCH_STYLE;
+        fl_style += HATCH_STYLE;
       if (fl_style >= PATTERNS)
-	fl_style = 1;
+        fl_style = 1;
       p->pattern = fl_style;
       fill_routine(n, px, py, gkss->cntnr);
     }
@@ -850,31 +859,31 @@ void text_routine(double x, double y, int nchars, char *chars)
     {
       ch = (chars[i] < 0) ? chars[i] + 256 : chars[i];
       switch (ch)
-	{
-	case '&':
-	  svg_printf(p->stream, "&amp;");
-	  break;
-	case '<':
-	  svg_printf(p->stream, "&lt;");
-	  break;
-	case '>':
-	  svg_printf(p->stream, "&gt;");
-	  break;
-	case '"':
-	  svg_printf(p->stream, "&quot;");
-	  break;
-	case '\'':
-	  svg_printf(p->stream, "&apos;");
-	  break;
-	default:
-	  if (p->family == 3)
-	    gks_symbol2utf(ch, utf, &len);
+        {
+        case '&':
+          svg_printf(p->stream, "&amp;");
+          break;
+        case '<':
+          svg_printf(p->stream, "&lt;");
+          break;
+        case '>':
+          svg_printf(p->stream, "&gt;");
+          break;
+        case '"':
+          svg_printf(p->stream, "&quot;");
+          break;
+        case '\'':
+          svg_printf(p->stream, "&apos;");
+          break;
+        default:
+          if (p->family == 3)
+            gks_symbol2utf(ch, utf, &len);
           else
-	    gks_iso2utf(ch, utf, &len);
-	  utf[len] = '\0';
+            gks_iso2utf(ch, utf, &len);
+          utf[len] = '\0';
           svg_printf(p->stream, "%s", utf);
-	  break;
-	}
+          break;
+        }
     }
   svg_printf(p->stream, "<");
 }
@@ -948,8 +957,8 @@ void text(double px, double py, int nchars, char *chars)
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
     {
       svg_printf(p->stream,
-		 "<g clip-path=\"url(#clip%02d%02d)\">\n<text style=\""
-		 "fill:#%s; fill-opacity:%g; ", path_id, p->path_index,
+                 "<g clip-path=\"url(#clip%02d%02d)\">\n<text style=\""
+                 "fill:#%s; fill-opacity:%g; ", path_id, p->path_index,
                  p->rgb[tx_color], p->transparency);
       set_font(tx_font);
 
@@ -961,14 +970,14 @@ void text(double px, double py, int nchars, char *chars)
     }
   else
     {
-      p->linewidth = 1;
+      p->linewidth = NOMINAL_LINEWIDTH;
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
 }
 
 static
 void cellarray(double xmin, double xmax, double ymin, double ymax,
-	       int dx, int dy, int dimx, int *colia, int true_color)
+               int dx, int dy, int dimx, int *colia, int true_color)
 {
   double x1, y1, x2, y2;
   double ix1, ix2, iy1, iy2;
@@ -1018,41 +1027,41 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
       png_byte *row = row_pointers[j];
       iy = dy * j / height;
       if (swapy)
-	iy = dy - 1 - iy;
+        iy = dy - 1 - iy;
       for (i = 0; i < width; i++)
-	{
-	  png_byte *ptr = &(row[i * 4]);
-	  ix = dx * i / width;
-	  if (swapx)
-	    ix = dx - 1 - ix;
-	  if (!true_color)
-	    {
-	      ind = colia[iy * dimx + ix];
+        {
+          png_byte *ptr = &(row[i * 4]);
+          ix = dx * i / width;
+          if (swapx)
+            ix = dx - 1 - ix;
+          if (!true_color)
+            {
+              ind = colia[iy * dimx + ix];
               ind = FIX_COLORIND(ind);
-	      sscanf(p->rgb[ind], "%02x%02x%02x", &red, &green, &blue);
+              sscanf(p->rgb[ind], "%02x%02x%02x", &red, &green, &blue);
               alpha = 0xff;
-	    }
-	  else
-	    {
-	      rgb   = colia[iy * dimx + ix];
-	      red   = (rgb & 0xff);
-	      green = (rgb & 0xff00) >> 8;
-	      blue  = (rgb & 0xff0000) >> 16;
-	      alpha = (rgb & 0xff000000) >> 24;
-	    }
-	  ptr[0] = red;
-	  ptr[1] = green;
-	  ptr[2] = blue;
-	  ptr[3] = alpha;
-	}
+            }
+          else
+            {
+              rgb   = colia[iy * dimx + ix];
+              red   = (rgb & 0xff);
+              green = (rgb & 0xff00) >> 8;
+              blue  = (rgb & 0xff0000) >> 16;
+              alpha = (rgb & 0xff000000) >> 24;
+            }
+          ptr[0] = red;
+          ptr[1] = green;
+          ptr[2] = blue;
+          ptr[3] = alpha;
+        }
     }
 
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   info_ptr = png_create_info_struct(png_ptr);
   png_init_io(png_ptr, stream);
   png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type,
-	       PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
-	       PNG_FILTER_TYPE_BASE);
+               PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
+               PNG_FILTER_TYPE_BASE);
   png_write_info(png_ptr, info_ptr);
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, NULL);
@@ -1066,20 +1075,20 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   s = base64_stream(TMP_NAME);
   remove(TMP_NAME);
   svg_printf(p->stream,
-	     "<g clip-path=\"url(#clip%02d%02d)\">\n"
-	     "<image width=\"%d\" height=\"%d\" "
+             "<g clip-path=\"url(#clip%02d%02d)\">\n"
+             "<image width=\"%d\" height=\"%d\" "
              "xlink:href=\"data:image/png;base64,\n",
-	     path_id, p->path_index, width, height);
+             path_id, p->path_index, width, height);
   i = j = 0;
   while (s[j])
     {
       line[i++] = s[j++];
       if (i == 76 || s[j] == '\0')
-	{
-	  line[i] = '\0';
-	  svg_printf(p->stream, "%s\n", line);
-	  i = 0;
-	}
+        {
+          line[i] = '\0';
+          svg_printf(p->stream, "%s\n", line);
+          i = 0;
+        }
     }
   svg_printf(p->stream, "\" transform=\"translate(%d, %d)\"/>\n</g>\n", x, y);
   free(s);
@@ -1114,11 +1123,11 @@ void set_clip_path(int tnr)
   for (i = 0; i < p->clip_index && !found; i++)
     {
       if (x == p->cx[i] && y == p->cy[i] &&
-	  width == p->cwidth[i] && height == p->cheight[i])
-	{
-	  found = 1;
-	  index = i;
-	}
+          width == p->cwidth[i] && height == p->cheight[i])
+        {
+          found = 1;
+          index = i;
+        }
     }
   if (found)
     {
@@ -1127,28 +1136,28 @@ void set_clip_path(int tnr)
   else
     {
       if (p->clip_index < MAX_TNR)
-	{
-	  p->cx[p->clip_index] = x;
-	  p->cy[p->clip_index] = y;
-	  p->cwidth[p->clip_index] = width;
-	  p->cheight[p->clip_index] = height;
-	  p->path_index = p->clip_index;
-	  svg_printf(p->stream,
-		     "<defs>\n  <clipPath id=\"clip%02d%02d\">\n    <rect"
-		     " x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"/>\n  </clip"
-		     "Path>\n</defs>\n", path_id, p->path_index, x, y, width,
-		     height);
-	  p->clip_index++;
-	}
+        {
+          p->cx[p->clip_index] = x;
+          p->cy[p->clip_index] = y;
+          p->cwidth[p->clip_index] = width;
+          p->cheight[p->clip_index] = height;
+          p->path_index = p->clip_index;
+          svg_printf(p->stream,
+                     "<defs>\n  <clipPath id=\"clip%02d%02d\">\n    <rect"
+                     " x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"/>\n  </clip"
+                     "Path>\n</defs>\n", path_id, p->path_index, x, y, width,
+                     height);
+          p->clip_index++;
+        }
       else
-	{
-	  svg_printf(p->stream,
-		     "<defs>\n  <clipPath id=\"clip%02d\">\n    <rect"
-		     " x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"/>\n  </clip"
-		     "Path>\n</defs>\n", p->path_counter, x, y, width,
-		     height);
-	  p->path_index = p->path_counter++;
-	}
+        {
+          svg_printf(p->stream,
+                     "<defs>\n  <clipPath id=\"clip%02d\">\n    <rect"
+                     " x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"/>\n  </clip"
+                     "Path>\n</defs>\n", p->path_counter, x, y, width,
+                     height);
+          p->path_index = p->path_counter++;
+        }
     }
 }
 
@@ -1172,9 +1181,9 @@ void write_page(void)
     {
       sprintf(buf, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
               "<svg xmlns=\"http://www.w3.org/2000/svg\" "
-	      "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
-	      "width=\"%g\" height=\"%g\" viewBox=\"0 0 %d %d\">\n",
-	      p->width / 4.0, p->height / 4.0, p->width, p->height);
+              "xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
+              "width=\"%g\" height=\"%g\" viewBox=\"0 0 %d %d\">\n",
+              p->width / 4.0, p->height / 4.0, p->width, p->height);
       gks_write_file(fd, buf, strlen(buf));
       gks_write_file(fd, p->stream->buffer, p->stream->length);
       sprintf(buf, "</svg>\n");
@@ -1235,16 +1244,17 @@ void gks_drv_js(
       p->page_counter = 0;
       p->offset = 0;
 
-      p->linewidth = 1.0;
+      p->linewidth = NOMINAL_LINEWIDTH;
       p->transparency = 1.0;
 
       set_xform();
       init_norm_xform();
       init_colors();
       init_clippaths();
+      set_clip_path(0);
 
       for (i = 0; i < PATTERNS; i++)
-	p->have_pattern[i] = 0;
+        p->have_pattern[i] = 0;
 
       *ptr = p;
       break;
@@ -1252,7 +1262,7 @@ void gks_drv_js(
 /* close workstation */
     case 3:
       if (!p->empty)
-	write_page();
+        write_page();
 
       free(p->stream->buffer);
       free(p->points);
@@ -1272,12 +1282,12 @@ void gks_drv_js(
 /* clear workstation */
     case 6:
       if (!p->empty)
-	{
-	  p->empty = 1;
-	  write_page();
+        {
+          p->empty = 1;
+          write_page();
 
-	  init_clippaths();
-	}
+          init_clippaths();
+        }
       break;
 
 /* update workstation */
@@ -1287,49 +1297,49 @@ void gks_drv_js(
 /* polyline */
     case 12:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  polyline(ia[0], r1, r2);
-	  p->empty = 0;
-	}
+        {
+          polyline(ia[0], r1, r2);
+          p->empty = 0;
+        }
       break;
 
 /* polymarker */
     case 13:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  polymarker(ia[0], r1, r2);
-	  p->empty = 0;
-	}
+        {
+          polymarker(ia[0], r1, r2);
+          p->empty = 0;
+        }
       break;
 
 /* text */
     case 14:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  text(r1[0], r2[0], strlen(chars), chars);
-	  p->empty = 0;
-	}
+        {
+          text(r1[0], r2[0], strlen(chars), chars);
+          p->empty = 0;
+        }
       break;
 
 /* fill area */
     case 15:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  fillarea(ia[0], r1, r2);
-	  p->empty = 0;
-	}
+        {
+          fillarea(ia[0], r1, r2);
+          p->empty = 0;
+        }
       break;
 
 /* cell array */
     case 16:
     case DRAW_IMAGE:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  int true_color = fctid == DRAW_IMAGE;
+        {
+          int true_color = fctid == DRAW_IMAGE;
 
-	  cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
-	  p->empty = 0;
-	}
+          cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+          p->empty = 0;
+        }
       break;
 
 /* set color representation */
@@ -1346,7 +1356,7 @@ void gks_drv_js(
 /* set viewport */
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
       if (*ia == gkss->cntnr)
-	set_clip_path(*ia);
+        set_clip_path(*ia);
       break;
 
     case 52:
