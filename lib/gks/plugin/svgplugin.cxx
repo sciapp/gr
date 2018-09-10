@@ -32,8 +32,6 @@
 
 #define DrawBorder 0
 
-#define TMP_NAME "gks_svg.tmp"
-
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -350,6 +348,36 @@ int reverse(int value)
   return result;
 }
 
+struct WriteCallbackData {
+  png_bytep data_ptr;
+  png_size_t size;
+  png_size_t capacity;
+};
+
+static WriteCallbackData current_write_data;
+
+static void write_callback(png_structp png_ptr, png_bytep data, png_size_t num_bytes) {
+  WriteCallbackData* write_data = (WriteCallbackData*)png_get_io_ptr(png_ptr);
+  png_size_t size_increment = 100000;
+  if (num_bytes > size_increment) {
+    size_increment = num_bytes;
+  }
+  if (!write_data->data_ptr) {
+    write_data->data_ptr = (png_bytep)gks_malloc(size_increment);
+    write_data->size = 0;
+    write_data->capacity = size_increment;
+  }
+  if (write_data->size + num_bytes > write_data->capacity) {
+    write_data->data_ptr = (png_bytep)gks_realloc(write_data->data_ptr, write_data->capacity + size_increment);
+  }
+  memcpy(write_data->data_ptr + write_data->size, data, num_bytes);
+  write_data->size += num_bytes;
+}
+
+static void flush_callback(png_structp png_ptr) {
+  (void)png_ptr;
+}
+
 static
 void create_pattern(void)
 {
@@ -360,9 +388,7 @@ void create_pattern(void)
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep *row_pointers;
-  FILE *stream;
 
-  stream = fopen(TMP_NAME, "wb");
 
   row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * 8);
   for (i = 0; i < 8; i++)
@@ -382,16 +408,18 @@ void create_pattern(void)
       *ptr = reverse(parray[j + 1]);
     }
 
+  current_write_data.data_ptr = NULL;
+  current_write_data.size = 0;
+  current_write_data.capacity = 0;
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   info_ptr = png_create_info_struct(png_ptr);
-  png_init_io(png_ptr, stream);
+  png_set_write_fn(png_ptr, &current_write_data, write_callback, flush_callback);
   png_set_IHDR(png_ptr, info_ptr, 8, 8, bit_depth, color_type,
                PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
                PNG_FILTER_TYPE_BASE);
   png_write_info(png_ptr, info_ptr);
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, NULL);
-  fclose(stream);
   for (j = 0; j < 8; ++j)
     {
       free(row_pointers[j]);
@@ -666,75 +694,83 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 }
 
 static
-char *base64_stream(const char *path)
-{
-  FILE *stream;
-  struct stat buf;
-  unsigned char *src;
-  char *dest;
-  size_t srclen, destlen;
-
-  if ((stream = fopen(path, "rb")) == NULL)
-    {
-      gks_perror("can't open image file");
-      perror("fopen");
-      return NULL;
-    }
-
-  fstat(fileno(stream), &buf);
-  srclen = buf.st_size;
-  src = (unsigned char *) gks_malloc(srclen);
-
-  if (fread(src, srclen, 1, stream) == 0)
-    {
-      gks_perror("can't read image file");
-      perror("fread");
-      return NULL;
-    }
-  fclose(stream);
-
-  destlen = buf.st_size * 4 / 3 + 4;
-  dest = (char *) gks_malloc(destlen);
-
-  gks_base64(src, srclen, dest, destlen);
-
-  free(src);
-
-  return dest;
-}
-
-static
 void fill_routine(int n, double *px, double *py, int tnr)
 {
   int i, j;
   double x, y, ix, iy;
   char *s, line[80];
+  size_t slen;
+
+  const char* hatch_paths[] = {
+    /* none */
+    "",
+    /* dense vertical */
+    "M0.5,-4 l0,16 M4.5,-4 l0,16",
+    /* dense horizontal */
+    "M-4,0.5 l16,0 M-4,4.5 l16,0",
+    /* dense upward diagonal */
+    "M-4,4 l8,-8 M4,12 l8,-8 M-4,12 l16,-16 M-2,14 l16,-16 M-2,6 l16,-16",
+    /* dense downward diagonal */
+    "M-4,4 l8,8 M-4,-4 l16,16 M4,-4 l8,8 M-2,2 l8,8 M-2,-6 l16,16",
+    /* dense cross */
+    "M-4,0.5 l16,0 M-4,4.5 l16,0 M0.5,-4 l0,16 M4.5,-4 l0,16",
+    /* sparse cross diagonal */
+    "M-4,4 l8,-8 M4,12 l8,-8 M-4,12 l16,-16 M-4,4 l8,8 M-4,-4 l16,16 M4,-4 l8,8",
+    /* sparse vertical */
+    "M3.5,-4 l0,16",
+    /* sparse horizontal */
+    "M-4,4.5 l16,0",
+    /* sparse upward diagonal */
+    "M-4,4 l8,-8 M4,12 l8,-8 M-4,12 l16,-16",
+    /* sparse downward diagonal */
+    "M-4,4 l8,8 M-4,-4 l16,16 M4,-4 l8,8",
+    /* sparse cross */
+    "M-4,4.5 l16,0 M3.5,-4 l0,16"
+  };
 
   if (p->pattern && !p->have_pattern[p->pattern])
     {
-      create_pattern();
-      p->have_pattern[p->pattern] = 1;
-      svg_printf(p->stream,
-                "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
-                "Use\" x=\"0\" y=\"0\" width=\"8\" height=\"8\">\n"
-                "<image width=\"8\" height=\"8\" "
-                "xlink:href=\"data:image/png;base64,\n",\
-                p->pattern + 1);
-      s = base64_stream(TMP_NAME);
-      remove(TMP_NAME);
-      i = j = 0;
-      while (s[j])
-        {
-          line[i++] = s[j++];
-          if (i == 76 || s[j] == '\0')
-            {
-              line[i] = '\0';
-              svg_printf(p->stream, "%s\n", line);
-              i = 0;
-            }
-        }
-      free(s);
-      svg_printf(p->stream, "\"/>\n  </pattern>\n</defs>\n");
+      if (p->pattern > HATCH_STYLE && p->pattern - HATCH_STYLE < 12 && *hatch_paths[p->pattern-HATCH_STYLE]) {
+        p->have_pattern[p->pattern] = 1;
+        svg_printf(p->stream,
+                   "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
+                   "Use\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\">\n"
+                   "<g transform=\"scale(%d)\">"
+                   "<path d=\"%s\" style=\"stroke:black; stroke-width:1\"/>"
+                   "</g>",
+                   p->pattern + 1,
+                   8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE,
+                   NOMINAL_POINTSIZE, hatch_paths[p->pattern-HATCH_STYLE]);
+        svg_printf(p->stream, "</pattern>\n</defs>\n");
+      } else {
+        create_pattern();
+        p->have_pattern[p->pattern] = 1;
+        svg_printf(p->stream,
+                  "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
+                  "Use\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\">\n"
+                  "<image width=\"%d\" height=\"%d\" "
+                  "xlink:href=\"data:image/png;base64,\n",\
+                   p->pattern + 1,
+                   8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE,
+                   8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE);
+        slen = current_write_data.size * 4 / 3 + 4;
+        s = (char *) gks_malloc(slen);
+        gks_base64(current_write_data.data_ptr, current_write_data.size, s, slen);
+        gks_free(current_write_data.data_ptr);
+        i = j = 0;
+        while (s[j])
+          {
+            line[i++] = s[j++];
+            if (i == 76 || s[j] == '\0')
+              {
+                line[i] = '\0';
+                svg_printf(p->stream, "%s\n", line);
+                i = 0;
+              }
+          }
+        free(s);
+        svg_printf(p->stream, "\"/>\n  </pattern>\n</defs>\n");
+      }
     }
 
   svg_printf(p->stream, "<polygon clip-path=\"url(#clip%02d%02d)\" points=\"\n",
@@ -990,8 +1026,8 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep *row_pointers;
-  FILE *stream;
   char *s, line[80];
+  size_t slen;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -1006,13 +1042,6 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   if (width == 0 || height == 0) return;
   x = nint(min(ix1, ix2));
   y = nint(min(iy1, iy2));
-
-  if ((stream = fopen(TMP_NAME, "wb")) == NULL)
-    {
-      gks_perror("can't open temporary file");
-      perror("open");
-      return;
-    }
 
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
@@ -1056,9 +1085,12 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
         }
     }
 
+  current_write_data.data_ptr = NULL;
+  current_write_data.size = 0;
+  current_write_data.capacity = 0;
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   info_ptr = png_create_info_struct(png_ptr);
-  png_init_io(png_ptr, stream);
+  png_set_write_fn(png_ptr, &current_write_data, write_callback, flush_callback);
   png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type,
                PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
                PNG_FILTER_TYPE_BASE);
@@ -1070,10 +1102,11 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
       free(row_pointers[j]);
     }
   free(row_pointers);
-  fclose(stream);
   png_destroy_write_struct(&png_ptr, &info_ptr);
-  s = base64_stream(TMP_NAME);
-  remove(TMP_NAME);
+  slen = current_write_data.size * 4 / 3 + 4;
+  s = (char *) gks_malloc(slen);
+  gks_base64(current_write_data.data_ptr, current_write_data.size, s, slen);
+  gks_free(current_write_data.data_ptr);
   svg_printf(p->stream,
              "<g clip-path=\"url(#clip%02d%02d)\">\n"
              "<image width=\"%d\" height=\"%d\" "

@@ -436,17 +436,6 @@ centos7-install:
   - gcc -o test test.c -lGR -lGR3
   - ./test
 
-opensuse42.3-install:
-  stage: install
-  image: opensuse/leap:42.3
-  script:
-  # Install gr RPM
-  - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
-  - zypper install -y artifacts-packages/linux/suse/gr*.rpm gcc
-  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
-  - gcc -o test test.c -lGR -lGR3
-  - ./test
-
 opensuse15-install:
   stage: install
   image: opensuse/leap:15
