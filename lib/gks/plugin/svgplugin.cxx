@@ -716,10 +716,12 @@ void fill_routine(int n, double *px, double *py, int tnr)
       p->have_pattern[p->pattern] = 1;
       svg_printf(p->stream,
                 "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
-                "Use\" x=\"0\" y=\"0\" width=\"8\" height=\"8\">\n"
-                "<image width=\"8\" height=\"8\" "
+                "Use\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\">\n"
+                "<image width=\"%d\" height=\"%d\" "
                 "xlink:href=\"data:image/png;base64,\n",\
-                p->pattern + 1);
+                 p->pattern + 1,
+                 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE,
+                 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE);
       s = base64_stream(TMP_NAME);
       remove(TMP_NAME);
       i = j = 0;
