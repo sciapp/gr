@@ -710,33 +710,74 @@ void fill_routine(int n, double *px, double *py, int tnr)
   double x, y, ix, iy;
   char *s, line[80];
 
+  const char* hatch_paths[] = {
+    /* none */
+    "",
+    /* dense vertical */
+    "M0.5,-4 l0,16 M4.5,-4 l0,16",
+    /* dense horizontal */
+    "M-4,0.5 l16,0 M-4,4.5 l16,0",
+    /* dense upward diagonal */
+    "M-4,4 l8,-8 M4,12 l8,-8 M-4,12 l16,-16 M-2,14 l16,-16 M-2,6 l16,-16",
+    /* dense downward diagonal */
+    "M-4,4 l8,8 M-4,-4 l16,16 M4,-4 l8,8 M-2,2 l8,8 M-2,-6 l16,16",
+    /* dense cross */
+    "M-4,0.5 l16,0 M-4,4.5 l16,0 M0.5,-4 l0,16 M4.5,-4 l0,16",
+    /* sparse cross diagonal */
+    "M-4,4 l8,-8 M4,12 l8,-8 M-4,12 l16,-16 M-4,4 l8,8 M-4,-4 l16,16 M4,-4 l8,8",
+    /* sparse vertical */
+    "M3.5,-4 l0,16",
+    /* sparse horizontal */
+    "M-4,4.5 l16,0",
+    /* sparse upward diagonal */
+    "M-4,4 l8,-8 M4,12 l8,-8 M-4,12 l16,-16",
+    /* sparse downward diagonal */
+    "M-4,4 l8,8 M-4,-4 l16,16 M4,-4 l8,8",
+    /* sparse cross */
+    "M-4,4.5 l16,0 M3.5,-4 l0,16"
+  };
+
   if (p->pattern && !p->have_pattern[p->pattern])
     {
-      create_pattern();
-      p->have_pattern[p->pattern] = 1;
-      svg_printf(p->stream,
-                "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
-                "Use\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\">\n"
-                "<image width=\"%d\" height=\"%d\" "
-                "xlink:href=\"data:image/png;base64,\n",\
-                 p->pattern + 1,
-                 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE,
-                 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE);
-      s = base64_stream(TMP_NAME);
-      remove(TMP_NAME);
-      i = j = 0;
-      while (s[j])
-        {
-          line[i++] = s[j++];
-          if (i == 76 || s[j] == '\0')
-            {
-              line[i] = '\0';
-              svg_printf(p->stream, "%s\n", line);
-              i = 0;
-            }
-        }
-      free(s);
-      svg_printf(p->stream, "\"/>\n  </pattern>\n</defs>\n");
+      if (p->pattern > HATCH_STYLE && p->pattern - HATCH_STYLE < 12 && *hatch_paths[p->pattern-HATCH_STYLE]) {
+        p->have_pattern[p->pattern] = 1;
+        svg_printf(p->stream,
+                   "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
+                   "Use\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\">\n"
+                   "<g transform=\"scale(%d)\">"
+                   "<path d=\"%s\" style=\"stroke:black; stroke-width:1\"/>"
+                   "</g>",
+                   p->pattern + 1,
+                   8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE,
+                   NOMINAL_POINTSIZE, hatch_paths[p->pattern-HATCH_STYLE]);
+        svg_printf(p->stream, "</pattern>\n</defs>\n");
+      } else {
+        create_pattern();
+        p->have_pattern[p->pattern] = 1;
+        svg_printf(p->stream,
+                  "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
+                  "Use\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\">\n"
+                  "<image width=\"%d\" height=\"%d\" "
+                  "xlink:href=\"data:image/png;base64,\n",\
+                   p->pattern + 1,
+                   8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE,
+                   8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE);
+        s = base64_stream(TMP_NAME);
+        remove(TMP_NAME);
+        i = j = 0;
+        while (s[j])
+          {
+            line[i++] = s[j++];
+            if (i == 76 || s[j] == '\0')
+              {
+                line[i] = '\0';
+                svg_printf(p->stream, "%s\n", line);
+                i = 0;
+              }
+          }
+        free(s);
+        svg_printf(p->stream, "\"/>\n  </pattern>\n</defs>\n");
+      }
     }
 
   svg_printf(p->stream, "<polygon clip-path=\"url(#clip%02d%02d)\" points=\"\n",
