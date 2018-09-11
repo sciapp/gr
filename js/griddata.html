@@ -3,16 +3,18 @@
 
 <head>
     <meta charset="utf-8">
+    <title>gr.js example</title>
 </head>
 
 <body>
 
-    <canvas id="canvas" width="500" height="500"></canvas>
+    <canvas id="example-canvas" width="500" height="500"></canvas>
     <script type="text/javascript" src="gr.js"></script>
 
     <script type="text/javascript">
         GR.ready(function() {
-            var gr = new GR();
+            
+            var gr = new GR('example-canvas');
 
             gr.setviewport(0.1, 0.95, 0.1, 0.95);
             gr.setwindow(-2, 2, -2, 2);
