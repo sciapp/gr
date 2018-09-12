@@ -8881,9 +8881,6 @@ void mathtex(double x, double y, char *string,
   latex2image(string, pointSize, rgb, &width, &height, &data);
 
   gks_inq_text_upvec(&errind, &ux, &uy);
-  ux = nx.a * x_lin(ux);
-  uy = nx.c * y_lin(uy);
-
   rad = -atan2(ux, uy);
   angle = (int)(rad * 180 / M_PI + 0.5);
   if (angle < 0)
