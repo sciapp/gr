@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -127,7 +126,7 @@ typedef struct ws_state_list_t
   char *path;
   double a, b, c, d;
   double window[4], viewport[4];
-  char rgb[MAX_COLOR][7];
+  unsigned char rgb[MAX_COLOR][3];
   int width, height;
   int color;
   double linewidth;
@@ -293,8 +292,9 @@ void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
-      sprintf(p->rgb[color], "%02x%02x%02x", (int) (red * 255),
-              (int) (green * 255), (int) (blue * 255));
+      p->rgb[color][0] = (unsigned char)(red * 255);
+      p->rgb[color][1] = (unsigned char)(green * 255);
+      p->rgb[color][2] = (unsigned char)(blue * 255);
     }
 }
 
@@ -358,7 +358,7 @@ static WriteCallbackData current_write_data;
 
 static void write_callback(png_structp png_ptr, png_bytep data, png_size_t num_bytes) {
   WriteCallbackData* write_data = (WriteCallbackData*)png_get_io_ptr(png_ptr);
-  png_size_t size_increment = 100000;
+  png_size_t size_increment = 1000000;
   if (num_bytes > size_increment) {
     size_increment = num_bytes;
   }
@@ -369,6 +369,7 @@ static void write_callback(png_structp png_ptr, png_bytep data, png_size_t num_b
   }
   if (write_data->size + num_bytes > write_data->capacity) {
     write_data->data_ptr = (png_bytep)gks_realloc(write_data->data_ptr, write_data->capacity + size_increment);
+    write_data->capacity += size_increment;
   }
   memcpy(write_data->data_ptr + write_data->size, data, num_bytes);
   write_data->size += num_bytes;
@@ -415,8 +416,8 @@ void create_pattern(void)
   info_ptr = png_create_info_struct(png_ptr);
   png_set_write_fn(png_ptr, &current_write_data, write_callback, flush_callback);
   png_set_IHDR(png_ptr, info_ptr, 8, 8, bit_depth, color_type,
-               PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
-               PNG_FILTER_TYPE_BASE);
+               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
+               PNG_FILTER_TYPE_DEFAULT);
   png_write_info(png_ptr, info_ptr);
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, NULL);
@@ -467,10 +468,11 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
         case 1:         /* point */
           svg_printf(p->stream,
                      "<circle clip-path=\"url(#clip%02d%02d)\" "
-                     "style=\"fill:#%s; stroke:none; fill-opacity:%g\" "
+                     "style=\"fill:#%02x%02x%02x; stroke:none; fill-opacity:%g\" "
                      "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-                     path_id, p->path_index, p->rgb[mcolor], p->transparency,
-                     x, y, NOMINAL_POINTSIZE / 2);
+                     path_id, p->path_index, p->rgb[mcolor][0],
+                     p->rgb[mcolor][1], p->rgb[mcolor][2],
+                     p->transparency, x, y, NOMINAL_POINTSIZE / 2);
           break;
 
         case 2:         /* line */
@@ -486,9 +488,9 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
                            x - xr, y - yr);
               else
                 svg_printf(p->stream, "x2=\"%g\" y2=\"%g\" "
-                           "style=\"stroke:#%s; stroke-width:%g; stroke-opacity:%g\"/>\n",
-                           x - xr, y - yr, p->rgb[mcolor],
-                           p->linewidth, p->transparency);
+                           "style=\"stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\"/>\n",
+                           x - xr, y - yr, p->rgb[mcolor][0], p->rgb[mcolor][1],
+                           p->rgb[mcolor][2], p->linewidth, p->transparency);
             }
           pc += 4;
           break;
@@ -496,9 +498,10 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
         case 3:         /* polyline */
           svg_printf(p->stream,
                      "<polyline clip-path=\"url(#clip%02d%02d)\" "
-                     "style=\"stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" "
+                     "style=\"stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g; fill:none\" "
                      "points=\"\n  ", path_id, p->path_index,
-                     p->rgb[mcolor], p->linewidth, p->transparency);
+                     p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
+                     p->linewidth, p->transparency);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -519,13 +522,16 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
           if (op == 5)
             svg_printf(p->stream,
                        "<polygon clip-path=\"url(#clip%02d%02d)\" "
-                       "style=\"fill:#%s; fill-opacity:%g\" points=\"",
-                       path_id, p->path_index, p->rgb[0], p->transparency);
+                       "style=\"fill:#%02x%02x%02x; fill-opacity:%g\" points=\"",
+                       path_id, p->path_index, p->rgb[0][0], p->rgb[0][1],
+                       p->rgb[0][2], p->transparency);
           else
             svg_printf(p->stream,
                        "<polygon clip-path=\"url(#clip%02d%02d)\" "
-                       "style=\"fill:#%s; fill-opacity:%g\" points=\"\n  ",
-                       path_id, p->path_index, p->rgb[mcolor], p->transparency);
+                       "style=\"fill:#%02x%02x%02x; fill-opacity:%g\" points=\"\n  ",
+                       path_id, p->path_index, p->rgb[mcolor][0],
+                       p->rgb[mcolor][1], p->rgb[mcolor][2],
+                       p->transparency);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -546,11 +552,11 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
         case 6:         /* arc */
           svg_printf(p->stream,
                      "<circle clip-path=\"url(#clip%02d%02d)\" "
-                     "style=\"fill:none; stroke:#%s; stroke-width:%g; stroke-opacity:%g\" "
+                     "style=\"fill:none; stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\" "
                      "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-                     path_id, p->path_index, p->rgb[mcolor],
-                     p->linewidth, p->transparency,
-                     x, y, r);
+                     path_id, p->path_index, p->rgb[mcolor][0],
+                     p->rgb[mcolor][1], p->rgb[mcolor][2], p->linewidth,
+                     p->transparency, x, y, r);
           break;
 
         case 7:         /* filled arc */
@@ -558,18 +564,20 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
           if (op == 8)
             svg_printf(p->stream,
                        "<circle clip-path=\"url(#clip%02d%02d)\" "
-                       "style=\"fill:none; stroke:#%s; stroke-width:%g; stroke-opacity:%g\" "
+                       "style=\"fill:none; stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\" "
                        "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-                       path_id, p->path_index, p->rgb[0],
+                       path_id, p->path_index, p->rgb[0][0],
+                       p->rgb[0][1], p->rgb[0][2],
                        p->linewidth, p->transparency,
                        x, y, r);
           else
             svg_printf(p->stream,
                        "<circle clip-path=\"url(#clip%02d%02d)\" "
-                       "style=\"fill:#%s; stroke:none; fill-opacity:%g\" "
+                       "style=\"fill:#%02x%02x%02x; stroke:none; fill-opacity:%g\" "
                        "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-                       path_id, p->path_index, p->rgb[mcolor], p->transparency,
-                       x, y, r);
+                       path_id, p->path_index, p->rgb[mcolor][0],
+                       p->rgb[mcolor][1], p->rgb[mcolor][2],
+                       p->transparency, x, y, r);
           break;
         }
       pc++;
@@ -621,9 +629,9 @@ void stroke(void)
   int i;
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d%02d)\" style=\""
-             "stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
-             path_id, p->path_index, p->rgb[p->color], p->linewidth,
-             p->transparency);
+             "stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
+             path_id, p->path_index, p->rgb[p->color][0], p->rgb[p->color][1],
+             p->rgb[p->color][2], p->linewidth, p->transparency);
   svg_printf(p->stream, "points=\"\n  ");
   for (i = 0; i < p->npoints; i++)
     {
@@ -652,9 +660,9 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   NDC_to_DC(x, y, x0, y0);
 
   svg_printf(p->stream, "<polyline clip-path=\"url(#clip%02d%02d)\" style=\""
-             "stroke:#%s; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
-             path_id, p->path_index, p->rgb[p->color], p->linewidth,
-             p->transparency);
+             "stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g; fill:none\" ",
+             path_id, p->path_index, p->rgb[p->color][0], p->rgb[p->color][1],
+             p->rgb[p->color][2], p->linewidth, p->transparency);
   if (linetype < 0 || linetype > 1)
     {
       gks_get_dash_list(linetype, 0.5 * p->linewidth, dash_list);
@@ -790,8 +798,9 @@ void fill_routine(int n, double *px, double *py, int tnr)
   if (p->pattern)
     svg_printf(p->stream, "\n  \" fill=\"url(#pattern%d)\"", p->pattern + 1);
   else
-    svg_printf(p->stream, "\n  \" fill=\"#%s\" fill-opacity=\"%g\"",
-               p->rgb[p->color], p->transparency);
+    svg_printf(p->stream, "\n  \" fill=\"#%02x%02x%02x\" fill-opacity=\"%g\"",
+               p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2],
+               p->transparency);
   svg_printf(p->stream, "/>\n");
 }
 
@@ -994,8 +1003,9 @@ void text(double px, double py, int nchars, char *chars)
     {
       svg_printf(p->stream,
                  "<g clip-path=\"url(#clip%02d%02d)\">\n<text style=\""
-                 "fill:#%s; fill-opacity:%g; ", path_id, p->path_index,
-                 p->rgb[tx_color], p->transparency);
+                 "fill:#%02x%02x%02x; fill-opacity:%g; ", path_id, p->path_index,
+                 p->rgb[tx_color][0], p->rgb[tx_color][0], p->rgb[tx_color][0],
+                 p->transparency);
       set_font(tx_font);
 
       WC_to_NDC(px, py, gkss->cntnr, x, y);
@@ -1067,7 +1077,9 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
             {
               ind = colia[iy * dimx + ix];
               ind = FIX_COLORIND(ind);
-              sscanf(p->rgb[ind], "%02x%02x%02x", &red, &green, &blue);
+              red = p->rgb[ind][0];
+              green = p->rgb[ind][1];
+              blue = p->rgb[ind][2];
               alpha = 0xff;
             }
           else
@@ -1092,8 +1104,8 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   info_ptr = png_create_info_struct(png_ptr);
   png_set_write_fn(png_ptr, &current_write_data, write_callback, flush_callback);
   png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type,
-               PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
-               PNG_FILTER_TYPE_BASE);
+               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
+               PNG_FILTER_TYPE_DEFAULT);
   png_write_info(png_ptr, info_ptr);
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, NULL);
