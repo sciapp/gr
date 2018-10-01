@@ -138,6 +138,7 @@ typedef struct ws_state_list_t
   double mw, mh;
   int w, h;
   char *path;
+  unsigned char *mem;
   double a, b, c, d;
   double window[4], viewport[4];
   double rgb[MAX_COLOR][3];
@@ -1054,7 +1055,7 @@ void open_page(void)
       exit(1);
 #endif
     }
-  else if (p->wtype == 140 || p->wtype == 150)
+  else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 150)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
                                               p->width, p->height);
@@ -1439,6 +1440,38 @@ void write_page(void)
   else if (p->wtype == 141)
     XSync(p->dpy, False);
 #endif
+  else if (p->wtype == 143)
+    {
+      cairo_surface_flush(p->surface);
+      data = cairo_image_surface_get_data(p->surface);
+      width = cairo_image_surface_get_width(p->surface);
+      height = cairo_image_surface_get_height(p->surface);
+      stride = cairo_image_surface_get_stride(p->surface);
+      if (p->mem) {
+        for (j = 0; j < height; j++) {
+          for (i = 0; i < width; i++) {
+            /* Reverse alpha pre-multiplication */
+            double alpha = data[j * stride + i * 4 + 3];
+            double red = data[j * stride + i * 4 + 2] * 255.0 / alpha;
+            double green = data[j * stride + i * 4 + 1] * 255.0 / alpha;
+            double blue = data[j * stride + i * 4 + 0] * 255.0 / alpha;
+            if (red > 255) {
+              red = 255;
+            }
+            if (green > 255) {
+              green = 255;
+            }
+            if (blue > 255) {
+              blue = 255;
+            }
+            p->mem[j * width * 4 + i * 4 + 0] = (unsigned char)red;
+            p->mem[j * width * 4 + i * 4 + 1] = (unsigned char)green;
+            p->mem[j * width * 4 + i * 4 + 2] = (unsigned char)blue;
+            p->mem[j * width * 4 + i * 4 + 3] = (unsigned char)alpha;
+          }
+        }
+      }
+    }
   else if (p->wtype == 150)
     {
       cairo_surface_flush(p->surface);
@@ -1527,12 +1560,45 @@ void gks_cairoplugin(
       p->conid = ia[1];
       p->path = chars;
       p->wtype = ia[2];
+      p->mem = NULL;
 
       if (p->wtype == 140)
         {
           p->mw = 0.28575; p->mh = 0.19685;
           p->w = 6750; p->h = 4650;
           resize(2400, 2400);
+        }
+      else if (p->wtype == 143)
+        {
+          long int width, height, mem_ptr_as_int;
+          char *path = p->path;
+          if (!path) {
+            fprintf(stderr, "Missing mem path. Expected !<width>x<height>@<pointer>.mem\n");
+            exit(1);
+          }
+          if (*path != '!') {
+            fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n", p->path);
+            exit(1);
+          }
+          width = strtol(path+1, &path, 10);
+          if (width <= 0 || width == LONG_MAX || *path != 'x') {
+            fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n", p->path);
+            exit(1);
+          }
+          height = strtol(path+1, &path, 10);
+          if (height <= 0 || height == LONG_MAX || *path != '@') {
+            fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n", p->path);
+            exit(1);
+          }
+          mem_ptr_as_int = strtol(path+1, &path, 16);
+          if (mem_ptr_as_int <= 0 || mem_ptr_as_int == LONG_MAX || strcmp(path, ".mem")) {
+            fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n", p->path);
+            exit(1);
+          }
+          p->mem = (unsigned char*)mem_ptr_as_int;
+          p->mw = 0.28575; p->mh = 0.19685;
+          p->w = 6750; p->h = 4650;
+          resize(width, height);
         }
       else if (p->wtype == 150)
         {
@@ -1568,7 +1634,7 @@ void gks_cairoplugin(
 
     case 3:
       /* close workstation */
-      if (!exit_due_to_x11_support_) {
+      if ((p->wtype != 141 || !exit_due_to_x11_support_) && (p->wtype != 143 || p->mem != NULL)) {
         if (!p->empty)
           write_page();
 
@@ -1730,9 +1796,10 @@ void gks_cairoplugin(
       p->viewport[2] = 0;
       p->viewport[3] = r2[1] - r2[0];
 
-      p->width = p->viewport[1] * p->w / p->mw;
-      p->height = p->viewport[3] * p->h / p->mh;
-
+      if (p->wtype != 143) {
+        p->width = p->viewport[1] * p->w / p->mw;
+        p->height = p->viewport[3] * p->h / p->mh;
+      }
       close_page();
       open_page();
 

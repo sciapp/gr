@@ -7744,6 +7744,8 @@ int gks_wstype(char *type)
 #else
     wstype = 140;
 #endif
+  else if (!str_casecmp(type, "mem"))
+    wstype = 143;
   else if (!str_casecmp(type, "tiff") || !str_casecmp(type, "tif"))
     wstype = 323;
   else if (!str_casecmp(type, "fig"))
