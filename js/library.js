@@ -76,8 +76,15 @@ mergeInto(LibraryManager.library, {
         } else if (bold) {
             strboit = "bold";
         }
-        var fonts = ["Times New Roman", "Arial", "Courier", "Symbol",
-            "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua"
+        var fonts = [
+            '"Times New Roman", Times, serif',
+            'Helvetica, Arial, sans-serif',
+            'Courier, monospace',
+            'Symbol',
+            '"Bookman Old Style", serif',
+            '"Century Schoolbook", serif',
+            '"Century Gothic", sans-serif',
+            '"Palatino Linotype", "Book Antiqua", Palatino, serif'
         ];
         context.font = strboit + " " + height + "px " + fonts[font];
         var valg = 0;

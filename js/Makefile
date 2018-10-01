@@ -1,8 +1,9 @@
      JSC = /System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Resources/jsc
+OPTS = -s LEGACY_GL_EMULATION=1 -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall", "cwrap", "getValue", "setValue"]' -s NO_EXIT_RUNTIME=0 -s WASM=0 --memory-init-file 0
 ifndef DEBUG
-    OPTS = -s LEGACY_GL_EMULATION=1 -O3
+    OPTS += -O3
 else
-	OPTS = -s LEGACY_GL_EMULATION=1 -s ASSERTIONS=2 -s SAFE_HEAP=1
+    OPTS += -s ASSERTIONS=2 -s SAFE_HEAP=1
 endif
  DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\"
  JPEGDIR = ../3rdparty/jpeg
@@ -16,7 +17,8 @@ INCLUDES = -I$(GR3DIR) -I$(GRDIR) -I$(GKSDIR) -I$(JPEGDIR) -I$(PNGDIR)/.. -I$(ZL
            $(GKSDIR)/malloc.o $(GKSDIR)/error.o $(GKSDIR)/wiss.o $(GKSDIR)/io.o
   GROBJS = $(GRDIR)/gr.o $(GRDIR)/io.o $(GRDIR)/text.o $(GRDIR)/gridit.o \
            $(GRDIR)/strlib.o $(GRDIR)/contour.o $(GRDIR)/spline.o \
-           $(GRDIR)/import.o $(GRDIR)/grforbnd.o $(GRDIR)/md5.o
+           $(GRDIR)/import.o $(GRDIR)/grforbnd.o $(GRDIR)/md5.o \
+           $(GRDIR)/interp2.o
  GR3OBJS = $(GR3DIR)/gr3.o $(GR3DIR)/gr3_convenience.o \
            $(GR3DIR)/gr3_html.o $(GR3DIR)/gr3_povray.o $(GR3DIR)/gr3_png.o \
            $(GR3DIR)/gr3_jpeg.o $(GR3DIR)/gr3_gr.o $(GR3DIR)/gr3_mc.o

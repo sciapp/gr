@@ -252,6 +252,27 @@ darwin-self-contained:
     paths:
     - artifacts-darwin/
 
+emscripten:
+  stage: build
+  image: ubuntu:18.04
+  script:
+  - apt-get update
+  - apt-get install -y git make python cmake nodejs default-jre
+  - git clone https://github.com/juj/emsdk.git
+  - cd emsdk
+  - ./emsdk install latest
+  - ./emsdk activate latest
+  - source ./emsdk_env.sh
+  - cd ..
+  - make -C js gr.js
+  - mkdir artifacts
+  - cp js/gr.js artifacts/
+  - mv artifacts artifacts-js
+  artifacts:
+    expire_in: 1 week
+    paths:
+    - artifacts-js/
+
 packages-fpm:
   stage: build
   image: debian:8
@@ -356,6 +377,7 @@ packages-tar:
       if [ -d Darwin-x86_64 ]; then
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$VERSION-Darwin-x86_64.tar.gz;
       fi;
+      cp artifacts-js/gr.js Downloads/gr-$VERSION.js;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$VERSION.sha512.txt && cd -;
     else
       cp Windows-i686/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-i686.tar.gz;
@@ -368,6 +390,7 @@ packages-tar:
       if [ -d Darwin-x86_64 ]; then
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
       fi;
+      cp artifacts-js/gr.js Downloads/gr-$CI_COMMIT_SHA.js;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$CI_COMMIT_SHA.sha512.txt && cd -;
     fi
   artifacts:
