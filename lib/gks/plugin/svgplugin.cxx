@@ -978,7 +978,7 @@ void set_font(int font)
   bold = (font % 4 == 1 || font % 4 == 2) ? 0 : 1;
   italic = (font % 4 == 2 || font % 4 == 0);
 
-  svg_printf(p->stream, "font-family:%s; font-size:%d; ",
+  svg_printf(p->stream, "font-family:%s; font-size:%dpx; ",
              fonts[p->family], size);
   if (bold && italic)
     svg_printf(p->stream, "font-style:italic; font-weight:bold; ");
