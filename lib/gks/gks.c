@@ -59,6 +59,9 @@ ws_descr_t ws_types[] = {
   { 142, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, NULL, NULL },
   { 143, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL },
   { 150, GKS_K_METERS, 0.20320, 0.15240,  560,  420, 0, "six", NULL },
+  { 160, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "mp4", NULL },
+  { 161, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "webm", NULL },
+  { 162, GKS_K_METERS, 0.25400, 0.19050, 1024,  768, 0, "ogg", NULL },
   { 210, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 0, NULL, NULL },
   { 211, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 2, NULL, NULL },
   { 212, GKS_K_METERS, 0.33300, 0.28100, 1024,  864, 2, NULL, NULL },
@@ -325,10 +328,18 @@ void gks_ddlk(
 
 	    case 140:
 	    case 141:
-      case 142:
-      case 143:
+	    case 142:
+	    case 143:
 	    case 150:
 	      gks_cairo_plugin(fctid, dx, dy, dimx, i_arr,
+		len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
+		ptr);
+	      break;
+
+	    case 160:
+	    case 161:
+	    case 162:
+	      gks_video_plugin(fctid, dx, dy, dimx, i_arr,
 		len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
 		ptr);
 	      break;

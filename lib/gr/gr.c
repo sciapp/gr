@@ -1546,7 +1546,8 @@ void initgks(void)
 
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
   if (!double_buf)
-    double_buf = wtype == 380 || wtype == 381 || wtype == 400 || wtype == 410 ||                 wtype == 411;;
+    double_buf = wtype == 160 || wtype == 161 || wtype == 162 || wtype == 380 || wtype == 381 || wtype == 400 ||
+                 wtype == 410 || wtype == 411;
 
   if (display)
     {
@@ -7746,6 +7747,12 @@ int gks_wstype(char *type)
 #endif
   else if (!str_casecmp(type, "mem"))
     wstype = 143;
+  else if (!str_casecmp(type, "mp4"))
+    wstype = 160;
+  else if (!str_casecmp(type, "webm"))
+    wstype = 161;
+  else if (!str_casecmp(type, "ogg"))
+    wstype = 162;
   else if (!str_casecmp(type, "tiff") || !str_casecmp(type, "tif"))
     wstype = 323;
   else if (!str_casecmp(type, "fig"))
@@ -7761,7 +7768,7 @@ int gks_wstype(char *type)
   else
     {
       fprintf(stderr, "%s: unrecognized file type\nAvailable formats: \
-bmp, eps, fig, html, jpeg, mov, pdf, pgf, png, ps, svg, tiff or wmf\n", type);
+bmp, eps, fig, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n", type);
       wstype = -1;
     }
 
@@ -7807,6 +7814,12 @@ bmp, eps, fig, html, jpeg, mov, pdf, pgf, png, ps, svg, tiff or wmf\n", type);
  * |.svg         |Scalable Vector Graphics               |
  * +-------------+---------------------------------------+
  * |.wmf         |Windows Metafile                       |
+ * +-------------+---------------------------------------+
+ * |.mp4         |MPEG-4 video file                      |
+ * +-------------+---------------------------------------+
+ * |.webm        |WebM video file                        |
+ * +-------------+---------------------------------------+
+ * |.ogg         |Ogg video file                         |
  * +-------------+---------------------------------------+
  *
  * \endverbatim
