@@ -1216,6 +1216,10 @@ void initialize_data()
 
   p->empty = 1;
   p->has_been_resized = 0;
+  p->window[0] = 0.0;
+  p->window[1] = 1.0;
+  p->window[2] = 0.0;
+  p->window[3] = 1.0;
 
   p->transparency = 255;
 }
