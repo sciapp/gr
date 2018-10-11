@@ -1,5 +1,5 @@
      JSC = /System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Resources/jsc
-OPTS = -s LEGACY_GL_EMULATION=1 -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall", "cwrap", "getValue", "setValue"]' -s NO_EXIT_RUNTIME=0 -s WASM=0 --memory-init-file 0
+OPTS = -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s LEGACY_GL_EMULATION=1 -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall", "cwrap", "getValue", "setValue"]' -s NO_EXIT_RUNTIME=0 -s WASM=0 --memory-init-file 0
 ifndef DEBUG
     OPTS += -O3
 else
