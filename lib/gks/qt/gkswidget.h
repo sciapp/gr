@@ -23,6 +23,7 @@ protected:
 
 private:
   int is_mapped;
+  bool prevent_resize;
   char *dl;
 };
 

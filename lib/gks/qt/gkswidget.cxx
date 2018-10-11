@@ -13,6 +13,7 @@
 #include <QtGui/QPainter>
 #include <QtGui/QImage>
 #include <QIcon>
+#include <QProcessEnvironment>
 
 #endif
 
@@ -75,6 +76,8 @@ GKSWidget::GKSWidget(QWidget *parent)
 
   setWindowTitle(tr("GKS QtTerm"));
   setWindowIcon(QIcon(":/images/gksqt.png"));
+
+  prevent_resize = !QProcessEnvironment::systemEnvironment().value("GKS_GKSQT_PREVENT_RESIZE").isEmpty();
 }
 
 void GKSWidget::paintEvent(QPaintEvent *)
@@ -85,7 +88,15 @@ void GKSWidget::paintEvent(QPaintEvent *)
       QPainter painter(this);
       p->pm->fill(Qt::white);
       interp(dl);
-      painter.drawPixmap(0, 0, *(p->pm));
+
+      if (!prevent_resize) {
+        painter.drawPixmap(0, 0, *(p->pm));
+      } else {
+        int x = (width() - p->width) / 2;
+        int y = (height() - p->height) / 2;
+        painter.fillRect(0, 0, width(), height(), Qt::white);
+        painter.drawPixmap(x, y, *(p->pm));
+      }
     }
 }
 
@@ -120,8 +131,9 @@ void set_window_size(char *s)
 void GKSWidget::interpret(char *dl)
 {
   set_window_size(dl);
-
-  resize(p->width, p->height);
+  if (!prevent_resize) {
+    resize(p->width, p->height);
+  }
   if (!is_mapped)
     {
       is_mapped = 1;
