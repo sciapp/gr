@@ -133,6 +133,9 @@ void GKSWidget::interpret(char *dl)
   set_window_size(dl);
   if (!prevent_resize) {
     resize(p->width, p->height);
+  } else {
+    p->mwidth = p->width * widthMM() * 0.001 / width();
+    p->mheight = p->height * heightMM() * 0.001 / height();
   }
   if (!is_mapped)
     {
