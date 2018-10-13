@@ -1657,15 +1657,14 @@ void gks_cairoplugin(
 
     case 6:
       /* clear workstation */
-      if (!p->empty)
-        {
-          lock();
-          cairo_set_source_rgb(p->cr, 255, 255,255);
-          cairo_rectangle(p->cr, 0, 0, p->width, p->height);
-          cairo_fill(p->cr);
-          p->empty = 1;
-          unlock();
-        }
+      lock();
+      cairo_save(p->cr);
+      cairo_reset_clip(p->cr);
+      cairo_set_operator(p->cr, CAIRO_OPERATOR_CLEAR);
+      cairo_paint(p->cr);
+      cairo_restore(p->cr);
+      p->empty = 1;
+      unlock();
       break;
 
     case 8:

@@ -36,7 +36,6 @@ movie_t vc_movie_create(const char *path, int framerate, int bitrate)
   }
 
   movie->cdc_ctx = movie->video_st->codec;
-  avcodec_get_context_defaults3(movie->cdc_ctx, movie->cdc);
 
   movie->cdc_ctx->codec_id       = movie->out_fmt->video_codec;
   movie->cdc_ctx->bit_rate       = bitrate;
@@ -70,7 +69,7 @@ void vc_movie_append_frame(movie_t movie, frame_t frame)
     }
 
     movie->frame = avcodec_alloc_frame();
-    if (!frame) {
+    if (!movie->frame) {
       fprintf(stderr, "could not allocate video frame\n");
       exit(1);
     }
@@ -101,22 +100,14 @@ void vc_movie_append_frame(movie_t movie, frame_t frame)
     movie->frame->pts = 0;
   }
 
-  ret = avpicture_alloc(&src_picture, PIX_FMT_RGB32, movie->cdc_ctx->width,
-                        movie->cdc_ctx->height);
-  if (ret < 0) {
-    fprintf(stderr, "could not allocate temporary picture\n");
-    exit(1);
-  }
-
   avpicture_fill(&src_picture, frame->data, PIX_FMT_RGBA, movie->cdc_ctx->width,
                  movie->cdc_ctx->height);
   src_picture.data[0] = frame->data;
 
-  sws_ctx = NULL;
-  sws_ctx = sws_getCachedContext(
-    sws_ctx, movie->cdc_ctx->width, movie->cdc_ctx->height, PIX_FMT_RGBA,
-    movie->cdc_ctx->width, movie->cdc_ctx->height, PIX_FMT_YUV420P, SWS_BICUBIC,
-    NULL, NULL, NULL);
+  sws_ctx = sws_getContext(
+    movie->cdc_ctx->width, movie->cdc_ctx->height, PIX_FMT_RGBA,
+    movie->cdc_ctx->width, movie->cdc_ctx->height, PIX_FMT_YUV420P,
+    SWS_BICUBIC, NULL, NULL, NULL);
 
   if (!sws_ctx) {
     fprintf(stderr, "could not initialize the conversion context\n");
@@ -163,6 +154,7 @@ void vc_movie_append_frame(movie_t movie, frame_t frame)
     }
   }
   av_free_packet(&pkt);
+  sws_freeContext(sws_ctx);
   movie->frame->pts += av_rescale_q(1, movie->video_st->codec->time_base,
                                     movie->video_st->time_base);
   movie->num_frames++;
@@ -176,8 +168,6 @@ void vc_frame_free(frame_t frame)
 
 void vc_movie_finish(movie_t movie)
 {
-  unsigned int i;
-
   av_write_trailer(movie->fmt_ctx);
 
   if (movie->video_st) {
@@ -186,15 +176,11 @@ void vc_movie_finish(movie_t movie)
     av_free(movie->dst_picture.data[0]);
     avcodec_free_frame(&movie->frame);
   }
-  for (i = 0; i < movie->fmt_ctx->nb_streams; i++) {
-    av_freep(&movie->fmt_ctx->streams[i]->codec);
-    av_freep(&movie->fmt_ctx->streams[i]);
-  }
 
   if (!(movie->fmt_ctx->oformat->flags & AVFMT_NOFILE))
     avio_close(movie->fmt_ctx->pb);
 
-  av_free(movie->fmt_ctx);
+  avformat_free_context(movie->fmt_ctx);
 }
 
 pdf_t vc_pdf_from_file(const char *path)

@@ -109,7 +109,8 @@ default:
 targets: prerequisites \
          x11plugin.so wxplugin.so qtplugin.so qt5plugin.so svgplugin.so \
          gtkplugin.so figplugin.so gsplugin.so wmfplugin.so glplugin.so \
-         zmqplugin.so movplugin.so htmplugin.so pgfplugin.so cairoplugin.so
+         zmqplugin.so movplugin.so htmplugin.so pgfplugin.so cairoplugin.so \
+         videoplugin.so
 
 prerequisites:
 	@for d in libpng16; do make -C ../../../3rdparty/$$d; done
@@ -181,6 +182,9 @@ cairoplugin.o: cairoplugin.cxx
 
 cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o ft.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
+
+videoplugin.so: videoplugin.o util.o malloc.o error.o io.o vc.o plugin.o
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)
