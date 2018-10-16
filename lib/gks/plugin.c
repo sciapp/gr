@@ -76,7 +76,7 @@ void *load_library(const char *name)
     {
       sprintf(symbol, "gks_%s", name);
 #ifdef _WIN32
-      entry = GetProcAddress(handle, symbol);
+      entry = (void *)GetProcAddress(handle, symbol);
 #else
       entry = dlsym(handle, symbol);
 #endif
@@ -112,7 +112,7 @@ const char *get_qt_version_string()
   qversion_t *qVersion = NULL;
 
 #ifdef _WIN32
-  void *handle = GetModuleHandle("Qt5Core.dll");
+  HMODULE handle = GetModuleHandle("Qt5Core.dll");
   if(handle != NULL)
     qVersion = (qversion_t *) GetProcAddress(handle, "qVersion");
 #else
@@ -151,7 +151,7 @@ void gks_x11_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 { 
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
   
   if (name == NULL)
@@ -169,7 +169,7 @@ void gks_gs_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -187,7 +187,7 @@ void gks_fig_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -205,7 +205,7 @@ void gks_gtk_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -223,7 +223,7 @@ void gks_wx_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -241,7 +241,7 @@ void gks_qt_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
   const char *qt_version_string;
   int qt_major_version;
@@ -272,7 +272,7 @@ void gks_svg_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -290,7 +290,7 @@ void gks_wmf_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -308,7 +308,7 @@ void gks_quartz_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -326,7 +326,7 @@ void gks_gl_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -344,7 +344,7 @@ void gks_mov_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -362,7 +362,7 @@ void gks_cairo_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -380,7 +380,7 @@ void gks_zmq_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -398,7 +398,7 @@ void gks_htm_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -416,7 +416,7 @@ void gks_pgf_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)
@@ -434,7 +434,7 @@ void gks_video_plugin(
   int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
   void **ptr)
 {
-  static char *name = NULL;
+  static const char *name = NULL;
   static void (*entry) (ENTRY_ARGS) = NULL;
 
   if (name == NULL)

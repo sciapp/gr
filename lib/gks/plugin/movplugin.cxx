@@ -50,6 +50,7 @@ DLLEXPORT void gks_movplugin(
 #if !defined(NO_AV) && !defined(NO_MUPDF)
 
 #include "vc.h"
+#include "pdf.h"
 #include "gif.h"
 
 #ifdef HAVE_ZLIB
