@@ -68,7 +68,7 @@ endif
       FTINC = -I../../../3rdparty/freetype/include
      FTLIBS = ../../../3rdparty/freetype/libfreetype.a
      AVDEFS =
-     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
+     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx $(BZ2LIBS)
   MUPDFDEFS =
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
   CAIRODEFS =
@@ -168,7 +168,7 @@ glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
 zmqplugin.so: zmqplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(ZMQLIBS) $(LIBS)
 
-movplugin.so: movplugin.o font.o afm.o util.o vc.o gif.o dl.o malloc.o error.o io.o
+movplugin.so: movplugin.o font.o afm.o util.o vc.o pdf.o gif.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 htmplugin.so: htmplugin.o font.o afm.o util.o malloc.o error.o io.o
@@ -183,8 +183,8 @@ cairoplugin.o: cairoplugin.cxx
 cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o ft.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
 
-videoplugin.so: videoplugin.o util.o malloc.o error.o io.o vc.o plugin.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(LIBS)
+videoplugin.so: videoplugin.o vc.o font.o afm.o util.o malloc.o error.o io.o plugin.o ft.o
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)

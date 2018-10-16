@@ -81,13 +81,18 @@ htmplugin.dll: htmplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
 
 movplugin.o: $(JBIG2DECLIB) $(OPENJP2LIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS MUPDFLIBS
 
-movplugin.dll: movplugin.o font.o afm.o util.o vc.o gif.o dl.o malloc.o error.o io.o
+movplugin.dll: movplugin.o font.o afm.o util.o vc.o pdf.o gif.o dl.o malloc.o error.o io.o
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
 
 cairoplugin.o: $(CAIROLIB)
 
 cairoplugin.dll: cairoplugin.o ft.o $(OBJS) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB) $(FTLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
+
+videoplugin.o: $(JBIG2DECLIB) $(OPENJP2LIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS
+
+videoplugin.dll: videoplugin.o plugin.o font.o afm.o util.o vc.o dl.o malloc.o error.o io.o
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
 
 wxplugin.dll: wxplugin.o $(OBJS)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
