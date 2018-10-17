@@ -6,10 +6,6 @@
 #include <windows.h>    /* required for all Windows applications */
 #define DLLEXPORT __declspec(dllexport)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifdef TEXT
 #undef TEXT
 #endif
@@ -20,6 +16,10 @@ extern "C" {
 #define DLLEXPORT
 #endif
 
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #define FEPS 1.0E-09
@@ -455,10 +455,8 @@ unsigned char *gks_ft_get_bitmap(
 void *gks_ft_get_face(int);
 void gks_ft_terminate(void);
 
-#ifdef _WIN32
 #ifdef __cplusplus
 }
-#endif
 #endif
 
 #endif

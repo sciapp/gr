@@ -36,17 +36,17 @@ default: gr.js gksdemo.pdf gr3demo.pdf
 .FORCE:
 
 svg:
-	make grdemo.svg BACKEND=$(GKSDIR)/plugin/svgplugin.cxx
+	make grdemo.svg BACKEND=$(GKSDIR)/plugin/svgplugin.c
 
 html:
-	make grdemo.html BACKEND=$(GKSDIR)/plugin/svgplugin.cxx
+	make grdemo.html BACKEND=$(GKSDIR)/plugin/svgplugin.c
 
 ../lib/gr/gr_version.h: .FORCE
 	../lib/Version --c > $@
 	@chmod 644 $@
 
 gr.js: ../lib/gr/gr_version.h
-	make libGR.js BACKEND=jsplugin.cxx
+	make libGR.js BACKEND=jsplugin.c
 	cat module.js libGR.js api.js >gr.js
 
 %.pdf: %.js

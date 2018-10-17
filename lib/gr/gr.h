@@ -8,19 +8,12 @@
 
 #include <windows.h>	/* required for all Windows applications */
 #define DLLEXPORT __declspec(dllexport)
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#else
-
-#ifdef __cplusplus
-#define DLLEXPORT extern "C"
 #else
 #define DLLEXPORT
 #endif
 
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #define GR_SENDER 0
@@ -207,9 +200,8 @@ DLLEXPORT void gr_shade(
 DLLEXPORT void gr_shadepoints(int, double *, double *, int, int, int);
 DLLEXPORT void gr_shadelines(int, double *, double *, int, int, int);
 
-#ifdef _WIN32
 #ifdef __cplusplus
 }
 #endif
-#endif
+
 #endif

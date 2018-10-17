@@ -640,6 +640,7 @@ static
 void text_routine(double x, double y, int nchars, char *chars)
 {
   int width, height, ch;
+  int i;
   double xrel, yrel, ax, ay;
   double xstart, ystart;
 
@@ -672,7 +673,7 @@ void text_routine(double x, double y, int nchars, char *chars)
   if (p->usesymbols)
     pgf_printf(p->stream, "\\Pifont{psy} ");
 
-  for (int i = 0; i < nchars; ++i)
+  for (i = 0; i < nchars; ++i)
     {
       ch = chars[i];
       switch (ch)

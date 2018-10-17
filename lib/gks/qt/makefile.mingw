@@ -1,6 +1,6 @@
 default: gksqt.exe
 
-gksqt.exe: afm.cxx dl.cxx error.cxx font.cxx gksqt.cxx gksserver.cxx gkswidget.cxx io.cxx malloc.cxx util.cxx
+gksqt.exe: afm.c dl.c error.c font.c gksqt.cxx gksserver.cxx gkswidget.cxx io.c malloc.c util.c
 	wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-i686.tar.gz
 	tar xzf qt5-runtime-Windows-i686.tar.gz
 	moc -DGRDIR=\"$(GRDIR)\" -Iinclude gkswidget.h -o moc_gkswidget.cxx

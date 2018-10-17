@@ -68,31 +68,31 @@ MUPDFLIBS:
 	cd ../../../3rdparty/mupdf && MUPDF_CROSS_COMPILE=yes ./build.sh
 
 x11plugin.dll: x11plugin.o $(OBJS)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 svgplugin.dll: svgplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 pgfplugin.dll: pgfplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 htmplugin.dll: htmplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -lwsock32
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -lwsock32
 
 movplugin.o: $(JBIG2DECLIB) $(OPENJP2LIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS MUPDFLIBS
 
 movplugin.dll: movplugin.o font.o afm.o util.o vc.o pdf.o gif.o dl.o malloc.o error.o io.o
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
 
 cairoplugin.o: $(CAIROLIB)
 
 cairoplugin.dll: cairoplugin.o ft.o $(OBJS) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB) $(FTLIB)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
 
 videoplugin.o: $(JBIG2DECLIB) $(OPENJP2LIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS
 
 videoplugin.dll: videoplugin.o plugin.o font.o afm.o util.o vc.o dl.o malloc.o error.o io.o
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
 
 wxplugin.dll: wxplugin.o $(OBJS)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
@@ -104,22 +104,22 @@ qt5plugin.dll: qt5plugin.o $(OBJS)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 gtkplugin.dll: gtkplugin.o $(OBJS)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 figplugin.dll: figplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 gsplugin.dll: gsplugin.o $(OBJS)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 wmfplugin.dll: wmfplugin.o $(OBJS)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 glplugin.dll: glplugin.o $(OBJS)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 zmqplugin.dll: zmqplugin.o $(OBJS)
-	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 clean:
 	$(RM) *.dll

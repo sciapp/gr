@@ -12,9 +12,6 @@ extern "C" {
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 
-typedef struct movie_t_ *movie_t;
-typedef struct frame_t_ *frame_t;
-
 struct frame_t_ {
   unsigned char *data;
   int           width, height;
@@ -31,6 +28,9 @@ struct movie_t_ {
   AVPicture       dst_picture;
   const char      *path;
 };
+
+typedef struct movie_t_ *movie_t;
+typedef struct frame_t_ *frame_t;
 
 movie_t vc_movie_create(const char *path, int framerate, int bitrate);
 void vc_movie_append_frame(movie_t movie, frame_t frame); 

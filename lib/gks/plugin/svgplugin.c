@@ -314,6 +314,7 @@ void init_colors(void)
 static
 void init_clippaths(void)
 {
+  int i;
   p->path_counter = MAX_TNR;
   p->clip_index = 0;
   if (path_id < 0)
@@ -323,7 +324,7 @@ void init_clippaths(void)
     }
   else
     path_id = (path_id + 1) % 100;
-  for (int i = 0; i < MAX_TNR; i++)
+  for (i = 0; i < MAX_TNR; i++)
     {
       p->cx[i] = p->cy[i] = -1;
       p->cwidth[i] = p->cheight[i] = 0;
@@ -348,11 +349,11 @@ int reverse(int value)
   return result;
 }
 
-struct WriteCallbackData {
+typedef struct WriteCallbackData_t {
   png_bytep data_ptr;
   png_size_t size;
   png_size_t capacity;
-};
+} WriteCallbackData;
 
 static WriteCallbackData current_write_data;
 
@@ -874,6 +875,7 @@ void text_routine(double x, double y, int nchars, char *chars)
   double xstart, ystart;
   int width, height, ch;
   double xrel, yrel, ax, ay;
+  int i;
   char utf[4];
   size_t len;
 
@@ -900,7 +902,7 @@ void text_routine(double x, double y, int nchars, char *chars)
   svg_printf(p->stream, "x=\"%g\" y=\"%g\"", xstart, ystart);
   svg_printf(p->stream, ">");
 
-  for (int i = 0; i < nchars; ++i)
+  for (i = 0; i < nchars; ++i)
     {
       ch = (chars[i] < 0) ? chars[i] + 256 : chars[i];
       switch (ch)

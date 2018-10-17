@@ -98,7 +98,7 @@ endif
 .m.o:
 	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(CXXFLAGS) $<
 .c.o:
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(AVDEFS) $(MUPDFDEFS) $(CFLAGS) $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CFLAGS) $(ZINC) $<
 .cxx.o:
 	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
@@ -132,7 +132,7 @@ qt5plugin.o: qt5plugin.cxx
 	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT5DEFS) $(QT5INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 x11plugin.so: x11plugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o compress.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(FTLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 wxplugin.so: wxplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(WXLIBS) $(X11LIBS) $(LIBS)
@@ -144,47 +144,47 @@ qt5plugin.so: qt5plugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(EXTRA_LDFLAGS_QT5) $(QT5LIBS) $(X11LIBS) $(LIBS)
 
 svgplugin.so: svgplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gtkplugin.so: gtkplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GTKLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GTKLIBS) $(X11LIBS) $(LIBS)
 
 figplugin.so: figplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gsplugin.so: gsplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GSLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GSLIBS) $(X11LIBS) $(LIBS)
 
 wmfplugin.so: wmfplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(LIBS)
 
 quartzplugin.so: quartzplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LIBS) $(ZMQLIBS) \
 	-lobjc -framework Foundation -framework ApplicationServices -framework AppKit
 
 glplugin.so: glplugin.o font.o afm.o util.o ft.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 zmqplugin.so: zmqplugin.o font.o afm.o util.o dl.o malloc.o error.o io.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(ZMQLIBS) $(LIBS)
 
 movplugin.so: movplugin.o font.o afm.o util.o vc.o pdf.o gif.o dl.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 htmplugin.so: htmplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 pgfplugin.so: pgfplugin.o font.o afm.o util.o malloc.o error.o io.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
-cairoplugin.o: cairoplugin.cxx
-	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
+cairoplugin.o: cairoplugin.c
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
 
 cairoplugin.so: cairoplugin.o font.o afm.o util.o malloc.o error.o io.o ft.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
 
 videoplugin.so: videoplugin.o vc.o font.o afm.o util.o malloc.o error.o io.o plugin.o ft.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)
