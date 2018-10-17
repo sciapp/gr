@@ -128,7 +128,7 @@ make GRDIR=%{grdir} \
 
 %install
 %{__install} -m 755 -d $RPM_BUILD_ROOT%{grdir}
-make install GRDIR=%{grdir} DESTDIR=${RPM_BUILD_ROOT}
+make install GRDIR=%{grdir} THIRDPARTYDIR=`pwd`/%{THIRDPARTY} DESTDIR=${RPM_BUILD_ROOT}
 
 %clean
 make realclean
