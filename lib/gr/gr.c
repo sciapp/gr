@@ -9473,3 +9473,83 @@ void gr_reducepoints(int n, const double *x, const double *y, int points, double
     append_index++;
   }
 }
+
+void gr_shadepoints(int n, double *x, double *y, int how, int w, int h)
+{
+  int *bins;
+
+  if (n <= 2)
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return;
+    }
+
+  if (how < 0 || how > 5)
+    {
+      fprintf(stderr, "invalid transfer function\n");
+      return;
+    }
+
+  if (w < 1 || h < 1)
+    {
+      fprintf(stderr, "invalid dimensions\n");
+      return;
+    }
+
+  check_autoinit;
+
+  bins = (int *) xcalloc(w * h, sizeof(int));
+
+  gr_shade(n, x, y, 0, how, w, h, bins);
+  gks_cellarray(lx.xmin, lx.ymax, lx.xmax, lx.ymin, w, h, 1, 1, w, h, bins);
+
+  free(bins);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<shadepoints len=\"%d\"", n);
+      print_float_array("x", n, x);
+      print_float_array("y", n, y);
+      gr_writestream(" how=\"%d\" w=\"%d\" h=\"%d\"/>\n", how, w, h);
+    }
+}
+
+void gr_shadelines(int n, double *x, double *y, int how, int w, int h)
+{
+  int *bins;
+
+  if (n <= 2)
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return;
+    }
+
+  if (how < 0 || how > 5)
+    {
+      fprintf(stderr, "invalid transfer function\n");
+      return;
+    }
+
+  if (w < 1 || h < 1)
+    {
+      fprintf(stderr, "invalid dimensions\n");
+      return;
+    }
+
+  check_autoinit;
+
+  bins = (int *) xcalloc(w * h, sizeof(int));
+
+  gr_shade(n, x, y, 1, how, w, h, bins);
+  gks_cellarray(lx.xmin, lx.ymax, lx.xmax, lx.ymin, w, h, 1, 1, w, h, bins);
+
+  free(bins);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<shadelines len=\"%d\"", n);
+      print_float_array("x", n, x);
+      print_float_array("y", n, y);
+      gr_writestream(" how=\"%d\" w=\"%d\" h=\"%d\"/>\n", how, w, h);
+    }
+}

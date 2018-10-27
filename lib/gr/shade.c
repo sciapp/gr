@@ -138,13 +138,9 @@ void shade(int w, int h, int *bins, int how)
             bins[i] = (int) (pow(bins[i], 0.3) / pow(bmax - bmin, 0.3) * 255);
         }
     }
-}
 
-void gr_shadepoints(int n, double *x, double *y, int how,
-                    int w, int h, int *bins)
-{
-  rasterize(n, x, y, w, h, bins);
-  shade(w, h, bins, how);
+  for (i = 0; i < num_bins; i++)
+    bins[i] += 1000;
 }
 
 static
@@ -155,7 +151,7 @@ void lineLow(int x0, int y0, int x1, int y1, int w, int h, int *bins)
   int yi = 1;
   int y = y0;
   int D, x;
-  
+
   if (dy < 0)
     {
       yi = -1;
@@ -164,7 +160,7 @@ void lineLow(int x0, int y0, int x1, int y1, int w, int h, int *bins)
   D = 2 * dy - dx;
 
   for (x = x0; x <= x1; x++)
-    { 
+    {
       bins[(h - y - 1) * w + x] += 1;
       if (D > 0)
         {
@@ -183,7 +179,7 @@ void lineHigh(int x0, int y0, int x1, int y1, int w, int h, int *bins)
   int xi = 1;
   int x = x0;
   int D, y;
-  
+
   if (dx < 0)
     {
       xi = -1;
@@ -222,37 +218,44 @@ void line(int x0, int y0, int x1, int y1, int w, int h, int *bins)
     }
 }
 
-void gr_shadelines(int n, double *x, double *y, int how,
-                   int w, int h, int *bins)
+void gr_shade(int n, double *x, double *y, int lines, int how,
+              int w, int h, int *bins)
 {
   double xmin, xmax, ymin, ymax;
   int i, j, x0, y0, x1, y1, num_bins = w * h;
 
-  extrema(n, x, &xmin, &xmax);
-  extrema(n, y, &ymin, &ymax);
-
-  for (i = 0; i < num_bins; i++)
-    bins[i] = 0;
-
-  i = 0;
-  while (i < n)
+  if (lines == 1)
     {
-      j = i + 1;
-      while (j < n && !is_nan(x[j]) && !is_nan(y[j]))
-        j++;
-      j--;
+      extrema(n, x, &xmin, &xmax);
+      extrema(n, y, &ymin, &ymax);
 
-      while (i < j)
+      for (i = 0; i < num_bins; i++)
+        bins[i] = 0;
+
+      i = 0;
+      while (i < n)
         {
-          x0 = (int) ((x[i] - xmin) / (xmax - xmin) * (w - 1) + 0.5);
-          y0 = (int) ((y[i] - ymin) / (ymax - ymin) * (h - 1) + 0.5);
-          x1 = (int) ((x[i + 1] - xmin) / (xmax - xmin) * (w - 1) + 0.5);
-          y1 = (int) ((y[i + 1] - ymin) / (ymax - ymin) * (h - 1) + 0.5);
-          line(x0, y0, x1, y1, w, h, bins);
-          i++;
-        }
+          j = i + 1;
+          while (j < n && !is_nan(x[j]) && !is_nan(y[j]))
+	    j++;
+          j--;
 
-      i += 2;
+          while (i < j)
+	    {
+              x0 = (int) ((x[i] - xmin) / (xmax - xmin) * (w - 1) + 0.5);
+              y0 = (int) ((y[i] - ymin) / (ymax - ymin) * (h - 1) + 0.5);
+              x1 = (int) ((x[i + 1] - xmin) / (xmax - xmin) * (w - 1) + 0.5);
+              y1 = (int) ((y[i + 1] - ymin) / (ymax - ymin) * (h - 1) + 0.5);
+              line(x0, y0, x1, y1, w, h, bins);
+              i++;
+            }
+
+          i += 2;
+        }
+    }
+  else
+    {
+      rasterize(n, x, y, w, h, bins);
     }
 
   shade(w, h, bins, how);
