@@ -101,6 +101,8 @@ EXPORTS
 	gr_setwindow
 	gr_setwsviewport
 	gr_setwswindow
+	gr_shadelines
+	gr_shadepoints
 	gr_spline
 	gr_surface
 	gr_text
