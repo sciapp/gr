@@ -197,7 +197,8 @@ DLLEXPORT void gr_dumpmeta(const gr_meta_args_t *, FILE *);
 DLLEXPORT void gr_dumpmeta_json(const gr_meta_args_t *, FILE *);
 #endif
 DLLEXPORT const char *gr_version(void);
-DLLEXPORT void gr_shade(int, double *, double *, int, int, int, int, int *);
+DLLEXPORT void gr_shade(
+  int, double *, double *, int, int, double *, int, int, int *);
 DLLEXPORT void gr_shadepoints(int, double *, double *, int, int, int);
 DLLEXPORT void gr_shadelines(int, double *, double *, int, int, int);
 

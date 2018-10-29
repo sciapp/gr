@@ -1,3 +1,13 @@
+/*
+
+This code is based on Jonas Clever's bachelor thesis "Entwicklung eines
+Verfahrens zur effizientenVisualisierung großer Datenmengen im GR-Framework".
+
+Link:
+  https://pgi-jcns.fz-juelich.de/pub/doc/Bachelor/Bachelorarbeit_JonasClever.pdf
+
+ */
+
 #include <float.h>
 #include <math.h>
 #include <stdint.h>
@@ -32,42 +42,28 @@ char *xcalloc(int count, int size)
 }
 
 static
-void extrema(int n, double *a, double *amin, double *amax)
+void rasterize(int n, double *x, double *y, double *roi,
+               int w, int h, int *bins)
 {
-  int i;
-
-  *amin =  DBL_MAX;
-  *amax = -DBL_MAX;
-
-  for (i = 0; i < n; i++)
-    {
-      if (!is_nan(a[i]))
-        {
-          if (a[i] > *amax)
-            *amax = a[i];
-          else if (a[i] < *amin)
-            *amin = a[i];
-        }
-    }
-}
-
-static
-void rasterize(int n, double *x, double *y, int w, int h, int *bins)
-{
-  double xmin, xmax, ymin, ymax;
+  double xl, xr, yb, yt;
   int i, ix, iy, num_bins = w * h;
 
-  extrema(n, x, &xmin, &xmax);
-  extrema(n, y, &ymin, &ymax);
+  xl = roi[0];
+  xr = roi[1];
+  yb = roi[2];
+  yt = roi[3];
 
   for (i = 0; i < num_bins; i++)
     bins[i] = 0;
 
   for (i = 0; i < n; i++)
     {
-      ix = (int) ((x[i] - xmin) / (xmax - xmin) * (w - 1) + 0.5);
-      iy = (int) ((y[i] - ymin) / (ymax - ymin) * (h - 1) + 0.5);
-      bins[(h - iy - 1) * w + ix] += 1;
+      if (x[i] >= roi[0] && x[i] <= roi[1] && y[i] >= roi[2] && y[i] <= roi[3])
+        {
+          ix = (int) ((x[i] - xl) / (xr - xl) * (w - 1) + 0.5);
+          iy = (int) ((y[i] - yb) / (yt - yb) * (h - 1) + 0.5);
+          bins[(h - iy - 1) * w + ix] += 1;
+        }
     }
 }
 
@@ -218,16 +214,18 @@ void line(int x0, int y0, int x1, int y1, int w, int h, int *bins)
     }
 }
 
-void gr_shade(int n, double *x, double *y, int lines, int how,
+void gr_shade(int n, double *x, double *y, int lines, int how, double *roi,
               int w, int h, int *bins)
 {
-  double xmin, xmax, ymin, ymax;
+  double xl, xr, yb, yt;
   int i, j, x0, y0, x1, y1, num_bins = w * h;
 
   if (lines == 1)
     {
-      extrema(n, x, &xmin, &xmax);
-      extrema(n, y, &ymin, &ymax);
+      xl = roi[0];
+      xr = roi[1];
+      yb = roi[2];
+      yt = roi[3];
 
       for (i = 0; i < num_bins; i++)
         bins[i] = 0;
@@ -242,12 +240,16 @@ void gr_shade(int n, double *x, double *y, int lines, int how,
 
           while (i < j)
 	    {
-              x0 = (int) ((x[i] - xmin) / (xmax - xmin) * (w - 1) + 0.5);
-              y0 = (int) ((y[i] - ymin) / (ymax - ymin) * (h - 1) + 0.5);
-              x1 = (int) ((x[i + 1] - xmin) / (xmax - xmin) * (w - 1) + 0.5);
-              y1 = (int) ((y[i + 1] - ymin) / (ymax - ymin) * (h - 1) + 0.5);
-              line(x0, y0, x1, y1, w, h, bins);
-              i++;
+             if (x[i]   >= xl && x[i]   <= xr && y[i]   >= yb && y[i]   <= yt &&
+                 x[i+1] >= xl && x[i+1] <= xr && y[i+1] >= yb && y[i+1] <= yt)
+               {
+                  x0 = (int) ((x[i]   - xl) / (xr - xl) * (w - 1) + 0.5);
+                  y0 = (int) ((y[i]   - yb) / (yt - yb) * (h - 1) + 0.5);
+                  x1 = (int) ((x[i+1] - xl) / (xr - xl) * (w - 1) + 0.5);
+                  y1 = (int) ((y[i+1] - yb) / (yt - yb) * (h - 1) + 0.5);
+                  line(x0, y0, x1, y1, w, h, bins);
+                  i++;
+                }
             }
 
           i += 2;
@@ -255,7 +257,7 @@ void gr_shade(int n, double *x, double *y, int lines, int how,
     }
   else
     {
-      rasterize(n, x, y, w, h, bins);
+      rasterize(n, x, y, roi, w, h, bins);
     }
 
   shade(w, h, bins, how);

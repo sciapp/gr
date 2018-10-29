@@ -9477,6 +9477,7 @@ void gr_reducepoints(int n, const double *x, const double *y, int points, double
 void gr_shadepoints(int n, double *x, double *y, int how, int w, int h)
 {
   int *bins;
+  double roi[4];
 
   if (n <= 2)
     {
@@ -9498,9 +9499,14 @@ void gr_shadepoints(int n, double *x, double *y, int how, int w, int h)
 
   check_autoinit;
 
+  roi[0] = lx.xmin;
+  roi[1] = lx.xmax;
+  roi[2] = lx.ymin;
+  roi[3] = lx.ymax;
   bins = (int *) xcalloc(w * h, sizeof(int));
 
-  gr_shade(n, x, y, 0, how, w, h, bins);
+  gr_shade(n, x, y, 0, how, roi, w, h, bins);
+
   gks_cellarray(lx.xmin, lx.ymax, lx.xmax, lx.ymin, w, h, 1, 1, w, h, bins);
 
   free(bins);
@@ -9517,6 +9523,7 @@ void gr_shadepoints(int n, double *x, double *y, int how, int w, int h)
 void gr_shadelines(int n, double *x, double *y, int how, int w, int h)
 {
   int *bins;
+  double roi[4];
 
   if (n <= 2)
     {
@@ -9538,9 +9545,14 @@ void gr_shadelines(int n, double *x, double *y, int how, int w, int h)
 
   check_autoinit;
 
+  roi[0] = lx.xmin;
+  roi[1] = lx.xmax;
+  roi[2] = lx.ymin;
+  roi[3] = lx.ymax;
   bins = (int *) xcalloc(w * h, sizeof(int));
 
-  gr_shade(n, x, y, 1, how, w, h, bins);
+  gr_shade(n, x, y, 1, how, roi, w, h, bins);
+
   gks_cellarray(lx.xmin, lx.ymax, lx.xmax, lx.ymin, w, h, 1, 1, w, h, bins);
 
   free(bins);
