@@ -83,7 +83,7 @@ void equalize(int w, int h, int *bins, int bmin, int bmax)
 
   lut = (int *) xcalloc(bmax + 1, sizeof(int));
   scale = 255.0 / (num_bins - hist[i]);
-  while (i < bmax - 1)
+  while (i < bmax)
     {
       i++;
       sum += hist[i];
