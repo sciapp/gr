@@ -81,6 +81,8 @@ char *format[] =
     "setwindow:ffff",
     "setwsviewport:ffff",
     "setwswindow:ffff",
+    "shadelines:iFFiii",
+    "shadepoints:iFFiii",
     "spline:iFFii",
     "surface:iiFFFi",
     "text:ffs",
@@ -466,30 +468,37 @@ void gr(int id)
       gr_setwswindow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 57:
-      gr_spline(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2]);
+      gr_shadelines(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2], i_arg[3]);
       break;
     case 58:
-      gr_surface(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], i_arg[2]);
+      gr_shadepoints(i_arg[0], f_arr[0], f_arr[1],
+                     i_arg[1], i_arg[2], i_arg[3]);
       break;
     case 59:
-      gr_text(f_arg[0], f_arg[1], s_arg[0]);
+      gr_spline(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2]);
       break;
     case 60:
-      gr_textext(f_arg[0], f_arg[1], s_arg[0]);
+      gr_surface(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], i_arg[2]);
       break;
     case 61:
-      gr_titles3d(s_arg[0], s_arg[1], s_arg[2]);
+      gr_text(f_arg[0], f_arg[1], s_arg[0]);
       break;
     case 62:
-      gr_tricontour(i_arg[0], f_arr[0], f_arr[1], f_arr[2], i_arg[2], f_arr[3]);
+      gr_textext(f_arg[0], f_arg[1], s_arg[0]);
       break;
     case 63:
-      gr_trisurface(i_arg[0], f_arr[0], f_arr[1], f_arr[2]);
+      gr_titles3d(s_arg[0], s_arg[1], s_arg[2]);
       break;
     case 64:
-      gr_uselinespec(s_arg[0]);
+      gr_tricontour(i_arg[0], f_arr[0], f_arr[1], f_arr[2], i_arg[2], f_arr[3]);
       break;
     case 65:
+      gr_trisurface(i_arg[0], f_arr[0], f_arr[1], f_arr[2]);
+      break;
+    case 66:
+      gr_uselinespec(s_arg[0]);
+      break;
+    case 67:
       gr_verrorbars(i_arg[0], f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
       break;
     }

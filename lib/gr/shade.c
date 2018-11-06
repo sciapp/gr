@@ -22,12 +22,12 @@ Link:
 #define is_nan(a) isnan(a)
 #endif
 
-#define SHADE_BOOLEAN 0
-#define SHADE_LINEAR 1
-#define SHADE_LOG 2
-#define SHADE_LOGLOG 3
-#define SHADE_CUBIC 4
-#define SHADE_EQUALIZED 5
+#define XFORM_BOOLEAN 0
+#define XFORM_LINEAR 1
+#define XFORM_LOG 2
+#define XFORM_LOGLOG 3
+#define XFORM_CUBIC 4
+#define XFORM_EQUALIZED 5
 
 static
 char *xcalloc(int count, int size)
@@ -98,7 +98,7 @@ void equalize(int w, int h, int *bins, int bmin, int bmax)
 }
 
 static
-void shade(int w, int h, int *bins, int how)
+void shade(int w, int h, int *bins, int xform)
 {
   int num_bins = w * h, bmin, bmax, i;
 
@@ -113,7 +113,7 @@ void shade(int w, int h, int *bins, int how)
         bmin = bins[i];
     }
 
-  if (how == SHADE_EQUALIZED) /* equalize */
+  if (xform == XFORM_EQUALIZED) /* equalize */
     {
       equalize(w, h, bins, bmin, bmax);
     }
@@ -121,16 +121,16 @@ void shade(int w, int h, int *bins, int how)
     {
       for (i = 0; i < num_bins; i++)
         {
-          if (how == SHADE_BOOLEAN) /* boolean */
+          if (xform == XFORM_BOOLEAN) /* boolean */
             bins[i] = bins[i] > 0 ? 255 : 0;
-          else if (how == SHADE_LINEAR) /* linear */
+          else if (xform == XFORM_LINEAR) /* linear */
             bins[i] = (int) ((double) (bins[i] - bmin) / (bmax - bmin) * 255);
-          else if (how == SHADE_LOG) /* log */
+          else if (xform == XFORM_LOG) /* log */
             bins[i] = (int) (log1p(bins[i] - bmin) / log1p(bmax - bmin) * 255);
-          else if (how == SHADE_LOGLOG) /* loglog */
+          else if (xform == XFORM_LOGLOG) /* loglog */
             bins[i] = (int) (log1p(log1p(bins[i] - bmin)) /
                              log1p(log1p(bmax - bmin)) * 255);
-          else if (how == SHADE_CUBIC) /* cubic */
+          else if (xform == XFORM_CUBIC) /* cubic */
             bins[i] = (int) (pow(bins[i], 0.3) / pow(bmax - bmin, 0.3) * 255);
         }
     }
@@ -214,7 +214,7 @@ void line(int x0, int y0, int x1, int y1, int w, int h, int *bins)
     }
 }
 
-void gr_shade(int n, double *x, double *y, int lines, int how, double *roi,
+void gr_shade(int n, double *x, double *y, int lines, int xform, double *roi,
               int w, int h, int *bins)
 {
   double xl, xr, yb, yt;
@@ -260,5 +260,5 @@ void gr_shade(int n, double *x, double *y, int lines, int how, double *roi,
       rasterize(n, x, y, roi, w, h, bins);
     }
 
-  shade(w, h, bins, how);
+  shade(w, h, bins, xform);
 }

@@ -9474,7 +9474,7 @@ void gr_reducepoints(int n, const double *x, const double *y, int points, double
   }
 }
 
-void gr_shadepoints(int n, double *x, double *y, int how, int w, int h)
+void gr_shadepoints(int n, double *x, double *y, int xform, int w, int h)
 {
   int *bins;
   double roi[4];
@@ -9485,7 +9485,7 @@ void gr_shadepoints(int n, double *x, double *y, int how, int w, int h)
       return;
     }
 
-  if (how < 0 || how > 5)
+  if (xform < 0 || xform > 5)
     {
       fprintf(stderr, "invalid transfer function\n");
       return;
@@ -9505,7 +9505,7 @@ void gr_shadepoints(int n, double *x, double *y, int how, int w, int h)
   roi[3] = lx.ymax;
   bins = (int *) xcalloc(w * h, sizeof(int));
 
-  gr_shade(n, x, y, 0, how, roi, w, h, bins);
+  gr_shade(n, x, y, 0, xform, roi, w, h, bins);
 
   gks_cellarray(lx.xmin, lx.ymax, lx.xmax, lx.ymin, w, h, 1, 1, w, h, bins);
 
@@ -9516,11 +9516,11 @@ void gr_shadepoints(int n, double *x, double *y, int how, int w, int h)
       gr_writestream("<shadepoints len=\"%d\"", n);
       print_float_array("x", n, x);
       print_float_array("y", n, y);
-      gr_writestream(" how=\"%d\" w=\"%d\" h=\"%d\"/>\n", how, w, h);
+      gr_writestream(" xform=\"%d\" w=\"%d\" h=\"%d\"/>\n", xform, w, h);
     }
 }
 
-void gr_shadelines(int n, double *x, double *y, int how, int w, int h)
+void gr_shadelines(int n, double *x, double *y, int xform, int w, int h)
 {
   int *bins;
   double roi[4];
@@ -9531,7 +9531,7 @@ void gr_shadelines(int n, double *x, double *y, int how, int w, int h)
       return;
     }
 
-  if (how < 0 || how > 5)
+  if (xform < 0 || xform > 5)
     {
       fprintf(stderr, "invalid transfer function\n");
       return;
@@ -9551,7 +9551,7 @@ void gr_shadelines(int n, double *x, double *y, int how, int w, int h)
   roi[3] = lx.ymax;
   bins = (int *) xcalloc(w * h, sizeof(int));
 
-  gr_shade(n, x, y, 1, how, roi, w, h, bins);
+  gr_shade(n, x, y, 1, xform, roi, w, h, bins);
 
   gks_cellarray(lx.xmin, lx.ymax, lx.xmax, lx.ymin, w, h, 1, 1, w, h, bins);
 
@@ -9562,6 +9562,6 @@ void gr_shadelines(int n, double *x, double *y, int how, int w, int h)
       gr_writestream("<shadelines len=\"%d\"", n);
       print_float_array("x", n, x);
       print_float_array("y", n, y);
-      gr_writestream(" how=\"%d\" w=\"%d\" h=\"%d\"/>\n", how, w, h);
+      gr_writestream(" xform=\"%d\" w=\"%d\" h=\"%d\"/>\n", xform, w, h);
     }
 }
