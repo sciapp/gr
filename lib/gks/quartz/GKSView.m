@@ -1479,7 +1479,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
       CGContextSetLineWidth(context, 1);
       CGContextAddLines(context, points, n);
       CGContextClosePath(context);
-      CGContextDrawPath(context, kCGPathFillStroke);
+      CGContextDrawPath(context, kCGPathEOFill);
       end_context(context);
     }
   else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
