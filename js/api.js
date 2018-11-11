@@ -137,6 +137,13 @@ function GR(canvas_id) {
     this.destroycontext = gr_destroycontext;
     this.uselinespec = gr_uselinespec;
     this.selntran = gr_selntran;
+    
+    //meta.c
+    this.newmeta = gr_newmeta;
+    this.get_stdout = gr_get_stdout;
+    this.readmeta = gr_readmeta;
+    this.plotmeta = gr_plotmeta;
+    this.dumpmeta_json = gr_dumpmeta_json;
 
     // set canvas and context
     Module.set_canvas(canvas_id);
@@ -340,6 +347,11 @@ function GR(canvas_id) {
     this.PRINT_FIG = "fig";
     this.PRINT_SVG = "svg";
     this.PRINT_WMF = "wmf";
+    
+    this.GR_SOURCE_JUPYTER = 0;
+    this.GR_SOURCE_SOCKET = 1;
+    this.GR_TARGET_JUPYTER = 2;
+    this.GR_TARGET_SOCKET = 3;
 }
 
 
@@ -1059,3 +1071,31 @@ gr_uselinespec = function(string) {
 }
 
 gr_selntran = Module.cwrap('gr_selntran', '', ['number']);
+
+gr_newmeta_c = Module.cwrap('gr_newmeta', 'number', []);
+gr_newmeta = function() {
+    return gr_newmeta_c()
+}
+
+gr_readmeta_c = Module.cwrap('gr_readmeta', 'number', ['number', 'string'])
+gr_readmeta = function(args, string) {
+    result = gr_readmeta_c(args, string);
+    return result;
+}
+
+gr_plotmeta_c = Module.cwrap('gr_plotmeta', '', ['number']);
+gr_plotmeta = function(args) {
+    gr_plotmeta_c(args);
+}
+
+gr_dumpmeta_json_c = Module.cwrap('gr_dumpmeta_json', 'number', ['number', 'number']);
+gr_dumpmeta_json = function(args, file) {
+    result = gr_dumpmeta_json_c(args, file);
+    return result;
+};
+
+gr_get_stdout_c = Module.cwrap('gr_get_stdout', 'number', []);
+gr_get_stdout = function(args, string) {
+    result = gr_get_stdout_c(args, string);
+    return result;
+};

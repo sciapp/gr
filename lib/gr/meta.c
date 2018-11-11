@@ -635,6 +635,7 @@ static error_t dynamic_args_array_push_back(dynamic_args_array_t *args_array, gr
 
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
+int gr_readmeta(gr_meta_args_t *args, const char *json_string);
 static error_t fromjson_read(gr_meta_args_t *args, const char *json_string);
 
 static error_t fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_shared_state_t *shared_state);
@@ -3413,7 +3414,11 @@ error_t dynamic_args_array_push_back(dynamic_args_array_t *args_array, gr_meta_a
 
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
 
-error_t fromjson_read(gr_meta_args_t *args, const char *json_string) {
+int gr_readmeta(gr_meta_args_t *args, const char *json_string) {
+  return (fromjson_read(args, json_string) == NO_ERROR);
+}
+
+static error_t fromjson_read(gr_meta_args_t *args, const char *json_string) {
   return fromjson_parse(args, json_string, NULL);
 }
 
@@ -5397,4 +5402,10 @@ void gr_dumpmeta_json(const gr_meta_args_t *args, FILE *f) {
     memwriter = NULL;
   }
 }
+
+#ifdef EMSCRIPTEN
+FILE * gr_get_stdout() {
+  return stdout;
+}
+#endif
 #endif
