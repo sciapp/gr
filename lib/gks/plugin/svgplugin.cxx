@@ -798,7 +798,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
   if (p->pattern)
     svg_printf(p->stream, "\n  \" fill=\"url(#pattern%d)\"", p->pattern + 1);
   else
-    svg_printf(p->stream, "\n  \" fill=\"#%02x%02x%02x\" fill-opacity=\"%g\"",
+    svg_printf(p->stream, "\n  \" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\"",
                p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2],
                p->transparency);
   svg_printf(p->stream, "/>\n");
