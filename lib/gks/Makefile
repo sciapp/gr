@@ -10,7 +10,7 @@ UNAME := $(shell uname)
 
      GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o dl.o malloc.o \
                error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o socket.o \
-               plugin.o compress.o io.o
+               plugin.o compress.o io.o ft.o
 
       GSDEFS =
           CC = cc
@@ -29,11 +29,14 @@ INSTALL_NAME =
      SOFLAGS = -shared
 endif
         LIBS = -lpthread -ldl -lc -lm
+      FTDEFS =
+       FTINC = -I../../3rdparty/freetype/include
+      FTLIBS = ../../3rdparty/freetype/libfreetype.a
         ZINC = -I../../3rdparty/zlib
        ZLIBS = ../../3rdparty/zlib/libz.a
 
 .c.o:
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(ZINC) $(CFLAGS) $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(ZINC) $(CFLAGS) $<
 
 default:
 	@make -C ../.. Makedefs
@@ -61,7 +64,7 @@ libGKS.a: $(GKSOBJS)
 	$(RANLIB) $@
 
 libGKS.so: $(GKSOBJS)
-	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(ZLIBS) $(LIBS) \
+	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(FTLIBS) $(ZLIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGKS.a
@@ -102,7 +105,7 @@ depend:
 	makedepend -Y -- \
 	gks.c gksforbnd.c font.c afm.c util.c dl.c malloc.c error.c \
 	mf.c wiss.c cgm.c win.c mac.c ps.c pdf.c socket.c plugin.c \
-	compress.c io.c 2> /dev/null
+	compress.c io.c ft.c 2> /dev/null
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

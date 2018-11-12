@@ -15,7 +15,7 @@ INCLUDES = -I../ -I../../../3rdparty/ -I../../../3rdparty/build/include -I/usr/l
 CFLAGS = -Wall $(DEFINES) $(INCLUDES)
 CXXFLAGS = -Wall $(DEFINES) $(INCLUDES)
 GDILIB = -lgdi32
-OBJS = font.o afm.o util.o malloc.o error.o io.o
+GKSLIB = ../libgks.lib
 
 all: x11plugin.dll svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll movplugin.dll wxplugin.dll qtplugin.dll qt5plugin.dll gtkplugin.dll figplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll videoplugin.dll
 
@@ -52,6 +52,9 @@ $(PIXMANLIB):
 $(CAIROLIB):
 	$(MAKE) -C ../../../3rdparty/cairo libcairo.lib
 
+$(GKSLIB):
+	$(MAKE) -C .. libgks.lib
+
 VPXLIBS:
 	cd ../../../3rdparty/vpx && MAKE=make ./build.sh
 
@@ -67,58 +70,58 @@ AVLIBS: VPXLIBS THEORALIBS
 MUPDFLIBS:
 	cd ../../../3rdparty/mupdf && MUPDF_CROSS_COMPILE=yes ./build.sh
 
-x11plugin.dll: x11plugin.o $(OBJS)
+x11plugin.dll: x11plugin.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-svgplugin.dll: svgplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
+svgplugin.dll: svgplugin.o $(GKSLIB) $(PNGLIB) $(ZLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-pgfplugin.dll: pgfplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
+pgfplugin.dll: pgfplugin.o $(GKSLIB) $(PNGLIB) $(ZLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-htmplugin.dll: htmplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
+htmplugin.dll: htmplugin.o $(GKSLIB) $(PNGLIB) $(ZLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -lwsock32
 
 movplugin.o: $(JBIG2DECLIB) $(OPENJP2LIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS MUPDFLIBS
 
-movplugin.dll: movplugin.o font.o afm.o util.o vc.o pdf.o gif.o dl.o malloc.o error.o io.o
+movplugin.dll: movplugin.o vc.o gif.o pdf.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
 
 cairoplugin.o: $(CAIROLIB)
 
-cairoplugin.dll: cairoplugin.o ft.o $(OBJS) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB) $(FTLIB)
+cairoplugin.dll: cairoplugin.o $(GKSLIB) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB) $(FTLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
 
 videoplugin.o: $(JBIG2DECLIB) $(OPENJP2LIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS
 
-videoplugin.dll: videoplugin.o plugin.o font.o afm.o util.o vc.o dl.o malloc.o error.o io.o
+videoplugin.dll: videoplugin.o vc.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
 
-wxplugin.dll: wxplugin.o $(OBJS)
+wxplugin.dll: wxplugin.o $(GKSLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-qtplugin.dll: qtplugin.o $(OBJS)
+qtplugin.dll: qtplugin.o $(GKSLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-qt5plugin.dll: qt5plugin.o $(OBJS)
+qt5plugin.dll: qt5plugin.o $(GKSLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-gtkplugin.dll: gtkplugin.o $(OBJS)
+gtkplugin.dll: gtkplugin.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-figplugin.dll: figplugin.o $(OBJS) $(PNGLIB) $(ZLIB)
+figplugin.dll: figplugin.o $(GKSLIB) $(PNGLIB) $(ZLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-gsplugin.dll: gsplugin.o $(OBJS)
+gsplugin.dll: gsplugin.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-wmfplugin.dll: wmfplugin.o $(OBJS)
+wmfplugin.dll: wmfplugin.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-glplugin.dll: glplugin.o $(OBJS)
+glplugin.dll: glplugin.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
-zmqplugin.dll: zmqplugin.o $(OBJS)
+zmqplugin.dll: zmqplugin.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 clean:
