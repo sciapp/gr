@@ -24,6 +24,12 @@ cd ${src}
 
 ./configure --prefix=${dest} --libdir=${dest}/lib \
   --disable-shared --enable-static --with-pic
+# pixman 0.34.0 tests and demos are broken on clang 5.x
+# https://bugs.freedesktop.org/show_bug.cgi?id=104886
+rm -f test/Makefile demos/Makefile
+echo "all:" > test/Makefile
+echo "install:" >> test/Makefile
+cp test/Makefile demos/Makefile
 make -j4
 make install
 
