@@ -140,6 +140,7 @@ function GR(canvas_id) {
     
     //meta.c
     this.newmeta = gr_newmeta;
+    this.deletemeta = gr_deletemeta;
     this.get_stdout = gr_get_stdout;
     this.readmeta = gr_readmeta;
     this.plotmeta = gr_plotmeta;
@@ -1075,6 +1076,11 @@ gr_selntran = Module.cwrap('gr_selntran', '', ['number']);
 gr_newmeta_c = Module.cwrap('gr_newmeta', 'number', []);
 gr_newmeta = function() {
     return gr_newmeta_c()
+}
+
+gr_deletemeta_c = Module.cwrap('gr_deletemeta', '', ['number']);
+gr_deletemeta = function(args) {
+    gr_deletemeta_c(args)
 }
 
 gr_readmeta_c = Module.cwrap('gr_readmeta', 'number', ['number', 'string'])
