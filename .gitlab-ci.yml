@@ -300,17 +300,20 @@ packages-tar:
     GIT_STRATEGY: none
   script:
   - mkdir -p Windows-i686/gr/bin
+  - mkdir -p Windows-i686/gr/lib
   - mv artifacts-windows32/*.dll Windows-i686/gr/bin/
   - mv artifacts-windows32/gksqt.exe Windows-i686/gr/bin/
   - mv artifacts-windows32/platforms Windows-i686/gr/bin/
   - mv artifacts-windows32/fonts Windows-i686/gr/
   - mv artifacts-windows32/include Windows-i686/gr/
+  - cp artifacts-js/gr.js Windows-i686/gr/lib/
   - rm -rf artifacts-windows32
-  - mkdir -p Windows-x86_64/gr/
+  - mkdir -p Windows-x86_64/gr/lib
   - cp -r Windows-i686/gr/bin Windows-x86_64/gr/bin
   - mv artifacts-windows64/*.dll Windows-x86_64/gr/bin/
   - mv artifacts-windows64/fonts Windows-x86_64/gr/
   - mv artifacts-windows64/include Windows-x86_64/gr/
+  - cp artifacts-js/gr.js Windows-x86_64/gr/lib/
   - rm -rf artifacts-windows64
   - mkdir -p Debian-x86_64/gr/bin
   - mkdir -p Debian-x86_64/gr/lib
@@ -318,6 +321,7 @@ packages-tar:
   - mv artifacts-debian9/gksqt Debian-x86_64/gr/bin/
   - mv artifacts-debian9/fonts Debian-x86_64/gr/
   - mv artifacts-debian9/include Debian-x86_64/gr/
+  - cp artifacts-js/gr.js Debian-x86_64/gr/lib/
   - rm -rf artifacts-debian9
   - mkdir -p Ubuntu-x86_64/gr/bin
   - mkdir -p Ubuntu-x86_64/gr/lib
@@ -325,6 +329,7 @@ packages-tar:
   - mv artifacts-ubuntu1604/gksqt Ubuntu-x86_64/gr/bin/
   - mv artifacts-ubuntu1604/fonts Ubuntu-x86_64/gr/
   - mv artifacts-ubuntu1604/include Ubuntu-x86_64/gr/
+  - cp artifacts-js/gr.js Ubuntu-x86_64/gr/lib/
   - rm -rf artifacts-ubuntu1604
   - mkdir -p CentOS-x86_64/gr/bin
   - mkdir -p CentOS-x86_64/gr/lib
@@ -332,6 +337,7 @@ packages-tar:
   - mv artifacts-centos7/gksqt CentOS-x86_64/gr/bin/
   - mv artifacts-centos7/fonts CentOS-x86_64/gr/
   - mv artifacts-centos7/include CentOS-x86_64/gr/
+  - cp artifacts-js/gr.js CentOS-x86_64/gr/lib/
   - rm -rf artifacts-centos7
   - mkdir -p Linux-i386/gr/bin
   - mkdir -p Linux-i386/gr/lib
@@ -339,6 +345,7 @@ packages-tar:
   - mv artifacts-centos6-32bit/gksqt Linux-i386/gr/bin/
   - mv artifacts-centos6-32bit/fonts Linux-i386/gr/
   - mv artifacts-centos6-32bit/include Linux-i386/gr/
+  - cp artifacts-js/gr.js Linux-i386/gr/lib/
   - rm -rf artifacts-centos6-32bit
   - mkdir -p Linux-x86_64/gr/bin
   - mkdir -p Linux-x86_64/gr/lib
@@ -346,6 +353,7 @@ packages-tar:
   - mv artifacts-centos6-64bit/gksqt Linux-x86_64/gr/bin/
   - mv artifacts-centos6-64bit/fonts Linux-x86_64/gr/
   - mv artifacts-centos6-64bit/include Linux-x86_64/gr/
+  - cp artifacts-js/gr.js Linux-x86_64/gr/lib/
   - rm -rf artifacts-centos6-64bit
   - if [ -d artifacts-darwin ]; then
       mkdir -p Darwin-x86_64/gr/lib;
@@ -354,6 +362,7 @@ packages-tar:
       mv artifacts-darwin/fonts Darwin-x86_64/gr/;
       mv artifacts-darwin/include Darwin-x86_64/gr/;
       mv artifacts-darwin/Applications Darwin-x86_64/gr/;
+      cp artifacts-js/gr.js Darwin-x86_64/gr/lib/;
       rm -rf artifacts-darwin;
       cd Darwin-x86_64 && tar czf gr.tar.gz gr && cd -;
     fi
