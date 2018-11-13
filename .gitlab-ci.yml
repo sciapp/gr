@@ -219,6 +219,7 @@ darwin-self-contained:
     - branches@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   script:
+  - export MACOSX_DEPLOYMENT_TARGET=10.11
   - rm -rf /tmp/gr
   - make self GRDIR=/tmp/gr QMAKE=/usr/local/qt5/bin/qmake
   - mkdir artifacts
