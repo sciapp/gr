@@ -34,6 +34,7 @@ typedef __int64 int64_t;
 #include "spline.h"
 #include "gridit.h"
 #include "contour.h"
+#include "contourf.h"
 #include "strlib.h"
 #include "io.h"
 #include "md5.h"
@@ -7154,6 +7155,98 @@ void gr_contour(
       print_float_array("h", nh, h);
       print_float_array("z", nx * ny, pz);
       gr_writestream(" majorh=\"%d\"/>\n", major_h);
+    }
+}
+
+/*!
+ * Draw filled contour plot of a three-dimensional data set whose values are
+ * specified over a rectangular mesh.
+ *
+ * \param[in] nx The number of points along the X axis
+ * \param[in] ny The number of points along the Y axis
+ * \param[in] nh The number of height values. 0 for default contours.
+ * \param[in] px A pointer to the X coordinates
+ * \param[in] py A pointer to the Y coordinates
+ * \param[in] h A pointer to the height values. If NULL, use nh evenly distributed height values between
+ *                      minimum and maximum Z value.
+ * \param[in] pz A pointer to the Z coordinates
+ */
+void gr_contourf(
+    int nx, int ny, int nh, double *px, double *py, double *h, double *pz)
+{
+  int i, j;
+  int errind;
+  int nxq, nyq;
+  int fillintstyle, fillcolorind;
+  double *xq = NULL, *yq = NULL, *zq = NULL;
+
+  if ((nx <= 0) || (ny <= 0))
+    {
+      fprintf(stderr, "invalid number of points\n");
+      return;
+    }
+
+  /* be sure that points ordinates are sorted in ascending order */
+
+  for (i = 1; i < nx; i++)
+    if (px[i - 1] >= px[i])
+      {
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
+      }
+
+  for (j = 1; j < ny; j++)
+    if (py[j - 1] >= py[j])
+      {
+        fprintf(stderr, "points not sorted in ascending order\n");
+        return;
+      }
+
+  if (nh > 0 && h)
+    {
+      for (i = 1; i < nh; i++)
+        if (h[i - 1] >= h[i])
+          {
+            fprintf(stderr, "contours not sorted in ascending order\n");
+            return;
+          }
+    }
+
+  check_autoinit;
+
+  setscale(lx.scale_options);
+
+  /* save fill style and color */
+
+  gks_inq_fill_style_index(&errind, &fillintstyle);
+  gks_inq_fill_color_index(&errind, &fillcolorind);
+
+  if (!islinspace(nx, px) || !islinspace(ny, py))
+    {
+      rebin(nx, ny, px, py, pz, &nxq, &nyq, &xq, &yq, &zq);
+
+      gr_draw_contourf(nxq, nyq, nh, xq, yq, h, zq, first_color, last_color);
+
+      free(zq);
+      free(yq);
+      free(xq);
+    }
+  else
+    gr_draw_contourf(nx, ny, nh, px, py, h, pz, first_color, last_color);
+
+  /* restore fill style and color */
+
+  gks_set_fill_style_index(fillintstyle);
+  gks_set_fill_color_index(fillcolorind);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<contourf nx=\"%d\" ny=\"%d\" nh=\"%d\"", nx, ny, nh);
+      print_float_array("x", nx, px);
+      print_float_array("y", ny, py);
+      print_float_array("h", nh, h);
+      print_float_array("z", nx * ny, pz);
+      gr_writestream(" />\n");
     }
 }
 
