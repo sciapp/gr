@@ -591,7 +591,9 @@ void fillarea(int n, double *px, double *py)
 
   set_color(fl_color);
 
+  cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_EVEN_ODD);
   fill_routine(n, px, py, gkss->cntnr);
+  cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_WINDING);
 }
 
 static
