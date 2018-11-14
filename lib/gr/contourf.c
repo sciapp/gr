@@ -25,7 +25,7 @@ typedef struct {
   size_t _element_size;
 } _list_t;
 
-_list_t *list_create(size_t initial_capacity, size_t element_size)
+static _list_t *list_create(size_t initial_capacity, size_t element_size)
 {
   _list_t *list = (_list_t*)malloc(sizeof(_list_t));
   assert(list);
@@ -37,7 +37,7 @@ _list_t *list_create(size_t initial_capacity, size_t element_size)
   return list;
 }
 
-void list_append(_list_t *list, const void *data)
+static void list_append(_list_t *list, const void *data)
 {
   if (list->size + 1 >= list->_capacity)
     {
@@ -49,7 +49,7 @@ void list_append(_list_t *list, const void *data)
   list->size++;
 }
 
-void *list_get(const _list_t *list, size_t ind)
+static void *list_get(const _list_t *list, size_t ind)
 {
   if (ind > list->size)
     {
@@ -58,7 +58,7 @@ void *list_get(const _list_t *list, size_t ind)
   return list->list + list->_element_size * ind;
 }
 
-void list_destroy(_list_t* list)
+static void list_destroy(_list_t* list)
 {
   if (list->list)
     {
@@ -67,7 +67,7 @@ void list_destroy(_list_t* list)
   free(list);
 }
 
-double padded_array_lookup(const double *z, size_t nx, size_t ny, long i, long j)
+static double padded_array_lookup(const double *z, size_t nx, size_t ny, long i, long j)
 {
   /*
    * This function returns the value of an Array z with the shape nx*ny at the position i, j.
@@ -99,7 +99,7 @@ double padded_array_lookup(const double *z, size_t nx, size_t ny, long i, long j
   return z[j*nx+i];
 }
 
-double padded_array_lookup_1d(const double *z, size_t nx, long i)
+static double padded_array_lookup_1d(const double *z, size_t nx, long i)
 {
   /*
    * This function performs a safe lookup in a 1 dimensional array z with the length nx.
@@ -117,7 +117,7 @@ double padded_array_lookup_1d(const double *z, size_t nx, long i)
   return z[i];
 }
 
-unsigned char get_bitmask(const double *z, size_t nx, size_t ny, long i, long j, double contour)
+static unsigned char get_bitmask(const double *z, size_t nx, size_t ny, long i, long j, double contour)
 {
   /*
    * Calculate the bitmask for cell (i, j) of z and contour used for the marching squares algorithm.
@@ -130,7 +130,7 @@ unsigned char get_bitmask(const double *z, size_t nx, size_t ny, long i, long j,
   return result;
 }
 
-double interpolate(double v1, double v2, double contour)
+static double interpolate(double v1, double v2, double contour)
 {
   double d = v2 - v1;
   if (d == 0)
@@ -149,7 +149,7 @@ double interpolate(double v1, double v2, double contour)
   return interp;
 }
 
-double interpolate_edge(const double *z, size_t nx, size_t ny, long i1, long i2, long j1, long j2, double contour)
+static double interpolate_edge(const double *z, size_t nx, size_t ny, long i1, long i2, long j1, long j2, double contour)
 {
   /*
    * Linear interpolation along the edge of a cell. Return 0 if one point is outside of z.
@@ -165,8 +165,8 @@ double interpolate_edge(const double *z, size_t nx, size_t ny, long i1, long i2,
   return interpolate(padded_array_lookup(z, nx, ny, i1, j1), padded_array_lookup(z, nx, ny, i2, j2), contour);
 }
 
-void marching_squares(const double *x, const double *y, const double *z, size_t nx, size_t ny,
-                      const double *contours, size_t nc, int first_color, int last_color)
+static void marching_squares(const double *x, const double *y, const double *z, size_t nx, size_t ny,
+                             const double *contours, size_t nc, int first_color, int last_color, int draw_polylines)
 {
   /*
    * Calculate and fill / draw contours using the marching squares algorithm.
@@ -329,6 +329,10 @@ void marching_squares(const double *x, const double *y, const double *z, size_t 
   free(edges);
 
   long num_lines = line_indices->size;
+  if (!draw_polylines)
+    {
+      num_lines = 0;
+    }
 
   size_t polylines_end_indices = polylines_x->size+1;
   list_append(line_indices, &(polylines_end_indices));
@@ -349,11 +353,11 @@ void marching_squares(const double *x, const double *y, const double *z, size_t 
 }
 
 void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
-                      double *pz, int first_color, int last_color)
+                      double *pz, int first_color, int last_color, int major_h)
 {
   double zmin, zmax;
   int i;
-  double *contours;
+  double *contours = NULL;
   if (nh < 1)
     {
       nh = DEFAULT_CONTOUR_LINES;
@@ -374,16 +378,24 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
             }
         }
       contours = (double *)malloc(nh * sizeof(double));
+      assert(contours);
       for (i=0; i<nh; i++)
       {
         contours[i] = zmin + (zmax - zmin) * 1.0 / (nh - 1) * i;
       }
-      assert(contours);
-      marching_squares(px, py, pz, nx, ny, contours, nh, first_color, last_color);
-      free(contours);
+      h = contours;
+      marching_squares(px, py, pz, nx, ny, h, nh, first_color, last_color, major_h==0);
     }
   else
     {
-      marching_squares(px, py, pz, nx, ny, h, nh, first_color, last_color);
+      marching_squares(px, py, pz, nx, ny, h, nh, first_color, last_color, major_h==0);
+    }
+  if (major_h)
+    {
+      gr_contour(nx, ny, nh, px, py, h, pz, major_h);
+    }
+  if (contours)
+    {
+      free(contours);
     }
 }
