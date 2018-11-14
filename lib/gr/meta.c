@@ -3476,7 +3476,7 @@ error_t fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_s
         break;
       }
       if (state.parsing_object) {
-        gr_meta_args_push_kwarg_buf(args, current_key, state.next_value_type, state.value_buffer, 0);
+        args_update_kwarg_buf(args, current_key, state.next_value_type, state.value_buffer, 0);
       } else {
         gr_meta_args_push_arg_buf(args, state.next_value_type, state.value_buffer, 0);
       }
