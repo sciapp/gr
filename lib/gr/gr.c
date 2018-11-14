@@ -7170,9 +7170,13 @@ void gr_contour(
  * \param[in] h A pointer to the height values. If NULL, use nh evenly distributed height values between
  *                      minimum and maximum Z value.
  * \param[in] pz A pointer to the Z coordinates
+ * \param[in] major_h Directs GR to label contour lines. For example, a value of
+ *                    3 would label every third line. A value of 1 will label
+ *                    every line. A value of 0 produces no labels. To produce
+ *                    colored contour lines, add an offset of 1000 to major_h
  */
 void gr_contourf(
-    int nx, int ny, int nh, double *px, double *py, double *h, double *pz)
+    int nx, int ny, int nh, double *px, double *py, double *h, double *pz, int major_h)
 {
   int i, j;
   int errind;
@@ -7225,14 +7229,14 @@ void gr_contourf(
     {
       rebin(nx, ny, px, py, pz, &nxq, &nyq, &xq, &yq, &zq);
 
-      gr_draw_contourf(nxq, nyq, nh, xq, yq, h, zq, first_color, last_color);
+      gr_draw_contourf(nxq, nyq, nh, xq, yq, h, zq, first_color, last_color, major_h);
 
       free(zq);
       free(yq);
       free(xq);
     }
   else
-    gr_draw_contourf(nx, ny, nh, px, py, h, pz, first_color, last_color);
+    gr_draw_contourf(nx, ny, nh, px, py, h, pz, first_color, last_color, major_h);
 
   /* restore fill style and color */
 
@@ -7246,7 +7250,7 @@ void gr_contourf(
       print_float_array("y", ny, py);
       print_float_array("h", nh, h);
       print_float_array("z", nx * ny, pz);
-      gr_writestream(" />\n");
+      gr_writestream(" majorh=\"%d\"/>\n", major_h);
     }
 }
 

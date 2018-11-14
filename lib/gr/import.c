@@ -29,7 +29,7 @@ char *format[] =
     "cellarray:ffffiiiiiiI",
     "colorbar:",
     "contour:iiiFFFFi",
-    "contourf:iiiFFFF",
+    "contourf:iiiFFFFi",
     "destroycontext:i",
     "drawarc:ffffii",
     "drawarrow:ffff",
@@ -311,7 +311,7 @@ void gr(int id)
       break;
     case  5:
       gr_contourf(i_arg[0], i_arg[1], i_arg[2],
-                  f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
+                  f_arr[0], f_arr[1], f_arr[2], f_arr[3], i_arg[3]);
       break;
     case  6:
       gr_destroycontext(i_arg[0]);
