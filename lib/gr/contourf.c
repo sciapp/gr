@@ -182,9 +182,13 @@ static void marching_squares(const double *x, const double *y, const double *z, 
   long i, j, fillarea_start_index;
   size_t contour_index;
   double color_step = 0;
-  if (nc > 0)
+  if (nc > 1)
     {
       color_step = 1.0 * (last_color - first_color) / (nc - 1);
+    }
+  else if (nc == 1)
+    {
+      color_step = 0;
     }
 
   /* Create list structures to store the polyline's vertices and the start index of each individual polyline */
@@ -379,10 +383,10 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
         }
       contours = (double *)malloc(nh * sizeof(double));
       assert(contours);
-      for (i=0; i<nh; i++)
-      {
-        contours[i] = zmin + (zmax - zmin) * 1.0 / (nh - 1) * i;
-      }
+      for (i = 0; i < nh; i++)
+        {
+          contours[i] = zmin + (zmax - zmin) * 1.0 / nh * i;
+        }
       h = contours;
       marching_squares(px, py, pz, nx, ny, h, nh, first_color, last_color, major_h==0);
     }
