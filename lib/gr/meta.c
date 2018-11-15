@@ -2755,7 +2755,7 @@ error_t args_update_kwarg_common(gr_meta_args_t *args, const char *key, const ch
       args_node->arg = arg;
     }
   } else {
-    return args_push_kwarg_vl(args, key, value_format, vl);
+    return args_push_kwarg_common(args, key, value_format, buffer, vl, apply_padding);
   }
 
   return NO_ERROR;
