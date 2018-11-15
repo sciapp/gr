@@ -137,6 +137,9 @@ function GR(canvas_id) {
     this.destroycontext = gr_destroycontext;
     this.uselinespec = gr_uselinespec;
     this.selntran = gr_selntran;
+    this.shade = gr_shade;
+    this.shadepoints = gr_shadepoints;
+    this.shadelines = gr_shadelines;
     
     //meta.c
     this.newmeta = gr_newmeta;
@@ -1104,4 +1107,30 @@ gr_get_stdout_c = Module.cwrap('gr_get_stdout', 'number', []);
 gr_get_stdout = function(args, string) {
     result = gr_get_stdout_c(args, string);
     return result;
+};
+
+gr_shade_c = Module.cwrap('gr_shade', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number']);
+gr_shade = function(n, x, y, lines, xform, roi, w, h) {
+    _x = floatarray(x);
+    _y = floatarray(y);
+    _roi = floatarray(roi);
+    var _bins = Module._malloc(w * h * 4);
+    gr_shade_c(n, _x, _y, lines, xform, _roi, w, h, _bins);
+    var result = Module.HEAP32.subarray(_bins / 4, _bins / 4 + w * h);
+    freearray(_bins);
+    return result;
+};
+
+gr_shadepoints_c = Module.cwrap('gr_shadepoints', '', ['number', 'number', 'number', 'number', 'number', 'number']);
+gr_shadepoints = function(n, x, y, xform, w, h) {
+    _x = floatarray(x);
+    _y = floatarray(y);
+    gr_shadepoints_c(n, _x, _y, xform, w, h);
+};
+
+gr_shadelines_c = Module.cwrap('gr_shadelines', '', ['number', 'number', 'number', 'number', 'number', 'number']);
+gr_shadelines = function(n, x, y, xform, w, h) {
+    _x = floatarray(x);
+    _y = floatarray(y);
+    gr_shadelines_c(n, _x, _y, xform, w, h);
 };
