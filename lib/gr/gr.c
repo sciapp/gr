@@ -9571,6 +9571,38 @@ void gr_reducepoints(int n, const double *x, const double *y, int points, double
   }
 }
 
+/*!
+ * Display a point set as a aggregated and rasterized image.
+ *
+ * \param[in] n The number of points
+ * \param[in] x A pointer to the X coordinates
+ * \param[in] y A pointer to the Y coordinates
+ * \param[in] xform The transformation type used for color mapping
+ * \param[in] w The width of the grid used for rasterization
+ * \param[in] h The height of the grid used for rasterization
+ *
+ * The values for `x` and `y` are in world coordinates.
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * The available transformation types are:
+ *
+ * +----------------+---+--------------------+
+ * |XFORM_BOOLEAN   |  0|boolean             |
+ * +----------------+---+--------------------+
+ * |XFORM_LINEAR    |  1|linear              |
+ * +----------------+---+--------------------+
+ * |XFORM_LOG       |  2|logarithmic         |
+ * +----------------+---+--------------------+
+ * |XFORM_LOGLOG    |  3|double logarithmic  |
+ * +----------------+---+--------------------+
+ * |XFORM_CUBIC     |  4|cubic               |
+ * +----------------+---+--------------------+
+ * |XFORM_EQUALIZED |  5|histogram equalized |
+ * +----------------+---+--------------------+
+ *
+ * \endverbatim
+ */
 void gr_shadepoints(int n, double *x, double *y, int xform, int w, int h)
 {
   int *bins;
@@ -9617,6 +9649,39 @@ void gr_shadepoints(int n, double *x, double *y, int xform, int w, int h)
     }
 }
 
+/*!
+ * Display a line set as a aggregated and rasterized image.
+ *
+ * \param[in] n The number of points
+ * \param[in] x A pointer to the X coordinates
+ * \param[in] y A pointer to the Y coordinates
+ * \param[in] xform The transformation type used for color mapping
+ * \param[in] w The width of the grid used for rasterization
+ * \param[in] h The height of the grid used for rasterization
+ *
+ * The values for `x` and `y` are in world coordinates.
+ * NaN values can be used to separate the point set into line segments.
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * The available transformation types are:
+ *
+ * +----------------+---+--------------------+
+ * |XFORM_BOOLEAN   |  0|boolean             |
+ * +----------------+---+--------------------+
+ * |XFORM_LINEAR    |  1|linear              |
+ * +----------------+---+--------------------+
+ * |XFORM_LOG       |  2|logarithmic         |
+ * +----------------+---+--------------------+
+ * |XFORM_LOGLOG    |  3|double logarithmic  |
+ * +----------------+---+--------------------+
+ * |XFORM_CUBIC     |  4|cubic               |
+ * +----------------+---+--------------------+
+ * |XFORM_EQUALIZED |  5|histogram equalized |
+ * +----------------+---+--------------------+
+ *
+ * \endverbatim
+ */
 void gr_shadelines(int n, double *x, double *y, int xform, int w, int h)
 {
   int *bins;
