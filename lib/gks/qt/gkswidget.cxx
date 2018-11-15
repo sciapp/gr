@@ -74,6 +74,7 @@ GKSWidget::GKSWidget(QWidget *parent)
 
   initialize_data();
 
+  setMinimumSize(2, 2);
   setWindowTitle(tr("GKS QtTerm"));
   setWindowIcon(QIcon(":/images/gksqt.png"));
 
@@ -120,8 +121,25 @@ void set_window_size(char *s)
       if (*f == 55)
         {
           vp = (double *) (s + sp + 3 * sizeof(int));
-          p->width = nint((vp[1] - vp[0]) / p->mwidth * p->width);
-          p->height = nint((vp[3] - vp[2]) / p->mheight * p->height);
+          if (p->mwidth > 0)
+            {
+              double mwidth = round((vp[1] - vp[0]) * 1000) * 0.001;
+              p->width = nint(mwidth / p->mwidth * p->width);
+            }
+          else
+            {
+              p->width = 2;
+            }
+
+          if (p->mheight > 0)
+            {
+              double mheight = round((vp[3] - vp[2]) * 1000) * 0.001;
+              p->height = nint(mheight / p->mheight * p->height);
+            }
+          else
+            {
+              p->height = 2;
+            }
         }
       sp += *len;
       len = (int *) (s + sp);

@@ -225,8 +225,26 @@ void init_norm_xform(void)
 static
 void resize_window(void)
 {
-  p->width = nint((p->viewport[1] - p->viewport[0]) / p->mwidth * p->width);
-  p->height = nint((p->viewport[3] - p->viewport[2]) / p->mheight * p->height);
+  if (p->mwidth > 0)
+    {
+      double mwidth = round((p->viewport[1] - p->viewport[0]) * 1000) * 0.001;
+      p->width = nint(mwidth / p->mwidth * p->width);
+    }
+  else
+    {
+      p->width = 2;
+    }
+
+  if (p->mheight > 0)
+    {
+      double mheight = round((p->viewport[3] - p->viewport[2]) * 1000) * 0.001;
+      p->height = nint(mheight / p->mheight * p->height);
+    }
+  else
+    {
+      p->height = 2;
+    }
+
   if (p->pm)
     {
       if (p->width  != p->pm->size().width() ||
