@@ -5084,7 +5084,7 @@ static
 void text3d(double x, double y, double z, char *chars)
 {
   double px, py, pz;
-  int errind, tnr, result;
+  int errind, tnr;
 
   check_autoinit;
 
@@ -5101,7 +5101,7 @@ void text3d(double x, double y, double z, char *chars)
       gks_select_xform(NDC);
     }
 
-  result = gr_textex(px, py, chars, 0, NULL, NULL);
+  gr_textex(px, py, chars, 0, NULL, NULL);
 
   if (tnr != NDC)
     gks_select_xform(tnr);

@@ -27,15 +27,21 @@
 
 #endif
 
-#ifdef _WIN32
-#include <windows.h>
-#define DLLEXPORT __declspec(dllexport)
-#else
-#define DLLEXPORT
-#endif
+#include "gks.h"
+#include "gkscore.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
+#endif
+
+#ifdef _WIN32
+
+#include <windows.h>
+#ifndef DLLEXPORT
+#define DLLEXPORT __declspec(dllexport)
+#endif
+
 #endif
 
 DLLEXPORT void gks_gsplugin(
@@ -46,9 +52,6 @@ DLLEXPORT void gks_gsplugin(
 #ifdef __cplusplus
 }
 #endif
-
-#include "gks.h"
-#include "gkscore.h"
 
 #ifndef NO_GS
 
