@@ -358,6 +358,21 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
   double zmin, zmax;
   int i;
   double *contours = NULL;
+  double z_space_min, z_space_max;
+  int rotation, tilt;
+  zmin = zmax = pz[0];
+  for (i=0; i<nx*ny; i++)
+    {
+      if (pz[i] < zmin)
+        {
+          zmin = pz[i];
+        }
+      if (pz[i] > zmax)
+        {
+          zmax = pz[i];
+        }
+    }
+
   if (nh < 1)
     {
       nh = DEFAULT_CONTOUR_LINES;
@@ -365,18 +380,6 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
     }
   if (h == NULL)
     {
-      zmin = zmax = pz[0];
-      for (i=0; i<nx*ny; i++)
-        {
-          if (pz[i] < zmin)
-            {
-              zmin = pz[i];
-            }
-          if (pz[i] > zmax)
-            {
-              zmax = pz[i];
-            }
-        }
       contours = (double *)malloc(nh * sizeof(double));
       assert(contours);
       for (i=0; i<nh; i++)
@@ -392,7 +395,10 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
     }
   if (major_h)
     {
+      gr_inqspace(&z_space_min, &z_space_max, &rotation, &tilt);
+      gr_setspace(zmin, zmax, 0, 90);
       gr_contour(nx, ny, nh, px, py, h, pz, major_h);
+      gr_setspace(z_space_min, z_space_max, rotation, tilt);
     }
   if (contours)
     {
