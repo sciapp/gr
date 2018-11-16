@@ -18,15 +18,36 @@ static int n_points = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
 static const char *labels[] = {"plot 1", "plot 2"};
 
 
-int test_sendmeta_ref(void) {
+static int disk_writer(const char *filepath, unsigned int id, const char *message) {
+  FILE *f;
+  int error = 0;
+
+  f = fopen(filepath, "w");
+  if (f == NULL) {
+    error = 1;
+    goto cleanup;
+  }
+  if (fputs(message, f) == EOF) {
+    error = 1;
+    goto cleanup;
+  }
+
+cleanup:
+  if (f != NULL && fclose(f) == EOF) {
+    error = 1;
+  }
+  return error;
+}
+
+static int test_sendmeta_ref(void) {
   void *handle;
 
-  printf("sending data...");
+  printf("writing data...");
   fflush(stdout);
 
-  handle = gr_openmeta(GR_SENDER, "localhost", 8002, NULL, NULL);
+  handle = gr_openmeta(GR_SENDER, "custom_sender.out", 0, NULL, disk_writer);
   if (handle == NULL) {
-    fprintf(stderr, "sender could not be created\n");
+    fprintf(stderr, "\"gr_openmeta\" failed.\n");
     return 1;
   }
 
@@ -41,7 +62,7 @@ int test_sendmeta_ref(void) {
   gr_sendmeta_ref(handle, "kind", 's', "line", 0);
   gr_sendmeta_ref(handle, NULL, '\0', NULL, 0);
 
-  printf("\tsent\n");
+  printf("\twritten\n");
 
   gr_closemeta(handle);
 

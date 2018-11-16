@@ -93,11 +93,23 @@ static void debug_printf(const char *format, ...) {
 /* ------------------------- logging -------------------------------------------------------------------------------- */
 
 #ifndef NDEBUG
-#define logger(logger_arguments)                                                  \
-  do {                                                                            \
-    fprintf(stderr, "\033[96m%s\033[0m:\033[93m%d\033[0m: ", __FILE__, __LINE__); \
-    fprintf logger_arguments;                                                     \
+#ifdef _WIN32
+#define logger(logger_arguments)                    \
+  do {                                              \
+    fprintf(stderr, "%s:%d: ", __FILE__, __LINE__); \
+    fprintf logger_arguments;                       \
   } while (0)
+#else
+#define logger(logger_arguments)                                                    \
+  do {                                                                              \
+    if (isatty(fileno(stderr))) {                                                   \
+      fprintf(stderr, "\033[96m%s\033[0m:\033[93m%d\033[0m: ", __FILE__, __LINE__); \
+    } else {                                                                        \
+      fprintf(stderr, "%s:%d: ", __FILE__, __LINE__);                               \
+    }                                                                               \
+    fprintf logger_arguments;                                                       \
+  } while (0)
+#endif
 #else
 #define logger(logger_arguments)
 #endif
@@ -278,6 +290,8 @@ typedef enum {
   ERROR_NETWORK_SEND,
   ERROR_NETWORK_SOCKET_CLOSE,
   ERROR_NETWORK_WINSOCK_CLEANUP,
+  ERROR_CUSTOM_RECV,
+  ERROR_CUSTOM_SEND,
   ERROR_NOT_IMPLEMENTED
 } error_t;
 
@@ -382,46 +396,50 @@ typedef struct {
 
 /* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
-union _metahandle_t;
-typedef union _metahandle_t metahandle_t;
+struct _metahandle_t;
+typedef struct _metahandle_t metahandle_t;
 
 typedef error_t (*recv_callback_t)(void *);
 typedef error_t (*send_callback_t)(void *);
-typedef const char *(*jupyter_recv_callback_t)(void);
-typedef error_t (*jupyter_send_callback_t)(const char *);
+typedef const char *(*custom_recv_callback_t)(const char *, unsigned int);
+typedef int (*custom_send_callback_t)(const char *, unsigned int, const char *);
 typedef error_t (*finalize_callback_t)(metahandle_t *);
 
-union _metahandle_t {
-  struct {
-    int source;
-    memwriter_t *memwriter;
-    size_t message_size;
-    recv_callback_t recv;
-    union {
-      struct {
-        jupyter_recv_callback_t recv;
-      } jupyter;
-      struct {
-        int client_socket;
-        int server_socket;
-      } socket;
-    } comm;
-  } receiver;
-  struct {
-    int target;
-    memwriter_t *memwriter;
-    send_callback_t send;
-    union {
-      struct {
-        /* callback to a function that handles jupyter communication */
-        jupyter_send_callback_t send;
-      } jupyter;
-      struct {
-        int client_socket;
-        struct sockaddr_in server_address;
-      } socket;
-    } comm;
-  } sender;
+struct _metahandle_t {
+  int is_receiver;
+  union {
+    struct {
+      memwriter_t *memwriter;
+      size_t message_size;
+      recv_callback_t recv;
+      union {
+        struct {
+          custom_recv_callback_t recv;
+          const char *name;
+          unsigned int id;
+        } custom;
+        struct {
+          int client_socket;
+          int server_socket;
+        } socket;
+      } comm;
+    } receiver;
+    struct {
+      memwriter_t *memwriter;
+      send_callback_t send;
+      union {
+        struct {
+          custom_send_callback_t send;
+          const char *name;
+          unsigned int id;
+        } custom;
+        struct {
+          int client_socket;
+          struct sockaddr_in server_address;
+        } socket;
+      } comm;
+    } sender;
+  } sender_receiver;
   finalize_callback_t finalize;
 };
 
@@ -718,19 +736,23 @@ static size_t memwriter_size(const memwriter_t *memwriter);
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
 static error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port);
-static error_t receiver_init_for_jupyter(metahandle_t *handle, const char *hostname, unsigned int port);
+static error_t receiver_init_for_custom(metahandle_t *handle, const char *name, unsigned int id,
+                                        const char *(*custom_recv)(const char *, unsigned int));
 static error_t receiver_finalize_for_socket(metahandle_t *handle);
-static error_t receiver_finalize_for_jupyter(metahandle_t *handle);
-static error_t receiver_recv_for_socket(void *p);
+static error_t receiver_finalize_for_custom(metahandle_t *handle);
+static error_t receiver_recv_for_socket(metahandle_t *handle);
+static error_t receiver_recv_for_custom(metahandle_t *handle);
 
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
 static error_t sender_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port);
-static error_t sender_init_for_jupyter(metahandle_t *handle, const char *hostname, unsigned int port);
+static error_t sender_init_for_custom(metahandle_t *handle, const char *name, unsigned int id,
+                                      int (*custom_send)(const char *, unsigned int, const char *));
 static error_t sender_finalize_for_socket(metahandle_t *handle);
-static error_t sender_finalize_for_jupyter(metahandle_t *handle);
-static error_t sender_send_for_socket(void *p);
+static error_t sender_finalize_for_custom(metahandle_t *handle);
+static error_t sender_send_for_socket(metahandle_t *handle);
+static error_t sender_send_for_custom(metahandle_t *handle);
 
 
 /* ========================= static variables ======================================================================= */
@@ -852,7 +874,9 @@ void gr_plotmeta(const gr_meta_args_t *args) {
 
 /* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
-void *gr_openmeta(int source_or_target, const char *hostname, unsigned int port) {
+void *gr_openmeta(int is_receiver, const char *name, unsigned int id,
+                  const char *(*custom_recv)(const char *, unsigned int),
+                  int (*custom_send)(const char *, unsigned int, const char *)) {
   metahandle_t *handle;
   error_t error = NO_ERROR;
 
@@ -860,22 +884,20 @@ void *gr_openmeta(int source_or_target, const char *hostname, unsigned int port)
   if (handle == NULL) {
     return NULL;
   }
-  handle->receiver.source = source_or_target;
-  switch (source_or_target) {
-  case GR_SOURCE_JUPYTER:
-    error = receiver_init_for_jupyter(handle, hostname, port);
-    break;
-  case GR_SOURCE_SOCKET:
-    error = receiver_init_for_socket(handle, hostname, port);
-    break;
-  case GR_TARGET_JUPYTER:
-    error = sender_init_for_jupyter(handle, hostname, port);
-    break;
-  case GR_TARGET_SOCKET:
-    error = sender_init_for_socket(handle, hostname, port);
-    break;
-  default:
-    break;
+  handle->is_receiver = is_receiver;
+  handle->sender_receiver.receiver.comm.custom.recv = custom_recv;
+  if (is_receiver) {
+    if (custom_recv != NULL) {
+      error = receiver_init_for_custom(handle, name, id, custom_recv);
+    } else {
+      error = receiver_init_for_socket(handle, name, id);
+    }
+  } else {
+    if (custom_send != NULL) {
+      error = sender_init_for_custom(handle, name, id, custom_send);
+    } else {
+      error = sender_init_for_socket(handle, name, id);
+    }
   }
 
   if (error != NO_ERROR) {
@@ -911,14 +933,15 @@ gr_meta_args_t *gr_recvmeta(const void *p, gr_meta_args_t *args) {
     created_args = 1;
   }
 
-  if (handle->receiver.recv(handle) != NO_ERROR) {
+  if (handle->sender_receiver.receiver.recv(handle) != NO_ERROR) {
     goto error_cleanup;
   }
-  if (fromjson_read(args, memwriter_buf(handle->receiver.memwriter)) != NO_ERROR) {
+  if (fromjson_read(args, memwriter_buf(handle->sender_receiver.receiver.memwriter)) != NO_ERROR) {
     goto error_cleanup;
   }
 
-  if (memwriter_erase(handle->receiver.memwriter, 0, handle->receiver.message_size + 1) != NO_ERROR) {
+  if (memwriter_erase(handle->sender_receiver.receiver.memwriter, 0, handle->sender_receiver.receiver.message_size) !=
+      NO_ERROR) {
     goto error_cleanup;
   }
 
@@ -941,9 +964,9 @@ int gr_sendmeta(const void *p, const char *data_desc, ...) {
   error_t error;
 
   va_start(vl, data_desc);
-  error = tojson_write_vl(handle->sender.memwriter, data_desc, &vl);
-  if (error == NO_ERROR && tojson_is_complete() && handle->sender.send != NULL) {
-    error = handle->sender.send(handle);
+  error = tojson_write_vl(handle->sender_receiver.sender.memwriter, data_desc, &vl);
+  if (error == NO_ERROR && tojson_is_complete() && handle->sender_receiver.sender.send != NULL) {
+    error = handle->sender_receiver.sender.send(handle);
   }
   va_end(vl);
 
@@ -954,9 +977,9 @@ int gr_sendmeta_buf(const void *p, const char *data_desc, const void *buffer, in
   metahandle_t *handle = (metahandle_t *)p;
   error_t error;
 
-  error = tojson_write_buf(handle->sender.memwriter, data_desc, buffer, apply_padding);
-  if (error == NO_ERROR && tojson_is_complete() && handle->sender.send != NULL) {
-    error = handle->sender.send(handle);
+  error = tojson_write_buf(handle->sender_receiver.sender.memwriter, data_desc, buffer, apply_padding);
+  if (error == NO_ERROR && tojson_is_complete() && handle->sender_receiver.sender.send != NULL) {
+    error = handle->sender_receiver.sender.send(handle);
   }
 
   return error == NO_ERROR;
@@ -1172,9 +1195,9 @@ int gr_sendmeta_args(const void *p, const gr_meta_args_t *args) {
   metahandle_t *handle = (metahandle_t *)p;
   error_t error;
 
-  error = tojson_write_args(handle->sender.memwriter, args);
-  if (error == NO_ERROR && tojson_is_complete() && handle->sender.send != NULL) {
-    error = handle->sender.send(handle);
+  error = tojson_write_args(handle->sender_receiver.sender.memwriter, args);
+  if (error == NO_ERROR && tojson_is_complete() && handle->sender_receiver.sender.send != NULL) {
+    error = handle->sender_receiver.sender.send(handle);
   }
 
   return error == NO_ERROR;
@@ -2217,7 +2240,8 @@ void plot_set_viewport(gr_meta_args_t *args) {
   if (wsviewport != NULL) {
     /*
      * gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
-     * logger((stderr, "Set wsviewport (%f, %f, %f, %f)\n", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]));
+     * logger((stderr, "Set wsviewport (%f, %f, %f, %f)\n", wsviewport[0], wsviewport[1], wsviewport[2],
+     * wsviewport[3]));
      */
   }
   if (wswindow != NULL) {
@@ -4777,7 +4801,8 @@ error_t memwriter_replace(memwriter_t *memwriter, int index, int count, const ch
   int replacement_str_len = (replacement_str != NULL) ? strlen(replacement_str) : 0;
   error_t error = NO_ERROR;
 
-  if ((error = memwriter_ensure_buf(memwriter, replacement_str_len - count)) != NO_ERROR) {
+  if ((replacement_str_len > count) &&
+      (error = memwriter_ensure_buf(memwriter, replacement_str_len - count)) != NO_ERROR) {
     return error;
   }
   if (count != replacement_str_len) {
@@ -4871,13 +4896,20 @@ size_t memwriter_size(const memwriter_t *memwriter) {
 
 /* ------------------------- receiver ------------------------------------------------------------------------------- */
 
-error_t receiver_init_for_jupyter(metahandle_t *handle, const char *hostname, unsigned int port) {
-  UNUSED(handle);
-  UNUSED(hostname);
-  UNUSED(port);
-  /* TODO: implement me! */
-  handle->finalize = receiver_finalize_for_jupyter;
-  return ERROR_NOT_IMPLEMENTED;
+error_t receiver_init_for_custom(metahandle_t *handle, const char *name, unsigned int id,
+                                 const char *(*custom_recv)(const char *, unsigned int)) {
+  handle->sender_receiver.receiver.comm.custom.recv = custom_recv;
+  handle->sender_receiver.receiver.comm.custom.name = name;
+  handle->sender_receiver.receiver.comm.custom.id = id;
+  handle->sender_receiver.receiver.message_size = 0;
+  handle->sender_receiver.receiver.recv = receiver_recv_for_custom;
+  handle->finalize = receiver_finalize_for_custom;
+  handle->sender_receiver.receiver.memwriter = memwriter_new();
+  if (handle->sender_receiver.receiver.memwriter == NULL) {
+    return ERROR_MALLOC;
+  }
+
+  return NO_ERROR;
 }
 
 error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port) {
@@ -4897,10 +4929,10 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
 
   snprintf(port_str, PORT_MAX_STRING_LENGTH, "%u", port);
 
-  handle->receiver.memwriter = NULL;
-  handle->receiver.comm.socket.server_socket = -1;
-  handle->receiver.comm.socket.client_socket = -1;
-  handle->receiver.recv = receiver_recv_for_socket;
+  handle->sender_receiver.receiver.memwriter = NULL;
+  handle->sender_receiver.receiver.comm.socket.server_socket = -1;
+  handle->sender_receiver.receiver.comm.socket.client_socket = -1;
+  handle->sender_receiver.receiver.recv = receiver_recv_for_socket;
   handle->finalize = receiver_finalize_for_socket;
 
 #ifdef _WIN32
@@ -4940,7 +4972,7 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
   }
 
   /* Create a socket for listening */
-  if ((handle->receiver.comm.socket.server_socket =
+  if ((handle->sender_receiver.receiver.comm.socket.server_socket =
          socket(addr_result->ai_family, addr_result->ai_socktype, addr_result->ai_protocol)) < 0) {
     psocketerror("socket creation failed");
     freeaddrinfo(addr_result);
@@ -4949,8 +4981,8 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
   /* Set SO_REUSEADDR if available on this system */
 #ifdef SO_REUSEADDR
   socket_opt = 1;
-  if (setsockopt(handle->receiver.comm.socket.server_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&socket_opt,
-                 sizeof(socket_opt)) < 0) {
+  if (setsockopt(handle->sender_receiver.receiver.comm.socket.server_socket, SOL_SOCKET, SO_REUSEADDR,
+                 (char *)&socket_opt, sizeof(socket_opt)) < 0) {
     psocketerror("setting socket options failed");
     freeaddrinfo(addr_result);
     return ERROR_NETWORK_SOCKET_CREATION;
@@ -4958,7 +4990,7 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
 #endif
 
   /* Bind the socket to given ip address and port */
-  if (bind(handle->receiver.comm.socket.server_socket, addr_result->ai_addr, addr_result->ai_addrlen)) {
+  if (bind(handle->sender_receiver.receiver.comm.socket.server_socket, addr_result->ai_addr, addr_result->ai_addrlen)) {
     psocketerror("bind failed");
     freeaddrinfo(addr_result);
     return ERROR_NETWORK_SOCKET_BIND;
@@ -4966,45 +4998,46 @@ error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, uns
   freeaddrinfo(addr_result);
 
   /* Listen for incoming connections */
-  if (listen(handle->receiver.comm.socket.server_socket, 1)) {
+  if (listen(handle->sender_receiver.receiver.comm.socket.server_socket, 1)) {
     psocketerror("listen failed");
     return ERROR_NETWORK_SOCKET_LISTEN;
   }
 
   /* Accecpt an incoming connection and get a new socket instance for communication */
-  if ((handle->receiver.comm.socket.client_socket =
-         accept(handle->receiver.comm.socket.server_socket, (struct sockaddr *)&client_addr, &client_addrlen)) < 0) {
+  if ((handle->sender_receiver.receiver.comm.socket.client_socket =
+         accept(handle->sender_receiver.receiver.comm.socket.server_socket, (struct sockaddr *)&client_addr,
+                &client_addrlen)) < 0) {
     psocketerror("accept failed");
     return ERROR_NETWORK_CONNECTION_ACCEPT;
   }
 
-  handle->receiver.memwriter = memwriter_new();
-  if (handle->receiver.memwriter == NULL) {
+  handle->sender_receiver.receiver.memwriter = memwriter_new();
+  if (handle->sender_receiver.receiver.memwriter == NULL) {
     return ERROR_MALLOC;
   }
 
   return NO_ERROR;
 }
 
-error_t receiver_finalize_for_jupyter(metahandle_t *handle) {
-  UNUSED(handle);
-  /* TODO: implement me! */
-  return ERROR_NOT_IMPLEMENTED;
+error_t receiver_finalize_for_custom(metahandle_t *handle) {
+  memwriter_delete(handle->sender_receiver.receiver.memwriter);
+
+  return NO_ERROR;
 }
 
 error_t receiver_finalize_for_socket(metahandle_t *handle) {
   error_t error = NO_ERROR;
 
-  memwriter_delete(handle->receiver.memwriter);
+  memwriter_delete(handle->sender_receiver.receiver.memwriter);
 #ifdef _WIN32
-  if (handle->receiver.comm.socket.client_socket >= 0) {
-    if (closesocket(handle->receiver.comm.socket.client_socket)) {
+  if (handle->sender_receiver.receiver.comm.socket.client_socket >= 0) {
+    if (closesocket(handle->sender_receiver.receiver.comm.socket.client_socket)) {
       psocketerror("client socket shutdown failed");
       error = ERROR_NETWORK_SOCKET_CLOSE;
     }
   }
-  if (handle->receiver.comm.socket.server_socket >= 0) {
-    if (closesocket(handle->receiver.comm.socket.server_socket)) {
+  if (handle->sender_receiver.receiver.comm.socket.server_socket >= 0) {
+    if (closesocket(handle->sender_receiver.receiver.comm.socket.server_socket)) {
       psocketerror("server socket shutdown failed");
       error = ERROR_NETWORK_SOCKET_CLOSE;
     }
@@ -5014,14 +5047,14 @@ error_t receiver_finalize_for_socket(metahandle_t *handle) {
     error = ERROR_NETWORK_WINSOCK_CLEANUP;
   }
 #else
-  if (handle->receiver.comm.socket.client_socket >= 0) {
-    if (close(handle->receiver.comm.socket.client_socket)) {
+  if (handle->sender_receiver.receiver.comm.socket.client_socket >= 0) {
+    if (close(handle->sender_receiver.receiver.comm.socket.client_socket)) {
       psocketerror("client socket shutdown failed");
       error = ERROR_NETWORK_SOCKET_CLOSE;
     }
   }
-  if (handle->receiver.comm.socket.server_socket >= 0) {
-    if (close(handle->receiver.comm.socket.server_socket)) {
+  if (handle->sender_receiver.receiver.comm.socket.server_socket >= 0) {
+    if (close(handle->sender_receiver.receiver.comm.socket.server_socket)) {
       psocketerror("server socket shutdown failed");
       error = ERROR_NETWORK_SOCKET_CLOSE;
     }
@@ -5031,28 +5064,48 @@ error_t receiver_finalize_for_socket(metahandle_t *handle) {
   return error;
 }
 
-error_t receiver_recv_for_socket(void *p) {
-  metahandle_t *handle = (metahandle_t *)p;
+error_t receiver_recv_for_socket(metahandle_t *handle) {
   int search_start_index = 0;
   char *end_ptr;
   static char recv_buf[SOCKET_RECV_BUF_SIZE];
   error_t error = NO_ERROR;
 
-  memwriter_clear(handle->receiver.memwriter);
-  while ((end_ptr = memchr(memwriter_buf(handle->receiver.memwriter) + search_start_index, ETB,
-                           memwriter_size(handle->receiver.memwriter) - search_start_index)) == NULL) {
+  memwriter_clear(handle->sender_receiver.receiver.memwriter);
+  while ((end_ptr = memchr(memwriter_buf(handle->sender_receiver.receiver.memwriter) + search_start_index, ETB,
+                           memwriter_size(handle->sender_receiver.receiver.memwriter) - search_start_index)) == NULL) {
     int bytes_received;
-    search_start_index = memwriter_size(handle->receiver.memwriter);
-    if ((bytes_received = recv(handle->receiver.comm.socket.client_socket, recv_buf, SOCKET_RECV_BUF_SIZE, 0)) < 0) {
+    search_start_index = memwriter_size(handle->sender_receiver.receiver.memwriter);
+    if ((bytes_received =
+           recv(handle->sender_receiver.receiver.comm.socket.client_socket, recv_buf, SOCKET_RECV_BUF_SIZE, 0)) < 0) {
       psocketerror("error while receiving data");
       return ERROR_NETWORK_RECV;
     }
-    if ((error = memwriter_printf(handle->receiver.memwriter, "%.*s", bytes_received, recv_buf)) != NO_ERROR) {
+    if ((error = memwriter_printf(handle->sender_receiver.receiver.memwriter, "%.*s", bytes_received, recv_buf)) !=
+        NO_ERROR) {
       return error;
     }
   }
   *end_ptr = '\0';
-  handle->receiver.message_size = end_ptr - memwriter_buf(handle->receiver.memwriter);
+  handle->sender_receiver.receiver.message_size = end_ptr - memwriter_buf(handle->sender_receiver.receiver.memwriter);
+
+  return error;
+}
+
+error_t receiver_recv_for_custom(metahandle_t *handle) {
+  /* TODO: is it really necessary to copy the memory? */
+  const char *recv_buf;
+  error_t error = NO_ERROR;
+
+  recv_buf = handle->sender_receiver.receiver.comm.custom.recv(handle->sender_receiver.receiver.comm.custom.name,
+                                                               handle->sender_receiver.receiver.comm.custom.id);
+  if (recv_buf == NULL) {
+    return ERROR_CUSTOM_RECV;
+  }
+  memwriter_clear(handle->sender_receiver.receiver.memwriter);
+  if ((error = memwriter_puts(handle->sender_receiver.receiver.memwriter, recv_buf)) != NO_ERROR) {
+    return error;
+  }
+  handle->sender_receiver.receiver.message_size = memwriter_size(handle->sender_receiver.receiver.memwriter);
 
   return error;
 }
@@ -5060,12 +5113,18 @@ error_t receiver_recv_for_socket(void *p) {
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
 
-error_t sender_init_for_jupyter(metahandle_t *handle, const char *hostname, unsigned int port) {
-  UNUSED(handle);
-  UNUSED(hostname);
-  UNUSED(port);
-  /* TODO: implement me! */
-  handle->finalize = sender_finalize_for_jupyter;
+error_t sender_init_for_custom(metahandle_t *handle, const char *name, unsigned int id,
+                               int (*custom_send)(const char *, unsigned int, const char *)) {
+  handle->sender_receiver.sender.comm.custom.send = custom_send;
+  handle->sender_receiver.sender.comm.custom.name = name;
+  handle->sender_receiver.sender.comm.custom.id = id;
+  handle->sender_receiver.sender.send = sender_send_for_custom;
+  handle->finalize = sender_finalize_for_custom;
+  handle->sender_receiver.sender.memwriter = memwriter_new();
+  if (handle->sender_receiver.sender.memwriter == NULL) {
+    return ERROR_MALLOC;
+  }
+
   return NO_ERROR;
 }
 
@@ -5080,9 +5139,9 @@ error_t sender_init_for_socket(metahandle_t *handle, const char *hostname, unsig
 
   snprintf(port_str, PORT_MAX_STRING_LENGTH, "%u", port);
 
-  handle->sender.memwriter = NULL;
-  handle->sender.comm.socket.client_socket = -1;
-  handle->sender.send = sender_send_for_socket;
+  handle->sender_receiver.sender.memwriter = NULL;
+  handle->sender_receiver.sender.comm.socket.client_socket = -1;
+  handle->sender_receiver.sender.send = sender_send_for_socket;
   handle->finalize = sender_finalize_for_socket;
 
 #ifdef _WIN32
@@ -5121,54 +5180,56 @@ error_t sender_init_for_socket(metahandle_t *handle, const char *hostname, unsig
   }
 
   /* Attempt to connect to an address until one succeeds */
-  handle->sender.comm.socket.client_socket = -1;
-  for (addr_ptr = addr_result; addr_ptr != NULL && handle->sender.comm.socket.client_socket < 0;
+  handle->sender_receiver.sender.comm.socket.client_socket = -1;
+  for (addr_ptr = addr_result; addr_ptr != NULL && handle->sender_receiver.sender.comm.socket.client_socket < 0;
        addr_ptr = addr_ptr->ai_next) {
     /* Create a socket for connecting to server */
-    handle->sender.comm.socket.client_socket =
+    handle->sender_receiver.sender.comm.socket.client_socket =
       socket(addr_ptr->ai_family, addr_ptr->ai_socktype, addr_ptr->ai_protocol);
-    if (handle->sender.comm.socket.client_socket < 0) {
+    if (handle->sender_receiver.sender.comm.socket.client_socket < 0) {
       psocketerror("socket creation failed");
       return ERROR_NETWORK_SOCKET_CREATION;
     }
     /* Connect to server */
-    if (connect(handle->sender.comm.socket.client_socket, addr_ptr->ai_addr, (int)addr_ptr->ai_addrlen)) {
+    if (connect(handle->sender_receiver.sender.comm.socket.client_socket, addr_ptr->ai_addr,
+                (int)addr_ptr->ai_addrlen)) {
 #ifdef _WIN32
-      closesocket(handle->sender.comm.socket.client_socket);
+      closesocket(handle->sender_receiver.sender.comm.socket.client_socket);
 #else
-      close(handle->sender.comm.socket.client_socket);
+      close(handle->sender_receiver.sender.comm.socket.client_socket);
 #endif
-      handle->sender.comm.socket.client_socket = -1;
+      handle->sender_receiver.sender.comm.socket.client_socket = -1;
     }
   }
   freeaddrinfo(addr_result);
 
-  if (handle->sender.comm.socket.client_socket < 0) {
+  if (handle->sender_receiver.sender.comm.socket.client_socket < 0) {
     fprintf(stderr, "cannot connect to host %s port %u: ", hostname, port);
     psocketerror("");
     return ERROR_NETWORK_CONNECT;
   }
 
-  handle->sender.memwriter = memwriter_new();
-  if (handle->sender.memwriter == NULL) {
+  handle->sender_receiver.sender.memwriter = memwriter_new();
+  if (handle->sender_receiver.sender.memwriter == NULL) {
     return ERROR_MALLOC;
   }
 
   return NO_ERROR;
 }
 
-error_t sender_finalize_for_jupyter(metahandle_t *handle) {
-  UNUSED(handle);
+error_t sender_finalize_for_custom(metahandle_t *handle) {
+  memwriter_delete(handle->sender_receiver.sender.memwriter);
+
   return NO_ERROR;
 }
 
 error_t sender_finalize_for_socket(metahandle_t *handle) {
   error_t error = NO_ERROR;
 
-  memwriter_delete(handle->sender.memwriter);
+  memwriter_delete(handle->sender_receiver.sender.memwriter);
 #ifdef _WIN32
-  if (handle->sender.comm.socket.client_socket >= 0) {
-    if (closesocket(handle->sender.comm.socket.client_socket)) {
+  if (handle->sender_receiver.sender.comm.socket.client_socket >= 0) {
+    if (closesocket(handle->sender_receiver.sender.comm.socket.client_socket)) {
       psocketerror("client socket shutdown failed");
       error = ERROR_NETWORK_SOCKET_CLOSE;
     }
@@ -5178,8 +5239,8 @@ error_t sender_finalize_for_socket(metahandle_t *handle) {
     error = ERROR_NETWORK_WINSOCK_CLEANUP;
   }
 #else
-  if (handle->sender.comm.socket.client_socket >= 0) {
-    if (close(handle->sender.comm.socket.client_socket)) {
+  if (handle->sender_receiver.sender.comm.socket.client_socket >= 0) {
+    if (close(handle->sender_receiver.sender.comm.socket.client_socket)) {
       psocketerror("client socket shutdown failed");
       error = ERROR_NETWORK_SOCKET_CLOSE;
     }
@@ -5189,24 +5250,23 @@ error_t sender_finalize_for_socket(metahandle_t *handle) {
   return error;
 }
 
-error_t sender_send_for_socket(void *p) {
-  metahandle_t *handle = (metahandle_t *)p;
+error_t sender_send_for_socket(metahandle_t *handle) {
   const char *buf, *send_ptr;
   size_t buf_size;
   int bytes_left;
   error_t error = NO_ERROR;
 
-  if ((error = memwriter_putc(handle->sender.memwriter, ETB)) != NO_ERROR) {
+  if ((error = memwriter_putc(handle->sender_receiver.sender.memwriter, ETB)) != NO_ERROR) {
     return error;
   }
 
-  buf = memwriter_buf(handle->sender.memwriter);
-  buf_size = memwriter_size(handle->sender.memwriter);
+  buf = memwriter_buf(handle->sender_receiver.sender.memwriter);
+  buf_size = memwriter_size(handle->sender_receiver.sender.memwriter);
 
   send_ptr = buf;
   bytes_left = buf_size;
   while (bytes_left) {
-    int bytes_sent = send(handle->sender.comm.socket.client_socket, buf, bytes_left, 0);
+    int bytes_sent = send(handle->sender_receiver.sender.comm.socket.client_socket, buf, bytes_left, 0);
     if (bytes_sent < 0) {
       psocketerror("could not send any data");
       return ERROR_NETWORK_SEND;
@@ -5215,7 +5275,22 @@ error_t sender_send_for_socket(void *p) {
     bytes_left -= bytes_sent;
   }
 
-  memwriter_clear(handle->sender.memwriter);
+  memwriter_clear(handle->sender_receiver.sender.memwriter);
+
+  return error;
+}
+
+error_t sender_send_for_custom(metahandle_t *handle) {
+  const char *buf;
+  error_t error = NO_ERROR;
+
+  buf = memwriter_buf(handle->sender_receiver.sender.memwriter);
+  if (!handle->sender_receiver.sender.comm.custom.send(handle->sender_receiver.sender.comm.custom.name,
+                                                       handle->sender_receiver.sender.comm.custom.id, buf)) {
+    error = ERROR_CUSTOM_SEND;
+    return error;
+  }
+  memwriter_clear(handle->sender_receiver.sender.memwriter);
 
   return error;
 }
@@ -5404,7 +5479,7 @@ void gr_dumpmeta_json(const gr_meta_args_t *args, FILE *f) {
 }
 
 #ifdef EMSCRIPTEN
-FILE * gr_get_stdout() {
+FILE *gr_get_stdout() {
   return stdout;
 }
 #endif

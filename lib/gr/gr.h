@@ -20,10 +20,8 @@ extern "C" {
 
 #endif
 
-#define GR_SOURCE_JUPYTER 0
-#define GR_SOURCE_SOCKET 1
-#define GR_TARGET_JUPYTER 2
-#define GR_TARGET_SOCKET 3
+#define GR_SENDER 0
+#define GR_RECEIVER 1
 
 typedef struct {
   double x, y;
@@ -185,7 +183,9 @@ DLLEXPORT void gr_meta_args_push_kwarg(
   gr_meta_args_t *, const char *, const char *, ...);
 DLLEXPORT void gr_meta_args_push_kwarg_buf(
   gr_meta_args_t *, const char *, const char *, const void *, int);
-DLLEXPORT void *gr_openmeta(int, const char *, unsigned int);
+DLLEXPORT void *gr_openmeta(
+  int, const char *, unsigned int, const char *(*)(const char *, unsigned int),
+  int (*)(const char *, unsigned int, const char *));
 DLLEXPORT gr_meta_args_t *gr_recvmeta(const void *p, gr_meta_args_t *);
 DLLEXPORT int gr_sendmeta(const void *, const char *, ...);
 DLLEXPORT int gr_sendmeta_buf(const void *, const char *, const void *, int);
