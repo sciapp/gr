@@ -1,5 +1,5 @@
-#ifndef GIF_H
-#define GIF_H
+#ifndef _GIF_H_
+#define _GIF_H_
 
 #define FORMAT_RGB (3)
 #define FORMAT_RGBA (4)

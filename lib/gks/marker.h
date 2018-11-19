@@ -1,3 +1,6 @@
+#ifndef _MARKER_H_
+#define _MARKER_H_
+
 #define marker_off 32
 
 static
@@ -118,3 +121,5 @@ int marker[38][57] =
     { 2, 0, 0, 1000, 1000, 2, 0, 0, 1000, -1000,
       2, 0, 0, -1000, -1000, 2, 0, 0, -1000, 1000, 0 }
   };
+
+#endif

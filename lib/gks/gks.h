@@ -1,3 +1,5 @@
+#ifndef _GKS_H_
+#define _GKS_H_
 
 #include <stdio.h>
 
@@ -712,5 +714,6 @@ DLLEXPORT int gemergencyclosegks(void);
 #ifdef _WIN32
 #ifdef __cplusplus
 }
+#endif
 #endif
 #endif

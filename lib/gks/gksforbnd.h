@@ -1,3 +1,5 @@
+#ifndef _GKSFORBND_H_
+#define _GKSFORBND_H_
 
 #if !defined (cray) && !(defined (_WIN32) && !defined (__GNUC__))
 #if defined (VMS) || ((defined (hpux) || defined (aix)) && !defined(NAGware))
@@ -324,3 +326,5 @@ extern void STDCALL GQTXXS(
 extern void STDCALL GQDSP(
   int *, int *, int *, float *, float *ry, int *lx, int *ly);
 extern void STDCALL GECLKS(void);
+
+#endif

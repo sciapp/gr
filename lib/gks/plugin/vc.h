@@ -1,4 +1,3 @@
-
 #ifndef _VC_H_
 #define _VC_H_
 

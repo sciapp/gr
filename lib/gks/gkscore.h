@@ -1,5 +1,4 @@
-
-#if !defined(_GKSCORE_H_)
+#ifndef _GKSCORE_H_
 #define _GKSCORE_H_
 
 #ifdef _WIN32
