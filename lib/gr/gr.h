@@ -1,3 +1,6 @@
+#ifndef _GR_H_
+#define _GR_H_
+
 #include <stdio.h>
 #ifdef _WIN32
 
@@ -207,5 +210,6 @@ DLLEXPORT void gr_shadelines(int, double *, double *, int, int, int);
 #ifdef _WIN32
 #ifdef __cplusplus
 }
+#endif
 #endif
 #endif

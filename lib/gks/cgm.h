@@ -1,3 +1,5 @@
+#ifndef _CGM_H_
+#define _CGM_H_
 
 #define term_char	    ';'		    /* std. terminator character */
 #define quote_char	    '\"'	    /* std. quote character */
@@ -247,3 +249,5 @@ static int element_list[n_melements*2] = {
     5, (int) HatchIndex,
     5, (int) PatIndex,
     5, (int) ColTab };
+
+#endif

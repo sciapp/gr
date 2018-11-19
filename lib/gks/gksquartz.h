@@ -1,5 +1,5 @@
-#ifndef GKSQUARTZ_H
-#define GKSQUARTZ_H
+#ifndef _GKSQUARTZ_H_
+#define _GKSQUARTZ_H_
 
 #define MAX_WINDOWS 50
 

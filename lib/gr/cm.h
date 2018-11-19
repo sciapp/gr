@@ -1,3 +1,6 @@
+#ifndef _CM_H_
+#define _CM_H_
+
 static
 int cmap_h[48][256] = {
   { /* COLORMAP_UNIFORM */
@@ -2161,3 +2164,4 @@ int cmap_h[48][256] = {
     0xfcf7b9, 0xfcf9bb, 0xfcfbbd, 0xfcfdbf }
 };
 
+#endif

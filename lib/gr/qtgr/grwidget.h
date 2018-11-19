@@ -1,5 +1,5 @@
-#ifndef GRWIDGET_H_INCLUDED
-#define GRWIDGET_H_INCLUDED
+#ifndef _GRWIDGET_H_
+#define _GRWIDGET_H_
 
 #include <QWidget>
 #include <QMouseEvent>

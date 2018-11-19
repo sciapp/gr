@@ -1,3 +1,5 @@
+#ifndef _GKSSERVER_H_
+#define _GKSSERVER_H_
 
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -28,3 +30,5 @@ private:
 signals:
   void data(char *);
 };
+
+#endif

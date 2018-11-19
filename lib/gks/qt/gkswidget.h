@@ -1,3 +1,5 @@
+#ifndef _GKSWIDGET_H_
+#define _GKSWIDGET_H_
 
 #include <QtGlobal>
 #if QT_VERSION >= 0x050000
@@ -27,3 +29,4 @@ private:
   char *dl;
 };
 
+#endif
