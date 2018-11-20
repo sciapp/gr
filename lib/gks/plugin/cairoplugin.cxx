@@ -1572,32 +1572,22 @@ void gks_cairoplugin(
         }
       else if (p->wtype == 143)
         {
-          long int width, height, mem_ptr_as_int;
+          int width = 0;
+          int height = 0;
+          int symbols_read = 0;
+          int characters_read = 0;
+          void *mem_ptr = NULL;
           char *path = p->path;
           if (!path) {
             fprintf(stderr, "Missing mem path. Expected !<width>x<height>@<pointer>.mem\n");
             exit(1);
           }
-          if (*path != '!') {
+          symbols_read = sscanf(path, "!%dx%d@%p.mem%n", &width, &height, &mem_ptr, &characters_read);
+          if (symbols_read != 3 || path[characters_read] != 0 || width <= 0 || height <= 0 || mem_ptr == NULL) {
             fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n", p->path);
             exit(1);
           }
-          width = strtol(path+1, &path, 10);
-          if (width <= 0 || width == LONG_MAX || *path != 'x') {
-            fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n", p->path);
-            exit(1);
-          }
-          height = strtol(path+1, &path, 10);
-          if (height <= 0 || height == LONG_MAX || *path != '@') {
-            fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n", p->path);
-            exit(1);
-          }
-          mem_ptr_as_int = strtol(path+1, &path, 16);
-          if (mem_ptr_as_int <= 0 || mem_ptr_as_int == LONG_MAX || strcmp(path, ".mem")) {
-            fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n", p->path);
-            exit(1);
-          }
-          p->mem = (unsigned char*)mem_ptr_as_int;
+          p->mem = (unsigned char*)mem_ptr;
           p->mw = 0.28575; p->mh = 0.19685;
           p->w = 6750; p->h = 4650;
           resize(width, height);
