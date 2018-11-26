@@ -13,10 +13,13 @@
 
 #define DEFAULT_CONTOUR_LINES 16 /* default number of contour lines */
 
-const unsigned char EDGE_N = 1 << 0;
-const unsigned char EDGE_E = 1 << 1;
-const unsigned char EDGE_S = 1 << 2;
-const unsigned char EDGE_W = 1 << 3;
+#define EDGE_N (1 << 0)
+#define EDGE_E (1 << 1)
+#define EDGE_S (1 << 2)
+#define EDGE_W (1 << 3)
+#define ALL_EDGES (EDGE_N | EDGE_E | EDGE_S | EDGE_W)
+#define SADDLE1 (1 << 4)
+#define SADDLE2 (1 << 5)
 
 typedef struct {
   void *list;
@@ -123,10 +126,10 @@ static unsigned char get_bitmask(const double *z, size_t nx, size_t ny, long i, 
    * Calculate the bitmask for cell (i, j) of z and contour used for the marching squares algorithm.
    */
   unsigned char result = 0;
-  result |= (padded_array_lookup(z, nx, ny, i  , j  ) > contour) << 3;
-  result |= (padded_array_lookup(z, nx, ny, i+1, j  ) > contour) << 2;
-  result |= (padded_array_lookup(z, nx, ny, i+1, j+1) > contour) << 1;
-  result |= (padded_array_lookup(z, nx, ny, i  , j+1) > contour);
+  result |= (padded_array_lookup(z, nx, ny, i  , j  ) >= contour) << 3;
+  result |= (padded_array_lookup(z, nx, ny, i+1, j  ) >= contour) << 2;
+  result |= (padded_array_lookup(z, nx, ny, i+1, j+1) >= contour) << 1;
+  result |= (padded_array_lookup(z, nx, ny, i  , j+1) >= contour);
   return result;
 }
 
@@ -163,6 +166,82 @@ static double interpolate_edge(const double *z, size_t nx, size_t ny, long i1, l
       return 0;
     }
   return interpolate(padded_array_lookup(z, nx, ny, i1, j1), padded_array_lookup(z, nx, ny, i2, j2), contour);
+}
+
+static unsigned char check_saddle(const unsigned char edges)
+{
+    /*
+     * Return the allowed edges to avoid crossing contour lines at saddle points.
+     */
+    unsigned char edge_bits = edges & ALL_EDGES;
+    if (!(edges & (SADDLE1 | SADDLE2)))
+      {
+        /*
+         * If the point is not a saddle point there is no ambiguity so all edges can be used (only one should
+         * be set in this case).
+         */
+        return ALL_EDGES;
+      }
+
+    /*
+     * Count number of edge bits
+     */
+    int cnt = 0;
+    while (edge_bits)
+      {
+        if (edge_bits & 1)
+          {
+            cnt++;
+          }
+        edge_bits >>= 1;
+      }
+
+    /*
+     * Possible cases:
+     * - 1 edge     : only one remaining connection, no ambiguity.
+     * - 2 / 4 edges: starting a new contour line in a saddle point. Every (remaining) edge can be used.
+     * - 3 edges    : contour line passing a saddle point, amiguous case. Only one edge is allowed depending
+     *                on the origin (cleared edge bit) and the type of the saddle point.
+     */
+    if (cnt != 3)
+      {
+        return ALL_EDGES;
+      }
+
+    if (!(edges & EDGE_N))
+      {
+        if (edges & SADDLE1)
+          {
+            return EDGE_W;
+          }
+        return EDGE_E;
+      }
+    if (!(edges & EDGE_E))
+      {
+        if (edges & SADDLE1)
+          {
+            return EDGE_S;
+          }
+        return EDGE_N;
+      }
+    if (!(edges & EDGE_S))
+      {
+        if (edges & SADDLE1)
+          {
+            return EDGE_E;
+          }
+        return EDGE_W;
+      }
+    if (!(edges & EDGE_W))
+      {
+        if (edges & SADDLE1)
+          {
+            return EDGE_N;
+          }
+        return EDGE_S;
+      }
+    assert(0 && "Invalid point in check_saddle.");
+    return ALL_EDGES;
 }
 
 static void marching_squares(const double *x, const double *y, const double *z, size_t nx, size_t ny,
@@ -216,6 +295,8 @@ static void marching_squares(const double *x, const double *y, const double *z, 
           for (i=0; i<nx_padded; i++)
             {
               unsigned char bitmask = get_bitmask(z, nx, ny, i, j, contour);
+              assert((edges[j*nx_padded+i] & ALL_EDGES) == 0 && "edge bit not cleared for previous iso value.");
+              edges[j*nx_padded+i] = 0;
               if (bitmask == 1 || bitmask == 10 || bitmask == 14)    /* bottom \ */
                 {
                   edges[j*nx_padded+i] |= EDGE_W | EDGE_S;
@@ -240,6 +321,26 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                 {
                   edges[j*nx_padded+i] |= EDGE_N | EDGE_E;
                 }
+              if (bitmask == 5 || bitmask == 10)
+                {
+                  /*
+                   * Handle saddle points (ambiguous case) depending on average value of
+                   * the four corner points of the cell.
+                   */
+                  double midpoint = (
+                         padded_array_lookup(z, nx, ny, i  , j  ) +
+                         padded_array_lookup(z, nx, ny, i+1, j  ) +
+                         padded_array_lookup(z, nx, ny, i+1, j+1) +
+                         padded_array_lookup(z, nx, ny, i  , j+1)) / 4.0 >= contour;
+                  if ((bitmask == 5 && midpoint) || (bitmask == 10 && !midpoint))
+                    {
+                      edges[j*nx_padded+i] |= SADDLE1;
+                    }
+                  else
+                    {
+                      edges[j*nx_padded+i] |= SADDLE2;
+                    }
+                }
             }
         }
 
@@ -248,7 +349,7 @@ static void marching_squares(const double *x, const double *y, const double *z, 
         {
           for (i=0; i<nx_padded; i++)
             {
-              if (edges[j*nx_padded+i]) /* Start of a new polyline found */
+              if (edges[j*nx_padded+i] & ALL_EDGES) /* Start of a new polyline found */
                 {
                   long xi = i;
                   long yi = j;
@@ -265,9 +366,10 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                    * to the polyline, remove the corresponding EDGE_* bit from the cell and the
                    * corresponding bit of the following cell in the line.
                    */
-                  while(edges[yi*nx_padded+xi])
+                  while(edges[yi*nx_padded+xi] & ALL_EDGES)
                     {
-                      if (edges[yi*nx_padded+xi] & EDGE_N)
+                      unsigned char saddle = check_saddle(edges[yi*nx_padded+xi]);
+                      if (edges[yi*nx_padded+xi] & saddle & EDGE_N)
                         {
                           x_pos = padded_array_lookup_1d(x, nx, xi) + \
                                   x_step * interpolate_edge(z, nx, ny, xi, xi + 1, yi, yi, contour);
@@ -277,7 +379,7 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                           assert(edges[yi*nx_padded+xi] | EDGE_S);
                           edges[yi*nx_padded+xi] &= ~EDGE_S;
                         }
-                      else if (edges[yi*nx_padded+xi] & EDGE_E)
+                      else if (edges[yi*nx_padded+xi] & saddle & EDGE_E)
                         {
                           x_pos = padded_array_lookup_1d(x, nx, xi + 1);
                           y_pos = padded_array_lookup_1d(y, ny, yi) + \
@@ -287,7 +389,7 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                           assert(edges[yi*nx_padded+xi] | EDGE_W);
                           edges[yi*nx_padded+xi] &= ~EDGE_W;
                         }
-                      else if (edges[yi*nx_padded+xi] & EDGE_S)
+                      else if (edges[yi*nx_padded+xi] & saddle & EDGE_S)
                         {
                           x_pos = padded_array_lookup_1d(x, nx, xi) + \
                                   x_step * interpolate_edge(z, nx, ny, xi, xi + 1, yi + 1, yi + 1, contour);
@@ -297,7 +399,7 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                           assert(edges[yi*nx_padded+xi] | EDGE_N);
                           edges[yi*nx_padded+xi] &= ~EDGE_N;
                         }
-                      else if (edges[yi*nx_padded+xi] & EDGE_W)
+                      else if (edges[yi*nx_padded+xi] & saddle & EDGE_W)
                         {
                           x_pos = padded_array_lookup_1d(x, nx, xi);
                           y_pos = padded_array_lookup_1d(y, ny, yi) + \
@@ -310,14 +412,13 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                       list_append(polylines_x, &x_pos);
                       list_append(polylines_y, &y_pos);
                     }
-                  assert(xi == i && yi == j);
+                  assert(xi == i && yi == j && "contour line is not closed.");
                   /* Repeat first polyline point to get a closed line */
                   list_append(polylines_x, ((double *)polylines_x->list)+polyline_start_index);
                   list_append(polylines_y, ((double *)polylines_y->list)+polyline_start_index);
                   x_pos = y_pos = 0;
                   list_append(polylines_x, &x_pos);
                   list_append(polylines_y, &y_pos);
-                  break;
                 }
             }
         }
