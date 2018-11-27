@@ -1,6 +1,5 @@
 stages:
 - build
-- install
 - package
 - deploy
 
@@ -274,26 +273,6 @@ emscripten:
     paths:
     - artifacts-js/
 
-packages-fpm:
-  stage: build
-  image: debian:8
-  script:
-  - apt-get update
-  - apt-get install -y wget build-essential mesa-common-dev gfortran libqt4-dev qtdeclarative5-dev libgs-dev texlive-latex-base dvipng cmake patch python2.7 rpm ruby-dev xorg-dev git automake libtool
-  - gem install fpm
-  - make "DISTROS=centos debian suse" linuxpackages
-  - mkdir -p artifacts/linux/centos
-  - cp packaging/centos/gr-*-1.x86_64.rpm artifacts/linux/centos/
-  - mkdir -p artifacts/linux/debian
-  - cp packaging/debian/gr_*_amd64.deb artifacts/linux/debian/
-  - mkdir -p artifacts/linux/suse
-  - cp packaging/suse/gr-*-1.x86_64.rpm artifacts/linux/suse/
-  - mv artifacts artifacts-packages
-  artifacts:
-    expire_in: 1 week
-    paths:
-    - artifacts-packages/
-
 packages-tar:
   stage: package
   image: ubuntu:16.04
@@ -421,61 +400,3 @@ deploy:
   - apt-get install -y sshpass rsync
   - set +x
   - sshpass -p $RSYNC_PASSWORD rsync -av ./Downloads/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/
-
-debian9-install:
-  stage: install
-  image: debian:9
-  script:
-  - apt-get -q update
-  - apt-get -q install -y gdebi-core gcc
-  # Install gr DEB
-  - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
-  - gcc -o test test.c -lGR -lGR3
-  - ./test
-
-ubuntu16.04-install:
-  stage: install
-  image: ubuntu:16.04
-  script:
-  - apt-get -q update
-  - apt-get -q install -y gdebi-core gcc
-  # Install gr DEB
-  - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
-  - gcc -o test test.c -lGR -lGR3
-  - ./test
-
-ubuntu17.10-install:
-  stage: install
-  image: ubuntu:17.10
-  script:
-  - apt-get -q update
-  - apt-get -q install -y gdebi-core gcc
-  # Install gr DEB
-  - gdebi -n artifacts-packages/linux/debian/gr*.deb
-  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
-  - gcc -o test test.c -lGR -lGR3
-  - ./test
-
-centos7-install:
-  stage: install
-  image: centos:7
-  script:
-  - yum install -y epel-release gcc
-  # Install gr RPM
-  - yum localinstall -y artifacts-packages/linux/centos/gr*.rpm
-  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
-  - gcc -o test test.c -lGR -lGR3
-  - ./test
-
-opensuse15-install:
-  stage: install
-  image: opensuse/leap:15
-  script:
-  # Install gr RPM
-  - echo 'gpgcheck = off' >> /etc/zypp/zypp.conf
-  - zypper install -y artifacts-packages/linux/suse/gr*.rpm gcc
-  - "echo -e '#include <gr.h>\n#include <gr3.h>\n#include <stdio.h>\nint main(void) { printf(\"gr version: %s\\\\n\", gr_version()); gr3_init(0); return 0; }' > test.c"
-  - gcc -o test test.c -lGR -lGR3
-  - ./test

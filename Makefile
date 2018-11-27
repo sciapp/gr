@@ -64,22 +64,5 @@ osxpkg:
 	pkgbuild --identifier de.fz-juelich.gr --root tmp --install-location /usr/local --ownership preserve gr.pkg
 	sudo rm -rf tmp
 
-linuxpackages: DESTDIR=$(shell pwd)/tmp
-linuxpackages: GRDIR=/opt/gr
-linuxpackages:
-	echo $(DISTROS)
-	@which fpm >/dev/null 2>&1 || \
-	( echo "FATAL: fpm could not be found in PATH.\n       Visit https://github.com/jordansissel/fpm for more information on fpm."; exit 1 )
-	mkdir -p $(DESTDIR)$(GRDIR)
-	env DESTDIR=$(DESTDIR) GRDIR=$(GRDIR) sh 3rdparty/makeself.sh
-ifndef DISTROS
-	@./packaging/create_package.sh
-else
-	@for DISTRO in $(DISTROS); do \
-		./packaging/create_package.sh "$${DISTRO}"; \
-	done
-endif
-	rm -rf $(DESTDIR)
-
 mirror:
 	(cd ../gr-github && git fetch && git push)
