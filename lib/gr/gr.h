@@ -195,7 +195,7 @@ DLLEXPORT int gr_sendmeta_buf(const void *, const char *, const void *, int);
 DLLEXPORT int gr_sendmeta_ref(const void *, const char *, char, const void *, int);
 DLLEXPORT int gr_sendmeta_args(const void *p, const gr_meta_args_t *);
 DLLEXPORT void gr_closemeta(const void *);
-DLLEXPORT void gr_plotmeta(const gr_meta_args_t *);
+DLLEXPORT int gr_plotmeta(const gr_meta_args_t *);
 DLLEXPORT int gr_readmeta(gr_meta_args_t *, const char *);
 #ifndef NDEBUG
 DLLEXPORT void gr_dumpmeta(const gr_meta_args_t *, FILE *);

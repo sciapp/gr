@@ -33,6 +33,8 @@
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 /* allow the use of posix functions on windows with msvc */
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
 #define strdup _strdup
 #define snprintf(buf, len, format, ...) _snprintf_s(buf, len, len, format, __VA_ARGS__)
 #endif
@@ -125,20 +127,46 @@ static void debug_printf(const char *format, ...) {
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
-#define PLOT_DEFAULT_WIDTH 500
-#define PLOT_DEFAULT_HEIGHT 500
+#define PLOT_DEFAULT_WIDTH 600.0
+#define PLOT_DEFAULT_HEIGHT 450.0
+#define PLOT_DEFAULT_KIND "line"
+#define PLOT_DEFAULT_SPEC ""
+#define PLOT_DEFAULT_CLEAR 1
+#define PLOT_DEFAULT_UPDATE 1
+#define PLOT_DEFAULT_LOCATION 1
 #define PLOT_DEFAULT_SUBPLOT_MIN_X 0.0
 #define PLOT_DEFAULT_SUBPLOT_MAX_X 1.0
 #define PLOT_DEFAULT_SUBPLOT_MIN_Y 0.0
 #define PLOT_DEFAULT_SUBPLOT_MAX_Y 1.0
+#define PLOT_DEFAULT_XLOG 0
+#define PLOT_DEFAULT_YLOG 0
+#define PLOT_DEFAULT_ZLOG 0
+#define PLOT_DEFAULT_XFLIP 0
+#define PLOT_DEFAULT_YFLIP 0
+#define PLOT_DEFAULT_ZFLIP 0
+#define PLOT_DEFAULT_ADJUST_XLIM 1
+#define PLOT_DEFAULT_ADJUST_YLIM 1
+#define PLOT_DEFAULT_ADJUST_ZLIM 1
+#define PLOT_DEFAULT_COLORMAP 44 /* VIRIDIS */
+#define PLOT_DEFAULT_ROTATION 40
+#define PLOT_DEFAULT_TILT 70
+#define PLOT_DEFAULT_XLABEL ""
+#define PLOT_DEFAULT_YLABEL ""
+#define PLOT_DEFAULT_ZLABEL ""
+#define PLOT_DEFAULT_STEP_WHERE "mid"
+#define PLOT_DEFAULT_CONTOUR_LEVELS 20
+#define PLOT_DEFAULT_HEXBIN_NBINS 40
+#define PLOT_DEFAULT_TRICONT_LEVELS 20
+#define SERIES_DEFAULT_SPEC ""
 #define PLOT_POLAR_AXES_TEXT_BUFFER 40
+#define PLOT_CONTOUR_GRIDIT_N 200
+#define PLOT_WIREFRAME_GRIDIT_N 50
+#define PLOT_SURFACE_GRIDIT_N 200
 
 
 /* ------------------------- receiver / sender----------------------------------------------------------------------- */
 
 #define SOCKET_RECV_BUF_SIZE (MEMWRITER_INITIAL_SIZE - 1)
-#define is_source(source_or_target) ((source_or_target) < GR_TARGET_JUPYTER)
-#define is_target(source_or_target) (!is_source(source_or_target))
 
 
 /* ------------------------- sender --------------------------------------------------------------------------------- */
@@ -150,12 +178,23 @@ static void debug_printf(const char *format, ...) {
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
 #define is_string_delimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr)-1) != '\\'))
+
 #ifndef min
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 #endif
+
 #ifndef max
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #endif
+
+/* test macro which can be used like `assert` */
+#define return_error_if(condition, error) \
+  do {                                    \
+    if (condition) {                      \
+      return (error);                     \
+    }                                     \
+  } while (0)
+/* TODO: Build a `cleanup_if` macro */
 
 #define UNUSED(param) \
   do {                \
@@ -292,6 +331,11 @@ typedef enum {
   ERROR_NETWORK_WINSOCK_CLEANUP,
   ERROR_CUSTOM_RECV,
   ERROR_CUSTOM_SEND,
+  ERROR_PLOT_NORMALIZATION,
+  ERROR_PLOT_UNKNOWN_KIND,
+  ERROR_PLOT_MISSING_DATA,
+  ERROR_PLOT_COMPONENT_LENGTH_MISMATCH,
+  ERROR_PLOT_MISSING_LABELS,
   ERROR_NOT_IMPLEMENTED
 } error_t;
 
@@ -448,20 +492,7 @@ struct _metahandle_t {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-typedef void (*plot_func_t)(gr_meta_args_t *args);
-typedef struct {
-  const char *kind;
-  plot_func_t func;
-} kind_to_func_t;
-
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-typedef int (*attribute_func_t)(gr_meta_args_t *args, arg_t *arg);
-typedef struct {
-  const char *attribute;
-  attribute_func_t func;
-} attribute_to_func_t;
+typedef error_t (*plot_func_t)(gr_meta_args_t *args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ options ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -472,8 +503,35 @@ typedef enum {
   GR_OPTION_Z_LOG = 1 << 2,
   GR_OPTION_FLIP_X = 1 << 3,
   GR_OPTION_FLIP_Y = 1 << 4,
-  GR_OPTION_FLIP_Z = 1 << 5
+  GR_OPTION_FLIP_Z = 1 << 5,
+  GR_OPTION_LINES = 0,
+  GR_OPTION_MESH = 1,
+  GR_OPTION_FILLED_MESH = 2,
+  GR_OPTION_Z_SHADED_MESH = 3,
+  GR_OPTION_COLORED_MESH = 4,
+  GR_OPTION_CELL_ARRAY = 5,
+  GR_OPTION_SHADED_MESH = 6
 } gr_option_t;
+
+
+/* ------------------------- string-to-generic map ------------------------------------------------------------------ */
+
+#define DECLARE_MAP_TYPE(prefix, value_type) \
+  typedef struct {                           \
+    const char *key;                         \
+    value_type value;                        \
+  } prefix##_map_entry_t;                    \
+                                             \
+  typedef struct {                           \
+    prefix##_map_entry_t *map;               \
+    size_t capacity;                         \
+    size_t size;                             \
+  } prefix##_map_t;
+
+DECLARE_MAP_TYPE(fmt, const char *)
+DECLARE_MAP_TYPE(plot_func, plot_func_t)
+
+#undef DECLARE_MAP_TYPE
 
 
 /* ========================= functions ============================================================================== */
@@ -509,43 +567,61 @@ static void args_decrease_arg_reference_count(args_node_t *args_node);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static plot_func_t plot_get_plot_func(const char *kind);
-static attribute_func_t plot_get_attribute_func(const char *attribute);
-static void plot_process_attributes(gr_meta_args_t *args, const char **attributes);
+static error_t plot_init_static_variables(void);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static void plot_store_and_normalize_plot_data(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args);
-static void plot_store_plot_attributes(gr_meta_args_t *subplot_args, const gr_meta_args_t *user_args);
-static void plot_store_window(gr_meta_args_t *subplot_args);
-static void plot_store_viewport(gr_meta_args_t *subplot_args);
+static error_t plot_normalize_args(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args);
+static void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args);
+static void plot_pre_plot(gr_meta_args_t *subplot_args);
+static void plot_process_colormap(gr_meta_args_t *subplot_args);
+static void plot_process_viewport(gr_meta_args_t *subplot_args);
+static void plot_process_window(gr_meta_args_t *subplot_args);
 static void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args);
+static void plot_post_plot(gr_meta_args_t *subplot_args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static void plot_plot_line(gr_meta_args_t *args);
+static error_t plot_line(gr_meta_args_t *subplot_args);
+static error_t plot_step(gr_meta_args_t *subplot_args);
+static error_t plot_scatter(gr_meta_args_t *subplot_args);
+static error_t plot_quiver(gr_meta_args_t *subplot_args);
+static error_t plot_stem(gr_meta_args_t *subplot_args);
+static error_t plot_hist(gr_meta_args_t *subplot_args);
+static error_t plot_contour(gr_meta_args_t *subplot_args);
+static error_t plot_contourf(gr_meta_args_t *subplot_args);
+static error_t plot_hexbin(gr_meta_args_t *subplot_args);
+static error_t plot_heatmap(gr_meta_args_t *subplot_args);
+static error_t plot_wireframe(gr_meta_args_t *subplot_args);
+static error_t plot_surface(gr_meta_args_t *subplot_args);
+static error_t plot_plot3(gr_meta_args_t *subplot_args);
+static error_t plot_scatter3(gr_meta_args_t *subplot_args);
+static error_t plot_imshow(gr_meta_args_t *subplot_args);
+static error_t plot_isosurface(gr_meta_args_t *subplot_args);
+static error_t plot_polar(gr_meta_args_t *subplot_args);
+static error_t plot_trisurf(gr_meta_args_t *subplot_args);
+static error_t plot_tricont(gr_meta_args_t *subplot_args);
+static error_t plot_shade(gr_meta_args_t *subplot_args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ auxiliary drawing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static void plot_pre_plot(gr_meta_args_t *args);
-static void plot_set_viewport(gr_meta_args_t *args);
-static void plot_set_window(gr_meta_args_t *args);
-static void plot_draw_background(gr_meta_args_t *args);
-static void plot_draw_axes(gr_meta_args_t *args);
-static void plot_draw_polar_axes(gr_meta_args_t *args);
+static error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass);
+static error_t plot_draw_polar_axes(gr_meta_args_t *args);
+static error_t plot_draw_legend(gr_meta_args_t *args);
+static error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors);
 
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ attributes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-static int plot_process_color(gr_meta_args_t *args, arg_t *arg);
-static int plot_process_labels(gr_meta_args_t *args, arg_t *arg);
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+static double find_max_step(unsigned int n, const double *x);
+static const char *next_fmt_key(const char *fmt);
 
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
+static size_t djb2_hash(const char *str);
 static int is_int_number(const char *str);
 static unsigned int str_to_uint(const char *str, int *was_successful);
 static int int_equals_any(int number, unsigned int n, ...);
@@ -578,6 +654,12 @@ static error_t args_update_kwarg(gr_meta_args_t *args, const char *key, const ch
 static error_t args_update_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format,
                                      const void *buffer, int apply_padding);
 static error_t args_update_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
+static error_t args_setdefault_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format,
+                                            const void *buffer, va_list *vl, int apply_padding);
+static error_t args_setdefault_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...);
+static error_t args_setdefault_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format,
+                                         const void *buffer, int apply_padding);
+static error_t args_setdefault_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
 static error_t args_push_args(gr_meta_args_t *args, const gr_meta_args_t *update_args);
 static error_t args_update_kwargs(gr_meta_args_t *args, const gr_meta_args_t *update_args);
 
@@ -755,6 +837,22 @@ static error_t sender_send_for_socket(metahandle_t *handle);
 static error_t sender_send_for_custom(metahandle_t *handle);
 
 
+/* ------------------------- string-to-generic map ------------------------------------------------------------------ */
+
+#define DECLARE_MAP_METHODS(prefix, value_type)                                                    \
+  static prefix##_map_t *prefix##_map_new(size_t capacity);                                        \
+  static prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries);  \
+  static void prefix##_map_delete(prefix##_map_t *prefix##_map);                                   \
+  static int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, value_type value); \
+  static value_type prefix##_map_at(prefix##_map_t *prefix##_map, const char *key);                \
+  static ssize_t prefix##_map_index(prefix##_map_t *prefix##_map, const char *key);
+
+DECLARE_MAP_METHODS(fmt, const char *)
+DECLARE_MAP_METHODS(plot_func, plot_func_t)
+
+#undef DECLARE_MAP_METHODS
+
+
 /* ========================= static variables ======================================================================= */
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
@@ -793,6 +891,40 @@ static const char *const fromjson_datatype_to_string[] = {"unknown", "null",  "b
 static error_t (*tojson_datatype_to_func[128])(tojson_state_t *);
 static int tojson_static_variables_initialized = 0;
 static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
+
+
+/* ------------------------- plot ----------------------------------------------------------------------------------- */
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static int plot_static_variables_initialized = 0;
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* TODO: Check format of: "heatmap", "hist", "isosurface", "imshow"  */
+static fmt_map_entry_t kind_to_fmt[] = {
+  {"line", "xys"},     {"hexbin", "xys"},     {"polar", "xys"},     {"shade", "xys"},    {"stem", "xys"},
+  {"step", "xys"},     {"contour", "xyzc"},   {"contourf", "xyzc"}, {"tricont", "xyzc"}, {"trisurf", "xyzc"},
+  {"surface", "xyzc"}, {"wireframe", "xyzc"}, {"plot3", "xyac"},    {"scatter", "xyac"}, {"scatter3", "xyac"},
+  {"quiver", "xyuv"},  {"heatmap", "x"},      {"hist", "x"},        {"isosurface", "x"}, {"imshow", ""}};
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static plot_func_map_entry_t kind_to_func[] = {
+  {"line", plot_line},     {"step", plot_step},         {"scatter", plot_scatter},     {"quiver", plot_quiver},
+  {"stem", plot_stem},     {"hist", plot_hist},         {"contour", plot_contour},     {"contourf", plot_contourf},
+  {"hexbin", plot_hexbin}, {"heatmap", plot_heatmap},   {"wireframe", plot_wireframe}, {"surface", plot_surface},
+  {"plot3", plot_plot3},   {"scatter3", plot_scatter3}, {"imshow", plot_imshow},       {"isosurface", plot_isosurface},
+  {"polar", plot_polar},   {"trisurf", plot_trisurf},   {"tricont", plot_tricont},     {"shade", plot_shade},
+};
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ maps ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static fmt_map_t *fmt_map = NULL;
+static plot_func_map_t *plot_func_map = NULL;
 
 
 /* ######################### public implementation ################################################################## */
@@ -850,25 +982,38 @@ void gr_meta_args_push_kwarg_buf(gr_meta_args_t *args, const char *key, const ch
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
-void gr_plotmeta(const gr_meta_args_t *args) {
-  gr_meta_args_t *current_subplot_args;
+int gr_plotmeta(const gr_meta_args_t *args) {
+  gr_meta_args_t *subplots_args, **current_subplot_args;
   plot_func_t plot_func;
   const char *kind = NULL;
+  error_t error = NO_ERROR;
 
-  /* --------------------- translation of mlab.py ------------------------- */
-  /* TODO: copy arguments from user into new internal data container */
-  /* TODO: make `current_subplot_args` static? */
-  current_subplot_args = gr_newmeta();
-  plot_store_and_normalize_plot_data(current_subplot_args, args);
-  plot_store_plot_attributes(current_subplot_args, args);
-  args_get_first_value_by_keyword(current_subplot_args, "kind", "s", &kind, NULL);
-  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  plot_pre_plot(current_subplot_args);
-  if ((plot_func = plot_get_plot_func(kind)) != NULL) {
-    plot_func(current_subplot_args);
+  plot_init_static_variables();
+  subplots_args = gr_newmeta();
+  if ((error = plot_normalize_args(subplots_args, args)) != NO_ERROR) {
+    goto cleanup;
   }
-  gr_updatews();
-  /* --------------------- end translation of mlab.py --------------------- */
+  args_get_first_value_by_keyword(subplots_args, "subplots", "A", &current_subplot_args, NULL);
+  while (*current_subplot_args != NULL) {
+    plot_set_plot_attribute_defaults(*current_subplot_args);
+    plot_pre_plot(*current_subplot_args);
+    args_get_first_value_by_keyword(*current_subplot_args, "kind", "s", &kind, NULL);
+    logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+    if ((plot_func = plot_func_map_at(plot_func_map, kind)) == NULL) {
+      error = ERROR_PLOT_UNKNOWN_KIND;
+      goto cleanup;
+    }
+    if ((error = plot_func(*current_subplot_args)) != NO_ERROR) {
+      goto cleanup;
+    };
+    plot_post_plot(*current_subplot_args);
+    ++current_subplot_args;
+  }
+
+cleanup:
+  gr_deletemeta(subplots_args);
+
+  return error;
 }
 
 
@@ -1205,22 +1350,6 @@ int gr_sendmeta_args(const void *p, const gr_meta_args_t *args) {
 
 
 /* ######################### private implementation ################################################################# */
-
-/* ========================= datatypes ============================================================================== */
-
-/* ------------------------- plot ----------------------------------------------------------------------------------- */
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-static kind_to_func_t kind_to_func[] = {{"line", plot_plot_line}};
-static const int kind_to_func_size = sizeof(kind_to_func) / sizeof(kind_to_func[0]);
-
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ attribute to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-static attribute_to_func_t attribute_to_func[] = {{"color", plot_process_color}, {"labels", plot_process_labels}};
-static const int attribute_to_func_size = sizeof(attribute_to_func) / sizeof(attribute_to_func[0]);
-
 
 /* ========================= functions ============================================================================== */
 
@@ -1832,223 +1961,190 @@ void args_decrease_arg_reference_count(args_node_t *args_node) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-plot_func_t plot_get_plot_func(const char *kind) {
-  if (kind != NULL) {
-    int i;
-    for (i = 0; i < kind_to_func_size; i++) {
-      if (!strcmp(kind, kind_to_func[i].kind)) {
-        return kind_to_func[i].func;
-      }
+error_t plot_init_static_variables(void) {
+  if (!plot_static_variables_initialized) {
+    logger((stderr, "Initializing static plot variables\n"));
+    fmt_map = fmt_map_new_with_data(sizeof(kind_to_fmt) / sizeof(kind_to_fmt[0]), kind_to_fmt);
+    if (fmt_map == NULL) {
+      debug_print_malloc_error();
+      return ERROR_MALLOC;
     }
-  }
-  return NULL;
-}
-
-attribute_func_t plot_get_attribute_func(const char *attribute) {
-  if (attribute != NULL) {
-    int i;
-    for (i = 0; i < attribute_to_func_size; i++) {
-      if (!strcmp(attribute, attribute_to_func[i].attribute)) {
-        return attribute_to_func[i].func;
-      }
+    plot_func_map = plot_func_map_new_with_data(sizeof(kind_to_func) / sizeof(kind_to_func[0]), kind_to_func);
+    if (plot_func_map == NULL) {
+      debug_print_malloc_error();
+      fmt_map_delete(fmt_map);
+      return ERROR_MALLOC;
     }
+    plot_static_variables_initialized = 1;
   }
-  return NULL;
-}
-
-static void plot_process_attributes(gr_meta_args_t *args, const char **attributes) {
-  args_iterator_t *it;
-  arg_t *arg;
-  attribute_func_t attribute_func;
-
-  it = args_iter_kwargs(args);
-  while ((arg = it->next(it)) != NULL) {
-    const char **current_attribute = attributes;
-    while (*current_attribute) {
-      if (!strcmp(arg->key, *current_attribute)) {
-        if ((attribute_func = plot_get_attribute_func(*current_attribute)) != NULL) {
-          logger((stderr, "Found attribute func for attribute: \"%s\"\n", arg->key));
-          /* TODO: check return value for error cases */
-          attribute_func(args, arg);
-        }
-      }
-      ++current_attribute;
-    }
-  }
-  args_iterator_delete(it);
+  return NO_ERROR;
 }
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void plot_store_and_normalize_plot_data(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args) {
-  /* TODO: normalize data instead of just copying them */
-  logger((stderr, "Storing plot data\n"));
+error_t plot_normalize_args(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args) {
+  arg_t *arg;
 
-  if (!args_has_keyword(user_args, "ax")) {
-    args_clear_args(normalized_args);
+  logger((stderr, "Normalize plot args\n"));
+
+  /* TODO: copy all user defined attributes! */
+  if ((arg = args_find_keyword(user_args, "subplots")) != NULL) {
+    args_value_iterator_t *value_it = args_value_iter(arg);
+    return_error_if(value_it->next(value_it) == NULL, ERROR_PLOT_NORMALIZATION);
+    return_error_if(value_it->format != 'a', ERROR_PLOT_NORMALIZATION);
+    if (value_it->is_array) {
+      gr_meta_args_push_kwarg(normalized_args, "subplots", "nA", value_it->array_length,
+                              *(gr_meta_args_t ***)value_it->value_ptr);
+    } else {
+      gr_meta_args_push_kwarg(normalized_args, "subplots", "A(1)", (gr_meta_args_t **)value_it->value_ptr);
+    }
+    args_value_iterator_delete(value_it);
+  } else if ((arg = args_find_keyword(user_args, "series")) != NULL) {
+    args_value_iterator_t *value_it = args_value_iter(arg);
+    return_error_if(value_it->next(value_it) == NULL, ERROR_PLOT_NORMALIZATION);
+    return_error_if(value_it->format != 'a', ERROR_PLOT_NORMALIZATION);
+    /* TODO: store a shallow copy of the user args! (currently, a user's call of `gr_deletemeta` will double free) */
+    if (value_it->is_array) {
+      gr_meta_args_push_kwarg(normalized_args, "subplots", "A(1)", &user_args);
+    } else {
+      gr_meta_args_t *subplot_args = gr_newmeta();
+      gr_meta_args_push_kwarg(subplot_args, "series", "A(1)", value_it->value_ptr);
+      gr_meta_args_push_kwarg(normalized_args, "subplots", "A(1)", &subplot_args);
+    }
+    args_value_iterator_delete(value_it);
+  } else {
+    gr_meta_args_t *subplot_args = gr_newmeta();
+    gr_meta_args_push_kwarg(subplot_args, "series", "A(1)", &user_args);
+    gr_meta_args_push_kwarg(normalized_args, "subplots", "A(1)", &subplot_args);
   }
-  args_push_args(normalized_args, user_args);
+
+  return NO_ERROR;
 }
 
-void plot_store_plot_attributes(gr_meta_args_t *subplot_args, const gr_meta_args_t *user_args) {
+void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args) {
   const char *kind;
+  gr_meta_args_t **current_series;
 
-  logger((stderr, "Storing plot attributes\n"));
+  logger((stderr, "Set plot attribute defaults\n"));
 
-  args_update_kwargs(subplot_args, user_args);
-  if (!args_has_keyword(subplot_args, "kind")) {
-    logger((stderr, "No \"%s\" given. Setting default value \"%s\"\n", "kind", "line"));
-    args_update_kwarg(subplot_args, "kind", "s", "line");
+  args_setdefault_kwarg(subplot_args, "kind", "s", PLOT_DEFAULT_KIND);
+  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
+  if (!args_has_keyword(subplot_args, "figsize")) {
+    args_setdefault_kwarg(subplot_args, "size", "dd", PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT);
+  }
+  args_setdefault_kwarg(subplot_args, "clear", "i", PLOT_DEFAULT_CLEAR);
+  args_setdefault_kwarg(subplot_args, "update", "i", PLOT_DEFAULT_UPDATE);
+  if (args_has_keyword(subplot_args, "labels")) {
+    args_setdefault_kwarg(subplot_args, "location", "i", PLOT_DEFAULT_LOCATION);
+  }
+  args_setdefault_kwarg(subplot_args, "subplot", "dddd", PLOT_DEFAULT_SUBPLOT_MIN_X, PLOT_DEFAULT_SUBPLOT_MAX_X,
+                        PLOT_DEFAULT_SUBPLOT_MIN_Y, PLOT_DEFAULT_SUBPLOT_MAX_Y);
+  args_setdefault_kwarg(subplot_args, "xlog", "i", PLOT_DEFAULT_XLOG);
+  args_setdefault_kwarg(subplot_args, "ylog", "i", PLOT_DEFAULT_YLOG);
+  args_setdefault_kwarg(subplot_args, "zlog", "i", PLOT_DEFAULT_ZLOG);
+  args_setdefault_kwarg(subplot_args, "xflip", "i", PLOT_DEFAULT_XFLIP);
+  args_setdefault_kwarg(subplot_args, "yflip", "i", PLOT_DEFAULT_YFLIP);
+  args_setdefault_kwarg(subplot_args, "zflip", "i", PLOT_DEFAULT_ZFLIP);
+  args_setdefault_kwarg(subplot_args, "adjust_xlim", "i", PLOT_DEFAULT_ADJUST_XLIM);
+  args_setdefault_kwarg(subplot_args, "adjust_ylim", "i", PLOT_DEFAULT_ADJUST_YLIM);
+  args_setdefault_kwarg(subplot_args, "adjust_zlim", "i", PLOT_DEFAULT_ADJUST_ZLIM);
+  args_setdefault_kwarg(subplot_args, "colormap", "i", PLOT_DEFAULT_COLORMAP);
+  args_setdefault_kwarg(subplot_args, "rotation", "i", PLOT_DEFAULT_ROTATION);
+  args_setdefault_kwarg(subplot_args, "tilt", "i", PLOT_DEFAULT_TILT);
+
+  if (strcmp(kind, "step") == 0) {
+    args_setdefault_kwarg(subplot_args, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
+  } else if (str_equals_any(kind, 2, "contour", "contourf")) {
+    args_setdefault_kwarg(subplot_args, "levels", "i", PLOT_DEFAULT_CONTOUR_LEVELS);
+  } else if (strcmp(kind, "hexbin") == 0) {
+    args_setdefault_kwarg(subplot_args, "nbins", "i", PLOT_DEFAULT_HEXBIN_NBINS);
+  } else if (strcmp(kind, "tricont") == 0) {
+    args_setdefault_kwarg(subplot_args, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
+  }
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    args_setdefault_kwarg(*current_series, "spec", "s", SERIES_DEFAULT_SPEC);
+    ++current_series;
+  }
+}
+
+void plot_pre_plot(gr_meta_args_t *subplot_args) {
+  int clear;
+  const char *kind;
+  double alpha;
+
+  logger((stderr, "Pre plot processing\n"));
+
+  args_get_first_value_by_keyword(subplot_args, "clear", "i", &clear, NULL);
+  logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
+  if (clear) {
+    gr_clearws();
   }
   args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (str_equals_any(kind, 2, "imshow", "isosurface")) {
-    plot_store_viewport(subplot_args);
-  } else if (!args_has_keyword(subplot_args, "ax")) {
-    plot_store_viewport(subplot_args);
+    plot_process_viewport(subplot_args);
+  } else {
+    plot_process_viewport(subplot_args);
     plot_store_coordinate_ranges(subplot_args);
-    if (!args_has_keyword(subplot_args, "window") || !args_has_keyword(subplot_args, "interactive") ||
-        args_has_keyword(subplot_args, "reset_window")) {
-      args_delete_kwarg(subplot_args, "reset_window");
-      plot_store_window(subplot_args);
+    plot_process_window(subplot_args);
+    if (str_equals_any(kind, 1, "polar")) {
+      plot_draw_polar_axes(subplot_args);
+    } else {
+      plot_draw_axes(subplot_args, 1);
     }
+  }
+
+  plot_process_colormap(subplot_args);
+  gr_uselinespec(" ");
+
+  gr_savestate();
+  if (args_get_first_value_by_keyword(subplot_args, "alpha", "d", &alpha, NULL)) {
+    gr_settransparency(alpha);
   }
 }
 
-void plot_store_window(gr_meta_args_t *subplot_args) {
-  const char *kind;
-  const char *scale_option_names[] = {"xlog", "ylog", "zlog", "xflip", "yflip", "zflip", NULL};
-  unsigned int scale_options[] = {GR_OPTION_X_LOG,  GR_OPTION_Y_LOG,  GR_OPTION_Z_LOG,
-                                  GR_OPTION_FLIP_X, GR_OPTION_FLIP_Y, GR_OPTION_FLIP_Z};
-  int has_current_option;
-  int scale;
-  double x_min, x_max, y_min, y_max, z_min, z_max;
-  int major_count, x_major_count, y_major_count, z_major_count;
-  double x_tick, y_tick, z_tick;
-  double x_org_low, x_org_high, y_org_low, y_org_high, z_org_low, z_org_high;
+void plot_process_colormap(gr_meta_args_t *subplot_args) {
+  int colormap;
 
-  logger((stderr, "Storing window attributes\n"));
-
-  scale = 0;
-  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
-  if (!str_equals_any(kind, 1, "polar")) {
-    const char **current_scale_name = scale_option_names;
-    unsigned int *current_scale_option = scale_options;
-    while (*current_scale_name != NULL) {
-      has_current_option = 0;
-      args_get_first_value_by_keyword(subplot_args, *current_scale_name, "i", &has_current_option, NULL);
-      if (has_current_option) {
-        scale |= *current_scale_option;
-      }
-      ++current_scale_name;
-      ++current_scale_option;
-    }
+  if (args_get_first_value_by_keyword(subplot_args, "colormap", "i", &colormap, NULL)) {
+    gr_setcolormap(colormap);
   }
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polor", "trisurf")) {
-    major_count = 2;
-  } else {
-    major_count = 5;
-  }
-
-  args_values_by_keyword(subplot_args, "xrange", "dd", &x_min, &x_max);
-  if (!(scale & GR_OPTION_X_LOG)) {
-    gr_adjustlimits(&x_min, &x_max);
-    x_major_count = major_count;
-    x_tick = gr_tick(x_min, x_max) / x_major_count;
-  } else {
-    x_tick = x_major_count = 1;
-  }
-  if (!(scale & GR_OPTION_FLIP_X)) {
-    x_org_low = x_min;
-    x_org_high = x_max;
-  } else {
-    x_org_low = x_max;
-    x_org_high = x_min;
-  }
-  args_update_kwarg(subplot_args, "xaxis", "dddi", x_tick, x_org_low, x_org_high, x_major_count);
-
-  args_values_by_keyword(subplot_args, "yrange", "dd", &y_min, &y_max);
-  if (str_equals_any(kind, 2, "hist", "stem") && !args_has_keyword(subplot_args, "ylim")) {
-    y_min = 0;
-  }
-  if (!(scale & GR_OPTION_Y_LOG)) {
-    gr_adjustlimits(&y_min, &y_max);
-    y_major_count = major_count;
-    y_tick = gr_tick(y_min, y_max) / y_major_count;
-  } else {
-    y_tick = y_major_count = 1;
-  }
-  if (!(scale & GR_OPTION_FLIP_Y)) {
-    y_org_low = y_min;
-    y_org_high = y_max;
-  } else {
-    y_org_low = y_max;
-    y_org_high = y_min;
-  }
-  args_update_kwarg(subplot_args, "yaxis", "dddi", y_tick, y_org_low, y_org_high, y_major_count);
-
-  if (strcmp(kind, "polar") != 0) {
-    logger((stderr, "Storing window (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
-    args_update_kwarg(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
-  } else {
-    args_update_kwarg(subplot_args, "window", "dddd", -1.0, 1.0, -1.0, 1.0);
-  }
-
-  if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf")) {
-    args_values_by_keyword(subplot_args, "zrange", "dd", &z_min, &z_max);
-    if (!(scale & GR_OPTION_Z_LOG)) {
-      gr_adjustlimits(&z_min, &z_max);
-      z_major_count = major_count;
-      z_tick = gr_tick(z_min, z_max) / z_major_count;
-    } else {
-      z_tick = z_major_count = 1;
-    }
-    if (!(scale & GR_OPTION_FLIP_Z)) {
-      z_org_low = z_min;
-      z_org_high = z_max;
-    } else {
-      z_org_low = z_max;
-      z_org_high = z_min;
-    }
-    args_update_kwarg(subplot_args, "zaxis", "dddi", z_tick, z_org_low, z_org_high, z_major_count);
-
-    args_update_kwarg(subplot_args, "zrange", "dd", z_min, z_max);
-    if (!args_has_keyword(subplot_args, "rotation")) {
-      args_update_kwarg(subplot_args, "rotation", "i", 40);
-    }
-    if (!args_has_keyword(subplot_args, "tilt")) {
-      args_update_kwarg(subplot_args, "tilt", "i", 70);
-    }
-  }
-
-  args_update_kwarg(subplot_args, "scale", "i", scale);
+  /* TODO: Implement other datatypes for `colormap` */
 }
 
-void plot_store_viewport(gr_meta_args_t *subplot_args) {
+void plot_process_viewport(gr_meta_args_t *subplot_args) {
   const char *kind;
   double metric_width, metric_height;
   int pixel_width, pixel_height;
-  int *fig_size;
-  int size[2] = {PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT};
+  double size[2];
   double width, height;
-  double subplot[4] = {PLOT_DEFAULT_SUBPLOT_MIN_X, PLOT_DEFAULT_SUBPLOT_MAX_X, PLOT_DEFAULT_SUBPLOT_MIN_Y,
-                       PLOT_DEFAULT_SUBPLOT_MAX_Y};
+  const double *subplot;
   double viewport[4] = {0.0, 0.0, 0.0, 0.0};
   double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
   double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
   double vp[4];
   double aspect_ratio;
   double metric_size;
-  double x_center, y_center, r;
+  int background_color_index;
 
   args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
-  if (!args_values_by_keyword(subplot_args, "subplot", "dddd", &subplot[0], &subplot[1], &subplot[2], &subplot[3])) {
-    args_update_kwarg(subplot_args, "subplot", "dddd", subplot[0], subplot[1], subplot[2], subplot[3]);
-  }
+  subplot = args_values_as_array_by_keyword(subplot_args, "subplot");
   gr_inqdspsize(&metric_width, &metric_height, &pixel_width, &pixel_height);
-  if (!args_values_by_keyword(subplot_args, "size", "ii", &size[0], &size[1])) {
-    args_update_kwarg(subplot_args, "size", "ii", size[0], size[1]);
+  if (args_values_by_keyword(subplot_args, "figsize", "dd", &size[0], &size[1])) {
+    size[0] *= pixel_width * 0.0254 / metric_width;
+    size[1] *= pixel_height * 0.0254 / metric_height;
+  } else {
+    double dpi = pixel_width / metric_width * 0.0254;
+    args_values_by_keyword(subplot_args, "size", "dd", &size[0], &size[1]);
+    if (dpi > 200) {
+      int i;
+      for (i = 0; i < 2; ++i) {
+        size[i] *= dpi / 100.0;
+      }
+    }
   }
   width = size[0];
   height = size[1];
@@ -2074,6 +2170,23 @@ void plot_store_viewport(gr_meta_args_t *subplot_args) {
     vp[0] *= aspect_ratio;
     vp[1] *= aspect_ratio;
   }
+
+  if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf")) {
+    double tmp_vp[4];
+    double extent;
+
+    if (str_equals_any(kind, 2, "surface", "trisurf")) {
+      extent = min(vp[1] - vp[0] - 0.1, vp[3] - vp[2]);
+    } else {
+      extent = min(vp[1] - vp[0], vp[3] - vp[2]);
+    }
+    tmp_vp[0] = 0.5 * (vp[0] + vp[1] - extent);
+    tmp_vp[1] = 0.5 * (vp[0] + vp[1] + extent);
+    tmp_vp[2] = 0.5 * (vp[2] + vp[3] - extent);
+    tmp_vp[3] = 0.5 * (vp[2] + vp[3] + extent);
+    memcpy(vp, tmp_vp, 4 * sizeof(double));
+  }
+
   viewport[0] = vp[0] + 0.125 * (vp[1] - vp[0]);
   viewport[1] = vp[0] + 0.925 * (vp[1] - vp[0]);
   viewport[2] = vp[2] + 0.125 * (vp[3] - vp[2]);
@@ -2082,13 +2195,27 @@ void plot_store_viewport(gr_meta_args_t *subplot_args) {
   if (width > height) {
     viewport[2] += (1 - (subplot[3] - subplot[2]) * (subplot[3] - subplot[2])) * 0.02;
   }
-  if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf")) {
-    viewport[1] -= 0.0525;
-  }
-  if (str_equals_any(kind, 6, "contour", "contourf", "surface", "trisurf", "heatmap", "hexbin")) {
+  if (str_equals_any(kind, 5, "contour", "contourf", "heatmap", "hexbin", "quiver")) {
     viewport[1] -= 0.1;
   }
-  if (!strcmp(kind, "polar")) {
+
+  if (args_get_first_value_by_keyword(subplot_args, "backgroundcolor", "i", &background_color_index, NULL)) {
+    gr_savestate();
+    gr_selntran(0);
+    gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
+    gr_setfillcolorind(background_color_index);
+    if (width > height) {
+      gr_fillrect(subplot[0], subplot[1], subplot[2] * aspect_ratio, subplot[3] * aspect_ratio);
+    } else {
+      gr_fillrect(subplot[0] * aspect_ratio, subplot[1] * aspect_ratio, subplot[2], subplot[3]);
+    }
+    gr_selntran(1);
+    gr_restorestate();
+  }
+
+  if (strcmp(kind, "polar") == 0) {
+    double x_center, y_center, r;
+
     x_center = 0.5 * (viewport[0] + viewport[1]);
     y_center = 0.5 * (viewport[2] + viewport[3]);
     r = 0.5 * min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
@@ -2097,214 +2224,941 @@ void plot_store_viewport(gr_meta_args_t *subplot_args) {
     viewport[2] = y_center - r;
     viewport[3] = y_center + r;
   }
+
+  gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+  gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+  gr_setwswindow(wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
+
   args_update_kwarg(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
   logger((stderr, "Stored viewport (%f, %f, %f, %f)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
-  args_update_kwarg(subplot_args, "wsviewport", "dddd", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
-  args_update_kwarg(subplot_args, "wswindow", "dddd", wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
   args_update_kwarg(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
   args_update_kwarg(subplot_args, "ratio", "d", aspect_ratio);
 }
 
+void plot_process_window(gr_meta_args_t *subplot_args) {
+  int scale = 0;
+  const char *kind;
+  int xlog, ylog, zlog;
+  int xflip, yflip, zflip;
+  int major_count, x_major_count, y_major_count;
+  double x_min, x_max, y_min, y_max, z_min, z_max;
+  int adjust_xlim, adjust_ylim, adjust_zlim;
+  double x_tick, y_tick;
+  double x_org_low, x_org_high, y_org_low, y_org_high;
+
+  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
+  args_get_first_value_by_keyword(subplot_args, "xlog", "i", &xlog, NULL);
+  args_get_first_value_by_keyword(subplot_args, "ylog", "i", &ylog, NULL);
+  args_get_first_value_by_keyword(subplot_args, "zlog", "i", &zlog, NULL);
+  args_get_first_value_by_keyword(subplot_args, "xflip", "i", &xflip, NULL);
+  args_get_first_value_by_keyword(subplot_args, "yflip", "i", &yflip, NULL);
+  args_get_first_value_by_keyword(subplot_args, "zflip", "i", &zflip, NULL);
+
+  if (strcmp(kind, "polar") != 0) {
+    scale |= xlog ? GR_OPTION_X_LOG : 0;
+    scale |= ylog ? GR_OPTION_Y_LOG : 0;
+    scale |= zlog ? GR_OPTION_Z_LOG : 0;
+    scale |= xflip ? GR_OPTION_FLIP_X : 0;
+    scale |= yflip ? GR_OPTION_FLIP_Y : 0;
+    scale |= zflip ? GR_OPTION_FLIP_Z : 0;
+  }
+
+  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf")) {
+    major_count = 2;
+  } else {
+    major_count = 5;
+  }
+
+  args_values_by_keyword(subplot_args, "xrange", "dd", &x_min, &x_max);
+  if (!(scale & GR_OPTION_X_LOG)) {
+    args_values_by_keyword(subplot_args, "adjust_xlim", "i", &adjust_xlim);
+    if (adjust_xlim) {
+      gr_adjustlimits(&x_min, &x_max);
+    }
+    x_major_count = major_count;
+    x_tick = gr_tick(x_min, x_max) / x_major_count;
+  } else {
+    x_tick = x_major_count = 1;
+  }
+  if (!(scale & GR_OPTION_FLIP_X)) {
+    x_org_low = x_min;
+    x_org_high = x_max;
+  } else {
+    x_org_low = x_max;
+    x_org_high = x_min;
+  }
+  args_update_kwarg(subplot_args, "xaxis", "dddi", x_tick, x_org_low, x_org_high, x_major_count);
+
+  args_values_by_keyword(subplot_args, "yrange", "dd", &y_min, &y_max);
+  if (str_equals_any(kind, 2, "hist", "stem") && !args_has_keyword(subplot_args, "ylim")) {
+    y_min = 0;
+  }
+  if (!(scale & GR_OPTION_Y_LOG)) {
+    args_values_by_keyword(subplot_args, "adjust_ylim", "i", &adjust_ylim);
+    if (adjust_ylim) {
+      gr_adjustlimits(&y_min, &y_max);
+    }
+    y_major_count = major_count;
+    y_tick = gr_tick(y_min, y_max) / y_major_count;
+  } else {
+    y_tick = y_major_count = 1;
+  }
+  if (!(scale & GR_OPTION_FLIP_Y)) {
+    y_org_low = y_min;
+    y_org_high = y_max;
+  } else {
+    y_org_low = y_max;
+    y_org_high = y_min;
+  }
+  args_update_kwarg(subplot_args, "yaxis", "dddi", y_tick, y_org_low, y_org_high, y_major_count);
+
+  logger((stderr, "Storing window (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
+  args_update_kwarg(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
+  if (strcmp(kind, "polar") != 0) {
+    gr_setwindow(x_min, x_max, y_min, y_max);
+  } else {
+    gr_setwindow(-1.0, 1.0, -1.0, 1.0);
+  }
+
+  if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf")) {
+    double z_major_count;
+    double z_tick;
+    double z_org_low, z_org_high;
+    int rotation, tilt;
+
+    args_values_by_keyword(subplot_args, "zrange", "dd", &z_min, &z_max);
+    if (!(scale & GR_OPTION_Z_LOG)) {
+      args_values_by_keyword(subplot_args, "adjust_zlim", "i", &adjust_zlim);
+      if (adjust_zlim) {
+        gr_adjustlimits(&z_min, &z_max);
+      }
+      z_major_count = major_count;
+      z_tick = gr_tick(z_min, z_max) / z_major_count;
+    } else {
+      z_tick = z_major_count = 1;
+    }
+    if (!(scale & GR_OPTION_FLIP_Z)) {
+      z_org_low = z_min;
+      z_org_high = z_max;
+    } else {
+      z_org_low = z_max;
+      z_org_high = z_min;
+    }
+    args_update_kwarg(subplot_args, "zaxis", "dddi", z_tick, z_org_low, z_org_high, z_major_count);
+
+    args_values_by_keyword(subplot_args, "rotation", "i", &rotation);
+    args_values_by_keyword(subplot_args, "tilt", "i", &tilt);
+    gr_setspace(z_min, z_max, rotation, tilt);
+  }
+
+  args_update_kwarg(subplot_args, "scale", "i", scale);
+  gr_setscale(scale);
+}
+
 void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
+  const char *kind;
+  const char *fmt;
   gr_meta_args_t **current_series;
   unsigned int series_count;
-  args_value_iterator_t *value_it;
   const char *data_component_names[] = {"x", "y", "z", NULL};
   const char **current_component_name;
-  double *current_component;
-  unsigned int point_count;
-  const char *series_key = "series";
+  double *current_component = NULL;
+  unsigned int point_count = 0;
   const char *range_keys[][2] = {{"xlim", "xrange"}, {"ylim", "yrange"}, {"zlim", "zrange"}};
   const char *(*current_range_keys)[2];
   unsigned int i;
 
   logger((stderr, "Storing coordinate ranges\n"));
+  /* TODO: support that single `lim` values are `null` / unset! */
 
-  /* TODO: improve error handling */
-
+  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
+  fmt = fmt_map_at(fmt_map, kind);
   current_range_keys = range_keys;
   current_component_name = data_component_names;
   while (*current_component_name != NULL) {
-    arg_t *arg;
     double min_component = DBL_MAX;
     double max_component = -DBL_MAX;
-    if ((arg = args_find_keyword(subplot_args, (*current_range_keys)[0])) == NULL) {
-      args_get_first_value_by_keyword(subplot_args, series_key, "A", &current_series, &series_count);
+    double step = -DBL_MAX;
+    if (strchr(fmt, **current_component_name) == NULL) {
+      ++current_component_name;
+      continue;
+    }
+    if (!args_has_keyword(subplot_args, (*current_range_keys)[0])) {
+      args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, &series_count);
       while (*current_series != NULL) {
-        args_get_first_value_by_keyword(*current_series, *current_component_name, "D", &current_component,
-                                        &point_count);
-        for (i = 0; i < point_count; i++) {
-          min_component = min(current_component[i], min_component);
-          max_component = max(current_component[i], max_component);
+        if (args_get_first_value_by_keyword(*current_series, *current_component_name, "D", &current_component,
+                                            &point_count)) {
+          for (i = 0; i < point_count; i++) {
+            min_component = min(current_component[i], min_component);
+            max_component = max(current_component[i], max_component);
+          }
         }
         ++current_series;
       }
-    } else {
-      /* TODO: check for correct types! */
-      value_it = args_value_iter(arg);
-      if (value_it->next(value_it) != NULL) {
-        if (value_it->is_array) {
-          min_component = (*(double **)value_it->value_ptr)[0];
-          max_component = (*(double **)value_it->value_ptr)[1];
-        } else {
-          min_component = *(double *)value_it->value_ptr;
-          if (value_it->next(value_it) != NULL) {
-            /* TODO: set error if the second value is not available! */
-            max_component = *(double *)value_it->value_ptr;
-          }
+      if (strcmp(kind, "quiver") == 0) {
+        step = max(find_max_step(point_count, current_component), step);
+        if (step > 0.0) {
+          min_component -= step;
+          max_component += step;
         }
       }
-      args_value_iterator_delete(value_it);
+    } else {
+      args_values_by_keyword(subplot_args, (*current_range_keys)[0], "dd", &min_component, &max_component);
     }
     args_update_kwarg(subplot_args, (*current_range_keys)[1], "dd", min_component, max_component);
     ++current_range_keys;
     ++current_component_name;
+  }
+  /* For quiver plots use u^2 + v^2 as z value */
+  if (strcmp(kind, "quiver") == 0) {
+    double min_component = DBL_MAX;
+    double max_component = -DBL_MAX;
+    if (!args_has_keyword(subplot_args, "zlim")) {
+      double *u, *v;
+      /* TODO: Support more than one series? */
+      /* TODO: `ERROR_PLOT_COMPONENT_LENGTH_MISMATCH` */
+      args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+      args_get_first_value_by_keyword(*current_series, "u", "D", &u, &point_count);
+      args_get_first_value_by_keyword(*current_series, "v", "D", &v, NULL);
+      for (i = 0; i < point_count; i++) {
+        double z = u[i] * u[i] + v[i] * v[i];
+        min_component = min(z, min_component);
+        max_component = max(z, max_component);
+      }
+      min_component = sqrt(min_component);
+      max_component = sqrt(max_component);
+    } else {
+      args_values_by_keyword(subplot_args, "zlim", "dd", &min_component, &max_component);
+    }
+    args_update_kwarg(subplot_args, "zrange", "dd", min_component, max_component);
+  }
+}
+
+void plot_post_plot(gr_meta_args_t *subplot_args) {
+  int update;
+  const char *kind;
+
+  logger((stderr, "Post plot processsing\n"));
+
+  gr_restorestate();
+  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
+  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+  if (str_equals_any(kind, 4, "line", "step", "scatter", "stem") && args_has_keyword(subplot_args, "labels")) {
+    plot_draw_legend(subplot_args);
+  }
+  args_get_first_value_by_keyword(subplot_args, "update", "i", &update, NULL);
+  logger((stderr, "Got keyword \"update\" with value %d\n", update));
+  if (update) {
+    gr_updatews();
   }
 }
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void plot_plot_line(gr_meta_args_t *args) {
+error_t plot_line(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
-  const char *data_component_names[] = {"x", "y", "z", NULL};
-  double *components[3];
-  char *spec = ""; /* TODO: read spec from data! */
-  const char *series_key = "series";
-  const char *attributes[] = {"color", "labels", NULL};
 
-  /* TODO: improve error handling */
-  args_get_first_value_by_keyword(args, series_key, "A", &current_series, NULL);
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
-    double **current_component = components;
-    const char **current_component_name = data_component_names;
-    int mask = gr_uselinespec(spec);
-    unsigned int point_count;
-    while (*current_component_name != NULL) {
-      args_get_first_value_by_keyword(*current_series, *current_component_name, "D", current_component, &point_count);
-      ++current_component_name;
-      ++current_component;
-    }
+    double *x, *y;
+    unsigned int x_length, y_length;
+    char *spec;
+    int mask;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+    mask = gr_uselinespec(spec);
     if (int_equals_any(mask, 5, 0, 1, 3, 4, 5)) {
-      gr_polyline(point_count, components[0], components[1]);
+      gr_polyline(x_length, x, y);
     }
     if (mask & 2) {
-      gr_polymarker(point_count, components[0], components[1]);
+      gr_polymarker(x_length, x, y);
     }
     ++current_series;
   }
 
-  plot_process_attributes(args, attributes);
+  return NO_ERROR;
+}
+
+error_t plot_step(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y;
+    unsigned int x_length, y_length;
+    char *spec;
+    int mask;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+    mask = gr_uselinespec(spec);
+    if (int_equals_any(mask, 5, 0, 1, 3, 4, 5)) {
+      const char *where;
+      args_get_first_value_by_keyword(*current_series, "step_where", "s", &where, NULL); /* `spec` is always set */
+      if (strcmp(where, "pre") == 0) {
+      }
+      /* TODO: implement this! */
+      /*
+       *     n = len(x)
+       *     x_step_boundaries = np.zeros(2 * n - 1)
+       *     y_step_values = np.zeros(2 * n - 1)
+       *     x_step_boundaries[0] = x[0]
+       *     x_step_boundaries[1::2] = x[:-1]
+       *     x_step_boundaries[2::2] = x[1:]
+       *     y_step_values[0] = y[0]
+       *     y_step_values[1::2] = y[1:]
+       *     y_step_values[2::2] = y[1:]
+       * }
+       * elif where == 'post':
+       *     n = len(x)
+       *     x_step_boundaries = np.zeros(2 * n - 1)
+       *     y_step_values = np.zeros(2 * n - 1)
+       *     x_step_boundaries[0::2] = x
+       *     x_step_boundaries[1::2] = x[1:]
+       *     x_step_boundaries[-1] = x[-1]
+       *     y_step_values[0::2] = y
+       *     y_step_values[1::2] = y[:-1]
+       *     y_step_values[-1] = y[-1]
+       * else:
+       *     n = len(x)
+       *     x_step_boundaries = np.zeros(2 * n)
+       *     x_step_boundaries[0] = x[0]
+       *     x_step_boundaries[1:-1][0::2] = (x[1:] + x[:-1]) / 2
+       *     x_step_boundaries[1:-1][1::2] = (x[1:] + x[:-1]) / 2
+       *     x_step_boundaries[-1] = x[-1]
+       *     y_step_values = np.zeros(2 * n)
+       *     y_step_values[0::2] = y
+       *     y_step_values[1::2] = y
+       * gr.polyline(x_step_boundaries, y_step_values)
+       */
+    }
+    if (mask & 2) {
+      gr_polymarker(x_length, x, y);
+    }
+    ++current_series;
+  }
+
+  return ERROR_NOT_IMPLEMENTED;
+}
+
+error_t plot_scatter(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x = NULL, *y = NULL, *z = NULL, *c = NULL;
+    unsigned int x_length, y_length, z_length, c_length;
+    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
+    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
+    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
+    args_get_first_value_by_keyword(*current_series, "c", "D", &c, &c_length);
+    return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    if (z != NULL || c != NULL) {
+      if (c != NULL) {
+        /* TODO: implement me! */
+        /*
+         * c_min = c.min()
+         * c_ptp = c.ptp()
+         */
+      }
+      /*
+       * for i in range(len(x)):
+       *     if z is not None:
+       *         gr.setmarkersize(z[i] / 100.0)
+       *     if c is not None:
+       *         c_index = 1000 + int(255 * (c[i] - c_min) / c_ptp)
+       *         gr.setmarkercolorind(c_index)
+       *     gr.polymarker([x[i]], [y[i]])
+       */
+    } else {
+      gr_polymarker(x_length, x, y);
+    }
+    ++current_series;
+  }
+
+  return ERROR_NOT_IMPLEMENTED;
+}
+
+error_t plot_quiver(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x = NULL, *y = NULL, *u = NULL, *v = NULL;
+    unsigned int x_length, y_length, u_length, v_length;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "u", "D", &u, &u_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "v", "D", &v, &v_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    /* TODO: Check length of `u` and `v` */
+    gr_quiver(x_length, y_length, x, y, u, v, 1);
+
+    ++current_series;
+  }
+
+  return NO_ERROR;
+}
+
+error_t plot_stem(gr_meta_args_t *subplot_args) {
+  const double *window;
+  double base_line_y[2] = {0.0, 0.0};
+  double stem_x[2], stem_y[2] = {0.0};
+  gr_meta_args_t **current_series;
+
+  window = args_values_as_array_by_keyword(subplot_args, "window");
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y;
+    unsigned int x_length, y_length;
+    char *spec;
+    unsigned int i;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    gr_polyline(2, (double *)window, base_line_y);
+    gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
+    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL);
+    gr_uselinespec(spec);
+    for (i = 0; i < x_length; ++i) {
+      stem_x[0] = stem_x[1] = x[i];
+      stem_y[1] = y[i];
+      gr_polyline(2, stem_x, stem_y);
+    }
+    gr_polymarker(x_length, x, y);
+    ++current_series;
+  }
+
+  return NO_ERROR;
+}
+
+error_t plot_hist(gr_meta_args_t *subplot_args) {
+  const double *window;
+  double y_min;
+  gr_meta_args_t **current_series;
+
+  window = args_values_as_array_by_keyword(subplot_args, "window");
+  y_min = window[2];
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y;
+    unsigned int x_length, y_length;
+    unsigned int i;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    for (i = 0; i <= y_length; ++i) {
+      gr_setfillcolorind(989);
+      gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
+      gr_fillrect(x[i - 1], x[i], y_min, y[i - 1]);
+      gr_setfillcolorind(1);
+      gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
+      gr_fillrect(x[i - 1], x[i], y_min, y[i - 1]);
+    }
+    ++current_series;
+  }
+
+  return NO_ERROR;
+}
+
+error_t plot_contour(gr_meta_args_t *subplot_args) {
+  double z_min, z_max;
+  int num_levels;
+  double *h;
+  double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
+  gr_meta_args_t **current_series;
+  int i;
+  error_t error = NO_ERROR;
+
+  args_values_by_keyword(subplot_args, "zrange", "dd", &z_min, &z_max);
+  gr_setspace(z_min, z_max, 0, 90);
+  args_values_by_keyword(subplot_args, "levels", "i", &num_levels);
+  h = malloc(num_levels * sizeof(double));
+  if (h == NULL) {
+    debug_print_malloc_error();
+    error = ERROR_MALLOC;
+    goto cleanup;
+  }
+  for (i = 0; i < num_levels; ++i) {
+    h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
+  }
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y, *z;
+    unsigned int x_length, y_length, z_length;
+    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
+    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
+    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
+    if (x_length == y_length && x_length == z_length) {
+      if (gridit_x == NULL) {
+        gridit_x = malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double));
+        gridit_y = malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double));
+        gridit_z = malloc(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N * sizeof(double));
+        if (gridit_x == NULL || gridit_y == NULL || gridit_z == NULL) {
+          debug_print_malloc_error();
+          error = ERROR_MALLOC;
+          goto cleanup;
+        }
+      }
+      gr_gridit(x_length, x, y, z, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y, gridit_z);
+      gr_contour(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h, gridit_z, 1000);
+    } else {
+      if (x_length * y_length != z_length) {
+        error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+        goto cleanup;
+      }
+      gr_contour(x_length, y_length, num_levels, x, y, h, z, 1000);
+    }
+    ++current_series;
+  }
+  if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != NO_ERROR) {
+    goto cleanup;
+  }
+
+cleanup:
+  free(h);
+  free(gridit_x);
+  free(gridit_y);
+  free(gridit_z);
+
+  return error;
+}
+
+error_t plot_contourf(gr_meta_args_t *subplot_args) {
+  double z_min, z_max;
+  int num_levels, scale;
+  double *h;
+  double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
+  gr_meta_args_t **current_series;
+  int i;
+  error_t error = NO_ERROR;
+
+  args_values_by_keyword(subplot_args, "zrange", "dd", &z_min, &z_max);
+  gr_setspace(z_min, z_max, 0, 90);
+  args_values_by_keyword(subplot_args, "levels", "i", &num_levels);
+  h = malloc(num_levels * sizeof(double));
+  if (h == NULL) {
+    debug_print_malloc_error();
+    error = ERROR_MALLOC;
+    goto cleanup;
+  }
+  for (i = 0; i < num_levels; ++i) {
+    h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
+  }
+  args_values_by_keyword(subplot_args, "scale", "i", &scale);
+  gr_setscale(scale);
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y, *z;
+    unsigned int x_length, y_length, z_length;
+    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
+    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
+    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
+    if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != NO_ERROR) {
+      goto cleanup;
+    }
+    gr_setlinecolorind(1);
+    if (x_length == y_length && x_length == z_length) {
+      if (gridit_x == NULL) {
+        gridit_x = malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double));
+        gridit_y = malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double));
+        gridit_z = malloc(PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N * sizeof(double));
+        if (gridit_x == NULL || gridit_y == NULL || gridit_z == NULL) {
+          debug_print_malloc_error();
+          error = ERROR_MALLOC;
+          goto cleanup;
+        }
+      }
+      gr_gridit(x_length, x, y, z, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y, gridit_z);
+      gr_contourf(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h, gridit_z, 1000);
+    } else {
+      if (x_length * y_length != z_length) {
+        error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+        goto cleanup;
+      }
+      gr_contourf(x_length, y_length, num_levels, x, y, h, z, 1000);
+    }
+    ++current_series;
+  }
+
+cleanup:
+  free(h);
+  free(gridit_x);
+  free(gridit_y);
+  free(gridit_z);
+
+  return error;
+}
+
+error_t plot_hexbin(gr_meta_args_t *subplot_args) {
+  int nbins;
+  gr_meta_args_t **current_series;
+
+  args_values_by_keyword(subplot_args, "nbins", "i", &nbins);
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y;
+    unsigned int x_length, y_length;
+    int cntmax;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    cntmax = gr_hexbin(x_length, x, y, nbins);
+    /* TODO: return an error in the else case? */
+    if (cntmax > 0) {
+      args_update_kwarg(subplot_args, "zrange", "dd", 0.0, 1.0 * cntmax);
+      plot_draw_colorbar(subplot_args, 0.0, 256);
+    }
+    ++current_series;
+  }
+
+  return NO_ERROR;
+}
+
+error_t plot_heatmap(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+
+    /* TODO: Implement me! */
+    /* TODO: How to deal with z.shape? */
+    /*
+     * x_min, x_max, y_min, y_max = _plt.kwargs['window']
+     * height, width = z.shape
+     * cmap = _colormap()
+     * icmap = np.zeros(256, np.uint32)
+     * for i in range(256):
+     *     r, g, b, a = cmap[i]
+     *     icmap[i] = (int(r * 255) << 0) + (int(g * 255) << 8) + (int(b * 255) << 16) + (int(a * 255) << 24)
+     * z_min, z_max = _plt.kwargs.get('zlim', (np.min(z), np.max(z)))
+     * if z_max < z_min:
+     *     z_max, z_min = z_min, z_max
+     * if z_max > z_min:
+     *     data = (z - z_min) / (z_max - z_min) * 255
+     * else:
+     *     data = np.zeros((height, width))
+     * rgba = np.zeros((height, width), np.uint32)
+     * for x in range(width):
+     *     for y in range(height):
+     *         rgba[y, x] = icmap[int(data[y, x])]
+     * gr.drawimage(x_min, x_max, y_min, y_max, width, height, rgba)
+     * _colorbar()
+     */
+
+    ++current_series;
+  }
+
+  return ERROR_NOT_IMPLEMENTED;
+}
+
+error_t plot_wireframe(gr_meta_args_t *subplot_args) {
+  double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
+  gr_meta_args_t **current_series;
+  error_t error = NO_ERROR;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y, *z;
+    unsigned int x_length, y_length, z_length;
+    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
+    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
+    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
+    gr_setfillcolorind(0);
+    if (x_length == y_length && x_length == z_length) {
+      if (gridit_x == NULL) {
+        gridit_x = malloc(PLOT_WIREFRAME_GRIDIT_N * sizeof(double));
+        gridit_y = malloc(PLOT_WIREFRAME_GRIDIT_N * sizeof(double));
+        gridit_z = malloc(PLOT_WIREFRAME_GRIDIT_N * PLOT_WIREFRAME_GRIDIT_N * sizeof(double));
+        if (gridit_x == NULL || gridit_y == NULL || gridit_z == NULL) {
+          debug_print_malloc_error();
+          error = ERROR_MALLOC;
+          goto cleanup;
+        }
+      }
+      gr_gridit(x_length, x, y, z, PLOT_WIREFRAME_GRIDIT_N, PLOT_WIREFRAME_GRIDIT_N, gridit_x, gridit_y, gridit_z);
+      gr_surface(PLOT_WIREFRAME_GRIDIT_N, PLOT_WIREFRAME_GRIDIT_N, gridit_x, gridit_y, gridit_z, GR_OPTION_FILLED_MESH);
+    } else {
+      if (x_length * y_length != z_length) {
+        error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+        goto cleanup;
+      }
+      gr_surface(x_length, y_length, x, y, z, GR_OPTION_FILLED_MESH);
+    }
+    ++current_series;
+  }
+  plot_draw_axes(subplot_args, 2);
+
+cleanup:
+  free(gridit_x);
+  free(gridit_y);
+  free(gridit_z);
+
+  return error;
+}
+
+error_t plot_surface(gr_meta_args_t *subplot_args) {
+  double *gridit_x = NULL, *gridit_y = NULL, *gridit_z = NULL;
+  gr_meta_args_t **current_series;
+  error_t error = NO_ERROR;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y, *z;
+    unsigned int x_length, y_length, z_length;
+    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
+    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
+    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
+    /* TODO: add support for GR3 */
+    if (x_length == y_length && x_length == z_length) {
+      if (gridit_x == NULL) {
+        gridit_x = malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double));
+        gridit_y = malloc(PLOT_SURFACE_GRIDIT_N * sizeof(double));
+        gridit_z = malloc(PLOT_SURFACE_GRIDIT_N * PLOT_SURFACE_GRIDIT_N * sizeof(double));
+        if (gridit_x == NULL || gridit_y == NULL || gridit_z == NULL) {
+          debug_print_malloc_error();
+          error = ERROR_MALLOC;
+          goto cleanup;
+        }
+      }
+      gr_gridit(x_length, x, y, z, PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z);
+      gr_surface(PLOT_SURFACE_GRIDIT_N, PLOT_SURFACE_GRIDIT_N, gridit_x, gridit_y, gridit_z, GR_OPTION_COLORED_MESH);
+    } else {
+      if (x_length * y_length != z_length) {
+        error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+        goto cleanup;
+      }
+      gr_surface(x_length, y_length, x, y, z, GR_OPTION_COLORED_MESH);
+    }
+    ++current_series;
+  }
+  plot_draw_axes(subplot_args, 2);
+  plot_draw_colorbar(subplot_args, 0.05, 256);
+
+cleanup:
+  free(gridit_x);
+  free(gridit_y);
+  free(gridit_z);
+
+  return error;
+}
+
+error_t plot_plot3(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y, *z;
+    unsigned int x_length, y_length, z_length;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    gr_polyline3d(x_length, x, y, z);
+    ++current_series;
+  }
+  plot_draw_axes(subplot_args, 2);
+
+  return NO_ERROR;
+}
+
+error_t plot_scatter3(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    /* TODO: Implement me! */
+    /*
+     * gr.setmarkertype(gr.MARKERTYPE_SOLID_CIRCLE)
+     * if c is not None:
+     *     c_min = c.min()
+     *     c_ptp = c.ptp()
+     *     for i in range(len(x)):
+     *         c_index = 1000 + int(255 * (c[i] - c_min) / c_ptp)
+     *         gr.setmarkercolorind(c_index)
+     *         gr.polymarker3d([x[i]], [y[i]], [z[i]])
+     * else:
+     *     gr.polymarker3d(x, y, z)
+     */
+    ++current_series;
+  }
+  plot_draw_axes(subplot_args, 2);
+
+  return ERROR_NOT_IMPLEMENTED;
+}
+
+error_t plot_imshow(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    /* TODO: Implement me! */
+    ++current_series;
+  }
+
+  return ERROR_NOT_IMPLEMENTED;
+}
+
+error_t plot_isosurface(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    /* TODO: Implement me! */
+    ++current_series;
+  }
+
+  return ERROR_NOT_IMPLEMENTED;
+}
+
+error_t plot_polar(gr_meta_args_t *subplot_args) {
+  const double *window;
+  double r_min, r_max, tick;
+  int n;
+  gr_meta_args_t **current_series;
+
+  window = args_values_as_array_by_keyword(subplot_args, "window");
+  r_min = window[2];
+  r_max = window[3];
+  tick = 0.5 * gr_tick(r_min, r_max);
+  n = (int)ceil((r_max - r_min) / tick);
+  r_max = r_min + n * tick;
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *rho, *theta, *x, *y;
+    unsigned int rho_length, theta_length;
+    char *spec;
+    unsigned int i;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &theta, &theta_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &rho, &rho_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(rho_length != theta_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    x = malloc(rho_length * sizeof(double));
+    y = malloc(rho_length * sizeof(double));
+    if (x == NULL || y == NULL) {
+      debug_print_malloc_error();
+      free(x);
+      free(y);
+      return ERROR_MALLOC;
+    }
+    for (i = 0; i < rho_length; ++i) {
+      double current_rho = (rho[i] - r_min) / (r_max - r_min);
+      x[i] = current_rho * cos(theta[i]);
+      y[i] = current_rho * sin(theta[i]);
+    }
+    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+    gr_uselinespec(spec);
+    gr_polyline(rho_length, x, y);
+    free(x);
+    free(y);
+    ++current_series;
+  }
+
+  return NO_ERROR;
+}
+
+error_t plot_trisurf(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y, *z;
+    unsigned int x_length, y_length, z_length;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    gr_trisurface(x_length, x, y, z);
+    ++current_series;
+  }
+  plot_draw_axes(subplot_args, 2);
+  plot_draw_colorbar(subplot_args, 0.05, 256);
+
+  return NO_ERROR;
+}
+
+error_t plot_tricont(gr_meta_args_t *subplot_args) {
+  double z_min, z_max;
+  double *levels;
+  int num_levels;
+  gr_meta_args_t **current_series;
+  int i;
+
+  args_values_by_keyword(subplot_args, "zrange", "dd", &z_min, &z_max);
+  args_values_by_keyword(subplot_args, "levels", "i", &num_levels);
+  levels = malloc(num_levels * sizeof(double));
+  if (levels == NULL) {
+    debug_print_malloc_error();
+    return ERROR_MALLOC;
+  }
+  for (i = 0; i < num_levels; ++i) {
+    levels[i] = z_min + ((1.0 * i) / (num_levels - 1)) * (z_max - z_min);
+  }
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    double *x, *y, *z;
+    unsigned int x_length, y_length, z_length;
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length),
+                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    gr_tricontour(x_length, x, y, z, num_levels, levels);
+    ++current_series;
+  }
+  plot_draw_axes(subplot_args, 2);
+  plot_draw_colorbar(subplot_args, 0.05, 256);
+  free(levels);
+
+  return NO_ERROR;
+}
+
+error_t plot_shade(gr_meta_args_t *subplot_args) {
+  gr_meta_args_t **current_series;
+
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  while (*current_series != NULL) {
+    /* TODO: Implement me! (Use Jonas' implementation) */
+    ++current_series;
+  }
+
+  return ERROR_NOT_IMPLEMENTED;
 }
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ auxiliary drawing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void plot_pre_plot(gr_meta_args_t *args) {
+error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass) {
   const char *kind = NULL;
-  int colormap = INT_MAX;
-
-  args_get_first_value_by_keyword(args, "kind", "s", &kind, NULL);
-  args_get_first_value_by_keyword(args, "colormap", "i", &colormap, NULL);
-
-  if (colormap == INT_MAX) {
-    colormap = 35; /* COOLWARM */ /* TODO: Add a colormap enumeration */
-  }
-
-  if (args_has_keyword(args, "clear")) {
-    gr_clearws();
-  }
-  if (str_equals_any(kind, 2, "imshow", "isosurface")) {
-    plot_set_viewport(args);
-  } else if (!args_has_keyword(args, "ax")) {
-    plot_set_viewport(args);
-    plot_set_window(args);
-    if (str_equals_any(kind, 1, "polar")) {
-      plot_draw_polar_axes(args);
-    } else {
-      plot_draw_axes(args);
-    }
-  }
-
-  gr_setcolormap(colormap);
-  gr_uselinespec(" ");
-}
-
-void plot_set_viewport(gr_meta_args_t *args) {
-  double *viewport, *wsviewport, *wswindow;
-
-  wsviewport = args_values_as_array_by_keyword(args, "wsviewport");
-  wswindow = args_values_as_array_by_keyword(args, "wswindow");
-  viewport = args_values_as_array_by_keyword(args, "viewport");
-
-  if (wsviewport != NULL) {
-    /*
-     * gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
-     * logger((stderr, "Set wsviewport (%f, %f, %f, %f)\n", wsviewport[0], wsviewport[1], wsviewport[2],
-     * wsviewport[3]));
-     */
-  }
-  if (wswindow != NULL) {
-    /*
-     * gr_setwswindow(wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
-     * logger((stderr, "Set wswindow (%f, %f, %f, %f)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
-     */
-  }
-  if (viewport != NULL) {
-    gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-    logger((stderr, "Set viewport (%f, %f, %f, %f)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
-  }
-
-  plot_draw_background(args);
-}
-
-void plot_set_window(gr_meta_args_t *args) {
-  double *window;
-  double *zrange;
-  int rotation, tilt;
-  int scale;
-
-  window = args_values_as_array_by_keyword(args, "window");
-  if (window != NULL) {
-    gr_setwindow(window[0], window[1], window[2], window[3]);
-    logger((stderr, "Set window (%f, %f, %f, %f)\n", window[0], window[1], window[2], window[3]));
-  }
-  if (args_has_keyword(args, "rotation")) {
-    args_get_first_value_by_keyword(args, "rotation", "i", &rotation, NULL);
-    args_get_first_value_by_keyword(args, "tilt", "i", &tilt, NULL);
-    zrange = args_values_as_array_by_keyword(args, "zrange");
-    gr_setspace(zrange[0], zrange[1], rotation, tilt);
-  }
-  if (args_get_first_value_by_keyword(args, "scale", "i", &scale, NULL)) {
-    gr_setscale(scale);
-  }
-}
-
-void plot_draw_background(gr_meta_args_t *args) {
-  int background_color_index;
-  double aspect_ratio;
-  double *subplot;
-
-  if (args_get_first_value_by_keyword(args, "backgroundcolor", "i", &background_color_index, NULL)) {
-    args_get_first_value_by_keyword(args, "ratio", "d", &aspect_ratio, NULL);
-    args_get_first_value_by_keyword(args, "subplot", "D", &subplot, NULL);
-    gr_savestate();
-    gr_selntran(0);
-    gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
-    gr_setfillcolorind(background_color_index);
-    if (aspect_ratio > 1) {
-      gr_fillrect(subplot[0], subplot[1], subplot[2] * aspect_ratio, subplot[3] * aspect_ratio);
-    } else {
-      gr_fillrect(subplot[0] * aspect_ratio, subplot[1] * aspect_ratio, subplot[2], subplot[3]);
-    }
-    gr_selntran(1);
-    gr_restorestate();
-  }
-}
-
-void plot_draw_axes(gr_meta_args_t *args) {
-  const char *kind = NULL;
-  double *window, *viewport, *vp;
+  const double *viewport, *vp;
   double x_tick;
   double x_org_low, x_org_high;
   int x_major_count;
@@ -2318,10 +3172,9 @@ void plot_draw_axes(gr_meta_args_t *args) {
   double charheight;
   double ticksize;
   char *title;
-  char *x_label = "", *y_label = "", *z_label = "";
+  char *x_label, *y_label, *z_label;
 
   args_get_first_value_by_keyword(args, "kind", "s", &kind, NULL);
-  window = args_values_as_array_by_keyword(args, "window");
   viewport = args_values_as_array_by_keyword(args, "viewport");
   vp = args_values_as_array_by_keyword(args, "vp");
   args_values_by_keyword(args, "xaxis", "dddi", &x_tick, &x_org_low, &x_org_high, &x_major_count);
@@ -2336,26 +3189,21 @@ void plot_draw_axes(gr_meta_args_t *args) {
   ticksize = 0.0075 * diag;
   if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf")) {
     args_values_by_keyword(args, "zaxis", "dddi", &z_tick, &z_org_low, &z_org_high, &z_major_count);
-    /* if pass_ == 1: */
-    gr_grid3d(x_tick, 0, z_tick, x_org_low, y_org_low, z_org_low, 2, 0, 2);
-    gr_grid3d(0, y_tick, 0, x_org_high, y_org_low, z_org_low, 0, 2, 0);
-    /*
-     * else:
-     *     gr.axes3d(x_tick, 0, z_tick, x_org[0], y_org[0], z_org[0], x_major_count, 0, z_major_count, -ticksize)
-     *     gr.axes3d(0, y_tick, 0, x_org[1], y_org[0], z_org[0], 0, y_major_count, 0, ticksize)
-     */
+    if (pass == 1) {
+      gr_grid3d(x_tick, 0, z_tick, x_org_low, y_org_high, z_org_low, 2, 0, 2);
+      gr_grid3d(0, y_tick, 0, x_org_low, y_org_high, z_org_low, 0, 2, 0);
+    } else {
+      gr_axes3d(x_tick, 0, z_tick, x_org_low, y_org_low, z_org_low, x_major_count, 0, z_major_count, -ticksize);
+      gr_axes3d(0, y_tick, 0, x_org_high, y_org_low, z_org_low, 0, y_major_count, 0, ticksize);
+    }
   } else {
-    if (!strcmp(kind, "heatmap")) {
+    if (str_equals_any(kind, 2, "heatmap", "shade")) {
       ticksize = -ticksize;
     } else {
       gr_grid(x_tick, y_tick, 0, 0, x_major_count, y_major_count);
     }
-    if ((window[0] <= x_org_low) && (window[2] <= y_org_low)) {
-      gr_axes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count, ticksize);
-    }
-    if ((x_org_high <= window[1]) && (y_org_high <= window[3])) {
-      gr_axes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count, -ticksize);
-    }
+    gr_axes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count, ticksize);
+    gr_axes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count, -ticksize);
   }
 
   if (args_get_first_value_by_keyword(args, "title", "s", &title, NULL)) {
@@ -2366,10 +3214,11 @@ void plot_draw_axes(gr_meta_args_t *args) {
   }
 
   if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf")) {
-    args_get_first_value_by_keyword(args, "xlabel", "s", &x_label, NULL);
-    args_get_first_value_by_keyword(args, "ylabel", "s", &y_label, NULL);
-    args_get_first_value_by_keyword(args, "zlabel", "s", &z_label, NULL);
-    gr_titles3d(x_label, y_label, z_label);
+    if (args_get_first_value_by_keyword(args, "xlabel", "s", &x_label, NULL) &&
+        args_get_first_value_by_keyword(args, "ylabel", "s", &y_label, NULL) &&
+        args_get_first_value_by_keyword(args, "zlabel", "s", &z_label, NULL)) {
+      gr_titles3d(x_label, y_label, z_label);
+    }
   } else {
     if (args_get_first_value_by_keyword(args, "xlabel", "s", &x_label, NULL)) {
       gr_savestate();
@@ -2385,24 +3234,26 @@ void plot_draw_axes(gr_meta_args_t *args) {
       gr_restorestate();
     }
   }
+
+  return NO_ERROR;
 }
 
-void plot_draw_polar_axes(gr_meta_args_t *args) {
+error_t plot_draw_polar_axes(gr_meta_args_t *args) {
   const double *window, *viewport;
   double diag;
   double charheight;
   double r_min, r_max;
   double tick;
   double x[2], y[2];
-  int i, r, n, alpha;
+  int i, n, alpha;
   char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER];
 
-  window = args_values_as_array_by_keyword(args, "window");
   viewport = args_values_as_array_by_keyword(args, "viewport");
-
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = max(0.018 * diag, 0.012);
+
+  window = args_values_as_array_by_keyword(args, "window");
   r_min = window[2];
   r_max = window[3];
 
@@ -2412,12 +3263,13 @@ void plot_draw_polar_axes(gr_meta_args_t *args) {
 
   tick = 0.5 * gr_tick(r_min, r_max);
   n = (int)ceil((r_max - r_min) / tick);
-  for (i = 0; i < n + 1; i++) {
-    r = i / n;
+  for (i = 0; i <= n; i++) {
+    int r = i / n;
     if (i % 2 == 0) {
       gr_setlinecolorind(88);
       if (i > 0) {
-        gr_drawarc(-r, r, -r, r, 0, 359);
+        gr_drawarc(-r, r, -r, r, 0, 180);
+        gr_drawarc(-r, r, -r, r, 180, 360);
       }
       gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
       x[0] = 0.05;
@@ -2427,12 +3279,13 @@ void plot_draw_polar_axes(gr_meta_args_t *args) {
       gr_text(x[0], y[0], text_buffer);
     } else {
       gr_setlinecolorind(90);
-      gr_drawarc(-r, r, -r, r, 0, 359);
+      gr_drawarc(-r, r, -r, r, 0, 180);
+      gr_drawarc(-r, r, -r, r, 180, 360);
     }
   }
   for (alpha = 0; alpha < 360; alpha += 45) {
-    x[0] = sin(alpha * M_PI / 180.0);
-    y[0] = cos(alpha * M_PI / 180.0);
+    x[0] = sin((alpha + 90) * M_PI / 180.0);
+    y[0] = cos((alpha + 90) * M_PI / 180.0);
     x[1] = 0.0;
     y[1] = 0.0;
     gr_polyline(2, x, y);
@@ -2440,117 +3293,190 @@ void plot_draw_polar_axes(gr_meta_args_t *args) {
     x[0] *= 1.1;
     y[0] *= 1.1;
     gr_wctondc(x, y);
-    snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d^o", alpha);
+    snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xb0", alpha);
     gr_textext(x[0], y[0], text_buffer);
   }
   gr_restorestate();
+
+  return NO_ERROR;
 }
 
-
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~ attributes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-int plot_process_color(gr_meta_args_t *args, arg_t *arg) {
-  args_value_iterator_t *value_it;
-  double *color;
-  int gr_color_index;
-
-  value_it = args_value_iter(arg);
-  if (value_it->next(value_it) != NULL) {
-    if (value_it->format == 'd' && value_it->is_array) {
-      color = *((double **)value_it->value_ptr);
-      logger((stderr, "Found attribute \"color\" with value (%lf, %lf, %lf)\n", color[0], color[1], color[2]));
-      /* TODO: Which color index should be set? */
-      gr_color_index = gr_inqcolorfromrgb(color[0], color[1], color[2]);
-      gr_setlinecolorind(gr_color_index);
-      logger((stderr, "Set colorrep %d with \"color\" values (%lf, %lf, %lf)\n", gr_color_index, color[0], color[1],
-              color[2]));
-    } else {
-      logger((stderr, "Unknown color format '%c' (%s array) -> ignoring\n", value_it->format,
-              value_it->is_array ? "" : "no"));
-      return 0;
-    }
-  }
-
-  return 1;
-}
-
-int plot_process_labels(gr_meta_args_t *args, arg_t *arg) {
-  /* TODO: add location handling! */
-  args_value_iterator_t *value_it;
-  double viewport[4];
-  char **labels;
-  int label_count;
+error_t plot_draw_legend(gr_meta_args_t *subplot_args) {
+  const char **labels, **current_label;
+  unsigned int num_labels, num_series;
+  gr_meta_args_t **current_series;
+  const double *viewport;
   int location;
   double px, py, w, h;
   double tbx[4], tby[4];
   double legend_symbol_x[2], legend_symbol_y[2];
-  int i;
-  int read_labels;
 
-  read_labels = 0;
-  value_it = args_value_iter(arg);
-  if (value_it->next(value_it) != NULL) {
-    if (value_it->format == 's' && value_it->is_array) {
-      labels = (*(char ***)value_it->value_ptr);
-      label_count = value_it->array_length;
-      read_labels = 1;
-    }
-  }
-  args_value_iterator_delete(value_it);
 
-  if (!read_labels) {
-    /* TODO: report error! */
-    /* gr_convenience_set_error(GR_CONVENIENCE_INVALID_ATTRIBUTE_FORMAT, "labels"); */
-    return 0;
-  }
-
-  logger((stderr, "\"label_count\" in \"plot_process_labels\": %d\n", label_count));
-
-  gr_inqviewport(&viewport[0], &viewport[1], &viewport[2], &viewport[3]);
-  location = 1; /* TODO: query location */
+  return_error_if(!args_get_first_value_by_keyword(subplot_args, "labels", "S", &labels, &num_labels),
+                  ERROR_PLOT_MISSING_LABELS);
+  logger((stderr, "Draw a legend with %d labels\n", num_labels));
+  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, &num_series);
+  viewport = args_values_as_array_by_keyword(subplot_args, "viewport");
+  args_values_by_keyword(subplot_args, "location", "i", &location);
   gr_savestate();
   gr_selntran(0);
   gr_setscale(0);
   w = 0;
-  for (i = 0; i < label_count; i++) {
-    gr_inqtextext(0, 0, labels[i], tbx, tby);
+  for (current_label = labels; *current_label != NULL; ++current_label) {
+    gr_inqtextext(0, 0, *(char **)current_label, tbx, tby);
     w = max(w, tbx[2]);
   }
-  /* TODO: use plot count instead of label_count */
-  h = (label_count + 1) * 0.03;
-  /* TODO: determine px and py with the "location" attribute */
-  px = viewport[1] - 0.05 - w;
-  py = viewport[3] - 0.06;
+
+  h = (num_series + 1) * 0.03;
+  if (int_equals_any(location, 3, 8, 9, 10)) {
+    px = 0.5 * (viewport[0] + viewport[1] - w);
+  } else if (int_equals_any(location, 3, 2, 3, 6)) {
+    px = viewport[0] + 0.11;
+  } else {
+    px = viewport[1] - 0.05 - w;
+  }
+  if (int_equals_any(location, 4, 5, 6, 7, 10)) {
+    py = 0.5 * (viewport[2] + viewport[3] + h) - 0.03;
+  } else if (int_equals_any(location, 3, 3, 4, 8)) {
+    py = viewport[2] + h;
+  } else {
+    py = viewport[3] - 0.06;
+  }
+
   gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
   gr_setfillcolorind(0);
-  gr_fillrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * label_count);
-  gr_setlinetype(GKS_K_LINETYPE_SOLID);
+  gr_fillrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_series);
+  gr_setlinetype(GKS_K_INTSTYLE_SOLID);
   gr_setlinecolorind(1);
   gr_setlinewidth(1);
-  gr_drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * label_count);
+  gr_drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_series);
   gr_uselinespec(" ");
-  /* TODO: use color and line spec given by the plots */
-  for (i = 0; i < label_count; i++) {
+  current_label = labels;
+  while (*current_series != NULL) {
+    char *spec;
+    int mask;
+
     gr_savestate();
-    gr_uselinespec("");
-    legend_symbol_x[0] = px - 0.07;
-    legend_symbol_x[1] = px - 0.01;
-    legend_symbol_y[0] = py;
-    legend_symbol_y[1] = py;
-    gr_polyline(2, legend_symbol_x, legend_symbol_y);
+    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+    mask = gr_uselinespec(spec);
+    if (int_equals_any(mask, 5, 0, 1, 3, 4, 5)) {
+      legend_symbol_x[0] = px - 0.07;
+      legend_symbol_x[1] = px - 0.01;
+      legend_symbol_y[0] = py;
+      legend_symbol_y[1] = py;
+      gr_polyline(2, legend_symbol_x, legend_symbol_y);
+    }
+    if (mask & 2) {
+      legend_symbol_x[0] = px - 0.06;
+      legend_symbol_x[1] = px - 0.02;
+      legend_symbol_y[0] = py;
+      legend_symbol_y[1] = py;
+      gr_polymarker(2, legend_symbol_x, legend_symbol_y);
+    }
     gr_restorestate();
     gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-    gr_textext(px, py, labels[i]);
+    if (*current_label != NULL) {
+      gr_textext(px, py, (char *)*current_label);
+      ++current_label;
+    }
     py -= 0.03;
+    ++current_series;
   }
   gr_selntran(1);
   gr_restorestate();
 
-  return 1;
+  return NO_ERROR;
+}
+
+error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors) {
+  const double *viewport;
+  double z_min, z_max;
+  int *data;
+  double diag, charheight;
+  int scale;
+  unsigned int i;
+
+  gr_savestate();
+  viewport = args_values_as_array_by_keyword(args, "viewport");
+  args_values_by_keyword(args, "zrange", "dd", &z_min, &z_max);
+  data = malloc(colors * sizeof(int));
+  if (data == NULL) {
+    debug_print_malloc_error();
+    return ERROR_MALLOC;
+  }
+  for (i = 0; i < colors; ++i) {
+    data[i] = 1000 + 255 * i / (colors - 1);
+  }
+  gr_setwindow(0.0, 1.0, z_min, z_max);
+  gr_setviewport(viewport[1] + 0.02 + off, viewport[1] + 0.05 + off, viewport[2], viewport[3]);
+  gr_cellarray(0, 1, z_max, z_min, 1, colors, 1, 1, 1, colors, data);
+  diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
+              (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
+  charheight = max(0.016 * diag, 0.012);
+  gr_setcharheight(charheight);
+  args_values_by_keyword(args, "scale", "i", &scale);
+  if (scale & GR_OPTION_Z_LOG) {
+    gr_setscale(GR_OPTION_Y_LOG);
+    gr_axes(0, 2, 1, z_min, 0, 1, 0.005);
+  } else {
+    double z_tick = 0.5 * gr_tick(z_min, z_max);
+    gr_axes(0, z_tick, 1, z_min, 0, 1, 0.005);
+  }
+  free(data);
+  gr_restorestate();
+
+  return NO_ERROR;
+}
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+double find_max_step(unsigned int n, const double *x) {
+  double max_step = 0.0;
+  unsigned int i;
+
+  if (n < 2) {
+    return 0.0;
+  }
+  for (i = 1; i < n; ++i) {
+    max_step = max(x[i] - x[i - 1], max_step);
+  }
+
+  return max_step;
+}
+
+const char *next_fmt_key(const char *kind) {
+  static const char *saved_fmt = NULL;
+  static char fmt_key[2] = {0, 0};
+
+  if (kind != NULL) {
+    saved_fmt = fmt_map_at(fmt_map, kind);
+  }
+  if (saved_fmt == NULL) {
+    return NULL;
+  }
+  fmt_key[0] = *saved_fmt;
+  if (*saved_fmt != '\0') {
+    ++saved_fmt;
+  }
+
+  return fmt_key;
 }
 
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
+
+size_t djb2_hash(const char *str) {
+  /* String hash function by Dan Bernstein, see http://www.cse.yorku.ca/~oz/hash.html */
+  size_t hash = 5381;
+  char c;
+
+  while ((c = *str++) != '\0') {
+    hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+  }
+
+  return hash;
+}
 
 int is_int_number(const char *str) {
   return strchr(FROMJSON_VALID_DELIMITERS, str[strspn(str, "0123456789-+")]) != NULL;
@@ -2790,7 +3716,7 @@ error_t args_update_kwarg(gr_meta_args_t *args, const char *key, const char *val
   va_list vl;
   va_start(vl, value_format);
 
-  error = args_push_kwarg_vl(args, key, value_format, &vl);
+  error = args_update_kwarg_vl(args, key, value_format, &vl);
 
   va_end(vl);
 
@@ -2804,6 +3730,35 @@ error_t args_update_kwarg_buf(gr_meta_args_t *args, const char *key, const char 
 
 error_t args_update_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
   return args_update_kwarg_common(args, key, value_format, NULL, vl, 0);
+}
+
+error_t args_setdefault_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format,
+                                     const void *buffer, va_list *vl, int apply_padding) {
+  if (!args_has_keyword(args, key)) {
+    return args_push_kwarg_common(args, key, value_format, buffer, vl, apply_padding);
+  }
+  return NO_ERROR;
+}
+
+error_t args_setdefault_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
+  error_t error;
+  va_list vl;
+  va_start(vl, value_format);
+
+  error = args_setdefault_kwarg_vl(args, key, value_format, &vl);
+
+  va_end(vl);
+
+  return error;
+}
+
+error_t args_setdefault_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                                  int apply_padding) {
+  return args_setdefault_kwarg_common(args, key, value_format, buffer, NULL, apply_padding);
+}
+
+error_t args_setdefault_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
+  return args_setdefault_kwarg_common(args, key, value_format, NULL, vl, 0);
 }
 
 error_t args_push_args(gr_meta_args_t *args, const gr_meta_args_t *update_args) {
@@ -3005,37 +3960,39 @@ int(args_get_first_value_by_keyword)(const gr_meta_args_t *args, const char *key
     }
     value_ptr = (size_t_typed_value_ptr + 1);
   }
-  switch (first_value_type) {
-  case 'i':
-    *(int *)first_value = *(int *)value_ptr;
-    break;
-  case 'I':
-    *(int **)first_value = *(int **)value_ptr;
-    break;
-  case 'd':
-    *(double *)first_value = *(double *)value_ptr;
-    break;
-  case 'D':
-    *(double **)first_value = *(double **)value_ptr;
-    break;
-  case 'c':
-    *(char *)first_value = *(char *)value_ptr;
-    break;
-  case 'C':
-  case 's':
-    *(char **)first_value = *(char **)value_ptr;
-    break;
-  case 'S':
-    *(char ***)first_value = *(char ***)value_ptr;
-    break;
-  case 'a':
-    *(gr_meta_args_t **)first_value = *(gr_meta_args_t **)value_ptr;
-    break;
-  case 'A':
-    *(gr_meta_args_t ***)first_value = *(gr_meta_args_t ***)value_ptr;
-    break;
-  default:
-    return 0;
+  if (first_value != NULL) {
+    switch (first_value_type) {
+    case 'i':
+      *(int *)first_value = *(int *)value_ptr;
+      break;
+    case 'I':
+      *(int **)first_value = *(int **)value_ptr;
+      break;
+    case 'd':
+      *(double *)first_value = *(double *)value_ptr;
+      break;
+    case 'D':
+      *(double **)first_value = *(double **)value_ptr;
+      break;
+    case 'c':
+      *(char *)first_value = *(char *)value_ptr;
+      break;
+    case 'C':
+    case 's':
+      *(char **)first_value = *(char **)value_ptr;
+      break;
+    case 'S':
+      *(char ***)first_value = *(char ***)value_ptr;
+      break;
+    case 'a':
+      *(gr_meta_args_t **)first_value = *(gr_meta_args_t **)value_ptr;
+      break;
+    case 'A':
+      *(gr_meta_args_t ***)first_value = *(gr_meta_args_t ***)value_ptr;
+      break;
+    default:
+      return 0;
+    }
   }
   return 1;
 }
@@ -3280,6 +4237,7 @@ void *args_value_iterator_next(args_value_iterator_t *args_value_iterator) {
       STEP_VALUE_BUFFER_BY_TYPE('d', double)
       STEP_VALUE_BUFFER_BY_TYPE('c', char)
       STEP_VALUE_BUFFER_BY_TYPE('s', char *)
+      STEP_VALUE_BUFFER_BY_TYPE('a', gr_meta_args_t *)
     case 'n':
       /* 'n' is not relevant for reading the values -> ignore it */
       break;
@@ -5484,3 +6442,106 @@ FILE *gr_get_stdout() {
 }
 #endif
 #endif
+
+
+/* ------------------------- string-to-generic map ------------------------------------------------------------------ */
+
+#define DEFINE_MAP_METHODS(prefix, value_type, invalid_value)                                                 \
+                                                                                                              \
+  prefix##_map_t *prefix##_map_new(size_t capacity) {                                                         \
+    prefix##_map_t *prefix##_map;                                                                             \
+    size_t power2_capacity = 1;                                                                               \
+                                                                                                              \
+    while (power2_capacity < 2 * capacity) {                                                                  \
+      power2_capacity <<= 1;                                                                                  \
+    }                                                                                                         \
+    prefix##_map = malloc(sizeof(prefix##_map_t));                                                            \
+    if (prefix##_map == NULL) {                                                                               \
+      debug_print_malloc_error();                                                                             \
+      return NULL;                                                                                            \
+    }                                                                                                         \
+    prefix##_map->map = calloc(power2_capacity, sizeof(prefix##_map_entry_t));                                \
+    if (prefix##_map->map == NULL) {                                                                          \
+      free(prefix##_map);                                                                                     \
+      debug_print_malloc_error();                                                                             \
+      return NULL;                                                                                            \
+    }                                                                                                         \
+    prefix##_map->capacity = power2_capacity;                                                                 \
+    prefix##_map->size = 0;                                                                                   \
+                                                                                                              \
+    return prefix##_map;                                                                                      \
+  }                                                                                                           \
+                                                                                                              \
+  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries) {                   \
+    prefix##_map_t *prefix##_map;                                                                             \
+    size_t i;                                                                                                 \
+                                                                                                              \
+    prefix##_map = prefix##_map_new(count);                                                                   \
+    if (prefix##_map == NULL) {                                                                               \
+      return NULL;                                                                                            \
+    }                                                                                                         \
+    for (i = 0; i < count; ++i) {                                                                             \
+      if (!prefix##_map_insert(prefix##_map, entries[i].key, entries[i].value)) {                             \
+        prefix##_map_delete(prefix##_map);                                                                    \
+        return NULL;                                                                                          \
+      }                                                                                                       \
+    }                                                                                                         \
+                                                                                                              \
+    return prefix##_map;                                                                                      \
+  }                                                                                                           \
+                                                                                                              \
+  void prefix##_map_delete(prefix##_map_t *prefix##_map) {                                                    \
+    free(prefix##_map->map);                                                                                  \
+    free(prefix##_map);                                                                                       \
+  }                                                                                                           \
+                                                                                                              \
+  int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, value_type value) {                  \
+    ssize_t index;                                                                                            \
+                                                                                                              \
+    index = prefix##_map_index(prefix##_map, key);                                                            \
+    if (index < 0) {                                                                                          \
+      return 0;                                                                                               \
+    }                                                                                                         \
+    if (prefix##_map->map[index].key != NULL) {                                                               \
+      free((char *)prefix##_map->map[index].key);                                                             \
+    }                                                                                                         \
+    prefix##_map->map[index].key = strdup(key);                                                               \
+    if (prefix##_map->map[index].key == NULL) {                                                               \
+      debug_print_malloc_error();                                                                             \
+      return 0;                                                                                               \
+    }                                                                                                         \
+    prefix##_map->map[index].value = value;                                                                   \
+                                                                                                              \
+    return 1;                                                                                                 \
+  }                                                                                                           \
+                                                                                                              \
+  value_type prefix##_map_at(prefix##_map_t *prefix##_map, const char *key) {                                 \
+    ssize_t index;                                                                                            \
+                                                                                                              \
+    index = prefix##_map_index(prefix##_map, key);                                                            \
+    if (index < 0) {                                                                                          \
+      return invalid_value;                                                                                   \
+    }                                                                                                         \
+    return prefix##_map->map[index].value;                                                                    \
+  }                                                                                                           \
+                                                                                                              \
+  ssize_t prefix##_map_index(prefix##_map_t *prefix##_map, const char *key) {                                 \
+    size_t hash;                                                                                              \
+    size_t i;                                                                                                 \
+                                                                                                              \
+    hash = djb2_hash(key);                                                                                    \
+    for (i = 0; i < prefix##_map->capacity; ++i) {                                                            \
+      /* Quadratic probing that will visit every slot in the hash table if the capacity is a power of 2, see: \
+       * http://research.cs.vt.edu/AVresearch/hashing/quadratic.php */                                        \
+      size_t next_index = (hash + (i * i + i) / 2) % prefix##_map->capacity;                                  \
+      if (prefix##_map->map[next_index].key == NULL || strcmp(prefix##_map->map[next_index].key, key) == 0) { \
+        return next_index;                                                                                    \
+      }                                                                                                       \
+    }                                                                                                         \
+    return -1;                                                                                                \
+  }
+
+DEFINE_MAP_METHODS(fmt, const char *, NULL)
+DEFINE_MAP_METHODS(plot_func, plot_func_t, NULL)
+
+#undef DEFINE_MAP_METHODS

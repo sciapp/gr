@@ -11,8 +11,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-
-int test_plotmeta(void) {
+static void test_line(void) {
   double plots[2][2][1000];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
   const char *labels[] = {"sin", "cos"};
@@ -48,11 +47,52 @@ int test_plotmeta(void) {
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_deletemeta(args);
+  /* TODO: In this case, `args` is already deleted in `gr_plotmeta` -> how should this be handled? */
+  /* gr_deletemeta(args); */
+}
 
-  return 0;
+static void test_contourf(void) {
+  double x[100], y[100], z[100];
+  int n = sizeof(x) / sizeof(x[0]);
+  int i;
+  gr_meta_args_t *series, *subplot, *args;
+
+  for (i = 0; i < n; ++i) {
+    x[i] = (double)rand() / RAND_MAX * 8.0 - 4.0;
+    y[i] = (double)rand() / RAND_MAX * 8.0 - 4.0;
+    z[i] = sin(x[i]) + cos(y[i]);
+  }
+
+  printf("filling argument container...\n");
+
+  series = gr_newmeta();
+  gr_meta_args_push_kwarg(series, "x", "nD", n, x);
+  gr_meta_args_push_kwarg(series, "y", "nD", n, y);
+  gr_meta_args_push_kwarg(series, "z", "nD", n, z);
+
+  subplot = gr_newmeta();
+  gr_meta_args_push_kwarg(subplot, "series", "A(1)", &series);
+  gr_meta_args_push_kwarg(subplot, "kind", "s", "contourf");
+
+  args = gr_newmeta();
+  gr_meta_args_push_kwarg(args, "subplots", "A(1)", &subplot);
+
+  printf("plotting data...\n");
+
+  gr_plotmeta(args);
+
+  printf("Press any key to continue...\n");
+  getchar();
+
+  /* TODO: In this case, `args` is already deleted in `gr_plotmeta` -> how should this be handled? */
+  /* gr_deletemeta(args); */
+}
+
+static void test_plotmeta(void) {
+  test_line();
+  test_contourf();
 }
 
 int main(void) {
-  return test_plotmeta();
+  test_plotmeta();
 }
