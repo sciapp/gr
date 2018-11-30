@@ -1238,9 +1238,9 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
 
   contour_vars.xdim = nx;
   contour_vars.ydim = ny;
-  contour_vars.lblmjh = major_h % 1000;
+  contour_vars.lblmjh = abs(major_h) % 1000;
   contour_vars.label_map = NULL;
-  contour_vars.use_color = major_h >= 1000;
+  contour_vars.use_color = abs(major_h) >= 1000;
 
   /* Don't label any lines if a 3D-transformation */
   /* or if any scale options are in effect.       */
@@ -1249,7 +1249,7 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
   gr_inqspace(&contour_vars.zmin, &contour_vars.zmax, &rotation, &tilt);
 
   if ((rotation == 0) && (tilt == 90) &&
-      (contour_vars.lblmjh > 0) && (scale_options == 0))
+      (major_h > 0) && (scale_options == 0))
     {
       contour_vars.txtflg = 1;
 
