@@ -2696,9 +2696,6 @@ error_t plot_contour(gr_meta_args_t *subplot_args) {
     error = ERROR_MALLOC;
     goto cleanup;
   }
-  for (i = 0; i < num_levels; ++i) {
-    h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
-  }
   args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y, *z;
@@ -2718,11 +2715,21 @@ error_t plot_contour(gr_meta_args_t *subplot_args) {
         }
       }
       gr_gridit(x_length, x, y, z, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y, gridit_z);
+      for (i = 0; i < PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N; i++) {
+        z_min = min(gridit_z[i], z_min);
+        z_max = max(gridit_z[i], z_max);
+      }
+      for (i = 0; i < num_levels; ++i) {
+        h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
+      }
       gr_contour(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h, gridit_z, 1000);
     } else {
       if (x_length * y_length != z_length) {
         error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
         goto cleanup;
+      }
+      for (i = 0; i < num_levels; ++i) {
+        h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
       }
       gr_contour(x_length, y_length, num_levels, x, y, h, z, 1000);
     }
@@ -2759,9 +2766,6 @@ error_t plot_contourf(gr_meta_args_t *subplot_args) {
     error = ERROR_MALLOC;
     goto cleanup;
   }
-  for (i = 0; i < num_levels; ++i) {
-    h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
-  }
   args_values_by_keyword(subplot_args, "scale", "i", &scale);
   gr_setscale(scale);
   args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
@@ -2787,11 +2791,21 @@ error_t plot_contourf(gr_meta_args_t *subplot_args) {
         }
       }
       gr_gridit(x_length, x, y, z, PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, gridit_x, gridit_y, gridit_z);
+      for (i = 0; i < PLOT_CONTOUR_GRIDIT_N * PLOT_CONTOUR_GRIDIT_N; i++) {
+        z_min = min(gridit_z[i], z_min);
+        z_max = max(gridit_z[i], z_max);
+      }
+      for (i = 0; i < num_levels; ++i) {
+        h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
+      }
       gr_contourf(PLOT_CONTOUR_GRIDIT_N, PLOT_CONTOUR_GRIDIT_N, num_levels, gridit_x, gridit_y, h, gridit_z, 1000);
     } else {
       if (x_length * y_length != z_length) {
         error = ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
         goto cleanup;
+      }
+      for (i = 0; i < num_levels; ++i) {
+        h[i] = z_min + (1.0 * i) / num_levels * (z_max - z_min);
       }
       gr_contourf(x_length, y_length, num_levels, x, y, h, z, 1000);
     }
