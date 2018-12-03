@@ -1011,7 +1011,7 @@ int gr_plotmeta(const gr_meta_args_t *args) {
   }
 
 cleanup:
-  gr_deletemeta(subplots_args);
+  //gr_deletemeta(subplots_args); TODO: Delete subplots_args at the right time
 
   return error;
 }
@@ -3156,15 +3156,31 @@ error_t plot_tricont(gr_meta_args_t *subplot_args) {
 }
 
 error_t plot_shade(gr_meta_args_t *subplot_args) {
-  gr_meta_args_t **current_series;
+    gr_meta_args_t **current_shader;
+    const char *data_component_names[] = {"x", "y", NULL};
+    double *components[2];
+    char *spec = ""; /* TODO: read spec from data! */
+    int *how, *width, *height;
+    double **current_component = components;
+    const char **current_component_name = data_component_names;
+    unsigned int point_count;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
-  while (*current_series != NULL) {
-    /* TODO: Implement me! (Use Jonas' implementation) */
-    ++current_series;
-  }
-
-  return ERROR_NOT_IMPLEMENTED;
+    args_get_first_value_by_keyword(subplot_args, "series", "A", &current_shader, NULL);
+    while (*current_component_name != NULL) {
+        args_get_first_value_by_keyword(*current_shader, *current_component_name, "D", current_component, &point_count);
+        ++current_component_name;
+        ++current_component;
+    }
+    if(!args_get_first_value_by_keyword(subplot_args, "how", "i", &how, NULL)) {
+        how=1;
+    }
+    if(!args_get_first_value_by_keyword(subplot_args, "width", "i", &width, NULL)){
+        width=100;
+    }
+    if(!args_get_first_value_by_keyword(subplot_args, "height", "i", &height, NULL)){
+        height=100;
+    }
+    gr_shadepoints(point_count, components[0], components[1],how,width,height);
 }
 
 
