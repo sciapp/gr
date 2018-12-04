@@ -206,6 +206,7 @@ DLLEXPORT void gr_shade(
   int, double *, double *, int, int, double *, int, int, int *);
 DLLEXPORT void gr_shadepoints(int, double *, double *, int, int, int);
 DLLEXPORT void gr_shadelines(int, double *, double *, int, int, int);
+DLLEXPORT void gr_panzoom(double *, double *, double *, double *, double);
 
 #ifdef _WIN32
 #ifdef __cplusplus

@@ -119,4 +119,5 @@ EXPORTS
 	gr_version
 	gr_wc3twco
 	gr_wctondc
+	gr_panzoom
 

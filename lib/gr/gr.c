@@ -9727,3 +9727,55 @@ void gr_shadelines(int n, double *x, double *y, int xform, int w, int h)
       gr_writestream(" xform=\"%d\" w=\"%d\" h=\"%d\"/>\n", xform, w, h);
     }
 }
+
+void gr_panzoom(
+  double *xmin, double *xmax, double *ymin, double *ymax, double zoom)
+{
+  double x0, x1, y0, y1, tmp, xext, yext;
+
+  check_autoinit;
+
+  x0 = *xmin;
+  x1 = *xmax;
+  y0 = *ymin;
+  y1 = *ymax;
+
+  gr_ndctowc(&x0, &y0);
+  gr_ndctowc(&x1, &y1);
+
+  if (OPTION_FLIP_X & lx.scale_options)
+    {
+      tmp = x0;
+      x0  = x1;
+      x1  = tmp;
+    }
+  if (OPTION_FLIP_Y & lx.scale_options)
+    {
+      tmp = y0;
+      y0 = y1;
+      y1 = tmp;
+    }
+
+  if (zoom < FEPS)
+    {
+      *xmin = x0;
+      *xmax = x1;
+      *ymin = y0;
+      *ymax = y1;
+    }
+  else
+    {
+      gr_inqwindow(xmin, xmax, ymin, ymax);
+      gr_wctondc(xmin, ymin);
+      gr_wctondc(xmax, ymax);
+      gr_wctondc(&x0, &y0);
+      xext = (*xmax - *xmin) * 0.5 * zoom;
+      yext = (*ymax - *ymin) * 0.5 * zoom;
+      *xmin = x0 - xext;
+      *xmax = x0 + xext;
+      *ymin = y0 - yext;
+      *ymax = y0 + yext;
+      gr_ndctowc(xmin, ymin);
+      gr_ndctowc(xmax, ymax);
+    }
+}
