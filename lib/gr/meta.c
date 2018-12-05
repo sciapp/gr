@@ -2263,7 +2263,7 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     scale |= zflip ? GR_OPTION_FLIP_Z : 0;
   }
 
-  if (!args_has_keyword(subplot_args, "pan")) {
+  if (args_has_keyword(subplot_args, "zoom")) {
     args_get_first_value_by_keyword(subplot_args, "zoom", "d", &zoom, NULL);
     args_values_by_keyword(subplot_args, "pan", "dddd", &x_min, &x_max, &y_min, &y_max);
     gr_panzoom(&x_min, &x_max, &y_min, &y_max, zoom);
