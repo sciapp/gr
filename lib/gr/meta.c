@@ -2241,7 +2241,7 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
   int xlog, ylog, zlog;
   int xflip, yflip, zflip;
   int major_count, x_major_count, y_major_count;
-  double x_min, x_max, y_min, y_max, z_min, z_max;
+  double x_min, x_max, y_min, y_max, z_min, z_max, zoom;
   int adjust_xlim, adjust_ylim, adjust_zlim;
   double x_tick, y_tick;
   double x_org_low, x_org_high, y_org_low, y_org_high;
@@ -2261,6 +2261,14 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     scale |= xflip ? GR_OPTION_FLIP_X : 0;
     scale |= yflip ? GR_OPTION_FLIP_Y : 0;
     scale |= zflip ? GR_OPTION_FLIP_Z : 0;
+  }
+
+  if (!args_has_keyword(subplot_args, "pan")) {
+    args_get_first_value_by_keyword(subplot_args, "zoom", "d", &zoom, NULL);
+    args_values_by_keyword(subplot_args, "pan", "dddd", &x_min, &x_max, &y_min, &y_max);
+    gr_panzoom(&x_min, &x_max, &y_min, &y_max, zoom);
+    args_update_kwarg(subplot_args, "xrange", "dd", x_min, x_max);
+    args_update_kwarg(subplot_args, "yrange", "dd", y_min, y_max);
   }
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf")) {
@@ -3160,7 +3168,7 @@ error_t plot_shade(gr_meta_args_t *subplot_args) {
     const char *data_component_names[] = {"x", "y", NULL};
     double *components[2];
     char *spec = ""; /* TODO: read spec from data! */
-    int *how, *width, *height;
+    int *xform, *width, *height;
     double **current_component = components;
     const char **current_component_name = data_component_names;
     unsigned int point_count;
@@ -3171,8 +3179,8 @@ error_t plot_shade(gr_meta_args_t *subplot_args) {
         ++current_component_name;
         ++current_component;
     }
-    if(!args_get_first_value_by_keyword(subplot_args, "how", "i", &how, NULL)) {
-        how=1;
+    if(!args_get_first_value_by_keyword(subplot_args, "xform", "i", &xform, NULL)) {
+        xform=1;
     }
     if(!args_get_first_value_by_keyword(subplot_args, "width", "i", &width, NULL)){
         width=100;
@@ -3180,7 +3188,7 @@ error_t plot_shade(gr_meta_args_t *subplot_args) {
     if(!args_get_first_value_by_keyword(subplot_args, "height", "i", &height, NULL)){
         height=100;
     }
-    gr_shadepoints(point_count, components[0], components[1],how,width,height);
+    gr_shadepoints(point_count, components[0], components[1],xform,width,height);
 }
 
 
