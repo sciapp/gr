@@ -1,4 +1,5 @@
 #include <stdio.h>
+#ifndef NO_GL
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glx.h>
@@ -186,3 +187,4 @@ struct platform *gr3_platform_initGL_dynamic_(void (*log_callback)(const char *)
     }
   return &gr3_platform_;
 }
+#endif

@@ -405,6 +405,46 @@ fi
 printf "%12s: %s\n" "GLFW" "$info" >&2
 rm -f $tmpout $tmpsrc $tmpver
 
+if [ "$gl" != "no" ]
+then
+  tmpout=`mktemp /tmp/a.out.XXXXX`
+  tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+  if [ `uname` = "Darwin" ]; then
+    cat >$tmpsrc << eof
+#include <OpenGL/OpenGL.h>
+int main(){
+  return 0;
+}
+eof
+    libs="-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo"
+    ret=1
+  else
+    cat >$tmpsrc << eof
+#include <GL/gl.h>
+int main(){
+  return 0;
+}
+eof
+    libs="-lGL -lXrandr -lXxf86vm -lXinerama -lXcursor -lXi -lX11 -lrt -lpthread -lm"
+  fi
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc"
+  $cmd $libs >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    gldefs="GLDEFS=-DNO_GL PLATFORMLIBS="
+    info="${red} no${normal} [OpenGL API not found]"
+    ret=1
+  else
+    $tmpout >$tmpver 2>&1
+    info="${green}yes${normal}"
+  fi
+else
+  gldefs="GLDEFS=-DNO_GL PLATFORMLIBS="
+  info="${yellow} no${normal} [disabled]"
+  ret=1
+fi
+printf "%12s: %s\n" "OpenGL" "$info" >&2
+rm -f $tmpout $tmpsrc $tmpver
+
 if [ "$zmq" != "no" ]
 then
   tmpout=`mktemp /tmp/a.out.XXXXX`
@@ -600,4 +640,4 @@ printf "%12s: %s\n" "libtiff" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
 echo "" >&2
-echo $target $wxdefs $qt4defs $qt5defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $zmqdefs $avdefs $cairodefs $tiffdefs $extradefs
+echo $target $wxdefs $qt4defs $qt5defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $extradefs
