@@ -17,18 +17,16 @@
 #include "vc.h"
 #endif
 
-#ifdef _WIN32
-#include <windows.h>
-#define DLLEXPORT __declspec(dllexport)
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-#else
-#ifdef __cplusplus
-#define DLLEXPORT extern "C"
-#else
-#define DLLEXPORT
+
+#ifdef _WIN32
+
+#include <windows.h>
+#ifndef DLLEXPORT
+#define DLLEXPORT __declspec(dllexport)
 #endif
 
 #endif
@@ -38,10 +36,8 @@ DLLEXPORT void gks_videoplugin(
   int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
-#ifdef _WIN32
 #ifdef __cplusplus
 }
-#endif
 #endif
 
 #if !defined(NO_AV) && !defined(NO_CAIRO)
@@ -78,6 +74,7 @@ static
 void write_page(void)
 {
   int bg[3] = { 255, 255, 255 };
+  int i, j, k;
   if (!p->movie)
     {
       char path[MAXPATHLEN];
@@ -95,14 +92,14 @@ void write_page(void)
         }
       p->movie = vc_movie_create(path, p->framerate, 4000000);
     }
-    frame_t frame = (frame_t) gks_malloc(sizeof(frame_t_));
-    for (int i=0; i<p->height; i++)
+    frame_t frame = (frame_t) gks_malloc(sizeof(struct frame_t_));
+    for (i=0; i<p->height; i++)
       {
-        for (int j=0; j<p->width; j++)
+        for (j=0; j<p->width; j++)
           {
             long ind = (i * p->width + j) * 4;
             double alpha = p->mem[ind + 3] / 255.0;
-            for (int k=0; k<3; k++)
+            for (k=0; k<3; k++)
               {
                 double col = p->mem[ind + k] * alpha + bg[k] * (1 - alpha) + 0.5;
                 if (col > 255)
@@ -135,8 +132,6 @@ void gks_videoplugin(
     {
       case 2:
         /* open workstation */
-        long width, height, framerate, num_args;
-        char *env;
 
         gkss = (gks_state_list_t *) * ptr;
 
@@ -149,6 +144,8 @@ void gks_videoplugin(
         p->path = chars;
         *ptr = p;
 
+        long width, height, framerate, num_args;
+        char *env;
         width = height = framerate = -1;
         env = (char *) gks_getenv("GKS_VIDEO_OPTS");
         if (env)

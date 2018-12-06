@@ -7,19 +7,12 @@
 
 #include <windows.h>    /* required for all Windows applications */
 #define DLLEXPORT __declspec(dllexport)
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#else
-
-#ifdef __cplusplus
-#define DLLEXPORT extern "C"
 #else
 #define DLLEXPORT
 #endif
 
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 /* default connection identifier */
@@ -711,9 +704,8 @@ DLLEXPORT int ginqtextextent(Gint, Gpoint *, Gchar *, Gextent *, Gint *);
 DLLEXPORT int ginqnameopenseg(Gint *, Gint *);
 DLLEXPORT int gemergencyclosegks(void);
 
-#ifdef _WIN32
 #ifdef __cplusplus
 }
 #endif
-#endif
+
 #endif

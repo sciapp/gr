@@ -15,22 +15,16 @@
 #define MAXPATHLEN 1024
 #endif
 
-#ifdef _WIN32
-
-#include <windows.h>
-#define DLLEXPORT __declspec(dllexport)
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#else
+#ifdef _WIN32
 
-#ifdef __cplusplus
-#define DLLEXPORT extern "C"
-#else
-#define DLLEXPORT
+#include <windows.h>
+#ifndef DLLEXPORT
+#define DLLEXPORT __declspec(dllexport)
 #endif
 
 #endif
@@ -40,10 +34,8 @@ DLLEXPORT void gks_quartzplugin(
   int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
-#ifdef _WIN32
 #ifdef __cplusplus
 }
-#endif
 #endif
 
 #define GKSTERM_DEFAULT_TIMEOUT 5000

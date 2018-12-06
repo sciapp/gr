@@ -10,22 +10,16 @@
 #include "gks.h"
 #include "gkscore.h"
 
-#ifdef _WIN32
-
-#include <windows.h>
-#define DLLEXPORT __declspec(dllexport)
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#else
+#ifdef _WIN32
 
-#ifdef __cplusplus
-#define DLLEXPORT extern "C"
-#else
-#define DLLEXPORT
+#include <windows.h>
+#ifndef DLLEXPORT
+#define DLLEXPORT __declspec(dllexport)
 #endif
 
 #endif
@@ -35,10 +29,8 @@ DLLEXPORT void gks_zmqplugin(
   int lr1, double *r1, int lr2, double *r2,
   int lc, char *chars, void **ptr);
 
-#ifdef _WIN32
 #ifdef __cplusplus
 }
-#endif
 #endif
 
 

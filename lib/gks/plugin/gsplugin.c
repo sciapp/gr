@@ -9,10 +9,12 @@
 
 #define __PROTOTYPES__
 
+#ifdef __cplusplus
+#define GSDLLEXPORT extern "C"
+#endif
+
 #ifdef _WIN32
 #define __WINDOWS__
-#else
-#define GSDLLEXPORT extern "C"
 #endif
 
 #include "ghostscript/iapi.h"
@@ -25,21 +27,19 @@
 
 #endif
 
-#ifdef _WIN32
-#include <windows.h>
-#define DLLEXPORT __declspec(dllexport)
+#include "gks.h"
+#include "gkscore.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#else
+#ifdef _WIN32
 
-#ifdef __cplusplus
-#define DLLEXPORT extern "C"
-#else
-#define DLLEXPORT
+#include <windows.h>
+#ifndef DLLEXPORT
+#define DLLEXPORT __declspec(dllexport)
 #endif
 
 #endif
@@ -49,14 +49,9 @@ DLLEXPORT void gks_gsplugin(
   int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
-#ifdef _WIN32
 #ifdef __cplusplus
 }
 #endif
-#endif
-
-#include "gks.h"
-#include "gkscore.h"
 
 #ifndef NO_GS
 

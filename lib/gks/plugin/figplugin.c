@@ -41,23 +41,15 @@
 #endif
 
 #ifdef _WIN32
-
 #include <windows.h>
+#ifndef DLLEXPORT
 #define DLLEXPORT __declspec(dllexport)
+#endif
+#endif
 
 #ifdef __cplusplus
 extern "C"
 {
-#endif
-
-#else
-
-#ifdef __cplusplus
-#define DLLEXPORT extern "C"
-#else
-#define DLLEXPORT
-#endif
-
 #endif
 
 DLLEXPORT void gks_figplugin(
@@ -65,10 +57,8 @@ DLLEXPORT void gks_figplugin(
   int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
   int len_c_arr, char *c_arr, void **ptr);
 
-#ifdef _WIN32
 #ifdef __cplusplus
 }
-#endif
 #endif
 
 #define MAX_TNR 9

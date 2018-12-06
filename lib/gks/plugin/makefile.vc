@@ -1,4 +1,5 @@
 CXX = CL
+CC = CL
 QT4DIR = S:\Qt\4.8.7
 QT5DIR = S:\Qt\5.7.0
 GSDIR = S:\gs\gs9.18
@@ -8,6 +9,7 @@ QT4INC = /I$(QT4DIR)\include
 QT5INC = /I$(QT5DIR)\include
 INCLUDES = /I.. /I$(WXDIR)\include\msvc /I$(WXDIR)\include /I$(GSDIR)\include /I..\..\..\3rdparty /I..\..\..\3rdparty\zlib
 CXXFLAGS = /Zi /EHsc /nologo $(DEFINES) $(INCLUDES)
+CFLAGS = /Zi /EHsc /nologo $(DEFINES) $(INCLUDES)
 QT4LIBS = $(QT4DIR)\lib\QtGui4.lib $(QT4DIR)\lib\QtCore4.lib
 QT5LIBS = $(QT5DIR)\lib\Qt5Widgets.lib $(QT5DIR)\lib\Qt5Gui.lib $(QT5DIR)\lib\Qt5Core.lib
 WXLIBS = $(WXDIR)\lib\vc100_x64_dll\wxmsw30ud_core.lib $(WXDIR)\lib\vc100_x64_dll\wxbase30ud.lib
@@ -24,6 +26,9 @@ SRCDIR = .\
 
 .cxx.obj:
 	$(CXX) /c $(CXXFLAGS) $<
+
+.c.obj:
+	$(CC) /c $(CFLAGS) $<
 
 default: $(PNGLIBS) $(ZLIBS) x11plugin.dll qtplugin.dll qt5plugin.dll svgplugin.dll wxplugin.dll gsplugin.dll wmfplugin.dll htmplugin.dll pgfplugin.dll cairoplugin.dll
 
@@ -74,43 +79,43 @@ qt5plugin.obj: qt5plugin.cxx
 	$(CXX) /Fo$@ /c $(CXXFLAGS) $(QT5INC) $**
 
 font.obj: ..\font.c
-	$(CXX) /c $(CXXFLAGS) ..\font.c
+	$(CC) /c $(CFLAGS) ..\font.c
 afm.obj: ..\afm.c
-	$(CXX) /c $(CXXFLAGS) ..\afm.c
+	$(CC) /c $(CFLAGS) ..\afm.c
 util.obj: ..\util.c
-	$(CXX) /c $(CXXFLAGS) ..\util.c
+	$(CC) /c $(CFLAGS) ..\util.c
 dl.obj: ..\dl.c
-	$(CXX) /c $(CXXFLAGS) ..\dl.c
+	$(CC) /c $(CFLAGS) ..\dl.c
 malloc.obj: ..\malloc.c
-	$(CXX) /c $(CXXFLAGS) ..\malloc.c
+	$(CC) /c $(CFLAGS) ..\malloc.c
 error.obj: ..\error.c
-	$(CXX) /c $(CXXFLAGS) ..\error.c
+	$(CC) /c $(CFLAGS) ..\error.c
 io.obj: ..\io.c
-	$(CXX) /c $(CXXFLAGS) ..\io.c
+	$(CC) /c $(CFLAGS) ..\io.c
 
-x11plugin.obj: x11plugin.cxx
-	$(CXX) /c $(CXXFLAGS) x11plugin.cxx
+x11plugin.obj: x11plugin.c
+	$(CC) /c $(CFLAGS) x11plugin.c
 
-svgplugin.obj: svgplugin.cxx
-	$(CXX) /c $(CXXFLAGS) svgplugin.cxx
+svgplugin.obj: svgplugin.c
+	$(CC) /c $(CFLAGS) svgplugin.c
 
 wxplugin.obj: wxplugin.cxx
 	$(CXX) /c $(CXXFLAGS) wxplugin.cxx
 
-gsplugin.obj: gsplugin.cxx
-	$(CXX) /c $(CXXFLAGS) gsplugin.cxx
+gsplugin.obj: gsplugin.c
+	$(CC) /c $(CFLAGS) gsplugin.c
 
-wmfplugin.obj: wmfplugin.cxx
-	$(CXX) /c $(CXXFLAGS) wmfplugin.cxx
+wmfplugin.obj: wmfplugin.c
+	$(CC) /c $(CFLAGS) wmfplugin.c
 
-htmplugin.obj: htmplugin.cxx
-	$(CXX) /c $(CXXFLAGS) htmplugin.cxx
+htmplugin.obj: htmplugin.c
+	$(CC) /c $(CFLAGS) htmplugin.c
 
-pgfplugin.obj: pgfplugin.cxx
-	$(CXX) /c $(CXXFLAGS) pgfplugin.cxx
+pgfplugin.obj: pgfplugin.c
+	$(CC) /c $(CFLAGS) pgfplugin.c
 
-cairoplugin.obj: cairoplugin.cxx
-	$(CXX) /c $(CXXFLAGS) cairoplugin.cxx
+cairoplugin.obj: cairoplugin.c
+	$(CC) /c $(CFLAGS) cairoplugin.c
 
 clean:
 	DEL *.dll
