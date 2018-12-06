@@ -2136,15 +2136,17 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
   if (args_values_by_keyword(subplot_args, "figsize", "dd", &size[0], &size[1])) {
     size[0] *= pixel_width * 0.0254 / metric_width;
     size[1] *= pixel_height * 0.0254 / metric_height;
-  } else {
+  } else if (args_values_by_keyword(subplot_args, "size", "dd", &size[0], &size[1])) {
     double dpi = pixel_width / metric_width * 0.0254;
-    args_values_by_keyword(subplot_args, "size", "dd", &size[0], &size[1]);
     if (dpi > 200) {
       int i;
       for (i = 0; i < 2; ++i) {
         size[i] *= dpi / 100.0;
       }
     }
+  } else {
+    size[0] = 500;
+    size[1] = 500;
   }
   width = size[0];
   height = size[1];
