@@ -3170,7 +3170,7 @@ error_t plot_shade(gr_meta_args_t *subplot_args) {
     const char *data_component_names[] = {"x", "y", NULL};
     double *components[2];
     char *spec = ""; /* TODO: read spec from data! */
-    int *xform, *width, *height;
+    int xform, width, height;
     double **current_component = components;
     const char **current_component_name = data_component_names;
     unsigned int point_count;
@@ -3190,7 +3190,9 @@ error_t plot_shade(gr_meta_args_t *subplot_args) {
     if(!args_get_first_value_by_keyword(subplot_args, "height", "i", &height, NULL)){
         height=100;
     }
-    gr_shadepoints(point_count, components[0], components[1],xform,width,height);
+    gr_shadepoints(point_count, components[0], components[1], xform, width, height);
+
+    return NO_ERROR;
 }
 
 
