@@ -2132,7 +2132,14 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
 
   args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
   subplot = args_values_as_array_by_keyword(subplot_args, "subplot");
-  gr_inqdspsize(&metric_width, &metric_height, &pixel_width, &pixel_height);
+  #ifdef __EMSCRIPTEN__
+    metric_width = 0.16384;
+    metric_height = 0.12288;
+    pixel_width = 640;
+    pixel_height = 480;
+  #else
+    gr_inqdspsize(&metric_width, &metric_height, &pixel_width, &pixel_height);
+  #endif
   if (args_values_by_keyword(subplot_args, "figsize", "dd", &size[0], &size[1])) {
     size[0] *= pixel_width * 0.0254 / metric_width;
     size[1] *= pixel_height * 0.0254 / metric_height;
@@ -2145,8 +2152,8 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
       }
     }
   } else {
-    size[0] = 500;
-    size[1] = 500;
+    size[0] = 480;
+    size[1] = 480;
   }
   width = size[0];
   height = size[1];
