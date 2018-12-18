@@ -2250,7 +2250,8 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
   int xlog, ylog, zlog;
   int xflip, yflip, zflip;
   int major_count, x_major_count, y_major_count;
-  double x_min, x_max, y_min, y_max, z_min, z_max, zoom;
+  double x_min, x_max, y_min, y_max, z_min, z_max;
+  double x, y, zoom;
   int adjust_xlim, adjust_ylim, adjust_zlim;
   double x_tick, y_tick;
   double x_org_low, x_org_high, y_org_low, y_org_high;
@@ -2272,10 +2273,9 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     scale |= zflip ? GR_OPTION_FLIP_Z : 0;
   }
 
-  if (args_has_keyword(subplot_args, "zoom")) {
-    args_get_first_value_by_keyword(subplot_args, "zoom", "d", &zoom, NULL);
-    args_values_by_keyword(subplot_args, "pan", "dddd", &x_min, &x_max, &y_min, &y_max);
-    gr_panzoom(&x_min, &x_max, &y_min, &y_max, zoom);
+  if (args_has_keyword(subplot_args, "panzoom")) {
+    args_values_by_keyword(subplot_args, "panzoom", "ddd", &x, &y, &zoom);
+    gr_panzoom(x, y, zoom, &x_min, &x_max, &y_min, &y_max);
     args_update_kwarg(subplot_args, "xrange", "dd", x_min, x_max);
     args_update_kwarg(subplot_args, "yrange", "dd", y_min, y_max);
   }
