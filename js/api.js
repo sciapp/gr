@@ -1136,8 +1136,8 @@ gr_shadelines = function(n, x, y, xform, w, h) {
     gr_shadelines_c(n, _x, _y, xform, w, h);
 };
 
-gr_panzoom_c = Module.cwrap('gr_panzoom', '', ['number', 'number', 'number', 'number', 'number']);
-gr_panzoom = function(xmin, xmax, ymin, ymax, zoom) {
+gr_panzoom_c = Module.cwrap('gr_panzoom', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number']);
+gr_panzoom = function(x, y, zoom, xmin, xmax, ymin, ymax) {
     var __xmin = Module._malloc(8);
     var _xmin = Module.HEAPF64.subarray(__xmin / 8, __xmin / 8 + 1);
     _xmin[0] = xmin;
@@ -1150,7 +1150,7 @@ gr_panzoom = function(xmin, xmax, ymin, ymax, zoom) {
     var __ymax = Module._malloc(8);
     var _ymax = Module.HEAPF64.subarray(__ymax / 8, __ymax / 8 + 1);
     _ymax[0] = ymax;
-    gr_panzoom_c(__xmin, __xmax, __ymin, __ymax, zoom);
+    gr_panzoom_c(x, y, zoom, __xmin, __xmax, __ymin, __ymax);
     result = new Array(4);
     result[0] = _xmin[0];
     result[1] = _xmax[0];
