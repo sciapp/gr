@@ -248,8 +248,8 @@ void gr_shade(int n, double *x, double *y, int lines, int xform, double *roi,
                   x1 = (int) ((x[i+1] - xl) / (xr - xl) * (w - 1) + 0.5);
                   y1 = (int) ((y[i+1] - yb) / (yt - yb) * (h - 1) + 0.5);
                   line(x0, y0, x1, y1, w, h, bins);
-                  i++;
                 }
+              i++;
             }
 
           i += 2;
