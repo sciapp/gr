@@ -172,12 +172,9 @@ DLLEXPORT void gr_interp2(
   int method, double extrapval);
 DLLEXPORT gr_meta_args_t *gr_newmeta(void);
 DLLEXPORT void gr_deletemeta(gr_meta_args_t *);
-DLLEXPORT void gr_meta_args_push_arg(gr_meta_args_t *, const char *, ...);
-DLLEXPORT void gr_meta_args_push_arg_buf(
-  gr_meta_args_t *, const char *, const void *, int);
-DLLEXPORT void gr_meta_args_push_kwarg(
+DLLEXPORT void gr_meta_args_push(
   gr_meta_args_t *, const char *, const char *, ...);
-DLLEXPORT void gr_meta_args_push_kwarg_buf(
+DLLEXPORT void gr_meta_args_push_buf(
   gr_meta_args_t *, const char *, const char *, const void *, int);
 DLLEXPORT void *gr_openmeta(
   int, const char *, unsigned int, const char *(*)(const char *, unsigned int),
