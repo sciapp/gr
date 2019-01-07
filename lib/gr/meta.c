@@ -72,7 +72,15 @@ static void debug_printf(const char *format, ...) {
 #define debug_print_error(error_message_arguments)
 #define psocketerror(prefix_message)
 #endif
-#define debug_print_malloc_error() debug_print_error(("Memory allocation failed -> out of virtual memory.\n"))
+#define debug_print_malloc_error()                                                                                    \
+  do {                                                                                                                \
+    if (isatty(fileno(stderr))) {                                                                                     \
+      debug_print_error(("\033[96m%s\033[0m:\033[93m%d\033[0m: Memory allocation failed -> out of virtual memory.\n", \
+                         __FILE__, __LINE__));                                                                        \
+    } else {                                                                                                          \
+      debug_print_error(("%s:%d: Memory allocation failed -> out of virtual memory.\n", __FILE__, __LINE__));         \
+    }                                                                                                                 \
+  } while (0)
 
 
 /* ------------------------- dynamic args array --------------------------------------------------------------------- */
@@ -228,8 +236,9 @@ struct _argparse_state_t {
   void *save_buffer;
   char current_format;
   int next_is_array;
-  int default_array_length;
-  int next_array_length;
+  size_t default_array_length;
+  ssize_t next_array_length;
+  int dataslot_count;
 };
 typedef struct _argparse_state_t argparse_state_t;
 
@@ -245,12 +254,8 @@ typedef struct _args_node_t {
 } args_node_t;
 
 struct _gr_meta_args_t {
-  args_node_t *args_head;
-  args_node_t *args_tail;
   args_node_t *kwargs_head;
   args_node_t *kwargs_tail;
-  unsigned int args_count;
-  unsigned int kwargs_count;
   unsigned int count;
 };
 typedef gr_meta_args_t *gr_meta_args_ptr_t;
@@ -318,6 +323,7 @@ typedef enum {
   ERROR_PARSE_UNKNOWN_DATATYPE,
   ERROR_PARSE_INVALID_DELIMITER,
   ERROR_PARSE_INCOMPLETE_STRING,
+  ERROR_PARSE_MISSING_OBJECT_CONTAINER,
   ERROR_NETWORK_WINSOCK_INIT,
   ERROR_NETWORK_SOCKET_CREATION,
   ERROR_NETWORK_SOCKET_BIND,
@@ -352,7 +358,7 @@ typedef struct _gr_meta_args_value_iterator_t {
   void *value_ptr;
   char format;
   int is_array;
-  int array_length;
+  size_t array_length;
   args_value_iterator_private_t *priv;
 } args_value_iterator_t;
 
@@ -411,7 +417,7 @@ typedef enum {
 
 typedef struct {
   int apply_padding;
-  int array_length;
+  size_t array_length;
   int read_length_from_string;
   const void *data_ptr;
   va_list *vl;
@@ -538,7 +544,8 @@ DECLARE_MAP_TYPE(plot_func, plot_func_t)
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
 
-static void *argparse_read_params(const char *format, const void *buffer, va_list *vl, int apply_padding);
+static void *argparse_read_params(const char *format, const void *buffer, va_list *vl, int apply_padding,
+                                  char **new_format);
 static void argparse_read_int(argparse_state_t *state);
 static void argparse_read_double(argparse_state_t *state);
 static void argparse_read_char(argparse_state_t *state);
@@ -550,6 +557,7 @@ static size_t argparse_calculate_needed_buffer_size(const char *format);
 static size_t argparse_calculate_needed_padding(void *buffer, char current_format);
 static void argparse_read_next_option(argparse_state_t *state, char **format);
 static const char *argparse_skip_option(const char *format);
+static char *argparse_convert_to_array(argparse_state_t *state);
 
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
@@ -560,6 +568,7 @@ static int args_validate_format_string(const char *format);
 static const char *args_skip_option(const char *format);
 static void args_copy_format_string_for_arg(char *dst, const char *format);
 static void args_copy_format_string_for_parsing(char *dst, const char *format);
+static int args_check_format_compatibility(arg_t *arg, const char *compatible_format);
 static void args_decrease_arg_reference_count(args_node_t *args_node);
 
 
@@ -633,8 +642,7 @@ static int uppercase_count(const char *str);
 
 /* ------------------------- argument ------------------------------------------------------------------------------- */
 
-static args_value_iterator_t *args_value_iter(const arg_t *arg);
-static void *args_values_as_array(const arg_t *arg);
+static args_value_iterator_t *arg_value_iter(const arg_t *arg);
 
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
@@ -642,51 +650,39 @@ static void *args_values_as_array(const arg_t *arg);
 static void args_init(gr_meta_args_t *args);
 static void args_finalize(gr_meta_args_t *args);
 
-static error_t args_push_arg_common(gr_meta_args_t *args, const char *value_format, const void *buffer, va_list *vl,
-                                    int apply_padding);
-static error_t args_push_arg_vl(gr_meta_args_t *args, const char *value_format, va_list *vl);
-static error_t args_push_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format,
+static error_t args_push_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                                va_list *vl, int apply_padding);
+static error_t args_push_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
+static error_t args_update_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                                  va_list *vl, int apply_padding);
+static error_t args_update(gr_meta_args_t *args, const char *key, const char *value_format, ...);
+static error_t args_update_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                               int apply_padding);
+static error_t args_update_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
+static error_t args_update_many(gr_meta_args_t *args, const gr_meta_args_t *update_args);
+static error_t args_setdefault_common(gr_meta_args_t *args, const char *key, const char *value_format,
                                       const void *buffer, va_list *vl, int apply_padding);
-static error_t args_push_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
-static error_t args_update_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format,
-                                        const void *buffer, va_list *vl, int apply_padding);
-static error_t args_update_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...);
-static error_t args_update_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format,
-                                     const void *buffer, int apply_padding);
-static error_t args_update_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
-static error_t args_setdefault_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format,
-                                            const void *buffer, va_list *vl, int apply_padding);
-static error_t args_setdefault_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...);
-static error_t args_setdefault_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format,
-                                         const void *buffer, int apply_padding);
-static error_t args_setdefault_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
-static error_t args_push_args(gr_meta_args_t *args, const gr_meta_args_t *update_args);
-static error_t args_update_kwargs(gr_meta_args_t *args, const gr_meta_args_t *update_args);
+static error_t args_setdefault(gr_meta_args_t *args, const char *key, const char *value_format, ...);
+static error_t args_setdefault_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                                   int apply_padding);
+static error_t args_setdefault_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
 
-static void args_clear_args(gr_meta_args_t *args);
-static void args_delete_kwarg(gr_meta_args_t *args, const char *key);
+static void args_remove(gr_meta_args_t *args, const char *key);
 
-static unsigned int args_args_count(const gr_meta_args_t *args);
-static unsigned int args_kwargs_count(const gr_meta_args_t *args);
 static unsigned int args_count(const gr_meta_args_t *args);
 
 static int args_has_keyword(const gr_meta_args_t *args, const char *keyword);
-static arg_t *args_find_keyword(const gr_meta_args_t *args, const char *keyword);
-static int args_get_first_value_by_keyword(const gr_meta_args_t *args, const char *keyword,
-                                           const char *first_value_format, void *first_value,
-                                           unsigned int *array_length);
-#define args_get_first_value_by_keyword(args, keyword, first_value_format, first_value, array_length) \
-  args_get_first_value_by_keyword(args, keyword, first_value_format, (void *)first_value, array_length)
-static int args_values_by_keyword(const gr_meta_args_t *args, const char *keyword, const char *expected_format, ...);
-static const void *args_values_as_array_by_keyword(const gr_meta_args_t *args, const char *keyword);
+static arg_t *args_at(const gr_meta_args_t *args, const char *keyword);
+static int args_first_value(const gr_meta_args_t *args, const char *keyword, const char *first_value_format,
+                            void *first_value, unsigned int *array_length);
+#define args_first_value(args, keyword, first_value_format, first_value, array_length) \
+  args_first_value(args, keyword, first_value_format, (void *)first_value, array_length)
+static int args_values(const gr_meta_args_t *args, const char *keyword, const char *expected_format, ...);
 
-static args_node_t *args_find_node_by_keyword(const gr_meta_args_t *args, const char *keyword);
-static int args_find_previous_node_by_keyword(const gr_meta_args_t *args, const char *keyword,
-                                              args_node_t **previous_node);
+static args_node_t *args_find_node(const gr_meta_args_t *args, const char *keyword);
+static int args_find_previous_node(const gr_meta_args_t *args, const char *keyword, args_node_t **previous_node);
 
 static args_iterator_t *args_iter(const gr_meta_args_t *args);
-static args_iterator_t *args_iter_args(const gr_meta_args_t *args);
-static args_iterator_t *args_iter_kwargs(const gr_meta_args_t *args);
 
 
 /* ------------------------- argument iterator ---------------------------------------------------------------------- */
@@ -752,7 +748,7 @@ static fromjson_datatype_t fromjson_check_type(const fromjson_state_t *state);
 static error_t fromjson_copy_and_filter_json_string(char **dest, const char *src);
 static int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int include_start,
                                         int exclude_nested_structures);
-static int fromjson_get_outer_array_length(const char *str);
+static size_t fromjson_get_outer_array_length(const char *str);
 static double fromjson_str_to_double(const char **str, int *was_successful);
 static int fromjson_str_to_int(const char **str, int *was_successful);
 
@@ -948,35 +944,22 @@ void gr_deletemeta(gr_meta_args_t *args) {
   free(args);
 }
 
-void gr_meta_args_push_arg(gr_meta_args_t *args, const char *value_format, ...) {
-  va_list vl;
-  va_start(vl, value_format);
-
-  args_push_arg_vl(args, value_format, &vl);
-
-  va_end(vl);
-}
-
-void gr_meta_args_push_arg_buf(gr_meta_args_t *args, const char *value_format, const void *buffer, int apply_padding) {
-  args_push_arg_common(args, value_format, buffer, NULL, apply_padding);
-}
-
-void gr_meta_args_push_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
+void gr_meta_args_push(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
   /*
    * warning! this function does not check if a given key already exists in the container
-   * -> use `args_update_kwarg` instead
+   * -> use `args_update` instead
    */
   va_list vl;
   va_start(vl, value_format);
 
-  args_push_kwarg_vl(args, key, value_format, &vl);
+  args_push_vl(args, key, value_format, &vl);
 
   va_end(vl);
 }
 
-void gr_meta_args_push_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                                 int apply_padding) {
-  args_push_kwarg_common(args, key, value_format, buffer, NULL, apply_padding);
+void gr_meta_args_push_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                           int apply_padding) {
+  args_push_common(args, key, value_format, buffer, NULL, apply_padding);
 }
 
 
@@ -993,11 +976,11 @@ int gr_plotmeta(const gr_meta_args_t *args) {
   if ((error = plot_normalize_args(subplots_args, args)) != NO_ERROR) {
     goto cleanup;
   }
-  args_get_first_value_by_keyword(subplots_args, "subplots", "A", &current_subplot_args, NULL);
+  args_first_value(subplots_args, "subplots", "A", &current_subplot_args, NULL);
   while (*current_subplot_args != NULL) {
     plot_set_plot_attribute_defaults(*current_subplot_args);
     plot_pre_plot(*current_subplot_args);
-    args_get_first_value_by_keyword(*current_subplot_args, "kind", "s", &kind, NULL);
+    args_first_value(*current_subplot_args, "kind", "s", &kind, NULL);
     logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
     if ((plot_func = plot_func_map_at(plot_func_map, kind)) == NULL) {
       error = ERROR_PLOT_UNKNOWN_KIND;
@@ -1011,7 +994,7 @@ int gr_plotmeta(const gr_meta_args_t *args) {
   }
 
 cleanup:
-  //gr_deletemeta(subplots_args); TODO: Delete subplots_args at the right time
+  /* gr_deletemeta(subplots_args); TODO: Delete subplots_args at the right time */
 
   return error;
 }
@@ -1153,7 +1136,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
       } else {
         snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "%c", format);
         /* TODO: add error return value to `gr_meta_args_push_arg` (?) */
-        gr_meta_args_push_kwarg_buf(current_args, key, format_string, ref, 1);
+        gr_meta_args_push_buf(current_args, key, format_string, ref, 1);
       }
     } else {
       if (current_args_array == NULL) {
@@ -1161,7 +1144,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
         error = gr_sendmeta(handle, format_string, len, ref);
       } else {
         snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "n%c", format);
-        gr_meta_args_push_kwarg(current_args, key, format_string, len, ref);
+        gr_meta_args_push(current_args, key, format_string, len, ref);
       }
     }
   } else {
@@ -1175,7 +1158,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
         snprintf(format_string, SENDMETA_REF_FORMAT_MAX_LENGTH, "%s:s,", key);
         error = gr_sendmeta(handle, format_string, ref);
       } else {
-        gr_meta_args_push_kwarg(current_args, key, "s", ref);
+        gr_meta_args_push(current_args, key, "s", ref);
       }
       break;
     case 'o':
@@ -1221,7 +1204,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
         } else {
           gr_meta_args_t *previous_args = args_stack_pop(args_stack);
           _key = string_stack_pop(key_stack);
-          gr_meta_args_push_kwarg(previous_args, _key, "a", current_args);
+          gr_meta_args_push(previous_args, _key, "a", current_args);
           current_args = previous_args;
           if (args_stack_empty(args_stack)) {
             args_stack_delete(args_stack);
@@ -1303,7 +1286,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
         _key = string_stack_pop(key_stack);
         if (args_array_stack != NULL) {
           current_args = args_stack_pop(args_stack);
-          gr_meta_args_push_kwarg(current_args, _key, "nA", current_args_array->size, current_args_array->buf);
+          gr_meta_args_push(current_args, _key, "nA", current_args_array->size, current_args_array->buf);
           dynamic_args_array_delete(current_args_array);
           current_args_array = dynamic_args_array_stack_pop(args_array_stack);
           if (dynamic_args_array_stack_empty(args_array_stack)) {
@@ -1355,8 +1338,8 @@ int gr_sendmeta_args(const void *p, const gr_meta_args_t *args) {
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
 
-void *argparse_read_params(const char *format, const void *buffer, va_list *vl, int apply_padding) {
-  char *fmt, *current_format;
+void *argparse_read_params(const char *format, const void *buffer, va_list *vl, int apply_padding, char **new_format) {
+  char *fmt, *current_format, first_format_char;
   size_t needed_buffer_size;
   void *save_buffer;
   argparse_state_t state;
@@ -1392,6 +1375,7 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
   state.next_is_array = 0;
   state.default_array_length = 1;
   state.next_array_length = -1;
+  state.dataslot_count = 0;
 
   current_format = fmt;
   while (*current_format) {
@@ -1405,13 +1389,25 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
     argparse_format_specifier_to_read_callback[(unsigned char)state.current_format](&state);
     state.next_is_array = 0;
     state.next_array_length = -1;
+    if (strchr(ARGS_VALID_DATA_FORMAT_SPECIFIERS, tolower(*current_format)) != NULL) {
+      ++state.dataslot_count;
+      if (state.dataslot_count == 1) {
+        first_format_char = *current_format;
+      }
+    }
     ++current_format;
+  }
+
+  /* Reset the save buffer since it was shifted during the parsing process */
+  state.save_buffer = save_buffer;
+  if (state.dataslot_count > 1 && islower(first_format_char) && new_format != NULL) {
+    *new_format = argparse_convert_to_array(&state);
   }
 
   /* cleanup */
   free(fmt);
 
-  return save_buffer;
+  return state.save_buffer;
 }
 
 #define CHECK_PADDING(type)                                           \
@@ -1563,11 +1559,11 @@ void argparse_read_string(argparse_state_t *state) {
 
 void argparse_read_default_array_length(argparse_state_t *state) {
   if (state->in_buffer != NULL) {
-    const int *typed_buffer = state->in_buffer;
-    CHECK_PADDING(int);
+    const size_t *typed_buffer = state->in_buffer;
+    CHECK_PADDING(size_t);
     state->default_array_length = *typed_buffer;
     state->in_buffer = typed_buffer + 1;
-    state->data_offset += sizeof(int);
+    state->data_offset += sizeof(size_t);
   } else {
     state->default_array_length = va_arg(*state->vl, int);
   }
@@ -1751,12 +1747,43 @@ const char *argparse_skip_option(const char *format) {
   return format;
 }
 
+char *argparse_convert_to_array(argparse_state_t *state) {
+  void *new_save_buffer = NULL;
+  size_t *size_t_typed_buffer;
+  void **general_typed_buffer;
+  char *new_format = NULL;
+
+  new_save_buffer = malloc(sizeof(size_t) + sizeof(void *));
+  if (new_save_buffer == NULL) {
+    goto cleanup;
+  }
+  size_t_typed_buffer = new_save_buffer;
+  *size_t_typed_buffer = state->dataslot_count;
+  general_typed_buffer = (void **)(size_t_typed_buffer + 1);
+  *general_typed_buffer = state->save_buffer;
+  state->save_buffer = new_save_buffer;
+  new_format = malloc(2 * sizeof(char));
+  new_format[0] = toupper(state->current_format);
+  new_format[1] = '\0';
+  if (new_format == NULL) {
+    goto cleanup;
+  }
+  return new_format;
+
+cleanup:
+  free(new_save_buffer);
+  free(new_format);
+  debug_print_malloc_error();
+  return NULL;
+}
+
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
 arg_t *args_create_args(const char *key, const char *value_format, const void *buffer, va_list *vl, int apply_padding) {
   arg_t *arg;
   char *parsing_format;
+  char *new_format = NULL;
 
   if (!args_validate_format_string(value_format)) {
     return NULL;
@@ -1792,9 +1819,14 @@ arg_t *args_create_args(const char *key, const char *value_format, const void *b
     free(arg);
     return NULL;
   }
-  args_copy_format_string_for_arg((char *)arg->value_format, value_format);
   args_copy_format_string_for_parsing(parsing_format, value_format);
-  arg->value_ptr = argparse_read_params(parsing_format, buffer, vl, apply_padding);
+  arg->value_ptr = argparse_read_params(parsing_format, buffer, vl, apply_padding, &new_format);
+  if (new_format == NULL) {
+    args_copy_format_string_for_arg((char *)arg->value_format, value_format);
+  } else {
+    args_copy_format_string_for_arg((char *)arg->value_format, new_format);
+    free(new_format);
+  }
   free(parsing_format);
   arg->priv = malloc(sizeof(arg_private_t));
   if (arg->priv == NULL) {
@@ -1811,6 +1843,7 @@ arg_t *args_create_args(const char *key, const char *value_format, const void *b
 
 int args_validate_format_string(const char *format) {
   char *fmt;
+  char *first_format_char;
   char *previous_char;
   char *current_char;
   char *option_start;
@@ -1825,6 +1858,7 @@ int args_validate_format_string(const char *format) {
     return 0;
   }
 
+  first_format_char = NULL;
   previous_char = NULL;
   current_char = fmt;
   is_valid = 1;
@@ -1842,27 +1876,35 @@ int args_validate_format_string(const char *format) {
             str_to_uint(option_start, &is_valid);
             if (!is_valid) {
               debug_print_error(
-                ("The option \"%s\" in the format string \"%s\" in no valid number.", option_start, format));
+                ("The option \"%s\" in the format string \"%s\" in no valid number.\n", option_start, format));
             }
           } else {
             is_valid = 0;
             --current_char;
-            debug_print_error(("Option \"%s\" in the format string \"%s\" is not terminated.", option_start, format));
+            debug_print_error(("Option \"%s\" in the format string \"%s\" is not terminated.\n", option_start, format));
           }
         } else {
           is_valid = 0;
           debug_print_error(
-            ("Specifier '%c' in the format string \"%s\" cannot have any options.", *previous_char, format));
+            ("Specifier '%c' in the format string \"%s\" cannot have any options.\n", *previous_char, format));
         }
       } else {
         is_valid = 0;
         debug_print_error(
-          ("The format string \"%s\" is invalid: Format strings must not start with an option.", format));
+          ("The format string \"%s\" is invalid: Format strings must not start with an option.\n", format));
       }
     } else {
-      if (!(strchr(ARGS_VALID_FORMAT_SPECIFIERS, *current_char) != NULL)) {
+      if (strchr(ARGS_VALID_FORMAT_SPECIFIERS, *current_char) == NULL) {
         is_valid = 0;
-        debug_print_error(("Invalid specifier '%c' in the format string \"%s\".", *current_char, format));
+        debug_print_error(("Invalid specifier '%c' in the format string \"%s\".\n", *current_char, format));
+      } else if (strchr(ARGS_VALID_DATA_FORMAT_SPECIFIERS, *current_char) != NULL) {
+        if (first_format_char != NULL && *current_char != *first_format_char) {
+          is_valid = 0;
+          debug_print_error(("The format string \"%s\" consists of different types which is not allowed.\n", format));
+        }
+        if (first_format_char == NULL) {
+          first_format_char = current_char;
+        }
       }
       previous_char = current_char;
     }
@@ -1927,9 +1969,68 @@ void args_copy_format_string_for_arg(char *dst, const char *format) {
   *dst = '\0';
 }
 
+int args_check_format_compatibility(arg_t *arg, const char *compatible_format) {
+  char first_compatible_format_char, first_value_format_char;
+  const char *current_format_ptr;
+  char *compatible_format_for_arg;
+  int dataslot_count;
+
+  /* First, check if the compatible format itself is valid (-> known format, homogeneous, no options) */
+  first_compatible_format_char = *compatible_format;
+  if (strchr(ARGS_VALID_DATA_FORMAT_SPECIFIERS, tolower(first_compatible_format_char)) == NULL) {
+    return 0;
+  }
+  current_format_ptr = compatible_format;
+  while (*current_format_ptr != '\0') {
+    if (*current_format_ptr != first_compatible_format_char) {
+      return 0;
+    }
+    ++current_format_ptr;
+  }
+
+  /* Second, check if original and compatible format are identical */
+  /* within an argument, formats are stored **with** array length slots, so we need `nD` instead of `D` for example
+   * -> convert the format before comparison */
+  compatible_format_for_arg = malloc(2 * strlen(compatible_format) + 1);
+  if (compatible_format_for_arg == NULL) {
+    debug_print_malloc_error();
+    return 0;
+  }
+  args_copy_format_string_for_arg(compatible_format_for_arg, compatible_format);
+  if (strcmp(arg->value_format, compatible_format_for_arg) == 0) {
+    free(compatible_format_for_arg);
+    return 2;
+  }
+  free(compatible_format_for_arg);
+
+  /* Otherwise, check if the format is compatible */
+  /* Compatibility is only possible for single array types -> the original format string (ignoring `n`!) must not be
+   * longer than 1 */
+  dataslot_count = 0;
+  current_format_ptr = arg->value_format;
+  while (*current_format_ptr != '\0' && dataslot_count < 2) {
+    if (strchr(ARGS_VALID_DATA_FORMAT_SPECIFIERS, tolower(*current_format_ptr)) != NULL) {
+      ++dataslot_count;
+      if (dataslot_count == 1) {
+        first_value_format_char = *current_format_ptr;
+      }
+    }
+    ++current_format_ptr;
+  }
+  if (dataslot_count > 1) {
+    return 0;
+  }
+  /* Check if the single format character is an uppercase varsion of the given compatible format */
+  if (first_value_format_char != toupper(first_compatible_format_char)) {
+    return 0;
+  }
+
+  return 1;
+}
+
 void args_decrease_arg_reference_count(args_node_t *args_node) {
   if (--(args_node->arg->priv->reference_count) == 0) {
-    args_value_iterator_t *value_it = args_value_iter(args_node->arg);
+    args_value_iterator_t *value_it = arg_value_iter(args_node->arg);
     while (value_it->next(value_it) != NULL) {
       /* use a char pointer since chars have no memory alignment restrictions */
       if (value_it->is_array) {
@@ -1989,34 +2090,34 @@ error_t plot_normalize_args(gr_meta_args_t *normalized_args, const gr_meta_args_
   logger((stderr, "Normalize plot args\n"));
 
   /* TODO: copy all user defined attributes! */
-  if ((arg = args_find_keyword(user_args, "subplots")) != NULL) {
-    args_value_iterator_t *value_it = args_value_iter(arg);
+  if ((arg = args_at(user_args, "subplots")) != NULL) {
+    args_value_iterator_t *value_it = arg_value_iter(arg);
     return_error_if(value_it->next(value_it) == NULL, ERROR_PLOT_NORMALIZATION);
     return_error_if(value_it->format != 'a', ERROR_PLOT_NORMALIZATION);
     if (value_it->is_array) {
-      gr_meta_args_push_kwarg(normalized_args, "subplots", "nA", value_it->array_length,
-                              *(gr_meta_args_t ***)value_it->value_ptr);
+      gr_meta_args_push(normalized_args, "subplots", "nA", value_it->array_length,
+                        *(gr_meta_args_t ***)value_it->value_ptr);
     } else {
-      gr_meta_args_push_kwarg(normalized_args, "subplots", "A(1)", (gr_meta_args_t **)value_it->value_ptr);
+      gr_meta_args_push(normalized_args, "subplots", "A(1)", (gr_meta_args_t **)value_it->value_ptr);
     }
     args_value_iterator_delete(value_it);
-  } else if ((arg = args_find_keyword(user_args, "series")) != NULL) {
-    args_value_iterator_t *value_it = args_value_iter(arg);
+  } else if ((arg = args_at(user_args, "series")) != NULL) {
+    args_value_iterator_t *value_it = arg_value_iter(arg);
     return_error_if(value_it->next(value_it) == NULL, ERROR_PLOT_NORMALIZATION);
     return_error_if(value_it->format != 'a', ERROR_PLOT_NORMALIZATION);
     /* TODO: store a shallow copy of the user args! (currently, a user's call of `gr_deletemeta` will double free) */
     if (value_it->is_array) {
-      gr_meta_args_push_kwarg(normalized_args, "subplots", "A(1)", &user_args);
+      gr_meta_args_push(normalized_args, "subplots", "A(1)", &user_args);
     } else {
       gr_meta_args_t *subplot_args = gr_newmeta();
-      gr_meta_args_push_kwarg(subplot_args, "series", "A(1)", value_it->value_ptr);
-      gr_meta_args_push_kwarg(normalized_args, "subplots", "A(1)", &subplot_args);
+      gr_meta_args_push(subplot_args, "series", "A(1)", value_it->value_ptr);
+      gr_meta_args_push(normalized_args, "subplots", "A(1)", &subplot_args);
     }
     args_value_iterator_delete(value_it);
   } else {
     gr_meta_args_t *subplot_args = gr_newmeta();
-    gr_meta_args_push_kwarg(subplot_args, "series", "A(1)", &user_args);
-    gr_meta_args_push_kwarg(normalized_args, "subplots", "A(1)", &subplot_args);
+    gr_meta_args_push(subplot_args, "series", "A(1)", &user_args);
+    gr_meta_args_push(normalized_args, "subplots", "A(1)", &subplot_args);
   }
 
   return NO_ERROR;
@@ -2028,44 +2129,44 @@ void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args) {
 
   logger((stderr, "Set plot attribute defaults\n"));
 
-  args_setdefault_kwarg(subplot_args, "kind", "s", PLOT_DEFAULT_KIND);
-  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
+  args_setdefault(subplot_args, "kind", "s", PLOT_DEFAULT_KIND);
+  args_first_value(subplot_args, "kind", "s", &kind, NULL);
   if (!args_has_keyword(subplot_args, "figsize")) {
-    args_setdefault_kwarg(subplot_args, "size", "dd", PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT);
+    args_setdefault(subplot_args, "size", "dd", PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT);
   }
-  args_setdefault_kwarg(subplot_args, "clear", "i", PLOT_DEFAULT_CLEAR);
-  args_setdefault_kwarg(subplot_args, "update", "i", PLOT_DEFAULT_UPDATE);
+  args_setdefault(subplot_args, "clear", "i", PLOT_DEFAULT_CLEAR);
+  args_setdefault(subplot_args, "update", "i", PLOT_DEFAULT_UPDATE);
   if (args_has_keyword(subplot_args, "labels")) {
-    args_setdefault_kwarg(subplot_args, "location", "i", PLOT_DEFAULT_LOCATION);
+    args_setdefault(subplot_args, "location", "i", PLOT_DEFAULT_LOCATION);
   }
-  args_setdefault_kwarg(subplot_args, "subplot", "dddd", PLOT_DEFAULT_SUBPLOT_MIN_X, PLOT_DEFAULT_SUBPLOT_MAX_X,
-                        PLOT_DEFAULT_SUBPLOT_MIN_Y, PLOT_DEFAULT_SUBPLOT_MAX_Y);
-  args_setdefault_kwarg(subplot_args, "xlog", "i", PLOT_DEFAULT_XLOG);
-  args_setdefault_kwarg(subplot_args, "ylog", "i", PLOT_DEFAULT_YLOG);
-  args_setdefault_kwarg(subplot_args, "zlog", "i", PLOT_DEFAULT_ZLOG);
-  args_setdefault_kwarg(subplot_args, "xflip", "i", PLOT_DEFAULT_XFLIP);
-  args_setdefault_kwarg(subplot_args, "yflip", "i", PLOT_DEFAULT_YFLIP);
-  args_setdefault_kwarg(subplot_args, "zflip", "i", PLOT_DEFAULT_ZFLIP);
-  args_setdefault_kwarg(subplot_args, "adjust_xlim", "i", PLOT_DEFAULT_ADJUST_XLIM);
-  args_setdefault_kwarg(subplot_args, "adjust_ylim", "i", PLOT_DEFAULT_ADJUST_YLIM);
-  args_setdefault_kwarg(subplot_args, "adjust_zlim", "i", PLOT_DEFAULT_ADJUST_ZLIM);
-  args_setdefault_kwarg(subplot_args, "colormap", "i", PLOT_DEFAULT_COLORMAP);
-  args_setdefault_kwarg(subplot_args, "rotation", "i", PLOT_DEFAULT_ROTATION);
-  args_setdefault_kwarg(subplot_args, "tilt", "i", PLOT_DEFAULT_TILT);
+  args_setdefault(subplot_args, "subplot", "dddd", PLOT_DEFAULT_SUBPLOT_MIN_X, PLOT_DEFAULT_SUBPLOT_MAX_X,
+                  PLOT_DEFAULT_SUBPLOT_MIN_Y, PLOT_DEFAULT_SUBPLOT_MAX_Y);
+  args_setdefault(subplot_args, "xlog", "i", PLOT_DEFAULT_XLOG);
+  args_setdefault(subplot_args, "ylog", "i", PLOT_DEFAULT_YLOG);
+  args_setdefault(subplot_args, "zlog", "i", PLOT_DEFAULT_ZLOG);
+  args_setdefault(subplot_args, "xflip", "i", PLOT_DEFAULT_XFLIP);
+  args_setdefault(subplot_args, "yflip", "i", PLOT_DEFAULT_YFLIP);
+  args_setdefault(subplot_args, "zflip", "i", PLOT_DEFAULT_ZFLIP);
+  args_setdefault(subplot_args, "adjust_xlim", "i", PLOT_DEFAULT_ADJUST_XLIM);
+  args_setdefault(subplot_args, "adjust_ylim", "i", PLOT_DEFAULT_ADJUST_YLIM);
+  args_setdefault(subplot_args, "adjust_zlim", "i", PLOT_DEFAULT_ADJUST_ZLIM);
+  args_setdefault(subplot_args, "colormap", "i", PLOT_DEFAULT_COLORMAP);
+  args_setdefault(subplot_args, "rotation", "i", PLOT_DEFAULT_ROTATION);
+  args_setdefault(subplot_args, "tilt", "i", PLOT_DEFAULT_TILT);
 
   if (strcmp(kind, "step") == 0) {
-    args_setdefault_kwarg(subplot_args, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
+    args_setdefault(subplot_args, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
   } else if (str_equals_any(kind, 2, "contour", "contourf")) {
-    args_setdefault_kwarg(subplot_args, "levels", "i", PLOT_DEFAULT_CONTOUR_LEVELS);
+    args_setdefault(subplot_args, "levels", "i", PLOT_DEFAULT_CONTOUR_LEVELS);
   } else if (strcmp(kind, "hexbin") == 0) {
-    args_setdefault_kwarg(subplot_args, "nbins", "i", PLOT_DEFAULT_HEXBIN_NBINS);
+    args_setdefault(subplot_args, "nbins", "i", PLOT_DEFAULT_HEXBIN_NBINS);
   } else if (strcmp(kind, "tricont") == 0) {
-    args_setdefault_kwarg(subplot_args, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
+    args_setdefault(subplot_args, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
   }
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
-    args_setdefault_kwarg(*current_series, "spec", "s", SERIES_DEFAULT_SPEC);
+    args_setdefault(*current_series, "spec", "s", SERIES_DEFAULT_SPEC);
     ++current_series;
   }
 }
@@ -2077,12 +2178,12 @@ void plot_pre_plot(gr_meta_args_t *subplot_args) {
 
   logger((stderr, "Pre plot processing\n"));
 
-  args_get_first_value_by_keyword(subplot_args, "clear", "i", &clear, NULL);
+  args_first_value(subplot_args, "clear", "i", &clear, NULL);
   logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
   if (clear) {
     gr_clearws();
   }
-  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
+  args_first_value(subplot_args, "kind", "s", &kind, NULL);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (str_equals_any(kind, 2, "imshow", "isosurface")) {
     plot_process_viewport(subplot_args);
@@ -2101,7 +2202,7 @@ void plot_pre_plot(gr_meta_args_t *subplot_args) {
   gr_uselinespec(" ");
 
   gr_savestate();
-  if (args_get_first_value_by_keyword(subplot_args, "alpha", "d", &alpha, NULL)) {
+  if (args_first_value(subplot_args, "alpha", "d", &alpha, NULL)) {
     gr_settransparency(alpha);
   }
 }
@@ -2109,7 +2210,7 @@ void plot_pre_plot(gr_meta_args_t *subplot_args) {
 void plot_process_colormap(gr_meta_args_t *subplot_args) {
   int colormap;
 
-  if (args_get_first_value_by_keyword(subplot_args, "colormap", "i", &colormap, NULL)) {
+  if (args_first_value(subplot_args, "colormap", "i", &colormap, NULL)) {
     gr_setcolormap(colormap);
   }
   /* TODO: Implement other datatypes for `colormap` */
@@ -2130,20 +2231,20 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
   double metric_size;
   int background_color_index;
 
-  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
-  subplot = args_values_as_array_by_keyword(subplot_args, "subplot");
-  #ifdef __EMSCRIPTEN__
-    metric_width = 0.16384;
-    metric_height = 0.12288;
-    pixel_width = 640;
-    pixel_height = 480;
-  #else
-    gr_inqdspsize(&metric_width, &metric_height, &pixel_width, &pixel_height);
-  #endif
-  if (args_values_by_keyword(subplot_args, "figsize", "dd", &size[0], &size[1])) {
+  args_first_value(subplot_args, "kind", "s", &kind, NULL);
+  args_first_value(subplot_args, "subplot", "D", &subplot, NULL);
+#ifdef __EMSCRIPTEN__
+  metric_width = 0.16384;
+  metric_height = 0.12288;
+  pixel_width = 640;
+  pixel_height = 480;
+#else
+  gr_inqdspsize(&metric_width, &metric_height, &pixel_width, &pixel_height);
+#endif
+  if (args_values(subplot_args, "figsize", "dd", &size[0], &size[1])) {
     size[0] *= pixel_width * 0.0254 / metric_width;
     size[1] *= pixel_height * 0.0254 / metric_height;
-  } else if (args_values_by_keyword(subplot_args, "size", "dd", &size[0], &size[1])) {
+  } else if (args_values(subplot_args, "size", "dd", &size[0], &size[1])) {
     double dpi = pixel_width / metric_width * 0.0254;
     if (dpi > 200) {
       int i;
@@ -2208,7 +2309,7 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
     viewport[1] -= 0.1;
   }
 
-  if (args_get_first_value_by_keyword(subplot_args, "backgroundcolor", "i", &background_color_index, NULL)) {
+  if (args_first_value(subplot_args, "backgroundcolor", "i", &background_color_index, NULL)) {
     gr_savestate();
     gr_selntran(0);
     gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
@@ -2238,10 +2339,10 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
   gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
   gr_setwswindow(wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
 
-  args_update_kwarg(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
+  args_update(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
   logger((stderr, "Stored viewport (%f, %f, %f, %f)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
-  args_update_kwarg(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
-  args_update_kwarg(subplot_args, "ratio", "d", aspect_ratio);
+  args_update(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
+  args_update(subplot_args, "ratio", "d", aspect_ratio);
 }
 
 void plot_process_window(gr_meta_args_t *subplot_args) {
@@ -2256,13 +2357,13 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
   double x_tick, y_tick;
   double x_org_low, x_org_high, y_org_low, y_org_high;
 
-  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
-  args_get_first_value_by_keyword(subplot_args, "xlog", "i", &xlog, NULL);
-  args_get_first_value_by_keyword(subplot_args, "ylog", "i", &ylog, NULL);
-  args_get_first_value_by_keyword(subplot_args, "zlog", "i", &zlog, NULL);
-  args_get_first_value_by_keyword(subplot_args, "xflip", "i", &xflip, NULL);
-  args_get_first_value_by_keyword(subplot_args, "yflip", "i", &yflip, NULL);
-  args_get_first_value_by_keyword(subplot_args, "zflip", "i", &zflip, NULL);
+  args_first_value(subplot_args, "kind", "s", &kind, NULL);
+  args_first_value(subplot_args, "xlog", "i", &xlog, NULL);
+  args_first_value(subplot_args, "ylog", "i", &ylog, NULL);
+  args_first_value(subplot_args, "zlog", "i", &zlog, NULL);
+  args_first_value(subplot_args, "xflip", "i", &xflip, NULL);
+  args_first_value(subplot_args, "yflip", "i", &yflip, NULL);
+  args_first_value(subplot_args, "zflip", "i", &zflip, NULL);
 
   if (strcmp(kind, "polar") != 0) {
     scale |= xlog ? GR_OPTION_X_LOG : 0;
@@ -2274,10 +2375,10 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
   }
 
   if (args_has_keyword(subplot_args, "panzoom")) {
-    args_values_by_keyword(subplot_args, "panzoom", "ddd", &x, &y, &zoom);
+    args_values(subplot_args, "panzoom", "ddd", &x, &y, &zoom);
     gr_panzoom(x, y, zoom, &x_min, &x_max, &y_min, &y_max);
-    args_update_kwarg(subplot_args, "xrange", "dd", x_min, x_max);
-    args_update_kwarg(subplot_args, "yrange", "dd", y_min, y_max);
+    args_update(subplot_args, "xrange", "dd", x_min, x_max);
+    args_update(subplot_args, "yrange", "dd", y_min, y_max);
   }
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf")) {
@@ -2286,9 +2387,9 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     major_count = 5;
   }
 
-  args_values_by_keyword(subplot_args, "xrange", "dd", &x_min, &x_max);
+  args_values(subplot_args, "xrange", "dd", &x_min, &x_max);
   if (!(scale & GR_OPTION_X_LOG)) {
-    args_values_by_keyword(subplot_args, "adjust_xlim", "i", &adjust_xlim);
+    args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
     if (adjust_xlim) {
       gr_adjustlimits(&x_min, &x_max);
     }
@@ -2304,14 +2405,16 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     x_org_low = x_max;
     x_org_high = x_min;
   }
-  args_update_kwarg(subplot_args, "xaxis", "dddi", x_tick, x_org_low, x_org_high, x_major_count);
+  args_update(subplot_args, "xtick", "d", x_tick);
+  args_update(subplot_args, "xorg", "dd", x_org_low, x_org_high);
+  args_update(subplot_args, "xmajor", "i", x_major_count);
 
-  args_values_by_keyword(subplot_args, "yrange", "dd", &y_min, &y_max);
+  args_values(subplot_args, "yrange", "dd", &y_min, &y_max);
   if (str_equals_any(kind, 2, "hist", "stem") && !args_has_keyword(subplot_args, "ylim")) {
     y_min = 0;
   }
   if (!(scale & GR_OPTION_Y_LOG)) {
-    args_values_by_keyword(subplot_args, "adjust_ylim", "i", &adjust_ylim);
+    args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
     if (adjust_ylim) {
       gr_adjustlimits(&y_min, &y_max);
     }
@@ -2327,10 +2430,12 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     y_org_low = y_max;
     y_org_high = y_min;
   }
-  args_update_kwarg(subplot_args, "yaxis", "dddi", y_tick, y_org_low, y_org_high, y_major_count);
+  args_update(subplot_args, "ytick", "d", y_tick);
+  args_update(subplot_args, "yorg", "dd", y_org_low, y_org_high);
+  args_update(subplot_args, "ymajor", "i", y_major_count);
 
   logger((stderr, "Storing window (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
-  args_update_kwarg(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
+  args_update(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
   if (strcmp(kind, "polar") != 0) {
     gr_setwindow(x_min, x_max, y_min, y_max);
   } else {
@@ -2343,9 +2448,9 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     double z_org_low, z_org_high;
     int rotation, tilt;
 
-    args_values_by_keyword(subplot_args, "zrange", "dd", &z_min, &z_max);
+    args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
     if (!(scale & GR_OPTION_Z_LOG)) {
-      args_values_by_keyword(subplot_args, "adjust_zlim", "i", &adjust_zlim);
+      args_values(subplot_args, "adjust_zlim", "i", &adjust_zlim);
       if (adjust_zlim) {
         gr_adjustlimits(&z_min, &z_max);
       }
@@ -2361,14 +2466,16 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
       z_org_low = z_max;
       z_org_high = z_min;
     }
-    args_update_kwarg(subplot_args, "zaxis", "dddi", z_tick, z_org_low, z_org_high, z_major_count);
+    args_update(subplot_args, "ztick", "d", z_tick);
+    args_update(subplot_args, "zorg", "dd", z_org_low, z_org_high);
+    args_update(subplot_args, "zmajor", "i", z_major_count);
 
-    args_values_by_keyword(subplot_args, "rotation", "i", &rotation);
-    args_values_by_keyword(subplot_args, "tilt", "i", &tilt);
+    args_values(subplot_args, "rotation", "i", &rotation);
+    args_values(subplot_args, "tilt", "i", &tilt);
     gr_setspace(z_min, z_max, rotation, tilt);
   }
 
-  args_update_kwarg(subplot_args, "scale", "i", scale);
+  args_update(subplot_args, "scale", "i", scale);
   gr_setscale(scale);
 }
 
@@ -2388,7 +2495,7 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
   logger((stderr, "Storing coordinate ranges\n"));
   /* TODO: support that single `lim` values are `null` / unset! */
 
-  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
+  args_first_value(subplot_args, "kind", "s", &kind, NULL);
   fmt = fmt_map_at(fmt_map, kind);
   current_range_keys = range_keys;
   current_component_name = data_component_names;
@@ -2401,10 +2508,9 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
       continue;
     }
     if (!args_has_keyword(subplot_args, (*current_range_keys)[0])) {
-      args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, &series_count);
+      args_first_value(subplot_args, "series", "A", &current_series, &series_count);
       while (*current_series != NULL) {
-        if (args_get_first_value_by_keyword(*current_series, *current_component_name, "D", &current_component,
-                                            &point_count)) {
+        if (args_first_value(*current_series, *current_component_name, "D", &current_component, &point_count)) {
           for (i = 0; i < point_count; i++) {
             min_component = min(current_component[i], min_component);
             max_component = max(current_component[i], max_component);
@@ -2420,9 +2526,9 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
         }
       }
     } else {
-      args_values_by_keyword(subplot_args, (*current_range_keys)[0], "dd", &min_component, &max_component);
+      args_values(subplot_args, (*current_range_keys)[0], "dd", &min_component, &max_component);
     }
-    args_update_kwarg(subplot_args, (*current_range_keys)[1], "dd", min_component, max_component);
+    args_update(subplot_args, (*current_range_keys)[1], "dd", min_component, max_component);
     ++current_range_keys;
     ++current_component_name;
   }
@@ -2434,9 +2540,9 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
       double *u, *v;
       /* TODO: Support more than one series? */
       /* TODO: `ERROR_PLOT_COMPONENT_LENGTH_MISMATCH` */
-      args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
-      args_get_first_value_by_keyword(*current_series, "u", "D", &u, &point_count);
-      args_get_first_value_by_keyword(*current_series, "v", "D", &v, NULL);
+      args_first_value(subplot_args, "series", "A", &current_series, NULL);
+      args_first_value(*current_series, "u", "D", &u, &point_count);
+      args_first_value(*current_series, "v", "D", &v, NULL);
       for (i = 0; i < point_count; i++) {
         double z = u[i] * u[i] + v[i] * v[i];
         min_component = min(z, min_component);
@@ -2445,9 +2551,9 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
       min_component = sqrt(min_component);
       max_component = sqrt(max_component);
     } else {
-      args_values_by_keyword(subplot_args, "zlim", "dd", &min_component, &max_component);
+      args_values(subplot_args, "zlim", "dd", &min_component, &max_component);
     }
-    args_update_kwarg(subplot_args, "zrange", "dd", min_component, max_component);
+    args_update(subplot_args, "zrange", "dd", min_component, max_component);
   }
 }
 
@@ -2458,12 +2564,12 @@ void plot_post_plot(gr_meta_args_t *subplot_args) {
   logger((stderr, "Post plot processsing\n"));
 
   gr_restorestate();
-  args_get_first_value_by_keyword(subplot_args, "kind", "s", &kind, NULL);
+  args_first_value(subplot_args, "kind", "s", &kind, NULL);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (str_equals_any(kind, 4, "line", "step", "scatter", "stem") && args_has_keyword(subplot_args, "labels")) {
     plot_draw_legend(subplot_args);
   }
-  args_get_first_value_by_keyword(subplot_args, "update", "i", &update, NULL);
+  args_first_value(subplot_args, "update", "i", &update, NULL);
   logger((stderr, "Got keyword \"update\" with value %d\n", update));
   if (update) {
     gr_updatews();
@@ -2476,18 +2582,16 @@ void plot_post_plot(gr_meta_args_t *subplot_args) {
 error_t plot_line(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y;
     unsigned int x_length, y_length;
     char *spec;
     int mask;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+    args_first_value(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
     mask = gr_uselinespec(spec);
     if (int_equals_any(mask, 5, 0, 1, 3, 4, 5)) {
       gr_polyline(x_length, x, y);
@@ -2504,22 +2608,20 @@ error_t plot_line(gr_meta_args_t *subplot_args) {
 error_t plot_step(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y;
     unsigned int x_length, y_length;
     char *spec;
     int mask;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+    args_first_value(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
     mask = gr_uselinespec(spec);
     if (int_equals_any(mask, 5, 0, 1, 3, 4, 5)) {
       const char *where;
-      args_get_first_value_by_keyword(*current_series, "step_where", "s", &where, NULL); /* `spec` is always set */
+      args_first_value(*current_series, "step_where", "s", &where, NULL); /* `spec` is always set */
       if (strcmp(where, "pre") == 0) {
       }
       /* TODO: implement this! */
@@ -2570,14 +2672,14 @@ error_t plot_scatter(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
   gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x = NULL, *y = NULL, *z = NULL, *c = NULL;
     unsigned int x_length, y_length, z_length, c_length;
-    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
-    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
-    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
-    args_get_first_value_by_keyword(*current_series, "c", "D", &c, &c_length);
+    args_first_value(*current_series, "x", "D", &x, &x_length);
+    args_first_value(*current_series, "y", "D", &y, &y_length);
+    args_first_value(*current_series, "z", "D", &z, &z_length);
+    args_first_value(*current_series, "c", "D", &c, &c_length);
     return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
     if (z != NULL || c != NULL) {
       if (c != NULL) {
@@ -2608,18 +2710,14 @@ error_t plot_scatter(gr_meta_args_t *subplot_args) {
 error_t plot_quiver(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x = NULL, *y = NULL, *u = NULL, *v = NULL;
     unsigned int x_length, y_length, u_length, v_length;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "u", "D", &u, &u_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "v", "D", &v, &v_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "u", "D", &u, &u_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "v", "D", &v, &v_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
     /* TODO: Check length of `u` and `v` */
     gr_quiver(x_length, y_length, x, y, u, v, 1);
@@ -2636,21 +2734,19 @@ error_t plot_stem(gr_meta_args_t *subplot_args) {
   double stem_x[2], stem_y[2] = {0.0};
   gr_meta_args_t **current_series;
 
-  window = args_values_as_array_by_keyword(subplot_args, "window");
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "window", "D", &window, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y;
     unsigned int x_length, y_length;
     char *spec;
     unsigned int i;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
     gr_polyline(2, (double *)window, base_line_y);
     gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
-    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL);
+    args_first_value(*current_series, "spec", "s", &spec, NULL);
     gr_uselinespec(spec);
     for (i = 0; i < x_length; ++i) {
       stem_x[0] = stem_x[1] = x[i];
@@ -2669,17 +2765,15 @@ error_t plot_hist(gr_meta_args_t *subplot_args) {
   double y_min;
   gr_meta_args_t **current_series;
 
-  window = args_values_as_array_by_keyword(subplot_args, "window");
+  args_first_value(subplot_args, "window", "D", &window, NULL);
   y_min = window[2];
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y;
     unsigned int x_length, y_length;
     unsigned int i;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
     for (i = 0; i <= y_length; ++i) {
       gr_setfillcolorind(989);
@@ -2704,22 +2798,22 @@ error_t plot_contour(gr_meta_args_t *subplot_args) {
   int i;
   error_t error = NO_ERROR;
 
-  args_values_by_keyword(subplot_args, "zrange", "dd", &z_min, &z_max);
+  args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
   gr_setspace(z_min, z_max, 0, 90);
-  args_values_by_keyword(subplot_args, "levels", "i", &num_levels);
+  args_values(subplot_args, "levels", "i", &num_levels);
   h = malloc(num_levels * sizeof(double));
   if (h == NULL) {
     debug_print_malloc_error();
     error = ERROR_MALLOC;
     goto cleanup;
   }
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y, *z;
     unsigned int x_length, y_length, z_length;
-    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
-    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
-    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
+    args_first_value(*current_series, "x", "D", &x, &x_length);
+    args_first_value(*current_series, "y", "D", &y, &y_length);
+    args_first_value(*current_series, "z", "D", &z, &z_length);
     if (x_length == y_length && x_length == z_length) {
       if (gridit_x == NULL) {
         gridit_x = malloc(PLOT_CONTOUR_GRIDIT_N * sizeof(double));
@@ -2774,24 +2868,24 @@ error_t plot_contourf(gr_meta_args_t *subplot_args) {
   int i;
   error_t error = NO_ERROR;
 
-  args_values_by_keyword(subplot_args, "zrange", "dd", &z_min, &z_max);
+  args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
   gr_setspace(z_min, z_max, 0, 90);
-  args_values_by_keyword(subplot_args, "levels", "i", &num_levels);
+  args_values(subplot_args, "levels", "i", &num_levels);
   h = malloc(num_levels * sizeof(double));
   if (h == NULL) {
     debug_print_malloc_error();
     error = ERROR_MALLOC;
     goto cleanup;
   }
-  args_values_by_keyword(subplot_args, "scale", "i", &scale);
+  args_values(subplot_args, "scale", "i", &scale);
   gr_setscale(scale);
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y, *z;
     unsigned int x_length, y_length, z_length;
-    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
-    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
-    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
+    args_first_value(*current_series, "x", "D", &x, &x_length);
+    args_first_value(*current_series, "y", "D", &y, &y_length);
+    args_first_value(*current_series, "z", "D", &z, &z_length);
     if ((error = plot_draw_colorbar(subplot_args, 0.0, num_levels)) != NO_ERROR) {
       goto cleanup;
     }
@@ -2842,21 +2936,19 @@ error_t plot_hexbin(gr_meta_args_t *subplot_args) {
   int nbins;
   gr_meta_args_t **current_series;
 
-  args_values_by_keyword(subplot_args, "nbins", "i", &nbins);
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "nbins", "i", &nbins);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y;
     unsigned int x_length, y_length;
     int cntmax;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
     cntmax = gr_hexbin(x_length, x, y, nbins);
     /* TODO: return an error in the else case? */
     if (cntmax > 0) {
-      args_update_kwarg(subplot_args, "zrange", "dd", 0.0, 1.0 * cntmax);
+      args_update(subplot_args, "zrange", "dd", 0.0, 1.0 * cntmax);
       plot_draw_colorbar(subplot_args, 0.0, 256);
     }
     ++current_series;
@@ -2868,7 +2960,7 @@ error_t plot_hexbin(gr_meta_args_t *subplot_args) {
 error_t plot_heatmap(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
 
     /* TODO: Implement me! */
@@ -2907,13 +2999,13 @@ error_t plot_wireframe(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
   error_t error = NO_ERROR;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y, *z;
     unsigned int x_length, y_length, z_length;
-    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
-    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
-    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
+    args_first_value(*current_series, "x", "D", &x, &x_length);
+    args_first_value(*current_series, "y", "D", &y, &y_length);
+    args_first_value(*current_series, "z", "D", &z, &z_length);
     gr_setfillcolorind(0);
     if (x_length == y_length && x_length == z_length) {
       if (gridit_x == NULL) {
@@ -2952,13 +3044,13 @@ error_t plot_surface(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
   error_t error = NO_ERROR;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y, *z;
     unsigned int x_length, y_length, z_length;
-    args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length);
-    args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length);
-    args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length);
+    args_first_value(*current_series, "x", "D", &x, &x_length);
+    args_first_value(*current_series, "y", "D", &y, &y_length);
+    args_first_value(*current_series, "z", "D", &z, &z_length);
     /* TODO: add support for GR3 */
     if (x_length == y_length && x_length == z_length) {
       if (gridit_x == NULL) {
@@ -2996,16 +3088,13 @@ cleanup:
 error_t plot_plot3(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y, *z;
     unsigned int x_length, y_length, z_length;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
     gr_polyline3d(x_length, x, y, z);
     ++current_series;
@@ -3018,7 +3107,7 @@ error_t plot_plot3(gr_meta_args_t *subplot_args) {
 error_t plot_scatter3(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     /* TODO: Implement me! */
     /*
@@ -3043,7 +3132,7 @@ error_t plot_scatter3(gr_meta_args_t *subplot_args) {
 error_t plot_imshow(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     /* TODO: Implement me! */
     ++current_series;
@@ -3055,7 +3144,7 @@ error_t plot_imshow(gr_meta_args_t *subplot_args) {
 error_t plot_isosurface(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     /* TODO: Implement me! */
     ++current_series;
@@ -3070,22 +3159,20 @@ error_t plot_polar(gr_meta_args_t *subplot_args) {
   int n;
   gr_meta_args_t **current_series;
 
-  window = args_values_as_array_by_keyword(subplot_args, "window");
+  args_first_value(subplot_args, "window", "D", &window, NULL);
   r_min = window[2];
   r_max = window[3];
   tick = 0.5 * gr_tick(r_min, r_max);
   n = (int)ceil((r_max - r_min) / tick);
   r_max = r_min + n * tick;
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *rho, *theta, *x, *y;
     unsigned int rho_length, theta_length;
     char *spec;
     unsigned int i;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &theta, &theta_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &rho, &rho_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &theta, &theta_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &rho, &rho_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(rho_length != theta_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
     x = malloc(rho_length * sizeof(double));
     y = malloc(rho_length * sizeof(double));
@@ -3100,7 +3187,7 @@ error_t plot_polar(gr_meta_args_t *subplot_args) {
       x[i] = current_rho * cos(theta[i]);
       y[i] = current_rho * sin(theta[i]);
     }
-    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+    args_first_value(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
     gr_uselinespec(spec);
     gr_polyline(rho_length, x, y);
     free(x);
@@ -3114,16 +3201,13 @@ error_t plot_polar(gr_meta_args_t *subplot_args) {
 error_t plot_trisurf(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
 
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y, *z;
     unsigned int x_length, y_length, z_length;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
     gr_trisurface(x_length, x, y, z);
     ++current_series;
@@ -3141,8 +3225,8 @@ error_t plot_tricont(gr_meta_args_t *subplot_args) {
   gr_meta_args_t **current_series;
   int i;
 
-  args_values_by_keyword(subplot_args, "zrange", "dd", &z_min, &z_max);
-  args_values_by_keyword(subplot_args, "levels", "i", &num_levels);
+  args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
+  args_values(subplot_args, "levels", "i", &num_levels);
   levels = malloc(num_levels * sizeof(double));
   if (levels == NULL) {
     debug_print_malloc_error();
@@ -3151,16 +3235,13 @@ error_t plot_tricont(gr_meta_args_t *subplot_args) {
   for (i = 0; i < num_levels; ++i) {
     levels[i] = z_min + ((1.0 * i) / (num_levels - 1)) * (z_max - z_min);
   }
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, NULL);
+  args_first_value(subplot_args, "series", "A", &current_series, NULL);
   while (*current_series != NULL) {
     double *x, *y, *z;
     unsigned int x_length, y_length, z_length;
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "x", "D", &x, &x_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "y", "D", &y, &y_length),
-                    ERROR_PLOT_MISSING_DATA);
-    return_error_if(!args_get_first_value_by_keyword(*current_series, "z", "D", &z, &z_length),
-                    ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+    return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
     return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
     gr_tricontour(x_length, x, y, z, num_levels, levels);
     ++current_series;
@@ -3173,33 +3254,33 @@ error_t plot_tricont(gr_meta_args_t *subplot_args) {
 }
 
 error_t plot_shade(gr_meta_args_t *subplot_args) {
-    gr_meta_args_t **current_shader;
-    const char *data_component_names[] = {"x", "y", NULL};
-    double *components[2];
-    char *spec = ""; /* TODO: read spec from data! */
-    int xform, width, height;
-    double **current_component = components;
-    const char **current_component_name = data_component_names;
-    unsigned int point_count;
+  gr_meta_args_t **current_shader;
+  const char *data_component_names[] = {"x", "y", NULL};
+  double *components[2];
+  char *spec = ""; /* TODO: read spec from data! */
+  int xform, width, height;
+  double **current_component = components;
+  const char **current_component_name = data_component_names;
+  unsigned int point_count;
 
-    args_get_first_value_by_keyword(subplot_args, "series", "A", &current_shader, NULL);
-    while (*current_component_name != NULL) {
-        args_get_first_value_by_keyword(*current_shader, *current_component_name, "D", current_component, &point_count);
-        ++current_component_name;
-        ++current_component;
-    }
-    if(!args_get_first_value_by_keyword(subplot_args, "xform", "i", &xform, NULL)) {
-        xform=1;
-    }
-    if(!args_get_first_value_by_keyword(subplot_args, "width", "i", &width, NULL)){
-        width=100;
-    }
-    if(!args_get_first_value_by_keyword(subplot_args, "height", "i", &height, NULL)){
-        height=100;
-    }
-    gr_shadepoints(point_count, components[0], components[1], xform, width, height);
+  args_first_value(subplot_args, "series", "A", &current_shader, NULL);
+  while (*current_component_name != NULL) {
+    args_first_value(*current_shader, *current_component_name, "D", current_component, &point_count);
+    ++current_component_name;
+    ++current_component;
+  }
+  if (!args_first_value(subplot_args, "xform", "i", &xform, NULL)) {
+    xform = 1;
+  }
+  if (!args_first_value(subplot_args, "width", "i", &width, NULL)) {
+    width = 100;
+  }
+  if (!args_first_value(subplot_args, "height", "i", &height, NULL)) {
+    height = 100;
+  }
+  gr_shadepoints(point_count, components[0], components[1], xform, width, height);
 
-    return NO_ERROR;
+  return NO_ERROR;
 }
 
 
@@ -3223,11 +3304,15 @@ error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass) {
   char *title;
   char *x_label, *y_label, *z_label;
 
-  args_get_first_value_by_keyword(args, "kind", "s", &kind, NULL);
-  viewport = args_values_as_array_by_keyword(args, "viewport");
-  vp = args_values_as_array_by_keyword(args, "vp");
-  args_values_by_keyword(args, "xaxis", "dddi", &x_tick, &x_org_low, &x_org_high, &x_major_count);
-  args_values_by_keyword(args, "yaxis", "dddi", &y_tick, &y_org_low, &y_org_high, &y_major_count);
+  args_first_value(args, "kind", "s", &kind, NULL);
+  args_first_value(args, "viewport", "D", &viewport, NULL);
+  args_first_value(args, "vp", "D", &vp, NULL);
+  args_values(args, "xtick", "d", &x_tick);
+  args_values(args, "xorg", "dd", &x_org_low, &x_org_high);
+  args_values(args, "xmajor", "i", &x_major_count);
+  args_values(args, "ytick", "d", &y_tick);
+  args_values(args, "yorg", "dd", &y_org_low, &y_org_high);
+  args_values(args, "ymajor", "i", &y_major_count);
 
   gr_setlinecolorind(1);
   gr_setlinewidth(1);
@@ -3237,7 +3322,9 @@ error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass) {
   gr_setcharheight(charheight);
   ticksize = 0.0075 * diag;
   if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf")) {
-    args_values_by_keyword(args, "zaxis", "dddi", &z_tick, &z_org_low, &z_org_high, &z_major_count);
+    args_values(args, "ztick", "d", &z_tick);
+    args_values(args, "zorg", "dd", &z_org_low, &z_org_high);
+    args_values(args, "zmajor", "i", &z_major_count);
     if (pass == 1) {
       gr_grid3d(x_tick, 0, z_tick, x_org_low, y_org_high, z_org_low, 2, 0, 2);
       gr_grid3d(0, y_tick, 0, x_org_low, y_org_high, z_org_low, 0, 2, 0);
@@ -3255,7 +3342,7 @@ error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass) {
     gr_axes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count, -ticksize);
   }
 
-  if (args_get_first_value_by_keyword(args, "title", "s", &title, NULL)) {
+  if (args_first_value(args, "title", "s", &title, NULL)) {
     gr_savestate();
     gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
     gr_textext(0.5 * (viewport[0] + viewport[1]), vp[3], title);
@@ -3263,19 +3350,19 @@ error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass) {
   }
 
   if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf")) {
-    if (args_get_first_value_by_keyword(args, "xlabel", "s", &x_label, NULL) &&
-        args_get_first_value_by_keyword(args, "ylabel", "s", &y_label, NULL) &&
-        args_get_first_value_by_keyword(args, "zlabel", "s", &z_label, NULL)) {
+    if (args_first_value(args, "xlabel", "s", &x_label, NULL) &&
+        args_first_value(args, "ylabel", "s", &y_label, NULL) &&
+        args_first_value(args, "zlabel", "s", &z_label, NULL)) {
       gr_titles3d(x_label, y_label, z_label);
     }
   } else {
-    if (args_get_first_value_by_keyword(args, "xlabel", "s", &x_label, NULL)) {
+    if (args_first_value(args, "xlabel", "s", &x_label, NULL)) {
       gr_savestate();
       gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
       gr_textext(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
       gr_restorestate();
     }
-    if (args_get_first_value_by_keyword(args, "ylabel", "s", &y_label, NULL)) {
+    if (args_first_value(args, "ylabel", "s", &y_label, NULL)) {
       gr_savestate();
       gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
       gr_setcharup(-1, 0);
@@ -3297,12 +3384,12 @@ error_t plot_draw_polar_axes(gr_meta_args_t *args) {
   int i, n, alpha;
   char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER];
 
-  viewport = args_values_as_array_by_keyword(args, "viewport");
+  args_first_value(args, "viewport", "D", &viewport, NULL);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = max(0.018 * diag, 0.012);
 
-  window = args_values_as_array_by_keyword(args, "window");
+  args_first_value(args, "window", "D", &window, NULL);
   r_min = window[2];
   r_max = window[3];
 
@@ -3361,12 +3448,11 @@ error_t plot_draw_legend(gr_meta_args_t *subplot_args) {
   double legend_symbol_x[2], legend_symbol_y[2];
 
 
-  return_error_if(!args_get_first_value_by_keyword(subplot_args, "labels", "S", &labels, &num_labels),
-                  ERROR_PLOT_MISSING_LABELS);
+  return_error_if(!args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
-  args_get_first_value_by_keyword(subplot_args, "series", "A", &current_series, &num_series);
-  viewport = args_values_as_array_by_keyword(subplot_args, "viewport");
-  args_values_by_keyword(subplot_args, "location", "i", &location);
+  args_first_value(subplot_args, "series", "A", &current_series, &num_series);
+  args_first_value(subplot_args, "viewport", "D", &viewport, NULL);
+  args_values(subplot_args, "location", "i", &location);
   gr_savestate();
   gr_selntran(0);
   gr_setscale(0);
@@ -3406,7 +3492,7 @@ error_t plot_draw_legend(gr_meta_args_t *subplot_args) {
     int mask;
 
     gr_savestate();
-    args_get_first_value_by_keyword(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+    args_first_value(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
     mask = gr_uselinespec(spec);
     if (int_equals_any(mask, 5, 0, 1, 3, 4, 5)) {
       legend_symbol_x[0] = px - 0.07;
@@ -3446,8 +3532,8 @@ error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors
   unsigned int i;
 
   gr_savestate();
-  viewport = args_values_as_array_by_keyword(args, "viewport");
-  args_values_by_keyword(args, "zrange", "dd", &z_min, &z_max);
+  args_first_value(args, "viewport", "D", &viewport, NULL);
+  args_values(args, "zrange", "dd", &z_min, &z_max);
   data = malloc(colors * sizeof(int));
   if (data == NULL) {
     debug_print_malloc_error();
@@ -3463,7 +3549,7 @@ error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = max(0.016 * diag, 0.012);
   gr_setcharheight(charheight);
-  args_values_by_keyword(args, "scale", "i", &scale);
+  args_values(args, "scale", "i", &scale);
   if (scale & GR_OPTION_Z_LOG) {
     gr_setscale(GR_OPTION_Y_LOG);
     gr_axes(0, 2, 1, z_min, 0, 1, 0.005);
@@ -3613,44 +3699,23 @@ int uppercase_count(const char *str) {
 
 /* ------------------------- argument ------------------------------------------------------------------------------- */
 
-args_value_iterator_t *args_value_iter(const arg_t *arg) {
+args_value_iterator_t *arg_value_iter(const arg_t *arg) {
   return args_value_iterator_new(arg);
-}
-
-void *args_values_as_array(const arg_t *arg) {
-  const char *format_ptr;
-  char format;
-
-  /* First check if it is safe to return an pointer to the internal buffer -> all formats are equal */
-  format_ptr = arg->value_format;
-  format = *format_ptr;
-  if (format == '\0') {
-    return NULL;
-  }
-  ++format_ptr;
-  while (*format_ptr == format) {
-    ++format_ptr;
-  }
-  return (*format_ptr == '\0') ? arg->value_ptr : NULL;
 }
 
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
 void args_init(gr_meta_args_t *args) {
-  args->args_head = NULL;
-  args->args_tail = NULL;
   args->kwargs_head = NULL;
   args->kwargs_tail = NULL;
-  args->args_count = 0;
-  args->kwargs_count = 0;
   args->count = 0;
 }
 
 void args_finalize(gr_meta_args_t *args) {
   args_node_t *current_node, *next_node;
 
-  current_node = (args->args_head != NULL) ? args->args_head : args->kwargs_head;
+  current_node = args->kwargs_head;
   while (current_node != NULL) {
     next_node = current_node->next;
     args_decrease_arg_reference_count(current_node);
@@ -3659,49 +3724,11 @@ void args_finalize(gr_meta_args_t *args) {
   }
 }
 
-error_t args_push_arg_common(gr_meta_args_t *args, const char *value_format, const void *buffer, va_list *vl,
-                             int apply_padding) {
-  arg_t *arg;
-  args_node_t *args_node;
-
-  if ((arg = args_create_args(NULL, value_format, buffer, vl, apply_padding)) == NULL) {
-    return ERROR_MALLOC;
-  }
-
-  args_node = malloc(sizeof(args_node_t));
-  if (args_node == NULL) {
-    debug_print_malloc_error();
-    free((char *)arg->value_format);
-    free(arg->priv);
-    free(arg);
-    return ERROR_MALLOC;
-  }
-  args_node->arg = arg;
-  args_node->next = args->kwargs_head;
-
-  if (args->args_head == NULL) {
-    args->args_head = args_node;
-    args->args_tail = args_node;
-  } else {
-    args->args_tail->next = args_node;
-    args->args_tail = args_node;
-  }
-
-  ++(args->args_count);
-  ++(args->count);
-
-  return NO_ERROR;
-}
-
-error_t args_push_arg_vl(gr_meta_args_t *args, const char *value_format, va_list *vl) {
-  return args_push_arg_common(args, value_format, NULL, vl, 0);
-}
-
-error_t args_push_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                               va_list *vl, int apply_padding) {
+error_t args_push_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                         va_list *vl, int apply_padding) {
   /*
    * warning! this function does not check if a given key already exists in the container
-   * -> use `args_update_kwarg` instead
+   * -> use `args_update` instead
    */
   arg_t *arg;
   args_node_t *args_node;
@@ -3725,130 +3752,64 @@ error_t args_push_kwarg_common(gr_meta_args_t *args, const char *key, const char
   if (args->kwargs_head == NULL) {
     args->kwargs_head = args_node;
     args->kwargs_tail = args_node;
-    if (args->args_tail != NULL) {
-      args->args_tail->next = args_node;
-    }
   } else {
     args->kwargs_tail->next = args_node;
     args->kwargs_tail = args_node;
   }
 
-  ++(args->kwargs_count);
   ++(args->count);
 
   return NO_ERROR;
 }
 
-error_t args_push_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
-  return args_push_kwarg_common(args, key, value_format, NULL, vl, 0);
+error_t args_push_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
+  return args_push_common(args, key, value_format, NULL, vl, 0);
 }
 
-error_t args_update_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                                 va_list *vl, int apply_padding) {
+error_t args_update_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                           va_list *vl, int apply_padding) {
   args_node_t *args_node;
   arg_t *arg;
 
-  if ((args_node = args_find_node_by_keyword(args, key)) != NULL) {
+  if ((args_node = args_find_node(args, key)) != NULL) {
     if ((arg = args_create_args(key, value_format, buffer, vl, apply_padding)) != NULL) {
       args_decrease_arg_reference_count(args_node);
       args_node->arg = arg;
     }
   } else {
-    return args_push_kwarg_common(args, key, value_format, buffer, vl, apply_padding);
+    return args_push_common(args, key, value_format, buffer, vl, apply_padding);
   }
 
   return NO_ERROR;
 }
 
-error_t args_update_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
+error_t args_update(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
   error_t error;
   va_list vl;
   va_start(vl, value_format);
 
-  error = args_update_kwarg_vl(args, key, value_format, &vl);
+  error = args_update_vl(args, key, value_format, &vl);
 
   va_end(vl);
 
   return error;
 }
 
-error_t args_update_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                              int apply_padding) {
-  return args_update_kwarg_common(args, key, value_format, buffer, NULL, apply_padding);
+error_t args_update_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                        int apply_padding) {
+  return args_update_common(args, key, value_format, buffer, NULL, apply_padding);
 }
 
-error_t args_update_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
-  return args_update_kwarg_common(args, key, value_format, NULL, vl, 0);
+error_t args_update_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
+  return args_update_common(args, key, value_format, NULL, vl, 0);
 }
 
-error_t args_setdefault_kwarg_common(gr_meta_args_t *args, const char *key, const char *value_format,
-                                     const void *buffer, va_list *vl, int apply_padding) {
-  if (!args_has_keyword(args, key)) {
-    return args_push_kwarg_common(args, key, value_format, buffer, vl, apply_padding);
-  }
-  return NO_ERROR;
-}
-
-error_t args_setdefault_kwarg(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
-  error_t error;
-  va_list vl;
-  va_start(vl, value_format);
-
-  error = args_setdefault_kwarg_vl(args, key, value_format, &vl);
-
-  va_end(vl);
-
-  return error;
-}
-
-error_t args_setdefault_kwarg_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                                  int apply_padding) {
-  return args_setdefault_kwarg_common(args, key, value_format, buffer, NULL, apply_padding);
-}
-
-error_t args_setdefault_kwarg_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
-  return args_setdefault_kwarg_common(args, key, value_format, NULL, vl, 0);
-}
-
-error_t args_push_args(gr_meta_args_t *args, const gr_meta_args_t *update_args) {
-  args_iterator_t *it;
-  args_node_t *args_node;
-  arg_t *update_arg;
-
-  it = args_iter_args(update_args);
-  while ((update_arg = it->next(it)) != NULL) {
-    ++(update_arg->priv->reference_count);
-    args_node = malloc(sizeof(args_node_t));
-    if (args_node == NULL) {
-      debug_print_malloc_error();
-      args_iterator_delete(it);
-      return ERROR_MALLOC;
-    }
-    args_node->arg = update_arg;
-    args_node->next = args->kwargs_head;
-
-    if (args->args_head == NULL) {
-      args->args_head = args_node;
-      args->args_tail = args_node;
-    } else {
-      args->args_tail->next = args_node;
-      args->args_tail = args_node;
-    }
-
-    ++(args->args_count);
-    ++(args->count);
-  }
-  args_iterator_delete(it);
-
-  return NO_ERROR;
-}
-
-error_t args_update_kwargs(gr_meta_args_t *args, const gr_meta_args_t *update_args) {
+error_t args_update_many(gr_meta_args_t *args, const gr_meta_args_t *update_args) {
   args_iterator_t *it;
   args_node_t *args_node, *previous_node_by_keyword;
   arg_t *update_arg;
 
-  it = args_iter_kwargs(update_args);
+  it = args_iter(update_args);
   while ((update_arg = it->next(it)) != NULL) {
     ++(update_arg->priv->reference_count);
     args_node = malloc(sizeof(args_node_t));
@@ -3863,19 +3824,12 @@ error_t args_update_kwargs(gr_meta_args_t *args, const gr_meta_args_t *update_ar
     if (args->kwargs_head == NULL) {
       args->kwargs_head = args_node;
       args->kwargs_tail = args_node;
-      if (args->args_tail != NULL) {
-        args->args_tail->next = args_node;
-      }
-      ++(args->kwargs_count);
       ++(args->count);
-    } else if (args_find_previous_node_by_keyword(args, update_arg->key, &previous_node_by_keyword)) {
+    } else if (args_find_previous_node(args, update_arg->key, &previous_node_by_keyword)) {
       if (previous_node_by_keyword == NULL) {
         args_node->next = args->kwargs_head->next;
         if (args->kwargs_head == args->kwargs_tail) {
           args->kwargs_tail = args_node;
-        }
-        if (args->args_tail != NULL) {
-          args->args_tail->next = args_node;
         }
         args_decrease_arg_reference_count(args->kwargs_head);
         free(args->kwargs_head);
@@ -3892,7 +3846,6 @@ error_t args_update_kwargs(gr_meta_args_t *args, const gr_meta_args_t *update_ar
     } else {
       args->kwargs_tail->next = args_node;
       args->kwargs_tail = args_node;
-      ++(args->kwargs_count);
       ++(args->count);
     }
   }
@@ -3901,25 +3854,39 @@ error_t args_update_kwargs(gr_meta_args_t *args, const gr_meta_args_t *update_ar
   return NO_ERROR;
 }
 
-void args_clear_args(gr_meta_args_t *args) {
-  args_node_t *current_node, *next_node;
-
-  current_node = args->args_head;
-  while (current_node != args->kwargs_head) {
-    next_node = current_node->next;
-    args_decrease_arg_reference_count(current_node);
-    free(current_node);
-    current_node = next_node;
+error_t args_setdefault_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                               va_list *vl, int apply_padding) {
+  if (!args_has_keyword(args, key)) {
+    return args_push_common(args, key, value_format, buffer, vl, apply_padding);
   }
-  args->args_head = NULL;
-  args->count -= args->args_count;
-  args->args_count = 0;
+  return NO_ERROR;
 }
 
-void args_delete_kwarg(gr_meta_args_t *args, const char *key) {
+error_t args_setdefault(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
+  error_t error;
+  va_list vl;
+  va_start(vl, value_format);
+
+  error = args_setdefault_vl(args, key, value_format, &vl);
+
+  va_end(vl);
+
+  return error;
+}
+
+error_t args_setdefault_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                            int apply_padding) {
+  return args_setdefault_common(args, key, value_format, buffer, NULL, apply_padding);
+}
+
+error_t args_setdefault_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
+  return args_setdefault_common(args, key, value_format, NULL, vl, 0);
+}
+
+void args_remove(gr_meta_args_t *args, const char *key) {
   args_node_t *tmp_node, *previous_node_by_keyword;
 
-  if (args_find_previous_node_by_keyword(args, key, &previous_node_by_keyword)) {
+  if (args_find_previous_node(args, key, &previous_node_by_keyword)) {
     if (previous_node_by_keyword == NULL) {
       tmp_node = args->kwargs_head->next;
       args_decrease_arg_reference_count(args->kwargs_head);
@@ -3927,9 +3894,6 @@ void args_delete_kwarg(gr_meta_args_t *args, const char *key) {
       args->kwargs_head = tmp_node;
       if (tmp_node == NULL) {
         args->kwargs_tail = NULL;
-      }
-      if (args->args_tail != NULL) {
-        args->args_tail->next = tmp_node;
       }
     } else {
       tmp_node = previous_node_by_keyword->next->next;
@@ -3940,17 +3904,8 @@ void args_delete_kwarg(gr_meta_args_t *args, const char *key) {
         args->kwargs_tail = previous_node_by_keyword;
       }
     }
-    --(args->kwargs_count);
     --(args->count);
   }
-}
-
-unsigned int args_args_count(const gr_meta_args_t *args) {
-  return args->args_count;
-}
-
-unsigned int args_kwargs_count(const gr_meta_args_t *args) {
-  return args->kwargs_count;
 }
 
 unsigned int args_count(const gr_meta_args_t *args) {
@@ -3958,10 +3913,10 @@ unsigned int args_count(const gr_meta_args_t *args) {
 }
 
 int args_has_keyword(const gr_meta_args_t *args, const char *keyword) {
-  return args_find_keyword(args, keyword) != NULL;
+  return args_at(args, keyword) != NULL;
 }
 
-arg_t *args_find_keyword(const gr_meta_args_t *args, const char *keyword) {
+arg_t *args_at(const gr_meta_args_t *args, const char *keyword) {
   args_node_t *current_node;
 
   current_node = args->kwargs_head;
@@ -3975,15 +3930,15 @@ arg_t *args_find_keyword(const gr_meta_args_t *args, const char *keyword) {
   return NULL;
 }
 
-int(args_get_first_value_by_keyword)(const gr_meta_args_t *args, const char *keyword, const char *first_value_format,
-                                     void *first_value, unsigned int *array_length) {
+int(args_first_value)(const gr_meta_args_t *args, const char *keyword, const char *first_value_format,
+                      void *first_value, unsigned int *array_length) {
   arg_t *arg;
   char *transformed_first_value_format;
   char first_value_type;
   size_t *size_t_typed_value_ptr;
   void *value_ptr;
 
-  arg = args_find_keyword(args, keyword);
+  arg = args_at(args, keyword);
   if (arg == NULL) {
     return 0;
   }
@@ -4010,110 +3965,133 @@ int(args_get_first_value_by_keyword)(const gr_meta_args_t *args, const char *key
     value_ptr = (size_t_typed_value_ptr + 1);
   }
   if (first_value != NULL) {
-    switch (first_value_type) {
-    case 'i':
-      *(int *)first_value = *(int *)value_ptr;
-      break;
-    case 'I':
-      *(int **)first_value = *(int **)value_ptr;
-      break;
-    case 'd':
-      *(double *)first_value = *(double *)value_ptr;
-      break;
-    case 'D':
-      *(double **)first_value = *(double **)value_ptr;
-      break;
-    case 'c':
-      *(char *)first_value = *(char *)value_ptr;
-      break;
-    case 'C':
-    case 's':
-      *(char **)first_value = *(char **)value_ptr;
-      break;
-    case 'S':
-      *(char ***)first_value = *(char ***)value_ptr;
-      break;
-    case 'a':
-      *(gr_meta_args_t **)first_value = *(gr_meta_args_t **)value_ptr;
-      break;
-    case 'A':
-      *(gr_meta_args_t ***)first_value = *(gr_meta_args_t ***)value_ptr;
-      break;
-    default:
-      return 0;
+    if (isupper(first_value_type)) {
+      /* if the first value is an array simple store the pointer; the type the pointer is pointing to is unimportant
+       * in this case so use a void pointer conversion to shorten the code */
+      *(void **)first_value = *(void **)value_ptr;
+    } else {
+      switch (first_value_type) {
+      case 'i':
+        *(int *)first_value = *(int *)value_ptr;
+        break;
+      case 'd':
+        *(double *)first_value = *(double *)value_ptr;
+        break;
+      case 'c':
+        *(char *)first_value = *(char *)value_ptr;
+        break;
+      case 's':
+        *(char **)first_value = *(char **)value_ptr;
+        break;
+      case 'a':
+        *(gr_meta_args_t **)first_value = *(gr_meta_args_t **)value_ptr;
+        break;
+      default:
+        return 0;
+      }
     }
   }
   return 1;
 }
 
-int args_values_by_keyword(const gr_meta_args_t *args, const char *keyword, const char *expected_format, ...) {
+int args_values(const gr_meta_args_t *args, const char *keyword, const char *expected_format, ...) {
   va_list vl;
   arg_t *arg;
-  args_value_iterator_t *value_it;
-
-  arg = args_find_keyword(args, keyword);
-  if (arg == NULL) {
-    return 0;
-  }
-  if (strcmp(expected_format, arg->value_format) != 0) {
-    return 0;
-  }
+  args_value_iterator_t *value_it = NULL;
+  const char *current_va_format;
+  int formats_are_equal = 0;
+  int data_offset = 0;
+  int was_successful = 0;
 
   va_start(vl, expected_format);
-  value_it = args_value_iter(arg);
-  while (value_it->next(value_it) != NULL) {
-    switch (value_it->format) {
-      void *current_value_ptr;
-    case 'i':
-      current_value_ptr = va_arg(vl, int *);
-      *(int *)current_value_ptr = *(int *)value_it->value_ptr;
-      break;
-    case 'I':
-      current_value_ptr = va_arg(vl, int **);
-      *(int **)current_value_ptr = *(int **)value_it->value_ptr;
-      break;
-    case 'd':
-      current_value_ptr = va_arg(vl, double *);
-      *(double *)current_value_ptr = *(double *)value_it->value_ptr;
-      break;
-    case 'D':
-      current_value_ptr = va_arg(vl, double **);
-      *(double **)current_value_ptr = *(double **)value_it->value_ptr;
-      break;
-    case 'c':
-      current_value_ptr = va_arg(vl, char *);
-      *(char *)current_value_ptr = *(char *)value_it->value_ptr;
-      break;
-    case 'C':
-    case 's':
-      current_value_ptr = va_arg(vl, char **);
-      *(char **)current_value_ptr = *(char **)value_it->value_ptr;
-      break;
-    case 'S':
-      current_value_ptr = va_arg(vl, char ***);
-      *(char ***)current_value_ptr = *(char ***)value_it->value_ptr;
-      break;
-    default:
-      break;
-    }
+
+  arg = args_at(args, keyword);
+  if (arg == NULL) {
+    goto cleanup;
   }
-  args_value_iterator_delete(value_it);
+  if (!(formats_are_equal = args_check_format_compatibility(arg, expected_format))) {
+    goto cleanup;
+  }
+  formats_are_equal = (formats_are_equal == 2);
+
+  current_va_format = expected_format;
+  value_it = arg_value_iter(arg);
+  if (value_it->next(value_it) == NULL) {
+    goto cleanup;
+  }
+  while (*current_va_format != '\0') {
+    void *current_value_ptr;
+    current_value_ptr = va_arg(vl, void *);
+    if (value_it->is_array && isupper(*current_va_format)) {
+      /* If an array is stored and an array format is given by the user, simply assign a pointer to the data. The
+       * datatype itself is unimportant in this case. */
+      *(void **)current_value_ptr = *(void **)value_it->value_ptr;
+    } else {
+      switch (value_it->format) {
+      case 'i':
+        if (value_it->is_array) {
+          /* The data is stored as an array but the user wants to assign the values to single variables (the array case
+           * was handled before by the void pointer). -> Assign value by value by incrementing a data offset in each
+           * step. */
+          *(int *)current_value_ptr = (*(int **)value_it->value_ptr)[data_offset++];
+        } else {
+          /* The data is stored as a single value. Assign that value to the variable given by the user. */
+          *(int *)current_value_ptr = *(int *)value_it->value_ptr;
+        }
+        break;
+      case 'd':
+        if (value_it->is_array) {
+          *(double *)current_value_ptr = (*(double **)value_it->value_ptr)[data_offset++];
+        } else {
+          *(double *)current_value_ptr = *(double *)value_it->value_ptr;
+        }
+        break;
+      case 'c':
+        if (value_it->is_array) {
+          *(char *)current_value_ptr = (*(char **)value_it->value_ptr)[data_offset++];
+        } else {
+          *(char *)current_value_ptr = *(char *)value_it->value_ptr;
+        }
+        break;
+      case 's':
+        if (value_it->is_array) {
+          *(char **)current_value_ptr = (*(char ***)value_it->value_ptr)[data_offset++];
+        } else {
+          *(char **)current_value_ptr = *(char **)value_it->value_ptr;
+        }
+        break;
+      case 'a':
+        if (value_it->is_array) {
+          *(gr_meta_args_t **)current_value_ptr = (*(gr_meta_args_t ***)value_it->value_ptr)[data_offset++];
+        } else {
+          *(gr_meta_args_t **)current_value_ptr = *(gr_meta_args_t **)value_it->value_ptr;
+        }
+        break;
+      default:
+        goto cleanup;
+      }
+    }
+    if (formats_are_equal) {
+      /* Only iterate if the format given by the user is equal to the stored internal format. In the other case, the
+       * user requests to store **one** array to single variables -> values are read from one pointer, no iteration is
+       * needed. */
+      value_it->next(value_it);
+      data_offset = 0;
+    }
+    ++current_va_format;
+  }
+  was_successful = 1;
+
+cleanup:
+  if (value_it != NULL) {
+    args_value_iterator_delete(value_it);
+  }
   va_end(vl);
 
-  return 1;
+  return was_successful;
 }
 
-const void *args_values_as_array_by_keyword(const gr_meta_args_t *args, const char *keyword) {
-  arg_t *arg;
-
-  arg = args_find_keyword(args, keyword);
-  if (arg == NULL) {
-    return NULL;
-  }
-  return args_values_as_array(arg);
-}
-
-args_node_t *args_find_node_by_keyword(const gr_meta_args_t *args, const char *keyword) {
+args_node_t *args_find_node(const gr_meta_args_t *args, const char *keyword) {
   args_node_t *current_node;
 
   current_node = args->kwargs_head;
@@ -4124,7 +4102,7 @@ args_node_t *args_find_node_by_keyword(const gr_meta_args_t *args, const char *k
   return current_node;
 }
 
-int args_find_previous_node_by_keyword(const gr_meta_args_t *args, const char *keyword, args_node_t **previous_node) {
+int args_find_previous_node(const gr_meta_args_t *args, const char *keyword, args_node_t **previous_node) {
   args_node_t *prev_node, *current_node;
 
   prev_node = NULL;
@@ -4142,14 +4120,6 @@ int args_find_previous_node_by_keyword(const gr_meta_args_t *args, const char *k
 }
 
 args_iterator_t *args_iter(const gr_meta_args_t *args) {
-  return args_iterator_new(args->args_head, NULL);
-}
-
-args_iterator_t *args_iter_args(const gr_meta_args_t *args) {
-  return args_iterator_new(args->args_head, args->kwargs_head);
-}
-
-args_iterator_t *args_iter_kwargs(const gr_meta_args_t *args) {
   return args_iterator_new(args->kwargs_head, NULL);
 }
 
@@ -4507,9 +4477,11 @@ error_t fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_s
         break;
       }
       if (state.parsing_object) {
-        args_update_kwarg_buf(args, current_key, state.next_value_type, state.value_buffer, 0);
+        args_update_buf(args, current_key, state.next_value_type, state.value_buffer, 0);
       } else {
-        gr_meta_args_push_arg_buf(args, state.next_value_type, state.value_buffer, 0);
+        /* parsing values without an outer object (-> missing key) is not supported by the argument container */
+        error = ERROR_PARSE_MISSING_OBJECT_CONTAINER;
+        break;
       }
       if (strchr(FROMJSON_VALID_DELIMITERS, *state.shared_state->json_ptr) != NULL) {
         if (*state.shared_state->json_ptr == ',') {
@@ -4673,34 +4645,34 @@ error_t fromjson_parse_array(fromjson_state_t *state) {
   fromjson_datatype_t json_datatype;
   const char *next_delim_ptr;
 
-#define PARSE_VALUES(parse_suffix, c_type)                                                                      \
-  do {                                                                                                          \
-    c_type *values;                                                                                             \
-    c_type *current_value_ptr;                                                                                  \
-    CHECK_AND_ALLOCATE_MEMORY(c_type *, 1);                                                                     \
-    values = malloc(array_length * sizeof(c_type));                                                             \
-    if (values == NULL) {                                                                                       \
-      debug_print_malloc_error();                                                                               \
-      return ERROR_MALLOC;                                                                                      \
-    }                                                                                                           \
-    current_value_ptr = values;                                                                                 \
-    *(c_type **)state->next_value_memory = values;                                                              \
-    state->value_buffer_pointer_level = 2;                                                                      \
-    state->next_value_memory = values;                                                                          \
-    --state->shared_state->json_ptr;                                                                            \
-    while (!error && strchr("]", *state->shared_state->json_ptr) == NULL) {                                     \
-      ++state->shared_state->json_ptr;                                                                          \
-      error = fromjson_parse_##parse_suffix(state);                                                             \
-      ++current_value_ptr;                                                                                      \
-      state->next_value_memory = current_value_ptr;                                                             \
-    }                                                                                                           \
-    snprintf(array_type + strlen(array_type), NEXT_VALUE_TYPE_SIZE, "%c(%u)", toupper(*state->next_value_type), \
-             array_length);                                                                                     \
+#define PARSE_VALUES(parse_suffix, c_type)                                                                       \
+  do {                                                                                                           \
+    c_type *values;                                                                                              \
+    c_type *current_value_ptr;                                                                                   \
+    CHECK_AND_ALLOCATE_MEMORY(c_type *, 1);                                                                      \
+    values = malloc(array_length * sizeof(c_type));                                                              \
+    if (values == NULL) {                                                                                        \
+      debug_print_malloc_error();                                                                                \
+      return ERROR_MALLOC;                                                                                       \
+    }                                                                                                            \
+    current_value_ptr = values;                                                                                  \
+    *(c_type **)state->next_value_memory = values;                                                               \
+    state->value_buffer_pointer_level = 2;                                                                       \
+    state->next_value_memory = values;                                                                           \
+    --state->shared_state->json_ptr;                                                                             \
+    while (!error && strchr("]", *state->shared_state->json_ptr) == NULL) {                                      \
+      ++state->shared_state->json_ptr;                                                                           \
+      error = fromjson_parse_##parse_suffix(state);                                                              \
+      ++current_value_ptr;                                                                                       \
+      state->next_value_memory = current_value_ptr;                                                              \
+    }                                                                                                            \
+    snprintf(array_type + strlen(array_type), NEXT_VALUE_TYPE_SIZE, "%c(%lu)", toupper(*state->next_value_type), \
+             array_length);                                                                                      \
   } while (0)
 
   if (strchr("]", *(state->shared_state->json_ptr + 1)) == NULL) {
     char array_type[NEXT_VALUE_TYPE_SIZE];
-    unsigned int outer_array_length = 0;
+    size_t outer_array_length = 0;
     int is_nested_array = (*(state->shared_state->json_ptr + 1) == '[');
     unsigned int current_outer_array_index = 0;
     if (is_nested_array) {
@@ -4711,7 +4683,7 @@ error_t fromjson_parse_array(fromjson_state_t *state) {
     array_type[0] = '\0';
     do {
       error_t error = NO_ERROR;
-      unsigned int array_length = 0;
+      size_t array_length = 0;
       state->shared_state->json_ptr += is_nested_array ? 2 : 1;
       next_delim_ptr = state->shared_state->json_ptr;
       while (*next_delim_ptr != ']' &&
@@ -4885,8 +4857,8 @@ int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int in
   return 0;
 }
 
-int fromjson_get_outer_array_length(const char *str) {
-  int outer_array_length = 0;
+size_t fromjson_get_outer_array_length(const char *str) {
+  size_t outer_array_length = 0;
   int current_array_level = 1;
 
   if (*str != '[') {
@@ -5399,7 +5371,7 @@ error_t tojson_close_object(tojson_state_t *state) {
 error_t tojson_read_array_length(tojson_state_t *state) {
   int value;
 
-  RETRIEVE_SINGLE_VALUE(value, int, int);
+  RETRIEVE_SINGLE_VALUE(value, size_t, size_t);
   state->shared->array_length = value;
 
   return NO_ERROR;
@@ -5742,13 +5714,7 @@ error_t tojson_write_args(memwriter_t *memwriter, const gr_meta_args_t *args) {
   args_iterator_t *it;
   arg_t *arg;
 
-  it = args_iter_args(args);
-  while ((arg = it->next(it))) {
-    tojson_write_arg(memwriter, arg);
-  }
-  args_iterator_delete(it);
-
-  it = args_iter_kwargs(args);
+  it = args_iter(args);
   if ((arg = it->next(it))) {
     tojson_write_buf(memwriter, "o(", NULL, 1);
     do {
@@ -6311,89 +6277,10 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f) {
 
   fprintf(f, "=== container contents ===\n");
 
-  fprintf(f, "\n--- value only ---\n");
-  it = args_iter_args(args);
+  it = args_iter(args);
   while ((arg = it->next(it)) != NULL) {
     if (*arg->value_format) {
-      value_it = args_value_iter(arg);
-      while (value_it->next(value_it) != NULL) {
-        switch (value_it->format) {
-        case 'i':
-          if (value_it->is_array) {
-            fprintf(f, "int array: [");
-            for (i = 0; i < value_it->array_length; i++) {
-              fprintf(f, "%d, ", (*((int **)value_it->value_ptr))[i]);
-            }
-            if (value_it->array_length > 0) {
-              fprintf(f, "\b\b");
-            }
-            fprintf(f, "]\n");
-          } else {
-            fprintf(f, "int: %d\n", *((int *)value_it->value_ptr));
-          }
-          break;
-        case 'd':
-          if (value_it->is_array) {
-            fprintf(f, "double array: [");
-            for (i = 0; i < value_it->array_length; i++) {
-              fprintf(f, "%lf, ", (*((double **)value_it->value_ptr))[i]);
-            }
-            if (value_it->array_length > 0) {
-              fprintf(f, "\b\b");
-            }
-            fprintf(f, "]\n");
-          } else {
-            fprintf(f, "double: %lf\n", *((double *)value_it->value_ptr));
-          }
-          break;
-        case 'c':
-          fprintf(f, "char: %c\n", *((char *)value_it->value_ptr));
-          break;
-        case 's':
-          if (value_it->is_array) {
-            fprintf(f, "string array: [");
-            for (i = 0; i < value_it->array_length; i++) {
-              fprintf(f, "%s, ", (*((char ***)value_it->value_ptr))[i]);
-            }
-            if (value_it->array_length > 0) {
-              fprintf(f, "\b\b");
-            }
-            fprintf(f, "]\n");
-          } else {
-            fprintf(f, "string: %s\n", *((char **)value_it->value_ptr));
-          }
-          break;
-        case 'a':
-          if (value_it->is_array) {
-            fprintf(f, "container: [\n");
-            for (i = 0; i < value_it->array_length; i++) {
-              gr_dumpmeta((*((gr_meta_args_t ***)value_it->value_ptr))[i], f);
-            }
-            if (value_it->array_length > 0) {
-              fprintf(f, "\b\b");
-            }
-            fprintf(f, "]\n");
-          } else {
-            fprintf(f, "container\n");
-            gr_dumpmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
-          }
-          break;
-        default:
-          break;
-        }
-      }
-      args_value_iterator_delete(value_it);
-    } else {
-      fprintf(f, "null: (none)\n");
-    }
-  }
-  args_iterator_delete(it);
-
-  fprintf(f, "\n--- with keys ---\n");
-  it = args_iter_kwargs(args);
-  while ((arg = it->next(it)) != NULL) {
-    if (*arg->value_format) {
-      value_it = args_value_iter(arg);
+      value_it = arg_value_iter(arg);
       while (value_it->next(value_it) != NULL) {
         switch (value_it->format) {
         case 'i':

@@ -31,14 +31,14 @@ static void test_line(void) {
 
   for (i = 0; i < 2; ++i) {
     series[i] = gr_newmeta();
-    gr_meta_args_push_kwarg(series[i], "x", "nD", n, plots[i][0]);
-    gr_meta_args_push_kwarg(series[i], "y", "nD", n, plots[i][1]);
+    gr_meta_args_push(series[i], "x", "nD", n, plots[i][0]);
+    gr_meta_args_push(series[i], "y", "nD", n, plots[i][1]);
   }
 
   args = gr_newmeta();
-  gr_meta_args_push_kwarg(args, "series", "nA", 2, series);
-  gr_meta_args_push_kwarg(args, "labels", "nS", 2, labels);
-  gr_meta_args_push_kwarg(args, "kind", "s", "line");
+  gr_meta_args_push(args, "series", "nA", 2, series);
+  gr_meta_args_push(args, "labels", "nS", 2, labels);
+  gr_meta_args_push(args, "kind", "s", "line");
 
   printf("plotting data...\n");
 
@@ -66,16 +66,16 @@ static void test_contourf(void) {
   printf("filling argument container...\n");
 
   series = gr_newmeta();
-  gr_meta_args_push_kwarg(series, "x", "nD", n, x);
-  gr_meta_args_push_kwarg(series, "y", "nD", n, y);
-  gr_meta_args_push_kwarg(series, "z", "nD", n, z);
+  gr_meta_args_push(series, "x", "nD", n, x);
+  gr_meta_args_push(series, "y", "nD", n, y);
+  gr_meta_args_push(series, "z", "nD", n, z);
 
   subplot = gr_newmeta();
-  gr_meta_args_push_kwarg(subplot, "series", "A(1)", &series);
-  gr_meta_args_push_kwarg(subplot, "kind", "s", "contourf");
+  gr_meta_args_push(subplot, "series", "A(1)", &series);
+  gr_meta_args_push(subplot, "kind", "s", "contourf");
 
   args = gr_newmeta();
-  gr_meta_args_push_kwarg(args, "subplots", "A(1)", &subplot);
+  gr_meta_args_push(args, "subplots", "A(1)", &subplot);
 
   printf("plotting data...\n");
 
