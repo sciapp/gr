@@ -1249,7 +1249,7 @@ void gr_draw_contours(int nx, int ny, int nh, double *px, double *py, double *h,
   gr_inqspace(&contour_vars.zmin, &contour_vars.zmax, &rotation, &tilt);
 
   if ((rotation == 0) && (tilt == 90) &&
-      (major_h > 0) && (scale_options == 0))
+      (contour_vars.lblmjh > 0) && (scale_options == 0))
     {
       contour_vars.txtflg = 1;
 
