@@ -195,14 +195,31 @@ static void debug_printf(const char *format, ...) {
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #endif
 
-/* test macro which can be used like `assert` */
-#define return_error_if(condition, error) \
-  do {                                    \
-    if (condition) {                      \
-      return (error);                     \
-    }                                     \
+/* test macros which can be used like `assert` */
+#define return_error_if(condition, error_value) \
+  do {                                          \
+    if (condition) {                            \
+      return (error_value);                     \
+    }                                           \
   } while (0)
-/* TODO: Build a `cleanup_if` macro */
+#define goto_if(condition, goto_label) \
+  do {                                 \
+    if (condition) {                   \
+      goto goto_label;                 \
+    }                                  \
+  } while (0)
+#define cleanup_if(condition) goto_if((condition), cleanup)
+#define error_cleanup_if(condition) goto_if((condition), error_cleanup)
+#define goto_and_set_error_if(condition, error_value, goto_label) \
+  do {                                                            \
+    if (condition) {                                              \
+      error = (error_value);                                      \
+      goto goto_label;                                            \
+    }                                                             \
+  } while (0)
+#define cleanup_and_set_error_if(condition, error_value) goto_and_set_error_if((condition), (error_value), cleanup)
+#define error_cleanup_and_set_error_if(condition, error_value) \
+  goto_and_set_error_if((condition), (error_value), error_cleanup)
 
 #define UNUSED(param) \
   do {                \
@@ -581,7 +598,7 @@ static error_t plot_init_static_variables(void);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static error_t plot_normalize_args(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args);
+static error_t plot_merge_and_normalize_args(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args);
 static void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args);
 static void plot_pre_plot(gr_meta_args_t *subplot_args);
 static void plot_process_colormap(gr_meta_args_t *subplot_args);
@@ -650,16 +667,14 @@ static args_value_iterator_t *arg_value_iter(const arg_t *arg);
 static void args_init(gr_meta_args_t *args);
 static void args_finalize(gr_meta_args_t *args);
 
+static gr_meta_args_t *args_flatcopy(const gr_meta_args_t *args);
+static gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_copy_as_array);
+
 static error_t args_push_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
                                 va_list *vl, int apply_padding);
 static error_t args_push_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
-static error_t args_update_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                                  va_list *vl, int apply_padding);
-static error_t args_update(gr_meta_args_t *args, const char *key, const char *value_format, ...);
-static error_t args_update_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                               int apply_padding);
-static error_t args_update_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
 static error_t args_update_many(gr_meta_args_t *args, const gr_meta_args_t *update_args);
+static error_t args_merge(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **merge_keys);
 static error_t args_setdefault_common(gr_meta_args_t *args, const char *key, const char *value_format,
                                       const void *buffer, va_list *vl, int apply_padding);
 static error_t args_setdefault(gr_meta_args_t *args, const char *key, const char *value_format, ...);
@@ -896,6 +911,10 @@ static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 static int plot_static_variables_initialized = 0;
 
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ args ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static gr_meta_args_t *subplots_args = NULL;
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* TODO: Check format of: "heatmap", "hist", "isosurface", "imshow"  */
@@ -944,37 +963,53 @@ void gr_deletemeta(gr_meta_args_t *args) {
   free(args);
 }
 
-void gr_meta_args_push(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
-  /*
-   * warning! this function does not check if a given key already exists in the container
-   * -> use `args_update` instead
-   */
-  va_list vl;
-  va_start(vl, value_format);
-
-  args_push_vl(args, key, value_format, &vl);
-
-  va_end(vl);
+void gr_finalizemeta(void) {
+  if (plot_static_variables_initialized) {
+    gr_deletemeta(subplots_args);
+    subplots_args = NULL;
+    fmt_map_delete(fmt_map);
+    fmt_map = NULL;
+    plot_func_map_delete(plot_func_map);
+    plot_func_map = NULL;
+    plot_static_variables_initialized = 0;
+  }
 }
 
-void gr_meta_args_push_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                           int apply_padding) {
-  args_push_common(args, key, value_format, buffer, NULL, apply_padding);
+int gr_meta_args_push(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
+  va_list vl;
+  error_t error;
+
+  va_start(vl, value_format);
+
+  error = args_push_vl(args, key, value_format, &vl);
+
+  va_end(vl);
+
+  return error == NO_ERROR;
+}
+
+int gr_meta_args_push_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
+                          int apply_padding) {
+  error_t error;
+
+  error = args_push_common(args, key, value_format, buffer, NULL, apply_padding);
+
+  return error == NO_ERROR;
 }
 
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
 int gr_plotmeta(const gr_meta_args_t *args) {
-  gr_meta_args_t *subplots_args, **current_subplot_args;
+  gr_meta_args_t **current_subplot_args;
   plot_func_t plot_func;
   const char *kind = NULL;
-  error_t error = NO_ERROR;
 
-  plot_init_static_variables();
-  subplots_args = gr_newmeta();
-  if ((error = plot_normalize_args(subplots_args, args)) != NO_ERROR) {
-    goto cleanup;
+  if (plot_init_static_variables() != NO_ERROR) {
+    return 0;
+  }
+  if (plot_merge_and_normalize_args(subplots_args, args) != NO_ERROR) {
+    return 0;
   }
   args_first_value(subplots_args, "subplots", "A", &current_subplot_args, NULL);
   while (*current_subplot_args != NULL) {
@@ -983,20 +1018,16 @@ int gr_plotmeta(const gr_meta_args_t *args) {
     args_first_value(*current_subplot_args, "kind", "s", &kind, NULL);
     logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
     if ((plot_func = plot_func_map_at(plot_func_map, kind)) == NULL) {
-      error = ERROR_PLOT_UNKNOWN_KIND;
-      goto cleanup;
+      return 0;
     }
-    if ((error = plot_func(*current_subplot_args)) != NO_ERROR) {
-      goto cleanup;
+    if (plot_func(*current_subplot_args) != NO_ERROR) {
+      return 0;
     };
     plot_post_plot(*current_subplot_args);
     ++current_subplot_args;
   }
 
-cleanup:
-  /* gr_deletemeta(subplots_args); TODO: Delete subplots_args at the right time */
-
-  return error;
+  return 1;
 }
 
 
@@ -2065,62 +2096,80 @@ void args_decrease_arg_reference_count(args_node_t *args_node) {
 error_t plot_init_static_variables(void) {
   if (!plot_static_variables_initialized) {
     logger((stderr, "Initializing static plot variables\n"));
+    subplots_args = gr_newmeta();
+    if (subplots_args == NULL) {
+      debug_print_malloc_error();
+      goto error_cleanup;
+    }
     fmt_map = fmt_map_new_with_data(sizeof(kind_to_fmt) / sizeof(kind_to_fmt[0]), kind_to_fmt);
     if (fmt_map == NULL) {
       debug_print_malloc_error();
-      return ERROR_MALLOC;
+      goto error_cleanup;
     }
     plot_func_map = plot_func_map_new_with_data(sizeof(kind_to_func) / sizeof(kind_to_func[0]), kind_to_func);
     if (plot_func_map == NULL) {
       debug_print_malloc_error();
-      fmt_map_delete(fmt_map);
-      return ERROR_MALLOC;
+      goto error_cleanup;
     }
     plot_static_variables_initialized = 1;
   }
   return NO_ERROR;
+
+error_cleanup:
+  if (subplots_args != NULL) {
+    gr_deletemeta(subplots_args);
+    subplots_args = NULL;
+  }
+  if (fmt_map != NULL) {
+    fmt_map_delete(fmt_map);
+    fmt_map = NULL;
+  }
+  if (plot_func_map != NULL) {
+    plot_func_map_delete(plot_func_map);
+    plot_func_map = NULL;
+  }
+  return ERROR_MALLOC;
 }
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_normalize_args(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args) {
-  arg_t *arg;
+error_t plot_merge_and_normalize_args(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args) {
+  gr_meta_args_t *copied_args = NULL, **subplot_args_array = NULL;
+  const char *keys_copy_as_array[] = {"subplots", "series", NULL};
+  const char *merge_keys[] = {"subplots", NULL};
+  error_t error = NO_ERROR;
 
   logger((stderr, "Normalize plot args\n"));
 
-  /* TODO: copy all user defined attributes! */
-  if ((arg = args_at(user_args, "subplots")) != NULL) {
-    args_value_iterator_t *value_it = arg_value_iter(arg);
-    return_error_if(value_it->next(value_it) == NULL, ERROR_PLOT_NORMALIZATION);
-    return_error_if(value_it->format != 'a', ERROR_PLOT_NORMALIZATION);
-    if (value_it->is_array) {
-      gr_meta_args_push(normalized_args, "subplots", "nA", value_it->array_length,
-                        *(gr_meta_args_t ***)value_it->value_ptr);
+  copied_args = args_copy(user_args, keys_copy_as_array);
+  return_error_if(copied_args == NULL, ERROR_MALLOC);
+  if ((args_has_keyword(user_args, "subplots"))) {
+    error = args_merge(normalized_args, copied_args, merge_keys);
+  } else if ((args_has_keyword(user_args, "series"))) {
+    if ((args_values(normalized_args, "subplots", "A", &subplot_args_array))) {
+      error = args_merge(*subplot_args_array, copied_args, merge_keys);
     } else {
-      gr_meta_args_push(normalized_args, "subplots", "A(1)", (gr_meta_args_t **)value_it->value_ptr);
+      error = gr_meta_args_push(normalized_args, "subplots", "A(1)", &copied_args) ? NO_ERROR : ERROR_MALLOC;
+      cleanup_if(error != NO_ERROR);
     }
-    args_value_iterator_delete(value_it);
-  } else if ((arg = args_at(user_args, "series")) != NULL) {
-    args_value_iterator_t *value_it = arg_value_iter(arg);
-    return_error_if(value_it->next(value_it) == NULL, ERROR_PLOT_NORMALIZATION);
-    return_error_if(value_it->format != 'a', ERROR_PLOT_NORMALIZATION);
-    /* TODO: store a shallow copy of the user args! (currently, a user's call of `gr_deletemeta` will double free) */
-    if (value_it->is_array) {
-      gr_meta_args_push(normalized_args, "subplots", "A(1)", &user_args);
-    } else {
-      gr_meta_args_t *subplot_args = gr_newmeta();
-      gr_meta_args_push(subplot_args, "series", "A(1)", value_it->value_ptr);
-      gr_meta_args_push(normalized_args, "subplots", "A(1)", &subplot_args);
-    }
-    args_value_iterator_delete(value_it);
+    copied_args = NULL;
   } else {
     gr_meta_args_t *subplot_args = gr_newmeta();
-    gr_meta_args_push(subplot_args, "series", "A(1)", &user_args);
-    gr_meta_args_push(normalized_args, "subplots", "A(1)", &subplot_args);
+    cleanup_and_set_error_if(subplot_args == NULL, ERROR_MALLOC);
+    error = gr_meta_args_push(subplot_args, "series", "A(1)", &copied_args) ? NO_ERROR : ERROR_MALLOC;
+    cleanup_if(error != NO_ERROR);
+    error = gr_meta_args_push(normalized_args, "subplots", "A(1)", &subplot_args) ? NO_ERROR : ERROR_MALLOC;
+    cleanup_if(error != NO_ERROR);
+    copied_args = NULL;
   }
 
-  return NO_ERROR;
+cleanup:
+  if (copied_args != NULL) {
+    gr_deletemeta(copied_args);
+  }
+
+  return error;
 }
 
 void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args) {
@@ -2339,10 +2388,10 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
   gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
   gr_setwswindow(wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
 
-  args_update(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
+  gr_meta_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
   logger((stderr, "Stored viewport (%f, %f, %f, %f)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
-  args_update(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
-  args_update(subplot_args, "ratio", "d", aspect_ratio);
+  gr_meta_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
+  gr_meta_args_push(subplot_args, "ratio", "d", aspect_ratio);
 }
 
 void plot_process_window(gr_meta_args_t *subplot_args) {
@@ -2380,10 +2429,10 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
         args_values(subplot_args, "original_yrange", "dd", &y_min, &y_max) &&
         args_values(subplot_args, "original_adjust_xlim", "i", &adjust_xlim) &&
         args_values(subplot_args, "original_adjust_ylim", "i", &adjust_ylim)) {
-      args_update(subplot_args, "xrange", "dd", x_min, x_max);
-      args_update(subplot_args, "yrange", "dd", y_min, y_max);
-      args_update(subplot_args, "adjust_xlim", "i", adjust_xlim);
-      args_update(subplot_args, "adjust_ylim", "i", adjust_ylim);
+      gr_meta_args_push(subplot_args, "xrange", "dd", x_min, x_max);
+      gr_meta_args_push(subplot_args, "yrange", "dd", y_min, y_max);
+      gr_meta_args_push(subplot_args, "adjust_xlim", "i", adjust_xlim);
+      gr_meta_args_push(subplot_args, "adjust_ylim", "i", adjust_ylim);
       args_remove(subplot_args, "original_xrange");
       args_remove(subplot_args, "original_yrange");
       args_remove(subplot_args, "original_adjust_xlim");
@@ -2399,20 +2448,20 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
       gr_meta_args_push(subplot_args, "original_xrange", "dd", x_min, x_max);
       args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
       gr_meta_args_push(subplot_args, "original_adjust_xlim", "i", adjust_xlim);
-      args_update(subplot_args, "adjust_xlim", "i", 0);
+      gr_meta_args_push(subplot_args, "adjust_xlim", "i", 0);
     }
     if (!args_has_keyword(subplot_args, "original_yrange")) {
       gr_meta_args_push(subplot_args, "original_yrange", "dd", y_min, y_max);
       args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
       gr_meta_args_push(subplot_args, "original_adjust_ylim", "i", adjust_ylim);
-      args_update(subplot_args, "adjust_ylim", "i", 0);
+      gr_meta_args_push(subplot_args, "adjust_ylim", "i", 0);
     }
     args_values(subplot_args, "panzoom", "ddd", &x, &y, &zoom);
     logger((stderr, "Window before `gr_panzoom` (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
     gr_panzoom(x, y, zoom, &x_min, &x_max, &y_min, &y_max);
     logger((stderr, "Window after `gr_panzoom` (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
-    args_update(subplot_args, "xrange", "dd", x_min, x_max);
-    args_update(subplot_args, "yrange", "dd", y_min, y_max);
+    gr_meta_args_push(subplot_args, "xrange", "dd", x_min, x_max);
+    gr_meta_args_push(subplot_args, "yrange", "dd", y_min, y_max);
     args_remove(subplot_args, "panzoom");
   }
 
@@ -2441,9 +2490,9 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     x_org_low = x_max;
     x_org_high = x_min;
   }
-  args_update(subplot_args, "xtick", "d", x_tick);
-  args_update(subplot_args, "xorg", "dd", x_org_low, x_org_high);
-  args_update(subplot_args, "xmajor", "i", x_major_count);
+  gr_meta_args_push(subplot_args, "xtick", "d", x_tick);
+  gr_meta_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
+  gr_meta_args_push(subplot_args, "xmajor", "i", x_major_count);
 
   if (str_equals_any(kind, 2, "hist", "stem") && !args_has_keyword(subplot_args, "ylim")) {
     y_min = 0;
@@ -2467,12 +2516,12 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     y_org_low = y_max;
     y_org_high = y_min;
   }
-  args_update(subplot_args, "ytick", "d", y_tick);
-  args_update(subplot_args, "yorg", "dd", y_org_low, y_org_high);
-  args_update(subplot_args, "ymajor", "i", y_major_count);
+  gr_meta_args_push(subplot_args, "ytick", "d", y_tick);
+  gr_meta_args_push(subplot_args, "yorg", "dd", y_org_low, y_org_high);
+  gr_meta_args_push(subplot_args, "ymajor", "i", y_major_count);
 
   logger((stderr, "Storing window (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
-  args_update(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
+  gr_meta_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
   if (strcmp(kind, "polar") != 0) {
     gr_setwindow(x_min, x_max, y_min, y_max);
   } else {
@@ -2505,16 +2554,16 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
       z_org_low = z_max;
       z_org_high = z_min;
     }
-    args_update(subplot_args, "ztick", "d", z_tick);
-    args_update(subplot_args, "zorg", "dd", z_org_low, z_org_high);
-    args_update(subplot_args, "zmajor", "i", z_major_count);
+    gr_meta_args_push(subplot_args, "ztick", "d", z_tick);
+    gr_meta_args_push(subplot_args, "zorg", "dd", z_org_low, z_org_high);
+    gr_meta_args_push(subplot_args, "zmajor", "i", z_major_count);
 
     args_values(subplot_args, "rotation", "i", &rotation);
     args_values(subplot_args, "tilt", "i", &tilt);
     gr_setspace(z_min, z_max, rotation, tilt);
   }
 
-  args_update(subplot_args, "scale", "i", scale);
+  gr_meta_args_push(subplot_args, "scale", "i", scale);
   gr_setscale(scale);
 }
 
@@ -2593,7 +2642,7 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
     } else {
       args_values(subplot_args, "zlim", "dd", &min_component, &max_component);
     }
-    args_update(subplot_args, "zrange", "dd", min_component, max_component);
+    gr_meta_args_push(subplot_args, "zrange", "dd", min_component, max_component);
   }
 }
 
@@ -2988,7 +3037,7 @@ error_t plot_hexbin(gr_meta_args_t *subplot_args) {
     cntmax = gr_hexbin(x_length, x, y, nbins);
     /* TODO: return an error in the else case? */
     if (cntmax > 0) {
-      args_update(subplot_args, "zrange", "dd", 0.0, 1.0 * cntmax);
+      gr_meta_args_push(subplot_args, "zrange", "dd", 0.0, 1.0 * cntmax);
       plot_draw_colorbar(subplot_args, 0.0, 256);
     }
     ++current_series;
@@ -3764,12 +3813,164 @@ void args_finalize(gr_meta_args_t *args) {
   }
 }
 
+gr_meta_args_t *args_flatcopy(const gr_meta_args_t *copy_args) {
+  /* Clone the linked list but share the referenced values */
+  gr_meta_args_t *args = NULL;
+  args_iterator_t *it = NULL;
+  args_node_t *args_node;
+  arg_t *copy_arg;
+
+  args = gr_newmeta();
+  if (args == NULL) {
+    debug_print_malloc_error();
+    goto error_cleanup;
+  }
+  it = args_iter(copy_args);
+  while ((copy_arg = it->next(it)) != NULL) {
+    ++(copy_arg->priv->reference_count);
+    args_node = malloc(sizeof(args_node_t));
+    if (args_node == NULL) {
+      debug_print_malloc_error();
+      goto error_cleanup;
+    }
+    args_node->arg = copy_arg;
+    args_node->next = NULL;
+
+    if (args->kwargs_head == NULL) {
+      args->kwargs_head = args_node;
+    } else {
+      args->kwargs_tail->next = args_node;
+    }
+    args->kwargs_tail = args_node;
+    ++(args->count);
+  }
+  args_iterator_delete(it);
+
+  return args;
+
+error_cleanup:
+  if (args != NULL) {
+    gr_deletemeta(args);
+  }
+  if (it != NULL) {
+    args_iterator_delete(it);
+  }
+
+  return NULL;
+}
+
+gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_copy_as_array) {
+  /* Clone the linked list and all values that are argument containers as well. Share all other values (-> **no deep
+   * copy!**).
+   * `keys_copy_as_array` can be used to always copy values of the specified keys as an array. It is only read for
+   * values which are argument containers. The array must be terminated with a NULL pointer. */
+  gr_meta_args_t *args = NULL, **args_array = NULL, *copied_args = NULL, **copied_args_array = NULL,
+                 **current_args_copy = NULL;
+  args_iterator_t *it = NULL;
+  args_value_iterator_t *value_it = NULL;
+  args_node_t *args_node;
+  arg_t *copy_arg;
+  const char **current_key_ptr;
+  int copy_as_array;
+
+  args = gr_newmeta();
+  if (args == NULL) {
+    debug_print_malloc_error();
+    goto error_cleanup;
+  }
+  it = args_iter(copy_args);
+  error_cleanup_if(it == NULL);
+  while ((copy_arg = it->next(it)) != NULL) {
+    if (strncmp(copy_arg->value_format, "a", 1) == 0 || strncmp(copy_arg->value_format, "nA", 2) == 0) {
+      value_it = arg_value_iter(copy_arg);
+      error_cleanup_if(value_it == NULL);
+      /* Do not support two dimensional argument arrays like `nAnA`) -> a loop would be needed with more memory
+       * management */
+      error_cleanup_if(value_it->next(value_it) == NULL);
+      if (value_it->is_array) {
+        args_array = *(gr_meta_args_t ***)value_it->value_ptr;
+        copied_args_array = malloc(value_it->array_length * sizeof(gr_meta_args_t *));
+        error_cleanup_if(copied_args_array == NULL);
+        current_args_copy = copied_args_array;
+        while (*args_array != NULL) {
+          *current_args_copy = args_copy(*args_array, keys_copy_as_array);
+          error_cleanup_if(*current_args_copy == NULL);
+          ++args_array;
+          ++current_args_copy;
+        }
+        current_args_copy = NULL;
+        gr_meta_args_push(args, it->arg->key, "nA", value_it->array_length, copied_args_array);
+      } else {
+        copied_args = args_copy(*(gr_meta_args_t **)value_it->value_ptr, keys_copy_as_array);
+        error_cleanup_if(copied_args == NULL);
+        copy_as_array = 0;
+        if (keys_copy_as_array != NULL) {
+          current_key_ptr = keys_copy_as_array;
+          while (*current_key_ptr != NULL) {
+            if (strcmp(it->arg->key, *current_key_ptr) == 0) {
+              copy_as_array = 1;
+              break;
+            }
+            ++current_key_ptr;
+          }
+        }
+        if (copy_as_array) {
+          gr_meta_args_push(args, it->arg->key, "A(1)", &copied_args);
+        } else {
+          gr_meta_args_push(args, it->arg->key, "a", copied_args);
+        }
+        copied_args = NULL;
+      }
+    } else {
+      ++(copy_arg->priv->reference_count);
+      args_node = malloc(sizeof(args_node_t));
+      if (args_node == NULL) {
+        debug_print_malloc_error();
+        goto error_cleanup;
+      }
+      args_node->arg = copy_arg;
+      args_node->next = NULL;
+
+      if (args->kwargs_head == NULL) {
+        args->kwargs_head = args_node;
+      } else {
+        args->kwargs_tail->next = args_node;
+      }
+      args->kwargs_tail = args_node;
+      ++(args->count);
+    }
+  }
+  goto cleanup;
+
+error_cleanup:
+  if (args != NULL) {
+    gr_deletemeta(args);
+    args = NULL;
+  }
+cleanup:
+  if (current_args_copy != NULL) {
+    while (current_args_copy != copied_args_array) {
+      if (*current_args_copy != NULL) {
+        gr_deletemeta(*current_args_copy);
+      }
+      --current_args_copy;
+    }
+  }
+  if (copied_args_array != NULL) {
+    free(copied_args_array);
+  }
+  if (it != NULL) {
+    args_iterator_delete(it);
+  }
+  if (value_it != NULL) {
+    args_value_iterator_delete(value_it);
+  }
+
+  return args;
+}
+
 error_t args_push_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
                          va_list *vl, int apply_padding) {
-  /*
-   * warning! this function does not check if a given key already exists in the container
-   * -> use `args_update` instead
-   */
   arg_t *arg;
   args_node_t *args_node;
 
@@ -3777,27 +3978,30 @@ error_t args_push_common(gr_meta_args_t *args, const char *key, const char *valu
     return ERROR_MALLOC;
   }
 
-  args_node = malloc(sizeof(args_node_t));
-  if (args_node == NULL) {
-    debug_print_malloc_error();
-    free((char *)arg->key);
-    free((char *)arg->value_format);
-    free(arg->priv);
-    free(arg);
-    return ERROR_MALLOC;
-  }
-  args_node->arg = arg;
-  args_node->next = NULL;
-
-  if (args->kwargs_head == NULL) {
-    args->kwargs_head = args_node;
-    args->kwargs_tail = args_node;
+  if ((args_node = args_find_node(args, key)) != NULL) {
+    args_decrease_arg_reference_count(args_node);
+    args_node->arg = arg;
   } else {
-    args->kwargs_tail->next = args_node;
-    args->kwargs_tail = args_node;
+    args_node = malloc(sizeof(args_node_t));
+    if (args_node == NULL) {
+      debug_print_malloc_error();
+      free((char *)arg->key);
+      free((char *)arg->value_format);
+      free(arg->priv);
+      free(arg);
+      return ERROR_MALLOC;
+    }
+    args_node->arg = arg;
+    args_node->next = NULL;
+    if (args->kwargs_head == NULL) {
+      args->kwargs_head = args_node;
+      args->kwargs_tail = args_node;
+    } else {
+      args->kwargs_tail->next = args_node;
+      args->kwargs_tail = args_node;
+    }
+    ++(args->count);
   }
-
-  ++(args->count);
 
   return NO_ERROR;
 }
@@ -3806,92 +4010,110 @@ error_t args_push_vl(gr_meta_args_t *args, const char *key, const char *value_fo
   return args_push_common(args, key, value_format, NULL, vl, 0);
 }
 
-error_t args_update_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                           va_list *vl, int apply_padding) {
-  args_node_t *args_node;
-  arg_t *arg;
-
-  if ((args_node = args_find_node(args, key)) != NULL) {
-    if ((arg = args_create_args(key, value_format, buffer, vl, apply_padding)) != NULL) {
-      args_decrease_arg_reference_count(args_node);
-      args_node->arg = arg;
-    }
-  } else {
-    return args_push_common(args, key, value_format, buffer, vl, apply_padding);
-  }
-
-  return NO_ERROR;
-}
-
-error_t args_update(gr_meta_args_t *args, const char *key, const char *value_format, ...) {
-  error_t error;
-  va_list vl;
-  va_start(vl, value_format);
-
-  error = args_update_vl(args, key, value_format, &vl);
-
-  va_end(vl);
-
-  return error;
-}
-
-error_t args_update_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                        int apply_padding) {
-  return args_update_common(args, key, value_format, buffer, NULL, apply_padding);
-}
-
-error_t args_update_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl) {
-  return args_update_common(args, key, value_format, NULL, vl, 0);
-}
-
 error_t args_update_many(gr_meta_args_t *args, const gr_meta_args_t *update_args) {
-  args_iterator_t *it;
+  return args_merge(args, update_args, NULL);
+}
+
+error_t args_merge(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **merge_keys) {
+  args_iterator_t *it = NULL;
+  args_value_iterator_t *value_it = NULL, *merge_value_it = NULL;
   args_node_t *args_node, *previous_node_by_keyword;
-  arg_t *update_arg;
+  arg_t *update_arg, *current_arg;
+  gr_meta_args_t **args_array, **merge_args_array;
+  const char **current_key_ptr;
+  int merge, i;
+  error_t error = NO_ERROR;
 
-  it = args_iter(update_args);
+  it = args_iter(merge_args);
+  cleanup_and_set_error_if(it == NULL, ERROR_MALLOC);
   while ((update_arg = it->next(it)) != NULL) {
-    ++(update_arg->priv->reference_count);
-    args_node = malloc(sizeof(args_node_t));
-    if (args_node == NULL) {
-      debug_print_malloc_error();
-      args_iterator_delete(it);
-      return ERROR_MALLOC;
+    merge = 0;
+    if (merge_keys != NULL) {
+      current_key_ptr = merge_keys;
+      while (*current_key_ptr != NULL) {
+        if (strcmp(it->arg->key, *current_key_ptr) == 0) {
+          merge = 1;
+          break;
+        }
+        ++current_key_ptr;
+      }
     }
-    args_node->arg = update_arg;
-    args_node->next = NULL;
-
-    if (args->kwargs_head == NULL) {
-      args->kwargs_head = args_node;
-      args->kwargs_tail = args_node;
-      ++(args->count);
-    } else if (args_find_previous_node(args, update_arg->key, &previous_node_by_keyword)) {
-      if (previous_node_by_keyword == NULL) {
-        args_node->next = args->kwargs_head->next;
-        if (args->kwargs_head == args->kwargs_tail) {
-          args->kwargs_tail = args_node;
-        }
-        args_decrease_arg_reference_count(args->kwargs_head);
-        free(args->kwargs_head);
-        args->kwargs_head = args_node;
+    if (merge && (current_arg = args_at(args, update_arg->key)) != NULL) {
+      value_it = arg_value_iter(current_arg);
+      merge_value_it = arg_value_iter(update_arg);
+      cleanup_and_set_error_if(value_it == NULL, ERROR_MALLOC);
+      cleanup_and_set_error_if(merge_value_it == NULL, ERROR_MALLOC);
+      /* Do not support two dimensional argument arrays like `nAnA`) -> a loop would be needed with more memory
+       * management */
+      cleanup_and_set_error_if(value_it->next(value_it) == NULL, ERROR_MALLOC);
+      cleanup_and_set_error_if(merge_value_it->next(merge_value_it) == NULL, ERROR_MALLOC);
+      if (value_it->is_array) {
+        args_array = *(gr_meta_args_t ***)value_it->value_ptr;
       } else {
-        args_node->next = previous_node_by_keyword->next->next;
-        args_decrease_arg_reference_count(previous_node_by_keyword->next);
-        free(previous_node_by_keyword->next);
-        previous_node_by_keyword->next = args_node;
-        if (args_node->next == NULL) {
-          args->kwargs_tail = args_node;
-        }
+        args_array = (gr_meta_args_t **)value_it->value_ptr;
+      }
+      if (merge_value_it->is_array) {
+        merge_args_array = *(gr_meta_args_t ***)merge_value_it->value_ptr;
+      } else {
+        merge_args_array = (gr_meta_args_t **)merge_value_it->value_ptr;
+      }
+      for (i = 0; i < value_it->array_length && i < merge_value_it->array_length; ++i) {
+        error = args_merge(args_array[i], merge_args_array[i], merge_keys);
+        cleanup_if(error != NO_ERROR);
       }
     } else {
-      args->kwargs_tail->next = args_node;
-      args->kwargs_tail = args_node;
-      ++(args->count);
+      ++(update_arg->priv->reference_count);
+      args_node = malloc(sizeof(args_node_t));
+      if (args_node == NULL) {
+        debug_print_malloc_error();
+        error = ERROR_MALLOC;
+        goto cleanup;
+      }
+      args_node->arg = update_arg;
+      args_node->next = NULL;
+
+      if (args->kwargs_head == NULL) {
+        args->kwargs_head = args_node;
+        args->kwargs_tail = args_node;
+        ++(args->count);
+      } else if (args_find_previous_node(args, update_arg->key, &previous_node_by_keyword)) {
+        if (previous_node_by_keyword == NULL) {
+          args_node->next = args->kwargs_head->next;
+          if (args->kwargs_head == args->kwargs_tail) {
+            args->kwargs_tail = args_node;
+          }
+          args_decrease_arg_reference_count(args->kwargs_head);
+          free(args->kwargs_head);
+          args->kwargs_head = args_node;
+        } else {
+          args_node->next = previous_node_by_keyword->next->next;
+          args_decrease_arg_reference_count(previous_node_by_keyword->next);
+          free(previous_node_by_keyword->next);
+          previous_node_by_keyword->next = args_node;
+          if (args_node->next == NULL) {
+            args->kwargs_tail = args_node;
+          }
+        }
+      } else {
+        args->kwargs_tail->next = args_node;
+        args->kwargs_tail = args_node;
+        ++(args->count);
+      }
     }
   }
-  args_iterator_delete(it);
 
-  return NO_ERROR;
+cleanup:
+  if (it != NULL) {
+    args_iterator_delete(it);
+  }
+  if (value_it != NULL) {
+    args_value_iterator_delete(value_it);
+  }
+  if (merge_value_it != NULL) {
+    args_value_iterator_delete(merge_value_it);
+  }
+
+  return error;
 }
 
 error_t args_setdefault_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
@@ -3953,16 +4175,13 @@ unsigned int args_count(const gr_meta_args_t *args) {
 }
 
 int args_has_keyword(const gr_meta_args_t *args, const char *keyword) {
-  return args_at(args, keyword) != NULL;
+  return args_find_node(args, keyword) != NULL;
 }
 
 arg_t *args_at(const gr_meta_args_t *args, const char *keyword) {
   args_node_t *current_node;
 
-  current_node = args->kwargs_head;
-  while (current_node != NULL && strcmp(current_node->arg->key, keyword) != 0) {
-    current_node = current_node->next;
-  }
+  current_node = args_find_node(args, keyword);
 
   if (current_node != NULL) {
     return current_node->arg;
@@ -4517,7 +4736,7 @@ error_t fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_s
         break;
       }
       if (state.parsing_object) {
-        args_update_buf(args, current_key, state.next_value_type, state.value_buffer, 0);
+        gr_meta_args_push_buf(args, current_key, state.next_value_type, state.value_buffer, 0);
       } else {
         /* parsing values without an outer object (-> missing key) is not supported by the argument container */
         error = ERROR_PARSE_MISSING_OBJECT_CONTAINER;
@@ -5135,10 +5354,10 @@ error_t tojson_stringify_double_value(memwriter_t *memwriter, double value) {
   const char *unprocessed_string;
 
   string_start_index = memwriter_size(memwriter);
-  unprocessed_string = memwriter_buf(memwriter) + string_start_index;
   if ((error = memwriter_printf(memwriter, "%." XSTR(DBL_DECIMAL_DIG) "g", value)) != NO_ERROR) {
     return error;
   }
+  unprocessed_string = memwriter_buf(memwriter) + string_start_index;
   if (strspn(unprocessed_string, "0123456789-") == memwriter_size(memwriter) - string_start_index) {
     if ((error = memwriter_putc(memwriter, '.')) != NO_ERROR) {
       return error;
@@ -6467,6 +6686,12 @@ FILE *gr_get_stdout() {
   }                                                                                                           \
                                                                                                               \
   void prefix##_map_delete(prefix##_map_t *prefix##_map) {                                                    \
+    ssize_t i;                                                                                                \
+    for (i = 0; i < prefix##_map->capacity; ++i) {                                                            \
+      if (prefix##_map->map[i].key != NULL) {                                                                 \
+        free((char *)prefix##_map->map[i].key);                                                               \
+      }                                                                                                       \
+    }                                                                                                         \
     free(prefix##_map->map);                                                                                  \
     free(prefix##_map);                                                                                       \
   }                                                                                                           \
