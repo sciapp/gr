@@ -9733,7 +9733,7 @@ void gr_panzoom(double x, double y, double zoom,
 {
   int errind, tnr;
   double wn[4], vp[4];
-  double x0, x1, y0, y1, tmp, xext, yext;
+  double x0, x1, y0, y1, tmp;
 
   check_autoinit;
 
@@ -9782,12 +9782,10 @@ void gr_panzoom(double x, double y, double zoom,
       gr_wctondc(xmin, ymin);
       gr_wctondc(xmax, ymax);
       gr_wctondc(&x0, &y0);
-      xext = (*xmax - *xmin) * 0.5 * zoom;
-      yext = (*ymax - *ymin) * 0.5 * zoom;
-      *xmin = x0 - xext;
-      *xmax = x0 + xext;
-      *ymin = y0 - yext;
-      *ymax = y0 + yext;
+      *xmin = x0 - (x0 - *xmin) * zoom;
+      *xmax = x0 + (*xmax - x0) * zoom;
+      *ymin = y0 - (y0 - *ymin) * zoom;;
+      *ymax = y0 + (*ymax - y0) * zoom;;
       gr_ndctowc(xmin, ymin);
       gr_ndctowc(xmax, ymax);
     }
