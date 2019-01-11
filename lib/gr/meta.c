@@ -2356,6 +2356,7 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
   int adjust_xlim, adjust_ylim, adjust_zlim;
   double x_tick, y_tick;
   double x_org_low, x_org_high, y_org_low, y_org_high;
+  int reset_ranges = 0;
 
   args_first_value(subplot_args, "kind", "s", &kind, NULL);
   args_first_value(subplot_args, "xlog", "i", &xlog, NULL);
@@ -2374,11 +2375,45 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     scale |= zflip ? GR_OPTION_FLIP_Z : 0;
   }
 
+  if (args_values(subplot_args, "reset_ranges", "i", &reset_ranges) && reset_ranges) {
+    if (args_values(subplot_args, "original_xrange", "dd", &x_min, &x_max) &&
+        args_values(subplot_args, "original_yrange", "dd", &y_min, &y_max) &&
+        args_values(subplot_args, "original_adjust_xlim", "i", &adjust_xlim) &&
+        args_values(subplot_args, "original_adjust_ylim", "i", &adjust_ylim)) {
+      args_update(subplot_args, "xrange", "dd", x_min, x_max);
+      args_update(subplot_args, "yrange", "dd", y_min, y_max);
+      args_update(subplot_args, "adjust_xlim", "i", adjust_xlim);
+      args_update(subplot_args, "adjust_ylim", "i", adjust_ylim);
+      args_remove(subplot_args, "original_xrange");
+      args_remove(subplot_args, "original_yrange");
+      args_remove(subplot_args, "original_adjust_xlim");
+      args_remove(subplot_args, "original_adjust_ylim");
+    }
+    args_remove(subplot_args, "reset_ranges");
+  } else {
+    args_values(subplot_args, "xrange", "dd", &x_min, &x_max);
+    args_values(subplot_args, "yrange", "dd", &y_min, &y_max);
+  }
   if (args_has_keyword(subplot_args, "panzoom")) {
+    if (!args_has_keyword(subplot_args, "original_xrange")) {
+      gr_meta_args_push(subplot_args, "original_xrange", "dd", x_min, x_max);
+      args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
+      gr_meta_args_push(subplot_args, "original_adjust_xlim", "i", adjust_xlim);
+      args_update(subplot_args, "adjust_xlim", "i", 0);
+    }
+    if (!args_has_keyword(subplot_args, "original_yrange")) {
+      gr_meta_args_push(subplot_args, "original_yrange", "dd", y_min, y_max);
+      args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
+      gr_meta_args_push(subplot_args, "original_adjust_ylim", "i", adjust_ylim);
+      args_update(subplot_args, "adjust_ylim", "i", 0);
+    }
     args_values(subplot_args, "panzoom", "ddd", &x, &y, &zoom);
+    logger((stderr, "Window before `gr_panzoom` (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
     gr_panzoom(x, y, zoom, &x_min, &x_max, &y_min, &y_max);
+    logger((stderr, "Window after `gr_panzoom` (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
     args_update(subplot_args, "xrange", "dd", x_min, x_max);
     args_update(subplot_args, "yrange", "dd", y_min, y_max);
+    args_remove(subplot_args, "panzoom");
   }
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf")) {
@@ -2387,11 +2422,12 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     major_count = 5;
   }
 
-  args_values(subplot_args, "xrange", "dd", &x_min, &x_max);
   if (!(scale & GR_OPTION_X_LOG)) {
     args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
     if (adjust_xlim) {
+      logger((stderr, "xrange before \"gr_adjustlimits\": (%f, %f)\n", x_min, x_max));
       gr_adjustlimits(&x_min, &x_max);
+      logger((stderr, "xrange after \"gr_adjustlimits\": (%f, %f)\n", x_min, x_max));
     }
     x_major_count = major_count;
     x_tick = gr_tick(x_min, x_max) / x_major_count;
@@ -2409,14 +2445,15 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
   args_update(subplot_args, "xorg", "dd", x_org_low, x_org_high);
   args_update(subplot_args, "xmajor", "i", x_major_count);
 
-  args_values(subplot_args, "yrange", "dd", &y_min, &y_max);
   if (str_equals_any(kind, 2, "hist", "stem") && !args_has_keyword(subplot_args, "ylim")) {
     y_min = 0;
   }
   if (!(scale & GR_OPTION_Y_LOG)) {
     args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
     if (adjust_ylim) {
+      logger((stderr, "yrange before \"gr_adjustlimits\": (%f, %f)\n", y_min, y_max));
       gr_adjustlimits(&y_min, &y_max);
+      logger((stderr, "yrange after \"gr_adjustlimits\": (%f, %f)\n", y_min, y_max));
     }
     y_major_count = major_count;
     y_tick = gr_tick(y_min, y_max) / y_major_count;
@@ -2452,7 +2489,9 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     if (!(scale & GR_OPTION_Z_LOG)) {
       args_values(subplot_args, "adjust_zlim", "i", &adjust_zlim);
       if (adjust_zlim) {
+        logger((stderr, "zrange before \"gr_adjustlimits\": (%f, %f)\n", z_min, z_max));
         gr_adjustlimits(&z_min, &z_max);
+        logger((stderr, "zrange after \"gr_adjustlimits\": (%f, %f)\n", z_min, z_max));
       }
       z_major_count = major_count;
       z_tick = gr_tick(z_min, z_max) / z_major_count;
@@ -2503,7 +2542,8 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
     double min_component = DBL_MAX;
     double max_component = -DBL_MAX;
     double step = -DBL_MAX;
-    if (strchr(fmt, **current_component_name) == NULL) {
+    if (strchr(fmt, **current_component_name) == NULL || args_has_keyword(subplot_args, (*current_range_keys)[1])) {
+      ++current_range_keys;
       ++current_component_name;
       continue;
     }
@@ -2528,7 +2568,7 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
     } else {
       args_values(subplot_args, (*current_range_keys)[0], "dd", &min_component, &max_component);
     }
-    args_update(subplot_args, (*current_range_keys)[1], "dd", min_component, max_component);
+    gr_meta_args_push(subplot_args, (*current_range_keys)[1], "dd", min_component, max_component);
     ++current_range_keys;
     ++current_component_name;
   }
