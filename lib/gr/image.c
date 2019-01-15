@@ -1,3 +1,8 @@
+#ifndef _POSIX_SOURCE
+#define _POSIX_SOURCE
+#endif
+/* _POSIX_SOURCE is required to define `sigjmp_buf` in `setjmp.h` used by <mupdf/fitz.h>.
+ * Otherwise this is undefined in ANSI C (at least on RHEL7) */
 
 #include <stdlib.h>
 #include <stdio.h>
