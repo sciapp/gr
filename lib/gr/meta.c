@@ -682,11 +682,8 @@ static error_t args_setdefault_buf(gr_meta_args_t *args, const char *key, const 
                                    int apply_padding);
 static error_t args_setdefault_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
 
-static void args_remove(gr_meta_args_t *args, const char *key);
-
 static unsigned int args_count(const gr_meta_args_t *args);
 
-static int args_has_keyword(const gr_meta_args_t *args, const char *keyword);
 static arg_t *args_at(const gr_meta_args_t *args, const char *keyword);
 static int args_first_value(const gr_meta_args_t *args, const char *keyword, const char *first_value_format,
                             void *first_value, unsigned int *array_length);
@@ -995,6 +992,48 @@ int gr_meta_args_push_buf(gr_meta_args_t *args, const char *key, const char *val
   error = args_push_common(args, key, value_format, buffer, NULL, apply_padding);
 
   return error == NO_ERROR;
+}
+
+int gr_meta_args_contains(const gr_meta_args_t *args, const char *keyword) {
+  return args_at(args, keyword) != NULL;
+}
+
+void gr_meta_args_clear(gr_meta_args_t *args) {
+  args_node_t *current_node, *next_node;
+
+  current_node = args->kwargs_head;
+  while (current_node != NULL) {
+    next_node = current_node->next;
+    args_decrease_arg_reference_count(current_node);
+    free(current_node);
+    current_node = next_node;
+  }
+  args_init(args);
+}
+
+void gr_meta_args_remove(gr_meta_args_t *args, const char *key) {
+  args_node_t *tmp_node, *previous_node_by_keyword;
+
+  if (args_find_previous_node(args, key, &previous_node_by_keyword)) {
+    if (previous_node_by_keyword == NULL) {
+      tmp_node = args->kwargs_head->next;
+      args_decrease_arg_reference_count(args->kwargs_head);
+      free(args->kwargs_head);
+      args->kwargs_head = tmp_node;
+      if (tmp_node == NULL) {
+        args->kwargs_tail = NULL;
+      }
+    } else {
+      tmp_node = previous_node_by_keyword->next->next;
+      args_decrease_arg_reference_count(previous_node_by_keyword->next);
+      free(previous_node_by_keyword->next);
+      previous_node_by_keyword->next = tmp_node;
+      if (tmp_node == NULL) {
+        args->kwargs_tail = previous_node_by_keyword;
+      }
+    }
+    --(args->count);
+  }
 }
 
 
@@ -2144,9 +2183,9 @@ error_t plot_merge_and_normalize_args(gr_meta_args_t *normalized_args, const gr_
 
   copied_args = args_copy(user_args, keys_copy_as_array);
   return_error_if(copied_args == NULL, ERROR_MALLOC);
-  if ((args_has_keyword(user_args, "subplots"))) {
+  if ((gr_meta_args_contains(user_args, "subplots"))) {
     error = args_merge(normalized_args, copied_args, merge_keys);
-  } else if ((args_has_keyword(user_args, "series"))) {
+  } else if ((gr_meta_args_contains(user_args, "series"))) {
     if ((args_values(normalized_args, "subplots", "A", &subplot_args_array))) {
       error = args_merge(*subplot_args_array, copied_args, merge_keys);
     } else {
@@ -2180,12 +2219,12 @@ void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args) {
 
   args_setdefault(subplot_args, "kind", "s", PLOT_DEFAULT_KIND);
   args_first_value(subplot_args, "kind", "s", &kind, NULL);
-  if (!args_has_keyword(subplot_args, "figsize")) {
+  if (!gr_meta_args_contains(subplot_args, "figsize")) {
     args_setdefault(subplot_args, "size", "dd", PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT);
   }
   args_setdefault(subplot_args, "clear", "i", PLOT_DEFAULT_CLEAR);
   args_setdefault(subplot_args, "update", "i", PLOT_DEFAULT_UPDATE);
-  if (args_has_keyword(subplot_args, "labels")) {
+  if (gr_meta_args_contains(subplot_args, "labels")) {
     args_setdefault(subplot_args, "location", "i", PLOT_DEFAULT_LOCATION);
   }
   args_setdefault(subplot_args, "subplot", "dddd", PLOT_DEFAULT_SUBPLOT_MIN_X, PLOT_DEFAULT_SUBPLOT_MAX_X,
@@ -2435,21 +2474,21 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
       gr_meta_args_push(subplot_args, "yrange", "dd", y_min, y_max);
       gr_meta_args_push(subplot_args, "adjust_xlim", "i", adjust_xlim);
       gr_meta_args_push(subplot_args, "adjust_ylim", "i", adjust_ylim);
-      args_remove(subplot_args, "original_xrange");
-      args_remove(subplot_args, "original_yrange");
-      args_remove(subplot_args, "original_adjust_xlim");
-      args_remove(subplot_args, "original_adjust_ylim");
+      gr_meta_args_remove(subplot_args, "original_xrange");
+      gr_meta_args_remove(subplot_args, "original_yrange");
+      gr_meta_args_remove(subplot_args, "original_adjust_xlim");
+      gr_meta_args_remove(subplot_args, "original_adjust_ylim");
     }
-    args_remove(subplot_args, "reset_ranges");
+    gr_meta_args_remove(subplot_args, "reset_ranges");
   }
-  if (args_has_keyword(subplot_args, "panzoom")) {
-    if (!args_has_keyword(subplot_args, "original_xrange")) {
+  if (gr_meta_args_contains(subplot_args, "panzoom")) {
+    if (!gr_meta_args_contains(subplot_args, "original_xrange")) {
       gr_meta_args_push(subplot_args, "original_xrange", "dd", x_min, x_max);
       args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
       gr_meta_args_push(subplot_args, "original_adjust_xlim", "i", adjust_xlim);
       gr_meta_args_push(subplot_args, "adjust_xlim", "i", 0);
     }
-    if (!args_has_keyword(subplot_args, "original_yrange")) {
+    if (!gr_meta_args_contains(subplot_args, "original_yrange")) {
       gr_meta_args_push(subplot_args, "original_yrange", "dd", y_min, y_max);
       args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
       gr_meta_args_push(subplot_args, "original_adjust_ylim", "i", adjust_ylim);
@@ -2461,7 +2500,7 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     logger((stderr, "Window after `gr_panzoom` (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
     gr_meta_args_push(subplot_args, "xrange", "dd", x_min, x_max);
     gr_meta_args_push(subplot_args, "yrange", "dd", y_min, y_max);
-    args_remove(subplot_args, "panzoom");
+    gr_meta_args_remove(subplot_args, "panzoom");
   }
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf")) {
@@ -2493,7 +2532,7 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
   gr_meta_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
   gr_meta_args_push(subplot_args, "xmajor", "i", x_major_count);
 
-  if (str_equals_any(kind, 2, "hist", "stem") && !args_has_keyword(subplot_args, "ylim")) {
+  if (str_equals_any(kind, 2, "hist", "stem") && !gr_meta_args_contains(subplot_args, "ylim")) {
     y_min = 0;
   }
   if (!(scale & GR_OPTION_Y_LOG)) {
@@ -2590,12 +2629,12 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
     double min_component = DBL_MAX;
     double max_component = -DBL_MAX;
     double step = -DBL_MAX;
-    if (strchr(fmt, **current_component_name) == NULL || args_has_keyword(subplot_args, (*current_range_keys)[1])) {
+    if (strchr(fmt, **current_component_name) == NULL || gr_meta_args_contains(subplot_args, (*current_range_keys)[1])) {
       ++current_range_keys;
       ++current_component_name;
       continue;
     }
-    if (!args_has_keyword(subplot_args, (*current_range_keys)[0])) {
+    if (!gr_meta_args_contains(subplot_args, (*current_range_keys)[0])) {
       args_first_value(subplot_args, "series", "A", &current_series, &series_count);
       while (*current_series != NULL) {
         if (args_first_value(*current_series, *current_component_name, "D", &current_component, &point_count)) {
@@ -2624,7 +2663,7 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args) {
   if (strcmp(kind, "quiver") == 0) {
     double min_component = DBL_MAX;
     double max_component = -DBL_MAX;
-    if (!args_has_keyword(subplot_args, "zlim")) {
+    if (!gr_meta_args_contains(subplot_args, "zlim")) {
       double *u, *v;
       /* TODO: Support more than one series? */
       /* TODO: `ERROR_PLOT_COMPONENT_LENGTH_MISMATCH` */
@@ -2654,7 +2693,7 @@ void plot_post_plot(gr_meta_args_t *subplot_args) {
   gr_restorestate();
   args_first_value(subplot_args, "kind", "s", &kind, NULL);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  if (str_equals_any(kind, 4, "line", "step", "scatter", "stem") && args_has_keyword(subplot_args, "labels")) {
+  if (str_equals_any(kind, 4, "line", "step", "scatter", "stem") && gr_meta_args_contains(subplot_args, "labels")) {
     plot_draw_legend(subplot_args);
   }
   args_first_value(subplot_args, "update", "i", &update, NULL);
@@ -3801,15 +3840,7 @@ void args_init(gr_meta_args_t *args) {
 }
 
 void args_finalize(gr_meta_args_t *args) {
-  args_node_t *current_node, *next_node;
-
-  current_node = args->kwargs_head;
-  while (current_node != NULL) {
-    next_node = current_node->next;
-    args_decrease_arg_reference_count(current_node);
-    free(current_node);
-    current_node = next_node;
-  }
+  gr_meta_args_clear(args);
 }
 
 gr_meta_args_t *args_flatcopy(const gr_meta_args_t *copy_args) {
@@ -4117,7 +4148,7 @@ cleanup:
 
 error_t args_setdefault_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
                                va_list *vl, int apply_padding) {
-  if (!args_has_keyword(args, key)) {
+  if (!gr_meta_args_contains(args, key)) {
     return args_push_common(args, key, value_format, buffer, vl, apply_padding);
   }
   return NO_ERROR;
@@ -4144,37 +4175,8 @@ error_t args_setdefault_vl(gr_meta_args_t *args, const char *key, const char *va
   return args_setdefault_common(args, key, value_format, NULL, vl, 0);
 }
 
-void args_remove(gr_meta_args_t *args, const char *key) {
-  args_node_t *tmp_node, *previous_node_by_keyword;
-
-  if (args_find_previous_node(args, key, &previous_node_by_keyword)) {
-    if (previous_node_by_keyword == NULL) {
-      tmp_node = args->kwargs_head->next;
-      args_decrease_arg_reference_count(args->kwargs_head);
-      free(args->kwargs_head);
-      args->kwargs_head = tmp_node;
-      if (tmp_node == NULL) {
-        args->kwargs_tail = NULL;
-      }
-    } else {
-      tmp_node = previous_node_by_keyword->next->next;
-      args_decrease_arg_reference_count(previous_node_by_keyword->next);
-      free(previous_node_by_keyword->next);
-      previous_node_by_keyword->next = tmp_node;
-      if (tmp_node == NULL) {
-        args->kwargs_tail = previous_node_by_keyword;
-      }
-    }
-    --(args->count);
-  }
-}
-
 unsigned int args_count(const gr_meta_args_t *args) {
   return args->count;
-}
-
-int args_has_keyword(const gr_meta_args_t *args, const char *keyword) {
-  return args_find_node(args, keyword) != NULL;
 }
 
 arg_t *args_at(const gr_meta_args_t *args, const char *keyword) {
