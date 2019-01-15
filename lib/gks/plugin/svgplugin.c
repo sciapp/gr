@@ -1304,6 +1304,7 @@ void gks_drv_js(
         write_page();
 
       free(p->stream->buffer);
+      free(p->stream);
       free(p->points);
       free(p);
       break;

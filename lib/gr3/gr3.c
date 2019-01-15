@@ -1609,7 +1609,7 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
                     {
                         int i;
                         for (i = 0; i < dy; i++)  {
-                            glReadPixels(0, i, dx, 1, format, GL_UNSIGNED_BYTE, raw_pixels+i*fb_width);
+                            glReadPixels(0, i, dx, 1, format, GL_UNSIGNED_BYTE, raw_pixels+i*fb_width*bpp);
                         }
                     }
                     #else
