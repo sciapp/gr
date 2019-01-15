@@ -39,6 +39,7 @@ typedef __int64 int64_t;
 #include "io.h"
 #include "md5.h"
 #include "cm.h"
+#include "boundary.h"
 
 #ifndef R_OK
 #define R_OK 4
@@ -9789,4 +9790,65 @@ void gr_panzoom(double x, double y, double zoom,
       gr_ndctowc(xmin, ymin);
       gr_ndctowc(xmax, ymax);
     }
+}
+
+/*!
+ * Find a boundary around a given point set.
+ *
+ * The boundary is calculated using a 2 dimensional ball pivoting algorithm.
+ *
+ * \param[in] n The number of points
+ * \param[in] x A pointer to the X coordinates
+ * \param[in] y A pointer to the Y coordinates
+ * \param[in] r A constant ball radius
+ * \param[in] r_function A ball radius callback function
+ * \param[in] n_contour The amount of memory allocated for the boundary points
+ * \param[out] contour A pointer to allocated memory to store the indices of the boundary points
+ *
+ * \returns Number of points in the boundary contour
+ *
+ * The ball radius used in the algorithm can be either constant or position dependent. In the first case
+ * `r` should contain the radius and `r_function` is NULL. Otherwise `r_function` should be a pointer to
+ * a function returning the appropriate radius for a given position.
+ *
+ * If `r_function` is NULL and `r` has a value less or equal 0 the algorithm calculates a ball radius
+ * based on the largest distance from a point to its nearest neighbor.
+ *
+ * The calculated boundary is represented as a list of indices in the given `x` and `y` arrays and is
+ * stored in the `contour` array. `contour` must be a pointer to allocated memory for at least `n_contour`
+ * integer indices. Normally less than `n` indices are needed for the boundary, in the worst case 2*`n`
+ * indices are needed.
+ *
+ */
+int gr_findboundary(int n, double *x, double *y, double r, double (*r_function)(double x, double y),
+                    int n_contour, int *contour)
+{
+  int result;
+  if (n < 2)
+    {
+      fprintf(stderr, "Not enough points provided.\n");
+      return 0;
+    }
+  result = find_boundary(n, x, y, r, r_function, n_contour, contour);
+  if (result < 0)
+    {
+      if (result == -1)
+        {
+          fprintf(stderr, "Ball radius is too small.\n");
+        }
+      else if (result == -2)
+        {
+          fprintf(stderr, "Ball radius is too large.\n");
+        }
+      else if (result == -3)
+        {
+          fprintf(stderr, "Not enough memory provided in contour array.\n");
+        }
+      else
+        {
+          fprintf(stderr, "An error occurred finding the boundary.\n");
+        }
+      result = 0;
+    }
+  return result;
 }

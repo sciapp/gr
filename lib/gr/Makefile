@@ -7,7 +7,7 @@ UNAME := $(shell uname)
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                delaunay.o interp2.o md5.o import.o meta.o shade.o grforbnd.o \
-               contourf.o
+               contourf.o boundary.o
    MUPDFDEFS =
       GSDEFS =
      DEFINES = $(MUPDFDEFS) $(GSDEFS)
@@ -117,3 +117,4 @@ import.o: gr.h
 meta.o: gr.h
 shade.o: gr.h
 grforbnd.o: gr.h
+boundary.o: boundary.h
