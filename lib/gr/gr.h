@@ -176,6 +176,9 @@ DLLEXPORT void gr_meta_args_push(
   gr_meta_args_t *, const char *, const char *, ...);
 DLLEXPORT void gr_meta_args_push_buf(
   gr_meta_args_t *, const char *, const char *, const void *, int);
+DLLEXPORT int gr_meta_args_contains(const gr_meta_args_t *, const char *);
+DLLEXPORT void gr_meta_args_clear(gr_meta_args_t *);
+DLLEXPORT void gr_meta_args_remove(gr_meta_args_t *, const char *);
 DLLEXPORT void *gr_openmeta(
   int, const char *, unsigned int, const char *(*)(const char *, unsigned int),
   int (*)(const char *, unsigned int, const char *));
