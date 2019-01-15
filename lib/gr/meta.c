@@ -2375,6 +2375,8 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
     scale |= zflip ? GR_OPTION_FLIP_Z : 0;
   }
 
+  args_values(subplot_args, "xrange", "dd", &x_min, &x_max);
+  args_values(subplot_args, "yrange", "dd", &y_min, &y_max);
   if (args_values(subplot_args, "reset_ranges", "i", &reset_ranges) && reset_ranges) {
     if (args_values(subplot_args, "original_xrange", "dd", &x_min, &x_max) &&
         args_values(subplot_args, "original_yrange", "dd", &y_min, &y_max) &&
@@ -2390,9 +2392,6 @@ void plot_process_window(gr_meta_args_t *subplot_args) {
       args_remove(subplot_args, "original_adjust_ylim");
     }
     args_remove(subplot_args, "reset_ranges");
-  } else {
-    args_values(subplot_args, "xrange", "dd", &x_min, &x_max);
-    args_values(subplot_args, "yrange", "dd", &y_min, &y_max);
   }
   if (args_has_keyword(subplot_args, "panzoom")) {
     if (!args_has_keyword(subplot_args, "original_xrange")) {
