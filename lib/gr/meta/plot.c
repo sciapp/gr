@@ -47,8 +47,7 @@ static void test_line(void) {
   printf("Press any key to continue...\n");
   getchar();
 
-  /* TODO: In this case, `args` is already deleted in `gr_plotmeta` -> how should this be handled? */
-  /* gr_deletemeta(args); */
+  gr_deletemeta(args);
 }
 
 static void test_contourf(void) {
@@ -84,13 +83,13 @@ static void test_contourf(void) {
   printf("Press any key to continue...\n");
   getchar();
 
-  /* TODO: In this case, `args` is already deleted in `gr_plotmeta` -> how should this be handled? */
-  /* gr_deletemeta(args); */
+  gr_deletemeta(args);
 }
 
 static void test_plotmeta(void) {
   test_line();
   test_contourf();
+  gr_finalizemeta();
 }
 
 int main(void) {
