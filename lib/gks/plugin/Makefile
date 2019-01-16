@@ -136,28 +136,28 @@ qt5plugin.o: qt5plugin.cxx
 	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT5DEFS) $(QT5INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 x11plugin.so: x11plugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(FTLIBS) $(X11LIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 wxplugin.so: wxplugin.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(WXLIBS) $(X11LIBS) $(GKSLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(WXLIBS) $(X11LIBS) $(LIBS)
 
 qtplugin.so: qtplugin.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(EXTRA_LDFLAGS_QT4) $(QT4LIBS) $(X11LIBS) $(GKSLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(EXTRA_LDFLAGS_QT4) $(QT4LIBS) $(X11LIBS) $(LIBS)
 
 qt5plugin.so: qt5plugin.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(EXTRA_LDFLAGS_QT5) $(QT5LIBS) $(X11LIBS) $(GKSLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(EXTRA_LDFLAGS_QT5) $(QT5LIBS) $(X11LIBS) $(LIBS)
 
 svgplugin.so: svgplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gtkplugin.so: gtkplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GTKLIBS) $(X11LIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(GTKLIBS) $(X11LIBS) $(LIBS)
 
 figplugin.so: figplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gsplugin.so: gsplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GSLIBS) $(X11LIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(GSLIBS) $(X11LIBS) $(LIBS)
 
 wmfplugin.so: wmfplugin.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(LIBS)
@@ -167,28 +167,28 @@ quartzplugin.so: quartzplugin.o
 	-lobjc -framework Foundation -framework ApplicationServices -framework AppKit
 
 glplugin.so: glplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
 
 zmqplugin.so: zmqplugin.o
-	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(ZMQLIBS) $(GKSLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(ZMQLIBS) $(LIBS)
 
 movplugin.so: movplugin.o vc.o pdf.o gif.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 htmplugin.so: htmplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 pgfplugin.so: pgfplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.o: cairoplugin.c
 	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
 
 cairoplugin.so: cairoplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(CAIROLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(GKSLIBS) $(LIBS) -DNO_X11
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(CAIROLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
 
 videoplugin.so: videoplugin.o vc.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(GKSLIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)
