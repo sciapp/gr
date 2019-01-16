@@ -210,6 +210,10 @@ static void debug_printf(const char *format, ...)
 
 #define is_string_delimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr)-1) != '\\'))
 
+#ifndef array_size
+#define array_size(a) ((sizeof(a) / sizeof(*(a))))
+#endif
+
 #ifndef min
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 #endif
@@ -219,15 +223,17 @@ static void debug_printf(const char *format, ...)
 #endif
 
 /* test macros which can be used like `assert` */
-#define return_error_if(condition, error_value) \
-  do                                            \
-    {                                           \
-      if (condition)                            \
-        {                                       \
-          return (error_value);                 \
-        }                                       \
-    }                                           \
+#define return_error_if(condition, error_value)                                                    \
+  do                                                                                               \
+    {                                                                                              \
+      if (condition)                                                                               \
+        {                                                                                          \
+          logger((stderr, "Got error \"%d\" (\"%s\")!\n", error_value, error_names[error_value])); \
+          return (error_value);                                                                    \
+        }                                                                                          \
+    }                                                                                              \
   while (0)
+#define return_if_error return_error_if((error) != NO_ERROR, (error))
 #define goto_if(condition, goto_label) \
   do                                   \
     {                                  \
@@ -239,15 +245,35 @@ static void debug_printf(const char *format, ...)
   while (0)
 #define cleanup_if(condition) goto_if((condition), cleanup)
 #define error_cleanup_if(condition) goto_if((condition), error_cleanup)
-#define goto_and_set_error_if(condition, error_value, goto_label) \
-  do                                                              \
-    {                                                             \
-      if (condition)                                              \
-        {                                                         \
-          error = (error_value);                                  \
-          goto goto_label;                                        \
-        }                                                         \
-    }                                                             \
+#define goto_if_error(goto_label)                                                          \
+  do                                                                                       \
+    {                                                                                      \
+      if ((error) != NO_ERROR)                                                             \
+        {                                                                                  \
+          logger((stderr, "Got error \"%d\" (\"%s\")!\n", (error), error_names[(error)])); \
+          goto goto_label;                                                                 \
+        }                                                                                  \
+    }                                                                                      \
+  while (0)
+#define cleanup_if_error goto_if_error(cleanup)
+#define error_cleanup_if_error goto_if_error(error_cleanup)
+#define goto_and_set_error_if(condition, error_value, goto_label)                                      \
+  do                                                                                                   \
+    {                                                                                                  \
+      if (condition)                                                                                   \
+        {                                                                                              \
+          error = (error_value);                                                                       \
+          if (error == ERROR_MALLOC)                                                                   \
+            {                                                                                          \
+              debug_print_malloc_error();                                                              \
+            }                                                                                          \
+          else                                                                                         \
+            {                                                                                          \
+              logger((stderr, "Got error \"%d\" (\"%s\")!\n", error_value, error_names[error_value])); \
+            }                                                                                          \
+          goto goto_label;                                                                             \
+        }                                                                                              \
+    }                                                                                                  \
   while (0)
 #define cleanup_and_set_error_if(condition, error_value) goto_and_set_error_if((condition), (error_value), cleanup)
 #define error_cleanup_and_set_error_if(condition, error_value) \
@@ -366,46 +392,69 @@ DEFINE_STACK_DATATYPES(string, const char *)
 
 /* ------------------------- error handling ------------------------------------------------------------------------- */
 
+#define ENUM_ELEMENTS(X, Y)                           \
+  X(ERROR_UNSPECIFIED, 1)                             \
+  X(ERROR_INTERNAL, 2)                                \
+  X(ERROR_MALLOC, 3)                                  \
+  X(ERROR_UNSUPPORTED_OPERATION, 4)                   \
+  X(ERROR_UNSUPPORTED_DATATYPE, 5)                    \
+  X(ERROR_ARGS_INVALID_KEY, 6)                        \
+  X(ERROR_ARGS_INCREASING_NON_ARRAY_VALUE, 7)         \
+  X(ERROR_ARGS_INCREASING_MULTI_DIMENSIONAL_ARRAY, 8) \
+  X(ERROR_PARSE_NULL, 9)                              \
+  X(ERROR_PARSE_BOOL, 10)                             \
+  X(ERROR_PARSE_INT, 11)                              \
+  X(ERROR_PARSE_DOUBLE, 12)                           \
+  X(ERROR_PARSE_STRING, 13)                           \
+  X(ERROR_PARSE_ARRAY, 14)                            \
+  X(ERROR_PARSE_OBJECT, 15)                           \
+  X(ERROR_PARSE_UNKNOWN_DATATYPE, 16)                 \
+  X(ERROR_PARSE_INVALID_DELIMITER, 17)                \
+  X(ERROR_PARSE_INCOMPLETE_STRING, 18)                \
+  X(ERROR_PARSE_MISSING_OBJECT_CONTAINER, 19)         \
+  X(ERROR_NETWORK_WINSOCK_INIT, 20)                   \
+  X(ERROR_NETWORK_SOCKET_CREATION, 21)                \
+  X(ERROR_NETWORK_SOCKET_BIND, 22)                    \
+  X(ERROR_NETWORK_SOCKET_LISTEN, 23)                  \
+  X(ERROR_NETWORK_CONNECTION_ACCEPT, 24)              \
+  X(ERROR_NETWORK_HOSTNAME_RESOLUTION, 25)            \
+  X(ERROR_NETWORK_CONNECT, 26)                        \
+  X(ERROR_NETWORK_RECV, 27)                           \
+  X(ERROR_NETWORK_SEND, 28)                           \
+  X(ERROR_NETWORK_SOCKET_CLOSE, 29)                   \
+  X(ERROR_NETWORK_WINSOCK_CLEANUP, 30)                \
+  X(ERROR_CUSTOM_RECV, 31)                            \
+  X(ERROR_CUSTOM_SEND, 32)                            \
+  X(ERROR_PLOT_NORMALIZATION, 33)                     \
+  X(ERROR_PLOT_UNKNOWN_KEY, 34)                       \
+  X(ERROR_PLOT_UNKNOWN_KIND, 35)                      \
+  X(ERROR_PLOT_MISSING_DATA, 36)                      \
+  X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 37)         \
+  X(ERROR_PLOT_MISSING_LABELS, 38)                    \
+  X(ERROR_PLOT_INVALID_ID, 39)                        \
+  Y(ERROR_NOT_IMPLEMENTED, 40)
+
+#define ENUM_VALUE(name, value) name = value,
+#define ENUM_LAST_VALUE(name, value) name = value
+#define STRING_ARRAY_VALUE(name, value) #name,
+#define STRING_ARRAY_LAST_VALUE(name, value) #name
+
 typedef enum
 {
 #ifndef _WIN32 /* Windows uses `NO_ERROR` (= 0) for its own error codes */
-  NO_ERROR = 0,
+  ENUM_VALUE(NO_ERROR, 0)
 #endif
-  ERROR_UNSPECIFIED = 1,
-  ERROR_MALLOC,
-  ERROR_UNSUPPORTED_OPERATION,
-  ERROR_UNSUPPORTED_DATATYPE,
-  ERROR_PARSE_NULL,
-  ERROR_PARSE_BOOL,
-  ERROR_PARSE_INT,
-  ERROR_PARSE_DOUBLE,
-  ERROR_PARSE_STRING,
-  ERROR_PARSE_ARRAY,
-  ERROR_PARSE_OBJECT,
-  ERROR_PARSE_UNKNOWN_DATATYPE,
-  ERROR_PARSE_INVALID_DELIMITER,
-  ERROR_PARSE_INCOMPLETE_STRING,
-  ERROR_PARSE_MISSING_OBJECT_CONTAINER,
-  ERROR_NETWORK_WINSOCK_INIT,
-  ERROR_NETWORK_SOCKET_CREATION,
-  ERROR_NETWORK_SOCKET_BIND,
-  ERROR_NETWORK_SOCKET_LISTEN,
-  ERROR_NETWORK_CONNECTION_ACCEPT,
-  ERROR_NETWORK_HOSTNAME_RESOLUTION,
-  ERROR_NETWORK_CONNECT,
-  ERROR_NETWORK_RECV,
-  ERROR_NETWORK_SEND,
-  ERROR_NETWORK_SOCKET_CLOSE,
-  ERROR_NETWORK_WINSOCK_CLEANUP,
-  ERROR_CUSTOM_RECV,
-  ERROR_CUSTOM_SEND,
-  ERROR_PLOT_NORMALIZATION,
-  ERROR_PLOT_UNKNOWN_KIND,
-  ERROR_PLOT_MISSING_DATA,
-  ERROR_PLOT_COMPONENT_LENGTH_MISMATCH,
-  ERROR_PLOT_MISSING_LABELS,
-  ERROR_NOT_IMPLEMENTED
+      ENUM_ELEMENTS(ENUM_VALUE, ENUM_LAST_VALUE)
 } error_t;
+
+#ifndef NDEBUG
+const char *error_names[] = {STRING_ARRAY_VALUE(NO_ERROR, 0)
+                                 ENUM_ELEMENTS(STRING_ARRAY_VALUE, STRING_ARRAY_LAST_VALUE)};
+#endif
+
+#undef ENUM_ELEMENTS
+#undef ENUM_VALUE
+#undef STRING_ARRAY_VALUE
 
 
 /* ------------------------- value iterator ------------------------------------------------------------------------- */
@@ -607,26 +656,41 @@ typedef enum
 } gr_option_t;
 
 
-/* ------------------------- string-to-generic map ------------------------------------------------------------------ */
+/* ------------------------- generic set ---------------------------------------------------------------------------- */
 
-#define DECLARE_MAP_TYPE(prefix, value_type) \
-  typedef struct                             \
-  {                                          \
-    const char *key;                         \
-    value_type value;                        \
-  } prefix##_map_entry_t;                    \
+#define DECLARE_SET_TYPE(prefix, entry_type) \
+  typedef entry_type prefix##_set_entry_t;   \
                                              \
   typedef struct                             \
   {                                          \
-    prefix##_map_entry_t *map;               \
+    prefix##_set_entry_t *set;               \
+    unsigned char *used;                     \
     size_t capacity;                         \
     size_t size;                             \
-  } prefix##_map_t;
+  } prefix##_set_t;
 
-DECLARE_MAP_TYPE(fmt, const char *)
+DECLARE_SET_TYPE(args, gr_meta_args_t *)
+
+
+/* ------------------------- string-to-generic map ------------------------------------------------------------------ */
+
+#define DECLARE_MAP_TYPE(prefix, value_type)                     \
+  typedef struct                                                 \
+  {                                                              \
+    const char *key;                                             \
+    value_type value;                                            \
+  } prefix##_map_entry_t;                                        \
+                                                                 \
+  DECLARE_SET_TYPE(string_##prefix##_pair, prefix##_map_entry_t) \
+  typedef string_##prefix##_pair_set_t prefix##_map_t;
+
 DECLARE_MAP_TYPE(plot_func, plot_func_t)
+DECLARE_MAP_TYPE(string, char *)
+DECLARE_MAP_TYPE(uint, unsigned int)
+DECLARE_MAP_TYPE(args_set, args_set_t *)
 
 #undef DECLARE_MAP_TYPE
+#undef DECLARE_SET_TYPE
 
 
 /* ========================= functions ============================================================================== */
@@ -657,7 +721,7 @@ static int args_validate_format_string(const char *format);
 static const char *args_skip_option(const char *format);
 static void args_copy_format_string_for_arg(char *dst, const char *format);
 static void args_copy_format_string_for_parsing(char *dst, const char *format);
-static int args_check_format_compatibility(arg_t *arg, const char *compatible_format);
+static int args_check_format_compatibility(const arg_t *arg, const char *compatible_format);
 static void args_decrease_arg_reference_count(args_node_t *args_node);
 
 
@@ -670,7 +734,9 @@ static error_t plot_init_static_variables(void);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static error_t plot_merge_and_normalize_args(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args);
+static error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **hierarchy_name_ptr);
+static error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_name_start_ptr,
+                                        unsigned int next_hierarchy_level_max_id);
 static void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args);
 static void plot_pre_plot(gr_meta_args_t *subplot_args);
 static void plot_process_colormap(gr_meta_args_t *subplot_args);
@@ -678,6 +744,9 @@ static void plot_process_viewport(gr_meta_args_t *subplot_args);
 static void plot_process_window(gr_meta_args_t *subplot_args);
 static void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args);
 static void plot_post_plot(gr_meta_args_t *subplot_args);
+static error_t plot_get_args_in_hierarchy(gr_meta_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
+                                          const uint_map_t *hierarchy_to_id, const gr_meta_args_t **found_args,
+                                          const char ***found_hierarchy_ptr);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -713,8 +782,10 @@ static error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 static double find_max_step(unsigned int n, const double *x);
 static const char *next_fmt_key(const char *fmt);
+static int get_id_from_args(const gr_meta_args_t *args, unsigned int *subplot_id, unsigned int *series_id);
 
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
@@ -724,6 +795,7 @@ static int is_int_number(const char *str);
 static unsigned int str_to_uint(const char *str, int *was_successful);
 static int int_equals_any(int number, unsigned int n, ...);
 static int str_equals_any(const char *str, unsigned int n, ...);
+static int str_equals_any_in_array(const char *str, const char **str_array);
 static int uppercase_count(const char *str);
 static unsigned long next_or_equal_power2(unsigned long num);
 
@@ -734,6 +806,14 @@ static unsigned long next_or_equal_power2(unsigned long num);
 
 static args_value_iterator_t *arg_value_iter(const arg_t *arg);
 
+static error_t arg_increase_array(arg_t *arg, size_t increment);
+
+static int arg_first_value(const arg_t *arg, const char *first_value_format, void *first_value,
+                           unsigned int *array_length);
+#define arg_first_value(arg, first_value_format, first_value, array_length) \
+  arg_first_value(arg, first_value_format, (void *)first_value, array_length)
+static int arg_values(const arg_t *arg, const char *expected_format, ...);
+static int arg_values_vl(const arg_t *arg, const char *expected_format, va_list *vl);
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
@@ -741,19 +821,23 @@ static void args_init(gr_meta_args_t *args);
 static void args_finalize(gr_meta_args_t *args);
 
 static gr_meta_args_t *args_flatcopy(const gr_meta_args_t *args);
-static gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_copy_as_array);
+static gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_copy_as_array,
+                                 const char **ignore_keys);
 
 static error_t args_push_common(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
                                 va_list *vl, int apply_padding);
 static error_t args_push_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
+static error_t args_push_arg(gr_meta_args_t *args, arg_t *arg);
 static error_t args_update_many(gr_meta_args_t *args, const gr_meta_args_t *update_args);
-static error_t args_merge(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **merge_keys);
+static error_t args_merge(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char *const *merge_keys);
 static error_t args_setdefault_common(gr_meta_args_t *args, const char *key, const char *value_format,
                                       const void *buffer, va_list *vl, int apply_padding);
 static error_t args_setdefault(gr_meta_args_t *args, const char *key, const char *value_format, ...);
 static error_t args_setdefault_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
                                    int apply_padding);
 static error_t args_setdefault_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
+
+static error_t args_increase_array(gr_meta_args_t *args, const char *key, size_t increment);
 
 static unsigned int args_count(const gr_meta_args_t *args);
 
@@ -918,31 +1002,60 @@ static error_t sender_send_for_socket(metahandle_t *handle);
 static error_t sender_send_for_custom(metahandle_t *handle);
 
 
+/* ------------------------- generic set ---------------------------------------------------------------------------- */
+
+#define DECLARE_SET_METHODS(prefix)                                                                 \
+  static prefix##_set_t *prefix##_set_new(size_t capacity);                                         \
+  static prefix##_set_t *prefix##_set_new_with_data(size_t count, prefix##_set_entry_t *entries);   \
+  static prefix##_set_t *prefix##_set_copy(const prefix##_set_t *set);                              \
+  static void prefix##_set_delete(prefix##_set_t *set);                                             \
+  static int prefix##_set_add(prefix##_set_t *set, const prefix##_set_entry_t entry);               \
+  static int prefix##_set_find(const prefix##_set_t *set, const prefix##_set_entry_t entry,         \
+                               prefix##_set_entry_t *saved_entry);                                  \
+  static int prefix##_set_contains(const prefix##_set_t *set, const prefix##_set_entry_t entry);    \
+  static ssize_t prefix##_set_index(const prefix##_set_t *set, const prefix##_set_entry_t entry);   \
+                                                                                                    \
+  static int prefix##_set_entry_copy(prefix##_set_entry_t *copy, const prefix##_set_entry_t entry); \
+  static void prefix##_set_entry_delete(prefix##_set_entry_t entry);                                \
+  static size_t prefix##_set_entry_hash(const prefix##_set_entry_t entry);                          \
+  static int prefix##_set_entry_equals(const prefix##_set_entry_t entry1, const prefix##_set_entry_t entry2);
+
+DECLARE_SET_METHODS(args)
+
+
 /* ------------------------- string-to-generic map ------------------------------------------------------------------ */
 
-#define DECLARE_MAP_METHODS(prefix, value_type)                                                    \
-  static prefix##_map_t *prefix##_map_new(size_t capacity);                                        \
-  static prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries);  \
-  static void prefix##_map_delete(prefix##_map_t *prefix##_map);                                   \
-  static int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, value_type value); \
-  static value_type prefix##_map_at(prefix##_map_t *prefix##_map, const char *key);                \
-  static ssize_t prefix##_map_index(prefix##_map_t *prefix##_map, const char *key);
+#define DECLARE_MAP_METHODS(prefix, value_type)                                                                  \
+  DECLARE_SET_METHODS(string_##prefix##_pair)                                                                    \
+                                                                                                                 \
+  static prefix##_map_t *prefix##_map_new(size_t capacity);                                                      \
+  static prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries);                \
+  static void prefix##_map_delete(prefix##_map_t *prefix##_map);                                                 \
+  static int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, const value_type value);         \
+  static int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, const value_type value); \
+  static int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, value_type *value);            \
+                                                                                                                 \
+  static int prefix##_map_value_copy(value_type *copy, const value_type value);                                  \
+  static void prefix##_map_value_delete(value_type value);
 
-DECLARE_MAP_METHODS(fmt, const char *)
 DECLARE_MAP_METHODS(plot_func, plot_func_t)
+DECLARE_MAP_METHODS(string, char *)
+DECLARE_MAP_METHODS(uint, unsigned int)
+DECLARE_MAP_METHODS(args_set, args_set_t *)
 
 #undef DECLARE_MAP_METHODS
+#undef DECLARE_SET_METHODS
 
 
 /* ========================= static variables ======================================================================= */
 
 /* ------------------------- argument parsing ----------------------------------------------------------------------- */
 
-static int argparse_valid_format_specifier[128];
-static read_param_t argparse_format_specifier_to_read_callback[128];
-static delete_value_t argparse_format_specifier_to_delete_callback[128];
-static size_t argparse_format_specifier_to_size[128];
-static const char *argparse_format_specifiers_with_array_termination = "sa";
+static int argparse_valid_format[128];
+static read_param_t argparse_format_to_read_callback[128];
+static delete_value_t argparse_format_to_delete_callback[128];
+static size_t argparse_format_to_size[128];
+static int argparse_format_has_array_terminator[128];
 static int argparse_static_variables_initialized = 0;
 
 
@@ -950,6 +1063,7 @@ static int argparse_static_variables_initialized = 0;
 
 static const char *const ARGS_VALID_FORMAT_SPECIFIERS = "niIdDcCsSaA";
 static const char *const ARGS_VALID_DATA_FORMAT_SPECIFIERS = "idcsa"; /* Each specifier is also valid in upper case */
+static const char *const ARGS_MERGE_RECURSIVELY[] = {"subplots", NULL};
 
 
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
@@ -980,16 +1094,17 @@ static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static int plot_static_variables_initialized = 0;
+const char *plot_hierarchy_names[] = {"plot", "subplots", "series", NULL};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ args ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static gr_meta_args_t *subplots_args = NULL;
+static gr_meta_args_t *global_plot_args = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* TODO: Check format of: "heatmap", "hist", "isosurface", "imshow"  */
-static fmt_map_entry_t kind_to_fmt[] = {
+static string_map_entry_t kind_to_fmt[] = {
     {"line", "xys"},     {"hexbin", "xys"},     {"polar", "xys"},     {"shade", "xys"},    {"stem", "xys"},
     {"step", "xys"},     {"contour", "xyzc"},   {"contourf", "xyzc"}, {"tricont", "xyzc"}, {"trisurf", "xyzc"},
     {"surface", "xyzc"}, {"wireframe", "xyzc"}, {"plot3", "xyac"},    {"scatter", "xyac"}, {"scatter3", "xyac"},
@@ -1014,9 +1129,30 @@ static plot_func_map_entry_t kind_to_func[] = {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ maps ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static fmt_map_t *fmt_map = NULL;
+static string_map_t *fmt_map = NULL;
 static plot_func_map_t *plot_func_map = NULL;
+static string_map_t *plot_valid_keys_map = NULL;
 
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot merge ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", NULL};
+const char *plot_merge_clear_keys[] = {"series", NULL};
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* IMPORTANT: Every key should only be part of ONE array -> keys can be assigned to the right object, if a user sends a
+ * flat object that mixes keys of different hierarchies */
+
+const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
+const char *valid_subplot_keys[] = {"adjust_xlim", "adjust_ylim", "adjust_zlim", "colormap", "keep_aspect_ratio",
+                                    "kind",        "labels",      "levels",      "location", "nbins",
+                                    "panzoom",     "xbins",       "ybins",       "rotation", "series",
+                                    "step_where",  "subplot",     "tilt",        "xflip",    "xform",
+                                    "xlog",        "yflip",       "ylog",        "zflip",    "zlog",
+                                    NULL};
+const char *valid_series_keys[] = {"a", "c", "s", "spec", "u", "v", "x", "y", "z", NULL};
 
 /* ######################### public implementation ################################################################## */
 
@@ -1046,12 +1182,14 @@ void gr_finalizemeta(void)
 {
   if (plot_static_variables_initialized)
     {
-      gr_deletemeta(subplots_args);
-      subplots_args = NULL;
-      fmt_map_delete(fmt_map);
+      gr_deletemeta(global_plot_args);
+      global_plot_args = NULL;
+      string_map_delete(fmt_map);
       fmt_map = NULL;
       plot_func_map_delete(plot_func_map);
       plot_func_map = NULL;
+      string_map_delete(plot_valid_keys_map);
+      plot_valid_keys_map = NULL;
       plot_static_variables_initialized = 0;
     }
 }
@@ -1100,15 +1238,6 @@ void gr_meta_args_clear(gr_meta_args_t *args)
   args_init(args);
 }
 
-int gr_meta_args_merge(const gr_meta_args_t *args)
-{
-  if (plot_init_static_variables() != NO_ERROR)
-    {
-      return 0;
-    }
-  return plot_merge_and_normalize_args(subplots_args, args) == NO_ERROR;
-}
-
 void gr_meta_args_remove(gr_meta_args_t *args, const char *key)
 {
   args_node_t *tmp_node, *previous_node_by_keyword;
@@ -1144,28 +1273,42 @@ void gr_meta_args_remove(gr_meta_args_t *args, const char *key)
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
+int gr_mergemeta(const gr_meta_args_t *args)
+{
+  if (plot_init_static_variables() != NO_ERROR)
+    {
+      return 0;
+    }
+  if (args != NULL)
+    {
+      if (plot_merge_args(global_plot_args, args, NULL) != NO_ERROR)
+        {
+          return 0;
+        }
+    }
+
+  return 1;
+}
+
 int gr_plotmeta(const gr_meta_args_t *args)
 {
   gr_meta_args_t **current_subplot_args;
   plot_func_t plot_func;
   const char *kind = NULL;
 
-  if (plot_init_static_variables() != NO_ERROR)
+  if (!gr_mergemeta(args))
     {
       return 0;
     }
-  if (plot_merge_and_normalize_args(subplots_args, args) != NO_ERROR)
-    {
-      return 0;
-    }
-  args_first_value(subplots_args, "subplots", "A", &current_subplot_args, NULL);
+
+  args_first_value(global_plot_args, "subplots", "A", &current_subplot_args, NULL);
   while (*current_subplot_args != NULL)
     {
       plot_set_plot_attribute_defaults(*current_subplot_args);
       plot_pre_plot(*current_subplot_args);
       args_first_value(*current_subplot_args, "kind", "s", &kind, NULL);
       logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-      if ((plot_func = plot_func_map_at(plot_func_map, kind)) == NULL)
+      if (!plot_func_map_at(plot_func_map, kind, &plot_func))
         {
           return 0;
         }
@@ -1741,7 +1884,7 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
       argparse_read_next_option(&state, &current_format);
       state.save_buffer =
           ((char *)state.save_buffer) + argparse_calculate_needed_padding(state.save_buffer, state.current_format);
-      argparse_format_specifier_to_read_callback[(unsigned char)state.current_format](&state);
+      argparse_format_to_read_callback[(unsigned char)state.current_format](&state);
       state.next_is_array = 0;
       state.next_array_length = -1;
       if (strchr(ARGS_VALID_DATA_FORMAT_SPECIFIERS, tolower(*current_format)) != NULL)
@@ -2032,40 +2175,43 @@ void argparse_init_static_variables()
 {
   if (!argparse_static_variables_initialized)
     {
-      argparse_valid_format_specifier['n'] = 1;
-      argparse_valid_format_specifier['i'] = 1;
-      argparse_valid_format_specifier['I'] = 1;
-      argparse_valid_format_specifier['d'] = 1;
-      argparse_valid_format_specifier['D'] = 1;
-      argparse_valid_format_specifier['c'] = 1;
-      argparse_valid_format_specifier['C'] = 1;
-      argparse_valid_format_specifier['s'] = 1;
-      argparse_valid_format_specifier['S'] = 1;
-      argparse_valid_format_specifier['a'] = 1;
-      argparse_valid_format_specifier['A'] = 1;
+      argparse_valid_format['n'] = 1;
+      argparse_valid_format['i'] = 1;
+      argparse_valid_format['I'] = 1;
+      argparse_valid_format['d'] = 1;
+      argparse_valid_format['D'] = 1;
+      argparse_valid_format['c'] = 1;
+      argparse_valid_format['C'] = 1;
+      argparse_valid_format['s'] = 1;
+      argparse_valid_format['S'] = 1;
+      argparse_valid_format['a'] = 1;
+      argparse_valid_format['A'] = 1;
 
-      argparse_format_specifier_to_read_callback['i'] = argparse_read_int;
-      argparse_format_specifier_to_read_callback['d'] = argparse_read_double;
-      argparse_format_specifier_to_read_callback['c'] = argparse_read_char;
-      argparse_format_specifier_to_read_callback['s'] = argparse_read_string;
-      argparse_format_specifier_to_read_callback['a'] = argparse_read_gr_meta_args_ptr_t;
-      argparse_format_specifier_to_read_callback['n'] = argparse_read_default_array_length;
+      argparse_format_to_read_callback['i'] = argparse_read_int;
+      argparse_format_to_read_callback['d'] = argparse_read_double;
+      argparse_format_to_read_callback['c'] = argparse_read_char;
+      argparse_format_to_read_callback['s'] = argparse_read_string;
+      argparse_format_to_read_callback['a'] = argparse_read_gr_meta_args_ptr_t;
+      argparse_format_to_read_callback['n'] = argparse_read_default_array_length;
 
-      argparse_format_specifier_to_delete_callback['s'] = free;
-      argparse_format_specifier_to_delete_callback['a'] = (delete_value_t)gr_deletemeta;
+      argparse_format_to_delete_callback['s'] = free;
+      argparse_format_to_delete_callback['a'] = (delete_value_t)gr_deletemeta;
 
-      argparse_format_specifier_to_size['i'] = sizeof(int);
-      argparse_format_specifier_to_size['I'] = sizeof(int *);
-      argparse_format_specifier_to_size['d'] = sizeof(double);
-      argparse_format_specifier_to_size['D'] = sizeof(double *);
-      argparse_format_specifier_to_size['c'] = sizeof(char);
-      argparse_format_specifier_to_size['C'] = sizeof(char *);
-      argparse_format_specifier_to_size['s'] = sizeof(char *);
-      argparse_format_specifier_to_size['S'] = sizeof(char **);
-      argparse_format_specifier_to_size['a'] = sizeof(gr_meta_args_t *);
-      argparse_format_specifier_to_size['A'] = sizeof(gr_meta_args_t **);
-      argparse_format_specifier_to_size['n'] = 0; /* size for array length is reserved by an array call itself */
-      argparse_format_specifier_to_size['#'] = sizeof(size_t); /* only used internally */
+      argparse_format_to_size['i'] = sizeof(int);
+      argparse_format_to_size['I'] = sizeof(int *);
+      argparse_format_to_size['d'] = sizeof(double);
+      argparse_format_to_size['D'] = sizeof(double *);
+      argparse_format_to_size['c'] = sizeof(char);
+      argparse_format_to_size['C'] = sizeof(char *);
+      argparse_format_to_size['s'] = sizeof(char *);
+      argparse_format_to_size['S'] = sizeof(char **);
+      argparse_format_to_size['a'] = sizeof(gr_meta_args_t *);
+      argparse_format_to_size['A'] = sizeof(gr_meta_args_t **);
+      argparse_format_to_size['n'] = 0;              /* size for array length is reserved by an array call itself */
+      argparse_format_to_size['#'] = sizeof(size_t); /* only used internally */
+
+      argparse_format_has_array_terminator['s'] = 1;
+      argparse_format_has_array_terminator['a'] = 1;
 
       argparse_static_variables_initialized = 1;
     }
@@ -2079,11 +2225,11 @@ size_t argparse_calculate_needed_buffer_size(const char *format, int apply_paddi
 
   needed_size = 0;
   is_array = 0;
-  if (strlen(format) > 1 && strchr(argparse_format_specifiers_with_array_termination, *format) != NULL)
+  if (strlen(format) > 1 && argparse_format_has_array_terminator[*format])
     {
       /* Add size for a NULL pointer terminator in the buffer itself because it will be converted to an array buffer
        * later (-> see `argparse_convert_to_array`) */
-      size_for_current_specifier = argparse_format_specifier_to_size[(unsigned char)*format];
+      size_for_current_specifier = argparse_format_to_size[(unsigned char)*format];
       needed_size = size_for_current_specifier;
     }
   while (*format)
@@ -2104,7 +2250,7 @@ size_t argparse_calculate_needed_buffer_size(const char *format, int apply_paddi
         }
       while (current_format)
         {
-          size_for_current_specifier = argparse_format_specifier_to_size[(unsigned char)current_format];
+          size_for_current_specifier = argparse_format_to_size[(unsigned char)current_format];
           if (apply_padding)
             {
               /* apply needed padding for memory alignment first */
@@ -2133,7 +2279,7 @@ size_t argparse_calculate_needed_padding(void *buffer, char current_format)
   int size_for_current_specifier;
   int needed_padding;
 
-  size_for_current_specifier = argparse_format_specifier_to_size[(unsigned char)current_format];
+  size_for_current_specifier = argparse_format_to_size[(unsigned char)current_format];
   if (size_for_current_specifier > 0)
     {
       needed_padding = size_for_current_specifier - ((char *)buffer - (char *)0) % size_for_current_specifier;
@@ -2220,7 +2366,7 @@ char *argparse_convert_to_array(argparse_state_t *state)
   *size_t_typed_buffer = state->dataslot_count;
   general_typed_buffer = (void ***)(size_t_typed_buffer + 1);
   *general_typed_buffer = state->save_buffer;
-  if (strchr(argparse_format_specifiers_with_array_termination, state->current_format) != NULL)
+  if (argparse_format_has_array_terminator[state->current_format])
     {
       (*general_typed_buffer)[*size_t_typed_buffer] = NULL;
     }
@@ -2487,7 +2633,7 @@ void args_copy_format_string_for_arg(char *dst, const char *format)
   *dst = '\0';
 }
 
-int args_check_format_compatibility(arg_t *arg, const char *compatible_format)
+int args_check_format_compatibility(const arg_t *arg, const char *compatible_format)
 {
   char first_compatible_format_char, first_value_format_char;
   const char *current_format_ptr;
@@ -2567,22 +2713,22 @@ void args_decrease_arg_reference_count(args_node_t *args_node)
           /* use a char pointer since chars have no memory alignment restrictions */
           if (value_it->is_array)
             {
-              if (argparse_format_specifier_to_delete_callback[(int)value_it->format] != NULL)
+              if (argparse_format_to_delete_callback[(int)value_it->format] != NULL)
                 {
                   char **current_value_ptr = *(char ***)value_it->value_ptr;
                   while (*current_value_ptr != NULL)
                     {
-                      argparse_format_specifier_to_delete_callback[(int)value_it->format](*current_value_ptr);
+                      argparse_format_to_delete_callback[(int)value_it->format](*current_value_ptr);
                       /* cast to (char *) to allow pointer increment by bytes */
-                      current_value_ptr = (char **)((char *)current_value_ptr +
-                                                    argparse_format_specifier_to_size[(int)value_it->format]);
+                      current_value_ptr =
+                          (char **)((char *)current_value_ptr + argparse_format_to_size[(int)value_it->format]);
                     }
                 }
               free(*(char ***)value_it->value_ptr);
             }
-          else if (argparse_format_specifier_to_delete_callback[(int)value_it->format] != NULL)
+          else if (argparse_format_to_delete_callback[(int)value_it->format] != NULL)
             {
-              argparse_format_specifier_to_delete_callback[(int)value_it->format](*(char **)value_it->value_ptr);
+              argparse_format_to_delete_callback[(int)value_it->format](*(char **)value_it->value_ptr);
             }
         }
       args_value_iterator_delete(value_it);
@@ -2601,40 +2747,52 @@ void args_decrease_arg_reference_count(args_node_t *args_node)
 
 error_t plot_init_static_variables(void)
 {
+  error_t error = NO_ERROR;
+
   if (!plot_static_variables_initialized)
     {
       logger((stderr, "Initializing static plot variables\n"));
-      subplots_args = gr_newmeta();
-      if (subplots_args == NULL)
-        {
-          debug_print_malloc_error();
-          goto error_cleanup;
-        }
-      fmt_map = fmt_map_new_with_data(sizeof(kind_to_fmt) / sizeof(kind_to_fmt[0]), kind_to_fmt);
-      if (fmt_map == NULL)
-        {
-          debug_print_malloc_error();
-          goto error_cleanup;
-        }
-      plot_func_map = plot_func_map_new_with_data(sizeof(kind_to_func) / sizeof(kind_to_func[0]), kind_to_func);
-      if (plot_func_map == NULL)
-        {
-          debug_print_malloc_error();
-          goto error_cleanup;
-        }
+      global_plot_args = gr_newmeta();
+      error_cleanup_and_set_error_if(global_plot_args == NULL, ERROR_MALLOC);
+      error = plot_init_args_structure(global_plot_args, plot_hierarchy_names, 1);
+      error_cleanup_if_error;
+      fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
+      error_cleanup_and_set_error_if(fmt_map == NULL, ERROR_MALLOC);
+      plot_func_map = plot_func_map_new_with_data(array_size(kind_to_func), kind_to_func);
+      error_cleanup_and_set_error_if(plot_func_map == NULL, ERROR_MALLOC);
+      {
+        const char **hierarchy_keys[] = {valid_plot_keys, valid_subplot_keys, valid_series_keys, NULL};
+        const char **hierarchy_names_ptr, ***hierarchy_keys_ptr, **current_key_ptr;
+        plot_valid_keys_map = string_map_new(array_size(valid_plot_keys) + array_size(valid_subplot_keys) +
+                                             array_size(valid_series_keys));
+        error_cleanup_and_set_error_if(plot_valid_keys_map == NULL, ERROR_MALLOC);
+        hierarchy_keys_ptr = hierarchy_keys;
+        hierarchy_names_ptr = plot_hierarchy_names;
+        while (*hierarchy_names_ptr != NULL && *hierarchy_keys_ptr != NULL)
+          {
+            current_key_ptr = *hierarchy_keys_ptr;
+            while (*current_key_ptr != NULL)
+              {
+                string_map_insert(plot_valid_keys_map, *current_key_ptr, *hierarchy_names_ptr);
+                ++current_key_ptr;
+              }
+            ++hierarchy_names_ptr;
+            ++hierarchy_keys_ptr;
+          }
+      }
       plot_static_variables_initialized = 1;
     }
   return NO_ERROR;
 
 error_cleanup:
-  if (subplots_args != NULL)
+  if (global_plot_args != NULL)
     {
-      gr_deletemeta(subplots_args);
-      subplots_args = NULL;
+      gr_deletemeta(global_plot_args);
+      global_plot_args = NULL;
     }
   if (fmt_map != NULL)
     {
-      fmt_map_delete(fmt_map);
+      string_map_delete(fmt_map);
       fmt_map = NULL;
     }
   if (plot_func_map != NULL)
@@ -2642,55 +2800,265 @@ error_cleanup:
       plot_func_map_delete(plot_func_map);
       plot_func_map = NULL;
     }
-  return ERROR_MALLOC;
+  if (plot_valid_keys_map != NULL)
+    {
+      string_map_delete(plot_valid_keys_map);
+      plot_valid_keys_map = NULL;
+    }
+  return error;
 }
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_merge_and_normalize_args(gr_meta_args_t *normalized_args, const gr_meta_args_t *user_args)
+error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **hierarchy_name_ptr)
 {
-  gr_meta_args_t *copied_args = NULL, **subplot_args_array = NULL;
-  const char *keys_copy_as_array[] = {"subplots", "series", NULL};
-  const char *merge_keys[] = {"subplots", NULL};
+  static uint_map_t *hierarchy_to_id = NULL;
+  static args_set_map_t *key_to_cleared_args = NULL;
+  static int recursion_level = -1;
+  unsigned int subplot_id, series_id;
+  args_iterator_t *merge_it = NULL;
+  arg_t *arg, *merge_arg;
+  args_value_iterator_t *value_it = NULL, *merge_value_it = NULL;
+  const char **current_hierarchy_name_ptr;
+  gr_meta_args_t **args_array, **merge_args_array, *current_args;
+  unsigned int i;
   error_t error = NO_ERROR;
 
-  logger((stderr, "Normalize plot args\n"));
-
-  copied_args = args_copy(user_args, keys_copy_as_array);
-  return_error_if(copied_args == NULL, ERROR_MALLOC);
-  if ((gr_meta_args_contains(user_args, "subplots")))
+  ++recursion_level;
+  if (hierarchy_name_ptr == NULL)
     {
-      error = args_merge(normalized_args, copied_args, merge_keys);
+      hierarchy_name_ptr = plot_hierarchy_names;
     }
-  else if ((gr_meta_args_contains(user_args, "series")))
+  if (hierarchy_to_id == NULL)
     {
-      if ((args_values(normalized_args, "subplots", "A", &subplot_args_array)))
-        {
-          error = args_merge(*subplot_args_array, copied_args, merge_keys);
-        }
-      else
-        {
-          error = gr_meta_args_push(normalized_args, "subplots", "A(1)", &copied_args) ? NO_ERROR : ERROR_MALLOC;
-          cleanup_if(error != NO_ERROR);
-        }
-      copied_args = NULL;
+      hierarchy_to_id = uint_map_new(array_size(plot_hierarchy_names));
+      cleanup_and_set_error_if(hierarchy_to_id == NULL, ERROR_MALLOC);
+    }
+  if (key_to_cleared_args == NULL)
+    {
+      key_to_cleared_args = args_set_map_new(array_size(plot_merge_clear_keys));
+      cleanup_and_set_error_if(hierarchy_to_id == NULL, ERROR_MALLOC);
+    }
+  get_id_from_args(merge_args, &subplot_id, &series_id);
+  if (subplot_id > 0)
+    {
+      uint_map_insert(hierarchy_to_id, "subplots", subplot_id);
     }
   else
     {
-      gr_meta_args_t *subplot_args = gr_newmeta();
-      cleanup_and_set_error_if(subplot_args == NULL, ERROR_MALLOC);
-      error = gr_meta_args_push(subplot_args, "series", "A(1)", &copied_args) ? NO_ERROR : ERROR_MALLOC;
-      cleanup_if(error != NO_ERROR);
-      error = gr_meta_args_push(normalized_args, "subplots", "A(1)", &subplot_args) ? NO_ERROR : ERROR_MALLOC;
-      cleanup_if(error != NO_ERROR);
-      copied_args = NULL;
+      uint_map_insert_default(hierarchy_to_id, "subplots", 1);
+    }
+  if (series_id > 0)
+    {
+      uint_map_insert(hierarchy_to_id, "series", series_id);
+    }
+  else
+    {
+      uint_map_insert_default(hierarchy_to_id, "series", 1);
+    }
+  merge_it = args_iter(merge_args);
+  cleanup_and_set_error_if(merge_it == NULL, ERROR_MALLOC);
+  while ((merge_arg = merge_it->next(merge_it)) != NULL)
+    {
+      if (str_equals_any_in_array(merge_arg->key, plot_merge_ignore_keys))
+        {
+          continue;
+        }
+      /* First, find the correct hierarchy level where the current merge value belongs to. */
+      error = plot_get_args_in_hierarchy(args, hierarchy_name_ptr, merge_arg->key, hierarchy_to_id,
+                                         (const gr_meta_args_t **)&current_args, &current_hierarchy_name_ptr);
+      if (error == ERROR_PLOT_UNKNOWN_KEY)
+        {
+          logger((stderr, "WARNING: The key \"%s\" is not assigned to any hierarchy level.\n", merge_arg->key));
+        }
+      cleanup_if_error;
+      if (str_equals_any_in_array(*current_hierarchy_name_ptr, plot_merge_clear_keys))
+        {
+          int clear_args = 1;
+          args_set_t *cleared_args = NULL;
+          if (args_set_map_at(key_to_cleared_args, *current_hierarchy_name_ptr, &cleared_args))
+            {
+              clear_args = !args_set_contains(cleared_args, current_args);
+            }
+          if (clear_args)
+            {
+              logger((stderr, "Perform a clear on the current args container\n"));
+              gr_meta_args_clear(current_args);
+              if (cleared_args == NULL)
+                {
+                  cleared_args = args_set_new(10); /* FIXME: do not use a magic number, use a growbable set instead! */
+                  cleanup_and_set_error_if(cleared_args == NULL, ERROR_MALLOC);
+                  cleanup_and_set_error_if(
+                      !args_set_map_insert(key_to_cleared_args, *current_hierarchy_name_ptr, cleared_args),
+                      ERROR_INTERNAL);
+                }
+              logger((stderr, "Add args container \"%p\" to cleared args with key \"%s\"\n", (void *)current_args,
+                      *current_hierarchy_name_ptr));
+              cleanup_and_set_error_if(!args_set_add(cleared_args, current_args), ERROR_INTERNAL);
+            }
+        }
+      /* If the current key is a hierarchy key, perform a merge. Otherwise (else branch) put the value in without a
+       * merge.
+       */
+      if (hierarchy_name_ptr[1] != NULL && str_equals_any_in_array(merge_arg->key, hierarchy_name_ptr + 1))
+        {
+          /* `args_at` cannot fail in this case because the `args` object was initialized with an empty structure
+           * before. If `arg` is NULL, an internal error occurred. */
+          arg = args_at(current_args, merge_arg->key);
+          cleanup_and_set_error_if(arg == NULL, ERROR_INTERNAL);
+          value_it = arg_value_iter(arg);
+          merge_value_it = arg_value_iter(merge_arg);
+          cleanup_and_set_error_if(value_it == NULL, ERROR_MALLOC);
+          cleanup_and_set_error_if(merge_value_it == NULL, ERROR_MALLOC);
+          /* Do not support two dimensional argument arrays like `nAnA`) -> a loop would be needed with more memory
+           * management */
+          cleanup_and_set_error_if(value_it->next(value_it) == NULL, ERROR_MALLOC);
+          cleanup_and_set_error_if(merge_value_it->next(merge_value_it) == NULL, ERROR_MALLOC);
+          /* Increase the array size of the internal args array if necessary */
+          if (merge_value_it->array_length > value_it->array_length)
+            {
+              error = plot_init_args_structure(current_args, current_hierarchy_name_ptr, merge_value_it->array_length);
+              cleanup_if_error;
+              args_value_iterator_delete(value_it);
+              value_it = arg_value_iter(arg);
+              cleanup_and_set_error_if(value_it == NULL, ERROR_MALLOC);
+              cleanup_and_set_error_if(value_it->next(value_it) == NULL, ERROR_MALLOC);
+              args_array = *(gr_meta_args_t ***)value_it->value_ptr;
+            }
+          else
+            {
+              /* The internal args container stores always an array for hierarchy levels */
+              args_array = *(gr_meta_args_t ***)value_it->value_ptr;
+            }
+          if (merge_value_it->is_array)
+            {
+              merge_args_array = *(gr_meta_args_t ***)merge_value_it->value_ptr;
+            }
+          else
+            {
+              merge_args_array = (gr_meta_args_t **)merge_value_it->value_ptr;
+            }
+          /* Merge array entries pairwise */
+          for (i = 0; i < merge_value_it->array_length; ++i)
+            {
+              logger((stderr, "Perform a recursive merge on key \"%s\", array index \"%d\"\n", merge_arg->key, i));
+              error = plot_merge_args(args_array[i], merge_args_array[i], current_hierarchy_name_ptr + 1);
+              cleanup_if_error;
+            }
+        }
+      else
+        {
+          logger((stderr, "Perform a replace on key \"%s\"\n", merge_arg->key));
+          error = args_push_arg(current_args, merge_arg);
+          cleanup_if_error;
+        }
     }
 
 cleanup:
-  if (copied_args != NULL)
+  if (recursion_level == 0)
     {
-      gr_deletemeta(copied_args);
+      if (hierarchy_to_id != NULL)
+        {
+          uint_map_delete(hierarchy_to_id);
+          hierarchy_to_id = NULL;
+        }
+      if (key_to_cleared_args != NULL)
+        {
+          args_set_t *cleared_args = NULL;
+          const char **current_key_ptr = plot_merge_clear_keys;
+          while (*current_key_ptr != NULL)
+            {
+              if (args_set_map_at(key_to_cleared_args, *current_key_ptr, &cleared_args))
+                {
+                  args_set_delete(cleared_args);
+                }
+              ++current_key_ptr;
+            }
+          args_set_map_delete(key_to_cleared_args);
+          key_to_cleared_args = NULL;
+        }
+    }
+  if (merge_it != NULL)
+    {
+      args_iterator_delete(merge_it);
+    }
+  if (value_it != NULL)
+    {
+      args_value_iterator_delete(value_it);
+    }
+  if (merge_value_it != NULL)
+    {
+      args_value_iterator_delete(merge_value_it);
+    }
+
+  --recursion_level;
+
+  return error;
+}
+
+error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_name_ptr,
+                                 unsigned int next_hierarchy_level_max_id)
+{
+  arg_t *arg = NULL;
+  gr_meta_args_t **args_array = NULL;
+  unsigned int args_old_array_length;
+  unsigned int i;
+  error_t error = NO_ERROR;
+
+  logger((stderr, "Init plot args structure for hierarchy: \"%s\"\n", *hierarchy_name_ptr));
+
+  ++hierarchy_name_ptr;
+  if (*hierarchy_name_ptr == NULL)
+    {
+      return NO_ERROR;
+    }
+  arg = args_at(args, *hierarchy_name_ptr);
+  if (arg == NULL)
+    {
+      args_array = calloc(next_hierarchy_level_max_id, sizeof(gr_meta_args_t *));
+      error_cleanup_and_set_error_if(args_array == NULL, ERROR_MALLOC);
+      for (i = 0; i < next_hierarchy_level_max_id; ++i)
+        {
+          args_array[i] = gr_newmeta();
+          error_cleanup_and_set_error_if(args_array[i] == NULL, ERROR_MALLOC);
+          error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
+          error_cleanup_if_error;
+        }
+      gr_meta_args_push(args, *hierarchy_name_ptr, "nA", next_hierarchy_level_max_id, args_array);
+      free(args_array);
+      args_array = NULL;
+    }
+  else
+    {
+      arg_first_value(arg, "A", NULL, &args_old_array_length);
+      logger((stderr, "Increase array for key \"%s\" from %d to %d\n", *hierarchy_name_ptr, args_old_array_length,
+              next_hierarchy_level_max_id));
+      error = arg_increase_array(arg, next_hierarchy_level_max_id - args_old_array_length);
+      return_if_error;
+      arg_values(arg, "A", &args_array);
+      for (i = args_old_array_length; i < next_hierarchy_level_max_id; ++i)
+        {
+          args_array[i] = gr_newmeta();
+          return_error_if(args_array[i] == NULL, ERROR_MALLOC);
+          error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
+          error_cleanup_if_error;
+        }
+    }
+
+  return NO_ERROR;
+
+error_cleanup:
+  if (args_array != NULL)
+    {
+      for (i = 0; i < next_hierarchy_level_max_id; ++i)
+        {
+          if (args_array[i] != NULL)
+            {
+              gr_deletemeta(args_array[i]);
+            }
+        }
+      free(args_array);
     }
 
   return error;
@@ -3221,7 +3589,7 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args)
   /* TODO: support that single `lim` values are `null` / unset! */
 
   args_first_value(subplot_args, "kind", "s", &kind, NULL);
-  fmt = fmt_map_at(fmt_map, kind);
+  string_map_at(fmt_map, kind, (char **)&fmt); /* TODO: check if the map access was successful */
   current_range_keys = range_keys;
   current_component_name = data_component_names;
   while (*current_component_name != NULL)
@@ -3319,6 +3687,53 @@ void plot_post_plot(gr_meta_args_t *subplot_args)
     {
       gr_updatews();
     }
+}
+
+error_t plot_get_args_in_hierarchy(gr_meta_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
+                                   const uint_map_t *hierarchy_to_id, const gr_meta_args_t **found_args,
+                                   const char ***found_hierarchy_name_ptr)
+{
+  const char *key_hierarchy_name, **current_hierarchy_name_ptr;
+  gr_meta_args_t *current_args, **args_array;
+  arg_t *current_arg;
+  unsigned int args_array_length, current_id;
+
+  logger((stderr, "Check hierarchy level for key \"%s\"...\n", key));
+  return_error_if(!string_map_at(plot_valid_keys_map, key, (char **)&key_hierarchy_name), ERROR_PLOT_UNKNOWN_KEY);
+  logger((stderr, "... got hierarchy \"%s\"\n", key_hierarchy_name));
+  current_hierarchy_name_ptr = hierarchy_name_start_ptr;
+  current_args = args;
+  if (strcmp(*hierarchy_name_start_ptr, key_hierarchy_name) != 0)
+    {
+      while (*++current_hierarchy_name_ptr != NULL)
+        {
+          current_arg = args_at(current_args, *current_hierarchy_name_ptr);
+          return_error_if(current_arg == NULL, ERROR_INTERNAL);
+          arg_first_value(current_arg, "A", &args_array, &args_array_length);
+          uint_map_at(hierarchy_to_id, *current_hierarchy_name_ptr, &current_id);
+          if (current_id > args_array_length)
+            {
+              plot_init_args_structure(current_args, current_hierarchy_name_ptr - 1, current_id);
+              arg_first_value(current_arg, "A", &args_array, &args_array_length);
+            }
+          current_args = args_array[current_id - 1];
+          if (strcmp(*current_hierarchy_name_ptr, key_hierarchy_name) == 0)
+            {
+              break;
+            }
+        }
+      return_error_if(*current_hierarchy_name_ptr == NULL, ERROR_INTERNAL);
+    }
+  if (found_args != NULL)
+    {
+      *found_args = current_args;
+    }
+  if (found_hierarchy_name_ptr != NULL)
+    {
+      *found_hierarchy_name_ptr = current_hierarchy_name_ptr;
+    }
+
+  return NO_ERROR;
 }
 
 
@@ -4094,7 +4509,7 @@ error_t plot_shade(gr_meta_args_t *subplot_args)
   const char *data_component_names[] = {"x", "y", NULL};
   double *components[2];
   char *spec = ""; /* TODO: read spec from data! */
-  int xform, width, height;
+  int xform, xbins, ybins;
   double **current_component = components;
   const char **current_component_name = data_component_names;
   unsigned int point_count;
@@ -4110,15 +4525,15 @@ error_t plot_shade(gr_meta_args_t *subplot_args)
     {
       xform = 1;
     }
-  if (!args_first_value(subplot_args, "width", "i", &width, NULL))
+  if (!args_first_value(subplot_args, "xbins", "i", &xbins, NULL))
     {
-      width = 100;
+      xbins = 100;
     }
-  if (!args_first_value(subplot_args, "height", "i", &height, NULL))
+  if (!args_first_value(subplot_args, "ybins", "i", &ybins, NULL))
     {
-      height = 100;
+      ybins = 100;
     }
-  gr_shadepoints(point_count, components[0], components[1], xform, width, height);
+  gr_shadepoints(point_count, components[0], components[1], xform, xbins, ybins);
 
   return NO_ERROR;
 }
@@ -4476,7 +4891,7 @@ const char *next_fmt_key(const char *kind)
 
   if (kind != NULL)
     {
-      saved_fmt = fmt_map_at(fmt_map, kind);
+      string_map_at(fmt_map, kind, (char **)&saved_fmt);
     }
   if (saved_fmt == NULL)
     {
@@ -4489,6 +4904,31 @@ const char *next_fmt_key(const char *kind)
     }
 
   return fmt_key;
+}
+
+int get_id_from_args(const gr_meta_args_t *args, unsigned int *subplot_id, unsigned int *series_id)
+{
+  const char *combined_id;
+  unsigned int _subplot_id = 0, _series_id = 0;
+
+  if (args_values(args, "id", "s", &combined_id))
+    {
+      int count_values_read;
+      count_values_read = sscanf(combined_id, "%u.%u", &_subplot_id, &_series_id);
+      if (count_values_read == 0)
+        {
+          logger((stderr, "Got an invalid id \"%s\"\n", combined_id));
+        }
+    }
+  else
+    {
+      args_values(args, "subplot_id", "i", &_subplot_id);
+      args_values(args, "series_id", "i", &_series_id);
+    }
+  *subplot_id = _subplot_id;
+  *series_id = _series_id;
+
+  return _subplot_id > 0 || _series_id > 0;
 }
 
 
@@ -4584,7 +5024,7 @@ int str_equals_any(const char *str, unsigned int n, ...)
   for (i = 0; i < n; i++)
     {
       current_str = va_arg(vl, char *);
-      if (!strcmp(str, current_str))
+      if (strcmp(str, current_str) == 0)
         {
           any_is_equal = 1;
           break;
@@ -4594,6 +5034,28 @@ int str_equals_any(const char *str, unsigned int n, ...)
 
   return any_is_equal;
 }
+
+int str_equals_any_in_array(const char *str, const char **str_array)
+{
+  /* `str_array` must be NULL terminated */
+  const char **current_str_ptr;
+  int any_is_equal;
+
+  any_is_equal = 0;
+  current_str_ptr = str_array;
+  while (*current_str_ptr != NULL)
+    {
+      if (strcmp(str, *current_str_ptr) == 0)
+        {
+          any_is_equal = 1;
+          break;
+        }
+      ++current_str_ptr;
+    }
+
+  return any_is_equal;
+}
+
 int uppercase_count(const char *str)
 {
   int uppercase_count = 0;
@@ -4646,6 +5108,236 @@ args_value_iterator_t *arg_value_iter(const arg_t *arg)
   return args_value_iterator_new(arg);
 }
 
+error_t arg_increase_array(arg_t *arg, size_t increment)
+{
+  size_t *current_size_ptr, new_size;
+  void ***current_buffer_ptr, **new_buffer;
+  int has_array_terminator;
+
+  return_error_if(arg->value_format[0] != 'n', ERROR_ARGS_INCREASING_NON_ARRAY_VALUE);
+  /* Currently, only one dimensional arrays can be increased */
+  return_error_if(strlen(arg->value_format) != 2, ERROR_ARGS_INCREASING_MULTI_DIMENSIONAL_ARRAY);
+
+  has_array_terminator = argparse_format_has_array_terminator[tolower(arg->value_format[1])];
+
+  current_size_ptr = (size_t *)arg->value_ptr;
+  current_buffer_ptr = (void ***)(current_size_ptr + 1);
+
+  new_size = *current_size_ptr + increment;
+  new_buffer = realloc(*current_buffer_ptr, sizeof(void *) * (new_size + (has_array_terminator ? 1 : 0)));
+  return_error_if(new_buffer == NULL, ERROR_MALLOC);
+
+  if (has_array_terminator)
+    {
+      unsigned int i;
+      for (i = *current_size_ptr + 1; i < new_size + 1; ++i)
+        {
+          new_buffer[i] = NULL;
+        }
+    }
+
+  *current_size_ptr = new_size;
+  *current_buffer_ptr = new_buffer;
+
+  return NO_ERROR;
+}
+
+int(arg_first_value)(const arg_t *arg, const char *first_value_format, void *first_value, unsigned int *array_length)
+{
+  char *transformed_first_value_format;
+  char first_value_type;
+  size_t *size_t_typed_value_ptr;
+  void *value_ptr;
+
+  transformed_first_value_format = malloc(2 * strlen(first_value_format) + 1);
+  if (transformed_first_value_format == NULL)
+    {
+      debug_print_malloc_error();
+      return 0;
+    }
+  args_copy_format_string_for_arg(transformed_first_value_format, first_value_format);
+  /* check if value_format does not start with the transformed first_value_format */
+  if (strncmp(arg->value_format, transformed_first_value_format, strlen(transformed_first_value_format)) != 0)
+    {
+      free(transformed_first_value_format);
+      return 0;
+    }
+  free(transformed_first_value_format);
+  first_value_type = (arg->value_format[0] != 'n') ? arg->value_format[0] : arg->value_format[1];
+  if (islower(first_value_type))
+    {
+      value_ptr = arg->value_ptr;
+    }
+  else
+    {
+      size_t_typed_value_ptr = arg->value_ptr;
+      if (array_length != NULL)
+        {
+          *array_length = *size_t_typed_value_ptr;
+        }
+      value_ptr = (size_t_typed_value_ptr + 1);
+    }
+  if (first_value != NULL)
+    {
+      if (isupper(first_value_type))
+        {
+          /* if the first value is an array simple store the pointer; the type the pointer is pointing to is unimportant
+           * in this case so use a void pointer conversion to shorten the code */
+          *(void **)first_value = *(void **)value_ptr;
+        }
+      else
+        {
+          switch (first_value_type)
+            {
+            case 'i':
+              *(int *)first_value = *(int *)value_ptr;
+              break;
+            case 'd':
+              *(double *)first_value = *(double *)value_ptr;
+              break;
+            case 'c':
+              *(char *)first_value = *(char *)value_ptr;
+              break;
+            case 's':
+              *(char **)first_value = *(char **)value_ptr;
+              break;
+            case 'a':
+              *(gr_meta_args_t **)first_value = *(gr_meta_args_t **)value_ptr;
+              break;
+            default:
+              return 0;
+            }
+        }
+    }
+  return 1;
+}
+
+int arg_values(const arg_t *arg, const char *expected_format, ...)
+{
+  va_list vl;
+  int was_successful;
+
+  va_start(vl, expected_format);
+
+  was_successful = arg_values_vl(arg, expected_format, &vl);
+
+  va_end(vl);
+
+  return was_successful;
+}
+
+int arg_values_vl(const arg_t *arg, const char *expected_format, va_list *vl)
+{
+  args_value_iterator_t *value_it = NULL;
+  const char *current_va_format;
+  int formats_are_equal = 0;
+  int data_offset = 0;
+  int was_successful = 0;
+
+  if (!(formats_are_equal = args_check_format_compatibility(arg, expected_format)))
+    {
+      goto cleanup;
+    }
+  formats_are_equal = (formats_are_equal == 2);
+
+  current_va_format = expected_format;
+  value_it = arg_value_iter(arg);
+  if (value_it->next(value_it) == NULL)
+    {
+      goto cleanup;
+    }
+  while (*current_va_format != '\0')
+    {
+      void *current_value_ptr;
+      current_value_ptr = va_arg(*vl, void *);
+      if (value_it->is_array && isupper(*current_va_format))
+        {
+          /* If an array is stored and an array format is given by the user, simply assign a pointer to the data. The
+           * datatype itself is unimportant in this case. */
+          *(void **)current_value_ptr = *(void **)value_it->value_ptr;
+        }
+      else
+        {
+          switch (value_it->format)
+            {
+            case 'i':
+              if (value_it->is_array)
+                {
+                  /* The data is stored as an array but the user wants to assign the values to single variables (the
+                   * array case was handled before by the void pointer). -> Assign value by value by incrementing a data
+                   * offset in each step. */
+                  *(int *)current_value_ptr = (*(int **)value_it->value_ptr)[data_offset++];
+                }
+              else
+                {
+                  /* The data is stored as a single value. Assign that value to the variable given by the user. */
+                  *(int *)current_value_ptr = *(int *)value_it->value_ptr;
+                }
+              break;
+            case 'd':
+              if (value_it->is_array)
+                {
+                  *(double *)current_value_ptr = (*(double **)value_it->value_ptr)[data_offset++];
+                }
+              else
+                {
+                  *(double *)current_value_ptr = *(double *)value_it->value_ptr;
+                }
+              break;
+            case 'c':
+              if (value_it->is_array)
+                {
+                  *(char *)current_value_ptr = (*(char **)value_it->value_ptr)[data_offset++];
+                }
+              else
+                {
+                  *(char *)current_value_ptr = *(char *)value_it->value_ptr;
+                }
+              break;
+            case 's':
+              if (value_it->is_array)
+                {
+                  *(char **)current_value_ptr = (*(char ***)value_it->value_ptr)[data_offset++];
+                }
+              else
+                {
+                  *(char **)current_value_ptr = *(char **)value_it->value_ptr;
+                }
+              break;
+            case 'a':
+              if (value_it->is_array)
+                {
+                  *(gr_meta_args_t **)current_value_ptr = (*(gr_meta_args_t ***)value_it->value_ptr)[data_offset++];
+                }
+              else
+                {
+                  *(gr_meta_args_t **)current_value_ptr = *(gr_meta_args_t **)value_it->value_ptr;
+                }
+              break;
+            default:
+              goto cleanup;
+            }
+        }
+      if (formats_are_equal)
+        {
+          /* Only iterate if the format given by the user is equal to the stored internal format. In the other case, the
+           * user requests to store **one** array to single variables -> values are read from one pointer, no iteration
+           * is needed. */
+          value_it->next(value_it);
+          data_offset = 0;
+        }
+      ++current_va_format;
+    }
+  was_successful = 1;
+
+cleanup:
+  if (value_it != NULL)
+    {
+      args_value_iterator_delete(value_it);
+    }
+
+  return was_successful;
+}
 
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
@@ -4716,12 +5408,13 @@ error_cleanup:
   return NULL;
 }
 
-gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_copy_as_array)
+gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys)
 {
   /* Clone the linked list and all values that are argument containers as well. Share all other values (-> **no deep
    * copy!**).
    * `keys_copy_as_array` can be used to always copy values of the specified keys as an array. It is only read for
-   * values which are argument containers. The array must be terminated with a NULL pointer. */
+   * values which are argument containers. The array must be terminated with a NULL pointer.
+   * `ignore_keys` is an array of keys which will not be copied. The array must be terminated with a NULL pointer. */
   gr_meta_args_t *args = NULL, **args_array = NULL, *copied_args = NULL, **copied_args_array = NULL,
                  **current_args_copy = NULL;
   args_iterator_t *it = NULL;
@@ -4729,7 +5422,6 @@ gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_cop
   args_node_t *args_node;
   arg_t *copy_arg;
   const char **current_key_ptr;
-  int copy_as_array;
 
   args = gr_newmeta();
   if (args == NULL)
@@ -4741,6 +5433,10 @@ gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_cop
   error_cleanup_if(it == NULL);
   while ((copy_arg = it->next(it)) != NULL)
     {
+      if (ignore_keys != NULL && str_equals_any_in_array(copy_arg->key, ignore_keys))
+        {
+          continue;
+        }
       if (strncmp(copy_arg->value_format, "a", 1) == 0 || strncmp(copy_arg->value_format, "nA", 2) == 0)
         {
           value_it = arg_value_iter(copy_arg);
@@ -4756,7 +5452,7 @@ gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_cop
               current_args_copy = copied_args_array;
               while (*args_array != NULL)
                 {
-                  *current_args_copy = args_copy(*args_array, keys_copy_as_array);
+                  *current_args_copy = args_copy(*args_array, keys_copy_as_array, ignore_keys);
                   error_cleanup_if(*current_args_copy == NULL);
                   ++args_array;
                   ++current_args_copy;
@@ -4766,23 +5462,9 @@ gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_cop
             }
           else
             {
-              copied_args = args_copy(*(gr_meta_args_t **)value_it->value_ptr, keys_copy_as_array);
+              copied_args = args_copy(*(gr_meta_args_t **)value_it->value_ptr, keys_copy_as_array, ignore_keys);
               error_cleanup_if(copied_args == NULL);
-              copy_as_array = 0;
-              if (keys_copy_as_array != NULL)
-                {
-                  current_key_ptr = keys_copy_as_array;
-                  while (*current_key_ptr != NULL)
-                    {
-                      if (strcmp(it->arg->key, *current_key_ptr) == 0)
-                        {
-                          copy_as_array = 1;
-                          break;
-                        }
-                      ++current_key_ptr;
-                    }
-                }
-              if (copy_as_array)
+              if (keys_copy_as_array != NULL && str_equals_any_in_array(it->arg->key, keys_copy_as_array))
                 {
                   gr_meta_args_push(args, it->arg->key, "A(1)", &copied_args);
                 }
@@ -4904,20 +5586,79 @@ error_t args_push_vl(gr_meta_args_t *args, const char *key, const char *value_fo
   return args_push_common(args, key, value_format, NULL, vl, 0);
 }
 
+error_t args_push_arg(gr_meta_args_t *args, arg_t *arg)
+{
+  args_node_t *args_node = NULL, *previous_node_by_keyword = NULL;
+  error_t error = NO_ERROR;
+
+  ++(arg->priv->reference_count);
+  args_node = malloc(sizeof(args_node_t));
+  error_cleanup_and_set_error_if(args_node == NULL, ERROR_MALLOC);
+  args_node->arg = arg;
+  args_node->next = NULL;
+
+  if (args->kwargs_head == NULL)
+    {
+      args->kwargs_head = args_node;
+      args->kwargs_tail = args_node;
+      ++(args->count);
+    }
+  else if (args_find_previous_node(args, arg->key, &previous_node_by_keyword))
+    {
+      if (previous_node_by_keyword == NULL)
+        {
+          args_node->next = args->kwargs_head->next;
+          if (args->kwargs_head == args->kwargs_tail)
+            {
+              args->kwargs_tail = args_node;
+            }
+          args_decrease_arg_reference_count(args->kwargs_head);
+          free(args->kwargs_head);
+          args->kwargs_head = args_node;
+        }
+      else
+        {
+          args_node->next = previous_node_by_keyword->next->next;
+          args_decrease_arg_reference_count(previous_node_by_keyword->next);
+          free(previous_node_by_keyword->next);
+          previous_node_by_keyword->next = args_node;
+          if (args_node->next == NULL)
+            {
+              args->kwargs_tail = args_node;
+            }
+        }
+    }
+  else
+    {
+      args->kwargs_tail->next = args_node;
+      args->kwargs_tail = args_node;
+      ++(args->count);
+    }
+
+  return NO_ERROR;
+
+error_cleanup:
+  if (args_node != NULL)
+    {
+      free(args_node);
+    }
+  return error;
+}
+
 error_t args_update_many(gr_meta_args_t *args, const gr_meta_args_t *update_args)
 {
   return args_merge(args, update_args, NULL);
 }
 
-error_t args_merge(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **merge_keys)
+error_t args_merge(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char *const *merge_keys)
 {
   args_iterator_t *it = NULL;
   args_value_iterator_t *value_it = NULL, *merge_value_it = NULL;
-  args_node_t *args_node, *previous_node_by_keyword;
   arg_t *update_arg, *current_arg;
   gr_meta_args_t **args_array, **merge_args_array;
-  const char **current_key_ptr;
-  int merge, i;
+  const char *const *current_key_ptr;
+  int merge;
+  unsigned int i;
   error_t error = NO_ERROR;
 
   it = args_iter(merge_args);
@@ -4967,59 +5708,13 @@ error_t args_merge(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const
           for (i = 0; i < value_it->array_length && i < merge_value_it->array_length; ++i)
             {
               error = args_merge(args_array[i], merge_args_array[i], merge_keys);
-              cleanup_if(error != NO_ERROR);
+              cleanup_if_error;
             }
         }
       else
         {
-          ++(update_arg->priv->reference_count);
-          args_node = malloc(sizeof(args_node_t));
-          if (args_node == NULL)
-            {
-              debug_print_malloc_error();
-              error = ERROR_MALLOC;
-              goto cleanup;
-            }
-          args_node->arg = update_arg;
-          args_node->next = NULL;
-
-          if (args->kwargs_head == NULL)
-            {
-              args->kwargs_head = args_node;
-              args->kwargs_tail = args_node;
-              ++(args->count);
-            }
-          else if (args_find_previous_node(args, update_arg->key, &previous_node_by_keyword))
-            {
-              if (previous_node_by_keyword == NULL)
-                {
-                  args_node->next = args->kwargs_head->next;
-                  if (args->kwargs_head == args->kwargs_tail)
-                    {
-                      args->kwargs_tail = args_node;
-                    }
-                  args_decrease_arg_reference_count(args->kwargs_head);
-                  free(args->kwargs_head);
-                  args->kwargs_head = args_node;
-                }
-              else
-                {
-                  args_node->next = previous_node_by_keyword->next->next;
-                  args_decrease_arg_reference_count(previous_node_by_keyword->next);
-                  free(previous_node_by_keyword->next);
-                  previous_node_by_keyword->next = args_node;
-                  if (args_node->next == NULL)
-                    {
-                      args->kwargs_tail = args_node;
-                    }
-                }
-            }
-          else
-            {
-              args->kwargs_tail->next = args_node;
-              args->kwargs_tail = args_node;
-              ++(args->count);
-            }
+          error = args_push_arg(args, update_arg);
+          cleanup_if_error;
         }
     }
 
@@ -5074,6 +5769,15 @@ error_t args_setdefault_vl(gr_meta_args_t *args, const char *key, const char *va
   return args_setdefault_common(args, key, value_format, NULL, vl, 0);
 }
 
+error_t args_increase_array(gr_meta_args_t *args, const char *key, size_t increment)
+{
+  arg_t *arg;
+
+  arg = args_at(args, key);
+  return_error_if(arg == NULL, ERROR_ARGS_INVALID_KEY);
+  return arg_increase_array(arg, increment);
+}
+
 unsigned int args_count(const gr_meta_args_t *args)
 {
   return args->count;
@@ -5096,197 +5800,30 @@ int(args_first_value)(const gr_meta_args_t *args, const char *keyword, const cha
                       void *first_value, unsigned int *array_length)
 {
   arg_t *arg;
-  char *transformed_first_value_format;
-  char first_value_type;
-  size_t *size_t_typed_value_ptr;
-  void *value_ptr;
 
   arg = args_at(args, keyword);
   if (arg == NULL)
     {
       return 0;
     }
-  transformed_first_value_format = malloc(2 * strlen(first_value_format) + 1);
-  if (transformed_first_value_format == NULL)
-    {
-      debug_print_malloc_error();
-      return 0;
-    }
-  args_copy_format_string_for_arg(transformed_first_value_format, first_value_format);
-  /* check if value_format does not start with the transformed first_value_format */
-  if (strncmp(arg->value_format, transformed_first_value_format, strlen(transformed_first_value_format)) != 0)
-    {
-      free(transformed_first_value_format);
-      return 0;
-    }
-  free(transformed_first_value_format);
-  first_value_type = (arg->value_format[0] != 'n') ? arg->value_format[0] : arg->value_format[1];
-  if (islower(first_value_type))
-    {
-      value_ptr = arg->value_ptr;
-    }
-  else
-    {
-      size_t_typed_value_ptr = arg->value_ptr;
-      if (array_length != NULL)
-        {
-          *array_length = *size_t_typed_value_ptr;
-        }
-      value_ptr = (size_t_typed_value_ptr + 1);
-    }
-  if (first_value != NULL)
-    {
-      if (isupper(first_value_type))
-        {
-          /* if the first value is an array simple store the pointer; the type the pointer is pointing to is unimportant
-           * in this case so use a void pointer conversion to shorten the code */
-          *(void **)first_value = *(void **)value_ptr;
-        }
-      else
-        {
-          switch (first_value_type)
-            {
-            case 'i':
-              *(int *)first_value = *(int *)value_ptr;
-              break;
-            case 'd':
-              *(double *)first_value = *(double *)value_ptr;
-              break;
-            case 'c':
-              *(char *)first_value = *(char *)value_ptr;
-              break;
-            case 's':
-              *(char **)first_value = *(char **)value_ptr;
-              break;
-            case 'a':
-              *(gr_meta_args_t **)first_value = *(gr_meta_args_t **)value_ptr;
-              break;
-            default:
-              return 0;
-            }
-        }
-    }
-  return 1;
+
+  return arg_first_value(arg, first_value_format, first_value, array_length);
 }
 
 int args_values(const gr_meta_args_t *args, const char *keyword, const char *expected_format, ...)
 {
   va_list vl;
   arg_t *arg;
-  args_value_iterator_t *value_it = NULL;
-  const char *current_va_format;
-  int formats_are_equal = 0;
-  int data_offset = 0;
   int was_successful = 0;
 
   va_start(vl, expected_format);
 
   arg = args_at(args, keyword);
-  if (arg == NULL)
-    {
-      goto cleanup;
-    }
-  if (!(formats_are_equal = args_check_format_compatibility(arg, expected_format)))
-    {
-      goto cleanup;
-    }
-  formats_are_equal = (formats_are_equal == 2);
+  cleanup_if(arg == NULL);
 
-  current_va_format = expected_format;
-  value_it = arg_value_iter(arg);
-  if (value_it->next(value_it) == NULL)
-    {
-      goto cleanup;
-    }
-  while (*current_va_format != '\0')
-    {
-      void *current_value_ptr;
-      current_value_ptr = va_arg(vl, void *);
-      if (value_it->is_array && isupper(*current_va_format))
-        {
-          /* If an array is stored and an array format is given by the user, simply assign a pointer to the data. The
-           * datatype itself is unimportant in this case. */
-          *(void **)current_value_ptr = *(void **)value_it->value_ptr;
-        }
-      else
-        {
-          switch (value_it->format)
-            {
-            case 'i':
-              if (value_it->is_array)
-                {
-                  /* The data is stored as an array but the user wants to assign the values to single variables (the
-                   * array case was handled before by the void pointer). -> Assign value by value by incrementing a data
-                   * offset in each step. */
-                  *(int *)current_value_ptr = (*(int **)value_it->value_ptr)[data_offset++];
-                }
-              else
-                {
-                  /* The data is stored as a single value. Assign that value to the variable given by the user. */
-                  *(int *)current_value_ptr = *(int *)value_it->value_ptr;
-                }
-              break;
-            case 'd':
-              if (value_it->is_array)
-                {
-                  *(double *)current_value_ptr = (*(double **)value_it->value_ptr)[data_offset++];
-                }
-              else
-                {
-                  *(double *)current_value_ptr = *(double *)value_it->value_ptr;
-                }
-              break;
-            case 'c':
-              if (value_it->is_array)
-                {
-                  *(char *)current_value_ptr = (*(char **)value_it->value_ptr)[data_offset++];
-                }
-              else
-                {
-                  *(char *)current_value_ptr = *(char *)value_it->value_ptr;
-                }
-              break;
-            case 's':
-              if (value_it->is_array)
-                {
-                  *(char **)current_value_ptr = (*(char ***)value_it->value_ptr)[data_offset++];
-                }
-              else
-                {
-                  *(char **)current_value_ptr = *(char **)value_it->value_ptr;
-                }
-              break;
-            case 'a':
-              if (value_it->is_array)
-                {
-                  *(gr_meta_args_t **)current_value_ptr = (*(gr_meta_args_t ***)value_it->value_ptr)[data_offset++];
-                }
-              else
-                {
-                  *(gr_meta_args_t **)current_value_ptr = *(gr_meta_args_t **)value_it->value_ptr;
-                }
-              break;
-            default:
-              goto cleanup;
-            }
-        }
-      if (formats_are_equal)
-        {
-          /* Only iterate if the format given by the user is equal to the stored internal format. In the other case, the
-           * user requests to store **one** array to single variables -> values are read from one pointer, no iteration
-           * is needed. */
-          value_it->next(value_it);
-          data_offset = 0;
-        }
-      ++current_va_format;
-    }
-  was_successful = 1;
+  was_successful = arg_values_vl(arg, expected_format, &vl);
 
 cleanup:
-  if (value_it != NULL)
-    {
-      args_value_iterator_delete(value_it);
-    }
   va_end(vl);
 
   return was_successful;
@@ -7435,7 +7972,7 @@ error_t memwriter_printf(memwriter_t *memwriter, const char *format, ...)
       va_end(vl);
       if (chars_needed < 0)
         {
-          return ERROR_UNSPECIFIED;
+          return ERROR_INTERNAL;
         }
       /* we need one more char because `vsnprintf` does exclude the trailing '\0' character in its calculations */
       if ((size_t)chars_needed < (memwriter->capacity - memwriter->size))
@@ -8075,130 +8612,383 @@ FILE *gr_get_stdout()
 #endif
 
 
-/* ------------------------- string-to-generic map ------------------------------------------------------------------ */
+/* ------------------------- generic set ---------------------------------------------------------------------------- */
 
-#define DEFINE_MAP_METHODS(prefix, value_type, invalid_value)                                                   \
-                                                                                                                \
-  prefix##_map_t *prefix##_map_new(size_t capacity)                                                             \
-  {                                                                                                             \
-    prefix##_map_t *prefix##_map;                                                                               \
-    size_t power2_capacity = 1;                                                                                 \
-                                                                                                                \
-    while (power2_capacity < 2 * capacity)                                                                      \
-      {                                                                                                         \
-        power2_capacity <<= 1;                                                                                  \
-      }                                                                                                         \
-    prefix##_map = malloc(sizeof(prefix##_map_t));                                                              \
-    if (prefix##_map == NULL)                                                                                   \
-      {                                                                                                         \
-        debug_print_malloc_error();                                                                             \
-        return NULL;                                                                                            \
-      }                                                                                                         \
-    prefix##_map->map = calloc(power2_capacity, sizeof(prefix##_map_entry_t));                                  \
-    if (prefix##_map->map == NULL)                                                                              \
-      {                                                                                                         \
-        free(prefix##_map);                                                                                     \
-        debug_print_malloc_error();                                                                             \
-        return NULL;                                                                                            \
-      }                                                                                                         \
-    prefix##_map->capacity = power2_capacity;                                                                   \
-    prefix##_map->size = 0;                                                                                     \
-                                                                                                                \
-    return prefix##_map;                                                                                        \
-  }                                                                                                             \
-                                                                                                                \
-  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries)                       \
-  {                                                                                                             \
-    prefix##_map_t *prefix##_map;                                                                               \
-    size_t i;                                                                                                   \
-                                                                                                                \
-    prefix##_map = prefix##_map_new(count);                                                                     \
-    if (prefix##_map == NULL)                                                                                   \
-      {                                                                                                         \
-        return NULL;                                                                                            \
-      }                                                                                                         \
-    for (i = 0; i < count; ++i)                                                                                 \
-      {                                                                                                         \
-        if (!prefix##_map_insert(prefix##_map, entries[i].key, entries[i].value))                               \
-          {                                                                                                     \
-            prefix##_map_delete(prefix##_map);                                                                  \
-            return NULL;                                                                                        \
-          }                                                                                                     \
-      }                                                                                                         \
-                                                                                                                \
-    return prefix##_map;                                                                                        \
-  }                                                                                                             \
-                                                                                                                \
-  void prefix##_map_delete(prefix##_map_t *prefix##_map)                                                        \
-  {                                                                                                             \
-    ssize_t i;                                                                                                  \
-    for (i = 0; i < prefix##_map->capacity; ++i)                                                                \
-      {                                                                                                         \
-        if (prefix##_map->map[i].key != NULL)                                                                   \
-          {                                                                                                     \
-            free((char *)prefix##_map->map[i].key);                                                             \
-          }                                                                                                     \
-      }                                                                                                         \
-    free(prefix##_map->map);                                                                                    \
-    free(prefix##_map);                                                                                         \
-  }                                                                                                             \
-                                                                                                                \
-  int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, value_type value)                      \
-  {                                                                                                             \
-    ssize_t index;                                                                                              \
-                                                                                                                \
-    index = prefix##_map_index(prefix##_map, key);                                                              \
-    if (index < 0)                                                                                              \
-      {                                                                                                         \
-        return 0;                                                                                               \
-      }                                                                                                         \
-    if (prefix##_map->map[index].key != NULL)                                                                   \
-      {                                                                                                         \
-        free((char *)prefix##_map->map[index].key);                                                             \
-      }                                                                                                         \
-    prefix##_map->map[index].key = strdup(key);                                                                 \
-    if (prefix##_map->map[index].key == NULL)                                                                   \
-      {                                                                                                         \
-        debug_print_malloc_error();                                                                             \
-        return 0;                                                                                               \
-      }                                                                                                         \
-    prefix##_map->map[index].value = value;                                                                     \
-                                                                                                                \
-    return 1;                                                                                                   \
-  }                                                                                                             \
-                                                                                                                \
-  value_type prefix##_map_at(prefix##_map_t *prefix##_map, const char *key)                                     \
-  {                                                                                                             \
-    ssize_t index;                                                                                              \
-                                                                                                                \
-    index = prefix##_map_index(prefix##_map, key);                                                              \
-    if (index < 0)                                                                                              \
-      {                                                                                                         \
-        return invalid_value;                                                                                   \
-      }                                                                                                         \
-    return prefix##_map->map[index].value;                                                                      \
-  }                                                                                                             \
-                                                                                                                \
-  ssize_t prefix##_map_index(prefix##_map_t *prefix##_map, const char *key)                                     \
-  {                                                                                                             \
-    size_t hash;                                                                                                \
-    size_t i;                                                                                                   \
-                                                                                                                \
-    hash = djb2_hash(key);                                                                                      \
-    for (i = 0; i < prefix##_map->capacity; ++i)                                                                \
-      {                                                                                                         \
-        /* Quadratic probing that will visit every slot in the hash table if the capacity is a power of 2, see: \
-         * http://research.cs.vt.edu/AVresearch/hashing/quadratic.php */                                        \
-        size_t next_index = (hash + (i * i + i) / 2) % prefix##_map->capacity;                                  \
-        if (prefix##_map->map[next_index].key == NULL || strcmp(prefix##_map->map[next_index].key, key) == 0)   \
-          {                                                                                                     \
-            return next_index;                                                                                  \
-          }                                                                                                     \
-      }                                                                                                         \
-    return -1;                                                                                                  \
+#define DEFINE_SET_METHODS(prefix)                                                                                \
+  prefix##_set_t *prefix##_set_new(size_t capacity)                                                               \
+  {                                                                                                               \
+    prefix##_set_t *set = NULL;                                                                                   \
+    size_t power2_capacity = 1;                                                                                   \
+                                                                                                                  \
+    /* Use the power of 2 which is equal or greater than 2*capacity as the set capacity */                        \
+    power2_capacity = next_or_equal_power2(2 * capacity);                                                         \
+    set = malloc(sizeof(prefix##_set_t));                                                                         \
+    if (set == NULL)                                                                                              \
+      {                                                                                                           \
+        debug_print_malloc_error();                                                                               \
+        goto error_cleanup;                                                                                       \
+      }                                                                                                           \
+    set->set = NULL;                                                                                              \
+    set->used = NULL;                                                                                             \
+    set->set = malloc(power2_capacity * sizeof(prefix##_set_entry_t));                                            \
+    if (set->set == NULL)                                                                                         \
+      {                                                                                                           \
+        debug_print_malloc_error();                                                                               \
+        goto error_cleanup;                                                                                       \
+      }                                                                                                           \
+    set->used = calloc(power2_capacity, sizeof(unsigned char));                                                   \
+    if (set->used == NULL)                                                                                        \
+      {                                                                                                           \
+        debug_print_malloc_error();                                                                               \
+        goto error_cleanup;                                                                                       \
+      }                                                                                                           \
+    set->capacity = power2_capacity;                                                                              \
+    set->size = 0;                                                                                                \
+                                                                                                                  \
+    logger((stderr, "Created a new set with capacity: %lu\n", set->capacity));                                    \
+                                                                                                                  \
+    return set;                                                                                                   \
+                                                                                                                  \
+  error_cleanup:                                                                                                  \
+    if (set != NULL)                                                                                              \
+      {                                                                                                           \
+        if (set->set != NULL)                                                                                     \
+          {                                                                                                       \
+            free(set->set);                                                                                       \
+          }                                                                                                       \
+        if (set->used != NULL)                                                                                    \
+          {                                                                                                       \
+            free(set->used);                                                                                      \
+          }                                                                                                       \
+        free(set);                                                                                                \
+      }                                                                                                           \
+                                                                                                                  \
+    return NULL;                                                                                                  \
+  }                                                                                                               \
+                                                                                                                  \
+  prefix##_set_t *prefix##_set_new_with_data(size_t count, prefix##_set_entry_t *entries)                         \
+  {                                                                                                               \
+    prefix##_set_t *set;                                                                                          \
+    size_t i;                                                                                                     \
+                                                                                                                  \
+    set = prefix##_set_new(count);                                                                                \
+    if (set == NULL)                                                                                              \
+      {                                                                                                           \
+        return NULL;                                                                                              \
+      }                                                                                                           \
+    for (i = 0; i < count; ++i)                                                                                   \
+      {                                                                                                           \
+        if (!prefix##_set_add(set, entries[i]))                                                                   \
+          {                                                                                                       \
+            prefix##_set_delete(set);                                                                             \
+            return NULL;                                                                                          \
+          }                                                                                                       \
+      }                                                                                                           \
+                                                                                                                  \
+    return set;                                                                                                   \
+  }                                                                                                               \
+                                                                                                                  \
+  prefix##_set_t *prefix##_set_copy(const prefix##_set_t *set)                                                    \
+  {                                                                                                               \
+    prefix##_set_t *copy;                                                                                         \
+    size_t i;                                                                                                     \
+                                                                                                                  \
+    copy = prefix##_set_new(set->size);                                                                           \
+    if (copy == NULL)                                                                                             \
+      {                                                                                                           \
+        return NULL;                                                                                              \
+      }                                                                                                           \
+    for (i = 0; i < set->capacity; ++i)                                                                           \
+      {                                                                                                           \
+        if (set->used[i] && !prefix##_set_add(copy, set->set[i]))                                                 \
+          {                                                                                                       \
+            prefix##_set_delete(copy);                                                                            \
+            return NULL;                                                                                          \
+          }                                                                                                       \
+      }                                                                                                           \
+                                                                                                                  \
+    return copy;                                                                                                  \
+  }                                                                                                               \
+                                                                                                                  \
+  void prefix##_set_delete(prefix##_set_t *set)                                                                   \
+  {                                                                                                               \
+    size_t i;                                                                                                     \
+    for (i = 0; i < set->capacity; ++i)                                                                           \
+      {                                                                                                           \
+        if (set->used[i])                                                                                         \
+          {                                                                                                       \
+            prefix##_set_entry_delete(set->set[i]);                                                               \
+          }                                                                                                       \
+      }                                                                                                           \
+    free(set->set);                                                                                               \
+    free(set->used);                                                                                              \
+    free(set);                                                                                                    \
+  }                                                                                                               \
+                                                                                                                  \
+  int prefix##_set_add(prefix##_set_t *set, const prefix##_set_entry_t entry)                                     \
+  {                                                                                                               \
+    ssize_t index;                                                                                                \
+                                                                                                                  \
+    index = prefix##_set_index(set, entry);                                                                       \
+    if (index < 0)                                                                                                \
+      {                                                                                                           \
+        return 0;                                                                                                 \
+      }                                                                                                           \
+    if (set->used[index])                                                                                         \
+      {                                                                                                           \
+        prefix##_set_entry_delete(set->set[index]);                                                               \
+        --(set->size);                                                                                            \
+        set->used[index] = 0;                                                                                     \
+      }                                                                                                           \
+    if (!prefix##_set_entry_copy(set->set + index, entry))                                                        \
+      {                                                                                                           \
+        return 0;                                                                                                 \
+      }                                                                                                           \
+    ++(set->size);                                                                                                \
+    set->used[index] = 1;                                                                                         \
+                                                                                                                  \
+    return 1;                                                                                                     \
+  }                                                                                                               \
+                                                                                                                  \
+  int prefix##_set_find(const prefix##_set_t *set, const prefix##_set_entry_t entry,                              \
+                        prefix##_set_entry_t *saved_entry)                                                        \
+  {                                                                                                               \
+    ssize_t index;                                                                                                \
+                                                                                                                  \
+    index = prefix##_set_index(set, entry);                                                                       \
+    if (index < 0 || !set->used[index])                                                                           \
+      {                                                                                                           \
+        return 0;                                                                                                 \
+      }                                                                                                           \
+    *saved_entry = set->set[index];                                                                               \
+    return 1;                                                                                                     \
+  }                                                                                                               \
+                                                                                                                  \
+  int prefix##_set_contains(const prefix##_set_t *set, const prefix##_set_entry_t entry)                          \
+  {                                                                                                               \
+    ssize_t index;                                                                                                \
+                                                                                                                  \
+    index = prefix##_set_index(set, entry);                                                                       \
+    return index >= 0 && set->used[index];                                                                        \
+  }                                                                                                               \
+                                                                                                                  \
+  ssize_t prefix##_set_index(const prefix##_set_t *set, const prefix##_set_entry_t entry)                         \
+  {                                                                                                               \
+    size_t hash;                                                                                                  \
+    size_t i;                                                                                                     \
+                                                                                                                  \
+    hash = prefix##_set_entry_hash(entry);                                                                        \
+    for (i = 0; i < set->capacity; ++i)                                                                           \
+      {                                                                                                           \
+        /* Quadratic probing that will visit every slot in the hash table if the capacity is a power of 2, see: \ \
+         * http://research.cs.vt.edu/AVresearch/hashing/quadratic.php */                                          \
+        size_t next_index = (hash + (i * i + i) / 2) % set->capacity;                                             \
+        if (!set->used[next_index] || prefix##_set_entry_equals(set->set[next_index], entry))                     \
+          {                                                                                                       \
+            return next_index;                                                                                    \
+          }                                                                                                       \
+      }                                                                                                           \
+    return -1;                                                                                                    \
   }
 
-DEFINE_MAP_METHODS(fmt, const char *, NULL)
-DEFINE_MAP_METHODS(plot_func, plot_func_t, NULL)
+DEFINE_SET_METHODS(args)
+
+int args_set_entry_copy(args_set_entry_t *copy, const args_set_entry_t entry)
+{
+  *copy = entry;
+  return 1;
+}
+
+void args_set_entry_delete(args_set_entry_t entry)
+{
+  UNUSED(entry);
+}
+
+size_t args_set_entry_hash(const args_set_entry_t entry)
+{
+  return (size_t)entry;
+}
+
+int args_set_entry_equals(const args_set_entry_t entry1, const args_set_entry_t entry2)
+{
+  return entry1 == entry2;
+}
+
+/* ------------------------- string-to-generic map ------------------------------------------------------------------ */
+
+#define DEFINE_MAP_METHODS(prefix, value_type)                                                              \
+  DEFINE_SET_METHODS(string_##prefix##_pair)                                                                \
+                                                                                                            \
+  prefix##_map_t *prefix##_map_new(size_t capacity)                                                         \
+  {                                                                                                         \
+    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                               \
+                                                                                                            \
+    string_##prefix##_pair_set = string_##prefix##_pair_set_new(capacity);                                  \
+    if (string_##prefix##_pair_set == NULL)                                                                 \
+      {                                                                                                     \
+        debug_print_malloc_error();                                                                         \
+        return NULL;                                                                                        \
+      }                                                                                                     \
+                                                                                                            \
+    return (prefix##_map_t *)string_##prefix##_pair_set;                                                    \
+  }                                                                                                         \
+                                                                                                            \
+  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries)                   \
+  {                                                                                                         \
+    return (prefix##_map_t *)string_##prefix##_pair_set_new_with_data(count, entries);                      \
+  }                                                                                                         \
+                                                                                                            \
+  void prefix##_map_delete(prefix##_map_t *prefix##_map)                                                    \
+  {                                                                                                         \
+    string_##prefix##_pair_set_delete((string_##prefix##_pair_set_t *)prefix##_map);                        \
+  }                                                                                                         \
+                                                                                                            \
+  int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, const value_type value)            \
+  {                                                                                                         \
+    string_##prefix##_pair_set_entry_t entry;                                                               \
+                                                                                                            \
+    entry.key = key;                                                                                        \
+    entry.value = value;                                                                                    \
+    return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);             \
+  }                                                                                                         \
+                                                                                                            \
+  int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, const value_type value)    \
+  {                                                                                                         \
+    string_##prefix##_pair_set_entry_t entry;                                                               \
+                                                                                                            \
+    entry.key = key;                                                                                        \
+    entry.value = value;                                                                                    \
+    if (!string_##prefix##_pair_set_contains((string_##prefix##_pair_set_t *)prefix##_map, entry))          \
+      {                                                                                                     \
+        return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);         \
+      }                                                                                                     \
+    return 0;                                                                                               \
+  }                                                                                                         \
+                                                                                                            \
+  int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, value_type *value)               \
+  {                                                                                                         \
+    string_##prefix##_pair_set_entry_t entry, saved_entry;                                                  \
+                                                                                                            \
+    entry.key = key;                                                                                        \
+    if (string_##prefix##_pair_set_find((string_##prefix##_pair_set_t *)prefix##_map, entry, &saved_entry)) \
+      {                                                                                                     \
+        if (value != NULL)                                                                                  \
+          {                                                                                                 \
+            *value = saved_entry.value;                                                                     \
+          }                                                                                                 \
+        return 1;                                                                                           \
+      }                                                                                                     \
+    else                                                                                                    \
+      {                                                                                                     \
+        return 0;                                                                                           \
+      }                                                                                                     \
+  }                                                                                                         \
+                                                                                                            \
+  int string_##prefix##_pair_set_entry_copy(string_##prefix##_pair_set_entry_t *copy,                       \
+                                            const string_##prefix##_pair_set_entry_t entry)                 \
+  {                                                                                                         \
+    const char *key_copy;                                                                                   \
+    value_type value_copy;                                                                                  \
+                                                                                                            \
+    key_copy = strdup(entry.key);                                                                           \
+    if (key_copy == NULL)                                                                                   \
+      {                                                                                                     \
+        return 0;                                                                                           \
+      }                                                                                                     \
+    if (!prefix##_map_value_copy(&value_copy, entry.value))                                                 \
+      {                                                                                                     \
+        free((char *)key_copy);                                                                             \
+        return 0;                                                                                           \
+      }                                                                                                     \
+    copy->key = key_copy;                                                                                   \
+    copy->value = value_copy;                                                                               \
+                                                                                                            \
+    return 1;                                                                                               \
+  }                                                                                                         \
+                                                                                                            \
+  void string_##prefix##_pair_set_entry_delete(string_##prefix##_pair_set_entry_t entry)                    \
+  {                                                                                                         \
+    free((char *)entry.key);                                                                                \
+    prefix##_map_value_delete(entry.value);                                                                 \
+  }                                                                                                         \
+                                                                                                            \
+  size_t string_##prefix##_pair_set_entry_hash(const string_##prefix##_pair_set_entry_t entry)              \
+  {                                                                                                         \
+    return djb2_hash(entry.key);                                                                            \
+  }                                                                                                         \
+                                                                                                            \
+  int string_##prefix##_pair_set_entry_equals(const string_##prefix##_pair_set_entry_t entry1,              \
+                                              const string_##prefix##_pair_set_entry_t entry2)              \
+  {                                                                                                         \
+    return strcmp(entry1.key, entry2.key) == 0;                                                             \
+  }
+
+DEFINE_MAP_METHODS(plot_func, plot_func_t)
+
+int plot_func_map_value_copy(plot_func_t *copy, const plot_func_t value)
+{
+  *copy = value;
+
+  return 1;
+}
+
+void plot_func_map_value_delete(plot_func_t value)
+{
+  UNUSED(value);
+}
+
+
+DEFINE_MAP_METHODS(string, char *)
+
+int string_map_value_copy(char **copy, const char *value)
+{
+  char *_copy;
+
+  _copy = strdup(value);
+  if (_copy == NULL)
+    {
+      return 0;
+    }
+  *copy = _copy;
+
+  return 1;
+}
+
+void string_map_value_delete(char *value)
+{
+  free(value);
+}
+
+
+DEFINE_MAP_METHODS(uint, unsigned int)
+
+int uint_map_value_copy(unsigned int *copy, const unsigned int value)
+{
+  *copy = value;
+
+  return 1;
+}
+
+void uint_map_value_delete(unsigned int value)
+{
+  UNUSED(value);
+}
+
+
+DEFINE_MAP_METHODS(args_set, args_set_t *)
+
+int args_set_map_value_copy(args_set_t **copy, const args_set_t *value)
+{
+  *copy = value;
+
+  return 1;
+}
+
+void args_set_map_value_delete(args_set_t *value)
+{
+  UNUSED(value);
+}
+
 
 #undef DEFINE_MAP_METHODS
+#undef DEFINE_SET_METHODS
