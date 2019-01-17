@@ -158,6 +158,7 @@ static void debug_printf(const char *format, ...) {
 #define PLOT_DEFAULT_COLORMAP 44 /* VIRIDIS */
 #define PLOT_DEFAULT_ROTATION 40
 #define PLOT_DEFAULT_TILT 70
+#define PLOT_DEFAULT_KEEP_ASPECT_RATIO 1
 #define PLOT_DEFAULT_XLABEL ""
 #define PLOT_DEFAULT_YLABEL ""
 #define PLOT_DEFAULT_ZLABEL ""
@@ -2241,6 +2242,7 @@ void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args) {
   args_setdefault(subplot_args, "colormap", "i", PLOT_DEFAULT_COLORMAP);
   args_setdefault(subplot_args, "rotation", "i", PLOT_DEFAULT_ROTATION);
   args_setdefault(subplot_args, "tilt", "i", PLOT_DEFAULT_TILT);
+  args_setdefault(subplot_args, "keep_aspect_ratio", "i", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
 
   if (strcmp(kind, "step") == 0) {
     args_setdefault(subplot_args, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
@@ -2315,12 +2317,14 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
   double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
   double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
   double vp[4];
-  double aspect_ratio;
   double metric_size;
+  double aspect_ratio_vp, aspect_ratio_ws;
+  int keep_aspect_ratio;
   int background_color_index;
 
   args_first_value(subplot_args, "kind", "s", &kind, NULL);
   args_first_value(subplot_args, "subplot", "D", &subplot, NULL);
+  args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
 #ifdef __EMSCRIPTEN__
   metric_width = 0.16384;
   metric_height = 0.12288;
@@ -2348,25 +2352,50 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
   height = size[1];
   logger((stderr, "Using size: %lf, %lf\n", width, height));
 
+  aspect_ratio_ws = width / height;
   memcpy(vp, subplot, sizeof(vp));
   if (width > height) {
-    aspect_ratio = height / width;
     metric_size = metric_width * width / pixel_width;
     wsviewport[1] = metric_size;
-    wsviewport[3] = metric_size * aspect_ratio;
+    wsviewport[3] = metric_size / aspect_ratio_ws;
     wswindow[1] = 1.0;
-    wswindow[3] = aspect_ratio;
-    vp[2] *= aspect_ratio;
-    vp[3] *= aspect_ratio;
+    wswindow[3] = 1.0 / aspect_ratio_ws;
+    if (!keep_aspect_ratio) {
+      vp[2] /= aspect_ratio_ws;
+      vp[3] /= aspect_ratio_ws;
+    }
   } else {
-    aspect_ratio = width / height;
     metric_size = metric_height * height / pixel_height;
-    wsviewport[1] = metric_size * aspect_ratio;
+    wsviewport[1] = metric_size * aspect_ratio_ws;
     wsviewport[3] = metric_size;
-    wswindow[1] = aspect_ratio;
+    wswindow[1] = aspect_ratio_ws;
     wswindow[3] = 1.0;
-    vp[0] *= aspect_ratio;
-    vp[1] *= aspect_ratio;
+    if (!keep_aspect_ratio) {
+      vp[0] *= aspect_ratio_ws;
+      vp[1] *= aspect_ratio_ws;
+    }
+  }
+  if (keep_aspect_ratio && args_values(subplot_args, "vp", "dddd", &vp[0], &vp[1], &vp[2], &vp[3])) {
+    aspect_ratio_vp = (vp[1] - vp[0]) / (vp[3] - vp[2]);
+    if (aspect_ratio_ws >= aspect_ratio_vp) {
+      double vp_width, wswindow_width, border;
+      vp[2] = wswindow[2];
+      vp[3] = wswindow[3];
+      vp_width = (vp[3] - vp[2]) * aspect_ratio_vp;
+      wswindow_width = (wswindow[1] - wswindow[0]);
+      border = (wswindow_width - vp_width) / 2;
+      vp[0] = border;
+      vp[1] = border + vp_width;
+    } else {
+      double vp_height, wswindow_height, border;
+      vp[0] = wswindow[0];
+      vp[1] = wswindow[1];
+      vp_height = (vp[1] - vp[0]) / aspect_ratio_vp;
+      wswindow_height = (wswindow[3] - wswindow[2]);
+      border = (wswindow_height - vp_height) / 2;
+      vp[2] = border;
+      vp[3] = border + vp_height;
+    }
   }
 
   if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf")) {
@@ -2403,9 +2432,9 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
     gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
     gr_setfillcolorind(background_color_index);
     if (width > height) {
-      gr_fillrect(subplot[0], subplot[1], subplot[2] * aspect_ratio, subplot[3] * aspect_ratio);
+      gr_fillrect(subplot[0], subplot[1], subplot[2] * aspect_ratio_ws, subplot[3] * aspect_ratio_ws);
     } else {
-      gr_fillrect(subplot[0] * aspect_ratio, subplot[1] * aspect_ratio, subplot[2], subplot[3]);
+      gr_fillrect(subplot[0] / aspect_ratio_ws, subplot[1] / aspect_ratio_ws, subplot[2], subplot[3]);
     }
     gr_selntran(1);
     gr_restorestate();
@@ -2430,7 +2459,6 @@ void plot_process_viewport(gr_meta_args_t *subplot_args) {
   gr_meta_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
   logger((stderr, "Stored viewport (%f, %f, %f, %f)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
   gr_meta_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
-  gr_meta_args_push(subplot_args, "ratio", "d", aspect_ratio);
 }
 
 void plot_process_window(gr_meta_args_t *subplot_args) {
