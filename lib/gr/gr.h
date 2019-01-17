@@ -179,6 +179,7 @@ DLLEXPORT int gr_meta_args_push_buf(
   gr_meta_args_t *, const char *, const char *, const void *, int);
 DLLEXPORT int gr_meta_args_contains(const gr_meta_args_t *, const char *);
 DLLEXPORT void gr_meta_args_clear(gr_meta_args_t *);
+DLLEXPORT int gr_meta_args_merge(const gr_meta_args_t *);
 DLLEXPORT void gr_meta_args_remove(gr_meta_args_t *, const char *);
 DLLEXPORT void *gr_openmeta(
   int, const char *, unsigned int, const char *(*)(const char *, unsigned int),
@@ -190,6 +191,7 @@ DLLEXPORT int gr_sendmeta_ref(const void *, const char *, char, const void *, in
 DLLEXPORT int gr_sendmeta_args(const void *p, const gr_meta_args_t *);
 DLLEXPORT void gr_closemeta(const void *);
 DLLEXPORT int gr_plotmeta(const gr_meta_args_t *);
+DLLEXPORT int gr_inputmeta(const gr_meta_args_t *, gr_meta_args_t *);
 DLLEXPORT int gr_readmeta(gr_meta_args_t *, const char *);
 #ifndef NDEBUG
 DLLEXPORT void gr_dumpmeta(const gr_meta_args_t *, FILE *);
