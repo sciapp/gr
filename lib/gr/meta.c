@@ -571,7 +571,7 @@ static void argparse_read_string(argparse_state_t *state);
 static void argparse_read_default_array_length(argparse_state_t *state);
 static void argparse_read_char_array(argparse_state_t *state, int store_array_length);
 static void argparse_init_static_variables(void);
-static size_t argparse_calculate_needed_buffer_size(const char *format);
+static size_t argparse_calculate_needed_buffer_size(const char *format, int apply_padding);
 static size_t argparse_calculate_needed_padding(void *buffer, char current_format);
 static void argparse_read_next_option(argparse_state_t *state, char **format);
 static const char *argparse_skip_option(const char *format);
@@ -870,6 +870,7 @@ static int argparse_valid_format_specifier[128];
 static read_param_t argparse_format_specifier_to_read_callback[128];
 static delete_value_t argparse_format_specifier_to_delete_callback[128];
 static size_t argparse_format_specifier_to_size[128];
+static const char *argparse_format_specifiers_with_array_termination = "sa";
 static int argparse_static_variables_initialized = 0;
 
 
@@ -1425,7 +1426,7 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
   }
 
   /* get needed save_buffer size to store all parameters and allocate memory */
-  needed_buffer_size = argparse_calculate_needed_buffer_size(fmt);
+  needed_buffer_size = argparse_calculate_needed_buffer_size(fmt, apply_padding);
   if (needed_buffer_size > 0) {
     save_buffer = malloc(needed_buffer_size);
     if (save_buffer == NULL) {
@@ -1718,13 +1719,19 @@ void argparse_init_static_variables() {
   }
 }
 
-size_t argparse_calculate_needed_buffer_size(const char *format) {
+size_t argparse_calculate_needed_buffer_size(const char *format, int apply_padding) {
   size_t needed_size;
   size_t size_for_current_specifier;
   int is_array;
 
   needed_size = 0;
   is_array = 0;
+  if (strlen(format) > 1 && strchr(argparse_format_specifiers_with_array_termination, *format) != NULL) {
+    /* Add size for a NULL pointer terminator in the buffer itself because it will be converted to an array buffer
+     * later (-> see `argparse_convert_to_array`) */
+    size_for_current_specifier = argparse_format_specifier_to_size[(unsigned char)*format];
+    needed_size = size_for_current_specifier;
+  }
   while (*format) {
     char current_format;
     if (*format == '(') {
@@ -1739,8 +1746,10 @@ size_t argparse_calculate_needed_buffer_size(const char *format) {
     }
     while (current_format) {
       size_for_current_specifier = argparse_format_specifier_to_size[(unsigned char)current_format];
-      /* apply needed padding for memory alignment first */
-      needed_size += argparse_calculate_needed_padding((void *)needed_size, current_format);
+      if (apply_padding) {
+        /* apply needed padding for memory alignment first */
+        needed_size += argparse_calculate_needed_padding((void *)needed_size, current_format);
+      }
       /* then add the actual needed memory size */
       needed_size += size_for_current_specifier;
       if (is_array) {
@@ -1821,7 +1830,7 @@ const char *argparse_skip_option(const char *format) {
 char *argparse_convert_to_array(argparse_state_t *state) {
   void *new_save_buffer = NULL;
   size_t *size_t_typed_buffer;
-  void **general_typed_buffer;
+  void ***general_typed_buffer;
   char *new_format = NULL;
 
   new_save_buffer = malloc(sizeof(size_t) + sizeof(void *));
@@ -1830,8 +1839,11 @@ char *argparse_convert_to_array(argparse_state_t *state) {
   }
   size_t_typed_buffer = new_save_buffer;
   *size_t_typed_buffer = state->dataslot_count;
-  general_typed_buffer = (void **)(size_t_typed_buffer + 1);
+  general_typed_buffer = (void ***)(size_t_typed_buffer + 1);
   *general_typed_buffer = state->save_buffer;
+  if (strchr(argparse_format_specifiers_with_array_termination, state->current_format) != NULL) {
+    (*general_typed_buffer)[*size_t_typed_buffer] = NULL;
+  }
   state->save_buffer = new_save_buffer;
   new_format = malloc(2 * sizeof(char));
   new_format[0] = toupper(state->current_format);
