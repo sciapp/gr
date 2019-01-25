@@ -402,7 +402,8 @@ deploy:
   - mkdir --mode=700 ~/.ssh/
   - (umask 0377 && echo "$SCIAPP_GR_PRIVATE_KEY" > ~/.ssh/id_rsa
                 && echo "github.com $GITHUB_HOST_KEY" >> ~/.ssh/known_hosts)
-  - git push --mirror git@github.com:sciapp/gr.git
+  - git clone --mirror "$CI_REPOSITORY_URL" gr_mirror
+  - cd gr_mirror && git push --mirror git@github.com:sciapp/gr.git && cd -
   - set +x
   - sshpass -p $RSYNC_PASSWORD rsync -av ./Downloads/ rsync://$RSYNC_USERNAME@ifffs.iff.kfa-juelich.de/gr/
   - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
