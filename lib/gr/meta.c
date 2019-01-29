@@ -1013,6 +1013,13 @@ void gr_meta_args_clear(gr_meta_args_t *args) {
   args_init(args);
 }
 
+int gr_meta_args_merge(const gr_meta_args_t *args) {
+    if (plot_init_static_variables() != NO_ERROR) {
+        return 0;
+    }
+    return plot_merge_and_normalize_args(subplots_args, args) == NO_ERROR;
+}
+
 void gr_meta_args_remove(gr_meta_args_t *args, const char *key) {
   args_node_t *tmp_node, *previous_node_by_keyword;
 
@@ -1403,6 +1410,71 @@ int gr_sendmeta_args(const void *p, const gr_meta_args_t *args) {
   return error == NO_ERROR;
 }
 
+
+/* ------------------------- user interaction ----------------------------------------------------------------------- */
+
+int gr_inputmeta(const gr_meta_args_t *draw_args, gr_meta_args_t *mouse_args) {
+  /*
+   * Pan: `x` and `y` key
+   * Zoom: `x`, `y` and `zoom_delta` key
+   * Rect_zoom: `x1`, `x2`, `y1`, `y2` key
+   * Reset_ranges: `key` key with value `r`
+   */
+  int x, y, x2, y2, offset;
+  double width, height, max;
+  char* key;
+
+  if(gr_meta_args_contains(mouse_args, "x") && gr_meta_args_contains(mouse_args, "y") &&
+    gr_meta_args_contains(mouse_args, "zoom_delta")) {
+    args_values(draw_args, "size", "dd", &width, &height);
+    args_values(mouse_args, "zoom_delta", "i", &offset);
+    args_values(mouse_args, "x", "i", &x);
+    args_values(mouse_args, "y", "i", &y);
+    gr_meta_args_remove(mouse_args, "x");
+    gr_meta_args_remove(mouse_args, "y");
+    gr_meta_args_remove(mouse_args, "zoom_delta");
+
+    double d1, d2;
+    if(height <= width) {
+      d1 = 1.0 * x / width - 0.5;
+      d2 = ((height - y) / height - 0.5 ) * height / width;
+      gr_meta_args_push(mouse_args, "panzoom", "ddd", d1, d2, 1.0 + 0.001 * offset);
+    } else {
+      d1 = (1.0 * x / width - 0.5) * width / height;
+      d2 = (height - y) / height - 0.5;
+      gr_meta_args_push(mouse_args, "panzoom", "ddd", d1, d2, 1.0 + 0.001 * offset);
+    }
+    return 0;
+  }
+  if(gr_meta_args_contains(mouse_args, "x") && gr_meta_args_contains(mouse_args, "y")) {
+    args_values(draw_args, "size", "dd", &width, &height);
+    max = max(height, width);
+    args_values(mouse_args, "x", "i", &x);
+    args_values(mouse_args, "y", "i", &y);
+    gr_meta_args_remove(mouse_args, "x");
+    gr_meta_args_remove(mouse_args, "y");
+    gr_meta_args_push(mouse_args, "panzoom", "ddd", -1.0 * x / max, 1.0 * y / max, 0.);
+    return 0;
+  }
+  if(gr_meta_args_contains(mouse_args, "x1") && gr_meta_args_contains(mouse_args, "x2") && gr_meta_args_contains(mouse_args, "y1") && gr_meta_args_contains(mouse_args, "y2")) {
+    /*TODO implement me*/
+    args_values(mouse_args, "x1", "i", &x);
+    args_values(mouse_args, "y1", "i", &y);
+    args_values(mouse_args, "x2", "i", &x2);
+    args_values(mouse_args, "y2", "i", &y2);
+    printf("%d %d %d %d\n",x,y,x2,y2);
+    return 0;
+  }
+  if(gr_meta_args_contains(mouse_args, "key")) {
+    args_values(mouse_args, "key", "s", &key);
+    if(strcmp(key, "r") == 0) {
+      gr_meta_args_push(mouse_args, "reset_ranges", "i", 1);
+    }
+    gr_meta_args_remove(mouse_args, "key");
+    return 0;
+  }
+  return 1;
+}
 
 /* ######################### private implementation ################################################################# */
 
