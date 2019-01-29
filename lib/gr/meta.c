@@ -23,6 +23,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
 
 #include "gks.h"
 #include "gr.h"
@@ -128,7 +131,8 @@ static void debug_printf(const char *format, ...) {
 /* ------------------------- memwriter ------------------------------------------------------------------------------ */
 
 #define MEMWRITER_INITIAL_SIZE 32768
-#define MEMWRITER_SIZE_INCREMENT 32768
+#define MEMWRITER_EXPONENTIAL_INCREASE_UNTIL 268435456
+#define MEMWRITER_LINEAR_INCREMENT_SIZE 67108864
 
 #define ETB '\027'
 
@@ -654,6 +658,7 @@ static unsigned int str_to_uint(const char *str, int *was_successful);
 static int int_equals_any(int number, unsigned int n, ...);
 static int str_equals_any(const char *str, unsigned int n, ...);
 static int uppercase_count(const char *str);
+static unsigned long next_or_equal_power2(unsigned long num);
 
 
 /* ========================= methods ================================================================================ */
@@ -3933,6 +3938,31 @@ int uppercase_count(const char *str) {
   return uppercase_count;
 }
 
+unsigned long next_or_equal_power2(unsigned long num) {
+#if defined(__GNUC__) || defined(__clang__)
+  /* Subtract the count of leading bit zeros from the count of all bits to get `floor(log2(num)) + 1`. If `num` is a
+   * power of 2 (only one bit is set), subtract 1 more. The result is `ceil(log2(num))`. Calculate
+   * `1 << ceil(log2(num))` to get `exp2(ceil(log2(num)))` which is the power of 2 which is greater or equal than `num`.
+   */
+  return 1ul << ((CHAR_BIT * sizeof(unsigned long)) - __builtin_clzl(num) - (__builtin_popcountl(num) == 1 ? 1 : 0));
+#elif defined(_MSC_VER)
+  /* Calculate the index of the highest set bit (bit scan reverse) to get `floor(log2(num)) + 1`. If `num` is a power
+   * of 2 (only one bit is set), subtract 1 more. The result is `ceil(log2(num))`. Calculate `1 << ceil(log2(num))`
+   * to get `exp2(ceil(log2(num)))` which is the power of 2 which is greater or equal than `num`.
+   */
+  unsigned long index;
+  _BitScanReverse(&index, num);
+  return 1ul << (index + 1 - (__popcnt(num) == 1 ? 1 : 0));
+#else
+  /* Fallback algorithm in software: Shift one bit till the resulting number is greater or equal than `num` */
+  unsigned long power = 1;
+  while (power < num) {
+    power <<= 1;
+  }
+  return power;
+#endif
+}
+
 
 /* ========================= methods ================================================================================ */
 
@@ -6174,10 +6204,18 @@ error_t memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment) {
   void *new_buf;
 
   if (size_increment == 0) {
-    size_increment = MEMWRITER_SIZE_INCREMENT;
+    if(memwriter->capacity >= MEMWRITER_EXPONENTIAL_INCREASE_UNTIL) {
+      size_increment = MEMWRITER_LINEAR_INCREMENT_SIZE;
+    } else {
+      size_increment = memwriter->capacity;
+    }
   } else {
-    /* round up to the next `MEMWRITER_SIZE_INCREMENT` step */
-    size_increment = ((size_increment - 1) / MEMWRITER_SIZE_INCREMENT + 1) * MEMWRITER_SIZE_INCREMENT;
+    /* round up to the next `MEMWRITER_LINEAR_INCREMENT_SIZE` step */
+    if(memwriter->capacity >= MEMWRITER_EXPONENTIAL_INCREASE_UNTIL) {
+      size_increment = ((size_increment - 1) / MEMWRITER_LINEAR_INCREMENT_SIZE + 1) * MEMWRITER_LINEAR_INCREMENT_SIZE;
+    } else {
+      size_increment = next_or_equal_power2(memwriter->capacity + size_increment) - memwriter->capacity;
+    }
   }
   new_buf = realloc(memwriter->buf, memwriter->capacity + size_increment);
   if (new_buf == NULL) {
