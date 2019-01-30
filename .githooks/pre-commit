@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Only check staged files (relevant for the current commit) that
+# were added, copied, modified or renamed.
+for file in $(git diff --cached --name-only --diff-filter=ACMR); do
+    [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue
+    clang-format -i -verbose -style=file "${file}" && \
+    git add "${file}" || exit 1
+done
+
+exit 0

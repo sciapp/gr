@@ -3,6 +3,25 @@ stages:
 - package
 - deploy
 
+code-style-check:
+  stage: build
+  image: debian:sid
+  script:
+  - apt-get update
+  - apt-get install -y clang-format git
+  - set +e
+  - for file in $(git diff HEAD~ HEAD --name-only --diff-filter=ACMR); do
+      [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue;
+      clang-format -verbose -style=file "${file}" > "${file}.formatted";
+      diff -q "${file}" "${file}.formatted";
+      return_code="$?";
+      rm -f "${file}.formatted";
+      if [[ "${return_code}" -ne 0 ]]; then
+        >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";
+        exit 1;
+      fi;
+    done
+
 ubuntu-self-contained:
   stage: build
   image: ubuntu:16.04
