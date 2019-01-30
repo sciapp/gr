@@ -28,7 +28,7 @@ int main(void)
       for (i = 1; i < POINTS; i++)
         {
           x[i] = i;
-          y[j][i] = y[j][i-1] + (-0.5 + (double) rand() / RAND_MAX);
+          y[j][i] = y[j][i - 1] + (-0.5 + (double)rand() / RAND_MAX);
         }
     }
 
@@ -37,7 +37,7 @@ int main(void)
     {
       gr_clearws();
       gr_setviewport(0.1, 0.95, 0.1, 0.95);
-      gr_setwindow(k, k+POINTS, -20, 20);
+      gr_setwindow(k, k + POINTS, -20, 20);
       gr_setlinecolorind(1);
       gr_setcharheight(0.02);
       gr_axes(20, 1, k, -20, 5, 5, -0.01);
@@ -50,12 +50,10 @@ int main(void)
       k++;
       for (i = 1; i < POINTS; i++)
         {
-          x[i-1] = x[i];
-          for (j = 0; j < CURVES; j++)
-            y[j][i-1] = y[j][i];
+          x[i - 1] = x[i];
+          for (j = 0; j < CURVES; j++) y[j][i - 1] = y[j][i];
         }
-      x[POINTS-1] = k + POINTS;
-      for (j = 0; j < CURVES; j++)
-        y[j][POINTS-1] = y[j][POINTS-2] + (-0.5 + (double) rand() / RAND_MAX);
+      x[POINTS - 1] = k + POINTS;
+      for (j = 0; j < CURVES; j++) y[j][POINTS - 1] = y[j][POINTS - 2] + (-0.5 + (double)rand() / RAND_MAX);
     }
 }

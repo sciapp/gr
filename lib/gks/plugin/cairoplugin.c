@@ -53,10 +53,8 @@ extern "C"
 {
 #endif
 
-DLLEXPORT void gks_cairoplugin(
-  int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                 int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef __cplusplus
 }
@@ -78,41 +76,39 @@ DLLEXPORT void gks_cairoplugin(
 
 #define MAX_TNR 9
 
-#define WC_to_NDC(xw, yw, tnr, xn, yn)          \
-  xn = a[tnr] * (xw) + b[tnr];                  \
+#define WC_to_NDC(xw, yw, tnr, xn, yn) \
+  xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
 
-#define WC_to_NDC_rel(xw, yw, tnr, xn, yn)      \
-  xn = a[tnr] * (xw);                           \
+#define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
+  xn = a[tnr] * (xw);                      \
   yn = c[tnr] * (yw)
 
-#define NDC_to_DC(xn, yn, xd, yd)               \
-  xd = (p->a * (xn) + p->b);                    \
+#define NDC_to_DC(xn, yn, xd, yd) \
+  xd = (p->a * (xn) + p->b);      \
   yd = (p->c * (yn) + p->d)
 
-#define CharXform(xrel, yrel, x, y)                     \
-  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel);  \
+#define CharXform(xrel, yrel, x, y)                  \
+  x = cos(p->alpha) * (xrel)-sin(p->alpha) * (yrel); \
   y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
 
 #ifndef min
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
 #ifndef max
-#define max(a,b) (((a) > (b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
 
 /* set this flag so that the exit handler won't try to use Cairo X11 support */
 static int exit_due_to_x11_support_ = 0;
 
-static
-gks_state_list_t *gkss;
+static gks_state_list_t *gkss;
 
-static
-double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 typedef unsigned char Byte;
 typedef unsigned long uLong;
@@ -120,8 +116,7 @@ typedef unsigned long uLong;
 typedef struct cairo_point_t
 {
   double x, y;
-}
-cairo_point;
+} cairo_point;
 
 typedef struct ws_state_list_t
 {
@@ -156,61 +151,35 @@ typedef struct ws_state_list_t
   unsigned char *patterns;
   int pattern_counter, use_symbols;
   double dashes[10];
-}
-ws_state_list;
+} ws_state_list;
 
-static
-ws_state_list *p;
+static ws_state_list *p;
 
-static
-int idle = 0;
+static int idle = 0;
 
-static
-const char *fonts[] = {
-  "Times New Roman", "Arial", "Courier", "Symbol",
-  "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua"
-};
+static const char *fonts[] = {"Times New Roman",    "Arial",          "Courier",     "Symbol", "Bookman Old Style",
+                              "Century Schoolbook", "Century Gothic", "Book Antiqua"};
 
-static
-double capheights[29] = {
-  0.662, 0.660, 0.681, 0.662,
-  0.729, 0.729, 0.729, 0.729,
-  0.583, 0.583, 0.583, 0.583,
-  0.667,
-  0.681, 0.681, 0.681, 0.681,
-  0.722, 0.722, 0.722, 0.722,
-  0.739, 0.739, 0.739, 0.739,
-  0.694, 0.693, 0.683, 0.683
-};
+static double capheights[29] = {0.662, 0.660, 0.681, 0.662, 0.729, 0.729, 0.729, 0.729, 0.583, 0.583,
+                                0.583, 0.583, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722,
+                                0.722, 0.739, 0.739, 0.739, 0.739, 0.694, 0.693, 0.683, 0.683};
 
-static
-int map[32] = {
-  22, 9, 5, 14, 18, 26, 13, 1,
-  24, 11, 7, 16, 20, 28, 13, 3,
-  23, 10, 6, 15, 19, 27, 13, 2,
-  25, 12, 8, 17, 21, 29, 13, 4
-};
+static int map[32] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
+                      23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
-static
-double xfac[4] = { 0, 0, -0.5, -1 };
+static double xfac[4] = {0, 0, -0.5, -1};
 
-static
-double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+static double yfac[6] = {0, -1.2, -1, -0.5, 0, 0.2};
 
-static
-int predef_font[] = { 1, 1, 1, -2, -3, -4 };
+static int predef_font[] = {1, 1, 1, -2, -3, -4};
 
-static
-int predef_prec[] = { 0, 1, 2, 2, 2, 2 };
+static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 
-static
-int predef_ints[] = { 0, 1, 3, 3, 3 };
+static int predef_ints[] = {0, 1, 3, 3, 3};
 
-static
-int predef_styli[] = { 1, 1, 1, 2, 3 };
+static int predef_styli[] = {1, 1, 1, 2, 3};
 
-static
-void set_norm_xform(int tnr, double *wn, double *vp)
+static void set_norm_xform(int tnr, double *wn, double *vp)
 {
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -221,17 +190,14 @@ void set_norm_xform(int tnr, double *wn, double *vp)
   NDC_to_DC(vp[1], vp[2], p->rect[tnr][1][0], p->rect[tnr][1][1]);
 }
 
-static
-void init_norm_xform(void)
+static void init_norm_xform(void)
 {
   int tnr;
 
-  for (tnr = 0; tnr < MAX_TNR; tnr++)
-    set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
+  for (tnr = 0; tnr < MAX_TNR; tnr++) set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
 }
 
-static
-void set_xform(void)
+static void set_xform(void)
 {
   p->a = p->width / (p->window[1] - p->window[0]);
   p->b = -p->window[0] * p->a;
@@ -239,8 +205,7 @@ void set_xform(void)
   p->d = p->height - p->window[2] * p->c;
 }
 
-static
-void seg_xform(double *x, double *y)
+static void seg_xform(double *x, double *y)
 {
   double xx;
 
@@ -249,8 +214,7 @@ void seg_xform(double *x, double *y)
   *x = xx;
 }
 
-static
-void seg_xform_rel(double *x, double *y)
+static void seg_xform_rel(double *x, double *y)
 {
   double xx;
 
@@ -259,23 +223,21 @@ void seg_xform_rel(double *x, double *y)
   *x = xx;
 }
 
-static
-void resize(int width, int height)
+static void resize(int width, int height)
 {
   p->width = width;
   p->height = height;
   p->window[0] = p->window[2] = 0.0;
   p->window[1] = p->window[3] = 1.0;
   p->viewport[0] = p->viewport[2] = 0;
-  p->viewport[1] = (double) p->width * p->mw / p->w;
-  p->viewport[3] = (double) p->height * p->mh / p->h;
+  p->viewport[1] = (double)p->width * p->mw / p->w;
+  p->viewport[3] = (double)p->height * p->mh / p->h;
 
   set_xform();
   init_norm_xform();
 }
 
-static
-void set_color_rep(int color, double red, double green, double blue)
+static void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
@@ -285,8 +247,7 @@ void set_color_rep(int color, double red, double green, double blue)
     }
 }
 
-static
-void init_colors(void)
+static void init_colors(void)
 {
   int color;
   double red, green, blue;
@@ -298,15 +259,12 @@ void init_colors(void)
     }
 }
 
-static
-void set_color(int index)
+static void set_color(int index)
 {
-  cairo_set_source_rgba(p->cr, p->rgb[index][0], p->rgb[index][1],
-                        p->rgb[index][2], p->transparency);
+  cairo_set_source_rgba(p->cr, p->rgb[index][0], p->rgb[index][1], p->rgb[index][2], p->transparency);
 }
 
-static
-void draw_marker(double xn, double yn, int mtype, double mscale)
+static void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   double x, y;
   double scale, xr, yr, x1, x2, y1, y2;
@@ -314,9 +272,8 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 
 #include "marker.h"
 
-  if (gkss->version > 4)
-    mscale *= (p->width + p->height) * 0.001;
-  r = (int) (3 * mscale);
+  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
+  r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
@@ -336,12 +293,12 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
       op = marker[mtype][pc];
       switch (op)
         {
-        case 1:         /* point */
+        case 1: /* point */
           cairo_rectangle(p->cr, x, y, 1.0, 1.0);
           cairo_stroke(p->cr);
           break;
 
-        case 2:         /* line */
+        case 2: /* line */
           x1 = scale * marker[mtype][pc + 1];
           y1 = scale * marker[mtype][pc + 2];
           seg_xform_rel(&x1, &y1);
@@ -356,14 +313,14 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
           pc += 4;
           break;
 
-        case 3:         /* polyline */
-        case 4:         /* filled polygon */
-        case 5:         /* hollow polygon */
+        case 3: /* polyline */
+        case 4: /* filled polygon */
+        case 5: /* hollow polygon */
           xr = scale * marker[mtype][pc + 2];
           yr = -scale * marker[mtype][pc + 3];
           seg_xform_rel(&xr, &yr);
 
-          cairo_move_to(p->cr, x-xr, y+yr);
+          cairo_move_to(p->cr, x - xr, y + yr);
 
           for (i = 1; i < marker[mtype][pc + 1]; i++)
             {
@@ -371,7 +328,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
 
-              cairo_line_to(p->cr, x-xr, y+yr);
+              cairo_line_to(p->cr, x - xr, y + yr);
             }
 
           cairo_close_path(p->cr);
@@ -384,9 +341,9 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
-        case 6:         /* arc */
-        case 7:         /* filled arc */
-        case 8:         /* hollow arc */
+        case 6: /* arc */
+        case 7: /* filled arc */
+        case 8: /* hollow arc */
           cairo_arc(p->cr, x, y, r * 1.0, 0, 2 * M_PI);
 
           if (op == 7)
@@ -403,8 +360,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
   while (op != 0);
 }
 
-static
-void polymarker(int n, double *px, double *py)
+static void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color, ln_width, i;
   double mk_size, x, y;
@@ -428,8 +384,7 @@ void polymarker(int n, double *px, double *py)
     }
 }
 
-static
-void stroke(void)
+static void stroke(void)
 {
   int i;
 
@@ -443,25 +398,21 @@ void stroke(void)
   p->npoints = 0;
 }
 
-static
-void move(double x, double y)
+static void move(double x, double y)
 {
-  if (p->npoints > 0)
-    stroke();
+  if (p->npoints > 0) stroke();
 
   NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
   p->npoints++;
 }
 
-static
-void draw(double x, double y)
+static void draw(double x, double y)
 {
   NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
   p->npoints++;
 }
 
-static
-void line_routine(int n, double *px, double *py, int linetype, int tnr)
+static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y, x0, y0, xi, yi;
   int i;
@@ -485,8 +436,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   cairo_stroke(p->cr);
 }
 
-static
-void fill_routine(int n, double *px, double *py, int tnr)
+static void fill_routine(int n, double *px, double *py, int tnr)
 {
   int i, j, k;
   double x, y, ix, iy;
@@ -532,8 +482,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
       gks_inq_pattern_array(fl_style, gks_pattern);
       size = gks_pattern[0];
 
-      p->patterns = (unsigned char*) gks_realloc(p->patterns,
-                                                 size * 8 * sizeof(unsigned char));
+      p->patterns = (unsigned char *)gks_realloc(p->patterns, size * 8 * sizeof(unsigned char));
       memset(p->patterns, 0, size * 8 * sizeof(unsigned char));
 
       for (j = 1; j < size + 1; j++)
@@ -543,26 +492,23 @@ void fill_routine(int n, double *px, double *py, int tnr)
               k = (1 << i) & gks_pattern[j];
               if (!(k))
                 {
-                  p->patterns[((i + 7) % 8) + ((j - 1 + (size-1)) % size) * 8] =
-                    (int) 255 * p->transparency;
+                  p->patterns[((i + 7) % 8) + ((j - 1 + (size - 1)) % size) * 8] = (int)255 * p->transparency;
                 }
             }
         }
 
-      image = cairo_image_surface_create_for_data(p->patterns, format, 8, size,
-                                                  stride);
+      image = cairo_image_surface_create_for_data(p->patterns, format, 8, size, stride);
 
       pattern = cairo_pattern_create_for_surface(image);
       cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
-      cairo_pattern_set_filter (pattern, CAIRO_FILTER_NEAREST);
-      cairo_matrix_init_scale(&pattern_matrix, 500.0/fmin(p->width, p->height), 500.0/fmin(p->width, p->height));
+      cairo_pattern_set_filter(pattern, CAIRO_FILTER_NEAREST);
+      cairo_matrix_init_scale(&pattern_matrix, 500.0 / fmin(p->width, p->height), 500.0 / fmin(p->width, p->height));
       cairo_pattern_set_matrix(pattern, &pattern_matrix);
 
       cairo_set_source(p->cr, pattern);
     }
 
-  if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH
-      || fl_inter == GKS_K_INTSTYLE_SOLID)
+  if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH || fl_inter == GKS_K_INTSTYLE_SOLID)
     {
       cairo_fill(p->cr);
     }
@@ -572,8 +518,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
     }
 }
 
-static
-void fillarea(int n, double *px, double *py)
+static void fillarea(int n, double *px, double *py)
 {
   int fl_color;
 
@@ -587,8 +532,7 @@ void fillarea(int n, double *px, double *py)
   cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_WINDING);
 }
 
-static
-void polyline(int n, double *px, double *py)
+static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color, i;
   double ln_width;
@@ -597,7 +541,7 @@ void polyline(int n, double *px, double *py)
 
   if (n > p->max_points)
     {
-      p->points = (cairo_point *) gks_realloc(p->points, n * sizeof(cairo_point));
+      p->points = (cairo_point *)gks_realloc(p->points, n * sizeof(cairo_point));
       p->max_points = n;
     }
 
@@ -609,8 +553,7 @@ void polyline(int n, double *px, double *py)
     width = nint(ln_width * (p->width + p->height) * 0.001);
   else
     width = nint(ln_width);
-  if (width < 1)
-    width = 1;
+  if (width < 1) width = 1;
 
   p->linewidth = width;
   p->color = ln_color;
@@ -618,33 +561,30 @@ void polyline(int n, double *px, double *py)
   set_color(ln_color);
 
   gks_get_dash_list(ln_type, ln_width, gks_dashes);
-  for (i = 0; i < gks_dashes[0]; i++)
-    p->dashes[i] = gks_dashes[i + 1] * fmin(p->width, p->height) / 500.0;
+  for (i = 0; i < gks_dashes[0]; i++) p->dashes[i] = gks_dashes[i + 1] * fmin(p->width, p->height) / 500.0;
   cairo_set_dash(p->cr, p->dashes, gks_dashes[0], 0);
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
   gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
 
-  if (p->npoints > 0)
-    stroke();
+  if (p->npoints > 0) stroke();
 }
 
-static
-void symbol_text(int nchars, char *chars)
+static void symbol_text(int nchars, char *chars)
 {
   int i;
   char temp[4];
   size_t len;
 
-  for (i = 0; i < nchars; i++) {
-    gks_symbol2utf(chars[i], temp, &len);
-    temp[len] = 0;
-    cairo_show_text(p->cr, temp);
-  }
+  for (i = 0; i < nchars; i++)
+    {
+      gks_symbol2utf(chars[i], temp, &len);
+      temp[len] = 0;
+      cairo_show_text(p->cr, temp);
+    }
 }
 
-static
-void text_routine(double x, double y, int nchars, char *chars)
+static void text_routine(double x, double y, int nchars, char *chars)
 {
   double xrel, yrel, ax, ay;
   double xstart, ystart;
@@ -656,10 +596,10 @@ void text_routine(double x, double y, int nchars, char *chars)
   if (!p->use_symbols)
     {
       /* convert latin1 to utf8 */
-      s = buf = (unsigned char *) gks_malloc(2 * nchars + 1);
+      s = buf = (unsigned char *)gks_malloc(2 * nchars + 1);
       for (i = 0; i < nchars; i++)
         {
-          ch = (unsigned char) chars[i];
+          ch = (unsigned char)chars[i];
           if (ch < 0x80)
             *s++ = chars[i];
           else
@@ -669,13 +609,13 @@ void text_routine(double x, double y, int nchars, char *chars)
             }
         }
       *s++ = '\0';
-      chars = (char *) buf;
+      chars = (char *)buf;
       nchars = strlen(chars);
     }
 
   /* Ugly workaround to avoid Cairo crashes when getting the text extent
      for a string that contains only a single character */
-  str = (char *) gks_malloc(nchars + 3);
+  str = (char *)gks_malloc(nchars + 3);
   strncpy(str, chars, nchars);
   strcat(str, "  ");
 
@@ -690,31 +630,31 @@ void text_routine(double x, double y, int nchars, char *chars)
   xstart += ax;
   ystart -= ay;
 
-  if (p->angle != 0) {
-    cairo_translate(p->cr, xstart, ystart);
-    cairo_rotate(p->cr, -p->angle*M_PI/180);
-    cairo_move_to(p->cr, 0, 0);
-    if (p->use_symbols)
-      symbol_text(nchars, chars);
-    else
-      cairo_show_text(p->cr, chars);
-    cairo_rotate(p->cr, p->angle*M_PI/180);
-    cairo_translate(p->cr, -xstart, -ystart);
-  }
-  else {
-    cairo_move_to(p->cr, xstart, ystart);
-    if (p->use_symbols)
-      symbol_text(nchars, chars);
-    else
-      cairo_show_text(p->cr, chars);
-  }
+  if (p->angle != 0)
+    {
+      cairo_translate(p->cr, xstart, ystart);
+      cairo_rotate(p->cr, -p->angle * M_PI / 180);
+      cairo_move_to(p->cr, 0, 0);
+      if (p->use_symbols)
+        symbol_text(nchars, chars);
+      else
+        cairo_show_text(p->cr, chars);
+      cairo_rotate(p->cr, p->angle * M_PI / 180);
+      cairo_translate(p->cr, -xstart, -ystart);
+    }
+  else
+    {
+      cairo_move_to(p->cr, xstart, ystart);
+      if (p->use_symbols)
+        symbol_text(nchars, chars);
+      else
+        cairo_show_text(p->cr, chars);
+    }
 
-  if (!p->use_symbols)
-    free(buf);
+  if (!p->use_symbols) free(buf);
 }
 
-static
-void set_font(int font)
+static void set_font(int font)
 {
   double scale, ux, uy, angle;
   int size;
@@ -736,8 +676,7 @@ void set_font(int font)
 
   p->alpha = -atan2(ux, uy);
   angle = p->alpha * 180 / M_PI;
-  if (angle < 0)
-    angle += 360;
+  if (angle < 0) angle += 360;
   p->angle = angle;
 
   scale = sqrt(gkss->chup[0] * gkss->chup[0] + gkss->chup[1] * gkss->chup[1]);
@@ -753,56 +692,52 @@ void set_font(int font)
   capheight = nint(height * (fabs(p->c) + 1));
   p->capheight = nint(capheight);
 
-  size = nint(capheight / capheights[font-1]);
-  if (font > 13)
-    font += 3;
+  size = nint(capheight / capheights[font - 1]);
+  if (font > 13) font += 3;
   p->family = (font - 1) / 4;
   bold = (font % 4 == 1 || font % 4 == 2) ? 0 : 1;
   italic = (font % 4 == 2 || font % 4 == 0);
 
 
-  if (p->family != 3) {
-    p->use_symbols = 0;
-    family = p->family;
-  } else {
-    p->use_symbols = 1;
-    family = 0;
-  }
+  if (p->family != 3)
+    {
+      p->use_symbols = 0;
+      family = p->family;
+    }
+  else
+    {
+      p->use_symbols = 1;
+      family = 0;
+    }
 
 #ifndef NO_FT
   ft_face = gks_ft_get_face(gkss->txfont);
-  if (ft_face) {
-    /* use cairo FreeType API */
-    cairo_font_face_t *font_face = cairo_ft_font_face_create_for_ft_face((FT_Face)ft_face, 0);
-    cairo_set_font_face(p->cr, font_face);
-    cairo_font_face_destroy(font_face);
-  } else
-#endif
-  {
-    /* fall back to cairo "toy" API */
-    if (italic && bold)
-      cairo_select_font_face(p->cr, fonts[family],
-                             CAIRO_FONT_SLANT_ITALIC,
-                             CAIRO_FONT_WEIGHT_BOLD);
-    else if (bold)
-      cairo_select_font_face(p->cr, fonts[family],
-                             CAIRO_FONT_SLANT_NORMAL,
-                             CAIRO_FONT_WEIGHT_BOLD);
-    else if (italic)
-      cairo_select_font_face(p->cr, fonts[family],
-                             CAIRO_FONT_SLANT_ITALIC,
-                             CAIRO_FONT_WEIGHT_NORMAL);
-    else {
-      cairo_select_font_face(p->cr, fonts[family],
-                             CAIRO_FONT_SLANT_NORMAL,
-                             CAIRO_FONT_WEIGHT_NORMAL);
+  if (ft_face)
+    {
+      /* use cairo FreeType API */
+      cairo_font_face_t *font_face = cairo_ft_font_face_create_for_ft_face((FT_Face)ft_face, 0);
+      cairo_set_font_face(p->cr, font_face);
+      cairo_font_face_destroy(font_face);
     }
-  }
+  else
+#endif
+    {
+      /* fall back to cairo "toy" API */
+      if (italic && bold)
+        cairo_select_font_face(p->cr, fonts[family], CAIRO_FONT_SLANT_ITALIC, CAIRO_FONT_WEIGHT_BOLD);
+      else if (bold)
+        cairo_select_font_face(p->cr, fonts[family], CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+      else if (italic)
+        cairo_select_font_face(p->cr, fonts[family], CAIRO_FONT_SLANT_ITALIC, CAIRO_FONT_WEIGHT_NORMAL);
+      else
+        {
+          cairo_select_font_face(p->cr, fonts[family], CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+        }
+    }
   cairo_set_font_size(p->cr, size);
 }
 
-static
-void text(double px, double py, int nchars, char *chars)
+static void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
   double x, y;
@@ -832,9 +767,8 @@ void text(double px, double py, int nchars, char *chars)
     }
 }
 
-static
-void cellarray(double xmin, double xmax, double ymin, double ymax,
-               int dx, int dy, int dimx, int *colia, int true_color)
+static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int dimx, int *colia,
+                      int true_color)
 {
   double x1, y1, x2, y2, x, y;
   int ix1, ix2, iy1, iy2;
@@ -863,98 +797,95 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
 
-  stride = cairo_format_stride_for_width (CAIRO_FORMAT_ARGB32, width);
-  data = (unsigned char *) gks_malloc(stride * height);
+  stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
+  data = (unsigned char *)gks_malloc(stride * height);
 
-  for (j = 0; j < height; j++) {
-    iy = dy * j / height;
-    if (swapy) {
-      iy = dy - 1 - iy;
+  for (j = 0; j < height; j++)
+    {
+      iy = dy * j / height;
+      if (swapy)
+        {
+          iy = dy - 1 - iy;
+        }
+      for (i = 0; i < width; i++)
+        {
+          ix = dx * i / width;
+          if (swapx)
+            {
+              ix = dx - 1 - ix;
+            }
+          if (!true_color)
+            {
+              ind = colia[iy * dimx + ix];
+              ind = FIX_COLORIND(ind);
+              red = (int)255 * p->rgb[ind][0];
+              green = (int)255 * p->rgb[ind][1];
+              blue = (int)255 * p->rgb[ind][2];
+              alpha = (int)255 * p->transparency;
+            }
+          else
+            {
+              rgb = colia[iy * dimx + ix];
+              red = (rgb & 0xff);
+              green = (rgb & 0xff00) >> 8;
+              blue = (rgb & 0xff0000) >> 16;
+              alpha = (rgb & 0xff000000) >> 24;
+            }
+          // ARGB32 format requires pre-multiplied alpha
+          red = red * alpha / 255;
+          green = green * alpha / 255;
+          blue = blue * alpha / 255;
+          data[j * stride + i * 4 + 0] = blue;
+          data[j * stride + i * 4 + 1] = green;
+          data[j * stride + i * 4 + 2] = red;
+          data[j * stride + i * 4 + 3] = alpha;
+        }
     }
-    for (i = 0; i < width; i++) {
-      ix = dx * i / width;
-      if (swapx) {
-        ix = dx - 1 - ix;
-      }
-      if (!true_color) {
-        ind = colia[iy * dimx + ix];
-        ind = FIX_COLORIND(ind);
-        red = (int) 255 * p->rgb[ind][0];
-        green = (int) 255 * p->rgb[ind][1];
-        blue = (int) 255 * p->rgb[ind][2];
-        alpha = (int) 255 * p->transparency;
-      } else {
-        rgb = colia[iy * dimx + ix];
-        red = (rgb & 0xff);
-        green = (rgb & 0xff00) >> 8;
-        blue = (rgb & 0xff0000) >> 16;
-        alpha = (rgb & 0xff000000) >> 24;
-      }
-      // ARGB32 format requires pre-multiplied alpha
-      red = red * alpha / 255;
-      green = green * alpha / 255;
-      blue = blue * alpha / 255;
-      data[j * stride + i * 4 + 0] = blue;
-      data[j * stride + i * 4 + 1] = green;
-      data[j * stride + i * 4 + 2] = red;
-      data[j * stride + i * 4 + 3] = alpha;
-    }
-  }
 
-  image = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32,
-                                              width, height, stride);
+  image = cairo_image_surface_create_for_data(data, CAIRO_FORMAT_ARGB32, width, height, stride);
   cairo_set_source_surface(p->cr, image, x, y);
   cairo_paint(p->cr);
   cairo_surface_destroy(image);
   free(data);
 }
 
-static
-void set_clip_rect(int tnr)
+static void set_clip_rect(int tnr)
 {
   cairo_reset_clip(p->cr);
 
   if (gkss->clip == GKS_K_CLIP)
     {
-      cairo_rectangle(p->cr,
-                      p->rect[tnr][0][0], p->rect[tnr][0][1],
-                      p->rect[tnr][1][0] - p->rect[tnr][0][0],
+      cairo_rectangle(p->cr, p->rect[tnr][0][0], p->rect[tnr][0][1], p->rect[tnr][1][0] - p->rect[tnr][0][0],
                       p->rect[tnr][1][1] - p->rect[tnr][0][1]);
       cairo_clip(p->cr);
     }
 }
 
-static
-void set_clipping(int index)
+static void set_clipping(int index)
 {
   gkss->clip = index;
   set_clip_rect(gkss->cntnr);
 }
 
-static
-void lock(void)
+static void lock(void)
 {
 #ifndef NO_X11
-  if (p->wtype == 141)
-    pthread_mutex_lock(&p->mutex);
+  if (p->wtype == 141) pthread_mutex_lock(&p->mutex);
 #endif
 }
 
-static
-void unlock(void)
+static void unlock(void)
 {
 #ifndef NO_X11
-  if (p->wtype == 141)
-    pthread_mutex_unlock(&p->mutex);
+  if (p->wtype == 141) pthread_mutex_unlock(&p->mutex);
 #endif
 }
 
 #ifndef NO_X11
 
-static
-void *event_loop(void *arg)
+static void *event_loop(void *arg)
 {
-  ws_state_list *p = (ws_state_list *) arg;
+  ws_state_list *p = (ws_state_list *)arg;
   XEvent event;
 
   p->run = 1;
@@ -971,7 +902,7 @@ void *event_loop(void *arg)
                   XNextEvent(p->dpy, &event);
                   if (event.type == ClientMessage)
                     {
-                      if ((Atom) event.xclient.data.l[0] == p->wmDeleteMessage)
+                      if ((Atom)event.xclient.data.l[0] == p->wmDeleteMessage)
                         {
 #ifdef SIGUSR1
                           pthread_kill(p->master_thread, SIGUSR1);
@@ -981,9 +912,7 @@ void *event_loop(void *arg)
                     }
                   else if (event.type == ConfigureNotify)
                     {
-                      cairo_xlib_surface_set_size(p->surface,
-                                                  event.xconfigure.width,
-                                                  event.xconfigure.height);
+                      cairo_xlib_surface_set_size(p->surface, event.xconfigure.width, event.xconfigure.height);
                     }
                 }
               pthread_mutex_unlock(&p->mutex);
@@ -995,20 +924,19 @@ void *event_loop(void *arg)
   pthread_exit(0);
 }
 
-static
-void create_window(void)
+static void create_window(void)
 {
   int screen;
   pthread_attr_t attr;
 
-  if (!(p->dpy = XOpenDisplay(NULL))) {
-    gks_perror("Could not open display");
-    exit(1);
-  }
+  if (!(p->dpy = XOpenDisplay(NULL)))
+    {
+      gks_perror("Could not open display");
+      exit(1);
+    }
 
   screen = DefaultScreen(p->dpy);
-  p->win = XCreateSimpleWindow(p->dpy, RootWindow(p->dpy, screen),
-                               1, 1, p->width, p->height, 0,
+  p->win = XCreateSimpleWindow(p->dpy, RootWindow(p->dpy, screen), 1, 1, p->width, p->height, 0,
                                BlackPixel(p->dpy, screen), WhitePixel(p->dpy, screen));
 
   p->master_thread = pthread_self();
@@ -1022,15 +950,13 @@ void create_window(void)
   pthread_mutex_init(&p->mutex, NULL);
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-  if (pthread_create(&p->thread, &attr, event_loop, (void *) p))
-    perror("pthread_create");
+  if (pthread_create(&p->thread, &attr, event_loop, (void *)p)) perror("pthread_create");
   pthread_attr_destroy(&attr);
 }
 
 #endif
 
-static
-void open_page(void)
+static void open_page(void)
 {
   char *env;
   exit_due_to_x11_support_ = 0;
@@ -1039,9 +965,7 @@ void open_page(void)
     {
 #ifndef NO_X11
       create_window();
-      p->surface = cairo_xlib_surface_create(p->dpy, p->win,
-                                             DefaultVisual(p->dpy, 0),
-                                             p->width, p->height);
+      p->surface = cairo_xlib_surface_create(p->dpy, p->win, DefaultVisual(p->dpy, 0), p->width, p->height);
 #else
       gks_perror("Cairo X11 support not compiled in");
       exit_due_to_x11_support_ = 1;
@@ -1050,17 +974,15 @@ void open_page(void)
     }
   else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 150)
     {
-      p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-                                              p->width, p->height);
+      p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, p->width, p->height);
     }
   if (p->wtype == 142)
     {
-      env = (char *) gks_getenv("GKS_CONID");
-      if (!env)
-        env = (char *) gks_getenv("GKSconid");
+      env = (char *)gks_getenv("GKS_CONID");
+      if (!env) env = (char *)gks_getenv("GKSconid");
 
       if (env != NULL)
-        sscanf(env, "%lu", (unsigned long *) &p->cr);
+        sscanf(env, "%lu", (unsigned long *)&p->cr);
       else
         {
           gks_perror("can't obtain Gtk drawable");
@@ -1071,8 +993,7 @@ void open_page(void)
     p->cr = cairo_create(p->surface);
 }
 
-static
-void close_page(void)
+static void close_page(void)
 {
   if (p->wtype != 142)
     {
@@ -1102,20 +1023,21 @@ void close_page(void)
 
 typedef struct oct_node_t oct_node_t, *oct_node;
 
-struct oct_node_t {
+struct oct_node_t
+{
   int64_t r, g, b; /* sum of all child node colors */
   int count, heap_idx;
   unsigned char n_kids, kid_idx, flags, depth;
   oct_node kids[8], parent;
 };
 
-typedef struct {
+typedef struct
+{
   int alloc, n;
   oct_node *buf;
 } node_heap;
 
-static
-int cmp_node(oct_node a, oct_node b)
+static int cmp_node(oct_node a, oct_node b)
 {
   int ac, bc;
 
@@ -1128,67 +1050,67 @@ int cmp_node(oct_node a, oct_node b)
   return ac < bc ? -1 : ac > bc;
 }
 
-static
-void down_heap(node_heap *h, oct_node p)
+static void down_heap(node_heap *h, oct_node p)
 {
   int n = p->heap_idx, m;
 
-  while (1) {
-    m = n * 2;
-    if (m >= h->n) break;
-    if (m + 1 < h->n && cmp_node(h->buf[m], h->buf[m + 1]) > 0) m++;
+  while (1)
+    {
+      m = n * 2;
+      if (m >= h->n) break;
+      if (m + 1 < h->n && cmp_node(h->buf[m], h->buf[m + 1]) > 0) m++;
 
-    if (cmp_node(p, h->buf[m]) <= 0) break;
+      if (cmp_node(p, h->buf[m]) <= 0) break;
 
-    h->buf[n] = h->buf[m];
-    h->buf[n]->heap_idx = n;
-    n = m;
-  }
+      h->buf[n] = h->buf[m];
+      h->buf[n]->heap_idx = n;
+      n = m;
+    }
   h->buf[n] = p;
   p->heap_idx = n;
 }
 
-static
-void up_heap(node_heap *h, oct_node p)
+static void up_heap(node_heap *h, oct_node p)
 {
   int n = p->heap_idx;
   oct_node prev;
 
-  while (n > 1) {
-    prev = h->buf[n / 2];
-    if (cmp_node(p, prev) >= 0) break;
+  while (n > 1)
+    {
+      prev = h->buf[n / 2];
+      if (cmp_node(p, prev) >= 0) break;
 
-    h->buf[n] = prev;
-    prev->heap_idx = n;
-    n /= 2;
-  }
+      h->buf[n] = prev;
+      prev->heap_idx = n;
+      n /= 2;
+    }
   h->buf[n] = p;
   p->heap_idx = n;
 }
 
-static
-void heap_add(node_heap *h, oct_node p)
+static void heap_add(node_heap *h, oct_node p)
 {
-  if ((p->flags & ON_INHEAP)) {
-    down_heap(h, p);
-    up_heap(h, p);
-    return;
-  }
+  if ((p->flags & ON_INHEAP))
+    {
+      down_heap(h, p);
+      up_heap(h, p);
+      return;
+    }
 
   p->flags |= ON_INHEAP;
   if (!h->n) h->n = 1;
-  if (h->n >= h->alloc) {
-    while (h->n >= h->alloc) h->alloc += 1024;
-    h->buf = (oct_node *) gks_realloc(h->buf, sizeof(oct_node) * h->alloc);
-  }
+  if (h->n >= h->alloc)
+    {
+      while (h->n >= h->alloc) h->alloc += 1024;
+      h->buf = (oct_node *)gks_realloc(h->buf, sizeof(oct_node) * h->alloc);
+    }
 
   p->heap_idx = h->n;
   h->buf[h->n++] = p;
   up_heap(h, p);
 }
 
-static
-oct_node pop_heap(node_heap *h)
+static oct_node pop_heap(node_heap *h)
 {
   oct_node ret;
 
@@ -1205,21 +1127,20 @@ oct_node pop_heap(node_heap *h)
   return ret;
 }
 
-static
-oct_node pool = NULL;
+static oct_node pool = NULL;
 
-static
-oct_node node_new(unsigned char idx, unsigned char depth, oct_node p)
+static oct_node node_new(unsigned char idx, unsigned char depth, oct_node p)
 {
   static int len = 0;
   oct_node x, n;
 
-  if (len <= 1) {
-    n = (oct_node) gks_malloc(sizeof(oct_node_t) * 2048);
-    n->parent = pool;
-    pool = n;
-    len = 2047;
-  }
+  if (len <= 1)
+    {
+      n = (oct_node)gks_malloc(sizeof(oct_node_t) * 2048);
+      n->parent = pool;
+      pool = n;
+      len = 2047;
+    }
 
   x = pool + len--;
   x->kid_idx = idx;
@@ -1230,30 +1151,29 @@ oct_node node_new(unsigned char idx, unsigned char depth, oct_node p)
   return x;
 }
 
-static
-void node_free()
+static void node_free()
 {
   oct_node p;
 
-  while (pool) {
-    p = pool->parent;
-    free(pool);
-    pool = p;
-  }
+  while (pool)
+    {
+      p = pool->parent;
+      free(pool);
+      pool = p;
+    }
 }
 
-static
-oct_node node_insert(oct_node root, unsigned char *pix)
+static oct_node node_insert(oct_node root, unsigned char *pix)
 {
   unsigned char i, bit, depth = 0;
 
-  for (bit = 1 << 7; ++depth < 8; bit >>= 1) {
-    i = !!(pix[1] & bit) * 4 + !!(pix[0] & bit) * 2 + !!(pix[2] & bit);
-    if (!root->kids[i])
-      root->kids[i] = node_new(i, depth, root);
+  for (bit = 1 << 7; ++depth < 8; bit >>= 1)
+    {
+      i = !!(pix[1] & bit) * 4 + !!(pix[0] & bit) * 2 + !!(pix[2] & bit);
+      if (!root->kids[i]) root->kids[i] = node_new(i, depth, root);
 
-    root = root->kids[i];
-  }
+      root = root->kids[i];
+    }
 
   root->r += pix[0];
   root->g += pix[1];
@@ -1263,8 +1183,7 @@ oct_node node_insert(oct_node root, unsigned char *pix)
   return root;
 }
 
-static
-oct_node node_fold(oct_node p)
+static oct_node node_fold(oct_node p)
 {
   oct_node q;
 
@@ -1281,16 +1200,16 @@ oct_node node_fold(oct_node p)
   return q;
 }
 
-static
-int color_replace(oct_node root, unsigned char *pix)
+static int color_replace(oct_node root, unsigned char *pix)
 {
   unsigned char i, bit;
 
-  for (bit = 1 << 7; bit; bit >>= 1) {
-    i = !!(pix[1] & bit) * 4 + !!(pix[0] & bit) * 2 + !!(pix[2] & bit);
-    if (!root->kids[i]) break;
-    root = root->kids[i];
-  }
+  for (bit = 1 << 7; bit; bit >>= 1)
+    {
+      i = !!(pix[1] & bit) * 4 + !!(pix[0] & bit) * 2 + !!(pix[2] & bit);
+      if (!root->kids[i]) break;
+      root = root->kids[i];
+    }
 
   pix[0] = root->r;
   pix[1] = root->g;
@@ -1301,36 +1220,35 @@ int color_replace(oct_node root, unsigned char *pix)
 
 #define N_COLORS 256
 
-#define WRITE_SIXEL_DATA \
-  if (cache == -1) \
-    c = 0x3f; \
-  else { \
-    c = 0x3f + n; \
-    if (slots[cache] == 0) { \
-      r = palette[cache * 3 - 3] * 100 / 256; \
-      g = palette[cache * 3 - 2] * 100 / 256; \
-      b = palette[cache * 3 - 1] * 100 / 256; \
-      slots[cache] = 1; \
-      fprintf(stream, "#%d;2;%d;%d;%d", cache, r, g, b); \
-    } \
-    fprintf(stream, "#%d", cache); \
-  } \
-  if (count < 3) \
-    for (i = 0; i < count; i++) \
-      fprintf(stream, "%c", c); \
-  else \
+#define WRITE_SIXEL_DATA                                     \
+  if (cache == -1)                                           \
+    c = 0x3f;                                                \
+  else                                                       \
+    {                                                        \
+      c = 0x3f + n;                                          \
+      if (slots[cache] == 0)                                 \
+        {                                                    \
+          r = palette[cache * 3 - 3] * 100 / 256;            \
+          g = palette[cache * 3 - 2] * 100 / 256;            \
+          b = palette[cache * 3 - 1] * 100 / 256;            \
+          slots[cache] = 1;                                  \
+          fprintf(stream, "#%d;2;%d;%d;%d", cache, r, g, b); \
+        }                                                    \
+      fprintf(stream, "#%d", cache);                         \
+    }                                                        \
+  if (count < 3)                                             \
+    for (i = 0; i < count; i++) fprintf(stream, "%c", c);    \
+  else                                                       \
     fprintf(stream, "!%d%c", count, c);
 
-static
-void write_sixels(char *path, int width, int height, int *palette, int *data)
+static void write_sixels(char *path, int width, int height, int *palette, int *data)
 {
   int i, slots[257];
   FILE *stream;
   int n, x, y, p, cache, count, c, color;
   int r, g, b;
 
-  for (i = 0; i <= 256; i++)
-    slots[i] = 0;
+  for (i = 0; i <= 256; i++) slots[i] = 0;
 
   stream = fopen(path, "w");
 
@@ -1338,71 +1256,75 @@ void write_sixels(char *path, int width, int height, int *palette, int *data)
   fprintf(stream, "%d;%d;%dq\"1;1;%d;%d", 7, 1, 75, width, height);
 
   n = 1;
-  for (y = 0; y < height; y++) {
-    p = y * width;
-    cache = data[p];
-    count = 1;
-    c = -1;
-    for (x = 0; x < width; x++) {
-      color = data[p + x];
-      if (color == cache)
-        count += 1;
-      else {
-        WRITE_SIXEL_DATA;
-        count = 1;
-        cache = color;
-      }
+  for (y = 0; y < height; y++)
+    {
+      p = y * width;
+      cache = data[p];
+      count = 1;
+      c = -1;
+      for (x = 0; x < width; x++)
+        {
+          color = data[p + x];
+          if (color == cache)
+            count += 1;
+          else
+            {
+              WRITE_SIXEL_DATA;
+              count = 1;
+              cache = color;
+            }
+        }
+      if (c != -1 && count > 1)
+        {
+          WRITE_SIXEL_DATA;
+        }
+      if (n == 32)
+        {
+          n = 1;
+          fprintf(stream, "-");
+        }
+      else
+        {
+          n <<= 1;
+          fprintf(stream, "$");
+        }
     }
-    if (c != -1 && count > 1) {
-      WRITE_SIXEL_DATA;
-    }
-    if (n == 32) {
-      n = 1;
-      fprintf(stream, "-");
-    } else {
-      n <<= 1;
-      fprintf(stream, "$");
-    }
-  }
   fprintf(stream, "%c\\", 0x1b);
   fclose(stream);
 }
 
-static
-void write_to_six(char *path, int width, int height, unsigned char *data)
+static void write_to_six(char *path, int width, int height, unsigned char *data)
 {
   unsigned char *pix = data;
   oct_node root, got;
   int i, j;
-  node_heap heap = { 0, 0, NULL };
+  node_heap heap = {0, 0, NULL};
   double c;
   int r, g, b, *palette, *ca;
 
   root = node_new(0, 0, NULL);
-  for (i = 0; i < width * height; i++, pix += 4)
-    heap_add(&heap, node_insert(root, pix));
+  for (i = 0; i < width * height; i++, pix += 4) heap_add(&heap, node_insert(root, pix));
 
-  while (heap.n > N_COLORS + 1)
-    heap_add(&heap, node_fold(pop_heap(&heap)));
+  while (heap.n > N_COLORS + 1) heap_add(&heap, node_fold(pop_heap(&heap)));
 
-  palette = (int *) gks_malloc(heap.n * 3 * sizeof(int));
-  for (i = 1, j = 0; i < heap.n; i++) {
-    got = heap.buf[i];
-    c = got->count;
-    got->r = got->r / c + 0.5;
-    got->g = got->g / c + 0.5;
-    got->b = got->b / c + 0.5;
-    r = (int) got->r & 0xff;
-    g = (int) got->g & 0xff;
-    b = (int) got->b & 0xff;
-    palette[j++] = r;
-    palette[j++] = g;
-    palette[j++] = b;
-  }
+  palette = (int *)gks_malloc(heap.n * 3 * sizeof(int));
+  for (i = 1, j = 0; i < heap.n; i++)
+    {
+      got = heap.buf[i];
+      c = got->count;
+      got->r = got->r / c + 0.5;
+      got->g = got->g / c + 0.5;
+      got->b = got->b / c + 0.5;
+      r = (int)got->r & 0xff;
+      g = (int)got->g & 0xff;
+      b = (int)got->b & 0xff;
+      palette[j++] = r;
+      palette[j++] = g;
+      palette[j++] = b;
+    }
 
-  ca = (int *) gks_malloc(width * height * sizeof(int));
-  for (i = 0, pix = data; i < width * height; i++, pix += 4)
-    ca[i] = color_replace(root, pix);
+  ca = (int *)gks_malloc(width * height * sizeof(int));
+  for (i = 0, pix = data; i < width * height; i++, pix += 4) ca[i] = color_replace(root, pix);
 
   write_sixels(path, width, height, palette, ca);
 
@@ -1410,14 +1332,13 @@ void write_to_six(char *path, int width, int height, unsigned char *data)
   free(heap.buf);
 }
 
-static
-void write_page(void)
+static void write_page(void)
 {
   char path[MAXPATHLEN];
   unsigned char *data, *pix;
   int width, height, stride;
   double alpha;
-  int i, j, k, l, bg[3] = { 255, 255, 255 };
+  int i, j, k, l, bg[3] = {255, 255, 255};
 
   p->empty = 1;
   p->page_counter++;
@@ -1440,30 +1361,36 @@ void write_page(void)
       width = cairo_image_surface_get_width(p->surface);
       height = cairo_image_surface_get_height(p->surface);
       stride = cairo_image_surface_get_stride(p->surface);
-      if (p->mem) {
-        for (j = 0; j < height; j++) {
-          for (i = 0; i < width; i++) {
-            /* Reverse alpha pre-multiplication */
-            double alpha = data[j * stride + i * 4 + 3];
-            double red = data[j * stride + i * 4 + 2] * 255.0 / alpha;
-            double green = data[j * stride + i * 4 + 1] * 255.0 / alpha;
-            double blue = data[j * stride + i * 4 + 0] * 255.0 / alpha;
-            if (red > 255) {
-              red = 255;
+      if (p->mem)
+        {
+          for (j = 0; j < height; j++)
+            {
+              for (i = 0; i < width; i++)
+                {
+                  /* Reverse alpha pre-multiplication */
+                  double alpha = data[j * stride + i * 4 + 3];
+                  double red = data[j * stride + i * 4 + 2] * 255.0 / alpha;
+                  double green = data[j * stride + i * 4 + 1] * 255.0 / alpha;
+                  double blue = data[j * stride + i * 4 + 0] * 255.0 / alpha;
+                  if (red > 255)
+                    {
+                      red = 255;
+                    }
+                  if (green > 255)
+                    {
+                      green = 255;
+                    }
+                  if (blue > 255)
+                    {
+                      blue = 255;
+                    }
+                  p->mem[j * width * 4 + i * 4 + 0] = (unsigned char)red;
+                  p->mem[j * width * 4 + i * 4 + 1] = (unsigned char)green;
+                  p->mem[j * width * 4 + i * 4 + 2] = (unsigned char)blue;
+                  p->mem[j * width * 4 + i * 4 + 3] = (unsigned char)alpha;
+                }
             }
-            if (green > 255) {
-              green = 255;
-            }
-            if (blue > 255) {
-              blue = 255;
-            }
-            p->mem[j * width * 4 + i * 4 + 0] = (unsigned char)red;
-            p->mem[j * width * 4 + i * 4 + 1] = (unsigned char)green;
-            p->mem[j * width * 4 + i * 4 + 2] = (unsigned char)blue;
-            p->mem[j * width * 4 + i * 4 + 3] = (unsigned char)alpha;
-          }
         }
-      }
     }
   else if (p->wtype == 150)
     {
@@ -1474,33 +1401,34 @@ void write_page(void)
       height = cairo_image_surface_get_height(p->surface);
       stride = cairo_image_surface_get_stride(p->surface);
 
-      pix = (unsigned char *) gks_malloc(width * height * 4);
+      pix = (unsigned char *)gks_malloc(width * height * 4);
       l = 0;
-      for (j = 0; j < height; j++) {
-        for (i = 0; i < width; i++) {
-          k = j * stride + i * 4;
-          alpha =           data[k + 3] / 255.0;
-          pix[l++] = (int) (data[k + 2] * alpha + bg[0] * (1 - alpha) + 0.5);
-          pix[l++] = (int) (data[k + 1] * alpha + bg[1] * (1 - alpha) + 0.5);
-          pix[l++] = (int) (data[k + 0] * alpha + bg[2] * (1 - alpha) + 0.5);
-          pix[l++] = 255;
+      for (j = 0; j < height; j++)
+        {
+          for (i = 0; i < width; i++)
+            {
+              k = j * stride + i * 4;
+              alpha = data[k + 3] / 255.0;
+              pix[l++] = (int)(data[k + 2] * alpha + bg[0] * (1 - alpha) + 0.5);
+              pix[l++] = (int)(data[k + 1] * alpha + bg[1] * (1 - alpha) + 0.5);
+              pix[l++] = (int)(data[k + 0] * alpha + bg[2] * (1 - alpha) + 0.5);
+              pix[l++] = 255;
+            }
         }
-      }
       gks_filepath(path, p->path, "six", p->page_counter, 0);
       write_to_six(path, width, height, pix);
       free(pix);
     }
 }
 
-static
-void select_xform(int tnr)
+static void select_xform(int tnr)
 {
   gkss->cntnr = tnr;
   set_clip_rect(tnr);
 }
 
-static
-void set_transparency(double alpha) {
+static void set_transparency(double alpha)
+{
   p->transparency = alpha;
 }
 
@@ -1516,8 +1444,7 @@ void set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
   gks_set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
 }
 
-static
-void set_viewport(int tnr, double xmin, double xmax, double ymin, double ymax)
+static void set_viewport(int tnr, double xmin, double xmax, double ymin, double ymax)
 {
   gkss->viewport[tnr][0] = xmin;
   gkss->viewport[tnr][1] = xmax;
@@ -1526,17 +1453,16 @@ void set_viewport(int tnr, double xmin, double xmax, double ymin, double ymax)
 
   set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
   gks_set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
-  if (tnr == gkss->cntnr) {
-    set_clip_rect(tnr);
-  }
+  if (tnr == gkss->cntnr)
+    {
+      set_clip_rect(tnr);
+    }
 }
 
-void gks_cairoplugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2,
-  int lc, char *chars, void **ptr)
+void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                     char *chars, void **ptr)
 {
-  p = (ws_state_list *) *ptr;
+  p = (ws_state_list *)*ptr;
 
   idle = 0;
 
@@ -1544,11 +1470,11 @@ void gks_cairoplugin(
     {
     case 2:
       /* open workstation */
-      gkss = (gks_state_list_t *) * ptr;
+      gkss = (gks_state_list_t *)*ptr;
 
       gks_init_core(gkss);
 
-      p = (ws_state_list *) gks_malloc(sizeof(ws_state_list));
+      p = (ws_state_list *)gks_malloc(sizeof(ws_state_list));
 
       p->conid = ia[1];
       p->path = chars;
@@ -1557,8 +1483,10 @@ void gks_cairoplugin(
 
       if (p->wtype == 140)
         {
-          p->mw = 0.28575; p->mh = 0.19685;
-          p->w = 6750; p->h = 4650;
+          p->mw = 0.28575;
+          p->mh = 0.19685;
+          p->w = 6750;
+          p->h = 4650;
           resize(2400, 2400);
         }
       else if (p->wtype == 143)
@@ -1569,35 +1497,44 @@ void gks_cairoplugin(
           int characters_read = 0;
           void *mem_ptr = NULL;
           char *path = p->path;
-          if (!path) {
-            fprintf(stderr, "Missing mem path. Expected !<width>x<height>@<pointer>.mem\n");
-            exit(1);
-          }
+          if (!path)
+            {
+              fprintf(stderr, "Missing mem path. Expected !<width>x<height>@<pointer>.mem\n");
+              exit(1);
+            }
           symbols_read = sscanf(path, "!%dx%d@%p.mem%n", &width, &height, &mem_ptr, &characters_read);
-          if (symbols_read != 3 || path[characters_read] != 0 || width <= 0 || height <= 0 || mem_ptr == NULL) {
-            fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n", p->path);
-            exit(1);
-          }
-          p->mem = (unsigned char*)mem_ptr;
-          p->mw = 0.28575; p->mh = 0.19685;
-          p->w = 6750; p->h = 4650;
+          if (symbols_read != 3 || path[characters_read] != 0 || width <= 0 || height <= 0 || mem_ptr == NULL)
+            {
+              fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n",
+                      p->path);
+              exit(1);
+            }
+          p->mem = (unsigned char *)mem_ptr;
+          p->mw = 0.28575;
+          p->mh = 0.19685;
+          p->w = 6750;
+          p->h = 4650;
           resize(width, height);
         }
       else if (p->wtype == 150)
         {
-          p->mw = 0.20320; p->mh = 0.15240;
-          p->w = 560; p->h = 420;
+          p->mw = 0.20320;
+          p->mh = 0.15240;
+          p->w = 560;
+          p->h = 420;
           resize(400, 400);
         }
       else
         {
-          p->mw = 0.25400; p->mh = 0.19050;
-          p->w = 1024; p->h = 768;
+          p->mw = 0.25400;
+          p->mh = 0.19050;
+          p->w = 1024;
+          p->h = 768;
           resize(500, 500);
         }
 
       p->max_points = MAX_POINTS;
-      p->points = (cairo_point *) gks_malloc(p->max_points * sizeof(cairo_point));
+      p->points = (cairo_point *)gks_malloc(p->max_points * sizeof(cairo_point));
       p->npoints = 0;
 
       p->empty = 1;
@@ -1617,15 +1554,15 @@ void gks_cairoplugin(
 
     case 3:
       /* close workstation */
-      if ((p->wtype != 141 || !exit_due_to_x11_support_) && (p->wtype != 143 || p->mem != NULL)) {
-        if (!p->empty)
-          write_page();
+      if ((p->wtype != 141 || !exit_due_to_x11_support_) && (p->wtype != 143 || p->mem != NULL))
+        {
+          if (!p->empty) write_page();
 
-        close_page();
-        free(p->patterns);
-        free(p->points);
-        free(p);
-      }
+          close_page();
+          free(p->patterns);
+          free(p->points);
+          free(p);
+        }
       break;
 
     case 4:
@@ -1655,8 +1592,7 @@ void gks_cairoplugin(
       if (ia[1] == GKS_K_PERFORM_FLAG)
         {
           lock();
-          if (!p->empty)
-            write_page();
+          if (!p->empty) write_page();
           unlock();
         }
       break;
@@ -1778,10 +1714,11 @@ void gks_cairoplugin(
       p->viewport[2] = 0;
       p->viewport[3] = r2[1] - r2[0];
 
-      if (p->wtype != 143) {
-        p->width = p->viewport[1] * p->w / p->mw;
-        p->height = p->viewport[3] * p->h / p->mh;
-      }
+      if (p->wtype != 143)
+        {
+          p->width = p->viewport[1] * p->w / p->mw;
+          p->height = p->viewport[3] * p->h / p->mh;
+        }
       close_page();
       open_page();
 
@@ -1798,8 +1735,7 @@ void gks_cairoplugin(
       unlock();
       break;
 
-    default:
-      ;
+    default:;
     }
 
   idle = 1;
@@ -1807,10 +1743,8 @@ void gks_cairoplugin(
 
 #else
 
-void gks_cairoplugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2,
-  int lc, char *chars, void **ptr)
+void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                     char *chars, void **ptr)
 {
   if (fctid == 2)
     {

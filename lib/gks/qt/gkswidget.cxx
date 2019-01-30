@@ -6,9 +6,9 @@
 
 #include <QtGlobal>
 #if QT_VERSION >= 0x050000
-    #include <QtWidgets/QWidget>
+#include <QtWidgets/QWidget>
 #else
-    #include <QtGui/QWidget>
+#include <QtGui/QWidget>
 #endif
 #include <QtGui/QPainter>
 #include <QtGui/QImage>
@@ -24,8 +24,7 @@
 
 #include "gkswidget.h"
 
-static
-void create_pixmap(ws_state_list *p)
+static void create_pixmap(ws_state_list *p)
 {
   p->pm = new QPixmap(p->width, p->height);
   p->pm->fill(Qt::white);
@@ -36,8 +35,7 @@ void create_pixmap(ws_state_list *p)
   get_pixmap();
 }
 
-static
-void resize_pixmap(int width, int height)
+static void resize_pixmap(int width, int height)
 {
   if (p->width != width || p->height != height)
     {
@@ -59,8 +57,7 @@ void resize_pixmap(int width, int height)
     }
 }
 
-GKSWidget::GKSWidget(QWidget *parent)
-  : QWidget(parent)
+GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
 {
   is_mapped = 0;
   dl = NULL;
@@ -90,14 +87,17 @@ void GKSWidget::paintEvent(QPaintEvent *)
       p->pm->fill(Qt::white);
       interp(dl);
 
-      if (!prevent_resize) {
-        painter.drawPixmap(0, 0, *(p->pm));
-      } else {
-        int x = (width() - p->width) / 2;
-        int y = (height() - p->height) / 2;
-        painter.fillRect(0, 0, width(), height(), Qt::white);
-        painter.drawPixmap(x, y, *(p->pm));
-      }
+      if (!prevent_resize)
+        {
+          painter.drawPixmap(0, 0, *(p->pm));
+        }
+      else
+        {
+          int x = (width() - p->width) / 2;
+          int y = (height() - p->height) / 2;
+          painter.fillRect(0, 0, width(), height(), Qt::white);
+          painter.drawPixmap(x, y, *(p->pm));
+        }
     }
 }
 
@@ -109,18 +109,17 @@ void GKSWidget::resizeEvent(QResizeEvent *event)
   repaint();
 }
 
-static
-void set_window_size(char *s)
+static void set_window_size(char *s)
 {
   int sp = 0, *len, *f;
   double *vp;
-  len = (int *) (s + sp);
+  len = (int *)(s + sp);
   while (*len)
     {
-      f = (int *) (s + sp + sizeof(int));
+      f = (int *)(s + sp + sizeof(int));
       if (*f == 55)
         {
-          vp = (double *) (s + sp + 3 * sizeof(int));
+          vp = (double *)(s + sp + 3 * sizeof(int));
           if (p->mwidth > 0)
             {
               double mwidth = round((vp[1] - vp[0]) * 1000) * 0.001;
@@ -142,19 +141,22 @@ void set_window_size(char *s)
             }
         }
       sp += *len;
-      len = (int *) (s + sp);
+      len = (int *)(s + sp);
     }
 }
 
 void GKSWidget::interpret(char *dl)
 {
   set_window_size(dl);
-  if (!prevent_resize) {
-    resize(p->width, p->height);
-  } else {
-    p->mwidth = p->width * widthMM() * 0.001 / width();
-    p->mheight = p->height * heightMM() * 0.001 / height();
-  }
+  if (!prevent_resize)
+    {
+      resize(p->width, p->height);
+    }
+  else
+    {
+      p->mwidth = p->width * widthMM() * 0.001 / width();
+      p->mheight = p->height * heightMM() * 0.001 / height();
+    }
   if (!is_mapped)
     {
       is_mapped = 1;

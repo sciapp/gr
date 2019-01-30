@@ -12,7 +12,7 @@ char *gks_malloc(int size)
 {
   char *temp;
 
-  temp = (char *) calloc(1, size);
+  temp = (char *)calloc(1, size);
   if (temp == 0)
     {
       gks_fatal_error("can't allocate memory");
@@ -25,7 +25,7 @@ char *gks_realloc(void *ptr, int size)
 {
   char *temp;
 
-  temp = ptr ? (char *) realloc(ptr, size) : (char *) malloc(size);
+  temp = ptr ? (char *)realloc(ptr, size) : (char *)malloc(size);
   if (temp == 0)
     {
       gks_fatal_error("can't re-allocate memory");
@@ -39,6 +39,5 @@ char *gks_realloc(void *ptr, int size)
 
 void gks_free(void *ptr)
 {
-  if (ptr)
-    free(ptr);
+  if (ptr) free(ptr);
 }

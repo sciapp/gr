@@ -67,40 +67,40 @@ GLFUNC PFNGLGENRENDERBUFFERSEXTPROC gr3_glGenRenderbuffersEXT;
 GLFUNC PFNGLDELETEFRAMEBUFFERSEXTPROC gr3_glDeleteFramebuffersEXT;
 GLFUNC PFNGLDELETERENDERBUFFERSEXTPROC gr3_glDeleteRenderbuffersEXT;
 #endif
-GLFUNC void(*gr3_glBegin)(GLenum);
-GLFUNC void(*gr3_glBlendColor)(GLclampf, GLclampf, GLclampf, GLclampf);
-GLFUNC void(*gr3_glBlendFunc)(GLenum, GLenum);
-GLFUNC void(*gr3_glCallList)(GLuint);
-GLFUNC void(*gr3_glClear)(GLenum);
-GLFUNC void(*gr3_glClearColor)(GLclampf, GLclampf, GLclampf, GLclampf);
-GLFUNC void(*gr3_glColor3fv)(const GLfloat*);
-GLFUNC void(*gr3_glColorMaterial)(GLenum, GLenum);
-GLFUNC void(*gr3_glDeleteLists)(GLuint, GLsizei);
-GLFUNC void(*gr3_glDisable)(GLenum);
-GLFUNC void(*gr3_glDrawArrays)(GLenum, GLint, GLsizei);
-GLFUNC void(*gr3_glDrawElements)(GLenum, GLsizei, GLenum, const GLvoid*);
-GLFUNC void(*gr3_glEnable)(GLenum);
-GLFUNC void(*gr3_glEnd)(void);
-GLFUNC void(*gr3_glEndList)(void);
-GLFUNC GLuint(*gr3_glGenLists)(GLsizei);
-GLFUNC GLenum(*gr3_glGetError)(void);
-GLFUNC void(*gr3_glGetIntegerv)(GLenum, GLint*);
-GLFUNC const GLubyte*(*gr3_glGetString)(GLenum);
-GLFUNC void(*gr3_glLightfv)(GLenum, GLenum, const GLfloat*);
-GLFUNC void(*gr3_glLoadIdentity)(void);
-GLFUNC void(*gr3_glLoadMatrixf)(const GLfloat*);
-GLFUNC void(*gr3_glMaterialfv)(GLenum, GLenum, const GLfloat*);
-GLFUNC void(*gr3_glMatrixMode)(GLenum);
-GLFUNC void(*gr3_glMultMatrixf)(const GLfloat*);
-GLFUNC void(*gr3_glNewList)(GLuint, GLenum);
-GLFUNC void(*gr3_glNormal3fv)(const GLfloat*);
-GLFUNC void(*gr3_glPixelStorei)(GLenum, GLint);
-GLFUNC void(*gr3_glPopMatrix)(void);
-GLFUNC void(*gr3_glPushMatrix)(void);
-GLFUNC void(*gr3_glReadBuffer)(GLenum);
-GLFUNC void(*gr3_glReadPixels)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, GLvoid*);
-GLFUNC void(*gr3_glVertex3fv)(const GLfloat*);
-GLFUNC void(*gr3_glViewport)(GLint, GLint, GLsizei, GLsizei);
+GLFUNC void (*gr3_glBegin)(GLenum);
+GLFUNC void (*gr3_glBlendColor)(GLclampf, GLclampf, GLclampf, GLclampf);
+GLFUNC void (*gr3_glBlendFunc)(GLenum, GLenum);
+GLFUNC void (*gr3_glCallList)(GLuint);
+GLFUNC void (*gr3_glClear)(GLenum);
+GLFUNC void (*gr3_glClearColor)(GLclampf, GLclampf, GLclampf, GLclampf);
+GLFUNC void (*gr3_glColor3fv)(const GLfloat *);
+GLFUNC void (*gr3_glColorMaterial)(GLenum, GLenum);
+GLFUNC void (*gr3_glDeleteLists)(GLuint, GLsizei);
+GLFUNC void (*gr3_glDisable)(GLenum);
+GLFUNC void (*gr3_glDrawArrays)(GLenum, GLint, GLsizei);
+GLFUNC void (*gr3_glDrawElements)(GLenum, GLsizei, GLenum, const GLvoid *);
+GLFUNC void (*gr3_glEnable)(GLenum);
+GLFUNC void (*gr3_glEnd)(void);
+GLFUNC void (*gr3_glEndList)(void);
+GLFUNC GLuint (*gr3_glGenLists)(GLsizei);
+GLFUNC GLenum (*gr3_glGetError)(void);
+GLFUNC void (*gr3_glGetIntegerv)(GLenum, GLint *);
+GLFUNC const GLubyte *(*gr3_glGetString)(GLenum);
+GLFUNC void (*gr3_glLightfv)(GLenum, GLenum, const GLfloat *);
+GLFUNC void (*gr3_glLoadIdentity)(void);
+GLFUNC void (*gr3_glLoadMatrixf)(const GLfloat *);
+GLFUNC void (*gr3_glMaterialfv)(GLenum, GLenum, const GLfloat *);
+GLFUNC void (*gr3_glMatrixMode)(GLenum);
+GLFUNC void (*gr3_glMultMatrixf)(const GLfloat *);
+GLFUNC void (*gr3_glNewList)(GLuint, GLenum);
+GLFUNC void (*gr3_glNormal3fv)(const GLfloat *);
+GLFUNC void (*gr3_glPixelStorei)(GLenum, GLint);
+GLFUNC void (*gr3_glPopMatrix)(void);
+GLFUNC void (*gr3_glPushMatrix)(void);
+GLFUNC void (*gr3_glReadBuffer)(GLenum);
+GLFUNC void (*gr3_glReadPixels)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, GLvoid *);
+GLFUNC void (*gr3_glVertex3fv)(const GLfloat *);
+GLFUNC void (*gr3_glViewport)(GLint, GLint, GLsizei, GLsizei);
 
 #define glBufferData gr3_glBufferData
 #define glBindBuffer gr3_glBindBuffer
@@ -177,6 +177,6 @@ GLFUNC void(*gr3_glViewport)(GLint, GLint, GLsizei, GLsizei);
 #define glVertex3fv gr3_glVertex3fv
 #define glViewport gr3_glViewport
 
-int  gr3_initGL_GLX_(void);
+int gr3_initGL_GLX_(void);
 
 #endif

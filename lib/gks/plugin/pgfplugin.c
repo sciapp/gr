@@ -20,10 +20,10 @@
 #define PATTERNS 120
 #define HATCH_STYLE 108
 
-#define MWIDTH  0.254
+#define MWIDTH 0.254
 #define MHEIGHT 0.1905
-#define WIDTH   1024
-#define HEIGHT  768
+#define WIDTH 1024
+#define HEIGHT 768
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -47,10 +47,8 @@ extern "C"
 
 #endif
 
-DLLEXPORT void gks_pgfplugin(
-    int fctid, int dx, int dy, int dimx, int *i_arr,
-    int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-    int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef __cplusplus
 }
@@ -58,37 +56,35 @@ DLLEXPORT void gks_pgfplugin(
 
 #define MAX_TNR 9
 
-#define WC_to_NDC(xw, yw, tnr, xn, yn)          \
-  xn = a[tnr] * (xw) + b[tnr];                  \
+#define WC_to_NDC(xw, yw, tnr, xn, yn) \
+  xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
 
-#define WC_to_NDC_rel(xw, yw, tnr, xn, yn)      \
-  xn = a[tnr] * (xw);                           \
+#define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
+  xn = a[tnr] * (xw);                      \
   yn = c[tnr] * (yw)
 
-#define NDC_to_DC(xn, yn, xd, yd)               \
-  xd = (p->a * (xn) + p->b);                    \
+#define NDC_to_DC(xn, yn, xd, yd) \
+  xd = (p->a * (xn) + p->b);      \
   yd = (p->c * (yn) + p->d)
 
-#define CharXform(xrel, yrel, x, y)                     \
-  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel);  \
+#define CharXform(xrel, yrel, x, y)                  \
+  x = cos(p->alpha) * (xrel)-sin(p->alpha) * (yrel); \
   y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
 
 #ifndef min
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
 #ifndef max
-#define max(a,b) (((a) > (b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-static
-gks_state_list_t *gkss;
+static gks_state_list_t *gkss;
 
-static
-double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 typedef unsigned char Byte;
 typedef unsigned long uLong;
@@ -97,14 +93,12 @@ typedef struct PGF_stream_t
 {
   Byte *buffer;
   uLong size, length;
-}
-PGF_stream;
+} PGF_stream;
 
 typedef struct PGF_point_t
 {
   double x, y;
-}
-PGF_point;
+} PGF_point;
 
 typedef struct ws_state_list_t
 {
@@ -128,72 +122,44 @@ typedef struct ws_state_list_t
   double rect[MAX_TNR][2][2];
   int scoped, png_counter, pattern_counter, usesymbols;
   int dashes[10];
-}
-ws_state_list;
+} ws_state_list;
 
-static
-ws_state_list *p;
+static ws_state_list *p;
 
-static
-const char *fonts[] = {
-  "ptm", "phv", "pcr", "psy",
-  "pbk", "pnc", "pag", "ppl"
-};
+static const char *fonts[] = {"ptm", "phv", "pcr", "psy", "pbk", "pnc", "pag", "ppl"};
 
-static
-double capheights[29] = {
-  0.662, 0.660, 0.681, 0.662,
-  0.729, 0.729, 0.729, 0.729,
-  0.583, 0.583, 0.583, 0.583,
-  0.667,
-  0.681, 0.681, 0.681, 0.681,
-  0.722, 0.722, 0.722, 0.722,
-  0.739, 0.739, 0.739, 0.739,
-  0.694, 0.693, 0.683, 0.683
-};
+static double capheights[29] = {0.662, 0.660, 0.681, 0.662, 0.729, 0.729, 0.729, 0.729, 0.583, 0.583,
+                                0.583, 0.583, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722,
+                                0.722, 0.739, 0.739, 0.739, 0.739, 0.694, 0.693, 0.683, 0.683};
 
-static
-int map[32] = {
-  22, 9, 5, 14, 18, 26, 13, 1,
-  24, 11, 7, 16, 20, 28, 13, 3,
-  23, 10, 6, 15, 19, 27, 13, 2,
-  25, 12, 8, 17, 21, 29, 13, 4
-};
+static int map[32] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
+                      23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
-static
-double xfac[4] = { 0, 0, -0.5, -1 };
+static double xfac[4] = {0, 0, -0.5, -1};
 
-static
-double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+static double yfac[6] = {0, -1.2, -1, -0.5, 0, 0.2};
 
-static
-int predef_font[] = { 1, 1, 1, -2, -3, -4 };
+static int predef_font[] = {1, 1, 1, -2, -3, -4};
 
-static
-int predef_prec[] = { 0, 1, 2, 2, 2, 2 };
+static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 
-static
-int predef_ints[] = { 0, 1, 3, 3, 3 };
+static int predef_ints[] = {0, 1, 3, 3, 3};
 
-static
-int predef_styli[] = { 1, 1, 1, 2, 3 };
+static int predef_styli[] = {1, 1, 1, 2, 3};
 
-static
-void pgf_memcpy(PGF_stream *p, char *s, size_t n)
+static void pgf_memcpy(PGF_stream *p, char *s, size_t n)
 {
   if (p->length + n >= p->size)
     {
-      while (p->length + n >= p->size)
-        p->size += MEMORY_INCREMENT;
-      p->buffer = (Byte *) realloc(p->buffer, p->size);
+      while (p->length + n >= p->size) p->size += MEMORY_INCREMENT;
+      p->buffer = (Byte *)realloc(p->buffer, p->size);
     }
 
   memmove(p->buffer + p->length, s, n);
   p->length += n;
 }
 
-static
-void pgf_printf(PGF_stream *p, const char *args, ...)
+static void pgf_printf(PGF_stream *p, const char *args, ...)
 {
   va_list ap;
   char fmt[BUFSIZ], s[BUFSIZ];
@@ -207,20 +173,18 @@ void pgf_printf(PGF_stream *p, const char *args, ...)
   pgf_memcpy(p, s, strlen(s));
 }
 
-static
-PGF_stream *pgf_alloc_stream(void)
+static PGF_stream *pgf_alloc_stream(void)
 {
   PGF_stream *p;
 
-  p = (PGF_stream *) calloc(1, sizeof(PGF_stream));
+  p = (PGF_stream *)calloc(1, sizeof(PGF_stream));
   p->buffer = NULL;
   p->size = p->length = 0;
 
   return p;
 }
 
-static
-void set_norm_xform(int tnr, double *wn, double *vp)
+static void set_norm_xform(int tnr, double *wn, double *vp)
 {
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -231,17 +195,14 @@ void set_norm_xform(int tnr, double *wn, double *vp)
   NDC_to_DC(vp[1], vp[2], p->rect[tnr][1][0], p->rect[tnr][1][1]);
 }
 
-static
-void init_norm_xform(void)
+static void init_norm_xform(void)
 {
   int tnr;
 
-  for (tnr = 0; tnr < MAX_TNR; tnr++)
-    set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
+  for (tnr = 0; tnr < MAX_TNR; tnr++) set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
 }
 
-static
-void set_xform(void)
+static void set_xform(void)
 {
   p->a = p->width / (p->window[1] - p->window[0]);
   p->b = -p->window[0] * p->a;
@@ -249,8 +210,7 @@ void set_xform(void)
   p->d = p->height - p->window[2] * p->c;
 }
 
-static
-void seg_xform(double *x, double *y)
+static void seg_xform(double *x, double *y)
 {
   double xx;
 
@@ -259,8 +219,7 @@ void seg_xform(double *x, double *y)
   *x = xx;
 }
 
-static
-void seg_xform_rel(double *x, double *y)
+static void seg_xform_rel(double *x, double *y)
 {
   double xx;
 
@@ -269,18 +228,15 @@ void seg_xform_rel(double *x, double *y)
   *x = xx;
 }
 
-static
-void set_color_rep(int color, double red, double green, double blue)
+static void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
-      sprintf(p->rgb[color], "%02X%02X%02X", (int) (red * 255),
-              (int) (green * 255), (int) (blue * 255));
+      sprintf(p->rgb[color], "%02X%02X%02X", (int)(red * 255), (int)(green * 255), (int)(blue * 255));
     }
 }
 
-static
-void init_colors(void)
+static void init_colors(void)
 {
   int color;
   double red, green, blue;
@@ -292,8 +248,7 @@ void init_colors(void)
     }
 }
 
-static
-void draw_marker(double xn, double yn, int mtype, double mscale)
+static void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   double x, y;
   double scale, xr, yr, x1, x2, y1, y2;
@@ -301,9 +256,8 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 
 #include "marker.h"
 
-  if (gkss->version > 4)
-    mscale *= (p->width + p->height) * 0.001;
-  r = (int) (3 * mscale);
+  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
+  r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
@@ -316,20 +270,21 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
   pc = 0;
   mtype = (r > 0) ? mtype + marker_off : marker_off + 1;
 
-  pgf_printf(p->stream, "\\begin{scope}[yscale=-1,yshift=-%f]\n", 2*y);
+  pgf_printf(p->stream, "\\begin{scope}[yscale=-1,yshift=-%f]\n", 2 * y);
 
   do
     {
       op = marker[mtype][pc];
       switch (op)
         {
-        case 1:         /* point */
-          pgf_printf(p->stream, "\\draw (%f,%f)"
+        case 1: /* point */
+          pgf_printf(p->stream,
+                     "\\draw (%f,%f)"
                      " rectangle (%f,%f);\n",
                      x, y, x + 1.0, y + 1.0);
           break;
 
-        case 2:         /* line */
+        case 2: /* line */
           x1 = scale * marker[mtype][pc + 1];
           y1 = scale * marker[mtype][pc + 2];
           seg_xform_rel(&x1, &y1);
@@ -338,30 +293,28 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
           y2 = scale * marker[mtype][pc + 2 + 2];
           seg_xform_rel(&x2, &y2);
 
-          pgf_printf(p->stream, "\\begin{scope}[yscale=-1, yshift=-%f]\n"
+          pgf_printf(p->stream,
+                     "\\begin{scope}[yscale=-1, yshift=-%f]\n"
                      "\\draw (%f,%f) -- (%f,%f);\n"
                      "\\end{scope}\n",
-                     2*y, x - x1, y - y1, x - x2, y - y2);
+                     2 * y, x - x1, y - y1, x - x2, y - y2);
 
           pc += 4;
           break;
 
-        case 3:         /* polyline */
-        case 4:         /* filled polygon */
-        case 5:         /* hollow polygon */
+        case 3: /* polyline */
+        case 4: /* filled polygon */
+        case 5: /* hollow polygon */
           xr = scale * marker[mtype][pc + 2];
           yr = -scale * marker[mtype][pc + 3];
           seg_xform_rel(&xr, &yr);
 
-          if(op == 4)
-            pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt]",
-                       p->linewidth);
+          if (op == 4)
+            pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt]", p->linewidth);
           else
-            pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt]",
-                       p->linewidth);
+            pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt]", p->linewidth);
 
-          pgf_printf(p->stream, " (%f,%f)",
-                     x-xr, y-yr);
+          pgf_printf(p->stream, " (%f,%f)", x - xr, y - yr);
 
           for (i = 1; i < marker[mtype][pc + 1]; i++)
             {
@@ -369,8 +322,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
 
-              pgf_printf(p->stream, "  --  (%f,%f)",
-                         x-xr, y-yr);
+              pgf_printf(p->stream, "  --  (%f,%f)", x - xr, y - yr);
             }
 
           pgf_printf(p->stream, "  --  cycle;\n");
@@ -378,18 +330,18 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
-        case 6:         /* arc */
-        case 7:         /* filled arc */
-        case 8:         /* hollow arc */
-          if(op == 7)
-            pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt]",
-                       p->linewidth);
+        case 6: /* arc */
+        case 7: /* filled arc */
+        case 8: /* hollow arc */
+          if (op == 7)
+            pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt]", p->linewidth);
           else
-            pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt]",
-                       p->linewidth);
+            pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt]", p->linewidth);
 
-          pgf_printf(p->stream, " (%f, %f) arc [start angle=%f, end angle=%f, "
-             "radius=%d];\n", x + r, y, 0.0, 2 * M_PI, r);
+          pgf_printf(p->stream,
+                     " (%f, %f) arc [start angle=%f, end angle=%f, "
+                     "radius=%d];\n",
+                     x + r, y, 0.0, 2 * M_PI, r);
           break;
 
         default:
@@ -402,8 +354,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
   pgf_printf(p->stream, "\\end{scope}\n");
 }
 
-static
-void polymarker(int n, double *px, double *py)
+static void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color, ln_width, i;
   double mk_size, x, y;
@@ -412,11 +363,10 @@ void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  ln_width = gkss->version > 4 ? max(1, nint(p->height/500.0)) : 1;
+  ln_width = gkss->version > 4 ? max(1, nint(p->height / 500.0)) : 1;
   p->linewidth = ln_width;
 
-  pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n",
-             p->rgb[mk_color]);
+  pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[mk_color]);
 
   for (i = 0; i < n; i++)
     {
@@ -427,43 +377,36 @@ void polymarker(int n, double *px, double *py)
     }
 }
 
-static
-void stroke(void)
+static void stroke(void)
 {
   int i;
 
-  pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt] (%f,%f)",
-             p->linewidth, p->points[0].x, p->points[0].y);
+  pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt] (%f,%f)", p->linewidth, p->points[0].x, p->points[0].y);
 
   for (i = 1; i < p->npoints; i++)
     {
-      pgf_printf(p->stream, " -- (%f, %f)",
-                 p->points[i].x, p->points[i].y);
+      pgf_printf(p->stream, " -- (%f, %f)", p->points[i].x, p->points[i].y);
     }
 
   p->npoints = 0;
   pgf_printf(p->stream, ";\n");
 }
 
-static
-void move(double x, double y)
+static void move(double x, double y)
 {
-  if (p->npoints > 0)
-    stroke();
+  if (p->npoints > 0) stroke();
 
   NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
   p->npoints++;
 }
 
-static
-void draw(double x, double y)
+static void draw(double x, double y)
 {
   NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
   p->npoints++;
 }
 
-static
-void line_routine(int n, double *px, double *py, int linetype, int tnr)
+static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y, x0, y0, xi, yi;
   int i;
@@ -472,8 +415,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   seg_xform(&x, &y);
   NDC_to_DC(x, y, x0, y0);
 
-  pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt] (%f,%f)",
-             p->linewidth, x0, y0);
+  pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt] (%f,%f)", p->linewidth, x0, y0);
 
   for (i = 1; i < n; i++)
     {
@@ -486,8 +428,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   pgf_printf(p->stream, ";\n");
 }
 
-static
-void fill_routine(int n, double *px, double *py, int tnr)
+static void fill_routine(int n, double *px, double *py, int tnr)
 {
   int i, j, k;
   double x, y, ix, iy;
@@ -501,19 +442,18 @@ void fill_routine(int n, double *px, double *py, int tnr)
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH)
     {
-      pgf_printf(p->stream, "\\fill[pattern=mypattern%d, pattern color=mycolor, "
+      pgf_printf(p->stream,
+                 "\\fill[pattern=mypattern%d, pattern color=mycolor, "
                  "thickness=%dpt] (%f,%f)",
                  p->pattern_counter, p->linewidth, ix, iy);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
-      pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt] (%f,%f)",
-                 p->linewidth, ix, iy);
+      pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt] (%f,%f)", p->linewidth, ix, iy);
     }
   else
     {
-      pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt] (%f,%f)",
-                 p->linewidth, ix, iy);
+      pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt] (%f,%f)", p->linewidth, ix, iy);
     }
 
   for (i = 1; i < n; i++)
@@ -552,9 +492,10 @@ void fill_routine(int n, double *px, double *py, int tnr)
               k = (1 << i) & pattern[j];
               if (!(k))
                 {
-                  pgf_printf(p->patternstream, "\\pgfpathrectangle"
+                  pgf_printf(p->patternstream,
+                             "\\pgfpathrectangle"
                              "{\\pgfpointxy{%d}{%d}}{\\pgfpointxy{1}{-1}}\n",
-                             (i + 7) % 8, size - (j - 1 + (size -1)) % size);
+                             (i + 7) % 8, size - (j - 1 + (size - 1)) % size);
                 }
             }
         }
@@ -563,22 +504,19 @@ void fill_routine(int n, double *px, double *py, int tnr)
   p->pattern_counter++;
 }
 
-static
-void fillarea(int n, double *px, double *py)
+static void fillarea(int n, double *px, double *py)
 {
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = gkss->version > 4 ? max(nint(p->height/500.0), 1) : 1;
+  p->linewidth = gkss->version > 4 ? max(nint(p->height / 500.0), 1) : 1;
 
-  pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n",
-             p->rgb[fl_color]);
+  pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[fl_color]);
 
   fill_routine(n, px, py, gkss->cntnr);
 }
 
-static
-void polyline(int n, double *px, double *py)
+static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color, i;
   double ln_width;
@@ -587,7 +525,7 @@ void polyline(int n, double *px, double *py)
 
   if (n > p->max_points)
     {
-      p->points = (PGF_point *) realloc(p->points, n * sizeof(PGF_point));
+      p->points = (PGF_point *)realloc(p->points, n * sizeof(PGF_point));
       p->max_points = n;
     }
 
@@ -599,15 +537,13 @@ void polyline(int n, double *px, double *py)
     width = nint(ln_width * (p->width + p->height) * 0.001);
   else
     width = nint(ln_width);
-  if (width < 1)
-    width = 0;
+  if (width < 1) width = 0;
 
   p->linewidth = width;
   p->color = ln_color;
   gks_get_dash_list(ln_type, ln_width, dashes);
   memmove(p->dashes, dashes, sizeof(dashes));
-  pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n",
-             p->rgb[ln_color]);
+  pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[ln_color]);
 
   pgf_printf(p->stream, "\\begin{scope}[dash pattern=");
   for (i = 1; i <= dashes[0]; i++)
@@ -622,14 +558,12 @@ void polyline(int n, double *px, double *py)
   gks_set_dev_xform(gkss, p->window, p->viewport);
   gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
 
-  if (p->npoints > 0)
-    stroke();
+  if (p->npoints > 0) stroke();
 
   pgf_printf(p->stream, "\\end{scope}\n");
 }
 
-static
-void text_routine(double x, double y, int nchars, char *chars)
+static void text_routine(double x, double y, int nchars, char *chars)
 {
   int width, height, ch;
   int i;
@@ -647,9 +581,10 @@ void text_routine(double x, double y, int nchars, char *chars)
   xstart += ax;
   ystart -= ay;
 
-  pgf_printf(p->stream, "\\begin{scope}[yscale=-1,yshift=-%f]\n"
+  pgf_printf(p->stream,
+             "\\begin{scope}[yscale=-1,yshift=-%f]\n"
              "\\draw[mycolor] (%f,%f) node[align=",
-             (ystart*2), xstart, ystart);
+             (ystart * 2), xstart, ystart);
   if (gkss->txal[0] == GKS_K_TEXT_HALIGN_RIGHT)
     pgf_printf(p->stream, "right");
   else if (gkss->txal[0] == GKS_K_TEXT_HALIGN_LEFT)
@@ -657,13 +592,11 @@ void text_routine(double x, double y, int nchars, char *chars)
   else
     pgf_printf(p->stream, "center");
 
-  if (p->angle != 0)
-    pgf_printf(p->stream, ", rotate=%f", p->angle);
+  if (p->angle != 0) pgf_printf(p->stream, ", rotate=%f", p->angle);
 
   pgf_printf(p->stream, "]{");
 
-  if (p->usesymbols)
-    pgf_printf(p->stream, "\\Pifont{psy} ");
+  if (p->usesymbols) pgf_printf(p->stream, "\\Pifont{psy} ");
 
   for (i = 0; i < nchars; ++i)
     {
@@ -708,8 +641,7 @@ void text_routine(double x, double y, int nchars, char *chars)
   pgf_printf(p->stream, "};\n\\end{scope}\n");
 }
 
-static
-void set_font(int font)
+static void set_font(int font)
 {
   double scale, ux, uy, angle;
   int size;
@@ -729,8 +661,7 @@ void set_font(int font)
 
   p->alpha = -atan2(ux, uy);
   angle = p->alpha * 180 / M_PI;
-  if (angle < 0)
-    angle += 360;
+  if (angle < 0) angle += 360;
   p->angle = angle;
 
   scale = sqrt(gkss->chup[0] * gkss->chup[0] + gkss->chup[1] * gkss->chup[1]);
@@ -746,17 +677,15 @@ void set_font(int font)
   capheight = nint(height * (fabs(p->c) + 1));
   p->capheight = nint(capheight);
 
-  size = nint(capheight / capheights[font-1]);
-  if (font > 13)
-    font += 3;
+  size = nint(capheight / capheights[font - 1]);
+  if (font > 13) font += 3;
   p->family = (font - 1) / 4;
   bold = (font % 4 == 1 || font % 4 == 2) ? 0 : 1;
   italic = (font % 4 == 2 || font % 4 == 0);
 
   if (p->family != 3)
     {
-      pgf_printf(p->stream, "\\fontfamily{%s}\\fontsize{%d}{%d}",
-                 fonts[p->family], size, nint(size*1.2));
+      pgf_printf(p->stream, "\\fontfamily{%s}\\fontsize{%d}{%d}", fonts[p->family], size, nint(size * 1.2));
       if (bold && italic)
         pgf_printf(p->stream, "\\fontshape{it}\\fontseries{b}");
       else if (italic)
@@ -770,8 +699,7 @@ void set_font(int font)
     p->usesymbols = 1;
 }
 
-static
-void text(double px, double py, int nchars, char *chars)
+static void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
   double x, y;
@@ -782,8 +710,7 @@ void text(double px, double py, int nchars, char *chars)
 
   p->color = tx_color;
 
-  pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n",
-             p->rgb[tx_color]);
+  pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[tx_color]);
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
     {
@@ -800,9 +727,8 @@ void text(double px, double py, int nchars, char *chars)
     }
 }
 
-static
-void cellarray(double xmin, double xmax, double ymin, double ymax,
-               int dx, int dy, int dimx, int *colia, int true_color)
+static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int dimx, int *colia,
+                      int true_color)
 {
   double x1, y1, x2, y2, x, y;
   int ix1, ix2, iy1, iy2;
@@ -843,23 +769,21 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
 
-  row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * height);
+  row_pointers = (png_bytep *)malloc(sizeof(png_bytep) * height);
   for (j = 0; j < height; j++)
     {
-      row_pointers[j] = (png_byte *) malloc(width * 3);
+      row_pointers[j] = (png_byte *)malloc(width * 3);
     }
   for (j = 0; j < height; j++)
     {
       png_byte *row = row_pointers[j];
       iy = dy * j / height;
-      if (swapy)
-        iy = dy - 1 - iy;
+      if (swapy) iy = dy - 1 - iy;
       for (i = 0; i < width; i++)
         {
           png_byte *ptr = &(row[i * 3]);
           ix = dx * i / width;
-          if (swapx)
-            ix = dx - 1 - ix;
+          if (swapx) ix = dx - 1 - ix;
           if (!true_color)
             {
               ind = colia[iy * dimx + ix];
@@ -881,8 +805,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   info_ptr = png_create_info_struct(png_ptr);
   png_init_io(png_ptr, stream);
-  png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type,
-               PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
+  png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
                PNG_FILTER_TYPE_BASE);
   png_write_info(png_ptr, info_ptr);
   png_write_image(png_ptr, row_pointers);
@@ -894,15 +817,15 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   free(row_pointers);
   fclose(stream);
 
-  pgf_printf(p->stream, "\\begin{scope}[yscale=-1, yshift=-%f]\n"
+  pgf_printf(p->stream,
+             "\\begin{scope}[yscale=-1, yshift=-%f]\n"
              "\\node[anchor=north west] (%s) at (%f,%f)"
              " {\\includegraphics{%s}};\n\\end{scope}\n",
-             2*y, filename, x, y, filename);
+             2 * y, filename, x, y, filename);
   p->png_counter++;
 }
 
-static
-void set_clip_rect(int tnr)
+static void set_clip_rect(int tnr)
 {
   if (p->scoped)
     {
@@ -912,26 +835,23 @@ void set_clip_rect(int tnr)
 
   if (gkss->clip == GKS_K_CLIP)
     {
-      if (p->scoped)
-        pgf_printf(p->stream, "\\end{scope}\n");
-      pgf_printf(p->stream, "\\begin{scope}\n"
+      if (p->scoped) pgf_printf(p->stream, "\\end{scope}\n");
+      pgf_printf(p->stream,
+                 "\\begin{scope}\n"
                  "\\clip (%f,%f) rectangle (%f,%f);\n",
-                 p->rect[tnr][0][0], p->rect[tnr][0][1],
-                 p->rect[tnr][0][0] + p->rect[tnr][1][0],
+                 p->rect[tnr][0][0], p->rect[tnr][0][1], p->rect[tnr][0][0] + p->rect[tnr][1][0],
                  p->rect[tnr][0][1] + p->rect[tnr][1][1]);
       p->scoped = 1;
     }
 }
 
-static
-void set_clipping(int idx)
+static void set_clipping(int idx)
 {
   gkss->clip = idx;
   set_clip_rect(gkss->cntnr);
 }
 
-static
-void write_page(void)
+static void write_page(void)
 {
   char filename[MAXPATHLEN];
   char buf[256];
@@ -950,20 +870,20 @@ void write_page(void)
   if (fd >= 0)
     {
       sprintf(buf, "\\documentclass[tikz]{standalone}\n"
-              "\\usetikzlibrary{patterns}\n"
-              "\\usepackage{pifont}\n\n"
-              "\\begin{document}\n\\pagenumbering{gobble}\n\\centering\n"
-              "\\pgfsetxvec{\\pgfpoint{1pt}{0pt}}\n"
-              "\\pgfsetyvec{\\pgfpoint{0pt}{-1pt}}\n");
+                   "\\usetikzlibrary{patterns}\n"
+                   "\\usepackage{pifont}\n\n"
+                   "\\begin{document}\n\\pagenumbering{gobble}\n\\centering\n"
+                   "\\pgfsetxvec{\\pgfpoint{1pt}{0pt}}\n"
+                   "\\pgfsetyvec{\\pgfpoint{0pt}{-1pt}}\n");
       gks_write_file(fd, buf, strlen(buf));
       sprintf(buf, "\\newdimen\\thickness\n\\tikzset{\n"
-              "thickness/.code={\\thickness=#1},\n"
-              "thickness=1pt\n}\n");
+                   "thickness/.code={\\thickness=#1},\n"
+                   "thickness=1pt\n}\n");
       gks_write_file(fd, buf, strlen(buf));
       gks_write_file(fd, p->patternstream->buffer, p->patternstream->length);
       sprintf(buf, "\\begin{tikzpicture}[yscale=-1, "
-              "every node/.style={inner sep=0pt, outer sep=1pt, anchor=base west}]\n"
-              "\\pgfsetyvec{\\pgfpoint{0pt}{1pt}}\n");
+                   "every node/.style={inner sep=0pt, outer sep=1pt, anchor=base west}]\n"
+                   "\\pgfsetyvec{\\pgfpoint{0pt}{1pt}}\n");
       gks_write_file(fd, buf, strlen(buf));
       gks_write_file(fd, p->stream->buffer, p->stream->length);
       if (p->scoped)
@@ -971,8 +891,7 @@ void write_page(void)
       else
         sprintf(buf, "\\end{tikzpicture}\n\\end{document}\n");
       gks_write_file(fd, buf, strlen(buf));
-      if (fd != p->conid)
-        gks_close_file(fd);
+      if (fd != p->conid) gks_close_file(fd);
 
       p->stream->length = 0;
     }
@@ -983,8 +902,7 @@ void write_page(void)
     }
 }
 
-static
-void select_xform(int tnr)
+static void select_xform(int tnr)
 {
   gkss->cntnr = tnr;
   set_clip_rect(tnr);
@@ -1002,8 +920,7 @@ void set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
   gks_set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
 }
 
-static
-void set_viewport(int tnr, double xmin, double xmax, double ymin, double ymax)
+static void set_viewport(int tnr, double xmin, double xmax, double ymin, double ymax)
 {
   gkss->viewport[tnr][0] = xmin;
   gkss->viewport[tnr][1] = xmax;
@@ -1012,29 +929,28 @@ void set_viewport(int tnr, double xmin, double xmax, double ymin, double ymax)
 
   set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
   gks_set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
-  if (tnr == gkss->cntnr) {
-    set_clip_rect(tnr);
-  }
+  if (tnr == gkss->cntnr)
+    {
+      set_clip_rect(tnr);
+    }
 }
 
-void gks_pgfplugin(
-    int fctid, int dx, int dy, int dimx, int *ia,
-    int lr1, double *r1, int lr2, double *r2,
-    int lc, char *chars, void **ptr)
+void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                   char *chars, void **ptr)
 {
   int i;
 
-  p = (ws_state_list *) *ptr;
+  p = (ws_state_list *)*ptr;
 
   switch (fctid)
     {
     case 2:
       /* open workstation */
-      gkss = (gks_state_list_t *) * ptr;
+      gkss = (gks_state_list_t *)*ptr;
 
       gks_init_core(gkss);
 
-      p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
+      p = (ws_state_list *)calloc(1, sizeof(ws_state_list));
 
       p->conid = ia[1];
       p->path = chars;
@@ -1044,14 +960,14 @@ void gks_pgfplugin(
       p->window[0] = p->window[2] = 0.0;
       p->window[1] = p->window[3] = 1.0;
       p->viewport[0] = p->viewport[2] = 0;
-      p->viewport[1] = (double) p->width * MWIDTH / WIDTH;
-      p->viewport[3] = (double) p->height * MHEIGHT / HEIGHT;
+      p->viewport[1] = (double)p->width * MWIDTH / WIDTH;
+      p->viewport[3] = (double)p->height * MHEIGHT / HEIGHT;
 
       p->stream = pgf_alloc_stream();
       p->patternstream = pgf_alloc_stream();
 
       p->max_points = MAX_POINTS;
-      p->points = (PGF_point *) gks_malloc(p->max_points * sizeof(PGF_point));
+      p->points = (PGF_point *)gks_malloc(p->max_points * sizeof(PGF_point));
       p->npoints = 0;
 
       p->empty = 1;
@@ -1065,16 +981,14 @@ void gks_pgfplugin(
       init_norm_xform();
       init_colors();
 
-      for (i = 0; i < PATTERNS; i++)
-        p->have_pattern[i] = 0;
+      for (i = 0; i < PATTERNS; i++) p->have_pattern[i] = 0;
 
       *ptr = p;
       break;
 
     case 3:
       /* close workstation */
-      if (!p->empty)
-        write_page();
+      if (!p->empty) write_page();
 
       free(p->stream->buffer);
       free(p->patternstream->buffer);
@@ -1193,7 +1107,6 @@ void gks_pgfplugin(
         }
       break;
 
-    default:
-      ;
+    default:;
     }
 }

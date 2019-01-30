@@ -24,143 +24,96 @@
 #endif
 
 #ifndef min
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw) + b[tnr]; \
+  xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
 
 #define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw); \
+  xn = a[tnr] * (xw);                      \
   yn = c[tnr] * (yw)
 
 #define NDC_to_DC(xn, yn, xd, yd) \
-  xd = p->a * (xn) + p->b; \
+  xd = p->a * (xn) + p->b;        \
   yd = p->c * (yn) + p->d
 
 #define DC_to_NDC(xd, yd, xn, yn) \
-    xn = ((xd) - p->b) / p->a; \
-    yn = ((yd) - p->d) / p->c
+  xn = ((xd)-p->b) / p->a;        \
+  yn = ((yd)-p->d) / p->c
 
-#define CharXform(xrel, yrel, x, y) \
-  x = cos_f[p->path] * (xrel) - sin_f[p->path] * (yrel); \
+#define CharXform(xrel, yrel, x, y)                    \
+  x = cos_f[p->path] * (xrel)-sin_f[p->path] * (yrel); \
   y = sin_f[p->path] * (xrel) + cos_f[p->path] * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
 
 typedef struct ws_state_list_t
-  {
-    pthread_t thread;
-    pthread_mutex_t mutex;
-    WindowRef win;
-    GrafPtr port;
-    int run;
-    int state, wtype;
-    int width, height;
-    int swidth, sheight;
-    double a, b, c, d;
-    double window[4], viewport[4];
-    Rect rect[MAX_TNR];
-    RGBColor rgb[MAX_COLOR];
-    int family, path, capheight;
-    Pattern pattern[PATTERNS], *pat;
-  }
-ws_state_list;
+{
+  pthread_t thread;
+  pthread_mutex_t mutex;
+  WindowRef win;
+  GrafPtr port;
+  int run;
+  int state, wtype;
+  int width, height;
+  int swidth, sheight;
+  double a, b, c, d;
+  double window[4], viewport[4];
+  Rect rect[MAX_TNR];
+  RGBColor rgb[MAX_COLOR];
+  int family, path, capheight;
+  Pattern pattern[PATTERNS], *pat;
+} ws_state_list;
 
-static
-ws_state_list *p;
+static ws_state_list *p;
 
-static
-char *fonts[] = {
-  "Times", "Helvetica", "Courier", "Symbol",
-  "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua" };
+static char *fonts[] = {"Times",          "Helvetica",   "Courier", "Symbol", "Bookman Old Style", "Century Schoolbook",
+                        "Century Gothic", "Book Antiqua"};
 
-static
-double capheights[29] = {
-  0.662, 0.660, 0.681, 0.662,
-  0.729, 0.729, 0.729, 0.729,
-  0.583, 0.583, 0.583, 0.583,
-  0.667,
-  0.681, 0.681, 0.681, 0.681,
-  0.722, 0.722, 0.722, 0.722,
-  0.739, 0.739, 0.739, 0.739,
-  0.694, 0.693, 0.683, 0.683 };
+static double capheights[29] = {0.662, 0.660, 0.681, 0.662, 0.729, 0.729, 0.729, 0.729, 0.583, 0.583,
+                                0.583, 0.583, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722,
+                                0.722, 0.739, 0.739, 0.739, 0.739, 0.694, 0.693, 0.683, 0.683};
 
-static
-int iso2mac[256] = {
-    0,   1,   2,   3,   4,   5,   6,   7,
-    8,   9,  10,  11,  12,  13,  14,  15,
-   16,  17,  18,  19,  20,  21,  22,  23,
-   24,  25,  26,  27,  28,  29,  30,  31,
-   32,  33,  34,  35,  36,  37,  38,  39,
-   40,  41,  42,  43,  44,  45,  46,  47,
-   48,  49,  50,  51,  52,  53,  54,  55,
-   56,  57,  58,  59,  60,  61,  62,  63,
-   64,  65,  66,  67,  68,  69,  70,  71,
-   72,  73,  74,  75,  76,  77,  78,  79,
-   80,  81,  82,  83,  84,  85,  86,  87,
-   88,  89,  90,  91,  92,  93,  94,  95,
-   96,  97,  98,  99, 100, 101, 102, 103,
-  104, 105, 106, 107, 108, 109, 110, 111,
-  112, 113, 114, 115, 116, 117, 118, 119,
-  120, 121, 122, 123, 124, 125, 126, 127,
-  128, 129, 130, 131, 132, 133, 134, 135,
-  136, 137, 138, 139, 140, 141, 142, 143,
-  144, 145, 146, 147, 148, 149, 150, 151,
-  152, 153, 154, 155, 156, 157, 158, 159,
-  202, 193, 162, 163,  32, 180,  32, 164,
-  172, 169, 187, 199, 194,  32, 168, 248,
-  161, 177,  32,  32, 171, 181, 166, 225,
-  252,  32, 188, 200,  32,  32,  32, 192,
-  203, 231, 229, 204, 128, 129, 174, 130,
-  233, 131, 230, 232, 237, 234, 235, 236,
-   32, 132, 241, 238, 239, 205, 133,  32,
-  175, 244, 242, 243, 134,  32,  32, 167,
-  136, 135, 137, 139, 138, 140, 190, 141,
-  143, 142, 144, 145, 147, 146, 148, 149,
-   32, 150, 152, 151, 153, 155, 154, 214,
-  191, 157, 156, 158, 159,  32,  32, 216 };
+static int iso2mac[256] = {
+    0,   1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,
+    22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35,  36,  37,  38,  39,  40,  41,  42,  43,
+    44,  45,  46,  47,  48,  49,  50,  51,  52,  53,  54,  55,  56,  57,  58,  59,  60,  61,  62,  63,  64,  65,
+    66,  67,  68,  69,  70,  71,  72,  73,  74,  75,  76,  77,  78,  79,  80,  81,  82,  83,  84,  85,  86,  87,
+    88,  89,  90,  91,  92,  93,  94,  95,  96,  97,  98,  99,  100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
+    110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131,
+    132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153,
+    154, 155, 156, 157, 158, 159, 202, 193, 162, 163, 32,  180, 32,  164, 172, 169, 187, 199, 194, 32,  168, 248,
+    161, 177, 32,  32,  171, 181, 166, 225, 252, 32,  188, 200, 32,  32,  32,  192, 203, 231, 229, 204, 128, 129,
+    174, 130, 233, 131, 230, 232, 237, 234, 235, 236, 32,  132, 241, 238, 239, 205, 133, 32,  175, 244, 242, 243,
+    134, 32,  32,  167, 136, 135, 137, 139, 138, 140, 190, 141, 143, 142, 144, 145, 147, 146, 148, 149, 32,  150,
+    152, 151, 153, 155, 154, 214, 191, 157, 156, 158, 159, 32,  32,  216};
 
-static
-gks_state_list_t *gkss;
+static gks_state_list_t *gkss;
 
-static
-double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
-static
-double xfac[4] = { 0, 0, -0.5, -1 };
+static double xfac[4] = {0, 0, -0.5, -1};
 
-static
-double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+static double yfac[6] = {0, -1.2, -1, -0.5, 0, 0.2};
 
-static
-double sin_f[] = { 0, 1, 0, -1 };
+static double sin_f[] = {0, 1, 0, -1};
 
-static
-double cos_f[] = { 1, 0, -1, 0 };
+static double cos_f[] = {1, 0, -1, 0};
 
-static
-int map[32] = {
-  22,  9,  5, 14, 18, 26, 13,  1,
-  24, 11,  7, 16, 20, 28, 13,  3,
-  23, 10,  6, 15, 19, 27, 13,  2,
-  25, 12,  8, 17, 21, 29, 13,  4 };
+static int map[32] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
+                      23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
-static
-int predef_font[] = { 1, 1, 1, -2, -3, -4 };
+static int predef_font[] = {1, 1, 1, -2, -3, -4};
 
-static
-int predef_prec[] = { 0, 1, 2, 2, 2, 2 };
+static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 
-static
-int predef_ints[] = { 0, 1, 3, 3, 3 };
+static int predef_ints[] = {0, 1, 3, 3, 3};
 
-static
-int predef_styli[] = { 1, 1, 1, 2, 3 };
+static int predef_styli[] = {1, 1, 1, 2, 3};
 
-static
-void set_norm_xform(int tnr, double *wn, double *vp)
+static void set_norm_xform(int tnr, double *wn, double *vp)
 {
   Rect *rect = &p->rect[tnr];
 
@@ -171,21 +124,18 @@ void set_norm_xform(int tnr, double *wn, double *vp)
 
   NDC_to_DC(vp[0], vp[3], rect->left, rect->top);
   NDC_to_DC(vp[1], vp[2], rect->right, rect->bottom);
-  rect->right  += 1;
+  rect->right += 1;
   rect->bottom += 1;
 }
 
-static
-void init_norm_xform(void)
+static void init_norm_xform(void)
 {
   int tnr;
 
-  for (tnr = 0; tnr < MAX_TNR; tnr++)
-    set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
+  for (tnr = 0; tnr < MAX_TNR; tnr++) set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
 }
 
-static
-void set_xform(void)
+static void set_xform(void)
 {
   p->a = (p->width - 1) / (p->window[1] - p->window[0]);
   p->b = -p->window[0] * p->a;
@@ -193,8 +143,7 @@ void set_xform(void)
   p->d = p->height - 1 - p->window[2] * p->c;
 }
 
-static
-void seg_xform(double *x, double *y)
+static void seg_xform(double *x, double *y)
 {
   double xx;
 
@@ -203,8 +152,7 @@ void seg_xform(double *x, double *y)
   *x = xx;
 }
 
-static
-void seg_xform_rel(double *x, double *y)
+static void seg_xform_rel(double *x, double *y)
 {
   double xx;
 
@@ -213,8 +161,7 @@ void seg_xform_rel(double *x, double *y)
   *x = xx;
 }
 
-static
-void set_color_rep(int color, double red, double green, double blue)
+static void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
@@ -224,8 +171,7 @@ void set_color_rep(int color, double red, double green, double blue)
     }
 }
 
-static
-void init_colors(void)
+static void init_colors(void)
 {
   int color;
   double red, green, blue;
@@ -237,14 +183,12 @@ void init_colors(void)
     }
 }
 
-static
-void set_color(int color)
+static void set_color(int color)
 {
   RGBForeColor(&p->rgb[color]);
 }
 
-static
-void create_patterns(void)
+static void create_patterns(void)
 {
   int i, j, height;
   int pattern, parray[33];
@@ -254,13 +198,11 @@ void create_patterns(void)
       pattern = i;
       gks_inq_pattern_array(pattern, parray);
       height = (*parray == 32) ? 16 : (*parray == 4) ? 8 : *parray;
-      for (j = 0; j < height; j++)
-        p->pattern[i].pat[height - j - 1] = ~parray[(j % *parray) + 1];
+      for (j = 0; j < height; j++) p->pattern[i].pat[height - j - 1] = ~parray[(j % *parray) + 1];
     }
 }
 
-static
-void set_clip_rect(int tnr)
+static void set_clip_rect(int tnr)
 {
   Rect *rect;
 
@@ -272,8 +214,7 @@ void set_clip_rect(int tnr)
   ClipRect(rect);
 }
 
-static
-void clear_ws(void)
+static void clear_ws(void)
 {
   Rect rect;
 
@@ -286,8 +227,7 @@ void clear_ws(void)
   set_clip_rect(gkss->cntnr);
 }
 
-static
-void create_window(ws_state_list *p)
+static void create_window(ws_state_list *p)
 {
   Rect screenRect, wRect;
   CGrafPtr screenPort;
@@ -307,14 +247,11 @@ void create_window(ws_state_list *p)
   p->viewport[3] = (double)p->height * MWIDTH / p->sheight;
 
   SetRect(&wRect, 0, 0, p->width, p->height);
-  CreateNewWindow(
-    kDocumentWindowClass,
-    kWindowStandardDocumentAttributes | kWindowStandardHandlerAttribute,
-    &wRect, &p->win);
+  CreateNewWindow(kDocumentWindowClass, kWindowStandardDocumentAttributes | kWindowStandardHandlerAttribute, &wRect,
+                  &p->win);
 
   SetWindowTitleWithCFString(p->win, CFSTR("GKS 5"));
-  ChangeWindowAttributes(p->win, 0,
-                         kWindowCloseBoxAttribute | kWindowResizableAttribute);
+  ChangeWindowAttributes(p->win, 0, kWindowCloseBoxAttribute | kWindowResizableAttribute);
   RepositionWindow(p->win, NULL, kWindowCascadeOnMainScreen);
   ShowWindow(p->win);
 
@@ -324,8 +261,7 @@ void create_window(ws_state_list *p)
   set_xform();
 }
 
-static
-void resize_window(void)
+static void resize_window(void)
 {
   double max_width, max_height;
   int width, height;
@@ -350,10 +286,9 @@ void resize_window(void)
     }
 }
 
-static
-void *exec(void *arg)
+static void *exec(void *arg)
 {
-  ws_state_list *p = (ws_state_list *) arg;
+  ws_state_list *p = (ws_state_list *)arg;
   EventRecord event;
 
   create_window(p);
@@ -367,11 +302,10 @@ void *exec(void *arg)
     {
       pthread_mutex_lock(&p->mutex);
       while (EventAvail(everyEvent, &event))
-	{
-	  GetNextEvent(everyEvent, &event);
-	  if (event.what == kHighLevelEvent)
-	    AEProcessAppleEvent(&event);
-	}
+        {
+          GetNextEvent(everyEvent, &event);
+          if (event.what == kHighLevelEvent) AEProcessAppleEvent(&event);
+        }
       pthread_mutex_unlock(&p->mutex);
       usleep(10000);
     }
@@ -382,8 +316,7 @@ void *exec(void *arg)
   return 0;
 }
 
-static
-void move_to(double x, double y)
+static void move_to(double x, double y)
 {
   int ix, iy;
 
@@ -391,8 +324,7 @@ void move_to(double x, double y)
   MoveTo(ix, iy);
 }
 
-static
-void line_to(double x, double y)
+static void line_to(double x, double y)
 {
   int ix, iy;
 
@@ -400,20 +332,17 @@ void line_to(double x, double y)
   LineTo(ix, iy);
 }
 
-static
-void move(double x, double y)
+static void move(double x, double y)
 {
   gks_move(x, y, move_to);
 }
 
-static
-void draw(double x, double y)
+static void draw(double x, double y)
 {
   gks_dash(x, y, move_to, line_to);
 }
 
-static
-void line_routine(int n, double *px, double *py, int linetype, int tnr)
+static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y;
   int i, x0, y0, xi, yi, xim1, yim1;
@@ -432,24 +361,22 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
       NDC_to_DC(x, y, xi, yi);
 
       if (i == 1 || xi != xim1 || yi != yim1)
-	{
-	  Line(xi - xim1, yi - yim1);
-	  xim1 = xi;
-	  yim1 = yi;
-	}
+        {
+          Line(xi - xim1, yi - yim1);
+          xim1 = xi;
+          yim1 = yi;
+        }
     }
-  if (linetype == 0)
-    LineTo(x0, y0);
+  if (linetype == 0) LineTo(x0, y0);
 }
 
-static
-void polyline(int n, double *px, double *py)
+static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
   double ln_width;
   int width;
 
-  ln_type  = gkss->asf[0] ? gkss->ltype  : gkss->lindex;
+  ln_type = gkss->asf[0] ? gkss->ltype : gkss->lindex;
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
@@ -457,8 +384,7 @@ void polyline(int n, double *px, double *py)
     width = nint(ln_width * (p->width + p->height) * 0.001);
   else
     width = nint(ln_width);
-  if (width < 1)
-    width = 1;
+  if (width < 1) width = 1;
 
   PenSize(width, width);
   set_color(ln_color);
@@ -467,8 +393,7 @@ void polyline(int n, double *px, double *py)
   gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
 }
 
-static
-void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
+static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   int r, x, y, i;
   double scale, xr, yr;
@@ -478,8 +403,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
 #include "marker.h"
 
-  if (gkss->version > 4)
-    mscale *= (p->width + p->height) * 0.001;
+  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -490,127 +414,119 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
   NDC_to_DC(xn, yn, x, y);
 
-  pc = 0;    
+  pc = 0;
   mtype = (r > 0) ? mtype + marker_off : marker_off + 1;
 
-  do 
-  {
-    op = marker[mtype][pc];
-    switch (op)
+  do
     {
-      case 1: /* point */
-	MoveTo(x, y);
-	LineTo(x, y);
-	break;
-
-      case 2: /* line */
-	for (i = 0; i < 2; i++)
+      op = marker[mtype][pc];
+      switch (op)
         {
-          xr =  scale * marker[mtype][pc + 2 * i + 1];
-          yr = -scale * marker[mtype][pc + 2 * i + 2];
-          seg_xform_rel(&xr, &yr);
-          if (i == 0)
-	    MoveTo(x - xr, y + yr);
-	  else
-	    LineTo(x - xr, y + yr);
+        case 1: /* point */
+          MoveTo(x, y);
+          LineTo(x, y);
+          break;
+
+        case 2: /* line */
+          for (i = 0; i < 2; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 * i + 1];
+              yr = -scale * marker[mtype][pc + 2 * i + 2];
+              seg_xform_rel(&xr, &yr);
+              if (i == 0)
+                MoveTo(x - xr, y + yr);
+              else
+                LineTo(x - xr, y + yr);
+            }
+          pc += 4;
+          break;
+
+        case 3: /* polyline */
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 + 2 * i];
+              yr = -scale * marker[mtype][pc + 3 + 2 * i];
+              seg_xform_rel(&xr, &yr);
+              if (i == 0)
+                MoveTo(x - xr, y + yr);
+              else
+                LineTo(x - xr, y + yr);
+            }
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          break;
+
+        case 4: /* filled polygon */
+        case 5: /* hollow polygon */
+          poly = OpenPoly();
+          if (op == 5) set_color(0);
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 + 2 * i];
+              yr = -scale * marker[mtype][pc + 3 + 2 * i];
+              seg_xform_rel(&xr, &yr);
+              if (i == 0)
+                MoveTo(x - xr, y + yr);
+              else
+                LineTo(x - xr, y + yr);
+            }
+          ClosePoly();
+          PaintPoly(poly);
+          KillPoly(poly);
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          if (op == 5) set_color(mcolor);
+          break;
+
+        case 6: /* arc */
+          rect.top = y - r;
+          rect.left = x - r;
+          rect.bottom = y + r;
+          rect.right = x + r;
+          FrameArc(&rect, 0, 360);
+          break;
+
+        case 7: /* filled arc */
+        case 8: /* hollow arc */
+          if (op == 8) set_color(0);
+          rect.top = y - r;
+          rect.left = x - r;
+          rect.bottom = y + r;
+          rect.right = x + r;
+          PaintArc(&rect, 0, 360);
+          if (op == 8) set_color(mcolor);
+          break;
         }
-	pc += 4;
-	break;
-
-      case 3: /* polyline */
-	for (i = 0; i < marker[mtype][pc + 1]; i++)
-	{
-	  xr =  scale * marker[mtype][pc + 2 + 2 * i];
-	  yr = -scale * marker[mtype][pc + 3 + 2 * i];
-          seg_xform_rel(&xr, &yr);
-          if (i == 0)
-	    MoveTo(x - xr, y + yr);
-	  else
-	    LineTo(x - xr, y + yr);
-	}
-	pc += 1 + 2 * marker[mtype][pc + 1];
-	break;
-
-      case 4: /* filled polygon */
-      case 5: /* hollow polygon */
-	poly = OpenPoly();
-	if (op == 5)
-	  set_color(0);
-	for (i = 0; i < marker[mtype][pc + 1]; i++)
-	{
-	  xr =  scale * marker[mtype][pc + 2 + 2 * i];
-	  yr = -scale * marker[mtype][pc + 3 + 2 * i];
-          seg_xform_rel(&xr, &yr);
-          if (i == 0)
-	    MoveTo(x - xr, y + yr);
-	  else
-	    LineTo(x - xr, y + yr);
-	}
-	ClosePoly();
-	PaintPoly(poly);
-	KillPoly(poly);
-        pc += 1 + 2 * marker[mtype][pc + 1];
-	if (op == 5)
-	  set_color(mcolor);
-	break;
-
-      case 6: /* arc */
-	rect.top = y - r;
-	rect.left = x - r;
-	rect.bottom = y + r;
-	rect.right = x + r;
-	FrameArc(&rect, 0, 360);
-	break;
-
-      case 7: /* filled arc */
-      case 8: /* hollow arc */
-	if (op == 8)
-	  set_color(0);
-	rect.top = y - r;
-	rect.left = x - r;
-	rect.bottom = y + r;
-	rect.right = x + r;
-	PaintArc(&rect, 0, 360);
-	if (op == 8)
-	  set_color(mcolor);
-	break;
+      pc++;
     }
-    pc++;
-  }
   while (op != 0);
 }
 
-static
-void marker_routine(
-  int n, double *px, double *py, int mtype, double mscale, int mcolor)
+static void marker_routine(int n, double *px, double *py, int mtype, double mscale, int mcolor)
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
   int i, draw;
 
   for (i = 0; i < n; i++)
-  {
-    WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
-    seg_xform(&x, &y);
+    {
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
 
-    if (gkss->clip == GKS_K_CLIP)
-      draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
-    else
-      draw = 1;
+      if (gkss->clip == GKS_K_CLIP)
+        draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
+      else
+        draw = 1;
 
-    if (draw)
-      draw_marker(x, y, mtype, mscale, mcolor);
-  }
+      if (draw) draw_marker(x, y, mtype, mscale, mcolor);
+    }
 }
 
-static
-void polymarker(int n, double *px, double *py)
+static void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
   double mk_size;
 
-  mk_type  = gkss->asf[3] ? gkss->mtype  : gkss->mindex;
-  mk_size  = gkss->asf[4] ? gkss->mszsc  : 1;
+  mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
+  mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
   PenSize(1, 1);
@@ -619,8 +535,7 @@ void polymarker(int n, double *px, double *py)
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
 }
 
-static
-void draw_string(int x, int y, int width, int height, Str255 chars)
+static void draw_string(int x, int y, int width, int height, Str255 chars)
 {
   FontInfo info;
   GWorldPtr fromworld, toworld;
@@ -640,11 +555,25 @@ void draw_string(int x, int y, int width, int height, Str255 chars)
       descent = info.descent;
 
       switch (p->path)
-	{
-	  case 1: x -= height-descent; y -= width; w = height; h = width; break;
-	  case 2: x -= width; y -= descent; w = width; h = height; break;
-	  case 3: x -= descent; w = height; h = width; break;
-	}
+        {
+        case 1:
+          x -= height - descent;
+          y -= width;
+          w = height;
+          h = width;
+          break;
+        case 2:
+          x -= width;
+          y -= descent;
+          w = width;
+          h = height;
+          break;
+        case 3:
+          x -= descent;
+          w = height;
+          h = width;
+          break;
+        }
 
       GetGWorld(&saveport, &savedevice);
       txFont = GetPortTextFont(saveport);
@@ -660,9 +589,9 @@ void draw_string(int x, int y, int width, int height, Str255 chars)
       fromrect.bottom = height;
       NewGWorld(&fromworld, 32, &fromrect, NULL, NULL, 0);
       SetGWorld(fromworld, NULL);
-	
+
       frompix = GetGWorldPixMap(fromworld);
-      from = (int *) GetPixBaseAddr(frompix);
+      from = (int *)GetPixBaseAddr(frompix);
       from_width = GetPixRowBytes(frompix) / 4;
 
       LockPixels(frompix);
@@ -681,23 +610,32 @@ void draw_string(int x, int y, int width, int height, Str255 chars)
       NewGWorld(&toworld, 32, &torect, NULL, NULL, 0);
 
       topix = GetGWorldPixMap(toworld);
-      to = (int *) GetPixBaseAddr(topix);
+      to = (int *)GetPixBaseAddr(topix);
       to_width = GetPixRowBytes(topix) / 4;
 
       LockPixels(topix);
       for (i = 0; i < width; i++)
-	{
-	  for (j = 0; j < height; j++)
-	    {
-	      switch (p->path)
-		{
-		  case 1: ii = j; jj = h - i - 1; break;
-		  case 2: ii = w - i - 1; jj = h - j - 1; break;
-		  case 3: ii = w - j - 1; jj = i; break;
-		}
-	      to[jj * to_width + ii] = from[j * from_width + i];
-	    }
-	}
+        {
+          for (j = 0; j < height; j++)
+            {
+              switch (p->path)
+                {
+                case 1:
+                  ii = j;
+                  jj = h - i - 1;
+                  break;
+                case 2:
+                  ii = w - i - 1;
+                  jj = h - j - 1;
+                  break;
+                case 3:
+                  ii = w - j - 1;
+                  jj = i;
+                  break;
+                }
+              to[jj * to_width + ii] = from[j * from_width + i];
+            }
+        }
       UnlockPixels(topix);
       UnlockPixels(frompix);
 
@@ -710,10 +648,9 @@ void draw_string(int x, int y, int width, int height, Str255 chars)
 
       SetPort(onport);
       LockPixels(topix);
-      CopyBits(
-	(BitMap *) *topix, (BitMap *) *onpix, &torect, &onrect, srcOr, NULL);
+      CopyBits((BitMap *)*topix, (BitMap *)*onpix, &torect, &onrect, srcOr, NULL);
       UnlockPixels(topix);
-	
+
       DisposeGWorld(toworld);
       DisposeGWorld(fromworld);
     }
@@ -724,24 +661,22 @@ void draw_string(int x, int y, int width, int height, Str255 chars)
     }
 }
 
-static
-void text_routine(double x, double y, int nchars, char *chars)
+static void text_routine(double x, double y, int nchars, char *chars)
 {
   int i, ch, xstart, ystart, width, height;
   double xrel, yrel, ax, ay;
   unsigned char *s;
   Str255 dst;
 
-  s = (unsigned char *) malloc(nchars + 1);
+  s = (unsigned char *)malloc(nchars + 1);
   for (i = 0; i < nchars; i++)
     {
       ch = chars[i];
-      if (ch < 0)
-	ch += 256;
+      if (ch < 0) ch += 256;
       s[i] = p->family == 3 ? ch : iso2mac[ch];
     }
   s[nchars] = '\0';
-  CopyCStringToPascal((char *) s, dst);
+  CopyCStringToPascal((char *)s, dst);
 
   NDC_to_DC(x, y, xstart, ystart);
 
@@ -759,8 +694,7 @@ void text_routine(double x, double y, int nchars, char *chars)
   free(s);
 }
 
-static
-void set_font(int font)
+static void set_font(int font)
 {
   double rad, scale, ux, uy;
   int family, size, angle;
@@ -798,12 +732,10 @@ void set_font(int font)
   p->capheight = nint(capheight);
 
   size = nint(capheight / capheights[font - 1]);
-  if (font > 13)
-    font += 3;
+  if (font > 13) font += 3;
   p->family = (font - 1) / 4;
   face = (font % 4 == 1 || font % 4 == 2) ? normal : bold;
-  if (font % 4 == 2 || font % 4 == 0)
-    face |= italic;
+  if (font % 4 == 2 || font % 4 == 0) face |= italic;
 
   CopyCStringToPascal(fonts[p->family], name);
   family = FMGetFontFamilyFromName(name);
@@ -817,17 +749,15 @@ void set_font(int font)
     gks_perror("invalid font family (%s)", fonts[p->family]);
 }
 
-static
-void fill_routine(int n, double *px, double *py, int tnr);
+static void fill_routine(int n, double *px, double *py, int tnr);
 
-static
-void text(double px, double py, int nchars, char *chars)
+static void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
   double x, y;
 
-  tx_font  = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
-  tx_prec  = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
+  tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
+  tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? gkss->txcoli : 1;
 
   PenSize(1, 1);
@@ -846,8 +776,7 @@ void text(double px, double py, int nchars, char *chars)
     gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
 }
 
-static
-void fill_routine(int n, double *px, double *py, int tnr)
+static void fill_routine(int n, double *px, double *py, int tnr)
 {
   PolyHandle poly;
   int i;
@@ -856,16 +785,16 @@ void fill_routine(int n, double *px, double *py, int tnr)
 
   poly = OpenPoly();
   for (i = 0; i < n; i++)
-  {
-    WC_to_NDC(px[i], py[i], tnr, x, y);
-    seg_xform(&x, &y);
-    NDC_to_DC(x, y, ix, iy);
+    {
+      WC_to_NDC(px[i], py[i], tnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, ix, iy);
 
-    if (i == 0)
-      MoveTo(ix, iy);
-    else
-      LineTo(ix, iy);
-  }
+      if (i == 0)
+        MoveTo(ix, iy);
+      else
+        LineTo(ix, iy);
+    }
   ClosePoly();
   if (p->pat)
     FillPoly(poly, p->pat);
@@ -874,13 +803,12 @@ void fill_routine(int n, double *px, double *py, int tnr)
   KillPoly(poly);
 }
 
-static
-void fillarea(int n, double *px, double *py)
+static void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color;
 
-  fl_inter = gkss->asf[10] ? gkss->ints   : predef_ints[gkss->findex - 1];
-  fl_style = gkss->asf[11] ? gkss->styli  : predef_styli[gkss->findex - 1];
+  fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
+  fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
 
   p->pat = NULL;
@@ -895,23 +823,18 @@ void fillarea(int n, double *px, double *py)
       set_color(fl_color);
       fill_routine(n, px, py, gkss->cntnr);
     }
-  else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
-    fl_inter == GKS_K_INTSTYLE_HATCH)
+  else if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH)
     {
       set_color(fl_color);
-      if (fl_inter == GKS_K_INTSTYLE_HATCH)
-	fl_style += HATCH_STYLE;
-      if (fl_style >= PATTERNS)
-	fl_style = 1;
+      if (fl_inter == GKS_K_INTSTYLE_HATCH) fl_style += HATCH_STYLE;
+      if (fl_style >= PATTERNS) fl_style = 1;
       p->pat = p->pattern + fl_style;
       fill_routine(n, px, py, gkss->cntnr);
     }
 }
 
-static
-void cellarray(
-  double xmin, double xmax, double ymin, double ymax,
-  int dx, int dy, int dimx, int *colia, int true_color)
+static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int dimx, int *colia,
+                      int true_color)
 {
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
@@ -939,52 +862,50 @@ void cellarray(
   swapy = iy1 < iy2;
 
   for (j = 0; j < height; j++)
-  {
-    iy = dy * j / height;
-    if (swapy)
-      iy = dy - 1 - iy;
-    for (i = 0; i < width; i++)
     {
-      ix = dx * i / width;
-      if (swapx)
-        ix = dx - 1 - ix;
-      if (!true_color)
-	{
-	  ind = colia[iy * dimx + ix];
-          ind = FIX_COLORIND(ind);
-	  color.red = p->rgb[ind].red;
-	  color.green = p->rgb[ind].green;
-	  color.blue = p->rgb[ind].blue;
-	}
-      else
-	{
-	  rgb = colia[iy * dimx + ix];
-	  red = (rgb & 0xff);
-	  green = (rgb & 0xff00) >> 8;
-	  blue = (rgb & 0xff0000) >> 16;
-	  color.red = nint(red * 256);
-	  color.green = nint(green * 256);
-	  color.blue = nint(blue * 256);
-	}
-      SetCPixel(x + i, y + j, &color);
+      iy = dy * j / height;
+      if (swapy) iy = dy - 1 - iy;
+      for (i = 0; i < width; i++)
+        {
+          ix = dx * i / width;
+          if (swapx) ix = dx - 1 - ix;
+          if (!true_color)
+            {
+              ind = colia[iy * dimx + ix];
+              ind = FIX_COLORIND(ind);
+              color.red = p->rgb[ind].red;
+              color.green = p->rgb[ind].green;
+              color.blue = p->rgb[ind].blue;
+            }
+          else
+            {
+              rgb = colia[iy * dimx + ix];
+              red = (rgb & 0xff);
+              green = (rgb & 0xff00) >> 8;
+              blue = (rgb & 0xff0000) >> 16;
+              color.red = nint(red * 256);
+              color.green = nint(green * 256);
+              color.blue = nint(blue * 256);
+            }
+          SetCPixel(x + i, y + j, &color);
+        }
     }
-  }
 }
 
-static
-void crosshair(int mousex, int mousey)
+static void crosshair(int mousex, int mousey)
 {
   PenMode(srcXor);
 
-  MoveTo(mousex, 0); LineTo(mousex, p->height);
-  MoveTo(0, mousey); LineTo(p->width, mousey);
+  MoveTo(mousex, 0);
+  LineTo(mousex, p->height);
+  MoveTo(0, mousey);
+  LineTo(p->width, mousey);
   QDFlushPortBuffer(p->port, NULL);
 
   PenMode(srcCopy);
 }
 
-static
-void get_mouse(Point *mouse, EventModifiers *modifiers)
+static void get_mouse(Point *mouse, EventModifiers *modifiers)
 {
   EventRecord event;
 
@@ -996,8 +917,7 @@ void get_mouse(Point *mouse, EventModifiers *modifiers)
   GlobalToLocal(mouse);
 }
 
-static
-void get_pointer(double *x, double *y, int *state)
+static void get_pointer(double *x, double *y, int *state)
 {
   Point mouse;
   EventModifiers modifiers;
@@ -1013,23 +933,23 @@ void get_pointer(double *x, double *y, int *state)
 
   *state = GKS_K_STATUS_OK;
   do
-    {  
+    {
       get_mouse(&mouse, &modifiers);
 
       if (mousex != mouse.h || mousey != mouse.v)
-	{
-	  crosshair(mousex, mousey);
-	  mousex = mouse.h;
-	  mousey = mouse.v;
-	  crosshair(mousex, mousey);
-	}
+        {
+          crosshair(mousex, mousey);
+          mousex = mouse.h;
+          mousey = mouse.v;
+          crosshair(mousex, mousey);
+        }
       usleep(10000);
 
       if (!(modifiers & 0x80) && modifiers & 0xff00)
-	{
-	  *state = GKS_K_STATUS_NONE;
-	  break;
-	}
+        {
+          *state = GKS_K_STATUS_NONE;
+          break;
+        }
     }
   while (modifiers);
 
@@ -1038,35 +958,32 @@ void get_pointer(double *x, double *y, int *state)
   DC_to_NDC(mousex, mousey, *x, *y);
 }
 
-void gks_drv_mac(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
-  void **ptr)
+void gks_drv_mac(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                 char *chars, void **ptr)
 {
-  p = (ws_state_list *) *ptr;
+  p = (ws_state_list *)*ptr;
 
   switch (fctid)
     {
-/* open workstation */
+      /* open workstation */
     case 2:
-      gkss = (gks_state_list_t *) *ptr;
+      gkss = (gks_state_list_t *)*ptr;
 
-      p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
+      p = (ws_state_list *)calloc(1, sizeof(ws_state_list));
 
       if (pthread_mutex_init(&p->mutex, NULL))
-	{
-	  perror("pthread_mutex_init");
-	  exit(-1);
-	}
+        {
+          perror("pthread_mutex_init");
+          exit(-1);
+        }
       p->run = 0;
-      if (pthread_create(&p->thread, NULL, exec, (void *) p))
-	{
-	  perror("pthread_create");
-	  exit(-1);
-	}
+      if (pthread_create(&p->thread, NULL, exec, (void *)p))
+        {
+          perror("pthread_create");
+          exit(-1);
+        }
 
-      while (!p->run)
-	usleep(10000);
+      while (!p->run) usleep(10000);
 
       p->port = GetWindowPort(p->win);
       SetPort(p->port);
@@ -1074,7 +991,7 @@ void gks_drv_mac(
       *ptr = p;
       break;
 
-/* close workstation */
+      /* close workstation */
     case 3:
       p->run = 0;
       pthread_join(p->thread, NULL);
@@ -1083,116 +1000,115 @@ void gks_drv_mac(
       free(p);
       break;
 
-/* activate workstation */
+      /* activate workstation */
     case 4:
       p->state = GKS_K_WS_ACTIVE;
       break;
 
-/* deactivate workstation */
+      /* deactivate workstation */
     case 5:
       p->state = GKS_K_WS_INACTIVE;
       break;
 
-/* clear workstation */
+      /* clear workstation */
     case 6:
       clear_ws();
       break;
 
-/* update workstation */
+      /* update workstation */
     case 8:
       pthread_mutex_lock(&p->mutex);
       QDFlushPortBuffer(p->port, NULL);
       pthread_mutex_unlock(&p->mutex);
       break;
 
-/* polyline */
+      /* polyline */
     case 12:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  pthread_mutex_lock(&p->mutex);
-	  LockPortBits(p->port);
-	  polyline(ia[0], r1, r2);
-	  UnlockPortBits(p->port);
-	  pthread_mutex_unlock(&p->mutex);
-	}
+        {
+          pthread_mutex_lock(&p->mutex);
+          LockPortBits(p->port);
+          polyline(ia[0], r1, r2);
+          UnlockPortBits(p->port);
+          pthread_mutex_unlock(&p->mutex);
+        }
       break;
 
-/* polymarker */
+      /* polymarker */
     case 13:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  pthread_mutex_lock(&p->mutex);
-	  LockPortBits(p->port);
-	  polymarker(ia[0], r1, r2);
-	  UnlockPortBits(p->port);
-	  pthread_mutex_unlock(&p->mutex);
-	}
+        {
+          pthread_mutex_lock(&p->mutex);
+          LockPortBits(p->port);
+          polymarker(ia[0], r1, r2);
+          UnlockPortBits(p->port);
+          pthread_mutex_unlock(&p->mutex);
+        }
       break;
 
-/* text */
+      /* text */
     case 14:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  pthread_mutex_lock(&p->mutex);
-	  LockPortBits(p->port);
-	  text(r1[0], r2[0], strlen(chars), chars);
-	  UnlockPortBits(p->port);
-	  pthread_mutex_unlock(&p->mutex);
-	}
+        {
+          pthread_mutex_lock(&p->mutex);
+          LockPortBits(p->port);
+          text(r1[0], r2[0], strlen(chars), chars);
+          UnlockPortBits(p->port);
+          pthread_mutex_unlock(&p->mutex);
+        }
       break;
 
-/* fill area */
+      /* fill area */
     case 15:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  pthread_mutex_lock(&p->mutex);
-	  LockPortBits(p->port);
-	  fillarea(ia[0], r1, r2);
-	  UnlockPortBits(p->port);
-	  pthread_mutex_unlock(&p->mutex);
-	}
+        {
+          pthread_mutex_lock(&p->mutex);
+          LockPortBits(p->port);
+          fillarea(ia[0], r1, r2);
+          UnlockPortBits(p->port);
+          pthread_mutex_unlock(&p->mutex);
+        }
       break;
 
-/* cell array */
+      /* cell array */
     case 16:
     case DRAW_IMAGE:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  int true_color = fctid == DRAW_IMAGE;
+        {
+          int true_color = fctid == DRAW_IMAGE;
 
-	  pthread_mutex_lock(&p->mutex);
-	  LockPortBits(p->port);
-	  cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
-	  UnlockPortBits(p->port);
-	  pthread_mutex_unlock(&p->mutex);
-	}
+          pthread_mutex_lock(&p->mutex);
+          LockPortBits(p->port);
+          cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+          UnlockPortBits(p->port);
+          pthread_mutex_unlock(&p->mutex);
+        }
       break;
 
-/* set color representation */
+      /* set color representation */
     case 48:
       set_color_rep(ia[1], r1[0], r1[1], r1[2]);
       break;
 
     case 49:
-/* set window */
+      /* set window */
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
       break;
 
     case 50:
-/* set viewport */
+      /* set viewport */
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
-      if (*ia == gkss->cntnr)
-        set_clip_rect(*ia);
+      if (*ia == gkss->cntnr) set_clip_rect(*ia);
       break;
 
     case 52:
-/* select normalization transformation */
+      /* select normalization transformation */
     case 53:
-/* set clipping inidicator */
+      /* set clipping inidicator */
       set_clip_rect(gkss->cntnr);
       break;
 
-/* set workstation window */
+      /* set workstation window */
     case 54:
       p->window[0] = r1[0];
       p->window[1] = r1[1];
@@ -1203,7 +1119,7 @@ void gks_drv_mac(
       init_norm_xform();
       break;
 
-/* set workstation viewport */
+      /* set workstation viewport */
     case 55:
       p->viewport[0] = r1[0];
       p->viewport[1] = r1[1];
@@ -1211,30 +1127,29 @@ void gks_drv_mac(
       p->viewport[3] = r2[1];
 
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  pthread_mutex_lock(&p->mutex);
-	  LockPortBits(p->port);
-	  resize_window();
-	  set_xform();
-	  init_norm_xform();
-	  UnlockPortBits(p->port);
-	  pthread_mutex_unlock(&p->mutex);
-	}
+        {
+          pthread_mutex_lock(&p->mutex);
+          LockPortBits(p->port);
+          resize_window();
+          set_xform();
+          init_norm_xform();
+          UnlockPortBits(p->port);
+          pthread_mutex_unlock(&p->mutex);
+        }
       break;
 
-/* request locator */
+      /* request locator */
     case 81:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  pthread_mutex_lock(&p->mutex);
-	  QDFlushPortBuffer(p->port, NULL);
-	  get_pointer(r1, r2, &ia[0]);
-	  pthread_mutex_unlock(&p->mutex);
-	}
+        {
+          pthread_mutex_lock(&p->mutex);
+          QDFlushPortBuffer(p->port, NULL);
+          get_pointer(r1, r2, &ia[0]);
+          pthread_mutex_unlock(&p->mutex);
+        }
       break;
 
-    default:
-      ;
+    default:;
     }
 }
 
@@ -1243,19 +1158,18 @@ void gks_drv_mac(
 #include "gks.h"
 #include "gkscore.h"
 
-void gks_drv_mac(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2, int lc, char *chars, void **ptr)
+void gks_drv_mac(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                 char *chars, void **ptr)
 {
   if (fctid == 2)
-  {
+    {
 #if defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 1060
-    gks_perror("Quickdraw is deprecated\nConsider using the Quartz driver");
+      gks_perror("Quickdraw is deprecated\nConsider using the Quartz driver");
 #else
-    gks_perror("Carbon support not compiled in");
+      gks_perror("Carbon support not compiled in");
 #endif
-    ia[0] = 0;
-  }
+      ia[0] = 0;
+    }
 }
 
 #endif

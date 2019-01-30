@@ -18,10 +18,8 @@ extern "C"
 
 #endif
 
-DLLEXPORT void gks_x11plugin(
-  int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef __cplusplus
 }
@@ -76,224 +74,177 @@ int usleep(useconds_t);
 #include "icon.bm"
 
 #ifndef min
-#define min(a,b)        (((a)<(b)) ? (a) : (b))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 #ifndef max
-#define max(a,b)        (((a)>(b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
 #endif
-#define nint(a)         ((int)(a + 0.5))
+#define nint(a) ((int)(a + 0.5))
 
 #define WindowName "GKS 5"
 
-#define DrawBorder      0
-#define Undefined       0xffff
+#define DrawBorder 0
+#define Undefined 0xffff
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-#define MAX_PIXMAP      512
-#define MAX_SIZE        1000
+#define MAX_PIXMAP 512
+#define MAX_SIZE 1000
 
-#define MAX_POINTS      2048
-#define MAX_SELECTIONS  100
-#define PATTERNS        120
-#define HATCH_STYLE     108
+#define MAX_POINTS 2048
+#define MAX_SELECTIONS 100
+#define PATTERNS 120
+#define HATCH_STYLE 108
 
 #define WHITE 255
 #define THRESH 127
 #define BLACK 0
-#define INITERR(X,Y)    (X - (Y ? WHITE : BLACK) + (THRESH - X)/2)
+#define INITERR(X, Y) (X - (Y ? WHITE : BLACK) + (THRESH - X) / 2)
 
-#define LEFT   (1<<0)
-#define RIGHT  (1<<1)
-#define BOTTOM (1<<2)
-#define TOP    (1<<3)
+#define LEFT (1 << 0)
+#define RIGHT (1 << 1)
+#define BOTTOM (1 << 2)
+#define TOP (1 << 3)
 
 #define CTRL_C 3
 #define CTRL_D 4
 #define CTRL_Z 26
 
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
-    xn = a[tnr] * (xw) + b[tnr]; \
-    yn = c[tnr] * (yw) + d[tnr]
+  xn = a[tnr] * (xw) + b[tnr];         \
+  yn = c[tnr] * (yw) + d[tnr]
 
 #define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
-    xn = a[tnr] * (xw); \
-    yn = c[tnr] * (yw)
+  xn = a[tnr] * (xw);                      \
+  yn = c[tnr] * (yw)
 
 #define NDC_to_WC(xn, yn, tnr, xw, yw) \
-    xw = ((xn) - b[tnr]) / a[tnr]; \
-    yw = ((yn) - d[tnr]) / c[tnr]
+  xw = ((xn)-b[tnr]) / a[tnr];         \
+  yw = ((yn)-d[tnr]) / c[tnr]
 
-#define NDC_to_DC(xn, yn, xd, yd) \
-    xd = sint(p->a * (xn) + p->b + 0.5); \
-    yd = sint(p->c * (yn) + p->d + 0.5); \
-    update_bbox(xd, yd)
+#define NDC_to_DC(xn, yn, xd, yd)      \
+  xd = sint(p->a * (xn) + p->b + 0.5); \
+  yd = sint(p->c * (yn) + p->d + 0.5); \
+  update_bbox(xd, yd)
 
 #define DC_to_NDC(xd, yd, xn, yn) \
-    xn = ((xd) - p->b) / p->a; \
-    yn = ((yd) - p->d) / p->c;
+  xn = ((xd)-p->b) / p->a;        \
+  yn = ((yd)-p->d) / p->c;
 
-#define CharXform(xrel, yrel, x, y) \
-    x = cos_f[p->path] * (xrel) - sin_f[p->path] * (yrel); \
-    y = sin_f[p->path] * (xrel) + cos_f[p->path] * (yrel);
+#define CharXform(xrel, yrel, x, y)                    \
+  x = cos_f[p->path] * (xrel)-sin_f[p->path] * (yrel); \
+  y = sin_f[p->path] * (xrel) + cos_f[p->path] * (yrel);
 
 static int idle = False;
 
 #if !defined(NO_XFT) || defined(NO_FT)
 
-static char *fonts[] =
-{
-  "-%s-times-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-times-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-times-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-times-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-helvetica-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-helvetica-medium-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-helvetica-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-helvetica-bold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-courier-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-courier-medium-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-courier-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-courier-bold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-symbol-medium-r-normal--*-%d0-%d-%d-*-*-*-*",
-  "-%s-bookman-light-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-bookman-light-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-bookman-demibold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-bookman-demibold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-new century schoolbook-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-new century schoolbook-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-new century schoolbook-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-new century schoolbook-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-avantgarde-book-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-avantgarde-book-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-avantgarde-demibold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-avantgarde-demibold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-palatino-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-palatino-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-palatino-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-palatino-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-zapf chancery-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-%s-zapf dingbats-medium-r-normal--*-%d0-%d-%d-*-*-*-*"
-};
+static char *fonts[] = {"-%s-times-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-times-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-times-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-times-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-helvetica-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-helvetica-medium-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-helvetica-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-helvetica-bold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-courier-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-courier-medium-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-courier-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-courier-bold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-symbol-medium-r-normal--*-%d0-%d-%d-*-*-*-*",
+                        "-%s-bookman-light-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-bookman-light-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-bookman-demibold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-bookman-demibold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-new century schoolbook-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-new century schoolbook-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-new century schoolbook-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-new century schoolbook-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-avantgarde-book-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-avantgarde-book-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-avantgarde-demibold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-avantgarde-demibold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-palatino-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-palatino-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-palatino-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-palatino-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-zapf chancery-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                        "-%s-zapf dingbats-medium-r-normal--*-%d0-%d-%d-*-*-*-*"};
 static int n_font = 31;
 
-static char *foundry[] =
-{
-   "*",
-   "adobe",
-   "urw"
-};
+static char *foundry[] = {"*", "adobe", "urw"};
 static int n_foundries = 3;
 
-static char *urw_fonts[] =
-{
-  "-urw-nimbus roman no9 l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus roman no9 l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus roman no9 l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus roman no9 l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus sans l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus sans l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus sans l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus sans l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus mono l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus mono l-medium-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus mono l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-nimbus mono l-bold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-standard symbols l-medium-r-normal--*-%d0-%d-%d-*-*-*-*",
-  "-urw-urw bookman l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw bookman l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw bookman l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw bookman l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-century schoolbook l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-century schoolbook l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-century schoolbook l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-century schoolbook l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw gothic l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw gothic l-medium-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw gothic l-semibold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw gothic l-semibold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw palladio l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw palladio l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw palladio l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw palladio l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-urw chancery l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
-  "-urw-dingbats-medium-r-normal--*-%d0-%d-%d-*-*-*-*"
-};
+static char *urw_fonts[] = {"-urw-nimbus roman no9 l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus roman no9 l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus roman no9 l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus roman no9 l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus sans l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus sans l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus sans l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus sans l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus mono l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus mono l-medium-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus mono l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-nimbus mono l-bold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-standard symbols l-medium-r-normal--*-%d0-%d-%d-*-*-*-*",
+                            "-urw-urw bookman l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw bookman l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw bookman l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw bookman l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-century schoolbook l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-century schoolbook l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-century schoolbook l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-century schoolbook l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw gothic l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw gothic l-medium-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw gothic l-semibold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw gothic l-semibold-o-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw palladio l-medium-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw palladio l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw palladio l-bold-r-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw palladio l-bold-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-urw chancery l-medium-i-normal--*-%d0-%d-%d-*-*-iso8859-1",
+                            "-urw-dingbats-medium-r-normal--*-%d0-%d-%d-*-*-*-*"};
 
 #ifndef NO_XFT
 
-static char *base_fonts[] =
-{
-  "Times", "Helvetica", "Courier", "Symbol",
-  "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua",
-  "Zapfino", "Zapf Dingbats"
-};
+static char *base_fonts[] = {
+    "Times",          "Helvetica",    "Courier", "Symbol",       "Bookman Old Style", "Century Schoolbook",
+    "Century Gothic", "Book Antiqua", "Zapfino", "Zapf Dingbats"};
 
 #endif
 
-static int map[32] =
-{
-  22, 9, 5, 14, 18, 26, 13, 1,
-  24, 11, 7, 16, 20, 28, 13, 3,
-  23, 10, 6, 15, 19, 27, 13, 2,
-  25, 12, 8, 17, 21, 29, 13, 4
-};
+static int map[32] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
+                      23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
-static double capheights[31] =
-{
-  0.662, 0.660, 0.681, 0.662,
-  0.729, 0.729, 0.729, 0.729,
-  0.583, 0.583, 0.583, 0.583,
-  0.667,
-  0.681, 0.681, 0.681, 0.681,
-  0.722, 0.722, 0.722, 0.722,
-  0.739, 0.739, 0.739, 0.739,
-  0.694, 0.693, 0.683, 0.683,
-  0.587, 0.692
-};
+static double capheights[31] = {0.662, 0.660, 0.681, 0.662, 0.729, 0.729, 0.729, 0.729, 0.583, 0.583, 0.583,
+                                0.583, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722, 0.722, 0.739,
+                                0.739, 0.739, 0.739, 0.694, 0.693, 0.683, 0.683, 0.587, 0.692};
 
 #endif
 
 #ifndef NO_XFT
 
-static
-int adobe2utf[256] =
-{
-       0,     1,     2,     3,     4,     5,     6,     7,
-       8,     9,    10,    11,    12,    13,    14,    15,
-      16,    17,    18,    19,    20,    21,    22,    23,
-      24,    25,    26,    27,    28,    29,    30,    31,
-      32,    33,  8704,    35,  8707,    37,    38,  8715,
-      40,    41,  8727,    43,    44,  8722,    46,    47,
-      48,    49,    50,    51,    52,    53,    54,    55,
-      56,    57,    58,    59,    60,    61,    62,    63,
-    8773,   913,   914,   935,  8710,   917,   934,   915,
-     919,   921,   977,   922,   923,   924,   925,   927,
-     928,   920,   929,   931,   932,   933,   962,  8486,
-     926,   936,   918,    91,  8756,    93,  8869,    95,
-   63717,   945,   946,   967,   948,   949,   966,   947,
-     951,   953,   981,   954,   955,   181,   957,   959,
-     960,   952,   961,   963,   964,   965,   118,   969,
-     958,   968,   950,   123,   124,   125,  8764,   127,
-     128,   129,   130,   131,   132,   133,   134,   135,
-     136,   137,   138,   139,   140,   141,   142,   143,
-     144,   145,   146,   147,   148,   149,   150,   151,
-     152,   153,   154,   155,   156,   157,   158,   159,
-     160,   161,   162,  8804,  8260,  8734,   402,  9827,
-    9830,  9829,  9824,  8596,  8592,  8593,  8594,  8595,
-     176,   177,   178,  8805,   215,  8733,  8706,  8226,
-     247,  8800,  8801,  8776,  8230, 63718, 63719,  8629,
-    8501,  8465,  8476,  8472,  8855,  8853,  8709,  8745,
-    8746,  8835,  8839,  8836,  8834,  8838,  8712,  8713,
-    8736,  8711,     0, 63193, 63195,  8719,  8730,  8901,
-     172,  8743,  8744,  8660,  8656,  8657,  8658,  8659,
-    9674,  9001,     0, 63721, 63722,  8721, 63723, 63724,
-   63725, 63726, 63727, 63728, 63729, 63730,     0, 63732,
-     240,  9002,  8747,  8992, 63733,  8993, 63734, 63735,
-   63736, 63737, 63738, 63739, 63740, 63741, 63742, 100000
-};
+static int adobe2utf[256] = {
+    0,     1,    2,    3,     4,     5,    6,     7,     8,     9,     10,    11,    12,    13,    14,    15,
+    16,    17,   18,   19,    20,    21,   22,    23,    24,    25,    26,    27,    28,    29,    30,    31,
+    32,    33,   8704, 35,    8707,  37,   38,    8715,  40,    41,    8727,  43,    44,    8722,  46,    47,
+    48,    49,   50,   51,    52,    53,   54,    55,    56,    57,    58,    59,    60,    61,    62,    63,
+    8773,  913,  914,  935,   8710,  917,  934,   915,   919,   921,   977,   922,   923,   924,   925,   927,
+    928,   920,  929,  931,   932,   933,  962,   8486,  926,   936,   918,   91,    8756,  93,    8869,  95,
+    63717, 945,  946,  967,   948,   949,  966,   947,   951,   953,   981,   954,   955,   181,   957,   959,
+    960,   952,  961,  963,   964,   965,  118,   969,   958,   968,   950,   123,   124,   125,   8764,  127,
+    128,   129,  130,  131,   132,   133,  134,   135,   136,   137,   138,   139,   140,   141,   142,   143,
+    144,   145,  146,  147,   148,   149,  150,   151,   152,   153,   154,   155,   156,   157,   158,   159,
+    160,   161,  162,  8804,  8260,  8734, 402,   9827,  9830,  9829,  9824,  8596,  8592,  8593,  8594,  8595,
+    176,   177,  178,  8805,  215,   8733, 8706,  8226,  247,   8800,  8801,  8776,  8230,  63718, 63719, 8629,
+    8501,  8465, 8476, 8472,  8855,  8853, 8709,  8745,  8746,  8835,  8839,  8836,  8834,  8838,  8712,  8713,
+    8736,  8711, 0,    63193, 63195, 8719, 8730,  8901,  172,   8743,  8744,  8660,  8656,  8657,  8658,  8659,
+    9674,  9001, 0,    63721, 63722, 8721, 63723, 63724, 63725, 63726, 63727, 63728, 63729, 63730, 0,     63732,
+    240,   9002, 8747, 8992,  63733, 8993, 63734, 63735, 63736, 63737, 63738, 63739, 63740, 63741, 63742, 100000};
 
 #endif
 
@@ -319,214 +270,215 @@ static XPoint *points = NULL;
 static int max_points = MAX_POINTS;
 
 typedef enum
-  {
-    TypeNone, TypeLocal, TypeCrosshair, TypeCross, TypeRubberband,
-    TypeRectangle, TypeDigital, TypeCircle
-  }
-pe_type;
+{
+  TypeNone,
+  TypeLocal,
+  TypeCrosshair,
+  TypeCross,
+  TypeRubberband,
+  TypeRectangle,
+  TypeDigital,
+  TypeCircle
+} pe_type;
 
 typedef unsigned char byte;
 
 typedef struct
-  {
-    int type;
-    short x1, y1, x2, y2;
-  }
-Segment;
+{
+  int type;
+  short x1, y1, x2, y2;
+} Segment;
 
 typedef struct ws_state_list_struct
-  {
-    pthread_t thread;
-    pthread_attr_t attr;
-    pthread_mutex_t mutex;
-    int run, done;
-    int wkid;
-    int gif, rf, uil;
-    Bool packed_ca;
-    Widget widget;
-    int conid, wstype;
-    Display *dpy;
-    Bool new_dpy;
-    int fd;
-    Screen *screen;
-    Bool backing_store;
-    unsigned long fg, bg;
-    Visual *vis;
-    int depth;
-    Colormap cmap;
-    Window win;
-    Bool new_win;
-    Atom wmDeleteMessage;
-    pthread_t master_thread;
-    Pixmap pixmap, drawable, icon_pixmap;
-    Bool double_buf;
-    int shape;
-    XImage *shmimage;
+{
+  pthread_t thread;
+  pthread_attr_t attr;
+  pthread_mutex_t mutex;
+  int run, done;
+  int wkid;
+  int gif, rf, uil;
+  Bool packed_ca;
+  Widget widget;
+  int conid, wstype;
+  Display *dpy;
+  Bool new_dpy;
+  int fd;
+  Screen *screen;
+  Bool backing_store;
+  unsigned long fg, bg;
+  Visual *vis;
+  int depth;
+  Colormap cmap;
+  Window win;
+  Bool new_win;
+  Atom wmDeleteMessage;
+  pthread_t master_thread;
+  Pixmap pixmap, drawable, icon_pixmap;
+  Bool double_buf;
+  int shape;
+  XImage *shmimage;
 #ifdef XSHM
-    XShmSegmentInfo shminfo;
+  XShmSegmentInfo shminfo;
 #endif
-    GC gc, def, invert, clear;
-    long event_mask;
-    Cursor cursor, textcursor;
-    int swidth, sheight, dpi, x, y, width, height;
-    int selection, bb_update, num_bb, max_bb;
-    Segment *bb, *bbox, bounding_box;
-    double mwidth, mheight, resolution, magnification, window[4], viewport[4];
-    int state, mapped;
-    Bool empty;
-    int path;
+  GC gc, def, invert, clear;
+  long event_mask;
+  Cursor cursor, textcursor;
+  int swidth, sheight, dpi, x, y, width, height;
+  int selection, bb_update, num_bb, max_bb;
+  Segment *bb, *bbox, bounding_box;
+  double mwidth, mheight, resolution, magnification, window[4], viewport[4];
+  int state, mapped;
+  Bool empty;
+  int path;
 #if !defined(NO_XFT) || defined(NO_FT)
 #ifndef NO_XFT
-    XftFont *fstr[31][MAX_SIZE + 1], *cfont;
+  XftFont *fstr[31][MAX_SIZE + 1], *cfont;
 #else
-    XFontStruct *fstr[31][MAX_SIZE + 1], *cfont;
+  XFontStruct *fstr[31][MAX_SIZE + 1], *cfont;
 #endif
 #endif
-    int capheight, font;
-    Pixmap tile[MAX_COLOR][PATTERNS];
-    Pixmap stipple[MAX_COLOR][PATTERNS];
-    Bool ored_patterns;
-    XColor color[MAX_COLOR];
+  int capheight, font;
+  Pixmap tile[MAX_COLOR][PATTERNS];
+  Pixmap stipple[MAX_COLOR][PATTERNS];
+  Bool ored_patterns;
+  XColor color[MAX_COLOR];
 #ifndef NO_XFT
-    XftColor rendercolor[MAX_COLOR];
-    Bool havecolor[MAX_COLOR];
+  XftColor rendercolor[MAX_COLOR];
+  Bool havecolor[MAX_COLOR];
 #endif
-    unsigned long pixels[MAX_COLOR];
-    int ccolor;
-    double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
-    double gray[MAX_COLOR];
-    int ltype;
-    unsigned int lwidth;
-    double a, b, c, d;
-    pe_type type;
-    int px, py;
-    char *error;
-    int scalable_fonts;
-    Bool xshm;
-    Pixmap *frame;
-    int nframes;
-  }
-ws_state_list;
+  unsigned long pixels[MAX_COLOR];
+  int ccolor;
+  double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
+  double gray[MAX_COLOR];
+  int ltype;
+  unsigned int lwidth;
+  double a, b, c, d;
+  pe_type type;
+  int px, py;
+  char *error;
+  int scalable_fonts;
+  Bool xshm;
+  Pixmap *frame;
+  int nframes;
+} ws_state_list;
 
 typedef struct
-  {
-    int ch;
-    char seq[3];
-    char alt_seq[3];
-  }
-compose_keys;
-
-static compose_keys key_bindings[] =
 {
-  {34, "\" ", ""},              /* quotation mark */
-  {35, "++", ""},               /* number sign */
-  {39, "' ", ""},               /* apostrophe */
-  {64, "AA", ""},               /* commercial at */
-  {91, "((", ""},               /* opening bracket */
-  {92, "//", "/<"},             /* backslash */
-  {93, "))", ""},               /* closing bracket */
-  {94, "^ ", ""},               /* circumflex accent */
-  {96, "` ", ""},               /* grave accent */
-  {123, "(-", ""},              /* opining brace */
-  {124, "/^", ""},              /* vertical line */
-  {125, ")-", ""},              /* closing brace */
-  {126, "~ ", ""},              /* tilde */
-  {160, "  ", ""},              /* no break space */
-  {161, "!!", ""},              /* inverted ! */
-  {162, "C/", "C|"},            /* cent sign */
-  {163, "L-", "L="},            /* pound sign */
-  {164, "XO", "X0"},            /* currency sign  */
-  {165, "Y-", "Y="},            /* yen sign  */
-  {166, "||", "!^"},            /* broken vertical bar */
-  {167, "SO", "S!"},            /* section sign */
-  {168, "\"\"", ""},            /* diaeresis */
-  {169, "CO", "C0"},            /* copyright sign */
-  {170, "A_", ""},              /* feminine ordinal */
-  {171, "<<", ""},              /* open angle brackets */
-  {172, "-,", ""},              /* logical not */
-  {173, "-^", ""},              /* macron */
-  {174, "RO", ""},              /* registered trademark */
-  {175, "--", ""},              /* soft (syllable) hyphen */
-  {176, "0^", ""},              /* degree sign */
-  {177, "+-", ""},              /* plus or minus sign */
-  {178, "2^", ""},              /* superscript 2 */
-  {179, "3^", ""},              /* superscript 3 */
-  {180, "''", ""},              /* acute accent */
-  {181, "/U", ""},              /* micro sign */
-  {182, "P!", ""},              /* paragraph sign */
-  {183, ".^", ""},              /* middle dot  */
-  {184, ", ", ""},              /* cedilla */
-  {185, "1^", ""},              /* superscript 1 */
-  {186, "O_", ""},              /* masculine ordinal */
-  {187, ">>", ""},              /* closed angle brackets */
-  {188, "14", ""},              /* fraction one-quarter */
-  {189, "12", ""},              /* fraction one-half */
-  {190, "34", ""},              /* three quarters */
-  {191, "??", ""},              /* inverted ? */
-  {192, "`A", ""},              /* A grave  */
-  {193, "'A", ""},              /* A acute  */
-  {194, "^A", ""},              /* A circumflex */
-  {195, "~A", ""},              /* A tilde */
-  {196, "\"A", ""},             /* A umlaut */
-  {197, "A*", ""},              /* A ring */
-  {198, "AE", ""},              /* A E diphthong */
-  {199, "C,", ""},              /* C cedilla */
-  {200, "`E", ""},              /* E grave */
-  {201, "'E", ""},              /* E acute */
-  {202, "^E", ""},              /* E circumflex */
-  {203, "\"E", ""},             /* E umlaut */
-  {204, "`I", ""},              /* I grave */
-  {205, "'I", ""},              /* I acute */
-  {206, "^I", ""},              /* I circumflex */
-  {207, "\"I", ""},             /* I umlaut */
-  {208, "-D", ""},              /* capital Icelandic Eth */
-  {209, "~N", ""},              /* N tilde */
-  {210, "`O", ""},              /* O grave */
-  {211, "'O", ""},              /* O acute */
-  {212, "^O", ""},              /* O circumflex */
-  {213, "~O", ""},              /* O tilde */
-  {214, "\"O", ""},             /* O umlaut */
-  {215, "xx", ""},              /* multiplication sign */
-  {216, "o/", ""},              /* O slash */
-  {217, "`U", ""},              /* U grave */
-  {218, "'U", ""},              /* U acute */
-  {219, "^U", ""},              /* U circumflex */
-  {220, "\"U", ""},             /* U umlaut */
-  {221, "'Y", ""},              /* Y acute */
-  {222, "TH", ""},              /* capital Icelandic thorn */
-  {223, "ss", ""},              /* German small sharp s */
-  {224, "`a", ""},              /* a grave */
-  {225, "'a", ""},              /* a acute */
-  {226, "^a", ""},              /* a circumflex */
-  {227, "~a", ""},              /* a tilde */
-  {228, "\"a", ""},             /* a umlaut */
-  {229, "a*", ""},              /* a ring */
-  {230, "ae", ""},              /* a e diphthong */
-  {231, "c,", ""},              /* c cedilla  */
-  {232, "`e", ""},              /* e grave */
-  {233, "'e", ""},              /* e acute */
-  {234, "^e", ""},              /* e circumflex */
-  {235, "\"e", ""},             /* e umlaut */
-  {236, "`i", ""},              /* i grave */
-  {237, "'i", ""},              /* i acute */
-  {238, "^i", ""},              /* i circumflex */
-  {239, "\"i", ""},             /* i umlaut */
-  {240, "-d", ""},              /* small Icelandic Eth */
-  {241, "~n", ""},              /* n tilde  */
-  {242, "`o", ""},              /* o grave */
-  {243, "'o", ""},              /* o acute */
-  {244, "^o", ""},              /* o circumflex */
-  {245, "~o", ""},              /* o tilde */
-  {246, "\"o", ""},             /* o umlaut */
-  {247, "-:", ""},              /* division sign */
-  {248, "o/", ""},              /* o slash  */
-  {249, "`u", ""},              /* u grave */
-  {250, "'u", ""},              /* u acute */
-  {251, "^u", ""},              /* u circumflex */
-  {252, "\"u", ""},             /* u umlaut */
-  {253, "'y", ""},              /* y acute */
-  {254, "th", ""},              /* small Icelandic thorn */
-  {255, "\"y", ""}              /* y umlaut */
+  int ch;
+  char seq[3];
+  char alt_seq[3];
+} compose_keys;
+
+static compose_keys key_bindings[] = {
+    {34, "\" ", ""},   /* quotation mark */
+    {35, "++", ""},    /* number sign */
+    {39, "' ", ""},    /* apostrophe */
+    {64, "AA", ""},    /* commercial at */
+    {91, "((", ""},    /* opening bracket */
+    {92, "//", "/<"},  /* backslash */
+    {93, "))", ""},    /* closing bracket */
+    {94, "^ ", ""},    /* circumflex accent */
+    {96, "` ", ""},    /* grave accent */
+    {123, "(-", ""},   /* opining brace */
+    {124, "/^", ""},   /* vertical line */
+    {125, ")-", ""},   /* closing brace */
+    {126, "~ ", ""},   /* tilde */
+    {160, "  ", ""},   /* no break space */
+    {161, "!!", ""},   /* inverted ! */
+    {162, "C/", "C|"}, /* cent sign */
+    {163, "L-", "L="}, /* pound sign */
+    {164, "XO", "X0"}, /* currency sign  */
+    {165, "Y-", "Y="}, /* yen sign  */
+    {166, "||", "!^"}, /* broken vertical bar */
+    {167, "SO", "S!"}, /* section sign */
+    {168, "\"\"", ""}, /* diaeresis */
+    {169, "CO", "C0"}, /* copyright sign */
+    {170, "A_", ""},   /* feminine ordinal */
+    {171, "<<", ""},   /* open angle brackets */
+    {172, "-,", ""},   /* logical not */
+    {173, "-^", ""},   /* macron */
+    {174, "RO", ""},   /* registered trademark */
+    {175, "--", ""},   /* soft (syllable) hyphen */
+    {176, "0^", ""},   /* degree sign */
+    {177, "+-", ""},   /* plus or minus sign */
+    {178, "2^", ""},   /* superscript 2 */
+    {179, "3^", ""},   /* superscript 3 */
+    {180, "''", ""},   /* acute accent */
+    {181, "/U", ""},   /* micro sign */
+    {182, "P!", ""},   /* paragraph sign */
+    {183, ".^", ""},   /* middle dot  */
+    {184, ", ", ""},   /* cedilla */
+    {185, "1^", ""},   /* superscript 1 */
+    {186, "O_", ""},   /* masculine ordinal */
+    {187, ">>", ""},   /* closed angle brackets */
+    {188, "14", ""},   /* fraction one-quarter */
+    {189, "12", ""},   /* fraction one-half */
+    {190, "34", ""},   /* three quarters */
+    {191, "??", ""},   /* inverted ? */
+    {192, "`A", ""},   /* A grave  */
+    {193, "'A", ""},   /* A acute  */
+    {194, "^A", ""},   /* A circumflex */
+    {195, "~A", ""},   /* A tilde */
+    {196, "\"A", ""},  /* A umlaut */
+    {197, "A*", ""},   /* A ring */
+    {198, "AE", ""},   /* A E diphthong */
+    {199, "C,", ""},   /* C cedilla */
+    {200, "`E", ""},   /* E grave */
+    {201, "'E", ""},   /* E acute */
+    {202, "^E", ""},   /* E circumflex */
+    {203, "\"E", ""},  /* E umlaut */
+    {204, "`I", ""},   /* I grave */
+    {205, "'I", ""},   /* I acute */
+    {206, "^I", ""},   /* I circumflex */
+    {207, "\"I", ""},  /* I umlaut */
+    {208, "-D", ""},   /* capital Icelandic Eth */
+    {209, "~N", ""},   /* N tilde */
+    {210, "`O", ""},   /* O grave */
+    {211, "'O", ""},   /* O acute */
+    {212, "^O", ""},   /* O circumflex */
+    {213, "~O", ""},   /* O tilde */
+    {214, "\"O", ""},  /* O umlaut */
+    {215, "xx", ""},   /* multiplication sign */
+    {216, "o/", ""},   /* O slash */
+    {217, "`U", ""},   /* U grave */
+    {218, "'U", ""},   /* U acute */
+    {219, "^U", ""},   /* U circumflex */
+    {220, "\"U", ""},  /* U umlaut */
+    {221, "'Y", ""},   /* Y acute */
+    {222, "TH", ""},   /* capital Icelandic thorn */
+    {223, "ss", ""},   /* German small sharp s */
+    {224, "`a", ""},   /* a grave */
+    {225, "'a", ""},   /* a acute */
+    {226, "^a", ""},   /* a circumflex */
+    {227, "~a", ""},   /* a tilde */
+    {228, "\"a", ""},  /* a umlaut */
+    {229, "a*", ""},   /* a ring */
+    {230, "ae", ""},   /* a e diphthong */
+    {231, "c,", ""},   /* c cedilla  */
+    {232, "`e", ""},   /* e grave */
+    {233, "'e", ""},   /* e acute */
+    {234, "^e", ""},   /* e circumflex */
+    {235, "\"e", ""},  /* e umlaut */
+    {236, "`i", ""},   /* i grave */
+    {237, "'i", ""},   /* i acute */
+    {238, "^i", ""},   /* i circumflex */
+    {239, "\"i", ""},  /* i umlaut */
+    {240, "-d", ""},   /* small Icelandic Eth */
+    {241, "~n", ""},   /* n tilde  */
+    {242, "`o", ""},   /* o grave */
+    {243, "'o", ""},   /* o acute */
+    {244, "^o", ""},   /* o circumflex */
+    {245, "~o", ""},   /* o tilde */
+    {246, "\"o", ""},  /* o umlaut */
+    {247, "-:", ""},   /* division sign */
+    {248, "o/", ""},   /* o slash  */
+    {249, "`u", ""},   /* u grave */
+    {250, "'u", ""},   /* u acute */
+    {251, "^u", ""},   /* u circumflex */
+    {252, "\"u", ""},  /* u umlaut */
+    {253, "'y", ""},   /* y acute */
+    {254, "th", ""},   /* small Icelandic thorn */
+    {255, "\"y", ""}   /* y umlaut */
 };
 static int n_key = sizeof(key_bindings) / sizeof(key_bindings[0]);
 
@@ -537,8 +489,7 @@ static ws_state_list *p;
 static int error_code, request_code, function_id;
 
 
-static
-int *handler(Display *dpy, XErrorEvent *event)
+static int *handler(Display *dpy, XErrorEvent *event)
 {
   char str[80], request[40];
 
@@ -549,8 +500,7 @@ int *handler(Display *dpy, XErrorEvent *event)
 
       sprintf(request, "XRequest.%d", event->request_code);
       XGetErrorDatabaseText(dpy, "", request, "unknown", str, sizeof(str));
-      fprintf(stderr, "Failed request major op code %d (%s)\n",
-              event->request_code, str);
+      fprintf(stderr, "Failed request major op code %d (%s)\n", event->request_code, str);
 
       fprintf(stderr, "Invoked from within GKS function id %d\n", function_id);
 
@@ -562,8 +512,7 @@ int *handler(Display *dpy, XErrorEvent *event)
 }
 
 
-static
-int sint(double a)
+static int sint(double a)
 {
   if (a > 65535)
     return 65535;
@@ -574,8 +523,7 @@ int sint(double a)
 }
 
 
-static
-void seg_xform(double *x, double *y)
+static void seg_xform(double *x, double *y)
 {
   double xx;
 
@@ -585,8 +533,7 @@ void seg_xform(double *x, double *y)
 }
 
 
-static
-void seg_xform_rel(double *x, double *y)
+static void seg_xform_rel(double *x, double *y)
 {
   double xx;
 
@@ -596,68 +543,55 @@ void seg_xform_rel(double *x, double *y)
 }
 
 
-static
-void update_bbox(int x, int y)
+static void update_bbox(int x, int y)
 {
   if (p->bb_update)
     {
-      if (x < p->bb->x1)
-        p->bb->x1 = x;
-      if (x > p->bb->x2)
-        p->bb->x2 = x;
+      if (x < p->bb->x1) p->bb->x1 = x;
+      if (x > p->bb->x2) p->bb->x2 = x;
 
-      if (y < p->bb->y1)
-        p->bb->y1 = y;
-      if (y > p->bb->y2)
-        p->bb->y2 = y;
+      if (y < p->bb->y1) p->bb->y1 = y;
+      if (y > p->bb->y2) p->bb->y2 = y;
     }
 }
 
 
-#define drawRect(x, y, w, h) \
-  { \
-    if (type == 0 && p->pixmap) \
-      XDrawRectangle(p->dpy, p->pixmap, p->def, x, y, w, h); \
-    if (!p->double_buf || type != 0) \
-      XDrawRectangle(p->dpy, p->win, p->def, x, y, w, h); \
+#define drawRect(x, y, w, h)                                                             \
+  {                                                                                      \
+    if (type == 0 && p->pixmap) XDrawRectangle(p->dpy, p->pixmap, p->def, x, y, w, h);   \
+    if (!p->double_buf || type != 0) XDrawRectangle(p->dpy, p->win, p->def, x, y, w, h); \
   }
 
-static
-void draw_bbox(int type, int xoff, int yoff)
+static void draw_bbox(int type, int xoff, int yoff)
 {
   int xmin = p->bb->x1, xmax = p->bb->x2, ymin = p->bb->y2, ymax = p->bb->y1;
-/*
-           4
-     8 o---o----o 6
-       |        |
-     1 o        o 2
-       |        |
-     5 o---o----o 7
-           3
- */
-  if (type == 1 || type == 5 || type == 8)
-    xmin += xoff;
-  if (type == 2 || type == 6 || type == 7)
-    xmax += xoff;
-  if (type == 3 || type == 5 || type == 7)
-    ymin += yoff;
-  if (type == 4 || type == 6 || type == 8)
-    ymax += yoff;
+  /*
+             4
+       8 o---o----o 6
+         |        |
+       1 o        o 2
+         |        |
+       5 o---o----o 7
+             3
+   */
+  if (type == 1 || type == 5 || type == 8) xmin += xoff;
+  if (type == 2 || type == 6 || type == 7) xmax += xoff;
+  if (type == 3 || type == 5 || type == 7) ymin += yoff;
+  if (type == 4 || type == 6 || type == 8) ymax += yoff;
 
-  drawRect(xmin - 1, ymax - 1, xmax - xmin + 2, ymin - ymax + 2)
-  if (p->bb->type & (1 << 0)) drawRect(xmin - 4, (ymin + ymax - 6) / 2, 6, 6)
-  if (p->bb->type & (1 << 1)) drawRect(xmax - 2, (ymin + ymax - 6) / 2, 6, 6)
-  if (p->bb->type & (1 << 2)) drawRect((xmin + xmax - 6) / 2, ymin - 2, 6, 6)
-  if (p->bb->type & (1 << 3)) drawRect((xmin + xmax - 6) / 2, ymax - 4, 6, 6)
-  if (p->bb->type & (1 << 4)) drawRect(xmin - 4, ymin - 2, 6, 6)
-  if (p->bb->type & (1 << 5)) drawRect(xmax - 2, ymax - 4, 6, 6)
-  if (p->bb->type & (1 << 6)) drawRect(xmax - 2, ymin - 2, 6, 6)
-  if (p->bb->type & (1 << 7)) drawRect(xmin - 4, ymax - 4, 6, 6)
+  drawRect(xmin - 1, ymax - 1, xmax - xmin + 2, ymin - ymax + 2) if (p->bb->type & (1 << 0))
+      drawRect(xmin - 4, (ymin + ymax - 6) / 2, 6, 6) if (p->bb->type & (1 << 1))
+          drawRect(xmax - 2, (ymin + ymax - 6) / 2, 6, 6) if (p->bb->type & (1 << 2))
+              drawRect((xmin + xmax - 6) / 2, ymin - 2, 6, 6) if (p->bb->type & (1 << 3))
+                  drawRect((xmin + xmax - 6) / 2, ymax - 4, 6, 6) if (p->bb->type & (1 << 4))
+                      drawRect(xmin - 4, ymin - 2, 6, 6) if (p->bb->type & (1 << 5))
+                          drawRect(xmax - 2, ymax - 4, 6, 6) if (p->bb->type & (1 << 6))
+                              drawRect(xmax - 2, ymin - 2, 6, 6) if (p->bb->type & (1 << 7))
+                                  drawRect(xmin - 4, ymax - 4, 6, 6)
 }
 
 
-static
-void set_clipping(Bool state)
+static void set_clipping(Bool state)
 {
   double clrt[4];
   int i, j;
@@ -690,9 +624,7 @@ void set_clipping(Bool state)
 }
 
 
-static
-void expose_event(Widget widget, ws_state_list *p, XExposeEvent *event,
-                  Boolean *continue_to_dispatch)
+static void expose_event(Widget widget, ws_state_list *p, XExposeEvent *event, Boolean *continue_to_dispatch)
 
 /*
  *  Handle expose events
@@ -702,15 +634,13 @@ void expose_event(Widget widget, ws_state_list *p, XExposeEvent *event,
   if (p->pixmap)
     {
       set_clipping(False);
-      XCopyArea(p->dpy, p->pixmap, p->win, p->gc, event->x, event->y,
-                event->width, event->height, event->x, event->y);
+      XCopyArea(p->dpy, p->pixmap, p->win, p->gc, event->x, event->y, event->width, event->height, event->x, event->y);
       set_clipping(True);
     }
 }
 
 
-static
-Display *open_display(void)
+static Display *open_display(void)
 
 /*
  *  Open display
@@ -719,12 +649,10 @@ Display *open_display(void)
 {
   char *env, *ep, s[80];
 
-  env = (char *) gks_getenv("GKS_CONID");
+  env = (char *)gks_getenv("GKS_CONID");
   if (env)
-    if (!*env)
-      env = NULL;
-  if (!env)
-    env = (char *) gks_getenv("GKSconid");
+    if (!*env) env = NULL;
+  if (!env) env = (char *)gks_getenv("GKSconid");
 
   if (p->wstype == 213)
     {
@@ -734,7 +662,7 @@ Display *open_display(void)
           return (NULL);
         }
       else
-        sscanf(env, "%p", (void **) &p->widget);
+        sscanf(env, "%p", (void **)&p->widget);
     }
 
   if (p->widget == NULL)
@@ -748,16 +676,15 @@ Display *open_display(void)
             }
           else
             {
-              if (sscanf(env, "%p!%ld",
-                        (void **) &p->dpy, (long int *) &p->win) != 2)
+              if (sscanf(env, "%p!%ld", (void **)&p->dpy, (long int *)&p->win) != 2)
                 {
                   ep = strchr(env, '!');
                   if (ep != NULL)
                     {
                       if (strncmp(++ep, "0x", 2) == 0)
-                        sscanf(ep + 2, "%x", (unsigned int *) &p->win);
+                        sscanf(ep + 2, "%x", (unsigned int *)&p->win);
                       else
-                        sscanf(ep, "%d", (int *) &p->win);
+                        sscanf(ep, "%d", (int *)&p->win);
                     }
 #ifdef _WIN32
                   if (*env == ':')
@@ -775,8 +702,7 @@ Display *open_display(void)
         }
       else
         {
-          if (!env)
-            env = (char *) gks_getenv("DISPLAY");
+          if (!env) env = (char *)gks_getenv("DISPLAY");
           if (env != NULL)
             {
 #ifdef _WIN32
@@ -800,7 +726,8 @@ Display *open_display(void)
             {
               gks_perror("can't open display on \"%s\"\n\
      Is your DISPLAY environment variable set correctly?\n\
-     Did you enable X11 and TCP forwarding?\n", env != NULL ? env : "");
+     Did you enable X11 and TCP forwarding?\n",
+                         env != NULL ? env : "");
               return (NULL);
             }
         }
@@ -817,11 +744,9 @@ Display *open_display(void)
   p->fd = ConnectionNumber(p->dpy);
 
   error_code = request_code = 0;
-  if (p->wstype != 212)
-    XSetErrorHandler((XErrorHandler) handler);
+  if (p->wstype != 212) XSetErrorHandler((XErrorHandler)handler);
 
-  p->backing_store = (XDoesBackingStore(p->screen) == Always) ||
-    ((char *) gks_getenv("GKS_BS") != NULL);
+  p->backing_store = (XDoesBackingStore(p->screen) == Always) || ((char *)gks_getenv("GKS_BS") != NULL);
 
   p->mwidth = XWidthMMOfScreen(p->screen) * 0.001;
   p->mheight = XHeightMMOfScreen(p->screen) * 0.001;
@@ -831,7 +756,7 @@ Display *open_display(void)
 
   p->magnification = 1;
 
-  if ((env = (char *) gks_getenv("GKS_DPI")) != NULL)
+  if ((env = (char *)gks_getenv("GKS_DPI")) != NULL)
     p->dpi = atoi(env);
   else
     {
@@ -847,14 +772,13 @@ Display *open_display(void)
 #endif
     }
 
-  p->ored_patterns = (char *) gks_getenv("GKS_TRANSPARENT_PATTERNS") != NULL;
+  p->ored_patterns = (char *)gks_getenv("GKS_TRANSPARENT_PATTERNS") != NULL;
 
   return (p->dpy);
 }
 
 
-static
-void set_colors(void)
+static void set_colors(void)
 {
   int i;
 
@@ -870,8 +794,7 @@ void set_colors(void)
 /* 24/32-bit TrueColor display color 'allocation' code */
 /*******************************************************/
 
-static
-int highbit(unsigned long ul)
+static int highbit(unsigned long ul)
 {
   /* returns position of highest set bit in 'ul' as an integer (0-31),
      or -1 if none */
@@ -879,27 +802,25 @@ int highbit(unsigned long ul)
   int i;
   unsigned long hb;
   hb = 0x8000;
-  hb = (hb << 16);              /* hb = 0x80000000UL */
-  for (i = 31; ((ul & hb) == 0) && i >= 0; i--, ul <<= 1);
+  hb = (hb << 16); /* hb = 0x80000000UL */
+  for (i = 31; ((ul & hb) == 0) && i >= 0; i--, ul <<= 1)
+    ;
   return i;
 }
 
 
-static
-int lowbit(unsigned long ul)
+static int lowbit(unsigned long ul)
 {
   /* returns position of lowest set bit in 'ul' as an integer (0-31),
      or -1 if none */
 
   int i;
-  for (i = 0; ((ul & 1) == 0) && i <= 31; i++)
-    ul >>= 1;
+  for (i = 0; ((ul & 1) == 0) && i <= 31; i++) ul >>= 1;
   return i;
 }
 
 
-static
-void alloc_color(XColor *color)
+static void alloc_color(XColor *color)
 {
   unsigned long r, g, b, rmask, gmask, bmask;
   int rshift, gshift, bshift;
@@ -967,8 +888,7 @@ void alloc_color(XColor *color)
 }
 
 
-static
-void allocate_colors(void)
+static void allocate_colors(void)
 {
   int i;
 
@@ -1005,21 +925,19 @@ void allocate_colors(void)
 
 #ifndef NO_XFT
 
-static
-void allocate_rendercolors(void)
+static void allocate_rendercolors(void)
 {
   XRenderColor rendercolor;
   int i;
 
   for (i = 0; i < MAX_COLOR; i++)
     {
-      rendercolor.red   = p->color[i].red;
+      rendercolor.red = p->color[i].red;
       rendercolor.green = p->color[i].green;
-      rendercolor.blue  = p->color[i].blue;
+      rendercolor.blue = p->color[i].blue;
       rendercolor.alpha = 65535;
 
-      p->havecolor[i] = XftColorAllocValue(p->dpy, p->vis, p->cmap,
-                                           &rendercolor, &p->rendercolor[i]);
+      p->havecolor[i] = XftColorAllocValue(p->dpy, p->vis, p->cmap, &rendercolor, &p->rendercolor[i]);
     }
 }
 
@@ -1028,21 +946,18 @@ void allocate_rendercolors(void)
 
 #ifndef NO_XFT
 
-static
-void free_rendercolors(void)
+static void free_rendercolors(void)
 {
   int i;
 
   for (i = 0; i < MAX_COLOR; i++)
-    if (p->havecolor[i])
-      XftColorFree(p->dpy, p->vis, p->cmap, &p->rendercolor[i]);
+    if (p->havecolor[i]) XftColorFree(p->dpy, p->vis, p->cmap, &p->rendercolor[i]);
 }
 
 #endif
 
 
-static
-void setup_xform(double *window, double *viewport)
+static void setup_xform(double *window, double *viewport)
 {
   p->a = (p->width - 1) / (window[1] - window[0]);
   p->b = -window[0] * p->a;
@@ -1051,8 +966,7 @@ void setup_xform(double *window, double *viewport)
 }
 
 
-static
-void configure_viewport(XConfigureEvent *event)
+static void configure_viewport(XConfigureEvent *event)
 {
   if (p->width != event->width || p->height != event->height)
     {
@@ -1062,18 +976,14 @@ void configure_viewport(XConfigureEvent *event)
       if (p->pixmap)
         {
           XFreePixmap(p->dpy, p->pixmap);
-          p->pixmap = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                                    p->width, p->height, p->depth);
-          XFillRectangle(p->dpy, p->pixmap, p->clear, 0, 0,
-                         p->width, p->height);
+          p->pixmap = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), p->width, p->height, p->depth);
+          XFillRectangle(p->dpy, p->pixmap, p->clear, 0, 0, p->width, p->height);
         }
       if (p->drawable)
         {
           XFreePixmap(p->dpy, p->drawable);
-          p->drawable = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                                      p->width, p->height, p->depth);
-          XFillRectangle(p->dpy, p->drawable, p->clear, 0, 0,
-                         p->width, p->height);
+          p->drawable = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), p->width, p->height, p->depth);
+          XFillRectangle(p->dpy, p->drawable, p->clear, 0, 0, p->width, p->height);
         }
 #ifdef XSHM
       free_shared_memory();
@@ -1104,8 +1014,7 @@ void configure_viewport(XConfigureEvent *event)
 }
 
 
-static
-void create_window(int win)
+static void create_window(int win)
 
 /*
  *  Create a window
@@ -1126,7 +1035,7 @@ void create_window(int win)
   xswa.background_pixel = p->bg;
   xswa.event_mask = StructureNotifyMask | ExposureMask;
 
-  if (p->backing_store && ((char *) gks_getenv("GKS_BS") == NULL))
+  if (p->backing_store && ((char *)gks_getenv("GKS_BS") == NULL))
     xswa.backing_store = Always;
   else
     xswa.backing_store = NotUseful;
@@ -1143,8 +1052,7 @@ void create_window(int win)
 
       if (p->uil < 0)
         {
-          if ((env = (char *) gks_getenv("GKS_MAGSTEP")) != NULL)
-            p->magnification = pow(1.2, atof(env));
+          if ((env = (char *)gks_getenv("GKS_MAGSTEP")) != NULL) p->magnification = pow(1.2, atof(env));
 
           p->width = p->height = (int)(500 * p->magnification);
         }
@@ -1153,17 +1061,15 @@ void create_window(int win)
 
       /* Create a window whose parent is the root window */
 
-      p->win = XCreateWindow(p->dpy, XRootWindowOfScreen(p->screen),
-        p->x, p->y, p->width, p->height, 0, p->depth, InputOutput, p->vis,
-        CWBackPixel | CWEventMask | CWBackingStore | CWColormap | CWBorderPixel,
-        &xswa);
+      p->win = XCreateWindow(p->dpy, XRootWindowOfScreen(p->screen), p->x, p->y, p->width, p->height, 0, p->depth,
+                             InputOutput, p->vis,
+                             CWBackPixel | CWEventMask | CWBackingStore | CWColormap | CWBorderPixel, &xswa);
 
       XSelectInput(p->dpy, p->win, xswa.event_mask);
 
-      p->icon_pixmap = XCreatePixmapFromBitmapData(p->dpy,
-        XRootWindowOfScreen(p->screen), (char *) icon_bits,
-        icon_width, icon_height, XBlackPixelOfScreen(p->screen),
-        XWhitePixelOfScreen(p->screen), 1);
+      p->icon_pixmap =
+          XCreatePixmapFromBitmapData(p->dpy, XRootWindowOfScreen(p->screen), (char *)icon_bits, icon_width,
+                                      icon_height, XBlackPixelOfScreen(p->screen), XWhitePixelOfScreen(p->screen), 1);
 
       if (p->conid)
         sprintf(icon_name, "GKSwk %d", p->conid);
@@ -1179,8 +1085,7 @@ void create_window(int win)
       else
         p->master_thread = 0;
 
-      XSetStandardProperties(p->dpy, p->win, WindowName, icon_name,
-                             p->icon_pixmap, argv, argc, hints);
+      XSetStandardProperties(p->dpy, p->win, WindowName, icon_name, p->icon_pixmap, argv, argc, hints);
 
       XStoreName(p->dpy, p->win, WindowName);
     }
@@ -1188,8 +1093,7 @@ void create_window(int win)
     {
       p->new_win = False;
 
-      if (p->wstype != 212)
-        p->win = XtWindow(p->widget);
+      if (p->wstype != 212) p->win = XtWindow(p->widget);
 
       XGetWindowAttributes(p->dpy, p->win, &xwa);
       p->x = xwa.x;
@@ -1200,8 +1104,7 @@ void create_window(int win)
       xswa.event_mask |= (xwa.all_event_masks | ButtonPressMask);
 
       valuemask = CWBackingStore;
-      if (p->wstype != 212)
-        valuemask = CWBackPixel | CWEventMask | CWBackingStore | CWColormap;
+      if (p->wstype != 212) valuemask = CWBackPixel | CWEventMask | CWBackingStore | CWColormap;
 
       XChangeWindowAttributes(p->dpy, p->win, valuemask, &xswa);
     }
@@ -1210,8 +1113,7 @@ void create_window(int win)
 }
 
 
-static
-void set_WM_hints(void)
+static void set_WM_hints(void)
 {
   XSizeHints hints;
   XWMHints wmhints;
@@ -1237,8 +1139,7 @@ void set_WM_hints(void)
 }
 
 
-static
-void create_GC(void)
+static void create_GC(void)
 
 /*
  *  Create graphics context
@@ -1262,8 +1163,7 @@ void create_GC(void)
 }
 
 
-static
-void free_GC(void)
+static void free_GC(void)
 
 /*
  *  Free graphics context
@@ -1277,19 +1177,16 @@ void free_GC(void)
 }
 
 
-static
-void create_pixmap(void)
+static void create_pixmap(void)
 
 /*
  *  Create a pixmap
  */
 
 {
-  if (!p->backing_store || p->gif >= 0 || p->rf >= 0 || p->uil >= 0 ||
-      p->frame || p->double_buf)
+  if (!p->backing_store || p->gif >= 0 || p->rf >= 0 || p->uil >= 0 || p->frame || p->double_buf)
     {
-      p->pixmap = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                                p->width, p->height, p->depth);
+      p->pixmap = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), p->width, p->height, p->depth);
       XFillRectangle(p->dpy, p->pixmap, p->clear, 0, 0, p->width, p->height);
     }
   else
@@ -1301,8 +1198,7 @@ void create_pixmap(void)
 
 int XShmQueryExtension(Display *);
 
-static
-void create_shared_memory(void)
+static void create_shared_memory(void)
 
 /*
  *  Create X shared memory
@@ -1317,15 +1213,13 @@ void create_shared_memory(void)
 
   if (XShmQueryExtension(p->dpy))
     {
-      p->shmimage = XShmCreateImage(p->dpy, p->vis, p->depth,
-        p->depth == 1 ? XYBitmap : ZPixmap, 0, &p->shminfo,
-        p->width, p->height);
+      p->shmimage = XShmCreateImage(p->dpy, p->vis, p->depth, p->depth == 1 ? XYBitmap : ZPixmap, 0, &p->shminfo,
+                                    p->width, p->height);
 
-      p->shminfo.shmid = shmget(IPC_PRIVATE, p->shmimage->bytes_per_line *
-                                p->shmimage->height, IPC_CREAT | 0777);
+      p->shminfo.shmid = shmget(IPC_PRIVATE, p->shmimage->bytes_per_line * p->shmimage->height, IPC_CREAT | 0777);
       if (p->shminfo.shmid >= 0)
         {
-          p->shminfo.shmaddr = (char *) shmat(p->shminfo.shmid, 0, 0);
+          p->shminfo.shmaddr = (char *)shmat(p->shminfo.shmid, 0, 0);
         }
 
       p->shminfo.readOnly = False;
@@ -1340,8 +1234,7 @@ void create_shared_memory(void)
 }
 
 
-static
-void free_shared_memory(void)
+static void free_shared_memory(void)
 
 /*
  *  Free X shared memory
@@ -1359,8 +1252,7 @@ void free_shared_memory(void)
 #endif /* XSHM */
 
 
-static
-void initialize_arrays(void)
+static void initialize_arrays(void)
 
 /*
  *  Initialize the arrays
@@ -1377,26 +1269,24 @@ void initialize_arrays(void)
           pat = i;
           gks_inq_pattern_array(pat, pa);
           patterns[i][0] = (char)(*pa);
-          for (j = 1; j <= *pa; j++)
-            patterns[i][j] = (char)(~pa[j]);
+          for (j = 1; j <= *pa; j++) patterns[i][j] = (char)(~pa[j]);
         }
       have_patterns = True;
     }
 
 #if !defined(NO_XFT) || defined(NO_FT)
 #ifndef NO_XFT
-  memset((void *) p->fstr, 0, n_font * (MAX_SIZE + 1) * sizeof(XftFont *));
+  memset((void *)p->fstr, 0, n_font * (MAX_SIZE + 1) * sizeof(XftFont *));
 #else
-  memset((void *) p->fstr, 0, n_font * (MAX_SIZE + 1) * sizeof(XFontStruct *));
+  memset((void *)p->fstr, 0, n_font * (MAX_SIZE + 1) * sizeof(XFontStruct *));
 #endif
 #endif
-  memset((void *) p->tile, 0, MAX_COLOR * PATTERNS * sizeof(Pixmap));
-  memset((void *) p->stipple, 0, MAX_COLOR * PATTERNS * sizeof(Pixmap));
+  memset((void *)p->tile, 0, MAX_COLOR * PATTERNS * sizeof(Pixmap));
+  memset((void *)p->stipple, 0, MAX_COLOR * PATTERNS * sizeof(Pixmap));
 }
 
 
-static
-void free_tile_patterns(int color)
+static void free_tile_patterns(int color)
 
 /*
  *  Free tile patterns
@@ -1417,8 +1307,7 @@ void free_tile_patterns(int color)
 }
 
 
-static
-void create_cursor(void)
+static void create_cursor(void)
 
 /*
  *  Create cursor
@@ -1428,18 +1317,15 @@ void create_cursor(void)
   char *env;
   unsigned int shape = 0;
 
-  if ((env = (char *) gks_getenv("GKS_XC")) != NULL)
-    shape = atoi(env);
-  if (!shape)
-    shape = XC_draft_small;
+  if ((env = (char *)gks_getenv("GKS_XC")) != NULL) shape = atoi(env);
+  if (!shape) shape = XC_draft_small;
 
   p->cursor = XCreateFontCursor(p->dpy, shape);
   p->textcursor = XCreateFontCursor(p->dpy, XC_xterm);
 }
 
 
-static
-void set_color_repr(int i, double r, double g, double b)
+static void set_color_repr(int i, double r, double g, double b)
 {
   p->red[i] = r;
   p->green[i] = g;
@@ -1469,8 +1355,7 @@ void set_color_repr(int i, double r, double g, double b)
 }
 
 
-static
-void set_color(int color)
+static void set_color(int color)
 {
   int i;
 
@@ -1483,8 +1368,7 @@ void set_color(int color)
 }
 
 
-static
-void set_pattern(int color, int style)
+static void set_pattern(int color, int style)
 {
   unsigned int w, h;
   char *pattern;
@@ -1496,10 +1380,10 @@ void set_pattern(int color, int style)
           pattern = patterns[style];
           w = h = (*pattern == 32) ? 16 : *pattern;
           pattern++;
-          p->tile[color][style] = XCreatePixmapFromBitmapData(p->dpy, p->win,
-            pattern, w, h, p->color[color].pixel, p->bg, p->depth);
-          p->stipple[color][style] = XCreatePixmapFromBitmapData(p->dpy,
-            p->win, pattern, w, h, p->color[color].pixel, p->bg, 1);
+          p->tile[color][style] =
+              XCreatePixmapFromBitmapData(p->dpy, p->win, pattern, w, h, p->color[color].pixel, p->bg, p->depth);
+          p->stipple[color][style] =
+              XCreatePixmapFromBitmapData(p->dpy, p->win, pattern, w, h, p->color[color].pixel, p->bg, 1);
         }
 
       if (p->ored_patterns)
@@ -1518,8 +1402,7 @@ void set_pattern(int color, int style)
 }
 
 
-static
-void configure_event(XConfigureEvent *event)
+static void configure_event(XConfigureEvent *event)
 
 /*
  *  Handle configure events
@@ -1529,13 +1412,11 @@ void configure_event(XConfigureEvent *event)
   double req_aspect_ratio, cur_aspect_ratio;
   int width, height;
 
-  if (p->widget || p->gif >= 0 || p->rf >= 0 || p->uil >= 0 || p->frame)
-    return;
+  if (p->widget || p->gif >= 0 || p->rf >= 0 || p->uil >= 0 || p->frame) return;
 
   p->x = event->x;
   p->y = event->y;
-  if (event->width == p->width && event->height == p->height)
-    return;
+  if (event->width == p->width && event->height == p->height) return;
 
   width = event->width;
   height = event->height;
@@ -1545,22 +1426,18 @@ void configure_event(XConfigureEvent *event)
   p->viewport[2] = (p->sheight - (p->y + height)) * p->resolution;
   p->viewport[3] = p->viewport[2] + height * p->resolution;
 
-  req_aspect_ratio = (p->window[1] - p->window[0]) /
-    (p->window[3] - p->window[2]);
-  cur_aspect_ratio = (p->viewport[1] - p->viewport[0]) /
-    (p->viewport[3] - p->viewport[2]);
+  req_aspect_ratio = (p->window[1] - p->window[0]) / (p->window[3] - p->window[2]);
+  cur_aspect_ratio = (p->viewport[1] - p->viewport[0]) / (p->viewport[3] - p->viewport[2]);
 
   if (cur_aspect_ratio > req_aspect_ratio)
     {
       width = (int)(height * req_aspect_ratio);
-      p->viewport[1] = p->viewport[0] + (p->viewport[3] - p->viewport[2]) *
-        req_aspect_ratio;
+      p->viewport[1] = p->viewport[0] + (p->viewport[3] - p->viewport[2]) * req_aspect_ratio;
     }
   else
     {
       height = (int)(width / req_aspect_ratio);
-      p->viewport[3] = p->viewport[2] + (p->viewport[1] - p->viewport[0]) /
-        req_aspect_ratio;
+      p->viewport[3] = p->viewport[2] + (p->viewport[1] - p->viewport[0]) / req_aspect_ratio;
     }
 
   if (width != p->width || height != p->height)
@@ -1571,18 +1448,14 @@ void configure_event(XConfigureEvent *event)
       if (p->pixmap)
         {
           XFreePixmap(p->dpy, p->pixmap);
-          p->pixmap = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                                    p->width, p->height, p->depth);
-          XFillRectangle(p->dpy, p->pixmap, p->clear, 0, 0,
-                         p->width, p->height);
+          p->pixmap = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), p->width, p->height, p->depth);
+          XFillRectangle(p->dpy, p->pixmap, p->clear, 0, 0, p->width, p->height);
         }
       if (p->drawable)
         {
           XFreePixmap(p->dpy, p->drawable);
-          p->drawable = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                                      p->width, p->height, p->depth);
-          XFillRectangle(p->dpy, p->drawable, p->clear, 0, 0,
-                         p->width, p->height);
+          p->drawable = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), p->width, p->height, p->depth);
+          XFillRectangle(p->dpy, p->drawable, p->clear, 0, 0, p->width, p->height);
         }
 #ifdef XSHM
       free_shared_memory();
@@ -1591,7 +1464,7 @@ void configure_event(XConfigureEvent *event)
       setup_xform(p->window, p->viewport);
       set_clipping(True);
 
-      //gks_redraw_seg_on_ws(p->wkid);
+      // gks_redraw_seg_on_ws(p->wkid);
       return;
     }
   else
@@ -1599,8 +1472,7 @@ void configure_event(XConfigureEvent *event)
 }
 
 
-static
-void handle_expose_event(ws_state_list *p)
+static void handle_expose_event(ws_state_list *p)
 
 /*
  *  Handle expose events
@@ -1610,16 +1482,14 @@ void handle_expose_event(ws_state_list *p)
   if (p->pixmap)
     {
       set_clipping(False);
-      XCopyArea(p->dpy, p->pixmap, p->win, p->gc, 0, 0, p->width, p->height,
-                0, 0);
+      XCopyArea(p->dpy, p->pixmap, p->win, p->gc, 0, 0, p->width, p->height, 0, 0);
       set_clipping(True);
       XSync(p->dpy, False);
     }
 }
 
 
-static
-void wait_for_expose(void)
+static void wait_for_expose(void)
 {
   XEvent event;
 
@@ -1627,16 +1497,14 @@ void wait_for_expose(void)
     {
       do
         XWindowEvent(p->dpy, p->win, StructureNotifyMask, &event);
-      while (event.xany.type != MapNotify &&
-             event.xany.type != ConfigureNotify);
+      while (event.xany.type != MapNotify && event.xany.type != ConfigureNotify);
       while (XCheckTypedWindowEvent(p->dpy, p->win, Expose, &event))
         ;
     }
 }
 
 
-static
-void map_window(void)
+static void map_window(void)
 
 /*
  *  Map window
@@ -1650,18 +1518,15 @@ void map_window(void)
       XMapWindow(p->dpy, p->win);
       p->mapped = True;
 
-      if (p->gif < 0 && p->rf < 0)
-        wait_for_expose();
+      if (p->gif < 0 && p->rf < 0) wait_for_expose();
 
       if (p->widget && !p->backing_store)
-        XtAddEventHandler(p->widget, ExposureMask, False,
-                          (XtEventHandler) expose_event, p);
+        XtAddEventHandler(p->widget, ExposureMask, False, (XtEventHandler)expose_event, p);
     }
 }
 
 
-static
-void unmap_window(void)
+static void unmap_window(void)
 
 /*
  *  Unmap window
@@ -1671,18 +1536,15 @@ void unmap_window(void)
   if (p->mapped)
     {
       if (p->widget && !p->backing_store)
-        XtRemoveEventHandler(p->widget, ExposureMask, False,
-                             (XtEventHandler) expose_event, p);
+        XtRemoveEventHandler(p->widget, ExposureMask, False, (XtEventHandler)expose_event, p);
 
-      if (!p->widget && p->wstype != 212)
-        XUnmapWindow(p->dpy, p->win);
+      if (!p->widget && p->wstype != 212) XUnmapWindow(p->dpy, p->win);
       p->mapped = False;
     }
 }
 
 
-static
-void setup_norm_xform(int tnr, double *wn, double *vp)
+static void setup_norm_xform(int tnr, double *wn, double *vp)
 {
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -1691,18 +1553,15 @@ void setup_norm_xform(int tnr, double *wn, double *vp)
 }
 
 
-static
-void init_norm_xform(void)
+static void init_norm_xform(void)
 {
   int tnr;
 
-  for (tnr = 0; tnr < MAX_TNR; tnr++)
-    setup_norm_xform(tnr, gksl->window[tnr], gksl->viewport[tnr]);
+  for (tnr = 0; tnr < MAX_TNR; tnr++) setup_norm_xform(tnr, gksl->window[tnr], gksl->viewport[tnr]);
 }
 
 
-static
-void draw_marker(double xn, double yn, int mtype, double mscale)
+static void draw_marker(double xn, double yn, int mtype, double mscale)
 {
   int r, d, x, y, i;
   int pc, op;
@@ -1711,8 +1570,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 
 #include "marker.h"
 
-  if (gksl->version > 4)
-    mscale *= (p->width + p->height) * 0.001;
+  if (gksl->version > 4) mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   d = 2 * r;
   scale = 0.01 * mscale / 3.0;
@@ -1736,16 +1594,13 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
       switch (op)
         {
 
-        case 1:         /* point */
-          if (p->pixmap)
-            XDrawPoint(p->dpy, p->pixmap, p->gc, x, y);
-          if (p->selection)
-            XDrawPoint(p->dpy, p->drawable, p->gc, x, y);
-          if (!p->double_buf)
-            XDrawPoint(p->dpy, p->win, p->gc, x, y);
+        case 1: /* point */
+          if (p->pixmap) XDrawPoint(p->dpy, p->pixmap, p->gc, x, y);
+          if (p->selection) XDrawPoint(p->dpy, p->drawable, p->gc, x, y);
+          if (!p->double_buf) XDrawPoint(p->dpy, p->win, p->gc, x, y);
           break;
 
-        case 2:         /* line */
+        case 2: /* line */
           for (i = 0; i < 2; i++)
             {
               xr = scale * marker[mtype][pc + 2 * i + 1];
@@ -1754,19 +1609,28 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
               points[i].x = nint(x - xr);
               points[i].y = nint(y + yr);
             }
-          if (p->pixmap)
-            XDrawLines(p->dpy, p->pixmap, p->gc, points, 2,
-                       CoordModeOrigin);
-          if (p->selection)
-            XDrawLines(p->dpy, p->drawable, p->gc, points, 2,
-                       CoordModeOrigin);
-          if (!p->double_buf)
-            XDrawLines(p->dpy, p->win, p->gc, points, 2,
-                       CoordModeOrigin);
+          if (p->pixmap) XDrawLines(p->dpy, p->pixmap, p->gc, points, 2, CoordModeOrigin);
+          if (p->selection) XDrawLines(p->dpy, p->drawable, p->gc, points, 2, CoordModeOrigin);
+          if (!p->double_buf) XDrawLines(p->dpy, p->win, p->gc, points, 2, CoordModeOrigin);
           pc += 4;
           break;
 
-        case 3:         /* polygon */
+        case 3: /* polygon */
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 + 2 * i];
+              yr = -scale * marker[mtype][pc + 3 + 2 * i];
+              seg_xform_rel(&xr, &yr);
+              points[i].x = nint(x - xr);
+              points[i].y = nint(y + yr);
+            }
+          if (p->pixmap) XDrawLines(p->dpy, p->pixmap, p->gc, points, marker[mtype][pc + 1], CoordModeOrigin);
+          if (p->selection) XDrawLines(p->dpy, p->drawable, p->gc, points, marker[mtype][pc + 1], CoordModeOrigin);
+          if (!p->double_buf) XDrawLines(p->dpy, p->win, p->gc, points, marker[mtype][pc + 1], CoordModeOrigin);
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          break;
+
+        case 4: /* filled polygon */
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1776,18 +1640,15 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
               points[i].y = nint(y + yr);
             }
           if (p->pixmap)
-            XDrawLines(p->dpy, p->pixmap, p->gc, points,
-                       marker[mtype][pc + 1], CoordModeOrigin);
+            XFillPolygon(p->dpy, p->pixmap, p->gc, points, marker[mtype][pc + 1], Complex, CoordModeOrigin);
           if (p->selection)
-            XDrawLines(p->dpy, p->drawable, p->gc, points,
-                       marker[mtype][pc + 1], CoordModeOrigin);
+            XFillPolygon(p->dpy, p->drawable, p->gc, points, marker[mtype][pc + 1], Complex, CoordModeOrigin);
           if (!p->double_buf)
-            XDrawLines(p->dpy, p->win, p->gc, points,
-                       marker[mtype][pc + 1], CoordModeOrigin);
+            XFillPolygon(p->dpy, p->win, p->gc, points, marker[mtype][pc + 1], Complex, CoordModeOrigin);
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
-        case 4:         /* filled polygon */
+        case 5: /* hollow polygon */
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1797,69 +1658,30 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
               points[i].y = nint(y + yr);
             }
           if (p->pixmap)
-            XFillPolygon(p->dpy, p->pixmap, p->gc, points,
-                         marker[mtype][pc + 1], Complex, CoordModeOrigin);
+            XFillPolygon(p->dpy, p->pixmap, p->clear, points, marker[mtype][pc + 1], Complex, CoordModeOrigin);
           if (p->selection)
-            XFillPolygon(p->dpy, p->drawable, p->gc, points,
-                         marker[mtype][pc + 1], Complex, CoordModeOrigin);
+            XFillPolygon(p->dpy, p->drawable, p->clear, points, marker[mtype][pc + 1], Complex, CoordModeOrigin);
           if (!p->double_buf)
-            XFillPolygon(p->dpy, p->win, p->gc, points,
-                         marker[mtype][pc + 1], Complex, CoordModeOrigin);
+            XFillPolygon(p->dpy, p->win, p->clear, points, marker[mtype][pc + 1], Complex, CoordModeOrigin);
           pc += 1 + 2 * marker[mtype][pc + 1];
           break;
 
-        case 5:         /* hollow polygon */
-          for (i = 0; i < marker[mtype][pc + 1]; i++)
-            {
-              xr = scale * marker[mtype][pc + 2 + 2 * i];
-              yr = -scale * marker[mtype][pc + 3 + 2 * i];
-              seg_xform_rel(&xr, &yr);
-              points[i].x = nint(x - xr);
-              points[i].y = nint(y + yr);
-            }
-          if (p->pixmap)
-            XFillPolygon(p->dpy, p->pixmap, p->clear, points,
-                         marker[mtype][pc + 1], Complex, CoordModeOrigin);
-          if (p->selection)
-            XFillPolygon(p->dpy, p->drawable, p->clear, points,
-                         marker[mtype][pc + 1], Complex, CoordModeOrigin);
-          if (!p->double_buf)
-            XFillPolygon(p->dpy, p->win, p->clear, points,
-                         marker[mtype][pc + 1], Complex, CoordModeOrigin);
-          pc += 1 + 2 * marker[mtype][pc + 1];
+        case 6: /* arc */
+          if (p->pixmap) XDrawArc(p->dpy, p->pixmap, p->gc, x - r, y - r, d, d, 0, 360 * 64);
+          if (p->selection) XDrawArc(p->dpy, p->drawable, p->gc, x - r, y - r, d, d, 0, 360 * 64);
+          if (!p->double_buf) XDrawArc(p->dpy, p->win, p->gc, x - r, y - r, d, d, 0, 360 * 64);
           break;
 
-        case 6:         /* arc */
-          if (p->pixmap)
-            XDrawArc(p->dpy, p->pixmap, p->gc, x - r, y - r, d, d,
-                     0, 360 * 64);
-          if (p->selection)
-            XDrawArc(p->dpy, p->drawable, p->gc, x - r, y - r, d, d,
-                     0, 360 * 64);
-          if (!p->double_buf)
-            XDrawArc(p->dpy, p->win, p->gc, x - r, y - r, d, d, 0, 360 * 64);
+        case 7: /* filled arc */
+          if (p->pixmap) XFillArc(p->dpy, p->pixmap, p->gc, x - r, y - r, d, d, 0, 360 * 64);
+          if (p->selection) XFillArc(p->dpy, p->drawable, p->gc, x - r, y - r, d, d, 0, 360 * 64);
+          if (!p->double_buf) XFillArc(p->dpy, p->win, p->gc, x - r, y - r, d, d, 0, 360 * 64);
           break;
 
-        case 7:         /* filled arc */
-          if (p->pixmap)
-            XFillArc(p->dpy, p->pixmap, p->gc, x - r, y - r, d, d,
-                     0, 360 * 64);
-          if (p->selection)
-            XFillArc(p->dpy, p->drawable, p->gc, x - r, y - r, d, d,
-                     0, 360 * 64);
-          if (!p->double_buf)
-            XFillArc(p->dpy, p->win, p->gc, x - r, y - r, d, d, 0, 360 * 64);
-          break;
-
-        case 8:         /* hollow arc */
-          if (p->pixmap)
-            XFillArc(p->dpy, p->pixmap, p->clear, x - r, y - r, d, d,
-                     0, 360 * 64);
-          if (p->selection)
-            XFillArc(p->dpy, p->drawable, p->clear, x - r, y - r, d, d,
-                     0, 360 *64);
-          if (!p->double_buf)
-            XFillArc(p->dpy, p->win, p->clear, x - r, y - r, d, d, 0, 360 * 64);
+        case 8: /* hollow arc */
+          if (p->pixmap) XFillArc(p->dpy, p->pixmap, p->clear, x - r, y - r, d, d, 0, 360 * 64);
+          if (p->selection) XFillArc(p->dpy, p->drawable, p->clear, x - r, y - r, d, d, 0, 360 * 64);
+          if (!p->double_buf) XFillArc(p->dpy, p->win, p->clear, x - r, y - r, d, d, 0, 360 * 64);
           break;
         }
       pc++;
@@ -1868,15 +1690,14 @@ void draw_marker(double xn, double yn, int mtype, double mscale)
 }
 
 
-static
-void draw_points(int n, double *px, double *py, int tnr)
+static void draw_points(int n, double *px, double *py, int tnr)
 {
   int i;
   double xn, yn;
 
   if (n > max_points)
     {
-      points = (XPoint *) realloc(points, n * sizeof(XPoint));
+      points = (XPoint *)realloc(points, n * sizeof(XPoint));
       max_points = n;
     }
 
@@ -1887,18 +1708,13 @@ void draw_points(int n, double *px, double *py, int tnr)
       NDC_to_DC(xn, yn, points[i].x, points[i].y);
     }
 
-  if (p->pixmap)
-    XDrawPoints(p->dpy, p->pixmap, p->gc, points, n, CoordModeOrigin);
-  if (p->selection)
-    XDrawPoints(p->dpy, p->drawable, p->gc, points, n, CoordModeOrigin);
-  if (!p->double_buf)
-    XDrawPoints(p->dpy, p->win, p->gc, points, n, CoordModeOrigin);
+  if (p->pixmap) XDrawPoints(p->dpy, p->pixmap, p->gc, points, n, CoordModeOrigin);
+  if (p->selection) XDrawPoints(p->dpy, p->drawable, p->gc, points, n, CoordModeOrigin);
+  if (!p->double_buf) XDrawPoints(p->dpy, p->win, p->gc, points, n, CoordModeOrigin);
 }
 
 
-static
-void marker_routine(
-  int n, double *px, double *py, int tnr, int mtype, double mscale)
+static void marker_routine(int n, double *px, double *py, int tnr, int mtype, double mscale)
 {
   double clrt[4] = {0, 1, 0, 1};
   double x, y;
@@ -1925,8 +1741,7 @@ void marker_routine(
           else
             draw = True;
 
-          if (draw)
-            draw_marker(x, y, mtype, mscale);
+          if (draw) draw_marker(x, y, mtype, mscale);
         }
       set_clipping(True);
     }
@@ -1935,8 +1750,7 @@ void marker_routine(
 }
 
 
-static
-void set_line_attr(int linetype, double linewidth)
+static void set_line_attr(int linetype, double linewidth)
 {
   int i, list[10];
   char dash_list[10];
@@ -1944,8 +1758,7 @@ void set_line_attr(int linetype, double linewidth)
   unsigned int width;
   int n;
 
-  if (gksl->version > 4)
-    linewidth *= (p->width + p->height) * 0.001;
+  if (gksl->version > 4) linewidth *= (p->width + p->height) * 0.001;
   if (linewidth > 1)
     width = (unsigned int)(linewidth + 0.5);
   else
@@ -1956,17 +1769,14 @@ void set_line_attr(int linetype, double linewidth)
       if (linetype != GKS_K_LINETYPE_SOLID)
         {
           gks_get_dash_list(linetype, linewidth, list);
-          for (i = 0; i < 10; i++)
-            dash_list[i] = (int) list[i];
+          for (i = 0; i < 10; i++) dash_list[i] = (int)list[i];
 
-          XSetLineAttributes(p->dpy, p->gc, width, LineOnOffDash,
-                             CapNotLast, JoinRound);
-          n = (int) dash_list[0];
+          XSetLineAttributes(p->dpy, p->gc, width, LineOnOffDash, CapNotLast, JoinRound);
+          n = (int)dash_list[0];
           XSetDashes(p->dpy, p->gc, 0, &dash_list[1], n);
         }
       else
-        XSetLineAttributes(p->dpy, p->gc, width, LineSolid, CapNotLast,
-                           JoinRound);
+        XSetLineAttributes(p->dpy, p->gc, width, LineSolid, CapNotLast, JoinRound);
 
       p->ltype = linetype;
       p->lwidth = width;
@@ -1974,8 +1784,7 @@ void set_line_attr(int linetype, double linewidth)
 }
 
 
-static
-int clip_code(int x, int y)
+static int clip_code(int x, int y)
 {
   int code = 0;
 
@@ -1993,8 +1802,7 @@ int clip_code(int x, int y)
 }
 
 
-static
-void clip_line(int *x0, int *x1, int *y0, int *y1, Bool *visible, Bool *clip)
+static void clip_line(int *x0, int *x1, int *y0, int *y1, Bool *visible, Bool *clip)
 {
   int c, c0, c1;
   int x = 0, y = 0;
@@ -2007,8 +1815,7 @@ void clip_line(int *x0, int *x1, int *y0, int *y1, Bool *visible, Bool *clip)
 
   while (c0 | c1)
     {
-      if (c0 & c1)
-        return;
+      if (c0 & c1) return;
       c = c0 ? c0 : c1;
 
       if (c & LEFT)
@@ -2049,8 +1856,7 @@ void clip_line(int *x0, int *x1, int *y0, int *y1, Bool *visible, Bool *clip)
 }
 
 
-static
-void line_routine(int n, double *px, double *py, int linetype, int tnr)
+static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x1, y1;
   int i, j, npoints, m;
@@ -2059,7 +1865,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   if (n > max_points)
     {
-      points = (XPoint *) realloc(points, n * sizeof(XPoint));
+      points = (XPoint *)realloc(points, n * sizeof(XPoint));
       max_points = n;
     }
 
@@ -2100,23 +1906,17 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
           if (clip)
             {
-              if (p->pixmap)
-                XDrawLines(p->dpy, p->pixmap, p->gc, points, npoints, 0);
-              if (p->selection)
-                XDrawLines(p->dpy, p->drawable, p->gc, points, npoints, 0);
-              if (!p->double_buf)
-                XDrawLines(p->dpy, p->win, p->gc, points, npoints, 0);
+              if (p->pixmap) XDrawLines(p->dpy, p->pixmap, p->gc, points, npoints, 0);
+              if (p->selection) XDrawLines(p->dpy, p->drawable, p->gc, points, npoints, 0);
+              if (!p->double_buf) XDrawLines(p->dpy, p->win, p->gc, points, npoints, 0);
               npoints = 0;
             }
 
           if (npoints == MAX_POINTS)
             {
-              if (p->pixmap)
-                XDrawLines(p->dpy, p->pixmap, p->gc, points, npoints, 0);
-              if (p->selection)
-                XDrawLines(p->dpy, p->drawable, p->gc, points, npoints, 0);
-              if (!p->double_buf)
-                XDrawLines(p->dpy, p->win, p->gc, points, npoints, 0);
+              if (p->pixmap) XDrawLines(p->dpy, p->pixmap, p->gc, points, npoints, 0);
+              if (p->selection) XDrawLines(p->dpy, p->drawable, p->gc, points, npoints, 0);
+              if (!p->double_buf) XDrawLines(p->dpy, p->win, p->gc, points, npoints, 0);
 
               --npoints;
               points[0].x = points[npoints].x;
@@ -2131,18 +1931,14 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   if (npoints > 1)
     {
-      if (p->pixmap)
-        XDrawLines(p->dpy, p->pixmap, p->gc, points, npoints, 0);
-      if (p->selection)
-        XDrawLines(p->dpy, p->drawable, p->gc, points, npoints, 0);
-      if (!p->double_buf)
-        XDrawLines(p->dpy, p->win, p->gc, points, npoints, 0);
+      if (p->pixmap) XDrawLines(p->dpy, p->pixmap, p->gc, points, npoints, 0);
+      if (p->selection) XDrawLines(p->dpy, p->drawable, p->gc, points, npoints, 0);
+      if (!p->double_buf) XDrawLines(p->dpy, p->win, p->gc, points, npoints, 0);
     }
 }
 
 
-static
-void polyline(int n, double *px, double *py)
+static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
   double ln_width;
@@ -2158,8 +1954,7 @@ void polyline(int n, double *px, double *py)
 }
 
 
-static
-void polymarker(int n, double *px, double *py)
+static void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
   double mk_size;
@@ -2175,15 +1970,14 @@ void polymarker(int n, double *px, double *py)
 }
 
 
-static
-void fill_routine(int n, double *px, double *py, int tnr)
+static void fill_routine(int n, double *px, double *py, int tnr)
 {
   double x, y;
   int i, npoints;
 
   if (n > max_points)
     {
-      points = (XPoint *) realloc(points, n * sizeof(XPoint));
+      points = (XPoint *)realloc(points, n * sizeof(XPoint));
       max_points = n;
     }
 
@@ -2197,21 +1991,14 @@ void fill_routine(int n, double *px, double *py, int tnr)
 
   if (npoints > 1)
     {
-      if (p->pixmap)
-        XFillPolygon(p->dpy, p->pixmap, p->gc, points, npoints,
-                     p->shape, CoordModeOrigin);
-      if (p->selection)
-        XFillPolygon(p->dpy, p->drawable, p->gc, points, npoints,
-                     p->shape, CoordModeOrigin);
-      if (!p->double_buf)
-        XFillPolygon(p->dpy, p->win, p->gc, points, npoints,
-                     p->shape, CoordModeOrigin);
+      if (p->pixmap) XFillPolygon(p->dpy, p->pixmap, p->gc, points, npoints, p->shape, CoordModeOrigin);
+      if (p->selection) XFillPolygon(p->dpy, p->drawable, p->gc, points, npoints, p->shape, CoordModeOrigin);
+      if (!p->double_buf) XFillPolygon(p->dpy, p->win, p->gc, points, npoints, p->shape, CoordModeOrigin);
     }
 }
 
 
-static
-void fill_area(int n, double *px, double *py)
+static void fill_area(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color;
   int ln_type;
@@ -2227,8 +2014,7 @@ void fill_area(int n, double *px, double *py)
     {
       fill_routine(n, px, py, gksl->cntnr);
     }
-  else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
-    fl_inter == GKS_K_INTSTYLE_HATCH)
+  else if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH)
     {
       if (fl_inter == GKS_K_INTSTYLE_HATCH)
         set_pattern(p->ccolor, fl_style + HATCH_STYLE);
@@ -2245,9 +2031,7 @@ void fill_area(int n, double *px, double *py)
 }
 
 
-static
-void x_draw_string(
-  Display *display, Drawable d, GC gc, int x, int y, char *string, int length)
+static void x_draw_string(Display *display, Drawable d, GC gc, int x, int y, char *string, int length)
 {
 #ifndef NO_XFT
   XftDraw *draw;
@@ -2256,25 +2040,22 @@ void x_draw_string(
   int i, j;
 
   draw = XftDrawCreate(display, d, p->vis, p->cmap);
-  if (p->havecolor[p->ccolor])
-    color = &p->rendercolor[p->ccolor];
+  if (p->havecolor[p->ccolor]) color = &p->rendercolor[p->ccolor];
 
   if (p->font == 12) /* Symbol */
     {
-      s32 = (unsigned int *) gks_malloc(length * sizeof(unsigned int));
+      s32 = (unsigned int *)gks_malloc(length * sizeof(unsigned int));
       for (i = 0; i < length; i++)
         {
-          j = (int) string[i];
-          if (j < 0)
-            j += 256;
+          j = (int)string[i];
+          if (j < 0) j += 256;
           s32[i] = adobe2utf[j];
         }
       XftDrawString32(draw, color, p->cfont, x, y, s32, length);
       free(s32);
     }
   else
-    XftDrawString8(draw, color, p->cfont,
-                   x, y, (unsigned char *) string, length);
+    XftDrawString8(draw, color, p->cfont, x, y, (unsigned char *)string, length);
 
   XftDrawDestroy(draw);
 #else
@@ -2285,8 +2066,7 @@ void x_draw_string(
 
 #if !defined(NO_XFT) || defined(NO_FT)
 
-static
-void draw_string(int x, int y, int width, int height, char *chars, int nchars)
+static void draw_string(int x, int y, int width, int height, char *chars, int nchars)
 {
   Pixmap src, dest;
   XImage *from, *to;
@@ -2327,14 +2107,11 @@ void draw_string(int x, int y, int width, int height, char *chars, int nchars)
     {
       set_clipping(False);
 
-      src = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                          width, height, p->depth);
+      src = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), width, height, p->depth);
       from = XGetImage(p->dpy, src, 0, 0, width, height, AllPlanes, ZPixmap);
 
-      dest = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                           w, h, p->depth);
-      XCopyArea(p->dpy, p->double_buf ? p->pixmap : p->win, dest, p->gc,
-                x, y, w, h, 0, 0);
+      dest = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), w, h, p->depth);
+      XCopyArea(p->dpy, p->double_buf ? p->pixmap : p->win, dest, p->gc, x, y, w, h, 0, 0);
       to = XGetImage(p->dpy, dest, 0, 0, w, h, AllPlanes, ZPixmap);
 
       for (i = 0; i < width; i++)
@@ -2391,12 +2168,9 @@ void draw_string(int x, int y, int width, int height, char *chars, int nchars)
 
       set_clipping(True);
 
-      if (p->pixmap)
-        XPutImage(p->dpy, p->pixmap, p->gc, to, 0, 0, x, y, w, h);
-      if (p->selection)
-        XPutImage(p->dpy, p->drawable, p->gc, to, 0, 0, x, y, w, h);
-      if (!p->double_buf)
-        XPutImage(p->dpy, p->win, p->gc, to, 0, 0, x, y, w, h);
+      if (p->pixmap) XPutImage(p->dpy, p->pixmap, p->gc, to, 0, 0, x, y, w, h);
+      if (p->selection) XPutImage(p->dpy, p->drawable, p->gc, to, 0, 0, x, y, w, h);
+      if (!p->double_buf) XPutImage(p->dpy, p->win, p->gc, to, 0, 0, x, y, w, h);
 
       XDestroyImage(to);
       XFreePixmap(p->dpy, dest);
@@ -2405,12 +2179,9 @@ void draw_string(int x, int y, int width, int height, char *chars, int nchars)
     }
   else
     {
-      if (p->pixmap)
-        x_draw_string(p->dpy, p->pixmap, p->gc, x, y, chars, nchars);
-      if (p->selection)
-        x_draw_string(p->dpy, p->drawable, p->gc, x, y, chars, nchars);
-      if (!p->double_buf)
-        x_draw_string(p->dpy, p->win, p->gc, x, y, chars, nchars);
+      if (p->pixmap) x_draw_string(p->dpy, p->pixmap, p->gc, x, y, chars, nchars);
+      if (p->selection) x_draw_string(p->dpy, p->drawable, p->gc, x, y, chars, nchars);
+      if (!p->double_buf) x_draw_string(p->dpy, p->win, p->gc, x, y, chars, nchars);
 
       update_bbox(x, y + descent);
       update_bbox(x + width, y + descent - ascent);
@@ -2418,8 +2189,7 @@ void draw_string(int x, int y, int width, int height, char *chars, int nchars)
 }
 
 
-static
-void text_routine(double x, double y, int nchars, char *chars)
+static void text_routine(double x, double y, int nchars, char *chars)
 {
   int xorg, yorg, width, height;
   double xrel, yrel, ax, ay;
@@ -2437,20 +2207,18 @@ void text_routine(double x, double y, int nchars, char *chars)
 #ifndef NO_XFT
   if (p->font == 12) /* Symbol */
     {
-      s32 = (unsigned int *) gks_malloc(nchars * sizeof(unsigned int));
+      s32 = (unsigned int *)gks_malloc(nchars * sizeof(unsigned int));
       for (i = 0; i < nchars; i++)
         {
-          j = (int) chars[i];
-          if (j < 0)
-            j += 256;
+          j = (int)chars[i];
+          if (j < 0) j += 256;
           s32[i] = adobe2utf[j];
         }
       XftTextExtents32(p->dpy, p->cfont, s32, nchars, &extents);
       free(s32);
     }
   else
-    XftTextExtents8(p->dpy, p->cfont, (unsigned char *) chars, nchars,
-                    &extents);
+    XftTextExtents8(p->dpy, p->cfont, (unsigned char *)chars, nchars, &extents);
 
   width = extents.xOff;
 #else
@@ -2473,12 +2241,11 @@ void text_routine(double x, double y, int nchars, char *chars)
 
       CharXform(xrel, yrel, ax, ay);
 
-      xorg += (int) ax;
-      yorg -= (int) ay;
+      xorg += (int)ax;
+      yorg -= (int)ay;
     }
 
-  if (width > 0 && height > 0)
-    draw_string(xorg, yorg, width, height, chars, nchars);
+  if (width > 0 && height > 0) draw_string(xorg, yorg, width, height, chars, nchars);
 }
 
 
@@ -2489,8 +2256,7 @@ void text_routine(double x, double y, int nchars, char *chars)
 #endif
 
 
-static
-void try_load_font(int font, int size, char *fontname)
+static void try_load_font(int font, int size, char *fontname)
 {
   int f;
 #ifndef NO_XFT
@@ -2510,16 +2276,14 @@ void try_load_font(int font, int size, char *fontname)
           sprintf(fontname, fonts[font], foundry[f], size, p->dpi, p->dpi);
           p->fstr[font][size] = load_font(p->dpy, fontname);
 
-          if (p->fstr[font][size] != NULL)
-            break;
+          if (p->fstr[font][size] != NULL) break;
         }
     }
 #ifndef NO_XFT
   f = font + 1;
   if (f < 30)
     {
-      if (f > 13)
-        f += 3;
+      if (f > 13) f += 3;
       family = (f - 1) / 4;
       weight = (f % 4 == 1 || f % 4 == 2) ? XFT_WEIGHT_MEDIUM : XFT_WEIGHT_BOLD;
       slant = (f % 4 == 2 || f % 4 == 0) ? XFT_SLANT_ITALIC : XFT_SLANT_ROMAN;
@@ -2535,18 +2299,16 @@ void try_load_font(int font, int size, char *fontname)
   XftPatternAddString(font_pattern, XFT_FAMILY, base_fonts[family]);
   XftPatternAddInteger(font_pattern, XFT_WEIGHT, weight);
   XftPatternAddInteger(font_pattern, XFT_SLANT, slant);
-  XftPatternAddDouble(font_pattern, XFT_PIXEL_SIZE, (double) size);
+  XftPatternAddDouble(font_pattern, XFT_PIXEL_SIZE, (double)size);
 
-  match_pattern = XftFontMatch(p->dpy, DefaultScreen(p->dpy), font_pattern,
-                               &match_result);
+  match_pattern = XftFontMatch(p->dpy, DefaultScreen(p->dpy), font_pattern, &match_result);
   p->fstr[font][size] = XftFontOpenPattern(p->dpy, match_pattern);
   XftPatternDestroy(font_pattern);
 #endif
 }
 
 
-static
-void verify_font_capabilities(void)
+static void verify_font_capabilities(void)
 {
   int font = 2, size = MAX_SIZE;
   char fontname[256];
@@ -2564,23 +2326,19 @@ void verify_font_capabilities(void)
     {
       for (font = 0; font < n_font; font++)
         {
-          if (p->fstr[font][size] == NULL)
-            try_load_font(font, size, fontname);
+          if (p->fstr[font][size] == NULL) try_load_font(font, size, fontname);
 
           if (p->fstr[font][size] != NULL)
             {
               if (font == 12) /* Symbol */
                 {
-                  s32[0] = adobe2utf[(unsigned int) 'A'];
-                  XftTextExtents32(p->dpy, p->fstr[font][size],
-                                   s32, 1, &extents);
+                  s32[0] = adobe2utf[(unsigned int)'A'];
+                  XftTextExtents32(p->dpy, p->fstr[font][size], s32, 1, &extents);
                 }
               else
-                XftTextExtents8(p->dpy, p->fstr[font][size],
-                                (unsigned char *) "A", 1, &extents);
+                XftTextExtents8(p->dpy, p->fstr[font][size], (unsigned char *)"A", 1, &extents);
 
-              if (extents.height != 0)
-                capheights[font] = (double) extents.height / MAX_SIZE;
+              if (extents.height != 0) capheights[font] = (double)extents.height / MAX_SIZE;
             }
         }
     }
@@ -2588,8 +2346,7 @@ void verify_font_capabilities(void)
 }
 
 
-static
-void set_font(int font)
+static void set_font(int font)
 {
   int size, angle;
   char fontname[256];
@@ -2612,8 +2369,7 @@ void set_font(int font)
 
   rad = -atan2(ux, uy);
   angle = (int)(rad * 180 / M_PI + 0.5);
-  if (angle < 0)
-    angle += 360;
+  if (angle < 0) angle += 360;
   p->path = ((angle + 45) / 90) % 4;
 
   scale = sqrt(gksl->chup[0] * gksl->chup[0] + gksl->chup[1] * gksl->chup[1]);
@@ -2638,10 +2394,8 @@ void set_font(int font)
   if (p->scalable_fonts)
     {
       size = nint(points / 10);
-      if (size < 1)
-        size = 1;
-      if (size > MAX_SIZE)
-        size = MAX_SIZE;
+      if (size < 1) size = 1;
+      if (size > MAX_SIZE) size = MAX_SIZE;
     }
   else
     {
@@ -2668,8 +2422,7 @@ void set_font(int font)
           gks_perror("unable to load font %s", fontname);
           p->fstr[font][size] = load_font(p->dpy, "variable");
 
-          if (p->fstr[font][size] == NULL)
-            p->fstr[font][size] = load_font(p->dpy, "fixed");
+          if (p->fstr[font][size] == NULL) p->fstr[font][size] = load_font(p->dpy, "fixed");
         }
     }
 
@@ -2685,8 +2438,7 @@ void set_font(int font)
 #endif
 
 
-static
-unsigned long rgb2pixel(int rgb)
+static unsigned long rgb2pixel(int rgb)
 {
   unsigned long r, g, b, rmask, gmask, bmask;
   int rshift, gshift, bshift;
@@ -2726,8 +2478,7 @@ unsigned long rgb2pixel(int rgb)
 }
 
 
-static
-unsigned long pixel2rgb(int pixel)
+static unsigned long pixel2rgb(int pixel)
 {
   unsigned long r, g, b, rmask, gmask, bmask;
   int rshift, gshift, bshift;
@@ -2752,8 +2503,7 @@ unsigned long pixel2rgb(int pixel)
 }
 
 
-static
-void draw_image(int x, int y, int width, int height, byte *ba, Bool true_color)
+static void draw_image(int x, int y, int width, int height, byte *ba, Bool true_color)
 {
   Pixmap dest;
   XImage *to;
@@ -2764,17 +2514,15 @@ void draw_image(int x, int y, int width, int height, byte *ba, Bool true_color)
 
   set_clipping(False);
 
-  dest = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                       width, height, p->depth);
-  XCopyArea(p->dpy, p->double_buf ? p->pixmap : p->win, dest, p->gc,
-            x, y, width, height, 0, 0);
+  dest = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), width, height, p->depth);
+  XCopyArea(p->dpy, p->double_buf ? p->pixmap : p->win, dest, p->gc, x, y, width, height, 0, 0);
   to = XGetImage(p->dpy, dest, 0, 0, width, height, AllPlanes, ZPixmap);
 
   if (!true_color)
     {
-      red   = 255.0 * p->red[p->ccolor];
+      red = 255.0 * p->red[p->ccolor];
       green = 255.0 * p->green[p->ccolor];
-      blue  = 255.0 * p->blue[p->ccolor];
+      blue = 255.0 * p->blue[p->ccolor];
     }
 
   for (j = 0; j < height; j++)
@@ -2785,17 +2533,17 @@ void draw_image(int x, int y, int width, int height, byte *ba, Bool true_color)
         if (true_color)
           {
             a = (double)ba[3] / 255.0;
-            r = (int)((double)ba[0] * a + (1 - a) * ((rgb &     0xff)      ));
-            g = (int)((double)ba[1] * a + (1 - a) * ((rgb &   0xff00) >> 8 ));
+            r = (int)((double)ba[0] * a + (1 - a) * ((rgb & 0xff)));
+            g = (int)((double)ba[1] * a + (1 - a) * ((rgb & 0xff00) >> 8));
             b = (int)((double)ba[2] * a + (1 - a) * ((rgb & 0xff0000) >> 16));
             ba += 4;
           }
         else
           {
             a = (double)ba[0] / 255.0;
-            r = (int)(red   * a + (1 - a) * ((rgb &     0xff)      ));
-            g = (int)(green * a + (1 - a) * ((rgb &   0xff00) >> 8 ));
-            b = (int)(blue  * a + (1 - a) * ((rgb & 0xff0000) >> 16));
+            r = (int)(red * a + (1 - a) * ((rgb & 0xff)));
+            g = (int)(green * a + (1 - a) * ((rgb & 0xff00) >> 8));
+            b = (int)(blue * a + (1 - a) * ((rgb & 0xff0000) >> 16));
             ba += 1;
           }
         rgb = r + (g << 8) + (b << 16);
@@ -2803,12 +2551,9 @@ void draw_image(int x, int y, int width, int height, byte *ba, Bool true_color)
         XPutPixel(to, i, j, pixel);
       }
 
-  if (p->pixmap)
-    XPutImage(p->dpy, p->pixmap, p->gc, to, 0, 0, x, y, width, height);
-  if (p->selection)
-    XPutImage(p->dpy, p->drawable, p->gc, to, 0, 0, x, y, width, height);
-  if (!p->double_buf)
-    XPutImage(p->dpy, p->win, p->gc, to, 0, 0, x, y, width, height);
+  if (p->pixmap) XPutImage(p->dpy, p->pixmap, p->gc, to, 0, 0, x, y, width, height);
+  if (p->selection) XPutImage(p->dpy, p->drawable, p->gc, to, 0, 0, x, y, width, height);
+  if (!p->double_buf) XPutImage(p->dpy, p->win, p->gc, to, 0, 0, x, y, width, height);
 
   XDestroyImage(to);
   XFreePixmap(p->dpy, dest);
@@ -2819,8 +2564,7 @@ void draw_image(int x, int y, int width, int height, byte *ba, Bool true_color)
 
 #if defined(NO_XFT) && !defined(NO_FT)
 
-static
-void ft_text_routine(double px, double py, int nchars, char *chars)
+static void ft_text_routine(double px, double py, int nchars, char *chars)
 {
   int x, y, w, h;
   byte *bitmap;
@@ -2832,7 +2576,7 @@ void ft_text_routine(double px, double py, int nchars, char *chars)
   w = p->width;
   y = p->height - y;
 
-  s = (char *) gks_malloc(nchars * 3 + 1);
+  s = (char *)gks_malloc(nchars * 3 + 1);
   n = 0;
   for (i = 0; i < nchars; i++)
     {
@@ -2857,8 +2601,7 @@ void ft_text_routine(double px, double py, int nchars, char *chars)
 #endif
 
 
-static
-void text(double px, double py, int nchars, char *chars)
+static void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
   double x, y;
@@ -2868,8 +2611,7 @@ void text(double px, double py, int nchars, char *chars)
   tx_color = gksl->asf[9] ? gksl->txcoli : 1;
 
 #if !defined(NO_XFT) || defined(NO_FT)
-  if (tx_prec != GKS_K_TEXT_PRECISION_STROKE)
-    set_font(tx_font);
+  if (tx_prec != GKS_K_TEXT_PRECISION_STROKE) set_font(tx_font);
 #endif
 
   set_color(tx_color);
@@ -2891,8 +2633,7 @@ void text(double px, double py, int nchars, char *chars)
 }
 
 
-static
-void update(void)
+static void update(void)
 {
   XEvent event;
 
@@ -2903,15 +2644,14 @@ void update(void)
           while (XPending(p->dpy))
             {
               XNextEvent(p->dpy, &event);
-              if (event.type == Expose)
-                expose_event(p->widget, p, (XExposeEvent *) &event, NULL);
+              if (event.type == Expose) expose_event(p->widget, p, (XExposeEvent *)&event, NULL);
             }
         }
       else
         {
           if (!p->new_win)
             if (XCheckTypedWindowEvent(p->dpy, p->win, ConfigureNotify, &event))
-              configure_viewport((XConfigureEvent *) &event);
+              configure_viewport((XConfigureEvent *)&event);
 
           XSync(p->dpy, False);
         }
@@ -2919,27 +2659,24 @@ void update(void)
 }
 
 
-static
-void message(int nchars, char *chars)
+static void message(int nchars, char *chars)
 {
   x_draw_string(p->dpy, p->win, p->invert, 10, 20, chars, nchars);
 }
 
 
-static
-void write_gif_word(int w)
+static void write_gif_word(int w)
 {
   byte c;
 
   c = (w & 0xff);
-  gks_write_file(p->gif, (void *) &c, 1);
+  gks_write_file(p->gif, (void *)&c, 1);
   c = ((w >> 8) & 0xff);
-  gks_write_file(p->gif, (void *) &c, 1);
+  gks_write_file(p->gif, (void *)&c, 1);
 }
 
 
-static
-void pixmap_to_gif(void)
+static void pixmap_to_gif(void)
 {
   int size, besize;
   byte c, r, g, b, *pix, *ppix, *beimage;
@@ -2948,12 +2685,11 @@ void pixmap_to_gif(void)
   int BitsPerPixel, ColorMapSize, InitCodeSize;
   unsigned long pixel;
 
-  image = XGetImage(p->dpy, p->pixmap, 0, 0, p->width, p->height, AllPlanes,
-                    ZPixmap);
+  image = XGetImage(p->dpy, p->pixmap, 0, 0, p->width, p->height, AllPlanes, ZPixmap);
 
   size = p->width * p->height;
-  pix = ppix = (byte *) gks_malloc(sizeof(byte) * size);
-  beimage = (byte *) gks_malloc(sizeof(byte) * size * 3 / 2);   /* worst case */
+  pix = ppix = (byte *)gks_malloc(sizeof(byte) * size);
+  beimage = (byte *)gks_malloc(sizeof(byte) * size * 3 / 2); /* worst case */
 
   if (pix != NULL && beimage != NULL)
     {
@@ -2973,32 +2709,29 @@ void pixmap_to_gif(void)
                     }
                 }
               *ppix++ = coli;
-              if (coli > mcolor)
-                mcolor = coli;
+              if (coli > mcolor) mcolor = coli;
             }
         }
 
       for (BitsPerPixel = 1; BitsPerPixel < 8; BitsPerPixel++)
-        if ((1 << BitsPerPixel) > mcolor)
-          break;
+        if ((1 << BitsPerPixel) > mcolor) break;
 
       /* write the GIF header */
 
-      gks_write_file(p->gif,
-        p->wstype == 218 ? (char *) "GIF89a" : (char *) "GIF87a", 6);
+      gks_write_file(p->gif, p->wstype == 218 ? (char *)"GIF89a" : (char *)"GIF87a", 6);
 
       write_gif_word(p->width); /* screen descriptor */
       write_gif_word(p->height);
 
-      c = 0x80;                 /* yes, there is a color map */
-      c |= (8 - 1) << 4;        /* OR in the color resolution (8) */
-      c |= (0) << 3;            /* no, the colors are not sorted */
-      c |= (BitsPerPixel - 1);  /* OR in the # of bits per pixel */
+      c = 0x80;                /* yes, there is a color map */
+      c |= (8 - 1) << 4;       /* OR in the color resolution (8) */
+      c |= (0) << 3;           /* no, the colors are not sorted */
+      c |= (BitsPerPixel - 1); /* OR in the # of bits per pixel */
       gks_write_file(p->gif, &c, 1);
 
       c = 0x0;
-      gks_write_file(p->gif, &c, 1);    /* background color index */
-      gks_write_file(p->gif, &c, 1);    /* pixel aspect ratio */
+      gks_write_file(p->gif, &c, 1); /* background color index */
+      gks_write_file(p->gif, &c, 1); /* pixel aspect ratio */
 
       /* write colormap */
 
@@ -3017,34 +2750,34 @@ void pixmap_to_gif(void)
       /* write extension block */
 
       if (p->wstype == 218)
-        {                               /* transparent GIF? */
+        { /* transparent GIF? */
           c = 0x21;
-          gks_write_file(p->gif, &c, 1);/* extension block ID (fixed value) */
+          gks_write_file(p->gif, &c, 1); /* extension block ID (fixed value) */
           c = 0xf9;
-          gks_write_file(p->gif, &c, 1);/* graphic control label (fixed) */
+          gks_write_file(p->gif, &c, 1); /* graphic control label (fixed) */
           c = 0x4;
-          gks_write_file(p->gif, &c, 1);/* block size (fixed) */
-          c = 0x0;                      /* no disposal method, no user flag */
-          c |= 0x1;                     /* transparent color on */
+          gks_write_file(p->gif, &c, 1); /* block size (fixed) */
+          c = 0x0;                       /* no disposal method, no user flag */
+          c |= 0x1;                      /* transparent color on */
           gks_write_file(p->gif, &c, 1);
-          write_gif_word(0);            /* delay time */
+          write_gif_word(0); /* delay time */
           c = 0x0;
-          gks_write_file(p->gif, &c, 1);/* transparent color index = 0 */
-          gks_write_file(p->gif, &c, 1);/* block terminator = 0 */
+          gks_write_file(p->gif, &c, 1); /* transparent color index = 0 */
+          gks_write_file(p->gif, &c, 1); /* block terminator = 0 */
         }
 
       /* write image block */
 
       c = ',';
-      gks_write_file(p->gif, &c, 1);    /* image separator */
+      gks_write_file(p->gif, &c, 1); /* image separator */
 
-      write_gif_word(0);                /* image left offset */
-      write_gif_word(0);                /* image top offset */
-      write_gif_word(p->width);         /* image width */
-      write_gif_word(p->height);        /* image height */
+      write_gif_word(0);         /* image left offset */
+      write_gif_word(0);         /* image top offset */
+      write_gif_word(p->width);  /* image width */
+      write_gif_word(p->height); /* image height */
 
       c = 0x0;
-      gks_write_file(p->gif, &c, 1);    /* no interlace, sort, color table */
+      gks_write_file(p->gif, &c, 1); /* no interlace, sort, color table */
 
       InitCodeSize = max(BitsPerPixel, 2);
       gks_compress(InitCodeSize + 1, pix, size, beimage, &besize);
@@ -3064,16 +2797,15 @@ void pixmap_to_gif(void)
     gks_perror("can't allocate temporary storage");
 
   c = '\0';
-  gks_write_file(p->gif, &c, 1);        /* write out a zero-length packet */
+  gks_write_file(p->gif, &c, 1); /* write out a zero-length packet */
   c = ';';
-  gks_write_file(p->gif, &c, 1);        /* terminator */
+  gks_write_file(p->gif, &c, 1); /* terminator */
 
   XDestroyImage(image);
 }
 
 
-static
-int compress_rle(byte *pix, int size, byte *beimage)
+static int compress_rle(byte *pix, int size, byte *beimage)
 {
   byte c = 0, pc = 0;
   int besize, count, i, j;
@@ -3102,8 +2834,7 @@ int compress_rle(byte *pix, int size, byte *beimage)
                 }
               else
                 {
-                  for (j = 0; j < count; ++j)
-                    beimage[besize++] = pc;
+                  for (j = 0; j < count; ++j) beimage[besize++] = pc;
                   count = 0;
                 }
             }
@@ -3133,8 +2864,7 @@ int compress_rle(byte *pix, int size, byte *beimage)
         }
       else
         {
-          for (j = 0; j < count; ++j)
-            beimage[besize++] = c;
+          for (j = 0; j < count; ++j) beimage[besize++] = c;
         }
     }
 
@@ -3142,8 +2872,7 @@ int compress_rle(byte *pix, int size, byte *beimage)
 }
 
 
-static
-void write_rf_long(long l)
+static void write_rf_long(long l)
 {
   byte c;
 
@@ -3158,12 +2887,11 @@ void write_rf_long(long l)
 }
 
 
-#define RAS_MAGIC       0x59a66a95
-#define RT_BYTE_ENCODED 2       /* Run-length compression of bytes */
-#define RMT_EQUAL_RGB   1
+#define RAS_MAGIC 0x59a66a95
+#define RT_BYTE_ENCODED 2 /* Run-length compression of bytes */
+#define RMT_EQUAL_RGB 1
 
-static
-void pixmap_to_rf(void)
+static void pixmap_to_rf(void)
 {
   XImage *image;
   int linesize, size, besize, depth = 8;
@@ -3172,17 +2900,15 @@ void pixmap_to_rf(void)
   byte rmap[MAX_COLOR], gmap[MAX_COLOR], bmap[MAX_COLOR];
   unsigned long pixel;
 
-  image = XGetImage(p->dpy, p->pixmap, 0, 0, p->width, p->height, AllPlanes,
-                    ZPixmap);
+  image = XGetImage(p->dpy, p->pixmap, 0, 0, p->width, p->height, AllPlanes, ZPixmap);
 
   linesize = p->width;
-  if (linesize % 2)
-    linesize++;
+  if (linesize % 2) linesize++;
 
   size = linesize * p->height;
 
-  pix = ppix = (byte *) gks_malloc(sizeof(byte) * size);
-  beimage = (byte *) gks_malloc(sizeof(byte) * size * 3 / 2);   /* worst case */
+  pix = ppix = (byte *)gks_malloc(sizeof(byte) * size);
+  beimage = (byte *)gks_malloc(sizeof(byte) * size * 3 / 2); /* worst case */
 
   if (pix != NULL && beimage != NULL)
     {
@@ -3202,8 +2928,7 @@ void pixmap_to_rf(void)
                 }
               *ppix++ = coli;
             }
-          if (linesize != p->width)
-            *ppix++ = 0;
+          if (linesize != p->width) *ppix++ = 0;
         }
 
       besize = compress_rle(pix, size, beimage);
@@ -3250,7 +2975,8 @@ void pixmap_to_rf(void)
 }
 
 
-#define UIL_HEADER "\
+#define UIL_HEADER \
+  "\
 value\n\
     white : color ('white');\n\
     black : color ('black');\n\
@@ -3274,30 +3000,27 @@ value\n\
     );\n"
 
 
-static
-void pixmap_to_uil(void)
+static void pixmap_to_uil(void)
 {
   static char *icon_name;
   XImage *image;
   int i, j, k, n = 8, pix;
   unsigned long pixel;
 
-  static char letter[] =
-  {'`', 'd', 'r', 'g', 'b', 'c', 'y', 'm'};
+  static char letter[] = {'`', 'd', 'r', 'g', 'b', 'c', 'y', 'm'};
 
-  icon_name = (char *) gks_getenv("GKS_ICON");
-  image = XGetImage(p->dpy, p->pixmap, 0, 0, p->width, p->height,
-                    AllPlanes, ZPixmap);
+  icon_name = (char *)gks_getenv("GKS_ICON");
+  image = XGetImage(p->dpy, p->pixmap, 0, 0, p->width, p->height, AllPlanes, ZPixmap);
 
-  gks_write_file(p->uil, (void *) "\n", 1);
+  gks_write_file(p->uil, (void *)"\n", 1);
   if (icon_name != NULL)
     gks_write_file(p->uil, icon_name, strlen(icon_name));
   else
-    gks_write_file(p->uil, (void *) "(unknown)", 9);
-  gks_write_file(p->uil, (void *) " : icon (color_table = color_map", 32);
+    gks_write_file(p->uil, (void *)"(unknown)", 9);
+  gks_write_file(p->uil, (void *)" : icon (color_table = color_map", 32);
   for (j = 0; j < p->height; j++)
     {
-      gks_write_file(p->uil, (void *) ",\n    '", 7);
+      gks_write_file(p->uil, (void *)",\n    '", 7);
       for (i = 0; i < p->width; i++)
         {
           pixel = XGetPixel(image, i, j);
@@ -3312,16 +3035,15 @@ void pixmap_to_uil(void)
             }
           gks_write_file(p->uil, &letter[pix], 1);
         }
-      gks_write_file(p->uil, (void *) "'", 1);
+      gks_write_file(p->uil, (void *)"'", 1);
     }
-  gks_write_file(p->uil, (void *) "\n    );\n", 8);
+  gks_write_file(p->uil, (void *)"\n    );\n", 8);
 
   XDestroyImage(image);
 }
 
 
-static
-void set_frame_header(int frame)
+static void set_frame_header(int frame)
 {
   char header[32];
 
@@ -3330,8 +3052,7 @@ void set_frame_header(int frame)
 }
 
 
-static
-void pixmap_loop(void)
+static void pixmap_loop(void)
 {
   int this_frame = 0, inc = 1;
   XEvent event;
@@ -3349,11 +3070,9 @@ void pixmap_loop(void)
     {
       if (run || step)
         {
-          XCopyArea(p->dpy, p->frame[this_frame], p->win, p->gc, 0, 0,
-                    p->width, p->height, 0, 0);
+          XCopyArea(p->dpy, p->frame[this_frame], p->win, p->gc, 0, 0, p->width, p->height, 0, 0);
           this_frame += inc;
-          if (this_frame == 0 || this_frame == p->nframes - 1)
-            inc = -inc;
+          if (this_frame == 0 || this_frame == p->nframes - 1) inc = -inc;
           step = False;
           set_frame_header(this_frame);
         }
@@ -3374,170 +3093,153 @@ void pixmap_loop(void)
     }
 stop:
   this_frame = p->nframes;
-  while (this_frame--)
-    XFreePixmap(p->dpy, p->frame[this_frame]);
+  while (this_frame--) XFreePixmap(p->dpy, p->frame[this_frame]);
   free(p->frame);
 
   p->pixmap = 0;
 }
 
 
-#define COPY_BODY(type) \
-  int i, j, ix, iy, nbytes; \
-  int *ilptr, *ipptr; \
-  byte *blptr, *bpptr, *packed_colia; \
-  type *elptr, *epptr, tmp, *tmpptr; \
-  type pixel[MAX_COLOR]; \
-\
-  if (!true_color) \
-    { \
-      for (i = 0; i < MAX_COLOR; i++) \
-        { \
-          if (p->depth != 1) \
-            pixel[i] = (type) p->color[i].pixel; \
-          else \
-            pixel[i] = i; \
-        } \
-    } \
-\
-  if (p->packed_ca) \
-    { \
-      packed_colia = (byte *) colia; \
-\
-      if (dx != dimx || w != dx || h != dy || w != bytes_per_line) \
-        { \
-          elptr = epptr = ba; \
-\
-          for (j = 0; j < h; j++, elptr += bytes_per_line) \
-            { \
-              iy = (dy * j) / h; \
-              epptr = elptr; \
-              blptr = packed_colia + (iy * dimx); \
-              for (i = 0; i < w; i++, epptr++) \
-                { \
-                  ix = (dx * i) / w; \
-                  bpptr = blptr + ix; \
-                  *epptr = pixel[*bpptr]; \
-                } \
-            } \
-        } \
-      else \
-        { \
-          nbytes = w * h; \
-          epptr = ba; \
-          bpptr = packed_colia; \
-          for (i = 0; i < nbytes; i++) \
-            *epptr++ = pixel[*bpptr++]; \
-        } \
-    } \
-  else \
-    { \
-      if (dx != dimx || w != dx || h != dy || w != bytes_per_line) \
-        { \
-          elptr = epptr = ba; \
-\
-          for (j = 0; j < h; j++, elptr += bytes_per_line) \
-            { \
-              iy = (dy * j) / h; \
-              epptr = elptr; \
-              ilptr = colia + (iy * dimx); \
-              for (i = 0; i < w; i++, epptr++) \
-                { \
-                  ix = (dx * i) / w; \
-                  ipptr = ilptr + ix; \
-                  *epptr = true_color ? *ipptr : pixel[FIX_COLORIND(*ipptr)]; \
-                } \
-            } \
-        } \
-      else \
-        { \
-          nbytes = w * h; \
-          epptr = ba; \
-          ipptr = colia; \
-          for (i = 0; i < nbytes; i++, ipptr++) \
-            *epptr++ = true_color ? *ipptr : pixel[FIX_COLORIND(*ipptr)]; \
-        } \
-    } \
-\
-  if (swapx) \
-    { \
-      ix = 0; \
-      w /= 2; \
-      for (j = 0; j < h; j++) \
-        { \
-          for (i = 0; i < w; i++) \
-            { \
-              tmp = ba[i + ix]; \
-              ba[i + ix] = ba[ix + w - i]; \
-              ba[ix + w - i] = tmp; \
-            } \
-        } \
-      ix += bytes_per_line; \
-    } \
-\
-  if (swapy) \
-    { \
-      tmpptr = (type *) gks_malloc(w * sizeof(type)); \
-\
-      elptr = ba; \
-      epptr = ba + h * bytes_per_line; \
-      h /= 2; \
-\
-      for (j = 0; j < h; j++) \
-        { \
-          epptr -= bytes_per_line; \
-          memmove(tmpptr, elptr, w * sizeof(type)); \
-          memmove(elptr, epptr, w * sizeof(type)); \
-          memmove(epptr, tmpptr, w * sizeof(type)); \
-          elptr += bytes_per_line; \
-        } \
-\
-      free(tmpptr); \
+#define COPY_BODY(type)                                                                                       \
+  int i, j, ix, iy, nbytes;                                                                                   \
+  int *ilptr, *ipptr;                                                                                         \
+  byte *blptr, *bpptr, *packed_colia;                                                                         \
+  type *elptr, *epptr, tmp, *tmpptr;                                                                          \
+  type pixel[MAX_COLOR];                                                                                      \
+                                                                                                              \
+  if (!true_color)                                                                                            \
+    {                                                                                                         \
+      for (i = 0; i < MAX_COLOR; i++)                                                                         \
+        {                                                                                                     \
+          if (p->depth != 1)                                                                                  \
+            pixel[i] = (type)p->color[i].pixel;                                                               \
+          else                                                                                                \
+            pixel[i] = i;                                                                                     \
+        }                                                                                                     \
+    }                                                                                                         \
+                                                                                                              \
+  if (p->packed_ca)                                                                                           \
+    {                                                                                                         \
+      packed_colia = (byte *)colia;                                                                           \
+                                                                                                              \
+      if (dx != dimx || w != dx || h != dy || w != bytes_per_line)                                            \
+        {                                                                                                     \
+          elptr = epptr = ba;                                                                                 \
+                                                                                                              \
+          for (j = 0; j < h; j++, elptr += bytes_per_line)                                                    \
+            {                                                                                                 \
+              iy = (dy * j) / h;                                                                              \
+              epptr = elptr;                                                                                  \
+              blptr = packed_colia + (iy * dimx);                                                             \
+              for (i = 0; i < w; i++, epptr++)                                                                \
+                {                                                                                             \
+                  ix = (dx * i) / w;                                                                          \
+                  bpptr = blptr + ix;                                                                         \
+                  *epptr = pixel[*bpptr];                                                                     \
+                }                                                                                             \
+            }                                                                                                 \
+        }                                                                                                     \
+      else                                                                                                    \
+        {                                                                                                     \
+          nbytes = w * h;                                                                                     \
+          epptr = ba;                                                                                         \
+          bpptr = packed_colia;                                                                               \
+          for (i = 0; i < nbytes; i++) *epptr++ = pixel[*bpptr++];                                            \
+        }                                                                                                     \
+    }                                                                                                         \
+  else                                                                                                        \
+    {                                                                                                         \
+      if (dx != dimx || w != dx || h != dy || w != bytes_per_line)                                            \
+        {                                                                                                     \
+          elptr = epptr = ba;                                                                                 \
+                                                                                                              \
+          for (j = 0; j < h; j++, elptr += bytes_per_line)                                                    \
+            {                                                                                                 \
+              iy = (dy * j) / h;                                                                              \
+              epptr = elptr;                                                                                  \
+              ilptr = colia + (iy * dimx);                                                                    \
+              for (i = 0; i < w; i++, epptr++)                                                                \
+                {                                                                                             \
+                  ix = (dx * i) / w;                                                                          \
+                  ipptr = ilptr + ix;                                                                         \
+                  *epptr = true_color ? *ipptr : pixel[FIX_COLORIND(*ipptr)];                                 \
+                }                                                                                             \
+            }                                                                                                 \
+        }                                                                                                     \
+      else                                                                                                    \
+        {                                                                                                     \
+          nbytes = w * h;                                                                                     \
+          epptr = ba;                                                                                         \
+          ipptr = colia;                                                                                      \
+          for (i = 0; i < nbytes; i++, ipptr++) *epptr++ = true_color ? *ipptr : pixel[FIX_COLORIND(*ipptr)]; \
+        }                                                                                                     \
+    }                                                                                                         \
+                                                                                                              \
+  if (swapx)                                                                                                  \
+    {                                                                                                         \
+      ix = 0;                                                                                                 \
+      w /= 2;                                                                                                 \
+      for (j = 0; j < h; j++)                                                                                 \
+        {                                                                                                     \
+          for (i = 0; i < w; i++)                                                                             \
+            {                                                                                                 \
+              tmp = ba[i + ix];                                                                               \
+              ba[i + ix] = ba[ix + w - i];                                                                    \
+              ba[ix + w - i] = tmp;                                                                           \
+            }                                                                                                 \
+        }                                                                                                     \
+      ix += bytes_per_line;                                                                                   \
+    }                                                                                                         \
+                                                                                                              \
+  if (swapy)                                                                                                  \
+    {                                                                                                         \
+      tmpptr = (type *)gks_malloc(w * sizeof(type));                                                          \
+                                                                                                              \
+      elptr = ba;                                                                                             \
+      epptr = ba + h * bytes_per_line;                                                                        \
+      h /= 2;                                                                                                 \
+                                                                                                              \
+      for (j = 0; j < h; j++)                                                                                 \
+        {                                                                                                     \
+          epptr -= bytes_per_line;                                                                            \
+          memmove(tmpptr, elptr, w * sizeof(type));                                                           \
+          memmove(elptr, epptr, w * sizeof(type));                                                            \
+          memmove(epptr, tmpptr, w * sizeof(type));                                                           \
+          elptr += bytes_per_line;                                                                            \
+        }                                                                                                     \
+                                                                                                              \
+      free(tmpptr);                                                                                           \
     }
 
 
-static
-void copy32(
-  int dx, int dy, int dimx, int *colia,
-  int w, int h, int bytes_per_line, int *ba, Bool swapx, Bool swapy,
-  int true_color)
+static void copy32(int dx, int dy, int dimx, int *colia, int w, int h, int bytes_per_line, int *ba, Bool swapx,
+                   Bool swapy, int true_color)
 {
   COPY_BODY(int)
 }
 
 
-
-static
-void copy16(
-  int dx, int dy, int dimx, int *colia,
-  int w, int h, int bytes_per_line, short int *ba, Bool swapx, Bool swapy,
-  int true_color)
+static void copy16(int dx, int dy, int dimx, int *colia, int w, int h, int bytes_per_line, short int *ba, Bool swapx,
+                   Bool swapy, int true_color)
 {
   COPY_BODY(short int)
 }
 
 
-
-static
-void copy8(
-  int dx, int dy, int dimx, int *colia,
-  int w, int h, int bytes_per_line, byte *ba, Bool swapx, Bool swapy,
-  int true_color)
+static void copy8(int dx, int dy, int dimx, int *colia, int w, int h, int bytes_per_line, byte *ba, Bool swapx,
+                  Bool swapy, int true_color)
 {
   COPY_BODY(byte)
 }
 
 
-
-static
-void pixmap_to_bitmap(int w, int h, byte *ba)
+static void pixmap_to_bitmap(int w, int h, byte *ba)
 {
   byte *pix, *mbuffer, *bbuffer, mvalue, *first;
   int i, j, k, graylevel, error, bit, row_size;
   int *lerr, *cerr, *terr, *error1, *error2;
 
-  static unsigned char bit_flag[] =
-  {1, 2, 4, 8, 16, 32, 64, 128};
+  static unsigned char bit_flag[] = {1, 2, 4, 8, 16, 32, 64, 128};
 
   pix = ba;
   for (j = 0; j < h; j++)
@@ -3549,23 +3251,22 @@ void pixmap_to_bitmap(int w, int h, byte *ba)
 
   /* Allocate space for error arrays */
 
-  error1 = (int *) calloc(w + 2, sizeof(int));
-  error2 = (int *) calloc(w + 2, sizeof(int));
-  bbuffer = mbuffer = (byte *) calloc(w * h, sizeof(byte));
+  error1 = (int *)calloc(w + 2, sizeof(int));
+  error2 = (int *)calloc(w + 2, sizeof(int));
+  bbuffer = mbuffer = (byte *)calloc(w * h, sizeof(byte));
 
   cerr = &error1[1];
   lerr = &error2[1];
   for (error = 0, i = 0; i < w;)
-    {                           /* The top border */
+    { /* The top border */
       mvalue = 0x00;
       for (j = 0; (j < 8) && (i < w); j++, i++)
         {
-          graylevel = (int) ba[i] + error;
+          graylevel = (int)ba[i] + error;
           bit = graylevel > THRESH ? WHITE : BLACK;
-          if (bit)
-            mvalue |= (0x01 << j);
+          if (bit) mvalue |= (0x01 << j);
           error = graylevel - bit;
-          lerr[i] = (THRESH - (int) bit) / 2;
+          lerr[i] = (THRESH - (int)bit) / 2;
         }
       *mbuffer++ = ~mvalue;
     }
@@ -3582,8 +3283,7 @@ void pixmap_to_bitmap(int w, int h, byte *ba)
           mvalue = 0x00;
           for (bit = 0; (bit < 8) && (i < w); bit++, i++)
             {
-              graylevel = (int) pix[i] + (int)(lerr[i - 1] + (5 * lerr[i]) +
-                                (3 * lerr[i + 1]) + (7 * cerr[i - 1])) / 16;
+              graylevel = (int)pix[i] + (int)(lerr[i - 1] + (5 * lerr[i]) + (3 * lerr[i + 1]) + (7 * cerr[i - 1])) / 16;
               if (graylevel > THRESH)
                 {
                   mvalue |= (0x01 << bit);
@@ -3594,7 +3294,7 @@ void pixmap_to_bitmap(int w, int h, byte *ba)
             }
           *mbuffer++ = ~mvalue;
         }
-      cerr[-1] = INITERR((int) pix[-1], (*first & 0x01));
+      cerr[-1] = INITERR((int)pix[-1], (*first & 0x01));
 
       /* Swap error buffers */
       terr = error1;
@@ -3621,13 +3321,12 @@ void pixmap_to_bitmap(int w, int h, byte *ba)
 }
 
 
-static
-void int64to32(int *a, int length)
+static void int64to32(int *a, int length)
 {
   int i;
   char *from, *to;
 
-  to = from = (char *) a;
+  to = from = (char *)a;
   for (i = 0; i < length; i++)
     {
       to[0] = from[7];
@@ -3640,13 +3339,12 @@ void int64to32(int *a, int length)
 }
 
 
-static
-void int64to16(short int *a, int length)
+static void int64to16(short int *a, int length)
 {
   int i;
   char *from, *to;
 
-  to = from = (char *) a;
+  to = from = (char *)a;
   for (i = 0; i < length; i++)
     {
       to[0] = from[7];
@@ -3657,10 +3355,8 @@ void int64to16(short int *a, int length)
 }
 
 
-static
-void cell_array(
-  double xmin, double xmax, double ymin, double ymax,
-  int dx, int dy, int dimx, int *colia, int true_color)
+static void cell_array(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int dimx, int *colia,
+                       int true_color)
 {
   XImage *image = NULL;
 
@@ -3688,7 +3384,7 @@ void cell_array(
   if (p->shmimage != NULL && w == p->width && h == p->height)
     {
       image = p->shmimage;
-      ba = (byte *) p->shminfo.shmaddr;
+      ba = (byte *)p->shminfo.shmaddr;
       bytes_per_line = p->shmimage->bytes_per_line;
     }
 #endif
@@ -3696,9 +3392,8 @@ void cell_array(
   if (image == NULL)
     {
       size = w * h * bitmap_pad / 8;
-      if (sizeof(int) == 8)
-         size *= 2;
-      ba = (byte *) gks_malloc(size);
+      if (sizeof(int) == 8) size *= 2;
+      ba = (byte *)gks_malloc(size);
       bytes_per_line = w;
     }
 
@@ -3709,24 +3404,18 @@ void cell_array(
 
       if (bitmap_pad == 32)
         {
-          copy32(dx, dy, dimx, colia, w, h, bytes_per_line, (int *) ba,
-                 swapx, swapy, true_color);
-          if (sizeof(int) == 8)
-             int64to32((int *) ba, w * h);
+          copy32(dx, dy, dimx, colia, w, h, bytes_per_line, (int *)ba, swapx, swapy, true_color);
+          if (sizeof(int) == 8) int64to32((int *)ba, w * h);
         }
       else if (bitmap_pad == 16)
         {
-          copy16(dx, dy, dimx, colia, w, h, bytes_per_line, (short int *) ba,
-                 swapx, swapy, true_color);
-          if (sizeof(short int) == 8)
-             int64to16((short int *) ba, w * h);
+          copy16(dx, dy, dimx, colia, w, h, bytes_per_line, (short int *)ba, swapx, swapy, true_color);
+          if (sizeof(short int) == 8) int64to16((short int *)ba, w * h);
         }
       else
-        copy8(dx, dy, dimx, colia, w, h, bytes_per_line, ba,
-              swapx, swapy, true_color);
+        copy8(dx, dy, dimx, colia, w, h, bytes_per_line, ba, swapx, swapy, true_color);
 
-      if (p->depth == 1)
-        pixmap_to_bitmap(w, h, ba);
+      if (p->depth == 1) pixmap_to_bitmap(w, h, ba);
 
       if (true_color && bitmap_pad == 32)
         {
@@ -3742,17 +3431,13 @@ void cell_array(
           return;
         }
 #endif
-      image = XCreateImage(p->dpy, p->vis, p->depth,
-                p->depth == 1 ? XYBitmap : ZPixmap, 0, (char *) ba, w, h,
-                bitmap_pad, 0);
+      image = XCreateImage(p->dpy, p->vis, p->depth, p->depth == 1 ? XYBitmap : ZPixmap, 0, (char *)ba, w, h,
+                           bitmap_pad, 0);
       if (image)
         {
-          if (p->pixmap)
-            XPutImage(p->dpy, p->pixmap, p->gc, image, 0, 0, x, y, w, h);
-          if (p->selection)
-            XPutImage(p->dpy, p->drawable, p->gc, image, 0, 0, x, y, w, h);
-          if (!p->double_buf)
-            XPutImage(p->dpy, p->win, p->gc, image, 0, 0, x, y, w, h);
+          if (p->pixmap) XPutImage(p->dpy, p->pixmap, p->gc, image, 0, 0, x, y, w, h);
+          if (p->selection) XPutImage(p->dpy, p->drawable, p->gc, image, 0, 0, x, y, w, h);
+          if (!p->double_buf) XPutImage(p->dpy, p->win, p->gc, image, 0, 0, x, y, w, h);
           XSync(p->dpy, False);
           /*
            * Note: `XDestroyImage' frees both the image structure and the
@@ -3771,18 +3456,14 @@ void cell_array(
 }
 
 
-
-static
-void resize_window(void)
+static void resize_window(void)
 {
   int x, y, width, height;
 
   if (p->uil < 0)
     {
-      width = nint((p->viewport[1] - p->viewport[0]) / p->resolution *
-                   p->magnification);
-      height = nint((p->viewport[3] - p->viewport[2]) / p->resolution *
-                    p->magnification);
+      width = nint((p->viewport[1] - p->viewport[0]) / p->resolution * p->magnification);
+      height = nint((p->viewport[3] - p->viewport[2]) / p->resolution * p->magnification);
     }
   else
     {
@@ -3811,18 +3492,14 @@ void resize_window(void)
       if (p->pixmap)
         {
           XFreePixmap(p->dpy, p->pixmap);
-          p->pixmap = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                                    p->width, p->height, p->depth);
-          XFillRectangle(p->dpy, p->pixmap, p->clear, 0, 0,
-                         p->width, p->height);
+          p->pixmap = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), p->width, p->height, p->depth);
+          XFillRectangle(p->dpy, p->pixmap, p->clear, 0, 0, p->width, p->height);
         }
       if (p->drawable)
         {
           XFreePixmap(p->dpy, p->drawable);
-          p->drawable = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                                      p->width, p->height, p->depth);
-          XFillRectangle(p->dpy, p->drawable, p->clear, 0, 0,
-                         p->width, p->height);
+          p->drawable = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), p->width, p->height, p->depth);
+          XFillRectangle(p->dpy, p->drawable, p->clear, 0, 0, p->width, p->height);
         }
 #ifdef XSHM
       free_shared_memory();
@@ -3832,15 +3509,13 @@ void resize_window(void)
 }
 
 
-static
-void display_cursor(int x, int y)
+static void display_cursor(int x, int y)
 {
   int xorg, yorg, width, height;
   int dx, dy, r, d;
   char str[16];
 
-  if (x == Undefined && y == Undefined)
-    return;
+  if (x == Undefined && y == Undefined) return;
 
   switch (p->type)
     {
@@ -3863,14 +3538,12 @@ void display_cursor(int x, int y)
       yorg = min(p->py, y);
       width = abs(p->px - x);
       height = abs(p->py - y);
-      XDrawRectangle(p->dpy, p->win, p->invert, xorg, yorg,
-                     width, height);
+      XDrawRectangle(p->dpy, p->win, p->invert, xorg, yorg, width, height);
       break;
 
     case TypeDigital:
       sprintf(str, "(%d %d)", x, y);
-      x_draw_string(p->dpy, p->win, p->invert,
-                    p->px, p->py, str, strlen(str));
+      x_draw_string(p->dpy, p->win, p->invert, p->px, p->py, str, strlen(str));
       break;
 
     case TypeCircle:
@@ -3878,16 +3551,13 @@ void display_cursor(int x, int y)
       dy = p->py - y;
       r = (int)(sqrt((double)(dx * dx + dy * dy)) + 0.5);
       d = 2 * r;
-      if (r != 0)
-        XDrawArc(p->dpy, p->win, p->invert, p->px - r, p->py - r,
-                 d, d, 0, 360 * 64);
+      if (r != 0) XDrawArc(p->dpy, p->win, p->invert, p->px - r, p->py - r, d, d, 0, 360 * 64);
       break;
     }
 }
 
 
-static
-void get_pointer(int *n, double *x, double *y, int *state, int *term)
+static void get_pointer(int *n, double *x, double *y, int *state, int *term)
 {
   Window focus, root_win, child_win;
   XEvent event;
@@ -3895,11 +3565,10 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
   KeySym keysym;
   char str[10];
   int inc, xcur, ycur, xwin, ywin;
-  static XComposeStatus status =
-  {NULL, 0};
+  static XComposeStatus status = {NULL, 0};
   unsigned int mask, old_mask;
-  int event_mask = ButtonPressMask | PointerMotionMask | KeyPressMask |
-                   KeyReleaseMask | StructureNotifyMask | ExposureMask;
+  int event_mask =
+      ButtonPressMask | PointerMotionMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask | ExposureMask;
 
   XGetInputFocus(p->dpy, &focus, &revert);
 
@@ -3919,8 +3588,7 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
   old_mask = 0;
   if (xold == Undefined || yold == Undefined)
     {
-      XQueryPointer(p->dpy, p->win, &root_win, &child_win, &xcur, &ycur,
-                    &xold, &yold, &mask);
+      XQueryPointer(p->dpy, p->win, &root_win, &child_win, &xcur, &ycur, &xold, &yold, &mask);
     }
   display_cursor(xold, yold);
 
@@ -3936,7 +3604,7 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
       if (p->wstype == 212)
 #ifndef _WIN32
 #ifdef __osf__
-        usleep(200000);         /* 200 ms */
+        usleep(200000); /* 200 ms */
 #else
         sleep(1);
 #endif
@@ -3949,10 +3617,8 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
               while (True)
                 {
                   old_mask = mask;
-                  XQueryPointer(p->dpy, p->win, &root_win, &child_win,
-                                &xcur, &ycur, &xwin, &ywin, &mask);
-                  if (xwin != xold || ywin != yold || mask != old_mask)
-                    break;
+                  XQueryPointer(p->dpy, p->win, &root_win, &child_win, &xcur, &ycur, &xwin, &ywin, &mask);
+                  if (xwin != xold || ywin != yold || mask != old_mask) break;
                 }
 
               switch (mask)
@@ -3960,8 +3626,7 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
                 case Button1Mask:
                 case Button2Mask:
                   event.xany.type = ButtonPress;
-                  event.xbutton.button = (mask == Button1Mask) ?
-                    Button1 : Button2;
+                  event.xbutton.button = (mask == Button1Mask) ? Button1 : Button2;
                   event.xbutton.x = xwin;
                   event.xbutton.y = ywin;
                   break;
@@ -4014,7 +3679,7 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
               ycur = yold;
               display_cursor(xold, yold);
 
-              XLookupString((XKeyEvent *) & event, str, 9, &keysym, &status);
+              XLookupString((XKeyEvent *)&event, str, 9, &keysym, &status);
 
               switch (keysym)
                 {
@@ -4068,17 +3733,15 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
               break;
 
             case KeyRelease:
-              XLookupString((XKeyEvent *) & event, str, 9, &keysym, &status);
+              XLookupString((XKeyEvent *)&event, str, 9, &keysym, &status);
 
-              if (keysym == XK_Shift_L || keysym == XK_Shift_R)
-                inc = 1;
+              if (keysym == XK_Shift_L || keysym == XK_Shift_R) inc = 1;
               break;
 
             case ConfigureNotify:
               p->empty = False;
-              configure_event((XConfigureEvent *) &event);
-              if (p->empty)
-                xold = yold = Undefined;
+              configure_event((XConfigureEvent *)&event);
+              if (p->empty) xold = yold = Undefined;
 
               *state = Undefined;
               break;
@@ -4097,16 +3760,14 @@ void get_pointer(int *n, double *x, double *y, int *state, int *term)
   XSync(p->dpy, False);
 
   *n = np;
-  if (*n > 1)
-    *state = GKS_K_STATUS_OK;
+  if (*n > 1) *state = GKS_K_STATUS_OK;
 
   p->px = xcur;
   p->py = ycur;
 }
 
 
-static
-int lookup_string(char *str)
+static int lookup_string(char *str)
 {
   int i;
   char s1[3], s2[3];
@@ -4120,10 +3781,8 @@ int lookup_string(char *str)
 
   for (i = 0; i < n_key; i++)
     {
-      if (strcmp(s1, key_bindings[i].seq) == 0 ||
-          strcmp(s2, key_bindings[i].seq) == 0 ||
-          strcmp(s1, key_bindings[i].alt_seq) == 0 ||
-          strcmp(s2, key_bindings[i].alt_seq) == 0)
+      if (strcmp(s1, key_bindings[i].seq) == 0 || strcmp(s2, key_bindings[i].seq) == 0 ||
+          strcmp(s1, key_bindings[i].alt_seq) == 0 || strcmp(s2, key_bindings[i].alt_seq) == 0)
         return (key_bindings[i].ch);
     }
 
@@ -4131,13 +3790,11 @@ int lookup_string(char *str)
 }
 
 
-static
-int dispatch_character(XKeyEvent *event, char *text)
+static int dispatch_character(XKeyEvent *event, char *text)
 {
   KeySym keysym;
   static char str[10], seq[3];
-  static XComposeStatus compose_status =
-  {NULL, 0};
+  static XComposeStatus compose_status = {NULL, 0};
   static char recall_buffer[256] = "";
 
   x_draw_string(p->dpy, p->win, p->invert, p->px, p->py, text, strlen(text));
@@ -4155,13 +3812,13 @@ int dispatch_character(XKeyEvent *event, char *text)
           switch (compose_status.chars_matched)
             {
             case 1:
-              seq[0] = (char) keysym;
+              seq[0] = (char)keysym;
               compose_status.chars_matched++;
               keysym = 0;
               break;
 
             case 2:
-              seq[1] = (char) keysym;
+              seq[1] = (char)keysym;
               seq[2] = '\0';
               keysym = lookup_string(seq);
 
@@ -4171,27 +3828,23 @@ int dispatch_character(XKeyEvent *event, char *text)
             }
         }
 #endif
-      if ((keysym >= XK_space && keysym <= XK_asciitilde) ||
-          (keysym >= XK_nobreakspace && keysym <= XK_ydiaeresis))
+      if ((keysym >= XK_space && keysym <= XK_asciitilde) || (keysym >= XK_nobreakspace && keysym <= XK_ydiaeresis))
         {
-          str[0] = (char) keysym;
+          str[0] = (char)keysym;
           str[1] = '\0';
           strcat(text, str);
         }
 
       else if (keysym == XK_Delete)
         {
-          if (*text)
-            text[strlen(text) - 1] = '\0';
+          if (*text) text[strlen(text) - 1] = '\0';
         }
       else if (keysym == XK_Up)
         strcpy(text, recall_buffer);
 
-      x_draw_string(p->dpy, p->win, p->invert,
-                    p->px, p->py, text, strlen(text));
+      x_draw_string(p->dpy, p->win, p->invert, p->px, p->py, text, strlen(text));
 
-      if (keysym == XK_Return)
-        strcpy(recall_buffer, text);
+      if (keysym == XK_Return) strcpy(recall_buffer, text);
     }
   else
     keysym = XK_space;
@@ -4200,8 +3853,7 @@ int dispatch_character(XKeyEvent *event, char *text)
 }
 
 
-static
-void draw_text_box(void)
+static void draw_text_box(void)
 
 {
   int x, y;
@@ -4214,15 +3866,13 @@ void draw_text_box(void)
 }
 
 
-static
-void get_string(int *n, char *chars, int *state)
+static void get_string(int *n, char *chars, int *state)
 {
   XEvent event;
   Window focus;
   int done, revert;
   char text[256];
-  int event_mask = ButtonPressMask | PointerMotionMask | KeyPressMask |
-                   ExposureMask;
+  int event_mask = ButtonPressMask | PointerMotionMask | KeyPressMask | ExposureMask;
 
   XGetInputFocus(p->dpy, &focus, &revert);
 
@@ -4247,7 +3897,7 @@ void get_string(int *n, char *chars, int *state)
           break;
 
         case KeyPress:
-          if (dispatch_character((XKeyEvent *) & event, text) == XK_Return)
+          if (dispatch_character((XKeyEvent *)&event, text) == XK_Return)
             {
               strcpy(chars, text);
               done = TRUE;
@@ -4288,24 +3938,19 @@ void get_string(int *n, char *chars, int *state)
 
 #if !defined(NO_X11)
 
-static
-void lock(void)
+static void lock(void)
 {
-  if (p->new_win)
-    pthread_mutex_lock(&p->mutex);
+  if (p->new_win) pthread_mutex_lock(&p->mutex);
 }
 
-static
-void unlock(void)
+static void unlock(void)
 {
-  if (p->new_win)
-    pthread_mutex_unlock(&p->mutex);
+  if (p->new_win) pthread_mutex_unlock(&p->mutex);
 }
 
-static
-void *event_loop(void *arg)
+static void *event_loop(void *arg)
 {
-  ws_state_list *p = (ws_state_list *) arg;
+  ws_state_list *p = (ws_state_list *)arg;
   XEvent event;
 
   p->run = 1;
@@ -4319,8 +3964,7 @@ void *event_loop(void *arg)
             {
               if (XCheckTypedWindowEvent(p->dpy, p->win, Expose, &event))
                 handle_expose_event(p);
-              else if (XCheckTypedWindowEvent(p->dpy, p->win, ClientMessage,
-                                              &event))
+              else if (XCheckTypedWindowEvent(p->dpy, p->win, ClientMessage, &event))
                 {
                   if (event.xclient.data.l[0] == p->wmDeleteMessage)
                     {
@@ -4343,38 +3987,36 @@ void *event_loop(void *arg)
 }
 
 
-void gks_x11plugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
-  void **ptr)
+void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                   char *chars, void **ptr)
 {
   static int win = 0;
 
   idle = False;
 
-  p = (ws_state_list *) *ptr;
+  p = (ws_state_list *)*ptr;
 
   switch (function_id = fctid)
     {
 
     case 2:
-/*
- *  Open workstation
- */
+      /*
+       *  Open workstation
+       */
       /* Get GKS state list address */
 
-      gksl = (gks_state_list_t *) *ptr;
+      gksl = (gks_state_list_t *)*ptr;
 
       gks_init_core(gksl);
 
-      p = (ws_state_list *) gks_malloc(sizeof(ws_state_list));
+      p = (ws_state_list *)gks_malloc(sizeof(ws_state_list));
 
       p->wkid = ia[0];
 
       p->packed_ca = gks_getenv("GKS_PACKED_CELL_ARRAY") ? True : False;
       p->double_buf = gks_getenv("GKS_DOUBLE_BUF") ? True : False;
       p->shape = gks_getenv("GKS_CONVEX_SHAPE") ? Convex : Complex;
-      p->widget = (Widget) NULL;
+      p->widget = (Widget)NULL;
       p->conid = ia[1];
       p->wstype = ia[2];
       p->gif = -1;
@@ -4394,9 +4036,9 @@ void gks_x11plugin(
         case 211:
         case 212:
         case 213:
-          if ((unsigned) ia[1] >= 100 + 100)
+          if ((unsigned)ia[1] >= 100 + 100)
             {
-              p->widget = (Widget) *ptr;
+              p->widget = (Widget)*ptr;
             }
           break;
 
@@ -4407,7 +4049,7 @@ void gks_x11plugin(
           break;
 
         case 217:
-          p->frame = (Pixmap *) gks_malloc(MAX_PIXMAP * sizeof(Pixmap));
+          p->frame = (Pixmap *)gks_malloc(MAX_PIXMAP * sizeof(Pixmap));
           p->nframes = 0;
           break;
         }
@@ -4426,7 +4068,7 @@ void gks_x11plugin(
       if (points == NULL)
         {
           max_points = MAX_POINTS;
-          points = (XPoint *) gks_malloc(max_points * sizeof(XPoint));
+          points = (XPoint *)gks_malloc(max_points * sizeof(XPoint));
         }
 
       set_colors();
@@ -4442,7 +4084,7 @@ void gks_x11plugin(
       else if (p->wstype == 216)
         {
           p->uil = p->conid;
-          gks_write_file(p->uil, (void *) UIL_HEADER, sizeof(UIL_HEADER));
+          gks_write_file(p->uil, (void *)UIL_HEADER, sizeof(UIL_HEADER));
         }
 
       create_window(win);
@@ -4491,7 +4133,7 @@ void gks_x11plugin(
       p->selection = p->bb_update = False;
       p->num_bb = p->max_bb = 0;
       p->bb = p->bbox = NULL;
-      p->bounding_box.x1 = p->bounding_box.y1 =  32767;
+      p->bounding_box.x1 = p->bounding_box.y1 = 32767;
       p->bounding_box.x2 = p->bounding_box.y2 = -32767;
       p->drawable = 0;
 
@@ -4508,7 +4150,7 @@ void gks_x11plugin(
       ia[0] = p->swidth;
       ia[1] = p->sheight;
 
-      p->xshm = ((char *) gks_getenv("GKS_XSHM") != NULL) ? True : False;
+      p->xshm = ((char *)gks_getenv("GKS_XSHM") != NULL) ? True : False;
 
       if (p->new_win)
         win++;
@@ -4525,17 +4167,16 @@ void gks_x11plugin(
             {
               pthread_attr_init(&p->attr);
               pthread_attr_setdetachstate(&p->attr, PTHREAD_CREATE_DETACHED);
-              if (pthread_create(&p->thread, &p->attr, event_loop, (void *) p))
-                perror("pthread_create");
+              if (pthread_create(&p->thread, &p->attr, event_loop, (void *)p)) perror("pthread_create");
               pthread_attr_destroy(&p->attr);
             }
         }
       break;
 
     case 3:
-/*
- *  Close workstation
- */
+      /*
+       *  Close workstation
+       */
       if (p->new_win)
         {
           if (p->run)
@@ -4557,20 +4198,15 @@ void gks_x11plugin(
         pixmap_to_rf();
 
       else if (p->frame)
-        if (p->nframes > 1)
-          pixmap_loop();
+        if (p->nframes > 1) pixmap_loop();
 
-      if (p->new_win)
-        unmap_window();
+      if (p->new_win) unmap_window();
 #ifdef XSHM
       free_shared_memory();
 #endif
-      if (p->pixmap)
-        XFreePixmap(p->dpy, p->pixmap);
-      if (p->drawable)
-        XFreePixmap(p->dpy, p->drawable);
-      if (p->bbox)
-        free(p->bbox);
+      if (p->pixmap) XFreePixmap(p->dpy, p->pixmap);
+      if (p->drawable) XFreePixmap(p->dpy, p->drawable);
+      if (p->bbox) free(p->bbox);
 
       free_GC();
 #ifndef NO_XFT
@@ -4585,33 +4221,31 @@ void gks_x11plugin(
           XFreePixmap(p->dpy, p->icon_pixmap);
         }
       unlock();
-      if (p->new_dpy)
-        XCloseDisplay(p->dpy);
+      if (p->new_dpy) XCloseDisplay(p->dpy);
 
-      if (p->new_win)
-        pthread_mutex_destroy(&p->mutex);
+      if (p->new_win) pthread_mutex_destroy(&p->mutex);
 
       free(p);
       return;
 
     case 4:
-/*
- *  Activate workstation
- */
+      /*
+       *  Activate workstation
+       */
       p->state = GKS_K_WS_ACTIVE;
       break;
 
     case 5:
-/*
- *  Deactivate workstation
- */
+      /*
+       *  Deactivate workstation
+       */
       p->state = GKS_K_WS_INACTIVE;
       break;
 
     case 6:
-/*
- *  Clear workstation
- */
+      /*
+       *  Clear workstation
+       */
       lock();
       if (p->uil >= 0)
         pixmap_to_uil();
@@ -4626,29 +4260,22 @@ void gks_x11plugin(
             }
         }
 
-      if (p->pixmap)
-        XFillRectangle(p->dpy, p->pixmap, p->clear, 0, 0, p->width,
-                       p->height);
-      if (p->drawable)
-        XFillRectangle(p->dpy, p->drawable, p->clear, 0, 0, p->width,
-                       p->height);
-      if (!p->double_buf)
-        XClearWindow(p->dpy, p->win);
+      if (p->pixmap) XFillRectangle(p->dpy, p->pixmap, p->clear, 0, 0, p->width, p->height);
+      if (p->drawable) XFillRectangle(p->dpy, p->drawable, p->clear, 0, 0, p->width, p->height);
+      if (!p->double_buf) XClearWindow(p->dpy, p->win);
 
       p->empty = True;
 
-      if (!p->frame)
-        XSync(p->dpy, False);
+      if (!p->frame) XSync(p->dpy, False);
       unlock();
       break;
 
     case 8:
-/*
- *  Update workstation
- */
+      /*
+       *  Update workstation
+       */
       lock();
-      if (p->double_buf && ia[1] == GKS_K_PERFORM_FLAG)
-        handle_expose_event(p);
+      if (p->double_buf && ia[1] == GKS_K_PERFORM_FLAG) handle_expose_event(p);
 
       update();
 
@@ -4664,25 +4291,22 @@ void gks_x11plugin(
       break;
 
     case 10:
-/*
- *  Message
- */
+      /*
+       *  Message
+       */
       lock();
-      if (!p->mapped)
-        map_window();
+      if (!p->mapped) map_window();
 
-      if (p->state == GKS_K_WS_ACTIVE)
-        message(strlen(chars), chars);
+      if (p->state == GKS_K_WS_ACTIVE) message(strlen(chars), chars);
       unlock();
       break;
 
     case 12:
-/*
- *  Polyline
- */
+      /*
+       *  Polyline
+       */
       lock();
-      if (!p->mapped)
-        map_window();
+      if (!p->mapped) map_window();
 
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -4692,12 +4316,11 @@ void gks_x11plugin(
       break;
 
     case 13:
-/*
- *  Polymarker
- */
+      /*
+       *  Polymarker
+       */
       lock();
-      if (!p->mapped)
-        map_window();
+      if (!p->mapped) map_window();
 
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -4707,12 +4330,11 @@ void gks_x11plugin(
       break;
 
     case 14:
-/*
- *  Text
- */
+      /*
+       *  Text
+       */
       lock();
-      if (!p->mapped)
-        map_window();
+      if (!p->mapped) map_window();
 
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -4722,12 +4344,11 @@ void gks_x11plugin(
       break;
 
     case 15:
-/*
- *  Fill Area
- */
+      /*
+       *  Fill Area
+       */
       lock();
-      if (!p->mapped)
-        map_window();
+      if (!p->mapped) map_window();
 
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -4738,12 +4359,11 @@ void gks_x11plugin(
 
     case 16:
     case DRAW_IMAGE:
-/*
- *  Cell Array
- */
+      /*
+       *  Cell Array
+       */
       lock();
-      if (!p->mapped)
-        map_window();
+      if (!p->mapped) map_window();
 
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -4755,9 +4375,9 @@ void gks_x11plugin(
       break;
 
     case 48:
-/*
- *  Set color representation
- */
+      /*
+       *  Set color representation
+       */
       lock();
       if (ia[1] >= 0 && ia[1] < MAX_COLOR)
         {
@@ -4768,9 +4388,9 @@ void gks_x11plugin(
       break;
 
     case 49:
-/*
- *  Set window
- */
+      /*
+       *  Set window
+       */
       lock();
       setup_norm_xform(*ia, gksl->window[*ia], gksl->viewport[*ia]);
       set_clipping(True);
@@ -4778,9 +4398,9 @@ void gks_x11plugin(
       break;
 
     case 50:
-/*
- *  Set viewport
- */
+      /*
+       *  Set viewport
+       */
       lock();
       setup_norm_xform(*ia, gksl->window[*ia], gksl->viewport[*ia]);
       set_clipping(True);
@@ -4788,27 +4408,27 @@ void gks_x11plugin(
       break;
 
     case 52:
-/*
- *  Select normalization transformation
- */
+      /*
+       *  Select normalization transformation
+       */
       lock();
       set_clipping(True);
       unlock();
       break;
 
     case 53:
-/*
- *  Set clipping indicator
- */
+      /*
+       *  Set clipping indicator
+       */
       lock();
       set_clipping(True);
       unlock();
       break;
 
     case 54:
-/*
- *  Set workstation window
- */
+      /*
+       *  Set workstation window
+       */
       lock();
       p->window[0] = r1[0];
       p->window[1] = r1[1];
@@ -4821,9 +4441,9 @@ void gks_x11plugin(
       break;
 
     case 55:
-/*
- *  Set workstation viewport
- */
+      /*
+       *  Set workstation viewport
+       */
       {
         double max_width, max_height;
 
@@ -4848,8 +4468,7 @@ void gks_x11plugin(
             max_width = 10.0;
             max_height = 10.0;
           }
-        if (p->uil < 0)
-          gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.0075);
+        if (p->uil < 0) gks_fit_ws_viewport(p->viewport, max_width, max_height, 0.0075);
 
         resize_window();
         set_WM_hints();
@@ -4861,25 +4480,24 @@ void gks_x11plugin(
       }
 
     case 69:
-/*
- *  Initialize locator
- */
+      /*
+       *  Initialize locator
+       */
       lock();
-      p->type = (pe_type) ia[3];
+      p->type = (pe_type)ia[3];
       NDC_to_DC(r1[0], r2[0], p->px, p->py);
       unlock();
       break;
 
     case 81:
-/*
- *  Request locator
- */
+      /*
+       *  Request locator
+       */
       {
         int n;
 
         lock();
-        if (!p->mapped)
-          map_window();
+        if (!p->mapped) map_window();
 
         n = 1;
         get_pointer(&n, r1, r2, &ia[0], &ia[3]);
@@ -4888,24 +4506,22 @@ void gks_x11plugin(
       }
 
     case 82:
-/*
- *  Request stroke
- */
+      /*
+       *  Request stroke
+       */
       lock();
-      if (!p->mapped)
-        map_window();
+      if (!p->mapped) map_window();
 
       get_pointer(&ia[2], r1, r2, &ia[0], &ia[3]);
       unlock();
       break;
 
     case 86:
-/*
- *  Request string
- */
+      /*
+       *  Request string
+       */
       lock();
-      if (!p->mapped)
-        map_window();
+      if (!p->mapped) map_window();
       get_string(&ia[1], chars, &ia[0]);
       unlock();
       break;
@@ -4920,20 +4536,18 @@ void gks_x11plugin(
       p->num_bb = ia[0];
       if (!p->drawable)
         {
-          p->drawable = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen),
-                                      p->width, p->height, p->depth);
-          XFillRectangle(p->dpy, p->drawable, p->clear,
-                         0, 0, p->width, p->height);
+          p->drawable = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), p->width, p->height, p->depth);
+          XFillRectangle(p->dpy, p->drawable, p->clear, 0, 0, p->width, p->height);
         }
       if (p->num_bb > p->max_bb)
         {
           p->max_bb += MAX_SELECTIONS;
-          p->bbox = (Segment *) realloc(p->bbox, p->max_bb * sizeof(Segment));
+          p->bbox = (Segment *)realloc(p->bbox, p->max_bb * sizeof(Segment));
         }
       p->selection = p->bb_update = True;
       p->bb = p->bbox + p->num_bb - 1;
       p->bb->type = ia[1];
-      p->bb->x1 = p->bb->y1 =  32767;
+      p->bb->x1 = p->bb->y1 = 32767;
       p->bb->x2 = p->bb->y2 = -32767;
       unlock();
       break;
@@ -4955,15 +4569,12 @@ void gks_x11plugin(
           yoff = sint(p->c * r2[0] + 0.5);
 
           set_clipping(False);
-          XCopyArea(p->dpy, p->pixmap, p->win, p->gc,
-                    0, 0, p->width, p->height, 0, 0);
+          XCopyArea(p->dpy, p->pixmap, p->win, p->gc, 0, 0, p->width, p->height, 0, 0);
           for (i = 0; i < p->num_bb; i++)
             {
               p->bb = p->bbox + i;
-              XCopyArea(p->dpy, p->drawable, p->win, p->gc,
-                        p->bb->x1, p->bb->y1,
-                        p->bb->x2 - p->bb->x1 + 1, p->bb->y2 - p->bb->y1 + 1,
-                        p->bb->x1 + xoff, p->bb->y1 + yoff);
+              XCopyArea(p->dpy, p->drawable, p->win, p->gc, p->bb->x1, p->bb->y1, p->bb->x2 - p->bb->x1 + 1,
+                        p->bb->y2 - p->bb->y1 + 1, p->bb->x1 + xoff, p->bb->y1 + yoff);
             }
           set_clipping(True);
         }
@@ -4980,8 +4591,7 @@ void gks_x11plugin(
           yoff = sint(p->c * r2[0] + 0.5);
 
           set_clipping(False);
-          XCopyArea(p->dpy, p->pixmap, p->win, p->gc,
-                    0, 0, p->width, p->height, 0, 0);
+          XCopyArea(p->dpy, p->pixmap, p->win, p->gc, 0, 0, p->width, p->height, 0, 0);
           for (i = 0; i < p->num_bb; i++)
             {
               p->bb = p->bbox + i;
@@ -5003,7 +4613,7 @@ void gks_x11plugin(
 
       if (!p->selection)
         {
-          p->bb->x1 = p->bb->y1 =  32767;
+          p->bb->x1 = p->bb->y1 = 32767;
           p->bb->x2 = p->bb->y2 = -32767;
         }
       p->bb_update = True;
@@ -5015,10 +4625,8 @@ void gks_x11plugin(
 
 #else
 
-void gks_x11plugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
-  void **ptr)
+void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                   char *chars, void **ptr)
 {
   if (fctid == 2)
     {

@@ -8,118 +8,62 @@
 
 #ifdef _MSC_VER
 #ifndef NAN
-static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
-#define NAN (*(const float *) __nan)
+static const unsigned long __nan[2] = {0xffffffff, 0x7fffffff};
+#define NAN (*(const float *)__nan)
 #endif
 #endif
 
 #ifdef __linux__
 #ifndef NAN
-#define NAN 0.0/0.0
+#define NAN 0.0 / 0.0
 #endif
 #endif
 
 #define BUFFSIZE 8192
 
-static
-char *format[] =
-  {
-    "axes:ffffiif",
-    "axes3d:ffffffiiif",
-    "cellarray:ffffiiiiiiI",
-    "colorbar:",
-    "contour:iiiFFFFi",
-    "contourf:iiiFFFFi",
-    "destroycontext:i",
-    "drawarc:ffffii",
-    "drawarrow:ffff",
-    "drawimage:ffffiiIi",
-    "drawpath:iVBi",
-    "drawrect:ffff",
-    "fillarc:ffffii",
-    "fillarea:iFF",
-    "fillrect:ffff",
-    "gdp:iFFiiI",
-    "grid:ffffii",
-    "grid3d:ffffffiii",
-    "herrorbars:iFFFF",
-    "hexbin:iFFi",
-    "mathtex:ffs",
-    "polyline:iFF",
-    "polyline3d:iFFF",
-    "polymarker:iFF",
-    "quiver:iiFFFFi",
-    "restorestate:",
-    "savestate:",
-    "selectcontext:i",
-    "selntran:i",
-    "setarrowsize:f",
-    "setarrowstyle:i",
-    "setcharexpan:f",
-    "setcharheight:f",
-    "setcharspace:f",
-    "setcharup:ff",
-    "setclip:i",
-    "setcolormap:i",
-    "setcolorrep:ifff",
-    "setfillcolorind:i",
-    "setfillintstyle:i",
-    "setfillstyle:i",
-    "setlinecolorind:i",
-    "setlinetype:i",
-    "setlinewidth:f",
-    "setmarkercolorind:i",
-    "setmarkersize:f",
-    "setmarkertype:i",
-    "setscale:i",
-    "setspace:ffii",
-    "settextalign:ii",
-    "settextcolorind:i",
-    "settextfontprec:ii",
-    "settextpath:i",
-    "settransparency:f",
-    "setviewport:ffff",
-    "setwindow:ffff",
-    "setwsviewport:ffff",
-    "setwswindow:ffff",
-    "shadelines:iFFiii",
-    "shadepoints:iFFiii",
-    "spline:iFFii",
-    "surface:iiFFFi",
-    "text:ffs",
-    "textext:ffs",
-    "titles3d:sss",
-    "tricont:iFFFiF",
-    "trisurf:iFFF",
-    "uselinespec:s",
-    "verrorbars:iFFFF",
-  };
+static char *format[] = {
+    "axes:ffffiif",       "axes3d:ffffffiiif", "cellarray:ffffiiiiiiI",
+    "colorbar:",          "contour:iiiFFFFi",  "contourf:iiiFFFFi",
+    "destroycontext:i",   "drawarc:ffffii",    "drawarrow:ffff",
+    "drawimage:ffffiiIi", "drawpath:iVBi",     "drawrect:ffff",
+    "fillarc:ffffii",     "fillarea:iFF",      "fillrect:ffff",
+    "gdp:iFFiiI",         "grid:ffffii",       "grid3d:ffffffiii",
+    "herrorbars:iFFFF",   "hexbin:iFFi",       "mathtex:ffs",
+    "polyline:iFF",       "polyline3d:iFFF",   "polymarker:iFF",
+    "quiver:iiFFFFi",     "restorestate:",     "savestate:",
+    "selectcontext:i",    "selntran:i",        "setarrowsize:f",
+    "setarrowstyle:i",    "setcharexpan:f",    "setcharheight:f",
+    "setcharspace:f",     "setcharup:ff",      "setclip:i",
+    "setcolormap:i",      "setcolorrep:ifff",  "setfillcolorind:i",
+    "setfillintstyle:i",  "setfillstyle:i",    "setlinecolorind:i",
+    "setlinetype:i",      "setlinewidth:f",    "setmarkercolorind:i",
+    "setmarkersize:f",    "setmarkertype:i",   "setscale:i",
+    "setspace:ffii",      "settextalign:ii",   "settextcolorind:i",
+    "settextfontprec:ii", "settextpath:i",     "settransparency:f",
+    "setviewport:ffff",   "setwindow:ffff",    "setwsviewport:ffff",
+    "setwswindow:ffff",   "shadelines:iFFiii", "shadepoints:iFFiii",
+    "spline:iFFii",       "surface:iiFFFi",    "text:ffs",
+    "textext:ffs",        "titles3d:sss",      "tricont:iFFFiF",
+    "trisurf:iFFF",       "uselinespec:s",     "verrorbars:iFFFF",
+};
 
-static
-int nel = sizeof(format) / sizeof(format[0]);
+static int nel = sizeof(format) / sizeof(format[0]);
 
-static
-double f_arg[7], *f_arr[4];
+static double f_arg[7], *f_arr[4];
 
-static
-int i_arg[6], *i_arr, i_arr_size, f_arr_size[4], v_arr_size, b_arr_size;
+static int i_arg[6], *i_arr, i_arr_size, f_arr_size[4], v_arr_size, b_arr_size;
 
-static
-vertex_t *v_arr;
+static vertex_t *v_arr;
 
-static
-unsigned char *b_arr;
+static unsigned char *b_arr;
 
-static
-char *s_arg[3];
+static char *s_arg[3];
 
-static
-int i_argc, f_argc, s_argc, i_arrc, f_arrp, f_arrc, v_arrc, b_arrc;
+static int i_argc, f_argc, s_argc, i_arrc, f_arrp, f_arrc, v_arrc, b_arrc;
 
-static
-char *xmalloc(int size)
+static char *xmalloc(int size)
 {
-  char *result = (char *) malloc(size);
+  char *result = (char *)malloc(size);
   if (!result)
     {
       fprintf(stderr, "out of virtual memory\n");
@@ -128,10 +72,9 @@ char *xmalloc(int size)
   return (result);
 }
 
-static
-char *xrealloc(void *ptr, int size)
+static char *xrealloc(void *ptr, int size)
 {
-  char *result = (char *) realloc(ptr, size);
+  char *result = (char *)realloc(ptr, size);
   if (!result)
     {
       fprintf(stderr, "out of virtual memory\n");
@@ -140,8 +83,7 @@ char *xrealloc(void *ptr, int size)
   return (result);
 }
 
-static
-int binsearch(char *str[], int nel, char *value)
+static int binsearch(char *str[], int nel, char *value)
 {
   int position, begin = 0, end = nel - 1, cond = 0;
   char key[31];
@@ -161,8 +103,7 @@ int binsearch(char *str[], int nel, char *value)
   return nel;
 }
 
-static
-double ascii2double(const char *s)
+static double ascii2double(const char *s)
 {
   if (strcmp(s, "nan") == 0 || strcmp(s, "1.#QNAN") == 0)
     return NAN;
@@ -170,8 +111,7 @@ double ascii2double(const char *s)
     return atof(s);
 }
 
-static
-char *xml(char *s, char *fmt)
+static char *xml(char *s, char *fmt)
 {
   char *attr, *p;
 
@@ -183,96 +123,89 @@ char *xml(char *s, char *fmt)
 
   while (*fmt)
     {
-      while (isspace(*s))
-        s++;
+      while (isspace(*s)) s++;
       if (isalpha(*s))
         {
-          while (isalnum(*s))
-            s++;
+          while (isalnum(*s)) s++;
           if (*s == '=')
             {
               s++;
               if (*s == '"')
                 {
                   attr = ++s;
-                  while (*s && *s != '"')
-                    s++;
+                  while (*s && *s != '"') s++;
                   if (*s == '"')
                     {
                       *s++ = '\0';
                       switch (*fmt)
                         {
-                          case 'i':
-                            i_arg[i_argc++] = atoi(attr);
-                            break;
-                          case 'f':
-                            f_arg[f_argc++] = atof(attr);
-                            break;
-                          case 's':
-                            s_arg[s_argc++] = attr;
-                            break;
-                          case 'I':
-                            p = strtok(attr, " \t\"");
-                            while (p != NULL)
-                              {
-                                if (i_arrc >= i_arr_size)
-                                  {
-                                    i_arr_size += BUFFSIZE;
-                                    i_arr = (int *) xrealloc(i_arr,
-                                      sizeof(int) * i_arr_size);
-                                  }
-                                i_arr[i_arrc++] = atoi(p);
-                                p = strtok(NULL, " \t\"");
-                              }
-                            break;
-                          case 'F':
-                            p = strtok(attr, " \t\"");
-                            while (p != NULL)
-                              {
-                                if (f_arrc >= f_arr_size[f_arrp])
-                                  {
-                                    f_arr_size[f_arrp] += BUFFSIZE;
-                                    f_arr[f_arrp] = (double *)
-                                      xrealloc(f_arr[f_arrp], sizeof(double) *
-                                               f_arr_size[f_arrp]);
-                                  }
-                                f_arr[f_arrp][f_arrc++] = atof(p);
-                                p = strtok(NULL, " \t\"");
-                              }
-                            f_arrp++;
-                            f_arrc = 0;
-                            break;
-                          case 'V':
-                            p = strtok(attr, " \t\"");
-                            while (p != NULL)
-                              {
-                                if (v_arrc >= v_arr_size)
-                                  {
-                                    v_arr_size += BUFFSIZE;
-                                    v_arr = (vertex_t *) xrealloc(v_arr,
-                                      sizeof(vertex_t) * v_arr_size);
-                                  }
-                                v_arr[v_arrc].x = ascii2double(p);
-                                p = strtok(NULL, " \t\"");
-                                v_arr[v_arrc].y = ascii2double(p);
-                                p = strtok(NULL, " \t\"");
-                                v_arrc++;
-                              }
-                            break;
-                          case 'B':
-                            p = strtok(attr, " \t\"");
-                            while (p != NULL)
-                              {
-                                if (b_arrc >= b_arr_size)
-                                  {
-                                    b_arr_size += BUFFSIZE;
-                                    b_arr = (unsigned char *) xrealloc(b_arr,
-                                      sizeof(unsigned char) * b_arr_size);
-                                  }
-                                b_arr[b_arrc++] = (unsigned char) atoi(p);
-                                p = strtok(NULL, " \t\"");
-                              }
-                            break;
+                        case 'i':
+                          i_arg[i_argc++] = atoi(attr);
+                          break;
+                        case 'f':
+                          f_arg[f_argc++] = atof(attr);
+                          break;
+                        case 's':
+                          s_arg[s_argc++] = attr;
+                          break;
+                        case 'I':
+                          p = strtok(attr, " \t\"");
+                          while (p != NULL)
+                            {
+                              if (i_arrc >= i_arr_size)
+                                {
+                                  i_arr_size += BUFFSIZE;
+                                  i_arr = (int *)xrealloc(i_arr, sizeof(int) * i_arr_size);
+                                }
+                              i_arr[i_arrc++] = atoi(p);
+                              p = strtok(NULL, " \t\"");
+                            }
+                          break;
+                        case 'F':
+                          p = strtok(attr, " \t\"");
+                          while (p != NULL)
+                            {
+                              if (f_arrc >= f_arr_size[f_arrp])
+                                {
+                                  f_arr_size[f_arrp] += BUFFSIZE;
+                                  f_arr[f_arrp] =
+                                      (double *)xrealloc(f_arr[f_arrp], sizeof(double) * f_arr_size[f_arrp]);
+                                }
+                              f_arr[f_arrp][f_arrc++] = atof(p);
+                              p = strtok(NULL, " \t\"");
+                            }
+                          f_arrp++;
+                          f_arrc = 0;
+                          break;
+                        case 'V':
+                          p = strtok(attr, " \t\"");
+                          while (p != NULL)
+                            {
+                              if (v_arrc >= v_arr_size)
+                                {
+                                  v_arr_size += BUFFSIZE;
+                                  v_arr = (vertex_t *)xrealloc(v_arr, sizeof(vertex_t) * v_arr_size);
+                                }
+                              v_arr[v_arrc].x = ascii2double(p);
+                              p = strtok(NULL, " \t\"");
+                              v_arr[v_arrc].y = ascii2double(p);
+                              p = strtok(NULL, " \t\"");
+                              v_arrc++;
+                            }
+                          break;
+                        case 'B':
+                          p = strtok(attr, " \t\"");
+                          while (p != NULL)
+                            {
+                              if (b_arrc >= b_arr_size)
+                                {
+                                  b_arr_size += BUFFSIZE;
+                                  b_arr = (unsigned char *)xrealloc(b_arr, sizeof(unsigned char) * b_arr_size);
+                                }
+                              b_arr[b_arrc++] = (unsigned char)atoi(p);
+                              p = strtok(NULL, " \t\"");
+                            }
+                          break;
                         }
                     }
                   else
@@ -285,46 +218,40 @@ char *xml(char *s, char *fmt)
   return s;
 }
 
-static
-void gr(int id)
+static void gr(int id)
 {
   switch (id)
     {
-    case  0:
-      gr_axes(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1],
-              f_arg[4]);
+    case 0:
+      gr_axes(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1], f_arg[4]);
       break;
-    case  1:
-      gr_axes3d(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5],
-                i_arg[0], i_arg[1], i_arg[2], f_arg[6]);
+    case 1:
+      gr_axes3d(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5], i_arg[0], i_arg[1], i_arg[2], f_arg[6]);
       break;
-    case  2:
-      gr_cellarray(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1],
-                   i_arg[2], i_arg[3], i_arg[4], i_arg[5], i_arr);
+    case 2:
+      gr_cellarray(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1], i_arg[2], i_arg[3], i_arg[4], i_arg[5],
+                   i_arr);
       break;
-    case  3:
+    case 3:
       gr_colorbar();
       break;
-    case  4:
-      gr_contour(i_arg[0], i_arg[1], i_arg[2],
-                 f_arr[0], f_arr[1], f_arr[2], f_arr[3], i_arg[3]);
+    case 4:
+      gr_contour(i_arg[0], i_arg[1], i_arg[2], f_arr[0], f_arr[1], f_arr[2], f_arr[3], i_arg[3]);
       break;
-    case  5:
-      gr_contourf(i_arg[0], i_arg[1], i_arg[2],
-                  f_arr[0], f_arr[1], f_arr[2], f_arr[3], i_arg[3]);
+    case 5:
+      gr_contourf(i_arg[0], i_arg[1], i_arg[2], f_arr[0], f_arr[1], f_arr[2], f_arr[3], i_arg[3]);
       break;
-    case  6:
+    case 6:
       gr_destroycontext(i_arg[0]);
       break;
-    case  7:
+    case 7:
       gr_drawarc(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1]);
       break;
-    case  8:
+    case 8:
       gr_drawarrow(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
-    case  9:
-      gr_drawimage(f_arg[0], f_arg[1], f_arg[2], f_arg[3],
-                   i_arg[0], i_arg[1], i_arr, i_arg[2]);
+    case 9:
+      gr_drawimage(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1], i_arr, i_arg[2]);
       break;
     case 10:
       gr_drawpath(i_arg[0], v_arr, b_arrc != 0 ? b_arr : NULL, i_arg[1]);
@@ -348,8 +275,7 @@ void gr(int id)
       gr_grid(f_arg[0], f_arg[1], f_arg[2], f_arg[3], i_arg[0], i_arg[1]);
       break;
     case 17:
-      gr_grid3d(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5],
-                i_arg[0], i_arg[1], i_arg[2]);
+      gr_grid3d(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5], i_arg[0], i_arg[1], i_arg[2]);
       break;
     case 18:
       gr_herrorbars(i_arg[0], f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
@@ -370,8 +296,7 @@ void gr(int id)
       gr_polymarker(i_arg[0], f_arr[0], f_arr[1]);
       break;
     case 24:
-      gr_quiver(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], f_arr[3],
-                i_arg[2]);
+      gr_quiver(i_arg[0], i_arg[1], f_arr[0], f_arr[1], f_arr[2], f_arr[3], i_arg[2]);
       break;
     case 25:
       gr_restorestate();
@@ -476,8 +401,7 @@ void gr(int id)
       gr_shadelines(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2], i_arg[3]);
       break;
     case 59:
-      gr_shadepoints(i_arg[0], f_arr[0], f_arr[1],
-                     i_arg[1], i_arg[2], i_arg[3]);
+      gr_shadepoints(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2], i_arg[3]);
       break;
     case 60:
       gr_spline(i_arg[0], f_arr[0], f_arr[1], i_arg[1], i_arg[2]);
@@ -514,16 +438,16 @@ int gr_drawgraphics(char *string)
   char *s = string, *el, *fmt;
   int i, id;
 
-  i_arr = (int *) xmalloc(sizeof(int) * BUFFSIZE);
+  i_arr = (int *)xmalloc(sizeof(int) * BUFFSIZE);
   i_arr_size = BUFFSIZE;
   for (i = 0; i < 4; i++)
     {
-      f_arr[i] = (double *) xmalloc(sizeof(double) * BUFFSIZE);
+      f_arr[i] = (double *)xmalloc(sizeof(double) * BUFFSIZE);
       f_arr_size[i] = BUFFSIZE;
     }
-  v_arr = (vertex_t *) xmalloc(sizeof(vertex_t) * BUFFSIZE);
+  v_arr = (vertex_t *)xmalloc(sizeof(vertex_t) * BUFFSIZE);
   v_arr_size = BUFFSIZE;
-  b_arr = (unsigned char *) xmalloc(sizeof(unsigned char) * BUFFSIZE);
+  b_arr = (unsigned char *)xmalloc(sizeof(unsigned char) * BUFFSIZE);
   b_arr_size = BUFFSIZE;
 
   while (*s)
@@ -533,8 +457,7 @@ int gr_drawgraphics(char *string)
           el = ++s;
           if (isalpha(*s))
             {
-              while (isalnum(*s))
-                s++;
+              while (isalnum(*s)) s++;
               *s++ = '\0';
               id = binsearch(format, nel, el);
               if (id < nel)
@@ -547,16 +470,13 @@ int gr_drawgraphics(char *string)
                 fprintf(stderr, "%s: unknown XML element\n", el);
             }
         }
-      while (*s && *s != '\n')
-        s++;
-      if (*s == '\n')
-        s++;
+      while (*s && *s != '\n') s++;
+      if (*s == '\n') s++;
     }
 
   free(b_arr);
   free(v_arr);
-  for (i = 0; i < 4; i++)
-    free(f_arr[i]);
+  for (i = 0; i < 4; i++) free(f_arr[i]);
   free(i_arr);
 
   return 0;
@@ -571,14 +491,14 @@ int gr_importgraphics(char *path)
   stream = fopen(path, "r");
   if (stream != NULL)
     {
-      buff = (char *) xmalloc(BUFSIZ);
+      buff = (char *)xmalloc(BUFSIZ);
       off = 0;
       nbytes = BUFSIZ;
       while ((ret = fread(buff + off, 1, BUFSIZ, stream)) > 0)
         {
           nbytes += BUFSIZ;
           off += ret;
-          buff = (char *) xrealloc(buff, nbytes);
+          buff = (char *)xrealloc(buff, nbytes);
         }
       fclose(stream);
       buff[off + ret] = '\0';

@@ -15,6 +15,5 @@ FOUNDATION_EXPORT double grVersionNumber;
 //! Project version string for gr.
 FOUNDATION_EXPORT const unsigned char grVersionString[];
 
-// In this header, you should import all the public headers of your framework using statements like #import <gr/PublicHeader.h>
-
-
+// In this header, you should import all the public headers of your framework using statements like #import
+// <gr/PublicHeader.h>

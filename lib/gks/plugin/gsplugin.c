@@ -44,10 +44,8 @@ extern "C"
 
 #endif
 
-DLLEXPORT void gks_gsplugin(
-  int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                              int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef __cplusplus
 }
@@ -64,10 +62,10 @@ DLLEXPORT void gks_gsplugin(
 #endif
 
 #ifndef MIN
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 #ifndef MAX
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 #define NINT(a) (int)((a) + 0.5)
 
@@ -88,24 +86,22 @@ DLLEXPORT void gks_gsplugin(
 #define LLY 0
 
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw) + b[tnr]; \
+  xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
 
 #define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw); \
+  xn = a[tnr] * (xw);                      \
   yn = c[tnr] * (yw)
 
 #define NDC_to_DC(xn, yn, xd, yd) \
-  xd = p->a * (xn) + p->b; \
+  xd = p->a * (xn) + p->b;        \
   yd = p->c * (yn) + p->d
 
 #define nint(a) ((int)(a + 0.5))
 
-static
-gks_state_list_t *gkss;
+static gks_state_list_t *gkss;
 
-static
-double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 static const char *show[] = {"lj", "lj", "ct", "rj"};
 static double yfac[] = {0., -1.2, -1.0, -0.5, 0., 0.2};
@@ -115,90 +111,86 @@ static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 static int predef_ints[] = {0, 1, 3, 3, 3};
 static int predef_styli[] = {1, 1, 1, 2, 3};
 
-static int map[] =
-{
-  22, 9, 5, 14, 18, 26, 13, 1,
-  24, 11, 7, 16, 20, 28, 13, 3,
-  23, 10, 6, 15, 19, 27, 13, 2,
-  25, 12, 8, 17, 21, 29, 13, 4
-};
+static int map[] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
+                    23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
-static double caps[] =
-{
-  0.662, 0.653, 0.676, 0.669,
-  0.718, 0.718, 0.718, 0.718,
-  0.562, 0.562, 0.562, 0.562,
-  0.667,
-  0.681, 0.681, 0.681, 0.681,
-  0.722, 0.722, 0.722, 0.722,
-  0.740, 0.740, 0.740, 0.740,
-  0.692, 0.692, 0.681, 0.681,
-  0.587, 0.692
-};
+static double caps[] = {0.662, 0.653, 0.676, 0.669, 0.718, 0.718, 0.718, 0.718, 0.562, 0.562, 0.562,
+                        0.562, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722, 0.722, 0.740,
+                        0.740, 0.740, 0.740, 0.692, 0.692, 0.681, 0.681, 0.587, 0.692};
 
-static const char *fonts[] =
-{
-  "Times-Roman", "Times-Italic", "Times-Bold", "Times-BoldItalic",
-  "Helvetica", "Helvetica-Oblique", "Helvetica-Bold", "Helvetica-BoldOblique",
-  "Courier", "Courier-Oblique", "Courier-Bold", "Courier-BoldOblique",
-  "Symbol",
-  "Bookman-Light", "Bookman-LightItalic", "Bookman-Demi", "Bookman-DemiItalic",
-  "NewCenturySchlbk-Roman", "NewCenturySchlbk-Italic",
-  "NewCenturySchlbk-Bold", "NewCenturySchlbk-BoldItalic",
-  "AvantGarde-Book", "AvantGarde-BookOblique", "AvantGarde-Demi",
-  "AvantGarde-DemiOblique",
-  "Palatino-Roman", "Palatino-Italic", "Palatino-Bold", "Palatino-BoldItalic",
-  "ZapfChancery-MediumItalic", "ZapfDingbats"
-};
+static const char *fonts[] = {"Times-Roman",
+                              "Times-Italic",
+                              "Times-Bold",
+                              "Times-BoldItalic",
+                              "Helvetica",
+                              "Helvetica-Oblique",
+                              "Helvetica-Bold",
+                              "Helvetica-BoldOblique",
+                              "Courier",
+                              "Courier-Oblique",
+                              "Courier-Bold",
+                              "Courier-BoldOblique",
+                              "Symbol",
+                              "Bookman-Light",
+                              "Bookman-LightItalic",
+                              "Bookman-Demi",
+                              "Bookman-DemiItalic",
+                              "NewCenturySchlbk-Roman",
+                              "NewCenturySchlbk-Italic",
+                              "NewCenturySchlbk-Bold",
+                              "NewCenturySchlbk-BoldItalic",
+                              "AvantGarde-Book",
+                              "AvantGarde-BookOblique",
+                              "AvantGarde-Demi",
+                              "AvantGarde-DemiOblique",
+                              "Palatino-Roman",
+                              "Palatino-Italic",
+                              "Palatino-Bold",
+                              "Palatino-BoldItalic",
+                              "ZapfChancery-MediumItalic",
+                              "ZapfDingbats"};
 
-static const char *dc[3][3] = {
-  {"F", "E", "D"},
-  {"G", "I", "C"},
-  {"H", "A", "B"}
-};
+static const char *dc[3][3] = {{"F", "E", "D"}, {"G", "I", "C"}, {"H", "A", "B"}};
 
 typedef struct ws_state_list_t
-  {
-    int conid, gs_dev, wtype, state;
-    char *path;
-    int empty, init, pages, page_counter;
+{
+  int conid, gs_dev, wtype, state;
+  char *path;
+  int empty, init, pages, page_counter;
 
-    int ix, iy;
-    double a, b, c, d, e, f, g, h, mw, mh;
-    int ytrans, res;
-    double magstep;
-    int stroke, limit, np;
+  int ix, iy;
+  double a, b, c, d, e, f, g, h, mw, mh;
+  int ytrans, res;
+  double magstep;
+  int stroke, limit, np;
 
-    double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
-    int color, fcol;
+  double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
+  int color, fcol;
 
-    double ysize;
+  double ysize;
 
-    int len, size, column, saved_len, saved_column;
-    char *buffer;
+  int len, size, column, saved_len, saved_column;
+  char *buffer;
 
-    unsigned char ascii85_buffer[10];
-    char a85line[100];
-    long a85offset;
+  unsigned char ascii85_buffer[10];
+  char a85line[100];
+  long a85offset;
 
-    double window[4], viewpt[4];
+  double window[4], viewpt[4];
 
-    int ltype;
-    double cwidth, csize, cangle, cheight;
-    int font, height;
+  int ltype;
+  double cwidth, csize, cangle, cheight;
+  int font, height;
 
-    gs_main_instance *gs_instance;
-    int gs_argc;
-    char *gs_argv[NUM_GS_ARGS];
-    int gs_position;
-  }
-ws_state_list;
+  gs_main_instance *gs_instance;
+  int gs_argc;
+  char *gs_argv[NUM_GS_ARGS];
+  int gs_position;
+} ws_state_list;
 
-static
-ws_state_list *p;
+static ws_state_list *p;
 
-static
-void set_norm_xform(int tnr, double *wn, double *vp)
+static void set_norm_xform(int tnr, double *wn, double *vp)
 {
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -206,17 +198,14 @@ void set_norm_xform(int tnr, double *wn, double *vp)
   d[tnr] = vp[2] - wn[2] * c[tnr];
 }
 
-static
-void init_norm_xform(void)
+static void init_norm_xform(void)
 {
   int tnr;
 
-  for (tnr = 0; tnr < MAX_TNR; tnr++)
-    set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
+  for (tnr = 0; tnr < MAX_TNR; tnr++) set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
 }
 
-static
-void seg_xform(double *x, double *y)
+static void seg_xform(double *x, double *y)
 {
   double xx;
 
@@ -225,8 +214,7 @@ void seg_xform(double *x, double *y)
   *x = xx;
 }
 
-static
-void seg_xform_rel(double *x, double *y)
+static void seg_xform_rel(double *x, double *y)
 {
   double xx;
 
@@ -235,8 +223,7 @@ void seg_xform_rel(double *x, double *y)
   *x = xx;
 }
 
-static
-int lastop(const char *op)
+static int lastop(const char *op)
 {
   int len;
 
@@ -247,8 +234,7 @@ int lastop(const char *op)
     return -1;
 }
 
-static
-void packb(const char *buff)
+static void packb(const char *buff)
 {
   int len, i;
 
@@ -277,7 +263,7 @@ void packb(const char *buff)
   if (len + 2 > p->size - p->len)
     {
       p->size += SIZE_INCREMENT;
-      p->buffer = (char *) realloc(p->buffer, p->size);
+      p->buffer = (char *)realloc(p->buffer, p->size);
     }
 
   if (p->column != 0)
@@ -299,15 +285,14 @@ void packb(const char *buff)
     }
 }
 
-static
-char *Ascii85Tuple(unsigned char *data)
+static char *Ascii85Tuple(unsigned char *data)
 {
   static char tuple[6];
   long i, x;
   unsigned long code, quantum;
 
-  code = ((((unsigned long) data[0] << 8) | (unsigned long) data[1]) << 16) |
-    ((unsigned long) data[2] << 8) | (unsigned long) data[3];
+  code = ((((unsigned long)data[0] << 8) | (unsigned long)data[1]) << 16) | ((unsigned long)data[2] << 8) |
+         (unsigned long)data[3];
   if (code == 0L)
     {
       tuple[0] = 'z';
@@ -317,25 +302,23 @@ char *Ascii85Tuple(unsigned char *data)
   quantum = 85UL * 85UL * 85UL * 85UL;
   for (i = 0; i < 4; i++)
     {
-      x = (long) (code / quantum);
+      x = (long)(code / quantum);
       code -= quantum * x;
-      tuple[i] = (char) (x + (int) '!');
+      tuple[i] = (char)(x + (int)'!');
       quantum /= 85L;
     }
-  tuple[4] = (char) ((code % 85L) + (int) '!');
+  tuple[4] = (char)((code % 85L) + (int)'!');
   tuple[5] = '\0';
   return (tuple);
 }
 
-static
-void Ascii85Initialize(void)
+static void Ascii85Initialize(void)
 {
   p->a85offset = 0L;
   p->a85line[0] = '\0';
 }
 
-static
-void Ascii85Flush(void)
+static void Ascii85Flush(void)
 {
   char *tuple;
 
@@ -346,13 +329,12 @@ void Ascii85Flush(void)
       p->ascii85_buffer[p->a85offset + 1] = '\0';
       p->ascii85_buffer[p->a85offset + 2] = '\0';
       tuple = Ascii85Tuple(p->ascii85_buffer);
-      packb(*tuple == 'z' ? (char *) "!!!!" : tuple);
+      packb(*tuple == 'z' ? (char *)"!!!!" : tuple);
     }
   packb("~>");
 }
 
-static
-void Ascii85Encode(unsigned char code)
+static void Ascii85Encode(unsigned char code)
 {
   long n, i = 0;
   char *q;
@@ -361,13 +343,11 @@ void Ascii85Encode(unsigned char code)
 
   p->ascii85_buffer[p->a85offset] = code;
   p->a85offset++;
-  if (p->a85offset < 4)
-    return;
+  if (p->a85offset < 4) return;
   c = p->ascii85_buffer;
   for (n = p->a85offset; n >= 4; n -= 4)
     {
-      for (q = Ascii85Tuple(c); *q; q++)
-        b[i++] = *q;
+      for (q = Ascii85Tuple(c); *q; q++) b[i++] = *q;
       c += 8;
     }
   p->a85offset = n;
@@ -379,26 +359,24 @@ void Ascii85Encode(unsigned char code)
       packb(p->a85line);
       p->a85line[0] = '\0';
     }
-  for (n = 0; n < 4; n++)
-    p->ascii85_buffer[n] = (*c++);
+  for (n = 0; n < 4; n++) p->ascii85_buffer[n] = (*c++);
 }
 
-static
-unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
+static unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
 {
-#define LZWClr  256UL           /* Clear Table Marker */
-#define LZWEod  257UL           /* End of Data marker */
-#define OutputCode(code) \
-{ \
+#define LZWClr 256UL /* Clear Table Marker */
+#define LZWEod 257UL /* End of Data marker */
+#define OutputCode(code)                                    \
+  {                                                         \
     accumulator += code << (32 - code_width - number_bits); \
-    number_bits += code_width; \
-    while (number_bits >= 8) \
-    { \
-        Ascii85Encode((unsigned char) (accumulator >> 24)); \
-        accumulator = accumulator << 8; \
-        number_bits -= 8; \
-    } \
-}
+    number_bits += code_width;                              \
+    while (number_bits >= 8)                                \
+      {                                                     \
+        Ascii85Encode((unsigned char)(accumulator >> 24));  \
+        accumulator = accumulator << 8;                     \
+        number_bits -= 8;                                   \
+      }                                                     \
+  }
 
   typedef struct _TableType
   {
@@ -414,9 +392,8 @@ unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
    * Allocate string table.
    */
 
-  table = (TableType *) malloc((1 << 12) * sizeof(*table));
-  if (table == (TableType *) NULL)
-    return (0);
+  table = (TableType *)malloc((1 << 12) * sizeof(*table));
+  if (table == (TableType *)NULL) return (0);
 
   /*
    * Initialize variables.
@@ -430,37 +407,36 @@ unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
   for (index = 0; index < 256; index++)
     {
       table[index].prefix = (-1);
-      table[index].suffix = (short) index;
+      table[index].suffix = (short)index;
       table[index].next = (-1);
     }
   next_index = LZWEod + 1;
   code_width = 9;
-  last_code = (unsigned long) pixels[0];
-  for (i = 1; i < (long) number_pixels; i++)
+  last_code = (unsigned long)pixels[0];
+  for (i = 1; i < (long)number_pixels; i++)
     {
       /*
        * Find string.
        */
-      index = (long) last_code;
+      index = (long)last_code;
       while (index != -1)
-        if ((table[index].prefix != (long) last_code) ||
-            (table[index].suffix != (long) pixels[i]))
+        if ((table[index].prefix != (long)last_code) || (table[index].suffix != (long)pixels[i]))
           index = table[index].next;
         else
           {
-            last_code = (unsigned long) index;
+            last_code = (unsigned long)index;
             break;
           }
-      if (last_code != (unsigned long) index)
+      if (last_code != (unsigned long)index)
         {
           /*
            * Add string.
            */
           OutputCode(last_code);
-          table[next_index].prefix = (long) last_code;
-          table[next_index].suffix = (short) pixels[i];
+          table[next_index].prefix = (long)last_code;
+          table[next_index].suffix = (short)pixels[i];
           table[next_index].next = table[last_code].next;
-          table[last_code].next = (long) next_index;
+          table[last_code].next = (long)next_index;
           next_index++;
           /*
            * Did we just move up to next bit width?
@@ -485,7 +461,7 @@ unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
                   code_width = 9;
                 }
             }
-          last_code = (unsigned long) pixels[i];
+          last_code = (unsigned long)pixels[i];
         }
     }
   /*
@@ -493,8 +469,7 @@ unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
    */
   OutputCode(last_code);
   OutputCode(LZWEod);
-  if (number_bits != 0)
-    Ascii85Encode((unsigned char) (accumulator >> 24));
+  if (number_bits != 0) Ascii85Encode((unsigned char)(accumulator >> 24));
 
   Ascii85Flush();
   free(table);
@@ -502,8 +477,7 @@ unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pixels)
   return (0);
 }
 
-static
-void set_xform(double *wn, double *vp, int *height)
+static void set_xform(double *wn, double *vp, int *height)
 {
   p->e = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   p->f = (6750 - 1) / 0.28575;
@@ -518,13 +492,12 @@ void set_xform(double *wn, double *vp, int *height)
   p->mw = p->a * (wn[1] - wn[0]);
   p->mh = p->c * (wn[3] - wn[2]);
 
-  *height = (int) p->c;
+  *height = (int)p->c;
 
   p->stroke = 0;
 }
 
-static
-void bounding_box(int landscape, double magstep)
+static void bounding_box(int landscape, double magstep)
 {
   char buffer[50];
   int ix1, ix2, iy1, iy2;
@@ -549,14 +522,12 @@ void bounding_box(int landscape, double magstep)
   packb(buffer);
   if (gkss->version > 4)
     {
-      sprintf(buffer, "%%%%Orientation: %s",
-              landscape ? "Landscape" : "Portrait");
+      sprintf(buffer, "%%%%Orientation: %s", landscape ? "Landscape" : "Portrait");
       packb(buffer);
     }
 }
 
-static
-void move(double x, double y)
+static void move(double x, double y)
 {
   char buffer[50];
 
@@ -573,8 +544,7 @@ void move(double x, double y)
   p->np = 1;
 }
 
-static
-void draw(double x, double y)
+static void draw(double x, double y)
 {
   char buffer[50];
   int jx, jy, rx, ry;
@@ -613,8 +583,7 @@ void draw(double x, double y)
     }
 }
 
-static
-void moveto(double x, double y)
+static void moveto(double x, double y)
 {
   char buffer[20];
 
@@ -625,8 +594,7 @@ void moveto(double x, double y)
   packb(buffer);
 }
 
-static
-void amoveto(double angle, double x, double y)
+static void amoveto(double angle, double x, double y)
 {
   char buffer[30];
 
@@ -637,13 +605,11 @@ void amoveto(double angle, double x, double y)
   packb(buffer);
 }
 
-static
-void set_linetype(int ltype, double lwidth)
+static void set_linetype(int ltype, double lwidth)
 {
   char buffer[100], dash[80];
 
-  if (gkss->version > 4)
-    lwidth *= p->res * 0.001;
+  if (gkss->version > 4) lwidth *= p->res * 0.001;
   if (ltype != p->ltype || (fabs(lwidth - p->cwidth) > FEPS))
     {
       p->ltype = ltype;
@@ -653,29 +619,24 @@ void set_linetype(int ltype, double lwidth)
     }
 }
 
-static
-void set_linewidth(double width)
+static void set_linewidth(double width)
 {
   char buffer[20];
 
-  if (gkss->version > 4)
-    width *= p->res * 0.001;
+  if (gkss->version > 4) width *= p->res * 0.001;
   if (fabs(width - p->cwidth) > FEPS)
     {
       p->cwidth = fabs(width);
-      sprintf(buffer, "%.4g lw",
-        gkss->version > 4 ? p->cwidth * 600 / 72 : p->cwidth * 4);
+      sprintf(buffer, "%.4g lw", gkss->version > 4 ? p->cwidth * 600 / 72 : p->cwidth * 4);
       packb(buffer);
     }
 }
 
-static
-void set_markersize(double size)
+static void set_markersize(double size)
 {
   char buffer[20];
 
-  if (gkss->version > 4)
-    size *= p->res * 0.001;
+  if (gkss->version > 4) size *= p->res * 0.001;
   if (fabs(size - p->csize) > FEPS)
     {
       p->csize = fabs(size);
@@ -684,8 +645,7 @@ void set_markersize(double size)
     }
 }
 
-static
-void set_markerangle(double angle)
+static void set_markerangle(double angle)
 {
   char buffer[20];
 
@@ -697,8 +657,7 @@ void set_markerangle(double angle)
     }
 }
 
-static
-void gkinfo(int *nchars, char *chars)
+static void gkinfo(int *nchars, char *chars)
 {
   char *date, host[100];
   const char *user;
@@ -715,7 +674,7 @@ void gkinfo(int *nchars, char *chars)
   date = ctime(&elapsed_time);
 
 #ifndef _WIN32
-  user = (char *) gks_getenv("USER");
+  user = (char *)gks_getenv("USER");
 #else
   if (GetUserName(lpBuffer, &nSize) != 0)
     {
@@ -725,18 +684,17 @@ void gkinfo(int *nchars, char *chars)
   else
     user = NULL;
 #endif
-  if (user == NULL)
-    user = "(?)";
+  if (user == NULL) user = "(?)";
 
 #ifdef VMS
-  strcpy(host, (char *) gks_getenv("SYS$NODE"));
+  strcpy(host, (char *)gks_getenv("SYS$NODE"));
 #else
 #ifdef hpux
   uname(&utsname);
   strcpy(host, utsname.nodename);
 #else
 #if defined(OS2) || (defined(_WIN32) && !defined(__GNUC__))
-  strcpy(host, "(unknown)");    /* FIXME */
+  strcpy(host, "(unknown)"); /* FIXME */
 #else
   gethostname(host, 100);
 #endif /* _WIN32 */
@@ -750,8 +708,7 @@ void gkinfo(int *nchars, char *chars)
   *nchars = strlen(chars);
 }
 
-static
-void ps_header(void)
+static void ps_header(void)
 {
   int nchars;
   char info[150], buffer[150];
@@ -761,7 +718,8 @@ void ps_header(void)
   if (nchars > 0)
     {
       sprintf(buffer, "\
-%%%%Creator: %s, GKS 5 PostScript Device Handler", info + 35);
+%%%%Creator: %s, GKS 5 PostScript Device Handler",
+              info + 35);
       packb(buffer);
       info[24] = '\0';
       sprintf(buffer, "%%%%+CreationDate: %s", info);
@@ -774,8 +732,7 @@ void ps_header(void)
   packb(buffer);
 }
 
-static
-void set_color(int color, int wtype)
+static void set_color(int color, int wtype)
 {
   char buffer[50];
   double grey;
@@ -793,15 +750,13 @@ void set_color(int color, int wtype)
           index = abs(color);
           if (wtype % 2)
             {
-              grey = 0.3 * p->red[index] + 0.59 * p->green[index] +
-                     0.11 * p->blue[index];
+              grey = 0.3 * p->red[index] + 0.59 * p->green[index] + 0.11 * p->blue[index];
               sprintf(buffer, "%.4g sg", grey);
               packb(buffer);
             }
           else
             {
-              sprintf(buffer, "%.4g %.4g %.4g sc", p->red[index],
-                      p->green[index], p->blue[index]);
+              sprintf(buffer, "%.4g %.4g %.4g sc", p->red[index], p->green[index], p->blue[index]);
               packb(buffer);
             }
           p->color = index;
@@ -809,8 +764,7 @@ void set_color(int color, int wtype)
     }
 }
 
-static
-void set_foreground(int color, int wtype)
+static void set_foreground(int color, int wtype)
 {
   char buffer[50];
   int index;
@@ -823,15 +777,13 @@ void set_foreground(int color, int wtype)
           index = abs(color);
           if (wtype % 2)
             {
-              grey = 0.3 * p->red[index] + 0.59 * p->green[index] +
-                    0.11 * p->blue[index];
+              grey = 0.3 * p->red[index] + 0.59 * p->green[index] + 0.11 * p->blue[index];
               sprintf(buffer, "/fg {%.4g sg} def", grey);
               packb(buffer);
             }
           else
             {
-              sprintf(buffer, "/fg {%.4g %.4g %.4g sc} def",
-                      p->red[index], p->green[index], p->blue[index]);
+              sprintf(buffer, "/fg {%.4g %.4g %.4g sc} def", p->red[index], p->green[index], p->blue[index]);
               packb(buffer);
             }
           p->fcol = index;
@@ -845,8 +797,7 @@ void set_foreground(int color, int wtype)
     }
 }
 
-static
-void set_background(int wtype)
+static void set_background(int wtype)
 {
   char buffer[50];
   double grey;
@@ -859,14 +810,12 @@ void set_background(int wtype)
     }
   else
     {
-      sprintf(buffer, "/bg {%.4g %.4g %.4g sc} def",
-              p->red[0], p->green[0], p->blue[0]);
+      sprintf(buffer, "/bg {%.4g %.4g %.4g sc} def", p->red[0], p->green[0], p->blue[0]);
       packb(buffer);
     }
 }
 
-static
-void update(void)
+static void update(void)
 {
   if (p->column != 0)
     {
@@ -875,8 +824,7 @@ void update(void)
     }
 }
 
-static
-void set_clipping(double *clrt)
+static void set_clipping(double *clrt)
 {
   int i, j;
   int ix1, ix2, iy1, iy2;
@@ -889,34 +837,32 @@ void set_clipping(double *clrt)
   NDC_to_DC(clrt[i], clrt[j], cx1, cy1);
   NDC_to_DC(clrt[1 - i], clrt[5 - j], cx2, cy2);
 
-  ix1 = ((int) cx1) - 2;
-  iy1 = ((int) cy1) - 2;
+  ix1 = ((int)cx1) - 2;
+  iy1 = ((int)cy1) - 2;
   ix2 = NINT(cx2) + 2;
   iy2 = NINT(cy2) + 2;
 
-  sprintf(buffer, "np %d %d m %d %d l %d %d l %d %d l cp clip",
-          ix1, iy1, ix1, iy2, ix2, iy2, ix2, iy1);
+  sprintf(buffer, "np %d %d m %d %d l %d %d l %d %d l cp clip", ix1, iy1, ix1, iy2, ix2, iy2, ix2, iy1);
   packb(buffer);
 }
 
-static
-void set_font(int font, int height)
+static void set_font(int font, int height)
 {
 
   double scale, w, h, ux, uy, chh;
   char buffer[200];
   int size;
 
-  scale = sqrt(gkss->chup[0]*gkss->chup[0] + gkss->chup[1]*gkss->chup[1]);
+  scale = sqrt(gkss->chup[0] * gkss->chup[0] + gkss->chup[1] * gkss->chup[1]);
   ux = gkss->chup[0] / scale * gkss->chh;
   uy = gkss->chup[1] / scale * gkss->chh;
   WC_to_NDC_rel(ux, uy, gkss->cntnr, ux, uy);
 
   w = 0;
-  h = sqrt(ux*ux + uy*uy);
+  h = sqrt(ux * ux + uy * uy);
   seg_xform_rel(&w, &h);
 
-  chh = sqrt(w*w + h*h);
+  chh = sqrt(w * w + h * h);
 
   if ((font != p->font) || (fabs(chh - p->cheight) > FEPS))
     {
@@ -931,7 +877,7 @@ void set_font(int font, int height)
         font = 8;
 
       p->ysize = p->cheight * height;
-      size = MIN(MAX((int) (p->ysize / caps[font]), 1), 7200);
+      size = MIN(MAX((int)(p->ysize / caps[font]), 1), 7200);
 
       if (font != 12 && font != 29 && font != 30)
         {
@@ -939,25 +885,22 @@ void set_font(int font, int height)
           packb(buffer);
           sprintf(buffer, "/%s encodefont pop grestore", fonts[font]);
           packb(buffer);
-          sprintf(buffer, "/%s_ findfont %d scalefont setfont",
-                  fonts[font], size);
+          sprintf(buffer, "/%s_ findfont %d scalefont setfont", fonts[font], size);
           packb(buffer);
         }
       else
         {
-          sprintf(buffer, "/%s findfont %d scalefont setfont",
-                  fonts[font], size);
+          sprintf(buffer, "/%s findfont %d scalefont setfont", fonts[font], size);
           packb(buffer);
         }
     }
 }
 
-static
-void get_magstep(double *magstep, int *dpi)
+static void get_magstep(double *magstep, int *dpi)
 {
   char *env;
 
-  if ((env = (char *) gks_getenv("GKS_MAGSTEP")) != NULL)
+  if ((env = (char *)gks_getenv("GKS_MAGSTEP")) != NULL)
     *magstep = atof(env);
   else
     *magstep = 0;
@@ -965,8 +908,7 @@ void get_magstep(double *magstep, int *dpi)
   *dpi = 75;
 }
 
-static
-void ps_init(int *pages)
+static void ps_init(int *pages)
 {
   int dpi, landscape;
   int pa[33], i, j = 1, k;
@@ -977,8 +919,7 @@ void ps_init(int *pages)
   landscape = p->wtype >= 63;
 
   if (gkss->version < 5)
-    if (!landscape)
-      landscape = p->viewpt[1] - p->viewpt[0] > 0.19685;
+    if (!landscape) landscape = p->viewpt[1] - p->viewpt[0] > 0.19685;
 
   if (*pages == 0)
     {
@@ -1133,10 +1074,12 @@ void ps_init(int *pages)
               sprintf(str + k, "%02x", pa[j]);
             }
           sprintf(buffer, "/pat%d << /PaintType 2 /PatternType 1 /TilingType 1\
- /BBox [0 0 1 1] /XStep 1", i);
+ /BBox [0 0 1 1] /XStep 1",
+                  i);
           packb(buffer);
           sprintf(buffer, "/YStep 1 /PaintProc {pop 8 8 false [8 0 0 8 0 0] \
-{<%s>} imagemask}", str);
+{<%s>} imagemask}",
+                  str);
           packb(buffer);
           packb(">> [0 8 -8 0 0 0] makepattern def");
         }
@@ -1227,8 +1170,7 @@ void ps_init(int *pages)
   update();
 }
 
-static
-void end_page(int pages)
+static void end_page(int pages)
 {
   char buffer[30];
 
@@ -1237,18 +1179,15 @@ void end_page(int pages)
 }
 
 
-static
-void set_colortable(void)
+static void set_colortable(void)
 {
   int i;
 
-  for (i = 0; i < MAX_COLOR; i++)
-    gks_inq_rgb(i, p->red + i, p->green + i, p->blue + i);
+  for (i = 0; i < MAX_COLOR; i++) gks_inq_rgb(i, p->red + i, p->green + i, p->blue + i);
   p->color = -1;
 }
 
-static
-void set_color_rep(int color, double red, double green, double blue)
+static void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
@@ -1259,8 +1198,7 @@ void set_color_rep(int color, double red, double green, double blue)
     }
 }
 
-static
-void query_color(int index, unsigned char **buf, int wtype)
+static void query_color(int index, unsigned char **buf, int wtype)
 {
   double grey;
 
@@ -1268,24 +1206,22 @@ void query_color(int index, unsigned char **buf, int wtype)
 
   if (wtype % 2)
     {
-      grey = 0.3 * p->red[index] + 0.59 * p->green[index] +
-             0.11 * p->blue[index];
-      **buf = (char) NINT(grey * 255);
+      grey = 0.3 * p->red[index] + 0.59 * p->green[index] + 0.11 * p->blue[index];
+      **buf = (char)NINT(grey * 255);
       (*buf)++;
     }
   else
     {
-      **buf = (char) NINT(p->red[index] * 255);
+      **buf = (char)NINT(p->red[index] * 255);
       (*buf)++;
-      **buf = (char) NINT(p->green[index] * 255);
+      **buf = (char)NINT(p->green[index] * 255);
       (*buf)++;
-      **buf = (char) NINT(p->blue[index] * 255);
+      **buf = (char)NINT(p->blue[index] * 255);
       (*buf)++;
     }
 }
 
-static
-void rgb2color(int rgb, unsigned char **buf, int wtype)
+static void rgb2color(int rgb, unsigned char **buf, int wtype)
 {
   int r, g, b;
   double grey;
@@ -1297,22 +1233,21 @@ void rgb2color(int rgb, unsigned char **buf, int wtype)
   if (wtype % 2)
     {
       grey = 0.3 * r / 255.0 + 0.59 * g / 255.0 + 0.11 * b / 255.0;
-      **buf = (char) NINT(grey * 255);
+      **buf = (char)NINT(grey * 255);
       (*buf)++;
     }
   else
     {
-      **buf = (char) NINT(r);
+      **buf = (char)NINT(r);
       (*buf)++;
-      **buf = (char) NINT(g);
+      **buf = (char)NINT(g);
       (*buf)++;
-      **buf = (char) NINT(b);
+      **buf = (char)NINT(b);
       (*buf)++;
     }
 }
 
-static
-void set_connection(int conid, char *path, int wtype)
+static void set_connection(int conid, char *path, int wtype)
 {
   p->conid = conid;
   p->path = path;
@@ -1342,18 +1277,14 @@ void set_connection(int conid, char *path, int wtype)
   p->cwidth = p->csize = p->cangle = p->cheight = 0.0;
 }
 
-static
-void marker_routine(double x, double y, int marker)
+static void marker_routine(double x, double y, int marker)
 {
   double dx, dy;
   char buffer[50];
-  static const char *macro[] =
-  {
-    "nom", " hl", " vl", "st8", "st7", "st6", "st5", "st4", "ed8", "ed7",
-    "ed6", "ed5", "fpl", "npl", "ftr", "ftl", "tud", "fst", " st", "fdm",
-    "ndm", "fhg", "nhg", "fbt", "nbt", "fsq", "nsq", "ftd", "ntd", "ftu",
-    "ntu", "fci", " dt", " dt", " pl", "fas", "nci", " dc"
-  };
+  static const char *macro[] = {"nom", " hl", " vl", "st8", "st7", "st6", "st5", "st4", "ed8", "ed7",
+                                "ed6", "ed5", "fpl", "npl", "ftr", "ftl", "tud", "fst", " st", "fdm",
+                                "ndm", "fhg", "nhg", "fbt", "nbt", "fsq", "nsq", "ftd", "ntd", "ftu",
+                                "ntu", "fci", " dt", " dt", " pl", "fas", "nci", " dc"};
 
   NDC_to_DC(x, y, dx, dy);
 
@@ -1363,10 +1294,8 @@ void marker_routine(double x, double y, int marker)
   packb(buffer);
 }
 
-static
-void cell_array(
-  double xmin, double xmax, double ymin, double ymax,
-  int dx, int dy, int dimx, int *colia, int wtype, int true_color)
+static void cell_array(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int dimx, int *colia,
+                       int wtype, int true_color)
 {
   char buffer[100];
   unsigned char *buf, *bufP;
@@ -1387,17 +1316,16 @@ void cell_array(
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, x2, y2);
 
-  w = (int) fabs(x2 - x1);
-  h = (int) fabs(y2 - y1);
+  w = (int)fabs(x2 - x1);
+  h = (int)fabs(y2 - y1);
   if (w == 0 || h == 0) return;
-  x = (int) MIN(x1, x2);
-  y = (int) MIN(y1, y2);
+  x = (int)MIN(x1, x2);
+  y = (int)MIN(y1, y2);
 
   packb("gsave");
 
   clsw = gkss->clip;
-  for (i = 0; i < 4; i++)
-    clrt[i] = gkss->viewport[clsw == GKS_K_CLIP ? tnr : 0][i];
+  for (i = 0; i < 4; i++) clrt[i] = gkss->viewport[clsw == GKS_K_CLIP ? tnr : 0][i];
 
   set_clipping(clrt);
 
@@ -1413,10 +1341,8 @@ void cell_array(
   sprintf(buffer, "/Device%s setcolorspace", wtype % 2 == 0 ? "RGB" : "Gray");
   packb(buffer);
 
-  if (x1 > x2)
-    swap = 1;
-  if (y1 > y2)
-    swap += 2;
+  if (x1 > x2) swap = 1;
+  if (y1 > y2) swap += 2;
 
   packb("{ << /ImageType 1");
 
@@ -1432,8 +1358,7 @@ void cell_array(
     sprintf(buffer, "/ImageMatrix [-%d 0 %d %d 0 0]", dx, dx, dy);
   packb(buffer);
 
-  sprintf(buffer, "/DataSource Data /BitsPerComponent 8 /Decode [0 1%s]",
-    wtype % 2 == 0 ? " 0 1 0 1" : "");
+  sprintf(buffer, "/DataSource Data /BitsPerComponent 8 /Decode [0 1%s]", wtype % 2 == 0 ? " 0 1 0 1" : "");
   packb(buffer);
 
   packb(">> image Data closefile RawData flushfile } exec");
@@ -1441,7 +1366,7 @@ void cell_array(
   len = dx * dy;
   if (wtype % 2 == 0) len = len * 3;
 
-  buf = (unsigned char *) malloc(len);
+  buf = (unsigned char *)malloc(len);
   bufP = buf;
   for (j = 0; j < dy; j++)
     {
@@ -1460,8 +1385,7 @@ void cell_array(
   packb("grestore");
 }
 
-static
-void text_routine(double *x, double *y, int *nchars, char *chars)
+static void text_routine(double *x, double *y, int *nchars, char *chars)
 {
   int i, j;
   double ux, uy, yrel, angle, phi;
@@ -1496,29 +1420,25 @@ void text_routine(double *x, double *y, int *nchars, char *chars)
   for (i = 0, j = 0; i < *nchars; i++)
     {
       ic = chars[i];
-      if (ic < 0)
-        ic += 256;
+      if (ic < 0) ic += 256;
       if (ic < 127)
         {
-          if (strchr("()\\", ic) != NULL)
-            str[j++] = '\\';
+          if (strchr("()\\", ic) != NULL) str[j++] = '\\';
           str[j++] = chars[i];
         }
       else
         {
-          sprintf(str+j, "\\%03o", ic);
+          sprintf(str + j, "\\%03o", ic);
           j += 4;
         }
       str[j] = '\0';
     }
   sprintf(buffer, "(%s) %s", str, show[alh + GKS_K_TEXT_HALIGN_NORMAL]);
   packb(buffer);
-  if (fabs(angle) > FEPS)
-    packb("gr");
+  if (fabs(angle) > FEPS) packb("gr");
 }
 
-static
-void fill_routine(int n, double *px, double *py, int tnr)
+static void fill_routine(int n, double *px, double *py, int tnr)
 {
   int clsw;
   double clrt[4], x, y;
@@ -1528,8 +1448,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
   packb("gsave");
 
   clsw = gkss->clip;
-  for (i = 0; i < 4; i++)
-    clrt[i] = gkss->viewport[clsw == GKS_K_CLIP ? tnr : 0][i];
+  for (i = 0; i < 4; i++) clrt[i] = gkss->viewport[clsw == GKS_K_CLIP ? tnr : 0][i];
 
   set_clipping(clrt);
 
@@ -1562,29 +1481,24 @@ void fill_routine(int n, double *px, double *py, int tnr)
         }
     }
 
-  if (p->np > 2)
-    packb("fi");
+  if (p->np > 2) packb("fi");
 
   packb("grestore");
 }
 
-static
-void fillpattern_routine(int n, double *px, double *py, int tnr, int pattern)
+static void fillpattern_routine(int n, double *px, double *py, int tnr, int pattern)
 {
   char buffer[100];
 
-  sprintf(buffer,
-          "gs [/Pattern /Device%s] setcolorspace %.4g %.4g %.4g pat%d setcolor",
-          p->wtype % 2 == 0 ? "RGB" : "Gray",
-          p->red[p->color], p->green[p->color], p->blue[p->color], pattern);
+  sprintf(buffer, "gs [/Pattern /Device%s] setcolorspace %.4g %.4g %.4g pat%d setcolor",
+          p->wtype % 2 == 0 ? "RGB" : "Gray", p->red[p->color], p->green[p->color], p->blue[p->color], pattern);
   packb(buffer);
 
   fill_routine(n, px, py, tnr);
   packb("gr");
 }
 
-static
-void line_routine(int n, double *px, double *py, int ltype, int tnr)
+static void line_routine(int n, double *px, double *py, int ltype, int tnr)
 {
   p->limit = 1000;
   gks_emul_polyline(n, px, py, ltype, tnr, move, draw);
@@ -1595,8 +1509,7 @@ void line_routine(int n, double *px, double *py, int ltype, int tnr)
     }
 }
 
-static
-int GSDLLCALL gsdll_stdin(void *instance, char *buf, int len)
+static int GSDLLCALL gsdll_stdin(void *instance, char *buf, int len)
 {
   int ch;
   int count = 0;
@@ -1619,20 +1532,17 @@ int GSDLLCALL gsdll_stdin(void *instance, char *buf, int len)
   return count;
 }
 
-static
-int GSDLLCALL gsdll_stdout(void *instance, const char *buf, int len)
+static int GSDLLCALL gsdll_stdout(void *instance, const char *buf, int len)
 {
   return len;
 }
 
-static
-int GSDLLCALL gsdll_stderr(void *instance, const char *buf, int len)
+static int GSDLLCALL gsdll_stderr(void *instance, const char *buf, int len)
 {
   return len;
 }
 
-static
-void init_arguments(void)
+static void init_arguments(void)
 {
   char path[MAXPATHLEN];
   const char *device = "jpeg", *type = ".jpg";
@@ -1642,10 +1552,22 @@ void init_arguments(void)
 
   switch (p->gs_dev)
     {
-      case 320: device = "bmp256";   type = "bmp"; break;
-      case 321: device = "jpeg";     type = "jpg"; break;
-      case 322: device = "pngalpha"; type = "png"; break;
-      case 323: device = "tiff24nc"; type = "tif"; break;
+    case 320:
+      device = "bmp256";
+      type = "bmp";
+      break;
+    case 321:
+      device = "jpeg";
+      type = "jpg";
+      break;
+    case 322:
+      device = "pngalpha";
+      type = "png";
+      break;
+    case 323:
+      device = "tiff24nc";
+      type = "tif";
+      break;
     }
 
   gks_filepath(path, p->path, type, p->page_counter, 0);
@@ -1653,7 +1575,7 @@ void init_arguments(void)
   p->gs_argc = NUM_GS_ARGS;
   for (i = 0; i < NUM_GS_ARGS; ++i)
     {
-      p->gs_argv[i] = (char *) malloc(MAXPATHLEN * sizeof(char));
+      p->gs_argv[i] = (char *)malloc(MAXPATHLEN * sizeof(char));
     }
 
 #ifdef _WIN32
@@ -1662,9 +1584,8 @@ void init_arguments(void)
   sprintf(p->gs_argv[0], "gs");
 #endif
   sprintf(p->gs_argv[1], "-sDEVICE=%s", device);
-  sprintf(p->gs_argv[2], "-g%dx%d",
-          (int) (p->viewpt[1] * 100.0 * 600.0 / 2.54),
-          (int) (p->viewpt[3] * 100.0 * 600.0 / 2.54));
+  sprintf(p->gs_argv[2], "-g%dx%d", (int)(p->viewpt[1] * 100.0 * 600.0 / 2.54),
+          (int)(p->viewpt[3] * 100.0 * 600.0 / 2.54));
   sprintf(p->gs_argv[3], "-r600x600");
   sprintf(p->gs_argv[4], "-sOutputFile=%s", path);
   sprintf(p->gs_argv[5], "-dGraphicsAlphaBits=4");
@@ -1672,8 +1593,7 @@ void init_arguments(void)
   sprintf(p->gs_argv[7], "-");
 }
 
-static
-void free_arguments(void)
+static void free_arguments(void)
 {
   int i;
 
@@ -1683,8 +1603,7 @@ void free_arguments(void)
     }
 }
 
-static
-void gs(void)
+static void gs(void)
 {
   init_arguments();
   p->gs_position = 0;
@@ -1698,30 +1617,28 @@ void gs(void)
   free_arguments();
 }
 
-void gks_gsplugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
-  void **ptr)
+void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                  char *chars, void **ptr)
 {
   int style, color, pattern, ltype;
   double yres, width, size, factor, x, y, angle;
   int font, tnr, prec;
   int nchars;
 
-  p = (ws_state_list *) *ptr;
+  p = (ws_state_list *)*ptr;
 
   switch (fctid)
     {
-/* open workstation */
+      /* open workstation */
     case 2:
-      gkss = (gks_state_list_t *) *ptr;
+      gkss = (gks_state_list_t *)*ptr;
 
       gks_init_core(gkss);
 
-      p = (ws_state_list *) calloc(1, sizeof(struct ws_state_list_t));
+      p = (ws_state_list *)calloc(1, sizeof(struct ws_state_list_t));
 
       p->size = SIZE_INCREMENT;
-      p->buffer = (char *) calloc(1, p->size);
+      p->buffer = (char *)calloc(1, p->size);
 
       init_norm_xform();
       set_connection(ia[1], chars, ia[2]);
@@ -1730,39 +1647,36 @@ void gks_gsplugin(
       *ptr = p;
       break;
 
-/* close workstation */
+      /* close workstation */
     case 3:
       if (p->init)
         {
-          if (!p->empty)
-            packb("showpage");
+          if (!p->empty) packb("showpage");
           packb("psl restore end % GKS_dict");
           end_page(p->pages);
           packb("%%Trailer");
           packb("GKS_save restore");
         }
-      if (p->pages == 0)
-        packb("%%Trailer");
+      if (p->pages == 0) packb("%%Trailer");
       update();
 
-      if (!p->empty)
-        gs();
+      if (!p->empty) gs();
 
       free(p->buffer);
       free(p);
       break;
 
-/* activate workstation */
+      /* activate workstation */
     case 4:
       p->state = GKS_K_WS_ACTIVE;
       break;
 
-/* deactivate workstation */
+      /* deactivate workstation */
     case 5:
       p->state = GKS_K_WS_INACTIVE;
       break;
 
-/* clear workstation */
+      /* clear workstation */
     case 6:
       if (p->init)
         {
@@ -1782,11 +1696,11 @@ void gks_gsplugin(
         }
       break;
 
-/* update workstation */
+      /* update workstation */
     case 8:
       break;
 
-/* polyline */
+      /* polyline */
     case 12:
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -1800,18 +1714,16 @@ void gks_gsplugin(
           ltype = gkss->asf[0] ? gkss->ltype : gkss->lindex;
           width = gkss->asf[1] ? gkss->lwidth : 1;
           color = gkss->asf[2] ? gkss->plcoli : 1;
-          if (ltype != GKS_K_LINETYPE_SOLID)
-            set_linetype(ltype, width);
+          if (ltype != GKS_K_LINETYPE_SOLID) set_linetype(ltype, width);
           set_linewidth(width);
           set_color(color, p->wtype);
           line_routine(ia[0], r1, r2, ltype, tnr);
-          if (ltype != GKS_K_LINETYPE_SOLID)
-            set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
+          if (ltype != GKS_K_LINETYPE_SOLID) set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
           p->empty = 0;
         }
       break;
 
-/* polymarker */
+      /* polymarker */
     case 13:
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -1825,7 +1737,7 @@ void gks_gsplugin(
           x = 0.0;
           y = 1.0;
           seg_xform_rel(&x, &y);
-          size *= sqrt(x*x + y*y);
+          size *= sqrt(x * x + y * y);
           set_markersize(23 * size / 24);
           angle = -atan2(x, y) * 180.0 / M_PI;
           set_markerangle(angle);
@@ -1838,7 +1750,7 @@ void gks_gsplugin(
         }
       break;
 
-/* text */
+      /* text */
     case 14:
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -1867,14 +1779,13 @@ void gks_gsplugin(
             }
           else
             {
-              gks_emul_text(r1[0], r2[0], nchars, chars, line_routine,
-                fill_routine);
+              gks_emul_text(r1[0], r2[0], nchars, chars, line_routine, fill_routine);
             }
           p->empty = 0;
         }
       break;
 
-/* fill area */
+      /* fill area */
     case 15:
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -1885,7 +1796,7 @@ void gks_gsplugin(
             }
           tnr = gkss->cntnr;
           gks_set_dev_xform(gkss, p->window, p->viewpt);
-          style = gkss->asf[10] ? gkss->ints   : predef_ints[gkss->findex - 1];
+          style = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
           color = gkss->asf[12] ? gkss->facoli : 1;
           set_color(color, p->wtype);
           set_linewidth(1.0);
@@ -1893,8 +1804,7 @@ void gks_gsplugin(
             fill_routine(ia[0], r1, r2, tnr);
           else if (style == GKS_K_INTSTYLE_PATTERN)
             {
-              pattern = gkss->asf[11] ? gkss->styli :
-                predef_styli[gkss->findex - 1];
+              pattern = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
               fillpattern_routine(ia[0], r1, r2, tnr, pattern);
             }
           else
@@ -1906,7 +1816,7 @@ void gks_gsplugin(
         }
       break;
 
-/* cell array */
+      /* cell array */
     case 16:
     case DRAW_IMAGE:
       if (p->state == GKS_K_WS_ACTIVE)
@@ -1919,28 +1829,27 @@ void gks_gsplugin(
               p->init = 1;
             }
           gks_set_dev_xform(gkss, p->window, p->viewpt);
-          cell_array(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, p->wtype,
-                     true_color);
+          cell_array(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, p->wtype, true_color);
           p->empty = 0;
         }
       break;
 
-/* set color representation */
+      /* set color representation */
     case 48:
       set_color_rep(ia[1], r1[0], r1[1], r1[2]);
       break;
 
     case 49:
-/* set window */
+      /* set window */
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
       break;
 
     case 50:
-/* set viewport */
+      /* set viewport */
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
       break;
 
-/* set workstation window */
+      /* set workstation window */
     case 54:
       p->window[0] = r1[0];
       p->window[1] = r1[1];
@@ -1948,11 +1857,10 @@ void gks_gsplugin(
       p->window[3] = r2[1];
       set_xform(p->window, p->viewpt, &p->height);
       init_norm_xform();
-      if (p->init)
-        set_clipping(p->window);
+      if (p->init) set_clipping(p->window);
       break;
 
-/* set workstation viewport */
+      /* set workstation viewport */
     case 55:
       p->viewpt[0] = r1[0];
       p->viewpt[1] = r1[1];
@@ -1962,24 +1870,20 @@ void gks_gsplugin(
       init_norm_xform();
       break;
 
-    default:
-      ;
+    default:;
     }
 }
 
 #else
 
-void gks_gsplugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
-  void **ptr)
+void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                  char *chars, void **ptr)
 {
   if (fctid == 2)
-  {
-    gks_perror("Ghostscript support not compiled in");
-    ia[0] = 0;
-  }
+    {
+      gks_perror("Ghostscript support not compiled in");
+      ia[0] = 0;
+    }
 }
 
 #endif
-

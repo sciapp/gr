@@ -14,10 +14,10 @@
 #define PATTERNS 120
 #define HATCH_STYLE 108
 
-#define MWIDTH  0.254
+#define MWIDTH 0.254
 #define MHEIGHT 0.1905
-#define WIDTH   1024
-#define HEIGHT  768
+#define WIDTH 1024
+#define HEIGHT 768
 
 #define DrawBorder 0
 
@@ -43,10 +43,8 @@ extern "C"
 
 #endif
 
-DLLEXPORT void gks_wmfplugin(
-  int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef __cplusplus
 }
@@ -55,57 +53,55 @@ DLLEXPORT void gks_wmfplugin(
 #define MAX_TNR 9
 
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw) + b[tnr]; \
+  xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
 
 #define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw); \
+  xn = a[tnr] * (xw);                      \
   yn = c[tnr] * (yw)
 
 #define NDC_to_DC(xn, yn, xd, yd) \
-  xd = (int) (p->a * (xn) + p->b); \
-  yd = (int) (p->c * (yn) + p->d)
+  xd = (int)(p->a * (xn) + p->b); \
+  yd = (int)(p->c * (yn) + p->d)
 
-#define CharXform(xrel, yrel, x, y) \
-  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
+#define CharXform(xrel, yrel, x, y)                  \
+  x = cos(p->alpha) * (xrel)-sin(p->alpha) * (yrel); \
   y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
 
 #ifndef min
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-#define WMF_STRETCHDIB            0x0f43
-#define WMF_EXTTEXTOUT            0x0a32
-#define WMF_POLYGON               0x0324
-#define WMF_POLYLINE              0x0325
-#define WMF_ELLIPSE               0x0418
-#define WMF_SELECTCLIPREGION      0x012c
-#define WMF_CREATEFONTINDIRECT    0x02fb
-#define WMF_TEXTCOLOR             0x0209
-#define WMF_TEXTALIGN             0x012e
-#define WMF_DELETEOBJECT          0x01f0
-#define WMF_CREATEBRUSHINDIRECT   0x02fc
-#define WMF_SELECTOBJECT          0x012d
-#define WMF_CREATEPENINDIRECT     0x02fa
-#define WMF_SETMAPMODE            0x0103
-#define WMF_SETWINDOWORG          0x020b
-#define WMF_SETWINDOWEXT          0x020c
-#define WMF_SETBKMODE             0x0102
-#define WMF_INTERSECTRECTCLIP     0x0416
+#define WMF_STRETCHDIB 0x0f43
+#define WMF_EXTTEXTOUT 0x0a32
+#define WMF_POLYGON 0x0324
+#define WMF_POLYLINE 0x0325
+#define WMF_ELLIPSE 0x0418
+#define WMF_SELECTCLIPREGION 0x012c
+#define WMF_CREATEFONTINDIRECT 0x02fb
+#define WMF_TEXTCOLOR 0x0209
+#define WMF_TEXTALIGN 0x012e
+#define WMF_DELETEOBJECT 0x01f0
+#define WMF_CREATEBRUSHINDIRECT 0x02fc
+#define WMF_SELECTOBJECT 0x012d
+#define WMF_CREATEPENINDIRECT 0x02fa
+#define WMF_SETMAPMODE 0x0103
+#define WMF_SETWINDOWORG 0x020b
+#define WMF_SETWINDOWEXT 0x020c
+#define WMF_SETBKMODE 0x0102
+#define WMF_INTERSECTRECTCLIP 0x0416
 #define WMF_DIBCREATEPATTERNBRUSH 0x0142
-#define WMF_EOF                   0x0003
+#define WMF_EOF 0x0003
 
-#define SIZE_BYTE   1
-#define SIZE_SHORT  2
-#define SIZE_LONG   4
+#define SIZE_BYTE 1
+#define SIZE_SHORT 2
+#define SIZE_LONG 4
 
-static
-gks_state_list_t *gkss;
+static gks_state_list_t *gkss;
 
-static
-double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 typedef unsigned char Byte;
 typedef unsigned long uLong;
@@ -114,14 +110,12 @@ typedef struct WMF_stream_t
 {
   Byte *buffer;
   uLong size, length;
-}
-WMF_stream;
+} WMF_stream;
 
 typedef struct WMF_point_t
 {
   int x, y;
-}
-WMF_point;
+} WMF_point;
 
 typedef struct ws_state_list_t
 {
@@ -145,103 +139,75 @@ typedef struct ws_state_list_t
   int cxl[MAX_TNR], cxr[MAX_TNR], cyb[MAX_TNR], cyt[MAX_TNR];
   int clip_index, path_index, path_counter;
   int maxrecord;
-}
-ws_state_list;
+} ws_state_list;
 
-static
-ws_state_list *p;
+static ws_state_list *p;
 
-static
-const char *fonts[] = {
-  "Times New Roman", "Arial", "Courier New", "Symbol",
-  "Bookman Old Style", "Century Schoolbook", "Century Gothic", "Book Antiqua"
-};
+static const char *fonts[] = {"Times New Roman",    "Arial",          "Courier New", "Symbol", "Bookman Old Style",
+                              "Century Schoolbook", "Century Gothic", "Book Antiqua"};
 
-static
-double capheights[29] = {
-  0.662, 0.660, 0.681, 0.662,
-  0.729, 0.729, 0.729, 0.729,
-  0.583, 0.583, 0.583, 0.583,
-  0.667,
-  0.681, 0.681, 0.681, 0.681,
-  0.722, 0.722, 0.722, 0.722,
-  0.739, 0.739, 0.739, 0.739,
-  0.694, 0.693, 0.683, 0.683
-};
+static double capheights[29] = {0.662, 0.660, 0.681, 0.662, 0.729, 0.729, 0.729, 0.729, 0.583, 0.583,
+                                0.583, 0.583, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722,
+                                0.722, 0.739, 0.739, 0.739, 0.739, 0.694, 0.693, 0.683, 0.683};
 
-static
-int map[32] = {
-  22, 9, 5, 14, 18, 26, 13, 1,
-  24, 11, 7, 16, 20, 28, 13, 3,
-  23, 10, 6, 15, 19, 27, 13, 2,
-  25, 12, 8, 17, 21, 29, 13, 4
-};
+static int map[32] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
+                      23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
-static
-double xfac[4] = { 0, 0, -0.5, -1 };
+static double xfac[4] = {0, 0, -0.5, -1};
 
-static
-double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+static double yfac[6] = {0, -1.2, -1, -0.5, 0, 0.2};
 
-static
-int predef_font[] = { 1, 1, 1, -2, -3, -4 };
+static int predef_font[] = {1, 1, 1, -2, -3, -4};
 
-static
-int predef_prec[] = { 0, 1, 2, 2, 2, 2 };
+static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 
-static
-int predef_ints[] = { 0, 1, 3, 3, 3 };
+static int predef_ints[] = {0, 1, 3, 3, 3};
 
-static
-int predef_styli[] = { 1, 1, 1, 2, 3 };
+static int predef_styli[] = {1, 1, 1, 2, 3};
 
-static
-void wmf_memcpy(WMF_stream *p, int src, size_t n)
+static void wmf_memcpy(WMF_stream *p, int src, size_t n)
 {
   unsigned char s[4];
 
   if (p->length + n >= p->size)
     {
-      while (p->length + n >= p->size)
-	p->size += MEMORY_INCREMENT;
-      p->buffer = (Byte *) realloc(p->buffer, p->size);
+      while (p->length + n >= p->size) p->size += MEMORY_INCREMENT;
+      p->buffer = (Byte *)realloc(p->buffer, p->size);
     }
 
   switch (n)
     {
-      case SIZE_BYTE:
-	s[0] = src & 0xff;
-	break;
-      case SIZE_SHORT:
-	s[0] = src & 0xff;
-	s[1] = (src >> 8) & 0xff;
-	break;
-      case SIZE_LONG:
-	s[0] = src & 0xff;
-	s[1] = (src >> 8) & 0xff;
-	s[2] = (src >> 16) & 0xff;
-	s[3] = (src >> 24) & 0xff;
-	break;
+    case SIZE_BYTE:
+      s[0] = src & 0xff;
+      break;
+    case SIZE_SHORT:
+      s[0] = src & 0xff;
+      s[1] = (src >> 8) & 0xff;
+      break;
+    case SIZE_LONG:
+      s[0] = src & 0xff;
+      s[1] = (src >> 8) & 0xff;
+      s[2] = (src >> 16) & 0xff;
+      s[3] = (src >> 24) & 0xff;
+      break;
     }
 
   memmove(p->buffer + p->length, s, n);
   p->length += n;
 }
 
-static
-WMF_stream *wmf_alloc_stream(void)
+static WMF_stream *wmf_alloc_stream(void)
 {
   WMF_stream *p;
 
-  p = (WMF_stream *) calloc(1, sizeof(WMF_stream));
+  p = (WMF_stream *)calloc(1, sizeof(WMF_stream));
   p->buffer = NULL;
   p->size = p->length = 0;
 
   return p;
 }
 
-static
-void wmf_setmapmode(void)
+static void wmf_setmapmode(void)
 {
   wmf_memcpy(p->stream, 4, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_SETMAPMODE, SIZE_SHORT);
@@ -252,8 +218,7 @@ void wmf_setmapmode(void)
     }
 }
 
-static
-void wmf_setwindoworg(void)
+static void wmf_setwindoworg(void)
 {
   wmf_memcpy(p->stream, 5, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_SETWINDOWORG, SIZE_SHORT);
@@ -265,8 +230,7 @@ void wmf_setwindoworg(void)
     }
 }
 
-static
-void wmf_setwindowext(void)
+static void wmf_setwindowext(void)
 {
   wmf_memcpy(p->stream, 5, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_SETWINDOWEXT, SIZE_SHORT);
@@ -278,8 +242,7 @@ void wmf_setwindowext(void)
     }
 }
 
-static
-void wmf_setbkmode(void)
+static void wmf_setbkmode(void)
 {
   wmf_memcpy(p->stream, 4, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_SETBKMODE, SIZE_SHORT);
@@ -290,8 +253,7 @@ void wmf_setbkmode(void)
     }
 }
 
-static
-void wmf_createpenindirect(int linetype, int size, int r, int g, int b)
+static void wmf_createpenindirect(int linetype, int size, int r, int g, int b)
 {
   wmf_memcpy(p->stream, 8, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_CREATEPENINDIRECT, SIZE_SHORT);
@@ -306,8 +268,7 @@ void wmf_createpenindirect(int linetype, int size, int r, int g, int b)
     }
 }
 
-static
-void wmf_selectobject(int value)
+static void wmf_selectobject(int value)
 {
   wmf_memcpy(p->stream, 4, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_SELECTOBJECT, SIZE_SHORT);
@@ -318,8 +279,7 @@ void wmf_selectobject(int value)
     }
 }
 
-static
-void wmf_selectclipregion(void)
+static void wmf_selectclipregion(void)
 {
   wmf_memcpy(p->stream, 4, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_SELECTCLIPREGION, SIZE_SHORT);
@@ -330,8 +290,7 @@ void wmf_selectclipregion(void)
     }
 }
 
-static
-void wmf_createbrushindirect(int style, int r, int g, int b)
+static void wmf_createbrushindirect(int style, int r, int g, int b)
 {
   wmf_memcpy(p->stream, 7, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_CREATEBRUSHINDIRECT, SIZE_SHORT);
@@ -345,8 +304,7 @@ void wmf_createbrushindirect(int style, int r, int g, int b)
     }
 }
 
-static
-void wmf_dibcreatepatternbrush(int r, int g, int b, int nr)
+static void wmf_dibcreatepatternbrush(int r, int g, int b, int nr)
 {
   int parray[33];
   int height, i, j;
@@ -390,8 +348,7 @@ void wmf_dibcreatepatternbrush(int r, int g, int b, int nr)
     }
 }
 
-static
-void wmf_deleteobject(int value)
+static void wmf_deleteobject(int value)
 {
   wmf_memcpy(p->stream, 4, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_DELETEOBJECT, SIZE_SHORT);
@@ -402,8 +359,7 @@ void wmf_deleteobject(int value)
     }
 }
 
-static
-void wmf_textalign(int value)
+static void wmf_textalign(int value)
 {
   wmf_memcpy(p->stream, 4, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_TEXTALIGN, SIZE_SHORT);
@@ -414,8 +370,7 @@ void wmf_textalign(int value)
     }
 }
 
-static
-void wmf_textcolor(int cindex)
+static void wmf_textcolor(int cindex)
 {
   wmf_memcpy(p->stream, 5, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_TEXTCOLOR, SIZE_SHORT);
@@ -427,9 +382,7 @@ void wmf_textcolor(int cindex)
     }
 }
 
-static
-void wmf_createfontindirect(
-  int fontname, int italic, int bold, int height, double angle)
+static void wmf_createfontindirect(int fontname, int italic, int bold, int height, double angle)
 {
   int len, ch, i, nchars;
 
@@ -440,8 +393,8 @@ void wmf_createfontindirect(
   wmf_memcpy(p->stream, WMF_CREATEFONTINDIRECT, SIZE_SHORT);
   wmf_memcpy(p->stream, height, SIZE_SHORT);
   wmf_memcpy(p->stream, 0, SIZE_SHORT);
-  wmf_memcpy(p->stream, (int) (angle * 10), SIZE_SHORT);
-  wmf_memcpy(p->stream, (int) (angle * 10), SIZE_SHORT);
+  wmf_memcpy(p->stream, (int)(angle * 10), SIZE_SHORT);
+  wmf_memcpy(p->stream, (int)(angle * 10), SIZE_SHORT);
   wmf_memcpy(p->stream, bold ? 700 : 400, SIZE_SHORT);
   wmf_memcpy(p->stream, italic, SIZE_SHORT);
   wmf_memcpy(p->stream, 0, SIZE_SHORT);
@@ -450,8 +403,7 @@ void wmf_createfontindirect(
   for (i = 0; i < nchars; ++i)
     {
       ch = fonts[fontname][i];
-      if (ch < 0)
-	ch += 256;
+      if (ch < 0) ch += 256;
       wmf_memcpy(p->stream, ch, SIZE_BYTE);
     }
   if (nchars % 2)
@@ -465,8 +417,7 @@ void wmf_createfontindirect(
     }
 }
 
-static
-void wmf_intersectrectclip(int xmin, int ymin, int xmax, int ymax)
+static void wmf_intersectrectclip(int xmin, int ymin, int xmax, int ymax)
 {
   wmf_memcpy(p->stream, 7, SIZE_LONG);
   wmf_memcpy(p->stream, WMF_INTERSECTRECTCLIP, SIZE_SHORT);
@@ -480,8 +431,7 @@ void wmf_intersectrectclip(int xmin, int ymin, int xmax, int ymax)
     }
 }
 
-static
-void wmf_exttextout(int xstart, int ystart, char *chars, int nchars)
+static void wmf_exttextout(int xstart, int ystart, char *chars, int nchars)
 {
   int ch, size, i;
 
@@ -495,8 +445,7 @@ void wmf_exttextout(int xstart, int ystart, char *chars, int nchars)
   for (i = 0; i < nchars; ++i)
     {
       ch = chars[i];
-      if (ch < 0)
-	ch += 256;
+      if (ch < 0) ch += 256;
       wmf_memcpy(p->stream, ch, SIZE_BYTE);
     }
   if (nchars % 2)
@@ -509,8 +458,7 @@ void wmf_exttextout(int xstart, int ystart, char *chars, int nchars)
     }
 }
 
-static 
-void wmf_trailer(void)
+static void wmf_trailer(void)
 {
   unsigned char s[4];
   int src;
@@ -535,29 +483,28 @@ void wmf_trailer(void)
   p->maxrecord = 0;
 }
 
-static
-void wmf_header(void)
+static void wmf_header(void)
 {
   short inch = 75;
   short cksum = 0x9ac6 ^ 0xcdd7 ^ p->width ^ p->height ^ inch;
 
-  wmf_memcpy(p->stream, (int) 0x9ac6cdd7, SIZE_LONG);	/* magic number */
-  wmf_memcpy(p->stream, 0, SIZE_SHORT);			/* (reserved) */
-  wmf_memcpy(p->stream, 0, SIZE_SHORT);			/* left */
-  wmf_memcpy(p->stream, 0, SIZE_SHORT);			/* top */
-  wmf_memcpy(p->stream, p->width, SIZE_SHORT);		/* right */
-  wmf_memcpy(p->stream, p->height, SIZE_SHORT);		/* bottom */
-  wmf_memcpy(p->stream, inch, SIZE_SHORT);	        /* inch */
-  wmf_memcpy(p->stream, 0, SIZE_LONG);			/* reserved */
-  wmf_memcpy(p->stream, cksum, SIZE_SHORT);	        /* ckecksum */
+  wmf_memcpy(p->stream, (int)0x9ac6cdd7, SIZE_LONG); /* magic number */
+  wmf_memcpy(p->stream, 0, SIZE_SHORT);              /* (reserved) */
+  wmf_memcpy(p->stream, 0, SIZE_SHORT);              /* left */
+  wmf_memcpy(p->stream, 0, SIZE_SHORT);              /* top */
+  wmf_memcpy(p->stream, p->width, SIZE_SHORT);       /* right */
+  wmf_memcpy(p->stream, p->height, SIZE_SHORT);      /* bottom */
+  wmf_memcpy(p->stream, inch, SIZE_SHORT);           /* inch */
+  wmf_memcpy(p->stream, 0, SIZE_LONG);               /* reserved */
+  wmf_memcpy(p->stream, cksum, SIZE_SHORT);          /* ckecksum */
 
-  wmf_memcpy(p->stream, 1, SIZE_SHORT);			/* 0|1 disk|metafile */
-  wmf_memcpy(p->stream, 9, SIZE_SHORT);			/* headersize */
-  wmf_memcpy(p->stream, 0x300, SIZE_SHORT);	        /* version 0300 */
-  wmf_memcpy(p->stream, 0, SIZE_LONG);			/* filesize */
-  wmf_memcpy(p->stream, 4, SIZE_SHORT);			/* # of objects */
-  wmf_memcpy(p->stream, 5, SIZE_LONG);			/* maxrecord */
-  wmf_memcpy(p->stream, 0, SIZE_SHORT);			/* (always 0) */
+  wmf_memcpy(p->stream, 1, SIZE_SHORT);     /* 0|1 disk|metafile */
+  wmf_memcpy(p->stream, 9, SIZE_SHORT);     /* headersize */
+  wmf_memcpy(p->stream, 0x300, SIZE_SHORT); /* version 0300 */
+  wmf_memcpy(p->stream, 0, SIZE_LONG);      /* filesize */
+  wmf_memcpy(p->stream, 4, SIZE_SHORT);     /* # of objects */
+  wmf_memcpy(p->stream, 5, SIZE_LONG);      /* maxrecord */
+  wmf_memcpy(p->stream, 0, SIZE_SHORT);     /* (always 0) */
 
   wmf_setmapmode();
   wmf_setwindoworg();
@@ -573,8 +520,7 @@ void wmf_header(void)
   wmf_selectobject(3);
 }
 
-static
-void set_norm_xform(int tnr, double *wn, double *vp)
+static void set_norm_xform(int tnr, double *wn, double *vp)
 {
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -587,17 +533,14 @@ void set_norm_xform(int tnr, double *wn, double *vp)
   p->cyb[tnr] += 1;
 }
 
-static
-void init_norm_xform(void)
+static void init_norm_xform(void)
 {
   int tnr;
 
-  for (tnr = 0; tnr < MAX_TNR; tnr++)
-    set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
+  for (tnr = 0; tnr < MAX_TNR; tnr++) set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
 }
 
-static
-void set_xform(void)
+static void set_xform(void)
 {
   p->a = p->width / (p->window[1] - p->window[0]);
   p->b = -p->window[0] * p->a;
@@ -605,8 +548,7 @@ void set_xform(void)
   p->d = p->height - p->window[2] * p->c;
 }
 
-static
-void seg_xform(double *x, double *y)
+static void seg_xform(double *x, double *y)
 {
   double xx;
 
@@ -615,8 +557,7 @@ void seg_xform(double *x, double *y)
   *x = xx;
 }
 
-static
-void seg_xform_rel(double *x, double *y)
+static void seg_xform_rel(double *x, double *y)
 {
   double xx;
 
@@ -625,19 +566,17 @@ void seg_xform_rel(double *x, double *y)
   *x = xx;
 }
 
-static
-void set_color_rep(int color, double red, double green, double blue)
+static void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
-      p->red[color] = (int) (red * 255);
-      p->green[color] = (int) (green * 255);
-      p->blue[color] = (int) (blue * 255);
+      p->red[color] = (int)(red * 255);
+      p->green[color] = (int)(green * 255);
+      p->blue[color] = (int)(blue * 255);
     }
 }
 
-static
-void init_colors(void)
+static void init_colors(void)
 {
   int color;
   double red, green, blue;
@@ -649,15 +588,13 @@ void init_colors(void)
     }
 }
 
-static
-void resize_window(void)
+static void resize_window(void)
 {
   p->width = nint((p->viewport[1] - p->viewport[0]) / MWIDTH * WIDTH);
   p->height = nint((p->viewport[3] - p->viewport[2]) / MHEIGHT * HEIGHT);
 }
 
-static
-void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
+static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   int r, x, y, i;
   double scale, xr, yr;
@@ -665,9 +602,8 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
 #include "marker.h"
 
-  if (gkss->version > 4)
-    mscale *= (p->width + p->height) * 0.001;
-  r = (int) (3 * mscale);
+  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
+  r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
@@ -682,166 +618,159 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
   wmf_selectobject(0);
   wmf_deleteobject(0);
-  wmf_createpenindirect(0, 0, p->red[mcolor], p->green[mcolor],
-			p->blue[mcolor]);
+  wmf_createpenindirect(0, 0, p->red[mcolor], p->green[mcolor], p->blue[mcolor]);
   wmf_selectobject(0);
   do
     {
       op = marker[mtype][pc];
       switch (op)
-	{
-	case 1:		/* point */
-	  wmf_memcpy(p->stream, 2 * 2 + 4, SIZE_LONG);
-	  wmf_memcpy(p->stream, WMF_POLYLINE, SIZE_SHORT);
-	  wmf_memcpy(p->stream, 2, SIZE_SHORT);
-	  wmf_memcpy(p->stream, x, SIZE_SHORT);
-	  wmf_memcpy(p->stream, y, SIZE_SHORT);
-	  wmf_memcpy(p->stream, x, SIZE_SHORT);
-	  wmf_memcpy(p->stream, y, SIZE_SHORT);
-	  if (p->maxrecord < 8)
-	    {
-	      p->maxrecord = 8;
-	    }
-	  break;
+        {
+        case 1: /* point */
+          wmf_memcpy(p->stream, 2 * 2 + 4, SIZE_LONG);
+          wmf_memcpy(p->stream, WMF_POLYLINE, SIZE_SHORT);
+          wmf_memcpy(p->stream, 2, SIZE_SHORT);
+          wmf_memcpy(p->stream, x, SIZE_SHORT);
+          wmf_memcpy(p->stream, y, SIZE_SHORT);
+          wmf_memcpy(p->stream, x, SIZE_SHORT);
+          wmf_memcpy(p->stream, y, SIZE_SHORT);
+          if (p->maxrecord < 8)
+            {
+              p->maxrecord = 8;
+            }
+          break;
 
-	case 2:		/* line */
-	  wmf_memcpy(p->stream, 2 * 2 + 4, SIZE_LONG);
-	  wmf_memcpy(p->stream, WMF_POLYLINE, SIZE_SHORT);
-	  wmf_memcpy(p->stream, 2, SIZE_SHORT);
-	  for (i = 0; i < 2; i++)
-	    {
-	      xr = scale * marker[mtype][pc + 2 * i + 1];
-	      yr = -scale * marker[mtype][pc + 2 * i + 2];
-	      seg_xform_rel(&xr, &yr);
-	      if (i == 0)
-		{
-		  wmf_memcpy(p->stream, (int) (x - xr), SIZE_SHORT);
-		  wmf_memcpy(p->stream, (int) (y - yr), SIZE_SHORT);
-		}
-	      else
-		{
-		  wmf_memcpy(p->stream, (int) (x - xr), SIZE_SHORT);
-		  wmf_memcpy(p->stream, (int) (y + yr), SIZE_SHORT);
-		}
-	    }
-	  if (p->maxrecord < 8)
-	    {
-	      p->maxrecord = 8;
-	    }
-	  pc += 4;
-	  break;
+        case 2: /* line */
+          wmf_memcpy(p->stream, 2 * 2 + 4, SIZE_LONG);
+          wmf_memcpy(p->stream, WMF_POLYLINE, SIZE_SHORT);
+          wmf_memcpy(p->stream, 2, SIZE_SHORT);
+          for (i = 0; i < 2; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 * i + 1];
+              yr = -scale * marker[mtype][pc + 2 * i + 2];
+              seg_xform_rel(&xr, &yr);
+              if (i == 0)
+                {
+                  wmf_memcpy(p->stream, (int)(x - xr), SIZE_SHORT);
+                  wmf_memcpy(p->stream, (int)(y - yr), SIZE_SHORT);
+                }
+              else
+                {
+                  wmf_memcpy(p->stream, (int)(x - xr), SIZE_SHORT);
+                  wmf_memcpy(p->stream, (int)(y + yr), SIZE_SHORT);
+                }
+            }
+          if (p->maxrecord < 8)
+            {
+              p->maxrecord = 8;
+            }
+          pc += 4;
+          break;
 
-	case 3:		/* polyline */
-	  wmf_memcpy(p->stream, 2 * marker[mtype][pc + 1] + 4, SIZE_LONG);
-	  wmf_memcpy(p->stream, WMF_POLYLINE, SIZE_SHORT);
-	  wmf_memcpy(p->stream, marker[mtype][pc + 1], SIZE_SHORT);
-	  for (i = 0; i < marker[mtype][pc + 1]; i++)
-	    {
-	      xr = scale * marker[mtype][pc + 2 + 2 * i];
-	      yr = -scale * marker[mtype][pc + 3 + 2 * i];
-	      seg_xform_rel(&xr, &yr);
-	      wmf_memcpy(p->stream, (int) (x - xr), SIZE_SHORT);
-	      wmf_memcpy(p->stream, (int) (y + yr), SIZE_SHORT);
-	    }
-	  if (p->maxrecord < 2 * marker[mtype][pc + 1] + 4)
-	    {
-	      p->maxrecord = 2 * marker[mtype][pc + 1] + 4;
-	    }
-	  pc += 1 + 2 * marker[mtype][pc + 1];
-	  break;
+        case 3: /* polyline */
+          wmf_memcpy(p->stream, 2 * marker[mtype][pc + 1] + 4, SIZE_LONG);
+          wmf_memcpy(p->stream, WMF_POLYLINE, SIZE_SHORT);
+          wmf_memcpy(p->stream, marker[mtype][pc + 1], SIZE_SHORT);
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 + 2 * i];
+              yr = -scale * marker[mtype][pc + 3 + 2 * i];
+              seg_xform_rel(&xr, &yr);
+              wmf_memcpy(p->stream, (int)(x - xr), SIZE_SHORT);
+              wmf_memcpy(p->stream, (int)(y + yr), SIZE_SHORT);
+            }
+          if (p->maxrecord < 2 * marker[mtype][pc + 1] + 4)
+            {
+              p->maxrecord = 2 * marker[mtype][pc + 1] + 4;
+            }
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          break;
 
-	case 4:		/* filled polygon */
-	case 5:		/* hollow polygon */
-	  if (op == 5)
-	    {
-	      wmf_selectobject(1);
-	      wmf_deleteobject(1);
-	      wmf_createbrushindirect(0, p->red[0], p->green[0], p->blue[0]);
-	      wmf_selectobject(1);
-	    }
-	  else
-	    {
-	      wmf_selectobject(1);
-	      wmf_deleteobject(1);
-	      wmf_createbrushindirect(0, p->red[mcolor], p->green[mcolor],
-				      p->blue[mcolor]);
-	      wmf_selectobject(1);
-	    }
-	  wmf_memcpy(p->stream, 2 * marker[mtype][pc + 1] + 4, SIZE_LONG);
-	  wmf_memcpy(p->stream, WMF_POLYGON, SIZE_SHORT);
-	  wmf_memcpy(p->stream, marker[mtype][pc + 1], SIZE_SHORT);
-	  for (i = 0; i < marker[mtype][pc + 1]; i++)
-	    {
-	      xr = scale * marker[mtype][pc + 2 + 2 * i];
-	      yr = -scale * marker[mtype][pc + 3 + 2 * i];
-	      seg_xform_rel(&xr, &yr);
-	      wmf_memcpy(p->stream, (int) (x - xr), SIZE_SHORT);
-	      wmf_memcpy(p->stream, (int) (y + yr), SIZE_SHORT);
-	    }
-	  if (p->maxrecord < 2 * marker[mtype][pc + 1] + 4)
-	    {
-	      p->maxrecord = 2 * marker[mtype][pc + 1] + 4;
-	    }
-	  pc += 1 + 2 * marker[mtype][pc + 1];
-	  if (op == 5)
-	    p->color = mcolor;
-	  break;
+        case 4: /* filled polygon */
+        case 5: /* hollow polygon */
+          if (op == 5)
+            {
+              wmf_selectobject(1);
+              wmf_deleteobject(1);
+              wmf_createbrushindirect(0, p->red[0], p->green[0], p->blue[0]);
+              wmf_selectobject(1);
+            }
+          else
+            {
+              wmf_selectobject(1);
+              wmf_deleteobject(1);
+              wmf_createbrushindirect(0, p->red[mcolor], p->green[mcolor], p->blue[mcolor]);
+              wmf_selectobject(1);
+            }
+          wmf_memcpy(p->stream, 2 * marker[mtype][pc + 1] + 4, SIZE_LONG);
+          wmf_memcpy(p->stream, WMF_POLYGON, SIZE_SHORT);
+          wmf_memcpy(p->stream, marker[mtype][pc + 1], SIZE_SHORT);
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 + 2 * i];
+              yr = -scale * marker[mtype][pc + 3 + 2 * i];
+              seg_xform_rel(&xr, &yr);
+              wmf_memcpy(p->stream, (int)(x - xr), SIZE_SHORT);
+              wmf_memcpy(p->stream, (int)(y + yr), SIZE_SHORT);
+            }
+          if (p->maxrecord < 2 * marker[mtype][pc + 1] + 4)
+            {
+              p->maxrecord = 2 * marker[mtype][pc + 1] + 4;
+            }
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          if (op == 5) p->color = mcolor;
+          break;
 
-	case 6:		/* arc */
-	  wmf_selectobject(1);
-	  wmf_deleteobject(1);
-	  wmf_createbrushindirect(0, p->red[mcolor], p->green[mcolor],
-				  p->blue[mcolor]);
-	  wmf_selectobject(1);
-	  wmf_memcpy(p->stream, 7, SIZE_LONG);
-	  wmf_memcpy(p->stream, WMF_ELLIPSE, SIZE_SHORT);
-	  wmf_memcpy(p->stream, y - r, SIZE_SHORT);
-	  wmf_memcpy(p->stream, x - r, SIZE_SHORT);
-	  wmf_memcpy(p->stream, y + r, SIZE_SHORT);
-	  wmf_memcpy(p->stream, x + r, SIZE_SHORT);
-	  if (p->maxrecord < 7)
-	    {
-	      p->maxrecord = 7;
-	    }
-	  break;
+        case 6: /* arc */
+          wmf_selectobject(1);
+          wmf_deleteobject(1);
+          wmf_createbrushindirect(0, p->red[mcolor], p->green[mcolor], p->blue[mcolor]);
+          wmf_selectobject(1);
+          wmf_memcpy(p->stream, 7, SIZE_LONG);
+          wmf_memcpy(p->stream, WMF_ELLIPSE, SIZE_SHORT);
+          wmf_memcpy(p->stream, y - r, SIZE_SHORT);
+          wmf_memcpy(p->stream, x - r, SIZE_SHORT);
+          wmf_memcpy(p->stream, y + r, SIZE_SHORT);
+          wmf_memcpy(p->stream, x + r, SIZE_SHORT);
+          if (p->maxrecord < 7)
+            {
+              p->maxrecord = 7;
+            }
+          break;
 
-	case 7:		/* filled arc */
-	case 8:		/* hollow arc */
-	  if (op == 8)
-	    {
-	      wmf_selectobject(1);
-	      wmf_deleteobject(1);
-	      wmf_createbrushindirect(0, p->red[0], p->green[0], p->blue[0]);
-	      wmf_selectobject(1);
-	    }
-	  else
-	    {
-	      wmf_selectobject(1);
-	      wmf_deleteobject(1);
-	      wmf_createbrushindirect(0, p->red[mcolor], p->green[mcolor],
-				      p->blue[mcolor]);
-	      wmf_selectobject(1);
-	    }
-	  wmf_memcpy(p->stream, 7, SIZE_LONG);
-	  wmf_memcpy(p->stream, WMF_ELLIPSE, SIZE_SHORT);
-	  wmf_memcpy(p->stream, y - r, SIZE_SHORT);
-	  wmf_memcpy(p->stream, x - r, SIZE_SHORT);
-	  wmf_memcpy(p->stream, y + r, SIZE_SHORT);
-	  wmf_memcpy(p->stream, x + r, SIZE_SHORT);
-	  if (p->maxrecord < 7)
-	    {
-	      p->maxrecord = 7;
-	    }
-	  break;
-	}
+        case 7: /* filled arc */
+        case 8: /* hollow arc */
+          if (op == 8)
+            {
+              wmf_selectobject(1);
+              wmf_deleteobject(1);
+              wmf_createbrushindirect(0, p->red[0], p->green[0], p->blue[0]);
+              wmf_selectobject(1);
+            }
+          else
+            {
+              wmf_selectobject(1);
+              wmf_deleteobject(1);
+              wmf_createbrushindirect(0, p->red[mcolor], p->green[mcolor], p->blue[mcolor]);
+              wmf_selectobject(1);
+            }
+          wmf_memcpy(p->stream, 7, SIZE_LONG);
+          wmf_memcpy(p->stream, WMF_ELLIPSE, SIZE_SHORT);
+          wmf_memcpy(p->stream, y - r, SIZE_SHORT);
+          wmf_memcpy(p->stream, x - r, SIZE_SHORT);
+          wmf_memcpy(p->stream, y + r, SIZE_SHORT);
+          wmf_memcpy(p->stream, x + r, SIZE_SHORT);
+          if (p->maxrecord < 7)
+            {
+              p->maxrecord = 7;
+            }
+          break;
+        }
       pc++;
     }
   while (op != 0);
 }
 
-static
-  void marker_routine(int n, double *px, double *py, int mtype, double mscale,
-		      int mcolor)
+static void marker_routine(int n, double *px, double *py, int mtype, double mscale, int mcolor)
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
@@ -853,17 +782,15 @@ static
       seg_xform(&x, &y);
 
       if (gkss->clip == GKS_K_CLIP)
-	draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
+        draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
       else
-	draw = 1;
+        draw = 1;
 
-      if (draw)
-	draw_marker(x, y, mtype, mscale, mcolor);
+      if (draw) draw_marker(x, y, mtype, mscale, mcolor);
     }
 }
 
-static
-void polymarker(int n, double *px, double *py)
+static void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
   double mk_size;
@@ -875,15 +802,13 @@ void polymarker(int n, double *px, double *py)
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
 }
 
-static
-void stroke(void)
+static void stroke(void)
 {
   int i;
 
   wmf_selectobject(0);
   wmf_deleteobject(0);
-  wmf_createpenindirect(0, p->linewidth, p->red[p->color], p->green[p->color],
-			p->blue[p->color]);
+  wmf_createpenindirect(0, p->linewidth, p->red[p->color], p->green[p->color], p->blue[p->color]);
   wmf_selectobject(0);
 
   wmf_memcpy(p->stream, 2 * p->npoints + 4, SIZE_LONG);
@@ -901,37 +826,31 @@ void stroke(void)
   p->npoints = 0;
 }
 
-static
-void move_to(double x, double y)
+static void move_to(double x, double y)
 {
-  if (p->npoints > 0)
-    stroke();
+  if (p->npoints > 0) stroke();
 
   NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
   p->npoints++;
 }
 
-static
-void line_to(double x, double y)
+static void line_to(double x, double y)
 {
   NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
   p->npoints++;
 }
 
-static
-void move(double x, double y)
+static void move(double x, double y)
 {
   gks_move(x, y, move_to);
 }
 
-static
-void draw(double x, double y)
+static void draw(double x, double y)
 {
   gks_dash(x, y, move_to, line_to);
 }
 
-static
-void line_routine(int n, double *px, double *py, int linetype, int tnr)
+static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y;
   int i, x0, y0, xi, yi, xim1, yim1, len;
@@ -942,8 +861,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   wmf_selectobject(0);
   wmf_deleteobject(0);
-  wmf_createpenindirect(0, 0, p->red[p->color],
-			p->green[p->color], p->blue[p->color]);
+  wmf_createpenindirect(0, 0, p->red[p->color], p->green[p->color], p->blue[p->color]);
   wmf_selectobject(0);
   len = 1;
   xim1 = x0;
@@ -955,11 +873,11 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
       NDC_to_DC(x, y, xi, yi);
 
       if (i == 1 || xi != xim1 || yi != yim1)
-	{
-	  xim1 = xi;
-	  yim1 = yi;
-	  len += 1;
-	}
+        {
+          xim1 = xi;
+          yim1 = yi;
+          len += 1;
+        }
     }
   if (linetype == 0)
     {
@@ -981,12 +899,12 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
       NDC_to_DC(x, y, xi, yi);
 
       if (i == 1 || xi != xim1 || yi != yim1)
-	{
-	  wmf_memcpy(p->stream, xi, SIZE_SHORT);
-	  wmf_memcpy(p->stream, yi, SIZE_SHORT);
-	  xim1 = xi;
-	  yim1 = yi;
-	}
+        {
+          wmf_memcpy(p->stream, xi, SIZE_SHORT);
+          wmf_memcpy(p->stream, yi, SIZE_SHORT);
+          xim1 = xi;
+          yim1 = yi;
+        }
     }
   if (linetype == 0)
     {
@@ -1000,8 +918,7 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
     }
 }
 
-static
-void fill_routine(int n, double *px, double *py, int tnr)
+static void fill_routine(int n, double *px, double *py, int tnr)
 {
   int i;
   double x, y;
@@ -1016,21 +933,18 @@ void fill_routine(int n, double *px, double *py, int tnr)
       wmf_selectobject(3);
 
       wmf_deleteobject(3);
-      wmf_dibcreatepatternbrush(p->red[p->color], p->green[p->color],
-				p->blue[p->color], p->pattern);
+      wmf_dibcreatepatternbrush(p->red[p->color], p->green[p->color], p->blue[p->color], p->pattern);
       wmf_selectobject(3);
     }
   else
     {
       wmf_selectobject(0);
       wmf_deleteobject(0);
-      wmf_createpenindirect(0, 0, p->red[p->color], p->green[p->color],
-			    p->blue[p->color]);
+      wmf_createpenindirect(0, 0, p->red[p->color], p->green[p->color], p->blue[p->color]);
       wmf_selectobject(0);
       wmf_selectobject(1);
       wmf_deleteobject(1);
-      wmf_createbrushindirect(0, p->red[p->color], p->green[p->color],
-			      p->blue[p->color]);
+      wmf_createbrushindirect(0, p->red[p->color], p->green[p->color], p->blue[p->color]);
       wmf_selectobject(1);
     }
   wmf_memcpy(p->stream, 2 * n + 4, SIZE_LONG);
@@ -1050,8 +964,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
     }
 }
 
-static
-void fillarea(int n, double *px, double *py)
+static void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color;
 
@@ -1070,21 +983,17 @@ void fillarea(int n, double *px, double *py)
       p->color = fl_color;
       fill_routine(n, px, py, gkss->cntnr);
     }
-  else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
-	   fl_inter == GKS_K_INTSTYLE_HATCH)
+  else if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH)
     {
       p->color = fl_color;
-      if (fl_inter == GKS_K_INTSTYLE_HATCH)
-	fl_style += HATCH_STYLE;
-      if (fl_style >= PATTERNS)
-	fl_style = 1;
+      if (fl_inter == GKS_K_INTSTYLE_HATCH) fl_style += HATCH_STYLE;
+      if (fl_style >= PATTERNS) fl_style = 1;
       p->pattern = fl_style;
       fill_routine(n, px, py, gkss->cntnr);
     }
 }
 
-static
-void polyline(int n, double *px, double *py)
+static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
   double ln_width;
@@ -1092,7 +1001,7 @@ void polyline(int n, double *px, double *py)
 
   if (n > p->max_points)
     {
-      p->points = (WMF_point *) realloc(p->points, n * sizeof(WMF_point));
+      p->points = (WMF_point *)realloc(p->points, n * sizeof(WMF_point));
       p->max_points = n;
     }
 
@@ -1104,8 +1013,7 @@ void polyline(int n, double *px, double *py)
     width = nint(ln_width * (p->width + p->height) * 0.001);
   else
     width = nint(ln_width);
-  if (width < 1)
-    width = 0;
+  if (width < 1) width = 0;
 
   p->linewidth = width;
   p->color = ln_color;
@@ -1113,12 +1021,10 @@ void polyline(int n, double *px, double *py)
   gks_set_dev_xform(gkss, p->window, p->viewport);
   gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
 
-  if (p->npoints > 0)
-    stroke();
+  if (p->npoints > 0) stroke();
 }
 
-static
-void text_routine(double x, double y, int nchars, char *chars)
+static void text_routine(double x, double y, int nchars, char *chars)
 {
   int xstart, ystart, width, height;
   double xrel, yrel, ax, ay;
@@ -1131,8 +1037,8 @@ void text_routine(double x, double y, int nchars, char *chars)
   xrel = width * xfac[gkss->txal[0]];
   yrel = height * yfac[gkss->txal[1]];
   CharXform(xrel, yrel, ax, ay);
-  xstart += (int) ax;
-  ystart -= (int) ay;
+  xstart += (int)ax;
+  ystart -= (int)ay;
 
   if (gkss->txal[0] == GKS_K_TEXT_HALIGN_CENTER)
     wmf_textalign(30);
@@ -1144,8 +1050,7 @@ void text_routine(double x, double y, int nchars, char *chars)
   wmf_exttextout(xstart, ystart, chars, nchars);
 }
 
-static
-void set_font(int font)
+static void set_font(int font)
 {
   double scale, ux, uy;
   int family, size;
@@ -1167,11 +1072,11 @@ void set_font(int font)
   p->alpha = -atan2(ux, uy);
   if (p->alpha < 0)
     {
-      ang = (int) (p->alpha * 180 / M_PI - 0.5);
+      ang = (int)(p->alpha * 180 / M_PI - 0.5);
     }
   else
     {
-      ang = (int) (p->alpha * 180 / M_PI + 0.5);
+      ang = (int)(p->alpha * 180 / M_PI + 0.5);
     }
 
   scale = sqrt(gkss->chup[0] * gkss->chup[0] + gkss->chup[1] * gkss->chup[1]);
@@ -1188,8 +1093,7 @@ void set_font(int font)
   p->capheight = nint(capheight);
 
   size = -nint(capheight / capheights[font - 1]);
-  if (font > 13)
-    font += 3;
+  if (font > 13) font += 3;
   family = (font - 1) / 4;
   bold = (font % 4 == 1 || font % 4 == 2) ? 0 : 1;
   italic = (font % 4 == 2 || font % 4 == 0);
@@ -1200,8 +1104,7 @@ void set_font(int font)
   wmf_selectobject(2);
 }
 
-static
-void text(double px, double py, int nchars, char *chars)
+static void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
   double x, y;
@@ -1227,9 +1130,7 @@ void text(double px, double py, int nchars, char *chars)
     }
 }
 
-static
-void cellarray(double xmin, double xmax, double ymin, double ymax,
-	       int dx, int dy, int dimx, int *colia)
+static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int dimx, int *colia)
 {
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
@@ -1255,7 +1156,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   swapy = iy1 < iy2;
 
   fill = (4 - (width * 3) % 4) % 4;
-  wmf_memcpy(p->stream, 34 + (3 * width * height + fill * height) / 2,4);
+  wmf_memcpy(p->stream, 34 + (3 * width * height + fill * height) / 2, 4);
   wmf_memcpy(p->stream, WMF_STRETCHDIB, SIZE_SHORT);
   wmf_memcpy(p->stream, 2, SIZE_SHORT);
   wmf_memcpy(p->stream, 204, SIZE_LONG);
@@ -1284,23 +1185,21 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   for (j = height - 1; j >= 0; j--)
     {
       iy = dy * j / height;
-      if (swapy)
-	iy = dy - 1 - iy;
+      if (swapy) iy = dy - 1 - iy;
       for (i = 0; i < width; i++)
-	{
-	  ix = dx * i / width;
-	  if (swapx)
-	    ix = dx - 1 - ix;
-	  ind = colia[iy * dimx + ix];
+        {
+          ix = dx * i / width;
+          if (swapx) ix = dx - 1 - ix;
+          ind = colia[iy * dimx + ix];
           ind = FIX_COLORIND(ind);
-	  wmf_memcpy(p->stream, p->blue[ind], SIZE_BYTE);
-	  wmf_memcpy(p->stream, p->green[ind], SIZE_BYTE);
-	  wmf_memcpy(p->stream, p->red[ind], SIZE_BYTE);
-	}
+          wmf_memcpy(p->stream, p->blue[ind], SIZE_BYTE);
+          wmf_memcpy(p->stream, p->green[ind], SIZE_BYTE);
+          wmf_memcpy(p->stream, p->red[ind], SIZE_BYTE);
+        }
       for (i = 0; i < fill; i++)
-	{
-	  wmf_memcpy(p->stream, 0, SIZE_BYTE);
-	}
+        {
+          wmf_memcpy(p->stream, 0, SIZE_BYTE);
+        }
     }
   if (p->maxrecord < 34 + (3 * width * height + fill * height) / 2)
     {
@@ -1308,8 +1207,7 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
     }
 }
 
-static
-void set_clip_path(int tnr)
+static void set_clip_path(int tnr)
 {
   int x, y, width, height;
 
@@ -1331,8 +1229,7 @@ void set_clip_path(int tnr)
   wmf_intersectrectclip(x, y, x + width, y + height);
 }
 
-static
-void write_page(void)
+static void write_page(void)
 {
   char path[MAXPATHLEN];
   FILE *stream;
@@ -1345,7 +1242,7 @@ void write_page(void)
       stream = fopen(path, "wb");
     }
   else
-    stream = fdopen(p->conid, "wb"); 
+    stream = fdopen(p->conid, "wb");
 
   if (stream != NULL)
     {
@@ -1361,21 +1258,20 @@ void write_page(void)
   p->stream->length = 0;
 }
 
-void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia,
-		   int lr1, double *r1, int lr2, double *r2,
-		   int lc, char *chars, void **ptr)
+void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                   char *chars, void **ptr)
 {
-  p = (ws_state_list *) * ptr;
+  p = (ws_state_list *)*ptr;
 
   switch (fctid)
     {
-/* open workstation */
+      /* open workstation */
     case 2:
-      gkss = (gks_state_list_t *) * ptr;
+      gkss = (gks_state_list_t *)*ptr;
 
       gks_init_core(gkss);
 
-      p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
+      p = (ws_state_list *)calloc(1, sizeof(ws_state_list));
 
       p->conid = ia[1];
       p->path = chars;
@@ -1385,12 +1281,12 @@ void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia,
       p->window[0] = p->window[2] = 0.0;
       p->window[1] = p->window[3] = 1.0;
       p->viewport[0] = p->viewport[2] = 0;
-      p->viewport[1] = (double) p->width * MWIDTH / WIDTH;
-      p->viewport[3] = (double) p->height * MHEIGHT / HEIGHT;
+      p->viewport[1] = (double)p->width * MWIDTH / WIDTH;
+      p->viewport[3] = (double)p->height * MHEIGHT / HEIGHT;
 
       p->stream = wmf_alloc_stream();
       p->max_points = MAX_POINTS;
-      p->points = (WMF_point *) gks_malloc(p->max_points * sizeof(WMF_point));
+      p->points = (WMF_point *)gks_malloc(p->max_points * sizeof(WMF_point));
       p->npoints = 0;
       p->empty = 1;
       p->page_counter = 0;
@@ -1404,115 +1300,113 @@ void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia,
       wmf_header();
       break;
 
-/* close workstation */
+      /* close workstation */
     case 3:
       wmf_trailer();
 
-      if (!p->empty)
-	write_page();
+      if (!p->empty) write_page();
 
       free(p->stream->buffer);
       free(p->points);
       free(p);
       break;
 
-/* activate workstation */
+      /* activate workstation */
     case 4:
       p->state = GKS_K_WS_ACTIVE;
       break;
 
-/* deactivate workstation */
+      /* deactivate workstation */
     case 5:
       p->state = GKS_K_WS_INACTIVE;
       break;
 
-/* clear workstation */
+      /* clear workstation */
     case 6:
       if (!p->empty)
-	{
-	  wmf_trailer();
-	  p->empty = 1;
+        {
+          wmf_trailer();
+          p->empty = 1;
 
-	  write_page();
+          write_page();
 
-	  wmf_header();
-	}
+          wmf_header();
+        }
       break;
 
-/* update workstation */
+      /* update workstation */
     case 8:
       break;
 
-/* polyline */
+      /* polyline */
     case 12:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  polyline(ia[0], r1, r2);
-	  p->empty = 0;
-	}
+        {
+          polyline(ia[0], r1, r2);
+          p->empty = 0;
+        }
       break;
 
-/* polymarker */
+      /* polymarker */
     case 13:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  polymarker(ia[0], r1, r2);
-	  p->empty = 0;
-	}
+        {
+          polymarker(ia[0], r1, r2);
+          p->empty = 0;
+        }
       break;
 
-/* text */
+      /* text */
     case 14:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  text(r1[0], r2[0], strlen(chars), chars);
-	  p->empty = 0;
-	}
+        {
+          text(r1[0], r2[0], strlen(chars), chars);
+          p->empty = 0;
+        }
       break;
 
-/* fill area */
+      /* fill area */
     case 15:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  fillarea(ia[0], r1, r2);
-	  p->empty = 0;
-	}
+        {
+          fillarea(ia[0], r1, r2);
+          p->empty = 0;
+        }
       break;
 
-/* cell array */
+      /* cell array */
     case 16:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia);
-	  p->empty = 0;
-	}
+        {
+          cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia);
+          p->empty = 0;
+        }
       break;
 
-/* set color representation */
+      /* set color representation */
     case 48:
       set_color_rep(ia[1], r1[0], r1[1], r1[2]);
       break;
 
     case 49:
-/* set window */
+      /* set window */
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
       break;
 
     case 50:
-/* set viewport */
+      /* set viewport */
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
-      if (*ia == gkss->cntnr)
-	set_clip_path(*ia);
+      if (*ia == gkss->cntnr) set_clip_path(*ia);
       break;
 
     case 52:
-/* select normalization transformation */
+      /* select normalization transformation */
     case 53:
-/* set clipping inidicator */
+      /* set clipping inidicator */
       set_clip_path(gkss->cntnr);
       break;
 
-/* set workstation window */
+      /* set workstation window */
     case 54:
       p->window[0] = r1[0];
       p->window[1] = r1[1];
@@ -1523,7 +1417,7 @@ void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia,
       init_norm_xform();
       break;
 
-/* set workstation viewport */
+      /* set workstation viewport */
     case 55:
       p->viewport[0] = r1[0];
       p->viewport[1] = r1[1];
@@ -1536,7 +1430,6 @@ void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia,
       set_clip_path(gkss->cntnr);
       break;
 
-    default:
-      ;
+    default:;
     }
 }

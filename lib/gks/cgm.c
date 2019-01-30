@@ -21,8 +21,8 @@
 #define NIL 0
 
 
-#define odd(number)   ((number) & 01)
-#define nint(a)       ((int)((a) + 0.5))
+#define odd(number) ((number)&01)
+#define nint(a) ((int)((a) + 0.5))
 
 #if defined(__cplusplus) || defined(c_plusplus)
 #define CGM_FUNC (void (*)(...))
@@ -34,24 +34,21 @@
 typedef struct
 {
   double a, b, c, d;
-}
-norm_xform;
+} norm_xform;
 
 typedef struct
 {
   int type;
   double width;
   int color;
-}
-line_attributes;
+} line_attributes;
 
 typedef struct
 {
   int type;
   double width;
   int color;
-}
-marker_attributes;
+} marker_attributes;
 
 typedef struct
 {
@@ -66,8 +63,7 @@ typedef struct
   int path;
   int halign;
   int valign;
-}
-text_attributes;
+} text_attributes;
 
 typedef struct
 {
@@ -75,65 +71,75 @@ typedef struct
   int hatch_index;
   int pattern_index;
   int color;
-}
-fill_attributes;
+} fill_attributes;
 
 typedef struct
 {
-  norm_xform xform;		/* internal transformation */
-  line_attributes pline;	/* current polyline attributes */
-  marker_attributes pmark;	/* current marker attributes */
-  text_attributes text;		/* current text attributes */
-  fill_attributes fill;		/* current fill area attributes */
-  int buffer_ind;		/* output buffer index */
-  char buffer[max_buffer + 2];	/* output buffer */
-  double color_t[MAX_COLOR * 3];	/* color table */
-  int conid;			/* GKS connection id */
-  unsigned active;		/* indicates active workstation */
-  unsigned begin_page;		/* indicates begin page */
-  double vp[4];			/* current GKS viewport */
-  double wn[4];			/* current GKS window */
-  int xext, yext;		/* VDC extent */
-  double mm;			/* metric size in mm */
-  char cmd_buffer[hdr_long + max_long];	/* where we buffer output */
-  char *cmd_hdr;		/* the command header */
-  char *cmd_data;		/* the command data */
-  int cmd_index;		/* index into the command data */
-  int bfr_index;		/* index into the buffer */
-  int partition;		/* which partition in the output */
-  enum encode_enum encode;	/* type of encoding */
+  norm_xform xform;                     /* internal transformation */
+  line_attributes pline;                /* current polyline attributes */
+  marker_attributes pmark;              /* current marker attributes */
+  text_attributes text;                 /* current text attributes */
+  fill_attributes fill;                 /* current fill area attributes */
+  int buffer_ind;                       /* output buffer index */
+  char buffer[max_buffer + 2];          /* output buffer */
+  double color_t[MAX_COLOR * 3];        /* color table */
+  int conid;                            /* GKS connection id */
+  unsigned active;                      /* indicates active workstation */
+  unsigned begin_page;                  /* indicates begin page */
+  double vp[4];                         /* current GKS viewport */
+  double wn[4];                         /* current GKS window */
+  int xext, yext;                       /* VDC extent */
+  double mm;                            /* metric size in mm */
+  char cmd_buffer[hdr_long + max_long]; /* where we buffer output */
+  char *cmd_hdr;                        /* the command header */
+  char *cmd_data;                       /* the command data */
+  int cmd_index;                        /* index into the command data */
+  int bfr_index;                        /* index into the buffer */
+  int partition;                        /* which partition in the output */
+  enum encode_enum encode;              /* type of encoding */
 #if defined(__cplusplus) || defined(c_plusplus)
-  void (*cgm[n_melements]) (...);	/* cgm functions and procedures */
+  void (*cgm[n_melements])(...); /* cgm functions and procedures */
 #else
-  void (*cgm[n_melements]) ();	/* cgm functions and procedures */
+  void (*cgm[n_melements])(); /* cgm functions and procedures */
 #endif
-}
-cgm_context;
+} cgm_context;
 
 static cgm_context *p;
 
-static char digits[10] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+static char digits[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
 
-static char *fonts[max_std_textfont] = {
-  "Times-Roman", "Times-Italic", "Times-Bold", "Times-BoldItalic",
-  "Helvetica", "Helvetica-Oblique", "Helvetica-Bold", "Helvetica-BoldOblique",
-  "Courier", "Courier-Oblique", "Courier-Bold", "Courier-BoldOblique",
-  "Symbol",
-  "Bookman-Light", "Bookman-LightItalic", "Bookman-Demi", "Bookman-DemiItalic",
-  "NewCenturySchlbk-Roman", "NewCenturySchlbk-Italic",
-  "NewCenturySchlbk-Bold", "NewCenturySchlbk-BoldItalic",
-  "AvantGarde-Book", "AvantGarde-BookOblique", "AvantGarde-Demi",
-  "AvantGarde-DemiOblique",
-  "Palatino-Roman", "Palatino-Italic", "Palatino-Bold", "Palatino-BoldItalic"
-};
+static char *fonts[max_std_textfont] = {"Times-Roman",
+                                        "Times-Italic",
+                                        "Times-Bold",
+                                        "Times-BoldItalic",
+                                        "Helvetica",
+                                        "Helvetica-Oblique",
+                                        "Helvetica-Bold",
+                                        "Helvetica-BoldOblique",
+                                        "Courier",
+                                        "Courier-Oblique",
+                                        "Courier-Bold",
+                                        "Courier-BoldOblique",
+                                        "Symbol",
+                                        "Bookman-Light",
+                                        "Bookman-LightItalic",
+                                        "Bookman-Demi",
+                                        "Bookman-DemiItalic",
+                                        "NewCenturySchlbk-Roman",
+                                        "NewCenturySchlbk-Italic",
+                                        "NewCenturySchlbk-Bold",
+                                        "NewCenturySchlbk-BoldItalic",
+                                        "AvantGarde-Book",
+                                        "AvantGarde-BookOblique",
+                                        "AvantGarde-Demi",
+                                        "AvantGarde-DemiOblique",
+                                        "Palatino-Roman",
+                                        "Palatino-Italic",
+                                        "Palatino-Bold",
+                                        "Palatino-BoldItalic"};
 
-static int map[] =
-{
-  22, 9, 5, 14, 18, 26, 13, 1,
-  24, 11, 7, 16, 20, 28, 13, 3,
-  23, 10, 6, 15, 19, 27, 13, 2,
-  25, 12, 8, 17, 21, 29, 13, 4
-};
+static int map[] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
+                    23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
 /* Transform world coordinates to virtual device coordinates */
 
@@ -141,21 +147,20 @@ static void WC_to_VDC(double xin, double yin, int *xout, int *yout)
 {
   double x, y;
 
-/* Normalization transformation */
+  /* Normalization transformation */
 
   x = p->xform.a * xin + p->xform.b;
   y = p->xform.c * yin + p->xform.d;
 
-/* Segment transformation */
+  /* Segment transformation */
 
   gks_seg_xform(&x, &y);
 
-/* Virtual device transformation */
+  /* Virtual device transformation */
 
-  *xout = (int) (x * max_coord);
-  *yout = (int) (y * max_coord);
+  *xout = (int)(x * max_coord);
+  *yout = (int)(y * max_coord);
 }
-
 
 
 /* Flush output buffer */
@@ -174,25 +179,22 @@ static void cgmt_fb(void)
 }
 
 
-
 /* Write a character to CGM clear text */
 
 static void cgmt_outc(char chr)
 {
-  if (p->buffer_ind >= cgmt_recl)
-    cgmt_fb();
+  if (p->buffer_ind >= cgmt_recl) cgmt_fb();
 
   p->buffer[p->buffer_ind++] = chr;
   p->buffer[p->buffer_ind] = '\0';
 }
 
 
-
 /* Write string to CGM clear text */
 
 static void cgmt_out_string(char *string)
 {
-  if ((int) (p->buffer_ind + strlen(string)) >= cgmt_recl)
+  if ((int)(p->buffer_ind + strlen(string)) >= cgmt_recl)
     {
       cgmt_fb();
       strcpy(p->buffer, "   ");
@@ -204,14 +206,12 @@ static void cgmt_out_string(char *string)
 }
 
 
-
 /* Start output command */
 
 static void cgmt_start_cmd(int cl, int el)
 {
   cgmt_out_string(cgmt_cptr[cl][el]);
 }
-
 
 
 /* Flush output command */
@@ -222,7 +222,6 @@ static void cgmt_flush_cmd(int this_flush)
 
   cgmt_fb();
 }
-
 
 
 /* Write a CGM clear text string */
@@ -237,16 +236,15 @@ static void cgmt_string(char *cptr, int slen)
   for (i = 0; i < slen; ++i)
     {
       if (cptr[i] == quote_char)
-	{
-	  cgmt_outc(quote_char);
-	}
+        {
+          cgmt_outc(quote_char);
+        }
 
       cgmt_outc(cptr[i]);
     }
 
   cgmt_outc(quote_char);
 }
-
 
 
 /* Write a signed integer variable */
@@ -272,10 +270,9 @@ static void cgmt_int(int xin)
     {
       *--cptr = digits[0];
 
-      if ((int) (p->buffer_ind + strlen(cptr)) < cgmt_recl)
-	cgmt_outc(' ');
+      if ((int)(p->buffer_ind + strlen(cptr)) < cgmt_recl) cgmt_outc(' ');
 
-      cgmt_out_string(cptr);	/* all done */
+      cgmt_out_string(cptr); /* all done */
       return;
     }
 
@@ -286,15 +283,12 @@ static void cgmt_int(int xin)
       xin /= 10;
     }
 
-  if (is_neg)
-    *--cptr = '-';
+  if (is_neg) *--cptr = '-';
 
-  if ((int) (p->buffer_ind + strlen(cptr)) < cgmt_recl)
-    cgmt_outc(' ');
+  if ((int)(p->buffer_ind + strlen(cptr)) < cgmt_recl) cgmt_outc(' ');
 
   cgmt_out_string(cptr);
 }
-
 
 
 /* Write a real variable */
@@ -308,7 +302,6 @@ static void cgmt_real(double xin)
 }
 
 
-
 /* Write an integer point */
 
 static void cgmt_ipoint(int x, int y)
@@ -320,12 +313,11 @@ static void cgmt_ipoint(int x, int y)
 }
 
 
-
 /* Begin metafile */
 
 static void cgmt_begin(char *comment)
 {
-  cgmt_start_cmd(0, (int) B_Mf);
+  cgmt_start_cmd(0, (int)B_Mf);
 
   if (*comment)
     cgmt_string(comment, strlen(comment));
@@ -336,12 +328,11 @@ static void cgmt_begin(char *comment)
 }
 
 
-
 /* End metafile */
 
 static void cgmt_end(void)
 {
-  cgmt_start_cmd(0, (int) E_Mf);
+  cgmt_start_cmd(0, (int)E_Mf);
 
   cgmt_flush_cmd(final_flush);
 
@@ -349,12 +340,11 @@ static void cgmt_end(void)
 }
 
 
-
 /* Begin picture */
 
 static void cgmt_bp(char *pic_name)
 {
-  cgmt_start_cmd(0, (int) B_Pic);
+  cgmt_start_cmd(0, (int)B_Pic);
 
   if (*pic_name)
     cgmt_string(pic_name, strlen(pic_name));
@@ -365,40 +355,36 @@ static void cgmt_bp(char *pic_name)
 }
 
 
-
 /* Begin picture body */
 
 static void cgmt_bpage(void)
 {
-  cgmt_start_cmd(0, (int) B_Pic_Body);
+  cgmt_start_cmd(0, (int)B_Pic_Body);
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* End picture */
 
 static void cgmt_epage(void)
 {
-  cgmt_start_cmd(0, (int) E_Pic);
+  cgmt_start_cmd(0, (int)E_Pic);
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Metafile version */
 
 static void cgmt_mfversion(void)
 {
-  cgmt_start_cmd(1, (int) MfVersion);
+  cgmt_start_cmd(1, (int)MfVersion);
 
   cgmt_int(1);
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Metafile description */
@@ -416,12 +402,11 @@ static void cgmt_mfdescrip(void)
 }
 
 
-
 /* VDC type */
 
 static void cgmt_vdctype(void)
 {
-  cgmt_start_cmd(1, (int) vdcType);
+  cgmt_start_cmd(1, (int)vdcType);
 
   cgmt_out_string(" Integer");
 
@@ -429,12 +414,11 @@ static void cgmt_vdctype(void)
 }
 
 
-
 /* Integer precision */
 
 static void cgmt_intprec(void)
 {
-  cgmt_start_cmd(1, (int) IntPrec);
+  cgmt_start_cmd(1, (int)IntPrec);
 
   cgmt_int(-32768);
   cgmt_int(32767);
@@ -443,13 +427,12 @@ static void cgmt_intprec(void)
 }
 
 
-
 /* Real precision */
 
 static void cgmt_realprec(void)
 {
 
-  cgmt_start_cmd(1, (int) RealPrec);
+  cgmt_start_cmd(1, (int)RealPrec);
 
   cgmt_real(-32768.);
   cgmt_real(32768.);
@@ -459,12 +442,11 @@ static void cgmt_realprec(void)
 }
 
 
-
 /* Index precision */
 
 static void cgmt_indexprec(void)
 {
-  cgmt_start_cmd(1, (int) IndexPrec);
+  cgmt_start_cmd(1, (int)IndexPrec);
 
   cgmt_int(-32768);
   cgmt_int(32767);
@@ -473,12 +455,11 @@ static void cgmt_indexprec(void)
 }
 
 
-
 /* Colour precision */
 
 static void cgmt_colprec(void)
 {
-  cgmt_start_cmd(1, (int) ColPrec);
+  cgmt_start_cmd(1, (int)ColPrec);
 
   cgmt_int((1 << cprec) - 1);
 
@@ -486,18 +467,16 @@ static void cgmt_colprec(void)
 }
 
 
-
 /* Colour index precision */
 
 static void cgmt_cindprec(void)
 {
-  cgmt_start_cmd(1, (int) CIndPrec);
+  cgmt_start_cmd(1, (int)CIndPrec);
 
   cgmt_int((1 << cxprec) - 1);
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Colour value extent */
@@ -506,7 +485,7 @@ static void cgmt_cvextent(void)
 {
   int i;
 
-  cgmt_start_cmd(1, (int) CVExtent);
+  cgmt_start_cmd(1, (int)CVExtent);
 
   for (i = 0; i < 3; ++i)
     {
@@ -522,18 +501,16 @@ static void cgmt_cvextent(void)
 }
 
 
-
 /* Maximum colour index */
 
 static void cgmt_maxcind(void)
 {
-  cgmt_start_cmd(1, (int) MaxCInd);
+  cgmt_start_cmd(1, (int)MaxCInd);
 
   cgmt_int(MAX_COLOR - 1);
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Metafile element list */
@@ -542,7 +519,7 @@ static void cgmt_mfellist(void)
 {
   int i;
 
-  cgmt_start_cmd(1, (int) MfElList);
+  cgmt_start_cmd(1, (int)MfElList);
 
   cgmt_outc(' ');
   cgmt_outc(quote_char);
@@ -551,14 +528,12 @@ static void cgmt_mfellist(void)
     {
       cgmt_out_string(cgmt_cptr[element_list[i]][element_list[i + 1]]);
 
-      if (i < 2 * (n_melements - 1))
-	cgmt_outc(' ');
+      if (i < 2 * (n_melements - 1)) cgmt_outc(' ');
     }
 
   cgmt_outc(quote_char);
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Font List */
@@ -569,7 +544,7 @@ static void cgmt_fontlist(void)
   char s[max_str];
   int font;
 
-  cgmt_start_cmd(1, (int) FontList);
+  cgmt_start_cmd(1, (int)FontList);
 
   cgmt_outc(' ');
 
@@ -584,12 +559,11 @@ static void cgmt_fontlist(void)
 }
 
 
-
 /* Character announcer */
 
 static void cgmt_cannounce(void)
 {
-  cgmt_start_cmd(1, (int) CharAnnounce);
+  cgmt_start_cmd(1, (int)CharAnnounce);
 
   cgmt_out_string(" Extd8Bit");
 
@@ -597,12 +571,11 @@ static void cgmt_cannounce(void)
 }
 
 
-
 /* Scaling mode */
 
 static void cgmt_scalmode(void)
 {
-  cgmt_start_cmd(2, (int) ScalMode);
+  cgmt_start_cmd(2, (int)ScalMode);
 
   if (p->mm > 0)
     {
@@ -616,12 +589,11 @@ static void cgmt_scalmode(void)
 }
 
 
-
 /* Colour selection mode */
 
 static void cgmt_colselmode(void)
 {
-  cgmt_start_cmd(2, (int) ColSelMode);
+  cgmt_start_cmd(2, (int)ColSelMode);
 
   cgmt_out_string(" Indexed");
 
@@ -629,25 +601,23 @@ static void cgmt_colselmode(void)
 }
 
 
-
 /* Line width specification mode */
 
 static void cgmt_lwsmode(void)
 {
-  cgmt_start_cmd(2, (int) LWidSpecMode);
+  cgmt_start_cmd(2, (int)LWidSpecMode);
 
   cgmt_out_string(" Scaled");
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Marker size specification mode */
 
 static void cgmt_msmode(void)
 {
-  cgmt_start_cmd(2, (int) MarkSizSpecMode);
+  cgmt_start_cmd(2, (int)MarkSizSpecMode);
 
   cgmt_out_string(" Scaled");
 
@@ -655,12 +625,11 @@ static void cgmt_msmode(void)
 }
 
 
-
 /* VDC extent */
 
 static void cgmt_vdcextent(void)
 {
-  cgmt_start_cmd(2, (int) vdcExtent);
+  cgmt_start_cmd(2, (int)vdcExtent);
 
   cgmt_ipoint(0, 0);
   cgmt_ipoint(p->xext, p->yext);
@@ -669,12 +638,11 @@ static void cgmt_vdcextent(void)
 }
 
 
-
 /* Background colour */
 
 static void cgmt_backcol(void)
 {
-  cgmt_start_cmd(2, (int) BackCol);
+  cgmt_start_cmd(2, (int)BackCol);
 
   cgmt_int(255);
   cgmt_int(255);
@@ -684,12 +652,11 @@ static void cgmt_backcol(void)
 }
 
 
-
 /* VDC integer precision */
 
 static void cgmt_vdcintprec(void)
 {
-  cgmt_start_cmd(3, (int) vdcIntPrec);
+  cgmt_start_cmd(3, (int)vdcIntPrec);
 
   cgmt_int(-32768);
   cgmt_int(32767);
@@ -698,12 +665,11 @@ static void cgmt_vdcintprec(void)
 }
 
 
-
 /* Clip rectangle */
 
 static void cgmt_cliprect(int *int_coords)
 {
-  cgmt_start_cmd(3, (int) ClipRect);
+  cgmt_start_cmd(3, (int)ClipRect);
 
   cgmt_ipoint(int_coords[0], int_coords[1]);
   cgmt_ipoint(int_coords[2], int_coords[3]);
@@ -712,12 +678,11 @@ static void cgmt_cliprect(int *int_coords)
 }
 
 
-
 /* Clip indicator */
 
 static void cgmt_clipindic(int clip_ind)
 {
-  cgmt_start_cmd(3, (int) ClipIndic);
+  cgmt_start_cmd(3, (int)ClipIndic);
 
   if (clip_ind)
     {
@@ -732,14 +697,13 @@ static void cgmt_clipindic(int clip_ind)
 }
 
 
-
 /* Polyline */
 
 static void cgmt_pline(int no_pairs, int *x1_ptr, int *y1_ptr)
 {
   int i;
 
-  cgmt_start_cmd(4, (int) PolyLine);
+  cgmt_start_cmd(4, (int)PolyLine);
 
   for (i = 0; i < no_pairs; ++i)
     {
@@ -748,7 +712,6 @@ static void cgmt_pline(int no_pairs, int *x1_ptr, int *y1_ptr)
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Polymarker */
@@ -757,7 +720,7 @@ static void cgmt_pmarker(int no_pairs, int *x1_ptr, int *y1_ptr)
 {
   int i;
 
-  cgmt_start_cmd(4, (int) PolyMarker);
+  cgmt_start_cmd(4, (int)PolyMarker);
 
   for (i = 0; i < no_pairs; ++i)
     {
@@ -768,12 +731,11 @@ static void cgmt_pmarker(int no_pairs, int *x1_ptr, int *y1_ptr)
 }
 
 
-
 /* Text */
 
 static void cgmt_text(int x, int y, int final, char *buffer)
 {
-  cgmt_start_cmd(4, (int) Text);
+  cgmt_start_cmd(4, (int)Text);
 
   cgmt_ipoint(x, y);
 
@@ -792,14 +754,13 @@ static void cgmt_text(int x, int y, int final, char *buffer)
 }
 
 
-
 /* Polygon */
 
 static void cgmt_pgon(int no_pairs, int *x1_ptr, int *y1_ptr)
 {
   int i;
 
-  cgmt_start_cmd(4, (int) C_Polygon);
+  cgmt_start_cmd(4, (int)C_Polygon);
 
   for (i = 0; i < no_pairs; ++i)
     {
@@ -810,25 +771,23 @@ static void cgmt_pgon(int no_pairs, int *x1_ptr, int *y1_ptr)
 }
 
 
-
 /* Line type */
 
 static void cgmt_ltype(int line_type)
 {
-  cgmt_start_cmd(5, (int) LType);
+  cgmt_start_cmd(5, (int)LType);
 
-  cgmt_int((int) line_type);
+  cgmt_int((int)line_type);
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Line width */
 
 static void cgmt_lwidth(double rmul)
 {
-  cgmt_start_cmd(5, (int) LWidth);
+  cgmt_start_cmd(5, (int)LWidth);
 
   cgmt_real(rmul);
 
@@ -836,12 +795,11 @@ static void cgmt_lwidth(double rmul)
 }
 
 
-
 /* Line colour */
 
 static void cgmt_lcolour(int index)
 {
-  cgmt_start_cmd(5, (int) LColour);
+  cgmt_start_cmd(5, (int)LColour);
 
   cgmt_int(index);
 
@@ -849,12 +807,11 @@ static void cgmt_lcolour(int index)
 }
 
 
-
 /* Marker type */
 
 static void cgmt_mtype(int marker)
 {
-  cgmt_start_cmd(5, (int) MType);
+  cgmt_start_cmd(5, (int)MType);
 
   cgmt_int(marker);
 
@@ -862,12 +819,11 @@ static void cgmt_mtype(int marker)
 }
 
 
-
 /* Marker size */
 
 static void cgmt_msize(double rmul)
 {
-  cgmt_start_cmd(5, (int) MSize);
+  cgmt_start_cmd(5, (int)MSize);
 
   cgmt_real(rmul);
 
@@ -875,25 +831,23 @@ static void cgmt_msize(double rmul)
 }
 
 
-
 /* Marker colour */
 
 static void cgmt_mcolour(int index)
 {
-  cgmt_start_cmd(5, (int) MColour);
+  cgmt_start_cmd(5, (int)MColour);
 
   cgmt_int(index);
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Text font index */
 
 static void cgmt_tfindex(int index)
 {
-  cgmt_start_cmd(5, (int) TFIndex);
+  cgmt_start_cmd(5, (int)TFIndex);
 
   cgmt_int(index);
 
@@ -901,32 +855,31 @@ static void cgmt_tfindex(int index)
 }
 
 
-
 /* Text precision */
 
 static void cgmt_tprec(int precision)
 {
-  cgmt_start_cmd(5, (int) TPrec);
+  cgmt_start_cmd(5, (int)TPrec);
 
   switch (precision)
     {
 
     case string:
       {
-	cgmt_out_string(" String");
-	break;
+        cgmt_out_string(" String");
+        break;
       }
 
     case character:
       {
-	cgmt_out_string(" Character");
-	break;
+        cgmt_out_string(" Character");
+        break;
       }
 
     case stroke:
       {
-	cgmt_out_string(" Stroke");
-	break;
+        cgmt_out_string(" Stroke");
+        break;
       }
     }
 
@@ -934,12 +887,11 @@ static void cgmt_tprec(int precision)
 }
 
 
-
 /* Character expansion factor */
 
 static void cgmt_cexpfac(double factor)
 {
-  cgmt_start_cmd(5, (int) CExpFac);
+  cgmt_start_cmd(5, (int)CExpFac);
 
   cgmt_real(factor);
 
@@ -947,12 +899,11 @@ static void cgmt_cexpfac(double factor)
 }
 
 
-
 /* Character space */
 
 static void cgmt_cspace(double space)
 {
-  cgmt_start_cmd(5, (int) CSpace);
+  cgmt_start_cmd(5, (int)CSpace);
 
   cgmt_real(space);
 
@@ -960,12 +911,11 @@ static void cgmt_cspace(double space)
 }
 
 
-
 /* Text colour */
 
 static void cgmt_tcolour(int index)
 {
-  cgmt_start_cmd(5, (int) TColour);
+  cgmt_start_cmd(5, (int)TColour);
 
   cgmt_int(index);
 
@@ -973,12 +923,11 @@ static void cgmt_tcolour(int index)
 }
 
 
-
 /* Character height */
 
 static void cgmt_cheight(int height)
 {
-  cgmt_start_cmd(5, (int) CHeight);
+  cgmt_start_cmd(5, (int)CHeight);
 
   cgmt_int(height);
 
@@ -986,12 +935,11 @@ static void cgmt_cheight(int height)
 }
 
 
-
 /* Character orientation */
 
 static void cgmt_corient(int x_up, int y_up, int x_base, int y_base)
 {
-  cgmt_start_cmd(5, (int) COrient);
+  cgmt_start_cmd(5, (int)COrient);
 
   cgmt_int(x_up);
   cgmt_int(y_up);
@@ -1002,37 +950,36 @@ static void cgmt_corient(int x_up, int y_up, int x_base, int y_base)
 }
 
 
-
 /* Text path */
 
 static void cgmt_tpath(int new_path)
 {
-  cgmt_start_cmd(5, (int) TPath);
+  cgmt_start_cmd(5, (int)TPath);
 
   switch (new_path)
     {
     case right:
       {
-	cgmt_out_string(" Right");
-	break;
+        cgmt_out_string(" Right");
+        break;
       }
 
     case left:
       {
-	cgmt_out_string(" Left");
-	break;
+        cgmt_out_string(" Left");
+        break;
       }
 
     case up:
       {
-	cgmt_out_string(" Up");
-	break;
+        cgmt_out_string(" Up");
+        break;
       }
 
     case down:
       {
-	cgmt_out_string(" Down");
-	break;
+        cgmt_out_string(" Down");
+        break;
       }
     }
 
@@ -1040,44 +987,42 @@ static void cgmt_tpath(int new_path)
 }
 
 
-
-
 /* Text alignment */
 
 static void cgmt_talign(int hor, int ver)
 {
-  cgmt_start_cmd(5, (int) TAlign);
+  cgmt_start_cmd(5, (int)TAlign);
 
   switch (hor)
     {
     case normal_h:
       {
-	cgmt_out_string(" NormHoriz");
-	break;
+        cgmt_out_string(" NormHoriz");
+        break;
       }
 
     case left_h:
       {
-	cgmt_out_string(" Left");
-	break;
+        cgmt_out_string(" Left");
+        break;
       }
 
     case center_h:
       {
-	cgmt_out_string(" Ctr");
-	break;
+        cgmt_out_string(" Ctr");
+        break;
       }
 
     case right_h:
       {
-	cgmt_out_string(" Right");
-	break;
+        cgmt_out_string(" Right");
+        break;
       }
 
     case cont_h:
       {
-	cgmt_out_string(" ContHoriz");
-	break;
+        cgmt_out_string(" ContHoriz");
+        break;
       }
     }
 
@@ -1086,44 +1031,44 @@ static void cgmt_talign(int hor, int ver)
 
     case normal_v:
       {
-	cgmt_out_string(" NormVert");
-	break;
+        cgmt_out_string(" NormVert");
+        break;
       }
 
     case top_v:
       {
-	cgmt_out_string(" Top");
-	break;
+        cgmt_out_string(" Top");
+        break;
       }
 
     case cap_v:
       {
-	cgmt_out_string(" Cap");
-	break;
+        cgmt_out_string(" Cap");
+        break;
       }
 
     case half_v:
       {
-	cgmt_out_string(" Half");
-	break;
+        cgmt_out_string(" Half");
+        break;
       }
 
     case base_v:
       {
-	cgmt_out_string(" Base");
-	break;
+        cgmt_out_string(" Base");
+        break;
       }
 
     case bottom_v:
       {
-	cgmt_out_string(" Bottom");
-	break;
+        cgmt_out_string(" Bottom");
+        break;
       }
 
     case cont_v:
       {
-	cgmt_out_string(" ContVert");
-	break;
+        cgmt_out_string(" ContVert");
+        break;
       }
     }
 
@@ -1132,46 +1077,45 @@ static void cgmt_talign(int hor, int ver)
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Interior style */
 
 static void cgmt_intstyle(int style)
 {
-  cgmt_start_cmd(5, (int) IntStyle);
+  cgmt_start_cmd(5, (int)IntStyle);
 
   switch (style)
     {
 
     case hollow:
       {
-	cgmt_out_string(" Hollow");
-	break;
+        cgmt_out_string(" Hollow");
+        break;
       }
 
     case solid_i:
       {
-	cgmt_out_string(" Solid");
-	break;
+        cgmt_out_string(" Solid");
+        break;
       }
 
     case pattern:
       {
-	cgmt_out_string(" Pat");
-	break;
+        cgmt_out_string(" Pat");
+        break;
       }
 
     case hatch:
       {
-	cgmt_out_string(" Hatch");
-	break;
+        cgmt_out_string(" Hatch");
+        break;
       }
 
     case empty:
       {
-	cgmt_out_string(" Empty");
-	break;
+        cgmt_out_string(" Empty");
+        break;
       }
     }
 
@@ -1179,12 +1123,11 @@ static void cgmt_intstyle(int style)
 }
 
 
-
 /* Fill colour */
 
 static void cgmt_fillcolour(int index)
 {
-  cgmt_start_cmd(5, (int) FillColour);
+  cgmt_start_cmd(5, (int)FillColour);
 
   cgmt_int(index);
 
@@ -1192,27 +1135,24 @@ static void cgmt_fillcolour(int index)
 }
 
 
-
 /* Hatch index */
 
 static void cgmt_hindex(int new_index)
 {
-  cgmt_start_cmd(5, (int) HatchIndex);
+  cgmt_start_cmd(5, (int)HatchIndex);
   cgmt_int(new_index);
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Pattern index */
 
 static void cgmt_pindex(int new_index)
 {
-  cgmt_start_cmd(5, (int) PatIndex);
+  cgmt_start_cmd(5, (int)PatIndex);
   cgmt_int(new_index);
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Colour table */
@@ -1221,30 +1161,28 @@ static void cgmt_coltab(int beg_index, int no_entries, double *ctab)
 {
   int i, j;
 
-  cgmt_start_cmd(5, (int) ColTab);
+  cgmt_start_cmd(5, (int)ColTab);
   cgmt_int(beg_index);
 
   for (i = beg_index; i < (beg_index + no_entries); ++i)
     {
       for (j = 0; j < 3; ++j)
-	{
-	  cgmt_int((int) (ctab[(i - beg_index) * 3 + j] * (max_colors - 1)));
-	}
+        {
+          cgmt_int((int)(ctab[(i - beg_index) * 3 + j] * (max_colors - 1)));
+        }
     }
 
   cgmt_flush_cmd(final_flush);
 }
 
 
-
 /* Cell array */
 
-static void cgmt_carray(int xmin, int xmax, int ymin, int ymax, int dx,
-			int dy, int dimx, int *array)
+static void cgmt_carray(int xmin, int xmax, int ymin, int ymax, int dx, int dy, int dimx, int *array)
 {
   int ix, iy, c;
 
-  cgmt_start_cmd(4, (int) Cell_Array);
+  cgmt_start_cmd(4, (int)Cell_Array);
 
   cgmt_ipoint(xmin, ymin);
   cgmt_ipoint(xmax, ymax);
@@ -1258,18 +1196,16 @@ static void cgmt_carray(int xmin, int xmax, int ymin, int ymax, int dx,
       cgmt_fb();
 
       for (ix = 0; ix < dx; ix++)
-	{
-	  c = array[dimx * iy + ix];
-	  cgmt_int(c);
+        {
+          c = array[dimx * iy + ix];
+          cgmt_int(c);
 
-	  if (ix < dx - 1)
-	    cgmt_outc(',');
-	}
+          if (ix < dx - 1) cgmt_outc(',');
+        }
     }
 
   cgmt_flush_cmd(final_flush);
 }
-
 
 
 /* Flush output buffer */
@@ -1291,12 +1227,10 @@ static void cgmb_fb(void)
 
 static void cgmb_outc(char chr)
 {
-  if (p->buffer_ind >= max_buffer)
-    cgmb_fb();
+  if (p->buffer_ind >= max_buffer) cgmb_fb();
 
   p->buffer[p->buffer_ind++] = chr;
 }
-
 
 
 /* Start output command */
@@ -1320,56 +1254,53 @@ static void cgmb_start_cmd(int cl, int el)
 }
 
 
-
 /* Flush output command */
 
 static void cgmb_flush_cmd(int this_flush)
 {
   int i;
 
-  if ((this_flush == final_flush) && (p->partition == 1) &&
-      (p->cmd_index <= max_short))
+  if ((this_flush == final_flush) && (p->partition == 1) && (p->cmd_index <= max_short))
     {
       p->cmd_hdr[1] |= p->cmd_index;
 
       /* flush out the header */
 
       for (i = 0; i < hdr_short; ++i)
-	{
-	  cgmb_outc(p->cmd_hdr[i]);
-	}
-
+        {
+          cgmb_outc(p->cmd_hdr[i]);
+        }
     }
   else
     {
       /* need a long form */
 
       if (p->partition == 1)
-	{
-	  /* first one */
+        {
+          /* first one */
 
-	  p->cmd_hdr[1] |= 31;
+          p->cmd_hdr[1] |= 31;
 
-	  for (i = 0; i < hdr_short; ++i)
-	    {
-	      cgmb_outc(p->cmd_hdr[i]);
-	    }
-	}
+          for (i = 0; i < hdr_short; ++i)
+            {
+              cgmb_outc(p->cmd_hdr[i]);
+            }
+        }
 
       p->cmd_hdr[2] = p->cmd_index >> 8;
       p->cmd_hdr[3] = p->cmd_index & 255;
 
       if (this_flush == int_flush)
-	{
-	  p->cmd_hdr[2] |= 1 << 7;	/* more come */
-	}
+        {
+          p->cmd_hdr[2] |= 1 << 7; /* more come */
+        }
 
       /* flush out the header */
 
       for (i = hdr_short; i < hdr_long; ++i)
-	{
-	  cgmb_outc(p->cmd_hdr[i]);
-	}
+        {
+          cgmb_outc(p->cmd_hdr[i]);
+        }
     }
 
 
@@ -1391,8 +1322,6 @@ static void cgmb_flush_cmd(int this_flush)
 }
 
 
-
-
 /* Write one byte */
 
 static void cgmb_out_bc(int c)
@@ -1404,8 +1333,6 @@ static void cgmb_out_bc(int c)
 
   p->cmd_data[p->cmd_index++] = c;
 }
-
-
 
 
 /* Write multiple bytes */
@@ -1420,9 +1347,9 @@ static void cgmb_out_bs(char *cptr, int n)
   while (to_do > space_left)
     {
       for (i = 0; i < space_left; ++i)
-	{
-	  p->cmd_data[p->cmd_index++] = *cptr++;
-	}
+        {
+          p->cmd_data[p->cmd_index++] = *cptr++;
+        }
 
       cgmb_flush_cmd(int_flush);
       to_do -= space_left;
@@ -1434,8 +1361,6 @@ static void cgmb_out_bs(char *cptr, int n)
       p->cmd_data[p->cmd_index++] = *cptr++;
     }
 }
-
-
 
 
 /* Write a CGM binary string */
@@ -1468,36 +1393,34 @@ static void cgmb_string(char *cptr, int slen)
       to_do = slen;
 
       while (to_do > 0)
-	{
-	  if (to_do < max_long)
-	    {
-	      /* last one */
+        {
+          if (to_do < max_long)
+            {
+              /* last one */
 
-	      byte1 = to_do >> 8;
-	      byte2 = to_do & 255;
+              byte1 = to_do >> 8;
+              byte2 = to_do & 255;
 
-	      cgmb_out_bc(byte1);
-	      cgmb_out_bc(byte2);
-	      cgmb_out_bs(cptr, to_do);
+              cgmb_out_bc(byte1);
+              cgmb_out_bc(byte2);
+              cgmb_out_bs(cptr, to_do);
 
-	      to_do = 0;
-	    }
-	  else
-	    {
-	      byte1 = (max_long >> 8) | (1 << 7);
-	      byte2 = max_long & 255;
+              to_do = 0;
+            }
+          else
+            {
+              byte1 = (max_long >> 8) | (1 << 7);
+              byte2 = max_long & 255;
 
-	      cgmb_out_bc(byte1);
-	      cgmb_out_bc(byte2);
-	      cgmb_out_bs(cptr, max_long);
+              cgmb_out_bc(byte1);
+              cgmb_out_bc(byte2);
+              cgmb_out_bs(cptr, max_long);
 
-	      to_do -= max_long;
-	    }
-	}
+              to_do -= max_long;
+            }
+        }
     }
 }
-
-
 
 
 /* Write a signed integer variable */
@@ -1517,15 +1440,13 @@ static void cgmb_gint(int xin, int precision)
       xshifted >>= byte_size;
     }
 
-  if ((xin < 0) && (buffer[0] > '\0'))	/* maybe after truncation */
+  if ((xin < 0) && (buffer[0] > '\0')) /* maybe after truncation */
     {
-      buffer[0] |= 1 << 7;	/* assuming two's complement */
+      buffer[0] |= 1 << 7; /* assuming two's complement */
     }
 
   cgmb_out_bs(buffer, no_out);
 }
-
-
 
 
 /* Write an unsigned integer variable */
@@ -1543,9 +1464,8 @@ static void cgmb_uint(unsigned int xin, int precision)
       xin >>= byte_size;
     }
 
-  cgmb_out_bs((char *) buffer, no_out);
+  cgmb_out_bs((char *)buffer, no_out);
 }
-
 
 
 /* Write fixed point variable */
@@ -1555,19 +1475,18 @@ static void cgmb_fixed(double xin)
   int exp_part, fract_part;
   double fract_real;
 
-  exp_part = (int) xin;
+  exp_part = (int)xin;
   if (exp_part > xin)
     {
-      exp_part -= 1;		/* take it below xin */
+      exp_part -= 1; /* take it below xin */
     }
 
   fract_real = xin - exp_part;
-  fract_part = (int) (fract_real * (01 << real_prec_fract));
+  fract_part = (int)(fract_real * (01 << real_prec_fract));
 
   cgmb_gint(exp_part, real_prec_exp);
   cgmb_uint(fract_part, real_prec_fract);
 }
-
 
 
 /* Write IEEE floating point variable */
@@ -1600,54 +1519,54 @@ static void cgmb_float(double xin)
   else
     {
       switch (real_prec_exp + real_prec_fract)
-	{
+        {
 
-	  /* first 32 bit precision */
+          /* first 32 bit precision */
 
-	case 32:
-	  {
-	    if (xin < 1.0)
-	      {
-		for (i = 0; (xin < 1.0) && (i < 128); ++i)
-		  {
-		    xin *= 2.0;
-		  }
+        case 32:
+          {
+            if (xin < 1.0)
+              {
+                for (i = 0; (xin < 1.0) && (i < 128); ++i)
+                  {
+                    xin *= 2.0;
+                  }
 
-		exponent = 127 - i;
-	      }
-	    else
-	      {
-		if (xin >= 2.0)
-		  {
-		    for (i = 0; (xin >= 2.0) && (i < 127); ++i)
-		      {
-			xin /= 2.0;
-		      }
-		    exponent = 127 + i;
-		  }
-		else
-		  {
-		    exponent = 127;
-		  }
-	      }
-	    dfract = xin - 1.0;
+                exponent = 127 - i;
+              }
+            else
+              {
+                if (xin >= 2.0)
+                  {
+                    for (i = 0; (xin >= 2.0) && (i < 127); ++i)
+                      {
+                        xin /= 2.0;
+                      }
+                    exponent = 127 + i;
+                  }
+                else
+                  {
+                    exponent = 127;
+                  }
+              }
+            dfract = xin - 1.0;
 
-	    for (i = 0; i < 23; ++i)
-	      {
-		dfract *= 2.0;
-	      }
+            for (i = 0; i < 23; ++i)
+              {
+                dfract *= 2.0;
+              }
 
-	    fract = (unsigned long) dfract;
-	    break;
-	  }
+            fract = (unsigned long)dfract;
+            break;
+          }
 
-	  /* now 64 bit precision */
+          /* now 64 bit precision */
 
-	case 64:
-	  {
-	    break;
-	  }
-	}
+        case 64:
+          {
+            break;
+          }
+        }
     }
 
   switch (real_prec_exp + real_prec_fract)
@@ -1657,23 +1576,22 @@ static void cgmb_float(double xin)
 
     case 32:
       {
-	arry[0] = ((sign_bit & 1) << 7) | ((exponent >> 1) & 127);
-	arry[1] = ((exponent & 1) << 7) | ((fract >> 16) & 127);
-	arry[2] = (fract >> 8) & 255;
-	arry[3] = fract & 255;
-	cgmb_out_bs((char *) arry, 4);
-	break;
+        arry[0] = ((sign_bit & 1) << 7) | ((exponent >> 1) & 127);
+        arry[1] = ((exponent & 1) << 7) | ((fract >> 16) & 127);
+        arry[2] = (fract >> 8) & 255;
+        arry[3] = fract & 255;
+        cgmb_out_bs((char *)arry, 4);
+        break;
       }
 
       /* now 64 bit precision */
 
     case 64:
       {
-	break;
+        break;
       }
     }
 }
-
 
 
 /* Write direct colour value */
@@ -1684,14 +1602,12 @@ static void cgmb_dcint(int xin)
 }
 
 
-
 /* Write a signed int at VDC integer precision */
 
 static void cgmb_vint(int xin)
 {
   cgmb_gint(xin, 16);
 }
-
 
 
 /* Write a standard CGM signed int */
@@ -1702,7 +1618,6 @@ static void cgmb_sint(int xin)
 }
 
 
-
 /* Write a signed int at index precision */
 
 static void cgmb_xint(int xin)
@@ -1711,14 +1626,12 @@ static void cgmb_xint(int xin)
 }
 
 
-
 /* Write an unsigned integer at colour index precision */
 
 static void cgmb_cxint(int xin)
 {
-  cgmb_uint((unsigned) xin, cxprec);
+  cgmb_uint((unsigned)xin, cxprec);
 }
-
 
 
 /* Write an integer at fixed (16 bit) precision */
@@ -1735,12 +1648,11 @@ static void cgmb_eint(int xin)
 }
 
 
-
 /* Begin metafile */
 
 static void cgmb_begin(char *comment)
 {
-  cgmb_start_cmd(0, (int) B_Mf);
+  cgmb_start_cmd(0, (int)B_Mf);
 
   if (*comment)
     {
@@ -1757,14 +1669,13 @@ static void cgmb_begin(char *comment)
 }
 
 
-
 /* End metafile */
 
 static void cgmb_end(void)
 {
   /* put out the end metafile command */
 
-  cgmb_start_cmd(0, (int) E_Mf);
+  cgmb_start_cmd(0, (int)E_Mf);
   cgmb_flush_cmd(final_flush);
 
   /* flush out the buffer */
@@ -1773,12 +1684,11 @@ static void cgmb_end(void)
 }
 
 
-
 /* Start picture */
 
 static void cgmb_bp(char *pic_name)
 {
-  cgmb_start_cmd(0, (int) B_Pic);
+  cgmb_start_cmd(0, (int)B_Pic);
 
   if (*pic_name)
     {
@@ -1793,40 +1703,36 @@ static void cgmb_bp(char *pic_name)
 }
 
 
-
 /* Start picture body */
 
 static void cgmb_bpage(void)
 {
-  cgmb_start_cmd(0, (int) B_Pic_Body);
+  cgmb_start_cmd(0, (int)B_Pic_Body);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* End picture */
 
 static void cgmb_epage(void)
 {
-  cgmb_start_cmd(0, (int) E_Pic);
+  cgmb_start_cmd(0, (int)E_Pic);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Metafile version */
 
 static void cgmb_mfversion(void)
 {
-  cgmb_start_cmd(1, (int) MfVersion);
+  cgmb_start_cmd(1, (int)MfVersion);
 
   cgmb_sint(1);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Metafile description */
@@ -1844,25 +1750,23 @@ static void cgmb_mfdescrip(void)
 }
 
 
-
 /* VDC type */
 
 static void cgmb_vdctype(void)
 {
-  cgmb_start_cmd(1, (int) vdcType);
+  cgmb_start_cmd(1, (int)vdcType);
 
-  cgmb_eint((int) vdc_int);
+  cgmb_eint((int)vdc_int);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Integer precision */
 
 static void cgmb_intprec(void)
 {
-  cgmb_start_cmd(1, (int) IntPrec);
+  cgmb_start_cmd(1, (int)IntPrec);
 
   cgmb_sint(16);
 
@@ -1870,12 +1774,11 @@ static void cgmb_intprec(void)
 }
 
 
-
 /* Real precision */
 
 static void cgmb_realprec(void)
 {
-  cgmb_start_cmd(1, (int) RealPrec);
+  cgmb_start_cmd(1, (int)RealPrec);
 
   cgmb_sint(1);
   cgmb_sint(16);
@@ -1885,12 +1788,11 @@ static void cgmb_realprec(void)
 }
 
 
-
 /* Index precision */
 
 static void cgmb_indexprec(void)
 {
-  cgmb_start_cmd(1, (int) IndexPrec);
+  cgmb_start_cmd(1, (int)IndexPrec);
 
   cgmb_sint(16);
 
@@ -1898,12 +1800,11 @@ static void cgmb_indexprec(void)
 }
 
 
-
 /* Colour precision */
 
 static void cgmb_colprec(void)
 {
-  cgmb_start_cmd(1, (int) ColPrec);
+  cgmb_start_cmd(1, (int)ColPrec);
 
   cgmb_sint(cprec);
 
@@ -1911,12 +1812,11 @@ static void cgmb_colprec(void)
 }
 
 
-
 /* Colour index precision */
 
 static void cgmb_cindprec(void)
 {
-  cgmb_start_cmd(1, (int) CIndPrec);
+  cgmb_start_cmd(1, (int)CIndPrec);
 
   cgmb_sint(cxprec);
 
@@ -1924,12 +1824,11 @@ static void cgmb_cindprec(void)
 }
 
 
-
 /* Colour value extent */
 
 static void cgmb_cvextent(void)
 {
-  cgmb_start_cmd(1, (int) CVExtent);
+  cgmb_start_cmd(1, (int)CVExtent);
 
   cgmb_dcint(0);
   cgmb_dcint(0);
@@ -1940,20 +1839,18 @@ static void cgmb_cvextent(void)
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Maximum colour index */
 
 static void cgmb_maxcind(void)
 {
-  cgmb_start_cmd(1, (int) MaxCInd);
+  cgmb_start_cmd(1, (int)MaxCInd);
 
   cgmb_cxint(MAX_COLOR - 1);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Metafile element list */
@@ -1962,7 +1859,7 @@ static void cgmb_mfellist(void)
 {
   int i;
 
-  cgmb_start_cmd(1, (int) MfElList);
+  cgmb_start_cmd(1, (int)MfElList);
   cgmb_sint(n_melements);
 
   for (i = 2; i < 2 * n_melements; ++i)
@@ -1972,7 +1869,6 @@ static void cgmb_mfellist(void)
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Font List */
@@ -1987,18 +1883,17 @@ static void cgmb_fontlist(void)
     {
       slen += strlen(fonts[i]) + 1;
     }
-  s = (char *) gks_malloc(slen);
+  s = (char *)gks_malloc(slen);
 
   *s = '\0';
   for (i = 0; i < max_std_textfont; i++)
     {
       font = map[i];
       strcat(s, fonts[font]);
-      if (i < max_std_textfont - 1)
-	strcat(s, " ");
+      if (i < max_std_textfont - 1) strcat(s, " ");
     }
 
-  cgmb_start_cmd(1, (int) FontList);
+  cgmb_start_cmd(1, (int)FontList);
 
   cgmb_string(s, strlen(s));
 
@@ -2008,12 +1903,11 @@ static void cgmb_fontlist(void)
 }
 
 
-
 /* Character announcer */
 
 static void cgmb_cannounce(void)
 {
-  cgmb_start_cmd(1, (int) CharAnnounce);
+  cgmb_start_cmd(1, (int)CharAnnounce);
 
   cgmb_eint(3);
 
@@ -2021,12 +1915,11 @@ static void cgmb_cannounce(void)
 }
 
 
-
 /* Scaling mode */
 
 static void cgmb_scalmode(void)
 {
-  cgmb_start_cmd(2, (int) ScalMode);
+  cgmb_start_cmd(2, (int)ScalMode);
 
   if (p->mm > 0)
     {
@@ -2043,52 +1936,47 @@ static void cgmb_scalmode(void)
 }
 
 
-
 /* Colour selection mode */
 
 static void cgmb_colselmode(void)
 {
-  cgmb_start_cmd(2, (int) ColSelMode);
+  cgmb_start_cmd(2, (int)ColSelMode);
 
-  cgmb_eint((int) i_c_mode);
+  cgmb_eint((int)i_c_mode);
 
   cgmb_flush_cmd(final_flush);
 }
-
-
 
 
 /* line width specification mode */
 
 static void cgmb_lwsmode(void)
 {
-  cgmb_start_cmd(2, (int) LWidSpecMode);
+  cgmb_start_cmd(2, (int)LWidSpecMode);
 
-  cgmb_eint((int) scaled);
+  cgmb_eint((int)scaled);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* marker size specification mode */
 
 static void cgmb_msmode(void)
 {
-  cgmb_start_cmd(2, (int) MarkSizSpecMode);
+  cgmb_start_cmd(2, (int)MarkSizSpecMode);
 
-  cgmb_eint((int) scaled);
+  cgmb_eint((int)scaled);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* VDC extent */
 
 static void cgmb_vdcextent(void)
 {
-  cgmb_start_cmd(2, (int) vdcExtent);
+  cgmb_start_cmd(2, (int)vdcExtent);
 
   cgmb_vint(0);
   cgmb_vint(0);
@@ -2099,12 +1987,11 @@ static void cgmb_vdcextent(void)
 }
 
 
-
 /* Background colour */
 
 static void cgmb_backcol(void)
 {
-  cgmb_start_cmd(2, (int) BackCol);
+  cgmb_start_cmd(2, (int)BackCol);
 
   cgmb_dcint(255);
   cgmb_dcint(255);
@@ -2112,20 +1999,18 @@ static void cgmb_backcol(void)
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* VDC integer precision */
 
 static void cgmb_vdcintprec(void)
 {
-  cgmb_start_cmd(3, (int) vdcIntPrec);
+  cgmb_start_cmd(3, (int)vdcIntPrec);
 
   cgmb_sint(16);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Clip rectangle */
@@ -2134,27 +2019,24 @@ static void cgmb_cliprect(int *int_coords)
 {
   int i;
 
-  cgmb_start_cmd(3, (int) ClipRect);
+  cgmb_start_cmd(3, (int)ClipRect);
 
-  for (i = 0; i < 4; ++i)
-    cgmb_vint(int_coords[i]);
+  for (i = 0; i < 4; ++i) cgmb_vint(int_coords[i]);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Clip indicator */
 
 static void cgmb_clipindic(int clip_ind)
 {
-  cgmb_start_cmd(3, (int) ClipIndic);
+  cgmb_start_cmd(3, (int)ClipIndic);
 
   cgmb_eint(clip_ind);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Polyline */
@@ -2163,7 +2045,7 @@ static void cgmb_pline(int no_pairs, int *x1_ptr, int *y1_ptr)
 {
   int i;
 
-  cgmb_start_cmd(4, (int) PolyLine);
+  cgmb_start_cmd(4, (int)PolyLine);
 
   for (i = 0; i < no_pairs; ++i)
     {
@@ -2173,7 +2055,6 @@ static void cgmb_pline(int no_pairs, int *x1_ptr, int *y1_ptr)
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Polymarker */
@@ -2182,7 +2063,7 @@ static void cgmb_pmarker(int no_pairs, int *x1_ptr, int *y1_ptr)
 {
   int i;
 
-  cgmb_start_cmd(4, (int) PolyMarker);
+  cgmb_start_cmd(4, (int)PolyMarker);
 
   for (i = 0; i < no_pairs; ++i)
     {
@@ -2194,12 +2075,11 @@ static void cgmb_pmarker(int no_pairs, int *x1_ptr, int *y1_ptr)
 }
 
 
-
 /* Text */
 
 static void cgmb_text(int x, int y, int final, char *buffer)
 {
-  cgmb_start_cmd(4, (int) Text);
+  cgmb_start_cmd(4, (int)Text);
 
   cgmb_vint(x);
   cgmb_vint(y);
@@ -2211,14 +2091,13 @@ static void cgmb_text(int x, int y, int final, char *buffer)
 }
 
 
-
 /* Polygon */
 
 static void cgmb_pgon(int no_pairs, int *x1_ptr, int *y1_ptr)
 {
   int i;
 
-  cgmb_start_cmd(4, (int) C_Polygon);
+  cgmb_start_cmd(4, (int)C_Polygon);
 
   for (i = 0; i < no_pairs; ++i)
     {
@@ -2230,15 +2109,13 @@ static void cgmb_pgon(int no_pairs, int *x1_ptr, int *y1_ptr)
 }
 
 
-
 /* Cell array */
 
-static void cgmb_carray(int xmin, int xmax, int ymin, int ymax, int dx,
-			int dy, int dimx, int *array)
+static void cgmb_carray(int xmin, int xmax, int ymin, int ymax, int dx, int dy, int dimx, int *array)
 {
   int ix, iy, c;
 
-  cgmb_start_cmd(4, (int) Cell_Array);
+  cgmb_start_cmd(4, (int)Cell_Array);
 
   cgmb_vint(xmin);
   cgmb_vint(ymin);
@@ -2255,25 +2132,23 @@ static void cgmb_carray(int xmin, int xmax, int ymin, int ymax, int dx,
   for (iy = 0; iy < dy; iy++)
     {
       for (ix = 0; ix < dx; ix++)
-	{
-	  c = array[dimx * iy + ix];
-	  cgmb_out_bc(c);
-	}
+        {
+          c = array[dimx * iy + ix];
+          cgmb_out_bc(c);
+        }
 
-      if (odd(dx))
-	cgmb_out_bc(0);
+      if (odd(dx)) cgmb_out_bc(0);
     }
 
   cgmb_flush_cmd(final_flush);
 }
 
 
-
 /* Line type */
 
 static void cgmb_ltype(int line_type)
 {
-  cgmb_start_cmd(5, (int) LType);
+  cgmb_start_cmd(5, (int)LType);
 
   cgmb_xint(line_type);
 
@@ -2281,13 +2156,11 @@ static void cgmb_ltype(int line_type)
 }
 
 
-
-
 /* Line width */
 
 static void cgmb_lwidth(double rmul)
 {
-  cgmb_start_cmd(5, (int) LWidth);
+  cgmb_start_cmd(5, (int)LWidth);
 
   cgmb_fixed(rmul);
 
@@ -2295,12 +2168,11 @@ static void cgmb_lwidth(double rmul)
 }
 
 
-
 /* Line colour */
 
 static void cgmb_lcolour(int index)
 {
-  cgmb_start_cmd(5, (int) LColour);
+  cgmb_start_cmd(5, (int)LColour);
 
   cgmb_cxint(index);
 
@@ -2308,12 +2180,11 @@ static void cgmb_lcolour(int index)
 }
 
 
-
 /* Marker type */
 
 static void cgmb_mtype(int marker)
 {
-  cgmb_start_cmd(5, (int) MType);
+  cgmb_start_cmd(5, (int)MType);
 
   cgmb_xint(marker);
 
@@ -2321,12 +2192,11 @@ static void cgmb_mtype(int marker)
 }
 
 
-
 /* Marker size */
 
 static void cgmb_msize(double rmul)
 {
-  cgmb_start_cmd(5, (int) MSize);
+  cgmb_start_cmd(5, (int)MSize);
 
   cgmb_fixed(rmul);
 
@@ -2334,13 +2204,12 @@ static void cgmb_msize(double rmul)
 }
 
 
-
 /* Marker colour */
 
 static void cgmb_mcolour(int index)
 {
 
-  cgmb_start_cmd(5, (int) MColour);
+  cgmb_start_cmd(5, (int)MColour);
 
   cgmb_cxint(index);
 
@@ -2348,12 +2217,11 @@ static void cgmb_mcolour(int index)
 }
 
 
-
 /* Text font index */
 
 static void cgmb_tfindex(int index)
 {
-  cgmb_start_cmd(5, (int) TFIndex);
+  cgmb_start_cmd(5, (int)TFIndex);
 
   cgmb_xint(index);
 
@@ -2361,12 +2229,11 @@ static void cgmb_tfindex(int index)
 }
 
 
-
 /* Text precision */
 
 static void cgmb_tprec(int precision)
 {
-  cgmb_start_cmd(5, (int) TPrec);
+  cgmb_start_cmd(5, (int)TPrec);
 
   cgmb_eint(precision);
 
@@ -2374,12 +2241,11 @@ static void cgmb_tprec(int precision)
 }
 
 
-
 /* Character expansion factor */
 
 static void cgmb_cexpfac(double factor)
 {
-  cgmb_start_cmd(5, (int) CExpFac);
+  cgmb_start_cmd(5, (int)CExpFac);
 
   cgmb_fixed(factor);
 
@@ -2387,12 +2253,11 @@ static void cgmb_cexpfac(double factor)
 }
 
 
-
 /* Character space */
 
 static void cgmb_cspace(double space)
 {
-  cgmb_start_cmd(5, (int) CSpace);
+  cgmb_start_cmd(5, (int)CSpace);
 
   cgmb_fixed(space);
 
@@ -2400,12 +2265,11 @@ static void cgmb_cspace(double space)
 }
 
 
-
 /* Text colour */
 
 static void cgmb_tcolour(int index)
 {
-  cgmb_start_cmd(5, (int) TColour);
+  cgmb_start_cmd(5, (int)TColour);
 
   cgmb_cxint(index);
 
@@ -2413,13 +2277,11 @@ static void cgmb_tcolour(int index)
 }
 
 
-
-
 /* Character height */
 
 static void cgmb_cheight(int height)
 {
-  cgmb_start_cmd(5, (int) CHeight);
+  cgmb_start_cmd(5, (int)CHeight);
 
   cgmb_vint(height);
 
@@ -2427,12 +2289,11 @@ static void cgmb_cheight(int height)
 }
 
 
-
 /* Character orientation */
 
 static void cgmb_corient(int x_up, int y_up, int x_base, int y_base)
 {
-  cgmb_start_cmd(5, (int) COrient);
+  cgmb_start_cmd(5, (int)COrient);
 
   cgmb_vint(x_up);
   cgmb_vint(y_up);
@@ -2443,13 +2304,11 @@ static void cgmb_corient(int x_up, int y_up, int x_base, int y_base)
 }
 
 
-
-
 /* Text path */
 
 static void cgmb_tpath(int new_path)
 {
-  cgmb_start_cmd(5, (int) TPath);
+  cgmb_start_cmd(5, (int)TPath);
 
   cgmb_eint(new_path);
 
@@ -2457,12 +2316,11 @@ static void cgmb_tpath(int new_path)
 }
 
 
-
 /* Text alignment */
 
 static void cgmb_talign(int hor, int ver)
 {
-  cgmb_start_cmd(5, (int) TAlign);
+  cgmb_start_cmd(5, (int)TAlign);
 
   cgmb_eint(hor);
   cgmb_eint(ver);
@@ -2473,12 +2331,11 @@ static void cgmb_talign(int hor, int ver)
 }
 
 
-
 /* Interior style */
 
 static void cgmb_intstyle(int style)
 {
-  cgmb_start_cmd(5, (int) IntStyle);
+  cgmb_start_cmd(5, (int)IntStyle);
 
   cgmb_eint(style);
 
@@ -2486,12 +2343,11 @@ static void cgmb_intstyle(int style)
 }
 
 
-
 /* Fill colour */
 
 static void cgmb_fillcolour(int index)
 {
-  cgmb_start_cmd(5, (int) FillColour);
+  cgmb_start_cmd(5, (int)FillColour);
 
   cgmb_cxint(index);
 
@@ -2499,13 +2355,11 @@ static void cgmb_fillcolour(int index)
 }
 
 
-
-
 /* Hatch index */
 
 static void cgmb_hindex(int new_index)
 {
-  cgmb_start_cmd(5, (int) HatchIndex);
+  cgmb_start_cmd(5, (int)HatchIndex);
 
   cgmb_xint(new_index);
 
@@ -2517,13 +2371,12 @@ static void cgmb_hindex(int new_index)
 
 static void cgmb_pindex(int new_index)
 {
-  cgmb_start_cmd(5, (int) PatIndex);
+  cgmb_start_cmd(5, (int)PatIndex);
 
   cgmb_xint(new_index);
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 /* Colour table */
@@ -2532,21 +2385,19 @@ static void cgmb_coltab(int beg_index, int no_entries, double *ctab)
 {
   int i, j;
 
-  cgmb_start_cmd(5, (int) ColTab);
+  cgmb_start_cmd(5, (int)ColTab);
   cgmb_cxint(beg_index);
 
   for (i = beg_index; i < (beg_index + no_entries); ++i)
     {
       for (j = 0; j < 3; ++j)
-	{
-	  cgmb_dcint((int)
-		     (ctab[(i - beg_index) * 3 + j] * (max_colors - 1)));
-	}
+        {
+          cgmb_dcint((int)(ctab[(i - beg_index) * 3 + j] * (max_colors - 1)));
+        }
     }
 
   cgmb_flush_cmd(final_flush);
 }
-
 
 
 static void init_color_table(void)
@@ -2556,21 +2407,17 @@ static void init_color_table(void)
   for (i = 0; i < MAX_COLOR; i++)
     {
       j = i;
-      gks_inq_rgb(j, &p->color_t[i * 3], &p->color_t[i * 3 + 1],
-		  &p->color_t[i * 3 + 2]);
+      gks_inq_rgb(j, &p->color_t[i * 3], &p->color_t[i * 3 + 1], &p->color_t[i * 3 + 2]);
     }
 }
-
 
 
 static void setup_colors(void)
 {
   int i;
 
-  for (i = 0; i < MAX_COLOR; i++)
-    p->cgm[coltab] (i, 1, &p->color_t[3 * i]);
+  for (i = 0; i < MAX_COLOR; i++) p->cgm[coltab](i, 1, &p->color_t[3 * i]);
 }
-
 
 
 static void set_xform(unsigned init)
@@ -2597,15 +2444,15 @@ static void set_xform(unsigned init)
   for (i = 0; i < 4; i++)
     {
       if (vp_new[i] != p->vp[i])
-	{
-	  p->vp[i] = vp_new[i];
-	  update = TRUE;
-	}
+        {
+          p->vp[i] = vp_new[i];
+          update = TRUE;
+        }
       if (wn_new[i] != p->wn[i])
-	{
-	  p->wn[i] = wn_new[i];
-	  update = TRUE;
-	}
+        {
+          p->wn[i] = wn_new[i];
+          update = TRUE;
+        }
     }
 
   if (init || update || (clip_old != clip_new))
@@ -2616,51 +2463,49 @@ static void set_xform(unsigned init)
       p->xform.d = vp_new[2] - wn_new[2] * p->xform.c;
 
       if (init)
-	{
-	  if (clip_new)
-	    {
-	      clip_rect[0] = (int) (vp_new[0] * max_coord);
-	      clip_rect[1] = (int) (vp_new[2] * max_coord);
-	      clip_rect[2] = (int) (vp_new[1] * max_coord);
-	      clip_rect[3] = (int) (vp_new[3] * max_coord);
+        {
+          if (clip_new)
+            {
+              clip_rect[0] = (int)(vp_new[0] * max_coord);
+              clip_rect[1] = (int)(vp_new[2] * max_coord);
+              clip_rect[2] = (int)(vp_new[1] * max_coord);
+              clip_rect[3] = (int)(vp_new[3] * max_coord);
 
-	      p->cgm[cliprect] (clip_rect);
-	      p->cgm[clipindic] (TRUE);
-	    }
-	  else
-	    {
-	      p->cgm[clipindic] (FALSE);
-	    }
-	  clip_old = clip_new;
-	}
+              p->cgm[cliprect](clip_rect);
+              p->cgm[clipindic](TRUE);
+            }
+          else
+            {
+              p->cgm[clipindic](FALSE);
+            }
+          clip_old = clip_new;
+        }
       else
-	{
-	  if ((clip_old != clip_new) || update)
-	    {
-	      if (clip_new)
-		{
-		  clip_rect[0] = (int) (vp_new[0] * max_coord);
-		  clip_rect[1] = (int) (vp_new[2] * max_coord);
-		  clip_rect[2] = (int) (vp_new[1] * max_coord);
-		  clip_rect[3] = (int) (vp_new[3] * max_coord);
+        {
+          if ((clip_old != clip_new) || update)
+            {
+              if (clip_new)
+                {
+                  clip_rect[0] = (int)(vp_new[0] * max_coord);
+                  clip_rect[1] = (int)(vp_new[2] * max_coord);
+                  clip_rect[2] = (int)(vp_new[1] * max_coord);
+                  clip_rect[3] = (int)(vp_new[3] * max_coord);
 
-		  p->cgm[cliprect] (clip_rect);
-		  p->cgm[clipindic] (TRUE);
-		}
-	      else
-		{
-		  p->cgm[clipindic] (FALSE);
-		}
-	      clip_old = clip_new;
-	    }
-	}
+                  p->cgm[cliprect](clip_rect);
+                  p->cgm[clipindic](TRUE);
+                }
+              else
+                {
+                  p->cgm[clipindic](FALSE);
+                }
+              clip_old = clip_new;
+            }
+        }
     }
 }
 
 
-
-static void output_points(void (*output_func) (int, int *, int *),
-			  int n_points, double *x, double *y)
+static void output_points(void (*output_func)(int, int *, int *), int n_points, double *x, double *y)
 {
   int i;
   static int x_buffer[max_pbuffer], y_buffer[max_pbuffer];
@@ -2670,13 +2515,13 @@ static void output_points(void (*output_func) (int, int *, int *),
 
   if (n_points > max_pbuffer)
     {
-      d_x_buffer = (int *) gks_malloc(sizeof(double) * n_points);
-      d_y_buffer = (int *) gks_malloc(sizeof(double) * n_points);
+      d_x_buffer = (int *)gks_malloc(sizeof(double) * n_points);
+      d_y_buffer = (int *)gks_malloc(sizeof(double) * n_points);
 
       for (i = 0; i < n_points; i++)
-	{
-	  WC_to_VDC(x[i], y[i], &d_x_buffer[i], &d_y_buffer[i]);
-	}
+        {
+          WC_to_VDC(x[i], y[i], &d_x_buffer[i], &d_y_buffer[i]);
+        }
 
       output_func(n_points, d_x_buffer, d_y_buffer);
 
@@ -2686,14 +2531,13 @@ static void output_points(void (*output_func) (int, int *, int *),
   else
     {
       for (i = 0; i < n_points; i++)
-	{
-	  WC_to_VDC(x[i], y[i], &x_buffer[i], &y_buffer[i]);
-	}
+        {
+          WC_to_VDC(x[i], y[i], &x_buffer[i], &y_buffer[i]);
+        }
 
       output_func(n_points, x_buffer, y_buffer);
     }
 }
-
 
 
 static void setup_polyline_attributes(unsigned init)
@@ -2714,29 +2558,27 @@ static void setup_polyline_attributes(unsigned init)
       gks_inq_pline_color_index(&errind, &newpline.color);
 
       if (p->encode == cgm_grafkit)
-	{
-	  if (newpline.type < 0)
-	    newpline.type = max_std_linetype - newpline.type;
-	}
+        {
+          if (newpline.type < 0) newpline.type = max_std_linetype - newpline.type;
+        }
 
       if (newpline.type != p->pline.type)
-	{
-	  p->cgm[ltype] (newpline.type);
-	  p->pline.type = newpline.type;
-	}
+        {
+          p->cgm[ltype](newpline.type);
+          p->pline.type = newpline.type;
+        }
       if (newpline.width != p->pline.width)
-	{
-	  p->cgm[lwidth] (newpline.width);
-	  p->pline.width = newpline.width;
-	}
+        {
+          p->cgm[lwidth](newpline.width);
+          p->pline.width = newpline.width;
+        }
       if (newpline.color != p->pline.color)
-	{
-	  p->cgm[lcolour] (newpline.color);
-	  p->pline.color = newpline.color;
-	}
+        {
+          p->cgm[lcolour](newpline.color);
+          p->pline.color = newpline.color;
+        }
     }
 }
-
 
 
 static void setup_polymarker_attributes(unsigned init)
@@ -2757,31 +2599,28 @@ static void setup_polymarker_attributes(unsigned init)
       gks_inq_pmark_color_index(&errind, &newpmark.color);
 
       if (p->encode == cgm_grafkit)
-	{
-	  if (newpmark.type < 0)
-	    newpmark.type = max_std_markertype - newpmark.type;
-	  if (newpmark.type > 5)
-	    newpmark.type = 3;
-	}
+        {
+          if (newpmark.type < 0) newpmark.type = max_std_markertype - newpmark.type;
+          if (newpmark.type > 5) newpmark.type = 3;
+        }
 
       if (newpmark.type != p->pmark.type)
-	{
-	  p->cgm[mtype] (newpmark.type);
-	  p->pmark.type = newpmark.type;
-	}
+        {
+          p->cgm[mtype](newpmark.type);
+          p->pmark.type = newpmark.type;
+        }
       if (newpmark.width != p->pmark.width)
-	{
-	  p->cgm[msize] (newpmark.width);
-	  p->pmark.width = newpmark.width;
-	}
+        {
+          p->cgm[msize](newpmark.width);
+          p->pmark.width = newpmark.width;
+        }
       if (newpmark.color != p->pmark.color)
-	{
-	  p->cgm[mcolour] (newpmark.color);
-	  p->pmark.color = newpmark.color;
-	}
+        {
+          p->cgm[mcolour](newpmark.color);
+          p->pmark.color = newpmark.color;
+        }
     }
 }
-
 
 
 static void setup_text_attributes(unsigned init)
@@ -2817,70 +2656,66 @@ static void setup_text_attributes(unsigned init)
       upy *= p->xform.c;
       gks_seg_xform(&upx, &upy);
       norm = fabs(upx) > fabs(upy) ? fabs(upx) : fabs(upy);
-      newtext.upx = (int) (upx / norm * max_coord);
-      newtext.upy = (int) (upy / norm * max_coord);
+      newtext.upx = (int)(upx / norm * max_coord);
+      newtext.upy = (int)(upy / norm * max_coord);
       gks_inq_text_path(&errind, &newtext.path);
       gks_inq_text_align(&errind, &newtext.halign, &newtext.valign);
 
       if (p->encode == cgm_grafkit)
-	{
-	  if (newtext.font < 0)
-	    newtext.font = max_std_textfont - newtext.font;
-	  newtext.prec = 2;
-	}
+        {
+          if (newtext.font < 0) newtext.font = max_std_textfont - newtext.font;
+          newtext.prec = 2;
+        }
 
       if (newtext.font != p->text.font)
-	{
-	  p->cgm[tfindex] (newtext.font);
-	  p->text.font = newtext.font;
-	}
+        {
+          p->cgm[tfindex](newtext.font);
+          p->text.font = newtext.font;
+        }
       if (newtext.prec != p->text.prec)
-	{
-	  p->cgm[tprec] (newtext.prec);
-	  p->text.prec = newtext.prec;
-	}
+        {
+          p->cgm[tprec](newtext.prec);
+          p->text.prec = newtext.prec;
+        }
       if (newtext.expfac != p->text.expfac)
-	{
-	  p->cgm[cexpfac] (newtext.expfac);
-	  p->text.expfac = newtext.expfac;
-	}
+        {
+          p->cgm[cexpfac](newtext.expfac);
+          p->text.expfac = newtext.expfac;
+        }
       if (newtext.spacing != p->text.spacing)
-	{
-	  p->cgm[cspace] (newtext.spacing);
-	  p->text.spacing = newtext.spacing;
-	}
+        {
+          p->cgm[cspace](newtext.spacing);
+          p->text.spacing = newtext.spacing;
+        }
       if (newtext.color != p->text.color)
-	{
-	  p->cgm[tcolour] (newtext.color);
-	  p->text.color = newtext.color;
-	}
+        {
+          p->cgm[tcolour](newtext.color);
+          p->text.color = newtext.color;
+        }
       if (newtext.height != p->text.height)
-	{
-	  p->cgm[cheight] ((int) (newtext.height * max_coord));
-	  p->text.height = newtext.height;
-	}
+        {
+          p->cgm[cheight]((int)(newtext.height * max_coord));
+          p->text.height = newtext.height;
+        }
       if ((newtext.upx != p->text.upx) || (newtext.upy != p->text.upy))
-	{
-	  p->cgm[corient] (newtext.upx, newtext.upy, newtext.upy,
-			   -newtext.upx);
-	  p->text.upx = newtext.upx;
-	  p->text.upy = newtext.upy;
-	}
+        {
+          p->cgm[corient](newtext.upx, newtext.upy, newtext.upy, -newtext.upx);
+          p->text.upx = newtext.upx;
+          p->text.upy = newtext.upy;
+        }
       if (newtext.path != p->text.path)
-	{
-	  p->cgm[tpath] (newtext.path);
-	  p->text.path = newtext.path;
-	}
-      if ((newtext.halign != p->text.halign) || (newtext.valign !=
-						 p->text.valign))
-	{
-	  p->cgm[talign] (newtext.halign, newtext.valign);
-	  p->text.halign = newtext.halign;
-	  p->text.valign = newtext.valign;
-	}
+        {
+          p->cgm[tpath](newtext.path);
+          p->text.path = newtext.path;
+        }
+      if ((newtext.halign != p->text.halign) || (newtext.valign != p->text.valign))
+        {
+          p->cgm[talign](newtext.halign, newtext.valign);
+          p->text.halign = newtext.halign;
+          p->text.valign = newtext.valign;
+        }
     }
 }
-
 
 
 static void setup_fill_attributes(unsigned init)
@@ -2903,56 +2738,47 @@ static void setup_fill_attributes(unsigned init)
       gks_inq_fill_style_index(&errind, &newfill.hatch_index);
 
       if (newfill.intstyle != p->fill.intstyle)
-	{
-	  p->cgm[intstyle] (newfill.intstyle);
-	  p->fill.intstyle = newfill.intstyle;
-	}
+        {
+          p->cgm[intstyle](newfill.intstyle);
+          p->fill.intstyle = newfill.intstyle;
+        }
       if (newfill.color != p->fill.color)
-	{
-	  p->cgm[fillcolour] (newfill.color);
-	  p->fill.color = newfill.color;
-	}
+        {
+          p->cgm[fillcolour](newfill.color);
+          p->fill.color = newfill.color;
+        }
       if (newfill.pattern_index != p->fill.pattern_index)
-	{
-	  p->cgm[pindex] (newfill.pattern_index);
-	  p->fill.pattern_index = newfill.pattern_index;
-	}
+        {
+          p->cgm[pindex](newfill.pattern_index);
+          p->fill.pattern_index = newfill.pattern_index;
+        }
       if (newfill.hatch_index != p->fill.hatch_index)
-	{
-	  p->cgm[hindex] (newfill.hatch_index);
-	  p->fill.hatch_index = newfill.hatch_index;
-	}
+        {
+          p->cgm[hindex](newfill.hatch_index);
+          p->fill.hatch_index = newfill.hatch_index;
+        }
     }
 }
-
 
 
 static char *local_time(void)
 {
   struct tm *time_structure;
   time_t time_val;
-  static char *weekday[7] = {
-    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-    "Saturday"
-  };
-  static char *month[12] = {
-    "January", "February", "March", "April", "May", "June", "July",
-    "August", "September", "October", "November", "Dezember"
-  };
+  static char *weekday[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+  static char *month[12] = {"January", "February", "March",     "April",   "May",      "June",
+                            "July",    "August",   "September", "October", "November", "Dezember"};
   static char time_string[81];
 
   time(&time_val);
   time_structure = localtime(&time_val);
 
-  sprintf(time_string, "%s, %s %d, 19%d %d:%02d:%02d",
-	  weekday[time_structure->tm_wday], month[time_structure->tm_mon],
-	  time_structure->tm_mday, time_structure->tm_year,
-	  time_structure->tm_hour, time_structure->tm_min,
-	  time_structure->tm_sec);
+  sprintf(time_string, "%s, %s %d, 19%d %d:%02d:%02d", weekday[time_structure->tm_wday], month[time_structure->tm_mon],
+          time_structure->tm_mday, time_structure->tm_year, time_structure->tm_hour, time_structure->tm_min,
+          time_structure->tm_sec);
 
   return (time_string);
 }
-
 
 
 static void setup_clear_text_context(void)
@@ -3013,7 +2839,6 @@ static void setup_clear_text_context(void)
   p->buffer_ind = 0;
   p->buffer[0] = '\0';
 }
-
 
 
 static void setup_binary_context(void)
@@ -3078,27 +2903,25 @@ static void setup_binary_context(void)
 }
 
 
-
 static void cgm_begin_page(void)
 {
-  p->cgm[bp] (local_time());
+  p->cgm[bp](local_time());
 
-  if (p->encode != cgm_grafkit)
-    p->cgm[scalmode] ();
+  if (p->encode != cgm_grafkit) p->cgm[scalmode]();
 
-  p->cgm[colselmode] ();
+  p->cgm[colselmode]();
 
   if (p->encode != cgm_grafkit)
     {
-      p->cgm[lwsmode] ();
-      p->cgm[msmode] ();
+      p->cgm[lwsmode]();
+      p->cgm[msmode]();
     }
 
-  p->cgm[vdcextent] ();
-  p->cgm[backcol] ();
+  p->cgm[vdcextent]();
+  p->cgm[backcol]();
 
-  p->cgm[bpage] ();
-  p->cgm[vdcintprec] ();
+  p->cgm[bpage]();
+  p->cgm[vdcintprec]();
 
   setup_colors();
 
@@ -3113,78 +2936,75 @@ static void cgm_begin_page(void)
 }
 
 
-
-void gks_drv_cgm(int fctid, int dx, int dy, int dimx, int *ia,
-		 int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
-		 void **context)
+void gks_drv_cgm(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                 char *chars, void **context)
 {
   char *buffer;
 
-  p = (cgm_context *) * context;
+  p = (cgm_context *)*context;
 
   switch (fctid)
     {
 
     case 2:
-/*
- *  Open workstation
- */
-      p = (cgm_context *) gks_malloc(sizeof(cgm_context));
+      /*
+       *  Open workstation
+       */
+      p = (cgm_context *)gks_malloc(sizeof(cgm_context));
 
       p->conid = ia[1];
 
       if (ia[2] == 7)
-	{
-	  p->encode = cgm_binary;
-	  setup_binary_context();
-	}
+        {
+          p->encode = cgm_binary;
+          setup_binary_context();
+        }
       else if (ia[2] == 8)
-	{
-	  p->encode = cgm_clear_text;
-	  setup_clear_text_context();
-	}
+        {
+          p->encode = cgm_clear_text;
+          setup_clear_text_context();
+        }
       else if (ia[2] == (7 | 0x50000))
-	{
-	  p->encode = cgm_grafkit;
-	  setup_binary_context();
-	}
+        {
+          p->encode = cgm_grafkit;
+          setup_binary_context();
+        }
       else
-	{
-	  gks_perror("invalid bit mask (%x)", ia[2]);
-	  ia[0] = ia[1] = 0;
-	  return;
-	}
+        {
+          gks_perror("invalid bit mask (%x)", ia[2]);
+          ia[0] = ia[1] = 0;
+          return;
+        }
 
       buffer = "GKS, Copyright @ 2001, Josef Heinen";
 
-      if (((char *) gks_getenv("GKS_SCALE_MODE_METRIC")) != NULL)
-	p->mm = 0.19685 / max_coord * 1000;
+      if (((char *)gks_getenv("GKS_SCALE_MODE_METRIC")) != NULL)
+        p->mm = 0.19685 / max_coord * 1000;
       else
-	p->mm = 0;
+        p->mm = 0;
 
-      p->cgm[begin] (buffer);
-      p->cgm[mfversion] ();
-      p->cgm[mfdescrip] ();
+      p->cgm[begin](buffer);
+      p->cgm[mfversion]();
+      p->cgm[mfdescrip]();
 
       if (p->encode != cgm_grafkit)
-	{
-	  p->cgm[vdctype] ();
-	  p->cgm[intprec] ();
+        {
+          p->cgm[vdctype]();
+          p->cgm[intprec]();
 #if 0
 	  p->cgm[realprec] ();	/* causes problems with RALCGM */
 #endif
-	  p->cgm[indexprec] ();
-	  p->cgm[colprec] ();
-	  p->cgm[cindprec] ();
-	  p->cgm[maxcind] ();
-	  p->cgm[cvextent] ();
-	}
+          p->cgm[indexprec]();
+          p->cgm[colprec]();
+          p->cgm[cindprec]();
+          p->cgm[maxcind]();
+          p->cgm[cvextent]();
+        }
 
-      p->cgm[mfellist] ();
-      p->cgm[fontlist] ();
+      p->cgm[mfellist]();
+      p->cgm[fontlist]();
 
-      if (p->encode != cgm_grafkit)
-	p->cgm[cannounce] ();
+      if (p->encode != cgm_grafkit) p->cgm[cannounce]();
 
       init_color_table();
 
@@ -3197,157 +3017,147 @@ void gks_drv_cgm(int fctid, int dx, int dy, int dimx, int *ia,
       break;
 
     case 3:
-/*
- *  Close workstation
- */
-      p->cgm[epage] ();
-      p->cgm[end] ();
+      /*
+       *  Close workstation
+       */
+      p->cgm[epage]();
+      p->cgm[end]();
 
       free(p);
       break;
 
     case 4:
-/*
- *  Activate workstation
- */
+      /*
+       *  Activate workstation
+       */
       p->active = TRUE;
       break;
 
     case 5:
-/*
- *  Deactivate workstation
- */
+      /*
+       *  Deactivate workstation
+       */
       p->active = FALSE;
       break;
 
     case 6:
-/*
- *  Clear workstation
- */
+      /*
+       *  Clear workstation
+       */
       if (!p->begin_page)
-	{
-	  p->cgm[epage] ();
-	  p->begin_page = TRUE;
-	}
+        {
+          p->cgm[epage]();
+          p->begin_page = TRUE;
+        }
       break;
 
     case 12:
-/*
- *  Polyline
- */
+      /*
+       *  Polyline
+       */
       if (p->active)
-	{
-	  if (p->begin_page)
-	    cgm_begin_page();
+        {
+          if (p->begin_page) cgm_begin_page();
 
-	  setup_polyline_attributes(FALSE);
-	  output_points((void (*)(int, int *, int *)) p->cgm[pline],
-			ia[0], r1, r2);
-	}
+          setup_polyline_attributes(FALSE);
+          output_points((void (*)(int, int *, int *))p->cgm[pline], ia[0], r1, r2);
+        }
       break;
 
     case 13:
-/*
- *  Polymarker
- */
+      /*
+       *  Polymarker
+       */
       if (p->active)
-	{
-	  if (p->begin_page)
-	    cgm_begin_page();
+        {
+          if (p->begin_page) cgm_begin_page();
 
-	  setup_polymarker_attributes(FALSE);
-	  output_points((void (*)(int, int *, int *)) p->cgm[pmarker],
-			ia[0], r1, r2);
-	}
+          setup_polymarker_attributes(FALSE);
+          output_points((void (*)(int, int *, int *))p->cgm[pmarker], ia[0], r1, r2);
+        }
       break;
 
     case 14:
-/*
- *  Text
- */
+      /*
+       *  Text
+       */
       if (p->active)
-	{
-	  int x, y;
+        {
+          int x, y;
 
-	  if (p->begin_page)
-	    cgm_begin_page();
+          if (p->begin_page) cgm_begin_page();
 
-	  set_xform(FALSE);
-	  setup_text_attributes(FALSE);
+          set_xform(FALSE);
+          setup_text_attributes(FALSE);
 
-	  WC_to_VDC(r1[0], r2[0], &x, &y);
-	  p->cgm[text] (x, y, TRUE, chars);
-	}
+          WC_to_VDC(r1[0], r2[0], &x, &y);
+          p->cgm[text](x, y, TRUE, chars);
+        }
       break;
 
     case 15:
-/*
- *  Fill Area
- */
+      /*
+       *  Fill Area
+       */
       if (p->active)
-	{
-	  if (p->begin_page)
-	    cgm_begin_page();
+        {
+          if (p->begin_page) cgm_begin_page();
 
-	  setup_fill_attributes(FALSE);
-	  output_points((void (*)(int, int *, int *)) p->cgm[pgon],
-			ia[0], r1, r2);
-	}
+          setup_fill_attributes(FALSE);
+          output_points((void (*)(int, int *, int *))p->cgm[pgon], ia[0], r1, r2);
+        }
       break;
 
     case 16:
-/*
- *  Cell Array
- */
+      /*
+       *  Cell Array
+       */
       if (p->active)
-	{
-	  int xmin, xmax, ymin, ymax;
+        {
+          int xmin, xmax, ymin, ymax;
 
-	  if (p->begin_page)
-	    cgm_begin_page();
+          if (p->begin_page) cgm_begin_page();
 
-	  set_xform(FALSE);
+          set_xform(FALSE);
 
-	  WC_to_VDC(r1[0], r2[0], &xmin, &ymin);
-	  WC_to_VDC(r1[1], r2[1], &xmax, &ymax);
+          WC_to_VDC(r1[0], r2[0], &xmin, &ymin);
+          WC_to_VDC(r1[1], r2[1], &xmax, &ymax);
 
-	  p->cgm[carray] (xmin, xmax, ymin, ymax, dx, dy, dimx, ia);
-	}
+          p->cgm[carray](xmin, xmax, ymin, ymax, dx, dy, dimx, ia);
+        }
       break;
 
     case 48:
-/*
- *  Set color representation
- */
+      /*
+       *  Set color representation
+       */
       if (p->begin_page)
-	{
-	  p->color_t[ia[1] * 3] = r1[0];
-	  p->color_t[ia[1] * 3 + 1] = r1[1];
-	  p->color_t[ia[1] * 3 + 2] = r1[2];
-	}
+        {
+          p->color_t[ia[1] * 3] = r1[0];
+          p->color_t[ia[1] * 3 + 1] = r1[1];
+          p->color_t[ia[1] * 3 + 2] = r1[2];
+        }
       break;
 
     case 54:
-/*
- *  Set workstation window
- */
+      /*
+       *  Set workstation window
+       */
       if (p->begin_page)
-	{
-	  p->xext = (int) (max_coord * (r1[1] - r1[0]));
-	  p->yext = (int) (max_coord * (r2[1] - r2[0]));
-	}
+        {
+          p->xext = (int)(max_coord * (r1[1] - r1[0]));
+          p->yext = (int)(max_coord * (r2[1] - r2[0]));
+        }
       break;
 
     case 55:
-/*
- *  Set workstation viewport
- */
+      /*
+       *  Set workstation viewport
+       */
       if (p->begin_page)
-	{
-	  if (p->mm > 0)
-	    p->mm = (r1[1] - r1[0]) / max_coord * 1000;
-	}
+        {
+          if (p->mm > 0) p->mm = (r1[1] - r1[0]) / max_coord * 1000;
+        }
       break;
-
     }
 }

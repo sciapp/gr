@@ -13,14 +13,13 @@ int main(int argc, char *argv[])
   int inp_status, tnr, errind;
   int count = 1, wstype = GKS_K_WSTYPE_DEFAULT;
 
-  for (i = 0; i < 13; i++)
-    asf[i] = GKS_K_ASF_INDIVIDUAL;
+  for (i = 0; i < 13; i++) asf[i] = GKS_K_ASF_INDIVIDUAL;
 
   k = 0;
   for (i = 0; i < 8; i++)
     for (j = 0; j < 10; j++)
       {
-	colia[i][j] = k++;
+        colia[i][j] = k++;
       }
 
   gks_open_gks(6);
@@ -118,11 +117,11 @@ int main(int argc, char *argv[])
   for (j = -8; j <= 4; j++)
     {
       if (j)
-	{
-	  gks_set_pline_linetype(j);
-	  y[1] = y[0] -= 0.02;
-	  gks_polyline(2, x, y);
-	}
+        {
+          gks_set_pline_linetype(j);
+          y[1] = y[0] -= 0.02;
+          gks_polyline(2, x, y);
+        }
     }
 
   for (i = 1; i <= 3; i++)
@@ -130,14 +129,14 @@ int main(int argc, char *argv[])
       y[0] = y[0] - 0.03;
       gks_set_pline_linewidth(1.0 * i);
       for (j = 1; j <= 4; j++)
-	{
-	  if (j)
-	    {
-	      gks_set_pline_linetype(j);
-	      y[1] = y[0] -= 0.02;
-	      gks_polyline(2, x, y);
-	    }
-	}
+        {
+          if (j)
+            {
+              gks_set_pline_linetype(j);
+              y[1] = y[0] -= 0.02;
+              gks_polyline(2, x, y);
+            }
+        }
     }
 
   /* Markertypes */
@@ -166,11 +165,11 @@ int main(int argc, char *argv[])
   for (j = -8; j <= 4; j++)
     {
       if (j != 0)
-	{
-	  gks_set_pmark_type(j);
-	  x[0] += 0.06;
-	  gks_polymarker(1, x, y);
-	}
+        {
+          gks_set_pmark_type(j);
+          x[0] += 0.06;
+          gks_polymarker(1, x, y);
+        }
     }
 
   /* Fill Areas */
@@ -189,10 +188,10 @@ int main(int argc, char *argv[])
   for (j = 0; j <= 3; j++)
     {
       for (i = 0; i < 5; i++)
-	{
-	  x[i] += 0.1;
-	  y[i] += 0.1;
-	}
+        {
+          x[i] += 0.1;
+          y[i] += 0.1;
+        }
       gks_set_fill_int_style(j);
       gks_fillarea(5, x, y);
     }
@@ -213,9 +212,9 @@ int main(int argc, char *argv[])
   for (j = 4; j <= 15; j++)
     {
       for (i = 0; i < 5; i++)
-	{
-	  y[i] += 0.06;
-	}
+        {
+          y[i] += 0.06;
+        }
       gks_set_fill_style_index(j - 3);
       gks_fillarea(5, x, y);
     }
@@ -261,15 +260,14 @@ int main(int argc, char *argv[])
       gks_activate_ws(2);
 
       while (count--)
-	{
-	  gks_clear_ws(2, GKS_K_CLEAR_ALWAYS);
-	  gks_copy_seg_to_ws(2, 1);
-	  gks_update_ws(2, GKS_K_POSTPONE_FLAG);
-	  printf("%d\n", count);
-	}
+        {
+          gks_clear_ws(2, GKS_K_CLEAR_ALWAYS);
+          gks_copy_seg_to_ws(2, 1);
+          gks_update_ws(2, GKS_K_POSTPONE_FLAG);
+          printf("%d\n", count);
+        }
 
-      if (wstype == GKS_K_WSTYPE_MO)
-	gks_update_ws(1, GKS_K_PERFORM_FLAG);
+      if (wstype == GKS_K_WSTYPE_MO) gks_update_ws(1, GKS_K_PERFORM_FLAG);
     }
   else
     {
@@ -281,10 +279,10 @@ int main(int argc, char *argv[])
       gks_set_pmark_type(2);
       gks_request_locator(2, 1, &inp_status, &tnr, x, y);
       while (inp_status == 1)
-	{
-	  gks_polymarker(1, x, y);
-	  gks_request_locator(2, 1, &inp_status, &tnr, x, y);
-	}
+        {
+          gks_polymarker(1, x, y);
+          gks_request_locator(2, 1, &inp_status, &tnr, x, y);
+        }
       printf("%g %g\n", x[0], y[0]);
 #endif
     }

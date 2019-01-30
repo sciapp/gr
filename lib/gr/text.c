@@ -6,34 +6,49 @@
 #include <assert.h>
 #include <math.h>
 
-#define MAX(a,b) (a)>(b) ? (a) : (b)
+#define MAX(a, b) (a) > (b) ? (a) : (b)
 
 typedef enum
 {
-  Plus, Minus, Mult, Div,
-  Value, Lbrace, Rbrace, Lpar, Rpar,
-  Exponent, Index, Sub, Over,
-  Newline, End, Error, None,
-  Greek, Underline
+  Plus,
+  Minus,
+  Mult,
+  Div,
+  Value,
+  Lbrace,
+  Rbrace,
+  Lpar,
+  Rpar,
+  Exponent,
+  Index,
+  Sub,
+  Over,
+  Newline,
+  End,
+  Error,
+  None,
+  Greek,
+  Underline
 } token_t;
 
 typedef enum
 {
-  false, true
+  false,
+  true
 } bool;
 
 #define POS_COUNT 10
 
-#define SUB_LEVEL   0
-#define NEXT        1
-#define INDEX       2
-#define EXPONENT    3
-#define OVER        4
-#define UNDER       5
-#define NEWLINE     6
-#define NOMINATOR   7
+#define SUB_LEVEL 0
+#define NEXT 1
+#define INDEX 2
+#define EXPONENT 3
+#define OVER 4
+#define UNDER 5
+#define NEWLINE 6
+#define NOMINATOR 7
 #define DENOMINATOR 8
-#define UNDERLINE   9
+#define UNDERLINE 9
 
 typedef struct string_tt
 {
@@ -52,43 +67,32 @@ typedef struct formula_tt
   double totWidth, totHeight, totDepth;
   double x, y;
   int font, prec;
-  token_t operator;		/* only: Plus, Minus, Mult or None  */
+  token_t operator; /* only: Plus, Minus, Mult or None  */
   struct formula_tt *next[POS_COUNT];
 } formula_t;
 
 
 #define GREEK_COUNT 54
-#define GREEK_FONT   7
+#define GREEK_FONT 7
 
-static
-char *greek[] = {
-  "alpha", "beta", "gamma", "Gamma", "delta", "Delta", "epsilon",
-  "varepsilon", "zeta", "eta", "theta", "Theta", "vartheta", "iota",
-  "kappa", "lambda", "Lambda", "mu", "xi", "Xi", "pi", "Pi",
-  "varpi", "rho", "varrho", "sigma", "Sigma", "varsigma", "tau",
-  "upsilon", "Upsilon", "phi", "Phi", "varphi", "chi", "psi", "Psi",
-  "omega", "Omega", "Alpha", "Beta", "Epsilon", "Zeta", "Eta", "Iota",
-  "Kappa", "Mu", "Nu", "Rho", "Tau", "Chi", "omicron", "Omicron",
-  "v" /* replacement for 'nu' which would conflict with '\n' (newline) */
+static char *greek[] =
+    {
+        "alpha",   "beta",    "gamma",    "Gamma",  "delta",  "Delta",  "epsilon", "varepsilon", "zeta",  "eta",
+        "theta",   "Theta",   "vartheta", "iota",   "kappa",  "lambda", "Lambda",  "mu",         "xi",    "Xi",
+        "pi",      "Pi",      "varpi",    "rho",    "varrho", "sigma",  "Sigma",   "varsigma",   "tau",   "upsilon",
+        "Upsilon", "phi",     "Phi",      "varphi", "chi",    "psi",    "Psi",     "omega",      "Omega", "Alpha",
+        "Beta",    "Epsilon", "Zeta",     "Eta",    "Iota",   "Kappa",  "Mu",      "Nu",         "Rho",   "Tau",
+        "Chi",     "omicron", "Omicron",  "v" /* replacement for 'nu' which would conflict with '\n' (newline) */
 };
 
-static
-int greekcode[] = {
-  97, 98, 103, 71, 100, 68, 101,
-  101, 122, 104, 113, 81, 74, 105,
-  107, 108, 76, 109, 120, 88, 112, 80,
-  118, 114, 114, 115, 83, 86, 116,
-  117, 85, 102, 70, 102, 99, 121, 89,
-  119, 87, 'A', 'B', 'E', 'Z', 'H', 'I',
-  'K', 'M', 'N', 'R', 'T', 'C', 'o', 'O',
-  110, 0
-};
+static int greekcode[] = {97, 98,  103, 71,  100, 68,  101, 101, 122, 104, 113, 81,  74,  105, 107, 108, 76,  109, 120,
+                          88, 112, 80,  118, 114, 114, 115, 83,  86,  116, 117, 85,  102, 70,  102, 99,  121, 89,  119,
+                          87, 'A', 'B', 'E', 'Z', 'H', 'I', 'K', 'M', 'N', 'R', 'T', 'C', 'o', 'O', 110, 0};
 
 
 /* tree Operations */
 
-static
-void saveString(string_t ** string, char *s, int font, int prec)
+static void saveString(string_t **string, char *s, int font, int prec)
 {
   *string = calloc(1, sizeof(string_t));
   (*string)->next = NULL;
@@ -98,21 +102,17 @@ void saveString(string_t ** string, char *s, int font, int prec)
 }
 
 
-static
-void freeString(string_t * string)
+static void freeString(string_t *string)
 {
-  if (string->next != NULL)
-    freeString(string->next);
+  if (string->next != NULL) freeString(string->next);
 
-  if (string->subStr != NULL)
-    free(string->subStr);
+  if (string->subStr != NULL) free(string->subStr);
 
   free(string);
 }
 
 
-static
-void freeFormula(formula_t * formula)
+static void freeFormula(formula_t *formula)
 {
   int i;
 
@@ -123,16 +123,13 @@ void freeFormula(formula_t * formula)
         formula->next[i] = NULL;
       }
 
-  if (formula->string != NULL)
-    freeString(formula->string);
+  if (formula->string != NULL) freeString(formula->string);
 
   free(formula);
 }
 
 
-static
-void saveFormula(formula_t ** formula, formula_t * toSave, int pos,
-		 token_t tok, string_t * s, int font, int prec)
+static void saveFormula(formula_t **formula, formula_t *toSave, int pos, token_t tok, string_t *s, int font, int prec)
 {
   int i;
 
@@ -141,12 +138,12 @@ void saveFormula(formula_t ** formula, formula_t * toSave, int pos,
   for (i = 0; i < POS_COUNT; i++)
     {
       if (i == pos)
-	(*formula)->next[i] = toSave;
+        (*formula)->next[i] = toSave;
       else
-	(*formula)->next[i] = NULL;
+        (*formula)->next[i] = NULL;
     }
 
-  (*formula)->operator = tok;
+  (*formula)->operator= tok;
   (*formula)->string = s;
   (*formula)->font = font;
   (*formula)->prec = prec;
@@ -155,14 +152,11 @@ void saveFormula(formula_t ** formula, formula_t * toSave, int pos,
   (*formula)->totHeight = (*formula)->totDepth = (*formula)->totWidth = 0;
 }
 
-static
-void increaseNominator(formula_t ** formula, formula_t * denom, int font,
-		       int prec)
+static void increaseNominator(formula_t **formula, formula_t *denom, int font, int prec)
 {
   formula_t *new;
 
-  saveFormula(&new, (*formula)->next[NOMINATOR], NOMINATOR, None, NULL, font,
-	      prec);
+  saveFormula(&new, (*formula)->next[NOMINATOR], NOMINATOR, None, NULL, font, prec);
   new->next[DENOMINATOR] = denom;
   (*formula)->next[NOMINATOR] = new;
 }
@@ -217,9 +211,7 @@ static bool factor(formula_t **, int font, int prec);
 static bool value(formula_t **, int font, int prec);
 
 
-
-static
-char *findEndingPosition(token_t tok)
+static char *findEndingPosition(token_t tok)
 {
   char *s = chin;
   int d = 1;
@@ -227,15 +219,15 @@ char *findEndingPosition(token_t tok)
   while (*s != '\0' && d != 0)
     {
       if (*s == '\\')
-	++s;
+        ++s;
       else if (*s == '{' && tok == Lbrace)
-	d++;
+        d++;
       else if (*s == '}' && tok == Lbrace)
-	d--;
+        d--;
       else if (*s == '(' && tok == Lpar)
-	d++;
+        d++;
       else if (*s == ')' && tok == Lpar)
-	d--;
+        d--;
 
       ++s;
     }
@@ -246,8 +238,7 @@ char *findEndingPosition(token_t tok)
     return s - 1;
 }
 
-static
-token_t getToken(void)
+static token_t getToken(void)
 {
   int len = 0, i, found = 0;
 
@@ -288,106 +279,105 @@ token_t getToken(void)
       break;
     case '\\':
       switch (*chin)
-	{
-	case '\\':
-	  token = Value;
-	  ++chin;
-	  break;
-	case '^':
-	  token = Value;
-	  ++chin;
-	  break;
-	case '_':
-	  token = Value;
-	  ++chin;
-	  break;
-	case '+':
-	  token = Value;
-	  ++chin;
-	  break;
-	case '-':
-	  token = Value;
-	  ++chin;
-	  break;
-	case '/':
-	  token = Value;
-	  ++chin;
-	  break;
-	case '*':
-	  token = Value;
-	  ++chin;
-	  break;
-	case '{':
-	  token = Value;
-	  ++chin;
-	  break;
-	case '}':
-	  token = Value;
-	  ++chin;
-	  break;
-	case ' ':
-	  token = Value;
-	  ++chin;
-	  break;
-	case '(':
-	  token = Value;
-	  ++chin;
-	  break;
-	case ')':
-	  token = Value;
-	  ++chin;
-	  break;
-	case 'n':
-	  token = Newline;
-	  ++chin;
-	  break;
-	default:
-	  if (strncmp(chin, "sub", 3) == 0)
-	    {
-	      token = Sub;
-	      len = 3;
-	    }
-	  else if (strncmp(chin, "over", 4) == 0)
-	    {
-	      token = Over;
-	      len = 4;
-	    }
-	  else if (strncmp(chin, "underline", 9) == 0)
-	    {
-	      token = Underline;
-	      len = 9;
-	    }
-	  else
-	    {
-	      for (i = 0; i < GREEK_COUNT && !found; i++)
-		{
-		  len = strlen(greek[i]);
-		  if (strncmp(chin, greek[i], len) == 0)
-		    {
-		      found = 1;
-		      token = Greek;
-		    }
-		}
-	      if (!found)
-		{
-		  fprintf(stderr, "%s: undefined symbol\n", chin - 1);
-		  token = Error;
-		  len = 0;
-		}
-	    }
-	  chin += len;
-	  if (found && *chin != ' ' && *chin != '{' && *chin != '\0'
-	      && *chin != '\\' && *chin != '^' && *chin != '_' && *chin != '+'
-	      && *chin != '-' && *chin != '*' && *chin != '/' && *chin != '=')
-	    {
-	      if (!isalnum(*chin) && !ispunct(*chin))
-		{
-		  fprintf(stderr, "%s: missing delimiter\n", chin - len - 1);
-		  token = Error;
-		}
-	    }
-	  break;
-	}
+        {
+        case '\\':
+          token = Value;
+          ++chin;
+          break;
+        case '^':
+          token = Value;
+          ++chin;
+          break;
+        case '_':
+          token = Value;
+          ++chin;
+          break;
+        case '+':
+          token = Value;
+          ++chin;
+          break;
+        case '-':
+          token = Value;
+          ++chin;
+          break;
+        case '/':
+          token = Value;
+          ++chin;
+          break;
+        case '*':
+          token = Value;
+          ++chin;
+          break;
+        case '{':
+          token = Value;
+          ++chin;
+          break;
+        case '}':
+          token = Value;
+          ++chin;
+          break;
+        case ' ':
+          token = Value;
+          ++chin;
+          break;
+        case '(':
+          token = Value;
+          ++chin;
+          break;
+        case ')':
+          token = Value;
+          ++chin;
+          break;
+        case 'n':
+          token = Newline;
+          ++chin;
+          break;
+        default:
+          if (strncmp(chin, "sub", 3) == 0)
+            {
+              token = Sub;
+              len = 3;
+            }
+          else if (strncmp(chin, "over", 4) == 0)
+            {
+              token = Over;
+              len = 4;
+            }
+          else if (strncmp(chin, "underline", 9) == 0)
+            {
+              token = Underline;
+              len = 9;
+            }
+          else
+            {
+              for (i = 0; i < GREEK_COUNT && !found; i++)
+                {
+                  len = strlen(greek[i]);
+                  if (strncmp(chin, greek[i], len) == 0)
+                    {
+                      found = 1;
+                      token = Greek;
+                    }
+                }
+              if (!found)
+                {
+                  fprintf(stderr, "%s: undefined symbol\n", chin - 1);
+                  token = Error;
+                  len = 0;
+                }
+            }
+          chin += len;
+          if (found && *chin != ' ' && *chin != '{' && *chin != '\0' && *chin != '\\' && *chin != '^' && *chin != '_' &&
+              *chin != '+' && *chin != '-' && *chin != '*' && *chin != '/' && *chin != '=')
+            {
+              if (!isalnum(*chin) && !ispunct(*chin))
+                {
+                  fprintf(stderr, "%s: missing delimiter\n", chin - len - 1);
+                  token = Error;
+                }
+            }
+          break;
+        }
       break;
     default:
       token = Value;
@@ -396,8 +386,7 @@ token_t getToken(void)
   return token;
 }
 
-static
-char *toGreek(char *string)
+static char *toGreek(char *string)
 {
   int i, len;
   char *g_ptr = string;
@@ -406,18 +395,18 @@ char *toGreek(char *string)
 
   do
     {
-      g_ptr++;			/* overread '\' */
+      g_ptr++; /* overread '\' */
 
       for (i = 0; i < GREEK_COUNT; i++)
-	{
-	  len = strlen(greek[i]);
-	  if (strncmp(g_ptr, greek[i], len) == 0)
-	    {
-	      *r_ptr++ = greekcode[i];
-	      g_ptr += len;
-	      i = GREEK_COUNT;
-	    }
-	}
+        {
+          len = strlen(greek[i]);
+          if (strncmp(g_ptr, greek[i], len) == 0)
+            {
+              *r_ptr++ = greekcode[i];
+              g_ptr += len;
+              i = GREEK_COUNT;
+            }
+        }
     }
   while (*g_ptr != '\0');
   *r_ptr = '\0';
@@ -426,16 +415,14 @@ char *toGreek(char *string)
 }
 
 
-static
-char *transform(char *s)
+static char *transform(char *s)
 {
   char *ret = calloc(strlen(s) + 1, sizeof(char));
   char *r_ptr = ret;
 
   do
     {
-      if (*s == '\\')
-	++s;
+      if (*s == '\\') ++s;
       *r_ptr++ = *s;
     }
   while (*s++ != '\0');
@@ -444,8 +431,7 @@ char *transform(char *s)
 }
 
 
-static
-bool getString(string_t ** string, char *start, int font, int prec)
+static bool getString(string_t **string, char *start, int font, int prec)
 {
   string_t **current = string;
   token_t val_or_greek;
@@ -457,19 +443,17 @@ bool getString(string_t ** string, char *start, int font, int prec)
       end = chin;
 
       if (token == Value)
-	while (getToken() == Value)
-	  end = chin;
+        while (getToken() == Value) end = chin;
       else if (token == Greek)
-	while (getToken() == Greek)
-	  end = chin;
+        while (getToken() == Greek) end = chin;
 
       c = *end;
       *end = '\0';
 
       if (val_or_greek == Value)
-	saveString(current, transform(start), font, prec);
+        saveString(current, transform(start), font, prec);
       else
-	saveString(current, toGreek(start), GREEK_FONT, prec);
+        saveString(current, toGreek(start), GREEK_FONT, prec);
 
       current = &((*current)->next);
 
@@ -484,8 +468,7 @@ bool getString(string_t ** string, char *start, int font, int prec)
 }
 
 
-static
-bool value(formula_t ** formula, int font, int prec)
+static bool value(formula_t **formula, int font, int prec)
 {
   char *st = chin;
   token_t sign = None, saveTok;
@@ -503,12 +486,10 @@ bool value(formula_t ** formula, int font, int prec)
 
   if (token == Value || token == Greek || token == Underline)
     {
-      if (getString(&string, st, font, prec) == false)
-	return false;
+      if (getString(&string, st, font, prec) == false) return false;
 
       saveFormula(formula, NULL, -1, sign, string, font, prec);
-      if (token == Lbrace)
-	--chin;
+      if (token == Lbrace) --chin;
     }
   else if (token == Lbrace || token == Lpar)
     {
@@ -516,30 +497,28 @@ bool value(formula_t ** formula, int font, int prec)
 
       st = findEndingPosition(token);
       if (st == NULL)
-	{
-	  fprintf(stderr, "missing '%c'\n", saveTok == Lbrace ? '}' : ')');
-	  return false;
-	}
+        {
+          fprintf(stderr, "missing '%c'\n", saveTok == Lbrace ? '}' : ')');
+          return false;
+        }
       *st = '\0';
 
-      if (Expression(&sub, font, prec) == false)
-	return false;
+      if (Expression(&sub, font, prec) == false) return false;
 
       saveFormula(formula, sub, SUB_LEVEL, sign, NULL, font, prec);
       if (saveTok == Lbrace)
-	*st = '}';
+        *st = '}';
       else
-	*st = ')';
+        *st = ')';
 
       st = chin;
       getToken();
 
-      if (token == Value || token == Lbrace || token == Greek
-	  || token == Lpar)
-	{
-	  chin = st;
-	  token = Lbrace;
-	}
+      if (token == Value || token == Lbrace || token == Greek || token == Lpar)
+        {
+          chin = st;
+          token = Lbrace;
+        }
     }
 
   else if (token == End || token == Newline)
@@ -548,16 +527,14 @@ bool value(formula_t ** formula, int font, int prec)
     return false;
   else
     {
-      fprintf(stderr, "%s: extra characters following a valid expression\n",
-	      st);
+      fprintf(stderr, "%s: extra characters following a valid expression\n", st);
       return false;
     }
 
   return true;
 }
 
-static
-bool factor(formula_t ** formula, int font, int prec)
+static bool factor(formula_t **formula, int font, int prec)
 {
 
   formula_t *sub;
@@ -565,35 +542,33 @@ bool factor(formula_t ** formula, int font, int prec)
 
   do
     {
-      if (value(&sub, font, prec) == false)
-	return false;
+      if (value(&sub, font, prec) == false) return false;
 
       if (first)
-	{
-	  saveFormula(formula, sub, SUB_LEVEL, None, NULL, font, prec);
-	  first = 0;
-	}
+        {
+          saveFormula(formula, sub, SUB_LEVEL, None, NULL, font, prec);
+          first = 0;
+        }
       else if ((*formula)->next[pos] != NULL)
-	{
-	  fprintf(stderr, "duplicate expression\n");
-	  return false;
-	}
+        {
+          fprintf(stderr, "duplicate expression\n");
+          return false;
+        }
       else
-	(*formula)->next[pos] = sub;
+        (*formula)->next[pos] = sub;
 
       if (token == Index)
-	pos = INDEX;
+        pos = INDEX;
       else if (token == Exponent)
-	pos = EXPONENT;
+        pos = EXPONENT;
       else if (token == Sub)
-	pos = UNDER;
+        pos = UNDER;
       else if (token == Over)
-	pos = OVER;
+        pos = OVER;
       else if (token == Underline)
-	pos = UNDERLINE;
+        pos = UNDERLINE;
     }
-  while (token == Exponent || token == Index || token == Sub
-	 || token == Over || token == Underline);
+  while (token == Exponent || token == Index || token == Sub || token == Over || token == Underline);
 
   if (token == Error)
     return false;
@@ -601,8 +576,7 @@ bool factor(formula_t ** formula, int font, int prec)
     return true;
 }
 
-static
-bool term(formula_t ** formula, int font, int prec)
+static bool term(formula_t **formula, int font, int prec)
 {
   formula_t *sub = NULL;
   formula_t **current = formula;
@@ -610,31 +584,29 @@ bool term(formula_t ** formula, int font, int prec)
 
   do
     {
-      if (factor(&sub, font, prec) == false)
-	return false;
+      if (factor(&sub, font, prec) == false) return false;
 
       if (token == Div)
-	{
-	  if (frac_found)
-	    increaseNominator(current, sub, font, prec);
-	  else
-	    saveFormula(current, sub, NOMINATOR, None, NULL, font, prec);
-	  frac_found = 1;
-	}
+        {
+          if (frac_found)
+            increaseNominator(current, sub, font, prec);
+          else
+            saveFormula(current, sub, NOMINATOR, None, NULL, font, prec);
+          frac_found = 1;
+        }
       else
-	{
-	  if (frac_found)
-	    {
-	      (*current)->next[DENOMINATOR] = sub;
-	      frac_found = 0;
-	      (*current)->operator = token == Mult ? Mult : None;
-	    }
-	  else
-	    saveFormula(current, sub, SUB_LEVEL, token == Mult ? Mult : None,
-			NULL, font, prec);
+        {
+          if (frac_found)
+            {
+              (*current)->next[DENOMINATOR] = sub;
+              frac_found = 0;
+              (*current)->operator= token == Mult ? Mult : None;
+            }
+          else
+            saveFormula(current, sub, SUB_LEVEL, token == Mult ? Mult : None, NULL, font, prec);
 
-	  current = &((*current)->next[NEXT]);
-	}
+          current = &((*current)->next[NEXT]);
+        }
     }
   while (token == Div || token == Mult);
 
@@ -645,20 +617,16 @@ bool term(formula_t ** formula, int font, int prec)
 }
 
 
-static
-bool simpleExpression(formula_t ** formula, int font, int prec)
+static bool simpleExpression(formula_t **formula, int font, int prec)
 {
   formula_t *sub;
   formula_t **current = formula;
 
   do
     {
-      if (term(&sub, font, prec) == false)
-	return false;
+      if (term(&sub, font, prec) == false) return false;
 
-      saveFormula(current, sub, SUB_LEVEL,
-		  token == Plus
-		  || token == Minus ? token : None, NULL, font, prec);
+      saveFormula(current, sub, SUB_LEVEL, token == Plus || token == Minus ? token : None, NULL, font, prec);
       current = &((*current)->next[NEXT]);
     }
   while (token == Plus || token == Minus);
@@ -670,25 +638,23 @@ bool simpleExpression(formula_t ** formula, int font, int prec)
 }
 
 
-static
-bool Expression(formula_t ** formula, int font, int prec)
+static bool Expression(formula_t **formula, int font, int prec)
 {
   formula_t *sub;
   formula_t **current = formula, **first = formula;
 
   do
     {
-      if (simpleExpression(&sub, font, prec) == false)
-	return false;
+      if (simpleExpression(&sub, font, prec) == false) return false;
 
       saveFormula(current, sub, SUB_LEVEL, None, NULL, font, prec);
 
       if (token == Newline)
-	first = current = &((*first)->next[NEWLINE]);
+        first = current = &((*first)->next[NEWLINE]);
       else
-	{
-	  current = &((*current)->next[NEXT]);
-	}
+        {
+          current = &((*current)->next[NEXT]);
+        }
     }
   while (token == Newline || token == Lbrace || token == Value);
 
@@ -704,7 +670,6 @@ bool Expression(formula_t ** formula, int font, int prec)
 }
 
 
-
 /*******************************************************************/
 /*                                                                 */
 /*                       ####   #    #   ####                      */
@@ -718,42 +683,42 @@ bool Expression(formula_t ** formula, int font, int prec)
 
 #include "gks.h"
 
-#define TOP_PERCENT    0.12
+#define TOP_PERCENT 0.12
 #define BOTTOM_PERCENT 0.33
 #define PERCENT_UNDERLINE 0.07
 #define FRACTION_FAC 0.6
 #define UNDERLINE_FAC 0.5
 
-#define TOPRIGHT_POS    (3.0 / 6.4)
+#define TOPRIGHT_POS (3.0 / 6.4)
 #define BOTTOMRIGHT_POS (3.3 / 6.4)
 
-#define NEWLINE_SPACE   (0.3)
+#define NEWLINE_SPACE (0.3)
 
-#define PAINT_FAC         (800)
+#define PAINT_FAC (800)
 
-#define FRAC_THICK        (.9 / 8.95)
-#define FRAC_SPACE        (1 / 20.)
+#define FRAC_THICK (.9 / 8.95)
+#define FRAC_SPACE (1 / 20.)
 #define FRAC_WIDTH_FACTOR (1. / 10.)
-#define FRAC_PAINT        FRAC_THICK * PAINT_FAC
+#define FRAC_PAINT FRAC_THICK *PAINT_FAC
 
 static double sinphi, cosphi;
 
-static double scales[] = { 1.0,	/* SUB_LEVEL */
-  1.0,				/* NEXT */
-  5.2 / 6.4,			/* INDEX */
-  5.2 / 6.4,			/* EXPONENT */
-  5.2 / 6.4,			/* OVER */
-  5.2 / 6.4,			/* UNDER */
-  1.0,				/* NEWLINE */
+static double scales[] = {
+    1.0,       /* SUB_LEVEL */
+    1.0,       /* NEXT */
+    5.2 / 6.4, /* INDEX */
+    5.2 / 6.4, /* EXPONENT */
+    5.2 / 6.4, /* OVER */
+    5.2 / 6.4, /* UNDER */
+    1.0,       /* NEWLINE */
 
-  5.8 / 6.4,			/* NOMINATOR */
-  5.8 / 6.4,			/* DENOMINATOR */
-  1.0				/* UNDERLINE */
+    5.8 / 6.4, /* NOMINATOR */
+    5.8 / 6.4, /* DENOMINATOR */
+    1.0        /* UNDERLINE */
 };
 
 
-static
-double textheight(void)
+static double textheight(void)
 {
   int errind;
   double height;
@@ -763,10 +728,10 @@ double textheight(void)
   return height;
 }
 
-static
-double textwidth(char *string, int font, int prec)
+static double textwidth(char *string, int font, int prec)
 {
-  double cpx, cpy, trx[5], try[5], qx = 0, qy = 0;
+  double cpx, cpy, trx[5], try
+    [5], qx = 0, qy = 0;
   int errind = 0, n = 0, wkid = 0;
 
   gks_inq_open_ws(1, &errind, &n, &wkid);
@@ -780,8 +745,7 @@ double textwidth(char *string, int font, int prec)
 }
 
 
-static
-double operatorLen(token_t operator, int font, int prec)
+static double operatorLen(token_t operator, int font, int prec)
 {
   double len;
   switch (operator)
@@ -807,21 +771,18 @@ double operatorLen(token_t operator, int font, int prec)
   return len;
 }
 
-static
-double stringWidth(string_t * str)
+static double stringWidth(string_t *str)
 {
   double nxt = 0;
 
   str->width = textwidth(str->subStr, str->font, str->prec);
-  if (str->next != NULL)
-    nxt = stringWidth(str->next);
+  if (str->next != NULL) nxt = stringWidth(str->next);
 
   return str->width + nxt;
 }
 
 
-static
-void heightAndWidth(formula_t * formula, double scale)
+static void heightAndWidth(formula_t *formula, double scale)
 {
   string_t *str;
   formula_t *help;
@@ -830,8 +791,7 @@ void heightAndWidth(formula_t * formula, double scale)
   int i;
 
   for (i = 0; i < POS_COUNT; i++)
-    if (formula->next[i] != NULL)
-      heightAndWidth(formula->next[i], scale * scales[i]);
+    if (formula->next[i] != NULL) heightAndWidth(formula->next[i], scale * scales[i]);
 
 
   /* SUBLEVEL */
@@ -847,19 +807,15 @@ void heightAndWidth(formula_t * formula, double scale)
 
   else if ((help = formula->next[NOMINATOR]) != NULL)
     {
-      formula->myHeight = txt_h * (.5 + FRAC_THICK / 2 + FRAC_SPACE)
-	+ help->totHeight + help->totDepth;
+      formula->myHeight = txt_h * (.5 + FRAC_THICK / 2 + FRAC_SPACE) + help->totHeight + help->totDepth;
 
       help = formula->next[DENOMINATOR];
-      formula->myDepth = txt_h * (FRAC_THICK / 2 + FRAC_SPACE)
-	+ help->totHeight + help->totDepth - txt_h / 2;
+      formula->myDepth = txt_h * (FRAC_THICK / 2 + FRAC_SPACE) + help->totHeight + help->totDepth - txt_h / 2;
 
-      if (formula->myDepth < 0)
-	formula->myDepth = txt_h * BOTTOM_PERCENT;
+      if (formula->myDepth < 0) formula->myDepth = txt_h * BOTTOM_PERCENT;
 
-      formula->myWidth = MAX(formula->next[DENOMINATOR]->totWidth,
-			     formula->next[NOMINATOR]->totWidth)
-	* (1.0 + 2 * FRAC_WIDTH_FACTOR);
+      formula->myWidth =
+          MAX(formula->next[DENOMINATOR]->totWidth, formula->next[NOMINATOR]->totWidth) * (1.0 + 2 * FRAC_WIDTH_FACTOR);
     }
 
   /* STRING */
@@ -870,8 +826,7 @@ void heightAndWidth(formula_t * formula, double scale)
 
       formula->myHeight = txt_h * (1.0 + TOP_PERCENT);
       formula->myDepth = txt_h * BOTTOM_PERCENT;
-      formula->myWidth = scale * stringWidth(str)
-	+ scale * operatorLen(formula->operator, str->font, str->prec);
+      formula->myWidth = scale * stringWidth(str) + scale * operatorLen(formula->operator, str->font, str->prec);
     }
 
   /* STRING can be NULL when input = "{}" */
@@ -897,65 +852,56 @@ void heightAndWidth(formula_t * formula, double scale)
 
   if ((help = formula->next[NEXT]) != NULL)
     {
-      formula->totWidth = formula->myWidth
-	+ scale * operatorLen(formula->operator, formula->font, formula->prec)
-	+ help->totWidth;
+      formula->totWidth =
+          formula->myWidth + scale * operatorLen(formula->operator, formula->font, formula->prec) + help->totWidth;
       formula->totHeight = MAX(formula->myHeight, help->totHeight);
       formula->totDepth = MAX(formula->myDepth, help->totDepth);
     }
 
   /* Exponent, Index, 'Over' or 'Sub' */
 
-  else if (formula->next[EXPONENT] != NULL || formula->next[INDEX] != NULL ||
-	   formula->next[OVER] != NULL || formula->next[UNDER] != NULL
-	   || formula->next[UNDERLINE] != NULL)
+  else if (formula->next[EXPONENT] != NULL || formula->next[INDEX] != NULL || formula->next[OVER] != NULL ||
+           formula->next[UNDER] != NULL || formula->next[UNDERLINE] != NULL)
     {
       if ((help = formula->next[EXPONENT]) != NULL)
-	{
-	  formula->totWidth = formula->myWidth + help->totWidth;
-	  formula->totHeight = MAX(formula->myHeight,
-				   formula->myHeight * TOPRIGHT_POS +
-				   help->totDepth + help->totHeight);
-	}
+        {
+          formula->totWidth = formula->myWidth + help->totWidth;
+          formula->totHeight =
+              MAX(formula->myHeight, formula->myHeight * TOPRIGHT_POS + help->totDepth + help->totHeight);
+        }
 
       if ((help = formula->next[INDEX]) != NULL)
-	{
-	  formula->totWidth =
-	    MAX(formula->totWidth, formula->myWidth + help->totWidth);
-	  formula->totDepth =
-	    MAX(formula->myDepth,
-		help->totDepth + help->totHeight - txt_h * BOTTOMRIGHT_POS);
-	}
+        {
+          formula->totWidth = MAX(formula->totWidth, formula->myWidth + help->totWidth);
+          formula->totDepth = MAX(formula->myDepth, help->totDepth + help->totHeight - txt_h * BOTTOMRIGHT_POS);
+        }
       if ((help = formula->next[UNDERLINE]) != NULL)
-	{
-	  formula->totWidth =
-	    MAX(formula->totWidth, formula->myWidth + help->totWidth);
-	  formula->totDepth =
-	    MAX(formula->myDepth,
-		help->totDepth + txt_h * PERCENT_UNDERLINE +
-		txt_h * FRAC_THICK * UNDERLINE_FAC);
-	}
+        {
+          formula->totWidth = MAX(formula->totWidth, formula->myWidth + help->totWidth);
+          formula->totDepth =
+              MAX(formula->myDepth, help->totDepth + txt_h * PERCENT_UNDERLINE + txt_h * FRAC_THICK * UNDERLINE_FAC);
+        }
 
       w = 0;
 
       if ((help = formula->next[OVER]) != NULL)
-	{
-	  w = help->totWidth;
-	  formula->totHeight += help->totHeight + help->totDepth;
-	}
+        {
+          w = help->totWidth;
+          formula->totHeight += help->totHeight + help->totDepth;
+        }
 
       if ((help = formula->next[UNDER]) != NULL)
-	{
-	  w = MAX(w, help->totWidth);
-	  formula->totDepth += help->totHeight + help->totDepth;
-	}
+        {
+          w = MAX(w, help->totWidth);
+          formula->totDepth += help->totHeight + help->totDepth;
+        }
 
       if (w > formula->myWidth)
-	{			/* Value centered */
-	  addLeft = (w - formula->myWidth) / 2;
-	  addRight = MAX(formula->totWidth - formula->myWidth, addLeft);
-	  formula->totWidth = addLeft + formula->myWidth + addRight;
-	}
+        { /* Value centered */
+          addLeft = (w - formula->myWidth) / 2;
+          addRight = MAX(formula->totWidth - formula->myWidth, addLeft);
+          formula->totWidth = addLeft + formula->myWidth + addRight;
+        }
     }
 
   /* NEWLINE ? */
@@ -963,22 +909,18 @@ void heightAndWidth(formula_t * formula, double scale)
   if ((help = formula->next[NEWLINE]) != NULL)
     {
       formula->totWidth = MAX(formula->totWidth, help->totWidth);
-      formula->totDepth +=
-	help->totHeight + help->totDepth + txt_h * NEWLINE_SPACE;
+      formula->totDepth += help->totHeight + help->totDepth + txt_h * NEWLINE_SPACE;
     }
 }
 
-static
-void xyStringPos(double x, double y, string_t * string, double scale)
+static void xyStringPos(double x, double y, string_t *string, double scale)
 {
   string->x = x;
   string->y = y;
-  if (string->next != NULL)
-    xyStringPos(x + string->width * scale, y, string->next, scale);
+  if (string->next != NULL) xyStringPos(x + string->width * scale, y, string->next, scale);
 }
 
-static
-void xyPos(double x, double y, formula_t * formula, double scale)
+static void xyPos(double x, double y, formula_t *formula, double scale)
 {
   formula_t *help;
   string_t *str;
@@ -994,19 +936,16 @@ void xyPos(double x, double y, formula_t * formula, double scale)
   if (formula->next[SUB_LEVEL] != NULL)
     {
       w = 0;
-      if ((help = formula->next[UNDER]) != NULL)
-	w = help->totWidth;
-      if ((help = formula->next[OVER]) != NULL)
-	w = MAX(w, help->totWidth);
+      if ((help = formula->next[UNDER]) != NULL) w = help->totWidth;
+      if ((help = formula->next[OVER]) != NULL) w = MAX(w, help->totWidth);
 
       if (w > formula->myWidth)
-	{
-	  addLeft = (w - formula->myWidth) / 2.;
-	  formula->x += addLeft;
-	}
+        {
+          addLeft = (w - formula->myWidth) / 2.;
+          formula->x += addLeft;
+        }
 
-      xyPos(formula->x,
-	    formula->y, formula->next[SUB_LEVEL], scale * scales[SUB_LEVEL]);
+      xyPos(formula->x, formula->y, formula->next[SUB_LEVEL], scale * scales[SUB_LEVEL]);
     }
 
   /* FRACTION */
@@ -1014,22 +953,18 @@ void xyPos(double x, double y, formula_t * formula, double scale)
   else if ((help = formula->next[NOMINATOR]) != NULL)
     {
       xyPos(x + (formula->myWidth - help->totWidth) / 2.,
-	    y + txt_h * (0.5 + FRAC_THICK / 2 + FRAC_SPACE) + help->totDepth,
-	    help, scale * scales[NOMINATOR]);
+            y + txt_h * (0.5 + FRAC_THICK / 2 + FRAC_SPACE) + help->totDepth, help, scale * scales[NOMINATOR]);
 
       help = formula->next[DENOMINATOR];
       xyPos(x + (formula->myWidth - help->totWidth) / 2.,
-	    y + txt_h * (.5 - FRAC_THICK / 2 - FRAC_SPACE) - help->totHeight,
-	    help, scale * scales[DENOMINATOR]);
+            y + txt_h * (.5 - FRAC_THICK / 2 - FRAC_SPACE) - help->totHeight, help, scale * scales[DENOMINATOR]);
     }
 
   /* STRING */
 
   else if ((str = formula->string) != NULL)
     {
-      xyStringPos(x +
-		  scale * operatorLen(formula->operator, str->font,
-				      str->prec), y, formula->string, scale);
+      xyStringPos(x + scale * operatorLen(formula->operator, str->font, str->prec), y, formula->string, scale);
     }
 
 
@@ -1040,63 +975,53 @@ void xyPos(double x, double y, formula_t * formula, double scale)
 
   if ((help = formula->next[NEXT]) != NULL)
     {
-      xyPos(x + formula->myWidth +
-	    scale * operatorLen(formula->operator, formula->font,
-				formula->prec), y, help,
-	    scale * scales[NEXT]);
+      xyPos(x + formula->myWidth + scale * operatorLen(formula->operator, formula->font, formula->prec), y, help,
+            scale * scales[NEXT]);
     }
 
   /* Exponent, Index, 'Over' or 'Sub' */
 
-  else if (formula->next[EXPONENT] != NULL || formula->next[INDEX] != NULL ||
-	   formula->next[OVER] != NULL || formula->next[UNDER] != NULL
-	   || formula->next[UNDERLINE] != NULL)
+  else if (formula->next[EXPONENT] != NULL || formula->next[INDEX] != NULL || formula->next[OVER] != NULL ||
+           formula->next[UNDER] != NULL || formula->next[UNDERLINE] != NULL)
     {
       if ((help = formula->next[EXPONENT]) != NULL)
-	{
-	  xyPos(x + addLeft + formula->myWidth,
-		y + formula->myHeight * TOPRIGHT_POS + help->totDepth,
-		help, scale * scales[EXPONENT]);
-	}
+        {
+          xyPos(x + addLeft + formula->myWidth, y + formula->myHeight * TOPRIGHT_POS + help->totDepth, help,
+                scale * scales[EXPONENT]);
+        }
 
       if ((help = formula->next[INDEX]) != NULL)
-	{
-	  xyPos(x + addLeft + formula->myWidth,
-		y + txt_h * BOTTOMRIGHT_POS - help->totHeight,
-		help, scale * scales[INDEX]);
-	}
+        {
+          xyPos(x + addLeft + formula->myWidth, y + txt_h * BOTTOMRIGHT_POS - help->totHeight, help,
+                scale * scales[INDEX]);
+        }
       if ((help = formula->next[UNDERLINE]) != NULL)
-	{
-	  xyPos(x + addLeft + formula->myWidth,
-		y, help, scale * scales[UNDERLINE]);
-	}
+        {
+          xyPos(x + addLeft + formula->myWidth, y, help, scale * scales[UNDERLINE]);
+        }
       if ((help = formula->next[OVER]) != NULL)
-	{
-	  if ((help->totWidth - formula->myWidth) / 2. == addLeft)
-	    shift = 0.;
-	  else if (help->totWidth < formula->myWidth)
-	    shift = (formula->myWidth - help->totWidth) / 2. + addLeft;
-	  else
-	    shift = addLeft - (help->totWidth - formula->myWidth) / 2.;
+        {
+          if ((help->totWidth - formula->myWidth) / 2. == addLeft)
+            shift = 0.;
+          else if (help->totWidth < formula->myWidth)
+            shift = (formula->myWidth - help->totWidth) / 2. + addLeft;
+          else
+            shift = addLeft - (help->totWidth - formula->myWidth) / 2.;
 
-	  xyPos(x + shift,
-		y + formula->totHeight - help->totHeight,
-		help, scale * scales[OVER]);
-	}
+          xyPos(x + shift, y + formula->totHeight - help->totHeight, help, scale * scales[OVER]);
+        }
 
       if ((help = formula->next[UNDER]) != NULL)
-	{
-	  if ((help->totWidth - formula->myWidth) / 2. == addLeft)
-	    shift = 0.;
-	  else if (help->totWidth < formula->myWidth)
-	    shift = (formula->myWidth - help->totWidth) / 2. + addLeft;
-	  else
-	    shift = addLeft - (help->totWidth - formula->myWidth) / 2.;
+        {
+          if ((help->totWidth - formula->myWidth) / 2. == addLeft)
+            shift = 0.;
+          else if (help->totWidth < formula->myWidth)
+            shift = (formula->myWidth - help->totWidth) / 2. + addLeft;
+          else
+            shift = addLeft - (help->totWidth - formula->myWidth) / 2.;
 
-	  xyPos(x + shift,
-		y - formula->totDepth + help->totDepth,
-		help, scale * scales[UNDER]);
-	}
+          xyPos(x + shift, y - formula->totDepth + help->totDepth, help, scale * scales[UNDER]);
+        }
     }
 
 
@@ -1104,26 +1029,21 @@ void xyPos(double x, double y, formula_t * formula, double scale)
 
   if ((help = formula->next[NEWLINE]) != NULL)
     {
-      xyPos(x,
-	    y - (formula->totDepth - shift - help->totDepth),
-	    help, scale * scales[NEWLINE]);
+      xyPos(x, y - (formula->totDepth - shift - help->totDepth), help, scale * scales[NEWLINE]);
     }
 }
 
 
-static
-void shiftString(string_t * string, double sx, double sy)
+static void shiftString(string_t *string, double sx, double sy)
 {
   string->x += sx;
   string->y += sy;
 
-  if (string->next != NULL)
-    shiftString(string->next, sx, sy);
+  if (string->next != NULL) shiftString(string->next, sx, sy);
 }
 
 
-static
-void shiftFormula(formula_t * formula, double sx, double sy)
+static void shiftFormula(formula_t *formula, double sx, double sy)
 {
   int i;
 
@@ -1131,15 +1051,12 @@ void shiftFormula(formula_t * formula, double sx, double sy)
   formula->y += sy;
 
   for (i = 0; i < POS_COUNT; i++)
-    if (formula->next[i] != NULL)
-      shiftFormula(formula->next[i], sx, sy);
+    if (formula->next[i] != NULL) shiftFormula(formula->next[i], sx, sy);
 
-  if (formula->string != NULL)
-    shiftString(formula->string, sx, sy);
+  if (formula->string != NULL) shiftString(formula->string, sx, sy);
 }
 
-static
-void setInnerAlignment(int align, formula_t * formula, double width)
+static void setInnerAlignment(int align, formula_t *formula, double width)
 {
   double x_shift = 0;
   double lineWidth;
@@ -1153,8 +1070,7 @@ void setInnerAlignment(int align, formula_t * formula, double width)
   else
     {
       lineWidth = formula->myWidth;
-      if ((help = formula->next[NEXT]) != NULL)
-	lineWidth += help->totWidth;
+      if ((help = formula->next[NEXT]) != NULL) lineWidth += help->totWidth;
     }
 
 
@@ -1168,25 +1084,22 @@ void setInnerAlignment(int align, formula_t * formula, double width)
   for (i = 0; i < POS_COUNT; i++)
     {
       if ((help = formula->next[i]) != NULL)
-	{
-	  if (i != NEWLINE)
-	    {
-	      if (x_shift != 0.)
-		shiftFormula(help, x_shift, 0.);
-	      setInnerAlignment(align, help, help->totWidth);
-	    }
-	  else
-	    {
-	      setInnerAlignment(align, help, width);
-	    }
-	}
+        {
+          if (i != NEWLINE)
+            {
+              if (x_shift != 0.) shiftFormula(help, x_shift, 0.);
+              setInnerAlignment(align, help, help->totWidth);
+            }
+          else
+            {
+              setInnerAlignment(align, help, width);
+            }
+        }
     }
 }
 
 
-
-static
-void rotateString(double x, double y, string_t * string)
+static void rotateString(double x, double y, string_t *string)
 {
   double delta_x = string->x - x;
   double delta_y = string->y - y;
@@ -1194,12 +1107,10 @@ void rotateString(double x, double y, string_t * string)
   string->x = x + delta_x * cosphi + delta_y * sinphi;
   string->y = y - delta_x * sinphi + delta_y * cosphi;
 
-  if (string->next != NULL)
-    rotateString(x, y, string->next);
+  if (string->next != NULL) rotateString(x, y, string->next);
 }
 
-static
-void rotate(double x, double y, formula_t * formula)
+static void rotate(double x, double y, formula_t *formula)
 {
   int i;
   double delta_x = formula->x - x;
@@ -1209,16 +1120,12 @@ void rotate(double x, double y, formula_t * formula)
   formula->y = y - delta_x * sinphi + delta_y * cosphi;
 
   for (i = 0; i < POS_COUNT; i++)
-    if (formula->next[i] != NULL)
-      rotate(x, y, formula->next[i]);
+    if (formula->next[i] != NULL) rotate(x, y, formula->next[i]);
 
-  if (formula->string != NULL)
-    rotateString(x, y, formula->string);
+  if (formula->string != NULL) rotateString(x, y, formula->string);
 }
 
-static
-void drawOperator(double x, double y, token_t operator, double txt_h, int font,
-		  int prec)
+static void drawOperator(double x, double y, token_t operator, double txt_h, int font, int prec)
 {
   gks_set_text_fontprec(font, prec);
   gks_set_text_height(txt_h);
@@ -1240,44 +1147,36 @@ void drawOperator(double x, double y, token_t operator, double txt_h, int font,
     }
 }
 
-static
-void drawString(string_t * str, double txt_h)
+static void drawString(string_t *str, double txt_h)
 {
   gks_set_text_fontprec(str->font, str->prec);
   gks_set_text_height(txt_h);
   gks_set_text_upvec(sinphi, cosphi);
   gks_text(str->x, str->y, str->subStr);
 
-  if (str->next != NULL)
-    drawString(str->next, txt_h);
+  if (str->next != NULL) drawString(str->next, txt_h);
 }
 
-static
-void drawFormula(formula_t * formula, double Height, double scale)
+static void drawFormula(formula_t *formula, double Height, double scale)
 {
   int i;
   double txt_h = Height * scale;
   double x[2], y[2];
 
   for (i = 0; i < POS_COUNT; i++)
-    if (formula->next[i] != NULL)
-      drawFormula(formula->next[i], Height, scale * scales[i]);
+    if (formula->next[i] != NULL) drawFormula(formula->next[i], Height, scale * scales[i]);
 
 
   if (formula->string != NULL)
     {
-      drawOperator(formula->x, formula->y,	/* sign */
-		   formula->operator, txt_h, formula->font, formula->prec);
+      drawOperator(formula->x, formula->y, /* sign */
+                   formula->operator, txt_h, formula->font, formula->prec);
       drawString(formula->string, txt_h);
     }
   else if (formula->next[UNDERLINE] != NULL)
     {
-      x[0] =
-	formula->next[UNDERLINE]->x - (formula->next[UNDERLINE]->totDepth +
-				       txt_h * PERCENT_UNDERLINE) * sinphi;
-      y[0] =
-	formula->next[UNDERLINE]->y - (formula->next[UNDERLINE]->totDepth +
-				       txt_h * PERCENT_UNDERLINE) * cosphi;
+      x[0] = formula->next[UNDERLINE]->x - (formula->next[UNDERLINE]->totDepth + txt_h * PERCENT_UNDERLINE) * sinphi;
+      y[0] = formula->next[UNDERLINE]->y - (formula->next[UNDERLINE]->totDepth + txt_h * PERCENT_UNDERLINE) * cosphi;
 
       x[1] = x[0] + formula->next[UNDERLINE]->totWidth * cosphi;
       y[1] = y[0] - formula->next[UNDERLINE]->totWidth * sinphi;
@@ -1298,55 +1197,72 @@ void drawFormula(formula_t * formula, double Height, double scale)
     }
 
   if (formula->next[NEXT] != NULL)
-    drawOperator(formula->x + formula->myWidth * cosphi,
-		 formula->y - formula->myWidth * sinphi,
-		 formula->operator, txt_h, formula->font, formula->prec);
-
+    drawOperator(formula->x + formula->myWidth * cosphi, formula->y - formula->myWidth * sinphi, formula->operator,
+                 txt_h, formula->font, formula->prec);
 }
 
-static char *pre_parse_escape(const char *string) {
+static char *pre_parse_escape(const char *string)
+{
   const char *c;
   char *escaped_string;
   char *ec;
   int escapable_parentheses = 0;
   int escapable_braces = 0;
-  int max_len = strlen(string)*3;
-  escaped_string = malloc(max_len+1);
+  int max_len = strlen(string) * 3;
+  escaped_string = malloc(max_len + 1);
   assert(escaped_string);
-  for (c = string, ec=escaped_string; c[0] != 0; c++, ec++) {
-    ec[0] = c[0];
-    if (c[0] == '\\' && c[1] == '\\') {
-      ec[1] = '\\';
-      c++;
-    } else if (c[0] == '\\' && c[1] == ' ') {
-      ec[0] = ' ';
-      c++;
-    } else if (c[0] == ' ' && (c[1] == '+' || c[1] == '-' || c[1] == '/' || c[1] == '*' || c[1] == '^' || c[1] == '_' || c[1] == '(' || c[1] == ')' || c[1] == '{' || c[1] == '}')) {
-      ec[1] = '\\';
-      ec[2] = c[1];
-      c++;
-      ec += 2;
-      if (c[0] == '(') {
-        escapable_parentheses++;
-      } else if (c[0] == '{') {
-        escapable_braces++;
-      } else if (c[0] == ')') {
-        escapable_parentheses--;
-      } else if (c[0] == '}') {
-        escapable_braces--;
-      }
-    } else if (escapable_parentheses && c[0] == ')') {
-      ec[0] = '\\';
-      ec[1] = ')';
-      ec++;
-      escapable_parentheses--;
-    } else if (escapable_braces && c[0] == '}') {
-      ec[0] = '\\';
-      ec[1] = '}';
-      ec++;
-      escapable_braces--;
+  for (c = string, ec = escaped_string; c[0] != 0; c++, ec++)
+    {
+      ec[0] = c[0];
+      if (c[0] == '\\' && c[1] == '\\')
+        {
+          ec[1] = '\\';
+          c++;
+        }
+      else if (c[0] == '\\' && c[1] == ' ')
+        {
+          ec[0] = ' ';
+          c++;
+        }
+      else if (c[0] == ' ' && (c[1] == '+' || c[1] == '-' || c[1] == '/' || c[1] == '*' || c[1] == '^' || c[1] == '_' ||
+                               c[1] == '(' || c[1] == ')' || c[1] == '{' || c[1] == '}'))
+        {
+          ec[1] = '\\';
+          ec[2] = c[1];
+          c++;
+          ec += 2;
+          if (c[0] == '(')
+            {
+              escapable_parentheses++;
+            }
+          else if (c[0] == '{')
+            {
+              escapable_braces++;
+            }
+          else if (c[0] == ')')
+            {
+              escapable_parentheses--;
+            }
+          else if (c[0] == '}')
+            {
+              escapable_braces--;
+            }
+        }
+      else if (escapable_parentheses && c[0] == ')')
+        {
+          ec[0] = '\\';
+          ec[1] = ')';
+          ec++;
+          escapable_parentheses--;
+        }
+      else if (escapable_braces && c[0] == '}')
+        {
+          ec[0] = '\\';
+          ec[1] = '}';
+          ec++;
+          escapable_braces--;
+        }
     }
-  }
   ec[0] = 0;
   return escaped_string;
 }
@@ -1356,8 +1272,7 @@ static char *pre_parse_escape(const char *string) {
 /*                      gr_textex                              */
 /*                                                             */
 /***************************************************************/
-int gr_textex(double x, double y, const char *string, int inquire,
-	      double *tbx, double *tby)
+int gr_textex(double x, double y, const char *string, int inquire, double *tbx, double *tby)
 {
   char *str = pre_parse_escape(string);
   int n, wkid = 0;
@@ -1384,8 +1299,7 @@ int gr_textex(double x, double y, const char *string, int inquire,
 
   if (Expression(&formula, font, prec) == false)
     {
-      if (formula != NULL)
-	freeFormula(formula);
+      if (formula != NULL) freeFormula(formula);
       free(str);
       return 0;
     }
@@ -1416,8 +1330,7 @@ int gr_textex(double x, double y, const char *string, int inquire,
       y_shift = -(formula->totHeight);
       break;
     case GKS_K_TEXT_VALIGN_HALF:
-      y_shift =
-	-(formula->totHeight + formula->totDepth) / 2. + formula->totDepth;
+      y_shift = -(formula->totHeight + formula->totDepth) / 2. + formula->totDepth;
       break;
     case GKS_K_TEXT_VALIGN_BOTTOM:
       y_shift = formula->totDepth;
@@ -1443,21 +1356,20 @@ int gr_textex(double x, double y, const char *string, int inquire,
 
   if (!inquire)
     {
-      xyPos(x, y, formula, 1.0);	/* without rotating */
+      xyPos(x, y, formula, 1.0); /* without rotating */
 
       if (x_shift != 0. || y_shift != 0.)
-	{
-	  shiftFormula(formula, x_shift, y_shift);	/* box alignment    */
-	}
+        {
+          shiftFormula(formula, x_shift, y_shift); /* box alignment    */
+        }
 
-      if (align_hor == GKS_K_TEXT_HALIGN_CENTER ||
-	  align_hor == GKS_K_TEXT_HALIGN_RIGHT)
-	{
-	  /* inner alignment  */
-	  setInnerAlignment(align_hor, formula, formula->totWidth);
-	}
+      if (align_hor == GKS_K_TEXT_HALIGN_CENTER || align_hor == GKS_K_TEXT_HALIGN_RIGHT)
+        {
+          /* inner alignment  */
+          setInnerAlignment(align_hor, formula, formula->totWidth);
+        }
 
-      rotate(x, y, formula);	/* rotate           */
+      rotate(x, y, formula); /* rotate           */
 
       drawFormula(formula, height, 1.0);
     }
@@ -1478,7 +1390,6 @@ int gr_textex(double x, double y, const char *string, int inquire,
 
       tbx[2] = tbx[3] + formula->totWidth * cosphi;
       tby[2] = tby[3] - formula->totWidth * sinphi;
-
     }
 
   gks_set_text_height(height);

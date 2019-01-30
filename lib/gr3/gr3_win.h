@@ -17,7 +17,7 @@ are supported!"
 #endif
 
 #ifdef GR3_WIN_C
-#define GLFUNC 
+#define GLFUNC
 #else
 #define GLFUNC extern
 #endif
@@ -69,7 +69,7 @@ GLFUNC PFNGLDELETEFRAMEBUFFERSEXTPROC glDeleteFramebuffersEXT;
 GLFUNC PFNGLDELETERENDERBUFFERSEXTPROC glDeleteRenderbuffersEXT;
 #endif
 
-int  gr3_initGL_WIN_(void);
+int gr3_initGL_WIN_(void);
 void gr3_terminateGL_WIN_(void);
 
 #endif

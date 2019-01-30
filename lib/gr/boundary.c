@@ -15,15 +15,13 @@ typedef struct
   double x;
   double y;
   int index;
-}
-double2;
+} double2;
 
 typedef struct
 {
   int x;
   int y;
-}
-int2;
+} int2;
 
 typedef struct
 {
@@ -32,8 +30,7 @@ typedef struct
   double cell_size;
   int *cell_offsets;
   double2 bounding_box[2];
-}
-grid;
+} grid;
 
 typedef struct
 {
@@ -42,8 +39,7 @@ typedef struct
   double2 center_point;
   double r;
   void *user_data;
-}
-grid_callback_data;
+} grid_callback_data;
 
 typedef struct
 {
@@ -52,8 +48,7 @@ typedef struct
   size_t num_points_reachable;
   size_t capacity;
   int *point_list;
-}
-neighbor_point_list;
+} neighbor_point_list;
 
 static grid *current_grid = NULL; /* grid pointer used in compare callback of qsort */
 
@@ -64,9 +59,9 @@ static void calculate_bounding_box(int n, const double2 *points, double2 *min, d
    * point to assure that the closest data point has a positive distance to the point min.
    */
   int i;
-  min->x = max-> x = points[0].x;
+  min->x = max->x = points[0].x;
   min->y = max->y = points[0].y;
-  for (i=1; i<n; i++)
+  for (i = 1; i < n; i++)
     {
       if (points[i].x < min->x)
         {
@@ -94,9 +89,9 @@ static double distance_sq(double2 position1, double2 position2)
   /*
    * Calculate the square of the distance between point1 and point2.
    */
-  double dx = position1.x-position2.x;
-  double dy = position1.y-position2.y;
-  return dx*dx + dy*dy;
+  double dx = position1.x - position2.x;
+  double dy = position1.y - position2.y;
+  return dx * dx + dy * dy;
 }
 
 static int2 grid_get_cell(grid *grid, const double2 *position)
@@ -114,7 +109,7 @@ static int2 grid_get_cell(grid *grid, const double2 *position)
     }
   else if (result.x >= grid->num_cells.x)
     {
-      result.x = grid->num_cells.x-1;
+      result.x = grid->num_cells.x - 1;
     }
   if (result.y < 0)
     {
@@ -122,7 +117,7 @@ static int2 grid_get_cell(grid *grid, const double2 *position)
     }
   else if (result.y >= grid->num_cells.y)
     {
-      result.y = grid->num_cells.y-1;
+      result.y = grid->num_cells.y - 1;
     }
   return result;
 }
@@ -146,8 +141,8 @@ static int compare_element_fun(const void *position1, const void *position2)
   /*
    * Comparator function to sort positions by their cell index using qsort function.
    */
-  return grid_get_cell_number(current_grid, (const double2 *) position1) >
-         grid_get_cell_number(current_grid, (const double2 *) position2);
+  return grid_get_cell_number(current_grid, (const double2 *)position1) >
+         grid_get_cell_number(current_grid, (const double2 *)position2);
 }
 
 static grid *grid_create(int n, double2 *points, double cell_size)
@@ -162,7 +157,7 @@ static grid *grid_create(int n, double2 *points, double cell_size)
 
   grid *grid_ptr;
   assert(n > 0);
-  grid_ptr= malloc(sizeof(grid));
+  grid_ptr = malloc(sizeof(grid));
   assert(grid_ptr);
 
   calculate_bounding_box(n, points, grid_ptr->bounding_box, grid_ptr->bounding_box + 1);
@@ -176,10 +171,10 @@ static grid *grid_create(int n, double2 *points, double cell_size)
 
   assert(current_grid == NULL);
   current_grid = grid_ptr;
-  qsort(points, (size_t) n, sizeof(double2), compare_element_fun);
+  qsort(points, (size_t)n, sizeof(double2), compare_element_fun);
   current_grid = NULL;
 
-  for (i=0; i<n; i++)
+  for (i = 0; i < n; i++)
     {
       while (grid_get_cell_number(grid_ptr, points + i) >= cur_cell)
         {
@@ -193,8 +188,9 @@ static grid *grid_create(int n, double2 *points, double cell_size)
   return grid_ptr;
 }
 
-static void grid_apply_function(grid *grid_ptr, double2 center, double radius, int (*cb_fun)(grid *, grid_callback_data),
-                         void *user_data, int n_excluded, const int *excluded_indices)
+static void grid_apply_function(grid *grid_ptr, double2 center, double radius,
+                                int (*cb_fun)(grid *, grid_callback_data), void *user_data, int n_excluded,
+                                const int *excluded_indices)
 {
   /*
    * Apply a callback function `cb_fun` to all points with a distance less than `radius` to the point `center`
@@ -217,21 +213,21 @@ static void grid_apply_function(grid *grid_ptr, double2 center, double radius, i
   callback_data.r = radius;
   callback_data.user_data = user_data;
 
-  for (i=bottom_left_cell.y; i<=top_right_cell.y; i++)
+  for (i = bottom_left_cell.y; i <= top_right_cell.y; i++)
     {
-      for (j=bottom_left_cell.x; j<=top_right_cell.x; j++)
+      for (j = bottom_left_cell.x; j <= top_right_cell.x; j++)
         {
           int cell_index = i * grid_ptr->num_cells.x + j;
-          for (k=grid_ptr->cell_offsets[cell_index]; k<grid_ptr->cell_offsets[cell_index+1]; k++)
+          for (k = grid_ptr->cell_offsets[cell_index]; k < grid_ptr->cell_offsets[cell_index + 1]; k++)
             {
-              for (l=0; l<n_excluded; l++)
+              for (l = 0; l < n_excluded; l++)
                 {
                   if (excluded_indices[l] == k)
                     {
                       break;
                     }
                 }
-              if (l<n_excluded)
+              if (l < n_excluded)
                 {
                   continue;
                 }
@@ -269,11 +265,11 @@ static double2 calculate_ball_center(double2 point1, double2 point2, double r)
    */
   double length;
   double distance = distance_sq(point1, point2) / 4;
-  double h = sqrt(r*r - distance);
+  double h = sqrt(r * r - distance);
   double2 m, m_normalized, center;
   m.x = (point2.x - point1.x) / 2;
   m.y = (point2.y - point1.y) / 2;
-  length = sqrt(m.x*m.x + m.y*m.y);
+  length = sqrt(m.x * m.x + m.y * m.y);
   m_normalized.x = m.x / length;
   m_normalized.y = m.y / length;
   center.x = point1.x + m.x + h * m_normalized.y;
@@ -287,7 +283,7 @@ static int grid_cb_ball_empty(grid *grid_ptr, grid_callback_data callback_data)
    * Callback function to check if a point is located inside a ball. If this function is called (and
    * both points on the circumference are excluded) at least one point is located inside the ball.
    */
-  (void) grid_ptr;
+  (void)grid_ptr;
   *(int *)(callback_data.user_data) = 0;
   return 1;
 }
@@ -316,7 +312,7 @@ static int grid_cb_find_possible_neighbors(grid *grid_ptr, grid_callback_data ca
   int excluded_indices[2];
   excluded_indices[0] = data->current;
   excluded_indices[1] = index;
-  grid_apply_function(grid_ptr, ball_center, r, grid_cb_ball_empty, (void *) &ball_empty, 2, excluded_indices);
+  grid_apply_function(grid_ptr, ball_center, r, grid_cb_ball_empty, (void *)&ball_empty, 2, excluded_indices);
   data->num_points_reachable++;
   if (!ball_empty)
     {
@@ -325,7 +321,7 @@ static int grid_cb_find_possible_neighbors(grid *grid_ptr, grid_callback_data ca
   if (data->size + 1 > data->capacity)
     {
       data->capacity *= 2;
-      data->point_list = realloc(data->point_list, data->capacity*sizeof(int));
+      data->point_list = realloc(data->point_list, data->capacity * sizeof(int));
       assert(data->point_list);
     }
   data->point_list[data->size++] = index;
@@ -341,7 +337,7 @@ static int grid_cb_nearest_neighbor(grid *grid_ptr, grid_callback_data callback_
   double2 *data = (double2 *)callback_data.user_data;
   double2 center = callback_data.center_point;
   double2 point = callback_data.current_point;
-  (void) grid_ptr;
+  (void)grid_ptr;
 
   distance = distance_sq(center, point);
   if (distance > 0 && (distance < data->x || data->x < 0))
@@ -363,7 +359,7 @@ static double2 grid_find_nearest_neighbor(grid *grid_ptr, double2 position, int 
   double scale = 1;
   while (result.index < 0)
     {
-      grid_apply_function(grid_ptr, position, scale * r, grid_cb_nearest_neighbor, (void *) &result, 1, &index);
+      grid_apply_function(grid_ptr, position, scale * r, grid_cb_nearest_neighbor, (void *)&result, 1, &index);
       scale *= 2;
     }
   return result;
@@ -376,7 +372,7 @@ static double angle(double2 c, double2 p1, double2 p2)
   v1.y = p1.y - c.y;
   v2.x = p2.x - c.x;
   v2.y = p2.y - c.y;
-  return acos(v1.x*v2.x + v1.y*v2.y);
+  return acos(v1.x * v2.x + v1.y * v2.y);
 }
 
 static int in_contour(int index, int n_contour, const int *contour)
@@ -385,7 +381,7 @@ static int in_contour(int index, int n_contour, const int *contour)
    * Check if `index` is already contained in the `contour` consisting of `n_contour` points.
    */
   int i;
-  for (i=n_contour-1; i>=0; i--)
+  for (i = n_contour - 1; i >= 0; i--)
     {
       if (contour[i] == index)
         {
@@ -438,7 +434,7 @@ int find_boundary(int n, double *x, double *y, double r, double (*r_function)(do
 
   points = malloc(n * sizeof(double2));
   assert(points);
-  for (i=0; i< n; i++)
+  for (i = 0; i < n; i++)
     {
       points[i].x = x[i];
       points[i].y = y[i];
@@ -464,7 +460,7 @@ int find_boundary(int n, double *x, double *y, double r, double (*r_function)(do
 
   if (r <= 0 && r_function == NULL)
     { /* No radius given, calculate from data */
-      for (i=0; i<n; i++)
+      for (i = 0; i < n; i++)
         {
           double nearest_neighbor = grid_find_nearest_neighbor(grid_ptr, grid_get_elem(grid_ptr, i), i, cell_size).x;
           if (nearest_neighbor > r)
@@ -507,7 +503,7 @@ int find_boundary(int n, double *x, double *y, double r, double (*r_function)(do
         }
 
       /* Find the possible neighbors of `current_point` using the grid structure. */
-      grid_apply_function(grid_ptr, current_point, 2 * r, grid_cb_find_possible_neighbors, (void *) &data, 1,
+      grid_apply_function(grid_ptr, current_point, 2 * r, grid_cb_find_possible_neighbors, (void *)&data, 1,
                           &current_index);
       if (data.size == 1)
         { /* Only one neighbor is possible */
@@ -518,7 +514,7 @@ int find_boundary(int n, double *x, double *y, double r, double (*r_function)(do
         { /* More than one point is a possible neighbor */
           int best_neighbor = 0;
           double best_angle = 0;
-          int oldest = num_contour_points+1;
+          int oldest = num_contour_points + 1;
           int unvisited_points = 0;
 
           /* If at least one possible neighbor is not included in the contour until now use the (unvisited) one
@@ -563,7 +559,7 @@ int find_boundary(int n, double *x, double *y, double r, double (*r_function)(do
         }
     }
   /* The grid data structure reorders the points. Restore original indices of the contour points. */
-  for (i=0; i<num_contour_points; i++)
+  for (i = 0; i < num_contour_points; i++)
     {
       contour[i] = points[contour[i]].index;
     }

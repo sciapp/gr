@@ -6,8 +6,8 @@
 
 
 extern float xeye, yeye, zeye; /* camera position */
-extern double rotation; /* camera rotation (negative rotation around y axis)*/
-extern double tilt; /* camera tilt (rotation around x axis)*/
+extern double rotation;        /* camera rotation (negative rotation around y axis)*/
+extern double tilt;            /* camera tilt (rotation around x axis)*/
 extern Bool gr3_debug;
 
 #define MOLDYN_EXPORT_TO_JPEG 1
