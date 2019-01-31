@@ -14,8 +14,11 @@
 #include "moldyn_element_information.h"
 #include "moldyn_graphics.h"
 
-typedef enum {
-    normal, xyz, unichem
+typedef enum
+{
+  normal,
+  xyz,
+  unichem
 } format_t;
 extern format_t format;
 extern FILE *fptr;

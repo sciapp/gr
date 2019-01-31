@@ -4,7 +4,7 @@
 
 #include "gr.h"
 
-#if defined (_WIN32) && !defined (__GNUC__)
+#if defined(_WIN32) && !defined(__GNUC__)
 #define STDCALL __stdcall
 #else
 #define STDCALL
@@ -22,19 +22,16 @@ void FORTRAN(gr_closegks)(void)
   gr_closegks();
 }
 
-void FORTRAN(gr_inqdspsize)(
-  double *mwidth, double *mheight, int *width, int *height)
+void FORTRAN(gr_inqdspsize)(double *mwidth, double *mheight, int *width, int *height)
 {
   gr_inqdspsize(mwidth, mheight, width, height);
 }
 
-void FORTRAN(gr_openws)(
-  int *workstation_id, char *connection, int *type,
-  unsigned short connection_len)
+void FORTRAN(gr_openws)(int *workstation_id, char *connection, int *type, unsigned short connection_len)
 {
   char *_connection;
 
-  _connection = (char *) calloc(1, sizeof(char) * connection_len);
+  _connection = (char *)calloc(1, sizeof(char) * connection_len);
   strncpy(_connection, connection, connection_len);
 
   gr_openws(*workstation_id, _connection, *type);
@@ -77,12 +74,11 @@ void FORTRAN(gr_polymarker)(int *n, double *x, double *y)
   gr_polymarker(*n, x, y);
 }
 
-void FORTRAN(gr_text)(
-  double *x, double *y, char *string, unsigned char string_len)
+void FORTRAN(gr_text)(double *x, double *y, char *string, unsigned char string_len)
 {
   char *_string;
 
-  _string = (char *) calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * string_len);
   strncpy(_string, string, string_len);
 
   gr_text(*x, *y, _string);
@@ -90,13 +86,11 @@ void FORTRAN(gr_text)(
   free(_string);
 }
 
-void FORTRAN(gr_inqtext)(
-  double *x, double *y, char *string, double *tbx, double *tby,
-  unsigned short string_len)
+void FORTRAN(gr_inqtext)(double *x, double *y, char *string, double *tbx, double *tby, unsigned short string_len)
 {
   char *_string;
 
-  _string = (char *) calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * string_len);
   strncpy(_string, string, string_len);
 
   gr_inqtext(*x, *y, _string, tbx, tby);
@@ -109,12 +103,10 @@ void FORTRAN(gr_fillarea)(int *n, double *x, double *y)
   gr_fillarea(*n, x, y);
 }
 
-void FORTRAN(gr_cellarray)(
-  double *xmin, double *xmax, double *ymin, double *ymax,
-  int *dimx, int *dimy, int *scol, int *srow, int *ncol, int *nrow, int *color)
+void FORTRAN(gr_cellarray)(double *xmin, double *xmax, double *ymin, double *ymax, int *dimx, int *dimy, int *scol,
+                           int *srow, int *ncol, int *nrow, int *color)
 {
-  gr_cellarray(*xmin, *xmax, *ymin, *ymax,
-               *dimx, *dimy, *scol, *srow, *ncol, *nrow, color);
+  gr_cellarray(*xmin, *xmax, *ymin, *ymax, *dimx, *dimy, *scol, *srow, *ncol, *nrow, color);
 }
 
 void FORTRAN(gr_spline)(int *n, double *x, double *y, int *m, int *method)
@@ -122,9 +114,7 @@ void FORTRAN(gr_spline)(int *n, double *x, double *y, int *m, int *method)
   gr_spline(*n, x, y, *m, *method);
 }
 
-void FORTRAN(gr_gridit)(
-  int *nd, double *xd, double *yd, double *zd,
-  int *nx, int *ny, double *x, double *y, double *z)
+void FORTRAN(gr_gridit)(int *nd, double *xd, double *yd, double *zd, int *nx, int *ny, double *x, double *y, double *z)
 {
   gr_gridit(*nd, xd, yd, zd, *nx, *ny, x, y, z);
 }
@@ -249,14 +239,12 @@ void FORTRAN(gr_setclip)(int *indicator)
   gr_setclip(*indicator);
 }
 
-void FORTRAN(gr_setwswindow)(
-  double *xmin, double *xmax, double *ymin, double *ymax)
+void FORTRAN(gr_setwswindow)(double *xmin, double *xmax, double *ymin, double *ymax)
 {
   gr_setwswindow(*xmin, *xmax, *ymin, *ymax);
 }
 
-void FORTRAN(gr_setwsviewport)(
-  double *xmin, double *xmax, double *ymin, double *ymax)
+void FORTRAN(gr_setwsviewport)(double *xmin, double *xmax, double *ymin, double *ymax)
 {
   gr_setwsviewport(*xmin, *xmax, *ymin, *ymax);
 }
@@ -276,9 +264,8 @@ void FORTRAN(gr_redrawsegws)(void)
   gr_redrawsegws();
 }
 
-void FORTRAN(gr_setsegtran)(
-  int *segment, double *fx, double *fy, double *transx, double *transy, double *phi,
-  double *scalex, double *scaley)
+void FORTRAN(gr_setsegtran)(int *segment, double *fx, double *fy, double *transx, double *transy, double *phi,
+                            double *scalex, double *scaley)
 {
   gr_setsegtran(*segment, *fx, *fy, *transx, *transy, *phi, *scalex, *scaley);
 }
@@ -318,13 +305,12 @@ void FORTRAN(gr_inqscale)(int *options)
   gr_inqscale(options);
 }
 
-int FORTRAN(gr_textext)(
-  double *x, double *y, char *string, unsigned short string_len)
+int FORTRAN(gr_textext)(double *x, double *y, char *string, unsigned short string_len)
 {
   char *_string;
   int result;
 
-  _string = (char *) calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * string_len);
   strncpy(_string, string, string_len);
 
   result = gr_textext(*x, *y, _string);
@@ -334,13 +320,11 @@ int FORTRAN(gr_textext)(
   return result;
 }
 
-void FORTRAN(gr_inqtextext)(
-  double *x, double *y, char *string, double *tbx, double *tby,
-  unsigned short string_len)
+void FORTRAN(gr_inqtextext)(double *x, double *y, char *string, double *tbx, double *tby, unsigned short string_len)
 {
   char *_string;
 
-  _string = (char *) calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * string_len);
   strncpy(_string, string, string_len);
 
   gr_inqtextext(*x, *y, _string, tbx, tby);
@@ -348,27 +332,21 @@ void FORTRAN(gr_inqtextext)(
   free(_string);
 }
 
-void FORTRAN(gr_axes)(
-  double *x_tick, double *y_tick, double *x_org, double *y_org,
-  int *major_x, int *major_y, double *tick_size)
+void FORTRAN(gr_axes)(double *x_tick, double *y_tick, double *x_org, double *y_org, int *major_x, int *major_y,
+                      double *tick_size)
 {
   gr_axes(*x_tick, *y_tick, *x_org, *y_org, *major_x, *major_y, *tick_size);
 }
 
-void FORTRAN(gr_grid)(
-  double *x_tick, double *y_tick, double *x_org, double *y_org,
-  int *major_x, int *major_y)
+void FORTRAN(gr_grid)(double *x_tick, double *y_tick, double *x_org, double *y_org, int *major_x, int *major_y)
 {
   gr_grid(*x_tick, *y_tick, *x_org, *y_org, *major_x, *major_y);
 }
 
-void FORTRAN(gr_grid3d)(
-  double *x_tick, double *y_tick, double *z_tick,
-  double *x_org, double *y_org, double *z_org,
-  int *major_x, int *major_y, int *major_z)
+void FORTRAN(gr_grid3d)(double *x_tick, double *y_tick, double *z_tick, double *x_org, double *y_org, double *z_org,
+                        int *major_x, int *major_y, int *major_z)
 {
-  gr_grid3d(*x_tick, *y_tick, *z_tick, *x_org, *y_org, *z_org,
-            *major_x, *major_y, *major_z);
+  gr_grid3d(*x_tick, *y_tick, *z_tick, *x_org, *y_org, *z_org, *major_x, *major_y, *major_z);
 }
 
 void FORTRAN(gr_verrorbars)(int *n, double *px, double *py, double *e1, double *e2)
@@ -391,25 +369,20 @@ void FORTRAN(gr_polymarker3d)(int *n, double *px, double *py, double *pz)
   gr_polymarker3d(*n, px, py, pz);
 }
 
-void FORTRAN(gr_axes3d)(
-  double *x_tick, double *y_tick, double *z_tick,
-  double *x_org, double *y_org, double *z_org,
-  int *major_x, int *major_y, int *major_z, double *tick_size)
+void FORTRAN(gr_axes3d)(double *x_tick, double *y_tick, double *z_tick, double *x_org, double *y_org, double *z_org,
+                        int *major_x, int *major_y, int *major_z, double *tick_size)
 {
-  gr_axes3d(*x_tick, *y_tick, *z_tick, *x_org, *y_org, *z_org,
-  	    *major_x, *major_y, *major_z, *tick_size);
+  gr_axes3d(*x_tick, *y_tick, *z_tick, *x_org, *y_org, *z_org, *major_x, *major_y, *major_z, *tick_size);
 }
 
-void FORTRAN(gr_titles3d)(
-  char *x_title, char *y_title, char *z_title,
-  unsigned short x_title_len, unsigned short y_title_len,
-  unsigned short z_title_len)
+void FORTRAN(gr_titles3d)(char *x_title, char *y_title, char *z_title, unsigned short x_title_len,
+                          unsigned short y_title_len, unsigned short z_title_len)
 {
   char *_x_title, *_y_title, *_z_title;
 
-  _x_title = (char *) calloc(1, sizeof(char) * x_title_len);
-  _y_title = (char *) calloc(1, sizeof(char) * y_title_len);
-  _z_title = (char *) calloc(1, sizeof(char) * z_title_len);
+  _x_title = (char *)calloc(1, sizeof(char) * x_title_len);
+  _y_title = (char *)calloc(1, sizeof(char) * y_title_len);
+  _z_title = (char *)calloc(1, sizeof(char) * z_title_len);
 
   strncpy(_x_title, x_title, x_title_len);
   strncpy(_y_title, y_title, y_title_len);
@@ -422,27 +395,22 @@ void FORTRAN(gr_titles3d)(
   free(_x_title);
 }
 
-void FORTRAN(gr_surface)(
-  int *nx, int *ny, double *px, double *py, double *pz, int *option)
+void FORTRAN(gr_surface)(int *nx, int *ny, double *px, double *py, double *pz, int *option)
 {
   gr_surface(*nx, *ny, px, py, pz, *option);
 }
 
-void FORTRAN(gr_contour)(
-  int *nx, int *ny, int *nh, double *px, double *py, double *h, double *pz,
-  int *major_h)
+void FORTRAN(gr_contour)(int *nx, int *ny, int *nh, double *px, double *py, double *h, double *pz, int *major_h)
 {
   gr_contour(*nx, *ny, *nh, px, py, h, pz, *major_h);
 }
 
-void FORTRAN(gr_tricontour)(
-  int *npoints, double *x, double *y, double *z, int *nlevels, double *levels)
+void FORTRAN(gr_tricontour)(int *npoints, double *x, double *y, double *z, int *nlevels, double *levels)
 {
   gr_tricontour(*npoints, x, y, z, *nlevels, levels);
 }
 
-int FORTRAN(gr_hexbin)(
-  int *n, double *x, double *y, int *nbins)
+int FORTRAN(gr_hexbin)(int *n, double *x, double *y, int *nbins)
 {
   return gr_hexbin(*n, x, y, *nbins);
 }
@@ -481,7 +449,7 @@ void FORTRAN(gr_beginprint)(char *pathname, unsigned short pathname_len)
 {
   char *_pathname;
 
-  _pathname = (char *) calloc(1, sizeof(char) * pathname_len);
+  _pathname = (char *)calloc(1, sizeof(char) * pathname_len);
   strncpy(_pathname, pathname, pathname_len);
 
   gr_beginprint(_pathname);
@@ -489,17 +457,15 @@ void FORTRAN(gr_beginprint)(char *pathname, unsigned short pathname_len)
   free(_pathname);
 }
 
-void FORTRAN(gr_beginprintext)(
-  char *pathname, char *mode, char *format, char *orientation,
-  unsigned short pathname_len, unsigned short mode_len,
-  unsigned short format_len, unsigned short orientation_len)
+void FORTRAN(gr_beginprintext)(char *pathname, char *mode, char *format, char *orientation, unsigned short pathname_len,
+                               unsigned short mode_len, unsigned short format_len, unsigned short orientation_len)
 {
   char *_pathname, *_mode, *_format, *_orientation;
 
-  _pathname = (char *) calloc(1, sizeof(char) * pathname_len);
-  _mode = (char *) calloc(1, sizeof(char) * mode_len);
-  _format = (char *) calloc(1, sizeof(char) * format_len);
-  _orientation = (char *) calloc(1, sizeof(char) * orientation_len);
+  _pathname = (char *)calloc(1, sizeof(char) * pathname_len);
+  _mode = (char *)calloc(1, sizeof(char) * mode_len);
+  _format = (char *)calloc(1, sizeof(char) * format_len);
+  _orientation = (char *)calloc(1, sizeof(char) * orientation_len);
 
   strncpy(_pathname, pathname, pathname_len);
   strncpy(_mode, mode, mode_len);
@@ -544,14 +510,12 @@ void FORTRAN(gr_fillrect)(double *xmin, double *xmax, double *ymin, double *ymax
   gr_fillrect(*xmin, *xmax, *ymin, *ymax);
 }
 
-void FORTRAN(gr_drawarc)(
-  double *xmin, double *xmax, double *ymin, double *ymax, int *a1, int *a2)
+void FORTRAN(gr_drawarc)(double *xmin, double *xmax, double *ymin, double *ymax, int *a1, int *a2)
 {
   gr_drawarc(*xmin, *xmax, *ymin, *ymax, *a1, *a2);
 }
 
-void FORTRAN(gr_fillarc)(
-  double *xmin, double *xmax, double *ymin, double *ymax, int *a1, int *a2)
+void FORTRAN(gr_fillarc)(double *xmin, double *xmax, double *ymin, double *ymax, int *a1, int *a2)
 {
   gr_fillarc(*xmin, *xmax, *ymin, *ymax, *a1, *a2);
 }
@@ -575,7 +539,7 @@ void FORTRAN(gr_begingraphics)(char *pathname, unsigned short pathname_len)
 {
   char *_pathname;
 
-  _pathname = (char *) calloc(1, sizeof(char) * pathname_len);
+  _pathname = (char *)calloc(1, sizeof(char) * pathname_len);
   strncpy(_pathname, pathname, pathname_len);
 
   gr_begingraphics(_pathname);
@@ -588,12 +552,11 @@ void FORTRAN(gr_endgraphics)(void)
   gr_endgraphics();
 }
 
-void FORTRAN(gr_mathtex)(
-  double *x, double *y, char *string, unsigned char string_len)
+void FORTRAN(gr_mathtex)(double *x, double *y, char *string, unsigned char string_len)
 {
   char *_string;
 
-  _string = (char *) calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * string_len);
   strncpy(_string, string, string_len);
 
   gr_mathtex(*x, *y, _string);
@@ -601,13 +564,11 @@ void FORTRAN(gr_mathtex)(
   free(_string);
 }
 
-void FORTRAN(gr_inqmathtex)(
-  double *x, double *y, char *string, double *tbx, double *tby,
-  unsigned short string_len)
+void FORTRAN(gr_inqmathtex)(double *x, double *y, char *string, double *tbx, double *tby, unsigned short string_len)
 {
   char *_string;
 
-  _string = (char *) calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * string_len);
   strncpy(_string, string, string_len);
 
   gr_inqmathtex(*x, *y, _string, tbx, tby);

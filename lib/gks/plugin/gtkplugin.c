@@ -20,11 +20,9 @@ extern "C"
 #define DLLEXPORT __declspec(dllexport)
 #endif
 #endif
-  
-DLLEXPORT void gks_gtkplugin(
-  int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+
+  DLLEXPORT void gks_gtkplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef __cplusplus
 }
@@ -32,10 +30,8 @@ DLLEXPORT void gks_gtkplugin(
 
 #ifndef NO_GTK
 
-void gks_gtkplugin(
-  int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr)
+void gks_gtkplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                   double *f_arr_2, int len_c_arr, char *c_arr, void **ptr)
 {
   if (fctid == 2)
     {
@@ -46,10 +42,8 @@ void gks_gtkplugin(
 
 #else
 
-void gks_gtkplugin(
-  int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr)
+void gks_gtkplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                   double *f_arr_2, int len_c_arr, char *c_arr, void **ptr)
 {
   if (fctid == 2)
     {
@@ -59,4 +53,3 @@ void gks_gtkplugin(
 }
 
 #endif
-

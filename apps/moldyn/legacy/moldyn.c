@@ -41,15 +41,17 @@
 
 #define SEPARATORS " \t"
 
-#define torad(alpha) ((alpha)*(M_PI / 180.0))
-#define todeg(alpha) ((alpha)*(180.0 / M_PI))
+#define torad(alpha) ((alpha) * (M_PI / 180.0))
+#define todeg(alpha) ((alpha) * (180.0 / M_PI))
 
 typedef enum
 {
-  normal, xyz, unichem
+  normal,
+  xyz,
+  unichem
 } format_t;
 
-static int ac; /* argument counter */
+static int ac;     /* argument counter */
 static char **avp; /* argument pointer */
 
 static GLuint theBox, theScreen; /* GL display lists */
@@ -60,9 +62,9 @@ static void *font_12 = GLUT_BITMAP_HELVETICA_12;
 static void *font_18 = GLUT_BITMAP_HELVETICA_18;
 static float cyl_rad; /* bond cylinder radius */
 
-static GLfloat xeye = 0.0, yeye = 0.0, zeye; /* camera position */
-static double rotation = 0; /* camera rotation (negative rotation around y axis)*/
-static double tilt = 0; /* camera tilt (rotation around x axis)*/
+static GLfloat xeye = 0.0, yeye = 0.0, zeye;   /* camera position */
+static double rotation = 0;                    /* camera rotation (negative rotation around y axis)*/
+static double tilt = 0;                        /* camera tilt (rotation around x axis)*/
 static int moving = 0, startx = 0, starty = 0; /* values for camera movement with the mouse */
 static int magstep = 0;
 static double magnification = 1;
@@ -86,10 +88,10 @@ static FILE *fptr = NULL;
 static int icycle = 0, current_cycle = 0;
 static fpos_t cycle[MAX_CYCLES];
 static double energy0 = 0, energy = 0; /* energy levels (?)*/
-static int step = 10; /* number of cycles skipped when reading cycles */
+static int step = 10;                  /* number of cycles skipped when reading cycles */
 
-static GLfloat c_white[] = { 1.0, 1.0, 1.0 };
-static GLfloat c_black[] = { 0.0, 0.0, 0.0 };
+static GLfloat c_white[] = {1.0, 1.0, 1.0};
+static GLfloat c_black[] = {0.0, 0.0, 0.0};
 
 static int resolution = 555; /* resolution for POV-Ray output */
 
@@ -97,7 +99,7 @@ static int resolution = 555; /* resolution for POV-Ray output */
 static int window_width = 555;
 static int window_height = 555;
 
-static Bool hint = False; /* show help text? */
+static Bool hint = False;      /* show help text? */
 static Bool autoscale = False; /* read the whole file for scaling information of ALL frames instead of the first? */
 
 static GLfloat range; /* range of coordinate values in all three dimensions*/
@@ -107,11 +109,11 @@ static double sscale; /* 1/scale */
 #define S(a) ((a)*sscale)
 
 #define p_xform(x, y, z, r, dx, dy, dz, dr) \
-factor = 1-z/(1+dist+z); \
-dx = x*factor; \
-dy = y*factor; \
-dz = z*factor; \
-dr = r*factor
+  factor = 1 - z / (1 + dist + z);          \
+  dx = x * factor;                          \
+  dy = y * factor;                          \
+  dz = z * factor;                          \
+  dr = r * factor
 
 static int max_atoms = 40;
 static double linewidth = 1;
@@ -123,11 +125,11 @@ static format_t format;
 static char title[MAX_STRING];
 
 static Bool numbers = True; /* show atom numbers? */
-static Bool bonds = True; /* show atom bonds? */
-static Bool chain = False; /* form atom bonds as a chain? */
+static Bool bonds = True;   /* show atom bonds? */
+static Bool chain = False;  /* form atom bonds as a chain? */
 static Bool colors = True;
 static Bool box = False; /* show bounding box? */
-static double size = 0; /* bounding box size */
+static double size = 0;  /* bounding box size */
 static double radius = 0;
 
 static double *atom_positions = NULL;
@@ -150,34 +152,31 @@ static double meanx, meany, meanz;
 static double global_xmin, global_xmax, global_ymin, global_ymax, global_zmin, global_zmax;
 static double global_meanx, global_meany, global_meanz;
 
-static const char *help_message[] =
-{
-  "where options include:                      "Version" "Revision"",
-  "    -povray n             povray [0]         by J.Heinen (initial version),",
-  "    -atoms n              number of atoms         A.Peters, F.Rhiem",
-  "    -bonds (yes|no|chain) display bonds",
-  "    -box (yes|no|f)       display bounding box",
-  "    -colors (yes|no)      use colors",
-  "    -color[1-118] c       color names",
-  "    -delta f              delta criterion",
-  "    -linewidth f          linewidth scale factor [1]",
-  "    -magstep f            magnification (1.2**magstep)",
-  "    -numbers (on|off)     display atom numbers",
-  "    -radius[1-118] f      radius",
-  "    -rot f                angle of rotation [0]",
-  "    -step n               step [10]",
-  "    -tilt f               angle of tilt [0]",
-  "    -tolerance f          tolerance for above delta criterion",
-  "    -resolution n         resolution [555]",
-  "    -autoscale (yes|no)   do scaling regarding all scenes [yes]",
-  "Keyboard bindings:",
-  " <Leftarrow>          rotate left   a/j  write povray/jpeg file(s)/movie",
-  "<Rightarrow>          rotate right  b/n  back/next (previous/next cycle)",
-  "   <Uparrow>          tilt up       c/p  capture/print (moldyn.[jpg|eps])",
-  " <Downarrow>          tilt down     h    hold",
-  "    <Return>,<Esc>,q  quit          m/r  magnify/reduce",
-  NULL
-};
+static const char *help_message[] = {"where options include:                      " Version " " Revision "",
+                                     "    -povray n             povray [0]         by J.Heinen (initial version),",
+                                     "    -atoms n              number of atoms         A.Peters, F.Rhiem",
+                                     "    -bonds (yes|no|chain) display bonds",
+                                     "    -box (yes|no|f)       display bounding box",
+                                     "    -colors (yes|no)      use colors",
+                                     "    -color[1-118] c       color names",
+                                     "    -delta f              delta criterion",
+                                     "    -linewidth f          linewidth scale factor [1]",
+                                     "    -magstep f            magnification (1.2**magstep)",
+                                     "    -numbers (on|off)     display atom numbers",
+                                     "    -radius[1-118] f      radius",
+                                     "    -rot f                angle of rotation [0]",
+                                     "    -step n               step [10]",
+                                     "    -tilt f               angle of tilt [0]",
+                                     "    -tolerance f          tolerance for above delta criterion",
+                                     "    -resolution n         resolution [555]",
+                                     "    -autoscale (yes|no)   do scaling regarding all scenes [yes]",
+                                     "Keyboard bindings:",
+                                     " <Leftarrow>          rotate left   a/j  write povray/jpeg file(s)/movie",
+                                     "<Rightarrow>          rotate right  b/n  back/next (previous/next cycle)",
+                                     "   <Uparrow>          tilt up       c/p  capture/print (moldyn.[jpg|eps])",
+                                     " <Downarrow>          tilt down     h    hold",
+                                     "    <Return>,<Esc>,q  quit          m/r  magnify/reduce",
+                                     NULL};
 
 static void drawStr(float x, float y, const char *str, void *fnt);
 static void drawStr2(float x, float y, float z, const char *str, void *fnt);
@@ -189,13 +188,13 @@ static void writeJpeg(char *filename, int jpeg_quality);
 static void makeJpeg(void);
 static void createPixmap(int width, int height);
 static void makePov(void);
-static void writePov(FILE * pf);
+static void writePov(FILE *pf);
 
 static void findRGB(char *newcolor, int *R, int *G, int *B);
 static int atomname2atomnumber(char *atom_name);
 
 static void read_dat();
-static void read_check(FILE * fptr, int *n, char **argv);
+static void read_check(FILE *fptr, int *n, char **argv);
 static void read_cycle(void);
 static void analyze(void);
 
@@ -232,8 +231,7 @@ static void init_List(void)
   glDeleteLists(theBox, 1);
   glDeleteLists(theScreen, 1);
 
-  if (file_done)
-    last_init_done = True;
+  if (file_done) last_init_done = True;
 
   if (num_atoms > 300)
     {
@@ -278,8 +276,7 @@ static void init_List(void)
   theScreen = glGenLists(1);
   glNewList(theScreen, GL_COMPILE);
 
-  if (!colors)
-    glColor3fv(c_white);
+  if (!colors) glColor3fv(c_white);
 
   for (i = 0; i < num_atoms; i++)
     {
@@ -289,11 +286,10 @@ static void init_List(void)
           gluQuadricNormals(sph, GLU_SMOOTH);
 
           glPushMatrix();
-          glTranslatef(atom_positions[0+3*i], atom_positions[1+3*i], atom_positions[2+3*i]);
+          glTranslatef(atom_positions[0 + 3 * i], atom_positions[1 + 3 * i], atom_positions[2 + 3 * i]);
           /* printf("%g %g %g\n", atom_positions[0+3*i], atom_positions[1+3*i], atom_positions[2+3*i]); */
 
-          if (colors)
-            glColor3ubv(f_ptable[atom_numbers[i] - 1]);
+          if (colors) glColor3ubv(f_ptable[atom_numbers[i] - 1]);
 
           gluSphere(sph, atom_radii[i], slices, stacks);
 
@@ -304,25 +300,24 @@ static void init_List(void)
       else
         continue;
 
-      if (!bonds)
-        continue;
+      if (!bonds) continue;
 
       for (j = i + 1; j < num_atoms; j++)
         {
           if (atom_numbers[j] && atom_adjacency_matrix[i * num_atoms + j])
             {
-              if (atom_positions[2+3*j] > atom_positions[2+3*i])
+              if (atom_positions[2 + 3 * j] > atom_positions[2 + 3 * i])
                 {
-                  vx = atom_positions[0+3*j] - atom_positions[0+3*i];
-                  vy = atom_positions[1+3*j] - atom_positions[1+3*i];
-                  vz = atom_positions[2+3*j] - atom_positions[2+3*i];
+                  vx = atom_positions[0 + 3 * j] - atom_positions[0 + 3 * i];
+                  vy = atom_positions[1 + 3 * j] - atom_positions[1 + 3 * i];
+                  vz = atom_positions[2 + 3 * j] - atom_positions[2 + 3 * i];
                   k = i;
                 }
               else
                 {
-                  vx = atom_positions[0+3*i] - atom_positions[0+3*j];
-                  vy = atom_positions[1+3*i] - atom_positions[1+3*j];
-                  vz = atom_positions[2+3*i] - atom_positions[2+3*j];
+                  vx = atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j];
+                  vy = atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j];
+                  vz = atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j];
                   k = j;
                 }
 
@@ -344,7 +339,7 @@ static void init_List(void)
               gluQuadricNormals(cyl, GLU_SMOOTH);
 
               glPushMatrix();
-              glTranslatef(atom_positions[0+3*k], atom_positions[1+3*k], atom_positions[2+3*k]);
+              glTranslatef(atom_positions[0 + 3 * k], atom_positions[1 + 3 * k], atom_positions[2 + 3 * k]);
               if (fabs(vz) > 1e-3)
                 {
                   glRotatef(ang, rx, ry, 0.0);
@@ -376,7 +371,7 @@ static void reshape(int w, int h)
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
 
-  gluPerspective(45.0f, (GLfloat) w / (GLfloat) h, 0.5, 7.0 * range);
+  gluPerspective(45.0f, (GLfloat)w / (GLfloat)h, 0.5, 7.0 * range);
 
   glMatrixMode(GL_MODELVIEW);
 
@@ -451,7 +446,7 @@ static void DrawScene(void)
                 }
 
               glPushMatrix();
-              glTranslatef(atom_positions[0+3*i], atom_positions[1+3*i], atom_positions[2+3*i]);
+              glTranslatef(atom_positions[0 + 3 * i], atom_positions[1 + 3 * i], atom_positions[2 + 3 * i]);
               glRotatef(-tilt, 1.0, 0.0, 0.0);
               glRotatef(rotation, 0.0, 1.0, 0.0);
 
@@ -506,7 +501,8 @@ static void animate(void)
 
       glutPostRedisplay();
 
-      sprintf(string, "cat %s????.jpg | ffmpeg -y -v 0 -r 30 -f image2pipe -vcodec mjpeg -i - -vcodec mpeg4 %s.mov", name, name);
+      sprintf(string, "cat %s????.jpg | ffmpeg -y -v 0 -r 30 -f image2pipe -vcodec mjpeg -i - -vcodec mpeg4 %s.mov",
+              name, name);
       system(string);
       return;
     }
@@ -542,8 +538,7 @@ static void animate(void)
       glEnd();
     }
 
-  if (!colors)
-    glColor3fv(c_white);
+  if (!colors) glColor3fv(c_white);
 
   for (i = 0; i < num_atoms; i++)
     {
@@ -553,10 +548,9 @@ static void animate(void)
           gluQuadricNormals(sph, GLU_SMOOTH);
 
           glPushMatrix();
-          glTranslatef(atom_positions[0+3*i], atom_positions[1+3*i], atom_positions[2+3*i]);
+          glTranslatef(atom_positions[0 + 3 * i], atom_positions[1 + 3 * i], atom_positions[2 + 3 * i]);
 
-          if (colors)
-            glColor3ubv(f_ptable[atom_numbers[i] - 1]);
+          if (colors) glColor3ubv(f_ptable[atom_numbers[i] - 1]);
 
           gluSphere(sph, atom_radii[i], slices, stacks);
           glPopMatrix();
@@ -566,25 +560,24 @@ static void animate(void)
       else
         continue;
 
-      if (!bonds)
-        continue;
+      if (!bonds) continue;
 
       for (j = i + 1; j < num_atoms; j++)
         {
           if (atom_numbers[j] && atom_adjacency_matrix[i * num_atoms + j])
             {
-              if (atom_positions[2+3*j] > atom_positions[2+3*i])
+              if (atom_positions[2 + 3 * j] > atom_positions[2 + 3 * i])
                 {
-                  vx = atom_positions[0+3*j] - atom_positions[0+3*i];
-                  vy = atom_positions[1+3*j] - atom_positions[1+3*i];
-                  vz = atom_positions[2+3*j] - atom_positions[2+3*i];
+                  vx = atom_positions[0 + 3 * j] - atom_positions[0 + 3 * i];
+                  vy = atom_positions[1 + 3 * j] - atom_positions[1 + 3 * i];
+                  vz = atom_positions[2 + 3 * j] - atom_positions[2 + 3 * i];
                   k = i;
                 }
               else
                 {
-                  vx = atom_positions[0+3*i] - atom_positions[0+3*j];
-                  vy = atom_positions[1+3*i] - atom_positions[1+3*j];
-                  vz = atom_positions[2+3*i] - atom_positions[2+3*j];
+                  vx = atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j];
+                  vy = atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j];
+                  vz = atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j];
                   k = j;
                 }
               cyl_len = sqrt(vx * vx + vy * vy + vz * vz);
@@ -601,7 +594,7 @@ static void animate(void)
               gluQuadricNormals(cyl, GLU_SMOOTH);
 
               glPushMatrix();
-              glTranslatef(atom_positions[0+3*k], atom_positions[1+3*k], atom_positions[2+3*k]);
+              glTranslatef(atom_positions[0 + 3 * k], atom_positions[1 + 3 * k], atom_positions[2 + 3 * k]);
               if (fabs(vz) > 1e-3)
                 glRotatef(ang, rx, ry, 0.0);
               else
@@ -706,7 +699,7 @@ static void keyboard(unsigned char key, int x, int y)
       if (magstep <= 10)
         {
           magstep++;
-          magnification = pow(1.2, (double) magstep);
+          magnification = pow(1.2, (double)magstep);
           zeye = -2 * range * magnification;
           glutPostRedisplay();
         }
@@ -716,7 +709,7 @@ static void keyboard(unsigned char key, int x, int y)
       if (magstep >= -10)
         {
           magstep--;
-          magnification = pow(1.2, (double) magstep);
+          magnification = pow(1.2, (double)magstep);
           zeye = -2 * range * magnification;
           glutPostRedisplay();
         }
@@ -755,11 +748,9 @@ static void keyboard(unsigned char key, int x, int y)
       show_stat = SHOW_PREV;
       current_cycle -= 2;
       file_done = 0;
-      if (feof(fptr))
-        rewind(fptr);
+      if (feof(fptr)) rewind(fptr);
 
-      if (fsetpos(fptr, &cycle[current_cycle]))
-        s_error("can't position file");
+      if (fsetpos(fptr, &cycle[current_cycle])) s_error("can't position file");
 
       read_cycle();
       init_List();
@@ -806,12 +797,11 @@ static void keyboard(unsigned char key, int x, int y)
         char *cp;
         sprintf(path, "%s%4d.jpg", name, current_cycle);
         for (cp = path; *cp; cp++)
-          if (*cp == ' ')
-            *cp = '0';
+          if (*cp == ' ') *cp = '0';
       }
       {
         char *argv[] = {"jpeg2ps", "-o", "moldyn.eps", path};
-        jpeg2ps_main(sizeof(argv)/sizeof(char *),argv);
+        jpeg2ps_main(sizeof(argv) / sizeof(char *), argv);
       }
 #ifdef _WIN32
       system("copy moldyn.eps %PRINTER%");
@@ -843,7 +833,6 @@ static void keyboard(unsigned char key, int x, int y)
     case GLUT_KEY_ESCAPE:
       moldyn_exit(0);
       break;
-
     }
 }
 
@@ -852,25 +841,23 @@ static void specialKey(int key, int x, int y)
   switch (key)
     {
     case GLUT_KEY_PAGE_UP:
-      if (zeye > range / 2)
-        break;
+      if (zeye > range / 2) break;
       zeye += 0.4f;
       if (magstep > -4 && zeye > -2 * range * magnification)
         {
           magstep--;
-          magnification = pow(1.2, (double) magstep);
+          magnification = pow(1.2, (double)magstep);
         }
       glutPostRedisplay();
       break;
 
     case GLUT_KEY_PAGE_DOWN:
-      if (zeye < -2 * range)
-        break;
+      if (zeye < -2 * range) break;
       zeye -= 0.4f;
       if (magstep < 4 && zeye < -2 * range * magnification)
         {
           magstep++;
-          magnification = pow(1.2, (double) magstep);
+          magnification = pow(1.2, (double)magstep);
         }
       glutPostRedisplay();
       break;
@@ -949,7 +936,7 @@ static void specialKey(int key, int x, int y)
     }
 }
 
-static void read_check(FILE * fptr, int *n, char **argv)
+static void read_check(FILE *fptr, int *n, char **argv)
 {
   int argc = 1;
   char line[MAX_STRING], *cp;
@@ -960,22 +947,19 @@ static void read_check(FILE * fptr, int *n, char **argv)
 
   if (*line == '#')
     {
-      CP = (char *) malloc(MAX_STRING * sizeof(char));
+      CP = (char *)malloc(MAX_STRING * sizeof(char));
       strcpy(CP, line + 1);
       strtok(CP, "\n");
       CP_LEN = strlen(CP);
 
       while (*CP)
         {
-          while (isspace(*CP))
-            CP++;
+          while (isspace(*CP)) CP++;
           if (*CP)
             {
               argv[argc++] = CP;
-              while (*CP && !isspace(*CP))
-                CP++;
-              while (isspace(*CP))
-                *CP++ = '\0';
+              while (*CP && !isspace(*CP)) CP++;
+              while (isspace(*CP)) *CP++ = '\0';
             }
           else
             argv[argc] = NULL;
@@ -1010,24 +994,20 @@ static void read_check(FILE * fptr, int *n, char **argv)
     {
       fgets(line, MAX_STRING, fptr);
 
-      if (feof(fptr))
-        break;
+      if (feof(fptr)) break;
 
       cp = line;
       nitems = 0;
       while (*cp)
         {
-          while (isspace(*cp))
-            cp++;
+          while (isspace(*cp)) cp++;
           if (*cp)
             {
-              while (!isspace(*cp))
-                cp++;
+              while (!isspace(*cp)) cp++;
               nitems++;
             }
         }
-      if (nitems != 5)
-        break;
+      if (nitems != 5) break;
 
       (*n)++;
     }
@@ -1045,7 +1025,7 @@ static void usage(void)
   char **cpp;
   fprintf(stderr, "usage:  %s file [-options]\n", program_name);
 
-  for (cpp = (char **) help_message; *cpp; cpp++)
+  for (cpp = (char **)help_message; *cpp; cpp++)
     {
       fprintf(stderr, "%s\n", *cpp);
     }
@@ -1069,23 +1049,19 @@ static void read_dat(void)
   int i;
 
   program_name = arg_vector[0] = avp[0];
-  if (ac <= 1)
-    usage();
+  if (ac <= 1) usage();
 
   fn = *++avp;
 
-  if (*fn == '-')
-    usage();
+  if (*fn == '-') usage();
 
   fptr = fopen(fn, "r");
-  if (fptr == NULL)
-    s_error("can't open file");
+  if (fptr == NULL) s_error("can't open file");
 
   strcpy(name, fn);
   strtok(name, ".");
 
-  for (i = 0; i < MAX_ARGS; i++)
-    arg_vector[i] = NULL;
+  for (i = 0; i < MAX_ARGS; i++) arg_vector[i] = NULL;
 
   read_check(fptr, &num_atoms, arg_vector);
 
@@ -1303,7 +1279,7 @@ static void drawStr(float x, float y, const char *str, void *fnt)
   char *c;
   glRasterPos2f(x, y);
 
-  for (c = (char *) str; *c != '\0'; c++)
+  for (c = (char *)str; *c != '\0'; c++)
     {
       glutBitmapCharacter(fnt, *c);
     }
@@ -1314,7 +1290,7 @@ static void drawStr2(float x, float y, float z, const char *str, void *fnt)
   char *c;
   glRasterPos3f(x, y, z);
 
-  for (c = (char *) str; *c != '\0'; c++)
+  for (c = (char *)str; *c != '\0'; c++)
     {
       glutBitmapCharacter(fnt, *c);
     }
@@ -1391,8 +1367,7 @@ static void read_cycle()
           if (feof(fptr))
             {
               file_done = True;
-              if (read_it)
-                break;
+              if (read_it) break;
               current_cycle--;
               return;
             }
@@ -1428,8 +1403,7 @@ static void read_cycle()
 
           strcpy(title, line);
           strtok(title, "\n");
-          if (!isalnum(*title))
-            *title = '\0';
+          if (!isalnum(*title)) *title = '\0';
 
           fgets(line, MAX_STRING, fptr);
           sscanf(line, "%d", &num_atoms);
@@ -1442,7 +1416,6 @@ static void read_cycle()
                   break;
                 }
               return;
-
             }
           read_it = True;
         }
@@ -1489,9 +1462,9 @@ static void read_cycle()
                 }
 
               atom_numbers2[i] = atoi(temp);
-              atom_positions[0+3*i] = atof(strtok(NULL, SEPARATORS));
-              atom_positions[1+3*i] = atof(strtok(NULL, SEPARATORS));
-              atom_positions[2+3*i] = atof(strtok(NULL, SEPARATORS));
+              atom_positions[0 + 3 * i] = atof(strtok(NULL, SEPARATORS));
+              atom_positions[1 + 3 * i] = atof(strtok(NULL, SEPARATORS));
+              atom_positions[2 + 3 * i] = atof(strtok(NULL, SEPARATORS));
 
               num_atoms++;
             }
@@ -1502,7 +1475,8 @@ static void read_cycle()
                 {
                   cp++;
                 }
-              if (sscanf(cp, "%3s %lg %lg %lg", s, &atom_positions[0+3*i], &atom_positions[1+3*i], &atom_positions[2+3*i]) != 4)
+              if (sscanf(cp, "%3s %lg %lg %lg", s, &atom_positions[0 + 3 * i], &atom_positions[1 + 3 * i],
+                         &atom_positions[2 + 3 * i]) != 4)
                 {
                   s_error("can't read data record");
                 }
@@ -1519,13 +1493,14 @@ static void read_cycle()
                 {
                   cp++;
                 }
-              if (sscanf(cp, "%d %lg %lg %lg", &atom_numbers[i], &atom_positions[0+3*i], &atom_positions[1+3*i], &atom_positions[2+3*i]) != 4)
+              if (sscanf(cp, "%d %lg %lg %lg", &atom_numbers[i], &atom_positions[0 + 3 * i], &atom_positions[1 + 3 * i],
+                         &atom_positions[2 + 3 * i]) != 4)
                 {
                   s_error("can't read data record");
                 }
               atom_numbers2[i] = 1;
             }
-          atom_positions[2+3*i] = -atom_positions[2+3*i];
+          atom_positions[2 + 3 * i] = -atom_positions[2 + 3 * i];
         }
       if (done)
         {
@@ -1539,27 +1514,21 @@ static void read_cycle()
       energy0 = energy;
     }
 
-  xmin = atom_positions[0+3*0];
-  xmax = atom_positions[0+3*0];
-  ymin = atom_positions[1+3*0];
-  ymax = atom_positions[1+3*0];
-  zmin = atom_positions[2+3*0];
-  zmax = atom_positions[2+3*0];
+  xmin = atom_positions[0 + 3 * 0];
+  xmax = atom_positions[0 + 3 * 0];
+  ymin = atom_positions[1 + 3 * 0];
+  ymax = atom_positions[1 + 3 * 0];
+  zmin = atom_positions[2 + 3 * 0];
+  zmax = atom_positions[2 + 3 * 0];
 
   for (i = 0; i < num_atoms; i++)
     {
-      if (atom_positions[0+3*i] < xmin)
-        xmin = atom_positions[0+3*i];
-      if (atom_positions[0+3*i] > xmax)
-        xmax = atom_positions[0+3*i];
-      if (atom_positions[1+3*i] < ymin)
-        ymin = atom_positions[1+3*i];
-      if (atom_positions[1+3*i] > ymax)
-        ymax = atom_positions[1+3*i];
-      if (atom_positions[2+3*i] < zmin)
-        zmin = atom_positions[2+3*i];
-      if (atom_positions[2+3*i] > zmax)
-        zmax = atom_positions[2+3*i];
+      if (atom_positions[0 + 3 * i] < xmin) xmin = atom_positions[0 + 3 * i];
+      if (atom_positions[0 + 3 * i] > xmax) xmax = atom_positions[0 + 3 * i];
+      if (atom_positions[1 + 3 * i] < ymin) ymin = atom_positions[1 + 3 * i];
+      if (atom_positions[1 + 3 * i] > ymax) ymax = atom_positions[1 + 3 * i];
+      if (atom_positions[2 + 3 * i] < zmin) zmin = atom_positions[2 + 3 * i];
+      if (atom_positions[2 + 3 * i] > zmax) zmax = atom_positions[2 + 3 * i];
     }
 
   meanx = (xmin + xmax) / 2;
@@ -1604,16 +1573,19 @@ static void read_cycle()
           for (j = 1; j < num_atoms; j++)
             {
               i = j - 1;
-              delta += sqrt((atom_positions[0+3*i] - atom_positions[0+3*j]) * (atom_positions[0+3*i] - atom_positions[0+3*j]) +
-                            (atom_positions[1+3*i] - atom_positions[1+3*j]) * (atom_positions[1+3*i] - atom_positions[1+3*j]) +
-                            (atom_positions[2+3*i] - atom_positions[2+3*j]) * (atom_positions[2+3*i] - atom_positions[2+3*j]));
+              delta += sqrt((atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j]) *
+                                (atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j]) +
+                            (atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j]) *
+                                (atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j]) +
+                            (atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j]) *
+                                (atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j]));
             }
 
           delta = 1.125 * delta / (num_atoms - 1);
         }
       else
         {
-          delta = 2.25 * scale / sqrt((double) num_atoms);
+          delta = 2.25 * scale / sqrt((double)num_atoms);
         }
 
       while (bonds)
@@ -1621,9 +1593,12 @@ static void read_cycle()
           nbonds = 0;
           for (i = 0; i < num_atoms; i++)
             for (j = i + 1; j < num_atoms; j++)
-              if (sqrt((atom_positions[0+3*i] - atom_positions[0+3*j]) * (atom_positions[0+3*i] - atom_positions[0+3*j]) +
-                       (atom_positions[1+3*i] - atom_positions[1+3*j]) * (atom_positions[1+3*i] - atom_positions[1+3*j]) +
-                       (atom_positions[2+3*i] - atom_positions[2+3*j]) * (atom_positions[2+3*i] - atom_positions[2+3*j])) < delta)
+              if (sqrt((atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j]) *
+                           (atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j]) +
+                       (atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j]) *
+                           (atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j]) +
+                       (atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j]) *
+                           (atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j])) < delta)
                 nbonds++;
 
           if (nbonds > 3 * num_atoms)
@@ -1666,8 +1641,7 @@ static void read_cycle()
       double rmax;
       rmax = 0;
       for (i = 0; i < 8; i++)
-        if (radius * radii[i] > rmax)
-          rmax = radius * radii[i];
+        if (radius * radii[i] > rmax) rmax = radius * radii[i];
 
       xmin -= rmax;
       xmax += rmax;
@@ -1679,9 +1653,9 @@ static void read_cycle()
 
   for (i = 0; i < num_atoms; i++)
     {
-      atom_positions[0+3*i] -= meanx;
-      atom_positions[1+3*i] -= meany;
-      atom_positions[2+3*i] -= meanz;
+      atom_positions[0 + 3 * i] -= meanx;
+      atom_positions[1 + 3 * i] -= meany;
+      atom_positions[2 + 3 * i] -= meanz;
       atom_radii[i] = atom_numbers[i] > 0 ? radius * radii[atom_numbers[i] - 1] : 0;
     }
   {
@@ -1694,11 +1668,15 @@ static void read_cycle()
           {
             for (j = i; j < num_atoms; j++)
               {
-                dt = fabs((atom_positions[0+3*i] - atom_positions[0+3*j]) * (atom_positions[0+3*i] - atom_positions[0+3*j]) +
-                          (atom_positions[1+3*i] - atom_positions[1+3*j]) * (atom_positions[1+3*i] - atom_positions[1+3*j]) +
-                          (atom_positions[2+3*i] - atom_positions[2+3*j]) * (atom_positions[2+3*i] - atom_positions[2+3*j]) - del);
+                dt = fabs((atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j]) *
+                              (atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j]) +
+                          (atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j]) *
+                              (atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j]) +
+                          (atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j]) *
+                              (atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j]) -
+                          del);
                 atom_adjacency_matrix[i * num_atoms + j] = atom_adjacency_matrix[j * num_atoms + i] =
-                      ((dt - del) < tol) || (atom_numbers2[i] < 0 && atom_numbers2[j] < 0) ? True : False;
+                    ((dt - del) < tol) || (atom_numbers2[i] < 0 && atom_numbers2[j] < 0) ? True : False;
               }
           }
       }
@@ -1708,11 +1686,14 @@ static void read_cycle()
           {
             for (j = i; j < num_atoms; j++)
               {
-                dt = (atom_positions[0+3*i] - atom_positions[0+3*j]) * (atom_positions[0+3*i] - atom_positions[0+3*j]) +
-                     (atom_positions[1+3*i] - atom_positions[1+3*j]) * (atom_positions[1+3*i] - atom_positions[1+3*j]) +
-                     (atom_positions[2+3*i] - atom_positions[2+3*j]) * (atom_positions[2+3*i] - atom_positions[2+3*j]);
+                dt = (atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j]) *
+                         (atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j]) +
+                     (atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j]) *
+                         (atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j]) +
+                     (atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j]) *
+                         (atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j]);
                 atom_adjacency_matrix[i * num_atoms + j] = atom_adjacency_matrix[j * num_atoms + i] =
-                      (dt < del) || (atom_numbers2[i] < 0 && atom_numbers2[j] < 0) ? True : False;
+                    (dt < del) || (atom_numbers2[i] < 0 && atom_numbers2[j] < 0) ? True : False;
               }
           }
       }
@@ -1722,7 +1703,8 @@ static void read_cycle()
           {
             for (j = i; j < num_atoms; j++)
               {
-                atom_adjacency_matrix[i * num_atoms + j] = atom_adjacency_matrix[j * num_atoms + i] = (j == i + 1) ? True : False;
+                atom_adjacency_matrix[i * num_atoms + j] = atom_adjacency_matrix[j * num_atoms + i] =
+                    (j == i + 1) ? True : False;
               }
           }
       }
@@ -1735,9 +1717,9 @@ static void writeJpegForPixels(char *filename, int jpeg_quality, unsigned char *
   int i;
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
-  FILE *outfile;              /* target file */
-  JSAMPROW row_pointer[1];    /* pointer to JSAMPLE row[s] */
-  int row_stride;             /* physical row width in image buffer */
+  FILE *outfile;           /* target file */
+  JSAMPROW row_pointer[1]; /* pointer to JSAMPLE row[s] */
+  int row_stride;          /* physical row width in image buffer */
 
   cinfo.err = jpeg_std_error(&jerr);
   /* Now we can initialize the JPEG compression object. */
@@ -1748,13 +1730,12 @@ static void writeJpegForPixels(char *filename, int jpeg_quality, unsigned char *
       exit(-1);
     }
   jpeg_stdio_dest(&cinfo, outfile);
-  cinfo.image_width = width;  /* image width and height, in pixels */
+  cinfo.image_width = width; /* image width and height, in pixels */
   cinfo.image_height = height;
-  cinfo.input_components = 3; /* # of color components per pixel */
-  cinfo.in_color_space = JCS_RGB;     /* colorspace of input image */
+  cinfo.input_components = 3;     /* # of color components per pixel */
+  cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
   jpeg_set_defaults(&cinfo);
-  jpeg_set_quality(&cinfo, jpeg_quality,
-                   TRUE /* limit to baseline-JPEG values */ );
+  jpeg_set_quality(&cinfo, jpeg_quality, TRUE /* limit to baseline-JPEG values */);
   jpeg_start_compress(&cinfo, TRUE);
 
   row_stride = width * 3;
@@ -1766,7 +1747,7 @@ static void writeJpegForPixels(char *filename, int jpeg_quality, unsigned char *
        * more than one scanline at a time if that's more convenient.
        */
       row_pointer[0] = &pixels[i * row_stride];
-      (void) jpeg_write_scanlines(&cinfo, row_pointer, 1);
+      (void)jpeg_write_scanlines(&cinfo, row_pointer, 1);
       i--;
     }
   jpeg_finish_compress(&cinfo);
@@ -1782,9 +1763,9 @@ static void writeJpeg(char *filename, int jpeg_quality)
   width = window_width;
   height = window_height;
 
-  pixels = (unsigned char *) malloc(height * width * 4);
+  pixels = (unsigned char *)malloc(height * width * 4);
   glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-  writeJpegForPixels(filename, jpeg_quality,pixels,width,height);
+  writeJpegForPixels(filename, jpeg_quality, pixels, width, height);
   free(pixels);
 }
 
@@ -1794,8 +1775,7 @@ static void makeJpeg(void)
 
   sprintf(path, "%s%4d.jpg", name, current_cycle);
   for (cp = path; *cp; cp++)
-    if (*cp == ' ')
-      *cp = '0';
+    if (*cp == ' ') *cp = '0';
   writeJpeg(path, 100);
 
   puts(path);
@@ -1854,7 +1834,6 @@ static void makePov(void)
           pix = 0;
         }
 #endif
-
     }
 
   else if (povray > 0)
@@ -1864,17 +1843,14 @@ static void makePov(void)
         {
           sprintf(path, "%s%4d.pov", name, current_cycle);
           for (cp = path; *cp; cp++)
-            if (*cp == ' ')
-              *cp = '0';
+            if (*cp == ' ') *cp = '0';
           pov_file = fopen(path, "w");
           read_cycle();
-          if (file_done)
-            break;
+          if (file_done) break;
           writePov(pov_file);
           fclose(pov_file);
 
-          sprintf(string, "povray %s.pov +W%d +H%d +A -D0 >/dev/null 2>&1",
-                  path, xres, yres);
+          sprintf(string, "povray %s.pov +W%d +H%d +A -D0 >/dev/null 2>&1", path, xres, yres);
 
 #if !defined(VMS) && !defined(_WIN32)
           if (pix != current_cycle)
@@ -1901,7 +1877,7 @@ static void makePov(void)
     }
 }
 
-static void writePov(FILE * pf)
+static void writePov(FILE *pf)
 {
   int i, j;
 
@@ -1913,13 +1889,13 @@ static void writePov(FILE * pf)
   double *x = NULL, *y = NULL, *z = NULL;
   double xbox[8], ybox[8], zbox[8];
 
-  static int bmask[] = { 26, 37, 74, 133, 161, 82, 164, 88 };
+  static int bmask[] = {26, 37, 74, 133, 161, 82, 164, 88};
   double cosr, sinr, cost, sint;
   double xt, yt, zt;
 
-  x = (double *) malloc(num_atoms * sizeof(double));
-  y = (double *) malloc(num_atoms * sizeof(double));
-  z = (double *) malloc(num_atoms * sizeof(double));
+  x = (double *)malloc(num_atoms * sizeof(double));
+  y = (double *)malloc(num_atoms * sizeof(double));
+  z = (double *)malloc(num_atoms * sizeof(double));
 
   xbox[0] = xmin;
   xbox[1] = xmax;
@@ -1964,9 +1940,9 @@ static void writePov(FILE * pf)
             light_source {\n\
             <%g, %g, %g>\n\
             color rgb <1, 1, 1>\n\
-            }\n", -xeye, -yeye, zeye, -xeye, -yeye, range / 2,
-          -range * 5, -range * 5, -range * 5,
-          range * 5,  range * 5, -range * 5);
+            }\n",
+          -xeye, -yeye, zeye, -xeye, -yeye, range / 2, -range * 5, -range * 5, -range * 5, range * 5, range * 5,
+          -range * 5);
 
   strtok(path, ".");
 
@@ -1986,21 +1962,21 @@ static void writePov(FILE * pf)
         {
           atom_numbers[i] = -j;
           atom_numbers2[i] = -bmask[i - num_atoms];
-          atom_positions[0+3*i] = xbox[i - num_atoms];
-          atom_positions[1+3*i] = ybox[i - num_atoms];
-          atom_positions[2+3*i] = zbox[i - num_atoms];
+          atom_positions[0 + 3 * i] = xbox[i - num_atoms];
+          atom_positions[1 + 3 * i] = ybox[i - num_atoms];
+          atom_positions[2 + 3 * i] = zbox[i - num_atoms];
           j *= 2;
         }
     }
 
   for (i = 0; i < n_pov; i++)
     {
-      yt = atom_positions[1+3*i];
-      zt = -atom_positions[2+3*i];
+      yt = atom_positions[1 + 3 * i];
+      zt = -atom_positions[2 + 3 * i];
       y[i] = yt * cost + zt * sint;
       z[i] = -yt * sint + zt * cost;
 
-      xt = atom_positions[0+3*i];
+      xt = atom_positions[0 + 3 * i];
       zt = z[i];
 
       x[i] = xt * cosr + zt * sinr;
@@ -2011,9 +1987,9 @@ static void writePov(FILE * pf)
     {
       for (j = i + 1; j < n_pov; j++)
         {
-          if ((xbox[i - num_atoms] == xbox[j - num_atoms] && ybox[i - num_atoms] == ybox[j - num_atoms])
-              || (xbox[i - num_atoms] == xbox[j - num_atoms] && zbox[i - num_atoms] == zbox[j - num_atoms])
-              || (ybox[i - num_atoms] == ybox[j - num_atoms] && zbox[i - num_atoms] == zbox[j - num_atoms]))
+          if ((xbox[i - num_atoms] == xbox[j - num_atoms] && ybox[i - num_atoms] == ybox[j - num_atoms]) ||
+              (xbox[i - num_atoms] == xbox[j - num_atoms] && zbox[i - num_atoms] == zbox[j - num_atoms]) ||
+              (ybox[i - num_atoms] == ybox[j - num_atoms] && zbox[i - num_atoms] == zbox[j - num_atoms]))
             {
               rin = 0.03 * radius;
 
@@ -2026,7 +2002,8 @@ static void writePov(FILE * pf)
                         <%g, %g, %g>,\n\
                         %g\n\
                         pigment { color rgb <0, 0, 0> } finish { ambient 0.3 phong 1.0 }\n\
-                        }\n", x[i], y[i], z[i], x[j], y[j], z[j], rin);
+                        }\n",
+                      x[i], y[i], z[i], x[j], y[j], z[j], rin);
             }
         }
     }
@@ -2043,15 +2020,13 @@ static void writePov(FILE * pf)
                     pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 }\n\
                     }\n",
                   atom_numbers[i], atom_numbers2[i], x[i], y[i], z[i], atom_radii[i],
-                  (f_ptable[atom_numbers[i] - 1][0]) / 255.0,
-                  (f_ptable[atom_numbers[i] - 1][1]) / 255.0,
+                  (f_ptable[atom_numbers[i] - 1][0]) / 255.0, (f_ptable[atom_numbers[i] - 1][1]) / 255.0,
                   (f_ptable[atom_numbers[i] - 1][2]) / 255.0);
         }
       else
         continue;
 
-      if (!bonds)
-        continue;
+      if (!bonds) continue;
 
       for (j = i + 1; j < num_atoms; j++)
         {
@@ -2067,7 +2042,9 @@ static void writePov(FILE * pf)
                         <%g, %g, %g>,\n\
                         %g\n\
                         pigment { color rgb <0.5, 0.5, 0.5> } finish { ambient 0.3 phong 1.0 }\n\
-                        }\n", atom_numbers[j], atom_numbers2[j], atom_numbers[i], atom_numbers2[i], x[i], y[i], z[i], x[j], y[j], z[j], rin);
+                        }\n",
+                      atom_numbers[j], atom_numbers2[j], atom_numbers[i], atom_numbers2[i], x[i], y[i], z[i], x[j],
+                      y[j], z[j], rin);
             }
         }
     }
@@ -2228,18 +2205,12 @@ static void analyze(void)
 
                   tn++;
 
-                  if (tx < global_xmin)
-                    global_xmin = tx;
-                  if (tx > global_xmax)
-                    global_xmax = tx;
-                  if (ty < global_ymin)
-                    global_ymin = ty;
-                  if (ty > global_ymax)
-                    global_ymax = ty;
-                  if (tz < global_zmin)
-                    global_zmin = tz;
-                  if (tz > global_zmax)
-                    global_zmax = tz;
+                  if (tx < global_xmin) global_xmin = tx;
+                  if (tx > global_xmax) global_xmax = tx;
+                  if (ty < global_ymin) global_ymin = ty;
+                  if (ty > global_ymax) global_ymax = ty;
+                  if (tz < global_zmin) global_zmin = tz;
+                  if (tz > global_zmax) global_zmax = tz;
                 }
               else
                 break;
@@ -2258,8 +2229,7 @@ static void analyze(void)
           tc = strtok(line, SEPARATORS);
 
           tn = atoi(tc);
-          if (tn < 1)
-            s_error("missing atom number in cycle record");
+          if (tn < 1) s_error("missing atom number in cycle record");
 
           if (tn > max_atoms)
             {
@@ -2273,32 +2243,23 @@ static void analyze(void)
               strtok(line, SEPARATORS);
 
               tc = strtok(NULL, SEPARATORS);
-              if (tc == NULL)
-                s_error("missing data");
+              if (tc == NULL) s_error("missing data");
               tx = atof(tc);
 
               tc = strtok(NULL, SEPARATORS);
-              if (tc == NULL)
-                s_error("missing data");
+              if (tc == NULL) s_error("missing data");
               ty = atof(tc);
 
               tc = strtok(NULL, SEPARATORS);
-              if (tc == NULL)
-                s_error("missing data");
+              if (tc == NULL) s_error("missing data");
               tz = -atof(tc);
 
-              if (tx < global_xmin)
-                global_xmin = tx;
-              if (tx > global_xmax)
-                global_xmax = tx;
-              if (ty < global_ymin)
-                global_ymin = ty;
-              if (ty > global_ymax)
-                global_ymax = ty;
-              if (tz < global_zmin)
-                global_zmin = tz;
-              if (tz > global_zmax)
-                global_zmax = tz;
+              if (tx < global_xmin) global_xmin = tx;
+              if (tx > global_xmax) global_xmax = tx;
+              if (ty < global_ymin) global_ymin = ty;
+              if (ty > global_ymax) global_ymax = ty;
+              if (tz < global_zmin) global_zmin = tz;
+              if (tz > global_zmax) global_zmax = tz;
             }
         }
     }
@@ -2306,14 +2267,12 @@ static void analyze(void)
     {
       while (!feof(fptr))
         {
-          if (fgets(line, MAX_STRING, fptr) == NULL)
-            break;
+          if (fgets(line, MAX_STRING, fptr) == NULL) break;
           fgets(line, MAX_STRING, fptr);
 
           tc = strtok(line, SEPARATORS);
           tn = atoi(tc);
-          if (tn < 1)
-            s_error("missing atom number in cycle record");
+          if (tn < 1) s_error("missing atom number in cycle record");
 
           if (tn > max_atoms)
             {
@@ -2326,32 +2285,23 @@ static void analyze(void)
               strtok(line, SEPARATORS);
 
               tc = strtok(NULL, SEPARATORS);
-              if (tc == NULL)
-                s_error("missing data");
+              if (tc == NULL) s_error("missing data");
               tx = atof(tc);
 
               tc = strtok(NULL, SEPARATORS);
-              if (tc == NULL)
-                s_error("missing data");
+              if (tc == NULL) s_error("missing data");
               ty = atof(tc);
 
               tc = strtok(NULL, SEPARATORS);
-              if (tc == NULL)
-                s_error("missing data");
+              if (tc == NULL) s_error("missing data");
               tz = -atof(tc);
 
-              if (tx < global_xmin)
-                global_xmin = tx;
-              if (tx > global_xmax)
-                global_xmax = tx;
-              if (ty < global_ymin)
-                global_ymin = ty;
-              if (ty > global_ymax)
-                global_ymax = ty;
-              if (tz < global_zmin)
-                global_zmin = tz;
-              if (tz > global_zmax)
-                global_zmax = tz;
+              if (tx < global_xmin) global_xmin = tx;
+              if (tx > global_xmax) global_xmax = tx;
+              if (ty < global_ymin) global_ymin = ty;
+              if (ty > global_ymax) global_ymax = ty;
+              if (tz < global_zmin) global_zmin = tz;
+              if (tz > global_zmax) global_zmax = tz;
             }
         }
     }
@@ -2395,20 +2345,21 @@ static void allocate_memory(void)
 
   if (max_atoms > 0)
     {
-      atom_numbers = (int *) malloc(max_atoms * sizeof(int));
-      atom_numbers2 = (int *) malloc(max_atoms * sizeof(int));
-      atom_positions = (double *) malloc(max_atoms * 3 * sizeof(double));
-      atom_radii = (double *) malloc(max_atoms * sizeof(double));
-      atom_adjacency_matrix = (char *) malloc(max_atoms * max_atoms * sizeof(char));
+      atom_numbers = (int *)malloc(max_atoms * sizeof(int));
+      atom_numbers2 = (int *)malloc(max_atoms * sizeof(int));
+      atom_positions = (double *)malloc(max_atoms * 3 * sizeof(double));
+      atom_radii = (double *)malloc(max_atoms * sizeof(double));
+      atom_adjacency_matrix = (char *)malloc(max_atoms * max_atoms * sizeof(char));
 
-      atom_names = (char **) malloc(max_atoms * sizeof(char *));
-      *atom_names = (char *) malloc(max_atoms * 4 * sizeof(char));
+      atom_names = (char **)malloc(max_atoms * sizeof(char *));
+      *atom_names = (char *)malloc(max_atoms * 4 * sizeof(char));
       for (i = 1; i < max_atoms; i++)
         {
           atom_names[i] = atom_names[i - 1] + 4;
         }
 
-      if (atom_numbers == NULL || atom_numbers2 == NULL || atom_positions == NULL || atom_radii == NULL || atom_adjacency_matrix == NULL)
+      if (atom_numbers == NULL || atom_numbers2 == NULL || atom_positions == NULL || atom_radii == NULL ||
+          atom_adjacency_matrix == NULL)
         {
           s_error("can't allocate memory");
         }
@@ -2423,7 +2374,7 @@ void glorlogfunc(const char *message) {
 
 static void createPixmap(int width, int height)
 {
-  GLORInitAttribute attrs[] = { kGLORIAFramebufferWidth, 512, kGLORIAFramebufferHeight, 1024, kGLORIAEndOfAttributeList };
+  GLORInitAttribute attrs[] = {kGLORIAFramebufferWidth, 512, kGLORIAFramebufferHeight, 1024, kGLORIAEndOfAttributeList};
   double x, y, z, fx, fy, fz, ux, uy, uz;
   double c1 = cos(torad(-rotation));
   double s1 = sin(torad(-rotation));
@@ -2434,7 +2385,7 @@ static void createPixmap(int width, int height)
   GLORError glor_error = glorInit(attrs);
   if (glor_error != kGLORENoError)
     {
-      fprintf(stderr,"glorInit: %s\n", glorErrorString(glor_error));
+      fprintf(stderr, "glorInit: %s\n", glorErrorString(glor_error));
     }
   glorSetBackgroundColor(1, 1, 1, 1);
   glorCameraProjectionParameters(45, 0.5, 7.0 * range);
@@ -2454,49 +2405,37 @@ static void createPixmap(int width, int height)
     {
 #define n_boxlines 12
       int i = 0;
-      double positions[3*n_boxlines];
-      double directions[3*n_boxlines];
-      double colors[3*n_boxlines];
+      double positions[3 * n_boxlines];
+      double directions[3 * n_boxlines];
+      double colors[3 * n_boxlines];
       double radii[n_boxlines];
       double lengths[n_boxlines];
-      double edges[2*3*n_boxlines] =
-      {
-        0, 0, 0,    0, 0, 1,
-        0, 0, 0,    0, 1, 0,
-        0, 0, 0,    1, 0, 0,
-        0, 0, 1,    0, 1, 1,
-        0, 0, 1,    1, 0, 1,
-        0, 1, 0,    0, 1, 1,
-        0, 1, 0,    1, 1, 0,
-        0, 1, 1,    1, 1, 1,
-        1, 0, 0,    1, 0, 1,
-        1, 0, 0,    1, 1, 0,
-        1, 0, 1,    1, 1, 1,
-        1, 1, 0,    1, 1, 1
-      };
+      double edges[2 * 3 * n_boxlines] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1,
+                                          0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1,
+                                          1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1};
 
       for (i = 0; i < n_boxlines; i++)
         {
-          int x1,y1,z1, x2,y2,z2;
-          x1 = edges[2*3*i + 0];
-          y1 = edges[2*3*i + 1];
-          z1 = edges[2*3*i + 2];
-          x2 = edges[2*3*i + 3];
-          y2 = edges[2*3*i + 4];
-          z2 = edges[2*3*i + 5];
-          positions[3*i+0] = xmin+x1*(xmax-xmin);
-          positions[3*i+1] = ymin+y1*(ymax-ymin);
-          positions[3*i+2] = zmin+z1*(zmax-zmin);
-          directions[3*i+0] = x2-x1;
-          directions[3*i+1] = y2-y1;
-          directions[3*i+2] = z2-z1;
-          colors[3*i+0] = 0;
-          colors[3*i+1] = 0;
-          colors[3*i+2] = 0;
+          int x1, y1, z1, x2, y2, z2;
+          x1 = edges[2 * 3 * i + 0];
+          y1 = edges[2 * 3 * i + 1];
+          z1 = edges[2 * 3 * i + 2];
+          x2 = edges[2 * 3 * i + 3];
+          y2 = edges[2 * 3 * i + 4];
+          z2 = edges[2 * 3 * i + 5];
+          positions[3 * i + 0] = xmin + x1 * (xmax - xmin);
+          positions[3 * i + 1] = ymin + y1 * (ymax - ymin);
+          positions[3 * i + 2] = zmin + z1 * (zmax - zmin);
+          directions[3 * i + 0] = x2 - x1;
+          directions[3 * i + 1] = y2 - y1;
+          directions[3 * i + 2] = z2 - z1;
+          colors[3 * i + 0] = 0;
+          colors[3 * i + 1] = 0;
+          colors[3 * i + 2] = 0;
           radii[i] = 0.05;
-          lengths[i] = (x2-x1)*(xmax-xmin) + (y2-y1)*(ymax-ymin) + (z2-z1)*(zmax-zmin);
+          lengths[i] = (x2 - x1) * (xmax - xmin) + (y2 - y1) * (ymax - ymin) + (z2 - z1) * (zmax - zmin);
         }
-      glorDrawCylinderMesh(n_boxlines,positions,directions,colors,radii,lengths);
+      glorDrawCylinderMesh(n_boxlines, positions, directions, colors, radii, lengths);
 #undef n_boxlines
     }
 
@@ -2514,17 +2453,17 @@ static void createPixmap(int width, int height)
             n_atoms++;
           }
       }
-    positions = (double *) malloc(sizeof(double) * 3 * n_atoms);
-    colors = (double *) malloc(sizeof(double) * 3 * n_atoms);
-    radii = (double *) malloc(sizeof(double) * n_atoms);
+    positions = (double *)malloc(sizeof(double) * 3 * n_atoms);
+    colors = (double *)malloc(sizeof(double) * 3 * n_atoms);
+    radii = (double *)malloc(sizeof(double) * n_atoms);
 
     for (i = 0, j = 0; i < num_atoms; i++)
       {
         if (atom_numbers[i] != 0)
           {
-            positions[j * 3 + 0] = atom_positions[0+3*i];
-            positions[j * 3 + 1] = atom_positions[1+3*i];
-            positions[j * 3 + 2] = atom_positions[2+3*i];
+            positions[j * 3 + 0] = atom_positions[0 + 3 * i];
+            positions[j * 3 + 1] = atom_positions[1 + 3 * i];
+            positions[j * 3 + 2] = atom_positions[2 + 3 * i];
             colors[j * 3 + 0] = f_ptable[atom_numbers[i] - 1][0] / 255.0;
             colors[j * 3 + 1] = f_ptable[atom_numbers[i] - 1][1] / 255.0;
             colors[j * 3 + 2] = f_ptable[atom_numbers[i] - 1][2] / 255.0;
@@ -2552,8 +2491,7 @@ static void createPixmap(int width, int height)
 
       for (i = 0; i < num_atoms; i++)
         {
-          if (atom_numbers[i] == 0)
-            continue;
+          if (atom_numbers[i] == 0) continue;
           for (j = i + 1; j < num_atoms; j++)
             {
               if (atom_numbers[j] && atom_adjacency_matrix[i * num_atoms + j])
@@ -2563,39 +2501,38 @@ static void createPixmap(int width, int height)
             }
         }
 
-      positions = (double *) malloc(sizeof(double) * 3 * n_bonds);
-      directions = (double *) malloc(sizeof(double) * 3 * n_bonds);
-      colors = (double *) malloc(sizeof(double) * 3 * n_bonds);
-      radii = (double *) malloc(sizeof(double) * n_bonds);
-      lengths = (double *) malloc(sizeof(double) * n_bonds);
+      positions = (double *)malloc(sizeof(double) * 3 * n_bonds);
+      directions = (double *)malloc(sizeof(double) * 3 * n_bonds);
+      colors = (double *)malloc(sizeof(double) * 3 * n_bonds);
+      radii = (double *)malloc(sizeof(double) * n_bonds);
+      lengths = (double *)malloc(sizeof(double) * n_bonds);
 
       for (i = 0, j = 0, l = 0; i < num_atoms; i++)
         {
-          if (atom_numbers[i] == 0)
-            continue;
+          if (atom_numbers[i] == 0) continue;
           for (j = i + 1; j < num_atoms; j++)
             {
               if (atom_numbers[j] && atom_adjacency_matrix[i * num_atoms + j])
                 {
-                  if (atom_positions[2+3*j] > atom_positions[2+3*i])
+                  if (atom_positions[2 + 3 * j] > atom_positions[2 + 3 * i])
                     {
-                      vx = atom_positions[0+3*j] - atom_positions[0+3*i];
-                      vy = atom_positions[1+3*j] - atom_positions[1+3*i];
-                      vz = atom_positions[2+3*j] - atom_positions[2+3*i];
+                      vx = atom_positions[0 + 3 * j] - atom_positions[0 + 3 * i];
+                      vy = atom_positions[1 + 3 * j] - atom_positions[1 + 3 * i];
+                      vz = atom_positions[2 + 3 * j] - atom_positions[2 + 3 * i];
                       k = i;
                     }
                   else
                     {
-                      vx = atom_positions[0+3*i] - atom_positions[0+3*j];
-                      vy = atom_positions[1+3*i] - atom_positions[1+3*j];
-                      vz = atom_positions[2+3*i] - atom_positions[2+3*j];
+                      vx = atom_positions[0 + 3 * i] - atom_positions[0 + 3 * j];
+                      vy = atom_positions[1 + 3 * i] - atom_positions[1 + 3 * j];
+                      vz = atom_positions[2 + 3 * i] - atom_positions[2 + 3 * j];
                       k = j;
                     }
 
                   cyl_len = sqrt(vx * vx + vy * vy + vz * vz);
-                  positions[3 * l + 0] = atom_positions[0+3*k];
-                  positions[3 * l + 1] = atom_positions[1+3*k];
-                  positions[3 * l + 2] = atom_positions[2+3*k];
+                  positions[3 * l + 0] = atom_positions[0 + 3 * k];
+                  positions[3 * l + 1] = atom_positions[1 + 3 * k];
+                  positions[3 * l + 2] = atom_positions[2 + 3 * k];
                   directions[3 * l + 0] = vx;
                   directions[3 * l + 1] = vy;
                   directions[3 * l + 2] = vz;
@@ -2620,8 +2557,8 @@ static void createPixmap(int width, int height)
   {
     int i;
     char *cp;
-    GLORPixel *pixmap = (GLORPixel *) malloc(sizeof(GLORPixel) * width * height);
-    unsigned char *pixels = (unsigned char *) malloc(sizeof(unsigned char) * 3 * width * height);
+    GLORPixel *pixmap = (GLORPixel *)malloc(sizeof(GLORPixel) * width * height);
+    unsigned char *pixels = (unsigned char *)malloc(sizeof(unsigned char) * 3 * width * height);
 
     glorGetPixmap(pixmap, width, height);
     for (i = 0; i < width * height; i++)
@@ -2633,9 +2570,8 @@ static void createPixmap(int width, int height)
 
     sprintf(path, "%s%4d.jpg", name, current_cycle);
     for (cp = path; *cp; cp++)
-      if (*cp == ' ')
-        *cp = '0';
-    writeJpegForPixels(path, 100, (unsigned char *) pixels, width, height);
+      if (*cp == ' ') *cp = '0';
+    writeJpegForPixels(path, 100, (unsigned char *)pixels, width, height);
     puts(path);
     free(pixels);
     free(pixmap);
@@ -2674,13 +2610,11 @@ int main(int argc, char **argv)
   init_List();
 
   range = fabs(zmax) + fabs(zmin);
-  if (range < fabs(xmax) + fabs(xmin))
-    range = fabs(xmax) + fabs(xmin);
+  if (range < fabs(xmax) + fabs(xmin)) range = fabs(xmax) + fabs(xmin);
 
-  if (range < fabs(ymax) + fabs(ymin))
-    range = fabs(ymax) + fabs(ymin);
+  if (range < fabs(ymax) + fabs(ymin)) range = fabs(ymax) + fabs(ymin);
 
-  magnification = pow(1.2, (double) magstep);
+  magnification = pow(1.2, (double)magstep);
   zeye = -2.0 * range * magnification;
 
   if (povray <= 0)

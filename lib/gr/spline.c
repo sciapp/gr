@@ -129,14 +129,13 @@
 
 #define DEPS 1E-16
 
-#define C(row,col)  c[*ic*(col)+row]
-#define R(row,col)  r[(*n+2)*(col)+row]
-#define T(row,col)  t[(*n+2)*(col)+row]
-#define WK(row,col) wk[(*n+2)*(col)+row]
+#define C(row, col) c[*ic * (col) + row]
+#define R(row, col) r[(*n + 2) * (col) + row]
+#define T(row, col) t[(*n + 2) * (col) + row]
+#define WK(row, col) wk[(*n + 2) * (col) + row]
 
-static
-void spcof1(double *x, double *avh, double *y, double *dy, int *n, double *p,
-	    double *q, double *a, double *c, int *ic, double *u, double *v)
+static void spcof1(double *x, double *avh, double *y, double *dy, int *n, double *p, double *q, double *a, double *c,
+                   int *ic, double *u, double *v)
 /*
  * Calculates coefficients of a cubic smoothing spline from
  * parameters calculated by subroutine spfit1.
@@ -145,7 +144,7 @@ void spcof1(double *x, double *avh, double *y, double *dy, int *n, double *p,
   int i;
   double h, qh;
 
-/* Calculate a */
+  /* Calculate a */
   qh = *q / ((*avh) * (*avh));
   for (i = 0; i < *n; i++)
     {
@@ -153,7 +152,7 @@ void spcof1(double *x, double *avh, double *y, double *dy, int *n, double *p,
       u[i + 1] *= qh;
     }
 
-/* Calculate c */
+  /* Calculate c */
   for (i = 1; i < *n; i++)
     {
       h = x[i] - x[i - 1];
@@ -163,9 +162,7 @@ void spcof1(double *x, double *avh, double *y, double *dy, int *n, double *p,
     }
 }
 
-static
-void sperr1(double *x, double *avh, double *dy, int *n, double *r, double *p,
-	    double *var, double *se)
+static void sperr1(double *x, double *avh, double *dy, int *n, double *r, double *p, double *var, double *se)
 /*
  * Calculates Bayesian estimates of the standard errors of the fitted
  * values of a cubic smoothing spline by calculating the diagonal elements
@@ -175,12 +172,12 @@ void sperr1(double *x, double *avh, double *dy, int *n, double *r, double *p,
   int i;
   double f, g, h, f1, g1, h1;
 
-/* Initialize */
+  /* Initialize */
   h = *avh / (x[1] - x[0]);
   se[0] = 1 - (*p) * dy[0] * dy[0] * h * h * R(2, 0);
   R(1, 0) = R(1, 1) = R(1, 2) = 0;
 
-/* Calculate diagonal elements */
+  /* Calculate diagonal elements */
   for (i = 2; i < *n; i++)
     {
       f = h;
@@ -189,19 +186,16 @@ void sperr1(double *x, double *avh, double *dy, int *n, double *r, double *p,
       f1 = f * R(i - 1, 0) + g * R(i - 1, 1) + h * R(i - 1, 2);
       g1 = f * R(i - 1, 1) + g * R(i, 0) + h * R(i, 1);
       h1 = f * R(i - 1, 2) + g * R(i, 1) + h * R(i + 1, 0);
-      se[i - 1] = 1 - (*p) * dy[i - 1] * dy[i - 1] *
-	(f * f1 + g * g1 + h * h1);
+      se[i - 1] = 1 - (*p) * dy[i - 1] * dy[i - 1] * (f * f1 + g * g1 + h * h1);
     }
   se[*n - 1] = 1 - (*p) * dy[*n - 1] * dy[*n - 1] * h * h * R(*n - 1, 0);
 
-/* Calculate standard error estimates */
-  for (i = 0; i < *n; i++)
-    se[i] = (se[i] * (*var) >= 0) ? sqrt(se[i] * (*var)) * dy[i] : 0;
+  /* Calculate standard error estimates */
+  for (i = 0; i < *n; i++) se[i] = (se[i] * (*var) >= 0) ? sqrt(se[i] * (*var)) * dy[i] : 0;
 }
 
-static
-void spint1(double *x, double *avh, double *y, double *dy, double *avdy, int *n,
-	    double *a, double *c, int *ic, double *r, double *t, int *ier)
+static void spint1(double *x, double *avh, double *y, double *dy, double *avdy, int *n, double *a, double *c, int *ic,
+                   double *r, double *t, int *ier)
 /*
  * Initializes the arrays c, r and t for one dimensional cubic
  * smoothing spline fitting by subroutine spfit1.  The values
@@ -218,7 +212,7 @@ void spint1(double *x, double *avh, double *y, double *dy, double *avdy, int *n,
   int i, done = 0;
   double e, f, g, h;
 
-/* Initialization and input checking */
+  /* Initialization and input checking */
   *ier = 0;
   if (*n < 3)
     *ier = 130;
@@ -227,85 +221,79 @@ void spint1(double *x, double *avh, double *y, double *dy, double *avdy, int *n,
   else
     {
 
-/* Get average x spacing in avh */
+      /* Get average x spacing in avh */
       g = 0;
       for (i = 1; i < *n; i++)
-	{
-	  h = x[i] - x[i - 1];
-	  if (h <= 0)
-	    {
-	      done = 1;
-	      break;
-	    }
-	  else
-	    g += h;
-	}
+        {
+          h = x[i] - x[i - 1];
+          if (h <= 0)
+            {
+              done = 1;
+              break;
+            }
+          else
+            g += h;
+        }
       if (!done)
-	{
-	  *avh = g / (*n - 1);
+        {
+          *avh = g / (*n - 1);
 
-/* Scale relative weights */
-	  g = 0;
-	  for (i = 0; i < *n; i++)
-	    if (dy[i] <= 0)
-	      {
-		done = 2;
-		break;
-	      }
-	    else
-	      g += dy[i] * dy[i];
-	}
+          /* Scale relative weights */
+          g = 0;
+          for (i = 0; i < *n; i++)
+            if (dy[i] <= 0)
+              {
+                done = 2;
+                break;
+              }
+            else
+              g += dy[i] * dy[i];
+        }
       if (!done)
-	{
-	  *avdy = sqrt(g / (*n));
-	  for (i = 0; i < *n; i++)
-	    dy[i] /= (*avdy);
+        {
+          *avdy = sqrt(g / (*n));
+          for (i = 0; i < *n; i++) dy[i] /= (*avdy);
 
-/* Initialize h, f */
-	  h = (x[1] - x[0]) / (*avh);
-	  f = (y[1] - y[0]) / h;
+          /* Initialize h, f */
+          h = (x[1] - x[0]) / (*avh);
+          f = (y[1] - y[0]) / h;
 
-/* Calculate a, t, r */
-	  for (i = 1; i < *n - 1; i++)
-	    {
-	      g = h;
-	      h = (x[i + 1] - x[i]) / (*avh);
-	      e = f;
-	      f = (y[i + 1] - y[i]) / h;
-	      a[i] = f - e;
-	      T(i + 1, 0) = 2 * (g + h) / 3;
-	      T(i + 1, 1) = h / 3;
-	      R(i + 1, 2) = dy[i - 1] / g;
-	      R(i + 1, 0) = dy[i + 1] / h;
-	      R(i + 1, 1) = -dy[i] / g - dy[i] / h;
-	    }
+          /* Calculate a, t, r */
+          for (i = 1; i < *n - 1; i++)
+            {
+              g = h;
+              h = (x[i + 1] - x[i]) / (*avh);
+              e = f;
+              f = (y[i + 1] - y[i]) / h;
+              a[i] = f - e;
+              T(i + 1, 0) = 2 * (g + h) / 3;
+              T(i + 1, 1) = h / 3;
+              R(i + 1, 2) = dy[i - 1] / g;
+              R(i + 1, 0) = dy[i + 1] / h;
+              R(i + 1, 1) = -dy[i] / g - dy[i] / h;
+            }
 
-/* Calculate c = r'*r */
-	  R(*n, 1) = 0;
-	  R(*n, 2) = 0;
-	  R(*n + 1, 2) = 0;
-	  for (i = 1; i < *n - 1; i++)
-	    {
-	      C(i, 0) = R(i + 1, 0) * R(i + 1, 0) +
-		R(i + 1, 1) * R(i + 1, 1) +
-		R(i + 1, 2) * R(i + 1, 2);
-	      C(i, 1) = R(i + 1, 0) * R(i + 2, 1) +
-		R(i + 1, 1) * R(i + 2, 2);
-	      C(i, 2) = R(i + 1, 0) * R(i + 3, 2);
-	    }
-	  return;
-	}
+          /* Calculate c = r'*r */
+          R(*n, 1) = 0;
+          R(*n, 2) = 0;
+          R(*n + 1, 2) = 0;
+          for (i = 1; i < *n - 1; i++)
+            {
+              C(i, 0) = R(i + 1, 0) * R(i + 1, 0) + R(i + 1, 1) * R(i + 1, 1) + R(i + 1, 2) * R(i + 1, 2);
+              C(i, 1) = R(i + 1, 0) * R(i + 2, 1) + R(i + 1, 1) * R(i + 2, 2);
+              C(i, 2) = R(i + 1, 0) * R(i + 3, 2);
+            }
+          return;
+        }
       if (done == 1)
-	*ier = 131;
+        *ier = 131;
       else
-	*ier = 132;
+        *ier = 132;
     }
 }
 
-static
-void spfit1(double *x, double *avh, double *dy, int *n, double *rho, double *p,
-	    double *q, double *fun, double *var, double *stat, double *a,
-	    double *c, int *ic, double *r, double *t, double *u, double *v)
+static void spfit1(double *x, double *avh, double *dy, int *n, double *rho, double *p, double *q, double *fun,
+                   double *var, double *stat, double *a, double *c, int *ic, double *r, double *t, double *u, double *v)
 /*
  * Fits a cubic smoothing spline to data with relative
  * weighting dy for a given value of the smoothing parameter
@@ -335,41 +323,35 @@ void spfit1(double *x, double *avh, double *dy, int *n, double *rho, double *p,
   double e, f, g, h, rho1;
   int i;
 
-/* Use p and q instead of rho to prevent overflow or underflow */
+  /* Use p and q instead of rho to prevent overflow or underflow */
   rho1 = *rho + 1;
   *p = *rho / rho1;
   *q = 1 / rho1;
-  if (fabs(rho1 - 1) < DEPS)
-    *p = 0;
-  if (fabs(rho1 - *rho) < DEPS)
-    *q = 0;
+  if (fabs(rho1 - 1) < DEPS) *p = 0;
+  if (fabs(rho1 - *rho) < DEPS) *q = 0;
 
-/* Rational cholesky decomposition of p*c + q*t */
+  /* Rational cholesky decomposition of p*c + q*t */
   f = g = h = 0;
-  for (i = 0; i < 2; i++)
-    R(i, 0) = 0;
+  for (i = 0; i < 2; i++) R(i, 0) = 0;
   for (i = 2; i < *n; i++)
     {
       R(i - 2, 2) = g * R(i - 2, 0);
       R(i - 1, 1) = f * R(i - 1, 0);
-      R(i, 0) = 1 / (*p * C(i - 1, 0) + *q * T(i, 0) - f * R(i - 1, 1) - g *
-	R(i - 2, 2));
+      R(i, 0) = 1 / (*p * C(i - 1, 0) + *q * T(i, 0) - f * R(i - 1, 1) - g * R(i - 2, 2));
       f = (*p) * C(i - 1, 1) + (*q) * T(i, 1) - h * R(i - 1, 1);
       g = h;
       h = *p * C(i - 1, 2);
     }
 
-/* Solve for u */
+  /* Solve for u */
   u[0] = 0;
   u[1] = 0;
-  for (i = 2; i < *n; i++)
-    u[i] = a[i - 1] - R(i - 1, 1) * u[i - 1] - R(i - 2, 2) * u[i - 2];
+  for (i = 2; i < *n; i++) u[i] = a[i - 1] - R(i - 1, 1) * u[i - 1] - R(i - 2, 2) * u[i - 2];
   u[*n] = 0;
   u[*n + 1] = 0;
-  for (i = *n - 1; i > 1; i--)
-    u[i] = R(i, 0) * u[i] - R(i, 1) * u[i + 1] - R(i, 2) * u[i + 2];
+  for (i = *n - 1; i > 1; i--) u[i] = R(i, 0) * u[i] - R(i, 1) * u[i + 1] - R(i, 2) * u[i + 2];
 
-/* Calculate residual vector v */
+  /* Calculate residual vector v */
   e = 0;
   h = 0;
   for (i = 1; i < *n; i++)
@@ -382,7 +364,7 @@ void spfit1(double *x, double *avh, double *dy, int *n, double *rho, double *p,
   v[*n] = dy[*n - 1] * (-h);
   e += e * v[*n] * v[*n];
 
-/* Calculate upper three bands of inverse matrix */
+  /* Calculate upper three bands of inverse matrix */
   R(*n, 0) = 0;
   R(*n, 1) = 0;
   R(*n + 1, 0) = 0;
@@ -395,7 +377,7 @@ void spfit1(double *x, double *avh, double *dy, int *n, double *rho, double *p,
       R(i, 0) -= (g * R(i, 1) + h * R(i, 2));
     }
 
-/* Calculate trace */
+  /* Calculate trace */
   f = g = h = 0;
   for (i = 2; i < *n; i++)
     {
@@ -405,7 +387,7 @@ void spfit1(double *x, double *avh, double *dy, int *n, double *rho, double *p,
     }
   f += 2 * (g + h);
 
-/* Calculate statistics */
+  /* Calculate statistics */
   stat[0] = *p;
   stat[1] = f * (*p);
   stat[2] = *n * e / (f * f);
@@ -414,8 +396,7 @@ void spfit1(double *x, double *avh, double *dy, int *n, double *rho, double *p,
   if (*var >= 0)
     {
       stat[4] = stat[3] - 2 * (*var) * stat[1] / (*n) + (*var);
-      if (stat[4] < 0)
-	stat[4] = 0;
+      if (stat[4] < 0) stat[4] = 0;
       *fun = stat[4];
     }
   else
@@ -425,147 +406,137 @@ void spfit1(double *x, double *avh, double *dy, int *n, double *rho, double *p,
     }
 }
 
-void cubgcv(
-  double *x, double *f, double *df, int *n, double *y, double *c, int *ic,
-  double *var, int *job, double *se, double *wk, int *ier)
+void cubgcv(double *x, double *f, double *df, int *n, double *y, double *c, int *ic, double *var, int *job, double *se,
+            double *wk, int *ier)
 {
   double delta, err, gf1, gf2, gf3, gf4, r1, r2, r3, r4, tau = 1.618033989;
   double ratio = 2.0, avh, avdf = 0.0, avar, stat[6], p, q;
 
   int done = 0, i;
 
-/* Initialize */
+  /* Initialize */
   *ier = 133;
   if (*job >= 0 && *job <= 1)
     {
       spint1(x, &avh, f, df, &avdf, n, y, c, ic, wk, &WK(0, 3), ier);
       if (*ier == 0)
-	{
-	  avar = *var;
-	  if (*var > 0)
-	    avar = *var * avdf * avdf;
+        {
+          avar = *var;
+          if (*var > 0) avar = *var * avdf * avdf;
 
-/* Check for zero variance */
-	  if (fabs(*var) > DEPS)
-	    {
+          /* Check for zero variance */
+          if (fabs(*var) > DEPS)
+            {
 
-/* Find local minimum of gcv or the expected mean square error */
-	      r1 = 1;
-	      r2 = ratio * r1;
-	      spfit1(x, &avh, df, n, &r2, &p, &q, &gf2, &avar, stat, y, c, ic,
-		     wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
-	      do
-		{
-		  spfit1(x, &avh, df, n, &r1, &p, &q, &gf1, &avar,
-			 stat, y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
-		  if (gf2 > gf1)
-		    {
-/* Exit if p zero */
-		      if (p > 0)
-			{
-			  r2 = r1;
-			  gf2 = gf1;
-			  r1 /= ratio;
-			}
-		      else
-			done = 1;
-		    }
-		}
-	      while (gf2 > gf1 && p > 0);
+              /* Find local minimum of gcv or the expected mean square error */
+              r1 = 1;
+              r2 = ratio * r1;
+              spfit1(x, &avh, df, n, &r2, &p, &q, &gf2, &avar, stat, y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
+              do
+                {
+                  spfit1(x, &avh, df, n, &r1, &p, &q, &gf1, &avar, stat, y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
+                  if (gf2 > gf1)
+                    {
+                      /* Exit if p zero */
+                      if (p > 0)
+                        {
+                          r2 = r1;
+                          gf2 = gf1;
+                          r1 /= ratio;
+                        }
+                      else
+                        done = 1;
+                    }
+                }
+              while (gf2 > gf1 && p > 0);
 
-	      if (!done)
-		{
-		  r3 = ratio * r2;
-		  do
-		    {
-		      spfit1(x, &avh, df, n, &r3, &p, &q, &gf3, &avar, stat,
-			     y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
-		      if (gf2 > gf3)
-			{
-/* Exit if q zero */
-			  if (q > 0)
-			    {
-			      r2 = r3;
-			      gf2 = gf3;
-			      r3 *= ratio;
-			    }
-			  else
-			    done = 1;
-			}
-		    }
-		  while (gf2 > gf3 && q > 0);
-		}
+              if (!done)
+                {
+                  r3 = ratio * r2;
+                  do
+                    {
+                      spfit1(x, &avh, df, n, &r3, &p, &q, &gf3, &avar, stat, y, c, ic, wk, &WK(0, 3), &WK(0, 5),
+                             &WK(0, 6));
+                      if (gf2 > gf3)
+                        {
+                          /* Exit if q zero */
+                          if (q > 0)
+                            {
+                              r2 = r3;
+                              gf2 = gf3;
+                              r3 *= ratio;
+                            }
+                          else
+                            done = 1;
+                        }
+                    }
+                  while (gf2 > gf3 && q > 0);
+                }
 
-	      if (!done)
-		{
-		  r2 = r3;
-		  gf2 = gf3;
-		  delta = (r2 - r1) / tau;
-		  r4 = r1 + delta;
-		  r3 = r2 - delta;
-		  spfit1(x, &avh, df, n, &r3, &p, &q, &gf3, &avar, stat,
-			 y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
-		  spfit1(x, &avh, df, n, &r4, &p, &q, &gf4, &avar, stat,
-			 y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
-		  do
-		    {
+              if (!done)
+                {
+                  r2 = r3;
+                  gf2 = gf3;
+                  delta = (r2 - r1) / tau;
+                  r4 = r1 + delta;
+                  r3 = r2 - delta;
+                  spfit1(x, &avh, df, n, &r3, &p, &q, &gf3, &avar, stat, y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
+                  spfit1(x, &avh, df, n, &r4, &p, &q, &gf4, &avar, stat, y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
+                  do
+                    {
 
-/* Golden section search for local minimum */
-		      if (gf3 > gf4)
-			{
-			  r1 = r3;
-			  gf1 = gf3;
-			  r3 = r4;
-			  gf3 = gf4;
-			  delta /= tau;
-			  r4 = r1 + delta;
-			  spfit1(x, &avh, df, n, &r4, &p, &q, &gf4, &avar, stat,
-				 y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
-			}
-		      else
-			{
-			  r2 = r4;
-			  gf2 = gf4;
-			  r4 = r3;
-			  gf4 = gf3;
-			  delta /= tau;
-			  r3 = r2 - delta;
-			  spfit1(x, &avh, df, n, &r3, &p, &q, &gf3, &avar, stat,
-				 y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
-			}
-		      err = (r2 - r1) / (r1 + r2);
-		    }
-		  while (err * err + 1 > 1 && err > 1E-6);
-		  r1 = (r1 + r2) * 0.5;
-		}
-	    }
-	  else
-	    r1 = 0;
+                      /* Golden section search for local minimum */
+                      if (gf3 > gf4)
+                        {
+                          r1 = r3;
+                          gf1 = gf3;
+                          r3 = r4;
+                          gf3 = gf4;
+                          delta /= tau;
+                          r4 = r1 + delta;
+                          spfit1(x, &avh, df, n, &r4, &p, &q, &gf4, &avar, stat, y, c, ic, wk, &WK(0, 3), &WK(0, 5),
+                                 &WK(0, 6));
+                        }
+                      else
+                        {
+                          r2 = r4;
+                          gf2 = gf4;
+                          r4 = r3;
+                          gf4 = gf3;
+                          delta /= tau;
+                          r3 = r2 - delta;
+                          spfit1(x, &avh, df, n, &r3, &p, &q, &gf3, &avar, stat, y, c, ic, wk, &WK(0, 3), &WK(0, 5),
+                                 &WK(0, 6));
+                        }
+                      err = (r2 - r1) / (r1 + r2);
+                    }
+                  while (err * err + 1 > 1 && err > 1E-6);
+                  r1 = (r1 + r2) * 0.5;
+                }
+            }
+          else
+            r1 = 0;
 
-/* Calculate spline coefficients */
-	  spfit1(x, &avh, df, n, &r1, &p, &q, &gf1, &avar, stat, y, c, ic,
-		 wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
-	  spcof1(x, &avh, f, df, n, &p, &q, y, c, ic, &WK(0, 5), &WK(0, 6));
+          /* Calculate spline coefficients */
+          spfit1(x, &avh, df, n, &r1, &p, &q, &gf1, &avar, stat, y, c, ic, wk, &WK(0, 3), &WK(0, 5), &WK(0, 6));
+          spcof1(x, &avh, f, df, n, &p, &q, y, c, ic, &WK(0, 5), &WK(0, 6));
 
-/* Optionally calculate standard error estimates */
-	  if (*var < 0)
-	    {
-	      avar = stat[5];
-	      *var = avar / (avdf * avdf);
-	    }
-	  if (*job == 1)
-	    sperr1(x, &avh, df, n, wk, &p, &avar, se);
+          /* Optionally calculate standard error estimates */
+          if (*var < 0)
+            {
+              avar = stat[5];
+              *var = avar / (avdf * avdf);
+            }
+          if (*job == 1) sperr1(x, &avh, df, n, wk, &p, &avar, se);
 
-/* Unscale df */
-	  for (i = 0; i < *n; i++)
-	    df[i] = df[i] * avdf;
+          /* Unscale df */
+          for (i = 0; i < *n; i++) df[i] = df[i] * avdf;
 
-/* Put statistics in wk */
-	  for (i = 0; i < 6; i++)
-	    WK(i, 0) = stat[i];
-	  WK(5, 0) = stat[5] / (avdf * avdf);
-	  WK(7, 0) = avdf * avdf;
-	}
+          /* Put statistics in wk */
+          for (i = 0; i < 6; i++) WK(i, 0) = stat[i];
+          WK(5, 0) = stat[5] / (avdf * avdf);
+          WK(7, 0) = avdf * avdf;
+        }
     }
 }
 
@@ -575,48 +546,45 @@ void b_spline(int n, double *x, double *y, int m, double *sx, double *sy)
   int i, j;
   double interval, xi_3, yi_3, xi, yi;
 
-  interval = (double) (n - 1) / (double) (m);
+  interval = (double)(n - 1) / (double)(m);
 
   for (i = 2, j = 0; i <= n; i++)
     {
       if (i == 2)
-	{
-	  xi_3 = x[0] - (x[1] - x[0]);
-	  yi_3 =
-	    (y[1] * (xi_3 - x[0]) - y[0] * (xi_3 - x[1])) / (x[1] - x[0]);
-	}
+        {
+          xi_3 = x[0] - (x[1] - x[0]);
+          yi_3 = (y[1] * (xi_3 - x[0]) - y[0] * (xi_3 - x[1])) / (x[1] - x[0]);
+        }
       else
-	{
-	  xi_3 = x[i - 3];
-	  yi_3 = y[i - 3];
-	}
+        {
+          xi_3 = x[i - 3];
+          yi_3 = y[i - 3];
+        }
       if (i == n)
-	{
-	  xi = x[n - 1] + (x[n - 1] - x[n - 2]);
-	  yi =
-	    (y[n - 1] * (xi - x[n - 2]) -
-	     y[n - 2] * (xi - x[n - 1])) / (x[n - 1] - x[n - 2]);
-	}
+        {
+          xi = x[n - 1] + (x[n - 1] - x[n - 2]);
+          yi = (y[n - 1] * (xi - x[n - 2]) - y[n - 2] * (xi - x[n - 1])) / (x[n - 1] - x[n - 2]);
+        }
       else
-	{
-	  xi = x[i];
-	  yi = y[i];
-	}
+        {
+          xi = x[i];
+          yi = y[i];
+        }
 
       t = fmod(j * interval, 1.0);
 
       while (t < 1.0 && j < m)
-	{
-	  bl1 = (1.0 - t) * (1.0 - t) * (1.0 - t) / 6.0;
-	  bl2 = (3.0 * t * t * t - 6.0 * t * t + 4.0) / 6.0;
-	  bl3 = (-3.0 * t * t * t + 3.0 * t * t + 3.0 * t + 1.0) / 6.0;
-	  bl4 = t * t * t / 6.0;
+        {
+          bl1 = (1.0 - t) * (1.0 - t) * (1.0 - t) / 6.0;
+          bl2 = (3.0 * t * t * t - 6.0 * t * t + 4.0) / 6.0;
+          bl3 = (-3.0 * t * t * t + 3.0 * t * t + 3.0 * t + 1.0) / 6.0;
+          bl4 = t * t * t / 6.0;
 
-	  sx[j] = bl1 * xi_3 + bl2 * x[i - 2] + bl3 * x[i - 1] + bl4 * xi;
-	  sy[j] = bl1 * yi_3 + bl2 * y[i - 2] + bl3 * y[i - 1] + bl4 * yi;
+          sx[j] = bl1 * xi_3 + bl2 * x[i - 2] + bl3 * x[i - 1] + bl4 * xi;
+          sy[j] = bl1 * yi_3 + bl2 * y[i - 2] + bl3 * y[i - 1] + bl4 * yi;
 
-	  t += interval;
-	  j++;
-	}
+          t += interval;
+          j++;
+        }
     }
 }

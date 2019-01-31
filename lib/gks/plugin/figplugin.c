@@ -23,12 +23,12 @@
 #define HATCH_STYLE 108
 #define RESOLUTION 1200
 #define PPI 80
-#define FACTOR RESOLUTION/PPI
+#define FACTOR RESOLUTION / PPI
 
-#define MWIDTH  0.254
+#define MWIDTH 0.254
 #define MHEIGHT 0.1905
-#define WIDTH   1024
-#define HEIGHT  768
+#define WIDTH 1024
+#define HEIGHT 768
 
 #define DrawBorder 0
 
@@ -52,10 +52,8 @@ extern "C"
 {
 #endif
 
-DLLEXPORT void gks_figplugin(
-  int fctid, int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_figplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef __cplusplus
 }
@@ -64,32 +62,30 @@ DLLEXPORT void gks_figplugin(
 #define MAX_TNR 9
 
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw) + b[tnr]; \
+  xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
 
 #define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
-  xn = a[tnr] * (xw); \
+  xn = a[tnr] * (xw);                      \
   yn = c[tnr] * (yw)
 
 #define NDC_to_DC(xn, yn, xd, yd) \
-  xd = (int) (p->a * (xn) + p->b); \
-  yd = (int) (p->c * (yn) + p->d)
+  xd = (int)(p->a * (xn) + p->b); \
+  yd = (int)(p->c * (yn) + p->d)
 
-#define CharXform(xrel, yrel, x, y) \
-  x = cos(p->alpha) * (xrel) - sin(p->alpha) * (yrel); \
+#define CharXform(xrel, yrel, x, y)                  \
+  x = cos(p->alpha) * (xrel)-sin(p->alpha) * (yrel); \
   y = sin(p->alpha) * (xrel) + cos(p->alpha) * (yrel);
 
 #define nint(a) ((int)(a + 0.5))
 
 #ifndef min
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-static
-gks_state_list_t *gkss;
+static gks_state_list_t *gkss;
 
-static
-double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
 typedef unsigned char Byte;
 typedef unsigned long uLong;
@@ -98,14 +94,12 @@ typedef struct FIG_stream_t
 {
   Byte *buffer;
   uLong size, length;
-}
-FIG_stream;
+} FIG_stream;
 
 typedef struct FIG_point_t
 {
   int x, y;
-}
-FIG_point;
+} FIG_point;
 
 typedef struct ws_state_list_t
 {
@@ -125,73 +119,45 @@ typedef struct ws_state_list_t
   int empty, page_counter, offset;
   int font, size;
   int img_counter;
-}
-ws_state_list;
+} ws_state_list;
 
-static
-ws_state_list *p;
+static ws_state_list *p;
 
-static
-int fonts[] = {
-  0, 1, 2, 3, 16, 17, 18, 19, 12, 13, 14, 15,
-  32, 32, 32, 32, 8, 9, 10, 11, 24, 25, 26, 27,
-  4, 5, 6, 7, 28, 29, 30, 31
-};
+static int fonts[] = {0, 1, 2,  3,  16, 17, 18, 19, 12, 13, 14, 15, 32, 32, 32, 32,
+                      8, 9, 10, 11, 24, 25, 26, 27, 4,  5,  6,  7,  28, 29, 30, 31};
 
-static
-double capheights[29] = {
-  0.662, 0.660, 0.681, 0.662,
-  0.729, 0.729, 0.729, 0.729,
-  0.583, 0.583, 0.583, 0.583,
-  0.667,
-  0.681, 0.681, 0.681, 0.681,
-  0.722, 0.722, 0.722, 0.722,
-  0.739, 0.739, 0.739, 0.739,
-  0.694, 0.693, 0.683, 0.683
-};
+static double capheights[29] = {0.662, 0.660, 0.681, 0.662, 0.729, 0.729, 0.729, 0.729, 0.583, 0.583,
+                                0.583, 0.583, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722,
+                                0.722, 0.739, 0.739, 0.739, 0.739, 0.694, 0.693, 0.683, 0.683};
 
-static
-int map[32] = {
-  22, 9, 5, 14, 18, 26, 13, 1,
-  24, 11, 7, 16, 20, 28, 13, 3,
-  23, 10, 6, 15, 19, 27, 13, 2,
-  25, 12, 8, 17, 21, 29, 13, 4
-};
+static int map[32] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
+                      23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
-static
-double xfac[4] = { 0, 0, -0.5, -1 };
+static double xfac[4] = {0, 0, -0.5, -1};
 
-static
-double yfac[6] = { 0, -1.2, -1, -0.5, 0, 0.2 };
+static double yfac[6] = {0, -1.2, -1, -0.5, 0, 0.2};
 
-static
-int predef_font[] = { 1, 1, 1, -2, -3, -4 };
+static int predef_font[] = {1, 1, 1, -2, -3, -4};
 
-static
-int predef_prec[] = { 0, 1, 2, 2, 2, 2 };
+static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 
-static
-int predef_ints[] = { 0, 1, 3, 3, 3 };
+static int predef_ints[] = {0, 1, 3, 3, 3};
 
-static
-int predef_styli[] = { 1, 1, 1, 2, 3 };
+static int predef_styli[] = {1, 1, 1, 2, 3};
 
-static
-void fig_memcpy(FIG_stream * p, char *s, size_t n)
+static void fig_memcpy(FIG_stream *p, char *s, size_t n)
 {
   if (p->length + n >= p->size)
     {
-      while (p->length + n >= p->size)
-	p->size += MEMORY_INCREMENT;
-      p->buffer = (Byte *) realloc(p->buffer, p->size);
+      while (p->length + n >= p->size) p->size += MEMORY_INCREMENT;
+      p->buffer = (Byte *)realloc(p->buffer, p->size);
     }
 
   memmove(p->buffer + p->length, s, n);
   p->length += n;
 }
 
-static
-void fig_printf(FIG_stream * p, const char *args, ...)
+static void fig_printf(FIG_stream *p, const char *args, ...)
 {
   va_list ap;
   char fmt[BUFSIZ], s[BUFSIZ];
@@ -205,34 +171,32 @@ void fig_printf(FIG_stream * p, const char *args, ...)
   fig_memcpy(p, s, strlen(s));
 }
 
-static
-FIG_stream *fig_alloc_stream(void)
+static FIG_stream *fig_alloc_stream(void)
 {
   FIG_stream *p;
 
-  p = (FIG_stream *) calloc(1, sizeof(FIG_stream));
+  p = (FIG_stream *)calloc(1, sizeof(FIG_stream));
   p->buffer = NULL;
   p->size = p->length = 0;
 
   return p;
 }
 
-static
-void fig_header(void)
+static void fig_header(void)
 {
   int i;
 
-  fig_printf(p->stream, "#FIG 3.2\nLandscape\nCenter\nMetric\nLetter"
-	     "\n100.00\nSingle\n-2\n%d 2\n", RESOLUTION);
+  fig_printf(p->stream,
+             "#FIG 3.2\nLandscape\nCenter\nMetric\nLetter"
+             "\n100.00\nSingle\n-2\n%d 2\n",
+             RESOLUTION);
   for (i = 0; i < MAX_COLOR; ++i)
     {
-      fig_printf(p->stream, "0 %d #%s\n", RESERVED_COLORS + i,\
-		 p->rgb[i]);
+      fig_printf(p->stream, "0 %d #%s\n", RESERVED_COLORS + i, p->rgb[i]);
     }
 }
 
-static
-void set_norm_xform(int tnr, double *wn, double *vp)
+static void set_norm_xform(int tnr, double *wn, double *vp)
 {
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -240,17 +204,14 @@ void set_norm_xform(int tnr, double *wn, double *vp)
   d[tnr] = vp[2] - wn[2] * c[tnr];
 }
 
-static
-void init_norm_xform(void)
+static void init_norm_xform(void)
 {
   int tnr;
 
-  for (tnr = 0; tnr < MAX_TNR; tnr++)
-    set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
+  for (tnr = 0; tnr < MAX_TNR; tnr++) set_norm_xform(tnr, gkss->window[tnr], gkss->viewport[tnr]);
 }
 
-static
-void set_xform(void)
+static void set_xform(void)
 {
   p->a = p->width / (p->window[1] - p->window[0]);
   p->b = -p->window[0] * p->a;
@@ -258,8 +219,7 @@ void set_xform(void)
   p->d = p->height - p->window[2] * p->c;
 }
 
-static
-void seg_xform(double *x, double *y)
+static void seg_xform(double *x, double *y)
 {
   double xx;
 
@@ -268,8 +228,7 @@ void seg_xform(double *x, double *y)
   *x = xx;
 }
 
-static
-void seg_xform_rel(double *x, double *y)
+static void seg_xform_rel(double *x, double *y)
 {
   double xx;
 
@@ -278,18 +237,15 @@ void seg_xform_rel(double *x, double *y)
   *x = xx;
 }
 
-static
-void set_color_rep(int color, double red, double green, double blue)
+static void set_color_rep(int color, double red, double green, double blue)
 {
   if (color >= 0 && color < MAX_COLOR)
     {
-      sprintf(p->rgb[color], "%02x%02x%02x", (int) (red * 255),
-	      (int) (green * 255), (int) (blue * 255));
+      sprintf(p->rgb[color], "%02x%02x%02x", (int)(red * 255), (int)(green * 255), (int)(blue * 255));
     }
 }
 
-static
-void init_colors(void)
+static void init_colors(void)
 {
   int color;
   double red, green, blue;
@@ -301,15 +257,13 @@ void init_colors(void)
     }
 }
 
-static
-void resize_window(void)
+static void resize_window(void)
 {
   p->width = nint((p->viewport[1] - p->viewport[0]) / MWIDTH * WIDTH);
   p->height = nint((p->viewport[3] - p->viewport[2]) / MHEIGHT * HEIGHT);
 }
 
-static
-void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
+static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   int r, x, y, i;
   double scale, xr, yr;
@@ -317,7 +271,7 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 
 #include "marker.h"
 
-  r = (int) (3 * mscale);
+  r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
   xr = r;
@@ -334,109 +288,102 @@ void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
     {
       op = marker[mtype][pc];
       switch (op)
-	{
-	case 1:		/* point */
-	  fig_printf(p->stream, "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 2\n",
-		     mcolor + 32);
-	  fig_printf(p->stream, "         %d %d %d %d\n", x * FACTOR,\
-		     y * FACTOR, x * FACTOR + 1, y * FACTOR);
-	  break;
+        {
+        case 1: /* point */
+          fig_printf(p->stream, "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 2\n", mcolor + 32);
+          fig_printf(p->stream, "         %d %d %d %d\n", x * FACTOR, y * FACTOR, x * FACTOR + 1, y * FACTOR);
+          break;
 
-	case 2:		/* line */
-	  for (i = 0; i < 2; i++)
-	    {
-	      xr = scale * marker[mtype][pc + 2 * i + 1];
-	      yr = -scale * marker[mtype][pc + 2 * i + 2];
-	      seg_xform_rel(&xr, &yr);
-	      if (i == 0)
-		{
-		  fig_printf(p->stream,
-			     "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0" " 2\n",
-			     mcolor + 32);
-		  fig_printf(p->stream, "         %d %d ",
-			     (int) (x - xr) * FACTOR, (int) (y - yr) * FACTOR);
-		}
-	      else
-		fig_printf(p->stream, "%d %d\n", (int) (x - xr) * FACTOR,
-			   (int) (y + yr) * FACTOR);
-	    }
-	  pc += 4;
-	  break;
+        case 2: /* line */
+          for (i = 0; i < 2; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 * i + 1];
+              yr = -scale * marker[mtype][pc + 2 * i + 2];
+              seg_xform_rel(&xr, &yr);
+              if (i == 0)
+                {
+                  fig_printf(p->stream,
+                             "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0"
+                             " 2\n",
+                             mcolor + 32);
+                  fig_printf(p->stream, "         %d %d ", (int)(x - xr) * FACTOR, (int)(y - yr) * FACTOR);
+                }
+              else
+                fig_printf(p->stream, "%d %d\n", (int)(x - xr) * FACTOR, (int)(y + yr) * FACTOR);
+            }
+          pc += 4;
+          break;
 
-	case 3:		/* polyline */
-	  fig_printf(p->stream, "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d"
-		     "\n", mcolor + 32, marker[mtype][pc + 1]);
-	  fig_printf(p->stream, "         ");
-	  for (i = 0; i < marker[mtype][pc + 1]; i++)
-	    {
-	      xr = scale * marker[mtype][pc + 2 + 2 * i];
-	      yr = -scale * marker[mtype][pc + 3 + 2 * i];
-	      seg_xform_rel(&xr, &yr);
-	      fig_printf(p->stream, "%d %d ", (int) (x - xr) * FACTOR,
-			 (int) (y + yr) * FACTOR);
-	    }
-	  fig_printf(p->stream, "\n");
-	  pc += 1 + 2 * marker[mtype][pc + 1];
-	  break;
+        case 3: /* polyline */
+          fig_printf(p->stream,
+                     "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d"
+                     "\n",
+                     mcolor + 32, marker[mtype][pc + 1]);
+          fig_printf(p->stream, "         ");
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 + 2 * i];
+              yr = -scale * marker[mtype][pc + 3 + 2 * i];
+              seg_xform_rel(&xr, &yr);
+              fig_printf(p->stream, "%d %d ", (int)(x - xr) * FACTOR, (int)(y + yr) * FACTOR);
+            }
+          fig_printf(p->stream, "\n");
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          break;
 
-	case 4:		/* filled polygon */
-	case 5:		/* hollow polygon */
-	  if (op == 5)
-	    fig_printf(p->stream, "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d"
-		       "\n", mcolor + 32, marker[mtype][pc + 1]);
-	  else
-	    fig_printf(p->stream, "2 1 0 1 0 %d 50 -1 20 0.000 0 0 -1 0 0 %d"
-		       "\n", mcolor + 32, marker[mtype][pc + 1]);
-	  fig_printf(p->stream, "         ");
-	  for (i = 0; i < marker[mtype][pc + 1]; i++)
-	    {
-	      xr = scale * marker[mtype][pc + 2 + 2 * i];
-	      yr = -scale * marker[mtype][pc + 3 + 2 * i];
-	      seg_xform_rel(&xr, &yr);
-	      fig_printf(p->stream, "%d %d ", (int) (x - xr) * FACTOR,
-			 (int) (y + yr) * FACTOR);
-	    }
-	  fig_printf(p->stream, "\n");
-	  pc += 1 + 2 * marker[mtype][pc + 1];
-	  if (op == 5)
-	    p->color = mcolor;
-	  break;
+        case 4: /* filled polygon */
+        case 5: /* hollow polygon */
+          if (op == 5)
+            fig_printf(p->stream,
+                       "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d"
+                       "\n",
+                       mcolor + 32, marker[mtype][pc + 1]);
+          else
+            fig_printf(p->stream,
+                       "2 1 0 1 0 %d 50 -1 20 0.000 0 0 -1 0 0 %d"
+                       "\n",
+                       mcolor + 32, marker[mtype][pc + 1]);
+          fig_printf(p->stream, "         ");
+          for (i = 0; i < marker[mtype][pc + 1]; i++)
+            {
+              xr = scale * marker[mtype][pc + 2 + 2 * i];
+              yr = -scale * marker[mtype][pc + 3 + 2 * i];
+              seg_xform_rel(&xr, &yr);
+              fig_printf(p->stream, "%d %d ", (int)(x - xr) * FACTOR, (int)(y + yr) * FACTOR);
+            }
+          fig_printf(p->stream, "\n");
+          pc += 1 + 2 * marker[mtype][pc + 1];
+          if (op == 5) p->color = mcolor;
+          break;
 
-	case 6:		/* arc */
-	  fig_printf(p->stream, "1 3 0 1 %d 0 50 -1 -1 0.000 1 0.0000",
-		     mcolor + 32);
-	  fig_printf(p->stream, " %d %d %d %d %d %d %d %d\n", x * FACTOR,\
-		     y * FACTOR, r * FACTOR, r * FACTOR, x * FACTOR,\
-		     y * FACTOR, r * FACTOR, (y + r) * FACTOR);
-	  break;
+        case 6: /* arc */
+          fig_printf(p->stream, "1 3 0 1 %d 0 50 -1 -1 0.000 1 0.0000", mcolor + 32);
+          fig_printf(p->stream, " %d %d %d %d %d %d %d %d\n", x * FACTOR, y * FACTOR, r * FACTOR, r * FACTOR,
+                     x * FACTOR, y * FACTOR, r * FACTOR, (y + r) * FACTOR);
+          break;
 
-	case 7:		/* filled arc */
-	case 8:		/* hollow arc */
-	  if (op == 8)
-	    {
-	      fig_printf(p->stream, "1 3 0 1 0 0 50 -1 -1 0.000 1 0.0000");
-	      fig_printf(p->stream, " %d %d %d %d %d %d %d %d\n", x * FACTOR,
-			 y * FACTOR, r * FACTOR, r * FACTOR, x * FACTOR,\
-			 y * FACTOR, r * FACTOR, (y + r) * FACTOR);
-	    }
-	  else
-	    {
-	      fig_printf(p->stream, "1 3 0 1 %d %d 50 -1 20 0.000 1 0.0000",
-			 mcolor + 32, mcolor + 32);
-	      fig_printf(p->stream, " %d %d %d %d %d %d %d %d\n", x * FACTOR,
-			 y * FACTOR, r * FACTOR, r * FACTOR, x * FACTOR, \
-			 y * FACTOR, r * FACTOR, (y + r) * FACTOR);
-	    }
-	  break;
-	}
+        case 7: /* filled arc */
+        case 8: /* hollow arc */
+          if (op == 8)
+            {
+              fig_printf(p->stream, "1 3 0 1 0 0 50 -1 -1 0.000 1 0.0000");
+              fig_printf(p->stream, " %d %d %d %d %d %d %d %d\n", x * FACTOR, y * FACTOR, r * FACTOR, r * FACTOR,
+                         x * FACTOR, y * FACTOR, r * FACTOR, (y + r) * FACTOR);
+            }
+          else
+            {
+              fig_printf(p->stream, "1 3 0 1 %d %d 50 -1 20 0.000 1 0.0000", mcolor + 32, mcolor + 32);
+              fig_printf(p->stream, " %d %d %d %d %d %d %d %d\n", x * FACTOR, y * FACTOR, r * FACTOR, r * FACTOR,
+                         x * FACTOR, y * FACTOR, r * FACTOR, (y + r) * FACTOR);
+            }
+          break;
+        }
       pc++;
     }
   while (op != 0);
 }
 
-static
-void marker_routine(int n, double *px, double *py, int mtype, double mscale,
-		    int mcolor)
+static void marker_routine(int n, double *px, double *py, int mtype, double mscale, int mcolor)
 {
   double x, y;
   double *clrt = gkss->viewport[gkss->cntnr];
@@ -448,17 +395,15 @@ void marker_routine(int n, double *px, double *py, int mtype, double mscale,
       seg_xform(&x, &y);
 
       if (gkss->clip == GKS_K_CLIP)
-	draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
+        draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
       else
-	draw = 1;
+        draw = 1;
 
-      if (draw)
-	draw_marker(x, y, mtype, mscale, mcolor);
+      if (draw) draw_marker(x, y, mtype, mscale, mcolor);
     }
 }
 
-static
-void polymarker(int n, double *px, double *py)
+static void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
   double mk_size;
@@ -470,55 +415,46 @@ void polymarker(int n, double *px, double *py)
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
 }
 
-static
-void stroke(void)
+static void stroke(void)
 {
   int i;
 
-  fig_printf(p->stream, "2 1 0 %d %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d\n",
-	     p->linewidth, p->color + 32, p->npoints);
+  fig_printf(p->stream, "2 1 0 %d %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d\n", p->linewidth, p->color + 32, p->npoints);
   fig_printf(p->stream, "         ");
   for (i = 0; i < p->npoints; i++)
     {
-      fig_printf(p->stream, "%d %d ", p->points[i].x * FACTOR,
-		 p->points[i].y * FACTOR);
+      fig_printf(p->stream, "%d %d ", p->points[i].x * FACTOR, p->points[i].y * FACTOR);
     }
   fig_printf(p->stream, "\n");
 
   p->npoints = 0;
 }
 
-static
-void move_to(double x, double y)
+static void move_to(double x, double y)
 {
-  if (p->npoints > 0)
-    stroke();
+  if (p->npoints > 0) stroke();
 
   NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
   p->npoints++;
 }
 
-static
-void line_to(double x, double y)
+static void line_to(double x, double y)
 {
   NDC_to_DC(x, y, p->points[p->npoints].x, p->points[p->npoints].y);
   p->npoints++;
 }
 
-static
-void move(double x, double y)
+static void move(double x, double y)
 {
   gks_move(x, y, move_to);
 }
 
-static
-void draw(double x, double y)
+static void draw(double x, double y)
 {
   gks_dash(x, y, move_to, line_to);
 }
 
-static
-void line_routine(int n, double *px, double *py, int linetype, int tnr)
+static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y;
   int i, x0, y0, xi, yi;
@@ -528,11 +464,9 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
   NDC_to_DC(x, y, x0, y0);
 
   if (linetype == 0)
-    fig_printf(p->stream, "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d\n",
-	       p->color + 32, n + 1);
+    fig_printf(p->stream, "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d\n", p->color + 32, n + 1);
   else
-    fig_printf(p->stream, "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d\n",
-	       p->color + 32, n);
+    fig_printf(p->stream, "2 1 0 1 %d 0 50 -1 -1 0.000 0 0 -1 0 0 %d\n", p->color + 32, n);
   fig_printf(p->stream, "         %d %d ", x0 * FACTOR, y0 * FACTOR);
   for (i = 1; i < n; i++)
     {
@@ -542,14 +476,12 @@ void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
       fig_printf(p->stream, "%d %d ", xi * FACTOR, yi * FACTOR);
     }
-  if (linetype == 0)
-    fig_printf(p->stream, "%d %d ", x0 * FACTOR, y0 * FACTOR);
+  if (linetype == 0) fig_printf(p->stream, "%d %d ", x0 * FACTOR, y0 * FACTOR);
 
   fig_printf(p->stream, "\n");
 }
 
-static
-void fill_routine(int n, double *px, double *py, int tnr)
+static void fill_routine(int n, double *px, double *py, int tnr)
 {
   int i;
   double x, y;
@@ -559,28 +491,54 @@ void fill_routine(int n, double *px, double *py, int tnr)
   if (p->pattern)
     {
       switch (p->pattern + 1)
-	{
-	case 13:  pat = 0;  break;
-	case 12:  pat = 1;  break;
-	case 11:  pat = 2;  break;
-	case 10:  pat = 3;  break;
-	case 9:   pat = 4;  break;
-	case 8:   pat = 10; break;
-	case 7:   pat = 11; break;
-	case 6:   pat = 12; break;
-	case 5:   pat = 15; break;
-	case 4:   pat = 16; break;
-	case 3:   pat = 18; break;
-	case 2:   pat = 19; break;
-	case 113: pat = 44; break;
-	default:  pat = 20; break;
-	}
-      fig_printf(p->stream, "2 3 0 0 0 7 50 -1 %d 0.000 0 0 -1 0 0 %d\n",
-		 pat, n);
+        {
+        case 13:
+          pat = 0;
+          break;
+        case 12:
+          pat = 1;
+          break;
+        case 11:
+          pat = 2;
+          break;
+        case 10:
+          pat = 3;
+          break;
+        case 9:
+          pat = 4;
+          break;
+        case 8:
+          pat = 10;
+          break;
+        case 7:
+          pat = 11;
+          break;
+        case 6:
+          pat = 12;
+          break;
+        case 5:
+          pat = 15;
+          break;
+        case 4:
+          pat = 16;
+          break;
+        case 3:
+          pat = 18;
+          break;
+        case 2:
+          pat = 19;
+          break;
+        case 113:
+          pat = 44;
+          break;
+        default:
+          pat = 20;
+          break;
+        }
+      fig_printf(p->stream, "2 3 0 0 0 7 50 -1 %d 0.000 0 0 -1 0 0 %d\n", pat, n);
     }
   else
-    fig_printf(p->stream, "2 1 0 0 0 %d 50 -1 20 0.000 0 0 -1 0 0 %d\n",
-	       p->color + 32, n);
+    fig_printf(p->stream, "2 1 0 0 0 %d 50 -1 20 0.000 0 0 -1 0 0 %d\n", p->color + 32, n);
   fig_printf(p->stream, "         ");
   for (i = 0; i < n; i++)
     {
@@ -593,8 +551,7 @@ void fill_routine(int n, double *px, double *py, int tnr)
   fig_printf(p->stream, "\n");
 }
 
-static
-void fillarea(int n, double *px, double *py)
+static void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color;
 
@@ -613,21 +570,17 @@ void fillarea(int n, double *px, double *py)
       p->color = fl_color;
       fill_routine(n, px, py, gkss->cntnr);
     }
-  else if (fl_inter == GKS_K_INTSTYLE_PATTERN ||
-	   fl_inter == GKS_K_INTSTYLE_HATCH)
+  else if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH)
     {
       p->color = fl_color;
-      if (fl_inter == GKS_K_INTSTYLE_HATCH)
-	fl_style += HATCH_STYLE;
-      if (fl_style >= PATTERNS)
-	fl_style = 1;
+      if (fl_inter == GKS_K_INTSTYLE_HATCH) fl_style += HATCH_STYLE;
+      if (fl_style >= PATTERNS) fl_style = 1;
       p->pattern = fl_style;
       fill_routine(n, px, py, gkss->cntnr);
     }
 }
 
-static
-void polyline(int n, double *px, double *py)
+static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
   double ln_width;
@@ -635,7 +588,7 @@ void polyline(int n, double *px, double *py)
 
   if (n > p->max_points)
     {
-      p->points = (FIG_point *) realloc(p->points, n * sizeof(FIG_point));
+      p->points = (FIG_point *)realloc(p->points, n * sizeof(FIG_point));
       p->max_points = n;
     }
 
@@ -644,8 +597,7 @@ void polyline(int n, double *px, double *py)
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
   width = nint(ln_width);
-  if (width < 1)
-    width = 0;
+  if (width < 1) width = 0;
 
   p->linewidth = width;
   p->color = ln_color;
@@ -653,12 +605,10 @@ void polyline(int n, double *px, double *py)
   gks_set_dev_xform(gkss, p->window, p->viewport);
   gks_emul_polyline(n, px, py, ln_type, gkss->cntnr, move, draw);
 
-  if (p->npoints > 0)
-    stroke();
+  if (p->npoints > 0) stroke();
 }
 
-static
-void text_routine(double x, double y, int nchars, char *chars)
+static void text_routine(double x, double y, int nchars, char *chars)
 {
   int xstart, ystart, width, height, ch;
   double xrel, yrel, ax, ay;
@@ -672,25 +622,23 @@ void text_routine(double x, double y, int nchars, char *chars)
   xrel = width * xfac[gkss->txal[0]];
   yrel = p->capheight * yfac[gkss->txal[1]];
   CharXform(xrel, yrel, ax, ay);
-  xstart += (int) ax;
-  ystart -= (int) ay;
+  xstart += (int)ax;
+  ystart -= (int)ay;
 
-  fig_printf(p->stream, "%d %d %d %d ", FACTOR * height, FACTOR * width,
-	     FACTOR * xstart, FACTOR * ystart);
+  fig_printf(p->stream, "%d %d %d %d ", FACTOR * height, FACTOR * width, FACTOR * xstart, FACTOR * ystart);
 
   for (i = 0; i < nchars; ++i)
     {
       ch = (chars[i] < 0) ? chars[i] + 256 : chars[i];
       if (ch > 127)
-	fig_printf(p->stream, "\\%o;", ch);
+        fig_printf(p->stream, "\\%o;", ch);
       else
-	fig_printf(p->stream, "%c", ch);
+        fig_printf(p->stream, "%c", ch);
     }
   fig_printf(p->stream, "\\001\n");
 }
 
-static
-void set_font(int font)
+static void set_font(int font)
 {
   double scale, ux, uy, angle;
   int size;
@@ -718,8 +666,7 @@ void set_font(int font)
 
   p->alpha = -atan2(ux, uy);
   angle = p->alpha * 180 / M_PI;
-  if (angle < 0)
-    angle += 360;
+  if (angle < 0) angle += 360;
   p->angle = angle;
 
   scale = sqrt(gkss->chup[0] * gkss->chup[0] + gkss->chup[1] * gkss->chup[1]);
@@ -737,8 +684,7 @@ void set_font(int font)
 
   size = nint(capheight / capheights[font - 1]);
 
-  if (font > 13)
-    font += 3;
+  if (font > 13) font += 3;
 
   p->font = fonts[font - 1];
   fig_printf(p->stream, "%d ", p->font);
@@ -746,8 +692,7 @@ void set_font(int font)
   fig_printf(p->stream, "%.4g 4 ", M_PI * p->angle / 180.0);
 }
 
-static
-void text(double px, double py, int nchars, char *chars)
+static void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
   double x, y;
@@ -772,9 +717,8 @@ void text(double px, double py, int nchars, char *chars)
     gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
 }
 
-static
-void cellarray(double xmin, double xmax, double ymin, double ymax,
-	       int dx, int dy, int dimx, int *colia, int true_color)
+static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int dimx, int *colia,
+                      int true_color)
 {
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
@@ -815,48 +759,45 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
 
-  row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * height);
+  row_pointers = (png_bytep *)malloc(sizeof(png_bytep) * height);
   for (j = 0; j < height; ++j)
     {
-      row_pointers[j] = (png_byte *) malloc(width * 3);
+      row_pointers[j] = (png_byte *)malloc(width * 3);
     }
   for (j = 0; j < height; j++)
     {
       png_byte *row = row_pointers[j];
       iy = dy * j / height;
-      if (swapy)
-	iy = dy - 1 - iy;
+      if (swapy) iy = dy - 1 - iy;
       for (i = 0; i < width; i++)
-	{
-	  png_byte *ptr = &(row[i * 3]);
-	  ix = dx * i / width;
-	  if (swapx)
-	    ix = dx - 1 - ix;
-	  if (!true_color)
-	    {
-	      ind = colia[iy * dimx + ix];
+        {
+          png_byte *ptr = &(row[i * 3]);
+          ix = dx * i / width;
+          if (swapx) ix = dx - 1 - ix;
+          if (!true_color)
+            {
+              ind = colia[iy * dimx + ix];
               ind = FIX_COLORIND(ind);
-	      sscanf(p->rgb[ind], "%02x%02x%02x", &red, &green, &blue);
-	    }
-	  else
-	    {
-	      rgb = colia[iy * dimx + ix];
-	      red = (rgb & 0xff);
-	      green = (rgb & 0xff00) >> 8;
-	      blue = (rgb & 0xff0000) >> 16;
-	    }
-	  ptr[0] = red;
-	  ptr[1] = green;
-	  ptr[2] = blue;
-	}
+              sscanf(p->rgb[ind], "%02x%02x%02x", &red, &green, &blue);
+            }
+          else
+            {
+              rgb = colia[iy * dimx + ix];
+              red = (rgb & 0xff);
+              green = (rgb & 0xff00) >> 8;
+              blue = (rgb & 0xff0000) >> 16;
+            }
+          ptr[0] = red;
+          ptr[1] = green;
+          ptr[2] = blue;
+        }
     }
 
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   info_ptr = png_create_info_struct(png_ptr);
   png_init_io(png_ptr, stream);
-  png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type,
-	       PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
-	       PNG_FILTER_TYPE_BASE);
+  png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
+               PNG_FILTER_TYPE_BASE);
   png_write_info(png_ptr, info_ptr);
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, NULL);
@@ -869,15 +810,13 @@ void cellarray(double xmin, double xmax, double ymin, double ymax,
 
   fig_printf(p->stream, "2 5 0 1 0 -1 50 -1 -1 0.000 0 0 -1 0 0 5\n");
   fig_printf(p->stream, "        0 %s\n", path);
-  fig_printf(p->stream, "        %d %d %d %d %d %d %d %d %d %d\n", x * FACTOR,
-	     y * FACTOR, (x + width) * FACTOR, y * FACTOR,\
-	     (x + width) * FACTOR, (y + height) * FACTOR, x * FACTOR,\
-	     (y + height) * FACTOR, x * FACTOR, y * FACTOR);
+  fig_printf(p->stream, "        %d %d %d %d %d %d %d %d %d %d\n", x * FACTOR, y * FACTOR, (x + width) * FACTOR,
+             y * FACTOR, (x + width) * FACTOR, (y + height) * FACTOR, x * FACTOR, (y + height) * FACTOR, x * FACTOR,
+             y * FACTOR);
   p->img_counter++;
 }
 
-static
-void write_page(void)
+static void write_page(void)
 {
   char path[MAXPATHLEN];
   int fd;
@@ -895,8 +834,7 @@ void write_page(void)
   if (fd >= 0)
     {
       gks_write_file(fd, p->stream->buffer, p->stream->length);
-      if (fd != p->conid)
-        gks_close_file(fd);
+      if (fd != p->conid) gks_close_file(fd);
 
       p->stream->length = 0;
     }
@@ -907,22 +845,20 @@ void write_page(void)
     }
 }
 
-void gks_figplugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2,
-  int lc, char *chars, void **ptr)
+void gks_figplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                   char *chars, void **ptr)
 {
-  p = (ws_state_list *) * ptr;
+  p = (ws_state_list *)*ptr;
 
   switch (fctid)
     {
-/* open workstation */
+      /* open workstation */
     case 2:
-      gkss = (gks_state_list_t *) * ptr;
+      gkss = (gks_state_list_t *)*ptr;
 
       gks_init_core(gkss);
 
-      p = (ws_state_list *) calloc(1, sizeof(ws_state_list));
+      p = (ws_state_list *)calloc(1, sizeof(ws_state_list));
 
       p->conid = ia[1];
       p->path = chars;
@@ -932,13 +868,13 @@ void gks_figplugin(
       p->window[0] = p->window[2] = 0.0;
       p->window[1] = p->window[3] = 1.0;
       p->viewport[0] = p->viewport[2] = 0;
-      p->viewport[1] = (double) p->width * MWIDTH / WIDTH;
-      p->viewport[3] = (double) p->height * MHEIGHT / HEIGHT;
+      p->viewport[1] = (double)p->width * MWIDTH / WIDTH;
+      p->viewport[3] = (double)p->height * MHEIGHT / HEIGHT;
 
       p->stream = fig_alloc_stream();
 
       p->max_points = MAX_POINTS;
-      p->points = (FIG_point *) gks_malloc(p->max_points * sizeof(FIG_point));
+      p->points = (FIG_point *)gks_malloc(p->max_points * sizeof(FIG_point));
       p->npoints = 0;
 
       p->empty = 1;
@@ -953,123 +889,122 @@ void gks_figplugin(
       *ptr = p;
       break;
 
-/* close workstation */
+      /* close workstation */
     case 3:
-      if (!p->empty)
-	write_page();
+      if (!p->empty) write_page();
 
       free(p->stream->buffer);
       free(p->points);
       free(p);
       break;
 
-/* activate workstation */
+      /* activate workstation */
     case 4:
       p->state = GKS_K_WS_ACTIVE;
       break;
 
-/* deactivate workstation */
+      /* deactivate workstation */
     case 5:
       p->state = GKS_K_WS_INACTIVE;
       break;
 
-/* clear workstation */
+      /* clear workstation */
     case 6:
       if (!p->empty)
-	{
-	  p->empty = 1;
-	  write_page();
-	}
+        {
+          p->empty = 1;
+          write_page();
+        }
       break;
 
-/* update workstation */
+      /* update workstation */
     case 8:
       break;
 
-/* polyline */
+      /* polyline */
     case 12:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (p->empty)
-	    {
-	      fig_header();
-	    }
-	  polyline(ia[0], r1, r2);
-	  p->empty = 0;
-	}
+        {
+          if (p->empty)
+            {
+              fig_header();
+            }
+          polyline(ia[0], r1, r2);
+          p->empty = 0;
+        }
       break;
 
-/* polymarker */
+      /* polymarker */
     case 13:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (p->empty)
-	    {
-	      fig_header();
-	    }
-	  polymarker(ia[0], r1, r2);
-	  p->empty = 0;
-	}
+        {
+          if (p->empty)
+            {
+              fig_header();
+            }
+          polymarker(ia[0], r1, r2);
+          p->empty = 0;
+        }
       break;
 
-/* text */
+      /* text */
     case 14:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (p->empty)
-	    {
-	      fig_header();
-	    }
-	  text(r1[0], r2[0], strlen(chars), chars);
-	  p->empty = 0;
-	}
+        {
+          if (p->empty)
+            {
+              fig_header();
+            }
+          text(r1[0], r2[0], strlen(chars), chars);
+          p->empty = 0;
+        }
       break;
 
-/* fill area */
+      /* fill area */
     case 15:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  if (p->empty)
-	    {
-	      fig_header();
-	    }
-	  fillarea(ia[0], r1, r2);
-	  p->empty = 0;
-	}
+        {
+          if (p->empty)
+            {
+              fig_header();
+            }
+          fillarea(ia[0], r1, r2);
+          p->empty = 0;
+        }
       break;
 
-/* cell array */
+      /* cell array */
     case 16:
     case DRAW_IMAGE:
       if (p->state == GKS_K_WS_ACTIVE)
-	{
-	  int true_color = fctid == DRAW_IMAGE;
+        {
+          int true_color = fctid == DRAW_IMAGE;
 
-	  if (p->empty)
-	    {
-	      fig_header();
-	    }
-	  cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
-	  p->empty = 0;
-	}
+          if (p->empty)
+            {
+              fig_header();
+            }
+          cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+          p->empty = 0;
+        }
       break;
 
-/* set color representation */
+      /* set color representation */
     case 48:
       set_color_rep(ia[1], r1[0], r1[1], r1[2]);
       break;
 
     case 49:
-/* set window */
+      /* set window */
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
       break;
 
     case 50:
-/* set viewport */
+      /* set viewport */
       set_norm_xform(*ia, gkss->window[*ia], gkss->viewport[*ia]);
       break;
 
-/* set workstation window */
+      /* set workstation window */
     case 54:
       p->window[0] = r1[0];
       p->window[1] = r1[1];
@@ -1080,7 +1015,7 @@ void gks_figplugin(
       init_norm_xform();
       break;
 
-/* set workstation viewport */
+      /* set workstation viewport */
     case 55:
       p->viewport[0] = r1[0];
       p->viewport[1] = r1[1];
@@ -1092,7 +1027,6 @@ void gks_figplugin(
       init_norm_xform();
       break;
 
-    default:
-      ;
+    default:;
     }
 }

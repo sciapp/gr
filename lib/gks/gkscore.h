@@ -3,7 +3,7 @@
 
 #ifdef _WIN32
 
-#include <windows.h>    /* required for all Windows applications */
+#include <windows.h> /* required for all Windows applications */
 #define DLLEXPORT __declspec(dllexport)
 
 #ifdef TEXT
@@ -19,7 +19,8 @@
 #endif
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #define FEPS 1.0E-09
@@ -28,9 +29,9 @@ extern "C" {
 #define GLIGKS 4
 #define GKS5 5
 
-#define MAX_WS 16	/* maximum number of workstations */
-#define MAX_TNR 9	/* maximum number of normalization transformations */
-#define MAX_COLOR 1256  /* maximum number of predefined colors */
+#define MAX_WS 16      /* maximum number of workstations */
+#define MAX_TNR 9      /* maximum number of normalization transformations */
+#define MAX_COLOR 1256 /* maximum number of predefined colors */
 
 #define FIX_COLORIND(c) (c) < 0 ? 0 : (c) < MAX_COLOR ? (c) : MAX_COLOR - 1
 
@@ -109,7 +110,7 @@ extern "C" {
 #define RESIZE_SELECTION 253
 #define INQ_BBOX 254
 
-typedef struct
+  typedef struct
   {
     int lindex;
     int ltype;
@@ -143,28 +144,25 @@ typedef struct
     double blur;
     double alpha;
     double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
-  }
-gks_state_list_t;
+  } gks_state_list_t;
 
-typedef struct gks_list
+  typedef struct gks_list
   {
     int item;
     struct gks_list *next;
     void *ptr;
-  }
-gks_list_t;
+  } gks_list_t;
 
-typedef struct
+  typedef struct
   {
     int wkid;
     char *path;
     int wtype;
     int conid;
     void *ptr;
-  }
-ws_list_t;
+  } ws_list_t;
 
-typedef struct
+  typedef struct
   {
     int wtype;
     int dcunit;
@@ -173,287 +171,190 @@ typedef struct
     int wscat;
     char *type;
     char *env;
-  }
-ws_descr_t;
+  } ws_descr_t;
 
-typedef struct
+  typedef struct
   {
     int state;
     char *buffer;
     int size, nbytes, position;
     int empty;
-  }
-gks_display_list_t;
+  } gks_display_list_t;
 
-typedef struct
+  typedef struct
   {
     int left, right;
     int size;
     int bottom, base, cap, top;
     int length;
     int coord[124][2];
-  }
-stroke_data_t;
+  } stroke_data_t;
 
-int gks_open_font(void);
-void gks_lookup_font(
-  int fd, int version, int font, int chr, stroke_data_t *buffer);
-void gks_close_font(int fd);
+  int gks_open_font(void);
+  void gks_lookup_font(int fd, int version, int font, int chr, stroke_data_t *buffer);
+  void gks_close_font(int fd);
 
-void gks_lookup_afm(int font, int chr, stroke_data_t *buffer);
+  void gks_lookup_afm(int font, int chr, stroke_data_t *buffer);
 
-char *gks_malloc(int size);
-char *gks_realloc(void *ptr, int size);
-void gks_free(void *ptr);
+  char *gks_malloc(int size);
+  char *gks_realloc(void *ptr, int size);
+  void gks_free(void *ptr);
 
-void gks_perror(const char *, ...);
-void gks_fatal_error(const char *, ...);
-const char *gks_function_name(int routine);
-void gks_report_error(int routine, int errnum);
+  void gks_perror(const char *, ...);
+  void gks_fatal_error(const char *, ...);
+  const char *gks_function_name(int routine);
+  void gks_report_error(int routine, int errnum);
 
-void gks_init_core(gks_state_list_t *list);
-gks_list_t *gks_list_find(gks_list_t *list, int element);
-gks_list_t *gks_list_add(gks_list_t *list, int element, void *ptr);
-gks_list_t *gks_list_del(gks_list_t *list, int element);
-void gks_list_free(gks_list_t *list);
-void gks_inq_pattern_array(int index, int *pa);
-void gks_set_pattern_array(int index, int *pa);
-void gks_inq_rgb(int index, double *red, double *green, double *blue);
-void gks_set_rgb(int index, double red, double green, double blue);
-void gks_inq_pixel(int index, int *pixel);
-void gks_set_pixel(int index, int pixel);
-void gks_fit_ws_viewport(double *viewport, double xmax, double ymax, double margin);
-void gks_set_norm_xform(int tnr, double *window, double *viewport);
-void gks_set_xform_matrix(double tran[3][2]);
-void gks_seg_xform(double *x, double *y);
-void gks_WC_to_NDC(int tnr, double *x, double *y);
-void gks_NDC_to_WC(int tnr, double *x, double *y);
-void gks_set_dev_xform(gks_state_list_t *s, double *window, double *viewport);
-void gks_inq_dev_xform(double *window, double *viewport);
-void gks_set_chr_xform(void);
-void gks_chr_height(double *height);
-void gks_get_dash(int ltype, double scale, char *dash);
-void gks_get_dash_list(int ltype, double scale, int list[10]);
-void gks_move(double x, double y, void (*move)(double x, double y));
-void gks_dash(double x, double y,
-  void (*move)(double x, double y), void (*draw)(double x, double y));
-void gks_emul_polyline(int n, double *px, double *py, int ltype, int tnr,
-  void (*move)(double x, double y), void (*draw)(double x, double y));
-void gks_emul_polymarker(
-  int n, double *px, double *py, void (*marker)(double x, double y, int mtype));
-void gks_emul_text(double px, double py, int nchars, char *chars,
-  void (*polyline)(int n, double *px, double *py, int ltype, int tnr),
-  void (*fillarea)(int n, double *px, double *py, int tnr));
-void gks_emul_fillarea(int n, double *px, double *py, int tnr,
-  void (*polyline)(int n, double *px, double *py, int ltype, int tnr),
-  double yres);
-void gks_util_inq_text_extent(double px, double py, char *chars, int nchars,
-  double *cpx, double *cpy, double tx[4], double ty[4]);
-int gks_get_ws_type(void);
-int gks_base64(
-  unsigned char *src, size_t srclength, char *target, size_t targsize);
-const char *gks_getenv(const char *env);
-void gks_iso2utf(unsigned char c, char *utf, size_t *len);
-void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
-int *gks_resize(int *image, int width, int height, int w, int h);
-void gks_filepath(
-  char *path, char *defpath, const char *type, int page, int index);
-void gks_adjust_cellarray(
-  double *qx, double *qy, double *rx, double *ry,
-  int *scol, int *srow, int *ncol, int *nrow, int dimx, int dimy);
+  void gks_init_core(gks_state_list_t *list);
+  gks_list_t *gks_list_find(gks_list_t *list, int element);
+  gks_list_t *gks_list_add(gks_list_t *list, int element, void *ptr);
+  gks_list_t *gks_list_del(gks_list_t *list, int element);
+  void gks_list_free(gks_list_t *list);
+  void gks_inq_pattern_array(int index, int *pa);
+  void gks_set_pattern_array(int index, int *pa);
+  void gks_inq_rgb(int index, double *red, double *green, double *blue);
+  void gks_set_rgb(int index, double red, double green, double blue);
+  void gks_inq_pixel(int index, int *pixel);
+  void gks_set_pixel(int index, int pixel);
+  void gks_fit_ws_viewport(double *viewport, double xmax, double ymax, double margin);
+  void gks_set_norm_xform(int tnr, double *window, double *viewport);
+  void gks_set_xform_matrix(double tran[3][2]);
+  void gks_seg_xform(double *x, double *y);
+  void gks_WC_to_NDC(int tnr, double *x, double *y);
+  void gks_NDC_to_WC(int tnr, double *x, double *y);
+  void gks_set_dev_xform(gks_state_list_t *s, double *window, double *viewport);
+  void gks_inq_dev_xform(double *window, double *viewport);
+  void gks_set_chr_xform(void);
+  void gks_chr_height(double *height);
+  void gks_get_dash(int ltype, double scale, char *dash);
+  void gks_get_dash_list(int ltype, double scale, int list[10]);
+  void gks_move(double x, double y, void (*move)(double x, double y));
+  void gks_dash(double x, double y, void (*move)(double x, double y), void (*draw)(double x, double y));
+  void gks_emul_polyline(int n, double *px, double *py, int ltype, int tnr, void (*move)(double x, double y),
+                         void (*draw)(double x, double y));
+  void gks_emul_polymarker(int n, double *px, double *py, void (*marker)(double x, double y, int mtype));
+  void gks_emul_text(double px, double py, int nchars, char *chars,
+                     void (*polyline)(int n, double *px, double *py, int ltype, int tnr),
+                     void (*fillarea)(int n, double *px, double *py, int tnr));
+  void gks_emul_fillarea(int n, double *px, double *py, int tnr,
+                         void (*polyline)(int n, double *px, double *py, int ltype, int tnr), double yres);
+  void gks_util_inq_text_extent(double px, double py, char *chars, int nchars, double *cpx, double *cpy, double tx[4],
+                                double ty[4]);
+  int gks_get_ws_type(void);
+  int gks_base64(unsigned char *src, size_t srclength, char *target, size_t targsize);
+  const char *gks_getenv(const char *env);
+  void gks_iso2utf(unsigned char c, char *utf, size_t *len);
+  void gks_symbol2utf(unsigned char c, char *utf, size_t *len);
+  int *gks_resize(int *image, int width, int height, int w, int h);
+  void gks_filepath(char *path, char *defpath, const char *type, int page, int index);
+  void gks_adjust_cellarray(double *qx, double *qy, double *rx, double *ry, int *scol, int *srow, int *ncol, int *nrow,
+                            int dimx, int dimy);
 
-DLLEXPORT void gks_dl_write_item(gks_display_list_t *d,
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2, int lc, char *c,
-  gks_state_list_t *gkss);
+  DLLEXPORT void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dimx, int *ia, int lr1,
+                                   double *r1, int lr2, double *r2, int lc, char *c, gks_state_list_t *gkss);
 
-void gks_wiss_dispatch(int fctid, int wkid, int segn);
+  void gks_wiss_dispatch(int fctid, int wkid, int segn);
 
 #ifndef EMSCRIPTEN
 
-void gks_drv_mo(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                  double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-void gks_drv_mi(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_mi(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                  double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-void gks_drv_wiss(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_wiss(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                    double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-void gks_drv_cgm(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_cgm(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                   double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-void gks_drv_win(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_win(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                   double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-void gks_drv_mac(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_mac(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                   double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-void gks_drv_ps(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                  double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-void gks_drv_pdf(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_pdf(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                   double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_x11_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_x11_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-void gks_drv_socket(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                      int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-void gks_drv_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  void gks_drv_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                      int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_gs_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_gs_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_fig_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_fig_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_gtk_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_gtk_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_wx_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_wx_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_qt_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_qt_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_svg_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_svg_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_wmf_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_wmf_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_quartz_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_quartz_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                   int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_gl_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_gl_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_mov_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_mov_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_cairo_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_cairo_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                  int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_zmq_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_zmq_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_htm_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_htm_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_pgf_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_pgf_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-DLLEXPORT void gks_video_plugin(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+  DLLEXPORT void gks_video_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                  int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #else
 
-void gks_drv_js(
-  int fctid,
-  int dx, int dy, int dimx, int *i_arr,
-  int len_f_arr_1, double *f_arr_1, int len_f_arr_2, double *f_arr_2,
-  int len_c_arr, char *c_arr, void **ptr);
+void gks_drv_js(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
+                double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #endif
 
-void gks_compress(
-  int bits, unsigned char *in, int in_len, unsigned char *out, int *out_len);
+  void gks_compress(int bits, unsigned char *in, int in_len, unsigned char *out, int *out_len);
 
-int gks_open_file(const char *path, const char *mode);
-int gks_read_file(int fd, void *buf, int count);
-int gks_write_file(int fd, void *buf, int count);
-int gks_close_file(int fd);
+  int gks_open_file(const char *path, const char *mode);
+  int gks_read_file(int fd, void *buf, int count);
+  int gks_write_file(int fd, void *buf, int count);
+  int gks_close_file(int fd);
 
-int gks_ft_init(void);
-int *gks_ft_render(
-  int *x, int *y, int *width, int *height,
-  gks_state_list_t *gkss, const char *text, int length);
-unsigned char *gks_ft_get_bitmap(
-  int *x, int *y, int *width, int *height,
-  gks_state_list_t *gkss, const char *text, int length);
-void *gks_ft_get_face(int);
-void gks_ft_terminate(void);
+  int gks_ft_init(void);
+  int *gks_ft_render(int *x, int *y, int *width, int *height, gks_state_list_t *gkss, const char *text, int length);
+  unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_state_list_t *gkss, const char *text,
+                                   int length);
+  void *gks_ft_get_face(int);
+  void gks_ft_terminate(void);
 
 #ifdef __cplusplus
 }

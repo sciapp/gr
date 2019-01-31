@@ -4,6 +4,6 @@
  * CodeWarrior doesn't support any project-wide
  * preprocessor settings directly. Sigh.
  */
- 
+
 #define MAC
 #define DROPUNIX

@@ -15,7 +15,7 @@
 are supported!"
 #endif
 
-int  gr3_initGL_CGL_(void);
+int gr3_initGL_CGL_(void);
 void gr3_terminateGL_CGL_(void);
 
 #endif

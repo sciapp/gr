@@ -24,10 +24,8 @@ extern "C"
 
 #endif
 
-DLLEXPORT void gks_zmqplugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2,
-  int lc, char *chars, void **ptr);
+  DLLEXPORT void gks_zmqplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
+                               int lc, char *chars, void **ptr);
 
 #ifdef __cplusplus
 }
@@ -35,32 +33,28 @@ DLLEXPORT void gks_zmqplugin(
 
 
 typedef struct
-  {
-    void *context;
-    void *publisher;
-    gks_display_list_t dl;
-  }
-ws_state_list;
+{
+  void *context;
+  void *publisher;
+  gks_display_list_t dl;
+} ws_state_list;
 
 #ifndef NO_ZMQ
 
-static
-gks_state_list_t *gkss;
+static gks_state_list_t *gkss;
 
-void gks_zmqplugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2,
-  int lc, char *chars, void **ptr)
+void gks_zmqplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                   char *chars, void **ptr)
 {
   ws_state_list *wss;
-  
-  wss = (ws_state_list *) *ptr;
+
+  wss = (ws_state_list *)*ptr;
 
   switch (fctid)
     {
     case 2:
-      gkss = (gks_state_list_t *) *ptr;      
-      wss = (ws_state_list *) gks_malloc(sizeof(ws_state_list));
+      gkss = (gks_state_list_t *)*ptr;
+      wss = (ws_state_list *)gks_malloc(sizeof(ws_state_list));
 
       wss->context = zmq_ctx_new();
       wss->publisher = zmq_socket(wss->context, ZMQ_PUSH);
@@ -82,31 +76,28 @@ void gks_zmqplugin(
     case 8:
       if (ia[1] == GKS_K_PERFORM_FLAG)
         {
-          zmq_send(wss->publisher, (char *) &wss->dl.nbytes, sizeof(int), 0);
+          zmq_send(wss->publisher, (char *)&wss->dl.nbytes, sizeof(int), 0);
           zmq_send(wss->publisher, wss->dl.buffer, wss->dl.nbytes, 0);
         }
       break;
-  }
+    }
 
   if (wss != NULL)
     {
-      gks_dl_write_item(
-        &wss->dl, fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, gkss);
+      gks_dl_write_item(&wss->dl, fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, gkss);
     }
 }
 
 #else
 
-void gks_zmqplugin(
-  int fctid, int dx, int dy, int dimx, int *ia,
-  int lr1, double *r1, int lr2, double *r2,
-  int lc, char *chars, void **ptr)
+void gks_zmqplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
+                   char *chars, void **ptr)
 {
   if (fctid == 2)
-  {
-    gks_perror("0MQ support not compiled in");
-    ia[0] = 0;
-  }
+    {
+      gks_perror("0MQ support not compiled in");
+      ia[0] = 0;
+    }
 }
 
 #endif

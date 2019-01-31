@@ -51,41 +51,35 @@ typedef struct
 {
   int index;
   double red, green, blue;
-}
-color_t;
+} color_t;
 
 typedef struct
 {
   double xmin, xmax, ymin, ymax;
-}
-rect_t;
+} rect_t;
 
 typedef struct
 {
   double a, b, c, d;
-}
-norm_xform;
+} norm_xform;
 
 typedef struct
 {
   int scale_options;
   double xmin, xmax, ymin, ymax, zmin, zmax, a, b, c, d, e, f;
-}
-linear_xform;
+} linear_xform;
 
 typedef struct
 {
   double zmin, zmax;
   int phi, delta;
   double a1, a2, b, c1, c2, c3, d;
-}
-world_xform;
+} world_xform;
 
 typedef struct
 {
   double x, y, z;
-}
-point_3d;
+} point_3d;
 
 typedef struct
 {
@@ -94,8 +88,7 @@ typedef struct
   double xmin, xmax;
   int initialize;
   double *buf, *ymin, *ymax;
-}
-hlr_t;
+} hlr_t;
 
 typedef struct
 {
@@ -119,101 +112,80 @@ typedef struct
   int tnr;
   double wn[4], vp[4];
   int scale_options;
-}
-state_list;
+} state_list;
 
-static
-norm_xform nx = { 1, 0, 1, 0 };
+static norm_xform nx = {1, 0, 1, 0};
 
-static
-linear_xform lx = { 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0 };
+static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
 
-static
-world_xform wx = { 0, 1, 60, 60, 0, 0, 0, 0, 0, 0, 0 };
+static world_xform wx = {0, 1, 60, 60, 0, 0, 0, 0, 0, 0, 0};
 
-static
-hlr_t hlr = { 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, NULL, NULL, NULL };
+static hlr_t hlr = {1, 0, 1, 0, 1, 0, 1, 0, 1, 1, NULL, NULL, NULL};
 
-static
-int predef_colors[20] = {
-  9, 2, 0, 1, 16, 3, 15, 8, 6, 10, 11, 4, 12, 13, 14, 7, 5, 17, 18, 19
-};
+static int predef_colors[20] = {9, 2, 0, 1, 16, 3, 15, 8, 6, 10, 11, 4, 12, 13, 14, 7, 5, 17, 18, 19};
 
 #define MAX_SAVESTATE 16
 
-static
-state_list *state = NULL;
+static state_list *state = NULL;
 
 #define MAX_CONTEXT 8
 
-static
-state_list *ctx, *app_context[MAX_CONTEXT] = {
-  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
-};
+static state_list *ctx, *app_context[MAX_CONTEXT] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
-static
-void (*previous_handler)(int);
+static void (*previous_handler)(int);
 
-static
-int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
+static int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
 
-static
-char *display = NULL;
+static char *display = NULL;
 
-static
-double vxmin = 0.2, vxmax = 0.9, vymin = 0.2, vymax = 0.9;
+static double vxmin = 0.2, vxmax = 0.9, vymin = 0.2, vymax = 0.9;
 
-static
-double cxl, cxr, cyf, cyb, czb, czt;
+static double cxl, cxr, cyf, cyb, czb, czt;
 
-static
-int arrow_style = 0;
+static int arrow_style = 0;
 
-static
-double arrow_size = 1;
+static double arrow_size = 1;
 
-static
-int flag_printing = 0, flag_graphics = 0;
+static int flag_printing = 0, flag_graphics = 0;
 
 #define DEFAULT_FIRST_COLOR 8
 #define DEFAULT_LAST_COLOR 79
 
-static
-int first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
+static int first_color = DEFAULT_FIRST_COLOR, last_color = DEFAULT_LAST_COLOR;
 
 #define MAX_COLOR 1256
 
-static
-unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
+static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 
 #define MAX_TICKS 500
 
-#define check_autoinit if (autoinit) initgks()
+#define check_autoinit \
+  if (autoinit) initgks()
 
-#define check_tick_marks(amin, amax, atick, axis) \
-  if ((amax - amin) / atick > MAX_TICKS) \
-    { \
-      atick = gr_tick(amin, amax); \
+#define check_tick_marks(amin, amax, atick, axis)           \
+  if ((amax - amin) / atick > MAX_TICKS)                    \
+    {                                                       \
+      atick = gr_tick(amin, amax);                          \
       fprintf(stderr, "auto-adjust %c tick marks\n", axis); \
     }
 
 #define nint(x) (int)((x) + 0.5)
 #define round(x) (x < 0 ? ceil(x - .5) : floor(x + .5))
-#define iround(x) ((int) round(x))
+#define iround(x) ((int)round(x))
 #define gauss(x) floor(x)
-#define igauss(x) ((int) gauss(x))
+#define igauss(x) ((int)gauss(x))
 
 #define NDC 0
-#define WC  1
+#define WC 1
 
 #define POINT_INC 2048
 
 /* Path definitions */
-#define STOP      0
-#define MOVETO    1
-#define LINETO    2
-#define CURVE3    3
-#define CURVE4    4
+#define STOP 0
+#define MOVETO 1
+#define LINETO 2
+#define CURVE3 3
+#define CURVE4 4
 #define CLOSEPOLY 0x4f
 
 #define RESOLUTION_X 4096
@@ -236,828 +208,542 @@ unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 #define OPTION_FLIP_Y (1 << 4)
 #define OPTION_FLIP_Z (1 << 5)
 
-#define LEFT   (1<<0)
-#define RIGHT  (1<<1)
-#define FRONT  (1<<2)
-#define BACK   (1<<3)
-#define BOTTOM (1<<4)
-#define TOP    (1<<5)
+#define LEFT (1 << 0)
+#define RIGHT (1 << 1)
+#define FRONT (1 << 2)
+#define BACK (1 << 3)
+#define BOTTOM (1 << 4)
+#define TOP (1 << 5)
 
-#define SPEC_LINE    (1<<0)
-#define SPEC_MARKER  (1<<1)
-#define SPEC_COLOR   (1<<2)
+#define SPEC_LINE (1 << 0)
+#define SPEC_MARKER (1 << 1)
+#define SPEC_COLOR (1 << 2)
 
 #define XML_HEADER "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
-#define GR_HEADER  "<gr>\n"
+#define GR_HEADER "<gr>\n"
 #define GR_TRAILER "</gr>\n"
 
 typedef enum
 {
-  OPTION_LINES, OPTION_MESH, OPTION_FILLED_MESH, OPTION_Z_SHADED_MESH,
-  OPTION_COLORED_MESH, OPTION_CELL_ARRAY, OPTION_SHADED_MESH
-}
-surface_option_t;
+  OPTION_LINES,
+  OPTION_MESH,
+  OPTION_FILLED_MESH,
+  OPTION_Z_SHADED_MESH,
+  OPTION_COLORED_MESH,
+  OPTION_CELL_ARRAY,
+  OPTION_SHADED_MESH
+} surface_option_t;
 
 typedef enum
 {
-  MODEL_RGB, MODEL_HSV
-}
-color_model_t;
+  MODEL_RGB,
+  MODEL_HSV
+} color_model_t;
 
 typedef struct
 {
   char *format;
   double width, height;
-}
-format_t;
+} format_t;
 
 #ifndef max
-#define max(a,b) ((a) > (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
 #ifndef min
-#define min(a,b) ((a) < (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
 #define arc(angle) (M_PI * (angle) / 180.0)
-#define deg(rad) ((rad) * 180.0 / M_PI)
+#define deg(rad) ((rad)*180.0 / M_PI)
 
-static
-unsigned char *opcode = NULL;
+static unsigned char *opcode = NULL;
 
-static
-double *xpath = NULL, *xpoint = NULL, *ypath = NULL, *ypoint = NULL,
-       *zpoint = NULL;
+static double *xpath = NULL, *xpoint = NULL, *ypath = NULL, *ypoint = NULL, *zpoint = NULL;
 
-static
-int npoints = 0, maxpath = 0, npath = 0;
+static int npoints = 0, maxpath = 0, npath = 0;
 
 /*  0 - 20    21 - 45    46 - 70    71 - 90           rot/  */
-static
-int rep_table[16][3] =
-{                    /*   tilt  */
-  {2, 2, 2}, {2, 2, 2}, {1, 3, 2}, {1, 3, 3},    /*  0 - 20 */
-  {2, 0, 0}, {2, 0, 0}, {1, 3, 2}, {1, 3, 1},    /* 21 - 45 */
-  {2, 0, 0}, {0, 0, 0}, {1, 3, 0}, {1, 3, 1},    /* 46 - 70 */
-  {0, 0, 0}, {0, 0, 0}, {1, 3, 0}, {1, 3, 1}     /* 71 - 90 */
+static int rep_table[16][3] = {
+    /*   tilt  */
+    {2, 2, 2}, {2, 2, 2}, {1, 3, 2}, {1, 3, 3}, /*  0 - 20 */
+    {2, 0, 0}, {2, 0, 0}, {1, 3, 2}, {1, 3, 1}, /* 21 - 45 */
+    {2, 0, 0}, {0, 0, 0}, {1, 3, 0}, {1, 3, 1}, /* 46 - 70 */
+    {0, 0, 0}, {0, 0, 0}, {1, 3, 0}, {1, 3, 1}  /* 71 - 90 */
 };
 
-static
-int axes_rep[4][3] =
-{
-  {1, 1, 1}, {1, 1, 2}, {0, 0, 0}, {0, 0, 3}
-};
+static int axes_rep[4][3] = {{1, 1, 1}, {1, 1, 2}, {0, 0, 0}, {0, 0, 3}};
 
-static
-int angle[4] = {20, 45, 70, 90};
+static int angle[4] = {20, 45, 70, 90};
 
-static
-format_t formats[] = {
-  { "A4",        0.210, 0.297 },
-  { "B5",        0.176, 0.250 },
-  { "Letter",    0.216, 0.279 },
-  { "Legal",     0.216, 0.356 },
-  { "Executive", 0.191, 0.254 },
-  { "A0",        0.841, 1.189 },
-  { "A1",        0.594, 0.841 },
-  { "A2",        0.420, 0.594 },
-  { "A3",        0.297, 0.420 },
-  { "A5",        0.148, 0.210 },
-  { "A6",        0.105, 0.148 },
-  { "A7",        0.074, 0.105 },
-  { "A8",        0.052, 0.074 },
-  { "A9",        0.037, 0.052 },
-  { "B0",        1.000, 1.414 },
-  { "B1",        0.500, 0.707 },
-  { "B10",       0.031, 0.044 },
-  { "B2",        0.500, 0.707 },
-  { "B3",        0.353, 0.500 },
-  { "B4",        0.250, 0.353 },
-  { "B6",        0.125, 0.176 },
-  { "B7",        0.088, 0.125 },
-  { "B8",        0.062, 0.088 },
-  { "B9",        0.044, 0.062 },
-  { "C5E",       0.163, 0.229 },
-  { "Comm10E",   0.105, 0.241 },
-  { "DLE",       0.110, 0.220 },
-  { "Folio",     0.210, 0.330 },
-  { "Ledger",    0.432, 0.279 },
-  { "Tabloid",   0.279, 0.432 },
-  { NULL,        0.000, 0.000 }
-};
+static format_t formats[] = {
+    {"A4", 0.210, 0.297},        {"B5", 0.176, 0.250},      {"Letter", 0.216, 0.279}, {"Legal", 0.216, 0.356},
+    {"Executive", 0.191, 0.254}, {"A0", 0.841, 1.189},      {"A1", 0.594, 0.841},     {"A2", 0.420, 0.594},
+    {"A3", 0.297, 0.420},        {"A5", 0.148, 0.210},      {"A6", 0.105, 0.148},     {"A7", 0.074, 0.105},
+    {"A8", 0.052, 0.074},        {"A9", 0.037, 0.052},      {"B0", 1.000, 1.414},     {"B1", 0.500, 0.707},
+    {"B10", 0.031, 0.044},       {"B2", 0.500, 0.707},      {"B3", 0.353, 0.500},     {"B4", 0.250, 0.353},
+    {"B6", 0.125, 0.176},        {"B7", 0.088, 0.125},      {"B8", 0.062, 0.088},     {"B9", 0.044, 0.062},
+    {"C5E", 0.163, 0.229},       {"Comm10E", 0.105, 0.241}, {"DLE", 0.110, 0.220},    {"Folio", 0.210, 0.330},
+    {"Ledger", 0.432, 0.279},    {"Tabloid", 0.279, 0.432}, {NULL, 0.000, 0.000}};
 
-static
-int vertex_list[18][25] = {
-  { 3, -10,80, 0,100, 10,80, 2, 0,100, 0,-100, 0 },
-  { 3, -7,80, 0,100, 7,80, 2, 0,100, 0,-100, 0 },
-  { 6, 0,85, -10,80, 0,100, 10,80, 0,85, 0,-100, 0 },
-  { -4, 0,85, -10,80, 0,100, 10,80, 2, 0,85, 0,-100, 0 },
-  { 6, 0,80, -10,80, 0,100, 10,80, 0,80, 0,-100, 0 },
-  { -4, 0,80, -10,80, 0,100, 10,80, 2, 0,80, 0,-100, 0 },
-  { 6, 0,75, -10,80, 0,100, 10,80, 0,75, 0,-100, 0 },
-  { -4, 0,75, -10,80, 0,100, 10,80, 2, 0,75, 0,-100, 0 },
-  { 3, -10,80, 0,100, 10,80, 2, 0,100, 0,-100, 3, -10,-80, 0,-100, 10,-80, 0 },
-  { 3, -7,80, 0,100, 7,80, 2, 0,100, 0,-100, 3, -7,-80, 0,-100, 7,-80, 0 },
-  { 10, 0,85, -10,80, 0,100, 10,80, 0,85, 0,-85, -10,-80, 0,-100, 10,-80,
-    0,-85, 0 },
-  { -4, 0,85, -10,80, 0,100, 10,80, 2, 0,85, 0,-85, -4, -10,-80, 0,-100,
-    10,-80, 0,-85, 0 },
-  { 10, 0,80, -10,80, 0,100, 10,80, 0,80, 0,-80, -10,-80, 0,-100, 10,-80,
-    0,-80, 0 },
-  { -4, 0,80, -10,80, 0,100, 10,80, 2, 0,80, 0,-80, -4, -10,-80, 0,-100,
-    10,-80, 0,-80, 0 },
-  { 10, 0,75, -10,80, 0,100, 10,80, 0,75, 0,-75, -10,-80, 0,-100, 10,-80,
-    0,-75, 0 },
-  { -4, 0,75, -10,80, 0,100, 10,80, 2, 0,75, 0,-75, -4, -10,-80, 0,-100,
-    10,-80, 0,-75, 0 },
-  { 3, -10,80, 0,100, 10,80, 2, -1,98, -1,-100, 2, 1,98, 1,-100, 0 },
-  { 3, -10,80, 0,100, 10,80, 2, -1,98, -1,-98, 3, -10,-80, 0,-100, 10,-80,
-    2, 1,98, 1,-98, 0 }
-};
+static int vertex_list[18][25] = {
+    {3, -10, 80, 0, 100, 10, 80, 2, 0, 100, 0, -100, 0},
+    {3, -7, 80, 0, 100, 7, 80, 2, 0, 100, 0, -100, 0},
+    {6, 0, 85, -10, 80, 0, 100, 10, 80, 0, 85, 0, -100, 0},
+    {-4, 0, 85, -10, 80, 0, 100, 10, 80, 2, 0, 85, 0, -100, 0},
+    {6, 0, 80, -10, 80, 0, 100, 10, 80, 0, 80, 0, -100, 0},
+    {-4, 0, 80, -10, 80, 0, 100, 10, 80, 2, 0, 80, 0, -100, 0},
+    {6, 0, 75, -10, 80, 0, 100, 10, 80, 0, 75, 0, -100, 0},
+    {-4, 0, 75, -10, 80, 0, 100, 10, 80, 2, 0, 75, 0, -100, 0},
+    {3, -10, 80, 0, 100, 10, 80, 2, 0, 100, 0, -100, 3, -10, -80, 0, -100, 10, -80, 0},
+    {3, -7, 80, 0, 100, 7, 80, 2, 0, 100, 0, -100, 3, -7, -80, 0, -100, 7, -80, 0},
+    {10, 0, 85, -10, 80, 0, 100, 10, 80, 0, 85, 0, -85, -10, -80, 0, -100, 10, -80, 0, -85, 0},
+    {-4, 0, 85, -10, 80, 0, 100, 10, 80, 2, 0, 85, 0, -85, -4, -10, -80, 0, -100, 10, -80, 0, -85, 0},
+    {10, 0, 80, -10, 80, 0, 100, 10, 80, 0, 80, 0, -80, -10, -80, 0, -100, 10, -80, 0, -80, 0},
+    {-4, 0, 80, -10, 80, 0, 100, 10, 80, 2, 0, 80, 0, -80, -4, -10, -80, 0, -100, 10, -80, 0, -80, 0},
+    {10, 0, 75, -10, 80, 0, 100, 10, 80, 0, 75, 0, -75, -10, -80, 0, -100, 10, -80, 0, -75, 0},
+    {-4, 0, 75, -10, 80, 0, 100, 10, 80, 2, 0, 75, 0, -75, -4, -10, -80, 0, -100, 10, -80, 0, -75, 0},
+    {3, -10, 80, 0, 100, 10, 80, 2, -1, 98, -1, -100, 2, 1, 98, 1, -100, 0},
+    {3, -10, 80, 0, 100, 10, 80, 2, -1, 98, -1, -98, 3, -10, -80, 0, -100, 10, -80, 2, 1, 98, 1, -98, 0}};
 
-static
-int colormap = 0;
+static int colormap = 0;
 
-static
-int cmap[48][72] = {
-  { /* COLORMAP_UNIFORM */
-    0x2020df, 0x3020df, 0x4020df, 0x5020df, 0x6020df, 0x7120df,
-    0x8020df, 0x9120df, 0xa120df, 0xb120df, 0xc120df, 0xd120df,
-    0xdf20de, 0xdf20cd, 0xdf20bd, 0xdf20ad, 0xdf209d, 0xdf208d,
-    0xdf207d, 0xdf206d, 0xdf205d, 0xdf204c, 0xdf203c, 0xdf202c,
-    0xdf2420, 0xdf3420, 0xdf4420, 0xdf5420, 0xdf6420, 0xdf7520,
-    0xdf8420, 0xdf9420, 0xdfa520, 0xdfb520, 0xdfc520, 0xdfd520,
-    0xd9df20, 0xc9df20, 0xb9df20, 0xa9df20, 0x99df20, 0x89df20,
-    0x79df20, 0x69df20, 0x59df20, 0x49df20, 0x38df20, 0x28df20,
-    0x20df28, 0x20df38, 0x20df48, 0x20df58, 0x20df68, 0x20df78,
-    0x20df88, 0x20df98, 0x20dfa9, 0x20dfb9, 0x20dfc9, 0x20dfd9,
-    0x20d6df, 0x20c6df, 0x20b5df, 0x20a5df, 0x2095df, 0x2085df,
-    0x2075df, 0x2065df, 0x2055df, 0x2045df, 0x2034df, 0x2024df },
+static int cmap[48][72] = {
+    {/* COLORMAP_UNIFORM */
+     0x2020df, 0x3020df, 0x4020df, 0x5020df, 0x6020df, 0x7120df, 0x8020df, 0x9120df, 0xa120df, 0xb120df, 0xc120df,
+     0xd120df, 0xdf20de, 0xdf20cd, 0xdf20bd, 0xdf20ad, 0xdf209d, 0xdf208d, 0xdf207d, 0xdf206d, 0xdf205d, 0xdf204c,
+     0xdf203c, 0xdf202c, 0xdf2420, 0xdf3420, 0xdf4420, 0xdf5420, 0xdf6420, 0xdf7520, 0xdf8420, 0xdf9420, 0xdfa520,
+     0xdfb520, 0xdfc520, 0xdfd520, 0xd9df20, 0xc9df20, 0xb9df20, 0xa9df20, 0x99df20, 0x89df20, 0x79df20, 0x69df20,
+     0x59df20, 0x49df20, 0x38df20, 0x28df20, 0x20df28, 0x20df38, 0x20df48, 0x20df58, 0x20df68, 0x20df78, 0x20df88,
+     0x20df98, 0x20dfa9, 0x20dfb9, 0x20dfc9, 0x20dfd9, 0x20d6df, 0x20c6df, 0x20b5df, 0x20a5df, 0x2095df, 0x2085df,
+     0x2075df, 0x2065df, 0x2055df, 0x2045df, 0x2034df, 0x2024df},
 
-  { /* COLORMAP_TEMPERATURE */
-    0x000080, 0x000090, 0x0000a0, 0x0000b1, 0x0000c1, 0x0000d1,
-    0x0000e1, 0x0000f2, 0x0000ff, 0x0002ff, 0x0011ff, 0x001fff,
-    0x002dff, 0x003cff, 0x004aff, 0x0058ff, 0x0066ff, 0x0074ff,
-    0x0084ff, 0x0092ff, 0x00a0ff, 0x00afff, 0x00bdff, 0x00cbff,
-    0x00daff, 0x01e7f5, 0x0df7ea, 0x19ffde, 0x25ffd2, 0x31ffc7,
-    0x3bffbb, 0x47ffb0, 0x53ffa4, 0x5fff98, 0x6aff8d, 0x76ff81,
-    0x81ff76, 0x8dff6a, 0x98ff5f, 0xa4ff53, 0xb0ff47, 0xbbff3b,
-    0xc7ff31, 0xd2ff25, 0xdeff19, 0xeaff0d, 0xf5f701, 0xffeb00,
-    0xffdd00, 0xffd000, 0xffc200, 0xffb500, 0xffa800, 0xff9b00,
-    0xff8d00, 0xff8000, 0xff7200, 0xff6500, 0xff5800, 0xff4a00,
-    0xff3d00, 0xff3000, 0xff2300, 0xff1500, 0xf20800, 0xe20000,
-    0xd10000, 0xc10000, 0xb10000, 0xa00000, 0x900000, 0x800000 },
+    {/* COLORMAP_TEMPERATURE */
+     0x000080, 0x000090, 0x0000a0, 0x0000b1, 0x0000c1, 0x0000d1, 0x0000e1, 0x0000f2, 0x0000ff, 0x0002ff, 0x0011ff,
+     0x001fff, 0x002dff, 0x003cff, 0x004aff, 0x0058ff, 0x0066ff, 0x0074ff, 0x0084ff, 0x0092ff, 0x00a0ff, 0x00afff,
+     0x00bdff, 0x00cbff, 0x00daff, 0x01e7f5, 0x0df7ea, 0x19ffde, 0x25ffd2, 0x31ffc7, 0x3bffbb, 0x47ffb0, 0x53ffa4,
+     0x5fff98, 0x6aff8d, 0x76ff81, 0x81ff76, 0x8dff6a, 0x98ff5f, 0xa4ff53, 0xb0ff47, 0xbbff3b, 0xc7ff31, 0xd2ff25,
+     0xdeff19, 0xeaff0d, 0xf5f701, 0xffeb00, 0xffdd00, 0xffd000, 0xffc200, 0xffb500, 0xffa800, 0xff9b00, 0xff8d00,
+     0xff8000, 0xff7200, 0xff6500, 0xff5800, 0xff4a00, 0xff3d00, 0xff3000, 0xff2300, 0xff1500, 0xf20800, 0xe20000,
+     0xd10000, 0xc10000, 0xb10000, 0xa00000, 0x900000, 0x800000},
 
-  { /* COLORMAP_GRAYSCALE */
-    0x000000, 0x040404, 0x070707, 0x0b0b0b, 0x0e0e0e, 0x121212,
-    0x161616, 0x191919, 0x1d1d1d, 0x202020, 0x242424, 0x282828,
-    0x2b2b2b, 0x2f2f2f, 0x323232, 0x363636, 0x393939, 0x3d3d3d,
-    0x414141, 0x444444, 0x484848, 0x4b4b4b, 0x4f4f4f, 0x535353,
-    0x565656, 0x5a5a5a, 0x5d5d5d, 0x616161, 0x656565, 0x686868,
-    0x6c6c6c, 0x6f6f6f, 0x737373, 0x777777, 0x7a7a7a, 0x7e7e7e,
-    0x808080, 0x848484, 0x878787, 0x8b8b8b, 0x8f8f8f, 0x929292,
-    0x969696, 0x999999, 0x9d9d9d, 0xa1a1a1, 0xa4a4a4, 0xa8a8a8,
-    0xababab, 0xafafaf, 0xb3b3b3, 0xb6b6b6, 0xbababa, 0xbdbdbd,
-    0xc1c1c1, 0xc5c5c5, 0xc8c8c8, 0xcccccc, 0xcfcfcf, 0xd3d3d3,
-    0xd6d6d6, 0xdadada, 0xdedede, 0xe1e1e1, 0xe5e5e5, 0xe8e8e8,
-    0xececec, 0xf0f0f0, 0xf3f3f3, 0xf7f7f7, 0xfafafa, 0xfefefe },
+    {/* COLORMAP_GRAYSCALE */
+     0x000000, 0x040404, 0x070707, 0x0b0b0b, 0x0e0e0e, 0x121212, 0x161616, 0x191919, 0x1d1d1d, 0x202020, 0x242424,
+     0x282828, 0x2b2b2b, 0x2f2f2f, 0x323232, 0x363636, 0x393939, 0x3d3d3d, 0x414141, 0x444444, 0x484848, 0x4b4b4b,
+     0x4f4f4f, 0x535353, 0x565656, 0x5a5a5a, 0x5d5d5d, 0x616161, 0x656565, 0x686868, 0x6c6c6c, 0x6f6f6f, 0x737373,
+     0x777777, 0x7a7a7a, 0x7e7e7e, 0x808080, 0x848484, 0x878787, 0x8b8b8b, 0x8f8f8f, 0x929292, 0x969696, 0x999999,
+     0x9d9d9d, 0xa1a1a1, 0xa4a4a4, 0xa8a8a8, 0xababab, 0xafafaf, 0xb3b3b3, 0xb6b6b6, 0xbababa, 0xbdbdbd, 0xc1c1c1,
+     0xc5c5c5, 0xc8c8c8, 0xcccccc, 0xcfcfcf, 0xd3d3d3, 0xd6d6d6, 0xdadada, 0xdedede, 0xe1e1e1, 0xe5e5e5, 0xe8e8e8,
+     0xececec, 0xf0f0f0, 0xf3f3f3, 0xf7f7f7, 0xfafafa, 0xfefefe},
 
-  { /* COLORMAP_GLOWING */
-    0x000000, 0x580400, 0x690700, 0x730b00, 0x7c0e00, 0x831200,
-    0x891600, 0x8f1900, 0x941d00, 0x982000, 0x9c2400, 0xa02800,
-    0xa32b00, 0xa72f00, 0xaa3200, 0xad3601, 0xaf3901, 0xb23d01,
-    0xb54101, 0xb74401, 0xba4802, 0xbc4b02, 0xbe4f02, 0xc05303,
-    0xc25603, 0xc45a04, 0xc65d04, 0xc86105, 0xca6506, 0xcc6807,
-    0xce6c08, 0xcf6f09, 0xd1730a, 0xd2770c, 0xd47a0d, 0xd67e0f,
-    0xd78010, 0xd88413, 0xda8714, 0xdb8b17, 0xdd8f1a, 0xde921c,
-    0xdf961f, 0xe19921, 0xe29d25, 0xe3a129, 0xe4a42c, 0xe6a830,
-    0xe7ab34, 0xe8af39, 0xeab33d, 0xeab643, 0xecba49, 0xedbd4e,
-    0xeec154, 0xefc55a, 0xf0c861, 0xf1cc68, 0xf2cf70, 0xf3d378,
-    0xf4d680, 0xf5da89, 0xf6de92, 0xf7e19c, 0xf8e5a6, 0xf9e8b0,
-    0xfaecbb, 0xfbf0c7, 0xfcf3d3, 0xfdf7e0, 0xfefaed, 0xfffefb },
+    {/* COLORMAP_GLOWING */
+     0x000000, 0x580400, 0x690700, 0x730b00, 0x7c0e00, 0x831200, 0x891600, 0x8f1900, 0x941d00, 0x982000, 0x9c2400,
+     0xa02800, 0xa32b00, 0xa72f00, 0xaa3200, 0xad3601, 0xaf3901, 0xb23d01, 0xb54101, 0xb74401, 0xba4802, 0xbc4b02,
+     0xbe4f02, 0xc05303, 0xc25603, 0xc45a04, 0xc65d04, 0xc86105, 0xca6506, 0xcc6807, 0xce6c08, 0xcf6f09, 0xd1730a,
+     0xd2770c, 0xd47a0d, 0xd67e0f, 0xd78010, 0xd88413, 0xda8714, 0xdb8b17, 0xdd8f1a, 0xde921c, 0xdf961f, 0xe19921,
+     0xe29d25, 0xe3a129, 0xe4a42c, 0xe6a830, 0xe7ab34, 0xe8af39, 0xeab33d, 0xeab643, 0xecba49, 0xedbd4e, 0xeec154,
+     0xefc55a, 0xf0c861, 0xf1cc68, 0xf2cf70, 0xf3d378, 0xf4d680, 0xf5da89, 0xf6de92, 0xf7e19c, 0xf8e5a6, 0xf9e8b0,
+     0xfaecbb, 0xfbf0c7, 0xfcf3d3, 0xfdf7e0, 0xfefaed, 0xfffefb},
 
-  { /* COLORMAP_RAINBOWLIKE */
-    0x800000, 0x8d0000, 0x9c0000, 0xaa0000, 0xb80000, 0xc70000,
-    0xd50000, 0xe40000, 0xf20000, 0xff0100, 0xff1000, 0xff1e00,
-    0xff2c00, 0xff3b00, 0xff4900, 0xff5700, 0xff6600, 0xff7400,
-    0xff8200, 0xff9000, 0xff9e00, 0xffad00, 0xffbb00, 0xffc900,
-    0xffd800, 0xffe600, 0xfff500, 0xfbff04, 0xedff12, 0xdeff21,
-    0xd0ff2f, 0xc2ff3d, 0xb3ff4c, 0xa5ff5a, 0x97ff68, 0x88ff77,
-    0x7bff84, 0x6cff93, 0x5effa1, 0x50ffaf, 0x41ffbe, 0x33ffcc,
-    0x25ffda, 0x16ffe9, 0x08fff7, 0x00f8ff, 0x00eaff, 0x00dcff,
-    0x00cdff, 0x00bfff, 0x00b1ff, 0x00a2ff, 0x0094ff, 0x0086ff,
-    0x0078ff, 0x006aff, 0x005bff, 0x004dff, 0x003fff, 0x0030ff,
-    0x0022ff, 0x0014ff, 0x0005ff, 0x0000f6, 0x0000e8, 0x0000d9,
-    0x0000cb, 0x0000bc, 0x0000ae, 0x0000a0, 0x000091, 0x000083 },
+    {/* COLORMAP_RAINBOWLIKE */
+     0x800000, 0x8d0000, 0x9c0000, 0xaa0000, 0xb80000, 0xc70000, 0xd50000, 0xe40000, 0xf20000, 0xff0100, 0xff1000,
+     0xff1e00, 0xff2c00, 0xff3b00, 0xff4900, 0xff5700, 0xff6600, 0xff7400, 0xff8200, 0xff9000, 0xff9e00, 0xffad00,
+     0xffbb00, 0xffc900, 0xffd800, 0xffe600, 0xfff500, 0xfbff04, 0xedff12, 0xdeff21, 0xd0ff2f, 0xc2ff3d, 0xb3ff4c,
+     0xa5ff5a, 0x97ff68, 0x88ff77, 0x7bff84, 0x6cff93, 0x5effa1, 0x50ffaf, 0x41ffbe, 0x33ffcc, 0x25ffda, 0x16ffe9,
+     0x08fff7, 0x00f8ff, 0x00eaff, 0x00dcff, 0x00cdff, 0x00bfff, 0x00b1ff, 0x00a2ff, 0x0094ff, 0x0086ff, 0x0078ff,
+     0x006aff, 0x005bff, 0x004dff, 0x003fff, 0x0030ff, 0x0022ff, 0x0014ff, 0x0005ff, 0x0000f6, 0x0000e8, 0x0000d9,
+     0x0000cb, 0x0000bc, 0x0000ae, 0x0000a0, 0x000091, 0x000083},
 
-  { /* COLORMAP_GEOLOGIC */
-    0x5555ff, 0x5158f8, 0x4e5af1, 0x4a5de9, 0x475fe2, 0x4362db,
-    0x3f65d4, 0x3c68cd, 0x386bc6, 0x356dbe, 0x3170b7, 0x2d73b0,
-    0x2a75a9, 0x2678a2, 0x237a9a, 0x1f7d93, 0x1c808c, 0x188385,
-    0x14867f, 0x118878, 0x0d8b70, 0x0a8d69, 0x069062, 0x02935b,
-    0x039556, 0x0d985a, 0x189a5d, 0x239d61, 0x2ea065, 0x38a368,
-    0x43a66c, 0x4ea86f, 0x59ab73, 0x64ae77, 0x6eb07a, 0x79b37e,
-    0x83b580, 0x8eb884, 0x98bb87, 0xa3be8b, 0xaec18f, 0xb9c392,
-    0xc4c696, 0xcec899, 0xd9cb9d, 0xe4cea1, 0xefd0a4, 0xf9d3a8,
-    0xfed2a6, 0xfacd9f, 0xf6c798, 0xf3c291, 0xefbc89, 0xecb782,
-    0xe8b27c, 0xe4ac75, 0xe1a76e, 0xdda267, 0xda9c5f, 0xd69758,
-    0xd39251, 0xcf8c4a, 0xcb8743, 0xc8823b, 0xc47c34, 0xc1772d,
-    0xbd7126, 0xb96c1f, 0xb66718, 0xb26110, 0xaf5c09, 0xab5602 },
+    {/* COLORMAP_GEOLOGIC */
+     0x5555ff, 0x5158f8, 0x4e5af1, 0x4a5de9, 0x475fe2, 0x4362db, 0x3f65d4, 0x3c68cd, 0x386bc6, 0x356dbe, 0x3170b7,
+     0x2d73b0, 0x2a75a9, 0x2678a2, 0x237a9a, 0x1f7d93, 0x1c808c, 0x188385, 0x14867f, 0x118878, 0x0d8b70, 0x0a8d69,
+     0x069062, 0x02935b, 0x039556, 0x0d985a, 0x189a5d, 0x239d61, 0x2ea065, 0x38a368, 0x43a66c, 0x4ea86f, 0x59ab73,
+     0x64ae77, 0x6eb07a, 0x79b37e, 0x83b580, 0x8eb884, 0x98bb87, 0xa3be8b, 0xaec18f, 0xb9c392, 0xc4c696, 0xcec899,
+     0xd9cb9d, 0xe4cea1, 0xefd0a4, 0xf9d3a8, 0xfed2a6, 0xfacd9f, 0xf6c798, 0xf3c291, 0xefbc89, 0xecb782, 0xe8b27c,
+     0xe4ac75, 0xe1a76e, 0xdda267, 0xda9c5f, 0xd69758, 0xd39251, 0xcf8c4a, 0xcb8743, 0xc8823b, 0xc47c34, 0xc1772d,
+     0xbd7126, 0xb96c1f, 0xb66718, 0xb26110, 0xaf5c09, 0xab5602},
 
-  { /* COLORMAP_GREENSCALE */
-    0x000000, 0x045800, 0x076900, 0x0b7300, 0x0e7c00, 0x128300,
-    0x168900, 0x198f00, 0x1d9400, 0x209800, 0x249c00, 0x28a000,
-    0x2ba300, 0x2fa700, 0x32aa00, 0x36ad01, 0x39af01, 0x3db201,
-    0x41b501, 0x44b701, 0x48ba02, 0x4bbc02, 0x4fbe02, 0x53c003,
-    0x56c203, 0x5ac404, 0x5dc604, 0x61c805, 0x65ca06, 0x68cc07,
-    0x6cce08, 0x6fcf09, 0x73d10a, 0x77d20c, 0x7ad40d, 0x7ed60f,
-    0x80d710, 0x84d813, 0x87da14, 0x8bdb17, 0x8fdd1a, 0x92de1c,
-    0x96df1f, 0x99e121, 0x9de225, 0xa1e329, 0xa4e42c, 0xa8e630,
-    0xabe734, 0xafe839, 0xb3ea3d, 0xb6ea43, 0xbaec49, 0xbded4e,
-    0xc1ee54, 0xc5ef5a, 0xc8f061, 0xccf168, 0xcff270, 0xd3f378,
-    0xd6f480, 0xdaf589, 0xdef692, 0xe1f79c, 0xe5f8a6, 0xe8f9b0,
-    0xecfabb, 0xf0fbc7, 0xf3fcd3, 0xf7fde0, 0xfafeed, 0xfefffb },
+    {/* COLORMAP_GREENSCALE */
+     0x000000, 0x045800, 0x076900, 0x0b7300, 0x0e7c00, 0x128300, 0x168900, 0x198f00, 0x1d9400, 0x209800, 0x249c00,
+     0x28a000, 0x2ba300, 0x2fa700, 0x32aa00, 0x36ad01, 0x39af01, 0x3db201, 0x41b501, 0x44b701, 0x48ba02, 0x4bbc02,
+     0x4fbe02, 0x53c003, 0x56c203, 0x5ac404, 0x5dc604, 0x61c805, 0x65ca06, 0x68cc07, 0x6cce08, 0x6fcf09, 0x73d10a,
+     0x77d20c, 0x7ad40d, 0x7ed60f, 0x80d710, 0x84d813, 0x87da14, 0x8bdb17, 0x8fdd1a, 0x92de1c, 0x96df1f, 0x99e121,
+     0x9de225, 0xa1e329, 0xa4e42c, 0xa8e630, 0xabe734, 0xafe839, 0xb3ea3d, 0xb6ea43, 0xbaec49, 0xbded4e, 0xc1ee54,
+     0xc5ef5a, 0xc8f061, 0xccf168, 0xcff270, 0xd3f378, 0xd6f480, 0xdaf589, 0xdef692, 0xe1f79c, 0xe5f8a6, 0xe8f9b0,
+     0xecfabb, 0xf0fbc7, 0xf3fcd3, 0xf7fde0, 0xfafeed, 0xfefffb},
 
-  { /* COLORMAP_CYANSCALE */
-    0x000000, 0x005804, 0x006907, 0x00730b, 0x007c0e, 0x008312,
-    0x008916, 0x008f19, 0x00941d, 0x009820, 0x009c24, 0x00a028,
-    0x00a32b, 0x00a72f, 0x00aa32, 0x01ad36, 0x01af39, 0x01b23d,
-    0x01b541, 0x01b744, 0x02ba48, 0x02bc4b, 0x02be4f, 0x03c053,
-    0x03c256, 0x04c45a, 0x04c65d, 0x05c861, 0x06ca65, 0x07cc68,
-    0x08ce6c, 0x09cf6f, 0x0ad173, 0x0cd277, 0x0dd47a, 0x0fd67e,
-    0x10d780, 0x13d884, 0x14da87, 0x17db8b, 0x1add8f, 0x1cde92,
-    0x1fdf96, 0x21e199, 0x25e29d, 0x29e3a1, 0x2ce4a4, 0x30e6a8,
-    0x34e7ab, 0x39e8af, 0x3deab3, 0x43eab6, 0x49ecba, 0x4eedbd,
-    0x54eec1, 0x5aefc5, 0x61f0c8, 0x68f1cc, 0x70f2cf, 0x78f3d3,
-    0x80f4d6, 0x89f5da, 0x92f6de, 0x9cf7e1, 0xa6f8e5, 0xb0f9e8,
-    0xbbfaec, 0xc7fbf0, 0xd3fcf3, 0xe0fdf7, 0xedfefa, 0xfbfffe },
+    {/* COLORMAP_CYANSCALE */
+     0x000000, 0x005804, 0x006907, 0x00730b, 0x007c0e, 0x008312, 0x008916, 0x008f19, 0x00941d, 0x009820, 0x009c24,
+     0x00a028, 0x00a32b, 0x00a72f, 0x00aa32, 0x01ad36, 0x01af39, 0x01b23d, 0x01b541, 0x01b744, 0x02ba48, 0x02bc4b,
+     0x02be4f, 0x03c053, 0x03c256, 0x04c45a, 0x04c65d, 0x05c861, 0x06ca65, 0x07cc68, 0x08ce6c, 0x09cf6f, 0x0ad173,
+     0x0cd277, 0x0dd47a, 0x0fd67e, 0x10d780, 0x13d884, 0x14da87, 0x17db8b, 0x1add8f, 0x1cde92, 0x1fdf96, 0x21e199,
+     0x25e29d, 0x29e3a1, 0x2ce4a4, 0x30e6a8, 0x34e7ab, 0x39e8af, 0x3deab3, 0x43eab6, 0x49ecba, 0x4eedbd, 0x54eec1,
+     0x5aefc5, 0x61f0c8, 0x68f1cc, 0x70f2cf, 0x78f3d3, 0x80f4d6, 0x89f5da, 0x92f6de, 0x9cf7e1, 0xa6f8e5, 0xb0f9e8,
+     0xbbfaec, 0xc7fbf0, 0xd3fcf3, 0xe0fdf7, 0xedfefa, 0xfbfffe},
 
-  { /* COLORMAP_BLUESCALE */
-    0x000000, 0x000458, 0x000769, 0x000b73, 0x000e7c, 0x001283,
-    0x001689, 0x00198f, 0x001d94, 0x002098, 0x00249c, 0x0028a0,
-    0x002ba3, 0x002fa7, 0x0032aa, 0x0136ad, 0x0139af, 0x013db2,
-    0x0141b5, 0x0144b7, 0x0248ba, 0x024bbc, 0x024fbe, 0x0353c0,
-    0x0356c2, 0x045ac4, 0x045dc6, 0x0561c8, 0x0665ca, 0x0768cc,
-    0x086cce, 0x096fcf, 0x0a73d1, 0x0c77d2, 0x0d7ad4, 0x0f7ed6,
-    0x1080d7, 0x1384d8, 0x1487da, 0x178bdb, 0x1a8fdd, 0x1c92de,
-    0x1f96df, 0x2199e1, 0x259de2, 0x29a1e3, 0x2ca4e4, 0x30a8e6,
-    0x34abe7, 0x39afe8, 0x3db3ea, 0x43b6ea, 0x49baec, 0x4ebded,
-    0x54c1ee, 0x5ac5ef, 0x61c8f0, 0x68ccf1, 0x70cff2, 0x78d3f3,
-    0x80d6f4, 0x89daf5, 0x92def6, 0x9ce1f7, 0xa6e5f8, 0xb0e8f9,
-    0xbbecfa, 0xc7f0fb, 0xd3f3fc, 0xe0f7fd, 0xedfafe, 0xfbfeff },
+    {/* COLORMAP_BLUESCALE */
+     0x000000, 0x000458, 0x000769, 0x000b73, 0x000e7c, 0x001283, 0x001689, 0x00198f, 0x001d94, 0x002098, 0x00249c,
+     0x0028a0, 0x002ba3, 0x002fa7, 0x0032aa, 0x0136ad, 0x0139af, 0x013db2, 0x0141b5, 0x0144b7, 0x0248ba, 0x024bbc,
+     0x024fbe, 0x0353c0, 0x0356c2, 0x045ac4, 0x045dc6, 0x0561c8, 0x0665ca, 0x0768cc, 0x086cce, 0x096fcf, 0x0a73d1,
+     0x0c77d2, 0x0d7ad4, 0x0f7ed6, 0x1080d7, 0x1384d8, 0x1487da, 0x178bdb, 0x1a8fdd, 0x1c92de, 0x1f96df, 0x2199e1,
+     0x259de2, 0x29a1e3, 0x2ca4e4, 0x30a8e6, 0x34abe7, 0x39afe8, 0x3db3ea, 0x43b6ea, 0x49baec, 0x4ebded, 0x54c1ee,
+     0x5ac5ef, 0x61c8f0, 0x68ccf1, 0x70cff2, 0x78d3f3, 0x80d6f4, 0x89daf5, 0x92def6, 0x9ce1f7, 0xa6e5f8, 0xb0e8f9,
+     0xbbecfa, 0xc7f0fb, 0xd3f3fc, 0xe0f7fd, 0xedfafe, 0xfbfeff},
 
-  { /* COLORMAP_MAGENTASCALE */
-    0x000000, 0x040058, 0x070069, 0x0b0073, 0x0e007c, 0x120083,
-    0x160089, 0x19008f, 0x1d0094, 0x200098, 0x24009c, 0x2800a0,
-    0x2b00a3, 0x2f00a7, 0x3200aa, 0x3601ad, 0x3901af, 0x3d01b2,
-    0x4101b5, 0x4401b7, 0x4802ba, 0x4b02bc, 0x4f02be, 0x5303c0,
-    0x5603c2, 0x5a04c4, 0x5d04c6, 0x6105c8, 0x6506ca, 0x6807cc,
-    0x6c08ce, 0x6f09cf, 0x730ad1, 0x770cd2, 0x7a0dd4, 0x7e0fd6,
-    0x8010d7, 0x8413d8, 0x8714da, 0x8b17db, 0x8f1add, 0x921cde,
-    0x961fdf, 0x9921e1, 0x9d25e2, 0xa129e3, 0xa42ce4, 0xa830e6,
-    0xab34e7, 0xaf39e8, 0xb33dea, 0xb643ea, 0xba49ec, 0xbd4eed,
-    0xc154ee, 0xc55aef, 0xc861f0, 0xcc68f1, 0xcf70f2, 0xd378f3,
-    0xd680f4, 0xda89f5, 0xde92f6, 0xe19cf7, 0xe5a6f8, 0xe8b0f9,
-    0xecbbfa, 0xf0c7fb, 0xf3d3fc, 0xf7e0fd, 0xfaedfe, 0xfefbff },
+    {/* COLORMAP_MAGENTASCALE */
+     0x000000, 0x040058, 0x070069, 0x0b0073, 0x0e007c, 0x120083, 0x160089, 0x19008f, 0x1d0094, 0x200098, 0x24009c,
+     0x2800a0, 0x2b00a3, 0x2f00a7, 0x3200aa, 0x3601ad, 0x3901af, 0x3d01b2, 0x4101b5, 0x4401b7, 0x4802ba, 0x4b02bc,
+     0x4f02be, 0x5303c0, 0x5603c2, 0x5a04c4, 0x5d04c6, 0x6105c8, 0x6506ca, 0x6807cc, 0x6c08ce, 0x6f09cf, 0x730ad1,
+     0x770cd2, 0x7a0dd4, 0x7e0fd6, 0x8010d7, 0x8413d8, 0x8714da, 0x8b17db, 0x8f1add, 0x921cde, 0x961fdf, 0x9921e1,
+     0x9d25e2, 0xa129e3, 0xa42ce4, 0xa830e6, 0xab34e7, 0xaf39e8, 0xb33dea, 0xb643ea, 0xba49ec, 0xbd4eed, 0xc154ee,
+     0xc55aef, 0xc861f0, 0xcc68f1, 0xcf70f2, 0xd378f3, 0xd680f4, 0xda89f5, 0xde92f6, 0xe19cf7, 0xe5a6f8, 0xe8b0f9,
+     0xecbbfa, 0xf0c7fb, 0xf3d3fc, 0xf7e0fd, 0xfaedfe, 0xfefbff},
 
-  { /* COLORMAP_REDSCALE */
-    0x000000, 0x580004, 0x690007, 0x73000b, 0x7c000e, 0x830012,
-    0x890016, 0x8f0019, 0x94001d, 0x980020, 0x9c0024, 0xa00028,
-    0xa3002b, 0xa7002f, 0xaa0032, 0xad0136, 0xaf0139, 0xb2013d,
-    0xb50141, 0xb70144, 0xba0248, 0xbc024b, 0xbe024f, 0xc00353,
-    0xc20356, 0xc4045a, 0xc6045d, 0xc80561, 0xca0665, 0xcc0768,
-    0xce086c, 0xcf096f, 0xd10a73, 0xd20c77, 0xd40d7a, 0xd60f7e,
-    0xd71080, 0xd81384, 0xda1487, 0xdb178b, 0xdd1a8f, 0xde1c92,
-    0xdf1f96, 0xe12199, 0xe2259d, 0xe329a1, 0xe42ca4, 0xe630a8,
-    0xe734ab, 0xe839af, 0xea3db3, 0xea43b6, 0xec49ba, 0xed4ebd,
-    0xee54c1, 0xef5ac5, 0xf061c8, 0xf168cc, 0xf270cf, 0xf378d3,
-    0xf480d6, 0xf589da, 0xf692de, 0xf79ce1, 0xf8a6e5, 0xf9b0e8,
-    0xfabbec, 0xfbc7f0, 0xfcd3f3, 0xfde0f7, 0xfeedfa, 0xfffbfe },
+    {/* COLORMAP_REDSCALE */
+     0x000000, 0x580004, 0x690007, 0x73000b, 0x7c000e, 0x830012, 0x890016, 0x8f0019, 0x94001d, 0x980020, 0x9c0024,
+     0xa00028, 0xa3002b, 0xa7002f, 0xaa0032, 0xad0136, 0xaf0139, 0xb2013d, 0xb50141, 0xb70144, 0xba0248, 0xbc024b,
+     0xbe024f, 0xc00353, 0xc20356, 0xc4045a, 0xc6045d, 0xc80561, 0xca0665, 0xcc0768, 0xce086c, 0xcf096f, 0xd10a73,
+     0xd20c77, 0xd40d7a, 0xd60f7e, 0xd71080, 0xd81384, 0xda1487, 0xdb178b, 0xdd1a8f, 0xde1c92, 0xdf1f96, 0xe12199,
+     0xe2259d, 0xe329a1, 0xe42ca4, 0xe630a8, 0xe734ab, 0xe839af, 0xea3db3, 0xea43b6, 0xec49ba, 0xed4ebd, 0xee54c1,
+     0xef5ac5, 0xf061c8, 0xf168cc, 0xf270cf, 0xf378d3, 0xf480d6, 0xf589da, 0xf692de, 0xf79ce1, 0xf8a6e5, 0xf9b0e8,
+     0xfabbec, 0xfbc7f0, 0xfcd3f3, 0xfde0f7, 0xfeedfa, 0xfffbfe},
 
-  { /* COLORMAP_FLAME */
-    0x80ffff, 0x72ffff, 0x63ffff, 0x55ffff, 0x47ffff, 0x38ffff,
-    0x2affff, 0x1bffff, 0x0dffff, 0x00feff, 0x00efff, 0x00e1ff,
-    0x00d3ff, 0x00c4ff, 0x00b6ff, 0x00a8ff, 0x0099ff, 0x008bff,
-    0x007dff, 0x006fff, 0x0061ff, 0x0052ff, 0x0044ff, 0x0036ff,
-    0x0027ff, 0x0019ff, 0x000aff, 0x0400fb, 0x1200ed, 0x2100de,
-    0x2f00d0, 0x3d00c2, 0x4c00b3, 0x5a00a5, 0x680097, 0x770088,
-    0x84007b, 0x93006c, 0xa1005e, 0xaf0050, 0xbe0041, 0xcc0033,
-    0xda0025, 0xe90016, 0xf70008, 0xff0700, 0xff1500, 0xff2300,
-    0xff3200, 0xff4000, 0xff4e00, 0xff5d00, 0xff6b00, 0xff7900,
-    0xff8700, 0xff9500, 0xffa400, 0xffb200, 0xffc000, 0xffcf00,
-    0xffdd00, 0xffeb00, 0xfffa00, 0xffff09, 0xffff17, 0xffff26,
-    0xffff34, 0xffff43, 0xffff51, 0xffff5f, 0xffff6e, 0xffff7c },
+    {/* COLORMAP_FLAME */
+     0x80ffff, 0x72ffff, 0x63ffff, 0x55ffff, 0x47ffff, 0x38ffff, 0x2affff, 0x1bffff, 0x0dffff, 0x00feff, 0x00efff,
+     0x00e1ff, 0x00d3ff, 0x00c4ff, 0x00b6ff, 0x00a8ff, 0x0099ff, 0x008bff, 0x007dff, 0x006fff, 0x0061ff, 0x0052ff,
+     0x0044ff, 0x0036ff, 0x0027ff, 0x0019ff, 0x000aff, 0x0400fb, 0x1200ed, 0x2100de, 0x2f00d0, 0x3d00c2, 0x4c00b3,
+     0x5a00a5, 0x680097, 0x770088, 0x84007b, 0x93006c, 0xa1005e, 0xaf0050, 0xbe0041, 0xcc0033, 0xda0025, 0xe90016,
+     0xf70008, 0xff0700, 0xff1500, 0xff2300, 0xff3200, 0xff4000, 0xff4e00, 0xff5d00, 0xff6b00, 0xff7900, 0xff8700,
+     0xff9500, 0xffa400, 0xffb200, 0xffc000, 0xffcf00, 0xffdd00, 0xffeb00, 0xfffa00, 0xffff09, 0xffff17, 0xffff26,
+     0xffff34, 0xffff43, 0xffff51, 0xffff5f, 0xffff6e, 0xffff7c},
 
-  { /* COLORMAP_BROWNSCALE */
-    0x8c2600, 0x8e2a00, 0x8f2c00, 0x913000, 0x933200, 0x943500,
-    0x963900, 0x973b00, 0x993f00, 0x9b4100, 0x9c4500, 0x9e4800,
-    0xa04b00, 0xa14e00, 0xa35100, 0xa45400, 0xa65700, 0xa85a00,
-    0xa95d00, 0xab6000, 0xad6300, 0xae6700, 0xb06900, 0xb16d00,
-    0xb36f00, 0xb57200, 0xb67500, 0xb87800, 0xba7c00, 0xbb7e00,
-    0xbd8200, 0xbe8400, 0xc08800, 0xc18b00, 0xc38e00, 0xc59100,
-    0xc69300, 0xc89700, 0xc99900, 0xcb9d00, 0xcda000, 0xcea300,
-    0xd0a600, 0xd1a900, 0xd3ac00, 0xd5af00, 0xd6b200, 0xd8b500,
-    0xd9b800, 0xdbbb00, 0xddbf00, 0xdec100, 0xe0c500, 0xe1c700,
-    0xe3cb00, 0xe5ce00, 0xe6d000, 0xe8d400, 0xe9d600, 0xebda00,
-    0xeddd00, 0xeee000, 0xf0e300, 0xf2e600, 0xf3e900, 0xf5ec00,
-    0xf6ef00, 0xf8f200, 0xfaf500, 0xfbf800, 0xfdfb00, 0xfffe00 },
+    {/* COLORMAP_BROWNSCALE */
+     0x8c2600, 0x8e2a00, 0x8f2c00, 0x913000, 0x933200, 0x943500, 0x963900, 0x973b00, 0x993f00, 0x9b4100, 0x9c4500,
+     0x9e4800, 0xa04b00, 0xa14e00, 0xa35100, 0xa45400, 0xa65700, 0xa85a00, 0xa95d00, 0xab6000, 0xad6300, 0xae6700,
+     0xb06900, 0xb16d00, 0xb36f00, 0xb57200, 0xb67500, 0xb87800, 0xba7c00, 0xbb7e00, 0xbd8200, 0xbe8400, 0xc08800,
+     0xc18b00, 0xc38e00, 0xc59100, 0xc69300, 0xc89700, 0xc99900, 0xcb9d00, 0xcda000, 0xcea300, 0xd0a600, 0xd1a900,
+     0xd3ac00, 0xd5af00, 0xd6b200, 0xd8b500, 0xd9b800, 0xdbbb00, 0xddbf00, 0xdec100, 0xe0c500, 0xe1c700, 0xe3cb00,
+     0xe5ce00, 0xe6d000, 0xe8d400, 0xe9d600, 0xebda00, 0xeddd00, 0xeee000, 0xf0e300, 0xf2e600, 0xf3e900, 0xf5ec00,
+     0xf6ef00, 0xf8f200, 0xfaf500, 0xfbf800, 0xfdfb00, 0xfffe00},
 
-  { /* COLORMAP_PILATUS */
-    0x000008, 0x000120, 0x010239, 0x010552, 0x02096d, 0x020e86,
-    0x04129c, 0x0515ad, 0x0619bf, 0x071ccf, 0x0920e1, 0x0a21f1,
-    0x1629fb, 0x333efb, 0x5459fb, 0x7579fb, 0x9698fc, 0xb8b9fd,
-    0xc1c9eb, 0xb7cdca, 0xaecfaa, 0xa4d48b, 0x9ad66b, 0x90da4f,
-    0x93dd49, 0x9ce04f, 0xa5e155, 0xade45c, 0xb6e562, 0xbfe968,
-    0xc9ec6e, 0xd3ee71, 0xddf375, 0xe8f67a, 0xf2f97d, 0xfcfc81,
-    0xfff77f, 0xfeef7a, 0xfee575, 0xfedb70, 0xfed16b, 0xfec767,
-    0xfec25d, 0xfdc150, 0xfdc144, 0xfdc03a, 0xfdbf33, 0xfdbe2d,
-    0xf7b72b, 0xedac28, 0xe3a225, 0xda9823, 0xd18e21, 0xc7831e,
-    0xc7782c, 0xcb6c4f, 0xcf6276, 0xd359a1, 0xd64fcb, 0xda49f3,
-    0xda53fc, 0xda60fc, 0xda70fc, 0xda7efc, 0xdb8efc, 0xdb9dfd,
-    0xe1acfd, 0xe6bdfd, 0xeccdfd, 0xf3defe, 0xf8eefe, 0xffffff },
+    {/* COLORMAP_PILATUS */
+     0x000008, 0x000120, 0x010239, 0x010552, 0x02096d, 0x020e86, 0x04129c, 0x0515ad, 0x0619bf, 0x071ccf, 0x0920e1,
+     0x0a21f1, 0x1629fb, 0x333efb, 0x5459fb, 0x7579fb, 0x9698fc, 0xb8b9fd, 0xc1c9eb, 0xb7cdca, 0xaecfaa, 0xa4d48b,
+     0x9ad66b, 0x90da4f, 0x93dd49, 0x9ce04f, 0xa5e155, 0xade45c, 0xb6e562, 0xbfe968, 0xc9ec6e, 0xd3ee71, 0xddf375,
+     0xe8f67a, 0xf2f97d, 0xfcfc81, 0xfff77f, 0xfeef7a, 0xfee575, 0xfedb70, 0xfed16b, 0xfec767, 0xfec25d, 0xfdc150,
+     0xfdc144, 0xfdc03a, 0xfdbf33, 0xfdbe2d, 0xf7b72b, 0xedac28, 0xe3a225, 0xda9823, 0xd18e21, 0xc7831e, 0xc7782c,
+     0xcb6c4f, 0xcf6276, 0xd359a1, 0xd64fcb, 0xda49f3, 0xda53fc, 0xda60fc, 0xda70fc, 0xda7efc, 0xdb8efc, 0xdb9dfd,
+     0xe1acfd, 0xe6bdfd, 0xeccdfd, 0xf3defe, 0xf8eefe, 0xffffff},
 
-  { /* COLORMAP_AUTUMN */
-    0xff0000, 0xff0400, 0xff0700, 0xff0b00, 0xff0e00, 0xff1200,
-    0xff1600, 0xff1900, 0xff1d00, 0xff2000, 0xff2400, 0xff2800,
-    0xff2b00, 0xff2f00, 0xff3200, 0xff3600, 0xff3900, 0xff3d00,
-    0xff4100, 0xff4400, 0xff4800, 0xff4b00, 0xff4f00, 0xff5300,
-    0xff5600, 0xff5a00, 0xff5d00, 0xff6100, 0xff6500, 0xff6800,
-    0xff6c00, 0xff6f00, 0xff7300, 0xff7700, 0xff7a00, 0xff7e00,
-    0xff8100, 0xff8500, 0xff8800, 0xff8c00, 0xff9000, 0xff9300,
-    0xff9700, 0xff9a00, 0xff9e00, 0xffa200, 0xffa500, 0xffa900,
-    0xffac00, 0xffb000, 0xffb400, 0xffb700, 0xffbb00, 0xffbe00,
-    0xffc200, 0xffc600, 0xffc900, 0xffcd00, 0xffd000, 0xffd400,
-    0xffd700, 0xffdb00, 0xffdf00, 0xffe200, 0xffe600, 0xffe900,
-    0xffed00, 0xfff100, 0xfff400, 0xfff800, 0xfffb00, 0xffff00 },
+    {/* COLORMAP_AUTUMN */
+     0xff0000, 0xff0400, 0xff0700, 0xff0b00, 0xff0e00, 0xff1200, 0xff1600, 0xff1900, 0xff1d00, 0xff2000, 0xff2400,
+     0xff2800, 0xff2b00, 0xff2f00, 0xff3200, 0xff3600, 0xff3900, 0xff3d00, 0xff4100, 0xff4400, 0xff4800, 0xff4b00,
+     0xff4f00, 0xff5300, 0xff5600, 0xff5a00, 0xff5d00, 0xff6100, 0xff6500, 0xff6800, 0xff6c00, 0xff6f00, 0xff7300,
+     0xff7700, 0xff7a00, 0xff7e00, 0xff8100, 0xff8500, 0xff8800, 0xff8c00, 0xff9000, 0xff9300, 0xff9700, 0xff9a00,
+     0xff9e00, 0xffa200, 0xffa500, 0xffa900, 0xffac00, 0xffb000, 0xffb400, 0xffb700, 0xffbb00, 0xffbe00, 0xffc200,
+     0xffc600, 0xffc900, 0xffcd00, 0xffd000, 0xffd400, 0xffd700, 0xffdb00, 0xffdf00, 0xffe200, 0xffe600, 0xffe900,
+     0xffed00, 0xfff100, 0xfff400, 0xfff800, 0xfffb00, 0xffff00},
 
-  { /* COLORMAP_BONE */
-    0x000000, 0x040305, 0x060609, 0x0a0a0d, 0x0c0c11, 0x101016,
-    0x12131b, 0x16161e, 0x191923, 0x1c1c27, 0x201f2c, 0x232330,
-    0x262634, 0x292939, 0x2c2c3d, 0x2f2f42, 0x323246, 0x35354a,
-    0x39394f, 0x3c3b53, 0x3f3f58, 0x43425c, 0x454560, 0x494965,
-    0x4b4b69, 0x4f4f6e, 0x515271, 0x555675, 0x575b78, 0x5b5f7b,
-    0x5e637e, 0x616781, 0x656c84, 0x687088, 0x6b748b, 0x6e798e,
-    0x717d91, 0x748194, 0x778697, 0x7b8a9a, 0x7e8e9e, 0x8192a0,
-    0x8497a4, 0x879ba7, 0x8aa0aa, 0x8ea4ae, 0x90a8b0, 0x94adb4,
-    0x97b1b6, 0x9ab5ba, 0x9dbabc, 0xa0bec0, 0xa4c2c3, 0xa6c6c6,
-    0xaccaca, 0xb1cdcd, 0xb5d0d0, 0xbad3d3, 0xbfd6d6, 0xc4d9d9,
-    0xc9dcdc, 0xcee0df, 0xd3e3e3, 0xd8e6e6, 0xdde9e9, 0xe1eced,
-    0xe6efef, 0xebf3f3, 0xf0f5f5, 0xf5f9f9, 0xfbfcfb, 0xffffff },
+    {/* COLORMAP_BONE */
+     0x000000, 0x040305, 0x060609, 0x0a0a0d, 0x0c0c11, 0x101016, 0x12131b, 0x16161e, 0x191923, 0x1c1c27, 0x201f2c,
+     0x232330, 0x262634, 0x292939, 0x2c2c3d, 0x2f2f42, 0x323246, 0x35354a, 0x39394f, 0x3c3b53, 0x3f3f58, 0x43425c,
+     0x454560, 0x494965, 0x4b4b69, 0x4f4f6e, 0x515271, 0x555675, 0x575b78, 0x5b5f7b, 0x5e637e, 0x616781, 0x656c84,
+     0x687088, 0x6b748b, 0x6e798e, 0x717d91, 0x748194, 0x778697, 0x7b8a9a, 0x7e8e9e, 0x8192a0, 0x8497a4, 0x879ba7,
+     0x8aa0aa, 0x8ea4ae, 0x90a8b0, 0x94adb4, 0x97b1b6, 0x9ab5ba, 0x9dbabc, 0xa0bec0, 0xa4c2c3, 0xa6c6c6, 0xaccaca,
+     0xb1cdcd, 0xb5d0d0, 0xbad3d3, 0xbfd6d6, 0xc4d9d9, 0xc9dcdc, 0xcee0df, 0xd3e3e3, 0xd8e6e6, 0xdde9e9, 0xe1eced,
+     0xe6efef, 0xebf3f3, 0xf0f5f5, 0xf5f9f9, 0xfbfcfb, 0xffffff},
 
-  { /* COLORMAP_COOL */
-    0x00ffff, 0x04fbff, 0x07f8ff, 0x0bf4ff, 0x0ef1ff, 0x12edff,
-    0x16e9ff, 0x19e6ff, 0x1de2ff, 0x20dfff, 0x24dbff, 0x28d7ff,
-    0x2bd4ff, 0x2fd0ff, 0x32cdff, 0x36c9ff, 0x39c6ff, 0x3dc2ff,
-    0x41beff, 0x44bbff, 0x48b7ff, 0x4bb4ff, 0x4fb0ff, 0x53acff,
-    0x56a9ff, 0x5aa5ff, 0x5da2ff, 0x619eff, 0x659aff, 0x6897ff,
-    0x6c93ff, 0x6f90ff, 0x738cff, 0x7788ff, 0x7a85ff, 0x7e81ff,
-    0x817eff, 0x857aff, 0x8877ff, 0x8c73ff, 0x906fff, 0x936cff,
-    0x9768ff, 0x9a65ff, 0x9e61ff, 0xa25dff, 0xa55aff, 0xa956ff,
-    0xac53ff, 0xb04fff, 0xb44bff, 0xb748ff, 0xbb44ff, 0xbe41ff,
-    0xc23dff, 0xc639ff, 0xc936ff, 0xcd32ff, 0xd02fff, 0xd42bff,
-    0xd728ff, 0xdb24ff, 0xdf20ff, 0xe21dff, 0xe619ff, 0xe916ff,
-    0xed12ff, 0xf10eff, 0xf40bff, 0xf807ff, 0xfb04ff, 0xff00ff },
+    {/* COLORMAP_COOL */
+     0x00ffff, 0x04fbff, 0x07f8ff, 0x0bf4ff, 0x0ef1ff, 0x12edff, 0x16e9ff, 0x19e6ff, 0x1de2ff, 0x20dfff, 0x24dbff,
+     0x28d7ff, 0x2bd4ff, 0x2fd0ff, 0x32cdff, 0x36c9ff, 0x39c6ff, 0x3dc2ff, 0x41beff, 0x44bbff, 0x48b7ff, 0x4bb4ff,
+     0x4fb0ff, 0x53acff, 0x56a9ff, 0x5aa5ff, 0x5da2ff, 0x619eff, 0x659aff, 0x6897ff, 0x6c93ff, 0x6f90ff, 0x738cff,
+     0x7788ff, 0x7a85ff, 0x7e81ff, 0x817eff, 0x857aff, 0x8877ff, 0x8c73ff, 0x906fff, 0x936cff, 0x9768ff, 0x9a65ff,
+     0x9e61ff, 0xa25dff, 0xa55aff, 0xa956ff, 0xac53ff, 0xb04fff, 0xb44bff, 0xb748ff, 0xbb44ff, 0xbe41ff, 0xc23dff,
+     0xc639ff, 0xc936ff, 0xcd32ff, 0xd02fff, 0xd42bff, 0xd728ff, 0xdb24ff, 0xdf20ff, 0xe21dff, 0xe619ff, 0xe916ff,
+     0xed12ff, 0xf10eff, 0xf40bff, 0xf807ff, 0xfb04ff, 0xff00ff},
 
-  { /* COLORMAP_COPPER */
-    0x000000, 0x050302, 0x090503, 0x0e0905, 0x120b07, 0x160e09,
-    0x1b100b, 0x1f140c, 0x24170e, 0x281910, 0x2c1c12, 0x301e14,
-    0x352215, 0x3a2517, 0x3e2719, 0x432a1b, 0x472d1c, 0x4b301e,
-    0x503320, 0x543522, 0x593824, 0x5e3b25, 0x623e27, 0x664129,
-    0x6a432b, 0x6f462d, 0x73492e, 0x784c30, 0x7d4f32, 0x805134,
-    0x855436, 0x895737, 0x8e5a39, 0x925d3b, 0x975f3d, 0x9b623f,
-    0xa06540, 0xa46842, 0xa96b44, 0xad6d46, 0xb27048, 0xb67349,
-    0xbb764b, 0xbe784d, 0xc37b4f, 0xc87f51, 0xcc8152, 0xd18454,
-    0xd58656, 0xd98958, 0xdd8d5a, 0xe28f5b, 0xe7925d, 0xeb945f,
-    0xf09861, 0xf49b63, 0xf89d64, 0xfda066, 0xffa267, 0xffa669,
-    0xffa86b, 0xffab6d, 0xffae6f, 0xffb170, 0xffb472, 0xffb674,
-    0xffb976, 0xffbc78, 0xffbf79, 0xffc27b, 0xffc47d, 0xffc77f },
+    {/* COLORMAP_COPPER */
+     0x000000, 0x050302, 0x090503, 0x0e0905, 0x120b07, 0x160e09, 0x1b100b, 0x1f140c, 0x24170e, 0x281910, 0x2c1c12,
+     0x301e14, 0x352215, 0x3a2517, 0x3e2719, 0x432a1b, 0x472d1c, 0x4b301e, 0x503320, 0x543522, 0x593824, 0x5e3b25,
+     0x623e27, 0x664129, 0x6a432b, 0x6f462d, 0x73492e, 0x784c30, 0x7d4f32, 0x805134, 0x855436, 0x895737, 0x8e5a39,
+     0x925d3b, 0x975f3d, 0x9b623f, 0xa06540, 0xa46842, 0xa96b44, 0xad6d46, 0xb27048, 0xb67349, 0xbb764b, 0xbe784d,
+     0xc37b4f, 0xc87f51, 0xcc8152, 0xd18454, 0xd58656, 0xd98958, 0xdd8d5a, 0xe28f5b, 0xe7925d, 0xeb945f, 0xf09861,
+     0xf49b63, 0xf89d64, 0xfda066, 0xffa267, 0xffa669, 0xffa86b, 0xffab6d, 0xffae6f, 0xffb170, 0xffb472, 0xffb674,
+     0xffb976, 0xffbc78, 0xffbf79, 0xffc27b, 0xffc47d, 0xffc77f},
 
-  { /* COLORMAP_GRAY */
-    0x000000, 0x040404, 0x070707, 0x0b0b0b, 0x0e0e0e, 0x121212,
-    0x161616, 0x191919, 0x1d1d1d, 0x202020, 0x242424, 0x282828,
-    0x2b2b2b, 0x2f2f2f, 0x323232, 0x363636, 0x393939, 0x3d3d3d,
-    0x414141, 0x444444, 0x484848, 0x4b4b4b, 0x4f4f4f, 0x535353,
-    0x565656, 0x5a5a5a, 0x5d5d5d, 0x616161, 0x656565, 0x686868,
-    0x6c6c6c, 0x6f6f6f, 0x737373, 0x777777, 0x7a7a7a, 0x7e7e7e,
-    0x818181, 0x858585, 0x888888, 0x8c8c8c, 0x909090, 0x939393,
-    0x979797, 0x9a9a9a, 0x9e9e9e, 0xa2a2a2, 0xa5a5a5, 0xa9a9a9,
-    0xacacac, 0xb0b0b0, 0xb4b4b4, 0xb7b7b7, 0xbbbbbb, 0xbebebe,
-    0xc2c2c2, 0xc6c6c6, 0xc9c9c9, 0xcdcdcd, 0xd0d0d0, 0xd4d4d4,
-    0xd7d7d7, 0xdbdbdb, 0xdfdfdf, 0xe2e2e2, 0xe6e6e6, 0xe9e9e9,
-    0xededed, 0xf1f1f1, 0xf4f4f4, 0xf8f8f8, 0xfbfbfb, 0xffffff },
+    {/* COLORMAP_GRAY */
+     0x000000, 0x040404, 0x070707, 0x0b0b0b, 0x0e0e0e, 0x121212, 0x161616, 0x191919, 0x1d1d1d, 0x202020, 0x242424,
+     0x282828, 0x2b2b2b, 0x2f2f2f, 0x323232, 0x363636, 0x393939, 0x3d3d3d, 0x414141, 0x444444, 0x484848, 0x4b4b4b,
+     0x4f4f4f, 0x535353, 0x565656, 0x5a5a5a, 0x5d5d5d, 0x616161, 0x656565, 0x686868, 0x6c6c6c, 0x6f6f6f, 0x737373,
+     0x777777, 0x7a7a7a, 0x7e7e7e, 0x818181, 0x858585, 0x888888, 0x8c8c8c, 0x909090, 0x939393, 0x979797, 0x9a9a9a,
+     0x9e9e9e, 0xa2a2a2, 0xa5a5a5, 0xa9a9a9, 0xacacac, 0xb0b0b0, 0xb4b4b4, 0xb7b7b7, 0xbbbbbb, 0xbebebe, 0xc2c2c2,
+     0xc6c6c6, 0xc9c9c9, 0xcdcdcd, 0xd0d0d0, 0xd4d4d4, 0xd7d7d7, 0xdbdbdb, 0xdfdfdf, 0xe2e2e2, 0xe6e6e6, 0xe9e9e9,
+     0xededed, 0xf1f1f1, 0xf4f4f4, 0xf8f8f8, 0xfbfbfb, 0xffffff},
 
-  { /* COLORMAP_HOT */
-    0x0b0000, 0x140000, 0x1e0000, 0x270000, 0x300000, 0x3a0000,
-    0x430000, 0x4c0000, 0x560000, 0x600000, 0x690000, 0x730000,
-    0x7b0000, 0x850000, 0x8f0000, 0x980000, 0xa10000, 0xab0000,
-    0xb40000, 0xbe0000, 0xc80000, 0xd00000, 0xda0000, 0xe30000,
-    0xec0000, 0xf60000, 0xff0100, 0xff0a00, 0xff1400, 0xff1d00,
-    0xff2600, 0xff3000, 0xff3a00, 0xff4200, 0xff4c00, 0xff5500,
-    0xff5f00, 0xff6900, 0xff7200, 0xff7b00, 0xff8500, 0xff8f00,
-    0xff9700, 0xffa100, 0xffaa00, 0xffb400, 0xffbd00, 0xffc700,
-    0xffd000, 0xffda00, 0xffe300, 0xffed00, 0xfff600, 0xfffe01,
-    0xffff0f, 0xffff1d, 0xffff2b, 0xffff39, 0xffff47, 0xffff56,
-    0xffff63, 0xffff71, 0xffff80, 0xffff8e, 0xffff9d, 0xffffaa,
-    0xffffb8, 0xffffc7, 0xffffd5, 0xffffe2, 0xfffff1, 0xffffff },
+    {/* COLORMAP_HOT */
+     0x0b0000, 0x140000, 0x1e0000, 0x270000, 0x300000, 0x3a0000, 0x430000, 0x4c0000, 0x560000, 0x600000, 0x690000,
+     0x730000, 0x7b0000, 0x850000, 0x8f0000, 0x980000, 0xa10000, 0xab0000, 0xb40000, 0xbe0000, 0xc80000, 0xd00000,
+     0xda0000, 0xe30000, 0xec0000, 0xf60000, 0xff0100, 0xff0a00, 0xff1400, 0xff1d00, 0xff2600, 0xff3000, 0xff3a00,
+     0xff4200, 0xff4c00, 0xff5500, 0xff5f00, 0xff6900, 0xff7200, 0xff7b00, 0xff8500, 0xff8f00, 0xff9700, 0xffa100,
+     0xffaa00, 0xffb400, 0xffbd00, 0xffc700, 0xffd000, 0xffda00, 0xffe300, 0xffed00, 0xfff600, 0xfffe01, 0xffff0f,
+     0xffff1d, 0xffff2b, 0xffff39, 0xffff47, 0xffff56, 0xffff63, 0xffff71, 0xffff80, 0xffff8e, 0xffff9d, 0xffffaa,
+     0xffffb8, 0xffffc7, 0xffffd5, 0xffffe2, 0xfffff1, 0xffffff},
 
-  { /* COLORMAP_HSV */
-    0xff0000, 0xff1600, 0xff2a00, 0xff4000, 0xff5500, 0xff6a00,
-    0xff7f00, 0xff9500, 0xffa900, 0xffbf00, 0xffd400, 0xffe900,
-    0xfaf900, 0xeaff00, 0xd5ff00, 0xc0ff00, 0xaaff00, 0x96ff00,
-    0x80ff00, 0x6bff00, 0x56ff00, 0x40ff00, 0x2bff00, 0x16ff00,
-    0x06ff05, 0x00ff15, 0x00ff29, 0x00ff3f, 0x00ff54, 0x00ff69,
-    0x00ff7e, 0x00ff94, 0x00ffa9, 0x00ffbe, 0x00ffd4, 0x00ffe8,
-    0x00fffd, 0x00ebff, 0x00d6ff, 0x00c1ff, 0x00acff, 0x0096ff,
-    0x0081ff, 0x006cff, 0x0057ff, 0x0041ff, 0x002cff, 0x0017ff,
-    0x0506ff, 0x1300ff, 0x2800ff, 0x3e00ff, 0x5300ff, 0x6800ff,
-    0x7e00ff, 0x9300ff, 0xa800ff, 0xbd00ff, 0xd200ff, 0xe700ff,
-    0xf900fb, 0xff00ed, 0xff00d7, 0xff00c1, 0xff00ad, 0xff0097,
-    0xff0082, 0xff006d, 0xff0058, 0xff0042, 0xff002e, 0xff0018 },
+    {/* COLORMAP_HSV */
+     0xff0000, 0xff1600, 0xff2a00, 0xff4000, 0xff5500, 0xff6a00, 0xff7f00, 0xff9500, 0xffa900, 0xffbf00, 0xffd400,
+     0xffe900, 0xfaf900, 0xeaff00, 0xd5ff00, 0xc0ff00, 0xaaff00, 0x96ff00, 0x80ff00, 0x6bff00, 0x56ff00, 0x40ff00,
+     0x2bff00, 0x16ff00, 0x06ff05, 0x00ff15, 0x00ff29, 0x00ff3f, 0x00ff54, 0x00ff69, 0x00ff7e, 0x00ff94, 0x00ffa9,
+     0x00ffbe, 0x00ffd4, 0x00ffe8, 0x00fffd, 0x00ebff, 0x00d6ff, 0x00c1ff, 0x00acff, 0x0096ff, 0x0081ff, 0x006cff,
+     0x0057ff, 0x0041ff, 0x002cff, 0x0017ff, 0x0506ff, 0x1300ff, 0x2800ff, 0x3e00ff, 0x5300ff, 0x6800ff, 0x7e00ff,
+     0x9300ff, 0xa800ff, 0xbd00ff, 0xd200ff, 0xe700ff, 0xf900fb, 0xff00ed, 0xff00d7, 0xff00c1, 0xff00ad, 0xff0097,
+     0xff0082, 0xff006d, 0xff0058, 0xff0042, 0xff002e, 0xff0018},
 
-  { /* COLORMAP_JET */
-    0x000080, 0x000090, 0x0000a0, 0x0000b1, 0x0000c1, 0x0000d1,
-    0x0000e1, 0x0000f2, 0x0000ff, 0x0002ff, 0x0011ff, 0x001fff,
-    0x002dff, 0x003cff, 0x004aff, 0x0058ff, 0x0066ff, 0x0074ff,
-    0x0084ff, 0x0092ff, 0x00a0ff, 0x00afff, 0x00bdff, 0x00cbff,
-    0x00daff, 0x01e7f5, 0x0df7ea, 0x19ffde, 0x25ffd2, 0x31ffc7,
-    0x3bffbb, 0x47ffb0, 0x53ffa4, 0x5fff98, 0x6aff8d, 0x76ff81,
-    0x81ff76, 0x8dff6a, 0x98ff5f, 0xa4ff53, 0xb0ff47, 0xbbff3b,
-    0xc7ff31, 0xd2ff25, 0xdeff19, 0xeaff0d, 0xf5f701, 0xffeb00,
-    0xffdd00, 0xffd000, 0xffc200, 0xffb500, 0xffa800, 0xff9b00,
-    0xff8d00, 0xff8000, 0xff7200, 0xff6500, 0xff5800, 0xff4a00,
-    0xff3d00, 0xff3000, 0xff2300, 0xff1500, 0xf20800, 0xe20000,
-    0xd10000, 0xc10000, 0xb10000, 0xa00000, 0x900000, 0x800000 },
+    {/* COLORMAP_JET */
+     0x000080, 0x000090, 0x0000a0, 0x0000b1, 0x0000c1, 0x0000d1, 0x0000e1, 0x0000f2, 0x0000ff, 0x0002ff, 0x0011ff,
+     0x001fff, 0x002dff, 0x003cff, 0x004aff, 0x0058ff, 0x0066ff, 0x0074ff, 0x0084ff, 0x0092ff, 0x00a0ff, 0x00afff,
+     0x00bdff, 0x00cbff, 0x00daff, 0x01e7f5, 0x0df7ea, 0x19ffde, 0x25ffd2, 0x31ffc7, 0x3bffbb, 0x47ffb0, 0x53ffa4,
+     0x5fff98, 0x6aff8d, 0x76ff81, 0x81ff76, 0x8dff6a, 0x98ff5f, 0xa4ff53, 0xb0ff47, 0xbbff3b, 0xc7ff31, 0xd2ff25,
+     0xdeff19, 0xeaff0d, 0xf5f701, 0xffeb00, 0xffdd00, 0xffd000, 0xffc200, 0xffb500, 0xffa800, 0xff9b00, 0xff8d00,
+     0xff8000, 0xff7200, 0xff6500, 0xff5800, 0xff4a00, 0xff3d00, 0xff3000, 0xff2300, 0xff1500, 0xf20800, 0xe20000,
+     0xd10000, 0xc10000, 0xb10000, 0xa00000, 0x900000, 0x800000},
 
-  { /* COLORMAP_PINK */
-    0x1e0000, 0x301717, 0x3d2323, 0x472b2b, 0x513131, 0x593737,
-    0x613d3d, 0x684141, 0x6e4646, 0x754a4a, 0x7b4e4e, 0x805252,
-    0x855555, 0x8b5959, 0x905c5c, 0x956060, 0x9a6262, 0x9e6666,
-    0xa26969, 0xa66c6c, 0xab6f6f, 0xae7272, 0xb37474, 0xb77777,
-    0xba7979, 0xbe7c7c, 0xc27e7e, 0xc38480, 0xc58982, 0xc68e85,
-    0xc89387, 0xc99789, 0xcb9c8c, 0xcda18e, 0xcea590, 0xd0a992,
-    0xd1ad94, 0xd2b296, 0xd4b599, 0xd5b99a, 0xd7bd9c, 0xd8c09e,
-    0xdac4a0, 0xdbc7a2, 0xdccba4, 0xdecfa6, 0xdfd2a7, 0xe1d6a9,
-    0xe2d8ab, 0xe3dcad, 0xe5e0af, 0xe6e2b0, 0xe7e6b2, 0xe8e8b4,
-    0xeaeab9, 0xebebbd, 0xececc2, 0xeeeec7, 0xefefcb, 0xf0f0d0,
-    0xf1f1d4, 0xf3f3d8, 0xf4f4dd, 0xf5f5e1, 0xf7f7e5, 0xf8f8e8,
-    0xf9f9ed, 0xfafaf1, 0xfbfbf4, 0xfdfdf8, 0xfefefb, 0xffffff },
+    {/* COLORMAP_PINK */
+     0x1e0000, 0x301717, 0x3d2323, 0x472b2b, 0x513131, 0x593737, 0x613d3d, 0x684141, 0x6e4646, 0x754a4a, 0x7b4e4e,
+     0x805252, 0x855555, 0x8b5959, 0x905c5c, 0x956060, 0x9a6262, 0x9e6666, 0xa26969, 0xa66c6c, 0xab6f6f, 0xae7272,
+     0xb37474, 0xb77777, 0xba7979, 0xbe7c7c, 0xc27e7e, 0xc38480, 0xc58982, 0xc68e85, 0xc89387, 0xc99789, 0xcb9c8c,
+     0xcda18e, 0xcea590, 0xd0a992, 0xd1ad94, 0xd2b296, 0xd4b599, 0xd5b99a, 0xd7bd9c, 0xd8c09e, 0xdac4a0, 0xdbc7a2,
+     0xdccba4, 0xdecfa6, 0xdfd2a7, 0xe1d6a9, 0xe2d8ab, 0xe3dcad, 0xe5e0af, 0xe6e2b0, 0xe7e6b2, 0xe8e8b4, 0xeaeab9,
+     0xebebbd, 0xececc2, 0xeeeec7, 0xefefcb, 0xf0f0d0, 0xf1f1d4, 0xf3f3d8, 0xf4f4dd, 0xf5f5e1, 0xf7f7e5, 0xf8f8e8,
+     0xf9f9ed, 0xfafaf1, 0xfbfbf4, 0xfdfdf8, 0xfefefb, 0xffffff},
 
-  { /* COLORMAP_SPECTRAL */
-    0x000000, 0x210027, 0x43004d, 0x650073, 0x79008a, 0x7e008f,
-    0x820093, 0x870098, 0x66009d, 0x4000a2, 0x1900a7, 0x0000af,
-    0x0000bd, 0x0000cc, 0x0000da, 0x001bdd, 0x003cdd, 0x005edd,
-    0x007add, 0x0083dd, 0x008cdd, 0x0096dd, 0x009cd3, 0x00a1c5,
-    0x00a6b6, 0x00aaa9, 0x00aa9f, 0x00aa95, 0x00aa8c, 0x00a771,
-    0x00a24b, 0x009e24, 0x009a00, 0x00a300, 0x00ac00, 0x00b600,
-    0x00c000, 0x00ca00, 0x00d300, 0x00dc00, 0x00e600, 0x00f000,
-    0x00fa00, 0x15ff00, 0x49ff00, 0x7eff00, 0xb3ff00, 0xc7fb00,
-    0xd6f600, 0xe4f100, 0xf0eb00, 0xf4e100, 0xf9d800, 0xfece00,
-    0xffc100, 0xffb300, 0xffa500, 0xff9100, 0xff6500, 0xff3a00,
-    0xff0f00, 0xf90000, 0xef0000, 0xe50000, 0xdc0000, 0xd70000,
-    0xd30000, 0xcf0000, 0xcc2020, 0xcc5959, 0xcc9393, 0xcccccc },
+    {/* COLORMAP_SPECTRAL */
+     0x000000, 0x210027, 0x43004d, 0x650073, 0x79008a, 0x7e008f, 0x820093, 0x870098, 0x66009d, 0x4000a2, 0x1900a7,
+     0x0000af, 0x0000bd, 0x0000cc, 0x0000da, 0x001bdd, 0x003cdd, 0x005edd, 0x007add, 0x0083dd, 0x008cdd, 0x0096dd,
+     0x009cd3, 0x00a1c5, 0x00a6b6, 0x00aaa9, 0x00aa9f, 0x00aa95, 0x00aa8c, 0x00a771, 0x00a24b, 0x009e24, 0x009a00,
+     0x00a300, 0x00ac00, 0x00b600, 0x00c000, 0x00ca00, 0x00d300, 0x00dc00, 0x00e600, 0x00f000, 0x00fa00, 0x15ff00,
+     0x49ff00, 0x7eff00, 0xb3ff00, 0xc7fb00, 0xd6f600, 0xe4f100, 0xf0eb00, 0xf4e100, 0xf9d800, 0xfece00, 0xffc100,
+     0xffb300, 0xffa500, 0xff9100, 0xff6500, 0xff3a00, 0xff0f00, 0xf90000, 0xef0000, 0xe50000, 0xdc0000, 0xd70000,
+     0xd30000, 0xcf0000, 0xcc2020, 0xcc5959, 0xcc9393, 0xcccccc},
 
-  { /* COLORMAP_SPRING */
-    0xff00ff, 0xff04fb, 0xff07f8, 0xff0bf4, 0xff0ef1, 0xff12ed,
-    0xff16e9, 0xff19e6, 0xff1de2, 0xff20df, 0xff24db, 0xff28d7,
-    0xff2bd4, 0xff2fd0, 0xff32cd, 0xff36c9, 0xff39c6, 0xff3dc2,
-    0xff41be, 0xff44bb, 0xff48b7, 0xff4bb4, 0xff4fb0, 0xff53ac,
-    0xff56a9, 0xff5aa5, 0xff5da2, 0xff619e, 0xff659a, 0xff6897,
-    0xff6c93, 0xff6f90, 0xff738c, 0xff7788, 0xff7a85, 0xff7e81,
-    0xff817e, 0xff857a, 0xff8877, 0xff8c73, 0xff906f, 0xff936c,
-    0xff9768, 0xff9a65, 0xff9e61, 0xffa25d, 0xffa55a, 0xffa956,
-    0xffac53, 0xffb04f, 0xffb44b, 0xffb748, 0xffbb44, 0xffbe41,
-    0xffc23d, 0xffc639, 0xffc936, 0xffcd32, 0xffd02f, 0xffd42b,
-    0xffd728, 0xffdb24, 0xffdf20, 0xffe21d, 0xffe619, 0xffe916,
-    0xffed12, 0xfff10e, 0xfff40b, 0xfff807, 0xfffb04, 0xffff00 },
+    {/* COLORMAP_SPRING */
+     0xff00ff, 0xff04fb, 0xff07f8, 0xff0bf4, 0xff0ef1, 0xff12ed, 0xff16e9, 0xff19e6, 0xff1de2, 0xff20df, 0xff24db,
+     0xff28d7, 0xff2bd4, 0xff2fd0, 0xff32cd, 0xff36c9, 0xff39c6, 0xff3dc2, 0xff41be, 0xff44bb, 0xff48b7, 0xff4bb4,
+     0xff4fb0, 0xff53ac, 0xff56a9, 0xff5aa5, 0xff5da2, 0xff619e, 0xff659a, 0xff6897, 0xff6c93, 0xff6f90, 0xff738c,
+     0xff7788, 0xff7a85, 0xff7e81, 0xff817e, 0xff857a, 0xff8877, 0xff8c73, 0xff906f, 0xff936c, 0xff9768, 0xff9a65,
+     0xff9e61, 0xffa25d, 0xffa55a, 0xffa956, 0xffac53, 0xffb04f, 0xffb44b, 0xffb748, 0xffbb44, 0xffbe41, 0xffc23d,
+     0xffc639, 0xffc936, 0xffcd32, 0xffd02f, 0xffd42b, 0xffd728, 0xffdb24, 0xffdf20, 0xffe21d, 0xffe619, 0xffe916,
+     0xffed12, 0xfff10e, 0xfff40b, 0xfff807, 0xfffb04, 0xffff00},
 
-  { /* COLORMAP_SUMMER */
-    0x008066, 0x048266, 0x078366, 0x0b8566, 0x0e8766, 0x128966,
-    0x168b66, 0x198c66, 0x1d8e66, 0x209066, 0x249266, 0x289366,
-    0x2b9566, 0x2f9766, 0x329966, 0x369b66, 0x399c66, 0x3d9e66,
-    0x41a066, 0x44a266, 0x48a366, 0x4ba666, 0x4fa766, 0x53a966,
-    0x56ab66, 0x5aad66, 0x5dae66, 0x61b066, 0x65b266, 0x68b366,
-    0x6cb666, 0x6fb766, 0x73b966, 0x77bb66, 0x7abd66, 0x7ebf66,
-    0x81c066, 0x85c266, 0x88c466, 0x8cc666, 0x90c866, 0x93c966,
-    0x97cb66, 0x9acd66, 0x9ecf66, 0xa2d166, 0xa5d266, 0xa9d466,
-    0xacd666, 0xb0d866, 0xb4da66, 0xb7db66, 0xbbdd66, 0xbedf66,
-    0xc2e166, 0xc6e366, 0xc9e466, 0xcde666, 0xd0e866, 0xd4ea66,
-    0xd7eb66, 0xdbed66, 0xdfef66, 0xe2f166, 0xe6f366, 0xe9f466,
-    0xedf666, 0xf1f866, 0xf4fa66, 0xf8fc66, 0xfbfd66, 0xffff66 },
+    {/* COLORMAP_SUMMER */
+     0x008066, 0x048266, 0x078366, 0x0b8566, 0x0e8766, 0x128966, 0x168b66, 0x198c66, 0x1d8e66, 0x209066, 0x249266,
+     0x289366, 0x2b9566, 0x2f9766, 0x329966, 0x369b66, 0x399c66, 0x3d9e66, 0x41a066, 0x44a266, 0x48a366, 0x4ba666,
+     0x4fa766, 0x53a966, 0x56ab66, 0x5aad66, 0x5dae66, 0x61b066, 0x65b266, 0x68b366, 0x6cb666, 0x6fb766, 0x73b966,
+     0x77bb66, 0x7abd66, 0x7ebf66, 0x81c066, 0x85c266, 0x88c466, 0x8cc666, 0x90c866, 0x93c966, 0x97cb66, 0x9acd66,
+     0x9ecf66, 0xa2d166, 0xa5d266, 0xa9d466, 0xacd666, 0xb0d866, 0xb4da66, 0xb7db66, 0xbbdd66, 0xbedf66, 0xc2e166,
+     0xc6e366, 0xc9e466, 0xcde666, 0xd0e866, 0xd4ea66, 0xd7eb66, 0xdbed66, 0xdfef66, 0xe2f166, 0xe6f366, 0xe9f466,
+     0xedf666, 0xf1f866, 0xf4fa66, 0xf8fc66, 0xfbfd66, 0xffff66},
 
-  { /* COLORMAP_WINTER */
-    0x0000ff, 0x0004fd, 0x0007fc, 0x000bfa, 0x000ef8, 0x0012f6,
-    0x0016f4, 0x0019f3, 0x001df1, 0x0020ef, 0x0024ed, 0x0028eb,
-    0x002bea, 0x002fe8, 0x0032e6, 0x0036e4, 0x0039e3, 0x003de1,
-    0x0041df, 0x0044dd, 0x0048db, 0x004bda, 0x004fd8, 0x0053d6,
-    0x0056d4, 0x005ad2, 0x005dd1, 0x0061cf, 0x0065cd, 0x0068cb,
-    0x006cc9, 0x006fc8, 0x0073c6, 0x0077c3, 0x007ac2, 0x007ec0,
-    0x0081bf, 0x0085bd, 0x0088bb, 0x008cb9, 0x0090b7, 0x0093b6,
-    0x0097b3, 0x009ab2, 0x009eb0, 0x00a2ae, 0x00a5ad, 0x00a9ab,
-    0x00aca9, 0x00b0a7, 0x00b4a6, 0x00b7a3, 0x00bba2, 0x00bea0,
-    0x00c29e, 0x00c69c, 0x00c99b, 0x00cd99, 0x00d097, 0x00d495,
-    0x00d793, 0x00db92, 0x00df90, 0x00e28e, 0x00e68c, 0x00e98b,
-    0x00ed89, 0x00f187, 0x00f485, 0x00f883, 0x00fb82, 0x00ff80 },
+    {/* COLORMAP_WINTER */
+     0x0000ff, 0x0004fd, 0x0007fc, 0x000bfa, 0x000ef8, 0x0012f6, 0x0016f4, 0x0019f3, 0x001df1, 0x0020ef, 0x0024ed,
+     0x0028eb, 0x002bea, 0x002fe8, 0x0032e6, 0x0036e4, 0x0039e3, 0x003de1, 0x0041df, 0x0044dd, 0x0048db, 0x004bda,
+     0x004fd8, 0x0053d6, 0x0056d4, 0x005ad2, 0x005dd1, 0x0061cf, 0x0065cd, 0x0068cb, 0x006cc9, 0x006fc8, 0x0073c6,
+     0x0077c3, 0x007ac2, 0x007ec0, 0x0081bf, 0x0085bd, 0x0088bb, 0x008cb9, 0x0090b7, 0x0093b6, 0x0097b3, 0x009ab2,
+     0x009eb0, 0x00a2ae, 0x00a5ad, 0x00a9ab, 0x00aca9, 0x00b0a7, 0x00b4a6, 0x00b7a3, 0x00bba2, 0x00bea0, 0x00c29e,
+     0x00c69c, 0x00c99b, 0x00cd99, 0x00d097, 0x00d495, 0x00d793, 0x00db92, 0x00df90, 0x00e28e, 0x00e68c, 0x00e98b,
+     0x00ed89, 0x00f187, 0x00f485, 0x00f883, 0x00fb82, 0x00ff80},
 
-  { /* COLORMAP_GIST_EARTH */
-    0x000000, 0x030049, 0x050070, 0x070975, 0x091175, 0x0c1976,
-    0x0f2177, 0x112977, 0x133178, 0x153a78, 0x184179, 0x1b487a,
-    0x1d4f7a, 0x1f567b, 0x215d7c, 0x24647c, 0x27697d, 0x296f7e,
-    0x2b747e, 0x2d7a7f, 0x308080, 0x31827c, 0x338477, 0x358672,
-    0x37886e, 0x388a6a, 0x3a8c66, 0x3c8e61, 0x3e915c, 0x3f9258,
-    0x419554, 0x429650, 0x44994b, 0x499a46, 0x509d48, 0x589f4a,
-    0x61a14c, 0x69a34e, 0x70a551, 0x78a652, 0x7ea853, 0x85a954,
-    0x8aab56, 0x90ac56, 0x96ae58, 0x9cb059, 0xa2b15a, 0xa8b35b,
-    0xaeb45c, 0xb4b65d, 0xb8b55f, 0xb9b360, 0xbbaf61, 0xbcac62,
-    0xbea963, 0xbfa664, 0xc1a367, 0xc5a570, 0xc9a77a, 0xcdaa82,
-    0xd0ad8b, 0xd5b194, 0xd9b59c, 0xddbaa6, 0xe1bfb0, 0xe5c6ba,
-    0xe9cdc5, 0xedd4d0, 0xf1dcdb, 0xf5e6e5, 0xfaf0f0, 0xfdfbfb },
+    {/* COLORMAP_GIST_EARTH */
+     0x000000, 0x030049, 0x050070, 0x070975, 0x091175, 0x0c1976, 0x0f2177, 0x112977, 0x133178, 0x153a78, 0x184179,
+     0x1b487a, 0x1d4f7a, 0x1f567b, 0x215d7c, 0x24647c, 0x27697d, 0x296f7e, 0x2b747e, 0x2d7a7f, 0x308080, 0x31827c,
+     0x338477, 0x358672, 0x37886e, 0x388a6a, 0x3a8c66, 0x3c8e61, 0x3e915c, 0x3f9258, 0x419554, 0x429650, 0x44994b,
+     0x499a46, 0x509d48, 0x589f4a, 0x61a14c, 0x69a34e, 0x70a551, 0x78a652, 0x7ea853, 0x85a954, 0x8aab56, 0x90ac56,
+     0x96ae58, 0x9cb059, 0xa2b15a, 0xa8b35b, 0xaeb45c, 0xb4b65d, 0xb8b55f, 0xb9b360, 0xbbaf61, 0xbcac62, 0xbea963,
+     0xbfa664, 0xc1a367, 0xc5a570, 0xc9a77a, 0xcdaa82, 0xd0ad8b, 0xd5b194, 0xd9b59c, 0xddbaa6, 0xe1bfb0, 0xe5c6ba,
+     0xe9cdc5, 0xedd4d0, 0xf1dcdb, 0xf5e6e5, 0xfaf0f0, 0xfdfbfb},
 
-  { /* COLORMAP_GIST_HEAT */
-    0x000000, 0x060000, 0x0b0000, 0x100000, 0x150000, 0x1b0000,
-    0x210000, 0x260000, 0x2c0000, 0x300000, 0x360000, 0x3c0000,
-    0x410000, 0x470000, 0x4c0000, 0x510000, 0x560000, 0x5b0000,
-    0x610000, 0x660000, 0x6c0000, 0x720000, 0x770000, 0x7c0000,
-    0x810000, 0x870000, 0x8c0000, 0x920000, 0x970000, 0x9c0000,
-    0xa20000, 0xa70000, 0xad0000, 0xb20000, 0xb70000, 0xbc0000,
-    0xc20400, 0xc80b00, 0xcd1200, 0xd21900, 0xd82000, 0xdc2800,
-    0xe32f00, 0xe73600, 0xed3d00, 0xf34400, 0xf84b00, 0xfe5300,
-    0xff5a00, 0xff6100, 0xff6800, 0xff6f00, 0xff7700, 0xff7e00,
-    0xff850b, 0xff8c19, 0xff9328, 0xff9a36, 0xffa244, 0xffa953,
-    0xffb061, 0xffb76f, 0xffbe7e, 0xffc68c, 0xffcd9a, 0xffd4a9,
-    0xffdbb7, 0xffe2c6, 0xffe9d4, 0xfff1e2, 0xfff8f1, 0xffffff },
+    {/* COLORMAP_GIST_HEAT */
+     0x000000, 0x060000, 0x0b0000, 0x100000, 0x150000, 0x1b0000, 0x210000, 0x260000, 0x2c0000, 0x300000, 0x360000,
+     0x3c0000, 0x410000, 0x470000, 0x4c0000, 0x510000, 0x560000, 0x5b0000, 0x610000, 0x660000, 0x6c0000, 0x720000,
+     0x770000, 0x7c0000, 0x810000, 0x870000, 0x8c0000, 0x920000, 0x970000, 0x9c0000, 0xa20000, 0xa70000, 0xad0000,
+     0xb20000, 0xb70000, 0xbc0000, 0xc20400, 0xc80b00, 0xcd1200, 0xd21900, 0xd82000, 0xdc2800, 0xe32f00, 0xe73600,
+     0xed3d00, 0xf34400, 0xf84b00, 0xfe5300, 0xff5a00, 0xff6100, 0xff6800, 0xff6f00, 0xff7700, 0xff7e00, 0xff850b,
+     0xff8c19, 0xff9328, 0xff9a36, 0xffa244, 0xffa953, 0xffb061, 0xffb76f, 0xffbe7e, 0xffc68c, 0xffcd9a, 0xffd4a9,
+     0xffdbb7, 0xffe2c6, 0xffe9d4, 0xfff1e2, 0xfff8f1, 0xffffff},
 
-  { /* COLORMAP_GIST_NCAR */
-    0x000080, 0x001a5e, 0x00343c, 0x004e1b, 0x00551d, 0x003d58,
-    0x002594, 0x000dcf, 0x0019100, 0x004cff, 0x007eff, 0x00b1ff,
-    0x00caff, 0x00daff, 0x00eaff, 0x00faf3, 0x00fedb, 0x00fcc4,
-    0x00faac, 0x00fa8f, 0x00fb6a, 0x00fd45, 0x00fe1f, 0x17f8-01,
-    0x2eeb00, 0x45de00, 0x5cd000, 0x6ad800, 0x71e400, 0x78f000,
-    0x7ffb07, 0x8fff15, 0x9fff24, 0xb0ff32, 0xc0ff37, 0xd1ff29,
-    0xe0ff1b, 0xf1ff0c, 0xfff700, 0xffee00, 0xffe500, 0xffdb00,
-    0xffd303, 0xffca07, 0xffc10b, 0xffb50e, 0xff970a, 0xff7a07,
-    0xff5d04, 0xff4300, 0xff3200, 0xff2000, 0xff0f00, 0xff0029,
-    0xff0069, 0xff00a9, 0xff00e8, 0xec09ff, 0xd416ff, 0xbb22ff,
-    0xa230ff, 0xb144fa, 0xc65af6, 0xdc70f2, 0xec83ef, 0xee94f1,
-    0xf1a5f3, 0xf4b5f5, 0xf6c6f7, 0xf9d7fa, 0xfbe7fc, 0xfef8fe },
+    {/* COLORMAP_GIST_NCAR */
+     0x000080, 0x001a5e,    0x00343c, 0x004e1b, 0x00551d, 0x003d58, 0x002594, 0x000dcf, 0x0019100, 0x004cff, 0x007eff,
+     0x00b1ff, 0x00caff,    0x00daff, 0x00eaff, 0x00faf3, 0x00fedb, 0x00fcc4, 0x00faac, 0x00fa8f,  0x00fb6a, 0x00fd45,
+     0x00fe1f, 0x17f8 - 01, 0x2eeb00, 0x45de00, 0x5cd000, 0x6ad800, 0x71e400, 0x78f000, 0x7ffb07,  0x8fff15, 0x9fff24,
+     0xb0ff32, 0xc0ff37,    0xd1ff29, 0xe0ff1b, 0xf1ff0c, 0xfff700, 0xffee00, 0xffe500, 0xffdb00,  0xffd303, 0xffca07,
+     0xffc10b, 0xffb50e,    0xff970a, 0xff7a07, 0xff5d04, 0xff4300, 0xff3200, 0xff2000, 0xff0f00,  0xff0029, 0xff0069,
+     0xff00a9, 0xff00e8,    0xec09ff, 0xd416ff, 0xbb22ff, 0xa230ff, 0xb144fa, 0xc65af6, 0xdc70f2,  0xec83ef, 0xee94f1,
+     0xf1a5f3, 0xf4b5f5,    0xf6c6f7, 0xf9d7fa, 0xfbe7fc, 0xfef8fe},
 
-  { /* COLORMAP_GIST_RAINBOW */
-    0xff0029, 0xff0015, 0xff0002, 0xff1100, 0xff2400, 0xff3800,
-    0xff4b00, 0xff5f00, 0xff7200, 0xff8600, 0xff9900, 0xffac00,
-    0xffbf00, 0xffd300, 0xffe600, 0xfffa00, 0xf1ff00, 0xdeff00,
-    0xcaff00, 0xb7ff00, 0xa3ff00, 0x90ff00, 0x7cff00, 0x69ff00,
-    0x55ff00, 0x42ff00, 0x2fff00, 0x1bff00, 0x08ff00, 0x00ff0c,
-    0x00ff1f, 0x00ff32, 0x00ff46, 0x00ff58, 0x00ff6d, 0x00ff80,
-    0x00ff93, 0x00ffa6, 0x00ffb9, 0x00ffcc, 0x00ffe0, 0x00fff3,
-    0x00f7ff, 0x00e4ff, 0x00d0ff, 0x00bdff, 0x00a9ff, 0x0096ff,
-    0x0082ff, 0x006fff, 0x005bff, 0x0048ff, 0x0034ff, 0x0021ff,
-    0x000dff, 0x0700ff, 0x1a00ff, 0x2e00ff, 0x4100ff, 0x5500ff,
-    0x6800ff, 0x7b00ff, 0x8f00ff, 0xa300ff, 0xb600ff, 0xca00ff,
-    0xdd00ff, 0xf100ff, 0xff00fa, 0xff00e6, 0xff00d3, 0xff00bf },
+    {/* COLORMAP_GIST_RAINBOW */
+     0xff0029, 0xff0015, 0xff0002, 0xff1100, 0xff2400, 0xff3800, 0xff4b00, 0xff5f00, 0xff7200, 0xff8600, 0xff9900,
+     0xffac00, 0xffbf00, 0xffd300, 0xffe600, 0xfffa00, 0xf1ff00, 0xdeff00, 0xcaff00, 0xb7ff00, 0xa3ff00, 0x90ff00,
+     0x7cff00, 0x69ff00, 0x55ff00, 0x42ff00, 0x2fff00, 0x1bff00, 0x08ff00, 0x00ff0c, 0x00ff1f, 0x00ff32, 0x00ff46,
+     0x00ff58, 0x00ff6d, 0x00ff80, 0x00ff93, 0x00ffa6, 0x00ffb9, 0x00ffcc, 0x00ffe0, 0x00fff3, 0x00f7ff, 0x00e4ff,
+     0x00d0ff, 0x00bdff, 0x00a9ff, 0x0096ff, 0x0082ff, 0x006fff, 0x005bff, 0x0048ff, 0x0034ff, 0x0021ff, 0x000dff,
+     0x0700ff, 0x1a00ff, 0x2e00ff, 0x4100ff, 0x5500ff, 0x6800ff, 0x7b00ff, 0x8f00ff, 0xa300ff, 0xb600ff, 0xca00ff,
+     0xdd00ff, 0xf100ff, 0xff00fa, 0xff00e6, 0xff00d3, 0xff00bf},
 
-  { /* COLORMAP_GIST_STERN */
-    0x000000, 0x420407, 0x83070e, 0xc50b16, 0xff0e1d, 0xeb1224,
-    0xd9162b, 0xc71932, 0xb51d39, 0xa32041, 0x912448, 0x7f284f,
-    0x6e2b56, 0x5c2f5d, 0x4a3265, 0x38366c, 0x273973, 0x153d7a,
-    0x454181, 0x444488, 0x484890, 0x4b4b97, 0x4f4f9e, 0x5353a5,
-    0x5656ac, 0x5a5ab4, 0x5d5dbb, 0x6161c2, 0x6565c9, 0x6868d0,
-    0x6c6cd7, 0x6f6fdf, 0x7373e6, 0x7777ed, 0x7a7af4, 0x7e7efb,
-    0x8181f8, 0x8585e9, 0x8888d9, 0x8c8cca, 0x9090ba, 0x9393ab,
-    0x97979c, 0x9a9a8c, 0x9e9e7d, 0xa2a26d, 0xa5a55e, 0xa9a94f,
-    0xacac40, 0xb0b031, 0xb4b422, 0xb7b712, 0xbbbb03, 0xbebe0b,
-    0xc2c219, 0xc6c626, 0xc9c934, 0xcdcd41, 0xd0d04f, 0xd4d45d,
-    0xd7d76a, 0xdbdb77, 0xdfdf85, 0xe2e293, 0xe6e6a1, 0xe9e9ae,
-    0xededbb, 0xf1f1c8, 0xf4f4d6, 0xf8f8e4, 0xfbfbf2, 0xffffff },
+    {/* COLORMAP_GIST_STERN */
+     0x000000, 0x420407, 0x83070e, 0xc50b16, 0xff0e1d, 0xeb1224, 0xd9162b, 0xc71932, 0xb51d39, 0xa32041, 0x912448,
+     0x7f284f, 0x6e2b56, 0x5c2f5d, 0x4a3265, 0x38366c, 0x273973, 0x153d7a, 0x454181, 0x444488, 0x484890, 0x4b4b97,
+     0x4f4f9e, 0x5353a5, 0x5656ac, 0x5a5ab4, 0x5d5dbb, 0x6161c2, 0x6565c9, 0x6868d0, 0x6c6cd7, 0x6f6fdf, 0x7373e6,
+     0x7777ed, 0x7a7af4, 0x7e7efb, 0x8181f8, 0x8585e9, 0x8888d9, 0x8c8cca, 0x9090ba, 0x9393ab, 0x97979c, 0x9a9a8c,
+     0x9e9e7d, 0xa2a26d, 0xa5a55e, 0xa9a94f, 0xacac40, 0xb0b031, 0xb4b422, 0xb7b712, 0xbbbb03, 0xbebe0b, 0xc2c219,
+     0xc6c626, 0xc9c934, 0xcdcd41, 0xd0d04f, 0xd4d45d, 0xd7d76a, 0xdbdb77, 0xdfdf85, 0xe2e293, 0xe6e6a1, 0xe9e9ae,
+     0xededbb, 0xf1f1c8, 0xf4f4d6, 0xf8f8e4, 0xfbfbf2, 0xffffff},
 
-  { /* COLORMAP_AFMHOT */
-    0x000000, 0x070000, 0x0e0000, 0x160000, 0x1d0000, 0x240000,
-    0x2b0000, 0x320000, 0x390000, 0x410000, 0x480000, 0x4f0000,
-    0x560000, 0x5d0000, 0x650000, 0x6c0000, 0x730000, 0x7a0000,
-    0x810100, 0x880800, 0x901000, 0x971800, 0x9e1f00, 0xa52600,
-    0xac2d00, 0xb43300, 0xbb3b00, 0xc24200, 0xc94900, 0xd05100,
-    0xd75900, 0xdf6000, 0xe66700, 0xed6e00, 0xf47400, 0xfb7c00,
-    0xff8304, 0xff8b0b, 0xff9212, 0xff9919, 0xffa020, 0xffa628,
-    0xffaf2f, 0xffb536, 0xffbd3d, 0xffc444, 0xffcc4b, 0xffd353,
-    0xffda5a, 0xffe161, 0xffe768, 0xffef6f, 0xfff577, 0xfffe7e,
-    0xffff85, 0xffff8c, 0xffff93, 0xffff9a, 0xffffa2, 0xffffa9,
-    0xffffb0, 0xffffb7, 0xffffbe, 0xffffc6, 0xffffcd, 0xffffd4,
-    0xffffdb, 0xffffe2, 0xffffe9, 0xfffff1, 0xfffff8, 0xffffff },
+    {/* COLORMAP_AFMHOT */
+     0x000000, 0x070000, 0x0e0000, 0x160000, 0x1d0000, 0x240000, 0x2b0000, 0x320000, 0x390000, 0x410000, 0x480000,
+     0x4f0000, 0x560000, 0x5d0000, 0x650000, 0x6c0000, 0x730000, 0x7a0000, 0x810100, 0x880800, 0x901000, 0x971800,
+     0x9e1f00, 0xa52600, 0xac2d00, 0xb43300, 0xbb3b00, 0xc24200, 0xc94900, 0xd05100, 0xd75900, 0xdf6000, 0xe66700,
+     0xed6e00, 0xf47400, 0xfb7c00, 0xff8304, 0xff8b0b, 0xff9212, 0xff9919, 0xffa020, 0xffa628, 0xffaf2f, 0xffb536,
+     0xffbd3d, 0xffc444, 0xffcc4b, 0xffd353, 0xffda5a, 0xffe161, 0xffe768, 0xffef6f, 0xfff577, 0xfffe7e, 0xffff85,
+     0xffff8c, 0xffff93, 0xffff9a, 0xffffa2, 0xffffa9, 0xffffb0, 0xffffb7, 0xffffbe, 0xffffc6, 0xffffcd, 0xffffd4,
+     0xffffdb, 0xffffe2, 0xffffe9, 0xfffff1, 0xfffff8, 0xffffff},
 
-  { /* COLORMAP_BRG */
-    0x0000ff, 0x0700f8, 0x0e00f1, 0x1600e9, 0x1d00e2, 0x2400db,
-    0x2b00d4, 0x3200cd, 0x3900c6, 0x4100be, 0x4800b7, 0x4f00b0,
-    0x5600a9, 0x5d00a2, 0x65009a, 0x6c0093, 0x73008c, 0x7a0085,
-    0x81007e, 0x880077, 0x90006f, 0x970068, 0x9e0061, 0xa5005a,
-    0xac0053, 0xb4004b, 0xbb0044, 0xc2003d, 0xc90036, 0xd0002f,
-    0xd70028, 0xdf0020, 0xe60019, 0xed0012, 0xf4000b, 0xfb0004,
-    0xfb0400, 0xf40b00, 0xed1200, 0xe61900, 0xdf2000, 0xd72800,
-    0xd02f00, 0xc93600, 0xc23d00, 0xbb4400, 0xb44b00, 0xac5300,
-    0xa55a00, 0x9e6100, 0x976800, 0x906f00, 0x887700, 0x817e00,
-    0x7a8500, 0x738c00, 0x6c9300, 0x659a00, 0x5da200, 0x56a900,
-    0x4fb000, 0x48b700, 0x41be00, 0x39c600, 0x32cd00, 0x2bd400,
-    0x24db00, 0x1de200, 0x16e900, 0x0ef100, 0x07f800, 0x00ff00 },
+    {/* COLORMAP_BRG */
+     0x0000ff, 0x0700f8, 0x0e00f1, 0x1600e9, 0x1d00e2, 0x2400db, 0x2b00d4, 0x3200cd, 0x3900c6, 0x4100be, 0x4800b7,
+     0x4f00b0, 0x5600a9, 0x5d00a2, 0x65009a, 0x6c0093, 0x73008c, 0x7a0085, 0x81007e, 0x880077, 0x90006f, 0x970068,
+     0x9e0061, 0xa5005a, 0xac0053, 0xb4004b, 0xbb0044, 0xc2003d, 0xc90036, 0xd0002f, 0xd70028, 0xdf0020, 0xe60019,
+     0xed0012, 0xf4000b, 0xfb0004, 0xfb0400, 0xf40b00, 0xed1200, 0xe61900, 0xdf2000, 0xd72800, 0xd02f00, 0xc93600,
+     0xc23d00, 0xbb4400, 0xb44b00, 0xac5300, 0xa55a00, 0x9e6100, 0x976800, 0x906f00, 0x887700, 0x817e00, 0x7a8500,
+     0x738c00, 0x6c9300, 0x659a00, 0x5da200, 0x56a900, 0x4fb000, 0x48b700, 0x41be00, 0x39c600, 0x32cd00, 0x2bd400,
+     0x24db00, 0x1de200, 0x16e900, 0x0ef100, 0x07f800, 0x00ff00},
 
-  { /* COLORMAP_BWR */
-    0x0000ff, 0x0707ff, 0x0e0eff, 0x1616ff, 0x1d1dff, 0x2424ff,
-    0x2b2bff, 0x3232ff, 0x3939ff, 0x4141ff, 0x4848ff, 0x4f4fff,
-    0x5656ff, 0x5d5dff, 0x6565ff, 0x6c6cff, 0x7373ff, 0x7a7aff,
-    0x8181ff, 0x8888ff, 0x9090ff, 0x9797ff, 0x9e9eff, 0xa5a5ff,
-    0xacacff, 0xb4b4ff, 0xbbbbff, 0xc2c2ff, 0xc9c9ff, 0xd0d0ff,
-    0xd7d7ff, 0xdfdfff, 0xe6e6ff, 0xededff, 0xf4f4ff, 0xfbfbff,
-    0xfffbfb, 0xfff4f4, 0xffeded, 0xffe6e6, 0xffdfdf, 0xffd7d7,
-    0xffd0d0, 0xffc9c9, 0xffc2c2, 0xffbbbb, 0xffb4b4, 0xffacac,
-    0xffa5a5, 0xff9e9e, 0xff9797, 0xff9090, 0xff8888, 0xff8181,
-    0xff7a7a, 0xff7373, 0xff6c6c, 0xff6565, 0xff5d5d, 0xff5656,
-    0xff4f4f, 0xff4848, 0xff4141, 0xff3939, 0xff3232, 0xff2b2b,
-    0xff2424, 0xff1d1d, 0xff1616, 0xff0e0e, 0xff0707, 0xff0000 },
+    {/* COLORMAP_BWR */
+     0x0000ff, 0x0707ff, 0x0e0eff, 0x1616ff, 0x1d1dff, 0x2424ff, 0x2b2bff, 0x3232ff, 0x3939ff, 0x4141ff, 0x4848ff,
+     0x4f4fff, 0x5656ff, 0x5d5dff, 0x6565ff, 0x6c6cff, 0x7373ff, 0x7a7aff, 0x8181ff, 0x8888ff, 0x9090ff, 0x9797ff,
+     0x9e9eff, 0xa5a5ff, 0xacacff, 0xb4b4ff, 0xbbbbff, 0xc2c2ff, 0xc9c9ff, 0xd0d0ff, 0xd7d7ff, 0xdfdfff, 0xe6e6ff,
+     0xededff, 0xf4f4ff, 0xfbfbff, 0xfffbfb, 0xfff4f4, 0xffeded, 0xffe6e6, 0xffdfdf, 0xffd7d7, 0xffd0d0, 0xffc9c9,
+     0xffc2c2, 0xffbbbb, 0xffb4b4, 0xffacac, 0xffa5a5, 0xff9e9e, 0xff9797, 0xff9090, 0xff8888, 0xff8181, 0xff7a7a,
+     0xff7373, 0xff6c6c, 0xff6565, 0xff5d5d, 0xff5656, 0xff4f4f, 0xff4848, 0xff4141, 0xff3939, 0xff3232, 0xff2b2b,
+     0xff2424, 0xff1d1d, 0xff1616, 0xff0e0e, 0xff0707, 0xff0000},
 
-  { /* COLORMAP_COOLWARM */
-    0x3b4cc0, 0x3f52c6, 0x4358cb, 0x485fd1, 0x4b65d5, 0x506bda,
-    0x5571df, 0x5977e3, 0x5e7de7, 0x6283ea, 0x6788ee, 0x6b8ef1,
-    0x7093f3, 0x7698f6, 0x7a9df8, 0x80a3fa, 0x85a7fc, 0x89acfd,
-    0x8eb1fe, 0x93b5fe, 0x98b9ff, 0x9ebdff, 0xa2c1ff, 0xa6c5fe,
-    0xabc8fd, 0xb1cbfc, 0xb6cdfa, 0xbad0f8, 0xbfd2f6, 0xc3d5f4,
-    0xc7d7f0, 0xcbd8ee, 0xcfdaea, 0xd4dbe6, 0xd7dce3, 0xdbdcdf,
-    0xdedcda, 0xe2dad5, 0xe5d7d0, 0xe9d5cb, 0xecd3c5, 0xeed0c0,
-    0xf1cdba, 0xf2cab5, 0xf4c6af, 0xf5c1a9, 0xf6bea4, 0xf7b99e,
-    0xf7b498, 0xf7b093, 0xf7ab8d, 0xf7a688, 0xf5a081, 0xf59b7c,
-    0xf39577, 0xf18f71, 0xf08a6c, 0xed8367, 0xeb7c61, 0xe8765c,
-    0xe56f57, 0xe26952, 0xde624d, 0xda5948, 0xd65244, 0xd14a40,
-    0xcd423b, 0xc93936, 0xc43032, 0xbe252e, 0xb9142b, 0xb40426 },
+    {/* COLORMAP_COOLWARM */
+     0x3b4cc0, 0x3f52c6, 0x4358cb, 0x485fd1, 0x4b65d5, 0x506bda, 0x5571df, 0x5977e3, 0x5e7de7, 0x6283ea, 0x6788ee,
+     0x6b8ef1, 0x7093f3, 0x7698f6, 0x7a9df8, 0x80a3fa, 0x85a7fc, 0x89acfd, 0x8eb1fe, 0x93b5fe, 0x98b9ff, 0x9ebdff,
+     0xa2c1ff, 0xa6c5fe, 0xabc8fd, 0xb1cbfc, 0xb6cdfa, 0xbad0f8, 0xbfd2f6, 0xc3d5f4, 0xc7d7f0, 0xcbd8ee, 0xcfdaea,
+     0xd4dbe6, 0xd7dce3, 0xdbdcdf, 0xdedcda, 0xe2dad5, 0xe5d7d0, 0xe9d5cb, 0xecd3c5, 0xeed0c0, 0xf1cdba, 0xf2cab5,
+     0xf4c6af, 0xf5c1a9, 0xf6bea4, 0xf7b99e, 0xf7b498, 0xf7b093, 0xf7ab8d, 0xf7a688, 0xf5a081, 0xf59b7c, 0xf39577,
+     0xf18f71, 0xf08a6c, 0xed8367, 0xeb7c61, 0xe8765c, 0xe56f57, 0xe26952, 0xde624d, 0xda5948, 0xd65244, 0xd14a40,
+     0xcd423b, 0xc93936, 0xc43032, 0xbe252e, 0xb9142b, 0xb40426},
 
-  { /* COLORMAP_CMRMAP */
-    0x000000, 0x05050e, 0x08081d, 0x0d0d2b, 0x111139, 0x161648,
-    0x191956, 0x1e1e65, 0x232373, 0x272681, 0x2b2688, 0x2f268f,
-    0x342696, 0x38269d, 0x3c26a5, 0x4126ac, 0x4526b3, 0x4926ba,
-    0x4f27be, 0x5828b7, 0x602aaf, 0x692ba8, 0x712ca1, 0x7a2e9a,
-    0x822f93, 0x8a318b, 0x943284, 0x9d347c, 0xa93571, 0xb43668,
-    0xc0385e, 0xcb3953, 0xd73b49, 0xe33c3f, 0xed3e36, 0xf93f2b,
-    0xfe4424, 0xfb4b20, 0xf7521b, 0xf55917, 0xf26013, 0xef680f,
-    0xec6f0a, 0xea7605, 0xe77d02, 0xe68402, 0xe68b05, 0xe69308,
-    0xe69a0a, 0xe6a10d, 0xe6a810, 0xe6af13, 0xe6b716, 0xe6be19,
-    0xe6c322, 0xe6c62e, 0xe6cb39, 0xe6d045, 0xe6d450, 0xe6d85c,
-    0xe6dc68, 0xe6e172, 0xe6e57e, 0xe8e88c, 0xebeb9a, 0xededa9,
-    0xf1f1b7, 0xf4f4c6, 0xf6f6d4, 0xf9f9e2, 0xfcfcf1, 0xffffff },
+    {/* COLORMAP_CMRMAP */
+     0x000000, 0x05050e, 0x08081d, 0x0d0d2b, 0x111139, 0x161648, 0x191956, 0x1e1e65, 0x232373, 0x272681, 0x2b2688,
+     0x2f268f, 0x342696, 0x38269d, 0x3c26a5, 0x4126ac, 0x4526b3, 0x4926ba, 0x4f27be, 0x5828b7, 0x602aaf, 0x692ba8,
+     0x712ca1, 0x7a2e9a, 0x822f93, 0x8a318b, 0x943284, 0x9d347c, 0xa93571, 0xb43668, 0xc0385e, 0xcb3953, 0xd73b49,
+     0xe33c3f, 0xed3e36, 0xf93f2b, 0xfe4424, 0xfb4b20, 0xf7521b, 0xf55917, 0xf26013, 0xef680f, 0xec6f0a, 0xea7605,
+     0xe77d02, 0xe68402, 0xe68b05, 0xe69308, 0xe69a0a, 0xe6a10d, 0xe6a810, 0xe6af13, 0xe6b716, 0xe6be19, 0xe6c322,
+     0xe6c62e, 0xe6cb39, 0xe6d045, 0xe6d450, 0xe6d85c, 0xe6dc68, 0xe6e172, 0xe6e57e, 0xe8e88c, 0xebeb9a, 0xededa9,
+     0xf1f1b7, 0xf4f4c6, 0xf6f6d4, 0xf9f9e2, 0xfcfcf1, 0xffffff},
 
-  { /* COLORMAP_CUBEHELIX */
-    0x000000, 0x060206, 0x0b040c, 0x100713, 0x13091a, 0x160d21,
-    0x191128, 0x1a142f, 0x1b1936, 0x1b1e3c, 0x1a2441, 0x192946,
-    0x182f49, 0x17364c, 0x163c4e, 0x15424e, 0x15484e, 0x154e4d,
-    0x16544b, 0x175a49, 0x1a6046, 0x1d6443, 0x22693f, 0x276d3b,
-    0x2d7038, 0x347435, 0x3d7632, 0x467830, 0x50792f, 0x5a7a2f,
-    0x657a30, 0x707b31, 0x7b7a35, 0x867a39, 0x907a3e, 0x9b7945,
-    0xa5794d, 0xae7956, 0xb6795f, 0xbe796a, 0xc47a75, 0xc97b80,
-    0xce7d8c, 0xd18097, 0xd382a3, 0xd486ae, 0xd589b9, 0xd48ec3,
-    0xd393cc, 0xd198d4, 0xcf9edc, 0xcca4e2, 0xcaaae8, 0xc8b1ec,
-    0xc5b8ef, 0xc3bef2, 0xc2c5f3, 0xc1ccf3, 0xc1d1f3, 0xc2d7f3,
-    0xc4ddf2, 0xc6e1f1, 0xcae6f0, 0xcdeaef, 0xd3eeef, 0xd8f1ef,
-    0xdef4ef, 0xe4f7f1, 0xebf9f3, 0xf2fbf6, 0xf9fdfb, 0xffffff },
+    {/* COLORMAP_CUBEHELIX */
+     0x000000, 0x060206, 0x0b040c, 0x100713, 0x13091a, 0x160d21, 0x191128, 0x1a142f, 0x1b1936, 0x1b1e3c, 0x1a2441,
+     0x192946, 0x182f49, 0x17364c, 0x163c4e, 0x15424e, 0x15484e, 0x154e4d, 0x16544b, 0x175a49, 0x1a6046, 0x1d6443,
+     0x22693f, 0x276d3b, 0x2d7038, 0x347435, 0x3d7632, 0x467830, 0x50792f, 0x5a7a2f, 0x657a30, 0x707b31, 0x7b7a35,
+     0x867a39, 0x907a3e, 0x9b7945, 0xa5794d, 0xae7956, 0xb6795f, 0xbe796a, 0xc47a75, 0xc97b80, 0xce7d8c, 0xd18097,
+     0xd382a3, 0xd486ae, 0xd589b9, 0xd48ec3, 0xd393cc, 0xd198d4, 0xcf9edc, 0xcca4e2, 0xcaaae8, 0xc8b1ec, 0xc5b8ef,
+     0xc3bef2, 0xc2c5f3, 0xc1ccf3, 0xc1d1f3, 0xc2d7f3, 0xc4ddf2, 0xc6e1f1, 0xcae6f0, 0xcdeaef, 0xd3eeef, 0xd8f1ef,
+     0xdef4ef, 0xe4f7f1, 0xebf9f3, 0xf2fbf6, 0xf9fdfb, 0xffffff},
 
-  { /* COLORMAP_GNUPLOT */
-    0x000000, 0x1e0017, 0x2b002d, 0x340043, 0x3d0058, 0x44006d,
-    0x4a0081, 0x500094, 0x5600a6, 0x5b01b6, 0x6001c6, 0x6501d3,
-    0x6901de, 0x6d02e9, 0x7102f2, 0x7502f8, 0x7a03fb, 0x7d03fe,
-    0x8104ff, 0x8405fe, 0x8706fa, 0x8a06f4, 0x8e08ed, 0x9109e4,
-    0x940ad9, 0x970bcc, 0x9a0cbe, 0x9d0eae, 0xa0109d, 0xa3118b,
-    0xa61377, 0xa81563, 0xab174d, 0xad1938, 0xb01c21, 0xb31f0b,
-    0xb52100, 0xb82400, 0xba2800, 0xbd2a00, 0xc02e00, 0xc23100,
-    0xc43500, 0xc63800, 0xc93d00, 0xcb4100, 0xcd4500, 0xd04a00,
-    0xd14f00, 0xd45400, 0xd65900, 0xd85e00, 0xda6500, 0xdc6a00,
-    0xde7000, 0xe17700, 0xe27d00, 0xe58400, 0xe68b00, 0xe99300,
-    0xea9a00, 0xeca200, 0xeeaa00, 0xf0b300, 0xf2bb00, 0xf4c400,
-    0xf6cd00, 0xf8d600, 0xf9e000, 0xfbeb00, 0xfdf400, 0xffff00 },
+    {/* COLORMAP_GNUPLOT */
+     0x000000, 0x1e0017, 0x2b002d, 0x340043, 0x3d0058, 0x44006d, 0x4a0081, 0x500094, 0x5600a6, 0x5b01b6, 0x6001c6,
+     0x6501d3, 0x6901de, 0x6d02e9, 0x7102f2, 0x7502f8, 0x7a03fb, 0x7d03fe, 0x8104ff, 0x8405fe, 0x8706fa, 0x8a06f4,
+     0x8e08ed, 0x9109e4, 0x940ad9, 0x970bcc, 0x9a0cbe, 0x9d0eae, 0xa0109d, 0xa3118b, 0xa61377, 0xa81563, 0xab174d,
+     0xad1938, 0xb01c21, 0xb31f0b, 0xb52100, 0xb82400, 0xba2800, 0xbd2a00, 0xc02e00, 0xc23100, 0xc43500, 0xc63800,
+     0xc93d00, 0xcb4100, 0xcd4500, 0xd04a00, 0xd14f00, 0xd45400, 0xd65900, 0xd85e00, 0xda6500, 0xdc6a00, 0xde7000,
+     0xe17700, 0xe27d00, 0xe58400, 0xe68b00, 0xe99300, 0xea9a00, 0xeca200, 0xeeaa00, 0xf0b300, 0xf2bb00, 0xf4c400,
+     0xf6cd00, 0xf8d600, 0xf9e000, 0xfbeb00, 0xfdf400, 0xffff00},
 
-  { /* COLORMAP_GNUPLOT2 */
-    0x000000, 0x00000e, 0x00001d, 0x00002b, 0x000039, 0x000048,
-    0x000056, 0x000065, 0x000073, 0x000081, 0x000090, 0x00009e,
-    0x0000ac, 0x0000bb, 0x0000c9, 0x0000d7, 0x0000e6, 0x0000f4,
-    0x0300ff, 0x0e00ff, 0x1900ff, 0x2400ff, 0x3000ff, 0x3b00ff,
-    0x4700ff, 0x5100ff, 0x5d00ff, 0x6800ff, 0x7300ff, 0x7e00ff,
-    0x8901fe, 0x9509f6, 0xa010ef, 0xac17e8, 0xb61ee1, 0xc225da,
-    0xcd2dd2, 0xd834cb, 0xe33bc4, 0xee42bd, 0xfa49b6, 0xff51ae,
-    0xff58a7, 0xff5fa0, 0xff6699, 0xff6d92, 0xff748b, 0xff7c83,
-    0xff837c, 0xff8a75, 0xff916e, 0xff9867, 0xffa05f, 0xffa758,
-    0xffae51, 0xffb54a, 0xffbc43, 0xffc33c, 0xffcb34, 0xffd22d,
-    0xffd926, 0xffe01f, 0xffe718, 0xffef10, 0xfff609, 0xfffd02,
-    0xffff1f, 0xffff4b, 0xffff78, 0xffffa5, 0xffffd2, 0xffffff },
+    {/* COLORMAP_GNUPLOT2 */
+     0x000000, 0x00000e, 0x00001d, 0x00002b, 0x000039, 0x000048, 0x000056, 0x000065, 0x000073, 0x000081, 0x000090,
+     0x00009e, 0x0000ac, 0x0000bb, 0x0000c9, 0x0000d7, 0x0000e6, 0x0000f4, 0x0300ff, 0x0e00ff, 0x1900ff, 0x2400ff,
+     0x3000ff, 0x3b00ff, 0x4700ff, 0x5100ff, 0x5d00ff, 0x6800ff, 0x7300ff, 0x7e00ff, 0x8901fe, 0x9509f6, 0xa010ef,
+     0xac17e8, 0xb61ee1, 0xc225da, 0xcd2dd2, 0xd834cb, 0xe33bc4, 0xee42bd, 0xfa49b6, 0xff51ae, 0xff58a7, 0xff5fa0,
+     0xff6699, 0xff6d92, 0xff748b, 0xff7c83, 0xff837c, 0xff8a75, 0xff916e, 0xff9867, 0xffa05f, 0xffa758, 0xffae51,
+     0xffb54a, 0xffbc43, 0xffc33c, 0xffcb34, 0xffd22d, 0xffd926, 0xffe01f, 0xffe718, 0xffef10, 0xfff609, 0xfffd02,
+     0xffff1f, 0xffff4b, 0xffff78, 0xffffa5, 0xffffd2, 0xffffff},
 
-  { /* COLORMAP_OCEAN */
-    0x008000, 0x007a04, 0x007507, 0x006f0b, 0x006a0e, 0x006512,
-    0x005f16, 0x005a19, 0x00541d, 0x004f20, 0x004a24, 0x004428,
-    0x003f2b, 0x003a2f, 0x003532, 0x002f36, 0x002a39, 0x00243d,
-    0x001f41, 0x001944, 0x001448, 0x000f4b, 0x00094f, 0x000453,
-    0x000156, 0x00075a, 0x000d5d, 0x001261, 0x001865, 0x001d68,
-    0x00226c, 0x00286f, 0x002d73, 0x003277, 0x00377a, 0x003e7e,
-    0x004281, 0x004885, 0x004d88, 0x00538c, 0x005890, 0x005d93,
-    0x006397, 0x00689a, 0x006e9e, 0x0072a2, 0x0078a5, 0x007ea9,
-    0x0784ac, 0x1288b0, 0x1d8eb4, 0x2893b7, 0x3298bb, 0x3d9ebe,
-    0x48a3c2, 0x53a9c6, 0x5daec9, 0x68b4cd, 0x73b9d0, 0x7ebfd4,
-    0x88c3d7, 0x93c9db, 0x9ecfdf, 0xa9d4e2, 0xb4dae6, 0xbedfe9,
-    0xc9e4ed, 0xd4e9f1, 0xdfeef4, 0xe9f4f8, 0xf4fafb, 0xffffff },
+    {/* COLORMAP_OCEAN */
+     0x008000, 0x007a04, 0x007507, 0x006f0b, 0x006a0e, 0x006512, 0x005f16, 0x005a19, 0x00541d, 0x004f20, 0x004a24,
+     0x004428, 0x003f2b, 0x003a2f, 0x003532, 0x002f36, 0x002a39, 0x00243d, 0x001f41, 0x001944, 0x001448, 0x000f4b,
+     0x00094f, 0x000453, 0x000156, 0x00075a, 0x000d5d, 0x001261, 0x001865, 0x001d68, 0x00226c, 0x00286f, 0x002d73,
+     0x003277, 0x00377a, 0x003e7e, 0x004281, 0x004885, 0x004d88, 0x00538c, 0x005890, 0x005d93, 0x006397, 0x00689a,
+     0x006e9e, 0x0072a2, 0x0078a5, 0x007ea9, 0x0784ac, 0x1288b0, 0x1d8eb4, 0x2893b7, 0x3298bb, 0x3d9ebe, 0x48a3c2,
+     0x53a9c6, 0x5daec9, 0x68b4cd, 0x73b9d0, 0x7ebfd4, 0x88c3d7, 0x93c9db, 0x9ecfdf, 0xa9d4e2, 0xb4dae6, 0xbedfe9,
+     0xc9e4ed, 0xd4e9f1, 0xdfeef4, 0xe9f4f8, 0xf4fafb, 0xffffff},
 
-  { /* COLORMAP_RAINBOW */
-    0x8000ff, 0x790bff, 0x7217ff, 0x6a21fe, 0x632dfe, 0x5c38fd,
-    0x5543fd, 0x4e4dfc, 0x4758fb, 0x3f63fa, 0x386df9, 0x3078f7,
-    0x2981f6, 0x228bf4, 0x1b94f3, 0x149df1, 0x0da6ef, 0x06aeed,
-    0x01b6eb, 0x08bfe9, 0x10c6e6, 0x18cce4, 0x1fd3e1, 0x26d9de,
-    0x2ddedc, 0x33e4d9, 0x3be9d6, 0x42edd3, 0x49f2cf, 0x51f4cc,
-    0x59f8c9, 0x60fac6, 0x67fcc2, 0x6efdbf, 0x74feba, 0x7cffb6,
-    0x83ffb3, 0x8bfeae, 0x92fdaa, 0x99fca6, 0xa0faa1, 0xa6f89d,
-    0xaff498, 0xb5f294, 0xbded8f, 0xc4e98b, 0xcce486, 0xd3de81,
-    0xdad97c, 0xe1d377, 0xe7cc73, 0xefc66d, 0xf5bf68, 0xfeb663,
-    0xffae5e, 0xffa658, 0xff9d53, 0xff944e, 0xff8b48, 0xff8143,
-    0xff783e, 0xff6d38, 0xff6332, 0xff582d, 0xff4d27, 0xff4322,
-    0xff381c, 0xff2d17, 0xff2111, 0xff170b, 0xff0b06, 0xff0000 },
+    {/* COLORMAP_RAINBOW */
+     0x8000ff, 0x790bff, 0x7217ff, 0x6a21fe, 0x632dfe, 0x5c38fd, 0x5543fd, 0x4e4dfc, 0x4758fb, 0x3f63fa, 0x386df9,
+     0x3078f7, 0x2981f6, 0x228bf4, 0x1b94f3, 0x149df1, 0x0da6ef, 0x06aeed, 0x01b6eb, 0x08bfe9, 0x10c6e6, 0x18cce4,
+     0x1fd3e1, 0x26d9de, 0x2ddedc, 0x33e4d9, 0x3be9d6, 0x42edd3, 0x49f2cf, 0x51f4cc, 0x59f8c9, 0x60fac6, 0x67fcc2,
+     0x6efdbf, 0x74feba, 0x7cffb6, 0x83ffb3, 0x8bfeae, 0x92fdaa, 0x99fca6, 0xa0faa1, 0xa6f89d, 0xaff498, 0xb5f294,
+     0xbded8f, 0xc4e98b, 0xcce486, 0xd3de81, 0xdad97c, 0xe1d377, 0xe7cc73, 0xefc66d, 0xf5bf68, 0xfeb663, 0xffae5e,
+     0xffa658, 0xff9d53, 0xff944e, 0xff8b48, 0xff8143, 0xff783e, 0xff6d38, 0xff6332, 0xff582d, 0xff4d27, 0xff4322,
+     0xff381c, 0xff2d17, 0xff2111, 0xff170b, 0xff0b06, 0xff0000},
 
-  { /* COLORMAP_SEISMIC */
-    0x00004d, 0x000057, 0x000061, 0x00006b, 0x000075, 0x00007f,
-    0x000089, 0x000093, 0x00009d, 0x0000a7, 0x0000b1, 0x0000bb,
-    0x0000c5, 0x0000cf, 0x0000d9, 0x0000e4, 0x0000ed, 0x0000f7,
-    0x0303ff, 0x1212ff, 0x2020ff, 0x2f2fff, 0x3d3dff, 0x4b4bff,
-    0x5a5aff, 0x6868ff, 0x7777ff, 0x8585ff, 0x9393ff, 0xa2a2ff,
-    0xb0b0ff, 0xbebeff, 0xcdcdff, 0xdbdbff, 0xe9e9ff, 0xf8f8ff,
-    0xfff8f8, 0xffe9e9, 0xffdbdb, 0xffcdcd, 0xffbebe, 0xffb0b0,
-    0xffa2a2, 0xff9393, 0xff8585, 0xff7777, 0xff6868, 0xff5a5a,
-    0xff4b4b, 0xff3d3d, 0xff2f2f, 0xff2020, 0xff1212, 0xff0303,
-    0xfa0000, 0xf30000, 0xec0000, 0xe40000, 0xdd0000, 0xd60000,
-    0xcf0000, 0xc80000, 0xc10000, 0xb90000, 0xb20000, 0xab0000,
-    0xa30000, 0x9d0000, 0x950000, 0x8e0000, 0x870000, 0x800000 },
+    {/* COLORMAP_SEISMIC */
+     0x00004d, 0x000057, 0x000061, 0x00006b, 0x000075, 0x00007f, 0x000089, 0x000093, 0x00009d, 0x0000a7, 0x0000b1,
+     0x0000bb, 0x0000c5, 0x0000cf, 0x0000d9, 0x0000e4, 0x0000ed, 0x0000f7, 0x0303ff, 0x1212ff, 0x2020ff, 0x2f2fff,
+     0x3d3dff, 0x4b4bff, 0x5a5aff, 0x6868ff, 0x7777ff, 0x8585ff, 0x9393ff, 0xa2a2ff, 0xb0b0ff, 0xbebeff, 0xcdcdff,
+     0xdbdbff, 0xe9e9ff, 0xf8f8ff, 0xfff8f8, 0xffe9e9, 0xffdbdb, 0xffcdcd, 0xffbebe, 0xffb0b0, 0xffa2a2, 0xff9393,
+     0xff8585, 0xff7777, 0xff6868, 0xff5a5a, 0xff4b4b, 0xff3d3d, 0xff2f2f, 0xff2020, 0xff1212, 0xff0303, 0xfa0000,
+     0xf30000, 0xec0000, 0xe40000, 0xdd0000, 0xd60000, 0xcf0000, 0xc80000, 0xc10000, 0xb90000, 0xb20000, 0xab0000,
+     0xa30000, 0x9d0000, 0x950000, 0x8e0000, 0x870000, 0x800000},
 
-  { /* COLORMAP_TERRAIN */
-    0x333399, 0x2f3da3, 0x2a46ac, 0x2450b6, 0x2059bf, 0x1b63c9,
-    0x176dd3, 0x1276dc, 0x0d7fe5, 0x0889ef, 0x0393f9, 0x009cf8,
-    0x00a3e2, 0x00aacd, 0x00b2b7, 0x00b9a2, 0x00c08c, 0x00c777,
-    0x03cd66, 0x12cf69, 0x20d36d, 0x2fd56f, 0x3dd872, 0x4bdb75,
-    0x5ade78, 0x68e17b, 0x77e37d, 0x85e781, 0x93ea84, 0xa2ec86,
-    0xb0ef89, 0xbef28c, 0xcdf58f, 0xdbf791, 0xe9fb95, 0xf8fe98,
-    0xfbfa97, 0xf4f193, 0xede890, 0xe6df8b, 0xdfd687, 0xd7cc84,
-    0xd0c380, 0xc9ba7c, 0xc2b178, 0xbba874, 0xb49e71, 0xac956c,
-    0xa58c69, 0x9e8365, 0x977a60, 0x90715d, 0x886859, 0x815e55,
-    0x85635c, 0x8c6c65, 0x93756e, 0x9a7e78, 0xa28882, 0xa9918c,
-    0xb09a95, 0xb7a39f, 0xbeaca8, 0xc6b6b2, 0xcdbfbc, 0xd4c8c5,
-    0xdbd1cf, 0xe2dad8, 0xe9e4e2, 0xf1edec, 0xf8f6f5, 0xffffff },
+    {/* COLORMAP_TERRAIN */
+     0x333399, 0x2f3da3, 0x2a46ac, 0x2450b6, 0x2059bf, 0x1b63c9, 0x176dd3, 0x1276dc, 0x0d7fe5, 0x0889ef, 0x0393f9,
+     0x009cf8, 0x00a3e2, 0x00aacd, 0x00b2b7, 0x00b9a2, 0x00c08c, 0x00c777, 0x03cd66, 0x12cf69, 0x20d36d, 0x2fd56f,
+     0x3dd872, 0x4bdb75, 0x5ade78, 0x68e17b, 0x77e37d, 0x85e781, 0x93ea84, 0xa2ec86, 0xb0ef89, 0xbef28c, 0xcdf58f,
+     0xdbf791, 0xe9fb95, 0xf8fe98, 0xfbfa97, 0xf4f193, 0xede890, 0xe6df8b, 0xdfd687, 0xd7cc84, 0xd0c380, 0xc9ba7c,
+     0xc2b178, 0xbba874, 0xb49e71, 0xac956c, 0xa58c69, 0x9e8365, 0x977a60, 0x90715d, 0x886859, 0x815e55, 0x85635c,
+     0x8c6c65, 0x93756e, 0x9a7e78, 0xa28882, 0xa9918c, 0xb09a95, 0xb7a39f, 0xbeaca8, 0xc6b6b2, 0xcdbfbc, 0xd4c8c5,
+     0xdbd1cf, 0xe2dad8, 0xe9e4e2, 0xf1edec, 0xf8f6f5, 0xffffff},
 
-  { /* COLORMAP_VIRIDIS */
-    0x440154, 0x46065a, 0x460b5e, 0x471164, 0x481768, 0x481b6d,
-    0x482070, 0x482475, 0x482979, 0x472d7b, 0x46327e, 0x453681,
-    0x443a83, 0x423f85, 0x414387, 0x3f4788, 0x3e4b89, 0x3c4f8a,
-    0x3a538b, 0x39568c, 0x375b8d, 0x355e8d, 0x33628d, 0x31668e,
-    0x30698e, 0x2e6d8e, 0x2d708e, 0x2c738e, 0x2a778e, 0x297a8e,
-    0x277e8e, 0x26818e, 0x25848e, 0x24888e, 0x228b8d, 0x218f8d,
-    0x20928c, 0x1f958b, 0x1f988b, 0x1e9c89, 0x1fa088, 0x1fa287,
-    0x21a685, 0x23a983, 0x26ad81, 0x2ab07f, 0x2eb37c, 0x34b679,
-    0x39b977, 0x3fbc73, 0x45c06f, 0x4cc26c, 0x54c568, 0x5bc864,
-    0x63cb5f, 0x6bcd5b, 0x73d056, 0x7bd250, 0x85d44a, 0x8ed645,
-    0x96d83f, 0xa0da39, 0xa9dc33, 0xb3dd2c, 0xbddf26, 0xc6e020,
-    0xd0e11c, 0xd9e319, 0xe3e418, 0xece51b, 0xf5e61f, 0xfde725 },
+    {/* COLORMAP_VIRIDIS */
+     0x440154, 0x46065a, 0x460b5e, 0x471164, 0x481768, 0x481b6d, 0x482070, 0x482475, 0x482979, 0x472d7b, 0x46327e,
+     0x453681, 0x443a83, 0x423f85, 0x414387, 0x3f4788, 0x3e4b89, 0x3c4f8a, 0x3a538b, 0x39568c, 0x375b8d, 0x355e8d,
+     0x33628d, 0x31668e, 0x30698e, 0x2e6d8e, 0x2d708e, 0x2c738e, 0x2a778e, 0x297a8e, 0x277e8e, 0x26818e, 0x25848e,
+     0x24888e, 0x228b8d, 0x218f8d, 0x20928c, 0x1f958b, 0x1f988b, 0x1e9c89, 0x1fa088, 0x1fa287, 0x21a685, 0x23a983,
+     0x26ad81, 0x2ab07f, 0x2eb37c, 0x34b679, 0x39b977, 0x3fbc73, 0x45c06f, 0x4cc26c, 0x54c568, 0x5bc864, 0x63cb5f,
+     0x6bcd5b, 0x73d056, 0x7bd250, 0x85d44a, 0x8ed645, 0x96d83f, 0xa0da39, 0xa9dc33, 0xb3dd2c, 0xbddf26, 0xc6e020,
+     0xd0e11c, 0xd9e319, 0xe3e418, 0xece51b, 0xf5e61f, 0xfde725},
 
-  { /* COLORMAP_INFERNO */
-    0x000004, 0x020109, 0x030210, 0x060419, 0x090620, 0x0d0829,
-    0x110a31, 0x160b39, 0x1c0c43, 0x220c4b, 0x280b53, 0x2e0a5a,
-    0x340a5f, 0x3a0964, 0x410a67, 0x470b6a, 0x4d0c6b, 0x520e6d,
-    0x58106e, 0x5d126e, 0x64156e, 0x69166e, 0x6f196e, 0x751a6e,
-    0x7a1d6d, 0x801f6c, 0x86216b, 0x8c2369, 0x912568, 0x972766,
-    0x9c2964, 0xa22b62, 0xa82e5f, 0xad305c, 0xb3325a, 0xb83556,
-    0xbe3853, 0xc33b4f, 0xc73e4c, 0xcc4248, 0xd14644, 0xd54a41,
-    0xda4e3c, 0xde5237, 0xe25734, 0xe65d2f, 0xe9612b, 0xec6726,
-    0xef6d22, 0xf1731d, 0xf37918, 0xf67e14, 0xf8850f, 0xf98b0b,
-    0xfa9207, 0xfb9806, 0xfc9f07, 0xfca60b, 0xfcad11, 0xfcb418,
-    0xfbbb20, 0xfac228, 0xf9c831, 0xf8d03b, 0xf6d746, 0xf4de51,
-    0xf3e55d, 0xf1eb6c, 0xf1f17a, 0xf3f689, 0xf7fa98, 0xfcffa4 },
+    {/* COLORMAP_INFERNO */
+     0x000004, 0x020109, 0x030210, 0x060419, 0x090620, 0x0d0829, 0x110a31, 0x160b39, 0x1c0c43, 0x220c4b, 0x280b53,
+     0x2e0a5a, 0x340a5f, 0x3a0964, 0x410a67, 0x470b6a, 0x4d0c6b, 0x520e6d, 0x58106e, 0x5d126e, 0x64156e, 0x69166e,
+     0x6f196e, 0x751a6e, 0x7a1d6d, 0x801f6c, 0x86216b, 0x8c2369, 0x912568, 0x972766, 0x9c2964, 0xa22b62, 0xa82e5f,
+     0xad305c, 0xb3325a, 0xb83556, 0xbe3853, 0xc33b4f, 0xc73e4c, 0xcc4248, 0xd14644, 0xd54a41, 0xda4e3c, 0xde5237,
+     0xe25734, 0xe65d2f, 0xe9612b, 0xec6726, 0xef6d22, 0xf1731d, 0xf37918, 0xf67e14, 0xf8850f, 0xf98b0b, 0xfa9207,
+     0xfb9806, 0xfc9f07, 0xfca60b, 0xfcad11, 0xfcb418, 0xfbbb20, 0xfac228, 0xf9c831, 0xf8d03b, 0xf6d746, 0xf4de51,
+     0xf3e55d, 0xf1eb6c, 0xf1f17a, 0xf3f689, 0xf7fa98, 0xfcffa4},
 
-  { /* COLORMAP_PLASMA */
-    0x0d0887, 0x18068b, 0x20068f, 0x280592, 0x2e0595, 0x350498,
-    0x3b049a, 0x41049d, 0x48039f, 0x4d02a1, 0x5302a3, 0x5901a5,
-    0x5e01a6, 0x6400a7, 0x6900a8, 0x6f00a8, 0x7401a8, 0x7a02a8,
-    0x7f04a8, 0x8405a7, 0x8a09a5, 0x8e0ca4, 0x9410a2, 0x99159f,
-    0x9d189d, 0xa21d9a, 0xa62098, 0xab2494, 0xaf2991, 0xb32c8e,
-    0xb7318a, 0xbb3488, 0xbf3984, 0xc33d80, 0xc6417d, 0xca457a,
-    0xcc4977, 0xd04d73, 0xd35271, 0xd6556d, 0xda596a, 0xdc5d67,
-    0xdf6263, 0xe26561, 0xe56a5d, 0xe76f5a, 0xe97257, 0xec7754,
-    0xef7b51, 0xf0804e, 0xf3844b, 0xf48948, 0xf68f44, 0xf79342,
-    0xf9983e, 0xfa9d3b, 0xfba238, 0xfca735, 0xfdad33, 0xfdb22f,
-    0xfeb72c, 0xfebd2a, 0xfdc328, 0xfdc927, 0xfcce25, 0xfbd424,
-    0xfada24, 0xf8e025, 0xf6e626, 0xf4ed27, 0xf1f327, 0xf0f921 },
+    {/* COLORMAP_PLASMA */
+     0x0d0887, 0x18068b, 0x20068f, 0x280592, 0x2e0595, 0x350498, 0x3b049a, 0x41049d, 0x48039f, 0x4d02a1, 0x5302a3,
+     0x5901a5, 0x5e01a6, 0x6400a7, 0x6900a8, 0x6f00a8, 0x7401a8, 0x7a02a8, 0x7f04a8, 0x8405a7, 0x8a09a5, 0x8e0ca4,
+     0x9410a2, 0x99159f, 0x9d189d, 0xa21d9a, 0xa62098, 0xab2494, 0xaf2991, 0xb32c8e, 0xb7318a, 0xbb3488, 0xbf3984,
+     0xc33d80, 0xc6417d, 0xca457a, 0xcc4977, 0xd04d73, 0xd35271, 0xd6556d, 0xda596a, 0xdc5d67, 0xdf6263, 0xe26561,
+     0xe56a5d, 0xe76f5a, 0xe97257, 0xec7754, 0xef7b51, 0xf0804e, 0xf3844b, 0xf48948, 0xf68f44, 0xf79342, 0xf9983e,
+     0xfa9d3b, 0xfba238, 0xfca735, 0xfdad33, 0xfdb22f, 0xfeb72c, 0xfebd2a, 0xfdc328, 0xfdc927, 0xfcce25, 0xfbd424,
+     0xfada24, 0xf8e025, 0xf6e626, 0xf4ed27, 0xf1f327, 0xf0f921},
 
-  { /* COLORMAP_MAGMA */
-    0x000004, 0x020109, 0x030310, 0x060518, 0x08071f, 0x0c0926,
-    0x110b2e, 0x140e36, 0x19103e, 0x1d1148, 0x221150, 0x281159,
-    0x2d1161, 0x341068, 0x390f6f, 0x400f74, 0x461078, 0x4c117a,
-    0x52137c, 0x57157e, 0x5d177f, 0x631a80, 0x681c81, 0x6e1d81,
-    0x732081, 0x792282, 0x7f2482, 0x842681, 0x8a2981, 0x902a81,
-    0x952c80, 0x9b2e7f, 0xa1307e, 0xa7317d, 0xad347c, 0xb3367a,
-    0xb83779, 0xbf3a77, 0xc43c75, 0xca3e72, 0xd0416f, 0xd5446d,
-    0xdb476a, 0xdf4b68, 0xe44f64, 0xe95362, 0xec5860, 0xf05f5e,
-    0xf2645c, 0xf56b5c, 0xf7715c, 0xf9785d, 0xfa7f5e, 0xfb8660,
-    0xfc8c63, 0xfd9367, 0xfd9a6a, 0xfea06e, 0xfea872, 0xfeae77,
-    0xfeb57b, 0xfebb81, 0xfec286, 0xfec98c, 0xfecf92, 0xfed698,
-    0xfddc9e, 0xfde3a4, 0xfdeaaa, 0xfcf0b2, 0xfcf6b8, 0xfcfdbf }
-};
+    {/* COLORMAP_MAGMA */
+     0x000004, 0x020109, 0x030310, 0x060518, 0x08071f, 0x0c0926, 0x110b2e, 0x140e36, 0x19103e, 0x1d1148, 0x221150,
+     0x281159, 0x2d1161, 0x341068, 0x390f6f, 0x400f74, 0x461078, 0x4c117a, 0x52137c, 0x57157e, 0x5d177f, 0x631a80,
+     0x681c81, 0x6e1d81, 0x732081, 0x792282, 0x7f2482, 0x842681, 0x8a2981, 0x902a81, 0x952c80, 0x9b2e7f, 0xa1307e,
+     0xa7317d, 0xad347c, 0xb3367a, 0xb83779, 0xbf3a77, 0xc43c75, 0xca3e72, 0xd0416f, 0xd5446d, 0xdb476a, 0xdf4b68,
+     0xe44f64, 0xe95362, 0xec5860, 0xf05f5e, 0xf2645c, 0xf56b5c, 0xf7715c, 0xf9785d, 0xfa7f5e, 0xfb8660, 0xfc8c63,
+     0xfd9367, 0xfd9a6a, 0xfea06e, 0xfea872, 0xfeae77, 0xfeb57b, 0xfebb81, 0xfec286, 0xfec98c, 0xfecf92, 0xfed698,
+     0xfddc9e, 0xfde3a4, 0xfdeaaa, 0xfcf0b2, 0xfcf6b8, 0xfcfdbf}};
 
-static
-double sizex = 0;
+static double sizex = 0;
 
-static
-int regeneration_flags = 0;
+static int regeneration_flags = 0;
 
 #ifdef _WIN32
 
@@ -1066,8 +752,7 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
   LPSTR lpEnvSearch;
   LPSTR lpszVarSearch;
 
-  if (!*lpszVariableName)
-    return NULL;
+  if (!*lpszVariableName) return NULL;
 
   lpEnvSearch = GetEnvironmentStrings();
 
@@ -1097,8 +782,7 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
       if (*lpEnvSearch == '=' && *lpszVarSearch == '\0')
         return (lpEnvSearch + 1);
       else
-        while (*lpEnvSearch)
-          lpEnvSearch++;
+        while (*lpEnvSearch) lpEnvSearch++;
 
       /*
        *  At this point the end of the environment variable's string
@@ -1109,18 +793,17 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
       lpEnvSearch++;
     }
 
-  return NULL;          /*
-                         *  If this section of code is reached, the variable
-                         *  was not found.
-                         */
+  return NULL; /*
+                *  If this section of code is reached, the variable
+                *  was not found.
+                */
 }
 
 #endif
 
-static
-char *xcalloc(int count, int size)
+static char *xcalloc(int count, int size)
 {
-  char *result = (char *) calloc(count, size);
+  char *result = (char *)calloc(count, size);
   if (!result)
     {
       fprintf(stderr, "out of virtual memory\n");
@@ -1129,10 +812,9 @@ char *xcalloc(int count, int size)
   return (result);
 }
 
-static
-char *xmalloc(int size)
+static char *xmalloc(int size)
 {
-  char *result = (char *) malloc(size);
+  char *result = (char *)malloc(size);
   if (!result)
     {
       fprintf(stderr, "out of virtual memory\n");
@@ -1141,10 +823,9 @@ char *xmalloc(int size)
   return (result);
 }
 
-static
-char *xrealloc(void *ptr, int size)
+static char *xrealloc(void *ptr, int size)
 {
-  char *result = (char *) realloc(ptr, size);
+  char *result = (char *)realloc(ptr, size);
   if (!result)
     {
       fprintf(stderr, "out of virtual memory\n");
@@ -1153,22 +834,19 @@ char *xrealloc(void *ptr, int size)
   return (result);
 }
 
-static
-void reallocate(int npoints)
+static void reallocate(int npoints)
 {
-  while (npoints >= maxpath)
-    maxpath += POINT_INC;
+  while (npoints >= maxpath) maxpath += POINT_INC;
 
-  opcode = (unsigned char *) xrealloc(opcode, maxpath * sizeof(unsigned char));
-  xpath = (double *) xrealloc(xpath, maxpath * sizeof(double));
-  xpoint = (double *) xrealloc(xpoint, maxpath * sizeof(double));
-  ypath = (double *) xrealloc(ypath, maxpath * sizeof(double));
-  ypoint = (double *) xrealloc(ypoint, maxpath * sizeof(double));
-  zpoint = (double *) xrealloc(zpoint, maxpath * sizeof(double));
+  opcode = (unsigned char *)xrealloc(opcode, maxpath * sizeof(unsigned char));
+  xpath = (double *)xrealloc(xpath, maxpath * sizeof(double));
+  xpoint = (double *)xrealloc(xpoint, maxpath * sizeof(double));
+  ypath = (double *)xrealloc(ypath, maxpath * sizeof(double));
+  ypoint = (double *)xrealloc(ypoint, maxpath * sizeof(double));
+  zpoint = (double *)xrealloc(zpoint, maxpath * sizeof(double));
 }
 
-static
-double x_lin(double x)
+static double x_lin(double x)
 {
   double result;
 
@@ -1182,14 +860,12 @@ double x_lin(double x)
   else
     result = x;
 
-  if (OPTION_FLIP_X & lx.scale_options)
-    result = lx.xmax - result + lx.xmin;
+  if (OPTION_FLIP_X & lx.scale_options) result = lx.xmax - result + lx.xmin;
 
   return (result);
 }
 
-static
-double y_lin(double y)
+static double y_lin(double y)
 {
   double result;
 
@@ -1203,14 +879,12 @@ double y_lin(double y)
   else
     result = y;
 
-  if (OPTION_FLIP_Y & lx.scale_options)
-    result = lx.ymax - result + lx.ymin;
+  if (OPTION_FLIP_Y & lx.scale_options) result = lx.ymax - result + lx.ymin;
 
   return (result);
 }
 
-static
-double z_lin(double z)
+static double z_lin(double z)
 {
   double result;
 
@@ -1224,50 +898,42 @@ double z_lin(double z)
   else
     result = z;
 
-  if (OPTION_FLIP_Z & lx.scale_options)
-    result = lx.zmax - result + lx.zmin;
+  if (OPTION_FLIP_Z & lx.scale_options) result = lx.zmax - result + lx.zmin;
 
   return (result);
 }
 
-static
-double x_log(double x)
+static double x_log(double x)
 {
-  if (OPTION_FLIP_X & lx.scale_options)
-    x = lx.xmax - x + lx.xmin;
+  if (OPTION_FLIP_X & lx.scale_options) x = lx.xmax - x + lx.xmin;
 
   if (OPTION_X_LOG & lx.scale_options)
-    return (pow(10.0, (double) ((x - lx.b) / lx.a)));
+    return (pow(10.0, (double)((x - lx.b) / lx.a)));
   else
     return (x);
 }
 
-static
-double y_log(double y)
+static double y_log(double y)
 {
-  if (OPTION_FLIP_Y & lx.scale_options)
-    y = lx.ymax - y + lx.ymin;
+  if (OPTION_FLIP_Y & lx.scale_options) y = lx.ymax - y + lx.ymin;
 
   if (OPTION_Y_LOG & lx.scale_options)
-    return (pow(10.0, (double) ((y - lx.d) / lx.c)));
+    return (pow(10.0, (double)((y - lx.d) / lx.c)));
   else
     return (y);
 }
 
-static
-double z_log(double z)
+static double z_log(double z)
 {
-  if (OPTION_FLIP_Z & lx.scale_options)
-    z = lx.zmax - z + lx.zmin;
+  if (OPTION_FLIP_Z & lx.scale_options) z = lx.zmax - z + lx.zmin;
 
   if (OPTION_Z_LOG & lx.scale_options)
-    return (pow(10.0, (double) ((z - lx.f) / lx.e)));
+    return (pow(10.0, (double)((z - lx.f) / lx.e)));
   else
     return (z);
 }
 
-static
-double atan_2(double x, double y)
+static double atan_2(double x, double y)
 {
   double a;
 
@@ -1282,8 +948,7 @@ double atan_2(double x, double y)
   return (a);
 }
 
-static
-void apply_world_xform (double *x, double *y, double *z)
+static void apply_world_xform(double *x, double *y, double *z)
 {
   double xw, yw;
 
@@ -1293,8 +958,7 @@ void apply_world_xform (double *x, double *y, double *z)
   *y = yw;
 }
 
-static
-void foreach_openws(void (*routine) (int, void *), void *arg)
+static void foreach_openws(void (*routine)(int, void *), void *arg)
 {
   int state, count, n = 1, errind, ol, wkid;
 
@@ -1312,8 +976,7 @@ void foreach_openws(void (*routine) (int, void *), void *arg)
     }
 }
 
-static
-void foreach_activews(void (*routine) (int, void *), void *arg)
+static void foreach_activews(void (*routine)(int, void *), void *arg)
 {
   int state, count, n = 1, errind, ol, wkid;
 
@@ -1331,8 +994,7 @@ void foreach_activews(void (*routine) (int, void *), void *arg)
     }
 }
 
-static
-void setspace(double zmin, double zmax, int rotation, int tilt)
+static void setspace(double zmin, double zmax, int rotation, int tilt)
 {
   int errind, tnr;
   double wn[4], vp[4];
@@ -1376,8 +1038,7 @@ void setspace(double zmin, double zmax, int rotation, int tilt)
   wx.d = wx.d - wx.c1 * xmin - wx.c2 * ymin - wx.c3 * zmin;
 }
 
-static
-int setscale(int options)
+static int setscale(int options)
 {
   int errind, tnr;
   double wn[4], vp[4];
@@ -1440,24 +1101,20 @@ int setscale(int options)
         result = -1;
     }
 
-  if (OPTION_FLIP_X & options)
-    lx.scale_options |= OPTION_FLIP_X;
+  if (OPTION_FLIP_X & options) lx.scale_options |= OPTION_FLIP_X;
 
-  if (OPTION_FLIP_Y & options)
-    lx.scale_options |= OPTION_FLIP_Y;
+  if (OPTION_FLIP_Y & options) lx.scale_options |= OPTION_FLIP_Y;
 
-  if (OPTION_FLIP_Z & options)
-    lx.scale_options |= OPTION_FLIP_Z;
+  if (OPTION_FLIP_Z & options) lx.scale_options |= OPTION_FLIP_Z;
 
   return result;
 }
 
-static
-void initialize(int state)
+static void initialize(int state)
 {
   int tnr = WC, font = 3, options = 0;
   double xmin = 0.2, xmax = 0.9, ymin = 0.2, ymax = 0.9;
-  int asf[13] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+  int asf[13] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
   double size = 2, height = 0.027;
 
   if (state == GKS_K_GKCL)
@@ -1482,16 +1139,14 @@ void initialize(int state)
   display = getenv("GR_DISPLAY");
 #endif
   if (display)
-    if (*display == '\0')
-      display = NULL;
+    if (*display == '\0') display = NULL;
 
   setscale(options);
 }
 
 #ifdef SIGUSR1
 
-static
-void resetgks(int sig)
+static void resetgks(int sig)
 {
   static int exiting = 0;
 
@@ -1505,15 +1160,13 @@ void resetgks(int sig)
         }
 
       signal(SIGUSR1, previous_handler);
-      if (previous_handler != SIG_DFL)
-        raise(SIGUSR1);
+      if (previous_handler != SIG_DFL) raise(SIGUSR1);
     }
 }
 
 #else
 
-static
-void resetgks(void)
+static void resetgks(void)
 {
   static int exiting = 0;
 
@@ -1528,15 +1181,13 @@ void resetgks(void)
 #endif
 
 
-static
-void initgks(void)
+static void initgks(void)
 {
   int state, errfil = 0, wkid = 1, errind, conid, wtype, color;
   double r, g, b;
 
   gks_inq_operating_state(&state);
-  if (state == GKS_K_GKCL)
-    gks_open_gks(errfil);
+  if (state == GKS_K_GKCL) gks_open_gks(errfil);
 
   initialize(state);
 
@@ -1566,9 +1217,7 @@ void initgks(void)
   for (color = 0; color < MAX_COLOR; color++)
     {
       gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
-      rgb[color] = ((nint(r * 255) & 0xff)      ) |
-                   ((nint(g * 255) & 0xff) <<  8) |
-                   ((nint(b * 255) & 0xff) << 16);
+      rgb[color] = ((nint(r * 255) & 0xff)) | ((nint(g * 255) & 0xff) << 8) | ((nint(b * 255) & 0xff) << 16);
       used[color] = 0;
     }
 
@@ -1677,8 +1326,7 @@ void gr_openws(int workstation_id, char *connection, int type)
 {
   if (connection)
     {
-      if (!*connection)
-        connection = NULL;
+      if (!*connection) connection = NULL;
     }
   gks_open_ws(workstation_id, connection, type);
 }
@@ -1713,20 +1361,17 @@ void gr_deactivatews(int workstation_id)
   gks_deactivate_ws(workstation_id);
 }
 
-static
-void clear(int workstation_id, int *clearflag)
+static void clear(int workstation_id, int *clearflag)
 {
   int wkid = workstation_id, state, errind, conid, wtype, wkcat;
 
   gks_inq_operating_state(&state);
-  if (state == GKS_K_SGOP)
-    gks_close_seg();
+  if (state == GKS_K_SGOP) gks_close_seg();
 
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
   gks_inq_ws_category(wtype, &errind, &wkcat);
 
-  if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN ||
-      wkcat == GKS_K_WSCAT_MO)
+  if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN || wkcat == GKS_K_WSCAT_MO)
     {
       gks_clear_ws(wkid, *clearflag);
       gks_update_ws(wkid, GKS_K_POSTPONE_FLAG);
@@ -1739,7 +1384,7 @@ void gr_clearws(void)
 
   check_autoinit;
 
-  foreach_activews((void (*)(int, void *)) clear, (void *) &clearflag);
+  foreach_activews((void (*)(int, void *))clear, (void *)&clearflag);
 
   if (flag_graphics)
     {
@@ -1752,16 +1397,14 @@ void gr_clearws(void)
   def_color = 0;
 }
 
-static
-void update(int workstation_id, int *regenflag)
+static void update(int workstation_id, int *regenflag)
 {
   int wkid = workstation_id, errind, conid, wtype, wkcat;
 
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
   gks_inq_ws_category(wtype, &errind, &wkcat);
 
-  if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN)
-    gks_update_ws(wkid, *regenflag);
+  if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN) gks_update_ws(wkid, *regenflag);
 }
 
 void gr_updatews(void)
@@ -1770,7 +1413,7 @@ void gr_updatews(void)
 
   check_autoinit;
 
-  foreach_openws((void (*)(int, void *)) update, (void *) &regenflag);
+  foreach_openws((void (*)(int, void *))update, (void *)&regenflag);
 
   if (flag_graphics)
     if (display)
@@ -1781,109 +1424,96 @@ void gr_updatews(void)
       }
 }
 
-#define gks(primitive) \
-  int npoints = n; \
-  double *px = x, *py = y; \
-  int i; \
-\
-  check_autoinit; \
-\
-  if (lx.scale_options) \
-    { \
-      if (npoints >= maxpath) \
-        reallocate(npoints); \
-\
-      px = xpoint; \
-      py = ypoint; \
-      for (i = 0; i < npoints; i++) \
-        { \
-          px[i] = x_lin(x[i]); \
-          py[i] = y_lin(y[i]); \
-        } \
-    } \
-\
+#define gks(primitive)                             \
+  int npoints = n;                                 \
+  double *px = x, *py = y;                         \
+  int i;                                           \
+                                                   \
+  check_autoinit;                                  \
+                                                   \
+  if (lx.scale_options)                            \
+    {                                              \
+      if (npoints >= maxpath) reallocate(npoints); \
+                                                   \
+      px = xpoint;                                 \
+      py = ypoint;                                 \
+      for (i = 0; i < npoints; i++)                \
+        {                                          \
+          px[i] = x_lin(x[i]);                     \
+          py[i] = y_lin(y[i]);                     \
+        }                                          \
+    }                                              \
+                                                   \
   primitive(npoints, px, py)
 
-static
-void polyline(int n, double *x, double *y)
+static void polyline(int n, double *x, double *y)
 {
   gks(gks_polyline);
 }
 
-static
-void polymarker(int n, double *x, double *y)
+static void polymarker(int n, double *x, double *y)
 {
   gks(gks_polymarker);
 }
 
-static
-void fillarea(int n, double *x, double *y)
+static void fillarea(int n, double *x, double *y)
 {
   gks(gks_fillarea);
 }
 
-static
-void print_int_array(char *name, int n, int *data)
+static void print_int_array(char *name, int n, int *data)
 {
   int i;
 
   gr_writestream(" %s=\"", name);
   for (i = 0; i < n; i++)
     {
-      if (i > 0)
-        gr_writestream(" ");
+      if (i > 0) gr_writestream(" ");
       gr_writestream("%d", data[i]);
     }
   gr_writestream("\"");
 }
 
-static
-void print_float_array(char *name, int n, double *data)
+static void print_float_array(char *name, int n, double *data)
 {
   int i;
 
   gr_writestream(" %s=\"", name);
   for (i = 0; i < n; i++)
     {
-      if (i > 0)
-        gr_writestream(" ");
+      if (i > 0) gr_writestream(" ");
       gr_writestream("%g", data[i]);
     }
   gr_writestream("\"");
 }
 
-static
-void print_vertex_array(char *name, int n, vertex_t *vertices)
+static void print_vertex_array(char *name, int n, vertex_t *vertices)
 {
   int i;
 
   gr_writestream(" %s=\"", name);
   for (i = 0; i < n; i++)
     {
-      if (i > 0)
-        gr_writestream(" ");
+      if (i > 0) gr_writestream(" ");
       gr_writestream("%g %g", vertices[i].x, vertices[i].y);
     }
   gr_writestream("\"");
 }
 
-static
-void print_byte_array(char *name, int n, unsigned char *data)
+static void print_byte_array(char *name, int n, unsigned char *data)
 {
   int i;
 
   gr_writestream(" %s=\"", name);
   for (i = 0; i < n; i++)
     {
-      if (i > 0)
-        gr_writestream(" ");
+      if (i > 0) gr_writestream(" ");
       gr_writestream("%d", data[i]);
     }
   gr_writestream("\"");
 }
 
-static
-void primitive(char *name, int n, double *x, double *y)
+static void primitive(char *name, int n, double *x, double *y)
 {
   gr_writestream("<%s len=\"%d\"", name, n);
   print_float_array("x", n, x);
@@ -1907,8 +1537,7 @@ void gr_polyline(int n, double *x, double *y)
 {
   gks(gks_polyline);
 
-  if (flag_graphics)
-    primitive("polyline", n, x, y);
+  if (flag_graphics) primitive("polyline", n, x, y);
 }
 
 /*!
@@ -1926,8 +1555,7 @@ void gr_polymarker(int n, double *x, double *y)
 {
   gks(gks_polymarker);
 
-  if (flag_graphics)
-    primitive("polymarker", n, x, y);
+  if (flag_graphics) primitive("polymarker", n, x, y);
 }
 
 /*!
@@ -1952,8 +1580,7 @@ void gr_text(double x, double y, char *string)
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
-  if (tnr != NDC)
-    gks_select_xform(NDC);
+  if (tnr != NDC) gks_select_xform(NDC);
 
   if (strchr(string, '\n') != NULL)
     {
@@ -1966,22 +1593,21 @@ void gr_text(double x, double y, char *string)
       n = 0;
       s = string;
       while (*s)
-        if (*s++ == '\n')
-          n++;
+        if (*s++ == '\n') n++;
 
       rx = x;
       ry = y;
       switch (valign)
         {
-          case 3:
-            rx = x - sin(angle) * 0.5 * n * height;
-            ry = y + cos(angle) * 0.5 * n * height;
-            break;
-          case 4:
-          case 5:
-            rx = x - sin(angle) * n * height;
-            ry = y + cos(angle) * n * height;
-            break;
+        case 3:
+          rx = x - sin(angle) * 0.5 * n * height;
+          ry = y + cos(angle) * 0.5 * n * height;
+          break;
+        case 4:
+        case 5:
+          rx = x - sin(angle) * n * height;
+          ry = y + cos(angle) * n * height;
+          break;
         }
 
       t = strdup(string);
@@ -2000,11 +1626,9 @@ void gr_text(double x, double y, char *string)
   else
     gks_text(x, y, string);
 
-  if (tnr != NDC)
-    gks_select_xform(tnr);
+  if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics)
-    gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_graphics) gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
 void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
@@ -2019,8 +1643,7 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
-  if (tnr != NDC)
-    gks_select_xform(NDC);
+  if (tnr != NDC) gks_select_xform(NDC);
 
   gks_inq_open_ws(1, &errind, &n, &wkid);
 
@@ -2052,16 +1675,28 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
       rx = x;
       switch (halign)
         {
-          case 2: rx -= 0.5 * width; break;
-          case 3: rx -= width; break;
+        case 2:
+          rx -= 0.5 * width;
+          break;
+        case 3:
+          rx -= width;
+          break;
         }
       ry = y;
       switch (valign)
         {
-          case 1: ry -= height - chh * 0.04; break;
-          case 2: ry -= height; break;
-          case 3: ry -= 0.5 * height; break;
-          case 5: ry -= chh * 0.04; break;
+        case 1:
+          ry -= height - chh * 0.04;
+          break;
+        case 2:
+          ry -= height;
+          break;
+        case 3:
+          ry -= 0.5 * height;
+          break;
+        case 5:
+          ry -= chh * 0.04;
+          break;
         }
       tbx[0] = rx;
       tbx[1] = rx + width;
@@ -2117,8 +1752,7 @@ void gr_fillarea(int n, double *x, double *y)
 {
   gks(gks_fillarea);
 
-  if (flag_graphics)
-    primitive("fillarea", n, x, y);
+  if (flag_graphics) primitive("fillarea", n, x, y);
 }
 
 /*!
@@ -2141,23 +1775,19 @@ void gr_fillarea(int n, double *x, double *y)
  *
  * The values for `xmin`, `xmax`, `ymin` and `ymax` are in world coordinates.
  */
-void gr_cellarray(
-  double xmin, double xmax, double ymin, double ymax, int dimx, int dimy,
-  int scol, int srow, int ncol, int nrow, int *color)
+void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, int dimy, int scol, int srow, int ncol,
+                  int nrow, int *color)
 {
   check_autoinit;
 
-  gks_cellarray(
-    x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin),
-    dimx, dimy, scol, srow, ncol, nrow, color);
+  gks_cellarray(x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), dimx, dimy, scol, srow, ncol, nrow, color);
 
   if (flag_graphics)
     {
-      gr_writestream(
-        "<cellarray xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
-        "dimx=\"%d\" dimy=\"%d\" scol=\"%d\" srow=\"%d\" "
-        "ncol=\"%d\" nrow=\"%d\"",
-        xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow);
+      gr_writestream("<cellarray xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+                     "dimx=\"%d\" dimy=\"%d\" scol=\"%d\" srow=\"%d\" "
+                     "ncol=\"%d\" nrow=\"%d\"",
+                     xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow);
       print_int_array("color", dimx * dimy, color);
       gr_writestream("/>\n");
     }
@@ -2173,8 +1803,7 @@ void gr_gdp(int n, double *x, double *y, int primid, int ldr, int *datrec)
 
   if (lx.scale_options)
     {
-      if (npoints >= maxpath)
-        reallocate(npoints);
+      if (npoints >= maxpath) reallocate(npoints);
 
       px = xpoint;
       py = ypoint;
@@ -2236,22 +1865,22 @@ void gr_spline(int n, double *px, double *py, int m, int method)
 
   check_autoinit;
 
-  t = (double *) xmalloc(sizeof(double) * m);
-  s = (double *) xmalloc(sizeof(double) * m);
-  sx = (double *) xmalloc(sizeof(double) * m);
-  sy = (double *) xmalloc(sizeof(double) * m);
-  x = (double *) xmalloc(sizeof(double) * n);
-  f = (double *) xmalloc(sizeof(double) * n);
-  df = (double *) xmalloc(sizeof(double) * n);
-  y = (double *) xmalloc(sizeof(double) * n);
-  c = (double *) xmalloc(sizeof(double) * 3 * (n - 1));
-  se = (double *) xmalloc(sizeof(double) * n);
-  wk = (double *) xmalloc(sizeof(double) * 7 * (n + 2));
+  t = (double *)xmalloc(sizeof(double) * m);
+  s = (double *)xmalloc(sizeof(double) * m);
+  sx = (double *)xmalloc(sizeof(double) * m);
+  sy = (double *)xmalloc(sizeof(double) * m);
+  x = (double *)xmalloc(sizeof(double) * n);
+  f = (double *)xmalloc(sizeof(double) * n);
+  df = (double *)xmalloc(sizeof(double) * n);
+  y = (double *)xmalloc(sizeof(double) * n);
+  c = (double *)xmalloc(sizeof(double) * 3 * (n - 1));
+  se = (double *)xmalloc(sizeof(double) * n);
+  wk = (double *)xmalloc(sizeof(double) * 7 * (n + 2));
 
   for (i = 0; i < n; i++)
     {
-      x[i] = (double) ((x_lin(px[i]) - lx.xmin) / (lx.xmax - lx.xmin));
-      f[i] = (double) ((y_lin(py[i]) - lx.ymin) / (lx.ymax - lx.ymin));
+      x[i] = (double)((x_lin(px[i]) - lx.xmin) / (lx.xmax - lx.xmin));
+      f[i] = (double)((y_lin(py[i]) - lx.ymin) / (lx.ymax - lx.ymin));
       df[i] = 1;
     }
 
@@ -2267,13 +1896,12 @@ void gr_spline(int n, double *px, double *py, int m, int method)
       if (!err)
         {
           sx[0] = x[0];
-          for (j = 1; j < m - 1; j++)
-            sx[j] = x[0] + j * (x[n - 1] - x[0]) / (m - 1);
+          for (j = 1; j < m - 1; j++) sx[j] = x[0] + j * (x[n - 1] - x[0]) / (m - 1);
           sx[m - 1] = x[n - 1];
 
           job = 0;
           ic = n - 1;
-          var = (double) method;
+          var = (double)method;
 
           cubgcv(x, f, df, &n, y, c, &ic, &var, &job, se, wk, &ier);
 
@@ -2282,18 +1910,15 @@ void gr_spline(int n, double *px, double *py, int m, int method)
               for (j = 0; j < m; j++)
                 {
                   i = 0;
-                  while ((i < ic) && (x[i] <= sx[j]))
-                    i++;
-                  if (x[i] > sx[j])
-                    i--;
+                  while ((i < ic) && (x[i] <= sx[j])) i++;
+                  if (x[i] > sx[j]) i--;
                   if (i < 0)
                     i = 0;
                   else if (i >= ic)
                     i = ic - 1;
                   d = sx[j] - x[i];
 
-                  s[j] = (double) (((c[i + 2 * ic] * d + c[i + ic]) * d +
-                                   c[i]) * d + y[i]);
+                  s[j] = (double)(((c[i + 2 * ic] * d + c[i + ic]) * d + c[i]) * d + y[i]);
                 }
             }
           else
@@ -2307,16 +1932,15 @@ void gr_spline(int n, double *px, double *py, int m, int method)
     {
       b_spline(n, x, f, m, sx, sy);
 
-      for (j = 0; j < m; j++)
-        s[j] = (double) sy[j];
+      for (j = 0; j < m; j++) s[j] = (double)sy[j];
     }
 
   if (!err)
     {
       for (j = 0; j < m; j++)
         {
-          t[j] = x_log((double) (lx.xmin + sx[j] * (lx.xmax - lx.xmin)));
-          s[j] = y_log((double) (lx.ymin + s[j] * (lx.ymax - lx.ymin)));
+          t[j] = x_log((double)(lx.xmin + sx[j] * (lx.xmax - lx.xmin)));
+          s[j] = y_log((double)(lx.ymin + s[j] * (lx.ymax - lx.ymin)));
         }
       polyline(m, t, s);
     }
@@ -2342,8 +1966,7 @@ void gr_spline(int n, double *px, double *py, int m, int method)
     }
 }
 
-void gr_gridit(int nd, double *xd, double *yd, double *zd,
-               int nx, int ny, double *x, double *y, double *z)
+void gr_gridit(int nd, double *xd, double *yd, double *zd, int nx, int ny, double *x, double *y, double *z)
 {
   int i, md, ncp;
   double xmin, ymin, xmax, ymax;
@@ -2369,26 +1992,29 @@ void gr_gridit(int nd, double *xd, double *yd, double *zd,
   ymax = ymin;
 
   /* CALCULATION OF MIN/MAX VALUES */
-  for (i = 1; i < nd; ++i) {
-    xmin = min(xmin, xd[i]);
-    xmax = max(xmax, xd[i]);
-    ymin = min(ymin, yd[i]);
-    ymax = max(ymax, yd[i]);
-  }
+  for (i = 1; i < nd; ++i)
+    {
+      xmin = min(xmin, xd[i]);
+      xmax = max(xmax, xd[i]);
+      ymin = min(ymin, yd[i]);
+      ymax = max(ymax, yd[i]);
+    }
 
   /* DETERMINE GRID POINTS INSIDE THE DATA AREA */
-  for (i = 0; i < nx; ++i) {
-    x[i] = xmin + i / (double) (nx - 1) * (xmax - xmin);
-  }
-  for (i = 0; i < ny; ++i) {
-    y[i] = ymin + i / (double) (ny - 1) * (ymax - ymin);
-  }
+  for (i = 0; i < nx; ++i)
+    {
+      x[i] = xmin + i / (double)(nx - 1) * (xmax - xmin);
+    }
+  for (i = 0; i < ny; ++i)
+    {
+      y[i] = ymin + i / (double)(ny - 1) * (ymax - ymin);
+    }
 
   /* CALL THE SMOOTH SURFACE FIT ROUTINE */
   md = 1;
   ncp = 4;
-  iwk = (int *) calloc(31 * nd + nx * ny, sizeof(int));
-  wk = (double *) calloc(6 * (nd + 1), sizeof(double));
+  iwk = (int *)calloc(31 * nd + nx * ny, sizeof(int));
+  wk = (double *)calloc(6 * (nd + 1), sizeof(double));
 
   idsfft(&md, &ncp, &nd, xd, yd, zd, &nx, &ny, x, y, z, iwk, wk);
 
@@ -2439,11 +2065,9 @@ void gr_setlinetype(int type)
   check_autoinit;
 
   gks_set_pline_linetype(type);
-  if (ctx)
-    ctx->ltype = type;
+  if (ctx) ctx->ltype = type;
 
-  if (flag_graphics)
-    gr_writestream("<setlinetype type=\"%d\"/>\n", type);
+  if (flag_graphics) gr_writestream("<setlinetype type=\"%d\"/>\n", type);
 }
 
 void gr_inqlinetype(int *ltype)
@@ -2468,11 +2092,9 @@ void gr_setlinewidth(double width)
   check_autoinit;
 
   gks_set_pline_linewidth(width);
-  if (ctx)
-    ctx->lwidth = width;
+  if (ctx) ctx->lwidth = width;
 
-  if (flag_graphics)
-    gr_writestream("<setlinewidth width=\"%g\"/>\n", width);
+  if (flag_graphics) gr_writestream("<setlinewidth width=\"%g\"/>\n", width);
 }
 
 void gr_inqlinewidth(double *width)
@@ -2491,11 +2113,9 @@ void gr_setlinecolorind(int color)
   check_autoinit;
 
   gks_set_pline_color_index(color);
-  if (ctx)
-    ctx->plcoli = color;
+  if (ctx) ctx->plcoli = color;
 
-  if (flag_graphics)
-    gr_writestream("<setlinecolorind color=\"%d\"/>\n", color);
+  if (flag_graphics) gr_writestream("<setlinecolorind color=\"%d\"/>\n", color);
 }
 
 void gr_inqlinecolorind(int *coli)
@@ -2597,11 +2217,9 @@ void gr_setmarkertype(int type)
   check_autoinit;
 
   gks_set_pmark_type(type);
-  if (ctx)
-    ctx->mtype = type;
+  if (ctx) ctx->mtype = type;
 
-  if (flag_graphics)
-    gr_writestream("<setmarkertype type=\"%d\"/>\n", type);
+  if (flag_graphics) gr_writestream("<setmarkertype type=\"%d\"/>\n", type);
 }
 
 void gr_inqmarkertype(int *mtype)
@@ -2623,11 +2241,9 @@ void gr_setmarkersize(double size)
   check_autoinit;
 
   gks_set_pmark_size(size);
-  if (ctx)
-    ctx->mszsc = size;
+  if (ctx) ctx->mszsc = size;
 
-  if (flag_graphics)
-    gr_writestream("<setmarkersize size=\"%g\"/>\n", size);
+  if (flag_graphics) gr_writestream("<setmarkersize size=\"%g\"/>\n", size);
 }
 
 /*!
@@ -2640,11 +2256,9 @@ void gr_setmarkercolorind(int color)
   check_autoinit;
 
   gks_set_pmark_color_index(color);
-  if (ctx)
-    ctx->pmcoli = color;
+  if (ctx) ctx->pmcoli = color;
 
-  if (flag_graphics)
-    gr_writestream("<setmarkercolorind color=\"%d\"/>\n", color);
+  if (flag_graphics) gr_writestream("<setmarkercolorind color=\"%d\"/>\n", color);
 }
 
 void gr_inqmarkercolorind(int *coli)
@@ -2755,9 +2369,7 @@ void gr_settextfontprec(int font, int precision)
       ctx->txprec = precision;
     }
 
-  if (flag_graphics)
-    gr_writestream("<settextfontprec font=\"%d\" precision=\"%d\"/>\n",
-            font, precision);
+  if (flag_graphics) gr_writestream("<settextfontprec font=\"%d\" precision=\"%d\"/>\n", font, precision);
 }
 
 /*!
@@ -2776,11 +2388,9 @@ void gr_setcharexpan(double factor)
   check_autoinit;
 
   gks_set_text_expfac(factor);
-  if (ctx)
-    ctx->chxp = factor;
+  if (ctx) ctx->chxp = factor;
 
-  if (flag_graphics)
-    gr_writestream("<setcharexpan factor=\"%g\"/>\n", factor);
+  if (flag_graphics) gr_writestream("<setcharexpan factor=\"%g\"/>\n", factor);
 }
 
 void gr_setcharspace(double spacing)
@@ -2788,12 +2398,9 @@ void gr_setcharspace(double spacing)
   check_autoinit;
 
   gks_set_text_spacing(spacing);
-  if (ctx)
-    ctx->chsp = spacing;
+  if (ctx) ctx->chsp = spacing;
 
-  if (flag_graphics)
-    gr_writestream("<setcharspace spacingr=\"%g\"/>\n", spacing);
-
+  if (flag_graphics) gr_writestream("<setcharspace spacingr=\"%g\"/>\n", spacing);
 }
 
 /*!
@@ -2809,11 +2416,9 @@ void gr_settextcolorind(int color)
   check_autoinit;
 
   gks_set_text_color_index(color);
-  if (ctx)
-    ctx->txcoli = color;
+  if (ctx) ctx->txcoli = color;
 
-  if (flag_graphics)
-    gr_writestream("<settextcolorind color=\"%d\"/>\n", color);
+  if (flag_graphics) gr_writestream("<settextcolorind color=\"%d\"/>\n", color);
 }
 
 /*!
@@ -2830,11 +2435,9 @@ void gr_setcharheight(double height)
   check_autoinit;
 
   gks_set_text_height(height);
-  if (ctx)
-    ctx->chh = height;
+  if (ctx) ctx->chh = height;
 
-  if (flag_graphics)
-    gr_writestream("<setcharheight height=\"%g\"/>\n", height);
+  if (flag_graphics) gr_writestream("<setcharheight height=\"%g\"/>\n", height);
 }
 
 /*!
@@ -2857,8 +2460,7 @@ void gr_setcharup(double ux, double uy)
       ctx->chup[1] = uy;
     }
 
-  if (flag_graphics)
-    gr_writestream("<setcharup x=\"%g\" y=\"%g\"/>\n", ux, uy);
+  if (flag_graphics) gr_writestream("<setcharup x=\"%g\" y=\"%g\"/>\n", ux, uy);
 }
 
 /*!
@@ -2885,11 +2487,9 @@ void gr_settextpath(int path)
   check_autoinit;
 
   gks_set_text_path(path);
-  if (ctx)
-    ctx->txp = path;
+  if (ctx) ctx->txp = path;
 
-  if (flag_graphics)
-    gr_writestream("<settextpath path=\"%d\"/>\n", path);
+  if (flag_graphics) gr_writestream("<settextpath path=\"%d\"/>\n", path);
 }
 
 /*!
@@ -2941,9 +2541,7 @@ void gr_settextalign(int horizontal, int vertical)
       ctx->txal[1] = vertical;
     }
 
-  if (flag_graphics)
-    gr_writestream("<settextalign halign=\"%d\" valign=\"%d\"/>\n",
-            horizontal, vertical);
+  if (flag_graphics) gr_writestream("<settextalign halign=\"%d\" valign=\"%d\"/>\n", horizontal, vertical);
 }
 
 /*!
@@ -2973,11 +2571,9 @@ void gr_setfillintstyle(int style)
   check_autoinit;
 
   gks_set_fill_int_style(style);
-  if (ctx)
-    ctx->ints = style;
+  if (ctx) ctx->ints = style;
 
-  if (flag_graphics)
-    gr_writestream("<setfillintstyle intstyle=\"%d\"/>\n", style);
+  if (flag_graphics) gr_writestream("<setfillintstyle intstyle=\"%d\"/>\n", style);
 }
 
 /*!
@@ -2997,11 +2593,9 @@ void gr_setfillstyle(int index)
   check_autoinit;
 
   gks_set_fill_style_index(index);
-  if (ctx)
-    ctx->styli = index;
+  if (ctx) ctx->styli = index;
 
-  if (flag_graphics)
-    gr_writestream("<setfillstyle style=\"%d\"/>\n", index);
+  if (flag_graphics) gr_writestream("<setfillstyle style=\"%d\"/>\n", index);
 }
 
 /*!
@@ -3018,24 +2612,19 @@ void gr_setfillcolorind(int color)
   check_autoinit;
 
   gks_set_fill_color_index(color);
-  if (ctx)
-    ctx->facoli = color;
+  if (ctx) ctx->facoli = color;
 
-  if (flag_graphics)
-    gr_writestream("<setfillcolorind color=\"%d\"/>\n", color);
+  if (flag_graphics) gr_writestream("<setfillcolorind color=\"%d\"/>\n", color);
 }
 
-static
-void setcolor(int workstation_id, color_t *color)
+static void setcolor(int workstation_id, color_t *color)
 {
   int wkid = workstation_id;
 
-  gks_set_color_rep(wkid, color->index, color->red, color->green,
-                    color->blue);
+  gks_set_color_rep(wkid, color->index, color->red, color->green, color->blue);
 }
 
-static
-void setcolorrep(int index, double red, double green, double blue)
+static void setcolorrep(int index, double red, double green, double blue)
 {
   color_t color;
 
@@ -3045,11 +2634,9 @@ void setcolorrep(int index, double red, double green, double blue)
   color.blue = blue;
 
   if (index >= 0 && index < MAX_COLOR)
-    rgb[index] = ((nint(red   * 255) & 0xff)      ) |
-                 ((nint(green * 255) & 0xff) <<  8) |
-                 ((nint(blue  * 255) & 0xff) << 16);
+    rgb[index] = ((nint(red * 255) & 0xff)) | ((nint(green * 255) & 0xff) << 8) | ((nint(blue * 255) & 0xff) << 16);
 
-  foreach_activews((void (*)(int, void *)) setcolor, (void *) &color);
+  foreach_activews((void (*)(int, void *))setcolor, (void *)&color);
 }
 
 /*!
@@ -3068,9 +2655,7 @@ void gr_setcolorrep(int index, double red, double green, double blue)
   setcolorrep(index, red, green, blue);
 
   if (flag_graphics)
-    gr_writestream(
-      "<setcolorrep index=\"%d\" red=\"%g\" green=\"%g\" blue=\"%g\"/>\n",
-      index, red, green, blue);
+    gr_writestream("<setcolorrep index=\"%d\" red=\"%g\" green=\"%g\" blue=\"%g\"/>\n", index, red, green, blue);
 }
 
 /*!
@@ -3114,11 +2699,9 @@ int gr_setscale(int options)
   check_autoinit;
 
   result = setscale(options);
-  if (ctx)
-    ctx->scale_options = options;
+  if (ctx) ctx->scale_options = options;
 
-  if (flag_graphics)
-    gr_writestream("<setscale scale=\"%d\"/>\n", options);
+  if (flag_graphics) gr_writestream("<setscale scale=\"%d\"/>\n", options);
 
   return result;
 }
@@ -3164,9 +2747,7 @@ void gr_setwindow(double xmin, double xmax, double ymin, double ymax)
   setscale(lx.scale_options);
 
   if (flag_graphics)
-    gr_writestream(
-      "<setwindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-      xmin, xmax, ymin, ymax);
+    gr_writestream("<setwindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
 void gr_inqwindow(double *xmin, double *xmax, double *ymin, double *ymax)
@@ -3219,9 +2800,7 @@ void gr_setviewport(double xmin, double xmax, double ymin, double ymax)
   vymax = ymax;
 
   if (flag_graphics)
-    gr_writestream(
-      "<setviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-      xmin, xmax, ymin, ymax);
+    gr_writestream("<setviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
 void gr_inqviewport(double *xmin, double *xmax, double *ymin, double *ymax)
@@ -3254,8 +2833,7 @@ void gr_selntran(int transform)
 
   gks_select_xform(transform);
 
-  if (flag_graphics)
-    gr_writestream("<selntran transform=\"%d\"/>\n", transform);
+  if (flag_graphics) gr_writestream("<selntran transform=\"%d\"/>\n", transform);
 }
 
 /*!
@@ -3286,12 +2864,10 @@ void gr_setclip(int indicator)
 
   gks_set_clipping(indicator);
 
-  if (flag_graphics)
-    gr_writestream("<setclip indicator=\"%d\"/>\n", indicator);
+  if (flag_graphics) gr_writestream("<setclip indicator=\"%d\"/>\n", indicator);
 }
 
-static
-void wswindow(int workstation_id, rect_t *rect)
+static void wswindow(int workstation_id, rect_t *rect)
 {
   int wkid = workstation_id;
 
@@ -3328,16 +2904,13 @@ void gr_setwswindow(double xmin, double xmax, double ymin, double ymax)
 
   check_autoinit;
 
-  foreach_activews((void (*)(int, void *)) wswindow, (void *) &rect);
+  foreach_activews((void (*)(int, void *))wswindow, (void *)&rect);
 
   if (flag_graphics)
-    gr_writestream(
-      "<setwswindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-      xmin, xmax, ymin, ymax);
+    gr_writestream("<setwswindow xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
-static
-void wsviewport(int workstation_id, rect_t *rect)
+static void wsviewport(int workstation_id, rect_t *rect)
 {
   int wkid = workstation_id;
 
@@ -3368,14 +2941,12 @@ void gr_setwsviewport(double xmin, double xmax, double ymin, double ymax)
 
   check_autoinit;
 
-  foreach_activews((void (*)(int, void *)) wsviewport, (void *) &rect);
+  foreach_activews((void (*)(int, void *))wsviewport, (void *)&rect);
 
   sizex = xmax - xmin;
 
   if (flag_graphics)
-    gr_writestream(
-      "<setwsviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-      xmin, xmax, ymin, ymax);
+    gr_writestream("<setwsviewport xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
 void gr_createseg(int segment)
@@ -3385,8 +2956,7 @@ void gr_createseg(int segment)
   gks_create_seg(segment);
 }
 
-static
-void copyseg(int workstation_id, int *segment)
+static void copyseg(int workstation_id, int *segment)
 {
   int wkid = workstation_id, errind, conid, wtype, wkcat;
 
@@ -3406,11 +2976,10 @@ void gr_copysegws(int segment)
 
   check_autoinit;
 
-  foreach_activews((void (*)(int, void *)) copyseg, (void *) &segn);
+  foreach_activews((void (*)(int, void *))copyseg, (void *)&segn);
 }
 
-static
-void redrawseg(int workstation_id, void *foo)
+static void redrawseg(int workstation_id, void *foo)
 {
   int wkid = workstation_id;
 
@@ -3421,20 +2990,18 @@ void gr_redrawsegws(void)
 {
   check_autoinit;
 
-  foreach_activews((void (*)(int, void *)) redrawseg, (void *) NULL);
+  foreach_activews((void (*)(int, void *))redrawseg, (void *)NULL);
 }
 
-void gr_setsegtran(
-  int segment, double fx, double fy, double transx, double transy, double phi,
-  double scalex, double scaley)
+void gr_setsegtran(int segment, double fx, double fy, double transx, double transy, double phi, double scalex,
+                   double scaley)
 {
   int segn = segment;
   double mat[3][2];
 
   check_autoinit;
 
-  gks_eval_xform_matrix(fx, fy, transx, transy, phi, scalex, scaley,
-                        GKS_K_COORDINATES_NDC, mat);
+  gks_eval_xform_matrix(fx, fy, transx, transy, phi, scalex, scaley, GKS_K_COORDINATES_NDC, mat);
   gks_set_seg_xform(segn, mat);
 }
 
@@ -3470,8 +3037,7 @@ void gr_updategks(void)
           gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
           gks_inq_ws_category(wtype, &errind, &wkcat);
 
-          if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN)
-            gks_update_ws(wkid, GKS_K_POSTPONE_FLAG);
+          if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN) gks_update_ws(wkid, GKS_K_POSTPONE_FLAG);
         }
     }
 }
@@ -3496,8 +3062,7 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
 {
   if (zmin < zmax)
     {
-      if (rotation < 0 || rotation > 90 || tilt < 0 || tilt > 90)
-        return -1;
+      if (rotation < 0 || rotation > 90 || tilt < 0 || tilt > 90) return -1;
     }
   else
     return -1;
@@ -3507,9 +3072,7 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
   setspace(zmin, zmax, rotation, tilt);
 
   if (flag_graphics)
-    gr_writestream(
-      "<setspace zmin=\"%g\" zmax=\"%g\" rotation=\"%d\" tilt=\"%d\"/>\n",
-      zmin, zmax, rotation, tilt);
+    gr_writestream("<setspace zmin=\"%g\" zmax=\"%g\" rotation=\"%d\" tilt=\"%d\"/>\n", zmin, zmax, rotation, tilt);
 
   return 0;
 }
@@ -3529,8 +3092,7 @@ double intpart(double x)
   return ipart;
 }
 
-static
-double pred(double x)
+static double pred(double x)
 {
   double ipart;
   ipart = intpart(x);
@@ -3540,7 +3102,7 @@ double pred(double x)
     return gauss(x);
 }
 
-#define ipred(x) ((int64_t) pred(x))
+#define ipred(x) ((int64_t)pred(x))
 
 double succ(double x)
 {
@@ -3552,17 +3114,15 @@ double succ(double x)
     return gauss(x) + 1;
 }
 
-#define isucc(x) ((int64_t) succ(x))
+#define isucc(x) ((int64_t)succ(x))
 
-static
-double fract(double x)
+static double fract(double x)
 {
   double _intpart;
   return modf(x, &_intpart);
 }
 
-static
-void end_pline(void)
+static void end_pline(void)
 {
   if (npoints >= 2)
     {
@@ -3571,19 +3131,16 @@ void end_pline(void)
     }
 }
 
-static
-void pline(double x, double y)
+static void pline(double x, double y)
 {
-  if (npoints >= maxpath)
-    reallocate(npoints);
+  if (npoints >= maxpath) reallocate(npoints);
 
   xpoint[npoints] = x_lin(x);
   ypoint[npoints] = y_lin(y);
   npoints++;
 }
 
-static
-void start_pline(double x, double y)
+static void start_pline(double x, double y)
 {
   end_pline();
 
@@ -3591,11 +3148,9 @@ void start_pline(double x, double y)
   pline(x, y);
 }
 
-static
-void pline3d(double x, double y, double z)
+static void pline3d(double x, double y, double z)
 {
-  if (npoints >= maxpath)
-    reallocate(npoints);
+  if (npoints >= maxpath) reallocate(npoints);
 
   xpoint[npoints] = x_lin(x);
   ypoint[npoints] = y_lin(y);
@@ -3606,8 +3161,7 @@ void pline3d(double x, double y, double z)
   npoints++;
 }
 
-static
-void start_pline3d(double x, double y, double z)
+static void start_pline3d(double x, double y, double z)
 {
   end_pline();
 
@@ -3710,16 +3264,13 @@ int gr_textext(double x, double y, char *string)
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
-  if (tnr != NDC)
-    gks_select_xform(NDC);
+  if (tnr != NDC) gks_select_xform(NDC);
 
   result = gr_textex(x, y, string, 0, NULL, NULL);
 
-  if (tnr != NDC)
-    gks_select_xform(tnr);
+  if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics)
-    gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_graphics) gr_writestream("<textext x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 
   return result;
 }
@@ -3732,8 +3283,7 @@ void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
   check_autoinit;
 
   gks_inq_current_xformno(&errind, &tnr);
-  if (tnr != NDC)
-    gks_select_xform(NDC);
+  if (tnr != NDC) gks_select_xform(NDC);
 
   gr_textex(x, y, string, 1, tbx, tby);
 
@@ -3754,9 +3304,8 @@ void gr_inqtextext(double x, double y, char *string, double *tbx, double *tby)
     }
 }
 
-static
-void text2dlbl(double x, double y, const char *chars, double value,
-               void (*fp)(double, double, const char*, double))
+static void text2dlbl(double x, double y, const char *chars, double value,
+                      void (*fp)(double, double, const char *, double))
 {
   int errind, tnr;
 
@@ -3779,21 +3328,17 @@ void text2dlbl(double x, double y, const char *chars, double value,
   else
     fp(x, y, chars, value);
 
-  if (tnr != NDC)
-    gks_select_xform(tnr);
+  if (tnr != NDC) gks_select_xform(tnr);
 }
 
-static
-void text2d(double x, double y, const char *chars)
+static void text2d(double x, double y, const char *chars)
 {
   /* 42. dummy value will not be interpreted until last argument fp != NULL */
   text2dlbl(x, y, chars, 42., NULL);
 }
 
-void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
-                int major_x, int major_y, double tick_size,
-                void (*fpx)(double, double, const char*, double),
-                void (*fpy)(double, double, const char*, double))
+void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int major_x, int major_y, double tick_size,
+                void (*fpx)(double, double, const char *, double), void (*fpy)(double, double, const char *, double))
 {
   int errind, tnr;
   int ltype, halign, valign, clsw;
@@ -3862,15 +3407,13 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
 
-          if (tick > 0)
-            x_label = x_log(x_lin(x_org) - tick);
+          if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-          if (tick < 0)
-            x_label = x_log(x_lin(x_org) - tick);
+          if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
         }
 
       if (OPTION_Y_LOG & lx.scale_options)
@@ -3904,8 +3447,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                               text2dlbl(x_label, yi, string, yi, fpy);
                             }
                           else
-                            text2dlbl(x_label, yi,
-                                      str_ftoa(string, yi, 0.), yi, fpy);
+                            text2dlbl(x_label, yi, str_ftoa(string, yi, 0.), yi, fpy);
                         }
                 }
               else
@@ -3929,8 +3471,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               yi = y0 + i * y0;
             }
 
-          if (yi > y_max)
-            pline(x_org, y_max);
+          if (yi > y_max) pline(x_org, y_max);
 
           end_pline();
         }
@@ -3940,7 +3481,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           check_tick_marks(y_min, y_max, y_tick, 'Y')
 
-          i = isucc(y_min / y_tick);
+              i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
           /* draw Y-axis */
@@ -3957,10 +3498,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                     {
                       xi = major_tick;
                       if (yi != y_org || y_org == y_min || y_org == y_max)
-                        if (major_y > 0)
-                          text2dlbl(x_label, yi,
-                                    str_ftoa(string, yi, y_tick * major_y), yi,
-                                    fpy);
+                        if (major_y > 0) text2dlbl(x_label, yi, str_ftoa(string, yi, y_tick * major_y), yi, fpy);
                     }
                   else
                     xi = minor_tick;
@@ -3975,8 +3513,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               yi = i * y_tick;
             }
 
-          if (yi > y_max + feps)
-            pline(x_org, y_max);
+          if (yi > y_max + feps) pline(x_org, y_max);
 
           end_pline();
         }
@@ -3996,16 +3533,13 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
 
-          if (tick > 0)
-            y_label = y_log(y_lin(y_org) - tick);
+          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
         }
       else
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER,
-                             GKS_K_TEXT_VALIGN_BOTTOM);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
 
-          if (tick < 0)
-            y_label = y_log(y_lin(y_org) - tick);
+          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
         }
 
       if (OPTION_X_LOG & lx.scale_options)
@@ -4039,8 +3573,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                               text2dlbl(xi, y_label, string, xi, fpx);
                             }
                           else
-                            text2dlbl(xi, y_label,
-                                      str_ftoa(string, xi, 0.), xi, fpx);
+                            text2dlbl(xi, y_label, str_ftoa(string, xi, 0.), xi, fpx);
                         }
                 }
               else
@@ -4064,8 +3597,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               xi = x0 + i * x0;
             }
 
-          if (xi > x_max)
-            pline(x_max, y_org);
+          if (xi > x_max) pline(x_max, y_org);
 
           end_pline();
         }
@@ -4075,7 +3607,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
 
           check_tick_marks(x_min, x_max, x_tick, 'X')
 
-          i = isucc(x_min / x_tick);
+              i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
           /* draw X-axis */
@@ -4092,10 +3624,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
                     {
                       yi = major_tick;
                       if (xi != x_org || x_org == x_min || x_org == x_max)
-                        if (major_x > 0)
-                          text2dlbl(xi, y_label,
-                                    str_ftoa(string, xi, x_tick * major_x), xi,
-                                    fpx);
+                        if (major_x > 0) text2dlbl(xi, y_label, str_ftoa(string, xi, x_tick * major_x), xi, fpx);
                     }
                   else
                     yi = minor_tick;
@@ -4110,8 +3639,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
               xi = i * x_tick;
             }
 
-          if (xi > x_max + feps)
-            pline(x_max, y_org);
+          if (xi > x_max + feps) pline(x_max, y_org);
 
           end_pline();
         }
@@ -4126,10 +3654,9 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    gr_writestream(
-      "<axes xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
-      "majorx=\"%d\" majory=\"%d\" ticksize=\"%g\"/>\n",
-      x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
+    gr_writestream("<axes xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
+                   "majorx=\"%d\" majory=\"%d\" ticksize=\"%g\"/>\n",
+                   x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size);
 }
 
 /*!
@@ -4164,15 +3691,12 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org,
  * are drawn according to the linear or logarithmic transformation established
  * by the gr_setscale function.
  */
-void gr_axes(double x_tick, double y_tick, double x_org, double y_org,
-             int major_x, int major_y, double tick_size)
+void gr_axes(double x_tick, double y_tick, double x_org, double y_org, int major_x, int major_y, double tick_size)
 {
-  gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size, NULL,
-             NULL);
+  gr_axeslbl(x_tick, y_tick, x_org, y_org, major_x, major_y, tick_size, NULL, NULL);
 }
 
-static
-void grid_line(double x0, double y0, double x1, double y1, int color, int major)
+static void grid_line(double x0, double y0, double x1, double y1, int color, int major)
 {
   if (color != 0)
     gks_set_pline_color_index(major ? 88 : 90);
@@ -4207,8 +3731,7 @@ void grid_line(double x0, double y0, double x1, double y1, int color, int major)
  * marks. Major grid lines are drawn using black lines and minor grid lines are
  * drawn using gray lines.
  */
-void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
-             int major_x, int major_y)
+void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major_x, int major_y)
 {
   int errind, tnr;
   int ltype, color, clsw, major;
@@ -4265,8 +3788,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               if (i == 0 || major_y == 1)
                 {
                   major = i == 0;
-                  if (fabs(yi - y_min) > FEPS * yi)
-                    grid_line(x_min, yi, x_max, yi, color, major);
+                  if (fabs(yi - y_min) > FEPS * yi) grid_line(x_min, yi, x_max, yi, color, major);
                 }
 
               if (i == 9)
@@ -4284,7 +3806,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
         {
           check_tick_marks(y_min, y_max, y_tick, 'Y')
 
-          i = isucc((y_min - y_org) / y_tick);
+              i = isucc((y_min - y_org) / y_tick);
           yi = y_org + i * y_tick;
 
           /* draw horizontal grid lines */
@@ -4296,8 +3818,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               else
                 major = 0;
 
-              if (fabs(yi - y_min) > FEPS * yi)
-                grid_line(x_min, yi, x_max, yi, color, major);
+              if (fabs(yi - y_min) > FEPS * yi) grid_line(x_min, yi, x_max, yi, color, major);
 
               i++;
               yi = y_org + i * y_tick;
@@ -4321,8 +3842,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               if (i == 0 || major_x == 1)
                 {
                   major = i == 0;
-                  if (fabs(xi - x_min) > FEPS * xi)
-                    grid_line(xi, y_min, xi, y_max, color, major);
+                  if (fabs(xi - x_min) > FEPS * xi) grid_line(xi, y_min, xi, y_max, color, major);
                 }
 
               if (i == 9)
@@ -4340,7 +3860,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
         {
           check_tick_marks(x_min, x_max, x_tick, 'X')
 
-          i = isucc((x_min - x_org) / x_tick);
+              i = isucc((x_min - x_org) / x_tick);
           xi = x_org + i * x_tick;
 
           /* draw vertical grid lines */
@@ -4352,8 +3872,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
               else
                 major = 0;
 
-              if (fabs(xi - x_min) > FEPS * xi)
-                grid_line(xi, y_min, xi, y_max, color, major);
+              if (fabs(xi - x_min) > FEPS * xi) grid_line(xi, y_min, xi, y_max, color, major);
 
               i++;
               xi = x_org + i * x_tick;
@@ -4369,15 +3888,12 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org,
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    gr_writestream(
-      "<grid xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
-      "majorx=\"%d\" majory=\"%d\"/>\n",
-      x_tick, y_tick, x_org, y_org, major_x, major_y);
+    gr_writestream("<grid xtick=\"%g\" ytick=\"%g\" xorg=\"%g\" yorg=\"%g\" "
+                   "majorx=\"%d\" majory=\"%d\"/>\n",
+                   x_tick, y_tick, x_org, y_org, major_x, major_y);
 }
 
-static
-void grid_line3d(double x0, double y0, double z0,
-                 double x1, double y1, double z1, int color, int major)
+static void grid_line3d(double x0, double y0, double z0, double x1, double y1, double z1, int color, int major)
 {
   if (color != 0)
     gks_set_pline_color_index(major ? 88 : 90);
@@ -4419,9 +3935,8 @@ void grid_line3d(double x0, double y0, double z0,
  * marks. Major grid lines are drawn using black lines and minor grid lines are
  * drawn using gray lines.
  */
-void gr_grid3d(double x_tick, double y_tick, double z_tick,
-               double x_org, double y_org, double z_org,
-               int major_x, int major_y, int major_z)
+void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org, double z_org, int major_x,
+               int major_y, int major_z)
 {
   int errind, tnr;
   int ltype, color, clsw, major;
@@ -4485,10 +4000,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
                   major = i == 0;
                   if (fabs(zi - z_min) > FEPS * zi)
                     {
-                      grid_line3d(x_org, y_min, zi, x_org, y_max, zi,
-                                  color, major);
-                      grid_line3d(x_min, y_org, zi, x_max, y_org, zi,
-                                  color, major);
+                      grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, major);
+                      grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, major);
                     }
                 }
 
@@ -4507,7 +4020,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
         {
           check_tick_marks(z_min, z_max, z_tick, 'Z')
 
-          i = 0;
+              i = 0;
           z0 = succ(z_min / z_tick) * z_tick;
           zi = z0;
 
@@ -4522,10 +4035,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
 
               if (fabs(zi - z_min) > FEPS * zi)
                 {
-                  grid_line3d(x_org, y_min, zi, x_org, y_max, zi,
-                              color, major);
-                  grid_line3d(x_min, y_org, zi, x_max, y_org, zi,
-                              color, major);
+                  grid_line3d(x_org, y_min, zi, x_org, y_max, zi, color, major);
+                  grid_line3d(x_min, y_org, zi, x_max, y_org, zi, color, major);
                 }
 
               i++;
@@ -4552,10 +4063,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
                   major = i == 0;
                   if (fabs(yi - y_min) > FEPS * yi)
                     {
-                      grid_line3d(x_min, yi, z_org, x_max, yi, z_org,
-                                  color, major);
-                      grid_line3d(x_org, yi, z_min, x_org, yi, z_max,
-                                  color, major);
+                      grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, major);
+                      grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, major);
                     }
                 }
 
@@ -4574,7 +4083,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
         {
           check_tick_marks(y_min, y_max, y_tick, 'Y')
 
-          i = 0;
+              i = 0;
           y0 = succ(y_min / y_tick) * y_tick;
           yi = y0;
 
@@ -4589,10 +4098,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
 
               if (fabs(yi - y_min) > FEPS * yi)
                 {
-                  grid_line3d(x_min, yi, z_org, x_max, yi, z_org,
-                              color, major);
-                  grid_line3d(x_org, yi, z_min, x_org, yi, z_max,
-                              color, major);
+                  grid_line3d(x_min, yi, z_org, x_max, yi, z_org, color, major);
+                  grid_line3d(x_org, yi, z_min, x_org, yi, z_max, color, major);
                 }
 
               i++;
@@ -4619,10 +4126,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
                   major = i == 0;
                   if (fabs(xi - x_min) > FEPS * xi)
                     {
-                      grid_line3d(xi, y_min, z_org, xi, y_max, z_org,
-                                  color, major);
-                      grid_line3d(xi, y_org, z_min, xi, y_org, z_max,
-                                  color, major);
+                      grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, major);
+                      grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, major);
                     }
                 }
 
@@ -4641,7 +4146,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
         {
           check_tick_marks(x_min, x_max, x_tick, 'X')
 
-          i = 0;
+              i = 0;
           x0 = succ(x_min / x_tick) * x_tick;
           xi = x0;
 
@@ -4656,10 +4161,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
 
               if (fabs(xi - x_min) > FEPS * xi)
                 {
-                  grid_line3d(xi, y_min, z_org, xi, y_max, z_org,
-                              color, major);
-                  grid_line3d(xi, y_org, z_min, xi, y_org, z_max,
-                              color, major);
+                  grid_line3d(xi, y_min, z_org, xi, y_max, z_org, color, major);
+                  grid_line3d(xi, y_org, z_min, xi, y_org, z_max, color, major);
                 }
 
               i++;
@@ -4676,11 +4179,10 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick,
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    gr_writestream(
-      "<grid3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
-      "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
-      "majorx=\"%d\" majory=\"%d\" majorz=\"%d\"/>\n",
-      x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z);
+    gr_writestream("<grid3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
+                   "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
+                   "majorx=\"%d\" majory=\"%d\" majorz=\"%d\"/>\n",
+                   x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z);
 }
 
 /*!
@@ -4719,14 +4221,14 @@ void gr_verrorbars(int n, double *px, double *py, double *e1, double *e2)
 
       start_pline(x1, y1);
       pline(x2, y1);
-      end_pline ();
+      end_pline();
 
       start_pline(x, y1);
-      pline (x, y2);
-      end_pline ();
+      pline(x, y2);
+      end_pline();
 
       start_pline(x1, y2);
-      pline (x2, y2);
+      pline(x2, y2);
       end_pline();
     }
 
@@ -4803,8 +4305,7 @@ void gr_herrorbars(int n, double *px, double *py, double *e1, double *e2)
     }
 }
 
-static
-void clip_code(double x, double y, double z, int *c)
+static void clip_code(double x, double y, double z, int *c)
 {
   *c = 0;
   if (x < cxl)
@@ -4821,9 +4322,7 @@ void clip_code(double x, double y, double z, int *c)
     *c = *c | TOP;
 }
 
-static
-void clip3d(double *x0, double *x1, double *y0, double *y1, double *z0,
-            double *z1, int *visible)
+static void clip3d(double *x0, double *x1, double *y0, double *y1, double *z0, double *z1, int *visible)
 {
   int c, c0, c1;
   double x = 0, y = 0, z = 0;
@@ -4835,8 +4334,7 @@ void clip3d(double *x0, double *x1, double *y0, double *y1, double *z0,
 
   while (c0 | c1)
     {
-      if (c0 & c1)
-        return;
+      if (c0 & c1) return;
       c = c0 ? c0 : c1;
 
       if (c & LEFT)
@@ -4951,8 +4449,7 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
       x = x1;
       y = y1;
       z = z1;
-      if (clsw == GKS_K_CLIP)
-        clip3d(&x0, &x1, &y0, &y1, &z0, &z1, &visible);
+      if (clsw == GKS_K_CLIP) clip3d(&x0, &x1, &y0, &y1, &z0, &z1, &visible);
 
       if (visible)
         {
@@ -4982,11 +4479,10 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
     }
 }
 
-static
-int cmp(const void *a, const void *b)
+static int cmp(const void *a, const void *b)
 {
-  const point_3d *pa = (const point_3d *) a;
-  const point_3d *pb = (const point_3d *) b;
+  const point_3d *pa = (const point_3d *)a;
+  const point_3d *pb = (const point_3d *)b;
   double x, y, da, db;
 
   x = (OPTION_FLIP_X & lx.scale_options) ? lx.xmin : lx.xmax;
@@ -5026,7 +4522,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
   gks_inq_clip(&errind, &clsw, clrt);
 
   m = 0;
-  point = (point_3d *) xmalloc(n * sizeof(point_3d));
+  point = (point_3d *)xmalloc(n * sizeof(point_3d));
 
   for (i = 0; i < n; i++)
     {
@@ -5035,9 +4531,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       z = pz[i];
 
       if (clsw == GKS_K_CLIP)
-        visible = x >= lx.xmin && x <= lx.xmax &&
-                  y >= lx.ymin && y <= lx.ymax &&
-                  z >= lx.zmin && z <= lx.zmax;
+        visible = x >= lx.xmin && x <= lx.xmax && y >= lx.ymin && y <= lx.ymax && z >= lx.zmin && z <= lx.zmax;
       else
         visible = 1;
 
@@ -5058,8 +4552,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
   qsort(point, m, sizeof(point_3d), cmp);
 
-  if (m >= maxpath)
-    reallocate(m);
+  if (m >= maxpath) reallocate(m);
 
   for (i = 0; i < m; i++)
     {
@@ -5068,8 +4561,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       zpoint[i] = point[i].z;
     }
 
-  if (m > 0)
-    gr_polymarker(m, xpoint, ypoint);
+  if (m > 0) gr_polymarker(m, xpoint, ypoint);
 
   if (flag_graphics)
     {
@@ -5081,8 +4573,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
     }
 }
 
-static
-void text3d(double x, double y, double z, char *chars)
+static void text3d(double x, double y, double z, char *chars)
 {
   double px, py, pz;
   int errind, tnr;
@@ -5104,12 +4595,9 @@ void text3d(double x, double y, double z, char *chars)
 
   gr_textex(px, py, chars, 0, NULL, NULL);
 
-  if (tnr != NDC)
-    gks_select_xform(tnr);
+  if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics)
-    gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\"/>\n",
-                   x, y, z, chars);
+  if (flag_graphics) gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\"/>\n", x, y, z, chars);
 }
 
 /*!
@@ -5151,9 +4639,8 @@ void text3d(double x, double y, double z, char *chars)
  * are drawn according to the linear or logarithmic transformation established
  * by the gr_setscale function.
  */
-void gr_axes3d(double x_tick, double y_tick, double z_tick,
-               double x_org, double y_org, double z_org,
-               int major_x, int major_y, int major_z, double tick_size)
+void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double y_org, double z_org, int major_x,
+               int major_y, int major_z, double tick_size)
 {
   int errind, tnr;
   int ltype, halign, valign, font, prec, clsw;
@@ -5200,8 +4687,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
   z_min = wx.zmin;
   z_max = wx.zmax;
 
-  if (x_min > x_org || x_org > x_max || y_min > y_org || y_org > y_max ||
-      z_min > z_org || z_org > z_max)
+  if (x_min > x_org || x_org > x_max || y_min > y_org || y_org > y_max || z_min > z_org || z_org > z_max)
     {
       fprintf(stderr, "origin outside current window\n");
       return;
@@ -5221,7 +4707,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
   text_slant[0] = alpha;
   text_slant[1] = beta;
-  text_slant[2] = - (90.0 + alpha - beta);
+  text_slant[2] = -(90.0 + alpha - beta);
   text_slant[3] = 90.0 + alpha - beta;
 
   /* save linetype, text alignment, text font, text slant,
@@ -5240,11 +4726,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
 
   which_rep = 0;
   anglep = angle;
-  while (wx.delta > *anglep++)
-    which_rep++;
+  while (wx.delta > *anglep++) which_rep++;
   anglep = angle;
-  while (wx.phi > *anglep++)
-    which_rep += 4;
+  while (wx.phi > *anglep++) which_rep += 4;
 
   if (z_tick != 0)
     {
@@ -5260,15 +4744,13 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
 
-          if (tick > 0)
-            y_label = y_log(y_lin(y_org) - tick);
+          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-          if (tick < 0)
-            y_label = y_log(y_lin(y_org) - tick);
+          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
         }
 
       rep = rep_table[which_rep][2];
@@ -5337,7 +4819,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         {
           check_tick_marks(z_min, z_max, z_tick, 'Z')
 
-          i = isucc(z_min / z_tick);
+              i = isucc(z_min / z_tick);
           zi = i * z_tick;
 
           /* draw Z-axis */
@@ -5354,8 +4836,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
                     {
                       yi = major_tick;
                       if ((zi != z_org) && (major_z > 0))
-                        text3d(x_org, y_label, zi,
-                               str_ftoa(string, zi, z_tick * major_z));
+                        text3d(x_org, y_label, zi, str_ftoa(string, zi, z_tick * major_z));
                     }
                   else
                     yi = minor_tick;
@@ -5370,8 +4851,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
               zi = i * z_tick;
             }
 
-          if (zi > z_max)
-            pline3d(x_org, y_org, z_max);
+          if (zi > z_max) pline3d(x_org, y_org, z_max);
 
           end_pline();
         }
@@ -5391,20 +4871,17 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
 
-          if (tick > 0)
-            x_label = x_log(x_lin(x_org) - tick);
+          if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-          if (tick < 0)
-            x_label = x_log(x_lin(x_org) - tick);
+          if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
         }
 
       rep = rep_table[which_rep][1];
-      if (rep == 0)
-        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      if (rep == 0) gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
 
       gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
       gks_set_text_slant(text_slant[axes_rep[rep][2]]);
@@ -5470,7 +4947,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         {
           check_tick_marks(y_min, y_max, y_tick, 'Y')
 
-          i = isucc(y_min / y_tick);
+              i = isucc(y_min / y_tick);
           yi = i * y_tick;
 
           /* draw Y-axis */
@@ -5487,8 +4964,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
                     {
                       xi = major_tick;
                       if ((yi != y_org) && (major_y > 0))
-                        text3d(x_label, yi, z_org,
-                               str_ftoa(string, yi, y_tick * major_y));
+                        text3d(x_label, yi, z_org, str_ftoa(string, yi, y_tick * major_y));
                     }
                   else
                     xi = minor_tick;
@@ -5503,8 +4979,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
               yi = i * y_tick;
             }
 
-          if (yi > y_max)
-            pline3d(x_org, y_max, z_org);
+          if (yi > y_max) pline3d(x_org, y_max, z_org);
 
           end_pline();
         }
@@ -5524,20 +4999,17 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
 
-          if (tick > 0)
-            y_label = y_log(y_lin(y_org) - tick);
+          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
         }
       else
         {
           gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-          if (tick < 0)
-            y_label = y_log(y_lin(y_org) - tick);
+          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
         }
 
       rep = rep_table[which_rep][0];
-      if (rep == 2)
-        gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      if (rep == 2) gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
 
       gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
       gks_set_text_slant(text_slant[axes_rep[rep][2]]);
@@ -5603,7 +5075,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
         {
           check_tick_marks(x_min, x_max, x_tick, 'X')
 
-          i = isucc(x_min / x_tick);
+              i = isucc(x_min / x_tick);
           xi = i * x_tick;
 
           /* draw X-axis */
@@ -5620,8 +5092,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
                     {
                       yi = major_tick;
                       if ((xi != x_org) && (major_x > 0))
-                        text3d(xi, y_label, z_org,
-                               str_ftoa(string, xi, x_tick * major_x));
+                        text3d(xi, y_label, z_org, str_ftoa(string, xi, x_tick * major_x));
                     }
                   else
                     yi = minor_tick;
@@ -5636,8 +5107,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
               xi = i * x_tick;
             }
 
-          if (xi > x_max)
-            pline3d(x_max, y_org, z_org);
+          if (xi > x_max) pline3d(x_max, y_org, z_org);
 
           end_pline();
         }
@@ -5654,12 +5124,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick,
   gks_set_clipping(clsw);
 
   if (flag_graphics)
-    gr_writestream(
-      "<axes3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
-      "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
-      "majorx=\"%d\" majory=\"%d\" majorz=\"%d\" ticksize=\"%g\"/>\n",
-      x_tick, y_tick, z_tick, x_org, y_org, z_org,
-      major_x, major_y, major_z, tick_size);
+    gr_writestream("<axes3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
+                   "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
+                   "majorx=\"%d\" majory=\"%d\" majorz=\"%d\" ticksize=\"%g\"/>\n",
+                   x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size);
 }
 
 /*!
@@ -5744,11 +5212,9 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
       which_rep = 0;
       anglep = angle;
-      while (wx.delta > *anglep++)
-        which_rep++;
+      while (wx.delta > *anglep++) which_rep++;
       anglep = angle;
-      while (wx.phi > *anglep++)
-        which_rep += 4;
+      while (wx.phi > *anglep++) which_rep += 4;
 
       r = arc(wx.phi);
       a1 = cos(r);
@@ -5991,12 +5457,10 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
     }
 
   if (flag_graphics)
-    gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n",
-                   x_title, y_title, z_title);
+    gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
 }
 
-static
-void init_hlr(void)
+static void init_hlr(void)
 {
   int sign, i, j, x1, x2;
   double *hide, a, b, m = 0;
@@ -6016,20 +5480,31 @@ void init_hlr(void)
       if (sign == 1)
         {
           hide = hlr.ymin;
-          x[0] = hlr.x0; y[0] = hlr.y0; z[0] = hlr.z0;
-          x[1] = hlr.x1; y[1] = hlr.y0; z[1] = hlr.z0;
-          x[2] = hlr.x1; y[2] = hlr.y1; z[2] = hlr.z0;
+          x[0] = hlr.x0;
+          y[0] = hlr.y0;
+          z[0] = hlr.z0;
+          x[1] = hlr.x1;
+          y[1] = hlr.y0;
+          z[1] = hlr.z0;
+          x[2] = hlr.x1;
+          y[2] = hlr.y1;
+          z[2] = hlr.z0;
         }
       else
         {
           hide = hlr.ymax;
-          x[0] = hlr.x0; y[0] = hlr.y0; z[0] = hlr.z1;
-          x[1] = hlr.x0; y[1] = hlr.y1; z[1] = hlr.z1;
-          x[2] = hlr.x1; y[2] = hlr.y1; z[2] = hlr.z1;
+          x[0] = hlr.x0;
+          y[0] = hlr.y0;
+          z[0] = hlr.z1;
+          x[1] = hlr.x0;
+          y[1] = hlr.y1;
+          z[1] = hlr.z1;
+          x[2] = hlr.x1;
+          y[2] = hlr.y1;
+          z[2] = hlr.z1;
         }
 
-      for (i = 0; i < 3; i++)
-        apply_world_xform(x + i, y + i, z + i);
+      for (i = 0; i < 3; i++) apply_world_xform(x + i, y + i, z + i);
 
       if (hlr.xmax > hlr.xmin)
         {
@@ -6043,8 +5518,7 @@ void init_hlr(void)
         }
 
       x1 = nint(a * x[0] + b);
-      if (x1 < 0)
-        x1 = 0;
+      if (x1 < 0) x1 = 0;
       x2 = x1;
 
       for (i = 1; i < 3; i++)
@@ -6054,8 +5528,7 @@ void init_hlr(void)
 
           if (x1 <= x2)
             {
-              if (x1 != x2)
-                m = (y[i] - y[i - 1]) / (x2 - x1);
+              if (x1 != x2) m = (y[i] - y[i - 1]) / (x2 - x1);
 
               for (j = x1; j <= x2; j++)
                 {
@@ -6071,8 +5544,7 @@ void init_hlr(void)
     }
 }
 
-static
-void pline_hlr(int n, double *x, double *y, double *z)
+static void pline_hlr(int n, double *x, double *y, double *z)
 {
   int i, j, x1, x2;
   int visible, draw;
@@ -6083,7 +5555,7 @@ void pline_hlr(int n, double *x, double *y, double *z)
 
   if (hlr.buf == NULL)
     {
-      hlr.buf = (double *) xmalloc(sizeof(double) * (RESOLUTION_X + 1) * 2);
+      hlr.buf = (double *)xmalloc(sizeof(double) * (RESOLUTION_X + 1) * 2);
       hlr.ymin = hlr.buf;
       hlr.ymax = hlr.buf + RESOLUTION_X + 1;
     }
@@ -6093,8 +5565,7 @@ void pline_hlr(int n, double *x, double *y, double *z)
   else
     hide = hlr.ymax;
 
-  for (i = 0; i < n; i++)
-    apply_world_xform(x + i, y + i, z + i);
+  for (i = 0; i < n; i++) apply_world_xform(x + i, y + i, z + i);
 
   draw = !hlr.initialize || hlr.sign > 0;
   visible = 0;
@@ -6115,8 +5586,7 @@ void pline_hlr(int n, double *x, double *y, double *z)
   c = 1.0 / a;
 
   x1 = nint(a * x[0] + b);
-  if (x1 < 0)
-    x1 = 0;
+  if (x1 < 0) x1 = 0;
   x2 = x1;
 
   if (hlr.initialize)
@@ -6127,8 +5597,7 @@ void pline_hlr(int n, double *x, double *y, double *z)
         {
           hide[x1] = y[0];
 
-          if (draw)
-            start_pline(x[0], y[0]);
+          if (draw) start_pline(x[0], y[0]);
 
           visible = 1;
         }
@@ -6141,8 +5610,7 @@ void pline_hlr(int n, double *x, double *y, double *z)
 
       if (x1 < x2)
         {
-          if (x1 != x2)
-            m = (y[i] - y[i - 1]) / (x2 - x1);
+          if (x1 != x2) m = (y[i] - y[i - 1]) / (x2 - x1);
 
           for (j = x1; j <= x2; j++)
             {
@@ -6181,12 +5649,10 @@ void pline_hlr(int n, double *x, double *y, double *z)
                     }
                 }
 
-              if ((yj - hide[j]) * hlr.sign > 0)
-                hide[j] = yj;
+              if ((yj - hide[j]) * hlr.sign > 0) hide[j] = yj;
             }
 
-          if (visible && draw)
-            pline(x[i], y[i]);
+          if (visible && draw) pline(x[i], y[i]);
         }
 
       else if (x1 == x2)
@@ -6212,14 +5678,12 @@ void pline_hlr(int n, double *x, double *y, double *z)
         }
     }
 
-  if (visible && draw)
-    end_pline();
+  if (visible && draw) end_pline();
 
   lx.scale_options = saved_scale_options;
 }
 
-static
-void glint(int dinp, int *inp, int doutp, int *outp)
+static void glint(int dinp, int *inp, int doutp, int *outp)
 {
   int i, j, k, n;
   double ratio, delta;
@@ -6228,25 +5692,19 @@ void glint(int dinp, int *inp, int doutp, int *outp)
   ratio = 1.0 / n;
 
   j = (n + 1) / 2;
-  for (k = 0; k < j; k++)
-    outp[k] = inp[0];
+  for (k = 0; k < j; k++) outp[k] = inp[0];
 
   for (i = 0; i < dinp - 1; i++)
     {
       delta = ratio * (inp[i + 1] - inp[i]);
-      for (k = 1; k <= n; k++)
-        outp[j++] = inp[i] + (int)(k * delta + 0.5);
+      for (k = 1; k <= n; k++) outp[j++] = inp[i] + (int)(k * delta + 0.5);
     }
 
-  for (k = j; k < doutp; k++)
-    outp[k] = inp[dinp - 1];
+  for (k = j; k < doutp; k++) outp[k] = inp[dinp - 1];
 }
 
-static
-void pixel(
-  double xmin, double xmax, double ymin, double ymax,
-  int dx, int dy, int *colia, int w, int h, int *pixmap,
-  int dwk, int *wk1, int *wk2)
+static void pixel(double xmin, double xmax, double ymin, double ymax, int dx, int dy, int *colia, int w, int h,
+                  int *pixmap, int dwk, int *wk1, int *wk2)
 {
   int i, j, ix, nx;
   int sx = 1, sy = 1;
@@ -6262,12 +5720,10 @@ void pixel(
 
   for (i = 0; i < dx; i++)
     {
-      for (j = 0; j < dy; j++)
-        wk1[j] = colia[i + j * dx];
+      for (j = 0; j < dy; j++) wk1[j] = colia[i + j * dx];
 
       glint(dy, wk1, h, wk2);
-      for (j = 0; j < h; j++)
-        pixmap[ix + j * w] = wk2[j];
+      for (j = 0; j < h; j++) pixmap[ix + j * w] = wk2[j];
 
       ix += nx;
     }
@@ -6282,16 +5738,13 @@ void pixel(
         }
 
       glint(dx, wk1, w, wk2);
-      for (i = 0; i < w; i++)
-        pixmap[i + j * w] = wk2[i];
+      for (i = 0; i < w; i++) pixmap[i + j * w] = wk2[i];
     }
 
   gks_cellarray(xmin, ymin, xmax, ymax, w, h, sx, sy, w, h, pixmap);
 }
 
-static
-void get_intensity(
-  double *fx, double *fy, double *fz, double *light_source, double *intensity)
+static void get_intensity(double *fx, double *fy, double *fz, double *light_source, double *intensity)
 {
   int k;
   double max_x, max_y, max_z, min_x, min_y, min_z, norm_1, norm_2;
@@ -6321,35 +5774,26 @@ void get_intensity(
   center[1] = (max_y + min_y) / 2;
   center[2] = (max_z + min_z) / 2;
 
-  for (k = 0; k < 3; k++)
-    negated[k] = light_source[k] - center[k];
+  for (k = 0; k < 3; k++) negated[k] = light_source[k] - center[k];
 
-  norm_1 = (double) sqrt(negated[0] * negated[0] + negated[1] * negated[1] +
-                        negated[2] * negated[2]);
+  norm_1 = (double)sqrt(negated[0] * negated[0] + negated[1] * negated[1] + negated[2] * negated[2]);
 
-  for (k = 0; k < 3; k++)
-    negated_norm[k] = negated[k] / norm_1;
+  for (k = 0; k < 3; k++) negated_norm[k] = negated[k] / norm_1;
 
-  normal[0] =
-    ((fy[1] - fy[0]) * (fz[2] - fz[0]) - (fz[1] - fz[0]) * (fy[2] - fy[0])) +
-    ((fy[2] - fy[1]) * (fz[3] - fz[1]) - (fz[2] - fz[1]) * (fy[3] - fy[1]));
-  normal[1] =
-    ((fz[1] - fz[0]) * (fx[2] - fx[0]) - (fx[1] - fx[0]) * (fz[2] - fz[0])) +
-    ((fz[2] - fz[1]) * (fx[3] - fx[1]) - (fx[2] - fx[1]) * (fz[3] - fz[1]));
-  normal[2] =
-    ((fx[1] - fx[0]) * (fy[2] - fy[0]) - (fy[1] - fy[0]) * (fx[2] - fx[0])) +
-    ((fx[2] - fx[1]) * (fy[3] - fy[1]) - (fy[2] - fy[1]) * (fx[3] - fx[1]));
+  normal[0] = ((fy[1] - fy[0]) * (fz[2] - fz[0]) - (fz[1] - fz[0]) * (fy[2] - fy[0])) +
+              ((fy[2] - fy[1]) * (fz[3] - fz[1]) - (fz[2] - fz[1]) * (fy[3] - fy[1]));
+  normal[1] = ((fz[1] - fz[0]) * (fx[2] - fx[0]) - (fx[1] - fx[0]) * (fz[2] - fz[0])) +
+              ((fz[2] - fz[1]) * (fx[3] - fx[1]) - (fx[2] - fx[1]) * (fz[3] - fz[1]));
+  normal[2] = ((fx[1] - fx[0]) * (fy[2] - fy[0]) - (fy[1] - fy[0]) * (fx[2] - fx[0])) +
+              ((fx[2] - fx[1]) * (fy[3] - fy[1]) - (fy[2] - fy[1]) * (fx[3] - fx[1]));
   normal[3] = 1;
 
-  norm_2 = (double) sqrt(normal[0] * normal[0] + normal[1] * normal[1] +
-                        normal[2] * normal[2]);
+  norm_2 = (double)sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
 
-  for (k = 0; k < 3; k++)
-    oddnormal[k] = normal[k] / norm_2;
+  for (k = 0; k < 3; k++) oddnormal[k] = normal[k] / norm_2;
 
   *intensity =
-    (oddnormal[0] * negated_norm[0] + oddnormal[1] * negated_norm[1] +
-     oddnormal[2] * negated_norm[2]) * 0.8 + 0.2;
+      (oddnormal[0] * negated_norm[0] + oddnormal[1] * negated_norm[1] + oddnormal[2] * negated_norm[2]) * 0.8 + 0.2;
 }
 
 /*!
@@ -6404,7 +5848,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   int *colia, w, h, *ca, dwk, *wk1, *wk2;
 
-  static double light_source[3] = { 0.5, -1, 2 };
+  static double light_source[3] = {0.5, -1, 2};
 
   if ((nx <= 0) || (ny <= 0))
     {
@@ -6449,20 +5893,18 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   gks_inq_fill_color_index(&errind, &coli);
 
   k = sizeof(double) * (nx + ny) * 3;
-  xn = (double *) xmalloc(k);
-  yn = (double *) xmalloc(k);
-  zn = (double *) xmalloc(k);
-  x = (double *) xmalloc(nx * sizeof(double));
-  y = (double *) xmalloc(ny * sizeof(double));
-  z = (double *) xmalloc(nx * ny * sizeof(double));
+  xn = (double *)xmalloc(k);
+  yn = (double *)xmalloc(k);
+  zn = (double *)xmalloc(k);
+  x = (double *)xmalloc(nx * sizeof(double));
+  y = (double *)xmalloc(ny * sizeof(double));
+  z = (double *)xmalloc(nx * ny * sizeof(double));
 
   flip_x = OPTION_FLIP_X & lx.scale_options;
-  for (i = 0; i < nx; i++)
-    x[i] = x_lin(px[flip_x ? nx - 1 - i : i]);
+  for (i = 0; i < nx; i++) x[i] = x_lin(px[flip_x ? nx - 1 - i : i]);
 
   flip_y = OPTION_FLIP_Y & lx.scale_options;
-  for (j = 0; j < ny; j++)
-    y[j] = y_lin(py[flip_y ? ny - 1 - j : j]);
+  for (j = 0; j < ny; j++) y[j] = y_lin(py[flip_y ? ny - 1 - j : j]);
 
   k = 0;
   for (j = 0; j < ny; j++)
@@ -6646,15 +6088,12 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
                             facey[k] = c * yn[k] + d;
                             facez[k] = e * zn[k] + f;
                           }
-                        get_intensity(facex, facey, facez,
-                                      light_source, &intensity);
+                        get_intensity(facex, facey, facez, light_source, &intensity);
                       }
 
-                    for (k = 0; k <= 4; k++)
-                      apply_world_xform(xn + k, yn + k, zn + k);
+                    for (k = 0; k <= 4; k++) apply_world_xform(xn + k, yn + k, zn + k);
 
-                    meanz = 0.25 * (Z(i - 1, j - 1) + Z(i, j - 1) +
-                                    Z(i, j) + Z(i - 1, j));
+                    meanz = 0.25 * (Z(i - 1, j - 1) + Z(i, j - 1) + Z(i, j) + Z(i - 1, j));
 
                     if (option == OPTION_Z_SHADED_MESH)
                       {
@@ -6670,8 +6109,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                     else if (option == OPTION_COLORED_MESH)
                       {
-                        color = iround((meanz - wx.zmin) / (wx.zmax - wx.zmin) *
-                          (last_color - first_color)) + first_color;
+                        color =
+                            iround((meanz - wx.zmin) / (wx.zmax - wx.zmin) * (last_color - first_color)) + first_color;
 
                         if (color < first_color)
                           color = first_color;
@@ -6683,8 +6122,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
                     else if (option == OPTION_SHADED_MESH)
                       {
-                        color = iround(intensity * (last_color - first_color)) +
-                          first_color;
+                        color = iround(intensity * (last_color - first_color)) + first_color;
 
                         if (color < first_color)
                           color = first_color;
@@ -6712,16 +6150,14 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
         case OPTION_CELL_ARRAY:
 
-          colia = (int *) xmalloc(nx * ny * sizeof(int));
+          colia = (int *)xmalloc(nx * ny * sizeof(int));
           k = 0;
           for (j = 0; j < ny; j++)
             for (i = 0; i < nx; i++)
               {
                 if (Z(i, j) != MISSING_VALUE)
                   {
-                    color = first_color + (int) (
-                      (Z(i, j) - wx.zmin) / (wx.zmax - wx.zmin) *
-                      (last_color - first_color));
+                    color = first_color + (int)((Z(i, j) - wx.zmin) / (wx.zmax - wx.zmin) * (last_color - first_color));
 
                     if (color < first_color)
                       color = first_color;
@@ -6736,21 +6172,17 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
           w = (nx < 256) ? nx * (255 / nx + 1) - 1 : nx - 1;
           h = (ny < 256) ? ny * (255 / ny + 1) - 1 : ny - 1;
-          ca = (int *) xmalloc((w+1) * (h+1) * sizeof(int));
+          ca = (int *)xmalloc((w + 1) * (h + 1) * sizeof(int));
 
           dwk = w;
-          if (h > dwk)
-            dwk = h;
-          if (nx > dwk)
-            dwk = nx;
-          if (ny > dwk)
-            dwk = ny;
+          if (h > dwk) dwk = h;
+          if (nx > dwk) dwk = nx;
+          if (ny > dwk) dwk = ny;
           dwk += 1;
-          wk1 = (int *) xmalloc(dwk * sizeof(int));
-          wk2 = (int *) xmalloc(dwk * sizeof(int));
+          wk1 = (int *)xmalloc(dwk * sizeof(int));
+          wk2 = (int *)xmalloc(dwk * sizeof(int));
 
-          pixel(hlr.xmin, hlr.xmax, ymin, ymax,
-                nx, ny, colia, w, h, ca, dwk, wk1, wk2);
+          pixel(hlr.xmin, hlr.xmax, ymin, ymax, nx, ny, colia, w, h, ca, dwk, wk1, wk2);
 
           free(wk2);
           free(wk1);
@@ -6760,10 +6192,9 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
           break;
         }
 
-      gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_SOLID :
-                             GKS_K_LINETYPE_DOTTED);
+      gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_SOLID : GKS_K_LINETYPE_DOTTED);
     }
-  while ((hlr.sign >= 0) && ((int) option <= (int) OPTION_MESH));
+  while ((hlr.sign >= 0) && ((int)option <= (int)OPTION_MESH));
 
 #undef Z
 
@@ -6790,17 +6221,13 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
     }
 }
 
-static
-const double *xp, *yp;
+static const double *xp, *yp;
 
-static
-int compar(const void *a, const void *b)
+static int compar(const void *a, const void *b)
 {
   int ret = -1;
-  if (xp[*(int *) a] > xp[*(int *) b])
-    ret = 1;
-  if (yp[*(int *) a] < yp[*(int *) b])
-    ret = 1;
+  if (xp[*(int *)a] > xp[*(int *)b]) ret = 1;
+  if (yp[*(int *)a] < yp[*(int *)b]) ret = 1;
   return ret;
 }
 
@@ -6847,17 +6274,16 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
       meanz = 0.0;
       for (j = 0; j < 3; j++)
         {
-          x[j] = x_lin(px[triangles[3*i+j]]);
-          y[j] = y_lin(py[triangles[3*i+j]]);
-          z[j] = z_lin(pz[triangles[3*i+j]]);
+          x[j] = x_lin(px[triangles[3 * i + j]]);
+          y[j] = y_lin(py[triangles[3 * i + j]]);
+          z[j] = z_lin(pz[triangles[3 * i + j]]);
           meanz += z[j];
 
           apply_world_xform(x + j, y + j, z + j);
         }
       meanz /= 3.0;
 
-      color = iround((meanz - wx.zmin)/(wx.zmax - wx.zmin) *
-                     (last_color - first_color)) + first_color;
+      color = iround((meanz - wx.zmin) / (wx.zmax - wx.zmin) * (last_color - first_color)) + first_color;
 
       if (color < first_color)
         color = first_color;
@@ -6915,9 +6341,9 @@ void gr_gradient(int nx, int ny, double *x, double *y, double *z, double *u, dou
         return;
       }
 
-#define Z(i,j) (z[(nx*(j)+(i))])
-#define U(i,j) (u[(nx*(j)+(i))])
-#define V(i,j) (v[(nx*(j)+(i))])
+#define Z(i, j) (z[(nx * (j) + (i))])
+#define U(i, j) (u[(nx * (j) + (i))])
+#define V(i, j) (v[(nx * (j) + (i))])
 
   dx = (x[nx - 1] - x[0]) / (nx - 1);
   dy = (y[ny - 1] - y[0]) / (ny - 1);
@@ -6980,32 +6406,33 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
   gks_inq_pline_color_index(&errind, &linecolor);
   gks_inq_fill_color_index(&errind, &fillcolor);
 
-#define Z(i,j) (z[(nx*(j)+(i))])
-#define U(i,j) (u[(nx*(j)+(i))])
-#define V(i,j) (v[(nx*(j)+(i))])
+#define Z(i, j) (z[(nx * (j) + (i))])
+#define U(i, j) (u[(nx * (j) + (i))])
+#define V(i, j) (v[(nx * (j) + (i))])
 
   for (j = 0; j < ny; j++)
-    for (i = 0; i < nx; i++) {
-      gmax = max(U(i, j) * U(i, j) + V(i, j) * V(i, j), gmax);
-    }
+    for (i = 0; i < nx; i++)
+      {
+        gmax = max(U(i, j) * U(i, j) + V(i, j) * V(i, j), gmax);
+      }
   gmax = sqrt(gmax);
 
   dx = (x[nx - 1] - x[0]) / (nx - 1);
   dy = (y[ny - 1] - y[0]) / (ny - 1);
 
   for (j = 0; j < ny; j++)
-    for (i = 0; i < nx; i++) {
-      gnorm = sqrt(U(i, j) * U(i, j) + V(i, j) * V(i, j)) / gmax;
-      if (color)
-        {
-          ci = first_color + (int)((last_color - first_color) * gnorm);
-          gr_setlinecolorind(ci);
-          gr_setfillcolorind(ci);
-        }
-      gr_setarrowsize(gnorm);
-      gr_drawarrow(x[i], y[j],
-                   x[i] + dx * U(i, j) / gmax, y[j] + dy * V(i, j) / gmax);
-    }
+    for (i = 0; i < nx; i++)
+      {
+        gnorm = sqrt(U(i, j) * U(i, j) + V(i, j) * V(i, j)) / gmax;
+        if (color)
+          {
+            ci = first_color + (int)((last_color - first_color) * gnorm);
+            gr_setlinecolorind(ci);
+            gr_setfillcolorind(ci);
+          }
+        gr_setarrowsize(gnorm);
+        gr_drawarrow(x[i], y[j], x[i] + dx * U(i, j) / gmax, y[j] + dy * V(i, j) / gmax);
+      }
 
 #undef V
 #undef U
@@ -7027,8 +6454,7 @@ void gr_quiver(int nx, int ny, double *x, double *y, double *u, double *v, int c
     }
 }
 
-static
-int islinspace(int n, double *a)
+static int islinspace(int n, double *a)
 {
   double step, feps;
   int i;
@@ -7037,14 +6463,13 @@ int islinspace(int n, double *a)
   step = (a[n - 1] - a[0]) / (n - 1);
   feps = step * FEPS;
   for (i = 1; i < n; i++)
-    if (fabs(a[i] - a[i-1] - step) > feps) return 0;
+    if (fabs(a[i] - a[i - 1] - step) > feps) return 0;
 
   return 1;
 }
 
-static
-void rebin(int nx, int ny, double *px, double *py, double *pz,
-           int *nxq, int *nyq, double **xq, double **yq, double **zq)
+static void rebin(int nx, int ny, double *px, double *py, double *pz, int *nxq, int *nyq, double **xq, double **yq,
+                  double **zq)
 {
   double step, *x, *y, *z;
   int i;
@@ -7052,17 +6477,15 @@ void rebin(int nx, int ny, double *px, double *py, double *pz,
   *nxq = 500;
   *nyq = 500;
 
-  x = *xq = (double *) xmalloc(sizeof(double) * *nxq);
-  y = *yq = (double *) xmalloc(sizeof(double) * *nyq);
-  z = *zq = (double *) xmalloc(sizeof(double) * *nxq * *nyq);
+  x = *xq = (double *)xmalloc(sizeof(double) * *nxq);
+  y = *yq = (double *)xmalloc(sizeof(double) * *nyq);
+  z = *zq = (double *)xmalloc(sizeof(double) * *nxq * *nyq);
 
   step = (px[nx - 1] - px[0]) / (*nxq - 1);
-  for (i = 0; i < *nxq; i++)
-    x[i] = px[0] + i * step;
+  for (i = 0; i < *nxq; i++) x[i] = px[0] + i * step;
 
   step = (py[ny - 1] - py[0]) / (*nyq - 1);
-  for (i = 0; i < *nyq; i++)
-    y[i] = py[0] + i * step;
+  for (i = 0; i < *nyq; i++) y[i] = py[0] + i * step;
 
   gr_interp2(nx, ny, px, py, pz, *nxq, *nyq, x, y, z, 1, 0.0);
 }
@@ -7083,9 +6506,7 @@ void rebin(int nx, int ny, double *px, double *py, double *pz,
  *                    every line. A value of 0 produces no labels. To produce
  *                    colored contour lines, add an offset of 1000 to major_h
  */
-void gr_contour(
-  int nx, int ny, int nh, double *px, double *py, double *h, double *pz,
-  int major_h)
+void gr_contour(int nx, int ny, int nh, double *px, double *py, double *h, double *pz, int major_h)
 {
   int i, j;
   int errind, ltype, color, halign, valign;
@@ -7176,8 +6597,7 @@ void gr_contour(
  *                    every line. A value of 0 produces no labels. To produce
  *                    colored contour lines, add an offset of 1000 to major_h
  */
-void gr_contourf(
-    int nx, int ny, int nh, double *px, double *py, double *h, double *pz, int major_h)
+void gr_contourf(int nx, int ny, int nh, double *px, double *py, double *h, double *pz, int major_h)
 {
   int i, j;
   int errind;
@@ -7265,8 +6685,7 @@ void gr_contourf(
  * \param[in] nlevels The number of contour levels
  * \param[in] levels A pointer to the contour levels
  */
-void gr_tricontour(
-  int npoints, double *x, double *y, double *z, int nlevels, double *levels)
+void gr_tricontour(int npoints, double *x, double *y, double *z, int nlevels, double *levels)
 {
   int i, *colors;
 
@@ -7286,10 +6705,8 @@ void gr_tricontour(
 
   setscale(lx.scale_options);
 
-  colors = (int *) xmalloc(nlevels * sizeof(int));
-  for (i = 0; i < nlevels; i++)
-    colors[i] = (int)((double)i / (nlevels - 1) * (last_color - first_color)) +
-                first_color;
+  colors = (int *)xmalloc(nlevels * sizeof(int));
+  for (i = 0; i < nlevels; i++) colors[i] = (int)((double)i / (nlevels - 1) * (last_color - first_color)) + first_color;
 
   gr_draw_tricont(npoints, x, y, z, nlevels, levels, colors);
 
@@ -7306,10 +6723,8 @@ void gr_tricontour(
     }
 }
 
-static
-int binning(
-  double x[], double y[], int *cell, int *cnt, double size, double shape,
-  double rx[2], double ry[2], int bnd[2], int n, double ycorr)
+static int binning(double x[], double y[], int *cell, int *cnt, double size, double shape, double rx[2], double ry[2],
+                   int bnd[2], int n, double ycorr)
 {
   int nc;
   double xi, yi;
@@ -7331,7 +6746,7 @@ int binning(
   iinc = 2 * jinc;
   lmax = bnd[0] * bnd[1];
   con1 = 0.25;
-  con2 = 1./3.;
+  con2 = 1. / 3.;
 
   for (i = 0; i < n; i++)
     {
@@ -7345,7 +6760,7 @@ int binning(
       if (dist1 < con1)
         L = i1 * iinc + j1 + 1;
       else if (dist1 > con2)
-        L = (int) sy * iinc + (int) sx + lat;
+        L = (int)sy * iinc + (int)sx + lat;
       else
         {
           j2 = sx;
@@ -7373,9 +6788,8 @@ int binning(
   return nc;
 }
 
-static
-int hcell2xy(int nbins, double rx[2], double ry[2], double shape, int bnd[2],
-             int *cell, double *x, double *y, int *cnt, double ycorr)
+static int hcell2xy(int nbins, double rx[2], double ry[2], double shape, int bnd[2], int *cell, double *x, double *y,
+                    int *cnt, double ycorr)
 {
   double c3, c4, tmp;
   int jmax, lmax, L;
@@ -7389,12 +6803,10 @@ int hcell2xy(int nbins, double rx[2], double ry[2], double shape, int bnd[2],
   cntmax = 0;
   for (L = 0; L <= lmax; L++)
     {
-      y[L] = c4 * ((cell[L] - 1)/jmax) + ry[0] + ycorr;
-      tmp = ((cell[L] - 1)/jmax) % 2 == 0 ? ((cell[L] - 1) % jmax) :
-        ((cell[L] - 1) % jmax + 0.5);
+      y[L] = c4 * ((cell[L] - 1) / jmax) + ry[0] + ycorr;
+      tmp = ((cell[L] - 1) / jmax) % 2 == 0 ? ((cell[L] - 1) % jmax) : ((cell[L] - 1) % jmax + 0.5);
       x[L] = c3 * tmp + rx[0];
-      if (cnt[L] > cntmax)
-        cntmax = cnt[L];
+      if (cnt[L] > cntmax) cntmax = cnt[L];
     }
   return cntmax;
 }
@@ -7448,15 +6860,18 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
   ycorr = (vymax - vymin) - ((imax - 2) * 1.5 * R + (imax % 2) * R);
   ycorr = ycorr / 2;
 
-  cell = (int *) calloc(lmax + 1, sizeof(int));
-  cnt  = (int *) calloc(lmax + 1, sizeof(int));
-  xcm = (double *) calloc(lmax + 1, sizeof(double));
-  ycm = (double *) calloc(lmax + 1, sizeof(double));
+  cell = (int *)calloc(lmax + 1, sizeof(int));
+  cnt = (int *)calloc(lmax + 1, sizeof(int));
+  xcm = (double *)calloc(lmax + 1, sizeof(double));
+  ycm = (double *)calloc(lmax + 1, sizeof(double));
 
-  rx[0] = vxmin; rx[1] = vxmax;
-  ry[0] = vymin; ry[1] = vymax;
+  rx[0] = vxmin;
+  rx[1] = vxmax;
+  ry[0] = vymin;
+  ry[1] = vymax;
 
-  bnd[0] = imax; bnd[1] = jmax;
+  bnd[0] = imax;
+  bnd[1] = jmax;
 
   nc = binning(x, y, cell, cnt, size, shape, rx, ry, bnd, n, ycorr);
 
@@ -7480,8 +6895,7 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
       xlist[6] = xlist[0];
       ylist[6] = ylist[0];
 
-      gks_set_fill_color_index(first_color + (last_color - first_color) *
-                               ((double) cnt[i] / cntmax));
+      gks_set_fill_color_index(first_color + (last_color - first_color) * ((double)cnt[i] / cntmax));
       gks_fillarea(6, xlist, ylist);
       gks_polyline(7, xlist, ylist);
     }
@@ -7536,15 +6950,14 @@ void gr_setcolormap(int index)
       last_color = DEFAULT_LAST_COLOR;
     }
 
-  if (ind >= sizeof(cmap) / sizeof(cmap[0]))
-    ind = 0;
+  if (ind >= sizeof(cmap) / sizeof(cmap[0])) ind = 0;
 
   for (i = 0; i <= DEFAULT_LAST_COLOR - DEFAULT_FIRST_COLOR; i++)
     {
       j = reverse ? DEFAULT_LAST_COLOR - DEFAULT_FIRST_COLOR - 1 - i : i;
       r = ((cmap[ind][j] >> 16) & 0xff) / 255.0;
-      g = ((cmap[ind][j] >>  8) & 0xff) / 255.0;
-      b = ( cmap[ind][j]        & 0xff) / 255.0;
+      g = ((cmap[ind][j] >> 8) & 0xff) / 255.0;
+      b = (cmap[ind][j] & 0xff) / 255.0;
 
       setcolorrep(DEFAULT_FIRST_COLOR + i, r, g, b);
     }
@@ -7553,14 +6966,13 @@ void gr_setcolormap(int index)
     {
       j = reverse ? 255 - i : i;
       r = ((cmap_h[ind][j] >> 16) & 0xff) / 255.0;
-      g = ((cmap_h[ind][j] >>  8) & 0xff) / 255.0;
-      b = ( cmap_h[ind][j]        & 0xff) / 255.0;
+      g = ((cmap_h[ind][j] >> 8) & 0xff) / 255.0;
+      b = (cmap_h[ind][j] & 0xff) / 255.0;
 
       setcolorrep(1000 + i, r, g, b);
     }
 
-  if (flag_graphics)
-    gr_writestream("<setcolormap index=\"%d\"/>\n", index);
+  if (flag_graphics) gr_writestream("<setcolormap index=\"%d\"/>\n", index);
 }
 
 void gr_inqcolormap(int *index)
@@ -7593,8 +7005,7 @@ void gr_colorbar(void)
   gks_inq_xform(tnr, &errind, wn, vp);
 
   cells = last_color - first_color + 1;
-  for (ci = first_color; ci <= last_color; ci++)
-    colia[ci - first_color] = ci;
+  for (ci = first_color; ci <= last_color; ci++) colia[ci - first_color] = ci;
 
   xmin = lx.xmin;
   xmax = lx.xmax;
@@ -7610,7 +7021,7 @@ void gr_colorbar(void)
   gks_cellarray(xmin, ymin, xmax, ymax, w, h, sx, sy, nx, ny, colia);
 
   dz = 0.5 * gr_tick(zmin, zmax);
-  nz = (int) ((zmax - zmin) / dz + 0.5);
+  nz = (int)((zmax - zmin) / dz + 0.5);
   dy = (ymax - ymin) / nz;
 
   gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
@@ -7629,8 +7040,7 @@ void gr_colorbar(void)
   gks_set_text_align(halign, valign);
   gks_set_clipping(clsw);
 
-  if (flag_graphics)
-    gr_writestream("<colorbar/>\n");
+  if (flag_graphics) gr_writestream("<colorbar/>\n");
 }
 
 void gr_inqcolor(int color, int *rgb)
@@ -7641,9 +7051,7 @@ void gr_inqcolor(int color, int *rgb)
   check_autoinit;
 
   gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
-  *rgb = ((nint(r * 255) & 0xff)      ) |
-         ((nint(g * 255) & 0xff) <<  8) |
-         ((nint(b * 255) & 0xff) << 16);
+  *rgb = ((nint(r * 255) & 0xff)) | ((nint(g * 255) & 0xff) << 8) | ((nint(b * 255) & 0xff) << 16);
 }
 
 int gr_inqcolorfromrgb(double red, double green, double blue)
@@ -7654,9 +7062,7 @@ int gr_inqcolorfromrgb(double red, double green, double blue)
 
   check_autoinit;
 
-  rgbmask = ((nint(red   * 255) & 0xff)      ) |
-            ((nint(green * 255) & 0xff) <<  8) |
-            ((nint(blue  * 255) & 0xff) << 16);
+  rgbmask = ((nint(red * 255) & 0xff)) | ((nint(green * 255) & 0xff) << 8) | ((nint(blue * 255) & 0xff) << 16);
 
   for (color = 80; color < 980; color++)
     if (rgb[color] == rgbmask)
@@ -7714,12 +7120,36 @@ void gr_hsvtorgb(double h, double s, double v, double *r, double *g, double *b)
 
       switch (i)
         {
-        case  0: *r = v; *g = t; *b = p; break;
-        case  1: *r = q; *g = v; *b = p; break;
-        case  2: *r = p; *g = v; *b = t; break;
-        case  3: *r = p; *g = q; *b = v; break;
-        case  4: *r = t; *g = p; *b = v; break;
-        case  5: *r = v; *g = p; *b = q; break;
+        case 0:
+          *r = v;
+          *g = t;
+          *b = p;
+          break;
+        case 1:
+          *r = q;
+          *g = v;
+          *b = p;
+          break;
+        case 2:
+          *r = p;
+          *g = v;
+          *b = t;
+          break;
+        case 3:
+          *r = p;
+          *g = q;
+          *b = v;
+          break;
+        case 4:
+          *r = t;
+          *g = p;
+          *b = v;
+          break;
+        case 5:
+          *r = v;
+          *g = p;
+          *b = q;
+          break;
         }
     }
 }
@@ -7734,7 +7164,7 @@ double gr_tick(double amin, double amax)
       exponent = log10(amax - amin);
       fractpart = modf(exponent, &intpart);
       GR_UNUSED(fractpart); /* silence compiler warning */
-      n = (int) intpart;
+      n = (int)intpart;
 
       factor = pow(10.0, exponent - n);
 
@@ -7751,7 +7181,7 @@ double gr_tick(double amin, double amax)
       else
         tick_unit = 0.05;
 
-      tick_unit = tick_unit * pow(10.0, (double) n);
+      tick_unit = tick_unit * pow(10.0, (double)n);
     }
   else
     {
@@ -7763,8 +7193,7 @@ double gr_tick(double amin, double amax)
                          difference between the minimum and maximum value */
 }
 
-static
-int check_range(double a, double b)
+static int check_range(double a, double b)
 {
   double d;
 
@@ -7788,8 +7217,7 @@ int gr_validaterange(double amin, double amax)
 
 #ifdef _MSC_VER
 #if _MSC_VER < 1700
-static
-double trunc(double d)
+static double trunc(double d)
 {
   return (d > 0) ? floor(d) : ceil(d);
 }
@@ -7813,15 +7241,12 @@ void gr_adjustrange(double *amin, double *amax)
 
   tick = gr_tick(*amin, *amax);
 
-  if (fract(*amin / tick) != 0)
-    *amin = tick * gauss(*amin / tick);
+  if (fract(*amin / tick) != 0) *amin = tick * gauss(*amin / tick);
 
-  if (fract(*amax / tick) != 0)
-    *amax = tick * (gauss(*amax / tick) + 1);
+  if (fract(*amax / tick) != 0) *amax = tick * (gauss(*amax / tick) + 1);
 }
 
-static
-int gks_wstype(char *type)
+static int gks_wstype(char *type)
 {
   int wstype;
 
@@ -7866,7 +7291,8 @@ int gks_wstype(char *type)
   else
     {
       fprintf(stderr, "%s: unrecognized file type\nAvailable formats: \
-bmp, eps, fig, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n", type);
+bmp, eps, fig, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n",
+              type);
       wstype = -1;
     }
 
@@ -7931,8 +7357,7 @@ void gr_beginprint(char *pathname)
 
   if (!flag_printing)
     {
-      if ((type = strrchr(pathname, '.')) != NULL)
-        wstype = gks_wstype(type + 1);
+      if ((type = strrchr(pathname, '.')) != NULL) wstype = gks_wstype(type + 1);
 
       if (wstype >= 0)
         {
@@ -8021,8 +7446,7 @@ void gr_beginprint(char *pathname)
  *
  * \endverbatim
  */
-void gr_beginprintext(
-  char *pathname, char *mode, char *format, char *orientation)
+void gr_beginprintext(char *pathname, char *mode, char *format, char *orientation)
 {
   int wkid = 6, wstype = 62;
   char *type;
@@ -8034,8 +7458,7 @@ void gr_beginprintext(
 
   if (!flag_printing)
     {
-      if ((type = strrchr(pathname, '.')) != NULL)
-        wstype = gks_wstype(type + 1);
+      if ((type = strrchr(pathname, '.')) != NULL) wstype = gks_wstype(type + 1);
 
       if (wstype >= 0)
         {
@@ -8054,8 +7477,7 @@ void gr_beginprintext(
                 }
               p++;
             }
-          if (p->format == NULL)
-            fprintf(stderr, "%s: invalid page size\n", format);
+          if (p->format == NULL) fprintf(stderr, "%s: invalid page size\n", format);
 
           if (str_casecmp(orientation, "Landscape") == 0)
             landscape = 1;
@@ -8064,10 +7486,8 @@ void gr_beginprintext(
 
           if (wstype == 62)
             {
-              if (!color)
-                wstype -= 1;
-              if (landscape)
-                wstype += 2;
+              if (!color) wstype -= 1;
+              if (landscape) wstype += 2;
             }
 
           gks_open_ws(wkid, pathname, wstype);
@@ -8161,9 +7581,7 @@ void gr_drawrect(double xmin, double xmax, double ymin, double ymax)
   polyline(5, x, y);
 
   if (flag_graphics)
-    gr_writestream(
-      "<drawrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-      xmin, xmax, ymin, ymax);
+    gr_writestream("<drawrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
 /*!
@@ -8188,9 +7606,7 @@ void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
   fillarea(4, x, y);
 
   if (flag_graphics)
-    gr_writestream(
-      "<fillrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n",
-      xmin, xmax, ymin, ymax);
+    gr_writestream("<fillrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
 }
 
 /*!
@@ -8207,8 +7623,7 @@ void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
  * interpreted such that 0 degrees is at the 3 o'clock position. The center of
  * the arc is the center of the given rectangle.
  */
-void gr_drawarc(
-  double xmin, double xmax, double ymin, double ymax, int a1, int a2)
+void gr_drawarc(double xmin, double xmax, double ymin, double ymax, int a1, int a2)
 {
   double xcenter, ycenter, width, height;
   int start, end, a, n;
@@ -8218,33 +7633,32 @@ void gr_drawarc(
 
   xcenter = (x_lin(xmin) + x_lin(xmax)) / 2.0;
   ycenter = (y_lin(ymin) + y_lin(ymax)) / 2.0;
-  width   = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
-  height  = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
+  width = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
+  height = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
 
-  start  = min(a1, a2);
-  end    = max(a1, a2);
+  start = min(a1, a2);
+  end = max(a1, a2);
   start += (end - start) / 360 * 360;
   /* Ensure that two equivalent but unequal angles result in a full arc. */
-  if (start == end && a1 != a2) {
-    end += 360;
-  }
+  if (start == end && a1 != a2)
+    {
+      end += 360;
+    }
 
   n = 0;
   for (a = start; a <= end; a++)
     {
-      x[n] = x_log(xcenter + width  * cos(a * M_PI / 180));
+      x[n] = x_log(xcenter + width * cos(a * M_PI / 180));
       y[n] = y_log(ycenter + height * sin(a * M_PI / 180));
       n++;
     }
 
-  if (n > 1)
-    polyline(n, x, y);
+  if (n > 1) polyline(n, x, y);
 
   if (flag_graphics)
-    gr_writestream(
-      "<drawarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
-      "a1=\"%d\" a2=\"%d\"/>\n",
-      xmin, xmax, ymin, ymax, a1, a2);
+    gr_writestream("<drawarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+                   "a1=\"%d\" a2=\"%d\"/>\n",
+                   xmin, xmax, ymin, ymax, a1, a2);
 }
 
 /*!
@@ -8261,8 +7675,7 @@ void gr_drawarc(
  * interpreted such that 0 degrees is at the 3 o'clock position. The center of
  * the arc is the center of the given rectangle.
  */
-void gr_fillarc(
-  double xmin, double xmax, double ymin, double ymax, int a1, int a2)
+void gr_fillarc(double xmin, double xmax, double ymin, double ymax, int a1, int a2)
 {
   double xcenter, ycenter, width, height;
   int start, end, a, n;
@@ -8272,11 +7685,11 @@ void gr_fillarc(
 
   xcenter = (x_lin(xmin) + x_lin(xmax)) / 2.0;
   ycenter = (y_lin(ymin) + y_lin(ymax)) / 2.0;
-  width   = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
-  height  = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
+  width = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
+  height = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
 
-  start  = min(a1, a2);
-  end    = max(a1, a2);
+  start = min(a1, a2);
+  end = max(a1, a2);
   start += (end - start) / 360 * 360;
 
   x[0] = x_log(xcenter);
@@ -8284,54 +7697,47 @@ void gr_fillarc(
   n = 1;
   for (a = start; a <= end; a++)
     {
-      x[n] = x_log(xcenter + width  * cos(a * M_PI / 180));
+      x[n] = x_log(xcenter + width * cos(a * M_PI / 180));
       y[n] = y_log(ycenter + height * sin(a * M_PI / 180));
       n++;
     }
 
-  if (n > 2)
-    fillarea(n, x, y);
+  if (n > 2) fillarea(n, x, y);
 
   if (flag_graphics)
-    gr_writestream(
-      "<fillarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
-      "a1=\"%d\" a2=\"%d\"/>\n",
-      xmin, xmax, ymin, ymax, a1, a2);
+    gr_writestream("<fillarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+                   "a1=\"%d\" a2=\"%d\"/>\n",
+                   xmin, xmax, ymin, ymax, a1, a2);
 }
 
-static
-void addpath(double x, double y)
+static void addpath(double x, double y)
 {
   xpath[npath] = x;
   ypath[npath] = y;
   npath += 1;
 }
 
-static
-void closepath(int fill)
+static void closepath(int fill)
 {
   if (fill)
     {
-      if (npath > 2)
-        gks_fillarea(npath, xpath, ypath);
+      if (npath > 2) gks_fillarea(npath, xpath, ypath);
     }
   else if (npath > 1)
     gks_polyline(npath, xpath, ypath);
   npath = 0;
 }
 
-static
-void quad_bezier(double x[3], double y[3], int n)
+static void quad_bezier(double x[3], double y[3], int n)
 {
   int i;
   double t, a, b, c;
 
-  if (npath + n >= maxpath)
-    reallocate(npath + n);
+  if (npath + n >= maxpath) reallocate(npath + n);
 
   for (i = 0; i < n; i++)
     {
-      t = (double) i / (n - 1);
+      t = (double)i / (n - 1);
       a = pow((1.0 - t), 2.0);
       b = 2.0 * t * (1.0 - t);
       c = pow(t, 2.0);
@@ -8339,24 +7745,21 @@ void quad_bezier(double x[3], double y[3], int n)
     }
 }
 
-static
-void cubic_bezier(double x[4], double y[4], int n)
+static void cubic_bezier(double x[4], double y[4], int n)
 {
   int i;
   double t, a, b, c, d;
 
-  if (npath + n >= maxpath)
-    reallocate(npath + n);
+  if (npath + n >= maxpath) reallocate(npath + n);
 
   for (i = 0; i < n; i++)
     {
-      t = (double) i / (n - 1);
+      t = (double)i / (n - 1);
       a = pow((1.0 - t), 3.0);
       b = 3.0 * t * pow((1.0 - t), 2.0);
       c = 3.0 * pow(t, 2.0) * (1.0 - t);
       d = pow(t, 3.0);
-      addpath(a * x[0] + b * x[1] + c * x[2] + d * x[3],
-              a * y[0] + b * y[1] + c * y[2] + d * y[3]);
+      addpath(a * x[0] + b * x[1] + c * x[2] + d * x[3], a * y[0] + b * y[1] + c * y[2] + d * y[3]);
     }
 }
 
@@ -8396,8 +7799,7 @@ void gr_drawpath(int n, vertex_t *vertices, unsigned char *codes, int fill)
 
   check_autoinit;
 
-  if (n >= maxpath)
-    reallocate(n);
+  if (n >= maxpath) reallocate(n);
 
   if (codes == NULL)
     {
@@ -8517,11 +7919,9 @@ void gr_setarrowstyle(int style)
 {
   check_autoinit;
 
-  if (style >= 1 && style <= 18)
-    arrow_style = style - 1;
+  if (style >= 1 && style <= 18) arrow_style = style - 1;
 
-  if (flag_graphics)
-    gr_writestream("<setarrowstyle style=\"%d\"/>\n", style);
+  if (flag_graphics) gr_writestream("<setarrowstyle style=\"%d\"/>\n", style);
 }
 
 /*!
@@ -8536,11 +7936,9 @@ void gr_setarrowsize(double size)
 {
   check_autoinit;
 
-  if (arrow_size > 0)
-    arrow_size = size;
+  if (arrow_size > 0) arrow_size = size;
 
-  if (flag_graphics)
-    gr_writestream("<setarrowsize size=\"%g\"/>\n", size);
+  if (flag_graphics) gr_writestream("<setarrowsize size=\"%g\"/>\n", size);
 }
 
 /*!
@@ -8591,10 +7989,8 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
     a = acos(fabs(xe - xs) / c);
   else
     a = 0;
-  if (ye < ys)
-    a = 2 * M_PI - a;
-  if (xe < xs)
-    a = M_PI - a;
+  if (ye < ys) a = 2 * M_PI - a;
+  if (xe < xs) a = M_PI - a;
   a -= M_PI / 2;
 
   xc = (xs + xe) / 2;
@@ -8614,9 +8010,9 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
           yi = vertex_list[arrow_style][j++];
           xi *= fh;
           if (yi < 0)
-             yi = (yi + 100) * fh - 100;
+            yi = (yi + 100) * fh - 100;
           else
-             yi = (yi - 100) * fh + 100;
+            yi = (yi - 100) * fh + 100;
           xi *= f;
           yi *= f;
           x[i] = xc + cos(a) * xi - sin(a) * yi;
@@ -8641,9 +8037,7 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
   gks_set_fill_int_style(intstyle);
   gks_set_pline_linetype(ltype);
 
-  if (flag_graphics)
-    gr_writestream("<drawarrow x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n",
-                   x1, y1, x2, y2);
+  if (flag_graphics) gr_writestream("<drawarrow x1=\"%g\" y1=\"%g\" x2=\"%g\" y2=\"%g\"/>\n", x1, y1, x2, y2);
 }
 
 /*!
@@ -8675,9 +8069,7 @@ void gr_drawarrow(double x1, double y1, double x2, double y2)
  *
  * \endverbatim
  */
-void gr_drawimage(
-  double xmin, double xmax, double ymin, double ymax,
-  int width, int height, int *data, int model)
+void gr_drawimage(double xmin, double xmax, double ymin, double ymax, int width, int height, int *data, int model)
 {
   int *img = data, *imgT;
   int n, i, j, w, h;
@@ -8688,31 +8080,31 @@ void gr_drawimage(
   if (model == MODEL_HSV)
     {
       n = width * height;
-      img = (int *) xmalloc(n * sizeof(int));
+      img = (int *)xmalloc(n * sizeof(int));
       for (i = 0; i < n; i++)
         {
-          hue        = ( data[i] & 0xff             ) / 255.0;
-          saturation = ((data[i] & 0xff00)     >>  8) / 255.0;
-          value      = ((data[i] & 0xff0000)   >> 16) / 255.0;
+          hue = (data[i] & 0xff) / 255.0;
+          saturation = ((data[i] & 0xff00) >> 8) / 255.0;
+          value = ((data[i] & 0xff0000) >> 16) / 255.0;
           gr_hsvtorgb(hue, saturation, value, &red, &green, &blue);
-          img[i] = (data[i] & 0xff000000) |
-                   ((int) (red   * 255) << 16) |
-                   ((int) (green * 255) <<  8) |
-                   ((int) (blue  * 255));
+          img[i] = (data[i] & 0xff000000) | ((int)(red * 255) << 16) | ((int)(green * 255) << 8) | ((int)(blue * 255));
         }
     }
 
   if (lx.scale_options != 0)
     {
-      w = max(width,  500);
+      w = max(width, 500);
       h = max(height, 500);
-      imgT = (int *) xmalloc(w * h * sizeof(int));
+      imgT = (int *)xmalloc(w * h * sizeof(int));
       for (i = 0; i < w; i++)
         {
           if (w > 1)
             {
-              x = (x_log(xmin + i * (xmax-xmin) / (w-1)) - xmin) / (xmax-xmin);
-              if (x < 0) x = 0; else if (x > 1) x = 1;
+              x = (x_log(xmin + i * (xmax - xmin) / (w - 1)) - xmin) / (xmax - xmin);
+              if (x < 0)
+                x = 0;
+              else if (x > 1)
+                x = 1;
             }
           else
             x = 0;
@@ -8720,18 +8112,18 @@ void gr_drawimage(
             {
               if (h > 1)
                 {
-                  y = (y_log(ymin + (h-1-j) * (ymax-ymin) / (h-1)) - ymin) /
-                      (ymax-ymin);
-                  if (y < 0) y = 0; else if (y > 1) y = 1;
+                  y = (y_log(ymin + (h - 1 - j) * (ymax - ymin) / (h - 1)) - ymin) / (ymax - ymin);
+                  if (y < 0)
+                    y = 0;
+                  else if (y > 1)
+                    y = 1;
                 }
               else
                 y = 0;
-              imgT[i + j * w] = img[(int)min(x * width, width-1) +
-                                    (int)min((1-y) * height, height-1) * width];
+              imgT[i + j * w] = img[(int)min(x * width, width - 1) + (int)min((1 - y) * height, height - 1) * width];
             }
         }
-      gks_draw_image(
-        x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), w, h, imgT);
+      gks_draw_image(x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), w, h, imgT);
       free(imgT);
     }
   else
@@ -8740,16 +8132,14 @@ void gr_drawimage(
   if (flag_graphics)
     {
       n = width * height;
-      gr_writestream(
-        "<drawimage xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
-        "width=\"%d\" height=\"%d\"",
-        xmin, xmax, ymin, ymax, width, height);
+      gr_writestream("<drawimage xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+                     "width=\"%d\" height=\"%d\"",
+                     xmin, xmax, ymin, ymax, width, height);
       print_int_array("data", n, data);
       gr_writestream("model=\"%d\"/>\n", model);
     }
 
-  if (model == MODEL_HSV)
-    free(img);
+  if (model == MODEL_HSV) free(img);
 }
 
 /*!
@@ -8829,9 +8219,7 @@ void gr_endgraphics(void)
     }
 }
 
-static
-void latex2image(char *string, int pointSize, double *rgb,
-                 int *width, int *height, int **data)
+static void latex2image(char *string, int pointSize, double *rgb, int *width, int *height, int **data)
 {
   int color;
   char s[FILENAME_MAX], path[FILENAME_MAX], cache[33];
@@ -8840,14 +8228,11 @@ void latex2image(char *string, int pointSize, double *rgb,
   FILE *stream;
   int math, ret;
 
-  color = ((int)(rgb[0] / 255)      ) +
-          ((int)(rgb[1] / 255) <<  8) +
-          ((int)(rgb[2] / 255) << 16) +
-          (               255  << 24);
+  color = ((int)(rgb[0] / 255)) + ((int)(rgb[1] / 255) << 8) + ((int)(rgb[2] / 255) << 16) + (255 << 24);
   sprintf(s, "%d%x%s", pointSize, color, string);
   md5(s, cache);
 #ifdef _WIN32
-  temp = (char *) getenv("TEMP");
+  temp = (char *)getenv("TEMP");
 #else
   temp = TMPDIR;
 #endif
@@ -8884,22 +8269,19 @@ void latex2image(char *string, int pointSize, double *rgb,
 \\usepackage[dvips]{color}\n\
 \\begin{document}\n");
       if (math) fprintf(stream, "\\[\n");
-      fprintf(stream, "\\color[rgb]{%.3f,%.3f,%.3f} {\n",
-        rgb[0], rgb[1], rgb[2]);
+      fprintf(stream, "\\color[rgb]{%.3f,%.3f,%.3f} {\n", rgb[0], rgb[1], rgb[2]);
       fwrite(string, strlen(string), 1, stream);
       fprintf(stream, "}\n");
       if (math) fprintf(stream, "\\]\n");
       fprintf(stream, "\\end{document}");
       fclose(stream);
 
-      sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s",
-              temp, tex, null);
+      sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s", temp, tex, null);
       ret = system(cmd);
 
       if (ret == 0 && access(dvi, R_OK) == 0)
         {
-          sprintf(cmd, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s",
-                  pointSize * 100, dvi, png, null);
+          sprintf(cmd, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s", pointSize * 100, dvi, png, null);
           ret = system(cmd);
           if (ret == 0)
             {
@@ -8910,8 +8292,7 @@ void latex2image(char *string, int pointSize, double *rgb,
               sprintf(cmd, "rm -f %s.*", tmp);
 #endif
               ret = system(cmd);
-              if (ret != 0)
-                fprintf(stderr, "error deleting temprorary files\n");
+              if (ret != 0) fprintf(stderr, "error deleting temprorary files\n");
             }
           else
             fprintf(stderr, "dvipng: PNG conversion failed\n");
@@ -8920,51 +8301,43 @@ void latex2image(char *string, int pointSize, double *rgb,
         fprintf(stderr, "latex: failed to create a dvi file\n");
     }
 
-  if (access(path, R_OK) == 0)
-    gr_readimage(path, width, height, data);
+  if (access(path, R_OK) == 0) gr_readimage(path, width, height, data);
 }
 
 int *rotl90(int m, int n, int *mat)
 {
-  int *trans = (int *) xcalloc(m * n, sizeof(int));
+  int *trans = (int *)xcalloc(m * n, sizeof(int));
   int i, j;
 
   for (j = 0; j < n; j++)
-    for (i = 0; i < m; i++)
-      trans[(m-1-i)*n + j] = mat[j*m + i];
+    for (i = 0; i < m; i++) trans[(m - 1 - i) * n + j] = mat[j * m + i];
 
   return trans;
 }
 
-static
-int *rot180(int m, int n, int *mat)
+static int *rot180(int m, int n, int *mat)
 {
-  int *trans = (int *) xcalloc(m * n, sizeof(int));
+  int *trans = (int *)xcalloc(m * n, sizeof(int));
   int i, j;
 
   for (j = 0; j < n; j++)
-    for (i = 0; i < m; i++)
-      trans[(n-1-j)*m + m-1-i] = mat[j*m + i];
+    for (i = 0; i < m; i++) trans[(n - 1 - j) * m + m - 1 - i] = mat[j * m + i];
 
   return trans;
 }
 
-static
-int *rotr90(int m, int n, int *mat)
+static int *rotr90(int m, int n, int *mat)
 {
-  int *trans = (int *) xcalloc(m * n, sizeof(int));
+  int *trans = (int *)xcalloc(m * n, sizeof(int));
   int i, j;
 
   for (j = 0; j < n; j++)
-    for (i = 0; i < m; i++)
-      trans[i*n + n-1-j] = mat[j*m + i];
+    for (i = 0; i < m; i++) trans[i * n + n - 1 - j] = mat[j * m + i];
 
   return trans;
 }
 
-static
-void mathtex(double x, double y, char *string,
-             int inquire, double *tbx, double *tby)
+static void mathtex(double x, double y, char *string, int inquire, double *tbx, double *tby)
 {
   int wkid = 1, errind, conid, wtype, dcunit;
   int pointSize, pixels, color;
@@ -8982,13 +8355,11 @@ void mathtex(double x, double y, char *string,
     pixels = sizex / rh * height;
   else
     pixels = 500;
-  if (wtype == 101 || wtype == 102 || wtype == 120)
-    pixels *= 8;
+  if (wtype == 101 || wtype == 102 || wtype == 120) pixels *= 8;
 
   gks_inq_text_height(&errind, &chh);
   gks_inq_text_color_index(&errind, &color);
-  gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET,
-                    &errind, &rgb[0], &rgb[1], &rgb[2]);
+  gks_inq_color_rep(wkid, color, GKS_K_VALUE_SET, &errind, &rgb[0], &rgb[1], &rgb[2]);
 
   pointSize = chh * pixels;
   latex2image(string, pointSize, rgb, &width, &height, &data);
@@ -8996,30 +8367,41 @@ void mathtex(double x, double y, char *string,
   gks_inq_text_upvec(&errind, &ux, &uy);
   rad = -atan2(ux, uy);
   angle = (int)(rad * 180 / M_PI + 0.5);
-  if (angle < 0)
-    angle += 360;
+  if (angle < 0) angle += 360;
   path = ((angle + 45) / 90) % 4;
 
   if (data != NULL)
     {
-      rw =  width / (double) pixels;
-      rh = height / (double) pixels;
+      rw = width / (double)pixels;
+      rh = height / (double)pixels;
 
       gks_inq_text_align(&errind, &halign, &valign);
 
       rx = x;
       switch (halign)
         {
-          case 2: rx -= 0.5 * rw; break;
-          case 3: rx -= rw; break;
+        case 2:
+          rx -= 0.5 * rw;
+          break;
+        case 3:
+          rx -= rw;
+          break;
         }
       ry = y;
       switch (valign)
         {
-          case 1: ry -= rh - chh * 0.04; break;
-          case 2: ry -= rh; break;
-          case 3: ry -= 0.5 * rh; break;
-          case 5: ry -= chh * 0.04; break;
+        case 1:
+          ry -= rh - chh * 0.04;
+          break;
+        case 2:
+          ry -= rh;
+          break;
+        case 3:
+          ry -= 0.5 * rh;
+          break;
+        case 5:
+          ry -= chh * 0.04;
+          break;
         }
       bbx[0] = rx;
       bbx[1] = rx + rw;
@@ -9057,38 +8439,36 @@ void mathtex(double x, double y, char *string,
       else
         {
           gks_inq_current_xformno(&errind, &tnr);
-          if (tnr != NDC)
-            gks_select_xform(NDC);
+          if (tnr != NDC) gks_select_xform(NDC);
 
           if (angle % 90 == 0)
             {
               switch (path)
                 {
-                  case 0:
-                    gks_draw_image(x1, y2, x2, y1, width, height, data);
-                    break;
-                  case 1:
-                    trans = rotl90(width, height, data);
-                    gks_draw_image(x1, y2, x2, y1, height, width, trans);
-                    free(trans);
-                    break;
-                  case 2:
-                    trans = rot180(width, height, data);
-                    gks_draw_image(x1, y2, x2, y1, width, height, trans);
-                    free(trans);
-                    break;
-                  case 3:
-                    trans = rotr90(width, height, data);
-                    gks_draw_image(x1, y2, x2, y1, height, width, trans);
-                    free(trans);
-                    break;
+                case 0:
+                  gks_draw_image(x1, y2, x2, y1, width, height, data);
+                  break;
+                case 1:
+                  trans = rotl90(width, height, data);
+                  gks_draw_image(x1, y2, x2, y1, height, width, trans);
+                  free(trans);
+                  break;
+                case 2:
+                  trans = rot180(width, height, data);
+                  gks_draw_image(x1, y2, x2, y1, width, height, trans);
+                  free(trans);
+                  break;
+                case 3:
+                  trans = rotr90(width, height, data);
+                  gks_draw_image(x1, y2, x2, y1, height, width, trans);
+                  free(trans);
+                  break;
                 }
             }
           else
             {
-              w = (int)((x2 - x1) * pixels + 0.5),
-              h = (int)((y2 - y1) * pixels + 0.5);
-              trans = (int *) xcalloc(w * h, sizeof(int));
+              w = (int)((x2 - x1) * pixels + 0.5), h = (int)((y2 - y1) * pixels + 0.5);
+              trans = (int *)xcalloc(w * h, sizeof(int));
               midx = ceil(0.5 * w);
               midy = ceil(0.5 * h);
               sinf = sin(rad);
@@ -9100,15 +8480,13 @@ void mathtex(double x, double y, char *string,
                     yy = (i - midx) * sinf + (j - midy) * cosf;
                     ii = round(xx) + ceil(0.5 * width);
                     jj = round(yy) + ceil(0.5 * height);
-                    if (ii >= 0 && jj >= 0 && ii < width && jj < height)
-                      trans[j * w + i] = data[jj * width + ii];
+                    if (ii >= 0 && jj >= 0 && ii < width && jj < height) trans[j * w + i] = data[jj * width + ii];
                   }
               gks_draw_image(x1, y2, x2, y1, w, h, trans);
               free(trans);
             }
 
-          if (tnr != NDC)
-            gks_select_xform(tnr);
+          if (tnr != NDC) gks_select_xform(tnr);
         }
 
       free(data);
@@ -9127,8 +8505,7 @@ void gr_mathtex(double x, double y, char *string)
 {
   mathtex(x, y, string, 0, NULL, NULL);
 
-  if (flag_graphics)
-    gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_graphics) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
 void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
@@ -9201,8 +8578,7 @@ void gr_savestate(void)
 
   if (state_saved < MAX_SAVESTATE)
     {
-      if (state == NULL)
-        state = (state_list *) xmalloc(sizeof(state_list) * MAX_SAVESTATE);
+      if (state == NULL) state = (state_list *)xmalloc(sizeof(state_list) * MAX_SAVESTATE);
 
       s = state + state_saved;
       state_saved += 1;
@@ -9233,8 +8609,7 @@ void gr_savestate(void)
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
 
-  if (flag_graphics)
-    gr_writestream("<savestate/>\n");
+  if (flag_graphics) gr_writestream("<savestate/>\n");
 }
 
 void gr_restorestate(void)
@@ -9275,8 +8650,7 @@ void gr_restorestate(void)
   else
     fprintf(stderr, "attempt to restore unsaved state\n");
 
-  if (flag_graphics)
-    gr_writestream("<restorestate/>\n");
+  if (flag_graphics) gr_writestream("<restorestate/>\n");
 }
 
 void gr_selectcontext(int context)
@@ -9290,7 +8664,7 @@ void gr_selectcontext(int context)
       id = context - 1;
       if (app_context[id] == NULL)
         {
-          app_context[id] = (state_list *) xmalloc(sizeof(state_list));
+          app_context[id] = (state_list *)xmalloc(sizeof(state_list));
           ctx = app_context[id];
 
           ctx->ltype = GKS_K_LINETYPE_SOLID;
@@ -9367,8 +8741,7 @@ void gr_destroycontext(int context)
   if (context >= 1 && context <= MAX_CONTEXT)
     {
       id = context - 1;
-      if (app_context[id] != NULL)
-        free(app_context[id]);
+      if (app_context[id] != NULL) free(app_context[id]);
 
       app_context[id] = NULL;
     }
@@ -9388,45 +8761,88 @@ int gr_uselinespec(char *linespec)
     {
       switch (*spec)
         {
-          case ' ':
-            def_color = 0;
-            break;
-          case '-':
-            if (lastspec == '-')
-              linetype = GKS_K_LINETYPE_DASHED;
-            else
-              linetype = GKS_K_LINETYPE_SOLID;
-            break;
-          case ':': linetype = GKS_K_LINETYPE_DOTTED; break;
-          case '.':
-            if (lastspec == '-')
-              linetype = GKS_K_LINETYPE_DASHED_DOTTED;
-            else
-              markertype = GKS_K_MARKERTYPE_DOT;
-            break;
+        case ' ':
+          def_color = 0;
+          break;
+        case '-':
+          if (lastspec == '-')
+            linetype = GKS_K_LINETYPE_DASHED;
+          else
+            linetype = GKS_K_LINETYPE_SOLID;
+          break;
+        case ':':
+          linetype = GKS_K_LINETYPE_DOTTED;
+          break;
+        case '.':
+          if (lastspec == '-')
+            linetype = GKS_K_LINETYPE_DASHED_DOTTED;
+          else
+            markertype = GKS_K_MARKERTYPE_DOT;
+          break;
 
-          case '+': markertype = GKS_K_MARKERTYPE_PLUS; break;
-          case 'o': markertype = GKS_K_MARKERTYPE_CIRCLE; break;
-          case '*': markertype = GKS_K_MARKERTYPE_ASTERISK; break;
-          case 'x': markertype = GKS_K_MARKERTYPE_DIAGONAL_CROSS; break;
-          case 's': markertype = GKS_K_MARKERTYPE_SOLID_SQUARE; break;
-          case 'd': markertype = GKS_K_MARKERTYPE_SOLID_DIAMOND; break;
-          case '^': markertype = GKS_K_MARKERTYPE_SOLID_TRI_UP; break;
-          case 'v': markertype = GKS_K_MARKERTYPE_SOLID_TRI_DOWN; break;
-          case '>': markertype = GKS_K_MARKERTYPE_SOLID_TRI_RIGHT; break;
-          case '<': markertype = GKS_K_MARKERTYPE_SOLID_TRI_LEFT; break;
-          case 'p': markertype = GKS_K_MARKERTYPE_SOLID_STAR; break;
-          case 'h': markertype = GKS_K_MARKERTYPE_TRI_UP_DOWN; break;
+        case '+':
+          markertype = GKS_K_MARKERTYPE_PLUS;
+          break;
+        case 'o':
+          markertype = GKS_K_MARKERTYPE_CIRCLE;
+          break;
+        case '*':
+          markertype = GKS_K_MARKERTYPE_ASTERISK;
+          break;
+        case 'x':
+          markertype = GKS_K_MARKERTYPE_DIAGONAL_CROSS;
+          break;
+        case 's':
+          markertype = GKS_K_MARKERTYPE_SOLID_SQUARE;
+          break;
+        case 'd':
+          markertype = GKS_K_MARKERTYPE_SOLID_DIAMOND;
+          break;
+        case '^':
+          markertype = GKS_K_MARKERTYPE_SOLID_TRI_UP;
+          break;
+        case 'v':
+          markertype = GKS_K_MARKERTYPE_SOLID_TRI_DOWN;
+          break;
+        case '>':
+          markertype = GKS_K_MARKERTYPE_SOLID_TRI_RIGHT;
+          break;
+        case '<':
+          markertype = GKS_K_MARKERTYPE_SOLID_TRI_LEFT;
+          break;
+        case 'p':
+          markertype = GKS_K_MARKERTYPE_SOLID_STAR;
+          break;
+        case 'h':
+          markertype = GKS_K_MARKERTYPE_TRI_UP_DOWN;
+          break;
 
-          case 'r': color = 984; break;
-          case 'g': color = 987; break;
-          case 'b': color = 989; break;
-          case 'c': color = 983; break;
-          case 'm': color = 988; break;
-          case 'y': color = 994; break;
-          case 'k': color = 1; break;
-          case 'w': color = 0; break;
-           default: break;
+        case 'r':
+          color = 984;
+          break;
+        case 'g':
+          color = 987;
+          break;
+        case 'b':
+          color = 989;
+          break;
+        case 'c':
+          color = 983;
+          break;
+        case 'm':
+          color = 988;
+          break;
+        case 'y':
+          color = 994;
+          break;
+        case 'k':
+          color = 1;
+          break;
+        case 'w':
+          color = 0;
+          break;
+        default:
+          break;
         }
       lastspec = *spec++;
     }
@@ -9445,8 +8861,7 @@ int gr_uselinespec(char *linespec)
   if (color == -1)
     {
       color = 980 + predef_colors[def_color];
-      if (strcmp(linespec, " "))
-        def_color = (def_color + 1) % 20;
+      if (strcmp(linespec, " ")) def_color = (def_color + 1) % 20;
     }
   else
     result |= SPEC_COLOR;
@@ -9454,8 +8869,7 @@ int gr_uselinespec(char *linespec)
   gr_setlinecolorind(color);
   gr_setmarkercolorind(color);
 
-  if (flag_graphics)
-    gr_writestream("<uselinespec linespec=\"%s\"/>\n", linespec);
+  if (flag_graphics) gr_writestream("<uselinespec linespec=\"%s\"/>\n", linespec);
 
   return result;
 }
@@ -9484,22 +8898,19 @@ void gr_adjustlimits(double *amin, double *amax)
   else
     {
       remainder *= remainder;
-      if (b < 0)
-        remainder = -remainder;
+      if (b < 0) remainder = -remainder;
     }
   if (quotient)
     {
       exponent = floor(quotient);
-      if (quotient - exponent > 0.5)
-        exponent += 1;
+      if (quotient - exponent > 0.5) exponent += 1;
     }
   else
     {
       quotient *= quotient;
       exponent = quotient * a / b;
     }
-  if (remainder < 0.5)
-    exponent -= 1;
+  if (remainder < 0.5) exponent -= 1;
 
   scale = pow(10.0, -exponent);
   *amin = floor(*amin * scale) / scale;
@@ -9511,9 +8922,10 @@ void gr_adjustlimits(double *amin, double *amax)
  *
  * \returns A pointer to the GR runtime version string.
  */
-const char *gr_version(void) {
-    static const char *gr_version_str = GR_VERSION;
-    return gr_version_str;
+const char *gr_version(void)
+{
+  static const char *gr_version_str = GR_VERSION;
+  return gr_version_str;
 }
 
 /*!
@@ -9524,16 +8936,16 @@ const char *gr_version(void) {
  * \param[in] n the number of values in array
  * \param[in] array the value array
  */
-static void arg_min_max(int *min_index, int *max_index, int n, const double *array) {
+static void arg_min_max(int *min_index, int *max_index, int n, const double *array)
+{
   int i;
   *min_index = 0;
   *max_index = 0;
-  for (i = 1; i < n; i++) {
-    if (array[i] < array[*min_index])
-      *min_index = i;
-    if (array[i] > array[*max_index])
-      *max_index = i;
-  }
+  for (i = 1; i < n; i++)
+    {
+      if (array[i] < array[*min_index]) *min_index = i;
+      if (array[i] > array[*max_index]) *max_index = i;
+    }
 }
 
 /*!
@@ -9546,30 +8958,33 @@ static void arg_min_max(int *min_index, int *max_index, int n, const double *arr
  * @param[out] x_array the return array for the x values
  * @param[out] y_array the return array for the y values
  */
-void gr_reducepoints(int n, const double *x, const double *y, int points, double *x_array, double *y_array) {
+void gr_reducepoints(int n, const double *x, const double *y, int points, double *x_array, double *y_array)
+{
   int append_index = 0;
   int num_intervals = points / 2;
-  double exact_interval_width = (double) n / num_intervals;
+  double exact_interval_width = (double)n / num_intervals;
   int interval_width = n / num_intervals;
   int interval;
-  if (n < points) {
-    /* Copy the original array */
-    memcpy(x_array, x, sizeof(double) * n);
-    memcpy(y_array, y, sizeof(double) * n);
-    fprintf(stderr, "Not enough points provided.\n");
-    return;
-  }
-  for (interval = 0; interval < num_intervals; interval++) {
-    int index = interval * exact_interval_width;
-    int min_index, max_index;
-    arg_min_max(&min_index, &max_index, min(interval_width, n - index - 1), y + index);
-    x_array[append_index] = x[min_index + index];
-    y_array[append_index] = y[min_index + index];
-    append_index++;
-    x_array[append_index] = x[max_index + index];
-    y_array[append_index] = y[max_index + index];
-    append_index++;
-  }
+  if (n < points)
+    {
+      /* Copy the original array */
+      memcpy(x_array, x, sizeof(double) * n);
+      memcpy(y_array, y, sizeof(double) * n);
+      fprintf(stderr, "Not enough points provided.\n");
+      return;
+    }
+  for (interval = 0; interval < num_intervals; interval++)
+    {
+      int index = interval * exact_interval_width;
+      int min_index, max_index;
+      arg_min_max(&min_index, &max_index, min(interval_width, n - index - 1), y + index);
+      x_array[append_index] = x[min_index + index];
+      y_array[append_index] = y[min_index + index];
+      append_index++;
+      x_array[append_index] = x[max_index + index];
+      y_array[append_index] = y[max_index + index];
+      append_index++;
+    }
 }
 
 /*!
@@ -9633,7 +9048,7 @@ void gr_shadepoints(int n, double *x, double *y, int xform, int w, int h)
   roi[1] = lx.xmax;
   roi[2] = lx.ymin;
   roi[3] = lx.ymax;
-  bins = (int *) xcalloc(w * h, sizeof(int));
+  bins = (int *)xcalloc(w * h, sizeof(int));
 
   gr_shade(n, x, y, 0, xform, roi, w, h, bins);
 
@@ -9712,7 +9127,7 @@ void gr_shadelines(int n, double *x, double *y, int xform, int w, int h)
   roi[1] = lx.xmax;
   roi[2] = lx.ymin;
   roi[3] = lx.ymax;
-  bins = (int *) xcalloc(w * h, sizeof(int));
+  bins = (int *)xcalloc(w * h, sizeof(int));
 
   gr_shade(n, x, y, 1, xform, roi, w, h, bins);
 
@@ -9729,8 +9144,7 @@ void gr_shadelines(int n, double *x, double *y, int xform, int w, int h)
     }
 }
 
-void gr_panzoom(double x, double y, double zoom,
-                double *xmin, double *xmax, double *ymin, double *ymax)
+void gr_panzoom(double x, double y, double zoom, double *xmin, double *xmax, double *ymin, double *ymax)
 {
   int errind, tnr;
   double wn[4], vp[4];
@@ -9760,8 +9174,8 @@ void gr_panzoom(double x, double y, double zoom,
   if (OPTION_FLIP_X & lx.scale_options)
     {
       tmp = x0;
-      x0  = x1;
-      x1  = tmp;
+      x0 = x1;
+      x1 = tmp;
     }
   if (OPTION_FLIP_Y & lx.scale_options)
     {
@@ -9785,8 +9199,10 @@ void gr_panzoom(double x, double y, double zoom,
       gr_wctondc(&x0, &y0);
       *xmin = x0 - (x0 - *xmin) * zoom;
       *xmax = x0 + (*xmax - x0) * zoom;
-      *ymin = y0 - (y0 - *ymin) * zoom;;
-      *ymax = y0 + (*ymax - y0) * zoom;;
+      *ymin = y0 - (y0 - *ymin) * zoom;
+      ;
+      *ymax = y0 + (*ymax - y0) * zoom;
+      ;
       gr_ndctowc(xmin, ymin);
       gr_ndctowc(xmax, ymax);
     }
@@ -9820,8 +9236,8 @@ void gr_panzoom(double x, double y, double zoom,
  * indices are needed.
  *
  */
-int gr_findboundary(int n, double *x, double *y, double r, double (*r_function)(double x, double y),
-                    int n_contour, int *contour)
+int gr_findboundary(int n, double *x, double *y, double r, double (*r_function)(double x, double y), int n_contour,
+                    int *contour)
 {
   int result;
   if (n < 2)

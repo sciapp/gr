@@ -8,8 +8,7 @@
 #define PORT 8410
 #define SIZE 262144
 
-GKSServer::GKSServer(QObject *parent)
-  : QTcpServer(parent)
+GKSServer::GKSServer(QObject *parent) : QTcpServer(parent)
 {
   connect(this, SIGNAL(newConnection()), this, SLOT(connectSocket()));
   if (!listen(QHostAddress::Any, PORT))
@@ -18,10 +17,10 @@ GKSServer::GKSServer(QObject *parent)
       exit(1);
     }
 
-  dl = (char *) malloc(SIZE);
+  dl = (char *)malloc(SIZE);
   dl_size = SIZE;
   nbyte = 0;
-  ba = (char *) malloc(SIZE);
+  ba = (char *)malloc(SIZE);
   ba_size = SIZE;
 }
 
@@ -55,25 +54,23 @@ void GKSServer::readClient()
     {
       if (nbyte == 0)
         {
-          if (socket->bytesAvailable() < (int) sizeof(int))
-            return;
-          cc = socket->read((char *) &nbyte, sizeof(int));
+          if (socket->bytesAvailable() < (int)sizeof(int)) return;
+          cc = socket->read((char *)&nbyte, sizeof(int));
 
           if (nbyte > dl_size)
             {
-              dl = (char *) realloc(dl, nbyte);
+              dl = (char *)realloc(dl, nbyte);
               dl_size = nbyte;
             }
         }
-      if (socket->bytesAvailable() < nbyte)
-        return;
+      if (socket->bytesAvailable() < nbyte) return;
 
       cc = socket->read(dl, nbyte);
       if (cc == nbyte)
         {
           if (nbyte + 4 > ba_size)
             {
-              ba = (char *) realloc(ba, nbyte + 4);
+              ba = (char *)realloc(ba, nbyte + 4);
               ba_size = nbyte + 4;
             }
           memmove(ba, dl, nbyte);
@@ -98,4 +95,3 @@ void GKSServer::disconnectSocket()
   widget->close();
   exit(0);
 }
-

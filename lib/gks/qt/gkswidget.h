@@ -3,9 +3,9 @@
 
 #include <QtGlobal>
 #if QT_VERSION >= 0x050000
-    #include <QtWidgets/QWidget>
+#include <QtWidgets/QWidget>
 #else
-    #include <QtGui/QWidget>
+#include <QtGui/QWidget>
 #endif
 #include <QtCore/QMutex>
 

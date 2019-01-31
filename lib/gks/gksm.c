@@ -7,20 +7,15 @@
 #include "gks.h"
 #include "gkscore.h"
 
-static
-char *path = NULL;
+static char *path = NULL;
 
-static
-int wstype = GKS_K_WSTYPE_DEFAULT;
+static int wstype = GKS_K_WSTYPE_DEFAULT;
 
-static
-int orientation = 0;
+static int orientation = 0;
 
-static
-double factor = 1.0;
+static double factor = 1.0;
 
-static
-void usage(int help)
+static void usage(int help)
 {
   fprintf(stderr, "\
 Usage: gksm [-Oorientation] [-factor f] [-h] [-t wstype] [file]\n\
@@ -53,8 +48,7 @@ The present workstation types recognized by gksm are:\n\
   exit(1);
 }
 
-static
-void parse(int argc, char **argv)
+static void parse(int argc, char **argv)
 {
   char *option;
   int ret;
@@ -78,33 +72,33 @@ void parse(int argc, char **argv)
             usage(0);
         }
       else if (!strcmp(option, "-h"))
-	{
-	  usage(1);
-	}
+        {
+          usage(1);
+        }
       else if (!strcmp(option, "-t"))
-	{
-	  if (*argv)
-	    wstype = atoi(*argv++);
-	  else
-	    usage(0);
-	}
+        {
+          if (*argv)
+            wstype = atoi(*argv++);
+          else
+            usage(0);
+        }
       else if (*option == '-')
-	{
-	  fprintf(stderr, "Invalid option: '%s'\n", option);
-	  usage(0);
-	}
+        {
+          fprintf(stderr, "Invalid option: '%s'\n", option);
+          usage(0);
+        }
       else
-	path = option;
+        path = option;
     }
 
   if (path != NULL)
     {
       ret = access(path, R_OK);
       if (ret)
-	{
-	  perror("open");
-	  exit(-1);
-	}
+        {
+          perror("open");
+          exit(-1);
+        }
     }
   else
     {
@@ -121,8 +115,7 @@ int main(int argc, char *argv[])
 
   parse(argc, argv);
 
-  for (i = 0; i < 13; i++)
-    asf[i] = GKS_K_ASF_INDIVIDUAL;
+  for (i = 0; i < 13; i++) asf[i] = GKS_K_ASF_INDIVIDUAL;
 
   gks_open_gks(6);
   gks_set_asf(asf);
@@ -133,15 +126,15 @@ int main(int argc, char *argv[])
 
   switch (orientation)
     {
-      case 1 :
-        gks_set_ws_viewport(2, 0.0, 0.297, 0.0, 0.21);
-        gks_set_ws_window(2, 0.0, 1.0, 0.0, 0.21 / 0.297);
-        break;
+    case 1:
+      gks_set_ws_viewport(2, 0.0, 0.297, 0.0, 0.21);
+      gks_set_ws_window(2, 0.0, 1.0, 0.0, 0.21 / 0.297);
+      break;
 
-      case 2 :
-        gks_set_ws_viewport(2, 0.0, 0.21, 0.0, 0.297);
-        gks_set_ws_window(2, 0.0, 0.21 / 0.297, 0.0, 1.0);
-        break;
+    case 2:
+      gks_set_ws_viewport(2, 0.0, 0.21, 0.0, 0.297);
+      gks_set_ws_window(2, 0.0, 0.21 / 0.297, 0.0, 1.0);
+      break;
     }
 
   if (factor != 1.0)
@@ -151,30 +144,28 @@ int main(int argc, char *argv[])
       if (factor < 1)
         {
           if (factor > 0)
-	    {
-	      transx = 0.5 * (factor - 1);
-	      transy = -transx;
-	    }
-	  else
-	    factor = -factor;
+            {
+              transx = 0.5 * (factor - 1);
+              transy = -transx;
+            }
+          else
+            factor = -factor;
         }
       gks_create_seg(1);
-      gks_eval_xform_matrix(
-	0.5, 0.5, transx, transy, 0, factor, factor, GKS_K_COORDINATES_NDC, mat);
+      gks_eval_xform_matrix(0.5, 0.5, transx, transy, 0, factor, factor, GKS_K_COORDINATES_NDC, mat);
       gks_set_seg_xform(1, mat);
     }
- 
+
   item = gks_malloc(maxodr * 80);
 
   gks_get_item(1, &type, &lenodr);
   while (type)
     {
       if (lenodr > maxodr)
-	{
-	  while (lenodr > maxodr)
-	    maxodr *= 2;
-	  item = gks_realloc(item, maxodr * 80);
-	}
+        {
+          while (lenodr > maxodr) maxodr *= 2;
+          item = gks_realloc(item, maxodr * 80);
+        }
       gks_read_item(1, lenodr, maxodr, item);
       gks_interpret_item(type, lenodr, maxodr, item);
       gks_get_item(1, &type, &lenodr);

@@ -19,29 +19,21 @@
 #include "gr.h"
 #include "io.h"
 
-static
-int status = EXIT_SUCCESS;
+static int status = EXIT_SUCCESS;
 
-static
-FILE *stream = NULL;
+static FILE *stream = NULL;
 
-static
-int s = -1;
+static int s = -1;
 
-static
-char *buffer = NULL, *static_buffer = NULL;
+static char *buffer = NULL, *static_buffer = NULL;
 
-static
-char *hostname = NULL;
+static char *hostname = NULL;
 
-static
-int port = PORT;
+static int port = PORT;
 
-static
-int nbytes = 0, size = 0, static_size = 0;
+static int nbytes = 0, size = 0, static_size = 0;
 
-static
-void close_socket(int s)
+static void close_socket(int s)
 {
 #ifndef _WIN32
   close(s);
@@ -54,19 +46,17 @@ void close_socket(int s)
 #endif
 }
 
-static
-void save(char *string, int nbytes)
+static void save(char *string, int nbytes)
 {
   if (nbytes > static_size)
     {
-      static_buffer = (char *) realloc(static_buffer, nbytes + 1);
+      static_buffer = (char *)realloc(static_buffer, nbytes + 1);
       static_size = nbytes + 1;
     }
   strcpy(static_buffer, string);
 }
 
-static
-int sendstream(char *string)
+static int sendstream(char *string)
 {
   int pos, i;
   struct hostent *hp;
@@ -90,37 +80,34 @@ int sendstream(char *string)
 
       if (s == -1)
         {
-          s = socket(PF_INET,   /* get a socket descriptor */
-                 SOCK_STREAM,   /* stream socket           */
-                 IPPROTO_TCP);  /* use TCP protocol        */
+          s = socket(PF_INET,      /* get a socket descriptor */
+                     SOCK_STREAM,  /* stream socket           */
+                     IPPROTO_TCP); /* use TCP protocol        */
           if (s != -1)
             {
-              int size = 128*128*16;
+              int size = 128 * 128 * 16;
               setsockopt(s, SOL_SOCKET, SO_SNDBUF, (char *)&size, sizeof(int));
 
               if (hostname == NULL)
                 {
-                  env = (char *) getenv("GR_DISPLAY");
+                  env = (char *)getenv("GR_DISPLAY");
                   if (env != NULL)
                     {
                       display = strdup(env);
-                      if ((env = strtok(display, ":")) != NULL)
-                        hostname = env;
-                      if ((env = strtok(NULL, ":")) != NULL)
-                        port = atoi(env);
+                      if ((env = strtok(display, ":")) != NULL) hostname = env;
+                      if ((env = strtok(NULL, ":")) != NULL) port = atoi(env);
                     }
                 }
-              if (hostname == NULL)
-                hostname = "localhost";
-             
+              if (hostname == NULL) hostname = "localhost";
+
               if ((hp = gethostbyname(hostname)) != NULL)
                 {
                   memset(&sin, 0, sizeof(sin));
                   sin.sin_family = AF_INET;
-                  sin.sin_addr.s_addr = ((struct in_addr *) (hp->h_addr_list[0]))->s_addr;
+                  sin.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
                   sin.sin_port = htons(port);
 
-                  if (connect(s, (struct sockaddr *) &sin, sizeof(sin)) == -1)
+                  if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
                     {
                       perror("connect");
                       status = EXIT_FAILURE;
@@ -173,24 +160,22 @@ int sendstream(char *string)
   return status;
 }
 
-static
-void append(char *string)
+static void append(char *string)
 {
   int len = strlen(string);
 
   if (buffer == NULL)
     {
-      buffer = (char *) malloc(BUFSIZ + 1);
+      buffer = (char *)malloc(BUFSIZ + 1);
       nbytes = 0;
       size = BUFSIZ;
     }
 
   if (nbytes + len > size)
     {
-      while (nbytes + len > size)
-        size += BUFSIZ;
+      while (nbytes + len > size) size += BUFSIZ;
 
-      buffer = (char *) realloc(buffer, size + 1);
+      buffer = (char *)realloc(buffer, size + 1);
     }
 
   strncpy(buffer + nbytes, string, len);
@@ -220,7 +205,7 @@ int gr_openstream(char *path)
 
   if (buffer == NULL)
     {
-      buffer = (char *) malloc(BUFSIZ + 1);
+      buffer = (char *)malloc(BUFSIZ + 1);
       size = BUFSIZ;
     }
   nbytes = 0;
@@ -264,8 +249,7 @@ void gr_closestream(void)
   gr_flushstream(0);
 
   if (stream)
-    if (stream != stdout)
-      fclose(stream);
+    if (stream != stdout) fclose(stream);
 
   free(buffer);
   buffer = NULL;

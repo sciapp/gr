@@ -76,8 +76,7 @@ int gks_read_file(int fd, void *buf, int count)
   if (cc != count)
     {
       gks_perror("file read error (fd=%d, cc=%d)", fd, cc);
-      if (cc == -1)
-	perror("read");
+      if (cc == -1) perror("read");
     }
 
   return cc;
@@ -95,8 +94,7 @@ int gks_write_file(int fd, void *buf, int count)
   if (cc != count)
     {
       gks_perror("file write error (fd=%d, cc=%d)", fd, cc);
-      if (cc == -1)
-	perror("write");
+      if (cc == -1) perror("write");
     }
 
   return cc;

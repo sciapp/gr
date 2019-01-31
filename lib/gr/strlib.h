@@ -2,13 +2,14 @@
 #define _STRLIB_H_
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-char *str_remove(char *, char);
-char *str_pad(char *, char, int);
-char *str_ftoa(char *, double, double);
-int str_casecmp(char *, char *);
+  char *str_remove(char *, char);
+  char *str_pad(char *, char, int);
+  char *str_ftoa(char *, double, double);
+  int str_casecmp(char *, char *);
 
 #ifdef __cplusplus
 }

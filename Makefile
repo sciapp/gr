@@ -33,7 +33,7 @@ ifeq ($(UNAME), Darwin)
 	@if [ ! -d $(DESTDIR)$(GRDIR)/Applications ]; then \
 	mkdir -m 755 $(DESTDIR)$(GRDIR)/Applications; fi
 	@ditto lib/gks/quartz/build/Release/GKSTerm.app \
-	$(DESTDIR)$(GRDIR)/Applications/GKSTerm.app 
+	$(DESTDIR)$(GRDIR)/Applications/GKSTerm.app
 endif
 
 clean:
@@ -64,5 +64,8 @@ osxpkg:
 	pkgbuild --identifier de.fz-juelich.gr --root tmp --install-location /usr/local --ownership preserve gr.pkg
 	sudo rm -rf tmp
 
-mirror:
-	(cd ../gr-github && git fetch && git push)
+code-format:
+	@find -E . -type f -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)' ! -path './3rdparty/*' -exec clang-format -i -verbose -style=file {} \;
+
+
+.PHONY: default pre-check Linux Darwin all install clean realclean self osxpkg code-format

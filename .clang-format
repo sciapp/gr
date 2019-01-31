@@ -1,0 +1,10 @@
+---
+BasedOnStyle: LLVM
+AlignEscapedNewlines: Left
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+BreakBeforeBraces: GNU
+ColumnLimit: 120
+MaxEmptyLinesToKeep: 2
+SortIncludes: false

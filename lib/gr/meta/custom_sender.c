@@ -3,53 +3,50 @@
 #include "gr.h"
 
 
-static double plots[2][2][3] = {
-  {
-    {0.0, 0.5, 1.0},
-    {0.1, 0.25, 0.9}
-  },
-  {
-    {0.0, 0.5, 1.0},
-    {0.2, 0.75, 0.95}
-  }
-};
+static double plots[2][2][3] = {{{0.0, 0.5, 1.0}, {0.1, 0.25, 0.9}}, {{0.0, 0.5, 1.0}, {0.2, 0.75, 0.95}}};
 static int n_series = sizeof(plots) / sizeof(plots[0]);
 static int n_points = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
 static const char *labels[] = {"plot 1", "plot 2"};
 
 
-static int disk_writer(const char *filepath, unsigned int id, const char *message) {
+static int disk_writer(const char *filepath, unsigned int id, const char *message)
+{
   FILE *f;
   int error = 0;
 
   f = fopen(filepath, "w");
-  if (f == NULL) {
-    error = 1;
-    goto cleanup;
-  }
-  if (fputs(message, f) == EOF) {
-    error = 1;
-    goto cleanup;
-  }
+  if (f == NULL)
+    {
+      error = 1;
+      goto cleanup;
+    }
+  if (fputs(message, f) == EOF)
+    {
+      error = 1;
+      goto cleanup;
+    }
 
 cleanup:
-  if (f != NULL && fclose(f) == EOF) {
-    error = 1;
-  }
+  if (f != NULL && fclose(f) == EOF)
+    {
+      error = 1;
+    }
   return error;
 }
 
-static int test_sendmeta_ref(void) {
+static int test_sendmeta_ref(void)
+{
   void *handle;
 
   printf("writing data...");
   fflush(stdout);
 
   handle = gr_openmeta(GR_SENDER, "custom_sender.out", 0, NULL, disk_writer);
-  if (handle == NULL) {
-    fprintf(stderr, "\"gr_openmeta\" failed.\n");
-    return 1;
-  }
+  if (handle == NULL)
+    {
+      fprintf(stderr, "\"gr_openmeta\" failed.\n");
+      return 1;
+    }
 
   gr_sendmeta_ref(handle, "series", 'O', "[", n_series);
   gr_sendmeta_ref(handle, "x", 'D', plots[0][0], n_points);
@@ -69,6 +66,7 @@ static int test_sendmeta_ref(void) {
   return 0;
 }
 
-int main(void) {
+int main(void)
+{
   return test_sendmeta_ref();
 }

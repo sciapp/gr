@@ -11,7 +11,7 @@ class glgrServer : public QTcpServer
   Q_OBJECT
 
 public:
-  glgrServer(QObject *parent=0);
+  glgrServer(QObject *parent = 0);
 
 public slots:
   void readClient();

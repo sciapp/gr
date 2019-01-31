@@ -6,25 +6,22 @@
 #include "gks.h"
 #include "gksforbnd.h"
 
-#if defined (_WIN32) && !defined (__GNUC__)
+#if defined(_WIN32) && !defined(__GNUC__)
 #define STDCALL __stdcall
 #else
 #define STDCALL
 #endif
 
-static
-double *x = NULL, *y = NULL;
+static double *x = NULL, *y = NULL;
 
-static
-int max_points = 0;
+static int max_points = 0;
 
-static
-void gksrealloc(int n)
+static void gksrealloc(int n)
 {
   if (n > max_points)
     {
-      x = (double *) realloc(x, sizeof(double) * n);
-      y = (double *) realloc(y, sizeof(double) * n);
+      x = (double *)realloc(x, sizeof(double) * n);
+      y = (double *)realloc(y, sizeof(double) * n);
       max_points = n;
     }
 }
@@ -43,9 +40,9 @@ void STDCALL GOPWK(int *wkid, int *conid, int *wtype)
 {
   static char s[32];
 
-  if (*wtype >= 210 && *wtype <= 212 && (unsigned int) *conid >= 100 + 100)
+  if (*wtype >= 210 && *wtype <= 212 && (unsigned int)*conid >= 100 + 100)
     {
-      sprintf(s, "GKS_CONID=%p", (void *) conid);
+      sprintf(s, "GKS_CONID=%p", (void *)conid);
       putenv(s);
 
       gks_open_ws(*wkid, GKS_K_CONID_DEFAULT, 213);
@@ -97,8 +94,7 @@ void STDCALL GSDS(int *wkid, int *defmo, int *regmo)
   gks_set_deferral_state(*wkid, *defmo, *regmo);
 }
 
-void STDCALL GESC(
-  int *funid, int *dimidr, int *idr, int *maxodr, int *lenodr, int *odr)
+void STDCALL GESC(int *funid, int *dimidr, int *idr, int *maxodr, int *lenodr, int *odr)
 {
   gks_escape(*funid, *dimidr, idr, *maxodr, lenodr, odr);
 }
@@ -108,8 +104,7 @@ void STDCALL GMSG(int *wkid, char *chars, unsigned short len)
   char s[256];
   int n = len;
 
-  if (n > 255)
-    n = 255;
+  if (n > 255) n = 255;
   strncpy(s, chars, n);
   s[n] = '\0';
 
@@ -144,27 +139,24 @@ void STDCALL GPM(int *n, float *pxa, float *pya)
 
 void STDCALL GTX(float *px, float *py, char *chars, unsigned short len)
 {
-  double _x = (double) *px, _y = (double) *py;
+  double _x = (double)*px, _y = (double)*py;
   char s[256];
   int n = len;
 
-  if (n > 255)
-    n = 255;
+  if (n > 255) n = 255;
   strncpy(s, chars, n);
   s[n] = '\0';
 
   gks_text(_x, _y, s);
 }
 
-void STDCALL GTXS(
-  float *px, float *py, int *nchars, char *chars, unsigned short len)
+void STDCALL GTXS(float *px, float *py, int *nchars, char *chars, unsigned short len)
 {
-  double _x = (double) *px, _y = (double) *py;
+  double _x = (double)*px, _y = (double)*py;
   char s[256];
   int n = *nchars;
 
-  if (n > 255)
-    n = 255;
+  if (n > 255) n = 255;
   strncpy(s, chars, n);
   s[n] = '\0';
 
@@ -184,19 +176,16 @@ void STDCALL GFA(int *n, float *pxa, float *pya)
   gks_fillarea(*n, x, y);
 }
 
-void STDCALL GCA(
-  float *qx, float *qy, float *rx, float *ry,
-  int *dimx, int *dimy, int *scol, int *srow, int *ncol, int *nrow, int *colia)
+void STDCALL GCA(float *qx, float *qy, float *rx, float *ry, int *dimx, int *dimy, int *scol, int *srow, int *ncol,
+                 int *nrow, int *colia)
 {
-  double _qx = (double) *qx, _qy = (double) *qy;
-  double _rx = (double) *rx, _ry = (double) *ry;
+  double _qx = (double)*qx, _qy = (double)*qy;
+  double _rx = (double)*rx, _ry = (double)*ry;
 
-  gks_cellarray(_qx, _qy, _rx, _ry,
-		*dimx, *dimy, *scol, *srow, *ncol, *nrow, colia);
+  gks_cellarray(_qx, _qy, _rx, _ry, *dimx, *dimy, *scol, *srow, *ncol, *nrow, colia);
 }
 
-void STDCALL GGDP(
-  int *n, float *px, float *py, int *primid, int *ldr, int *datrec)
+void STDCALL GGDP(int *n, float *px, float *py, int *primid, int *ldr, int *datrec)
 {
   int i;
 
@@ -221,7 +210,7 @@ void STDCALL GSLN(int *ltype)
 
 void STDCALL GSLWSC(float *lwidth)
 {
-  double _lwidth = (double) *lwidth;
+  double _lwidth = (double)*lwidth;
 
   gks_set_pline_linewidth(_lwidth);
 }
@@ -243,7 +232,7 @@ void STDCALL GSMK(int *mtype)
 
 void STDCALL GSMKSC(float *mszsc)
 {
-  double _mszsc = (double) *mszsc;
+  double _mszsc = (double)*mszsc;
 
   gks_set_pmark_size(_mszsc);
 }
@@ -265,14 +254,14 @@ void STDCALL GSTXFP(int *font, int *prec)
 
 void STDCALL GSCHXP(float *chxp)
 {
-  double _chxp = (double) *chxp;
+  double _chxp = (double)*chxp;
 
   gks_set_text_expfac(_chxp);
 }
 
 void STDCALL GSCHSP(float *chsp)
 {
-  double _chsp = (double) *chsp;
+  double _chsp = (double)*chsp;
 
   gks_set_text_spacing(_chsp);
 }
@@ -284,14 +273,14 @@ void STDCALL GSTXCI(int *coli)
 
 void STDCALL GSCHH(float *chh)
 {
-  double _chh = (double) *chh;
+  double _chh = (double)*chh;
 
   gks_set_text_height(_chh);
 }
 
 void STDCALL GSCHUP(float *chux, float *chuy)
 {
-  double _chux = (double) *chux, _chuy = (double) *chuy;
+  double _chux = (double)*chux, _chuy = (double)*chuy;
 
   gks_set_text_upvec(_chux, _chuy);
 }
@@ -333,23 +322,23 @@ void STDCALL GSASF(int *flag)
 
 void STDCALL GSCR(int *wkid, int *index, float *red, float *green, float *blue)
 {
-  double _red = (double) *red, _green = (double) *green, _blue = (double) *blue;
+  double _red = (double)*red, _green = (double)*green, _blue = (double)*blue;
 
   gks_set_color_rep(*wkid, *index, _red, _green, _blue);
 }
 
 void STDCALL GSWN(int *tnr, float *xmin, float *xmax, float *ymin, float *ymax)
 {
-  double _xmin = (double) *xmin, _xmax = (double) *xmax;
-  double _ymin = (double) *ymin, _ymax = (double) *ymax;
+  double _xmin = (double)*xmin, _xmax = (double)*xmax;
+  double _ymin = (double)*ymin, _ymax = (double)*ymax;
 
   gks_set_window(*tnr, _xmin, _xmax, _ymin, _ymax);
 }
 
 void STDCALL GSVP(int *tnr, float *xmin, float *xmax, float *ymin, float *ymax)
 {
-  double _xmin = (double) *xmin, _xmax = (double) *xmax;
-  double _ymin = (double) *ymin, _ymax = (double) *ymax;
+  double _xmin = (double)*xmin, _xmax = (double)*xmax;
+  double _ymin = (double)*ymin, _ymax = (double)*ymax;
 
   gks_set_viewport(*tnr, _xmin, _xmax, _ymin, _ymax);
 }
@@ -364,20 +353,18 @@ void STDCALL GSCLIP(int *clsw)
   gks_set_clipping(*clsw);
 }
 
-void STDCALL GSWKWN(
-  int *wkid, float *xmin, float *xmax, float *ymin, float *ymax)
+void STDCALL GSWKWN(int *wkid, float *xmin, float *xmax, float *ymin, float *ymax)
 {
-  double _xmin = (double) *xmin, _xmax = (double) *xmax;
-  double _ymin = (double) *ymin, _ymax = (double) *ymax;
+  double _xmin = (double)*xmin, _xmax = (double)*xmax;
+  double _ymin = (double)*ymin, _ymax = (double)*ymax;
 
   gks_set_ws_window(*wkid, _xmin, _xmax, _ymin, _ymax);
 }
 
-void STDCALL GSWKVP(
-  int *wkid, float *xmin, float *xmax, float *ymin, float *ymax)
+void STDCALL GSWKVP(int *wkid, float *xmin, float *xmax, float *ymin, float *ymax)
 {
-  double _xmin = (double) *xmin, _xmax = (double) *xmax;
-  double _ymin = (double) *ymin, _ymax = (double) *ymax;
+  double _xmin = (double)*xmin, _xmax = (double)*xmax;
+  double _ymin = (double)*ymin, _ymax = (double)*ymax;
 
   gks_set_ws_viewport(*wkid, _xmin, _xmax, _ymin, _ymax);
 }
@@ -413,27 +400,22 @@ void STDCALL GSSGT(int *segn, float mat[3][2])
   double _mat[3][2];
 
   for (i = 0; i < 3; i++)
-    for (j = 0; j < 2; j++)
-       _mat[i][j] = mat[i][j];
+    for (j = 0; j < 2; j++) _mat[i][j] = mat[i][j];
 
   gks_set_seg_xform(*segn, _mat);
 }
 
-void STDCALL GINLC(
-  int *wkid, int *lcdnr, int *tnr, float *px, float *py, int *pet,
-  float *xmin, float *xmax, float *ymin, float *ymax, int *ldr, char *datrec,
-  unsigned short len)
+void STDCALL GINLC(int *wkid, int *lcdnr, int *tnr, float *px, float *py, int *pet, float *xmin, float *xmax,
+                   float *ymin, float *ymax, int *ldr, char *datrec, unsigned short len)
 {
-  double _x = (double) *px, _y = (double) *py;
-  double _xmin = (double) *xmin, _xmax = (double) *xmax;
-  double _ymin = (double) *ymin, _ymax = (double) *ymax;
+  double _x = (double)*px, _y = (double)*py;
+  double _xmin = (double)*xmin, _xmax = (double)*xmax;
+  double _ymin = (double)*ymin, _ymax = (double)*ymax;
 
-  gks_initialize_locator(*wkid, *lcdnr, *tnr, _x, _y, *pet,
-			 _xmin, _xmax, _ymin, _ymax, *ldr, datrec);
+  gks_initialize_locator(*wkid, *lcdnr, *tnr, _x, _y, *pet, _xmin, _xmax, _ymin, _ymax, *ldr, datrec);
 }
 
-void STDCALL GRQLC(
-  int *wkid, int *lcdnr, int *stat, int *tnr, float *px, float *py)
+void STDCALL GRQLC(int *wkid, int *lcdnr, int *stat, int *tnr, float *px, float *py)
 {
   double _px, _py;
 
@@ -442,9 +424,7 @@ void STDCALL GRQLC(
   *py = _py;
 }
 
-void STDCALL GRQSK(
-  int *wkid, int *skdnr, int *n,
-  int *stat, int *tnr, int *np, float *pxa, float *pya)
+void STDCALL GRQSK(int *wkid, int *skdnr, int *n, int *stat, int *tnr, int *np, float *pxa, float *pya)
 {
   int i;
 
@@ -462,14 +442,12 @@ void STDCALL GRQCH(int *wkid, int *chdnr, int *stat, int *chnr)
   gks_request_choice(*wkid, *chdnr, stat, chnr);
 }
 
-void STDCALL GRQST(
-  int *wkid, int *stdnr, int *stat, int *lostr, char *str, unsigned short len)
+void STDCALL GRQST(int *wkid, int *stdnr, int *stat, int *lostr, char *str, unsigned short len)
 {
   gks_request_string(*wkid, *stdnr, stat, lostr, str);
 }
 
-void STDCALL GRDITM(
-  int *wkid, int *lenidr, int *maxodr, char *odr, unsigned short len)
+void STDCALL GRDITM(int *wkid, int *lenidr, int *maxodr, char *odr, unsigned short len)
 {
   gks_read_item(*wkid, *lenidr, *maxodr, odr);
 }
@@ -479,29 +457,25 @@ void STDCALL GGTITM(int *wkid, int *type, int *lenodr)
   gks_get_item(*wkid, type, lenodr);
 }
 
-void STDCALL GIITM(
-  int *type, int *lenidr, int *dimidr, char *idr, unsigned short len)
+void STDCALL GIITM(int *type, int *lenidr, int *dimidr, char *idr, unsigned short len)
 {
   gks_interpret_item(*type, *lenidr, *dimidr, idr);
 }
 
-void STDCALL GEVTM(
-  float *fx, float *fy, float *transx, float *transy, float *phi,
-  float *scalex, float *scaley, int *coord, float mat[3][2])
+void STDCALL GEVTM(float *fx, float *fy, float *transx, float *transy, float *phi, float *scalex, float *scaley,
+                   int *coord, float mat[3][2])
 {
-  double _fx = (double) *fx, _fy = (double) *fy;
-  double _transx = (double) *transx, _transy = (double) *transy;
-  double _phi = (double) *phi;
-  double _scalex = (double) *scalex, _scaley = (double) *scaley;
+  double _fx = (double)*fx, _fy = (double)*fy;
+  double _transx = (double)*transx, _transy = (double)*transy;
+  double _phi = (double)*phi;
+  double _scalex = (double)*scalex, _scaley = (double)*scaley;
   int i, j;
   double _mat[3][2];
 
-  gks_eval_xform_matrix(
-    _fx, _fy, _transx, _transy, _phi, _scalex, _scaley, *coord, _mat);
+  gks_eval_xform_matrix(_fx, _fy, _transx, _transy, _phi, _scalex, _scaley, *coord, _mat);
 
   for (i = 0; i < 3; i++)
-    for (j = 0; j < 2; j++)
-       mat[i][j] = _mat[i][j];
+    for (j = 0; j < 2; j++) mat[i][j] = _mat[i][j];
 }
 
 void STDCALL GQOPS(int *opsta)
@@ -549,7 +523,7 @@ void STDCALL GQLWSC(int *errind, float *lwidth)
   double _lwidth;
 
   gks_inq_pline_linewidth(errind, &_lwidth);
-  *lwidth = (float) _lwidth;
+  *lwidth = (float)_lwidth;
 }
 
 void STDCALL GQPLCI(int *errind, int *coli)
@@ -567,7 +541,7 @@ void STDCALL GQMKSC(int *errind, float *mszsc)
   double _mszsc;
 
   gks_inq_pmark_size(errind, &_mszsc);
-  *mszsc = (float) _mszsc;
+  *mszsc = (float)_mszsc;
 }
 
 void STDCALL GQPMCI(int *errind, int *coli)
@@ -661,8 +635,8 @@ void STDCALL GQNT(int *tnr, int *errind, float *wn, float *vp)
   gks_inq_xform(*tnr, errind, _wn, _vp);
   for (i = 0; i < 4; i++)
     {
-      wn[i] = (float) _wn[i];
-      vp[i] = (float) _vp[i];
+      wn[i] = (float)_wn[i];
+      vp[i] = (float)_vp[i];
     }
 }
 
@@ -672,8 +646,7 @@ void STDCALL GQCLIP(int *errind, int *clsw, float *clrt)
   int i;
 
   gks_inq_clip(errind, clsw, _clrt);
-  for (i = 0; i < 4; i++)
-    clrt[i] = (float) _clrt[i];
+  for (i = 0; i < 4; i++) clrt[i] = (float)_clrt[i];
 }
 
 void STDCALL GQWKC(int *wkid, int *errind, int *conid, int *wtype)
@@ -686,24 +659,20 @@ void STDCALL GQWKCA(int *wtype, int *errind, int *wscat)
   gks_inq_ws_category(*wtype, errind, wscat);
 }
 
-#if defined (_WIN32) && !defined (__GNUC__)
-void STDCALL GQTXX(
-  int *wkid, float *px, float *py, char *str, unsigned short len,
-  int *errind, float *cpx, float *cpy, float *tx, float *ty)
+#if defined(_WIN32) && !defined(__GNUC__)
+void STDCALL GQTXX(int *wkid, float *px, float *py, char *str, unsigned short len, int *errind, float *cpx, float *cpy,
+                   float *tx, float *ty)
 #else
-void STDCALL GQTXX(
-  int *wkid, float *px, float *py, char *str,
-  int *errind, float *cpx, float *cpy, float *tx, float *ty,
-  unsigned short len)
+void STDCALL GQTXX(int *wkid, float *px, float *py, char *str, int *errind, float *cpx, float *cpy, float *tx,
+                   float *ty, unsigned short len)
 #endif
 {
-  double _x = (double) *px, _y = (double) *py;
+  double _x = (double)*px, _y = (double)*py;
   char s[256];
   int i, n = len;
   double _cpx, _cpy, _tx[4], _ty[4];
 
-  if (n > 255)
-    n = 255;
+  if (n > 255) n = 255;
   strncpy(s, str, n);
   s[n] = '\0';
 
@@ -712,29 +681,25 @@ void STDCALL GQTXX(
   *cpy = _cpy;
   for (i = 0; i < 4; i++)
     {
-      tx[i] = (float) _tx[i];
-      ty[i] = (float) _ty[i];
+      tx[i] = (float)_tx[i];
+      ty[i] = (float)_ty[i];
     }
 }
 
-#if defined (_WIN32) && !defined (__GNUC__)
-void STDCALL GQTXXS(
-  int *wkid, float *px, float *py, int *nchars, char *str, unsigned short len,
-  int *errind, float *cpx, float *cpy, float *tx, float *ty)
+#if defined(_WIN32) && !defined(__GNUC__)
+void STDCALL GQTXXS(int *wkid, float *px, float *py, int *nchars, char *str, unsigned short len, int *errind,
+                    float *cpx, float *cpy, float *tx, float *ty)
 #else
-void STDCALL GQTXXS(
-  int *wkid, float *px, float *py, int *nchars, char *str,
-  int *errind, float *cpx, float *cpy, float *tx, float *ty,
-  unsigned short len)
+void STDCALL GQTXXS(int *wkid, float *px, float *py, int *nchars, char *str, int *errind, float *cpx, float *cpy,
+                    float *tx, float *ty, unsigned short len)
 #endif
 {
-  double _x = (double) *px, _y = (double) *py;
+  double _x = (double)*px, _y = (double)*py;
   char s[256];
   int i, n = *nchars;
   double _cpx, _cpy, _tx[4], _ty[4];
 
-  if (n > 255)
-    n = 255;
+  if (n > 255) n = 255;
   strncpy(s, str, n);
   s[n] = '\0';
 
@@ -743,13 +708,12 @@ void STDCALL GQTXXS(
   *cpy = _cpy;
   for (i = 0; i < 4; i++)
     {
-      tx[i] = (float) _tx[i];
-      ty[i] = (float) _ty[i];
+      tx[i] = (float)_tx[i];
+      ty[i] = (float)_ty[i];
     }
 }
 
-void STDCALL GQDSP(
-  int *wtype, int *errind, int *dcunit, float *rx, float *ry, int *lx, int *ly)
+void STDCALL GQDSP(int *wtype, int *errind, int *dcunit, float *rx, float *ry, int *lx, int *ly)
 {
   double _rx, _ry;
 

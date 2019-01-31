@@ -3,56 +3,57 @@
 #include <math.h>
 #include "gr3.h"
 #include "gr3_internals.h"
-static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-  'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-  'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-  'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-  'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-  'w', 'x', 'y', 'z', '0', '1', '2', '3',
-  '4', '5', '6', '7', '8', '9', '+', '/'};
+static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+                                'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+                                'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
 static unsigned int mod_table[] = {0, 2, 1};
 
 
-static char *base64_encode(const unsigned char *data,
-                    size_t input_length) {
+static char *base64_encode(const unsigned char *data, size_t input_length)
+{
   unsigned int i, j;
   size_t output_length = 4 * ((input_length + 2) / 3) + 1;
   char *encoded_data = malloc(output_length);
-  if (encoded_data == NULL) {
-    return NULL;
-  }
-  
-  for (i = 0, j = 0; i < input_length;) {
-    unsigned int octet_a = i < input_length ? data[i++] : 0;
-    unsigned int octet_b = i < input_length ? data[i++] : 0;
-    unsigned int octet_c = i < input_length ? data[i++] : 0;
-    
-    unsigned int triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
-    
-    encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
-    encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
-    encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
-    encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
-  }
-  
-  for (i = 0; i < mod_table[input_length % 3]; i++) {
-    encoded_data[output_length - 2 - i] = '=';
-  }
-  encoded_data[output_length-1] = 0;
+  if (encoded_data == NULL)
+    {
+      return NULL;
+    }
+
+  for (i = 0, j = 0; i < input_length;)
+    {
+      unsigned int octet_a = i < input_length ? data[i++] : 0;
+      unsigned int octet_b = i < input_length ? data[i++] : 0;
+      unsigned int octet_c = i < input_length ? data[i++] : 0;
+
+      unsigned int triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+
+      encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
+      encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
+      encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
+      encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
+    }
+
+  for (i = 0; i < mod_table[input_length % 3]; i++)
+    {
+      encoded_data[output_length - 2 - i] = '=';
+    }
+  encoded_data[output_length - 1] = 0;
   return encoded_data;
 }
 
-int gr3_export_html_(const char *filename, int width, int height) {
+int gr3_export_html_(const char *filename, int width, int height)
+{
   FILE *htmlfp;
   const char *title = "GR3";
   int i, j;
   char *b64vertices = NULL, *b64normals = NULL;
-  
+
   htmlfp = fopen(filename, "w");
-  if (!htmlfp) {
-    RETURN_ERROR(GR3_ERROR_CANNOT_OPEN_FILE);
-  }
+  if (!htmlfp)
+    {
+      RETURN_ERROR(GR3_ERROR_CANNOT_OPEN_FILE);
+    }
   fprintf(htmlfp, "<!DOCTYPE html>\n");
   fprintf(htmlfp, "<html>\n");
   fprintf(htmlfp, "  <head>\n");
@@ -60,10 +61,13 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "    <title>%s</title>\n", title);
   fprintf(htmlfp, "    <script type=\"text/javascript\">\n");
   fprintf(htmlfp, "      function b64ToUint6 (nChr) {\n");
-  fprintf(htmlfp, "        return nChr > 64 && nChr < 91 ? nChr - 65 : nChr > 96 && nChr < 123 ? nChr - 71 : nChr > 47 && nChr < 58 ? nChr + 4 : nChr === 43 ? 62 : nChr === 47 ? 63 : 0;\n");
+  fprintf(htmlfp, "        return nChr > 64 && nChr < 91 ? nChr - 65 : nChr > 96 && nChr < 123 ? nChr - 71 : nChr > 47 "
+                  "&& nChr < 58 ? nChr + 4 : nChr === 43 ? 62 : nChr === 47 ? 63 : 0;\n");
   fprintf(htmlfp, "      }\n");
   fprintf(htmlfp, "      function base64DecToArr (sBase64, nBlocksSize) {\n");
-  fprintf(htmlfp, "    var sB64Enc = sBase64.replace(/[^A-Za-z0-9\\+\\/]/g, \"\"), nInLen = sB64Enc.length, nOutLen = nBlocksSize ? Math.ceil((nInLen * 3 + 1 >> 2) / nBlocksSize) * nBlocksSize : nInLen * 3 + 1 >> 2, taBytes = new Uint8Array(nOutLen);\n");
+  fprintf(htmlfp, "    var sB64Enc = sBase64.replace(/[^A-Za-z0-9\\+\\/]/g, \"\"), nInLen = sB64Enc.length, nOutLen = "
+                  "nBlocksSize ? Math.ceil((nInLen * 3 + 1 >> 2) / nBlocksSize) * nBlocksSize : nInLen * 3 + 1 >> 2, "
+                  "taBytes = new Uint8Array(nOutLen);\n");
   fprintf(htmlfp, "    for (var nMod3, nMod4, nUint24 = 0, nOutIdx = 0, nInIdx = 0; nInIdx < nInLen; nInIdx++) {\n");
   fprintf(htmlfp, "      nMod4 = nInIdx & 3;\n");
   fprintf(htmlfp, "      nUint24 |= b64ToUint6(sB64Enc.charCodeAt(nInIdx)) << 18 - 6 * nMod4;\n");
@@ -76,7 +80,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "    }\n");
   fprintf(htmlfp, "    return taBytes;\n");
   fprintf(htmlfp, "  }\n");
-  
+
   fprintf(htmlfp, "      function startWebGLCanvas() {\n");
   fprintf(htmlfp, "        var canvas = document.getElementById(\"webgl-canvas\");\n");
   fprintf(htmlfp, "        initWebGL(canvas);\n");
@@ -92,7 +96,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        canvas.onmouseout = canvasMouseOut;\n");
   fprintf(htmlfp, "        canvas.onkeypress = canvasKeyPress;\n");
   fprintf(htmlfp, "      }\n");
-  
+
   fprintf(htmlfp, "      function transposeMatrix4(matrix) {\n");
   fprintf(htmlfp, "        var transposedMatrix = [");
   fprintf(htmlfp, "          matrix[0],  matrix[4],  matrix[8],  matrix[12],\n");
@@ -102,7 +106,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        ];\n");
   fprintf(htmlfp, "        return transposedMatrix;\n");
   fprintf(htmlfp, "      }\n");
-  
+
   fprintf(htmlfp, "      var gl;\n");
   fprintf(htmlfp, "      function initWebGL(canvas) {\n");
   fprintf(htmlfp, "        try {\n");
@@ -115,8 +119,8 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "          alert(\"Unable to initialize WebGL.\");\n");
   fprintf(htmlfp, "        }\n");
   fprintf(htmlfp, "      }\n");
-  
-  
+
+
   fprintf(htmlfp, "      var meshes;\n");
   fprintf(htmlfp, "      function initMeshes() {\n");
   fprintf(htmlfp, "        function Mesh(id, vertices, normals, colors) {\n");
@@ -150,12 +154,18 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "            gl.enableVertexAttribArray(shaderProgram.colorLocation);\n");
   fprintf(htmlfp, "            \n");
   fprintf(htmlfp, "          }\n");
-  fprintf(htmlfp, "          this.draw = function (projectionMatrix, viewMatrix, modelMatrix, scales, lightDirection) {\n");
-  fprintf(htmlfp, "            gl.uniformMatrix4fv(shaderProgram.projectionMatrixLocation, false, new Float32Array(projectionMatrix));\n");
-  fprintf(htmlfp, "            gl.uniformMatrix4fv(shaderProgram.viewMatrixLocation, false, new Float32Array(viewMatrix));\n");
-  fprintf(htmlfp, "            gl.uniformMatrix4fv(shaderProgram.modelMatrixLocation, false, new Float32Array(modelMatrix));\n");
+  fprintf(htmlfp,
+          "          this.draw = function (projectionMatrix, viewMatrix, modelMatrix, scales, lightDirection) {\n");
+  fprintf(htmlfp, "            gl.uniformMatrix4fv(shaderProgram.projectionMatrixLocation, false, new "
+                  "Float32Array(projectionMatrix));\n");
+  fprintf(htmlfp,
+          "            gl.uniformMatrix4fv(shaderProgram.viewMatrixLocation, false, new Float32Array(viewMatrix));\n");
+  fprintf(
+      htmlfp,
+      "            gl.uniformMatrix4fv(shaderProgram.modelMatrixLocation, false, new Float32Array(modelMatrix));\n");
   fprintf(htmlfp, "            gl.uniform3fv(shaderProgram.scalesLocation, new Float32Array(scales));\n");
-  fprintf(htmlfp, "            gl.uniform3fv(shaderProgram.lightDirectionLocation, new Float32Array(lightDirection));\n");
+  fprintf(htmlfp,
+          "            gl.uniform3fv(shaderProgram.lightDirectionLocation, new Float32Array(lightDirection));\n");
   fprintf(htmlfp, "            \n");
   fprintf(htmlfp, "            gl.drawArrays(gl.TRIANGLES, 0, this.number_of_vertices);\n");
   fprintf(htmlfp, "            \n");
@@ -163,43 +173,56 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        }\n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        meshes = new Array();\n");
-  for (i = 0; i < context_struct_.mesh_list_capacity_; i++) {
-    if (context_struct_.mesh_list_[i].refcount > 0) {
-      gr3_sortindexedmeshdata(i);
-      b64vertices = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
-      fprintf(htmlfp, "        var vertices = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64vertices, context_struct_.mesh_list_[i].data.number_of_vertices*3);
-      
-      b64normals = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.normals, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
-      fprintf(htmlfp, "        var normals = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64normals, context_struct_.mesh_list_[i].data.number_of_vertices*3);
-      {
-        int all_ones = 1;
-        for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices*3; j++) {
-          if (context_struct_.mesh_list_[i].data.colors[j] != 1) {
-            all_ones = 0;
-            break;
+  for (i = 0; i < context_struct_.mesh_list_capacity_; i++)
+    {
+      if (context_struct_.mesh_list_[i].refcount > 0)
+        {
+          gr3_sortindexedmeshdata(i);
+          b64vertices = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.vertices,
+                                      context_struct_.mesh_list_[i].data.number_of_vertices * 3 * sizeof(float));
+          fprintf(htmlfp, "        var vertices = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64vertices,
+                  context_struct_.mesh_list_[i].data.number_of_vertices * 3);
+
+          b64normals = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.normals,
+                                     context_struct_.mesh_list_[i].data.number_of_vertices * 3 * sizeof(float));
+          fprintf(htmlfp, "        var normals = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64normals,
+                  context_struct_.mesh_list_[i].data.number_of_vertices * 3);
+          {
+            int all_ones = 1;
+            for (j = 0; j < context_struct_.mesh_list_[i].data.number_of_vertices * 3; j++)
+              {
+                if (context_struct_.mesh_list_[i].data.colors[j] != 1)
+                  {
+                    all_ones = 0;
+                    break;
+                  }
+              }
+            if (!all_ones)
+              {
+                char *b64colors =
+                    base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.colors,
+                                  context_struct_.mesh_list_[i].data.number_of_vertices * 3 * sizeof(float));
+                fprintf(htmlfp, "        var colors = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64colors,
+                        context_struct_.mesh_list_[i].data.number_of_vertices * 3);
+              }
+            else
+              {
+                fprintf(htmlfp, "        var colors = Array();");
+                fprintf(htmlfp, "        for (var i = 0; i < %d; i++) {",
+                        context_struct_.mesh_list_[i].data.number_of_vertices * 3);
+                fprintf(htmlfp, "          colors[i] = 1.0;");
+                fprintf(htmlfp, "        }");
+              }
+            fprintf(htmlfp, "        \n");
           }
+          fprintf(htmlfp, "        var mesh = new Mesh(%u, vertices, normals, colors);\n", i);
+          fprintf(htmlfp, "        mesh.init();\n");
+          fprintf(htmlfp, "        meshes.push(mesh);\n");
         }
-        if (!all_ones) {
-          char *b64colors = base64_encode((unsigned char *)context_struct_.mesh_list_[i].data.colors, context_struct_.mesh_list_[i].data.number_of_vertices*3*sizeof(float));
-          fprintf(htmlfp, "        var colors = new Float32Array(base64DecToArr('%s').buffer, 0, %d);", b64colors, context_struct_.mesh_list_[i].data.number_of_vertices*3);
-          
-        } else {
-          fprintf(htmlfp, "        var colors = Array();");
-          fprintf(htmlfp, "        for (var i = 0; i < %d; i++) {", context_struct_.mesh_list_[i].data.number_of_vertices*3);
-          fprintf(htmlfp, "          colors[i] = 1.0;");
-          fprintf(htmlfp, "        }");
-        }
-        fprintf(htmlfp, "        \n");
-      }
-      fprintf(htmlfp, "        var mesh = new Mesh(%u, vertices, normals, colors);\n", i);
-      fprintf(htmlfp, "        mesh.init();\n");
-      fprintf(htmlfp, "        meshes.push(mesh);\n");
     }
-  }
   fprintf(htmlfp, "      }\n");
-  
-  
-  
+
+
   fprintf(htmlfp, "      function getRotationMatrix(angle, x, y, z) {\n");
   fprintf(htmlfp, "        var f = Math.PI/180;\n");
   fprintf(htmlfp, "        var s = Math.sin(angle);\n");
@@ -211,7 +234,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        return matrix;\n");
   fprintf(htmlfp, "      }\n");
-  
+
   fprintf(htmlfp, "      function multMatrix4(matrix1, matrix2) {\n");
   fprintf(htmlfp, "        var matrix = [0,0,0,0,\n");
   fprintf(htmlfp, "                      0,0,0,0,\n");
@@ -228,7 +251,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        }\n");
   fprintf(htmlfp, "        return matrix;\n");
   fprintf(htmlfp, "      }\n");
-  
+
   fprintf(htmlfp, "      var isDragging = false;\n");
   fprintf(htmlfp, "      var xOffset = 0;\n");
   fprintf(htmlfp, "      var yOffset = 0;\n");
@@ -306,7 +329,8 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "          for (i = 0; i < 3; i++) {\n");
   fprintf(htmlfp, "            rotation[i] = rotation[i]/tmp;\n");
   fprintf(htmlfp, "          }\n");
-  fprintf(htmlfp, "          rotationsMatrix = getRotationMatrix(-Math.sqrt(dx*dx+dy*dy)*0.003, rotation[0], rotation[1], rotation[2])\n");
+  fprintf(htmlfp, "          rotationsMatrix = getRotationMatrix(-Math.sqrt(dx*dx+dy*dy)*0.003, rotation[0], "
+                  "rotation[1], rotation[2])\n");
   fprintf(htmlfp, "          viewMatrix = multMatrix4(rotationsMatrix, viewMatrix);\n");
   fprintf(htmlfp, "          up_dir = [viewMatrix[1], viewMatrix[5], viewMatrix[9]];\n");
   fprintf(htmlfp, "          forward = [viewMatrix[2], viewMatrix[6], viewMatrix[10]];\n");
@@ -316,10 +340,10 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "          drawScene();\n");
   fprintf(htmlfp, "        }\n");
   fprintf(htmlfp, "      }\n");
-  
-  
+
+
   fprintf(htmlfp, "      viewMatrix = null;\n");
-  
+
   fprintf(htmlfp, "      function calculateViewMatrix() {\n");
   fprintf(htmlfp, "        viewMatrix = [\n");
   fprintf(htmlfp, "          0.0, 0.0, 0.0, 0.0,\n");
@@ -389,9 +413,12 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        }\n");
   fprintf(htmlfp, "        viewMatrix = transposeMatrix4(viewMatrix);\n");
   fprintf(htmlfp, "      }\n");
-  fprintf(htmlfp, "      var camera_pos = [%g, %g, %g];\n", context_struct_.camera_x, context_struct_.camera_y, context_struct_.camera_z);
-  fprintf(htmlfp, "      var center_pos = [%g, %g, %g];\n", context_struct_.center_x, context_struct_.center_y, context_struct_.center_z);
-  fprintf(htmlfp, "      var up_dir = [%g, %g, %g];\n", context_struct_.up_x, context_struct_.up_y, context_struct_.up_z);
+  fprintf(htmlfp, "      var camera_pos = [%g, %g, %g];\n", context_struct_.camera_x, context_struct_.camera_y,
+          context_struct_.camera_z);
+  fprintf(htmlfp, "      var center_pos = [%g, %g, %g];\n", context_struct_.center_x, context_struct_.center_y,
+          context_struct_.center_z);
+  fprintf(htmlfp, "      var up_dir = [%g, %g, %g];\n", context_struct_.up_x, context_struct_.up_y,
+          context_struct_.up_z);
   fprintf(htmlfp, "      var original_camera_pos = camera_pos.slice(0);\n");
   fprintf(htmlfp, "      var original_center_pos = center_pos.slice(0);\n");
   fprintf(htmlfp, "      var original_up_dir = up_dir.slice(0);\n");
@@ -416,111 +443,132 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        var lightDirection = [\n");
-  fprintf(htmlfp, "          %g, %g, %g\n", context_struct_.light_dir[0], context_struct_.light_dir[1], context_struct_.light_dir[2]);
+  fprintf(htmlfp, "          %g, %g, %g\n", context_struct_.light_dir[0], context_struct_.light_dir[1],
+          context_struct_.light_dir[2]);
   fprintf(htmlfp, "        ];\n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        \n");
-  fprintf(htmlfp, "        gl.clearColor(%g,%g,%g,%g);\n", context_struct_.background_color[0], context_struct_.background_color[1], context_struct_.background_color[2], context_struct_.background_color[3]);
+  fprintf(htmlfp, "        gl.clearColor(%g,%g,%g,%g);\n", context_struct_.background_color[0],
+          context_struct_.background_color[1], context_struct_.background_color[2],
+          context_struct_.background_color[3]);
   fprintf(htmlfp, "        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);\n");
   {
     GR3_DrawList_t_ *draw;
     draw = context_struct_.draw_list_;
-    while (draw) {
-      GLfloat forward[3], up[3], left[3];
-      GLfloat model_matrix[4][4] = {{0}};
-      float tmp;
-      fprintf(htmlfp, "        var meshId = %u;\n", draw->mesh);
-      fprintf(htmlfp, "        var mesh = null;\n");
-      fprintf(htmlfp, "        for (var meshIndex in meshes) {\n");
-      fprintf(htmlfp, "          if (meshes[meshIndex].id == meshId) {\n");
-      fprintf(htmlfp, "            mesh = meshes[meshIndex];\n");
-      fprintf(htmlfp, "            break;\n");
-      fprintf(htmlfp, "          }\n");
-      fprintf(htmlfp, "        }\n");
-      fprintf(htmlfp, "        mesh.bind()\n");
-      fprintf(htmlfp, "        \n");
-      fprintf(htmlfp, "        var modelMatrices = new Array();\n");
-      fprintf(htmlfp, "        var scales = new Array();\n");
-      fprintf(htmlfp, "        var colors = new Array();\n");
-      for (i = 0; i < draw->n; i++) {
-        {
-          
-          /* Calculate an orthonormal base in IR^3, correcting the up vector
-           * in case it is not perpendicular to the forward vector. This base
-           * is used to create the model matrix as a base-transformation
-           * matrix.
-           */
-          /* forward = normalize(&directions[i*3]); */
-          tmp = 0;
-          for (j = 0; j < 3; j++) {
-            tmp+= draw->directions[i*3+j]*draw->directions[i*3+j];
-          }
-          tmp = sqrt(tmp);
-          for (j = 0; j < 3; j++) {
-            forward[j] = draw->directions[i*3+j]/tmp;
-          }/* up = normalize(&ups[i*3]); */
-          tmp = 0;
-          for (j = 0; j < 3; j++) {
-            tmp+= draw->ups[i*3+j]*draw->ups[i*3+j];
-          }
-          tmp = sqrt(tmp);
-          for (j = 0; j < 3; j++) {
-            up[j] = draw->ups[i*3+j]/tmp;
-          }
-          /* left = cross(forward,up); */
-          for (j = 0; j < 3; j++) {
-            left[j] = forward[(j+1)%3]*up[(j+2)%3] - up[(j+1)%3]*forward[(j+2)%3];
-          }/* left = normalize(left); */
-          tmp = 0;
-          for (j = 0; j < 3; j++) {
-            tmp+= left[j]*left[j];
-          }
-          tmp = sqrt(tmp);
-          for (j = 0; j < 3; j++) {
-            left[j] = left[j]/tmp;
-          }
-          /* up = cross(left,forward); */
-          for (j = 0; j < 3; j++) {
-            up[j] = left[(j+1)%3]*forward[(j+2)%3] - forward[(j+1)%3]*left[(j+2)%3];
-          }
-          for (j = 0; j < 3; j++) {
-            model_matrix[0][j] = -left[j];
-            model_matrix[1][j] = up[j];
-            model_matrix[2][j] = forward[j];
-            model_matrix[3][j] = draw->positions[i*3+j];
-          }
-          model_matrix[3][3] = 1;
-        }
-        
-        fprintf(htmlfp, "        var modelMatrix = [\n");
-        fprintf(htmlfp, "          %g, %g, %g, %g,\n", model_matrix[0][0], model_matrix[1][0], model_matrix[2][0], model_matrix[3][0]);
-        fprintf(htmlfp, "          %g, %g, %g, %g,\n", model_matrix[0][1], model_matrix[1][1], model_matrix[2][1], model_matrix[3][1]);
-        fprintf(htmlfp, "          %g, %g, %g, %g,\n", model_matrix[0][2], model_matrix[1][2], model_matrix[2][2], model_matrix[3][2]);
-        fprintf(htmlfp, "          %g, %g, %g, %g\n", model_matrix[0][3], model_matrix[1][3], model_matrix[2][3], model_matrix[3][3]);
-        fprintf(htmlfp, "        ];\n");
-        fprintf(htmlfp, "        modelMatrices.push(transposeMatrix4(modelMatrix));\n");
-        
-        fprintf(htmlfp, "        var scale = [\n");
-        fprintf(htmlfp, "          %g, %g, %g\n", draw->scales[i*3+0], draw->scales[i*3+1], draw->scales[i*3+2]);
-        fprintf(htmlfp, "        ];\n");
-        fprintf(htmlfp, "        scales.push(scale);\n");
+    while (draw)
+      {
+        GLfloat forward[3], up[3], left[3];
+        GLfloat model_matrix[4][4] = {{0}};
+        float tmp;
+        fprintf(htmlfp, "        var meshId = %u;\n", draw->mesh);
+        fprintf(htmlfp, "        var mesh = null;\n");
+        fprintf(htmlfp, "        for (var meshIndex in meshes) {\n");
+        fprintf(htmlfp, "          if (meshes[meshIndex].id == meshId) {\n");
+        fprintf(htmlfp, "            mesh = meshes[meshIndex];\n");
+        fprintf(htmlfp, "            break;\n");
+        fprintf(htmlfp, "          }\n");
+        fprintf(htmlfp, "        }\n");
+        fprintf(htmlfp, "        mesh.bind()\n");
         fprintf(htmlfp, "        \n");
-        fprintf(htmlfp, "        var color = [\n");
-        fprintf(htmlfp, "          %g, %g, %g\n", draw->colors[i*3+0], draw->colors[i*3+1], draw->colors[i*3+2]);
-        fprintf(htmlfp, "        ];\n");
-        fprintf(htmlfp, "        colors.push(color);\n");
+        fprintf(htmlfp, "        var modelMatrices = new Array();\n");
+        fprintf(htmlfp, "        var scales = new Array();\n");
+        fprintf(htmlfp, "        var colors = new Array();\n");
+        for (i = 0; i < draw->n; i++)
+          {
+            {
+
+              /* Calculate an orthonormal base in IR^3, correcting the up vector
+               * in case it is not perpendicular to the forward vector. This base
+               * is used to create the model matrix as a base-transformation
+               * matrix.
+               */
+              /* forward = normalize(&directions[i*3]); */
+              tmp = 0;
+              for (j = 0; j < 3; j++)
+                {
+                  tmp += draw->directions[i * 3 + j] * draw->directions[i * 3 + j];
+                }
+              tmp = sqrt(tmp);
+              for (j = 0; j < 3; j++)
+                {
+                  forward[j] = draw->directions[i * 3 + j] / tmp;
+                } /* up = normalize(&ups[i*3]); */
+              tmp = 0;
+              for (j = 0; j < 3; j++)
+                {
+                  tmp += draw->ups[i * 3 + j] * draw->ups[i * 3 + j];
+                }
+              tmp = sqrt(tmp);
+              for (j = 0; j < 3; j++)
+                {
+                  up[j] = draw->ups[i * 3 + j] / tmp;
+                }
+              /* left = cross(forward,up); */
+              for (j = 0; j < 3; j++)
+                {
+                  left[j] = forward[(j + 1) % 3] * up[(j + 2) % 3] - up[(j + 1) % 3] * forward[(j + 2) % 3];
+                } /* left = normalize(left); */
+              tmp = 0;
+              for (j = 0; j < 3; j++)
+                {
+                  tmp += left[j] * left[j];
+                }
+              tmp = sqrt(tmp);
+              for (j = 0; j < 3; j++)
+                {
+                  left[j] = left[j] / tmp;
+                }
+              /* up = cross(left,forward); */
+              for (j = 0; j < 3; j++)
+                {
+                  up[j] = left[(j + 1) % 3] * forward[(j + 2) % 3] - forward[(j + 1) % 3] * left[(j + 2) % 3];
+                }
+              for (j = 0; j < 3; j++)
+                {
+                  model_matrix[0][j] = -left[j];
+                  model_matrix[1][j] = up[j];
+                  model_matrix[2][j] = forward[j];
+                  model_matrix[3][j] = draw->positions[i * 3 + j];
+                }
+              model_matrix[3][3] = 1;
+            }
+
+            fprintf(htmlfp, "        var modelMatrix = [\n");
+            fprintf(htmlfp, "          %g, %g, %g, %g,\n", model_matrix[0][0], model_matrix[1][0], model_matrix[2][0],
+                    model_matrix[3][0]);
+            fprintf(htmlfp, "          %g, %g, %g, %g,\n", model_matrix[0][1], model_matrix[1][1], model_matrix[2][1],
+                    model_matrix[3][1]);
+            fprintf(htmlfp, "          %g, %g, %g, %g,\n", model_matrix[0][2], model_matrix[1][2], model_matrix[2][2],
+                    model_matrix[3][2]);
+            fprintf(htmlfp, "          %g, %g, %g, %g\n", model_matrix[0][3], model_matrix[1][3], model_matrix[2][3],
+                    model_matrix[3][3]);
+            fprintf(htmlfp, "        ];\n");
+            fprintf(htmlfp, "        modelMatrices.push(transposeMatrix4(modelMatrix));\n");
+
+            fprintf(htmlfp, "        var scale = [\n");
+            fprintf(htmlfp, "          %g, %g, %g\n", draw->scales[i * 3 + 0], draw->scales[i * 3 + 1],
+                    draw->scales[i * 3 + 2]);
+            fprintf(htmlfp, "        ];\n");
+            fprintf(htmlfp, "        scales.push(scale);\n");
+            fprintf(htmlfp, "        \n");
+            fprintf(htmlfp, "        var color = [\n");
+            fprintf(htmlfp, "          %g, %g, %g\n", draw->colors[i * 3 + 0], draw->colors[i * 3 + 1],
+                    draw->colors[i * 3 + 2]);
+            fprintf(htmlfp, "        ];\n");
+            fprintf(htmlfp, "        colors.push(color);\n");
+          }
+        fprintf(htmlfp, "        gl.enable(gl.BLEND);\n");
+        fprintf(htmlfp, "        gl.blendFunc(gl.CONSTANT_COLOR, gl.ZERO);\n");
+        fprintf(htmlfp, "        for (var i = 0; i < %u; i++) {\n", draw->n);
+        fprintf(htmlfp, "          gl.blendColor(colors[i][0],colors[i][1],colors[i][2],1.0);\n");
+        fprintf(htmlfp,
+                "          mesh.draw(projectionMatrix, viewMatrix, modelMatrices[i], scales[i], lightDirection);\n");
+        fprintf(htmlfp, "        }\n");
+        draw = draw->next;
       }
-      fprintf(htmlfp, "        gl.enable(gl.BLEND);\n");
-      fprintf(htmlfp, "        gl.blendFunc(gl.CONSTANT_COLOR, gl.ZERO);\n");
-      fprintf(htmlfp, "        for (var i = 0; i < %u; i++) {\n", draw->n);
-      fprintf(htmlfp, "          gl.blendColor(colors[i][0],colors[i][1],colors[i][2],1.0);\n");
-      fprintf(htmlfp, "          mesh.draw(projectionMatrix, viewMatrix, modelMatrices[i], scales[i], lightDirection);\n");
-      fprintf(htmlfp, "        }\n");
-      draw = draw->next;
-    }
   }
   fprintf(htmlfp, "      }\n");
-  
+
   fprintf(htmlfp, "      var shaderProgram;");
   fprintf(htmlfp, "      function initShaderProgram() {\n");
   fprintf(htmlfp, "        var vertexShader = getShader(gl, \"shader-vs\");\n");
@@ -537,11 +585,15 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        }\n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        gl.useProgram(shaderProgram);\n");
-  
-  fprintf(htmlfp, "        shaderProgram.projectionMatrixLocation = gl.getUniformLocation(shaderProgram, \"ProjectionMatrix\");\n");
+
+  fprintf(
+      htmlfp,
+      "        shaderProgram.projectionMatrixLocation = gl.getUniformLocation(shaderProgram, \"ProjectionMatrix\");\n");
   fprintf(htmlfp, "        shaderProgram.viewMatrixLocation = gl.getUniformLocation(shaderProgram, \"ViewMatrix\");\n");
-  fprintf(htmlfp, "        shaderProgram.modelMatrixLocation = gl.getUniformLocation(shaderProgram, \"ModelMatrix\");\n");
-  fprintf(htmlfp, "        shaderProgram.lightDirectionLocation = gl.getUniformLocation(shaderProgram, \"LightDirection\");\n");
+  fprintf(htmlfp,
+          "        shaderProgram.modelMatrixLocation = gl.getUniformLocation(shaderProgram, \"ModelMatrix\");\n");
+  fprintf(htmlfp,
+          "        shaderProgram.lightDirectionLocation = gl.getUniformLocation(shaderProgram, \"LightDirection\");\n");
   fprintf(htmlfp, "        shaderProgram.scalesLocation = gl.getUniformLocation(shaderProgram, \"Scales\");\n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        shaderProgram.vertexLocation = gl.getAttribLocation(shaderProgram, \"in_Vertex\");\n");
@@ -550,7 +602,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "      }\n");
-  
+
   fprintf(htmlfp, "      function getShader(gl, id) {\n");
   fprintf(htmlfp, "        var shaderScriptElement = document.getElementById(id);\n");
   fprintf(htmlfp, "        if (!shaderScriptElement) {\n");
@@ -585,9 +637,9 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        return shader;\n");
   fprintf(htmlfp, "      }\n");
-  
+
   fprintf(htmlfp, "    </script>\n");
-  
+
   fprintf(htmlfp, "    <script id=\"shader-vs\" type=\"x-shader/x-vertex\">\n");
   fprintf(htmlfp, "      uniform mat4 ProjectionMatrix;\n");
   fprintf(htmlfp, "      uniform mat4 ViewMatrix;\n");
@@ -611,7 +663,7 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        Color.rgb = diffuse*Color.rgb;\n");
   fprintf(htmlfp, "      }\n");
   fprintf(htmlfp, "    </script>\n");
-  
+
   fprintf(htmlfp, "    <script id=\"shader-fs\" type=\"x-shader/x-fragment\">\n");
   fprintf(htmlfp, "      precision mediump float;\n");
   fprintf(htmlfp, "      varying vec4 Color;\n");
@@ -620,10 +672,13 @@ int gr3_export_html_(const char *filename, int width, int height) {
   fprintf(htmlfp, "        gl_FragColor=vec4(Color.rgb,Color.a);\n");
   fprintf(htmlfp, "      }\n");
   fprintf(htmlfp, "    </script>\n");
-  
+
   fprintf(htmlfp, "  </head>\n");
   fprintf(htmlfp, "  <body onload=\"startWebGLCanvas()\">\n");
-  fprintf(htmlfp, "    <canvas id=\"webgl-canvas\" width=\"%u\" height=\"%u\" tabindex=\"1\" style=\"outline-style:none;\"></canvas>\n", width, height);
+  fprintf(htmlfp,
+          "    <canvas id=\"webgl-canvas\" width=\"%u\" height=\"%u\" tabindex=\"1\" "
+          "style=\"outline-style:none;\"></canvas>\n",
+          width, height);
   fprintf(htmlfp, "  </body>\n");
   fprintf(htmlfp, "</html>");
   fclose(htmlfp);
