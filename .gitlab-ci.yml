@@ -28,7 +28,7 @@ ubuntu-self-contained:
   script:
   - apt-get update
   - apt-get install -y wget make gcc g++ libgl1-mesa-dev libglu1-mesa-dev xorg-dev git qt5-default libgtk2.0-dev gtk2.0-examples libwxgtk3.0-dev qt4-dev-tools qtbase5-dev
-  - make self GRDIR=/tmp/gr
+  - make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
@@ -49,7 +49,7 @@ ubuntu-system-dependencies:
   script:
   - apt-get update
   - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7 texlive-latex3 dvipng libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev libglfw3-dev libzmq3-dev cmake git
-  - make install GRDIR=/tmp/gr
+  - make install GRDIR=/usr/local/gr
 
 debian-self-contained:
   stage: build
@@ -57,7 +57,7 @@ debian-self-contained:
   script:
   - apt-get update
   - apt-get install -y wget make patch gcc g++ xz-utils lbzip2 libgl1-mesa-dev libglu1-mesa-dev xorg-dev git qt5-default libgtk2.0-dev gtk2.0-examples libwxgtk3.0-dev qt4-dev-tools qtbase5-dev
-  - make self GRDIR=/tmp/gr
+  - make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
@@ -78,7 +78,7 @@ debian-system-dependencies:
   script:
   - apt-get update
   - apt-get install -y wget make gcc g++ libx11-dev libxft-dev libxt-dev python2.7 texlive-latex3 dvipng libgl1-mesa-dev qt4-dev-tools pyqt4-dev-tools libgs-dev libgtk2.0-dev libwxgtk3.0-dev libglfw3-dev libzmq3-dev cmake git
-  - make install GRDIR=/tmp/gr
+  - make install GRDIR=/usr/local/gr
 
 centos7-self-contained:
   stage: build
@@ -88,7 +88,7 @@ centos7-self-contained:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel qt5-qtbase-devel gtk2-devel qt-devel
-  - make self GRDIR=/tmp/gr
+  - make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
@@ -112,7 +112,7 @@ centos7-system-dependencies:
   - yum groupinstall -y "X Window System"
   - yum install -y which
   - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel git
-  - make install GRDIR=/tmp/gr
+  - make install GRDIR=/usr/local/gr
 
 centos6-32bit-self-contained:
   stage: build
@@ -123,7 +123,7 @@ centos6-32bit-self-contained:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel git qt-devel gtk2-devel
-  - make self GRDIR=/tmp/gr
+  - make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
@@ -148,7 +148,7 @@ centos6-32bit-system-dependencies:
   - yum groupinstall -y "X Window System"
   - yum install -y which
   - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel git
-  - make install GRDIR=/tmp/gr
+  - make install GRDIR=/usr/local/gr
 
 centos6-64bit-self-contained:
   stage: build
@@ -158,7 +158,7 @@ centos6-64bit-self-contained:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel git qt-devel gtk2-devel
-  - make self GRDIR=/tmp/gr
+  - make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
@@ -182,7 +182,7 @@ centos6-64bit-system-dependencies:
   - yum groupinstall -y "X Window System"
   - yum install -y which
   - yum install -y gcc gcc-c++ cmake patch PyQt4-devel ghostscript-devel texlive-collection-latex texlive-dvipng cairo-devel git
-  - make install GRDIR=/tmp/gr
+  - make install GRDIR=/usr/local/gr
 
 windows-32bit-cross:
   stage: build
@@ -238,8 +238,8 @@ darwin-self-contained:
     - tags@Scientific-IT-Systems/gr
   script:
   - export MACOSX_DEPLOYMENT_TARGET=10.11
-  - rm -rf /tmp/gr
-  - make self GRDIR=/tmp/gr QMAKE=/usr/local/qt5/bin/qmake
+  - rm -rf /usr/local/gr
+  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
