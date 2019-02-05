@@ -3337,6 +3337,46 @@ static void text2d(double x, double y, const char *chars)
   text2dlbl(x, y, chars, 42., NULL);
 }
 
+/*!
+ * Create axes in the current workspace and supply a custom function for changing
+ * the behaviour of the tick labels.
+ *
+ * Similar to gr_axes() but allows more fine-grained control over tick labels
+ * and text positioning by supplying callback functions. Within the callback
+ * function you can use normal GR text primitives for performing any manipulations
+ * on the label text.
+ *
+ * \param[in] x_tick The interval between minor tick marks on the X axis.
+ * \param[in] y_tick The interval between minor tick marks on the Y axis.
+ * \param[in] x_org The world coordinate of the origin (point of intersection)
+ *                  of the X axis.
+ * \param[in] y_org The world coordinate of the origin (point of intersection)
+ *                  of the Y axis.
+ * \param[in] major_x Unitless integer value specifying the number of minor tick
+ *                    intervals between major tick marks on the X axis. Values
+ *                    of 0 or 1 imply no minor ticks. Negative values specify no
+ *                    labels will be drawn for the associated axis.
+ * \param[in] major_y Unitless integer value specifying the number of minor tick
+ *                    intervals between major tick marks on the Y axis. Values
+ *                    of 0 or 1 imply no minor ticks. Negative values specify no
+ *                    labels will be drawn for the associated axis.
+ * \param[in] tick_size The length of minor tick marks specified in a normalized
+ *                      device coordinate unit. Major tick marks are twice as
+ *                      long as minor tick marks. A negative value reverses the
+ *                      tick marks on the axes from inward facing to outward
+ *                      facing (or vice versa).
+ * \param[in] fpx Function pointer to a function that returns a label for a given
+ *                tick on the X axis. The callback function should have the following arguments:
+ *                \param[in] x NDC of the label in X direction.
+ *                \param[in] y NDC of the label in Y direction.
+ *                \param[in] svalue Internal string representation of the text
+ *                                  drawn by GR at (x,y).
+ *                \param[in] value Floating point representation of the label drawn
+ *                                 at (x,y).
+ * \param[in] fpy Exactly same as the fpx above, but for the the Y axis.
+ *
+ * See gr_axes() for more details on drawing axes.
+ */
 void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int major_x, int major_y, double tick_size,
                 void (*fpx)(double, double, const char *, double), void (*fpy)(double, double, const char *, double))
 {
