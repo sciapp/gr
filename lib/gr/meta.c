@@ -22,6 +22,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 #endif
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -117,7 +118,7 @@ static void debug_printf(const char *format, ...)
 /* ------------------------- logging -------------------------------------------------------------------------------- */
 
 #ifndef NDEBUG
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
 #define logger(logger_arguments)                      \
   do                                                  \
     {                                                 \
@@ -131,7 +132,7 @@ static void debug_printf(const char *format, ...)
     {                                                                                   \
       if (isatty(fileno(stderr)))                                                       \
         {                                                                               \
-          fprintf(stderr, "\033[96m%s\033[0m:\033[93m%d\033[0m: ", __FILE__, __LINE__); \
+          fprintf(stderr, "\033[36m%s\033[0m:\033[33m%d\033[0m: ", __FILE__, __LINE__); \
         }                                                                               \
       else                                                                              \
         {                                                                               \
@@ -8475,9 +8476,104 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f)
   args_iterator_t *it;
   args_value_iterator_t *value_it;
   arg_t *arg;
-  int i;
+  unsigned int i;
+#define BUFFER_LEN 200
+  char buffer[BUFFER_LEN];
+  int count_characters;
+  static int recursion_level = -1;
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
+  int columns = INT_MAX, cursor_xpos = 0;
+  int use_color_codes = 0;
+#else
+  int columns, cursor_xpos = 0;
+  int use_color_codes = isatty(fileno(f));
+  struct winsize w;
+  ioctl(0, TIOCGWINSZ, &w);
+  columns = w.ws_col;
+#endif
 
-  fprintf(f, "=== container contents ===\n");
+#define INDENT 2
+
+#define print_indent                                                                 \
+  do                                                                                 \
+    {                                                                                \
+      if (use_color_codes)                                                           \
+        {                                                                            \
+          int i;                                                                     \
+          for (i = 0; i < recursion_level; ++i)                                      \
+            {                                                                        \
+              fprintf(f, "\033[48;5;%dm%*s\033[0m", 235 + (5 * i) % 25, INDENT, ""); \
+            }                                                                        \
+        }                                                                            \
+      else                                                                           \
+        {                                                                            \
+          fprintf(f, "%*s", INDENT *recursion_level, "");                            \
+        }                                                                            \
+    }                                                                                \
+  while (0)
+
+#if defined(_WIN32) || defined(__EMSCRIPTEN__)
+#define print_key                   \
+  do                                \
+    {                               \
+      print_indent;                 \
+      fprintf(f, "%s: ", arg->key); \
+    }                               \
+  while (0)
+#else
+#define print_key                                      \
+  do                                                   \
+    {                                                  \
+      print_indent;                                    \
+      if (use_color_codes)                             \
+        {                                              \
+          fprintf(f, "\033[36m%s\033[0m: ", arg->key); \
+        }                                              \
+      else                                             \
+        {                                              \
+          fprintf(f, "%s: ", arg->key);                \
+        }                                              \
+    }                                                  \
+  while (0)
+#endif
+
+#define print_type(value_type, format_string)                                                                    \
+  do                                                                                                             \
+    {                                                                                                            \
+      if (value_it->is_array)                                                                                    \
+        {                                                                                                        \
+          print_key;                                                                                             \
+          fprintf(f, "[");                                                                                       \
+          cursor_xpos += strlen(arg->key) + 3;                                                                   \
+          for (i = 0; i < value_it->array_length; i++)                                                           \
+            {                                                                                                    \
+              count_characters =                                                                                 \
+                  snprintf(buffer, BUFFER_LEN, format_string "%s", (*((value_type **)value_it->value_ptr))[i],   \
+                           (i < value_it->array_length - 1) ? ", " : "]");                                       \
+              if (cursor_xpos + count_characters > columns)                                                      \
+                {                                                                                                \
+                  fputc('\n', f);                                                                                \
+                  print_indent;                                                                                  \
+                  cursor_xpos = INDENT * recursion_level + fprintf(f, "%*s", (int)strlen(arg->key) + 3, "") - 1; \
+                }                                                                                                \
+              fputs(buffer, f);                                                                                  \
+              cursor_xpos += count_characters;                                                                   \
+            }                                                                                                    \
+          if (value_it->array_length == 0)                                                                       \
+            {                                                                                                    \
+              fputc(']', f);                                                                                     \
+            }                                                                                                    \
+          fputc('\n', f);                                                                                        \
+        }                                                                                                        \
+      else                                                                                                       \
+        {                                                                                                        \
+          print_key;                                                                                             \
+          fprintf(f, format_string "\n", *((value_type *)value_it->value_ptr));                                  \
+        }                                                                                                        \
+    }                                                                                                            \
+  while (0)
+
+  ++recursion_level;
 
   it = args_iter(args);
   while ((arg = it->next(it)) != NULL)
@@ -8487,86 +8583,45 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f)
           value_it = arg_value_iter(arg);
           while (value_it->next(value_it) != NULL)
             {
+              cursor_xpos = INDENT * recursion_level;
               switch (value_it->format)
                 {
                 case 'i':
-                  if (value_it->is_array)
-                    {
-                      fprintf(f, "%s: [", arg->key);
-                      for (i = 0; i < value_it->array_length; i++)
-                        {
-                          fprintf(f, "%d, ", (*((int **)value_it->value_ptr))[i]);
-                        }
-                      if (value_it->array_length > 0)
-                        {
-                          fprintf(f, "\b\b");
-                        }
-                      fprintf(f, "]\n");
-                    }
-                  else
-                    {
-                      fprintf(f, "%s: %d\n", arg->key, *((int *)value_it->value_ptr));
-                    }
+                  print_type(int, "% d");
                   break;
                 case 'd':
-                  if (value_it->is_array)
-                    {
-                      fprintf(f, "%s: [", arg->key);
-                      for (i = 0; i < value_it->array_length; i++)
-                        {
-                          fprintf(f, "%lf, ", (*((double **)value_it->value_ptr))[i]);
-                        }
-                      if (value_it->array_length > 0)
-                        {
-                          fprintf(f, "\b\b");
-                        }
-                      fprintf(f, "]\n");
-                    }
-                  else
-                    {
-                      fprintf(f, "%s: %lf\n", arg->key, *((double *)value_it->value_ptr));
-                    }
+                  print_type(double, "% lf");
                   break;
                 case 'c':
-                  fprintf(f, "%s: %c\n", arg->key, *((char *)value_it->value_ptr));
+                  print_key;
+                  fprintf(f, "'%c'\n", *((char *)value_it->value_ptr));
                   break;
                 case 's':
-                  if (value_it->is_array)
-                    {
-                      fprintf(f, "%s: [", arg->key);
-                      for (i = 0; i < value_it->array_length; i++)
-                        {
-                          fprintf(f, "%s, ", (*((char ***)value_it->value_ptr))[i]);
-                        }
-                      if (value_it->array_length > 0)
-                        {
-                          fprintf(f, "\b\b");
-                        }
-                      fprintf(f, "]\n");
-                    }
-                  else
-                    {
-                      fprintf(f, "%s: %s\n", arg->key, *((char **)value_it->value_ptr));
-                    }
+                  print_type(char *, "\"%s\"");
                   break;
                 case 'a':
                   if (value_it->is_array)
                     {
-                      fprintf(f, "%s: [\n", arg->key);
+                      print_key;
+                      fprintf(f, "[\n");
                       for (i = 0; i < value_it->array_length; i++)
                         {
                           gr_dumpmeta((*((gr_meta_args_t ***)value_it->value_ptr))[i], f);
+                          if (i < value_it->array_length - 1)
+                            {
+                              print_indent;
+                              fprintf(f, ",\n");
+                            }
                         }
-                      if (value_it->array_length > 0)
-                        {
-                          fprintf(f, "\b\b");
-                        }
+                      print_indent;
                       fprintf(f, "]\n");
                     }
                   else
                     {
-                      fprintf(f, "%s: container\n", arg->key);
+                      print_key;
+                      fprintf(f, "\n");
                       gr_dumpmeta(*((gr_meta_args_t **)value_it->value_ptr), f);
+                      fprintf(f, "\n");
                     }
                   break;
                 default:
@@ -8577,12 +8632,19 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f)
         }
       else
         {
-          fprintf(f, "%s: (none)\n", arg->key);
+          print_key;
+          fprintf(f, "(none)\n");
         }
     }
   args_iterator_delete(it);
 
-  fprintf(f, "=== container contents end ===\n");
+  --recursion_level;
+
+#undef BUFFER_LEN
+#undef INDENT
+#undef print_indent
+#undef print_key
+#undef print_type
 }
 
 void gr_dumpmeta_json(const gr_meta_args_t *args, FILE *f)
