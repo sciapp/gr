@@ -5,7 +5,7 @@ LIBS = -L$(GRDIR)/lib -lGR -lm
 LDFLAGS = $(LIBS) -Wl,-rpath,$(GRDIR)/lib
 
 
-all: plot receiver sender custom_receiver custom_sender
+all: plot receiver sender custom_receiver custom_sender merge_args
 
 plot: plot.o
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -22,10 +22,13 @@ custom_receiver: custom_receiver.o
 custom_sender: custom_sender.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
+merge_args: merge_args.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
 %.o: %.c
 	$(CC) -c $(CFLAGS) $^
 
 clean:
-	rm -f plot receiver sender custom_receiver custom_sender custom_sender.out *.o *.a *.so
+	rm -f plot receiver sender custom_receiver custom_sender merge_args custom_sender.out *.o *.a *.so
 
 .PHONY: all clean
