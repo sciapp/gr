@@ -735,7 +735,8 @@ static error_t plot_init_static_variables(void);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **hierarchy_name_ptr);
+static error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **hierarchy_name_ptr,
+                               uint_map_t *hierarchy_to_id);
 static error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr,
                                        unsigned int next_hierarchy_level_max_id);
 static error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_name_ptr,
@@ -788,14 +789,14 @@ static error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int
 
 static double find_max_step(unsigned int n, const double *x);
 static const char *next_fmt_key(const char *fmt);
-static int get_id_from_args(const gr_meta_args_t *args, unsigned int *subplot_id, unsigned int *series_id);
+static int get_id_from_args(const gr_meta_args_t *args, int *plot_id, int *subplot_id, int *series_id);
 
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
 static size_t djb2_hash(const char *str);
 static int is_int_number(const char *str);
-static unsigned int str_to_uint(const char *str, int *was_successful);
+static int str_to_uint(const char *str, unsigned int *value_ptr);
 static int int_equals_any(int number, unsigned int n, ...);
 static int str_equals_any(const char *str, unsigned int n, ...);
 static int str_equals_any_in_array(const char *str, const char **str_array);
@@ -1033,6 +1034,7 @@ DECLARE_SET_METHODS(args)
                                                                                                                  \
   static prefix##_map_t *prefix##_map_new(size_t capacity);                                                      \
   static prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries);                \
+  static prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map);                                           \
   static void prefix##_map_delete(prefix##_map_t *prefix##_map);                                                 \
   static int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, const value_type value);         \
   static int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, const value_type value); \
@@ -1097,12 +1099,14 @@ static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static int plot_static_variables_initialized = 0;
-const char *plot_hierarchy_names[] = {"plot", "subplots", "series", NULL};
+const char *plot_hierarchy_names[] = {"root", "plots", "subplots", "series", NULL};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ args ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static gr_meta_args_t *global_plot_args = NULL;
+static gr_meta_args_t *global_root_args = NULL;
+static gr_meta_args_t *active_plot_args = NULL;
+static unsigned int active_plot_index = 0;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1148,6 +1152,7 @@ const char *plot_merge_clear_keys[] = {"series", NULL};
 /* IMPORTANT: Every key should only be part of ONE array -> keys can be assigned to the right object, if a user sends a
  * flat object that mixes keys of different hierarchies */
 
+const char *valid_root_keys[] = {"plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
 const char *valid_subplot_keys[] = {"adjust_xlim", "adjust_ylim", "adjust_zlim", "colormap", "keep_aspect_ratio",
                                     "kind",        "labels",      "levels",      "location", "nbins",
@@ -1185,8 +1190,10 @@ void gr_finalizemeta(void)
 {
   if (plot_static_variables_initialized)
     {
-      gr_deletemeta(global_plot_args);
-      global_plot_args = NULL;
+      gr_deletemeta(global_root_args);
+      global_root_args = NULL;
+      active_plot_args = NULL;
+      active_plot_index = 0;
       string_map_delete(fmt_map);
       fmt_map = NULL;
       plot_func_map_delete(plot_func_map);
@@ -1284,7 +1291,7 @@ int gr_mergemeta(const gr_meta_args_t *args)
     }
   if (args != NULL)
     {
-      if (plot_merge_args(global_plot_args, args, NULL) != NO_ERROR)
+      if (plot_merge_args(global_root_args, args, NULL, NULL) != NO_ERROR)
         {
           return 0;
         }
@@ -1304,7 +1311,7 @@ int gr_plotmeta(const gr_meta_args_t *args)
       return 0;
     }
 
-  args_first_value(global_plot_args, "subplots", "A", &current_subplot_args, NULL);
+  args_first_value(active_plot_args, "subplots", "A", &current_subplot_args, NULL);
   while (*current_subplot_args != NULL)
     {
       plot_set_plot_attribute_defaults(*current_subplot_args);
@@ -1326,6 +1333,34 @@ int gr_plotmeta(const gr_meta_args_t *args)
   return 1;
 }
 
+int gr_switchmeta(unsigned int id)
+{
+  gr_meta_args_t **args_array = NULL;
+  unsigned int args_array_length = 0;
+
+  if (plot_init_static_variables() != NO_ERROR)
+    {
+      return 0;
+    }
+
+  if (plot_init_args_structure(global_root_args, plot_hierarchy_names, id + 1) != NO_ERROR)
+    {
+      return 0;
+    }
+  if (!args_first_value(global_root_args, "plots", "A", &args_array, &args_array_length))
+    {
+      return 0;
+    }
+  if (id + 1 > args_array_length)
+    {
+      return 0;
+    }
+
+  active_plot_index = id + 1;
+  active_plot_args = args_array[id];
+
+  return 1;
+}
 
 /* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
@@ -2304,7 +2339,6 @@ void argparse_read_next_option(argparse_state_t *state, char **format)
   char *fmt = *format;
   unsigned int next_array_length;
   char *current_char;
-  int was_successful;
 
   ++fmt;
   if (*fmt != '(')
@@ -2324,8 +2358,7 @@ void argparse_read_next_option(argparse_state_t *state, char **format)
     }
   *current_char = '\0';
 
-  next_array_length = str_to_uint(fmt, &was_successful);
-  if (!was_successful)
+  if (!str_to_uint(fmt, &next_array_length))
     {
       debug_print_error(
           ("Option \"%s\" in format string \"%s\" could not be converted to a number -> ignore it.\n", fmt, *format));
@@ -2508,7 +2541,7 @@ int args_validate_format_string(const char *format)
                   if (*current_char)
                     {
                       *current_char = '\0';
-                      str_to_uint(option_start, &is_valid);
+                      is_valid = str_to_uint(option_start, NULL);
                       if (!is_valid)
                         {
                           debug_print_error(("The option \"%s\" in the format string \"%s\" in no valid number.\n",
@@ -2755,19 +2788,21 @@ error_t plot_init_static_variables(void)
   if (!plot_static_variables_initialized)
     {
       logger((stderr, "Initializing static plot variables\n"));
-      global_plot_args = gr_newmeta();
-      error_cleanup_and_set_error_if(global_plot_args == NULL, ERROR_MALLOC);
-      error = plot_init_args_structure(global_plot_args, plot_hierarchy_names, 1);
+      global_root_args = gr_newmeta();
+      error_cleanup_and_set_error_if(global_root_args == NULL, ERROR_MALLOC);
+      error = plot_init_args_structure(global_root_args, plot_hierarchy_names, 1);
       error_cleanup_if_error;
+      error_cleanup_and_set_error_if(!args_values(global_root_args, "plots", "a", &active_plot_args), ERROR_INTERNAL);
+      active_plot_index = 1;
       fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
       error_cleanup_and_set_error_if(fmt_map == NULL, ERROR_MALLOC);
       plot_func_map = plot_func_map_new_with_data(array_size(kind_to_func), kind_to_func);
       error_cleanup_and_set_error_if(plot_func_map == NULL, ERROR_MALLOC);
       {
-        const char **hierarchy_keys[] = {valid_plot_keys, valid_subplot_keys, valid_series_keys, NULL};
+        const char **hierarchy_keys[] = {valid_root_keys, valid_plot_keys, valid_subplot_keys, valid_series_keys, NULL};
         const char **hierarchy_names_ptr, ***hierarchy_keys_ptr, **current_key_ptr;
-        plot_valid_keys_map = string_map_new(array_size(valid_plot_keys) + array_size(valid_subplot_keys) +
-                                             array_size(valid_series_keys));
+        plot_valid_keys_map = string_map_new(array_size(valid_root_keys) + array_size(valid_plot_keys) +
+                                             array_size(valid_subplot_keys) + array_size(valid_series_keys));
         error_cleanup_and_set_error_if(plot_valid_keys_map == NULL, ERROR_MALLOC);
         hierarchy_keys_ptr = hierarchy_keys;
         hierarchy_names_ptr = plot_hierarchy_names;
@@ -2788,10 +2823,10 @@ error_t plot_init_static_variables(void)
   return NO_ERROR;
 
 error_cleanup:
-  if (global_plot_args != NULL)
+  if (global_root_args != NULL)
     {
-      gr_deletemeta(global_plot_args);
-      global_plot_args = NULL;
+      gr_deletemeta(global_root_args);
+      global_root_args = NULL;
     }
   if (fmt_map != NULL)
     {
@@ -2814,12 +2849,12 @@ error_cleanup:
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **hierarchy_name_ptr)
+error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **hierarchy_name_ptr,
+                        uint_map_t *hierarchy_to_id)
 {
-  static uint_map_t *hierarchy_to_id = NULL;
   static args_set_map_t *key_to_cleared_args = NULL;
   static int recursion_level = -1;
-  unsigned int subplot_id, series_id;
+  int plot_id, subplot_id, series_id;
   args_iterator_t *merge_it = NULL;
   arg_t *arg, *merge_arg;
   args_value_iterator_t *value_it = NULL, *merge_value_it = NULL;
@@ -2838,12 +2873,25 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
       hierarchy_to_id = uint_map_new(array_size(plot_hierarchy_names));
       cleanup_and_set_error_if(hierarchy_to_id == NULL, ERROR_MALLOC);
     }
+  else
+    {
+      hierarchy_to_id = uint_map_copy(hierarchy_to_id);
+      cleanup_and_set_error_if(hierarchy_to_id == NULL, ERROR_MALLOC);
+    }
   if (key_to_cleared_args == NULL)
     {
       key_to_cleared_args = args_set_map_new(array_size(plot_merge_clear_keys));
       cleanup_and_set_error_if(hierarchy_to_id == NULL, ERROR_MALLOC);
     }
-  get_id_from_args(merge_args, &subplot_id, &series_id);
+  get_id_from_args(merge_args, &plot_id, &subplot_id, &series_id);
+  if (plot_id > 0)
+    {
+      uint_map_insert(hierarchy_to_id, "plots", plot_id);
+    }
+  else
+    {
+      uint_map_insert_default(hierarchy_to_id, "plots", active_plot_index);
+    }
   if (subplot_id > 0)
     {
       uint_map_insert(hierarchy_to_id, "subplots", subplot_id);
@@ -2859,6 +2907,15 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
   else
     {
       uint_map_insert_default(hierarchy_to_id, "series", 1);
+    }
+  /* special case: if the plot_id is `1` (and it is the first call of `plot_merge_args`), clear the plot argument
+   * container before usage */
+  if (plot_id == 1 && strcmp(*hierarchy_name_ptr, "root") == 0)
+    {
+      cleanup_and_set_error_if(!args_values(args, "plots", "a", &current_args), ERROR_INTERNAL);
+      gr_meta_args_clear(current_args);
+      error = plot_init_args_structure(current_args, hierarchy_name_ptr, 1);
+      cleanup_if_error;
     }
   merge_it = args_iter(merge_args);
   cleanup_and_set_error_if(merge_it == NULL, ERROR_MALLOC);
@@ -2946,7 +3003,8 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
           for (i = 0; i < merge_value_it->array_length; ++i)
             {
               logger((stderr, "Perform a recursive merge on key \"%s\", array index \"%d\"\n", merge_arg->key, i));
-              error = plot_merge_args(args_array[i], merge_args_array[i], current_hierarchy_name_ptr + 1);
+              error =
+                  plot_merge_args(args_array[i], merge_args_array[i], current_hierarchy_name_ptr + 1, hierarchy_to_id);
               cleanup_if_error;
             }
         }
@@ -2961,11 +3019,6 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
 cleanup:
   if (recursion_level == 0)
     {
-      if (hierarchy_to_id != NULL)
-        {
-          uint_map_delete(hierarchy_to_id);
-          hierarchy_to_id = NULL;
-        }
       if (key_to_cleared_args != NULL)
         {
           args_set_t *cleared_args = NULL;
@@ -2981,6 +3034,11 @@ cleanup:
           args_set_map_delete(key_to_cleared_args);
           key_to_cleared_args = NULL;
         }
+    }
+  if (hierarchy_to_id != NULL)
+    {
+      uint_map_delete(hierarchy_to_id);
+      hierarchy_to_id = NULL;
     }
   if (merge_it != NULL)
     {
@@ -4928,29 +4986,73 @@ const char *next_fmt_key(const char *kind)
   return fmt_key;
 }
 
-int get_id_from_args(const gr_meta_args_t *args, unsigned int *subplot_id, unsigned int *series_id)
+int get_id_from_args(const gr_meta_args_t *args, int *plot_id, int *subplot_id, int *series_id)
 {
   const char *combined_id;
-  unsigned int _subplot_id = 0, _series_id = 0;
+  int _plot_id = -1, _subplot_id = 0, _series_id = 0;
 
   if (args_values(args, "id", "s", &combined_id))
     {
-      int count_values_read;
-      count_values_read = sscanf(combined_id, "%u.%u", &_subplot_id, &_series_id);
-      if (count_values_read == 0)
+      const char *valid_id_delims = ":.";
+      int *id_ptrs[4], **current_id_ptr;
+      char *copied_id_str, *current_id_str;
+      size_t segment_length;
+      int is_last_segment;
+
+      id_ptrs[0] = &_plot_id;
+      id_ptrs[1] = &_subplot_id;
+      id_ptrs[2] = &_series_id;
+      id_ptrs[3] = NULL;
+      if ((copied_id_str = strdup(combined_id)) == NULL)
         {
-          logger((stderr, "Got an invalid id \"%s\"\n", combined_id));
+          debug_print_malloc_error();
+          return 0;
         }
+
+      current_id_ptr = id_ptrs;
+      current_id_str = copied_id_str;
+      is_last_segment = 0;
+      while (*current_id_ptr != NULL && !is_last_segment)
+        {
+          segment_length = strcspn(current_id_str, valid_id_delims);
+          if (current_id_str[segment_length] == '\0')
+            {
+              is_last_segment = 1;
+            }
+          else
+            {
+              current_id_str[segment_length] = '\0';
+            }
+          if (*current_id_str != '\0')
+            {
+              if (!str_to_uint(current_id_str, (unsigned int *)*current_id_ptr))
+                {
+                  logger((stderr, "Got an invalid id \"%s\"\n", current_id_str));
+                }
+              else
+                {
+                  logger((stderr, "Read id: %d\n", **current_id_ptr));
+                }
+            }
+          ++current_id_ptr;
+          ++current_id_str;
+        }
+
+      free(copied_id_str);
     }
   else
     {
+      args_values(args, "plot_id", "i", &_plot_id);
       args_values(args, "subplot_id", "i", &_subplot_id);
       args_values(args, "series_id", "i", &_series_id);
     }
+  /* plot id `0` references the first plot object (implicit object) -> handle it as the first plot and shift all ids by
+   * one */
+  *plot_id = _plot_id + 1;
   *subplot_id = _subplot_id;
   *series_id = _series_id;
 
-  return _subplot_id > 0 || _series_id > 0;
+  return _plot_id > 0 || _subplot_id > 0 || _series_id > 0;
 }
 
 
@@ -4975,14 +5077,14 @@ int is_int_number(const char *str)
   return strchr(FROMJSON_VALID_DELIMITERS, str[strspn(str, "0123456789-+")]) != NULL;
 }
 
-unsigned int str_to_uint(const char *str, int *was_successful)
+int str_to_uint(const char *str, unsigned int *value_ptr)
 {
   char *conversion_end = NULL;
   unsigned long conversion_result;
   int success = 0;
 
   errno = 0;
-  if (str != NULL)
+  if (str != NULL && *str != '\0')
     {
       conversion_result = strtoul(str, &conversion_end, 10);
     }
@@ -5003,12 +5105,12 @@ unsigned int str_to_uint(const char *str, int *was_successful)
     {
       success = 1;
     }
-  if (was_successful != NULL)
+  if (value_ptr != NULL)
     {
-      *was_successful = success;
+      *value_ptr = (unsigned int)conversion_result;
     }
 
-  return (unsigned int)conversion_result;
+  return success;
 }
 
 int int_equals_any(int number, unsigned int n, ...)
@@ -7002,9 +7104,7 @@ int fromjson_str_to_int(const char **str, int *was_successful)
     INIT_MULTI_VALUE(values, type);                                                                       \
     if (state->additional_type_info != NULL)                                                              \
       {                                                                                                   \
-        int was_successful;                                                                               \
-        length = str_to_uint(state->additional_type_info, &was_successful);                               \
-        if (!was_successful)                                                                              \
+        if (!str_to_uint(state->additional_type_info, &length))                                           \
           {                                                                                               \
             debug_print_error(                                                                            \
                 ("The given array length \"%s\" is no valid number; the array contents will be ignored.", \
@@ -7106,9 +7206,7 @@ error_t tojson_stringify_char_array(tojson_state_t *state)
 
   if (state->additional_type_info != NULL)
     {
-      int was_successful;
-      length = str_to_uint(state->additional_type_info, &was_successful);
-      if (!was_successful)
+      if (!str_to_uint(state->additional_type_info, &length))
         {
           debug_print_error(("The given array length \"%s\" is no valid number; the array contents will be ignored.",
                              state->additional_type_info));
@@ -7380,7 +7478,7 @@ void tojson_read_datatype(tojson_state_t *state)
 
 error_t tojson_skip_bytes(tojson_state_t *state)
 {
-  int count;
+  unsigned int count;
 
   if (state->shared->data_ptr == NULL)
     {
@@ -7390,9 +7488,7 @@ error_t tojson_skip_bytes(tojson_state_t *state)
 
   if (state->additional_type_info != NULL)
     {
-      int was_successful;
-      count = str_to_uint(state->additional_type_info, &was_successful);
-      if (!was_successful)
+      if (!str_to_uint(state->additional_type_info, &count))
         {
           debug_print_error(("Byte skipping with an invalid number -> ignoring.\n"));
           return NO_ERROR;
@@ -8919,6 +9015,20 @@ int args_set_entry_equals(const args_set_entry_t entry1, const args_set_entry_t 
   prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries)                   \
   {                                                                                                         \
     return (prefix##_map_t *)string_##prefix##_pair_set_new_with_data(count, entries);                      \
+  }                                                                                                         \
+                                                                                                            \
+  prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map)                                              \
+  {                                                                                                         \
+    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                               \
+                                                                                                            \
+    string_##prefix##_pair_set = string_##prefix##_pair_set_copy((string_##prefix##_pair_set_t *)map);      \
+    if (string_##prefix##_pair_set == NULL)                                                                 \
+      {                                                                                                     \
+        debug_print_malloc_error();                                                                         \
+        return NULL;                                                                                        \
+      }                                                                                                     \
+                                                                                                            \
+    return (prefix##_map_t *)string_##prefix##_pair_set;                                                    \
   }                                                                                                         \
                                                                                                             \
   void prefix##_map_delete(prefix##_map_t *prefix##_map)                                                    \
