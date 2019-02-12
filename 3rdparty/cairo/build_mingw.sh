@@ -15,7 +15,7 @@ if [ ! -d "${src}" ]; then
   else
     cmd="wget --no-check-certificate"
   fi
-  ${cmd} https://cairographics.org/releases/${src}.tar.xz
+  ${cmd} https://gr-framework.org/downloads/3rdparty/${src}.tar.xz
   tar -xf ${src}.tar.xz
 fi
 
