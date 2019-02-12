@@ -100,6 +100,10 @@ extern "C"
           use the z-value directly as   \
           color index */
 
+#define GR_VOLUME_EMISSION 0
+#define GR_VOLUME_ABSORPTION 1
+#define GR_VOLUME_MIP 2
+
   typedef struct
   {
     float x, y, z;
@@ -234,6 +238,8 @@ extern "C"
                                  double offset_y, double offset_z);
 
   GR3API void gr3_drawtrianglesurface(int n, const float *triangles);
+
+  GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr);
 
 #ifdef _WIN32
 #ifdef __cplusplus

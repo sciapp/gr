@@ -38,11 +38,16 @@ GLFUNC PFNGLCREATESHADERPROC gr3_glCreateShader;
 GLFUNC PFNGLCOMPILESHADERPROC gr3_glCompileShader;
 GLFUNC PFNGLCREATEPROGRAMPROC gr3_glCreateProgram;
 GLFUNC PFNGLDELETEPROGRAMPROC gr3_glDeleteProgram;
+GLFUNC PFNGLUNIFORM1IPROC gr3_glUniform1i;
 GLFUNC PFNGLUNIFORM3FPROC gr3_glUniform3f;
 GLFUNC PFNGLUNIFORMMATRIX4FVPROC gr3_glUniformMatrix4fv;
 GLFUNC PFNGLUNIFORM4FPROC gr3_glUniform4f;
 GLFUNC PFNGLGETUNIFORMLOCATIONPROC gr3_glGetUniformLocation;
 GLFUNC PFNGLSHADERSOURCEPROC gr3_glShaderSource;
+GLFUNC PFNGLGETSHADERIVPROC gr3_glGetShaderiv;
+GLFUNC PFNGLGETPROGRAMIVPROC gr3_glGetProgramiv;
+GLFUNC PFNGLACTIVETEXTUREPROC gr3_glActiveTexture;
+GLFUNC PFNGLTEXIMAGE3DPROC gr3_glTexImage3D;
 #endif
 GLFUNC PFNGLDRAWBUFFERSPROC gr3_glDrawBuffers;
 #ifdef GL_ARB_framebuffer_object
@@ -55,6 +60,7 @@ GLFUNC PFNGLGENFRAMEBUFFERSPROC gr3_glGenFramebuffers;
 GLFUNC PFNGLGENRENDERBUFFERSPROC gr3_glGenRenderbuffers;
 GLFUNC PFNGLDELETEFRAMEBUFFERSPROC gr3_glDeleteFramebuffers;
 GLFUNC PFNGLDELETERENDERBUFFERSPROC gr3_glDeleteRenderbuffers;
+GLFUNC PFNGLFRAMEBUFFERTEXTURE2DPROC gr3_glFramebufferTexture2D;
 #endif
 #ifdef GL_EXT_framebuffer_object
 GLFUNC PFNGLBINDRENDERBUFFEREXTPROC gr3_glBindRenderbufferEXT;
@@ -66,6 +72,7 @@ GLFUNC PFNGLGENFRAMEBUFFERSEXTPROC gr3_glGenFramebuffersEXT;
 GLFUNC PFNGLGENRENDERBUFFERSEXTPROC gr3_glGenRenderbuffersEXT;
 GLFUNC PFNGLDELETEFRAMEBUFFERSEXTPROC gr3_glDeleteFramebuffersEXT;
 GLFUNC PFNGLDELETERENDERBUFFERSEXTPROC gr3_glDeleteRenderbuffersEXT;
+GLFUNC PFNGLFRAMEBUFFERTEXTURE2DEXTPROC gr3_glFramebufferTexture2DEXT;
 #endif
 GLFUNC void (*gr3_glBegin)(GLenum);
 GLFUNC void (*gr3_glBlendColor)(GLclampf, GLclampf, GLclampf, GLclampf);
@@ -84,6 +91,8 @@ GLFUNC void (*gr3_glEnd)(void);
 GLFUNC void (*gr3_glEndList)(void);
 GLFUNC GLuint (*gr3_glGenLists)(GLsizei);
 GLFUNC GLenum (*gr3_glGetError)(void);
+GLFUNC void (*gr3_glGetBooleanv)(GLenum, GLboolean *);
+GLFUNC void (*gr3_glGetFloatv)(GLenum, GLfloat *);
 GLFUNC void (*gr3_glGetIntegerv)(GLenum, GLint *);
 GLFUNC const GLubyte *(*gr3_glGetString)(GLenum);
 GLFUNC void (*gr3_glLightfv)(GLenum, GLenum, const GLfloat *);
@@ -101,6 +110,12 @@ GLFUNC void (*gr3_glReadBuffer)(GLenum);
 GLFUNC void (*gr3_glReadPixels)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, GLvoid *);
 GLFUNC void (*gr3_glVertex3fv)(const GLfloat *);
 GLFUNC void (*gr3_glViewport)(GLint, GLint, GLsizei, GLsizei);
+GLFUNC void (*gr3_glCullFace)(GLenum);
+GLFUNC void (*gr3_glGenTextures)(GLsizei, GLuint *);
+GLFUNC void (*gr3_glDeleteTextures)(GLsizei, const GLuint *);
+GLFUNC void (*gr3_glBindTexture)(GLenum, GLuint);
+GLFUNC void (*gr3_glTexParameteri)(GLenum, GLenum, GLint);
+GLFUNC void (*gr3_glTexImage2D)(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, const GLvoid *);
 
 #define glBufferData gr3_glBufferData
 #define glBindBuffer gr3_glBindBuffer
@@ -117,11 +132,16 @@ GLFUNC void (*gr3_glViewport)(GLint, GLint, GLsizei, GLsizei);
 #define glCompileShader gr3_glCompileShader
 #define glCreateProgram gr3_glCreateProgram
 #define glDeleteProgram gr3_glDeleteProgram
+#define glUniform1i gr3_glUniform1i
 #define glUniform3f gr3_glUniform3f
 #define glUniformMatrix4fv gr3_glUniformMatrix4fv
 #define glUniform4f gr3_glUniform4f
 #define glGetUniformLocation gr3_glGetUniformLocation
 #define glShaderSource gr3_glShaderSource
+#define glGetShaderiv gr3_glGetShaderiv
+#define glGetProgramiv gr3_glGetProgramiv
+#define glActiveTexture gr3_glActiveTexture
+#define glTexImage3D gr3_glTexImage3D
 #define glDrawBuffers gr3_glDrawBuffers
 #define glBindRenderbuffer gr3_glBindRenderbuffer
 #define glCheckFramebufferStatus gr3_glCheckFramebufferStatus
@@ -132,6 +152,7 @@ GLFUNC void (*gr3_glViewport)(GLint, GLint, GLsizei, GLsizei);
 #define glGenRenderbuffers gr3_glGenRenderbuffers
 #define glDeleteFramebuffers gr3_glDeleteFramebuffers
 #define glDeleteRenderbuffers gr3_glDeleteRenderbuffers
+#define glFramebufferTexture2D gr3_glFramebufferTexture2D
 #define glBindRenderbufferEXT gr3_glBindRenderbufferEXT
 #define glCheckFramebufferStatusEXT gr3_glCheckFramebufferStatusEXT
 #define glFramebufferRenderbufferEXT gr3_glFramebufferRenderbufferEXT
@@ -141,6 +162,7 @@ GLFUNC void (*gr3_glViewport)(GLint, GLint, GLsizei, GLsizei);
 #define glGenRenderbuffersEXT gr3_glGenRenderbuffersEXT
 #define glDeleteFramebuffersEXT gr3_glDeleteFramebuffersEXT
 #define glDeleteRenderbuffersEXT gr3_glDeleteRenderbuffersEXT
+#define glFramebufferTexture2DEXT gr3_glFramebufferTexture2DEXT
 
 #define glBegin gr3_glBegin
 #define glBlendColor gr3_glBlendColor
@@ -159,6 +181,8 @@ GLFUNC void (*gr3_glViewport)(GLint, GLint, GLsizei, GLsizei);
 #define glEndList gr3_glEndList
 #define glGenLists gr3_glGenLists
 #define glGetError gr3_glGetError
+#define glGetBooleanv gr3_glGetBooleanv
+#define glGetFloatv gr3_glGetFloatv
 #define glGetIntegerv gr3_glGetIntegerv
 #define glGetString gr3_glGetString
 #define glLightfv gr3_glLightfv
@@ -176,6 +200,12 @@ GLFUNC void (*gr3_glViewport)(GLint, GLint, GLsizei, GLsizei);
 #define glReadPixels gr3_glReadPixels
 #define glVertex3fv gr3_glVertex3fv
 #define glViewport gr3_glViewport
+#define glCullFace gr3_glCullFace
+#define glGenTextures gr3_glGenTextures
+#define glDeleteTextures gr3_glDeleteTextures
+#define glBindTexture gr3_glBindTexture
+#define glTexParameteri gr3_glTexParameteri
+#define glTexImage2D gr3_glTexImage2D
 
 int gr3_initGL_GLX_(void);
 
