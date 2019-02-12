@@ -118,11 +118,16 @@ int gr3_initGL_GLX_(void)
     gr3_glCompileShader = (PFNGLCOMPILESHADERPROC)platform->getProcAddress("glCompileShader");
     gr3_glCreateProgram = (PFNGLCREATEPROGRAMPROC)platform->getProcAddress("glCreateProgram");
     gr3_glDeleteProgram = (PFNGLDELETEPROGRAMPROC)platform->getProcAddress("glDeleteProgram");
+    gr3_glUniform1i = (PFNGLUNIFORM1IPROC)platform->getProcAddress("glUniform1i");
     gr3_glUniform3f = (PFNGLUNIFORM3FPROC)platform->getProcAddress("glUniform3f");
     gr3_glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)platform->getProcAddress("glUniformMatrix4fv");
     gr3_glUniform4f = (PFNGLUNIFORM4FPROC)platform->getProcAddress("glUniform4f");
     gr3_glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)platform->getProcAddress("glGetUniformLocation");
     gr3_glShaderSource = (PFNGLSHADERSOURCEPROC)platform->getProcAddress("glShaderSource");
+    gr3_glGetShaderiv = (PFNGLGETSHADERIVPROC)platform->getProcAddress("glGetShaderiv");
+    gr3_glGetProgramiv = (PFNGLGETPROGRAMIVPROC)platform->getProcAddress("glGetProgramiv");
+    gr3_glActiveTexture = (PFNGLACTIVETEXTUREPROC)platform->getProcAddress("glActiveTexture");
+    gr3_glTexImage3D = (PFNGLTEXIMAGE3DPROC)platform->getProcAddress("glTexImage3D");
 #endif
     gr3_glDrawBuffers = (PFNGLDRAWBUFFERSPROC)platform->getProcAddress("glDrawBuffers");
     /*glBlendColor = (PFNGLBLENDCOLORPROC)platform->getProcAddress("glBlendColor");*/
@@ -138,6 +143,7 @@ int gr3_initGL_GLX_(void)
     gr3_glGenRenderbuffers = (PFNGLGENRENDERBUFFERSPROC)platform->getProcAddress("glGenRenderbuffers");
     gr3_glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)platform->getProcAddress("glDeleteFramebuffers");
     gr3_glDeleteRenderbuffers = (PFNGLDELETERENDERBUFFERSPROC)platform->getProcAddress("glDeleteRenderbuffers");
+    gr3_glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)platform->getProcAddress("glFramebufferTexture2D");
 #endif
 #ifdef GL_EXT_framebuffer_object
     gr3_glBindRenderbufferEXT = (PFNGLBINDRENDERBUFFEREXTPROC)platform->getProcAddress("glBindRenderbufferEXT");
@@ -153,6 +159,8 @@ int gr3_initGL_GLX_(void)
     gr3_glDeleteFramebuffersEXT = (PFNGLDELETEFRAMEBUFFERSEXTPROC)platform->getProcAddress("glDeleteFramebuffersEXT");
     gr3_glDeleteRenderbuffersEXT =
         (PFNGLDELETERENDERBUFFERSEXTPROC)platform->getProcAddress("glDeleteRenderbuffersEXT");
+    gr3_glFramebufferTexture2DEXT =
+        (PFNGLFRAMEBUFFERTEXTURE2DEXTPROC)platform->getProcAddress("glFramebufferTexture2DEXT");
 #endif
     gr3_glBegin = (void (*)(GLenum))platform->getProcAddress("glBegin");
     gr3_glBlendColor = (void (*)(GLclampf, GLclampf, GLclampf, GLclampf))platform->getProcAddress("glBlendColor");
@@ -171,6 +179,8 @@ int gr3_initGL_GLX_(void)
     gr3_glEndList = (void (*)(void))platform->getProcAddress("glEndList");
     gr3_glGenLists = (GLuint(*)(GLsizei))platform->getProcAddress("glGenLists");
     gr3_glGetError = (GLenum(*)(void))platform->getProcAddress("glGetError");
+    gr3_glGetBooleanv = (void (*)(GLenum, GLboolean *))platform->getProcAddress("glGetBooleanv");
+    gr3_glGetFloatv = (void (*)(GLenum, GLfloat *))platform->getProcAddress("glGetFloatv");
     gr3_glGetIntegerv = (void (*)(GLenum, GLint *))platform->getProcAddress("glGetIntegerv");
     gr3_glGetString = (const GLubyte *(*)(GLenum))platform->getProcAddress("glGetString");
     gr3_glLightfv = (void (*)(GLenum, GLenum, const GLfloat *))platform->getProcAddress("glLightfv");
@@ -189,6 +199,13 @@ int gr3_initGL_GLX_(void)
         (void (*)(GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, GLvoid *))platform->getProcAddress("glReadPixels");
     gr3_glVertex3fv = (void (*)(const GLfloat *))platform->getProcAddress("glVertex3fv");
     gr3_glViewport = (void (*)(GLint, GLint, GLsizei, GLsizei))platform->getProcAddress("glViewport");
+    gr3_glCullFace = (void (*)(GLenum))platform->getProcAddress("glCullFace");
+    gr3_glGenTextures = (void (*)(GLsizei, GLuint *))platform->getProcAddress("glGenTextures");
+    gr3_glDeleteTextures = (void (*)(GLsizei, const GLuint *))platform->getProcAddress("glDeleteTextures");
+    gr3_glBindTexture = (void (*)(GLenum, GLuint))platform->getProcAddress("glBindTexture");
+    gr3_glTexParameteri = (void (*)(GLenum, GLenum, GLint))platform->getProcAddress("glTexParameteri");
+    gr3_glTexImage2D = (void (*)(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum,
+                                 const GLvoid *))platform->getProcAddress("glTexImage2D");
   }
   return GR3_ERROR_NONE;
 }

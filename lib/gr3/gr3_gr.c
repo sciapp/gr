@@ -765,3 +765,423 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
                 GR3_DRAWABLE_GKS);
   if (gr3_geterror(0, NULL, NULL)) return;
 }
+
+/*!
+ * Draw volume data using the given algorithm and apply the current GR colormap.
+ *
+ * \param [in]     nx         number of points in x-direction
+ * \param [in]     ny         number of points in y-direction
+ * \param [in]     nz         number of points in z-direction
+ * \param [in]     data       an array of shape nx * ny * nz containing the intensities for each point
+ * \param [in]     algorithm  the algorithm to reduce the volume data
+ * \param [in,out] dmin_ptr   The variable this parameter points at will be used as minimum data value when applying the
+ *                            colormap. If it is negative, the variable will be set to the actual occuring minimum and
+ *                            that value will be used instead. If dmin_ptr is NULL, it will be ignored.
+ * \param [in,out] dmax_ptr   The variable this parameter points at will be used as maximum data value when applying the
+ *                            colormap. If it is negative, the variable will be set to the actual occuring maximum and
+ *                            that value will be used instead. If dmax_ptr is NULL, it will be ignored.
+ *
+ * Available algorithms are:
+ *
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_EMISSION   |  0|emission model               |
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_ABSORPTION |  1|absorption model             |
+ * +---------------------+---+-----------------------------+
+ * |GR_VOLUME_MIP        |  2|maximum intensity projection |
+ * +---------------------+---+-----------------------------+
+ */
+GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr)
+{
+#if defined(GR3_CAN_USE_VBO) && (defined(GL_ARB_framebuffer_object) || defined(GL_EXT_framebuffer_object))
+  double xmin, ymin, xmax, ymax, zmin, zmax;
+  int rotation, tilt, scale;
+  double min, max;
+  int i;
+  int *color_data, *colormap;
+  GLfloat fovy, zNear, zFar, aspect, tfov2, right, top;
+  GLfloat *pixel_data, *fdata;
+  GLsizei vertex_shader_source_lines, fragment_shader_source_lines;
+  GLfloat grmatrix[16], grviewmatrix[16], projection_matrix[16];
+  GLint width, height;
+  GLfloat camera_direction[3];
+  GLint nmax, success;
+  GLuint vertex_shader, fragment_shader, program;
+  GLuint vbo, texture, framebuffer, framebuffer_texture;
+  GLint previous_viewport[4];
+  GLint previous_framebuffer_binding;
+  GLboolean previous_cull_face_state;
+  GLint previous_cull_face_mode;
+  GLfloat previous_clear_color[4];
+
+  const float vertices[] = {
+      -1, -1, -1, -1, -1, +1, -1, +1, -1, -1, +1, -1, -1, -1, +1, -1, +1, +1, /* yz-plane, negative x */
+      +1, -1, -1, +1, +1, -1, +1, -1, +1, +1, -1, +1, +1, +1, -1, +1, +1, +1, /* yz-plane, positive x */
+      -1, -1, -1, +1, -1, -1, -1, -1, +1, -1, -1, +1, +1, -1, -1, +1, -1, +1, /* xz-plane, negative y */
+      -1, +1, -1, -1, +1, +1, +1, +1, -1, +1, +1, -1, -1, +1, +1, +1, +1, +1, /* xz-plane, positive y*/
+      -1, -1, -1, -1, +1, -1, +1, -1, -1, +1, -1, -1, -1, +1, -1, +1, +1, -1, /* xy-plane, negatize z*/
+      -1, -1, +1, +1, -1, +1, -1, +1, +1, -1, +1, +1, +1, -1, +1, +1, +1, +1  /* xz-plane, positive z*/
+  };
+
+  const char *vertex_shader_source[] = {
+      "#version 120\n",
+      "\n",
+      "attribute vec3 position;\n",
+      "attribute vec3 normal;\n",
+      "varying vec3 vf_tex_coord;\n",
+      "varying vec3 vf_position;\n",
+      "varying float perspective_projection;\n",
+      "varying vec3 vf_camera_direction;\n",
+      "uniform vec3 camera_direction;\n",
+      "uniform mat4 model;\n",
+      "uniform mat4 view;\n",
+      "uniform mat4 projection;\n",
+      "\n",
+      "void main() {\n",
+      "    vf_camera_direction = (transpose(view)*vec4(camera_direction, 0)).xyz;\n",
+      "    vf_position = position;\n",
+      "    vf_tex_coord = position*0.5+vec3(0.5);\n",
+      "    perspective_projection = float(abs(projection[2][3]) > 0.5);\n",
+      "    gl_Position = projection*view*vec4(position, 1.0);\n",
+      "}",
+  };
+
+  const char *fragment_shader_source[] = {
+      "#version 120\n"
+      "\n",
+      "varying vec3 vf_tex_coord;\n",
+      "varying vec3 vf_position;\n",
+      "varying float perspective_projection;\n",
+      "varying vec3 vf_camera_direction;\n",
+      "\n",
+      "uniform int n;\n",
+      "uniform sampler3D tex;\n",
+      "\n",
+      "float transfer_function(float step_length, float tex_val, float current_value);\n",
+      "float initial_value();\n",
+      "\n",
+      "void main() {\n",
+      "    vec3 camera_dir = normalize(vf_camera_direction + perspective_projection * vf_position);\n",
+      "\n",
+      "    float result = initial_value();\n",
+      "    int n_samples = int(max(1000, sqrt(3)*n));\n",
+      "    float step_length = sqrt(3.0) / n_samples;\n",
+      "    vec3 tex_coord = vf_tex_coord;\n",
+      "    for (int i = 0; i <= n_samples; i++) {\n",
+      "        float tex_val = max(0, texture3D(tex, tex_coord).r);\n",
+      "        tex_coord += camera_dir * step_length;\n",
+      "        result = transfer_function(step_length, tex_val, result);",
+      "        if (any(greaterThan(tex_coord, vec3(1.0)))) break;\n",
+      "        if (any(lessThan(tex_coord, vec3(0.0)))) break;\n",
+      "    }\n",
+      "    gl_FragColor.r = 1+result;\n",
+      "}\n",
+      NULL};
+
+  const char *transfer_functions[] = {
+      /* emission */
+      "float initial_value() {\n"
+      "   return 0.0;\n"
+      "}\n"
+      "float transfer_function(float step_length, float tex_value, float current_value) {\n"
+      "   return current_value + step_length * tex_value;\n"
+      "}\n",
+      /* absorption */
+      "float initial_value() {\n"
+      "   return 1.0;\n"
+      "}\n"
+      "float transfer_function(float step_length, float tex_value, float current_value) {\n"
+      "   return current_value * exp(-step_length * tex_value);\n"
+      "}\n",
+      /* maximum intensity projection */
+      "float initial_value() {\n"
+      "   return 0.0;\n"
+      "}\n"
+      "float transfer_function(float step_length, float tex_value, float current_value) {\n"
+      "   return max(current_value, tex_value);\n"
+      "}\n"};
+
+  if (nx <= 0 || ny <= 0 || nz <= 0)
+    {
+      fprintf(stderr, "Invalid dimensions in gr_volume.\n");
+      return;
+    }
+
+  if (algorithm < 0 || algorithm > 2)
+    {
+      fprintf(stderr, "Invalid algorithm for gr_volume\n");
+      return;
+    }
+
+  /* TODO: inquire the required resolution */
+  width = 1000;
+  height = 1000;
+
+  pixel_data = malloc(width * height * sizeof(float));
+  assert(pixel_data);
+  fdata = malloc(nx * ny * nz * sizeof(float));
+  assert(fdata);
+  colormap = malloc(256 * sizeof(int));
+  assert(colormap);
+  color_data = malloc(width * height * sizeof(int));
+  assert(color_data);
+
+  for (i = 0; i < nx * ny * nz; i++)
+    {
+      fdata[i] = (float)data[i];
+    }
+
+  gr3_getrenderpathstring(); /* Initializes GR3 if it is not initialized yet */
+
+  /* Add transfer function implementation to fragment shader source */
+  vertex_shader_source_lines = sizeof(vertex_shader_source) / sizeof(vertex_shader_source[0]);
+  fragment_shader_source_lines = sizeof(fragment_shader_source) / sizeof(fragment_shader_source[0]);
+  fragment_shader_source[fragment_shader_source_lines - 1] = transfer_functions[algorithm];
+
+  /* Create and compile shader, link shader program*/
+  vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+  fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(vertex_shader, vertex_shader_source_lines, vertex_shader_source, NULL);
+  glCompileShader(vertex_shader);
+  glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
+  if (!success)
+    {
+      fprintf(stderr, "Failed to compile vertex shader in gr_volume.\n");
+      return;
+    }
+  glShaderSource(fragment_shader, fragment_shader_source_lines, fragment_shader_source, NULL);
+  glCompileShader(fragment_shader);
+  glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
+  if (!success)
+    {
+      fprintf(stderr, "Failed to compile fragment shader in gr_volume.\n");
+      return;
+    }
+  program = glCreateProgram();
+  glAttachShader(program, vertex_shader);
+  glAttachShader(program, fragment_shader);
+  glLinkProgram(program);
+  glGetProgramiv(program, GL_LINK_STATUS, &success);
+  if (!success)
+    {
+      fprintf(stderr, "Failed to link shader program in gr_volume.\n");
+      return;
+    }
+  glDeleteShader(vertex_shader);
+  glDeleteShader(fragment_shader);
+  glUseProgram(program);
+
+  /* Set projection parameter like in `gr3_drawmesh_grlike` and create (orthographic) projection matrix */
+  fovy = 90.0f;
+  zNear = 1.0f;
+  zFar = 200.0f;
+  aspect = width / height;
+  tfov2 = tan(fovy * M_PI / 360.0);
+  right = zNear * aspect * tfov2;
+  top = zNear * tfov2;
+
+  memset(projection_matrix, 0, 16 * sizeof(GLfloat));
+  projection_matrix[0 + 0 * 4] = 1.0 / right; /* left = -right */
+  projection_matrix[0 + 3 * 4] = 0.0;
+  projection_matrix[1 + 1 * 4] = 1.0 / top; /* bottom = -top */
+  projection_matrix[1 + 3 * 4] = 0.0;
+  projection_matrix[2 + 2 * 4] = -2.0 / (zFar - zNear);
+  projection_matrix[2 + 3 * 4] = -(zFar + zNear) / (zFar - zNear);
+  projection_matrix[3 + 3 * 4] = 1.0;
+
+  /* Create view matrix */
+  gr_inqspace(&zmin, &zmax, &rotation, &tilt);
+  gr3_grtransformation_(grmatrix, rotation, tilt);
+  gr3_identity_(grviewmatrix);
+  grviewmatrix[2 + 3 * 4] = -4;
+  gr3_matmul_(grviewmatrix, grmatrix);
+
+  /* Buffer Vertices */
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+  /* Buffer input data in a 3D float texture */
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_3D, texture);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+  glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, nx, ny, nz, 0, GL_RED, GL_FLOAT, fdata);
+  free(fdata);
+
+  /* Create framebuffer object and bind 2D float texture as COLOR_ATTACHMENT0 to it */
+  glGenTextures(1, &framebuffer_texture);
+  glBindTexture(GL_TEXTURE_2D, framebuffer_texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, width, height, 0, GL_RED, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previous_framebuffer_binding);
+#ifdef GL_ARB_framebuffer_object
+  glGenFramebuffers(1, &framebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_texture, 0);
+#else
+  glGenFramebuffersEXT(1, &framebuffer);
+  glBindFramebufferEXT(GL_FRAMEBUFFER, framebuffer);
+  glFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebuffer_texture, 0);
+#endif
+
+  glGetIntegerv(GL_VIEWPORT, previous_viewport);
+  glViewport(0, 0, width, height);
+
+  glGetBooleanv(GL_CULL_FACE, &previous_cull_face_state);
+  glGetIntegerv(GL_CULL_FACE_MODE, &previous_cull_face_mode);
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_BACK);
+  if (nx > ny && nx > nz)
+    {
+      nmax = nx;
+    }
+  else if (ny > nz)
+    {
+      nmax = ny;
+    }
+  else
+    {
+      nmax = nz;
+    }
+
+  glActiveTexture(GL_TEXTURE0);
+  glGetFloatv(GL_COLOR_CLEAR_VALUE, previous_clear_color);
+  glClearColor(0, 0, 0, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)NULL);
+  glEnableVertexAttribArray(0);
+
+  camera_direction[0] = context_struct_.center_x - context_struct_.camera_x;
+  camera_direction[1] = context_struct_.center_y - context_struct_.camera_y;
+  camera_direction[2] = context_struct_.center_z - context_struct_.camera_z;
+
+  glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, grviewmatrix);
+  glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix);
+  glUniform3f(glGetUniformLocation(program, "camera_direction"), camera_direction[0], camera_direction[1],
+              camera_direction[2]);
+  glUniform1i(glGetUniformLocation(program, "n"), nmax);
+
+  glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(vertices[0]));
+  glReadPixels(0, 0, width, height, GL_RED, GL_FLOAT, pixel_data);
+
+  if (dmin_ptr && *dmin_ptr >= 0)
+    {
+      min = *dmin_ptr;
+    }
+  else
+    {
+      min = 1.0;
+      for (i = 0; i < width * height; i++)
+        {
+          if (pixel_data[i] < min && pixel_data[i] >= 1)
+            {
+              min = pixel_data[i];
+            }
+        }
+      min -= 1;
+      if (dmin_ptr)
+        {
+          *dmin_ptr = min;
+        }
+    }
+
+  if (dmax_ptr && *dmax_ptr >= 0)
+    {
+      max = *dmax_ptr;
+    }
+  else
+    {
+      max = 1.0;
+      for (i = 0; i < width * height; i++)
+        {
+          if (pixel_data[i] > max)
+            {
+              max = pixel_data[i];
+            }
+        }
+      max -= 1;
+      if (dmax_ptr)
+        {
+          *dmax_ptr = max;
+        }
+    }
+
+  for (i = 0; i < 256; i++)
+    {
+      gr_inqcolor(i + 1000, colormap + i);
+    }
+
+  for (i = 0; i < width * height; i++)
+    {
+      if (pixel_data[i] < 1)
+        {
+          color_data[i] = 0;
+        }
+      else
+        {
+          int val = (int)(255 * ((pixel_data[i] - 1) - min) / (max - min));
+          if (val < 0)
+            {
+              val = 0;
+            }
+          else if (val > 255)
+            {
+              val = 255;
+            }
+          color_data[i] = (255 << 24) + colormap[val];
+        }
+    }
+  free(pixel_data);
+  free(colormap);
+
+  gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+  gr_inqscale(&scale);
+  if (scale & OPTION_FLIP_X)
+    {
+      double tmp = xmin;
+      xmin = xmax;
+      xmax = tmp;
+    }
+  if (scale & OPTION_FLIP_Y)
+    {
+      double tmp = ymin;
+      ymin = ymax;
+      ymax = tmp;
+    }
+
+  gr_drawimage(xmin, xmax, ymax, ymin, width, height, color_data, 0);
+
+  free(color_data);
+
+  /* Cleanup and restore previous GL state */
+  glViewport(previous_viewport[0], previous_viewport[1], previous_viewport[2], previous_viewport[3]);
+  if (!previous_cull_face_state)
+    {
+      glDisable(GL_CULL_FACE);
+    }
+  glCullFace(previous_cull_face_mode);
+  glClearColor(previous_clear_color[0], previous_clear_color[1], previous_clear_color[2], previous_clear_color[3]);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindTexture(GL_TEXTURE_3D, 0);
+  glBindTexture(GL_TEXTURE_2D, 0);
+#ifdef GL_ARB_framebuffer_object
+  glBindFramebuffer(GL_FRAMEBUFFER, previous_framebuffer_binding);
+  glDeleteFramebuffers(1, &framebuffer);
+#else
+  glBindFramebufferEXT(GL_FRAMEBUFFER, previous_framebuffer_binding);
+  glDeleteFramebuffersEXT(1, &framebuffer);
+#endif
+  glDeleteBuffers(1, &vbo);
+  glDeleteTextures(1, &framebuffer_texture);
+  glDeleteTextures(1, &texture);
+  glDeleteProgram(program);
+#else
+  fprintf(stderr, "gr_volume support not compiled in.\n");
+#endif
+}
