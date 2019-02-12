@@ -735,7 +735,9 @@ static error_t plot_init_static_variables(void);
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char **hierarchy_name_ptr);
-static error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_name_start_ptr,
+static error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr,
+                                       unsigned int next_hierarchy_level_max_id);
+static error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_name_ptr,
                                         unsigned int next_hierarchy_level_max_id);
 static void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args);
 static void plot_pre_plot(gr_meta_args_t *subplot_args);
@@ -2901,7 +2903,7 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
       /* If the current key is a hierarchy key, perform a merge. Otherwise (else branch) put the value in without a
        * merge.
        */
-      if (hierarchy_name_ptr[1] != NULL && str_equals_any_in_array(merge_arg->key, hierarchy_name_ptr + 1))
+      if (current_hierarchy_name_ptr[1] != NULL && strcmp(merge_arg->key, current_hierarchy_name_ptr[1]) == 0)
         {
           /* `args_at` cannot fail in this case because the `args` object was initialized with an empty structure
            * before. If `arg` is NULL, an internal error occurred. */
@@ -2918,7 +2920,7 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
           /* Increase the array size of the internal args array if necessary */
           if (merge_value_it->array_length > value_it->array_length)
             {
-              error = plot_init_args_structure(current_args, current_hierarchy_name_ptr, merge_value_it->array_length);
+              error = plot_init_arg_structure(arg, current_hierarchy_name_ptr, merge_value_it->array_length);
               cleanup_if_error;
               args_value_iterator_delete(value_it);
               value_it = arg_value_iter(arg);
@@ -2997,12 +2999,42 @@ cleanup:
   return error;
 }
 
+error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, unsigned int next_hierarchy_level_max_id)
+{
+  gr_meta_args_t **args_array = NULL;
+  unsigned int args_old_array_length;
+  unsigned int i;
+  error_t error = NO_ERROR;
+
+  logger((stderr, "Init plot args structure for hierarchy: \"%s\"\n", *hierarchy_name_ptr));
+
+  ++hierarchy_name_ptr;
+  if (*hierarchy_name_ptr == NULL)
+    {
+      return NO_ERROR;
+    }
+  arg_first_value(arg, "A", NULL, &args_old_array_length);
+  logger((stderr, "Increase array for key \"%s\" from %d to %d\n", *hierarchy_name_ptr, args_old_array_length,
+          next_hierarchy_level_max_id));
+  error = arg_increase_array(arg, next_hierarchy_level_max_id - args_old_array_length);
+  return_if_error;
+  arg_values(arg, "A", &args_array);
+  for (i = args_old_array_length; i < next_hierarchy_level_max_id; ++i)
+    {
+      args_array[i] = gr_newmeta();
+      return_error_if(args_array[i] == NULL, ERROR_MALLOC);
+      error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
+      return_if_error;
+    }
+
+  return NO_ERROR;
+}
+
 error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_name_ptr,
                                  unsigned int next_hierarchy_level_max_id)
 {
   arg_t *arg = NULL;
   gr_meta_args_t **args_array = NULL;
-  unsigned int args_old_array_length;
   unsigned int i;
   error_t error = NO_ERROR;
 
@@ -3025,25 +3057,14 @@ error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_na
           error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
           error_cleanup_if_error;
         }
-      gr_meta_args_push(args, *hierarchy_name_ptr, "nA", next_hierarchy_level_max_id, args_array);
+      error_cleanup_if(!gr_meta_args_push(args, *hierarchy_name_ptr, "nA", next_hierarchy_level_max_id, args_array));
       free(args_array);
       args_array = NULL;
     }
   else
     {
-      arg_first_value(arg, "A", NULL, &args_old_array_length);
-      logger((stderr, "Increase array for key \"%s\" from %d to %d\n", *hierarchy_name_ptr, args_old_array_length,
-              next_hierarchy_level_max_id));
-      error = arg_increase_array(arg, next_hierarchy_level_max_id - args_old_array_length);
-      return_if_error;
-      arg_values(arg, "A", &args_array);
-      for (i = args_old_array_length; i < next_hierarchy_level_max_id; ++i)
-        {
-          args_array[i] = gr_newmeta();
-          return_error_if(args_array[i] == NULL, ERROR_MALLOC);
-          error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
-          error_cleanup_if_error;
-        }
+      error = plot_init_arg_structure(arg, hierarchy_name_ptr - 1, next_hierarchy_level_max_id);
+      error_cleanup_if_error;
     }
 
   return NO_ERROR;
