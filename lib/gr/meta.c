@@ -2244,11 +2244,11 @@ size_t argparse_calculate_needed_buffer_size(const char *format, int apply_paddi
               break;
             }
         }
-      current_format = tolower(*format);
-      if (current_format != *format)
+      if (tolower(*format) != *format)
         {
           is_array = 1;
         }
+      current_format = *format;
       while (current_format)
         {
           size_for_current_specifier = argparse_format_to_size[(unsigned char)current_format];
