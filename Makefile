@@ -65,7 +65,11 @@ osxpkg:
 	sudo rm -rf tmp
 
 code-format:
+ifeq ($(UNAME), Darwin)
 	@find -E . -type f -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)' ! -path './3rdparty/*' -exec clang-format -i -verbose -style=file {} \;
+else
+	@find . -type f -regextype posix-extended -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)' ! -path './3rdparty/*' -exec clang-format -i -verbose -style=file {} \;
+endif
 
 
 .PHONY: default pre-check Linux Darwin all install clean realclean self osxpkg code-format
