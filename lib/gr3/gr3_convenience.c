@@ -18,10 +18,26 @@ static void gr3_createcubemesh_(void);
 
 void gr3_init_convenience(void)
 {
-  gr3_createcylindermesh_();
-  gr3_createspheremesh_();
-  gr3_createconemesh_();
-  gr3_createcubemesh_();
+  if (!context_struct_.convenience_is_initialized)
+    {
+      gr3_createcylindermesh_();
+      gr3_createspheremesh_();
+      gr3_createconemesh_();
+      gr3_createcubemesh_();
+      context_struct_.convenience_is_initialized = 1;
+    }
+}
+
+void gr3_terminate_convenience(void)
+{
+  if (context_struct_.convenience_is_initialized)
+    {
+      gr3_deletemesh(context_struct_.cylinder_mesh);
+      gr3_deletemesh(context_struct_.sphere_mesh);
+      gr3_deletemesh(context_struct_.cone_mesh);
+      gr3_deletemesh(context_struct_.cube_mesh);
+      context_struct_.convenience_is_initialized = 0;
+    }
 }
 
 static void gr3_createcubemesh_(void)

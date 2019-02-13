@@ -50,10 +50,10 @@ const char *gr3_error_file_ = "";
  * The only instance of ::GR3_ContextStruct_t_. For documentation, see
  * ::_GR3_ContextStruct_t_.
  */
-#define GR3_ContextStruct_INITIALIZER                                                                                  \
-  {                                                                                                                    \
-    GR3_InitStruct_INITIALIZER, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, {0, 0, 0, 0}, \
-        0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0                                          \
+#define GR3_ContextStruct_INITIALIZER                                                                       \
+  {                                                                                                         \
+    GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, \
+        {0, 0, 0, 0}, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0                 \
   }
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
 
@@ -337,9 +337,7 @@ GR3API void gr3_terminate(void)
           glDeleteProgram(context_struct_.program);
         }
 #endif
-      gr3_deletemesh(context_struct_.cylinder_mesh);
-      gr3_deletemesh(context_struct_.sphere_mesh);
-      gr3_deletemesh(context_struct_.cone_mesh);
+      gr3_terminate_convenience();
       if (context_struct_.fbo_is_initialized)
         {
           int i;
