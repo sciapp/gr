@@ -37,8 +37,10 @@ extern "C"
 #endif
 
 #define GKSTERM_DEFAULT_TIMEOUT 5000
+
+static int gksterm_has_run_before = 0;
 /* Timeout for is running is short so that GKSTerm will be started quickly. */
-#define GKSTERM_IS_RUNNING_TIMEOUT 50
+#define GKSTERM_IS_RUNNING_TIMEOUT (gksterm_has_run_before ? 500 : 50)
 
 static gks_state_list_t *gkss;
 
@@ -93,7 +95,7 @@ static void gksterm_communicate(const char *request, size_t request_len, int tim
         }
       if (rc == -1 && errno == EAGAIN)
         {
-          usleep(10000);
+          usleep(1000);
         }
       rc = zmq_msg_send(&message, socket, ZMQ_DONTWAIT);
     }
@@ -115,7 +117,7 @@ static void gksterm_communicate(const char *request, size_t request_len, int tim
         }
       if (rc == -1 && errno == EAGAIN)
         {
-          usleep(10000);
+          usleep(1000);
         }
       rc = zmq_msg_recv(&message, socket, ZMQ_DONTWAIT);
     }
@@ -148,6 +150,7 @@ static bool gksterm_is_running()
     {
       return false;
     }
+  gksterm_has_run_before = 1;
   return true;
 }
 
