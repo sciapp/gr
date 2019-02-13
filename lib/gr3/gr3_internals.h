@@ -172,6 +172,9 @@ typedef struct _GR3_ContextStruct_t_
   int gl_is_initialized; /*!< This flag is set to 1 if an OpenGL context
                           has been created successfully. */
 
+  int convenience_is_initialized; /*!< This flag is set to 1 if the convenience
+                                   layer has been initialized successfully. */
+
   void (*terminateGL)(void); /*!< This member holds a pointer to the
                               function which must be used for destroying
                               the OpenGL context.
@@ -260,6 +263,7 @@ static int _return_error_helper(int error, int line, const char *file)
 void gr3_log_(const char *log_message);
 void gr3_appendtorenderpathstring_(const char *string);
 void gr3_init_convenience(void);
+void gr3_terminate_convenience(void);
 int gr3_export_html_(const char *filename, int width, int height);
 int gr3_export_pov_(const char *filename, int width, int height);
 int gr3_getpovray_(char *bitmap, int width, int height, int use_alpha, int ssaa_factor);
