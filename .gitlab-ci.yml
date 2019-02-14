@@ -382,6 +382,7 @@ packages-tar:
       cp Debian-x86_64/gr.tar.gz Downloads/gr-$VERSION-Debian-x86_64.tar.gz;
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$VERSION-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$VERSION-CentOS-x86_64.tar.gz;
+      ln -s gr-$VERSION-CentOS-x86_64.tar.gz Downloads/gr-$VERSION-Redhat-x86_64.tar.gz;
       cp Linux-i386/gr.tar.gz Downloads/gr-$VERSION-Linux-i386.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$VERSION-Linux-x86_64.tar.gz;
       if [ -d Darwin-x86_64 ]; then
@@ -395,12 +396,17 @@ packages-tar:
       cp Debian-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-x86_64.tar.gz;
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz;
+      ln -s gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz Downloads/gr-$CI_COMMIT_SHA-Redhat-x86_64.tar.gz;
       cp Linux-i386/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-i386.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-x86_64.tar.gz;
       if [ -d Darwin-x86_64 ]; then
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
       fi;
       cp artifacts-js/gr.js Downloads/gr-$CI_COMMIT_SHA.js;
+      for f in Windows-i686 Windows-x86_64 Debian-x86_64 Ubuntu-x86_64 CentOS-x86_64 Redhat-x86_64 Linux-i386 Linux-x86_64; do
+        ln -s gr-$CI_COMMIT_SHA-$f.tar.gz Downloads/gr-latest-$f.tar.gz;
+      done;
+      ln -s gr-$CI_COMMIT_SHA.js Downloads/gr-latest.js;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$CI_COMMIT_SHA.sha512.txt && cd -;
     fi
   artifacts:
