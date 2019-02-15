@@ -831,7 +831,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
               blue = (rgb & 0xff0000) >> 16;
               alpha = (rgb & 0xff000000) >> 24;
             }
-          // ARGB32 format requires pre-multiplied alpha
+          /* ARGB32 format requires pre-multiplied alpha */
           red = red * alpha / 255;
           green = green * alpha / 255;
           blue = blue * alpha / 255;

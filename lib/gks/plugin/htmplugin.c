@@ -202,7 +202,7 @@ static int connect_socket()
 
   memset(&sin, 0, sizeof(sin));
   sin.sin_family = AF_INET;
-  sin.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr))->s_addr;
+  sin.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
   sin.sin_port = htons(PORT);
 
   if (connect(s, (struct sockaddr *)&sin, sizeof(sin)) == -1)
