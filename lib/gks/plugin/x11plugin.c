@@ -1463,8 +1463,6 @@ static void configure_event(XConfigureEvent *event)
 #endif
       setup_xform(p->window, p->viewport);
       set_clipping(True);
-
-      // gks_redraw_seg_on_ws(p->wkid);
       return;
     }
   else
