@@ -144,11 +144,14 @@ function GR(canvas_id) {
     
     //meta.c
     this.newmeta = gr_newmeta;
+    this.meta_args_push = gr_meta_args_push;
     this.deletemeta = gr_deletemeta;
     this.get_stdout = gr_get_stdout;
     this.readmeta = gr_readmeta;
     this.plotmeta = gr_plotmeta;
     this.dumpmeta_json = gr_dumpmeta_json;
+    this.inputmeta = gr_inputmeta;
+    this.mergemeta = gr_mergemeta;
 
     // set canvas and context
     Module.set_canvas(canvas_id);
@@ -374,7 +377,6 @@ floatarray = function(a) {
 intarray = function(a) {
     var ptr = Module._malloc(a.length * 4);
     var data = Module.HEAP32.subarray(ptr / 4, ptr / 4 + a.length);
-
     for (i = 0; i < a.length; i++) {
         data[i] = a[i];
     }
@@ -386,12 +388,10 @@ uint8array = function(a) {
     var ptr = Module._malloc(a.length + 1);
     a = intArrayFromString(a, true);
     var data = Module.HEAPU8.subarray(ptr, ptr + a.length + 1);
-
     for (i = 0; i < a.length; i++) {
         data[i] = a[i];
     }
     data[a.length] = 0x00;
-
     return ptr;
 }
 
@@ -1080,6 +1080,31 @@ gr_selntran = Module.cwrap('gr_selntran', '', ['number']);
 gr_newmeta_c = Module.cwrap('gr_newmeta', 'number', []);
 gr_newmeta = function() {
     return gr_newmeta_c()
+}
+
+gr_meta_args_push_c = Module.cwrap('gr_meta_args_push', 'number', ['number', 'string', 'string', 'number']);
+gr_meta_args_push = function(args, key, format, vals) {
+    var type = format[0];
+    var arr;
+    if (type == "d") {
+        arr = floatarray(vals);
+    } else if (type == "i") {
+        arr = intarray(vals);
+    } else if (type == "s") {
+        let ptr = uint8array(vals);
+        arr = intarray([ptr]);
+    }
+    return gr_meta_args_push_c(args, key, format, arr);
+}
+
+gr_mergemeta_c = Module.cwrap('gr_mergemeta', 'number', ['number']);
+gr_mergemeta = function(args) {
+    return gr_mergemeta_c(args);
+}
+
+gr_inputmeta_c = Module.cwrap('gr_inputmeta', 'number', ['number', 'number']);
+gr_inputmeta = function(args, mouse_args) {
+    return gr_inputmeta_c(args, mouse_args);
 }
 
 gr_deletemeta_c = Module.cwrap('gr_deletemeta', '', ['number']);
