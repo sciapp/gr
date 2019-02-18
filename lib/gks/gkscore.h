@@ -200,6 +200,8 @@ extern "C"
   char *gks_realloc(void *ptr, int size);
   void gks_free(void *ptr);
 
+  DLLEXPORT char *gks_strdup(const char *str);
+
   void gks_perror(const char *, ...);
   void gks_fatal_error(const char *, ...);
   const char *gks_function_name(int routine);

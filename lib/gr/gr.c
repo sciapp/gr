@@ -1610,7 +1610,7 @@ void gr_text(double x, double y, char *string)
           break;
         }
 
-      t = strdup(string);
+      t = gks_strdup(string);
       n = 0;
       s = strtok(t, "\n");
       while (s != NULL)
@@ -1654,7 +1654,7 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
 
       gks_set_text_upvec(0.0, 1.0);
 
-      t = strdup(string);
+      t = gks_strdup(string);
       n = 0;
       s = strtok(t, "\n");
       while (s != NULL)

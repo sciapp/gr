@@ -1865,7 +1865,7 @@ LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
       if (*lpEnvSearch == '=' && *lpszVarSearch == '\0')
         {
           if (env != NULL) free(env);
-          env = strdup(lpEnvSearch + 1);
+          env = gks_strdup(lpEnvSearch + 1);
           FreeEnvironmentStrings(lpEnvBlock);
           return env;
         }
@@ -2061,4 +2061,18 @@ void gks_adjust_cellarray(double *qx, double *qy, double *rx, double *ry, int *s
 
   NDC_to_WC(xmin, ymax, gkss->cntnr, *qx, *qy);
   NDC_to_WC(xmax, ymin, gkss->cntnr, *rx, *ry);
+}
+
+char *gks_strdup(const char *str)
+{
+  if (str)
+    {
+      char *dup = gks_malloc(strlen(str) + 1);
+      strcpy(dup, str);
+      return dup;
+    }
+  else
+    {
+      return NULL;
+    }
 }

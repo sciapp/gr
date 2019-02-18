@@ -18,6 +18,7 @@
 
 #include "gr.h"
 #include "io.h"
+#include "gkscore.h"
 
 static int status = EXIT_SUCCESS;
 
@@ -93,7 +94,7 @@ static int sendstream(char *string)
                   env = (char *)getenv("GR_DISPLAY");
                   if (env != NULL)
                     {
-                      display = strdup(env);
+                      display = gks_strdup(env);
                       if ((env = strtok(display, ":")) != NULL) hostname = env;
                       if ((env = strtok(NULL, ":")) != NULL) port = atoi(env);
                     }

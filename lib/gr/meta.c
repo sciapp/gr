@@ -30,6 +30,7 @@
 
 #include "gks.h"
 #include "gr.h"
+#include "gkscore.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -39,7 +40,6 @@
 /* allow the use of posix functions on windows with msvc */
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
-#define strdup _strdup
 #define snprintf(buf, len, format, ...) _snprintf_s(buf, len, len, format, __VA_ARGS__)
 #endif
 
@@ -1576,7 +1576,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
                 }
               else
                 {
-                  if ((_key = strdup(key)) == NULL)
+                  if ((_key = gks_strdup(key)) == NULL)
                     {
                       error = ERROR_MALLOC;
                       break;
@@ -1644,7 +1644,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
         case 'O':
           if (strchr(VALID_OPENING_BRACKETS, *(const char *)ref))
             {
-              if ((_key = strdup(key)) == NULL)
+              if ((_key = gks_strdup(key)) == NULL)
                 {
                   error = ERROR_MALLOC;
                   break;
@@ -1876,7 +1876,7 @@ void *argparse_read_params(const char *format, const void *buffer, va_list *vl, 
   argparse_init_static_variables();
 
   /* copy format string since it is modified during the parsing process */
-  fmt = strdup(format);
+  fmt = gks_strdup(format);
   if (fmt == NULL)
     {
       debug_print_malloc_error();
@@ -2445,7 +2445,7 @@ arg_t *args_create_args(const char *key, const char *value_format, const void *b
     }
   if (key != NULL)
     {
-      arg->key = strdup(key);
+      arg->key = gks_strdup(key);
       if (arg->key == NULL)
         {
           debug_print_malloc_error();
@@ -2513,7 +2513,7 @@ int args_validate_format_string(const char *format)
     {
       return 0;
     }
-  fmt = strdup(format);
+  fmt = gks_strdup(format);
   if (fmt == NULL)
     {
       debug_print_malloc_error();
@@ -5003,7 +5003,7 @@ int get_id_from_args(const gr_meta_args_t *args, int *plot_id, int *subplot_id, 
       id_ptrs[1] = &_subplot_id;
       id_ptrs[2] = &_series_id;
       id_ptrs[3] = NULL;
-      if ((copied_id_str = strdup(combined_id)) == NULL)
+      if ((copied_id_str = gks_strdup(combined_id)) == NULL)
         {
           debug_print_malloc_error();
           return 0;
@@ -7834,7 +7834,7 @@ error_t tojson_init_variables(int *add_data, int *add_data_without_separator, ch
     }
   else
     {
-      *_data_desc = strdup(data_desc);
+      *_data_desc = gks_strdup(data_desc);
       if (*_data_desc == NULL)
         {
           debug_print_malloc_error();
@@ -9083,7 +9083,7 @@ int args_set_entry_equals(const args_set_entry_t entry1, const args_set_entry_t 
     const char *key_copy;                                                                                   \
     value_type value_copy;                                                                                  \
                                                                                                             \
-    key_copy = strdup(entry.key);                                                                           \
+    key_copy = gks_strdup(entry.key);                                                                       \
     if (key_copy == NULL)                                                                                   \
       {                                                                                                     \
         return 0;                                                                                           \
@@ -9137,7 +9137,7 @@ int string_map_value_copy(char **copy, const char *value)
 {
   char *_copy;
 
-  _copy = strdup(value);
+  _copy = gks_strdup(value);
   if (_copy == NULL)
     {
       return 0;
