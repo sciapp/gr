@@ -48,6 +48,7 @@ EXPORTS
 	gks_set_clipping
 	gks_set_ws_window
 	gks_set_ws_viewport
+	gks_strdup
 	gks_create_seg
 	gks_close_seg
 	gks_delete_seg

@@ -538,21 +538,21 @@ void gks_open_ws(int wkid, char *path, int wtype)
                             {
                               path = (char *)malloc(MAXPATHLEN * sizeof(char));
                               gks_filepath(path, NULL, descr->type, 1, 0);
-                              ws->path = strdup(path);
+                              ws->path = gks_strdup(path);
                               free(path);
                             }
                           else
                             ws->path = NULL;
                         }
                       else
-                        ws->path = strdup(path);
+                        ws->path = gks_strdup(path);
                       ws->wtype = wtype;
 
                       if (wtype < 320 || wtype > 323)
                         {
                           if (descr->env)
                             {
-                              if ((env = gks_getenv(descr->env))) ws->path = strdup(env);
+                              if ((env = gks_getenv(descr->env))) ws->path = gks_strdup(env);
                             }
                           if (ws->path)
                             {
