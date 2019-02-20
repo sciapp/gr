@@ -386,7 +386,7 @@ typedef struct
 
 DEFINE_STACK_DATATYPES(args, gr_meta_args_t *)
 DEFINE_STACK_DATATYPES(dynamic_args_array, dynamic_args_array_t *)
-DEFINE_STACK_DATATYPES(string, const char *)
+DEFINE_STACK_DATATYPES(string, char *)
 
 #undef DEFINE_STACK_DATATYPES
 
@@ -575,8 +575,8 @@ typedef struct
 struct _metahandle_t;
 typedef struct _metahandle_t metahandle_t;
 
-typedef error_t (*recv_callback_t)(void *);
-typedef error_t (*send_callback_t)(void *);
+typedef error_t (*recv_callback_t)(metahandle_t *);
+typedef error_t (*send_callback_t)(metahandle_t *);
 typedef const char *(*custom_recv_callback_t)(const char *, unsigned int);
 typedef int (*custom_send_callback_t)(const char *, unsigned int, const char *);
 typedef error_t (*finalize_callback_t)(metahandle_t *);
@@ -741,13 +741,15 @@ static error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_p
                                        unsigned int next_hierarchy_level_max_id);
 static error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_name_ptr,
                                         unsigned int next_hierarchy_level_max_id);
-static void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args);
-static void plot_pre_plot(gr_meta_args_t *subplot_args);
+static void plot_set_attribute_defaults(gr_meta_args_t *subplot_args);
+static void plot_pre_plot(gr_meta_args_t *plot_args);
+static void plot_pre_subplot(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_args);
 static void plot_process_colormap(gr_meta_args_t *subplot_args);
-static void plot_process_viewport(gr_meta_args_t *subplot_args);
+static void plot_process_viewport(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_args);
 static void plot_process_window(gr_meta_args_t *subplot_args);
 static void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args);
-static void plot_post_plot(gr_meta_args_t *subplot_args);
+static void plot_post_plot(gr_meta_args_t *plot_args);
+static void plot_post_subplot(gr_meta_args_t *subplot_args);
 static error_t plot_get_args_in_hierarchy(gr_meta_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
                                           const uint_map_t *hierarchy_to_id, const gr_meta_args_t **found_args,
                                           const char ***found_hierarchy_ptr);
@@ -889,7 +891,7 @@ static void *args_value_iterator_next(args_value_iterator_t *args_value_iterator
 
 DECLARE_STACK_METHODS(args, gr_meta_args_t *)
 DECLARE_STACK_METHODS(dynamic_args_array, dynamic_args_array_t *)
-DECLARE_STACK_METHODS(string, const char *)
+DECLARE_STACK_METHODS(string, char *)
 
 #undef DECLARE_STACK_METHODS
 
@@ -1068,7 +1070,6 @@ static int argparse_static_variables_initialized = 0;
 
 static const char *const ARGS_VALID_FORMAT_SPECIFIERS = "niIdDcCsSaA";
 static const char *const ARGS_VALID_DATA_FORMAT_SPECIFIERS = "idcsa"; /* Each specifier is also valid in upper case */
-static const char *const ARGS_MERGE_RECURSIVELY[] = {"subplots", NULL};
 
 
 /* ------------------------- json deserializer ---------------------------------------------------------------------- */
@@ -1154,11 +1155,32 @@ const char *plot_merge_clear_keys[] = {"series", NULL};
 
 const char *valid_root_keys[] = {"plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
-const char *valid_subplot_keys[] = {"adjust_xlim", "adjust_ylim", "adjust_zlim", "colormap", "keep_aspect_ratio",
-                                    "kind",        "labels",      "levels",      "location", "nbins",
-                                    "panzoom",     "xbins",       "ybins",       "rotation", "series",
-                                    "step_where",  "subplot",     "tilt",        "xflip",    "xform",
-                                    "xlog",        "yflip",       "ylog",        "zflip",    "zlog",
+const char *valid_subplot_keys[] = {"adjust_xlim",
+                                    "adjust_ylim",
+                                    "adjust_zlim",
+                                    "colormap",
+                                    "keep_aspect_ratio",
+                                    "kind",
+                                    "labels",
+                                    "levels",
+                                    "location",
+                                    "nbins",
+                                    "panzoom",
+                                    "reset_ranges",
+                                    "rotation",
+                                    "series",
+                                    "step_where",
+                                    "subplot",
+                                    "tilt",
+                                    "xbins",
+                                    "xflip",
+                                    "xform",
+                                    "xlog",
+                                    "ybins",
+                                    "yflip",
+                                    "ylog",
+                                    "zflip",
+                                    "zlog",
                                     NULL};
 const char *valid_series_keys[] = {"a", "c", "s", "spec", "u", "v", "x", "y", "z", NULL};
 
@@ -1311,12 +1333,14 @@ int gr_plotmeta(const gr_meta_args_t *args)
       return 0;
     }
 
-  args_first_value(active_plot_args, "subplots", "A", &current_subplot_args, NULL);
+  plot_set_attribute_defaults(active_plot_args);
+
+  plot_pre_plot(active_plot_args);
+  args_values(active_plot_args, "subplots", "A", &current_subplot_args);
   while (*current_subplot_args != NULL)
     {
-      plot_set_plot_attribute_defaults(*current_subplot_args);
-      plot_pre_plot(*current_subplot_args);
-      args_first_value(*current_subplot_args, "kind", "s", &kind, NULL);
+      plot_pre_subplot(active_plot_args, *current_subplot_args);
+      args_values(*current_subplot_args, "kind", "s", &kind);
       logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
       if (!plot_func_map_at(plot_func_map, kind, &plot_func))
         {
@@ -1326,9 +1350,10 @@ int gr_plotmeta(const gr_meta_args_t *args)
         {
           return 0;
         };
-      plot_post_plot(*current_subplot_args);
+      plot_post_subplot(*current_subplot_args);
       ++current_subplot_args;
     }
+  plot_post_plot(active_plot_args);
 
   return 1;
 }
@@ -1507,7 +1532,7 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
   static const char VALID_SEPARATOR[] = ",";
   static gr_meta_args_t *current_args = NULL;
   static dynamic_args_array_t *current_args_array = NULL;
-  const char *_key = NULL;
+  char *_key = NULL;
   metahandle_t *handle = (metahandle_t *)p;
   char format_string[SENDMETA_REF_FORMAT_MAX_LENGTH];
   error_t error = NO_ERROR;
@@ -1802,6 +1827,8 @@ int gr_inputmeta(const gr_meta_args_t *draw_args, gr_meta_args_t *mouse_args)
   if (gr_meta_args_contains(mouse_args, "x") && gr_meta_args_contains(mouse_args, "y") &&
       gr_meta_args_contains(mouse_args, "zoom_delta"))
     {
+      double d1, d2;
+
       args_values(draw_args, "size", "dd", &width, &height);
       args_values(mouse_args, "zoom_delta", "i", &offset);
       args_values(mouse_args, "x", "i", &x);
@@ -1810,7 +1837,6 @@ int gr_inputmeta(const gr_meta_args_t *draw_args, gr_meta_args_t *mouse_args)
       gr_meta_args_remove(mouse_args, "y");
       gr_meta_args_remove(mouse_args, "zoom_delta");
 
-      double d1, d2;
       if (height <= width)
         {
           d1 = 1.0 * x / width - 0.5;
@@ -2263,7 +2289,7 @@ size_t argparse_calculate_needed_buffer_size(const char *format, int apply_paddi
 
   needed_size = 0;
   is_array = 0;
-  if (strlen(format) > 1 && argparse_format_has_array_terminator[*format])
+  if (strlen(format) > 1 && argparse_format_has_array_terminator[(unsigned char)*format])
     {
       /* Add size for a NULL pointer terminator in the buffer itself because it will be converted to an array buffer
        * later (-> see `argparse_convert_to_array`) */
@@ -2402,7 +2428,7 @@ char *argparse_convert_to_array(argparse_state_t *state)
   *size_t_typed_buffer = state->dataslot_count;
   general_typed_buffer = (void ***)(size_t_typed_buffer + 1);
   *general_typed_buffer = state->save_buffer;
-  if (argparse_format_has_array_terminator[state->current_format])
+  if (argparse_format_has_array_terminator[(unsigned char)state->current_format])
     {
       (*general_typed_buffer)[*size_t_typed_buffer] = NULL;
     }
@@ -3144,89 +3170,102 @@ error_cleanup:
   return error;
 }
 
-void plot_set_plot_attribute_defaults(gr_meta_args_t *subplot_args)
+void plot_set_attribute_defaults(gr_meta_args_t *plot_args)
 {
   const char *kind;
-  gr_meta_args_t **current_series;
+  gr_meta_args_t **current_subplot, **current_series;
 
   logger((stderr, "Set plot attribute defaults\n"));
 
-  args_setdefault(subplot_args, "kind", "s", PLOT_DEFAULT_KIND);
-  args_first_value(subplot_args, "kind", "s", &kind, NULL);
-  if (!gr_meta_args_contains(subplot_args, "figsize"))
+  args_setdefault(plot_args, "clear", "i", PLOT_DEFAULT_CLEAR);
+  args_setdefault(plot_args, "update", "i", PLOT_DEFAULT_UPDATE);
+  if (!gr_meta_args_contains(plot_args, "figsize"))
     {
-      args_setdefault(subplot_args, "size", "dd", PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT);
-    }
-  args_setdefault(subplot_args, "clear", "i", PLOT_DEFAULT_CLEAR);
-  args_setdefault(subplot_args, "update", "i", PLOT_DEFAULT_UPDATE);
-  if (gr_meta_args_contains(subplot_args, "labels"))
-    {
-      args_setdefault(subplot_args, "location", "i", PLOT_DEFAULT_LOCATION);
-    }
-  args_setdefault(subplot_args, "subplot", "dddd", PLOT_DEFAULT_SUBPLOT_MIN_X, PLOT_DEFAULT_SUBPLOT_MAX_X,
-                  PLOT_DEFAULT_SUBPLOT_MIN_Y, PLOT_DEFAULT_SUBPLOT_MAX_Y);
-  args_setdefault(subplot_args, "xlog", "i", PLOT_DEFAULT_XLOG);
-  args_setdefault(subplot_args, "ylog", "i", PLOT_DEFAULT_YLOG);
-  args_setdefault(subplot_args, "zlog", "i", PLOT_DEFAULT_ZLOG);
-  args_setdefault(subplot_args, "xflip", "i", PLOT_DEFAULT_XFLIP);
-  args_setdefault(subplot_args, "yflip", "i", PLOT_DEFAULT_YFLIP);
-  args_setdefault(subplot_args, "zflip", "i", PLOT_DEFAULT_ZFLIP);
-  args_setdefault(subplot_args, "adjust_xlim", "i", PLOT_DEFAULT_ADJUST_XLIM);
-  args_setdefault(subplot_args, "adjust_ylim", "i", PLOT_DEFAULT_ADJUST_YLIM);
-  args_setdefault(subplot_args, "adjust_zlim", "i", PLOT_DEFAULT_ADJUST_ZLIM);
-  args_setdefault(subplot_args, "colormap", "i", PLOT_DEFAULT_COLORMAP);
-  args_setdefault(subplot_args, "rotation", "i", PLOT_DEFAULT_ROTATION);
-  args_setdefault(subplot_args, "tilt", "i", PLOT_DEFAULT_TILT);
-  args_setdefault(subplot_args, "keep_aspect_ratio", "i", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
-
-  if (strcmp(kind, "step") == 0)
-    {
-      args_setdefault(subplot_args, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
-    }
-  else if (str_equals_any(kind, 2, "contour", "contourf"))
-    {
-      args_setdefault(subplot_args, "levels", "i", PLOT_DEFAULT_CONTOUR_LEVELS);
-    }
-  else if (strcmp(kind, "hexbin") == 0)
-    {
-      args_setdefault(subplot_args, "nbins", "i", PLOT_DEFAULT_HEXBIN_NBINS);
-    }
-  else if (strcmp(kind, "tricont") == 0)
-    {
-      args_setdefault(subplot_args, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
+      args_setdefault(plot_args, "size", "dd", PLOT_DEFAULT_WIDTH, PLOT_DEFAULT_HEIGHT);
     }
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
-  while (*current_series != NULL)
+  args_values(plot_args, "subplots", "A", &current_subplot);
+  while (*current_subplot != NULL)
     {
-      args_setdefault(*current_series, "spec", "s", SERIES_DEFAULT_SPEC);
-      ++current_series;
+      args_setdefault(*current_subplot, "kind", "s", PLOT_DEFAULT_KIND);
+      args_values(*current_subplot, "kind", "s", &kind);
+      if (gr_meta_args_contains(*current_subplot, "labels"))
+        {
+          args_setdefault(*current_subplot, "location", "i", PLOT_DEFAULT_LOCATION);
+        }
+      args_setdefault(*current_subplot, "subplot", "dddd", PLOT_DEFAULT_SUBPLOT_MIN_X, PLOT_DEFAULT_SUBPLOT_MAX_X,
+                      PLOT_DEFAULT_SUBPLOT_MIN_Y, PLOT_DEFAULT_SUBPLOT_MAX_Y);
+      args_setdefault(*current_subplot, "xlog", "i", PLOT_DEFAULT_XLOG);
+      args_setdefault(*current_subplot, "ylog", "i", PLOT_DEFAULT_YLOG);
+      args_setdefault(*current_subplot, "zlog", "i", PLOT_DEFAULT_ZLOG);
+      args_setdefault(*current_subplot, "xflip", "i", PLOT_DEFAULT_XFLIP);
+      args_setdefault(*current_subplot, "yflip", "i", PLOT_DEFAULT_YFLIP);
+      args_setdefault(*current_subplot, "zflip", "i", PLOT_DEFAULT_ZFLIP);
+      args_setdefault(*current_subplot, "adjust_xlim", "i", PLOT_DEFAULT_ADJUST_XLIM);
+      args_setdefault(*current_subplot, "adjust_ylim", "i", PLOT_DEFAULT_ADJUST_YLIM);
+      args_setdefault(*current_subplot, "adjust_zlim", "i", PLOT_DEFAULT_ADJUST_ZLIM);
+      args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP);
+      args_setdefault(*current_subplot, "rotation", "i", PLOT_DEFAULT_ROTATION);
+      args_setdefault(*current_subplot, "tilt", "i", PLOT_DEFAULT_TILT);
+      args_setdefault(*current_subplot, "keep_aspect_ratio", "i", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
+
+      if (strcmp(kind, "step") == 0)
+        {
+          args_setdefault(*current_subplot, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
+        }
+      else if (str_equals_any(kind, 2, "contour", "contourf"))
+        {
+          args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_CONTOUR_LEVELS);
+        }
+      else if (strcmp(kind, "hexbin") == 0)
+        {
+          args_setdefault(*current_subplot, "nbins", "i", PLOT_DEFAULT_HEXBIN_NBINS);
+        }
+      else if (strcmp(kind, "tricont") == 0)
+        {
+          args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
+        }
+
+      args_values(*current_subplot, "series", "A", &current_series);
+      while (*current_series != NULL)
+        {
+          args_setdefault(*current_series, "spec", "s", SERIES_DEFAULT_SPEC);
+          ++current_series;
+        }
+      ++current_subplot;
     }
 }
 
-void plot_pre_plot(gr_meta_args_t *subplot_args)
+void plot_pre_plot(gr_meta_args_t *plot_args)
 {
   int clear;
-  const char *kind;
-  double alpha;
 
   logger((stderr, "Pre plot processing\n"));
 
-  args_first_value(subplot_args, "clear", "i", &clear, NULL);
+  args_values(plot_args, "clear", "i", &clear);
   logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
   if (clear)
     {
       gr_clearws();
     }
-  args_first_value(subplot_args, "kind", "s", &kind, NULL);
+}
+
+void plot_pre_subplot(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_args)
+{
+  const char *kind;
+  double alpha;
+
+  logger((stderr, "Pre subplot processing\n"));
+
+  args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (str_equals_any(kind, 2, "imshow", "isosurface"))
     {
-      plot_process_viewport(subplot_args);
+      plot_process_viewport(plot_args, subplot_args);
     }
   else
     {
-      plot_process_viewport(subplot_args);
+      plot_process_viewport(plot_args, subplot_args);
       plot_store_coordinate_ranges(subplot_args);
       plot_process_window(subplot_args);
       if (str_equals_any(kind, 1, "polar"))
@@ -3243,7 +3282,7 @@ void plot_pre_plot(gr_meta_args_t *subplot_args)
   gr_uselinespec(" ");
 
   gr_savestate();
-  if (args_first_value(subplot_args, "alpha", "d", &alpha, NULL))
+  if (args_values(subplot_args, "alpha", "d", &alpha))
     {
       gr_settransparency(alpha);
     }
@@ -3253,14 +3292,14 @@ void plot_process_colormap(gr_meta_args_t *subplot_args)
 {
   int colormap;
 
-  if (args_first_value(subplot_args, "colormap", "i", &colormap, NULL))
+  if (args_values(subplot_args, "colormap", "i", &colormap))
     {
       gr_setcolormap(colormap);
     }
   /* TODO: Implement other datatypes for `colormap` */
 }
 
-void plot_process_viewport(gr_meta_args_t *subplot_args)
+void plot_process_viewport(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_args)
 {
   const char *kind;
   double metric_width, metric_height;
@@ -3277,8 +3316,8 @@ void plot_process_viewport(gr_meta_args_t *subplot_args)
   int keep_aspect_ratio;
   int background_color_index;
 
-  args_first_value(subplot_args, "kind", "s", &kind, NULL);
-  args_first_value(subplot_args, "subplot", "D", &subplot, NULL);
+  args_values(subplot_args, "kind", "s", &kind);
+  args_values(subplot_args, "subplot", "D", &subplot);
   args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
 #ifdef __EMSCRIPTEN__
   metric_width = 0.16384;
@@ -3288,14 +3327,15 @@ void plot_process_viewport(gr_meta_args_t *subplot_args)
 #else
   gr_inqdspsize(&metric_width, &metric_height, &pixel_width, &pixel_height);
 #endif
-  if (args_values(subplot_args, "figsize", "dd", &size[0], &size[1]))
+  if (args_values(plot_args, "figsize", "dd", &size[0], &size[1]))
     {
       size[0] *= pixel_width * 0.0254 / metric_width;
       size[1] *= pixel_height * 0.0254 / metric_height;
     }
-  else if (args_values(subplot_args, "size", "dd", &size[0], &size[1]))
+  else
     {
       double dpi = pixel_width / metric_width * 0.0254;
+      args_values(plot_args, "size", "dd", &size[0], &size[1]);
       if (dpi > 200)
         {
           int i;
@@ -3304,11 +3344,6 @@ void plot_process_viewport(gr_meta_args_t *subplot_args)
               size[i] *= dpi / 100.0;
             }
         }
-    }
-  else
-    {
-      size[0] = 480;
-      size[1] = 480;
     }
   width = size[0];
   height = size[1];
@@ -3342,7 +3377,7 @@ void plot_process_viewport(gr_meta_args_t *subplot_args)
           vp[1] *= aspect_ratio_ws;
         }
     }
-  if (keep_aspect_ratio && args_values(subplot_args, "vp", "dddd", &vp[0], &vp[1], &vp[2], &vp[3]))
+  if (keep_aspect_ratio)
     {
       aspect_ratio_vp = (vp[1] - vp[0]) / (vp[3] - vp[2]);
       if (aspect_ratio_ws >= aspect_ratio_vp)
@@ -3403,7 +3438,7 @@ void plot_process_viewport(gr_meta_args_t *subplot_args)
       viewport[1] -= 0.1;
     }
 
-  if (args_first_value(subplot_args, "backgroundcolor", "i", &background_color_index, NULL))
+  if (args_values(subplot_args, "backgroundcolor", "i", &background_color_index))
     {
       gr_savestate();
       gr_selntran(0);
@@ -3457,13 +3492,13 @@ void plot_process_window(gr_meta_args_t *subplot_args)
   double x_org_low, x_org_high, y_org_low, y_org_high;
   int reset_ranges = 0;
 
-  args_first_value(subplot_args, "kind", "s", &kind, NULL);
-  args_first_value(subplot_args, "xlog", "i", &xlog, NULL);
-  args_first_value(subplot_args, "ylog", "i", &ylog, NULL);
-  args_first_value(subplot_args, "zlog", "i", &zlog, NULL);
-  args_first_value(subplot_args, "xflip", "i", &xflip, NULL);
-  args_first_value(subplot_args, "yflip", "i", &yflip, NULL);
-  args_first_value(subplot_args, "zflip", "i", &zflip, NULL);
+  args_values(subplot_args, "kind", "s", &kind);
+  args_values(subplot_args, "xlog", "i", &xlog);
+  args_values(subplot_args, "ylog", "i", &ylog);
+  args_values(subplot_args, "zlog", "i", &zlog);
+  args_values(subplot_args, "xflip", "i", &xflip);
+  args_values(subplot_args, "yflip", "i", &yflip);
+  args_values(subplot_args, "zflip", "i", &zflip);
 
   if (strcmp(kind, "polar") != 0)
     {
@@ -3668,7 +3703,7 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args)
   logger((stderr, "Storing coordinate ranges\n"));
   /* TODO: support that single `lim` values are `null` / unset! */
 
-  args_first_value(subplot_args, "kind", "s", &kind, NULL);
+  args_values(subplot_args, "kind", "s", &kind);
   string_map_at(fmt_map, kind, (char **)&fmt); /* TODO: check if the map access was successful */
   current_range_keys = range_keys;
   current_component_name = data_component_names;
@@ -3727,7 +3762,7 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args)
           double *u, *v;
           /* TODO: Support more than one series? */
           /* TODO: `ERROR_PLOT_COMPONENT_LENGTH_MISMATCH` */
-          args_first_value(subplot_args, "series", "A", &current_series, NULL);
+          args_values(subplot_args, "series", "A", &current_series);
           args_first_value(*current_series, "u", "D", &u, &point_count);
           args_first_value(*current_series, "v", "D", &v, NULL);
           for (i = 0; i < point_count; i++)
@@ -3747,25 +3782,32 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args)
     }
 }
 
-void plot_post_plot(gr_meta_args_t *subplot_args)
+void plot_post_plot(gr_meta_args_t *plot_args)
 {
   int update;
-  const char *kind;
 
-  logger((stderr, "Post plot processsing\n"));
+  logger((stderr, "Post plot processing\n"));
 
-  gr_restorestate();
-  args_first_value(subplot_args, "kind", "s", &kind, NULL);
-  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  if (str_equals_any(kind, 4, "line", "step", "scatter", "stem") && gr_meta_args_contains(subplot_args, "labels"))
-    {
-      plot_draw_legend(subplot_args);
-    }
-  args_first_value(subplot_args, "update", "i", &update, NULL);
+  args_values(plot_args, "update", "i", &update);
   logger((stderr, "Got keyword \"update\" with value %d\n", update));
   if (update)
     {
       gr_updatews();
+    }
+}
+
+void plot_post_subplot(gr_meta_args_t *subplot_args)
+{
+  const char *kind;
+
+  logger((stderr, "Post subplot processing\n"));
+
+  gr_restorestate();
+  args_values(subplot_args, "kind", "s", &kind);
+  logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+  if (str_equals_any(kind, 4, "line", "step", "scatter", "stem") && gr_meta_args_contains(subplot_args, "labels"))
+    {
+      plot_draw_legend(subplot_args);
     }
 }
 
@@ -3823,7 +3865,7 @@ error_t plot_line(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y;
@@ -3833,7 +3875,7 @@ error_t plot_line(gr_meta_args_t *subplot_args)
       return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      args_first_value(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+      args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       mask = gr_uselinespec(spec);
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
         {
@@ -3853,7 +3895,7 @@ error_t plot_step(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y;
@@ -3863,12 +3905,12 @@ error_t plot_step(gr_meta_args_t *subplot_args)
       return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      args_first_value(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+      args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       mask = gr_uselinespec(spec);
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
         {
           const char *where;
-          args_first_value(*current_series, "step_where", "s", &where, NULL); /* `spec` is always set */
+          args_values(*current_series, "step_where", "s", &where); /* `spec` is always set */
           if (strcmp(where, "pre") == 0)
             {
             }
@@ -3922,7 +3964,7 @@ error_t plot_scatter(gr_meta_args_t *subplot_args)
   gr_meta_args_t **current_series;
 
   gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x = NULL, *y = NULL, *z = NULL, *c = NULL;
@@ -3966,7 +4008,7 @@ error_t plot_quiver(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x = NULL, *y = NULL, *u = NULL, *v = NULL;
@@ -3992,8 +4034,8 @@ error_t plot_stem(gr_meta_args_t *subplot_args)
   double stem_x[2], stem_y[2] = {0.0};
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "window", "D", &window, NULL);
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "window", "D", &window);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y;
@@ -4005,7 +4047,7 @@ error_t plot_stem(gr_meta_args_t *subplot_args)
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       gr_polyline(2, (double *)window, base_line_y);
       gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
-      args_first_value(*current_series, "spec", "s", &spec, NULL);
+      args_values(*current_series, "spec", "s", &spec);
       gr_uselinespec(spec);
       for (i = 0; i < x_length; ++i)
         {
@@ -4026,9 +4068,9 @@ error_t plot_hist(gr_meta_args_t *subplot_args)
   double y_min;
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "window", "D", &window, NULL);
+  args_values(subplot_args, "window", "D", &window);
   y_min = window[2];
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y;
@@ -4072,7 +4114,7 @@ error_t plot_contour(gr_meta_args_t *subplot_args)
       error = ERROR_MALLOC;
       goto cleanup;
     }
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y, *z;
@@ -4157,7 +4199,7 @@ error_t plot_contourf(gr_meta_args_t *subplot_args)
     }
   args_values(subplot_args, "scale", "i", &scale);
   gr_setscale(scale);
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y, *z;
@@ -4227,7 +4269,7 @@ error_t plot_hexbin(gr_meta_args_t *subplot_args)
   gr_meta_args_t **current_series;
 
   args_values(subplot_args, "nbins", "i", &nbins);
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y;
@@ -4253,7 +4295,7 @@ error_t plot_heatmap(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
 
@@ -4294,7 +4336,7 @@ error_t plot_wireframe(gr_meta_args_t *subplot_args)
   gr_meta_args_t **current_series;
   error_t error = NO_ERROR;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y, *z;
@@ -4348,7 +4390,7 @@ error_t plot_surface(gr_meta_args_t *subplot_args)
   gr_meta_args_t **current_series;
   error_t error = NO_ERROR;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y, *z;
@@ -4401,7 +4443,7 @@ error_t plot_plot3(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y, *z;
@@ -4422,7 +4464,7 @@ error_t plot_scatter3(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       /* TODO: Implement me! */
@@ -4449,7 +4491,7 @@ error_t plot_imshow(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       /* TODO: Implement me! */
@@ -4463,7 +4505,7 @@ error_t plot_isosurface(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       /* TODO: Implement me! */
@@ -4480,13 +4522,13 @@ error_t plot_polar(gr_meta_args_t *subplot_args)
   int n;
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "window", "D", &window, NULL);
+  args_values(subplot_args, "window", "D", &window);
   r_min = window[2];
   r_max = window[3];
   tick = 0.5 * gr_tick(r_min, r_max);
   n = (int)ceil((r_max - r_min) / tick);
   r_max = r_min + n * tick;
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *rho, *theta, *x, *y;
@@ -4511,7 +4553,7 @@ error_t plot_polar(gr_meta_args_t *subplot_args)
           x[i] = current_rho * cos(theta[i]);
           y[i] = current_rho * sin(theta[i]);
         }
-      args_first_value(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+      args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       gr_uselinespec(spec);
       gr_polyline(rho_length, x, y);
       free(x);
@@ -4526,7 +4568,7 @@ error_t plot_trisurf(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
 
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y, *z;
@@ -4564,7 +4606,7 @@ error_t plot_tricont(gr_meta_args_t *subplot_args)
     {
       levels[i] = z_min + ((1.0 * i) / (num_levels - 1)) * (z_max - z_min);
     }
-  args_first_value(subplot_args, "series", "A", &current_series, NULL);
+  args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y, *z;
@@ -4594,22 +4636,22 @@ error_t plot_shade(gr_meta_args_t *subplot_args)
   const char **current_component_name = data_component_names;
   unsigned int point_count;
 
-  args_first_value(subplot_args, "series", "A", &current_shader, NULL);
+  args_values(subplot_args, "series", "A", &current_shader);
   while (*current_component_name != NULL)
     {
       args_first_value(*current_shader, *current_component_name, "D", current_component, &point_count);
       ++current_component_name;
       ++current_component;
     }
-  if (!args_first_value(subplot_args, "xform", "i", &xform, NULL))
+  if (!args_values(subplot_args, "xform", "i", &xform))
     {
       xform = 1;
     }
-  if (!args_first_value(subplot_args, "xbins", "i", &xbins, NULL))
+  if (!args_values(subplot_args, "xbins", "i", &xbins))
     {
       xbins = 100;
     }
-  if (!args_first_value(subplot_args, "ybins", "i", &ybins, NULL))
+  if (!args_values(subplot_args, "ybins", "i", &ybins))
     {
       ybins = 100;
     }
@@ -4640,9 +4682,9 @@ error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass)
   char *title;
   char *x_label, *y_label, *z_label;
 
-  args_first_value(args, "kind", "s", &kind, NULL);
-  args_first_value(args, "viewport", "D", &viewport, NULL);
-  args_first_value(args, "vp", "D", &vp, NULL);
+  args_values(args, "kind", "s", &kind);
+  args_values(args, "viewport", "D", &viewport);
+  args_values(args, "vp", "D", &vp);
   args_values(args, "xtick", "d", &x_tick);
   args_values(args, "xorg", "dd", &x_org_low, &x_org_high);
   args_values(args, "xmajor", "i", &x_major_count);
@@ -4687,7 +4729,7 @@ error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass)
       gr_axes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count, -ticksize);
     }
 
-  if (args_first_value(args, "title", "s", &title, NULL))
+  if (args_values(args, "title", "s", &title))
     {
       gr_savestate();
       gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
@@ -4697,23 +4739,22 @@ error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass)
 
   if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf"))
     {
-      if (args_first_value(args, "xlabel", "s", &x_label, NULL) &&
-          args_first_value(args, "ylabel", "s", &y_label, NULL) &&
-          args_first_value(args, "zlabel", "s", &z_label, NULL))
+      if (args_values(args, "xlabel", "s", &x_label) && args_values(args, "ylabel", "s", &y_label) &&
+          args_values(args, "zlabel", "s", &z_label))
         {
           gr_titles3d(x_label, y_label, z_label);
         }
     }
   else
     {
-      if (args_first_value(args, "xlabel", "s", &x_label, NULL))
+      if (args_values(args, "xlabel", "s", &x_label))
         {
           gr_savestate();
           gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
           gr_textext(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
           gr_restorestate();
         }
-      if (args_first_value(args, "ylabel", "s", &y_label, NULL))
+      if (args_values(args, "ylabel", "s", &y_label))
         {
           gr_savestate();
           gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
@@ -4737,12 +4778,12 @@ error_t plot_draw_polar_axes(gr_meta_args_t *args)
   int i, n, alpha;
   char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER];
 
-  args_first_value(args, "viewport", "D", &viewport, NULL);
+  args_values(args, "viewport", "D", &viewport);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = max(0.018 * diag, 0.012);
 
-  args_first_value(args, "window", "D", &window, NULL);
+  args_values(args, "window", "D", &window);
   r_min = window[2];
   r_max = window[3];
 
@@ -4811,7 +4852,7 @@ error_t plot_draw_legend(gr_meta_args_t *subplot_args)
   return_error_if(!args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
   args_first_value(subplot_args, "series", "A", &current_series, &num_series);
-  args_first_value(subplot_args, "viewport", "D", &viewport, NULL);
+  args_values(subplot_args, "viewport", "D", &viewport);
   args_values(subplot_args, "location", "i", &location);
   gr_savestate();
   gr_selntran(0);
@@ -4864,7 +4905,7 @@ error_t plot_draw_legend(gr_meta_args_t *subplot_args)
       int mask;
 
       gr_savestate();
-      args_first_value(*current_series, "spec", "s", &spec, NULL); /* `spec` is always set */
+      args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       mask = gr_uselinespec(spec);
       if (int_equals_any(mask, 5, 0, 1, 3, 4, 5))
         {
@@ -4908,7 +4949,7 @@ error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors
   unsigned int i;
 
   gr_savestate();
-  args_first_value(args, "viewport", "D", &viewport, NULL);
+  args_values(args, "viewport", "D", &viewport);
   args_values(args, "zrange", "dd", &z_min, &z_max);
   data = malloc(colors * sizeof(int));
   if (data == NULL)
@@ -6264,7 +6305,7 @@ void *args_value_iterator_next(args_value_iterator_t *args_value_iterator)
 
 DEFINE_STACK_METHODS(args, gr_meta_args_t *, gr_deletemeta)
 DEFINE_STACK_METHODS(dynamic_args_array, dynamic_args_array_t *, dynamic_args_array_delete)
-DEFINE_STACK_METHODS(string, const char *, free)
+DEFINE_STACK_METHODS(string, char *, free)
 
 #undef DEFINE_STACK_METHODS
 
@@ -7098,7 +7139,7 @@ int fromjson_str_to_int(const char **str, int *was_successful)
   {                                                                                                       \
     type *values;                                                                                         \
     type current_value;                                                                                   \
-    int length;                                                                                           \
+    unsigned int length;                                                                                  \
     int remaining_elements;                                                                               \
     error_t error = NO_ERROR;                                                                             \
     INIT_MULTI_VALUE(values, type);                                                                       \
@@ -7724,9 +7765,9 @@ error_t tojson_serialize(memwriter_t *memwriter, char *data_desc, const void *da
     {
       shared_state->wrote_output = 0;
       tojson_read_datatype(&state);
-      if (tojson_datatype_to_func[state.current_data_type])
+      if (tojson_datatype_to_func[(unsigned char)state.current_data_type])
         {
-          error = tojson_datatype_to_func[state.current_data_type](&state);
+          error = tojson_datatype_to_func[(unsigned char)state.current_data_type](&state);
         }
       else
         {
@@ -9072,125 +9113,127 @@ int args_set_entry_equals(const args_set_entry_t entry1, const args_set_entry_t 
 
 /* ------------------------- string-to-generic map ------------------------------------------------------------------ */
 
-#define DEFINE_MAP_METHODS(prefix, value_type)                                                              \
-  DEFINE_SET_METHODS(string_##prefix##_pair)                                                                \
-                                                                                                            \
-  prefix##_map_t *prefix##_map_new(size_t capacity)                                                         \
-  {                                                                                                         \
-    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                               \
-                                                                                                            \
-    string_##prefix##_pair_set = string_##prefix##_pair_set_new(capacity);                                  \
-    if (string_##prefix##_pair_set == NULL)                                                                 \
-      {                                                                                                     \
-        debug_print_malloc_error();                                                                         \
-        return NULL;                                                                                        \
-      }                                                                                                     \
-                                                                                                            \
-    return (prefix##_map_t *)string_##prefix##_pair_set;                                                    \
-  }                                                                                                         \
-                                                                                                            \
-  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries)                   \
-  {                                                                                                         \
-    return (prefix##_map_t *)string_##prefix##_pair_set_new_with_data(count, entries);                      \
-  }                                                                                                         \
-                                                                                                            \
-  prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map)                                              \
-  {                                                                                                         \
-    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                               \
-                                                                                                            \
-    string_##prefix##_pair_set = string_##prefix##_pair_set_copy((string_##prefix##_pair_set_t *)map);      \
-    if (string_##prefix##_pair_set == NULL)                                                                 \
-      {                                                                                                     \
-        debug_print_malloc_error();                                                                         \
-        return NULL;                                                                                        \
-      }                                                                                                     \
-                                                                                                            \
-    return (prefix##_map_t *)string_##prefix##_pair_set;                                                    \
-  }                                                                                                         \
-                                                                                                            \
-  void prefix##_map_delete(prefix##_map_t *prefix##_map)                                                    \
-  {                                                                                                         \
-    string_##prefix##_pair_set_delete((string_##prefix##_pair_set_t *)prefix##_map);                        \
-  }                                                                                                         \
-                                                                                                            \
-  int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, const value_type value)            \
-  {                                                                                                         \
-    string_##prefix##_pair_set_entry_t entry;                                                               \
-                                                                                                            \
-    entry.key = key;                                                                                        \
-    entry.value = value;                                                                                    \
-    return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);             \
-  }                                                                                                         \
-                                                                                                            \
-  int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, const value_type value)    \
-  {                                                                                                         \
-    string_##prefix##_pair_set_entry_t entry;                                                               \
-                                                                                                            \
-    entry.key = key;                                                                                        \
-    entry.value = value;                                                                                    \
-    if (!string_##prefix##_pair_set_contains((string_##prefix##_pair_set_t *)prefix##_map, entry))          \
-      {                                                                                                     \
-        return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);         \
-      }                                                                                                     \
-    return 0;                                                                                               \
-  }                                                                                                         \
-                                                                                                            \
-  int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, value_type *value)               \
-  {                                                                                                         \
-    string_##prefix##_pair_set_entry_t entry, saved_entry;                                                  \
-                                                                                                            \
-    entry.key = key;                                                                                        \
-    if (string_##prefix##_pair_set_find((string_##prefix##_pair_set_t *)prefix##_map, entry, &saved_entry)) \
-      {                                                                                                     \
-        if (value != NULL)                                                                                  \
-          {                                                                                                 \
-            *value = saved_entry.value;                                                                     \
-          }                                                                                                 \
-        return 1;                                                                                           \
-      }                                                                                                     \
-    else                                                                                                    \
-      {                                                                                                     \
-        return 0;                                                                                           \
-      }                                                                                                     \
-  }                                                                                                         \
-                                                                                                            \
-  int string_##prefix##_pair_set_entry_copy(string_##prefix##_pair_set_entry_t *copy,                       \
-                                            const string_##prefix##_pair_set_entry_t entry)                 \
-  {                                                                                                         \
-    const char *key_copy;                                                                                   \
-    value_type value_copy;                                                                                  \
-                                                                                                            \
-    key_copy = gks_strdup(entry.key);                                                                       \
-    if (key_copy == NULL)                                                                                   \
-      {                                                                                                     \
-        return 0;                                                                                           \
-      }                                                                                                     \
-    if (!prefix##_map_value_copy(&value_copy, entry.value))                                                 \
-      {                                                                                                     \
-        free((char *)key_copy);                                                                             \
-        return 0;                                                                                           \
-      }                                                                                                     \
-    copy->key = key_copy;                                                                                   \
-    copy->value = value_copy;                                                                               \
-                                                                                                            \
-    return 1;                                                                                               \
-  }                                                                                                         \
-                                                                                                            \
-  void string_##prefix##_pair_set_entry_delete(string_##prefix##_pair_set_entry_t entry)                    \
-  {                                                                                                         \
-    free((char *)entry.key);                                                                                \
-    prefix##_map_value_delete(entry.value);                                                                 \
-  }                                                                                                         \
-                                                                                                            \
-  size_t string_##prefix##_pair_set_entry_hash(const string_##prefix##_pair_set_entry_t entry)              \
-  {                                                                                                         \
-    return djb2_hash(entry.key);                                                                            \
-  }                                                                                                         \
-                                                                                                            \
-  int string_##prefix##_pair_set_entry_equals(const string_##prefix##_pair_set_entry_t entry1,              \
-                                              const string_##prefix##_pair_set_entry_t entry2)              \
-  {                                                                                                         \
-    return strcmp(entry1.key, entry2.key) == 0;                                                             \
+#define DEFINE_MAP_METHODS(prefix, value_type)                                                                   \
+  DEFINE_SET_METHODS(string_##prefix##_pair)                                                                     \
+                                                                                                                 \
+  prefix##_map_t *prefix##_map_new(size_t capacity)                                                              \
+  {                                                                                                              \
+    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                                    \
+                                                                                                                 \
+    string_##prefix##_pair_set = string_##prefix##_pair_set_new(capacity);                                       \
+    if (string_##prefix##_pair_set == NULL)                                                                      \
+      {                                                                                                          \
+        debug_print_malloc_error();                                                                              \
+        return NULL;                                                                                             \
+      }                                                                                                          \
+                                                                                                                 \
+    return (prefix##_map_t *)string_##prefix##_pair_set;                                                         \
+  }                                                                                                              \
+                                                                                                                 \
+  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries)                        \
+  {                                                                                                              \
+    return (prefix##_map_t *)string_##prefix##_pair_set_new_with_data(count, entries);                           \
+  }                                                                                                              \
+                                                                                                                 \
+  prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map)                                                   \
+  {                                                                                                              \
+    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                                    \
+                                                                                                                 \
+    string_##prefix##_pair_set = string_##prefix##_pair_set_copy((string_##prefix##_pair_set_t *)map);           \
+    if (string_##prefix##_pair_set == NULL)                                                                      \
+      {                                                                                                          \
+        debug_print_malloc_error();                                                                              \
+        return NULL;                                                                                             \
+      }                                                                                                          \
+                                                                                                                 \
+    return (prefix##_map_t *)string_##prefix##_pair_set;                                                         \
+  }                                                                                                              \
+                                                                                                                 \
+  void prefix##_map_delete(prefix##_map_t *prefix##_map)                                                         \
+  {                                                                                                              \
+    string_##prefix##_pair_set_delete((string_##prefix##_pair_set_t *)prefix##_map);                             \
+  }                                                                                                              \
+                                                                                                                 \
+  int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, const value_type value)                 \
+  {                                                                                                              \
+    string_##prefix##_pair_set_entry_t entry;                                                                    \
+                                                                                                                 \
+    entry.key = key;                                                                                             \
+    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */ \
+    entry.value = (value_type)value;                                                                             \
+    return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);                  \
+  }                                                                                                              \
+                                                                                                                 \
+  int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, const value_type value)         \
+  {                                                                                                              \
+    string_##prefix##_pair_set_entry_t entry;                                                                    \
+                                                                                                                 \
+    entry.key = key;                                                                                             \
+    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */ \
+    entry.value = (value_type)value;                                                                             \
+    if (!string_##prefix##_pair_set_contains((string_##prefix##_pair_set_t *)prefix##_map, entry))               \
+      {                                                                                                          \
+        return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);              \
+      }                                                                                                          \
+    return 0;                                                                                                    \
+  }                                                                                                              \
+                                                                                                                 \
+  int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, value_type *value)                    \
+  {                                                                                                              \
+    string_##prefix##_pair_set_entry_t entry, saved_entry;                                                       \
+                                                                                                                 \
+    entry.key = key;                                                                                             \
+    if (string_##prefix##_pair_set_find((string_##prefix##_pair_set_t *)prefix##_map, entry, &saved_entry))      \
+      {                                                                                                          \
+        if (value != NULL)                                                                                       \
+          {                                                                                                      \
+            *value = saved_entry.value;                                                                          \
+          }                                                                                                      \
+        return 1;                                                                                                \
+      }                                                                                                          \
+    else                                                                                                         \
+      {                                                                                                          \
+        return 0;                                                                                                \
+      }                                                                                                          \
+  }                                                                                                              \
+                                                                                                                 \
+  int string_##prefix##_pair_set_entry_copy(string_##prefix##_pair_set_entry_t *copy,                            \
+                                            const string_##prefix##_pair_set_entry_t entry)                      \
+  {                                                                                                              \
+    const char *key_copy;                                                                                        \
+    value_type value_copy;                                                                                       \
+                                                                                                                 \
+    key_copy = gks_strdup(entry.key);                                                                            \
+    if (key_copy == NULL)                                                                                        \
+      {                                                                                                          \
+        return 0;                                                                                                \
+      }                                                                                                          \
+    if (!prefix##_map_value_copy(&value_copy, entry.value))                                                      \
+      {                                                                                                          \
+        free((char *)key_copy);                                                                                  \
+        return 0;                                                                                                \
+      }                                                                                                          \
+    copy->key = key_copy;                                                                                        \
+    copy->value = value_copy;                                                                                    \
+                                                                                                                 \
+    return 1;                                                                                                    \
+  }                                                                                                              \
+                                                                                                                 \
+  void string_##prefix##_pair_set_entry_delete(string_##prefix##_pair_set_entry_t entry)                         \
+  {                                                                                                              \
+    free((char *)entry.key);                                                                                     \
+    prefix##_map_value_delete(entry.value);                                                                      \
+  }                                                                                                              \
+                                                                                                                 \
+  size_t string_##prefix##_pair_set_entry_hash(const string_##prefix##_pair_set_entry_t entry)                   \
+  {                                                                                                              \
+    return djb2_hash(entry.key);                                                                                 \
+  }                                                                                                              \
+                                                                                                                 \
+  int string_##prefix##_pair_set_entry_equals(const string_##prefix##_pair_set_entry_t entry1,                   \
+                                              const string_##prefix##_pair_set_entry_t entry2)                   \
+  {                                                                                                              \
+    return strcmp(entry1.key, entry2.key) == 0;                                                                  \
   }
 
 DEFINE_MAP_METHODS(plot_func, plot_func_t)
@@ -9249,7 +9292,8 @@ DEFINE_MAP_METHODS(args_set, args_set_t *)
 
 int args_set_map_value_copy(args_set_t **copy, const args_set_t *value)
 {
-  *copy = value;
+  /* discard const because it is necessary to work on the object itself */
+  *copy = (args_set_t *)value;
 
   return 1;
 }
