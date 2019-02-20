@@ -109,4 +109,6 @@ cleanup:
 int main(void)
 {
   test_merge();
+
+  return 0;
 }

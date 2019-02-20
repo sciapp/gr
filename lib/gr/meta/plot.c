@@ -102,4 +102,6 @@ static void test_plotmeta(void)
 int main(void)
 {
   test_plotmeta();
+
+  return 0;
 }
