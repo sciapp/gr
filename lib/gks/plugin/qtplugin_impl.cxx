@@ -105,8 +105,9 @@ typedef struct ws_state_list_t
 
 static ws_state_list p_, *p = &p_;
 
-static const char *fonts[] = {"Times New Roman",    "Arial",          "Courier",     "Open Symbol", "Bookman Old Style",
-                              "Century Schoolbook", "Century Gothic", "Book Antiqua"};
+static const char *fonts[] = {
+    "Times",          "Arial",       "Courier", "Open Symbol", "Bookman Old Style", "Century Schoolbook",
+    "Century Gothic", "Book Antiqua"};
 
 static double capheights[29] = {0.662, 0.660, 0.681, 0.662, 0.729, 0.729, 0.729, 0.729, 0.583, 0.583,
                                 0.583, 0.583, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722,
