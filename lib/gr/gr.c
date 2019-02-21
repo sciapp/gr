@@ -7663,10 +7663,10 @@ void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
  * interpreted such that 0 degrees is at the 3 o'clock position. The center of
  * the arc is the center of the given rectangle.
  */
-void gr_drawarc(double xmin, double xmax, double ymin, double ymax, int a1, int a2)
+void gr_drawarc(double xmin, double xmax, double ymin, double ymax, double a1, double a2)
 {
-  double xcenter, ycenter, width, height;
-  int start, end, a, n;
+  double xcenter, ycenter, width, height, start, end, a;
+  int n;
   double x[361], y[361];
 
   check_autoinit;
@@ -7678,9 +7678,9 @@ void gr_drawarc(double xmin, double xmax, double ymin, double ymax, int a1, int 
 
   start = min(a1, a2);
   end = max(a1, a2);
-  start += (end - start) / 360 * 360;
+  start += ((int)(end - start)) / 360 * 360;
   /* Ensure that two equivalent but unequal angles result in a full arc. */
-  if (start == end && a1 != a2)
+  if (fabs(end - start) < FEPS && fabs(a1 - a2) > FEPS)
     {
       end += 360;
     }
@@ -7692,13 +7692,24 @@ void gr_drawarc(double xmin, double xmax, double ymin, double ymax, int a1, int 
       y[n] = y_log(ycenter + height * sin(a * M_PI / 180));
       n++;
     }
+  if (fabs((a - 1) - end) > FEPS)
+    {
+      x[n] = x_log(xcenter + width * cos(end * M_PI / 180));
+      y[n] = y_log(ycenter + height * sin(end * M_PI / 180));
+      n++;
+    }
 
-  if (n > 1) polyline(n, x, y);
+  if (n > 1)
+    {
+      polyline(n, x, y);
+    }
 
   if (flag_graphics)
-    gr_writestream("<drawarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
-                   "a1=\"%d\" a2=\"%d\"/>\n",
-                   xmin, xmax, ymin, ymax, a1, a2);
+    {
+      gr_writestream("<drawarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+                     "a1=\"%g\" a2=\"%g\"/>\n",
+                     xmin, xmax, ymin, ymax, a1, a2);
+    }
 }
 
 /*!
@@ -7715,10 +7726,10 @@ void gr_drawarc(double xmin, double xmax, double ymin, double ymax, int a1, int 
  * interpreted such that 0 degrees is at the 3 o'clock position. The center of
  * the arc is the center of the given rectangle.
  */
-void gr_fillarc(double xmin, double xmax, double ymin, double ymax, int a1, int a2)
+void gr_fillarc(double xmin, double xmax, double ymin, double ymax, double a1, double a2)
 {
-  double xcenter, ycenter, width, height;
-  int start, end, a, n;
+  double xcenter, ycenter, width, height, start, end, a;
+  int n;
   double x[362], y[362];
 
   check_autoinit;
@@ -7730,7 +7741,12 @@ void gr_fillarc(double xmin, double xmax, double ymin, double ymax, int a1, int 
 
   start = min(a1, a2);
   end = max(a1, a2);
-  start += (end - start) / 360 * 360;
+  start += ((int)(end - start)) / 360 * 360;
+  /* Ensure that two equivalent but unequal angles result in a full arc. */
+  if (fabs(end - start) < FEPS && fabs(a1 - a2) > FEPS)
+    {
+      end += 360;
+    }
 
   x[0] = x_log(xcenter);
   y[0] = x_log(ycenter);
@@ -7741,13 +7757,24 @@ void gr_fillarc(double xmin, double xmax, double ymin, double ymax, int a1, int 
       y[n] = y_log(ycenter + height * sin(a * M_PI / 180));
       n++;
     }
+  if (fabs((a - 1) - end) > FEPS)
+    {
+      x[n] = x_log(xcenter + width * cos(end * M_PI / 180));
+      y[n] = y_log(ycenter + height * sin(end * M_PI / 180));
+      n++;
+    }
 
-  if (n > 2) fillarea(n, x, y);
+  if (n > 2)
+    {
+      fillarea(n, x, y);
+    }
 
   if (flag_graphics)
-    gr_writestream("<fillarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
-                   "a1=\"%d\" a2=\"%d\"/>\n",
-                   xmin, xmax, ymin, ymax, a1, a2);
+    {
+      gr_writestream("<fillarc xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" "
+                     "a1=\"%g\" a2=\"%g\"/>\n",
+                     xmin, xmax, ymin, ymax, a1, a2);
+    }
 }
 
 static void addpath(double x, double y)
