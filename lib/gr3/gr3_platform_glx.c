@@ -21,6 +21,13 @@ static GLXPbuffer pbuffer = (GLXPbuffer)NULL; /*!< The GLX Pbuffer (GLX >=1.4) *
 static GLXContext context;                    /*!< The GLX context */
 
 
+static int _gr3_ignore_x_errors(Display *display, XErrorEvent *error)
+{
+  (void)display;
+  (void)error;
+  return 0;
+}
+
 /*!
  * This function destroys the OpenGL context using GLX with a Pbuffer.
  */
@@ -88,6 +95,7 @@ struct platform *gr3_platform_initGL_dynamic_(void (*log_callback)(const char *)
         }
       if (major > 1 || minor >= 4)
         {
+          int (*x_error_handler)() = _gr3_ignore_x_errors;
           int i;
           int fb_attribs[] = {GLX_DRAWABLE_TYPE, GLX_PBUFFER_BIT, GLX_RENDER_TYPE, GLX_RGBA_BIT, None};
           int pbuffer_attribs[] = {GLX_PBUFFER_WIDTH, 1, GLX_PBUFFER_HEIGHT, 1, None};
@@ -101,11 +109,16 @@ struct platform *gr3_platform_initGL_dynamic_(void (*log_callback)(const char *)
               XCloseDisplay(display);
               return NULL;
             }
+          /* Failed creation of a pbuffer may cause X errors, which we need to ignore */
+          XSynchronize(display, 1);
+          x_error_handler = XSetErrorHandler(_gr3_ignore_x_errors);
           for (i = 0; i < fbcount && !pbuffer; i++)
             {
               fbconfig = fbc[i];
               pbuffer = glXCreatePbuffer(display, fbconfig, pbuffer_attribs);
             }
+          XSetErrorHandler(x_error_handler);
+          XSynchronize(display, 0);
           XFree(fbc);
           if (!pbuffer)
             {
