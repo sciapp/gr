@@ -123,8 +123,8 @@ extern "C"
   DLLEXPORT void gr_wc3towc(double *, double *, double *);
   DLLEXPORT void gr_drawrect(double, double, double, double);
   DLLEXPORT void gr_fillrect(double, double, double, double);
-  DLLEXPORT void gr_drawarc(double, double, double, double, int, int);
-  DLLEXPORT void gr_fillarc(double, double, double, double, int, int);
+  DLLEXPORT void gr_drawarc(double, double, double, double, double, double);
+  DLLEXPORT void gr_fillarc(double, double, double, double, double, double);
   DLLEXPORT void gr_drawpath(int, vertex_t *, unsigned char *, int);
   DLLEXPORT void gr_setarrowstyle(int);
   DLLEXPORT void gr_setarrowsize(double);
