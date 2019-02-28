@@ -1231,6 +1231,7 @@ static void set_clip_path(int tnr)
 
 static void write_page(void)
 {
+  int should_close = 0;
   char path[MAXPATHLEN];
   FILE *stream;
 
@@ -1240,6 +1241,7 @@ static void write_page(void)
     {
       gks_filepath(path, p->path, "wmf", p->page_counter, 0);
       stream = fopen(path, "wb");
+      should_close = 1;
     }
   else
     stream = fdopen(p->conid, "wb");
@@ -1247,7 +1249,10 @@ static void write_page(void)
   if (stream != NULL)
     {
       fwrite(p->stream->buffer, p->stream->length, 1, stream);
-      fclose(stream);
+      if (should_close)
+        {
+          fclose(stream);
+        }
       p->stream->length = 0;
     }
   else
