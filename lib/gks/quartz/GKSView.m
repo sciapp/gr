@@ -1495,9 +1495,13 @@ static void fill_routine(int n, double *px, double *py, int tnr)
     { // Symbols
       string = [NSString stringWithCString:text encoding:NSSymbolStringEncoding];
     }
-  else
-    { // Anything else
+  else if (!gkss->ignore_encoding)
+    { // Latin-1
       string = [NSString stringWithCString:text encoding:NSASCIIStringEncoding];
+    }
+  else
+    { // UTF-8
+      string = [NSString stringWithCString:text encoding:NSUTF8StringEncoding];
     }
   return string;
 }

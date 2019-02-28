@@ -537,13 +537,18 @@ static void text_routine(double x, double y, int nchars, char *chars)
   QFontMetrics fm = QFontMetrics(*p->font);
   QString s = QString("");
 
-  for (i = 0; i < nchars; i++)
+  if (!gkss->ignore_encoding)
     {
-      ch = chars[i];
-      if (ch < 0) ch += 256;
-      if (p->family == 3) ch = symbol2utf[ch];
-      s.append(QChar(ch));
+      for (i = 0; i < nchars; i++)
+        {
+          ch = chars[i];
+          if (ch < 0) ch += 256;
+          if (p->family == 3) ch = symbol2utf[ch];
+          s.append(QChar(ch));
+        }
     }
+  else
+    s = QString::fromUtf8(chars);
 
   NDC_to_DC(x, y, xstart, ystart);
 

@@ -593,7 +593,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
   int i;
   char *str;
 
-  if (!p->use_symbols)
+  if (!p->use_symbols && !gkss->ignore_encoding)
     {
       /* convert latin1 to utf8 */
       s = buf = (unsigned char *)gks_malloc(2 * nchars + 1);
@@ -651,7 +651,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
         cairo_show_text(p->cr, chars);
     }
 
-  if (!p->use_symbols) free(buf);
+  if (!p->use_symbols && !gkss->ignore_encoding) free(buf);
 }
 
 static void set_font(int font)

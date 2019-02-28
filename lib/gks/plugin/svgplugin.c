@@ -850,8 +850,13 @@ static void text_routine(double x, double y, int nchars, char *chars)
         default:
           if (p->family == 3)
             gks_symbol2utf(ch, utf, &len);
-          else
+          else if (!gkss->ignore_encoding)
             gks_iso2utf(ch, utf, &len);
+          else
+            {
+              *utf = ch;
+              len = 1;
+            }
           utf[len] = '\0';
           svg_printf(p->stream, "%s", utf);
           break;

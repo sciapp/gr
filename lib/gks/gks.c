@@ -374,6 +374,8 @@ void gks_open_gks(int errfil)
       /* open font database */
       s->fontfile = gks_open_font();
 
+      s->ignore_encoding = (char *)gks_getenv("GKS_IGNORE_ENCODING") != NULL;
+
       gks_init_core(s);
 
       /* initialize aspect source flags */

@@ -139,6 +139,7 @@ extern "C"
     int asf[13];
     int wiss, version;
     int fontfile;
+    int ignore_encoding;
     double txslant;
     double shoff[2];
     double blur;

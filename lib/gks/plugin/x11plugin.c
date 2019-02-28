@@ -2581,8 +2581,13 @@ static void ft_text_routine(double px, double py, int nchars, char *chars)
       ch = (chars[i] < 0) ? chars[i] + 256 : chars[i];
       if (p->font == 12)
         gks_symbol2utf(ch, s + n, &len);
-      else
+      else if (!gksl->ignore_encoding)
         gks_iso2utf(ch, s + n, &len);
+      else
+        {
+          s[n] = ch;
+          len = 1;
+        }
       n += len;
       s[n] = '\0';
     }
