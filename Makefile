@@ -34,6 +34,8 @@ ifeq ($(UNAME), Darwin)
 	mkdir -m 755 $(DESTDIR)$(GRDIR)/Applications; fi
 	@ditto lib/gks/quartz/build/Release/GKSTerm.app \
 	$(DESTDIR)$(GRDIR)/Applications/GKSTerm.app
+	@ditto lib/gks/qt/gksqt.app \
+	$(DESTDIR)$(GRDIR)/Applications/gksqt.app
 endif
 
 clean:
