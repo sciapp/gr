@@ -554,7 +554,11 @@ void gks_open_ws(int wkid, char *path, int wtype)
                         {
                           if (descr->env)
                             {
-                              if ((env = gks_getenv(descr->env))) ws->path = gks_strdup(env);
+                              if ((env = gks_getenv(descr->env)))
+                                {
+                                  if (ws->path != NULL) free(ws->path);
+                                  ws->path = gks_strdup(env);
+                                }
                             }
                           if (ws->path)
                             {
