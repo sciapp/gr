@@ -1249,6 +1249,7 @@ static void write_page(void)
   if (stream != NULL)
     {
       fwrite(p->stream->buffer, p->stream->length, 1, stream);
+      fflush(stream);
       if (should_close)
         {
           fclose(stream);
