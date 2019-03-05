@@ -31,7 +31,7 @@ void FORTRAN(gr_openws)(int *workstation_id, char *connection, int *type, unsign
 {
   char *_connection;
 
-  _connection = (char *)calloc(1, sizeof(char) * connection_len);
+  _connection = (char *)calloc(1, sizeof(char) * (connection_len + 1));
   strncpy(_connection, connection, connection_len);
 
   gr_openws(*workstation_id, _connection, *type);
@@ -78,7 +78,7 @@ void FORTRAN(gr_text)(double *x, double *y, char *string, unsigned char string_l
 {
   char *_string;
 
-  _string = (char *)calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * (string_len + 1));
   strncpy(_string, string, string_len);
 
   gr_text(*x, *y, _string);
@@ -90,7 +90,7 @@ void FORTRAN(gr_inqtext)(double *x, double *y, char *string, double *tbx, double
 {
   char *_string;
 
-  _string = (char *)calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * (string_len + 1));
   strncpy(_string, string, string_len);
 
   gr_inqtext(*x, *y, _string, tbx, tby);
@@ -310,7 +310,7 @@ int FORTRAN(gr_textext)(double *x, double *y, char *string, unsigned short strin
   char *_string;
   int result;
 
-  _string = (char *)calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * (string_len + 1));
   strncpy(_string, string, string_len);
 
   result = gr_textext(*x, *y, _string);
@@ -324,7 +324,7 @@ void FORTRAN(gr_inqtextext)(double *x, double *y, char *string, double *tbx, dou
 {
   char *_string;
 
-  _string = (char *)calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * (string_len + 1));
   strncpy(_string, string, string_len);
 
   gr_inqtextext(*x, *y, _string, tbx, tby);
@@ -556,7 +556,7 @@ void FORTRAN(gr_mathtex)(double *x, double *y, char *string, unsigned char strin
 {
   char *_string;
 
-  _string = (char *)calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * (string_len + 1));
   strncpy(_string, string, string_len);
 
   gr_mathtex(*x, *y, _string);
@@ -568,7 +568,7 @@ void FORTRAN(gr_inqmathtex)(double *x, double *y, char *string, double *tbx, dou
 {
   char *_string;
 
-  _string = (char *)calloc(1, sizeof(char) * string_len);
+  _string = (char *)calloc(1, sizeof(char) * (string_len + 1));
   strncpy(_string, string, string_len);
 
   gr_inqmathtex(*x, *y, _string, tbx, tby);
