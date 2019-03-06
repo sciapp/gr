@@ -30,6 +30,8 @@ extern void js_pattern_routine(int n, double *px, double *py, int *rgb);
 extern void js_clip_path(int x, int y, int width, int height);
 extern void js_reset_clipping(void);
 extern void js_clear(void);
+extern int js_get_ws_width(void);
+extern int js_get_ws_height(void);
 
 #ifdef __cplusplus
 #define }
@@ -48,10 +50,10 @@ extern void js_clear(void);
 #define PATTERNS 120
 #define HATCH_STYLE 108
 
-#define MWIDTH 0.254
-#define MHEIGHT 0.1905
-#define WIDTH 1024
-#define HEIGHT 768
+#define MWIDTH 0.16384
+#define MHEIGHT 0.12288
+#define WIDTH 640
+#define HEIGHT 480
 
 #define DrawBorder 0
 
@@ -129,8 +131,6 @@ typedef struct ws_state_list_t
   int npoints, max_points;
   int empty, page_counter, offset;
   double cxl[MAX_TNR], cxr[MAX_TNR], cyb[MAX_TNR], cyt[MAX_TNR];
-  int cx[MAX_TNR], cy[MAX_TNR], cwidth[MAX_TNR], cheight[MAX_TNR];
-  int clip_index, path_index, path_counter;
   double alpha;
 } ws_state_list;
 
@@ -225,18 +225,6 @@ static void init_colors(void)
       gks_inq_rgb(color, &red, &green, &blue);
       set_color_rep(color, red, green, blue);
     }
-}
-
-static void init_clippaths(void)
-{
-  p->path_counter = 0;
-  p->clip_index = 0;
-  for (int i = 0; i < MAX_TNR; i++)
-    {
-      p->cx[i] = p->cy[i] = -1;
-      p->cwidth[i] = p->cheight[i] = 0;
-    }
-  set_clip_path(0);
 }
 
 static void resize_window(void)
@@ -741,38 +729,7 @@ static void set_clip_path(int tnr)
       js_reset_clipping();
       return;
     }
-
-  for (i = 0; i < p->clip_index && !found; i++)
-    {
-      if (x == p->cx[i] && y == p->cy[i] && width == p->cwidth[i] && height == p->cheight[i])
-        {
-          found = 1;
-          index = i;
-        }
-    }
-  if (found)
-    {
-      p->path_index = index;
-    }
-  else
-    {
-      if (p->clip_index < MAX_TNR)
-        {
-          p->cx[p->clip_index] = x;
-          p->cy[p->clip_index] = y;
-          p->cwidth[p->clip_index] = width;
-          p->cheight[p->clip_index] = height;
-          p->path_index = p->clip_index;
-
-          js_clip_path(x, y, width, height);
-          p->clip_index++;
-        }
-      else
-        {
-          js_clip_path(x, y, width, height);
-          p->path_index = p->path_counter++;
-        }
-    }
+  js_clip_path(x, y, width, height);
 }
 
 
@@ -794,14 +751,18 @@ void gks_drv_js(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
       p = (ws_state_list *)calloc(1, sizeof(ws_state_list));
 
       p->conid = ia[1];
-
-      p->height = 500;
-      p->width = 500;
+      p->height = js_get_ws_height();
+      p->width = js_get_ws_width();
       p->window[0] = p->window[2] = 0.0;
       p->window[1] = p->window[3] = 1.0;
       p->viewport[0] = p->viewport[2] = 0;
       p->viewport[1] = (double)p->width * MWIDTH / WIDTH;
       p->viewport[3] = (double)p->height * MHEIGHT / HEIGHT;
+
+      r1[0] = p->width * MWIDTH / WIDTH;
+      r2[0] = p->height * MHEIGHT / HEIGHT;
+      ia[0] = p->width;
+      ia[1] = p->height;
 
       p->max_points = MAX_POINTS;
       p->points = (JS_point *)gks_malloc(p->max_points * sizeof(JS_point));
@@ -816,7 +777,6 @@ void gks_drv_js(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
       set_xform();
       init_norm_xform();
       init_colors();
-      init_clippaths();
 
       for (i = 0; i < PATTERNS; i++) p->have_pattern[i] = 0;
 
@@ -845,7 +805,6 @@ void gks_drv_js(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
         {
           p->empty = 1;
           js_clear();
-          init_clippaths();
         }
       break;
 
