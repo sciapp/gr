@@ -207,6 +207,11 @@ static void debug_printf(const char *format, ...)
 #define PORT_MAX_STRING_LENGTH 80
 
 
+/* ------------------------- user interaction ----------------------------------------------------------------------- */
+
+#define INPUTMETA_ANGLE_DELTA_FACTOR 0.001
+
+
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
 #define is_string_delimiter(char_ptr, str) ((*(char_ptr) == '"') && (((char_ptr) == (str)) || *((char_ptr)-1) != '\\'))
@@ -792,6 +797,8 @@ static error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int
 static double find_max_step(unsigned int n, const double *x);
 static const char *next_fmt_key(const char *fmt);
 static int get_id_from_args(const gr_meta_args_t *args, int *plot_id, int *subplot_id, int *series_id);
+static gr_meta_args_t *get_subplot_from_ndc_point(double x, double y);
+static gr_meta_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const double *y);
 
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
@@ -1355,6 +1362,11 @@ int gr_plotmeta(const gr_meta_args_t *args)
     }
   plot_post_plot(active_plot_args);
 
+#ifndef NDEBUG
+  logger((stderr, "root args after \"gr_plotmeta\" (active_plot_index: %d):\n", active_plot_index - 1));
+  gr_dumpmeta(global_root_args, stderr);
+#endif
+
   return 1;
 }
 
@@ -1812,78 +1824,159 @@ int gr_sendmeta_args(const void *p, const gr_meta_args_t *args)
 
 /* ------------------------- user interaction ----------------------------------------------------------------------- */
 
-int gr_inputmeta(const gr_meta_args_t *draw_args, gr_meta_args_t *mouse_args)
+int gr_inputmeta(const gr_meta_args_t *input_args)
 {
   /*
-   * Pan: `x` and `y` key
-   * Zoom: `x`, `y` and `zoom_delta` key
-   * Rect_zoom: `x1`, `x2`, `y1`, `y2` key
-   * Reset_ranges: `key` key with value `r`
+   * reset_ranges:
+   * - `x`, `y`: mouse cursor position
+   * - `key`: Pressed key (as string)
+   * zoom:
+   * - `x`, `y`: start point
+   * - `angle_delta`: mouse wheel rotation angle in eighths of a degree (double type)
+   * box zoom:
+   * - `left`, `top`, `right`, `bottom`: coordinates of a box selection
+   * pan:
+   * - `x`, `y`: start point
+   * - `xshift`, `yshift`: shift in x and y direction
+   *
+   * All coordinates are expected to be given as workstation coordinates (integer type)
    */
-  int x, y, x2, y2, offset;
-  double width, height, max;
-  char *key;
+  double width, height, max_width_height;
+  int x, y, left, top, right, bottom;
+  gr_meta_args_t *subplot_args;
+  const double *viewport;
+  double viewport_mid_x, viewport_mid_y;
 
-  if (gr_meta_args_contains(mouse_args, "x") && gr_meta_args_contains(mouse_args, "y") &&
-      gr_meta_args_contains(mouse_args, "zoom_delta"))
-    {
-      double d1, d2;
+  logger((stderr, "Processing input\n"));
 
-      args_values(draw_args, "size", "dd", &width, &height);
-      args_values(mouse_args, "zoom_delta", "i", &offset);
-      args_values(mouse_args, "x", "i", &x);
-      args_values(mouse_args, "y", "i", &y);
-      gr_meta_args_remove(mouse_args, "x");
-      gr_meta_args_remove(mouse_args, "y");
-      gr_meta_args_remove(mouse_args, "zoom_delta");
+  args_values(active_plot_args, "size", "dd", &width, &height);
+  max_width_height = max(width, height);
+  logger((stderr, "Using size (%lf, %lf)\n", width, height));
 
-      if (height <= width)
-        {
-          d1 = 1.0 * x / width - 0.5;
-          d2 = ((height - y) / height - 0.5) * height / width;
-          gr_meta_args_push(mouse_args, "panzoom", "ddd", d1, d2, 1.0 + 0.001 * offset);
-        }
-      else
-        {
-          d1 = (1.0 * x / width - 0.5) * width / height;
-          d2 = (height - y) / height - 0.5;
-          gr_meta_args_push(mouse_args, "panzoom", "ddd", d1, d2, 1.0 + 0.001 * offset);
-        }
-      return 0;
-    }
-  if (gr_meta_args_contains(mouse_args, "x") && gr_meta_args_contains(mouse_args, "y"))
+  if (args_values(input_args, "x", "i", &x) && args_values(input_args, "y", "i", &y))
     {
-      args_values(draw_args, "size", "dd", &width, &height);
-      max = max(height, width);
-      args_values(mouse_args, "x", "i", &x);
-      args_values(mouse_args, "y", "i", &y);
-      gr_meta_args_remove(mouse_args, "x");
-      gr_meta_args_remove(mouse_args, "y");
-      gr_meta_args_push(mouse_args, "panzoom", "ddd", -1.0 * x / max, 1.0 * y / max, 0.);
-      return 0;
-    }
-  if (gr_meta_args_contains(mouse_args, "x1") && gr_meta_args_contains(mouse_args, "x2") &&
-      gr_meta_args_contains(mouse_args, "y1") && gr_meta_args_contains(mouse_args, "y2"))
-    {
-      /*TODO implement me*/
-      args_values(mouse_args, "x1", "i", &x);
-      args_values(mouse_args, "y1", "i", &y);
-      args_values(mouse_args, "x2", "i", &x2);
-      args_values(mouse_args, "y2", "i", &y2);
-      printf("%d %d %d %d\n", x, y, x2, y2);
-      return 0;
-    }
-  if (gr_meta_args_contains(mouse_args, "key"))
-    {
-      args_values(mouse_args, "key", "s", &key);
-      if (strcmp(key, "r") == 0)
+      double ndc_x, ndc_y;
+      char *key;
+
+      ndc_x = (double)x / max_width_height;
+      ndc_y = (double)(height - y) / max_width_height;
+      logger((stderr, "x: %d, y: %d, ndc_x: %lf, ndc_y: %lf\n", x, y, ndc_x, ndc_y));
+
+      subplot_args = get_subplot_from_ndc_point(ndc_x, ndc_y);
+
+      if (args_values(input_args, "key", "s", &key))
         {
-          gr_meta_args_push(mouse_args, "reset_ranges", "i", 1);
+          logger((stderr, "Got key \"%s\"\n", key));
+
+          if (strcmp(key, "r") == 0)
+            {
+              if (subplot_args != NULL)
+                {
+                  logger((stderr, "Reset single subplot coordinate ranges\n"));
+                  gr_meta_args_push(subplot_args, "reset_ranges", "i", 1);
+                }
+              else
+                {
+                  gr_meta_args_t **subplot_args_ptr;
+                  logger((stderr, "Reset all subplot coordinate ranges\n"));
+                  args_values(active_plot_args, "subplots", "A", &subplot_args_ptr);
+                  while (*subplot_args_ptr != NULL)
+                    {
+                      gr_meta_args_push(*subplot_args_ptr, "reset_ranges", "i", 1);
+                      ++subplot_args_ptr;
+                    }
+                }
+            }
+
+          return 1;
         }
-      gr_meta_args_remove(mouse_args, "key");
-      return 0;
+
+      if (subplot_args != NULL)
+        {
+          double angle_delta;
+          int xshift, yshift;
+          args_values(subplot_args, "viewport", "D", &viewport);
+
+          if (args_values(input_args, "angle_delta", "d", &angle_delta))
+            {
+              double focus_x, focus_y;
+
+              viewport_mid_x = (viewport[0] + viewport[1]) / 2.0;
+              viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
+              focus_x = ndc_x - viewport_mid_x;
+              focus_y = ndc_y - viewport_mid_y;
+              logger((stderr, "Zoom to ndc focus point (%lf, %lf), angle_delta %lf\n", focus_x, focus_y, angle_delta));
+              gr_meta_args_push(subplot_args, "panzoom", "ddd", focus_x, focus_y,
+                                1.0 - INPUTMETA_ANGLE_DELTA_FACTOR * angle_delta);
+
+              return 1;
+            }
+
+          if (args_values(input_args, "xshift", "i", &xshift) && args_values(input_args, "yshift", "i", &yshift))
+            {
+              double ndc_xshift, ndc_yshift;
+
+              ndc_xshift = -xshift / max_width_height;
+              ndc_yshift = yshift / max_width_height;
+              logger((stderr, "Translate by ndc coordinates (%lf, %lf)\n", ndc_xshift, ndc_yshift));
+              gr_meta_args_push(subplot_args, "panzoom", "ddd", ndc_xshift, ndc_yshift, 0.0);
+
+              return 1;
+            }
+        }
     }
-  return 1;
+
+  if (args_values(input_args, "left", "i", &left) && args_values(input_args, "right", "i", &right) &&
+      args_values(input_args, "top", "i", &top) && args_values(input_args, "bottom", "i", &bottom))
+    {
+      double ndc_left, ndc_top, ndc_right, ndc_bottom;
+      double focus_left, focus_top, focus_right, focus_bottom, focus_x, focus_y, factor;
+      double ndc_box_x[4], ndc_box_y[4];
+
+      ndc_left = (double)left / max_width_height;
+      ndc_top = (double)(height - top) / max_width_height;
+      ndc_right = (double)right / max_width_height;
+      ndc_bottom = (double)(height - bottom) / max_width_height;
+
+      ndc_box_x[0] = ndc_left;
+      ndc_box_y[0] = ndc_bottom;
+      ndc_box_x[1] = ndc_right;
+      ndc_box_y[1] = ndc_bottom;
+      ndc_box_x[2] = ndc_left;
+      ndc_box_y[2] = ndc_top;
+      ndc_box_x[3] = ndc_right;
+      ndc_box_y[3] = ndc_top;
+      subplot_args = get_subplot_from_ndc_points(array_size(ndc_box_x), ndc_box_x, ndc_box_y);
+      if (subplot_args == NULL)
+        {
+          return 0;
+        }
+      args_values(subplot_args, "viewport", "D", &viewport);
+
+      viewport_mid_x = (viewport[0] + viewport[1]) / 2.0;
+      viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
+      factor = max((abs(right - left) / width) / (viewport[1] - viewport[0]),
+                   (abs(bottom - top) / height) / (viewport[3] - viewport[2]));
+      /* Dependent on which factor was taken in the previous statement, the focus point calculation can differ for
+       * left/right and top/bottom pairs -> calculate both and take the average */
+      focus_left = (ndc_left - factor * viewport[0]) / (1 - factor);
+      focus_right = (ndc_right - factor * viewport[1]) / (1 - factor);
+      focus_bottom = (ndc_bottom - factor * viewport[2]) / (1 - factor);
+      focus_top = (ndc_top - factor * viewport[3]) / (1 - factor);
+      focus_x = (focus_left + focus_right) / 2.0 - viewport_mid_x;
+      focus_y = (focus_top + focus_bottom) / 2.0 - viewport_mid_y;
+
+      logger((stderr, "Got box: (%d, %d, %d, %d)\n", left, right, top, bottom));
+      logger((stderr, "viewport mid: (%lf, %lf)\n", viewport_mid_x, viewport_mid_y));
+      logger((stderr, "zoom focus: (%lf, %lf)\n", focus_x, focus_y));
+      logger((stderr, "zomm factor: %lf\n", factor));
+
+      gr_meta_args_push(subplot_args, "panzoom", "ddd", focus_x, focus_y, factor);
+
+      return 1;
+    }
+
+  return 0;
 }
 
 /* ######################### private implementation ################################################################# */
@@ -5094,6 +5187,42 @@ int get_id_from_args(const gr_meta_args_t *args, int *plot_id, int *subplot_id, 
   *series_id = _series_id;
 
   return _plot_id > 0 || _subplot_id > 0 || _series_id > 0;
+}
+
+gr_meta_args_t *get_subplot_from_ndc_point(double x, double y)
+{
+  gr_meta_args_t **subplot_args;
+  const double *viewport;
+
+  args_values(active_plot_args, "subplots", "A", &subplot_args);
+  while (*subplot_args != NULL)
+    {
+      if (args_values(*subplot_args, "viewport", "D", &viewport))
+        {
+          logger((stderr, "Got viewport (%f, %f, %f, %f) and point (%lf, %lf)\n", viewport[0], viewport[1], viewport[2],
+                  viewport[3], x, y));
+          if (viewport[0] <= x && x <= viewport[1] && viewport[2] <= y && y <= viewport[3])
+            {
+              return *subplot_args;
+            }
+        }
+      ++subplot_args;
+    }
+
+  return NULL;
+}
+
+gr_meta_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const double *y)
+{
+  gr_meta_args_t *subplot_args;
+  unsigned int i;
+
+  for (i = 0, subplot_args = NULL; i < n && subplot_args == NULL; ++i)
+    {
+      subplot_args = get_subplot_from_ndc_point(x[i], y[i]);
+    }
+
+  return subplot_args;
 }
 
 
