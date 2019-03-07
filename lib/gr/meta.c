@@ -1312,6 +1312,21 @@ void gr_meta_args_remove(gr_meta_args_t *args, const char *key)
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
+int gr_clearmeta(void)
+{
+  if (plot_init_static_variables() != NO_ERROR)
+    {
+      return 0;
+    }
+  gr_meta_args_clear(active_plot_args);
+  if (plot_init_args_structure(active_plot_args, plot_hierarchy_names + 1, 1) != NO_ERROR)
+    {
+      return 0;
+    }
+
+  return 1;
+}
+
 int gr_mergemeta(const gr_meta_args_t *args)
 {
   if (plot_init_static_variables() != NO_ERROR)

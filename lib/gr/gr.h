@@ -177,6 +177,7 @@ extern "C"
   DLLEXPORT int gr_sendmeta_ref(const void *, const char *, char, const void *, int);
   DLLEXPORT int gr_sendmeta_args(const void *p, const gr_meta_args_t *);
   DLLEXPORT void gr_closemeta(const void *);
+  DLLEXPORT int gr_clearmeta(void);
   DLLEXPORT int gr_inputmeta(const gr_meta_args_t *);
   DLLEXPORT int gr_mergemeta(const gr_meta_args_t *);
   DLLEXPORT int gr_plotmeta(const gr_meta_args_t *);
