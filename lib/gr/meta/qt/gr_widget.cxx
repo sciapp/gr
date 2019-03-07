@@ -71,7 +71,6 @@ void GRWidget::paintEvent(QPaintEvent *event)
 
 void GRWidget::keyPressEvent(QKeyEvent *event)
 {
-  std::cerr << event->key() << std::endl;
   if (event->key() == Qt::Key_R)
     {
       gr_meta_args_t *input_args = gr_newmeta();
@@ -121,6 +120,7 @@ void GRWidget::mouseReleaseEvent(QMouseEvent *event)
       box_zoom_rubberband_->hide();
       if (std::abs(event->x() - start_pos.x()) >= 5 && std::abs(event->y() - start_pos.y()) >= 5)
         {
+          gr_meta_args_push(input_args, "keep_aspect_ratio", "i", event->modifiers() & Qt::ShiftModifier);
           gr_meta_args_push(input_args, "left", "i", box_zoom_rubberband_->geometry().left());
           gr_meta_args_push(input_args, "top", "i", box_zoom_rubberband_->geometry().top());
           gr_meta_args_push(input_args, "right", "i", box_zoom_rubberband_->geometry().right());
