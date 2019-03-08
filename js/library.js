@@ -187,5 +187,13 @@ mergeInto(LibraryManager.library, {
         context.restore();
         context.save();
         context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    },
+
+    js_get_ws_width: function() {
+        return Module.canvas.width;
+    },
+
+    js_get_ws_height: function() {
+        return Module.canvas.height;
     }
 });

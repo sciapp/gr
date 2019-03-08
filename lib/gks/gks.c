@@ -607,6 +607,7 @@ void gks_open_ws(int wkid, char *path, int wtype)
                         {
                           if (wtype == 5) s->wiss = 1;
 
+#ifndef __EMSCRIPTEN__
                           if ((wtype >= 210 && wtype <= 213) || wtype == 218 || wtype == 41 || wtype == 381 ||
                               wtype == 400 || wtype == 420)
                             {
@@ -617,6 +618,14 @@ void gks_open_ws(int wkid, char *path, int wtype)
                               p->unitsx = i_arr[0];
                               p->unitsy = i_arr[1];
                             }
+#else
+                          ws_descr_t *p = (ws_descr_t *)element->ptr;
+
+                          p->sizex = f_arr_1[0];
+                          p->sizey = f_arr_2[0];
+                          p->unitsx = i_arr[0];
+                          p->unitsy = i_arr[1];
+#endif
                         }
                       else
                         {
