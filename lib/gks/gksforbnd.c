@@ -26,6 +26,11 @@ static void gksrealloc(int n)
     }
 }
 
+void STDCALL GINKS(void)
+{
+  gks_init_gks();
+}
+
 void STDCALL GOPKS(int *errfil, int *buffer)
 {
   gks_open_gks(2);

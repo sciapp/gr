@@ -497,6 +497,7 @@ extern "C"
 
   /* GKS function prototypes */
 
+  DLLEXPORT void gks_init_gks(void);
   DLLEXPORT void gks_open_gks(int errfil);
   DLLEXPORT void gks_close_gks(void);
   DLLEXPORT void gks_open_ws(int wkid, char *conid, int wtype);

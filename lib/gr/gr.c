@@ -1228,6 +1228,13 @@ static void initgks(void)
 #endif
 }
 
+void gr_initgr(void)
+{
+  gks_init_gks();
+
+  initialize(GKS_K_GKCL);
+}
+
 void gr_opengks(void)
 {
   int errfil = 0;

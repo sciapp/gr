@@ -55,6 +55,7 @@ EXPORTS
 	gr_inqmathtex
 	gr_moveselection
 	gr_ndctowc
+	gr_initgr
 	gr_opengks
 	gr_openmeta
 	gr_openws

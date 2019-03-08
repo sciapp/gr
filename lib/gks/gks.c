@@ -347,37 +347,18 @@ static void gks_parse_env(void)
     }
   else
     s->version = GKS5;
+
+  s->ignore_encoding = (char *)gks_getenv("GKS_IGNORE_ENCODING") != NULL;
+
+  if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL) atexit(gks_emergency_close);
 }
 
-void gks_open_gks(int errfil)
+void gks_init_gks(void)
 {
   int i, tnr;
-  ws_descr_t *ws;
 
-  if (state == GKS_K_GKCL)
+  if (s != NULL)
     {
-      open_ws = NULL;
-      active_ws = NULL;
-      av_ws_types = NULL;
-      for (i = 0; i < num_ws_types; i++)
-        {
-          ws = (ws_descr_t *)gks_malloc(sizeof(ws_descr_t));
-          memmove(ws, ws_types + i, sizeof(ws_descr_t));
-          av_ws_types = gks_list_add(av_ws_types, ws_types[i].wtype, ws);
-        }
-
-      s = (gks_state_list_t *)gks_malloc(sizeof(gks_state_list_t));
-
-      /* parse GKS environment variables */
-      gks_parse_env();
-
-      /* open font database */
-      s->fontfile = gks_open_font();
-
-      s->ignore_encoding = (char *)gks_getenv("GKS_IGNORE_ENCODING") != NULL;
-
-      gks_init_core(s);
-
       /* initialize aspect source flags */
       for (i = 0; i < 13; i++) s->asf[i] = GKS_K_ASF_BUNDLED;
 
@@ -443,15 +424,47 @@ void gks_open_gks(int errfil)
       s->cntnr = 0;
       s->clip = GKS_K_CLIP;
 
-      /* miscellaneous flags */
-      s->wiss = 0;
-
       /* GKS extended attributes */
       s->txslant = 0;
       s->shoff[0] = 0;
       s->shoff[1] = 0;
       s->blur = 0;
       s->alpha = 1;
+    }
+}
+
+void gks_open_gks(int errfil)
+{
+  int i;
+  ws_descr_t *ws;
+
+  if (state == GKS_K_GKCL)
+    {
+      open_ws = NULL;
+      active_ws = NULL;
+      av_ws_types = NULL;
+      for (i = 0; i < num_ws_types; i++)
+        {
+          ws = (ws_descr_t *)gks_malloc(sizeof(ws_descr_t));
+          memmove(ws, ws_types + i, sizeof(ws_descr_t));
+          av_ws_types = gks_list_add(av_ws_types, ws_types[i].wtype, ws);
+        }
+
+      s = (gks_state_list_t *)gks_malloc(sizeof(gks_state_list_t));
+
+      /* parse GKS environment variables */
+      gks_parse_env();
+
+      /* open font database */
+      s->fontfile = gks_open_font();
+
+      /* miscellaneous flags */
+      s->wiss = 0;
+
+      gks_init_core(s);
+
+      /* initialize GKS state */
+      gks_init_gks();
 
       i_arr[0] = errfil;
 
@@ -459,8 +472,6 @@ void gks_open_gks(int errfil)
       gks_ddlk(OPEN_GKS, 1, 1, 1, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
 
       state = GKS_K_GKOP;
-
-      if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL) atexit(gks_emergency_close);
 
       /* ensure that floats are printed with dots */
       setlocale(LC_NUMERIC, "C");
@@ -482,6 +493,7 @@ void gks_close_gks(void)
 
       gks_list_free(av_ws_types);
       gks_free((void *)s);
+      s = NULL;
 
       state = GKS_K_GKCL;
     }

@@ -26,6 +26,7 @@ extern "C"
   } vertex_t;
   typedef struct _gr_meta_args_t gr_meta_args_t;
 
+  DLLEXPORT void gr_initgr(void);
   DLLEXPORT void gr_opengks(void);
   DLLEXPORT void gr_closegks(void);
   DLLEXPORT void gr_inqdspsize(double *, double *, int *, int *);

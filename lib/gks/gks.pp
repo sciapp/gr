@@ -168,6 +168,7 @@ interface
 
   { GKS function prototypes }
 
+  procedure gks_init_gks; cdecl; external 'GKS';
   procedure gks_open_gks(errfil : longint); cdecl; external 'GKS';
   procedure gks_close_gks; cdecl; external 'GKS';
   procedure gks_open_ws(

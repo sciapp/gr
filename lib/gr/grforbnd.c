@@ -12,6 +12,11 @@
 
 #define FORTRAN(a) STDCALL a##_
 
+void FORTRAN(gr_initgr)(void)
+{
+  gr_initgr();
+}
+
 void FORTRAN(gr_opengks)(void)
 {
   gr_opengks();

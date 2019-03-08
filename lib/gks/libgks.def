@@ -1,6 +1,7 @@
 LIBRARY libgks.dll
 
 EXPORTS
+	gks_init_gks
 	gks_open_gks
 	gks_close_gks
 	gks_open_ws
@@ -111,6 +112,7 @@ EXPORTS
 	gks_inq_text_slant
 	gks_a_error_info
 	gks_errno
+	GINKS
 	GOPKS
 	GCLKS
 	GOPWK
