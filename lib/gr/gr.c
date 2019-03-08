@@ -1230,9 +1230,12 @@ static void initgks(void)
 
 void gr_initgr(void)
 {
-  gks_init_gks();
+  if (!autoinit)
+    {
+      gks_init_gks();
 
-  initialize(GKS_K_GKCL);
+      initialize(GKS_K_GKCL);
+    }
 }
 
 void gr_opengks(void)
