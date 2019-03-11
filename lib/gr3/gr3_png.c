@@ -2,7 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libpng16/png.h>
+#include <png.h>
 #include "gr3.h"
 #include "gr3_internals.h"
 

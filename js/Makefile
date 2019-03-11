@@ -12,7 +12,7 @@ endif
   GKSDIR = ../lib/gks
    GRDIR = ../lib/gr
   GR3DIR = ../lib/gr3
-INCLUDES = -I$(GR3DIR) -I$(GRDIR) -I$(GKSDIR) -I$(JPEGDIR) -I$(PNGDIR)/.. -I$(ZLIBDIR)
+INCLUDES = -I$(GR3DIR) -I$(GRDIR) -I$(GKSDIR) -I$(JPEGDIR) -I$(PNGDIR) -I$(ZLIBDIR)
  GKSOBJS = js.o $(GKSDIR)/gks.o $(GKSDIR)/font.o $(GKSDIR)/afm.o $(GKSDIR)/util.o \
            $(GKSDIR)/malloc.o $(GKSDIR)/error.o $(GKSDIR)/wiss.o $(GKSDIR)/io.o
   GROBJS = $(GRDIR)/gr.o $(GRDIR)/io.o $(GRDIR)/text.o $(GRDIR)/gridit.o \

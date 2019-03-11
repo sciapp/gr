@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <math.h>
 #include <string.h>
-#include <libpng16/png.h>
+#include <png.h>
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -87,13 +87,10 @@ static gks_state_list_t *gkss;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
-typedef unsigned char Byte;
-typedef unsigned long uLong;
-
 typedef struct FIG_stream_t
 {
-  Byte *buffer;
-  uLong size, length;
+  unsigned char *buffer;
+  unsigned long size, length;
 } FIG_stream;
 
 typedef struct FIG_point_t
@@ -150,7 +147,7 @@ static void fig_memcpy(FIG_stream *p, char *s, size_t n)
   if (p->length + n >= p->size)
     {
       while (p->length + n >= p->size) p->size += MEMORY_INCREMENT;
-      p->buffer = (Byte *)realloc(p->buffer, p->size);
+      p->buffer = (unsigned char *)realloc(p->buffer, p->size);
     }
 
   memmove(p->buffer + p->length, s, n);

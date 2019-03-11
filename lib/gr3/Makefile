@@ -34,7 +34,7 @@ targets: prerequisites libGR3.so
 prerequisites:
 	@make -C ../gr
 
-ifneq ($(UNAME), Darwin)
+ifeq ($(UNAME), Linux)
 targets: libGR3platform.so
 install: install_platform
 install_platform:

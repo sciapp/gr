@@ -1,3 +1,7 @@
+ifeq ($(strip $(PREFIX)),)
+override PREFIX = $(abspath $(CURDIR)/../build)
+endif
+
 CFLAGS=-O -fPIC -DHAVE_HIDDEN $(ARCHS)
 LIBS=libz.a
 
@@ -17,6 +21,8 @@ OBJS = \
         gzlib.o \
         gzread.o \
         gzwrite.o
+
+default: install
 
 libz.a: $(OBJS)
 	$(AR) crv $@ $?
@@ -44,6 +50,16 @@ depend:
         gzlib.c \
         gzread.c \
         gzwrite.c 2> /dev/null
+
+$(PREFIX)/lib/libz.a: libz.a
+	mkdir -p $(PREFIX)/lib/
+	mkdir -p $(PREFIX)/include/
+	cp libz.a $(PREFIX)/lib/
+	cp *.h $(PREFIX)/include/
+
+install: $(PREFIX)/lib/libz.a
+
+.PHONY: default install clean distclean depend
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

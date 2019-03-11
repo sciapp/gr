@@ -10,7 +10,7 @@
 
 #include <jpeglib.h>
 #include <jerror.h>
-#include <libpng16/png.h>
+#include <png.h>
 
 #ifndef NO_MUPDF
 #include <mupdf/fitz.h>

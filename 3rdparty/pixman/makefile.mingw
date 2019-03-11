@@ -1,5 +1,0 @@
-libpixman-1.lib: ../build/lib/libpixman-1.a
-	ln -s -f `pwd`/../build/lib/libpixman-1.a `pwd`/libpixman-1.lib
-
-../build/lib/libpixman-1.a:
-	./build_mingw.sh

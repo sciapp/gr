@@ -1,4 +1,4 @@
-FTLIB = ../../3rdparty/freetype/libfreetype.lib
+FTLIB = -L../../3rdparty/build/lib -lfreetype
 INCLUDES = -I../../3rdparty/freetype/include
 DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11
 CFLAGS = $(DEFINES) $(INCLUDES)
@@ -11,10 +11,9 @@ LIBS = -lwsock32 -lmsimg32 -lgdi32
 
 .SUFFIXES: .o .c
 
-all: prerequisites libgks.lib libgks.dll demo.exe
+default: all
 
-prerequisites:
-	@$(MAKE) -C ../../3rdparty/freetype
+all: libgks.lib libgks.dll demo.exe
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFINES) $<
@@ -39,3 +38,5 @@ clean:
 	$(RM) libgks.dll
 	$(RM) libgks.lib
 	$(RM) *.o
+
+.PHONY: default all clean

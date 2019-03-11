@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <math.h>
-#include <libpng16/png.h>
+#include <png.h>
 
 #ifndef _WIN32
 #include <arpa/inet.h>
@@ -101,9 +101,6 @@ extern "C"
 static int img_count = 0;
 
 static gks_state_list_t *gkss;
-
-typedef unsigned char Byte;
-typedef unsigned long uLong;
 
 typedef struct HTM_stream_t
 {

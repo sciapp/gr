@@ -121,7 +121,7 @@ gks:
 
 Darwin:
 	@make targets quartzplugin.so \
-	EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation" LIBS="-liconv"
+	EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation" LIBS=""
 Linux:
 	@make targets \
 	SOFLAGS="-shared" \
@@ -182,7 +182,7 @@ pgfplugin.so: pgfplugin.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.o: cairoplugin.c
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(CAIRODEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
 
 cairoplugin.so: cairoplugin.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(CAIROLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
