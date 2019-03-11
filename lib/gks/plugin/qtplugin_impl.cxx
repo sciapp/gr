@@ -87,6 +87,7 @@ typedef struct ws_state_list_t
   QPixmap *pm;
   QPainter *pixmap;
   int state, wtype;
+  int device_dpi_x, device_dpi_y;
   double mwidth, mheight;
   int width, height;
   double a, b, c, d;
@@ -170,24 +171,20 @@ static void init_norm_xform(void)
 
 static void resize_window(void)
 {
-  if (p->mwidth > 0)
-    {
-      double mwidth = round((p->viewport[1] - p->viewport[0]) * 1000) * 0.001;
-      p->width = nint(mwidth / p->mwidth * p->width);
-    }
-  else
+  p->mwidth = p->viewport[1] - p->viewport[0];
+  p->width = nint(p->device_dpi_x * p->mwidth / 0.0254);
+  if (p->width < 2)
     {
       p->width = 2;
+      p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
     }
 
-  if (p->mheight > 0)
-    {
-      double mheight = round((p->viewport[3] - p->viewport[2]) * 1000) * 0.001;
-      p->height = nint(mheight / p->mheight * p->height);
-    }
-  else
+  p->mheight = p->viewport[3] - p->viewport[2];
+  p->height = nint(p->device_dpi_y * p->mheight / 0.0254);
+  if (p->height < 2)
     {
       p->height = 2;
+      p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
     }
 
   if (p->pm)
@@ -1168,22 +1165,18 @@ static int get_pixmap(void)
         sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->pixmap);
     }
   else
-    return 1;
+    {
+      return 1;
+    }
 
-  if (p->widget != NULL)
-    {
-      p->mwidth = p->widget->widthMM() * 0.001;
-      p->mheight = p->widget->heightMM() * 0.001;
-      p->width = p->widget->width();
-      p->height = p->widget->height();
-    }
-  else
-    {
-      p->mwidth = p->pixmap->device()->widthMM() * 0.001;
-      p->mheight = p->pixmap->device()->heightMM() * 0.001;
-      p->width = p->pixmap->device()->width();
-      p->height = p->pixmap->device()->height();
-    }
+  QPaintDevice *device = (p->widget != NULL) ? p->widget : p->pixmap->device();
+  p->device_dpi_x = device->physicalDpiX();
+  p->device_dpi_y = device->physicalDpiY();
+  p->width = device->width();
+  p->height = device->height();
+  p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
+  p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
+
   return 0;
 }
 

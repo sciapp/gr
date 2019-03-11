@@ -121,8 +121,8 @@ void InteractiveGRWidget::paintEvent(QPaintEvent *event)
   gr_clearws();
   /* wsviewport is set here because the resize event is called before GR
      is initialized */
-  mheight = this->heightMM() * 0.001;
-  mwidth = this->widthMM() * 0.001;
+  mwidth = (double)width() / physicalDpiX() * 2.54 / 100;
+  mheight = (double)height() / physicalDpiY() * 2.54 / 100;
   if (mwidth > mheight)
     {
       vp_width = mheight;
