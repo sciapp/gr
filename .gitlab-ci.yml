@@ -123,7 +123,7 @@ centos6-32bit-self-contained:
   - yum groupinstall -y "Development Tools"
   - yum groupinstall -y "X Window System"
   - yum install -y which gcc gcc-c++ mesa-libGL-devel libXt-devel libX11-devel libXrender-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel git qt-devel gtk2-devel
-  - make self GRDIR=/usr/local/gr
+  - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
