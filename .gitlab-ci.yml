@@ -384,6 +384,7 @@ deploy:
     - master@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   script:
+  - chmod 644 Downloads/*.tar.gz
   - apt-get update
   - apt-get install -y git python3-pip rsync sshpass
   - python3 -m pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@iffgit.fz-juelich.de/Scientific-IT-Systems/github-binary-upload.git
