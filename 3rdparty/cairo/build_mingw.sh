@@ -35,7 +35,7 @@ export FREETYPE_LIBS=${dest}/lib/libfreetype.lib
 export MAKE=make
 
 ./configure --prefix=${dest} --libdir=${dest}/lib \
-  --enable-static --disable-shared --with-pic --disable-quartz --enable-ft --disable-fc --host=x86_64-w64-mingw32 --disable-ps --disable-pdf --disable-xlib --disable-interpreter --disable-valgrind
+  --enable-static --disable-shared --with-pic --disable-quartz --enable-ft --disable-fc --host=x86_64-w64-mingw32 --disable-ps --disable-pdf --disable-xlib --disable-xcb --disable-xlib-xcb --disable-interpreter --disable-valgrind
 make
 make install
 export MAKE="make -f makefile.mingw"
