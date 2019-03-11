@@ -1,4 +1,6 @@
 #!/bin/sh
+set -e
+
 
 if [ $# = 0 ]; then
   opts="xft=no"

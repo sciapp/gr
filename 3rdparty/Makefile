@@ -3,13 +3,13 @@
      DIR = 
 
 default:
-	@for d in $(TARGETS); do make -C $$d; done
+	@set -e; for d in $(TARGETS); do make -C $$d; done
 
 extras:
-	@for d in $(EXTRAS); do ( cd $$d && ./build.sh $(DIR) ); done
+	@set -e; for d in $(EXTRAS); do ( cd $$d && ./build.sh $(DIR) ); done
 
 clean:
-	@for d in $(TARGETS); do make -C $$d clean; done
+	@set -e; for d in $(TARGETS); do make -C $$d clean; done
 
 realclean: clean
 	rm -rf ./build

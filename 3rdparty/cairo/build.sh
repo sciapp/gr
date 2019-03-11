@@ -46,8 +46,11 @@ export FREETYPE_LIBS=${dest}/lib/libfreetype.a
   --disable-pdf --disable-interpreter  --without-x --disable-xlib \
   --disable-xlib-xrender --disable-xcb --disable-xlib-xcb
 # Building the Cairo test suite may fail
-make -j4 || true
-make install || true
+echo '%:' > test/Makefile
+echo '	@echo "Skipping target $@"' >> test/Makefile
+cp test/Makefile perf/Makefile
+make -j4
+make install
 
 cd ${cwd}
 
