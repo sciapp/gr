@@ -9221,7 +9221,7 @@ void gr_shadelines(int n, double *x, double *y, int xform, int w, int h)
     }
 }
 
-void gr_panzoom(double x, double y, double zoom, double *xmin, double *xmax, double *ymin, double *ymax)
+void gr_panzoom(double x, double y, double xzoom, double yzoom, double *xmin, double *xmax, double *ymin, double *ymax)
 {
   int errind, tnr;
   double wn[4], vp[4];
@@ -9232,7 +9232,15 @@ void gr_panzoom(double x, double y, double zoom, double *xmin, double *xmax, dou
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  if (zoom < FEPS)
+  xzoom = fabs(xzoom);
+  yzoom = fabs(yzoom);
+
+  if (yzoom < FEPS)
+    {
+      yzoom = xzoom;
+    }
+
+  if (xzoom < FEPS)
     {
       x0 = vp[0] + x;
       x1 = vp[1] + x;
@@ -9261,7 +9269,7 @@ void gr_panzoom(double x, double y, double zoom, double *xmin, double *xmax, dou
       y1 = tmp;
     }
 
-  if (zoom < FEPS)
+  if (xzoom < FEPS)
     {
       *xmin = x0;
       *xmax = x1;
@@ -9274,12 +9282,10 @@ void gr_panzoom(double x, double y, double zoom, double *xmin, double *xmax, dou
       gr_wctondc(xmin, ymin);
       gr_wctondc(xmax, ymax);
       gr_wctondc(&x0, &y0);
-      *xmin = x0 - (x0 - *xmin) * zoom;
-      *xmax = x0 + (*xmax - x0) * zoom;
-      *ymin = y0 - (y0 - *ymin) * zoom;
-      ;
-      *ymax = y0 + (*ymax - y0) * zoom;
-      ;
+      *xmin = x0 - (x0 - *xmin) * xzoom;
+      *xmax = x0 + (*xmax - x0) * xzoom;
+      *ymin = y0 - (y0 - *ymin) * yzoom;
+      *ymax = y0 + (*ymax - y0) * yzoom;
       gr_ndctowc(xmin, ymin);
       gr_ndctowc(xmax, ymax);
     }

@@ -210,6 +210,7 @@ static void debug_printf(const char *format, ...)
 /* ------------------------- user interaction ----------------------------------------------------------------------- */
 
 #define INPUTMETA_ANGLE_DELTA_FACTOR 0.001
+#define INPUTMETA_DEFAULT_KEEP_ASPECT_RATIO 1
 
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
@@ -1850,6 +1851,7 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
    * - `angle_delta`: mouse wheel rotation angle in eighths of a degree (double type)
    * box zoom:
    * - `left`, `top`, `right`, `bottom`: coordinates of a box selection
+   * - `keep_aspect_ratio`: if set to `1`, the aspect ratio of the gr window is preserved (defaults to `1`)
    * pan:
    * - `x`, `y`: start point
    * - `xshift`, `yshift`: shift in x and y direction
@@ -1945,8 +1947,12 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
       args_values(input_args, "top", "i", &top) && args_values(input_args, "bottom", "i", &bottom))
     {
       double ndc_left, ndc_top, ndc_right, ndc_bottom;
-      double focus_left, focus_top, focus_right, focus_bottom, focus_x, focus_y, factor;
+      double focus_left, focus_top, focus_right, focus_bottom, focus_x, focus_y, factor_x, factor_y;
       double ndc_box_x[4], ndc_box_y[4];
+      const double *wswindow;
+      int keep_aspect_ratio = INPUTMETA_DEFAULT_KEEP_ASPECT_RATIO;
+
+      args_values(input_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
 
       ndc_left = (double)left / max_width_height;
       ndc_top = (double)(height - top) / max_width_height;
@@ -1967,26 +1973,39 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
           return 0;
         }
       args_values(subplot_args, "viewport", "D", &viewport);
+      args_values(subplot_args, "wswindow", "D", &wswindow);
 
       viewport_mid_x = (viewport[0] + viewport[1]) / 2.0;
       viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
-      factor = max((abs(right - left) / width) / (viewport[1] - viewport[0]),
-                   (abs(bottom - top) / height) / (viewport[3] - viewport[2]));
-      /* Dependent on which factor was taken in the previous statement, the focus point calculation can differ for
+      if (keep_aspect_ratio)
+        {
+          factor_x = factor_y =
+              max(abs(right - left) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0])),
+                  abs(bottom - top) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2])));
+        }
+      else
+        {
+          factor_x = abs(right - left) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
+          factor_y = abs(bottom - top) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
+        }
+      /* If `keep_aspect_ratio` is set to `1`:
+       * Dependent on which factor was taken in the previous statement, the focus point calculation can differ for
        * left/right and top/bottom pairs -> calculate both and take the average */
-      focus_left = (ndc_left - factor * viewport[0]) / (1 - factor);
-      focus_right = (ndc_right - factor * viewport[1]) / (1 - factor);
-      focus_bottom = (ndc_bottom - factor * viewport[2]) / (1 - factor);
-      focus_top = (ndc_top - factor * viewport[3]) / (1 - factor);
+      focus_left = (ndc_left - factor_x * viewport[0]) / (1 - factor_x);
+      focus_right = (ndc_right - factor_x * viewport[1]) / (1 - factor_x);
+      focus_bottom = (ndc_bottom - factor_y * viewport[2]) / (1 - factor_y);
+      focus_top = (ndc_top - factor_y * viewport[3]) / (1 - factor_y);
       focus_x = (focus_left + focus_right) / 2.0 - viewport_mid_x;
       focus_y = (focus_top + focus_bottom) / 2.0 - viewport_mid_y;
 
+      logger((stderr, "Got widget size: (%lf, %lf)\n", width, height));
       logger((stderr, "Got box: (%d, %d, %d, %d)\n", left, right, top, bottom));
+      logger((stderr, "Got viewport: (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
       logger((stderr, "viewport mid: (%lf, %lf)\n", viewport_mid_x, viewport_mid_y));
       logger((stderr, "zoom focus: (%lf, %lf)\n", focus_x, focus_y));
-      logger((stderr, "zomm factor: %lf\n", factor));
+      logger((stderr, "zomm factors: (%lf, %lf)\n", factor_x, factor_y));
 
-      gr_meta_args_push(subplot_args, "panzoom", "ddd", focus_x, focus_y, factor);
+      gr_meta_args_push(subplot_args, "panzoom", "dddd", focus_x, focus_y, factor_x, factor_y);
 
       return 1;
     }
@@ -2808,7 +2827,7 @@ int args_check_format_compatibility(const arg_t *arg, const char *compatible_for
   char first_compatible_format_char, first_value_format_char;
   const char *current_format_ptr;
   char *compatible_format_for_arg;
-  int dataslot_count;
+  size_t dataslot_count, len_compatible_format;
 
   /* First, check if the compatible format itself is valid (-> known format, homogeneous, no options) */
   first_compatible_format_char = *compatible_format;
@@ -2825,6 +2844,7 @@ int args_check_format_compatibility(const arg_t *arg, const char *compatible_for
         }
       ++current_format_ptr;
     }
+  len_compatible_format = current_format_ptr - compatible_format;
 
   /* Second, check if original and compatible format are identical */
   /* within an argument, formats are stored **with** array length slots, so we need `nD` instead of `D` for example
@@ -2864,8 +2884,13 @@ int args_check_format_compatibility(const arg_t *arg, const char *compatible_for
     {
       return 0;
     }
-  /* Check if the single format character is an uppercase varsion of the given compatible format */
+  /* Check if the single format character is an uppercase version of the given compatible format */
   if (first_value_format_char != toupper(first_compatible_format_char))
+    {
+      return 0;
+    }
+  /* Check if the compatible format is not longer than the stored array */
+  if (len_compatible_format > *(size_t *)arg->value_ptr)
     {
       return 0;
     }
@@ -3581,9 +3606,15 @@ void plot_process_viewport(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_ar
   gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
   gr_setwswindow(wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
 
-  gr_meta_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
-  logger((stderr, "Stored viewport (%f, %f, %f, %f)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
   gr_meta_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
+  gr_meta_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
+  gr_meta_args_push(subplot_args, "wswindow", "dddd", wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
+  gr_meta_args_push(subplot_args, "wsviewport", "dddd", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+  logger((stderr, "Stored vp (%lf, %lf, %lf, %lf)\n", vp[0], vp[1], vp[2], vp[3]));
+  logger((stderr, "Stored viewport (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
+  logger((stderr, "Stored wswindow (%lf, %lf, %lf, %lf)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
+  logger(
+      (stderr, "Stored wsviewport (%lf, %lf, %lf, %lf)\n", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]));
 }
 
 void plot_process_window(gr_meta_args_t *subplot_args)
@@ -3594,7 +3625,7 @@ void plot_process_window(gr_meta_args_t *subplot_args)
   int xflip, yflip, zflip;
   int major_count, x_major_count, y_major_count;
   double x_min, x_max, y_min, y_max, z_min, z_max;
-  double x, y, zoom;
+  double x, y, xzoom, yzoom;
   int adjust_xlim, adjust_ylim, adjust_zlim;
   double x_tick, y_tick;
   double x_org_low, x_org_high, y_org_low, y_org_high;
@@ -3654,10 +3685,22 @@ void plot_process_window(gr_meta_args_t *subplot_args)
           gr_meta_args_push(subplot_args, "original_adjust_ylim", "i", adjust_ylim);
           gr_meta_args_push(subplot_args, "adjust_ylim", "i", 0);
         }
-      args_values(subplot_args, "panzoom", "ddd", &x, &y, &zoom);
-      logger((stderr, "Window before `gr_panzoom` (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
-      gr_panzoom(x, y, zoom, &x_min, &x_max, &y_min, &y_max);
-      logger((stderr, "Window after `gr_panzoom` (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
+      if (!args_values(subplot_args, "panzoom", "dddd", &x, &y, &xzoom, &yzoom))
+        {
+          if (args_values(subplot_args, "panzoom", "ddd", &x, &y, &xzoom))
+            {
+              yzoom = xzoom;
+            }
+          else
+            {
+              /* TODO: Add error handling for type mismatch (-> next statement would fail) */
+              args_values(subplot_args, "panzoom", "dd", &x, &y);
+              yzoom = xzoom = 0.0;
+            }
+        }
+      logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
+      gr_panzoom(x, y, xzoom, yzoom, &x_min, &x_max, &y_min, &y_max);
+      logger((stderr, "Window after `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
       gr_meta_args_push(subplot_args, "xrange", "dd", x_min, x_max);
       gr_meta_args_push(subplot_args, "yrange", "dd", y_min, y_max);
       gr_meta_args_remove(subplot_args, "panzoom");
@@ -3677,9 +3720,9 @@ void plot_process_window(gr_meta_args_t *subplot_args)
       args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
       if (adjust_xlim)
         {
-          logger((stderr, "xrange before \"gr_adjustlimits\": (%f, %f)\n", x_min, x_max));
+          logger((stderr, "xrange before \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
           gr_adjustlimits(&x_min, &x_max);
-          logger((stderr, "xrange after \"gr_adjustlimits\": (%f, %f)\n", x_min, x_max));
+          logger((stderr, "xrange after \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
         }
       x_major_count = major_count;
       x_tick = gr_tick(x_min, x_max) / x_major_count;
@@ -3711,9 +3754,9 @@ void plot_process_window(gr_meta_args_t *subplot_args)
       args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
       if (adjust_ylim)
         {
-          logger((stderr, "yrange before \"gr_adjustlimits\": (%f, %f)\n", y_min, y_max));
+          logger((stderr, "yrange before \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
           gr_adjustlimits(&y_min, &y_max);
-          logger((stderr, "yrange after \"gr_adjustlimits\": (%f, %f)\n", y_min, y_max));
+          logger((stderr, "yrange after \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
         }
       y_major_count = major_count;
       y_tick = gr_tick(y_min, y_max) / y_major_count;
@@ -3736,7 +3779,7 @@ void plot_process_window(gr_meta_args_t *subplot_args)
   gr_meta_args_push(subplot_args, "yorg", "dd", y_org_low, y_org_high);
   gr_meta_args_push(subplot_args, "ymajor", "i", y_major_count);
 
-  logger((stderr, "Storing window (%f, %f, %f, %f)\n", x_min, x_max, y_min, y_max));
+  logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
   gr_meta_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
   if (strcmp(kind, "polar") != 0)
     {
@@ -3760,9 +3803,9 @@ void plot_process_window(gr_meta_args_t *subplot_args)
           args_values(subplot_args, "adjust_zlim", "i", &adjust_zlim);
           if (adjust_zlim)
             {
-              logger((stderr, "zrange before \"gr_adjustlimits\": (%f, %f)\n", z_min, z_max));
+              logger((stderr, "zrange before \"gr_adjustlimits\": (%lf, %lf)\n", z_min, z_max));
               gr_adjustlimits(&z_min, &z_max);
-              logger((stderr, "zrange after \"gr_adjustlimits\": (%f, %f)\n", z_min, z_max));
+              logger((stderr, "zrange after \"gr_adjustlimits\": (%lf, %lf)\n", z_min, z_max));
             }
           z_major_count = major_count;
           z_tick = gr_tick(z_min, z_max) / z_major_count;
@@ -5214,8 +5257,8 @@ gr_meta_args_t *get_subplot_from_ndc_point(double x, double y)
     {
       if (args_values(*subplot_args, "viewport", "D", &viewport))
         {
-          logger((stderr, "Got viewport (%f, %f, %f, %f) and point (%lf, %lf)\n", viewport[0], viewport[1], viewport[2],
-                  viewport[3], x, y));
+          logger((stderr, "Got viewport (%lf, %lf, %lf, %lf) and point (%lf, %lf)\n", viewport[0], viewport[1],
+                  viewport[2], viewport[3], x, y));
           if (viewport[0] <= x && x <= viewport[1] && viewport[2] <= y && y <= viewport[3])
             {
               return *subplot_args;
@@ -8787,7 +8830,8 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f)
   int count_characters;
   static int recursion_level = -1;
   int columns, cursor_xpos = 0;
-  int use_color_codes = isatty(fileno(f));
+  int use_color_codes;
+  int has_dark_bg;
   struct gr_dumpmeta_color_codes_t
   {
     unsigned char k, i, d, c, s;
@@ -8796,6 +8840,7 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f)
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
   columns = INT_MAX;
   use_color_codes = 0;
+  has_dark_bg = 0;
 #else
   struct winsize w;
   use_color_codes = isatty(fileno(f));
@@ -8804,6 +8849,7 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f)
   if (getenv(DARK_BACKGROUND_ENV_KEY) != NULL &&
       str_equals_any(getenv(DARK_BACKGROUND_ENV_KEY), 5, "1", "yes", "YES", "on", "ON"))
     {
+      has_dark_bg = 1;
       color_codes.k = 122;
       color_codes.i = 81;
       color_codes.d = 215;
@@ -8812,6 +8858,7 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f)
     }
   else
     {
+      has_dark_bg = 0;
       color_codes.k = 18;
       color_codes.i = 25;
       color_codes.d = 88;
@@ -8834,22 +8881,23 @@ void gr_dumpmeta(const gr_meta_args_t *args, FILE *f)
 
 #define INDENT 2
 
-#define print_indent                                                                 \
-  do                                                                                 \
-    {                                                                                \
-      if (use_color_codes)                                                           \
-        {                                                                            \
-          int i;                                                                     \
-          for (i = 0; i < recursion_level; ++i)                                      \
-            {                                                                        \
-              fprintf(f, "\033[48;5;%dm%*s\033[0m", 235 + (5 * i) % 25, INDENT, ""); \
-            }                                                                        \
-        }                                                                            \
-      else                                                                           \
-        {                                                                            \
-          fprintf(f, "%*s", INDENT *recursion_level, "");                            \
-        }                                                                            \
-    }                                                                                \
+#define print_indent                                                                                                   \
+  do                                                                                                                   \
+    {                                                                                                                  \
+      if (use_color_codes)                                                                                             \
+        {                                                                                                              \
+          int i;                                                                                                       \
+          for (i = 0; i < recursion_level; ++i)                                                                        \
+            {                                                                                                          \
+              fprintf(f, "\033[48;5;%dm%*s\033[0m", has_dark_bg ? (235 + (5 * i) % 25) : (255 - (5 * i) % 25), INDENT, \
+                      "");                                                                                             \
+            }                                                                                                          \
+        }                                                                                                              \
+      else                                                                                                             \
+        {                                                                                                              \
+          fprintf(f, "%*s", INDENT *recursion_level, "");                                                              \
+        }                                                                                                              \
+    }                                                                                                                  \
   while (0)
 
 #define print_key                                                          \
