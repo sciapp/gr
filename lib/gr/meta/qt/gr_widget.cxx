@@ -3,8 +3,8 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
-#include "gr_widget.hxx"
 #include "util.hxx"
+#include "gr_widget.hxx"
 
 GRWidget::GRWidget(QWidget *parent) : QWidget(parent), args_(nullptr), box_zoom_rubberband_(nullptr)
 {
@@ -27,17 +27,39 @@ void GRWidget::init_env_vars()
 void GRWidget::init_plot_data()
 {
   const int n = 1000;
-  double subplot_data[2][n];
+  double subplot_data[4][2][1000];
+  gr_meta_args_t *subplots[4];
 
-  for (int i = 0; i < n; ++i)
+  for (int i = 0; i < 2; ++i)
     {
-      subplot_data[0][i] = i * 2 * M_PI / n;
-      subplot_data[1][i] = sin(i * 2 * M_PI / n);
+      for (int j = 0; j < n; ++j)
+        {
+          subplot_data[i][0][j] = j * 2 * M_PI / n;
+          subplot_data[i][1][j] = sin((j * (i + 1) * 2) * M_PI / n);
+        }
+    }
+  for (int i = 0; i < 2; ++i)
+    {
+      for (int j = 0; j < n; ++j)
+        {
+          subplot_data[2 + i][0][j] = j * 2 * M_PI / n;
+          subplot_data[2 + i][1][j] = cos((j * (i + 1) * 2) * M_PI / n);
+        }
+    }
+
+  for (int i = 0; i < 4; ++i)
+    {
+      subplots[i] = gr_newmeta();
+      gr_meta_args_push(subplots[i], "x", "nD", n, subplot_data[i][0]);
+      gr_meta_args_push(subplots[i], "y", "nD", n, subplot_data[i][1]);
+      gr_meta_args_push(subplots[i], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2),
+                        0.5 * (i / 2 + 1));
+      gr_meta_args_push(subplots[i], "keep_aspect_ratio", "i", 1);
+      // gr_meta_args_push(subplots[i], "backgroundcolor", "i", i + 1);
     }
 
   args_ = gr_newmeta();
-  gr_meta_args_push(args_, "x", "nD", n, subplot_data[0]);
-  gr_meta_args_push(args_, "y", "nD", n, subplot_data[1]);
+  gr_meta_args_push(args_, "subplots", "nA", 4, subplots);
 }
 
 void GRWidget::init_ui()
