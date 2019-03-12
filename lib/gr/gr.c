@@ -7030,6 +7030,78 @@ void gr_inqcolormap(int *index)
   *index = colormap;
 }
 
+/*!
+ * Define a colormap by a list of RGB colors.
+ *
+ * \param[in] n The number of colors
+ * \param[in] r A pointer to the red intensities in range 0.0 to 1.0
+ * \param[in] g A pointer to the green intensities in range 0.0 to 1.0
+ * \param[in] b A pointer to the blue intensities in range 0.0 to 1.0
+ * \param[in] x A pointer to the positions of the corresponding color in the resulting colormap or NULL. The values of
+ * x must increase monotonically from 0.0 to 1.0. If x is NULL the given colors are evenly distributed in the colormap.
+ *
+ * This function defines a colormap using the n given color intensities. If less than 256 colors are provided the
+ * colors intensities are linear interpolated. If x is NULL the given color values are evenly distributed in the
+ * colormap. Otherwise the normalized value of x defines the position of the color in the colormap.
+ */
+void gr_setcolormapfromrgb(int n, double *r, double *g, double *b, double *x)
+{
+  int i, j;
+  int start_index, end_index;
+
+  check_autoinit;
+
+  if (n < 2)
+    {
+      fprintf(stderr, "Not enough colors provided.\n");
+      return;
+    }
+
+  /* make sure x is in ascending order starting at 0 and ending at 1 */
+  if (x != NULL)
+    {
+      if (x[0] != 0.0)
+        {
+          fprintf(stderr, "x must start at 0.0\n");
+          return;
+        }
+      if (x[n - 1] != 1.0)
+        {
+          fprintf(stderr, "x must end at 1.0\n");
+          return;
+        }
+      for (i = 0; i < n - 1; i++)
+        {
+          if (x[i] >= x[i + 1])
+            {
+              fprintf(stderr, "x not sorted in ascending order\n");
+              return;
+            }
+        }
+    }
+  for (i = 0; i < n - 1; i++)
+    {
+      if (x == NULL)
+        {
+          start_index = nint(i * 256. / (n - 1));
+          end_index = nint((i + 1) * 256. / (n - 1));
+        }
+      else
+        {
+          start_index = nint(x[i] * 256);
+          end_index = nint(x[i + 1] * 256);
+        }
+      for (j = start_index; j < end_index; j++)
+        {
+          double a = ((double)j - start_index) / (end_index - start_index);
+          double rj = r[i] * (1 - a) + r[i + 1] * a;
+          double gj = g[i] * (1 - a) + g[i + 1] * a;
+          double bj = b[i] * (1 - a) + b[i + 1] * a;
+          gr_setcolorrep(1000 + j, rj, gj, bj);
+        }
+    }
+}
+
 void gr_colorbar(void)
 {
   int errind, halign, valign, clsw, tnr;
