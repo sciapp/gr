@@ -64,10 +64,12 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
 
   gkss->fontfile = gks_open_font();
 
+  p->device_dpi_x = this->physicalDpiX();
+  p->device_dpi_y = this->physicalDpiY();
   p->width = this->width();
   p->height = this->height();
-  p->mwidth = this->widthMM() * 0.001;
-  p->mheight = this->heightMM() * 0.001;
+  p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
+  p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
 
   initialize_data();
 
@@ -103,9 +105,9 @@ void GKSWidget::paintEvent(QPaintEvent *)
 
 void GKSWidget::resizeEvent(QResizeEvent *event)
 {
-  p->mwidth = this->widthMM() * 0.001;
-  p->mheight = this->heightMM() * 0.001;
-  resize_pixmap(this->size().width(), this->size().height());
+  p->mwidth = (double)this->width() / p->device_dpi_x * 0.0254;
+  p->mheight = (double)this->height() / p->device_dpi_y * 0.0254;
+  resize_pixmap(this->width(), this->height());
   repaint();
 }
 
@@ -120,24 +122,20 @@ static void set_window_size(char *s)
       if (*f == 55)
         {
           vp = (double *)(s + sp + 3 * sizeof(int));
-          if (p->mwidth > 0)
-            {
-              double mwidth = round((vp[1] - vp[0]) * 1000) * 0.001;
-              p->width = nint(mwidth / p->mwidth * p->width);
-            }
-          else
+          p->mwidth = vp[1] - vp[0];
+          p->width = nint(p->device_dpi_x * p->mwidth / 0.0254);
+          if (p->width < 2)
             {
               p->width = 2;
+              p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
             }
 
-          if (p->mheight > 0)
-            {
-              double mheight = round((vp[3] - vp[2]) * 1000) * 0.001;
-              p->height = nint(mheight / p->mheight * p->height);
-            }
-          else
+          p->mheight = vp[3] - vp[2];
+          p->height = nint(p->device_dpi_y * p->mheight / 0.0254);
+          if (p->height < 2)
             {
               p->height = 2;
+              p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
             }
         }
       sp += *len;
@@ -151,11 +149,6 @@ void GKSWidget::interpret(char *dl)
   if (!prevent_resize)
     {
       resize(p->width, p->height);
-    }
-  else
-    {
-      p->mwidth = p->width * widthMM() * 0.001 / width();
-      p->mheight = p->height * heightMM() * 0.001 / height();
     }
   if (!is_mapped)
     {
