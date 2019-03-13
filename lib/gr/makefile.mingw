@@ -7,7 +7,7 @@
    QHLIBS = ../../3rdparty/build/lib/libqhull.a
 MUPDFLIBS = ../../3rdparty/build/lib/libmupdf.a
    FTLIBS = ../../3rdparty/build/lib/libfreetype.a
-OPENJPEG2LIBS = ../../3rdparty/build/lib/libopenjp2.a
+OPENJPEGLIBS = ../../3rdparty/build/lib/libopenjpeg.a
 JBIG2DECLIBS = ../../3rdparty/build/lib/libjbig2dec.a
   GKSLIBS = -L../gks/ -lgks
      LIBS = -lws2_32 -lmsimg32 -lgdi32
@@ -29,7 +29,7 @@ libgr.lib: $(OBJS)
 
 libgr.dll: $(OBJS)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) \
-	$(JPEGLIBS) $(MUPDFLIBS) $(FTLIBS) $(OPENJPEG2LIBS) $(JBIG2DECLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) $(GKSLIBS) $(LIBS)
+	$(JPEGLIBS) $(MUPDFLIBS) $(FTLIBS) $(OPENJPEGLIBS) $(JBIG2DECLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) $(GKSLIBS) $(LIBS)
 
 demo.exe: demo.o libgr.dll
 	$(CC) -o $@ demo.o -L. -lgr

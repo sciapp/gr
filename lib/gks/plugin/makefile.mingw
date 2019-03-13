@@ -3,11 +3,11 @@ ZLIB = ../../../3rdparty/build/lib/libz.a
 PNGLIB = ../../../3rdparty/build/lib/libpng.a
 JBIG2DECLIB = ../../../3rdparty/build/lib/libjbig2dec.a
 JPEGLIB = ../../../3rdparty/build/lib/libjpeg.a
-OPENJP2LIB = ../../../3rdparty/build/lib/libopenjp2.a
+OPENJPEGLIB = ../../../3rdparty/build/lib/libopenjpeg.a
 PIXMANLIB = ../../../3rdparty/build/lib/libpixman-1.a
 CAIROLIB = ../../../3rdparty/build/lib/libcairo.a
 FTLIB = ../../../3rdparty/build/lib/libfreetype.a
-MUPDFLIBS = -lmupdf $(FTLIBS) $(JBIG2DECLIB) $(JPEGLIBS) $(OPENJP2LIB) $(BZ2LIBS) -lws2_32
+MUPDFLIBS = -lmupdf $(FTLIBS) $(JBIG2DECLIB) $(JPEGLIBS) $(OPENJPEGLIB) $(BZ2LIBS) -lws2_32
 AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
 INCLUDES = -I../ -I../../../3rdparty/build/include -I/usr/local/include
 CFLAGS = -Wall $(DEFINES) $(INCLUDES)
@@ -37,7 +37,7 @@ pgfplugin.dll: pgfplugin.o $(GKSLIB) $(PNGLIB) $(ZLIB)
 htmplugin.dll: htmplugin.o $(GKSLIB) $(PNGLIB) $(ZLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -lwsock32
 
-movplugin.o: $(JBIG2DECLIB) $(OPENJP2LIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS MUPDFLIBS
+movplugin.o: $(JBIG2DECLIB) $(OPENJPEGLIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS MUPDFLIBS
 
 movplugin.dll: movplugin.o vc.o gif.o pdf.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
@@ -47,7 +47,7 @@ cairoplugin.o: $(CAIROLIB)
 cairoplugin.dll: cairoplugin.o $(GKSLIB) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB) $(FTLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
 
-videoplugin.o: $(JBIG2DECLIB) $(OPENJP2LIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS
+videoplugin.o: $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS
 
 videoplugin.dll: videoplugin.o vc.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
