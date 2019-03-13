@@ -749,9 +749,10 @@ static error_t plot_init_args_structure(gr_meta_args_t *args, const char **hiera
                                         unsigned int next_hierarchy_level_max_id);
 static void plot_set_attribute_defaults(gr_meta_args_t *subplot_args);
 static void plot_pre_plot(gr_meta_args_t *plot_args);
-static void plot_pre_subplot(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_args);
+static void plot_process_wswindow_wsviewport(gr_meta_args_t *plot_args);
+static void plot_pre_subplot(gr_meta_args_t *subplot_args);
 static void plot_process_colormap(gr_meta_args_t *subplot_args);
-static void plot_process_viewport(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_args);
+static void plot_process_viewport(gr_meta_args_t *subplot_args);
 static void plot_process_window(gr_meta_args_t *subplot_args);
 static void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args);
 static void plot_post_plot(gr_meta_args_t *plot_args);
@@ -798,6 +799,8 @@ static error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int
 static double find_max_step(unsigned int n, const double *x);
 static const char *next_fmt_key(const char *fmt);
 static int get_id_from_args(const gr_meta_args_t *args, int *plot_id, int *subplot_id, int *series_id);
+static int get_figure_size(const gr_meta_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
+                           double *metric_height);
 static gr_meta_args_t *get_subplot_from_ndc_point(double x, double y);
 static gr_meta_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const double *y);
 
@@ -1152,7 +1155,7 @@ static string_map_t *plot_valid_keys_map = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot merge ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", NULL};
+const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", "array_index", NULL};
 const char *plot_merge_clear_keys[] = {"series", NULL};
 
 
@@ -1163,33 +1166,20 @@ const char *plot_merge_clear_keys[] = {"series", NULL};
 
 const char *valid_root_keys[] = {"plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
-const char *valid_subplot_keys[] = {"adjust_xlim",
-                                    "adjust_ylim",
-                                    "adjust_zlim",
-                                    "colormap",
-                                    "keep_aspect_ratio",
-                                    "kind",
-                                    "labels",
-                                    "levels",
-                                    "location",
-                                    "nbins",
-                                    "panzoom",
-                                    "reset_ranges",
-                                    "rotation",
-                                    "series",
-                                    "step_where",
-                                    "subplot",
-                                    "tilt",
-                                    "xbins",
-                                    "xflip",
-                                    "xform",
-                                    "xlog",
-                                    "ybins",
-                                    "yflip",
-                                    "ylog",
-                                    "zflip",
-                                    "zlog",
-                                    NULL};
+const char *valid_subplot_keys[] = {"adjust_xlim",  "adjust_ylim",
+                                    "adjust_zlim",  "backgroundcolor",
+                                    "colormap",     "keep_aspect_ratio",
+                                    "kind",         "labels",
+                                    "levels",       "location",
+                                    "nbins",        "panzoom",
+                                    "reset_ranges", "rotation",
+                                    "series",       "step_where",
+                                    "subplot",      "tilt",
+                                    "xbins",        "xflip",
+                                    "xform",        "xlog",
+                                    "ybins",        "yflip",
+                                    "ylog",         "zflip",
+                                    "zlog",         NULL};
 const char *valid_series_keys[] = {"a", "c", "s", "spec", "u", "v", "x", "y", "z", NULL};
 
 /* ######################### public implementation ################################################################## */
@@ -1362,7 +1352,7 @@ int gr_plotmeta(const gr_meta_args_t *args)
   args_values(active_plot_args, "subplots", "A", &current_subplot_args);
   while (*current_subplot_args != NULL)
     {
-      plot_pre_subplot(active_plot_args, *current_subplot_args);
+      plot_pre_subplot(*current_subplot_args);
       args_values(*current_subplot_args, "kind", "s", &kind);
       logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
       if (!plot_func_map_at(plot_func_map, kind, &plot_func))
@@ -1858,7 +1848,7 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
    *
    * All coordinates are expected to be given as workstation coordinates (integer type)
    */
-  double width, height, max_width_height;
+  int width, height, max_width_height;
   int x, y, left, top, right, bottom;
   gr_meta_args_t *subplot_args;
   const double *viewport;
@@ -1866,9 +1856,9 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
 
   logger((stderr, "Processing input\n"));
 
-  args_values(active_plot_args, "size", "dd", &width, &height);
+  get_figure_size(NULL, &width, &height, NULL, NULL);
   max_width_height = max(width, height);
-  logger((stderr, "Using size (%lf, %lf)\n", width, height));
+  logger((stderr, "Using size (%d, %d)\n", width, height));
 
   if (args_values(input_args, "x", "i", &x) && args_values(input_args, "y", "i", &y))
     {
@@ -1933,8 +1923,8 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
             {
               double ndc_xshift, ndc_yshift;
 
-              ndc_xshift = -xshift / max_width_height;
-              ndc_yshift = yshift / max_width_height;
+              ndc_xshift = (double)-xshift / max_width_height;
+              ndc_yshift = (double)yshift / max_width_height;
               logger((stderr, "Translate by ndc coordinates (%lf, %lf)\n", ndc_xshift, ndc_yshift));
               gr_meta_args_push(subplot_args, "panzoom", "ddd", ndc_xshift, ndc_yshift, 0.0);
 
@@ -1973,7 +1963,7 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
           return 0;
         }
       args_values(subplot_args, "viewport", "D", &viewport);
-      args_values(subplot_args, "wswindow", "D", &wswindow);
+      args_values(active_plot_args, "wswindow", "D", &wswindow);
 
       viewport_mid_x = (viewport[0] + viewport[1]) / 2.0;
       viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
@@ -1998,7 +1988,7 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
       focus_x = (focus_left + focus_right) / 2.0 - viewport_mid_x;
       focus_y = (focus_top + focus_bottom) / 2.0 - viewport_mid_y;
 
-      logger((stderr, "Got widget size: (%lf, %lf)\n", width, height));
+      logger((stderr, "Got widget size: (%d, %d)\n", width, height));
       logger((stderr, "Got box: (%d, %d, %d, %d)\n", left, right, top, bottom));
       logger((stderr, "Got viewport: (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
       logger((stderr, "viewport mid: (%lf, %lf)\n", viewport_mid_x, viewport_mid_y));
@@ -3240,6 +3230,7 @@ error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, uns
   for (i = args_old_array_length; i < next_hierarchy_level_max_id; ++i)
     {
       args_array[i] = gr_newmeta();
+      gr_meta_args_push(args_array[i], "array_index", "i", i);
       return_error_if(args_array[i] == NULL, ERROR_MALLOC);
       error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
       return_if_error;
@@ -3271,6 +3262,7 @@ error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_na
       for (i = 0; i < next_hierarchy_level_max_id; ++i)
         {
           args_array[i] = gr_newmeta();
+          gr_meta_args_push(args_array[i], "array_index", "i", i);
           error_cleanup_and_set_error_if(args_array[i] == NULL, ERROR_MALLOC);
           error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
           error_cleanup_if_error;
@@ -3381,9 +3373,46 @@ void plot_pre_plot(gr_meta_args_t *plot_args)
     {
       gr_clearws();
     }
+  plot_process_wswindow_wsviewport(plot_args);
 }
 
-void plot_pre_subplot(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_args)
+void plot_process_wswindow_wsviewport(gr_meta_args_t *plot_args)
+{
+  double metric_width, metric_height;
+  double aspect_ratio_ws;
+  double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
+  double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
+
+  get_figure_size(plot_args, NULL, NULL, &metric_width, &metric_height);
+
+  aspect_ratio_ws = metric_width / metric_height;
+  if (aspect_ratio_ws > 1)
+    {
+      wsviewport[1] = metric_width;
+      wsviewport[3] = metric_width / aspect_ratio_ws;
+      wswindow[1] = 1.0;
+      wswindow[3] = 1.0 / aspect_ratio_ws;
+    }
+  else
+    {
+      wsviewport[1] = metric_height * aspect_ratio_ws;
+      wsviewport[3] = metric_height;
+      wswindow[1] = aspect_ratio_ws;
+      wswindow[3] = 1.0;
+    }
+
+  gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+  gr_setwswindow(wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
+
+  gr_meta_args_push(plot_args, "wswindow", "dddd", wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
+  gr_meta_args_push(plot_args, "wsviewport", "dddd", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+
+  logger((stderr, "Stored wswindow (%lf, %lf, %lf, %lf)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
+  logger(
+      (stderr, "Stored wsviewport (%lf, %lf, %lf, %lf)\n", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]));
+}
+
+void plot_pre_subplot(gr_meta_args_t *subplot_args)
 {
   const char *kind;
   double alpha;
@@ -3394,11 +3423,11 @@ void plot_pre_subplot(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_args)
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   if (str_equals_any(kind, 2, "imshow", "isosurface"))
     {
-      plot_process_viewport(plot_args, subplot_args);
+      plot_process_viewport(subplot_args);
     }
   else
     {
-      plot_process_viewport(plot_args, subplot_args);
+      plot_process_viewport(subplot_args);
       plot_store_coordinate_ranges(subplot_args);
       plot_process_window(subplot_args);
       if (str_equals_any(kind, 1, "polar"))
@@ -3432,108 +3461,46 @@ void plot_process_colormap(gr_meta_args_t *subplot_args)
   /* TODO: Implement other datatypes for `colormap` */
 }
 
-void plot_process_viewport(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_args)
+void plot_process_viewport(gr_meta_args_t *subplot_args)
 {
   const char *kind;
-  double metric_width, metric_height;
-  int pixel_width, pixel_height;
-  double size[2];
-  double width, height;
   const double *subplot;
-  double viewport[4] = {0.0, 0.0, 0.0, 0.0};
-  double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
-  double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
-  double vp[4];
-  double metric_size;
-  double aspect_ratio_vp, aspect_ratio_ws;
   int keep_aspect_ratio;
+  double metric_width, metric_height;
+  double aspect_ratio_ws;
+  double vp[4];
+  double viewport[4] = {0.0, 0.0, 0.0, 0.0};
   int background_color_index;
 
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "subplot", "D", &subplot);
   args_values(subplot_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
-#ifdef __EMSCRIPTEN__
-  metric_width = 0.16384;
-  metric_height = 0.12288;
-  pixel_width = 640;
-  pixel_height = 480;
-#else
-  gr_inqdspsize(&metric_width, &metric_height, &pixel_width, &pixel_height);
-#endif
-  if (args_values(plot_args, "figsize", "dd", &size[0], &size[1]))
-    {
-      size[0] *= pixel_width * 0.0254 / metric_width;
-      size[1] *= pixel_height * 0.0254 / metric_height;
-    }
-  else
-    {
-      double dpi = pixel_width / metric_width * 0.0254;
-      args_values(plot_args, "size", "dd", &size[0], &size[1]);
-      if (dpi > 200)
-        {
-          int i;
-          for (i = 0; i < 2; ++i)
-            {
-              size[i] *= dpi / 100.0;
-            }
-        }
-    }
-  width = size[0];
-  height = size[1];
-  logger((stderr, "Using size: %lf, %lf\n", width, height));
+  logger((stderr, "Using subplot: %lf, %lf, %lf, %lf\n", subplot[0], subplot[1], subplot[2], subplot[3]));
 
-  aspect_ratio_ws = width / height;
+  get_figure_size(NULL, NULL, NULL, &metric_width, &metric_height);
+
+  aspect_ratio_ws = metric_width / metric_height;
   memcpy(vp, subplot, sizeof(vp));
-  if (width > height)
+  if (aspect_ratio_ws > 1)
     {
-      metric_size = metric_width * width / pixel_width;
-      wsviewport[1] = metric_size;
-      wsviewport[3] = metric_size / aspect_ratio_ws;
-      wswindow[1] = 1.0;
-      wswindow[3] = 1.0 / aspect_ratio_ws;
-      if (!keep_aspect_ratio)
+      vp[2] /= aspect_ratio_ws;
+      vp[3] /= aspect_ratio_ws;
+      if (keep_aspect_ratio)
         {
-          vp[2] /= aspect_ratio_ws;
-          vp[3] /= aspect_ratio_ws;
+          double border = 0.5 * (vp[1] - vp[0]) * (1.0 - 1.0 / aspect_ratio_ws);
+          vp[0] += border;
+          vp[1] -= border;
         }
     }
   else
     {
-      metric_size = metric_height * height / pixel_height;
-      wsviewport[1] = metric_size * aspect_ratio_ws;
-      wsviewport[3] = metric_size;
-      wswindow[1] = aspect_ratio_ws;
-      wswindow[3] = 1.0;
-      if (!keep_aspect_ratio)
+      vp[0] *= aspect_ratio_ws;
+      vp[1] *= aspect_ratio_ws;
+      if (keep_aspect_ratio)
         {
-          vp[0] *= aspect_ratio_ws;
-          vp[1] *= aspect_ratio_ws;
-        }
-    }
-  if (keep_aspect_ratio)
-    {
-      aspect_ratio_vp = (vp[1] - vp[0]) / (vp[3] - vp[2]);
-      if (aspect_ratio_ws >= aspect_ratio_vp)
-        {
-          double vp_width, wswindow_width, border;
-          vp[2] = wswindow[2];
-          vp[3] = wswindow[3];
-          vp_width = (vp[3] - vp[2]) * aspect_ratio_vp;
-          wswindow_width = (wswindow[1] - wswindow[0]);
-          border = (wswindow_width - vp_width) / 2;
-          vp[0] = border;
-          vp[1] = border + vp_width;
-        }
-      else
-        {
-          double vp_height, wswindow_height, border;
-          vp[0] = wswindow[0];
-          vp[1] = wswindow[1];
-          vp_height = (vp[1] - vp[0]) / aspect_ratio_vp;
-          wswindow_height = (wswindow[3] - wswindow[2]);
-          border = (wswindow_height - vp_height) / 2;
-          vp[2] = border;
-          vp[3] = border + vp_height;
+          double border = 0.5 * (vp[3] - vp[2]) * (1.0 - aspect_ratio_ws);
+          vp[2] += border;
+          vp[3] -= border;
         }
     }
 
@@ -3562,7 +3529,7 @@ void plot_process_viewport(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_ar
   viewport[2] = vp[2] + 0.125 * (vp[3] - vp[2]);
   viewport[3] = vp[2] + 0.925 * (vp[3] - vp[2]);
 
-  if (width > height)
+  if (aspect_ratio_ws > 1)
     {
       viewport[2] += (1 - (subplot[3] - subplot[2]) * (subplot[3] - subplot[2])) * 0.02;
     }
@@ -3577,13 +3544,13 @@ void plot_process_viewport(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_ar
       gr_selntran(0);
       gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
       gr_setfillcolorind(background_color_index);
-      if (width > height)
+      if (aspect_ratio_ws > 1)
         {
-          gr_fillrect(subplot[0], subplot[1], subplot[2] * aspect_ratio_ws, subplot[3] * aspect_ratio_ws);
+          gr_fillrect(subplot[0], subplot[1], subplot[2] / aspect_ratio_ws, subplot[3] / aspect_ratio_ws);
         }
       else
         {
-          gr_fillrect(subplot[0] / aspect_ratio_ws, subplot[1] / aspect_ratio_ws, subplot[2], subplot[3]);
+          gr_fillrect(subplot[0] * aspect_ratio_ws, subplot[1] * aspect_ratio_ws, subplot[2], subplot[3]);
         }
       gr_selntran(1);
       gr_restorestate();
@@ -3603,18 +3570,12 @@ void plot_process_viewport(gr_meta_args_t *plot_args, gr_meta_args_t *subplot_ar
     }
 
   gr_setviewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-  gr_setwsviewport(wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
-  gr_setwswindow(wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
 
   gr_meta_args_push(subplot_args, "vp", "dddd", vp[0], vp[1], vp[2], vp[3]);
   gr_meta_args_push(subplot_args, "viewport", "dddd", viewport[0], viewport[1], viewport[2], viewport[3]);
-  gr_meta_args_push(subplot_args, "wswindow", "dddd", wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
-  gr_meta_args_push(subplot_args, "wsviewport", "dddd", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+
   logger((stderr, "Stored vp (%lf, %lf, %lf, %lf)\n", vp[0], vp[1], vp[2], vp[3]));
   logger((stderr, "Stored viewport (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
-  logger((stderr, "Stored wswindow (%lf, %lf, %lf, %lf)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
-  logger(
-      (stderr, "Stored wsviewport (%lf, %lf, %lf, %lf)\n", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]));
 }
 
 void plot_process_window(gr_meta_args_t *subplot_args)
@@ -3624,6 +3585,7 @@ void plot_process_window(gr_meta_args_t *subplot_args)
   int xlog, ylog, zlog;
   int xflip, yflip, zflip;
   int major_count, x_major_count, y_major_count;
+  const double *stored_window;
   double x_min, x_max, y_min, y_max, z_min, z_max;
   double x, y, xzoom, yzoom;
   int adjust_xlim, adjust_ylim, adjust_zlim;
@@ -3698,7 +3660,13 @@ void plot_process_window(gr_meta_args_t *subplot_args)
               yzoom = xzoom = 0.0;
             }
         }
-      logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
+      /* Ensure the correct window is set in GR */
+      if (args_values(subplot_args, "window", "D", &stored_window))
+        {
+          gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
+          logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
+                  stored_window[2], stored_window[3]));
+        }
       gr_panzoom(x, y, xzoom, yzoom, &x_min, &x_max, &y_min, &y_max);
       logger((stderr, "Window after `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
       gr_meta_args_push(subplot_args, "xrange", "dd", x_min, x_max);
@@ -5247,6 +5215,99 @@ int get_id_from_args(const gr_meta_args_t *args, int *plot_id, int *subplot_id, 
   return _plot_id > 0 || _subplot_id > 0 || _series_id > 0;
 }
 
+int get_figure_size(const gr_meta_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
+                    double *metric_height)
+{
+  double display_metric_width, display_metric_height;
+  int display_pixel_width, display_pixel_height;
+  double dpm[2], dpi[2];
+  int tmp_size_i[2], pixel_size[2];
+  double tmp_size_d[2], metric_size[2];
+  int i;
+
+  if (plot_args == NULL)
+    {
+      plot_args = active_plot_args;
+    }
+
+#ifdef __EMSCRIPTEN__
+  display_metric_width = 0.16384;
+  display_metric_height = 0.12288;
+  display_pixel_width = 640;
+  display_pixel_height = 480;
+#else
+  gr_inqdspsize(&display_metric_width, &display_metric_height, &display_pixel_width, &display_pixel_height);
+#endif
+  dpm[0] = display_pixel_width / display_metric_width;
+  dpm[1] = display_pixel_height / display_metric_height;
+  dpi[0] = dpm[0] * 0.0254;
+  dpi[1] = dpm[1] * 0.0254;
+
+  /* TODO: Overwork this calculation */
+  if (args_values(plot_args, "figsize", "dd", &tmp_size_d[0], &tmp_size_d[1]))
+    {
+      for (i = 0; i < 2; ++i)
+        {
+          pixel_size[i] = round(tmp_size_d[i] * dpi[i]);
+          metric_size[i] = tmp_size_d[i] / 0.0254;
+        }
+    }
+  else if (args_values(plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
+    {
+      if (dpi[0] > 200 || dpi[1] > 200)
+        {
+          for (i = 0; i < 2; ++i)
+            {
+              pixel_size[i] = round(tmp_size_d[i] * dpi[i] / 100.0);
+              metric_size[i] = tmp_size_d[i] / 0.000254;
+            }
+        }
+      else
+        {
+          for (i = 0; i < 2; ++i)
+            {
+              pixel_size[i] = round(tmp_size_d[i]);
+              metric_size[i] = tmp_size_d[i] / dpm[i];
+            }
+        }
+    }
+  else if (args_values(plot_args, "size", "ii", &tmp_size_i[0], &tmp_size_i[1]))
+    {
+      for (i = 0; i < 2; ++i)
+        {
+          pixel_size[i] = tmp_size_i[i];
+          metric_size[i] = tmp_size_i[i] / dpm[i];
+        }
+    }
+  else
+    {
+      /* If this branch is executed, there is an internal error (size has a default value if not set by the user) */
+      return 0;
+    }
+
+  logger((stderr, "figure pixel size: (%d, %d)\n", pixel_size[0], pixel_size[1]));
+  logger((stderr, "device dpi: (%lf, %lf)\n", dpi[0], dpi[1]));
+
+  if (pixel_width != NULL)
+    {
+      *pixel_width = pixel_size[0];
+    }
+  if (pixel_height != NULL)
+    {
+      *pixel_height = pixel_size[1];
+    }
+  if (metric_width != NULL)
+    {
+      *metric_width = metric_size[0];
+    }
+  if (metric_height != NULL)
+    {
+      *metric_height = metric_size[1];
+    }
+
+  return 1;
+}
+
 gr_meta_args_t *get_subplot_from_ndc_point(double x, double y)
 {
   gr_meta_args_t **subplot_args;
@@ -5257,10 +5318,12 @@ gr_meta_args_t *get_subplot_from_ndc_point(double x, double y)
     {
       if (args_values(*subplot_args, "viewport", "D", &viewport))
         {
-          logger((stderr, "Got viewport (%lf, %lf, %lf, %lf) and point (%lf, %lf)\n", viewport[0], viewport[1],
-                  viewport[2], viewport[3], x, y));
           if (viewport[0] <= x && x <= viewport[1] && viewport[2] <= y && y <= viewport[3])
             {
+              unsigned int array_index;
+              args_values(*subplot_args, "array_index", "i", &array_index);
+              logger((stderr, "Found subplot id \"%u\" for ndc point (%lf, %lf)\n", array_index + 1, x, y));
+
               return *subplot_args;
             }
         }
