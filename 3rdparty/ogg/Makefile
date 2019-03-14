@@ -16,7 +16,7 @@ DOWNLOAD_CMD := wget --no-check-certificate
 endif
 endif
 ifeq ($(DOWNLOAD_CMD),)
-$(error Unable to find curl or wget)
+DOWNLOAD_CMD := echo "Error: Unable to find curl or wget."; exit 1; \#
 endif
 
 default: install
