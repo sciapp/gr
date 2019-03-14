@@ -454,7 +454,7 @@ static void pdf_close(PDF *p)
   char path[MAXPATHLEN];
 
   pdf_printf(p->stream, "%%PDF-1.%d\n", p->compress ? 2 : 0);
-  pdf_printf(p->stream, "%%\344\343\317\322\n"); /* %����\n */
+  pdf_printf(p->stream, "%%\344\343\317\322\n");
 
   time(&timer);
   ltime = *localtime(&timer);

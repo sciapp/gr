@@ -4,6 +4,8 @@
 # were added, copied, modified or renamed.
 for file in $(git diff --cached --name-only --diff-filter=ACMR); do
     [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue
+    grep -vr $'\r' "${file}" || (echo "${file} must not contain carriage return as line endings." && exit 1);
+    file --mime "${file}" | grep "charset=us-ascii" >/dev/null || (echo "${file} must be encoded as ASCII text." && exit 1);
     clang-format -i -verbose -style=file "${file}" && \
     git add "${file}" || exit 1
 done
