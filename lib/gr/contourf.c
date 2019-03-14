@@ -201,7 +201,7 @@ static unsigned char check_saddle(const unsigned char edges)
   /*
    * Possible cases:
    * - 1 edge     : only one remaining connection, no ambiguity.
-   * - 2 / 4 edges: starting a new contour line in a saddle point. Every (remaining) edge can be used.
+   * - 2 / 4 edges: starting a new contour line in a saddle point. Every (remaining) edge can be used.
    * - 3 edges    : contour line passing a saddle point, amiguous case. Only one edge is allowed depending
    *                on the origin (cleared edge bit) and the type of the saddle point.
    */
@@ -315,7 +315,7 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                 {
                   edges[j * nx_padded + i] |= EDGE_N | EDGE_S;
                 }
-              if (bitmask == 7 || bitmask == 8 || bitmask == 5) /* top     / */
+              if (bitmask == 7 || bitmask == 8 || bitmask == 5) /* top     / */
                 {
                   edges[j * nx_padded + i] |= EDGE_N | EDGE_W;
                 }

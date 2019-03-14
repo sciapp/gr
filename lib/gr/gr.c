@@ -2900,7 +2900,7 @@ static void wswindow(int workstation_id, rect_t *rect)
  * This function defines the rectangular area of the Normalized Device
  * Coordinate space to be output to the device. By default, the workstation
  * transformation will map the range [0,1] x [0,1] in NDC onto the largest
- * square on the workstation’s display surface. The aspect ratio of the
+ * square on the workstation's display surface. The aspect ratio of the
  * workstation window is maintained at 1 to 1.
  */
 void gr_setwswindow(double xmin, double xmax, double ymin, double ymax)
@@ -3066,7 +3066,7 @@ void gr_updategks(void)
  * three-dimensional graph, used for mapping corresponding output primitives
  * into the current window. These settings are used for all subsequent
  * three-dimensional output primitives until other values are specified. Angles
- * of rotation and viewing angle must be specified between 0° and 90°.
+ * of rotation and viewing angle must be specified between 0 and 90 degrees.
  */
 int gr_setspace(double zmin, double zmax, int rotation, int tilt)
 {
@@ -7933,9 +7933,9 @@ static void cubic_bezier(double x[4], double y[4], int n)
  * +----------+-----------------------------------------------------------+
  * |    LINETO|draw a line from the current position to the given vertex  |
  * +----------+-----------------------------------------------------------+
- * |    CURVE3|draw a quadratic Bézier curve                              |
+ * |    CURVE3|draw a quadratic Bezier curve                              |
  * +----------+-----------------------------------------------------------+
- * |    CURVE4|draw a cubic Bézier curve                                  |
+ * |    CURVE4|draw a cubic Bezier curve                                  |
  * +----------+-----------------------------------------------------------+
  * | CLOSEPOLY|draw a line segment to the start point of the current path |
  * +----------+-----------------------------------------------------------+

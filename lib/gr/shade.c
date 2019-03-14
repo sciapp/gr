@@ -1,7 +1,7 @@
 /*
 
 This code is based on Jonas Clever's bachelor thesis "Entwicklung eines
-Verfahrens zur effizientenVisualisierung großer Datenmengen im GR-Framework".
+Verfahrens zur effizienten Visualisierung grosser Datenmengen im GR-Framework".
 
 Link:
   https://pgi-jcns.fz-juelich.de/pub/doc/Bachelor/Bachelorarbeit_JonasClever.pdf
