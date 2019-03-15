@@ -36,32 +36,15 @@ if [ -z "${QTDIR}" ]; then
   done
 fi
 
+opts="${opts} USE_STATIC_CAIRO_LIBS=1"
+
 extras=`pwd`/3rdparty/build
 extras_lib=${extras}/lib
 export PATH=${PATH}:${extras}/bin
 
-if [ "`uname`" != "Darwin" ]; then
-  opts="${opts} USE_STATIC_CAIRO_LIBS=1"
-fi
-
-mkdir -p ${extras_lib}
 make -C 3rdparty
-cp -p 3rdparty/freetype/libfreetype.a ${extras_lib}/
-cp -p 3rdparty/jpeg/libjpeg.a ${extras_lib}/
-cp -p 3rdparty/libpng16/libpng.a ${extras_lib}/
-cp -p 3rdparty/zlib/libz.a ${extras_lib}/
-cp -p 3rdparty/qhull/libqhull.a ${extras_lib}/
-
 make -C 3rdparty extras
 make EXTRA_CFLAGS=-I${extras}/include \
      EXTRA_CXXFLAGS=-I${extras}/include \
      EXTRA_LDFLAGS=-L${extras_lib} \
      ${opts} install
-
-if [ "`uname`" = "Darwin" ]; then
-  cp -p ${extras_lib}/libcairo.2.dylib ${gr_lib}/
-  install_name_tool -id @rpath/libcairo.2.dylib ${gr_lib}/libcairo.2.dylib
-  old=`otool -L ${gr_lib}/cairoplugin.so|grep libcairo.2.dylib|awk '{print $1}'`
-  install_name_tool -change ${old} @rpath/libcairo.2.dylib \
-    ${gr_lib}/cairoplugin.so
-fi

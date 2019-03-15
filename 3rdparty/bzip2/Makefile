@@ -1,3 +1,7 @@
+ifeq ($(strip $(PREFIX)),)
+override PREFIX = $(abspath $(CURDIR)/../build)
+endif
+
   CFLAGS = -O -I. -fPIC -fno-common $(ARCHS)
     OBJS = blocksort.o \
         huffman.o \
@@ -6,6 +10,8 @@
         compress.o \
         decompress.o \
         bzlib.o
+
+default: install
 
 libbz2.a: $(OBJS)
 	$(AR) crv $@ $?
@@ -16,6 +22,14 @@ distclean: clean
 clean:
 	rm -f libbz2.a *.o *.bak
 
+$(PREFIX)/lib/libbz2.a: libbz2.a
+	mkdir -p $(PREFIX)/lib/
+	mkdir -p $(PREFIX)/include/
+	cp libbz2.a $(PREFIX)/lib/
+	cp bzlib.h $(PREFIX)/include/
+
+install: $(PREFIX)/lib/libbz2.a
+
 depend:
 	makedepend -Y -- \
         huffman.c \
@@ -24,6 +38,8 @@ depend:
         compress.c \
         decompress.c \
         bzlib.o 2> /dev/null
+
+.PHONY: default install clean distclean depend
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

@@ -2,11 +2,11 @@
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
 
-    INCLUDES = -I../../3rdparty -I../../3rdparty/jpeg -I../gr
+    INCLUDES = -I../../3rdparty/build/include -I../gr
       GRLIBS = -L../gr -lgr
-     PNGLIBS = ../../3rdparty/libpng16/libpng.lib
-    JPEGLIBS = ../../3rdparty/jpeg/libjpeg.lib
-       ZLIBS = ../../3rdparty/zlib/libz.lib
+     PNGLIBS = ../../3rdparty/build/lib/libpng.a
+    JPEGLIBS = ../../3rdparty/build/lib/libjpeg.a
+       ZLIBS = ../../3rdparty/build/lib/libz.a
       CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)
       GLLIBS = -lopengl32 -lgdi32
      SOFLAGS = -shared

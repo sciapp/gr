@@ -99,17 +99,17 @@ GR, a universal framework for visualization applications
 %prep
 %setup -n gr-%{fixedversion}
 mkdir -p %{THIRDPARTY_SRC}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE1}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE2}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE3}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE4}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE5}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE6}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE7}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE8}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE9}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE10}
-tar -C %{THIRDPARTY_SRC} -xf %{SOURCE11}
+%{__cp} %{SOURCE1} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE2} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE3} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE4} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE5} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE6} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE7} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE8} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE9} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE10} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE11} %{THIRDPARTY_SRC}
 
 %build
 make -C 3rdparty GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}

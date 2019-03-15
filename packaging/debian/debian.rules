@@ -23,16 +23,16 @@ endif
 
 override_dh_auto_configure:
 	mkdir -p ${THIRDPARTY_SRC}
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/mupdf-1.6-source.tar.gz
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/libogg-1.3.2.tar.gz
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/libtheora-1.1.1.tar.gz
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/libvpx-1.4.0.tar.bz2
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/ffmpeg-2.1.4.tar.gz
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/glfw-3.1.1.tar.gz
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/zeromq-4.0.4.tar.gz
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/openjpeg-2.0.0.tar.gz
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/cairo-1.14.6.tar.xz
-	tar -C ${THIRDPARTY_SRC} -xf ../SOURCES/pixman-0.34.0.tar.gz
+	cp ../SOURCES/mupdf-1.6-source.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/libogg-1.3.2.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/libtheora-1.1.1.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/libvpx-1.4.0.tar.bz2 ${THIRDPARTY_SRC}
+	cp ../SOURCES/ffmpeg-2.1.4.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/glfw-3.1.1.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/zeromq-4.0.4.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/openjpeg-2.0.0.tar.gz ${THIRDPARTY_SRC}
+	cp ../SOURCES/cairo-1.14.6.tar.xz ${THIRDPARTY_SRC}
+	cp ../SOURCES/pixman-0.34.0.tar.gz ${THIRDPARTY_SRC}
 
 override_dh_auto_build:
 	make -C 3rdparty GRDIR=${GRDIR} DIR=`pwd`/${THIRDPARTY}

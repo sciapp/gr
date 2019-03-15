@@ -103,13 +103,10 @@ static gks_state_list_t *gkss;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
 
-typedef unsigned char Byte;
-typedef unsigned long uLong;
-
 typedef struct WMF_stream_t
 {
-  Byte *buffer;
-  uLong size, length;
+  unsigned char *buffer;
+  unsigned long size, length;
 } WMF_stream;
 
 typedef struct WMF_point_t
@@ -172,7 +169,7 @@ static void wmf_memcpy(WMF_stream *p, int src, size_t n)
   if (p->length + n >= p->size)
     {
       while (p->length + n >= p->size) p->size += MEMORY_INCREMENT;
-      p->buffer = (Byte *)realloc(p->buffer, p->size);
+      p->buffer = (unsigned char *)realloc(p->buffer, p->size);
     }
 
   switch (n)

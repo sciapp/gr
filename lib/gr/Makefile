@@ -36,6 +36,15 @@ endif
        ZLIBS = ../../3rdparty/zlib/libz.a
       QHLIBS = ../../3rdparty/qhull/libqhull.a
 
+# Only update gr_version.h if it will result in an actual change
+GR_VERSION_H_GENERATED := $(shell ../../lib/Version --c)
+GR_VERSION_H_CURRENT := $(shell cat gr_version.h 2>/dev/null || echo "")
+ifneq ($(GR_VERSION_H_CURRENT),$(GR_VERSION_H_GENERATED))
+GR_VERSION_H_DEPS := .FORCE
+else
+GR_VERSION_H_DEPS :=
+endif
+
 .c.o:
 	$(CC) -c $(INCLUDES) $(CFLAGS) $<
 
@@ -71,7 +80,7 @@ demo: demo.c libGR.a $(GKSLIBS)
 libqtgr:
 	@make -C qtgr
 
-gr_version.h: .FORCE
+gr_version.h: $(GR_VERSION_H_DEPS)
 	../../lib/Version --c > $@
 	@chmod 644 $@
 

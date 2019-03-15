@@ -1,3 +1,7 @@
+ifeq ($(strip $(PREFIX)),)
+override PREFIX = $(abspath $(CURDIR)/../build)
+endif
+
   CFLAGS = -O -I. -fPIC -fno-common $(ARCHS)
     OBJS = \
         jbig2.o \
@@ -16,6 +20,8 @@
         jbig2_symbol_dict.o \
         jbig2_text.o
 
+default: install
+
 libjbig2dec.a: $(OBJS)
 	$(AR) crv $@ $?
 	$(AR) ts $@
@@ -24,6 +30,14 @@ distclean: clean
 
 clean:
 	rm -f libjbig2dec.a *.o *.bak
+
+$(PREFIX)/lib/libjbig2dec.a: libjbig2dec.a
+	mkdir -p $(PREFIX)/lib
+	cp libjbig2dec.a $(PREFIX)/lib/
+	mkdir -p $(PREFIX)/include
+	cp jbig2.h $(PREFIX)/include/
+
+install: $(PREFIX)/lib/libjbig2dec.a
 
 depend:
 	makedepend -Y -- \
@@ -42,6 +56,8 @@ depend:
         jbig2_segment.c \
         jbig2_symbol_dict.c \
         jbig2_text.c 2> /dev/null
+
+.PHONY: default install clean distclean depend
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

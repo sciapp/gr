@@ -1,3 +1,7 @@
+ifeq ($(strip $(PREFIX)),)
+override PREFIX = $(abspath $(CURDIR)/../build)
+endif
+
  FTDEFINES = -DFT2_BUILD_LIBRARY -DDARWIN_NO_CARBON \
              '-DFT_CONFIG_MODULES_H="slimftmodules.h"' \
              '-DFT_CONFIG_OPTIONS_H="slimftoptions.h"'
@@ -27,6 +31,8 @@ FTINCLUDES = -Isrc -Iinclude
         truetype.o \
         type1.o \
         type1cid.o
+
+default: install
 
 libfreetype.a: $(OBJS)
 	$(AR) crv $@ $?
@@ -60,3 +66,13 @@ distclean: clean
 clean:
 	rm -f libfreetype.a *.o
 
+$(PREFIX)/lib/libfreetype.a: libfreetype.a
+	mkdir -p $(PREFIX)/lib/
+	mkdir -p $(PREFIX)/include/
+	cp libfreetype.a $(PREFIX)/lib/
+	cp include/ft2build.h $(PREFIX)/include/
+	cp -r include/freetype $(PREFIX)/include/
+
+install: $(PREFIX)/lib/libfreetype.a
+
+.PHONY: default install clean distclean

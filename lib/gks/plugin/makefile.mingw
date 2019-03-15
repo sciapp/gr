@@ -1,17 +1,15 @@
 DEFINES = -DNO_X11 -DNO_GLFW -DNO_GS -DNO_QT4 -DNO_QT5 -DNO_GTK -DNO_WX -DNO_ZMQ -DGRDIR=\"$(GRDIR)\"
-ZLIB = ../../../3rdparty/zlib/libz.lib
-PNGLIB = ../../../3rdparty/libpng16/libpng.lib
-JBIG2DECLIB = ../../../3rdparty/jbig2dec/libjbig2dec.lib
-JPEGLIB = ../../../3rdparty/jpeg/libjpeg.lib
-OPENJP2LIB = ../../../3rdparty/build/lib/libopenjp2.lib
-PIXMANLIB = ../../../3rdparty/pixman/libpixman-1.lib
-CAIROLIB = ../../../3rdparty/cairo/libcairo.lib
-FTLIB = ../../../3rdparty/freetype/libfreetype.lib
+ZLIB = ../../../3rdparty/build/lib/libz.a
+PNGLIB = ../../../3rdparty/build/lib/libpng.a
+JBIG2DECLIB = ../../../3rdparty/build/lib/libjbig2dec.a
+JPEGLIB = ../../../3rdparty/build/lib/libjpeg.a
+OPENJP2LIB = ../../../3rdparty/build/lib/libopenjp2.a
+PIXMANLIB = ../../../3rdparty/build/lib/libpixman-1.a
+CAIROLIB = ../../../3rdparty/build/lib/libcairo.a
+FTLIB = ../../../3rdparty/build/lib/libfreetype.a
 MUPDFLIBS = -lmupdf $(FTLIBS) $(JBIG2DECLIB) $(JPEGLIBS) $(OPENJP2LIB) $(BZ2LIBS) -lws2_32
 AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
-CAIROINCLUDES = -I../../../3rdparty/build/src/
-FTINCLUDES = -I../../../3rdparty/freetype/include/
-INCLUDES = -I../ -I../../../3rdparty/ -I../../../3rdparty/build/include -I/usr/local/include $(CAIROINCLUDES) $(FTINCLUDES)
+INCLUDES = -I../ -I../../../3rdparty/build/include -I/usr/local/include
 CFLAGS = -Wall $(DEFINES) $(INCLUDES)
 CXXFLAGS = -Wall $(DEFINES) $(INCLUDES)
 GDILIB = -lgdi32
@@ -26,49 +24,6 @@ all: x11plugin.dll svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll mov
 
 .cxx.o:
 	$(CXX) -c $(CXXFLAGS) $<
-
-$(PNGLIB):
-	$(MAKE) -C ../../../3rdparty/libpng16 libpng.lib
-
-$(JBIG2DECLIB):
-	$(MAKE) -C ../../../3rdparty/jbig2dec libjbig2dec.lib
-
-$(JPEGLIB):
-	$(MAKE) -C ../../../3rdparty/jpeg libjpeg.lib
-
-$(FTLIB):
-	$(MAKE) -C ../../../3rdparty/freetype libfreetype.lib
-
-$(OPENJP2LIB):
-	cd ../../../3rdparty/openjp2/ && OPENJP2_EXTRA_CONFIGURE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/${PREFIX}.cmake MAKE=make ./build.sh
-	mv ../../../3rdparty/build/lib/libopenjp2.a ../../../3rdparty/build/lib/libopenjp2.lib
-
-$(ZLIB):
-	$(MAKE) -C ../../../3rdparty/zlib libz.lib
-
-$(PIXMANLIB):
-	$(MAKE) -C ../../../3rdparty/pixman libpixman-1.lib
-
-$(CAIROLIB):
-	$(MAKE) -C ../../../3rdparty/cairo libcairo.lib
-
-$(GKSLIB):
-	$(MAKE) -C .. libgks.lib
-
-VPXLIBS:
-	cd ../../../3rdparty/vpx && MAKE=make ./build.sh
-
-OGGLIBS:
-	cd ../../../3rdparty/ogg && OGG_EXTRA_CONFIGURE_FLAGS="--host=${PREFIX}" MAKE=make ./build.sh
-
-THEORALIBS: OGGLIBS
-	cd ../../../3rdparty/theora && THEORA_EXTRA_CONFIGURE_FLAGS="--host=${PREFIX}" MAKE=make ./build.sh
-
-AVLIBS: VPXLIBS THEORALIBS
-	cd ../../../3rdparty/ffmpeg/ &&	FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=${PREFIX}- --arch=${ARCHITECTURE} --target-os=mingw32" MAKE=make ./build.sh
-
-MUPDFLIBS:
-	cd ../../../3rdparty/mupdf && MUPDF_CROSS_COMPILE=yes ./build.sh
 
 x11plugin.dll: x11plugin.o $(GKSLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)

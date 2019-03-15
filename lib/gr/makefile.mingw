@@ -1,55 +1,59 @@
- INCLUDES = -I../../3rdparty/jpeg -I../../3rdparty -I../../3rdparty/zlib -I../gks -I.
+ INCLUDES = -I../../3rdparty/build/include -I../gks -I.
    CFLAGS = -DXMD_H -D_POSIX -D_WIN32_WINNT=0x0600 $(INCLUDES)
-  DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_MUPDF -DNO_GS -DNO_X11
- JPEGLIBS = ../../3rdparty/jpeg/libjpeg.lib
-  PNGLIBS = ../../3rdparty/libpng16/libpng.lib
-    ZLIBS = ../../3rdparty/zlib/libz.lib
-   QHLIBS = ../../3rdparty/qhull/libqhull.lib
+  DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11
+ JPEGLIBS = ../../3rdparty/build/lib/libjpeg.a
+  PNGLIBS = ../../3rdparty/build/lib/libpng.a
+    ZLIBS = ../../3rdparty/build/lib/libz.a
+   QHLIBS = ../../3rdparty/build/lib/libqhull.a
+MUPDFLIBS = ../../3rdparty/build/lib/libmupdf.a
+   FTLIBS = ../../3rdparty/build/lib/libfreetype.a
+OPENJPEG2LIBS = ../../3rdparty/build/lib/libopenjp2.a
+JBIG2DECLIBS = ../../3rdparty/build/lib/libjbig2dec.a
   GKSLIBS = -L../gks/ -lgks
      LIBS = -lws2_32 -lmsimg32 -lgdi32
 
 OBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
 	delaunay.o interp2.o md5.o import.o meta.o shade.o contourf.o boundary.o
 
+
+# Only update gr_version.h if it will result in an actual change
+GR_VERSION_H_GENERATED := $(shell ../../lib/Version --c)
+GR_VERSION_H_CURRENT := $(shell cat gr_version.h 2>/dev/null || echo "")
+ifneq ($(GR_VERSION_H_CURRENT),$(GR_VERSION_H_GENERATED))
+GR_VERSION_H_DEPS := .FORCE
+else
+GR_VERSION_H_DEPS :=
+endif
+
 .SUFFIXES: .o .c
 
-all: prerequisites libgr.dll libgr.lib demo.exe
+default: all
+
+all: libgr.dll libgr.lib demo.exe
 
 .c.o:
 	$(CC) $(CFLAGS) $(DEFINES) -c $<
-
-prerequisites:
-	@$(MAKE) -C ../gks
-	@$(MAKE) -C ../../3rdparty/qhull
-	@$(MAKE) -C ../../3rdparty/zlib
-	@$(MAKE) -C ../../3rdparty/libpng16
-	@$(MAKE) -C ../../3rdparty/jpeg
 
 libgr.lib: $(OBJS)
 	$(AR) crs $@ $?
 
 libgr.dll: $(OBJS)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) \
-	$(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) $(GKSLIBS) $(LIBS)
+	$(JPEGLIBS) $(MUPDFLIBS) $(FTLIBS) $(OPENJPEG2LIBS) $(JBIG2DECLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) $(GKSLIBS) $(LIBS)
 
 demo.exe: demo.o libgr.dll
 	$(CC) -o $@ demo.o -L. -lgr
 
-gr_version.h: .FORCE
+gr_version.h: $(GR_VERSION_H_DEPS)
 	../../lib/Version --c > $@
 	@chmod 644 $@
 
 gr.o: gr_version.h
 
 clean:
-	@$(MAKE) -C ../gks clean
-	@$(MAKE) -C ../../3rdparty/qhull clean
-	@$(MAKE) -C ../../3rdparty/zlib clean
-	@$(MAKE) -C ../../3rdparty/libpng16 clean
-	@$(MAKE) -C ../../3rdparty/jpeg clean
 	$(RM) libgr.so
 	$(RM) *.o
 	$(RM) gr_version.h
 
-.PHONY: default prerequisites clean
+.PHONY: default all clean
 .FORCE:
