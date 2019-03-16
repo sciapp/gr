@@ -37,6 +37,8 @@ typedef __int64 int64_t;
 #include <unistd.h>
 #endif
 
+#include <jpeglib.h>
+
 #include "gks.h"
 #include "gkscore.h"
 
@@ -972,7 +974,7 @@ static void open_page(void)
       exit(1);
 #endif
     }
-  else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 150)
+  else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 144 || p->wtype == 150)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, p->width, p->height);
     }
@@ -1392,6 +1394,64 @@ static void write_page(void)
             }
         }
     }
+  else if (p->wtype == 144)
+    {
+      FILE *fp;
+
+      gks_filepath(path, p->path, "jpg", p->page_counter, 0);
+      fp = fopen(path, "wb");
+      if (!fp)
+        {
+          fprintf(stderr, "GKS: Failed to open file: %s\n", path);
+        }
+      else
+        {
+          unsigned char *data = cairo_image_surface_get_data(p->surface);
+          int width = cairo_image_surface_get_width(p->surface);
+          int height = cairo_image_surface_get_height(p->surface);
+          int stride = cairo_image_surface_get_stride(p->surface);
+          unsigned char *row = (unsigned char *)gks_malloc(width * 3);
+
+          struct jpeg_compress_struct cinfo;
+          struct jpeg_error_mgr jerr;
+
+          cinfo.err = jpeg_std_error(&jerr);
+          jpeg_create_compress(&cinfo);
+          jpeg_stdio_dest(&cinfo, fp);
+
+          cinfo.image_width = width;
+          cinfo.image_height = height;
+          cinfo.input_components = 3;
+          cinfo.in_color_space = JCS_RGB;
+          jpeg_set_defaults(&cinfo);
+          jpeg_set_quality(&cinfo, 100, 1);
+
+          jpeg_start_compress(&cinfo, 1);
+          while (cinfo.next_scanline < cinfo.image_height)
+            {
+              int i, j;
+              for (i = 0; i < width; i++)
+                {
+                  double alpha = data[cinfo.next_scanline * stride + i * 4 + 3] / 255.0;
+                  for (j = 0; j < 3; j++)
+                    {
+                      int component = data[cinfo.next_scanline * stride + i * 4 + (2 - j)];
+                      component = bg[j] * (1 - alpha) + component * alpha + 0.5;
+                      if (component > 255)
+                        {
+                          component = 255;
+                        }
+                      row[i * 3 + j] = component;
+                    }
+                }
+              jpeg_write_scanlines(&cinfo, &row, 1);
+            }
+          jpeg_finish_compress(&cinfo);
+          jpeg_destroy_compress(&cinfo);
+          fclose(fp);
+          gks_free(row);
+        }
+    }
   else if (p->wtype == 150)
     {
       cairo_surface_flush(p->surface);
@@ -1481,7 +1541,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->wtype = ia[2];
       p->mem = NULL;
 
-      if (p->wtype == 140)
+      if (p->wtype == 140 || p->wtype == 144)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;

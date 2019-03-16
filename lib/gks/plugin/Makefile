@@ -50,6 +50,7 @@ endif
      GTKINC = `$(GTK_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
     GTKLIBS = `$(GTK_CONFIG) gtk+-2.0 --libs 2>/dev/null`
    JPEGLIBS = ../../../3rdparty/jpeg/libjpeg.a
+   JPEGDEFS = -I../../../3rdparty/jpeg/
     PNGLIBS = ../../../3rdparty/libpng16/libpng.a
     BZ2LIBS = ../../../3rdparty/bzip2/libbz2.a
      GSDEFS =
@@ -182,10 +183,10 @@ pgfplugin.so: pgfplugin.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.o: cairoplugin.c
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(CAIRODEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(JPEGDEFS) $(CAIRODEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
 
 cairoplugin.so: cairoplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(CAIROLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(CAIROLIBS) $(FTLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
 
 videoplugin.so: videoplugin.o vc.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
