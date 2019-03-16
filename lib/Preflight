@@ -571,7 +571,7 @@ int main(int argc, char **argv)
 }
 eof
   libs="-lz -lm"
-  cmd="${CC} ${MUPDF_CFLAGS} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lmupdf -lfreetype -ljbig2dec -ljpeg -lopenjp2"
+  cmd="${CC} ${MUPDF_CFLAGS} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lmupdf -lfreetype -ljbig2dec -ljpeg -lopenjpeg"
   $cmd $libs >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     $cmd -lssl -lcrypto $libs >/dev/null 2>&1

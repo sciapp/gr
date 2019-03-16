@@ -71,7 +71,7 @@ endif
      AVDEFS =
      AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx $(BZ2LIBS)
   MUPDFDEFS =
-  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
+  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjpeg $(BZ2LIBS)
   CAIRODEFS =
 ifdef USE_STATIC_CAIRO_LIBS
   CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a

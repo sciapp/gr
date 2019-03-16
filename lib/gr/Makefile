@@ -31,7 +31,7 @@ endif
      PNGLIBS = ../../3rdparty/libpng16/libpng.a
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = ../../3rdparty/freetype/libfreetype.a
-   MUPDFLIBS = -lmupdf -ljbig2dec $(JPEGLIBS) -lopenjp2 $(BZ2LIBS)
+   MUPDFLIBS = -lmupdf -ljbig2dec $(JPEGLIBS) -lopenjpeg $(BZ2LIBS)
      SSLLIBS = -lssl -lcrypto
        ZLIBS = ../../3rdparty/zlib/libz.a
       QHLIBS = ../../3rdparty/qhull/libqhull.a
