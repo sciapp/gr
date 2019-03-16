@@ -346,7 +346,6 @@ packages-tar:
   - if [ -d artifacts-darwin ]; then
       mkdir -p Darwin-x86_64/gr/lib;
       mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/;
-      mv artifacts-darwin/*.dylib Darwin-x86_64/gr/lib/;
       mv artifacts-darwin/fonts Darwin-x86_64/gr/;
       mv artifacts-darwin/include Darwin-x86_64/gr/;
       mv artifacts-darwin/Applications Darwin-x86_64/gr/;
