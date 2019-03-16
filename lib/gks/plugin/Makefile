@@ -121,7 +121,7 @@ gks:
 
 Darwin:
 	@make targets quartzplugin.so \
-	EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation" LIBS=""
+	EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation" LIBS="-liconv"
 Linux:
 	@make targets \
 	SOFLAGS="-shared" \
