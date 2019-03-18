@@ -11,6 +11,40 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+
+static void test_consecutive_plots(void)
+{
+  double plots[2][2][1000];
+  int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
+  gr_meta_args_t *args;
+  int i;
+
+  printf("filling argument container...\n");
+
+  for (i = 0; i < n; ++i)
+    {
+      plots[0][0][i] = i * 2 * M_PI / n;
+      plots[0][1][i] = 2 * sin(i * 2 * M_PI / n);
+    }
+  for (i = 0; i < n; ++i)
+    {
+      plots[1][0][i] = i * 2 * M_PI / n;
+      plots[1][1][i] = sin(i * 2 * M_PI / n);
+    }
+
+  args = gr_newmeta();
+  for (i = 0; i < 2; ++i)
+    {
+      gr_meta_args_push(args, "x", "nD", n, plots[i][0]);
+      gr_meta_args_push(args, "y", "nD", n, plots[i][1]);
+      gr_plotmeta(args);
+      printf("Press any key to continue...\n");
+      getchar();
+    }
+
+  gr_deletemeta(args);
+}
+
 static void test_line(void)
 {
   double plots[2][2][1000];
@@ -95,6 +129,7 @@ static void test_contourf(void)
 static void test_plotmeta(void)
 {
   test_line();
+  test_consecutive_plots();
   test_contourf();
   gr_finalizemeta();
 }

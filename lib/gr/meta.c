@@ -3040,6 +3040,7 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
   else
     {
       uint_map_insert_default(hierarchy_to_id, "plots", active_plot_index);
+      uint_map_at(hierarchy_to_id, "plots", (unsigned int *)&plot_id);
     }
   if (subplot_id > 0)
     {
@@ -3048,6 +3049,7 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
   else
     {
       uint_map_insert_default(hierarchy_to_id, "subplots", 1);
+      uint_map_at(hierarchy_to_id, "subplots", (unsigned int *)&subplot_id);
     }
   if (series_id > 0)
     {
@@ -3056,6 +3058,7 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
   else
     {
       uint_map_insert_default(hierarchy_to_id, "series", 1);
+      uint_map_at(hierarchy_to_id, "series", (unsigned int *)&series_id);
     }
   /* special case: if the plot_id is `1` (and it is the first call of `plot_merge_args`), clear the plot argument
    * container before usage */
@@ -3063,7 +3066,7 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
     {
       cleanup_and_set_error_if(!args_values(args, "plots", "a", &current_args), ERROR_INTERNAL);
       gr_meta_args_clear(current_args);
-      error = plot_init_args_structure(current_args, hierarchy_name_ptr, 1);
+      error = plot_init_args_structure(current_args, hierarchy_name_ptr + 1, 1);
       cleanup_if_error;
     }
   merge_it = args_iter(merge_args);
