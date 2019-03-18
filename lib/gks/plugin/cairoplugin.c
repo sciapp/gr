@@ -974,7 +974,7 @@ static void open_page(void)
       exit(1);
 #endif
     }
-  else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 144 || p->wtype == 150)
+  else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 144 || p->wtype == 145 || p->wtype == 150)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, p->width, p->height);
     }
@@ -1452,6 +1452,74 @@ static void write_page(void)
           gks_free(row);
         }
     }
+  else if (p->wtype == 145)
+    {
+      FILE *fp;
+
+      gks_filepath(path, p->path, "bmp", p->page_counter, 0);
+      fp = fopen(path, "wb");
+      if (!fp)
+        {
+          fprintf(stderr, "GKS: Failed to open file: %s\n", path);
+        }
+      else
+        {
+          unsigned char *data = cairo_image_surface_get_data(p->surface);
+          int width = cairo_image_surface_get_width(p->surface);
+          int height = cairo_image_surface_get_height(p->surface);
+          int stride = cairo_image_surface_get_stride(p->surface);
+          int i, j, k;
+          int padding = width % 4;
+          int bmp_stride = 3 * width + padding;
+          unsigned int file_size = 54 + bmp_stride * height;
+          unsigned char *row = (unsigned char *)gks_malloc(bmp_stride);
+          unsigned char header[54] = {0};
+          header[0] = 'B';
+          header[1] = 'M';
+          header[2] = file_size / (1 << 0);
+          header[3] = file_size / (1 << 8);
+          header[4] = file_size / (1 << 16);
+          header[5] = file_size / (1 << 24);
+          header[10] = 54;
+          header[14] = 40;
+          header[18] = width / (1 << 0);
+          header[19] = width / (1 << 8);
+          header[20] = width / (1 << 16);
+          header[21] = width / (1 << 24);
+          header[22] = height / (1 << 0);
+          header[23] = height / (1 << 8);
+          header[24] = height / (1 << 16);
+          header[25] = height / (1 << 24);
+          header[26] = 1;
+          header[28] = 24;
+          fwrite(header, 1, 54, fp);
+
+          for (i = width; i < bmp_stride; i++)
+            {
+              row[i] = 0;
+            }
+          for (i = 0, i = 0; i < height; i++)
+            {
+              for (j = 0; j < width; j++)
+                {
+                  double alpha = data[(height - i - 1) * stride + j * 4 + 3] / 255.0;
+                  for (k = 0; k < 3; k++)
+                    {
+                      int component = data[stride * (height - i - 1) + j * 4 + (2 - k)];
+                      component = bg[k] * (1 - alpha) + component * alpha + 0.5;
+                      if (component > 255)
+                        {
+                          component = 255;
+                        }
+                      row[j * 3 + k] = component;
+                    }
+                }
+              fwrite(row, bmp_stride, 1, fp);
+            }
+          fclose(fp);
+          gks_free(row);
+        }
+    }
   else if (p->wtype == 150)
     {
       cairo_surface_flush(p->surface);
@@ -1541,7 +1609,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->wtype = ia[2];
       p->mem = NULL;
 
-      if (p->wtype == 140 || p->wtype == 144)
+      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;

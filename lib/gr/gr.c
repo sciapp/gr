@@ -7381,7 +7381,11 @@ static int gks_wstype(char *type)
   else if (!str_casecmp(type, "gif"))
     wstype = 130;
   else if (!str_casecmp(type, "bmp"))
+#ifndef NO_GS
     wstype = 320;
+#else
+    wstype = 145;
+#endif
   else if (!str_casecmp(type, "jpeg") || !str_casecmp(type, "jpg"))
 #ifndef NO_GS
     wstype = 321;
@@ -7424,10 +7428,14 @@ bmp, eps, fig, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or 
 
 #ifndef NO_CAIRO
 #ifdef _WIN32
+  if (wstype == 320 && DLLGetEnv("GKS_USE_CAIRO_BMP") != NULL) wstype = 145;
+
   if (wstype == 321 && DLLGetEnv("GKS_USE_CAIRO_JPG") != NULL) wstype = 144;
 
   if (wstype == 322 && DLLGetEnv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
 #else
+  if (wstype == 320 && getenv("GKS_USE_CAIRO_BMP") != NULL) wstype = 145;
+
   if (wstype == 321 && getenv("GKS_USE_CAIRO_JPG") != NULL) wstype = 144;
 
   if (wstype == 322 && getenv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
