@@ -14,6 +14,7 @@ CFLAGS = -Wall $(DEFINES) $(INCLUDES)
 CXXFLAGS = -Wall $(DEFINES) $(INCLUDES)
 GDILIB = -lgdi32
 GKSLIB = ../libgks.lib
+TIFFLIB = ../../../3rdparty/build/lib/libtiff.a
 
 all: x11plugin.dll svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll movplugin.dll wxplugin.dll qtplugin.dll qt5plugin.dll gtkplugin.dll figplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll videoplugin.dll
 
@@ -44,7 +45,7 @@ movplugin.dll: movplugin.o vc.o gif.o pdf.o $(GKSLIB)
 
 cairoplugin.o: $(CAIROLIB)
 
-cairoplugin.dll: cairoplugin.o $(GKSLIB) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(ZLIB) $(FTLIB) $(JPEGLIB)
+cairoplugin.dll: cairoplugin.o $(GKSLIB) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(TIFFLIB) $(ZLIB) $(FTLIB) $(JPEGLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) $(GDILIB)
 
 videoplugin.o: $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS

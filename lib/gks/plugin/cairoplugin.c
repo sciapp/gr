@@ -12,6 +12,7 @@ typedef __int64 int64_t;
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <math.h>
+#include <time.h>
 
 #include <cairo/cairo.h>
 #ifndef NO_FT
@@ -38,6 +39,10 @@ typedef __int64 int64_t;
 #endif
 
 #include <jpeglib.h>
+
+#ifndef NO_TIFF
+#include <tiffio.h>
+#endif
 
 #include "gks.h"
 #include "gkscore.h"
@@ -974,7 +979,8 @@ static void open_page(void)
       exit(1);
 #endif
     }
-  else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 144 || p->wtype == 145 || p->wtype == 150)
+  else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 ||
+           p->wtype == 150)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, p->width, p->height);
     }
@@ -1520,6 +1526,67 @@ static void write_page(void)
           gks_free(row);
         }
     }
+  else if (p->wtype == 146)
+    {
+#ifdef NO_TIFF
+      gks_perror("Cairo TIFF support not compiled in");
+#else
+      TIFF *fp;
+
+      gks_filepath(path, p->path, "tif", p->page_counter, 0);
+      fp = TIFFOpen(path, "w");
+      if (!fp)
+        {
+          fprintf(stderr, "GKS: Failed to open file: %s\n", path);
+        }
+      else
+        {
+          time_t current_datetime = time(NULL);
+          unsigned char *data = cairo_image_surface_get_data(p->surface);
+          int width = cairo_image_surface_get_width(p->surface);
+          int height = cairo_image_surface_get_height(p->surface);
+          int stride = cairo_image_surface_get_stride(p->surface);
+          int i;
+          TIFFSetField(fp, TIFFTAG_IMAGEWIDTH, width);
+          TIFFSetField(fp, TIFFTAG_IMAGELENGTH, height);
+          TIFFSetField(fp, TIFFTAG_SAMPLESPERPIXEL, 4);
+          TIFFSetField(fp, TIFFTAG_BITSPERSAMPLE, 8);
+          TIFFSetField(fp, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);
+          TIFFSetField(fp, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+          TIFFSetField(fp, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+          TIFFSetField(fp, TIFFTAG_COMPRESSION, COMPRESSION_DEFLATE);
+          TIFFSetField(fp, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(fp, stride));
+          TIFFSetField(fp, TIFFTAG_SOFTWARE, "GKS Cairo Plugin");
+          TIFFSetField(fp, TIFFTAG_XRESOLUTION, p->w * 0.0254 / p->mw);
+          TIFFSetField(fp, TIFFTAG_YRESOLUTION, p->h * 0.0254 / p->mh);
+          TIFFSetField(fp, TIFFTAG_RESOLUTIONUNIT, RESUNIT_INCH);
+          if (current_datetime != -1)
+            {
+              struct tm *current_datetime_struct = localtime(&current_datetime);
+              if (current_datetime_struct)
+                {
+                  char current_datetime_str[20] = {0};
+                  if (strftime(current_datetime_str, 20, "%Y:%m:%d %H:%M:%S", current_datetime_struct))
+                    {
+                      TIFFSetField(fp, TIFFTAG_DATETIME, current_datetime_str);
+                    }
+                }
+            }
+          for (i = 0; i < height; i++)
+            {
+              if (TIFFWriteScanline(fp, data + i * stride, i, 0) < 0)
+                {
+                  break;
+                }
+            }
+          if (i != height)
+            {
+              fprintf(stderr, "GKS: Failed to write file: %s\n", path);
+            }
+          TIFFClose(fp);
+        }
+#endif
+    }
   else if (p->wtype == 150)
     {
       cairo_surface_flush(p->surface);
@@ -1609,7 +1676,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->wtype = ia[2];
       p->mem = NULL;
 
-      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145)
+      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;

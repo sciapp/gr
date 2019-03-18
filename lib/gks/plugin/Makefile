@@ -93,6 +93,7 @@ endif
        LIBS = -lc -lm
        ZINC = -I../../../3rdparty/zlib
       ZLIBS = ../../../3rdparty/zlib/libz.a
+   TIFFLIBS = -ltiff
     GKSLIBS = ../libGKS.a
 
 .SUFFIXES: .o .m .cxx
@@ -183,10 +184,10 @@ pgfplugin.so: pgfplugin.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.o: cairoplugin.c
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(JPEGDEFS) $(CAIRODEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(JPEGDEFS) $(CAIRODEFS) $(TIFFDEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
 
 cairoplugin.so: cairoplugin.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(CAIROLIBS) $(FTLIBS) $(JPEGLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) -DNO_X11
+	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(CAIROLIBS) $(FTLIBS) $(JPEGLIBS) $(PNGLIBS) $(TIFFLIBS) $(ZLIBS) $(LIBS) -DNO_X11
 
 videoplugin.so: videoplugin.o vc.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)

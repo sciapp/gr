@@ -57,6 +57,7 @@ static ws_descr_t ws_types[] = {{2, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536
                                 {143, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
                                 {144, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "jpg", NULL},
                                 {145, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "bmp", NULL},
+                                {146, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "tif", NULL},
                                 {150, GKS_K_METERS, 0.20320, 0.15240, 560, 420, 0, "six", NULL},
                                 {160, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "mp4", NULL},
                                 {161, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "webm", NULL},
@@ -302,6 +303,7 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
             case 143:
             case 144:
             case 145:
+            case 146:
             case 150:
               gks_cairo_plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
                                ptr);
