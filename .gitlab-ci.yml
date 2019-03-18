@@ -256,7 +256,7 @@ darwin-self-contained:
   script:
   - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Darwin-x86_64.tar.gz
   - tar xf cmake-3.6.3-Darwin-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Darwin-x86_64/bin/cmake
+  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Darwin-x86_64/CMake.app/Contents/bin/cmake
   - export MACOSX_DEPLOYMENT_TARGET=10.11
   - rm -rf /usr/local/gr/*
   - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake
