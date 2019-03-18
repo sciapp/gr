@@ -57,7 +57,7 @@ prerequisites: $(THIRDPARTYINCDIR)/zmq.h
 	@for d in bzip2 freetype jpeg libpng16 zlib; do make -C ../../3rdparty/$$d; done
 
 $(THIRDPARTYINCDIR)/zmq.h:
-	@cd ../../3rdparty/zeromq && ./build.sh $(THIRDPARTYDIR)
+	make -C ../../3rdparty/zeromq DIR=$(THIRDPARTYDIR)
 
 libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?
