@@ -170,7 +170,7 @@ windows-32bit-cross:
   - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="ogg theora vpx ffmpeg mupdf pixman cairo"
+    EXTRAS="tiff ogg theora vpx ffmpeg mupdf pixman cairo"
     HOST=i686-w64-mingw32
     ARCHITECTURE=i686
     OS=w64_x86-cross-mingw32
@@ -184,6 +184,7 @@ windows-32bit-cross:
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32"
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
+    TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
   - MAKE="make -f makefile.mingw" make -f makefile.mingw
     GRDIR=./
     CC=i686-w64-mingw32-gcc
@@ -217,7 +218,7 @@ windows-64bit-cross:
   - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="ogg theora vpx ffmpeg mupdf pixman cairo"
+    EXTRAS="tiff ogg theora vpx ffmpeg mupdf pixman cairo"
     HOST=x86_64-w64-mingw32
     ARCHITECTURE=x86_64
     OS=w64_amd64-cross-mingw32
@@ -231,6 +232,7 @@ windows-64bit-cross:
     FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32"
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+    TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
   - MAKE="make -f makefile.mingw" make -f makefile.mingw
     GRDIR=./
     CC=x86_64-w64-mingw32-gcc

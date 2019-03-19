@@ -32,6 +32,7 @@ Source8:			https://gr-framework.org/downloads/3rdparty/openjpeg-2.0.0.tar.gz
 Source9:			https://gr-framework.org/downloads/3rdparty/cmake-2.8.12.2.tar.gz
 Source10:			https://gr-framework.org/downloads/3rdparty/cairo-1.14.6.tar.xz
 Source11:			https://gr-framework.org/downloads/3rdparty/pixman-0.34.0.tar.gz
+Source12:			https://gr-framework.org/downloads/3rdparty/tiff-4.0.10.tar.gz
 BuildRequires:		git
 BuildRequires:		gcc-c++
 BuildRequires:		libX11-devel
@@ -110,6 +111,7 @@ mkdir -p %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE9} %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE10} %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE11} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE12} %{THIRDPARTY_SRC}
 
 %build
 make -C 3rdparty GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}

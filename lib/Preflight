@@ -653,5 +653,39 @@ fi
 printf "%12s: %s\n" "Cairo" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
+
+if [ "$tiff" != "no" ]
+then
+  tmpout=`mktemp /tmp/a.out.XXXXX`
+  tmpsrc=`mktemp /tmp/a$$XXXXX.c`
+  tmpver=`mktemp /tmp/a$$XXXXX.txt`
+  cat >$tmpsrc << eof
+#include <stdio.h>
+#include <tiffio.h>
+
+int main() {
+    puts(TIFFGetVersion());
+    return 0;
+}
+eof
+  libs="-lm"
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -ltiff"
+  $cmd $libs >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    tiffdefs="TIFFDEFS=-DNO_TIFF TIFFLIBS="
+    info="${red} no${normal} [libtiff not found]"
+    ret=1
+  else
+    $tmpout >$tmpver 2>&1
+    info="${green}yes${normal} [`cat $tmpver | head -1 | sed s/LIBTIFF,\ Version/version/`]"
+  fi
+else
+  info="${yellow} no${normal} [disabled]"
+  tiffdefs="TIFFDEFS=-DNO_TIFF TIFFLIBS="
+  ret=1
+fi
+printf "%12s: %s\n" "libtiff" "$info" >&2
+rm -f $tmpsrc $tmpout $tmpver
+
 echo "" >&2
-echo $target $wxdefs $qt4defs $qt5defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $cairodefs $extradefs
+echo $target $wxdefs $qt4defs $qt5defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $zmqdefs $avdefs $mupdfdefs $ssldefs $cairodefs $tiffdefs $extradefs
