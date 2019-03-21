@@ -1,4 +1,5 @@
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -339,8 +340,46 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
   api = 1;
 }
 
+static int gks_parse_encoding(const char *encoding)
+{
+  int i, j;
+  const char *utf8_aliases[] = {"utf8", "utf-8"};
+  const char *latin1_aliases[] = {"latin1", "latin-1", "iso-8859-1", "iso8859-1", "iso 8859-1"};
+
+  if (!encoding)
+    {
+      return 0;
+    }
+
+  for (i = 0; i < sizeof(utf8_aliases) / sizeof(char *); i++)
+    {
+      for (j = 0; utf8_aliases[i][j] == tolower(encoding[j]) && encoding[j] != 0; j++)
+        {
+        }
+      if (encoding[j] == 0)
+        {
+          return ENCODING_UTF8;
+        }
+    }
+
+  for (i = 0; i < sizeof(latin1_aliases) / sizeof(char *); i++)
+    {
+      for (j = 0; latin1_aliases[i][j] == tolower(encoding[j]) && encoding[j] != 0; j++)
+        {
+        }
+      if (encoding[j] == 0)
+        {
+          return ENCODING_LATIN1;
+        }
+    }
+
+  return 0;
+}
+
+
 static void gks_parse_env(void)
 {
+  static int did_report_invalid_encoding = 0;
   const char *env;
 
   env = gks_getenv("GLI_GKS");
@@ -354,7 +393,20 @@ static void gks_parse_env(void)
   else
     s->version = GKS5;
 
-  s->ignore_encoding = (char *)gks_getenv("GKS_IGNORE_ENCODING") != NULL;
+  env = gks_getenv("GKS_ENCODING");
+  if (env)
+    {
+      s->input_encoding = gks_parse_encoding(gks_getenv("GKS_ENCODING"));
+      if (s->input_encoding == 0 && did_report_invalid_encoding == 0)
+        {
+          gks_perror("Invalid value '%s' for GKS_ENCODING, please use either 'utf8' or 'latin1'.", env);
+          did_report_invalid_encoding = 1;
+        }
+    }
+  if (s->input_encoding == 0)
+    {
+      s->input_encoding = (char *)gks_getenv("GKS_IGNORE_ENCODING") != NULL ? ENCODING_UTF8 : ENCODING_LATIN1;
+    }
 
   if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL) atexit(gks_emergency_close);
 }

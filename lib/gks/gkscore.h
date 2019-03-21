@@ -110,6 +110,9 @@ extern "C"
 #define RESIZE_SELECTION 253
 #define INQ_BBOX 254
 
+#define ENCODING_LATIN1 300
+#define ENCODING_UTF8 301
+
   typedef struct
   {
     int lindex;
@@ -139,7 +142,7 @@ extern "C"
     int asf[13];
     int wiss, version;
     int fontfile;
-    int ignore_encoding;
+    int input_encoding;
     double txslant;
     double shoff[2];
     double blur;

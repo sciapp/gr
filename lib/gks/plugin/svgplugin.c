@@ -847,7 +847,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
         default:
           if (p->family == 3)
             gks_symbol2utf(ch, utf, &len);
-          else if (!gkss->ignore_encoding)
+          else if (gkss->input_encoding == ENCODING_LATIN1)
             gks_iso2utf(ch, utf, &len);
           else
             {

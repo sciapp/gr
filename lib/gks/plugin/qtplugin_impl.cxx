@@ -534,7 +534,7 @@ static void text_routine(double x, double y, int nchars, char *chars)
   QFontMetrics fm = QFontMetrics(*p->font);
   QString s = QString("");
 
-  if (!gkss->ignore_encoding)
+  if (gkss->input_encoding == ENCODING_LATIN1)
     {
       for (i = 0; i < nchars; i++)
         {
