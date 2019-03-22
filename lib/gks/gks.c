@@ -356,7 +356,7 @@ static int gks_parse_encoding(const char *encoding)
       for (j = 0; utf8_aliases[i][j] == tolower(encoding[j]) && encoding[j] != 0; j++)
         {
         }
-      if (encoding[j] == 0)
+      if (encoding[j] == 0 && utf8_aliases[i][j] == 0)
         {
           return ENCODING_UTF8;
         }
@@ -367,7 +367,7 @@ static int gks_parse_encoding(const char *encoding)
       for (j = 0; latin1_aliases[i][j] == tolower(encoding[j]) && encoding[j] != 0; j++)
         {
         }
-      if (encoding[j] == 0)
+      if (encoding[j] == 0 && latin1_aliases[i][j] == 0)
         {
           return ENCODING_LATIN1;
         }
@@ -1057,6 +1057,10 @@ void gks_text(double px, double py, char *str)
     {
       if (strlen(str) < 132)
         {
+          /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
+          char utf8_str[2 * 131 + 1];
+          gks_input2utf8(str, utf8_str, s->input_encoding);
+
           f_arr_1[0] = px;
           f_arr_2[0] = py;
 
@@ -2767,8 +2771,12 @@ void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind,
 {
   if (gks_list_find(open_ws, wkid) != NULL)
     {
+      /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
+      char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
+      gks_input2utf8(str, utf8_str, s->input_encoding);
       gks_util_inq_text_extent(px, py, str, strlen(str), cpx, cpy, tx, ty);
       *errind = GKS_K_NO_ERROR;
+      gks_free(utf8_str);
     }
   else
     *errind = GKS_K_ERROR;

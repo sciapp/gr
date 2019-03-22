@@ -1252,6 +1252,11 @@ static void text_routine(double x, double y, int nchars, char *chars)
   stroke_data_t buffer;
   int i;
 
+  char *latin1_str = gks_malloc(nchars + 1);
+  gks_utf82latin1(chars, latin1_str);
+  chars = latin1_str;
+  nchars = strlen(chars);
+
   NDC_to_DC(x, y, xorg, yorg);
 
   tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
@@ -1291,6 +1296,8 @@ static void text_routine(double x, double y, int nchars, char *chars)
     pdf_text_ex(p, xorg, yorg, s);
   else
     pdf_text(p, xorg, yorg, s);
+
+  gks_free(latin1_str);
 }
 
 static void text(double px, double py, int nchars, char *chars)

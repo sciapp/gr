@@ -1497,16 +1497,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
     }
   else
     {
-      switch (gkss->input_encoding)
-        {
-        default:
-        case ENCODING_UTF8:
-          string = [NSString stringWithCString:text encoding:NSUTF8StringEncoding];
-          break;
-        case ENCODING_LATIN1:
-          string = [NSString stringWithCString:text encoding:NSISOLatin1StringEncoding];
-          break;
-        }
+      string = [NSString stringWithCString:text encoding:NSUTF8StringEncoding];
     }
   return string;
 }

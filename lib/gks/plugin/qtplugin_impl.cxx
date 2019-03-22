@@ -533,19 +533,24 @@ static void text_routine(double x, double y, int nchars, char *chars)
   double xrel, yrel, ax, ay;
   QFontMetrics fm = QFontMetrics(*p->font);
   QString s = QString("");
-
-  if (gkss->input_encoding == ENCODING_LATIN1)
+  if (p->family == 3)
     {
+      /* Open Symbol maps codepoints to glyphs correctly, but GKS expects mappings like a to alpha, which we need to
+       * revert */
       for (i = 0; i < nchars; i++)
         {
           ch = chars[i];
           if (ch < 0) ch += 256;
-          if (p->family == 3) ch = symbol2utf[ch];
+          ch = symbol2utf[ch];
           s.append(QChar(ch));
         }
     }
   else
-    s = QString::fromUtf8(chars);
+    {
+      s = QString::fromUtf8(chars);
+    }
+
+  (void)nchars;
 
   NDC_to_DC(x, y, xstart, ystart);
 
