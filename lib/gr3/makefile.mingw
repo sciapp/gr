@@ -1,12 +1,16 @@
+ifeq ($(strip $(THIRDPARTYDIR)),)
+override THIRDPARTYDIR = $(abspath $(CURDIR)/../../3rdparty/build)
+endif
+
        GRDIR = /usr/local/gr
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
 
-    INCLUDES = -I../../3rdparty/build/include -I../gr
+    INCLUDES = -I$(THIRDPARTYDIR)/include -I../gr
       GRLIBS = -L../gr -lgr
-     PNGLIBS = ../../3rdparty/build/lib/libpng.a
-    JPEGLIBS = ../../3rdparty/build/lib/libjpeg.a
-       ZLIBS = ../../3rdparty/build/lib/libz.a
+     PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
+    JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
+       ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
       CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)
       GLLIBS = -lopengl32 -lgdi32
      SOFLAGS = -shared

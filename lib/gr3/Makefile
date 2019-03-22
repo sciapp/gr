@@ -1,14 +1,18 @@
+ifeq ($(strip $(THIRDPARTYDIR)),)
+override THIRDPARTYDIR = $(abspath $(CURDIR)/../../3rdparty/build)
+endif
+
        GRDIR = /usr/local/gr
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
 
 UNAME := $(shell uname)
 
-    INCLUDES = -I../../3rdparty -I../../3rdparty/jpeg -I../gr
+    INCLUDES = -I$(THIRDPARTYDIR)/include -I../gr
       GRLIBS = -L../gr -lGR
-     PNGLIBS = ../../3rdparty/libpng16/libpng.a
-    JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
-       ZLIBS = ../../3rdparty/zlib/libz.a
+     PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
+    JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
+       ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
       CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC -DGRDIR=\"$(GRDIR)\" $(EXTRA_CFLAGS)
         SRCS = gr3.c gr3_convenience.c gr3_html.c gr3_povray.c gr3_png.c \
                gr3_jpeg.c gr3_gr.c gr3_mc.c gr3_slices.c
