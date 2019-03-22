@@ -224,7 +224,7 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       break;
     case 8:
       /* update workstation */
-      if (ia[1] == GKS_K_PERFORM_FLAG)
+      if (ia[1] & GKS_K_WRITE_PAGE_FLAG)
         {
           write_page();
         }

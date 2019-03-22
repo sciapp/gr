@@ -619,29 +619,36 @@ void gks_open_ws(int wkid, char *path, int wtype)
                       else
                         ws->path = gks_strdup(path);
                       ws->wtype = wtype;
+                      ws->conid = 0;
 
-                      if (wtype < 320 || wtype > 323)
+                      if (descr->env)
                         {
-                          if (descr->env)
+                          if ((env = gks_getenv(descr->env)))
                             {
-                              if ((env = gks_getenv(descr->env)))
+                              if (ws->path != NULL) free(ws->path);
+                              ws->path = gks_strdup(env);
+                            }
+                        }
+                      if (ws->path)
+                        {
+                          if (*ws->path != '!')
+                            {
+                              if (wtype == 2 || wtype == 3 || wtype == 5 || /* mf and wiss */
+                                  (wtype >= 61 && wtype <= 64) ||           /* ps */
+                                  wtype == 101 || wtype == 102)             /* pdf */
                                 {
-                                  if (ws->path != NULL) free(ws->path);
-                                  ws->path = gks_strdup(env);
+                                  ws->conid = open_file(ws->path, wtype);
                                 }
                             }
-                          if (ws->path)
-                            {
-                              if (*ws->path != '!')
-                                ws->conid = open_file(ws->path, wtype);
-                              else
-                                ws->conid = atoi(ws->path + 1);
-                            }
                           else
-                            ws->conid = 1;
+                            {
+                              ws->conid = atoi(ws->path + 1);
+                            }
                         }
                       else
-                        ws->conid = 1;
+                        {
+                          ws->conid = 1;
+                        }
 
                       /* add workstation identifier to the set of open
                          workstations */
@@ -687,7 +694,7 @@ void gks_open_ws(int wkid, char *path, int wtype)
                         }
                       else
                         {
-                          if (ws->conid != 1)
+                          if (ws->conid && ws->conid != 1)
                             if (ws->path)
                               if (*ws->path != '!') gks_close_file(ws->conid);
 
@@ -747,7 +754,7 @@ void gks_close_ws(int wkid)
 
                   if (ws->wtype == 5) s->wiss = 0;
 
-                  if (ws->conid != 1)
+                  if (ws->conid && ws->conid != 1)
                     if (ws->path)
                       if (*ws->path != '!') gks_close_file(ws->conid);
 

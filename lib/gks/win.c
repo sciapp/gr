@@ -1295,7 +1295,7 @@ void gks_drv_win(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *
 
     case 8:
       /* update workstation */
-      if (p->double_buffering && ia[1] == GKS_K_PERFORM_FLAG) update_ws();
+      if (p->double_buffering && (ia[1] & GKS_K_PERFORM_FLAG)) update_ws();
       break;
 
     case 12:

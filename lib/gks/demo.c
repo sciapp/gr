@@ -267,11 +267,11 @@ int main(int argc, char *argv[])
           printf("%d\n", count);
         }
 
-      if (wstype == GKS_K_WSTYPE_MO) gks_update_ws(1, GKS_K_PERFORM_FLAG);
+      if (wstype == GKS_K_WSTYPE_MO) gks_update_ws(1, GKS_K_PERFORM_FLAG | GKS_K_WRITE_PAGE_FLAG);
     }
   else
     {
-      gks_update_ws(2, GKS_K_PERFORM_FLAG);
+      gks_update_ws(2, GKS_K_PERFORM_FLAG | GKS_K_WRITE_PAGE_FLAG);
 #ifndef EMSCRIPTEN
       puts("Press RETURN to continue ...");
       getchar();

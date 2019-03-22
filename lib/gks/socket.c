@@ -225,7 +225,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       break;
 
     case 8:
-      if (ia[1] == GKS_K_PERFORM_FLAG)
+      if (ia[1] & GKS_K_PERFORM_FLAG)
         {
           send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int));
           send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes);

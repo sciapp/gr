@@ -1166,7 +1166,7 @@ void gks_glplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr
       break;
 
     case 8:
-      if (i_arr[1] == GKS_K_PERFORM_FLAG)
+      if (i_arr[1] & GKS_K_PERFORM_FLAG)
         {
           interp(p->dl.buffer);
           update();

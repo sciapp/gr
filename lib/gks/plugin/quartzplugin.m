@@ -429,7 +429,7 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
       break;
 
     case UPDATE_WS:
-      if (ia[1] == GKS_K_PERFORM_FLAG)
+      if (ia[1] & GKS_K_PERFORM_FLAG)
         {
           [mutex lock];
           @try

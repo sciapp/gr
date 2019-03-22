@@ -1008,12 +1008,16 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
       if (!p->empty)
         {
           p->empty = 1;
-          write_page();
         }
       break;
 
     case 8:
       /* update workstation */
+      if (ia[1] & GKS_K_WRITE_PAGE_FLAG)
+        {
+          p->empty = 1;
+          write_page();
+        }
       break;
 
     case 12:

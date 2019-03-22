@@ -2068,10 +2068,10 @@ void gks_filepath(char *path, char *defpath, const char *type, int page, int ind
   const char *env;
 
   env = gks_getenv("GKS_FILEPATH");
-  if (env)
-    strcpy(path, env);
-  else if (defpath != NULL)
+  if (defpath != NULL)
     strcpy(path, defpath);
+  else if (env != NULL)
+    strcpy(path, env);
   else
     strcpy(path, "gks");
 

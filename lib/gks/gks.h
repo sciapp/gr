@@ -91,6 +91,7 @@ extern "C"
 
 #define GKS_K_POSTPONE_FLAG 0
 #define GKS_K_PERFORM_FLAG 1
+#define GKS_K_WRITE_PAGE_FLAG 2
 
   /* text alignment horizontal */
 

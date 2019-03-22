@@ -1117,8 +1117,11 @@ void gks_htmplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 
     case 8:
       /* update workstation */
-      if (p->stream->length > 0) write_page();
-      img_count = 0;
+      if (ia[1] & GKS_K_WRITE_PAGE_FLAG)
+        {
+          if (p->stream->length > 0) write_page();
+          img_count = 0;
+        }
       break;
 
     case 12:
