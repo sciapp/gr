@@ -63,11 +63,14 @@ prerequisites:
 	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do make -C ../../3rdparty/$$d; done
 	@for d in gks gks/plugin; do make -C ../$$d; done
 
+../gks/libGKS.a:
+	make -C ../gks libGKS.a
+
 libGR.a: $(GROBJS)
 	$(AR) crv $@ $?
 	$(RANLIB) $@
 
-libGR.so: $(GROBJS)
+libGR.so: $(GROBJS) $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) \
 	$(FTLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(QHLIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)
