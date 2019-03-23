@@ -1,3 +1,7 @@
+ifeq ($(strip $(THIRDPARTYDIR)),)
+override THIRDPARTYDIR = $(abspath $(CURDIR)/../../../3rdparty/build)
+endif
+
    UNAME_S := $(shell uname -s)
 
       GRDIR = /usr/local/gr
@@ -5,7 +9,7 @@
 
      CFLAGS = -O -Wall -fPIC $(EXTRA_CFLAGS)
    CXXFLAGS = -O -Wall -fPIC $(EXTRA_CXXFLAGS)
-   INCLUDES = -I.. -I../../../3rdparty
+   INCLUDES = -I.. -I$(THIRDPARTYDIR)/include
     SOFLAGS = -shared
     LDFLAGS = $(EXTRA_LDFLAGS)
   WX_CONFIG = false
@@ -49,10 +53,9 @@ endif
     GTKDEFS =
      GTKINC = `$(GTK_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
     GTKLIBS = `$(GTK_CONFIG) gtk+-2.0 --libs 2>/dev/null`
-   JPEGLIBS = ../../../3rdparty/jpeg/libjpeg.a
-   JPEGDEFS = -I../../../3rdparty/jpeg/
-    PNGLIBS = ../../../3rdparty/libpng16/libpng.a
-    BZ2LIBS = ../../../3rdparty/bzip2/libbz2.a
+   JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
+    PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
+    BZ2LIBS = $(THIRDPARTYDIR)/lib/libbz2.a
      GSDEFS =
       GSINC =
      GSLIBS = -lgs
@@ -66,15 +69,14 @@ else
 endif
     XFTDEFS =
      FTDEFS =
-      FTINC = -I../../../3rdparty/freetype/include
-     FTLIBS = ../../../3rdparty/freetype/libfreetype.a
+     FTLIBS = $(THIRDPARTYDIR)/lib/libfreetype.a
      AVDEFS =
      AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx $(BZ2LIBS)
   MUPDFDEFS =
   MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjpeg $(BZ2LIBS)
   CAIRODEFS =
 ifdef USE_STATIC_CAIRO_LIBS
-  CAIROLIBS = ../../../3rdparty/build/lib/libcairo.a ../../../3rdparty/build/lib/libpixman-1.a
+  CAIROLIBS = $(THIRDPARTYDIR)/lib/libcairo.a $(THIRDPARTYDIR)/lib/libpixman-1.a
 else
   CAIROLIBS = -lcairo -lpixman-1 -lpthread
 endif
@@ -88,11 +90,10 @@ endif
     XFTLIBS = -lXft -lfontconfig
     X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
     ZMQDEFS =
-    ZMQLIBS = -L../../../3rdparty/build/lib/ -lzmq -lpthread
+    ZMQLIBS = -L$(THIRDPARTYDIR)/lib/ -lzmq -lpthread
   EXTRALIBS =
        LIBS = -lc -lm
-       ZINC = -I../../../3rdparty/zlib
-      ZLIBS = ../../../3rdparty/zlib/libz.a
+      ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
    TIFFLIBS = -ltiff
     GKSLIBS = ../libGKS.a
 

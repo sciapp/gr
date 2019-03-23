@@ -1,3 +1,7 @@
+ifeq ($(strip $(THIRDPARTYDIR)),)
+override THIRDPARTYDIR = $(abspath $(CURDIR)/../../3rdparty/build)
+endif
+
        GRDIR = /usr/local/gr
       BINDIR = $(DESTDIR)$(GRDIR)/bin
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
@@ -11,7 +15,7 @@ UNAME := $(shell uname)
    MUPDFDEFS =
       GSDEFS =
      DEFINES = $(MUPDFDEFS) $(GSDEFS)
-    INCLUDES = -I../gks -I../../3rdparty/jpeg -I../../3rdparty
+    INCLUDES = -I../gks -I$(THIRDPARTYDIR)/include
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           AR = ar
@@ -26,15 +30,15 @@ INSTALL_NAME =
      SOFLAGS = -shared
 endif
         LIBS = -lpthread -ldl -lc -lm
-    JPEGLIBS = ../../3rdparty/jpeg/libjpeg.a
-     BZ2LIBS = ../../3rdparty/bzip2/libbz2.a
-     PNGLIBS = ../../3rdparty/libpng16/libpng.a
+    JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
+     BZ2LIBS = $(THIRDPARTYDIR)/lib/libbz2.a
+     PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
      GKSLIBS = ../gks/libGKS.a
-      FTLIBS = ../../3rdparty/freetype/libfreetype.a
+      FTLIBS = $(THIRDPARTYDIR)/lib/libfreetype.a
    MUPDFLIBS = -lmupdf -ljbig2dec $(JPEGLIBS) -lopenjpeg $(BZ2LIBS)
      SSLLIBS = -lssl -lcrypto
-       ZLIBS = ../../3rdparty/zlib/libz.a
-      QHLIBS = ../../3rdparty/qhull/libqhull.a
+       ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
+      QHLIBS = $(THIRDPARTYDIR)/lib/libqhull.a
 
 # Only update gr_version.h if it will result in an actual change
 GR_VERSION_H_GENERATED := $(shell ../../lib/Version --c)
@@ -63,11 +67,14 @@ prerequisites:
 	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do make -C ../../3rdparty/$$d; done
 	@for d in gks gks/plugin; do make -C ../$$d; done
 
+../gks/libGKS.a:
+	make -C ../gks libGKS.a
+
 libGR.a: $(GROBJS)
 	$(AR) crv $@ $?
 	$(RANLIB) $@
 
-libGR.so: $(GROBJS)
+libGR.so: $(GROBJS) $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) \
 	$(FTLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(QHLIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)

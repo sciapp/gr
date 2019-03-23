@@ -1,10 +1,12 @@
+ifeq ($(strip $(THIRDPARTYDIR)),)
+override THIRDPARTYDIR = $(abspath $(CURDIR)/../../3rdparty/build)
+endif
+
             GRDIR = /usr/local/gr
            BINDIR = $(DESTDIR)$(GRDIR)/bin
            LIBDIR = $(DESTDIR)$(GRDIR)/lib
            INCDIR = $(DESTDIR)$(GRDIR)/include
           FONTDIR = $(DESTDIR)$(GRDIR)/fonts
-   THIRDPARTYDIR ?= $(shell pwd)/../../3rdparty/build
-THIRDPARTYINCDIR ?= $(THIRDPARTYDIR)/include
 
 UNAME := $(shell uname)
 
@@ -30,10 +32,10 @@ INSTALL_NAME =
 endif
         LIBS = -lpthread -ldl -lc -lm
       FTDEFS =
-       FTINC = -I../../3rdparty/freetype/include
-      FTLIBS = ../../3rdparty/freetype/libfreetype.a
-        ZINC = -I../../3rdparty/zlib
-       ZLIBS = ../../3rdparty/zlib/libz.a
+       FTINC = -I$(THIRDPARTYDIR)/include
+      FTLIBS = $(THIRDPARTYDIR)/lib/libfreetype.a
+        ZINC = -I$(THIRDPARTYDIR)/include
+       ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
 
 .c.o:
 	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(ZINC) $(CFLAGS) $<
@@ -53,10 +55,10 @@ endif
 
 targets: prerequisites libGKS.a libGKS.so demo gksm plugins gksqt
 
-prerequisites: $(THIRDPARTYINCDIR)/zmq.h
+prerequisites: $(THIRDPARTYINCDIR)/include/zmq.h
 	@for d in bzip2 freetype jpeg libpng16 zlib; do make -C ../../3rdparty/$$d; done
 
-$(THIRDPARTYINCDIR)/zmq.h:
+$(THIRDPARTYINC)/include/zmq.h:
 	make -C ../../3rdparty/zeromq DIR=$(THIRDPARTYDIR)
 
 libGKS.a: $(GKSOBJS)
