@@ -600,10 +600,13 @@ static void seg_xform_rel(double *x, double *y) {}
 
   if (buffer)
     {
+      double scale = [self.window backingScaleFactor];
       c = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
 
-      layer = CGLayerCreateWithContext(c, CGSizeMake(self.bounds.size.width, self.bounds.size.height), NULL);
+      layer = CGLayerCreateWithContext(c, CGSizeMake(self.bounds.size.width * scale, self.bounds.size.height * scale),
+                                       NULL);
       context = CGLayerGetContext(layer);
+      CGContextScaleCTM(context, scale, scale);
 
       // Clear the layer with white before drawing
       CGContextSetFillColorWithColor(context, CGColorGetConstantColor(kCGColorWhite));
@@ -622,7 +625,7 @@ static void seg_xform_rel(double *x, double *y) {}
         }
 
       [self interp:buffer];
-      CGContextDrawLayerAtPoint(c, CGPointMake(0, 0), layer);
+      CGContextDrawLayerInRect(c, CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height), layer);
 
       CGContextFlush(context);
       CGLayerRelease(layer);
