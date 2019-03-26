@@ -1939,8 +1939,9 @@ const char *gks_getenv(const char *env)
 
 void gks_input2utf8(const char *input_str, char *utf8_str, int input_encoding)
 {
-  int i;
-  int j;
+  int i, j = 0;
+  size_t len = 0;
+
   for (i = 0, j = 0; input_str[i] != 0; i++, j++)
     {
       switch (input_encoding)
@@ -1948,7 +1949,6 @@ void gks_input2utf8(const char *input_str, char *utf8_str, int input_encoding)
         default:
         case ENCODING_LATIN1:
           {
-            size_t len;
             gks_iso2utf(input_str[i], utf8_str + j, &len);
             j += len - 1;
             break;
