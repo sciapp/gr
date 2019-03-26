@@ -1664,6 +1664,12 @@ void gks_util_inq_text_extent(double px, double py, char *chars, int nchars, dou
   double x0, y0, xn, yn, chsp, ax, ay, aspace, spacex, spacey;
   int txx, size, bottom, base, cap, top, space;
 
+
+  char *latin1_str = gks_malloc(nchars + 1);
+  gks_utf82latin1(chars, latin1_str);
+  chars = latin1_str;
+  nchars = strlen(chars);
+
   tnr = gkss->cntnr;
   WC_to_NDC(px, py, tnr, x0, y0);
 
@@ -1781,6 +1787,8 @@ void gks_util_inq_text_extent(double px, double py, char *chars, int nchars, dou
     {
       NDC_to_WC(tx[i], ty[i], tnr, tx[i], ty[i]);
     }
+
+  gks_free(latin1_str);
 }
 
 int gks_base64(unsigned char *src, size_t srclen, char *dest, size_t destsize)
@@ -1927,6 +1935,82 @@ const char *gks_getenv(const char *env)
 #else
   return getenv(env);
 #endif
+}
+
+void gks_input2utf8(const char *input_str, char *utf8_str, int input_encoding)
+{
+  int i;
+  int j;
+  for (i = 0, j = 0; input_str[i] != 0; i++, j++)
+    {
+      switch (input_encoding)
+        {
+        default:
+        case ENCODING_LATIN1:
+          {
+            size_t len;
+            gks_iso2utf(input_str[i], utf8_str + j, &len);
+            j += len - 1;
+            break;
+          }
+        case ENCODING_UTF8:
+          {
+            utf8_str[j] = input_str[i];
+            break;
+          }
+        }
+    }
+  utf8_str[j] = 0;
+}
+
+void gks_utf82latin1(const char *utf8_str, char *latin1_str)
+{
+  int i;
+  int j;
+  for (i = 0, j = 0; utf8_str[j] != 0; i++, j++)
+    {
+      int codepoint = 0;
+      if ((utf8_str[i] & 0x80) == 0x00)
+        {
+          codepoint = utf8_str[j];
+        }
+      else if ((utf8_str[i] & 0xe0) == 0xc0 && (utf8_str[i + 1] & 0xc0) == 0x80)
+        {
+          codepoint = ((utf8_str[i] & 0x1f) << 6) + (utf8_str[i + 1] & 0x3f);
+          j += 1;
+        }
+      else if ((utf8_str[i] & 0xf0) == 0xe0 && (utf8_str[i + 1] & 0xc0) == 0x80 && (utf8_str[i + 2] & 0xc0) == 0x80)
+        {
+          codepoint = ((utf8_str[i] & 0xf) << 12) + ((utf8_str[i + 1] & 0x3f) << 6) + (utf8_str[i + 1] & 0x3f);
+          j += 2;
+        }
+      else if ((utf8_str[i] & 0xf8) == 0xf0 && (utf8_str[i + 1] & 0xc0) == 0x80 && (utf8_str[i + 2] & 0xc0) == 0x80 &&
+               (utf8_str[i + 3] & 0xc0) == 0x80)
+        {
+          codepoint = ((utf8_str[i] & 0x7) << 18) + ((utf8_str[i + 1] & 0x3f) << 12) + ((utf8_str[i + 2] & 0x3f) << 6) +
+                      (utf8_str[i + 3] & 0x3f);
+          j += 3;
+        }
+      else
+        {
+          /* invalid byte combination */
+          i -= 1;
+          continue;
+        }
+      if (codepoint < 256)
+        {
+          latin1_str[i] = codepoint;
+        }
+      else if (codepoint == 8722)
+        {
+          latin1_str[i] = '-';
+        }
+      else
+        {
+          latin1_str[i] = '?';
+        }
+    }
+  latin1_str[i] = 0;
 }
 
 void gks_iso2utf(unsigned char c, char *utf, size_t *len)
