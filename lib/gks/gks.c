@@ -342,7 +342,7 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
 
 static int gks_parse_encoding(const char *encoding)
 {
-  int i;
+  int i, j;
   const char *utf8_aliases[] = {"utf8", "utf-8"};
   const char *latin1_aliases[] = {"latin1", "latin-1", "iso-8859-1", "iso8859-1", "iso 8859-1"};
 
@@ -353,7 +353,10 @@ static int gks_parse_encoding(const char *encoding)
 
   for (i = 0; i < sizeof(utf8_aliases) / sizeof(char *); i++)
     {
-      if (strcmp(encoding, utf8_aliases[i]) == 0)
+      for (j = 0; utf8_aliases[i][j] == tolower(encoding[j]) && encoding[j] != 0; j++)
+        {
+        }
+      if (encoding[j] == 0 && utf8_aliases[i][j] == 0)
         {
           return ENCODING_UTF8;
         }
@@ -361,7 +364,10 @@ static int gks_parse_encoding(const char *encoding)
 
   for (i = 0; i < sizeof(latin1_aliases) / sizeof(char *); i++)
     {
-      if (strcmp(encoding, latin1_aliases[i]) == 0)
+      for (j = 0; latin1_aliases[i][j] == tolower(encoding[j]) && encoding[j] != 0; j++)
+        {
+        }
+      if (encoding[j] == 0 && latin1_aliases[i][j] == 0)
         {
           return ENCODING_LATIN1;
         }
