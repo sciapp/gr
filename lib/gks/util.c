@@ -1939,9 +1939,8 @@ const char *gks_getenv(const char *env)
 
 void gks_input2utf8(const char *input_str, char *utf8_str, int input_encoding)
 {
-  int i, j = 0;
-  size_t len = 0;
-
+  int i;
+  int j;
   for (i = 0, j = 0; input_str[i] != 0; i++, j++)
     {
       switch (input_encoding)
@@ -1949,6 +1948,7 @@ void gks_input2utf8(const char *input_str, char *utf8_str, int input_encoding)
         default:
         case ENCODING_LATIN1:
           {
+            size_t len;
             gks_iso2utf(input_str[i], utf8_str + j, &len);
             j += len - 1;
             break;
@@ -1970,25 +1970,25 @@ void gks_utf82latin1(const char *utf8_str, char *latin1_str)
   for (i = 0, j = 0; utf8_str[j] != 0; i++, j++)
     {
       int codepoint = 0;
-      if ((utf8_str[i] & 0x80) == 0x00)
+      if ((utf8_str[j] & 0x80) == 0x00)
         {
           codepoint = utf8_str[j];
         }
-      else if ((utf8_str[i] & 0xe0) == 0xc0 && (utf8_str[i + 1] & 0xc0) == 0x80)
+      else if ((utf8_str[j] & 0xe0) == 0xc0 && (utf8_str[j + 1] & 0xc0) == 0x80)
         {
-          codepoint = ((utf8_str[i] & 0x1f) << 6) + (utf8_str[i + 1] & 0x3f);
+          codepoint = ((utf8_str[j] & 0x1f) << 6) + (utf8_str[j + 1] & 0x3f);
           j += 1;
         }
-      else if ((utf8_str[i] & 0xf0) == 0xe0 && (utf8_str[i + 1] & 0xc0) == 0x80 && (utf8_str[i + 2] & 0xc0) == 0x80)
+      else if ((utf8_str[j] & 0xf0) == 0xe0 && (utf8_str[j + 1] & 0xc0) == 0x80 && (utf8_str[j + 2] & 0xc0) == 0x80)
         {
-          codepoint = ((utf8_str[i] & 0xf) << 12) + ((utf8_str[i + 1] & 0x3f) << 6) + (utf8_str[i + 1] & 0x3f);
+          codepoint = ((utf8_str[j] & 0xf) << 12) + ((utf8_str[j + 1] & 0x3f) << 6) + (utf8_str[j + 1] & 0x3f);
           j += 2;
         }
-      else if ((utf8_str[i] & 0xf8) == 0xf0 && (utf8_str[i + 1] & 0xc0) == 0x80 && (utf8_str[i + 2] & 0xc0) == 0x80 &&
-               (utf8_str[i + 3] & 0xc0) == 0x80)
+      else if ((utf8_str[j] & 0xf8) == 0xf0 && (utf8_str[j + 1] & 0xc0) == 0x80 && (utf8_str[j + 2] & 0xc0) == 0x80 &&
+               (utf8_str[j + 3] & 0xc0) == 0x80)
         {
-          codepoint = ((utf8_str[i] & 0x7) << 18) + ((utf8_str[i + 1] & 0x3f) << 12) + ((utf8_str[i + 2] & 0x3f) << 6) +
-                      (utf8_str[i + 3] & 0x3f);
+          codepoint = ((utf8_str[j] & 0x7) << 18) + ((utf8_str[j + 1] & 0x3f) << 12) + ((utf8_str[j + 2] & 0x3f) << 6) +
+                      (utf8_str[j + 3] & 0x3f);
           j += 3;
         }
       else
