@@ -1257,6 +1257,12 @@ void gks_emul_text(double px, double py, int nchars, char *chars,
   double xn, yn, chsp, ax, ay, spacex, spacey;
   int txx, size, bottom, base, cap, top, space;
 
+
+  char *latin1_str = gks_malloc(nchars + 1);
+  gks_utf82latin1(chars, latin1_str);
+  chars = latin1_str;
+  nchars = strlen(chars);
+
   tnr = gkss->cntnr;
   WC_to_NDC(px, py, tnr, xn, yn);
 
@@ -1333,6 +1339,8 @@ void gks_emul_text(double px, double py, int nchars, char *chars,
       xn += spacex;
       yn += spacey;
     }
+
+  gks_free(latin1_str);
 }
 
 static void minmax(int n, double *a, double *amin, double *amax)
