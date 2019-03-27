@@ -1501,6 +1501,75 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   else
     {
       string = [NSString stringWithCString:text encoding:NSUTF8StringEncoding];
+      if (!string)
+        {
+          /* if string creation failed, replace all invalid bytes with question marks */
+          int i;
+          const char *utf8_str = text;
+          char *text_without_invalid_bytes = gks_malloc(strlen(text) + 1);
+          for (i = 0; utf8_str[i] != 0; i++)
+            {
+              if ((utf8_str[i] & 0x80) == 0x00)
+                {
+                  text_without_invalid_bytes[i] = utf8_str[i];
+                }
+              else if ((utf8_str[i] & 0xe0) == 0xc0 && (utf8_str[i + 1] & 0xc0) == 0x80)
+                {
+                  text_without_invalid_bytes[i] = utf8_str[i];
+                  text_without_invalid_bytes[i + 1] = utf8_str[i + 1];
+                  i += 1;
+                }
+              else if ((utf8_str[i] & 0xf0) == 0xe0 && (utf8_str[i + 1] & 0xc0) == 0x80 &&
+                       (utf8_str[i + 2] & 0xc0) == 0x80)
+                {
+                  text_without_invalid_bytes[i] = utf8_str[i];
+                  text_without_invalid_bytes[i + 1] = utf8_str[i + 1];
+                  text_without_invalid_bytes[i + 2] = utf8_str[i + 2];
+                  i += 2;
+                }
+              else if ((utf8_str[i] & 0xf8) == 0xf0 && (utf8_str[i + 1] & 0xc0) == 0x80 &&
+                       (utf8_str[i + 2] & 0xc0) == 0x80 && (utf8_str[i + 3] & 0xc0) == 0x80)
+                {
+                  text_without_invalid_bytes[i] = utf8_str[i];
+                  text_without_invalid_bytes[i + 1] = utf8_str[i + 1];
+                  text_without_invalid_bytes[i + 2] = utf8_str[i + 2];
+                  text_without_invalid_bytes[i + 3] = utf8_str[i + 3];
+                  i += 3;
+                }
+              else
+                {
+                  /* invalid byte combination */
+                  text_without_invalid_bytes[i] = '?';
+                  continue;
+                }
+            }
+          text_without_invalid_bytes[i] = 0;
+          string = [NSString stringWithCString:text_without_invalid_bytes encoding:NSUTF8StringEncoding];
+          gks_free(text_without_invalid_bytes);
+        }
+      if (!string)
+        {
+          /* if string creation failed again, replace all non-ASCII bytes with question marks */
+          int i;
+          const char *utf8_str = text;
+          char *text_without_nonascii_bytes = gks_malloc(strlen(text) + 1);
+          for (i = 0; utf8_str[i] != 0; i++)
+            {
+              if ((utf8_str[i] & 0x80) == 0x00)
+                {
+                  text_without_nonascii_bytes[i] = utf8_str[i];
+                }
+              else
+                {
+                  /* invalid byte combination */
+                  text_without_nonascii_bytes[i] = '?';
+                  continue;
+                }
+            }
+          text_without_nonascii_bytes[i] = 0;
+          string = [NSString stringWithCString:text_without_nonascii_bytes encoding:NSASCIIStringEncoding];
+          gks_free(text_without_nonascii_bytes);
+        }
     }
   return string;
 }
@@ -1536,6 +1605,10 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       cgfont = cgfontrefs[p->family];
       CTFontRef font = CTFontCreateWithGraphicsFont(cgfont, fontsize, &CGAffineTransformIdentity, NULL);
       NSString *string = [self stringForText:text withFontFamilyID:p->family];
+      if (!string)
+        {
+          return;
+        }
       CFStringRef cfstring = (__bridge CFStringRef)string;
       CFStringRef keys[] = {kCTFontAttributeName, kCTForegroundColorFromContextAttributeName};
       CFTypeRef values[] = {font, kCFBooleanTrue};
