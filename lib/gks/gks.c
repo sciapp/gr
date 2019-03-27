@@ -1053,15 +1053,16 @@ void gks_polymarker(int n, double *pxa, double *pya)
 
 void gks_text(double px, double py, char *str)
 {
-  char utf8_str[2 * 131 + 1];
-
   if (state >= GKS_K_WSAC)
     {
       if (strlen(str) < 132)
         {
+          /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
+          char utf8_str[2 * 131 + 1];
+          gks_input2utf8(str, utf8_str, s->input_encoding);
+
           f_arr_1[0] = px;
           f_arr_2[0] = py;
-          gks_input2utf8(str, utf8_str, s->input_encoding);
 
           /* call the device driver link routine */
           gks_ddlk(TEXT, 0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 1, utf8_str, NULL);
@@ -2768,13 +2769,14 @@ void gks_inq_ws_category(int wtype, int *errind, int *wscat)
 void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind, double *cpx, double *cpy, double *tx,
                          double *ty)
 {
-  char utf8_str[2 * 131 + 1];
-
   if (gks_list_find(open_ws, wkid) != NULL)
     {
+      /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
+      char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
       gks_input2utf8(str, utf8_str, s->input_encoding);
       gks_util_inq_text_extent(px, py, utf8_str, strlen(utf8_str), cpx, cpy, tx, ty);
       *errind = GKS_K_NO_ERROR;
+      gks_free(utf8_str);
     }
   else
     *errind = GKS_K_ERROR;
