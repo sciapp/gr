@@ -1392,12 +1392,12 @@ static void text_routine(double *x, double *y, int *nchars, char *chars)
   double xorg, yorg;
   int alh, alv, ic;
   char str[500], buffer[510];
-  int prec;
+  int prec, len;
+  char *latin1_str = gks_malloc(*nchars + 1);
 
-  char *latin1_str = gks_malloc(nchars + 1);
   gks_utf82latin1(chars, latin1_str);
   chars = latin1_str;
-  nchars = strlen(chars);
+  len = strlen(chars);
 
   NDC_to_DC(*x, *y, xorg, yorg);
 
@@ -1422,7 +1422,7 @@ static void text_routine(double *x, double *y, int *nchars, char *chars)
   else
     moveto(xorg, yorg);
 
-  for (i = 0, j = 0; i < *nchars; i++)
+  for (i = 0, j = 0; i < len; i++)
     {
       ic = chars[i];
       if (ic < 0) ic += 256;
