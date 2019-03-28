@@ -106,7 +106,7 @@ mergeInto(LibraryManager.library, {
         } else {
             context.textAlign = "left";
         }
-        var text = Pointer_stringify(chars);
+        var text = UTF8ToString(chars);
         context.fillText(text, 0, top * context.canvas.height * valg);
         context.setTransform(1, 0, 0, 1, 0, 0);
     },
