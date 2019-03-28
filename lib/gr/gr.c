@@ -136,7 +136,7 @@ static void (*previous_handler)(int);
 
 static int autoinit = 1, double_buf = 0, state_saved = 0, def_color = 0;
 
-static char *display = NULL;
+static const char *display = NULL;
 
 static double vxmin = 0.2, vxmax = 0.9, vymin = 0.2, vymax = 0.9;
 
@@ -745,62 +745,6 @@ static double sizex = 0;
 
 static int regeneration_flags = 0;
 
-#ifdef _WIN32
-
-LPSTR FAR PASCAL DLLGetEnv(LPSTR lpszVariableName)
-{
-  LPSTR lpEnvSearch;
-  LPSTR lpszVarSearch;
-
-  if (!*lpszVariableName) return NULL;
-
-  lpEnvSearch = GetEnvironmentStrings();
-
-  while (*lpEnvSearch)
-    {
-      /*
-       *  Make a copy of the pointer to the name of the
-       *  environment variable to search for.
-       */
-      lpszVarSearch = lpszVariableName;
-
-      /*  Check to see if the variable names match */
-      while (*lpEnvSearch && *lpszVarSearch && *lpEnvSearch == *lpszVarSearch)
-        {
-          lpEnvSearch++;
-          lpszVarSearch++;
-        }
-      /*
-       *  If the names match, the lpEnvSearch pointer is on the "="
-       *  character and lpszVarSearch is on a null terminator.
-       *  Increment and return lpszEnvSearch, which will point to the
-       *  environment variable's contents.
-       *
-       *  If the names do not match, increment lpEnvSearch until it
-       *  reaches the end of the current variable string.
-       */
-      if (*lpEnvSearch == '=' && *lpszVarSearch == '\0')
-        return (lpEnvSearch + 1);
-      else
-        while (*lpEnvSearch) lpEnvSearch++;
-
-      /*
-       *  At this point the end of the environment variable's string
-       *  has been reached. Increment lpEnvSearch to move to the
-       *  next variable in the environment block. If it is NULL,
-       *  the end of the environment block has been reached.
-       */
-      lpEnvSearch++;
-    }
-
-  return NULL; /*
-                *  If this section of code is reached, the variable
-                *  was not found.
-                */
-}
-
-#endif
-
 static char *xcalloc(int count, int size)
 {
   char *result = (char *)calloc(count, size);
@@ -1131,13 +1075,8 @@ static void initialize(int state)
     }
 
   autoinit = 0;
-#ifdef _WIN32
-  double_buf = DLLGetEnv("GKS_DOUBLE_BUF") != NULL;
-  display = DLLGetEnv("GR_DISPLAY");
-#else
-  double_buf = getenv("GKS_DOUBLE_BUF") != NULL;
-  display = getenv("GR_DISPLAY");
-#endif
+  double_buf = gks_getenv("GKS_DOUBLE_BUF") != NULL;
+  display = gks_getenv("GR_DISPLAY");
   if (display)
     if (*display == '\0') display = NULL;
 
@@ -7431,23 +7370,13 @@ bmp, eps, fig, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or 
     }
 
 #ifndef NO_CAIRO
-#ifdef _WIN32
-  if (wstype == 320 && DLLGetEnv("GKS_USE_CAIRO_BMP") != NULL) wstype = 145;
+  if (wstype == 320 && gks_getenv("GKS_USE_CAIRO_BMP") != NULL) wstype = 145;
 
-  if (wstype == 321 && DLLGetEnv("GKS_USE_CAIRO_JPG") != NULL) wstype = 144;
+  if (wstype == 321 && gks_getenv("GKS_USE_CAIRO_JPG") != NULL) wstype = 144;
 
-  if (wstype == 322 && DLLGetEnv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
+  if (wstype == 322 && gks_getenv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
 
-  if (wstype == 323 && DLLGetEnv("GKS_USE_CAIRO_TIF") != NULL) wstype = 146;
-#else
-  if (wstype == 320 && getenv("GKS_USE_CAIRO_BMP") != NULL) wstype = 145;
-
-  if (wstype == 321 && getenv("GKS_USE_CAIRO_JPG") != NULL) wstype = 144;
-
-  if (wstype == 322 && getenv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
-
-  if (wstype == 323 && getenv("GKS_USE_CAIRO_TIF") != NULL) wstype = 146;
-#endif
+  if (wstype == 323 && gks_getenv("GKS_USE_CAIRO_TIF") != NULL) wstype = 146;
 #endif
 
   return wstype;
@@ -8405,7 +8334,7 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
   sprintf(s, "%d%x%s", pointSize, color, string);
   md5(s, cache);
 #ifdef _WIN32
-  temp = (char *)getenv("TEMP");
+  temp = (char *)gks_getenv("TEMP");
 #else
   temp = TMPDIR;
 #endif

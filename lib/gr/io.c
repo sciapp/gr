@@ -184,7 +184,7 @@ static void append(char *string)
   buffer[nbytes] = '\0';
 }
 
-int gr_openstream(char *path)
+int gr_openstream(const char *path)
 {
   if (path != NULL)
     {
