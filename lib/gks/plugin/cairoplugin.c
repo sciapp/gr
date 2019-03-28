@@ -596,7 +596,6 @@ static void text_routine(double x, double y, int nchars, char *chars)
   double xrel, yrel, ax, ay;
   double xstart, ystart;
   cairo_text_extents_t extents;
-  int i;
   char *str;
 
   /* Ugly workaround to avoid Cairo crashes when getting the text extent
