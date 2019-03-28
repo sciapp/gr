@@ -596,7 +596,6 @@ static void text_routine(double x, double y, int nchars, char *chars)
   double xrel, yrel, ax, ay;
   double xstart, ystart;
   cairo_text_extents_t extents;
-  unsigned char ch, *s, *buf = NULL;
   int i;
   char *str;
 
