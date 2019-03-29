@@ -3709,7 +3709,7 @@ void plot_process_window(gr_meta_args_t *subplot_args)
   gr_meta_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
   gr_meta_args_push(subplot_args, "xmajor", "i", x_major_count);
 
-  if (str_equals_any(kind, 2, "hist", "stem") && !gr_meta_args_contains(subplot_args, "ylim"))
+  if (strcmp(kind, "hist") == 0 && !gr_meta_args_contains(subplot_args, "ylim"))
     {
       y_min = 0;
     }
