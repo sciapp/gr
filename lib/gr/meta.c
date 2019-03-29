@@ -1166,20 +1166,13 @@ const char *plot_merge_clear_keys[] = {"series", NULL};
 
 const char *valid_root_keys[] = {"plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
-const char *valid_subplot_keys[] = {"adjust_xlim",  "adjust_ylim",
-                                    "adjust_zlim",  "backgroundcolor",
-                                    "colormap",     "keep_aspect_ratio",
-                                    "kind",         "labels",
-                                    "levels",       "location",
-                                    "nbins",        "panzoom",
-                                    "reset_ranges", "rotation",
-                                    "series",       "step_where",
-                                    "subplot",      "tilt",
-                                    "xbins",        "xflip",
-                                    "xform",        "xlog",
-                                    "ybins",        "yflip",
-                                    "ylog",         "zflip",
-                                    "zlog",         NULL};
+const char *valid_subplot_keys[] = {
+    "adjust_xlim",  "adjust_ylim", "adjust_zlim", "backgroundcolor", "colormap", "keep_aspect_ratio",
+    "kind",         "labels",      "levels",      "location",        "nbins",    "panzoom",
+    "reset_ranges", "rotation",    "series",      "step_where",      "subplot",  "tilt",
+    "title",        "xbins",       "xflip",       "xform",           "xlabel",   "xlim",
+    "xlog",         "ybins",       "yflip",       "ylabel",          "ylim",     "ylog",
+    "zflip",        "zlog",        NULL};
 const char *valid_series_keys[] = {"a", "c", "s", "spec", "u", "v", "x", "y", "z", NULL};
 
 /* ######################### public implementation ################################################################## */
