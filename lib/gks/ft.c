@@ -364,40 +364,46 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
   FT_Int halign, valign;       /* alignment */
   FT_Byte *mono_bitmap = NULL; /* target for rendered text */
   FT_Int num_glyphs;           /* number of glyphs */
-  FT_Vector align;
+  FT_Vector anchor;
+  FT_Vector up;
   FT_Bitmap ftbitmap;
   FT_UInt codepoint;
   int i, textfont, dx, dy, value, pos_x, pos_y;
   unsigned int j, k;
-  double angle;
-  const int windowwidth = *width;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN || direction == GKS_K_TEXT_PATH_UP);
 
   if (!init) gks_ft_init();
 
-  if (gkss->txal[0] != GKS_K_TEXT_HALIGN_NORMAL)
+  halign = gkss->txal[0];
+  if (halign < 0 || halign > 3)
     {
-      halign = gkss->txal[0];
+      gks_perror("Invalid horizontal alignment");
+      halign = GKS_K_TEXT_HALIGN_NORMAL;
     }
-  else if (vertical)
+  if (halign == GKS_K_TEXT_HALIGN_NORMAL)
     {
-      halign = GKS_K_TEXT_HALIGN_CENTER;
+      if (vertical)
+        {
+          halign = GKS_K_TEXT_HALIGN_CENTER;
+        }
+      else if (direction == GKS_K_TEXT_PATH_LEFT)
+        {
+          halign = GKS_K_TEXT_HALIGN_RIGHT;
+        }
+      else
+        {
+          halign = GKS_K_TEXT_HALIGN_LEFT;
+        }
     }
-  else if (direction == GKS_K_TEXT_PATH_LEFT)
-    {
-      halign = GKS_K_TEXT_HALIGN_RIGHT;
-    }
-  else
-    {
-      halign = GKS_K_TEXT_HALIGN_LEFT;
-    }
+
   valign = gkss->txal[1];
-  if (valign != GKS_K_TEXT_VALIGN_NORMAL)
+  if (valign < 0 || valign > 5)
     {
-      valign = gkss->txal[1];
+      gks_perror("Invalid vertical alignment");
+      valign = GKS_K_TEXT_VALIGN_NORMAL;
     }
-  else
+  if (valign == GKS_K_TEXT_VALIGN_NORMAL)
     {
       valign = GKS_K_TEXT_VALIGN_BASE;
     }
@@ -409,28 +415,21 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
     }
   textfont = gks_ft_convert_textfont(gkss->txfont);
 
-  num_glyphs = length;
-  unicode_string = (FT_UInt *)malloc(length * sizeof(FT_UInt) + 1);
-  if (textfont + 1 == 13)
-    {
-      symbol_to_unicode((FT_Bytes)text, unicode_string, num_glyphs);
-    }
-  else
-    {
-      utf_to_unicode((FT_Bytes)text, unicode_string, &num_glyphs);
-    }
-
-  textheight = nint(gkss->chh * windowwidth * 64 / caps[textfont]);
+  textheight = nint(gkss->chh * *width * 64 / caps[textfont]);
   error = FT_Set_Char_Size(face, nint(textheight * gkss->chxp), textheight, 72, 72);
   if (error) gks_perror("cannot set text height");
 
   if (gkss->chup[0] != 0.0 || gkss->chup[1] != 0.0)
     {
-      angle = atan2f(gkss->chup[1], gkss->chup[0]) - M_PI / 2;
-      rotation.xx = nint(cosf(angle) * 0x10000L);
-      rotation.xy = nint(-sinf(angle) * 0x10000L);
-      rotation.yx = nint(sinf(angle) * 0x10000L);
-      rotation.yy = nint(cosf(angle) * 0x10000L);
+      double s = -gkss->chup[0];
+      double c = gkss->chup[1];
+      double f = sqrt(s * s + c * c);
+      s /= f;
+      c /= f;
+      rotation.xx = nint(c * 0x10000L);
+      rotation.xy = nint(-s * 0x10000L);
+      rotation.yx = nint(s * 0x10000L);
+      rotation.yy = nint(c * 0x10000L);
       FT_Set_Transform(face, &rotation, NULL);
     }
   else
@@ -453,14 +452,39 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
         }
     }
 
+  num_glyphs = length;
+  unicode_string = (FT_UInt *)malloc(length * sizeof(FT_UInt) + 1);
+  if (textfont + 1 == 13)
+    {
+      symbol_to_unicode((FT_Bytes)text, unicode_string, num_glyphs);
+    }
+  else
+    {
+      utf_to_unicode((FT_Bytes)text, unicode_string, &num_glyphs);
+    }
+
+  if (direction == GKS_K_TEXT_PATH_LEFT)
+    {
+      int i;
+      for (i = 0; i < num_glyphs - 1 - i; i++)
+        {
+          int tmp = unicode_string[i];
+          unicode_string[i] = unicode_string[num_glyphs - 1 - i];
+          unicode_string[num_glyphs - 1 - i] = tmp;
+        }
+    }
+
   bb.xMin = bb.yMin = LONG_MAX;
   bb.xMax = bb.yMax = LONG_MIN;
-  pen.x = pen.y = 0;
+  pen.x = 0;
+  pen.y = 0;
   previous = 0;
 
   for (i = 0; i < num_glyphs; i++)
     {
-      codepoint = unicode_string[direction == GKS_K_TEXT_PATH_LEFT ? (num_glyphs - 1 - i) : i];
+
+      codepoint = unicode_string[i];
+
       error = set_glyph(face, codepoint, &previous, &pen, vertical, &rotation, &bearing, halign);
       if (error) continue;
 
@@ -480,6 +504,56 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
           pen.y += face->glyph->advance.y + spacing.y;
         }
     }
+
+  if (halign == GKS_K_TEXT_HALIGN_LEFT)
+    {
+      anchor.x = 0;
+      anchor.y = 0;
+    }
+  else if (halign == GKS_K_TEXT_HALIGN_CENTER)
+    {
+      anchor.x = nint(pen.x * 0.5);
+      anchor.y = nint(pen.y * 0.5);
+    }
+  else if (halign == GKS_K_TEXT_HALIGN_RIGHT)
+    {
+      anchor.x = pen.x;
+      anchor.y = pen.y;
+    }
+
+  up.x = 0;
+  up.y = nint(gkss->chh * *width * 64);
+  FT_Vector_Transform(&up, &rotation);
+
+  if (valign == GKS_K_TEXT_VALIGN_BOTTOM)
+    {
+      anchor.x += nint(-0.2 * up.x);
+      anchor.y += nint(-0.2 * up.y);
+    }
+  else if (valign == GKS_K_TEXT_VALIGN_BASE)
+    {
+      anchor.x += 0;
+      anchor.y += 0;
+    }
+  else if (valign == GKS_K_TEXT_VALIGN_HALF)
+    {
+      anchor.x += nint(0.5 * up.x);
+      anchor.y += nint(0.5 * up.y);
+    }
+  else if (valign == GKS_K_TEXT_VALIGN_CAP)
+    {
+      anchor.x += nint(1.0 * up.x);
+      anchor.y += nint(1.0 * up.y);
+    }
+  else if (valign == GKS_K_TEXT_VALIGN_TOP)
+    {
+      anchor.x += nint(1.2 * up.x);
+      anchor.y += nint(1.2 * up.y);
+    }
+
+  *x += (bb.xMin - anchor.x) / 64.0;
+  *y += (bb.yMin - anchor.y) / 64.0;
+
   *width = (int)((bb.xMax - bb.xMin) / 64);
   *height = (int)((bb.yMax - bb.yMin) / 64);
   if (bb.xMax <= bb.xMin || bb.yMax <= bb.yMin)
@@ -488,6 +562,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
       free(unicode_string);
       return NULL;
     }
+
   size = *width * *height;
   mono_bitmap = (FT_Byte *)safe_realloc(mono_bitmap, size);
   memset(mono_bitmap, 0, size);
@@ -498,8 +573,9 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
 
   for (i = 0; i < num_glyphs; i++)
     {
+      codepoint = unicode_string[i];
+
       bearing.x = bearing.y = 0;
-      codepoint = unicode_string[direction == GKS_K_TEXT_PATH_LEFT ? (num_glyphs - 1 - i) : i];
       error = set_glyph(face, codepoint, &previous, &pen, vertical, &rotation, &bearing, halign);
       if (error) continue;
 
@@ -535,65 +611,6 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
     }
   free(unicode_string);
 
-  /* Alignment */
-  if (direction == GKS_K_TEXT_PATH_DOWN)
-    {
-      pen.x += spacing.x;
-      pen.y += spacing.y;
-    }
-  else
-    {
-      pen.x -= spacing.x;
-      pen.y -= spacing.y;
-    }
-
-  align.x = align.y = 0;
-  if (valign != GKS_K_TEXT_VALIGN_BASE)
-    {
-      align.y = nint(gkss->chh * windowwidth * 64);
-      FT_Vector_Transform(&align, &rotation);
-      if (valign == GKS_K_TEXT_VALIGN_HALF)
-        {
-          align.x = nint(0.5 * align.x);
-          align.y = nint(0.5 * align.y);
-        }
-      else if (valign == GKS_K_TEXT_VALIGN_TOP)
-        {
-          align.x = nint(1.2 * align.x);
-          align.y = nint(1.2 * align.y);
-        }
-      else if (valign == GKS_K_TEXT_VALIGN_BOTTOM)
-        {
-          align.x = nint(-0.2 * align.x);
-          align.y = nint(-0.2 * align.y);
-        }
-    }
-
-  if (!vertical && halign != GKS_K_TEXT_HALIGN_LEFT)
-    {
-      FT_Vector right;
-      right.x = face->glyph->metrics.width + face->glyph->metrics.horiBearingX;
-      right.y = 0;
-      if (right.x != 0)
-        {
-          FT_Vector_Transform(&right, &rotation);
-        }
-      pen.x += right.x - face->glyph->advance.x;
-      pen.y += right.y - face->glyph->advance.y;
-      if (halign == GKS_K_TEXT_HALIGN_CENTER)
-        {
-          align.x += pen.x / 2;
-          align.y += pen.y / 2;
-        }
-      else if (halign == GKS_K_TEXT_HALIGN_RIGHT)
-        {
-          align.x += pen.x;
-          align.y += pen.y;
-        }
-    }
-
-  *x += (bb.xMin - align.x) / 64;
-  *y += (bb.yMin - align.y) / 64;
   return mono_bitmap;
 }
 
