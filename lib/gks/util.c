@@ -1636,8 +1636,10 @@ int gks_get_ws_type(void)
                 break;
               }
         }
-      else
+      else if (*env)
         wstype = atoi(env);
+      else
+        return get_default_ws_type();
 
       if (wstype == 0) gks_perror("invalid workstation type (%s)", env);
     }
