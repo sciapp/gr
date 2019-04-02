@@ -219,7 +219,10 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
 
     case 3:
       close_socket(wss->s);
-
+      if (wss->dl.buffer)
+        {
+          free(wss->dl.buffer);
+        }
       gks_free(wss);
       wss = NULL;
       break;

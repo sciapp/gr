@@ -363,8 +363,8 @@ avg_done:
           if (++i >= n) i = 1;
           t = contour_vars.gradient_mag[i] + contour_vars.variance_list[i] + fabs(((double)i / (double)n) - 0.5);
           var = contour_vars.variance_list[i];
-          map_xpos = (int)((xpts[i] - contour_vars.xmin) * contour_vars.x_map_factor) + 1;
-          map_ypos = (int)((ypts[i] - contour_vars.ymin) * contour_vars.y_map_factor) + 1;
+          map_xpos = (int)((xpts[i] - contour_vars.wn[0]) * contour_vars.x_map_factor) + 1;
+          map_ypos = (int)((ypts[i] - contour_vars.wn[2]) * contour_vars.y_map_factor) + 1;
           dx = xpts[i] - xpts[0];
           dy = (ypts[i] - ypts[0]) * contour_vars.aspect_ratio;
           dist = dx * dx + dy * dy;
@@ -386,9 +386,8 @@ avg_done:
 
   if (k >= 0)
     {
-      map_xpos = (int)((xpts[k] - contour_vars.xmin) * contour_vars.x_map_factor) + 1;
-      map_ypos = (int)((ypts[k] - contour_vars.ymin) * contour_vars.y_map_factor) + 1;
-
+      map_xpos = (int)((xpts[k] - contour_vars.wn[0]) * contour_vars.x_map_factor) + 1;
+      map_ypos = (int)((ypts[k] - contour_vars.wn[2]) * contour_vars.y_map_factor) + 1;
       contour_vars.label_map[(map_xpos - 1) * contour_vars.x_map_size + map_ypos - 1] = 1;
       contour_vars.label_map[(map_xpos - 1) * contour_vars.x_map_size + map_ypos] = 1;
       contour_vars.label_map[(map_xpos - 1) * contour_vars.x_map_size + map_ypos + 1] = 1;
