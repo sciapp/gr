@@ -123,7 +123,7 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT
   if (FT_HAS_KERNING(face) && *previous && !vertical && glyph_index)
     {
       FT_Vector delta;
-      FT_Get_Kerning(face, *previous, glyph_index, FT_KERNING_DEFAULT, &delta);
+      FT_Get_Kerning(face, *previous, glyph_index, FT_KERNING_UNFITTED, &delta);
       FT_Vector_Transform(&delta, rotation);
       pen->x += delta.x;
       pen->y += delta.y;
