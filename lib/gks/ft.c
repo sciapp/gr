@@ -283,14 +283,38 @@ static int gks_ft_convert_textfont(int textfont)
   return textfont;
 }
 
+static char *gks_ft_get_font_path(const char *font_name, const char *font_file_extension)
+{
+  const char *prefix;
+  char *font_path;
+
+  prefix = gks_getenv("GKS_FONTPATH");
+  if (prefix == NULL)
+    {
+      prefix = gks_getenv("GRDIR");
+    }
+  if (prefix == NULL)
+    {
+      prefix = GRDIR;
+    }
+
+  font_path = (char *)gks_malloc(strlen(prefix) + 7 + strlen(font_name) + strlen(font_file_extension) + 1);
+  strcpy(font_path, prefix);
+#ifdef _WIN32
+  strcat(font_path, "\\FONTS\\");
+#else
+  strcat(font_path, "/fonts/");
+#endif
+  strcat(font_path, font_name);
+  strcat(font_path, font_file_extension);
+  return font_path;
+}
+
 void *gks_ft_get_face(int textfont)
 {
   FT_Error error;
   FT_Face face;
   const FT_String *font;
-  const FT_String *prefix;
-  FT_String *file;
-  const FT_String *suffix_type1 = ".afm";
 
   if (!init) gks_ft_init();
 
@@ -299,22 +323,9 @@ void *gks_ft_get_face(int textfont)
 
   if (font_face_cache[textfont] == NULL)
     {
-      prefix = gks_getenv("GKS_FONTPATH");
-      if (prefix == NULL)
-        {
-          prefix = gks_getenv("GRDIR");
-          if (prefix == NULL) prefix = GRDIR;
-        }
-      file = (FT_String *)malloc(strlen(prefix) + 7 + strlen(font) + 4 + 1);
-      strcpy(file, prefix);
-#ifndef _WIN32
-      strcat(file, "/fonts/");
-#else
-      strcat(file, "\\FONTS\\");
-#endif
-      strcat(file, font);
-      strcat(file, ".pfb");
+      char *file = gks_ft_get_font_path(font, ".pfb");
       error = FT_New_Face(library, file, 0, &face);
+      gks_free(file);
       if (error == FT_Err_Unknown_File_Format)
         {
           gks_perror("unknown file format: %s", file);
@@ -327,17 +338,10 @@ void *gks_ft_get_face(int textfont)
         }
       if (strcmp(FT_Get_X11_Font_Format(face), "Type 1") == 0)
         {
-          strcpy(file, prefix);
-#ifndef _WIN32
-          strcat(file, "/fonts/");
-#else
-          strcat(file, "\\FONTS\\");
-#endif
-          strcat(file, font);
-          strcat(file, suffix_type1);
+          char *file = gks_ft_get_font_path(font, ".afm");
           FT_Attach_File(face, file);
+          gks_free(file);
         }
-      free(file);
       font_face_cache[textfont] = face;
     }
   else
