@@ -6744,8 +6744,13 @@ static int binning(double x[], double y[], int *cell, int *cnt, double size, dou
 
   for (i = 0; i < n; i++)
     {
-      xi = nx.a * x_lin(x[i]) + nx.b;
-      yi = nx.c * y_lin(y[i]) + nx.d;
+      xi = x[i];
+      yi = y[i];
+      gr_wctondc(&xi, &yi);
+      if (xi < vxmin || xi > vxmax || yi < vymin || yi > vymax)
+        {
+          continue;
+        }
       sx = c1 * (xi - xmin);
       sy = c2 * (yi - ymin);
       j1 = sx + 0.5;
@@ -6883,8 +6888,9 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
     {
       for (j = 0; j < 6; j++)
         {
-          xlist[j] = x_log(xcm[i] + xdelta[j] - nx.b) / nx.a;
-          ylist[j] = y_log(ycm[i] + ydelta[j] - nx.d) / nx.c;
+          xlist[j] = xcm[i] + xdelta[j];
+          ylist[j] = ycm[i] + ydelta[j];
+          gr_ndctowc(xlist + j, ylist + j);
         }
       xlist[6] = xlist[0];
       ylist[6] = ylist[0];
