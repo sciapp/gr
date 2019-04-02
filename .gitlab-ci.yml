@@ -10,7 +10,7 @@ code-style-check:
   - set +e
   - for file in $(git diff HEAD~ HEAD --name-only --diff-filter=ACMR); do
       [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue;
-      grep -vr $'\r' "${file}" || (echo "${file} must not contain carriage return as line endings." && exit 1);
+      grep -vr $'\r' "${file}" >/dev/null || (echo "${file} must not contain carriage return as line endings." && exit 1);
       file --mime "${file}" | grep "charset=us-ascii" >/dev/null || (echo "${file} must be encoded as ASCII text." && exit 1);
       clang-format -verbose -style=file "${file}" > "${file}.formatted";
       diff -q "${file}" "${file}.formatted";
