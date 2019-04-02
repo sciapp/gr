@@ -1,3 +1,9 @@
+#ifdef NO_FT
+#ifndef NO_CAIRO
+#define NO_CAIRO
+#endif
+#endif
+
 #ifndef NO_CAIRO
 
 #include <stdio.h>
@@ -163,20 +169,6 @@ typedef struct ws_state_list_t
 static ws_state_list *p;
 
 static int idle = 0;
-
-static const char *fonts[] = {"Times New Roman",    "Arial",          "Courier",     "Symbol", "Bookman Old Style",
-                              "Century Schoolbook", "Century Gothic", "Book Antiqua"};
-
-static double capheights[29] = {0.662, 0.660, 0.681, 0.662, 0.729, 0.729, 0.729, 0.729, 0.583, 0.583,
-                                0.583, 0.583, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722,
-                                0.722, 0.739, 0.739, 0.739, 0.739, 0.694, 0.693, 0.683, 0.683};
-
-static int map[32] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
-                      23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
-
-static double xfac[4] = {0, 0, -0.5, -1};
-
-static double yfac[6] = {0, -1.2, -1, -0.5, 0, 0.2};
 
 static int predef_font[] = {1, 1, 1, -2, -3, -4};
 
@@ -577,148 +569,44 @@ static void polyline(int n, double *px, double *py)
   if (p->npoints > 0) stroke();
 }
 
-static void symbol_text(int nchars, char *chars)
-{
-  int i;
-  char temp[4];
-  size_t len;
-
-  for (i = 0; i < nchars; i++)
-    {
-      gks_symbol2utf(chars[i], temp, &len);
-      temp[len] = 0;
-      cairo_show_text(p->cr, temp);
-    }
-}
-
 static void text_routine(double x, double y, int nchars, char *chars)
 {
-  double xrel, yrel, ax, ay;
-  double xstart, ystart;
-  cairo_text_extents_t extents;
-  char *str;
+  cairo_surface_t *image;
+  int i, j;
+  int stride;
+  int width = p->width;
+  int height = p->height;
+  int px, py;
+  unsigned char *alpha_pixels;
+  unsigned char *bgra_pixels;
+  double red, green, blue;
 
-  /* Ugly workaround to avoid Cairo crashes when getting the text extent
-     for a string that contains only a single character */
-  str = (char *)gks_malloc(nchars + 3);
-  strncpy(str, chars, nchars);
-  strcat(str, "  ");
+  NDC_to_DC(x, y, px, py);
+  py = p->height - py;
 
-  cairo_text_extents(p->cr, str, &extents);
-  free(str);
+  alpha_pixels = gks_ft_get_bitmap(&px, &py, &width, &height, gkss, chars, nchars);
+  stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
+  bgra_pixels = (unsigned char *)gks_malloc(4 * height * stride);
 
-  NDC_to_DC(x, y, xstart, ystart);
-
-  xrel = (extents.width + extents.x_bearing) * xfac[gkss->txal[0]];
-  yrel = p->capheight * yfac[gkss->txal[1]];
-  CharXform(xrel, yrel, ax, ay);
-  xstart += ax;
-  ystart -= ay;
-
-  if (p->angle != 0)
+  gks_inq_rgb(p->color, &red, &green, &blue);
+  for (i = 0; i < height; i++)
     {
-      cairo_translate(p->cr, xstart, ystart);
-      cairo_rotate(p->cr, -p->angle * M_PI / 180);
-      cairo_move_to(p->cr, 0, 0);
-      if (p->use_symbols)
-        symbol_text(nchars, chars);
-      else
-        cairo_show_text(p->cr, chars);
-      cairo_rotate(p->cr, p->angle * M_PI / 180);
-      cairo_translate(p->cr, -xstart, -ystart);
-    }
-  else
-    {
-      cairo_move_to(p->cr, xstart, ystart);
-      if (p->use_symbols)
-        symbol_text(nchars, chars);
-      else
-        cairo_show_text(p->cr, chars);
-    }
-}
-
-static void set_font(int font)
-{
-  double scale, ux, uy, angle;
-  int size;
-  double width, height, capheight;
-  int bold, italic;
-  int family;
-  void *ft_face;
-
-  font = abs(font);
-  if (font >= 101 && font <= 129)
-    font -= 100;
-  else if (font >= 1 && font <= 32)
-    font = map[font - 1];
-  else
-    font = 9;
-
-  WC_to_NDC_rel(gkss->chup[0], gkss->chup[1], gkss->cntnr, ux, uy);
-  seg_xform_rel(&ux, &uy);
-
-  p->alpha = -atan2(ux, uy);
-  angle = p->alpha * 180 / M_PI;
-  if (angle < 0) angle += 360;
-  p->angle = angle;
-
-  scale = sqrt(gkss->chup[0] * gkss->chup[0] + gkss->chup[1] * gkss->chup[1]);
-  ux = gkss->chup[0] / scale * gkss->chh;
-  uy = gkss->chup[1] / scale * gkss->chh;
-  WC_to_NDC_rel(ux, uy, gkss->cntnr, ux, uy);
-
-  width = 0;
-  height = sqrt(ux * ux + uy * uy);
-  seg_xform_rel(&width, &height);
-
-  height = sqrt(width * width + height * height);
-  capheight = nint(height * (fabs(p->c) + 1));
-  p->capheight = nint(capheight);
-
-  size = nint(capheight / capheights[font - 1]);
-  if (font > 13) font += 3;
-  p->family = (font - 1) / 4;
-  bold = (font % 4 == 1 || font % 4 == 2) ? 0 : 1;
-  italic = (font % 4 == 2 || font % 4 == 0);
-
-
-  if (p->family != 3)
-    {
-      p->use_symbols = 0;
-      family = p->family;
-    }
-  else
-    {
-      p->use_symbols = 1;
-      family = 0;
-    }
-
-#ifndef NO_FT
-  ft_face = gks_ft_get_face(gkss->txfont);
-  if (ft_face)
-    {
-      /* use cairo FreeType API */
-      cairo_font_face_t *font_face = cairo_ft_font_face_create_for_ft_face((FT_Face)ft_face, 0);
-      cairo_set_font_face(p->cr, font_face);
-      cairo_font_face_destroy(font_face);
-    }
-  else
-#endif
-    {
-      /* fall back to cairo "toy" API */
-      if (italic && bold)
-        cairo_select_font_face(p->cr, fonts[family], CAIRO_FONT_SLANT_ITALIC, CAIRO_FONT_WEIGHT_BOLD);
-      else if (bold)
-        cairo_select_font_face(p->cr, fonts[family], CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-      else if (italic)
-        cairo_select_font_face(p->cr, fonts[family], CAIRO_FONT_SLANT_ITALIC, CAIRO_FONT_WEIGHT_NORMAL);
-      else
+      for (j = 0; j < width; j++)
         {
-          cairo_select_font_face(p->cr, fonts[family], CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+          double alpha = alpha_pixels[i * width + j];
+          bgra_pixels[i * stride + j * 4 + 0] = blue * alpha / 255;
+          bgra_pixels[i * stride + j * 4 + 1] = green * alpha / 255;
+          bgra_pixels[i * stride + j * 4 + 2] = red * alpha / 255;
+          bgra_pixels[i * stride + j * 4 + 3] = alpha;
         }
     }
-  cairo_set_font_size(p->cr, size);
+  image = cairo_image_surface_create_for_data(bgra_pixels, CAIRO_FORMAT_ARGB32, width, height, stride);
+  cairo_set_source_surface(p->cr, image, px, p->height - py - height);
+  cairo_paint(p->cr);
+  cairo_surface_destroy(image);
+  gks_free(bgra_pixels);
 }
+
 
 static void text(double px, double py, int nchars, char *chars)
 {
@@ -736,8 +624,6 @@ static void text(double px, double py, int nchars, char *chars)
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
     {
-      set_font(tx_font);
-
       WC_to_NDC(px, py, gkss->cntnr, x, y);
       seg_xform(&x, &y);
 
