@@ -1326,19 +1326,25 @@ void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 
       /* clear workstation */
     case 6:
-      if (!p->empty)
-        {
-          wmf_trailer();
-          p->empty = 1;
-
-          write_page();
-
-          wmf_header();
-        }
+      p->empty = 1;
+      p->stream->length = 0;
+      wmf_header();
       break;
 
       /* update workstation */
     case 8:
+      if (ia[1] & GKS_K_WRITE_PAGE_FLAG)
+        {
+          if (!p->empty)
+            {
+              wmf_trailer();
+              p->empty = 1;
+
+              write_page();
+
+              wmf_header();
+            }
+        }
       break;
 
       /* polyline */

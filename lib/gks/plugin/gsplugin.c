@@ -1685,26 +1685,33 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
 
       /* clear workstation */
     case 6:
-      if (p->init)
-        {
-          if (!p->empty)
-            {
-              packb("showpage");
-              p->empty = 1;
-            }
-          packb("psl restore end % GKS_dict");
-          end_page(p->pages);
-
-          gs();
-
-          p->init = 0;
-          p->pages = 0;
-          p->len = p->column = 0;
-        }
+      p->empty = 1;
+      p->init = 0;
+      p->pages = 0;
+      p->len = p->column = 0;
       break;
 
       /* update workstation */
     case 8:
+      if (ia[1] & GKS_K_WRITE_PAGE_FLAG)
+        {
+          if (p->init)
+            {
+              if (!p->empty)
+                {
+                  packb("showpage");
+                  p->empty = 1;
+                }
+              packb("psl restore end % GKS_dict");
+              end_page(p->pages);
+
+              gs();
+
+              p->init = 0;
+              p->pages = 0;
+              p->len = p->column = 0;
+            }
+        }
       break;
 
       /* polyline */

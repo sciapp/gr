@@ -1239,17 +1239,23 @@ void gks_drv_js(
 
       /* clear workstation */
     case 6:
-      if (!p->empty)
-        {
-          p->empty = 1;
-          write_page();
-
-          init_clippaths();
-        }
+      p->stream->length = 0;
+      p->empty = 1;
+      init_clippaths();
       break;
 
       /* update workstation */
     case 8:
+      if (ia[1] & GKS_K_WRITE_PAGE_FLAG)
+        {
+          if (!p->empty)
+            {
+              p->empty = 1;
+              write_page();
+
+              init_clippaths();
+            }
+        }
       break;
 
       /* polyline */

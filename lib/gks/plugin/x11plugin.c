@@ -4276,7 +4276,7 @@ void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
        *  Update workstation
        */
       lock();
-      if (p->double_buf && ia[1] == GKS_K_PERFORM_FLAG) handle_expose_event(p);
+      if (p->double_buf && (ia[1] & GKS_K_PERFORM_FLAG)) handle_expose_event(p);
 
       update();
 

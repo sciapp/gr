@@ -301,7 +301,7 @@ void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
 
     case 8: /* update workstation */
 
-      if (i_arr[1] == GKS_K_PERFORM_FLAG)
+      if (i_arr[1] & GKS_K_PERFORM_FLAG)
         {
           if (p->position < p->nbytes && !p->empty)
             {

@@ -1233,7 +1233,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       break;
 
     case 8:
-      if (i_arr[1] == GKS_K_PERFORM_FLAG)
+      if (i_arr[1] & GKS_K_PERFORM_FLAG)
         {
           if (get_pixmap() == 0)
             interp(p->dl.buffer);

@@ -819,6 +819,7 @@ static void write_page(void)
   int fd;
 
   p->page_counter++;
+  p->empty = 1;
 
   if (p->conid == 0)
     {
@@ -907,15 +908,19 @@ void gks_figplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 
       /* clear workstation */
     case 6:
-      if (!p->empty)
-        {
-          p->empty = 1;
-          write_page();
-        }
+      p->stream->length = 0;
+      p->empty = 1;
       break;
 
       /* update workstation */
     case 8:
+      if (ia[1] & GKS_K_WRITE_PAGE_FLAG)
+        {
+          if (!p->empty)
+            {
+              write_page();
+            }
+        }
       break;
 
       /* polyline */

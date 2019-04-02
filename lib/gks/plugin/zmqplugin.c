@@ -74,7 +74,7 @@ void gks_zmqplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
       break;
 
     case 8:
-      if (ia[1] == GKS_K_PERFORM_FLAG)
+      if (ia[1] & GKS_K_WRITE_PAGE_FLAG)
         {
           zmq_send(wss->publisher, (char *)&wss->dl.nbytes, sizeof(int), 0);
           zmq_send(wss->publisher, wss->dl.buffer, wss->dl.nbytes, 0);

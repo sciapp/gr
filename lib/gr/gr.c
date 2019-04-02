@@ -1138,8 +1138,9 @@ static void initgks(void)
 
   gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
   if (!double_buf)
-    double_buf = wtype == 160 || wtype == 161 || wtype == 162 || wtype == 380 || wtype == 381 || wtype == 400 ||
-                 wtype == 410 || wtype == 411;
+    {
+      double_buf = wtype == 380 || wtype == 381 || wtype == 400 || wtype == 410 || wtype == 411;
+    }
 
   if (display)
     {
@@ -1359,6 +1360,7 @@ static void update(int workstation_id, int *regenflag)
 void gr_updatews(void)
 {
   int regenflag = double_buf ? GKS_K_PERFORM_FLAG : GKS_K_POSTPONE_FLAG;
+  regenflag |= GKS_K_WRITE_PAGE_FLAG;
 
   check_autoinit;
 
@@ -2986,7 +2988,10 @@ void gr_updategks(void)
           gks_inq_ws_conntype(wkid, &errind, &conid, &wtype);
           gks_inq_ws_category(wtype, &errind, &wkcat);
 
-          if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN) gks_update_ws(wkid, GKS_K_POSTPONE_FLAG);
+          if (wkcat == GKS_K_WSCAT_OUTPUT || wkcat == GKS_K_WSCAT_OUTIN)
+            {
+              gks_update_ws(wkid, GKS_K_WRITE_PAGE_FLAG);
+            }
         }
     }
 }
