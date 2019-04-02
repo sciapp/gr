@@ -483,7 +483,15 @@ void gr_draw_contourf(int nx, int ny, int nh, double *px, double *py, double *h,
 
   if (nh < 1)
     {
-      nh = DEFAULT_CONTOUR_LINES;
+      if (major_h % 1000) /* label contour lines */
+        {
+          gr_adjustrange(&zmin, &zmax);
+          nh = (int)(((zmax - zmin) / (gr_tick(zmin, zmax) / 5.0)) + 0.5);
+        }
+      else
+        {
+          nh = DEFAULT_CONTOUR_LINES;
+        }
       h = NULL;
     }
   if (h == NULL)
