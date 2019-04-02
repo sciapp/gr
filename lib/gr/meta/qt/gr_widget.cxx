@@ -60,6 +60,7 @@ void GRWidget::init_plot_data()
 
   args_ = gr_newmeta();
   gr_meta_args_push(args_, "subplots", "nA", 4, subplots);
+  gr_mergemeta(args_);
 }
 
 void GRWidget::init_ui()
@@ -71,7 +72,7 @@ void GRWidget::init_ui()
 
 void GRWidget::draw()
 {
-  gr_plotmeta(args_);
+  gr_plotmeta(nullptr);
 }
 
 void GRWidget::paintEvent(QPaintEvent *event)
@@ -166,6 +167,7 @@ void GRWidget::mouseReleaseEvent(QMouseEvent *event)
 void GRWidget::resizeEvent(QResizeEvent *event)
 {
   gr_meta_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
+  gr_mergemeta(args_);
 }
 
 void GRWidget::wheelEvent(QWheelEvent *event)
