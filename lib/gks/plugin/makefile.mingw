@@ -5,9 +5,7 @@ endif
 DEFINES = -DNO_X11 -DNO_GLFW -DNO_GS -DNO_QT4 -DNO_QT5 -DNO_GTK -DNO_WX -DNO_ZMQ -DGRDIR=\"$(GRDIR)\" -DXMD_H
 ZLIB = $(THIRDPARTYDIR)/lib/libz.a
 PNGLIB = $(THIRDPARTYDIR)/lib/libpng.a
-JBIG2DECLIB = $(THIRDPARTYDIR)/lib/libjbig2dec.a
 JPEGLIB = $(THIRDPARTYDIR)/lib/libjpeg.a
-OPENJPEGLIB = $(THIRDPARTYDIR)/lib/libopenjpeg.a
 PIXMANLIB = $(THIRDPARTYDIR)/lib/libpixman-1.a
 CAIROLIB = $(THIRDPARTYDIR)/lib/libcairo.a
 FTLIB = $(THIRDPARTYDIR)/lib/libfreetype.a

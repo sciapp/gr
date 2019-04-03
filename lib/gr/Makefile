@@ -12,9 +12,8 @@ UNAME := $(shell uname)
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                delaunay.o interp2.o md5.o import.o meta.o shade.o grforbnd.o \
                contourf.o boundary.o
-   MUPDFDEFS =
       GSDEFS =
-     DEFINES = $(MUPDFDEFS) $(GSDEFS)
+     DEFINES = $(GSDEFS)
     INCLUDES = -I../gks -I$(THIRDPARTYDIR)/include
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)
@@ -36,8 +35,6 @@ endif
      PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
      GKSLIBS = ../gks/libGKS.a
       FTLIBS = $(THIRDPARTYDIR)/lib/libfreetype.a
-   MUPDFLIBS = -lmupdf -ljbig2dec $(JPEGLIBS) -lopenjpeg $(BZ2LIBS)
-     SSLLIBS = -lssl -lcrypto
        ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
       QHLIBS = $(THIRDPARTYDIR)/lib/libqhull.a
 
@@ -72,13 +69,13 @@ libGR.a: $(GROBJS)
 	$(RANLIB) $@
 
 libGR.so: $(GROBJS) $(GKSLIBS)
-	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) \
-	$(FTLIBS) $(JPEGLIBS) $(SSLLIBS) $(ZLIBS) $(QHLIBS) $(LIBS) \
+	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(PNGLIBS) $(GKSLIBS) \
+	$(FTLIBS) $(JPEGLIBS) $(ZLIBS) $(QHLIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)
 
 demo: demo.c libGR.a $(GKSLIBS)
 	$(CC) -o demo $(INCLUDES) $(CFLAGS) demo.c libGR.a \
-	$(PNGLIBS) $(GKSLIBS) $(MUPDFLIBS) $(FTLIBS) $(JPEGLIBS) $(SSLLIBS) \
+	$(PNGLIBS) $(GKSLIBS) $(FTLIBS) $(JPEGLIBS) \
 	$(ZLIBS) $(QHLIBS) $(LIBS) $(LDFLAGS)
 
 libqtgr:

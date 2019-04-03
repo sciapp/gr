@@ -1,9 +1,3 @@
-#ifndef _POSIX_SOURCE
-#define _POSIX_SOURCE
-#endif
-/* _POSIX_SOURCE is required to define `sigjmp_buf` in `setjmp.h` used by <mupdf/fitz.h>.
- * Otherwise this is undefined in ANSI C (at least on RHEL7) */
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,10 +5,6 @@
 #include <jpeglib.h>
 #include <jerror.h>
 #include <png.h>
-
-#ifndef NO_MUPDF
-#include <mupdf/fitz.h>
-#endif
 
 #include "gr.h"
 
@@ -195,64 +185,6 @@ static int read_png_image(char *path, int *width, int *height, int **data)
   return ret;
 }
 
-#ifndef NO_MUPDF
-
-static int read_pdf_image(char *path, int *width, int *height, int **data)
-{
-  int ret = 0, page_number = 0;
-  fz_context *ctx;
-  fz_document *doc;
-  fz_rect rect;
-  fz_irect bbox;
-  fz_pixmap *pix;
-  fz_device *dev;
-  fz_page *page;
-  unsigned char *rgba;
-
-  ctx = fz_new_context(NULL, NULL, FZ_STORE_UNLIMITED);
-  fz_register_document_handlers(ctx);
-  doc = fz_open_document(ctx, path);
-#ifdef MUPDF_API_VERSION_17
-  page = fz_load_page(ctx, doc, page_number);
-  fz_bound_page(ctx, page, &rect);
-#else
-  page = fz_load_page(doc, page_number);
-  fz_bound_page(doc, page, &rect);
-#endif
-  fz_round_rect(&bbox, &rect);
-  pix = fz_new_pixmap_with_bbox(ctx, fz_device_rgb(ctx), &bbox);
-  dev = fz_new_draw_device(ctx, pix);
-#ifdef MUPDF_API_VERSION_17
-  fz_run_page(ctx, page, dev, &fz_identity, NULL);
-#else
-  fz_run_page(doc, page, dev, &fz_identity, NULL);
-#endif
-
-  *width = fz_pixmap_width(ctx, pix);
-  *height = fz_pixmap_height(ctx, pix);
-  rgba = fz_pixmap_samples(ctx, pix);
-  *data = (int *)malloc(*width * *height * sizeof(int));
-  memmove((void *)*data, (const void *)rgba, *width * *height * sizeof(int));
-
-#ifdef MUPDF_API_VERSION_17
-  fz_drop_device(ctx, dev);
-  fz_drop_pixmap(ctx, pix);
-  fz_drop_page(ctx, page);
-  fz_drop_document(ctx, doc);
-  fz_drop_context(ctx);
-#else
-  fz_free_device(dev);
-  fz_drop_pixmap(ctx, pix);
-  fz_free_page(doc, page);
-  fz_close_document(doc);
-  fz_free_context(ctx);
-#endif
-
-  return ret;
-}
-
-#endif
-
 int gr_readimage(char *path, int *width, int *height, int **data)
 {
   FILE *stream;
@@ -276,12 +208,6 @@ int gr_readimage(char *path, int *width, int *height, int **data)
             {
               ret = read_jpeg_image(path, width, height, data);
             }
-#ifndef NO_MUPDF
-          else if (!strncmp(header, "%PDF-1.", 7))
-            {
-              ret = read_pdf_image(path, width, height, data);
-            }
-#endif
           else
             ret = -1;
         }
