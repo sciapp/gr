@@ -7331,23 +7331,11 @@ static int gks_wstype(char *type)
   else if (!str_casecmp(type, "gif"))
     wstype = 130;
   else if (!str_casecmp(type, "bmp"))
-#ifndef NO_GS
-    wstype = 320;
-#else
     wstype = 145;
-#endif
   else if (!str_casecmp(type, "jpeg") || !str_casecmp(type, "jpg"))
-#ifndef NO_GS
-    wstype = 321;
-#else
     wstype = 144;
-#endif
   else if (!str_casecmp(type, "png"))
-#ifndef NO_GS
-    wstype = 322;
-#else
     wstype = 140;
-#endif
   else if (!str_casecmp(type, "mem"))
     wstype = 143;
   else if (!str_casecmp(type, "mp4"))
@@ -7357,11 +7345,7 @@ static int gks_wstype(char *type)
   else if (!str_casecmp(type, "ogg"))
     wstype = 162;
   else if (!str_casecmp(type, "tiff") || !str_casecmp(type, "tif"))
-#ifndef NO_GS
-    wstype = 323;
-#else
     wstype = 146;
-#endif
   else if (!str_casecmp(type, "fig"))
     wstype = 370;
   else if (!str_casecmp(type, "svg"))
@@ -7380,15 +7364,13 @@ bmp, eps, fig, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or 
       wstype = -1;
     }
 
-#ifndef NO_CAIRO
-  if (wstype == 320 && gks_getenv("GKS_USE_CAIRO_BMP") != NULL) wstype = 145;
+  if (wstype == 145 && gks_getenv("GKS_USE_GS_BMP") != NULL) wstype = 320;
 
-  if (wstype == 321 && gks_getenv("GKS_USE_CAIRO_JPG") != NULL) wstype = 144;
+  if (wstype == 144 && gks_getenv("GKS_USE_GS_JPG") != NULL) wstype = 321;
 
-  if (wstype == 322 && gks_getenv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
+  if (wstype == 140 && gks_getenv("GKS_USE_GS_PNG") != NULL) wstype = 322;
 
-  if (wstype == 323 && gks_getenv("GKS_USE_CAIRO_TIF") != NULL) wstype = 146;
-#endif
+  if (wstype == 146 && gks_getenv("GKS_USE_GS_TIF") != NULL) wstype = 323;
 
   return wstype;
 }
