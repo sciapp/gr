@@ -68,8 +68,8 @@ static struct wstypes_t wstypes[] = {
     {"cgm", 8},        {"win", 42},     {"ps", 62},        {"eps", 62},       {"nul", 100},      {"pdf", 102},
     {"mov", 120},      {"gif", 130},    {"cairopng", 140}, {"cairox11", 141}, {"cairojpg", 144}, {"cairobmp", 145},
     {"cairotif", 146}, {"six", 150},    {"mp4", 160},      {"webm", 161},     {"ogg", 162},      {"x11", 211},
-    {"pgf", 314},      {"bmp", 320},    {"jpeg", 321},     {"jpg", 321},      {"png", 322},      {"tiff", 323},
-    {"tif", 323},      {"fig", 370},    {"gtk", 370},      {"wx", 380},       {"qt", 381},       {"svg", 382},
+    {"pgf", 314},      {"bmp", 145},    {"jpeg", 144},     {"jpg", 144},      {"png", 140},      {"tiff", 146},
+    {"tif", 146},      {"fig", 370},    {"gtk", 370},      {"wx", 380},       {"qt", 381},       {"svg", 382},
     {"wmf", 390},      {"quartz", 400}, {"socket", 410},   {"sock", 410},     {"gksqt", 411},    {"zmq", 415},
     {"gl", 420},       {"opengl", 420}, {"html", 430}};
 
@@ -1641,25 +1641,31 @@ int gks_get_ws_type(void)
       else
         return get_default_ws_type();
 
-      if (wstype == 0) gks_perror("invalid workstation type (%s)", env);
+      if (!strcmp(env, "bmp") && gks_getenv("GKS_USE_GS_BMP") != NULL)
+        {
+          wstype = 320;
+        }
+
+      if ((!strcmp(env, "jpg") || !strcmp(env, "jpeg")) && gks_getenv("GKS_USE_GS_JPG") != NULL)
+        {
+          wstype = 321;
+        }
+
+      if (!strcmp(env, "png") && gks_getenv("GKS_USE_GS_PNG") != NULL)
+        {
+          wstype = 322;
+        }
+
+      if ((!strcmp(env, "tif") || !strcmp(env, "tiff")) && gks_getenv("GKS_USE_GS_TIF") != NULL)
+        {
+          wstype = 323;
+        }
+
+      if (wstype == 0)
+        {
+          gks_perror("invalid workstation type (%s)", env);
+        }
     }
-
-#if defined(NO_GS) && !defined(NO_CAIRO)
-  if (wstype == 320) wstype = 145;
-  if (wstype == 321) wstype = 144;
-  if (wstype == 322) wstype = 140;
-  if (wstype == 323) wstype = 146;
-#endif
-
-#ifndef NO_CAIRO
-  if (wstype == 320 && gks_getenv("GKS_USE_CAIRO_BMP") != NULL) wstype = 144;
-
-  if (wstype == 321 && gks_getenv("GKS_USE_CAIRO_JPG") != NULL) wstype = 144;
-
-  if (wstype == 322 && gks_getenv("GKS_USE_CAIRO_PNG") != NULL) wstype = 140;
-
-  if (wstype == 323 && gks_getenv("GKS_USE_CAIRO_TIF") != NULL) wstype = 146;
-#endif
 
   if (wstype == 0) wstype = get_default_ws_type();
 
