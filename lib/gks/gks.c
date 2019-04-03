@@ -292,12 +292,6 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
                             ptr);
               break;
 
-            case 120:
-            case 130:
-              gks_mov_plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
-                             ptr);
-              break;
-
             case 140:
             case 141:
             case 142:
@@ -310,6 +304,8 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
                                ptr);
               break;
 
+            case 120:
+            case 130:
             case 160:
             case 161:
             case 162:
