@@ -38,10 +38,12 @@ typedef __int64 int64_t;
 #include <unistd.h>
 #endif
 
+#ifndef NO_CAIRO
 #include <jpeglib.h>
 
 #ifndef NO_TIFF
 #include <tiffio.h>
+#endif
 #endif
 
 #include "gks.h"
