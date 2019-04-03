@@ -295,21 +295,6 @@ void gks_gl_plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
   if (entry != NULL) (*entry)(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, ptr);
 }
 
-void gks_mov_plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
-                    char *chars, void **ptr)
-{
-  static const char *name = NULL;
-  static void (*entry)(ENTRY_ARGS) = NULL;
-
-  if (name == NULL)
-    {
-      name = "movplugin";
-      *(void **)(&entry) = load_library(name);
-    }
-
-  if (entry != NULL) (*entry)(fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, ptr);
-}
-
 void gks_cairo_plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                       char *chars, void **ptr)
 {

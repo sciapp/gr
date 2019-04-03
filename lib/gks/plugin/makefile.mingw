@@ -11,7 +11,6 @@ OPENJPEGLIB = $(THIRDPARTYDIR)/lib/libopenjpeg.a
 PIXMANLIB = $(THIRDPARTYDIR)/lib/libpixman-1.a
 CAIROLIB = $(THIRDPARTYDIR)/lib/libcairo.a
 FTLIB = $(THIRDPARTYDIR)/lib/libfreetype.a
-MUPDFLIBS = -lmupdf $(FTLIBS) $(JBIG2DECLIB) $(JPEGLIBS) $(OPENJPEGLIB) $(BZ2LIBS) -lws2_32
 AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
 INCLUDES = -I../ -I$(THIRDPARTYDIR)/include -I/usr/local/include
 CFLAGS = -Wall $(DEFINES) $(INCLUDES)
@@ -20,7 +19,7 @@ GDILIB = -lgdi32
 GKSLIB = ../libgks.lib
 TIFFLIB = $(THIRDPARTYDIR)/lib/libtiff.a
 
-all: x11plugin.dll svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll movplugin.dll wxplugin.dll qtplugin.dll qt5plugin.dll gtkplugin.dll figplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll videoplugin.dll
+all: x11plugin.dll svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll wxplugin.dll qtplugin.dll qt5plugin.dll gtkplugin.dll figplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll videoplugin.dll
 
 .SUFFIXES: .c .cxx .o
 
@@ -42,11 +41,6 @@ pgfplugin.dll: pgfplugin.o $(GKSLIB) $(PNGLIB) $(ZLIB)
 htmplugin.dll: htmplugin.o $(GKSLIB) $(PNGLIB) $(ZLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -lwsock32
 
-movplugin.o: $(JBIG2DECLIB) $(OPENJPEGLIB) $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS MUPDFLIBS
-
-movplugin.dll: movplugin.o vc.o gif.o pdf.o $(GKSLIB)
-	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
-
 cairoplugin.o: $(CAIROLIB)
 
 cairoplugin.dll: cairoplugin.o $(GKSLIB) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(TIFFLIB) $(ZLIB) $(FTLIB) $(JPEGLIB)
@@ -54,8 +48,8 @@ cairoplugin.dll: cairoplugin.o $(GKSLIB) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(TI
 
 videoplugin.o: $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS
 
-videoplugin.dll: videoplugin.o vc.o $(GKSLIB)
-	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
+videoplugin.dll: videoplugin.o vc.o gif.o $(GKSLIB)
+	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
 
 wxplugin.dll: wxplugin.o $(GKSLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
@@ -88,4 +82,4 @@ clean:
 	$(RM) *.dll
 	$(RM) *.o
 
-.PHONY: clean AVLIBS VPXLIBS OGGLIBS THEORALIBS MUPDFLIBS
+.PHONY: clean AVLIBS VPXLIBS OGGLIBS THEORALIBS

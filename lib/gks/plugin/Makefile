@@ -72,8 +72,6 @@ endif
      FTLIBS = $(THIRDPARTYDIR)/lib/libfreetype.a
      AVDEFS =
      AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx $(BZ2LIBS)
-  MUPDFDEFS =
-  MUPDFLIBS = -lmupdf $(FTLIBS) -ljbig2dec $(JPEGLIBS) -lopenjpeg $(BZ2LIBS)
   CAIRODEFS =
 ifdef USE_STATIC_CAIRO_LIBS
   CAIROLIBS = $(THIRDPARTYDIR)/lib/libcairo.a $(THIRDPARTYDIR)/lib/libpixman-1.a
@@ -102,9 +100,9 @@ endif
 .m.o:
 	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(CXXFLAGS) $<
 .c.o:
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(CFLAGS) $(INCLUDES) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(ZINC) $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(CFLAGS) $(INCLUDES) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(ZINC) $<
 .cxx.o:
-	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(CXXFLAGS) $(INCLUDES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(ZINC) $<
+	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(CXXFLAGS) $(INCLUDES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(ZINC) $<
 
 default:
 	@make -C ../../.. Makedefs
@@ -113,8 +111,7 @@ default:
 targets: prerequisites gks \
          x11plugin.so wxplugin.so qtplugin.so qt5plugin.so svgplugin.so \
          gtkplugin.so figplugin.so gsplugin.so wmfplugin.so glplugin.so \
-         zmqplugin.so movplugin.so htmplugin.so pgfplugin.so cairoplugin.so \
-         videoplugin.so
+         zmqplugin.so htmplugin.so pgfplugin.so cairoplugin.so videoplugin.so
 
 prerequisites:
 	@for d in libpng16; do make -C ../../../3rdparty/$$d; done
@@ -133,10 +130,10 @@ Linux:
 	EXTRA_LDFLAGS_QT5="-Wl,-rpath=$(QT5LIBDIR)"
 
 qtplugin.o: qtplugin.cxx
-	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
+	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 qt5plugin.o: qt5plugin.cxx
-	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT5DEFS) $(QT5INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(MUPDFDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
+	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT5DEFS) $(QT5INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 x11plugin.so: x11plugin.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
@@ -175,9 +172,6 @@ glplugin.so: glplugin.o
 zmqplugin.so: zmqplugin.o
 	$(CXX) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(ZMQLIBS) $(LIBS)
 
-movplugin.so: movplugin.o vc.o pdf.o gif.o
-	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(AVLIBS) $(MUPDFLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
-
 htmplugin.so: htmplugin.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS)
 
@@ -190,7 +184,7 @@ cairoplugin.o: cairoplugin.c
 cairoplugin.so: cairoplugin.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(CAIROLIBS) $(FTLIBS) $(JPEGLIBS) $(PNGLIBS) $(TIFFLIBS) $(ZLIBS) $(LIBS) -DNO_X11
 
-videoplugin.so: videoplugin.o vc.o
+videoplugin.so: videoplugin.o vc.o gif.o
 	$(CC) -o $@ $(SOFLAGS) $^ $(LDFLAGS) $(GKSLIBS) $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 install: default $(TARGETS)

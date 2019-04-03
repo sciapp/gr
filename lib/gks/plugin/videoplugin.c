@@ -12,6 +12,7 @@
 
 #include "gks.h"
 #include "gkscore.h"
+#include "gif.h"
 
 #if !defined(NO_AV)
 #include "vc.h"
@@ -49,6 +50,7 @@ typedef struct ws_state_list_t
   long int width, height, framerate;
   int wtype;
   movie_t movie;
+  gif_writer *gif;
   void *cairo_ws_state_list;
   int video_plugin_initialized;
 } ws_state_list;
@@ -57,11 +59,16 @@ static ws_state_list *p;
 
 static void close_page(void)
 {
-  if ((p->wtype == 160 || p->wtype == 161 || p->wtype == 162) && p->movie)
+  if ((p->wtype == 120 || p->wtype == 160 || p->wtype == 161 || p->wtype == 162) && p->movie)
     {
       vc_movie_finish(p->movie);
       free(p->movie);
       p->movie = NULL;
+    }
+  else if (p->wtype == 130 && p->gif)
+    {
+      gif_close(p->gif);
+      free(p->gif);
     }
 }
 
@@ -69,10 +76,14 @@ static void write_page(void)
 {
   int bg[3] = {255, 255, 255};
   int i, j, k;
-  if (!p->movie)
+  if (p->wtype != 130 && !p->movie)
     {
       char path[MAXPATHLEN];
-      if (p->wtype == 160)
+      if (p->wtype == 120)
+        {
+          gks_filepath(path, p->path, "mov", 0, 0);
+        }
+      else if (p->wtype == 160)
         {
           gks_filepath(path, p->path, "mp4", 0, 0);
         }
@@ -85,6 +96,13 @@ static void write_page(void)
           gks_filepath(path, p->path, "ogg", 0, 0);
         }
       p->movie = vc_movie_create(path, p->framerate, 4000000);
+    }
+  else if (p->wtype == 130 && !p->gif)
+    {
+      char path[MAXPATHLEN];
+      gks_filepath(path, p->path, "gif", 0, 0);
+      p->gif = (gif_writer *)gks_malloc(sizeof(gif_writer));
+      gif_open(p->gif, path);
     }
   frame_t frame = (frame_t)gks_malloc(sizeof(struct frame_t_));
   for (i = 0; i < p->height; i++)
@@ -107,9 +125,14 @@ static void write_page(void)
   frame->data = p->mem;
   frame->width = p->width;
   frame->height = p->height;
-  if (p->movie)
+  if (p->wtype != 130 && p->movie)
     {
       vc_movie_append_frame(p->movie, frame);
+    }
+  else if (p->wtype == 130 && p->gif)
+    {
+      int delay = 100 / p->framerate;
+      gif_write(p->gif, p->mem, p->width, p->height, FORMAT_RGBA, delay);
     }
   gks_free(frame);
 }
@@ -165,8 +188,8 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
         }
 
       p->framerate = 24;
-      p->width = 1024;
-      p->height = 768;
+      p->width = 720;
+      p->height = 720;
 
       if (framerate > 0)
         {
