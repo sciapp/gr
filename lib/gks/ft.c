@@ -71,7 +71,6 @@ const static double caps[] = {0.662, 0.653, 0.676, 0.669, 0.718, 0.718, 0.718, 0
 static FT_Bool init = 0;
 static FT_Library library;
 
-static FT_Pointer safe_realloc(FT_Pointer ptr, size_t size);
 static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT_Vector *pen, FT_Bool vertical,
                           FT_Matrix *rotation, FT_Vector *bearing, FT_Int halign, FT_GlyphSlot *glyph_slot_ptr);
 static void gks_ft_init_fallback_faces();
@@ -87,29 +86,6 @@ static FT_Long ft_min(FT_Long a, FT_Long b)
 static FT_Long ft_max(FT_Long a, FT_Long b)
 {
   return a > b ? a : b;
-}
-
-static FT_Pointer safe_realloc(FT_Pointer ptr, size_t size)
-{
-  FT_Pointer tmp;
-  if (ptr)
-    {
-      tmp = malloc(size);
-    }
-  else
-    {
-      tmp = realloc(ptr, size);
-    }
-  if (tmp != NULL)
-    {
-      ptr = tmp;
-    }
-  else
-    {
-      gks_perror("out of memory");
-      ptr = NULL;
-    }
-  return ptr;
 }
 
 /* load a glyph into the slot and compute bearing */
@@ -539,7 +515,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
     }
 
   num_glyphs = length;
-  unicode_string = (FT_UInt *)malloc((length + 1) * sizeof(FT_UInt));
+  unicode_string = (FT_UInt *)gks_malloc((length + 1) * sizeof(FT_UInt));
   if (textfont + 1 == 13)
     {
       symbol_to_unicode((FT_Bytes)text, unicode_string, num_glyphs);
@@ -645,12 +621,12 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
   if (bb.xMax <= bb.xMin || bb.yMax <= bb.yMin)
     {
       gks_perror("invalid bitmap size");
-      free(unicode_string);
+      gks_free(unicode_string);
       return NULL;
     }
 
   size = *width * *height;
-  mono_bitmap = (FT_Byte *)safe_realloc(mono_bitmap, size);
+  mono_bitmap = (FT_Byte *)gks_malloc(size);
   memset(mono_bitmap, 0, size);
 
   pen.x = 0;
@@ -695,7 +671,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
           pen.y += glyph_slot->advance.y + spacing.y;
         }
     }
-  free(unicode_string);
+  gks_free(unicode_string);
 
   return mono_bitmap;
 }
@@ -716,7 +692,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height, gks_state_list_t *gk
   color[3] = (int)(gkss->alpha * 255);
 
   size = *width * *height;
-  rgba_bitmap = (FT_Byte *)safe_realloc(rgba_bitmap, 4 * size);
+  rgba_bitmap = (FT_Byte *)gks_malloc(4 * size);
   memset(rgba_bitmap, 0, 4 * size);
   for (i = 0; i < size; i++)
     {
@@ -727,7 +703,7 @@ int *gks_ft_render(int *x, int *y, int *width, int *height, gks_state_list_t *gk
         }
     }
 
-  free(mono_bitmap);
+  gks_free(mono_bitmap);
   return (int *)rgba_bitmap;
 }
 
