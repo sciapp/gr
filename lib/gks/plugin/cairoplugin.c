@@ -173,8 +173,6 @@ static ws_state_list *p;
 
 static int idle = 0;
 
-static int predef_font[] = {1, 1, 1, -2, -3, -4};
-
 static int predef_prec[] = {0, 1, 2, 2, 2, 2};
 
 static int predef_ints[] = {0, 1, 3, 3, 3};
@@ -608,15 +606,15 @@ static void text_routine(double x, double y, int nchars, char *chars)
   cairo_paint(p->cr);
   cairo_surface_destroy(image);
   gks_free(bgra_pixels);
+  gks_free(alpha_pixels);
 }
 
 
 static void text(double px, double py, int nchars, char *chars)
 {
-  int tx_font, tx_prec, tx_color;
+  int tx_prec, tx_color;
   double x, y;
 
-  tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? gkss->txcoli : 1;
 
@@ -1240,7 +1238,7 @@ static void write_page(void)
           if (p->mem_resizable)
             {
               int *mem_info_ptr = (int *)p->mem;
-              unsigned char **mem_ptr_ptr = (unsigned char **)(mem_info_ptr + 2);
+              unsigned char **mem_ptr_ptr = (unsigned char **)(mem_info_ptr + 3);
               mem_info_ptr[0] = width;
               mem_info_ptr[1] = height;
               *mem_ptr_ptr = (unsigned char *)gks_realloc(*mem_ptr_ptr, width * height * 4);
@@ -1567,6 +1565,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
         {
           int width = 0;
           int height = 0;
+          int dpi = 600;
           int symbols_read = 0;
           int characters_read = 0;
           void *mem_ptr = NULL;
@@ -1582,10 +1581,12 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
               p->mem_resizable = 1;
               width = ((int *)mem_ptr)[0];
               height = ((int *)mem_ptr)[1];
-              if (width <= 0 || height <= 0)
+              dpi = ((int *)mem_ptr)[2];
+              if (width <= 0 || height <= 0 || dpi <= 0)
                 {
                   width = 2400;
                   height = 2400;
+                  dpi = 600;
                 }
             }
           else
@@ -1600,10 +1601,10 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
                 }
             }
           p->mem = (unsigned char *)mem_ptr;
-          p->mw = 0.28575;
-          p->mh = 0.19685;
           p->w = 6750;
           p->h = 4650;
+          p->mw = p->w * 2.54 / 100 / dpi;
+          p->mh = p->h * 2.54 / 100 / dpi;
           resize(width, height);
         }
       else if (p->wtype == 150)

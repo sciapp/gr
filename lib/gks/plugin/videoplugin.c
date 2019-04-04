@@ -46,13 +46,14 @@ typedef struct ws_state_list_t
 {
   char *path;
   char *mem_path;
-  unsigned char *mem;
+  int *mem;
   long int width, height, framerate;
   int wtype;
   movie_t movie;
   gif_writer *gif;
   void *cairo_ws_state_list;
   int video_plugin_initialized;
+  int user_defined_resolution;
 } ws_state_list;
 
 static ws_state_list *p;
@@ -76,6 +77,12 @@ static void write_page(void)
 {
   int bg[3] = {255, 255, 255};
   int i, j, k;
+  int width, height;
+  unsigned char *mem;
+  width = p->mem[0];
+  height = p->mem[1];
+
+  mem = *((unsigned char **)(p->mem + 3));
   if (p->wtype != 130 && !p->movie)
     {
       char path[MAXPATHLEN];
@@ -105,34 +112,34 @@ static void write_page(void)
       gif_open(p->gif, path);
     }
   frame_t frame = (frame_t)gks_malloc(sizeof(struct frame_t_));
-  for (i = 0; i < p->height; i++)
+  for (i = 0; i < height; i++)
     {
-      for (j = 0; j < p->width; j++)
+      for (j = 0; j < width; j++)
         {
-          long ind = (i * p->width + j) * 4;
-          double alpha = p->mem[ind + 3] / 255.0;
+          long ind = (i * width + j) * 4;
+          double alpha = mem[ind + 3] / 255.0;
           for (k = 0; k < 3; k++)
             {
-              double col = p->mem[ind + k] * alpha + bg[k] * (1 - alpha) + 0.5;
+              double col = mem[ind + k] * alpha + bg[k] * (1 - alpha) + 0.5;
               if (col > 255)
                 {
                   col = 255;
                 }
-              p->mem[ind + k] = (unsigned char)col;
+              mem[ind + k] = (unsigned char)col;
             }
         }
     }
-  frame->data = p->mem;
-  frame->width = p->width;
-  frame->height = p->height;
   if (p->wtype != 130 && p->movie)
     {
+      frame->data = mem;
+      frame->width = width;
+      frame->height = height;
       vc_movie_append_frame(p->movie, frame);
     }
   else if (p->wtype == 130 && p->gif)
     {
       int delay = 100 / p->framerate;
-      gif_write(p->gif, p->mem, p->width, p->height, FORMAT_RGBA, delay);
+      gif_write(p->gif, mem, width, height, FORMAT_RGBA, delay);
     }
   gks_free(frame);
 }
@@ -190,6 +197,7 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->framerate = 24;
       p->width = 720;
       p->height = 720;
+      p->user_defined_resolution = 0;
 
       if (framerate > 0)
         {
@@ -198,15 +206,22 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       if (width > 0)
         {
           p->width = width;
+          p->user_defined_resolution = 1;
         }
       if (height > 0)
         {
           p->height = height;
+          p->user_defined_resolution = 1;
         }
 
       p->mem_path = (char *)gks_malloc(MAXPATHLEN);
-      p->mem = (unsigned char *)gks_malloc(p->width * p->height * 4 * sizeof(unsigned char));
-      sprintf(p->mem_path, "!%ldx%ld@%p.mem", p->width, p->height, p->mem);
+      p->mem = (int *)gks_malloc(3 * sizeof(int) + sizeof(unsigned char *));
+      p->mem[0] = p->width;
+      p->mem[1] = p->height;
+      p->mem[2] = 100;
+      *((unsigned char **)(p->mem + 3)) = NULL;
+
+      sprintf(p->mem_path, "!resizable@%p.mem", p->mem);
       chars = p->mem_path;
       /* set wstype for cairo png in memory */
       ia[2] = 143;
@@ -214,6 +229,12 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->video_plugin_initialized = 1;
       break;
     default:;
+    }
+
+  if (p && p->user_defined_resolution && fctid == 55)
+    {
+      /* Ignore setwsviewport if the video resolution is user defined */
+      return;
     }
 
   if (p && p->video_plugin_initialized)
@@ -241,6 +262,11 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       close_page();
       if (p->mem)
         {
+          unsigned char *mem_ptr = *((unsigned char **)(p->mem + 3));
+          if (mem_ptr)
+            {
+              gks_free(mem_ptr);
+            }
           gks_free(p->mem);
         }
       gks_free(p);

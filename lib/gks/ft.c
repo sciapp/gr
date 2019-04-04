@@ -539,7 +539,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
     }
 
   num_glyphs = length;
-  unicode_string = (FT_UInt *)malloc(length * sizeof(FT_UInt) + 1);
+  unicode_string = (FT_UInt *)malloc((length + 1) * sizeof(FT_UInt));
   if (textfont + 1 == 13)
     {
       symbol_to_unicode((FT_Bytes)text, unicode_string, num_glyphs);
