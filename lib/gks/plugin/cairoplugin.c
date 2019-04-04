@@ -139,7 +139,8 @@ typedef struct ws_state_list_t
   double mw, mh;
   int w, h;
   char *path;
-  unsigned char *mem;
+  void *mem;
+  int mem_resizable;
   double a, b, c, d;
   double window[4], viewport[4];
   double rgb[MAX_COLOR][3];
@@ -1235,6 +1236,20 @@ static void write_page(void)
       stride = cairo_image_surface_get_stride(p->surface);
       if (p->mem)
         {
+          unsigned char *mem;
+          if (p->mem_resizable)
+            {
+              int *mem_info_ptr = (int *)p->mem;
+              unsigned char **mem_ptr_ptr = (unsigned char **)(mem_info_ptr + 2);
+              mem_info_ptr[0] = width;
+              mem_info_ptr[1] = height;
+              *mem_ptr_ptr = (unsigned char *)gks_realloc(*mem_ptr_ptr, width * height * 4);
+              mem = *mem_ptr_ptr;
+            }
+          else
+            {
+              mem = p->mem;
+            }
           for (j = 0; j < height; j++)
             {
               for (i = 0; i < width; i++)
@@ -1256,10 +1271,10 @@ static void write_page(void)
                     {
                       blue = 255;
                     }
-                  p->mem[j * width * 4 + i * 4 + 0] = (unsigned char)red;
-                  p->mem[j * width * 4 + i * 4 + 1] = (unsigned char)green;
-                  p->mem[j * width * 4 + i * 4 + 2] = (unsigned char)blue;
-                  p->mem[j * width * 4 + i * 4 + 3] = (unsigned char)alpha;
+                  mem[j * width * 4 + i * 4 + 0] = (unsigned char)red;
+                  mem[j * width * 4 + i * 4 + 1] = (unsigned char)green;
+                  mem[j * width * 4 + i * 4 + 2] = (unsigned char)blue;
+                  mem[j * width * 4 + i * 4 + 3] = (unsigned char)alpha;
                 }
             }
         }
@@ -1561,12 +1576,28 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
               fprintf(stderr, "Missing mem path. Expected !<width>x<height>@<pointer>.mem\n");
               exit(1);
             }
-          symbols_read = sscanf(path, "!%dx%d@%p.mem%n", &width, &height, &mem_ptr, &characters_read);
-          if (symbols_read != 3 || path[characters_read] != 0 || width <= 0 || height <= 0 || mem_ptr == NULL)
+          symbols_read = sscanf(path, "!resizable@%p.mem%n", &mem_ptr, &characters_read);
+          if (symbols_read == 1 && path[characters_read] == 0 && mem_ptr != NULL)
             {
-              fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n",
-                      p->path);
-              exit(1);
+              p->mem_resizable = 1;
+              width = ((int *)mem_ptr)[0];
+              height = ((int *)mem_ptr)[1];
+              if (width <= 0 || height <= 0)
+                {
+                  width = 2400;
+                  height = 2400;
+                }
+            }
+          else
+            {
+              p->mem_resizable = 0;
+              symbols_read = sscanf(path, "!%dx%d@%p.mem%n", &width, &height, &mem_ptr, &characters_read);
+              if (symbols_read != 3 || path[characters_read] != 0 || width <= 0 || height <= 0 || mem_ptr == NULL)
+                {
+                  fprintf(stderr, "Failed to parse mem path. Expected !<width>x<height>@<pointer>.mem, but found %s\n",
+                          p->path);
+                  exit(1);
+                }
             }
           p->mem = (unsigned char *)mem_ptr;
           p->mw = 0.28575;
@@ -1773,7 +1804,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->viewport[2] = 0;
       p->viewport[3] = r2[1] - r2[0];
 
-      if (p->wtype != 143)
+      if (p->wtype != 143 || p->mem_resizable)
         {
           p->width = p->viewport[1] * p->w / p->mw;
           p->height = p->viewport[3] * p->h / p->mh;
