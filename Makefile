@@ -4,20 +4,16 @@
 
 UNAME := $(shell uname)
 
-default: pre-check Makedefs
+default: all
 
 pre-check:
 	@lib/Precheck "${GRDIR}"  || \
 	( echo "FATAL: Source and target directory are identical"; exit 1 )
-	$(MAKE) `uname`
 
 Makedefs:
 	@lib/Preflight $(CONFIG) >Makedefs
 
-Linux: all
-Darwin: all
-
-all:
+all: pre-check
 	@for d in $(DIRS); do $(MAKE) -C $$d GRDIR=$(GRDIR); done
 ifeq ($(UNAME), Darwin)
 	(env CC=cc xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj)
@@ -70,4 +66,4 @@ else
 endif
 
 
-.PHONY: default pre-check Linux Darwin all install clean realclean self osxpkg code-format
+.PHONY: default pre-check all install clean realclean self osxpkg code-format
