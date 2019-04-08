@@ -41,7 +41,7 @@ endif
       QHLIBS = $(THIRDPARTYDIR)/lib/libqhull.a
 
 # Only update gr_version.h if it will result in an actual change
-GR_VERSION_H_GENERATED := $(shell ../../lib/Version --c)
+GR_VERSION_H_GENERATED := $(shell ../../lib/Version)
 GR_VERSION_H_CURRENT := $(shell cat gr_version.h 2>/dev/null || echo "")
 ifneq ($(GR_VERSION_H_CURRENT),$(GR_VERSION_H_GENERATED))
 GR_VERSION_H_DEPS := .FORCE
@@ -88,7 +88,7 @@ libqtgr:
 	$(MAKE) -C qtgr
 
 gr_version.h: $(GR_VERSION_H_DEPS)
-	../../lib/Version --c > $@
+	../../lib/Version > $@
 	@chmod 644 $@
 
 .FORCE:

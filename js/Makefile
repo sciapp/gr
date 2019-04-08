@@ -42,8 +42,7 @@ html:
 	make grdemo.html BACKEND=$(GKSDIR)/plugin/svgplugin.c
 
 ../lib/gr/gr_version.h: .FORCE
-	../lib/Version --c > $@
-	@chmod 644 $@
+	$(MAKE) -C ../lib/gr gr_version.h
 
 gr.js: ../lib/gr/gr_version.h
 	make libGR.js BACKEND=jsplugin.c
