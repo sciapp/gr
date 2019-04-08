@@ -62,8 +62,6 @@ targets: prerequisites libGR.a libGR.so demo libqtgr
 
 prerequisites:
 	$(MAKE) -C ../../3rdparty/ PREFIX=$(THIRDPARTYDIR)
-	$(MAKE) -C ../gks
-	$(MAKE) -C ../gks/plugin
 
 ../gks/libGKS.a:
 	$(MAKE) -C ../gks libGKS.a
