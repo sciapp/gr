@@ -44,10 +44,7 @@ default:
 	$(MAKE) -C ../.. Makedefs
 	$(MAKE) `cat ../../Makedefs`
 
-Linux:
-	$(MAKE) targets
-Darwin:
-	$(MAKE) targets
+all: targets
 
 targets: prerequisites libGKS.a libGKS.so demo gksm plugins gksqt
 
@@ -104,6 +101,8 @@ depend:
 	gks.c gksforbnd.c font.c afm.c util.c dl.c malloc.c error.c \
 	mf.c wiss.c cgm.c win.c mac.c ps.c pdf.c socket.c plugin.c \
 	compress.c io.c ft.c 2> /dev/null
+
+.PHONY: default all targets prerequisites plugins install clean depend
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

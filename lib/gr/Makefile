@@ -56,10 +56,7 @@ default:
 	$(MAKE) -C ../.. Makedefs
 	$(MAKE) `cat ../../Makedefs`
 
-Linux:
-	$(MAKE) targets
-Darwin:
-	$(MAKE) targets
+all: targets
 
 targets: prerequisites libGR.a libGR.so demo libqtgr
 
@@ -91,8 +88,6 @@ gr_version.h: $(GR_VERSION_H_DEPS)
 	../../lib/Version > $@
 	@chmod 644 $@
 
-.FORCE:
-
 gr.o: gr_version.h
 
 install:
@@ -115,6 +110,10 @@ depend:
 	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \
 	image.c delaunay.c interp2.c md5.c import.c meta.c shade.c grforbnd.c \
         2> /dev/null
+
+.FORCE:
+
+.PHONY: all targets install clean depend prerequisites .FORCE
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

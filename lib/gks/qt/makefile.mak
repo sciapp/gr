@@ -22,3 +22,5 @@ install:
 clean:
 	@if [ -f QMakefile ]; then make -f QMakefile distclean; \
 	rm -f QMakefile; fi
+
+.PHONY: default install clean
