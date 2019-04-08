@@ -1,5 +1,10 @@
 program demo(input, output);
 
+{
+  fpc -Px86_64 demo.p
+  env DYLD_LIBRARY_PATH=/usr/local/gr/lib GKS_WSTYPE=x11 ./demo
+}
+
 uses
   gks;
 

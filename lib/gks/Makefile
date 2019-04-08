@@ -47,11 +47,7 @@ default:
 Linux:
 	@make targets
 Darwin:
-ifeq ($(CC),cc)
-	@make targets CFLAGS="$(CFLAGS) -fpascal-strings"
-else
 	@make targets
-endif
 
 targets: prerequisites libGKS.a libGKS.so demo gksm plugins gksqt
 
