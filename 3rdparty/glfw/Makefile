@@ -4,6 +4,9 @@ endif
 
 VERSION = 3.1.1
 GLFW_EXTRA_CMAKE_FLAGS ?=
+ifeq ($(shell uname),Darwin)
+ GLFW_EXTRA_CMAKE_FLAGS += -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11
+endif
 
 ifeq ($(DOWNLOAD_CMD),)
 ifneq ($(shell curl --version 2>/dev/null),)

@@ -3,6 +3,9 @@ override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
 CFLAGS=-O -fPIC -DHAVE_HIDDEN $(ARCHS)
+ifeq ($(shell uname),Darwin)
+CFLAGS += -mmacosx-version-min=10.11
+endif
 LIBS=libz.a
 
 OBJS = \

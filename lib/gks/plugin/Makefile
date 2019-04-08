@@ -12,15 +12,15 @@ endif
    INCLUDES = -I.. -I$(THIRDPARTYDIR)/include
     SOFLAGS = -shared
     LDFLAGS = $(EXTRA_LDFLAGS)
+ifeq ($(UNAME),Darwin)
+	 CFLAGS += -mmacosx-version-min=10.11
+   CXXFLAGS += -mmacosx-version-min=10.11
+	 LDFLAGS += -mmacosx-version-min=10.11
+endif
   WX_CONFIG = false
      WXDEFS =
       WXINC = `$(WX_CONFIG) --cxxflags 2>/dev/null`
      WXLIBS = `$(WX_CONFIG) --libs 2>/dev/null`
-ifeq ($(UNAME),Darwin)
-ifneq ($(WXLIBS),)
-     WXLIBS += -mmacosx-version-min=10.11
-endif
-endif
 ifneq ($(QT4_QMAKE),false)
      QT4DEFS =
    QT4INCDIR = `$(QT4_QMAKE) -query QT_INSTALL_HEADERS`
@@ -183,7 +183,7 @@ pgfplugin.so: pgfplugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.o: cairoplugin.c
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(JPEGDEFS) $(CAIRODEFS) $(TIFFDEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(JPEGDEFS) $(CAIRODEFS) $(TIFFDEFS) $(CFLAGS) $(ZINC) -DNO_X11 $<
 
 cairoplugin.so: cairoplugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(CAIROLIBS) $(FTLIBS) $(JPEGLIBS) $(PNGLIBS) $(TIFFLIBS) $(ZLIBS) $(LIBS) -DNO_X11

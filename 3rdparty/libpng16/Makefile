@@ -3,6 +3,9 @@ override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
  PNGCFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(ARCHS)
+ifeq ($(shell uname),Darwin)
+PNGCFLAGS += -mmacosx-version-min=10.11
+endif
       OBJS = \
 	png.o \
 	pngerror.o \

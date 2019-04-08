@@ -17,10 +17,11 @@ UNAME := $(shell uname)
         SRCS = gr3.c gr3_convenience.c gr3_html.c gr3_povray.c gr3_png.c \
                gr3_jpeg.c gr3_gr.c gr3_mc.c gr3_slices.c
 ifeq ($(UNAME), Darwin)
+      CFLAGS+= -mmacosx-version-min=10.11
       GLLIBS = -framework OpenGL -framework Cocoa
         SRCS+= gr3_cgl.c
 INSTALL_NAME = -Wl,-install_name,@rpath/libGR3.so
-     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/.
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
      SOFLAGS = -dynamiclib
 else
       GLLIBS =

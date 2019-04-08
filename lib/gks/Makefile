@@ -22,8 +22,9 @@ UNAME := $(shell uname)
           AR = ar
       RANLIB = ar ts
 ifeq ($(UNAME), Darwin)
+	 CFLAGS += -mmacosx-version-min=10.11
 INSTALL_NAME = -Wl,-install_name,@rpath/libGKS.so
-     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/.
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
      SOFLAGS = -dynamiclib
 else
 INSTALL_NAME =
