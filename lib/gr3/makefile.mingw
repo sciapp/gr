@@ -5,24 +5,32 @@ endif
        GRDIR = /usr/local/gr
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
+        OBJS = gr3.o gr3_convenience.o gr3_html.o gr3_povray.o gr3_png.o \
+               gr3_jpeg.o gr3_gr.o gr3_mc.o gr3_slices.o
+       OBJS += gr3_win.o
 
     INCLUDES = -I$(THIRDPARTYDIR)/include -I../gr
       GRLIBS = -L../gr -lgr
      PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
     JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
        ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
-      CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC $(EXTRA_CFLAGS)
+      CFLAGS = -O3 -Wall -Wextra -pedantic -fPIC $(EXTRA_CFLAGS)
       GLLIBS = -lopengl32 -lgdi32
      SOFLAGS = -shared
      LDFLAGS = -Wl,--out-implib,$(@:.dll=.a)
+        LIBS =
+INSTALL_NAME =
 
 default: targets
 
 targets: libGR3.dll
 
-libGR3.dll: gr3.c gr3_win.c gr3_convenience.c gr3_html.c gr3_povray.c gr3_png.c gr3_jpeg.c gr3_gr.c gr3_mc.c gr3_slices.c
-	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) $(JPEGLIBS) $(GRLIBS) $(GLLIBS) $(PNGLIBS) $(ZLIBS) \
-	-shared -Wl,--out-implib,$(@:.dll=.a)
+.c.o:
+	$(CC) -c $< $(CFLAGS) $(INCLUDES)
+
+libGR3.dll: $(OBJS)
+	$(CC) -o $@ $^ $(CFLAGS) $(JPEGLIBS) $(GLLIBS) $(GRLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) \
+	$(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
 
 gr3.c: gr3.h gr3_internals.h
 gr3_internals.h: gr3.h gr3_glx.h gr3_cgl.h
