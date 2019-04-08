@@ -1,10 +1,6 @@
       GRDIR = /usr/local/gr
      CONFIG = xft=no
        DIRS = lib/gr lib/gr3
-ALL_DISTROS = centos centos6 debian suse
-ifeq ($(DISTROS),all)
-	override DISTROS = $(ALL_DISTROS)
-endif
 
 UNAME := $(shell uname)
 
