@@ -2,7 +2,7 @@ ifeq ($(strip $(THIRDPARTYDIR)),)
 override THIRDPARTYDIR = $(abspath $(CURDIR)/../../../3rdparty/build)
 endif
 
-   UNAME_S := $(shell uname -s)
+   UNAME := $(shell uname)
 
       GRDIR = /usr/local/gr
      LIBDIR = $(DESTDIR)$(GRDIR)/lib
@@ -12,41 +12,44 @@ endif
    INCLUDES = -I.. -I$(THIRDPARTYDIR)/include
     SOFLAGS = -shared
     LDFLAGS = $(EXTRA_LDFLAGS)
+ifeq ($(UNAME),Darwin)
+	 CFLAGS += -mmacosx-version-min=10.11
+   CXXFLAGS += -mmacosx-version-min=10.11
+	 LDFLAGS += -mmacosx-version-min=10.11
+endif
   WX_CONFIG = false
      WXDEFS =
       WXINC = `$(WX_CONFIG) --cxxflags 2>/dev/null`
      WXLIBS = `$(WX_CONFIG) --libs 2>/dev/null`
-ifeq ($(UNAME_S),Darwin)
-ifneq ($(WXLIBS),)
-     WXLIBS += -mmacosx-version-min=10.11
-endif
-endif
 ifneq ($(QT4_QMAKE),false)
      QT4DEFS =
    QT4INCDIR = `$(QT4_QMAKE) -query QT_INSTALL_HEADERS`
       QT4INC = -I$(QT4INCDIR) -I$(QT4INCDIR)/QtCore -I$(QT4INCDIR)/QtGui
-ifeq ($(UNAME_S),Darwin)
+   QT4LIBDIR = `$(QT4_QMAKE) -query QT_INSTALL_LIBS`
+     QT4LIBS = -L$(QT4LIBDIR) -lQtGui -lQtCore
+ifeq ($(UNAME),Darwin)
 ifneq ($(QT4INC),)
      QT4INC += -mmacosx-version-min=10.11
 endif
+else
+	EXTRA_LDFLAGS_QT4="-Wl,-rpath=$(QT4LIBDIR)"
 endif
-   QT4LIBDIR = `$(QT4_QMAKE) -query QT_INSTALL_LIBS`
-     QT4LIBS = -L$(QT4LIBDIR) -lQtGui -lQtCore
 endif
 ifneq ($(QT5_QMAKE),false)
      QT5DEFS =
    QT5INCDIR = `$(QT5_QMAKE) -query QT_INSTALL_HEADERS`
-ifeq ($(UNAME_S),Darwin)
+ifeq ($(UNAME),Darwin)
       QT5INC = -I$(QT5INCDIR) -I$(QT5LIBDIR)/QtCore.framework/Versions/5/Headers -I$(QT5LIBDIR)/QtGui.framework/Versions/5/Headers -I$(QT5LIBDIR)/QtWidgets.framework/Versions/5/Headers -F$(QT5LIBDIR)
 else
       QT5INC = -I$(QT5INCDIR) -I$(QT5INCDIR)/QtCore -I$(QT5INCDIR)/QtGui -I$(QT5INCDIR)/QtWidgets
 endif
    QT5INC += -std=c++11
    QT5LIBDIR = `$(QT5_QMAKE) -query QT_INSTALL_LIBS`
-ifeq ($(UNAME_S),Darwin)
+ifeq ($(UNAME),Darwin)
      QT5LIBS = -F$(QT5LIBDIR) -framework QtWidgets -framework QtGui -framework QtCore
 else
      QT5LIBS = -L$(QT5LIBDIR) -lQt5Widgets -lQt5Gui -lQt5Core
+	EXTRA_LDFLAGS_QT5="-Wl,-rpath=$(QT5LIBDIR)"
 endif
 endif
  GTK_CONFIG = false
@@ -62,7 +65,7 @@ endif
    GLFWDEFS =
     GLFWINC =
     GLFWLIB = glfw
-ifeq ($(UNAME_S),Darwin)
+ifeq ($(UNAME),Darwin)
    GLFWLIBS = -l$(GLFWLIB) -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
 else
    GLFWLIBS = -l$(GLFWLIB) -lGL
@@ -80,7 +83,7 @@ else
 endif
     SSLLIBS = -lssl -lcrypto
     X11DEFS =
-ifeq ($(UNAME_S), Darwin)
+ifeq ($(UNAME), Darwin)
      X11INC = -I/opt/X11/include
 else
      X11INC = -I/usr/X11R6/include
@@ -89,8 +92,13 @@ endif
     X11LIBS = $(X11PATH) $(XFTLIBS) -lXt -lX11
     ZMQDEFS =
     ZMQLIBS = -L$(THIRDPARTYDIR)/lib/ -lzmq -lpthread
+ifeq ($(UNAME), Darwin)
+  EXTRALIBS = -framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation
+       LIBS = -liconv
+else
   EXTRALIBS =
        LIBS = -lc -lm
+endif
       ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
    TIFFLIBS = -ltiff
     GKSLIBS = ../libGKS.a
@@ -108,26 +116,22 @@ default:
 	$(MAKE) -C ../../.. Makedefs
 	$(MAKE) `cat ../../../Makedefs`
 
+all: targets
+
 targets: prerequisites \
          x11plugin.so wxplugin.so qtplugin.so qt5plugin.so svgplugin.so \
          gtkplugin.so figplugin.so gsplugin.so wmfplugin.so glplugin.so \
          zmqplugin.so htmplugin.so pgfplugin.so cairoplugin.so videoplugin.so
 
+ifeq ($(UNAME),Darwin)
+targets: quartzplugin.so
+endif
+
 prerequisites:
-	@for d in libpng16; do $(MAKE) -C ../../../3rdparty/$$d; done
+	$(MAKE) -C ../../../3rdparty PREFIX=$(THIRDPARTYDIR)
 
 $(GKSLIBS):
 	$(MAKE) -C .. libGKS.a
-
-Darwin:
-	$(MAKE) targets quartzplugin.so \
-	EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation" LIBS="-liconv"
-Linux:
-	$(MAKE) targets \
-	SOFLAGS="-shared" \
-	LDFLAGS="$(EXTRA_LDFLAGS)" \
-	EXTRA_LDFLAGS_QT4="-Wl,-rpath=$(QT4LIBDIR)" \
-	EXTRA_LDFLAGS_QT5="-Wl,-rpath=$(QT5LIBDIR)"
 
 qtplugin.o: qtplugin.cxx
 	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
@@ -179,7 +183,7 @@ pgfplugin.so: pgfplugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.o: cairoplugin.c
-	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(JPEGDEFS) $(CAIRODEFS) $(TIFFDEFS) $(CXXFLAGS) $(ZINC) -DNO_X11 $<
+	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(JPEGDEFS) $(CAIRODEFS) $(TIFFDEFS) $(CFLAGS) $(ZINC) -DNO_X11 $<
 
 cairoplugin.so: cairoplugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(CAIROLIBS) $(FTLIBS) $(JPEGLIBS) $(PNGLIBS) $(TIFFLIBS) $(ZLIBS) $(LIBS) -DNO_X11
@@ -196,4 +200,4 @@ clean:
 qtplugin.o: qtplugin_impl.cxx
 qt5plugin.o: qtplugin_impl.cxx
 
-.PHONY: clean install default gks Darwin Linux
+.PHONY: clean install default gks

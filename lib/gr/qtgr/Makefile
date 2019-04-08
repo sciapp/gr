@@ -47,10 +47,7 @@ default:
 	$(MAKE) -C ../../.. Makedefs
 	$(MAKE) `cat ../../../Makedefs`
 
-Linux:
-	$(MAKE) targets
-Darwin:
-	$(MAKE) targets
+all: targets
 
 targets: libqt4gr.so libqt5gr.so
 
@@ -85,4 +82,4 @@ endif
 clean:
 	rm -f *.so *.o
 
-.PHONY: default Linux Darwin targets install clean
+.PHONY: default targets install clean

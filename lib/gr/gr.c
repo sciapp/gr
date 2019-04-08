@@ -1917,6 +1917,19 @@ void gr_spline(int n, double *px, double *py, int m, int method)
     }
 }
 
+/*!
+ * Interpolate data from arbitrary points at points on a rectangular grid.
+ *
+ * \param[in] nd The number of input points
+ * \param[in] xd A pointer to the X coordinates of the input points
+ * \param[in] yd A pointer to the Y coordinates of the input points
+ * \param[in] zd A pointer to the values of the points
+ * \param[in] nx The number of points in X direction for the output grid
+ * \param[in] ny The number of points in Y direction for the output grid
+ * \param[out] x A pointer to the points in X direction for the output grid
+ * \param[out] y A pointer to the points in Y direction for the output grid
+ * \param[out] z A pointer to the interpolated values on the nx x ny grid points
+ */
 void gr_gridit(int nd, double *xd, double *yd, double *zd, int nx, int ny, double *x, double *y, double *z)
 {
   int i, md, ncp;
@@ -6921,6 +6934,15 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
   return cntmax;
 }
 
+/*!
+ * Set the currently used colormap.
+ *
+ * \param[in] index Colormap index
+ *
+ * A list of colormaps can be found at: https://gr-framework.org/colormaps.html
+ *
+ * Using a negative index will use the reverse of the selected colormap.
+ */
 void gr_setcolormap(int index)
 {
   int ind = index, reverse, i, j;

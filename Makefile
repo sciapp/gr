@@ -1,50 +1,33 @@
       GRDIR = /usr/local/gr
      CONFIG = xft=no
-       DIRS = lib/gr lib/gr3
-ALL_DISTROS = centos centos6 debian suse
-ifeq ($(DISTROS),all)
-	override DISTROS = $(ALL_DISTROS)
-endif
 
 UNAME := $(shell uname)
 
-default: pre-check Makedefs
+default: all
 
 pre-check:
 	@lib/Precheck "${GRDIR}"  || \
 	( echo "FATAL: Source and target directory are identical"; exit 1 )
-	$(MAKE) `uname`
 
 Makedefs:
 	@lib/Preflight $(CONFIG) >Makedefs
 
-Linux: all
-Darwin: all
-
-all:
-	@for d in $(DIRS); do $(MAKE) -C $$d GRDIR=$(GRDIR); done
-ifeq ($(UNAME), Darwin)
-	(env CC=cc xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj)
-endif
+all: pre-check
+	$(MAKE) -C lib/gks GRDIR=$(GRDIR)
+	$(MAKE) -C lib/gr GRDIR=$(GRDIR)
+	$(MAKE) -C lib/gr3 GRDIR=$(GRDIR)
 
 install: default
-	@for d in $(DIRS); do $(MAKE) -C $$d GRDIR=$(GRDIR) install; done
-ifeq ($(UNAME), Darwin)
-	@if [ ! -d $(DESTDIR)$(GRDIR)/Applications ]; then \
-	mkdir -m 755 $(DESTDIR)$(GRDIR)/Applications; fi
-	@ditto lib/gks/quartz/build/Release/GKSTerm.app \
-	$(DESTDIR)$(GRDIR)/Applications/GKSTerm.app
-	@ditto lib/gks/qt/gksqt.app \
-	$(DESTDIR)$(GRDIR)/Applications/gksqt.app
-endif
+	$(MAKE) -C lib/gks GRDIR=$(GRDIR) install
+	$(MAKE) -C lib/gr GRDIR=$(GRDIR) install
+	$(MAKE) -C lib/gr3 GRDIR=$(GRDIR) install
 
 clean:
 	rm -f Makedefs
-	@for d in $(DIRS) 3rdparty; do $(MAKE) -C $$d clean; done
-ifeq ($(UNAME), Darwin)
-	(env CC=cc xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean)
-endif
-	cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
+	$(MAKE) -C lib/gks clean
+	$(MAKE) -C lib/gr clean
+	$(MAKE) -C lib/gr3 clean
+	$(MAKE) -C 3rdparty clean
 	rm -f gr.pkg
 
 realclean: clean
@@ -74,4 +57,4 @@ else
 endif
 
 
-.PHONY: default pre-check Linux Darwin all install clean realclean self osxpkg code-format
+.PHONY: default pre-check all install clean realclean self osxpkg code-format

@@ -21,8 +21,9 @@ UNAME := $(shell uname)
           AR = ar
       RANLIB = ar ts
 ifeq ($(UNAME), Darwin)
+	 CFLAGS += -mmacosx-version-min=10.11
 INSTALL_NAME = -Wl,-install_name,@rpath/libGR.so
-     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/.
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
      SOFLAGS = -dynamiclib
 else
 INSTALL_NAME =
@@ -41,7 +42,7 @@ endif
       QHLIBS = $(THIRDPARTYDIR)/lib/libqhull.a
 
 # Only update gr_version.h if it will result in an actual change
-GR_VERSION_H_GENERATED := $(shell ../../lib/Version --c)
+GR_VERSION_H_GENERATED := $(shell ../../lib/Version)
 GR_VERSION_H_CURRENT := $(shell cat gr_version.h 2>/dev/null || echo "")
 ifneq ($(GR_VERSION_H_CURRENT),$(GR_VERSION_H_GENERATED))
 GR_VERSION_H_DEPS := .FORCE
@@ -56,16 +57,12 @@ default:
 	$(MAKE) -C ../.. Makedefs
 	$(MAKE) `cat ../../Makedefs`
 
-Linux:
-	$(MAKE) targets
-Darwin:
-	$(MAKE) targets
+all: targets
 
 targets: prerequisites libGR.a libGR.so demo libqtgr
 
 prerequisites:
-	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do $(MAKE) -C ../../3rdparty/$$d; done
-	@for d in gks gks/plugin; do $(MAKE) -C ../$$d; done
+	$(MAKE) -C ../../3rdparty/ PREFIX=$(THIRDPARTYDIR)
 
 ../gks/libGKS.a:
 	$(MAKE) -C ../gks libGKS.a
@@ -88,10 +85,8 @@ libqtgr:
 	$(MAKE) -C qtgr
 
 gr_version.h: $(GR_VERSION_H_DEPS)
-	../../lib/Version --c > $@
+	../../lib/Version > $@
 	@chmod 644 $@
-
-.FORCE:
 
 gr.o: gr_version.h
 
@@ -107,14 +102,19 @@ install:
 
 clean:
 	$(MAKE) -C qtgr clean
-	@for d in gks gks/plugin; do $(MAKE) -C ../$$d clean; done
-	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do $(MAKE) -C ../../3rdparty/$$d clean; done
+	$(MAKE) -C ../gks clean
+	$(MAKE) -C ../gks/plugin clean
+	$(MAKE) -C ../../3rdparty/ clean
 	rm -f so_locations demo *.so *.a *.o *.bak *~ gr_version.h
 
 depend:
 	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \
 	image.c delaunay.c interp2.c md5.c import.c meta.c shade.c grforbnd.c \
         2> /dev/null
+
+.FORCE:
+
+.PHONY: all targets install clean depend prerequisites .FORCE
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

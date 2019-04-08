@@ -22,8 +22,9 @@ UNAME := $(shell uname)
           AR = ar
       RANLIB = ar ts
 ifeq ($(UNAME), Darwin)
+	 CFLAGS += -mmacosx-version-min=10.11
 INSTALL_NAME = -Wl,-install_name,@rpath/libGKS.so
-     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/.
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
      SOFLAGS = -dynamiclib
 else
 INSTALL_NAME =
@@ -44,35 +45,44 @@ default:
 	$(MAKE) -C ../.. Makedefs
 	$(MAKE) `cat ../../Makedefs`
 
-Linux:
-	$(MAKE) targets
-Darwin:
-	$(MAKE) targets
+all: targets
 
-targets: prerequisites libGKS.a libGKS.so demo gksm plugins gksqt
+targets: libGKS.a libGKS.so demo gksm plugins gksqt
 
-prerequisites: $(THIRDPARTYINCDIR)/include/zmq.h
-	@for d in bzip2 freetype jpeg libpng16 zlib; do $(MAKE) -C ../../3rdparty/$$d; done
+ifeq ($(UNAME), Darwin)
+targets: gksterm
+endif
 
-$(THIRDPARTYINC)/include/zmq.h:
-	$(MAKE) -C ../../3rdparty/zeromq DIR=$(THIRDPARTYDIR)
+$(THIRDPARTYDIR)/lib/libz.a:
+	$(MAKE) -C ../../3rdparty/zlib PREFIX=$(THIRDPARTYDIR)
+
+$(THIRDPARTYDIR)/lib/libfreetype.a:
+	$(MAKE) -C ../../3rdparty/freetype PREFIX=$(THIRDPARTYDIR)
+
+$(THIRDPARTYDIR)/lib/libzmq.a:
+	$(MAKE) -C ../../3rdparty/zeromq PREFIX=$(THIRDPARTYDIR)
 
 libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?
 	$(RANLIB) $@
 
-libGKS.so: $(GKSOBJS)
+libGKS.so: $(GKSOBJS) $(THIRDPARTYDIR)/lib/libfreetype.a $(THIRDPARTYDIR)/lib/libz.a
 	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(FTLIBS) $(ZLIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)
 
-demo: demo.c libGKS.a
+demo: demo.c libGKS.a $(THIRDPARTYDIR)/lib/libz.a
 	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(LIBS)
 
-gksm: gksm.c libGKS.a
+gksm: gksm.c libGKS.a $(THIRDPARTYDIR)/lib/libz.a
 	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(LIBS)
 
 gksqt:
 	$(MAKE) -C qt -f makefile.mak GRDIR=$(GRDIR)
+
+ifeq ($(UNAME), Darwin)
+gksterm: $(THIRDPARTYDIR)/lib/libzmq.a
+	(env CC=cc xcodebuild -project quartz/GKSTerm.xcodeproj)
+endif
 
 plugins:
 	$(MAKE) -C plugin
@@ -92,18 +102,32 @@ install:
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gks.h $(INCDIR)
 	$(MAKE) -C qt -f makefile.mak install
+ifeq ($(UNAME), Darwin)
+	@if [ ! -d $(DESTDIR)$(GRDIR)/Applications ]; then \
+	mkdir -m 755 $(DESTDIR)$(GRDIR)/Applications; fi
+	@ditto quartz/build/Release/GKSTerm.app \
+	$(DESTDIR)$(GRDIR)/Applications/GKSTerm.app
+endif
 
 clean:
 	$(MAKE) -C plugin clean
 	$(MAKE) -C qt -f makefile.mak clean
 	rm -f demo gksm pasdemo so_locations *.so *.a *.o *.ppu link.res
 	rm -f *.bak *~
+ifeq ($(UNAME), Darwin)
+	(env CC=cc xcodebuild -project quartz/GKSTerm.xcodeproj clean)
+endif
+	cp -p quartz/project.pbxproj quartz/GKSTerm.xcodeproj/
 
 depend:
 	makedepend -Y -- \
 	gks.c gksforbnd.c font.c afm.c util.c dl.c malloc.c error.c \
 	mf.c wiss.c cgm.c win.c mac.c ps.c pdf.c socket.c plugin.c \
 	compress.c io.c ft.c 2> /dev/null
+
+.PHONY: default all targets prerequisites plugins install clean depend
+
+ft.o: $(THIRDPARTYDIR)/lib/libfreetype.a
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 

@@ -4,6 +4,9 @@ endif
 
 VERSION = 4.0.10
 TIFF_EXTRA_CONFIGURE_FLAGS ?=
+ifeq ($(shell uname),Darwin)
+ TIFF_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.11
+endif
 
 ifeq ($(DOWNLOAD_CMD),)
 ifneq ($(shell curl --version 2>/dev/null),)

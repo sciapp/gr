@@ -21,7 +21,7 @@ OBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
 
 
 # Only update gr_version.h if it will result in an actual change
-GR_VERSION_H_GENERATED := $(shell ../../lib/Version --c)
+GR_VERSION_H_GENERATED := $(shell ../../lib/Version)
 GR_VERSION_H_CURRENT := $(shell cat gr_version.h 2>/dev/null || echo "")
 ifneq ($(GR_VERSION_H_CURRENT),$(GR_VERSION_H_GENERATED))
 GR_VERSION_H_DEPS := .FORCE
@@ -49,7 +49,7 @@ demo.exe: demo.o libgr.dll
 	$(CC) -o $@ demo.o -L. -lgr
 
 gr_version.h: $(GR_VERSION_H_DEPS)
-	../../lib/Version --c > $@
+	../../lib/Version > $@
 	@chmod 644 $@
 
 gr.o: gr_version.h

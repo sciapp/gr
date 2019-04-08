@@ -13,22 +13,25 @@ UNAME := $(shell uname)
      PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
     JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
        ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
-      CFLAGS = -O3 -Wall -Wextra -pedantic -g -fPIC -DGRDIR=\"$(GRDIR)\" $(EXTRA_CFLAGS)
-        SRCS = gr3.c gr3_convenience.c gr3_html.c gr3_povray.c gr3_png.c \
-               gr3_jpeg.c gr3_gr.c gr3_mc.c gr3_slices.c
+      CFLAGS = -O3 -Wall -Wextra -pedantic -fPIC -DGRDIR=\"$(GRDIR)\" $(EXTRA_CFLAGS)
+        OBJS = gr3.o gr3_convenience.o gr3_html.o gr3_povray.o gr3_png.o \
+               gr3_jpeg.o gr3_gr.o gr3_mc.o gr3_slices.o
 ifeq ($(UNAME), Darwin)
+      CFLAGS+= -mmacosx-version-min=10.11
       GLLIBS = -framework OpenGL -framework Cocoa
-        SRCS+= gr3_cgl.c
+        OBJS+= gr3_cgl.o
 INSTALL_NAME = -Wl,-install_name,@rpath/libGR3.so
-     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/.
+     LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
      SOFLAGS = -dynamiclib
+        LIBS =
 else
       GLLIBS =
 PLATFORMLIBS = -lX11 -lGL
-        SRCS+= gr3_glx.c
+        OBJS+= gr3_glx.o
 INSTALL_NAME =
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
      SOFLAGS = -shared
+        LIBS = -ldl
 endif
 
 default: targets
@@ -49,8 +52,11 @@ libGR3platform.so: gr3_platform_glx.c
 	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) $(PLATFORMLIBS) $(SOFLAGS) $(LDFLAGS)
 endif
 
-libGR3.so: $(SRCS)
-	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) ${ZLIBS} $(JPEGLIBS) $(GLLIBS) $(GRLIBS) $(PNGLIBS) -ldl \
+.c.o:
+	$(CC) -c $< $(CFLAGS) $(INCLUDES)
+
+libGR3.so: $(OBJS)
+	$(CC) -o $@ $^ $(CFLAGS) $(JPEGLIBS) $(GLLIBS) $(GRLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) \
 	$(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
 
 gr3.c: gr3.h gr3_internals.h

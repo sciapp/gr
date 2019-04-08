@@ -7,9 +7,4 @@ if [ "${commits}" != "" -a "${commits}" != "0" ]
 then
   version="${version}.post${commits}"
 fi
-if [ "$1" = "--c" ]
-then
 printf "#ifndef GR_VERSION\n#define GR_VERSION \"${version}\"\n#endif\n"
-else
-printf "__version__ = '${version}'\n__sha__ = '${sha}'\n__revision__ = '${sha}'\n"
-fi

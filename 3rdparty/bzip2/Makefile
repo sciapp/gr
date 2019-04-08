@@ -3,6 +3,9 @@ override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
   CFLAGS = -O -I. -fPIC -fno-common $(ARCHS)
+ifeq ($(shell uname),Darwin)
+ CFLAGS += -mmacosx-version-min=10.11
+endif
     OBJS = blocksort.o \
         huffman.o \
         crctable.o \
