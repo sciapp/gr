@@ -128,7 +128,7 @@ targets: quartzplugin.so
 endif
 
 prerequisites:
-	@for d in libpng16; do $(MAKE) -C ../../../3rdparty/$$d; done
+	$(MAKE) -C ../../../3rdparty PREFIX=$(THIRDPARTYDIR)
 
 $(GKSLIBS):
 	$(MAKE) -C .. libGKS.a

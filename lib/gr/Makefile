@@ -61,8 +61,9 @@ all: targets
 targets: prerequisites libGR.a libGR.so demo libqtgr
 
 prerequisites:
-	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do $(MAKE) -C ../../3rdparty/$$d; done
-	@for d in gks gks/plugin; do $(MAKE) -C ../$$d; done
+	$(MAKE) -C ../../3rdparty/ PREFIX=$(THIRDPARTYDIR)
+	$(MAKE) -C ../gks
+	$(MAKE) -C ../gks/plugin
 
 ../gks/libGKS.a:
 	$(MAKE) -C ../gks libGKS.a
@@ -102,8 +103,9 @@ install:
 
 clean:
 	$(MAKE) -C qtgr clean
-	@for d in gks gks/plugin; do $(MAKE) -C ../$$d clean; done
-	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do $(MAKE) -C ../../3rdparty/$$d clean; done
+	$(MAKE) -C ../gks clean
+	$(MAKE) -C ../gks/plugin clean
+	$(MAKE) -C ../../3rdparty/ clean
 	rm -f so_locations demo *.so *.a *.o *.bak *~ gr_version.h
 
 depend:
