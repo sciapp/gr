@@ -14,7 +14,7 @@ QMAKE ?= $(TMP_QMAKE)
 
 default:
 	@if [ "$(QMAKE)" != "" ]; then $(QMAKE) -o QMakefile; \
-	make -f QMakefile; fi
+	$(MAKE) -f QMakefile; fi
 
 install:
 	@if [ -f gksqt ]; then cp -p gksqt $(BINDIR); fi

@@ -53,12 +53,12 @@ $(PREFIX)/build/glfw-$(VERSION)/Makefile: $(PREFIX)/src/glfw-$(VERSION)/CMakeLis
 		$(PREFIX)/src/glfw-$(VERSION)/
 
 $(PREFIX)/lib/libglfw3.a: $(PREFIX)/build/glfw-$(VERSION)/Makefile
-	make -C $(PREFIX)/build/glfw-$(VERSION) -j4
-	make -C $(PREFIX)/build/glfw-$(VERSION) install
+	$(MAKE) -C $(PREFIX)/build/glfw-$(VERSION) -j4
+	$(MAKE) -C $(PREFIX)/build/glfw-$(VERSION) install
 
 install: $(PREFIX)/lib/libglfw3.a
 
 $(PREFIX)/bin/cmake:
-	make -C ../cmake PREFIX="$(PREFIX)" install
+	$(MAKE) -C ../cmake PREFIX="$(PREFIX)" install
 
 .PHONY: default install

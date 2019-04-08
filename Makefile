@@ -13,7 +13,7 @@ default: pre-check Makedefs
 pre-check:
 	@lib/Precheck "${GRDIR}"  || \
 	( echo "FATAL: Source and target directory are identical"; exit 1 )
-	@make `uname`
+	$(MAKE) `uname`
 
 Makedefs:
 	@lib/Preflight $(CONFIG) >Makedefs
@@ -22,13 +22,13 @@ Linux: all
 Darwin: all
 
 all:
-	@for d in $(DIRS); do make -C $$d GRDIR=$(GRDIR); done
+	@for d in $(DIRS); do $(MAKE) -C $$d GRDIR=$(GRDIR); done
 ifeq ($(UNAME), Darwin)
 	(env CC=cc xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj)
 endif
 
 install: default
-	@for d in $(DIRS); do make -C $$d GRDIR=$(GRDIR) install; done
+	@for d in $(DIRS); do $(MAKE) -C $$d GRDIR=$(GRDIR) install; done
 ifeq ($(UNAME), Darwin)
 	@if [ ! -d $(DESTDIR)$(GRDIR)/Applications ]; then \
 	mkdir -m 755 $(DESTDIR)$(GRDIR)/Applications; fi
@@ -40,7 +40,7 @@ endif
 
 clean:
 	rm -f Makedefs
-	@for d in $(DIRS) 3rdparty; do make -C $$d clean; done
+	@for d in $(DIRS) 3rdparty; do $(MAKE) -C $$d clean; done
 ifeq ($(UNAME), Darwin)
 	(env CC=cc xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean)
 endif
@@ -48,7 +48,7 @@ endif
 	rm -f gr.pkg
 
 realclean: clean
-	make -C 3rdparty realclean
+	$(MAKE) -C 3rdparty realclean
 	rm -rf build
 	find packaging -type f \( -name '*.deb' -o -name '*.rpm' \) -exec rm \{\} \;
 	rm -rf tmp

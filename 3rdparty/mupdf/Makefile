@@ -36,9 +36,9 @@ $(PREFIX)/src/mupdf-$(VERSION)-source/Makefile: $(PREFIX)/src/mupdf-$(VERSION)-s
 	touch $@
 
 $(PREFIX)/lib/libmupdf.a: $(PREFIX)/src/mupdf-$(VERSION)-source/Makefile
-	make -C $(PREFIX)/src/mupdf-$(VERSION)-source -j4 generate CC=cc CXX=c++ AR=ar OS=""
-	make -C $(PREFIX)/src/mupdf-$(VERSION)-source -j4 $(MUPDF_MAKE_FLAGS)
-	make -C $(PREFIX)/src/mupdf-$(VERSION)-source install $(MUPDF_MAKE_FLAGS)
+	$(MAKE) -C $(PREFIX)/src/mupdf-$(VERSION)-source -j4 generate CC=cc CXX=c++ AR=ar OS=""
+	$(MAKE) -C $(PREFIX)/src/mupdf-$(VERSION)-source -j4 $(MUPDF_MAKE_FLAGS)
+	$(MAKE) -C $(PREFIX)/src/mupdf-$(VERSION)-source install $(MUPDF_MAKE_FLAGS)
 	cp $(PREFIX)/src/mupdf-$(VERSION)-source/build/debug/libjbig2dec.a $(PREFIX)/lib/
 	cp $(PREFIX)/src/mupdf-$(VERSION)-source/build/debug/libopenjpeg.a $(PREFIX)/lib/
 

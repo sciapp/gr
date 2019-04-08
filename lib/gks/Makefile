@@ -41,21 +41,21 @@ endif
 	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(FTINC) $(ZINC) $(CFLAGS) $<
 
 default:
-	@make -C ../.. Makedefs
-	@make `cat ../../Makedefs`
+	$(MAKE) -C ../.. Makedefs
+	$(MAKE) `cat ../../Makedefs`
 
 Linux:
-	@make targets
+	$(MAKE) targets
 Darwin:
-	@make targets
+	$(MAKE) targets
 
 targets: prerequisites libGKS.a libGKS.so demo gksm plugins gksqt
 
 prerequisites: $(THIRDPARTYINCDIR)/include/zmq.h
-	@for d in bzip2 freetype jpeg libpng16 zlib; do make -C ../../3rdparty/$$d; done
+	@for d in bzip2 freetype jpeg libpng16 zlib; do $(MAKE) -C ../../3rdparty/$$d; done
 
 $(THIRDPARTYINC)/include/zmq.h:
-	make -C ../../3rdparty/zeromq DIR=$(THIRDPARTYDIR)
+	$(MAKE) -C ../../3rdparty/zeromq DIR=$(THIRDPARTYDIR)
 
 libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?
@@ -72,10 +72,10 @@ gksm: gksm.c libGKS.a
 	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(LIBS)
 
 gksqt:
-	@make -C qt -f makefile.mak GRDIR=$(GRDIR)
+	$(MAKE) -C qt -f makefile.mak GRDIR=$(GRDIR)
 
 plugins:
-	@make -C plugin
+	$(MAKE) -C plugin
 
 pasdemo: default
 	fpc -Px86_64 demo.p -g -Fl./ -k-rpath -k./
@@ -91,11 +91,11 @@ install:
 	cp -a fonts/* $(FONTDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gks.h $(INCDIR)
-	@make -C qt -f makefile.mak install
+	$(MAKE) -C qt -f makefile.mak install
 
 clean:
-	@make -C plugin clean
-	@make -C qt -f makefile.mak clean
+	$(MAKE) -C plugin clean
+	$(MAKE) -C qt -f makefile.mak clean
 	rm -f demo gksm pasdemo so_locations *.so *.a *.o *.ppu link.res
 	rm -f *.bak *~
 

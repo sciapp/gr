@@ -37,7 +37,7 @@ demo.exe: demo.o libgks.lib
 	$(CC) -o $@ demo.o libgks.lib ${LIBS}
 
 clean:
-	@$(MAKE) -C ../../3rdparty/freetype clean
+	$(MAKE) -C ../../3rdparty/freetype clean
 	$(RM) demo.exe
 	$(RM) libgks.dll
 	$(RM) libgks.lib

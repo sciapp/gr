@@ -71,16 +71,16 @@ $(PREFIX)/src/ffmpeg-$(VERSION)/Makefile: $(PREFIX)/src/ffmpeg-$(VERSION)/config
 	touch $@
 
 $(PREFIX)/lib/libavformat.a: $(PREFIX)/src/ffmpeg-$(VERSION)/Makefile
-	make -C $(PREFIX)/src/ffmpeg-$(VERSION) -j4
-	make -C $(PREFIX)/src/ffmpeg-$(VERSION) install
+	$(MAKE) -C $(PREFIX)/src/ffmpeg-$(VERSION) -j4
+	$(MAKE) -C $(PREFIX)/src/ffmpeg-$(VERSION) install
 
 install: $(PREFIX)/lib/libavformat.a
 
 
 $(PREFIX)/lib/libtheora.a:
-	make -C ../theora PREFIX="$(PREFIX)" install
+	$(MAKE) -C ../theora PREFIX="$(PREFIX)" install
 
 $(PREFIX)/lib/libvpx.a:
-	make -C ../vpx PREFIX="$(PREFIX)" install
+	$(MAKE) -C ../vpx PREFIX="$(PREFIX)" install
 
 .PHONY: default install

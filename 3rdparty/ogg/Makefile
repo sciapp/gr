@@ -41,8 +41,8 @@ $(PREFIX)/src/libogg-$(VERSION)/Makefile: $(PREFIX)/src/libogg-$(VERSION)/config
 		$(OGG_EXTRA_CONFIGURE_FLAGS)
 
 $(PREFIX)/lib/libogg.a: $(PREFIX)/src/libogg-$(VERSION)/Makefile
-	make -C $(PREFIX)/src/libogg-$(VERSION) -j4
-	make -C $(PREFIX)/src/libogg-$(VERSION) install
+	$(MAKE) -C $(PREFIX)/src/libogg-$(VERSION) -j4
+	$(MAKE) -C $(PREFIX)/src/libogg-$(VERSION) install
 
 install: $(PREFIX)/lib/libogg.a
 

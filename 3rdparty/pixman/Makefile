@@ -43,8 +43,8 @@ $(PREFIX)/src/pixman-$(VERSION)/Makefile: $(PREFIX)/src/pixman-$(VERSION)/config
 	cp dummy.Makefile $(PREFIX)/src/pixman-$(VERSION)/demos/Makefile
 
 $(PREFIX)/lib/libpixman-1.a: $(PREFIX)/src/pixman-$(VERSION)/Makefile
-	make -C $(PREFIX)/src/pixman-$(VERSION) -j4
-	make -C $(PREFIX)/src/pixman-$(VERSION) install
+	$(MAKE) -C $(PREFIX)/src/pixman-$(VERSION) -j4
+	$(MAKE) -C $(PREFIX)/src/pixman-$(VERSION) install
 
 install: $(PREFIX)/lib/libpixman-1.a
 

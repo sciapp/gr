@@ -53,22 +53,22 @@ endif
 	$(CC) -c $(INCLUDES) $(CFLAGS) $<
 
 default:
-	@make -C ../.. Makedefs
-	@make `cat ../../Makedefs`
+	$(MAKE) -C ../.. Makedefs
+	$(MAKE) `cat ../../Makedefs`
 
 Linux:
-	@make targets
+	$(MAKE) targets
 Darwin:
-	@make targets
+	$(MAKE) targets
 
 targets: prerequisites libGR.a libGR.so demo libqtgr
 
 prerequisites:
-	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do make -C ../../3rdparty/$$d; done
-	@for d in gks gks/plugin; do make -C ../$$d; done
+	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do $(MAKE) -C ../../3rdparty/$$d; done
+	@for d in gks gks/plugin; do $(MAKE) -C ../$$d; done
 
 ../gks/libGKS.a:
-	make -C ../gks libGKS.a
+	$(MAKE) -C ../gks libGKS.a
 
 libGR.a: $(GROBJS)
 	$(AR) crv $@ $?
@@ -85,7 +85,7 @@ demo: demo.c libGR.a $(GKSLIBS)
 	$(ZLIBS) $(QHLIBS) $(LIBS) $(LDFLAGS)
 
 libqtgr:
-	@make -C qtgr
+	$(MAKE) -C qtgr
 
 gr_version.h: $(GR_VERSION_H_DEPS)
 	../../lib/Version --c > $@
@@ -96,19 +96,19 @@ gr_version.h: $(GR_VERSION_H_DEPS)
 gr.o: gr_version.h
 
 install:
-	@make -C ../gks install
+	$(MAKE) -C ../gks install
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
 	@if [ ! -d $(BINDIR) ]; then mkdir -m 755 $(BINDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libGR.* $(LIBDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr.h $(INCDIR)
-	@make -C qtgr install
+	$(MAKE) -C qtgr install
 
 clean:
-	@make -C qtgr clean
-	@for d in gks gks/plugin; do make -C ../$$d clean; done
-	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do make -C ../../3rdparty/$$d clean; done
+	$(MAKE) -C qtgr clean
+	@for d in gks gks/plugin; do $(MAKE) -C ../$$d clean; done
+	@for d in bzip2 freetype jpeg libpng16 zlib qhull; do $(MAKE) -C ../../3rdparty/$$d clean; done
 	rm -f so_locations demo *.so *.a *.o *.bak *~ gr_version.h
 
 depend:

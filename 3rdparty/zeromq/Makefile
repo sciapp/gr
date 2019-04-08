@@ -44,8 +44,8 @@ $(PREFIX)/src/zeromq-$(VERSION)/Makefile: $(PREFIX)/src/zeromq-$(VERSION)/config
 	echo '#endif' >> $(PREFIX)/src/zeromq-$(VERSION)/src/platform.hpp
 
 $(PREFIX)/lib/libzmq.a: $(PREFIX)/src/zeromq-$(VERSION)/Makefile
-	MACOSX_DEPLOYMENT_TARGET="10.11" make -C $(PREFIX)/src/zeromq-$(VERSION) -j4 SUBDIRS=src
-	MACOSX_DEPLOYMENT_TARGET="10.11" make -C $(PREFIX)/src/zeromq-$(VERSION) install SUBDIRS=src
+	MACOSX_DEPLOYMENT_TARGET="10.11" $(MAKE) -C $(PREFIX)/src/zeromq-$(VERSION) -j4 SUBDIRS=src
+	MACOSX_DEPLOYMENT_TARGET="10.11" $(MAKE) -C $(PREFIX)/src/zeromq-$(VERSION) install SUBDIRS=src
 
 install: $(PREFIX)/lib/libzmq.a
 

@@ -3,7 +3,7 @@
  Linux:
 
 t=../../3rdparty
-for d in libpng16 jpeg zlib; do make -C ${t}/${d}; done
+for d in libpng16 jpeg zlib; do $(MAKE) -C ${t}/${d}; done
 cc -g demo.c gr3.c gr3_glx.c gr3_convenience.c gr3_gr.c \
  gr3_html.c gr3_jpeg.c gr3_mc.c gr3_png.c gr3_povray.c \
  -I${t} -I${t}/jpeg -I${t}/zlib -I/usr/local/gr/include \
@@ -14,7 +14,7 @@ cc -g demo.c gr3.c gr3_glx.c gr3_convenience.c gr3_gr.c \
  Darwin:
 
 t=../../3rdparty
-for d in libpng16 jpeg zlib; do make -C ${t}/${d}; done
+for d in libpng16 jpeg zlib; do $(MAKE) -C ${t}/${d}; done
 cc -g demo.c gr3.c gr3_cgl.c gr3_convenience.c gr3_gr.c \
  gr3_html.c gr3_jpeg.c gr3_mc.c gr3_png.c gr3_povray.c \
  -I${t} -I${t}/jpeg -I${t}/zlib -I/usr/local/gr/include \

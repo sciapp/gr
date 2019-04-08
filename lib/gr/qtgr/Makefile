@@ -44,13 +44,13 @@ GRLIBS = -L.. -lGR
 
 
 default:
-	@make -C ../../.. Makedefs
-	@make `cat ../../../Makedefs`
+	$(MAKE) -C ../../.. Makedefs
+	$(MAKE) `cat ../../../Makedefs`
 
 Linux:
-	@make targets
+	$(MAKE) targets
 Darwin:
-	@make targets
+	$(MAKE) targets
 
 targets: libqt4gr.so libqt5gr.so
 

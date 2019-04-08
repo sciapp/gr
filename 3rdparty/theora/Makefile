@@ -47,13 +47,13 @@ $(PREFIX)/src/libtheora-$(VERSION)/Makefile: $(PREFIX)/src/libtheora-$(VERSION)/
 		$(THEORA_EXTRA_CONFIGURE_FLAGS)
 
 $(PREFIX)/lib/libtheora.a: $(PREFIX)/src/libtheora-$(VERSION)/Makefile
-	make -C $(PREFIX)/src/libtheora-$(VERSION) -j4
-	make -C $(PREFIX)/src/libtheora-$(VERSION) install
+	$(MAKE) -C $(PREFIX)/src/libtheora-$(VERSION) -j4
+	$(MAKE) -C $(PREFIX)/src/libtheora-$(VERSION) install
 
 install: $(PREFIX)/lib/libtheora.a
 
 
 $(PREFIX)/lib/libogg.a:
-	make -C ../ogg PREFIX="$(PREFIX)" install
+	$(MAKE) -C ../ogg PREFIX="$(PREFIX)" install
 
 .PHONY: default install

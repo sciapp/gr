@@ -105,8 +105,8 @@ endif
 	$(CXX) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(CXXFLAGS) $(INCLUDES) $(WXDEFS) $(WXINC) $(QT4DEFS) $(QT4INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(ZINC) $<
 
 default:
-	@make -C ../../.. Makedefs
-	@make `cat ../../../Makedefs`
+	$(MAKE) -C ../../.. Makedefs
+	$(MAKE) `cat ../../../Makedefs`
 
 targets: prerequisites \
          x11plugin.so wxplugin.so qtplugin.so qt5plugin.so svgplugin.so \
@@ -114,16 +114,16 @@ targets: prerequisites \
          zmqplugin.so htmplugin.so pgfplugin.so cairoplugin.so videoplugin.so
 
 prerequisites:
-	@for d in libpng16; do make -C ../../../3rdparty/$$d; done
+	@for d in libpng16; do $(MAKE) -C ../../../3rdparty/$$d; done
 
 $(GKSLIBS):
-	@make -C .. libGKS.a
+	$(MAKE) -C .. libGKS.a
 
 Darwin:
-	@make targets quartzplugin.so \
+	$(MAKE) targets quartzplugin.so \
 	EXTRALIBS="-framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation" LIBS="-liconv"
 Linux:
-	@make targets \
+	$(MAKE) targets \
 	SOFLAGS="-shared" \
 	LDFLAGS="$(EXTRA_LDFLAGS)" \
 	EXTRA_LDFLAGS_QT4="-Wl,-rpath=$(QT4LIBDIR)" \

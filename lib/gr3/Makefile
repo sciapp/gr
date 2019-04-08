@@ -36,7 +36,7 @@ default: targets
 targets: prerequisites libGR3.so
 
 prerequisites:
-	@make -C ../gr
+	$(MAKE) -C ../gr
 
 ifeq ($(UNAME), Linux)
 targets: libGR3platform.so
@@ -74,7 +74,7 @@ install: targets
 	cp -p gr3.h $(INCDIR)
 
 clean:
-	@make -C ../gr clean
+	$(MAKE) -C ../gr clean
 	rm -rf libGR3.so*
 	rm -rf libGR3platform.so*
 	rm -f *.o

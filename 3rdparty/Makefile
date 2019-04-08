@@ -3,13 +3,13 @@
      DIR =
 
 default:
-	@set -e; for d in $(TARGETS); do make -C $$d PREFIX=$(DIR); done
+	@set -e; for d in $(TARGETS); do $(MAKE) -C $$d PREFIX=$(DIR); done
 
 extras:
-	@set -e; for d in $(EXTRAS); do make -C $$d PREFIX=$(DIR); done
+	@set -e; for d in $(EXTRAS); do $(MAKE) -C $$d PREFIX=$(DIR); done
 
 clean:
-	@set -e; for d in $(TARGETS); do make -C $$d clean; done
+	@set -e; for d in $(TARGETS); do $(MAKE) -C $$d clean; done
 
 realclean: clean
 	rm -rf ./build

@@ -47,8 +47,8 @@ $(PREFIX)/src/libvpx-$(VERSION)/Makefile: $(PREFIX)/src/libvpx-$(VERSION)/config
 		$(VPX_EXTRA_CONFIGURE_FLAGS)
 
 $(PREFIX)/lib/libvpx.a: $(PREFIX)/src/libvpx-$(VERSION)/Makefile
-	make -C $(PREFIX)/src/libvpx-$(VERSION) -j4
-	make -C $(PREFIX)/src/libvpx-$(VERSION) install
+	$(MAKE) -C $(PREFIX)/src/libvpx-$(VERSION) -j4
+	$(MAKE) -C $(PREFIX)/src/libvpx-$(VERSION) install
 
 install: $(PREFIX)/lib/libvpx.a
 

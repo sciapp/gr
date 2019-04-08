@@ -58,8 +58,8 @@ $(PREFIX)/src/tiff-$(VERSION)/Makefile: $(PREFIX)/src/tiff-$(VERSION)/configure
 		$(TIFF_EXTRA_CONFIGURE_FLAGS)
 
 $(PREFIX)/lib/libtiff.a: $(PREFIX)/src/tiff-$(VERSION)/Makefile
-	make -C $(PREFIX)/src/tiff-$(VERSION) -j4
-	make -C $(PREFIX)/src/tiff-$(VERSION) install
+	$(MAKE) -C $(PREFIX)/src/tiff-$(VERSION) -j4
+	$(MAKE) -C $(PREFIX)/src/tiff-$(VERSION) install
 
 install: $(PREFIX)/lib/libtiff.a
 

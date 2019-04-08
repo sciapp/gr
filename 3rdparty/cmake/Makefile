@@ -37,8 +37,8 @@ $(PREFIX)/src/cmake-$(VERSION)/Makefile: $(PREFIX)/src/cmake-$(VERSION)/bootstra
 		$(CMAKE_EXTRA_BOOTSTRAP_FLAGS)
 
 $(PREFIX)/bin/cmake: $(PREFIX)/src/cmake-$(VERSION)/Makefile
-	make -C $(PREFIX)/src/cmake-$(VERSION) -j4
-	make -C $(PREFIX)/src/cmake-$(VERSION) install
+	$(MAKE) -C $(PREFIX)/src/cmake-$(VERSION) -j4
+	$(MAKE) -C $(PREFIX)/src/cmake-$(VERSION) install
 
 install: $(PREFIX)/bin/cmake
 

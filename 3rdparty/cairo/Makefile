@@ -84,8 +84,8 @@ $(PREFIX)/lib/libcairo.a: $(PREFIX)/src/cairo-$(VERSION)/Makefile
 	export pixman_LIBS=$(PREFIX)/lib/libpixman-1.a && \
 	export FREETYPE_CFLAGS=-I$(PREFIX)/include/ && \
 	export FREETYPE_LIBS=$(PREFIX)/lib/libfreetype.a && \
-	make -C $(PREFIX)/src/cairo-$(VERSION) -j4 && \
-	make -C $(PREFIX)/src/cairo-$(VERSION) install
+	$(MAKE) -C $(PREFIX)/src/cairo-$(VERSION) -j4 && \
+	$(MAKE) -C $(PREFIX)/src/cairo-$(VERSION) install
 	# Fix broken libcairo static library issues on some systems (e.g. Darwin)
 	mkdir -p $(PREFIX)/build/cairo-$(VERSION)
 	cd $(PREFIX)/build/cairo-$(VERSION) && $(AR) x $(PREFIX)/lib/libcairo.a
@@ -95,15 +95,15 @@ $(PREFIX)/lib/libcairo.a: $(PREFIX)/src/cairo-$(VERSION)/Makefile
 install: $(PREFIX)/lib/libcairo.a
 
 $(PREFIX)/lib/libz.a:
-	make -C ../zlib PREFIX="$(PREFIX)" install
+	$(MAKE) -C ../zlib PREFIX="$(PREFIX)" install
 
 $(PREFIX)/lib/libpng.a:
-	make -C ../libpng16 PREFIX="$(PREFIX)" install
+	$(MAKE) -C ../libpng16 PREFIX="$(PREFIX)" install
 
 $(PREFIX)/lib/libfreetype.a:
-	make -C ../freetype PREFIX="$(PREFIX)" install
+	$(MAKE) -C ../freetype PREFIX="$(PREFIX)" install
 
 $(PREFIX)/lib/libpixman-1.a:
-	make -C ../pixman PREFIX="$(PREFIX)" install
+	$(MAKE) -C ../pixman PREFIX="$(PREFIX)" install
 
 .PHONY: default install
