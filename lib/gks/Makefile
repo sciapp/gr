@@ -114,6 +114,10 @@ clean:
 	$(MAKE) -C qt -f makefile.mak clean
 	rm -f demo gksm pasdemo so_locations *.so *.a *.o *.ppu link.res
 	rm -f *.bak *~
+ifeq ($(UNAME), Darwin)
+	(env CC=cc xcodebuild -project quartz/GKSTerm.xcodeproj clean)
+endif
+	cp -p quartz/project.pbxproj quartz/GKSTerm.xcodeproj/
 
 depend:
 	makedepend -Y -- \

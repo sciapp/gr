@@ -28,10 +28,6 @@ clean:
 	$(MAKE) -C lib/gr clean
 	$(MAKE) -C lib/gr3 clean
 	$(MAKE) -C 3rdparty clean
-ifeq ($(UNAME), Darwin)
-	(env CC=cc xcodebuild -project lib/gks/quartz/GKSTerm.xcodeproj clean)
-endif
-	cp -p lib/gks/quartz/project.pbxproj lib/gks/quartz/GKSTerm.xcodeproj/
 	rm -f gr.pkg
 
 realclean: clean
