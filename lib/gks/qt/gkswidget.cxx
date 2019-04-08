@@ -105,6 +105,7 @@ void GKSWidget::paintEvent(QPaintEvent *)
 
 void GKSWidget::resizeEvent(QResizeEvent *event)
 {
+  (void)event;
   p->mwidth = (double)this->width() / p->device_dpi_x * 0.0254;
   p->mheight = (double)this->height() / p->device_dpi_y * 0.0254;
   resize_pixmap(this->width(), this->height());
