@@ -1005,7 +1005,7 @@ static oct_node node_new(unsigned char idx, unsigned char depth, oct_node p)
   static int len = 0;
   oct_node x, n;
 
-  if (len <= 1)
+  if (len <= 1 || pool == NULL)
     {
       n = (oct_node)gks_malloc(sizeof(oct_node_t) * 2048);
       n->parent = pool;
