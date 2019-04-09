@@ -128,6 +128,7 @@ depend:
 .PHONY: default all targets prerequisites plugins install clean depend
 
 ft.o: $(THIRDPARTYDIR)/lib/libfreetype.a
+pdf.o: $(THIRDPARTYDIR)/lib/libz.a
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
