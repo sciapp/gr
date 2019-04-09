@@ -72,9 +72,9 @@ libqt5gr.so:
 endif
 
 install:
+ifneq (false false,$(filter false,$(QT4_QMAKE) $(QT5_QMAKE)))   # install only if Qt4 and/or Qt5 are present
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -p libqt*.* $(LIBDIR)
-ifneq (false false,$(filter false,$(QT4_QMAKE) $(QT5_QMAKE)))   # copy grwidget.h only if Qt4 or/and Qt5 are present
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p grwidget.h $(INCDIR)
 endif
@@ -82,4 +82,4 @@ endif
 clean:
 	rm -f *.so *.o
 
-.PHONY: default targets install clean
+.PHONY: default all targets install clean

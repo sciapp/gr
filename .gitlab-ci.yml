@@ -261,7 +261,7 @@ darwin-self-contained:
   - export CMAKE_CMD=`pwd`/cmake-3.6.3-Darwin-x86_64/CMake.app/Contents/bin/cmake
   - export MACOSX_DEPLOYMENT_TARGET=10.11
   - rm -rf /usr/local/gr/*
-  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake
+  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
