@@ -34,7 +34,7 @@ ubuntu-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -62,7 +62,7 @@ debian-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -90,7 +90,7 @@ centos7-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -118,7 +118,7 @@ centos6-32bit-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -146,7 +146,7 @@ centos6-64bit-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
@@ -265,7 +265,7 @@ darwin-self-contained:
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
