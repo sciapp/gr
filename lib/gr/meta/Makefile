@@ -5,7 +5,10 @@ LIBS = -L$(GRDIR)/lib -lGR -lm
 LDFLAGS = $(LIBS) -Wl,-rpath,$(GRDIR)/lib
 
 
-all: event_handling plot multi_plot subplots receiver sender custom_receiver custom_sender merge_args
+all: hold_append event_handling plot multi_plot subplots receiver sender custom_receiver custom_sender merge_args
+
+hold_append: hold_append.o
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 event_handling: event_handling.o
 	$(CC) -o $@ $^ $(LDFLAGS)

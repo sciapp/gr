@@ -163,6 +163,7 @@ static void debug_printf(const char *format, ...)
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
+#define ROOT_DEFAULT_APPEND_PLOTS 0
 #define PLOT_DEFAULT_WIDTH 600.0
 #define PLOT_DEFAULT_HEIGHT 450.0
 #define PLOT_DEFAULT_KIND "line"
@@ -809,6 +810,7 @@ static error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_p
                                        unsigned int next_hierarchy_level_max_id);
 static error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_name_ptr,
                                         unsigned int next_hierarchy_level_max_id);
+static void plot_set_flag_defaults(void);
 static void plot_set_attribute_defaults(gr_meta_args_t *subplot_args);
 static void plot_pre_plot(gr_meta_args_t *plot_args);
 static void plot_process_wswindow_wsviewport(gr_meta_args_t *plot_args);
@@ -820,7 +822,7 @@ static void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args);
 static void plot_post_plot(gr_meta_args_t *plot_args);
 static void plot_post_subplot(gr_meta_args_t *subplot_args);
 static error_t plot_get_args_in_hierarchy(gr_meta_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
-                                          const uint_map_t *hierarchy_to_id, const gr_meta_args_t **found_args,
+                                          uint_map_t *hierarchy_to_id, const gr_meta_args_t **found_args,
                                           const char ***found_hierarchy_ptr);
 
 
@@ -918,6 +920,8 @@ static error_t args_setdefault(gr_meta_args_t *args, const char *key, const char
 static error_t args_setdefault_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
                                    int apply_padding);
 static error_t args_setdefault_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
+
+static void args_clear(gr_meta_args_t *args, const char **exclude_keys);
 
 static error_t args_increase_array(gr_meta_args_t *args, const char *key, size_t increment);
 
@@ -1283,9 +1287,14 @@ static plot_func_map_t *plot_func_map = NULL;
 static string_map_t *plot_valid_keys_map = NULL;
 
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot clear ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+const char *plot_clear_exclude_keys[] = {"array_index", "in_use", NULL};
+
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot merge ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", "plot_id", "array_index", NULL};
+const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", "plot_id", "array_index", "in_use", NULL};
 const char *plot_merge_clear_keys[] = {"series", NULL};
 
 
@@ -1294,7 +1303,7 @@ const char *plot_merge_clear_keys[] = {"series", NULL};
 /* IMPORTANT: Every key should only be part of ONE array -> keys can be assigned to the right object, if a user sends a
  * flat object that mixes keys of different hierarchies */
 
-const char *valid_root_keys[] = {"plots", NULL};
+const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
 const char *valid_subplot_keys[] = {
     "adjust_xlim",  "adjust_ylim", "adjust_zlim", "backgroundcolor", "colormap", "keep_aspect_ratio",
@@ -1381,17 +1390,7 @@ int gr_meta_args_contains(const gr_meta_args_t *args, const char *keyword)
 
 void gr_meta_args_clear(gr_meta_args_t *args)
 {
-  args_node_t *current_node, *next_node;
-
-  current_node = args->kwargs_head;
-  while (current_node != NULL)
-    {
-      next_node = current_node->next;
-      args_decrease_arg_reference_count(current_node);
-      free(current_node);
-      current_node = next_node;
-    }
-  args_init(args);
+  args_clear(args, plot_clear_exclude_keys);
 }
 
 void gr_meta_args_remove(gr_meta_args_t *args, const char *key)
@@ -3114,6 +3113,7 @@ error_t plot_init_static_variables(void)
       error_cleanup_and_set_error_if(global_root_args == NULL, ERROR_MALLOC);
       error = plot_init_args_structure(global_root_args, plot_hierarchy_names, 1);
       error_cleanup_if_error;
+      plot_set_flag_defaults();
       error_cleanup_and_set_error_if(!args_values(global_root_args, "plots", "a", &active_plot_args), ERROR_INTERNAL);
       active_plot_index = 1;
       fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
@@ -3177,6 +3177,7 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
   static args_set_map_t *key_to_cleared_args = NULL;
   static int recursion_level = -1;
   int plot_id, subplot_id, series_id;
+  int append_plots;
   args_iterator_t *merge_it = NULL;
   arg_t *arg, *merge_arg;
   args_value_iterator_t *value_it = NULL, *merge_value_it = NULL;
@@ -3205,6 +3206,7 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
       key_to_cleared_args = args_set_map_new(array_size(plot_merge_clear_keys));
       cleanup_and_set_error_if(hierarchy_to_id == NULL, ERROR_MALLOC);
     }
+  args_values(global_root_args, "append_plots", "i", &append_plots);
   get_id_from_args(merge_args, &plot_id, &subplot_id, &series_id);
   if (plot_id > 0)
     {
@@ -3212,8 +3214,9 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
     }
   else
     {
-      uint_map_insert_default(hierarchy_to_id, "plots", active_plot_index);
+      uint_map_insert_default(hierarchy_to_id, "plots", append_plots ? 0 : active_plot_index);
       uint_map_at(hierarchy_to_id, "plots", (unsigned int *)&plot_id);
+      logger((stderr, "Using plot_id \"%u\"\n", plot_id));
     }
   if (subplot_id > 0)
     {
@@ -3233,14 +3236,32 @@ error_t plot_merge_args(gr_meta_args_t *args, const gr_meta_args_t *merge_args, 
       uint_map_insert_default(hierarchy_to_id, "series", 1);
       uint_map_at(hierarchy_to_id, "series", (unsigned int *)&series_id);
     }
-  /* special case: if the plot_id is `1` (and it is the first call of `plot_merge_args`), clear the plot argument
-   * container before usage */
-  if (plot_id == 1 && strcmp(*hierarchy_name_ptr, "root") == 0)
+  /* special case: clear the plot container before usage if
+   * - it is the first call of `plot_merge_args` AND
+   *   - `plot_id` is `1` and `hold_plots` is not set OR
+   *   - `hold_plots` is true and no plot will be appended (`plot_id` > 0)
+   */
+  if (strcmp(*hierarchy_name_ptr, "root") == 0 && plot_id > 0)
     {
-      cleanup_and_set_error_if(!args_values(args, "plots", "a", &current_args), ERROR_INTERNAL);
-      gr_meta_args_clear(current_args);
-      error = plot_init_args_structure(current_args, hierarchy_name_ptr + 1, 1);
-      cleanup_if_error;
+      int hold_plots_key_available, hold_plots;
+      hold_plots_key_available = args_values(args, "hold_plots", "i", &hold_plots);
+      if (hold_plots_key_available)
+        {
+          logger((stderr, "Do%s hold plots\n", hold_plots ? "" : " not"));
+        }
+      if ((hold_plots_key_available && !hold_plots) || (!hold_plots_key_available && plot_id == 1))
+        {
+          cleanup_and_set_error_if(!args_values(args, "plots", "A", &args_array), ERROR_INTERNAL);
+          current_args = args_array[plot_id - 1];
+          gr_meta_args_clear(current_args);
+          error = plot_init_args_structure(current_args, hierarchy_name_ptr + 1, 1);
+          cleanup_if_error;
+          logger((stderr, "Cleared current args\n"));
+        }
+      else
+        {
+          logger((stderr, "Held current args\n"));
+        }
     }
   merge_it = args_iter(merge_args);
   cleanup_and_set_error_if(merge_it == NULL, ERROR_MALLOC);
@@ -3416,6 +3437,7 @@ error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, uns
       return_if_error;
       if (strcmp(*hierarchy_name_ptr, "plots") == 0)
         {
+          gr_meta_args_push(args_array[i], "in_use", "i", 0);
           error = event_queue_enqueue_new_plot_event(event_queue, i);
           return_if_error;
         }
@@ -3453,6 +3475,7 @@ error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_na
           error_cleanup_if_error;
           if (strcmp(*hierarchy_name_ptr, "plots") == 0)
             {
+              gr_meta_args_push(args_array[i], "in_use", "i", 0);
               error = event_queue_enqueue_new_plot_event(event_queue, i);
               return_if_error;
             }
@@ -3483,6 +3506,16 @@ error_cleanup:
     }
 
   return error;
+}
+
+void plot_set_flag_defaults(void)
+{
+  /* Use a standalone function for initializing flags instead of `plot_set_attribute_defaults` to guarantee the flags
+   * are already set before `gr_plotmeta` is called (important for `gr_mergemeta`) */
+
+  logger((stderr, "Set global flag defaults\n"));
+
+  args_setdefault(global_root_args, "append_plots", "i", ROOT_DEFAULT_APPEND_PLOTS);
 }
 
 void plot_set_attribute_defaults(gr_meta_args_t *plot_args)
@@ -4131,7 +4164,7 @@ void plot_post_subplot(gr_meta_args_t *subplot_args)
 }
 
 error_t plot_get_args_in_hierarchy(gr_meta_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
-                                   const uint_map_t *hierarchy_to_id, const gr_meta_args_t **found_args,
+                                   uint_map_t *hierarchy_to_id, const gr_meta_args_t **found_args,
                                    const char ***found_hierarchy_name_ptr)
 {
   const char *key_hierarchy_name, **current_hierarchy_name_ptr;
@@ -4152,12 +4185,33 @@ error_t plot_get_args_in_hierarchy(gr_meta_args_t *args, const char **hierarchy_
           return_error_if(current_arg == NULL, ERROR_INTERNAL);
           arg_first_value(current_arg, "A", &args_array, &args_array_length);
           uint_map_at(hierarchy_to_id, *current_hierarchy_name_ptr, &current_id);
+          /* Check for the invalid id 0 because id 0 is set for append mode */
+          if (current_id == 0)
+            {
+              current_id = args_array_length + 1;
+              if (strcmp(*current_hierarchy_name_ptr, "plots") == 0)
+                {
+                  int last_plot_in_use = 0;
+                  if (args_values(args_array[args_array_length - 1], "in_use", "i", &last_plot_in_use) &&
+                      !last_plot_in_use)
+                    {
+                      /* Use the last already existing plot if it is still empty */
+                      --current_id;
+                    }
+                }
+              logger((stderr, "Append mode, set id to \"%u\"\n", current_id));
+              uint_map_insert(hierarchy_to_id, *current_hierarchy_name_ptr, current_id);
+            }
           if (current_id > args_array_length)
             {
               plot_init_args_structure(current_args, current_hierarchy_name_ptr - 1, current_id);
               arg_first_value(current_arg, "A", &args_array, &args_array_length);
             }
           current_args = args_array[current_id - 1];
+          if (strcmp(*current_hierarchy_name_ptr, "plots") == 0)
+            {
+              gr_meta_args_push(current_args, "in_use", "i", 1);
+            }
           if (strcmp(*current_hierarchy_name_ptr, key_hierarchy_name) == 0)
             {
               break;
@@ -6457,6 +6511,46 @@ error_t args_setdefault_buf(gr_meta_args_t *args, const char *key, const char *v
 error_t args_setdefault_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl)
 {
   return args_setdefault_common(args, key, value_format, NULL, vl, 0);
+}
+
+void args_clear(gr_meta_args_t *args, const char **exclude_keys)
+{
+  args_node_t *current_node, *next_node, *last_excluded_node;
+
+  current_node = args->kwargs_head;
+  last_excluded_node = NULL;
+  while (current_node != NULL)
+    {
+      next_node = current_node->next;
+      if (exclude_keys != NULL && str_equals_any_in_array(current_node->arg->key, exclude_keys))
+        {
+          if (last_excluded_node == NULL)
+            {
+              args->kwargs_head = current_node;
+            }
+          else
+            {
+              last_excluded_node->next = current_node;
+            }
+          last_excluded_node = current_node;
+        }
+      else
+        {
+          args_decrease_arg_reference_count(current_node);
+          free(current_node);
+          --(args->count);
+        }
+      current_node = next_node;
+    }
+  args->kwargs_tail = last_excluded_node;
+  if (args->kwargs_tail == NULL)
+    {
+      args->kwargs_head = NULL;
+    }
+  else
+    {
+      args->kwargs_tail->next = NULL;
+    }
 }
 
 error_t args_increase_array(gr_meta_args_t *args, const char *key, size_t increment)
