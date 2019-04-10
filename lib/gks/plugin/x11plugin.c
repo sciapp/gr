@@ -2109,7 +2109,7 @@ static void draw_string(int x, int y, int width, int height, char *chars, int nc
       from = XGetImage(p->dpy, src, 0, 0, width, height, AllPlanes, ZPixmap);
 
       dest = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), w, h, p->depth);
-      XCopyArea(p->dpy, p->double_buf ? p->pixmap : p->win, dest, p->gc, x, y, w, h, 0, 0);
+      XCopyArea(p->dpy, p->pixmap ? p->pixmap : p->win, dest, p->gc, x, y, w, h, 0, 0);
       to = XGetImage(p->dpy, dest, 0, 0, w, h, AllPlanes, ZPixmap);
 
       for (i = 0; i < width; i++)
@@ -2513,7 +2513,7 @@ static void draw_image(int x, int y, int width, int height, byte *ba, Bool true_
   set_clipping(False);
 
   dest = XCreatePixmap(p->dpy, XRootWindowOfScreen(p->screen), width, height, p->depth);
-  XCopyArea(p->dpy, p->double_buf ? p->pixmap : p->win, dest, p->gc, x, y, width, height, 0, 0);
+  XCopyArea(p->dpy, p->pixmap ? p->pixmap : p->win, dest, p->gc, x, y, width, height, 0, 0);
   to = XGetImage(p->dpy, dest, 0, 0, width, height, AllPlanes, ZPixmap);
 
   if (!true_color)
