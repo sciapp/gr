@@ -185,6 +185,7 @@ extern "C"
   DLLEXPORT int gr_plotmeta(const gr_meta_args_t *);
   DLLEXPORT int gr_readmeta(gr_meta_args_t *, const char *);
   DLLEXPORT int gr_switchmeta(unsigned int id);
+  DLLEXPORT unsigned int gr_meta_max_plotid(void);
 #ifndef NDEBUG
   DLLEXPORT void gr_dumpmeta(const gr_meta_args_t *, FILE *);
   DLLEXPORT void gr_dumpmeta_json(const gr_meta_args_t *, FILE *);

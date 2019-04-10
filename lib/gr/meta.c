@@ -1403,6 +1403,19 @@ int gr_switchmeta(unsigned int id)
   return 1;
 }
 
+unsigned int gr_meta_max_plotid(void)
+{
+  unsigned int args_array_length = 0;
+
+  if (args_first_value(global_root_args, "plots", "A", NULL, &args_array_length))
+    {
+      --args_array_length;
+    }
+
+  return args_array_length;
+}
+
+
 /* ------------------------- receiver / sender ---------------------------------------------------------------------- */
 
 void *gr_openmeta(int is_receiver, const char *name, unsigned int id,
