@@ -27,6 +27,5 @@ The GR framework is licensed under the MIT License.
 The GR framework can be built with plugins that use code from the
 following projects, which have their own licenses:
 
-- MuPDF - a lightweight PDF and XPS viewer (AFPL)
 - Ghostscript - an interpreter for the PostScript language and for PDF (AFPL)
 - FFmpeg - a multimedia framework (LGPL / GPLv2)
