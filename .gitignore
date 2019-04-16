@@ -12,6 +12,7 @@ dist/
 *.app
 gr*.deb
 gr*.rpm
+cmake-build-*/
 moc_*.h
 moc_*.cpp
 qrc_*.cpp

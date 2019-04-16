@@ -1,3 +1,8 @@
+/* TODO: this is workaround to allow building with mingw and cmake */
+#ifndef AI_ADDRCONFIG
+#define AI_ADDRCONFIG 0x00000400
+#endif
+
 #ifdef __unix__
 #define _XOPEN_SOURCE 600
 #endif
