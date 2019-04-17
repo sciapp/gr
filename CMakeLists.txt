@@ -1,18 +1,21 @@
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(GetVersionFromGit)
 get_version_from_git(GR_VERSION GR_VERSION_FULL)
 
+
 project(GR VERSION ${GR_VERSION} LANGUAGES C CXX )
 
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+
+set(GR_DIRECTORY "${CMAKE_INSTALL_PREFIX}" CACHE STRING "Default value for GRDIR")
 option(GR_BUILD_DEMOS "Build demos for GR" OFF)
 option(GR_INSTALL "Create installation target for GR" ON)
+option(GR_USE_BUNDLED_LIBRARIES "Use thirdparty libraries bundled with GR" OFF)
 option(GR_MANUAL_MOC_AND_RCC "Manually run moc and rcc instead of relying on AUTOMOC and AUTORCC" OFF)
-set(GR_DIRECTORY "/usr/local/gr" CACHE STRING "Default value for GRDIR")
-option(GR_USE_BUNDLED_LIBRARIES "Use thirdparty libraries bundled with GR" ON)
+
+
 if (GR_USE_BUNDLED_LIBRARIES)
     list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/3rdparty/build/")
     set(GR_THIRDPARTY_LIBRARY_PREFIX ${CMAKE_STATIC_LIBRARY_PREFIX})
@@ -22,13 +25,14 @@ else()
     set(GR_THIRDPARTY_LIBRARY_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
 endif()
 
+
 if(WIN32)
     set(GR_PLUGIN_SUFFIX ".dll")
 else()
     set(GR_PLUGIN_SUFFIX ".so")
 endif()
 
-find_package(Threads REQUIRED)
+
 find_package(Freetype)
 find_package(Jpeg REQUIRED)
 find_package(Libpng REQUIRED)
@@ -41,7 +45,7 @@ find_package(Zeromq)
 find_package(Cairo)
 find_package(X11)
 find_package(Fontconfig)
-find_package(OpenGL REQUIRED COMPONENTS OpenGL)
+find_package(OpenGL OPTIONAL_COMPONENTS OpenGL)
 find_package(Gs)
 find_package(Qt5 OPTIONAL_COMPONENTS Widgets Core Network)
 find_package(Qt4)
@@ -83,7 +87,23 @@ if(Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
     endforeach()
 endif()
 
-add_library(gks_static STATIC
+
+if (X11_FOUND)
+    if (NOT TARGET X11::X11)
+        find_path(X11_INTRINSIC_INCLUDE_DIR X11/Intrinsic.h PATHS ${X11_INCLUDE_DIR})
+        find_path(XFT_INCLUDE_DIR X11/Xft/Xft.h PATHS ${X11_INCLUDE_DIR})
+        if (X11_INTRINSIC_INCLUDE_DIR AND XFT_INCLUDE_DIR)
+            add_library(X11::X11 UNKNOWN IMPORTED)
+            set_target_properties(X11::X11 PROPERTIES
+                    INTERFACE_INCLUDE_DIRECTORIES "${X11_INCLUDE_DIR}/"
+                    IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                    IMPORTED_LOCATION "${X11_X11_LIB}"
+                    INTERFACE_LINK_LIBRARIES "${X11_Xft_LIB};${X11_Xt_LIB}")
+        endif()
+    endif()
+endif()
+
+set(GKS_SOURCES
         lib/gks/afm.c
         lib/gks/font.c
         lib/gks/mac.c
@@ -105,30 +125,13 @@ add_library(gks_static STATIC
         lib/gks/io.c
         lib/gks/ps.c
         )
-add_library(gks_shared SHARED
-        lib/gks/afm.c
-        lib/gks/font.c
-        lib/gks/mac.c
-        lib/gks/socket.c
-        lib/gks/cgm.c
-        lib/gks/ft.c
-        lib/gks/malloc.c
-        lib/gks/util.c
-        lib/gks/compress.c
-        lib/gks/gks.c
-        lib/gks/mf.c
-        lib/gks/win.c
-        lib/gks/gksforbnd.c
-        lib/gks/pdf.c
-        lib/gks/wiss.c
-        lib/gks/dl.c
-        lib/gks/plugin.c
-        lib/gks/error.c
-        lib/gks/io.c
-        lib/gks/ps.c
-        )
+
+add_library(gks_static STATIC ${GKS_SOURCES})
+add_library(gks_shared SHARED ${GKS_SOURCES})
+
 foreach(LIBRARY gks_static gks_shared)
-    target_link_libraries(${LIBRARY} PUBLIC Threads::Threads)
+    target_link_libraries(${LIBRARY} PUBLIC pthread)
+    target_link_libraries(${LIBRARY} PUBLIC m)
     if(FREETYPE_FOUND)
         target_link_libraries(${LIBRARY} PUBLIC Freetype::Freetype)
     else()
@@ -155,7 +158,7 @@ foreach(LIBRARY gks_static gks_shared)
             C_EXTENSIONS OFF
             C_STANDARD_REQUIRED ON
             POSITION_INDEPENDENT_CODE ON
-            OUTPUT_NAME gks
+            OUTPUT_NAME GKS
             INSTALL_RPATH "${INSTALL_RPATH}"
             )
 endforeach()
@@ -167,7 +170,7 @@ set_source_files_properties(
 )
 
 
-add_library(gr
+set(GR_SOURCES
         lib/gr/boundary.c
         lib/gr/contour.c
         lib/gr/contourf.c
@@ -187,106 +190,135 @@ add_library(gr
         lib/gr/text.c
         ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
         )
-target_link_libraries(gr PUBLIC GR::GKS)
-target_link_libraries(gr PUBLIC m)
-target_link_libraries(gr PUBLIC Qhull::Qhull)
-target_link_libraries(gr PUBLIC Jpeg::Jpeg)
-target_link_libraries(gr PUBLIC Libpng::Libpng)
-if(WIN32)
-    target_link_libraries(gr PUBLIC ws2_32)
-endif()
-target_include_directories(gr PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        )
-target_include_directories(gr PRIVATE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-        )
-set_target_properties(gr PROPERTIES
-        C_STANDARD 90
-        C_EXTENSIONS OFF
-        C_STANDARD_REQUIRED ON
-        POSITION_INDEPENDENT_CODE ON
-        INSTALL_RPATH "${INSTALL_RPATH}"
-        )
-add_library(GR::GR ALIAS gr)
 
+add_library(gr_static STATIC ${GR_SOURCES})
+add_library(gr_shared SHARED ${GR_SOURCES})
 
-add_library(gr3 SHARED
-        lib/gr3/gr3.c
-        lib/gr3/gr3_convenience.c
-        lib/gr3/gr3_gr.c
-        lib/gr3/gr3_html.c
-        lib/gr3/gr3_jpeg.c
-        lib/gr3/gr3_mc.c
-        lib/gr3/gr3_png.c
-        lib/gr3/gr3_povray.c
-        lib/gr3/gr3_slices.c
-        )
-if(APPLE)
-    target_sources(gr3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_cgl.c)
-elseif(UNIX AND NOT APPLE)
-    target_sources(gr3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_glx.c)
-elseif(WIN32)
-    target_sources(gr3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_win.c)
-endif()
-target_link_libraries(gr3 PUBLIC GR::GR)
-target_link_libraries(gr3 PUBLIC Jpeg::Jpeg)
-target_link_libraries(gr3 PUBLIC Libpng::Libpng)
-if(APPLE OR WIN32)
-    target_link_libraries(gr3 PUBLIC OpenGL::GL)
-endif()
-if(APPLE)
-    # Apple has deprecated OpenGL in macOS 10.14
-    target_compile_definitions(gr3 PRIVATE GL_SILENCE_DEPRECATION)
-endif()
-target_include_directories(gr3 PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-        )
-set_target_properties(gr3 PROPERTIES
-        C_STANDARD 90
-        C_EXTENSIONS OFF
-        C_STANDARD_REQUIRED ON
-        POSITION_INDEPENDENT_CODE ON
-        INSTALL_RPATH "${INSTALL_RPATH}"
-        )
-add_library(GR::GR3 ALIAS gr3)
-
-
-if(UNIX AND NOT APPLE)
-    if(X11_FOUND)
-    add_library(gr3platform SHARED lib/gr3/gr3_platform_glx.c)
-    target_link_libraries(gr3platform PUBLIC GR::GR)
-    target_link_libraries(gr3platform PUBLIC OpenGL::GL)
-    target_link_libraries(gr3platform PUBLIC X11::X11)
-    set_target_properties(gr3platform PROPERTIES
+foreach(LIBRARY gr_static gr_shared)
+    target_link_libraries(${LIBRARY} PUBLIC gks_static)
+    target_link_libraries(${LIBRARY} PUBLIC m)
+    target_link_libraries(${LIBRARY} PUBLIC Qhull::Qhull)
+    target_link_libraries(${LIBRARY} PUBLIC Jpeg::Jpeg)
+    target_link_libraries(${LIBRARY} PUBLIC Libpng::Libpng)
+    if(WIN32)
+        target_link_libraries(${LIBRARY} PUBLIC ws2_32)
+    endif()
+    target_include_directories(${LIBRARY} PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+            )
+    target_include_directories(${LIBRARY} PRIVATE
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+            )
+    set_target_properties(${LIBRARY} PROPERTIES
             C_STANDARD 90
             C_EXTENSIONS OFF
             C_STANDARD_REQUIRED ON
             POSITION_INDEPENDENT_CODE ON
             INSTALL_RPATH "${INSTALL_RPATH}"
+            OUTPUT_NAME GR
             )
-    else()
-        message(WARNING "libGR3platform.so requires X11 and will not be built.")
+endforeach()
+add_library(GR::GR ALIAS gr_shared)
+
+if (OpenGL_FOUND)
+    set(GR3_SOURCES
+            lib/gr3/gr3.c
+            lib/gr3/gr3_convenience.c
+            lib/gr3/gr3_gr.c
+            lib/gr3/gr3_html.c
+            lib/gr3/gr3_jpeg.c
+            lib/gr3/gr3_mc.c
+            lib/gr3/gr3_png.c
+            lib/gr3/gr3_povray.c
+            lib/gr3/gr3_slices.c
+            )
+
+    add_library(gr3_static STATIC ${GR3_SOURCES})
+    add_library(gr3_shared SHARED ${GR3_SOURCES})
+    foreach(LIBRARY gr3_static gr3_shared)
+        if(APPLE)
+            target_sources(${LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_cgl.c)
+        elseif(UNIX AND NOT APPLE)
+            target_sources(${LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_glx.c)
+        elseif(WIN32)
+            target_sources(${LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_win.c)
+        endif()
+        target_link_libraries(${LIBRARY} PUBLIC GR::GR)
+        target_link_libraries(${LIBRARY} PUBLIC Jpeg::Jpeg)
+        target_link_libraries(${LIBRARY} PUBLIC Libpng::Libpng)
+        if(APPLE OR WIN32)
+            target_link_libraries(${LIBRARY} PUBLIC OpenGL::GL)
+        endif()
+        if(APPLE)
+            # Apple has deprecated OpenGL in macOS 10.14
+            target_compile_definitions(${LIBRARY} PRIVATE GL_SILENCE_DEPRECATION)
+        endif()
+        target_include_directories(${LIBRARY} PUBLIC
+                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/>
+                $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+                )
+        set_target_properties(${LIBRARY} PROPERTIES
+                C_STANDARD 90
+                C_EXTENSIONS OFF
+                C_STANDARD_REQUIRED ON
+                POSITION_INDEPENDENT_CODE ON
+                INSTALL_RPATH "${INSTALL_RPATH}"
+                OUTPUT_NAME GR3
+                )
+    endforeach()
+    add_library(GR::GR3 ALIAS gr3_shared)
+
+    if(UNIX AND NOT APPLE)
+        if(TARGET X11::X11)
+            add_library(gr3platform SHARED lib/gr3/gr3_platform_glx.c)
+            target_link_libraries(gr3platform PUBLIC GR::GR)
+            target_link_libraries(gr3platform PUBLIC OpenGL::GL)
+            target_link_libraries(gr3platform PUBLIC X11::X11)
+            set_target_properties(gr3platform PROPERTIES
+                    C_STANDARD 90
+                    C_EXTENSIONS OFF
+                    C_STANDARD_REQUIRED ON
+                    POSITION_INDEPENDENT_CODE ON
+                    INSTALL_RPATH "${INSTALL_RPATH}"
+                    )
+        else()
+            message(WARNING "libGR3platform.so requires X11 and will not be built.")
+        endif()
     endif()
+else()
+    message(WARNING "GR3 requires OpenGL and will not be built.")
 endif()
+
+
+set(GR_REPORT "GKS plugins:\n")
 
 
 add_library(cairoplugin SHARED
         lib/gks/plugin/cairoplugin.c
         )
-target_link_libraries(cairoplugin PUBLIC GR::GKS)
+target_link_libraries(cairoplugin PUBLIC gks_static)
 if(Cairo_FOUND)
     target_link_libraries(cairoplugin PRIVATE Cairo::Cairo)
     target_link_libraries(cairoplugin PRIVATE Jpeg::Jpeg)
+    string(APPEND GR_REPORT "- cairoplugin:\n")
+    string(APPEND GR_REPORT "\tPNG output: Yes\n")
+    string(APPEND GR_REPORT "\tBMP output: Yes\n")
+    string(APPEND GR_REPORT "\tJPEG output: Yes\n")
+
+    if(Tiff_FOUND)
+        target_link_libraries(cairoplugin PRIVATE Tiff::Tiff)
+        string(APPEND GR_REPORT "\tTiff output: Yes\n")
+    else()
+        string(APPEND GR_REPORT "\tTiff output: No (libtiff not found)\n")
+        target_compile_definitions(cairoplugin PRIVATE NO_TIFF)
+    endif()
+    string(APPEND GR_REPORT "\tSixel output: Yes\n")
+    string(APPEND GR_REPORT "\tMemory output: Yes\n")
+    string(APPEND GR_REPORT "\tX11 output: No (not available in CMake build)\n")
 else()
     target_compile_definitions(cairoplugin PRIVATE NO_CAIRO)
-endif()
-if(Tiff_FOUND)
-    target_link_libraries(cairoplugin PRIVATE Tiff::Tiff)
-else()
-    target_compile_definitions(cairoplugin PRIVATE NO_TIFF)
+    string(APPEND GR_REPORT "- cairoplugin: No (Cairo not found)\n")
 endif()
 # Cairo X11 support is disabled to allow users to generate images using Cairo on systems without X11 installed
 target_compile_definitions(cairoplugin PRIVATE NO_X11)
@@ -304,14 +336,23 @@ add_library(videoplugin SHARED
         lib/gks/plugin/vc.c
         lib/gks/plugin/gif.c
         )
-target_link_libraries(videoplugin PUBLIC GR::GKS)
+target_link_libraries(videoplugin PUBLIC gks_static)
 if(NOT Cairo_FOUND)
     target_compile_definitions(videoplugin PRIVATE NO_CAIRO)
-endif()
-if(Ffmpeg_FOUND)
-    target_link_libraries(videoplugin PUBLIC Ffmpeg::Ffmpeg)
-else()
     target_compile_definitions(videoplugin PRIVATE NO_AV)
+    string(APPEND GR_REPORT "- videoplugin: No (Cairo not found)\n")
+elseif(NOT Ffmpeg_FOUND)
+    target_compile_definitions(videoplugin PRIVATE NO_CAIRO)
+    target_compile_definitions(videoplugin PRIVATE NO_AV)
+    string(APPEND GR_REPORT "- videoplugin: No (ffmpeg / ogg / theora / vpx not found)\n")
+else()
+    string(APPEND GR_REPORT "- videoplugin:\n")
+    string(APPEND GR_REPORT "\tMP4 output: Yes\n")
+    string(APPEND GR_REPORT "\tMOV output: Yes\n")
+    string(APPEND GR_REPORT "\tWEBM output: Yes\n")
+    string(APPEND GR_REPORT "\tOGG output: Yes\n")
+    string(APPEND GR_REPORT "\tGIF output: Yes\n")
+    target_link_libraries(videoplugin PUBLIC Ffmpeg::Ffmpeg)
 endif()
 set_target_properties(videoplugin PROPERTIES
         C_STANDARD 99
@@ -322,48 +363,10 @@ set_target_properties(videoplugin PROPERTIES
         )
 
 
-add_library(x11plugin SHARED
-        lib/gks/plugin/x11plugin.c
-        )
-target_link_libraries(x11plugin PUBLIC GR::GKS)
-if(NOT Freetype_FOUND)
-    target_compile_definitions(x11plugin PRIVATE NO_FT)
-endif()
-if (X11_FOUND)
-    if (NOT TARGET X11::X11)
-        add_library(X11::X11 UNKNOWN IMPORTED)
-        if(NOT Xft_FOUND)
-            target_compile_definitions(x11plugin PRIVATE NO_XFT)
-        else()
-            target_link_libraries(x11plugin PUBLIC Fontconfig::Fontconfig)
-        endif()
-        set_target_properties(X11::X11 PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${X11_INCLUDE_DIR}/"
-            IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-            IMPORTED_LOCATION "${X11_X11_LIB}"
-            INTERFACE_LINK_LIBRARIES "${X11_Xft_LIB};${X11_Xt_LIB}")
-    endif()
-    target_link_libraries(x11plugin PUBLIC X11::X11)
-else()
-    target_compile_definitions(x11plugin PRIVATE NO_X11)
-    target_compile_definitions(x11plugin PRIVATE NO_XFT)
-endif()
-set_target_properties(x11plugin PROPERTIES
-        C_STANDARD 90
-        C_EXTENSIONS OFF
-        C_STANDARD_REQUIRED ON
-        CXX_STANDARD 11
-        CXX_EXTENSIONS OFF
-        CXX_STANDARD_REQUIRED ON
-        PREFIX ""
-        SUFFIX "${GR_PLUGIN_SUFFIX}"
-        )
-
-
 add_library(pgfplugin SHARED
         lib/gks/plugin/pgfplugin.c
         )
-target_link_libraries(pgfplugin PUBLIC GR::GKS)
+target_link_libraries(pgfplugin PUBLIC gks_static)
 target_link_libraries(pgfplugin PUBLIC Libpng::Libpng)
 set_target_properties(pgfplugin PROPERTIES
         C_STANDARD 90
@@ -372,12 +375,14 @@ set_target_properties(pgfplugin PROPERTIES
         PREFIX ""
         SUFFIX "${GR_PLUGIN_SUFFIX}"
         )
+string(APPEND GR_REPORT "- pgfplugin:\n")
+string(APPEND GR_REPORT "\tTeX output: Yes\n")
 
 
 add_library(htmplugin SHARED
         lib/gks/plugin/htmplugin.c
         )
-target_link_libraries(htmplugin PUBLIC GR::GKS)
+target_link_libraries(htmplugin PUBLIC gks_static)
 target_link_libraries(htmplugin PUBLIC Libpng::Libpng)
 set_target_properties(htmplugin PROPERTIES
         C_STANDARD 90
@@ -386,16 +391,94 @@ set_target_properties(htmplugin PROPERTIES
         PREFIX ""
         SUFFIX "${GR_PLUGIN_SUFFIX}"
         )
+string(APPEND GR_REPORT "- htmplugin:\n")
+string(APPEND GR_REPORT "\tHTML output: Yes\n")
+
+add_library(wmfplugin SHARED
+        lib/gks/plugin/wmfplugin.c
+        )
+target_link_libraries(wmfplugin PUBLIC gks_static)
+set_target_properties(wmfplugin PROPERTIES
+        C_STANDARD 90
+        C_EXTENSIONS OFF
+        C_STANDARD_REQUIRED ON
+        PREFIX ""
+        SUFFIX "${GR_PLUGIN_SUFFIX}"
+        )
+string(APPEND GR_REPORT "- wmfplugin:\n")
+string(APPEND GR_REPORT "\tWMF output: Yes\n")
+
+
+add_library(gsplugin SHARED
+        lib/gks/plugin/gsplugin.c
+        )
+target_link_libraries(gsplugin PUBLIC gks_static)
+if(NOT TARGET X11::X11)
+    string(APPEND GR_REPORT "- gsplugin: No (X11 not found)\n")
+    target_compile_definitions(gsplugin PRIVATE NO_GS)
+elseif(NOT Gs_FOUND)
+    string(APPEND GR_REPORT "- gsplugin: No (ghostscript not found)\n")
+    target_compile_definitions(gsplugin PRIVATE NO_GS)
+else()
+    target_link_libraries(gsplugin PUBLIC X11::X11)
+    target_link_libraries(gsplugin PUBLIC Gs::Gs)
+    string(APPEND GR_REPORT "- gsplugin:\n")
+    string(APPEND GR_REPORT "\tPNG outout: Yes\n")
+    string(APPEND GR_REPORT "\tBMP outout: Yes\n")
+    string(APPEND GR_REPORT "\tJPEG outout: Yes\n")
+    string(APPEND GR_REPORT "\tTiff outout: Yes\n")
+endif()
+set_target_properties(gsplugin PROPERTIES
+        C_STANDARD 90
+        C_EXTENSIONS OFF
+        C_STANDARD_REQUIRED ON
+        PREFIX ""
+        SUFFIX "${GR_PLUGIN_SUFFIX}"
+        )
+
+
+add_library(figplugin SHARED
+        lib/gks/plugin/figplugin.c
+        )
+target_link_libraries(figplugin PUBLIC gks_static)
+target_link_libraries(figplugin PUBLIC Libpng::Libpng)
+set_target_properties(figplugin PROPERTIES
+        C_STANDARD 90
+        C_EXTENSIONS OFF
+        C_STANDARD_REQUIRED ON
+        PREFIX ""
+        SUFFIX "${GR_PLUGIN_SUFFIX}"
+        )
+string(APPEND GR_REPORT "- figplugin:\n")
+string(APPEND GR_REPORT "\tXfig output: Yes\n")
+
+
+add_library(svgplugin SHARED
+        lib/gks/plugin/svgplugin.c
+        )
+target_link_libraries(svgplugin PUBLIC gks_static)
+target_link_libraries(svgplugin PUBLIC Libpng::Libpng)
+set_target_properties(svgplugin PROPERTIES
+        C_STANDARD 90
+        C_EXTENSIONS OFF
+        C_STANDARD_REQUIRED ON
+        PREFIX ""
+        SUFFIX "${GR_PLUGIN_SUFFIX}"
+        )
+string(APPEND GR_REPORT "- svgplugin:\n")
+string(APPEND GR_REPORT "\tSVG output: Yes\n")
 
 
 add_library(glplugin SHARED
         lib/gks/plugin/glplugin.c
         )
-target_link_libraries(glplugin PUBLIC GR::GKS)
-target_link_libraries(glplugin PUBLIC OpenGL::GL)
-if(Glfw_FOUND)
+target_link_libraries(glplugin PUBLIC gks_static)
+if(Glfw_FOUND AND OpenGL_FOUND)
+    string(APPEND GR_REPORT "- glplugin: Yes\n")
     target_link_libraries(glplugin PUBLIC Glfw::Glfw)
+    target_link_libraries(glplugin PUBLIC OpenGL::GL)
 else()
+    string(APPEND GR_REPORT "- glplugin: No (GLFW / OpenGL not found)\n")
     target_compile_definitions(glplugin PRIVATE NO_GLFW)
 endif()
 if(NOT Freetype_FOUND)
@@ -417,10 +500,12 @@ set_target_properties(glplugin PROPERTIES
 add_library(zmqplugin SHARED
         lib/gks/plugin/zmqplugin.c
         )
-target_link_libraries(zmqplugin PUBLIC GR::GKS)
+target_link_libraries(zmqplugin PUBLIC gks_static)
 if(Zeromq_FOUND)
+    string(APPEND GR_REPORT "- zmqplugin: Yes\n")
     target_link_libraries(zmqplugin PUBLIC Zeromq::Zeromq)
 else()
+    string(APPEND GR_REPORT "- zmqplugin: No (ZeroMQ not found)\n")
     target_compile_definitions(zmqplugin PRIVATE NO_ZMQ)
 endif()
 set_target_properties(zmqplugin PROPERTIES
@@ -432,76 +517,33 @@ set_target_properties(zmqplugin PROPERTIES
         )
 
 
-add_library(wmfplugin SHARED
-        lib/gks/plugin/wmfplugin.c
+add_library(x11plugin SHARED
+        lib/gks/plugin/x11plugin.c
         )
-target_link_libraries(wmfplugin PUBLIC GR::GKS)
-set_target_properties(wmfplugin PROPERTIES
-        C_STANDARD 90
-        C_EXTENSIONS OFF
-        C_STANDARD_REQUIRED ON
-        PREFIX ""
-        SUFFIX "${GR_PLUGIN_SUFFIX}"
-        )
-
-
-add_library(gsplugin SHARED
-        lib/gks/plugin/gsplugin.c
-        )
-target_link_libraries(gsplugin PUBLIC GR::GKS)
-if(X11_FOUND AND Gs_FOUND)
-    target_link_libraries(gsplugin PUBLIC X11::X11)
+target_link_libraries(x11plugin PUBLIC gks_static)
+if(NOT Freetype_FOUND)
+    target_compile_definitions(x11plugin PRIVATE NO_FT)
 endif()
-if( NOT Gs_FOUND OR  NOT X11_FOUND)
-   target_compile_definitions(gsplugin PRIVATE NO_GS)
+if(TARGET X11::X11)
+    if(Xft_FOUND AND Fontconfig_FOUND)
+        target_link_libraries(x11plugin PUBLIC Fontconfig::Fontconfig)
+    else()
+        target_compile_definitions(x11plugin PRIVATE NO_XFT)
+    endif()
+    target_link_libraries(x11plugin PUBLIC X11::X11)
+    string(APPEND GR_REPORT "- x11plugin: Yes\n")
 else()
-    target_link_libraries(gsplugin PUBLIC Gs::Gs)
+    target_compile_definitions(x11plugin PRIVATE NO_X11)
+    target_compile_definitions(x11plugin PRIVATE NO_XFT)
+    string(APPEND GR_REPORT "- x11plugin: No (X11 / Xft / Xt not found)\n")
 endif()
-set_target_properties(gsplugin PROPERTIES
+set_target_properties(x11plugin PROPERTIES
         C_STANDARD 90
         C_EXTENSIONS OFF
         C_STANDARD_REQUIRED ON
-        PREFIX ""
-        SUFFIX "${GR_PLUGIN_SUFFIX}"
-        )
-
-
-add_library(figplugin SHARED
-        lib/gks/plugin/figplugin.c
-        )
-target_link_libraries(figplugin PUBLIC GR::GKS)
-target_link_libraries(figplugin PUBLIC Libpng::Libpng)
-set_target_properties(figplugin PROPERTIES
-        C_STANDARD 90
-        C_EXTENSIONS OFF
-        C_STANDARD_REQUIRED ON
-        PREFIX ""
-        SUFFIX "${GR_PLUGIN_SUFFIX}"
-        )
-
-
-add_library(gtkplugin SHARED
-        lib/gks/plugin/gtkplugin.c
-        )
-target_link_libraries(gtkplugin PUBLIC GR::GKS)
-set_target_properties(gtkplugin PROPERTIES
-        C_STANDARD 90
-        C_EXTENSIONS OFF
-        C_STANDARD_REQUIRED ON
-        PREFIX ""
-        SUFFIX "${GR_PLUGIN_SUFFIX}"
-        )
-
-
-add_library(svgplugin SHARED
-        lib/gks/plugin/svgplugin.c
-        )
-target_link_libraries(svgplugin PUBLIC GR::GKS)
-target_link_libraries(svgplugin PUBLIC Libpng::Libpng)
-set_target_properties(svgplugin PROPERTIES
-        C_STANDARD 90
-        C_EXTENSIONS OFF
-        C_STANDARD_REQUIRED ON
+        CXX_STANDARD 11
+        CXX_EXTENSIONS OFF
+        CXX_STANDARD_REQUIRED ON
         PREFIX ""
         SUFFIX "${GR_PLUGIN_SUFFIX}"
         )
@@ -510,10 +552,12 @@ set_target_properties(svgplugin PROPERTIES
 add_library(qt5plugin SHARED
         lib/gks/plugin/qt5plugin.cxx
         )
-target_link_libraries(qt5plugin PUBLIC GR::GKS)
+target_link_libraries(qt5plugin PUBLIC gks_static)
 if(Qt5Widgets_FOUND)
+    string(APPEND GR_REPORT "- qt5plugin: Yes\n")
     target_link_libraries(qt5plugin PUBLIC Qt5::Widgets)
 else()
+    string(APPEND GR_REPORT "- qt5plugin: No (Qt5 not found)\n")
     target_compile_definitions(qt5plugin PRIVATE NO_QT5)
 endif()
 set_target_properties(qt5plugin PROPERTIES
@@ -523,24 +567,41 @@ set_target_properties(qt5plugin PROPERTIES
         PREFIX ""
         SUFFIX "${GR_PLUGIN_SUFFIX}"
         )
+
+
 add_library(qtplugin SHARED
         lib/gks/plugin/qtplugin.cxx
         )
-target_link_libraries(qtplugin PUBLIC GR::GKS)
-
-
+target_link_libraries(qtplugin PUBLIC gks_static)
 if(Qt4_FOUND)
+    string(APPEND GR_REPORT "- qtplugin: Yes\n")
     target_link_libraries(qtplugin PUBLIC Qt4::QtGui)
 else()
+    string(APPEND GR_REPORT "- qtplugin: No (Qt4 not found)\n")
     target_compile_definitions(qtplugin PRIVATE NO_QT)
 endif()
 set_target_properties(qtplugin PROPERTIES
-    CXX_STANDARD 11
-    CXX_EXTENSIONS OFF
-    CXX_STANDARD_REQUIRED ON
-    PREFIX ""
-    SUFFIX "${GR_PLUGIN_SUFFIX}"
-    )
+        CXX_STANDARD 11
+        CXX_EXTENSIONS OFF
+        CXX_STANDARD_REQUIRED ON
+        PREFIX ""
+        SUFFIX "${GR_PLUGIN_SUFFIX}"
+        )
+
+
+add_library(gtkplugin SHARED
+        lib/gks/plugin/gtkplugin.c
+        )
+target_link_libraries(gtkplugin PUBLIC gks_static)
+set_target_properties(gtkplugin PROPERTIES
+        C_STANDARD 90
+        C_EXTENSIONS OFF
+        C_STANDARD_REQUIRED ON
+        PREFIX ""
+        SUFFIX "${GR_PLUGIN_SUFFIX}"
+        )
+string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
+
 
 if(Qt4_FOUND)
     add_library(qt4gr SHARED lib/gr/qtgr/grwidget.cxx)
@@ -556,7 +617,7 @@ if(Qt4_FOUND)
                 AUTORCC OFF
                 )
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx
-                COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GRDIR)\" ${QT4_MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx
+                COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT4_MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx
                 DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.cxx)
         target_sources(qt5gr PUBLIC
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx)
@@ -569,6 +630,7 @@ if(Qt4_FOUND)
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h)
     endif()
 endif()
+
 
 if(Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
     add_library(qt5gr SHARED lib/gr/qtgr/grwidget.cxx)
@@ -584,7 +646,7 @@ if(Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
                 AUTORCC OFF
                 )
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx
-                COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GRDIR)\" ${QT5_MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx
+                COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT5_MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx
                 DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.cxx)
         target_sources(qt5gr PUBLIC
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx)
@@ -598,34 +660,42 @@ if(Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
     endif()
 endif()
 
+
+string(APPEND GR_REPORT "\nGKS applications:\n")
+
+
 if(APPLE)
-add_executable(GKSTerm MACOSX_BUNDLE
-        lib/gks/quartz/GKSTerm.m
-        lib/gks/quartz/main.m
-        lib/gks/quartz/GKSView.m
-        )
-target_link_libraries(GKSTerm PUBLIC Zeromq::Zeromq)
-target_link_libraries(GKSTerm PUBLIC GR::GKS
-        "-framework CoreGraphics -framework CoreFoundation -framework CoreVideo -framework Cocoa")
-file(READ "lib/gks/quartz/Info.plist" GKS_TERM_INFO_PLIST)
-string(REPLACE "\${EXECUTABLE_NAME}" "GKSTerm" GKS_TERM_INFO_PLIST ${GKS_TERM_INFO_PLIST})
-string(REPLACE "\${PRODUCT_NAME}" "GKSTerm" GKS_TERM_INFO_PLIST ${GKS_TERM_INFO_PLIST})
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/Info.plist" ${GKS_TERM_INFO_PLIST})
-add_custom_command(TARGET GKSTerm POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/Info.plist ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Info.plist
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Info.plist
-        BYPRODUCTS GKSTerm.app/Contents/Info.plist
-        )
-add_custom_command(TARGET GKSTerm POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj
-        BYPRODUCTS GKSTerm.app/Contents/Resources/English.lproj
-        )
-add_custom_command(TARGET GKSTerm POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/GKSTerm.icns ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/GKSTerm.icns
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/GKSTerm.icns
-        BYPRODUCTS GKSTerm.app/Contents/Resources/GKSTerm.icns
-        )
+    if(Zeromq_FOUND)
+        add_executable(GKSTerm MACOSX_BUNDLE
+                lib/gks/quartz/GKSTerm.m
+                lib/gks/quartz/main.m
+                lib/gks/quartz/GKSView.m
+                )
+        target_link_libraries(GKSTerm PUBLIC Zeromq::Zeromq)
+        target_link_libraries(GKSTerm PUBLIC gks_static
+                "-framework CoreGraphics -framework CoreFoundation -framework CoreVideo -framework Cocoa")
+
+        add_custom_command(TARGET GKSTerm POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj
+                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/English.lproj
+                BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/GKSTerm.app/Contents/Resources/English.lproj
+                )
+        target_sources(GKSTerm PRIVATE lib/gks/quartz/GKSTerm.icns)
+        set_source_files_properties(lib/gks/quartz/GKSTerm.icns PROPERTIES
+                MACOSX_PACKAGE_LOCATION Resources/
+                )
+        set_target_properties(GKSTerm PROPERTIES
+                MACOSX_BUNDLE_BUNDLE_NAME "GKSTerm"
+                MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.GKSTerm"
+                MACOSX_BUNDLE_ICON_FILE "GKSTerm"
+                MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
+                )
+        set(GKSTerm_MACOSX_BUNDLE_SIGNATURE "GKST")
+        set(GKSTerm_MACOSX_MAIN_NIB_FILE "MainMenu")
+        string(APPEND GR_REPORT "- GKSTerm: Yes\n")
+    else()
+        string(APPEND GR_REPORT "- GKSTerm: No (ZeroMQ not found)\n")
+    endif()
 endif()
 
 
@@ -634,7 +704,7 @@ if(Qt4_FOUND OR (Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND))
             lib/gks/qt/gksqt.cxx
             lib/gks/qt/gkswidget.cxx
             lib/gks/qt/gksserver.cxx)
-    target_link_libraries(gksqt PUBLIC GR::GKS)
+    target_link_libraries(gksqt PUBLIC gks_static)
     if(Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
         target_link_libraries(gksqt PUBLIC Qt5::Widgets Qt5::Core Qt5::Network)
     elseif(Qt4_FOUND)
@@ -654,10 +724,10 @@ if(Qt4_FOUND OR (Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND))
             set(MOC_INCLUDE_FLAGS ${QT4_MOC_INCLUDE_FLAGS})
         endif()
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_gkswidget.cxx
-                COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GRDIR)\" ${MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gkswidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_gkswidget.cxx
+                COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gkswidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_gkswidget.cxx
                 DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gkswidget.h)
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_gksserver.cxx
-                COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GRDIR)\" ${MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksserver.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_gksserver.cxx
+                COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksserver.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_gksserver.cxx
                 DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksserver.h)
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx
                 COMMAND ${QT_RCC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc -o ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx
@@ -677,27 +747,69 @@ if(Qt4_FOUND OR (Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND))
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc)
     endif()
     if(APPLE)
-        add_custom_command(TARGET gksqt POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/Info.plist ${CMAKE_CURRENT_BINARY_DIR}/gksqt.app/Contents/Info.plist
-                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/Info.plist
-                BYPRODUCTS gksqt.app/Contents/Info.plist
+        target_sources(gksqt PRIVATE lib/gks/qt/gksqt.icns)
+        set_source_files_properties(lib/gks/qt/gksqt.icns PROPERTIES
+                MACOSX_PACKAGE_LOCATION Resources/
                 )
-        add_custom_command(TARGET gksqt POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.icns ${CMAKE_CURRENT_BINARY_DIR}/gksqt.app/Contents/Resources/gksqt.icns
-                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.icns
-                BYPRODUCTS gksqt.app/Contents/Resources/gksqt.icns
+        set_target_properties(gksqt PROPERTIES
+                MACOSX_BUNDLE_BUNDLE_NAME "gksqt"
+                MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.gksqt"
+                MACOSX_BUNDLE_ICON_FILE "gksqt"
+                MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
                 )
+        set(gksqt_MACOSX_BUNDLE_SIGNATURE "gksqt")
+        set(gksqt_MACOSX_MAIN_NIB_FILE "")
     endif()
+    string(APPEND GR_REPORT "- gksqt: Yes\n")
+else()
+    string(APPEND GR_REPORT "- gksqt: No (Qt4 / Qt5 not found)\n")
 endif()
+
+
+if (GR_BUILD_DEMOS)
+    add_executable(gksdemo
+            lib/gks/demo.c
+            )
+    target_link_libraries(gksdemo PUBLIC gks_static)
+    set_target_properties(gksdemo PROPERTIES
+            C_STANDARD 90
+            C_EXTENSIONS OFF
+            C_STANDARD_REQUIRED ON
+            )
+
+    add_executable(grdemo
+            lib/gr/demo.c
+            )
+    target_link_libraries(grdemo PUBLIC GR::GR)
+    set_target_properties(grdemo PROPERTIES
+            C_STANDARD 90
+            C_EXTENSIONS OFF
+            C_STANDARD_REQUIRED ON
+            )
+endif ()
 
 
 if(GR_INSTALL)
     include(GNUInstallDirs)
-    install(TARGETS gr gks_static gks_shared gr3 cairoplugin figplugin glplugin gsplugin gtkplugin htmplugin pgfplugin svgplugin videoplugin wmfplugin x11plugin zmqplugin qtplugin qt5plugin
+    install(TARGETS gks_static gks_shared gr_static gr_shared cairoplugin figplugin glplugin gsplugin gtkplugin htmplugin pgfplugin svgplugin videoplugin wmfplugin x11plugin zmqplugin qtplugin qt5plugin
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
             )
+    if(TARGET gr3_static)
+        install(TARGETS gr3_static
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                )
+    endif()
+    if(TARGET gr3_shared)
+        install(TARGETS gr3_shared
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                )
+    endif()
     if(TARGET gr3platform)
         install(TARGETS gr3platform
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -736,30 +848,4 @@ if(GR_INSTALL)
             )
 endif()
 
-
-if (GR_BUILD_DEMOS)
-    add_executable(gksdemo
-            lib/gks/demo.c
-            )
-    target_link_libraries(gksdemo PUBLIC GR::GKS)
-    set_target_properties(gksdemo PROPERTIES
-            C_STANDARD 90
-            C_EXTENSIONS OFF
-            C_STANDARD_REQUIRED ON
-            CXX_STANDARD 11
-            CXX_EXTENSIONS OFF
-            CXX_STANDARD_REQUIRED ON
-            )
-    add_executable(grdemo
-            lib/gr/demo.c
-            )
-    target_link_libraries(grdemo PUBLIC GR::GR)
-    set_target_properties(grdemo PROPERTIES
-            C_STANDARD 90
-            C_EXTENSIONS OFF
-            C_STANDARD_REQUIRED ON
-            CXX_STANDARD 11
-            CXX_EXTENSIONS OFF
-            CXX_STANDARD_REQUIRED ON
-            )
-endif ()
+message(${GR_REPORT})

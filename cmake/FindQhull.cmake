@@ -2,7 +2,7 @@
 # FindQhull
 # ---------
 #
-# Find the Qhull geometry renderer and library.
+# Find the Qhull library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -30,37 +30,39 @@ if(NOT QHULL_INCLUDE_DIR)
 endif()
 
 if(NOT QHULL_LIBRARY)
-    find_library(QHULL_LIBRARY NAMES qhull)
+    find_library(QHULL_LIBRARY NAMES ${GR_THIRDPARTY_LIBRARY_PREFIX}qhull${GR_THIRDPARTY_LIBRARY_SUFFIX} qhull)
 endif()
 
-if(NOT CMAKE_CROSSCOMPILING AND QHULL_INCLUDE_DIR)
-    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/qhull_version_tmp.c" "
-    #include \"qhull/libqhull.h\"
+if(NOT QHULL_VERSION_STRING AND QHULL_INCLUDE_DIR AND QHULL_LIBRARY)
+    if (CMAKE_CROSSCOMPILING)
+        # Qhull version cannot be queried when cross compiling
+        set(QHULL_VERSION_STRING "Unknown")
+    else()
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/qhull_get_version.c" "
+        #include \"qhull/libqhull.h\"
 
-    int main(void)
-    {
-        printf(\"%s\", qh_version2);
-        return 0;
-    }
-    ")
+        int main(void)
+        {
+            printf(\"%s\", qh_version2);
+            return 0;
+        }
+        ")
 
-    try_compile(COMPILE_SUCCESS "${CMAKE_CURRENT_BINARY_DIR}/qhull_version" "${CMAKE_CURRENT_BINARY_DIR}/qhull_version_tmp.c"
-            LINK_LIBRARIES ${QHULL_LIBRARY} m
-            COPY_FILE "${CMAKE_CURRENT_BINARY_DIR}/qhull_version/exe"
-            CMAKE_FLAGS
-            "-DINCLUDE_DIRECTORIES=${QHULL_INCLUDE_DIR}"
-            )
-    if(COMPILE_SUCCESS)
-        execute_process(COMMAND "${CMAKE_CURRENT_BINARY_DIR}/qhull_version/exe" OUTPUT_VARIABLE QHULL_H_TEXT)
-
-        if(NOT QHULL_VERSION_STRING)
+        try_compile(COMPILE_SUCCESS "${CMAKE_CURRENT_BINARY_DIR}/qhull_get_version" "${CMAKE_CURRENT_BINARY_DIR}/qhull_get_version.c"
+                LINK_LIBRARIES ${QHULL_LIBRARY} m
+                COPY_FILE "${CMAKE_CURRENT_BINARY_DIR}/qhull_get_version/exe"
+                CMAKE_FLAGS
+                "-DINCLUDE_DIRECTORIES=${QHULL_INCLUDE_DIR}"
+                )
+        if(COMPILE_SUCCESS)
+            execute_process(COMMAND "${CMAKE_CURRENT_BINARY_DIR}/qhull_get_version/exe" OUTPUT_VARIABLE QHULL_H_TEXT)
             string(REGEX REPLACE "[ \tA-Za-z]*([0-9]+.[0-9]+.[0-9]+).*" "\\1" QHULL_VERSION_STRING ${QHULL_H_TEXT})
+        else()
+            set(QHULL_VERSION_STRING "Unknown")
         endif()
     endif()
 endif()
-if(NOT QHULL_VERSION_STRING)
-    string(CONCAT QHULL_VERSION_STRING "Unknown")
-endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Qhull
         VERSION_VAR QHULL_VERSION_STRING

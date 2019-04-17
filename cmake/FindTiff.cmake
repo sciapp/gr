@@ -2,7 +2,7 @@
 # FindTiff
 # --------
 #
-# Find the Tiff viewer renderer and library.
+# Find the Tiff library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -18,7 +18,7 @@
 # This module will set the following variables in your project:
 #
 # ``TIFF_INCLUDE_DIRS``
-#   where to find tiff/fitz.h, etc.
+#   where to find tiff.h, etc.
 # ``TIFF_LIBRARIES``
 #   the libraries to link against to use Tiff.
 # ``Tiff_FOUND``
@@ -30,18 +30,15 @@ if(NOT TIFF_INCLUDE_DIR)
 endif()
 
 if(NOT TIFF_LIBRARY)
-    find_library(TIFF_LIBRARY NAMES tiff)
+    find_library(TIFF_LIBRARY NAMES ${GR_THIRDPARTY_LIBRARY_PREFIX}tiff${GR_THIRDPARTY_LIBRARY_SUFFIX} tiff)
 endif()
 
 find_path(TIFF_VERSION_DIR tiffvers.h)
-if(TIFF_VERSION_DIR)
+if(TIFF_INCLUDE_DIR AND TIFF_VERSION_DIR)
     if(NOT TIFF_VERSION_STRING)
         file(READ ${TIFF_VERSION_DIR}/tiffvers.h TIFF_H_TEXT)
         string(REGEX REPLACE ".*#define TIFFLIB_VERSION_STR \"[ \tA-Za-z,]*([0-9]+.[0-9]+.[0-9]+).*\".*" "\\1" TIFF_VERSION_STRING ${TIFF_H_TEXT})
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT TIFF_VERSION_STRING "Unknown")
 endif()
 
 

@@ -2,7 +2,7 @@
 # FindPixman
 # ----------
 #
-# Find the Pixman renderer and library.
+# Find the Pixman library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -27,7 +27,7 @@ if(NOT PIXMAN_LIBRARY)
 endif()
 
 if(NOT PIXMAN_INCLUDE_DIR)
-    find_path(PIXMAN_INCLUDE_DIR pixman-1)
+    find_path(PIXMAN_INCLUDE_DIR pixman-1/pixman-version.h)
 endif()
 
 if(PIXMAN_INCLUDE_DIR)
@@ -38,9 +38,6 @@ if(PIXMAN_INCLUDE_DIR)
         string(REGEX REPLACE ".*#define PIXMAN_VERSION_MICRO[ \t]*([0-9]+).*" "\\1" PIXMAN_MICRO_STRING ${PIXMAN_H_TEXT})
         string(CONCAT PIXMAN_VERSION_STRING "${PIXMAN_MAJOR_STRING}" "${PIXMAN_MINOR_STRING}" "${PIXMAN_MICRO_STRING}")
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT PIXMAN_VERSION_STRING "Unknown")
 endif()
 
 

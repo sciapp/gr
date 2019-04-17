@@ -30,7 +30,7 @@ if(NOT FONTCONFIG_INCLUDE_DIR)
 endif()
 
 if(NOT FONTCONFIG_LIBRARY)
-    find_library(FONTCONFIG_LIBRARY NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}fontconfig${CMAKE_STATIC_LIBRARY_SUFFIX} fontconfig)
+    find_library(FONTCONFIG_LIBRARY NAMES fontconfig)
 endif()
 
 if(FONTCONFIG_INCLUDE_DIR)
@@ -41,9 +41,6 @@ if(FONTCONFIG_INCLUDE_DIR)
         string(REGEX REPLACE ".*#define FC_REVISION[ \t]*([0-9]+).*" "\\1" FC_REVISION_STRING ${FONTCONFIG_H_TEXT})
         string(CONCAT FONTCONFIG_VERSION_STRING "${FC_MAJOR_STRING}" "${FC_MINOR_STRING}" "${FC_REVISION_STRING}")
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT FONTCONFIG_VERSION_STRING "Unknown")
 endif()
 
 include(FindPackageHandleStandardArgs)

@@ -2,7 +2,7 @@
 # FindFfmpeg
 # ----------
 #
-# Find the Ffmpeg video renderer and library.
+# Find the Ffmpeg video library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -75,10 +75,8 @@ if(FFMPEG_VERSION_DIR)
         string(REGEX REPLACE ".*#define LIBAVCODEC_VERSION_MICRO[ \t]*([0-9]+).*" "\\1" FFMPEG_MICRO_STRING ${FFMPEG_H_TEXT})
         string(CONCAT FFMPEG_VERSION_STRING "${FFMPEG_MAJOR_STRING}" "${FFMPEG_MINOR_STRING}" "${FFMPEG_MICRO_STRING}")
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT FFMPEG_VERSION_STRING "Unknown")
 endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Ffmpeg
         VERSION_VAR FFMPEG_VERSION_STRING

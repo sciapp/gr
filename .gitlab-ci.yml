@@ -54,7 +54,7 @@ ubuntu-cmake-self-contained:
     - make -C 3rdparty default extras
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - cd ..
@@ -81,7 +81,7 @@ ubuntu-cmake-system-dependencies:
     - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON -DGR_USE_BUNDLED_LIBRARIES=OFF
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
     - make
 
 debian-self-contained:
@@ -116,7 +116,7 @@ debian-cmake-self-contained:
     - make -C 3rdparty default extras
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - cd ..
@@ -143,7 +143,7 @@ debian-cmake-system-dependencies:
     - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON -DGR_USE_BUNDLED_LIBRARIES=OFF
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
     - make
 
 centos7-self-contained:
@@ -178,7 +178,7 @@ centos7-cmake-self-contained:
     - make -C 3rdparty default extras
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - mv ../install/lib64/ ../install/lib/
@@ -206,7 +206,7 @@ centos7-cmake-system-dependencies:
     - make -C 3rdparty default TARGETS="qhull"
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
 
 centos6-32bit-self-contained:
@@ -241,7 +241,7 @@ centos6-32bit-cmake-self-contained:
     - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm make -C 3rdparty default extras
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - cd ..
@@ -268,7 +268,7 @@ centos6-32bit-cmake-system-dependencies:
     - make -C 3rdparty default TARGETS="qhull"
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
 
 centos6-64bit-self-contained:
@@ -303,7 +303,7 @@ centos6-64bit-cmake-self-contained:
     - make -C 3rdparty default extras
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - mv ../install/lib64/ ../install/lib/
@@ -331,7 +331,7 @@ centos6-64bit-cmake-system-dependencies:
     - make -C 3rdparty default TARGETS="qhull"
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
 
 windows-32bit-cross:
@@ -390,8 +390,6 @@ windows-32bit-cmake-cross:
     - wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-i686.tar.gz
     - tar xf qt5-runtime-Windows-i686.tar.gz
     - cd ..
-    - mkdir qt5-runtime-Windows-i686/cmake/
-    - mv FindQt5.cmake qt5-runtime-Windows-i686/cmake/
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
     - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
@@ -413,7 +411,7 @@ windows-32bit-cmake-cross:
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/i686-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-i686/cmake -DGR_MANUAL_MOC_AND_RCC=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/i686-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-i686/cmake -DGR_MANUAL_MOC_AND_RCC=ON -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - cd ..
@@ -490,7 +488,7 @@ windows-64bit-cmake-cross:
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DBUILD_SHARED_LIBS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - cd ..

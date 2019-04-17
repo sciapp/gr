@@ -2,7 +2,7 @@
 # FindBZip2
 # ---------
 #
-# Find the BZip2 data compressing library.
+# Find the BZip2 compression library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -30,7 +30,7 @@ if(NOT BZip2_INCLUDE_DIR)
 endif()
 
 if(NOT BZip2_LIBRARY)
-    find_library(BZip2_LIBRARY NAMES ${GR_THIRDPARTY_LIBRARY_PREFIX}bz2${GR_THIRDPARTY_LIBRARY_SUFFIX} bz2 )
+    find_library(BZip2_LIBRARY NAMES ${GR_THIRDPARTY_LIBRARY_PREFIX}bz2${GR_THIRDPARTY_LIBRARY_SUFFIX} bz2)
 endif()
 
 if (BZip2_INCLUDE_DIR)
@@ -38,9 +38,6 @@ if (BZip2_INCLUDE_DIR)
         file(READ ${BZip2_INCLUDE_DIR}/bzlib.h BZIP2_H_TEXT)
         string(REGEX REPLACE ".*version ([0-9]+.[0-9]+.[0-9]).*" "\\1" BZIP2_VERSION_STRING ${BZIP2_H_TEXT})
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT BZIP2_VERSION_STRING "Unknown")
 endif()
 
 include(FindPackageHandleStandardArgs)

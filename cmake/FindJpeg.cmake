@@ -2,7 +2,7 @@
 # FindJpeg
 # --------
 #
-# Find the native JPEG includes and library This module defines.
+# Find the JPEG library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -47,8 +47,6 @@ if(JPEG_INCLUDE_DIR AND JCONFIG_INCLUDE_DIR)
             set(JPEG_VERSION_STRING "${JPEG_MAJOR_STRING}.${JPEG_MINOR_STRING}")
         elseif (JCONFIG_H_TEXT MATCHES "#define JPEG_LIB_VERSION")
             string(REGEX REPLACE ".*#define JPEG_LIB_VERSION[ \t]*([0-9]+).*" "\\1" JPEG_VERSION_STRING ${JCONFIG_H_TEXT})
-        else()
-            string(CONCAT JPEG_VERSION_STRING "Unknown")
         endif()
     endif()
 endif()

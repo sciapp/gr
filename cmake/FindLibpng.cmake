@@ -2,7 +2,7 @@
 # FindLibpng
 # ----------
 #
-# Find the Libpng png support renderer and library.
+# Find the PNG library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -18,7 +18,7 @@
 # This module will set the following variables in your project:
 #
 # ``LIBPNG_INCLUDE_DIRS``
-#   where to find libpng16/png.h, etc.
+#   where to find png.h, etc.
 # ``LIBPNG_LIBRARIES``
 #   the libraries to link against to use Libpng.
 # ``Libpng_FOUND``
@@ -39,9 +39,6 @@ if(LIBPNG_INCLUDE_DIR)
         file(READ ${LIBPNG_INCLUDE_DIR}/png.h LIBPNG_H_TEXT)
         string(REGEX REPLACE ".*#define PNG_LIBPNG_VER_STRING \"([0-9]+.[0-9]+.[0-9]+)\".*" "\\1" LIBPNG_VERSION_STRING ${LIBPNG_H_TEXT})
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT LIBPNG_VERSION_STRING "Unknown")
 endif()
 
 

@@ -2,7 +2,7 @@
 # FindZeromq
 # ----------
 #
-# Find the Zeromq messaging support renderer and library.
+# Find the Zeromq messaging support library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -41,9 +41,6 @@ if(ZEROMQ_INCLUDE_DIR)
         string(REGEX REPLACE ".*#define ZMQ_VERSION_PATCH[ \t]*([0-9]+).*" "\\1" ZMQ_PATCH_STRING ${ZEROMQ_H_TEXT})
         string(CONCAT ZEROMQ_VERSION_STRING "${ZMQ_MAJOR_STRING}" "${ZMQ_MINOR_STRING}" "${ZMQ_PATCH_STRING}")
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT ZEROMQ_VERSION_STRING "Unknown")
 endif()
 
 

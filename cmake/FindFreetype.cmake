@@ -2,7 +2,7 @@
 # FindFreetype
 # ------------
 #
-# Find the Freetype font renderer and library.
+# Find the Freetype font renderer library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^

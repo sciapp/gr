@@ -2,7 +2,7 @@
 # FindGs
 # ------
 #
-# Find the Ghostscript postscript and pdf renderer and library.
+# Find the Ghostscript postscript and pdf renderer library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -30,7 +30,7 @@ if(NOT GS_INCLUDE_DIR)
 endif()
 
 if(NOT GS_LIBRARY)
-    find_library(GS_LIBRARY NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}gs${CMAKE_STATIC_LIBRARY_SUFFIX} gs )
+    find_library(GS_LIBRARY NAMES gs)
 endif()
 
 find_path(GS_VERSION_DIR ghostscript/gdevdsp.h)
@@ -41,10 +41,8 @@ if(GS_VERSION_DIR)
         string(REGEX REPLACE ".*#define DISPLAY_VERSION_MINOR[ \t]*([0-9]+).*" "\\1" GS_MINOR_STRING ${GS_H_TEXT})
         string(CONCAT GS_VERSION_STRING "${GS_MAJOR_STRING}" "${GS_MINOR_STRING}")
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT GS_VERSION_STRING "Unknown")
 endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Gs
         VERSION_VAR GS_VERSION_STRING

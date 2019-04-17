@@ -2,7 +2,7 @@
 # FindZlib
 # --------
 #
-# Find the Zlib dataformat renderer and library.
+# Find the Z compression library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -38,11 +38,7 @@ if(ZLIB_INCLUDE_DIR)
         file(READ ${ZLIB_INCLUDE_DIR}/zlib.h ZLIB_H_TEXT)
         string(REGEX REPLACE ".*#define ZLIB_VERSION \"([0-9]+.[0-9]+.[0-9]+)\".*" "\\1" ZLIB_VERSION_STRING ${ZLIB_H_TEXT})
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT ZLIB_VERSION_STRING "Unknown")
 endif()
-
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Zlib

@@ -2,7 +2,7 @@
 # FindGlfw
 # --------
 #
-# Find the Glfw api creating library.
+# Find the GLFW library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -41,9 +41,6 @@ if(GLFW_INCLUDE_DIR)
         string(REGEX REPLACE ".*#define GLFW_VERSION_REVISION[ \t]*([0-9]+).*" "\\1" GLFW_REVISION_STRING ${GLFW_H_TEXT})
         string(CONCAT GLFW_VERSION_STRING "${GLFW_MAJOR_STRING}" "${GLFW_MINOR_STRING}" "${GLFW_REVISION_STRING}")
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT Glfw_VERSION_STRING "Unknown")
 endif()
 
 include(FindPackageHandleStandardArgs)

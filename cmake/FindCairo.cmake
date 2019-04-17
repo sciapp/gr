@@ -2,7 +2,7 @@
 # FindCairo
 # ---------
 #
-# Find the Cairo renderer and library.
+# Find the Cairo library.
 #
 # Imported targets
 # ^^^^^^^^^^^^^^^^
@@ -32,7 +32,7 @@ if(NOT CAIRO_INCLUDE_DIR)
 endif()
 
 if(NOT CAIRO_LIBRARY)
-    find_library(CAIRO_LIBRARY NAMES cairo)
+    find_library(CAIRO_LIBRARY NAMES ${GR_THIRDPARTY_LIBRARY_PREFIX}cairo${GR_THIRDPARTY_LIBRARY_SUFFIX} cairo)
 endif()
 
 find_path(CAIRO_VERSION_DIR cairo/cairo-version.h)
@@ -44,9 +44,6 @@ if(CAIRO_VERSION_DIR)
         string(REGEX REPLACE ".*#define CAIRO_VERSION_MICRO[ \t]*([0-9]+).*" "\\1" CAIRO_MICRO_STRING ${CAIRO_H_TEXT})
         string(CONCAT CAIRO_VERSION_STRING "${CAIRO_MAJOR_STRING}" "${CAIRO_MINOR_STRING}" "${CAIRO_MICRO_STRING}")
     endif()
-else()
-    message(STATUS "No version found!")
-    string(CONCAT CAIRO_VERSION_STRING "Unknown")
 endif()
 
 include(FindPackageHandleStandardArgs)
