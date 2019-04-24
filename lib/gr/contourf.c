@@ -11,6 +11,10 @@
 #define NAN (0.0 / 0.0)
 #endif
 
+#ifndef INF
+#define INF (1.0 / 0.0)
+#endif
+
 #define DEFAULT_CONTOUR_LINES 16 /* default number of contour lines */
 
 #define EDGE_N (1 << 0)
@@ -100,6 +104,10 @@ static double padded_array_lookup(const double *z, size_t nx, size_t ny, long i,
     {
       return NAN;
     }
+  if (z[j * nx + i] != z[j * nx + i])
+    {
+      return -INF; /* set NAN values to -inf */
+    }
   return z[j * nx + i];
 }
 
@@ -137,6 +145,8 @@ static unsigned char get_bitmask(const double *z, size_t nx, size_t ny, long i, 
 static double interpolate(double v1, double v2, double contour)
 {
   double d = v2 - v1;
+  if (v2 == -INF) return 0;
+  if (v1 == -INF) return 1;
   if (d == 0)
     {
       return 0;
