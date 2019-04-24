@@ -1155,7 +1155,7 @@ static string_map_t *plot_valid_keys_map = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot merge ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", "array_index", NULL};
+const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", "plot_id", "array_index", NULL};
 const char *plot_merge_clear_keys[] = {"series", NULL};
 
 
@@ -3218,6 +3218,10 @@ error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, uns
       return NO_ERROR;
     }
   arg_first_value(arg, "A", NULL, &args_old_array_length);
+  if (next_hierarchy_level_max_id <= args_old_array_length)
+    {
+      return NO_ERROR;
+    }
   logger((stderr, "Increase array for key \"%s\" from %d to %d\n", *hierarchy_name_ptr, args_old_array_length,
           next_hierarchy_level_max_id));
   error = arg_increase_array(arg, next_hierarchy_level_max_id - args_old_array_length);
