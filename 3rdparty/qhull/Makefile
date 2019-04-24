@@ -42,7 +42,7 @@ $(PREFIX)/lib/libqhull.a: libqhull.a
 	mkdir -p $(PREFIX)/lib/
 	mkdir -p $(PREFIX)/include/qhull
 	cp libqhull.a $(PREFIX)/lib/
-	cp *.h libqhull.h $(PREFIX)/include/qhull/
+	cp *.h $(PREFIX)/include/qhull/
 
 install: $(PREFIX)/lib/libqhull.a
 

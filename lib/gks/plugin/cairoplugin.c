@@ -1,12 +1,21 @@
+
 #ifdef NO_FT
 #ifndef NO_CAIRO
 #define NO_CAIRO
 #endif
 #endif
 
-#ifndef NO_CAIRO
+#ifdef _WIN32
+#include <windows.h>
+
+#ifndef DLLEXPORT
+#define DLLEXPORT __declspec(dllexport)
+#endif
+#endif
 
 #include <stdio.h>
+
+#ifndef NO_CAIRO
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
@@ -55,13 +64,6 @@ typedef __int64 int64_t;
 #include "gks.h"
 #include "gkscore.h"
 
-#ifdef _WIN32
-
-#include <windows.h>
-#ifndef DLLEXPORT
-#define DLLEXPORT __declspec(dllexport)
-#endif
-#endif
 
 #ifdef __cplusplus
 extern "C"
