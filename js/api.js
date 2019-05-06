@@ -152,6 +152,7 @@ function GR(canvas_id) {
     this.dumpmeta_json = gr_dumpmeta_json;
     this.inputmeta = gr_inputmeta;
     this.mergemeta = gr_mergemeta;
+    this.switchmeta = gr_switchmeta;
 
     // set canvas and context
     Module.set_canvas(canvas_id);
@@ -1129,6 +1130,12 @@ gr_dumpmeta_json = function(args, file) {
     return result;
 };
 
+gr_switchmeta_c = Module.cwrap('gr_switchmeta', 'number', ['number']);
+gr_switchmeta = function(id) {
+    result = gr_switchmeta_c(id);
+    return result;
+};
+
 gr_get_stdout_c = Module.cwrap('gr_get_stdout', 'number', []);
 gr_get_stdout = function(args, string) {
     result = gr_get_stdout_c(args, string);
@@ -1186,4 +1193,4 @@ gr_panzoom = function(x, y, zoom, xmin, xmax, ymin, ymax) {
     freearray(__ymin);
     freearray(__ymax);
     return result;
-}
+};
