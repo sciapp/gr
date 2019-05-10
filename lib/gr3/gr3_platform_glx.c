@@ -112,6 +112,23 @@ struct platform *gr3_platform_initGL_dynamic_(void (*log_callback)(const char *)
           /* Failed creation of a pbuffer may cause X errors, which we need to ignore */
           XSynchronize(display, 1);
           x_error_handler = XSetErrorHandler(_gr3_ignore_x_errors);
+          /* First try fbconfigs with 24bit color depth, as these are most likely to succeed */
+          for (i = 0; i < fbcount && !pbuffer; i++)
+            {
+              int red_size = 0;
+              int green_size = 0;
+              int blue_size = 0;
+              int alpha_size = 0;
+              fbconfig = fbc[i];
+              glXGetFBConfigAttrib(display, fbconfig, GLX_RED_SIZE, &red_size);
+              glXGetFBConfigAttrib(display, fbconfig, GLX_GREEN_SIZE, &green_size);
+              glXGetFBConfigAttrib(display, fbconfig, GLX_BLUE_SIZE, &blue_size);
+              glXGetFBConfigAttrib(display, fbconfig, GLX_ALPHA_SIZE, &alpha_size);
+              if (red_size == 8 && green_size == 8 && blue_size == 8 && alpha_size == 0)
+                {
+                  pbuffer = glXCreatePbuffer(display, fbconfig, pbuffer_attribs);
+                }
+            }
           for (i = 0; i < fbcount && !pbuffer; i++)
             {
               fbconfig = fbc[i];
