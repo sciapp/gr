@@ -828,6 +828,37 @@ static void create_window(void)
 
 #endif
 
+/**
+ * Write an empty page or image.
+ *
+ * This is currently being ignored for most workstation types, but for memory
+ * output this will ensure that the memory is initialized to white and, if
+ * resizable memory is used, that the size is set correctly.
+ */
+static void write_empty_page(void)
+{
+  if (p->wtype == 143 && p->mem)
+    {
+      int width = cairo_image_surface_get_width(p->surface);
+      int height = cairo_image_surface_get_height(p->surface);
+      unsigned char *mem;
+      if (p->mem_resizable)
+        {
+          int *mem_info_ptr = (int *)p->mem;
+          unsigned char **mem_ptr_ptr = (unsigned char **)(mem_info_ptr + 3);
+          mem_info_ptr[0] = width;
+          mem_info_ptr[1] = height;
+          *mem_ptr_ptr = (unsigned char *)gks_realloc(*mem_ptr_ptr, width * height * 4);
+          mem = *mem_ptr_ptr;
+        }
+      else
+        {
+          mem = p->mem;
+        }
+      memset(mem, 255, height * width * 4);
+    }
+}
+
 static void open_page(void)
 {
   char *env;
@@ -864,6 +895,8 @@ static void open_page(void)
     }
   else
     p->cr = cairo_create(p->surface);
+
+  write_empty_page();
 }
 
 static void close_page(void)
@@ -1685,7 +1718,14 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       if (ia[1] & GKS_K_WRITE_PAGE_FLAG)
         {
           lock();
-          if (!p->empty) write_page();
+          if (!p->empty)
+            {
+              write_page();
+            }
+          else
+            {
+              write_empty_page();
+            }
           unlock();
         }
       break;
