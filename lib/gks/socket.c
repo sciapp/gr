@@ -149,7 +149,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
                     char *chars, void **ptr)
 {
   ws_state_list *wss;
-  const char *command, *env;
+  const char *command = NULL, *env;
   int retry_count;
   char *cmd = NULL;
 
@@ -187,7 +187,7 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
         {
           if ((wss->s = connect_socket(retry_count != 10)) == -1)
             {
-              if (retry_count == 1)
+              if (command != NULL && retry_count == 1)
                 {
                   if (start(command) != 0) gks_perror("could not auto-start GKS Qt application");
                 }
