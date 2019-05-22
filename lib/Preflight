@@ -31,6 +31,10 @@ qt4_qmake_names=("qmake-qt4" "qmake")
 qt4_qmake_dirs=("/usr/lib/${qt_arch}-linux-gnu/qt4/bin" "/usr/bin" "/usr/lib${qt_lib_suffix}/qt4/bin")
 qt5_qmake_names=("qmake-qt5" "qmake")
 qt5_qmake_dirs=("/usr/lib/${qt_arch}-linux-gnu/qt5/bin" "/usr/bin" "/usr/lib${qt_lib_suffix}/qt5/bin")
+if [ -d /usr/lib/arm-linux-gnueabihf/qt5 ]; then
+  qt5_qmake_names=("qmake")
+  qt5_qmake_dirs=("/usr/lib/arm-linux-gnueabihf/qt5/bin" "/usr/bin")
+fi
 gtkdefs=""
 x11defs=""
 xftdefs=""
