@@ -42,6 +42,7 @@ extern "C"
   DLLEXPORT void gr_inqtext(double, double, char *, double *, double *);
   DLLEXPORT void gr_fillarea(int, double *, double *);
   DLLEXPORT void gr_cellarray(double, double, double, double, int, int, int, int, int, int, int *);
+  DLLEXPORT void gr_polarcellarray(double, double, double, double, double, double, int, int, int, int, int, int, int *);
   DLLEXPORT void gr_gdp(int, double *, double *, int, int, int *);
   DLLEXPORT void gr_spline(int, double *, double *, int, int);
   DLLEXPORT void gr_gridit(int, double *, double *, double *, int, int, double *, double *, double *);

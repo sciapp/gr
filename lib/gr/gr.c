@@ -1744,6 +1744,177 @@ void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, 
     }
 }
 
+/*!
+ * Display a two dimensional color index array mapped to a disk using polar
+ * coordinates.
+ *
+ * \param[in] x_org X coordinate of the disk center in world coordinates
+ * \param[in] y_org Y coordinate of the disk center in world coordinates
+ * \param[in] phimin start angle of the disk sector in degrees
+ * \param[in] phimax end angle of the disk sector in degrees
+ * \param[in] rmin inner radius of the punctured disk in world coordinates
+ * \param[in] rmax outer radius of the disk in world coordinates
+ * \param[in] dimphi Phi (X) dimension of the color index array
+ * \param[in] dimr R (Y) dimension of the color index array
+ * \param[in] scol number of leading columns in the color index array
+ * \param[in] srow number of leading rows in the color index array
+ * \param[in] ncol total number of columns in the color index array
+ * \param[in] nrow total number of rows in the color index array
+ * \param[in] color color index array
+ *
+ * The two dimensional color index array is mapped to the resulting image by
+ * interpreting the X-axis of the array as the angle and the Y-axis as the raidus.
+ * The center point of the resulting disk is located at `x_org`, `y_org` and the
+ * radius of the disk is `rmax`.
+ *
+ * To draw a contiguous array as a complete disk use:
+ *
+ *     gr_polarcellarray(x_org, y_org, 0, 360, 0, rmax, dimphi, dimr, 1, 1, dimphi, dimr, color)
+ *
+ * The additional parameters to the function can be used to further control the
+ * mapping from polar to cartesian coordinates.
+ *
+ * If `rmin` is greater than 0 the input data is mapped to a punctured disk (or
+ * annulus) with an inner radius of `rmin` and an outer radius `rmax`. If `rmin`
+ * is greater than `rmax` the Y-axis of the array is reversed.
+ *
+ * The parameter `phimin` and `phimax` can be used to map the data to a sector
+ * of the (punctured) disk starting at `phimin` and ending at `phimax`. If
+ * `phimin` is greater than `phimax` the X-axis is reversed. The visible sector
+ * is the one starting in mathematically positive direction (counterclockwise)
+ * at the smaller angle and ending at the larger angle. An example of the four
+ * possible options can be found below:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * +-----------+-----------+---------------------------------------------------+
+ * |**phimin** |**phimax** |**Result**                                         |
+ * +-----------+-----------+---------------------------------------------------+
+ * |90         |270        |Left half visible, mapped counterclockwise         |
+ * +-----------+-----------+---------------------------------------------------+
+ * |270        |90         |Left half visible, mapped clockwise                |
+ * +-----------+-----------+---------------------------------------------------+
+ * |-90        |90         |Right half visible, mapped counterclockwise        |
+ * +-----------+-----------+---------------------------------------------------+
+ * |90         |-90        |Right half visible, mapped clockwise               |
+ * +-----------+-----------+---------------------------------------------------+
+ *
+ * \endverbatim
+ *
+ * `scol` and `srow` can be used to specify a (1-based) starting column and row
+ * in the `color` array. `ncol` and `nrow` specify the actual dimension of the
+ * array in the memory whereof `dimphi` and `dimr` values are mapped to the disk.
+ *
+ */
+void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax, double rmin, double rmax, int dimphi,
+                       int dimr, int scol, int srow, int ncol, int nrow, int *color)
+{
+  int x, y, color_ind, r_ind, phi_ind, phi_reverse, phi_wrapped_reverse, r_reverse, size = 2000;
+  int *img_data;
+  double r, phi, tmp, center = size / 2.;
+
+  phimin = arc(phimin);
+  phimax = arc(phimax);
+
+  if (!(scol >= 1 && srow >= 1 && scol + ncol - 1 <= dimphi && srow + nrow - 1 <= dimr))
+    {
+      fprintf(stderr, "Dimensions of color index array are invalid.\n");
+      return;
+    }
+
+  if (phimin == phimax)
+    {
+      fprintf(stderr, "Invalid angles specified.\n");
+      return;
+    }
+
+  if (rmin == rmax || rmin < 0 || rmax < 0)
+    {
+      fprintf(stderr, "Invalid radii specified.\n");
+      return;
+    }
+
+  if ((r_reverse = rmin > rmax))
+    {
+      tmp = rmin;
+      rmin = rmax;
+      rmax = tmp;
+    }
+
+  phi_reverse = phimin > phimax;
+
+  /* Wrap phimin and phimax to [0, 2Pi] */
+  phimin -= floor(phimin / M_PI / 2) * 2 * M_PI;
+  phimax -= floor(phimax / M_PI / 2) * 2 * M_PI;
+
+  if (fabs(phimin - phimax) < 1e-8) /* Avoid empty images when drawing a full circle */
+    {
+      phimax += 2 * M_PI;
+    }
+
+  if ((phi_wrapped_reverse = phimin > phimax))
+    {
+      tmp = phimin;
+      phimin = phimax;
+      phimax = tmp;
+    }
+
+  if (phi_reverse != phi_wrapped_reverse) /* Drawing in negative direction */
+    {
+      phimin += 2 * M_PI;
+    }
+
+  img_data = (int *)xmalloc(size * size * sizeof(int));
+
+  for (y = 0; y < size; y++)
+    {
+      for (x = 0; x < size; x++)
+        {
+          double px = (x - center) / center;
+          double py = (y - center) / center;
+          r = sqrt(px * px + py * py);
+          phi = atan2(py, px);
+          if (phi < min(phimin, phimax))
+            {
+              phi += 2 * M_PI;
+            }
+
+          /* map phi from [phimin, phimax] to [0, 1] */
+          phi = (phi - phimin) / (phimax - phimin);
+
+          if (r * rmax < rmin || r >= 1 || phi < 0 || phi > 1)
+            {
+              img_data[y * size + x] = 0;
+              continue;
+            }
+          r = (r * rmax - rmin) / (rmax - rmin);
+          r_ind = (int)(r * dimr);
+          phi_ind = (int)(phi * dimphi) % dimphi;
+          if (r_reverse)
+            {
+              r_ind = dimr - r_ind - 1;
+            }
+          if (phi_wrapped_reverse)
+            {
+              phi_ind = dimphi - phi_ind - 1;
+            }
+          color_ind = color[(r_ind + srow - 1) * ncol + phi_ind + scol - 1];
+          if (color_ind >= 0 && color_ind < MAX_COLOR)
+            {
+              img_data[y * size + x] = (255 << 24) + rgb[color_ind];
+            }
+          else
+            {
+              /* invalid color indices in input data result in transparent pixel */
+              img_data[y * size + x] = 0;
+            }
+        }
+    }
+
+  gr_drawimage(x_org - rmax, x_org + rmax, y_org + rmax, y_org - rmax, size, size, img_data, 0);
+  free(img_data);
+}
+
 void gr_gdp(int n, double *x, double *y, int primid, int ldr, int *datrec)
 {
   int npoints = n;
