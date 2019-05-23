@@ -1849,7 +1849,8 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
    * - `key`: Pressed key (as string)
    * zoom:
    * - `x`, `y`: start point
-   * - `angle_delta`: mouse wheel rotation angle in eighths of a degree (double type)
+   * - `angle_delta`: mouse wheel rotation angle in eighths of a degree, can be replaced by factor (double type)
+   * - `factor`: zoom factor, can be replaced by angle_delta (double type)
    * box zoom:
    * - `left`, `top`, `right`, `bottom`: coordinates of a box selection
    * - `keep_aspect_ratio`: if set to `1`, the aspect ratio of the gr window is preserved (defaults to `1`)
@@ -1911,7 +1912,7 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
 
       if (subplot_args != NULL)
         {
-          double angle_delta;
+          double angle_delta, factor;
           int xshift, yshift;
           args_values(subplot_args, "viewport", "D", &viewport);
 
@@ -1926,6 +1927,19 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
               logger((stderr, "Zoom to ndc focus point (%lf, %lf), angle_delta %lf\n", focus_x, focus_y, angle_delta));
               gr_meta_args_push(subplot_args, "panzoom", "ddd", focus_x, focus_y,
                                 1.0 - INPUTMETA_ANGLE_DELTA_FACTOR * angle_delta);
+
+              return 1;
+            }
+          else if (args_values(input_args, "factor", "d", &factor))
+            {
+              double focus_x, focus_y;
+
+              viewport_mid_x = (viewport[0] + viewport[1]) / 2.0;
+              viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
+              focus_x = ndc_x - viewport_mid_x;
+              focus_y = ndc_y - viewport_mid_y;
+              logger((stderr, "Zoom to ndc focus point (%lf, %lf), factor %lf\n", focus_x, focus_y, factor));
+              gr_meta_args_push(subplot_args, "panzoom", "ddd", focus_x, focus_y, factor);
 
               return 1;
             }
