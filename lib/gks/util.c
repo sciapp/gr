@@ -2086,7 +2086,7 @@ void gks_filepath(char *path, char *defpath, const char *type, int page, int ind
   p = strrchr(path, '.');
   if (p) *p = '\0';
 
-  if (page > 1)
+  if (page > 1 && !gks_getenv("GKS_DISABLE_PAGE_SUFFIX"))
     {
       strcat(path, "-");
       sprintf(number, "%d", page);
