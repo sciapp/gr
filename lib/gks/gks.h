@@ -505,6 +505,7 @@ extern "C"
   DLLEXPORT void gks_close_ws(int wkid);
   DLLEXPORT void gks_activate_ws(int wkid);
   DLLEXPORT void gks_deactivate_ws(int wkid);
+  DLLEXPORT void gks_configure_ws(int wkid);
   DLLEXPORT void gks_clear_ws(int wkid, int cofl);
   DLLEXPORT void gks_redraw_seg_on_ws(int wkid);
   DLLEXPORT void gks_update_ws(int wkid, int regfl);
@@ -644,6 +645,7 @@ extern "C"
   DLLEXPORT int gclosews(Gint);
   DLLEXPORT int gactivatews(Gint);
   DLLEXPORT int gdeactivatews(Gint);
+  DLLEXPORT int gconfigurews(Gint);
   DLLEXPORT int gclearws(Gint, Gclrflag);
   DLLEXPORT int gupdatews(Gint, Gregen);
   DLLEXPORT int gmessage(Gint, Gchar *);

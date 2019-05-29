@@ -242,6 +242,9 @@ const char *gks_function_name(int routine)
     case 204:
       name = "SET_COORD_XFORM";
       break;
+    case 205:
+      name = "CONFIGURE_WS";
+      break;
     case 250:
       name = "BEGIN_SELECTION";
       break;

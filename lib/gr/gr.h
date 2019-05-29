@@ -34,6 +34,7 @@ extern "C"
   DLLEXPORT void gr_closews(int);
   DLLEXPORT void gr_activatews(int);
   DLLEXPORT void gr_deactivatews(int);
+  DLLEXPORT void gr_configurews(void);
   DLLEXPORT void gr_clearws(void);
   DLLEXPORT void gr_updatews(void);
   DLLEXPORT void gr_polyline(int, double *, double *);

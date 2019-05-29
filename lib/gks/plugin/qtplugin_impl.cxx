@@ -1251,6 +1251,12 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       p->empty = 0;
       break;
 
+    case 205: /* configure ws */
+      f_arr_1[0] = p->mwidth;
+      f_arr_2[0] = p->mheight;
+      i_arr[0] = p->width;
+      i_arr[1] = p->height;
+      return;
     default:;
     }
 

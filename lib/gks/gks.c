@@ -851,6 +851,51 @@ void gks_deactivate_ws(int wkid)
     gks_report_error(DEACTIVATE_WS, 3);
 }
 
+void gks_configure_ws(int wkid)
+{
+  gks_list_t *element;
+  ws_list_t *ws;
+
+
+  if (state == GKS_K_WSOP || state == GKS_K_WSAC)
+    {
+      if (wkid > 0)
+        {
+          if ((element = gks_list_find(open_ws, wkid)) != NULL)
+            {
+              i_arr[0] = wkid;
+
+              /* call the device driver link routine */
+              gks_ddlk(CONFIGURE_WS, 1, 1, 1, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+
+              ws = (ws_list_t *)element->ptr;
+              if ((element = gks_list_find(av_ws_types, ws->wtype)) != NULL)
+                {
+                  ws_descr_t *p = (ws_descr_t *)element->ptr;
+
+                  p->sizex = f_arr_1[0];
+                  p->sizey = f_arr_2[0];
+                  p->unitsx = i_arr[0];
+                  p->unitsy = i_arr[1];
+                }
+              else
+                /* specified workstation type is invalid */
+                gks_report_error(CONFIGURE_WS, 22);
+            }
+          else
+            /* specified workstation is not open */
+            gks_report_error(CONFIGURE_WS, 25);
+        }
+      else
+        /* specified workstation identifier is invalid */
+        gks_report_error(CONFIGURE_WS, 20);
+    }
+  else
+    /* GKS not in proper state. GKS must be either in the state
+       WSOP or in the state WSAC */
+    gks_report_error(CONFIGURE_WS, 6);
+}
+
 void gks_clear_ws(int wkid, int cofl)
 {
   if (state == GKS_K_WSOP || state == GKS_K_WSAC)
@@ -3088,6 +3133,15 @@ int gdeactivatews(Gint workstation_id)
   int wkid = workstation_id;
 
   gks_deactivate_ws(wkid);
+
+  return gks_errno;
+}
+
+int gconfigurews(Gint workstation_id)
+{
+  int wkid = workstation_id;
+
+  gks_configure_ws(wkid);
 
   return gks_errno;
 }

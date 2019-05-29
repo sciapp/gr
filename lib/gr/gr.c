@@ -1311,6 +1311,19 @@ void gr_deactivatews(int workstation_id)
   gks_deactivate_ws(workstation_id);
 }
 
+static void configure(int workstation_id, void *dummy)
+{
+  gks_configure_ws(workstation_id);
+}
+
+/*!
+ * Configure the specified workstation.
+ */
+void gr_configurews(void)
+{
+  foreach_activews((void (*)(int, void *))configure, (void *)NULL);
+}
+
 static void clear(int workstation_id, int *clearflag)
 {
   int wkid = workstation_id, state, errind, conid, wtype, wkcat;
