@@ -731,10 +731,17 @@ static void seg_xform_rel(double *x, double *y) {}
   [savePanel setNameFieldStringValue:[[self window] title]];
   [savePanel setDirectoryURL:[NSURL fileURLWithPath:[[NSUserDefaults standardUserDefaults]
                                                         objectForKey:@"CurrentSaveFolder"]]];
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 101500
   [savePanel beginSheetModalForWindow:_window
                     completionHandler:^(NSInteger result) {
                       [self savePanelDidEnd:savePanel returnCode:result contextInfo:saveFormatPopUp];
                     }];
+#else
+  [savePanel beginSheetModalForWindow:cWindow
+                    completionHandler:^(NSInteger result) {
+                      [self savePanelDidEnd:savePanel returnCode:result contextInfo:saveFormatPopUp];
+                    }];
+#endif
 }
 
 - (void)savePanelDidEnd:(NSSavePanel *)theSheet returnCode:(int)returnCode contextInfo:(NSPopUpButton *)formatPopUp {

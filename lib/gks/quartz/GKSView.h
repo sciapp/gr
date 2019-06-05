@@ -46,7 +46,6 @@ typedef struct
                  :(int)dimx
                  :(int *)colia
                  :(int)true_color;
-
 - (void)text:(double)px:(double)py:(char *)text;
 - (_FontInfo)set_font:(int)font;
 - (NSString *)stringForText:(const char *)text withFontFamilyID:(int)family;
