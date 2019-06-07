@@ -1862,7 +1862,14 @@ void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax,
 
   if (fabs(phimin - phimax) < 1e-8) /* Avoid empty images when drawing a full circle */
     {
-      phimax += 2 * M_PI;
+      if (!phi_reverse)
+        {
+          phimax += 2 * M_PI;
+        }
+      else
+        {
+          phimin += 2 * M_PI;
+        }
     }
 
   if ((phi_wrapped_reverse = phimin > phimax))
