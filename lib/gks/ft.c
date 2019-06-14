@@ -55,10 +55,10 @@ static FT_Face font_face_cache[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NU
                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
-/* TODO: Add actual fallback fonts for non-Latin languages, mathematical symbols, etc. */
-static const char *fallback_font_list[] = {};
+/* TODO: Add fallback fonts for non-Latin languages */
+static const char *fallback_font_list[] = {"LatinModern-Math.otf"};
 
-static FT_Face fallback_font_faces[] = {};
+static FT_Face fallback_font_faces[] = {NULL};
 static const int NUM_FALLBACK_FACES = sizeof(fallback_font_faces) / sizeof(fallback_font_faces[0]);
 
 const static int map[] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
