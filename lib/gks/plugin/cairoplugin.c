@@ -597,9 +597,9 @@ static void text_routine(double x, double y, int nchars, char *chars)
       for (j = 0; j < width; j++)
         {
           double alpha = alpha_pixels[i * width + j];
-          bgra_pixels[i * stride + j * 4 + 0] = blue * alpha / 255;
-          bgra_pixels[i * stride + j * 4 + 1] = green * alpha / 255;
-          bgra_pixels[i * stride + j * 4 + 2] = red * alpha / 255;
+          bgra_pixels[i * stride + j * 4 + 0] = blue * alpha;
+          bgra_pixels[i * stride + j * 4 + 1] = green * alpha;
+          bgra_pixels[i * stride + j * 4 + 2] = red * alpha;
           bgra_pixels[i * stride + j * 4 + 3] = alpha;
         }
     }
