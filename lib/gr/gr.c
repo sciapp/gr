@@ -8403,6 +8403,15 @@ void gr_drawimage(double xmin, double xmax, double ymin, double ymax, int width,
     {
       w = max(width, 500);
       h = max(height, 500);
+      linear_xform lx_original = lx;
+      lx.xmin = xmin;
+      lx.xmax = xmax;
+      lx.a = (xmax - xmin) / log10(xmax / xmin);
+      lx.b = xmin - lx.a * log10(xmin);
+      lx.ymin = ymin;
+      lx.ymax = ymax;
+      lx.c = (ymax - ymin) / log10(ymax / ymin);
+      lx.d = ymin - lx.c * log10(ymin);
       imgT = (int *)xmalloc(w * h * sizeof(int));
       for (i = 0; i < w; i++)
         {
@@ -8430,6 +8439,19 @@ void gr_drawimage(double xmin, double xmax, double ymin, double ymax, int width,
                 y = 0;
               imgT[i + j * w] = img[(int)min(x * width, width - 1) + (int)min((1 - y) * height, height - 1) * width];
             }
+        }
+      lx = lx_original;
+      if (lx.scale_options & OPTION_FLIP_X)
+        {
+          double t = xmin;
+          xmin = xmax;
+          xmax = t;
+        }
+      if (lx.scale_options & OPTION_FLIP_Y)
+        {
+          double t = ymin;
+          ymin = ymax;
+          ymax = t;
         }
       gks_draw_image(x_lin(xmin), y_lin(ymax), x_lin(xmax), y_lin(ymin), w, h, imgT);
       free(imgT);
