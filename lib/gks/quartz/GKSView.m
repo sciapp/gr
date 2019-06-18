@@ -725,12 +725,20 @@ static void seg_xform_rel(double *x, double *y) {}
       NSLog(@"Failed to load ExtendSavePanel.nib");
       return;
     }
-  [saveFormatPopUp selectItemWithTitle:[[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFormat"]];
+  NSString *saveFormat = [[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFormat"];
+  if (!saveFormat)
+    {
+      saveFormat = @"PNG";
+    }
+  [saveFormatPopUp selectItemWithTitle:saveFormat];
 
   [savePanel setAccessoryView:extendSavePanelView];
   [savePanel setNameFieldStringValue:[[self window] title]];
-  [savePanel setDirectoryURL:[NSURL fileURLWithPath:[[NSUserDefaults standardUserDefaults]
-                                                        objectForKey:@"CurrentSaveFolder"]]];
+  NSString *saveFolder = [[NSUserDefaults standardUserDefaults] objectForKey:@"CurrentSaveFolder"];
+  if (saveFolder)
+    {
+      [savePanel setDirectoryURL:[NSURL fileURLWithPath:saveFolder]];
+    }
 #if __MAC_OS_X_VERSION_MAX_ALLOWED < 101500
   [savePanel beginSheetModalForWindow:_window
                     completionHandler:^(NSInteger result) {
@@ -769,7 +777,8 @@ static void seg_xform_rel(double *x, double *y) {}
           filename = [filename stringByAppendingPathExtension:@"tiff"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[self bounds]];
+          bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
+          [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
           [self unlockFocus];
 
           [[bitmap TIFFRepresentationUsingCompression:compression factor:1.0] writeToFile:filename atomically:YES];
@@ -781,7 +790,8 @@ static void seg_xform_rel(double *x, double *y) {}
           filename = [filename stringByAppendingPathExtension:@"png"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[self bounds]];
+          bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
+          [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -794,7 +804,6 @@ static void seg_xform_rel(double *x, double *y) {}
 
           CGImageDestinationFinalize(dr);
 
-          [bitmap release];
           CFRelease(dr);
 
           CFRelease(url);
@@ -804,7 +813,8 @@ static void seg_xform_rel(double *x, double *y) {}
           filename = [filename stringByAppendingPathExtension:@"jpg"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[self bounds]];
+          bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
+          [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -827,7 +837,6 @@ static void seg_xform_rel(double *x, double *y) {}
 
           CFRelease(mSaveMetaAndOpts);
 
-          [bitmap release];
           CFRelease(dr);
 
           CFRelease(url);
@@ -837,7 +846,8 @@ static void seg_xform_rel(double *x, double *y) {}
           filename = [filename stringByAppendingPathExtension:@"jp2"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[self bounds]];
+          bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
+          [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -860,7 +870,6 @@ static void seg_xform_rel(double *x, double *y) {}
 
           CFRelease(mSaveMetaAndOpts);
 
-          [bitmap release];
           CFRelease(dr);
 
           CFRelease(url);
@@ -870,7 +879,8 @@ static void seg_xform_rel(double *x, double *y) {}
           filename = [filename stringByAppendingPathExtension:@"gif"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[self bounds]];
+          bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
+          [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -883,17 +893,17 @@ static void seg_xform_rel(double *x, double *y) {}
 
           CGImageDestinationFinalize(dr);
 
-          [bitmap release];
           CFRelease(dr);
 
           CFRelease(url);
         }
-      else if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"BMP"])
+      else if ([[formatPopUp titleOfSelectedItem] isEqualToString:@"Windows BMP"])
         {
           filename = [filename stringByAppendingPathExtension:@"bmp"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[self bounds]];
+          bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
+          [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -906,7 +916,6 @@ static void seg_xform_rel(double *x, double *y) {}
 
           CGImageDestinationFinalize(dr);
 
-          [bitmap release];
           CFRelease(dr);
 
           CFRelease(url);
@@ -916,7 +925,8 @@ static void seg_xform_rel(double *x, double *y) {}
           filename = [filename stringByAppendingPathExtension:@"pic"];
 
           [self lockFocus];
-          bitmap = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[self bounds]];
+          bitmap = [self bitmapImageRepForCachingDisplayInRect:[self bounds]];
+          [self cacheDisplayInRect:[self bounds] toBitmapImageRep:bitmap];
           [self unlockFocus];
 
           CGImageRef image = [bitmap CGImage];
@@ -929,7 +939,6 @@ static void seg_xform_rel(double *x, double *y) {}
 
           CGImageDestinationFinalize(dr);
 
-          [bitmap release];
           CFRelease(dr);
 
           CFRelease(url);
