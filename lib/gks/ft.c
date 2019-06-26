@@ -121,6 +121,18 @@ static FT_Long ft_max(FT_Long a, FT_Long b)
   return a > b ? a : b;
 }
 
+int gks_ft_bearing_x_direction = -1;
+
+DLLEXPORT void gks_ft_set_bearing_x_direction(int direction)
+{
+  gks_ft_bearing_x_direction = direction;
+}
+
+DLLEXPORT void gks_ft_inq_bearing_x_direction(int *direction)
+{
+  *direction = gks_ft_bearing_x_direction;
+}
+
 /* load a glyph into the slot and compute bearing */
 static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT_Vector *pen, FT_Bool vertical,
                           FT_Matrix *rotation, FT_Vector *bearing, FT_Int halign, FT_GlyphSlot *glyph_slot_ptr)
@@ -191,7 +203,7 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT
   else
     {
       if (bearing->x != 0) FT_Vector_Transform(bearing, rotation);
-      pen->x -= bearing->x;
+      pen->x += gks_ft_bearing_x_direction * bearing->x;
       pen->y -= bearing->y;
       bearing->x = 64 * face->glyph->bitmap_left;
       bearing->y = 64 * face->glyph->bitmap_top;
@@ -442,6 +454,157 @@ void *gks_ft_get_face(int textfont)
     }
   return (void *)face;
 }
+
+
+int gks_ft_get_metrics(int font, double fontsize, unsigned int codepoint, unsigned int dpi, double *width,
+                       double *height, double *depth, double *advance, double *bearing, double *xmin, double *xmax,
+                       double *ymin, double *ymax)
+{
+  FT_Face face;
+  FT_Error error;
+  int hinting_factor = 8;
+  int i;
+
+  gks_ft_init();
+
+  for (i = -1; i < NUM_FALLBACK_FACES; i++)
+    {
+      if (i < 0)
+        {
+          face = (FT_Face)gks_ft_get_face(font);
+        }
+      else
+        {
+          face = fallback_font_faces[i];
+        }
+      if (!face)
+        {
+          continue;
+        }
+      error = FT_Set_Char_Size(face, (long)(fontsize * 64), 0, (dpi * hinting_factor), dpi);
+      if (error)
+        {
+          continue;
+        }
+
+      FT_Set_Transform(face, NULL, NULL);
+
+      FT_UInt glyph_index;
+
+      glyph_index = FT_Get_Char_Index(face, codepoint);
+      if (!glyph_index)
+        {
+          continue;
+        }
+      error = FT_Load_Glyph(face, glyph_index, 2);
+
+      if (error)
+        {
+          continue;
+        }
+      FT_Glyph newglyph;
+      error = FT_Get_Glyph(face->glyph, &newglyph);
+      if (error)
+        {
+          continue;
+        }
+      if (width)
+        {
+          *width = face->glyph->metrics.width / hinting_factor / 64.0;
+        }
+      if (height)
+        {
+          *height = face->glyph->metrics.horiBearingY / 64.0;
+        }
+      if (depth)
+        {
+          *depth = face->glyph->metrics.height / 64.0 - *height;
+        }
+      if (advance)
+        {
+          *advance = face->glyph->linearHoriAdvance / hinting_factor / 65536.0;
+        }
+      if (bearing)
+        {
+          *bearing = face->glyph->metrics.horiBearingX / hinting_factor / 64.0;
+        }
+
+      FT_BBox cbox;
+      FT_Glyph_Get_CBox(newglyph, FT_GLYPH_BBOX_SUBPIXELS, &cbox);
+      if (xmin)
+        {
+          *xmin = cbox.xMin / 64.0 / hinting_factor;
+        }
+      if (xmax)
+        {
+          *xmax = cbox.xMax / 64.0 / hinting_factor;
+        }
+      if (ymin)
+        {
+          *ymin = cbox.yMin / 64.0;
+        }
+      if (ymax)
+        {
+          *ymax = cbox.yMax / 64.0;
+        }
+      FT_Done_Glyph(newglyph);
+      return 1;
+    }
+  return 0;
+}
+
+double gks_ft_get_kerning(int font, double fontsize, unsigned int dpi, unsigned int first_codepoint,
+                          unsigned int second_codepoint)
+{
+  FT_Face face;
+  FT_Error error;
+  int hinting_factor = 8;
+  int i;
+  FT_UInt first_glyph_index;
+  FT_UInt second_glyph_index;
+
+  gks_ft_init();
+
+  for (i = -1; i < NUM_FALLBACK_FACES; i++)
+    {
+      if (i < 0)
+        {
+          face = (FT_Face)gks_ft_get_face(font);
+        }
+      else
+        {
+          face = fallback_font_faces[i];
+        }
+      if (!face)
+        {
+          continue;
+        }
+      error = FT_Set_Char_Size(face, (long)(fontsize * 64), 0, (dpi * hinting_factor), dpi);
+      if (error)
+        {
+          continue;
+        }
+
+      FT_Set_Transform(face, NULL, NULL);
+
+      first_glyph_index = FT_Get_Char_Index(face, first_codepoint);
+      if (!first_glyph_index)
+        {
+          continue;
+        }
+
+      second_glyph_index = FT_Get_Char_Index(face, second_codepoint);
+      if (!second_glyph_index)
+        {
+          return 0.0;
+        }
+      FT_Vector kerning;
+      FT_Get_Kerning(face, first_glyph_index, second_glyph_index, FT_KERNING_DEFAULT, &kerning);
+      return kerning.x / 64.0 / hinting_factor;
+    }
+  return 0.0;
+}
+
 
 unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_state_list_t *gkss, const char *text,
                                  int length)

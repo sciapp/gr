@@ -390,6 +390,7 @@ void gks_set_encoding(int encoding)
     {
       switch (encoding)
         {
+        case 0:
         case ENCODING_LATIN1:
         case ENCODING_UTF8:
           s->input_encoding = encoding;
