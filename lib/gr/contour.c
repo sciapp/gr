@@ -374,7 +374,7 @@ avg_done:
           if ((t < 1.1 * min_t) && (var < 1.1 * min_var) && (xpts[i] - r > contour_vars.wn[0]) &&
               (xpts[i] + r < contour_vars.wn[1]) && (ypts[i] - r > contour_vars.wn[2]) &&
               (ypts[i] + r < contour_vars.wn[3]) && (dist > r_sqr) && (dist1 > r_sqr) &&
-              (contour_vars.label_map[map_xpos * contour_vars.x_map_size + map_ypos] == 0))
+              (contour_vars.label_map[map_xpos * contour_vars.y_map_size + map_ypos] == 0))
             {
               min_t = t;
               min_var = var;
@@ -388,15 +388,15 @@ avg_done:
     {
       map_xpos = (int)((xpts[k] - contour_vars.wn[0]) * contour_vars.x_map_factor) + 1;
       map_ypos = (int)((ypts[k] - contour_vars.wn[2]) * contour_vars.y_map_factor) + 1;
-      contour_vars.label_map[(map_xpos - 1) * contour_vars.x_map_size + map_ypos - 1] = 1;
-      contour_vars.label_map[(map_xpos - 1) * contour_vars.x_map_size + map_ypos] = 1;
-      contour_vars.label_map[(map_xpos - 1) * contour_vars.x_map_size + map_ypos + 1] = 1;
-      contour_vars.label_map[map_xpos * contour_vars.x_map_size + map_ypos - 1] = 1;
-      contour_vars.label_map[map_xpos * contour_vars.x_map_size + map_ypos] = 1;
-      contour_vars.label_map[map_xpos * contour_vars.x_map_size + map_ypos + 1] = 1;
-      contour_vars.label_map[(map_xpos + 1) * contour_vars.x_map_size + map_ypos - 1] = 1;
-      contour_vars.label_map[(map_xpos + 1) * contour_vars.x_map_size + map_ypos] = 1;
-      contour_vars.label_map[(map_xpos + 1) * contour_vars.x_map_size + map_ypos + 1] = 1;
+      contour_vars.label_map[(map_xpos - 1) * contour_vars.y_map_size + map_ypos - 1] = 1;
+      contour_vars.label_map[(map_xpos - 1) * contour_vars.y_map_size + map_ypos] = 1;
+      contour_vars.label_map[(map_xpos - 1) * contour_vars.y_map_size + map_ypos + 1] = 1;
+      contour_vars.label_map[map_xpos * contour_vars.y_map_size + map_ypos - 1] = 1;
+      contour_vars.label_map[map_xpos * contour_vars.y_map_size + map_ypos] = 1;
+      contour_vars.label_map[map_xpos * contour_vars.y_map_size + map_ypos + 1] = 1;
+      contour_vars.label_map[(map_xpos + 1) * contour_vars.y_map_size + map_ypos - 1] = 1;
+      contour_vars.label_map[(map_xpos + 1) * contour_vars.y_map_size + map_ypos] = 1;
+      contour_vars.label_map[(map_xpos + 1) * contour_vars.y_map_size + map_ypos + 1] = 1;
     }
 
   free(ind);

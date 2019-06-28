@@ -426,8 +426,10 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                     }
                   assert(xi == i && yi == j && "contour line is not closed.");
                   /* Repeat first polyline point to get a closed line */
-                  list_append(polylines_x, ((double *)polylines_x->list) + polyline_start_index);
-                  list_append(polylines_y, ((double *)polylines_y->list) + polyline_start_index);
+                  x_pos = *(((double *)polylines_x->list) + polyline_start_index);
+                  y_pos = *(((double *)polylines_y->list) + polyline_start_index);
+                  list_append(polylines_x, &x_pos);
+                  list_append(polylines_y, &y_pos);
                   x_pos = y_pos = 0;
                   list_append(polylines_x, &x_pos);
                   list_append(polylines_y, &y_pos);
