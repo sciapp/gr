@@ -1103,7 +1103,12 @@ void gks_text(double px, double py, char *str)
 {
   if (state >= GKS_K_WSAC)
     {
-      if (strlen(str) < 132)
+      if (strlen(str) == 0)
+        {
+          /* ignore empty strings */
+          return;
+        }
+      else if (strlen(str) < 132)
         {
           /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
           char utf8_str[2 * 131 + 1];
@@ -2817,7 +2822,7 @@ void gks_inq_ws_category(int wtype, int *errind, int *wscat)
 void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind, double *cpx, double *cpy, double *tx,
                          double *ty)
 {
-  if (gks_list_find(open_ws, wkid) != NULL)
+  if (gks_list_find(open_ws, wkid) != NULL && strlen(str) != 0)
     {
       /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
       char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
