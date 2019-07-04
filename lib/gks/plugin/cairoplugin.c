@@ -1842,22 +1842,26 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
     case 55:
       /* set workstation viewport */
       lock();
-      p->viewport[0] = 0;
-      p->viewport[1] = r1[1] - r1[0];
-      p->viewport[2] = 0;
-      p->viewport[3] = r2[1] - r2[0];
-
-      if (p->wtype != 143 || p->mem_resizable)
+      if (p->viewport[0] != 0 || p->viewport[1] != r1[1] - r1[0] || p->viewport[2] != 0 ||
+          p->viewport[3] != r2[1] - r2[0])
         {
-          p->width = p->viewport[1] * p->w / p->mw;
-          p->height = p->viewport[3] * p->h / p->mh;
-        }
-      close_page();
-      open_page();
+          p->viewport[0] = 0;
+          p->viewport[1] = r1[1] - r1[0];
+          p->viewport[2] = 0;
+          p->viewport[3] = r2[1] - r2[0];
 
-      set_xform();
-      init_norm_xform();
-      set_clip_rect(gkss->cntnr);
+          if (p->wtype != 143 || p->mem_resizable)
+            {
+              p->width = p->viewport[1] * p->w / p->mw;
+              p->height = p->viewport[3] * p->h / p->mh;
+            }
+          close_page();
+          open_page();
+
+          set_xform();
+          init_norm_xform();
+          set_clip_rect(gkss->cntnr);
+        }
       unlock();
       break;
 
