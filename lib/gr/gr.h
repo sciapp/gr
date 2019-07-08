@@ -173,6 +173,7 @@ extern "C"
   DLLEXPORT int gr_meta_args_contains(const gr_meta_args_t *, const char *);
   DLLEXPORT void gr_meta_args_clear(gr_meta_args_t *);
   DLLEXPORT void gr_meta_args_remove(gr_meta_args_t *, const char *);
+  DLLEXPORT int gr_meta_get_box(const int, const int, const int, const int, const int, int *, int *, int *, int *);
   DLLEXPORT void *gr_openmeta(int, const char *, unsigned int, const char *(*)(const char *, unsigned int),
                               int (*)(const char *, unsigned int, const char *));
   DLLEXPORT gr_meta_args_t *gr_recvmeta(const void *p, gr_meta_args_t *);

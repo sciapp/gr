@@ -8,17 +8,17 @@ GR.ready = function(callback){
     }
 };
 
-Module['onRuntimeInitialized'] = function() {
+Module.onRuntimeInitialized = function() {
     GR.is_ready = true;
     GR.ready_callbacks.forEach(function (callback) {
         callback();
-    })
+    });
 };
 
 select_canvas = function() {
     Module.canvas = this.current_canvas;
     Module.context = this.current_context;
-}
+};
 
 function GR(canvas_id) {
     this.opengks = gr_opengks;
@@ -153,6 +153,7 @@ function GR(canvas_id) {
     this.inputmeta = gr_inputmeta;
     this.mergemeta = gr_mergemeta;
     this.switchmeta = gr_switchmeta;
+    this.meta_get_box = gr_meta_get_box;
 
     // set canvas and context
     Module.set_canvas(canvas_id);
@@ -373,7 +374,7 @@ floatarray = function(a) {
     }
 
     return ptr;
-}
+};
 
 intarray = function(a) {
     var ptr = Module._malloc(a.length * 4);
@@ -383,7 +384,7 @@ intarray = function(a) {
     }
 
     return ptr;
-}
+};
 
 uint8array = function(a) {
     var ptr = Module._malloc(a.length + 1);
@@ -394,11 +395,11 @@ uint8array = function(a) {
     }
     data[a.length] = 0x00;
     return ptr;
-}
+};
 
 freearray = function(ptr) {
     Module._free(ptr);
-}
+};
 
 gr_opengks = Module.cwrap('gr_opengks', '', []);
 
@@ -421,14 +422,14 @@ gr_inqdspsize = function() {
     freearray(_width);
     freearray(_height);
     return result;
-}
+};
 
 gr_openws_c = Module.cwrap('gr_openws', '', ['number', 'number', 'number', ]);
 gr_openws = function(workstation_id, connection, type) {
     _connection = uint8array(connection);
     gr_openws_c(workstation_id, _connection, type);
     freearray(_connection);
-}
+};
 
 gr_closews = Module.cwrap('gr_closews', '', ['number', ]);
 
@@ -449,7 +450,7 @@ gr_polyline = function(n, x, y) {
     gr_polyline_c(n, _x, _y);
     freearray(_x);
     freearray(_y);
-}
+};
 
 gr_polymarker_c = Module.cwrap('gr_polymarker', '', ['number', 'number', 'number', ]);
 gr_polymarker = function(n, x, y) {
@@ -460,7 +461,7 @@ gr_polymarker = function(n, x, y) {
     gr_polymarker_c(n, _x, _y);
     freearray(_x);
     freearray(_y);
-}
+};
 
 gr_text_c = Module.cwrap('gr_text', '', ['number', 'number', 'number', ]);
 gr_text = function(x, y, string) {
@@ -468,7 +469,7 @@ gr_text = function(x, y, string) {
     _string = uint8array(string);
     gr_text_c(x, y, _string);
     freearray(_string);
-}
+};
 
 gr_inqtext_c = Module.cwrap('gr_inqtext', '', ['number', 'number', 'number', 'number', 'number', ]);
 gr_inqtext = function(x, y, string) {
@@ -483,7 +484,7 @@ gr_inqtext = function(x, y, string) {
     freearray(_tbx);
     freearray(_tby);
     return result;
-}
+};
 
 gr_fillarea_c = Module.cwrap('gr_fillarea', '', ['number', 'number', 'number', ]);
 gr_fillarea = function(n, x, y) {
@@ -494,7 +495,7 @@ gr_fillarea = function(n, x, y) {
     gr_fillarea_c(n, _x, _y);
     freearray(_x);
     freearray(_y);
-}
+};
 
 gr_cellarray_c = Module.cwrap('gr_cellarray', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', ]);
 gr_cellarray = function(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow, color) {
@@ -502,7 +503,7 @@ gr_cellarray = function(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nr
     _color = intarray(color);
     gr_cellarray_c(xmin, xmax, ymin, ymax, dimx, dimy, scol, srow, ncol, nrow, _color);
     freearray(_color);
-}
+};
 
 gr_spline_c = Module.cwrap('gr_spline', '', ['number', 'number', 'number', 'number', 'number', ]);
 gr_spline = function(n, px, py, m, method) {
@@ -512,7 +513,7 @@ gr_spline = function(n, px, py, m, method) {
     gr_spline_c(n, _px, _py, m, method);
     freearray(_px);
     freearray(_py);
-}
+};
 
 
 gr_gridit_c = Module.cwrap('gr_gridit', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', ]);
@@ -542,7 +543,7 @@ gr_gridit = function(nd, xd, yd, zd, nx, ny) {
     freearray(_y);
     freearray(_z);
     return result;
-}
+};
 
 gr_setlinetype = Module.cwrap('gr_setlinetype', '', ['number', ]);
 
@@ -553,7 +554,7 @@ gr_inqlinetype = function() {
     result = Module.HEAP32.subarray(_ltype / 4, _ltype / 4 + 1)[0];
     freearray(_ltype);
     return result;
-}
+};
 
 gr_setlinewidth = Module.cwrap('gr_setlinewidth', '', ['number', ]);
 
@@ -564,7 +565,7 @@ gr_inqlinewidth = function() {
     result = Module.HEAPF64.subarray(_width / 8, _width / 8 + 1)[0];
     freearray(_width);
     return result;
-}
+};
 
 gr_setlinecolorind = Module.cwrap('gr_setlinecolorind', '', ['number', ]);
 
@@ -575,7 +576,7 @@ gr_inqlinecolorind = function() {
     result = Module.HEAP32.subarray(_coli / 4, _coli / 4 + 1)[0];
     freearray(_coli);
     return result;
-}
+};
 
 gr_setmarkertype = Module.cwrap('gr_setmarkertype', '', ['number', ]);
 
@@ -586,7 +587,7 @@ gr_inqmarkertype = function() {
     result = Module.HEAP32.subarray(_mtype / 4, _mtype / 4 + 1)[0];
     freearray(_mtype);
     return result;
-}
+};
 
 gr_setmarkersize = Module.cwrap('gr_setmarkersize', '', ['number', ]);
 
@@ -599,7 +600,7 @@ gr_inqmarkercolorind = function() {
     result = Module.HEAP32.subarray(_coli / 4, _coli / 4 + 1)[0];
     freearray(_coli);
     return result;
-}
+};
 
 gr_settextfontprec = Module.cwrap('gr_settextfontprec', '', ['number', 'number', ]);
 
@@ -634,7 +635,7 @@ gr_inqscale = function() {
     result = Module.HEAP32.subarray(_options / 4, _options / 4 + 1)[0];
     freearray(_options);
     return result;
-}
+};
 
 gr_setwindow = Module.cwrap('gr_setwindow', '', ['number', 'number', 'number', 'number', ]);
 
@@ -655,7 +656,7 @@ gr_inqwindow = function() {
     freearray(_ymin);
     freearray(_ymax);
     return result;
-}
+};
 
 gr_setviewport = Module.cwrap('gr_setviewport', '', ['number', 'number', 'number', 'number', ]);
 
@@ -676,7 +677,7 @@ gr_inqviewport = function() {
     freearray(_ymin);
     freearray(_ymax);
     return result;
-}
+};
 
 gr_selntran = Module.cwrap('gr_selntran', '', ['number', ]);
 
@@ -719,14 +720,14 @@ gr_inqspace = function() {
     freearray(_rotation);
     freearray(_tilt);
     return result;
-}
+};
 
 gr_textext_c = Module.cwrap('gr_textext', 'number', ['number', 'number', 'number', ]);
 gr_textext = function(x, y, string) {
     _string = uint8array(string);
     gr_textext_c(x, y, _string);
     freearray(_string);
-}
+};
 
 gr_inqtextext_c = Module.cwrap('gr_inqtextext', '', ['number', 'number', 'number', 'number', 'number', ]);
 gr_inqtextext = function(x, y, string) {
@@ -743,7 +744,7 @@ gr_inqtextext = function(x, y, string) {
     freearray(_tbx);
     freearray(_tby);
     return result;
-}
+};
 
 gr_axes = Module.cwrap('gr_axes', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', ]);
 
@@ -761,7 +762,7 @@ gr_verrorbars = function(n, px, py, e1, e2) {
     freearray(_py);
     freearray(_e1);
     freearray(_e2);
-}
+};
 
 gr_herrorbars_c = Module.cwrap('gr_herrorbars', '', ['number', 'number', 'number', 'number', 'number', ]);
 gr_herrorbars = function(n, px, py, e1, e2) {
@@ -775,7 +776,7 @@ gr_herrorbars = function(n, px, py, e1, e2) {
     freearray(_py);
     freearray(_e1);
     freearray(_e2);
-}
+};
 
 gr_polyline3d_c = Module.cwrap('gr_polyline3d', '', ['number', 'number', 'number', 'number', ]);
 gr_polyline3d = function(n, px, py, pz) {
@@ -787,7 +788,7 @@ gr_polyline3d = function(n, px, py, pz) {
     freearray(_px);
     freearray(_py);
     freearray(_pz);
-}
+};
 
 gr_axes3d = Module.cwrap('gr_axes3d', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', ]);
 
@@ -800,7 +801,7 @@ gr_titles3d = function(x_title, y_title, z_title) {
     freearray(_x_title);
     freearray(_y_title);
     freearray(_z_title);
-}
+};
 
 gr_surface_c = Module.cwrap('gr_surface', '', ['number', 'number', 'number', 'number', 'number', 'number', ]);
 gr_surface = function(nx, ny, px, py, pz, option) {
@@ -811,7 +812,7 @@ gr_surface = function(nx, ny, px, py, pz, option) {
     freearray(_px);
     freearray(_py);
     freearray(_pz);
-}
+};
 
 gr_contour_c = Module.cwrap('gr_contour', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', ]);
 gr_contour = function(nx, ny, nh, px, py, h, pz, major_h) {
@@ -824,7 +825,7 @@ gr_contour = function(nx, ny, nh, px, py, h, pz, major_h) {
     freearray(_py);
     freearray(_h);
     freearray(_pz);
-}
+};
 
 gr_hexbin_c = Module.cwrap('gr_hexbin', 'number', ['number', 'number', 'number', 'number', ]);
 gr_hexbin = function(n, x, y, nbins) {
@@ -834,7 +835,7 @@ gr_hexbin = function(n, x, y, nbins) {
     freearray(_x);
     freearray(_y);
     return cntmax;
-}
+};
 
 gr_setcolormap = Module.cwrap('gr_setcolormap', '', ['number', ]);
 
@@ -845,7 +846,7 @@ gr_inqcolormap = function() {
     result = Module.HEAP32.subarray(_index / 4, _index / 4 + 1)[0];
     freearray(_index);
     return result;
-}
+};
 
 gr_colorbar = Module.cwrap('gr_colorbar', '', []);
 
@@ -856,7 +857,7 @@ gr_inqcolor = function(color) {
     result = Module.HEAP32.subarray(_rgb / 4, _rgb / 4 + 1)[0];
     freearray(_rgb);
     return result;
-}
+};
 
 gr_inqcolorfromrgb = Module.cwrap('gr_inqcolorfromrgb', 'number', ['number', 'number', 'number', ]);
 
@@ -869,7 +870,7 @@ gr_hsvtorgb = function(h, s, v, r, g, b) {
     freearray(_r);
     freearray(_g);
     freearray(_b);
-}
+};
 
 gr_tick = Module.cwrap('gr_tick', 'number', ['number', 'number', ]);
 
@@ -885,14 +886,14 @@ gr_adjustrange = function(amin, amax) {
     freearray(_amin);
     freearray(_amax);
     return [amin, amax];
-}
+};
 
 gr_beginprint_c = Module.cwrap('gr_beginprint', '', ['number', ]);
 gr_beginprint = function(pathname) {
     _pathname = uint8array(pathname);
     gr_beginprint_c(_pathname);
     freearray(_pathname);
-}
+};
 
 gr_beginprintext_c = Module.cwrap('gr_beginprintext', '', ['number', 'number', 'number', 'number', ]);
 gr_beginprintext = function(pathname, mode, format, orientation) {
@@ -905,7 +906,7 @@ gr_beginprintext = function(pathname, mode, format, orientation) {
     freearray(_mode);
     freearray(_format);
     freearray(_orientation);
-}
+};
 
 gr_endprint = Module.cwrap('gr_endprint', '', []);
 
@@ -925,7 +926,7 @@ gr_ndctowc = function(x, y) {
     freearray(__x);
     freearray(__y);
     return result;
-}
+};
 
 
 gr_wctondc_c = Module.cwrap('gr_wctondc', '', ['number', 'number', ]);
@@ -943,7 +944,7 @@ gr_wctondc = function(x, y) {
     freearray(__x);
     freearray(__y);
     return result;
-}
+};
 
 gr_drawrect = Module.cwrap('gr_drawrect', '', ['number', 'number', 'number', 'number', ]);
 
@@ -959,7 +960,7 @@ gr_drawpath = function(n, vertices, codes, fill) {
     gr_drawpath_c(n, _vertices, _codes, fill);
     freearray(_vertices);
     freearray(_codes);
-}
+};
 
 gr_setarrowstyle = Module.cwrap('gr_setarrowstyle', '', ['number', ]);
 
@@ -981,7 +982,7 @@ gr_readimage = function(path) {
     freearray(_height);
     freearray(_data);
     return result;
-}
+};
 
 gr_drawimage_c = Module.cwrap('gr_drawimage', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', ]);
 gr_drawimage = function(xmin, xmax, ymin, ymax, width, height, data, model) {
@@ -989,14 +990,14 @@ gr_drawimage = function(xmin, xmax, ymin, ymax, width, height, data, model) {
     _data = intarray(data);
     gr_drawimage_c(xmin, xmax, ymin, ymax, width, height, _data, model);
     freearray(_data);
-}
+};
 
 gr_importgraphics_c = Module.cwrap('gr_importgraphics', 'number', ['number', ]);
 gr_importgraphics = function(path) {
     _path = uint8array(path);
     gr_importgraphics_c(_path);
     freearray(_path);
-}
+};
 
 gr_setshadow = Module.cwrap('gr_setshadow', '', ['number', 'number', 'number', ]);
 
@@ -1009,7 +1010,7 @@ gr_begingraphics = function(path) {
     _path = uint8array(path);
     gr_begingraphics_c(_path);
     freearray(_path);
-}
+};
 
 gr_endgraphics = Module.cwrap('gr_endgraphics', '', []);
 
@@ -1018,14 +1019,14 @@ gr_drawgraphics = function(string) {
     _string = uint8array(string);
     gr_drawgraphics_c(_string);
     freearray(_string);
-}
+};
 
 gr_mathtex_c = Module.cwrap('gr_mathtex', '', ['number', 'number', 'number', ]);
 gr_mathtex = function(x, y, string) {
     _string = uint8array(string);
     gr_mathtex_c(x, y, _string);
     freearray(_string);
-}
+};
 
 gr_beginselection = Module.cwrap('gr_beginselection', '', ['number', 'number', ]);
 
@@ -1052,7 +1053,7 @@ gr_inqbbox = function() {
     freearray(_ymin);
     freearray(_ymax);
     return result;
-}
+};
 
 gr_precision = Module.cwrap('gr_precision', 'number', []);
 
@@ -1074,14 +1075,14 @@ gr_uselinespec = function(string) {
     result = gr_uselinespec_c(_string);
     freearray(_string);
     return result;
-}
+};
 
 gr_selntran = Module.cwrap('gr_selntran', '', ['number']);
 
 gr_newmeta_c = Module.cwrap('gr_newmeta', 'number', []);
 gr_newmeta = function() {
-    return gr_newmeta_c()
-}
+    return gr_newmeta_c();
+};
 
 gr_meta_args_push_c = Module.cwrap('gr_meta_args_push', 'number', ['number', 'string', 'string', 'number']);
 gr_meta_args_push = function(args, key, format, vals) {
@@ -1092,37 +1093,37 @@ gr_meta_args_push = function(args, key, format, vals) {
     } else if (type == "i") {
         arr = intarray(vals);
     } else if (type == "s") {
-        let ptr = uint8array(vals);
+        var ptr = uint8array(vals);
         arr = intarray([ptr]);
     }
     return gr_meta_args_push_c(args, key, format, arr);
-}
+};
 
 gr_mergemeta_c = Module.cwrap('gr_mergemeta', 'number', ['number']);
 gr_mergemeta = function(args) {
     return gr_mergemeta_c(args);
-}
+};
 
 gr_inputmeta_c = Module.cwrap('gr_inputmeta', 'number', ['number', 'number']);
 gr_inputmeta = function(args, mouse_args) {
     return gr_inputmeta_c(args, mouse_args);
-}
+};
 
 gr_deletemeta_c = Module.cwrap('gr_deletemeta', '', ['number']);
 gr_deletemeta = function(args) {
-    gr_deletemeta_c(args)
-}
+    gr_deletemeta_c(args);
+};
 
-gr_readmeta_c = Module.cwrap('gr_readmeta', 'number', ['number', 'string'])
+gr_readmeta_c = Module.cwrap('gr_readmeta', 'number', ['number', 'string']);
 gr_readmeta = function(args, string) {
     result = gr_readmeta_c(args, string);
     return result;
-}
+};
 
 gr_plotmeta_c = Module.cwrap('gr_plotmeta', '', ['number']);
 gr_plotmeta = function(args) {
     gr_plotmeta_c(args);
-}
+};
 
 gr_dumpmeta_json_c = Module.cwrap('gr_dumpmeta_json', 'number', ['number', 'number']);
 gr_dumpmeta_json = function(args, file) {
@@ -1192,5 +1193,24 @@ gr_panzoom = function(x, y, zoom, xmin, xmax, ymin, ymax) {
     freearray(__xmax);
     freearray(__ymin);
     freearray(__ymax);
+    return result;
+};
+
+gr_meta_get_box_c = Module.cwrap('gr_meta_get_box', 'number', ['number', 'number', 'number', 'number', 'number']);
+gr_meta_get_box = function(top, right, bottom, left, keepAspectRatio) {
+    var result = new Array(4);
+    var _x = Module._malloc(4);
+    var _y = Module._malloc(4);
+    var _w = Module._malloc(4);
+    var _h = Module._malloc(4);
+    gr_meta_get_box_c(top, right, bottom, left, keepAspectRatio, _x, _y, _w, _h);
+    result[0] = Module.HEAP32.subarray(_x / 4, _x / 4 + 1)[0];
+    result[1] = Module.HEAP32.subarray(_y / 4, _y / 4 + 1)[0];
+    result[2] = Module.HEAP32.subarray(_w / 4, _w / 4 + 1)[0];
+    result[3] = Module.HEAP32.subarray(_h / 4, _h / 4 + 1)[0];
+    freearray(_x);
+    freearray(_y);
+    freearray(_w);
+    freearray(_h);
     return result;
 };
