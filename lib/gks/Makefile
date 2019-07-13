@@ -117,6 +117,7 @@ endif
 clean:
 	$(MAKE) -C plugin clean
 	$(MAKE) -C qt -f makefile.mak clean
+	rm -f qt/.qmake.stash
 	rm -f demo gksm pasdemo so_locations *.so *.a *.o *.ppu link.res
 	rm -f *.bak *~
 ifeq ($(UNAME), Darwin)
