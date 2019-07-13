@@ -84,8 +84,13 @@ gksterm: $(THIRDPARTYDIR)/lib/libzmq.a
 	(env CC=cc xcodebuild -project quartz/GKSTerm.xcodeproj)
 endif
 
+ifeq ($(UNAME), Darwin)
+plugins: $(THIRDPARTYDIR)/lib/libzmq.a
+	$(MAKE) -C plugin
+else
 plugins:
 	$(MAKE) -C plugin
+endif
 
 pasdemo: default
 	fpc -Px86_64 demo.p -g -Fl./ -k-rpath -k./
