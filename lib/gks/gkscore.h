@@ -97,6 +97,8 @@ extern "C"
 #define READ_ITEM 103
 #define INTERPRET_ITEM 104
 #define EVAL_XFORM_MATRIX 105
+#define SET_ENCODING 106
+#define INQ_ENCODING 107
 
 #define SET_TEXT_SLANT 200
 #define DRAW_IMAGE 201
@@ -361,6 +363,8 @@ void gks_drv_js(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1
                                    int length);
   void *gks_ft_get_face(int);
   void gks_ft_terminate(void);
+  void gks_set_encoding(int encoding);
+  void gks_inq_encoding(int *encoding);
 
 #ifdef __cplusplus
 }

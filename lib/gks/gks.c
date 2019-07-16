@@ -389,14 +389,17 @@ static void gks_parse_env(void)
   else
     s->version = GKS5;
 
-  env = gks_getenv("GKS_ENCODING");
-  if (env)
+  if (s->input_encoding == 0)
     {
-      s->input_encoding = gks_parse_encoding(gks_getenv("GKS_ENCODING"));
-      if (s->input_encoding == 0 && did_report_invalid_encoding == 0)
+      env = gks_getenv("GKS_ENCODING");
+      if (env)
         {
-          gks_perror("Invalid value '%s' for GKS_ENCODING, please use either 'utf8' or 'latin1'.", env);
-          did_report_invalid_encoding = 1;
+          s->input_encoding = gks_parse_encoding(gks_getenv("GKS_ENCODING"));
+          if (s->input_encoding == 0 && did_report_invalid_encoding == 0)
+            {
+              gks_perror("Invalid value '%s' for GKS_ENCODING, please use either 'utf8' or 'latin1'.", env);
+              did_report_invalid_encoding = 1;
+            }
         }
     }
   if (s->input_encoding == 0)
@@ -405,6 +408,41 @@ static void gks_parse_env(void)
     }
 
   if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL) atexit(gks_emergency_close);
+}
+
+void gks_set_encoding(int encoding)
+{
+  if (state >= GKS_K_GKOP)
+    {
+      switch (encoding)
+        {
+        case ENCODING_LATIN1:
+        case ENCODING_UTF8:
+          s->input_encoding = encoding;
+          break;
+        default:
+          gks_perror("Invalid value '%d' for encoding.", encoding);
+          break;
+        }
+    }
+  else
+    {
+      /* GKS not in proper state. GKS must be in the state GKOP */
+      gks_report_error(SET_ENCODING, 8);
+    }
+}
+
+void gks_inq_encoding(int *encoding)
+{
+  if (state >= GKS_K_GKOP)
+    {
+      *encoding = s->input_encoding;
+    }
+  else
+    {
+      /* GKS not in proper state. GKS must be in the state GKOP */
+      gks_report_error(INQ_ENCODING, 8);
+    }
 }
 
 void gks_init_gks(void)
@@ -484,6 +522,8 @@ void gks_init_gks(void)
       s->shoff[1] = 0;
       s->blur = 0;
       s->alpha = 1;
+
+      s->input_encoding = 0;
     }
 }
 

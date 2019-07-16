@@ -227,6 +227,12 @@ const char *gks_function_name(int routine)
     case 105:
       name = "EVAL_XFORM_MATRIX";
       break;
+    case 106:
+      name = "SET_ENCODING";
+      break;
+    case 107:
+      name = "INQ_ENCODING";
+      break;
     case 200:
       name = "SET_TEXT_SLANT";
       break;
