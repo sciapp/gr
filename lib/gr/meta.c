@@ -705,8 +705,6 @@ DECLARE_LIST_TYPE(args, gr_meta_args_t *)
 DECLARE_LIST_TYPE(dynamic_args_array, dynamic_args_array_t *)
 DECLARE_LIST_TYPE(string, char *)
 
-#undef DECLARE_LIST_TYPE
-
 
 /* ------------------------- generic set ---------------------------------------------------------------------------- */
 
@@ -743,6 +741,19 @@ DECLARE_MAP_TYPE(args_set, args_set_t *)
 
 #undef DECLARE_MAP_TYPE
 #undef DECLARE_SET_TYPE
+
+
+/* ------------------------- event handling ------------------------------------------------------------------------- */
+
+DECLARE_LIST_TYPE(event, gr_meta_event_t *)
+
+typedef struct
+{
+  event_reflist_t *queue;
+  gr_meta_event_callback_t *event_callbacks;
+} event_queue_t;
+
+#undef DECLARE_LIST_TYPE
 
 
 /* ========================= functions ============================================================================== */
@@ -1103,8 +1114,6 @@ DECLARE_LIST_METHODS(args)
 DECLARE_LIST_METHODS(dynamic_args_array)
 DECLARE_LIST_METHODS(string)
 
-#undef DECLARE_LIST_METHODS
-
 /* ------------------------- generic set ---------------------------------------------------------------------------- */
 
 #define DECLARE_SET_METHODS(prefix)                                                                 \
@@ -1149,6 +1158,26 @@ DECLARE_MAP_METHODS(args_set, args_set_t *)
 
 #undef DECLARE_MAP_METHODS
 #undef DECLARE_SET_METHODS
+
+
+/* ------------------------- event handling ------------------------------------------------------------------------- */
+
+DECLARE_LIST_METHODS(event)
+
+static event_queue_t *event_queue_new(void);
+static void event_queue_delete(event_queue_t *queue);
+
+static void event_queue_register(event_queue_t *queue, gr_meta_event_type_t type, gr_meta_event_callback_t callback);
+static void event_queue_unregister(event_queue_t *queue, gr_meta_event_type_t type);
+
+static int event_queue_process_next(event_queue_t *queue);
+static int event_queue_process_all(event_queue_t *queue);
+
+static error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id);
+static error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height);
+
+
+#undef DECLARE_LIST_METHODS
 
 
 /* ========================= static variables ======================================================================= */
@@ -1205,6 +1234,12 @@ const char *plot_hierarchy_names[] = {"root", "plots", "subplots", "series", NUL
 static gr_meta_args_t *global_root_args = NULL;
 static gr_meta_args_t *active_plot_args = NULL;
 static unsigned int active_plot_index = 0;
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static event_queue_t *event_queue = NULL;
+static int processing_events = 0;
+
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1293,6 +1328,9 @@ void gr_finalizemeta(void)
       global_root_args = NULL;
       active_plot_args = NULL;
       active_plot_index = 0;
+      event_queue_delete(event_queue);
+      event_queue = NULL;
+      processing_events = 0;
       string_map_delete(fmt_map);
       fmt_map = NULL;
       plot_func_map_delete(plot_func_map);
@@ -1447,6 +1485,15 @@ int gr_plotmeta(const gr_meta_args_t *args)
     }
   plot_post_plot(active_plot_args);
 
+  /* Trigger event handling routines after plotting -> args container is fully processed (and modified consistently) at
+   * this time */
+  if (!processing_events)
+    {
+      processing_events = 1; /* Ensure that event processing won't trigger event processing again */
+      event_queue_process_all(event_queue);
+      processing_events = 0;
+    }
+
 #ifndef NDEBUG
   logger((stderr, "root args after \"gr_plotmeta\" (active_plot_index: %d):\n", active_plot_index - 1));
   gr_dumpmeta(global_root_args, stderr);
@@ -1480,6 +1527,30 @@ int gr_switchmeta(unsigned int id)
 
   active_plot_index = id + 1;
   active_plot_args = args_array[id];
+
+  return 1;
+}
+
+int gr_registermeta(gr_meta_event_type_t type, gr_meta_event_callback_t callback)
+{
+  if (plot_init_static_variables() != NO_ERROR)
+    {
+      return 0;
+    }
+
+  event_queue_register(event_queue, type, callback);
+
+  return 1;
+}
+
+int gr_unregistermeta(gr_meta_event_type_t type)
+{
+  if (plot_init_static_variables() != NO_ERROR)
+    {
+      return 0;
+    }
+
+  event_queue_unregister(event_queue, type);
 
   return 1;
 }
@@ -3031,6 +3102,8 @@ error_t plot_init_static_variables(void)
   if (!plot_static_variables_initialized)
     {
       logger((stderr, "Initializing static plot variables\n"));
+      event_queue = event_queue_new();
+      processing_events = 0;
       global_root_args = gr_newmeta();
       error_cleanup_and_set_error_if(global_root_args == NULL, ERROR_MALLOC);
       error = plot_init_args_structure(global_root_args, plot_hierarchy_names, 1);
@@ -3335,6 +3408,11 @@ error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, uns
       return_error_if(args_array[i] == NULL, ERROR_MALLOC);
       error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
       return_if_error;
+      if (strcmp(*hierarchy_name_ptr, "plots") == 0)
+        {
+          error = event_queue_enqueue_new_plot_event(event_queue, i);
+          return_if_error;
+        }
     }
 
   return NO_ERROR;
@@ -3367,6 +3445,11 @@ error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_na
           error_cleanup_and_set_error_if(args_array[i] == NULL, ERROR_MALLOC);
           error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
           error_cleanup_if_error;
+          if (strcmp(*hierarchy_name_ptr, "plots") == 0)
+            {
+              error = event_queue_enqueue_new_plot_event(event_queue, i);
+              return_if_error;
+            }
         }
       error_cleanup_if(!gr_meta_args_push(args, *hierarchy_name_ptr, "nA", next_hierarchy_level_max_id, args_array));
       free(args_array);
@@ -3479,12 +3562,21 @@ void plot_pre_plot(gr_meta_args_t *plot_args)
 
 void plot_process_wswindow_wsviewport(gr_meta_args_t *plot_args)
 {
+  int pixel_width, pixel_height;
+  int previous_pixel_width, previous_pixel_height;
   double metric_width, metric_height;
   double aspect_ratio_ws;
   double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
   double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
 
-  get_figure_size(plot_args, NULL, NULL, &metric_width, &metric_height);
+  get_figure_size(plot_args, &pixel_width, &pixel_height, &metric_width, &metric_height);
+
+  if (!args_values(plot_args, "previous_pixel_size", "ii", &previous_pixel_width, &previous_pixel_height) ||
+      (previous_pixel_width != pixel_width || previous_pixel_height != pixel_height))
+    {
+      /* TODO: handle error return value? */
+      event_queue_enqueue_size_event(event_queue, active_plot_index - 1, pixel_width, pixel_height);
+    }
 
   aspect_ratio_ws = metric_width / metric_height;
   if (aspect_ratio_ws > 1)
@@ -3507,6 +3599,7 @@ void plot_process_wswindow_wsviewport(gr_meta_args_t *plot_args)
 
   gr_meta_args_push(plot_args, "wswindow", "dddd", wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
   gr_meta_args_push(plot_args, "wsviewport", "dddd", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+  gr_meta_args_push(plot_args, "previous_pixel_size", "ii", pixel_width, pixel_height);
 
   logger((stderr, "Stored wswindow (%lf, %lf, %lf, %lf)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
   logger(
@@ -9509,8 +9602,6 @@ error_t string_list_entry_delete(string_list_entry_t entry)
   return NO_ERROR;
 }
 
-#undef DEFINE_LIST_METHODS
-
 
 /* ------------------------- generic set ---------------------------------------------------------------------------- */
 
@@ -9909,3 +10000,166 @@ void args_set_map_value_delete(args_set_t *value)
 
 #undef DEFINE_MAP_METHODS
 #undef DEFINE_SET_METHODS
+
+
+/* ------------------------- event handling ------------------------------------------------------------------------- */
+
+DEFINE_LIST_METHODS(event)
+
+error_t event_list_entry_copy(event_list_entry_t *copy, event_list_entry_t entry)
+{
+  event_list_entry_t _copy;
+
+  _copy = malloc(sizeof(gr_meta_event_t));
+  if (_copy == NULL)
+    {
+      return ERROR_MALLOC;
+    }
+
+  memcpy(_copy, entry, sizeof(gr_meta_event_t));
+  *copy = _copy;
+
+  return NO_ERROR;
+}
+
+error_t event_list_entry_delete(event_list_entry_t entry)
+{
+  free(entry);
+  return NO_ERROR;
+}
+
+event_queue_t *event_queue_new(void)
+{
+  event_queue_t *queue = NULL;
+
+  queue = malloc(sizeof(event_queue_t));
+  error_cleanup_if(queue == NULL);
+  queue->queue = NULL;
+  queue->event_callbacks = NULL;
+  queue->queue = event_reflist_new();
+  error_cleanup_if(queue->queue == NULL);
+  queue->event_callbacks = calloc(_GR_META_EVENT_TYPE_COUNT, sizeof(gr_meta_event_callback_t));
+  error_cleanup_if(queue->event_callbacks == NULL);
+
+  return queue;
+
+error_cleanup:
+  if (queue != NULL)
+    {
+      if (queue->queue != NULL)
+        {
+          event_reflist_delete(queue->queue);
+        }
+      if (queue->event_callbacks != NULL)
+        {
+          free(queue->event_callbacks);
+        }
+      free(queue);
+    }
+
+  return NULL;
+}
+
+void event_queue_delete(event_queue_t *queue)
+{
+  event_reflist_delete_with_entries(queue->queue);
+  free(queue->event_callbacks);
+  free(queue);
+}
+
+void event_queue_register(event_queue_t *queue, gr_meta_event_type_t type, gr_meta_event_callback_t callback)
+{
+  queue->event_callbacks[type] = callback;
+}
+
+void event_queue_unregister(event_queue_t *queue, gr_meta_event_type_t type)
+{
+  queue->event_callbacks[type] = NULL;
+}
+
+int event_queue_process_next(event_queue_t *queue)
+{
+  gr_meta_event_t *event;
+  gr_meta_event_type_t type;
+
+  if (event_reflist_empty(queue->queue))
+    {
+      return 0;
+    }
+
+  event = event_reflist_dequeue(queue->queue);
+  type = *((int *)event);
+  if (queue->event_callbacks[type] != NULL)
+    {
+      queue->event_callbacks[type](event);
+    }
+
+  return 1;
+}
+
+int event_queue_process_all(event_queue_t *queue)
+{
+
+  if (event_reflist_empty(queue->queue))
+    {
+      return 0;
+    }
+
+  while (event_queue_process_next(queue))
+    ;
+
+  return 1;
+}
+
+error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id)
+{
+  gr_meta_new_plot_event_t *new_plot_event = NULL;
+  error_t error = NO_ERROR;
+
+  new_plot_event = malloc(sizeof(gr_meta_new_plot_event_t));
+  error_cleanup_and_set_error_if(new_plot_event == NULL, ERROR_MALLOC);
+  new_plot_event->type = GR_META_EVENT_NEW_PLOT;
+  new_plot_event->plot_id = plot_id;
+
+  error = event_reflist_enqueue(queue->queue, (gr_meta_event_t *)new_plot_event);
+  error_cleanup_if_error;
+
+  return NO_ERROR;
+
+error_cleanup:
+  if (new_plot_event != NULL)
+    {
+      free(new_plot_event);
+    }
+
+  return error;
+}
+
+error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height)
+{
+  gr_meta_size_event_t *size_event = NULL;
+  error_t error = NO_ERROR;
+
+  size_event = malloc(sizeof(gr_meta_size_event_t));
+  error_cleanup_and_set_error_if(size_event == NULL, ERROR_MALLOC);
+  size_event->type = GR_META_EVENT_SIZE;
+  size_event->plot_id = plot_id;
+  size_event->width = width;
+  size_event->height = height;
+
+  error = event_reflist_enqueue(queue->queue, (gr_meta_event_t *)size_event);
+  error_cleanup_if_error;
+
+  return NO_ERROR;
+
+error_cleanup:
+  if (size_event != NULL)
+    {
+      free(size_event);
+    }
+
+  return error;
+}
+
+
+#undef DEFINE_LIST_METHODS
