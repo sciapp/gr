@@ -9,6 +9,11 @@ get_version_from_git(GR_VERSION GR_VERSION_FULL)
 project(GR VERSION ${GR_VERSION} LANGUAGES C CXX )
 
 
+if(UNIX)
+    if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+        set (CMAKE_INSTALL_PREFIX "/usr/local/gr" CACHE PATH "GR install prefix" FORCE)
+    endif()
+endif()
 set(GR_DIRECTORY "${CMAKE_INSTALL_PREFIX}" CACHE STRING "Default value for GRDIR")
 option(GR_BUILD_DEMOS "Build demos for GR" OFF)
 option(GR_INSTALL "Create installation target for GR" ON)
