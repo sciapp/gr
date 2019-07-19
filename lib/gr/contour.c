@@ -1333,17 +1333,15 @@ static void convert_segments_to_polylines(int nsegments, vertex_t *segments, int
   int nlin;
   polyline_t *cur_lin;
   vertex_t *points;
-  static int start;
-  static int end;
-  static int capacity;
-  static vertex_t *first_point;
-  vertex_t **pointp;
+  int start;
+  int end;
+  int capacity;
+  vertex_t *start_point = NULL;
+  vertex_t *end_point = NULL;
   int *used_segments;
   int nfree_segments;
   int found_point;
-  int line_segment_fits;
-  int closed_segment;
-  int i, j;
+  int i;
 
   lin = (polyline_t *)malloc(nsegments * sizeof(polyline_t));
   if (lin == NULL)
@@ -1351,7 +1349,6 @@ static void convert_segments_to_polylines(int nsegments, vertex_t *segments, int
       fprintf(stderr, "out of virtual memory\n");
       return;
     }
-  nlin = 0;
   cur_lin = lin;
   points = (vertex_t *)malloc((nsegments + 2) * sizeof(vertex_t));
   if (points == NULL)
@@ -1364,7 +1361,6 @@ static void convert_segments_to_polylines(int nsegments, vertex_t *segments, int
   start = -1;
   end = 0;
   capacity = nsegments + 2;
-  first_point = NULL;
   used_segments = calloc(nsegments, sizeof(int));
   if (used_segments == NULL)
     {
@@ -1391,45 +1387,38 @@ static void convert_segments_to_polylines(int nsegments, vertex_t *segments, int
                 {
                   if (start >= 0)
                     {
-                      /* the current line has already points */
-                      line_segment_fits = 0;
-                      for ((j = 0, pointp = &first_point); *pointp != NULL; (j++, pointp++))
-                        {
-                          if (fabs(segments[2 * i].x - (*pointp)->x) < FEPS &&
-                              fabs(segments[2 * i].y - (*pointp)->y) < FEPS)
-                            {
-                              line_segment_fits = 1;
-                              closed_segment = (pointp == &first_point) ? 0 : 1;
-                              break;
-                            }
-                          else if (fabs(segments[2 * i + 1].x - (*pointp)->x) < FEPS &&
-                                   fabs(segments[2 * i + 1].y - (*pointp)->y) < FEPS)
-                            {
-                              line_segment_fits = 1;
-                              closed_segment = (pointp != &first_point) ? 0 : 1;
-                              break;
-                            }
+                      if (fabs(segments[2 * i].x - start_point->x) < FEPS &&
+                          fabs(segments[2 * i].y - start_point->y) < FEPS)
+                        { /* start of segment fits at start of polyline */
+                          points[start] = segments[2 * i + 1];
+                          start = (start - 1 + capacity) % capacity;
                         }
-                      if (line_segment_fits)
-                        {
-                          if (pointp == &first_point)
-                            {
-                              /* line segment fits at the beginning of the current polyline */
-                              points[start] = segments[2 * i + (1 - closed_segment)];
-                              first_point = &points[start];
-                              start = (start - 1 + capacity) % capacity;
-                            }
-                          else
-                            {
-                              /* line segment fits at the end of the current polyline */
-                              points[end] = segments[2 * i + closed_segment];
-                              end = (end + 1 + capacity) % capacity;
-                            }
-                          used_segments[i] = 1;
-                          --nfree_segments;
-                          found_point = 1;
-                          break;
+                      else if (fabs(segments[2 * i + 1].x - start_point->x) < FEPS &&
+                               fabs(segments[2 * i + 1].y - start_point->y) < FEPS)
+                        { /* end of segment fits at start of polyline */
+                          points[start] = segments[2 * i];
+                          start = (start - 1 + capacity) % capacity;
                         }
+                      else if (fabs(segments[2 * i].x - end_point->x) < FEPS &&
+                               fabs(segments[2 * i].y - end_point->y) < FEPS)
+                        { /* start of segment fits at end of polyline */
+                          points[end] = segments[2 * i + 1];
+                          end = (end + 1 + capacity) % capacity;
+                        }
+                      else if (fabs(segments[2 * i + 1].x - end_point->x) < FEPS &&
+                               fabs(segments[2 * i + 1].y - end_point->y) < FEPS)
+                        { /* end of segment fits at end of polyline */
+                          points[end] = segments[2 * i];
+                          end = (end + 1 + capacity) % capacity;
+                        }
+                      else
+                        {
+                          continue;
+                        }
+                      used_segments[i] = 1;
+                      --nfree_segments;
+                      found_point = 1;
+                      break;
                     }
                   else
                     {
@@ -1437,7 +1426,8 @@ static void convert_segments_to_polylines(int nsegments, vertex_t *segments, int
                       start = (start + capacity) % capacity;
                       points[start] = segments[2 * i];
                       points[end] = segments[2 * i + 1];
-                      first_point = &points[start];
+                      start_point = points + start;
+                      end_point = points + end;
                       start = (start - 1 + capacity) % capacity;
                       end = (end + 1 + capacity) % capacity;
                       used_segments[i] = 1;
@@ -1514,8 +1504,8 @@ void gr_draw_tricont(int npoints, double *x, double *y, double *z, int nlevels, 
 {
   int i, l;
   int ntri, *triangles;
-  int nlines;
-  polyline_t *lines;
+  int nlines = 0;
+  polyline_t *lines = NULL;
 
   gr_delaunay(npoints, x, y, &ntri, &triangles);
 
