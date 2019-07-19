@@ -67,8 +67,11 @@ extern "C"
   DLLEXPORT void gr_settextpath(int);
   DLLEXPORT void gr_settextalign(int, int);
   DLLEXPORT void gr_setfillintstyle(int);
+  DLLEXPORT void gr_inqfillintstyle(int *);
   DLLEXPORT void gr_setfillstyle(int);
+  DLLEXPORT void gr_inqfillstyle(int *);
   DLLEXPORT void gr_setfillcolorind(int);
+  DLLEXPORT void gr_inqfillcolorind(int *);
   DLLEXPORT void gr_setcolorrep(int, double, double, double);
   DLLEXPORT void gr_setwindow(double, double, double, double);
   DLLEXPORT void gr_inqwindow(double *, double *, double *, double *);

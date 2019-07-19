@@ -2734,6 +2734,19 @@ void gr_setfillintstyle(int style)
 /*!
  * Set the fill area interior style to be used for fill areas.
  *
+ * \param[out] style The currently set fill style
+ *
+ * This function gets the currently set fill style.
+ */
+void gr_inqfillintstyle(int *style)
+{
+  int errind;
+  gks_inq_fill_int_style(&errind, style);
+}
+
+/*!
+ * Set the fill area interior style to be used for fill areas.
+ *
  * \param[in] index The fill style index to be used
  *
  * This function specifies an index when PATTERN fill or HATCH fill is
@@ -2754,6 +2767,19 @@ void gr_setfillstyle(int index)
 }
 
 /*!
+ * Get the fill area interior style to be used for fill areas.
+ *
+ * \param[out] index The currently set fill style color index
+ *
+ * This function gets the color index for PATTERN and HATCH fills.
+ */
+void gr_inqfillstyle(int *index)
+{
+  int errind;
+  gks_inq_fill_style_index(&errind, index);
+}
+
+/*!
  * Sets the current fill area color index.
  *
  * \param[in] color The fill area color index (COLOR < 1256)
@@ -2770,6 +2796,19 @@ void gr_setfillcolorind(int color)
   if (ctx) ctx->facoli = color;
 
   if (flag_graphics) gr_writestream("<setfillcolorind color=\"%d\"/>\n", color);
+}
+
+/*!
+ * Gets the current fill area color index.
+ *
+ * \param[out] color The fill area color index (COLOR < 1256)
+ *
+ * This function gets the color of fill area output primitives.
+ */
+void gr_inqfillcolorind(int *color)
+{
+  int errind;
+  gks_inq_fill_color_index(&errind, color);
 }
 
 static void setcolor(int workstation_id, color_t *color)
