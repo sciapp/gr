@@ -26,6 +26,35 @@ extern "C"
   } vertex_t;
   typedef struct _gr_meta_args_t gr_meta_args_t;
 
+  typedef enum
+  {
+    GR_META_EVENT_NEW_PLOT,
+    GR_META_EVENT_SIZE,
+    _GR_META_EVENT_TYPE_COUNT /* helper entry to store how many different event types exist */
+  } gr_meta_event_type_t;
+
+  typedef struct
+  {
+    gr_meta_event_type_t type;
+    int plot_id;
+  } gr_meta_new_plot_event_t;
+
+  typedef struct
+  {
+    gr_meta_event_type_t type;
+    int plot_id;
+    int width;
+    int height;
+  } gr_meta_size_event_t;
+
+  typedef union
+  {
+    gr_meta_new_plot_event_t new_plot_event;
+    gr_meta_size_event_t size_event;
+  } gr_meta_event_t;
+
+  typedef void (*gr_meta_event_callback_t)(const gr_meta_event_t *);
+
   DLLEXPORT void gr_initgr(void);
   DLLEXPORT void gr_opengks(void);
   DLLEXPORT void gr_closegks(void);
@@ -191,6 +220,8 @@ extern "C"
   DLLEXPORT int gr_plotmeta(const gr_meta_args_t *);
   DLLEXPORT int gr_readmeta(gr_meta_args_t *, const char *);
   DLLEXPORT int gr_switchmeta(unsigned int id);
+  DLLEXPORT int gr_registermeta(gr_meta_event_type_t, gr_meta_event_callback_t);
+  DLLEXPORT int gr_unregistermeta(gr_meta_event_type_t);
   DLLEXPORT unsigned int gr_meta_max_plotid(void);
 #ifndef NDEBUG
   DLLEXPORT void gr_dumpmeta(const gr_meta_args_t *, FILE *);

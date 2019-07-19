@@ -381,27 +381,6 @@ typedef struct
 } dynamic_args_array_t;
 
 
-/* ------------------------- args / dynamic args array stack -------------------------------------------------------- */
-
-#define DEFINE_STACK_DATATYPES(prefix, type) \
-  typedef struct _##prefix##_stack_node_t    \
-  {                                          \
-    type value;                              \
-    struct _##prefix##_stack_node_t *next;   \
-  } prefix##_stack_node_t;                   \
-                                             \
-  typedef struct                             \
-  {                                          \
-    prefix##_stack_node_t *head;             \
-  } prefix##_stack_t;
-
-DEFINE_STACK_DATATYPES(args, gr_meta_args_t *)
-DEFINE_STACK_DATATYPES(dynamic_args_array, dynamic_args_array_t *)
-DEFINE_STACK_DATATYPES(string, char *)
-
-#undef DEFINE_STACK_DATATYPES
-
-
 /* ------------------------- error handling ------------------------------------------------------------------------- */
 
 #define ENUM_ELEMENTS(X, Y)                           \
@@ -668,6 +647,65 @@ typedef enum
 } gr_option_t;
 
 
+/* ------------------------- generic list --------------------------------------------------------------------------- */
+
+#define DECLARE_LIST_TYPE(prefix, entry_type)                                                                          \
+  typedef entry_type prefix##_list_entry_t;                                                                            \
+  typedef int (*prefix##_list_entry_copy_func_t)(prefix##_list_entry_t *, prefix##_list_entry_t);                      \
+  typedef int (*prefix##_list_entry_delete_func_t)(prefix##_list_entry_t);                                             \
+                                                                                                                       \
+  typedef struct                                                                                                       \
+  {                                                                                                                    \
+    prefix##_list_entry_copy_func_t entry_copy;                                                                        \
+    prefix##_list_entry_delete_func_t entry_delete;                                                                    \
+  } prefix##_list_vtable_t;                                                                                            \
+                                                                                                                       \
+  typedef struct _##prefix##_list_node_t                                                                               \
+  {                                                                                                                    \
+    prefix##_list_entry_t entry;                                                                                       \
+    struct _##prefix##_list_node_t *next;                                                                              \
+  } prefix##_list_node_t;                                                                                              \
+                                                                                                                       \
+  typedef struct                                                                                                       \
+  {                                                                                                                    \
+    const prefix##_list_vtable_t *vt;                                                                                  \
+    prefix##_list_node_t *head;                                                                                        \
+    prefix##_list_node_t *tail;                                                                                        \
+    size_t size;                                                                                                       \
+  } prefix##_list_t;                                                                                                   \
+                                                                                                                       \
+  /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */ \
+                                                                                                                       \
+  typedef entry_type prefix##_reflist_entry_t;                                                                         \
+  typedef int (*prefix##_reflist_entry_copy_func_t)(prefix##_reflist_entry_t *, prefix##_reflist_entry_t);             \
+  typedef int (*prefix##_reflist_entry_delete_func_t)(prefix##_reflist_entry_t);                                       \
+                                                                                                                       \
+  typedef struct                                                                                                       \
+  {                                                                                                                    \
+    prefix##_reflist_entry_copy_func_t entry_copy;                                                                     \
+    prefix##_reflist_entry_delete_func_t entry_delete;                                                                 \
+  } prefix##_reflist_vtable_t;                                                                                         \
+                                                                                                                       \
+  typedef struct _##prefix##_reflist_node_t                                                                            \
+  {                                                                                                                    \
+    prefix##_reflist_entry_t entry;                                                                                    \
+    struct _##prefix##_reflist_node_t *next;                                                                           \
+  } prefix##_reflist_node_t;                                                                                           \
+                                                                                                                       \
+  typedef struct                                                                                                       \
+  {                                                                                                                    \
+    const prefix##_reflist_vtable_t *vt;                                                                               \
+    prefix##_reflist_node_t *head;                                                                                     \
+    prefix##_reflist_node_t *tail;                                                                                     \
+    size_t size;                                                                                                       \
+  } prefix##_reflist_t;
+
+
+DECLARE_LIST_TYPE(args, gr_meta_args_t *)
+DECLARE_LIST_TYPE(dynamic_args_array, dynamic_args_array_t *)
+DECLARE_LIST_TYPE(string, char *)
+
+
 /* ------------------------- generic set ---------------------------------------------------------------------------- */
 
 #define DECLARE_SET_TYPE(prefix, entry_type) \
@@ -703,6 +741,19 @@ DECLARE_MAP_TYPE(args_set, args_set_t *)
 
 #undef DECLARE_MAP_TYPE
 #undef DECLARE_SET_TYPE
+
+
+/* ------------------------- event handling ------------------------------------------------------------------------- */
+
+DECLARE_LIST_TYPE(event, gr_meta_event_t *)
+
+typedef struct
+{
+  event_reflist_t *queue;
+  gr_meta_event_callback_t *event_callbacks;
+} event_queue_t;
+
+#undef DECLARE_LIST_TYPE
 
 
 /* ========================= functions ============================================================================== */
@@ -898,23 +949,6 @@ static void args_value_iterator_finalize(args_value_iterator_t *args_value_itera
 static void *args_value_iterator_next(args_value_iterator_t *args_value_iterator);
 
 
-/* ------------------------- args / dynamic args array stack -------------------------------------------------------- */
-
-#define DECLARE_STACK_METHODS(prefix, type)                                          \
-  static prefix##_stack_t *prefix##_stack_new(void);                                 \
-  static void prefix##_stack_delete(prefix##_stack_t *prefix##_stack);               \
-  static void prefix##_stack_delete_with_elements(prefix##_stack_t *prefix##_stack); \
-  static error_t prefix##_stack_push(prefix##_stack_t *prefix##_stack, type value);  \
-  static type prefix##_stack_pop(prefix##_stack_t *prefix##_stack);                  \
-  static int prefix##_stack_empty(prefix##_stack_t *prefix##_stack);
-
-DECLARE_STACK_METHODS(args, gr_meta_args_t *)
-DECLARE_STACK_METHODS(dynamic_args_array, dynamic_args_array_t *)
-DECLARE_STACK_METHODS(string, char *)
-
-#undef DECLARE_STACK_METHODS
-
-
 /* ------------------------- dynamic args array --------------------------------------------------------------------- */
 
 static dynamic_args_array_t *dynamic_args_array_new(void);
@@ -1027,6 +1061,62 @@ static error_t sender_send_for_socket(metahandle_t *handle);
 static error_t sender_send_for_custom(metahandle_t *handle);
 
 
+/* ------------------------- generic list --------------------------------------------------------------------------- */
+
+#define DECLARE_LIST_METHODS(prefix)                                                                                   \
+  static prefix##_list_t *prefix##_list_new(void);                                                                     \
+  static void prefix##_list_delete(prefix##_list_t *list);                                                             \
+                                                                                                                       \
+  static error_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_entry_t entry);                         \
+  static error_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_entry_t entry);                          \
+                                                                                                                       \
+  static prefix##_list_entry_t prefix##_list_pop_front(prefix##_list_t *list);                                         \
+  static prefix##_list_entry_t prefix##_list_pop_back(prefix##_list_t *list);                                          \
+                                                                                                                       \
+  static error_t prefix##_list_push(prefix##_list_t *list, prefix##_list_entry_t entry);                               \
+  static prefix##_list_entry_t prefix##_list_pop(prefix##_list_t *list);                                               \
+                                                                                                                       \
+  static error_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_entry_t entry);                            \
+  static prefix##_list_entry_t prefix##_list_dequeue(prefix##_list_t *list);                                           \
+                                                                                                                       \
+  static int prefix##_list_empty(prefix##_list_t *list);                                                               \
+                                                                                                                       \
+  static error_t prefix##_list_entry_copy(prefix##_list_entry_t *copy, prefix##_list_entry_t entry);                   \
+  static error_t prefix##_list_entry_delete(prefix##_list_entry_t entry);                                              \
+                                                                                                                       \
+  static int prefix##_list_find_previous_node(const prefix##_list_t *list, const prefix##_list_node_t *node,           \
+                                              prefix##_list_node_t **previous_node);                                   \
+                                                                                                                       \
+  /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */ \
+                                                                                                                       \
+  static prefix##_reflist_t *prefix##_reflist_new(void);                                                               \
+  static void prefix##_reflist_delete(prefix##_reflist_t *list);                                                       \
+  static void prefix##_reflist_delete_with_entries(prefix##_reflist_t *list);                                          \
+                                                                                                                       \
+  static error_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry);                \
+  static error_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry);                 \
+                                                                                                                       \
+  static prefix##_reflist_entry_t prefix##_reflist_pop_front(prefix##_reflist_t *list);                                \
+  static prefix##_reflist_entry_t prefix##_reflist_pop_back(prefix##_reflist_t *list);                                 \
+                                                                                                                       \
+  static error_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry);                      \
+  static prefix##_reflist_entry_t prefix##_reflist_pop(prefix##_reflist_t *list);                                      \
+                                                                                                                       \
+  static error_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry);                   \
+  static prefix##_reflist_entry_t prefix##_reflist_dequeue(prefix##_reflist_t *list);                                  \
+                                                                                                                       \
+  static int prefix##_reflist_empty(prefix##_reflist_t *list);                                                         \
+                                                                                                                       \
+  static error_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, prefix##_reflist_entry_t entry);          \
+  static error_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry);                                        \
+                                                                                                                       \
+  static int prefix##_reflist_find_previous_node(const prefix##_reflist_t *list, const prefix##_reflist_node_t *node,  \
+                                                 prefix##_reflist_node_t **previous_node);
+
+DECLARE_LIST_METHODS(args)
+DECLARE_LIST_METHODS(dynamic_args_array)
+DECLARE_LIST_METHODS(string)
+
 /* ------------------------- generic set ---------------------------------------------------------------------------- */
 
 #define DECLARE_SET_METHODS(prefix)                                                                 \
@@ -1071,6 +1161,26 @@ DECLARE_MAP_METHODS(args_set, args_set_t *)
 
 #undef DECLARE_MAP_METHODS
 #undef DECLARE_SET_METHODS
+
+
+/* ------------------------- event handling ------------------------------------------------------------------------- */
+
+DECLARE_LIST_METHODS(event)
+
+static event_queue_t *event_queue_new(void);
+static void event_queue_delete(event_queue_t *queue);
+
+static void event_queue_register(event_queue_t *queue, gr_meta_event_type_t type, gr_meta_event_callback_t callback);
+static void event_queue_unregister(event_queue_t *queue, gr_meta_event_type_t type);
+
+static int event_queue_process_next(event_queue_t *queue);
+static int event_queue_process_all(event_queue_t *queue);
+
+static error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id);
+static error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height);
+
+
+#undef DECLARE_LIST_METHODS
 
 
 /* ========================= static variables ======================================================================= */
@@ -1127,6 +1237,12 @@ const char *plot_hierarchy_names[] = {"root", "plots", "subplots", "series", NUL
 static gr_meta_args_t *global_root_args = NULL;
 static gr_meta_args_t *active_plot_args = NULL;
 static unsigned int active_plot_index = 0;
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ event handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static event_queue_t *event_queue = NULL;
+static int processing_events = 0;
+
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1215,6 +1331,9 @@ void gr_finalizemeta(void)
       global_root_args = NULL;
       active_plot_args = NULL;
       active_plot_index = 0;
+      event_queue_delete(event_queue);
+      event_queue = NULL;
+      processing_events = 0;
       string_map_delete(fmt_map);
       fmt_map = NULL;
       plot_func_map_delete(plot_func_map);
@@ -1369,6 +1488,15 @@ int gr_plotmeta(const gr_meta_args_t *args)
     }
   plot_post_plot(active_plot_args);
 
+  /* Trigger event handling routines after plotting -> args container is fully processed (and modified consistently) at
+   * this time */
+  if (!processing_events)
+    {
+      processing_events = 1; /* Ensure that event processing won't trigger event processing again */
+      event_queue_process_all(event_queue);
+      processing_events = 0;
+    }
+
 #ifndef NDEBUG
   logger((stderr, "root args after \"gr_plotmeta\" (active_plot_index: %d):\n", active_plot_index - 1));
   gr_dumpmeta(global_root_args, stderr);
@@ -1402,6 +1530,30 @@ int gr_switchmeta(unsigned int id)
 
   active_plot_index = id + 1;
   active_plot_args = args_array[id];
+
+  return 1;
+}
+
+int gr_registermeta(gr_meta_event_type_t type, gr_meta_event_callback_t callback)
+{
+  if (plot_init_static_variables() != NO_ERROR)
+    {
+      return 0;
+    }
+
+  event_queue_register(event_queue, type, callback);
+
+  return 1;
+}
+
+int gr_unregistermeta(gr_meta_event_type_t type)
+{
+  if (plot_init_static_variables() != NO_ERROR)
+    {
+      return 0;
+    }
+
+  event_queue_unregister(event_queue, type);
 
   return 1;
 }
@@ -1606,9 +1758,9 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
     }
   else
     {
-      static args_stack_t *args_stack = NULL;
-      static dynamic_args_array_stack_t *args_array_stack = NULL;
-      static string_stack_t *key_stack = NULL;
+      static args_reflist_t *args_stack = NULL;
+      static dynamic_args_array_reflist_t *args_array_stack = NULL;
+      static string_list_t *key_stack = NULL;
       /* handle special cases (strings, objects and arrays of objects) */
       switch (format)
         {
@@ -1633,14 +1785,9 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
                 }
               else
                 {
-                  if ((_key = gks_strdup(key)) == NULL)
-                    {
-                      error = ERROR_MALLOC;
-                      break;
-                    }
                   if (args_stack == NULL)
                     {
-                      args_stack = args_stack_new();
+                      args_stack = args_reflist_new();
                       if (args_stack == NULL)
                         {
                           error = ERROR_MALLOC;
@@ -1649,22 +1796,21 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
                     }
                   if (key_stack == NULL)
                     {
-                      key_stack = string_stack_new();
+                      key_stack = string_list_new();
                       if (key_stack == NULL)
                         {
                           error = ERROR_MALLOC;
                           break;
                         }
                     }
-                  if ((error = args_stack_push(args_stack, current_args)) != NO_ERROR)
+                  if ((error = args_reflist_push(args_stack, current_args)) != NO_ERROR)
                     {
                       break;
                     }
-                  if ((error = string_stack_push(key_stack, _key)) != NO_ERROR)
+                  if ((error = string_list_push(key_stack, key)) != NO_ERROR)
                     {
                       break;
                     }
-                  _key = NULL; /* avoid deletion at the end of this function */
                   current_args = gr_newmeta();
                   if (current_args == NULL)
                     {
@@ -1681,18 +1827,18 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
                 }
               else
                 {
-                  gr_meta_args_t *previous_args = args_stack_pop(args_stack);
-                  _key = string_stack_pop(key_stack);
+                  gr_meta_args_t *previous_args = args_reflist_pop(args_stack);
+                  _key = string_list_pop(key_stack);
                   gr_meta_args_push(previous_args, _key, "a", current_args);
                   current_args = previous_args;
-                  if (args_stack_empty(args_stack))
+                  if (args_reflist_empty(args_stack))
                     {
-                      args_stack_delete(args_stack);
+                      args_reflist_delete_with_entries(args_stack);
                       args_stack = NULL;
                     }
-                  if (string_stack_empty(key_stack))
+                  if (string_list_empty(key_stack))
                     {
-                      string_stack_delete(key_stack);
+                      string_list_delete(key_stack);
                       key_stack = NULL;
                     }
                 }
@@ -1701,23 +1847,18 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
         case 'O':
           if (strchr(VALID_OPENING_BRACKETS, *(const char *)ref))
             {
-              if ((_key = gks_strdup(key)) == NULL)
-                {
-                  error = ERROR_MALLOC;
-                  break;
-                }
               if (current_args_array != NULL)
                 {
                   if (args_array_stack == NULL)
                     {
-                      args_array_stack = dynamic_args_array_stack_new();
+                      args_array_stack = dynamic_args_array_reflist_new();
                       if (args_array_stack == NULL)
                         {
                           error = ERROR_MALLOC;
                           break;
                         }
                     }
-                  if ((error = dynamic_args_array_stack_push(args_array_stack, current_args_array)) != NO_ERROR)
+                  if ((error = dynamic_args_array_reflist_push(args_array_stack, current_args_array)) != NO_ERROR)
                     {
                       break;
                     }
@@ -1726,32 +1867,31 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
                 {
                   if (args_stack == NULL)
                     {
-                      args_stack = args_stack_new();
+                      args_stack = args_reflist_new();
                       if (args_stack == NULL)
                         {
                           error = ERROR_MALLOC;
                           break;
                         }
                     }
-                  if ((error = args_stack_push(args_stack, current_args)) != NO_ERROR)
+                  if ((error = args_reflist_push(args_stack, current_args)) != NO_ERROR)
                     {
                       break;
                     }
                 }
               if (key_stack == NULL)
                 {
-                  key_stack = string_stack_new();
+                  key_stack = string_list_new();
                   if (key_stack == NULL)
                     {
                       error = ERROR_MALLOC;
                       break;
                     }
                 }
-              if ((error = string_stack_push(key_stack, _key)) != NO_ERROR)
+              if ((error = string_list_push(key_stack, key)) != NO_ERROR)
                 {
                   break;
                 }
-              _key = NULL;
               current_args_array = dynamic_args_array_new();
               if (current_args_array == NULL)
                 {
@@ -1786,16 +1926,16 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
           else if (strchr(VALID_CLOSING_BRACKETS, *(const char *)ref))
             {
               assert(key_stack != NULL);
-              _key = string_stack_pop(key_stack);
+              _key = string_list_pop(key_stack);
               if (args_array_stack != NULL)
                 {
-                  current_args = args_stack_pop(args_stack);
+                  current_args = args_reflist_pop(args_stack);
                   gr_meta_args_push(current_args, _key, "nA", current_args_array->size, current_args_array->buf);
                   dynamic_args_array_delete(current_args_array);
-                  current_args_array = dynamic_args_array_stack_pop(args_array_stack);
-                  if (dynamic_args_array_stack_empty(args_array_stack))
+                  current_args_array = dynamic_args_array_reflist_pop(args_array_stack);
+                  if (dynamic_args_array_reflist_empty(args_array_stack))
                     {
-                      dynamic_args_array_stack_delete(args_array_stack);
+                      dynamic_args_array_reflist_delete_with_entries(args_array_stack);
                       args_array_stack = NULL;
                     }
                 }
@@ -1807,9 +1947,9 @@ int gr_sendmeta_ref(const void *p, const char *key, char format, const void *ref
                   current_args_array = NULL;
                   current_args = NULL;
                 }
-              if (string_stack_empty(key_stack))
+              if (string_list_empty(key_stack))
                 {
-                  string_stack_delete(key_stack);
+                  string_list_delete(key_stack);
                   key_stack = NULL;
                 }
             }
@@ -2949,6 +3089,8 @@ error_t plot_init_static_variables(void)
   if (!plot_static_variables_initialized)
     {
       logger((stderr, "Initializing static plot variables\n"));
+      event_queue = event_queue_new();
+      processing_events = 0;
       global_root_args = gr_newmeta();
       error_cleanup_and_set_error_if(global_root_args == NULL, ERROR_MALLOC);
       error = plot_init_args_structure(global_root_args, plot_hierarchy_names, 1);
@@ -3253,6 +3395,11 @@ error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, uns
       return_error_if(args_array[i] == NULL, ERROR_MALLOC);
       error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
       return_if_error;
+      if (strcmp(*hierarchy_name_ptr, "plots") == 0)
+        {
+          error = event_queue_enqueue_new_plot_event(event_queue, i);
+          return_if_error;
+        }
     }
 
   return NO_ERROR;
@@ -3285,6 +3432,11 @@ error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_na
           error_cleanup_and_set_error_if(args_array[i] == NULL, ERROR_MALLOC);
           error = plot_init_args_structure(args_array[i], hierarchy_name_ptr, 1);
           error_cleanup_if_error;
+          if (strcmp(*hierarchy_name_ptr, "plots") == 0)
+            {
+              error = event_queue_enqueue_new_plot_event(event_queue, i);
+              return_if_error;
+            }
         }
       error_cleanup_if(!gr_meta_args_push(args, *hierarchy_name_ptr, "nA", next_hierarchy_level_max_id, args_array));
       free(args_array);
@@ -3397,12 +3549,21 @@ void plot_pre_plot(gr_meta_args_t *plot_args)
 
 void plot_process_wswindow_wsviewport(gr_meta_args_t *plot_args)
 {
+  int pixel_width, pixel_height;
+  int previous_pixel_width, previous_pixel_height;
   double metric_width, metric_height;
   double aspect_ratio_ws;
   double wsviewport[4] = {0.0, 0.0, 0.0, 0.0};
   double wswindow[4] = {0.0, 0.0, 0.0, 0.0};
 
-  get_figure_size(plot_args, NULL, NULL, &metric_width, &metric_height);
+  get_figure_size(plot_args, &pixel_width, &pixel_height, &metric_width, &metric_height);
+
+  if (!args_values(plot_args, "previous_pixel_size", "ii", &previous_pixel_width, &previous_pixel_height) ||
+      (previous_pixel_width != pixel_width || previous_pixel_height != pixel_height))
+    {
+      /* TODO: handle error return value? */
+      event_queue_enqueue_size_event(event_queue, active_plot_index - 1, pixel_width, pixel_height);
+    }
 
   aspect_ratio_ws = metric_width / metric_height;
   if (aspect_ratio_ws > 1)
@@ -3425,6 +3586,7 @@ void plot_process_wswindow_wsviewport(gr_meta_args_t *plot_args)
 
   gr_meta_args_push(plot_args, "wswindow", "dddd", wswindow[0], wswindow[1], wswindow[2], wswindow[3]);
   gr_meta_args_push(plot_args, "wsviewport", "dddd", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]);
+  gr_meta_args_push(plot_args, "previous_pixel_size", "ii", pixel_width, pixel_height);
 
   logger((stderr, "Stored wswindow (%lf, %lf, %lf, %lf)\n", wswindow[0], wswindow[1], wswindow[2], wswindow[3]));
   logger(
@@ -6570,90 +6732,6 @@ void *args_value_iterator_next(args_value_iterator_t *args_value_iterator)
 }
 
 
-/* ------------------------- args / dynamic args array stack -------------------------------------------------------- */
-
-#define DEFINE_STACK_METHODS(prefix, type, free_elem_func)                         \
-  prefix##_stack_t *prefix##_stack_new(void)                                       \
-  {                                                                                \
-    prefix##_stack_t *prefix##_stack;                                              \
-                                                                                   \
-    prefix##_stack = malloc(sizeof(prefix##_stack_t));                             \
-    if (prefix##_stack == NULL)                                                    \
-      {                                                                            \
-        return NULL;                                                               \
-      }                                                                            \
-    prefix##_stack->head = NULL;                                                   \
-                                                                                   \
-    return prefix##_stack;                                                         \
-  }                                                                                \
-                                                                                   \
-  void prefix##_stack_delete(prefix##_stack_t *prefix##_stack)                     \
-  {                                                                                \
-    prefix##_stack_node_t *current_node = prefix##_stack->head, *next_node = NULL; \
-                                                                                   \
-    while (current_node != NULL)                                                   \
-      {                                                                            \
-        next_node = current_node->next;                                            \
-        free(current_node);                                                        \
-        current_node = next_node;                                                  \
-      }                                                                            \
-    free(prefix##_stack);                                                          \
-  }                                                                                \
-                                                                                   \
-  void prefix##_stack_delete_with_elements(prefix##_stack_t *prefix##_stack)       \
-  {                                                                                \
-    prefix##_stack_node_t *current_node = prefix##_stack->head, *next_node = NULL; \
-                                                                                   \
-    while (current_node != NULL)                                                   \
-      {                                                                            \
-        next_node = current_node->next;                                            \
-        free_elem_func(next_node->value);                                          \
-        free(current_node);                                                        \
-        current_node = next_node;                                                  \
-      }                                                                            \
-    free(prefix##_stack);                                                          \
-  }                                                                                \
-                                                                                   \
-  error_t prefix##_stack_push(prefix##_stack_t *prefix##_stack, type value)        \
-  {                                                                                \
-    prefix##_stack_node_t *prefix##_stack_node;                                    \
-                                                                                   \
-    if ((prefix##_stack_node = malloc(sizeof(prefix##_stack_node_t))) == NULL)     \
-      {                                                                            \
-        return ERROR_MALLOC;                                                       \
-      }                                                                            \
-    prefix##_stack_node->value = value;                                            \
-    prefix##_stack_node->next = prefix##_stack->head;                              \
-    prefix##_stack->head = prefix##_stack_node;                                    \
-                                                                                   \
-    return NO_ERROR;                                                               \
-  }                                                                                \
-                                                                                   \
-  type prefix##_stack_pop(prefix##_stack_t *prefix##_stack)                        \
-  {                                                                                \
-    prefix##_stack_node_t *head_node;                                              \
-    type value = NULL;                                                             \
-                                                                                   \
-    head_node = prefix##_stack->head;                                              \
-    if (head_node != NULL)                                                         \
-      {                                                                            \
-        value = head_node->value;                                                  \
-        prefix##_stack->head = head_node->next;                                    \
-        free(head_node);                                                           \
-      }                                                                            \
-                                                                                   \
-    return value;                                                                  \
-  }                                                                                \
-                                                                                   \
-  int prefix##_stack_empty(prefix##_stack_t *prefix##_stack) { return (prefix##_stack->head == NULL); }
-
-DEFINE_STACK_METHODS(args, gr_meta_args_t *, gr_deletemeta)
-DEFINE_STACK_METHODS(dynamic_args_array, dynamic_args_array_t *, dynamic_args_array_delete)
-DEFINE_STACK_METHODS(string, char *, free)
-
-#undef DEFINE_STACK_METHODS
-
-
 /* ------------------------- dynamic args array --------------------------------------------------------------------- */
 
 dynamic_args_array_t *dynamic_args_array_new(void)
@@ -9258,6 +9336,335 @@ FILE *gr_get_stdout()
 #endif
 
 
+/* ------------------------- generic list --------------------------------------------------------------------------- */
+
+#define DEFINE_LIST_METHODS(prefix)                                                                                    \
+  prefix##_list_t *prefix##_list_new(void)                                                                             \
+  {                                                                                                                    \
+    static const prefix##_list_vtable_t vt = {                                                                         \
+        prefix##_list_entry_copy,                                                                                      \
+        prefix##_list_entry_delete,                                                                                    \
+    };                                                                                                                 \
+    prefix##_list_t *list;                                                                                             \
+                                                                                                                       \
+    list = malloc(sizeof(prefix##_list_t));                                                                            \
+    if (list == NULL)                                                                                                  \
+      {                                                                                                                \
+        return NULL;                                                                                                   \
+      }                                                                                                                \
+    list->vt = &vt;                                                                                                    \
+    list->head = NULL;                                                                                                 \
+    list->tail = NULL;                                                                                                 \
+    list->size = 0;                                                                                                    \
+                                                                                                                       \
+    return list;                                                                                                       \
+  }                                                                                                                    \
+                                                                                                                       \
+  void prefix##_list_delete(prefix##_list_t *list)                                                                     \
+  {                                                                                                                    \
+    prefix##_list_node_t *current_list_node;                                                                           \
+    prefix##_list_node_t *next_list_node;                                                                              \
+                                                                                                                       \
+    current_list_node = list->head;                                                                                    \
+    while (current_list_node != NULL)                                                                                  \
+      {                                                                                                                \
+        next_list_node = current_list_node->next;                                                                      \
+        list->vt->entry_delete(current_list_node->entry);                                                              \
+        free(current_list_node);                                                                                       \
+        current_list_node = next_list_node;                                                                            \
+      }                                                                                                                \
+    free(list);                                                                                                        \
+  }                                                                                                                    \
+                                                                                                                       \
+  error_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_entry_t entry)                                 \
+  {                                                                                                                    \
+    prefix##_list_node_t *new_list_node;                                                                               \
+    error_t error = NO_ERROR;                                                                                          \
+                                                                                                                       \
+    new_list_node = malloc(sizeof(prefix##_list_node_t));                                                              \
+    error_cleanup_and_set_error_if(new_list_node == NULL, ERROR_MALLOC);                                               \
+    error = list->vt->entry_copy(&new_list_node->entry, entry);                                                        \
+    error_cleanup_if_error;                                                                                            \
+    new_list_node->next = list->head;                                                                                  \
+    list->head = new_list_node;                                                                                        \
+    if (list->tail == NULL)                                                                                            \
+      {                                                                                                                \
+        list->tail = new_list_node;                                                                                    \
+      }                                                                                                                \
+    ++(list->size);                                                                                                    \
+                                                                                                                       \
+    return NO_ERROR;                                                                                                   \
+                                                                                                                       \
+  error_cleanup:                                                                                                       \
+    free(new_list_node);                                                                                               \
+    return error;                                                                                                      \
+  }                                                                                                                    \
+                                                                                                                       \
+  error_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_entry_t entry)                                  \
+  {                                                                                                                    \
+    prefix##_list_node_t *new_list_node;                                                                               \
+    error_t error = NO_ERROR;                                                                                          \
+                                                                                                                       \
+    new_list_node = malloc(sizeof(prefix##_list_node_t));                                                              \
+    error_cleanup_and_set_error_if(new_list_node == NULL, ERROR_MALLOC);                                               \
+    error = list->vt->entry_copy(&new_list_node->entry, entry);                                                        \
+    error_cleanup_if_error;                                                                                            \
+    new_list_node->next = NULL;                                                                                        \
+    if (list->head == NULL)                                                                                            \
+      {                                                                                                                \
+        list->head = new_list_node;                                                                                    \
+      }                                                                                                                \
+    else                                                                                                               \
+      {                                                                                                                \
+        list->tail->next = new_list_node;                                                                              \
+      }                                                                                                                \
+    list->tail = new_list_node;                                                                                        \
+    ++(list->size);                                                                                                    \
+                                                                                                                       \
+    return NO_ERROR;                                                                                                   \
+                                                                                                                       \
+  error_cleanup:                                                                                                       \
+    free(new_list_node);                                                                                               \
+    return error;                                                                                                      \
+  }                                                                                                                    \
+                                                                                                                       \
+  prefix##_list_entry_t prefix##_list_pop_front(prefix##_list_t *list)                                                 \
+  {                                                                                                                    \
+    prefix##_list_node_t *front_node;                                                                                  \
+    prefix##_list_entry_t front_entry;                                                                                 \
+                                                                                                                       \
+    assert(list->head != NULL);                                                                                        \
+    front_node = list->head;                                                                                           \
+    list->head = list->head->next;                                                                                     \
+    if (list->tail == front_node)                                                                                      \
+      {                                                                                                                \
+        list->tail = NULL;                                                                                             \
+      }                                                                                                                \
+    front_entry = front_node->entry;                                                                                   \
+    free(front_node);                                                                                                  \
+    --(list->size);                                                                                                    \
+                                                                                                                       \
+    return front_entry;                                                                                                \
+  }                                                                                                                    \
+                                                                                                                       \
+  prefix##_list_entry_t prefix##_list_pop_back(prefix##_list_t *list)                                                  \
+  {                                                                                                                    \
+    prefix##_list_node_t *last_node;                                                                                   \
+    prefix##_list_node_t *next_to_last_node = NULL;                                                                    \
+    prefix##_list_entry_t last_entry;                                                                                  \
+                                                                                                                       \
+    assert(list->tail != NULL);                                                                                        \
+    last_node = list->tail;                                                                                            \
+    prefix##_list_find_previous_node(list, last_node, &next_to_last_node);                                             \
+    if (next_to_last_node == NULL)                                                                                     \
+      {                                                                                                                \
+        list->head = list->tail = NULL;                                                                                \
+      }                                                                                                                \
+    else                                                                                                               \
+      {                                                                                                                \
+        list->tail = next_to_last_node;                                                                                \
+        next_to_last_node->next = NULL;                                                                                \
+      }                                                                                                                \
+    last_entry = last_node->entry;                                                                                     \
+    free(last_node);                                                                                                   \
+    --(list->size);                                                                                                    \
+                                                                                                                       \
+    return last_entry;                                                                                                 \
+  }                                                                                                                    \
+                                                                                                                       \
+  error_t prefix##_list_push(prefix##_list_t *list, prefix##_list_entry_t entry)                                       \
+  {                                                                                                                    \
+    return prefix##_list_push_front(list, entry);                                                                      \
+  }                                                                                                                    \
+                                                                                                                       \
+  prefix##_list_entry_t prefix##_list_pop(prefix##_list_t *list) { return prefix##_list_pop_front(list); }             \
+                                                                                                                       \
+  error_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_entry_t entry)                                    \
+  {                                                                                                                    \
+    return prefix##_list_push_back(list, entry);                                                                       \
+  }                                                                                                                    \
+                                                                                                                       \
+  prefix##_list_entry_t prefix##_list_dequeue(prefix##_list_t *list) { return prefix##_list_pop_front(list); }         \
+                                                                                                                       \
+  int prefix##_list_empty(prefix##_list_t *list) { return list->size == 0; }                                           \
+                                                                                                                       \
+  int prefix##_list_find_previous_node(const prefix##_list_t *list, const prefix##_list_node_t *node,                  \
+                                       prefix##_list_node_t **previous_node)                                           \
+  {                                                                                                                    \
+    prefix##_list_node_t *prev_node;                                                                                   \
+    prefix##_list_node_t *current_node;                                                                                \
+                                                                                                                       \
+    prev_node = NULL;                                                                                                  \
+    current_node = list->head;                                                                                         \
+    while (current_node != NULL)                                                                                       \
+      {                                                                                                                \
+        if (current_node == node)                                                                                      \
+          {                                                                                                            \
+            if (previous_node != NULL)                                                                                 \
+              {                                                                                                        \
+                *previous_node = prev_node;                                                                            \
+              }                                                                                                        \
+            return 1;                                                                                                  \
+          }                                                                                                            \
+        prev_node = current_node;                                                                                      \
+        current_node = current_node->next;                                                                             \
+      }                                                                                                                \
+                                                                                                                       \
+    return 0;                                                                                                          \
+  }                                                                                                                    \
+                                                                                                                       \
+  /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */ \
+                                                                                                                       \
+  prefix##_reflist_t *prefix##_reflist_new(void)                                                                       \
+  {                                                                                                                    \
+    static const prefix##_reflist_vtable_t vt = {                                                                      \
+        prefix##_reflist_entry_copy,                                                                                   \
+        prefix##_reflist_entry_delete,                                                                                 \
+    };                                                                                                                 \
+    prefix##_reflist_t *list;                                                                                          \
+                                                                                                                       \
+    list = (prefix##_reflist_t *)prefix##_list_new();                                                                  \
+    list->vt = &vt;                                                                                                    \
+                                                                                                                       \
+    return list;                                                                                                       \
+  }                                                                                                                    \
+                                                                                                                       \
+  void prefix##_reflist_delete(prefix##_reflist_t *list) { prefix##_list_delete((prefix##_list_t *)list); }            \
+                                                                                                                       \
+  void prefix##_reflist_delete_with_entries(prefix##_reflist_t *list)                                                  \
+  {                                                                                                                    \
+    prefix##_reflist_node_t *current_reflist_node;                                                                     \
+    prefix##_reflist_node_t *next_reflist_node;                                                                        \
+                                                                                                                       \
+    current_reflist_node = list->head;                                                                                 \
+    while (current_reflist_node != NULL)                                                                               \
+      {                                                                                                                \
+        next_reflist_node = current_reflist_node->next;                                                                \
+        prefix##_list_entry_delete((prefix##_list_entry_t)current_reflist_node->entry);                                \
+        free(current_reflist_node);                                                                                    \
+        current_reflist_node = next_reflist_node;                                                                      \
+      }                                                                                                                \
+    free(list);                                                                                                        \
+  }                                                                                                                    \
+                                                                                                                       \
+  error_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                        \
+  {                                                                                                                    \
+    return prefix##_list_push_front((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                            \
+  }                                                                                                                    \
+                                                                                                                       \
+  error_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                         \
+  {                                                                                                                    \
+    return prefix##_list_push_back((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                             \
+  }                                                                                                                    \
+                                                                                                                       \
+  prefix##_reflist_entry_t prefix##_reflist_pop_front(prefix##_reflist_t *list)                                        \
+  {                                                                                                                    \
+    return prefix##_list_pop_front((prefix##_list_t *)list);                                                           \
+  }                                                                                                                    \
+                                                                                                                       \
+  prefix##_reflist_entry_t prefix##_reflist_pop_back(prefix##_reflist_t *list)                                         \
+  {                                                                                                                    \
+    return prefix##_list_pop_back((prefix##_list_t *)list);                                                            \
+  }                                                                                                                    \
+                                                                                                                       \
+  error_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                              \
+  {                                                                                                                    \
+    return prefix##_list_push((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                                  \
+  }                                                                                                                    \
+                                                                                                                       \
+  prefix##_reflist_entry_t prefix##_reflist_pop(prefix##_reflist_t *list)                                              \
+  {                                                                                                                    \
+    return prefix##_list_pop((prefix##_list_t *)list);                                                                 \
+  }                                                                                                                    \
+                                                                                                                       \
+  error_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry)                           \
+  {                                                                                                                    \
+    return prefix##_list_enqueue((prefix##_list_t *)list, (prefix##_list_entry_t)entry);                               \
+  }                                                                                                                    \
+                                                                                                                       \
+  prefix##_reflist_entry_t prefix##_reflist_dequeue(prefix##_reflist_t *list)                                          \
+  {                                                                                                                    \
+    return prefix##_list_dequeue((prefix##_list_t *)list);                                                             \
+  }                                                                                                                    \
+                                                                                                                       \
+  int prefix##_reflist_empty(prefix##_reflist_t *list) { return prefix##_list_empty((prefix##_list_t *)list); }        \
+                                                                                                                       \
+                                                                                                                       \
+  int prefix##_reflist_find_previous_node(const prefix##_reflist_t *list, const prefix##_reflist_node_t *node,         \
+                                          prefix##_reflist_node_t **previous_node)                                     \
+  {                                                                                                                    \
+    return prefix##_list_find_previous_node((prefix##_list_t *)list, (prefix##_list_node_t *)node,                     \
+                                            (prefix##_list_node_t **)previous_node);                                   \
+  }                                                                                                                    \
+                                                                                                                       \
+  error_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, prefix##_reflist_entry_t entry)                  \
+  {                                                                                                                    \
+    *copy = entry;                                                                                                     \
+    return NO_ERROR;                                                                                                   \
+  }                                                                                                                    \
+                                                                                                                       \
+  error_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry) { return NO_ERROR; }
+
+DEFINE_LIST_METHODS(args)
+
+error_t args_list_entry_copy(args_list_entry_t *copy, args_list_entry_t entry)
+{
+  args_list_entry_t _copy;
+
+  _copy = args_copy(entry, NULL, NULL);
+  if (_copy == NULL)
+    {
+      return ERROR_MALLOC;
+    }
+  *copy = _copy;
+
+  return NO_ERROR;
+}
+
+error_t args_list_entry_delete(args_list_entry_t entry)
+{
+  gr_deletemeta(entry);
+  return NO_ERROR;
+}
+
+DEFINE_LIST_METHODS(dynamic_args_array)
+
+error_t dynamic_args_array_list_entry_copy(dynamic_args_array_list_entry_t *copy, dynamic_args_array_list_entry_t entry)
+{
+  /* TODO: create a copy of the object! Otherwise code will segfault on list deletion for a non-ref list */
+  *copy = entry;
+  return NO_ERROR;
+}
+
+error_t dynamic_args_array_list_entry_delete(dynamic_args_array_list_entry_t entry)
+{
+  dynamic_args_array_delete(entry);
+  return NO_ERROR;
+}
+
+DEFINE_LIST_METHODS(string)
+
+error_t string_list_entry_copy(string_list_entry_t *copy, string_list_entry_t entry)
+{
+  string_list_entry_t _copy;
+
+  _copy = strdup(entry);
+  if (_copy == NULL)
+    {
+      return ERROR_MALLOC;
+    }
+  *copy = _copy;
+
+  return NO_ERROR;
+}
+
+error_t string_list_entry_delete(string_list_entry_t entry)
+{
+  free(entry);
+  return NO_ERROR;
+}
+
+
 /* ------------------------- generic set ---------------------------------------------------------------------------- */
 
 #define DEFINE_SET_METHODS(prefix)                                                                                \
@@ -9655,3 +10062,166 @@ void args_set_map_value_delete(args_set_t *value)
 
 #undef DEFINE_MAP_METHODS
 #undef DEFINE_SET_METHODS
+
+
+/* ------------------------- event handling ------------------------------------------------------------------------- */
+
+DEFINE_LIST_METHODS(event)
+
+error_t event_list_entry_copy(event_list_entry_t *copy, event_list_entry_t entry)
+{
+  event_list_entry_t _copy;
+
+  _copy = malloc(sizeof(gr_meta_event_t));
+  if (_copy == NULL)
+    {
+      return ERROR_MALLOC;
+    }
+
+  memcpy(_copy, entry, sizeof(gr_meta_event_t));
+  *copy = _copy;
+
+  return NO_ERROR;
+}
+
+error_t event_list_entry_delete(event_list_entry_t entry)
+{
+  free(entry);
+  return NO_ERROR;
+}
+
+event_queue_t *event_queue_new(void)
+{
+  event_queue_t *queue = NULL;
+
+  queue = malloc(sizeof(event_queue_t));
+  error_cleanup_if(queue == NULL);
+  queue->queue = NULL;
+  queue->event_callbacks = NULL;
+  queue->queue = event_reflist_new();
+  error_cleanup_if(queue->queue == NULL);
+  queue->event_callbacks = calloc(_GR_META_EVENT_TYPE_COUNT, sizeof(gr_meta_event_callback_t));
+  error_cleanup_if(queue->event_callbacks == NULL);
+
+  return queue;
+
+error_cleanup:
+  if (queue != NULL)
+    {
+      if (queue->queue != NULL)
+        {
+          event_reflist_delete(queue->queue);
+        }
+      if (queue->event_callbacks != NULL)
+        {
+          free(queue->event_callbacks);
+        }
+      free(queue);
+    }
+
+  return NULL;
+}
+
+void event_queue_delete(event_queue_t *queue)
+{
+  event_reflist_delete_with_entries(queue->queue);
+  free(queue->event_callbacks);
+  free(queue);
+}
+
+void event_queue_register(event_queue_t *queue, gr_meta_event_type_t type, gr_meta_event_callback_t callback)
+{
+  queue->event_callbacks[type] = callback;
+}
+
+void event_queue_unregister(event_queue_t *queue, gr_meta_event_type_t type)
+{
+  queue->event_callbacks[type] = NULL;
+}
+
+int event_queue_process_next(event_queue_t *queue)
+{
+  gr_meta_event_t *event;
+  gr_meta_event_type_t type;
+
+  if (event_reflist_empty(queue->queue))
+    {
+      return 0;
+    }
+
+  event = event_reflist_dequeue(queue->queue);
+  type = *((int *)event);
+  if (queue->event_callbacks[type] != NULL)
+    {
+      queue->event_callbacks[type](event);
+    }
+
+  return 1;
+}
+
+int event_queue_process_all(event_queue_t *queue)
+{
+
+  if (event_reflist_empty(queue->queue))
+    {
+      return 0;
+    }
+
+  while (event_queue_process_next(queue))
+    ;
+
+  return 1;
+}
+
+error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id)
+{
+  gr_meta_new_plot_event_t *new_plot_event = NULL;
+  error_t error = NO_ERROR;
+
+  new_plot_event = malloc(sizeof(gr_meta_new_plot_event_t));
+  error_cleanup_and_set_error_if(new_plot_event == NULL, ERROR_MALLOC);
+  new_plot_event->type = GR_META_EVENT_NEW_PLOT;
+  new_plot_event->plot_id = plot_id;
+
+  error = event_reflist_enqueue(queue->queue, (gr_meta_event_t *)new_plot_event);
+  error_cleanup_if_error;
+
+  return NO_ERROR;
+
+error_cleanup:
+  if (new_plot_event != NULL)
+    {
+      free(new_plot_event);
+    }
+
+  return error;
+}
+
+error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height)
+{
+  gr_meta_size_event_t *size_event = NULL;
+  error_t error = NO_ERROR;
+
+  size_event = malloc(sizeof(gr_meta_size_event_t));
+  error_cleanup_and_set_error_if(size_event == NULL, ERROR_MALLOC);
+  size_event->type = GR_META_EVENT_SIZE;
+  size_event->plot_id = plot_id;
+  size_event->width = width;
+  size_event->height = height;
+
+  error = event_reflist_enqueue(queue->queue, (gr_meta_event_t *)size_event);
+  error_cleanup_if_error;
+
+  return NO_ERROR;
+
+error_cleanup:
+  if (size_event != NULL)
+    {
+      free(size_event);
+    }
+
+  return error;
+}
+
+
+#undef DEFINE_LIST_METHODS
