@@ -144,10 +144,10 @@ void GRWidget::mouseReleaseEvent(QMouseEvent *event)
       if (std::abs(event->x() - start_pos.x()) >= 5 && std::abs(event->y() - start_pos.y()) >= 5)
         {
           gr_meta_args_push(input_args, "keep_aspect_ratio", "i", event->modifiers() & Qt::ShiftModifier);
-          gr_meta_args_push(input_args, "left", "i", box_zoom_rubberband_->geometry().left());
-          gr_meta_args_push(input_args, "top", "i", box_zoom_rubberband_->geometry().top());
-          gr_meta_args_push(input_args, "right", "i", box_zoom_rubberband_->geometry().right());
-          gr_meta_args_push(input_args, "bottom", "i", box_zoom_rubberband_->geometry().bottom());
+          gr_meta_args_push(input_args, "x1", "i", start_pos.x());
+          gr_meta_args_push(input_args, "y1", "i", start_pos.y());
+          gr_meta_args_push(input_args, "x2", "i", event->x());
+          gr_meta_args_push(input_args, "y2", "i", event->y());
         }
     }
   else if (mouse_state_.mode() == MouseState::Mode::pan)

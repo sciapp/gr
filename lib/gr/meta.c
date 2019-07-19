@@ -820,6 +820,9 @@ static int str_equals_any(const char *str, unsigned int n, ...);
 static int str_equals_any_in_array(const char *str, const char **str_array);
 static int uppercase_count(const char *str);
 static unsigned long next_or_equal_power2(unsigned long num);
+static int get_focus_and_factor(const int top, const int right, const int bottom, const int left,
+                                const int keep_aspect_ratio, double *factor_x, double *factor_y, double *focus_x,
+                                double *focus_y, gr_meta_args_t **subplot_args);
 
 
 /* ========================= methods ================================================================================ */
@@ -1852,7 +1855,7 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
    * - `angle_delta`: mouse wheel rotation angle in eighths of a degree, can be replaced by factor (double type)
    * - `factor`: zoom factor, can be replaced by angle_delta (double type)
    * box zoom:
-   * - `left`, `top`, `right`, `bottom`: coordinates of a box selection
+   * - `x1`, `y1`, `x2`, `y2`: coordinates of a box selection, (x1, y1) is the fixed corner
    * - `keep_aspect_ratio`: if set to `1`, the aspect ratio of the gr window is preserved (defaults to `1`)
    * pan:
    * - `x`, `y`: start point
@@ -1861,7 +1864,7 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
    * All coordinates are expected to be given as workstation coordinates (integer type)
    */
   int width, height, max_width_height;
-  int x, y, left, top, right, bottom;
+  int x, y, x1, y1, x2, y2;
   gr_meta_args_t *subplot_args;
   const double *viewport;
   double viewport_mid_x, viewport_mid_y;
@@ -1958,67 +1961,24 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
         }
     }
 
-  if (args_values(input_args, "left", "i", &left) && args_values(input_args, "right", "i", &right) &&
-      args_values(input_args, "top", "i", &top) && args_values(input_args, "bottom", "i", &bottom))
+  if (args_values(input_args, "x1", "i", &x1) && args_values(input_args, "x2", "i", &x2) &&
+      args_values(input_args, "y1", "i", &y1) && args_values(input_args, "y2", "i", &y2))
     {
-      double ndc_left, ndc_top, ndc_right, ndc_bottom;
-      double focus_left, focus_top, focus_right, focus_bottom, focus_x, focus_y, factor_x, factor_y;
-      double ndc_box_x[4], ndc_box_y[4];
-      const double *wswindow;
+      double focus_x, focus_y, factor_x, factor_y;
       int keep_aspect_ratio = INPUTMETA_DEFAULT_KEEP_ASPECT_RATIO;
 
       args_values(input_args, "keep_aspect_ratio", "i", &keep_aspect_ratio);
 
-      ndc_left = (double)left / max_width_height;
-      ndc_top = (double)(height - top) / max_width_height;
-      ndc_right = (double)right / max_width_height;
-      ndc_bottom = (double)(height - bottom) / max_width_height;
-
-      ndc_box_x[0] = ndc_left;
-      ndc_box_y[0] = ndc_bottom;
-      ndc_box_x[1] = ndc_right;
-      ndc_box_y[1] = ndc_bottom;
-      ndc_box_x[2] = ndc_left;
-      ndc_box_y[2] = ndc_top;
-      ndc_box_x[3] = ndc_right;
-      ndc_box_y[3] = ndc_top;
-      subplot_args = get_subplot_from_ndc_points(array_size(ndc_box_x), ndc_box_x, ndc_box_y);
-      if (subplot_args == NULL)
+      if (!get_focus_and_factor(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y,
+                                &subplot_args))
         {
           return 0;
         }
-      args_values(subplot_args, "viewport", "D", &viewport);
-      args_values(active_plot_args, "wswindow", "D", &wswindow);
-
-      viewport_mid_x = (viewport[0] + viewport[1]) / 2.0;
-      viewport_mid_y = (viewport[2] + viewport[3]) / 2.0;
-      if (keep_aspect_ratio)
-        {
-          factor_x = factor_y =
-              max(abs(right - left) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0])),
-                  abs(bottom - top) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2])));
-        }
-      else
-        {
-          factor_x = abs(right - left) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
-          factor_y = abs(bottom - top) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
-        }
-      /* If `keep_aspect_ratio` is set to `1`:
-       * Dependent on which factor was taken in the previous statement, the focus point calculation can differ for
-       * left/right and top/bottom pairs -> calculate both and take the average */
-      focus_left = (ndc_left - factor_x * viewport[0]) / (1 - factor_x);
-      focus_right = (ndc_right - factor_x * viewport[1]) / (1 - factor_x);
-      focus_bottom = (ndc_bottom - factor_y * viewport[2]) / (1 - factor_y);
-      focus_top = (ndc_top - factor_y * viewport[3]) / (1 - factor_y);
-      focus_x = (focus_left + focus_right) / 2.0 - viewport_mid_x;
-      focus_y = (focus_top + focus_bottom) / 2.0 - viewport_mid_y;
 
       logger((stderr, "Got widget size: (%d, %d)\n", width, height));
-      logger((stderr, "Got box: (%d, %d, %d, %d)\n", left, right, top, bottom));
-      logger((stderr, "Got viewport: (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
-      logger((stderr, "viewport mid: (%lf, %lf)\n", viewport_mid_x, viewport_mid_y));
+      logger((stderr, "Got box: (%d, %d, %d, %d)\n", x1, y1, x2, y2));
       logger((stderr, "zoom focus: (%lf, %lf)\n", focus_x, focus_y));
-      logger((stderr, "zomm factors: (%lf, %lf)\n", factor_x, factor_y));
+      logger((stderr, "zoom factors: (%lf, %lf)\n", factor_x, factor_y));
 
       gr_meta_args_push(subplot_args, "panzoom", "dddd", focus_x, focus_y, factor_x, factor_y);
 
@@ -2026,6 +1986,33 @@ int gr_inputmeta(const gr_meta_args_t *input_args)
     }
 
   return 0;
+}
+
+int gr_meta_get_box(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio, int *x, int *y,
+                    int *w, int *h)
+{
+  int width, height, max_width_height;
+  double focus_x, focus_y, factor_x, factor_y;
+  double viewport_mid_x, viewport_mid_y;
+  const double *viewport, *wswindow;
+  gr_meta_args_t *subplot_args;
+  get_figure_size(NULL, &width, &height, NULL, NULL);
+  max_width_height = max(width, height);
+  if (!get_focus_and_factor(x1, y1, x2, y2, keep_aspect_ratio, &factor_x, &factor_y, &focus_x, &focus_y, &subplot_args))
+    {
+      return 0;
+    }
+  args_values(active_plot_args, "wswindow", "D", &wswindow);
+  args_values(subplot_args, "viewport", "D", &viewport);
+  viewport_mid_x = (viewport[1] + viewport[0]) / 2.0;
+  viewport_mid_y = (viewport[3] + viewport[2]) / 2.0;
+  *w = (int)round(factor_x * width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
+  *h = (int)round(factor_y * height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
+  *x = (int)round(((viewport_mid_x + focus_x) - ((viewport_mid_x + focus_x) - viewport[0]) * factor_x) *
+                  max_width_height);
+  *y = (int)round(height - ((viewport_mid_y + focus_y) - ((viewport_mid_y + focus_y) - viewport[3]) * factor_y) *
+                               max_width_height);
+  return 1;
 }
 
 /* ######################### private implementation ################################################################# */
@@ -5543,6 +5530,81 @@ unsigned long next_or_equal_power2(unsigned long num)
     }
   return power;
 #endif
+}
+
+static int get_focus_and_factor(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio,
+                                double *factor_x, double *factor_y, double *focus_x, double *focus_y,
+                                gr_meta_args_t **subplot_args)
+{
+  double ndc_box_x[4], ndc_box_y[4];
+  double ndc_left, ndc_top, ndc_right, ndc_bottom;
+  const double *wswindow, *viewport;
+  int width, height, max_width_height;
+
+  get_figure_size(NULL, &width, &height, NULL, NULL);
+  max_width_height = max(width, height);
+
+  if (x1 <= x2)
+    {
+      ndc_left = (double)x1 / max_width_height;
+      ndc_right = (double)x2 / max_width_height;
+    }
+  else
+    {
+      ndc_left = (double)x2 / max_width_height;
+      ndc_right = (double)x1 / max_width_height;
+    }
+  if (y1 <= y2)
+    {
+      ndc_top = (double)(height - y1) / max_width_height;
+      ndc_bottom = (double)(height - y2) / max_width_height;
+    }
+  else
+    {
+      ndc_top = (double)(height - y2) / max_width_height;
+      ndc_bottom = (double)(height - y1) / max_width_height;
+    }
+
+  ndc_box_x[0] = ndc_left;
+  ndc_box_y[0] = ndc_bottom;
+  ndc_box_x[1] = ndc_right;
+  ndc_box_y[1] = ndc_bottom;
+  ndc_box_x[2] = ndc_left;
+  ndc_box_y[2] = ndc_top;
+  ndc_box_x[3] = ndc_right;
+  ndc_box_y[3] = ndc_top;
+  *subplot_args = get_subplot_from_ndc_points(array_size(ndc_box_x), ndc_box_x, ndc_box_y);
+  if (*subplot_args == NULL)
+    {
+      return 0;
+    }
+  args_values(*subplot_args, "viewport", "D", &viewport);
+  args_values(active_plot_args, "wswindow", "D", &wswindow);
+
+  *factor_x = abs(x1 - x2) / (width * (viewport[1] - viewport[0]) / (wswindow[1] - wswindow[0]));
+  *factor_y = abs(y1 - y2) / (height * (viewport[3] - viewport[2]) / (wswindow[3] - wswindow[2]));
+  if (keep_aspect_ratio)
+    {
+      if (*factor_x <= *factor_y)
+        {
+          *factor_x = *factor_y;
+          if (x1 > x2)
+            {
+              ndc_left = ndc_right - *factor_x * (viewport[1] - viewport[0]);
+            }
+        }
+      else
+        {
+          *factor_y = *factor_x;
+          if (y1 > y2)
+            {
+              ndc_top = ndc_bottom + *factor_y * (viewport[3] - viewport[2]);
+            }
+        }
+    }
+  *focus_x = (ndc_left - *factor_x * viewport[0]) / (1 - *factor_x) - (viewport[0] + viewport[1]) / 2.0;
+  *focus_y = (ndc_top - *factor_y * viewport[3]) / (1 - *factor_y) - (viewport[2] + viewport[3]) / 2.0;
+  return 1;
 }
 
 
