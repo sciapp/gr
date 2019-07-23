@@ -411,19 +411,20 @@ typedef struct
   X(ERROR_NETWORK_HOSTNAME_RESOLUTION, 25)            \
   X(ERROR_NETWORK_CONNECT, 26)                        \
   X(ERROR_NETWORK_RECV, 27)                           \
-  X(ERROR_NETWORK_SEND, 28)                           \
-  X(ERROR_NETWORK_SOCKET_CLOSE, 29)                   \
-  X(ERROR_NETWORK_WINSOCK_CLEANUP, 30)                \
-  X(ERROR_CUSTOM_RECV, 31)                            \
-  X(ERROR_CUSTOM_SEND, 32)                            \
-  X(ERROR_PLOT_NORMALIZATION, 33)                     \
-  X(ERROR_PLOT_UNKNOWN_KEY, 34)                       \
-  X(ERROR_PLOT_UNKNOWN_KIND, 35)                      \
-  X(ERROR_PLOT_MISSING_DATA, 36)                      \
-  X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 37)         \
-  X(ERROR_PLOT_MISSING_LABELS, 38)                    \
-  X(ERROR_PLOT_INVALID_ID, 39)                        \
-  Y(ERROR_NOT_IMPLEMENTED, 40)
+  X(ERROR_NETWORK_RECV_CONNECTION_SHUTDOWN, 28)       \
+  X(ERROR_NETWORK_SEND, 29)                           \
+  X(ERROR_NETWORK_SOCKET_CLOSE, 30)                   \
+  X(ERROR_NETWORK_WINSOCK_CLEANUP, 31)                \
+  X(ERROR_CUSTOM_RECV, 32)                            \
+  X(ERROR_CUSTOM_SEND, 33)                            \
+  X(ERROR_PLOT_NORMALIZATION, 34)                     \
+  X(ERROR_PLOT_UNKNOWN_KEY, 35)                       \
+  X(ERROR_PLOT_UNKNOWN_KIND, 36)                      \
+  X(ERROR_PLOT_MISSING_DATA, 37)                      \
+  X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 38)         \
+  X(ERROR_PLOT_MISSING_LABELS, 39)                    \
+  X(ERROR_PLOT_INVALID_ID, 40)                        \
+  Y(ERROR_NOT_IMPLEMENTED, 41)
 
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value
@@ -8799,11 +8800,16 @@ error_t receiver_recv_for_socket(metahandle_t *handle)
     {
       int bytes_received;
       search_start_index = memwriter_size(handle->sender_receiver.receiver.memwriter);
-      if ((bytes_received =
-               recv(handle->sender_receiver.receiver.comm.socket.client_socket, recv_buf, SOCKET_RECV_BUF_SIZE, 0)) < 0)
+      bytes_received =
+          recv(handle->sender_receiver.receiver.comm.socket.client_socket, recv_buf, SOCKET_RECV_BUF_SIZE, 0);
+      if (bytes_received < 0)
         {
           psocketerror("error while receiving data");
           return ERROR_NETWORK_RECV;
+        }
+      else if (bytes_received == 0)
+        {
+          return ERROR_NETWORK_RECV_CONNECTION_SHUTDOWN;
         }
       if ((error = memwriter_printf(handle->sender_receiver.receiver.memwriter, "%.*s", bytes_received, recv_buf)) !=
           NO_ERROR)
