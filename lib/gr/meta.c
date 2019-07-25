@@ -1659,8 +1659,8 @@ gr_meta_args_t *gr_recvmeta(const void *p, gr_meta_args_t *args)
       goto error_cleanup;
     }
 
-  if (memwriter_erase(handle->sender_receiver.receiver.memwriter, 0, handle->sender_receiver.receiver.message_size) !=
-      NO_ERROR)
+  if (memwriter_erase(handle->sender_receiver.receiver.memwriter, 0,
+                      handle->sender_receiver.receiver.message_size + 1) != NO_ERROR)
     {
       goto error_cleanup;
     }
@@ -8794,7 +8794,6 @@ error_t receiver_recv_for_socket(metahandle_t *handle)
   static char recv_buf[SOCKET_RECV_BUF_SIZE];
   error_t error = NO_ERROR;
 
-  memwriter_clear(handle->sender_receiver.receiver.memwriter);
   while ((end_ptr = memchr(memwriter_buf(handle->sender_receiver.receiver.memwriter) + search_start_index, ETB,
                            memwriter_size(handle->sender_receiver.receiver.memwriter) - search_start_index)) == NULL)
     {
