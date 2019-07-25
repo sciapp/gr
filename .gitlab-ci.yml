@@ -334,6 +334,59 @@ centos6-64bit-cmake-system-dependencies:
     - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
 
+arch-self-contained:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  script:
+    - make self GRDIR=/usr/local/gr
+    - mkdir artifacts
+    - cp lib/gks/demo artifacts/gksdemo
+    - cp lib/gks/qt/gksqt artifacts/gksqt
+    - cp lib/gr/demo artifacts/grdemo
+    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
+    - cp -r lib/gks/fonts artifacts/
+    - mkdir artifacts/include/
+    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - mv artifacts artifacts-arch
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - artifacts-arch/
+
+arch-cmake-self-contained:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-self-contained
+  script:
+    - make -C 3rdparty default extras
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+    - make
+    - make install
+    - mv ../install/lib64/ ../install/lib/
+    - cd ..
+    - mv install artifacts-arch-cmake
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - artifacts-arch-cmake/
+
+arch-system-dependencies:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  script:
+    - make install GRDIR=/usr/local/gr
+
+arch-cmake-system-dependencies:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-system-dependencies
+  script:
+    - make -C 3rdparty default TARGETS="qhull"
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+    - make
+
 windows-32bit-cross:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
@@ -619,6 +672,14 @@ packages-tar:
   - mv artifacts-centos6-64bit/include Linux-x86_64/gr/
   - cp artifacts-js/gr.js Linux-x86_64/gr/lib/
   - rm -rf artifacts-centos6-64bit
+  - mkdir -p ArchLinux-x86_64/gr/bin
+  - mkdir -p ArchLinux-x86_64/gr/lib
+  - mv artifacts-arch/*.so ArchLinux-x86_64/gr/lib/
+  - mv artifacts-arch/gksqt ArchLinux-x86_64/gr/bin/
+  - mv artifacts-arch/fonts ArchLinux-x86_64/gr/
+  - mv artifacts-arch/include ArchLinux-x86_64/gr/
+  - cp artifacts-js/gr.js ArchLinux-x86_64/gr/lib/
+  - rm -rf artifacts-arch
   - if [ -d artifacts-darwin ]; then
       mkdir -p Darwin-x86_64/gr/lib;
       mv artifacts-darwin/*.so Darwin-x86_64/gr/lib/;
@@ -636,6 +697,7 @@ packages-tar:
   - cd CentOS-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Linux-i386 && tar czf gr.tar.gz gr && cd -
   - cd Linux-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd ArchLinux-x86_64 && tar czf gr.tar.gz gr && cd -
   - mkdir Downloads
   - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
       export VERSION=`echo "$CI_COMMIT_TAG" | sed 's/^v//'`;
@@ -647,6 +709,7 @@ packages-tar:
       ln -s gr-$VERSION-CentOS-x86_64.tar.gz Downloads/gr-$VERSION-Redhat-x86_64.tar.gz;
       cp Linux-i386/gr.tar.gz Downloads/gr-$VERSION-Linux-i386.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$VERSION-Linux-x86_64.tar.gz;
+      cp ArchLinux-x86_64/gr.tar.gz Downloads/gr-$VERSION-ArchLinux-x86_64.tar.gz;
       if [ -d Darwin-x86_64 ]; then
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$VERSION-Darwin-x86_64.tar.gz;
       fi;
@@ -661,11 +724,12 @@ packages-tar:
       ln -s gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz Downloads/gr-$CI_COMMIT_SHA-Redhat-x86_64.tar.gz;
       cp Linux-i386/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-i386.tar.gz;
       cp Linux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Linux-x86_64.tar.gz;
+      cp ArchLinux-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-ArchLinux-x86_64.tar.gz;
       if [ -d Darwin-x86_64 ]; then
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
       fi;
       cp artifacts-js/gr.js Downloads/gr-$CI_COMMIT_SHA.js;
-      for f in Windows-i686 Windows-x86_64 Debian-x86_64 Ubuntu-x86_64 CentOS-x86_64 Redhat-x86_64 Linux-i386 Linux-x86_64; do
+      for f in Windows-i686 Windows-x86_64 Debian-x86_64 Ubuntu-x86_64 CentOS-x86_64 Redhat-x86_64 Linux-i386 Linux-x86_64 ArchLinux-x86_64; do
         ln -s gr-$CI_COMMIT_SHA-$f.tar.gz Downloads/gr-latest-$f.tar.gz;
       done;
       if [ -d Darwin-x86_64 ]; then
