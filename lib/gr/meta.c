@@ -789,6 +789,11 @@ static int args_check_format_compatibility(const arg_t *arg, const char *compati
 static void args_decrease_arg_reference_count(args_node_t *args_node);
 
 
+/* ------------------------- event handling ------------------------------------------------------------------------- */
+
+static int process_events(void);
+
+
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1453,6 +1458,8 @@ int gr_mergemeta(const gr_meta_args_t *args)
         }
     }
 
+  process_events();
+
   return 1;
 }
 
@@ -1489,14 +1496,7 @@ int gr_plotmeta(const gr_meta_args_t *args)
     }
   plot_post_plot(active_plot_args);
 
-  /* Trigger event handling routines after plotting -> args container is fully processed (and modified consistently) at
-   * this time */
-  if (!processing_events)
-    {
-      processing_events = 1; /* Ensure that event processing won't trigger event processing again */
-      event_queue_process_all(event_queue);
-      processing_events = 0;
-    }
+  process_events();
 
 #ifndef NDEBUG
   logger((stderr, "root args after \"gr_plotmeta\" (active_plot_index: %d):\n", active_plot_index - 1));
@@ -3076,6 +3076,24 @@ void args_decrease_arg_reference_count(args_node_t *args_node)
       free(args_node->arg->value_ptr);
       free(args_node->arg);
     }
+}
+
+
+/* ------------------------- event handling ------------------------------------------------------------------------- */
+
+int process_events(void)
+{
+  int processed_events = 0;
+  /* Trigger event handling routines after plotting -> args container is fully processed (and modified consistently) at
+   * this time */
+  if (!processing_events)
+    {
+      processing_events = 1; /* Ensure that event processing won't trigger event processing again */
+      processed_events = event_queue_process_all(event_queue);
+      processing_events = 0;
+    }
+
+  return processed_events;
 }
 
 
