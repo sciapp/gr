@@ -292,12 +292,14 @@ static void debug_printf(const char *format, ...)
 #define error_cleanup_and_set_error_if(condition, error_value) \
   goto_and_set_error_if((condition), (error_value), error_cleanup)
 
-#define UNUSED(param) \
-  do                  \
-    {                 \
-      (void)(param);  \
-    }                 \
-  while (0)
+#if (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5))) || defined(__clang__)
+#define MAYBE_UNUSED __attribute__((unused))
+#define UNUSED \
+  __attribute__((unused, deprecated("Marked as \"UNUSED\" but used. Please remove the \"UNUSED\" marker.")))
+#else
+#define MAYBE_UNUSED
+#define UNUSED
+#endif
 
 
 /* ========================= datatypes ============================================================================== */
@@ -653,8 +655,9 @@ typedef enum
 
 #define DECLARE_LIST_TYPE(prefix, entry_type)                                                                          \
   typedef entry_type prefix##_list_entry_t;                                                                            \
-  typedef int (*prefix##_list_entry_copy_func_t)(prefix##_list_entry_t *, prefix##_list_entry_t);                      \
-  typedef int (*prefix##_list_entry_delete_func_t)(prefix##_list_entry_t);                                             \
+  typedef const entry_type prefix##_list_const_entry_t;                                                                \
+  typedef error_t (*prefix##_list_entry_copy_func_t)(prefix##_list_entry_t *, prefix##_list_const_entry_t);            \
+  typedef error_t (*prefix##_list_entry_delete_func_t)(prefix##_list_entry_t);                                         \
                                                                                                                        \
   typedef struct                                                                                                       \
   {                                                                                                                    \
@@ -679,8 +682,8 @@ typedef enum
   /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */ \
                                                                                                                        \
   typedef entry_type prefix##_reflist_entry_t;                                                                         \
-  typedef int (*prefix##_reflist_entry_copy_func_t)(prefix##_reflist_entry_t *, prefix##_reflist_entry_t);             \
-  typedef int (*prefix##_reflist_entry_delete_func_t)(prefix##_reflist_entry_t);                                       \
+  typedef error_t (*prefix##_reflist_entry_copy_func_t)(prefix##_reflist_entry_t *, prefix##_reflist_entry_t);         \
+  typedef error_t (*prefix##_reflist_entry_delete_func_t)(prefix##_reflist_entry_t);                                   \
                                                                                                                        \
   typedef struct                                                                                                       \
   {                                                                                                                    \
@@ -710,15 +713,16 @@ DECLARE_LIST_TYPE(string, char *)
 
 /* ------------------------- generic set ---------------------------------------------------------------------------- */
 
-#define DECLARE_SET_TYPE(prefix, entry_type) \
-  typedef entry_type prefix##_set_entry_t;   \
-                                             \
-  typedef struct                             \
-  {                                          \
-    prefix##_set_entry_t *set;               \
-    unsigned char *used;                     \
-    size_t capacity;                         \
-    size_t size;                             \
+#define DECLARE_SET_TYPE(prefix, entry_type)           \
+  typedef entry_type prefix##_set_entry_t;             \
+  typedef const entry_type prefix##_set_const_entry_t; \
+                                                       \
+  typedef struct                                       \
+  {                                                    \
+    prefix##_set_entry_t *set;                         \
+    unsigned char *used;                               \
+    size_t capacity;                                   \
+    size_t size;                                       \
   } prefix##_set_t;
 
 DECLARE_SET_TYPE(args, gr_meta_args_t *)
@@ -727,10 +731,13 @@ DECLARE_SET_TYPE(args, gr_meta_args_t *)
 /* ------------------------- string-to-generic map ------------------------------------------------------------------ */
 
 #define DECLARE_MAP_TYPE(prefix, value_type)                     \
+  typedef value_type prefix##_map_value_t;                       \
+  typedef const value_type prefix##_map_const_value_t;           \
+                                                                 \
   typedef struct                                                 \
   {                                                              \
     const char *key;                                             \
-    value_type value;                                            \
+    prefix##_map_value_t value;                                  \
   } prefix##_map_entry_t;                                        \
                                                                  \
   DECLARE_SET_TYPE(string_##prefix##_pair, prefix##_map_entry_t) \
@@ -861,7 +868,7 @@ static error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static double find_max_step(unsigned int n, const double *x);
-static const char *next_fmt_key(const char *fmt);
+static const char *next_fmt_key(const char *fmt) UNUSED;
 static int get_id_from_args(const gr_meta_args_t *args, int *plot_id, int *subplot_id, int *series_id);
 static int get_figure_size(const gr_meta_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
                            double *metric_height);
@@ -904,7 +911,7 @@ static int arg_values_vl(const arg_t *arg, const char *expected_format, va_list 
 static void args_init(gr_meta_args_t *args);
 static void args_finalize(gr_meta_args_t *args);
 
-static gr_meta_args_t *args_flatcopy(const gr_meta_args_t *args);
+static gr_meta_args_t *args_flatcopy(const gr_meta_args_t *args) UNUSED;
 static gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_copy_as_array,
                                  const char **ignore_keys);
 
@@ -912,20 +919,20 @@ static error_t args_push_common(gr_meta_args_t *args, const char *key, const cha
                                 va_list *vl, int apply_padding);
 static error_t args_push_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
 static error_t args_push_arg(gr_meta_args_t *args, arg_t *arg);
-static error_t args_update_many(gr_meta_args_t *args, const gr_meta_args_t *update_args);
+static error_t args_update_many(gr_meta_args_t *args, const gr_meta_args_t *update_args) UNUSED;
 static error_t args_merge(gr_meta_args_t *args, const gr_meta_args_t *merge_args, const char *const *merge_keys);
 static error_t args_setdefault_common(gr_meta_args_t *args, const char *key, const char *value_format,
                                       const void *buffer, va_list *vl, int apply_padding);
 static error_t args_setdefault(gr_meta_args_t *args, const char *key, const char *value_format, ...);
 static error_t args_setdefault_buf(gr_meta_args_t *args, const char *key, const char *value_format, const void *buffer,
-                                   int apply_padding);
+                                   int apply_padding) UNUSED;
 static error_t args_setdefault_vl(gr_meta_args_t *args, const char *key, const char *value_format, va_list *vl);
 
 static void args_clear(gr_meta_args_t *args, const char **exclude_keys);
 
-static error_t args_increase_array(gr_meta_args_t *args, const char *key, size_t increment);
+static error_t args_increase_array(gr_meta_args_t *args, const char *key, size_t increment) UNUSED;
 
-static unsigned int args_count(const gr_meta_args_t *args);
+static unsigned int args_count(const gr_meta_args_t *args) UNUSED;
 
 static arg_t *args_at(const gr_meta_args_t *args, const char *keyword);
 static int args_first_value(const gr_meta_args_t *args, const char *keyword, const char *first_value_format,
@@ -1039,7 +1046,7 @@ static void memwriter_delete(memwriter_t *memwriter);
 static void memwriter_clear(memwriter_t *memwriter);
 static error_t memwriter_replace(memwriter_t *memwriter, int index, int count, const char *replacement_str);
 static error_t memwriter_erase(memwriter_t *memwriter, int index, int count);
-static error_t memwriter_insert(memwriter_t *memwriter, int index, const char *str);
+static error_t memwriter_insert(memwriter_t *memwriter, int index, const char *str) UNUSED;
 static error_t memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment);
 static error_t memwriter_ensure_buf(memwriter_t *memwriter, size_t needed_additional_size);
 static error_t memwriter_printf(memwriter_t *memwriter, const char *format, ...);
@@ -1077,21 +1084,21 @@ static error_t sender_send_for_custom(metahandle_t *handle);
   static prefix##_list_t *prefix##_list_new(void);                                                                     \
   static void prefix##_list_delete(prefix##_list_t *list);                                                             \
                                                                                                                        \
-  static error_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_entry_t entry);                         \
-  static error_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_entry_t entry);                          \
+  static error_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_const_entry_t entry);                   \
+  static error_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_const_entry_t entry);                    \
                                                                                                                        \
   static prefix##_list_entry_t prefix##_list_pop_front(prefix##_list_t *list);                                         \
   static prefix##_list_entry_t prefix##_list_pop_back(prefix##_list_t *list);                                          \
                                                                                                                        \
-  static error_t prefix##_list_push(prefix##_list_t *list, prefix##_list_entry_t entry);                               \
+  static error_t prefix##_list_push(prefix##_list_t *list, prefix##_list_const_entry_t entry);                         \
   static prefix##_list_entry_t prefix##_list_pop(prefix##_list_t *list);                                               \
                                                                                                                        \
-  static error_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_entry_t entry);                            \
+  static error_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_const_entry_t entry);                      \
   static prefix##_list_entry_t prefix##_list_dequeue(prefix##_list_t *list);                                           \
                                                                                                                        \
   static int prefix##_list_empty(prefix##_list_t *list);                                                               \
                                                                                                                        \
-  static error_t prefix##_list_entry_copy(prefix##_list_entry_t *copy, prefix##_list_entry_t entry);                   \
+  static error_t prefix##_list_entry_copy(prefix##_list_entry_t *copy, prefix##_list_const_entry_t entry);             \
   static error_t prefix##_list_entry_delete(prefix##_list_entry_t entry);                                              \
                                                                                                                        \
   static int prefix##_list_find_previous_node(const prefix##_list_t *list, const prefix##_list_node_t *node,           \
@@ -1099,29 +1106,29 @@ static error_t sender_send_for_custom(metahandle_t *handle);
                                                                                                                        \
   /* ~~~~~~~~~~~~~~~~~~~~~~~ ref list ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */ \
                                                                                                                        \
-  static prefix##_reflist_t *prefix##_reflist_new(void);                                                               \
-  static void prefix##_reflist_delete(prefix##_reflist_t *list);                                                       \
-  static void prefix##_reflist_delete_with_entries(prefix##_reflist_t *list);                                          \
+  static prefix##_reflist_t *prefix##_reflist_new(void) MAYBE_UNUSED;                                                  \
+  static void prefix##_reflist_delete(prefix##_reflist_t *list) MAYBE_UNUSED;                                          \
+  static void prefix##_reflist_delete_with_entries(prefix##_reflist_t *list) MAYBE_UNUSED;                             \
                                                                                                                        \
-  static error_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry);                \
-  static error_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry);                 \
+  static error_t prefix##_reflist_push_front(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;   \
+  static error_t prefix##_reflist_push_back(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;    \
                                                                                                                        \
-  static prefix##_reflist_entry_t prefix##_reflist_pop_front(prefix##_reflist_t *list);                                \
-  static prefix##_reflist_entry_t prefix##_reflist_pop_back(prefix##_reflist_t *list);                                 \
+  static prefix##_reflist_entry_t prefix##_reflist_pop_front(prefix##_reflist_t *list) MAYBE_UNUSED;                   \
+  static prefix##_reflist_entry_t prefix##_reflist_pop_back(prefix##_reflist_t *list) MAYBE_UNUSED;                    \
                                                                                                                        \
-  static error_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry);                      \
-  static prefix##_reflist_entry_t prefix##_reflist_pop(prefix##_reflist_t *list);                                      \
+  static error_t prefix##_reflist_push(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;         \
+  static prefix##_reflist_entry_t prefix##_reflist_pop(prefix##_reflist_t *list) MAYBE_UNUSED;                         \
                                                                                                                        \
-  static error_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry);                   \
-  static prefix##_reflist_entry_t prefix##_reflist_dequeue(prefix##_reflist_t *list);                                  \
+  static error_t prefix##_reflist_enqueue(prefix##_reflist_t *list, prefix##_reflist_entry_t entry) MAYBE_UNUSED;      \
+  static prefix##_reflist_entry_t prefix##_reflist_dequeue(prefix##_reflist_t *list) MAYBE_UNUSED;                     \
                                                                                                                        \
-  static int prefix##_reflist_empty(prefix##_reflist_t *list);                                                         \
+  static int prefix##_reflist_empty(prefix##_reflist_t *list) MAYBE_UNUSED;                                            \
                                                                                                                        \
-  static error_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, prefix##_reflist_entry_t entry);          \
+  static error_t prefix##_reflist_entry_copy(prefix##_reflist_entry_t *copy, const prefix##_reflist_entry_t entry);    \
   static error_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry);                                        \
                                                                                                                        \
   static int prefix##_reflist_find_previous_node(const prefix##_reflist_t *list, const prefix##_reflist_node_t *node,  \
-                                                 prefix##_reflist_node_t **previous_node);
+                                                 prefix##_reflist_node_t **previous_node) MAYBE_UNUSED;
 
 DECLARE_LIST_METHODS(args)
 DECLARE_LIST_METHODS(dynamic_args_array)
@@ -1129,45 +1136,48 @@ DECLARE_LIST_METHODS(string)
 
 /* ------------------------- generic set ---------------------------------------------------------------------------- */
 
-#define DECLARE_SET_METHODS(prefix)                                                                 \
-  static prefix##_set_t *prefix##_set_new(size_t capacity);                                         \
-  static prefix##_set_t *prefix##_set_new_with_data(size_t count, prefix##_set_entry_t *entries);   \
-  static prefix##_set_t *prefix##_set_copy(const prefix##_set_t *set);                              \
-  static void prefix##_set_delete(prefix##_set_t *set);                                             \
-  static int prefix##_set_add(prefix##_set_t *set, const prefix##_set_entry_t entry);               \
-  static int prefix##_set_find(const prefix##_set_t *set, const prefix##_set_entry_t entry,         \
-                               prefix##_set_entry_t *saved_entry);                                  \
-  static int prefix##_set_contains(const prefix##_set_t *set, const prefix##_set_entry_t entry);    \
-  static ssize_t prefix##_set_index(const prefix##_set_t *set, const prefix##_set_entry_t entry);   \
-                                                                                                    \
-  static int prefix##_set_entry_copy(prefix##_set_entry_t *copy, const prefix##_set_entry_t entry); \
-  static void prefix##_set_entry_delete(prefix##_set_entry_t entry);                                \
-  static size_t prefix##_set_entry_hash(const prefix##_set_entry_t entry);                          \
-  static int prefix##_set_entry_equals(const prefix##_set_entry_t entry1, const prefix##_set_entry_t entry2);
+#define DECLARE_SET_METHODS(prefix)                                                                            \
+  static prefix##_set_t *prefix##_set_new(size_t capacity) MAYBE_UNUSED;                                       \
+  static prefix##_set_t *prefix##_set_new_with_data(size_t count, prefix##_set_entry_t *entries) MAYBE_UNUSED; \
+  static prefix##_set_t *prefix##_set_copy(const prefix##_set_t *set) MAYBE_UNUSED;                            \
+  static void prefix##_set_delete(prefix##_set_t *set);                                                        \
+  static int prefix##_set_add(prefix##_set_t *set, prefix##_set_const_entry_t entry) MAYBE_UNUSED;             \
+  static int prefix##_set_find(const prefix##_set_t *set, prefix##_set_const_entry_t entry,                    \
+                               prefix##_set_entry_t *saved_entry) MAYBE_UNUSED;                                \
+  static int prefix##_set_contains(const prefix##_set_t *set, prefix##_set_const_entry_t entry) MAYBE_UNUSED;  \
+  static ssize_t prefix##_set_index(const prefix##_set_t *set, prefix##_set_const_entry_t entry) MAYBE_UNUSED; \
+                                                                                                               \
+  static int prefix##_set_entry_copy(prefix##_set_entry_t *copy, prefix##_set_const_entry_t entry);            \
+  static void prefix##_set_entry_delete(prefix##_set_entry_t entry);                                           \
+  static size_t prefix##_set_entry_hash(prefix##_set_const_entry_t entry);                                     \
+  static int prefix##_set_entry_equals(prefix##_set_const_entry_t entry1, prefix##_set_const_entry_t entry2);
 
 DECLARE_SET_METHODS(args)
 
 
 /* ------------------------- string-to-generic map ------------------------------------------------------------------ */
 
-#define DECLARE_MAP_METHODS(prefix, value_type)                                                                  \
-  DECLARE_SET_METHODS(string_##prefix##_pair)                                                                    \
-                                                                                                                 \
-  static prefix##_map_t *prefix##_map_new(size_t capacity);                                                      \
-  static prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries);                \
-  static prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map);                                           \
-  static void prefix##_map_delete(prefix##_map_t *prefix##_map);                                                 \
-  static int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, const value_type value);         \
-  static int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, const value_type value); \
-  static int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, value_type *value);            \
-                                                                                                                 \
-  static int prefix##_map_value_copy(value_type *copy, const value_type value);                                  \
-  static void prefix##_map_value_delete(value_type value);
+#define DECLARE_MAP_METHODS(prefix)                                                                               \
+  DECLARE_SET_METHODS(string_##prefix##_pair)                                                                     \
+                                                                                                                  \
+  static prefix##_map_t *prefix##_map_new(size_t capacity) MAYBE_UNUSED;                                          \
+  static prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries) MAYBE_UNUSED;    \
+  static prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map) MAYBE_UNUSED;                               \
+  static void prefix##_map_delete(prefix##_map_t *prefix##_map) MAYBE_UNUSED;                                     \
+  static int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, prefix##_map_const_value_t value) \
+      MAYBE_UNUSED;                                                                                               \
+  static int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key,                           \
+                                         prefix##_map_const_value_t value) MAYBE_UNUSED;                          \
+  static int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, prefix##_map_value_t *value)    \
+      MAYBE_UNUSED;                                                                                               \
+                                                                                                                  \
+  static int prefix##_map_value_copy(prefix##_map_value_t *copy, prefix##_map_const_value_t value);               \
+  static void prefix##_map_value_delete(prefix##_map_value_t value);
 
-DECLARE_MAP_METHODS(plot_func, plot_func_t)
-DECLARE_MAP_METHODS(string, char *)
-DECLARE_MAP_METHODS(uint, unsigned int)
-DECLARE_MAP_METHODS(args_set, args_set_t *)
+DECLARE_MAP_METHODS(plot_func)
+DECLARE_MAP_METHODS(string)
+DECLARE_MAP_METHODS(uint)
+DECLARE_MAP_METHODS(args_set)
 
 #undef DECLARE_MAP_METHODS
 #undef DECLARE_SET_METHODS
@@ -5003,7 +5013,7 @@ error_t plot_shade(gr_meta_args_t *subplot_args)
   gr_meta_args_t **current_shader;
   const char *data_component_names[] = {"x", "y", NULL};
   double *components[2];
-  char *spec = ""; /* TODO: read spec from data! */
+  /* char *spec = ""; TODO: read spec from data! */
   int xform, xbins, ybins;
   double **current_component = components;
   const char **current_component_name = data_component_names;
@@ -6165,7 +6175,6 @@ gr_meta_args_t *args_copy(const gr_meta_args_t *copy_args, const char **keys_cop
   args_value_iterator_t *value_it = NULL;
   args_node_t *args_node;
   arg_t *copy_arg;
-  const char **current_key_ptr;
 
   args = gr_newmeta();
   if (args == NULL)
@@ -6690,10 +6699,7 @@ void args_iterator_delete(args_iterator_t *args_iterator)
   free(args_iterator);
 }
 
-void args_iterator_finalize(args_iterator_t *args_iterator)
-{
-  UNUSED(args_iterator);
-}
+void args_iterator_finalize(args_iterator_t *args_iterator UNUSED) {}
 
 arg_t *args_iterator_next(args_iterator_t *args_iterator)
 {
@@ -6754,10 +6760,7 @@ void args_value_iterator_delete(args_value_iterator_t *args_value_iterator)
   free(args_value_iterator);
 }
 
-void args_value_iterator_finalize(args_value_iterator_t *args_value_iterator)
-{
-  UNUSED(args_value_iterator);
-}
+void args_value_iterator_finalize(args_value_iterator_t *args_value_iterator UNUSED) {}
 
 void *args_value_iterator_next(args_value_iterator_t *args_value_iterator)
 {
@@ -8727,8 +8730,7 @@ error_t receiver_init_for_custom(metahandle_t *handle, const char *name, unsigne
 error_t receiver_init_for_socket(metahandle_t *handle, const char *hostname, unsigned int port)
 {
   char port_str[PORT_MAX_STRING_LENGTH];
-  struct addrinfo *addr_result = NULL, *addr_ptr = NULL, addr_hints;
-  struct sockaddr_in server_addr;
+  struct addrinfo *addr_result = NULL, addr_hints;
   struct sockaddr_in client_addr;
   socklen_t client_addrlen = sizeof(client_addr);
   int error;
@@ -9493,7 +9495,7 @@ FILE *gr_get_stdout()
     free(list);                                                                                                        \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_entry_t entry)                                 \
+  error_t prefix##_list_push_front(prefix##_list_t *list, prefix##_list_const_entry_t entry)                           \
   {                                                                                                                    \
     prefix##_list_node_t *new_list_node;                                                                               \
     error_t error = NO_ERROR;                                                                                          \
@@ -9517,7 +9519,7 @@ FILE *gr_get_stdout()
     return error;                                                                                                      \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_entry_t entry)                                  \
+  error_t prefix##_list_push_back(prefix##_list_t *list, prefix##_list_const_entry_t entry)                            \
   {                                                                                                                    \
     prefix##_list_node_t *new_list_node;                                                                               \
     error_t error = NO_ERROR;                                                                                          \
@@ -9589,14 +9591,14 @@ FILE *gr_get_stdout()
     return last_entry;                                                                                                 \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_list_push(prefix##_list_t *list, prefix##_list_entry_t entry)                                       \
+  error_t prefix##_list_push(prefix##_list_t *list, prefix##_list_const_entry_t entry)                                 \
   {                                                                                                                    \
     return prefix##_list_push_front(list, entry);                                                                      \
   }                                                                                                                    \
                                                                                                                        \
   prefix##_list_entry_t prefix##_list_pop(prefix##_list_t *list) { return prefix##_list_pop_front(list); }             \
                                                                                                                        \
-  error_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_entry_t entry)                                    \
+  error_t prefix##_list_enqueue(prefix##_list_t *list, prefix##_list_const_entry_t entry)                              \
   {                                                                                                                    \
     return prefix##_list_push_back(list, entry);                                                                       \
   }                                                                                                                    \
@@ -9720,11 +9722,11 @@ FILE *gr_get_stdout()
     return NO_ERROR;                                                                                                   \
   }                                                                                                                    \
                                                                                                                        \
-  error_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry) { return NO_ERROR; }
+  error_t prefix##_reflist_entry_delete(prefix##_reflist_entry_t entry UNUSED) { return NO_ERROR; }
 
 DEFINE_LIST_METHODS(args)
 
-error_t args_list_entry_copy(args_list_entry_t *copy, args_list_entry_t entry)
+error_t args_list_entry_copy(args_list_entry_t *copy, args_list_const_entry_t entry)
 {
   args_list_entry_t _copy;
 
@@ -9746,10 +9748,11 @@ error_t args_list_entry_delete(args_list_entry_t entry)
 
 DEFINE_LIST_METHODS(dynamic_args_array)
 
-error_t dynamic_args_array_list_entry_copy(dynamic_args_array_list_entry_t *copy, dynamic_args_array_list_entry_t entry)
+error_t dynamic_args_array_list_entry_copy(dynamic_args_array_list_entry_t *copy,
+                                           dynamic_args_array_list_const_entry_t entry)
 {
   /* TODO: create a copy of the object! Otherwise code will segfault on list deletion for a non-ref list */
-  *copy = entry;
+  *copy = (dynamic_args_array_list_entry_t)entry;
   return NO_ERROR;
 }
 
@@ -9761,7 +9764,7 @@ error_t dynamic_args_array_list_entry_delete(dynamic_args_array_list_entry_t ent
 
 DEFINE_LIST_METHODS(string)
 
-error_t string_list_entry_copy(string_list_entry_t *copy, string_list_entry_t entry)
+error_t string_list_entry_copy(string_list_entry_t *copy, const string_list_const_entry_t entry)
 {
   string_list_entry_t _copy;
 
@@ -9895,7 +9898,7 @@ error_t string_list_entry_delete(string_list_entry_t entry)
     free(set);                                                                                                    \
   }                                                                                                               \
                                                                                                                   \
-  int prefix##_set_add(prefix##_set_t *set, const prefix##_set_entry_t entry)                                     \
+  int prefix##_set_add(prefix##_set_t *set, prefix##_set_const_entry_t entry)                                     \
   {                                                                                                               \
     ssize_t index;                                                                                                \
                                                                                                                   \
@@ -9920,7 +9923,7 @@ error_t string_list_entry_delete(string_list_entry_t entry)
     return 1;                                                                                                     \
   }                                                                                                               \
                                                                                                                   \
-  int prefix##_set_find(const prefix##_set_t *set, const prefix##_set_entry_t entry,                              \
+  int prefix##_set_find(const prefix##_set_t *set, prefix##_set_const_entry_t entry,                              \
                         prefix##_set_entry_t *saved_entry)                                                        \
   {                                                                                                               \
     ssize_t index;                                                                                                \
@@ -9934,7 +9937,7 @@ error_t string_list_entry_delete(string_list_entry_t entry)
     return 1;                                                                                                     \
   }                                                                                                               \
                                                                                                                   \
-  int prefix##_set_contains(const prefix##_set_t *set, const prefix##_set_entry_t entry)                          \
+  int prefix##_set_contains(const prefix##_set_t *set, prefix##_set_const_entry_t entry)                          \
   {                                                                                                               \
     ssize_t index;                                                                                                \
                                                                                                                   \
@@ -9942,7 +9945,7 @@ error_t string_list_entry_delete(string_list_entry_t entry)
     return index >= 0 && set->used[index];                                                                        \
   }                                                                                                               \
                                                                                                                   \
-  ssize_t prefix##_set_index(const prefix##_set_t *set, const prefix##_set_entry_t entry)                         \
+  ssize_t prefix##_set_index(const prefix##_set_t *set, prefix##_set_const_entry_t entry)                         \
   {                                                                                                               \
     size_t hash;                                                                                                  \
     size_t i;                                                                                                     \
@@ -9963,153 +9966,152 @@ error_t string_list_entry_delete(string_list_entry_t entry)
 
 DEFINE_SET_METHODS(args)
 
-int args_set_entry_copy(args_set_entry_t *copy, const args_set_entry_t entry)
+int args_set_entry_copy(args_set_entry_t *copy, args_set_const_entry_t entry)
 {
-  *copy = entry;
+  /* discard const because it is necessary to work on the object itself */
+  /* TODO create two set types: copy and pointer version */
+  *copy = (args_set_entry_t)entry;
   return 1;
 }
 
-void args_set_entry_delete(args_set_entry_t entry)
-{
-  UNUSED(entry);
-}
+void args_set_entry_delete(args_set_entry_t entry UNUSED) {}
 
-size_t args_set_entry_hash(const args_set_entry_t entry)
+size_t args_set_entry_hash(args_set_const_entry_t entry)
 {
   return (size_t)entry;
 }
 
-int args_set_entry_equals(const args_set_entry_t entry1, const args_set_entry_t entry2)
+int args_set_entry_equals(args_set_const_entry_t entry1, args_set_const_entry_t entry2)
 {
   return entry1 == entry2;
 }
 
 /* ------------------------- string-to-generic map ------------------------------------------------------------------ */
 
-#define DEFINE_MAP_METHODS(prefix, value_type)                                                                   \
-  DEFINE_SET_METHODS(string_##prefix##_pair)                                                                     \
-                                                                                                                 \
-  prefix##_map_t *prefix##_map_new(size_t capacity)                                                              \
-  {                                                                                                              \
-    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                                    \
-                                                                                                                 \
-    string_##prefix##_pair_set = string_##prefix##_pair_set_new(capacity);                                       \
-    if (string_##prefix##_pair_set == NULL)                                                                      \
-      {                                                                                                          \
-        debug_print_malloc_error();                                                                              \
-        return NULL;                                                                                             \
-      }                                                                                                          \
-                                                                                                                 \
-    return (prefix##_map_t *)string_##prefix##_pair_set;                                                         \
-  }                                                                                                              \
-                                                                                                                 \
-  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries)                        \
-  {                                                                                                              \
-    return (prefix##_map_t *)string_##prefix##_pair_set_new_with_data(count, entries);                           \
-  }                                                                                                              \
-                                                                                                                 \
-  prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map)                                                   \
-  {                                                                                                              \
-    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                                    \
-                                                                                                                 \
-    string_##prefix##_pair_set = string_##prefix##_pair_set_copy((string_##prefix##_pair_set_t *)map);           \
-    if (string_##prefix##_pair_set == NULL)                                                                      \
-      {                                                                                                          \
-        debug_print_malloc_error();                                                                              \
-        return NULL;                                                                                             \
-      }                                                                                                          \
-                                                                                                                 \
-    return (prefix##_map_t *)string_##prefix##_pair_set;                                                         \
-  }                                                                                                              \
-                                                                                                                 \
-  void prefix##_map_delete(prefix##_map_t *prefix##_map)                                                         \
-  {                                                                                                              \
-    string_##prefix##_pair_set_delete((string_##prefix##_pair_set_t *)prefix##_map);                             \
-  }                                                                                                              \
-                                                                                                                 \
-  int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, const value_type value)                 \
-  {                                                                                                              \
-    string_##prefix##_pair_set_entry_t entry;                                                                    \
-                                                                                                                 \
-    entry.key = key;                                                                                             \
-    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */ \
-    entry.value = (value_type)value;                                                                             \
-    return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);                  \
-  }                                                                                                              \
-                                                                                                                 \
-  int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, const value_type value)         \
-  {                                                                                                              \
-    string_##prefix##_pair_set_entry_t entry;                                                                    \
-                                                                                                                 \
-    entry.key = key;                                                                                             \
-    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */ \
-    entry.value = (value_type)value;                                                                             \
-    if (!string_##prefix##_pair_set_contains((string_##prefix##_pair_set_t *)prefix##_map, entry))               \
-      {                                                                                                          \
-        return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);              \
-      }                                                                                                          \
-    return 0;                                                                                                    \
-  }                                                                                                              \
-                                                                                                                 \
-  int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, value_type *value)                    \
-  {                                                                                                              \
-    string_##prefix##_pair_set_entry_t entry, saved_entry;                                                       \
-                                                                                                                 \
-    entry.key = key;                                                                                             \
-    if (string_##prefix##_pair_set_find((string_##prefix##_pair_set_t *)prefix##_map, entry, &saved_entry))      \
-      {                                                                                                          \
-        if (value != NULL)                                                                                       \
-          {                                                                                                      \
-            *value = saved_entry.value;                                                                          \
-          }                                                                                                      \
-        return 1;                                                                                                \
-      }                                                                                                          \
-    else                                                                                                         \
-      {                                                                                                          \
-        return 0;                                                                                                \
-      }                                                                                                          \
-  }                                                                                                              \
-                                                                                                                 \
-  int string_##prefix##_pair_set_entry_copy(string_##prefix##_pair_set_entry_t *copy,                            \
-                                            const string_##prefix##_pair_set_entry_t entry)                      \
-  {                                                                                                              \
-    const char *key_copy;                                                                                        \
-    value_type value_copy;                                                                                       \
-                                                                                                                 \
-    key_copy = gks_strdup(entry.key);                                                                            \
-    if (key_copy == NULL)                                                                                        \
-      {                                                                                                          \
-        return 0;                                                                                                \
-      }                                                                                                          \
-    if (!prefix##_map_value_copy(&value_copy, entry.value))                                                      \
-      {                                                                                                          \
-        free((char *)key_copy);                                                                                  \
-        return 0;                                                                                                \
-      }                                                                                                          \
-    copy->key = key_copy;                                                                                        \
-    copy->value = value_copy;                                                                                    \
-                                                                                                                 \
-    return 1;                                                                                                    \
-  }                                                                                                              \
-                                                                                                                 \
-  void string_##prefix##_pair_set_entry_delete(string_##prefix##_pair_set_entry_t entry)                         \
-  {                                                                                                              \
-    free((char *)entry.key);                                                                                     \
-    prefix##_map_value_delete(entry.value);                                                                      \
-  }                                                                                                              \
-                                                                                                                 \
-  size_t string_##prefix##_pair_set_entry_hash(const string_##prefix##_pair_set_entry_t entry)                   \
-  {                                                                                                              \
-    return djb2_hash(entry.key);                                                                                 \
-  }                                                                                                              \
-                                                                                                                 \
-  int string_##prefix##_pair_set_entry_equals(const string_##prefix##_pair_set_entry_t entry1,                   \
-                                              const string_##prefix##_pair_set_entry_t entry2)                   \
-  {                                                                                                              \
-    return strcmp(entry1.key, entry2.key) == 0;                                                                  \
+#define DEFINE_MAP_METHODS(prefix)                                                                                 \
+  DEFINE_SET_METHODS(string_##prefix##_pair)                                                                       \
+                                                                                                                   \
+  prefix##_map_t *prefix##_map_new(size_t capacity)                                                                \
+  {                                                                                                                \
+    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                                      \
+                                                                                                                   \
+    string_##prefix##_pair_set = string_##prefix##_pair_set_new(capacity);                                         \
+    if (string_##prefix##_pair_set == NULL)                                                                        \
+      {                                                                                                            \
+        debug_print_malloc_error();                                                                                \
+        return NULL;                                                                                               \
+      }                                                                                                            \
+                                                                                                                   \
+    return (prefix##_map_t *)string_##prefix##_pair_set;                                                           \
+  }                                                                                                                \
+                                                                                                                   \
+  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries)                          \
+  {                                                                                                                \
+    return (prefix##_map_t *)string_##prefix##_pair_set_new_with_data(count, entries);                             \
+  }                                                                                                                \
+                                                                                                                   \
+  prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map)                                                     \
+  {                                                                                                                \
+    string_##prefix##_pair_set_t *string_##prefix##_pair_set;                                                      \
+                                                                                                                   \
+    string_##prefix##_pair_set = string_##prefix##_pair_set_copy((string_##prefix##_pair_set_t *)map);             \
+    if (string_##prefix##_pair_set == NULL)                                                                        \
+      {                                                                                                            \
+        debug_print_malloc_error();                                                                                \
+        return NULL;                                                                                               \
+      }                                                                                                            \
+                                                                                                                   \
+    return (prefix##_map_t *)string_##prefix##_pair_set;                                                           \
+  }                                                                                                                \
+                                                                                                                   \
+  void prefix##_map_delete(prefix##_map_t *prefix##_map)                                                           \
+  {                                                                                                                \
+    string_##prefix##_pair_set_delete((string_##prefix##_pair_set_t *)prefix##_map);                               \
+  }                                                                                                                \
+                                                                                                                   \
+  int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, prefix##_map_const_value_t value)         \
+  {                                                                                                                \
+    string_##prefix##_pair_set_entry_t entry;                                                                      \
+                                                                                                                   \
+    entry.key = key;                                                                                               \
+    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */   \
+    entry.value = (prefix##_map_value_t)value;                                                                     \
+    return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);                    \
+  }                                                                                                                \
+                                                                                                                   \
+  int prefix##_map_insert_default(prefix##_map_t *prefix##_map, const char *key, prefix##_map_const_value_t value) \
+  {                                                                                                                \
+    string_##prefix##_pair_set_entry_t entry;                                                                      \
+                                                                                                                   \
+    entry.key = key;                                                                                               \
+    /* in this case, it is ok to remove the const attribute since a copy is created in the set implementation */   \
+    entry.value = (prefix##_map_value_t)value;                                                                     \
+    if (!string_##prefix##_pair_set_contains((string_##prefix##_pair_set_t *)prefix##_map, entry))                 \
+      {                                                                                                            \
+        return string_##prefix##_pair_set_add((string_##prefix##_pair_set_t *)prefix##_map, entry);                \
+      }                                                                                                            \
+    return 0;                                                                                                      \
+  }                                                                                                                \
+                                                                                                                   \
+  int prefix##_map_at(const prefix##_map_t *prefix##_map, const char *key, prefix##_map_value_t *value)            \
+  {                                                                                                                \
+    string_##prefix##_pair_set_entry_t entry, saved_entry;                                                         \
+                                                                                                                   \
+    entry.key = key;                                                                                               \
+    if (string_##prefix##_pair_set_find((string_##prefix##_pair_set_t *)prefix##_map, entry, &saved_entry))        \
+      {                                                                                                            \
+        if (value != NULL)                                                                                         \
+          {                                                                                                        \
+            *value = saved_entry.value;                                                                            \
+          }                                                                                                        \
+        return 1;                                                                                                  \
+      }                                                                                                            \
+    else                                                                                                           \
+      {                                                                                                            \
+        return 0;                                                                                                  \
+      }                                                                                                            \
+  }                                                                                                                \
+                                                                                                                   \
+  int string_##prefix##_pair_set_entry_copy(string_##prefix##_pair_set_entry_t *copy,                              \
+                                            const string_##prefix##_pair_set_entry_t entry)                        \
+  {                                                                                                                \
+    const char *key_copy;                                                                                          \
+    prefix##_map_value_t value_copy;                                                                               \
+                                                                                                                   \
+    key_copy = gks_strdup(entry.key);                                                                              \
+    if (key_copy == NULL)                                                                                          \
+      {                                                                                                            \
+        return 0;                                                                                                  \
+      }                                                                                                            \
+    if (!prefix##_map_value_copy(&value_copy, entry.value))                                                        \
+      {                                                                                                            \
+        free((char *)key_copy);                                                                                    \
+        return 0;                                                                                                  \
+      }                                                                                                            \
+    copy->key = key_copy;                                                                                          \
+    copy->value = value_copy;                                                                                      \
+                                                                                                                   \
+    return 1;                                                                                                      \
+  }                                                                                                                \
+                                                                                                                   \
+  void string_##prefix##_pair_set_entry_delete(string_##prefix##_pair_set_entry_t entry)                           \
+  {                                                                                                                \
+    free((char *)entry.key);                                                                                       \
+    prefix##_map_value_delete(entry.value);                                                                        \
+  }                                                                                                                \
+                                                                                                                   \
+  size_t string_##prefix##_pair_set_entry_hash(const string_##prefix##_pair_set_entry_t entry)                     \
+  {                                                                                                                \
+    return djb2_hash(entry.key);                                                                                   \
+  }                                                                                                                \
+                                                                                                                   \
+  int string_##prefix##_pair_set_entry_equals(const string_##prefix##_pair_set_entry_t entry1,                     \
+                                              const string_##prefix##_pair_set_entry_t entry2)                     \
+  {                                                                                                                \
+    return strcmp(entry1.key, entry2.key) == 0;                                                                    \
   }
 
-DEFINE_MAP_METHODS(plot_func, plot_func_t)
+DEFINE_MAP_METHODS(plot_func)
 
 int plot_func_map_value_copy(plot_func_t *copy, const plot_func_t value)
 {
@@ -10118,13 +10120,10 @@ int plot_func_map_value_copy(plot_func_t *copy, const plot_func_t value)
   return 1;
 }
 
-void plot_func_map_value_delete(plot_func_t value)
-{
-  UNUSED(value);
-}
+void plot_func_map_value_delete(plot_func_t value UNUSED) {}
 
 
-DEFINE_MAP_METHODS(string, char *)
+DEFINE_MAP_METHODS(string)
 
 int string_map_value_copy(char **copy, const char *value)
 {
@@ -10146,7 +10145,7 @@ void string_map_value_delete(char *value)
 }
 
 
-DEFINE_MAP_METHODS(uint, unsigned int)
+DEFINE_MAP_METHODS(uint)
 
 int uint_map_value_copy(unsigned int *copy, const unsigned int value)
 {
@@ -10155,26 +10154,21 @@ int uint_map_value_copy(unsigned int *copy, const unsigned int value)
   return 1;
 }
 
-void uint_map_value_delete(unsigned int value)
-{
-  UNUSED(value);
-}
+void uint_map_value_delete(unsigned int value UNUSED) {}
 
 
-DEFINE_MAP_METHODS(args_set, args_set_t *)
+DEFINE_MAP_METHODS(args_set)
 
 int args_set_map_value_copy(args_set_t **copy, const args_set_t *value)
 {
   /* discard const because it is necessary to work on the object itself */
+  /* TODO create two map types: copy and pointer version */
   *copy = (args_set_t *)value;
 
   return 1;
 }
 
-void args_set_map_value_delete(args_set_t *value)
-{
-  UNUSED(value);
-}
+void args_set_map_value_delete(args_set_t *value UNUSED) {}
 
 
 #undef DEFINE_MAP_METHODS
@@ -10185,7 +10179,7 @@ void args_set_map_value_delete(args_set_t *value)
 
 DEFINE_LIST_METHODS(event)
 
-error_t event_list_entry_copy(event_list_entry_t *copy, event_list_entry_t entry)
+error_t event_list_entry_copy(event_list_entry_t *copy, event_list_const_entry_t entry)
 {
   event_list_entry_t _copy;
 
