@@ -1197,6 +1197,7 @@ static int event_queue_process_next(event_queue_t *queue);
 static int event_queue_process_all(event_queue_t *queue);
 
 static error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id);
+static error_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id);
 static error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height);
 
 
@@ -3448,8 +3449,6 @@ error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, uns
       if (strcmp(*hierarchy_name_ptr, "plots") == 0)
         {
           gr_meta_args_push(args_array[i], "in_use", "i", 0);
-          error = event_queue_enqueue_new_plot_event(event_queue, i);
-          return_if_error;
         }
     }
 
@@ -3486,8 +3485,6 @@ error_t plot_init_args_structure(gr_meta_args_t *args, const char **hierarchy_na
           if (strcmp(*hierarchy_name_ptr, "plots") == 0)
             {
               gr_meta_args_push(args_array[i], "in_use", "i", 0);
-              error = event_queue_enqueue_new_plot_event(event_queue, i);
-              return_if_error;
             }
         }
       error_cleanup_if(!gr_meta_args_push(args, *hierarchy_name_ptr, "nA", next_hierarchy_level_max_id, args_array));
@@ -4220,6 +4217,18 @@ error_t plot_get_args_in_hierarchy(gr_meta_args_t *args, const char **hierarchy_
           current_args = args_array[current_id - 1];
           if (strcmp(*current_hierarchy_name_ptr, "plots") == 0)
             {
+              int in_use;
+              error_t error = NO_ERROR;
+              args_values(current_args, "in_use", "i", &in_use);
+              if (in_use)
+                {
+                  error = event_queue_enqueue_update_plot_event(event_queue, current_id - 1);
+                }
+              else
+                {
+                  error = event_queue_enqueue_new_plot_event(event_queue, current_id - 1);
+                }
+              return_if_error;
               gr_meta_args_push(current_args, "in_use", "i", 1);
             }
           if (strcmp(*current_hierarchy_name_ptr, key_hierarchy_name) == 0)
@@ -10303,6 +10312,30 @@ error_cleanup:
   if (new_plot_event != NULL)
     {
       free(new_plot_event);
+    }
+
+  return error;
+}
+
+error_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id)
+{
+  gr_meta_update_plot_event_t *update_plot_event = NULL;
+  error_t error = NO_ERROR;
+
+  update_plot_event = malloc(sizeof(gr_meta_update_plot_event_t));
+  error_cleanup_and_set_error_if(update_plot_event == NULL, ERROR_MALLOC);
+  update_plot_event->type = GR_META_EVENT_UPDATE_PLOT;
+  update_plot_event->plot_id = plot_id;
+
+  error = event_reflist_enqueue(queue->queue, (gr_meta_event_t *)update_plot_event);
+  error_cleanup_if_error;
+
+  return NO_ERROR;
+
+error_cleanup:
+  if (update_plot_event != NULL)
+    {
+      free(update_plot_event);
     }
 
   return error;
