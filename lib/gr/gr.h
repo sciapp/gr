@@ -29,6 +29,7 @@ extern "C"
   typedef enum
   {
     GR_META_EVENT_NEW_PLOT,
+    GR_META_EVENT_UPDATE_PLOT,
     GR_META_EVENT_SIZE,
     _GR_META_EVENT_TYPE_COUNT /* helper entry to store how many different event types exist */
   } gr_meta_event_type_t;
@@ -38,6 +39,12 @@ extern "C"
     gr_meta_event_type_t type;
     int plot_id;
   } gr_meta_new_plot_event_t;
+
+  typedef struct
+  {
+    gr_meta_event_type_t type;
+    int plot_id;
+  } gr_meta_update_plot_event_t;
 
   typedef struct
   {
