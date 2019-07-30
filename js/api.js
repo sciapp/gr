@@ -150,10 +150,13 @@ function GR(canvas_id) {
     this.readmeta = gr_readmeta;
     this.plotmeta = gr_plotmeta;
     this.dumpmeta_json = gr_dumpmeta_json;
+    this.dumpmeta = gr_dumpmeta;
     this.inputmeta = gr_inputmeta;
     this.mergemeta = gr_mergemeta;
     this.switchmeta = gr_switchmeta;
     this.meta_get_box = gr_meta_get_box;
+    this.registermeta = gr_registermeta;
+    this.unregistermeta = gr_unregistermeta;
 
     // set canvas and context
     Module.set_canvas(canvas_id);
@@ -357,11 +360,10 @@ function GR(canvas_id) {
     this.PRINT_FIG = "fig";
     this.PRINT_SVG = "svg";
     this.PRINT_WMF = "wmf";
-    
-    this.GR_SOURCE_JUPYTER = 0;
-    this.GR_SOURCE_SOCKET = 1;
-    this.GR_TARGET_JUPYTER = 2;
-    this.GR_TARGET_SOCKET = 3;
+
+    this.GR_META_EVENT_NEW_PLOT = 0;
+    this.GR_META_EVENT_UPDATE_PLOT = 1;
+    this.GR_META_EVENT_SIZE = 2;
 }
 
 
@@ -1114,33 +1116,49 @@ gr_deletemeta = function(args) {
     gr_deletemeta_c(args);
 };
 
-gr_readmeta_c = Module.cwrap('gr_readmeta', 'number', ['number', 'string']);
+gr_readmeta_c = Module.cwrap('gr_readmeta', 'number', ['number', 'number']);
 gr_readmeta = function(args, string) {
-    result = gr_readmeta_c(args, string);
+    var bufferSize = Module.lengthBytesUTF8(string);
+    var bufferPtr = Module._malloc(bufferSize + 1);
+    Module.stringToUTF8(string, bufferPtr, bufferSize + 1);
+    result = gr_readmeta_c(args, bufferPtr);
+    freearray(bufferPtr);
     return result;
 };
 
 gr_plotmeta_c = Module.cwrap('gr_plotmeta', '', ['number']);
 gr_plotmeta = function(args) {
-    gr_plotmeta_c(args);
+    if (typeof args === 'undefined') {
+        gr_plotmeta_c(0);
+    } else {
+        gr_plotmeta_c(args);
+    }
 };
 
 gr_dumpmeta_json_c = Module.cwrap('gr_dumpmeta_json', 'number', ['number', 'number']);
 gr_dumpmeta_json = function(args, file) {
-    result = gr_dumpmeta_json_c(args, file);
-    return result;
+    if (typeof file === 'undefined') {
+        file = this.get_stdout();
+    }
+    return gr_dumpmeta_json_c(args, file);
+};
+
+gr_dumpmeta_c = Module.cwrap('gr_dumpmeta', 'number', ['number', 'number']);
+gr_dumpmeta = function(args, file) {
+    if (typeof file === 'undefined') {
+        file = this.get_stdout();
+    }
+    return gr_dumpmeta_c(args, file);
 };
 
 gr_switchmeta_c = Module.cwrap('gr_switchmeta', 'number', ['number']);
 gr_switchmeta = function(id) {
-    result = gr_switchmeta_c(id);
-    return result;
+    return gr_switchmeta_c(id);
 };
 
 gr_get_stdout_c = Module.cwrap('gr_get_stdout', 'number', []);
-gr_get_stdout = function(args, string) {
-    result = gr_get_stdout_c(args, string);
-    return result;
+gr_get_stdout = function() {
+    return gr_get_stdout_c();
 };
 
 gr_shade_c = Module.cwrap('gr_shade', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number']);
@@ -1213,4 +1231,42 @@ gr_meta_get_box = function(top, right, bottom, left, keepAspectRatio) {
     freearray(_w);
     freearray(_h);
     return result;
+};
+
+var gr_meta_callbacks = [];
+gr_registermeta_c = Module.cwrap('gr_registermeta', 'number', ['number', 'number']);
+gr_registermeta = function(type, callback) {
+    var callback_pointer;
+    if (type in gr_meta_callbacks) {
+        Module.removeFunction(gr_meta_callbacks[type]);
+        delete gr_meta_callbacks[type];
+    }
+    if (type == this.GR_META_EVENT_NEW_PLOT || type == this.GR_META_EVENT_UPDATE_PLOT) {
+        callback_pointer = Module.addFunction(function(evt) {
+            var evt_data = {
+                'evt_type': Module.HEAP32.subarray(evt / 4, evt + 1)[0],
+                'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt + 2)[0]
+            };
+            callback(evt_data);
+        }, 'vi');
+    } else if (type == this.GR_META_EVENT_SIZE) {
+        callback_pointer = Module.addFunction(function(evt) {
+            var evt_data = {
+                'evt_type': Module.HEAP32.subarray(evt / 4, evt + 1)[0],
+                'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt + 2)[0],
+                'width': Module.HEAP32.subarray(evt / 4 + 2, evt + 3)[0],
+                'height': Module.HEAP32.subarray(evt / 4 + 3, evt + 4)[0]
+            };
+            callback(evt_data);
+        }, 'vi');
+    }
+    gr_meta_callbacks[type] = callback_pointer;
+    return gr_registermeta_c(type, callback_pointer);
+};
+
+gr_unregistermeta_c = Module.cwrap('gr_unregistermeta', 'number', ['number']);
+gr_unregistermeta = function(type) {
+    Module.removeFunction(gr_meta_callbacks[type]);
+    delete gr_meta_callbacks[type];
+    return gr_unregistermeta_c(type);
 };
