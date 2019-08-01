@@ -1758,6 +1758,104 @@ void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, 
 }
 
 /*!
+ * Display a two dimensional color index array with nonuniform cell sizes.
+ *
+ * \param[in] x X coordinates of the cell edges
+ * \param[in] y Y coordinates of the cell edges
+ * \param[in] dimx actual X dimension of the color index array in the memory
+ * \param[in] dimy actual Y dimension of the color index array in the memory
+ * \param[in] scol 1-based starting column of color index and x array
+ * \param[in] srow 1-based starting row of color index and y array
+ * \param[in] ncol number of columns displayed
+ * \param[in] nrow number of rows displayed
+ * \param[in] color color index array
+ *
+ * The values for `x` and `y` are in world coordinates. `x` must contain `dimx`+1 elements
+ * and `y` must contain `dimy`+1 elements. The elements i and i+1 are respectively the edges
+ * of the i-th cell in X and Y direction.
+ *
+ * To draw all cells of the color index array use:
+ *
+ *      gr_nonuniformcellarray(x, y, dimx, dimy, 1, 1, dimx, dimy, color)
+ *
+ * `scol` and `srow` can be used to specify a (1-based) starting column and row
+ * in the `color`, `x` and `y` array. `dimx` and `dimy` specify the actual dimension of the
+ * arrays in the memory whereof `ncol` and `nrow` values are displayed.
+ */
+void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, int srow, int ncol, int nrow,
+                            int *color)
+{
+  int img_data_x, img_data_y, color_x_ind, color_y_ind, color_ind, size = 2000;
+  int *img_data;
+  double x_pos, y_pos, x_size, y_size;
+
+  if (scol < 1 || srow < 1 || scol + ncol - 1 > dimx || srow + nrow - 1 > dimy)
+    {
+      fprintf(stderr, "Dimensions of color index array are invalid.\n");
+      return;
+    }
+
+  scol--;
+  srow--;
+  nrow += srow;
+  ncol += scol;
+
+  for (color_x_ind = scol; color_x_ind < ncol; color_x_ind++)
+    {
+      if (x[color_x_ind] > x[color_x_ind + 1])
+        {
+          fprintf(stderr, "x points not sorted in ascending order\n");
+          return;
+        }
+    }
+
+  for (color_y_ind = srow; color_y_ind < nrow; color_y_ind++)
+    {
+      if (y[color_y_ind] > y[color_y_ind + 1])
+        {
+          fprintf(stderr, "y points not sorted in ascending order\n");
+          return;
+        }
+    }
+
+  x_size = x[ncol] - x[scol];
+  y_size = y[nrow] - y[srow];
+  img_data = (int *)xmalloc(size * size * sizeof(int));
+
+  color_y_ind = srow;
+  for (img_data_y = 0; img_data_y < size; img_data_y++)
+    {
+      y_pos = y[srow] + img_data_y * y_size / size;
+      while (color_y_ind < nrow && y[color_y_ind + 1] <= y_pos)
+        {
+          color_y_ind++;
+        }
+      color_x_ind = scol;
+      for (img_data_x = 0; img_data_x < size; img_data_x++)
+        {
+          x_pos = x[scol] + img_data_x * x_size / size;
+          while (color_x_ind < ncol && x[color_x_ind + 1] <= x_pos)
+            {
+              color_x_ind++;
+            }
+          color_ind = color[color_y_ind * dimx + color_x_ind];
+          if (color_ind >= 0 && color_ind < MAX_COLOR)
+            {
+              img_data[img_data_y * size + img_data_x] = (255 << 24) + rgb[color_ind];
+            }
+          else
+            {
+              /* invalid color indices in input data result in transparent pixel */
+              img_data[img_data_y * size + img_data_x] = 0;
+            }
+        }
+    }
+
+  gr_drawimage(x[scol], x[ncol], y[nrow], y[srow], size, size, img_data, 0);
+  free(img_data);
+}
+
+/*!
  * Display a two dimensional color index array mapped to a disk using polar
  * coordinates.
  *
