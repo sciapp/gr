@@ -1,9 +1,0 @@
-grant {
-  permission java.io.FilePermission 
-	"gksfont.dat", "read";
-};
-grant {
-  permission java.net.SocketPermission
-        "localhost:8410-", 
-	"accept, connect, listen";
-};

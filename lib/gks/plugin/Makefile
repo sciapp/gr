@@ -120,7 +120,7 @@ all: targets
 
 targets: prerequisites \
          x11plugin.so wxplugin.so qtplugin.so qt5plugin.so svgplugin.so \
-         gtkplugin.so figplugin.so gsplugin.so wmfplugin.so glplugin.so \
+         gtkplugin.so gsplugin.so wmfplugin.so glplugin.so \
          zmqplugin.so htmplugin.so pgfplugin.so cairoplugin.so videoplugin.so
 
 ifeq ($(UNAME),Darwin)
@@ -156,9 +156,6 @@ svgplugin.so: svgplugin.o $(GKSLIBS)
 
 gtkplugin.so: gtkplugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(GTKLIBS) $(X11LIBS) $(LIBS)
-
-figplugin.so: figplugin.o $(GKSLIBS)
-	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gsplugin.so: gsplugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(GSLIBS) $(X11LIBS) $(LIBS)

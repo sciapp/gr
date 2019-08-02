@@ -111,9 +111,7 @@ endif()
 set(GKS_SOURCES
         lib/gks/afm.c
         lib/gks/font.c
-        lib/gks/mac.c
         lib/gks/socket.c
-        lib/gks/cgm.c
         lib/gks/ft.c
         lib/gks/malloc.c
         lib/gks/util.c
@@ -440,22 +438,6 @@ set_target_properties(gsplugin PROPERTIES
         PREFIX ""
         SUFFIX "${GR_PLUGIN_SUFFIX}"
         )
-
-
-add_library(figplugin SHARED
-        lib/gks/plugin/figplugin.c
-        )
-target_link_libraries(figplugin PUBLIC gks_static)
-target_link_libraries(figplugin PUBLIC Libpng::Libpng)
-set_target_properties(figplugin PROPERTIES
-        C_STANDARD 90
-        C_EXTENSIONS OFF
-        C_STANDARD_REQUIRED ON
-        PREFIX ""
-        SUFFIX "${GR_PLUGIN_SUFFIX}"
-        )
-string(APPEND GR_REPORT "- figplugin:\n")
-string(APPEND GR_REPORT "\tXfig output: Yes\n")
 
 
 add_library(svgplugin SHARED
@@ -796,7 +778,7 @@ endif ()
 
 if(GR_INSTALL)
     include(GNUInstallDirs)
-    install(TARGETS gks_static gks_shared gr_static gr_shared cairoplugin figplugin glplugin gsplugin gtkplugin htmplugin pgfplugin svgplugin videoplugin wmfplugin x11plugin zmqplugin qtplugin qt5plugin
+    install(TARGETS gks_static gks_shared gr_static gr_shared cairoplugin glplugin gsplugin gtkplugin htmplugin pgfplugin svgplugin videoplugin wmfplugin x11plugin zmqplugin qtplugin qt5plugin
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
