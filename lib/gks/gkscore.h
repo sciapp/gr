@@ -277,13 +277,7 @@ extern "C"
   void gks_drv_wiss(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
                     double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
-  void gks_drv_cgm(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
-                   double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
-
   void gks_drv_win(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
-                   double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
-
-  void gks_drv_mac(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
                    double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
   void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
@@ -303,9 +297,6 @@ extern "C"
 
   DLLEXPORT void gks_gs_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
-
-  DLLEXPORT void gks_fig_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
-                                int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
   DLLEXPORT void gks_gtk_plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
                                 int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);

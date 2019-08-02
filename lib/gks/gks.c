@@ -39,10 +39,7 @@ static gks_list_t *open_ws = NULL, *active_ws = NULL, *av_ws_types = NULL;
 static ws_descr_t ws_types[] = {{2, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536, 4, "mf", NULL},
                                 {3, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536, 5, "mf", NULL},
                                 {5, GKS_K_METERS, 1.00000, 1.00000, 32767, 32767, 3, NULL, NULL},
-                                {7, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536, 4, "cgm", NULL},
-                                {8, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536, 4, "cgm", NULL},
                                 {41, GKS_K_METERS, 0.33300, 0.28100, 1024, 864, 2, NULL, NULL},
-                                {51, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 2, NULL, NULL},
                                 {61, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL},
                                 {62, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL},
                                 {63, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, "ps", NULL},
@@ -78,7 +75,6 @@ static ws_descr_t ws_types[] = {{2, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536
                                 {321, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
                                 {322, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
                                 {323, GKS_K_METERS, 0.28575, 0.19685, 6750, 4650, 0, NULL, NULL},
-                                {370, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "fig", NULL},
                                 {371, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
                                 {380, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
                                 {381, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
@@ -183,19 +179,8 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
                            ptr);
               break;
 
-            case 7:
-            case 8:
-              gks_drv_cgm(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
-                          ptr);
-              break;
-
             case 41:
               gks_drv_win(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
-                          ptr);
-              break;
-
-            case 51:
-              gks_drv_mac(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
                           ptr);
               break;
 
@@ -250,11 +235,6 @@ static void gks_ddlk(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_
             case 323:
               gks_gs_plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
                             ptr);
-              break;
-
-            case 370:
-              gks_fig_plugin(fctid, dx, dy, dimx, i_arr, len_f_arr_1, f_arr_1, len_f_arr_2, f_arr_2, len_c_arr, c_arr,
-                             ptr);
               break;
 
             case 371:

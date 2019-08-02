@@ -11,7 +11,7 @@ endif
 UNAME := $(shell uname)
 
      GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o dl.o malloc.o \
-               error.o mf.o wiss.o cgm.o win.o mac.o ps.o pdf.o socket.o \
+               error.o mf.o wiss.o win.o ps.o pdf.o socket.o \
                plugin.o compress.o io.o ft.o
 
       GSDEFS =
@@ -128,7 +128,7 @@ endif
 depend:
 	makedepend -Y -- \
 	gks.c gksforbnd.c font.c afm.c util.c dl.c malloc.c error.c \
-	mf.c wiss.c cgm.c win.c mac.c ps.c pdf.c socket.c plugin.c \
+	mf.c wiss.c win.c ps.c pdf.c socket.c plugin.c \
 	compress.c io.c ft.c 2> /dev/null
 
 .PHONY: default all targets prerequisites plugins install clean depend
@@ -148,9 +148,7 @@ malloc.o: gkscore.h
 error.o: gkscore.h
 mf.o: gkscore.h gks.h
 wiss.o: gks.h gkscore.h
-cgm.o: cgm.h gks.h gkscore.h
 win.o: gks.h gkscore.h
-mac.o: gks.h gkscore.h
 ps.o: gks.h gkscore.h
 pdf.o: gks.h gkscore.h
 socket.o: gks.h gkscore.h

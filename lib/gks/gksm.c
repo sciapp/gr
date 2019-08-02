@@ -28,8 +28,8 @@ Usage: gksm [-Oorientation] [-factor f] [-h] [-t wstype] [file]\n\
     fprintf(stderr, "\n\
 The present workstation types recognized by gksm are:\n\
   61:    PostScript (b/w)                     2:    GKS Metafile\n\
-  62:    Color PostScript                     7:    CGM Binary\n\
-  63:    PostScript (b/w, landscape)          8:    CGM Clear Text\n\
+  62:    Color PostScript\n\
+  63:    PostScript (b/w, landscape)\n\
   64:    Color PostScript (landscape)\n\
  101:    Portable Document Format (PDF)\n\
  102:    Portable Document Format (PDF, compressed)\n\
@@ -39,11 +39,9 @@ The present workstation types recognized by gksm are:\n\
  321:    JPEG File\n\
  322:    Portable Network Graphics (PNG)\n\
  323:    Tagged Image File (TIFF)\n\
- 370:    Fig Format 3.2 (Xfig)\n\
  382:    Scalable Vector Graphics (SVG)\n\
  390:    Windows Metafile (WMF)\n\
- 400:    Quartz 2D Graphics (Mac OS X)\n\
- 410:    Java Web Plug-in\n");
+ 400:    Quartz 2D Graphics (Mac OS X)\n");
 
   exit(1);
 }

@@ -17,7 +17,7 @@ GDILIB = -lgdi32
 GKSLIB = ../libgks.lib
 TIFFLIB = $(THIRDPARTYDIR)/lib/libtiff.a
 
-all: x11plugin.dll svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll wxplugin.dll qtplugin.dll qt5plugin.dll gtkplugin.dll figplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll videoplugin.dll
+all: x11plugin.dll svgplugin.dll pgfplugin.dll htmplugin.dll cairoplugin.dll wxplugin.dll qtplugin.dll qt5plugin.dll gtkplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll videoplugin.dll
 
 .SUFFIXES: .c .cxx .o
 
@@ -59,9 +59,6 @@ qt5plugin.dll: qt5plugin.o $(GKSLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 gtkplugin.dll: gtkplugin.o $(GKSLIB)
-	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
-
-figplugin.dll: figplugin.o $(GKSLIB) $(PNGLIB) $(ZLIB)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)
 
 gsplugin.dll: gsplugin.o $(GKSLIB)

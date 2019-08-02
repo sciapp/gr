@@ -1221,11 +1221,7 @@ void gr_inqdspsize(double *mwidth, double *mheight, int *width, int *height)
  * +-------------+------------------------------------------------------+
  * |            5|Workstation Independent Segment Storage               |
  * +-------------+------------------------------------------------------+
- * |         7, 8|Computer Graphics Metafile (CGM binary, clear text)   |
- * +-------------+------------------------------------------------------+
  * |           41|Windows GDI                                           |
- * +-------------+------------------------------------------------------+
- * |           51|Mac Quickdraw                                         |
  * +-------------+------------------------------------------------------+
  * |      61 - 64|PostScript (b/w, color)                               |
  * +-------------+------------------------------------------------------+
@@ -1246,8 +1242,6 @@ void gr_inqdspsize(double *mwidth, double *mheight, int *width, int *height)
  * |          322|Portable Network Graphics file (PNG)                  |
  * +-------------+------------------------------------------------------+
  * |          323|Tagged Image File Format (TIFF)                       |
- * +-------------+------------------------------------------------------+
- * |          370|Xfig vector graphics file                             |
  * +-------------+------------------------------------------------------+
  * |          371|Gtk                                                   |
  * +-------------+------------------------------------------------------+
@@ -7696,8 +7690,6 @@ static int gks_wstype(char *type)
     wstype = 162;
   else if (!str_casecmp(type, "tiff") || !str_casecmp(type, "tif"))
     wstype = 146;
-  else if (!str_casecmp(type, "fig"))
-    wstype = 370;
   else if (!str_casecmp(type, "svg"))
     wstype = 382;
   else if (!str_casecmp(type, "wmf"))
@@ -7709,7 +7701,7 @@ static int gks_wstype(char *type)
   else
     {
       fprintf(stderr, "%s: unrecognized file type\nAvailable formats: \
-bmp, eps, fig, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n",
+bmp, eps, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n",
               type);
       wstype = -1;
     }
@@ -7750,8 +7742,6 @@ bmp, eps, fig, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or 
  * |.png         |Portable Network Graphics file (PNG)   |
  * +-------------+---------------------------------------+
  * |.tiff, .tif  |Tagged Image File Format (TIFF)        |
- * +-------------+---------------------------------------+
- * |.fig         |Xfig vector graphics file              |
  * +-------------+---------------------------------------+
  * |.svg         |Scalable Vector Graphics               |
  * +-------------+---------------------------------------+
