@@ -1,5 +1,5 @@
 import sys
-from math import sqrt, pi, atan2
+from math import sqrt, pi, atan2, isnan
 import zlib
 import struct
 import gks
@@ -317,7 +317,10 @@ class Html_output(object):
             (xn, yn) = self.WC_to_NDC(px[i], py[i], self.gkss.cntnr)
             (xn, yn) = self.seg_xform(xn, yn)
             (xd, yd) = self.NDC_to_DC(xn, yn)
-            self.write('c.lineTo({0}, {1});\n'.format(xd, yd))
+            if isnan(px[i]) and isnan(py[i]):
+                self.write('c.moveTo({0}, {1});\n'.format(xd, yd))
+            else:
+                self.write('c.lineTo({0}, {1});\n'.format(xd, yd))
         self.write('c.closePath();\n')
 
         fl_inter = self.gkss.ints if self.gkss.asf[10] else predef_ints[self.gkss.findex - 1]
@@ -343,9 +346,9 @@ class Html_output(object):
             self.write('pctx.fill();\n')
             self.write('var pattern = c.createPattern(pcan, "repeat");\n')
             self.write('c.fillStyle = pattern;\n')
-            self.write('c.fill();\n')
+            self.write('c.fill("evenodd");\n')
         elif fl_inter == GKS_K_INTSTYLE_SOLID:
-            self.write('c.fill();\n')
+            self.write('c.fill("evenodd");\n')
         else:
             self.write('c.stroke();\n')
 
