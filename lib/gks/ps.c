@@ -1398,7 +1398,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   int clsw;
   double clrt[4], x, y;
   char buffer[50];
-  int i, jx, jy, rx, ry;
+  int i, jx, jy, rx, ry, nan_found = 0;
 
   packb("gsave");
 
@@ -1427,7 +1427,20 @@ static void fill_routine(int n, double *px, double *py, int tnr)
           ry = p->iy - jy;
           if (abs(rx) > 1 || abs(ry) > 1)
             {
-              sprintf(buffer, "%d %d rl", rx, ry);
+              if (px[i] != px[i] && py[i] != py[i])
+                {
+                  nan_found = 1;
+                  continue;
+                }
+              if (nan_found)
+                {
+                  sprintf(buffer, "%d %d m", p->ix, p->iy);
+                  nan_found = 0;
+                }
+              else
+                {
+                  sprintf(buffer, "%d %d rl", rx, ry);
+                }
               packb(buffer);
             }
           else

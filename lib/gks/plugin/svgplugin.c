@@ -637,7 +637,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
 static void fill_routine(int n, double *px, double *py, int tnr)
 {
-  int i, j;
+  int i, j, nan_found = 0;
   double x, y, ix, iy;
   char *s, line[80];
   size_t slen;
@@ -713,23 +713,36 @@ static void fill_routine(int n, double *px, double *py, int tnr)
         }
     }
 
-  svg_printf(p->stream, "<polygon clip-path=\"url(#clip%02d%02d)\" points=\"\n", path_id, p->path_index);
+  svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%02d)\" d=\"\n", path_id, p->path_index);
   for (i = 0; i < n; i++)
     {
+      if (px[i] != px[i] && py[i] != py[i])
+        {
+          nan_found = 1;
+          continue;
+        }
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
       NDC_to_DC(x, y, ix, iy);
 
-      svg_printf(p->stream, "%g,%g ", ix, iy);
+      if (i == 0 || nan_found)
+        {
+          svg_printf(p->stream, "M%g %g ", ix, iy);
+          nan_found = 0;
+        }
+      else
+        {
+          svg_printf(p->stream, "L%g %g ", ix, iy);
+        }
       if (!((i + 1) % 10))
         {
           svg_printf(p->stream, "\n  ");
         }
     }
   if (p->pattern)
-    svg_printf(p->stream, "\n  \" fill=\"url(#pattern%d)\"", p->pattern + 1);
+    svg_printf(p->stream, " Z\n  \" fill=\"url(#pattern%d)\"", p->pattern + 1);
   else
-    svg_printf(p->stream, "\n  \" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\"",
+    svg_printf(p->stream, " Z\n  \" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\"",
                p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
   svg_printf(p->stream, "/>\n");
 }

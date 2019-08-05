@@ -1311,6 +1311,11 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 0; i < n; ++i)
     {
+      if (px[i] != px[i] && py[i] != py[i])
+        {
+          NDC_to_DC(0, 0, points[i].x, points[i].y);
+          continue;
+        }
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
       NDC_to_DC(x, y, points[i].x, points[i].y);
@@ -1345,6 +1350,11 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 0; i < n; ++i)
     {
+      if (px[i] != px[i] && py[i] != py[i])
+        {
+          NDC_to_DC(0, 0, points[i].x, points[i].y);
+          continue;
+        }
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
       NDC_to_DC(x, y, points[i].x, points[i].y);
