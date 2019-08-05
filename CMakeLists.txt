@@ -382,21 +382,6 @@ string(APPEND GR_REPORT "- pgfplugin:\n")
 string(APPEND GR_REPORT "\tTeX output: Yes\n")
 
 
-add_library(htmplugin SHARED
-        lib/gks/plugin/htmplugin.c
-        )
-target_link_libraries(htmplugin PUBLIC gks_static)
-target_link_libraries(htmplugin PUBLIC Libpng::Libpng)
-set_target_properties(htmplugin PROPERTIES
-        C_STANDARD 90
-        C_EXTENSIONS OFF
-        C_STANDARD_REQUIRED ON
-        PREFIX ""
-        SUFFIX "${GR_PLUGIN_SUFFIX}"
-        )
-string(APPEND GR_REPORT "- htmplugin:\n")
-string(APPEND GR_REPORT "\tHTML output: Yes\n")
-
 add_library(wmfplugin SHARED
         lib/gks/plugin/wmfplugin.c
         )
@@ -778,7 +763,7 @@ endif ()
 
 if(GR_INSTALL)
     include(GNUInstallDirs)
-    install(TARGETS gks_static gks_shared gr_static gr_shared cairoplugin glplugin gsplugin gtkplugin htmplugin pgfplugin svgplugin videoplugin wmfplugin x11plugin zmqplugin qtplugin qt5plugin
+    install(TARGETS gks_static gks_shared gr_static gr_shared cairoplugin glplugin gsplugin gtkplugin pgfplugin svgplugin videoplugin wmfplugin x11plugin zmqplugin qtplugin qt5plugin
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

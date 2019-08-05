@@ -427,7 +427,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
 static void fill_routine(int n, double *px, double *py, int tnr)
 {
-  int i, j, k;
+  int i, j, k, nan_found = 0;
   double x, y, ix, iy;
   int fl_inter, fl_style, size;
   int pattern[33];
@@ -446,7 +446,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
     {
-      pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt] (%f,%f)", p->linewidth, ix, iy);
+      pgf_printf(p->stream, "\\fill[color=mycolor, line width=%dpt, even odd rule] (%f,%f)", p->linewidth, ix, iy);
     }
   else
     {
@@ -455,10 +455,24 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 1; i < n; i++)
     {
+      if (px[i] != px[i] && py[i] != py[i])
+        {
+          nan_found = 1;
+          continue;
+        }
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
       NDC_to_DC(x, y, ix, iy);
-      pgf_printf(p->stream, " -- (%f,%f)", ix, iy);
+
+      if (nan_found)
+        {
+          pgf_printf(p->stream, " (%f,%f)", ix, iy);
+          nan_found = 0;
+        }
+      else
+        {
+          pgf_printf(p->stream, " -- (%f,%f)", ix, iy);
+        }
     }
 
   pgf_printf(p->stream, " -- cycle;\n");

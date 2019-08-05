@@ -1261,8 +1261,6 @@ void gr_inqdspsize(double *mwidth, double *mheight, int *width, int *height)
  * +-------------+------------------------------------------------------+
  * |          420|OpenGL                                                |
  * +-------------+------------------------------------------------------+
- * |          430|HTML5 Canvas                                          |
- * +-------------+------------------------------------------------------+
  *
  * \endverbatim
  */
@@ -7694,14 +7692,12 @@ static int gks_wstype(char *type)
     wstype = 382;
   else if (!str_casecmp(type, "wmf"))
     wstype = 390;
-  else if (!str_casecmp(type, "html"))
-    wstype = 430;
   else if (!str_casecmp(type, "pgf"))
     wstype = 314;
   else
     {
       fprintf(stderr, "%s: unrecognized file type\nAvailable formats: \
-bmp, eps, html, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n",
+bmp, eps, jpeg, mov, mp4, webm, ogg, pdf, pgf, png, ps, svg, tiff or wmf\n",
               type);
       wstype = -1;
     }

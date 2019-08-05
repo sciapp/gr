@@ -366,10 +366,6 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                   long xi = i;
                   long yi = j;
 
-                  /* Start and end all lines at (0, 0) to avoid connecting separate regions while filling */
-                  x_pos = y_pos = 0;
-                  list_append(polylines_x, &x_pos);
-                  list_append(polylines_y, &y_pos);
                   size_t polyline_start_index = polylines_x->size;
                   list_append(line_indices, &polyline_start_index);
 
@@ -430,7 +426,9 @@ static void marching_squares(const double *x, const double *y, const double *z, 
                   y_pos = *(((double *)polylines_y->list) + polyline_start_index);
                   list_append(polylines_x, &x_pos);
                   list_append(polylines_y, &y_pos);
-                  x_pos = y_pos = 0;
+
+                  /* end each separate filled area with NAN */
+                  x_pos = y_pos = NAN;
                   list_append(polylines_x, &x_pos);
                   list_append(polylines_y, &y_pos);
                 }
@@ -453,7 +451,7 @@ static void marching_squares(const double *x, const double *y, const double *z, 
       num_lines = 0;
     }
 
-  size_t polylines_end_indices = polylines_x->size + 1;
+  size_t polylines_end_indices = polylines_x->size;
   list_append(line_indices, &(polylines_end_indices));
   size_t *line_ind = (size_t *)line_indices->list;
 
@@ -461,7 +459,7 @@ static void marching_squares(const double *x, const double *y, const double *z, 
   for (i = 0; i < num_lines; i++)
     {
       long n =
-          line_ind[i + 1] - line_ind[i] - 2; /* Remove (0, 0) points which are required for filling from polyline. */
+          line_ind[i + 1] - line_ind[i] - 1; /* Remove (0, 0) points which are required for filling from polyline. */
       if (n >= 2)
         {
           gr_polyline(n, (double *)list_get(polylines_x, line_ind[i]), (double *)list_get(polylines_y, line_ind[i]));

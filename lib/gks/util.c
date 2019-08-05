@@ -65,13 +65,12 @@ struct wstypes_t
 };
 
 static struct wstypes_t wstypes[] = {
-    {"win", 42},     {"ps", 62},        {"eps", 62},       {"nul", 100},      {"pdf", 102},      {"mov", 120},
+    {"win", 41},     {"ps", 62},        {"eps", 62},       {"nul", 100},      {"pdf", 102},      {"mov", 120},
     {"gif", 130},    {"cairopng", 140}, {"cairox11", 141}, {"cairojpg", 144}, {"cairobmp", 145}, {"cairotif", 146},
     {"six", 150},    {"mp4", 160},      {"webm", 161},     {"ogg", 162},      {"x11", 211},      {"pgf", 314},
     {"bmp", 145},    {"jpeg", 144},     {"jpg", 144},      {"png", 140},      {"tiff", 146},     {"tif", 146},
     {"gtk", 142},    {"wx", 380},       {"qt", 381},       {"svg", 382},      {"wmf", 390},      {"quartz", 400},
-    {"socket", 410}, {"sock", 410},     {"gksqt", 411},    {"zmq", 415},      {"gl", 420},       {"opengl", 420},
-    {"html", 430}};
+    {"socket", 410}, {"sock", 410},     {"gksqt", 411},    {"zmq", 415},      {"gl", 420},       {"opengl", 420}};
 
 static int num_wstypes = sizeof(wstypes) / sizeof(wstypes[0]);
 

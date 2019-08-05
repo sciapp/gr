@@ -1324,6 +1324,7 @@ static void write_page(void)
         }
       else
         {
+          cairo_surface_flush(p->surface);
           unsigned char *data = cairo_image_surface_get_data(p->surface);
           int width = cairo_image_surface_get_width(p->surface);
           int height = cairo_image_surface_get_height(p->surface);
@@ -1382,11 +1383,11 @@ static void write_page(void)
         }
       else
         {
-          unsigned char *data = cairo_image_surface_get_data(p->surface);
-          int width = cairo_image_surface_get_width(p->surface);
-          int height = cairo_image_surface_get_height(p->surface);
-          int stride = cairo_image_surface_get_stride(p->surface);
-          int i, j, k;
+          cairo_surface_flush(p->surface);
+          data = cairo_image_surface_get_data(p->surface);
+          width = cairo_image_surface_get_width(p->surface);
+          height = cairo_image_surface_get_height(p->surface);
+          stride = cairo_image_surface_get_stride(p->surface);
           int padding = width % 4;
           int bmp_stride = 3 * width + padding;
           unsigned int file_size = 54 + bmp_stride * height;
@@ -1423,7 +1424,7 @@ static void write_page(void)
                   double alpha = data[(height - i - 1) * stride + j * 4 + 3] / 255.0;
                   for (k = 0; k < 3; k++)
                     {
-                      int component = data[stride * (height - i - 1) + j * 4 + (2 - k)];
+                      int component = data[stride * (height - i - 1) + j * 4 + k];
                       component = bg[k] * (1 - alpha) + component * alpha + 0.5;
                       if (component > 255)
                         {
@@ -1454,11 +1455,12 @@ static void write_page(void)
       else
         {
           time_t current_datetime = time(NULL);
-          unsigned char *data = cairo_image_surface_get_data(p->surface);
-          int width = cairo_image_surface_get_width(p->surface);
-          int height = cairo_image_surface_get_height(p->surface);
-          int stride = cairo_image_surface_get_stride(p->surface);
-          int i;
+          cairo_surface_flush(p->surface);
+          data = cairo_image_surface_get_data(p->surface);
+          width = cairo_image_surface_get_width(p->surface);
+          height = cairo_image_surface_get_height(p->surface);
+          stride = cairo_image_surface_get_stride(p->surface);
+          pix = (unsigned char *)gks_malloc(stride);
           TIFFSetField(fp, TIFFTAG_IMAGEWIDTH, width);
           TIFFSetField(fp, TIFFTAG_IMAGELENGTH, height);
           TIFFSetField(fp, TIFFTAG_SAMPLESPERPIXEL, 4);
@@ -1486,11 +1488,20 @@ static void write_page(void)
             }
           for (i = 0; i < height; i++)
             {
-              if (TIFFWriteScanline(fp, data + i * stride, i, 0) < 0)
+              memcpy(pix, data + i * stride, stride);
+              for (j = 0; j < width; j++)
+                {
+                  int tmp;
+                  tmp = pix[4 * j + 0];
+                  pix[4 * j + 0] = pix[4 * j + 2];
+                  pix[4 * j + 2] = tmp;
+                }
+              if (TIFFWriteScanline(fp, pix, i, 0) < 0)
                 {
                   break;
                 }
             }
+          free(pix);
           if (i != height)
             {
               fprintf(stderr, "GKS: Failed to write file: %s\n", path);

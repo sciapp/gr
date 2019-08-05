@@ -1332,7 +1332,7 @@ static void text(double px, double py, int nchars, char *chars)
 
 static void fill_routine(int n, double *px, double *py, int tnr)
 {
-  int i;
+  int i, nan_found = 0;
   double x, y, xdev, ydev;
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
@@ -1341,14 +1341,24 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 0; i < n; i++)
     {
+      if (px[i] != px[i] && py[i] != py[i])
+        {
+          nan_found = 1;
+          continue;
+        }
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xdev, ydev);
 
-      if (i == 0)
-        pdf_moveto(p, xdev, ydev);
+      if (i == 0 || nan_found)
+        {
+          pdf_moveto(p, xdev, ydev);
+          nan_found = 0;
+        }
       else
-        pdf_lineto(p, xdev, ydev);
+        {
+          pdf_lineto(p, xdev, ydev);
+        }
     }
 
   if (p->pattern)
