@@ -124,27 +124,28 @@ static void debug_printf(const char *format, ...)
 
 #ifndef NDEBUG
 #if defined(_WIN32) || defined(__EMSCRIPTEN__)
-#define logger(logger_arguments)                      \
-  do                                                  \
-    {                                                 \
-      fprintf(stderr, "%s:%d: ", __FILE__, __LINE__); \
-      fprintf logger_arguments;                       \
-    }                                                 \
+#define logger(logger_arguments)                                            \
+  do                                                                        \
+    {                                                                       \
+      fprintf(stderr, "%s:%d(%s): ", __FILE__, __LINE__, CURRENT_FUNCTION); \
+      fprintf logger_arguments;                                             \
+    }                                                                       \
   while (0)
 #else
-#define logger(logger_arguments)                                                        \
-  do                                                                                    \
-    {                                                                                   \
-      if (isatty(fileno(stderr)))                                                       \
-        {                                                                               \
-          fprintf(stderr, "\033[36m%s\033[0m:\033[33m%d\033[0m: ", __FILE__, __LINE__); \
-        }                                                                               \
-      else                                                                              \
-        {                                                                               \
-          fprintf(stderr, "%s:%d: ", __FILE__, __LINE__);                               \
-        }                                                                               \
-      fprintf logger_arguments;                                                         \
-    }                                                                                   \
+#define logger(logger_arguments)                                                                          \
+  do                                                                                                      \
+    {                                                                                                     \
+      if (isatty(fileno(stderr)))                                                                         \
+        {                                                                                                 \
+          fprintf(stderr, "\033[36m%s\033[0m:\033[33m%d\033[0m(\033[34m%s\033[0m): ", __FILE__, __LINE__, \
+                  CURRENT_FUNCTION);                                                                      \
+        }                                                                                                 \
+      else                                                                                                \
+        {                                                                                                 \
+          fprintf(stderr, "%s:%d(%s): ", __FILE__, __LINE__, CURRENT_FUNCTION);                           \
+        }                                                                                                 \
+      fprintf logger_arguments;                                                                           \
+    }                                                                                                     \
   while (0)
 #endif
 #else
@@ -299,6 +300,15 @@ static void debug_printf(const char *format, ...)
 #else
 #define MAYBE_UNUSED
 #define UNUSED
+#endif
+
+
+#if defined(__GNUC__) || defined(__clang__)
+#define CURRENT_FUNCTION __func__
+#elif defined(__FUNCTION__)
+#define CURRENT_FUNCTION __FUNCTION__
+#else
+#define CURRENT_FUNCTION "<unknown>"
 #endif
 
 
