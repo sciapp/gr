@@ -975,7 +975,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   fovy = 90.0f;
   zNear = 1.0f;
   zFar = 200.0f;
-  aspect = width / height;
+  aspect = 1.0f * width / height;
   tfov2 = tan(fovy * M_PI / 360.0);
   right = zNear * aspect * tfov2;
   top = zNear * tfov2;
@@ -1068,7 +1068,11 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   glUniform1i(glGetUniformLocation(program, "n"), nmax);
 
   glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(vertices[0]));
-  glReadPixels(0, 0, width, height, GL_RED, GL_FLOAT, pixel_data);
+  for (i = 0; i < height; i++)
+    {
+      glPixelStorei(GL_PACK_ROW_LENGTH, width);
+      glReadPixels(0, i, width, 1, GL_RED, GL_FLOAT, pixel_data + i * height);
+    }
 
   if (dmin_ptr && *dmin_ptr >= 0)
     {
