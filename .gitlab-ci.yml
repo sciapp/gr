@@ -737,6 +737,7 @@ packages-tar:
       fi;
       ln -s gr-$CI_COMMIT_SHA.js Downloads/gr-latest.js;
       cd Downloads && sha512sum -b gr-*.tar.gz > gr-$CI_COMMIT_SHA.sha512.txt && cd -;
+      ln -s gr-$CI_COMMIT_SHA.sha512.txt Downloads/gr-latest.sha512.txt;
     fi
   artifacts:
     expire_in: 1 week
