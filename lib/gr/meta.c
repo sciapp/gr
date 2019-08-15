@@ -1261,6 +1261,15 @@ static tojson_permanent_state_t tojson_permanent_state = {complete, 0};
 
 static int plot_static_variables_initialized = 0;
 const char *plot_hierarchy_names[] = {"root", "plots", "subplots", "series", NULL};
+static int plot_scatter_markertypes[] = {
+    GKS_K_MARKERTYPE_SOLID_CIRCLE,   GKS_K_MARKERTYPE_SOLID_TRI_UP, GKS_K_MARKERTYPE_SOLID_TRI_DOWN,
+    GKS_K_MARKERTYPE_SOLID_SQUARE,   GKS_K_MARKERTYPE_SOLID_BOWTIE, GKS_K_MARKERTYPE_SOLID_HGLASS,
+    GKS_K_MARKERTYPE_SOLID_DIAMOND,  GKS_K_MARKERTYPE_SOLID_STAR,   GKS_K_MARKERTYPE_SOLID_TRI_RIGHT,
+    GKS_K_MARKERTYPE_SOLID_TRI_LEFT, GKS_K_MARKERTYPE_SOLID_PLUS,   GKS_K_MARKERTYPE_PENTAGON,
+    GKS_K_MARKERTYPE_HEXAGON,        GKS_K_MARKERTYPE_HEPTAGON,     GKS_K_MARKERTYPE_OCTAGON,
+    GKS_K_MARKERTYPE_STAR_4,         GKS_K_MARKERTYPE_STAR_5,       GKS_K_MARKERTYPE_STAR_6,
+    GKS_K_MARKERTYPE_STAR_7,         GKS_K_MARKERTYPE_STAR_8,       GKS_K_MARKERTYPE_VLINE,
+    GKS_K_MARKERTYPE_HLINE,          GKS_K_MARKERTYPE_OMARK,        INT_MAX};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ args ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1333,7 +1342,7 @@ const char *valid_subplot_keys[] = {
     "title",        "xbins",       "xflip",       "xform",           "xlabel",   "xlim",
     "xlog",         "ybins",       "yflip",       "ylabel",          "ylim",     "ylog",
     "zflip",        "zlog",        NULL};
-const char *valid_series_keys[] = {"a", "c", "s", "spec", "u", "v", "x", "y", "z", NULL};
+const char *valid_series_keys[] = {"a", "c", "markertype", "s", "spec", "u", "v", "x", "y", "z", NULL};
 
 /* ######################### public implementation ################################################################## */
 
@@ -4363,38 +4372,95 @@ error_t plot_step(gr_meta_args_t *subplot_args)
 
 error_t plot_scatter(gr_meta_args_t *subplot_args)
 {
+  /*
+   * Parameters:
+   * `x` as double array
+   * `y` as double array
+   * optional marker size `z` as double array
+   * optional marker color `c` as double array for each marker or as single integer for all markers
+   * optional `markertype` as integer (see: [Marker types](https://gr-framework.org/markertypes.html?highlight=marker))
+   */
   gr_meta_args_t **current_series;
-
-  gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
+  int *previous_marker_type = plot_scatter_markertypes;
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
-      double *x = NULL, *y = NULL, *z = NULL, *c = NULL;
+      double *x = NULL, *y = NULL, *z = NULL, *c = NULL, c_min, c_ptp;
       unsigned int x_length, y_length, z_length, c_length;
+      int i, c_index = -1, markertype;
       args_first_value(*current_series, "x", "D", &x, &x_length);
       args_first_value(*current_series, "y", "D", &y, &y_length);
       args_first_value(*current_series, "z", "D", &z, &z_length);
-      args_first_value(*current_series, "c", "D", &c, &c_length);
+      if (args_values(*current_series, "markertype", "i", &markertype))
+        {
+          gr_setmarkertype(markertype);
+        }
+      else
+        {
+          gr_setmarkertype(*previous_marker_type++);
+          if (*previous_marker_type == INT_MAX)
+            {
+              previous_marker_type = plot_scatter_markertypes;
+            }
+        }
+      if (!args_first_value(*current_series, "c", "D", &c, &c_length) &&
+          args_values(*current_series, "c", "i", &c_index))
+        {
+          if (c_index < 0)
+            {
+              logger((stderr, "Invalid scatter color %d, using 0 instead\n", c_index));
+              c_index = 0;
+            }
+          else if (c_index > 255)
+            {
+              logger((stderr, "Invalid scatter color %d, using 255 instead\n", c_index));
+              c_index = 255;
+            }
+        }
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       if (z != NULL || c != NULL)
         {
-          if (c != NULL)
+          if (c != NULL && c_length > 0)
             {
-              /* TODO: implement me! */
-              /*
-               * c_min = c.min()
-               * c_ptp = c.ptp()
-               */
+              c_min = c[0];
+              c_ptp = c[0];
+              for (i = 1; i < c_length; i++)
+                {
+                  if (c_min > c[i]) c_min = c[i];
+                  if (c_ptp < c[i]) c_ptp = c[i];
+                }
             }
-          /*
-           * for i in range(len(x)):
-           *     if z is not None:
-           *         gr.setmarkersize(z[i] / 100.0)
-           *     if c is not None:
-           *         c_index = 1000 + int(255 * (c[i] - c_min) / c_ptp)
-           *         gr.setmarkercolorind(c_index)
-           *     gr.polymarker([x[i]], [y[i]])
-           */
+          for (i = 0; i < x_length; i++)
+            {
+              if (z != NULL)
+                {
+                  if (i < z_length)
+                    {
+                      gr_setmarkersize(z[i] / 100.0);
+                    }
+                  else
+                    {
+                      gr_setmarkersize(2.0);
+                    }
+                }
+              if (c != NULL)
+                {
+                  if (i < c_length)
+                    {
+                      c_index = 1000 + (int)(255 * (c[i] - c_min) / c_ptp);
+                    }
+                  else
+                    {
+                      c_index = 989;
+                    }
+                  gr_setmarkercolorind(c_index);
+                }
+              else if (c_index != -1)
+                {
+                  gr_setmarkercolorind(1000 + c_index);
+                }
+              gr_polymarker(1, &x[i], &y[i]);
+            }
         }
       else
         {
@@ -4403,7 +4469,7 @@ error_t plot_scatter(gr_meta_args_t *subplot_args)
       ++current_series;
     }
 
-  return ERROR_NOT_IMPLEMENTED;
+  return NO_ERROR;
 }
 
 error_t plot_quiver(gr_meta_args_t *subplot_args)
