@@ -751,6 +751,7 @@ deploy:
     GIT_STRATEGY: none
   only:
     - master@Scientific-IT-Systems/gr
+    - develop@Scientific-IT-Systems/gr
     - tags@Scientific-IT-Systems/gr
   script:
   - chmod 644 Downloads/*.tar.gz
