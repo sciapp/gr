@@ -1335,14 +1335,23 @@ const char *plot_merge_clear_keys[] = {"series", NULL};
 
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
-const char *valid_subplot_keys[] = {
-    "adjust_xlim",  "adjust_ylim", "adjust_zlim", "backgroundcolor", "colormap", "keep_aspect_ratio",
-    "kind",         "labels",      "levels",      "location",        "nbins",    "panzoom",
-    "reset_ranges", "rotation",    "series",      "step_where",      "subplot",  "tilt",
-    "title",        "xbins",       "xflip",       "xform",           "xlabel",   "xlim",
-    "xlog",         "ybins",       "yflip",       "ylabel",          "ylim",     "ylog",
-    "zflip",        "zlog",        NULL};
-const char *valid_series_keys[] = {"a", "c", "markertype", "s", "spec", "u", "v", "x", "y", "z", NULL};
+const char *valid_subplot_keys[] = {"adjust_xlim",  "adjust_ylim",
+                                    "adjust_zlim",  "backgroundcolor",
+                                    "colormap",     "keep_aspect_ratio",
+                                    "kind",         "labels",
+                                    "levels",       "location",
+                                    "nbins",        "panzoom",
+                                    "reset_ranges", "rotation",
+                                    "series",       "subplot",
+                                    "tilt",         "title",
+                                    "xbins",        "xflip",
+                                    "xform",        "xlabel",
+                                    "xlim",         "xlog",
+                                    "ybins",        "yflip",
+                                    "ylabel",       "ylim",
+                                    "ylog",         "zflip",
+                                    "zlog",         NULL};
+const char *valid_series_keys[] = {"a", "c", "markertype", "s", "spec", "step_where", "u", "v", "x", "y", "z", NULL};
 
 /* ######################### public implementation ################################################################## */
 
@@ -3583,11 +3592,7 @@ void plot_set_attribute_defaults(gr_meta_args_t *plot_args)
       args_setdefault(*current_subplot, "tilt", "i", PLOT_DEFAULT_TILT);
       args_setdefault(*current_subplot, "keep_aspect_ratio", "i", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
 
-      if (strcmp(kind, "step") == 0)
-        {
-          args_setdefault(*current_subplot, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
-        }
-      else if (str_equals_any(kind, 2, "contour", "contourf"))
+      if (str_equals_any(kind, 2, "contour", "contourf"))
         {
           args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_CONTOUR_LEVELS);
         }
@@ -3604,6 +3609,10 @@ void plot_set_attribute_defaults(gr_meta_args_t *plot_args)
       while (*current_series != NULL)
         {
           args_setdefault(*current_series, "spec", "s", SERIES_DEFAULT_SPEC);
+          if (strcmp(kind, "step") == 0)
+            {
+              args_setdefault(*current_series, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
+            }
           ++current_series;
         }
       ++current_subplot;
@@ -4304,16 +4313,23 @@ error_t plot_line(gr_meta_args_t *subplot_args)
 
 error_t plot_step(gr_meta_args_t *subplot_args)
 {
+  /*
+   * Parameters:
+   * `x` as double array
+   * `y` as double array
+   * optional step position `step_where` as string, modes: `pre`, `mid`, `post`, Default: `mid`
+   * optional `spec`
+   */
   gr_meta_args_t **current_series;
 
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
-      double *x, *y;
-      unsigned int x_length, y_length;
+      double *x, *y, *x_step_boundaries = NULL, *y_step_values = NULL;
+      unsigned int x_length, y_length, mask, i;
       char *spec;
-      int mask;
-      return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length) && x_length < 1,
+                      ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
@@ -4324,41 +4340,56 @@ error_t plot_step(gr_meta_args_t *subplot_args)
           args_values(*current_series, "step_where", "s", &where); /* `spec` is always set */
           if (strcmp(where, "pre") == 0)
             {
+              x_step_boundaries = calloc(2 * x_length - 1, sizeof(double));
+              y_step_values = calloc(2 * x_length - 1, sizeof(double));
+              x_step_boundaries[0] = x[0];
+              for (i = 1; i < 2 * x_length - 2; i += 2)
+                {
+                  x_step_boundaries[i] = x[i / 2];
+                  x_step_boundaries[i + 1] = x[i / 2 + 1];
+                }
+              y_step_values[0] = y[0];
+              for (i = 1; i < 2 * x_length - 1; i += 2)
+                {
+                  y_step_values[i] = y_step_values[i + 1] = y[i / 2 + 1];
+                }
+              gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
             }
-          /* TODO: implement this! */
-          /*
-           *     n = len(x)
-           *     x_step_boundaries = np.zeros(2 * n - 1)
-           *     y_step_values = np.zeros(2 * n - 1)
-           *     x_step_boundaries[0] = x[0]
-           *     x_step_boundaries[1::2] = x[:-1]
-           *     x_step_boundaries[2::2] = x[1:]
-           *     y_step_values[0] = y[0]
-           *     y_step_values[1::2] = y[1:]
-           *     y_step_values[2::2] = y[1:]
-           * }
-           * elif where == 'post':
-           *     n = len(x)
-           *     x_step_boundaries = np.zeros(2 * n - 1)
-           *     y_step_values = np.zeros(2 * n - 1)
-           *     x_step_boundaries[0::2] = x
-           *     x_step_boundaries[1::2] = x[1:]
-           *     x_step_boundaries[-1] = x[-1]
-           *     y_step_values[0::2] = y
-           *     y_step_values[1::2] = y[:-1]
-           *     y_step_values[-1] = y[-1]
-           * else:
-           *     n = len(x)
-           *     x_step_boundaries = np.zeros(2 * n)
-           *     x_step_boundaries[0] = x[0]
-           *     x_step_boundaries[1:-1][0::2] = (x[1:] + x[:-1]) / 2
-           *     x_step_boundaries[1:-1][1::2] = (x[1:] + x[:-1]) / 2
-           *     x_step_boundaries[-1] = x[-1]
-           *     y_step_values = np.zeros(2 * n)
-           *     y_step_values[0::2] = y
-           *     y_step_values[1::2] = y
-           * gr.polyline(x_step_boundaries, y_step_values)
-           */
+          else if (strcmp(where, "post") == 0)
+            {
+              x_step_boundaries = calloc(2 * x_length - 1, sizeof(double));
+              y_step_values = calloc(2 * x_length - 1, sizeof(double));
+              for (i = 0; i < 2 * x_length - 2; i += 2)
+                {
+                  x_step_boundaries[i] = x[i / 2];
+                  x_step_boundaries[i + 1] = x[i / 2 + 1];
+                }
+              x_step_boundaries[2 * x_length - 2] = x[x_length - 1];
+              for (i = 0; i < 2 * x_length - 2; i += 2)
+                {
+                  y_step_values[i] = y_step_values[i + 1] = y[i / 2];
+                }
+              y_step_values[2 * x_length - 2] = y[x_length - 1];
+              gr_polyline(2 * x_length - 1, x_step_boundaries, y_step_values);
+            }
+          else if (strcmp(where, "mid") == 0)
+            {
+              x_step_boundaries = calloc(2 * x_length, sizeof(double));
+              y_step_values = calloc(2 * x_length, sizeof(double));
+              x_step_boundaries[0] = x[0];
+              for (i = 1; i < 2 * x_length - 2; i += 2)
+                {
+                  x_step_boundaries[i] = x_step_boundaries[i + 1] = (x[i / 2] + x[i / 2 + 1]) / 2.0;
+                }
+              x_step_boundaries[2 * x_length - 1] = x[x_length - 1];
+              for (i = 0; i < 2 * x_length - 1; i += 2)
+                {
+                  y_step_values[i] = y_step_values[i + 1] = y[i / 2];
+                }
+              gr_polyline(2 * x_length, x_step_boundaries, y_step_values);
+            }
+          free(x_step_boundaries);
+          free(y_step_values);
         }
       if (mask & 2)
         {
@@ -4367,7 +4398,7 @@ error_t plot_step(gr_meta_args_t *subplot_args)
       ++current_series;
     }
 
-  return ERROR_NOT_IMPLEMENTED;
+  return NO_ERROR;
 }
 
 error_t plot_scatter(gr_meta_args_t *subplot_args)
