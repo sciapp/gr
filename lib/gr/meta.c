@@ -188,7 +188,7 @@ static void debug_printf(const char *format, ...)
 #define PLOT_DEFAULT_COLORMAP 44 /* VIRIDIS */
 #define PLOT_DEFAULT_ROTATION 40
 #define PLOT_DEFAULT_TILT 70
-#define PLOT_DEFAULT_KEEP_ASPECT_RATIO 1
+#define PLOT_DEFAULT_KEEP_ASPECT_RATIO 0
 #define PLOT_DEFAULT_XLABEL ""
 #define PLOT_DEFAULT_YLABEL ""
 #define PLOT_DEFAULT_ZLABEL ""
@@ -1286,27 +1286,40 @@ static int processing_events = 0;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-/* TODO: Check format of: "heatmap", "hist", "isosurface", "imshow"  */
-static string_map_entry_t kind_to_fmt[] = {
-    {"line", "xys"},     {"hexbin", "xys"},     {"polar", "xys"},     {"shade", "xys"},    {"stem", "xys"},
-    {"step", "xys"},     {"contour", "xyzc"},   {"contourf", "xyzc"}, {"tricont", "xyzc"}, {"trisurf", "xyzc"},
-    {"surface", "xyzc"}, {"wireframe", "xyzc"}, {"plot3", "xyac"},    {"scatter", "xyac"}, {"scatter3", "xyac"},
-    {"quiver", "xyuv"},  {"heatmap", "x"},      {"hist", "x"},        {"isosurface", "x"}, {"imshow", ""}};
+/* TODO: Check format of: "hist", "isosurface", "imshow"  */
+static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},     {"hexbin", "xys"},    {"polar", "xys"},
+                                           {"shade", "xys"},    {"stem", "xys"},      {"step", "xys"},
+                                           {"contour", "xyzc"}, {"contourf", "xyzc"}, {"tricont", "xyzc"},
+                                           {"trisurf", "xyzc"}, {"surface", "xyzc"},  {"wireframe", "xyzc"},
+                                           {"plot3", "xyac"},   {"scatter", "xyac"},  {"scatter3", "xyac"},
+                                           {"quiver", "xyuv"},  {"heatmap", "xyz"},   {"hist", "x"},
+                                           {"isosurface", "x"}, {"imshow", ""},       {"nonuniformheatmap", "xyz"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 static plot_func_map_entry_t kind_to_func[] = {
-    {"line", plot_line},           {"step", plot_step},
-    {"scatter", plot_scatter},     {"quiver", plot_quiver},
-    {"stem", plot_stem},           {"hist", plot_hist},
-    {"contour", plot_contour},     {"contourf", plot_contourf},
-    {"hexbin", plot_hexbin},       {"heatmap", plot_heatmap},
-    {"wireframe", plot_wireframe}, {"surface", plot_surface},
-    {"plot3", plot_plot3},         {"scatter3", plot_scatter3},
-    {"imshow", plot_imshow},       {"isosurface", plot_isosurface},
-    {"polar", plot_polar},         {"trisurf", plot_trisurf},
-    {"tricont", plot_tricont},     {"shade", plot_shade},
+    {"line", plot_line},
+    {"step", plot_step},
+    {"scatter", plot_scatter},
+    {"quiver", plot_quiver},
+    {"stem", plot_stem},
+    {"hist", plot_hist},
+    {"contour", plot_contour},
+    {"contourf", plot_contourf},
+    {"hexbin", plot_hexbin},
+    {"heatmap", plot_heatmap},
+    {"wireframe", plot_wireframe},
+    {"surface", plot_surface},
+    {"plot3", plot_plot3},
+    {"scatter3", plot_scatter3},
+    {"imshow", plot_imshow},
+    {"isosurface", plot_isosurface},
+    {"polar", plot_polar},
+    {"trisurf", plot_trisurf},
+    {"tricont", plot_tricont},
+    {"shade", plot_shade},
+    {"nonuniformheatmap", plot_heatmap},
 };
 
 
@@ -3557,6 +3570,7 @@ void plot_set_attribute_defaults(gr_meta_args_t *plot_args)
 {
   const char *kind;
   gr_meta_args_t **current_subplot, **current_series;
+  double garbage0, garbage1;
 
   logger((stderr, "Set plot attribute defaults\n"));
 
@@ -3584,9 +3598,15 @@ void plot_set_attribute_defaults(gr_meta_args_t *plot_args)
       args_setdefault(*current_subplot, "xflip", "i", PLOT_DEFAULT_XFLIP);
       args_setdefault(*current_subplot, "yflip", "i", PLOT_DEFAULT_YFLIP);
       args_setdefault(*current_subplot, "zflip", "i", PLOT_DEFAULT_ZFLIP);
-      args_setdefault(*current_subplot, "adjust_xlim", "i", PLOT_DEFAULT_ADJUST_XLIM);
-      args_setdefault(*current_subplot, "adjust_ylim", "i", PLOT_DEFAULT_ADJUST_YLIM);
-      args_setdefault(*current_subplot, "adjust_zlim", "i", PLOT_DEFAULT_ADJUST_ZLIM);
+      args_setdefault(
+          *current_subplot, "adjust_xlim", "i",
+          (args_values(*current_subplot, "xlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
+      args_setdefault(
+          *current_subplot, "adjust_ylim", "i",
+          (args_values(*current_subplot, "ylim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+      args_setdefault(
+          *current_subplot, "adjust_zlim", "i",
+          (args_values(*current_subplot, "zlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
       args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP);
       args_setdefault(*current_subplot, "rotation", "i", PLOT_DEFAULT_ROTATION);
       args_setdefault(*current_subplot, "tilt", "i", PLOT_DEFAULT_TILT);
@@ -3801,7 +3821,7 @@ void plot_process_viewport(gr_meta_args_t *subplot_args)
     {
       viewport[2] += (1 - (subplot[3] - subplot[2]) * (subplot[3] - subplot[2])) * 0.02;
     }
-  if (str_equals_any(kind, 5, "contour", "contourf", "heatmap", "hexbin", "quiver"))
+  if (str_equals_any(kind, 6, "contour", "contourf", "heatmap", "nonuniformheatmap", "hexbin", "quiver"))
     {
       viewport[1] -= 0.1;
     }
@@ -4792,41 +4812,91 @@ error_t plot_hexbin(gr_meta_args_t *subplot_args)
 
 error_t plot_heatmap(gr_meta_args_t *subplot_args)
 {
+  const char *kind = NULL;
   gr_meta_args_t **current_series;
+  int i, zlim_set, icmap[256], *rgba, flip, *data;
+  unsigned int width, height, z_length;
+  double *x, *y, *z, z_min, z_max, tmp;
 
   args_values(subplot_args, "series", "A", &current_series);
+  args_values(subplot_args, "kind", "s", &kind);
+  zlim_set = args_values(subplot_args, "zlim", "dd", &z_min, &z_max);
   while (*current_series != NULL)
     {
+      return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "x", "D", &x, &width), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "y", "D", &y, &height), ERROR_PLOT_MISSING_DATA);
+      if (str_equals_any(kind, 1, "nonuniformheatmap"))
+        {
+          --width;
+          --height;
+        }
+      for (i = 0; i < 256; i++)
+        {
+          gr_inqcolor(1000 + i, icmap + i);
+        }
+      if (!zlim_set)
+        {
+          z_min = DBL_MAX;
+          z_max = DBL_MIN;
+          for (i = 0; i < width * height; i++)
+            {
+              if (z[i] < z_min)
+                {
+                  z_min = z[i];
+                }
+              if (z[i] > z_max)
+                {
+                  z_max = z[i];
+                }
+            }
+        }
 
-      /* TODO: Implement me! */
-      /* TODO: How to deal with z.shape? */
-      /*
-       * x_min, x_max, y_min, y_max = _plt.kwargs['window']
-       * height, width = z.shape
-       * cmap = _colormap()
-       * icmap = np.zeros(256, np.uint32)
-       * for i in range(256):
-       *     r, g, b, a = cmap[i]
-       *     icmap[i] = (int(r * 255) << 0) + (int(g * 255) << 8) + (int(b * 255) << 16) + (int(a * 255) << 24)
-       * z_min, z_max = _plt.kwargs.get('zlim', (np.min(z), np.max(z)))
-       * if z_max < z_min:
-       *     z_max, z_min = z_min, z_max
-       * if z_max > z_min:
-       *     data = (z - z_min) / (z_max - z_min) * 255
-       * else:
-       *     data = np.zeros((height, width))
-       * rgba = np.zeros((height, width), np.uint32)
-       * for x in range(width):
-       *     for y in range(height):
-       *         rgba[y, x] = icmap[int(data[y, x])]
-       * gr.drawimage(x_min, x_max, y_min, y_max, width, height, rgba)
-       * _colorbar()
-       */
+      data = malloc(height * width * sizeof(int));
+      if (z_max < z_min)
+        {
+          tmp = z_min;
+          z_min = z_max;
+          z_max = tmp;
+        }
+      if (z_max > z_min)
+        {
+          for (i = 0; i < width * height; i++)
+            {
+              data[i] = (int)((z[i] - z_min) / (z_max - z_min) * 255);
+            }
+        }
+      else
+        {
+          for (i = 0; i < width * height; i++)
+            {
+              data[i] = 0;
+            }
+        }
+      rgba = malloc(height * width * sizeof(int));
+      if (str_equals_any(kind, 1, "heatmap"))
+        {
+          for (i = 0; i < height * width; i++)
+            {
+              rgba[i] = (255 << 24) + icmap[data[i]];
+            }
+          gr_drawimage(0.5, width + 0.5, height + 0.5, 0.5, width, height, rgba, 0);
+        }
+      else
+        {
+          for (i = 0; i < height * width; i++)
+            {
+              rgba[i] = data[i] + 1000;
+            }
+          gr_nonuniformcellarray(x, y, width, height, 1, 1, width, height, rgba);
+        }
+      free(rgba);
+      free(data);
+      plot_draw_colorbar(subplot_args, 0.0, 256);
 
       ++current_series;
     }
-
-  return ERROR_NOT_IMPLEMENTED;
+  return NO_ERROR;
 }
 
 error_t plot_wireframe(gr_meta_args_t *subplot_args)
@@ -5216,7 +5286,7 @@ error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass)
     }
   else
     {
-      if (str_equals_any(kind, 2, "heatmap", "shade"))
+      if (str_equals_any(kind, 3, "heatmap", "shade", "nonuniformheatmap"))
         {
           ticksize = -ticksize;
         }
@@ -5444,7 +5514,7 @@ error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors
   double z_min, z_max;
   int *data;
   double diag, charheight;
-  int scale;
+  int scale, flip, options;
   unsigned int i;
 
   gr_savestate();
@@ -5459,6 +5529,22 @@ error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors
   for (i = 0; i < colors; ++i)
     {
       data[i] = 1000 + 255 * i / (colors - 1);
+    }
+  gr_inqscale(&options);
+  if (args_values(args, "xflip", "i", &flip) && flip)
+    {
+      options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
+      gr_setscale(options);
+    }
+  else if (args_values(args, "yflip", "i", &flip) && flip)
+    {
+      options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
+      gr_setscale(options);
+    }
+  else
+    {
+      options = options & ~GR_OPTION_FLIP_X;
+      gr_setscale(options);
     }
   gr_setwindow(0.0, 1.0, z_min, z_max);
   gr_setviewport(viewport[1] + 0.02 + off, viewport[1] + 0.05 + off, viewport[2], viewport[3]);
