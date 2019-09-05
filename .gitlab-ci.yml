@@ -363,7 +363,6 @@ arch-cmake-self-contained:
     - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
-    - mv ../install/lib64/ ../install/lib/
     - cd ..
     - mv install artifacts-arch-cmake
   artifacts:
