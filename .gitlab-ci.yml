@@ -360,10 +360,9 @@ arch-cmake-self-contained:
     - make -C 3rdparty default extras
     - mkdir build
     - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON -DCMAKE_INSTALL_LIBDIR=${CI_PROJECT_DIR}/install/lib
     - make
     - make install
-    - mv ../install/lib64/ ../install/lib/
     - cd ..
     - mv install artifacts-arch-cmake
   artifacts:
