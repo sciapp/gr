@@ -1292,8 +1292,8 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},     {"hexbin", "xys"
                                            {"contour", "xyzc"}, {"contourf", "xyzc"}, {"tricont", "xyzc"},
                                            {"trisurf", "xyzc"}, {"surface", "xyzc"},  {"wireframe", "xyzc"},
                                            {"plot3", "xyac"},   {"scatter", "xyac"},  {"scatter3", "xyac"},
-                                           {"quiver", "xyuv"},  {"heatmap", "xyz"},   {"hist", "x"},
-                                           {"isosurface", "x"}, {"imshow", ""},       {"nonuniformheatmap", "xyz"}};
+                                           {"quiver", "xyuv"},  {"heatmap", "xyzc"},  {"hist", "x"},
+                                           {"isosurface", "x"}, {"imshow", ""},       {"nonuniformheatmap", "xyzc"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1363,7 +1363,8 @@ const char *valid_subplot_keys[] = {"adjust_xlim",  "adjust_ylim",
                                     "ybins",        "yflip",
                                     "ylabel",       "ylim",
                                     "ylog",         "zflip",
-                                    "zlog",         NULL};
+                                    "zlim",         "zlog",
+                                    "clim",         NULL};
 const char *valid_series_keys[] = {"a", "c", "markertype", "s", "spec", "step_where", "u", "v", "x", "y", "z", NULL};
 
 /* ######################### public implementation ################################################################## */
@@ -4814,88 +4815,144 @@ error_t plot_heatmap(gr_meta_args_t *subplot_args)
 {
   const char *kind = NULL;
   gr_meta_args_t **current_series;
-  int i, zlim_set, icmap[256], *rgba, flip, *data;
+  int i, zlim_set, icmap[256], *rgba, *data, zlog;
   unsigned int width, height, z_length;
-  double *x, *y, *z, z_min, z_max, tmp;
+  double *x, *y, *z, z_min, z_max, c_min, c_max, tmp, zv;
 
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "kind", "s", &kind);
+  return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+  return_error_if(!args_first_value(*current_series, "x", "D", &x, &width), ERROR_PLOT_MISSING_DATA);
+  return_error_if(!args_first_value(*current_series, "y", "D", &y, &height), ERROR_PLOT_MISSING_DATA);
   zlim_set = args_values(subplot_args, "zlim", "dd", &z_min, &z_max);
-  while (*current_series != NULL)
+  if (!args_values(subplot_args, "zlog", "i", &zlog))
     {
-      return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!args_first_value(*current_series, "x", "D", &x, &width), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!args_first_value(*current_series, "y", "D", &y, &height), ERROR_PLOT_MISSING_DATA);
-      if (str_equals_any(kind, 1, "nonuniformheatmap"))
+      zlog = 0;
+    }
+  if (!zlim_set)
+    {
+      z_min = DBL_MAX;
+      z_max = DBL_MIN;
+      for (i = 0; i < width * height; i++)
         {
-          --width;
-          --height;
-        }
-      for (i = 0; i < 256; i++)
-        {
-          gr_inqcolor(1000 + i, icmap + i);
-        }
-      if (!zlim_set)
-        {
-          z_min = DBL_MAX;
-          z_max = DBL_MIN;
-          for (i = 0; i < width * height; i++)
+          if (z[i] < z_min)
             {
-              if (z[i] < z_min)
-                {
-                  z_min = z[i];
-                }
-              if (z[i] > z_max)
-                {
-                  z_max = z[i];
-                }
+              z_min = z[i];
+            }
+          if (z[i] > z_max)
+            {
+              z_max = z[i];
             }
         }
+    }
+  if (z_max < z_min)
+    {
+      tmp = z_min;
+      z_min = z_max;
+      z_max = tmp;
+    }
 
-      data = malloc(height * width * sizeof(int));
-      if (z_max < z_min)
+  if (zlog)
+    {
+      z_min = log(z_min);
+      z_max = log(z_max);
+    }
+
+  if (!args_values(subplot_args, "clim", "dd", &c_min, &c_max))
+    {
+      c_min = z_min;
+      c_max = z_max;
+    }
+  else if (zlog)
+    {
+      c_min = log(c_min);
+      c_max = log(c_max);
+    }
+
+  if (str_equals_any(kind, 1, "nonuniformheatmap"))
+    {
+      --width;
+      --height;
+    }
+  for (i = 0; i < 256; i++)
+    {
+      gr_inqcolor(1000 + i, icmap + i);
+    }
+
+  data = malloc(height * width * sizeof(int));
+  if (z_max > z_min)
+    {
+      for (i = 0; i < width * height; i++)
         {
-          tmp = z_min;
-          z_min = z_max;
-          z_max = tmp;
-        }
-      if (z_max > z_min)
-        {
-          for (i = 0; i < width * height; i++)
+          if (zlog)
             {
-              data[i] = (int)((z[i] - z_min) / (z_max - z_min) * 255);
+              zv = log(z[i]);
+            }
+          else
+            {
+              zv = z[i];
+            }
+
+          if (zv > z_max || zv < z_min)
+            {
+              data[i] = -1;
+            }
+          else
+            {
+              data[i] = (int)((zv - c_min) / (c_max - c_min) * 255);
+              if (data[i] >= 255)
+                {
+                  data[i] = 255;
+                }
+              else if (data[i] < 0)
+                {
+                  data[i] = 0;
+                }
             }
         }
-      else
+    }
+  else
+    {
+      for (i = 0; i < width * height; i++)
         {
-          for (i = 0; i < width * height; i++)
-            {
-              data[i] = 0;
-            }
+          data[i] = 0;
         }
-      rgba = malloc(height * width * sizeof(int));
-      if (str_equals_any(kind, 1, "heatmap"))
+    }
+  rgba = malloc(height * width * sizeof(int));
+  if (str_equals_any(kind, 1, "heatmap"))
+    {
+      for (i = 0; i < height * width; i++)
         {
-          for (i = 0; i < height * width; i++)
+          if (data[i] == -1)
+            {
+              rgba[i] = 0;
+            }
+          else
             {
               rgba[i] = (255 << 24) + icmap[data[i]];
             }
-          gr_drawimage(0.5, width + 0.5, height + 0.5, 0.5, width, height, rgba, 0);
         }
-      else
+      gr_drawimage(0.5, width + 0.5, height + 0.5, 0.5, width, height, rgba, 0);
+    }
+  else
+    {
+      for (i = 0; i < height * width; i++)
         {
-          for (i = 0; i < height * width; i++)
+          if (data[i] == -1)
+            {
+              rgba[i] = 1256 + 1; /* Invalid color index -> gr_nonuniformcellarray draws a transparent rectangle */
+            }
+          else
             {
               rgba[i] = data[i] + 1000;
             }
-          gr_nonuniformcellarray(x, y, width, height, 1, 1, width, height, rgba);
         }
-      free(rgba);
-      free(data);
-      plot_draw_colorbar(subplot_args, 0.0, 256);
-
-      ++current_series;
+      gr_nonuniformcellarray(x, y, width, height, 1, 1, width, height, rgba);
     }
+  free(rgba);
+  free(data);
+
+  plot_draw_colorbar(subplot_args, 0.0, 256);
   return NO_ERROR;
 }
 
@@ -5290,7 +5347,7 @@ error_t plot_draw_axes(gr_meta_args_t *args, unsigned int pass)
         {
           ticksize = -ticksize;
         }
-      else
+      if (!str_equals_any(kind, 1, "shade"))
         {
           gr_grid(x_tick, y_tick, 0, 0, x_major_count, y_major_count);
         }
@@ -5511,7 +5568,7 @@ error_t plot_draw_legend(gr_meta_args_t *subplot_args)
 error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors)
 {
   const double *viewport;
-  double z_min, z_max;
+  double c_min, c_max;
   int *data;
   double diag, charheight;
   int scale, flip, options;
@@ -5519,7 +5576,10 @@ error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors
 
   gr_savestate();
   args_values(args, "viewport", "D", &viewport);
-  args_values(args, "zrange", "dd", &z_min, &z_max);
+  if (!args_values(args, "clim", "dd", &c_min, &c_max))
+    {
+      args_values(args, "zrange", "dd", &c_min, &c_max);
+    }
   data = malloc(colors * sizeof(int));
   if (data == NULL)
     {
@@ -5546,9 +5606,9 @@ error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors
       options = options & ~GR_OPTION_FLIP_X;
       gr_setscale(options);
     }
-  gr_setwindow(0.0, 1.0, z_min, z_max);
+  gr_setwindow(0.0, 1.0, c_min, c_max);
   gr_setviewport(viewport[1] + 0.02 + off, viewport[1] + 0.05 + off, viewport[2], viewport[3]);
-  gr_cellarray(0, 1, z_max, z_min, 1, colors, 1, 1, 1, colors, data);
+  gr_cellarray(0, 1, c_max, c_min, 1, colors, 1, 1, 1, colors, data);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = max(0.016 * diag, 0.012);
@@ -5557,12 +5617,12 @@ error_t plot_draw_colorbar(gr_meta_args_t *args, double off, unsigned int colors
   if (scale & GR_OPTION_Z_LOG)
     {
       gr_setscale(GR_OPTION_Y_LOG);
-      gr_axes(0, 2, 1, z_min, 0, 1, 0.005);
+      gr_axes(0, 2, 1, c_min, 0, 1, 0.005);
     }
   else
     {
-      double z_tick = 0.5 * gr_tick(z_min, z_max);
-      gr_axes(0, z_tick, 1, z_min, 0, 1, 0.005);
+      double c_tick = 0.5 * gr_tick(c_min, c_max);
+      gr_axes(0, c_tick, 1, c_min, 0, 1, 0.005);
     }
   free(data);
   gr_restorestate();
