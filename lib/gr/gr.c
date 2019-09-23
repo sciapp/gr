@@ -9658,10 +9658,10 @@ void gr_panzoom(double x, double y, double xzoom, double yzoom, double *xmin, do
       gr_wctondc(xmin, ymin);
       gr_wctondc(xmax, ymax);
       gr_wctondc(&x0, &y0);
-      *xmin = x0 - (x0 - *xmin) * xzoom;
-      *xmax = x0 + (*xmax - x0) * xzoom;
-      *ymin = y0 - (y0 - *ymin) * yzoom;
-      *ymax = y0 + (*ymax - y0) * yzoom;
+      *xmin = x0 - 0.5 * (*xmax - *xmin) * xzoom;
+      *xmax = x0 + 0.5 * (*xmax - *xmin) * xzoom;
+      *ymin = y0 - 0.5 * (*ymax - *ymin) * yzoom;
+      *ymax = y0 + 0.5 * (*ymax - *ymin) * yzoom;
       gr_ndctowc(xmin, ymin);
       gr_ndctowc(xmax, ymax);
     }
