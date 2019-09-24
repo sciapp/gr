@@ -151,6 +151,7 @@ extern "C"
     double blur;
     double alpha;
     double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+    int resample_method;
   } gks_state_list_t;
 
   typedef struct gks_list
@@ -214,6 +215,8 @@ extern "C"
   const char *gks_function_name(int routine);
   void gks_report_error(int routine, int errnum);
 
+  DLLEXPORT void gks_resample(const unsigned char *source_img, unsigned char *result_img, size_t width, size_t height,
+                              size_t new_w, size_t new_h, size_t stride, int swapx, int swapy, int resample_method);
   void gks_init_core(gks_state_list_t *list);
   gks_list_t *gks_list_find(gks_list_t *list, int element);
   gks_list_t *gks_list_add(gks_list_t *list, int element, void *ptr);

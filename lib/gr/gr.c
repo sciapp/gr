@@ -1718,8 +1718,8 @@ void gr_fillarea(int n, double *x, double *y)
  * of the given cell array.
  *
  * \param[in] xmin X coordinate of the lower left point of the rectangle
- * \param[in] ymin Y coordinate of the lower left point of the rectangle
  * \param[in] xmax X coordinate of the upper right point of the rectangle
+ * \param[in] ymin Y coordinate of the lower left point of the rectangle
  * \param[in] ymax Y coordinate of the upper right point of the rectangle
  * \param[in] dimx X dimension of the color index array
  * \param[in] dimy Y dimension of the color index array
@@ -9772,4 +9772,44 @@ int gr_findboundary(int n, double *x, double *y, double r, double (*r_function)(
       result = 0;
     }
   return result;
+}
+
+/*!
+ * Set the resample method for up and downscaling. The default method is nearest neighbour.
+ *
+ * \param[in] flag Resample method
+ *
+ * The available options are:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * +------------------------+---+--------------------+
+ * |GKS_K_RESAMPLE_NEAREST  |  0|nearest neighbour   |
+ * +------------------------+---+--------------------+
+ * |GKS_K_RESAMPLE_LINEAR   |  1|linear              |
+ * +------------------------+---+--------------------+
+ * |GKS_K_RESAMPLE_LANCZOS  |  2|lanczos             |
+ * +------------------------+---+--------------------+
+ * |GKS_K_RESAMPLE_DEFAULT  |  0|nearest neighbour   |
+ * +------------------------+---+--------------------+
+ *
+ * \endverbatim
+ */
+void gr_setresamplemethod(int flag)
+{
+  check_autoinit;
+
+  gks_set_resample_method(flag);
+}
+
+/*!
+ * Inquire the resample flag status.
+ *
+ * \returns Resample flag
+ */
+void gr_inqresamplemethod(int *flag)
+{
+  check_autoinit;
+
+  gks_inq_resample_method(flag);
 }

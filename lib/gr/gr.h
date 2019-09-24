@@ -241,6 +241,8 @@ extern "C"
   DLLEXPORT void gr_shadelines(int, double *, double *, int, int, int);
   DLLEXPORT void gr_panzoom(double, double, double, double, double *, double *, double *, double *);
   DLLEXPORT int gr_findboundary(int, double *, double *, double, double (*)(double, double), int, int *);
+  DLLEXPORT void gr_setresamplemethod(int flag);
+  DLLEXPORT void gr_inqresamplemethod(int *flag);
 
 #ifdef __cplusplus
 }

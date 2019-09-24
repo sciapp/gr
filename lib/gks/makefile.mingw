@@ -9,7 +9,7 @@ CFLAGS = $(DEFINES) $(INCLUDES)
 
 OBJS = gks.o gksforbnd.o font.o afm.o util.o ft.o dl.o \
        malloc.o error.o mf.o wiss.o win.o ps.o \
-       pdf.o socket.o plugin.o compress.o io.o
+       pdf.o socket.o plugin.o compress.o io.o resample.o
 
 LIBS = -lwsock32 -lmsimg32 -lgdi32
 

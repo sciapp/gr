@@ -127,6 +127,7 @@ set(GKS_SOURCES
         lib/gks/error.c
         lib/gks/io.c
         lib/gks/ps.c
+        lib/gks/resample.c
         )
 
 add_library(gks_static STATIC ${GKS_SOURCES})

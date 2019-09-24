@@ -4021,3 +4021,32 @@ double gks_precision(void)
 {
   return FEPS;
 }
+
+/*!
+ * Set the resample method for up and downscaling. The default method is nearest neighbour.
+ *
+ * \param[in] flag Resample method, valid options are GKS_K_RESAMPLE_DEFAULT, GKS_K_RESAMPLE_LINEAR,
+ * GKS_K_RESAMPLE_NEAREST and GKS_K_RESAMPLE_LANCZOS
+ */
+void gks_set_resample_method(int flag)
+{
+  if (flag == GKS_K_RESAMPLE_NEAREST || flag == GKS_K_RESAMPLE_LANCZOS || flag == GKS_K_RESAMPLE_LINEAR)
+    {
+      s->resample_method = flag;
+    }
+  else
+    {
+      fprintf(stderr, "Only GKS_K_RESAMPLE_DEFAULT, GKS_K_RESAMPLE_LINEAR, GKS_K_RESAMPLE_NEAREST and "
+                      "GKS_K_RESAMPLE_LANCZOS are valid values for the flag parameter\n");
+    }
+}
+
+/*!
+ * Inquire the resample flag status.
+ *
+ * \returns Resample flag
+ */
+void gks_inq_resample_method(int *flag)
+{
+  flag[0] = s->resample_method;
+}

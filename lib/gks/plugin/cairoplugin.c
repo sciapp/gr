@@ -668,49 +668,60 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
 
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
-
   stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
   data = (unsigned char *)gks_malloc(stride * height);
 
-  for (j = 0; j < height; j++)
+  if (true_color)
     {
-      iy = dy * j / height;
-      if (swapy)
-        {
-          iy = dy - 1 - iy;
-        }
+      gks_resample((unsigned char *)colia, data, (size_t)dx, (size_t)dy, (size_t)width, (size_t)height, (size_t)dimx,
+                   swapx, swapy, gkss->resample_method);
       for (i = 0; i < width; i++)
         {
-          ix = dx * i / width;
-          if (swapx)
+          for (j = 0; j < height; j++)
             {
-              ix = dx - 1 - ix;
+              unsigned char r = data[(j * width + i) * 4 + 0];
+              unsigned char g = data[(j * width + i) * 4 + 1];
+              unsigned char b = data[(j * width + i) * 4 + 2];
+              unsigned char a = data[(j * width + i) * 4 + 3];
+
+              data[(j * width + i) * 4 + 0] = (unsigned char)(b * a / 255);
+              data[(j * width + i) * 4 + 1] = (unsigned char)(g * a / 255);
+              data[(j * width + i) * 4 + 2] = (unsigned char)(r * a / 255);
+              data[(j * width + i) * 4 + 3] = a;
             }
-          if (!true_color)
+        }
+    }
+  else
+    {
+      for (j = 0; j < height; j++)
+        {
+          iy = dy * j / height;
+          if (swapy)
             {
+              iy = dy - 1 - iy;
+            }
+          for (i = 0; i < width; i++)
+            {
+              ix = dx * i / width;
+              if (swapx)
+                {
+                  ix = dx - 1 - ix;
+                }
               ind = colia[iy * dimx + ix];
               ind = FIX_COLORIND(ind);
               red = (int)255 * p->rgb[ind][0];
               green = (int)255 * p->rgb[ind][1];
               blue = (int)255 * p->rgb[ind][2];
               alpha = (int)255 * p->transparency;
+              /* ARGB32 format requires pre-multiplied alpha */
+              red = red * alpha / 255;
+              green = green * alpha / 255;
+              blue = blue * alpha / 255;
+              data[j * stride + i * 4 + 0] = blue;
+              data[j * stride + i * 4 + 1] = green;
+              data[j * stride + i * 4 + 2] = red;
+              data[j * stride + i * 4 + 3] = alpha;
             }
-          else
-            {
-              rgb = colia[iy * dimx + ix];
-              red = (rgb & 0xff);
-              green = (rgb & 0xff00) >> 8;
-              blue = (rgb & 0xff0000) >> 16;
-              alpha = (rgb & 0xff000000) >> 24;
-            }
-          /* ARGB32 format requires pre-multiplied alpha */
-          red = red * alpha / 255;
-          green = green * alpha / 255;
-          blue = blue * alpha / 255;
-          data[j * stride + i * 4 + 0] = blue;
-          data[j * stride + i * 4 + 1] = green;
-          data[j * stride + i * 4 + 2] = red;
-          data[j * stride + i * 4 + 3] = alpha;
         }
     }
 

@@ -202,6 +202,13 @@ extern "C"
 #define GKS_K_VALUE_SET 0
 #define GKS_K_VALUE_REALIZED 1
 
+  /* Resample flags */
+
+#define GKS_K_RESAMPLE_NEAREST 0
+#define GKS_K_RESAMPLE_DEFAULT GKS_K_RESAMPLE_NEAREST
+#define GKS_K_RESAMPLE_LINEAR 1
+#define GKS_K_RESAMPLE_LANCZOS 2
+
   /* GKS error codes */
 
 #define GKS_K_NO_ERROR 0
@@ -719,6 +726,8 @@ extern "C"
   DLLEXPORT int ginqtextextent(Gint, Gpoint *, Gchar *, Gextent *, Gint *);
   DLLEXPORT int ginqnameopenseg(Gint *, Gint *);
   DLLEXPORT int gemergencyclosegks(void);
+  DLLEXPORT void gks_inq_resample_method(int *flag);
+  DLLEXPORT void gks_set_resample_method(int flag);
 
 #ifdef __cplusplus
 }
