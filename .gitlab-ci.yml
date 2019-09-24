@@ -765,3 +765,29 @@ deploy:
   - if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
       echo "$SCIAPP_GR_ACCESS_TOKEN" | github-binary-upload --user jheinen sciapp/gr "$CI_COMMIT_TAG" Downloads/gr-*;
     fi
+
+deploy-to-obs:
+  stage: deploy
+  image: ubuntu:16.04
+  variables:
+    GIT_STRATEGY: none
+  only:
+    - tags@Scientific-IT-Systems/gr
+  script:
+  - apt-get update
+  - apt-get install -y wget sed
+  - echo 'deb http://download.opensuse.org/repositories/openSUSE:/Tools/xUbuntu_16.04/ /' > /etc/apt/sources.list.d/openSUSE:Tools.list
+  - wget -nv https://download.opensuse.org/repositories/openSUSE:Tools/xUbuntu_16.04/Release.key -O Release.key
+  - apt-key add - < Release.key
+  - apt-get update
+  - apt-get install -y osc
+  - mkdir -p "${HOME}/.config/osc" && ln -s "${OSCRC}" "${HOME}/.config/osc/oscrc"
+  - osc co science:gr-framework/gr
+  - export VERSION=`echo "$CI_COMMIT_TAG" | sed 's/^v//'` ;
+    sed 's/\(.*revision">\).*\(<.*\)/\1tags\/'$CI_COMMIT_TAG'\2/'
+    science\:gr-framework/gr/_service |
+    sed 's/\(.*version">\)[[:digit:]].*\(<.*\)/\1'$VERSION'\2/'
+    > science\:gr-framework/gr/_service.new &&
+    mv -f science\:gr-framework/gr/_service.new
+    science\:gr-framework/gr/_service
+  - osc commit science\:gr-framework/gr/_service -m "Release $CI_COMMIT_TAG"
