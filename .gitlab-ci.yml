@@ -126,6 +126,52 @@ debian-cmake-self-contained:
     paths:
       - artifacts-debian9-cmake/
 
+debian-self-contained-armhf:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  tags:
+    - armhf
+  script:
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.15.3-Linux-armhf.tar.gz
+    - tar xf cmake-3.15.3-Linux-armhf.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.15.3-Linux-armhf/bin/cmake
+    - make self GRDIR=/usr/local/gr
+    - mkdir artifacts
+    - cp lib/gks/demo artifacts/gksdemo
+    - cp lib/gks/qt/gksqt artifacts/gksqt
+    - cp lib/gr/demo artifacts/grdemo
+    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
+    - cp -r lib/gks/fonts artifacts/
+    - mkdir artifacts/include/
+    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - mv artifacts artifacts-debian9-armhf
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - artifacts-debian9-armhf/
+
+debian-cmake-self-contained-armhf:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-armhf
+  tags:
+    - armhf
+  script:
+    - wget https://gr-framework.org/downloads/3rdparty/cmake-3.15.3-Linux-armhf.tar.gz
+    - tar xf cmake-3.15.3-Linux-armhf.tar.gz
+    - export CMAKE_CMD=`pwd`/cmake-3.15.3-Linux-armhf/bin/cmake
+    - make -C 3rdparty default extras
+    - mkdir build
+    - cd build
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+    - make
+    - make install
+    - cd ..
+    - mv install artifacts-debian9-cmake-armhf
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - artifacts-debian9-cmake-armhf/
+
 debian-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
@@ -639,6 +685,14 @@ packages-tar:
   - mv artifacts-debian9/include Debian-x86_64/gr/
   - cp artifacts-js/gr.js Debian-x86_64/gr/lib/
   - rm -rf artifacts-debian9
+  - mkdir -p Debian-armhf/gr/bin
+  - mkdir -p Debian-armhf/gr/lib
+  - mv artifacts-debian9-armhf/*.so Debian-armhf/gr/lib/
+  - mv artifacts-debian9-armhf/gksqt Debian-armhf/gr/bin/
+  - mv artifacts-debian9-armhf/fonts Debian-armhf/gr/
+  - mv artifacts-debian9-armhf/include Debian-armhf/gr/
+  - cp artifacts-js/gr.js Debian-armhf/gr/lib/
+  - rm -rf artifacts-debian9-armhf
   - mkdir -p Ubuntu-x86_64/gr/bin
   - mkdir -p Ubuntu-x86_64/gr/lib
   - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/gr/lib/
@@ -692,6 +746,7 @@ packages-tar:
   - cd Windows-i686 && tar czf gr.tar.gz gr && cd -
   - cd Windows-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Debian-x86_64 && tar czf gr.tar.gz gr && cd -
+  - cd Debian-armhf && tar czf gr.tar.gz gr && cd -
   - cd Ubuntu-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd CentOS-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Linux-i386 && tar czf gr.tar.gz gr && cd -
@@ -703,6 +758,7 @@ packages-tar:
       cp Windows-i686/gr.tar.gz Downloads/gr-$VERSION-Windows-i686.tar.gz;
       cp Windows-x86_64/gr.tar.gz Downloads/gr-$VERSION-Windows-x86_64.tar.gz;
       cp Debian-x86_64/gr.tar.gz Downloads/gr-$VERSION-Debian-x86_64.tar.gz;
+      cp Debian-armhf/gr.tar.gz Downloads/gr-$VERSION-Debian-armhf.tar.gz;
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$VERSION-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$VERSION-CentOS-x86_64.tar.gz;
       ln -s gr-$VERSION-CentOS-x86_64.tar.gz Downloads/gr-$VERSION-Redhat-x86_64.tar.gz;
@@ -718,6 +774,7 @@ packages-tar:
       cp Windows-i686/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-i686.tar.gz;
       cp Windows-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-x86_64.tar.gz;
       cp Debian-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-x86_64.tar.gz;
+      cp Debian-armhf/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-armhf.tar.gz;
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz;
       ln -s gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz Downloads/gr-$CI_COMMIT_SHA-Redhat-x86_64.tar.gz;
@@ -728,7 +785,7 @@ packages-tar:
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
       fi;
       cp artifacts-js/gr.js Downloads/gr-$CI_COMMIT_SHA.js;
-      for f in Windows-i686 Windows-x86_64 Debian-x86_64 Ubuntu-x86_64 CentOS-x86_64 Redhat-x86_64 Linux-i386 Linux-x86_64 ArchLinux-x86_64; do
+      for f in Windows-i686 Windows-x86_64 Debian-x86_64 Debian-armhf Ubuntu-x86_64 CentOS-x86_64 Redhat-x86_64 Linux-i386 Linux-x86_64 ArchLinux-x86_64; do
         ln -s gr-$CI_COMMIT_SHA-$f.tar.gz Downloads/gr-latest-$f.tar.gz;
       done;
       if [ -d Darwin-x86_64 ]; then
