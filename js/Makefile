@@ -46,7 +46,7 @@ html:
 
 gr.js: ../lib/gr/gr_version.h
 	make libGR.js BACKEND=jsplugin.c
-	cat module.js libGR.js api.js >gr.js
+	cat module.js libGR.js api.js jsterm.js >gr.js
 
 %.pdf: %.js
 	$(JSC) $< >$@
