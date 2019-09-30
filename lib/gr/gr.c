@@ -1787,6 +1787,8 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
       return;
     }
 
+  check_autoinit;
+
   scol--;
   srow--;
   nrow += srow;
@@ -1936,6 +1938,8 @@ void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax,
       fprintf(stderr, "Invalid radii specified.\n");
       return;
     }
+
+  check_autoinit;
 
   if ((r_reverse = rmin > rmax))
     {
@@ -2318,6 +2322,9 @@ void gr_setlinetype(int type)
 void gr_inqlinetype(int *ltype)
 {
   int errind;
+
+  check_autoinit;
+
   gks_inq_pline_linetype(&errind, ltype);
 }
 
@@ -2345,6 +2352,9 @@ void gr_setlinewidth(double width)
 void gr_inqlinewidth(double *width)
 {
   int errind;
+
+  check_autoinit;
+
   gks_inq_pline_linewidth(&errind, width);
 }
 
@@ -2366,6 +2376,9 @@ void gr_setlinecolorind(int color)
 void gr_inqlinecolorind(int *coli)
 {
   int errind;
+
+  check_autoinit;
+
   gks_inq_pline_color_index(&errind, coli);
 }
 
@@ -2470,6 +2483,9 @@ void gr_setmarkertype(int type)
 void gr_inqmarkertype(int *mtype)
 {
   int errind;
+
+  check_autoinit;
+
   gks_inq_pmark_type(&errind, mtype);
 }
 
@@ -2509,6 +2525,9 @@ void gr_setmarkercolorind(int color)
 void gr_inqmarkercolorind(int *coli)
 {
   int errind;
+
+  check_autoinit;
+
   gks_inq_pmark_color_index(&errind, coli);
 }
 
@@ -2831,6 +2850,9 @@ void gr_setfillintstyle(int style)
 void gr_inqfillintstyle(int *style)
 {
   int errind;
+
+  check_autoinit;
+
   gks_inq_fill_int_style(&errind, style);
 }
 
@@ -2866,6 +2888,9 @@ void gr_setfillstyle(int index)
 void gr_inqfillstyle(int *index)
 {
   int errind;
+
+  check_autoinit;
+
   gks_inq_fill_style_index(&errind, index);
 }
 
@@ -2898,6 +2923,9 @@ void gr_setfillcolorind(int color)
 void gr_inqfillcolorind(int *color)
 {
   int errind;
+
+  check_autoinit;
+
   gks_inq_fill_color_index(&errind, color);
 }
 
@@ -2992,6 +3020,8 @@ int gr_setscale(int options)
 
 void gr_inqscale(int *options)
 {
+  check_autoinit;
+
   *options = lx.scale_options;
 }
 
@@ -3036,6 +3066,8 @@ void gr_setwindow(double xmin, double xmax, double ymin, double ymax)
 
 void gr_inqwindow(double *xmin, double *xmax, double *ymin, double *ymax)
 {
+  check_autoinit;
+
   *xmin = lx.xmin;
   *xmax = lx.xmax;
   *ymin = lx.ymin;
@@ -3089,6 +3121,8 @@ void gr_setviewport(double xmin, double xmax, double ymin, double ymax)
 
 void gr_inqviewport(double *xmin, double *xmax, double *ymin, double *ymax)
 {
+  check_autoinit;
+
   *xmin = vxmin;
   *xmax = vxmax;
   *ymin = vymin;
@@ -3366,6 +3400,8 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
 
 void gr_inqspace(double *zmin, double *zmax, int *rotation, int *tilt)
 {
+  check_autoinit;
+
   *zmin = wx.zmin;
   *zmax = wx.zmax;
   *rotation = wx.phi;
@@ -6668,6 +6704,8 @@ void gr_gradient(int nx, int ny, double *x, double *y, double *z, double *u, dou
         return;
       }
 
+  check_autoinit;
+
 #define Z(i, j) (z[(nx * (j) + (i))])
 #define U(i, j) (u[(nx * (j) + (i))])
 #define V(i, j) (v[(nx * (j) + (i))])
@@ -7319,6 +7357,8 @@ void gr_setcolormap(int index)
 
 void gr_inqcolormap(int *index)
 {
+  check_autoinit;
+
   *index = colormap;
 }
 
@@ -8956,6 +8996,8 @@ static void mathtex(double x, double y, char *string, int inquire, double *tbx, 
  */
 void gr_mathtex(double x, double y, char *string)
 {
+  check_autoinit;
+
   mathtex(x, y, string, 0, NULL, NULL);
 
   if (flag_graphics) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
@@ -8963,6 +9005,8 @@ void gr_mathtex(double x, double y, char *string)
 
 void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
 {
+  check_autoinit;
+
   mathtex(x, y, string, 1, tbx, tby);
 }
 
@@ -9005,6 +9049,8 @@ void gr_inqbbox(double *xmin, double *xmax, double *ymin, double *ymax)
 
 double gr_precision(void)
 {
+  check_autoinit;
+
   return gks_precision();
 }
 
