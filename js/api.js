@@ -153,6 +153,7 @@ function GR(canvas_id) {
     this.dumpmeta = gr_dumpmeta;
     this.inputmeta = gr_inputmeta;
     this.mergemeta = gr_mergemeta;
+    this.mergemeta_named = gr_mergemeta_named;
     this.switchmeta = gr_switchmeta;
     this.meta_get_box = gr_meta_get_box;
     this.registermeta = gr_registermeta;
@@ -364,6 +365,7 @@ function GR(canvas_id) {
     this.GR_META_EVENT_NEW_PLOT = 0;
     this.GR_META_EVENT_UPDATE_PLOT = 1;
     this.GR_META_EVENT_SIZE = 2;
+    this.GR_META_EVENT_MERGE_END = 3;
 }
 
 
@@ -1106,6 +1108,15 @@ gr_mergemeta = function(args) {
     return gr_mergemeta_c(args);
 };
 
+gr_mergemeta_named_c = Module.cwrap('gr_mergemeta_named', 'number', ['number', 'number']);
+gr_mergemeta_named = function(args, identificator) {
+    let bufferSize = Module.lengthBytesUTF8(identificator);
+    let bufferPtr = Module._malloc(bufferSize + 1);
+    Module.stringToUTF8(identificator, bufferPtr, bufferSize + 1);
+    let result = gr_mergemeta_named_c(args, bufferPtr);
+    return result;
+};
+
 gr_inputmeta_c = Module.cwrap('gr_inputmeta', 'number', ['number', 'number']);
 gr_inputmeta = function(args, mouse_args) {
     return gr_inputmeta_c(args, mouse_args);
@@ -1244,21 +1255,35 @@ gr_registermeta = function(type, callback) {
     if (type == this.GR_META_EVENT_NEW_PLOT || type == this.GR_META_EVENT_UPDATE_PLOT) {
         callback_pointer = Module.addFunction(function(evt) {
             var evt_data = {
-                'evt_type': Module.HEAP32.subarray(evt / 4, evt + 1)[0],
-                'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt + 2)[0]
+                'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
+                'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0]
             };
             callback(evt_data);
         }, 'vi');
     } else if (type == this.GR_META_EVENT_SIZE) {
         callback_pointer = Module.addFunction(function(evt) {
             var evt_data = {
-                'evt_type': Module.HEAP32.subarray(evt / 4, evt + 1)[0],
-                'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt + 2)[0],
-                'width': Module.HEAP32.subarray(evt / 4 + 2, evt + 3)[0],
-                'height': Module.HEAP32.subarray(evt / 4 + 3, evt + 4)[0]
+                'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
+                'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0],
+                'width': Module.HEAP32.subarray(evt / 4 + 2, evt / 4 + 3)[0],
+                'height': Module.HEAP32.subarray(evt / 4 + 3, evt / 4 + 4)[0]
             };
             callback(evt_data);
         }, 'vi');
+    } else if (type == this.GR_META_EVENT_MERGE_END) {
+      callback_pointer = Module.addFunction(function(evt) {
+          let identificator_str = '';
+          let identificator = Module.UTF8ToString(Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0]);
+          freearray(Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0]);
+          var evt_data = {
+              'evt_type': Module.HEAP32.subarray(evt / 4, evt + 1)[0],
+              'identificator': identificator
+          };
+          callback(evt_data);
+      }, 'vi');
+    } else {
+      console.error('gr.registermeta: unknown event type:', type);
+      return;
     }
     gr_meta_callbacks[type] = callback_pointer;
     return gr_registermeta_c(type, callback_pointer);
