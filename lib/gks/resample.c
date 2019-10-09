@@ -444,7 +444,6 @@ static void upsample_horizonal_rgba_lanczos(const unsigned char *source_img, dou
   size_t jx, hy;
   int i, l;
   double *horizontal_values = (double *)gks_malloc(sizeof(double) * new_w * a * 2);
-  fprintf(stderr, "upsample horizontal\n");
 
   /* precompute horizontal lanczos filter values*/
   for (j = 0; j < new_w; j++)
@@ -530,7 +529,6 @@ static void downsample_horizonal_rgba_lanczos(const unsigned char *source_img, d
   size_t j, h;
   size_t jx, hy;
   int i, l;
-  fprintf(stderr, "downsample horizontal\n");
   int num_steps = (int)ceil((double)width / new_w * a) * 2;
   double *horizontal_values = (double *)gks_malloc(sizeof(double) * new_w * num_steps);
 
