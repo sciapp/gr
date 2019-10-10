@@ -9049,7 +9049,8 @@ void gr_inqbbox(double *xmin, double *xmax, double *ymin, double *ymax)
 
 double gr_precision(void)
 {
-  check_autoinit;
+  /* check_autoinit is intentionally not called here, because
+   *  wrappers might call gr_precision on top-level. */
 
   return gks_precision();
 }
