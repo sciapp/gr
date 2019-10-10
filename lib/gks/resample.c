@@ -45,542 +45,204 @@ static double integrate_box(double left, double right, int width)
   return (right - left) / width;
 }
 
-static void upsample_horizontal_rgba(const unsigned char *source_img, double *result_img, size_t width, size_t height,
-                                     size_t new_w, size_t stride, int w, int swapx, int swapy)
+static double calculate_lanzcos_factor(double source_position, double target_position, int a)
 {
-  int i, j, h, l, jx, iy;
-  /* array to store filter values once to increase efficiency */
-  double *horizontal_values = (double *)gks_malloc(sizeof(double) * new_w * 2 * w);
-
-  /* precompute horizontal linear filter values*/
-  for (jx = 0; jx < new_w; jx++)
-    {
-      j = jx;
-      if (swapx)
-        {
-          j = (int)new_w - 1 - jx;
-        }
-      double sum = 0.0;
-      double destination_position = (double)j / (new_w - 1) * width - 0.5;
-      int source_position_offset = (int)floor(destination_position - (w - 1));
-      for (h = 0; h < 2 * w; h++)
-        {
-          int source_position = h + source_position_offset;
-          if (source_position < 0)
-            {
-              continue;
-            }
-          if (source_position > width - 1)
-            {
-              break;
-            }
-          double linear_factor = integrate_box(source_position - destination_position - 0.5,
-                                               source_position - destination_position + 0.5, w);
-          sum += linear_factor;
-          horizontal_values[j * 2 * w + h] = linear_factor;
-        }
-      for (i = 0; i < 2 * w; i++)
-        {
-          horizontal_values[(int)(j * 2 * w + i)] /= sum;
-        }
-    }
-
-  /* resample width */
-  for (iy = 0; iy < height; iy++)
-    {
-      i = iy;
-      if (swapy)
-        {
-          i = (int)height - 1 - iy;
-        }
-      for (jx = 0; jx < new_w; jx++)
-        {
-          j = jx;
-          if (swapx)
-            {
-              j = (int)new_w - 1 - jx;
-            }
-          double destination_position = (double)j / (new_w - 1) * width - 0.5;
-          int source_position_offset = (int)floor(destination_position - (w - 1));
-          for (h = 0; h < 2 * w; h++)
-            {
-              int source_position = source_position_offset + h;
-              if (source_position < 0)
-                {
-                  continue;
-                }
-              if (source_position > width - 1)
-                {
-                  break;
-                }
-              double linear_factor = horizontal_values[j * 2 * w + h];
-              for (l = 0; l < 4; l++)
-                {
-                  /* calculate the influence of the image points */
-                  result_img[(i * new_w + j) * 4 + l] +=
-                      source_img[(i * stride + source_position) * 4 + l] * linear_factor;
-                }
-            }
-        }
-    }
-  gks_free(horizontal_values);
+  return lanczos(source_position - target_position, a);
 }
 
-static void downsample_horizontal_rgba(const unsigned char *source_img, double *result_img, size_t width, size_t height,
-                                       size_t new_w, size_t stride, int w, int swapx, int swapy)
+static double calculate_linear_factor(double source_position, double target_position, int a)
 {
-  int i, j, h, l, iy, jx;
-  /* array to store filter values once to increase efficiency */
-  int num_steps = (int)ceil((double)width / new_w * w) * 2;
-  double *horizontal_values = (double *)gks_malloc(sizeof(double) * new_w * num_steps);
+  return integrate_box(source_position - target_position - 0.5, source_position - target_position + 0.5, a);
+}
 
-  /* precompute horizontal linear filter values*/
-  for (jx = 0; jx < new_w; jx++)
+static double *calculate_resampling_factors(size_t source_size, size_t target_size, int a, int flip,
+                                            double (*factor_func)(double, double, int))
+{
+  size_t i;
+  size_t i_flipped;
+  int j;
+  double *factors;
+  int num_steps;
+  if (source_size > target_size)
     {
-      j = jx;
-      if (swapx)
+      num_steps = (int)ceil((double)source_size / target_size * a) * 2;
+    }
+  else
+    {
+      num_steps = a * 2;
+    }
+  factors = (double *)gks_malloc((int)sizeof(double) * (int)target_size * num_steps);
+  for (i = 0; i < target_size; i++)
+    {
+      if (flip)
         {
-          j = (int)new_w - 1 - jx;
+          i_flipped = target_size - 1 - i;
         }
-      double sum = 0;
-      int source_index_offset =
-          (int)ceil((double)j / (double)(new_w - 1) * (double)width - 0.5 - (double)width / new_w * w);
-      for (h = 0; h < num_steps; h++)
+      else
         {
-          int source_index = h + source_index_offset;
-          double source_position = (source_index_offset + h + 0.5) / (double)width * (double)(new_w - 1);
+          i_flipped = i;
+        }
+      double sum = 0.0;
+      double target_position;
+      int source_index_offset;
+
+      if (source_size > target_size)
+        {
+          target_position = i_flipped;
+          source_index_offset = (int)ceil((double)i_flipped / (double)(target_size - 1) * (double)source_size - 0.5 -
+                                          (double)source_size / target_size * a);
+        }
+      else
+        {
+          target_position = i_flipped / (double)(target_size - 1) * source_size - 0.5;
+          source_index_offset = (int)floor(target_position - (a - 1));
+        }
+      for (j = 0; j < num_steps; j++)
+        {
+          int source_index = source_index_offset + j;
           if (source_index < 0)
             {
               continue;
             }
-          if (source_index > width - 1)
+          if (source_index > source_size - 1)
             {
               break;
             }
-          double linear_factor = integrate_box(source_position - j - 0.5, source_position - j + 0.5, w);
-          sum += linear_factor;
-          horizontal_values[j * num_steps + h] = linear_factor;
+
+          double source_position;
+          if (source_size > target_size)
+            {
+              source_position = (source_index_offset + j + 0.5) / (double)source_size * (double)(target_size - 1);
+            }
+          else
+            {
+              source_position = source_index;
+            }
+          double factor = factor_func(source_position, target_position, a);
+          sum += factor;
+          factors[i * num_steps + j] = factor;
         }
-      for (i = 0; i < num_steps; i++)
+      for (j = 0; j < num_steps; j++)
         {
-          horizontal_values[j * num_steps + i] /= sum;
+          factors[i * num_steps + j] /= sum;
         }
     }
+  return factors;
+}
 
-  /* resample width */
-  for (iy = 0; iy < height; iy++)
+static void resample_horizontal_rgba(const unsigned char *source_image, double *target_image, size_t source_width,
+                                     size_t source_height, size_t target_width, size_t stride, int a, int flip,
+                                     double (*factor_func)(double, double, int))
+{
+  size_t ix;
+  size_t ix_flipped;
+  size_t iy;
+  int i, j;
+  int num_steps;
+  double *factors;
+  if (source_width > target_width)
     {
-      i = iy;
-      if (swapy)
+      num_steps = (int)ceil((double)source_width / target_width * a) * 2;
+    }
+  else
+    {
+      num_steps = a * 2;
+    }
+  factors = calculate_resampling_factors(source_width, target_width, a, flip, factor_func);
+
+  for (iy = 0; iy < source_height; iy++)
+    {
+      for (ix = 0; ix < target_width; ix++)
         {
-          i = (int)height - 1 - iy;
-        }
-      for (jx = 0; jx < new_w; jx++)
-        {
-          j = jx;
-          if (swapx)
+          int source_index_offset;
+
+          if (flip)
             {
-              j = (int)new_w - 1 - jx;
+              ix_flipped = (int)target_width - 1 - ix;
             }
-          int source_index_offset =
-              (int)ceil((double)j / (double)(new_w - 1) * (double)width - 0.5 - (double)width / new_w * w);
-          for (h = 0; h < num_steps; h++)
+          else
             {
-              int source_index = source_index_offset + h;
+              ix_flipped = ix;
+            }
+
+          if (source_width > target_width)
+            {
+              source_index_offset = (int)ceil((double)ix_flipped / (double)(target_width - 1) * (double)source_width -
+                                              0.5 - (double)source_width / (double)target_width * a);
+            }
+          else
+            {
+              source_index_offset =
+                  (int)floor((double)ix_flipped / (double)(target_width - 1) * (double)source_width + 0.5 - a);
+            }
+          for (i = 0; i < num_steps; i++)
+            {
+              int source_index = source_index_offset + i;
               if (source_index < 0)
                 {
                   continue;
                 }
-              if (source_index > width - 1)
+              if (source_index > source_width - 1)
                 {
                   break;
                 }
-              double linear_factor = horizontal_values[j * num_steps + h];
-              for (l = 0; l < 4; l++)
+              double factor = factors[ix * num_steps + i];
+              for (j = 0; j < 4; j++)
                 {
-                  /* calculate the influence of the image points */
-                  result_img[(i * new_w + j) * 4 + l] +=
-                      source_img[(i * stride + source_index) * 4 + l] * linear_factor;
+                  target_image[(iy * target_width + ix) * 4 + j] +=
+                      source_image[(iy * stride + source_index) * 4 + j] * factor;
                 }
             }
         }
     }
-  gks_free(horizontal_values);
+  gks_free(factors);
 }
 
-static void upsample_vertical_rgba(const double *source_img, unsigned char *result_img, size_t height, size_t new_w,
-                                   size_t new_h, int w, int swapx, int swapy)
+static void resample_vertical_rgba(const double *source_image, unsigned char *target_image, size_t source_width,
+                                   size_t source_height, size_t target_height, size_t stride, int a, int flip,
+                                   double (*factor_func)(double, double, int))
 {
-  int i, j, h, l, ix, jy;
-  /* array to store filter values once to increase efficiency */
-  double *vertical_values = (double *)gks_malloc(sizeof(double) * new_h * 2 * w);
-
-  /* precompute vertical linear filter values*/
-  for (jy = 0; jy < new_h; jy++)
+  size_t ix;
+  size_t iy;
+  size_t iy_flipped;
+  int i, j;
+  int num_steps;
+  double *factors;
+  if (source_height > target_height)
     {
-      j = jy;
-      if (swapy)
-        {
-          j = (int)new_h - 1 - jy;
-        }
-      double sum = 0.0;
-      double destination_position = (double)j / (new_h - 1) * height - 0.5;
-      int source_position_offset = (int)floor(destination_position - (w - 1));
-      for (h = 0; h < 2 * w; h++)
-        {
-          int source_position = h + source_position_offset;
-          if (source_position < 0)
-            {
-              continue;
-            }
-          if (source_position > height - 1)
-            {
-              break;
-            }
-          double linear_factor = integrate_box(source_position - destination_position - 0.5,
-                                               source_position - destination_position + 0.5, w);
-          sum += linear_factor;
-          vertical_values[(int)(j * 2 * w + h)] = linear_factor;
-        }
-      for (i = 0; i < 2 * w; i++)
-        {
-          vertical_values[(int)(j * 2 * w + i)] /= sum;
-        }
-    }
-
-  /* resample height */
-  for (ix = 0; ix < new_w; ix++)
-    {
-      i = ix;
-      if (swapx)
-        {
-          i = (int)new_w - 1 - ix;
-        }
-      for (jy = 0; jy < new_h; jy++)
-        {
-          j = jy;
-          if (swapy)
-            {
-              j = (int)new_h - 1 - jy;
-            }
-          double destination_position = (double)j / (new_h - 1) * height - 0.5;
-          int source_position_offset = (int)floor(destination_position - (w - 1));
-          double rgba[4] = {0};
-          for (h = 0; h < 2 * w; h++)
-            {
-              int source_position = source_position_offset + h;
-              if (source_position < 0)
-                {
-                  continue;
-                }
-              if (source_position > height - 1)
-                {
-                  break;
-                }
-              double linear_factor = vertical_values[(int)(j * 2 * w + h)];
-              for (l = 0; l < 4; l++)
-                {
-                  /* calculate the influence of image points */
-                  rgba[l] += source_img[(new_w * source_position + i) * 4 + l] * linear_factor;
-                }
-            }
-          result_img[(j * new_w + i) * 4 + 0] = (unsigned char)round(rgba[0]);
-          result_img[(j * new_w + i) * 4 + 1] = (unsigned char)round(rgba[1]);
-          result_img[(j * new_w + i) * 4 + 2] = (unsigned char)round(rgba[2]);
-          result_img[(j * new_w + i) * 4 + 3] = (unsigned char)round(rgba[3]);
-        }
-    }
-  gks_free(vertical_values);
-}
-
-static void downsample_vertical_rgba(const double *source_img, unsigned char *result_img, size_t height, size_t new_w,
-                                     size_t new_h, int w, int swapx, int swapy)
-{
-  int i, j, h, l, ix, jy;
-  int num_steps = (int)ceil((double)height / new_h * w) * 2;
-  /* array to store filter values once to increase efficiency */
-  double *vertical_values = (double *)gks_malloc(sizeof(double) * new_h * num_steps);
-
-  /* precompute vertical linear filter values*/
-  for (jy = 0; jy < new_h; jy++)
-    {
-      j = jy;
-      if (swapy)
-        {
-          j = (int)new_h - 1 - jy;
-        }
-      double sum = 0.0;
-      int source_index_offset = (int)ceil(j / (double)(new_h - 1) * height - 0.5 - (double)height / new_h * w);
-      for (h = 0; h < num_steps; h++)
-        {
-          int source_index = source_index_offset + h;
-          double source_position = (source_index_offset + h + 0.5) / (double)height * (double)(new_h - 1);
-          if (source_index < 0)
-            {
-              continue;
-            }
-          if (source_index > height - 1)
-            {
-              break;
-            }
-          double linear_factor = integrate_box(source_position - j - 0.5, source_position - j + 0.5, w);
-          sum += linear_factor;
-          vertical_values[j * num_steps + h] = linear_factor;
-        }
-      for (i = 0; i < num_steps; i++)
-        {
-          vertical_values[j * num_steps + i] /= sum;
-        }
-    }
-
-  /* resample height */
-  for (ix = 0; ix < new_w; ix++)
-    {
-      i = ix;
-      if (swapx)
-        {
-          i = (int)new_w - 1 - ix;
-        }
-      for (jy = 0; jy < new_h; jy++)
-        {
-          j = jy;
-          if (swapy)
-            {
-              j = (int)new_h - 1 - jy;
-            }
-          int source_index_offset =
-              (int)ceil(j / (double)(new_h - 1) * (double)height - 0.5 - (double)height / new_h * w);
-          double rgba[4] = {0};
-          for (h = 0; h < num_steps; h++)
-            {
-              int source_index = h + source_index_offset;
-              if (source_index < 0)
-                {
-                  continue;
-                }
-              if (source_index > height - 1)
-                {
-                  break;
-                }
-              double linear_factor = vertical_values[j * num_steps + h];
-              for (l = 0; l < 4; l++)
-                {
-                  /* calculate the influence of image points */
-                  rgba[l] += source_img[(new_w * source_index + i) * 4 + l] * linear_factor;
-                }
-            }
-
-          for (l = 0; l < 4; l++)
-            {
-              result_img[(j * new_w + i) * 4 + l] = (unsigned char)round(rgba[l]);
-            }
-        }
-    }
-  gks_free(vertical_values);
-}
-
-/*!
- * Use linear resampling to rescale the data image.
- *
- * \param[in] source_img Data array of the original image
- * \param[out] result_img Data array with resampled values
- * \param[in] width Size of a row in source_img
- * \param[in] height Number of rows in source_img
- * \param[in] new_w Size of a row in result_img
- * \param[in] new_h Number of rows in result_img
- * \param[in] stride Stride of source_img
- * \param[in] w Width of linear filter
- *
- */
-static void resample_rgba(const unsigned char *source_img, unsigned char *result_img, size_t width, size_t height,
-                          size_t new_w, size_t new_h, size_t stride, int w, int swapx, int swapy)
-{
-  if (w <= 0)
-    {
-      gks_fatal_error("w greater than 0 required!\n");
-    }
-  double *one_dir_img = (double *)calloc(4 * height * new_w, sizeof(double));
-  if (new_w > width)
-    {
-      upsample_horizontal_rgba(source_img, one_dir_img, width, height, new_w, stride, w, swapx, swapy);
+      num_steps = (int)ceil((double)source_height / target_height * a) * 2;
     }
   else
     {
-      downsample_horizontal_rgba(source_img, one_dir_img, width, height, new_w, stride, w, swapx, swapy);
+      num_steps = 2 * a;
     }
-  if (new_h > height)
-    {
-      upsample_vertical_rgba(one_dir_img, result_img, height, new_w, new_h, w, swapx, swapy);
-    }
-  else
-    {
-      downsample_vertical_rgba(one_dir_img, result_img, height, new_w, new_h, w, swapx, swapy);
-    }
-}
+  factors = calculate_resampling_factors(source_height, target_height, a, flip, factor_func);
 
-/*!
- * Use lanczos resampling to rescale the data image.
- *
- * \param[in] source_img Data array of the original image
- * \param[out] result_img Data array with resampled values
- * \param[in] width Size of a row in source_img
- * \param[in] height Number of rows in source_img
- * \param[in] new_w Size of a row in result_img
- * \param[in] new_h Number of rows in result_img
- * \param[in] stride Stride of source_img
- * \param[in] a Half width of lanczos filter
- * \param[in] min_val Lower border for colour values
- * \param[in] max_val Upperborder for colour values
- * \param[in] swapx True if x coordinates are swapped in source_img
- * \param[in] swapy True if y coordinates are swapped in source_img
- *
- * Best results will be generated when a = 2 or a = 3.
- */
-static void upsample_horizonal_rgba_lanczos(const unsigned char *source_img, double *result_img, size_t width,
-                                            size_t height, size_t new_w, size_t stride, int a, int min_val, int max_val,
-                                            int swapx, int swapy)
-{
-  size_t j, h;
-  size_t jx, hy;
-  int i, l;
-  double *horizontal_values = (double *)gks_malloc(sizeof(double) * new_w * a * 2);
-
-  /* precompute horizontal lanczos filter values*/
-  for (j = 0; j < new_w; j++)
+  for (ix = 0; ix < source_width; ix++)
     {
-      jx = j;
-      if (swapx)
+      for (iy = 0; iy < target_height; iy++)
         {
-          jx = (int)new_w - 1 - j;
-        }
-      double destination_position = jx / (double)(new_w - 1) * (double)width - 0.5;
-      double sum = 0;
-      for (i = 0; i < 2 * a; i++)
-        {
-          int source_position = (int)floor(destination_position - (a - 1)) + i;
-          if (source_position < 0)
-            {
-              continue;
-            }
-          if (source_position > width - 1)
-            {
-              break;
-            }
-          double lanczos_factor = lanczos(source_position - destination_position, a);
-          sum += lanczos_factor;
-          horizontal_values[jx * 2 * a + i] = lanczos_factor;
-        }
-      for (i = 0; i < 2 * a; i++)
-        {
-          horizontal_values[jx * 2 * a + i] /= sum;
-        }
-    }
+          int source_index_offset;
 
-  /* resample width */
-  for (h = 0; h < height; h++)
-    {
-      hy = h;
-      if (swapy)
-        {
-          hy = (int)height - 1 - h;
-        }
-      for (j = 0; j < new_w; j++)
-        {
-          jx = j;
-          if (swapx)
+          if (flip)
             {
-              jx = (int)new_w - 1 - j;
+              iy_flipped = (int)target_height - 1 - iy;
             }
-          /* linspace between -0.5 and width-0.5 */
-          double destination_position = jx / (double)(new_w - 1) * (double)width - 0.5;
-          int source_position_offset = (int)floor(destination_position - (a - 1));
-          double result[4] = {0};
-          /* filter values are not zero */
-          for (i = 0; i < 2 * a; i++)
+          else
             {
-              int source_position = i + source_position_offset;
-              if (source_position < 0)
-                {
-                  continue;
-                }
-              if (source_position > width - 1)
-                {
-                  break;
-                }
-              double lanczos_factor = horizontal_values[jx * 2 * a + i];
-              for (l = 0; l < 4; l++)
-                {
-                  result[l] += lanczos_factor * source_img[(hy * stride + source_position) * 4 + l];
-                }
+              iy_flipped = iy;
             }
-          for (l = 0; l < 4; l++)
-            {
-              result_img[(hy * new_w + jx) * 4 + l] = result[l];
-            }
-        }
-    }
-  gks_free(horizontal_values);
-}
 
-static void downsample_horizonal_rgba_lanczos(const unsigned char *source_img, double *result_img, size_t width,
-                                              size_t height, size_t new_w, size_t stride, int a, int min_val,
-                                              int max_val, int swapx, int swapy)
-{
-  size_t j, h;
-  size_t jx, hy;
-  int i, l;
-  int num_steps = (int)ceil((double)width / new_w * a) * 2;
-  double *horizontal_values = (double *)gks_malloc(sizeof(double) * new_w * num_steps);
-
-  /* precompute horizontal lanczos filter values*/
-  for (j = 0; j < new_w; j++)
-    {
-      jx = j;
-      if (swapx)
-        {
-          jx = (int)new_w - 1 - j;
-        }
-      double sum = 0;
-      int source_index_offset = (int)ceil(jx / (double)(new_w - 1) * (double)width - 0.5 - (double)width / new_w * a);
-      for (i = 0; i < num_steps; i++)
-        {
-          int source_index = source_index_offset + i;
-          double source_position = (source_index_offset + i + 0.5) / (double)width * (double)(new_w - 1);
-          if (source_index < 0)
+          if (source_height > target_height)
             {
-              continue;
+              source_index_offset = (int)ceil((double)iy_flipped / (double)(target_height - 1) * (double)source_height -
+                                              0.5 - (double)source_height / target_height * a);
             }
-          if (source_index > width - 1)
+          else
             {
-              break;
+              source_index_offset =
+                  (int)floor((double)iy_flipped / (double)(target_height - 1) * (double)source_height + 0.5 - a);
             }
-          double lanczos_factor = lanczos(source_position - jx, a);
-          sum += lanczos_factor;
-          horizontal_values[jx * num_steps + i] = lanczos_factor;
-        }
-      for (i = 0; i < num_steps; i++)
-        {
-          horizontal_values[jx * num_steps + i] /= sum;
-        }
-    }
-
-  /* resample width */
-  for (h = 0; h < height; h++)
-    {
-      hy = h;
-      if (swapy)
-        {
-          hy = (int)height - 1 - h;
-        }
-      for (j = 0; j < new_w; j++)
-        {
-          jx = j;
-          if (swapx)
-            {
-              jx = (int)new_w - 1 - j;
-            }
-          int source_index_offset =
-              (int)ceil(jx / (double)(new_w - 1) * (double)width - 0.5 - (double)width / new_w * a);
           double result[4] = {0};
           for (i = 0; i < num_steps; i++)
             {
@@ -589,327 +251,129 @@ static void downsample_horizonal_rgba_lanczos(const unsigned char *source_img, d
                 {
                   continue;
                 }
-              if (source_index > width - 1)
+              if (source_index > source_height - 1)
                 {
                   break;
                 }
-              double lanczos_factor = horizontal_values[jx * num_steps + i];
-              for (l = 0; l < 4; l++)
+              double factor = factors[iy * num_steps + i];
+              for (j = 0; j < 4; j++)
                 {
-                  result[l] += lanczos_factor * source_img[(hy * stride + source_index) * 4 + l];
+                  result[j] += source_image[(source_index * stride + ix) * 4 + j] * factor;
                 }
             }
-          for (l = 0; l < 4; l++)
+          for (j = 0; j < 4; j++)
             {
-              result_img[(hy * new_w + jx) * 4 + l] = result[l];
+              if (result[j] > 255)
+                {
+                  result[j] = 255;
+                }
+              else if (result[j] < 0)
+                {
+                  result[j] = 0;
+                }
+              target_image[(iy * source_width + ix) * 4 + j] = (unsigned char)round(result[j]);
             }
         }
     }
-  gks_free(horizontal_values);
+  gks_free(factors);
 }
 
-static void upsample_vertical_rgba_lanczos(const double *source_img, unsigned char *result_img, size_t width,
-                                           size_t height, size_t new_h, size_t stride, int a, int min_val, int max_val,
-                                           int swapx, int swapy)
-{
-  size_t j, h;
-  size_t jx, hy;
-  int i, l;
-  double *vertical_values = (double *)gks_malloc(sizeof(double) * new_h * a * 2);
 
-  /* precompute vertical lanczos filter values */
-  for (h = 0; h < new_h; h++)
-    {
-      hy = h;
-      if (swapy)
-        {
-          hy = (int)new_h - 1 - h;
-        }
-      double destination_position = hy / (double)(new_h - 1) * (double)height - 0.5;
-      double sum = 0;
-      for (i = 0; i < 2 * a; i++)
-        {
-          int source_position = (int)floor(destination_position - (a - 1)) + i;
-          if (source_position < 0)
-            {
-              continue;
-            }
-          if (source_position > height - 1)
-            {
-              break;
-            }
-          double lanczos_factor = lanczos(source_position - destination_position, a);
-          sum += lanczos_factor;
-          vertical_values[hy * 2 * a + i] = lanczos_factor;
-        }
-      for (i = 0; i < 2 * a; i++)
-        {
-          vertical_values[hy * 2 * a + i] /= sum;
-        }
-    }
-
-  /* resample height*/
-  for (j = 0; j < width; j++)
-    {
-      jx = j;
-      if (swapx)
-        {
-          jx = (int)width - 1 - j;
-        }
-      for (h = 0; h < new_h; h++)
-        {
-          hy = h;
-          if (swapy)
-            {
-              hy = (int)new_h - 1 - h;
-            }
-          double destination_position = hy / (double)(new_h - 1) * (double)height - 0.5;
-          int source_position_offset = (int)floor(destination_position - (a - 1));
-          double result[4] = {0};
-          /* where filter is not null */
-          for (i = 0; i < 2 * a; i++)
-            {
-              int source_position = i + source_position_offset;
-              if (source_position < 0)
-                {
-                  continue;
-                }
-              if (source_position > height - 1)
-                {
-                  break;
-                }
-              double lanczos_factor = vertical_values[hy * 2 * a + i];
-              for (l = 0; l < 4; l++)
-                {
-                  result[l] += lanczos_factor * source_img[(source_position * width + jx) * 4 + l];
-                }
-            }
-          for (l = 0; l < 4; l++)
-            {
-              /* clipping */
-              if (result[l] > max_val)
-                {
-                  result[l] = max_val;
-                }
-              else if (result[l] < min_val)
-                {
-                  result[l] = min_val;
-                }
-              result_img[(h * width + j) * 4 + l] = (unsigned char)round(result[l]);
-            }
-        }
-    }
-  gks_free(vertical_values);
-}
-
-static void downsample_vertical_rgba_lanczos(const double *source_img, unsigned char *result_img, size_t width,
-                                             size_t height, size_t new_h, size_t stride, int a, int min_val,
-                                             int max_val, int swapx, int swapy)
-{
-  size_t j, h;
-  size_t jx, hy;
-  int i, l;
-  int num_steps = (int)ceil((double)height / new_h * a) * 2;
-  double *vertical_values = (double *)gks_malloc(sizeof(double) * new_h * num_steps);
-
-  /* precompute vertical lanczos filter values */
-  for (h = 0; h < new_h; h++)
-    {
-      hy = h;
-      if (swapy)
-        {
-          hy = (int)new_h - 1 - h;
-        }
-      double sum = 0;
-      int source_index_offset = (int)ceil(hy / (double)(new_h - 1) * (height)-0.5 - (double)height / new_h * a);
-      for (i = 0; i < num_steps; i++)
-        {
-          int source_index = source_index_offset + i;
-          double source_position = (source_index_offset + i + 0.5) / (double)height * (double)(new_h - 1);
-          if (source_index < 0)
-            {
-              continue;
-            }
-          if (source_index > height - 1)
-            {
-              break;
-            }
-          double lanczos_factor = lanczos(source_position - hy, a);
-          sum += lanczos_factor;
-          vertical_values[hy * num_steps + i] = lanczos_factor;
-        }
-      for (i = 0; i < num_steps; i++)
-        {
-          vertical_values[hy * num_steps + i] /= sum;
-        }
-    }
-
-  /* resample height*/
-  for (j = 0; j < width; j++)
-    {
-      jx = j;
-      if (swapx)
-        {
-          jx = (int)width - 1 - j;
-        }
-      for (h = 0; h < new_h; h++)
-        {
-          hy = h;
-          if (swapy)
-            {
-              hy = (int)new_h - 1 - h;
-            }
-          int source_index_offset =
-              (int)ceil(hy / (double)(new_h - 1) * (double)height - 0.5 - (double)height / new_h * a);
-          double result[4] = {0};
-          /* where filter is not null */
-          for (i = 0; i < num_steps; i++)
-            {
-              int source_index = i + source_index_offset;
-              if (source_index < 0)
-                {
-                  continue;
-                }
-              if (source_index > height - 1)
-                {
-                  break;
-                }
-              double lanczos_factor = vertical_values[hy * num_steps + i];
-              for (l = 0; l < 4; l++)
-                {
-                  result[l] += lanczos_factor * source_img[(source_index * width + jx) * 4 + l];
-                }
-            }
-          for (l = 0; l < 4; l++)
-            {
-              /* clipping */
-              if (result[l] > max_val)
-                {
-                  result[l] = max_val;
-                }
-              else if (result[l] < min_val)
-                {
-                  result[l] = min_val;
-                }
-              result_img[(h * width + j) * 4 + l] = (unsigned char)round(result[l]);
-            }
-        }
-    }
-  gks_free(vertical_values);
-}
-
-/*!
- * Use lanczos resampling to rescale the data image.
- *
- * \param[in] source_img Data array of the original image
- * \param[out] result_img Data array with resampled values
- * \param[in] width Size of a row in source_img
- * \param[in] height Number of rows in source_img
- * \param[in] new_w Size of a row in result_img
- * \param[in] new_h Number of rows in result_img
- * \param[in] stride Stride of source_img
- * \param[in] a Half width of lanczos filter
- * \param[in] min_val Lower border for colour values
- * \param[in] max_val Upperborder for colour values
- * \param[in] swapx True if x coordinates are swapped in source_img
- * \param[in] swapy True if y coordinates are swapped in source_img
- *
- * Best results will be generated when a = 2 or a = 3.
- */
-static void resample_rgba_lanczos(const unsigned char *source_img, unsigned char *result_img, size_t width,
-                                  size_t height, size_t new_w, size_t new_h, size_t stride, int a, int min_val,
-                                  int max_val, int swapx, int swapy)
+static void resample_rgba(const unsigned char *source_image, unsigned char *target_image, size_t source_width,
+                          size_t source_height, size_t target_width, size_t target_height, size_t stride, int a,
+                          int flip_x, int flip_y, double (*factor_func)(double, double, int))
 {
   if (a <= 0)
     {
       gks_fatal_error("a greater than 0 required!\n");
     }
-  double *one_dir_img = (double *)gks_malloc(4 * (int)height * (int)new_w * sizeof(double));
-  if (new_w > width)
-    {
-      upsample_horizonal_rgba_lanczos(source_img, one_dir_img, width, height, new_w, stride, a, min_val, max_val, swapx,
-                                      swapy);
-    }
-  else
-    {
-      downsample_horizonal_rgba_lanczos(source_img, one_dir_img, width, height, new_w, stride, a, min_val, max_val,
-                                        swapx, swapy);
-    }
-
-  if (new_h > height)
-    {
-      upsample_vertical_rgba_lanczos(one_dir_img, result_img, new_w, height, new_h, stride, a, min_val, max_val, swapx,
-                                     swapy);
-    }
-  else
-    {
-      downsample_vertical_rgba_lanczos(one_dir_img, result_img, new_w, height, new_h, stride, a, min_val, max_val,
-                                       swapx, swapy);
-    }
-  gks_free(one_dir_img);
+  double *temp_image = (double *)gks_malloc((int)sizeof(double) * 4 * (int)target_width * (int)source_height);
+  resample_horizontal_rgba(source_image, temp_image, source_width, source_height, target_width, stride, a, flip_x,
+                           factor_func);
+  resample_vertical_rgba(temp_image, target_image, target_width, source_height, target_height, target_width, a, flip_y,
+                         factor_func);
+  gks_free(temp_image);
 }
 
-static void resample_rgba_nearest(const unsigned char *source_img, unsigned char *result_img, size_t width,
-                                  size_t height, size_t new_w, size_t new_h, size_t stride, int swapx, int swapy)
+
+static void resample_rgba_nearest(const unsigned char *source_image, unsigned char *target_image, size_t source_width,
+                                  size_t source_height, size_t target_width, size_t target_height, size_t stride,
+                                  int flip_x, int flip_y)
 {
-  int i, j, ix, iy, rgb;
-  for (j = 0; j < new_h; j++)
+  size_t ix, iy, ix_flipped, iy_flipped;
+  for (iy = 0; iy < target_height; iy++)
     {
-      iy = (int)height * j / (int)new_h;
-      if (swapy)
+      iy_flipped = source_height * iy / target_height;
+      if (flip_y)
         {
-          iy = (int)height - 1 - iy;
+          iy_flipped = source_height - 1 - iy_flipped;
         }
-      for (i = 0; i < new_w; i++)
+      for (ix = 0; ix < target_width; ix++)
         {
-          ix = (int)width * i / (int)new_w;
-          if (swapx)
+          ix_flipped = source_width * ix / target_width;
+          if (flip_x)
             {
-              ix = (int)width - 1 - ix;
+              ix_flipped = source_width - 1 - ix_flipped;
             }
 
-          result_img[(j * new_w + i) * 4 + 0] = source_img[(iy * stride + ix) * 4 + 0];
-          result_img[(j * new_w + i) * 4 + 1] = source_img[(iy * stride + ix) * 4 + 1];
-          result_img[(j * new_w + i) * 4 + 2] = source_img[(iy * stride + ix) * 4 + 2];
-          result_img[(j * new_w + i) * 4 + 3] = source_img[(iy * stride + ix) * 4 + 3];
+          target_image[(iy * target_width + ix) * 4 + 0] = source_image[(iy_flipped * stride + ix_flipped) * 4 + 0];
+          target_image[(iy * target_width + ix) * 4 + 1] = source_image[(iy_flipped * stride + ix_flipped) * 4 + 1];
+          target_image[(iy * target_width + ix) * 4 + 2] = source_image[(iy_flipped * stride + ix_flipped) * 4 + 2];
+          target_image[(iy * target_width + ix) * 4 + 3] = source_image[(iy_flipped * stride + ix_flipped) * 4 + 3];
         }
     }
 }
 
 /*!
- * Method switches between different resample filters depending on the resample flag status.
+ * Resample an RGBA image using one of several resampling methods.
  *
- * \param[in] source_img Data array of the original image
- * \param[out] result_img Data array with resampled values
- * \param[in] width Size of a row in source_img
- * \param[in] height Number of rows in source_img
- * \param[in] new_w Size of a row in result_img
- * \param[in] new_h Number of rows in result_img
- * \param[in] stride Stride of source_img
- * \param[in] swapx True if x coordinates are swapped in source_img
- * \param[in] swapy True if y coordinates are swapped in source_img
+ * \param[in] source_image RGBA-data of the original image
+ * \param[out] target_image RGBA-data for resampled values
+ * \param[in] source_width number of columns in source_image
+ * \param[in] source_height number of rows in source_image
+ * \param[in] target_width number of columns in target_image
+ * \param[in] target_height number of rows in target_image
+ * \param[in] stride stride of source_image
+ * \param[in] flip_x whether the image should also be flipped horizontally
+ * \param[in] flip_y whether the image should also be flipped vertically
  *
- * Calculate new image data with linear or lanczos interpolation to receive smoother results.
- * This way the source_img can be up or downscaled. It is an alternative for the nearest neighbour resampling.
+ *  The available resampling methods are:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * +------------------------+---+--------------------+
+ * |GKS_K_RESAMPLE_NEAREST  |  0|nearest neighbour   |
+ * +------------------------+---+--------------------+
+ * |GKS_K_RESAMPLE_LINEAR   |  1|linear              |
+ * +------------------------+---+--------------------+
+ * |GKS_K_RESAMPLE_LANCZOS  |  2|lanczos             |
+ * +------------------------+---+--------------------+
+ * |GKS_K_RESAMPLE_DEFAULT  |  0|nearest neighbour   |
+ * +------------------------+---+--------------------+
+ *
+ * \endverbatim
  */
-void gks_resample(const unsigned char *source_img, unsigned char *result_img, size_t width, size_t height, size_t new_w,
-                  size_t new_h, size_t stride, int swapx, int swapy, int resample_method)
+void gks_resample(const unsigned char *source_image, unsigned char *target_image, size_t source_width,
+                  size_t source_height, size_t target_width, size_t target_height, size_t stride, int flip_x,
+                  int flip_y, int resample_method)
 {
-  if (resample_method == GKS_K_RESAMPLE_LINEAR)
+  switch (resample_method)
     {
-      resample_rgba(source_img, result_img, width, height, new_w, new_h, stride, 1, swapx, swapy);
-    }
-  else if (resample_method == GKS_K_RESAMPLE_LANCZOS)
-    {
-      resample_rgba_lanczos(source_img, result_img, width, height, new_w, new_h, stride, 3, 0, 255, swapx, swapy);
-    }
-  else if (resample_method == GKS_K_RESAMPLE_NEAREST)
-    {
-      resample_rgba_nearest(source_img, result_img, width, height, new_w, new_h, stride, swapx, swapy);
-    }
-  else
-    {
-      gks_fatal_error(
-          "Only GKS_K_RESAMPLE_LINEAR, GKS_K_RESAMPLE_NEAREST and GKS_K_RESAMPLE_LANCZOS are valid for resample\n");
+    case GKS_K_RESAMPLE_NEAREST:
+      resample_rgba_nearest(source_image, target_image, source_width, source_height, target_width, target_height,
+                            stride, flip_x, flip_y);
+      return;
+    case GKS_K_RESAMPLE_LINEAR:
+      resample_rgba(source_image, target_image, source_width, source_height, target_width, target_height, stride, 1,
+                    flip_x, flip_y, calculate_linear_factor);
+      return;
+    case GKS_K_RESAMPLE_LANCZOS:
+      resample_rgba(source_image, target_image, source_width, source_height, target_width, target_height, stride, 3,
+                    flip_x, flip_y, calculate_lanzcos_factor);
+      return;
+    default:
+      gks_fatal_error("Only GKS_K_RESAMPLE_DEFAULT, GKS_K_RESAMPLE_NEAREST, GKS_K_RESAMPLE_LINEAR and "
+                      "GKS_K_RESAMPLE_LANCZOS are valid for resample\n");
+      return;
     }
 }

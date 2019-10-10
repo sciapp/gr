@@ -215,8 +215,9 @@ extern "C"
   const char *gks_function_name(int routine);
   void gks_report_error(int routine, int errnum);
 
-  DLLEXPORT void gks_resample(const unsigned char *source_img, unsigned char *result_img, size_t width, size_t height,
-                              size_t new_w, size_t new_h, size_t stride, int swapx, int swapy, int resample_method);
+  DLLEXPORT void gks_resample(const unsigned char *source_image, unsigned char *target_image, size_t source_width,
+                              size_t source_height, size_t target_width, size_t target_height, size_t stride, int swapx,
+                              int swapy, int resample_method);
   void gks_init_core(gks_state_list_t *list);
   gks_list_t *gks_list_find(gks_list_t *list, int element);
   gks_list_t *gks_list_add(gks_list_t *list, int element, void *ptr);

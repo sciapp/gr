@@ -645,7 +645,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   double x1, y1, x2, y2, x, y;
   int ix1, ix2, iy1, iy2;
   int width, height;
-  int red, green, blue, alpha;
+  double red, green, blue, alpha;
   int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   int stride;
@@ -675,19 +675,19 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
     {
       gks_resample((unsigned char *)colia, data, (size_t)dx, (size_t)dy, (size_t)width, (size_t)height, (size_t)dimx,
                    swapx, swapy, gkss->resample_method);
-      for (i = 0; i < width; i++)
+      for (i = width - 1; i >= 0; i--)
         {
-          for (j = 0; j < height; j++)
+          for (j = height - 1; j >= 0; j--)
             {
-              unsigned char r = data[(j * width + i) * 4 + 0];
-              unsigned char g = data[(j * width + i) * 4 + 1];
-              unsigned char b = data[(j * width + i) * 4 + 2];
-              unsigned char a = data[(j * width + i) * 4 + 3];
-
-              data[(j * width + i) * 4 + 0] = (unsigned char)(b * a / 255);
-              data[(j * width + i) * 4 + 1] = (unsigned char)(g * a / 255);
-              data[(j * width + i) * 4 + 2] = (unsigned char)(r * a / 255);
-              data[(j * width + i) * 4 + 3] = a;
+              red = data[(j * width + i) * 4 + 0];
+              green = data[(j * width + i) * 4 + 1];
+              blue = data[(j * width + i) * 4 + 2];
+              alpha = data[(j * width + i) * 4 + 3] * p->transparency;
+              /* ARGB32 format requires pre-multiplied alpha */
+              data[j * stride + i * 4 + 0] = (unsigned char)(blue * alpha / 255);
+              data[j * stride + i * 4 + 1] = (unsigned char)(green * alpha / 255);
+              data[j * stride + i * 4 + 2] = (unsigned char)(red * alpha / 255);
+              data[j * stride + i * 4 + 3] = (unsigned char)alpha;
             }
         }
     }
@@ -709,18 +709,15 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
                 }
               ind = colia[iy * dimx + ix];
               ind = FIX_COLORIND(ind);
-              red = (int)255 * p->rgb[ind][0];
-              green = (int)255 * p->rgb[ind][1];
-              blue = (int)255 * p->rgb[ind][2];
-              alpha = (int)255 * p->transparency;
+              red = 255 * p->rgb[ind][0];
+              green = 255 * p->rgb[ind][1];
+              blue = 255 * p->rgb[ind][2];
+              alpha = 255 * p->transparency;
               /* ARGB32 format requires pre-multiplied alpha */
-              red = red * alpha / 255;
-              green = green * alpha / 255;
-              blue = blue * alpha / 255;
-              data[j * stride + i * 4 + 0] = blue;
-              data[j * stride + i * 4 + 1] = green;
-              data[j * stride + i * 4 + 2] = red;
-              data[j * stride + i * 4 + 3] = alpha;
+              data[j * stride + i * 4 + 0] = (unsigned char)(blue * alpha / 255);
+              data[j * stride + i * 4 + 1] = (unsigned char)(green * alpha / 255);
+              data[j * stride + i * 4 + 2] = (unsigned char)(red * alpha / 255);
+              data[j * stride + i * 4 + 3] = (unsigned char)alpha;
             }
         }
     }
