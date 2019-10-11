@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
 #include "gkscore.h"
 #include "gks.h"
 
@@ -45,7 +47,7 @@ static double integrate_box(double left, double right, int width)
   return (right - left) / width;
 }
 
-static double calculate_lanzcos_factor(double source_position, double target_position, int a)
+static double calculate_lanczos_factor(double source_position, double target_position, int a)
 {
   return lanczos(source_position - target_position, a);
 }
@@ -279,23 +281,6 @@ static void resample_vertical_rgba(const double *source_image, unsigned char *ta
 }
 
 
-static void resample_rgba(const unsigned char *source_image, unsigned char *target_image, size_t source_width,
-                          size_t source_height, size_t target_width, size_t target_height, size_t stride, int a,
-                          int flip_x, int flip_y, double (*factor_func)(double, double, int))
-{
-  if (a <= 0)
-    {
-      gks_fatal_error("a greater than 0 required!\n");
-    }
-  double *temp_image = (double *)gks_malloc((int)sizeof(double) * 4 * (int)target_width * (int)source_height);
-  resample_horizontal_rgba(source_image, temp_image, source_width, source_height, target_width, stride, a, flip_x,
-                           factor_func);
-  resample_vertical_rgba(temp_image, target_image, target_width, source_height, target_height, target_width, a, flip_y,
-                         factor_func);
-  gks_free(temp_image);
-}
-
-
 static void resample_rgba_nearest(const unsigned char *source_image, unsigned char *target_image, size_t source_width,
                                   size_t source_height, size_t target_width, size_t target_height, size_t stride,
                                   int flip_x, int flip_y)
@@ -324,6 +309,99 @@ static void resample_rgba_nearest(const unsigned char *source_image, unsigned ch
     }
 }
 
+static void resample_horizontal_rgba_nearest(const unsigned char *source_image, double *target_image,
+                                             size_t source_width, size_t source_height, size_t target_width,
+                                             size_t stride, int flip)
+{
+  size_t ix, iy, ix_flipped, j;
+  for (iy = 0; iy < source_height; iy++)
+    {
+      for (ix = 0; ix < target_width; ix++)
+        {
+          ix_flipped = source_width * ix / target_width;
+          if (flip)
+            {
+              ix_flipped = source_width - 1 - ix_flipped;
+            }
+
+          for (j = 0; j < 4; j++)
+            {
+              target_image[(iy * target_width + ix) * 4 + j] = source_image[(iy * stride + ix_flipped) * 4 + j];
+            }
+        }
+    }
+}
+
+
+static void resample_vertical_rgba_nearest(const double *source_image, unsigned char *target_image, size_t source_width,
+                                           size_t source_height, size_t target_height, size_t stride, int flip)
+{
+  size_t ix, iy, iy_flipped, j;
+  for (ix = 0; ix < source_width; ix++)
+    {
+      for (iy = 0; iy < target_height; iy++)
+        {
+          iy_flipped = source_height * iy / target_height;
+          if (flip)
+            {
+              iy_flipped = source_height - 1 - iy_flipped;
+            }
+
+
+          for (j = 0; j < 4; j++)
+            {
+              double value = round(source_image[(iy_flipped * stride + ix) * 4 + j]);
+              if (value > 255)
+                {
+                  value = 255;
+                }
+              if (value < 0)
+                {
+                  value = 0;
+                }
+              target_image[(iy * source_width + ix) * 4 + j] = (unsigned char)value;
+            }
+        }
+    }
+}
+
+static unsigned int get_default_resampling_method()
+{
+  unsigned int resample_method = GKS_K_RESAMPLE_NEAREST;
+  char *env;
+  env = (char *)gks_getenv("GKS_DEFAULT_RESAMPLE_METHOD");
+  if (env)
+    {
+      int i;
+      env = gks_strdup(env);
+      for (i = 0; env[i]; i++)
+        {
+          if (0 <= env[i] && env[i] <= 127)
+            {
+              env[i] = (char)tolower(env[i]);
+            }
+        }
+      if (!strcmp(env, "nearest"))
+        {
+          resample_method = GKS_K_RESAMPLE_NEAREST;
+        }
+      else if (!strcmp(env, "linear"))
+        {
+          resample_method = GKS_K_RESAMPLE_LINEAR;
+        }
+      else if (!strcmp(env, "lanczos"))
+        {
+          resample_method = GKS_K_RESAMPLE_LANCZOS;
+        }
+      else
+        {
+          gks_perror("Unknown resample method: %s", env);
+        }
+      gks_free(env);
+    }
+  return resample_method;
+}
+
 /*!
  * Resample an RGBA image using one of several resampling methods.
  *
@@ -336,44 +414,184 @@ static void resample_rgba_nearest(const unsigned char *source_image, unsigned ch
  * \param[in] stride stride of source_image
  * \param[in] flip_x whether the image should also be flipped horizontally
  * \param[in] flip_y whether the image should also be flipped vertically
+ * \param[in] resample_method the resample method
  *
- *  The available resampling methods are:
+ * The available options are:
  *
  * \verbatim embed:rst:leading-asterisk
  *
- * +------------------------+---+--------------------+
- * |GKS_K_RESAMPLE_NEAREST  |  0|nearest neighbour   |
- * +------------------------+---+--------------------+
- * |GKS_K_RESAMPLE_LINEAR   |  1|linear              |
- * +------------------------+---+--------------------+
- * |GKS_K_RESAMPLE_LANCZOS  |  2|lanczos             |
- * +------------------------+---+--------------------+
- * |GKS_K_RESAMPLE_DEFAULT  |  0|nearest neighbour   |
- * +------------------------+---+--------------------+
+ * +------------------------+------------+--------------------+
+ * |GKS_K_RESAMPLE_DEFAULT  | 0x00000000 |default             |
+ * +------------------------+------------+--------------------+
+ * |GKS_K_RESAMPLE_NEAREST  | 0x01010101 |nearest neighbour   |
+ * +------------------------+------------+--------------------+
+ * |GKS_K_RESAMPLE_LINEAR   | 0x02020202 |linear              |
+ * +------------------------+------------+--------------------+
+ * |GKS_K_RESAMPLE_LANCZOS  | 0x03030303 |Lanczos             |
+ * +------------------------+------------+--------------------+
+ *
+ * \endverbatim
+ *
+ * Alternatively, combinations of these methods can be selected for horizontal or vertical upsampling or downsampling:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_VERTICAL_DEFAULT     | 0x00000000 | default for vertical upsampling              |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_HORIZONTAL_DEFAULT   | 0x00000000 | default for horizontal upsampling            |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_VERTICAL_DEFAULT   | 0x00000000 | default for vertical downsampling            |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_HORIZONTAL_DEFAULT | 0x00000000 | default for horizontal downsampling          |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_VERTICAL_NEAREST     | 0x00000001 | nearest neighbor for vertical upsampling     |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_HORIZONTAL_NEAREST   | 0x00000100 | nearest neighbor for horizontal upsampling   |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_VERTICAL_NEAREST   | 0x00010000 | nearest neighbor for vertical downsampling   |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_HORIZONTAL_NEAREST | 0x01000000 | nearest neighbor for horizontal downsampling |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_VERTICAL_LINEAR      | 0x00000002 | linear for vertical upsampling               |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_HORIZONTAL_LINEAR    | 0x00000200 | linear for horizontal upsampling             |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_VERTICAL_LINEAR    | 0x00020000 | linear for vertical downsampling             |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_HORIZONTAL_LINEAR  | 0x02000000 | linear for horizontal downsampling           |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_VERTICAL_LANCZOS     | 0x00000003 | lanczos for vertical upsampling              |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_HORIZONTAL_LANCZOS   | 0x00000300 | lanczos for horizontal upsampling            |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_VERTICAL_LANCZOS   | 0x00030000 | lanczos for vertical downsampling            |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_HORIZONTAL_LANCZOS | 0x03000000 | lanczos for horizontal downsampling          |
+ * +-------------------------------------+------------+----------------------------------------------+
  *
  * \endverbatim
  */
 void gks_resample(const unsigned char *source_image, unsigned char *target_image, size_t source_width,
                   size_t source_height, size_t target_width, size_t target_height, size_t stride, int flip_x,
-                  int flip_y, int resample_method)
+                  int flip_y, unsigned int resample_method)
 {
-  switch (resample_method)
+  double *temp_image;
+  const unsigned int resampling_methods[] = {GKS_K_RESAMPLE_DEFAULT, GKS_K_RESAMPLE_NEAREST, GKS_K_RESAMPLE_LINEAR,
+                                             GKS_K_RESAMPLE_LANCZOS};
+  unsigned int horizontal_resampling_method;
+  unsigned int vertical_resampling_method;
+
+  unsigned int vertical_upsampling_method = (resample_method >> 0u) & 0xffu;
+  unsigned int horizontal_upsampling_method = (resample_method >> 8u) & 0xffu;
+  unsigned int vertical_downsampling_method = (resample_method >> 16u) & 0xffu;
+  unsigned int horizontal_downsampling_method = (resample_method >> 24u) & 0xffu;
+
+  if (vertical_upsampling_method > 3)
     {
-    case GKS_K_RESAMPLE_NEAREST:
+      gks_perror("Invalid vertical upsampling method.");
+      vertical_upsampling_method = 0;
+    }
+  if (horizontal_upsampling_method > 3)
+    {
+      gks_perror("Invalid horizontal upsampling method.");
+      horizontal_upsampling_method = 0;
+    }
+  if (vertical_downsampling_method > 3)
+    {
+      gks_perror("Invalid vertical downsampling method.");
+      vertical_downsampling_method = 0;
+    }
+  if (horizontal_downsampling_method > 3)
+    {
+      gks_perror("Invalid horizontal downsampling method.");
+      horizontal_downsampling_method = 0;
+    }
+
+  if (source_width > target_width)
+    {
+      horizontal_resampling_method = resampling_methods[horizontal_downsampling_method];
+    }
+  else if (source_width < target_width)
+    {
+      horizontal_resampling_method = resampling_methods[horizontal_upsampling_method];
+    }
+  else
+    {
+      /* No horizontal resampling needed */
+      horizontal_resampling_method = GKS_K_RESAMPLE_NEAREST;
+    }
+
+  if (source_height > target_height)
+    {
+      vertical_resampling_method = resampling_methods[vertical_downsampling_method];
+    }
+  else if (source_height < target_height)
+    {
+      vertical_resampling_method = resampling_methods[vertical_upsampling_method];
+    }
+  else
+    {
+      /* No vertical resampling needed */
+      vertical_resampling_method = GKS_K_RESAMPLE_NEAREST;
+    }
+
+  if (horizontal_resampling_method == GKS_K_RESAMPLE_DEFAULT)
+    {
+      horizontal_resampling_method = get_default_resampling_method();
+    }
+  if (vertical_resampling_method == GKS_K_RESAMPLE_DEFAULT)
+    {
+      vertical_resampling_method = get_default_resampling_method();
+    }
+
+  if (horizontal_resampling_method == GKS_K_RESAMPLE_NEAREST && vertical_resampling_method == GKS_K_RESAMPLE_NEAREST)
+    {
+      /* Only nearest-neighbor resampling, so no intermediate image is required. */
       resample_rgba_nearest(source_image, target_image, source_width, source_height, target_width, target_height,
                             stride, flip_x, flip_y);
       return;
-    case GKS_K_RESAMPLE_LINEAR:
-      resample_rgba(source_image, target_image, source_width, source_height, target_width, target_height, stride, 1,
-                    flip_x, flip_y, calculate_linear_factor);
-      return;
-    case GKS_K_RESAMPLE_LANCZOS:
-      resample_rgba(source_image, target_image, source_width, source_height, target_width, target_height, stride, 3,
-                    flip_x, flip_y, calculate_lanzcos_factor);
-      return;
-    default:
-      gks_fatal_error("Only GKS_K_RESAMPLE_DEFAULT, GKS_K_RESAMPLE_NEAREST, GKS_K_RESAMPLE_LINEAR and "
-                      "GKS_K_RESAMPLE_LANCZOS are valid for resample\n");
-      return;
     }
+
+  temp_image = (double *)gks_malloc((int)sizeof(double) * 4 * (int)target_width * (int)source_height);
+
+  switch (horizontal_resampling_method)
+    {
+    case GKS_K_RESAMPLE_NEAREST:
+      resample_horizontal_rgba_nearest(source_image, temp_image, source_width, source_height, target_width, stride,
+                                       flip_x);
+      break;
+    case GKS_K_RESAMPLE_LINEAR:
+      resample_horizontal_rgba(source_image, temp_image, source_width, source_height, target_width, stride, 1, flip_x,
+                               calculate_linear_factor);
+      break;
+    case GKS_K_RESAMPLE_LANCZOS:
+      resample_horizontal_rgba(source_image, temp_image, source_width, source_height, target_width, stride, 3, flip_x,
+                               calculate_lanczos_factor);
+      break;
+    default:
+      gks_perror("Invalid horizontal resampling method.");
+      break;
+    }
+
+  switch (vertical_resampling_method)
+    {
+    case GKS_K_RESAMPLE_NEAREST:
+      resample_vertical_rgba_nearest(temp_image, target_image, target_width, source_height, target_height, target_width,
+                                     flip_y);
+      break;
+    case GKS_K_RESAMPLE_LINEAR:
+      resample_vertical_rgba(temp_image, target_image, target_width, source_height, target_height, target_width, 1,
+                             flip_x, calculate_linear_factor);
+      break;
+    case GKS_K_RESAMPLE_LANCZOS:
+      resample_vertical_rgba(temp_image, target_image, target_width, source_height, target_height, target_width, 3,
+                             flip_x, calculate_lanczos_factor);
+      break;
+    default:
+      gks_perror("Invalid vertical resampling method.");
+      break;
+    }
+
+  gks_free(temp_image);
 }

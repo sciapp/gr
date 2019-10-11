@@ -4026,16 +4026,22 @@ double gks_precision(void)
  * Set the resample method for up and downscaling. The default method is nearest neighbour.
  *
  * \param[in] flag Resample method, valid options are GKS_K_RESAMPLE_DEFAULT, GKS_K_RESAMPLE_LINEAR,
- * GKS_K_RESAMPLE_NEAREST and GKS_K_RESAMPLE_LANCZOS
+ * GKS_K_RESAMPLE_NEAREST and GKS_K_RESAMPLE_LANCZOS, or combinations of the GKS_K_UPSAMPLE_* and GKS_K_DOWNSAMPLE_*
+ * flags
  */
-void gks_set_resample_method(int flag)
+void gks_set_resample_method(unsigned int flag)
 {
   if (state >= GKS_K_GKOP)
     {
-      if (flag == GKS_K_RESAMPLE_NEAREST || flag == GKS_K_RESAMPLE_LANCZOS || flag == GKS_K_RESAMPLE_LINEAR)
+      unsigned int vertical_upsampling_method = (flag >> 0u) & 0xffu;
+      unsigned int horizontal_upsampling_method = (flag >> 8u) & 0xffu;
+      unsigned int vertical_downsampling_method = (flag >> 16u) & 0xffu;
+      unsigned int horizontal_downsampling_method = (flag >> 24u) & 0xffu;
+      if ((vertical_upsampling_method <= 3) && (horizontal_upsampling_method <= 3) &&
+          (vertical_downsampling_method <= 3) && (horizontal_downsampling_method <= 3))
         {
           s->resample_method = flag;
-          i_arr[0] = flag;
+          i_arr[0] = (int)flag;
 
           /* call the device driver link routine */
           gks_ddlk(SET_RESAMPLE_METHOD, 1, 1, 1, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
@@ -4056,7 +4062,7 @@ void gks_set_resample_method(int flag)
  *
  * \returns Resample flag
  */
-void gks_inq_resample_method(int *flag)
+void gks_inq_resample_method(unsigned int *flag)
 {
   flag[0] = s->resample_method;
 }
