@@ -877,17 +877,18 @@ static void interp(char *str)
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
-        case 19: /* set linetype */
-        case 21: /* set polyline color index */
-        case 23: /* set markertype */
-        case 25: /* set polymarker color index */
-        case 30: /* set text color index */
-        case 33: /* set text path */
-        case 36: /* set fillarea interior style */
-        case 37: /* set fillarea style index */
-        case 38: /* set fillarea color index */
-        case 52: /* select normalization transformation */
-        case 53: /* set clipping indicator */
+        case 19:  /* set linetype */
+        case 21:  /* set polyline color index */
+        case 23:  /* set markertype */
+        case 25:  /* set polymarker color index */
+        case 30:  /* set text color index */
+        case 33:  /* set text path */
+        case 36:  /* set fillarea interior style */
+        case 37:  /* set fillarea style index */
+        case 38:  /* set fillarea color index */
+        case 52:  /* select normalization transformation */
+        case 53:  /* set clipping indicator */
+        case 108: /* set resample method */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
@@ -1112,6 +1113,10 @@ static void interp(char *str)
 
           resize_window();
           set_xform();
+          break;
+
+        case 108:
+          gkss->resample_method = i_arr[0];
           break;
 
         case 200:

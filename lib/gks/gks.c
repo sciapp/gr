@@ -4030,14 +4030,24 @@ double gks_precision(void)
  */
 void gks_set_resample_method(int flag)
 {
-  if (flag == GKS_K_RESAMPLE_NEAREST || flag == GKS_K_RESAMPLE_LANCZOS || flag == GKS_K_RESAMPLE_LINEAR)
+  if (state >= GKS_K_GKOP)
     {
-      s->resample_method = flag;
+      if (flag == GKS_K_RESAMPLE_NEAREST || flag == GKS_K_RESAMPLE_LANCZOS || flag == GKS_K_RESAMPLE_LINEAR)
+        {
+          s->resample_method = flag;
+          i_arr[0] = flag;
+
+          /* call the device driver link routine */
+          gks_ddlk(SET_RESAMPLE_METHOD, 1, 1, 1, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+        }
+      else
+        {
+          gks_report_error(SET_RESAMPLE_METHOD, 501);
+        }
     }
   else
     {
-      fprintf(stderr, "Only GKS_K_RESAMPLE_DEFAULT, GKS_K_RESAMPLE_LINEAR, GKS_K_RESAMPLE_NEAREST and "
-                      "GKS_K_RESAMPLE_LANCZOS are valid values for the flag parameter\n");
+      gks_report_error(SET_RESAMPLE_METHOD, 8);
     }
 }
 
