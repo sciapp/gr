@@ -88,6 +88,8 @@ extern "C"
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
+#define MAX_CLIP 64
+
 static gks_state_list_t *gkss;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
@@ -120,8 +122,8 @@ typedef struct ws_state_list_t
   SVG_point *points;
   int npoints, max_points;
   int empty, page_counter, offset;
-  int cx[MAX_TNR], cy[MAX_TNR], cwidth[MAX_TNR], cheight[MAX_TNR];
-  int clip_index, path_index, path_counter;
+  int cx[MAX_CLIP], cy[MAX_CLIP], cwidth[MAX_CLIP], cheight[MAX_CLIP];
+  int clip_index, path_index;
   double transparency;
 } ws_state_list;
 
@@ -260,7 +262,6 @@ static void init_colors(void)
 static void init_clippaths(void)
 {
   int i;
-  p->path_counter = MAX_TNR;
   p->clip_index = 0;
   if (path_id < 0)
     {
@@ -269,7 +270,7 @@ static void init_clippaths(void)
     }
   else
     path_id = (path_id + 1) % 100;
-  for (i = 0; i < MAX_TNR; i++)
+  for (i = 0; i < MAX_CLIP; i++)
     {
       p->cx[i] = p->cy[i] = -1;
       p->cwidth[i] = p->cheight[i] = 0;
@@ -1109,7 +1110,7 @@ static void set_clip_path(int tnr)
     }
   else
     {
-      if (p->clip_index < MAX_TNR)
+      if (p->clip_index < MAX_CLIP)
         {
           p->cx[p->clip_index] = x;
           p->cy[p->clip_index] = y;
@@ -1125,12 +1126,7 @@ static void set_clip_path(int tnr)
         }
       else
         {
-          svg_printf(p->stream,
-                     "<defs>\n  <clipPath id=\"clip%02d\">\n    <rect"
-                     " x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"/>\n  </clip"
-                     "Path>\n</defs>\n",
-                     p->path_counter, x, y, width, height);
-          p->path_index = p->path_counter++;
+          gks_perror("clip path limit reached");
         }
     }
 }
