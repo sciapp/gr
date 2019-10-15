@@ -95,6 +95,7 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp, "        canvas.onmousedown = canvasMouseDown;\n");
   fprintf(htmlfp, "        canvas.onmouseout = canvasMouseOut;\n");
   fprintf(htmlfp, "        canvas.onkeypress = canvasKeyPress;\n");
+  fprintf(htmlfp, "        canvas.onwheel = canvasWheel;\n");
   fprintf(htmlfp, "      }\n");
 
   fprintf(htmlfp, "      function transposeMatrix4(matrix) {\n");
@@ -255,6 +256,13 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp, "      var isDragging = false;\n");
   fprintf(htmlfp, "      var xOffset = 0;\n");
   fprintf(htmlfp, "      var yOffset = 0;\n");
+  fprintf(htmlfp, "      var fieldOfViewMultiplier = 1.0;\n");
+  fprintf(htmlfp, "      function canvasWheel(event) {\n");
+  fprintf(htmlfp, "          event.preventDefault();\n");
+  fprintf(htmlfp, "          var delta = event.deltaY;\n");
+  fprintf(htmlfp, "          fieldOfViewMultiplier = fieldOfViewMultiplier * Math.pow(1.01, delta);\n");
+  fprintf(htmlfp, "          drawScene();\n");
+  fprintf(htmlfp, "      }\n");
   fprintf(htmlfp, "      function canvasMouseUp(event) {\n");
   fprintf(htmlfp, "        isDragging = false;\n");
   fprintf(htmlfp, "        xOffset = event.clientX;\n");
@@ -275,6 +283,7 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp, "          camera_pos = original_camera_pos.slice(0);\n");
   fprintf(htmlfp, "          center_pos = original_center_pos.slice(0);\n");
   fprintf(htmlfp, "          up_dir = original_up_dir.slice(0);\n");
+  fprintf(htmlfp, "          fieldOfViewMultiplier = 1;\n");
   fprintf(htmlfp, "          calculateViewMatrix();\n");
   fprintf(htmlfp, "          drawScene();\n");
   fprintf(htmlfp, "        }\n");
@@ -427,7 +436,11 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp, "        if (!viewMatrix) {\n");
   fprintf(htmlfp, "          calculateViewMatrix();\n");
   fprintf(htmlfp, "        }\n");
-  fprintf(htmlfp, "        var verticalFieldOfView = %g;\n", context_struct_.vertical_field_of_view);
+  fprintf(htmlfp, "        var verticalFieldOfView = %g * fieldOfViewMultiplier;\n",
+          context_struct_.vertical_field_of_view);
+  fprintf(htmlfp, "        if (verticalFieldOfView > 179) {\n");
+  fprintf(htmlfp, "          verticalFieldOfView = 179;\n");
+  fprintf(htmlfp, "        }\n");
   fprintf(htmlfp, "        var zNear = %g;\n", context_struct_.zNear);
   fprintf(htmlfp, "        var zFar = %g;\n", context_struct_.zFar);
   fprintf(htmlfp, "        var aspect = 1.0*gl.viewportWidth/gl.viewportHeight;\n");
