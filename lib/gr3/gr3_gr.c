@@ -803,7 +803,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   double min, max;
   int i;
   int *color_data, *colormap;
-  GLfloat fovy, zNear, zFar, aspect, tfov2, right, top;
+  GLfloat fovy, zNear, zFar, aspect, tfov2;
   GLfloat *pixel_data, *fdata;
   GLsizei vertex_shader_source_lines, fragment_shader_source_lines;
   GLfloat grmatrix[16], grviewmatrix[16], projection_matrix[16];
@@ -851,7 +851,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   };
 
   const char *fragment_shader_source[] = {
-      "#version 120\n"
+      "#version 120\n",
       "\n",
       "varying vec3 vf_tex_coord;\n",
       "varying vec3 vf_position;\n",
@@ -975,30 +975,127 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   glDeleteShader(fragment_shader);
   glUseProgram(program);
 
-  /* Set projection parameter like in `gr3_drawmesh_grlike` and create (orthographic) projection matrix */
-  fovy = 90.0f;
-  zNear = 1.0f;
-  zFar = 200.0f;
-  aspect = 1.0f * width / height;
-  tfov2 = tan(fovy * M_PI / 360.0);
-  right = zNear * aspect * tfov2;
-  top = zNear * tfov2;
-
+  int projection_type;
+  gr_inqprojectiontype(&projection_type);
   memset(projection_matrix, 0, 16 * sizeof(GLfloat));
-  projection_matrix[0 + 0 * 4] = 1.0 / right; /* left = -right */
-  projection_matrix[0 + 3 * 4] = 0.0;
-  projection_matrix[1 + 1 * 4] = 1.0 / top; /* bottom = -top */
-  projection_matrix[1 + 3 * 4] = 0.0;
-  projection_matrix[2 + 2 * 4] = -2.0 / (zFar - zNear);
-  projection_matrix[2 + 3 * 4] = -(zFar + zNear) / (zFar - zNear);
-  projection_matrix[3 + 3 * 4] = 1.0;
+  if (projection_type == GR_PROJECTION_DEFAULT)
+    {
+      /* Set projection parameter like in `gr3_drawmesh_grlike` and create (orthographic) projection matrix */
+      fovy = 90.0f;
+      zNear = 1.0f;
+      zFar = 200.0f;
+      aspect = 1.0f * width / height;
+      tfov2 = (GLfloat)tan(fovy * M_PI / 360.0);
+      GLfloat right = zNear * aspect * tfov2;
+      GLfloat top = zNear * tfov2;
+
+      projection_matrix[0 + 0 * 4] = (GLfloat)1.0 / right; /* left = -right */
+      projection_matrix[0 + 3 * 4] = 0.0;
+      projection_matrix[1 + 1 * 4] = (GLfloat)1.0 / top; /* bottom = -top */
+      projection_matrix[1 + 3 * 4] = 0.0;
+      projection_matrix[2 + 2 * 4] = (GLfloat)-2.0 / (zFar - zNear);
+      projection_matrix[2 + 3 * 4] = -(zFar + zNear) / (zFar - zNear);
+      projection_matrix[3 + 3 * 4] = 1.0;
+    }
+  else if (projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+    {
+      double near;
+      double far;
+      double fov;
+      double left;
+      double right;
+      double bottom;
+      double top;
+      gr_inqprojectionparameters(&left, &right, &bottom, &top, &near, &far, &fov);
+
+      projection_matrix[0 + 0 * 4] = (GLfloat)(2. / (right - left));
+      projection_matrix[0 + 3 * 4] = (GLfloat)(-(left + right) / (right - left));
+      projection_matrix[1 + 1 * 4] = (GLfloat)(2. / (top - bottom));
+      projection_matrix[1 + 3 * 4] = (GLfloat)(-(bottom + top) / (top - bottom));
+      projection_matrix[2 + 2 * 4] = (GLfloat)(-2. / (far - near));
+      projection_matrix[2 + 3 * 4] = (GLfloat)(-(far + near) / (far - near));
+      projection_matrix[3 + 3 * 4] = 1;
+    }
+  else if (projection_type == GR_PROJECTION_PERSPECTIV)
+    {
+      double near;
+      double far;
+      double fov;
+      double left;
+      double right;
+      double bottom;
+      double top;
+      gr_inqprojectionparameters(&left, &right, &bottom, &top, &near, &far, &fov);
+
+      double aspect = fabs(right - left) / fabs(top - bottom);
+      projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2) / aspect);
+      projection_matrix[1 + 1 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2));
+      projection_matrix[2 + 2 * 4] = (GLfloat)((far + near) / (near - far));
+      projection_matrix[2 + 3 * 4] = (GLfloat)(2 * far * near / (near - far));
+      projection_matrix[3 + 2 * 4] = -1;
+    }
 
   /* Create view matrix */
-  gr_inqspace(&zmin, &zmax, &rotation, &tilt);
-  gr3_grtransformation_(grmatrix, rotation, tilt);
-  gr3_identity_(grviewmatrix);
-  grviewmatrix[2 + 3 * 4] = -4;
-  gr3_matmul_(grviewmatrix, grmatrix);
+  if (projection_type == GR_PROJECTION_DEFAULT)
+    {
+      gr_inqspace(&zmin, &zmax, &rotation, &tilt);
+      gr3_grtransformation_(grmatrix, rotation, tilt);
+      gr3_identity_(grviewmatrix);
+      grviewmatrix[2 + 3 * 4] = -4;
+      gr3_matmul_(grviewmatrix, grmatrix);
+    }
+  else if (projection_type == GR_PROJECTION_PERSPECTIV || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+    {
+      memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
+      double camera_pos_x;
+      double camera_pos_y;
+      double camera_pos_z;
+      double up_x;
+      double up_y;
+      double up_z;
+      double focus_point_x;
+      double focus_point_y;
+      double focus_point_z;
+      gr_inqtransformationparameters(&camera_pos_x, &camera_pos_y, &camera_pos_z, &up_x, &up_y, &up_z, &focus_point_x,
+                                     &focus_point_y, &focus_point_z);
+      double F[3] = {focus_point_x - camera_pos_x, focus_point_y - camera_pos_y,
+                     focus_point_z - camera_pos_z}; // direction between camera and focus point
+      double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
+      double f[3] = {F[0] / norm_func, F[1] / norm_func, F[2] / norm_func};
+      double norm_up = sqrt(up_x * up_x + up_y * up_y + up_z * up_z);
+      double up[3] = {up_x / norm_up, up_y / norm_up, up_z / norm_up};
+      double s_deri[3];
+      for (i = 0; i < 3; i++)
+        //  f cross up
+        {
+          s_deri[i] = f[(i + 1) % 3] * up[(i + 2) % 3] - up[(i + 1) % 3] * f[(i + 2) % 3];
+        }
+      double s_norm = sqrt(s_deri[0] * s_deri[0] + s_deri[1] * s_deri[1] + s_deri[2] * s_deri[2]);
+      double s[3] = {s_deri[0] / s_norm, s_deri[1] / s_norm, s_deri[2] / s_norm};
+      double u_deri[3];
+      for (i = 0; i < 3; i++)
+        // s cross f
+        {
+          u_deri[i] = s[(i + 1) % 3] * f[(i + 2) % 3] - f[(i + 1) % 3] * s[(i + 2) % 3];
+        }
+      double norm_u = sqrt(u_deri[0] * u_deri[0] + u_deri[1] * u_deri[1] + u_deri[2] * u_deri[2]);
+      double u[3] = {u_deri[0] / norm_u, u_deri[1] / norm_u, u_deri[2] / norm_u};
+
+      // transformation matrix
+      grviewmatrix[0 + 0 * 4] = (GLfloat)s[0];
+      grviewmatrix[0 + 1 * 4] = (GLfloat)s[1];
+      grviewmatrix[0 + 2 * 4] = (GLfloat)s[2];
+      grviewmatrix[0 + 3 * 4] = (GLfloat)(-camera_pos_x * s[0] - camera_pos_y * s[1] - camera_pos_z * s[2]);
+      grviewmatrix[1 + 0 * 4] = (GLfloat)u[0];
+      grviewmatrix[1 + 1 * 4] = (GLfloat)u[1];
+      grviewmatrix[1 + 2 * 4] = (GLfloat)u[2];
+      grviewmatrix[1 + 3 * 4] = (GLfloat)(-camera_pos_x * u[0] - camera_pos_y * u[1] - camera_pos_z * u[2]);
+      grviewmatrix[2 + 0 * 4] = (GLfloat)-f[0];
+      grviewmatrix[2 + 1 * 4] = (GLfloat)-f[1];
+      grviewmatrix[2 + 2 * 4] = (GLfloat)-f[2];
+      grviewmatrix[2 + 3 * 4] = (GLfloat)(camera_pos_x * f[0] + camera_pos_y * f[1] + camera_pos_z * f[2]);
+      grviewmatrix[3 + 3 * 4] = 1;
+    }
 
   /* Buffer Vertices */
   glGenBuffers(1, &vbo);
@@ -1061,6 +1158,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)NULL);
   glEnableVertexAttribArray(0);
 
+  // maybe fix camera direcetion
   camera_direction[0] = context_struct_.center_x - context_struct_.camera_x;
   camera_direction[1] = context_struct_.center_y - context_struct_.camera_y;
   camera_direction[2] = context_struct_.center_z - context_struct_.camera_z;
