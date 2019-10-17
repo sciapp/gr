@@ -236,7 +236,8 @@ static void seg_xform_rel(double *x, double *y) {}
 
 @implementation GKSView
 
-- (void)interp:(char *)str {
+- (void)interp:(char *)str
+{
   char *s;
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
@@ -577,7 +578,8 @@ static void seg_xform_rel(double *x, double *y) {}
   if (gkss != NULL) memmove(gkss, &saved_gkss, sizeof(gks_state_list_t));
 }
 
-- (id)initWithFrame:(NSRect)frame {
+- (id)initWithFrame:(NSRect)frame
+{
   self = [super initWithFrame:frame];
 
   if (self)
@@ -591,7 +593,8 @@ static void seg_xform_rel(double *x, double *y) {}
   return self;
 }
 
-- (void)drawRect:(NSRect)rect {
+- (void)drawRect:(NSRect)rect
+{
   CGContextRef c;
   CGFloat centerx, centery;
 
@@ -643,7 +646,8 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)setDisplayList:(id)display_list {
+- (void)setDisplayList:(id)display_list
+{
   int len = [display_list length];
   if (len + sizeof(int) > size)
     {
@@ -657,21 +661,25 @@ static void seg_xform_rel(double *x, double *y) {}
   [self setNeedsDisplay:YES];
 }
 
-- (void)setWinID:(int)winid {
+- (void)setWinID:(int)winid
+{
   win_id = winid;
 }
 
-- (int)getWinID {
+- (int)getWinID
+{
   return win_id;
 }
 
-- (IBAction)keep_on_display:(id)sender {
+- (IBAction)keep_on_display:(id)sender
+{
   [[NSNotificationQueue defaultQueue]
       enqueueNotification:[NSNotification notificationWithName:@"GKSViewKeepOnDisplayNotification" object:self]
              postingStyle:NSPostWhenIdle];
 }
 
-- (IBAction)rotate:(id)sender {
+- (IBAction)rotate:(id)sender
+{
   NSRect rect = [[self window] frame];
 
   angle = (int)(angle + 90) % 360;
@@ -687,7 +695,8 @@ static void seg_xform_rel(double *x, double *y) {}
   [self setNeedsDisplay:YES];
 }
 
-- (void)clear {
+- (void)clear
+{
   if (buffer)
     {
       if (context != NULL)
@@ -699,7 +708,8 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)close {
+- (void)close
+{
   gks_close_font(fontfile);
   if (buffer)
     {
@@ -718,7 +728,8 @@ static void seg_xform_rel(double *x, double *y) {}
 
 /* SaveAs Dialog */
 
-- (IBAction)saveDocumentAs:(id)sender {
+- (IBAction)saveDocumentAs:(id)sender
+{
   NSSavePanel *savePanel = [NSSavePanel savePanel];
 
 #if __MAC_OS_X_VERSION_MAX_ALLOWED > 1070
@@ -757,7 +768,8 @@ static void seg_xform_rel(double *x, double *y) {}
 #endif
 }
 
-- (void)savePanelDidEnd:(NSSavePanel *)theSheet returnCode:(int)returnCode contextInfo:(NSPopUpButton *)formatPopUp {
+- (void)savePanelDidEnd:(NSSavePanel *)theSheet returnCode:(int)returnCode contextInfo:(NSPopUpButton *)formatPopUp
+{
   NSString *filename;
   NSData *data;
   NSBitmapImageRep *bitmap;
@@ -955,17 +967,20 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)set_fill_color:(int)color:(CGContextRef)context {
+- (void)set_fill_color:(int)color:(CGContextRef)context
+{
   update_color(color);
   CGContextSetFillColorWithColor(context, p->rgb[color]);
 }
 
-- (void)set_stroke_color:(int)color:(CGContextRef)context {
+- (void)set_stroke_color:(int)color:(CGContextRef)context
+{
   update_color(color);
   CGContextSetStrokeColorWithColor(context, p->rgb[color]);
 }
 
-- (void)resize_window {
+- (void)resize_window
+{
   double max_width, max_height, width, height;
   NSRect rect = [[self window] frame];
   CGSize screen_size;
@@ -1008,7 +1023,8 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)set_clip_rect:(int)tnr {
+- (void)set_clip_rect:(int)tnr
+{
   if (gkss->clip == GKS_K_CLIP)
     clipRect = p->rect[tnr];
   else
@@ -1026,7 +1042,8 @@ static void end_context(CGContextRef context)
   CGContextRestoreGState(context);
 }
 
-- (void)gks_set_shadow {
+- (void)gks_set_shadow
+{
   CGSize offset;
 
   offset.width = gkss->shoff[0];
@@ -1060,7 +1077,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   if (linetype == 0) CGContextClosePath(context);
 }
 
-- (void)polyline:(int)n:(double *)px:(double *)py {
+- (void)polyline:(int)n:(double *)px:(double *)py
+{
   int ln_type, ln_color, i;
   double ln_width;
   int dashlist[10];
@@ -1105,7 +1123,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   end_context(context);
 }
 
-- (void)draw_marker:(double)xn:(double)yn:(int)mtype:(double)mscale:(int)mcolor:(CGContextRef)context {
+- (void)draw_marker:(double)xn:(double)yn:(int)mtype:(double)mscale:(int)mcolor:(CGContextRef)context
+{
   int r, x, y, i;
   double scale, xr, yr;
   int pc, op;
@@ -1209,7 +1228,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   while (op != 0);
 }
 
-- (void)polymarker:(int)n:(double *)px:(double *)py {
+- (void)polymarker:(int)n:(double *)px:(double *)py
+{
   int mk_type, mk_color;
   double mk_size;
   double x, y;
@@ -1343,7 +1363,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   CGPathRelease(shape);
 }
 
-- (void)fillarea:(int)n:(double *)px:(double *)py {
+- (void)fillarea:(int)n:(double *)px:(double *)py
+{
   int fl_inter, fl_style, fl_color, i = 0;
   double x, y;
 
@@ -1412,7 +1433,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
                  :(int)dy
                  :(int)dimx
                  :(int *)colia
-                 :(int)true_color {
+                 :(int)true_color
+{
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
@@ -1508,7 +1530,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   end_context(context);
 }
 
-- (void)drawimage:(int)x:(int)y:(int)width:(int)height:(int *)bitmap {
+- (void)drawimage:(int)x:(int)y:(int)width:(int)height:(int *)bitmap
+{
   CGColorSpaceRef cs;
   CGContextRef bmp;
   CGImageRef image;
@@ -1524,7 +1547,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   end_context(context);
 }
 
-- (NSString *)stringForText:(const char *)text withFontFamilyID:(int)family {
+- (NSString *)stringForText:(const char *)text withFontFamilyID:(int)family
+{
   NSString *string;
   if (family == 30)
     { // ZapfDingbatsITC
@@ -1617,7 +1641,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 }
 
 
-- (void)text:(double)px:(double)py:(char *)text {
+- (void)text:(double)px:(double)py:(char *)text
+{
   int tx_font, tx_prec, tx_color, nchars;
   double xn, yn, xstart, ystart, xrel, yrel, ax, ay;
   NSString *fontName;
@@ -1722,7 +1747,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   end_context(context);
 }
 
-- (_FontInfo)set_font:(int)font {
+- (_FontInfo)set_font:(int)font
+{
   double scale, ux, uy;
   int fontsize;
   double width, height, capheight;
