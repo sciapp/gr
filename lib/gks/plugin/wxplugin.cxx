@@ -681,7 +681,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
-  int i, j, ix, iy, ind, rgb;
+  int i, j, ix, iy, ind;
   int swapx, swapy;
   int red, green, blue;
 
@@ -713,17 +713,17 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   img_dc.SetBackground(*wxWHITE_BRUSH);
   img_dc.Clear();
 
-  for (j = 0; j < height; j++)
+  if (!true_color)
     {
-      iy = dy * j / height;
-      if (swapy) iy = dy - 1 - iy;
-      for (i = 0; i < width; i++)
+      for (j = 0; j < height; j++)
         {
-          ix = dx * i / width;
-          if (swapx) ix = dx - 1 - ix;
-
-          if (!true_color)
+          iy = dy * j / height;
+          if (swapy) iy = dy - 1 - iy;
+          for (i = 0; i < width; i++)
             {
+              ix = dx * i / width;
+              if (swapx) ix = dx - 1 - ix;
+
               ind = colia[iy * dimx + ix];
               red = p->rgb[ind].Red();
               green = p->rgb[ind].Green();
@@ -731,17 +731,26 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
               img_dc.SetPen(wxPen(wxColour(red, green, blue)));
               draw_pixel(img_dc, wxPoint(i, j));
             }
-          else
+        }
+    }
+  else
+    {
+      unsigned char *pixels = (unsigned char *)gks_malloc(width * height * 4);
+      gks_resample((const unsigned char *)colia, pixels, dx, dy, width, height, dimx, swapx, swapy,
+                   gkss->resample_method);
+      for (j = 0; j < height; j++)
+        {
+          for (i = 0; i < width; i++)
             {
-              rgb = colia[iy * dimx + ix];
-
-              red = (rgb & 0xff);
-              green = (rgb & 0xff00) >> 8;
-              blue = (rgb & 0xff0000) >> 16;
-              img_dc.SetPen(wxPen(wxColour(red, green, blue)));
+              unsigned char red = pixels[(j * width + i) * 4 + 0];
+              unsigned char green = pixels[(j * width + i) * 4 + 1];
+              unsigned char blue = pixels[(j * width + i) * 4 + 2];
+              unsigned char alpha = pixels[(j * width + i) * 4 + 3];
+              img_dc.SetPen(wxPen(wxColour(red, green, blue, alpha * gkss->alpha)));
               draw_pixel(img_dc, wxPoint(i, j));
             }
         }
+      gks_free(pixels);
     }
   p->pixmap->DrawBitmap(img, x, y);
 }
@@ -884,17 +893,18 @@ static void interp(char *str)
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
-        case 19: /* set linetype */
-        case 21: /* set polyline color index */
-        case 23: /* set markertype */
-        case 25: /* set polymarker color index */
-        case 30: /* set text color index */
-        case 33: /* set text path */
-        case 36: /* set fillarea interior style */
-        case 37: /* set fillarea style index */
-        case 38: /* set fillarea color index */
-        case 52: /* select normalization transformation */
-        case 53: /* set clipping indicator */
+        case 19:  /* set linetype */
+        case 21:  /* set polyline color index */
+        case 23:  /* set markertype */
+        case 25:  /* set polymarker color index */
+        case 30:  /* set text color index */
+        case 33:  /* set text path */
+        case 36:  /* set fillarea interior style */
+        case 37:  /* set fillarea style index */
+        case 38:  /* set fillarea color index */
+        case 52:  /* select normalization transformation */
+        case 53:  /* set clipping indicator */
+        case 108: /* set resample method */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
@@ -1119,6 +1129,10 @@ static void interp(char *str)
 
           set_xform();
           init_norm_xform();
+          break;
+
+        case 108:
+          gkss->resample_method = i_arr[0];
           break;
 
         case 200:

@@ -741,11 +741,8 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
-  int i, j, ix, iy, ind, rgb;
+  int i, j, ix, iy, ind;
   int swapx, swapy;
-  QImage *img;
-  QImage::Format format;
-  int red, green, blue, alpha;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -766,44 +763,44 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
 
   if (!true_color)
     {
-      format = QImage::Format_RGB32;
-    }
-  else
-    {
-      format = QImage::Format_ARGB32;
-    }
-  img = new QImage(width, height, format);
-
-  for (j = 0; j < height; j++)
-    {
-      iy = dy * j / height;
-      if (swapy) iy = dy - 1 - iy;
-      for (i = 0; i < width; i++)
+      QImage img = QImage(width, height, QImage::Format_RGB32);
+      for (j = 0; j < height; j++)
         {
-          ix = dx * i / width;
-          if (swapx) ix = dx - 1 - ix;
-          if (!true_color)
+          iy = dy * j / height;
+          if (swapy) iy = dy - 1 - iy;
+          for (i = 0; i < width; i++)
             {
+              ix = dx * i / width;
+              if (swapx) ix = dx - 1 - ix;
               ind = colia[iy * dimx + ix];
               ind = FIX_COLORIND(ind);
               QColor transparent_color(p->rgb[ind]);
               transparent_color.setAlpha(p->transparency);
-              img->setPixel(i, j, transparent_color.rgba());
-            }
-          else
-            {
-              rgb = colia[iy * dimx + ix];
-              red = (rgb & 0xff);
-              green = (rgb & 0xff00) >> 8;
-              blue = (rgb & 0xff0000) >> 16;
-              alpha = (rgb & 0xff000000) >> 24;
-              img->setPixel(i, j, qRgba(red, green, blue, alpha));
+              img.setPixel(i, j, transparent_color.rgba());
             }
         }
+      p->pixmap->drawPixmap(x, y, QPixmap::fromImage(img));
     }
-  p->pixmap->drawPixmap(x, y, QPixmap::fromImage(*img));
-
-  delete img;
+  else
+    {
+      unsigned char *pixels = (unsigned char *)gks_malloc(width * height * 4);
+      gks_resample((const unsigned char *)colia, pixels, dx, dy, width, height, dimx, swapx, swapy,
+                   gkss->resample_method);
+      /* TODO: Use QImage::Format_RGBA8888 once GR stops supporting Qt4? */
+      for (j = 0; j < height; j++)
+        {
+          for (i = 0; i < width; i++)
+            {
+              unsigned char red = pixels[(j * width + i) * 4 + 0];
+              unsigned char green = pixels[(j * width + i) * 4 + 1];
+              unsigned char blue = pixels[(j * width + i) * 4 + 2];
+              unsigned char alpha = pixels[(j * width + i) * 4 + 3];
+              ((unsigned int *)pixels)[j * width + i] = (alpha << 24u) + (red << 16u) + (green << 8u) + (blue << 0u);
+            }
+        }
+      p->pixmap->drawPixmap(x, y, QPixmap::fromImage(QImage(pixels, width, height, QImage::Format_ARGB32)));
+      gks_free(pixels);
+    }
 }
 
 static void interp(char *str)
@@ -854,17 +851,18 @@ static void interp(char *str)
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
-        case 19: /* set linetype */
-        case 21: /* set polyline color index */
-        case 23: /* set markertype */
-        case 25: /* set polymarker color index */
-        case 30: /* set text color index */
-        case 33: /* set text path */
-        case 36: /* set fillarea interior style */
-        case 37: /* set fillarea style index */
-        case 38: /* set fillarea color index */
-        case 52: /* select normalization transformation */
-        case 53: /* set clipping indicator */
+        case 19:  /* set linetype */
+        case 21:  /* set polyline color index */
+        case 23:  /* set markertype */
+        case 25:  /* set polymarker color index */
+        case 30:  /* set text color index */
+        case 33:  /* set text path */
+        case 36:  /* set fillarea interior style */
+        case 37:  /* set fillarea style index */
+        case 38:  /* set fillarea color index */
+        case 52:  /* select normalization transformation */
+        case 53:  /* set clipping indicator */
+        case 108: /* set resample method */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
@@ -1101,6 +1099,10 @@ static void interp(char *str)
           resize_window();
           set_xform();
           init_norm_xform();
+          break;
+
+        case 108:
+          gkss->resample_method = i_arr[0];
           break;
 
         case 200:

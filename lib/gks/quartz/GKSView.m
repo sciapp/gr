@@ -284,17 +284,18 @@ static void seg_xform_rel(double *x, double *y) {}
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
-        case 19: /* set linetype */
-        case 21: /* set polyline color index */
-        case 23: /* set markertype */
-        case 25: /* set polymarker color index */
-        case 30: /* set text color index */
-        case 33: /* set text path */
-        case 36: /* set fillarea interior style */
-        case 37: /* set fillarea style index */
-        case 38: /* set fillarea color index */
-        case 52: /* select normalization transformation */
-        case 53: /* set clipping indicator */
+        case 19:  /* set linetype */
+        case 21:  /* set polyline color index */
+        case 23:  /* set markertype */
+        case 25:  /* set polymarker color index */
+        case 30:  /* set text color index */
+        case 33:  /* set text path */
+        case 36:  /* set fillarea interior style */
+        case 37:  /* set fillarea style index */
+        case 38:  /* set fillarea color index */
+        case 52:  /* select normalization transformation */
+        case 53:  /* set clipping indicator */
+        case 108: /* set resample method */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
@@ -535,6 +536,10 @@ static void seg_xform_rel(double *x, double *y) {}
 
           set_xform();
           init_norm_xform();
+          break;
+
+        case 108:
+          gkss->resample_method = i_arr[0];
           break;
 
         case 200:
@@ -1436,28 +1441,27 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   swapx = ix1 > ix2;
   swapy = iy1 > iy2;
 
-  tmpptr = (int *)gks_malloc(dx * dy * sizeof(int));
-  for (i = 0; i < dx; i++)
-    for (j = 0; j < dy; j++)
-      {
-        ix = swapx ? dx - i - 1 : i;
-        iy = swapy ? dy - j - 1 : j;
-        tmpptr[iy * dx + ix] = colia[j * dimx + i];
-      }
-
-  if (dx != width || dy != height)
-    {
-      colia = gks_resize(tmpptr, dx, dy, width, height);
-      free(tmpptr);
-    }
-  else
-    colia = tmpptr;
-
   begin_context(context);
-
-  cs = CGColorSpaceCreateDeviceRGB();
   if (!true_color)
     {
+      tmpptr = (int *)gks_malloc(dx * dy * sizeof(int));
+      for (i = 0; i < dx; i++)
+        for (j = 0; j < dy; j++)
+          {
+            ix = swapx ? dx - i - 1 : i;
+            iy = swapy ? dy - j - 1 : j;
+            tmpptr[iy * dx + ix] = colia[j * dimx + i];
+          }
+
+      if (dx != width || dy != height)
+        {
+          colia = gks_resize(tmpptr, dx, dy, width, height);
+          free(tmpptr);
+        }
+      else
+        colia = tmpptr;
+
+      cs = CGColorSpaceCreateDeviceRGB();
       for (i = 0; i < width * height; i++)
         {
           ind = colia[i];
@@ -1469,14 +1473,26 @@ static void fill_routine(int n, double *px, double *py, int tnr)
     }
   else
     {
+      unsigned char *pixels = (unsigned char *)gks_malloc(width * height * 4);
+      gks_resample((const unsigned char *)colia, pixels, dx, dy, width, height, dimx, swapx, swapy,
+                   gkss->resample_method);
+
+      cs = CGColorSpaceCreateDeviceRGB();
       for (i = 0; i < width * height; i++)
         {
+          unsigned char red = pixels[i * 4 + 0];
+          unsigned char green = pixels[i * 4 + 1];
+          unsigned char blue = pixels[i * 4 + 2];
+          unsigned char alpha = pixels[i * 4 + 3];
           /* Combine pixel alpha component and global transparency */
-          float alpha = gkss->alpha * ((colia[i] >> 24) & 0xff) / 255.0f;
+          float combined_alpha = alpha * gkss->alpha;
           /* Pre-multiply alpha */
-          colia[i] = (int)(alpha * ((colia[i] >> 0) & 0xff)) + ((int)(alpha * ((colia[i] >> 8) & 0xff)) << 8) +
-                     ((int)(alpha * ((colia[i] >> 16) & 0xff)) << 16) + ((int)(alpha * 255) << 24);
+          pixels[i * 4 + 0] = red * combined_alpha / 255.0;
+          pixels[i * 4 + 1] = green * combined_alpha / 255.0;
+          pixels[i * 4 + 2] = blue * combined_alpha / 255.0;
+          pixels[i * 4 + 3] = combined_alpha;
         }
+      colia = (int *)pixels;
     }
 
   bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width, cs, kCGImageAlphaPremultipliedLast);

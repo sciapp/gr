@@ -12,7 +12,7 @@ UNAME := $(shell uname)
 
      GKSOBJS = gks.o gksforbnd.o font.o afm.o util.o dl.o malloc.o \
                error.o mf.o wiss.o win.o ps.o pdf.o socket.o \
-               plugin.o compress.o io.o ft.o
+               plugin.o compress.o io.o ft.o resample.o
 
       GSDEFS =
           CC = cc
@@ -129,7 +129,7 @@ depend:
 	makedepend -Y -- \
 	gks.c gksforbnd.c font.c afm.c util.c dl.c malloc.c error.c \
 	mf.c wiss.c win.c ps.c pdf.c socket.c plugin.c \
-	compress.c io.c ft.c 2> /dev/null
+	compress.c io.c ft.c resample.c 2> /dev/null
 
 .PHONY: default all targets prerequisites plugins install clean depend
 

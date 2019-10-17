@@ -173,17 +173,18 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
         }
       break;
 
-    case 19: /* set linetype */
-    case 21: /* set polyline color index */
-    case 23: /* set markertype */
-    case 25: /* set polymarker color index */
-    case 30: /* set text color index */
-    case 33: /* set text path */
-    case 36: /* set fillarea interior style */
-    case 37: /* set fillarea style index */
-    case 38: /* set fillarea color index */
-    case 52: /* select normalization transformation */
-    case 53: /* set clipping indicator */
+    case 19:  /* set linetype */
+    case 21:  /* set polyline color index */
+    case 23:  /* set markertype */
+    case 25:  /* set polymarker color index */
+    case 30:  /* set text color index */
+    case 33:  /* set text path */
+    case 36:  /* set fillarea interior style */
+    case 37:  /* set fillarea style index */
+    case 38:  /* set fillarea color index */
+    case 52:  /* select normalization transformation */
+    case 53:  /* set clipping indicator */
+    case 108: /* set resample method */
 
       len = 3 * sizeof(int);
       if (d->nbytes + len > d->size) reallocate(d, len);
