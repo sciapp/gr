@@ -4064,5 +4064,5 @@ void gks_set_resample_method(unsigned int flag)
  */
 void gks_inq_resample_method(unsigned int *flag)
 {
-  flag[0] = s->resample_method;
+  *flag = s->resample_method;
 }
