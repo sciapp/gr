@@ -767,8 +767,6 @@ static double sizex = 0;
 
 static int regeneration_flags = 0;
 
-static int projection_flag = GR_PROJECTION_DEFAULT;
-
 static char *xcalloc(int count, int size)
 {
   char *result = (char *)calloc(count, size);
@@ -971,6 +969,7 @@ static void apply_world_xform(double *x, double *y, double *z)
       double u[3] = {u_deri[0] / norm_u, u_deri[1] / norm_u, u_deri[2] / norm_u};
 
       // transformation
+
       xw = (*x - tx.camera_pos_x) * s[0] + (*y - tx.camera_pos_y) * s[1] + (*z - tx.camera_pos_z) * s[2];
       yw = (*x - tx.camera_pos_x) * u[0] + (*y - tx.camera_pos_y) * u[1] + (*z - tx.camera_pos_z) * u[2];
       zw = (tx.camera_pos_x - *x) * f[0] + (tx.camera_pos_y - *y) * f[1] + (tx.camera_pos_z - *z) * f[2];
@@ -3640,6 +3639,7 @@ void gr_perspectivprojection(double near_plane, double far_plane, double fov)
 
   px.near_plane = near_plane;
   px.far_plane = far_plane;
+
   if (0 <= fov && fov <= 180)
     {
       px.fov = fov;
