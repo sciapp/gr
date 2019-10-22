@@ -730,8 +730,7 @@ static double textheight(void)
 
 static double textwidth(char *string, int font, int prec)
 {
-  double cpx, cpy, trx[5], try
-    [5], qx = 0, qy = 0;
+  double cpx, cpy, tx[5], ty[5], qx = 0, qy = 0;
   int errind = 0, n = 0, wkid = 0;
 
   gks_inq_open_ws(1, &errind, &n, &wkid);
@@ -739,9 +738,9 @@ static double textwidth(char *string, int font, int prec)
   gks_set_text_fontprec(font, prec);
   gks_set_text_upvec(0, 1);
 
-  gks_inq_text_extent(wkid, qx, qy, string, &errind, &cpx, &cpy, trx, try);
+  gks_inq_text_extent(wkid, qx, qy, string, &errind, &cpx, &cpy, tx, ty);
 
-  return trx[1] - trx[0];
+  return tx[1] - tx[0];
 }
 
 
