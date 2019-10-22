@@ -93,6 +93,7 @@ extern "C"
   DLLEXPORT void gr_setmarkertype(int);
   DLLEXPORT void gr_inqmarkertype(int *);
   DLLEXPORT void gr_setmarkersize(double);
+  DLLEXPORT void gr_inqmarkersize(double *);
   DLLEXPORT void gr_setmarkercolorind(int);
   DLLEXPORT void gr_inqmarkercolorind(int *);
   DLLEXPORT void gr_settextfontprec(int, int);

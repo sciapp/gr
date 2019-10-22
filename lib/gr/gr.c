@@ -2508,6 +2508,22 @@ void gr_setmarkersize(double size)
 }
 
 /*!
+ *
+ * Inquire the marker size for polymarkers.
+ *
+ * \param[out] size Scale factor applied to the nominal marker size
+ *
+ */
+void gr_inqmarkersize(double *size)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_pmark_size(&errind, size);
+}
+
+/*!
  * Define the color of subsequent polymarker output primitives.
  *
  * \param[in] color The polymarker color index (COLOR < 1256)

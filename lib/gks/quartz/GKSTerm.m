@@ -156,7 +156,8 @@ static void forward_message(void *input_socket, void *output_socket)
 }
 
 @implementation GKSNetworkingForwarderThread
-+ (void)run:(GKSTerm *)gksterm {
++ (void)run:(GKSTerm *)gksterm
+{
   // Handle requests incoming via ZeroMQ
   void *frontend = zmq_socket(context, ZMQ_ROUTER);
   void *backend = zmq_socket(context, ZMQ_DEALER);
@@ -183,7 +184,8 @@ static void forward_message(void *input_socket, void *output_socket)
 
 
 @implementation GKSNetworkingWorkerThread
-+ (void)run:(GKSTerm *)gksterm {
++ (void)run:(GKSTerm *)gksterm
+{
   void *worker = zmq_socket(context, ZMQ_REP);
   zmq_connect(worker, "inproc://:gksterm:");
 
@@ -205,7 +207,8 @@ static bool initialized = NO;
 
 @implementation GKSTerm
 
-- (void)awakeFromNib {
+- (void)awakeFromNib
+{
   int win;
 
   [[NSNotificationCenter defaultCenter] addObserver:self
@@ -226,7 +229,8 @@ static bool initialized = NO;
     }
 }
 
-- (int)GKSQuartzCreateWindow {
+- (int)GKSQuartzCreateWindow
+{
   int win = [self getNextWindowID];
 
   if (win < MAX_WINDOWS)
@@ -263,7 +267,8 @@ static bool initialized = NO;
     return -1;
 }
 
-- (void)windowWillClose:(NSNotification *)notification {
+- (void)windowWillClose:(NSNotification *)notification
+{
   int win;
 
   NSWindow *nswin = [notification object];
@@ -276,15 +281,18 @@ static bool initialized = NO;
     }
 }
 
-- (int)GKSQuartzIsAlive:(int)win {
+- (int)GKSQuartzIsAlive:(int)win
+{
   return window[win] != nil ? 1 : 0;
 }
 
-- (void)GKSQuartzDraw:(int)win displayList:(id)displayList {
+- (void)GKSQuartzDraw:(int)win displayList:(id)displayList
+{
   [view[win] setDisplayList:displayList];
 }
 
-- (void)GKSQuartzCloseWindow:(int)win {
+- (void)GKSQuartzCloseWindow:(int)win
+{
   if (close_window[win])
     {
       if (view[win] != nil)
@@ -302,7 +310,8 @@ static bool initialized = NO;
   curr_win_id = win;
 }
 
-- (IBAction)cascadeWindows:(id)sender {
+- (IBAction)cascadeWindows:(id)sender
+{
   int i;
   NSRect screenFrame = [[NSScreen mainScreen] visibleFrame];
   cascadingPoint = NSMakePoint(NSMinX(screenFrame), NSMaxY(screenFrame));
@@ -317,17 +326,20 @@ static bool initialized = NO;
     }
 }
 
-- (void)setWindowPos:(NSWindow *)plotWindow {
+- (void)setWindowPos:(NSWindow *)plotWindow
+{
   cascadingPoint = [plotWindow cascadeTopLeftFromPoint:cascadingPoint];
 }
 
-- (void)keepOnDisplay:(NSNotification *)aNotification {
+- (void)keepOnDisplay:(NSNotification *)aNotification
+{
   GKSView *tmpView = [aNotification object];
   int win = [tmpView getWinID];
   close_window[win] = NO;
 }
 
-- (int)getNextWindowID {
+- (int)getNextWindowID
+{
   /* Search unused window */
   int unused_win_id;
   for (unused_win_id = 0; unused_win_id < MAX_WINDOWS && window[unused_win_id]; unused_win_id++)
