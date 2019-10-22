@@ -99,6 +99,7 @@ extern "C"
 #define EVAL_XFORM_MATRIX 105
 #define SET_ENCODING 106
 #define INQ_ENCODING 107
+#define SET_RESAMPLE_METHOD 108
 
 #define SET_TEXT_SLANT 200
 #define DRAW_IMAGE 201
@@ -151,6 +152,7 @@ extern "C"
     double blur;
     double alpha;
     double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
+    unsigned int resample_method;
   } gks_state_list_t;
 
   typedef struct gks_list
@@ -214,6 +216,9 @@ extern "C"
   const char *gks_function_name(int routine);
   void gks_report_error(int routine, int errnum);
 
+  DLLEXPORT void gks_resample(const unsigned char *source_image, unsigned char *target_image, size_t source_width,
+                              size_t source_height, size_t target_width, size_t target_height, size_t stride, int swapx,
+                              int swapy, unsigned int resample_method);
   void gks_init_core(gks_state_list_t *list);
   gks_list_t *gks_list_find(gks_list_t *list, int element);
   gks_list_t *gks_list_add(gks_list_t *list, int element, void *ptr);

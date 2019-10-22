@@ -1718,8 +1718,8 @@ void gr_fillarea(int n, double *x, double *y)
  * of the given cell array.
  *
  * \param[in] xmin X coordinate of the lower left point of the rectangle
- * \param[in] ymin Y coordinate of the lower left point of the rectangle
  * \param[in] xmax X coordinate of the upper right point of the rectangle
+ * \param[in] ymin Y coordinate of the lower left point of the rectangle
  * \param[in] ymax Y coordinate of the upper right point of the rectangle
  * \param[in] dimx X dimension of the color index array
  * \param[in] dimy Y dimension of the color index array
@@ -2505,6 +2505,22 @@ void gr_setmarkersize(double size)
   if (ctx) ctx->mszsc = size;
 
   if (flag_graphics) gr_writestream("<setmarkersize size=\"%g\"/>\n", size);
+}
+
+/*!
+ *
+ * Inquire the marker size for polymarkers.
+ *
+ * \param[out] size Scale factor applied to the nominal marker size
+ *
+ */
+void gr_inqmarkersize(double *size)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_pmark_size(&errind, size);
 }
 
 /*!
@@ -9773,4 +9789,84 @@ int gr_findboundary(int n, double *x, double *y, double r, double (*r_function)(
       result = 0;
     }
   return result;
+}
+
+/*!
+ * Set the resample method for resampling.
+ *
+ * \param[in] flag Resample method
+ *
+ * The available options are:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * +------------------------+------------+--------------------+
+ * |GKS_K_RESAMPLE_DEFAULT  | 0x00000000 |default             |
+ * +------------------------+------------+--------------------+
+ * |GKS_K_RESAMPLE_NEAREST  | 0x01010101 |nearest neighbour   |
+ * +------------------------+------------+--------------------+
+ * |GKS_K_RESAMPLE_LINEAR   | 0x02020202 |linear              |
+ * +------------------------+------------+--------------------+
+ * |GKS_K_RESAMPLE_LANCZOS  | 0x03030303 |Lanczos             |
+ * +------------------------+------------+--------------------+
+ *
+ * \endverbatim
+ *
+ * Alternatively, combinations of these methods can be selected for horizontal or vertical upsampling or downsampling:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_VERTICAL_DEFAULT     | 0x00000000 | default for vertical upsampling              |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_HORIZONTAL_DEFAULT   | 0x00000000 | default for horizontal upsampling            |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_VERTICAL_DEFAULT   | 0x00000000 | default for vertical downsampling            |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_HORIZONTAL_DEFAULT | 0x00000000 | default for horizontal downsampling          |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_VERTICAL_NEAREST     | 0x00000001 | nearest neighbor for vertical upsampling     |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_HORIZONTAL_NEAREST   | 0x00000100 | nearest neighbor for horizontal upsampling   |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_VERTICAL_NEAREST   | 0x00010000 | nearest neighbor for vertical downsampling   |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_HORIZONTAL_NEAREST | 0x01000000 | nearest neighbor for horizontal downsampling |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_VERTICAL_LINEAR      | 0x00000002 | linear for vertical upsampling               |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_HORIZONTAL_LINEAR    | 0x00000200 | linear for horizontal upsampling             |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_VERTICAL_LINEAR    | 0x00020000 | linear for vertical downsampling             |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_HORIZONTAL_LINEAR  | 0x02000000 | linear for horizontal downsampling           |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_VERTICAL_LANCZOS     | 0x00000003 | lanczos for vertical upsampling              |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_UPSAMPLE_HORIZONTAL_LANCZOS   | 0x00000300 | lanczos for horizontal upsampling            |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_VERTICAL_LANCZOS   | 0x00030000 | lanczos for vertical downsampling            |
+ * +-------------------------------------+------------+----------------------------------------------+
+ * | GKS_K_DOWNSAMPLE_HORIZONTAL_LANCZOS | 0x03000000 | lanczos for horizontal downsampling          |
+ * +-------------------------------------+------------+----------------------------------------------+
+ *
+ * \endverbatim
+ */
+void gr_setresamplemethod(unsigned int flag)
+{
+  check_autoinit;
+
+  gks_set_resample_method(flag);
+}
+
+/*!
+ * Inquire the resample flag status.
+ *
+ * \returns Resample flag
+ */
+void gr_inqresamplemethod(unsigned int *flag)
+{
+  check_autoinit;
+
+  gks_inq_resample_method(flag);
 }

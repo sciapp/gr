@@ -233,6 +233,9 @@ const char *gks_function_name(int routine)
     case 107:
       name = "INQ_ENCODING";
       break;
+    case 108:
+      name = "SET_RESAMPLE_METHOD";
+      break;
     case 200:
       name = "SET_TEXT_SLANT";
       break;
@@ -454,6 +457,9 @@ void gks_report_error(int routine, int errnum)
       break;
     case 404:
       message = "Subimage limitation reached in routine %s";
+      break;
+    case 501:
+      message = "Resample method is invalid in routine %s";
       break;
     case 901:
       message = "Open failed in routine %s";

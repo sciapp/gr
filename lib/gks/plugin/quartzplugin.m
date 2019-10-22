@@ -222,7 +222,8 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
 @end
 
 @implementation gks_quartz_thread
-+ (void)update:(id)param {
++ (void)update:(id)param
+{
   int didDie = 0;
   wss_wrapper *wrapper = (wss_wrapper *)param;
   ws_state_list *wss = [wrapper wss];

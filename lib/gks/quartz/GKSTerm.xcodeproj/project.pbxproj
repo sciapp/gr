@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		13C7C4E3200F4851007A6396 /* libzmq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 13C7C4E2200F4851007A6396 /* libzmq.a */; };
+		13E82E0423507CA0004A4130 /* resample.c in Sources */ = {isa = PBXBuildFile; fileRef = 13E82E0323507CA0004A4130 /* resample.c */; };
 		202DC483101F0B9F00A39179 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 202DC482101F0B9F00A39179 /* QuartzCore.framework */; };
 		20A794F5106BB92800D5CF6E /* GKSTerm.icns in Resources */ = {isa = PBXBuildFile; fileRef = 20A794F4106BB92800D5CF6E /* GKSTerm.icns */; };
 		20A87F351062253500F6E07D /* ExtendSavePanel.nib in Resources */ = {isa = PBXBuildFile; fileRef = 20A87F331062253500F6E07D /* ExtendSavePanel.nib */; };
@@ -33,6 +34,7 @@
 		13C7C4E1200F47A4007A6396 /* zmq.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zmq.h; path = ../../../3rdparty/build/include/zmq.h; sourceTree = "<group>"; };
 		13C7C4E2200F4851007A6396 /* libzmq.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libzmq.a; path = ../../../3rdparty/build/lib/libzmq.a; sourceTree = "<group>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
+		13E82E0323507CA0004A4130 /* resample.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = resample.c; path = ../resample.c; sourceTree = "<group>"; };
 		202DC482101F0B9F00A39179 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = /System/Library/Frameworks/QuartzCore.framework; sourceTree = "<absolute>"; };
 		2093412D10285A27004FC05A /* gkscore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gkscore.h; path = ../gkscore.h; sourceTree = SOURCE_ROOT; };
 		2093412E10285A27004FC05A /* gksquartz.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gksquartz.h; path = ../gksquartz.h; sourceTree = SOURCE_ROOT; };
@@ -129,6 +131,7 @@
 		29B97315FDCFA39411CA2CEA /* Other Sources */ = {
 			isa = PBXGroup;
 			children = (
+				13E82E0323507CA0004A4130 /* resample.c */,
 				13C7C4E1200F47A4007A6396 /* zmq.h */,
 				6629D22816E0F03F009E93C2 /* ft.c */,
 				20F444700FCC0F0000FC6780 /* main.m */,
@@ -203,6 +206,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* GKSTerm */;
@@ -241,6 +245,7 @@
 				6625B76210298C790059B278 /* util.c in Sources */,
 				6625B77410298D570059B278 /* font.c in Sources */,
 				6625B77710298D6C0059B278 /* io.c in Sources */,
+				13E82E0423507CA0004A4130 /* resample.c in Sources */,
 				6641A634102AC967001FB593 /* dl.c in Sources */,
 				666F41B0102DB39500B8F004 /* GKSView.m in Sources */,
 				6629D22916E0F03F009E93C2 /* ft.c in Sources */,

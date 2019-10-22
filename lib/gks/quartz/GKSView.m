@@ -236,7 +236,8 @@ static void seg_xform_rel(double *x, double *y) {}
 
 @implementation GKSView
 
-- (void)interp:(char *)str {
+- (void)interp:(char *)str
+{
   char *s;
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
@@ -284,17 +285,18 @@ static void seg_xform_rel(double *x, double *y) {}
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
-        case 19: /* set linetype */
-        case 21: /* set polyline color index */
-        case 23: /* set markertype */
-        case 25: /* set polymarker color index */
-        case 30: /* set text color index */
-        case 33: /* set text path */
-        case 36: /* set fillarea interior style */
-        case 37: /* set fillarea style index */
-        case 38: /* set fillarea color index */
-        case 52: /* select normalization transformation */
-        case 53: /* set clipping indicator */
+        case 19:  /* set linetype */
+        case 21:  /* set polyline color index */
+        case 23:  /* set markertype */
+        case 25:  /* set polymarker color index */
+        case 30:  /* set text color index */
+        case 33:  /* set text path */
+        case 36:  /* set fillarea interior style */
+        case 37:  /* set fillarea style index */
+        case 38:  /* set fillarea color index */
+        case 52:  /* select normalization transformation */
+        case 53:  /* set clipping indicator */
+        case 108: /* set resample method */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
@@ -537,6 +539,10 @@ static void seg_xform_rel(double *x, double *y) {}
           init_norm_xform();
           break;
 
+        case 108:
+          gkss->resample_method = i_arr[0];
+          break;
+
         case 200:
           gkss->txslant = f_arr_1[0];
           break;
@@ -572,7 +578,8 @@ static void seg_xform_rel(double *x, double *y) {}
   if (gkss != NULL) memmove(gkss, &saved_gkss, sizeof(gks_state_list_t));
 }
 
-- (id)initWithFrame:(NSRect)frame {
+- (id)initWithFrame:(NSRect)frame
+{
   self = [super initWithFrame:frame];
 
   if (self)
@@ -586,7 +593,8 @@ static void seg_xform_rel(double *x, double *y) {}
   return self;
 }
 
-- (void)drawRect:(NSRect)rect {
+- (void)drawRect:(NSRect)rect
+{
   CGContextRef c;
   CGFloat centerx, centery;
 
@@ -638,7 +646,8 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)setDisplayList:(id)display_list {
+- (void)setDisplayList:(id)display_list
+{
   int len = [display_list length];
   if (len + sizeof(int) > size)
     {
@@ -652,21 +661,25 @@ static void seg_xform_rel(double *x, double *y) {}
   [self setNeedsDisplay:YES];
 }
 
-- (void)setWinID:(int)winid {
+- (void)setWinID:(int)winid
+{
   win_id = winid;
 }
 
-- (int)getWinID {
+- (int)getWinID
+{
   return win_id;
 }
 
-- (IBAction)keep_on_display:(id)sender {
+- (IBAction)keep_on_display:(id)sender
+{
   [[NSNotificationQueue defaultQueue]
       enqueueNotification:[NSNotification notificationWithName:@"GKSViewKeepOnDisplayNotification" object:self]
              postingStyle:NSPostWhenIdle];
 }
 
-- (IBAction)rotate:(id)sender {
+- (IBAction)rotate:(id)sender
+{
   NSRect rect = [[self window] frame];
 
   angle = (int)(angle + 90) % 360;
@@ -682,7 +695,8 @@ static void seg_xform_rel(double *x, double *y) {}
   [self setNeedsDisplay:YES];
 }
 
-- (void)clear {
+- (void)clear
+{
   if (buffer)
     {
       if (context != NULL)
@@ -694,7 +708,8 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)close {
+- (void)close
+{
   gks_close_font(fontfile);
   if (buffer)
     {
@@ -713,7 +728,8 @@ static void seg_xform_rel(double *x, double *y) {}
 
 /* SaveAs Dialog */
 
-- (IBAction)saveDocumentAs:(id)sender {
+- (IBAction)saveDocumentAs:(id)sender
+{
   NSSavePanel *savePanel = [NSSavePanel savePanel];
 
 #if __MAC_OS_X_VERSION_MAX_ALLOWED > 1070
@@ -752,7 +768,8 @@ static void seg_xform_rel(double *x, double *y) {}
 #endif
 }
 
-- (void)savePanelDidEnd:(NSSavePanel *)theSheet returnCode:(int)returnCode contextInfo:(NSPopUpButton *)formatPopUp {
+- (void)savePanelDidEnd:(NSSavePanel *)theSheet returnCode:(int)returnCode contextInfo:(NSPopUpButton *)formatPopUp
+{
   NSString *filename;
   NSData *data;
   NSBitmapImageRep *bitmap;
@@ -950,17 +967,20 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)set_fill_color:(int)color:(CGContextRef)context {
+- (void)set_fill_color:(int)color:(CGContextRef)context
+{
   update_color(color);
   CGContextSetFillColorWithColor(context, p->rgb[color]);
 }
 
-- (void)set_stroke_color:(int)color:(CGContextRef)context {
+- (void)set_stroke_color:(int)color:(CGContextRef)context
+{
   update_color(color);
   CGContextSetStrokeColorWithColor(context, p->rgb[color]);
 }
 
-- (void)resize_window {
+- (void)resize_window
+{
   double max_width, max_height, width, height;
   NSRect rect = [[self window] frame];
   CGSize screen_size;
@@ -1003,7 +1023,8 @@ static void seg_xform_rel(double *x, double *y) {}
     }
 }
 
-- (void)set_clip_rect:(int)tnr {
+- (void)set_clip_rect:(int)tnr
+{
   if (gkss->clip == GKS_K_CLIP)
     clipRect = p->rect[tnr];
   else
@@ -1021,7 +1042,8 @@ static void end_context(CGContextRef context)
   CGContextRestoreGState(context);
 }
 
-- (void)gks_set_shadow {
+- (void)gks_set_shadow
+{
   CGSize offset;
 
   offset.width = gkss->shoff[0];
@@ -1055,7 +1077,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   if (linetype == 0) CGContextClosePath(context);
 }
 
-- (void)polyline:(int)n:(double *)px:(double *)py {
+- (void)polyline:(int)n:(double *)px:(double *)py
+{
   int ln_type, ln_color, i;
   double ln_width;
   int dashlist[10];
@@ -1100,7 +1123,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   end_context(context);
 }
 
-- (void)draw_marker:(double)xn:(double)yn:(int)mtype:(double)mscale:(int)mcolor:(CGContextRef)context {
+- (void)draw_marker:(double)xn:(double)yn:(int)mtype:(double)mscale:(int)mcolor:(CGContextRef)context
+{
   int r, x, y, i;
   double scale, xr, yr;
   int pc, op;
@@ -1204,7 +1228,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   while (op != 0);
 }
 
-- (void)polymarker:(int)n:(double *)px:(double *)py {
+- (void)polymarker:(int)n:(double *)px:(double *)py
+{
   int mk_type, mk_color;
   double mk_size;
   double x, y;
@@ -1338,7 +1363,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   CGPathRelease(shape);
 }
 
-- (void)fillarea:(int)n:(double *)px:(double *)py {
+- (void)fillarea:(int)n:(double *)px:(double *)py
+{
   int fl_inter, fl_style, fl_color, i = 0;
   double x, y;
 
@@ -1407,7 +1433,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
                  :(int)dy
                  :(int)dimx
                  :(int *)colia
-                 :(int)true_color {
+                 :(int)true_color
+{
   double x1, y1, x2, y2;
   int ix1, ix2, iy1, iy2;
   int x, y, width, height;
@@ -1436,28 +1463,27 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   swapx = ix1 > ix2;
   swapy = iy1 > iy2;
 
-  tmpptr = (int *)gks_malloc(dx * dy * sizeof(int));
-  for (i = 0; i < dx; i++)
-    for (j = 0; j < dy; j++)
-      {
-        ix = swapx ? dx - i - 1 : i;
-        iy = swapy ? dy - j - 1 : j;
-        tmpptr[iy * dx + ix] = colia[j * dimx + i];
-      }
-
-  if (dx != width || dy != height)
-    {
-      colia = gks_resize(tmpptr, dx, dy, width, height);
-      free(tmpptr);
-    }
-  else
-    colia = tmpptr;
-
   begin_context(context);
-
-  cs = CGColorSpaceCreateDeviceRGB();
   if (!true_color)
     {
+      tmpptr = (int *)gks_malloc(dx * dy * sizeof(int));
+      for (i = 0; i < dx; i++)
+        for (j = 0; j < dy; j++)
+          {
+            ix = swapx ? dx - i - 1 : i;
+            iy = swapy ? dy - j - 1 : j;
+            tmpptr[iy * dx + ix] = colia[j * dimx + i];
+          }
+
+      if (dx != width || dy != height)
+        {
+          colia = gks_resize(tmpptr, dx, dy, width, height);
+          free(tmpptr);
+        }
+      else
+        colia = tmpptr;
+
+      cs = CGColorSpaceCreateDeviceRGB();
       for (i = 0; i < width * height; i++)
         {
           ind = colia[i];
@@ -1469,14 +1495,26 @@ static void fill_routine(int n, double *px, double *py, int tnr)
     }
   else
     {
+      unsigned char *pixels = (unsigned char *)gks_malloc(width * height * 4);
+      gks_resample((const unsigned char *)colia, pixels, dx, dy, width, height, dimx, swapx, swapy,
+                   gkss->resample_method);
+
+      cs = CGColorSpaceCreateDeviceRGB();
       for (i = 0; i < width * height; i++)
         {
+          unsigned char red = pixels[i * 4 + 0];
+          unsigned char green = pixels[i * 4 + 1];
+          unsigned char blue = pixels[i * 4 + 2];
+          unsigned char alpha = pixels[i * 4 + 3];
           /* Combine pixel alpha component and global transparency */
-          float alpha = gkss->alpha * ((colia[i] >> 24) & 0xff) / 255.0f;
+          float combined_alpha = alpha * gkss->alpha;
           /* Pre-multiply alpha */
-          colia[i] = (int)(alpha * ((colia[i] >> 0) & 0xff)) + ((int)(alpha * ((colia[i] >> 8) & 0xff)) << 8) +
-                     ((int)(alpha * ((colia[i] >> 16) & 0xff)) << 16) + ((int)(alpha * 255) << 24);
+          pixels[i * 4 + 0] = red * combined_alpha / 255.0;
+          pixels[i * 4 + 1] = green * combined_alpha / 255.0;
+          pixels[i * 4 + 2] = blue * combined_alpha / 255.0;
+          pixels[i * 4 + 3] = combined_alpha;
         }
+      colia = (int *)pixels;
     }
 
   bitmap = CGBitmapContextCreate(colia, width, height, 8, 4 * width, cs, kCGImageAlphaPremultipliedLast);
@@ -1492,7 +1530,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   end_context(context);
 }
 
-- (void)drawimage:(int)x:(int)y:(int)width:(int)height:(int *)bitmap {
+- (void)drawimage:(int)x:(int)y:(int)width:(int)height:(int *)bitmap
+{
   CGColorSpaceRef cs;
   CGContextRef bmp;
   CGImageRef image;
@@ -1508,7 +1547,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   end_context(context);
 }
 
-- (NSString *)stringForText:(const char *)text withFontFamilyID:(int)family {
+- (NSString *)stringForText:(const char *)text withFontFamilyID:(int)family
+{
   NSString *string;
   if (family == 30)
     { // ZapfDingbatsITC
@@ -1601,7 +1641,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 }
 
 
-- (void)text:(double)px:(double)py:(char *)text {
+- (void)text:(double)px:(double)py:(char *)text
+{
   int tx_font, tx_prec, tx_color, nchars;
   double xn, yn, xstart, ystart, xrel, yrel, ax, ay;
   NSString *fontName;
@@ -1706,7 +1747,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   end_context(context);
 }
 
-- (_FontInfo)set_font:(int)font {
+- (_FontInfo)set_font:(int)font
+{
   double scale, ux, uy;
   int fontsize;
   double width, height, capheight;

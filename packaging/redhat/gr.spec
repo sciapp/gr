@@ -117,8 +117,8 @@ mkdir -p %{THIRDPARTY_SRC}
 make -C 3rdparty GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
 make -C 3rdparty extras GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
 %if 0%{?__jcns}
-export CC=/usr/local/gcc/bin/gcc49
-export CXX=/usr/local/gcc/bin/g++49
+export CC=/usr/local/gcc/bin/gcc74
+export CXX=/usr/local/gcc/bin/g++74
 %endif
 make GRDIR=%{grdir} \
      EXTRA_CFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
