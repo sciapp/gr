@@ -1652,9 +1652,11 @@ GR3API int gr3_export(const char *filename, int width, int height)
 /*!
  * This function fills a bitmap of the given size (width x height) with the
  * image created by gr3.
- * \param [in] bitmap       The bitmap that the function has to fill
+ * \param [in] pixmap       The pixmap that the function has to fill
  * \param [in] width        The width of the bitmap
  * \param [in] height       The height of the bitmap
+ * \param [in] use_alpha    Whether to include an alpha component in the pixmap
+ * \param [in] ssaa_factor  The factor to use for supersampling antialiasing
  * \returns
  * - ::GR3_ERROR_NONE                     on success
  * - ::GR3_ERROR_NOT_INITIALIZED          if gr3 has not been initialized

@@ -666,7 +666,7 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
 /*!
  * Draw the given triangles using the current GR colormap
  * \param [in]  n          number of triangles
- * \param [in]  triangles  pointer to an array of 3*3*n float values
+ * \param [in]  positions  pointer to an array of 3*3*n float values
  */
 GR3API void gr3_drawtrianglesurface(int n, const float *positions)
 {
@@ -781,6 +781,8 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
  *                            colormap. If it is negative, the variable will be set to the actual occuring maximum and
  *                            that value will be used instead. If dmax_ptr is NULL, it will be ignored.
  *
+ * \verbatim embed:rst:leading-asterisk
+ *
  * Available algorithms are:
  *
  * +---------------------+---+-----------------------------+
@@ -790,6 +792,8 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
  * +---------------------+---+-----------------------------+
  * |GR_VOLUME_MIP        |  2|maximum intensity projection |
  * +---------------------+---+-----------------------------+
+ *
+ * \endverbatim
  */
 GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr)
 {
