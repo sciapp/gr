@@ -296,8 +296,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
       switch (op)
         {
         case 1: /* point */
-          cairo_rectangle(p->cr, x, y, 1.0, 1.0);
-          cairo_stroke(p->cr);
+          cairo_rectangle(p->cr, round(x), round(y), 1.0, 1.0);
+          cairo_fill(p->cr);
           break;
 
         case 2: /* line */
