@@ -451,39 +451,59 @@ then
   tmpsrc=`mktemp /tmp/a$$XXXXX.c`
   tmpver=`mktemp /tmp/a$$XXXXX.txt`
   cat >$tmpsrc << eof
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+#ifndef __STDC_CONSTANT_MACROS
+#define __STDC_CONSTANT_MACROS
+#endif
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/mathematics.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
-
+#ifdef __cplusplus
+}
+#endif
 int main(void)
 {
-   avcodec_register_all();
-   exit(0);
+  int minimum_version = (57 << 16) + (48 << 8) + 100;
+  if (avcodec_version() < minimum_version) {
+    /* ffmpeg version is lower than 3.1 */
+    return 1;
+  }
+
+  AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_VP8);
+  AVCodecContext *ctx = avcodec_alloc_context3(codec);
+  avcodec_free_context(&ctx);
+
+  /* av_version_info() is the 'informative version string' but should not be parsed */
+  fprintf(stderr, "%s\n", av_version_info());
+  return 0;
 }
 eof
-  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx -lz"
+  cmd="${CXX} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lavformat -lavcodec -lswscale -lavutil -lz"
+  cmd_link_encoder="${CXX} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -lavformat -lavcodec -lswscale -lavutil -lz -lvpx -ltheora -logg -lopenh264"
   if [ `uname` = "Linux" ]
   then
     cmd="$cmd -lpthread -lm"
+    cmd_link_encoder="$cmd_link_encoder -lpthread -lm"
   elif [ `uname` = "Darwin" ]
   then
-    cmd="$cmd -liconv"
+    cmd="$cmd -liconv -framework VideoToolbox -framework CoreVideo -framework CoreFoundation -framework CoreServices -framework CoreMedia"
+    cmd_link_encoder="$cmd_link_encoder -liconv -framework VideoToolbox -framework CoreVideo -framework CoreFoundation -framework CoreServices -framework CoreMedia"
   fi
-  $cmd >/dev/null 2>&1
-  if [ $? -ne 0 ]; then
+  if $cmd >/dev/null 2>&1 && $tmpout >$tmpver 2>&1; then
+    info="${green}yes${normal} [version `cat $tmpver | head -1`]"
+    avdefs="AVDEFS= AVLIBS=-lavformat AVLIBS+=-lavcodec AVLIBS+=-lswscale AVLIBS+=-lavutil"
+  elif $cmd_link_encoder >/dev/null 2>&1 && $tmpout >$tmpver 2>&1; then
+    info="${green}yes${normal} [version `cat $tmpver | head -1`, linking encoders]"
+    avdefs="AVDEFS= AVLIBS=-lavformat AVLIBS+=-lavcodec AVLIBS+=-lswscale AVLIBS+=-lavutil AVLIBS+=-lvpx AVLIBS+=-ltheora AVLIBS+=-logg AVLIBS+=-lopenh264"
+  else
     avdefs="AVDEFS=-DNO_AV AVLIBS="
     info="${red} no${normal} [required APIs not found]"
     ret=1
-  else
-    if [ "`which ffmpeg 2>/dev/null`" != "" ]
-    then
-      ffmpeg -version >$tmpver 2>&1
-    else
-      cat /dev/null >$tmpver
-    fi
-    info="${green}yes${normal} [`cat $tmpver | head -1`]"
   fi
 else
   avdefs="AVDEFS=-DNO_AV AVLIBS="

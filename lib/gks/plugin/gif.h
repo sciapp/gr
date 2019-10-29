@@ -1,30 +1,14 @@
 #ifndef _GIF_H_
 #define _GIF_H_
 
-#define FORMAT_RGB (3)
-#define FORMAT_RGBA (4)
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-  typedef struct
-  {
-    FILE *fp;
-    int width;
-    int height;
-  } gif_writer;
-
-
-  /* Open a GIF file for writing. */
-  void gif_open(gif_writer *gwp, const char *file_name);
-  /* Write the image rgb_image with the given width, height and format (either FORMAT_RGB or FORMAT_RGBA) into the GIF
-   * file and wait delay centiseconds before showing the next frame. */
-  void gif_write(gif_writer *gwp, const unsigned char *rgb_image, unsigned short width, unsigned short height,
-                 int format, int delay);
-  /* Close the GIF file. */
-  void gif_close(gif_writer *gwp);
+  void median_cut(unsigned char *pixels, unsigned char *color_table, int num_pixels, int num_colors, int num_channels);
+  unsigned char color_index_for_rgb(const unsigned char *rgb_pixel, const unsigned char *color_table,
+                                    int color_table_size, int num_channels);
 
 #ifdef __cplusplus
 }

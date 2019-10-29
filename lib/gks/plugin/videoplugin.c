@@ -12,7 +12,6 @@
 
 #include "gks.h"
 #include "gkscore.h"
-#include "gif.h"
 
 #if !defined(NO_AV)
 #include "vc.h"
@@ -47,10 +46,10 @@ typedef struct ws_state_list_t
   char *path;
   char *mem_path;
   int *mem;
-  long int width, height, framerate;
+  int width, height, framerate;
   int wtype;
   movie_t movie;
-  gif_writer *gif;
+  frame_t frame;
   void *cairo_ws_state_list;
   int video_plugin_initialized;
   int user_defined_resolution;
@@ -60,17 +59,43 @@ static ws_state_list *p;
 
 static void close_page(void)
 {
-  if ((p->wtype == 120 || p->wtype == 160 || p->wtype == 161 || p->wtype == 162) && p->movie)
+  if ((p->wtype == 120 || p->wtype == 130 || p->wtype == 160 || p->wtype == 161 || p->wtype == 162) && p->movie)
     {
       vc_movie_finish(p->movie);
-      free(p->movie);
-      p->movie = NULL;
     }
-  else if (p->wtype == 130 && p->gif)
+  gks_free(p->movie);
+  gks_free(p->frame);
+}
+
+static void open_page()
+{
+  int width, height;
+  width = p->mem[0];
+  height = p->mem[1];
+  char path[MAXPATHLEN];
+
+  if (p->wtype == 120)
     {
-      gif_close(p->gif);
-      free(p->gif);
+      gks_filepath(path, p->path, "mov", 0, 0);
     }
+  else if (p->wtype == 130)
+    {
+      gks_filepath(path, p->path, "gif", 0, 0);
+    }
+  else if (p->wtype == 160)
+    {
+      gks_filepath(path, p->path, "mp4", 0, 0);
+    }
+  else if (p->wtype == 161)
+    {
+      gks_filepath(path, p->path, "webm", 0, 0);
+    }
+  else if (p->wtype == 162)
+    {
+      gks_filepath(path, p->path, "ogg", 0, 0);
+    }
+  p->movie = vc_movie_create(path, p->framerate, 4000000, width, height);
+  p->frame = (frame_t)gks_malloc(sizeof(struct frame_t_));
 }
 
 static void write_page(void)
@@ -83,35 +108,6 @@ static void write_page(void)
   height = p->mem[1];
 
   mem = *((unsigned char **)(p->mem + 3));
-  if (p->wtype != 130 && !p->movie)
-    {
-      char path[MAXPATHLEN];
-      if (p->wtype == 120)
-        {
-          gks_filepath(path, p->path, "mov", 0, 0);
-        }
-      else if (p->wtype == 160)
-        {
-          gks_filepath(path, p->path, "mp4", 0, 0);
-        }
-      else if (p->wtype == 161)
-        {
-          gks_filepath(path, p->path, "webm", 0, 0);
-        }
-      else if (p->wtype == 162)
-        {
-          gks_filepath(path, p->path, "ogg", 0, 0);
-        }
-      p->movie = vc_movie_create(path, p->framerate, 4000000);
-    }
-  else if (p->wtype == 130 && !p->gif)
-    {
-      char path[MAXPATHLEN];
-      gks_filepath(path, p->path, "gif", 0, 0);
-      p->gif = (gif_writer *)gks_malloc(sizeof(gif_writer));
-      gif_open(p->gif, path);
-    }
-  frame_t frame = (frame_t)gks_malloc(sizeof(struct frame_t_));
   for (i = 0; i < height; i++)
     {
       for (j = 0; j < width; j++)
@@ -129,19 +125,17 @@ static void write_page(void)
             }
         }
     }
-  if (p->wtype != 130 && p->movie)
+  if (p->movie)
     {
-      frame->data = mem;
-      frame->width = width;
-      frame->height = height;
-      vc_movie_append_frame(p->movie, frame);
+      p->frame->data = mem;
+      p->frame->width = width;
+      p->frame->height = height;
+      vc_movie_append_frame(p->movie, p->frame);
     }
-  else if (p->wtype == 130 && p->gif)
+  else
     {
-      int delay = 100 / p->framerate;
-      gif_write(p->gif, mem, width, height, FORMAT_RGBA, delay);
+      fprintf(stderr, "Failed to append video frame\n");
     }
-  gks_free(frame);
 }
 
 void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
@@ -201,16 +195,16 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
 
       if (framerate > 0)
         {
-          p->framerate = framerate;
+          p->framerate = (int)framerate;
         }
       if (width > 0)
         {
-          p->width = width;
+          p->width = (int)width;
           p->user_defined_resolution = 1;
         }
       if (height > 0)
         {
-          p->height = height;
+          p->height = (int)height;
           p->user_defined_resolution = 1;
         }
 
@@ -225,6 +219,8 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       chars = p->mem_path;
       /* set wstype for cairo png in memory */
       ia[2] = 143;
+
+      open_page();
 
       p->video_plugin_initialized = 1;
       break;

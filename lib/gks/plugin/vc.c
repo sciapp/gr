@@ -3,194 +3,267 @@
 #include <stdio.h>
 
 #include "vc.h"
+#include "gif.h"
+#include "gkscore.h"
 
-movie_t vc_movie_create(const char *path, int framerate, int bitrate)
+static void encode_frame(movie_t movie)
 {
-  movie_t movie = (movie_t)malloc(sizeof(struct movie_t_));
-
-  av_register_all();
-  av_log_set_level(AV_LOG_QUIET);
-
-  movie->path = path;
-
-  avformat_alloc_output_context2(&movie->fmt_ctx, NULL, NULL, movie->path);
-
-  movie->out_fmt = movie->fmt_ctx->oformat;
-  movie->video_st = NULL;
-
-  if (movie->out_fmt->video_codec == AV_CODEC_ID_NONE)
+  int ret;
+  AVPacket pkt = {0};
+  av_init_packet(&pkt);
+  ret = avcodec_send_frame(movie->cdc_ctx, movie->frame);
+  if (ret < 0)
     {
-      fprintf(stderr, "codec not found from given path\n");
-      exit(1);
+      fprintf(stderr, "Error sending frame %ld for encoding\n", movie->frame->pts);
+      return;
     }
-
-  movie->cdc = avcodec_find_encoder(movie->out_fmt->video_codec);
-  if (!(movie->cdc))
+  while (ret >= 0)
     {
-      fprintf(stderr, "codec not found\n");
-      exit(1);
+      ret = avcodec_receive_packet(movie->cdc_ctx, &pkt);
+      if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+        {
+          return;
+        }
+      else if (ret < 0)
+        {
+          fprintf(stderr, "Error during encoding of frame %ld\n", movie->frame->pts);
+          return;
+        }
+      av_packet_rescale_ts(&pkt, movie->cdc_ctx->time_base, movie->video_st->time_base);
+      pkt.stream_index = movie->video_st->index;
+
+      ret = av_interleaved_write_frame(movie->fmt_ctx, &pkt);
+      av_packet_unref(&pkt);
     }
-
-  movie->video_st = avformat_new_stream(movie->fmt_ctx, movie->cdc);
-  if (!movie->video_st)
-    {
-      fprintf(stderr, "Could not alloc stream\n");
-      exit(1);
-    }
-
-  movie->cdc_ctx = movie->video_st->codec;
-
-  movie->cdc_ctx->codec_id = movie->out_fmt->video_codec;
-  movie->cdc_ctx->bit_rate = bitrate;
-  movie->cdc_ctx->time_base.num = 1;
-  movie->cdc_ctx->time_base.den = framerate;
-  movie->cdc_ctx->gop_size = 12;
-  movie->cdc_ctx->pix_fmt = PIX_FMT_YUV420P;
-  movie->num_frames = 0;
-
-  return movie;
 }
 
 void vc_movie_append_frame(movie_t movie, frame_t frame)
 {
-  int got_output, ret;
-  struct SwsContext *sws_ctx;
-  AVPacket pkt;
-  AVPicture src_picture;
+  int is_gif = movie->cdc_ctx->pix_fmt == AV_PIX_FMT_PAL8;
+  int height = movie->cdc_ctx->height;
+  int width = movie->cdc_ctx->width;
+  int i;
 
-  if (movie->num_frames == 0)
+  if (!movie->sws_ctx)
     {
-
-      movie->cdc_ctx->width = frame->width;
-      movie->cdc_ctx->height = frame->height;
-
-      if (movie->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER) movie->cdc_ctx->flags |= CODEC_FLAG_GLOBAL_HEADER;
-
-      if (avcodec_open2(movie->cdc_ctx, movie->cdc, NULL) < 0)
+      int dst_pix_format = movie->cdc_ctx->pix_fmt;
+      if (is_gif)
         {
-          fprintf(stderr, "could not open video codec\n");
-          exit(1);
+          dst_pix_format = AV_PIX_FMT_RGBA;
         }
-
-      movie->frame = avcodec_alloc_frame();
-      if (!movie->frame)
+      movie->sws_ctx = sws_getContext(frame->width, frame->height, AV_PIX_FMT_RGBA, width, height, dst_pix_format,
+                                      SWS_BICUBIC, NULL, NULL, NULL);
+      if (!movie->sws_ctx)
         {
-          fprintf(stderr, "could not allocate video frame\n");
-          exit(1);
+          fprintf(stderr, "Could not initialize the conversion context\n");
+          return;
         }
-
-      ret =
-          avpicture_alloc(&movie->dst_picture, movie->cdc_ctx->pix_fmt, movie->cdc_ctx->width, movie->cdc_ctx->height);
-      if (ret < 0)
-        {
-          fprintf(stderr, "could not allocate picture\n");
-          exit(1);
-        }
-
-      *((AVPicture *)movie->frame) = movie->dst_picture;
-
-      av_dump_format(movie->fmt_ctx, 0, movie->path, 1);
-      if (!(movie->out_fmt->flags & AVFMT_NOFILE))
-        {
-          if (avio_open(&movie->fmt_ctx->pb, movie->path, AVIO_FLAG_WRITE) < 0)
-            {
-              fprintf(stderr, "could not open '%s'\n", movie->path);
-              exit(1);
-            }
-        }
-
-      if (avformat_write_header(movie->fmt_ctx, NULL) < 0)
-        {
-          fprintf(stderr, "error occurred when opening output file\n");
-          exit(1);
-        }
-
-      movie->frame->pts = 0;
     }
 
-  avpicture_fill(&src_picture, frame->data, PIX_FMT_RGBA, movie->cdc_ctx->width, movie->cdc_ctx->height);
-  src_picture.data[0] = frame->data;
+  int src_stride[4] = {4 * frame->width, 0, 0, 0};
+  const unsigned char *src_slice[4] = {frame->data, 0, 0, 0};
 
-  sws_ctx = sws_getContext(movie->cdc_ctx->width, movie->cdc_ctx->height, PIX_FMT_RGBA, movie->cdc_ctx->width,
-                           movie->cdc_ctx->height, PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
-
-  if (!sws_ctx)
+  if (is_gif)
     {
-      fprintf(stderr, "could not initialize the conversion context\n");
-      exit(1);
-    }
+      int dst_stride[4] = {4 * width, 0, 0, 0};
+      unsigned char *dst_slice[4] = {movie->gif_scaled_image, 0, 0, 0};
 
-  sws_scale(sws_ctx, (const uint8_t *const *)src_picture.data, src_picture.linesize, 0, movie->cdc_ctx->height,
-            movie->dst_picture.data, movie->dst_picture.linesize);
+      sws_scale(movie->sws_ctx, src_slice, src_stride, 0, frame->height, dst_slice, dst_stride);
 
-  av_init_packet(&pkt);
+      memcpy(movie->gif_scaled_image_copy, movie->gif_scaled_image, width * height * 4);
+      median_cut(movie->gif_scaled_image_copy, movie->gif_palette, width * height, AVPALETTE_COUNT, 4);
 
-  if (movie->fmt_ctx->oformat->flags & AVFMT_RAWPICTURE)
-    {
-      pkt.flags |= AV_PKT_FLAG_KEY;
-      pkt.stream_index = movie->video_st->index;
-      pkt.data = movie->dst_picture.data[0];
-      pkt.size = sizeof(AVPicture);
+      for (i = 0; i < width * height; i++)
+        {
+          movie->gif_scaled_image[i] =
+              color_index_for_rgb(movie->gif_scaled_image + (i * 4), movie->gif_palette, AVPALETTE_COUNT, 4);
+        }
 
-      av_write_frame(movie->fmt_ctx, &pkt);
+      movie->frame->data[0] = movie->gif_scaled_image;
+      movie->frame->data[1] = movie->gif_palette;
+
+      movie->frame->linesize[0] = width;
+      movie->frame->linesize[1] = 0;
     }
   else
     {
-      pkt.data = NULL;
-      pkt.size = 0;
-
-      ret = avcodec_encode_video2(movie->cdc_ctx, &pkt, movie->frame, &got_output);
-      if (ret < 0)
-        {
-          fprintf(stderr, "Error encoding video frame\n");
-          exit(1);
-        }
-
-      if (got_output)
-        {
-          if (movie->cdc_ctx->coded_frame->key_frame) pkt.flags |= AV_PKT_FLAG_KEY;
-
-          pkt.stream_index = movie->video_st->index;
-          ret = av_write_frame(movie->fmt_ctx, &pkt);
-        }
-      else
-        {
-          ret = 0;
-        }
-
-      if (ret != 0)
-        {
-          fprintf(stderr, "Error while writing video frame\n");
-          exit(1);
-        }
+      sws_scale(movie->sws_ctx, src_slice, src_stride, 0, frame->height, movie->frame->data, movie->frame->linesize);
     }
-  av_free_packet(&pkt);
-  sws_freeContext(sws_ctx);
-  movie->frame->pts += av_rescale_q(1, movie->video_st->codec->time_base, movie->video_st->time_base);
-  movie->num_frames++;
+  encode_frame(movie);
+  movie->frame->pts++;
 }
 
-void vc_frame_free(frame_t frame)
+movie_t vc_movie_create(const char *path, int framerate, int bitrate, int width, int height)
 {
-  free(frame->data);
-  free(frame);
+  const AVCodec *codec;
+  int ret;
+
+  av_log_set_level(AV_LOG_QUIET);
+
+#if (LIBAVUTIL_VERSION_MAJOR < 56)
+  /* av_register_all is deprecated and unnecessary since ffmpeg version 4.0 */
+  av_register_all();
+#endif
+
+  movie_t movie = (movie_t)gks_malloc(sizeof(struct movie_t_));
+
+  avformat_alloc_output_context2(&movie->fmt_ctx, NULL, NULL, path);
+  if (!movie->fmt_ctx || movie->fmt_ctx->oformat->video_codec == AV_CODEC_ID_NONE)
+    {
+      fprintf(stderr, "Failed to allocate the output context\n");
+      vc_movie_finish(movie);
+      gks_free(movie);
+      return NULL;
+    }
+  movie->out_fmt = movie->fmt_ctx->oformat;
+  codec = avcodec_find_encoder(movie->out_fmt->video_codec);
+  if (!codec && movie->out_fmt->video_codec == 12)
+    {
+      codec = avcodec_find_encoder_by_name("libopenh264");
+    }
+  if (!codec)
+    {
+      fprintf(stderr, "Could not find encoder for '%s'\n", avcodec_get_name(movie->out_fmt->video_codec));
+      vc_movie_finish(movie);
+      gks_free(movie);
+      return NULL;
+    }
+
+  movie->video_st = avformat_new_stream(movie->fmt_ctx, codec);
+  if (!movie->video_st)
+    {
+      fprintf(stderr, "Could not allocate video stream\n");
+      vc_movie_finish(movie);
+      gks_free(movie);
+      return NULL;
+    }
+
+  movie->cdc_ctx = avcodec_alloc_context3(codec);
+
+  movie->cdc_ctx->bit_rate = bitrate;
+  movie->cdc_ctx->width = width;
+  movie->cdc_ctx->height = height;
+  movie->cdc_ctx->time_base = (AVRational){1, framerate};
+  movie->cdc_ctx->framerate = (AVRational){framerate, 1};
+
+  if (movie->fmt_ctx->oformat->video_codec == AV_CODEC_ID_GIF)
+    {
+      movie->cdc_ctx->pix_fmt = AV_PIX_FMT_PAL8;
+      movie->gif_palette = (unsigned char *)gks_malloc(AVPALETTE_SIZE);
+      movie->gif_scaled_image = (unsigned char *)gks_malloc(width * height * 4);
+      movie->gif_scaled_image_copy = (unsigned char *)gks_malloc(width * height * 4);
+    }
+  else
+    {
+      movie->cdc_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+    }
+  /* Some formats want stream headers to be separate. */
+  if (movie->fmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+    {
+      movie->cdc_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
+
+  movie->video_st->time_base = movie->cdc_ctx->time_base;
+  movie->video_st->r_frame_rate = movie->cdc_ctx->framerate;
+
+  ret = avcodec_open2(movie->cdc_ctx, codec, NULL);
+  if (ret < 0)
+    {
+      fprintf(stderr, "Could not open video codec: %s\n", av_err2str(ret));
+      vc_movie_finish(movie);
+      gks_free(movie);
+      return NULL;
+    }
+
+  ret = avcodec_parameters_from_context(movie->video_st->codecpar, movie->cdc_ctx);
+  if (ret < 0)
+    {
+      fprintf(stderr, "Could not set codec parameters\n");
+      vc_movie_finish(movie);
+      gks_free(movie);
+      return NULL;
+    }
+
+  movie->frame = av_frame_alloc();
+  if (!movie->frame)
+    {
+      fprintf(stderr, "Could not allocate video frame\n");
+      vc_movie_finish(movie);
+      gks_free(movie);
+      return NULL;
+    }
+
+  movie->frame->format = movie->cdc_ctx->pix_fmt;
+  movie->frame->width = movie->cdc_ctx->width;
+  movie->frame->height = movie->cdc_ctx->height;
+  movie->frame->pts = 0;
+
+  ret = av_frame_get_buffer(movie->frame, 32);
+  if (ret < 0)
+    {
+      fprintf(stderr, "Could not allocate frame data.\n");
+      vc_movie_finish(movie);
+      gks_free(movie);
+      return NULL;
+    }
+
+  if (!(movie->out_fmt->flags & AVFMT_NOFILE))
+    {
+      ret = avio_open(&movie->fmt_ctx->pb, path, AVIO_FLAG_WRITE);
+      if (ret < 0)
+        {
+          fprintf(stderr, "Error occurred while opening output file '%s': %s\n", path, av_err2str(ret));
+          vc_movie_finish(movie);
+          gks_free(movie);
+          return NULL;
+        }
+    }
+
+  ret = avformat_write_header(movie->fmt_ctx, NULL);
+  if (ret < 0)
+    {
+      fprintf(stderr, "Error occurred while writing video header: %s\n", av_err2str(ret));
+      vc_movie_finish(movie);
+      gks_free(movie);
+      return NULL;
+    }
+
+  return movie;
 }
 
 void vc_movie_finish(movie_t movie)
 {
-  av_write_trailer(movie->fmt_ctx);
-
-  if (movie->video_st)
+  if (movie->frame)
     {
-      avcodec_close(movie->video_st->codec);
-
-      av_free(movie->dst_picture.data[0]);
-      avcodec_free_frame(&movie->frame);
+      /* drain encoder */
+      av_frame_free(&movie->frame);
+      movie->frame = NULL;
+      encode_frame(movie);
     }
 
-  if (!(movie->fmt_ctx->oformat->flags & AVFMT_NOFILE)) avio_close(movie->fmt_ctx->pb);
+  if (movie->sws_ctx)
+    {
+      sws_freeContext(movie->sws_ctx);
+      movie->sws_ctx = NULL;
+    }
 
-  avformat_free_context(movie->fmt_ctx);
+  gks_free(movie->gif_palette);
+  gks_free(movie->gif_scaled_image);
+  gks_free(movie->gif_scaled_image_copy);
+
+  if (movie->fmt_ctx && movie->cdc_ctx)
+    {
+      av_write_trailer(movie->fmt_ctx);
+      avcodec_close(movie->cdc_ctx);
+
+      if (!(movie->out_fmt->flags & AVFMT_NOFILE))
+        {
+          avio_closep(&movie->fmt_ctx->pb);
+        }
+
+      avformat_free_context(movie->fmt_ctx);
+      avcodec_free_context(&movie->cdc_ctx);
+    }
 }
 
 #endif
