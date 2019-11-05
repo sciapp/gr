@@ -20,7 +20,7 @@ extern "C" {
 #define GR_RECEIVER 1
 #define GR_PROJECTION_DEFAULT 0
 #define GR_PROJECTION_ORTHOGRAPHIC 1
-#define GR_PROJECTION_PERSPECTIV 2
+#define GR_PROJECTION_PERSPECTIVE 2
 
 typedef struct
 {
@@ -264,15 +264,19 @@ DLLEXPORT void gr_inqborderwidth(double *);
 DLLEXPORT void gr_setbordercolorind(int);
 DLLEXPORT void gr_inqbordercolorind(int *);
 DLLEXPORT void gr_setprojectiontype(int flag);
-DLLEXPORT void gr_perspectivprojection(double near_plane, double far_plane, double fov);
+DLLEXPORT void gr_setperspectiveprojection(double near_plane, double far_plane, double fov);
 DLLEXPORT void gr_cameralookat(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x, double up_y,
-                               double up_z, double focus_point_x, double focus_point_y, double focus_point_z,
-                               int projection_type);
-DLLEXPORT void gr_transformationparameters(double left, double right, double top, double bottom);
+                               double up_z, double focus_point_x, double focus_point_y, double focus_point_z);
+DLLEXPORT void gr_setorthographicprojection(double left, double right, double bottom, double top, double near,
+                                            double far);
 DLLEXPORT void gr_inqprojectiontype(int *projection_type);
-DLLEXPORT void gr_inqtransformationparameters(double *, double *, double *, double *, double *, double *, double *,
-                                              double *, double *);
+DLLEXPORT void gr_inqtransformationparameters(double *camera_pos_x, double *camera_pos_y, double *camera_pos_z,
+                                              double *up_x, double *up_y, double *up_z, double *focus_point_x,
+                                              double *focus_point_y, double *focus_point_z, double *s_x, double *s_y,
+                                              double *s_z);
 DLLEXPORT void gr_inqprojectionparameters(double *, double *, double *, double *, double *, double *, double *);
+DLLEXPORT void gr_camerainteraction(const double *old_mouse_pos, const double *new_mouse_pos);
+DLLEXPORT void gr_setaxesforinteraction(double left, double right, double bottom, double top, double near, double far);
 
 #ifdef __cplusplus
 }

@@ -20,6 +20,13 @@ typedef __int64 int64_t;
 #define TMPDIR "C:\\Users\\%USERNAME%\\AppData\\Local\\Temp"
 #define DIRDELIM "\\"
 #define is_nan(a) _isnan(a)
+#define WIN32_LEAN_AND_MEAN 1
+#ifdef near
+#undef near
+#endif
+#ifdef far
+#undef far
+#endif
 #else
 #define TMPDIR "/tmp"
 #define DIRDELIM "/"
@@ -46,6 +53,10 @@ typedef __int64 int64_t;
 #endif
 
 #define GR_UNUSED(param) (void)param
+
+#ifndef M_PI
+#define M_PI (3.141592653589793)
+#endif
 
 typedef struct
 {
@@ -81,14 +92,20 @@ typedef struct
   double camera_pos_x, camera_pos_y, camera_pos_z;
   double up_x, up_y, up_z;
   double focus_point_x, focus_point_y, focus_point_z;
+  double s_x, s_y, s_z;
 } transformation_xform;
 
 typedef struct
 {
   double left, right, bottom, top;
-  double near_plane, far_plane, fov; // only used for perspectiv
+  double near_plane, far_plane, fov; /* only used for perspectiv */
   int projection_type;
 } projection_xform;
+
+typedef struct
+{
+  double left, right, bottom, top, z_near, z_far, set;
+} interaction_xform;
 
 typedef struct
 {
@@ -136,9 +153,11 @@ static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
 
 static world_xform wx = {0, 1, 60, 60, 0, 0, 0, 0, 0, 0, 0};
 
-static transformation_xform tx = {0, 0, 2, 0, 1, 0, 0.5, 0.5, 0.5};
+static transformation_xform tx = {0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0};
 
-static projection_xform px = {-1, 1, -1, 1, 1, 0, M_PI / 2, GR_PROJECTION_DEFAULT};
+static projection_xform px = {-1, 1, -1, 1, 1, 0, 45, GR_PROJECTION_DEFAULT};
+
+static interaction_xform ix = {0, 0, 0, 0, 0, 0, 0};
 
 static hlr_t hlr = {1, 0, 1, 0, 1, 0, 1, 0, 1, 1, NULL, NULL, NULL};
 
@@ -934,59 +953,37 @@ static void apply_world_xform(double *x, double *y, double *z)
 
       gks_inq_current_xformno(&errind, &tnr);
       gks_inq_xform(tnr, &errind, wn, vp);
-      double top = px.top;
-      double bottom = px.bottom;
-      double left = px.left;
-      double right = px.right;
-      double near = px.near_plane; // near clipping plane
-      double far = px.far_plane;
-      double fov = -px.fov * M_PI / 180; // camera angle of perspektiv projection
-      double width = fabs(right - left);
-      double height = fabs(top - bottom);
-      double aspect = width / height;
 
+      double fov = px.fov * M_PI / 180; /* camera angle of perspektiv projection */
+      double width = fabs(px.right - px.left);
+      double height = fabs(px.top - px.bottom);
+      double aspect = width / height;
       double F[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
-                     tx.focus_point_z - tx.camera_pos_z}; // direction between camera and focus point
+                     tx.focus_point_z - tx.camera_pos_z}; /* direction between camera and focus point */
       double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
       double f[3] = {F[0] / norm_func, F[1] / norm_func, F[2] / norm_func};
-      double norm_up = sqrt(tx.up_x * tx.up_x + tx.up_y * tx.up_y + tx.up_z * tx.up_z);
-      double up[3] = {tx.up_x / norm_up, tx.up_y / norm_up, tx.up_z / norm_up};
-      double s_deri[3];
-      for (i = 0; i < 3; i++)
-        //  f cross up
-        {
-          s_deri[i] = f[(i + 1) % 3] * up[(i + 2) % 3] - up[(i + 1) % 3] * f[(i + 2) % 3];
-        }
-      double s_norm = sqrt(s_deri[0] * s_deri[0] + s_deri[1] * s_deri[1] + s_deri[2] * s_deri[2]);
-      double s[3] = {s_deri[0] / s_norm, s_deri[1] / s_norm, s_deri[2] / s_norm};
-      double u_deri[3];
-      for (i = 0; i < 3; i++)
-        // s cross f
-        {
-          u_deri[i] = s[(i + 1) % 3] * f[(i + 2) % 3] - f[(i + 1) % 3] * s[(i + 2) % 3];
-        }
-      double norm_u = sqrt(u_deri[0] * u_deri[0] + u_deri[1] * u_deri[1] + u_deri[2] * u_deri[2]);
-      double u[3] = {u_deri[0] / norm_u, u_deri[1] / norm_u, u_deri[2] / norm_u};
 
-      // transformation
-
-      xw = (*x - tx.camera_pos_x) * s[0] + (*y - tx.camera_pos_y) * s[1] + (*z - tx.camera_pos_z) * s[2];
-      yw = (*x - tx.camera_pos_x) * u[0] + (*y - tx.camera_pos_y) * u[1] + (*z - tx.camera_pos_z) * u[2];
+      /* transformation */
+      xw = (*x - tx.camera_pos_x) * tx.s_x + (*y - tx.camera_pos_y) * tx.s_y + (*z - tx.camera_pos_z) * tx.s_z;
+      yw = (*x - tx.camera_pos_x) * tx.up_x + (*y - tx.camera_pos_y) * tx.up_y + (*z - tx.camera_pos_z) * tx.up_z;
       zw = (tx.camera_pos_x - *x) * f[0] + (tx.camera_pos_y - *y) * f[1] + (tx.camera_pos_z - *z) * f[2];
 
-      if (projection_type[0] == GR_PROJECTION_PERSPECTIV)
+      if (projection_type[0] == GR_PROJECTION_PERSPECTIVE)
         {
-          // perspectiv projection
+          /* perspective projection */
           xw = ((cos(fov / 2) / sin(fov / 2)) / aspect * xw) / (-zw);
           yw = ((cos(fov / 2) / sin(fov / 2)) * yw) / (-zw);
-          zw = ((far + near) / (near - far) * zw + 2 * far * near / (near - far)) / (-zw);
+          zw = ((px.far_plane + px.near_plane) / (px.near_plane - px.far_plane) * zw +
+                2 * px.far_plane * px.near_plane / (px.near_plane - px.far_plane)) /
+               (-zw);
         }
       else if (projection_type[0] == GR_PROJECTION_ORTHOGRAPHIC)
         {
-          // orthographic projection
-          xw = (xw * 2 / (right - left) - (left + right) / (right - left));
-          yw = (yw * 2 / (top - bottom) - (bottom + top) / (top - bottom));
-          zw = (zw * -2 / (far - near) - (far + near) / (far - near));
+          /* orthographic projection */
+          xw = (xw * 2 / (px.right - px.left) - (px.left + px.right) / (px.right - px.left));
+          yw = (yw * 2 / (px.top - px.bottom) - (px.bottom + px.top) / (px.top - px.bottom));
+          zw = (zw * -2 / (px.far_plane - px.near_plane) -
+                (px.far_plane + px.near_plane) / (px.far_plane - px.near_plane));
         }
     }
 
@@ -1034,15 +1031,29 @@ static void setspace(double zmin, double zmax, int rotation, int tilt)
 {
   int errind, tnr;
   double wn[4], vp[4];
-  double xmin, xmax, ymin, ymax, r, t, a, c;
+  double xmin = 0, xmax = 0, ymin = 0, ymax = 0, r, t, a, c;
 
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  xmin = wn[0];
-  xmax = wn[1];
-  ymin = wn[2];
-  ymax = wn[3];
+
+  int projection_type = 0;
+  gr_inqprojectiontype(&projection_type);
+
+  if ((projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC) && ix.set)
+    {
+      xmin = ix.left;
+      xmax = ix.right;
+      ymin = ix.bottom;
+      ymax = ix.top;
+    }
+  else
+    {
+      xmin = wn[0];
+      xmax = wn[1];
+      ymin = wn[2];
+      ymax = wn[3];
+    }
 
   wx.zmin = zmin;
   wx.zmax = zmax;
@@ -1078,52 +1089,77 @@ static int setscale(int options)
 {
   int errind, tnr;
   double wn[4], vp[4];
+  double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
   int result = 0;
 
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  nx.a = (vp[1] - vp[0]) / (wn[1] - wn[0]);
-  nx.b = vp[0] - wn[0] * nx.a;
-  nx.c = (vp[3] - vp[2]) / (wn[3] - wn[2]);
-  nx.d = vp[2] - wn[2] * nx.c;
+  int projection_type = 0;
+  gr_inqprojectiontype(&projection_type);
+
+  if ((projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC) && ix.set)
+    {
+      x_min = ix.left;
+      x_max = ix.right;
+      y_min = ix.bottom;
+      y_max = ix.top;
+
+      z_min = ix.z_near;
+      z_max = ix.z_far;
+    }
+  else
+    {
+      x_min = wn[0];
+      x_max = wn[1];
+      y_min = wn[2];
+      y_max = wn[3];
+
+      z_min = wx.zmin;
+      z_max = wx.zmax;
+    }
+
+  nx.a = (vp[1] - vp[0]) / (x_max - x_min);
+  nx.b = vp[0] - x_min * nx.a;
+  nx.c = (vp[3] - vp[2]) / (y_max - y_min);
+  nx.d = vp[2] - y_min * nx.c;
 
   lx.scale_options = 0;
 
-  lx.xmin = wn[0];
-  lx.xmax = wn[1];
+  lx.xmin = x_min;
+  lx.xmax = x_max;
 
   if (OPTION_X_LOG & options)
     {
-      if (wn[0] > 0)
+      if (x_min > 0)
         {
-          lx.a = (wn[1] - wn[0]) / log10(wn[1] / wn[0]);
-          lx.b = wn[0] - lx.a * log10(wn[0]);
+          lx.a = (x_max - x_min) / log10(x_max / x_min);
+          lx.b = x_min - lx.a * log10(x_min);
           lx.scale_options |= OPTION_X_LOG;
         }
       else
         result = -1;
     }
 
-  lx.ymin = wn[2];
-  lx.ymax = wn[3];
+  lx.ymin = y_min;
+  lx.ymax = y_max;
 
   if (OPTION_Y_LOG & options)
     {
-      if (wn[2] > 0)
+      if (y_min > 0)
         {
-          lx.c = (wn[3] - wn[2]) / log10(wn[3] / wn[2]);
-          lx.d = wn[2] - lx.c * log10(wn[2]);
+          lx.c = (y_max - y_min) / log10(y_max / y_min);
+          lx.d = y_min - lx.c * log10(y_min);
           lx.scale_options |= OPTION_Y_LOG;
         }
       else
         result = -1;
     }
 
-  setspace(wx.zmin, wx.zmax, wx.phi, wx.delta);
+  setspace(z_min, z_max, wx.phi, wx.delta);
 
-  lx.zmin = wx.zmin;
-  lx.zmax = wx.zmax;
+  lx.zmin = z_min;
+  lx.zmax = z_max;
 
   if (OPTION_Z_LOG & options)
     {
@@ -3556,14 +3592,14 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
  * +---------------------------+---+--------------+
  * |GR_PROJECTION_ORTHOGRAPHIC |  1|orthographic  |
  * +---------------------------+---+--------------+
- * |GR_PROJECTION_PERSPECTIV   |  2|perspectiv    |
+ * |GR_PROJECTION_PERSPECTIV   |  2|perspective    |
  * +---------------------------+---+--------------+
  */
 void gr_setprojectiontype(int flag)
 {
   check_autoinit;
 
-  if (flag == GR_PROJECTION_DEFAULT || flag == GR_PROJECTION_ORTHOGRAPHIC || flag == GR_PROJECTION_PERSPECTIV)
+  if (flag == GR_PROJECTION_DEFAULT || flag == GR_PROJECTION_ORTHOGRAPHIC || flag == GR_PROJECTION_PERSPECTIVE)
     {
       px.projection_type = flag;
     }
@@ -3599,15 +3635,16 @@ void gr_inqprojectiontype(int *flag)
  * \param up_z z direction which shows up
  * \param focus_point_x x coordinate of focuspoint inside volume
  * \param focus_point_y y coordinate of focuspoint inside volume
- * \param focus_point_z z coordinate of focuspoint inside volume
- * \param projection_type GR_PROJECTION_ORTHOGRAPHIC(1) or GR_PROJECTION_PERSPECTIV(2)
+ * \param focus_point_z z coordinate of focuspoint inside volum
  *
  */
 void gr_cameralookat(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x, double up_y,
-                     double up_z, double focus_point_x, double focus_point_y, double focus_point_z, int projection_type)
+                     double up_z, double focus_point_x, double focus_point_y, double focus_point_z)
 {
 
   check_autoinit;
+
+  int i;
 
   tx.camera_pos_x = camera_pos_x;
   tx.camera_pos_y = camera_pos_y;
@@ -3617,22 +3654,46 @@ void gr_cameralookat(double camera_pos_x, double camera_pos_y, double camera_pos
   tx.focus_point_y = focus_point_y;
   tx.focus_point_z = focus_point_z;
 
-  tx.up_x = up_x;
-  tx.up_y = up_y;
-  tx.up_z = up_z;
+  double F[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
+                 tx.focus_point_z - tx.camera_pos_z}; /* direction between camera and focus point */
+  double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
+  double f[3] = {F[0] / norm_func, F[1] / norm_func, F[2] / norm_func};
+  double norm_up = sqrt(up_x * up_x + up_y * up_y + up_z * up_z);
+  double up[3] = {up_x / norm_up, up_y / norm_up, up_z / norm_up};
+  double s_deri[3];
+  for (i = 0; i < 3; i++) /*  f cross up */
+    {
+      s_deri[i] = f[(i + 1) % 3] * up[(i + 2) % 3] - up[(i + 1) % 3] * f[(i + 2) % 3];
+    }
+  double s_norm = sqrt(s_deri[0] * s_deri[0] + s_deri[1] * s_deri[1] + s_deri[2] * s_deri[2]);
+  double s[3] = {s_deri[0] / s_norm, s_deri[1] / s_norm, s_deri[2] / s_norm};
+  double u_deri[3];
+  for (i = 0; i < 3; i++) /* s cross f */
+    {
+      u_deri[i] = s[(i + 1) % 3] * f[(i + 2) % 3] - f[(i + 1) % 3] * s[(i + 2) % 3];
+    }
+  double norm_u = sqrt(u_deri[0] * u_deri[0] + u_deri[1] * u_deri[1] + u_deri[2] * u_deri[2]);
+  double u[3] = {u_deri[0] / norm_u, u_deri[1] / norm_u, u_deri[2] / norm_u};
 
-  gr_setprojectiontype(projection_type);
+  tx.up_x = u[0];
+  tx.up_y = u[1];
+  tx.up_z = u[2];
+  tx.s_x = s[0];
+  tx.s_y = s[1];
+  tx.s_z = s[2];
 }
 
 /*!
  * Set the far near clipping plane for perspective projection and the vertical field ov view
  * The projection type will be switched to perspectiv
  *
- * @param near_plane distance to near clipping plane
- * @param far_plane distance to far clipping plane
- * @param fov vertical field of view degree, input must be between 0 and 180 degree
+ * \param near_plane distance to near clipping plane
+ * \param far_plane distance to far clipping plane
+ * \param fov vertical field of view degree, input must be between 0 and 180 degree
+ *
+ * Switches projection type to perspective
  */
-void gr_perspectivprojection(double near_plane, double far_plane, double fov)
+void gr_setperspectiveprojection(double near_plane, double far_plane, double fov)
 {
 
   check_autoinit;
@@ -3640,7 +3701,7 @@ void gr_perspectivprojection(double near_plane, double far_plane, double fov)
   px.near_plane = near_plane;
   px.far_plane = far_plane;
 
-  if (0 <= fov && fov <= 180)
+  if (0 < fov && fov < 180)
     {
       px.fov = fov;
     }
@@ -3649,18 +3710,23 @@ void gr_perspectivprojection(double near_plane, double far_plane, double fov)
       fprintf(stderr, "The value for the fov parameter is not between 0 and 180 degree\n");
     }
 
-  gr_setprojectiontype(GR_PROJECTION_PERSPECTIV);
+  gr_setprojectiontype(GR_PROJECTION_PERSPECTIVE);
 }
 
 /*!
- * Set optional parameters for transformation
+ * Set parameters for orthographic transformation
  *
- * @param left xmin of the volume in worldcoordinates
- * @param right xmax of volume in worldcoordinates
- * @param bottom ymin of volume in worldcoordinates
- * @param top ymax of volume in worldcoordinates
+ * \param left xmin of the volume in worldcoordinates
+ * \param right xmax of volume in worldcoordinates
+ * \param bottom ymin of volume in worldcoordinates
+ * \param top ymax of volume in worldcoordinates
+ * \param near_plane distance to near clipping plane
+ * \param far_plane distance to far clipping plane
+ *
+ * Switches projection type to orthographic
  */
-void gr_transformationparameters(double left, double right, double bottom, double top)
+void gr_setorthographicprojection(double left, double right, double bottom, double top, double near_plane,
+                                  double far_plane)
 {
 
   check_autoinit;
@@ -3669,11 +3735,29 @@ void gr_transformationparameters(double left, double right, double bottom, doubl
   px.right = right;
   px.bottom = bottom;
   px.top = top;
-}
+  px.near_plane = near_plane;
+  px.far_plane = far_plane;
 
+  gr_setprojectiontype(GR_PROJECTION_ORTHOGRAPHIC);
+}
+/*!
+ * Inquire all nessecary parameters for the transformation matrix
+ * \param camera_pos_x x position in world coordinates of camera
+ * \param camera_pos_y y position in world coordinates of camera
+ * \param camera_pos_z z position in world coordinates of camera
+ * \param up_x x direction which shows up
+ * \param up_y y direction which shows up
+ * \param up_z z direction which shows up
+ * \param focus_point_x x coordinate of focuspoint inside volume
+ * \param focus_point_y y coordinate of focuspoint inside volume
+ * \param focus_point_z z coordinate of focuspoint inside volum
+ * \param s_x x direction of right facing camera vector
+ * \param s_y y direction of right facing camera vector
+ * \param s_z z direction of right facing camera vector
+ */
 void gr_inqtransformationparameters(double *camera_pos_x, double *camera_pos_y, double *camera_pos_z, double *up_x,
                                     double *up_y, double *up_z, double *focus_point_x, double *focus_point_y,
-                                    double *focus_point_z)
+                                    double *focus_point_z, double *s_x, double *s_y, double *s_z)
 {
 
   check_autoinit;
@@ -3689,8 +3773,24 @@ void gr_inqtransformationparameters(double *camera_pos_x, double *camera_pos_y, 
   *focus_point_x = tx.focus_point_x;
   *focus_point_y = tx.focus_point_y;
   *focus_point_z = tx.focus_point_z;
+
+  *s_x = tx.s_x;
+  *s_y = tx.s_y;
+  *s_z = tx.s_z;
 }
 
+/*!
+ * Set parameters for orthographic transformation
+ *
+ * \param left xmin of the volume in worldcoordinates
+ * \param right xmax of volume in worldcoordinates
+ * \param bottom ymin of volume in worldcoordinates
+ * \param top ymax of volume in worldcoordinates
+ * \param near_plane distance to near clipping plane
+ * \param far_plane distance to far clipping plane
+ * \param fov fov vertical field of view degree, input must be between 0 and 180 degree
+ *
+ */
 void gr_inqprojectionparameters(double *left, double *right, double *bottom, double *top, double *near_plane,
                                 double *far_plane, double *fov)
 {
@@ -3701,7 +3801,6 @@ void gr_inqprojectionparameters(double *left, double *right, double *bottom, dou
   *right = px.right;
   *bottom = px.bottom;
   *top = px.top;
-
   *near_plane = px.near_plane;
   *far_plane = px.far_plane;
   *fov = px.fov;
@@ -3783,6 +3882,7 @@ static void start_pline(double x, double y)
 static void pline3d(double x, double y, double z)
 {
   if (npoints >= maxpath) reallocate(npoints);
+
   xpoint[npoints] = x_lin(x);
   ypoint[npoints] = y_lin(y);
   zpoint[npoints] = z_lin(z);
@@ -4614,7 +4714,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
   double width;
 
   double clrt[4], wn[4], vp[4];
-  double x_min, x_max, y_min, y_max, z_min, z_max;
+  double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
 
   double x0, y0, z0, xi, yi, zi;
 
@@ -4635,13 +4735,29 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  x_min = wn[0];
-  x_max = wn[1];
-  y_min = wn[2];
-  y_max = wn[3];
+  int projection_type = 0;
+  gr_inqprojectiontype(&projection_type);
 
-  z_min = wx.zmin;
-  z_max = wx.zmax;
+  if ((projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC) && ix.set)
+    {
+      x_min = ix.left;
+      x_max = ix.right;
+      y_min = ix.bottom;
+      y_max = ix.top;
+
+      z_min = ix.z_near;
+      z_max = ix.z_far;
+    }
+  else
+    {
+      x_min = wn[0];
+      x_max = wn[1];
+      y_min = wn[2];
+      y_max = wn[3];
+
+      z_min = wx.zmin;
+      z_max = wx.zmax;
+    }
 
   /* save linetype, line width, line color and clipping indicator */
 
@@ -4841,6 +4957,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
             }
         }
     }
+
   /* restore linetype, line width, line color and clipping indicator */
 
   gks_set_pline_linetype(ltype);
@@ -5248,25 +5365,25 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
 static void text3d(double x, double y, double z, char *chars)
 {
-  double px, py, pz;
+  double p_x, p_y, p_z;
   int errind, tnr;
 
   check_autoinit;
 
-  px = x_lin(x);
-  py = y_lin(y);
-  pz = z_lin(z);
-  apply_world_xform(&px, &py, &pz);
+  p_x = x_lin(x);
+  p_y = y_lin(y);
+  p_z = z_lin(z);
+  apply_world_xform(&p_x, &p_y, &p_z);
 
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC)
     {
-      px = nx.a * px + nx.b;
-      py = nx.c * py + nx.d;
+      p_x = nx.a * p_x + nx.b;
+      p_y = nx.c * p_y + nx.d;
       gks_select_xform(NDC);
     }
 
-  gr_textex(px, py, chars, 0, NULL, NULL);
+  gr_textex(p_x, p_y, chars, 0, NULL, NULL);
 
   if (tnr != NDC) gks_select_xform(tnr);
 
@@ -5320,7 +5437,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   double chux, chuy, slant;
 
   double clrt[4], wn[4], vp[4];
-  double x_min, x_max, y_min, y_max, z_min, z_max;
+  double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
 
   double r, alpha, beta;
   double a[2], c[2], text_slant[4];
@@ -5352,13 +5469,29 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  x_min = wn[0];
-  x_max = wn[1];
-  y_min = wn[2];
-  y_max = wn[3];
+  int projection_type = 0;
+  gr_inqprojectiontype(&projection_type);
 
-  z_min = wx.zmin;
-  z_max = wx.zmax;
+  if ((projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC) && ix.set)
+    {
+      x_min = ix.left;
+      x_max = ix.right;
+      y_min = ix.bottom;
+      y_max = ix.top;
+
+      z_min = ix.z_near;
+      z_max = ix.z_far;
+    }
+  else
+    {
+      x_min = wn[0];
+      x_max = wn[1];
+      y_min = wn[2];
+      y_max = wn[3];
+
+      z_min = wx.zmin;
+      z_max = wx.zmax;
+    }
 
   if (x_min > x_org || x_org > x_max || y_min > y_org || y_org > y_max || z_min > z_org || z_org > z_max)
     {
@@ -5834,6 +5967,10 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
   int flip_x, flip_y, flip_z;
 
+  int projection_type;
+  gr_inqprojectiontype(&projection_type);
+
+
   check_autoinit;
 
   setscale(lx.scale_options);
@@ -5845,14 +5982,26 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
   if (wx.phi != 0 || wx.delta != 90)
     {
-      x_min = wn[0];
-      x_max = wn[1];
-      y_min = wn[2];
-      y_max = wn[3];
+      if ((projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC) && ix.set)
+        {
+          x_min = ix.left;
+          x_max = ix.right;
+          y_min = ix.bottom;
+          y_max = ix.top;
 
-      z_min = wx.zmin;
-      z_max = wx.zmax;
+          z_min = ix.z_near;
+          z_max = ix.z_far;
+        }
+      else
+        {
+          x_min = wn[0];
+          x_max = wn[1];
+          y_min = wn[2];
+          y_max = wn[3];
 
+          z_min = wx.zmin;
+          z_max = wx.zmax;
+        }
       r = (x_max - x_min) / (y_max - y_min) * (vp[3] - vp[2]) / (vp[1] - vp[0]);
 
       alpha = atan_2(r * wx.c1, wx.a1);
@@ -6501,6 +6650,7 @@ static void get_intensity(double *fx, double *fy, double *fz, double *light_sour
  * |SHADED_MESH       | 6|Applies light source shading to the 3-D surface               |
  * +------------------+--+--------------------------------------------------------------+
  *
+ * To see option 2 correctly change linecolorind or fillcolorind. Both default values are black.
  * \endverbatim
  */
 void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
@@ -6520,6 +6670,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   int np;
 
   int *colia, w, h, *ca, dwk, *wk1, *wk2;
+
+  int projection_type;
 
   static double light_source[3] = {0.5, -1, 2};
 
@@ -6573,10 +6725,23 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   y = (double *)xmalloc(ny * sizeof(double));
   z = (double *)xmalloc(nx * ny * sizeof(double));
 
+  gr_inqprojectiontype(&projection_type);
+
   flip_x = OPTION_FLIP_X & lx.scale_options;
+  if (tx.camera_pos_x > 0 &&
+      (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC))
+    {
+      flip_x = 1;
+    }
+  fprintf(stderr, "%f\t%f\t%f\n", tx.camera_pos_x, tx.camera_pos_y, tx.camera_pos_z);
   for (i = 0; i < nx; i++) x[i] = x_lin(px[flip_x ? nx - 1 - i : i]);
 
   flip_y = OPTION_FLIP_Y & lx.scale_options;
+  if (tx.camera_pos_y > 0 &&
+      (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC))
+    {
+      flip_y = 1;
+    }
   for (j = 0; j < ny; j++) y[j] = y_lin(py[flip_y ? ny - 1 - j : j]);
 
   k = 0;
@@ -6611,6 +6776,12 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   flip_z = OPTION_FLIP_Z & lx.scale_options;
   gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_DOTTED : GKS_K_LINETYPE_SOLID);
+
+  if (tx.camera_pos_z >= 0 &&
+      (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC))
+    {
+      flip_z = 1;
+    }
 
 #define Z(x, y) z[(x) + nx * (y)]
 
@@ -6951,6 +7122,7 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
           y[j] = y_lin(py[triangles[3 * i + j]]);
           z[j] = z_lin(pz[triangles[3 * i + j]]);
           meanz += z[j];
+
           apply_world_xform(x + j, y + j, z + j);
         }
       meanz /= 3.0;
@@ -10412,7 +10584,6 @@ void gr_inqresamplemethod(unsigned int *flag)
  *    current border width and color afterwards.
  *
  */
-
 void gr_path(int n, double *x, double *y, const char *codes)
 {
   int i, len;
@@ -10422,9 +10593,209 @@ void gr_path(int n, double *x, double *y, const char *codes)
   len = strlen(codes);
   if (len >= maxpath) reallocate(len);
 
-  for (i = 0; i < len; i++) code[i] = (unsigned int) codes[i];
+  for (i = 0; i < len; i++) code[i] = (unsigned int)codes[i];
 
   gks_gdp(n, x, y, GKS_K_GDP_DRAW_PATH, len, code);
+}
+
+static void gr_trackballposition(const double *mouse, double r, double *erg)
+{
+  double x, y, z;
+
+  if (sqrt(mouse[0] * mouse[0] + mouse[1] * mouse[1]) <= r / sqrt(2))
+    {
+      x = mouse[0];
+      y = mouse[1];
+      z = sqrt(r * r - (mouse[0] * mouse[0] + mouse[1] * mouse[1]));
+    }
+  else
+    {
+      x = mouse[0];
+      y = mouse[1];
+      z = r * r / (2 * sqrt(mouse[0] * mouse[0] + mouse[1] * mouse[1]));
+    }
+
+  erg[0] = x * tx.s_x + y * tx.up_x + z * (tx.focus_point_x - tx.camera_pos_x);
+  erg[1] = x * tx.s_y + y * tx.up_y + z * (tx.focus_point_y - tx.camera_pos_y);
+  erg[2] = x * tx.s_z + y * tx.up_z + z * (tx.focus_point_z - tx.camera_pos_z);
+}
+
+static void gr_calculateradius(double *radius)
+{
+  int i;
+  double max = 0;
+  double left = pow(ix.left - tx.focus_point_x, 2);
+  double right = pow(ix.right - tx.focus_point_x, 2);
+  double top = pow(ix.top - tx.focus_point_y, 2);
+  double bottom = pow(ix.bottom - tx.focus_point_y, 2);
+  double far = pow(ix.z_far - tx.focus_point_z, 2);
+  double near = pow(ix.z_near - tx.focus_point_z, 2);
+
+  /* all eight coordinates quadrants */
+  double rtf_radius = sqrt(right + top + far);
+  double rtn_radius = sqrt(right + top + near);
+  double ltf_radius = sqrt(left + top + far);
+  double ltn_radius = sqrt(left + top + near);
+  double rbf_radius = sqrt(right + bottom + far);
+  double rbn_radius = sqrt(right + bottom + near);
+  double lbf_radius = sqrt(left + bottom + far);
+  double lbn_radius = sqrt(left + bottom + near);
+  double radii[8] = {rtf_radius, rtn_radius, ltf_radius, ltn_radius, rbf_radius, rbn_radius, lbf_radius, lbn_radius};
+
+  /* find the max radius*/
+  for (i = 0; i < 8; i++)
+    {
+      if (max < radii[i])
+        {
+          max = radii[i];
+        }
+    }
+
+  *radius = max;
+}
+
+static void gr_quaternionen(double *start, double *end, double *q)
+{
+  int i;
+  double n[3]; /* rotation axes */
+
+  double start_norm = sqrt(start[0] * start[0] + start[1] * start[1] + start[2] * start[2]);
+  double end_norm = sqrt(end[0] * end[0] + end[1] * end[1] + end[2] * end[2]);
+  double norm_n = 0;
+
+  for (i = 0; i < 3; i++)
+    {
+      /* normalize start and end */
+      start[i] /= start_norm;
+      end[i] /= end_norm;
+    }
+
+  for (i = 0; i < 3; i++)
+    {
+      /* start cross end */
+      n[i] = start[(i + 1) % 3] * end[(i + 2) % 3] - end[(i + 1) % 3] * start[(i + 2) % 3];
+      norm_n += n[i] * n[i];
+    }
+
+  /* rotation angle */
+  double alpha = atan(sqrt(norm_n) / (start[0] * end[0] + start[1] * end[1] + start[2] * end[2]));
+
+  /* normalize rotation axes */
+  n[0] /= sqrt(norm_n);
+  n[1] /= sqrt(norm_n);
+  n[2] /= sqrt(norm_n);
+
+  /* quaternionen */
+  q[0] = cos(alpha / 2);
+  q[1] = sin(alpha / 2) * n[0];
+  q[2] = sin(alpha / 2) * n[1];
+  q[3] = sin(alpha / 2) * n[2];
+}
+
+void gr_camerainteraction(const double *old_mouse_pos, const double *new_mouse_pos)
+{
+  if (old_mouse_pos[0] != new_mouse_pos[0] || old_mouse_pos[1] != new_mouse_pos[1] ||
+      old_mouse_pos[2] != new_mouse_pos[2])
+    {
+      double start[3];
+      double end[3];
+      double q[4];
+      double radius;
+      double camera_distance;
+      int projection_type;
+      double wn[4], vp[4];
+      int errind, tnr;
+      double width = fabs(ix.right - ix.left);
+      double height = fabs(ix.top - ix.bottom);
+      double aspect = width / height;
+
+      gks_inq_current_xformno(&errind, &tnr);
+      gks_inq_xform(tnr, &errind, wn, vp);
+
+      gr_inqprojectiontype(&projection_type);
+      gr_calculateradius(&radius);
+
+      camera_distance = radius;
+      /* parameter for better overview */
+      if (projection_type == GR_PROJECTION_PERSPECTIVE)
+        {
+          camera_distance = fabs(radius / sin((px.fov * M_PI / 180) / 2));
+        }
+
+      /* transform mouseposition onto [-1, 1] */
+      double mouse_start[3] = {fabs(wn[0]) * (old_mouse_pos[0] * 2 - 1), fabs(wn[2]) * (2 * (1 - old_mouse_pos[1]) - 1),
+                               0};
+      double mouse_end[3] = {fabs(wn[0]) * (new_mouse_pos[0] * 2 - 1), fabs(wn[2]) * (2 * (1 - new_mouse_pos[1]) - 1),
+                             0};
+
+      gr_trackballposition(mouse_start, radius, start);
+      gr_trackballposition(mouse_end, radius, end);
+
+      end[0] -= tx.focus_point_x;
+      end[1] -= tx.focus_point_y;
+      end[2] -= tx.focus_point_z;
+
+
+      gr_quaternionen(start, end, q);
+
+      /* rotation matrix */
+      double rotation_mat[9] = {q[1] * q[1] + q[0] * q[0] - q[2] * q[2] - q[3] * q[3],
+                                2 * (q[1] * q[2] - q[0] * q[3]),
+                                2 * (q[1] * q[3] + q[0] * q[2]),
+                                2 * (q[0] * q[3] + q[1] * q[2]),
+                                q[0] * q[0] - q[1] * q[1] + q[2] * q[2] - q[3] * q[3],
+                                2 * (q[2] * q[3] - q[0] * q[1]),
+                                2 * (q[1] * q[3] - q[0] * q[2]),
+                                2 * (q[0] * q[1] + q[2] * q[3]),
+                                q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]};
+      /* rotate camera position */
+      double cam_x =
+          tx.camera_pos_x * rotation_mat[0] + tx.camera_pos_y * rotation_mat[1] + tx.camera_pos_z * rotation_mat[2];
+      double cam_y =
+          tx.camera_pos_x * rotation_mat[3] + tx.camera_pos_y * rotation_mat[4] + tx.camera_pos_z * rotation_mat[5];
+      double cam_z =
+          tx.camera_pos_x * rotation_mat[6] + tx.camera_pos_y * rotation_mat[7] + tx.camera_pos_z * rotation_mat[8];
+      /* rotate up and right camera axes */
+      double up_x = tx.up_x * rotation_mat[0] + tx.up_y * rotation_mat[1] + tx.up_z * rotation_mat[2];
+      double up_y = tx.up_x * rotation_mat[3] + tx.up_y * rotation_mat[4] + tx.up_z * rotation_mat[5];
+      double up_z = tx.up_x * rotation_mat[6] + tx.up_y * rotation_mat[7] + tx.up_z * rotation_mat[8];
+      double s_x = tx.s_x * rotation_mat[0] + tx.s_y * rotation_mat[1] + tx.s_z * rotation_mat[2];
+      double s_y = tx.s_x * rotation_mat[3] + tx.s_y * rotation_mat[4] + tx.s_z * rotation_mat[5];
+      double s_z = tx.s_x * rotation_mat[6] + tx.s_y * rotation_mat[7] + tx.s_z * rotation_mat[8];
+
+      double cam_norm = sqrt(cam_x * cam_x + cam_y * cam_y + cam_z * cam_z);
+
+      tx.camera_pos_x = cam_x / cam_norm * camera_distance;
+      tx.camera_pos_y = cam_y / cam_norm * camera_distance;
+      tx.camera_pos_z = cam_z / cam_norm * camera_distance;
+      tx.up_x = up_x;
+      tx.up_y = up_y;
+      tx.up_z = up_z;
+      tx.s_x = s_x;
+      tx.s_y = s_y;
+      tx.s_z = s_z;
+    }
+}
+
+/*!
+ * Set the axes for three dimensional axes or grids. Only used for gr_camerainteraction
+ *
+ * @param left min x-value
+ * @param right max x-value
+ * @param bottom min y-value
+ * @param top max y-value
+ * @param near min z-value
+ * @param far max z-value
+ */
+void gr_setaxesforinteraction(double left, double right, double bottom, double top, double near, double far)
+{
+  ix.left = left;
+  ix.right = right;
+  ix.bottom = bottom;
+  ix.top = top;
+  ix.z_near = near;
+  ix.z_far = far;
+  ix.set = 1;
 }
 
 /*!
