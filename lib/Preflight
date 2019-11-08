@@ -93,7 +93,7 @@ if [ "`which python 2>/dev/null`" = "" ]
 then
   info="${red} no${normal} [not found]"
 else
-  info="${green}yes${normal} [version `python -c 'import sys;print sys.version' | head -1`]"
+  info="${green}yes${normal} [version `python -c 'import sys;print(sys.version)' | head -1`]"
 fi
 printf "%12s: %s\n" "Python" "$info" >&2
 
