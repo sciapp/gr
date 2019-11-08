@@ -74,7 +74,7 @@ endif
      FTDEFS =
      FTLIBS = $(THIRDPARTYDIR)/lib/libfreetype.a
      AVDEFS =
-     AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx $(BZ2LIBS)
+     AVLIBS = -lavformat -lavcodec -lswscale -lavutil $(BZ2LIBS)
   CAIRODEFS =
 ifdef USE_STATIC_CAIRO_LIBS
   CAIROLIBS = $(THIRDPARTYDIR)/lib/libcairo.a $(THIRDPARTYDIR)/lib/libpixman-1.a
@@ -93,7 +93,7 @@ endif
     ZMQDEFS =
     ZMQLIBS = -L$(THIRDPARTYDIR)/lib/ -lzmq -lpthread
 ifeq ($(UNAME), Darwin)
-  EXTRALIBS = -framework VideoDecodeAcceleration -framework CoreVideo -framework CoreFoundation
+  EXTRALIBS = -framework VideoDecodeAcceleration -framework VideoToolbox -framework CoreVideo -framework CoreFoundation -framework CoreServices -framework CoreMedia
        LIBS = -liconv
 else
   EXTRALIBS =
@@ -183,7 +183,7 @@ cairoplugin.so: cairoplugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(CAIROLIBS) $(FTLIBS) $(JPEGLIBS) $(PNGLIBS) $(TIFFLIBS) $(ZLIBS) $(LIBS) -DNO_X11
 
 videoplugin.so: videoplugin.o vc.o gif.o $(GKSLIBS)
-	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
+	$(CXX) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(AVLIBS) $(FTLIBS) $(EXTRALIBS) $(ZLIBS) $(LIBS)
 
 install: default $(TARGETS)
 	cp -p *.so $(LIBDIR)

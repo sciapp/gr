@@ -2,7 +2,7 @@ ifeq ($(strip $(PREFIX)),)
 override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
-VERSION = 2.1.4
+VERSION = 4.2.1
 FFMPEG_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
 FFMPEG_EXTRA_CONFIGURE_FLAGS += --extra-cflags=-mmacosx-version-min=10.11
@@ -30,19 +30,22 @@ $(PREFIX)/src/ffmpeg-$(VERSION).tar.gz:
 
 $(PREFIX)/src/ffmpeg-$(VERSION)/configure: $(PREFIX)/src/ffmpeg-$(VERSION).tar.gz
 	cd $(PREFIX)/src/ && tar -xf ffmpeg-$(VERSION).tar.gz
-	touch $@
+	sed 's/    \(bcrypt\|clock_gettime\)//' $(PREFIX)/src/ffmpeg-$(VERSION)/configure > $(PREFIX)/src/ffmpeg-$(VERSION)/configure.tmp
+	mv $(PREFIX)/src/ffmpeg-$(VERSION)/configure.tmp $(PREFIX)/src/ffmpeg-$(VERSION)/configure
+	chmod +x $(PREFIX)/src/ffmpeg-$(VERSION)/configure
 
-$(PREFIX)/src/ffmpeg-$(VERSION)/Makefile: $(PREFIX)/src/ffmpeg-$(VERSION)/configure $(PREFIX)/lib/libtheora.a $(PREFIX)/lib/libvpx.a
+$(PREFIX)/src/ffmpeg-$(VERSION)/Makefile: $(PREFIX)/src/ffmpeg-$(VERSION)/configure $(PREFIX)/lib/libtheora.a $(PREFIX)/lib/libvpx.a $(PREFIX)/lib/libopenh264.a
 	cd $(PREFIX)/src/ffmpeg-$(VERSION) && \
-	./configure \
+	PKG_CONFIG_PATH=$(PREFIX)/lib/pkgconfig ./configure \
 		--prefix=$(PREFIX) \
-		--disable-yasm \
+		--disable-x86asm \
 		--disable-asm \
 		--enable-static \
 		--disable-shared \
 		--enable-pic \
 		--enable-libvpx \
 		--enable-libtheora \
+		--enable-libopenh264 \
 		--disable-iconv \
 		--extra-cflags=-I$(PREFIX)/include \
 		--extra-cxxflags=-I$(PREFIX)/include \
@@ -61,13 +64,17 @@ $(PREFIX)/src/ffmpeg-$(VERSION)/Makefile: $(PREFIX)/src/ffmpeg-$(VERSION)/config
 		--disable-protocols \
 		--disable-devices \
 		--disable-filters \
+		--disable-vdpau \
+		--disable-dxva2 \
 		--enable-encoder=libvpx_vp8 \
 		--enable-encoder=libtheora \
-		--enable-encoder=mpeg4 \
+		--enable-encoder=libopenh264 \
+		--enable-encoder=gif \
 		--enable-muxer=webm \
 		--enable-muxer=mov \
 		--enable-muxer=mp4 \
 		--enable-muxer=ogg \
+		--enable-muxer=gif \
 		--enable-protocol=file \
 		$(FFMPEG_EXTRA_CONFIGURE_FLAGS)
 	# configure doesn't update the Makefile mtime correctly
@@ -85,5 +92,8 @@ $(PREFIX)/lib/libtheora.a:
 
 $(PREFIX)/lib/libvpx.a:
 	$(MAKE) -C ../vpx PREFIX="$(PREFIX)" install
+
+$(PREFIX)/lib/libopenh264.a:
+	$(MAKE) -C ../openh264 PREFIX="$(PREFIX)" install
 
 .PHONY: default install

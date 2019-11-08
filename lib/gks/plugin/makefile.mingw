@@ -9,7 +9,7 @@ JPEGLIB = $(THIRDPARTYDIR)/lib/libjpeg.a
 PIXMANLIB = $(THIRDPARTYDIR)/lib/libpixman-1.a
 CAIROLIB = $(THIRDPARTYDIR)/lib/libcairo.a
 FTLIB = $(THIRDPARTYDIR)/lib/libfreetype.a
-AVLIBS = -lavdevice -lavformat -lavfilter -lavcodec -lswscale -lavutil -ltheora -logg -lvpx
+AVLIBS = -lavformat -lavcodec -lswscale -lavutil -lvpx -ltheora -logg -lopenh264
 INCLUDES = -I../ -I$(THIRDPARTYDIR)/include -I/usr/local/include
 CFLAGS = -Wall $(DEFINES) $(INCLUDES)
 CXXFLAGS = -Wall $(DEFINES) $(INCLUDES)
@@ -44,7 +44,7 @@ cairoplugin.dll: cairoplugin.o $(GKSLIB) $(CAIROLIB) $(PIXMANLIB) $(PNGLIB) $(TI
 videoplugin.o: $(ZLIB) $(JPEGLIB) $(FTLIB) AVLIBS
 
 videoplugin.dll: videoplugin.o vc.o gif.o $(GKSLIB)
-	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
+	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) -L../../../3rdparty/build/lib -L/usr/local/lib $(AVLIBS) $(SSLLIBS) $(EXTRALIBS) $(ZLIB) $(LIBS) $(JPEGLIB) $(FTLIB)
 
 wxplugin.dll: wxplugin.o $(GKSLIB)
 	$(CXX) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a)

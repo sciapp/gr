@@ -263,7 +263,9 @@ centos6-32bit-self-contained:
   - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-i386.tar.gz
   - tar xf cmake-3.6.3-Linux-i386.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-i386/bin/cmake
-  - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm make self GRDIR=/usr/local/gr
+  - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm
+    OPENH264_EXTRA_MAKE_FLAGS=ARCH=i386
+    make self GRDIR=/usr/local/gr
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
@@ -285,7 +287,9 @@ centos6-32bit-cmake-self-contained:
     - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-i386.tar.gz
     - tar xf cmake-3.6.3-Linux-i386.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-i386/bin/cmake
-    - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm make -C 3rdparty default extras
+    - THEORA_EXTRA_CONFIGURE_FLAGS=--disable-asm
+      OPENH264_EXTRA_MAKE_FLAGS=ARCH=i386
+      make -C 3rdparty default extras
     - mkdir build
     - cd build
     - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
@@ -451,10 +455,11 @@ windows-32bit-cross:
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
     OGG_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     THEORA_EXTRA_CONFIGURE_FLAGS="--host=i686-w64-mingw32 --disable-asm"
-    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32"
+    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32 --pkg-config=pkg-config"
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
+    OPENH264_EXTRA_MAKE_FLAGS="OS=mingw_nt ARCH=i386 CFLAGS=-fno-exceptions CXXFLAGS=-fno-exceptions LDFLAGS=-fno-exceptions"
   - MAKE="make -f makefile.mingw" make -f makefile.mingw
     GRDIR=./
     CC=i686-w64-mingw32-gcc
@@ -465,6 +470,7 @@ windows-32bit-cross:
     CC=i686-w64-mingw32-gcc
     CXX=i686-w64-mingw32-g++
     AR=i686-w64-mingw32-ar
+    ARCHITECTURE=i686
   - mkdir artifacts
   - cp lib/gks/qt/gksqt.exe artifacts/
   - cp lib/gks/qt/*.dll artifacts/
@@ -504,10 +510,11 @@ windows-32bit-cmake-cross:
       GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/i686-w64-mingw32.cmake
       OGG_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
       THEORA_EXTRA_CONFIGURE_FLAGS="--host=i686-w64-mingw32 --disable-asm"
-      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32"
+      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=i686-w64-mingw32- --arch=i686 --target-os=mingw32 --pkg-config=pkg-config"
       PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
       CAIRO_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=i686-w64-mingw32
+      OPENH264_EXTRA_MAKE_FLAGS="OS=mingw_nt ARCH=i386 CFLAGS=-fno-exceptions CXXFLAGS=-fno-exceptions LDFLAGS=-fno-exceptions"
     - mkdir build
     - cd build
     - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/i686-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-i686/cmake -DGR_MANUAL_MOC_AND_RCC=ON -DGR_USE_BUNDLED_LIBRARIES=ON
@@ -531,7 +538,7 @@ windows-64bit-cross:
   - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
   - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
   - make -C 3rdparty default extras
-    EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo"
+    EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo"
     HOST=x86_64-w64-mingw32
     ARCHITECTURE=x86_64
     OS=w64_amd64-cross-mingw32
@@ -541,16 +548,26 @@ windows-64bit-cross:
     GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
     OGG_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     THEORA_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32"
+    FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --pkg-config=pkg-config"
     PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
     TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+    OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
   - MAKE="make -f makefile.mingw" make -f makefile.mingw
     GRDIR=./
     CC=x86_64-w64-mingw32-gcc
     CXX=x86_64-w64-mingw32-g++
     AR=x86_64-w64-mingw32-ar
+  - MAKE="make -f makefile.mingw" make -f makefile.mingw -C lib/gks/qt
+    GRDIR=./
+    CC=x86_64-w64-mingw32-gcc
+    CXX=x86_64-w64-mingw32-g++
+    AR=x86_64-w64-mingw32-ar
+    ARCHITECTURE=x86_64
   - mkdir artifacts
+  - cp lib/gks/qt/gksqt.exe artifacts/
+  - cp lib/gks/qt/*.dll artifacts/
+  - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libgks.lib lib/gks/libgks.dll lib/gks/libgks.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libgr.lib lib/gr/libgr.dll lib/gr/libgr.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
   - cp -r lib/gks/fonts artifacts/
   - cp /usr/lib/gcc/x86_64-w64-mingw32/6.3-win32/libgcc_s_seh-1.dll artifacts/
@@ -566,11 +583,16 @@ windows-64bit-cmake-cross:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/windows-64bit-cross
   script:
+    - mkdir qt5-runtime-Windows-x86_64
+    - cd qt5-runtime-Windows-x86_64
+    - wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-x86_64.tar.gz
+    - tar xf qt5-runtime-Windows-x86_64.tar.gz
+    - cd ..
     - wget https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
     - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
     - make -C 3rdparty default extras
-      EXTRAS="tiff ogg theora vpx ffmpeg pixman cairo"
+      EXTRAS="tiff ogg theora vpx openh264 ffmpeg pixman cairo"
       HOST=x86_64-w64-mingw32
       ARCHITECTURE=x86_64
       OS=w64_amd64-cross-mingw32
@@ -581,16 +603,19 @@ windows-64bit-cmake-cross:
       GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/x86_64-w64-mingw32.cmake
       OGG_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
       THEORA_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
-      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32"
+      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --pkg-config=pkg-config"
       PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
       CAIRO_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
       TIFF_EXTRA_CONFIGURE_FLAGS=--host=x86_64-w64-mingw32
+      OPENH264_EXTRA_MAKE_FLAGS=OS=mingw_nt
     - mkdir build
     - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DGR_USE_BUNDLED_LIBRARIES=ON
+    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DCMAKE_TOOLCHAIN_FILE=`pwd`/../cmake/x86_64-w64-mingw32.cmake -DCMAKE_MODULE_PATH=${CI_PROJECT_DIR}/qt5-runtime-Windows-x86_64/cmake -DGR_MANUAL_MOC_AND_RCC=ON  -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
     - make install
     - cd ..
+    - mv qt5-runtime-Windows-x86_64/*.dll install/bin/
+    - mv qt5-runtime-Windows-x86_64/platforms install/bin/platforms
     - cp /usr/lib/gcc/x86_64-w64-mingw32/6.3-win32/libgcc_s_seh-1.dll install/bin/
     - mv install artifacts-windows-64bit-cmake
   artifacts:
@@ -670,8 +695,8 @@ packages-tar:
   - mv artifacts-windows32/include Windows-i686/gr/
   - cp artifacts-js/gr.js Windows-i686/gr/lib/
   - rm -rf artifacts-windows32
+  - mkdir -p Windows-x86_64/gr/bin
   - mkdir -p Windows-x86_64/gr/lib
-  - cp -r Windows-i686/gr/bin Windows-x86_64/gr/bin
   - mv artifacts-windows64/*.dll Windows-x86_64/gr/bin/
   - mv artifacts-windows64/*.lib Windows-x86_64/gr/bin/
   - mv artifacts-windows64/fonts Windows-x86_64/gr/
