@@ -93,7 +93,7 @@ if [ "`which python 2>/dev/null`" = "" ]
 then
   info="${red} no${normal} [not found]"
 else
-  info="${green}yes${normal} [version `python -c 'import sys;print sys.version' | head -1`]"
+  info="${green}yes${normal} [version `python -c 'import sys;print(sys.version)' | head -1`]"
 fi
 printf "%12s: %s\n" "Python" "$info" >&2
 
@@ -295,7 +295,12 @@ int main(void)
     return 0;
 }
 eof
-  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -I$x11path/include `freetype-config --cflags 2>/dev/null`"
+  if [ "`which freetype-config 2>/dev/null`" = "" ]; then
+    freetype_cflags="`pkg-config freetype2 --cflags 2>/dev/null`"
+  else
+    freetype_cflags="`freetype-config --cflags 2>/dev/null`"
+  fi
+  cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc -I$x11path/include $freetype_cflags"
   $cmd >/dev/null 2>&1
   if [ $? -ne 0 ]; then
     xftdefs="XFTDEFS=-DNO_XFT XFTLIBS="
