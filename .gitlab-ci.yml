@@ -699,6 +699,8 @@ packages-tar:
   - mkdir -p Windows-x86_64/gr/lib
   - mv artifacts-windows64/*.dll Windows-x86_64/gr/bin/
   - mv artifacts-windows64/*.lib Windows-x86_64/gr/bin/
+  - mv artifacts-windows64/gksqt.exe Windows-x86_64/gr/bin/
+  - mv artifacts-windows64/platforms Windows-x86_64/gr/bin/
   - mv artifacts-windows64/fonts Windows-x86_64/gr/
   - mv artifacts-windows64/include Windows-x86_64/gr/
   - cp artifacts-js/gr.js Windows-x86_64/gr/lib/
