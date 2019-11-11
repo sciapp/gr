@@ -104,6 +104,12 @@ static void write_page(void)
   int i, j, k;
   int width, height;
   unsigned char *mem;
+
+  if (!p->movie)
+    {
+      open_page();
+    }
+
   width = p->mem[0];
   height = p->mem[1];
 
@@ -219,8 +225,6 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       chars = p->mem_path;
       /* set wstype for cairo png in memory */
       ia[2] = 143;
-
-      open_page();
 
       p->video_plugin_initialized = 1;
       break;
