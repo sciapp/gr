@@ -10,7 +10,8 @@ function runJsterm() {
      BOXZOOM_FILL_STYLE = '#FFAAAA'; // Fill style of the boxzoom box
      BOXZOOM_STROKE_STYLE = '#FF0000'; // Outline style of the boxzoom box
 
-     var gr, comm, widgets = [], jupyterRunning = false;
+     var gr, comm, widgets = [], jupyterRunning = false, scheduled_merges = [];
+     var display = [];
 
      /**
       * Sends a mouse-event via jupyter-comm
@@ -28,17 +29,37 @@ function runJsterm() {
      };
 
      /**
-      * Sends a create-canvas-event via jupyter-comm
-      * @param  {number} id The removed plot's id
+      * Creates a canvas to display a JSTermWidget
+      * @param  {JSTermWidget} widget The widget to be displayed
       */
-     createCanvas = function(id, width, height) {
-       if (jupyterRunning) {
-         comm.send({
-           "type": "createCanvas",
-           "id": id,
-           "width": width,
-           "height": height
-         });
+     createCanvas = function(widget) {
+       let disp = document.getElementById('jsterm-display-' + widget.display);
+       if (disp === null) {
+         if (display.length > 0) {
+           widget.display = display[0];
+           return createCanvas(widget);
+         } else {
+           console.err('Can not create canvas. No active display.');
+           return;
+         }
+       } else {
+         let div = document.createElement('div');
+         div.id = 'jsterm-div-' + widget.id;
+         div.style = 'position: relative; width:' + widget.width + 'px; height: ' + widget.height + 'px;';
+         let overlay = document.createElement('canvas');
+         overlay.id = 'jsterm-overlay-' + widget.id;
+         overlay.style = 'position:absolute; top: 0; right: 0; z-index: 1;';
+         overlay.width = widget.width;
+         overlay.height = widget.height;
+         let canvas = document.createElement('canvas');
+         canvas.id = 'jsterm-' + widget.id;
+         canvas.style = 'position: absolute; top: 0; right: 0; z-index: 0';
+         canvas.width = widget.width;
+         canvas.height = widget.height;
+         div.appendChild(overlay);
+         div.appendChild(canvas);
+         disp.appendChild(div);
+         widget.connectCanvas();
        }
      };
 
@@ -157,10 +178,16 @@ function runJsterm() {
            gr.registermeta(gr.GR_META_EVENT_SIZE, sizeCallback);
            gr.registermeta(gr.GR_META_EVENT_NEW_PLOT, newPlotCallback);
            gr.registermeta(gr.GR_META_EVENT_UPDATE_PLOT, updatePlotCallback);
+           gr.registermeta(gr.GR_META_EVENT_MERGE_END, mergeEndCallback);
          }
          let arguments = gr.newmeta();
          gr.readmeta(arguments, msg.content.data.json);
-         gr.mergemeta(arguments);
+         do {
+           rand = Math.round(Math.random() * 1000000);
+         } while(rand in scheduled_merges);
+         scheduled_merges.push(rand);
+         display.push(msg.content.data.display);
+         gr.mergemeta_named(arguments, "jstermMerge" + rand);
        }
      };
 
@@ -214,11 +241,28 @@ function runJsterm() {
      };
 
      /**
+      * Callback for gr-meta's merge end event.
+      * Acknowledge the finished execution of a `draw()` command.
+      */
+     mergeEndCallback = function(evt) {
+       if (jupyterRunning) {
+         let index = scheduled_merges.indexOf(parseInt(evt.identificator.substring("jstermMerge".length)));
+         if (index > -1) {
+           scheduled_merges.splice(index, 1);
+           document.getElementById('jsterm-msg-' + display[0]).innerText = '';
+           document.getElementById('jsterm-msg-' + display[0]).display = 'none';
+           display.shift();
+         }
+       }
+     };
+
+     /**
       * Creates a JSTermWidget-Object describing and managing a canvas
       * @param       {number} id     The widget's numerical identifier (belonging context in `meta.c`)
       * @constructor
       */
      JSTermWidget = function(id) {
+       this.id = id;  // context id for meta.c (switchmeta)
 
        /**
         * Initialize the JSTermWidget
@@ -227,10 +271,8 @@ function runJsterm() {
          this.canvas = undefined;
          this.overlayCanvas = undefined;
          this.div = undefined;
-         this.id = id;  // context id for meta.c (switchmeta)
 
          this.waiting = false;
-         this.oncanvas = function() {};
 
          // event handling
          this.pinching = false;
@@ -245,6 +287,8 @@ function runJsterm() {
 
          this.sendEvents = false;
          this.handleEvents = true;
+
+         this.display = undefined;
 
          this.width = 640;
          this.height = 480;
@@ -699,33 +743,20 @@ function runJsterm() {
         * @param  {Object} msg message containing the draw-command
         */
        this.draw = function() {
-         if (this.waiting) {
-           this.oncanvas = function() {
-             return this.draw();
-           };
-         } else {
-           if (document.getElementById('jsterm-' + this.id) == null) {
-             createCanvas(this.id, this.width, this.height);
-             this.canvas = undefined;
-             this.waiting = true;
-             this.oncanvas = function() {
-               return this.draw();
-             };
-             setTimeout(function() {
-               this.refreshPlot(this.id, 0);
-             }.bind(this), RECONNECT_PLOT_TIMEOUT);
-           } else {
-             if (document.getElementById('jsterm-' + this.id) !== this.canvas || typeof this.canvas === 'undefined' || typeof this.overlayCanvas === 'undefined') {
-               this.connectCanvas();
-             }
-
-             gr.switchmeta(this.id);
-             gr.current_canvas = this.canvas;
-             gr.current_context = gr.current_canvas.getContext('2d');
-             gr.select_canvas();
-             gr.plotmeta();
-           }
+         if (typeof this.display === 'undefined' || document.getElementById('jsterm-' + this.id) == null) {
+           this.canvas = undefined;
+           this.display = display[0];
+           createCanvas(this);
          }
+         if (document.getElementById('jsterm-' + this.id) !== this.canvas || typeof this.canvas === 'undefined' || typeof this.overlayCanvas === 'undefined') {
+           this.connectCanvas();
+         }
+
+         gr.switchmeta(this.id);
+         gr.current_canvas = this.canvas;
+         gr.current_context = gr.current_canvas.getContext('2d');
+         gr.select_canvas();
+         gr.plotmeta();
        };
 
        /**
@@ -736,12 +767,6 @@ function runJsterm() {
            this.div = document.getElementById('jsterm-div-' + this.id);
            this.canvas = document.getElementById('jsterm-' + this.id);
            this.overlayCanvas = document.getElementById('jsterm-overlay-' + this.id);
-           this.overlayCanvas.addEventListener('DOMNodeRemoved', function() {
-             createCanvas(this.id, this.width, this.height);
-             this.canvas = undefined;
-             this.waiting = true;
-             this.oncanvas = function() {};
-           });
            this.overlayCanvas.style.cursor = 'auto';
 
            //registering event handler
@@ -758,26 +783,7 @@ function runJsterm() {
              event.preventDefault();
              return false;
            });
-         }
-       };
-
-       /**
-        * Check if a deleted canvas has been recreated.
-        * Calls itself after REFRESH_PLOT_TIMEOUT ms if no canvas is found
-        * @param  {number} count [description]
-        */
-       this.refreshPlot = function(count) {
-         if (document.getElementById('jsterm-' + this.id) == null) {
-           if (count < RECONNECT_PLOT_MAX_ATTEMPTS) {
-             setTimeout(function() {
-               this.refreshPlot( count + 1);
-             }.bind(this), RECONNECT_PLOT_TIMEOUT);
-           }
-         } else {
-           this.waiting = false;
-           if (typeof this.oncanvas !== 'undefined') {
-             this.oncanvas();
-           }
+           console.log('Canvas connected', this.id);
          }
        };
      };

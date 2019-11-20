@@ -31,6 +31,7 @@ extern "C"
     GR_META_EVENT_NEW_PLOT,
     GR_META_EVENT_UPDATE_PLOT,
     GR_META_EVENT_SIZE,
+    GR_META_EVENT_MERGE_END,
     _GR_META_EVENT_TYPE_COUNT /* helper entry to store how many different event types exist */
   } gr_meta_event_type_t;
 
@@ -54,10 +55,18 @@ extern "C"
     int height;
   } gr_meta_size_event_t;
 
+  typedef struct
+  {
+    gr_meta_event_type_t type;
+    const char *identificator;
+  } gr_meta_merge_end_event_t;
+
   typedef union
   {
     gr_meta_new_plot_event_t new_plot_event;
     gr_meta_size_event_t size_event;
+    gr_meta_update_plot_event_t update_plot_event;
+    gr_meta_merge_end_event_t merge_end_event;
   } gr_meta_event_t;
 
   typedef void (*gr_meta_event_callback_t)(const gr_meta_event_t *);
@@ -226,6 +235,7 @@ extern "C"
   DLLEXPORT int gr_clearmeta(void);
   DLLEXPORT int gr_inputmeta(const gr_meta_args_t *);
   DLLEXPORT int gr_mergemeta(const gr_meta_args_t *);
+  DLLEXPORT int gr_mergemeta_named(const gr_meta_args_t *, const char *identificator);
   DLLEXPORT int gr_plotmeta(const gr_meta_args_t *);
   DLLEXPORT int gr_readmeta(gr_meta_args_t *, const char *);
   DLLEXPORT int gr_switchmeta(unsigned int id);

@@ -6,7 +6,10 @@ extern "C"
 {
 #endif
 
+#ifndef __STDC_CONSTANT_MACROS
 #define __STDC_CONSTANT_MACROS
+#endif
+
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/mathematics.h>
@@ -21,25 +24,25 @@ extern "C"
 
   struct movie_t_
   {
-    AVCodec *cdc;
-    AVCodecContext *cdc_ctx;
     AVFormatContext *fmt_ctx;
     AVOutputFormat *out_fmt;
+    AVCodecContext *cdc_ctx;
     AVStream *video_st;
     AVFrame *frame;
-    int num_frames;
-    AVPicture dst_picture;
-    const char *path;
+    float t;
+    struct SwsContext *sws_ctx;
+
+    unsigned char *gif_scaled_image;
+    unsigned char *gif_scaled_image_copy;
+    unsigned char *gif_palette;
   };
 
   typedef struct movie_t_ *movie_t;
   typedef struct frame_t_ *frame_t;
 
-  movie_t vc_movie_create(const char *path, int framerate, int bitrate);
+  movie_t vc_movie_create(const char *path, int framerate, int bitrate, int width, int height);
   void vc_movie_append_frame(movie_t movie, frame_t frame);
   void vc_movie_finish(movie_t movie);
-  void vc_movie_free(movie_t);
-  void vc_frame_free(frame_t);
 
 #ifdef __cplusplus
 }

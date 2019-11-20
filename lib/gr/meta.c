@@ -1209,6 +1209,7 @@ static int event_queue_process_all(event_queue_t *queue);
 static error_t event_queue_enqueue_new_plot_event(event_queue_t *queue, int plot_id);
 static error_t event_queue_enqueue_update_plot_event(event_queue_t *queue, int plot_id);
 static error_t event_queue_enqueue_size_event(event_queue_t *queue, int plot_id, int width, int height);
+static error_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator);
 
 
 #undef DECLARE_LIST_METHODS
@@ -1496,7 +1497,7 @@ int gr_clearmeta(void)
   return 1;
 }
 
-int gr_mergemeta(const gr_meta_args_t *args)
+int gr_mergemeta_named(const gr_meta_args_t *args, const char *identificator)
 {
   if (plot_init_static_variables() != NO_ERROR)
     {
@@ -1511,8 +1512,15 @@ int gr_mergemeta(const gr_meta_args_t *args)
     }
 
   process_events();
+  event_queue_enqueue_merge_end_event(event_queue, identificator);
+  process_events();
 
   return 1;
+}
+
+int gr_mergemeta(const gr_meta_args_t *args)
+{
+  return gr_mergemeta_named(args, "");
 }
 
 int gr_plotmeta(const gr_meta_args_t *args)
@@ -10615,6 +10623,29 @@ error_cleanup:
   if (size_event != NULL)
     {
       free(size_event);
+    }
+
+  return error;
+}
+
+error_t event_queue_enqueue_merge_end_event(event_queue_t *queue, const char *identificator)
+{
+  gr_meta_merge_end_event_t *merge_end_event = NULL;
+  error_t error = NO_ERROR;
+
+  merge_end_event = malloc(sizeof(gr_meta_merge_end_event_t));
+  error_cleanup_and_set_error_if(merge_end_event == NULL, ERROR_MALLOC);
+  merge_end_event->type = GR_META_EVENT_MERGE_END;
+  merge_end_event->identificator = identificator;
+  error = event_reflist_enqueue(queue->queue, (gr_meta_event_t *)merge_end_event);
+  error_cleanup_if_error;
+
+  return NO_ERROR;
+
+error_cleanup:
+  if (merge_end_event != NULL)
+    {
+      free(merge_end_event);
     }
 
   return error;

@@ -44,7 +44,7 @@ find_package(Libpng REQUIRED)
 find_package(Zlib REQUIRED)
 find_package(Qhull REQUIRED)
 find_package(Tiff)
-find_package(Ffmpeg)
+find_package(Ffmpeg 57.48.100)
 find_package(Glfw)
 find_package(Zeromq)
 find_package(Cairo)
@@ -348,7 +348,7 @@ if(NOT Cairo_FOUND)
 elseif(NOT Ffmpeg_FOUND)
     target_compile_definitions(videoplugin PRIVATE NO_CAIRO)
     target_compile_definitions(videoplugin PRIVATE NO_AV)
-    string(APPEND GR_REPORT "- videoplugin: No (ffmpeg / ogg / theora / vpx not found)\n")
+    string(APPEND GR_REPORT "- videoplugin: No (ffmpeg / ogg / theora / vpx / openh264 not found)\n")
 else()
     string(APPEND GR_REPORT "- videoplugin:\n")
     string(APPEND GR_REPORT "\tMP4 output: Yes\n")
@@ -362,6 +362,7 @@ set_target_properties(videoplugin PROPERTIES
         C_STANDARD 99
         C_EXTENSIONS OFF
         C_STANDARD_REQUIRED ON
+        LINKER_LANGUAGE CXX
         PREFIX ""
         SUFFIX "${GR_PLUGIN_SUFFIX}"
         )
