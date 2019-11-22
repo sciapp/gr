@@ -263,6 +263,8 @@ static double *xpath = NULL, *xpoint = NULL, *ypath = NULL, *ypoint = NULL, *zpo
 
 static int npoints = 0, maxpath = 0, npath = 0;
 
+static int *code = NULL;
+
 /*  0 - 20    21 - 45    46 - 70    71 - 90           rot/  */
 static int rep_table[16][3] = {
     /*   tilt  */
@@ -788,6 +790,7 @@ static void reallocate(int npoints)
   ypath = (double *)xrealloc(ypath, maxpath * sizeof(double));
   ypoint = (double *)xrealloc(ypoint, maxpath * sizeof(double));
   zpoint = (double *)xrealloc(zpoint, maxpath * sizeof(double));
+  code = (int *)xrealloc(code, maxpath * sizeof(int));
 }
 
 static double x_lin(double x)
@@ -9869,4 +9872,57 @@ void gr_inqresamplemethod(unsigned int *flag)
   check_autoinit;
 
   gks_inq_resample_method(flag);
+}
+
+/*!
+ * Draw paths using given vertices and path codes.
+ *
+ * \param[in] n The number of points
+ * \param[in] x A pointer to the X coordinates
+ * \param[in] y A pointer to the Y coordinates
+ * \param[in] codes Path codes
+ *
+ * The values for `x` and `y` are in normalized device coordinates.
+ * The `codes` describe several patch primitives that can be used to create compound paths.
+ *
+ * The following path codes are recognized:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ *
+ * +-----+------------------+------------------+
+ * |Code | Description      |Vertices          |
+ * +-----+------------------+------------------|
+ * |M, m | moveto           |x,y               |
+ * +-----+------------------+------------------|
+ * |L, l | lineto           |x,y               |
+ * +-----+------------------+------------------|
+ * |Q, q | quadratic Bézier |x1,y1 x2,y2       |
+ * +-----+------------------+------------------|
+ * |C, c | cubic Bézier     |x1,y1 x2,y2 x3,y3 |
+ * +-----+------------------+------------------|
+ * |R, r | rectangle        |w,h               |
+ * +-----+------------------+------------------|
+ * |A, a | arc              |w,h a1,a2         |
+ * +-----+------------------+------------------|
+ * |   Z | closepath        |-                 |
+ * +-----+------------------+------------------|
+ * |   s | stroke           |-                 |
+ * +-----+------------------+------------------|
+ * |   f | fill             |-                 |
+ * +-----+------------------+------------------+
+ *
+ * \endverbatim
+ */
+void gr_path(int n, double *x, double *y, char *codes)
+{
+  int i, len;
+
+  check_autoinit;
+
+  len = strlen(codes);
+  if (len >= maxpath) reallocate(len);
+
+  for (i = 0; i < len; i++) code[i] = (unsigned int)codes[i];
+
+  gks_gdp(n, x, y, GKS_K_GDP_DRAW_PATH, len, code);
 }

@@ -234,6 +234,10 @@ extern "C"
   (GKS_K_UPSAMPLE_VERTICAL_LANCZOS | GKS_K_UPSAMPLE_HORIZONTAL_LANCZOS | GKS_K_DOWNSAMPLE_VERTICAL_LANCZOS | \
    GKS_K_DOWNSAMPLE_HORIZONTAL_LANCZOS)
 
+  /* GKS generalized drawing primitive (GDP) function IDs */
+
+#define GKS_K_GDP_DRAW_PATH 1
+
   /* GKS error codes */
 
 #define GKS_K_NO_ERROR 0
