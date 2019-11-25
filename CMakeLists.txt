@@ -37,6 +37,8 @@ else()
     set(GR_PLUGIN_SUFFIX ".so")
 endif()
 
+set(GR_LIBRARY_SUFFIX ${GR_PLUGIN_SUFFIX})
+
 
 find_package(Freetype)
 find_package(Jpeg REQUIRED)
@@ -170,6 +172,9 @@ foreach(LIBRARY gks_static gks_shared)
             INSTALL_RPATH "${INSTALL_RPATH}"
             )
 endforeach()
+set_target_properties(gks_shared PROPERTIES
+        SUFFIX "${GR_LIBRARY_SUFFIX}"
+        )
 add_library(GR::GKS ALIAS gks_static)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h "#ifndef GR_VERSION\n#define GR_VERSION \"${GR_VERSION_FULL}\"\n#endif\n")
 set_source_files_properties(
@@ -227,6 +232,9 @@ foreach(LIBRARY gr_static gr_shared)
             OUTPUT_NAME GR
             )
 endforeach()
+set_target_properties(gr_shared PROPERTIES
+        SUFFIX "${GR_LIBRARY_SUFFIX}"
+        )
 add_library(GR::GR ALIAS gr_shared)
 
 if (OpenGL_FOUND)
@@ -275,6 +283,9 @@ if (OpenGL_FOUND)
                 OUTPUT_NAME GR3
                 )
     endforeach()
+    set_target_properties(gr3_shared PROPERTIES
+        SUFFIX "${GR_LIBRARY_SUFFIX}"
+    )
     add_library(GR::GR3 ALIAS gr3_shared)
 
     if(UNIX AND NOT APPLE)
@@ -581,6 +592,25 @@ set_target_properties(gtkplugin PROPERTIES
 string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
 
 
+if(APPLE)
+    if(Zeromq_FOUND)
+        add_library(quartzplugin SHARED
+            lib/gks/plugin/quartzplugin.m
+            )
+        target_link_libraries(quartzplugin PUBLIC gks_static)
+        target_link_libraries(quartzplugin PUBLIC Zeromq::Zeromq)
+        target_link_libraries(quartzplugin PUBLIC "-framework Foundation -framework ApplicationServices -framework AppKit")
+        set_target_properties(quartzplugin PROPERTIES
+            C_STANDARD 90
+            C_EXTENSIONS OFF
+            C_STANDARD_REQUIRED ON
+            PREFIX ""
+            SUFFIX "${GR_PLUGIN_SUFFIX}"
+        )
+    endif()
+endif()
+
+
 if(Qt4_FOUND)
     add_library(qt4gr SHARED lib/gr/qtgr/grwidget.cxx)
     target_link_libraries(qt4gr PUBLIC GR::GR)
@@ -802,6 +832,13 @@ if(GR_INSTALL)
     endif()
     if(TARGET qt5gr)
         install(TARGETS qt5gr
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                )
+    endif()
+    if(TARGET quartzplugin)
+        install(TARGETS quartzplugin
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
                 )
