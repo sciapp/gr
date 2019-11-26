@@ -56,6 +56,6 @@ def compare(dir, ext, ref_name, test_name):
         out_name = '%s/%s_%s_diff.png' % (results_path, dir, file_name)
         result.make_diff_png(out_name)
         shutil.copy(test_name, '%s/%s.%s' % (results_path, dir, file_name))
-        print("diff png: %s" % out_name)
+        print("Stats: %s diff png: %s" % (result.diff_stats(), out_name))
 
     assert result.is_equal()
