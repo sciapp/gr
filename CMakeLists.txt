@@ -95,16 +95,20 @@ endif()
 
 if (X11_FOUND)
     if (NOT TARGET X11::X11)
-        find_path(X11_INTRINSIC_INCLUDE_DIR X11/Intrinsic.h PATHS ${X11_INCLUDE_DIR})
-        find_path(XFT_INCLUDE_DIR X11/Xft/Xft.h PATHS ${X11_INCLUDE_DIR})
-        if (X11_INTRINSIC_INCLUDE_DIR AND XFT_INCLUDE_DIR)
-            add_library(X11::X11 UNKNOWN IMPORTED)
-            set_target_properties(X11::X11 PROPERTIES
-                    INTERFACE_INCLUDE_DIRECTORIES "${X11_INCLUDE_DIR}/"
-                    IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                    IMPORTED_LOCATION "${X11_X11_LIB}"
-                    INTERFACE_LINK_LIBRARIES "${X11_Xft_LIB};${X11_Xt_LIB}")
-        endif()
+        add_library(X11::X11 UNKNOWN IMPORTED)
+        set_target_properties(X11::X11 PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${X11_INCLUDE_DIR}/"
+                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                IMPORTED_LOCATION "${X11_X11_LIB}"
+                INTERFACE_LINK_LIBRARIES "${X11_Xft_LIB}")
+    endif()
+    if (NOT TARGET X11::Xt)
+        add_library(X11::Xt UNKNOWN IMPORTED)
+        set_target_properties(X11::Xt PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${X11_INCLUDE_DIR}/"
+                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+                IMPORTED_LOCATION "${X11_Xt_LIB}"
+                INTERFACE_LINK_LIBRARIES "X11::X11")
     endif()
 endif()
 
@@ -403,14 +407,14 @@ add_library(gsplugin SHARED
         lib/gks/plugin/gsplugin.c
         )
 target_link_libraries(gsplugin PUBLIC gks_static)
-if(NOT TARGET X11::X11)
-    string(APPEND GR_REPORT "- gsplugin: No (X11 not found)\n")
+if(NOT TARGET X11::Xt)
+    string(APPEND GR_REPORT "- gsplugin: No (X11 / Xt not found)\n")
     target_compile_definitions(gsplugin PRIVATE NO_GS)
 elseif(NOT Gs_FOUND)
     string(APPEND GR_REPORT "- gsplugin: No (ghostscript not found)\n")
     target_compile_definitions(gsplugin PRIVATE NO_GS)
 else()
-    target_link_libraries(gsplugin PUBLIC X11::X11)
+    target_link_libraries(gsplugin PUBLIC X11::Xt)
     target_link_libraries(gsplugin PUBLIC Gs::Gs)
     string(APPEND GR_REPORT "- gsplugin:\n")
     string(APPEND GR_REPORT "\tPNG outout: Yes\n")
@@ -498,13 +502,13 @@ target_link_libraries(x11plugin PUBLIC gks_static)
 if(NOT Freetype_FOUND)
     target_compile_definitions(x11plugin PRIVATE NO_FT)
 endif()
-if(TARGET X11::X11)
+if(TARGET X11::Xt)
     if(Xft_FOUND AND Fontconfig_FOUND)
         target_link_libraries(x11plugin PUBLIC Fontconfig::Fontconfig)
     else()
         target_compile_definitions(x11plugin PRIVATE NO_XFT)
     endif()
-    target_link_libraries(x11plugin PUBLIC X11::X11)
+    target_link_libraries(x11plugin PUBLIC X11::Xt)
     string(APPEND GR_REPORT "- x11plugin: Yes\n")
 else()
     target_compile_definitions(x11plugin PRIVATE NO_X11)
