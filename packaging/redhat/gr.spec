@@ -24,13 +24,14 @@ Source:				gr-%{fixedversion}.tar%{?compression:.%{compression}}
 Source1:			https://gr-framework.org/downloads/3rdparty/libogg-1.3.2.tar.gz
 Source2:			https://gr-framework.org/downloads/3rdparty/libtheora-1.1.1.tar.gz
 Source3:			https://gr-framework.org/downloads/3rdparty/libvpx-1.4.0.tar.bz2
-Source4:			https://gr-framework.org/downloads/3rdparty/ffmpeg-2.1.4.tar.gz
+Source4:			https://gr-framework.org/downloads/3rdparty/ffmpeg-4.2.1.tar.gz
 Source5:			https://gr-framework.org/downloads/3rdparty/glfw-3.1.1.tar.gz
 Source6:			https://gr-framework.org/downloads/3rdparty/zeromq-4.0.4.tar.gz
 Source7:			https://gr-framework.org/downloads/3rdparty/cmake-2.8.12.2.tar.gz
 Source8:			https://gr-framework.org/downloads/3rdparty/cairo-1.14.6.tar.xz
 Source9:			https://gr-framework.org/downloads/3rdparty/pixman-0.34.0.tar.gz
 Source10:			https://gr-framework.org/downloads/3rdparty/tiff-4.0.10.tar.gz
+Source11:			https://gr-framework.org/downloads/3rdparty/libopenh264-2.0.0.tar.gz
 BuildRequires:		git
 BuildRequires:		gcc-c++
 BuildRequires:		libX11-devel
@@ -112,6 +113,7 @@ mkdir -p %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE8} %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE9} %{THIRDPARTY_SRC}
 %{__cp} %{SOURCE10} %{THIRDPARTY_SRC}
+%{__cp} %{SOURCE11} %{THIRDPARTY_SRC}
 
 %build
 make -C 3rdparty GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
