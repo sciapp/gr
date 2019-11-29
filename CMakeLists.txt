@@ -48,7 +48,7 @@ find_package(Qhull REQUIRED)
 find_package(Tiff)
 find_package(Ffmpeg 57.48.100)
 find_package(Glfw)
-find_package(Zeromq)
+find_package(Zeromq 4.0 EXACT)
 find_package(Cairo)
 find_package(X11)
 find_package(Fontconfig)
@@ -593,21 +593,23 @@ string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
 
 
 if(APPLE)
-    if(Zeromq_FOUND)
-        add_library(quartzplugin SHARED
+    add_library(quartzplugin SHARED
             lib/gks/plugin/quartzplugin.m
             )
-        target_link_libraries(quartzplugin PUBLIC gks_static)
+    target_link_libraries(quartzplugin PUBLIC gks_static)
+    if(Zeromq_FOUND)
         target_link_libraries(quartzplugin PUBLIC Zeromq::Zeromq)
         target_link_libraries(quartzplugin PUBLIC "-framework Foundation -framework ApplicationServices -framework AppKit")
-        set_target_properties(quartzplugin PROPERTIES
+    else()
+        target_compile_definitions(quartzplugin PRIVATE NO_GKSTERM)
+    endif()
+    set_target_properties(quartzplugin PROPERTIES
             C_STANDARD 90
             C_EXTENSIONS OFF
             C_STANDARD_REQUIRED ON
             PREFIX ""
             SUFFIX "${GR_PLUGIN_SUFFIX}"
-        )
-    endif()
+            )
 endif()
 
 
