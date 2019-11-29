@@ -37,7 +37,7 @@ else()
     set(GR_PLUGIN_SUFFIX ".so")
 endif()
 
-set(GR_LIBRARY_SUFFIX ${GR_PLUGIN_SUFFIX})
+set(GR_SHARED_LIBRARY_SUFFIX ${GR_PLUGIN_SUFFIX})
 
 
 find_package(Freetype)
@@ -173,7 +173,7 @@ foreach(LIBRARY gks_static gks_shared)
             )
 endforeach()
 set_target_properties(gks_shared PROPERTIES
-        SUFFIX "${GR_LIBRARY_SUFFIX}"
+        SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}"
         )
 add_library(GR::GKS ALIAS gks_static)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h "#ifndef GR_VERSION\n#define GR_VERSION \"${GR_VERSION_FULL}\"\n#endif\n")
@@ -233,7 +233,7 @@ foreach(LIBRARY gr_static gr_shared)
             )
 endforeach()
 set_target_properties(gr_shared PROPERTIES
-        SUFFIX "${GR_LIBRARY_SUFFIX}"
+        SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}"
         )
 add_library(GR::GR ALIAS gr_shared)
 
@@ -284,7 +284,7 @@ if (OpenGL_FOUND)
                 )
     endforeach()
     set_target_properties(gr3_shared PROPERTIES
-        SUFFIX "${GR_LIBRARY_SUFFIX}"
+        SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}"
     )
     add_library(GR::GR3 ALIAS gr3_shared)
 
