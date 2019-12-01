@@ -25,7 +25,7 @@ or signal processing environments.
 Institute at Forschunsgzentrum Jülich. The main development has been done
 by Josef Heinen who currently maintains the software, but there are other
 developers who currently make valuable contributions. Special thanks to
-Florian Rhiem (*GR3*] and Christian Felder (qtgr, setup.py).
+Florian Rhiem (*GR3*) and Christian Felder (qtgr, setup.py).
 
 Starting with release 0.6 *GR* can be used as a backend
 for [Matplotlib](http://matplotlib.org) and significantly improve
