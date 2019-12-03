@@ -176,7 +176,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 17: /* GDP */
       if (d->state == GKS_K_WS_ACTIVE)
         {
-          len = 2 + (3 + ia[2]) * sizeof(int) + 2 * ia[0] * sizeof(double);
+          len = (2 + 3 + ia[2]) * sizeof(int) + 2 * ia[0] * sizeof(double);
           if (d->nbytes + len > d->size) reallocate(d, len);
 
           COPY(&len, sizeof(int));
