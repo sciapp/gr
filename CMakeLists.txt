@@ -37,7 +37,7 @@ else()
     set(GR_PLUGIN_SUFFIX ".so")
 endif()
 
-set(GR_SHARED_LIBRARY_SUFFIX ${GR_PLUGIN_SUFFIX})
+set(GR_SHARED_LIBRARY_SUFFIX "${GR_PLUGIN_SUFFIX}" CACHE STRING "File suffix for shared libraries")
 
 
 find_package(Freetype)
