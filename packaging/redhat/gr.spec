@@ -47,7 +47,9 @@ BuildRequires: qt5-local
 BuildRequires: gcc-local
 BuildRequires: cmake-local
 %else
+%if 0%{?centos_version} < 800
 BuildRequires: qt-devel
+%endif
 %endif
 
 %if 0%{?suse_version}
@@ -91,7 +93,7 @@ BuildRequires:		wxWidgets-devel
 %endif
 
 # Qt5 BuildRequires for Fedora
-%if 0%{?fedora_version} >= 23
+%if 0%{?fedora_version} >= 23 || 0%{?centos_version} >= 800
 %define qmake_qt5 qmake-qt5
 BuildRequires:		qt5-qtbase-devel
 %endif
