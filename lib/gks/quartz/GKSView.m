@@ -27,6 +27,8 @@
 
 #define nint(a) (int)((a) + 0.5)
 
+#define is_NaN(x) ((x) != (x))
+
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
   xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
@@ -1336,7 +1338,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 0; i < n; ++i)
     {
-      if (px[i] != px[i] && py[i] != py[i])
+      if (!is_NaN(px[i]) && !is_NaN(py[i]))
         {
           NDC_to_DC(0, 0, points[i].x, points[i].y);
           continue;
@@ -1376,7 +1378,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 0; i < n; ++i)
     {
-      if (px[i] != px[i] && py[i] != py[i])
+      if (!is_NaN(px[i]) && !is_NaN(py[i]))
         {
           NDC_to_DC(0, 0, points[i].x, points[i].y);
           continue;
