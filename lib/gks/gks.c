@@ -496,6 +496,8 @@ void gks_init_gks(void)
       s->shoff[1] = 0;
       s->blur = 0;
       s->alpha = 1;
+      s->bwidth = 1;
+      s->bcoli = 1;
 
       s->input_encoding = 0;
     }
@@ -4065,4 +4067,58 @@ void gks_set_resample_method(unsigned int flag)
 void gks_inq_resample_method(unsigned int *flag)
 {
   *flag = s->resample_method;
+}
+
+void gks_set_border_width(double bwidth)
+{
+  if (state >= GKS_K_GKOP)
+    {
+      if (bwidth != s->bwidth)
+        {
+          s->bwidth = f_arr_1[0] = bwidth;
+
+          /* call the device driver link routine */
+          gks_ddlk(SET_BORDER_WIDTH, 0, 0, 0, i_arr, 1, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+        }
+    }
+  else
+    /* GKS not in proper state. GKS must be in one of the states
+       GKOP, WSOP, WSAC or SGOP */
+    gks_report_error(SET_BORDER_WIDTH, 8);
+}
+
+void gks_inq_border_width(int *errind, double *bwidth)
+{
+  *errind = GKS_K_NO_ERROR;
+  *bwidth = s->bwidth;
+}
+
+void gks_set_border_color_index(int coli)
+{
+  if (state >= GKS_K_GKOP)
+    {
+      if (coli >= 0)
+        {
+          if (coli != s->bcoli)
+            {
+              s->bcoli = i_arr[0] = coli;
+
+              /* call the device driver link routine */
+              gks_ddlk(SET_BORDER_COLOR_INDEX, 1, 1, 1, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, NULL);
+            }
+        }
+      else
+        /* color index is invalid */
+        gks_report_error(SET_BORDER_COLOR_INDEX, 65);
+    }
+  else
+    /* GKS not in proper state. GKS must be in one of the states
+       GKOP, WSOP, WSAC or SGOP */
+    gks_report_error(SET_BORDER_COLOR_INDEX, 8);
+}
+
+void gks_inq_border_color_index(int *errind, int *coli)
+{
+  *errind = GKS_K_NO_ERROR;
+  *coli = s->bcoli;
 }

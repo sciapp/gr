@@ -663,6 +663,11 @@ extern "C"
 
   DLLEXPORT double gks_precision(void);
 
+  DLLEXPORT void gks_set_border_color_index(int coli);
+  DLLEXPORT void gks_inq_border_color_index(int *errind, int *coli);
+  DLLEXPORT void gks_set_border_width(double bwidth);
+  DLLEXPORT void gks_inq_border_width(int *errind, double *bwidth);
+
   /* Entry point definitions */
 
 #define gsetlinecolorind gsetlinecolourind

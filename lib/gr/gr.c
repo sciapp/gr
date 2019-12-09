@@ -112,6 +112,8 @@ typedef struct
   int tnr;
   double wn[4], vp[4];
   int scale_options;
+  double bwidth;
+  int bcoli;
 } state_list;
 
 static norm_xform nx = {1, 0, 1, 0};
@@ -9124,6 +9126,9 @@ void gr_savestate(void)
       gks_inq_xform(WC, &errind, s->wn, s->vp);
 
       s->scale_options = lx.scale_options;
+
+      gks_inq_border_width(&errind, &s->bwidth);
+      gks_inq_border_color_index(&errind, &s->bcoli);
     }
   else
     fprintf(stderr, "attempt to save state beyond implementation limit\n");
@@ -9165,6 +9170,9 @@ void gr_restorestate(void)
       gks_set_viewport(WC, s->vp[0], s->vp[1], s->vp[2], s->vp[3]);
 
       setscale(s->scale_options);
+
+      gks_set_border_width(s->bwidth);
+      gks_set_border_color_index(s->bcoli);
     }
   else
     fprintf(stderr, "attempt to restore unsaved state\n");
@@ -9214,6 +9222,9 @@ void gr_selectcontext(int context)
           ctx->vp[1] = ctx->vp[3] = 0.9;
 
           ctx->scale_options = 0;
+
+          ctx->bwidth = 1;
+          ctx->bcoli = 1;
         }
       else
         {
@@ -9243,6 +9254,9 @@ void gr_selectcontext(int context)
       gks_set_viewport(WC, ctx->vp[0], ctx->vp[1], ctx->vp[2], ctx->vp[3]);
 
       setscale(ctx->scale_options);
+
+      gks_set_border_width(ctx->bwidth);
+      gks_set_border_color_index(ctx->bcoli);
     }
   else
     {
@@ -9925,4 +9939,52 @@ void gr_path(int n, double *x, double *y, char *codes)
   for (i = 0; i < len; i++) code[i] = (unsigned int)codes[i];
 
   gks_gdp(n, x, y, GKS_K_GDP_DRAW_PATH, len, code);
+}
+
+/*!
+ * Define the border width of subsequent path output primitives.
+ *
+ * \param[in] width The border width scale factor
+ */
+void gr_setborderwidth(double width)
+{
+  check_autoinit;
+
+  gks_set_border_width(width);
+  if (ctx) ctx->bwidth = width;
+
+  if (flag_graphics) gr_writestream("<setborderwidth width=\"%g\"/>\n", width);
+}
+
+void gr_inqborderwidth(double *width)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_border_width(&errind, width);
+}
+
+/*!
+ * Define the border color of subsequent path output primitives.
+ *
+ * \param[in] color The border color index (COLOR < 1256)
+ */
+void gr_setbordercolorind(int color)
+{
+  check_autoinit;
+
+  gks_set_border_color_index(color);
+  if (ctx) ctx->bcoli = color;
+
+  if (flag_graphics) gr_writestream("<setbordercolorind color=\"%d\"/>\n", color);
+}
+
+void gr_inqbordercolorind(int *coli)
+{
+  int errind;
+
+  check_autoinit;
+
+  gks_inq_border_color_index(&errind, coli);
 }
