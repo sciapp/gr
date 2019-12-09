@@ -244,6 +244,7 @@ static void seg_xform_rel(double *x, double *y) {}
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr;
+  int *n, *primid, *ldr;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   double mat[3][2];
@@ -287,6 +288,15 @@ static void seg_xform_rel(double *x, double *y) {}
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
+        case 17: /* GDP */
+          RESOLVE(n, int, sizeof(int));
+          RESOLVE(primid, int, sizeof(int));
+          RESOLVE(ldr, int, sizeof(int));
+          RESOLVE(i_arr, int, *ldr * sizeof(int));
+          RESOLVE(f_arr_1, double, *n * sizeof(double));
+          RESOLVE(f_arr_2, double, *n * sizeof(double));
+          break;
+
         case 19:  /* set linetype */
         case 21:  /* set polyline color index */
         case 23:  /* set markertype */
@@ -299,6 +309,7 @@ static void seg_xform_rel(double *x, double *y) {}
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
+        case 207: /* set border color index */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
@@ -314,6 +325,7 @@ static void seg_xform_rel(double *x, double *y) {}
         case 31:  /* set character height */
         case 200: /* set text slant */
         case 203: /* set transparency */
+        case 206: /* set border width */
           RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
@@ -406,6 +418,10 @@ static void seg_xform_rel(double *x, double *y) {}
 
         case 16:
           [self cellarray:f_arr_1[0]:f_arr_1[1]:f_arr_2[0]:f_arr_2[1]:*dx:*dy:*dimx:i_arr:0];
+          break;
+
+        case 17:
+          [self gdp:*n:f_arr_1:f_arr_2:*ldr:i_arr];
           break;
 
         case 19:
@@ -571,6 +587,14 @@ static void seg_xform_rel(double *x, double *y) {}
           mat[1][1] = f_arr_1[3];
           mat[2][0] = f_arr_1[4];
           mat[2][1] = f_arr_1[5];
+          break;
+
+        case 206:
+          gkss->bwidth = f_arr_1[0];
+          break;
+
+        case 207:
+          gkss->bcoli = i_arr[0];
           break;
         }
 
@@ -1426,6 +1450,175 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       pattern_ = -1;
     }
 }
+
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+- (void)gdp:(int)n:(double *)px:(double *)py:(int)nc:(int *)codes
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0;
+
+  begin_context(context);
+
+  CGContextSetLineWidth(context, gkss->bwidth);
+  [self set_stroke_color:gkss->bcoli:context];
+  [self set_fill_color:gkss->facoli:context];
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          CGContextMoveToPoint(context, x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          CGContextAddLineToPoint(context, x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          CGContextAddQuadCurveToPoint(context, x[0], y[0], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += x[1];
+              y[2] += y[1];
+            }
+          to_DC(3, x, y);
+          CGContextAddCurveToPoint(context, x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'R':
+        case 'r':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'r')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          w = px[j + 1];
+          h = py[j + 1];
+          to_DC(1, x, y);
+          w = p->a * a[gkss->cntnr] * w;
+          h = p->c * c[gkss->cntnr] * h;
+          CGContextAddRect(context, CGRectMake(x[0], y[0], w, h));
+          j += 2;
+          break;
+        case 'A':
+        case 'a':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'a')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          w = px[j + 1];
+          h = py[j + 1];
+          a1 = px[j + 2];
+          a2 = py[j + 2];
+          to_DC(1, x, y);
+          w = p->a * a[gkss->cntnr] * w;
+          h = p->c * c[gkss->cntnr] * h;
+          if (w != h)
+            {
+              CGMutablePathRef path = CGPathCreateMutable();
+              CGAffineTransform m = CGAffineTransformMakeTranslation(x[0] + 0.5 * w, y[0] + 0.5 * h);
+              m = CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, h / w), m);
+              CGPathAddArc(path, &m, 0, 0, w * 0.5, a1, a2, false);
+              CGContextAddPath(context, path);
+              // TODO: CFRelease(path);
+            }
+          else
+            CGContextAddArc(context, x[0], y[0], w, a1, a2, false);
+          j += 3;
+          break;
+        case 's':
+          CGContextDrawPath(context, kCGPathStroke);
+          break;
+        case 'f':
+          CGContextDrawPath(context, kCGPathFillStroke);
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+      cur_x = x[0];
+      cur_y = y[0];
+    }
+
+  end_context(context);
+}
+
 
 - (void)cellarray:(double)
              xmin:(double)xmax
