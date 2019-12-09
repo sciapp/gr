@@ -201,6 +201,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
     case 108: /* set resample method */
+    case 207: /* set border color index */
 
       len = 3 * sizeof(int);
       if (d->nbytes + len > d->size) reallocate(d, len);
@@ -228,6 +229,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 31:  /* set character height */
     case 200: /* set text slant */
     case 203: /* set transparency */
+    case 206: /* set border width */
 
       len = 2 * sizeof(int) + sizeof(double);
       if (d->nbytes + len > d->size) reallocate(d, len);
