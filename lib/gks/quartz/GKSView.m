@@ -1338,7 +1338,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 0; i < n; ++i)
     {
-      if (!is_NaN(px[i]) && !is_NaN(py[i]))
+      if (is_NaN(px[i]) && is_NaN(py[i]))
         {
           NDC_to_DC(0, 0, points[i].x, points[i].y);
           continue;
@@ -1378,7 +1378,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 0; i < n; ++i)
     {
-      if (!is_NaN(px[i]) && !is_NaN(py[i]))
+      if (is_NaN(px[i]) && is_NaN(py[i]))
         {
           NDC_to_DC(0, 0, points[i].x, points[i].y);
           continue;
