@@ -107,6 +107,8 @@ extern "C"
 #define SET_TRANSPARENCY 203
 #define SET_COORD_XFORM 204
 #define CONFIGURE_WS 205
+#define SET_BORDER_WIDTH 206
+#define SET_BORDER_COLOR_INDEX 207
 
 #define BEGIN_SELECTION 250
 #define END_SELECTION 251
@@ -153,6 +155,8 @@ extern "C"
     double alpha;
     double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
     unsigned int resample_method;
+    double bwidth;
+    int bcoli;
   } gks_state_list_t;
 
   typedef struct gks_list

@@ -255,6 +255,10 @@ extern "C"
   DLLEXPORT void gr_setresamplemethod(unsigned int);
   DLLEXPORT void gr_inqresamplemethod(unsigned int *);
   DLLEXPORT void gr_path(int, double *, double *, char *);
+  DLLEXPORT void gr_setborderwidth(double);
+  DLLEXPORT void gr_inqborderwidth(double *);
+  DLLEXPORT void gr_setbordercolorind(int);
+  DLLEXPORT void gr_inqbordercolorind(int *);
 
 #ifdef __cplusplus
 }
