@@ -101,17 +101,18 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
       COPY(i_arr, dimx * dy * sizeof(int));
       break;
 
-    case 19: /* set linetype */
-    case 21: /* set polyline color index */
-    case 23: /* set markertype */
-    case 25: /* set polymarker color index */
-    case 30: /* set text color index */
-    case 33: /* set text path */
-    case 36: /* set fillarea interior style */
-    case 37: /* set fillarea style index */
-    case 38: /* set fillarea color index */
-    case 52: /* select normalization transformation */
-    case 53: /* set clipping indicator */
+    case 19:  /* set linetype */
+    case 21:  /* set polyline color index */
+    case 23:  /* set markertype */
+    case 25:  /* set polymarker color index */
+    case 30:  /* set text color index */
+    case 33:  /* set text path */
+    case 36:  /* set fillarea interior style */
+    case 37:  /* set fillarea style index */
+    case 38:  /* set fillarea color index */
+    case 52:  /* select normalization transformation */
+    case 53:  /* set clipping indicator */
+    case 207: /* set border color index */
 
       len = 3 * sizeof(int);
       if (p->nbytes + len > p->size) reallocate(len);
@@ -139,6 +140,7 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
     case 31:  /* set character height */
     case 200: /* set text slant */
     case 203: /* set transparency */
+    case 206: /* set border width */
 
       len = 2 * sizeof(int) + sizeof(double);
       if (p->nbytes + len > p->size) reallocate(len);
@@ -345,6 +347,8 @@ void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
     case 202:
     case 203:
     case 204:
+    case 206:
+    case 207:
 
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -482,17 +486,18 @@ static void interp(char *str)
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
-        case 19: /* set linetype */
-        case 21: /* set polyline color index */
-        case 23: /* set markertype */
-        case 25: /* set polymarker color index */
-        case 30: /* set text color index */
-        case 33: /* set text path */
-        case 36: /* set fillarea interior style */
-        case 37: /* set fillarea style index */
-        case 38: /* set fillarea color index */
-        case 52: /* select normalization transformation */
-        case 53: /* set clipping indicator */
+        case 19:  /* set linetype */
+        case 21:  /* set polyline color index */
+        case 23:  /* set markertype */
+        case 25:  /* set polymarker color index */
+        case 30:  /* set text color index */
+        case 33:  /* set text path */
+        case 36:  /* set fillarea interior style */
+        case 37:  /* set fillarea style index */
+        case 38:  /* set fillarea color index */
+        case 52:  /* select normalization transformation */
+        case 53:  /* set clipping indicator */
+        case 207: /* set border color index */
 
           RESOLVE(i_arr, int, sizeof(int));
           break;
@@ -510,6 +515,7 @@ static void interp(char *str)
         case 31:  /* set character height */
         case 200: /* set text slant */
         case 203: /* set transparency */
+        case 206: /* set border width */
 
           RESOLVE(f_arr_1, double, sizeof(double));
           break;
@@ -669,6 +675,12 @@ static void interp(char *str)
           mat[2][0] = f_arr_1[4];
           mat[2][1] = f_arr_1[5];
           gks_set_coord_xform(mat);
+          break;
+        case 206:
+          gks_set_border_width(f_arr_1[0]);
+          break;
+        case 207:
+          gks_set_border_color_index(i_arr[0]);
           break;
         }
 
