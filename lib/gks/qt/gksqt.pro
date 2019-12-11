@@ -5,7 +5,7 @@ DEFINES	        += GRDIR=\\\"$(GRDIR)\\\"
 INCLUDEPATH	+= ../
 HEADERS		= gkswidget.h gksserver.h
 SOURCES		= gksqt.cxx gkswidget.cxx gksserver.cxx
-exists(i ../libGKS.a ) {
+exists( ../libGKS.a ) {
 LIBS		+= ../libGKS.a
   LIBS		+= ../libGKS.a
 } else {
