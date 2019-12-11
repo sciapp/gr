@@ -11,6 +11,7 @@
 #include <QtGui/QWidget>
 #endif
 #include <QtGui/QPainter>
+#include <QtGui/QPainterPath>
 #include <QtGui/QImage>
 #include <QIcon>
 #include <QProcessEnvironment>

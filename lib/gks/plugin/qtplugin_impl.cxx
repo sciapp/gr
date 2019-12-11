@@ -281,6 +281,15 @@ static void set_color(int color)
   p->pixmap->setBrush(transparent_color);
 }
 
+static void set_path_attributes(int border, double width, int color)
+{
+  QColor transparent_border(p->rgb[border]), transparent_color(p->rgb[color]);
+  transparent_border.setAlpha(p->transparency);
+  transparent_color.setAlpha(p->transparency);
+  p->pixmap->setPen(QPen(transparent_border, width, Qt::SolidLine));
+  p->pixmap->setBrush(transparent_color);
+}
+
 static QPixmap *create_pattern(int pattern)
 {
   int parray[33];
@@ -803,12 +812,169 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
     }
 }
 
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void gdp(int n, double *px, double *py, int nc, int *codes)
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0;
+  QPainterPath path;
+
+  set_path_attributes(gkss->bcoli, gkss->bwidth, gkss->facoli);
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          path.moveTo(x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          path.lineTo(x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          path.quadTo(x[0], y[0], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += x[1];
+              y[2] += y[1];
+            }
+          to_DC(3, x, y);
+          path.cubicTo(x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'R':
+        case 'r':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'r')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          w = px[j + 1];
+          h = py[j + 1];
+          to_DC(1, x, y);
+          w = p->a * a[gkss->cntnr] * w;
+          h = p->c * c[gkss->cntnr] * h;
+          path.addRect(x[0], y[0], w, h);
+          j += 2;
+          break;
+        case 'A':
+        case 'a':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'a')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          w = px[j + 1];
+          h = py[j + 1];
+          a1 = px[j + 2];
+          a2 = py[j + 2];
+          to_DC(1, x, y);
+          w = p->a * a[gkss->cntnr] * w;
+          h = p->c * c[gkss->cntnr] * h;
+          path.moveTo(x[0] + w * cos(a1), y[0] + h * sin(a1));
+          path.arcTo(x[0], y[0], w, h, -a1 * 180 / M_PI, -(a2 - a1) * 180 / M_PI);
+          j += 3;
+          break;
+        case 's':
+          path.closeSubpath();
+          p->pixmap->drawPath(path);
+          break;
+        case 'f':
+          path.closeSubpath();
+          p->pixmap->drawPath(path);
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+      cur_x = x[0];
+      cur_y = y[0];
+    }
+}
+
 static void interp(char *str)
 {
   char *s;
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
+  int *n, *primid, *ldr;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
@@ -851,6 +1017,15 @@ static void interp(char *str)
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
+        case 17: /* GDP */
+          RESOLVE(n, int, sizeof(int));
+          RESOLVE(primid, int, sizeof(int));
+          RESOLVE(ldr, int, sizeof(int));
+          RESOLVE(i_arr, int, *ldr * sizeof(int));
+          RESOLVE(f_arr_1, double, *n * sizeof(double));
+          RESOLVE(f_arr_2, double, *n * sizeof(double));
+          break;
+
         case 19:  /* set linetype */
         case 21:  /* set polyline color index */
         case 23:  /* set markertype */
@@ -863,6 +1038,7 @@ static void interp(char *str)
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
+        case 207: /* set border color index */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
@@ -878,6 +1054,8 @@ static void interp(char *str)
         case 31:  /* set character height */
         case 200: /* set text slant */
         case 203: /* set transparency */
+        case 206: /* set border width */
+
           RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
@@ -963,6 +1141,10 @@ static void interp(char *str)
         case 201:
           true_color = *f == DRAW_IMAGE;
           cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1], *dx, *dy, *dimx, i_arr, true_color);
+          break;
+
+        case 17:
+          gdp(*n, f_arr_1, f_arr_2, *ldr, i_arr);
           break;
 
         case 19:
@@ -1111,6 +1293,15 @@ static void interp(char *str)
 
         case 203:
           p->transparency = (int)(f_arr_1[0] * 255);
+          break;
+
+        case 206:
+          gkss->bwidth = f_arr_1[0];
+          break;
+
+        case 207:
+          gkss->bcoli = i_arr[0];
+          break;
         }
 
       RESOLVE(len, int, sizeof(int));
