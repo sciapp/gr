@@ -1,7 +1,14 @@
 #ifndef GR3_GLX_H_INCLUDED
 #define GR3_GLX_H_INCLUDED
 
+#ifdef NO_GL
+#define GR3_USE_SR
+#define GLfloat float
+#define GLuint unsigned int
+#define GLint int
+#endif
 
+#ifndef NO_GL
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glx.h>
@@ -209,4 +216,5 @@ GLFUNC void (*gr3_glTexImage2D)(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, G
 
 int gr3_initGL_GLX_(void);
 
+#endif
 #endif

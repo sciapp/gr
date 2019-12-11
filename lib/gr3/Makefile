@@ -13,9 +13,10 @@ UNAME := $(shell uname)
      PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
     JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
        ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
-      CFLAGS = -O3 -Wall -Wextra -pedantic -fPIC -DGRDIR=\"$(GRDIR)\" $(EXTRA_CFLAGS)
+      CFLAGS = -O3 -Wall -Wextra -pedantic -fPIC -pthread -DGRDIR=\"$(GRDIR)\" $(EXTRA_CFLAGS)
         OBJS = gr3.o gr3_convenience.o gr3_html.o gr3_povray.o gr3_png.o \
-               gr3_jpeg.o gr3_gr.o gr3_mc.o gr3_slices.o
+               gr3_jpeg.o gr3_gr.o gr3_mc.o gr3_slices.o gr3_sr.o
+
 ifeq ($(UNAME), Darwin)
       CFLAGS+= -mmacosx-version-min=10.11
       GLLIBS = -framework OpenGL -framework Cocoa
@@ -34,7 +35,11 @@ INSTALL_NAME =
         LIBS = -ldl
 endif
 
-default: targets
+default:
+	$(MAKE) -C ../.. Makedefs
+	$(MAKE) `cat ../../Makedefs`
+
+all: targets
 
 targets: prerequisites libGR3.so
 
@@ -49,17 +54,17 @@ install_platform:
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	cp -r libGR3platform.so $(LIBDIR)
 libGR3platform.so: gr3_platform_glx.c
-	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) $(PLATFORMLIBS) $(SOFLAGS) $(LDFLAGS)
+	${CC} -o $@ $^ $(CFLAGS) $(INCLUDES) $(PLATFORMLIBS) $(SOFLAGS) $(LDFLAGS) $(GLDEFS)
 endif
 
 .c.o:
-	$(CC) -c $< $(CFLAGS) $(INCLUDES)
+	${CC} -c $< $(CFLAGS) $(INCLUDES) $(GLDEFS)
 
 libGR3.so: $(OBJS)
-	$(CC) -o $@ $^ $(CFLAGS) $(JPEGLIBS) $(GLLIBS) $(GRLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) \
+	${CC} -o $@ $^ $(CFLAGS) $(JPEGLIBS) $(GLLIBS) $(GRLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) \
 	$(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
 
-gr3.c: gr3.h gr3_internals.h
+gr3.c: gr3.h gr3_internals.h gr3_sr.h
 gr3_internals.h: gr3.h gr3_glx.h gr3_cgl.h
 gr3_glx.c: gr3_glx.h
 gr3_cgl.c: gr3_cgl.h
@@ -68,9 +73,10 @@ gr3_html.c: gr3_internals.h
 gr3_povray.c: gr3_internals.h
 gr3_png.c: gr3_internals.h
 gr3_jpeg.c: gr3_internals.h
-gr3_gr.c: gr3_internals.h
+gr3_gr.c: gr3_internals.h gr3_sr.h
 gr3_mc.c: gr3.h gr3_mc_data.h
 gr3_slices.c: gr3.h
+gr3_sr.c: gr3_sr.h
 
 install: targets
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi

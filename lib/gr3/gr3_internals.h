@@ -1,6 +1,7 @@
 #ifndef GR3_INTERNALS_H_INCLUDED
 #define GR3_INTERNALS_H_INCLUDED
 
+#include "gr3_sr.h"
 #ifndef M_PI
 #define M_PI 3.141592653589793238462643383279
 #endif
@@ -56,6 +57,7 @@ typedef struct _GR3_InitStruct_t_
                            generating images */
   int framebuffer_height; /*!< The height of the framebuffer used for
                            generating images */
+  int num_threads;
 } GR3_InitStruct_t_;
 
 typedef enum _GR3_MeshType_t
@@ -92,6 +94,7 @@ typedef struct _GR3_MeshData_t_
   int *indices;
   int number_of_vertices;
   int number_of_indices;
+  vertex_fp *vertices_fp;
 } GR3_MeshData_t_;
 
 
@@ -149,6 +152,7 @@ typedef struct _GR3_DrawList_t_
                       for one mesh to be drawn. */
   int n;             /*!< The number of meshes to be drawn. */
   int object_id;
+  vertex_fp **vertices_fp;
   struct _GR3_DrawList_t_ *next; /*!< The pointer to the next GR3_DrawList_t_. */
 } GR3_DrawList_t_;
 
@@ -239,6 +243,15 @@ typedef struct _GR3_ContextStruct_t_
   GLfloat *projection_matrix;
   int quality;
   int projection_type;
+  int num_threads;
+  int use_software_renderer;
+  int software_renderer_pixmaps_initalised;
+  unsigned char *pixmaps[MAX_NUM_THREADS]; /* pixels to be drawn created by the Software Renderer */
+  float *depth_buffers[MAX_NUM_THREADS];
+  pthread_t threads[MAX_NUM_THREADS];
+  queue *queues[MAX_NUM_THREADS];
+  int last_width;
+  int last_height;
 } GR3_ContextStruct_t_;
 
 extern GR3_ContextStruct_t_ context_struct_;

@@ -100,6 +100,7 @@ int gr3_initGL_GLX_(void)
     }
 
 
+#ifndef NO_GL
   /* Load Function pointers */ {
 #ifdef GR3_CAN_USE_VBO
     gr3_glBufferData = (PFNGLBUFFERDATAPROC)platform->getProcAddress("glBufferData");
@@ -207,5 +208,6 @@ int gr3_initGL_GLX_(void)
     gr3_glTexImage2D = (void (*)(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum,
                                  const GLvoid *))platform->getProcAddress("glTexImage2D");
   }
+#endif
   return GR3_ERROR_NONE;
 }

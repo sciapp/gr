@@ -237,7 +237,6 @@ set_target_properties(gr_shared PROPERTIES
         )
 add_library(GR::GR ALIAS gr_shared)
 
-if (OpenGL_FOUND)
     set(GR3_SOURCES
             lib/gr3/gr3.c
             lib/gr3/gr3_convenience.c
@@ -248,6 +247,7 @@ if (OpenGL_FOUND)
             lib/gr3/gr3_png.c
             lib/gr3/gr3_povray.c
             lib/gr3/gr3_slices.c
+            lib/gr3/gr3_sr.c
             )
 
     add_library(gr3_static STATIC ${GR3_SOURCES})
@@ -263,7 +263,7 @@ if (OpenGL_FOUND)
         target_link_libraries(${LIBRARY} PUBLIC GR::GR)
         target_link_libraries(${LIBRARY} PUBLIC Jpeg::Jpeg)
         target_link_libraries(${LIBRARY} PUBLIC Libpng::Libpng)
-        if(APPLE OR WIN32)
+        if((APPLE OR WIN32) AND OpenGL_FOUND)
             target_link_libraries(${LIBRARY} PUBLIC OpenGL::GL)
         endif()
         if(APPLE)
@@ -292,7 +292,9 @@ if (OpenGL_FOUND)
         if(TARGET X11::X11)
             add_library(gr3platform SHARED lib/gr3/gr3_platform_glx.c)
             target_link_libraries(gr3platform PUBLIC GR::GR)
-            target_link_libraries(gr3platform PUBLIC OpenGL::GL)
+            if(OpenGL_FOUND)
+                target_link_libraries(gr3platform PUBLIC OpenGL::GL)
+            endif()
             target_link_libraries(gr3platform PUBLIC X11::X11)
             set_target_properties(gr3platform PROPERTIES
                     C_STANDARD 90
@@ -305,10 +307,11 @@ if (OpenGL_FOUND)
             message(WARNING "libGR3platform.so requires X11 and will not be built.")
         endif()
     endif()
-else()
-    message(WARNING "GR3 requires OpenGL and will not be built.")
-endif()
 
+if (NOT OpenGL_FOUND)
+    target_compile_definitions(gr3_static PUBLIC -DNO_GL)
+    target_compile_definitions(gr3_shared PUBLIC -DNO_GL)
+endif()
 
 set(GR_REPORT "GKS plugins:\n")
 
