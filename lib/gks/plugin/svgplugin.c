@@ -1216,7 +1216,6 @@ static void gdp(int n, double *px, double *py, int nc, int *codes)
           cx = x[0] + w;
           cy = y[0] + h;
           h = fabs(h);
-          printf("a1=%g a2=%g w=%g h=%g\n", a1 * 180 / M_PI, a2 * 180 / M_PI, w, h);
           sx = cx + w * cos(a1);
           sy = cy + h * sin(a1);
           ex = cx + w * cos(a1 + a2);
