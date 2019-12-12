@@ -825,7 +825,7 @@ static void to_DC(int n, double *x, double *y)
     }
 }
 
-static void gdp(int n, double *px, double *py, int nc, int *codes)
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
 {
   int i, j;
   double x[3], y[3], w, h, a1, a2;
@@ -975,6 +975,14 @@ static void gdp(int n, double *px, double *py, int nc, int *codes)
         }
       cur_x = x[0];
       cur_y = y[0];
+    }
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
     }
 }
 
@@ -1154,7 +1162,7 @@ static void interp(char *str)
           break;
 
         case 17:
-          gdp(*n, f_arr_1, f_arr_2, *ldr, i_arr);
+          gdp(*n, f_arr_1, f_arr_2, *primid, *ldr, i_arr);
           break;
 
         case 19:
