@@ -1071,6 +1071,175 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   free(s);
 }
 
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void gdp(int n, double *px, double *py, int nc, int *codes)
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0;
+  double cx, cy, sx, sy, ex, ey;
+  int large_arc_flag, sweep_flag;
+
+  svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%02d)\" d=\"", path_id, p->path_index);
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          svg_printf(p->stream, "M%g %g ", x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          svg_printf(p->stream, "L%g %g ", x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          svg_printf(p->stream, "Q%g %g %g %g ", x[0], y[0], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += x[1];
+              y[2] += y[1];
+            }
+          to_DC(3, x, y);
+          svg_printf(p->stream, "C%g %g %g %g %g %g ", x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'R':
+        case 'r':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'r')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          w = px[j + 1];
+          h = py[j + 1];
+          to_DC(1, x, y);
+          w = p->a * a[gkss->cntnr] * w;
+          h = p->c * c[gkss->cntnr] * h;
+          svg_printf(p->stream, "M%g %g L%g %g L%g %g L%g %g", x[0], y[0], x[0] + w, y[0], x[0] + w, y[0] + h, x[0],
+                     y[0] + h);
+          j += 2;
+          break;
+        case 'A':
+        case 'a':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'a')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          w = px[j + 1];
+          h = py[j + 1];
+          a1 = M_PI - py[j + 2];
+          a2 = py[j + 2] - px[j + 2];
+          to_DC(1, x, y);
+          w = 0.5 * p->a * a[gkss->cntnr] * w;
+          h = 0.5 * p->c * c[gkss->cntnr] * h;
+          cx = x[0] + w;
+          cy = y[0] + h;
+          h = fabs(h);
+          sx = cx + w * cos(a1);
+          sy = cy + h * sin(a1);
+          ex = cx + w * cos(a1 + a2);
+          ey = cy + h * sin(a1 + a2);
+          large_arc_flag = a2 > M_PI ? 1 : 0;
+          sweep_flag = a2 > 0 ? 1 : 0;
+          svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g\n", sx, sy, large_arc_flag, sweep_flag, w, h, ex, ey);
+          j += 3;
+          break;
+        case 's':
+          break;
+        case 'f':
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+      cur_x = x[0];
+      cur_y = y[0];
+    }
+
+  p->color = gkss->facoli;
+  svg_printf(p->stream,
+             "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" stroke=\"#%02x%02x%02x\" "
+             "stroke-opacity=\"%g\" stroke-width=\"%g\"/>\n",
+             p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency, p->rgb[gkss->bcoli][0],
+             p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency, gkss->bwidth * NOMINAL_LINEWIDTH);
+}
+
 static void set_clip_path(int tnr)
 {
   double *vp;
@@ -1311,6 +1480,15 @@ void gks_drv_js(
           int true_color = fctid == DRAW_IMAGE;
 
           cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+          p->empty = 0;
+        }
+      break;
+
+      /* GDP */
+    case 17:
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          gdp(ia[0], r1, r2, ia[2], ia + 3);
           p->empty = 0;
         }
       break;
