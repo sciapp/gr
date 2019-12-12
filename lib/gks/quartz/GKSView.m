@@ -421,7 +421,7 @@ static void seg_xform_rel(double *x, double *y) {}
           break;
 
         case 17:
-          [self gdp:*n:f_arr_1:f_arr_2:*ldr:i_arr];
+          [self gdp:*n:f_arr_1:f_arr_2:*primid:*ldr:i_arr];
           break;
 
         case 19:
@@ -1464,7 +1464,7 @@ static void to_DC(int n, double *x, double *y)
     }
 }
 
-- (void)gdp:(int)n:(double *)px:(double *)py:(int)nc:(int *)codes
+- (void)draw_path:(int)n:(double *)px:(double *)py:(int)nc:(int *)codes
 {
   int i, j;
   double x[3], y[3], w, h, a1, a2;
@@ -1627,6 +1627,15 @@ static void to_DC(int n, double *x, double *y)
     }
 
   end_context(context);
+}
+
+
+- (void)gdp:(int)n:(double *)px:(double *)py:(int)primid:(int)nc:(int *)codes
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      [self draw_path:n:px:py:nc:codes];
+    }
 }
 
 

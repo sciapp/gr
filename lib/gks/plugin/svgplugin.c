@@ -1084,7 +1084,7 @@ static void to_DC(int n, double *x, double *y)
     }
 }
 
-static void gdp(int n, double *px, double *py, int nc, int *codes)
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
 {
   int i, j;
   double x[3], y[3], w, h, a1, a2;
@@ -1245,6 +1245,14 @@ static void gdp(int n, double *px, double *py, int nc, int *codes)
              "stroke-opacity=\"%g\" stroke-width=\"%g\"/>\n",
              p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency, p->rgb[gkss->bcoli][0],
              p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency, gkss->bwidth * NOMINAL_LINEWIDTH);
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
+    }
 }
 
 static void set_clip_path(int tnr)
@@ -1495,7 +1503,7 @@ void gks_drv_js(
     case 17:
       if (p->state == GKS_K_WS_ACTIVE)
         {
-          gdp(ia[0], r1, r2, ia[2], ia + 3);
+          gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
           p->empty = 0;
         }
       break;
