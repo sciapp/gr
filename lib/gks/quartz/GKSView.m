@@ -1563,11 +1563,16 @@ static void to_DC(int n, double *x, double *y)
               x[0] += cur_x;
               y[0] += cur_y;
             }
-          w = px[j + 1];
-          h = py[j + 1];
-          to_DC(1, x, y);
-          w = p->a * a[gkss->cntnr] * w;
-          h = p->c * c[gkss->cntnr] * h;
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'r')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          w = x[1] - x[0];
+          h = y[1] - y[0];
           CGContextAddRect(context, CGRectMake(x[0], y[0], w, h));
           j += 2;
           break;
@@ -1580,13 +1585,18 @@ static void to_DC(int n, double *x, double *y)
               x[0] += cur_x;
               y[0] += cur_y;
             }
-          w = px[j + 1];
-          h = py[j + 1];
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'a')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          w = x[1] - x[0];
+          h = y[1] - y[0];
           a1 = px[j + 2];
           a2 = py[j + 2];
-          to_DC(1, x, y);
-          w = p->a * a[gkss->cntnr] * w;
-          h = p->c * c[gkss->cntnr] * h;
           if (w != h)
             {
               CGMutablePathRef path = CGPathCreateMutable();

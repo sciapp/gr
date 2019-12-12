@@ -1181,13 +1181,15 @@ static void gdp(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
-          w = px[j + 1];
-          h = py[j + 1];
-          to_DC(1, x, y);
-          w = p->a * a[gkss->cntnr] * w;
-          h = p->c * c[gkss->cntnr] * h;
-          svg_printf(p->stream, "M%g %g L%g %g L%g %g L%g %g", x[0], y[0], x[0] + w, y[0], x[0] + w, y[0] + h, x[0],
-                     y[0] + h);
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'r')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          svg_printf(p->stream, "M%g %g L%g %g L%g %g L%g %g", x[0], y[0], x[1], y[0], x[1], y[1], x[0], y[1]);
           j += 2;
           break;
         case 'A':
@@ -1199,16 +1201,22 @@ static void gdp(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
-          w = px[j + 1];
-          h = py[j + 1];
-          a1 = M_PI - py[j + 2];
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'a')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          w = 0.5 * (x[1] - x[0]);
+          h = 0.5 * (y[1] - y[0]);
+          a1 = 2 * M_PI - py[j + 2];
           a2 = py[j + 2] - px[j + 2];
-          to_DC(1, x, y);
-          w = 0.5 * p->a * a[gkss->cntnr] * w;
-          h = 0.5 * p->c * c[gkss->cntnr] * h;
           cx = x[0] + w;
           cy = y[0] + h;
           h = fabs(h);
+          printf("a1=%g a2=%g w=%g h=%g\n", a1 * 180 / M_PI, a2 * 180 / M_PI, w, h);
           sx = cx + w * cos(a1);
           sy = cy + h * sin(a1);
           ex = cx + w * cos(a1 + a2);
