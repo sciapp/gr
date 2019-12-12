@@ -888,6 +888,7 @@ static void ps_init(int *pages)
       packb("/cp {closepath} def");
       packb("/m {moveto} def");
       packb("/l {lineto} def");
+      packb("/c {curveto} def");
       packb("/A {1 0 rlineto} def");
       packb("/B {1 1 rlineto} def");
       packb("/C {0 1 rlineto} def");
@@ -1477,6 +1478,194 @@ static void line_routine(int n, double *px, double *py, int ltype, int tnr)
     }
 }
 
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
+{
+  char buffer[100];
+  int i, j, np = 1;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0;
+  double x1, y1, x2, y2;
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          sprintf(buffer, "%s%.2f %.2f m", np ? "np " : "", x[0], y[0]);
+          packb(buffer);
+          np = 0;
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          sprintf(buffer, "%.2f %.2f l", x[0], y[0]);
+          packb(buffer);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          x1 = cur_x + (2.0 / 3.0) * (x[0] - cur_x);
+          y1 = cur_y + (2.0 / 3.0) * (y[0] - cur_y);
+          x2 = x[1] + (2.0 / 3.0) * (x[0] - x[1]);
+          y2 = y[1] + (2.0 / 3.0) * (y[0] - y[1]);
+          sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x1, y1, x2, y2, x[1], y[1]);
+          packb(buffer);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += x[1];
+              y[2] += y[1];
+            }
+          to_DC(3, x, y);
+          sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x[0], y[0], x[1], y[1], x[2], y[2]);
+          packb(buffer);
+          j += 3;
+          break;
+        case 'R':
+        case 'r':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'r')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'r')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          sprintf(buffer, "%.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l cp", x[0], y[0], x[1], y[0], x[1], y[1],
+                  x[0], y[1]);
+          packb(buffer);
+          j += 2;
+          break;
+        case 'A':
+        case 'a':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'a')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'a')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          w = 0.5 * (x[1] - x[0]);
+          h = 0.5 * (y[1] - y[0]);
+          a1 = px[j + 2];
+          a2 = py[j + 2];
+          /* TODO */
+          j += 3;
+          break;
+        case 's':
+          set_linewidth(gkss->bwidth);
+          sprintf(buffer, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+          packb(buffer);
+          np = 1;
+          break;
+        case 'f':
+          sprintf(buffer, "gs %.4g %.4g %.4g sc fi gr", p->red[gkss->facoli], p->green[gkss->facoli],
+                  p->blue[gkss->facoli]);
+          packb(buffer);
+          set_linewidth(gkss->bwidth);
+          sprintf(buffer, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+          packb(buffer);
+          np = 1;
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+      cur_x = x[0];
+      cur_y = y[0];
+    }
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
+    }
+}
+
 void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                 char *chars, void **ptr)
 {
@@ -1684,6 +1873,20 @@ void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
             }
           gks_set_dev_xform(gkss, p->window, p->viewpt);
           cell_array(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, p->wtype, true_color);
+          p->empty = 0;
+        }
+      break;
+
+      /* GDP */
+    case 17:
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          if (!p->init)
+            {
+              ps_init(&p->pages);
+              p->init = 1;
+            }
+          gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
           p->empty = 0;
         }
       break;

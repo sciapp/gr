@@ -1546,6 +1546,175 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   pdf_restore(p);
 }
 
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0;
+
+  pdf_setrgbcolor(p, p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+  pdf_setfillcolor(p, p->red[gkss->facoli], p->green[gkss->facoli], p->blue[gkss->facoli]);
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          pdf_printf(p->content, "%.2f %.2f m\n", x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          pdf_printf(p->content, "%.2f %.2f l\n", x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          pdf_printf(p->content, "%.2f %.2f %.2f %.2f v\n", x[0], y[0], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += x[1];
+              y[2] += y[1];
+            }
+          to_DC(3, x, y);
+          pdf_printf(p->content, "%.2f %.2f %.2f %.2f %.2f %.2f c\n", x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'R':
+        case 'r':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'r')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'r')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          pdf_printf(p->content, "%.2f %.2f %.2f %.2f re\n", x[0], y[0], x[1] - x[0], y[1] - y[0]);
+          j += 2;
+          break;
+        case 'A':
+        case 'a':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'a')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'a')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          w = 0.5 * (x[1] - x[0]);
+          h = 0.5 * (y[1] - y[0]);
+          a1 = px[j + 2];
+          a2 = py[j + 2];
+          /* TODO */
+          j += 3;
+          break;
+        case 's':
+          pdf_printf(p->content, "s\n");
+          break;
+        case 'f':
+          pdf_printf(p->content, "b\n");
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+      cur_x = x[0];
+      cur_y = y[0];
+    }
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
+    }
+}
+
 #ifndef EMSCRIPTEN
 void gks_drv_pdf(
 #else
@@ -1642,6 +1811,16 @@ void gks_drv_js(
           int true_color = fctid == DRAW_IMAGE;
           if (p->empty) begin_page();
           cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+        }
+      break;
+
+    case 17:
+      /* GDP */
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          if (p->empty) begin_page();
+          gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
+          p->empty = 0;
         }
       break;
 
