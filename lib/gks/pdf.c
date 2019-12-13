@@ -1564,6 +1564,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   int i, j;
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0;
+  int close_path_flag = 0;
 
   pdf_setrgbcolor(p, p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
   pdf_setfillcolor(p, p->red[gkss->facoli], p->green[gkss->facoli], p->blue[gkss->facoli]);
@@ -1690,12 +1691,27 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           /* TODO */
           j += 3;
           break;
-        case 's':
+        case 'S': /* stroke */
+          if (close_path_flag)
+            {
+              pdf_printf(p->content, "s\n");
+            }
+          else
+            {
+              pdf_printf(p->content, "S\n");
+            }
+          break;
+        case 's': /* close and stroke */
           pdf_printf(p->content, "s\n");
           break;
-        case 'f':
-          pdf_printf(p->content, "b\n");
+        case 'f': /* close, fill using even-odd rule */
+          pdf_printf(p->content, "B*\n");
           break;
+        case 'F': /* close, fill using even-odd rule, stroke */
+          pdf_printf(p->content, "b*\n");
+          break;
+        case 'Z':
+          close_path_flag = 1;
         case '\0':
           break;
         default:

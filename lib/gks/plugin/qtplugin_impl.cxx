@@ -281,15 +281,6 @@ static void set_color(int color)
   p->pixmap->setBrush(transparent_color);
 }
 
-static void set_path_attributes(int border, double width, int color)
-{
-  QColor transparent_border(p->rgb[border]), transparent_color(p->rgb[color]);
-  transparent_border.setAlpha(p->transparency);
-  transparent_color.setAlpha(p->transparency);
-  p->pixmap->setPen(QPen(transparent_border, width, Qt::SolidLine));
-  p->pixmap->setBrush(transparent_color);
-}
-
 static QPixmap *create_pattern(int pattern)
 {
   int parray[33];
@@ -832,8 +823,6 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double cur_x = 0, cur_y = 0;
   QPainterPath path;
 
-  set_path_attributes(gkss->bcoli, gkss->bwidth, gkss->facoli);
-
   j = 0;
   for (i = 0; i < nc; ++i)
     {
@@ -959,13 +948,24 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           path.arcTo(x[0], y[0], w, h, -a1 * 180 / M_PI, -(a2 - a1) * 180 / M_PI);
           j += 3;
           break;
-        case 's':
+        case 's': /* close and stroke */
           path.closeSubpath();
-          p->pixmap->drawPath(path);
+          p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine));
           break;
-        case 'f':
+        case 'S': /* stroke */
+          p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine));
+          break;
+        case 'F': /* fill and stroke */
           path.closeSubpath();
-          p->pixmap->drawPath(path);
+          p->pixmap->fillPath(path, QColor(p->rgb[gkss->facoli]));
+          p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine));
+          break;
+        case 'f': /* fill */
+          path.closeSubpath();
+          p->pixmap->fillPath(path, QColor(p->rgb[gkss->facoli]));
+          break;
+        case 'Z': /* closepath */
+          path.closeSubpath();
           break;
         case '\0':
           break;

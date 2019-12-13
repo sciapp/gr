@@ -1585,6 +1585,207 @@ static void set_viewport(int tnr, double xmin, double xmax, double ymin, double 
     }
 }
 
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0, qx = 0, qy = 0;
+
+  cairo_new_path(p->cr);
+  cairo_set_line_width(p->cr, gkss->bwidth * fmin(p->width, p->height) / 500.0);
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          cairo_move_to(p->cr, x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          to_DC(1, x, y);
+          cairo_line_to(p->cr, x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          if (cairo_has_current_point(p->cr))
+            {
+              cairo_get_current_point(p->cr, &qx, &qy);
+            }
+          else
+            {
+              qx = qy = 0;
+            }
+          cairo_curve_to(p->cr, 2.0 / 3.0 * x[0] + 1.0 / 3.0 * qx, 2.0 / 3.0 * y[0] + 1.0 / 3.0 * qy,
+                         2.0 / 3.0 * x[0] + 1.0 / 3.0 * x[1], 2.0 / 3.0 * y[0] + 1.0 / 3.0 * y[1], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += x[1];
+              y[2] += y[1];
+            }
+          to_DC(3, x, y);
+          cairo_curve_to(p->cr, x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'R':
+        case 'r':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'r')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'r')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          cairo_rectangle(p->cr, x[0], y[0], x[1] - x[0], y[1] - y[0]);
+          j += 2;
+          break;
+        case 'A':
+        case 'a':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'a')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'a')
+            {
+              x[1] += x[0];
+              y[1] += y[0];
+            }
+          to_DC(2, x, y);
+          w = x[1] - x[0];
+          h = y[1] - y[0];
+          a1 = px[j + 2];
+          a2 = py[j + 2];
+
+          cairo_save(p->cr);
+          cairo_translate(p->cr, x[0] + 0.5 * w, y[0] + 0.5 * h);
+          cairo_scale(p->cr, 1., h / w);
+          cairo_arc(p->cr, 0., 0., w * 0.5, a1, a2);
+          cairo_restore(p->cr);
+          j += 3;
+          break;
+        case 's': /* close and stroke */
+          cairo_close_path(p->cr);
+          set_color(gkss->bcoli);
+          cairo_stroke(p->cr);
+          break;
+        case 'S': /* stroke */
+          set_color(gkss->bcoli);
+          cairo_stroke(p->cr);
+          break;
+        case 'F': /* fill and stroke */
+          cairo_close_path(p->cr);
+          set_color(gkss->facoli);
+          cairo_fill_preserve(p->cr);
+          set_color(gkss->bcoli);
+          cairo_stroke(p->cr);
+          break;
+        case 'f': /* fill */
+          cairo_close_path(p->cr);
+          set_color(gkss->facoli);
+          cairo_fill(p->cr);
+          break;
+        case 'Z': /* close */
+          cairo_close_path(p->cr);
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+      cur_x = x[0];
+      cur_y = y[0];
+    }
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
+    }
+}
+
 void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                      char *chars, void **ptr)
 {
@@ -1804,6 +2005,14 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
           p->empty = 0;
           unlock();
+        }
+      break;
+
+    case 17:
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
+          p->empty = 0;
         }
       break;
 

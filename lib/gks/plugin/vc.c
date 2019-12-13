@@ -14,7 +14,7 @@ static void encode_frame(movie_t movie)
   ret = avcodec_send_frame(movie->cdc_ctx, movie->frame);
   if (ret < 0)
     {
-      fprintf(stderr, "Error sending frame %ld for encoding\n", movie->frame->pts);
+      fprintf(stderr, "Error sending frame %ld for encoding\n", (long)movie->frame->pts);
       return;
     }
   while (ret >= 0)
@@ -26,7 +26,7 @@ static void encode_frame(movie_t movie)
         }
       else if (ret < 0)
         {
-          fprintf(stderr, "Error during encoding of frame %ld\n", movie->frame->pts);
+          fprintf(stderr, "Error during encoding of frame %ld\n", (long)movie->frame->pts);
           return;
         }
       av_packet_rescale_ts(&pkt, movie->cdc_ctx->time_base, movie->video_st->time_base);
