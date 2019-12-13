@@ -908,6 +908,10 @@ static void ps_init(int *pages)
       packb("/sk {stroke} def");
       packb("/csk {closepath stroke} def");
       packb("/fi {closepath eofill} def");
+      packb("/el {/endangle exch def /startangle exch def\
+ /yrad exch def /xrad exch def /y exch def /x exch def\
+ /savematrix matrix currentmatrix def x y translate xrad yrad scale\
+ 0 0 1 startangle endangle arc savematrix setmatrix} def");
       packb("/sg {setgray} def");
       packb("/sc {setrgbcolor} def");
       packb("/fg {0 sg} def");
@@ -1629,15 +1633,23 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           h = 0.5 * (y[1] - y[0]);
           a1 = px[j + 2];
           a2 = py[j + 2];
-          /* TODO */
+          sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f el", x[0] + w, y[0] + h, w, h, a1 * 180 / M_PI,
+                  a2 * 180 / M_PI);
+          packb(buffer);
           j += 3;
           break;
+        case 'S':
+          sprintf(buffer, "cp");
+          packb(buffer);
         case 's':
           set_linewidth(gkss->bwidth);
           sprintf(buffer, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
           packb(buffer);
           np = 1;
           break;
+        case 'F':
+          sprintf(buffer, "cp");
+          packb(buffer);
         case 'f':
           sprintf(buffer, "gs %.4g %.4g %.4g sc fi gr", p->red[gkss->facoli], p->green[gkss->facoli],
                   p->blue[gkss->facoli]);
