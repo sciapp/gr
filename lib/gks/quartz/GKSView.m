@@ -1613,7 +1613,15 @@ static void to_DC(int n, double *x, double *y)
         case 's':
           CGContextDrawPath(context, kCGPathStroke);
           break;
+        case 'S':
+          CGContextClosePath(context);
+          CGContextDrawPath(context, kCGPathStroke);
+          break;
         case 'f':
+          CGContextDrawPath(context, kCGPathFill);
+          break;
+        case 'F':
+          CGContextClosePath(context);
           CGContextDrawPath(context, kCGPathFillStroke);
           break;
         case '\0':
