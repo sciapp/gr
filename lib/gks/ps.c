@@ -1338,7 +1338,7 @@ static void cell_array(double xmin, double xmax, double ymin, double ymax, int d
   packb("grestore");
 }
 
-static void text_routine(double *x, double *y, int *nchars, char *chars)
+static void text_routine(double *x, double *y, int nchars, char *chars)
 {
   int i, j;
   double ux, uy, yrel, angle, phi;
@@ -1346,11 +1346,11 @@ static void text_routine(double *x, double *y, int *nchars, char *chars)
   int alh, alv, ic;
   char str[500], buffer[510];
   int prec;
+  char *latin1_str = gks_malloc(nchars + 1);
 
-  char *latin1_str = gks_malloc(*nchars + 1);
   gks_utf82latin1(chars, latin1_str);
   chars = latin1_str;
-  *nchars = strlen(chars);
+  nchars = strlen(chars);
 
   NDC_to_DC(*x, *y, xorg, yorg);
 
@@ -1375,7 +1375,7 @@ static void text_routine(double *x, double *y, int *nchars, char *chars)
   else
     moveto(xorg, yorg);
 
-  for (i = 0, j = 0; i < *nchars; i++)
+  for (i = 0, j = 0; i < nchars; i++)
     {
       ic = chars[i];
       if (ic < 0) ic += 256;
@@ -1638,19 +1638,19 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           packb(buffer);
           j += 3;
           break;
-        case 'S':
+        case 's':
           sprintf(buffer, "cp");
           packb(buffer);
-        case 's':
+        case 'S':
           set_linewidth(gkss->bwidth);
           sprintf(buffer, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
           packb(buffer);
           np = 1;
           break;
-        case 'F':
+        case 'f':
           sprintf(buffer, "cp");
           packb(buffer);
-        case 'f':
+        case 'F':
           sprintf(buffer, "gs %.4g %.4g %.4g sc fi gr", p->red[gkss->facoli], p->green[gkss->facoli],
                   p->blue[gkss->facoli]);
           packb(buffer);
@@ -1830,7 +1830,7 @@ void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
               double px, py;
               WC_to_NDC(*r1, *r2, tnr, px, py);
               seg_xform(&px, &py);
-              text_routine(&px, &py, &nchars, chars);
+              text_routine(&px, &py, nchars, chars);
             }
           else
             {
