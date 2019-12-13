@@ -90,6 +90,10 @@ extern "C"
 
 #define MAX_CLIP 64
 
+#define SVG_DRAW_PATH_STROKE (1u << 0u)
+#define SVG_DRAW_PATH_FILL (1u << 1u)
+#define SVG_DRAW_PATH_CLOSE (1u << 2u)
+
 static gks_state_list_t *gkss;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
@@ -1091,6 +1095,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double cur_x = 0, cur_y = 0;
   double cx, cy, sx, sy, ex, ey;
   int large_arc_flag, sweep_flag;
+  unsigned int draw_flags = 0;
 
   svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%02d)\" d=\"", path_id, p->path_index);
 
@@ -1189,7 +1194,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               y[1] += y[0];
             }
           to_DC(2, x, y);
-          svg_printf(p->stream, "M%g %g L%g %g L%g %g L%g %g", x[0], y[0], x[1], y[0], x[1], y[1], x[0], y[1]);
+          svg_printf(p->stream, "M%g %g L%g %g L%g %g L%g %g L%g %g", x[0], y[0], x[1], y[0], x[1], y[1], x[0], y[1],
+                     x[0], y[0]);
           j += 2;
           break;
         case 'A':
@@ -1222,13 +1228,23 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           ey = cy + h * sin(a1 + a2);
           large_arc_flag = a2 > M_PI ? 1 : 0;
           sweep_flag = a2 > 0 ? 1 : 0;
-          svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g\n", sx, sy, large_arc_flag, sweep_flag, w, h, ex, ey);
+          svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g ", sx, sy, large_arc_flag, sweep_flag, w, h, ex, ey);
           j += 3;
           break;
-        case 's':
+        case 'S': /* stroke */
+          draw_flags |= SVG_DRAW_PATH_STROKE;
           break;
-        case 'f':
+        case 's': /* close and stroke */
+          draw_flags |= SVG_DRAW_PATH_CLOSE | SVG_DRAW_PATH_STROKE;
           break;
+        case 'f': /* fill */
+          draw_flags |= SVG_DRAW_PATH_CLOSE | SVG_DRAW_PATH_FILL;
+          break;
+        case 'F': /* fill and stroke */
+          draw_flags |= SVG_DRAW_PATH_CLOSE | SVG_DRAW_PATH_FILL | SVG_DRAW_PATH_STROKE;
+          break;
+        case 'Z': /* close */
+          draw_flags |= SVG_DRAW_PATH_CLOSE;
         case '\0':
           break;
         default:
@@ -1240,11 +1256,36 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
     }
 
   p->color = gkss->facoli;
-  svg_printf(p->stream,
-             "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" stroke=\"#%02x%02x%02x\" "
-             "stroke-opacity=\"%g\" stroke-width=\"%g\"/>\n",
-             p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency, p->rgb[gkss->bcoli][0],
-             p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency, gkss->bwidth * NOMINAL_LINEWIDTH);
+  if (draw_flags & SVG_DRAW_PATH_CLOSE)
+    {
+      svg_printf(p->stream, "Z\" ");
+    }
+  else
+    {
+      svg_printf(p->stream, "\" ");
+    }
+
+  if (draw_flags & SVG_DRAW_PATH_FILL)
+    {
+      svg_printf(p->stream, "fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ", p->rgb[p->color][0],
+                 p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
+    }
+  else
+    {
+      svg_printf(p->stream, "fill=\"none\" ");
+    }
+
+  if (draw_flags & SVG_DRAW_PATH_STROKE)
+    {
+      svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
+                 p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
+                 gkss->bwidth * NOMINAL_LINEWIDTH);
+    }
+  else
+    {
+      svg_printf(p->stream, "stroke=\"none\"");
+    }
+  svg_printf(p->stream, "/>\n");
 }
 
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
