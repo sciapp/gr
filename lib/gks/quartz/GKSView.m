@@ -1493,6 +1493,8 @@ static void to_DC(int n, double *x, double *y)
           to_DC(1, x, y);
           CGContextMoveToPoint(context, x[0], y[0]);
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1506,6 +1508,8 @@ static void to_DC(int n, double *x, double *y)
           to_DC(1, x, y);
           CGContextAddLineToPoint(context, x[0], y[0]);
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1526,6 +1530,8 @@ static void to_DC(int n, double *x, double *y)
           to_DC(2, x, y);
           CGContextAddQuadCurveToPoint(context, x[0], y[0], x[1], y[1]);
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1553,6 +1559,8 @@ static void to_DC(int n, double *x, double *y)
           to_DC(3, x, y);
           CGContextAddCurveToPoint(context, x[0], y[0], x[1], y[1], x[2], y[2]);
           j += 3;
+          cur_x = x[2];
+          cur_y = y[2];
           break;
         case 'R':
         case 'r':
@@ -1575,6 +1583,8 @@ static void to_DC(int n, double *x, double *y)
           h = y[1] - y[0];
           CGContextAddRect(context, CGRectMake(x[0], y[0], w, h));
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'A':
         case 'a':
@@ -1609,12 +1619,14 @@ static void to_DC(int n, double *x, double *y)
           else
             CGContextAddArc(context, x[0], y[0], w, a1, a2, false);
           j += 3;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 's':
+          CGContextClosePath(context);
           CGContextDrawPath(context, kCGPathStroke);
           break;
         case 'S':
-          CGContextClosePath(context);
           CGContextDrawPath(context, kCGPathStroke);
           break;
         case 'f':
@@ -1630,8 +1642,6 @@ static void to_DC(int n, double *x, double *y)
           gks_perror("invalid path code ('%c')", codes[i]);
           exit(1);
         }
-      cur_x = x[0];
-      cur_y = y[0];
     }
 
   end_context(context);

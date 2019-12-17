@@ -1566,6 +1566,9 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double cur_x = 0, cur_y = 0;
   int close_path_flag = 0;
 
+  set_linewidth(gkss->bwidth);
+  set_transparency(p->alpha);
+
   pdf_setrgbcolor(p, p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
   pdf_setfillcolor(p, p->red[gkss->facoli], p->green[gkss->facoli], p->blue[gkss->facoli]);
 
@@ -1586,6 +1589,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(1, x, y);
           pdf_printf(p->content, "%.2f %.2f m\n", x[0], y[0]);
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1599,6 +1604,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(1, x, y);
           pdf_printf(p->content, "%.2f %.2f l\n", x[0], y[0]);
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1619,6 +1626,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(2, x, y);
           pdf_printf(p->content, "%.2f %.2f %.2f %.2f v\n", x[0], y[0], x[1], y[1]);
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1646,6 +1655,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(3, x, y);
           pdf_printf(p->content, "%.2f %.2f %.2f %.2f %.2f %.2f c\n", x[0], y[0], x[1], y[1], x[2], y[2]);
           j += 3;
+          cur_x = x[2];
+          cur_y = y[2];
           break;
         case 'R':
         case 'r':
@@ -1666,6 +1677,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(2, x, y);
           pdf_printf(p->content, "%.2f %.2f %.2f %.2f re\n", x[0], y[0], x[1] - x[0], y[1] - y[0]);
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'A':
         case 'a':
@@ -1690,6 +1703,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           a2 = py[j + 2];
           /* TODO */
           j += 3;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'S': /* stroke */
           if (close_path_flag)
@@ -1718,8 +1733,6 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           gks_perror("invalid path code ('%c')", codes[i]);
           exit(1);
         }
-      cur_x = x[0];
-      cur_y = y[0];
     }
 }
 

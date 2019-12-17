@@ -1574,6 +1574,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           packb(buffer);
           np = 0;
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1588,6 +1590,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           sprintf(buffer, "%.2f %.2f l", x[0], y[0]);
           packb(buffer);
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1613,6 +1617,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x1, y1, x2, y2, x[1], y[1]);
           packb(buffer);
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1641,6 +1647,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x[0], y[0], x[1], y[1], x[2], y[2]);
           packb(buffer);
           j += 3;
+          cur_x = x[2];
+          cur_y = y[2];
           break;
         case 'R':
         case 'r':
@@ -1663,6 +1671,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
                   x[0], y[1]);
           packb(buffer);
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'A':
         case 'a':
@@ -1689,6 +1699,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
                   a2 * 180 / M_PI);
           packb(buffer);
           j += 3;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 's':
           sprintf(buffer, "cp");
@@ -1700,14 +1712,16 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           np = 1;
           break;
         case 'f':
-          sprintf(buffer, "cp");
+          sprintf(buffer, "%.4g %.4g %.4g sc fi", p->red[gkss->facoli], p->green[gkss->facoli], p->blue[gkss->facoli]);
           packb(buffer);
+          np = 1;
+          break;
         case 'F':
           sprintf(buffer, "gs %.4g %.4g %.4g sc fi gr", p->red[gkss->facoli], p->green[gkss->facoli],
                   p->blue[gkss->facoli]);
           packb(buffer);
           set_linewidth(gkss->bwidth);
-          sprintf(buffer, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+          sprintf(buffer, "%.4g %.4g %.4g sc csk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
           packb(buffer);
           np = 1;
           break;
@@ -1717,8 +1731,6 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           gks_perror("invalid path code ('%c')", codes[i]);
           exit(1);
         }
-      cur_x = x[0];
-      cur_y = y[0];
     }
 }
 
