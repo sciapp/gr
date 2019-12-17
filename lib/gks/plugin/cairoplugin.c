@@ -1624,6 +1624,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(1, x, y);
           cairo_move_to(p->cr, x[0], y[0]);
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1637,6 +1639,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(1, x, y);
           cairo_line_to(p->cr, x[0], y[0]);
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1666,6 +1670,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cairo_curve_to(p->cr, 2.0 / 3.0 * x[0] + 1.0 / 3.0 * qx, 2.0 / 3.0 * y[0] + 1.0 / 3.0 * qy,
                          2.0 / 3.0 * x[0] + 1.0 / 3.0 * x[1], 2.0 / 3.0 * y[0] + 1.0 / 3.0 * y[1], x[1], y[1]);
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1693,6 +1699,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(3, x, y);
           cairo_curve_to(p->cr, x[0], y[0], x[1], y[1], x[2], y[2]);
           j += 3;
+          cur_x = x[2];
+          cur_y = y[2];
           break;
         case 'R':
         case 'r':
@@ -1713,6 +1721,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(2, x, y);
           cairo_rectangle(p->cr, x[0], y[0], x[1] - x[0], y[1] - y[0]);
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'A':
         case 'a':
@@ -1742,6 +1752,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cairo_arc(p->cr, 0., 0., w * 0.5, a1, a2);
           cairo_restore(p->cr);
           j += 3;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 's': /* close and stroke */
           cairo_close_path(p->cr);
@@ -1773,8 +1785,6 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           gks_perror("invalid path code ('%c')", codes[i]);
           exit(1);
         }
-      cur_x = x[0];
-      cur_y = y[0];
     }
 }
 

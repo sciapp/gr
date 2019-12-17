@@ -1116,6 +1116,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(1, x, y);
           svg_printf(p->stream, "M%g %g ", x[0], y[0]);
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1129,6 +1131,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(1, x, y);
           svg_printf(p->stream, "L%g %g ", x[0], y[0]);
           j += 1;
+          cur_x = x[0];
+          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1149,6 +1153,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(2, x, y);
           svg_printf(p->stream, "Q%g %g %g %g ", x[0], y[0], x[1], y[1]);
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1176,6 +1182,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(3, x, y);
           svg_printf(p->stream, "C%g %g %g %g %g %g ", x[0], y[0], x[1], y[1], x[2], y[2]);
           j += 3;
+          cur_x = x[2];
+          cur_y = y[2];
           break;
         case 'R':
         case 'r':
@@ -1197,6 +1205,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           svg_printf(p->stream, "M%g %g L%g %g L%g %g L%g %g L%g %g", x[0], y[0], x[1], y[0], x[1], y[1], x[0], y[1],
                      x[0], y[0]);
           j += 2;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'A':
         case 'a':
@@ -1230,6 +1240,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           sweep_flag = a2 > 0 ? 1 : 0;
           svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g ", sx, sy, large_arc_flag, sweep_flag, w, h, ex, ey);
           j += 3;
+          cur_x = x[1];
+          cur_y = y[1];
           break;
         case 'S': /* stroke */
           draw_flags |= SVG_DRAW_PATH_STROKE;
@@ -1251,8 +1263,6 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           gks_perror("invalid path code ('%c')", codes[i]);
           exit(1);
         }
-      cur_x = x[0];
-      cur_y = y[0];
     }
 
   p->color = gkss->facoli;
