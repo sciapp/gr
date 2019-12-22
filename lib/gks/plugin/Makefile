@@ -151,7 +151,7 @@ qtplugin.so: qtplugin.o $(GKSLIBS)
 qt5plugin.so: qt5plugin.o $(GKSLIBS)
 	$(CXX) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(EXTRA_LDFLAGS_QT5) $(QT5LIBS) $(X11LIBS) $(LIBS)
 
-svgplugin.so: svgplugin.o $(GKSLIBS)
+svgplugin.so: svgplugin.o $(GKSLIBS) $(PNGLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 gtkplugin.so: gtkplugin.o $(GKSLIBS)
@@ -173,13 +173,13 @@ glplugin.so: glplugin.o $(GKSLIBS)
 zmqplugin.so: zmqplugin.o $(GKSLIBS)
 	$(CXX) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(ZMQLIBS) $(LIBS)
 
-pgfplugin.so: pgfplugin.o $(GKSLIBS)
+pgfplugin.so: pgfplugin.o $(GKSLIBS) $(PNGLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(PNGLIBS) $(ZLIBS) $(LIBS)
 
 cairoplugin.o: cairoplugin.c
 	$(CC) -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(INCLUDES) $(FTDEFS) $(FTINC) $(JPEGDEFS) $(CAIRODEFS) $(TIFFDEFS) $(CFLAGS) $(ZINC) -DNO_X11 $<
 
-cairoplugin.so: cairoplugin.o $(GKSLIBS)
+cairoplugin.so: cairoplugin.o $(GKSLIBS) $(PNGLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(CAIROLIBS) $(FTLIBS) $(JPEGLIBS) $(PNGLIBS) $(TIFFLIBS) $(ZLIBS) $(LIBS) -DNO_X11
 
 videoplugin.so: videoplugin.o vc.o gif.o $(GKSLIBS)
