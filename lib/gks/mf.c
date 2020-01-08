@@ -101,6 +101,17 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
       COPY(i_arr, dimx * dy * sizeof(int));
       break;
 
+    case 17: /* GDP */
+      len = (2 + 3 + i_arr[2]) * sizeof(int) + 2 * i_arr[0] * sizeof(double);
+      if (p->nbytes + len > p->size) reallocate(len);
+
+      COPY(&len, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(i_arr, (3 + i_arr[2]) * sizeof(int));
+      COPY(f_arr_1, i_arr[0] * sizeof(double));
+      COPY(f_arr_2, i_arr[0] * sizeof(double));
+      break;
+
     case 19:  /* set linetype */
     case 21:  /* set polyline color index */
     case 23:  /* set markertype */
@@ -318,6 +329,7 @@ void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
     case 14:
     case 15:
     case 16:
+    case 17:
       p->empty = 0;
     case 19:
     case 20:
@@ -440,6 +452,7 @@ static void interp(char *str)
   gks_state_list_t *gkss = NULL;
   int sp = 0, *len, *f, sx = 1, sy = 1;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
+  int *n = NULL, *primid = NULL, *ldr = NULL;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   double mat[3][2];
@@ -484,6 +497,15 @@ static void interp(char *str)
           RESOLVE(dy, int, sizeof(int));
           RESOLVE(dimx, int, sizeof(int));
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
+          break;
+
+        case 17: /* GDP */
+          RESOLVE(n, int, sizeof(int));
+          RESOLVE(primid, int, sizeof(int));
+          RESOLVE(ldr, int, sizeof(int));
+          RESOLVE(i_arr, int, *ldr * sizeof(int));
+          RESOLVE(f_arr_1, double, *n * sizeof(double));
+          RESOLVE(f_arr_2, double, *n * sizeof(double));
           break;
 
         case 19:  /* set linetype */
@@ -581,6 +603,9 @@ static void interp(char *str)
           break;
         case 16:
           gks_cellarray(f_arr_1[0], f_arr_2[0], f_arr_1[1], f_arr_2[1], *dx, *dy, sx, sy, *dimx, *dy, i_arr);
+          break;
+        case 17:
+          gks_gdp(*n, f_arr_1, f_arr_2, *primid, *ldr, i_arr);
           break;
 
         case 19:
