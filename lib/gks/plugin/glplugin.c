@@ -833,6 +833,7 @@ static void interp(char *str)
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
+  int *n = NULL, *primid = NULL, *ldr = NULL;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
@@ -875,6 +876,15 @@ static void interp(char *str)
           RESOLVE(dy, int, sizeof(int));
           RESOLVE(dimx, int, sizeof(int));
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
+          break;
+
+        case 17: /* GDP */
+          RESOLVE(n, int, sizeof(int));
+          RESOLVE(primid, int, sizeof(int));
+          RESOLVE(ldr, int, sizeof(int));
+          RESOLVE(i_arr, int, *ldr * sizeof(int));
+          RESOLVE(f_arr_1, double, *n * sizeof(double));
+          RESOLVE(f_arr_2, double, *n * sizeof(double));
           break;
 
         case 19:  /* set linetype */
@@ -984,6 +994,10 @@ static void interp(char *str)
         case 201:
           true_color = *f == DRAW_IMAGE;
           cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1], *dx, *dy, *dimx, i_arr, true_color);
+          break;
+
+        case 17:
+          gks_perror("GDP primitive not supported for OpenGL");
           break;
 
         case 19:

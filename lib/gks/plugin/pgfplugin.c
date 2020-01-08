@@ -1082,6 +1082,11 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
         }
       break;
 
+    case 17:
+      /* GDP */
+      gks_perror("GDP primitive not supported for PGF");
+      break;
+
     case 48:
       /* set color representation */
       if (p->state == GKS_K_WS_ACTIVE)

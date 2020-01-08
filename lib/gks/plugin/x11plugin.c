@@ -4375,6 +4375,13 @@ void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
       unlock();
       break;
 
+    case 17:
+      /*
+       * GDP
+       */
+      gks_perror("GDP primitive not supported for X11");
+      break;
+
     case 48:
       /*
        *  Set color representation
