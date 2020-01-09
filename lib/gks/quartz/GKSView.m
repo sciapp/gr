@@ -1610,9 +1610,9 @@ static void to_DC(int n, double *x, double *y)
           if (w != h)
             {
               CGMutablePathRef path = CGPathCreateMutable();
-              CGAffineTransform m = CGAffineTransformMakeTranslation(x[0] - 0.5 * w, y[0] - 0.5 * h);
+              CGAffineTransform m = CGAffineTransformMakeTranslation(x[0] + 0.5 * w, y[0] + 0.5 * h);
               m = CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, h / w), m);
-              CGPathAddArc(path, &m, w, h, 0.5 * w, a1, a2, false);
+              CGPathAddArc(path, &m, 0, 0, 0.5 * w, a1, a2, false);
               CGContextAddPath(context, path);
               CFRelease(path);
             }

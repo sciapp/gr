@@ -1559,6 +1559,47 @@ static void to_DC(int n, double *x, double *y)
     }
 }
 
+static void arc(double x, double y, double w, double h, double a1, double a2)
+{
+  double bcp, cos_a1, cos_a2, sin_a1, sin_a2;
+
+  a1 = a1 * M_PI / 180;
+  a2 = a2 * M_PI / 180;
+
+  bcp = (4.0 / 3 * (1 - cos(0.5 * (a2 - a1))) / sin(0.5 * (a2 - a1)));
+
+  sin_a1 = sin(a1);
+  sin_a2 = sin(a2);
+  cos_a1 = cos(a1);
+  cos_a2 = cos(a2);
+
+  pdf_printf(p->content, "%.2f %.2f %.2f %.2f %.2f %.2f c\n", x + w * (cos_a1 - bcp * sin_a1),
+             y + h * (sin_a1 + bcp * cos_a1), x + w * (cos_a2 + bcp * sin_a2), y + h * (sin_a2 - bcp * cos_a2),
+             x + w * cos_a2, y + h * sin_a2);
+}
+
+static void draw_arc(double x, double y, double w, double h, double a1, double a2)
+{
+  double rad_a1 = a1 * M_PI / 180;
+  double startx, starty;
+
+  startx = x + w * cos(rad_a1);
+  starty = y + h * sin(rad_a1);
+  pdf_printf(p->content, "%.2f %.2f m\n", startx, starty);
+
+  while (a2 < a1) a2 += 360;
+
+  if (a1 == a2) return;
+
+  while (a2 - a1 > 90)
+    {
+      arc(x, y, w, h, a1, a1 + 90);
+      a1 += 90;
+    }
+
+  if (a1 != a2) arc(x, y, w, h, a1, a2);
+}
+
 static void draw_path(int n, double *px, double *py, int nc, int *codes)
 {
   int i, j;
@@ -1699,9 +1740,9 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(2, x, y);
           w = 0.5 * (x[1] - x[0]);
           h = 0.5 * (y[1] - y[0]);
-          a1 = px[j + 2];
-          a2 = py[j + 2];
-          /* TODO */
+          a1 = px[j + 2] * 180 / M_PI;
+          a2 = py[j + 2] * 180 / M_PI;
+          draw_arc(x[0] + w, y[0] + h, w, h, a1, a2);
           j += 3;
           cur_x = x[1];
           cur_y = y[1];
@@ -1720,13 +1761,14 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           pdf_printf(p->content, "s\n");
           break;
         case 'f': /* close, fill using even-odd rule */
-          pdf_printf(p->content, "B*\n");
+          pdf_printf(p->content, "h B*\n");
           break;
         case 'F': /* close, fill using even-odd rule, stroke */
-          pdf_printf(p->content, "b*\n");
+          pdf_printf(p->content, "h b*\n");
           break;
         case 'Z':
-          close_path_flag = 1;
+          pdf_printf(p->content, "h\n");
+          break;
         case '\0':
           break;
         default:
