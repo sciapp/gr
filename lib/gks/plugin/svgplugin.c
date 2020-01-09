@@ -1238,7 +1238,20 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           ey = cy + h * sin(a1 + a2);
           large_arc_flag = a2 > M_PI ? 1 : 0;
           sweep_flag = a2 > 0 ? 1 : 0;
-          svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g ", sx, sy, large_arc_flag, sweep_flag, w, h, ex, ey);
+          if (a2 >= 2 * M_PI)
+            {
+              ex = cx + w * cos(a1 + a2 / 2);
+              ey = cy + h * sin(a1 + a2 / 2);
+              svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g ", sx, sy, large_arc_flag, sweep_flag, w, h, ex, ey);
+              svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g ", ex, ey, large_arc_flag, sweep_flag, w, h, sx, sy);
+              ex = cx + w * cos(a1 + a2);
+              ey = cy + h * sin(a1 + a2);
+              svg_printf(p->stream, "M%g %g ", ex, ey);
+            }
+          else
+            {
+              svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g ", sx, sy, large_arc_flag, sweep_flag, w, h, ex, ey);
+            }
           j += 3;
           cur_x = x[1];
           cur_y = y[1];
