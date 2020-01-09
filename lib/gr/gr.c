@@ -1417,11 +1417,6 @@ static void polymarker(int n, double *x, double *y)
   gks(gks_polymarker);
 }
 
-static void fillarea(int n, double *x, double *y)
-{
-  gks(gks_fillarea);
-}
-
 static void print_int_array(char *name, int n, int *data)
 {
   int i;
@@ -8032,18 +8027,17 @@ void gr_wc3towc(double *x, double *y, double *z)
  */
 void gr_drawrect(double xmin, double xmax, double ymin, double ymax)
 {
-  double x[5], y[5];
+  double x[2], y[2];
+  int codes[2] = {'R', 'S'};
 
   check_autoinit;
 
-  x[0] = x[3] = min(xmin, xmax);
-  x[1] = x[2] = max(xmin, xmax);
-  x[4] = x[0];
-  y[0] = y[1] = min(ymin, ymax);
-  y[2] = y[3] = max(ymin, ymax);
-  y[4] = y[0];
+  x[0] = min(xmin, xmax);
+  y[0] = min(ymin, ymax);
+  x[1] = max(xmin, xmax);
+  y[1] = max(ymin, ymax);
 
-  polyline(5, x, y);
+  gks_gdp(2, x, y, GKS_K_GDP_DRAW_PATH, 2, codes);
 
   if (flag_graphics)
     gr_writestream("<drawrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
@@ -8059,16 +8053,20 @@ void gr_drawrect(double xmin, double xmax, double ymin, double ymax)
  */
 void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
 {
-  double x[4], y[4];
+  double bwidth, x[2], y[2];
+  int codes[2] = {'R', 'f'};
 
   check_autoinit;
 
-  x[0] = x[3] = min(xmin, xmax);
-  x[1] = x[2] = max(xmin, xmax);
-  y[0] = y[1] = min(ymin, ymax);
-  y[2] = y[3] = max(ymin, ymax);
+  x[0] = min(xmin, xmax);
+  y[0] = min(ymin, ymax);
+  x[1] = max(xmin, xmax);
+  y[1] = max(ymin, ymax);
 
-  fillarea(4, x, y);
+  gr_inqborderwidth(&bwidth);
+  if (bwidth != 0) codes[1] = 'F';
+
+  gks_gdp(2, x, y, GKS_K_GDP_DRAW_PATH, 2, codes);
 
   if (flag_graphics)
     gr_writestream("<fillrect xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\"/>\n", xmin, xmax, ymin, ymax);
@@ -8090,44 +8088,19 @@ void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
  */
 void gr_drawarc(double xmin, double xmax, double ymin, double ymax, double a1, double a2)
 {
-  double xcenter, ycenter, width, height, start, end, a;
-  int n;
-  double x[361], y[361];
+  double x[3], y[3];
+  int codes[2] = {'A', 'S'};
 
   check_autoinit;
 
-  xcenter = (x_lin(xmin) + x_lin(xmax)) / 2.0;
-  ycenter = (y_lin(ymin) + y_lin(ymax)) / 2.0;
-  width = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
-  height = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
+  x[0] = min(xmin, xmax);
+  y[0] = min(ymin, ymax);
+  x[1] = max(xmin, xmax);
+  y[1] = max(ymin, ymax);
+  x[2] = a1 * M_PI / 180;
+  y[2] = a2 * M_PI / 180;
 
-  start = min(a1, a2);
-  end = max(a1, a2);
-  start += ((int)(end - start)) / 360 * 360;
-  /* Ensure that two equivalent but unequal angles result in a full arc. */
-  if (fabs(end - start) < FEPS && fabs(a1 - a2) > FEPS)
-    {
-      end += 360;
-    }
-
-  n = 0;
-  for (a = start; a <= end; a++)
-    {
-      x[n] = x_log(xcenter + width * cos(a * M_PI / 180));
-      y[n] = y_log(ycenter + height * sin(a * M_PI / 180));
-      n++;
-    }
-  if (fabs((a - 1) - end) > FEPS)
-    {
-      x[n] = x_log(xcenter + width * cos(end * M_PI / 180));
-      y[n] = y_log(ycenter + height * sin(end * M_PI / 180));
-      n++;
-    }
-
-  if (n > 1)
-    {
-      polyline(n, x, y);
-    }
+  gks_gdp(3, x, y, GKS_K_GDP_DRAW_PATH, 2, codes);
 
   if (flag_graphics)
     {
@@ -8153,46 +8126,22 @@ void gr_drawarc(double xmin, double xmax, double ymin, double ymax, double a1, d
  */
 void gr_fillarc(double xmin, double xmax, double ymin, double ymax, double a1, double a2)
 {
-  double xcenter, ycenter, width, height, start, end, a;
-  int n;
-  double x[362], y[362];
+  double bwidth, x[3], y[3];
+  int codes[2] = {'A', 'f'};
 
   check_autoinit;
 
-  xcenter = (x_lin(xmin) + x_lin(xmax)) / 2.0;
-  ycenter = (y_lin(ymin) + y_lin(ymax)) / 2.0;
-  width = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
-  height = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
+  x[0] = min(xmin, xmax);
+  y[0] = min(ymin, ymax);
+  x[1] = max(xmin, xmax);
+  y[1] = max(ymin, ymax);
+  x[2] = a1 * M_PI / 180;
+  y[2] = a2 * M_PI / 180;
 
-  start = min(a1, a2);
-  end = max(a1, a2);
-  start += ((int)(end - start)) / 360 * 360;
-  /* Ensure that two equivalent but unequal angles result in a full arc. */
-  if (fabs(end - start) < FEPS && fabs(a1 - a2) > FEPS)
-    {
-      end += 360;
-    }
+  gr_inqborderwidth(&bwidth);
+  if (bwidth != 0) codes[1] = 'F';
 
-  x[0] = x_log(xcenter);
-  y[0] = x_log(ycenter);
-  n = 1;
-  for (a = start; a <= end; a++)
-    {
-      x[n] = x_log(xcenter + width * cos(a * M_PI / 180));
-      y[n] = y_log(ycenter + height * sin(a * M_PI / 180));
-      n++;
-    }
-  if (fabs((a - 1) - end) > FEPS)
-    {
-      x[n] = x_log(xcenter + width * cos(end * M_PI / 180));
-      y[n] = y_log(ycenter + height * sin(end * M_PI / 180));
-      n++;
-    }
-
-  if (n > 2)
-    {
-      fillarea(n, x, y);
-    }
+  gks_gdp(3, x, y, GKS_K_GDP_DRAW_PATH, 2, codes);
 
   if (flag_graphics)
     {
