@@ -1610,11 +1610,11 @@ static void to_DC(int n, double *x, double *y)
           if (w != h)
             {
               CGMutablePathRef path = CGPathCreateMutable();
-              CGAffineTransform m = CGAffineTransformMakeTranslation(x[0] + 0.5 * w, y[0] + 0.5 * h);
+              CGAffineTransform m = CGAffineTransformMakeTranslation(x[0] - 0.5 * w, y[0] - 0.5 * h);
               m = CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, h / w), m);
-              CGPathAddArc(path, &m, 0.5 * w, 0.5 * h, w * 0.5, a1, a2, false);
+              CGPathAddArc(path, &m, w, h, 0.5 * w, a1, a2, false);
               CGContextAddPath(context, path);
-              // TODO: CFRelease(path);
+              CFRelease(path);
             }
           else
             CGContextAddArc(context, x[0] + 0.5 * w, y[0] + 0.5 * h, 0.5 * w, a1, a2, false);
@@ -1635,6 +1635,9 @@ static void to_DC(int n, double *x, double *y)
         case 'F':
           CGContextClosePath(context);
           CGContextDrawPath(context, kCGPathFillStroke);
+          break;
+        case 'Z':
+          CGContextClosePath(context);
           break;
         case '\0':
           break;
