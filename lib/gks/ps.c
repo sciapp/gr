@@ -1673,6 +1673,10 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           packb(buffer);
           np = 1;
           break;
+        case 'Z':
+          sprintf(buffer, "cp");
+          np = 0;
+          break;
         case '\0':
           break;
         default:
