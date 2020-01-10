@@ -1550,10 +1550,14 @@ static void to_DC(int n, double *x, double *y)
 static void draw_path(int n, double *px, double *py, int nc, int *codes)
 {
   char buffer[100];
-  int i, j, np = 1;
+  int i, j, np;
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0;
   double x1, y1, x2, y2;
+
+  sprintf(buffer, "np ");
+  packb(buffer);
+  np = 0;
 
   j = 0;
   for (i = 0; i < nc; ++i)
