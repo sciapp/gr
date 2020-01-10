@@ -1761,7 +1761,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           pdf_printf(p->content, "s\n");
           break;
         case 'f': /* close, fill using even-odd rule */
-          pdf_printf(p->content, "h B*\n");
+          pdf_printf(p->content, "h f*\n");
           break;
         case 'F': /* close, fill using even-odd rule, stroke */
           pdf_printf(p->content, "h b*\n");
