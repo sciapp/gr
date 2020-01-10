@@ -3,15 +3,17 @@ function runJsterm() {
      BOXZOOM_THRESHOLD = 3;  // Minimal size in pixels of the boxzoom-box to trigger a boxzoom-event
      BOXZOOM_TRIGGER_THRESHHOLD = 1000;  // Time to wait (in ms) before triggering boxzoom event instead
                              // of panning when pressing the left mouse button without moving the mouse
-     MAX_KERNEL_CONNECTION_ATTEMPTS = 1;  // Maximum number of kernel initialisation attempts
+     MAX_KERNEL_CONNECTION_ATTEMPTS = 1000;  // Maximum number of kernel initialisation attempts
      KERNEL_CONNECT_WAIT_TIME = 100; // Time to wait between kernel initialisation attempts
      RECONNECT_PLOT_TIMEOUT = 100; // Time to wait between attempts to connect to a plot's canvas
      RECONNECT_PLOT_MAX_ATTEMPTS = 50; // Maximum number of canvas reconnection attempts
      BOXZOOM_FILL_STYLE = '#FFAAAA'; // Fill style of the boxzoom box
      BOXZOOM_STROKE_STYLE = '#FF0000'; // Outline style of the boxzoom box
+     DEFAULT_WIDTH = 600;
+     DEFAULT_HEIGHT = 450;
 
-     var gr, comm, widgets = [], jupyterRunning = false, scheduled_merges = [];
-     var display = [];
+     var gr, comm, widgets = {}, jupyterRunning = false, scheduled_merges = [];
+     var display = [], widgets_to_save = new Set();//, widget_data = {}, save_display;
 
      /**
       * Sends a mouse-event via jupyter-comm
@@ -35,14 +37,16 @@ function runJsterm() {
      createCanvas = function(widget) {
        let disp = document.getElementById('jsterm-display-' + widget.display);
        if (disp === null) {
+         //TODO: Wenn ungültiges Canvas übergeben wird löst dies ein endlose rekursion aus
          if (display.length > 0) {
            widget.display = display[0];
            return createCanvas(widget);
          } else {
-           console.err('Can not create canvas. No active display.');
+           console.error('Can not create canvas. No active display.');
            return;
          }
        } else {
+         disp.style = "display: inline;";
          let div = document.createElement('div');
          div.id = 'jsterm-div-' + widget.id;
          div.style = 'position: relative; width:' + widget.width + 'px; height: ' + widget.height + 'px;';
@@ -65,16 +69,23 @@ function runJsterm() {
 
      /**
       * Sends a save-event via jupyter-comm
-      * @param  {Object} data Data to save
-      * @param  {string} id   plot identifier
       */
-     saveData = function(data, id) {
+     saveData = function(data, plot_id, display, width, height) {
        if (jupyterRunning) {
          comm.send({
            "type": "save",
+           "display_id": display,
            "content": {
-             "id": id,
-             "data": JSON.stringify(data)
+             "data": {
+               "widget_data": JSON.stringify({
+                 "timestamp": Date.now(),
+                 "width": width, //JSON.stringify(widget_data),
+                 "height": height,
+                 "display_id": display,
+                 "plot_id": plot_id,
+                 "gr": data
+               })
+             }
            }
          });
        }
@@ -108,23 +119,11 @@ function runJsterm() {
          });
          c.on_close(function() {});
          window.addEventListener('beforeunload', function(e) {
+           //saveData();
            c.close();
          });
          comm = c;
        });
-     };
-
-     /**
-      * Function to call when page has been loaded.
-      * Determines if running in a jupyter environment.
-      */
-     onLoad = function() {
-       if (typeof Jupyter !== 'undefined') {
-         jupyterRunning = true;
-         initKernel(0);
-       } else {
-         drawSavedData();
-       }
      };
 
      /**
@@ -167,19 +166,6 @@ function runJsterm() {
            return draw(msg);
          });
        } else {
-         if (typeof gr === 'undefined') {
-           let canvas = document.createElement('canvas');
-           canvas.id = 'jsterm-hidden-canvas';
-           canvas.width = 640;
-           canvas.height = 480;
-           canvas.style = 'display: none;';
-           document.body.appendChild(canvas);
-           gr = new GR('jsterm-hidden-canvas');
-           gr.registermeta(gr.GR_META_EVENT_SIZE, sizeCallback);
-           gr.registermeta(gr.GR_META_EVENT_NEW_PLOT, newPlotCallback);
-           gr.registermeta(gr.GR_META_EVENT_UPDATE_PLOT, updatePlotCallback);
-           gr.registermeta(gr.GR_META_EVENT_MERGE_END, mergeEndCallback);
-         }
          let arguments = gr.newmeta();
          gr.readmeta(arguments, msg.content.data.json);
          do {
@@ -195,63 +181,29 @@ function runJsterm() {
       * Draw data that has been saved in the loaded page
       */
      drawSavedData = function() {
-       let data = document.getElementsByClassName("jsterm-data");
-       for (let i = 0; i < data.length; i++) {
-         let msg = data[i].innerText;
-         draw(JSON.parse(msg));
-       }
-     };
-
-     if (document.readyState!='loading') {
-       onLoad();
-     } else if (document.addEventListener) {
-       document.addEventListener('DOMContentLoaded', onLoad);
-     } else document.attachEvent('onreadystatechange', function() {
-       if (document.readyState=='complete') {
-         onLoad();
-       }
-     });
-
-     /**
-      * Callback for gr-meta's size event. Handles event and resizes canvas if required.
-      */
-     sizeCallback = function(evt) {
-       widgets[evt.plot_id].resize(evt.width, evt.height);
-     };
-
-     /**
-      * Callback for gr-meta's new plot event. Handles event and creates new canvas.
-      */
-     newPlotCallback = function(evt) {
-       if (typeof widgets[evt.plot_id] === 'undefined') {
-         widgets[evt.plot_id] = new JSTermWidget(evt.plot_id);
-       }
-       widgets[evt.plot_id].draw();
-     };
-
-     /**
-      * Callback for gr-meta's update plot event. Handles event and creates canvas id needed.
-      */
-     updatePlotCallback = function(evt) {
-       if (typeof widgets[evt.plot_id] === 'undefined') {
-         console.error('Updated plot does not exist, creating new object. (id', evt.plot_id, ')');
-         widgets[evt.plot_id] = new JSTermWidget(evt.plot_id);
-       }
-       widgets[evt.plot_id].draw();
-     };
-
-     /**
-      * Callback for gr-meta's merge end event.
-      * Acknowledge the finished execution of a `draw()` command.
-      */
-     mergeEndCallback = function(evt) {
-       if (jupyterRunning) {
-         let index = scheduled_merges.indexOf(parseInt(evt.identificator.substring("jstermMerge".length)));
-         if (index > -1) {
-           scheduled_merges.splice(index, 1);
-           document.getElementById('jsterm-msg-' + display[0]).innerText = '';
-           document.getElementById('jsterm-msg-' + display[0]).display = 'none';
-           display.shift();
+       data_loaded = true;
+       let created_widgets = [];
+       let timestamps = {};
+       let divs = document.getElementsByClassName("jsterm-data-widget");
+       for (let i = 0; i < divs.length; i++) {
+         let widget_data_str = divs[i].innerText.trim();
+         if (widget_data_str !== 'nothing' && widget_data_str !== '') {
+           let widget_data = JSON.parse(widget_data_str);
+           if (typeof timestamps[widget_data.plot_id] === 'undefined' || widget_data.timestamp < timestamps[widget_data.plot_id]) {
+             timestamps[widget_data.plot_id] = widget_data.timestamp;
+             widgets[widget_data.plot_id] = new JSTermWidget(widget_data.plot_id);
+             widgets[widget_data.plot_id].display = widget_data.display_id;
+             widgets[widget_data.plot_id].width = widget_data.width;
+             widgets[widget_data.plot_id].height = widget_data.height;
+             // TODO: Das hier erst am Schluss machen, wenn klar ist, dass keine aktuelleren Daten gefunden wurden
+             createCanvas(widgets[widget_data.plot_id]);
+             gr.switchmeta(widget_data.plot_id);
+             let data = gr.load_from_str(widget_data.gr);
+             widgets[widget_data.plot_id].draw();
+           } else {
+             // TODO
+             console.log('older widget data for plot ID', widget_data.plot_id, 'found');
+           }
          }
        }
      };
@@ -290,8 +242,8 @@ function runJsterm() {
 
          this.display = undefined;
 
-         this.width = 640;
-         this.height = 480;
+         this.width = DEFAULT_WIDTH;
+         this.height = DEFAULT_HEIGHT;
        };
 
        this.init();
@@ -313,6 +265,7 @@ function runJsterm() {
              this.div.style = "position: relative; width: " + width + "px; height: " + height + "px;";
            }
            this.draw();
+           this.save();
          }
        };
 
@@ -746,6 +699,9 @@ function runJsterm() {
          if (typeof this.display === 'undefined' || document.getElementById('jsterm-' + this.id) == null) {
            this.canvas = undefined;
            this.display = display[0];
+           //widget_data[this.id].display = this.display;
+           //widget_data[this.id].width = this.width;
+           //widget_data[this.id].height = this.height;
            createCanvas(this);
          }
          if (document.getElementById('jsterm-' + this.id) !== this.canvas || typeof this.canvas === 'undefined' || typeof this.overlayCanvas === 'undefined') {
@@ -783,10 +739,116 @@ function runJsterm() {
              event.preventDefault();
              return false;
            });
-           console.log('Canvas connected', this.id);
          }
        };
+
+       this.save = function() {
+         gr.switchmeta(this.id);
+         let data = gr.dumpmeta_json_str();
+         saveData(data, this.id, this.display, this.width, this.height);
+       };
      };
+
+     /**
+      * Callback for gr-meta's size event. Handles event and resizes canvas if required.
+      */
+     sizeCallback = function(evt) {
+       widgets[evt.plot_id].resize(evt.width, evt.height);
+     };
+
+     /**
+      * Callback for gr-meta's new plot event. Handles event and creates new canvas.
+      */
+     newPlotCallback = function(evt) {
+       if (typeof widgets[evt.plot_id] === 'undefined') {
+         widgets[evt.plot_id] = new JSTermWidget(evt.plot_id);
+       }
+       //widgets[evt.plot_id].draw();
+       widgets_to_save.add(evt.plot_id);
+       //widgets[evt.plot_id].save();
+     };
+
+     /**
+      * Callback for gr-meta's update plot event. Handles event and creates canvas id needed.
+      */
+     updatePlotCallback = function(evt) {
+       if (typeof widgets[evt.plot_id] === 'undefined') {
+         console.error('Updated plot does not exist, creating new object. (id', evt.plot_id, ')');
+         widgets[evt.plot_id] = new JSTermWidget(evt.plot_id);
+       }
+       //widgets[evt.plot_id].draw();
+       widgets_to_save.add(evt.plot_id);
+       //widgets[evt.plot_id].save();
+     };
+
+     /**
+      * Callback for gr-meta's merge end event.
+      * Acknowledge the finished execution of a `draw()` command.
+      */
+     mergeEndCallback = function(evt) {
+       let index = scheduled_merges.indexOf(parseInt(evt.identificator.substring("jstermMerge".length)));
+       if (index > -1) {
+         scheduled_merges.splice(index, 1);
+         //document.getElementById('jsterm-msg-' + display[0]).innerText = '';
+         //document.getElementById('jsterm-msg-' + display[0]).display = 'none';
+         //saveData();
+         iter = Array.from(widgets_to_save);
+         for (let w in iter) {
+           widgets[iter[w]].draw();
+           widgets[iter[w]].save();
+         }
+         display.shift();
+         widgets_to_save.clear();
+       }
+     };
+
+     /**
+      * Function to call when page has been loaded.
+      * Determines if running in a jupyter environment.
+      */
+     onLoad = function() {
+       if (!GR.is_ready) {
+         GR.ready(function() {
+           return onLoad();
+         });
+         return;
+       }
+       if (typeof gr === 'undefined') {
+         let canvas = document.createElement('canvas');
+         canvas.id = 'jsterm-hidden-canvas';
+         canvas.width = 640;
+         canvas.height = 480;
+         canvas.style = 'display: none;';
+         document.body.appendChild(canvas);
+         gr = new GR('jsterm-hidden-canvas');
+         gr.registermeta(gr.GR_META_EVENT_SIZE, sizeCallback);
+         gr.registermeta(gr.GR_META_EVENT_NEW_PLOT, newPlotCallback);
+         gr.registermeta(gr.GR_META_EVENT_UPDATE_PLOT, updatePlotCallback);
+         gr.registermeta(gr.GR_META_EVENT_MERGE_END, mergeEndCallback);
+         let arguments = gr.newmeta();
+         gr.meta_args_push(arguments, 'append_plots', 'i', [1]);
+         gr.meta_args_push(arguments, 'hold_plots', 'i', [1]);
+         gr.mergemeta(arguments);
+       }
+       if (typeof Jupyter !== 'undefined') {
+         jupyterRunning = true;
+         initKernel(0);
+       } else {
+         drawSavedData();
+       }
+     };
+
+      if (document.readyState != 'loading') {
+        onLoad();
+      } else if (document.addEventListener) {
+        document.addEventListener('DOMContentLoaded', onLoad);
+      } else {
+        document.attachEvent('onreadystatechange', function() {
+          if (document.readyState == 'complete') {
+            onLoad();
+          }
+        });
+      }
    }
    var grJSTermRunning = true;
 }

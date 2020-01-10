@@ -7189,6 +7189,11 @@ static error_t fromjson_read(gr_meta_args_t *args, const char *json_string)
   return fromjson_parse(args, json_string, NULL);
 }
 
+int gr_load_from_str(const char *json_string)
+{
+  return (fromjson_read(active_plot_args, json_string) == NO_ERROR);
+}
+
 error_t fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_shared_state_t *shared_state)
 {
   char *filtered_json_string = NULL;
@@ -8773,6 +8778,7 @@ error_t tojson_write_arg(memwriter_t *memwriter, const arg_t *arg)
 
 error_t tojson_write_args(memwriter_t *memwriter, const gr_meta_args_t *args)
 {
+  const char *key_hierarchy_name;
   args_iterator_t *it;
   arg_t *arg;
 
@@ -9714,6 +9720,29 @@ void gr_dumpmeta_json(const gr_meta_args_t *args, FILE *f)
       memwriter_delete(memwriter);
       memwriter = NULL;
     }
+}
+
+char *gr_dumpmeta_json_str(void)
+{
+  static memwriter_t *memwriter = NULL;
+  char *result;
+
+  if (memwriter == NULL)
+    {
+      memwriter = memwriter_new();
+    }
+  // tojson_write_args(memwriter, global_root_args);
+  tojson_write_args(memwriter, active_plot_args);
+  if (tojson_is_complete())
+    {
+      memwriter_putc(memwriter, '\0');
+      result = malloc(strlen(memwriter_buf(memwriter)) * sizeof(char));
+      strcpy(result, memwriter_buf(memwriter));
+      memwriter_delete(memwriter);
+      memwriter = NULL;
+      return result;
+    }
+  return "";
 }
 
 #ifdef EMSCRIPTEN
