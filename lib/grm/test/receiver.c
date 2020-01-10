@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "gr.h"
+#include "grm.h"
 
 
 int test_recvmeta(void)

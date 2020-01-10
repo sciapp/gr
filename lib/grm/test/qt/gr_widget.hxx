@@ -1,6 +1,6 @@
 #include <QWidget>
 #include <QRubberBand>
-#include <gr.h>
+#include <grm.h>
 
 class GRWidget : public QWidget
 {

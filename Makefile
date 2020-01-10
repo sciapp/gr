@@ -16,17 +16,20 @@ all: pre-check
 	$(MAKE) -C lib/gks GRDIR=$(GRDIR)
 	$(MAKE) -C lib/gr GRDIR=$(GRDIR)
 	$(MAKE) -C lib/gr3 GRDIR=$(GRDIR)
+	$(MAKE) -C lib/grm GRDIR=$(GRDIR)
 
 install: default
 	$(MAKE) -C lib/gks GRDIR=$(GRDIR) install
 	$(MAKE) -C lib/gr GRDIR=$(GRDIR) install
 	$(MAKE) -C lib/gr3 GRDIR=$(GRDIR) install
+	$(MAKE) -C lib/grm GRDIR=$(GRDIR) install
 
 clean:
 	rm -f Makedefs
 	$(MAKE) -C lib/gks clean
 	$(MAKE) -C lib/gr clean
 	$(MAKE) -C lib/gr3 clean
+	$(MAKE) -C lib/grm clean
 	$(MAKE) -C 3rdparty clean
 	rm -f gr.pkg
 

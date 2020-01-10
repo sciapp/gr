@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "gr.h"
+#include "grm.h"
 
 
 #define MESSAGE_SIZE 512

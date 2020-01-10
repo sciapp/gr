@@ -1,7 +1,7 @@
 GRDIR = /usr/local/gr
-INCLUDES = -I..
+INCLUDES = -I$(GRDIR)/include
 CFLAGS = $(INCLUDES) -std=c89 -Wall -Wextra -Wpedantic -Wno-unused-parameter -g
-LIBS = -L$(GRDIR)/lib -lGR -lm
+LIBS = -L$(GRDIR)/lib -lGRM -lm
 LDFLAGS = $(LIBS) -Wl,-rpath,$(GRDIR)/lib
 
 
@@ -41,7 +41,7 @@ merge_args: merge_args.o
 	$(CC) -c $(CFLAGS) $^
 
 clean:
-	rm -f event_handling plot multi_plot subplots receiver sender custom_receiver custom_sender merge_args \
-	      custom_sender.out *.o *.a *.so
+	rm -f hold_append event_handling plot multi_plot subplots receiver sender custom_receiver custom_sender merge_args \
+	      *.o *.a *.so
 
 .PHONY: all clean

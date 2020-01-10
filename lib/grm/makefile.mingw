@@ -1,0 +1,38 @@
+ifeq ($(strip $(THIRDPARTYDIR)),)
+override THIRDPARTYDIR = $(abspath $(CURDIR)/../../3rdparty/build)
+endif
+
+  DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11 -DXMD_H -D_POSIX -D_WIN32_WINNT=0x0600
+ INCLUDES = -I. -I../gks -I../gr -I../gr3 -I$(THIRDPARTYDIR)/include
+   CFLAGS = $(DEFINES) $(INCLUDES)
+  GKSLIBS = -L ../gks/ -lGKS
+   GRLIBS = -L ../gr/ -lGR
+  GR3LIBS = -L ../gr3/ -lGR3
+  LDFLAGS = -Wl,--out-implib,$(@:.dll=.a)
+     LIBS = $(GR3LIBS) $(GRLIBS) $(GKSLIBS) -lm -lws2_32 -lmsimg32 -lgdi32
+
+OBJS = grm.o
+
+
+.SUFFIXES: .o .c
+
+default: all
+
+all: libGRM.dll libGRM.lib
+
+.c.o:
+	$(CC) $(CFLAGS) $(DEFINES) -c $<
+
+libGRM.lib: $(OBJS)
+	$(AR) crs $@ $?
+
+libGRM.dll: $(OBJS)
+	$(CC) -shared -o $@ $^ $(LIBS) $(LDFLAGS)
+
+grm.c: grm.h
+
+clean:
+	$(RM) libGRM.so
+	$(RM) *.o
+
+.PHONY: default all clean

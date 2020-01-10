@@ -10,7 +10,7 @@ TEMPLATE = app
 TARGET = qt_meta_test
 INCLUDEPATH += .
 INCLUDEPATH += $$GRDIR/include
-LIBS += -L$$GRDIR/lib -lGR
+LIBS += -L$$GRDIR/lib -lGRM
 QMAKE_RPATHDIR += $$GRDIR/lib
 
 # The following define makes your compiler warn you if you use any
