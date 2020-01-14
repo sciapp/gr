@@ -944,7 +944,7 @@ static void text(double px, double py, int nchars, char *chars)
       svg_printf(p->stream,
                  "<g clip-path=\"url(#clip%02d%02d)\">\n<text style=\""
                  "fill:#%02x%02x%02x; fill-opacity:%g; ",
-                 path_id, p->path_index, p->rgb[tx_color][0], p->rgb[tx_color][0], p->rgb[tx_color][0],
+                 path_id, p->path_index, p->rgb[tx_color][0], p->rgb[tx_color][1], p->rgb[tx_color][2],
                  p->transparency);
       set_font(tx_font);
 
