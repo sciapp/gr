@@ -41,6 +41,7 @@ interface
      GKS_K_INTSTYLE_SOLID = 1;
      GKS_K_INTSTYLE_PATTERN = 2;
      GKS_K_INTSTYLE_HATCH = 3;
+     GKS_K_INTSTYLE_SOLID_WITH_BORDER = 4;
 
   { input device status }
      GKS_K_STATUS_NONE = 0;
