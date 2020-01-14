@@ -944,6 +944,10 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           h = y[1] - y[0];
           a1 = px[j + 2];
           a2 = py[j + 2];
+          while (a1 > a2)
+            {
+              a2 += 2 * M_PI;
+            }
           path.arcMoveTo(x[0], y[0], w, h, -a1 * 180 / M_PI);
           path.arcTo(x[0], y[0], w, h, -a1 * 180 / M_PI, -(a2 - a1) * 180 / M_PI);
           j += 3;
