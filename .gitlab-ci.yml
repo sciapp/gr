@@ -80,15 +80,17 @@ ubuntu-cmake-self-contained:
 
 ubuntu-cmake-self-contained-test:
   stage: test
-  needs:
-  - ubuntu-cmake-self-contained
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
   rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
   - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
     when: never
   - if: '$GR_REBUILD_REFERENCE'
     when: never
-  - when: always
+  - when: on_success
+  needs:
+  - ubuntu-cmake-self-contained
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu1604-cmake/
   - gr_test c `pwd`/test_result/
@@ -99,14 +101,16 @@ ubuntu-cmake-self-contained-test:
 
 ubuntu-cmake-self-contained-rebuild-images:
   stage: test
-  needs:
-  - ubuntu-cmake-self-contained
   image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing:latest
   rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
   - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
-    when: always
+    when: on_success
   - if: '$GR_REBUILD_REFERENCE'
-    when: always
+    when: on_success
+  needs:
+  - ubuntu-cmake-self-contained
   script:
   - export GRDIR=`pwd`/artifacts-ubuntu1604-cmake/
 
@@ -114,7 +118,6 @@ ubuntu-cmake-self-contained-rebuild-images:
   - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
   - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
   - chmod 600 ~/.ssh/id_rsa
-  - ssh -v gitlab@iffgit.fz-juelich.de
   - git clone gitlab@iffgit.fz-juelich.de:Scientific-IT-Systems/gr-test.git
   - pip install -e gr-test/
   - cd gr-test
