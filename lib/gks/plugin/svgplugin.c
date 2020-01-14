@@ -1094,7 +1094,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0;
   double cx, cy, sx, sy, ex, ey;
-  int large_arc_flag, sweep_flag;
+  int large_arc_flag;
   unsigned int draw_flags = 0;
 
   svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%02d)\" d=\"", path_id, p->path_index);
@@ -1227,30 +1227,32 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           to_DC(2, x, y);
           w = 0.5 * (x[1] - x[0]);
           h = 0.5 * (y[1] - y[0]);
-          a1 = 2 * M_PI - py[j + 2];
-          a2 = py[j + 2] - px[j + 2];
+          a1 = px[j + 2];
+          a2 = py[j + 2];
+          while (a1 > a2)
+            {
+              a2 += 2 * M_PI;
+            }
           cx = x[0] + w;
           cy = y[0] + h;
-          h = fabs(h);
           sx = cx + w * cos(a1);
           sy = cy + h * sin(a1);
-          ex = cx + w * cos(a1 + a2);
-          ey = cy + h * sin(a1 + a2);
-          large_arc_flag = a2 > M_PI ? 1 : 0;
-          sweep_flag = a2 > 0 ? 1 : 0;
-          if (a2 >= 2 * M_PI)
+          large_arc_flag = (a2 - a1) > M_PI ? 1 : 0;
+          if (fabs(a2 - a1) >= 2 * M_PI)
             {
               ex = cx + w * cos(a1 + a2 / 2);
               ey = cy + h * sin(a1 + a2 / 2);
-              svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g ", sx, sy, large_arc_flag, sweep_flag, w, h, ex, ey);
-              svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g ", ex, ey, large_arc_flag, sweep_flag, w, h, sx, sy);
-              ex = cx + w * cos(a1 + a2);
-              ey = cy + h * sin(a1 + a2);
+              svg_printf(p->stream, "M%g %g A%g %g 0 %d 0 %g %g ", sx, sy, w, h, large_arc_flag, ex, ey);
+              svg_printf(p->stream, "M%g %g A%g %g 0 %d 0 %g %g ", ex, ey, w, h, large_arc_flag, sx, sy);
+              ex = cx + w * cos(a2);
+              ey = cy + h * sin(a2);
               svg_printf(p->stream, "M%g %g ", ex, ey);
             }
           else
             {
-              svg_printf(p->stream, "M%g %g A%g %g 0 %d %d %g %g ", sx, sy, large_arc_flag, sweep_flag, w, h, ex, ey);
+              ex = cx + w * cos(a2);
+              ey = cy + h * sin(a2);
+              svg_printf(p->stream, "M%g %g A%g %g 0 %d 0 %g %g ", sx, sy, w, h, large_arc_flag, ex, ey);
             }
           j += 3;
           cur_x = x[1];
