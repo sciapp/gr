@@ -254,11 +254,11 @@ add_library(GR::GR ALIAS gr_shared)
     add_library(gr3_shared SHARED ${GR3_SOURCES})
     foreach(LIBRARY gr3_static gr3_shared)
         if(APPLE)
-            target_sources(${LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_cgl.c)
+            target_sources(${LIBRARY} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_cgl.c)
         elseif(UNIX AND NOT APPLE)
-            target_sources(${LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_glx.c)
+            target_sources(${LIBRARY} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_glx.c)
         elseif(WIN32)
-            target_sources(${LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_win.c)
+            target_sources(${LIBRARY} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_win.c)
         endif()
         target_link_libraries(${LIBRARY} PUBLIC GR::GR)
         target_link_libraries(${LIBRARY} PUBLIC Jpeg::Jpeg)
@@ -632,14 +632,14 @@ if(Qt4_FOUND)
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx
                 COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT4_MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx
                 DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.cxx)
-        target_sources(qt5gr PUBLIC
+        target_sources(qt5gr PRIVATE
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx)
     else()
         set_target_properties(qt4gr PROPERTIES
                 AUTOMOC ON
                 AUTORCC ON
                 )
-        target_sources(qt4gr PUBLIC
+        target_sources(qt4gr PRIVATE
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h)
     endif()
 endif()
@@ -661,14 +661,14 @@ if(Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND)
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx
                 COMMAND ${QT_MOC_EXECUTABLE} -DGRDIR=\"$(GR_DIRECTORY)\" ${QT5_MOC_INCLUDE_FLAGS} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx
                 DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.cxx)
-        target_sources(qt5gr PUBLIC
+        target_sources(qt5gr PRIVATE
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_qt5_grwidget.cxx)
     else()
         set_target_properties(qt5gr PROPERTIES
                 AUTOMOC ON
                 AUTORCC ON
                 )
-        target_sources(qt5gr PUBLIC
+        target_sources(qt5gr PRIVATE
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h)
     endif()
 endif()
@@ -745,7 +745,7 @@ if(Qt4_FOUND OR (Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND))
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx
                 COMMAND ${QT_RCC_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc -o ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx
                 DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc)
-        target_sources(gksqt PUBLIC
+        target_sources(gksqt PRIVATE
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_gksserver.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/moc_gkswidget.cxx
                 ${CMAKE_CURRENT_BINARY_DIR}/qrc_gksqt.cxx)
@@ -754,7 +754,7 @@ if(Qt4_FOUND OR (Qt5Widgets_FOUND AND Qt5Core_FOUND AND Qt5Network_FOUND))
                 AUTOMOC ON
                 AUTORCC ON
                 )
-        target_sources(gksqt PUBLIC
+        target_sources(gksqt PRIVATE
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksserver.h
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gkswidget.h
                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/qt/gksqt.qrc)
