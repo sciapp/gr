@@ -61,6 +61,7 @@ extern "C"
 #define GKS_K_INTSTYLE_SOLID 1
 #define GKS_K_INTSTYLE_PATTERN 2
 #define GKS_K_INTSTYLE_HATCH 3
+#define GKS_K_INTSTYLE_SOLID_WITH_BORDER 4
 
   /* input device status */
 
