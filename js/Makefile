@@ -1,7 +1,7 @@
      JSC = /System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Resources/jsc
-    OPTS = -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s LEGACY_GL_EMULATION=1 -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall", "cwrap", "getValue", "setValue", "addFunction", "removeFunction", "UTF8ToString", "stringToUTF8", "lengthBytesUTF8"]' -s NO_EXIT_RUNTIME=0 -s WASM=0 --memory-init-file 0 -s TOTAL_MEMORY=33554432 -s ALLOW_MEMORY_GROWTH=1 -s ALLOW_TABLE_GROWTH=1
+    OPTS = -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s LEGACY_GL_EMULATION=1 -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall", "cwrap", "getValue", "setValue", "addFunction", "removeFunction", "UTF8ToString", "stringToUTF8", "lengthBytesUTF8"]' -s NO_EXIT_RUNTIME=0 -s WASM=0 --memory-init-file 0 -s TOTAL_MEMORY=33554432 -s ALLOW_MEMORY_GROWTH=1 -s RESERVED_FUNCTION_POINTERS=4 -s ALLOW_TABLE_GROWTH=1
 ifndef DEBUG
-    OPTS += -O3
+    OPTS += -O2
 else
     OPTS += -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2
 endif
