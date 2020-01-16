@@ -993,7 +993,6 @@ static void set_linetype(int ltype, double lwidth)
 {
   char dash[80];
 
-  if (gkss->version > 4) lwidth *= (p->width + p->height) * 0.001;
   if (p->ltype != ltype || p->lwidth != lwidth)
     {
       gks_get_dash(ltype, lwidth, dash);
@@ -1004,7 +1003,6 @@ static void set_linetype(int ltype, double lwidth)
 
 static void set_linewidth(double lwidth)
 {
-  if (gkss->version > 4) lwidth *= (p->width + p->height) * 0.001;
   if (p->lwidth != lwidth)
     {
       pdf_setlinewidth(p, lwidth);
@@ -1191,13 +1189,13 @@ static void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  set_linetype(GKS_K_LINETYPE_SOLID, mk_size / 2);
-  set_linewidth(mk_size / 2);
+  set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
+  set_linewidth(1.0);
   set_transparency(p->alpha);
   set_color(mk_color);
   set_fillcolor(mk_color);
 
-  marker_routine(n, px, py, mk_type, 23 * mk_size / 24, mk_color);
+  marker_routine(n, px, py, mk_type, mk_size, mk_color);
 }
 
 static void set_font(int font)

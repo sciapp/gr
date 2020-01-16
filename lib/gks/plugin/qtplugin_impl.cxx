@@ -337,7 +337,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  double ln_width, width;
+  double ln_width;
   int i, list[10];
 
   if (n > p->max_points)
@@ -349,15 +349,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4 && n < 0.5 * ln_width * p->height)
-    /*                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-       Note: we don't adjust the linewidth to the window height for lines with a
-       large number of points because this leads to performance issues in Qt */
-    width = ln_width * (p->width + p->height) * 0.001;
-  else
-    width = ln_width;
-  if (width < 1) width = 1;
-
+  if (ln_width < 1) ln_width = 1;
   if (ln_color < 0 || ln_color >= MAX_COLOR) ln_color = 1;
 
   p->pixmap->save();
@@ -371,12 +363,12 @@ static void polyline(int n, double *px, double *py)
       QVector<qreal> dashPattern(list[0]);
       for (i = 0; i < list[0]; i++) dashPattern[i] = (double)list[i + 1];
 
-      QPen pen(QPen(transparent_color, width, Qt::CustomDashLine));
+      QPen pen(QPen(transparent_color, ln_width, Qt::CustomDashLine));
       pen.setDashPattern(dashPattern);
       p->pixmap->setPen(pen);
     }
   else
-    p->pixmap->setPen(QPen(transparent_color, width, Qt::SolidLine));
+    p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
 
   line_routine(n, px, py, ln_type, gkss->cntnr);
 
@@ -501,19 +493,11 @@ static void marker_routine(int n, double *px, double *py, int mtype, double msca
 static void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
-  double mk_size, ln_width;
+  double mk_size;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
-
-  if (gkss->version > 4)
-    {
-      ln_width = (p->width + p->height) * 0.001;
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    ln_width = 1;
 
   if (mk_color < 0 || mk_color >= MAX_COLOR) mk_color = 1;
 
@@ -521,7 +505,7 @@ static void polymarker(int n, double *px, double *py)
   p->pixmap->setRenderHint(QPainter::Antialiasing);
   QColor transparent_color(p->rgb[mk_color]);
   transparent_color.setAlpha(p->transparency);
-  p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
+  p->pixmap->setPen(QPen(transparent_color, 1.0, Qt::SolidLine));
   p->pixmap->setBrush(QBrush(transparent_color, Qt::SolidPattern));
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
   p->pixmap->restore();
@@ -628,20 +612,11 @@ static void fill_routine(int n, double *px, double *py, int tnr);
 static void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
-  double ln_width, x, y;
+  double x, y;
 
   tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? gkss->txcoli : 1;
-
-  if (gkss->version > 4)
-    {
-      ln_width = (p->width + p->height) * 0.001;
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    ln_width = 1;
-  if (ln_width < 1) ln_width = 1;
 
   if (tx_color < 0 || tx_color >= MAX_COLOR) tx_color = 1;
 
@@ -649,7 +624,7 @@ static void text(double px, double py, int nchars, char *chars)
   p->pixmap->setRenderHint(QPainter::Antialiasing);
   QColor transparent_color(p->rgb[tx_color]);
   transparent_color.setAlpha(p->transparency);
-  p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
+  p->pixmap->setPen(QPen(transparent_color, 1.0, Qt::SolidLine));
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
     {
@@ -689,20 +664,10 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 static void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color;
-  double ln_width;
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-
-  if (gkss->version > 4)
-    {
-      ln_width = (p->width + p->height) * 0.001;
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    ln_width = 1;
-  if (ln_width < 1) ln_width = 1;
 
   if (fl_color < 0 || fl_color >= MAX_COLOR) fl_color = 1;
 
@@ -713,7 +678,7 @@ static void fillarea(int n, double *px, double *py)
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
-      p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
+      p->pixmap->setPen(QPen(transparent_color, 1.0, Qt::SolidLine));
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)

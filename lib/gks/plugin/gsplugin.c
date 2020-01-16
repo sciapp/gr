@@ -609,7 +609,6 @@ static void set_linetype(int ltype, double lwidth)
 {
   char buffer[100], dash[80];
 
-  if (gkss->version > 4) lwidth *= p->res * 0.001;
   if (ltype != p->ltype || (fabs(lwidth - p->cwidth) > FEPS))
     {
       p->ltype = ltype;
@@ -623,11 +622,10 @@ static void set_linewidth(double width)
 {
   char buffer[20];
 
-  if (gkss->version > 4) width *= p->res * 0.001;
   if (fabs(width - p->cwidth) > FEPS)
     {
       p->cwidth = fabs(width);
-      sprintf(buffer, "%.4g lw", gkss->version > 4 ? p->cwidth * 600 / 72 : p->cwidth * 4);
+      sprintf(buffer, "%.4g lw", p->cwidth * 600 / 72);
       packb(buffer);
     }
 }
@@ -636,11 +634,10 @@ static void set_markersize(double size)
 {
   char buffer[20];
 
-  if (gkss->version > 4) size *= p->res * 0.001;
   if (fabs(size - p->csize) > FEPS)
     {
       p->csize = fabs(size);
-      sprintf(buffer, "%.4g ms", p->csize);
+      sprintf(buffer, "%.4g ms", p->csize * 558.0 / 500);
       packb(buffer);
     }
 }
@@ -1988,8 +1985,7 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
           set_markersize(23 * size / 24);
           angle = -atan2(x, y) * 180.0 / M_PI;
           set_markerangle(angle);
-          factor = size / 2.0;
-          set_linewidth(factor);
+          set_linewidth(1.0);
           color = gkss->asf[5] ? gkss->pmcoli : 1;
           set_foreground(color, p->wtype);
           gks_emul_polymarker(ia[0], r1, r2, marker_routine);

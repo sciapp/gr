@@ -561,7 +561,6 @@ static void polyline(int n, double *px, double *py)
   if (!p->double_buffering) SelectClipRgn(p->dc, p->rgn);
   if (p->bm) SelectClipRgn(p->memdc, p->rgn);
 
-  if (gkss->version > 4) ln_width *= (p->width + p->height) * 0.001;
   if (ln_type != 1)
     {
       pen_style = PS_GEOMETRIC | PS_COSMETIC | PS_ENDCAP_FLAT | PS_JOIN_ROUND | PS_USERSTYLE;
@@ -731,7 +730,7 @@ static void marker_routine(int n, double *px, double *py, int mtype, double msca
 
 static void polymarker(int n, double *px, double *py)
 {
-  int mk_type, mk_color, ln_width;
+  int mk_type, mk_color;
   double mk_size;
   HPEN pen, dc_pen, memdc_pen;
   HBRUSH dc_brush, memdc_brush;
@@ -739,11 +738,9 @@ static void polymarker(int n, double *px, double *py)
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
-  ln_width = nint(1.0);
-  if (ln_width < 1) ln_width = 1;
 
   p->dc = GetDC(p->win);
-  pen = CreatePen(PS_SOLID, ln_width, p->palette[mk_color]);
+  pen = CreatePen(PS_SOLID, 1, p->palette[mk_color]);
   p->brush = CreateSolidBrush(p->palette[mk_color]);
   if (!p->double_buffering)
     {
@@ -933,7 +930,7 @@ static void create_font(int font)
 
 static void text(double px, double py, int nchars, char *chars)
 {
-  int tx_font, tx_prec, tx_color, ln_width;
+  int tx_font, tx_prec, tx_color;
   double x, y;
   HPEN pen, dc_pen, memdc_pen;
   HFONT dc_font, memdc_font;
@@ -941,8 +938,6 @@ static void text(double px, double py, int nchars, char *chars)
   tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? gkss->txcoli : 1;
-  ln_width = nint(1.0);
-  if (ln_width < 1) ln_width = 1;
 
   p->dc = GetDC(p->win);
   if (!p->double_buffering) SelectClipRgn(p->dc, p->rgn);
@@ -976,7 +971,7 @@ static void text(double px, double py, int nchars, char *chars)
     }
   else
     {
-      pen = CreatePen(PS_SOLID, ln_width, p->palette[tx_color]);
+      pen = CreatePen(PS_SOLID, 1, p->palette[tx_color]);
       if (!p->double_buffering)
         {
           dc_pen = SelectObject(p->dc, pen);
@@ -1022,7 +1017,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
 static void fillarea(int n, double *px, double *py)
 {
-  int fl_inter, fl_style, fl_color, ln_width;
+  int fl_inter, fl_style, fl_color;
   int ln_type, fill = 1;
   HPEN pen, dc_pen, memdc_pen;
   HBRUSH dc_brush, memdc_brush;
@@ -1030,8 +1025,6 @@ static void fillarea(int n, double *px, double *py)
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  ln_width = nint(1.0);
-  if (ln_width < 1) ln_width = 1;
 
   p->dc = GetDC(p->win);
   if (!p->double_buffering) SelectClipRgn(p->dc, p->rgn);
@@ -1047,9 +1040,9 @@ static void fillarea(int n, double *px, double *py)
       p->brush = CreatePatternBrush(bitmap[fl_style]);
     }
   if (fill)
-    pen = CreatePen(PS_NULL, ln_width, p->palette[fl_color]);
+    pen = CreatePen(PS_NULL, 1, p->palette[fl_color]);
   else
-    pen = CreatePen(PS_SOLID, ln_width, p->palette[fl_color]);
+    pen = CreatePen(PS_SOLID, 1, p->palette[fl_color]);
   if (!p->double_buffering)
     {
       dc_pen = SelectObject(p->dc, pen);
