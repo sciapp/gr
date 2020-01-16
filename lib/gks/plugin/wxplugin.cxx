@@ -316,11 +316,9 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4)
-    width = nint(ln_width * (p->width + p->height) * 0.001);
-  else
-    width = nint(ln_width);
+  width = nint(ln_width);
   if (width < 1) width = 1;
+
   if (ln_color <= 0 || ln_color >= MAX_COLOR) ln_color = 1;
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
@@ -501,25 +499,18 @@ static void marker_routine(int n, double *px, double *py, int mtype, double msca
 
 static void polymarker(int n, double *px, double *py)
 {
-  int mk_type, mk_color, ln_width;
+  int mk_type, mk_color;
   double mk_size;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
-  if (gkss->version > 4)
-    {
-      ln_width = nint((p->width + p->height) * 0.001);
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    ln_width = 1;
 
 #if wxCHECK_VERSION(2, 9, 0)
-  p->pixmap->SetPen(wxPen(p->rgb[mk_color], ln_width, wxPENSTYLE_SOLID));
+  p->pixmap->SetPen(wxPen(p->rgb[mk_color], 1, wxPENSTYLE_SOLID));
   p->pixmap->SetBrush(wxBrush(p->rgb[mk_color], wxBRUSHSTYLE_SOLID));
 #else
-  p->pixmap->SetPen(wxPen(p->rgb[mk_color], ln_width, wxSOLID));
+  p->pixmap->SetPen(wxPen(p->rgb[mk_color], 1, wxSOLID));
   p->pixmap->SetBrush(wxBrush(p->rgb[mk_color], wxSOLID));
 #endif
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
@@ -640,25 +631,17 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
 static void text(double px, double py, int nchars, char *chars)
 {
-  int tx_font, tx_prec, tx_color, ln_width;
+  int tx_font, tx_prec, tx_color;
   double x, y;
 
   tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? gkss->txcoli : 1;
-  if (gkss->version > 4)
-    {
-      ln_width = nint((p->width + p->height) * 0.001);
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    ln_width = 1;
-  if (ln_width < 1) ln_width = 1;
 
 #if wxCHECK_VERSION(2, 9, 0)
-  p->pixmap->SetPen(wxPen(p->rgb[tx_color], ln_width, wxPENSTYLE_SOLID));
+  p->pixmap->SetPen(wxPen(p->rgb[tx_color], 1, wxPENSTYLE_SOLID));
 #else
-  p->pixmap->SetPen(wxPen(p->rgb[tx_color], ln_width, wxSOLID));
+  p->pixmap->SetPen(wxPen(p->rgb[tx_color], 1, wxSOLID));
 #endif
   p->pixmap->SetTextForeground(p->rgb[tx_color]);
 
@@ -798,26 +781,18 @@ static void destroy_clipping_region(wxGCDC &dc, bool antialias)
 
 static void fillarea(int n, double *px, double *py)
 {
-  int fl_inter, fl_style, fl_color, ln_width;
+  int fl_inter, fl_style, fl_color;
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  if (gkss->version > 4)
-    {
-      ln_width = nint((p->width + p->height) * 0.001);
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    ln_width = 1;
-  if (ln_width < 1) ln_width = 1;
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
 #if wxCHECK_VERSION(2, 9, 0)
-      p->pixmap->SetPen(wxPen(p->rgb[fl_color], ln_width, wxPENSTYLE_SOLID));
+      p->pixmap->SetPen(wxPen(p->rgb[fl_color], 1, wxPENSTYLE_SOLID));
 #else
-      p->pixmap->SetPen(wxPen(p->rgb[fl_color], ln_width, wxSOLID));
+      p->pixmap->SetPen(wxPen(p->rgb[fl_color], 1, wxSOLID));
 #endif
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
