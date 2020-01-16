@@ -785,7 +785,7 @@ static void fillarea(int n, double *px, double *py)
 static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  double ln_width, width;
+  double ln_width;
 
   if (n > p->max_points)
     {
@@ -797,12 +797,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4)
-    width = ln_width * (p->width + p->height) * 0.001;
-  else
-    width = ln_width;
-
-  p->linewidth = width;
+  p->linewidth = ln_width;
   p->color = ln_color;
 
   line_routine(n, px, py, ln_type, gkss->cntnr);

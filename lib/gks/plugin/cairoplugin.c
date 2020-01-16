@@ -83,6 +83,8 @@ extern "C"
 #define PATTERNS 120
 #define HATCH_STYLE 108
 
+#define NOMINAL_LINEWIDTH 4.0
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -371,8 +373,8 @@ static void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  p->linewidth = 1;
-  cairo_set_line_width(p->cr, 1);
+  p->linewidth = NOMINAL_LINEWIDTH;
+  cairo_set_line_width(p->cr, p->linewidth);
 
   set_color(mk_color);
 
@@ -523,9 +525,9 @@ static void fillarea(int n, double *px, double *py)
 {
   int fl_color;
 
-  fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = 1;
+  p->linewidth = NOMINAL_LINEWIDTH;
 
+  fl_color = gkss->asf[12] ? gkss->facoli : 1;
   set_color(fl_color);
 
   cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_EVEN_ODD);
@@ -553,9 +555,10 @@ static void polyline(int n, double *px, double *py)
   width = nint(ln_width);
   if (width < 1) width = 1;
 
-  p->linewidth = width;
+  p->linewidth = width * NOMINAL_LINEWIDTH;
+  cairo_set_line_width(p->cr, p->linewidth);
+
   p->color = ln_color;
-  cairo_set_line_width(p->cr, width);
   set_color(ln_color);
 
   gks_get_dash_list(ln_type, ln_width, gks_dashes);
@@ -630,7 +633,7 @@ static void text(double px, double py, int nchars, char *chars)
     }
   else
     {
-      p->linewidth = 1;
+      p->linewidth = NOMINAL_LINEWIDTH;
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
 }
@@ -1601,7 +1604,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double cur_x = 0, cur_y = 0, qx = 0, qy = 0;
 
   cairo_new_path(p->cr);
-  cairo_set_line_width(p->cr, gkss->bwidth);
+  cairo_set_line_width(p->cr, gkss->bwidth * NOMINAL_LINEWIDTH);
 
   j = 0;
   for (i = 0; i < nc; ++i)
@@ -1893,7 +1896,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->page_counter = 0;
 
       p->transparency = 1.0;
-      p->linewidth = 1;
+      p->linewidth = NOMINAL_LINEWIDTH;
 
       init_colors();
 
