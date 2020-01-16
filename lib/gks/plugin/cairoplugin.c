@@ -364,17 +364,16 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
 static void polymarker(int n, double *px, double *py)
 {
-  int mk_type, mk_color, ln_width, i;
+  int mk_type, mk_color, i;
   double mk_size, x, y;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  ln_width = gkss->version > 4 ? max(1, nint((p->width + p->height) * 0.001)) : 1;
-  p->linewidth = ln_width;
+  p->linewidth = 1;
+  cairo_set_line_width(p->cr, 1);
 
-  cairo_set_line_width(p->cr, ln_width);
   set_color(mk_color);
 
   for (i = 0; i < n; i++)
@@ -423,7 +422,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   seg_xform(&x, &y);
   NDC_to_DC(x, y, x0, y0);
 
-  cairo_set_line_width(p->cr, p->linewidth * fmin(p->width, p->height) / 500.0);
+  cairo_set_line_width(p->cr, p->linewidth);
 
   cairo_move_to(p->cr, x0, y0);
 
@@ -525,7 +524,7 @@ static void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = gkss->version > 4 ? max(nint((p->width + p->height) * 0.001), 1) : 1;
+  p->linewidth = 1;
 
   set_color(fl_color);
 
@@ -551,10 +550,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4)
-    width = nint(ln_width * (p->width + p->height) * 0.001);
-  else
-    width = nint(ln_width);
+  width = nint(ln_width);
   if (width < 1) width = 1;
 
   p->linewidth = width;
@@ -1605,7 +1601,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double cur_x = 0, cur_y = 0, qx = 0, qy = 0;
 
   cairo_new_path(p->cr);
-  cairo_set_line_width(p->cr, gkss->bwidth * fmin(p->width, p->height) / 500.0);
+  cairo_set_line_width(p->cr, gkss->bwidth);
 
   j = 0;
   for (i = 0; i < nc; ++i)

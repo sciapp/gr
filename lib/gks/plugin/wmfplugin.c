@@ -994,7 +994,6 @@ static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
   double ln_width;
-  int width;
 
   if (n > p->max_points)
     {
@@ -1006,13 +1005,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4)
-    width = nint(ln_width * (p->width + p->height) * 0.001);
-  else
-    width = nint(ln_width);
-  if (width < 1) width = 0;
-
-  p->linewidth = width;
+  p->linewidth = nint(ln_width);
   p->color = ln_color;
 
   gks_set_dev_xform(gkss, p->window, p->viewport);

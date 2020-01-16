@@ -356,15 +356,14 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
 static void polymarker(int n, double *px, double *py)
 {
-  int mk_type, mk_color, ln_width, i;
+  int mk_type, mk_color, i;
   double mk_size, x, y;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  ln_width = gkss->version > 4 ? max(1, nint(p->height / 500.0)) : 1;
-  p->linewidth = ln_width;
+  p->linewidth = 1;
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[mk_color]);
 
@@ -523,7 +522,7 @@ static void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = gkss->version > 4 ? max(nint(p->height / 500.0), 1) : 1;
+  p->linewidth = 1;
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[fl_color]);
 
@@ -547,10 +546,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4)
-    width = nint(ln_width * (p->width + p->height) * 0.001);
-  else
-    width = nint(ln_width);
+  width = nint(ln_width);
   if (width < 1) width = 0;
 
   p->linewidth = width;
@@ -999,21 +995,10 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   int i, j;
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0;
-
   int line_width;
 
-  if (gkss->version > 4)
-    {
-      line_width = nint(gkss->bwidth * (p->width + p->height) * 0.001);
-    }
-  else
-    {
-      line_width = nint(gkss->bwidth);
-    }
-  if (line_width < 1)
-    {
-      line_width = 0;
-    }
+  line_width = nint(gkss->bwidth);
+  if (line_width < 1) line_width = 0;
 
   pgf_printf(p->stream, "\\definecolor{pathstroke}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
   pgf_printf(p->stream, "\\definecolor{pathfill}{HTML}{%s}\n", p->rgb[gkss->facoli]);
