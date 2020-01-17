@@ -274,7 +274,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
 #include "marker.h"
 
-  mscale *= 5 * p->dpi / 600;
+  mscale *= 5 * p->dpi / 600.0;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -1921,7 +1921,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->page_counter = 0;
 
       p->transparency = 1.0;
-      p->nominal_linewidth = 5 * p->dpi / 600;
+      p->nominal_linewidth = nint(5 * p->dpi / 600.0);
       p->linewidth = p->nominal_linewidth;
 
       init_colors();
