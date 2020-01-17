@@ -1303,7 +1303,7 @@ static void drawPatternCell(void *info, CGContextRef context)
 
 static void draw_pattern(int index, CGPathRef shape, CGContextRef context)
 {
-  int scale = (int)(0.125 * (int)(p->c + p->a) / 125);
+  double scale = 0.125 * (int)(p->c + p->a) / 125;
 
   gks_inq_pattern_array(index, patArray);
   double patHeight = patArray[0] * scale;
