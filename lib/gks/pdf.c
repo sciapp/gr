@@ -1041,7 +1041,6 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
   static double cy[4][3] = {{-1, -0.5523, 0}, {0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}};
 
-  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -1061,12 +1060,16 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
       switch (op)
         {
         case 1: /* point */
+          set_linewidth(1.0);
+          set_color(mcolor);
           pdf_moveto(p, x, y);
           pdf_lineto(p, x, y);
           pdf_stroke(p);
           break;
 
         case 2: /* line */
+          set_linewidth(1.0);
+          set_color(mcolor);
           for (i = 0; i < 2; i++)
             {
               xr = scale * marker[mtype][pc + 2 * i + 1];
@@ -1082,6 +1085,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 3: /* polyline */
+          set_linewidth(1.0);
+          set_color(mcolor);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1098,7 +1103,17 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
-          if (op == 5) set_fillcolor(0);
+          if (op == 4)
+            {
+              set_fillcolor(mcolor);
+              if (gkss->bcoli != mcolor)
+                {
+                  set_linewidth(gkss->bwidth);
+                  set_color(gkss->bcoli);
+                }
+            }
+          else
+            set_fillcolor(0);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1109,7 +1124,10 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               else
                 pdf_lineto(p, x - xr, y - yr);
             }
-          pdf_eofill(p);
+          if (op == 4 && gkss->bcoli != mcolor)
+            pdf_printf(p->content, "b*\n");
+          else
+            pdf_eofill(p);
           pc += 1 + 2 * marker[mtype][pc + 1];
           if (op == 5) set_fillcolor(mcolor);
           break;
@@ -1118,6 +1136,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           xr = 0;
           yr = -r;
           seg_xform_rel(&xr, &yr);
+          set_linewidth(1.0);
+          set_color(mcolor);
           pdf_moveto(p, x - xr, y - yr);
           for (curve = 0; curve < 4; curve++)
             {
@@ -1135,7 +1155,17 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 7: /* filled arc */
         case 8: /* hollow arc */
-          if (op == 8) set_fillcolor(0);
+          if (op == 7)
+            {
+              set_fillcolor(mcolor);
+              if (gkss->bcoli != mcolor)
+                {
+                  set_linewidth(gkss->bwidth);
+                  set_color(gkss->bcoli);
+                }
+            }
+          else
+            set_fillcolor(0);
           xr = 0;
           yr = -r;
           seg_xform_rel(&xr, &yr);
@@ -1151,7 +1181,10 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                 }
               pdf_curveto(p);
             }
-          pdf_eofill(p);
+          if (op == 7 && gkss->bcoli != mcolor)
+            pdf_printf(p->content, "b*\n");
+          else
+            pdf_eofill(p);
           if (op == 8) set_fillcolor(mcolor);
           break;
         }
@@ -1190,10 +1223,7 @@ static void polymarker(int n, double *px, double *py)
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
   set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
-  set_linewidth(1.0);
   set_transparency(p->alpha);
-  set_color(mk_color);
-  set_fillcolor(mk_color);
 
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
 }

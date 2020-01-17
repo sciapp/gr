@@ -393,11 +393,11 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 {
   int r, i;
   double scale, x, y, xr, yr;
-  int pc, op;
+  int pc, op, color;
 
 #include "marker.h"
 
-  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
+  mscale *= 4;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -470,31 +470,25 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
-          if (op == 5)
-            svg_printf(p->stream,
-                       "<polygon clip-path=\"url(#clip%02d%02d)\" "
-                       "style=\"fill:#%02x%02x%02x; fill-opacity:%g\" points=\"",
-                       path_id, p->path_index, p->rgb[0][0], p->rgb[0][1], p->rgb[0][2], p->transparency);
-          else
-            svg_printf(p->stream,
-                       "<polygon clip-path=\"url(#clip%02d%02d)\" "
-                       "style=\"fill:#%02x%02x%02x; fill-opacity:%g\" points=\"\n  ",
-                       path_id, p->path_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2],
-                       p->transparency);
+          color = op == 4 ? mcolor : 0;
+          svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%02d)\" d=\"", path_id, p->path_index);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
-              svg_printf(p->stream, "%g,%g ", x - xr, y + yr);
-              if (!((i + 1) % 10))
-                {
-                  svg_printf(p->stream, "\n  ");
-                }
+              svg_printf(p->stream, "%c%g %g ", i == 0 ? 'M' : 'L', x - xr, y + yr);
             }
-          svg_printf(p->stream, "\n  \"/>\n");
+          svg_printf(p->stream, "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ",
+                     p->rgb[color][0], p->rgb[color][1], p->rgb[color][2], p->transparency);
+          if (op == 4 && gkss->bcoli != mcolor)
+            svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
+                       p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
+                       gkss->bwidth * NOMINAL_LINEWIDTH);
+          else
+            svg_printf(p->stream, "stroke=\"none\"");
+          svg_printf(p->stream, "/>\n");
           pc += 1 + 2 * marker[mtype][pc + 1];
-          if (op == 5) p->color = mcolor;
           break;
 
         case 6: /* arc */
@@ -508,20 +502,20 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 7: /* filled arc */
         case 8: /* hollow arc */
-          if (op == 8)
-            svg_printf(p->stream,
-                       "<circle clip-path=\"url(#clip%02d%02d)\" "
-                       "style=\"fill:none; stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\" "
-                       "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-                       path_id, p->path_index, p->rgb[0][0], p->rgb[0][1], p->rgb[0][2], p->linewidth, p->transparency,
-                       x, y, r);
+          color = op == 7 ? mcolor : 0;
+          svg_printf(p->stream,
+                     "<circle clip-path=\"url(#clip%02d%02d)\" "
+                     "cx=\"%g\" cy=\"%g\" r=\"%d\"",
+                     path_id, p->path_index, x, y, r);
+          svg_printf(p->stream, " fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ", p->rgb[color][0],
+                     p->rgb[color][1], p->rgb[color][2], p->transparency);
+          if (op == 7 && gkss->bcoli != mcolor)
+            svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
+                       p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
+                       gkss->bwidth * NOMINAL_LINEWIDTH);
           else
-            svg_printf(p->stream,
-                       "<circle clip-path=\"url(#clip%02d%02d)\" "
-                       "style=\"fill:#%02x%02x%02x; stroke:none; fill-opacity:%g\" "
-                       "cx=\"%g\" cy=\"%g\" r=\"%d\"/>\n",
-                       path_id, p->path_index, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2], p->transparency,
-                       x, y, r);
+            svg_printf(p->stream, "stroke=\"none\"");
+          svg_printf(p->stream, "/>\n");
           break;
         }
       pc++;
@@ -797,7 +791,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  p->linewidth = ln_width;
+  p->linewidth = ln_width * NOMINAL_LINEWIDTH;
   p->color = ln_color;
 
   line_routine(n, px, py, ln_type, gkss->cntnr);
