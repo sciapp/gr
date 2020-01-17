@@ -1157,7 +1157,6 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
 #include "marker.h"
 
-  mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -1177,11 +1176,14 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
       switch (op)
         {
         case 1: // point
+          [self set_fill_color:mcolor:context];
           CGContextFillRect(context, CGRectMake(x, y, 1, 1));
           break;
 
         case 2: // line
           CGContextBeginPath(context);
+          CGContextSetLineWidth(context, 1);
+          [self set_stroke_color:mcolor:context];
           for (i = 0; i < 2; i++)
             {
               xr = scale * marker[mtype][pc + 2 * i + 1];
@@ -1198,6 +1200,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
         case 3: // polyline
           CGContextBeginPath(context);
+          CGContextSetLineWidth(context, 1);
+          [self set_stroke_color:mcolor:context];
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1216,7 +1220,17 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
         case 4: // filled polygon
         case 5: // hollow polygon
           CGContextBeginPath(context);
-          if (op == 5) [self set_fill_color:0:context];
+          if (op == 4)
+            {
+              [self set_fill_color:mcolor:context];
+              if (gkss->bcoli != mcolor)
+                {
+                  CGContextSetLineWidth(context, gkss->bwidth);
+                  [self set_stroke_color:gkss->bcoli:context];
+                }
+            }
+          else
+            [self set_fill_color:0:context];
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1228,25 +1242,41 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
                 CGContextAddLineToPoint(context, x - xr, y + yr);
             }
           CGContextClosePath(context);
-          CGContextDrawPath(context, kCGPathFill);
+          if (op == 4 && gkss->bcoli != mcolor)
+            CGContextDrawPath(context, kCGPathFillStroke);
+          else
+            CGContextDrawPath(context, kCGPathFill);
 
           pc += 1 + 2 * marker[mtype][pc + 1];
-          if (op == 5) [self set_fill_color:mcolor:context];
           break;
 
         case 6: // arc
           CGContextBeginPath(context);
+          CGContextSetLineWidth(context, 1);
+          [self set_stroke_color:mcolor:context];
           CGContextAddArc(context, x, y, r, 0.0, 2 * M_PI, 0);
           CGContextDrawPath(context, kCGPathStroke);
           break;
 
         case 7: // filled arc
         case 8: // hollow arc
-          if (op == 8) [self set_fill_color:0:context];
           CGContextBeginPath(context);
+          if (op == 7)
+            {
+              [self set_fill_color:mcolor:context];
+              if (gkss->bcoli != mcolor)
+                {
+                  CGContextSetLineWidth(context, gkss->bwidth);
+                  [self set_stroke_color:gkss->bcoli:context];
+                }
+            }
+          else
+            [self set_fill_color:0:context];
           CGContextAddArc(context, x, y, r, 0.0, 2 * M_PI, 0);
-          CGContextDrawPath(context, kCGPathFill);
-          if (op == 8) [self set_fill_color:mcolor:context];
+          if (op == 7 && gkss->bcoli != mcolor)
+            CGContextDrawPath(context, kCGPathFillStroke);
+          else
+            CGContextDrawPath(context, kCGPathFill);
           break;
         }
       pc++;
@@ -1266,14 +1296,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  [self set_stroke_color:mk_color:context];
-
   begin_context(context);
-
-  CGContextSetLineWidth(context, 1);
-  [self set_stroke_color:mk_color:context];
-  [self set_fill_color:mk_color:context];
-
   for (i = 0; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
@@ -1303,7 +1326,7 @@ static void drawPatternCell(void *info, CGContextRef context)
 
 static void draw_pattern(int index, CGPathRef shape, CGContextRef context)
 {
-  int scale = (int)(0.125 * (int)(p->c + p->a) / 125);
+  double scale = 0.125 * (int)(p->c + p->a) / 125;
 
   gks_inq_pattern_array(index, patArray);
   double patHeight = patArray[0] * scale;
