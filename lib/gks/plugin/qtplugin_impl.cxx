@@ -384,7 +384,11 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
 #include "marker.h"
 
-  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
+  QColor marker_color(p->rgb[mcolor]);
+  marker_color.setAlpha(p->transparency);
+  QColor border_color(p->rgb[gkss->bcoli]);
+  border_color.setAlpha(p->transparency);
+
   r = (int)(3 * mscale);
   d = 2 * r;
   scale = 0.01 * mscale / 3.0;
@@ -406,6 +410,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
         {
 
         case 1: /* point */
+          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine));
           p->pixmap->drawPoint(x, y);
           break;
 
@@ -417,6 +422,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               p->points->setPoint(i, nint(x - xr), nint(y + yr));
             }
+          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine));
           p->pixmap->drawPolyline(p->points->constData(), 2);
           pc += 4;
           break;
@@ -430,6 +436,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               points->setPoint(i, nint(x - xr), nint(y + yr));
             }
+          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine));
           p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
           delete points;
@@ -438,8 +445,16 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
           points = new QPolygon(marker[mtype][pc + 1]);
-          if (op == 5) set_color(0);
-          p->pixmap->setPen(Qt::NoPen);
+          if (op == 4)
+            {
+              p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
+              if (gkss->bcoli != mcolor)
+                p->pixmap->setPen(QPen(border_color, gkss->bwidth, Qt::SolidLine));
+              else
+                p->pixmap->setPen(Qt::NoPen);
+            }
+          else
+            set_color(0);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -449,20 +464,27 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
             }
           p->pixmap->drawPolygon(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
-          set_color(mcolor);
           delete points;
           break;
 
         case 6: /* arc */
+          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine));
           p->pixmap->drawArc(x - r, y - r, d, d, 0, 360 * 16);
           break;
 
         case 7: /* filled arc */
         case 8: /* hollow arc */
-          if (op == 8) set_color(0);
-          p->pixmap->setPen(Qt::NoPen);
+          if (op == 7)
+            {
+              p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
+              if (gkss->bcoli != mcolor)
+                p->pixmap->setPen(QPen(border_color, gkss->bwidth, Qt::SolidLine));
+              else
+                p->pixmap->setPen(Qt::NoPen);
+            }
+          else
+            set_color(0);
           p->pixmap->drawChord(x - r, y - r, d, d, 0, 360 * 16);
-          set_color(mcolor);
           break;
         }
       pc++;
@@ -503,11 +525,9 @@ static void polymarker(int n, double *px, double *py)
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
-  QColor transparent_color(p->rgb[mk_color]);
-  transparent_color.setAlpha(p->transparency);
-  p->pixmap->setPen(QPen(transparent_color, 1.0, Qt::SolidLine));
-  p->pixmap->setBrush(QBrush(transparent_color, Qt::SolidPattern));
+
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
+
   p->pixmap->restore();
 }
 
