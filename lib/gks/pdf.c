@@ -23,6 +23,7 @@ typedef unsigned long uLong;
 #define MAX_FONT 31
 #define HATCH_STYLE 108
 #define PATTERNS 120
+#define NOMINAL_SIZE 558.0 / 500
 
 #define MEMORY_INCREMENT 32768
 
@@ -995,7 +996,7 @@ static void set_linetype(int ltype, double lwidth)
 
   if (p->ltype != ltype || p->lwidth != lwidth)
     {
-      gks_get_dash(ltype, lwidth, dash);
+      gks_get_dash(ltype, lwidth * NOMINAL_SIZE, dash);
       pdf_setdash(p, dash);
       p->ltype = ltype;
     }
@@ -1005,7 +1006,7 @@ static void set_linewidth(double lwidth)
 {
   if (p->lwidth != lwidth)
     {
-      pdf_setlinewidth(p, lwidth);
+      pdf_setlinewidth(p, lwidth * NOMINAL_SIZE);
       p->lwidth = lwidth;
     }
 }
@@ -1041,6 +1042,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
   static double cy[4][3] = {{-1, -0.5523, 0}, {0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}};
 
+  mscale *= NOMINAL_SIZE;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 

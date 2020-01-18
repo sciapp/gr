@@ -26,7 +26,7 @@
 #define WIDTH 4096
 #define HEIGHT 3072
 
-#define NOMINAL_LINEWIDTH 4.0
+#define NOMINAL_SIZE 4.0
 #define NOMINAL_POINTSIZE 4
 
 #define DrawBorder 0
@@ -435,12 +435,12 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                 svg_printf(p->stream,
                            "<line clip-path=\"url(#clip%02d%02d)\" "
                            "x1=\"%g\" y1=\"%g\" ",
-                           path_id, p->path_index, x - xr, y - yr);
+                           path_id, p->path_index, x - xr, y + yr);
               else
                 svg_printf(p->stream,
                            "x2=\"%g\" y2=\"%g\" "
                            "style=\"stroke:#%02x%02x%02x; stroke-width:%g; stroke-opacity:%g\"/>\n",
-                           x - xr, y - yr, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2], p->linewidth,
+                           x - xr, y + yr, p->rgb[mcolor][0], p->rgb[mcolor][1], p->rgb[mcolor][2], p->linewidth,
                            p->transparency);
             }
           pc += 4;
@@ -484,7 +484,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 4 && gkss->bcoli != mcolor)
             svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
                        p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                       gkss->bwidth * NOMINAL_LINEWIDTH);
+                       gkss->bwidth * NOMINAL_SIZE);
           else
             svg_printf(p->stream, "stroke=\"none\"");
           svg_printf(p->stream, "/>\n");
@@ -512,7 +512,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 7 && gkss->bcoli != mcolor)
             svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
                        p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                       gkss->bwidth * NOMINAL_LINEWIDTH);
+                       gkss->bwidth * NOMINAL_SIZE);
           else
             svg_printf(p->stream, "stroke=\"none\"");
           svg_printf(p->stream, "/>\n");
@@ -529,7 +529,7 @@ static void marker_routine(int n, double *px, double *py, int mtype, double msca
   double *clrt = gkss->viewport[gkss->cntnr];
   int i, draw;
 
-  p->linewidth = NOMINAL_LINEWIDTH;
+  p->linewidth = NOMINAL_SIZE;
 
   for (i = 0; i < n; i++)
     {
@@ -758,7 +758,7 @@ static void fillarea(int n, double *px, double *py)
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
       p->color = fl_color;
-      p->linewidth = NOMINAL_LINEWIDTH;
+      p->linewidth = NOMINAL_SIZE;
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
@@ -791,7 +791,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  p->linewidth = ln_width * NOMINAL_LINEWIDTH;
+  p->linewidth = ln_width * NOMINAL_SIZE;
   p->color = ln_color;
 
   line_routine(n, px, py, ln_type, gkss->cntnr);
@@ -945,7 +945,7 @@ static void text(double px, double py, int nchars, char *chars)
     }
   else
     {
-      p->linewidth = NOMINAL_LINEWIDTH;
+      p->linewidth = NOMINAL_SIZE;
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
 }
@@ -1293,7 +1293,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
     {
       svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
                  p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                 gkss->bwidth * NOMINAL_LINEWIDTH);
+                 gkss->bwidth * NOMINAL_SIZE);
     }
   else
     {
@@ -1451,7 +1451,7 @@ void gks_drv_js(
       p->page_counter = 0;
       p->offset = 0;
 
-      p->linewidth = NOMINAL_LINEWIDTH;
+      p->linewidth = NOMINAL_SIZE;
       p->transparency = 1.0;
 
       set_xform();

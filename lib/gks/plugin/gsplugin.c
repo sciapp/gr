@@ -625,7 +625,7 @@ static void set_linewidth(double width)
   if (fabs(width - p->cwidth) > FEPS)
     {
       p->cwidth = fabs(width);
-      sprintf(buffer, "%.4g lw", p->cwidth * 600 / 72);
+      sprintf(buffer, "%.4g lw", p->cwidth * 600 / 72 * 558.0 / 500);
       packb(buffer);
     }
 }

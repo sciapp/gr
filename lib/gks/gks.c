@@ -1946,7 +1946,6 @@ void gks_set_ws_viewport(int wkid, double xmin, double xmax, double ymin, double
                   f_arr_1[1] = xmax;
                   f_arr_2[0] = ymin;
                   f_arr_2[1] = ymax;
-
                   /* call the device driver link routine */
                   gks_ddlk(SET_WS_VIEWPORT, 1, 1, 1, i_arr, 2, f_arr_1, 2, f_arr_2, 0, c_arr, NULL);
                 }
