@@ -148,7 +148,8 @@ typedef struct ws_state_list_t
   double rgb[MAX_COLOR][3];
   double transparency;
   int width, height;
-  int color, nominal_linewidth, linewidth;
+  int color;
+  double linewidth, nominal_size;
   double alpha, angle;
   int family, capheight;
   cairo_surface_t *surface;
@@ -274,7 +275,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
 #include "marker.h"
 
-  mscale *= 5 * p->dpi / 600.0;
+  mscale *= p->nominal_size;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -296,7 +297,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
       switch (op)
         {
         case 1: /* point */
-          cairo_set_line_width(p->cr, p->nominal_linewidth);
+          cairo_set_line_width(p->cr, p->nominal_size);
           set_color(mcolor);
           cairo_rectangle(p->cr, round(x), round(y), 1.0, 1.0);
           cairo_fill(p->cr);
@@ -311,7 +312,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           y2 = scale * marker[mtype][pc + 2 + 2];
           seg_xform_rel(&x2, &y2);
 
-          cairo_set_line_width(p->cr, p->nominal_linewidth);
+          cairo_set_line_width(p->cr, p->nominal_size);
           set_color(mcolor);
           cairo_move_to(p->cr, x - x1, y - y1);
           cairo_line_to(p->cr, x - x2, y - y2);
@@ -326,7 +327,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           yr = -scale * marker[mtype][pc + 3];
           seg_xform_rel(&xr, &yr);
 
-          cairo_set_line_width(p->cr, p->nominal_linewidth);
+          cairo_set_line_width(p->cr, p->nominal_size);
           set_color(mcolor);
           cairo_move_to(p->cr, x - xr, y + yr);
           for (i = 1; i < marker[mtype][pc + 1]; i++)
@@ -345,7 +346,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                 {
                   cairo_fill_preserve(p->cr);
                   set_color(gkss->bcoli);
-                  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_linewidth);
+                  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
                   cairo_stroke(p->cr);
                 }
               else
@@ -369,7 +370,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                 {
                   cairo_fill_preserve(p->cr);
                   set_color(gkss->bcoli);
-                  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_linewidth);
+                  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
                   cairo_stroke(p->cr);
                 }
               else
@@ -396,7 +397,7 @@ static void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  p->linewidth = p->nominal_linewidth;
+  p->linewidth = p->nominal_size;
 
   for (i = 0; i < n; i++)
     {
@@ -545,7 +546,7 @@ static void fillarea(int n, double *px, double *py)
 {
   int fl_color;
 
-  p->linewidth = p->nominal_linewidth;
+  p->linewidth = p->nominal_size;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
   set_color(fl_color);
@@ -575,7 +576,7 @@ static void polyline(int n, double *px, double *py)
   width = nint(ln_width);
   if (width < 1) width = 1;
 
-  p->linewidth = width * p->nominal_linewidth;
+  p->linewidth = width * p->nominal_size;
   cairo_set_line_width(p->cr, p->linewidth);
 
   p->color = ln_color;
@@ -653,7 +654,7 @@ static void text(double px, double py, int nchars, char *chars)
     }
   else
     {
-      p->linewidth = p->nominal_linewidth;
+      p->linewidth = p->nominal_size;
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
 }
@@ -1624,7 +1625,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double cur_x = 0, cur_y = 0, qx = 0, qy = 0;
 
   cairo_new_path(p->cr);
-  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_linewidth);
+  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
 
   j = 0;
   for (i = 0; i < nc; ++i)
@@ -1845,6 +1846,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->h = 4650;
           p->dpi = 600;
           resize(2400, 2400);
+          p->nominal_size = 2400 / 500.0;
         }
       else if (p->wtype == 143)
         {
@@ -1893,6 +1895,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
             }
           p->mem = (unsigned char *)mem_ptr;
           resize(width, height);
+          p->nominal_size = 2400 / 500.0;
         }
       else if (p->wtype == 150)
         {
@@ -1902,6 +1905,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->h = 420;
           p->dpi = 100;
           resize(400, 400);
+          p->nominal_size = 0.8;
         }
       else
         {
@@ -1911,6 +1915,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->h = 768;
           p->dpi = 100;
           resize(500, 500);
+          p->nominal_size = 1;
         }
 
       p->max_points = MAX_POINTS;
@@ -1921,8 +1926,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->page_counter = 0;
 
       p->transparency = 1.0;
-      p->nominal_linewidth = nint(5 * p->dpi / 600.0);
-      p->linewidth = p->nominal_linewidth;
+      p->linewidth = p->nominal_size;
 
       init_colors();
 
