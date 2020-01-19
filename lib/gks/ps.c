@@ -1232,7 +1232,7 @@ static void marker_routine(double x, double y, int marker)
   double dx, dy;
   char buffer[50];
   static const char *macro[] = {"nom", " hl", " vl", "st8", "st7", "st6", "st5", "st4", "ed8", "ed7",
-                                "ed6", "ed5", "fpl", "npl", "ftr", "ftl", "tud", "fst", " st", "fdm",
+                                "ed6", "ed5", "fpl", "npl", "ftl", "ftr", "tud", "fst", " st", "fdm",
                                 "ndm", "fhg", "nhg", "fbt", "nbt", "fsq", "nsq", "ftd", "ntd", "ftu",
                                 "ntu", "fci", " dt", " dt", " pl", "fas", "nci", " dc"};
 
