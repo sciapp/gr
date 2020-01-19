@@ -281,9 +281,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
         {
         case 1: /* point */
           pgf_printf(p->stream,
-                     "\\draw (%f,%f)"
+                     "\\draw[color=mycolor, line width=%dpt] (%f,%f)"
                      " rectangle (%f,%f);\n",
-                     x, y, x + 1.0, y + 1.0);
+                     p->linewidth, x, y, x + 1.0, y + 1.0);
           break;
 
         case 2: /* line */
@@ -297,9 +297,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
           pgf_printf(p->stream,
                      "\\begin{scope}[yscale=-1, yshift=-%f]\n"
-                     "\\draw (%f,%f) -- (%f,%f);\n"
+                     "\\draw[color=mycolor, line width=%dpt] (%f,%f) -- (%f,%f);\n"
                      "\\end{scope}\n",
-                     2 * y, x - x1, y - y1, x - x2, y - y2);
+                     2 * y, p->linewidth, x - x1, y - y1, x - x2, y - y2);
 
           pc += 4;
           break;
