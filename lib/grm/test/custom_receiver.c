@@ -37,39 +37,39 @@ cleanup:
   return message;
 }
 
-int test_recvmeta(void)
+int test_recv(void)
 {
-  gr_meta_args_t *args;
+  grm_args_t *args;
   void *handle;
 
   printf("waiting for data... ");
   fflush(stdout);
 
-  handle = gr_openmeta(GR_RECEIVER, "custom_sender.out", 0, disk_reader, NULL);
+  handle = grm_open(GRM_RECEIVER, "custom_sender.out", 0, disk_reader, NULL);
   if (handle == NULL)
     {
-      fprintf(stderr, "\"gr_openmeta\" failed.\n");
+      fprintf(stderr, "\"grm_open\" failed.\n");
       return 1;
     }
 
-  if ((args = gr_recvmeta(handle, NULL)) == NULL)
+  if ((args = grm_recv(handle, NULL)) == NULL)
     {
-      gr_deletemeta(handle);
+      grm_args_delete(handle);
       return 2;
     }
 
   printf("received\n");
-  gr_dumpmeta(args, stdout);
+  grm_dump(args, stdout);
   printf("\njson dump:\n");
-  gr_dumpmeta_json(args, stdout);
+  grm_dump_json(args, stdout);
 
-  gr_closemeta(handle);
-  gr_deletemeta(args);
+  grm_close(handle);
+  grm_args_delete(args);
 
   return 0;
 }
 
 int main(void)
 {
-  return test_recvmeta();
+  return test_recv();
 }

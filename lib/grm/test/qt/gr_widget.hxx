@@ -53,7 +53,7 @@ private:
   };
 
 
-  gr_meta_args_t *args_;
+  grm_args_t *args_;
   MouseState mouse_state_;
   QRubberBand *box_zoom_rubberband_;
 };

@@ -12,12 +12,12 @@
 #endif
 
 
-static void new_plot_callback(const gr_meta_event_t *event)
+static void new_plot_callback(const grm_event_t *event)
 {
   fprintf(stderr, "Got new plot event, plot_id: %d\n", event->new_plot_event.plot_id);
 }
 
-static void size_callback(const gr_meta_event_t *event)
+static void size_callback(const grm_event_t *event)
 {
   fprintf(stderr, "Got size event, size: (%d, %d)\n", event->size_event.width, event->size_event.width);
 }
@@ -27,7 +27,7 @@ static void test_line(void)
   double plots[2][2][1000];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
   const char *labels[] = {"sin", "cos"};
-  gr_meta_args_t *args, *series[2];
+  grm_args_t *args, *series[2];
   int i;
 
   printf("filling argument container...\n");
@@ -45,58 +45,58 @@ static void test_line(void)
 
   for (i = 0; i < 2; ++i)
     {
-      series[i] = gr_newmeta();
-      gr_meta_args_push(series[i], "x", "nD", n, plots[i][0]);
-      gr_meta_args_push(series[i], "y", "nD", n, plots[i][1]);
+      series[i] = grm_args_new();
+      grm_args_push(series[i], "x", "nD", n, plots[i][0]);
+      grm_args_push(series[i], "y", "nD", n, plots[i][1]);
     }
 
-  args = gr_newmeta();
-  gr_meta_args_push(args, "series", "nA", 2, series);
-  gr_meta_args_push(args, "labels", "nS", 2, labels);
-  gr_meta_args_push(args, "kind", "s", "line");
+  args = grm_args_new();
+  grm_args_push(args, "series", "nA", 2, series);
+  grm_args_push(args, "labels", "nS", 2, labels);
+  grm_args_push(args, "kind", "s", "line");
 
-  gr_registermeta(GR_META_EVENT_NEW_PLOT, new_plot_callback);
-  gr_registermeta(GR_META_EVENT_SIZE, size_callback);
+  grm_register(GRM_EVENT_NEW_PLOT, new_plot_callback);
+  grm_register(GRM_EVENT_SIZE, size_callback);
 
   printf("plotting data...\n");
 
-  gr_plotmeta(args);
+  grm_plot(args);
 
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_meta_args_push(args, "size", "dd", 1000.0, 1000.0);
+  grm_args_push(args, "size", "dd", 1000.0, 1000.0);
 
   printf("plotting data...\n");
 
-  gr_plotmeta(args);
+  grm_plot(args);
 
   printf("Press any key to continue...\n");
   getchar();
 
 
-  gr_meta_args_push(args, "size", "dd", 1000.0, 1000.0);
+  grm_args_push(args, "size", "dd", 1000.0, 1000.0);
 
   printf("plotting data...\n");
 
-  gr_switchmeta(1);
-  gr_plotmeta(args);
+  grm_switch(1);
+  grm_plot(args);
 
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_deletemeta(args);
+  grm_args_delete(args);
 }
 
-static void test_plotmeta(void)
+static void test_plot(void)
 {
   test_line();
-  gr_finalizemeta();
+  grm_finalize();
 }
 
 int main(void)
 {
-  test_plotmeta();
+  test_plot();
 
   return 0;
 }

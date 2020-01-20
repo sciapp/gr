@@ -3,39 +3,39 @@
 #include "grm.h"
 
 
-int test_recvmeta(void)
+int test_recv(void)
 {
-  gr_meta_args_t *args;
+  grm_args_t *args;
   void *handle;
 
   printf("waiting for data... ");
   fflush(stdout);
 
-  handle = gr_openmeta(GR_RECEIVER, "localhost", 8002, NULL, NULL);
+  handle = grm_open(GRM_RECEIVER, "localhost", 8002, NULL, NULL);
   if (handle == NULL)
     {
       fprintf(stderr, "receiver could not be created\n");
       return 1;
     }
 
-  if ((args = gr_recvmeta(handle, NULL)) == NULL)
+  if ((args = grm_recv(handle, NULL)) == NULL)
     {
-      gr_deletemeta(args);
+      grm_args_delete(args);
       return 2;
     }
 
   printf("received\n");
-  gr_dumpmeta(args, stdout);
+  grm_dump(args, stdout);
   printf("\njson dump:\n");
-  gr_dumpmeta_json(args, stdout);
+  grm_dump_json(args, stdout);
 
-  gr_closemeta(handle);
-  gr_deletemeta(args);
+  grm_close(handle);
+  grm_args_delete(args);
 
   return 0;
 }
 
 int main(void)
 {
-  return test_recvmeta();
+  return test_recv();
 }

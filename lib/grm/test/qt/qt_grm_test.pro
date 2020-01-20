@@ -7,7 +7,7 @@ isEmpty(GRDIR) {
   GRDIR = /usr/local/gr
 }
 TEMPLATE = app
-TARGET = qt_meta_test
+TARGET = qt_grm_test
 INCLUDEPATH += .
 INCLUDEPATH += $$GRDIR/include
 LIBS += -L$$GRDIR/lib -lGRM

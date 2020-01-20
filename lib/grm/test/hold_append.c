@@ -16,7 +16,7 @@ static void test_hold_append(void)
 {
   double plots[2][2][1000];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
-  gr_meta_args_t *args, *series[2];
+  grm_args_t *args, *series[2];
   int i;
 
   printf("filling argument container...\n");
@@ -34,53 +34,53 @@ static void test_hold_append(void)
 
   for (i = 0; i < 2; ++i)
     {
-      series[i] = gr_newmeta();
-      gr_meta_args_push(series[i], "x", "nD", n, plots[i][0]);
-      gr_meta_args_push(series[i], "y", "nD", n, plots[i][1]);
+      series[i] = grm_args_new();
+      grm_args_push(series[i], "x", "nD", n, plots[i][0]);
+      grm_args_push(series[i], "y", "nD", n, plots[i][1]);
     }
 
-  args = gr_newmeta();
-  gr_meta_args_push(args, "append_plots", "i", 1); /* Automatically create new plots, if no `plot_id` is given */
-  gr_meta_args_push(args, "hold_plots", "i", 1);   /* Do not delete contents of the default plot automatically */
-  gr_mergemeta(args);
-  gr_meta_args_push(args, "series", "a", series[0]);
+  args = grm_args_new();
+  grm_args_push(args, "append_plots", "i", 1); /* Automatically create new plots, if no `plot_id` is given */
+  grm_args_push(args, "hold_plots", "i", 1);   /* Do not delete contents of the default plot automatically */
+  grm_merge(args);
+  grm_args_push(args, "series", "a", series[0]);
 
   printf("plotting data...\n");
-  gr_plotmeta(args);
+  grm_plot(args);
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_deletemeta(args);
-  args = gr_newmeta();
-  gr_meta_args_push(args, "size", "dd", 800.0, 800.0);
-  gr_meta_args_push(args, "plot_id", "i", 0); /* Avoid creating a new plot */
+  grm_args_delete(args);
+  args = grm_args_new();
+  grm_args_push(args, "size", "dd", 800.0, 800.0);
+  grm_args_push(args, "plot_id", "i", 0); /* Avoid creating a new plot */
   printf("plotting data...\n");
-  gr_plotmeta(args);
+  grm_plot(args);
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_deletemeta(args);
-  args = gr_newmeta();
-  gr_meta_args_push(args, "series", "a", series[1]);
-  gr_mergemeta(args); /* This call will create a new plot with id `1` */
+  grm_args_delete(args);
+  args = grm_args_new();
+  grm_args_push(args, "series", "a", series[1]);
+  grm_merge(args); /* This call will create a new plot with id `1` */
   printf("plotting data...\n");
-  gr_switchmeta(1);
-  gr_plotmeta(NULL);
+  grm_switch(1);
+  grm_plot(NULL);
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_deletemeta(args);
+  grm_args_delete(args);
 }
 
-static void test_plotmeta(void)
+static void test_plot(void)
 {
   test_hold_append();
-  gr_finalizemeta();
+  grm_finalize();
 }
 
 int main(void)
 {
-  test_plotmeta();
+  test_plot();
 
   return 0;
 }

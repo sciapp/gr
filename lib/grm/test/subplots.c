@@ -16,7 +16,7 @@ static void test_subplots(void)
 {
   double plots[4][2][1000];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
-  gr_meta_args_t *args, *subplots[4];
+  grm_args_t *args, *subplots[4];
   int i, j;
 
   printf("filling argument container...\n");
@@ -40,40 +40,39 @@ static void test_subplots(void)
 
   for (i = 0; i < 4; ++i)
     {
-      subplots[i] = gr_newmeta();
-      gr_meta_args_push(subplots[i], "x", "nD", n, plots[i][0]);
-      gr_meta_args_push(subplots[i], "y", "nD", n, plots[i][1]);
-      gr_meta_args_push(subplots[i], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2),
-                        0.5 * (i / 2 + 1));
+      subplots[i] = grm_args_new();
+      grm_args_push(subplots[i], "x", "nD", n, plots[i][0]);
+      grm_args_push(subplots[i], "y", "nD", n, plots[i][1]);
+      grm_args_push(subplots[i], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2), 0.5 * (i / 2 + 1));
     }
 
-  args = gr_newmeta();
-  gr_meta_args_push(args, "subplots", "nA", 4, subplots);
+  args = grm_args_new();
+  grm_args_push(args, "subplots", "nA", 4, subplots);
 
   printf("plotting data...\n");
 
-  gr_plotmeta(args);
+  grm_plot(args);
   printf("Press any key to continue...\n");
   getchar();
 
   sleep(10);
 
-  gr_plotmeta(args);
+  grm_plot(args);
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_deletemeta(args);
+  grm_args_delete(args);
 }
 
-static void test_plotmeta(void)
+static void test_plot(void)
 {
   test_subplots();
-  gr_finalizemeta();
+  grm_finalize();
 }
 
 int main(void)
 {
-  test_plotmeta();
+  test_plot();
 
   return 0;
 }

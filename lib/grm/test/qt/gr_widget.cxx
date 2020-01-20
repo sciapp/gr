@@ -15,7 +15,7 @@ GRWidget::GRWidget(QWidget *parent) : QWidget(parent), args_(nullptr), box_zoom_
 
 GRWidget::~GRWidget()
 {
-  gr_deletemeta(args_);
+  grm_args_delete(args_);
 }
 
 void GRWidget::init_env_vars()
@@ -28,7 +28,7 @@ void GRWidget::init_plot_data()
 {
   const int n = 1000;
   double subplot_data[4][2][1000];
-  gr_meta_args_t *subplots[4];
+  grm_args_t *subplots[4];
 
   for (int i = 0; i < 2; ++i)
     {
@@ -49,18 +49,17 @@ void GRWidget::init_plot_data()
 
   for (int i = 0; i < 4; ++i)
     {
-      subplots[i] = gr_newmeta();
-      gr_meta_args_push(subplots[i], "x", "nD", n, subplot_data[i][0]);
-      gr_meta_args_push(subplots[i], "y", "nD", n, subplot_data[i][1]);
-      gr_meta_args_push(subplots[i], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2),
-                        0.5 * (i / 2 + 1));
-      gr_meta_args_push(subplots[i], "keep_aspect_ratio", "i", 1);
-      // gr_meta_args_push(subplots[i], "backgroundcolor", "i", i + 1);
+      subplots[i] = grm_args_new();
+      grm_args_push(subplots[i], "x", "nD", n, subplot_data[i][0]);
+      grm_args_push(subplots[i], "y", "nD", n, subplot_data[i][1]);
+      grm_args_push(subplots[i], "subplot", "dddd", 0.5 * (i % 2), 0.5 * (i % 2 + 1), 0.5 * (i / 2), 0.5 * (i / 2 + 1));
+      grm_args_push(subplots[i], "keep_aspect_ratio", "i", 1);
+      // grm_args_push(subplots[i], "backgroundcolor", "i", i + 1);
     }
 
-  args_ = gr_newmeta();
-  gr_meta_args_push(args_, "subplots", "nA", 4, subplots);
-  gr_mergemeta(args_);
+  args_ = grm_args_new();
+  grm_args_push(args_, "subplots", "nA", 4, subplots);
+  grm_merge(args_);
 }
 
 void GRWidget::init_ui()
@@ -72,7 +71,7 @@ void GRWidget::init_ui()
 
 void GRWidget::draw()
 {
-  gr_plotmeta(nullptr);
+  grm_plot(nullptr);
 }
 
 void GRWidget::paintEvent(QPaintEvent *event)
@@ -96,13 +95,13 @@ void GRWidget::keyPressEvent(QKeyEvent *event)
 {
   if (event->key() == Qt::Key_R)
     {
-      gr_meta_args_t *input_args = gr_newmeta();
+      grm_args_t *input_args = grm_args_new();
       QPoint widget_cursor_pos = mapFromGlobal(QCursor::pos());
-      gr_meta_args_push(input_args, "key", "s", "r");
-      gr_meta_args_push(input_args, "x", "i", widget_cursor_pos.x());
-      gr_meta_args_push(input_args, "y", "i", widget_cursor_pos.y());
-      gr_inputmeta(input_args);
-      gr_deletemeta(input_args);
+      grm_args_push(input_args, "key", "s", "r");
+      grm_args_push(input_args, "x", "i", widget_cursor_pos.x());
+      grm_args_push(input_args, "y", "i", widget_cursor_pos.y());
+      grm_input(input_args);
+      grm_args_delete(input_args);
       repaint();
     }
 }
@@ -134,7 +133,7 @@ void GRWidget::mousePressEvent(QMouseEvent *event)
 void GRWidget::mouseReleaseEvent(QMouseEvent *event)
 {
   QPoint start_pos{mouse_state_.mode_start_pos()};
-  gr_meta_args_t *input_args = gr_newmeta();
+  grm_args_t *input_args = grm_args_new();
 
   std::cout << "mouse delta: " << event->pos() - start_pos << std::endl;
 
@@ -143,43 +142,43 @@ void GRWidget::mouseReleaseEvent(QMouseEvent *event)
       box_zoom_rubberband_->hide();
       if (std::abs(event->x() - start_pos.x()) >= 5 && std::abs(event->y() - start_pos.y()) >= 5)
         {
-          gr_meta_args_push(input_args, "keep_aspect_ratio", "i", event->modifiers() & Qt::ShiftModifier);
-          gr_meta_args_push(input_args, "x1", "i", start_pos.x());
-          gr_meta_args_push(input_args, "y1", "i", start_pos.y());
-          gr_meta_args_push(input_args, "x2", "i", event->x());
-          gr_meta_args_push(input_args, "y2", "i", event->y());
+          grm_args_push(input_args, "keep_aspect_ratio", "i", event->modifiers() & Qt::ShiftModifier);
+          grm_args_push(input_args, "x1", "i", start_pos.x());
+          grm_args_push(input_args, "y1", "i", start_pos.y());
+          grm_args_push(input_args, "x2", "i", event->x());
+          grm_args_push(input_args, "y2", "i", event->y());
         }
     }
   else if (mouse_state_.mode() == MouseState::Mode::pan)
     {
-      gr_meta_args_push(input_args, "x", "i", start_pos.x());
-      gr_meta_args_push(input_args, "y", "i", start_pos.y());
-      gr_meta_args_push(input_args, "xshift", "i", event->x() - start_pos.x());
-      gr_meta_args_push(input_args, "yshift", "i", event->y() - start_pos.y());
+      grm_args_push(input_args, "x", "i", start_pos.x());
+      grm_args_push(input_args, "y", "i", start_pos.y());
+      grm_args_push(input_args, "xshift", "i", event->x() - start_pos.x());
+      grm_args_push(input_args, "yshift", "i", event->y() - start_pos.y());
     }
 
-  gr_inputmeta(input_args);
-  gr_deletemeta(input_args);
+  grm_input(input_args);
+  grm_args_delete(input_args);
 
   repaint();
 }
 
 void GRWidget::resizeEvent(QResizeEvent *event)
 {
-  gr_meta_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
-  gr_mergemeta(args_);
+  grm_args_push(args_, "size", "dd", (double)event->size().width(), (double)event->size().height());
+  grm_merge(args_);
 }
 
 void GRWidget::wheelEvent(QWheelEvent *event)
 {
   std::cout << "angle delta: " << event->angleDelta() << ", position: " << event->pos() << std::endl;
 
-  gr_meta_args_t *input_args = gr_newmeta();
-  gr_meta_args_push(input_args, "x", "i", event->x());
-  gr_meta_args_push(input_args, "y", "i", event->y());
-  gr_meta_args_push(input_args, "angle_delta", "d", (double)event->angleDelta().y());
-  gr_inputmeta(input_args);
-  gr_deletemeta(input_args);
+  grm_args_t *input_args = grm_args_new();
+  grm_args_push(input_args, "x", "i", event->x());
+  grm_args_push(input_args, "y", "i", event->y());
+  grm_args_push(input_args, "angle_delta", "d", (double)event->angleDelta().y());
+  grm_input(input_args);
+  grm_args_delete(input_args);
 
   repaint();
 }

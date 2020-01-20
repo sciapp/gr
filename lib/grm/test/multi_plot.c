@@ -15,7 +15,7 @@ static void test_multiple_plots(void)
 {
   double plots[2][2][1000];
   int n = sizeof(plots[0][0]) / sizeof(plots[0][0][0]);
-  gr_meta_args_t *args;
+  grm_args_t *args;
   int i;
 
   printf("filling argument container...\n");
@@ -31,47 +31,47 @@ static void test_multiple_plots(void)
       plots[1][1][i] = cos(i * 2 * M_PI / n);
     }
 
-  args = gr_newmeta();
-  gr_meta_args_push(args, "x", "nD", n, plots[0][0]);
-  gr_meta_args_push(args, "y", "nD", n, plots[0][1]);
+  args = grm_args_new();
+  grm_args_push(args, "x", "nD", n, plots[0][0]);
+  grm_args_push(args, "y", "nD", n, plots[0][1]);
 
   printf("plotting sin...\n");
-  gr_plotmeta(args);
+  grm_plot(args);
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_meta_args_clear(args);
-  gr_meta_args_push(args, "x", "nD", n, plots[1][0]);
-  gr_meta_args_push(args, "y", "nD", n, plots[1][1]);
+  grm_args_clear(args);
+  grm_args_push(args, "x", "nD", n, plots[1][0]);
+  grm_args_push(args, "y", "nD", n, plots[1][1]);
 
   printf("plotting cos...\n");
-  gr_plotmeta(args);
+  grm_plot(args);
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_switchmeta(1);
+  grm_switch(1);
 
-  gr_meta_args_clear(args);
-  gr_meta_args_push(args, "x", "nD", n, plots[0][0]);
-  gr_meta_args_push(args, "y", "nD", n, plots[0][1]);
+  grm_args_clear(args);
+  grm_args_push(args, "x", "nD", n, plots[0][0]);
+  grm_args_push(args, "y", "nD", n, plots[0][1]);
 
   printf("plotting sin...\n");
-  gr_plotmeta(args);
+  grm_plot(args);
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_meta_args_clear(args);
-  gr_meta_args_push(args, "x", "nD", n, plots[1][0]);
-  gr_meta_args_push(args, "y", "nD", n, plots[1][1]);
-  gr_meta_args_push(args, "id", "s", ":.2");
+  grm_args_clear(args);
+  grm_args_push(args, "x", "nD", n, plots[1][0]);
+  grm_args_push(args, "y", "nD", n, plots[1][1]);
+  grm_args_push(args, "id", "s", ":.2");
 
   printf("plotting sin AND cos...\n");
-  gr_plotmeta(args);
+  grm_plot(args);
   printf("Press any key to continue...\n");
   getchar();
 
-  gr_deletemeta(args);
-  gr_finalizemeta();
+  grm_args_delete(args);
+  grm_finalize();
 }
 
 int main(void)
