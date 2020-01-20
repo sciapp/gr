@@ -1,13 +1,39 @@
 #!/bin/bash
 
-# Only check staged files (relevant for the current commit) that
-# were added, copied, modified or renamed.
-for file in $(git diff --cached --name-only --diff-filter=ACMR); do
-    [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue
-    grep -vr $'\r' "${file}" >/dev/null || (echo "${file} must not contain carriage return as line endings." && exit 1);
-    file --mime "${file}" | grep "charset=us-ascii" >/dev/null || (echo "${file} must be encoded as ASCII text." && exit 1);
-    clang-format -i -verbose -style=file "${file}" && \
-    git add "${file}" || exit 1
-done
+format_c_cpp () {
+    # Only check staged files (relevant for the current commit) that
+    # were added, copied, modified or renamed.
+    for file in $(git diff --cached --name-only --diff-filter=ACMR); do
+        [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue
+        grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; return 1; }
+        file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; return 1; }
+        clang-format -i -verbose -style=file "${file}" && \
+        git add "${file}" || exit 1
+    done
+    return 0
+}
 
-exit 0
+format_cmake () {
+    local cmake_format
+
+    cmake_format="$(./.setup_cmakeformat.sh)"
+    # Only check staged files (relevant for the current commit) that
+    # were added, copied, modified or renamed.
+    for file in $(git diff --cached --name-only --diff-filter=ACMR); do
+        [[ "${file}" =~ (^|/)CMakeLists.txt$ || "${file}" =~ \.cmake$ ]] || continue
+        grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; return 1; }
+        file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; return 1; }
+        # `cmake-format` reads the configuration file `.cmake-format.py` in the top level directory
+        echo "Formatting ${file}"
+        "${cmake_format}" -i "${file}" && \
+        git add "${file}" || exit 1
+    done
+    return 0
+}
+
+main () {
+    format_c_cpp && \
+    format_cmake
+}
+
+main "$@"

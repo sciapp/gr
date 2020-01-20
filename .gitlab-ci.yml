@@ -10,18 +10,30 @@ code-style-check:
   - set +e
   - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
       [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue;
-      grep -vr $'\r' "${file}" >/dev/null || (echo "${file} must not contain carriage return as line endings." && exit 1);
-      file --mime "${file}" | grep "charset=us-ascii" >/dev/null || (echo "${file} must be encoded as ASCII text." && exit 1);
+      grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
+      file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; exit 1; };
       clang-format -verbose -style=file "${file}" > "${file}.formatted";
-      diff -q "${file}" "${file}.formatted";
-      return_code="$?";
-      if [[ "${return_code}" -ne 0 ]]; then
+      if ! diff -q "${file}" "${file}.formatted"; then
         diff "${file}" "${file}.formatted";
         >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";
         exit 1;
       fi;
       rm -f "${file}.formatted";
     done
+  - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
+      [[ "${file}" =~ (^|/)CMakeLists.txt$ || "${file}" =~ \.cmake$ ]] || continue;
+      grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
+      file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; exit 1; };
+      echo "Formatting ${file}";
+      cmake-format "${file}" > "${file}.formatted";
+      if ! diff -q "${file}" "${file}.formatted"; then
+        diff "${file}" "${file}.formatted";
+        >&2 echo "The code style of file \"${file}\" does not follow the code style guideline of this project.";
+        exit 1;
+      fi;
+      rm -f "${file}.formatted";
+    done
+  - exit 0
 
 ubuntu-self-contained:
   stage: build
