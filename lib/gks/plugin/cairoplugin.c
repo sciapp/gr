@@ -1857,12 +1857,6 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           void *mem_ptr = NULL;
           char *path = p->path;
 
-          p->w = 6750;
-          p->h = 4650;
-          p->dpi = 600;
-          p->mw = p->w * 2.54 / 100 / p->dpi;
-          p->mh = p->h * 2.54 / 100 / p->dpi;
-
           if (!path)
             {
               fprintf(stderr, "Missing mem path. Expected !<width>x<height>@<pointer>.mem\n");
@@ -1894,6 +1888,10 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
                 }
             }
           p->mem = (unsigned char *)mem_ptr;
+          p->w = 6750;
+          p->h = 4650;
+          p->mw = p->w * 2.54 / 100 / p->dpi;
+          p->mh = p->h * 2.54 / 100 / p->dpi;
           resize(width, height);
           p->nominal_size = 2400 / 500.0;
         }
