@@ -1,9 +1,9 @@
-GKSLIB = ../libgks.lib
+GKSLIB = ../libGKS.lib
 
 default: gksqt.exe
 
 $(GKSLIB):
-	$(MAKE) -C .. libgks.lib
+	$(MAKE) -C .. libGKS.lib
 
 gksqt.exe: gksqt.cxx gksserver.cxx gkswidget.cxx $(GKSLIB)
 	wget https://gr-framework.org/downloads/3rdparty/qt5-runtime-Windows-$(ARCHITECTURE).tar.gz

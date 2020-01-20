@@ -487,7 +487,8 @@ windows-32bit-cross:
   - cp lib/gks/qt/gksqt.exe artifacts/
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
-  - cp lib/gks/libgks.lib lib/gks/libgks.dll lib/gks/libgks.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libgr.lib lib/gr/libgr.dll lib/gr/libgr.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
+  - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
+       lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
   - cp -r lib/gks/fonts artifacts/
   - cp /usr/lib/gcc/i686-w64-mingw32/6.3-win32/libgcc_s_sjlj-1.dll artifacts/
   - mkdir artifacts/include/
@@ -580,7 +581,8 @@ windows-64bit-cross:
   - cp lib/gks/qt/gksqt.exe artifacts/
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
-  - cp lib/gks/libgks.lib lib/gks/libgks.dll lib/gks/libgks.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libgr.lib lib/gr/libgr.dll lib/gr/libgr.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
+  - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
+       lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
   - cp -r lib/gks/fonts artifacts/
   - cp /usr/lib/gcc/x86_64-w64-mingw32/6.3-win32/libgcc_s_seh-1.dll artifacts/
   - mkdir artifacts/include/

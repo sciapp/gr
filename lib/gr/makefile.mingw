@@ -10,7 +10,7 @@ endif
     ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
    QHLIBS = $(THIRDPARTYDIR)/lib/libqhull.a
    FTLIBS = $(THIRDPARTYDIR)/lib/libfreetype.a
-  GKSLIBS = -L../gks/ -lgks
+  GKSLIBS = -L../gks/ -lGKS
      LIBS = -lws2_32 -lmsimg32 -lgdi32
 
 OBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
@@ -30,20 +30,20 @@ endif
 
 default: all
 
-all: libgr.dll libgr.lib demo.exe
+all: libGR.dll libGR.lib demo.exe
 
 .c.o:
 	$(CC) $(CFLAGS) $(DEFINES) -c $<
 
-libgr.lib: $(OBJS)
+libGR.lib: $(OBJS)
 	$(AR) crs $@ $?
 
-libgr.dll: $(OBJS)
+libGR.dll: $(OBJS)
 	$(CC) -shared -o $@ $^ -Wl,--out-implib,$(@:.dll=.a) \
 	$(JPEGLIBS) $(FTLIBS) $(PNGLIBS) $(ZLIBS) $(QHLIBS) $(GKSLIBS) $(LIBS)
 
-demo.exe: demo.o libgr.dll
-	$(CC) -o $@ demo.o -L. -lgr
+demo.exe: demo.o libGR.dll
+	$(CC) -o $@ demo.o -L. -lGR
 
 gr_version.h: $(GR_VERSION_H_DEPS)
 	../../lib/Version > $@
@@ -52,7 +52,7 @@ gr_version.h: $(GR_VERSION_H_DEPS)
 gr.o: gr_version.h
 
 clean:
-	$(RM) libgr.so
+	$(RM) libGR.so
 	$(RM) *.o
 	$(RM) gr_version.h
 
