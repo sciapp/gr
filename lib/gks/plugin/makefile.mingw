@@ -14,7 +14,7 @@ INCLUDES = -I../ -I$(THIRDPARTYDIR)/include -I/usr/local/include
 CFLAGS = -Wall $(DEFINES) $(INCLUDES)
 CXXFLAGS = -Wall $(DEFINES) $(INCLUDES)
 GDILIB = -lgdi32
-GKSLIB = ../libgks.lib
+GKSLIB = ../libGKS.lib
 TIFFLIB = $(THIRDPARTYDIR)/lib/libtiff.a
 
 all: x11plugin.dll svgplugin.dll pgfplugin.dll cairoplugin.dll wxplugin.dll qtplugin.dll qt5plugin.dll gtkplugin.dll gsplugin.dll wmfplugin.dll glplugin.dll zmqplugin.dll videoplugin.dll
