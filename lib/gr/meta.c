@@ -3605,15 +3605,23 @@ void plot_set_attribute_defaults(gr_meta_args_t *plot_args)
       args_setdefault(*current_subplot, "xflip", "i", PLOT_DEFAULT_XFLIP);
       args_setdefault(*current_subplot, "yflip", "i", PLOT_DEFAULT_YFLIP);
       args_setdefault(*current_subplot, "zflip", "i", PLOT_DEFAULT_ZFLIP);
-      args_setdefault(
-          *current_subplot, "adjust_xlim", "i",
-          (args_values(*current_subplot, "xlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
-      args_setdefault(
-          *current_subplot, "adjust_ylim", "i",
-          (args_values(*current_subplot, "ylim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
-      args_setdefault(
-          *current_subplot, "adjust_zlim", "i",
-          (args_values(*current_subplot, "zlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
+      if (str_equals_any(kind, 1, "heatmap"))
+        {
+          args_setdefault(*current_subplot, "adjust_xlim", "i", 0);
+          args_setdefault(*current_subplot, "adjust_ylim", "i", 0);
+        }
+      else
+        {
+          args_setdefault(
+              *current_subplot, "adjust_xlim", "i",
+              (args_values(*current_subplot, "xlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
+          args_setdefault(
+              *current_subplot, "adjust_ylim", "i",
+              (args_values(*current_subplot, "ylim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+          args_setdefault(
+              *current_subplot, "adjust_zlim", "i",
+              (args_values(*current_subplot, "zlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
+        }
       args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP);
       args_setdefault(*current_subplot, "rotation", "i", PLOT_DEFAULT_ROTATION);
       args_setdefault(*current_subplot, "tilt", "i", PLOT_DEFAULT_TILT);
@@ -4156,6 +4164,11 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args)
                   min_component -= step;
                   max_component += step;
                 }
+            }
+          else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
+            {
+              min_component -= 0.5;
+              max_component += 0.5;
             }
         }
       else
@@ -4829,46 +4842,23 @@ error_t plot_heatmap(gr_meta_args_t *subplot_args)
   return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
   return_error_if(!args_first_value(*current_series, "x", "D", &x, &width), ERROR_PLOT_MISSING_DATA);
   return_error_if(!args_first_value(*current_series, "y", "D", &y, &height), ERROR_PLOT_MISSING_DATA);
-  zlim_set = args_values(subplot_args, "zlim", "dd", &z_min, &z_max);
+  args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
   if (!args_values(subplot_args, "zlog", "i", &zlog))
     {
       zlog = 0;
     }
-  if (!zlim_set)
-    {
-      z_min = DBL_MAX;
-      z_max = DBL_MIN;
-      for (i = 0; i < width * height; i++)
-        {
-          if (z[i] < z_min)
-            {
-              z_min = z[i];
-            }
-          if (z[i] > z_max)
-            {
-              z_max = z[i];
-            }
-        }
-    }
-  if (z_max < z_min)
-    {
-      tmp = z_min;
-      z_min = z_max;
-      z_max = tmp;
-    }
-
   if (zlog)
     {
       z_min = log(z_min);
       z_max = log(z_max);
     }
 
-  if (!args_values(subplot_args, "clim", "dd", &c_min, &c_max))
+  if (!args_values(subplot_args, "crange", "dd", &c_min, &c_max))
     {
       c_min = z_min;
       c_max = z_max;
     }
-  else if (zlog)
+  if (zlog)
     {
       c_min = log(c_min);
       c_max = log(c_max);
