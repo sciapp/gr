@@ -497,7 +497,7 @@ void gks_init_gks(void)
       s->blur = 0;
       s->alpha = 1;
       s->bwidth = 1;
-      s->bcoli = 1;
+      s->bcoli = 0;
 
       s->input_encoding = 0;
     }
