@@ -5435,7 +5435,7 @@ error_t plot_draw_polar_axes(gr_meta_args_t *args)
   n = (int)ceil((r_max - r_min) / tick);
   for (i = 0; i <= n; i++)
     {
-      int r = i / n;
+      double r = (i * 1.0) / n;
       if (i % 2 == 0)
         {
           gr_setlinecolorind(88);
@@ -5460,8 +5460,8 @@ error_t plot_draw_polar_axes(gr_meta_args_t *args)
     }
   for (alpha = 0; alpha < 360; alpha += 45)
     {
-      x[0] = sin((alpha + 90) * M_PI / 180.0);
-      y[0] = cos((alpha + 90) * M_PI / 180.0);
+      x[0] = cos(alpha * M_PI / 180.0);
+      y[0] = sin(alpha * M_PI / 180.0);
       x[1] = 0.0;
       y[1] = 0.0;
       gr_polyline(2, x, y);
