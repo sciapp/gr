@@ -4,7 +4,9 @@ endif
 
  PNGCFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(ARCHS)
 ifeq ($(shell uname),Darwin)
+ifneq ($(notdir $(CC)),emcc)
 PNGCFLAGS += -mmacosx-version-min=10.11
+endif
 endif
       OBJS = \
 	png.o \

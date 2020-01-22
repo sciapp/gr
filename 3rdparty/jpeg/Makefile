@@ -4,7 +4,9 @@ endif
 
   CFLAGS = -O -I. -fPIC -fno-common $(ARCHS)
 ifeq ($(shell uname),Darwin)
+ifneq ($(notdir $(CC)),emcc)
  CFLAGS += -mmacosx-version-min=10.11
+endif
 endif
     OBJS = \
         jaricom.o \
