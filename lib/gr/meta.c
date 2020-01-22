@@ -851,6 +851,7 @@ static error_t plot_scatter(gr_meta_args_t *subplot_args);
 static error_t plot_quiver(gr_meta_args_t *subplot_args);
 static error_t plot_stem(gr_meta_args_t *subplot_args);
 static error_t plot_hist(gr_meta_args_t *subplot_args);
+static error_t plot_barplot(gr_meta_args_t *subplot_args);
 static error_t plot_contour(gr_meta_args_t *subplot_args);
 static error_t plot_contourf(gr_meta_args_t *subplot_args);
 static error_t plot_hexbin(gr_meta_args_t *subplot_args);
@@ -1288,13 +1289,17 @@ static int processing_events = 0;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* TODO: Check format of: "hist", "isosurface", "imshow"  */
-static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},     {"hexbin", "xys"},    {"polar", "xys"},
-                                           {"shade", "xys"},    {"stem", "xys"},      {"step", "xys"},
-                                           {"contour", "xyzc"}, {"contourf", "xyzc"}, {"tricont", "xyzc"},
-                                           {"trisurf", "xyzc"}, {"surface", "xyzc"},  {"wireframe", "xyzc"},
-                                           {"plot3", "xyzc"},   {"scatter", "xyzc"},  {"scatter3", "xyzc"},
-                                           {"quiver", "xyuv"},  {"heatmap", "xyzc"},  {"hist", "x"},
-                                           {"isosurface", "x"}, {"imshow", ""},       {"nonuniformheatmap", "xyzc"}};
+static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},      {"hexbin", "xys"},
+                                           {"polar", "xys"},     {"shade", "xys"},
+                                           {"stem", "xys"},      {"step", "xys"},
+                                           {"contour", "xyzc"},  {"contourf", "xyzc"},
+                                           {"tricont", "xyzc"},  {"trisurf", "xyzc"},
+                                           {"surface", "xyzc"},  {"wireframe", "xyzc"},
+                                           {"plot3", "xyzc"},    {"scatter", "xyzc"},
+                                           {"scatter3", "xyzc"}, {"quiver", "xyuv"},
+                                           {"heatmap", "xyzc"},  {"hist", "x"},
+                                           {"barplot", "xy"},    {"isosurface", "x"},
+                                           {"imshow", ""},       {"nonuniformheatmap", "xyzc"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1306,6 +1311,7 @@ static plot_func_map_entry_t kind_to_func[] = {
     {"quiver", plot_quiver},
     {"stem", plot_stem},
     {"hist", plot_hist},
+    {"barplot", plot_barplot},
     {"contour", plot_contour},
     {"contourf", plot_contourf},
     {"hexbin", plot_hexbin},
@@ -4016,10 +4022,6 @@ void plot_process_window(gr_meta_args_t *subplot_args)
   gr_meta_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
   gr_meta_args_push(subplot_args, "xmajor", "i", x_major_count);
 
-  if (strcmp(kind, "hist") == 0 && !gr_meta_args_contains(subplot_args, "ylim"))
-    {
-      y_min = 0;
-    }
   if (!(scale & GR_OPTION_Y_LOG))
     {
       args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
@@ -4169,6 +4171,11 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args)
             {
               min_component -= 0.5;
               max_component += 0.5;
+            }
+          else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0) &&
+                   strcmp("y", *current_component_name) == 0)
+            {
+              min_component = 0;
             }
         }
       else
@@ -4625,6 +4632,37 @@ error_t plot_hist(gr_meta_args_t *subplot_args)
           gr_setfillcolorind(1);
           gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
           gr_fillrect(x[i - 1], x[i], y_min, y[i - 1]);
+        }
+      ++current_series;
+    }
+
+  return NO_ERROR;
+}
+
+
+error_t plot_barplot(gr_meta_args_t *subplot_args)
+{
+  const double *window;
+  gr_meta_args_t **current_series;
+
+  args_values(subplot_args, "window", "D", &window);
+  args_values(subplot_args, "series", "A", &current_series);
+  while (*current_series != NULL)
+    {
+      double *x, *y;
+      unsigned int x_length, y_length;
+      unsigned int i;
+      return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(x_length != y_length + 1, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      for (i = 1; i <= y_length; ++i)
+        {
+          gr_setfillcolorind(989);
+          gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
+          gr_fillrect(x[i - 1], x[i], 0, y[i - 1]);
+          gr_setfillcolorind(1);
+          gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
+          gr_fillrect(x[i - 1], x[i], 0, y[i - 1]);
         }
       ++current_series;
     }
