@@ -90,10 +90,6 @@ extern "C"
 
 #define MAX_CLIP 64
 
-#define SVG_DRAW_PATH_STROKE (1u << 0u)
-#define SVG_DRAW_PATH_FILL (1u << 1u)
-#define SVG_DRAW_PATH_CLOSE (1u << 2u)
-
 static gks_state_list_t *gkss;
 
 static double a[MAX_TNR], b[MAX_TNR], c[MAX_TNR], d[MAX_TNR];
@@ -1081,16 +1077,21 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
 {
   int i, j;
   double x[3], y[3], w, h, a1, a2;
-  double cur_x = 0, cur_y = 0;
-  double cx, cy, sx, sy, ex, ey;
-  int large_arc_flag;
-  unsigned int draw_flags = 0;
+  double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
+  int large_arc_flag, sweep_flag;
+  unsigned int in_path = 0;
 
-  svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%02d)\" d=\"", path_id, p->path_index);
+  p->color = gkss->facoli;
 
   j = 0;
   for (i = 0; i < nc; ++i)
     {
+      if (!in_path)
+        {
+          svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%02d)\" d=\"M %g %g ", path_id, p->path_index, start_x,
+                     start_y);
+          in_path = 1;
+        }
       switch (codes[i])
         {
         case 'M':
@@ -1102,11 +1103,11 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          start_x = cur_x = x[0];
+          start_y = cur_y = y[0];
           to_DC(1, x, y);
           svg_printf(p->stream, "M%g %g ", x[0], y[0]);
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1117,11 +1118,11 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          cur_x = x[0];
+          cur_y = y[0];
           to_DC(1, x, y);
           svg_printf(p->stream, "L%g %g ", x[0], y[0]);
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1136,14 +1137,14 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'q')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
+          cur_x = x[1];
+          cur_y = y[1];
           to_DC(2, x, y);
           svg_printf(p->stream, "Q%g %g %g %g ", x[0], y[0], x[1], y[1]);
           j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1158,109 +1159,103 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'c')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
           x[2] = px[j + 2];
           y[2] = py[j + 2];
           if (codes[i] == 'c')
             {
-              x[2] += x[1];
-              y[2] += y[1];
+              x[2] += cur_x;
+              y[2] += cur_y;
             }
+          cur_x = x[2];
+          cur_y = y[2];
           to_DC(3, x, y);
           svg_printf(p->stream, "C%g %g %g %g %g %g ", x[0], y[0], x[1], y[1], x[2], y[2]);
           j += 3;
-          cur_x = x[2];
-          cur_y = y[2];
-          break;
-        case 'R':
-        case 'r':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'r')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'r')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
-          to_DC(2, x, y);
-          svg_printf(p->stream, "M%g %g L%g %g L%g %g L%g %g L%g %g", x[0], y[0], x[1], y[0], x[1], y[1], x[0], y[1],
-                     x[0], y[0]);
-          j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'A':
         case 'a':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'a')
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+            x[2] = cur_x;
+            y[2] = cur_y;
+          }
+          to_DC(3, x, y);
+
+          w = (x[1] - x[0]) * 0.5;
+          h = (y[1] - y[0]) * 0.5;
+
+          sweep_flag = a1 > a2;
+          while (fabs(a2 - a1) >= 2 * M_PI)
             {
-              x[0] += cur_x;
-              y[0] += cur_y;
+              if (sweep_flag)
+                {
+                  a1 -= M_PI;
+                }
+              else
+                {
+                  a1 += M_PI;
+                }
+              double mx = x[0] + w + cos(a1) * w;
+              double my = y[0] + h + sin(a1) * h;
+              svg_printf(p->stream, "A%g %g 0 1 %d %g %g ", w, h, sweep_flag, mx, my);
             }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'a')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
-          to_DC(2, x, y);
-          w = 0.5 * (x[1] - x[0]);
-          h = 0.5 * (y[1] - y[0]);
-          a1 = px[j + 2];
-          a2 = py[j + 2];
-          while (a1 > a2)
-            {
-              a2 += 2 * M_PI;
-            }
-          cx = x[0] + w;
-          cy = y[0] + h;
-          sx = cx + w * cos(a1);
-          sy = cy + h * sin(a1);
-          large_arc_flag = (a2 - a1) > M_PI ? 1 : 0;
-          if (fabs(a2 - a1) >= 2 * M_PI)
-            {
-              ex = cx + w * cos(a1 + a2 / 2);
-              ey = cy + h * sin(a1 + a2 / 2);
-              svg_printf(p->stream, "M%g %g A%g %g 0 %d 0 %g %g ", sx, sy, w, h, large_arc_flag, ex, ey);
-              svg_printf(p->stream, "M%g %g A%g %g 0 %d 0 %g %g ", ex, ey, w, h, large_arc_flag, sx, sy);
-              ex = cx + w * cos(a2);
-              ey = cy + h * sin(a2);
-              svg_printf(p->stream, "M%g %g ", ex, ey);
-            }
-          else
-            {
-              ex = cx + w * cos(a2);
-              ey = cy + h * sin(a2);
-              svg_printf(p->stream, "M%g %g A%g %g 0 %d 0 %g %g ", sx, sy, w, h, large_arc_flag, ex, ey);
-            }
+          large_arc_flag = fabs(a2 - a1) >= M_PI;
+          svg_printf(p->stream, "A%g %g 0 %d %d %g %g ", w, h, large_arc_flag, sweep_flag, x[2], y[2]);
           j += 3;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'S': /* stroke */
-          draw_flags |= SVG_DRAW_PATH_STROKE;
+          svg_printf(p->stream,
+                     "\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\" />",
+                     p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
+                     gkss->bwidth * NOMINAL_SIZE);
+          in_path = 0;
           break;
         case 's': /* close and stroke */
-          draw_flags |= SVG_DRAW_PATH_CLOSE | SVG_DRAW_PATH_STROKE;
+          svg_printf(p->stream,
+                     "Z\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\" />",
+                     p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
+                     gkss->bwidth * NOMINAL_SIZE);
+          cur_x = start_x;
+          cur_y = start_y;
+          in_path = 0;
           break;
         case 'f': /* fill */
-          draw_flags |= SVG_DRAW_PATH_CLOSE | SVG_DRAW_PATH_FILL;
+          svg_printf(p->stream, "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" />",
+                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
+          cur_x = start_x;
+          cur_y = start_y;
+          in_path = 0;
           break;
         case 'F': /* fill and stroke */
-          draw_flags |= SVG_DRAW_PATH_CLOSE | SVG_DRAW_PATH_FILL | SVG_DRAW_PATH_STROKE;
+          svg_printf(p->stream,
+                     "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" stroke=\"#%02x%02x%02x\" "
+                     "stroke-opacity=\"%g\" stroke-width=\"%g\" />",
+                     p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency,
+                     p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
+                     gkss->bwidth * NOMINAL_SIZE);
+          cur_x = start_x;
+          cur_y = start_y;
+          in_path = 0;
           break;
         case 'Z': /* close */
-          draw_flags |= SVG_DRAW_PATH_CLOSE;
+          svg_printf(p->stream, "Z ");
+          cur_x = start_x;
+          cur_y = start_y;
         case '\0':
           break;
         default:
@@ -1268,38 +1263,6 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           exit(1);
         }
     }
-
-  p->color = gkss->facoli;
-  if (draw_flags & SVG_DRAW_PATH_CLOSE)
-    {
-      svg_printf(p->stream, "Z\" ");
-    }
-  else
-    {
-      svg_printf(p->stream, "\" ");
-    }
-
-  if (draw_flags & SVG_DRAW_PATH_FILL)
-    {
-      svg_printf(p->stream, "fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ", p->rgb[p->color][0],
-                 p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
-    }
-  else
-    {
-      svg_printf(p->stream, "fill=\"none\" ");
-    }
-
-  if (draw_flags & SVG_DRAW_PATH_STROKE)
-    {
-      svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
-                 p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                 gkss->bwidth * NOMINAL_SIZE);
-    }
-  else
-    {
-      svg_printf(p->stream, "stroke=\"none\"");
-    }
-  svg_printf(p->stream, "/>\n");
 }
 
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)

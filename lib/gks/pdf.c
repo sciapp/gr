@@ -1610,21 +1610,20 @@ static void arc(double x, double y, double w, double h, double a1, double a2)
 
 static void draw_arc(double x, double y, double w, double h, double a1, double a2)
 {
-  double rad_a1 = a1 * M_PI / 180;
-  double startx, starty;
-
-  startx = x + w * cos(rad_a1);
-  starty = y + h * sin(rad_a1);
-  pdf_printf(p->content, "%.2f %.2f m\n", startx, starty);
-
-  while (a2 < a1) a2 += 360;
-
   if (a1 == a2) return;
 
-  while (a2 - a1 > 90)
+  while (fabs(a2 - a1) > 90)
     {
-      arc(x, y, w, h, a1, a1 + 90);
-      a1 += 90;
+      if (a2 > a1)
+        {
+          arc(x, y, w, h, a1, a1 + 90);
+          a1 += 90;
+        }
+      else
+        {
+          arc(x, y, w, h, a1, a1 - 90);
+          a1 -= 90;
+        }
     }
 
   if (a1 != a2) arc(x, y, w, h, a1, a2);
@@ -1634,8 +1633,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
 {
   int i, j;
   double x[3], y[3], w, h, a1, a2;
-  double cur_x = 0, cur_y = 0;
-  int close_path_flag = 0;
+  double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
 
   set_linewidth(gkss->bwidth);
   set_transparency(p->alpha);
@@ -1657,11 +1655,11 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          start_x = cur_x = x[0];
+          start_y = cur_y = y[0];
           to_DC(1, x, y);
           pdf_printf(p->content, "%.2f %.2f m\n", x[0], y[0]);
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1672,11 +1670,11 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          cur_x = x[0];
+          cur_y = y[0];
           to_DC(1, x, y);
           pdf_printf(p->content, "%.2f %.2f l\n", x[0], y[0]);
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1691,14 +1689,14 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'q')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
+          cur_x = x[1];
+          cur_y = y[1];
           to_DC(2, x, y);
           pdf_printf(p->content, "%.2f %.2f %.2f %.2f v\n", x[0], y[0], x[1], y[1]);
           j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1713,91 +1711,67 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'c')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
           x[2] = px[j + 2];
           y[2] = py[j + 2];
           if (codes[i] == 'c')
             {
-              x[2] += x[1];
-              y[2] += y[1];
+              x[2] += cur_x;
+              y[2] += cur_y;
             }
+          cur_x = x[2];
+          cur_y = y[2];
           to_DC(3, x, y);
           pdf_printf(p->content, "%.2f %.2f %.2f %.2f %.2f %.2f c\n", x[0], y[0], x[1], y[1], x[2], y[2]);
           j += 3;
-          cur_x = x[2];
-          cur_y = y[2];
-          break;
-        case 'R':
-        case 'r':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'r')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'r')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
-          to_DC(2, x, y);
-          pdf_printf(p->content, "%.2f %.2f %.2f %.2f re\n", x[0], y[0], x[1] - x[0], y[1] - y[0]);
-          j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'A':
         case 'a':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'a')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'a')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
           to_DC(2, x, y);
           w = 0.5 * (x[1] - x[0]);
           h = 0.5 * (y[1] - y[0]);
-          a1 = px[j + 2] * 180 / M_PI;
-          a2 = py[j + 2] * 180 / M_PI;
-          draw_arc(x[0] + w, y[0] + h, w, h, a1, a2);
+          draw_arc(x[0] + w, y[0] + h, w, h, a1 * 180 / M_PI, a2 * 180 / M_PI);
           j += 3;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'S': /* stroke */
-          if (close_path_flag)
-            {
-              pdf_printf(p->content, "s\n");
-            }
-          else
-            {
-              pdf_printf(p->content, "S\n");
-            }
+          pdf_printf(p->content, "S\n");
           break;
         case 's': /* close and stroke */
           pdf_printf(p->content, "s\n");
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case 'f': /* close, fill using even-odd rule */
           pdf_printf(p->content, "h f*\n");
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case 'F': /* close, fill using even-odd rule, stroke */
           pdf_printf(p->content, "h b*\n");
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case 'Z':
           pdf_printf(p->content, "h\n");
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case '\0':
           break;

@@ -1492,6 +1492,7 @@ static void to_DC(int n, double *x, double *y)
   int i, j;
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0;
+  double start_x = 0, start_y = 0;
 
   begin_context(context);
 
@@ -1513,11 +1514,11 @@ static void to_DC(int n, double *x, double *y)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          cur_x = start_x = x[0];
+          cur_y = start_y = y[0];
           to_DC(1, x, y);
           CGContextMoveToPoint(context, x[0], y[0]);
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1528,11 +1529,11 @@ static void to_DC(int n, double *x, double *y)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          cur_x = x[0];
+          cur_y = y[0];
           to_DC(1, x, y);
           CGContextAddLineToPoint(context, x[0], y[0]);
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1547,14 +1548,14 @@ static void to_DC(int n, double *x, double *y)
           y[1] = py[j + 1];
           if (codes[i] == 'q')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
+          cur_x = x[1];
+          cur_y = y[1];
           to_DC(2, x, y);
           CGContextAddQuadCurveToPoint(context, x[0], y[0], x[1], y[1]);
           j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1569,98 +1570,80 @@ static void to_DC(int n, double *x, double *y)
           y[1] = py[j + 1];
           if (codes[i] == 'c')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
           x[2] = px[j + 2];
           y[2] = py[j + 2];
           if (codes[i] == 'c')
             {
-              x[2] += x[1];
-              y[2] += y[1];
+              x[2] += cur_x;
+              y[2] += cur_y;
             }
+          cur_x = x[2];
+          cur_y = y[2];
           to_DC(3, x, y);
           CGContextAddCurveToPoint(context, x[0], y[0], x[1], y[1], x[2], y[2]);
           j += 3;
-          cur_x = x[2];
-          cur_y = y[2];
-          break;
-        case 'R':
-        case 'r':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'r')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'r')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
-          to_DC(2, x, y);
-          w = x[1] - x[0];
-          h = y[1] - y[0];
-          CGContextAddRect(context, CGRectMake(x[0], y[0], w, h));
-          j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'A':
         case 'a':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'a')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'a')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
           to_DC(2, x, y);
           w = x[1] - x[0];
           h = y[1] - y[0];
-          a1 = px[j + 2];
-          a2 = py[j + 2];
           if (w != h)
             {
               CGMutablePathRef path = CGPathCreateMutable();
               CGAffineTransform m = CGAffineTransformMakeTranslation(x[0] + 0.5 * w, y[0] + 0.5 * h);
               m = CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, h / w), m);
-              CGPathAddArc(path, &m, 0, 0, 0.5 * w, a1, a2, false);
+              CGPathAddArc(path, &m, 0, 0, 0.5 * w, a1, a2, a1 > a2);
               CGContextAddPath(context, path);
               CFRelease(path);
             }
           else
-            CGContextAddArc(context, x[0] + 0.5 * w, y[0] + 0.5 * h, 0.5 * w, a1, a2, false);
+            CGContextAddArc(context, x[0] + 0.5 * w, y[0] + 0.5 * h, 0.5 * w, a1, a2, a1 > a2);
           j += 3;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 's':
           CGContextClosePath(context);
+          cur_x = start_x;
+          cur_y = start_y;
           CGContextDrawPath(context, kCGPathStroke);
           break;
         case 'S':
           CGContextDrawPath(context, kCGPathStroke);
           break;
         case 'f':
+          CGContextClosePath(context);
+          cur_x = start_x;
+          cur_y = start_y;
           CGContextDrawPath(context, kCGPathFill);
           break;
         case 'F':
           CGContextClosePath(context);
+          cur_x = start_x;
+          cur_y = start_y;
           CGContextDrawPath(context, kCGPathFillStroke);
           break;
         case 'Z':
           CGContextClosePath(context);
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case '\0':
           break;

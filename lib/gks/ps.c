@@ -909,6 +909,10 @@ static void ps_init(int *pages)
  /yrad exch def /xrad exch def /y exch def /x exch def\
  /savematrix matrix currentmatrix def x y translate xrad yrad scale\
  0 0 1 startangle endangle arc savematrix setmatrix} def");
+      packb("/eln {/endangle exch def /startangle exch def\
+ /yrad exch def /xrad exch def /y exch def /x exch def\
+ /savematrix matrix currentmatrix def x y translate xrad yrad scale\
+ 0 0 1 startangle endangle arcn savematrix setmatrix} def");
       packb("/sg {setgray} def");
       packb("/sc {setrgbcolor} def");
       packb("/fg {0 sg} def");
@@ -1497,7 +1501,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   char buffer[100];
   int i, j, np;
   double x[3], y[3], w, h, a1, a2;
-  double cur_x = 0, cur_y = 0;
+  double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
   double x1, y1, x2, y2;
 
   sprintf(buffer, "np ");
@@ -1518,13 +1522,13 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          start_x = cur_x = x[0];
+          start_y = cur_y = y[0];
           to_DC(1, x, y);
           sprintf(buffer, "%s%.2f %.2f m", np ? "np " : "", x[0], y[0]);
           packb(buffer);
           np = 0;
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1535,12 +1539,12 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          cur_x = x[0];
+          cur_y = y[0];
           to_DC(1, x, y);
           sprintf(buffer, "%.2f %.2f l", x[0], y[0]);
           packb(buffer);
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1555,19 +1559,21 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'q')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
-          to_DC(2, x, y);
-          x1 = cur_x + (2.0 / 3.0) * (x[0] - cur_x);
-          y1 = cur_y + (2.0 / 3.0) * (y[0] - cur_y);
+          x[2] = cur_x;
+          y[2] = cur_y;
+          cur_x = x[1];
+          cur_y = y[1];
+          to_DC(3, x, y);
+          x1 = x[2] + (2.0 / 3.0) * (x[0] - x[2]);
+          y1 = y[2] + (2.0 / 3.0) * (y[0] - y[2]);
           x2 = x[1] + (2.0 / 3.0) * (x[0] - x[1]);
           y2 = y[1] + (2.0 / 3.0) * (y[0] - y[1]);
           sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x1, y1, x2, y2, x[1], y[1]);
           packb(buffer);
           j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1582,77 +1588,60 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'c')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
           x[2] = px[j + 2];
           y[2] = py[j + 2];
           if (codes[i] == 'c')
             {
-              x[2] += x[1];
-              y[2] += y[1];
+              x[2] += cur_x;
+              y[2] += cur_y;
             }
+          cur_x = x[2];
+          cur_y = y[2];
           to_DC(3, x, y);
           sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x[0], y[0], x[1], y[1], x[2], y[2]);
           packb(buffer);
           j += 3;
-          cur_x = x[2];
-          cur_y = y[2];
-          break;
-        case 'R':
-        case 'r':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'r')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'r')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
-          to_DC(2, x, y);
-          sprintf(buffer, "%.2f %.2f m %.2f %.2f l %.2f %.2f l %.2f %.2f l cp", x[0], y[0], x[1], y[0], x[1], y[1],
-                  x[0], y[1]);
-          packb(buffer);
-          j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'A':
         case 'a':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'a')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'a')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx;
+            y[0] = cy;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
           to_DC(2, x, y);
-          w = 0.5 * (x[1] - x[0]);
-          h = 0.5 * (y[1] - y[0]);
-          a1 = px[j + 2];
-          a2 = py[j + 2];
-          sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f el", x[0] + w, y[0] + h, w, h, a1 * 180 / M_PI,
-                  a2 * 180 / M_PI);
+          w = x[1] - x[0];
+          h = y[1] - y[0];
+          a1 *= 180 / M_PI;
+          a2 *= 180 / M_PI;
+          if (a2 < a1)
+            {
+              sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f eln", x[0], y[0], w, h, a1, a2);
+            }
+          else
+            {
+              sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f el", x[0], y[0], w, h, a1, a2);
+            }
           packb(buffer);
           j += 3;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 's':
           sprintf(buffer, "cp");
+          cur_x = start_x;
+          cur_y = start_y;
           packb(buffer);
         case 'S':
           set_linewidth(gkss->bwidth);
@@ -1662,6 +1651,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 'f':
           sprintf(buffer, "%.4g %.4g %.4g sc fi", p->red[gkss->facoli], p->green[gkss->facoli], p->blue[gkss->facoli]);
+          cur_x = start_x;
+          cur_y = start_y;
           packb(buffer);
           np = 1;
           break;
@@ -1671,11 +1662,15 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           packb(buffer);
           set_linewidth(gkss->bwidth);
           sprintf(buffer, "%.4g %.4g %.4g sc csk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+          cur_x = start_x;
+          cur_y = start_y;
           packb(buffer);
           np = 1;
           break;
         case 'Z':
           sprintf(buffer, "cp");
+          cur_x = start_x;
+          cur_y = start_y;
           np = 0;
           break;
         case '\0':
