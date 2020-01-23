@@ -3842,7 +3842,7 @@ void plot_process_viewport(gr_meta_args_t *subplot_args)
     {
       viewport[2] += (1 - (subplot[3] - subplot[2]) * (subplot[3] - subplot[2])) * 0.02;
     }
-  if (str_equals_any(kind, 6, "contour", "contourf", "heatmap", "nonuniformheatmap", "hexbin", "quiver"))
+  if (str_equals_any(kind, 7, "tricont", "contour", "contourf", "heatmap", "nonuniformheatmap", "hexbin", "quiver"))
     {
       viewport[1] -= 0.1;
     }
@@ -5297,7 +5297,7 @@ error_t plot_tricont(gr_meta_args_t *subplot_args)
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
-  plot_draw_colorbar(subplot_args, 0.05, 256);
+  plot_draw_colorbar(subplot_args, 0.0, num_levels);
   free(levels);
 
   return NO_ERROR;
