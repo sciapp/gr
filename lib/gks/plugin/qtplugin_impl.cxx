@@ -806,6 +806,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   int i, j;
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0;
+  double start_x = 0, start_y = 0;
   QPainterPath path;
 
   j = 0;
@@ -822,6 +823,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          cur_x = start_x = x[0];
+          cur_y = start_y = y[0];
           to_DC(1, x, y);
           path.moveTo(x[0], y[0]);
           j += 1;
@@ -835,6 +838,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          cur_x = x[0];
+          cur_y = y[0];
           to_DC(1, x, y);
           path.lineTo(x[0], y[0]);
           j += 1;
@@ -852,9 +857,11 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'q')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
+          cur_x = x[1];
+          cur_y = y[1];
           to_DC(2, x, y);
           path.quadTo(x[0], y[0], x[1], y[1]);
           j += 2;
@@ -872,73 +879,64 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'c')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
           x[2] = px[j + 2];
           y[2] = py[j + 2];
           if (codes[i] == 'c')
             {
-              x[2] += x[1];
-              y[2] += y[1];
+              x[2] += cur_x;
+              y[2] += cur_y;
             }
+          cur_x = x[2];
+          cur_y = y[2];
           to_DC(3, x, y);
           path.cubicTo(x[0], y[0], x[1], y[1], x[2], y[2]);
           j += 3;
           break;
-        case 'R':
-        case 'r':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'r')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'r')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
-          to_DC(2, x, y);
-          w = x[1] - x[0];
-          h = y[1] - y[0];
-          path.addRect(x[0], y[0], w, h);
-          j += 2;
-          break;
         case 'A':
         case 'a':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'a')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'a')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
           to_DC(2, x, y);
           w = x[1] - x[0];
           h = y[1] - y[0];
-          a1 = px[j + 2];
-          a2 = py[j + 2];
-          while (a1 > a2)
+          a1 *= -180 / M_PI;
+          a2 *= -180 / M_PI;
+          while (fabs(a2 - a1) > 360)
             {
-              a2 += 2 * M_PI;
+              if (a1 > a2)
+                {
+                  path.arcTo(x[0], y[0], w, h, a1, -180);
+                  a1 -= 180;
+                }
+              else
+                {
+                  path.arcTo(x[0], y[0], w, h, a1, 180);
+                  a1 += 180;
+                }
             }
-          path.arcMoveTo(x[0], y[0], w, h, -a1 * 180 / M_PI);
-          path.arcTo(x[0], y[0], w, h, -a1 * 180 / M_PI, -(a2 - a1) * 180 / M_PI);
+          path.arcTo(x[0], y[0], w, h, a1, (a2 - a1));
           j += 3;
           break;
         case 's': /* close and stroke */
           path.closeSubpath();
+          cur_x = start_x;
+          cur_y = start_y;
           p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
           break;
         case 'S': /* stroke */
@@ -946,15 +944,21 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           break;
         case 'F': /* fill and stroke */
           path.closeSubpath();
+          cur_x = start_x;
+          cur_y = start_y;
           p->pixmap->fillPath(path, QColor(p->rgb[gkss->facoli]));
           p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
           break;
         case 'f': /* fill */
           path.closeSubpath();
+          cur_x = start_x;
+          cur_y = start_y;
           p->pixmap->fillPath(path, QColor(p->rgb[gkss->facoli]));
           break;
         case 'Z': /* closepath */
           path.closeSubpath();
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case '\0':
           break;
@@ -962,8 +966,6 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           gks_perror("invalid path code ('%c')", codes[i]);
           exit(1);
         }
-      cur_x = x[0];
-      cur_y = y[0];
     }
 }
 

@@ -2871,16 +2871,17 @@ void gr_settextalign(int horizontal, int vertical)
  *
  * \verbatim embed:rst:leading-asterisk
  *
- * +---------+---+--------------------------------------------------------------------------------+
- * |HOLLOW   |  0|No filling. Just draw the bounding polyline                                     |
- * +---------+---+--------------------------------------------------------------------------------+
- * |SOLID    |  1|Fill the interior of the polygon using the fill color index                     |
- * +---------+---+--------------------------------------------------------------------------------+
- * |PATTERN  |  2|Fill the interior of the polygon using the style index as a pattern index       |
- * +---------+---+--------------------------------------------------------------------------------+
- * |HATCH    |  3|Fill the interior of the polygon using the style index as a cross-hatched style |
- * +---------+---+--------------------------------------------------------------------------------+
- *
+ * +------------------+---+-------------------------------------------------------------------------------------------+
+ * |HOLLOW            |  0|No filling. Just draw the bounding polyline                                                |
+ * +------------------+---+-------------------------------------------------------------------------------------------+
+ * |SOLID             |  1|Fill the interior of the polygon using the fill color index                                |
+ * +------------------+---+-------------------------------------------------------------------------------------------+
+ * |PATTERN           |  2|Fill the interior of the polygon using the style index as a pattern index                  |
+ * +------------------+---+-------------------------------------------------------------------------------------------+
+ * |HATCH             |  3|Fill the interior of the polygon using the style index as a cross-hatched style            |
+ * +------------------+---+-------------------------------------------------------------------------------------------+
+ * |SOLID_WITH_BORDER |  4|Fill the interior of the polygon using the fill color index and draw the bounding polyline |
+ * +------------------+---+-------------------------------------------------------------------------------------------+
  * \endverbatim
  *
  * This function defines the interior style  for subsequent fill area output
@@ -8069,7 +8070,7 @@ void gr_drawrect(double xmin, double xmax, double ymin, double ymax)
 {
   int errind, style;
   double x[5], y[5];
-  int codes[2] = {'R', 'S'};
+  int codes[] = {'M', 'L', 'L', 'L', 'S'};
 
   check_autoinit;
 
@@ -8088,12 +8089,12 @@ void gr_drawrect(double xmin, double xmax, double ymin, double ymax)
     }
   else
     {
-      x[0] = min(x_lin(xmin), x_lin(xmax));
-      y[0] = min(y_lin(ymin), y_lin(ymax));
-      x[1] = max(x_lin(xmin), x_lin(xmax));
-      y[1] = max(y_lin(ymin), y_lin(ymax));
+      x[1] = x[2] = x_lin(max(xmin, xmax));
+      x[0] = x[3] = x_lin(min(xmin, xmax));
+      y[2] = y[3] = y_lin(max(ymin, ymax));
+      y[0] = y[1] = y_lin(min(ymin, ymax));
 
-      gks_gdp(2, x, y, GKS_K_GDP_DRAW_PATH, 2, codes);
+      gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 5, codes);
     }
 
   if (flag_graphics)
@@ -8112,7 +8113,7 @@ void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
 {
   int errind, style;
   double bwidth, x[4], y[4];
-  int codes[2] = {'R', 'f'};
+  int codes[] = {'M', 'L', 'L', 'L', 'f'};
 
   check_autoinit;
 
@@ -8134,10 +8135,15 @@ void gr_fillrect(double xmin, double xmax, double ymin, double ymax)
       x[1] = max(x_lin(xmin), x_lin(xmax));
       y[1] = max(y_lin(ymin), y_lin(ymax));
 
-      gr_inqborderwidth(&bwidth);
-      if (bwidth != 0) codes[1] = 'F';
+      x[1] = x[2] = x_lin(max(xmin, xmax));
+      x[0] = x[3] = x_lin(min(xmin, xmax));
+      y[2] = y[3] = y_lin(max(ymin, ymax));
+      y[0] = y[1] = y_lin(min(ymin, ymax));
 
-      gks_gdp(2, x, y, GKS_K_GDP_DRAW_PATH, 2, codes);
+      gr_inqborderwidth(&bwidth);
+      if (bwidth != 0) codes[4] = 'F';
+
+      gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 5, codes);
     }
 
   if (flag_graphics)
@@ -8164,19 +8170,19 @@ void gr_drawarc(double xmin, double xmax, double ymin, double ymax, double a1, d
   double xcenter, ycenter, width, height, start, end, a;
   int n;
   double x[361], y[361];
-  int codes[2] = {'A', 'S'};
+  int codes[3] = {'M', 'A', 'S'};
 
   check_autoinit;
 
   gks_inq_fill_int_style(&errind, &style);
 
+  xcenter = (x_lin(xmin) + x_lin(xmax)) / 2.0;
+  ycenter = (y_lin(ymin) + y_lin(ymax)) / 2.0;
+  width = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
+  height = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
+
   if (style != GKS_K_INTSTYLE_SOLID_WITH_BORDER)
     {
-      xcenter = (x_lin(xmin) + x_lin(xmax)) / 2.0;
-      ycenter = (y_lin(ymin) + y_lin(ymax)) / 2.0;
-      width = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
-      height = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
-
       start = min(a1, a2);
       end = max(a1, a2);
       start += ((int)(end - start)) / 360 * 360;
@@ -8207,14 +8213,15 @@ void gr_drawarc(double xmin, double xmax, double ymin, double ymax, double a1, d
     }
   else
     {
-      x[0] = min(x_lin(xmin), x_lin(xmax));
-      y[0] = min(y_lin(ymin), y_lin(ymax));
-      x[1] = max(x_lin(xmin), x_lin(xmax));
-      y[1] = max(y_lin(ymin), y_lin(ymax));
+      x[0] = xcenter + width * cos(a1);
+      y[0] = ycenter + height * sin(a1);
+      x[1] = width;
+      y[1] = height;
       x[2] = a1 * M_PI / 180;
       y[2] = a2 * M_PI / 180;
+      x[3] = y[3] = 0;
 
-      gks_gdp(3, x, y, GKS_K_GDP_DRAW_PATH, 2, codes);
+      gks_gdp(4, x, y, GKS_K_GDP_DRAW_PATH, 3, codes);
     }
 
   if (flag_graphics)
@@ -8251,13 +8258,13 @@ void gr_fillarc(double xmin, double xmax, double ymin, double ymax, double a1, d
 
   gks_inq_fill_int_style(&errind, &style);
 
+  xcenter = (x_lin(xmin) + x_lin(xmax)) / 2.0;
+  ycenter = (y_lin(ymin) + y_lin(ymax)) / 2.0;
+  width = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
+  height = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
+
   if (style != GKS_K_INTSTYLE_SOLID_WITH_BORDER)
     {
-      xcenter = (x_lin(xmin) + x_lin(xmax)) / 2.0;
-      ycenter = (y_lin(ymin) + y_lin(ymax)) / 2.0;
-      width = fabs(x_lin(xmax) - x_lin(xmin)) / 2.0;
-      height = fabs(y_lin(ymax) - y_lin(ymin)) / 2.0;
-
       start = min(a1, a2);
       end = max(a1, a2);
       start += ((int)(end - start)) / 360 * 360;
@@ -8290,14 +8297,13 @@ void gr_fillarc(double xmin, double xmax, double ymin, double ymax, double a1, d
     }
   else
     {
-      x[0] = 0.5 * (x_lin(xmin) + x_lin(xmax));
-      y[0] = 0.5 * (y_lin(ymin) + y_lin(ymax));
-      x[1] = min(x_lin(xmin), x_lin(xmax));
-      y[1] = min(y_lin(ymin), y_lin(ymax));
-      x[2] = max(x_lin(xmin), x_lin(xmax));
-      y[2] = max(y_lin(ymin), y_lin(ymax));
-      x[3] = a1 * M_PI / 180;
-      y[3] = a2 * M_PI / 180;
+      x[0] = xcenter + width * cos(a1);
+      y[0] = ycenter + height * sin(a1);
+      x[1] = width;
+      y[1] = height;
+      x[2] = a1 * M_PI / 180;
+      y[2] = a2 * M_PI / 180;
+      x[3] = y[3] = 0;
 
       gr_inqborderwidth(&bwidth);
       if (bwidth != 0) codes[2] = 'F';
@@ -10005,47 +10011,156 @@ void gr_inqresamplemethod(unsigned int *flag)
  * \param[in] n The number of points
  * \param[in] x A pointer to the X coordinates
  * \param[in] y A pointer to the Y coordinates
- * \param[in] codes Path codes
+ * \param[in] codes Path codes as a null-terminated string
  *
- * The values for `x` and `y` are in normalized device coordinates.
+ * The values for `x` and `y` are in world coordinates. `n` is the number of vertices to use.
  * The `codes` describe several patch primitives that can be used to create compound paths.
  *
  * The following path codes are recognized:
  *
  * \verbatim embed:rst:leading-asterisk
  *
- * +----------+----------------------+-------------------+
- * | **Code** | **Description**      | **Vertices**      |
- * +----------+----------------------+-------------------+
- * |     M, m | moveto               | x,y               |
- * +----------+----------------------+-------------------+
- * |     L, l | lineto               | x,y               |
- * +----------+----------------------+-------------------+
- * |     Q, q | quadratic Bezier     | x1,y1 x2,y2       |
- * +----------+----------------------+-------------------+
- * |     C, c | cubic Bezier         | x1,y1 x2,y2 x3,y3 |
- * +----------+----------------------+-------------------+
- * |     R, r | rectangle            | w,h               |
- * +----------+----------------------+-------------------+
- * |     A, a | arc                  | w,h a1,a2         |
- * +----------+----------------------+-------------------+
- * |        Z | closepath            |                   |
- * +----------+----------------------+-------------------+
- * |        S | stroke               |                   |
- * +----------+----------------------+-------------------+
- * |        s | closepath and stroke |                   |
- * +----------+----------------------+-------------------+
- * |        f | fill                 |                   |
- * +----------+----------------------+-------------------+
- * |        F | fill and stroke      |                   |
- * +----------+----------------------+-------------------+
+ * +----------+---------------------------------+-------------------+-------------------+
+ * | **Code** | **Description**                 | **x**             | **y**             |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |     M, m | move                            | x                 | y                 |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |     L, l | line                            | x                 | y                 |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |     Q, q | quadratic Bezier                | x1, x2            | y1, y2            |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |     C, c | cubic Bezier                    | x1, x2, x3        | y1, y2, y3        |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |     A, a | arc                             | rx, a1, reserved  | ry, a2, reserved  |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |        Z | close path                      |                   |                   |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |        S | stroke                          |                   |                   |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |        s | close path and stroke           |                   |                   |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |        f | close path and fill             |                   |                   |
+ * +----------+---------------------------------+-------------------+-------------------+
+ * |        F | close path, fill and stroke     |                   |                   |
+ * +----------+---------------------------------+-------------------+-------------------+
  *
  * \endverbatim
  *
- * Filled paths are implicitly closed.
+ *  - M, m
+ *
+ *    Moves the current position to (`x`, `y`). The new position is either absolute (`M`) or relative to the current
+ *    position (`m`). The initial position of `gr_path` is (0, 0).
+ *
+ *    Example:
+ *
+ *        double x[2] = {0.5, -0.1};
+ *        double y[2] = {0.2, 0.1};
+ *        gr_path(2, x, y, "Mm");
+ *
+ *    The first move command in this example moves the current position to the absolute coordinates (0.5, 0.2). The
+ *    second move to performs a movement by (-0.1, 0.1) relative to the current position resulting in the point
+ *    (0.4, 0.3).
+ *
+ *
+ *  - L, l
+ *
+ *    Draws a line from the current position to the given position (`x`, `y`). The end point of the line is either
+ *    absolute (`L`) or relative to the current position (`l`). The current position is set to the end point of the
+ *    line.
+ *
+ *    Example:
+ *
+ *        double x[3] = {0.1, 0.5, 0.0};
+ *        double y[3] = {0.1, 0.1, 0.2};
+ *        gr_path(3, x, y, "MLlS");
+ *
+ *    The first line to command draws a straight line from the current position (0.1, 0.1) to the absolute position
+ *    (0.5, 0.1) resulting in a horizontal line. The second line to command draws a vertical line relative to the
+ *    current position resulting in the end point (0.5, 0.3).
+ *
+ *
+ *  - Q, q
+ *
+ *    Draws a quadratic bezier curve from the current position to the end point (`x2`, `y2`) using (`x1`, `y1`) as the
+ *    control point. Both points are either absolute (`Q`) or relative to the current position (`q`). The current
+ *    position is set to the end point of the bezier curve.
+ *
+ *    Example:
+ *
+ *        double x[5] = {0.1, 0.3, 0.5, 0.2, 0.4};
+ *        double y[5] = {0.1, 0.2, 0.1, 0.1, 0.0};
+ *        gr_path(5, x, y, "MQqS");
+ *
+ *    This example will generate two bezier curves whose start and end points are each located at y=0.1. As the control
+ *    points are horizontally in the middle of each bezier curve with a higher y value both curves are symmetrical
+ *    and bend slightly upwards in the middle. The current position is set to (0.9, 0.1) at the end.
+ *
+ *  - C, c
+ *
+ *    Draws a cubic bezier curve from the current position to the end point (`x3`, `y3`) using (`x1`, `y1`) and
+ *    (`x2`, `y2`) as the control points. All three points are either absolute (`C`) or relative to the current position
+ *    (`c`). The current position is set to the end point of the bezier curve.
+ *
+ *    Example:
+ *
+ *        double x[7] = {0.1, 0.2, 0.3, 0.4, 0.1, 0.2, 0.3};
+ *        double y[7] = {0.1, 0.2, 0.0, 0.1, 0.1, -0.1, 0.0};
+ *        gr_path(7, x, y, "MCcS");
+ *
+ *    This example will generate two bezier curves whose start and end points are each located at y=0.1. As the control
+ *    points are equally spaced along the x-axis and the first is above and the second is below the start and end
+ *    points this creates a wave-like shape for both bezier curves. The current position is set to (0.8, 0.1) at the
+ *    end.
+ *
+ *
+ *  - A, a
+ *
+ *    Draws an elliptical arc starting at the current position. The major axis of the ellipse is aligned with the x-axis
+ *    and the minor axis is aligned with the y-axis of the plot. `rx` and `ry` are the ellipses radii along the major
+ *    and minor axis. `a1` and `a2` define the start and end angle of the arc in radians. The current position is set
+ *    to the end point of the arc. If `a2` is greater than `a1` the arc is drawn counter-clockwise, otherwise it is
+ *    drawn clockwise. The `a` and `A` commands draw the same arc. The third coordinates of the `x` and `y` array are
+ *    ignored and reserved for future use.
+ *
+ *    Examples:
+ *
+ *        double x[4] = {0.1, 0.2, -3.14159 / 2, 0.0};
+ *        double y[4] = {0.1, 0.4, 3.14159 / 2, 0.0};
+ *        gr_path(4, x, y, "MAS");
+ *
+ *    This example draws an arc starting at (0.1, 0.1). As the start angle -π/2 is smaller than the end angle π/2 the
+ *    arc is drawn counter-clockwise. In this case the right half of an ellipse with an x radius of 0.2 and a y radius
+ *    of 0.4 is shown. Therefore the current position is set to (0.1, 0.9) at the end.
+ *
+ *        double x[4] = {0.1, 0.2, 3.14159 / 2, 0.0};
+ *        double y[4] = {0.9, 0.4, -3.14159 / 2, 0.0};
+ *        gr_path(4, x, y, "MAS");
+ *
+ *    This examples draws the same arc as the previous one. The only difference is that the starting point is now at
+ *    (0.1, 0.9) and the start angle π/2 is greater than the end angle -π/2 so that the ellipse arc is drawn clockwise.
+ *    Therefore the current position is set to (0.1, 0.1) at the end.
+ *
+ *  - Z
+ *
+ *    Closes the current path by connecting the current position to the target position of the last move command
+ *    (`m` or `M`) with a straight line. If no move to was performed in this path it connects the current position to
+ *    (0, 0). When the path is stroked this line will also be drawn.
+ *
+ *
+ *  - S, s
+ *
+ *    Strokes the path with the current border width and border color (set with `gr_setborderwidth` and
+ *    `gr_setbordercolorind`). In case of `s` the path is closed beforehand, which is equivalent to `ZS`.
+ *
+ *
+ *  - F, f
+ *
+ *    Fills the current path using the even-odd-rule using the current fill color. Filling a path implicitly closes the
+ *    path. The fill color can be set using `gr_setfillcolorind`. In case of `F` the path is also stroked using the
+ *    current border width and color afterwards.
  *
  */
-void gr_path(int n, double *x, double *y, char *codes)
+void gr_path(int n, double *x, double *y, const char *codes)
 {
   int i, len;
 

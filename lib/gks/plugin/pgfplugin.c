@@ -993,7 +993,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
 {
   int i, j;
   double x[3], y[3], w, h, a1, a2;
-  double cur_x = 0, cur_y = 0;
+  double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
   int line_width;
 
   line_width = nint(gkss->bwidth);
@@ -1019,11 +1019,11 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          start_x = cur_x = x[0];
+          start_y = cur_y = y[0];
           to_DC(1, x, y);
           pgf_printf(buf, "(%f, %f) ", x[0], y[0]);
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'L':
         case 'l':
@@ -1034,11 +1034,11 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
               x[0] += cur_x;
               y[0] += cur_y;
             }
+          cur_x = x[0];
+          cur_y = y[0];
           to_DC(1, x, y);
           pgf_printf(buf, "-- (%f, %f) ", x[0], y[0]);
           j += 1;
-          cur_x = x[0];
-          cur_y = y[0];
           break;
         case 'Q':
         case 'q':
@@ -1053,14 +1053,14 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'q')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
+          cur_x = x[1];
+          cur_y = y[1];
           to_DC(2, x, y);
           pgf_printf(buf, ".. controls (%f, %f) .. (%f, %f) ", x[0], y[0], x[1], y[1]);
           j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'C':
         case 'c':
@@ -1075,81 +1075,53 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           y[1] = py[j + 1];
           if (codes[i] == 'c')
             {
-              x[1] += x[0];
-              y[1] += y[0];
+              x[1] += cur_x;
+              y[1] += cur_y;
             }
           x[2] = px[j + 2];
           y[2] = py[j + 2];
           if (codes[i] == 'c')
             {
-              x[2] += x[1];
-              y[2] += y[1];
+              x[2] += cur_x;
+              y[2] += cur_y;
             }
+          cur_x = x[2];
+          cur_y = y[2];
           to_DC(3, x, y);
           pgf_printf(buf, ".. controls (%f, %f) and (%f, %f) .. (%f, %f) ", x[0], y[0], x[1], y[1], x[2], y[2]);
           j += 3;
-          cur_x = x[2];
-          cur_y = y[2];
-          break;
-        case 'R':
-        case 'r':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'r')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'r')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
-          to_DC(2, x, y);
-          pgf_printf(buf, "(%f, %f) rectangle (%f, %f) ", x[0], y[0], x[1], y[1]);
-          j += 2;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 'A':
         case 'a':
-          x[0] = px[j];
-          y[0] = py[j];
-          if (codes[i] == 'a')
-            {
-              x[0] += cur_x;
-              y[0] += cur_y;
-            }
-          x[1] = px[j + 1];
-          y[1] = py[j + 1];
-          if (codes[i] == 'a')
-            {
-              x[1] += x[0];
-              y[1] += y[0];
-            }
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
           to_DC(2, x, y);
           w = (x[1] - x[0]) * 0.5;
           h = (y[1] - y[0]) * 0.5;
-          a1 = px[j + 2];
-          a2 = py[j + 2];
 
-          while (a1 > a2)
-            {
-              a2 += 2 * M_PI;
-            }
-          pgf_printf(buf, "(%f, %f) arc (%f:%f:%f and %f) ", x[0] + w + cos(a1) * w, y[0] + h + sin(a1) * h,
-                     a1 * 180 / M_PI, a2 * 180 / M_PI, w, h);
+          pgf_printf(buf, "arc (%f:%f:%f and %f) ", a1 * 180 / M_PI, a2 * 180 / M_PI, w, h);
           j += 3;
-          cur_x = x[1];
-          cur_y = y[1];
           break;
         case 's': /* close and stroke */
           pgf_printf(buf, "-- cycle;\n");
           pgf_printf(p->stream, "\\draw[color=pathstroke, line width=%dpt] ", line_width);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case 'S': /* stroke */
           pgf_printf(buf, ";\n");
@@ -1162,15 +1134,21 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           pgf_printf(p->stream, "\\filldraw[color=pathstroke, fill=pathfill, line width=%dpt] ", line_width);
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case 'f': /* fill */
           pgf_printf(buf, "-- cycle;\n");
           pgf_printf(p->stream, "\\fill[fill=pathfill] ");
           pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
           pgf_clear_stream(buf);
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case 'Z': /* close */
           pgf_printf(buf, "-- cycle ");
+          cur_x = start_x;
+          cur_y = start_y;
           break;
         case '\0':
           break;
