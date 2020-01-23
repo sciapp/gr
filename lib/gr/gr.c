@@ -10128,7 +10128,7 @@ void gr_inqresamplemethod(unsigned int *flag)
  *        double y[4] = {0.1, 0.4, 3.14159 / 2, 0.0};
  *        gr_path(4, x, y, "MAS");
  *
- *    This example draws an arc starting at (0.1, 0.1). As the start angle -π/2 is smaller than the end angle π/2 the
+ *    This example draws an arc starting at (0.1, 0.1). As the start angle -pi/2 is smaller than the end angle pi/2 the
  *    arc is drawn counter-clockwise. In this case the right half of an ellipse with an x radius of 0.2 and a y radius
  *    of 0.4 is shown. Therefore the current position is set to (0.1, 0.9) at the end.
  *
@@ -10137,8 +10137,8 @@ void gr_inqresamplemethod(unsigned int *flag)
  *        gr_path(4, x, y, "MAS");
  *
  *    This examples draws the same arc as the previous one. The only difference is that the starting point is now at
- *    (0.1, 0.9) and the start angle π/2 is greater than the end angle -π/2 so that the ellipse arc is drawn clockwise.
- *    Therefore the current position is set to (0.1, 0.1) at the end.
+ *    (0.1, 0.9) and the start angle pi/2 is greater than the end angle -pi/2 so that the ellipse arc is drawn
+ * clockwise. Therefore the current position is set to (0.1, 0.1) at the end.
  *
  *  - Z
  *
