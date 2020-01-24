@@ -5,3 +5,5 @@
 0785e7f81b7bb39dfc0cf9e9c9faea8336a83022
 # Commit which applied the coding style guidelines for CMake files
 1b886d02d4e32be1060e5330e1e756a4a04aa63f
+# Commit which applied the new coding style of `cmake-format` version `0.6.7`
+97151f7590c1c2e7893e6e3282cb01e8c1c62e7b

@@ -99,8 +99,8 @@ if(FFMPEG_INCLUDE_DIR
   if(APPLE)
     list(
       APPEND
-        FFMPEG_LIBRARIES
-        "-framework VideoToolbox;-framework CoreVideo;-framework CoreFoundation;-framework CoreServices;-framework CoreMedia"
+      FFMPEG_LIBRARIES
+      "-framework VideoToolbox;-framework CoreVideo;-framework CoreFoundation;-framework CoreServices;-framework CoreMedia"
     )
   endif()
   try_compile(
@@ -116,7 +116,7 @@ if(FFMPEG_INCLUDE_DIR
      AND FFMPEG_LIBRARY_OPENH264
   )
     list(APPEND FFMPEG_LIBRARIES
-                "${FFMPEG_LIBRARY_THEORA};${FFMPEG_LIBRARY_OGG};${FFMPEG_LIBRARY_VPX};${FFMPEG_LIBRARY_OPENH264}"
+         "${FFMPEG_LIBRARY_THEORA};${FFMPEG_LIBRARY_OGG};${FFMPEG_LIBRARY_VPX};${FFMPEG_LIBRARY_OPENH264}"
     )
     try_compile(
       FFMPEG_TEST_COMPILED ${CMAKE_CURRENT_BINARY_DIR}/ffmpeg_test ${CMAKE_CURRENT_LIST_DIR}/ffmpeg_test.cxx
