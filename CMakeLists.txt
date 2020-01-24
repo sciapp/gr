@@ -790,26 +790,12 @@ if(GR_INSTALL)
             zmqplugin
             qtplugin
             qt5plugin
+            gr3_static
+            gr3_shared
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
-  if(TARGET gr3_static)
-    install(
-      TARGETS gr3_static
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
-  endif()
-  if(TARGET gr3_shared)
-    install(
-      TARGETS gr3_shared
-      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
-  endif()
   if(TARGET gr3platform)
     install(
       TARGETS gr3platform
