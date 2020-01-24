@@ -1,5 +1,6 @@
 #!/bin/bash
 
+CMAKE_FORMAT_VERSION="0.6.7"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 VENV_NAME=".cmakeformat_venv"
 
@@ -9,7 +10,8 @@ install_cmakeformat () {
         python3 -m venv "${VENV_NAME}" || return
     fi
     source "${VENV_NAME}/bin/activate" && \
-    pip -qqq install -U cmake_format six && \
+    # Guarantee that all team members use the same version (of dependent packages)
+    pip -qqq install --upgrade --upgrade-strategy eager "cmake_format==${CMAKE_FORMAT_VERSION}" && \
     deactivate && \
     echo "$(cd "${VENV_NAME}" && pwd)/bin/cmake-format"
 }
@@ -17,8 +19,7 @@ install_cmakeformat () {
 
 main () {
     cd "${SCRIPT_DIR}"
-    # If `cmake-format` is already installed on the system, use that version
-    command -v "cmake-format" && return
+    # Always use a pinned version of `cmake-format`
     install_cmakeformat
 }
 
