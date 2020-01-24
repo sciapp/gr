@@ -11,6 +11,7 @@
 #include <QtGui/QWidget>
 #endif
 #include <QtGui/QPainter>
+#include <QtGui/QPainterPath>
 #include <QtGui/QImage>
 #include <QIcon>
 #include <QProcessEnvironment>
@@ -66,8 +67,8 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
 
   p->device_dpi_x = this->physicalDpiX();
   p->device_dpi_y = this->physicalDpiY();
-  p->width = this->width();
-  p->height = this->height();
+  p->width = 500;
+  p->height = 500;
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
 

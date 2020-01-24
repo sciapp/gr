@@ -6,7 +6,10 @@ set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++-posix)
 set(CMAKE_CXX_COMPILER_TARGET x86_64-w64-mingw32)
 set(CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)
 # CMAKE_AR is required to be a CACHE variable
-set(CMAKE_AR x86_64-w64-mingw32-ar CACHE FILEPATH "Archiver")
+set(CMAKE_AR
+    x86_64-w64-mingw32-ar
+    CACHE FILEPATH "Archiver"
+)
 set(CMAKE_SYSROOT /usr/x86_64-w64-mingw32)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)

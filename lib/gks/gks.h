@@ -61,6 +61,7 @@ extern "C"
 #define GKS_K_INTSTYLE_SOLID 1
 #define GKS_K_INTSTYLE_PATTERN 2
 #define GKS_K_INTSTYLE_HATCH 3
+#define GKS_K_INTSTYLE_SOLID_WITH_BORDER 4
 
   /* input device status */
 
@@ -662,6 +663,11 @@ extern "C"
   DLLEXPORT void gks_inq_text_slant(int *errind, double *slant);
 
   DLLEXPORT double gks_precision(void);
+
+  DLLEXPORT void gks_set_border_color_index(int coli);
+  DLLEXPORT void gks_inq_border_color_index(int *errind, int *coli);
+  DLLEXPORT void gks_set_border_width(double bwidth);
+  DLLEXPORT void gks_inq_border_width(int *errind, double *bwidth);
 
   /* Entry point definitions */
 

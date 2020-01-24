@@ -27,6 +27,8 @@
 
 #define nint(a) (int)((a) + 0.5)
 
+#define is_NaN(x) ((x) != (x))
+
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
   xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
@@ -242,6 +244,7 @@ static void seg_xform_rel(double *x, double *y) {}
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr;
+  int *n, *primid, *ldr;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   double mat[3][2];
@@ -285,6 +288,15 @@ static void seg_xform_rel(double *x, double *y) {}
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
+        case 17: /* GDP */
+          RESOLVE(n, int, sizeof(int));
+          RESOLVE(primid, int, sizeof(int));
+          RESOLVE(ldr, int, sizeof(int));
+          RESOLVE(i_arr, int, *ldr * sizeof(int));
+          RESOLVE(f_arr_1, double, *n * sizeof(double));
+          RESOLVE(f_arr_2, double, *n * sizeof(double));
+          break;
+
         case 19:  /* set linetype */
         case 21:  /* set polyline color index */
         case 23:  /* set markertype */
@@ -297,6 +309,7 @@ static void seg_xform_rel(double *x, double *y) {}
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
+        case 207: /* set border color index */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
@@ -312,6 +325,7 @@ static void seg_xform_rel(double *x, double *y) {}
         case 31:  /* set character height */
         case 200: /* set text slant */
         case 203: /* set transparency */
+        case 206: /* set border width */
           RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
@@ -404,6 +418,10 @@ static void seg_xform_rel(double *x, double *y) {}
 
         case 16:
           [self cellarray:f_arr_1[0]:f_arr_1[1]:f_arr_2[0]:f_arr_2[1]:*dx:*dy:*dimx:i_arr:0];
+          break;
+
+        case 17:
+          [self gdp:*n:f_arr_1:f_arr_2:*primid:*ldr:i_arr];
           break;
 
         case 19:
@@ -569,6 +587,14 @@ static void seg_xform_rel(double *x, double *y) {}
           mat[1][1] = f_arr_1[3];
           mat[2][0] = f_arr_1[4];
           mat[2][1] = f_arr_1[5];
+          break;
+
+        case 206:
+          gkss->bwidth = f_arr_1[0];
+          break;
+
+        case 207:
+          gkss->bcoli = i_arr[0];
           break;
         }
 
@@ -1131,7 +1157,6 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
 #include "marker.h"
 
-  mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -1151,11 +1176,14 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
       switch (op)
         {
         case 1: // point
+          [self set_fill_color:mcolor:context];
           CGContextFillRect(context, CGRectMake(x, y, 1, 1));
           break;
 
         case 2: // line
           CGContextBeginPath(context);
+          CGContextSetLineWidth(context, 1);
+          [self set_stroke_color:mcolor:context];
           for (i = 0; i < 2; i++)
             {
               xr = scale * marker[mtype][pc + 2 * i + 1];
@@ -1172,6 +1200,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
         case 3: // polyline
           CGContextBeginPath(context);
+          CGContextSetLineWidth(context, 1);
+          [self set_stroke_color:mcolor:context];
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1190,7 +1220,17 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
         case 4: // filled polygon
         case 5: // hollow polygon
           CGContextBeginPath(context);
-          if (op == 5) [self set_fill_color:0:context];
+          if (op == 4)
+            {
+              [self set_fill_color:mcolor:context];
+              if (gkss->bcoli != mcolor)
+                {
+                  CGContextSetLineWidth(context, gkss->bwidth);
+                  [self set_stroke_color:gkss->bcoli:context];
+                }
+            }
+          else
+            [self set_fill_color:0:context];
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1202,25 +1242,41 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
                 CGContextAddLineToPoint(context, x - xr, y + yr);
             }
           CGContextClosePath(context);
-          CGContextDrawPath(context, kCGPathFill);
+          if (op == 4 && gkss->bcoli != mcolor)
+            CGContextDrawPath(context, kCGPathFillStroke);
+          else
+            CGContextDrawPath(context, kCGPathFill);
 
           pc += 1 + 2 * marker[mtype][pc + 1];
-          if (op == 5) [self set_fill_color:mcolor:context];
           break;
 
         case 6: // arc
           CGContextBeginPath(context);
+          CGContextSetLineWidth(context, 1);
+          [self set_stroke_color:mcolor:context];
           CGContextAddArc(context, x, y, r, 0.0, 2 * M_PI, 0);
           CGContextDrawPath(context, kCGPathStroke);
           break;
 
         case 7: // filled arc
         case 8: // hollow arc
-          if (op == 8) [self set_fill_color:0:context];
           CGContextBeginPath(context);
+          if (op == 7)
+            {
+              [self set_fill_color:mcolor:context];
+              if (gkss->bcoli != mcolor)
+                {
+                  CGContextSetLineWidth(context, gkss->bwidth);
+                  [self set_stroke_color:gkss->bcoli:context];
+                }
+            }
+          else
+            [self set_fill_color:0:context];
           CGContextAddArc(context, x, y, r, 0.0, 2 * M_PI, 0);
-          CGContextDrawPath(context, kCGPathFill);
-          if (op == 8) [self set_fill_color:mcolor:context];
+          if (op == 7 && gkss->bcoli != mcolor)
+            CGContextDrawPath(context, kCGPathFillStroke);
+          else
+            CGContextDrawPath(context, kCGPathFill);
           break;
         }
       pc++;
@@ -1240,14 +1296,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  [self set_stroke_color:mk_color:context];
-
   begin_context(context);
-
-  CGContextSetLineWidth(context, 1);
-  [self set_stroke_color:mk_color:context];
-  [self set_fill_color:mk_color:context];
-
   for (i = 0; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
@@ -1277,7 +1326,7 @@ static void drawPatternCell(void *info, CGContextRef context)
 
 static void draw_pattern(int index, CGPathRef shape, CGContextRef context)
 {
-  int scale = (int)(0.125 * (int)(p->c + p->a) / 125);
+  double scale = 0.125 * (int)(p->c + p->a) / 125;
 
   gks_inq_pattern_array(index, patArray);
   double patHeight = patArray[0] * scale;
@@ -1336,7 +1385,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 0; i < n; ++i)
     {
-      if (px[i] != px[i] && py[i] != py[i])
+      if (is_NaN(px[i]) && is_NaN(py[i]))
         {
           NDC_to_DC(0, 0, points[i].x, points[i].y);
           continue;
@@ -1376,7 +1425,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   for (i = 0; i < n; ++i)
     {
-      if (px[i] != px[i] && py[i] != py[i])
+      if (is_NaN(px[i]) && is_NaN(py[i]))
         {
           NDC_to_DC(0, 0, points[i].x, points[i].y);
           continue;
@@ -1424,6 +1473,198 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       pattern_ = -1;
     }
 }
+
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+- (void)draw_path:(int)n:(double *)px:(double *)py:(int)nc:(int *)codes
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0;
+  double start_x = 0, start_y = 0;
+
+  begin_context(context);
+
+  CGContextSetLineWidth(context, gkss->bwidth);
+  [self set_stroke_color:gkss->bcoli:context];
+  [self set_fill_color:gkss->facoli:context];
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          cur_x = start_x = x[0];
+          cur_y = start_y = y[0];
+          to_DC(1, x, y);
+          CGContextMoveToPoint(context, x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          cur_x = x[0];
+          cur_y = y[0];
+          to_DC(1, x, y);
+          CGContextAddLineToPoint(context, x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          cur_x = x[1];
+          cur_y = y[1];
+          to_DC(2, x, y);
+          CGContextAddQuadCurveToPoint(context, x[0], y[0], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += cur_x;
+              y[2] += cur_y;
+            }
+          cur_x = x[2];
+          cur_y = y[2];
+          to_DC(3, x, y);
+          CGContextAddCurveToPoint(context, x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'A':
+        case 'a':
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
+          to_DC(2, x, y);
+          w = x[1] - x[0];
+          h = y[1] - y[0];
+          if (w != h)
+            {
+              CGMutablePathRef path = CGPathCreateMutable();
+              CGAffineTransform m = CGAffineTransformMakeTranslation(x[0] + 0.5 * w, y[0] + 0.5 * h);
+              m = CGAffineTransformConcat(CGAffineTransformMakeScale(1.0, h / w), m);
+              CGPathAddArc(path, &m, 0, 0, 0.5 * w, a1, a2, a1 > a2);
+              CGContextAddPath(context, path);
+              CFRelease(path);
+            }
+          else
+            CGContextAddArc(context, x[0] + 0.5 * w, y[0] + 0.5 * h, 0.5 * w, a1, a2, a1 > a2);
+          j += 3;
+          break;
+        case 's':
+          CGContextClosePath(context);
+          cur_x = start_x;
+          cur_y = start_y;
+          CGContextDrawPath(context, kCGPathStroke);
+          break;
+        case 'S':
+          CGContextDrawPath(context, kCGPathStroke);
+          break;
+        case 'f':
+          CGContextClosePath(context);
+          cur_x = start_x;
+          cur_y = start_y;
+          CGContextDrawPath(context, kCGPathFill);
+          break;
+        case 'F':
+          CGContextClosePath(context);
+          cur_x = start_x;
+          cur_y = start_y;
+          CGContextDrawPath(context, kCGPathFillStroke);
+          break;
+        case 'Z':
+          CGContextClosePath(context);
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+    }
+
+  end_context(context);
+}
+
+
+- (void)gdp:(int)n:(double *)px:(double *)py:(int)primid:(int)nc:(int *)codes
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      [self draw_path:n:px:py:nc:codes];
+    }
+}
+
 
 - (void)cellarray:(double)
              xmin:(double)xmax

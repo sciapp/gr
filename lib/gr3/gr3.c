@@ -11,6 +11,7 @@
 #include <math.h>
 #include "gr3.h"
 #include "gr3_internals.h"
+#include "gr3_sr.h"
 
 /*!
  * This function pointer holds the function used by gr3_log_(). It can be set
@@ -40,20 +41,22 @@ const char *gr3_error_file_ = "";
  * The default values for the instances of GR3_InitStruct_t_:\n
  * GR3_InitStruct_t_::framebuffer_width = 512;\n
  * GR3_InitStruct_t_::framebuffer_height = 512;
+ * GR3_InitStruct_t_::num_threads = 0;
  */
 #define GR3_InitStruct_INITIALIZER \
   {                                \
-    512, 512                       \
+    512, 512, 0                    \
   }
 
 /*!
  * The only instance of ::GR3_ContextStruct_t_. For documentation, see
  * ::_GR3_ContextStruct_t_.
  */
-#define GR3_ContextStruct_INITIALIZER                                                                       \
-  {                                                                                                         \
-    GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, \
-        {0, 0, 0, 0}, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0                 \
+#define GR3_ContextStruct_INITIALIZER                                                                                \
+  {                                                                                                                  \
+    GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0,          \
+        {0, 0, 0, 0}, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, {0}, {0}, {0}, \
+        {0}, 0, 0                                                                                                    \
   }
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
 
@@ -104,9 +107,13 @@ static void gr3_projectionmatrix_(float left, float right, float bottom, float t
  */
 GR3API int gr3_init(int *attrib_list)
 {
-  int i;
+  int i, error;
   char *renderpath_string = "gr3";
-  int error;
+  char *software_renderer;
+  software_renderer = getenv("GR3_USE_SR");
+#ifdef NO_GL
+  software_renderer = "True";
+#endif
   GR3_InitStruct_t_ init_struct = GR3_InitStruct_INITIALIZER;
   if (attrib_list)
     {
@@ -122,6 +129,10 @@ GR3API int gr3_init(int *attrib_list)
               init_struct.framebuffer_height = attrib_list[++i];
               if (attrib_list[i] <= 0) RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
               break;
+            case GR3_IA_NUM_THREADS:
+              init_struct.num_threads = attrib_list[++i];
+              if (attrib_list[i] <= 0) RETURN_ERROR(GR3_ERROR_INVALID_VALUE);
+              break;
             default:
               RETURN_ERROR(GR3_ERROR_INVALID_ATTRIBUTE);
             }
@@ -131,142 +142,179 @@ GR3API int gr3_init(int *attrib_list)
 
   context_struct_.renderpath_string = malloc(strlen(renderpath_string) + 1);
   strcpy(context_struct_.renderpath_string, renderpath_string);
-
+  error = GR3_ERROR_INIT_FAILED;
   do
     {
-      error = GR3_ERROR_INIT_FAILED;
-#if defined(GR3_USE_CGL)
-      error = gr3_initGL_CGL_();
-      if (error == GR3_ERROR_NONE)
+      if (software_renderer == NULL)
         {
-          break;
-        }
+#if defined(GR3_USE_CGL)
+          error = gr3_initGL_CGL_();
+          if (error == GR3_ERROR_NONE)
+            {
+              break;
+            }
 #endif
 #if defined(GR3_USE_GLX)
-      error = gr3_initGL_GLX_();
-      if (error == GR3_ERROR_NONE)
-        {
-          break;
-        }
+          error = gr3_initGL_GLX_();
+          if (error == GR3_ERROR_NONE)
+            {
+              break;
+            }
 #endif
 #if defined(GR3_USE_WIN)
-      error = gr3_initGL_WIN_();
-      if (error == GR3_ERROR_NONE)
-        {
-          break;
-        }
+          error = gr3_initGL_WIN_();
+          if (error == GR3_ERROR_NONE)
+            {
+              break;
+            }
 #endif
+        }
+      else
+        {
+          error = gr3_initSR_();
+          if (error == GR3_ERROR_NONE)
+            {
+              break;
+            }
+        }
+    }
+  while (0);
+#ifndef NO_GL
+  if (!context_struct_.use_software_renderer &&
+      (error != GR3_ERROR_NONE || strncmp((const char *)glGetString(GL_VERSION), "2.1", 3) < 0))
+    {
+      if (context_struct_.gl_is_initialized)
+        {
+          context_struct_.terminateGL();
+        }
+      error = gr3_initSR_();
+      if (error != GR3_ERROR_NONE)
+        {
+          gr3_terminate();
+          RETURN_ERROR(error);
+        }
+    }
+#else
+  if (error != GR3_ERROR_NONE)
+    {
       gr3_terminate();
       RETURN_ERROR(error);
     }
-  while (0);
+#endif
 
-/* GL_ARB_framebuffer_object is core since OpenGL 3.0 */
-#if GL_ARB_framebuffer_object
-  if (!strncmp((const char *)glGetString(GL_VERSION), "3.", 2) ||
-      !strncmp((const char *)glGetString(GL_VERSION), "4.", 2) || gr3_extensionsupported_("GL_ARB_framebuffer_object"))
+  /* GL_ARB_framebuffer_object is core since OpenGL 3.0 */
+  if (!context_struct_.use_software_renderer)
     {
-      error = gr3_initFBO_ARB_();
-      if (error)
+#if GL_ARB_framebuffer_object
+      if (!strncmp((const char *)glGetString(GL_VERSION), "3.", 2) ||
+          !strncmp((const char *)glGetString(GL_VERSION), "4.", 2) ||
+          gr3_extensionsupported_("GL_ARB_framebuffer_object"))
         {
-          gr3_terminate();
-          return error;
+          error = gr3_initFBO_ARB_();
+          if (error)
+            {
+              gr3_terminate();
+              return error;
+            }
         }
-    }
-  else
+      else
 #endif
 #if GL_EXT_framebuffer_object
-      if (gr3_extensionsupported_("GL_EXT_framebuffer_object"))
-    {
-      error = gr3_initFBO_EXT_();
-      if (error)
+          if (gr3_extensionsupported_("GL_EXT_framebuffer_object"))
+        {
+          error = gr3_initFBO_EXT_();
+          if (error)
+            {
+              gr3_terminate();
+              return error;
+            }
+        }
+      else
+#endif
         {
           gr3_terminate();
-          return error;
+          RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
         }
-    }
-  else
-#endif
-    {
-      gr3_terminate();
-      RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
-    }
 
 #ifdef GR3_CAN_USE_VBO
-  if (strncmp((const char *)glGetString(GL_VERSION), "2.1", 3) >= 0)
-    {
-      context_struct_.use_vbo = 1;
-    }
-  if (context_struct_.use_vbo)
-    {
-      GLuint program;
-      GLuint fragment_shader;
-      GLuint vertex_shader;
-      char *vertex_shader_source[] = {
-          "#version 120\n",
-          "uniform mat4 ProjectionMatrix;\n",
-          "uniform mat4 ViewMatrix;\n",
-          "uniform mat4 ModelMatrix;\n",
-          "uniform vec3 LightDirection;\n",
-          "uniform vec4 Scales;\n",
+      if (strncmp((const char *)glGetString(GL_VERSION), "2.1", 3) >= 0)
+        {
+          context_struct_.use_vbo = 1;
+        }
+      if (context_struct_.use_vbo)
+        {
+          GLuint program;
+          GLuint fragment_shader;
+          GLuint vertex_shader;
+          char *vertex_shader_source[] = {
+              "#version 120\n",
+              "uniform mat4 ProjectionMatrix;\n",
+              "uniform mat4 ViewMatrix;\n",
+              "uniform mat4 ModelMatrix;\n",
+              "uniform vec3 LightDirection;\n",
+              "uniform vec4 Scales;\n",
 
-          "attribute vec3 in_Vertex;\n"
-          "attribute vec3 in_Normal;\n"
-          "attribute vec3 in_Color;\n"
+              "attribute vec3 in_Vertex;\n"
+              "attribute vec3 in_Normal;\n"
+              "attribute vec3 in_Color;\n"
 
-          "varying vec4 Color;\n",
-          "varying vec3 Normal;\n",
+              "varying vec4 Color;\n",
+              "varying vec3 Normal;\n",
 
-          "void main(void) {\n",
-          "vec4 Position = ViewMatrix*ModelMatrix*(Scales*vec4(in_Vertex,1));\n",
-          "gl_Position=ProjectionMatrix*Position;\n",
-          "Normal = normalize(mat3(ViewMatrix)*mat3(ModelMatrix)*(in_Normal/vec3(Scales)));\n",
-          "Color = vec4(in_Color,1);\n",
-          "float diffuse = Normal.z;\n",
-          "if (dot(LightDirection,LightDirection) > 0.001) {",
-          "diffuse = dot(mat3(ViewMatrix)*normalize(LightDirection),Normal);",
-          "}",
-          "Color.rgb = diffuse*Color.rgb;"
-          "}\n"};
+              "void main(void) {\n",
+              "vec4 Position = ViewMatrix*ModelMatrix*(Scales*vec4(in_Vertex,1));\n",
+              "gl_Position=ProjectionMatrix*Position;\n",
+              "Normal = normalize(mat3(ViewMatrix)*mat3(ModelMatrix)*(in_Normal/vec3(Scales)));\n",
+              "Color = vec4(in_Color,1);\n",
+              "float diffuse = Normal.z;\n",
+              "if (dot(LightDirection,LightDirection) > 0.001) {",
+              "diffuse = dot(mat3(ViewMatrix)*normalize(LightDirection),Normal);",
+              "}",
+              "Color.rgb = diffuse*Color.rgb;"
+              "}\n"};
 
-      char *fragment_shader_source[] = {"#version 120\n",
-                                        "varying vec4 Color;\n",
-                                        "varying vec3 Normal;\n",
-                                        "uniform mat4 ViewMatrix;\n",
+          char *fragment_shader_source[] = {"#version 120\n",
+                                            "varying vec4 Color;\n",
+                                            "varying vec3 Normal;\n",
+                                            "uniform mat4 ViewMatrix;\n",
 
-                                        "void main(void) {\n",
-                                        "gl_FragColor=vec4(Color.rgb,Color.a);\n",
-                                        "}\n"};
-      program = glCreateProgram();
-      vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-      glShaderSource(vertex_shader, sizeof(vertex_shader_source) / sizeof(char *),
-                     (const GLchar **)vertex_shader_source, NULL);
-      glCompileShader(vertex_shader);
-      fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-      glShaderSource(fragment_shader, sizeof(fragment_shader_source) / sizeof(char *),
-                     (const GLchar **)fragment_shader_source, NULL);
-      glCompileShader(fragment_shader);
-      glAttachShader(program, vertex_shader);
-      glAttachShader(program, fragment_shader);
-      glLinkProgram(program);
-      glDeleteShader(vertex_shader);
-      glDeleteShader(fragment_shader);
-      context_struct_.program = program;
-      glUseProgram(program);
+                                            "void main(void) {\n",
+                                            "gl_FragColor=vec4(Color.rgb,Color.a);\n",
+                                            "}\n"};
+          program = glCreateProgram();
+          vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+          glShaderSource(vertex_shader, sizeof(vertex_shader_source) / sizeof(char *),
+                         (const GLchar **)vertex_shader_source, NULL);
+          glCompileShader(vertex_shader);
+          fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+          glShaderSource(fragment_shader, sizeof(fragment_shader_source) / sizeof(char *),
+                         (const GLchar **)fragment_shader_source, NULL);
+          glCompileShader(fragment_shader);
+          glAttachShader(program, vertex_shader);
+          glAttachShader(program, fragment_shader);
+          glLinkProgram(program);
+          glDeleteShader(vertex_shader);
+          glDeleteShader(fragment_shader);
+          context_struct_.program = program;
+          glUseProgram(program);
 
-      gr3_appendtorenderpathstring_("Vertex Buffer Objects");
-    }
-  else
+          gr3_appendtorenderpathstring_("Vertex Buffer Objects");
+        }
+      else
 #endif
-    {
-      gr3_appendtorenderpathstring_("Display Lists");
-    }
+        {
+          gr3_appendtorenderpathstring_("Display Lists");
+        }
 
+#ifndef NO_GL
+      gr3_appendtorenderpathstring_((const char *)glGetString(GL_VERSION));
+      gr3_appendtorenderpathstring_((const char *)glGetString(GL_RENDERER));
+#else
+      gr3_appendtorenderpathstring_("Software-Renderer");
+#endif
+    }
 
   context_struct_.is_initialized = 1;
-
-  gr3_appendtorenderpathstring_((const char *)glGetString(GL_VERSION));
-  gr3_appendtorenderpathstring_((const char *)glGetString(GL_RENDERER));
   gr3_init_convenience();
   gr3_useframebuffer(0);
   gr3_setcameraprojectionparameters(45, 1, 200);
@@ -313,8 +361,13 @@ GR3API int gr3_geterror(int clear, int *line, const char **file)
  */
 static int gr3_extensionsupported_(const char *extension_name)
 {
+#ifndef NO_GL
   const char *extension_string = (const char *)glGetString(GL_EXTENSIONS);
   return strstr(extension_string, extension_name) != NULL;
+#else
+  (void)extension_name;
+  return 0;
+#endif
 }
 
 /*!
@@ -346,7 +399,9 @@ GR3API void gr3_terminate(void)
             {
               if (context_struct_.mesh_list_[i].data.data.display_list_id != 0)
                 {
+#ifndef NO_GL
                   glDeleteLists(context_struct_.mesh_list_[i].data.data.display_list_id, 1);
+#endif
                   context_struct_.mesh_list_[i].data.data.display_list_id = 0;
                   free(context_struct_.mesh_list_[i].data.vertices);
                   free(context_struct_.mesh_list_[i].data.normals);
@@ -363,14 +418,24 @@ GR3API void gr3_terminate(void)
 
           context_struct_.terminateFBO();
         }
-      context_struct_.terminateGL();
-      context_struct_.gl_is_initialized = 0;
+      if (!context_struct_.use_software_renderer)
+        {
+          context_struct_.terminateGL();
+          context_struct_.gl_is_initialized = 0;
+        }
     }
   context_struct_.is_initialized = 0;
   if (context_struct_.renderpath_string != not_initialized_)
     {
       free(context_struct_.renderpath_string);
       context_struct_.renderpath_string = not_initialized_;
+    }
+  if (context_struct_.use_software_renderer)
+    {
+      if (context_struct_.software_renderer_pixmaps_initalised)
+        {
+          gr3_terminateSR_();
+        }
     }
   {
     GR3_ContextStruct_t_ initializer = GR3_ContextStruct_INITIALIZER;
@@ -398,6 +463,18 @@ GR3API int gr3_clear(void)
       while (context_struct_.draw_list_)
         {
           draw = context_struct_.draw_list_;
+          int i;
+          if (context_struct_.use_software_renderer && draw->vertices_fp)
+            {
+              for (i = 0; i < draw->n; i++)
+                {
+                  if (draw->vertices_fp[i])
+                    {
+                      free(draw->vertices_fp[i]);
+                    }
+                }
+            }
+          free(draw->vertices_fp);
           context_struct_.draw_list_ = draw->next;
           gr3_meshremovereference_(draw->mesh);
           free(draw->positions);
@@ -408,7 +485,10 @@ GR3API int gr3_clear(void)
           free(draw);
         }
 
-      if (glGetError() == GL_NO_ERROR)
+#ifdef NO_GL
+      RETURN_ERROR(GR3_ERROR_NONE);
+#else
+      if (context_struct_.use_software_renderer || glGetError() == GL_NO_ERROR)
         {
           RETURN_ERROR(GR3_ERROR_NONE);
         }
@@ -416,6 +496,7 @@ GR3API int gr3_clear(void)
         {
           RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
         }
+#endif
     }
   else
     {
@@ -427,7 +508,9 @@ GR3API int gr3_clear(void)
 GR3API void gr3_usecurrentframebuffer()
 {
   GLuint framebuffer = 0;
+#ifndef NO_GL
   glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint *)&framebuffer);
+#endif
   gr3_useframebuffer(framebuffer);
 }
 
@@ -476,6 +559,7 @@ static void gr3_getfirstfreemesh(int *mesh)
           context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.data.vertex_buffer_id = 0;
           context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.number_of_vertices = 0;
           context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.number_of_indices = 0;
+          context_struct_.mesh_list_[context_struct_.mesh_list_capacity_].data.vertices_fp = NULL;
           context_struct_.mesh_list_capacity_++;
         }
     }
@@ -520,6 +604,7 @@ void gr3_sortindexedmeshdata(int mesh)
       context_struct_.mesh_list_[mesh].data.colors = colors;
       context_struct_.mesh_list_[mesh].data.normals = normals;
       context_struct_.mesh_list_[mesh].data.indices = NULL;
+      context_struct_.mesh_list_[mesh].data.vertices_fp = NULL;
     }
 }
 
@@ -606,6 +691,7 @@ GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices, float *norma
   gr3_getfirstfreemesh(mesh);
 
   context_struct_.mesh_list_[*mesh].data.number_of_vertices = n;
+  context_struct_.mesh_list_[*mesh].data.vertices_fp = NULL;
   gr3_meshaddreference_(*mesh);
   context_struct_.mesh_list_[*mesh].data.type = kMTNormalMesh;
 #ifdef GR3_CAN_USE_VBO
@@ -638,30 +724,39 @@ GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices, float *norma
   else
 #endif
     {
-      context_struct_.mesh_list_[*mesh].data.data.display_list_id = glGenLists(1);
-      glNewList(context_struct_.mesh_list_[*mesh].data.data.display_list_id, GL_COMPILE);
-      glBegin(GL_TRIANGLES);
-      for (i = 0; i < n; i++)
+#ifndef NO_GL
+      if (!context_struct_.use_software_renderer)
         {
-          glColor3fv(colors + i * 3);
-          glNormal3fv(normals + i * 3);
-          glVertex3fv(vertices + i * 3);
+          context_struct_.mesh_list_[*mesh].data.data.display_list_id = glGenLists(1);
+          glNewList(context_struct_.mesh_list_[*mesh].data.data.display_list_id, GL_COMPILE);
+          glBegin(GL_TRIANGLES);
+          for (i = 0; i < n; i++)
+            {
+              glColor3fv(colors + i * 3);
+              glNormal3fv(normals + i * 3);
+              glVertex3fv(vertices + i * 3);
+            }
+          glEnd();
+          glEndList();
         }
-      glEnd();
-      glEndList();
+#endif
     }
   context_struct_.mesh_list_[*mesh].data.vertices = vertices;
   context_struct_.mesh_list_[*mesh].data.normals = normals;
   context_struct_.mesh_list_[*mesh].data.colors = colors;
 
-  if (glGetError() != GL_NO_ERROR)
-    {
-      RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
-    }
-  else
+#ifdef NO_GL
+  RETURN_ERROR(GR3_ERROR_NONE);
+#else
+  if (context_struct_.use_software_renderer || glGetError() == GL_NO_ERROR)
     {
       RETURN_ERROR(GR3_ERROR_NONE);
     }
+  else
+    {
+      RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
+    }
+#endif
 }
 
 /*!
@@ -752,6 +847,7 @@ GR3API int gr3_createindexedmesh_nocopy(int *mesh, int number_of_vertices, float
   context_struct_.mesh_list_[*mesh].data.type = kMTIndexedMesh;
   context_struct_.mesh_list_[*mesh].data.number_of_vertices = number_of_vertices;
   context_struct_.mesh_list_[*mesh].data.number_of_indices = number_of_indices;
+  context_struct_.mesh_list_[*mesh].data.vertices_fp = NULL;
 #ifdef GR3_CAN_USE_VBO
   if (context_struct_.use_vbo)
     {
@@ -785,32 +881,45 @@ GR3API int gr3_createindexedmesh_nocopy(int *mesh, int number_of_vertices, float
   else
 #endif
     {
-      context_struct_.mesh_list_[*mesh].data.data.display_list_id = glGenLists(1);
-      glNewList(context_struct_.mesh_list_[*mesh].data.data.display_list_id, GL_COMPILE);
-      glBegin(GL_TRIANGLES);
-      for (i = 0; i < number_of_indices; i++)
+#ifndef NO_GL
+      if (!context_struct_.use_software_renderer)
         {
-          glColor3fv(colors + indices[i] * 3);
-          glNormal3fv(normals + indices[i] * 3);
-          glVertex3fv(vertices + indices[i] * 3);
+          context_struct_.mesh_list_[*mesh].data.data.display_list_id = glGenLists(1);
+          glNewList(context_struct_.mesh_list_[*mesh].data.data.display_list_id, GL_COMPILE);
+          glBegin(GL_TRIANGLES);
+          for (i = 0; i < number_of_indices; i++)
+            {
+              glColor3fv(colors + indices[i] * 3);
+              glNormal3fv(normals + indices[i] * 3);
+              glVertex3fv(vertices + indices[i] * 3);
+            }
+          glEnd();
+          glEndList();
         }
-      glEnd();
-      glEndList();
+#else
+    (void)mem;
+    (void)i;
+#endif
     }
 
+  context_struct_.mesh_list_[*mesh].data.vertices_fp = NULL;
   context_struct_.mesh_list_[*mesh].data.vertices = vertices;
   context_struct_.mesh_list_[*mesh].data.normals = normals;
   context_struct_.mesh_list_[*mesh].data.colors = colors;
   context_struct_.mesh_list_[*mesh].data.indices = indices;
 
-  if (glGetError() != GL_NO_ERROR)
-    {
-      RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
-    }
-  else
+#ifdef NO_GL
+  RETURN_ERROR(GR3_ERROR_NONE);
+#else
+  if (context_struct_.use_software_renderer || glGetError() == GL_NO_ERROR)
     {
       RETURN_ERROR(GR3_ERROR_NONE);
     }
+  else
+    {
+      RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
+    }
+#endif
 }
 
 /*!
@@ -911,6 +1020,7 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *d
   draw->scales = malloc(sizeof(float) * n * 3);
   memmove(draw->scales, scales, sizeof(float) * n * 3);
   draw->n = n;
+  draw->vertices_fp = NULL;
   draw->object_id = current_object_id;
   draw->next = NULL;
   gr3_meshaddreference_(mesh);
@@ -945,6 +1055,7 @@ GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *d
  *  - ::GR3_ERROR_NONE on success
  *  - ::GR3_ERROR_OPENGL_ERR if an OpenGL error occured
  */
+#ifndef NO_GL
 static void gr3_dodrawmesh_(int mesh, int n, const float *positions, const float *directions, const float *ups,
                             const float *colors, const float *scales)
 {
@@ -1083,6 +1194,7 @@ static void gr3_dodrawmesh_(int mesh, int n, const float *positions, const float
       glDisable(GL_BLEND);
     }
 }
+#endif
 
 /*!
  * This function marks a mesh for deletion and removes the user's reference
@@ -1152,7 +1264,12 @@ static void gr3_meshremovereference_(int mesh)
       else
 #endif
         {
-          glDeleteLists(context_struct_.mesh_list_[mesh].data.data.display_list_id, 1);
+#ifndef NO_GL
+          if (!context_struct_.use_software_renderer)
+            {
+              glDeleteLists(context_struct_.mesh_list_[mesh].data.data.display_list_id, 1);
+            }
+#endif
         }
       if (context_struct_.mesh_list_[mesh].data.type == kMTIndexedMesh)
         {
@@ -1472,10 +1589,14 @@ static void gr3_draw_(GLuint width, GLuint height)
         glUniformMatrix4fv(glGetUniformLocation(context_struct_.program, "ProjectionMatrix"), 1, GL_FALSE, pm);
       }
     else
+#else
+    (void)pm;
 #endif
       {
+#ifndef NO_GL
         glMatrixMode(GL_PROJECTION);
         glLoadMatrixf(pm);
+#endif
       }
 
 #ifdef GR3_CAN_USE_VBO
@@ -1487,6 +1608,7 @@ static void gr3_draw_(GLuint width, GLuint height)
     else
 #endif
       {
+#ifndef NO_GL
         glMatrixMode(GL_MODELVIEW);
         if (context_struct_.light_dir[0] == 0 && context_struct_.light_dir[1] == 0 && context_struct_.light_dir[2] == 0)
           {
@@ -1495,6 +1617,7 @@ static void gr3_draw_(GLuint width, GLuint height)
             glLightfv(GL_LIGHT0, GL_POSITION, &def[0]);
           }
         glLoadMatrixf(&(context_struct_.view_matrix[0][0]));
+#endif
       }
 #ifdef GR3_CAN_USE_VBO
     if (context_struct_.use_vbo)
@@ -1504,6 +1627,7 @@ static void gr3_draw_(GLuint width, GLuint height)
       }
 #endif
   }
+#ifndef NO_GL
   glEnable(GL_NORMALIZE);
   if (!context_struct_.use_vbo)
     {
@@ -1537,6 +1661,7 @@ static void gr3_draw_(GLuint width, GLuint height)
       glUseProgram(0);
     }
 #endif
+#endif
 }
 
 GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type)
@@ -1556,13 +1681,19 @@ GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int wid
 
 static int gr3_drawimage_opengl_(float xmin, float xmax, float ymin, float ymax, int width, int height)
 {
+  (void)xmin;
+  (void)xmax;
+  (void)ymin;
+  (void)ymax;
   gr3_log_("gr3_drawimage_opengl_();");
+#ifndef NO_GL
 #if GL_ARB_framebuffer_object
   glBindFramebuffer(GL_FRAMEBUFFER, user_framebuffer);
 #else
   glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, user_framebuffer);
 #endif
   glViewport(xmin, ymin, xmax - xmin, ymax - ymin);
+#endif
   gr3_draw_(width, height);
   RETURN_ERROR(GR3_ERROR_NONE);
 }
@@ -1674,7 +1805,9 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
   int view_matrix_all_zeros;
   char *raw_pixels = NULL;
 
+#ifndef NO_GL
   GLenum format = use_alpha ? GL_RGBA : GL_RGB;
+#endif
   int bpp = use_alpha ? 4 : 3;
   GLfloat fovy = context_struct_.vertical_field_of_view;
   GLfloat tan_halffovy = tan(fovy * M_PI / 360.0);
@@ -1716,6 +1849,12 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
           RETURN_ERROR(GR3_ERROR_CAMERA_NOT_INITIALIZED);
         }
 
+      if (context_struct_.use_software_renderer == 1)
+        {
+          gr3_getpixmap_softwarerendered(pixmap, width, height, ssaa_factor);
+          return (GR3_ERROR_NONE);
+        }
+#ifndef NO_GL
       fb_width = context_struct_.init_struct.framebuffer_width;
       fb_height = context_struct_.init_struct.framebuffer_height;
       if (ssaa_factor != 1)
@@ -1858,6 +1997,20 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
         {
           RETURN_ERROR(GR3_ERROR_OPENGL_ERR);
         }
+#else
+      (void)bottom;
+      (void)top;
+      (void)left;
+      (void)zFar;
+      (void)bpp;
+      (void)raw_pixels;
+      (void)x_patches;
+      (void)y_patches;
+      (void)dy;
+      (void)dx;
+      (void)fb_width;
+      (void)fb_height;
+#endif
     }
   else
     {
@@ -2150,6 +2303,7 @@ GR3API void gr3_setobjectid(int id)
 }
 
 static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height);
+#ifndef NO_GL
 GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
 {
   int x, y;
@@ -2270,7 +2424,9 @@ GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
       RETURN_ERROR(GR3_ERROR_NOT_INITIALIZED);
     }
 }
+#endif
 
+#ifndef NO_GL
 static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height)
 {
   int object_id = 0;
@@ -2384,6 +2540,7 @@ static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height)
 #endif
   return object_id;
 }
+#endif
 
 /*!
  * \param [out] m the 4x4 column major view matrix

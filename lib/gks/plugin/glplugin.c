@@ -350,7 +350,6 @@ static void polyline(int num_points, double *x, double *y)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4) ln_width *= (p->width + p->height) * 0.001;
   ln_width = max(1, nint(ln_width));
 
   glLineWidth(ln_width);
@@ -379,7 +378,6 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
   int pc, op;
   double scale, x, y, xr, yr, c, s, tmp;
 
-  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -494,7 +492,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 static void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
-  double mk_size, ln_width, *clrt;
+  double mk_size, *clrt;
   double x, y;
   int i;
 
@@ -502,8 +500,7 @@ static void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  ln_width = (gkss->version > 4) ? max(1, nint((p->width + p->height) * 0.001)) : 1;
-  glLineWidth(ln_width);
+  glLineWidth(1);
 
   clrt = gkss->viewport[gkss->cntnr];
 
@@ -521,7 +518,7 @@ static void polymarker(int n, double *px, double *py)
 
 static void fill_routine(int n, double *px, double *py, int tnr)
 {
-  int fl_inter, fl_style, i, j, ln_width;
+  int fl_inter, fl_style, i, j;
   GLfloat vertices[2 * n];
   GLuint texture = 0;
   int parray[33];
@@ -542,8 +539,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
 
-  ln_width = (gkss->version > 4) ? max(1, nint((p->width + p->height) * 0.001)) : 1;
-  glLineWidth(ln_width);
+  glLineWidth(1);
 
   draw_pattern = (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH);
 
@@ -833,6 +829,7 @@ static void interp(char *str)
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
+  int *n = NULL, *primid = NULL, *ldr = NULL;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
@@ -875,6 +872,15 @@ static void interp(char *str)
           RESOLVE(dy, int, sizeof(int));
           RESOLVE(dimx, int, sizeof(int));
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
+          break;
+
+        case 17: /* GDP */
+          RESOLVE(n, int, sizeof(int));
+          RESOLVE(primid, int, sizeof(int));
+          RESOLVE(ldr, int, sizeof(int));
+          RESOLVE(i_arr, int, *ldr * sizeof(int));
+          RESOLVE(f_arr_1, double, *n * sizeof(double));
+          RESOLVE(f_arr_2, double, *n * sizeof(double));
           break;
 
         case 19:  /* set linetype */
@@ -984,6 +990,10 @@ static void interp(char *str)
         case 201:
           true_color = *f == DRAW_IMAGE;
           cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1], *dx, *dy, *dimx, i_arr, true_color);
+          break;
+
+        case 17:
+          gks_perror("GDP primitive not supported for OpenGL");
           break;
 
         case 19:

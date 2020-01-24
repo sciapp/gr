@@ -557,7 +557,6 @@ static void set_linetype(int ltype, double lwidth)
 {
   char buffer[100], dash[80];
 
-  if (gkss->version > 4) lwidth *= p->res * 0.001;
   if (ltype != p->ltype || (fabs(lwidth - p->cwidth) > FEPS))
     {
       p->ltype = ltype;
@@ -571,11 +570,10 @@ static void set_linewidth(double width)
 {
   char buffer[20];
 
-  if (gkss->version > 4) width *= p->res * 0.001;
   if (fabs(width - p->cwidth) > FEPS)
     {
       p->cwidth = fabs(width);
-      sprintf(buffer, "%.4g lw", gkss->version > 4 ? p->cwidth * 600 / 72 : p->cwidth * 4);
+      sprintf(buffer, "%.4g lw", p->cwidth * 600 / 72 * 558.0 / 500);
       packb(buffer);
     }
 }
@@ -584,11 +582,10 @@ static void set_markersize(double size)
 {
   char buffer[20];
 
-  if (gkss->version > 4) size *= p->res * 0.001;
   if (fabs(size - p->csize) > FEPS)
     {
       p->csize = fabs(size);
-      sprintf(buffer, "%.4g ms", p->csize);
+      sprintf(buffer, "%.4g ms", p->csize * 558.0 / 500);
       packb(buffer);
     }
 }
@@ -888,6 +885,7 @@ static void ps_init(int *pages)
       packb("/cp {closepath} def");
       packb("/m {moveto} def");
       packb("/l {lineto} def");
+      packb("/c {curveto} def");
       packb("/A {1 0 rlineto} def");
       packb("/B {1 1 rlineto} def");
       packb("/C {0 1 rlineto} def");
@@ -907,6 +905,14 @@ static void ps_init(int *pages)
       packb("/sk {stroke} def");
       packb("/csk {closepath stroke} def");
       packb("/fi {closepath eofill} def");
+      packb("/el {/endangle exch def /startangle exch def\
+ /yrad exch def /xrad exch def /y exch def /x exch def\
+ /savematrix matrix currentmatrix def x y translate xrad yrad scale\
+ 0 0 1 startangle endangle arc savematrix setmatrix} def");
+      packb("/eln {/endangle exch def /startangle exch def\
+ /yrad exch def /xrad exch def /y exch def /x exch def\
+ /savematrix matrix currentmatrix def x y translate xrad yrad scale\
+ 0 0 1 startangle endangle arcn savematrix setmatrix} def");
       packb("/sg {setgray} def");
       packb("/sc {setrgbcolor} def");
       packb("/fg {0 sg} def");
@@ -1230,7 +1236,7 @@ static void marker_routine(double x, double y, int marker)
   double dx, dy;
   char buffer[50];
   static const char *macro[] = {"nom", " hl", " vl", "st8", "st7", "st6", "st5", "st4", "ed8", "ed7",
-                                "ed6", "ed5", "fpl", "npl", "ftr", "ftl", "tud", "fst", " st", "fdm",
+                                "ed6", "ed5", "fpl", "npl", "ftl", "ftr", "tud", "fst", " st", "fdm",
                                 "ndm", "fhg", "nhg", "fbt", "nbt", "fsq", "nsq", "ftd", "ntd", "ftu",
                                 "ntu", "fci", " dt", " dt", " pl", "fas", "nci", " dc"};
 
@@ -1333,7 +1339,7 @@ static void cell_array(double xmin, double xmax, double ymin, double ymax, int d
   packb("grestore");
 }
 
-static void text_routine(double *x, double *y, int *nchars, char *chars)
+static void text_routine(double *x, double *y, int nchars, char *chars)
 {
   int i, j;
   double ux, uy, yrel, angle, phi;
@@ -1341,11 +1347,11 @@ static void text_routine(double *x, double *y, int *nchars, char *chars)
   int alh, alv, ic;
   char str[500], buffer[510];
   int prec;
+  char *latin1_str = gks_malloc(nchars + 1);
 
-  char *latin1_str = gks_malloc(*nchars + 1);
   gks_utf82latin1(chars, latin1_str);
   chars = latin1_str;
-  *nchars = strlen(chars);
+  nchars = strlen(chars);
 
   NDC_to_DC(*x, *y, xorg, yorg);
 
@@ -1370,7 +1376,7 @@ static void text_routine(double *x, double *y, int *nchars, char *chars)
   else
     moveto(xorg, yorg);
 
-  for (i = 0, j = 0; i < *nchars; i++)
+  for (i = 0, j = 0; i < nchars; i++)
     {
       ic = chars[i];
       if (ic < 0) ic += 256;
@@ -1474,6 +1480,213 @@ static void line_routine(int n, double *px, double *py, int ltype, int tnr)
     {
       packb("sk");
       p->stroke = 0;
+    }
+}
+
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
+{
+  char buffer[100];
+  int i, j, np;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
+  double x1, y1, x2, y2;
+
+  sprintf(buffer, "np ");
+  packb(buffer);
+  np = 0;
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          start_x = cur_x = x[0];
+          start_y = cur_y = y[0];
+          to_DC(1, x, y);
+          sprintf(buffer, "%s%.2f %.2f m", np ? "np " : "", x[0], y[0]);
+          packb(buffer);
+          np = 0;
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          cur_x = x[0];
+          cur_y = y[0];
+          to_DC(1, x, y);
+          sprintf(buffer, "%.2f %.2f l", x[0], y[0]);
+          packb(buffer);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          x[2] = cur_x;
+          y[2] = cur_y;
+          cur_x = x[1];
+          cur_y = y[1];
+          to_DC(3, x, y);
+          x1 = x[2] + (2.0 / 3.0) * (x[0] - x[2]);
+          y1 = y[2] + (2.0 / 3.0) * (y[0] - y[2]);
+          x2 = x[1] + (2.0 / 3.0) * (x[0] - x[1]);
+          y2 = y[1] + (2.0 / 3.0) * (y[0] - y[1]);
+          sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x1, y1, x2, y2, x[1], y[1]);
+          packb(buffer);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += cur_x;
+              y[2] += cur_y;
+            }
+          cur_x = x[2];
+          cur_y = y[2];
+          to_DC(3, x, y);
+          sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f c", x[0], y[0], x[1], y[1], x[2], y[2]);
+          packb(buffer);
+          j += 3;
+          break;
+        case 'A':
+        case 'a':
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx;
+            y[0] = cy;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
+          to_DC(2, x, y);
+          w = x[1] - x[0];
+          h = y[1] - y[0];
+          a1 *= 180 / M_PI;
+          a2 *= 180 / M_PI;
+          if (a2 < a1)
+            {
+              sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f eln", x[0], y[0], w, h, a1, a2);
+            }
+          else
+            {
+              sprintf(buffer, "%.2f %.2f %.2f %.2f %.2f %.2f el", x[0], y[0], w, h, a1, a2);
+            }
+          packb(buffer);
+          j += 3;
+          break;
+        case 's':
+          sprintf(buffer, "cp");
+          cur_x = start_x;
+          cur_y = start_y;
+          packb(buffer);
+        case 'S':
+          set_linewidth(gkss->bwidth);
+          sprintf(buffer, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+          packb(buffer);
+          np = 1;
+          break;
+        case 'f':
+          sprintf(buffer, "%.4g %.4g %.4g sc fi", p->red[gkss->facoli], p->green[gkss->facoli], p->blue[gkss->facoli]);
+          cur_x = start_x;
+          cur_y = start_y;
+          packb(buffer);
+          np = 1;
+          break;
+        case 'F':
+          sprintf(buffer, "gs %.4g %.4g %.4g sc fi gr", p->red[gkss->facoli], p->green[gkss->facoli],
+                  p->blue[gkss->facoli]);
+          packb(buffer);
+          set_linewidth(gkss->bwidth);
+          sprintf(buffer, "%.4g %.4g %.4g sc csk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+          cur_x = start_x;
+          cur_y = start_y;
+          packb(buffer);
+          np = 1;
+          break;
+        case 'Z':
+          sprintf(buffer, "cp");
+          cur_x = start_x;
+          cur_y = start_y;
+          np = 0;
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+    }
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
     }
 }
 
@@ -1595,8 +1808,7 @@ void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
           set_markersize(23 * size / 24);
           angle = -atan2(x, y) * 180.0 / M_PI;
           set_markerangle(angle);
-          factor = size / 2.0;
-          set_linewidth(factor);
+          set_linewidth(1.0);
           color = gkss->asf[5] ? gkss->pmcoli : 1;
           set_foreground(color, p->wtype);
           gks_emul_polymarker(ia[0], r1, r2, marker_routine);
@@ -1629,7 +1841,7 @@ void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
               double px, py;
               WC_to_NDC(*r1, *r2, tnr, px, py);
               seg_xform(&px, &py);
-              text_routine(&px, &py, &nchars, chars);
+              text_routine(&px, &py, nchars, chars);
             }
           else
             {
@@ -1684,6 +1896,21 @@ void gks_drv_ps(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
             }
           gks_set_dev_xform(gkss, p->window, p->viewpt);
           cell_array(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, p->wtype, true_color);
+          p->empty = 0;
+        }
+      break;
+
+      /* GDP */
+    case 17:
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          if (!p->init)
+            {
+              ps_init(&p->pages);
+              p->init = 1;
+            }
+          gks_set_dev_xform(gkss, p->window, p->viewpt);
+          gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
           p->empty = 0;
         }
       break;

@@ -221,7 +221,7 @@ void gks_videoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->mem[2] = 100;
       *((unsigned char **)(p->mem + 3)) = NULL;
 
-      sprintf(p->mem_path, "!resizable@%p.mem", p->mem);
+      sprintf(p->mem_path, "!resizable@%p.mem", (void *)p->mem);
       chars = p->mem_path;
       /* set wstype for cairo png in memory */
       ia[2] = 143;

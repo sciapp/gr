@@ -851,6 +851,7 @@ static error_t plot_scatter(gr_meta_args_t *subplot_args);
 static error_t plot_quiver(gr_meta_args_t *subplot_args);
 static error_t plot_stem(gr_meta_args_t *subplot_args);
 static error_t plot_hist(gr_meta_args_t *subplot_args);
+static error_t plot_barplot(gr_meta_args_t *subplot_args);
 static error_t plot_contour(gr_meta_args_t *subplot_args);
 static error_t plot_contourf(gr_meta_args_t *subplot_args);
 static error_t plot_hexbin(gr_meta_args_t *subplot_args);
@@ -1288,13 +1289,17 @@ static int processing_events = 0;
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* TODO: Check format of: "hist", "isosurface", "imshow"  */
-static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},     {"hexbin", "xys"},    {"polar", "xys"},
-                                           {"shade", "xys"},    {"stem", "xys"},      {"step", "xys"},
-                                           {"contour", "xyzc"}, {"contourf", "xyzc"}, {"tricont", "xyzc"},
-                                           {"trisurf", "xyzc"}, {"surface", "xyzc"},  {"wireframe", "xyzc"},
-                                           {"plot3", "xyac"},   {"scatter", "xyac"},  {"scatter3", "xyac"},
-                                           {"quiver", "xyuv"},  {"heatmap", "xyzc"},  {"hist", "x"},
-                                           {"isosurface", "x"}, {"imshow", ""},       {"nonuniformheatmap", "xyzc"}};
+static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},      {"hexbin", "xys"},
+                                           {"polar", "xys"},     {"shade", "xys"},
+                                           {"stem", "xys"},      {"step", "xys"},
+                                           {"contour", "xyzc"},  {"contourf", "xyzc"},
+                                           {"tricont", "xyzc"},  {"trisurf", "xyzc"},
+                                           {"surface", "xyzc"},  {"wireframe", "xyzc"},
+                                           {"plot3", "xyzc"},    {"scatter", "xyzc"},
+                                           {"scatter3", "xyzc"}, {"quiver", "xyuv"},
+                                           {"heatmap", "xyzc"},  {"hist", "x"},
+                                           {"barplot", "xy"},    {"isosurface", "x"},
+                                           {"imshow", ""},       {"nonuniformheatmap", "xyzc"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1306,6 +1311,7 @@ static plot_func_map_entry_t kind_to_func[] = {
     {"quiver", plot_quiver},
     {"stem", plot_stem},
     {"hist", plot_hist},
+    {"barplot", plot_barplot},
     {"contour", plot_contour},
     {"contourf", plot_contourf},
     {"hexbin", plot_hexbin},
@@ -1528,14 +1534,12 @@ int gr_plotmeta(const gr_meta_args_t *args)
   gr_meta_args_t **current_subplot_args;
   plot_func_t plot_func;
   const char *kind = NULL;
-
   if (!gr_mergemeta(args))
     {
       return 0;
     }
 
   plot_set_attribute_defaults(active_plot_args);
-
   plot_pre_plot(active_plot_args);
   args_values(active_plot_args, "subplots", "A", &current_subplot_args);
   while (*current_subplot_args != NULL)
@@ -3607,15 +3611,23 @@ void plot_set_attribute_defaults(gr_meta_args_t *plot_args)
       args_setdefault(*current_subplot, "xflip", "i", PLOT_DEFAULT_XFLIP);
       args_setdefault(*current_subplot, "yflip", "i", PLOT_DEFAULT_YFLIP);
       args_setdefault(*current_subplot, "zflip", "i", PLOT_DEFAULT_ZFLIP);
-      args_setdefault(
-          *current_subplot, "adjust_xlim", "i",
-          (args_values(*current_subplot, "xlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
-      args_setdefault(
-          *current_subplot, "adjust_ylim", "i",
-          (args_values(*current_subplot, "ylim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
-      args_setdefault(
-          *current_subplot, "adjust_zlim", "i",
-          (args_values(*current_subplot, "zlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
+      if (str_equals_any(kind, 1, "heatmap"))
+        {
+          args_setdefault(*current_subplot, "adjust_xlim", "i", 0);
+          args_setdefault(*current_subplot, "adjust_ylim", "i", 0);
+        }
+      else
+        {
+          args_setdefault(
+              *current_subplot, "adjust_xlim", "i",
+              (args_values(*current_subplot, "xlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_XLIM));
+          args_setdefault(
+              *current_subplot, "adjust_ylim", "i",
+              (args_values(*current_subplot, "ylim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_YLIM));
+          args_setdefault(
+              *current_subplot, "adjust_zlim", "i",
+              (args_values(*current_subplot, "zlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
+        }
       args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP);
       args_setdefault(*current_subplot, "rotation", "i", PLOT_DEFAULT_ROTATION);
       args_setdefault(*current_subplot, "tilt", "i", PLOT_DEFAULT_TILT);
@@ -3830,7 +3842,7 @@ void plot_process_viewport(gr_meta_args_t *subplot_args)
     {
       viewport[2] += (1 - (subplot[3] - subplot[2]) * (subplot[3] - subplot[2])) * 0.02;
     }
-  if (str_equals_any(kind, 6, "contour", "contourf", "heatmap", "nonuniformheatmap", "hexbin", "quiver"))
+  if (str_equals_any(kind, 7, "tricont", "contour", "contourf", "heatmap", "nonuniformheatmap", "hexbin", "quiver"))
     {
       viewport[1] -= 0.1;
     }
@@ -4010,10 +4022,6 @@ void plot_process_window(gr_meta_args_t *subplot_args)
   gr_meta_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
   gr_meta_args_push(subplot_args, "xmajor", "i", x_major_count);
 
-  if (strcmp(kind, "hist") == 0 && !gr_meta_args_contains(subplot_args, "ylim"))
-    {
-      y_min = 0;
-    }
   if (!(scale & GR_OPTION_Y_LOG))
     {
       args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
@@ -4108,11 +4116,11 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args)
   const char *fmt;
   gr_meta_args_t **current_series;
   unsigned int series_count;
-  const char *data_component_names[] = {"x", "y", "z", NULL};
+  const char *data_component_names[] = {"x", "y", "z", "c", NULL};
   const char **current_component_name;
   double *current_component = NULL;
   unsigned int point_count = 0;
-  const char *range_keys[][2] = {{"xlim", "xrange"}, {"ylim", "yrange"}, {"zlim", "zrange"}};
+  const char *range_keys[][2] = {{"xlim", "xrange"}, {"ylim", "yrange"}, {"zlim", "zrange"}, {"clim", "crange"}};
   const char *(*current_range_keys)[2];
   unsigned int i;
 
@@ -4159,12 +4167,27 @@ void plot_store_coordinate_ranges(gr_meta_args_t *subplot_args)
                   max_component += step;
                 }
             }
+          else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
+            {
+              min_component -= 0.5;
+              max_component += 0.5;
+            }
+          else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0) &&
+                   strcmp("y", *current_component_name) == 0)
+            {
+              min_component = 0;
+            }
         }
       else
         {
           args_values(subplot_args, (*current_range_keys)[0], "dd", &min_component, &max_component);
         }
-      gr_meta_args_push(subplot_args, (*current_range_keys)[1], "dd", min_component, max_component);
+      /* TODO: This may be obsolete when all supported format-strings are added
+       color is an optional part of the format strings */
+      if (!(min_component == DBL_MAX && max_component == -DBL_MAX && strcmp(*current_component_name, "c") == 0))
+        {
+          gr_meta_args_push(subplot_args, (*current_range_keys)[1], "dd", min_component, max_component);
+        }
       ++current_range_keys;
       ++current_component_name;
     }
@@ -4445,12 +4468,16 @@ error_t plot_scatter(gr_meta_args_t *subplot_args)
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
-      double *x = NULL, *y = NULL, *z = NULL, *c = NULL, c_min, c_ptp;
+      double *x = NULL, *y = NULL, *z = NULL, *c = NULL, c_min, c_max;
       unsigned int x_length, y_length, z_length, c_length;
       int i, c_index = -1, markertype;
-      args_first_value(*current_series, "x", "D", &x, &x_length);
-      args_first_value(*current_series, "y", "D", &y, &y_length);
-      args_first_value(*current_series, "z", "D", &z, &z_length);
+      return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      if (args_first_value(*current_series, "z", "D", &z, &z_length))
+        {
+          return_error_if(x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+        }
       if (args_values(*current_series, "markertype", "i", &markertype))
         {
           gr_setmarkertype(markertype);
@@ -4477,19 +4504,9 @@ error_t plot_scatter(gr_meta_args_t *subplot_args)
               c_index = 255;
             }
         }
-      return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
       if (z != NULL || c != NULL)
         {
-          if (c != NULL && c_length > 0)
-            {
-              c_min = c[0];
-              c_ptp = c[0];
-              for (i = 1; i < c_length; i++)
-                {
-                  if (c_min > c[i]) c_min = c[i];
-                  if (c_ptp < c[i]) c_ptp = c[i];
-                }
-            }
+          args_values(subplot_args, "crange", "dd", &c_min, &c_max);
           for (i = 0; i < x_length; i++)
             {
               if (z != NULL)
@@ -4507,7 +4524,7 @@ error_t plot_scatter(gr_meta_args_t *subplot_args)
                 {
                   if (i < c_length)
                     {
-                      c_index = 1000 + (int)(255 * (c[i] - c_min) / c_ptp);
+                      c_index = 1000 + (int)(255 * (c[i] - c_min) / c_max);
                     }
                   else
                     {
@@ -4615,6 +4632,37 @@ error_t plot_hist(gr_meta_args_t *subplot_args)
           gr_setfillcolorind(1);
           gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
           gr_fillrect(x[i - 1], x[i], y_min, y[i - 1]);
+        }
+      ++current_series;
+    }
+
+  return NO_ERROR;
+}
+
+
+error_t plot_barplot(gr_meta_args_t *subplot_args)
+{
+  const double *window;
+  gr_meta_args_t **current_series;
+
+  args_values(subplot_args, "window", "D", &window);
+  args_values(subplot_args, "series", "A", &current_series);
+  while (*current_series != NULL)
+    {
+      double *x, *y;
+      unsigned int x_length, y_length;
+      unsigned int i;
+      return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(x_length != y_length + 1, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      for (i = 1; i <= y_length; ++i)
+        {
+          gr_setfillcolorind(989);
+          gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
+          gr_fillrect(x[i - 1], x[i], 0, y[i - 1]);
+          gr_setfillcolorind(1);
+          gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
+          gr_fillrect(x[i - 1], x[i], 0, y[i - 1]);
         }
       ++current_series;
     }
@@ -4832,46 +4880,23 @@ error_t plot_heatmap(gr_meta_args_t *subplot_args)
   return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
   return_error_if(!args_first_value(*current_series, "x", "D", &x, &width), ERROR_PLOT_MISSING_DATA);
   return_error_if(!args_first_value(*current_series, "y", "D", &y, &height), ERROR_PLOT_MISSING_DATA);
-  zlim_set = args_values(subplot_args, "zlim", "dd", &z_min, &z_max);
+  args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
   if (!args_values(subplot_args, "zlog", "i", &zlog))
     {
       zlog = 0;
     }
-  if (!zlim_set)
-    {
-      z_min = DBL_MAX;
-      z_max = DBL_MIN;
-      for (i = 0; i < width * height; i++)
-        {
-          if (z[i] < z_min)
-            {
-              z_min = z[i];
-            }
-          if (z[i] > z_max)
-            {
-              z_max = z[i];
-            }
-        }
-    }
-  if (z_max < z_min)
-    {
-      tmp = z_min;
-      z_min = z_max;
-      z_max = tmp;
-    }
-
   if (zlog)
     {
       z_min = log(z_min);
       z_max = log(z_max);
     }
 
-  if (!args_values(subplot_args, "clim", "dd", &c_min, &c_max))
+  if (!args_values(subplot_args, "crange", "dd", &c_min, &c_max))
     {
       c_min = z_min;
       c_max = z_max;
     }
-  else if (zlog)
+  if (zlog)
     {
       c_min = log(c_min);
       c_max = log(c_max);
@@ -5097,28 +5122,47 @@ error_t plot_plot3(gr_meta_args_t *subplot_args)
 error_t plot_scatter3(gr_meta_args_t *subplot_args)
 {
   gr_meta_args_t **current_series;
-
+  double c_min, c_max;
+  unsigned int x_length, y_length, z_length, c_length, i, c_index;
+  double *x, *y, *z, *c;
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
-      /* TODO: Implement me! */
-      /*
-       * gr.setmarkertype(gr.MARKERTYPE_SOLID_CIRCLE)
-       * if c is not None:
-       *     c_min = c.min()
-       *     c_ptp = c.ptp()
-       *     for i in range(len(x)):
-       *         c_index = 1000 + int(255 * (c[i] - c_min) / c_ptp)
-       *         gr.setmarkercolorind(c_index)
-       *         gr.polymarker3d([x[i]], [y[i]], [z[i]])
-       * else:
-       *     gr.polymarker3d(x, y, z)
-       */
+      return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(x_length != y_length || x_length != z_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
+      if (args_first_value(*current_series, "c", "D", &c, &c_length))
+        {
+          args_values(subplot_args, "crange", "dd", &c_min, &c_max);
+          for (i = 0; i < x_length; i++)
+            {
+              if (i < c_length)
+                {
+                  c_index = 1000 + (int)(255 * (c[i] - c_min) / c_max);
+                }
+              else
+                {
+                  c_index = 989;
+                }
+              gr_setmarkercolorind(c_index);
+              gr_polymarker3d(1, x + i, y + i, z + i);
+            }
+        }
+      else
+        {
+          if (args_values(*current_series, "c", "i", &c_index))
+            {
+              gr_setmarkercolorind(c_index);
+            }
+          gr_polymarker3d(x_length, x, y, z);
+        }
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
 
-  return ERROR_NOT_IMPLEMENTED;
+  return NO_ERROR;
 }
 
 error_t plot_imshow(gr_meta_args_t *subplot_args)
@@ -5253,7 +5297,7 @@ error_t plot_tricont(gr_meta_args_t *subplot_args)
       ++current_series;
     }
   plot_draw_axes(subplot_args, 2);
-  plot_draw_colorbar(subplot_args, 0.05, 256);
+  plot_draw_colorbar(subplot_args, 0.0, num_levels);
   free(levels);
 
   return NO_ERROR;
@@ -5429,7 +5473,7 @@ error_t plot_draw_polar_axes(gr_meta_args_t *args)
   n = (int)ceil((r_max - r_min) / tick);
   for (i = 0; i <= n; i++)
     {
-      int r = i / n;
+      double r = (i * 1.0) / n;
       if (i % 2 == 0)
         {
           gr_setlinecolorind(88);
@@ -5454,8 +5498,8 @@ error_t plot_draw_polar_axes(gr_meta_args_t *args)
     }
   for (alpha = 0; alpha < 360; alpha += 45)
     {
-      x[0] = sin((alpha + 90) * M_PI / 180.0);
-      y[0] = cos((alpha + 90) * M_PI / 180.0);
+      x[0] = cos(alpha * M_PI / 180.0);
+      y[0] = sin(alpha * M_PI / 180.0);
       x[1] = 0.0;
       y[1] = 0.0;
       gr_polyline(2, x, y);
@@ -7189,6 +7233,11 @@ static error_t fromjson_read(gr_meta_args_t *args, const char *json_string)
   return fromjson_parse(args, json_string, NULL);
 }
 
+int gr_load_from_str(const char *json_string)
+{
+  return (fromjson_read(active_plot_args, json_string) == NO_ERROR);
+}
+
 error_t fromjson_parse(gr_meta_args_t *args, const char *json_string, fromjson_shared_state_t *shared_state)
 {
   char *filtered_json_string = NULL;
@@ -8773,6 +8822,7 @@ error_t tojson_write_arg(memwriter_t *memwriter, const arg_t *arg)
 
 error_t tojson_write_args(memwriter_t *memwriter, const gr_meta_args_t *args)
 {
+  const char *key_hierarchy_name;
   args_iterator_t *it;
   arg_t *arg;
 
@@ -9714,6 +9764,29 @@ void gr_dumpmeta_json(const gr_meta_args_t *args, FILE *f)
       memwriter_delete(memwriter);
       memwriter = NULL;
     }
+}
+
+char *gr_dumpmeta_json_str(void)
+{
+  static memwriter_t *memwriter = NULL;
+  char *result;
+
+  if (memwriter == NULL)
+    {
+      memwriter = memwriter_new();
+    }
+  /* tojson_write_args(memwriter, global_root_args); */
+  tojson_write_args(memwriter, active_plot_args);
+  if (tojson_is_complete())
+    {
+      memwriter_putc(memwriter, '\0');
+      result = malloc(strlen(memwriter_buf(memwriter)) * sizeof(char));
+      strcpy(result, memwriter_buf(memwriter));
+      memwriter_delete(memwriter);
+      memwriter = NULL;
+      return result;
+    }
+  return "";
 }
 
 #ifdef EMSCRIPTEN

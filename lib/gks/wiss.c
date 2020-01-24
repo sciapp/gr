@@ -151,17 +151,29 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
       COPY(i_arr, dimx * dy, sizeof(int));
       break;
 
-    case 19: /* set linetype */
-    case 21: /* set polyline color index */
-    case 23: /* set markertype */
-    case 25: /* set polymarker color index */
-    case 30: /* set text color index */
-    case 33: /* set text path */
-    case 36: /* set fillarea interior style */
-    case 37: /* set fillarea style index */
-    case 38: /* set fillarea color index */
-    case 52: /* select normalization transformation */
-    case 53: /* set clipping indicator */
+    case 17: /* GDP */
+      len = (2 + 3 + i_arr[2]) * sizeof(int) + 2 * i_arr[0] * sizeof(double);
+      if (p->nbytes + len > p->size) reallocate(len);
+
+      COPY(&len, 1, sizeof(int));
+      COPY(&fctid, 1, sizeof(int));
+      COPY(i_arr, (3 + i_arr[2]), sizeof(int));
+      COPY(f_arr_1, i_arr[0], sizeof(double));
+      COPY(f_arr_2, i_arr[0], sizeof(double));
+      break;
+
+    case 19:  /* set linetype */
+    case 21:  /* set polyline color index */
+    case 23:  /* set markertype */
+    case 25:  /* set polymarker color index */
+    case 30:  /* set text color index */
+    case 33:  /* set text path */
+    case 36:  /* set fillarea interior style */
+    case 37:  /* set fillarea style index */
+    case 38:  /* set fillarea color index */
+    case 52:  /* select normalization transformation */
+    case 53:  /* set clipping indicator */
+    case 207: /* set border color index */
 
       len = 4 * sizeof(int);
       if (p->nbytes + len >= p->size) reallocate(len);
@@ -191,6 +203,7 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
     case 31:  /* set character height */
     case 200: /* set text slant */
     case 203: /* set transparency */
+    case 206: /* set border width */
 
       len = 3 * sizeof(int) + sizeof(double);
       if (p->nbytes + len >= p->size) reallocate(len);
@@ -366,6 +379,7 @@ void gks_drv_wiss(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_
     case 14:
     case 15:
     case 16:
+    case 17:
       p->empty = 0;
     case 19:
     case 20:
@@ -395,6 +409,8 @@ void gks_drv_wiss(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_
     case 202:
     case 203:
     case 204:
+    case 206:
+    case 207:
 
       if (p->state == GKS_K_WS_ACTIVE)
         {
@@ -441,6 +457,7 @@ static void interp(char *str, int segn)
   gks_state_list_t *gkss = NULL;
   int sp = 0, *len, *sgnum, *fctid, sx = 1, sy = 1;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
+  int *n = NULL, *primid = NULL, *ldr = NULL;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int saved_sp;
@@ -492,17 +509,27 @@ static void interp(char *str, int segn)
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
-        case 19: /* set linetype */
-        case 21: /* set polyline color index */
-        case 23: /* set markertype */
-        case 25: /* set polymarker color index */
-        case 30: /* set text color index */
-        case 33: /* set text path */
-        case 36: /* set fillarea interior style */
-        case 37: /* set fillarea style index */
-        case 38: /* set fillarea color index */
-        case 52: /* select normalization transformation */
-        case 53: /* set clipping indicator */
+        case 17: /* GDP */
+          RESOLVE(n, int, sizeof(int));
+          RESOLVE(primid, int, sizeof(int));
+          RESOLVE(ldr, int, sizeof(int));
+          RESOLVE(i_arr, int, *ldr * sizeof(int));
+          RESOLVE(f_arr_1, double, *n * sizeof(double));
+          RESOLVE(f_arr_2, double, *n * sizeof(double));
+          break;
+
+        case 19:  /* set linetype */
+        case 21:  /* set polyline color index */
+        case 23:  /* set markertype */
+        case 25:  /* set polymarker color index */
+        case 30:  /* set text color index */
+        case 33:  /* set text path */
+        case 36:  /* set fillarea interior style */
+        case 37:  /* set fillarea style index */
+        case 38:  /* set fillarea color index */
+        case 52:  /* select normalization transformation */
+        case 53:  /* set clipping indicator */
+        case 207: /* set border color index */
 
           RESOLVE(i_arr, int, sizeof(int));
           break;
@@ -520,6 +547,7 @@ static void interp(char *str, int segn)
         case 31:  /* set character height */
         case 200: /* set text slant */
         case 203: /* set transparency */
+        case 206: /* set border width */
 
           RESOLVE(f_arr_1, double, sizeof(double));
           break;
@@ -589,6 +617,9 @@ static void interp(char *str, int segn)
               break;
             case 16:
               gks_cellarray(f_arr_1[0], f_arr_2[0], f_arr_1[1], f_arr_2[1], *dx, *dy, sx, sy, *dimx, *dy, i_arr);
+              break;
+            case 17:
+              gks_gdp(*n, f_arr_1, f_arr_2, *primid, *ldr, i_arr);
               break;
 
             case 19:
@@ -683,6 +714,12 @@ static void interp(char *str, int segn)
               mat[2][0] = f_arr_1[4];
               mat[2][1] = f_arr_1[5];
               gks_set_coord_xform(mat);
+              break;
+            case 206:
+              gks_set_border_width(f_arr_1[0]);
+              break;
+            case 207:
+              gks_set_border_color_index(i_arr[0]);
               break;
             }
         }

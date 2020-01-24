@@ -254,6 +254,12 @@ const char *gks_function_name(int routine)
     case 205:
       name = "CONFIGURE_WS";
       break;
+    case 206:
+      name = "SET_BORDER_WIDTH";
+      break;
+    case 207:
+      name = "SET_BORDER_COLOR_INDEX";
+      break;
     case 250:
       name = "BEGIN_SELECTION";
       break;

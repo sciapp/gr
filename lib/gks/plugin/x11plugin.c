@@ -1568,7 +1568,6 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
 #include "marker.h"
 
-  if (gksl->version > 4) mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   d = 2 * r;
   scale = 0.01 * mscale / 3.0;
@@ -1756,7 +1755,6 @@ static void set_line_attr(int linetype, double linewidth)
   unsigned int width;
   int n;
 
-  if (gksl->version > 4) linewidth *= (p->width + p->height) * 0.001;
   if (linewidth > 1)
     width = (unsigned int)(linewidth + 0.5);
   else
@@ -4373,6 +4371,13 @@ void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
           cell_array(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
         }
       unlock();
+      break;
+
+    case 17:
+      /*
+       * GDP
+       */
+      gks_perror("GDP primitive not supported for X11");
       break;
 
     case 48:

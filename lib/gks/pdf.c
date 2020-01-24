@@ -23,6 +23,7 @@ typedef unsigned long uLong;
 #define MAX_FONT 31
 #define HATCH_STYLE 108
 #define PATTERNS 120
+#define NOMINAL_SIZE 558.0 / 500
 
 #define MEMORY_INCREMENT 32768
 
@@ -993,10 +994,9 @@ static void set_linetype(int ltype, double lwidth)
 {
   char dash[80];
 
-  if (gkss->version > 4) lwidth *= (p->width + p->height) * 0.001;
   if (p->ltype != ltype || p->lwidth != lwidth)
     {
-      gks_get_dash(ltype, lwidth, dash);
+      gks_get_dash(ltype, lwidth * NOMINAL_SIZE, dash);
       pdf_setdash(p, dash);
       p->ltype = ltype;
     }
@@ -1004,10 +1004,9 @@ static void set_linetype(int ltype, double lwidth)
 
 static void set_linewidth(double lwidth)
 {
-  if (gkss->version > 4) lwidth *= (p->width + p->height) * 0.001;
   if (p->lwidth != lwidth)
     {
-      pdf_setlinewidth(p, lwidth);
+      pdf_setlinewidth(p, lwidth * NOMINAL_SIZE);
       p->lwidth = lwidth;
     }
 }
@@ -1043,7 +1042,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
   static double cy[4][3] = {{-1, -0.5523, 0}, {0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}};
 
-  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
+  mscale *= NOMINAL_SIZE;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -1063,12 +1062,16 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
       switch (op)
         {
         case 1: /* point */
+          set_linewidth(1.0);
+          set_color(mcolor);
           pdf_moveto(p, x, y);
           pdf_lineto(p, x, y);
           pdf_stroke(p);
           break;
 
         case 2: /* line */
+          set_linewidth(1.0);
+          set_color(mcolor);
           for (i = 0; i < 2; i++)
             {
               xr = scale * marker[mtype][pc + 2 * i + 1];
@@ -1084,6 +1087,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 3: /* polyline */
+          set_linewidth(1.0);
+          set_color(mcolor);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1100,7 +1105,17 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
-          if (op == 5) set_fillcolor(0);
+          if (op == 4)
+            {
+              set_fillcolor(mcolor);
+              if (gkss->bcoli != mcolor)
+                {
+                  set_linewidth(gkss->bwidth);
+                  set_color(gkss->bcoli);
+                }
+            }
+          else
+            set_fillcolor(0);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -1111,7 +1126,10 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               else
                 pdf_lineto(p, x - xr, y - yr);
             }
-          pdf_eofill(p);
+          if (op == 4 && gkss->bcoli != mcolor)
+            pdf_printf(p->content, "b*\n");
+          else
+            pdf_eofill(p);
           pc += 1 + 2 * marker[mtype][pc + 1];
           if (op == 5) set_fillcolor(mcolor);
           break;
@@ -1120,6 +1138,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           xr = 0;
           yr = -r;
           seg_xform_rel(&xr, &yr);
+          set_linewidth(1.0);
+          set_color(mcolor);
           pdf_moveto(p, x - xr, y - yr);
           for (curve = 0; curve < 4; curve++)
             {
@@ -1137,7 +1157,17 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 7: /* filled arc */
         case 8: /* hollow arc */
-          if (op == 8) set_fillcolor(0);
+          if (op == 7)
+            {
+              set_fillcolor(mcolor);
+              if (gkss->bcoli != mcolor)
+                {
+                  set_linewidth(gkss->bwidth);
+                  set_color(gkss->bcoli);
+                }
+            }
+          else
+            set_fillcolor(0);
           xr = 0;
           yr = -r;
           seg_xform_rel(&xr, &yr);
@@ -1153,7 +1183,10 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                 }
               pdf_curveto(p);
             }
-          pdf_eofill(p);
+          if (op == 7 && gkss->bcoli != mcolor)
+            pdf_printf(p->content, "b*\n");
+          else
+            pdf_eofill(p);
           if (op == 8) set_fillcolor(mcolor);
           break;
         }
@@ -1191,13 +1224,10 @@ static void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  set_linetype(GKS_K_LINETYPE_SOLID, mk_size / 2);
-  set_linewidth(mk_size / 2);
+  set_linetype(GKS_K_LINETYPE_SOLID, 1.0);
   set_transparency(p->alpha);
-  set_color(mk_color);
-  set_fillcolor(mk_color);
 
-  marker_routine(n, px, py, mk_type, 23 * mk_size / 24, mk_color);
+  marker_routine(n, px, py, mk_type, mk_size, mk_color);
 }
 
 static void set_font(int font)
@@ -1546,6 +1576,220 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   pdf_restore(p);
 }
 
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void arc(double x, double y, double w, double h, double a1, double a2)
+{
+  double bcp, cos_a1, cos_a2, sin_a1, sin_a2;
+
+  a1 = a1 * M_PI / 180;
+  a2 = a2 * M_PI / 180;
+
+  bcp = (4.0 / 3 * (1 - cos(0.5 * (a2 - a1))) / sin(0.5 * (a2 - a1)));
+
+  sin_a1 = sin(a1);
+  sin_a2 = sin(a2);
+  cos_a1 = cos(a1);
+  cos_a2 = cos(a2);
+
+  pdf_printf(p->content, "%.2f %.2f %.2f %.2f %.2f %.2f c\n", x + w * (cos_a1 - bcp * sin_a1),
+             y + h * (sin_a1 + bcp * cos_a1), x + w * (cos_a2 + bcp * sin_a2), y + h * (sin_a2 - bcp * cos_a2),
+             x + w * cos_a2, y + h * sin_a2);
+}
+
+static void draw_arc(double x, double y, double w, double h, double a1, double a2)
+{
+  if (a1 == a2) return;
+
+  while (fabs(a2 - a1) > 90)
+    {
+      if (a2 > a1)
+        {
+          arc(x, y, w, h, a1, a1 + 90);
+          a1 += 90;
+        }
+      else
+        {
+          arc(x, y, w, h, a1, a1 - 90);
+          a1 -= 90;
+        }
+    }
+
+  if (a1 != a2) arc(x, y, w, h, a1, a2);
+}
+
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
+
+  set_linewidth(gkss->bwidth);
+  set_transparency(p->alpha);
+
+  pdf_setrgbcolor(p, p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+  pdf_setfillcolor(p, p->red[gkss->facoli], p->green[gkss->facoli], p->blue[gkss->facoli]);
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          start_x = cur_x = x[0];
+          start_y = cur_y = y[0];
+          to_DC(1, x, y);
+          pdf_printf(p->content, "%.2f %.2f m\n", x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          cur_x = x[0];
+          cur_y = y[0];
+          to_DC(1, x, y);
+          pdf_printf(p->content, "%.2f %.2f l\n", x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          cur_x = x[1];
+          cur_y = y[1];
+          to_DC(2, x, y);
+          pdf_printf(p->content, "%.2f %.2f %.2f %.2f v\n", x[0], y[0], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += cur_x;
+              y[2] += cur_y;
+            }
+          cur_x = x[2];
+          cur_y = y[2];
+          to_DC(3, x, y);
+          pdf_printf(p->content, "%.2f %.2f %.2f %.2f %.2f %.2f c\n", x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'A':
+        case 'a':
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
+          to_DC(2, x, y);
+          w = 0.5 * (x[1] - x[0]);
+          h = 0.5 * (y[1] - y[0]);
+          draw_arc(x[0] + w, y[0] + h, w, h, a1 * 180 / M_PI, a2 * 180 / M_PI);
+          j += 3;
+          break;
+        case 'S': /* stroke */
+          pdf_printf(p->content, "S\n");
+          break;
+        case 's': /* close and stroke */
+          pdf_printf(p->content, "s\n");
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case 'f': /* close, fill using even-odd rule */
+          pdf_printf(p->content, "h f*\n");
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case 'F': /* close, fill using even-odd rule, stroke */
+          pdf_printf(p->content, "h b*\n");
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case 'Z':
+          pdf_printf(p->content, "h\n");
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+    }
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
+    }
+}
+
 #ifndef EMSCRIPTEN
 void gks_drv_pdf(
 #else
@@ -1642,6 +1886,16 @@ void gks_drv_js(
           int true_color = fctid == DRAW_IMAGE;
           if (p->empty) begin_page();
           cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+        }
+      break;
+
+    case 17:
+      /* GDP */
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          if (p->empty) begin_page();
+          gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
+          p->empty = 0;
         }
       break;
 

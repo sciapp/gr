@@ -32,7 +32,7 @@ mergeInto(LibraryManager.library, {
         img.getContext("2d").putImageData(imageData, 0, 0);
         var pattern = context.createPattern(img, "repeat");
         context.fillStyle = pattern;
-        context.fill();
+        context.fill("evenodd");
     },
 
     js_fill_routine: function(n, px, py, colia) {
@@ -47,7 +47,7 @@ mergeInto(LibraryManager.library, {
         }
         context.lineTo(px[0], py[0]);
         context.fillStyle = "rgba(" + rgba[0] + "," + rgba[1] + "," + rgba[2] + "," + rgba[3] + ")";
-        context.fill();
+        context.fill("evenodd");
     },
 
     js_cellarray: function(x, y, width, height, colia) {
@@ -122,15 +122,28 @@ mergeInto(LibraryManager.library, {
         context.fillStyle = "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + rgb[3] + ")";
         context.lineWidth = width;
         context.moveTo(px[0], py[0]);
+        var nan_found = false;
         for (var i = 1; i < n; i++) {
+          if (Number.isNaN(px[i]) && Number.isNaN(py[i])) {
+            nan_found = true;
+            continue;
+          }
+          if (nan_found) {
+            nan_found = false;
+            if (linetype == 0) {
+                context.closePath();
+            }
+            context.moveTo(px[i], py[i]);
+          } else {
             context.lineTo(px[i], py[i]);
+          }
         }
         if (linetype == 0) {
-            context.lineTo(px[0], py[0]);
+            context.closePath();
         }
         context.stroke();
         if (fill != 0) {
-            context.fill();
+            context.fill("evenodd");
         }
     },
 
@@ -161,7 +174,7 @@ mergeInto(LibraryManager.library, {
         context.fillStyle = "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + 255 + ")";
         context.arc(x, y, r, 0, 2 * Math.PI);
         if (fill == 1) {
-            context.fill();
+            context.fill("evenodd");
         } else {
             context.stroke();
         }

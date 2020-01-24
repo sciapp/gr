@@ -337,7 +337,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color;
-  double ln_width, width;
+  double ln_width;
   int i, list[10];
 
   if (n > p->max_points)
@@ -349,15 +349,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4 && n < 0.5 * ln_width * p->height)
-    /*                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-       Note: we don't adjust the linewidth to the window height for lines with a
-       large number of points because this leads to performance issues in Qt */
-    width = ln_width * (p->width + p->height) * 0.001;
-  else
-    width = ln_width;
-  if (width < 1) width = 1;
-
+  if (ln_width < 1) ln_width = 1;
   if (ln_color < 0 || ln_color >= MAX_COLOR) ln_color = 1;
 
   p->pixmap->save();
@@ -371,12 +363,12 @@ static void polyline(int n, double *px, double *py)
       QVector<qreal> dashPattern(list[0]);
       for (i = 0; i < list[0]; i++) dashPattern[i] = (double)list[i + 1];
 
-      QPen pen(QPen(transparent_color, width, Qt::CustomDashLine));
+      QPen pen(QPen(transparent_color, ln_width, Qt::CustomDashLine, Qt::FlatCap));
       pen.setDashPattern(dashPattern);
       p->pixmap->setPen(pen);
     }
   else
-    p->pixmap->setPen(QPen(transparent_color, width, Qt::SolidLine));
+    p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine, Qt::FlatCap));
 
   line_routine(n, px, py, ln_type, gkss->cntnr);
 
@@ -392,7 +384,11 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
 #include "marker.h"
 
-  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
+  QColor marker_color(p->rgb[mcolor]);
+  marker_color.setAlpha(p->transparency);
+  QColor border_color(p->rgb[gkss->bcoli]);
+  border_color.setAlpha(p->transparency);
+
   r = (int)(3 * mscale);
   d = 2 * r;
   scale = 0.01 * mscale / 3.0;
@@ -414,6 +410,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
         {
 
         case 1: /* point */
+          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPoint(x, y);
           break;
 
@@ -425,6 +422,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               p->points->setPoint(i, nint(x - xr), nint(y + yr));
             }
+          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(p->points->constData(), 2);
           pc += 4;
           break;
@@ -438,6 +436,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               points->setPoint(i, nint(x - xr), nint(y + yr));
             }
+          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
           delete points;
@@ -446,8 +445,16 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
           points = new QPolygon(marker[mtype][pc + 1]);
-          if (op == 5) set_color(0);
-          p->pixmap->setPen(Qt::NoPen);
+          if (op == 4)
+            {
+              p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
+              if (gkss->bcoli != mcolor)
+                p->pixmap->setPen(QPen(border_color, gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+              else
+                p->pixmap->setPen(Qt::NoPen);
+            }
+          else
+            set_color(0);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -457,20 +464,27 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
             }
           p->pixmap->drawPolygon(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
-          set_color(mcolor);
           delete points;
           break;
 
         case 6: /* arc */
+          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawArc(x - r, y - r, d, d, 0, 360 * 16);
           break;
 
         case 7: /* filled arc */
         case 8: /* hollow arc */
-          if (op == 8) set_color(0);
-          p->pixmap->setPen(Qt::NoPen);
+          if (op == 7)
+            {
+              p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
+              if (gkss->bcoli != mcolor)
+                p->pixmap->setPen(QPen(border_color, gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+              else
+                p->pixmap->setPen(Qt::NoPen);
+            }
+          else
+            set_color(0);
           p->pixmap->drawChord(x - r, y - r, d, d, 0, 360 * 16);
-          set_color(mcolor);
           break;
         }
       pc++;
@@ -501,29 +515,19 @@ static void marker_routine(int n, double *px, double *py, int mtype, double msca
 static void polymarker(int n, double *px, double *py)
 {
   int mk_type, mk_color;
-  double mk_size, ln_width;
+  double mk_size;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  if (gkss->version > 4)
-    {
-      ln_width = (p->width + p->height) * 0.001;
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    ln_width = 1;
-
   if (mk_color < 0 || mk_color >= MAX_COLOR) mk_color = 1;
 
   p->pixmap->save();
   p->pixmap->setRenderHint(QPainter::Antialiasing);
-  QColor transparent_color(p->rgb[mk_color]);
-  transparent_color.setAlpha(p->transparency);
-  p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
-  p->pixmap->setBrush(QBrush(transparent_color, Qt::SolidPattern));
+
   marker_routine(n, px, py, mk_type, mk_size, mk_color);
+
   p->pixmap->restore();
 }
 
@@ -628,20 +632,11 @@ static void fill_routine(int n, double *px, double *py, int tnr);
 static void text(double px, double py, int nchars, char *chars)
 {
   int tx_font, tx_prec, tx_color;
-  double ln_width, x, y;
+  double x, y;
 
   tx_font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
   tx_prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
   tx_color = gkss->asf[9] ? gkss->txcoli : 1;
-
-  if (gkss->version > 4)
-    {
-      ln_width = (p->width + p->height) * 0.001;
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    ln_width = 1;
-  if (ln_width < 1) ln_width = 1;
 
   if (tx_color < 0 || tx_color >= MAX_COLOR) tx_color = 1;
 
@@ -649,7 +644,7 @@ static void text(double px, double py, int nchars, char *chars)
   p->pixmap->setRenderHint(QPainter::Antialiasing);
   QColor transparent_color(p->rgb[tx_color]);
   transparent_color.setAlpha(p->transparency);
-  p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
+  p->pixmap->setPen(QPen(transparent_color, 1.0, Qt::SolidLine, Qt::FlatCap));
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
     {
@@ -689,20 +684,10 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 static void fillarea(int n, double *px, double *py)
 {
   int fl_inter, fl_style, fl_color;
-  double ln_width;
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
   fl_style = gkss->asf[11] ? gkss->styli : predef_styli[gkss->findex - 1];
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-
-  if (gkss->version > 4)
-    {
-      ln_width = (p->width + p->height) * 0.001;
-      if (ln_width < 1) ln_width = 1;
-    }
-  else
-    ln_width = 1;
-  if (ln_width < 1) ln_width = 1;
 
   if (fl_color < 0 || fl_color >= MAX_COLOR) fl_color = 1;
 
@@ -713,7 +698,7 @@ static void fillarea(int n, double *px, double *py)
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
-      p->pixmap->setPen(QPen(transparent_color, ln_width, Qt::SolidLine));
+      p->pixmap->setPen(QPen(transparent_color, 1.0, Qt::SolidLine, Qt::FlatCap));
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
@@ -803,12 +788,202 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
     }
 }
 
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0;
+  double start_x = 0, start_y = 0;
+  QPainterPath path;
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          cur_x = start_x = x[0];
+          cur_y = start_y = y[0];
+          to_DC(1, x, y);
+          path.moveTo(x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          cur_x = x[0];
+          cur_y = y[0];
+          to_DC(1, x, y);
+          path.lineTo(x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          cur_x = x[1];
+          cur_y = y[1];
+          to_DC(2, x, y);
+          path.quadTo(x[0], y[0], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += cur_x;
+              y[2] += cur_y;
+            }
+          cur_x = x[2];
+          cur_y = y[2];
+          to_DC(3, x, y);
+          path.cubicTo(x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'A':
+        case 'a':
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
+          to_DC(2, x, y);
+          w = x[1] - x[0];
+          h = y[1] - y[0];
+          a1 *= -180 / M_PI;
+          a2 *= -180 / M_PI;
+          while (fabs(a2 - a1) > 360)
+            {
+              if (a1 > a2)
+                {
+                  path.arcTo(x[0], y[0], w, h, a1, -180);
+                  a1 -= 180;
+                }
+              else
+                {
+                  path.arcTo(x[0], y[0], w, h, a1, 180);
+                  a1 += 180;
+                }
+            }
+          path.arcTo(x[0], y[0], w, h, a1, (a2 - a1));
+          j += 3;
+          break;
+        case 's': /* close and stroke */
+          path.closeSubpath();
+          cur_x = start_x;
+          cur_y = start_y;
+          p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+          break;
+        case 'S': /* stroke */
+          p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+          break;
+        case 'F': /* fill and stroke */
+          path.closeSubpath();
+          cur_x = start_x;
+          cur_y = start_y;
+          p->pixmap->fillPath(path, QColor(p->rgb[gkss->facoli]));
+          p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+          break;
+        case 'f': /* fill */
+          path.closeSubpath();
+          cur_x = start_x;
+          cur_y = start_y;
+          p->pixmap->fillPath(path, QColor(p->rgb[gkss->facoli]));
+          break;
+        case 'Z': /* closepath */
+          path.closeSubpath();
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+    }
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
+    }
+}
+
 static void interp(char *str)
 {
   char *s;
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
+  int *n, *primid, *ldr;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
@@ -851,6 +1026,15 @@ static void interp(char *str)
           RESOLVE(i_arr, int, *dimx **dy * sizeof(int));
           break;
 
+        case 17: /* GDP */
+          RESOLVE(n, int, sizeof(int));
+          RESOLVE(primid, int, sizeof(int));
+          RESOLVE(ldr, int, sizeof(int));
+          RESOLVE(i_arr, int, *ldr * sizeof(int));
+          RESOLVE(f_arr_1, double, *n * sizeof(double));
+          RESOLVE(f_arr_2, double, *n * sizeof(double));
+          break;
+
         case 19:  /* set linetype */
         case 21:  /* set polyline color index */
         case 23:  /* set markertype */
@@ -863,6 +1047,7 @@ static void interp(char *str)
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
         case 108: /* set resample method */
+        case 207: /* set border color index */
           RESOLVE(i_arr, int, sizeof(int));
           break;
 
@@ -878,6 +1063,8 @@ static void interp(char *str)
         case 31:  /* set character height */
         case 200: /* set text slant */
         case 203: /* set transparency */
+        case 206: /* set border width */
+
           RESOLVE(f_arr_1, double, sizeof(double));
           break;
 
@@ -963,6 +1150,10 @@ static void interp(char *str)
         case 201:
           true_color = *f == DRAW_IMAGE;
           cellarray(f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1], *dx, *dy, *dimx, i_arr, true_color);
+          break;
+
+        case 17:
+          gdp(*n, f_arr_1, f_arr_2, *primid, *ldr, i_arr);
           break;
 
         case 19:
@@ -1111,6 +1302,15 @@ static void interp(char *str)
 
         case 203:
           p->transparency = (int)(f_arr_1[0] * 255);
+          break;
+
+        case 206:
+          gkss->bwidth = f_arr_1[0];
+          break;
+
+        case 207:
+          gkss->bcoli = i_arr[0];
+          break;
         }
 
       RESOLVE(len, int, sizeof(int));

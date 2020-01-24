@@ -139,7 +139,7 @@ typedef struct ws_state_list_t
 {
   int conid, state, wtype;
   double mw, mh;
-  int w, h;
+  int w, h, dpi;
   char *path;
   void *mem;
   int mem_resizable;
@@ -148,7 +148,8 @@ typedef struct ws_state_list_t
   double rgb[MAX_COLOR][3];
   double transparency;
   int width, height;
-  int color, linewidth;
+  int color;
+  double linewidth, nominal_size;
   double alpha, angle;
   int family, capheight;
   cairo_surface_t *surface;
@@ -266,7 +267,7 @@ static void set_color(int index)
   cairo_set_source_rgba(p->cr, p->rgb[index][0], p->rgb[index][1], p->rgb[index][2], p->transparency);
 }
 
-static void draw_marker(double xn, double yn, int mtype, double mscale)
+static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   double x, y;
   double scale, xr, yr, x1, x2, y1, y2;
@@ -274,7 +275,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
 #include "marker.h"
 
-  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
+  mscale *= p->nominal_size;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -296,6 +297,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
       switch (op)
         {
         case 1: /* point */
+          cairo_set_line_width(p->cr, p->nominal_size);
+          set_color(mcolor);
           cairo_rectangle(p->cr, round(x), round(y), 1.0, 1.0);
           cairo_fill(p->cr);
           break;
@@ -309,6 +312,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
           y2 = scale * marker[mtype][pc + 2 + 2];
           seg_xform_rel(&x2, &y2);
 
+          cairo_set_line_width(p->cr, p->nominal_size);
+          set_color(mcolor);
           cairo_move_to(p->cr, x - x1, y - y1);
           cairo_line_to(p->cr, x - x2, y - y2);
           cairo_stroke(p->cr);
@@ -322,8 +327,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
           yr = -scale * marker[mtype][pc + 3];
           seg_xform_rel(&xr, &yr);
 
+          cairo_set_line_width(p->cr, p->nominal_size);
+          set_color(mcolor);
           cairo_move_to(p->cr, x - xr, y + yr);
-
           for (i = 1; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
@@ -332,11 +338,20 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
               cairo_line_to(p->cr, x - xr, y + yr);
             }
-
           cairo_close_path(p->cr);
 
           if (op == 4)
-            cairo_fill(p->cr);
+            {
+              if (gkss->bcoli != mcolor)
+                {
+                  cairo_fill_preserve(p->cr);
+                  set_color(gkss->bcoli);
+                  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
+                  cairo_stroke(p->cr);
+                }
+              else
+                cairo_fill(p->cr);
+            }
           else
             cairo_stroke(p->cr);
 
@@ -348,8 +363,19 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
         case 8: /* hollow arc */
           cairo_arc(p->cr, x, y, r * 1.0, 0, 2 * M_PI);
 
+          set_color(mcolor);
           if (op == 7)
-            cairo_fill(p->cr);
+            {
+              if (gkss->bcoli != mcolor)
+                {
+                  cairo_fill_preserve(p->cr);
+                  set_color(gkss->bcoli);
+                  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
+                  cairo_stroke(p->cr);
+                }
+              else
+                cairo_fill(p->cr);
+            }
           else
             cairo_stroke(p->cr);
           break;
@@ -364,25 +390,21 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
 static void polymarker(int n, double *px, double *py)
 {
-  int mk_type, mk_color, ln_width, i;
+  int mk_type, mk_color, i;
   double mk_size, x, y;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  ln_width = gkss->version > 4 ? max(1, nint((p->width + p->height) * 0.001)) : 1;
-  p->linewidth = ln_width;
-
-  cairo_set_line_width(p->cr, ln_width);
-  set_color(mk_color);
+  p->linewidth = p->nominal_size;
 
   for (i = 0; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
       seg_xform(&x, &y);
 
-      draw_marker(x, y, mk_type, mk_size);
+      draw_marker(x, y, mk_type, mk_size, mk_color);
     }
 }
 
@@ -423,7 +445,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   seg_xform(&x, &y);
   NDC_to_DC(x, y, x0, y0);
 
-  cairo_set_line_width(p->cr, p->linewidth * fmin(p->width, p->height) / 500.0);
+  cairo_set_line_width(p->cr, p->linewidth);
 
   cairo_move_to(p->cr, x0, y0);
 
@@ -524,9 +546,9 @@ static void fillarea(int n, double *px, double *py)
 {
   int fl_color;
 
-  fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = gkss->version > 4 ? max(nint((p->width + p->height) * 0.001), 1) : 1;
+  p->linewidth = p->nominal_size;
 
+  fl_color = gkss->asf[12] ? gkss->facoli : 1;
   set_color(fl_color);
 
   cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_EVEN_ODD);
@@ -551,15 +573,13 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4)
-    width = nint(ln_width * (p->width + p->height) * 0.001);
-  else
-    width = nint(ln_width);
+  width = nint(ln_width);
   if (width < 1) width = 1;
 
-  p->linewidth = width;
+  p->linewidth = width * p->nominal_size;
+  cairo_set_line_width(p->cr, p->linewidth);
+
   p->color = ln_color;
-  cairo_set_line_width(p->cr, width);
   set_color(ln_color);
 
   gks_get_dash_list(ln_type, ln_width, gks_dashes);
@@ -634,7 +654,7 @@ static void text(double px, double py, int nchars, char *chars)
     }
   else
     {
-      p->linewidth = 1;
+      p->linewidth = p->nominal_size;
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
 }
@@ -646,7 +666,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   int ix1, ix2, iy1, iy2;
   int width, height;
   double red, green, blue, alpha;
-  int i, j, ix, iy, ind, rgb;
+  int i, j, ix, iy, ind;
   int swapx, swapy;
   int stride;
   unsigned char *data;
@@ -1585,6 +1605,205 @@ static void set_viewport(int tnr, double xmin, double xmax, double ymin, double 
     }
 }
 
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
+
+  cairo_new_path(p->cr);
+  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          start_x = cur_x = x[0];
+          start_y = cur_y = y[0];
+          to_DC(1, x, y);
+          cairo_move_to(p->cr, x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          cur_x = x[0];
+          cur_y = y[0];
+          to_DC(1, x, y);
+          cairo_line_to(p->cr, x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          x[2] = cur_x;
+          y[2] = cur_y;
+          cur_x = x[1];
+          cur_y = y[1];
+          to_DC(3, x, y);
+          cairo_curve_to(p->cr, 2.0 / 3.0 * x[0] + 1.0 / 3.0 * x[2], 2.0 / 3.0 * y[0] + 1.0 / 3.0 * y[2],
+                         2.0 / 3.0 * x[0] + 1.0 / 3.0 * x[1], 2.0 / 3.0 * y[0] + 1.0 / 3.0 * y[1], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += cur_x;
+              y[2] += cur_y;
+            }
+          cur_x = x[2];
+          cur_y = y[2];
+          to_DC(3, x, y);
+          cairo_curve_to(p->cr, x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'A':
+        case 'a':
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            if (rx == 0 && ry == 0)
+              {
+                break;
+              }
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
+          to_DC(2, x, y);
+          w = x[1] - x[0];
+          h = y[1] - y[0];
+
+          cairo_save(p->cr);
+          cairo_translate(p->cr, x[0] + 0.5 * w, y[0] + 0.5 * h);
+          cairo_scale(p->cr, 1., h / w);
+          if (a1 < a2)
+            {
+              cairo_arc(p->cr, 0., 0., w * 0.5, a1, a2);
+            }
+          else
+            {
+              cairo_arc_negative(p->cr, 0., 0., w * 0.5, a1, a2);
+            }
+          cairo_restore(p->cr);
+          j += 3;
+          break;
+        case 's': /* close and stroke */
+          cairo_close_path(p->cr);
+          cur_x = start_x;
+          cur_y = start_y;
+          set_color(gkss->bcoli);
+          cairo_stroke(p->cr);
+          break;
+        case 'S': /* stroke */
+          set_color(gkss->bcoli);
+          cairo_stroke(p->cr);
+          break;
+        case 'F': /* fill and stroke */
+          cairo_close_path(p->cr);
+          cur_x = start_x;
+          cur_y = start_y;
+          set_color(gkss->facoli);
+          cairo_fill_preserve(p->cr);
+          set_color(gkss->bcoli);
+          cairo_stroke(p->cr);
+          break;
+        case 'f': /* fill */
+          cairo_close_path(p->cr);
+          cur_x = start_x;
+          cur_y = start_y;
+          set_color(gkss->facoli);
+          cairo_fill(p->cr);
+          break;
+        case 'Z': /* close */
+          cairo_close_path(p->cr);
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+    }
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
+    }
+}
+
 void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                      char *chars, void **ptr)
 {
@@ -1613,17 +1832,19 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->mh = 0.19685;
           p->w = 6750;
           p->h = 4650;
+          p->dpi = 600;
           resize(2400, 2400);
+          p->nominal_size = 2400 / 500.0;
         }
       else if (p->wtype == 143)
         {
           int width = 0;
           int height = 0;
-          int dpi = 600;
           int symbols_read = 0;
           int characters_read = 0;
           void *mem_ptr = NULL;
           char *path = p->path;
+
           if (!path)
             {
               fprintf(stderr, "Missing mem path. Expected !<width>x<height>@<pointer>.mem\n");
@@ -1635,12 +1856,12 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
               p->mem_resizable = 1;
               width = ((int *)mem_ptr)[0];
               height = ((int *)mem_ptr)[1];
-              dpi = ((int *)mem_ptr)[2];
-              if (width <= 0 || height <= 0 || dpi <= 0)
+              p->dpi = ((int *)mem_ptr)[2];
+              if (width <= 0 || height <= 0 || p->dpi <= 0)
                 {
                   width = 2400;
                   height = 2400;
-                  dpi = 600;
+                  p->dpi = 600;
                 }
             }
           else
@@ -1657,9 +1878,10 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->mem = (unsigned char *)mem_ptr;
           p->w = 6750;
           p->h = 4650;
-          p->mw = p->w * 2.54 / 100 / dpi;
-          p->mh = p->h * 2.54 / 100 / dpi;
+          p->mw = p->w * 2.54 / 100 / p->dpi;
+          p->mh = p->h * 2.54 / 100 / p->dpi;
           resize(width, height);
+          p->nominal_size = 2400 / 500.0;
         }
       else if (p->wtype == 150)
         {
@@ -1667,7 +1889,9 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->mh = 0.15240;
           p->w = 560;
           p->h = 420;
+          p->dpi = 100;
           resize(400, 400);
+          p->nominal_size = 0.8;
         }
       else
         {
@@ -1675,7 +1899,9 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->mh = 0.19050;
           p->w = 1024;
           p->h = 768;
+          p->dpi = 100;
           resize(500, 500);
+          p->nominal_size = 1;
         }
 
       p->max_points = MAX_POINTS;
@@ -1686,7 +1912,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->page_counter = 0;
 
       p->transparency = 1.0;
-      p->linewidth = 1;
+      p->linewidth = p->nominal_size;
 
       init_colors();
 
@@ -1804,6 +2030,14 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
           p->empty = 0;
           unlock();
+        }
+      break;
+
+    case 17:
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
+          p->empty = 0;
         }
       break;
 

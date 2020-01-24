@@ -37,6 +37,12 @@ extern "C"
          will be used as the height of the      \
          framebuffer used for rendering.        \
          Default: 512 */
+#define GR3_IA_NUM_THREADS                      \
+  3 /*!< The next element of the attribute list \
+         will be used as the number of Threads  \
+         used by the Software-Renderer          \
+         Default: 0 (its then set to the number \
+         of cores) */
 
 /*!
  * These contants are error codes returned by gr3 functions.

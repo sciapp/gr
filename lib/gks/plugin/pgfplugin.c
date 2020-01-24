@@ -2,14 +2,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <math.h>
 #include <png.h>
-
-#if !defined(VMS) && !defined(_WIN32)
-#include <unistd.h>
-#endif
 
 #include "gks.h"
 #include "gkscore.h"
@@ -119,6 +113,7 @@ typedef struct ws_state_list_t
   double rect[MAX_TNR][2][2];
   int scoped, png_counter, pattern_counter, usesymbols;
   int dashes[10];
+  int tex_file;
 } ws_state_list;
 
 static ws_state_list *p;
@@ -149,7 +144,7 @@ static void pgf_memcpy(PGF_stream *p, char *s, size_t n)
   if (p->length + n >= p->size)
     {
       while (p->length + n >= p->size) p->size += MEMORY_INCREMENT;
-      p->buffer = (unsigned char *)realloc(p->buffer, p->size);
+      p->buffer = (unsigned char *)gks_realloc(p->buffer, p->size);
     }
 
   memmove(p->buffer + p->length, s, n);
@@ -179,6 +174,17 @@ static PGF_stream *pgf_alloc_stream(void)
   p->size = p->length = 0;
 
   return p;
+}
+
+static void pgf_free_stream(PGF_stream *p)
+{
+  gks_free(p->buffer);
+  gks_free(p);
+}
+
+static void pgf_clear_stream(PGF_stream *p)
+{
+  p->length = 0;
 }
 
 static void set_norm_xform(int tnr, double *wn, double *vp)
@@ -253,7 +259,6 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
 #include "marker.h"
 
-  if (gkss->version > 4) mscale *= (p->width + p->height) * 0.001;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -276,9 +281,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
         {
         case 1: /* point */
           pgf_printf(p->stream,
-                     "\\draw (%f,%f)"
+                     "\\draw[color=mycolor, line width=%dpt] (%f,%f)"
                      " rectangle (%f,%f);\n",
-                     x, y, x + 1.0, y + 1.0);
+                     p->linewidth, x, y, x + 1.0, y + 1.0);
           break;
 
         case 2: /* line */
@@ -292,9 +297,9 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
           pgf_printf(p->stream,
                      "\\begin{scope}[yscale=-1, yshift=-%f]\n"
-                     "\\draw (%f,%f) -- (%f,%f);\n"
+                     "\\draw[color=mycolor, line width=%dpt] (%f,%f) -- (%f,%f);\n"
                      "\\end{scope}\n",
-                     2 * y, x - x1, y - y1, x - x2, y - y2);
+                     2 * y, p->linewidth, x - x1, y - y1, x - x2, y - y2);
 
           pc += 4;
           break;
@@ -335,10 +340,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
           else
             pgf_printf(p->stream, "\\draw[color=mycolor, line width=%dpt]", p->linewidth);
 
-          pgf_printf(p->stream,
-                     " (%f, %f) arc [start angle=%f, end angle=%f, "
-                     "radius=%d];\n",
-                     x + r, y, 0.0, 2 * M_PI, r);
+          pgf_printf(p->stream, " (%f, %f) arc (0:360:%d);\n", x + r, y, r);
           break;
 
         default:
@@ -353,15 +355,14 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
 static void polymarker(int n, double *px, double *py)
 {
-  int mk_type, mk_color, ln_width, i;
+  int mk_type, mk_color, i;
   double mk_size, x, y;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  ln_width = gkss->version > 4 ? max(1, nint(p->height / 500.0)) : 1;
-  p->linewidth = ln_width;
+  p->linewidth = 1;
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[mk_color]);
 
@@ -520,7 +521,7 @@ static void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = gkss->version > 4 ? max(nint(p->height / 500.0), 1) : 1;
+  p->linewidth = 1;
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[fl_color]);
 
@@ -536,7 +537,7 @@ static void polyline(int n, double *px, double *py)
 
   if (n > p->max_points)
     {
-      p->points = (PGF_point *)realloc(p->points, n * sizeof(PGF_point));
+      p->points = (PGF_point *)gks_realloc(p->points, n * sizeof(PGF_point));
       p->max_points = n;
     }
 
@@ -544,10 +545,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  if (gkss->version > 4)
-    width = nint(ln_width * (p->width + p->height) * 0.001);
-  else
-    width = nint(ln_width);
+  width = nint(ln_width);
   if (width < 1) width = 0;
 
   p->linewidth = width;
@@ -742,18 +740,20 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
                       int true_color)
 {
   double x1, y1, x2, y2, x, y;
-  int ix1, ix2, iy1, iy2;
-  int width, height;
-  int red, green, blue;
+  double ix1, ix2, iy1, iy2;
+  double width, height;
+  int red, green, blue, alpha;
   int i, j, ix, iy, ind, rgb;
   int swapx, swapy;
   png_byte bit_depth = 8;
-  png_byte color_type = PNG_COLOR_TYPE_RGB;
+  png_byte color_type = PNG_COLOR_TYPE_RGB_ALPHA;
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep *row_pointers;
   FILE *stream;
   char filename[MAXPATHLEN];
+
+  if (dx == 0 || dy == 0) return;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -763,42 +763,37 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   seg_xform(&x2, &y2);
   NDC_to_DC(x2, y2, ix2, iy2);
 
-  width = abs(ix2 - ix1);
-  height = abs(iy2 - iy1);
-  if (width == 0 || height == 0) return;
+  width = fabs(ix2 - ix1);
+  height = fabs(iy2 - iy1);
+
   x = min(ix1, ix2);
   y = min(iy1, iy2);
 
-  gks_filepath(filename, p->path, "png", p->page_counter, p->png_counter);
+  gks_filepath(filename, p->path, "png", p->page_counter + 1, p->png_counter);
   if ((stream = fopen(filename, "wb")) == NULL)
     {
       gks_perror("can't open temporary file");
-      perror("open");
       return;
     }
 
   swapx = ix1 > ix2;
   swapy = iy1 < iy2;
 
-  row_pointers = (png_bytep *)malloc(sizeof(png_bytep) * height);
-  for (j = 0; j < height; j++)
+  row_pointers = (png_bytep *)gks_malloc(sizeof(png_bytep) * dy);
+  for (j = 0; j < dy; j++)
     {
-      row_pointers[j] = (png_byte *)malloc(width * 3);
-    }
-  for (j = 0; j < height; j++)
-    {
-      png_byte *row = row_pointers[j];
-      iy = dy * j / height;
-      if (swapy) iy = dy - 1 - iy;
-      for (i = 0; i < width; i++)
+      png_byte *row = (png_byte *)gks_malloc(dx * 4);
+      row_pointers[j] = row;
+      iy = swapy ? (dy - 1 - j) : j;
+      for (i = 0; i < dx; i++)
         {
-          png_byte *ptr = &(row[i * 3]);
-          ix = dx * i / width;
-          if (swapx) ix = dx - 1 - ix;
+          png_byte *ptr = &(row[i * 4]);
+          ix = swapx ? (dx - 1 - i) : i;
           if (!true_color)
             {
               ind = colia[iy * dimx + ix];
               sscanf(p->rgb[ind], "%02x%02x%02x", &red, &green, &blue);
+              alpha = 255;
             }
           else
             {
@@ -806,33 +801,35 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
               red = (rgb & 0xff);
               green = (rgb & 0xff00) >> 8;
               blue = (rgb & 0xff0000) >> 16;
+              alpha = (rgb & 0xff000000) >> 24;
             }
           ptr[0] = red;
           ptr[1] = green;
           ptr[2] = blue;
+          ptr[3] = alpha;
         }
     }
 
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   info_ptr = png_create_info_struct(png_ptr);
   png_init_io(png_ptr, stream);
-  png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
+  png_set_IHDR(png_ptr, info_ptr, dx, dy, bit_depth, color_type, PNG_FILTER_TYPE_BASE, PNG_COMPRESSION_TYPE_BASE,
                PNG_FILTER_TYPE_BASE);
   png_write_info(png_ptr, info_ptr);
   png_write_image(png_ptr, row_pointers);
   png_write_end(png_ptr, NULL);
-  for (j = 0; j < height; j++)
+  for (j = 0; j < dy; j++)
     {
-      free(row_pointers[j]);
+      gks_free(row_pointers[j]);
     }
-  free(row_pointers);
+  gks_free(row_pointers);
   fclose(stream);
 
   pgf_printf(p->stream,
              "\\begin{scope}[yscale=-1, yshift=-%f]\n"
-             "\\node[anchor=north west] (%s) at (%f,%f)"
-             " {\\includegraphics{%s}};\n\\end{scope}\n",
-             2 * y, filename, x, y, filename);
+             "\\node[anchor=north west,inner sep=0, outer sep=0] (%s) at (%f,%f)"
+             " {\\includegraphics[width=%fpt, height=%fpt]{%s}};\n\\end{scope}\n",
+             2 * y, filename, x, y, width, height, filename);
   p->png_counter++;
 }
 
@@ -850,8 +847,7 @@ static void set_clip_rect(int tnr)
       pgf_printf(p->stream,
                  "\\begin{scope}\n"
                  "\\clip (%f,%f) rectangle (%f,%f);\n",
-                 p->rect[tnr][0][0], p->rect[tnr][0][1], p->rect[tnr][0][0] + p->rect[tnr][1][0],
-                 p->rect[tnr][0][1] + p->rect[tnr][1][1]);
+                 p->rect[tnr][0][0], p->rect[tnr][0][1], p->rect[tnr][1][0], p->rect[tnr][1][1]);
       p->scoped = 1;
     }
 }
@@ -862,24 +858,25 @@ static void set_clipping(int idx)
   set_clip_rect(gkss->cntnr);
 }
 
-static void write_page(void)
+static void open_page(void)
 {
   char filename[MAXPATHLEN];
   char buf[256];
   int fd;
 
-  p->page_counter++;
-
   if (p->conid == 0)
     {
-      gks_filepath(filename, p->path, "tex", p->page_counter, 0);
+      gks_filepath(filename, p->path, "tex", 0, 0);
       fd = gks_open_file(filename, "w");
     }
   else
-    fd = p->conid;
+    {
+      fd = p->conid;
+    }
 
   if (fd >= 0)
     {
+      p->tex_file = fd;
       sprintf(buf, "\\documentclass[tikz]{standalone}\n"
                    "\\usetikzlibrary{patterns}\n"
                    "\\usepackage{pifont}\n\n"
@@ -892,24 +889,57 @@ static void write_page(void)
                    "thickness=1pt\n}\n");
       gks_write_file(fd, buf, strlen(buf));
       gks_write_file(fd, p->patternstream->buffer, p->patternstream->length);
-      sprintf(buf, "\\begin{tikzpicture}[yscale=-1, "
-                   "every node/.style={inner sep=0pt, outer sep=1pt, anchor=base west}]\n"
-                   "\\pgfsetyvec{\\pgfpoint{0pt}{1pt}}\n");
-      gks_write_file(fd, buf, strlen(buf));
-      gks_write_file(fd, p->stream->buffer, p->stream->length);
-      if (p->scoped)
-        sprintf(buf, "\\end{scope}\n\\end{tikzpicture}\n\\end{document}\n");
-      else
-        sprintf(buf, "\\end{tikzpicture}\n\\end{document}\n");
-      gks_write_file(fd, buf, strlen(buf));
-      if (fd != p->conid) gks_close_file(fd);
-
-      p->stream->length = 0;
     }
   else
     {
       gks_perror("can't open TEX file");
-      perror("open");
+    }
+}
+
+static void write_page(void)
+{
+  char buf[256];
+
+  if (p->tex_file >= 0)
+    {
+      p->page_counter++;
+      p->png_counter = 0;
+      sprintf(buf,
+              "\\begin{tikzpicture}[yscale=-1, "
+              "every node/.style={inner sep=0pt, outer sep=1pt, anchor=base west}]\n"
+              "\\pgfsetyvec{\\pgfpoint{0pt}{1pt}}\n\\clip (0,0) rectangle (%d,%d);\\node at (0,0) {}; \\node at "
+              "(%d,%d) {};\n",
+              p->width, p->height, p->width, p->height);
+      gks_write_file(p->tex_file, buf, strlen(buf));
+      gks_write_file(p->tex_file, p->stream->buffer, p->stream->length);
+      if (p->scoped)
+        {
+          sprintf(buf, "\\end{scope}\n\\end{tikzpicture}\n");
+          p->scoped = 0;
+        }
+      else
+        {
+          sprintf(buf, "\\end{tikzpicture}\n");
+        }
+      gks_write_file(p->tex_file, buf, strlen(buf));
+      pgf_clear_stream(p->stream);
+    }
+  else
+    {
+      gks_perror("can't write TEX file");
+    }
+}
+
+static void close_page(void)
+{
+  if (p->tex_file >= 0)
+    {
+      char buf[] = "\\end{document}\n";
+      gks_write_file(p->tex_file, buf, strlen(buf));
+      if (p->tex_file != p->conid)
+        {
+          gks_close_file(p->tex_file);
+        }
     }
 }
 
@@ -943,6 +973,200 @@ static void set_viewport(int tnr, double xmin, double xmax, double ymin, double 
   if (tnr == gkss->cntnr)
     {
       set_clip_rect(tnr);
+    }
+}
+
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      NDC_to_DC(xn, yn, x[i], y[i]);
+    }
+}
+
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
+{
+  int i, j;
+  double x[3], y[3], w, h, a1, a2;
+  double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
+  int line_width;
+
+  line_width = nint(gkss->bwidth);
+  if (line_width < 1) line_width = 0;
+
+  pgf_printf(p->stream, "\\definecolor{pathstroke}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
+  pgf_printf(p->stream, "\\definecolor{pathfill}{HTML}{%s}\n", p->rgb[gkss->facoli]);
+
+  pgf_printf(p->stream, "\\begin{scope}");
+  PGF_stream *buf = pgf_alloc_stream();
+
+  j = 0;
+  for (i = 0; i < nc; ++i)
+    {
+      switch (codes[i])
+        {
+        case 'M':
+        case 'm':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'm')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          start_x = cur_x = x[0];
+          start_y = cur_y = y[0];
+          to_DC(1, x, y);
+          pgf_printf(buf, "(%f, %f) ", x[0], y[0]);
+          j += 1;
+          break;
+        case 'L':
+        case 'l':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'l')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          cur_x = x[0];
+          cur_y = y[0];
+          to_DC(1, x, y);
+          pgf_printf(buf, "-- (%f, %f) ", x[0], y[0]);
+          j += 1;
+          break;
+        case 'Q':
+        case 'q':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'q')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'q')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          cur_x = x[1];
+          cur_y = y[1];
+          to_DC(2, x, y);
+          pgf_printf(buf, ".. controls (%f, %f) .. (%f, %f) ", x[0], y[0], x[1], y[1]);
+          j += 2;
+          break;
+        case 'C':
+        case 'c':
+          x[0] = px[j];
+          y[0] = py[j];
+          if (codes[i] == 'c')
+            {
+              x[0] += cur_x;
+              y[0] += cur_y;
+            }
+          x[1] = px[j + 1];
+          y[1] = py[j + 1];
+          if (codes[i] == 'c')
+            {
+              x[1] += cur_x;
+              y[1] += cur_y;
+            }
+          x[2] = px[j + 2];
+          y[2] = py[j + 2];
+          if (codes[i] == 'c')
+            {
+              x[2] += cur_x;
+              y[2] += cur_y;
+            }
+          cur_x = x[2];
+          cur_y = y[2];
+          to_DC(3, x, y);
+          pgf_printf(buf, ".. controls (%f, %f) and (%f, %f) .. (%f, %f) ", x[0], y[0], x[1], y[1], x[2], y[2]);
+          j += 3;
+          break;
+        case 'A':
+        case 'a':
+          {
+            double rx, ry, cx, cy;
+            rx = fabs(px[j]);
+            ry = fabs(py[j]);
+            a1 = px[j + 1];
+            a2 = py[j + 1];
+            cx = cur_x - rx * cos(a1);
+            cy = cur_y - ry * sin(a1);
+            x[0] = cx - rx;
+            y[0] = cy - ry;
+            x[1] = cx + rx;
+            y[1] = cy + ry;
+            cur_x = cx + rx * cos(a2);
+            cur_y = cy + ry * sin(a2);
+          }
+          to_DC(2, x, y);
+          w = (x[1] - x[0]) * 0.5;
+          h = (y[1] - y[0]) * 0.5;
+
+          pgf_printf(buf, "arc (%f:%f:%f and %f) ", a1 * 180 / M_PI, a2 * 180 / M_PI, w, h);
+          j += 3;
+          break;
+        case 's': /* close and stroke */
+          pgf_printf(buf, "-- cycle;\n");
+          pgf_printf(p->stream, "\\draw[color=pathstroke, line width=%dpt] ", line_width);
+          pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
+          pgf_clear_stream(buf);
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case 'S': /* stroke */
+          pgf_printf(buf, ";\n");
+          pgf_printf(p->stream, "\\draw[color=pathstroke, line width=%dpt] ", line_width);
+          pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
+          pgf_clear_stream(buf);
+          break;
+        case 'F': /* fill and stroke */
+          pgf_printf(buf, "-- cycle;\n");
+          pgf_printf(p->stream, "\\filldraw[color=pathstroke, fill=pathfill, line width=%dpt] ", line_width);
+          pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
+          pgf_clear_stream(buf);
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case 'f': /* fill */
+          pgf_printf(buf, "-- cycle;\n");
+          pgf_printf(p->stream, "\\fill[fill=pathfill] ");
+          pgf_memcpy(p->stream, (char *)buf->buffer, buf->length);
+          pgf_clear_stream(buf);
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case 'Z': /* close */
+          pgf_printf(buf, "-- cycle ");
+          cur_x = start_x;
+          cur_y = start_y;
+          break;
+        case '\0':
+          break;
+        default:
+          gks_perror("invalid path code ('%c')", codes[i]);
+          exit(1);
+        }
+    }
+
+  pgf_printf(p->stream, "\\end{scope}");
+  pgf_free_stream(buf);
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
     }
 }
 
@@ -995,16 +1219,26 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
       for (i = 0; i < PATTERNS; i++) p->have_pattern[i] = 0;
 
       *ptr = p;
+
+      p->tex_file = -1;
+      open_page();
       break;
 
     case 3:
       /* close workstation */
       if (!p->empty) write_page();
 
-      free(p->stream->buffer);
-      free(p->patternstream->buffer);
-      free(p->points);
-      free(p);
+      close_page();
+      if (p->stream)
+        {
+          pgf_free_stream(p->stream);
+        }
+      if (p->patternstream)
+        {
+          pgf_free_stream(p->patternstream);
+        }
+      gks_free(p->points);
+      gks_free(p);
       break;
 
     case 4:
@@ -1082,6 +1316,11 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
         }
       break;
 
+    case 17:
+      /* GDP */
+      gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
+      break;
+
     case 48:
       /* set color representation */
       if (p->state == GKS_K_WS_ACTIVE)
@@ -1094,7 +1333,7 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
       /* set window */
       if (p->state == GKS_K_WS_ACTIVE)
         {
-          set_window(gkss->cntnr, r1[0], r1[1], r2[0], r2[1]);
+          set_window(ia[0], r1[0], r1[1], r2[0], r2[1]);
         }
       break;
 
@@ -1102,7 +1341,7 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
       /* set viewport */
       if (p->state == GKS_K_WS_ACTIVE)
         {
-          set_viewport(gkss->cntnr, r1[0], r1[1], r2[0], r2[1]);
+          set_viewport(ia[0], r1[0], r1[1], r2[0], r2[1]);
         }
       break;
 
@@ -1119,6 +1358,36 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
       if (p->state == GKS_K_WS_ACTIVE)
         {
           set_clipping(ia[0]);
+        }
+      break;
+
+    case 54:
+      /* set workstation window */
+      p->window[0] = r1[0];
+      p->window[1] = r1[1];
+      p->window[2] = r2[0];
+      p->window[3] = r2[1];
+
+      set_xform();
+      init_norm_xform();
+      break;
+
+    case 55:
+      /* set workstation viewport */
+      if (p->viewport[0] != 0 || p->viewport[1] != r1[1] - r1[0] || p->viewport[2] != 0 ||
+          p->viewport[3] != r2[1] - r2[0])
+        {
+          p->viewport[0] = 0;
+          p->viewport[1] = r1[1] - r1[0];
+          p->viewport[2] = 0;
+          p->viewport[3] = r2[1] - r2[0];
+
+          p->width = p->viewport[1] * WIDTH / MWIDTH;
+          p->height = p->viewport[3] * HEIGHT / MHEIGHT;
+
+          set_xform();
+          init_norm_xform();
+          set_clip_rect(gkss->cntnr);
         }
       break;
 

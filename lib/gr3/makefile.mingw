@@ -6,11 +6,11 @@ endif
       LIBDIR = $(DESTDIR)$(GRDIR)/lib
       INCDIR = $(DESTDIR)$(GRDIR)/include
         OBJS = gr3.o gr3_convenience.o gr3_html.o gr3_povray.o gr3_png.o \
-               gr3_jpeg.o gr3_gr.o gr3_mc.o gr3_slices.o
+               gr3_jpeg.o gr3_gr.o gr3_mc.o gr3_slices.o gr3_sr.o
        OBJS += gr3_win.o
 
     INCLUDES = -I$(THIRDPARTYDIR)/include -I../gr
-      GRLIBS = -L../gr -lgr
+      GRLIBS = -L../gr -lGR
      PNGLIBS = $(THIRDPARTYDIR)/lib/libpng.a
     JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
        ZLIBS = $(THIRDPARTYDIR)/lib/libz.a
@@ -18,7 +18,7 @@ endif
       GLLIBS = -lopengl32 -lgdi32
      SOFLAGS = -shared
      LDFLAGS = -Wl,--out-implib,$(@:.dll=.a)
-        LIBS =
+        LIBS = -lpthread
 INSTALL_NAME =
 
 default: targets
@@ -44,6 +44,7 @@ gr3_jpeg.c: gr3_internals.h
 gr3_gr.c: gr3_internals.h
 gr3_mc.c: gr3.h gr3_mc_data.h
 gr3_slices.c: gr3.h
+gr3_sr.c : gr3_sr.h
 
 clean:
 	$(RM) libGR3.dylib*

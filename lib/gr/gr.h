@@ -246,6 +246,8 @@ extern "C"
   DLLEXPORT void gr_dumpmeta(const gr_meta_args_t *, FILE *);
   DLLEXPORT void gr_dumpmeta_json(const gr_meta_args_t *, FILE *);
 #endif
+  DLLEXPORT int gr_load_from_str(const char *);
+  DLLEXPORT char *gr_dumpmeta_json_str(void);
   DLLEXPORT const char *gr_version(void);
   DLLEXPORT void gr_shade(int, double *, double *, int, int, double *, int, int, int *);
   DLLEXPORT void gr_shadepoints(int, double *, double *, int, int, int);
@@ -254,7 +256,11 @@ extern "C"
   DLLEXPORT int gr_findboundary(int, double *, double *, double, double (*)(double, double), int, int *);
   DLLEXPORT void gr_setresamplemethod(unsigned int);
   DLLEXPORT void gr_inqresamplemethod(unsigned int *);
-  DLLEXPORT void gr_path(int, double *, double *, char *);
+  DLLEXPORT void gr_path(int, double *, double *, const char *);
+  DLLEXPORT void gr_setborderwidth(double);
+  DLLEXPORT void gr_inqborderwidth(double *);
+  DLLEXPORT void gr_setbordercolorind(int);
+  DLLEXPORT void gr_inqbordercolorind(int *);
 
 #ifdef __cplusplus
 }
