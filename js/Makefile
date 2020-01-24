@@ -57,8 +57,8 @@ default: gr.js
 ../lib/gr/gr_version.h: .FORCE
 	$(MAKE) -C ../lib/gr gr_version.h
 
-gr.js: libGR.js
-	cat module.js libGR.js api.js jsterm.js >gr.js
+gr.js: module.js libGR.js api.js jsterm.js
+	cat $^ > $@
 
 fonts:
 	mkdir fonts
