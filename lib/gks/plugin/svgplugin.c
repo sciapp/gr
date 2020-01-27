@@ -26,7 +26,6 @@
 #define WIDTH 4096
 #define HEIGHT 3072
 
-#define NOMINAL_SIZE 4.0
 #define NOMINAL_POINTSIZE 4
 
 #define DrawBorder 0
@@ -114,7 +113,7 @@ typedef struct ws_state_list_t
   unsigned char rgb[MAX_COLOR][3];
   int width, height;
   int color;
-  double linewidth;
+  double linewidth, nominal_size;
   double phi, angle;
   int family, capheight;
   int pattern, have_pattern[PATTERNS];
@@ -383,6 +382,7 @@ static void resize_window(void)
 {
   p->width = nint((p->viewport[1] - p->viewport[0]) / MWIDTH * WIDTH);
   p->height = nint((p->viewport[3] - p->viewport[2]) / MHEIGHT * HEIGHT);
+  p->nominal_size = min(p->width, p->height) / 500.0;
 }
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
@@ -393,7 +393,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
 #include "marker.h"
 
-  mscale *= 4;
+  mscale *= p->nominal_size;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -480,7 +480,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 4 && gkss->bcoli != mcolor)
             svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
                        p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                       gkss->bwidth * NOMINAL_SIZE);
+                       gkss->bwidth * p->nominal_size);
           else
             svg_printf(p->stream, "stroke=\"none\"");
           svg_printf(p->stream, "/>\n");
@@ -508,7 +508,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 7 && gkss->bcoli != mcolor)
             svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
                        p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                       gkss->bwidth * NOMINAL_SIZE);
+                       gkss->bwidth * p->nominal_size);
           else
             svg_printf(p->stream, "stroke=\"none\"");
           svg_printf(p->stream, "/>\n");
@@ -525,7 +525,7 @@ static void marker_routine(int n, double *px, double *py, int mtype, double msca
   double *clrt = gkss->viewport[gkss->cntnr];
   int i, draw;
 
-  p->linewidth = NOMINAL_SIZE;
+  p->linewidth = p->nominal_size;
 
   for (i = 0; i < n; i++)
     {
@@ -754,7 +754,7 @@ static void fillarea(int n, double *px, double *py)
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
       p->color = fl_color;
-      p->linewidth = NOMINAL_SIZE;
+      p->linewidth = p->nominal_size;
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
@@ -787,7 +787,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  p->linewidth = ln_width * NOMINAL_SIZE;
+  p->linewidth = ln_width * p->nominal_size;
   p->color = ln_color;
 
   line_routine(n, px, py, ln_type, gkss->cntnr);
@@ -941,7 +941,7 @@ static void text(double px, double py, int nchars, char *chars)
     }
   else
     {
-      p->linewidth = NOMINAL_SIZE;
+      p->linewidth = p->nominal_size;
       gks_emul_text(px, py, nchars, chars, line_routine, fill_routine);
     }
 }
@@ -1222,14 +1222,14 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           svg_printf(p->stream,
                      "\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\" />",
                      p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                     gkss->bwidth * NOMINAL_SIZE);
+                     gkss->bwidth * p->nominal_size);
           in_path = 0;
           break;
         case 's': /* close and stroke */
           svg_printf(p->stream,
                      "Z\" fill=\"none\" stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\" />",
                      p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                     gkss->bwidth * NOMINAL_SIZE);
+                     gkss->bwidth * p->nominal_size);
           cur_x = start_x;
           cur_y = start_y;
           in_path = 0;
@@ -1247,7 +1247,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
                      "stroke-opacity=\"%g\" stroke-width=\"%g\" />",
                      p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency,
                      p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
-                     gkss->bwidth * NOMINAL_SIZE);
+                     gkss->bwidth * p->nominal_size);
           cur_x = start_x;
           cur_y = start_y;
           in_path = 0;
@@ -1403,6 +1403,7 @@ void gks_drv_js(
       p->viewport[0] = p->viewport[2] = 0;
       p->viewport[1] = (double)p->width * MWIDTH / WIDTH;
       p->viewport[3] = (double)p->height * MHEIGHT / HEIGHT;
+      p->nominal_size = 2000 / 500.0;
 
       p->stream = svg_alloc_stream();
 
@@ -1414,7 +1415,7 @@ void gks_drv_js(
       p->page_counter = 0;
       p->offset = 0;
 
-      p->linewidth = NOMINAL_SIZE;
+      p->linewidth = p->nominal_size;
       p->transparency = 1.0;
 
       set_xform();

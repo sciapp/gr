@@ -1881,7 +1881,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           p->mw = p->w * 2.54 / 100 / p->dpi;
           p->mh = p->h * 2.54 / 100 / p->dpi;
           resize(width, height);
-          p->nominal_size = 2400 / 500.0;
+          p->nominal_size = min(width, height) / 500.0;
         }
       else if (p->wtype == 150)
         {
@@ -2107,6 +2107,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
             {
               p->width = p->viewport[1] * p->w / p->mw;
               p->height = p->viewport[3] * p->h / p->mh;
+              p->nominal_size = fmin(p->width, p->height) / 500.0;
             }
           close_page();
           open_page();

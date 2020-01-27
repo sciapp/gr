@@ -23,7 +23,6 @@ typedef unsigned long uLong;
 #define MAX_FONT 31
 #define HATCH_STYLE 108
 #define PATTERNS 120
-#define NOMINAL_SIZE 558.0 / 500
 
 #define MEMORY_INCREMENT 32768
 
@@ -136,6 +135,7 @@ typedef struct ws_state_list_t
   double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
   int color, fillcolor, alpha, ltype, font, size, pt;
   double lwidth, angle;
+  double nominal_size;
   PDF_stream *stream;
   long object_number;
   long info, root, outlines, pages;
@@ -762,6 +762,7 @@ static void set_xform(void)
 
   p->width = nint(p->a * (p->window[1] - p->window[0]));
   p->height = nint(p->c * (p->window[3] - p->window[2]));
+  p->nominal_size = min(p->width, p->height) / 500.0;
 }
 
 static void seg_xform(double *x, double *y)
@@ -853,6 +854,7 @@ static void open_ws(int fd, int wstype)
   p->viewport[0] = p->viewport[2] = 0;
   p->viewport[1] = p->viewport[3] = 0.1984;
   p->width = p->height = 558;
+  p->nominal_size = 558 / 500.0;
 
   p->empty = 1;
 
@@ -996,7 +998,7 @@ static void set_linetype(int ltype, double lwidth)
 
   if (p->ltype != ltype || p->lwidth != lwidth)
     {
-      gks_get_dash(ltype, lwidth * NOMINAL_SIZE, dash);
+      gks_get_dash(ltype, lwidth * p->nominal_size, dash);
       pdf_setdash(p, dash);
       p->ltype = ltype;
     }
@@ -1006,7 +1008,7 @@ static void set_linewidth(double lwidth)
 {
   if (p->lwidth != lwidth)
     {
-      pdf_setlinewidth(p, lwidth * NOMINAL_SIZE);
+      pdf_setlinewidth(p, lwidth * p->nominal_size);
       p->lwidth = lwidth;
     }
 }
@@ -1042,7 +1044,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
   static double cy[4][3] = {{-1, -0.5523, 0}, {0.5523, 1, 1}, {1, 0.5523, 0}, {-0.5523, -1, -1}};
 
-  mscale *= NOMINAL_SIZE;
+  mscale *= p->nominal_size;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 

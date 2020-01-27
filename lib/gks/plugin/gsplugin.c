@@ -180,12 +180,14 @@ typedef struct ws_state_list_t
 
   int ltype;
   double cwidth, csize, cangle, cheight;
-  int font, height;
+  int font;
 
   gs_main_instance *gs_instance;
   int gs_argc;
   char *gs_argv[NUM_GS_ARGS];
   int gs_position;
+
+  double width, height, nominal_size;
 } ws_state_list;
 
 static ws_state_list *p;
@@ -477,7 +479,7 @@ static unsigned int LZWEncodeImage(unsigned int number_pixels, unsigned char *pi
   return (0);
 }
 
-static void set_xform(double *wn, double *vp, int *height)
+static void set_xform(double *wn, double *vp)
 {
   p->e = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   p->f = (6750 - 1) / 0.28575;
@@ -492,7 +494,9 @@ static void set_xform(double *wn, double *vp, int *height)
   p->mw = p->a * (wn[1] - wn[0]);
   p->mh = p->c * (wn[3] - wn[2]);
 
-  *height = (int)p->c;
+  p->width = p->a;
+  p->height = p->c;
+  p->nominal_size = MIN(p->width, p->height) / 500.0 * 72 / 600;
 
   p->stroke = 0;
 }
@@ -625,7 +629,7 @@ static void set_linewidth(double width)
   if (fabs(width - p->cwidth) > FEPS)
     {
       p->cwidth = fabs(width);
-      sprintf(buffer, "%.4g lw", p->cwidth * 600 / 72 * 558.0 / 500);
+      sprintf(buffer, "%.4g lw", p->cwidth * 600 / 72 * p->nominal_size);
       packb(buffer);
     }
 }
@@ -637,7 +641,7 @@ static void set_markersize(double size)
   if (fabs(size - p->csize) > FEPS)
     {
       p->csize = fabs(size);
-      sprintf(buffer, "%.4g ms", p->csize * 558.0 / 500);
+      sprintf(buffer, "%.4g ms", p->csize * p->nominal_size);
       packb(buffer);
     }
 }
@@ -843,7 +847,7 @@ static void set_clipping(double *clrt)
   packb(buffer);
 }
 
-static void set_font(int font, int height)
+static void set_font(int font)
 {
 
   double scale, w, h, ux, uy, chh;
@@ -873,7 +877,7 @@ static void set_font(int font, int height)
       else
         font = 8;
 
-      p->ysize = p->cheight * height;
+      p->ysize = p->cheight * p->height;
       size = MIN(MAX((int)(p->ysize / caps[font]), 1), 7200);
 
       if (font != 12 && font != 29 && font != 30)
@@ -1170,7 +1174,7 @@ static void ps_init(int *pages)
   set_linewidth(-1.0);
   set_markersize(-1.0);
   packb("0 ma");
-  set_font(-1, p->height);
+  set_font(-1);
   set_clipping(p->window);
   packb("%%EndPageSetup");
   update();
@@ -1270,7 +1274,7 @@ static void set_connection(int conid, char *path, int wtype)
   p->viewpt[2] = 0;
   p->viewpt[3] = p->viewpt[1];
 
-  set_xform(p->window, p->viewpt, &p->height);
+  set_xform(p->window, p->viewpt);
 
   p->pages = 0;
   p->init = 0;
@@ -1977,7 +1981,7 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
           y = 1.0;
           seg_xform_rel(&x, &y);
           size *= sqrt(x * x + y * y);
-          set_markersize(23 * size / 24);
+          set_markersize(size);
           angle = -atan2(x, y) * 180.0 / M_PI;
           set_markerangle(angle);
           set_linewidth(1.0);
@@ -2002,7 +2006,7 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
           font = gkss->asf[6] ? gkss->txfont : predef_font[gkss->tindex - 1];
           prec = gkss->asf[6] ? gkss->txprec : predef_prec[gkss->tindex - 1];
           if (prec != GKS_K_TEXT_PRECISION_STROKE)
-            set_font(font, p->height);
+            set_font(font);
           else
             set_linewidth(1.0);
           color = gkss->asf[9] ? gkss->txcoli : 1;
@@ -2108,7 +2112,7 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
       p->window[1] = r1[1];
       p->window[2] = r2[0];
       p->window[3] = r2[1];
-      set_xform(p->window, p->viewpt, &p->height);
+      set_xform(p->window, p->viewpt);
       init_norm_xform();
       if (p->init) set_clipping(p->window);
       break;
@@ -2119,7 +2123,7 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
       p->viewpt[1] = r1[1];
       p->viewpt[2] = r2[0];
       p->viewpt[3] = r2[1];
-      set_xform(p->window, p->viewpt, &p->height);
+      set_xform(p->window, p->viewpt);
       init_norm_xform();
       break;
 
