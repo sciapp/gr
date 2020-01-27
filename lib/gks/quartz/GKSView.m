@@ -375,6 +375,7 @@ static void seg_xform_rel(double *x, double *y) {}
 
           p->width = [self bounds].size.width;
           p->height = [self bounds].size.height;
+          p->nominal_size = min(p->width, p->height) / 500.0;
           p->swidth = NSMaxX([[[NSScreen screens] objectAtIndex:0] frame]);
           p->sheight = NSMaxY([[[NSScreen screens] objectAtIndex:0] frame]);
 
@@ -1043,6 +1044,7 @@ static void seg_xform_rel(double *x, double *y) {}
 
       p->width = width;
       p->height = height;
+      p->nominal_size = min(p->width, p->height) / 500.0;
 
       [self setNeedsDisplay:YES];
       [[self window] setFrame:rect display:YES];
@@ -1142,7 +1144,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
       CGContextSetLineDash(context, 0.0, lengths, dashlist[0]);
     }
 
-  CGContextSetLineWidth(context, ln_width);
+  CGContextSetLineWidth(context, ln_width * p->nominal_size);
   CGContextAddLines(context, points, n);
   CGContextDrawPath(context, kCGPathStroke);
 
@@ -1157,6 +1159,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
 #include "marker.h"
 
+  mscale *= p->nominal_size;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -1182,7 +1185,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
         case 2: // line
           CGContextBeginPath(context);
-          CGContextSetLineWidth(context, 1);
+          CGContextSetLineWidth(context, p->nominal_size);
           [self set_stroke_color:mcolor:context];
           for (i = 0; i < 2; i++)
             {
@@ -1200,7 +1203,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
         case 3: // polyline
           CGContextBeginPath(context);
-          CGContextSetLineWidth(context, 1);
+          CGContextSetLineWidth(context, p->nominal_size);
           [self set_stroke_color:mcolor:context];
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
@@ -1225,7 +1228,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
               [self set_fill_color:mcolor:context];
               if (gkss->bcoli != mcolor)
                 {
-                  CGContextSetLineWidth(context, gkss->bwidth);
+                  CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
                   [self set_stroke_color:gkss->bcoli:context];
                 }
             }
@@ -1252,7 +1255,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
         case 6: // arc
           CGContextBeginPath(context);
-          CGContextSetLineWidth(context, 1);
+          CGContextSetLineWidth(context, p->nominal_size);
           [self set_stroke_color:mcolor:context];
           CGContextAddArc(context, x, y, r, 0.0, 2 * M_PI, 0);
           CGContextDrawPath(context, kCGPathStroke);
@@ -1266,7 +1269,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
               [self set_fill_color:mcolor:context];
               if (gkss->bcoli != mcolor)
                 {
-                  CGContextSetLineWidth(context, gkss->bwidth);
+                  CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
                   [self set_stroke_color:gkss->bcoli:context];
                 }
             }
@@ -1445,7 +1448,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
     {
       begin_context(context);
       CGContextBeginPath(context);
-      CGContextSetLineWidth(context, 1);
+      CGContextSetLineWidth(context, p->nominal_size);
       CGContextAddLines(context, points, n);
       CGContextClosePath(context);
       CGContextDrawPath(context, kCGPathStroke);
@@ -1456,7 +1459,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       begin_context(context);
       [self set_fill_color:fl_color:context];
       CGContextBeginPath(context);
-      CGContextSetLineWidth(context, 1);
+      CGContextSetLineWidth(context, p->nominal_size);
       CGContextAddLines(context, points, n);
       CGContextClosePath(context);
       CGContextDrawPath(context, kCGPathEOFill);
@@ -1496,7 +1499,7 @@ static void to_DC(int n, double *x, double *y)
 
   begin_context(context);
 
-  CGContextSetLineWidth(context, gkss->bwidth);
+  CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
   [self set_stroke_color:gkss->bcoli:context];
   [self set_fill_color:gkss->facoli:context];
 

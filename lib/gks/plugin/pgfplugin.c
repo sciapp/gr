@@ -99,6 +99,7 @@ typedef struct ws_state_list_t
   double window[4], viewport[4];
   char rgb[MAX_COLOR][7];
   int width, height;
+  double nominal_size;
   int color, linewidth;
   double alpha, angle;
   int family, capheight;
@@ -259,6 +260,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale)
 
 #include "marker.h"
 
+  mscale *= p->nominal_size;
   r = (int)(3 * mscale);
   scale = 0.01 * mscale / 3.0;
 
@@ -362,7 +364,7 @@ static void polymarker(int n, double *px, double *py)
   mk_size = gkss->asf[4] ? gkss->mszsc : 1;
   mk_color = gkss->asf[5] ? gkss->pmcoli : 1;
 
-  p->linewidth = 1;
+  p->linewidth = nint(p->nominal_size);
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[mk_color]);
 
@@ -521,7 +523,7 @@ static void fillarea(int n, double *px, double *py)
   int fl_color;
 
   fl_color = gkss->asf[12] ? gkss->facoli : 1;
-  p->linewidth = 1;
+  p->linewidth = nint(p->nominal_size);
 
   pgf_printf(p->stream, "\\definecolor{mycolor}{HTML}{%s}\n", p->rgb[fl_color]);
 
@@ -545,7 +547,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  width = nint(ln_width);
+  width = nint(ln_width * p->nominal_size);
   if (width < 1) width = 0;
 
   p->linewidth = width;
@@ -888,7 +890,6 @@ static void open_page(void)
                    "thickness/.code={\\thickness=#1},\n"
                    "thickness=1pt\n}\n");
       gks_write_file(fd, buf, strlen(buf));
-      gks_write_file(fd, p->patternstream->buffer, p->patternstream->length);
     }
   else
     {
@@ -904,6 +905,8 @@ static void write_page(void)
     {
       p->page_counter++;
       p->png_counter = 0;
+      gks_write_file(p->tex_file, p->patternstream->buffer, p->patternstream->length);
+      pgf_clear_stream(p->patternstream);
       sprintf(buf,
               "\\begin{tikzpicture}[yscale=-1, "
               "every node/.style={inner sep=0pt, outer sep=1pt, anchor=base west}]\n"
@@ -1192,6 +1195,7 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 
       p->height = 500;
       p->width = 500;
+      p->nominal_size = 1;
       p->window[0] = p->window[2] = 0.0;
       p->window[1] = p->window[3] = 1.0;
       p->viewport[0] = p->viewport[2] = 0;
@@ -1384,6 +1388,7 @@ void gks_pgfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 
           p->width = p->viewport[1] * WIDTH / MWIDTH;
           p->height = p->viewport[3] * HEIGHT / MHEIGHT;
+          p->nominal_size = min(p->width, p->height) / 500.0;
 
           set_xform();
           init_norm_xform();

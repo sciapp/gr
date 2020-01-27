@@ -2107,6 +2107,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
             {
               p->width = p->viewport[1] * p->w / p->mw;
               p->height = p->viewport[3] * p->h / p->mh;
+              p->nominal_size = fmin(p->width, p->height) / 500.0;
             }
           close_page();
           open_page();
