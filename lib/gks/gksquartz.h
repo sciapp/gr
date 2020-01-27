@@ -21,6 +21,7 @@ typedef struct
   double swidth, sheight;
   double a, b, c, d;
   double window[4], viewport[4];
+  double nominal_size;
   CGColorRef rgb[MAX_COLOR];
   int family, capheight;
   double angle;

@@ -92,6 +92,7 @@ typedef struct ws_state_list_t
   int width, height;
   double a, b, c, d;
   double window[4], viewport[4];
+  double nominal_size;
   QRect rect[MAX_TNR];
   QColor rgb[MAX_COLOR];
   int transparency;
@@ -186,6 +187,7 @@ static void resize_window(void)
       p->height = 2;
       p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
     }
+  p->nominal_size = min(p->width, p->height) / 500.0;
 
   if (p->pm)
     {
@@ -228,6 +230,8 @@ static void set_xform(void)
   p->b = x - p->window[0] * p->a;
   p->c = h / (p->window[2] - p->window[3]);
   p->d = y + p->window[2] * p->c;
+
+  p->nominal_size = min(p->width, p->height) / 500.0;
 }
 
 static void seg_xform(double *x, double *y)
@@ -349,6 +353,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
+  ln_width *= p->nominal_size;
   if (ln_width < 1) ln_width = 1;
   if (ln_color < 0 || ln_color >= MAX_COLOR) ln_color = 1;
 
@@ -389,6 +394,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
   QColor border_color(p->rgb[gkss->bcoli]);
   border_color.setAlpha(p->transparency);
 
+  mscale *= p->nominal_size;
   r = (int)(3 * mscale);
   d = 2 * r;
   scale = 0.01 * mscale / 3.0;
@@ -410,7 +416,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
         {
 
         case 1: /* point */
-          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPoint(x, y);
           break;
 
@@ -422,7 +428,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               p->points->setPoint(i, nint(x - xr), nint(y + yr));
             }
-          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(p->points->constData(), 2);
           pc += 4;
           break;
@@ -436,7 +442,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               seg_xform_rel(&xr, &yr);
               points->setPoint(i, nint(x - xr), nint(y + yr));
             }
-          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
           delete points;
@@ -449,7 +455,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
               if (gkss->bcoli != mcolor)
-                p->pixmap->setPen(QPen(border_color, gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+                p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
               else
                 p->pixmap->setPen(Qt::NoPen);
             }
@@ -468,7 +474,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 6: /* arc */
-          p->pixmap->setPen(QPen(marker_color, 1.0, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawArc(x - r, y - r, d, d, 0, 360 * 16);
           break;
 
@@ -478,7 +484,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
               if (gkss->bcoli != mcolor)
-                p->pixmap->setPen(QPen(border_color, gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+                p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
               else
                 p->pixmap->setPen(Qt::NoPen);
             }
@@ -644,7 +650,7 @@ static void text(double px, double py, int nchars, char *chars)
   p->pixmap->setRenderHint(QPainter::Antialiasing);
   QColor transparent_color(p->rgb[tx_color]);
   transparent_color.setAlpha(p->transparency);
-  p->pixmap->setPen(QPen(transparent_color, 1.0, Qt::SolidLine, Qt::FlatCap));
+  p->pixmap->setPen(QPen(transparent_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
 
   if (tx_prec == GKS_K_TEXT_PRECISION_STRING)
     {
@@ -698,7 +704,7 @@ static void fillarea(int n, double *px, double *py)
 
   if (fl_inter == GKS_K_INTSTYLE_HOLLOW)
     {
-      p->pixmap->setPen(QPen(transparent_color, 1.0, Qt::SolidLine, Qt::FlatCap));
+      p->pixmap->setPen(QPen(transparent_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
       line_routine(n, px, py, DrawBorder, gkss->cntnr);
     }
   else if (fl_inter == GKS_K_INTSTYLE_SOLID)
@@ -937,17 +943,20 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           path.closeSubpath();
           cur_x = start_x;
           cur_y = start_y;
-          p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->strokePath(
+              path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           break;
         case 'S': /* stroke */
-          p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->strokePath(
+              path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           break;
         case 'F': /* fill and stroke */
           path.closeSubpath();
           cur_x = start_x;
           cur_y = start_y;
           p->pixmap->fillPath(path, QColor(p->rgb[gkss->facoli]));
-          p->pixmap->strokePath(path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth, Qt::SolidLine, Qt::FlatCap));
+          p->pixmap->strokePath(
+              path, QPen(QColor(p->rgb[gkss->bcoli]), gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           break;
         case 'f': /* fill */
           path.closeSubpath();
@@ -1383,6 +1392,7 @@ static int get_pixmap(void)
   p->height = device->height();
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
+  p->nominal_size = min(p->width, p->height) / 500.0;
 
   return 0;
 }
@@ -1399,6 +1409,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
       p = new ws_state_list;
 
       p->width = p->height = 500;
+      p->nominal_size = 1;
 
       initialize_data();
 
