@@ -9,8 +9,7 @@
 #define GR3API __declspec(dllexport)
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 #else
 #ifdef __cplusplus
@@ -110,142 +109,141 @@ extern "C"
 #define GR_VOLUME_ABSORPTION 1
 #define GR_VOLUME_MIP 2
 
-  typedef struct
-  {
-    float x, y, z;
-  } gr3_coord_t;
+typedef struct
+{
+  float x, y, z;
+} gr3_coord_t;
 
-  typedef struct
-  {
-    gr3_coord_t vertex[3];
-    gr3_coord_t normal[3];
-  } gr3_triangle_t;
+typedef struct
+{
+  gr3_coord_t vertex[3];
+  gr3_coord_t normal[3];
+} gr3_triangle_t;
 
-  GR3API int gr3_init(int *attrib_list);
-  GR3API void gr3_free(void *pointer);
-  GR3API void gr3_terminate(void);
-  GR3API int gr3_geterror(int clear, int *line, const char **file);
-  GR3API const char *gr3_getrenderpathstring(void);
-  GR3API const char *gr3_geterrorstring(int error);
-  GR3API void gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
-  GR3API int gr3_clear(void);
-  GR3API void gr3_usecurrentframebuffer();
-  GR3API void gr3_useframebuffer(unsigned int framebuffer);
+GR3API int gr3_init(int *attrib_list);
+GR3API void gr3_free(void *pointer);
+GR3API void gr3_terminate(void);
+GR3API int gr3_geterror(int clear, int *line, const char **file);
+GR3API const char *gr3_getrenderpathstring(void);
+GR3API const char *gr3_geterrorstring(int error);
+GR3API void gr3_setlogcallback(void (*gr3_log_func)(const char *log_message));
+GR3API int gr3_clear(void);
+GR3API void gr3_usecurrentframebuffer();
+GR3API void gr3_useframebuffer(unsigned int framebuffer);
 
-  GR3API int gr3_setquality(int quality);
-  GR3API int gr3_getimage(int width, int height, int use_alpha, char *pixels);
-  GR3API int gr3_export(const char *filename, int width, int height);
-  GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type);
+GR3API int gr3_setquality(int quality);
+GR3API int gr3_getimage(int width, int height, int use_alpha, char *pixels);
+GR3API int gr3_export(const char *filename, int width, int height);
+GR3API int gr3_drawimage(float xmin, float xmax, float ymin, float ymax, int width, int height, int drawable_type);
 
-  GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices, float *normals, float *colors);
-  GR3API int gr3_createmesh(int *mesh, int n, const float *vertices, const float *normals, const float *colors);
-  GR3API int gr3_createindexedmesh_nocopy(int *mesh, int number_of_vertices, float *vertices, float *normals,
-                                          float *colors, int number_of_indices, int *indices);
-  GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices, const float *vertices, const float *normals,
-                                   const float *colors, int number_of_indices, const int *indices);
-  GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *directions, const float *ups,
-                           const float *colors, const float *scales);
-  GR3API void gr3_deletemesh(int mesh);
+GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices, float *normals, float *colors);
+GR3API int gr3_createmesh(int *mesh, int n, const float *vertices, const float *normals, const float *colors);
+GR3API int gr3_createindexedmesh_nocopy(int *mesh, int number_of_vertices, float *vertices, float *normals,
+                                        float *colors, int number_of_indices, int *indices);
+GR3API int gr3_createindexedmesh(int *mesh, int number_of_vertices, const float *vertices, const float *normals,
+                                 const float *colors, int number_of_indices, const int *indices);
+GR3API void gr3_drawmesh(int mesh, int n, const float *positions, const float *directions, const float *ups,
+                         const float *colors, const float *scales);
+GR3API void gr3_deletemesh(int mesh);
 
-  GR3API void gr3_cameralookat(float camera_x, float camera_y, float camera_z, float center_x, float center_y,
-                               float center_z, float up_x, float up_y, float up_z);
-  GR3API int gr3_setcameraprojectionparameters(float vertical_field_of_view, float zNear, float zFar);
-  GR3API int gr3_getcameraprojectionparameters(float *vfov, float *znear, float *zfar);
-  GR3API void gr3_setlightdirection(float x, float y, float z);
-  GR3API void gr3_setbackgroundcolor(float red, float green, float blue, float alpha);
+GR3API void gr3_cameralookat(float camera_x, float camera_y, float camera_z, float center_x, float center_y,
+                             float center_z, float up_x, float up_y, float up_z);
+GR3API int gr3_setcameraprojectionparameters(float vertical_field_of_view, float zNear, float zFar);
+GR3API int gr3_getcameraprojectionparameters(float *vfov, float *znear, float *zfar);
+GR3API void gr3_setlightdirection(float x, float y, float z);
+GR3API void gr3_setbackgroundcolor(float red, float green, float blue, float alpha);
 
-  GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int num_rows);
-  GR3API void gr3_drawheightmap(const float *heightmap, int num_columns, int num_rows, const float *positions,
-                                const float *scales);
+GR3API int gr3_createheightmapmesh(const float *heightmap, int num_columns, int num_rows);
+GR3API void gr3_drawheightmap(const float *heightmap, int num_columns, int num_rows, const float *positions,
+                              const float *scales);
 
-  GR3API void gr3_drawconemesh(int n, const float *positions, const float *directions, const float *colors,
-                               const float *radii, const float *lengths);
-  GR3API void gr3_drawcylindermesh(int n, const float *positions, const float *directions, const float *colors,
-                                   const float *radii, const float *lengths);
-  GR3API void gr3_drawspheremesh(int n, const float *positions, const float *colors, const float *radii);
-  GR3API void gr3_drawcubemesh(int n, const float *positions, const float *directions, const float *ups,
-                               const float *colors, const float *scales);
-
-
-  GR3API void gr3_setobjectid(int id);
-  GR3API int gr3_selectid(int x, int y, int width, int height, int *selection_id);
-  GR3API void gr3_getviewmatrix(float *m);
-  GR3API void gr3_setviewmatrix(const float *m);
-  GR3API int gr3_getprojectiontype(void);
-  GR3API void gr3_setprojectiontype(int type);
-
-  GR3API unsigned int gr3_triangulate(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel, unsigned int dim_x,
-                                      unsigned int dim_y, unsigned int dim_z, unsigned int stride_x,
-                                      unsigned int stride_y, unsigned int stride_z, double step_x, double step_y,
-                                      double step_z, double offset_x, double offset_y, double offset_z,
-                                      gr3_triangle_t **triangles_p);
-
-  GR3API void gr3_triangulateindexed(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel, unsigned int dim_x,
-                                     unsigned int dim_y, unsigned int dim_z, unsigned int stride_x,
-                                     unsigned int stride_y, unsigned int stride_z, double step_x, double step_y,
-                                     double step_z, double offset_x, double offset_y, double offset_z,
-                                     unsigned int *num_vertices, gr3_coord_t **vertices, gr3_coord_t **normals,
-                                     unsigned int *num_indices, unsigned int **indices);
-
-  GR3API int gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel, unsigned int dim_x,
-                                      unsigned int dim_y, unsigned int dim_z, unsigned int stride_x,
-                                      unsigned int stride_y, unsigned int stride_z, double step_x, double step_y,
-                                      double step_z, double offset_x, double offset_y, double offset_z);
-
-  GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py, float *pz, int option);
-
-  GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const float *directions, const float *ups,
-                                  const float *colors, const float *scales);
-
-  GR3API void gr3_drawsurface(int mesh);
-
-  GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int option);
-
-  GR3API int gr3_drawtubemesh(int n, float *points, float *colors, float *radii, int num_steps, int num_segments);
-
-  GR3API int gr3_createtubemesh(int *mesh, int n, const float *points, const float *colors, const float *radii,
-                                int num_steps, int num_segments);
-
-  GR3API void gr3_drawspins(int n, const float *positions, const float *directions, const float *colors,
-                            float cone_radius, float cylinder_radius, float cone_height, float cylinder_height);
-
-  GR3API void gr3_drawmolecule(int n, const float *positions, const float *colors, const float *radii,
-                               float bond_radius, const float bond_color[3], float bond_delta);
+GR3API void gr3_drawconemesh(int n, const float *positions, const float *directions, const float *colors,
+                             const float *radii, const float *lengths);
+GR3API void gr3_drawcylindermesh(int n, const float *positions, const float *directions, const float *colors,
+                                 const float *radii, const float *lengths);
+GR3API void gr3_drawspheremesh(int n, const float *positions, const float *colors, const float *radii);
+GR3API void gr3_drawcubemesh(int n, const float *positions, const float *directions, const float *ups,
+                             const float *colors, const float *scales);
 
 
-  GR3API void gr3_createxslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned int ix, unsigned int dim_x,
+GR3API void gr3_setobjectid(int id);
+GR3API int gr3_selectid(int x, int y, int width, int height, int *selection_id);
+GR3API void gr3_getviewmatrix(float *m);
+GR3API void gr3_setviewmatrix(const float *m);
+GR3API int gr3_getprojectiontype(void);
+GR3API void gr3_setprojectiontype(int type);
+
+GR3API unsigned int gr3_triangulate(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel, unsigned int dim_x,
+                                    unsigned int dim_y, unsigned int dim_z, unsigned int stride_x,
+                                    unsigned int stride_y, unsigned int stride_z, double step_x, double step_y,
+                                    double step_z, double offset_x, double offset_y, double offset_z,
+                                    gr3_triangle_t **triangles_p);
+
+GR3API void gr3_triangulateindexed(const GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel, unsigned int dim_x,
                                    unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
                                    unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x,
-                                   double offset_y, double offset_z);
+                                   double offset_y, double offset_z, unsigned int *num_vertices, gr3_coord_t **vertices,
+                                   gr3_coord_t **normals, unsigned int *num_indices, unsigned int **indices);
 
-  GR3API void gr3_createyslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned int iy, unsigned int dim_x,
-                                   unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
-                                   unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x,
-                                   double offset_y, double offset_z);
+GR3API int gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data, GR3_MC_DTYPE isolevel, unsigned int dim_x,
+                                    unsigned int dim_y, unsigned int dim_z, unsigned int stride_x,
+                                    unsigned int stride_y, unsigned int stride_z, double step_x, double step_y,
+                                    double step_z, double offset_x, double offset_y, double offset_z);
 
-  GR3API void gr3_createzslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned int iz, unsigned int dim_x,
-                                   unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
-                                   unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x,
-                                   double offset_y, double offset_z);
+GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py, float *pz, int option);
 
-  GR3API void gr3_drawxslicemesh(const GR3_MC_DTYPE *data, unsigned int ix, unsigned int dim_x, unsigned int dim_y,
-                                 unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
+GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const float *directions, const float *ups,
+                                const float *colors, const float *scales);
+
+GR3API void gr3_drawsurface(int mesh);
+
+GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int option);
+
+GR3API int gr3_drawtubemesh(int n, float *points, float *colors, float *radii, int num_steps, int num_segments);
+
+GR3API int gr3_createtubemesh(int *mesh, int n, const float *points, const float *colors, const float *radii,
+                              int num_steps, int num_segments);
+
+GR3API void gr3_drawspins(int n, const float *positions, const float *directions, const float *colors,
+                          float cone_radius, float cylinder_radius, float cone_height, float cylinder_height);
+
+GR3API void gr3_drawmolecule(int n, const float *positions, const float *colors, const float *radii, float bond_radius,
+                             const float bond_color[3], float bond_delta);
+
+
+GR3API void gr3_createxslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned int ix, unsigned int dim_x,
+                                 unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
                                  unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x,
                                  double offset_y, double offset_z);
 
-  GR3API void gr3_drawyslicemesh(const GR3_MC_DTYPE *data, unsigned int iy, unsigned int dim_x, unsigned int dim_y,
-                                 unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
+GR3API void gr3_createyslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned int iy, unsigned int dim_x,
+                                 unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
                                  unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x,
                                  double offset_y, double offset_z);
 
-  GR3API void gr3_drawzslicemesh(const GR3_MC_DTYPE *data, unsigned int iz, unsigned int dim_x, unsigned int dim_y,
-                                 unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
+GR3API void gr3_createzslicemesh(int *mesh, const GR3_MC_DTYPE *data, unsigned int iz, unsigned int dim_x,
+                                 unsigned int dim_y, unsigned int dim_z, unsigned int stride_x, unsigned int stride_y,
                                  unsigned int stride_z, double step_x, double step_y, double step_z, double offset_x,
                                  double offset_y, double offset_z);
 
-  GR3API void gr3_drawtrianglesurface(int n, const float *triangles);
+GR3API void gr3_drawxslicemesh(const GR3_MC_DTYPE *data, unsigned int ix, unsigned int dim_x, unsigned int dim_y,
+                               unsigned int dim_z, unsigned int stride_x, unsigned int stride_y, unsigned int stride_z,
+                               double step_x, double step_y, double step_z, double offset_x, double offset_y,
+                               double offset_z);
 
-  GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr);
+GR3API void gr3_drawyslicemesh(const GR3_MC_DTYPE *data, unsigned int iy, unsigned int dim_x, unsigned int dim_y,
+                               unsigned int dim_z, unsigned int stride_x, unsigned int stride_y, unsigned int stride_z,
+                               double step_x, double step_y, double step_z, double offset_x, double offset_y,
+                               double offset_z);
+
+GR3API void gr3_drawzslicemesh(const GR3_MC_DTYPE *data, unsigned int iz, unsigned int dim_x, unsigned int dim_y,
+                               unsigned int dim_z, unsigned int stride_x, unsigned int stride_y, unsigned int stride_z,
+                               double step_x, double step_y, double step_z, double offset_x, double offset_y,
+                               double offset_z);
+
+GR3API void gr3_drawtrianglesurface(int n, const float *triangles);
+
+GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr);
 
 #ifdef _WIN32
 #ifdef __cplusplus

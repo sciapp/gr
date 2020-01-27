@@ -2,8 +2,7 @@
 #define _VC_H_
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #ifndef __STDC_CONSTANT_MACROS
@@ -16,33 +15,33 @@ extern "C"
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 
-  struct frame_t_
-  {
-    unsigned char *data;
-    int width, height;
-  };
+struct frame_t_
+{
+  unsigned char *data;
+  int width, height;
+};
 
-  struct movie_t_
-  {
-    AVFormatContext *fmt_ctx;
-    AVOutputFormat *out_fmt;
-    AVCodecContext *cdc_ctx;
-    AVStream *video_st;
-    AVFrame *frame;
-    float t;
-    struct SwsContext *sws_ctx;
+struct movie_t_
+{
+  AVFormatContext *fmt_ctx;
+  AVOutputFormat *out_fmt;
+  AVCodecContext *cdc_ctx;
+  AVStream *video_st;
+  AVFrame *frame;
+  float t;
+  struct SwsContext *sws_ctx;
 
-    unsigned char *gif_scaled_image;
-    unsigned char *gif_scaled_image_copy;
-    unsigned char *gif_palette;
-  };
+  unsigned char *gif_scaled_image;
+  unsigned char *gif_scaled_image_copy;
+  unsigned char *gif_palette;
+};
 
-  typedef struct movie_t_ *movie_t;
-  typedef struct frame_t_ *frame_t;
+typedef struct movie_t_ *movie_t;
+typedef struct frame_t_ *frame_t;
 
-  movie_t vc_movie_create(const char *path, int framerate, int bitrate, int width, int height);
-  void vc_movie_append_frame(movie_t movie, frame_t frame);
-  void vc_movie_finish(movie_t movie);
+movie_t vc_movie_create(const char *path, int framerate, int bitrate, int width, int height);
+void vc_movie_append_frame(movie_t movie, frame_t frame);
+void vc_movie_finish(movie_t movie);
 
 #ifdef __cplusplus
 }
