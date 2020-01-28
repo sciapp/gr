@@ -71,8 +71,7 @@ extern int js_get_ws_height(void);
 #define DLLEXPORT __declspec(dllexport)
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #else

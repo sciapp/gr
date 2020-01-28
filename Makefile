@@ -51,15 +51,33 @@ osxpkg:
 
 code-format:
 ifeq ($(UNAME), Darwin)
-	@find -E . -type f -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)' ! -path './3rdparty/*' -exec clang-format -i -verbose -style=file {} \;
+	@find -E . -type f \
+	           -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)'
+	         ! -path './3rdparty/*' \
+	         ! -path './apps/*' \
+	           -exec clang-format -i -verbose -style=file {} \;
 	@CMAKE_FORMAT="$$(./.setup_cmakeformat.sh)" && \
-	find -E . -type f -regex '(.*/CMakeLists\.txt)|(.*\.cmake)' ! -path './3rdparty/*' \
-	          -exec echo "Formatting "{} \; -exec "$${CMAKE_FORMAT}" -i {} \;
+	find -E . -type f \
+	          -regex '(.*/CMakeLists\.txt)|(.*\.cmake)' \
+	        ! -path './3rdparty/*' \
+	        ! -path './apps/*' \
+	          -exec echo "Formatting "{} \; \
+	          -exec "$${CMAKE_FORMAT}" -i {} \;
 else
-	@find . -type f -regextype posix-extended -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)' ! -path './3rdparty/*' -exec clang-format -i -verbose -style=file {} \;
+	@find . -type f \
+	        -regextype posix-extended \
+	        -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)' \
+	      ! -path './3rdparty/*' \
+	      ! -path './apps/*' \
+	        -exec clang-format -i -verbose -style=file {} \;
 	@CMAKE_FORMAT="$$(./.setup_cmakeformat.sh)" && \
-	find . -type f -regextype posix-extended -regex '(.*/CMakeLists\.txt)|(.*\.cmake)' ! -path './3rdparty/*' \
-	       -exec echo "Formatting "{} \; -exec "$${CMAKE_FORMAT}" -i {} \;
+	find . -type f \
+	       -regextype posix-extended \
+	       -regex '(.*/CMakeLists\.txt)|(.*\.cmake)' \
+	     ! -path './3rdparty/*' \
+	     ! -path './apps/*' \
+	       -exec echo "Formatting "{} \; \
+	       -exec "$${CMAKE_FORMAT}" -i {} \;
 endif
 
 
