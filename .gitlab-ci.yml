@@ -508,10 +508,11 @@ arch-cmake-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-system-dependencies
   script:
-    - make -C 3rdparty default TARGETS="qhull"
+    - pacman -Sy
+    - pacman -S --noconfirm --needed qhull
     - mkdir build
     - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
     - make
 
 windows-32bit-cross:

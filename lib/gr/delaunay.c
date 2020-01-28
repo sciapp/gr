@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "qhull/qhull_a.h"
+#include "qhull_a.h"
 
 #include "gr.h"
 
