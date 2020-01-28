@@ -1,9 +1,24 @@
 #!/bin/bash
 
+EXCLUDED_ROOT_DIRECTORIES=( "3rdparty" "apps" )
+
+is_in_excluded_directory () {
+    local file directory
+
+    file="$1"
+    for directory in "${EXCLUDED_ROOT_DIRECTORIES[@]}"; do
+        [[ "${file}" == ${directory}* ]] && return 0
+    done
+    return 1
+}
+
 format_c_cpp () {
+    local file
+
     # Only check staged files (relevant for the current commit) that
     # were added, copied, modified or renamed.
     for file in $(git diff --cached --name-only --diff-filter=ACMR); do
+        ! is_in_excluded_directory "${file}" || continue
         [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue
         grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; return 1; }
         file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; return 1; }
@@ -14,12 +29,13 @@ format_c_cpp () {
 }
 
 format_cmake () {
-    local cmake_format
+    local cmake_format file
 
     cmake_format="$(./.setup_cmakeformat.sh)"
     # Only check staged files (relevant for the current commit) that
     # were added, copied, modified or renamed.
     for file in $(git diff --cached --name-only --diff-filter=ACMR); do
+        ! is_in_excluded_directory "${file}" || continue
         [[ "${file}" =~ (^|/)CMakeLists.txt$ || "${file}" =~ \.cmake$ ]] || continue
         grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; return 1; }
         file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; return 1; }
