@@ -14,9 +14,7 @@ typedef struct JS_point_t
 } JS_point;
 
 #ifdef __cplusplus
-#define extern \
-  "C"          \
-  {
+extern "C" {
 #endif
 
 extern void js_stroke(int n, JS_point *points, unsigned char color[4], int linewidth);
