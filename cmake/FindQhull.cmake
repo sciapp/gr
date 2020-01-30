@@ -25,7 +25,7 @@
 #   If false, do not try to use Qhull.
 
 if(NOT QHULL_INCLUDE_DIR)
-  find_path(QHULL_INCLUDE_DIR qhull/qhull_a.h)
+  find_path(QHULL_INCLUDE_DIR qhull_a.h PATH_SUFFIXES qhull libqhull)
 endif()
 
 if(NOT QHULL_LIBRARY)
@@ -43,7 +43,7 @@ if(NOT QHULL_VERSION_STRING
     file(
       WRITE "${CMAKE_CURRENT_BINARY_DIR}/qhull_get_version.c"
       "
-        #include \"qhull/libqhull.h\"
+        #include \"libqhull.h\"
 
         int main(void)
         {
