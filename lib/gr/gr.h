@@ -263,20 +263,16 @@ DLLEXPORT void gr_setborderwidth(double);
 DLLEXPORT void gr_inqborderwidth(double *);
 DLLEXPORT void gr_setbordercolorind(int);
 DLLEXPORT void gr_inqbordercolorind(int *);
-DLLEXPORT void gr_setprojectiontype(int flag);
-DLLEXPORT void gr_setperspectiveprojection(double near_plane, double far_plane, double fov);
-DLLEXPORT void gr_cameralookat(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x, double up_y,
-                               double up_z, double focus_point_x, double focus_point_y, double focus_point_z);
-DLLEXPORT void gr_setorthographicprojection(double left, double right, double bottom, double top, double near,
-                                            double far);
-DLLEXPORT void gr_inqprojectiontype(int *projection_type);
-DLLEXPORT void gr_inqtransformationparameters(double *camera_pos_x, double *camera_pos_y, double *camera_pos_z,
-                                              double *up_x, double *up_y, double *up_z, double *focus_point_x,
-                                              double *focus_point_y, double *focus_point_z, double *s_x, double *s_y,
-                                              double *s_z);
+DLLEXPORT void gr_setprojectiontype(int);
+DLLEXPORT void gr_setperspectiveprojection(double, double, double);
+DLLEXPORT void gr_cameralookat(double, double, double, double, double, double, double, double, double);
+DLLEXPORT void gr_setorthographicprojection(double, double, double, double, double, double);
+DLLEXPORT void gr_inqprojectiontype(int *);
+DLLEXPORT void gr_inqtransformationparameters(double *, double *, double *, double *, double *, double *, double *,
+                                              double *, double *);
 DLLEXPORT void gr_inqprojectionparameters(double *, double *, double *, double *, double *, double *, double *);
-DLLEXPORT void gr_camerainteraction(const double *old_mouse_pos, const double *new_mouse_pos);
-DLLEXPORT void gr_setaxesforinteraction(double left, double right, double bottom, double top, double near, double far);
+DLLEXPORT void gr_camerainteraction(const double *, const double *);
+DLLEXPORT void gr_setwindow3d(double, double, double, double, double, double);
 
 #ifdef __cplusplus
 }
