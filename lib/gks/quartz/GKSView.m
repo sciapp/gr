@@ -1609,7 +1609,7 @@ static void to_DC(int n, double *x, double *y)
           to_DC(2, x, y);
           w = x[1] - x[0];
           h = y[1] - y[0];
-          if (w != h)
+          if (fabs(w - h) > FEPS) // stupid workaround for 10.15.3
             {
               CGMutablePathRef path = CGPathCreateMutable();
               CGAffineTransform m = CGAffineTransformMakeTranslation(x[0] + 0.5 * w, y[0] + 0.5 * h);
