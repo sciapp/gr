@@ -1791,9 +1791,10 @@ void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
           if (!check_range(xmin, xmax) || !check_range(ymin, ymax))
             {
               if (warn_about)
-                fprintf(stderr, "GKS: Possible loss of precision in routine SET_WINDOW\n");
-              else
-                warn_about = 0;
+                {
+                  fprintf(stderr, "GKS: Possible loss of precision in routine SET_WINDOW\n");
+                  warn_about = 0;
+                }
             }
           if (xmin < xmax && ymin < ymax)
             {
