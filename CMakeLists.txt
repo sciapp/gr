@@ -603,6 +603,7 @@ if(Qt4_FOUND)
     target_compile_options(qt4gr PRIVATE -fno-exceptions)
   endif()
 
+  set_target_properties(qt4gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
   if(GR_MANUAL_MOC_AND_RCC)
     set_target_properties(qt4gr PROPERTIES AUTOMOC OFF AUTORCC OFF)
     add_custom_command(
@@ -629,6 +630,7 @@ if(Qt5Widgets_FOUND
     target_compile_options(qt5gr PRIVATE -fno-exceptions)
   endif()
 
+  set_target_properties(qt5gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
   if(GR_MANUAL_MOC_AND_RCC)
     set_target_properties(qt5gr PROPERTIES AUTOMOC OFF AUTORCC OFF)
     add_custom_command(
@@ -832,6 +834,9 @@ if(GR_INSTALL)
     )
   endif()
   install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
+  if(TARGET qt4gr OR TARGET qt5gr)
+    install(FILES lib/gr/qtgr/grwidget.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
+  endif()
   install(
     DIRECTORY lib/gks/fonts
     DESTINATION ${CMAKE_INSTALL_PREFIX}/
