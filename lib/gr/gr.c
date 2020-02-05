@@ -3495,6 +3495,7 @@ double succ(double x)
 }
 
 #define isucc(x) ((int64_t)succ(x))
+#define round_off(x) (floor((x)*pow(10., 12) + .5) / pow(10., 12))
 
 static double fract(double x)
 {
@@ -4158,7 +4159,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
   double width;
 
   double clrt[4], wn[4], vp[4];
-  double x_min, x_max, y_min, y_max;
+  double x_min, x_max, y_min, y_max, feps;
 
   double x0, y0, xi, yi;
 
@@ -4224,24 +4225,35 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
         }
       else
         {
+          feps = FEPS * (y_max - y_min);
+
           check_tick_marks(y_min, y_max, y_tick, 'Y')
 
-              i = isucc((y_min - y_org) / y_tick);
-          yi = y_org + i * y_tick;
+              if (round_off(y_min - y_org) == 0)
+          {
+            i = isucc((y_min - y_org) / y_tick);
+            y0 = y_org;
+            yi = y_org + i * y_tick;
+          }
+          else
+          {
+            i = 0;
+            y0 = yi = y_min;
+          }
 
           /* draw horizontal grid lines */
 
-          while (yi <= y_max)
+          while (yi <= y_max + feps)
             {
               if (major_y > 0)
                 major = i % major_y == 0 && major_y > 1;
               else
                 major = 0;
 
-              if (fabs(yi - y_min) > FEPS * yi) grid_line(x_min, yi, x_max, yi, color, major);
+              if (fabs(yi - y_min) > feps * yi) grid_line(x_min, yi, x_max, yi, color, major);
 
               i++;
-              yi = y_org + i * y_tick;
+              yi = y0 + i * y_tick;
             }
         }
     }
@@ -4278,24 +4290,35 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
         }
       else
         {
+          feps = FEPS * (x_max - x_min);
+
           check_tick_marks(x_min, x_max, x_tick, 'X')
 
-              i = isucc((x_min - x_org) / x_tick);
-          xi = x_org + i * x_tick;
+              if (round_off(x_min - x_org) == 0)
+          {
+            i = isucc((x_min - x_org) / x_tick);
+            x0 = x_org;
+            xi = x_org + i * x_tick;
+          }
+          else
+          {
+            i = 0;
+            x0 = xi = x_min;
+          }
 
           /* draw vertical grid lines */
 
-          while (xi <= x_max)
+          while (xi <= x_max + feps)
             {
               if (major_x > 0)
                 major = i % major_x == 0 && major_x > 1;
               else
                 major = 0;
 
-              if (fabs(xi - x_min) > FEPS * xi) grid_line(xi, y_min, xi, y_max, color, major);
+              if (fabs(xi - x_min) > feps * xi) grid_line(xi, y_min, xi, y_max, color, major);
 
               i++;
-              xi = x_org + i * x_tick;
+              xi = x0 + i * x_tick;
             }
         }
     }
