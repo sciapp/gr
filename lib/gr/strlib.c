@@ -3,6 +3,11 @@
 #include <math.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef _MSC_VER
+typedef __int64 int64_t;
+#else
+#include <stdint.h>
+#endif
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
@@ -15,7 +20,7 @@
 /*
  * maximum number of digits to be used in standard notation
  */
-#define NDIGITS 9
+#define NDIGITS 14
 
 
 char *str_remove(char *str, char ch)
@@ -65,18 +70,18 @@ char *str_ftoa(char *result, double value, double reference)
 
   double abs_val;
   char str[STR_MAX], *fcp, *cp;
-  int count, exponent, factor, mantissa;
-  int fdigits, digits, scientific_notation;
+  int64_t count, exponent, factor, mantissa;
+  int64_t fdigits, digits, scientific_notation;
 
   if (value != 0)
     {
       abs_val = fabs(value);
 
-      exponent = (int)(log10(abs_val) + pow(10.0, -NDIGITS));
+      exponent = (int64_t)(log10(abs_val) + pow(10.0, -NDIGITS));
       if (exponent < 0) exponent--;
 
       factor = (NDIGITS - 1) - exponent;
-      mantissa = (int)(abs_val * pow(10.0, factor) + 0.5);
+      mantissa = (int64_t)(abs_val * pow(10.0, factor) + 0.5);
 
       strcpy(result, "");
 
@@ -136,7 +141,7 @@ char *str_ftoa(char *result, double value, double reference)
       if (scientific_notation)
         {
           strcat(result, "E");
-          sprintf(str, "%d", exponent + 1);
+          sprintf(str, "%lld", exponent + 1);
           strcat(result, str);
         }
       else
@@ -147,18 +152,18 @@ char *str_ftoa(char *result, double value, double reference)
 
             if ((fcp = strchr(format, '.')) != 0)
               {
-                fdigits = strlen(format) - (int)(fcp - format) - 1;
+                fdigits = strlen(format) - (int64_t)(fcp - format) - 1;
 
                 if ((cp = strchr(result, '.')) != 0)
                   {
-                    digits = strlen(result) - (int)(cp - result) - 1;
+                    digits = strlen(result) - (int64_t)(cp - result) - 1;
 
-                    if (fdigits > digits) strncat(result, "000000000", fdigits - digits);
+                    if (fdigits > digits) strncat(result, "00000000000000", fdigits - digits);
                   }
                 else
                   {
                     strcat(result, ".");
-                    strncat(result, "000000000", fdigits);
+                    strncat(result, "00000000000000", fdigits);
                   }
               }
         }
