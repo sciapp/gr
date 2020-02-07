@@ -693,7 +693,7 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       gr_inqwindow(&wn[0], &wn[1], &wn[2], &wn[3]);
       gr_inqprojectiontype(&projection_type);
 
-      if (projection_type == GR_PROJECTION_PERSPECTIVE || GR_PROJECTION_ORTHOGRAPHIC)
+      if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
         {
           gr_setwindow(-1, 1, -1, 1);
         }
