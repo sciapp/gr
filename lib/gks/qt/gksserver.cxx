@@ -20,6 +20,7 @@ GKSConnection::GKSConnection(QTcpSocket *socket) : socket(socket), widget(NULL)
   ++index;
   connect(socket, SIGNAL(readyRead()), this, SLOT(readClient()));
   connect(socket, SIGNAL(disconnected()), this, SLOT(disconnectedSocket()));
+  dl_size = 0;
 }
 
 GKSConnection::~GKSConnection()
@@ -36,7 +37,7 @@ void GKSConnection::readClient()
 {
   while (socket->bytesAvailable() > 0)
     {
-      if (dl.empty())
+      if (dl_size == 0)
         {
           if (socket->bytesAvailable() < (long)sizeof(int)) return;
           socket->read((char *)&dl_size, sizeof(unsigned int));
