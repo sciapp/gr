@@ -25,14 +25,14 @@ public slots:
 
 signals:
   void data(char *);
-  void close(const GKSConnection &connection);
+  void close(GKSConnection &connection);
 
 private:
   static unsigned int index;
   static const int window_shift;
   QTcpSocket *socket;
   GKSWidget *widget;
-  std::vector<char> dl;
+  QByteArray dl;
   unsigned int dl_size;
 };
 
@@ -43,10 +43,11 @@ class GKSServer : public QTcpServer
 
 public:
   GKSServer(QObject *parent = 0);
+  virtual ~GKSServer();
 
 public slots:
   void connectSocket();
-  void closeConnection(const GKSConnection &connection);
+  void closeConnection(GKSConnection &connection);
 
 private:
   static const unsigned int port;
