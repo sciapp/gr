@@ -15,12 +15,11 @@ unsigned int GKSConnection::index = 0;
 const unsigned int GKSServer::port = 8410;
 
 
-GKSConnection::GKSConnection(QTcpSocket *socket) : socket(socket), widget(NULL)
+GKSConnection::GKSConnection(QTcpSocket *socket) : socket(socket), widget(NULL), dl_size(0)
 {
   ++index;
   connect(socket, SIGNAL(readyRead()), this, SLOT(readClient()));
   connect(socket, SIGNAL(disconnected()), this, SLOT(disconnectedSocket()));
-  dl_size = 0;
 }
 
 GKSConnection::~GKSConnection()
@@ -44,10 +43,9 @@ void GKSConnection::readClient()
         }
       if (socket->bytesAvailable() < dl_size) return;
 
-      dl.reserve(dl_size + sizeof(unsigned int));
-      socket->read(dl.data(), dl_size);
-      // The data buffer must be terminated by a zero integer
-      *(unsigned int *)(dl.data() + dl_size) = 0;
+      dl = socket->read(dl_size);
+      // The data buffer must be terminated by a zero integer -> `sizeof(int)` zero bytes
+      dl.append(QString(sizeof(int), '\0'));
       if (widget == NULL)
         {
           newWidget();
@@ -102,20 +100,28 @@ GKSServer::GKSServer(QObject *parent) : QTcpServer(parent)
     }
 }
 
+GKSServer::~GKSServer()
+{
+  for (std::list<const GKSConnection *>::iterator it = connections.begin(); it != connections.end(); ++it)
+    {
+      delete *it;
+    }
+}
+
 void GKSServer::connectSocket()
 {
   QTcpSocket *socket = this->nextPendingConnection();
   GKSConnection *connection = new GKSConnection(socket);
-  connect(connection, SIGNAL(close(const GKSConnection &)), this, SLOT(closeConnection(const GKSConnection &)));
+  connect(connection, SIGNAL(close(GKSConnection &)), this, SLOT(closeConnection(GKSConnection &)));
   connections.push_back(connection);
 }
 
-void GKSServer::closeConnection(const GKSConnection &connection)
+void GKSServer::closeConnection(GKSConnection &connection)
 {
   connections.remove(&connection);
-  delete &connection;
+  connection.deleteLater();
   if (connections.empty())
     {
-      exit(0);
+      QApplication::quit();
     }
 }
