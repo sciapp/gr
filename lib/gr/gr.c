@@ -3221,26 +3221,25 @@ void gr_setwindow(double xmin, double xmax, double ymin, double ymax)
 
 void gr_inqwindow(double *xmin, double *xmax, double *ymin, double *ymax)
 {
-  int projection_type;
+  check_autoinit;
+
+  *xmin = lx.xmin;
+  *xmax = lx.xmax;
+  *ymin = lx.ymin;
+  *ymax = lx.ymax;
+}
+
+void gr_inqwindow3d(double *xmin, double *xmax, double *ymin, double *ymax, double *zmin, double *zmax)
+{
 
   check_autoinit;
 
-  gr_inqprojectiontype(&projection_type);
-
-  if (projection_type == GR_PROJECTION_ORTHOGRAPHIC || projection_type == GR_PROJECTION_PERSPECTIVE)
-    {
-      *xmin = ix.xmin;
-      *xmax = ix.xmax;
-      *ymin = ix.ymin;
-      *ymax = ix.ymax;
-    }
-  else
-    {
-      *xmin = lx.xmin;
-      *xmax = lx.xmax;
-      *ymin = lx.ymin;
-      *ymax = lx.ymax;
-    }
+  *xmin = ix.xmin;
+  *xmax = ix.xmax;
+  *ymin = ix.ymin;
+  *ymax = ix.ymax;
+  *zmin = ix.zmin;
+  *zmax = ix.zmax;
 }
 
 /*!
