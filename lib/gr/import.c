@@ -22,7 +22,7 @@ static const unsigned long __nan[2] = {0xffffffff, 0x7fffffff};
 static char *format[] = {
     "axes:ffffiif",
     "axes3d:ffffffiiif",
-    "camerainteraction:FF",
+    "camerainteraction:ffff",
     "cameralookat:fffffffff",
     "cellarray:ffffiiiiiiI",
     "colorbar:",
@@ -281,7 +281,7 @@ static void gr(int id)
       gr_axes3d(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5], i_arg[0], i_arg[1], i_arg[2], f_arg[6]);
       break;
     case 2:
-      gr_camerainteraction(f_arr[0], f_arr[1]);
+      gr_camerainteraction(f_arg[0], f_arg[1], f_arg[2], f_arg[3]);
       break;
     case 3:
       gr_cameralookat(f_arg[0], f_arg[1], f_arg[2], f_arg[3], f_arg[4], f_arg[5], f_arg[6], f_arg[7], f_arg[8]);
