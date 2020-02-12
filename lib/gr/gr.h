@@ -271,7 +271,7 @@ DLLEXPORT void gr_inqprojectiontype(int *);
 DLLEXPORT void gr_inqtransformationparameters(double *, double *, double *, double *, double *, double *, double *,
                                               double *, double *);
 DLLEXPORT void gr_inqprojectionparameters(double *, double *, double *, double *, double *, double *, double *);
-DLLEXPORT void gr_camerainteraction(const double *, const double *);
+DLLEXPORT void gr_camerainteraction(double, double, double, double);
 DLLEXPORT void gr_setwindow3d(double, double, double, double, double, double);
 DLLEXPORT void gr_inqwindow3d(double *, double *, double *, double *, double *, double *);
 

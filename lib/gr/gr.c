@@ -3229,6 +3229,9 @@ void gr_inqwindow(double *xmin, double *xmax, double *ymin, double *ymax)
   *ymax = lx.ymax;
 }
 
+/*
+ * Return the three dimensional window.
+ */
 void gr_inqwindow3d(double *xmin, double *xmax, double *ymin, double *ymax, double *zmin, double *zmax)
 {
 
@@ -3569,7 +3572,7 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
 /*!
  * Set the projection type with this flag.
  *
- * \param flag Projection type
+ * \param flag projection type
  *
  * The available options are:
  *
@@ -3580,7 +3583,7 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
  * +---------------------------+---+--------------+
  * |GR_PROJECTION_ORTHOGRAPHIC |  1|orthographic  |
  * +---------------------------+---+--------------+
- * |GR_PROJECTION_PERSPECTIV   |  2|perspective    |
+ * |GR_PROJECTION_PERSPECTIVE  |  2|perspective    |
  * +---------------------------+---+--------------+
  */
 void gr_setprojectiontype(int flag)
@@ -3601,9 +3604,7 @@ void gr_setprojectiontype(int flag)
 }
 
 /*!
- * Inquire the projection type status
- *
- *\param flag stores projection type
+ * Return the projection type.
  */
 void gr_inqprojectiontype(int *flag)
 {
@@ -3680,12 +3681,11 @@ void gr_cameralookat(double camera_pos_x, double camera_pos_y, double camera_pos
 }
 
 /*!
- * Set the far near clipping plane for perspective projection and the vertical field ov view
- * The projection type will be switched to perspectiv
+ * Set the far and near clipping plane for perspective projection and the vertical field ov view
  *
  * \param near_plane distance to near clipping plane
  * \param far_plane distance to far clipping plane
- * \param fov vertical field of view degree, input must be between 0 and 180 degree
+ * \param fov vertical field of view, input must be between 0 and 180 degrees
  *
  * Switches projection type to perspective
  */
@@ -3744,16 +3744,7 @@ void gr_setorthographicprojection(double left, double right, double bottom, doub
                    left, right, bottom, top, near_plane, far_plane);
 }
 /*!
- * Inquire all nessecary parameters for the transformation matrix
- * \param camera_pos_x x position in world coordinates of camera
- * \param camera_pos_y y position in world coordinates of camera
- * \param camera_pos_z z position in world coordinates of camera
- * \param up_x x direction which shows up
- * \param up_y y direction which shows up
- * \param up_z z direction which shows up
- * \param focus_point_x x coordinate of focuspoint inside volume
- * \param focus_point_y y coordinate of focuspoint inside volume
- * \param focus_point_z z coordinate of focuspoint inside volum
+ * Return the camera position, up vector and focus point.
  */
 void gr_inqtransformationparameters(double *camera_pos_x, double *camera_pos_y, double *camera_pos_z, double *up_x,
                                     double *up_y, double *up_z, double *focus_point_x, double *focus_point_y,
@@ -3776,16 +3767,7 @@ void gr_inqtransformationparameters(double *camera_pos_x, double *camera_pos_y, 
 }
 
 /*!
- * Set parameters for orthographic transformation
- *
- * \param left xmin of the volume in worldcoordinates
- * \param right xmax of volume in worldcoordinates
- * \param bottom ymin of volume in worldcoordinates
- * \param top ymax of volume in worldcoordinates
- * \param near_plane distance to near clipping plane
- * \param far_plane distance to far clipping plane
- * \param fov fov vertical field of view degree, input must be between 0 and 180 degree
- *
+ *  Return the parameters for the orthographic or perspective projection.
  */
 void gr_inqprojectionparameters(double *left, double *right, double *bottom, double *top, double *near_plane,
                                 double *far_plane, double *fov)
@@ -10848,13 +10830,15 @@ static void gr_quaternionen(double *start, double *end, double *q)
 /*!
  * Interface for interaction with the rotation of the model. For this a virtual Arcball is used.
  *
- * \param start_mouse_pos pointer to the start mouse position
- * \param end_mouse_pos pointer to the end mouse position
+ * \param start_mouse_pos_x x component of the start mouse position
+ * \param start_mouse_pos_y y component of the start mouse position
+ * \param end_mouse_pos_x x component of the end mouse position
+ * \param end_mouse_pos_y y component of the end mouse position
  */
-void gr_camerainteraction(const double *start_mouse_pos, const double *end_mouse_pos)
+void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, double end_mouse_pos_x,
+                          double end_mouse_pos_y)
 {
-  if (start_mouse_pos[0] != end_mouse_pos[0] || start_mouse_pos[1] != end_mouse_pos[1] ||
-      start_mouse_pos[2] != end_mouse_pos[2])
+  if (start_mouse_pos_x != end_mouse_pos_x || start_mouse_pos_y != end_mouse_pos_y)
     {
       double start[3];
       double end[3];
@@ -10879,10 +10863,9 @@ void gr_camerainteraction(const double *start_mouse_pos, const double *end_mouse
         }
 
       /* transform mouseposition onto [-1, 1] */
-      double mouse_start[3] = {fabs(wn[0]) * (start_mouse_pos[0] * 2 - 1),
-                               fabs(wn[2]) * (2 * (1 - start_mouse_pos[1]) - 1), 0};
-      double mouse_end[3] = {fabs(wn[0]) * (end_mouse_pos[0] * 2 - 1), fabs(wn[2]) * (2 * (1 - end_mouse_pos[1]) - 1),
-                             0};
+      double mouse_start[3] = {fabs(wn[0]) * (start_mouse_pos_x * 2 - 1),
+                               fabs(wn[2]) * (2 * (1 - start_mouse_pos_y) - 1), 0};
+      double mouse_end[3] = {fabs(wn[0]) * (end_mouse_pos_x * 2 - 1), fabs(wn[2]) * (2 * (1 - end_mouse_pos_y) - 1), 0};
 
       gr_trackballposition(mouse_start, radius, start);
       gr_trackballposition(mouse_end, radius, end);
@@ -10935,9 +10918,9 @@ void gr_camerainteraction(const double *start_mouse_pos, const double *end_mouse
     }
 
   if (flag_graphics)
-    gr_writestream("<camerainteraction start_mouse_pos=\"%g\" start_mouse_pos=\"%g\" end_mouse_pos=\"%g\" "
-                   "end_mouse_pos=\"%g\"/>\n",
-                   start_mouse_pos[0], start_mouse_pos[1], end_mouse_pos[0], end_mouse_pos[1]);
+    gr_writestream("<camerainteraction start_mouse_pos_x=\"%g\" start_mouse_pos_y=\"%g\" end_mouse_pos_x=\"%g\" "
+                   "end_mouse_pos_y=\"%g\"/>\n",
+                   start_mouse_pos_x, start_mouse_pos_y, end_mouse_pos_x, end_mouse_pos_y);
 }
 
 /*!
