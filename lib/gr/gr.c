@@ -10838,6 +10838,8 @@ static void gr_quaternionen(double *start, double *end, double *q)
 void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, double end_mouse_pos_x,
                           double end_mouse_pos_y)
 {
+  check_autoinit;
+
   if (start_mouse_pos_x != end_mouse_pos_x || start_mouse_pos_y != end_mouse_pos_y)
     {
       double start[3];
@@ -10935,6 +10937,8 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
  */
 void gr_setwindow3d(double xmin, double xmax, double ymin, double ymax, double zmin, double zmax)
 {
+  check_autoinit;
+
   ix.xmin = xmin;
   ix.xmax = xmax;
   ix.ymin = ymin;
