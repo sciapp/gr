@@ -310,6 +310,7 @@ if(UNIX AND NOT APPLE)
                  C_STANDARD_REQUIRED ON
                  POSITION_INDEPENDENT_CODE ON
                  INSTALL_RPATH "${INSTALL_RPATH}"
+                 OUTPUT_NAME GR3platform
     )
   else()
     message(WARNING "libGR3platform.so requires X11 and will not be built.")
