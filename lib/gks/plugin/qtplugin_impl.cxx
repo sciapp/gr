@@ -86,7 +86,8 @@ typedef struct ws_state_list_t
   QPixmap *pm;
   QPainter *pixmap;
   int state, wtype;
-  int device_dpi_x, device_dpi_y, device_pixel_ratio;
+  int device_dpi_x, device_dpi_y;
+  double device_pixel_ratio;
   double mwidth, mheight;
   int width, height;
   double a, b, c, d;
@@ -1387,10 +1388,12 @@ static int get_pixmap(void)
   QPaintDevice *device = (p->widget != NULL) ? p->widget : p->pixmap->device();
   p->device_dpi_x = device->physicalDpiX();
   p->device_dpi_y = device->physicalDpiY();
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-  p->device_pixel_ratio = 1;
-#else
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+  p->device_pixel_ratio = device->devicePixelRatioF();
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
   p->device_pixel_ratio = device->devicePixelRatio();
+#else
+  p->device_pixel_ratio = 1;
 #endif
   p->width = device->width();
   p->height = device->height();

@@ -67,10 +67,12 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
 
   p->device_dpi_x = this->physicalDpiX();
   p->device_dpi_y = this->physicalDpiY();
-#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
-  p->device_pixel_ratio = 1;
-#else
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+  p->device_pixel_ratio = this->devicePixelRatioF();
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
   p->device_pixel_ratio = this->devicePixelRatio();
+#else
+  p->device_pixel_ratio = 1;
 #endif
   p->width = 500;
   p->height = 500;
