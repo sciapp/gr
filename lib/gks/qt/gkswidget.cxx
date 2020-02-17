@@ -67,10 +67,16 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
 
   p->device_dpi_x = this->physicalDpiX();
   p->device_dpi_y = this->physicalDpiY();
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+  p->device_pixel_ratio = 1;
+#else
+  p->device_pixel_ratio = this->devicePixelRatio();
+#endif
   p->width = 500;
   p->height = 500;
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
+  p->nominal_size = 1.0;
 
   initialize_data();
 
@@ -83,7 +89,6 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
 
 void GKSWidget::paintEvent(QPaintEvent *)
 {
-
   if (dl)
     {
       QPainter painter(this);
@@ -92,14 +97,14 @@ void GKSWidget::paintEvent(QPaintEvent *)
 
       if (!prevent_resize)
         {
-          painter.drawPixmap(0, 0, *(p->pm));
+          painter.drawPixmap(0, 0, width(), height(), *(p->pm));
         }
       else
         {
           int x = (width() - p->width) / 2;
           int y = (height() - p->height) / 2;
           painter.fillRect(0, 0, width(), height(), Qt::white);
-          painter.drawPixmap(x, y, *(p->pm));
+          painter.drawPixmap(x, y, width(), height(), *(p->pm));
         }
     }
 }
