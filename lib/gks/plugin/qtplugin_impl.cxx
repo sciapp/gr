@@ -86,7 +86,7 @@ typedef struct ws_state_list_t
   QPixmap *pm;
   QPainter *pixmap;
   int state, wtype;
-  int device_dpi_x, device_dpi_y;
+  int device_dpi_x, device_dpi_y, device_pixel_ratio;
   double mwidth, mheight;
   int width, height;
   double a, b, c, d;
@@ -172,7 +172,7 @@ static void init_norm_xform(void)
 static void resize_window(void)
 {
   p->mwidth = p->viewport[1] - p->viewport[0];
-  p->width = nint(p->device_dpi_x * p->mwidth / 0.0254);
+  p->width = nint(p->device_dpi_x * p->mwidth / 0.0254) * p->device_pixel_ratio;
   if (p->width < 2)
     {
       p->width = 2;
@@ -180,7 +180,7 @@ static void resize_window(void)
     }
 
   p->mheight = p->viewport[3] - p->viewport[2];
-  p->height = nint(p->device_dpi_y * p->mheight / 0.0254);
+  p->height = nint(p->device_dpi_y * p->mheight / 0.0254) * p->device_pixel_ratio;
   if (p->height < 2)
     {
       p->height = 2;
@@ -1387,6 +1387,11 @@ static int get_pixmap(void)
   QPaintDevice *device = (p->widget != NULL) ? p->widget : p->pixmap->device();
   p->device_dpi_x = device->physicalDpiX();
   p->device_dpi_y = device->physicalDpiY();
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+  p->device_pixel_ratio = 1;
+#else
+  p->device_pixel_ratio = device->devicePixelRatio();
+#endif
   p->width = device->width();
   p->height = device->height();
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
