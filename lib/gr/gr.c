@@ -3824,7 +3824,6 @@ double succ(double x)
 }
 
 #define isucc(x) ((int64_t)succ(x))
-#define round_off(x) (floor((x)*pow(10., 12) + .5) / pow(10., 12))
 
 static double fract(double x)
 {
@@ -4491,8 +4490,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
   double x_min, x_max, y_min, y_max, feps;
 
   double x0, y0, xi, yi;
-
-  int i;
+  int64_t i;
 
   if (x_tick < 0 || y_tick < 0)
     {
@@ -4538,7 +4536,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
               if (i == 0 || major_y == 1)
                 {
                   major = i == 0;
-                  if (fabs(yi - y_min) > FEPS * yi) grid_line(x_min, yi, x_max, yi, color, major);
+                  if (yi != y_min) grid_line(x_min, yi, x_max, yi, color, major);
                 }
 
               if (i == 9)
@@ -4558,17 +4556,8 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
 
           check_tick_marks(y_min, y_max, y_tick, 'Y');
 
-          if (round_off(y_min - y_org) == 0)
-            {
-              i = isucc((y_min - y_org) / y_tick);
-              y0 = y_org;
-              yi = y_org + i * y_tick;
-            }
-          else
-            {
-              i = 0;
-              y0 = yi = y_min;
-            }
+          i = isucc(y_min / y_tick);
+          yi = i * y_tick;
 
           /* draw horizontal grid lines */
 
@@ -4579,10 +4568,10 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
               else
                 major = 0;
 
-              if (fabs(yi - y_org) > feps * yi) grid_line(x_min, yi, x_max, yi, color, major);
+              if (yi != y_org) grid_line(x_min, yi, x_max, yi, color, major);
 
               i++;
-              yi = y0 + i * y_tick;
+              yi = i * y_tick;
             }
         }
     }
@@ -4603,7 +4592,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
               if (i == 0 || major_x == 1)
                 {
                   major = i == 0;
-                  if (fabs(xi - x_min) > FEPS * xi) grid_line(xi, y_min, xi, y_max, color, major);
+                  if (xi != x_min) grid_line(xi, y_min, xi, y_max, color, major);
                 }
 
               if (i == 9)
@@ -4623,17 +4612,8 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
 
           check_tick_marks(x_min, x_max, x_tick, 'X');
 
-          if (round_off(x_min - x_org) == 0)
-            {
-              i = isucc((x_min - x_org) / x_tick);
-              x0 = x_org;
-              xi = x_org + i * x_tick;
-            }
-          else
-            {
-              i = 0;
-              x0 = xi = x_min;
-            }
+          i = isucc(x_min / x_tick);
+          xi = i * x_tick;
 
           /* draw vertical grid lines */
 
@@ -4644,10 +4624,10 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
               else
                 major = 0;
 
-              if (fabs(xi - x_org) > feps * xi) grid_line(xi, y_min, xi, y_max, color, major);
+              if (xi != x_org) grid_line(xi, y_min, xi, y_max, color, major);
 
               i++;
-              xi = x0 + i * x_tick;
+              xi = i * x_tick;
             }
         }
     }
