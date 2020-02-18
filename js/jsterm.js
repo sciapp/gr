@@ -12,7 +12,7 @@ JSTerm = function() {
      DEFAULT_WIDTH = 600;
      DEFAULT_HEIGHT = 450;
 
-     var gr, comm, widgets = {}, jupyterRunning = false, scheduled_merges = [];
+     var grm, comm, widgets = {}, jupyterRunning = false, scheduled_merges = [];
      var display = [], widgets_to_save = new Set(), data_loaded = false;
 
      /**
@@ -82,7 +82,7 @@ JSTerm = function() {
                  "height": height,
                  "display_id": display,
                  "plot_id": plot_id,
-                 "gr": data
+                 "grm": data
                })
              }
            }
@@ -139,11 +139,11 @@ JSTerm = function() {
          console.error('GR is not ready.');
          return;
        }
-       let arguments = gr.newmeta();
-       gr.readmeta(arguments, msg.content.data.json);
+       let arguments = grm.args_new();
+       grm.read(arguments, msg.content.data.json);
        display.push(msg.content.data.display);
-       gr.mergemeta_named(arguments, "jstermMerge" + msg.content.data.display);
-       gr.deletemeta(arguments);
+       grm.merge_named(arguments, "jstermMerge" + msg.content.data.display);
+       grm.args_delete(arguments);
      };
 
      /**
@@ -169,8 +169,8 @@ JSTerm = function() {
              widgets[widget_data.plot_id].height = widget_data.height;
              // TODO: Das hier erst am Schluss machen, wenn klar ist, dass keine aktuelleren Daten gefunden wurden
              createCanvas(widgets[widget_data.plot_id]);
-             gr.switchmeta(widget_data.plot_id);
-             let data = gr.load_from_str(widget_data.gr);
+             grm.switch(widget_data.plot_id);
+             let data = grm.load_from_str(widget_data.grm);
              widgets[widget_data.plot_id].draw();
            } else {
              // TODO
@@ -182,11 +182,11 @@ JSTerm = function() {
 
      /**
       * Creates a JSTermWidget-Object describing and managing a canvas
-      * @param       {number} id     The widget's numerical identifier (belonging context in `meta.c`)
+      * @param       {number} id     The widget's numerical identifier (belonging context in `grm.c`)
       * @constructor
       */
      JSTermWidget = function(id) {
-       this.id = id;  // context id for meta.c (switchmeta)
+       this.id = id;  // context id for grm.c (switch)
 
        /**
         * Initialize the JSTermWidget
@@ -263,16 +263,16 @@ JSTerm = function() {
        };
 
        /**
-        * Send an event to the GR runtime
+        * Send an event to the GRM runtime
         * @param  {number} mouseargs (Emscripten) address of the argumentcontainer describing an event
         */
        this.grEventinput = function(mouseargs) {
-         gr.switchmeta(this.id);
-         gr.inputmeta(mouseargs);
-         gr.current_canvas = this.canvas;
-         gr.current_context = gr.current_canvas.getContext('2d');
-         gr.select_canvas();
-         gr.plotmeta();
+         grm.switch(this.id);
+         grm.input(mouseargs);
+         grm.current_canvas = this.canvas;
+         grm.current_context = grm.current_canvas.getContext('2d');
+         grm.select_canvas();
+         grm.plot();
        };
 
        /**
@@ -285,12 +285,12 @@ JSTerm = function() {
          if (typeof this.boxzoomTriggerTimeout !== 'undefined') {
            clearTimeout(this.boxzoomTriggerTimeout);
          }
-         let mouseargs = gr.newmeta();
-         gr.meta_args_push(mouseargs, "x", "i", [x]);
-         gr.meta_args_push(mouseargs, "y", "i", [y]);
-         gr.meta_args_push(mouseargs, "angle_delta", "d", [angle_delta]);
+         let mouseargs = grm.args_new();
+         grm.args_push(mouseargs, "x", "i", [x]);
+         grm.args_push(mouseargs, "y", "i", [y]);
+         grm.args_push(mouseargs, "angle_delta", "d", [angle_delta]);
          this.grEventinput(mouseargs);
-         gr.deletemeta(mouseargs);
+         grm.args_delete(mouseargs);
        };
 
        /**
@@ -380,19 +380,19 @@ JSTerm = function() {
          }
          if (this.boxzoom) {
            if ((Math.abs(this.boxzoomPoint[0] - x) >= BOXZOOM_THRESHOLD) && (Math.abs(this.boxzoomPoint[1] - y) >= BOXZOOM_THRESHOLD)) {
-             let mouseargs = gr.newmeta();
+             let mouseargs = grm.args_new();
              let diff = [x - this.boxzoomPoint[0], y - this.boxzoomPoint[1]];
-             gr.meta_args_push(mouseargs, "x1", "i", [this.boxzoomPoint[0]]);
-             gr.meta_args_push(mouseargs, "x2", "i", [this.boxzoomPoint[0] + diff[0]]);
-             gr.meta_args_push(mouseargs, "y1", "i", [this.boxzoomPoint[1]]);
-             gr.meta_args_push(mouseargs, "y2", "i", [this.boxzoomPoint[1] + diff[1]]);
+             grm.args_push(mouseargs, "x1", "i", [this.boxzoomPoint[0]]);
+             grm.args_push(mouseargs, "x2", "i", [this.boxzoomPoint[0] + diff[0]]);
+             grm.args_push(mouseargs, "y1", "i", [this.boxzoomPoint[1]]);
+             grm.args_push(mouseargs, "y2", "i", [this.boxzoomPoint[1] + diff[1]]);
              if (this.keepAspectRatio) {
-               gr.meta_args_push(mouseargs, "keep_aspect_ratio", "i", [1]);
+               grm.args_push(mouseargs, "keep_aspect_ratio", "i", [1]);
              } else {
-               gr.meta_args_push(mouseargs, "keep_aspect_ratio", "i", [0]);
+               grm.args_push(mouseargs, "keep_aspect_ratio", "i", [0]);
              }
              this.grEventinput(mouseargs);
-             gr.deletemeta(mouseargs);
+             grm.args_delete(mouseargs);
            }
          }
          this.prevMousePos = undefined;
@@ -471,20 +471,20 @@ JSTerm = function() {
            if (typeof this.pinchDiff !== 'undefined' && typeof this.prevTouches !== 'undefined') {
              let factor = this.pinchDiff / diff;
 
-             let mouseargs = gr.newmeta();
-             gr.meta_args_push(mouseargs, "x", "i", [(c1[0] + c2[0]) / 2]);
-             gr.meta_args_push(mouseargs, "y", "i", [(c1[1] + c2[1]) / 2]);
-             gr.meta_args_push(mouseargs, "factor", "d", [factor]);
+             let mouseargs = grm.args_new();
+             grm.args_push(mouseargs, "x", "i", [(c1[0] + c2[0]) / 2]);
+             grm.args_push(mouseargs, "y", "i", [(c1[1] + c2[1]) / 2]);
+             grm.args_push(mouseargs, "factor", "d", [factor]);
              this.grEventinput(mouseargs);
-             gr.deletemeta(mouseargs);
+             grm.args_delete(mouseargs);
 
-             let panmouseargs = gr.newmeta();
-             gr.meta_args_push(panmouseargs, "x", "i", [(c1[0] + c2[0]) / 2]);
-             gr.meta_args_push(panmouseargs, "y", "i", [(c1[1] + c2[1]) / 2]);
-             gr.meta_args_push(panmouseargs, "xshift", "i", [(c1[0] - this.prevTouches[0][0] + c2[0] - this.prevTouches[1][0]) / 2.0]);
-             gr.meta_args_push(panmouseargs, "yshift", "i", [(c1[1] - this.prevTouches[0][1] + c2[1] - this.prevTouches[1][1]) / 2.0]);
+             let panmouseargs = grm.args_new();
+             grm.args_push(panmouseargs, "x", "i", [(c1[0] + c2[0]) / 2]);
+             grm.args_push(panmouseargs, "y", "i", [(c1[1] + c2[1]) / 2]);
+             grm.args_push(panmouseargs, "xshift", "i", [(c1[0] - this.prevTouches[0][0] + c2[0] - this.prevTouches[1][0]) / 2.0]);
+             grm.args_push(panmouseargs, "yshift", "i", [(c1[1] - this.prevTouches[0][1] + c2[1] - this.prevTouches[1][1]) / 2.0]);
              this.grEventinput(panmouseargs);
-             gr.deletemeta(panmouseargs);
+             grm.args_delete(panmouseargs);
            }
            this.pinchDiff = diff;
            this.prevTouches = [c1, c2];
@@ -536,19 +536,19 @@ JSTerm = function() {
            if (typeof this.boxzoomTriggerTimeout !== 'undefined') {
              clearTimeout(this.boxzoomTriggerTimeout);
            }
-           let mouseargs = gr.newmeta();
-           gr.meta_args_push(mouseargs, "x", "i", [this.prevMousePos[0]]);
-           gr.meta_args_push(mouseargs, "y", "i", [this.prevMousePos[1]]);
-           gr.meta_args_push(mouseargs, "xshift", "i", [x - this.prevMousePos[0]]);
-           gr.meta_args_push(mouseargs, "yshift", "i", [y - this.prevMousePos[1]]);
+           let mouseargs = grm.args_new();
+           grm.args_push(mouseargs, "x", "i", [this.prevMousePos[0]]);
+           grm.args_push(mouseargs, "y", "i", [this.prevMousePos[1]]);
+           grm.args_push(mouseargs, "xshift", "i", [x - this.prevMousePos[0]]);
+           grm.args_push(mouseargs, "yshift", "i", [y - this.prevMousePos[1]]);
            this.grEventinput(mouseargs);
-           gr.deletemeta(mouseargs);
+           grm.args_delete(mouseargs);
            this.prevMousePos = [x, y];
          } else if (this.boxzoom) {
            let context = this.overlayCanvas.getContext('2d');
            let diff = [x - this.boxzoomPoint[0], y - this.boxzoomPoint[1]];
-           gr.switchmeta(this.id);
-           let box = gr.meta_get_box(this.boxzoomPoint[0], this.boxzoomPoint[1], this.boxzoomPoint[0] + diff[0], this.boxzoomPoint[1] + diff[1], this.keepAspectRatio);
+           grm.switch(this.id);
+           let box = grm.get_box(this.boxzoomPoint[0], this.boxzoomPoint[1], this.boxzoomPoint[0] + diff[0], this.boxzoomPoint[1] + diff[1], this.keepAspectRatio);
            context.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
            if (diff[0] * diff[1] >= 0) {
              this.overlayCanvas.style.cursor = 'nwse-resize';
@@ -590,12 +590,12 @@ JSTerm = function() {
         * @param  {number} y       y-coordinate on the canvas of the mouse
         */
        this.handleDoubleclick = function(x, y) {
-         let mouseargs = gr.newmeta();
-         gr.meta_args_push(mouseargs, "x", "i", [x]);
-         gr.meta_args_push(mouseargs, "y", "i", [y]);
-         gr.meta_args_push(mouseargs, "key", "s", "r");
+         let mouseargs = grm.args_new();
+         grm.args_push(mouseargs, "x", "i", [x]);
+         grm.args_push(mouseargs, "y", "i", [y]);
+         grm.args_push(mouseargs, "key", "s", "r");
          this.grEventinput(mouseargs);
-         gr.deletemeta(mouseargs);
+         grm.args_delete(mouseargs);
          this.boxzoomPoint = [undefined, undefined];
        };
 
@@ -682,11 +682,11 @@ JSTerm = function() {
            this.connectCanvas();
          }
 
-         gr.switchmeta(this.id);
-         gr.current_canvas = this.canvas;
-         gr.current_context = gr.current_canvas.getContext('2d');
-         gr.select_canvas();
-         gr.plotmeta();
+         grm.switch(this.id);
+         grm.current_canvas = this.canvas;
+         grm.current_context = grm.current_canvas.getContext('2d');
+         grm.select_canvas();
+         grm.plot();
        };
 
        /**
@@ -717,21 +717,21 @@ JSTerm = function() {
        };
 
        this.save = function() {
-         gr.switchmeta(this.id);
-         let data = gr.dumpmeta_json_str();
+         grm.switch(this.id);
+         let data = grm.dump_json_str();
          saveData(data, this.id, this.display, this.width, this.height);
        };
      };
 
      /**
-      * Callback for gr-meta's size event. Handles event and resizes canvas if required.
+      * Callback for grm's size event. Handles event and resizes canvas if required.
       */
      sizeCallback = function(evt) {
        widgets[evt.plot_id].resize(evt.width, evt.height);
      };
 
      /**
-      * Callback for gr-meta's new plot event. Handles event and creates new canvas.
+      * Callback for grm's new plot event. Handles event and creates new canvas.
       */
      newPlotCallback = function(evt) {
        if (typeof widgets[evt.plot_id] === 'undefined') {
@@ -741,7 +741,7 @@ JSTerm = function() {
      };
 
      /**
-      * Callback for gr-meta's update plot event. Handles event and creates canvas id needed.
+      * Callback for grm's update plot event. Handles event and creates canvas id needed.
       */
      updatePlotCallback = function(evt) {
        if (typeof widgets[evt.plot_id] === 'undefined') {
@@ -752,7 +752,7 @@ JSTerm = function() {
      };
 
      /**
-      * Callback for gr-meta's merge end event.
+      * Callback for grm's merge end event.
       * Acknowledge the finished execution of a `draw()` command.
       */
      mergeEndCallback = function(evt) {
@@ -779,23 +779,23 @@ JSTerm = function() {
          });
          return;
        } else {
-         if (typeof gr === 'undefined') {
+         if (typeof grm === 'undefined') {
            let canvas = document.createElement('canvas');
            canvas.id = 'jsterm-hidden-canvas';
            canvas.width = 640;
            canvas.height = 480;
            canvas.style = 'display: none;';
            document.body.appendChild(canvas);
-           gr = new GR('jsterm-hidden-canvas');
-           gr.registermeta(gr.GR_META_EVENT_SIZE, sizeCallback);
-           gr.registermeta(gr.GR_META_EVENT_NEW_PLOT, newPlotCallback);
-           gr.registermeta(gr.GR_META_EVENT_UPDATE_PLOT, updatePlotCallback);
-           gr.registermeta(gr.GR_META_EVENT_MERGE_END, mergeEndCallback);
-           let arguments = gr.newmeta();
-           gr.meta_args_push(arguments, 'append_plots', 'i', [1]);
-           gr.meta_args_push(arguments, 'hold_plots', 'i', [1]);
-           gr.mergemeta(arguments);
-           gr.deletemeta(arguments);
+           grm = new GRM('jsterm-hidden-canvas');
+           grm.register(grm.EVENT_SIZE, sizeCallback);
+           grm.register(grm.EVENT_NEW_PLOT, newPlotCallback);
+           grm.register(grm.EVENT_UPDATE_PLOT, updatePlotCallback);
+           grm.register(grm.EVENT_MERGE_END, mergeEndCallback);
+           let arguments = grm.args_new();
+           grm.args_push(arguments, 'append_plots', 'i', [1]);
+           grm.args_push(arguments, 'hold_plots', 'i', [1]);
+           grm.merge(arguments);
+           grm.args_delete(arguments);
          }
          if (typeof Jupyter !== 'undefined') {
            jupyterRunning = true;
