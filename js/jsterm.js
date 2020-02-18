@@ -1,4 +1,4 @@
-function runJsterm() {
+JSTerm = function() {
   if (typeof grJSTermRunning === 'undefined' || !grJSTermRunning) {
      BOXZOOM_THRESHOLD = 3;  // Minimal size in pixels of the boxzoom-box to trigger a boxzoom-event
      BOXZOOM_TRIGGER_THRESHHOLD = 1000;  // Time to wait (in ms) before triggering boxzoom event instead
@@ -13,7 +13,7 @@ function runJsterm() {
      DEFAULT_HEIGHT = 450;
 
      var gr, comm, widgets = {}, jupyterRunning = false, scheduled_merges = [];
-     var display = [], widgets_to_save = new Set();//, widget_data = {}, save_display;
+     var display = [], widgets_to_save = new Set(), data_loaded = false;
 
      /**
       * Sends a mouse-event via jupyter-comm
@@ -43,7 +43,6 @@ function runJsterm() {
            return createCanvas(widget);
          } else {
            console.error('Can not create canvas. No active display.');
-           return;
          }
        } else {
          disp.style = "display: inline;";
@@ -79,7 +78,7 @@ function runJsterm() {
              "data": {
                "widget_data": JSON.stringify({
                  "timestamp": Date.now(),
-                 "width": width, //JSON.stringify(widget_data),
+                 "width": width,
                  "height": height,
                  "display_id": display,
                  "plot_id": plot_id,
@@ -93,67 +92,42 @@ function runJsterm() {
 
      /**
       * Registration/initialisation of the jupyter-comm
-      * @param  {[type]} kernel Jupyter kernel object
       */
-     registerComm = function(kernel) {
-       kernel.comm_manager.register_target('jsterm_comm', function(c) {
-         c.on_msg(function(msg) {
-           let data = msg.content.data;
-           if (data.type === 'evt') {
-             if (typeof widgets[data.id] !== 'undefined') {
-               widgets[data.id].msgHandleEvent(data);
-             }
-           } else if (msg.content.data.type === 'cmd') {
-             if (typeof data.id !== 'undefined') {
-               if (typeof widgets[data.id] !== 'undefined') {
-                 widgets[data.id].msgHandleCommand(data);
-               }
-             } else {
-               for (let key in widgets) {
-                 widgets[key].msgHandleCommand(data);
-               }
-             }
-           } else if (data.type === 'draw') {
-             draw(msg);
-           }
-         });
-         c.on_close(function() {});
-         window.addEventListener('beforeunload', function(e) {
-           //saveData();
-           c.close();
-         });
-         comm = c;
-       });
-     };
-
-     /**
-      * Jupyter specific initialisation.
-      * Retrying maximum `MAX_KERNEL_CONNECTION_ATTEMPTS` times
-      * every KERNEL_CONNECT_WAIT_TIME ms
-      * @param  {number} attempt number of previous attempts
-      */
-     initKernel = function(attempt) {
+     this.registerComm = function() {
+       let kernel;
        if (typeof Jupyter !== 'undefined' && Jupyter != null) {
-         let kernel = Jupyter.notebook.kernel;
+         kernel = Jupyter.notebook.kernel;
          if (typeof kernel === 'undefined' || kernel == null) {
-           if (attempt < MAX_KERNEL_CONNECTION_ATTEMPTS) {
-             setTimeout(function() {
-               initKernel(attempt + 1);
-             }, KERNEL_CONNECT_WAIT_TIME);
-           } else {
-             console.error('Unable to connect to Jupyter kernel');
-           }
-         } else {
-           registerComm(kernel);
-           Jupyter.notebook.events.on('kernel_ready.Kernel', function() {
-             registerComm(kernel);
-             for (let key in widgets) {
-               widgets[key].connectCanvas();
-             }
-           });
-           drawSavedData();
+           return;
          }
+       } else {
+         return;
        }
+       comm = kernel.comm_manager.new_comm('jsterm_comm');
+       comm.on_msg(function(msg) {
+         let data = msg.content.data;
+         if (data.type === 'evt') {
+           if (typeof widgets[data.id] !== 'undefined') {
+             widgets[data.id].msgHandleEvent(data);
+           }
+         } else if (msg.content.data.type === 'cmd') {
+           if (typeof data.id !== 'undefined') {
+             if (typeof widgets[data.id] !== 'undefined') {
+               widgets[data.id].msgHandleCommand(data);
+             }
+           } else {
+             for (let key in widgets) {
+               widgets[key].msgHandleCommand(data);
+             }
+           }
+         } else if (data.type === 'draw') {
+           draw(msg);
+         }
+       });
+       comm.on_close(function() {});
+       window.addEventListener('beforeunload', function(e) {
+         comm.close();
+       });
      };
 
      /**
@@ -162,25 +136,23 @@ function runJsterm() {
       */
      draw = function(msg) {
        if (!GR.is_ready) {
-         GR.ready(function() {
-           return draw(msg);
-         });
-       } else {
-         let arguments = gr.newmeta();
-         gr.readmeta(arguments, msg.content.data.json);
-         do {
-           rand = Math.round(Math.random() * 1000000);
-         } while(rand in scheduled_merges);
-         scheduled_merges.push(rand);
-         display.push(msg.content.data.display);
-         gr.mergemeta_named(arguments, "jstermMerge" + rand);
+         console.error('GR is not ready.');
+         return;
        }
+       let arguments = gr.newmeta();
+       gr.readmeta(arguments, msg.content.data.json);
+       display.push(msg.content.data.display);
+       gr.mergemeta_named(arguments, "jstermMerge" + msg.content.data.display);
+       gr.deletemeta(arguments);
      };
 
      /**
       * Draw data that has been saved in the loaded page
       */
      drawSavedData = function() {
+       if (data_loaded) {
+         return;
+       }
        data_loaded = true;
        let created_widgets = [];
        let timestamps = {};
@@ -250,7 +222,6 @@ function runJsterm() {
 
        /**
         * Resizes the JSTermWidget
-        * @param  {number} width  new canvas width in pixels
         * @param  {number} height new canvas height in pixels
         */
        this.resize = function(width, height) {
@@ -319,6 +290,7 @@ function runJsterm() {
          gr.meta_args_push(mouseargs, "y", "i", [y]);
          gr.meta_args_push(mouseargs, "angle_delta", "d", [angle_delta]);
          this.grEventinput(mouseargs);
+         gr.deletemeta(mouseargs);
        };
 
        /**
@@ -420,6 +392,7 @@ function runJsterm() {
                gr.meta_args_push(mouseargs, "keep_aspect_ratio", "i", [0]);
              }
              this.grEventinput(mouseargs);
+             gr.deletemeta(mouseargs);
            }
          }
          this.prevMousePos = undefined;
@@ -503,6 +476,7 @@ function runJsterm() {
              gr.meta_args_push(mouseargs, "y", "i", [(c1[1] + c2[1]) / 2]);
              gr.meta_args_push(mouseargs, "factor", "d", [factor]);
              this.grEventinput(mouseargs);
+             gr.deletemeta(mouseargs);
 
              let panmouseargs = gr.newmeta();
              gr.meta_args_push(panmouseargs, "x", "i", [(c1[0] + c2[0]) / 2]);
@@ -510,6 +484,7 @@ function runJsterm() {
              gr.meta_args_push(panmouseargs, "xshift", "i", [(c1[0] - this.prevTouches[0][0] + c2[0] - this.prevTouches[1][0]) / 2.0]);
              gr.meta_args_push(panmouseargs, "yshift", "i", [(c1[1] - this.prevTouches[0][1] + c2[1] - this.prevTouches[1][1]) / 2.0]);
              this.grEventinput(panmouseargs);
+             gr.deletemeta(panmouseargs);
            }
            this.pinchDiff = diff;
            this.prevTouches = [c1, c2];
@@ -567,6 +542,7 @@ function runJsterm() {
            gr.meta_args_push(mouseargs, "xshift", "i", [x - this.prevMousePos[0]]);
            gr.meta_args_push(mouseargs, "yshift", "i", [y - this.prevMousePos[1]]);
            this.grEventinput(mouseargs);
+           gr.deletemeta(mouseargs);
            this.prevMousePos = [x, y];
          } else if (this.boxzoom) {
            let context = this.overlayCanvas.getContext('2d');
@@ -619,6 +595,7 @@ function runJsterm() {
          gr.meta_args_push(mouseargs, "y", "i", [y]);
          gr.meta_args_push(mouseargs, "key", "s", "r");
          this.grEventinput(mouseargs);
+         gr.deletemeta(mouseargs);
          this.boxzoomPoint = [undefined, undefined];
        };
 
@@ -699,9 +676,6 @@ function runJsterm() {
          if (typeof this.display === 'undefined' || document.getElementById('jsterm-' + this.id) == null) {
            this.canvas = undefined;
            this.display = display[0];
-           //widget_data[this.id].display = this.display;
-           //widget_data[this.id].width = this.width;
-           //widget_data[this.id].height = this.height;
            createCanvas(this);
          }
          if (document.getElementById('jsterm-' + this.id) !== this.canvas || typeof this.canvas === 'undefined' || typeof this.overlayCanvas === 'undefined') {
@@ -763,9 +737,7 @@ function runJsterm() {
        if (typeof widgets[evt.plot_id] === 'undefined') {
          widgets[evt.plot_id] = new JSTermWidget(evt.plot_id);
        }
-       //widgets[evt.plot_id].draw();
        widgets_to_save.add(evt.plot_id);
-       //widgets[evt.plot_id].save();
      };
 
      /**
@@ -776,9 +748,7 @@ function runJsterm() {
          console.error('Updated plot does not exist, creating new object. (id', evt.plot_id, ')');
          widgets[evt.plot_id] = new JSTermWidget(evt.plot_id);
        }
-       //widgets[evt.plot_id].draw();
        widgets_to_save.add(evt.plot_id);
-       //widgets[evt.plot_id].save();
      };
 
      /**
@@ -786,12 +756,8 @@ function runJsterm() {
       * Acknowledge the finished execution of a `draw()` command.
       */
      mergeEndCallback = function(evt) {
-       let index = scheduled_merges.indexOf(parseInt(evt.identificator.substring("jstermMerge".length)));
-       if (index > -1) {
-         scheduled_merges.splice(index, 1);
-         //document.getElementById('jsterm-msg-' + display[0]).innerText = '';
-         //document.getElementById('jsterm-msg-' + display[0]).display = 'none';
-         //saveData();
+       let display_uuid = evt.identificator.substring("jstermMerge".length);
+       if (display_uuid.length != 0) {
          iter = Array.from(widgets_to_save);
          for (let w in iter) {
            widgets[iter[w]].draw();
@@ -812,30 +778,30 @@ function runJsterm() {
            return onLoad();
          });
          return;
-       }
-       if (typeof gr === 'undefined') {
-         let canvas = document.createElement('canvas');
-         canvas.id = 'jsterm-hidden-canvas';
-         canvas.width = 640;
-         canvas.height = 480;
-         canvas.style = 'display: none;';
-         document.body.appendChild(canvas);
-         gr = new GR('jsterm-hidden-canvas');
-         gr.registermeta(gr.GR_META_EVENT_SIZE, sizeCallback);
-         gr.registermeta(gr.GR_META_EVENT_NEW_PLOT, newPlotCallback);
-         gr.registermeta(gr.GR_META_EVENT_UPDATE_PLOT, updatePlotCallback);
-         gr.registermeta(gr.GR_META_EVENT_MERGE_END, mergeEndCallback);
-         let arguments = gr.newmeta();
-         gr.meta_args_push(arguments, 'append_plots', 'i', [1]);
-         gr.meta_args_push(arguments, 'hold_plots', 'i', [1]);
-         gr.mergemeta(arguments);
-       }
-       if (typeof Jupyter !== 'undefined') {
-         jupyterRunning = true;
-         initKernel(0);
        } else {
+         if (typeof gr === 'undefined') {
+           let canvas = document.createElement('canvas');
+           canvas.id = 'jsterm-hidden-canvas';
+           canvas.width = 640;
+           canvas.height = 480;
+           canvas.style = 'display: none;';
+           document.body.appendChild(canvas);
+           gr = new GR('jsterm-hidden-canvas');
+           gr.registermeta(gr.GR_META_EVENT_SIZE, sizeCallback);
+           gr.registermeta(gr.GR_META_EVENT_NEW_PLOT, newPlotCallback);
+           gr.registermeta(gr.GR_META_EVENT_UPDATE_PLOT, updatePlotCallback);
+           gr.registermeta(gr.GR_META_EVENT_MERGE_END, mergeEndCallback);
+           let arguments = gr.newmeta();
+           gr.meta_args_push(arguments, 'append_plots', 'i', [1]);
+           gr.meta_args_push(arguments, 'hold_plots', 'i', [1]);
+           gr.mergemeta(arguments);
+           gr.deletemeta(arguments);
+         }
+         if (typeof Jupyter !== 'undefined') {
+           jupyterRunning = true;
+         }
          drawSavedData();
-       }
+      }
      };
 
       if (document.readyState != 'loading') {
@@ -851,4 +817,9 @@ function runJsterm() {
       }
    }
    var grJSTermRunning = true;
+};
+
+if (typeof jsterm === 'undefined') {
+  jsterm = new JSTerm();
+  jsterm.registerComm();
 }
