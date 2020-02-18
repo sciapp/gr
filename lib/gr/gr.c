@@ -4556,8 +4556,8 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
 
           check_tick_marks(y_min, y_max, y_tick, 'Y');
 
-          i = isucc(y_min / y_tick);
-          yi = i * y_tick;
+          i = isucc((y_min - y_org) / y_tick);
+          yi = y_org + i * y_tick;
 
           /* draw horizontal grid lines */
 
@@ -4568,10 +4568,10 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
               else
                 major = 0;
 
-              if (yi != y_org) grid_line(x_min, yi, x_max, yi, color, major);
+              grid_line(x_min, yi, x_max, yi, color, major);
 
               i++;
-              yi = i * y_tick;
+              yi = y_org + i * y_tick;
             }
         }
     }
@@ -4612,8 +4612,8 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
 
           check_tick_marks(x_min, x_max, x_tick, 'X');
 
-          i = isucc(x_min / x_tick);
-          xi = i * x_tick;
+          i = isucc((x_min - x_org) / x_tick);
+          xi = x_org + i * x_tick;
 
           /* draw vertical grid lines */
 
@@ -4624,10 +4624,10 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
               else
                 major = 0;
 
-              if (xi != x_org) grid_line(xi, y_min, xi, y_max, color, major);
+              grid_line(xi, y_min, xi, y_max, color, major);
 
               i++;
-              xi = i * x_tick;
+              xi = x_org + i * x_tick;
             }
         }
     }
