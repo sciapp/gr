@@ -3629,8 +3629,9 @@ void gr_inqprojectiontype(int *flag)
  * \param focus_point_z z component of focus-point inside volume
  *
  */
-void gr_cameralookat(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x, double up_y,
-                     double up_z, double focus_point_x, double focus_point_y, double focus_point_z)
+void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, double camera_pos_z, double up_x,
+                                    double up_y, double up_z, double focus_point_x, double focus_point_y,
+                                    double focus_point_z)
 {
 
   check_autoinit;
@@ -3674,7 +3675,8 @@ void gr_cameralookat(double camera_pos_x, double camera_pos_y, double camera_pos
   tx.s_z = s[2];
 
   if (flag_graphics)
-    gr_writestream("<cameralookat camera_pos_x=\"%g\" camera_pos_y=\"%g\" camera_pos_z=\"%g\" up_x=\"%g\" up_y=\"%g\" "
+    gr_writestream("<settransformationparameters camera_pos_x=\"%g\" camera_pos_y=\"%g\" camera_pos_z=\"%g\" "
+                   "up_x=\"%g\" up_y=\"%g\" "
                    "up_z=\"%g\" focus_point_x=\"%g\" focus_point_y=\"%g\" focus_point_z=\"%g\"/>\n",
                    camera_pos_x, camera_pos_y, camera_pos_z, up_x, up_y, up_z, focus_point_x, focus_point_y,
                    focus_point_z);
@@ -3767,10 +3769,10 @@ void gr_inqtransformationparameters(double *camera_pos_x, double *camera_pos_y, 
 }
 
 /*!
- *  Return the parameters for the orthographic or perspective projection.
+ *  Return the parameters for the orthographic projection.
  */
-void gr_inqprojectionparameters(double *left, double *right, double *bottom, double *top, double *near_plane,
-                                double *far_plane, double *fov)
+void gr_inqorthographicprojection(double *left, double *right, double *bottom, double *top, double *near_plane,
+                                  double *far_plane)
 {
 
   check_autoinit;
@@ -3779,6 +3781,18 @@ void gr_inqprojectionparameters(double *left, double *right, double *bottom, dou
   *right = px.right;
   *bottom = px.bottom;
   *top = px.top;
+  *near_plane = px.near_plane;
+  *far_plane = px.far_plane;
+}
+
+/*!
+ *  Return the parameters for the perspective projection.
+ */
+void gr_inqperspectiveprojection(double *near_plane, double *far_plane, double *fov)
+{
+
+  check_autoinit;
+
   *near_plane = px.near_plane;
   *far_plane = px.far_plane;
   *fov = px.fov;
