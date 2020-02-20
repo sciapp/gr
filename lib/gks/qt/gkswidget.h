@@ -15,6 +15,7 @@ class GKSWidget : public QWidget
 
 public:
   GKSWidget(QWidget *parent = 0);
+  virtual ~GKSWidget();
 
 public slots:
   void interpret(char *dl);

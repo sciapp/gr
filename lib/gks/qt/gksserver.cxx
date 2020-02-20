@@ -15,7 +15,7 @@ unsigned int GKSConnection::index = 0;
 const unsigned int GKSServer::port = 8410;
 
 
-GKSConnection::GKSConnection(QTcpSocket *socket) : socket(socket), widget(NULL), dl_size(0)
+GKSConnection::GKSConnection(QTcpSocket *socket) : socket(socket), widget(NULL), dl(NULL), dl_size(0)
 {
   ++index;
   connect(socket, SIGNAL(readyRead()), this, SLOT(readClient()));
@@ -42,15 +42,15 @@ void GKSConnection::readClient()
           socket->read((char *)&dl_size, sizeof(unsigned int));
         }
       if (socket->bytesAvailable() < dl_size) return;
-
-      dl = socket->read(dl_size);
+      dl = new char[dl_size + sizeof(int)];
+      socket->read(dl, dl_size);
       // The data buffer must be terminated by a zero integer -> `sizeof(int)` zero bytes
-      dl.append(QString(sizeof(int), '\0'));
+      memset(dl + dl_size, 0, sizeof(int));
       if (widget == NULL)
         {
           newWidget();
         }
-      emit(data(dl.data()));
+      emit(data(dl));
       dl_size = 0;
     }
 }

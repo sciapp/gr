@@ -89,6 +89,12 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
   prevent_resize = !QProcessEnvironment::systemEnvironment().value("GKS_GKSQT_PREVENT_RESIZE").isEmpty();
 }
 
+GKSWidget::~GKSWidget()
+{
+  delete[] dl;
+}
+
+
 void GKSWidget::paintEvent(QPaintEvent *)
 {
   if (dl)
@@ -154,7 +160,10 @@ static void set_window_size(char *s)
 
 void GKSWidget::interpret(char *dl)
 {
-  set_window_size(dl);
+  delete[] this->dl;
+  this->dl = dl;
+
+  set_window_size(this->dl);
   if (!prevent_resize)
     {
       resize(p->width, p->height);
@@ -166,6 +175,5 @@ void GKSWidget::interpret(char *dl)
       show();
     }
 
-  this->dl = dl;
   repaint();
 }
