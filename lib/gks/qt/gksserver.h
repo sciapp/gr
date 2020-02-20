@@ -32,7 +32,7 @@ private:
   static const int window_shift;
   QTcpSocket *socket;
   GKSWidget *widget;
-  QByteArray dl;
+  char *dl;
   unsigned int dl_size;
 };
 
