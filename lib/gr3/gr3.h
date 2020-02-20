@@ -87,6 +87,7 @@ extern "C" {
 
 #define GR3_PROJECTION_PERSPECTIVE 0
 #define GR3_PROJECTION_PARALLEL 1
+#define GR3_PROJECTION_ORTHOGRAPHIC 2
 
 #define GR3_SURFACE_DEFAULT 0 /*!< default behavior */
 #define GR3_SURFACE_NORMALS                                    \
@@ -244,6 +245,8 @@ GR3API void gr3_drawzslicemesh(const GR3_MC_DTYPE *data, unsigned int iz, unsign
 GR3API void gr3_drawtrianglesurface(int n, const float *triangles);
 
 GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr);
+
+GR3API void gr3_setorthographicprojection(float left, float right, float bottom, float top, float znear, float zfar);
 
 #ifdef _WIN32
 #ifdef __cplusplus

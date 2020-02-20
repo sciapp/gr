@@ -13,6 +13,14 @@
 #include "gr3_internals.h"
 #include "gr3_sr.h"
 
+#ifndef is_nan
+#define is_nan(a) ((a) != (a))
+#endif
+
+#ifndef NAN
+#define NAN (0.0 / 0.0)
+#endif
+
 /*!
  * This function pointer holds the function used by gr3_log_(). It can be set
  * with gr3_setlogcallback().
@@ -52,11 +60,11 @@ const char *gr3_error_file_ = "";
  * The only instance of ::GR3_ContextStruct_t_. For documentation, see
  * ::_GR3_ContextStruct_t_.
  */
-#define GR3_ContextStruct_INITIALIZER                                                                                \
-  {                                                                                                                  \
-    GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0,          \
-        {0, 0, 0, 0}, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, {0}, {0}, {0}, \
-        {0}, 0, 0                                                                                                    \
+#define GR3_ContextStruct_INITIALIZER                                                                                 \
+  {                                                                                                                   \
+    GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
+        NAN, NAN, {0, 0, 0, 0}, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 0, {0},  \
+        {0}, {0}, {0}, 0, 0                                                                                           \
   }
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
 
@@ -1522,13 +1530,14 @@ GR3API int gr3_getcameraprojectionparameters(float *vfov, float *znear, float *z
 }
 
 /*!
- * Create a parallel or perspective projection
+ * Create a parallel, orthographic or perspective projection
  */
 static void gr3_projectionmatrix_(float left, float right, float bottom, float top, float znear, float zfar,
                                   GLfloat *matrix)
 {
   memset(matrix, 0, 16 * sizeof(GLfloat));
-  if (context_struct_.projection_type == GR3_PROJECTION_PARALLEL)
+  if (context_struct_.projection_type == GR3_PROJECTION_PARALLEL ||
+      context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
     {
       /* Source: http://www.opengl.org/sdk/docs/man2/xhtml/glOrtho.xml */
       matrix[0 + 0 * 4] = 2.0 / (right - left);
@@ -1573,14 +1582,23 @@ static void gr3_draw_(GLuint width, GLuint height)
       }
     else
       {
-        GLfloat fovy = context_struct_.vertical_field_of_view;
-        GLfloat zNear = context_struct_.zNear;
-        GLfloat zFar = context_struct_.zFar;
-        GLfloat aspect = (GLfloat)width / height;
-        GLfloat tfov2 = tan(fovy * M_PI / 360.0);
-        GLfloat right = zNear * aspect * tfov2;
-        GLfloat top = zNear * tfov2;
-        gr3_projectionmatrix_(-right, right, -top, top, zNear, zFar, &(projection_matrix[0][0]));
+        if (context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
+          {
+            gr3_projectionmatrix_(context_struct_.left, context_struct_.right, context_struct_.bottom,
+                                  context_struct_.top, context_struct_.zNear, context_struct_.zFar,
+                                  &(projection_matrix[0][0]));
+          }
+        else
+          {
+            GLfloat fovy = context_struct_.vertical_field_of_view;
+            GLfloat zNear = context_struct_.zNear;
+            GLfloat zFar = context_struct_.zFar;
+            GLfloat aspect = (GLfloat)width / height;
+            GLfloat tfov2 = tan(fovy * M_PI / 360.0);
+            GLfloat right = zNear * aspect * tfov2;
+            GLfloat top = zNear * tfov2;
+            gr3_projectionmatrix_(-right, right, -top, top, zNear, zFar, &(projection_matrix[0][0]));
+          }
         pm = &projection_matrix[0][0];
       }
 #ifdef GR3_CAN_USE_VBO
@@ -1809,16 +1827,28 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
   GLenum format = use_alpha ? GL_RGBA : GL_RGB;
 #endif
   int bpp = use_alpha ? 4 : 3;
-  GLfloat fovy = context_struct_.vertical_field_of_view;
-  GLfloat tan_halffovy = tan(fovy * M_PI / 360.0);
-  GLfloat aspect = (GLfloat)width / height;
   GLfloat zNear = context_struct_.zNear;
   GLfloat zFar = context_struct_.zFar;
+  GLfloat left, right, bottom, top;
 
-  GLfloat right = zNear * tan_halffovy * aspect;
-  GLfloat left = -right;
-  GLfloat top = zNear * tan_halffovy;
-  GLfloat bottom = -top;
+  if (context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
+    {
+      right = context_struct_.right;
+      left = context_struct_.left;
+      bottom = context_struct_.bottom;
+      top = context_struct_.top;
+    }
+  else
+    {
+      GLfloat fovy = context_struct_.vertical_field_of_view;
+      GLfloat tan_halffovy = tan(fovy * M_PI / 360.0);
+      GLfloat aspect = (GLfloat)width / height;
+
+      right = zNear * tan_halffovy * aspect;
+      left = -right;
+      top = zNear * tan_halffovy;
+      bottom = -top;
+    }
 
   if (context_struct_.is_initialized)
     {
@@ -1842,10 +1872,14 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
           /* gr3_cameralookat has not been called */
           RETURN_ERROR(GR3_ERROR_CAMERA_NOT_INITIALIZED);
         }
-      if (context_struct_.zFar < context_struct_.zNear || context_struct_.zNear <= 0 ||
-          context_struct_.vertical_field_of_view >= 180 || context_struct_.vertical_field_of_view <= 0)
+      if ((context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC &&
+           (is_nan(context_struct_.left) || is_nan(context_struct_.right) || is_nan(context_struct_.bottom) ||
+            is_nan(context_struct_.top) || context_struct_.zFar < context_struct_.zNear)) ||
+          (context_struct_.projection_type != GR3_PROJECTION_ORTHOGRAPHIC &&
+           (context_struct_.zFar < context_struct_.zNear || context_struct_.zNear <= 0 ||
+            context_struct_.vertical_field_of_view >= 180 || context_struct_.vertical_field_of_view <= 0)))
         {
-          /* gr3_setcameraprojectionparameters has not been called */
+          /* gr3_setcameraprojectionparameters or gr3_setorthographicprojection has not been called */
           RETURN_ERROR(GR3_ERROR_CAMERA_NOT_INITIALIZED);
         }
 
@@ -2312,16 +2346,27 @@ GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
   int x_patches, y_patches;
   int view_matrix_all_zeros;
 
-  GLfloat fovy = context_struct_.vertical_field_of_view;
-  GLfloat tan_halffovy = tan(fovy * M_PI / 360.0);
-  GLfloat aspect = (GLfloat)width / height;
   GLfloat zNear = context_struct_.zNear;
   GLfloat zFar = context_struct_.zFar;
+  GLfloat left, right, bottom, top;
 
-  GLfloat right = zNear * tan_halffovy * aspect;
-  GLfloat left = -right;
-  GLfloat top = zNear * tan_halffovy;
-  GLfloat bottom = -top;
+  if (context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
+    {
+      left = context_struct_.left;
+      right = context_struct_.right;
+      bottom = context_struct_.bottom;
+      top = context_struct_.top;
+    }
+  else
+    {
+      GLfloat fovy = context_struct_.vertical_field_of_view;
+      GLfloat tan_halffovy = tan(fovy * M_PI / 360.0);
+      GLfloat aspect = (GLfloat)width / height;
+      right = zNear * tan_halffovy * aspect;
+      left = -right;
+      top = zNear * tan_halffovy;
+      bottom = -top;
+    }
   int id;
   GR3_DO_INIT;
   if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
@@ -2350,10 +2395,14 @@ GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
           /* gr3_cameralookat has not been called */
           RETURN_ERROR(GR3_ERROR_CAMERA_NOT_INITIALIZED);
         }
-      if (context_struct_.zFar < context_struct_.zNear || context_struct_.zNear <= 0 ||
-          context_struct_.vertical_field_of_view >= 180 || context_struct_.vertical_field_of_view <= 0)
+      if ((context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC &&
+           (is_nan(context_struct_.left) || is_nan(context_struct_.right) || is_nan(context_struct_.bottom) ||
+            is_nan(context_struct_.top) || context_struct_.zFar < context_struct_.zNear)) ||
+          (context_struct_.projection_type != GR3_PROJECTION_ORTHOGRAPHIC &&
+           (context_struct_.zFar < context_struct_.zNear || context_struct_.zNear <= 0 ||
+            context_struct_.vertical_field_of_view >= 180 || context_struct_.vertical_field_of_view <= 0)))
         {
-          /* gr3_setcameraprojectionparameters has not been called */
+          /* gr3_setcameraprojectionparameters or gr3_setorthographicprojection has not been called */
           RETURN_ERROR(GR3_ERROR_CAMERA_NOT_INITIALIZED);
         }
 
@@ -2560,7 +2609,7 @@ GR3API void gr3_setviewmatrix(const float *m)
 
 /*!
  * \returns the current projection type:
- * GR3_PROJECTION_PERSPECTIVE or GR3_PROJECTION_PARALLEL
+ * GR3_PROJECTION_PERSPECTIVE, GR3_PROJECTION_PARALLEL or GR3_PROJECTION_ORTHOGRAPHIC
  */
 GR3API int gr3_getprojectiontype()
 {
@@ -2569,7 +2618,7 @@ GR3API int gr3_getprojectiontype()
 
 /*!
  * \param [in] type the new projection type:
- * GR3_PROJECTION_PERSPECTIVE or GR3_PROJECTION_PARALLEL
+ * GR3_PROJECTION_PERSPECTIVE, GR3_PROJECTION_PARALLEL or GR3_PROJECTION_ORTHOGRAPHIC
  */
 GR3API void gr3_setprojectiontype(int type)
 {
@@ -2577,8 +2626,36 @@ GR3API void gr3_setprojectiontype(int type)
     {
       context_struct_.projection_type = GR3_PROJECTION_PARALLEL;
     }
-  else
+  else if (type == GR3_PROJECTION_PERSPECTIVE)
     {
       context_struct_.projection_type = GR3_PROJECTION_PERSPECTIVE;
     }
+  else if (type == GR3_PROJECTION_ORTHOGRAPHIC)
+    {
+      context_struct_.projection_type = GR3_PROJECTION_ORTHOGRAPHIC;
+    }
+}
+
+/*!
+ * Set parameters for orthographic transformation
+ *
+ * \param left xmin of the volume in worldcoordinates
+ * \param right xmax of volume in worldcoordinates
+ * \param bottom ymin of volume in worldcoordinates
+ * \param top ymax of volume in worldcoordinates
+ * \param near_plane distance to near clipping plane
+ * \param far_plane distance to far clipping plane
+ *
+ * Switches projection type to orthographic
+ */
+GR3API void gr3_setorthographicprojection(float left, float right, float bottom, float top, float znear, float zfar)
+{
+  context_struct_.left = left;
+  context_struct_.right = right;
+  context_struct_.bottom = bottom;
+  context_struct_.top = top;
+  context_struct_.zNear = znear;
+  context_struct_.zFar = zfar;
+
+  gr3_setprojectiontype(GR3_PROJECTION_ORTHOGRAPHIC);
 }
