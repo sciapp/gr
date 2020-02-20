@@ -220,6 +220,10 @@ typedef struct _GR3_ContextStruct_t_
                                  projection marix */
   float zNear;                  /*!< distance to the near clipping plane */
   float zFar;                   /*!< distance to the far clipping plane */
+  float left;                   /*!< distance to the left plane of the orthographic projection */
+  float right;                  /*!< distance to the right plane of the orthographic projection */
+  float bottom;                 /*!< distance to the bottom plane of the orthographic projection */
+  float top;                    /*!< distance to the top plane of the orthographic projection */
 
   GLfloat light_dir[4]; /*!< The direction of light + 0 for showing that it is
                          not a position, but a direction */

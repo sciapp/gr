@@ -567,12 +567,18 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
         {
           double znear, zfar, fov;
           gr3_setprojectiontype(GR3_PROJECTION_PERSPECTIVE);
+          if (gr3_geterror(0, NULL, NULL)) return;
           gr_inqperspectiveprojection(&znear, &zfar, &fov);
           gr3_setcameraprojectionparameters((GLfloat)fov, (GLfloat)znear, (GLfloat)zfar);
         }
       else
         {
-          gr3_setprojectiontype(GR3_PROJECTION_PARALLEL);
+          double left, right, bottom, top, znear, zfar;
+          gr3_setprojectiontype(GR3_PROJECTION_ORTHOGRAPHIC);
+          if (gr3_geterror(0, NULL, NULL)) return;
+          gr_inqorthographicprojection(&left, &right, &bottom, &top, &znear, &zfar);
+          gr3_setorthographicprojection((GLfloat)left, (GLfloat)right, (GLfloat)bottom, (GLfloat)top, (GLfloat)znear,
+                                        (GLfloat)zfar);
         }
       if (gr3_geterror(0, NULL, NULL)) return;
       gr3_setlightdirection(ups[0], ups[1], ups[2]);
@@ -622,8 +628,8 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
         {
           if (projection_type == GR_PROJECTION_ORTHOGRAPHIC || projection_type == GR_PROJECTION_PERSPECTIVE)
             {
-              modelscales[i * 3 + j] = scales[i * 3 + j] * 1;
-              modelpos[i * 3 + j] = positions[i * 3 + j] * 1;
+              modelscales[i * 3 + j] = scales[i * 3 + j];
+              modelpos[i * 3 + j] = positions[i * 3 + j];
             }
           else
             {
@@ -1103,11 +1109,11 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
     }
   else if (projection_type == GR_PROJECTION_PERSPECTIVE)
     {
-      double near, far, fov, aspec;
+      double near, far, fov;
       gr_inqperspectiveprojection(&near, &far, &fov);
 
-      aspec = (float)width / height;
-      projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2) / aspec);
+      aspect = (float)width / height;
+      projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2) / aspect);
       projection_matrix[1 + 1 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2));
       projection_matrix[2 + 2 * 4] = (GLfloat)((far + near) / (near - far));
       projection_matrix[2 + 3 * 4] = (GLfloat)(2 * far * near / (near - far));
