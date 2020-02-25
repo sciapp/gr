@@ -30,6 +30,7 @@ typedef struct
   int inactivity_counter;
   bool thread_alive;
   bool closed_by_api;
+  bool empty;
 } ws_state_list;
 
 #endif

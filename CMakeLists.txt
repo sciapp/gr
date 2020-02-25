@@ -675,6 +675,7 @@ if(APPLE)
                  MACOSX_BUNDLE_GUI_IDENTIFIER "de.fz-juelich.GKSTerm"
                  MACOSX_BUNDLE_ICON_FILE "GKSTerm"
                  MACOSX_BUNDLE_BUNDLE_VERSION "${GR_VERSION}"
+                 MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/quartz/MacOSXBundleInfo.plist.in"
     )
     set(GKSTerm_MACOSX_BUNDLE_SIGNATURE "GKST")
     set(GKSTerm_MACOSX_MAIN_NIB_FILE "MainMenu")
