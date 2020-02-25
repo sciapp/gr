@@ -96,12 +96,12 @@ int gr3_export_pov_(const char *filename, int width, int height)
     {
       fprintf(povfp, "  up <0,1,0>\n");
       fprintf(povfp, "  right <-%f,0,0>\n", 1.0 * width / height);
-      fprintf(povfp, "  angle %f\n", context_struct_.vertical_field_of_view);
+      fprintf(povfp, "  angle %f\n", context_struct_.vertical_field_of_view * 1.0 * width / height);
     }
   else
     {
-      fprintf(povfp, "  up <0 %f 0>\n", fabsf(context_struct_.top) + fabsf(context_struct_.left));
-      fprintf(povfp, "  right <-%f,0,0>\n", fabsf(context_struct_.right) + fabsf(context_struct_.bottom));
+      fprintf(povfp, "  up <0 %f 0>\n", fabsf(context_struct_.top) + fabsf(context_struct_.bottom));
+      fprintf(povfp, "  right <-%f,0,0>\n", fabsf(context_struct_.right) + fabsf(context_struct_.left));
     }
   fprintf(povfp, "}\n");
 
