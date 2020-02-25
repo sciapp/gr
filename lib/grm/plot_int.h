@@ -113,7 +113,7 @@ error_t plot_init_static_variables(void);
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char **hierarchy_name_ptr,
-                        uint_map_t *hierarchy_to_id);
+                        uint_map_t *hierarchy_to_id, int hold_always);
 error_t plot_init_arg_structure(arg_t *arg, const char **hierarchy_name_ptr, unsigned int next_hierarchy_level_max_id);
 error_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_ptr,
                                  unsigned int next_hierarchy_level_max_id);
