@@ -83,14 +83,26 @@ int gr3_export_pov_(const char *filename, int width, int height)
     }
 
   fprintf(povfp, "camera {\n");
-  fprintf(povfp, "  up <0,1,0>\n");
-  fprintf(povfp, "  right <-%f,0,0>\n", 1.0 * width / height);
+  if (context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
+    {
+      fprintf(povfp, "  orthographic\n");
+    }
   fprintf(povfp, "  location <%f, %f, %f>\n", context_struct_.camera_x, context_struct_.camera_y,
           context_struct_.camera_z);
   fprintf(povfp, "  look_at <%f, %f, %f>\n", context_struct_.center_x, context_struct_.center_y,
           context_struct_.center_z);
   fprintf(povfp, "  sky <%f, %f, %f>\n", context_struct_.up_x, context_struct_.up_y, context_struct_.up_z);
-  fprintf(povfp, "  angle %f\n", context_struct_.vertical_field_of_view);
+  if (context_struct_.projection_type != GR3_PROJECTION_ORTHOGRAPHIC)
+    {
+      fprintf(povfp, "  up <0,1,0>\n");
+      fprintf(povfp, "  right <-%f,0,0>\n", 1.0 * width / height);
+      fprintf(povfp, "  angle %f\n", context_struct_.vertical_field_of_view);
+    }
+  else
+    {
+      fprintf(povfp, "  up <0 %f 0>\n", fabsf(context_struct_.top) + fabsf(context_struct_.left));
+      fprintf(povfp, "  right <-%f,0,0>\n", fabsf(context_struct_.right) + fabsf(context_struct_.bottom));
+    }
   fprintf(povfp, "}\n");
 
   if (context_struct_.light_dir[0] == 0 && context_struct_.light_dir[1] == 0 && context_struct_.light_dir[2] == 0)
