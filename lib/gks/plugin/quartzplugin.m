@@ -284,7 +284,7 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
           didDie = 1;
         }
 
-      if (didDie)
+      if (didDie || (wss->win == -1 && wss->closed_by_api))
         {
           wss->thread_alive = NO;
         }
