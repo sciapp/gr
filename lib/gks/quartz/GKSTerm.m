@@ -29,6 +29,7 @@ static void send_message(void *socket, void *data, size_t data_len)
 static void handle_create_window(GKSTerm *gksterm, void *socket, unsigned char *data)
 {
   (void)data;
+
   __block int result = 0;
   dispatch_sync(dispatch_get_main_queue(), ^{
     result = [gksterm GKSQuartzCreateWindow];
@@ -37,6 +38,10 @@ static void handle_create_window(GKSTerm *gksterm, void *socket, unsigned char *
   reply[0] = GKSTERM_FUNCTION_CREATE_WINDOW;
   *(int *)(reply + 1) = result;
   send_message(socket, reply, sizeof(reply));
+
+  /* Show the app icon in dock */
+  ProcessSerialNumber psn = {0, kCurrentProcess};
+  TransformProcessType(&psn, kProcessTransformToForegroundApplication);
 }
 
 static void handle_is_alive(GKSTerm *gksterm, void *socket, unsigned char *data)

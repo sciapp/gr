@@ -237,7 +237,14 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
         {
           @try
             {
-              gksterm_draw(wss->win, wss->dl.buffer, wss->dl.nbytes);
+              if (wss->win == -1 && !wss->empty)
+                {
+                  wss->win = gksterm_create_window();
+                }
+              if (wss->win != -1)
+                {
+                  gksterm_draw(wss->win, wss->dl.buffer, wss->dl.nbytes);
+                }
               wss->inactivity_counter = -1;
             }
           @catch (NSException *e)
@@ -248,7 +255,7 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
       if (wss->inactivity_counter >= 0) wss->inactivity_counter++;
       @try
         {
-          if (!gksterm_is_alive(wss->win))
+          if (wss->win != -1 && !gksterm_is_alive(wss->win))
             {
               /* This process should die when the user closes the last window */
               if (!wss->closed_by_api)
@@ -364,7 +371,9 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
             }
         }
 
-      wss->win = gksterm_create_window();
+      /* Do not create a window yet */
+      wss->win = -1;
+      wss->empty = YES;
       num_windows++;
 
       if (is_connected)
@@ -394,7 +403,10 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
 
       @try
         {
-          gksterm_close_window(wss->win);
+          if (wss->win != -1)
+            {
+              gksterm_close_window(wss->win);
+            }
           num_windows--;
         }
       @catch (NSException *e)
@@ -426,16 +438,26 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
         }
       break;
 
-    case 6:
+    case CLEAR_WS:
+      [mutex lock];
+      wss->empty = YES;
+      [mutex unlock];
       break;
 
     case UPDATE_WS:
       if (ia[1] & GKS_K_PERFORM_FLAG)
         {
           [mutex lock];
+          if (wss->win == -1 && !wss->empty)
+            {
+              wss->win = gksterm_create_window();
+            }
           @try
             {
-              gksterm_draw(wss->win, wss->dl.buffer, wss->dl.nbytes);
+              if (wss->win != -1)
+                {
+                  gksterm_draw(wss->win, wss->dl.buffer, wss->dl.nbytes);
+                }
               wss->inactivity_counter = -1;
             }
           @catch (NSException *e)
@@ -455,6 +477,7 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
     case DRAW_IMAGE:
       [mutex lock];
       wss->inactivity_counter = 0;
+      wss->empty = NO;
       [mutex unlock];
       break;
     }
