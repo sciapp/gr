@@ -436,22 +436,40 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp, "        if (!viewMatrix) {\n");
   fprintf(htmlfp, "          calculateViewMatrix();\n");
   fprintf(htmlfp, "        }\n");
-  fprintf(htmlfp, "        var verticalFieldOfView = %g * fieldOfViewMultiplier;\n",
-          context_struct_.vertical_field_of_view);
-  fprintf(htmlfp, "        if (verticalFieldOfView > 179) {\n");
-  fprintf(htmlfp, "          verticalFieldOfView = 179;\n");
-  fprintf(htmlfp, "        }\n");
-  fprintf(htmlfp, "        var zNear = %g;\n", context_struct_.zNear);
-  fprintf(htmlfp, "        var zFar = %g;\n", context_struct_.zFar);
-  fprintf(htmlfp, "        var aspect = 1.0*gl.viewportWidth/gl.viewportHeight;\n");
-  fprintf(htmlfp, "        var f = 1/Math.tan(verticalFieldOfView*Math.PI/360.0);\n");
-  fprintf(htmlfp, "        \n");
-  fprintf(htmlfp, "        var projectionMatrix = [\n");
-  fprintf(htmlfp, "          f/aspect, 0.0, 0.0, 0.0,\n");
-  fprintf(htmlfp, "          0.0, f, 0.0, 0.0,\n");
-  fprintf(htmlfp, "          0.0, 0.0, (zFar+zNear)/(zNear-zFar), 2*zFar*zNear/(zNear-zFar),\n");
-  fprintf(htmlfp, "          0.0, 0.0, -1, 0.0\n");
-  fprintf(htmlfp, "        ];\n");
+  if (context_struct_.projection_type != GR3_PROJECTION_ORTHOGRAPHIC)
+    {
+      fprintf(htmlfp, "        var verticalFieldOfView = %g * fieldOfViewMultiplier;\n",
+              context_struct_.vertical_field_of_view);
+      fprintf(htmlfp, "        if (verticalFieldOfView > 179) {\n");
+      fprintf(htmlfp, "          verticalFieldOfView = 179;\n");
+      fprintf(htmlfp, "        }\n");
+      fprintf(htmlfp, "        var zNear = %g;\n", context_struct_.zNear);
+      fprintf(htmlfp, "        var zFar = %g;\n", context_struct_.zFar);
+      fprintf(htmlfp, "        var aspect = 1.0*gl.viewportWidth/gl.viewportHeight;\n");
+      fprintf(htmlfp, "        var f = 1/Math.tan(verticalFieldOfView*Math.PI/360.0);\n");
+      fprintf(htmlfp, "        \n");
+      fprintf(htmlfp, "        var projectionMatrix = [\n");
+      fprintf(htmlfp, "          f/aspect, 0.0, 0.0, 0.0,\n");
+      fprintf(htmlfp, "          0.0, f, 0.0, 0.0,\n");
+      fprintf(htmlfp, "          0.0, 0.0, (zFar+zNear)/(zNear-zFar), 2*zFar*zNear/(zNear-zFar),\n");
+      fprintf(htmlfp, "          0.0, 0.0, -1, 0.0\n");
+      fprintf(htmlfp, "        ];\n");
+    }
+  else
+    {
+      fprintf(htmlfp, "        var zNear = %g;\n", context_struct_.zNear);
+      fprintf(htmlfp, "        var zFar = %g;\n", context_struct_.zFar);
+      fprintf(htmlfp, "        var left = %g;\n", context_struct_.left);
+      fprintf(htmlfp, "        var right = %g;\n", context_struct_.right);
+      fprintf(htmlfp, "        var bottom = %g;\n", context_struct_.bottom);
+      fprintf(htmlfp, "        var top = %g;\n", context_struct_.top);
+      fprintf(htmlfp, "        var projectionMatrix = [\n");
+      fprintf(htmlfp, "          2/(right - left), 0.0, 0.0, -(left + right)/(right - left),\n");
+      fprintf(htmlfp, "          0.0, 2/(top - bottom), 0.0, -(bottom + top)/(top - bottom),\n");
+      fprintf(htmlfp, "          0.0, 0.0, -2 /(zFar-zNear), -(zFar+zNear)/(zFar-zNear),\n");
+      fprintf(htmlfp, "          0.0, 0.0, 0.0, 1.0\n");
+      fprintf(htmlfp, "        ];\n");
+    }
   fprintf(htmlfp, "        projectionMatrix = transposeMatrix4(projectionMatrix);\n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        \n");
