@@ -224,7 +224,10 @@ void gr_writestream(char *string, ...)
   vsprintf(s, string, ap);
   va_end(ap);
 
-  append(s);
+  if (stream != stdout)
+    append(s);
+  else
+    fprintf(stdout, "%s", s);
 }
 
 void gr_flushstream(int discard)
