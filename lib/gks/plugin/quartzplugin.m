@@ -290,6 +290,10 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
         }
       [mutex unlock];
 
+      if (!wss->thread_alive)
+        {
+          break;
+        }
       usleep(100000);
     }
   [pool drain];
