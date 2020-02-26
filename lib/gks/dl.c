@@ -36,6 +36,7 @@ static int purge(gks_display_list_t *d, char *t)
   while (*len)
     {
       fctid = (int *)(s + sp + sizeof(int));
+      if (fctid == 2) break;
       /* 48: setcolorrep, 54: setwswindow, 55: setwsviewport */
       if (*fctid == 48 || *fctid == 54 || *fctid == 55)
         {
@@ -89,11 +90,8 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
     case 6: /* clear workstation */
 
-      if (d->empty)
-        {
-          t = gks_malloc(d->size);
-          tp = purge(d, t);
-        }
+      t = gks_malloc(d->size);
+      tp = purge(d, t);
       d->nbytes = d->position = 0;
 
       len = 2 * sizeof(int) + sizeof(gks_state_list_t);
@@ -103,11 +101,8 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       COPY(&fctid, sizeof(int));
       COPY(gkss, sizeof(gks_state_list_t));
 
-      if (d->empty)
-        {
-          COPY(t, tp);
-          free(t);
-        }
+      COPY(t, tp);
+      free(t);
       break;
 
     case 12: /* polyline */
