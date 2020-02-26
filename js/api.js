@@ -142,6 +142,12 @@ function GR(canvas_id) {
     this.shadelines = gr_shadelines;
     this.panzoom = gr_panzoom;
 
+    // set canvas and context
+    Module.set_canvas(canvas_id);
+    this.current_canvas = Module.canvas;
+    this.current_context = Module.context;
+    this.select_canvas = select_canvas;
+
     // constants
     this.NOCLIP = 0;
     this.CLIP = 1;
