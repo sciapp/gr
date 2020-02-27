@@ -2871,7 +2871,7 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     }
   else if (args_values(plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
     {
-      if (dpi[0] > 200 || dpi[1] > 200)
+      if (dpi[0] > 300 || dpi[1] > 300)
         {
           for (i = 0; i < 2; ++i)
             {
