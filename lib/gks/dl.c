@@ -29,22 +29,56 @@ static int purge(gks_display_list_t *d, char *t)
  */
 {
   char *s;
-  int sp = 0, tp = 0, *len, *fctid;
+  int i;
+  int sp = 0, tp = 0, *len, fctid;
+  static const char *attribute_buffer[MAX_ATTRIBUTE_FCTID];
+  static const char *color_buffer[MAX_COLOR];
+  memset(attribute_buffer, 0, sizeof(char *) * MAX_ATTRIBUTE_FCTID);
+  memset(color_buffer, 0, sizeof(char *) * MAX_COLOR);
 
   s = d->buffer;
   len = (int *)(s + sp);
   while (*len)
     {
-      fctid = (int *)(s + sp + sizeof(int));
-      if (fctid == 2) break;
-      /* 48: setcolorrep, 54: setwswindow, 55: setwsviewport */
-      if (*fctid == 48 || *fctid == 54 || *fctid == 55)
+      fctid = *(int *)(s + sp + sizeof(int));
+      switch (fctid)
         {
-          memmove(t + tp, s + sp, *len);
-          tp += *len;
+        case 48: /* setcolorrep */
+          {
+            int colorind = *(int *)(s + sp + 2 * sizeof(int));
+            if (colorind >= 0 && colorind < MAX_COLOR)
+              {
+                color_buffer[colorind] = s + sp;
+              }
+          }
+          break;
+        case 54: /* setwswindow */
+        case 55: /* setwsviewport */
+          attribute_buffer[fctid] = s + sp;
+          break;
+        default:
+          break;
         }
       sp += *len;
       len = (int *)(s + sp);
+    }
+  for (i = 0; i < MAX_COLOR; i++)
+    {
+      if (color_buffer[i])
+        {
+          len = (int *)(color_buffer[i]);
+          memmove(t + tp, color_buffer[i], *len);
+          tp += *len;
+        }
+    }
+  for (i = 0; i < MAX_ATTRIBUTE_FCTID; i++)
+    {
+      if (attribute_buffer[i])
+        {
+          len = (int *)(attribute_buffer[i]);
+          memmove(t + tp, attribute_buffer[i], *len);
+          tp += *len;
+        }
     }
   return tp;
 }

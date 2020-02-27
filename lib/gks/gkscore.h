@@ -118,6 +118,8 @@ extern "C" {
 #define ENCODING_LATIN1 300
 #define ENCODING_UTF8 301
 
+#define MAX_ATTRIBUTE_FCTID SET_WS_VIEWPORT /* maximum function ID for setting an attribute */
+
 typedef struct
 {
   int lindex;
