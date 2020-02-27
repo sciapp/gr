@@ -142,25 +142,6 @@ function GR(canvas_id) {
     this.shadelines = gr_shadelines;
     this.panzoom = gr_panzoom;
 
-    //meta.c
-    this.newmeta = gr_newmeta;
-    this.meta_args_push = gr_meta_args_push;
-    this.deletemeta = gr_deletemeta;
-    this.get_stdout = gr_get_stdout;
-    this.readmeta = gr_readmeta;
-    this.plotmeta = gr_plotmeta;
-    this.dumpmeta_json = gr_dumpmeta_json;
-    this.dumpmeta = gr_dumpmeta;
-    this.inputmeta = gr_inputmeta;
-    this.mergemeta = gr_mergemeta;
-    this.mergemeta_named = gr_mergemeta_named;
-    this.switchmeta = gr_switchmeta;
-    this.meta_get_box = gr_meta_get_box;
-    this.registermeta = gr_registermeta;
-    this.unregistermeta = gr_unregistermeta;
-    this.dumpmeta_json_str = gr_dumpmeta_json_str;
-    this.load_from_str = gr_load_from_str;
-
     // set canvas and context
     Module.set_canvas(canvas_id);
     this.current_canvas = Module.canvas;
@@ -363,33 +344,59 @@ function GR(canvas_id) {
     this.PRINT_FIG = "fig";
     this.PRINT_SVG = "svg";
     this.PRINT_WMF = "wmf";
+}
 
-    this.GR_META_EVENT_NEW_PLOT = 0;
-    this.GR_META_EVENT_UPDATE_PLOT = 1;
-    this.GR_META_EVENT_SIZE = 2;
-    this.GR_META_EVENT_MERGE_END = 3;
+function GRM(canvas_id) {
+    this.args_new = grm_args_new;
+    this.args_push = grm_args_push;
+    this.args_delete = grm_args_delete;
+    this.get_stdout = grm_get_stdout;
+    this.read = grm_read;
+    this.plot = grm_plot;
+    this.dump_json = grm_dump_json;
+    this.dump = grm_dump;
+    this.input = grm_input;
+    this.merge = grm_merge;
+    this.merge_named = grm_merge_named;
+    this.switch = grm_switch;
+    this.get_box = grm_get_box;
+    this.register = grm_register;
+    this.unregister = grm_unregister;
+    this.dump_json_str = grm_dump_json_str;
+    this.load_from_str = grm_load_from_str;
 
-    this.gr_meta_callbacks = [Function.prototype, Function.prototype, Function.prototype, Function.prototype];
+    // set canvas and context
+    Module.set_canvas(canvas_id);
+    this.current_canvas = Module.canvas;
+    this.current_context = Module.context;
+    this.select_canvas = select_canvas;
 
-    gr_registermeta_c(this.GR_META_EVENT_NEW_PLOT, Module.addFunction(function(evt) {
+    this.EVENT_NEW_PLOT = 0;
+    this.EVENT_UPDATE_PLOT = 1;
+    this.EVENT_SIZE = 2;
+    this.EVENT_MERGE_END = 3;
+
+    this.callbacks = [Function.prototype, Function.prototype, Function.prototype, Function.prototype];
+
+    grm_register_c(this.EVENT_NEW_PLOT, Module.addFunction(function(evt) {
         var evt_data = {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0]
         };
         freearray(evt);
-        this.gr_meta_callbacks[this.GR_META_EVENT_NEW_PLOT](evt_data);
+        this.callbacks[this.EVENT_NEW_PLOT](evt_data);
     }.bind(this), 'vi'));
 
-    gr_registermeta_c(this.GR_META_EVENT_UPDATE_PLOT, Module.addFunction(function(evt) {
+    grm_register_c(this.EVENT_UPDATE_PLOT, Module.addFunction(function(evt) {
         var evt_data = {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0]
         };
         freearray(evt);
-        this.gr_meta_callbacks[this.GR_META_EVENT_UPDATE_PLOT](evt_data);
+        this.callbacks[this.EVENT_UPDATE_PLOT](evt_data);
     }.bind(this), 'vi'));
 
-    gr_registermeta_c(this.GR_META_EVENT_SIZE, Module.addFunction(function(evt) {
+    grm_register_c(this.EVENT_SIZE, Module.addFunction(function(evt) {
         var evt_data = {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0],
@@ -397,19 +404,18 @@ function GR(canvas_id) {
             'height': Module.HEAP32.subarray(evt / 4 + 3, evt / 4 + 4)[0]
         };
         freearray(evt);
-        this.gr_meta_callbacks[this.GR_META_EVENT_SIZE](evt_data);
+        this.callbacks[this.EVENT_SIZE](evt_data);
     }.bind(this), 'vi'));
 
-    gr_registermeta_c(this.GR_META_EVENT_MERGE_END, Module.addFunction(function(evt) {
+    grm_register_c(this.EVENT_MERGE_END, Module.addFunction(function(evt) {
         var evt_data = {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'identificator': Module.UTF8ToString(Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0])
         };
         freearray(evt);
-        this.gr_meta_callbacks[this.GR_META_EVENT_MERGE_END](evt_data);
+        this.callbacks[this.EVENT_MERGE_END](evt_data);
     }.bind(this), 'vi'));
 }
-
 
 floatarray = function(a) {
     var ptr = Module._malloc(a.length * 8);
@@ -1125,13 +1131,13 @@ gr_uselinespec = function(string) {
 
 gr_selntran = Module.cwrap('gr_selntran', '', ['number']);
 
-gr_newmeta_c = Module.cwrap('gr_newmeta', 'number', []);
-gr_newmeta = function() {
-    return gr_newmeta_c();
+grm_args_new_c = Module.cwrap('grm_args_new', 'number', []);
+grm_args_new = function() {
+    return grm_args_new_c();
 };
 
-gr_meta_args_push_c = Module.cwrap('gr_meta_args_push', 'number', ['number', 'string', 'string', 'number']);
-gr_meta_args_push = function(args, key, format, vals) {
+grm_args_push_c = Module.cwrap('grm_args_push', 'number', ['number', 'string', 'string', 'number']);
+grm_args_push = function(args, key, format, vals) {
     var type = format[0];
     var arr;
     if (type == "d") {
@@ -1142,77 +1148,77 @@ gr_meta_args_push = function(args, key, format, vals) {
         var ptr = uint8array(vals);
         arr = intarray([ptr]);
     }
-    return gr_meta_args_push_c(args, key, format, arr);
+    return grm_args_push_c(args, key, format, arr);
 };
 
-gr_mergemeta_c = Module.cwrap('gr_mergemeta', 'number', ['number']);
-gr_mergemeta = function(args) {
-    return gr_mergemeta_c(args);
+grm_merge_c = Module.cwrap('grm_merge', 'number', ['number']);
+grm_merge = function(args) {
+    return grm_merge_c(args);
 };
 
-gr_mergemeta_named_c = Module.cwrap('gr_mergemeta_named', 'number', ['number', 'number']);
-gr_mergemeta_named = function(args, identificator) {
+grm_merge_named_c = Module.cwrap('grm_merge_named', 'number', ['number', 'number']);
+grm_merge_named = function(args, identificator) {
     let bufferSize = Module.lengthBytesUTF8(identificator);
     let bufferPtr = Module._malloc(bufferSize + 1);
     Module.stringToUTF8(identificator, bufferPtr, bufferSize + 1);
-    let result = gr_mergemeta_named_c(args, bufferPtr);
+    let result = grm_merge_named_c(args, bufferPtr);
     freearray(bufferPtr);
     return result;
 };
 
-gr_inputmeta_c = Module.cwrap('gr_inputmeta', 'number', ['number', 'number']);
-gr_inputmeta = function(args, mouse_args) {
-    return gr_inputmeta_c(args, mouse_args);
+grm_input_c = Module.cwrap('grm_input', 'number', ['number', 'number']);
+grm_input = function(args, mouse_args) {
+    return grm_input_c(args, mouse_args);
 };
 
-gr_deletemeta_c = Module.cwrap('gr_deletemeta', '', ['number']);
-gr_deletemeta = function(args) {
-    gr_deletemeta_c(args);
+grm_args_delete_c = Module.cwrap('grm_args_delete', '', ['number']);
+grm_args_delete = function(args) {
+    grm_args_delete_c(args);
 };
 
-gr_readmeta_c = Module.cwrap('gr_readmeta', 'number', ['number', 'number']);
-gr_readmeta = function(args, string) {
+grm_read_c = Module.cwrap('grm_read', 'number', ['number', 'number']);
+grm_read = function(args, string) {
     var bufferSize = Module.lengthBytesUTF8(string);
     var bufferPtr = Module._malloc(bufferSize + 1);
     Module.stringToUTF8(string, bufferPtr, bufferSize + 1);
-    result = gr_readmeta_c(args, bufferPtr);
+    result = grm_read_c(args, bufferPtr);
     freearray(bufferPtr);
     return result;
 };
 
-gr_plotmeta_c = Module.cwrap('gr_plotmeta', '', ['number']);
-gr_plotmeta = function(args) {
+grm_plot_c = Module.cwrap('grm_plot', '', ['number']);
+grm_plot = function(args) {
     if (typeof args === 'undefined') {
-        gr_plotmeta_c(0);
+        grm_plot_c(0);
     } else {
-        gr_plotmeta_c(args);
+        grm_plot_c(args);
     }
 };
 
-gr_dumpmeta_json_c = Module.cwrap('gr_dumpmeta_json', 'number', ['number', 'number']);
-gr_dumpmeta_json = function(args, file) {
+grm_dump_json_c = Module.cwrap('grm_dump_json', 'number', ['number', 'number']);
+grm_dump_json = function(args, file) {
     if (typeof file === 'undefined') {
         file = this.get_stdout();
     }
-    return gr_dumpmeta_json_c(args, file);
+    return grm_dump_json_c(args, file);
 };
 
-gr_dumpmeta_c = Module.cwrap('gr_dumpmeta', 'number', ['number', 'number']);
-gr_dumpmeta = function(args, file) {
+grm_dump_c = Module.cwrap('grm_dump', 'number', ['number', 'number']);
+grm_dump = function(args, file) {
     if (typeof file === 'undefined') {
         file = this.get_stdout();
     }
-    return gr_dumpmeta_c(args, file);
+    return grm_dump_c(args, file);
 };
 
-gr_switchmeta_c = Module.cwrap('gr_switchmeta', 'number', ['number']);
-gr_switchmeta = function(id) {
-    return gr_switchmeta_c(id);
+grm_switch_c = Module.cwrap('grm_switch', 'number', ['number']);
+grm_switch = function(id) {
+    return grm_switch_c(id);
 };
 
-gr_get_stdout_c = Module.cwrap('gr_get_stdout', 'number', []);
-gr_get_stdout = function() {
-    return gr_get_stdout_c();
+grm_get_stdout_c = Module.cwrap('grm_get_stdout', 'number', []);
+grm_get_stdout = function() {
+    return grm_get_stdout_c();
 };
 
 gr_shade_c = Module.cwrap('gr_shade', '', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number']);
@@ -1268,14 +1274,14 @@ gr_panzoom = function(x, y, zoom, xmin, xmax, ymin, ymax) {
     return result;
 };
 
-gr_meta_get_box_c = Module.cwrap('gr_meta_get_box', 'number', ['number', 'number', 'number', 'number', 'number']);
-gr_meta_get_box = function(top, right, bottom, left, keepAspectRatio) {
+grm_get_box_c = Module.cwrap('grm_get_box', 'number', ['number', 'number', 'number', 'number', 'number']);
+grm_get_box = function(top, right, bottom, left, keepAspectRatio) {
     var result = new Array(4);
     var _x = Module._malloc(4);
     var _y = Module._malloc(4);
     var _w = Module._malloc(4);
     var _h = Module._malloc(4);
-    gr_meta_get_box_c(top, right, bottom, left, keepAspectRatio, _x, _y, _w, _h);
+    grm_get_box_c(top, right, bottom, left, keepAspectRatio, _x, _y, _w, _h);
     result[0] = Module.HEAP32.subarray(_x / 4, _x / 4 + 1)[0];
     result[1] = Module.HEAP32.subarray(_y / 4, _y / 4 + 1)[0];
     result[2] = Module.HEAP32.subarray(_w / 4, _w / 4 + 1)[0];
@@ -1287,35 +1293,35 @@ gr_meta_get_box = function(top, right, bottom, left, keepAspectRatio) {
     return result;
 };
 
-gr_registermeta_c = Module.cwrap('gr_registermeta', 'number', ['number', 'number']);
-gr_registermeta = function(type, callback) {
+grm_register_c = Module.cwrap('grm_register', 'number', ['number', 'number']);
+grm_register = function(type, callback) {
     if (type <= 3) {
-      this.gr_meta_callbacks[type] = callback;
+      this.callbacks[type] = callback;
     } else {
-      console.error('gr.registermeta: unknown event type:', type);
+      console.error('gr.register: unknown event type:', type);
       return;
     }
 };
 
-gr_unregistermeta_c = Module.cwrap('gr_unregistermeta', 'number', ['number']);
-gr_unregistermeta = function(type) {
-    Module.removeFunction(gr_meta_callbacks[type]);
-    delete gr_meta_callbacks[type];
-    return gr_unregistermeta_c(type);
+grm_unregister_c = Module.cwrap('grm_unregister', 'number', ['number']);
+grm_unregister = function(type) {
+    Module.removeFunction(callbacks[type]);
+    delete callbacks[type];
+    return grm_unregister_c(type);
 };
 
-gr_dumpmeta_json_str_c = Module.cwrap('gr_dumpmeta_json_str', 'number', []);
-gr_dumpmeta_json_str = function() {
-  let str_p = gr_dumpmeta_json_str_c();
+grm_dump_json_str_c = Module.cwrap('grm_dump_json_str', 'number', []);
+grm_dump_json_str = function() {
+  let str_p = grm_dump_json_str_c();
   let str = Module.UTF8ToString(str_p);
   freearray(str_p);
   return str;
 };
 
-gr_load_from_str_c = Module.cwrap('gr_load_from_str', 'number', ['number']);
-gr_load_from_str = function(json_string) {
+grm_load_from_str_c = Module.cwrap('grm_load_from_str', 'number', ['number']);
+grm_load_from_str = function(json_string) {
   let cstr = uint8array(json_string);
-  let result = gr_load_from_str_c(cstr);
+  let result = grm_load_from_str_c(cstr);
   freearray(cstr);
   return result;
 };

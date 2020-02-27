@@ -10,6 +10,9 @@ project(
   LANGUAGES C CXX
 )
 
+# Honor `C_VISIBILITY_PRESET hidden` in static libraries
+cmake_policy(SET CMP0063 NEW)
+
 if(UNIX)
   if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX
@@ -207,7 +210,6 @@ set(GR_SOURCES
     lib/gr/interp2.c
     lib/gr/io.c
     lib/gr/md5.c
-    lib/gr/meta.c
     lib/gr/shade.c
     lib/gr/spline.c
     lib/gr/strlib.c
@@ -321,6 +323,64 @@ if(NOT OpenGL_FOUND)
   target_compile_definitions(gr3_static PUBLIC -DNO_GL)
   target_compile_definitions(gr3_shared PUBLIC -DNO_GL)
 endif()
+
+set(GRM_SOURCES
+    lib/grm/args.c
+    lib/grm/dump.c
+    lib/grm/dynamic_args_array.c
+    lib/grm/error.c
+    lib/grm/event.c
+    lib/grm/interaction.c
+    lib/grm/json.c
+    lib/grm/memwriter.c
+    lib/grm/net.c
+    lib/grm/plot.c
+    lib/grm/util.c
+    lib/grm/datatype/string_list.c
+    lib/grm/datatype/string_map.c
+    lib/grm/datatype/uint_map.c
+)
+
+set(GRM_SUBDIR_HEADERS
+    lib/grm/args.h
+    lib/grm/dump.h
+    lib/grm/event.h
+    lib/grm/interaction.h
+    lib/grm/net.h
+    lib/grm/plot.h
+    lib/grm/util.h
+)
+
+add_library(grm_static STATIC ${GRM_SOURCES})
+add_library(grm_shared SHARED ${GRM_SOURCES})
+
+foreach(LIBRARY grm_static grm_shared)
+  target_link_libraries(${LIBRARY} PUBLIC GR::GR)
+  target_link_libraries(${LIBRARY} PUBLIC GR::GR3)
+  target_link_libraries(${LIBRARY} PUBLIC m)
+  if(WIN32)
+    target_link_libraries(${LIBRARY} PUBLIC ws2_32)
+  endif()
+  target_include_directories(
+    ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/>
+                      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  )
+  set_target_properties(
+    ${LIBRARY}
+    PROPERTIES C_STANDARD 90
+               C_EXTENSIONS OFF
+               C_STANDARD_REQUIRED ON
+               POSITION_INDEPENDENT_CODE ON
+               C_VISIBILITY_PRESET hidden
+               INSTALL_RPATH "${INSTALL_RPATH}"
+               OUTPUT_NAME GRM
+  )
+endforeach()
+if(WIN32)
+  target_compile_definitions(grm_shared PRIVATE BUILDING_DLL)
+endif()
+set_target_properties(grm_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
+add_library(GR::GRM ALIAS grm_shared)
 
 set(GR_REPORT "GKS plugins:\n")
 
@@ -778,6 +838,8 @@ if(GR_INSTALL)
             gks_shared
             gr_static
             gr_shared
+            grm_static
+            grm_shared
             cairoplugin
             glplugin
             gsplugin
@@ -835,7 +897,8 @@ if(GR_INSTALL)
       BUNDLE DESTINATION Applications
     )
   endif()
-  install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
+  install(FILES lib/gr/gr.h lib/gks/gks.h lib/gr3/gr3.h lib/grm/grm.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
+  install(FILES ${GRM_SUBDIR_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/grm/)
   if(TARGET qt4gr OR TARGET qt5gr)
     install(FILES lib/gr/qtgr/grwidget.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/)
   endif()
