@@ -271,7 +271,7 @@ error_cleanup:
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const char **hierarchy_name_ptr,
-                        uint_map_t *hierarchy_to_id)
+                        uint_map_t *hierarchy_to_id, int hold_always)
 {
   static args_set_map_t *key_to_cleared_args = NULL;
   static int recursion_level = -1;
@@ -336,11 +336,11 @@ error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const ch
       uint_map_at(hierarchy_to_id, "series", (unsigned int *)&series_id);
     }
   /* special case: clear the plot container before usage if
-   * - it is the first call of `plot_merge_args` AND
+   * - it is the first call of `plot_merge_args` AND `hold_always` is `0` AND
    *   - `plot_id` is `1` and `hold_plots` is not set OR
    *   - `hold_plots` is true and no plot will be appended (`plot_id` > 0)
    */
-  if (strcmp(*hierarchy_name_ptr, "root") == 0 && plot_id > 0)
+  if (strcmp(*hierarchy_name_ptr, "root") == 0 && plot_id > 0 && !hold_always)
     {
       int hold_plots_key_available, hold_plots;
       hold_plots_key_available = args_values(args, "hold_plots", "i", &hold_plots);
@@ -362,6 +362,12 @@ error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const ch
           logger((stderr, "Held current args\n"));
         }
     }
+#ifndef NDEBUG
+  if (strcmp(*hierarchy_name_ptr, "root") == 0 && hold_always)
+    {
+      logger((stderr, "\"hold_always\" is set\n"));
+    }
+#endif /* ifndef  */
   merge_it = args_iter(merge_args);
   cleanup_and_set_error_if(merge_it == NULL, ERROR_MALLOC);
   while ((merge_arg = merge_it->next(merge_it)) != NULL)
@@ -448,8 +454,8 @@ error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const ch
           for (i = 0; i < merge_value_it->array_length; ++i)
             {
               logger((stderr, "Perform a recursive merge on key \"%s\", array index \"%d\"\n", merge_arg->key, i));
-              error =
-                  plot_merge_args(args_array[i], merge_args_array[i], current_hierarchy_name_ptr + 1, hierarchy_to_id);
+              error = plot_merge_args(args_array[i], merge_args_array[i], current_hierarchy_name_ptr + 1,
+                                      hierarchy_to_id, hold_always);
               cleanup_if_error;
             }
         }
@@ -3148,10 +3154,10 @@ unsigned int grm_max_plotid(void)
 
 int grm_merge(const grm_args_t *args)
 {
-  return grm_merge_named(args, "");
+  return grm_merge_extended(args, 0, NULL);
 }
 
-int grm_merge_named(const grm_args_t *args, const char *identificator)
+int grm_merge_extended(const grm_args_t *args, int hold, const char *identificator)
 {
   if (plot_init_static_variables() != NO_ERROR)
     {
@@ -3159,7 +3165,7 @@ int grm_merge_named(const grm_args_t *args, const char *identificator)
     }
   if (args != NULL)
     {
-      if (plot_merge_args(global_root_args, args, NULL, NULL) != NO_ERROR)
+      if (plot_merge_args(global_root_args, args, NULL, NULL, hold) != NO_ERROR)
         {
           return 0;
         }
@@ -3170,6 +3176,16 @@ int grm_merge_named(const grm_args_t *args, const char *identificator)
   process_events();
 
   return 1;
+}
+
+int grm_merge_hold(const grm_args_t *args)
+{
+  return grm_merge_extended(args, 1, NULL);
+}
+
+int grm_merge_named(const grm_args_t *args, const char *identificator)
+{
+  return grm_merge_extended(args, 0, identificator);
 }
 
 int grm_plot(const grm_args_t *args)
