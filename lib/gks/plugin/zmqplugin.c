@@ -11,8 +11,7 @@
 #include "gkscore.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #ifdef _WIN32
@@ -24,8 +23,8 @@ extern "C"
 
 #endif
 
-  DLLEXPORT void gks_zmqplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
-                               int lc, char *chars, void **ptr);
+DLLEXPORT void gks_zmqplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
+                             int lc, char *chars, void **ptr);
 
 #ifdef __cplusplus
 }

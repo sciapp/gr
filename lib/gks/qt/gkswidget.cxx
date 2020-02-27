@@ -54,7 +54,10 @@ static void resize_pixmap(int width, int height)
           p->pixmap = new QPainter(p->pm);
           p->pixmap->setClipRect(0, 0, p->width, p->height);
         }
-      p->has_been_resized = 1;
+      if (!p->resize_requested_by_application)
+        {
+          p->resized_by_user = 1;
+        }
     }
 }
 
@@ -65,12 +68,20 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
 
   gkss->fontfile = gks_open_font();
 
-  p->device_dpi_x = this->physicalDpiX();
-  p->device_dpi_y = this->physicalDpiY();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+  p->device_pixel_ratio = this->devicePixelRatioF();
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+  p->device_pixel_ratio = this->devicePixelRatio();
+#else
+  p->device_pixel_ratio = 1;
+#endif
+  p->device_dpi_x = this->physicalDpiX() * p->device_pixel_ratio;
+  p->device_dpi_y = this->physicalDpiY() * p->device_pixel_ratio;
   p->width = 500;
   p->height = 500;
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
+  p->nominal_size = 1.0;
 
   initialize_data();
 
@@ -81,9 +92,14 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
   prevent_resize = !QProcessEnvironment::systemEnvironment().value("GKS_GKSQT_PREVENT_RESIZE").isEmpty();
 }
 
+GKSWidget::~GKSWidget()
+{
+  delete[] dl;
+}
+
+
 void GKSWidget::paintEvent(QPaintEvent *)
 {
-
   if (dl)
     {
       QPainter painter(this);
@@ -92,14 +108,14 @@ void GKSWidget::paintEvent(QPaintEvent *)
 
       if (!prevent_resize)
         {
-          painter.drawPixmap(0, 0, *(p->pm));
+          painter.drawPixmap(0, 0, width(), height(), *(p->pm));
         }
       else
         {
-          int x = (width() - p->width) / 2;
-          int y = (height() - p->height) / 2;
+          int x = (width() - p->width / p->device_pixel_ratio) / 2;
+          int y = (height() - p->height / p->device_pixel_ratio) / 2;
           painter.fillRect(0, 0, width(), height(), Qt::white);
-          painter.drawPixmap(x, y, *(p->pm));
+          painter.drawPixmap(x, y, p->width / p->device_pixel_ratio, p->height / p->device_pixel_ratio, *(p->pm));
         }
     }
 }
@@ -107,10 +123,13 @@ void GKSWidget::paintEvent(QPaintEvent *)
 void GKSWidget::resizeEvent(QResizeEvent *event)
 {
   (void)event;
-  p->mwidth = (double)this->width() / p->device_dpi_x * 0.0254;
-  p->mheight = (double)this->height() / p->device_dpi_y * 0.0254;
-  resize_pixmap(this->width(), this->height());
-  repaint();
+  double width_ = width() * p->device_pixel_ratio;
+  double height_ = height() * p->device_pixel_ratio;
+  p->mwidth = width_ / p->device_dpi_x * 0.0254;
+  p->mheight = height_ / p->device_dpi_y * 0.0254;
+  p->nominal_size = min(width_, height_) / 500.0;
+  resize_pixmap(nint(width_), nint(height_));
+  p->resize_requested_by_application = 0;
 }
 
 static void set_window_size(char *s)
@@ -147,10 +166,14 @@ static void set_window_size(char *s)
 
 void GKSWidget::interpret(char *dl)
 {
-  set_window_size(dl);
+  delete[] this->dl;
+  this->dl = dl;
+
+  set_window_size(this->dl);
   if (!prevent_resize)
     {
-      resize(p->width, p->height);
+      p->resize_requested_by_application = 1;
+      resize(nint(p->width / p->device_pixel_ratio), nint(p->height / p->device_pixel_ratio));
     }
   if (!is_mapped)
     {
@@ -159,6 +182,5 @@ void GKSWidget::interpret(char *dl)
       show();
     }
 
-  this->dl = dl;
   repaint();
 }

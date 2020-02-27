@@ -5,8 +5,7 @@
 #include "gkscore.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #ifdef _WIN32
@@ -18,8 +17,8 @@ extern "C"
 
 #endif
 
-  DLLEXPORT void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
-                               int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
+DLLEXPORT void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                             int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef __cplusplus
 }

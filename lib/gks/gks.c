@@ -1777,6 +1777,8 @@ void gks_set_color_rep(int wkid, int index, double red, double green, double blu
 
 void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
 {
+  static int warn_about = 1;
+
   if (state >= GKS_K_GKOP)
     {
       if (tnr > 0 && tnr < MAX_TNR)
@@ -1784,8 +1786,17 @@ void gks_set_window(int tnr, double xmin, double xmax, double ymin, double ymax)
           /* Check whether the given coordinate range does not lead
              to loss of precision in subsequent GKS functions. It must
              be ensured that there are at least 4 significant digits
-             when applying normalization or device transformations */
-          if (xmin < xmax && check_range(xmin, xmax) && ymin < ymax && check_range(ymin, ymax))
+             when applying normalization or device transformations
+           */
+          if (!check_range(xmin, xmax) || !check_range(ymin, ymax))
+            {
+              if (warn_about)
+                {
+                  fprintf(stderr, "GKS: Possible loss of precision in routine SET_WINDOW\n");
+                  warn_about = 0;
+                }
+            }
+          if (xmin < xmax && ymin < ymax)
             {
               i_arr[0] = tnr;
               s->window[tnr][0] = f_arr_1[0] = xmin;

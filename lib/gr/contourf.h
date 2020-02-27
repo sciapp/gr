@@ -2,11 +2,10 @@
 #define _CONTOURF_H_
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-  void gr_draw_contourf(int, int, int, double *, double *, double *, double *, int, int, int);
+void gr_draw_contourf(int, int, int, double *, double *, double *, double *, int, int, int);
 
 #ifdef __cplusplus
 }

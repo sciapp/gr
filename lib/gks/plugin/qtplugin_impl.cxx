@@ -11,8 +11,7 @@
 #include "gkscore.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #ifdef _WIN32
@@ -24,8 +23,8 @@ extern "C"
 
 #endif
 
-  DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
-                                      int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
+DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
+                                    int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr);
 
 #ifdef __cplusplus
 }
@@ -88,6 +87,7 @@ typedef struct ws_state_list_t
   QPainter *pixmap;
   int state, wtype;
   int device_dpi_x, device_dpi_y;
+  double device_pixel_ratio;
   double mwidth, mheight;
   int width, height;
   double a, b, c, d;
@@ -102,7 +102,7 @@ typedef struct ws_state_list_t
   int family, capheight;
   double alpha, angle;
   QPixmap *pattern[PATTERNS];
-  int empty, has_been_resized;
+  int empty, resized_by_user, resize_requested_by_application;
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -1121,7 +1121,7 @@ static void interp(char *str)
 
           gkss->fontfile = saved_gkss.fontfile;
 
-          if (!p->has_been_resized)
+          if (!p->resized_by_user)
             {
               p->window[0] = p->window[2] = 0.0;
               p->window[1] = p->window[3] = 1.0;
@@ -1275,7 +1275,7 @@ static void interp(char *str)
           break;
 
         case 54:
-          if (!p->has_been_resized)
+          if (!p->resized_by_user)
             {
               p->window[0] = f_arr_1[0];
               p->window[1] = f_arr_1[1];
@@ -1288,7 +1288,7 @@ static void interp(char *str)
           break;
 
         case 55:
-          if (!p->has_been_resized)
+          if (!p->resized_by_user)
             {
               p->viewport[0] = f_arr_1[0];
               p->viewport[1] = f_arr_1[1];
@@ -1342,7 +1342,8 @@ static void initialize_data()
   for (i = 0; i < PATTERNS; i++) p->pattern[i] = NULL;
 
   p->empty = 1;
-  p->has_been_resized = 0;
+  p->resized_by_user = 0;
+  p->resize_requested_by_application = 0;
   p->window[0] = 0.0;
   p->window[1] = 1.0;
   p->window[2] = 0.0;
@@ -1386,10 +1387,17 @@ static int get_pixmap(void)
     }
 
   QPaintDevice *device = (p->widget != NULL) ? p->widget : p->pixmap->device();
-  p->device_dpi_x = device->physicalDpiX();
-  p->device_dpi_y = device->physicalDpiY();
-  p->width = device->width();
-  p->height = device->height();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+  p->device_pixel_ratio = device->devicePixelRatioF();
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+  p->device_pixel_ratio = device->devicePixelRatio();
+#else
+  p->device_pixel_ratio = 1;
+#endif
+  p->device_dpi_x = device->physicalDpiX() * p->device_pixel_ratio;
+  p->device_dpi_y = device->physicalDpiY() * p->device_pixel_ratio;
+  p->width = device->width() * p->device_pixel_ratio;
+  p->height = device->height() * p->device_pixel_ratio;
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
   p->nominal_size = min(p->width, p->height) / 500.0;

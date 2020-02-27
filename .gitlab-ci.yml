@@ -1,7 +1,9 @@
 stages:
 - build
+- test
 - package
 - deploy
+- deploy-to-aur
 
 code-style-check:
   stage: build
@@ -9,6 +11,7 @@ code-style-check:
   script:
   - set +e
   - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
+      [[ "${file}" != 3rdparty* ]] && [[ "${file}" != apps* ]] || continue;
       [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue;
       grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
       file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; exit 1; };
@@ -21,6 +24,7 @@ code-style-check:
       rm -f "${file}.formatted";
     done
   - for file in $(git diff $(git describe --tags --abbrev=0) HEAD --name-only --diff-filter=ACMR); do
+      [[ "${file}" != 3rdparty* ]] && [[ "${file}" != apps* ]] || continue;
       [[ "${file}" =~ (^|/)CMakeLists.txt$ || "${file}" =~ \.cmake$ ]] || continue;
       grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; exit 1; };
       file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; exit 1; };
@@ -47,10 +51,14 @@ ubuntu-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mkdir artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+       artifacts/include/grm/
   - mv artifacts artifacts-ubuntu1604
   artifacts:
     expire_in: 1 week
@@ -76,6 +84,68 @@ ubuntu-cmake-self-contained:
     expire_in: 1 week
     paths:
       - artifacts-ubuntu1604-cmake/
+
+ubuntu-cmake-self-contained-test:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing
+  rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: never
+  - if: '$GR_REBUILD_REFERENCE'
+    when: never
+  - when: on_success
+  needs:
+  - ubuntu-cmake-self-contained
+  script:
+  - export GRDIR=`pwd`/artifacts-ubuntu1604-cmake/
+  - gr_test c `pwd`/test_result/
+  artifacts:
+    paths:
+    - test_result/
+    when: on_failure
+
+ubuntu-cmake-self-contained-rebuild-images:
+  stage: test
+  image: iffregistry.fz-juelich.de/scientific-it-systems/gr-test/c-testing:latest
+  rules:
+  - if: '$CI_MERGE_REQUEST_ID'
+    when: never
+  - if: '$CI_COMMIT_MESSAGE =~ /RebuildReferenceImages\([][ ?*_a-zA-Z0-9-]*\)/'
+    when: on_success
+  - if: '$GR_REBUILD_REFERENCE'
+    when: on_success
+  needs:
+  - ubuntu-cmake-self-contained
+  script:
+  - export GRDIR=`pwd`/artifacts-ubuntu1604-cmake/
+
+  - mkdir -p ~/.ssh
+  - cat $SSH_KEY | base64 -d > ~/.ssh/id_rsa
+  - mv $SSH_KNOWN_HOSTS ~/.ssh/known_hosts
+  - chmod 600 ~/.ssh/id_rsa
+  - git clone gitlab@iffgit.fz-juelich.de:Scientific-IT-Systems/gr-test.git
+  - pip install -e gr-test/
+  - cd gr-test
+  - git checkout -b update-files/job-$CI_JOB_ID
+
+  - if [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      export GR_REBUILD_REFERENCE=`echo $CI_COMMIT_MESSAGE | sed 's/.*RebuildReferenceImages(\([][ ?*_a-zA-Z0-9-]*\)).*/\1/'` ;
+    fi
+
+  - if [[ $GR_REBUILD_REFERENCE == "all" ]] || [[ -z "$GR_REBUILD_REFERENCE" ]]; then
+      gr_test --create=REFERENCE c ;
+    else
+    gr_test --create=REFERENCE --filter ${GR_REBUILD_REFERENCE} -- c ;
+    fi
+  - git config user.name "GR-Test Reference Bot"
+  - git config user.email "$GITLAB_USER_EMAIL"
+  - git status
+  - git add -A gr_test/c_data/
+  - git commit -m "Rebuilt c images in build job $CI_JOB_ID"
+  - 'git push -o merge_request.description="Job initiator: @$GITLAB_USER_LOGIN" -o merge_request.label="auto-create" -o merge_request.label="reference-files-update" -o merge_request.remove_source_branch -o merge_request.create origin update-files/job-$CI_JOB_ID'
+
 
 ubuntu-system-dependencies:
   stage: build
@@ -109,10 +179,14 @@ debian-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mkdir artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+       artifacts/include/grm/
   - mv artifacts artifacts-debian9
   artifacts:
     expire_in: 1 week
@@ -153,10 +227,14 @@ debian-self-contained-armhf:
     - cp lib/gks/demo artifacts/gksdemo
     - cp lib/gks/qt/gksqt artifacts/gksqt
     - cp lib/gr/demo artifacts/grdemo
-    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
+    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+         lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
     - cp -r lib/gks/fonts artifacts/
     - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - mkdir artifacts/include/grm/
+    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+         artifacts/include/grm/
     - mv artifacts artifacts-debian9-armhf
   artifacts:
     expire_in: 1 week
@@ -217,10 +295,14 @@ centos7-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mkdir artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+       artifacts/include/grm/
   - mv artifacts artifacts-centos7
   artifacts:
     expire_in: 1 week
@@ -282,10 +364,14 @@ centos6-32bit-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mkdir artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+       artifacts/include/grm/
   - mv artifacts artifacts-centos6-32bit
   artifacts:
     expire_in: 1 week
@@ -346,10 +432,14 @@ centos6-64bit-self-contained:
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gks/qt/gksqt artifacts/gksqt
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mkdir artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+       artifacts/include/grm/
   - mv artifacts artifacts-centos6-64bit
   artifacts:
     expire_in: 1 week
@@ -406,10 +496,14 @@ arch-self-contained:
     - cp lib/gks/demo artifacts/gksdemo
     - cp lib/gks/qt/gksqt artifacts/gksqt
     - cp lib/gr/demo artifacts/grdemo
-    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr3/libGR3platform.so lib/gr/qtgr/*.so artifacts/
+    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+         lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
     - cp -r lib/gks/fonts artifacts/
     - mkdir artifacts/include/
-    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - mkdir artifacts/include/grm/
+    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+         artifacts/include/grm/
     - mv artifacts artifacts-arch
   artifacts:
     expire_in: 1 week
@@ -443,10 +537,11 @@ arch-cmake-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/arch-system-dependencies
   script:
-    - make -C 3rdparty default TARGETS="qhull"
+    - pacman -Sy
+    - pacman -S --noconfirm --needed qhull
     - mkdir build
     - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
+    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=OFF
     - make
 
 windows-32bit-cross:
@@ -488,11 +583,15 @@ windows-32bit-cross:
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
-       lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
+       lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a lib/grm/libGRM.dll lib/grm/libGRM.a
+       artifacts/
   - cp -r lib/gks/fonts artifacts/
   - cp /usr/lib/gcc/i686-w64-mingw32/6.3-win32/libgcc_s_sjlj-1.dll artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mkdir artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+       artifacts/include/grm/
   - mv artifacts artifacts-windows32
   artifacts:
     expire_in: 1 week
@@ -582,11 +681,15 @@ windows-64bit-cross:
   - cp lib/gks/qt/*.dll artifacts/
   - cp -r lib/gks/qt/platforms artifacts/
   - cp lib/gks/libGKS.lib lib/gks/libGKS.dll lib/gks/libGKS.a lib/gks/plugin/*.dll lib/gks/plugin/*.a lib/gr/libGR.lib
-       lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a artifacts/
+       lib/gr/libGR.dll lib/gr/libGR.a lib/gr3/libGR3.dll lib/gr3/libGR3.a lib/grm/libGRM.dll lib/grm/libGRM.a
+       artifacts/
   - cp -r lib/gks/fonts artifacts/
   - cp /usr/lib/gcc/x86_64-w64-mingw32/6.3-win32/libgcc_s_seh-1.dll artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mkdir artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+       artifacts/include/grm/
   - mv artifacts artifacts-windows64
   artifacts:
     expire_in: 1 week
@@ -653,10 +756,14 @@ darwin-self-contained:
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so lib/gr/qtgr/*.so artifacts/
+  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+       lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+  - mkdir artifacts/include/grm/
+  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+       artifacts/include/grm/
   - mkdir artifacts/Applications/
   - cp -r lib/gks/quartz/build/Release/GKSTerm.app artifacts/Applications/GKSTerm.app
   - cp -r lib/gks/qt/gksqt.app artifacts/Applications/gksqt.app
@@ -891,3 +998,38 @@ deploy-to-obs:
     mv -f science\:gr-framework/gr/_service.new
     science\:gr-framework/gr/_service
   - osc commit science\:gr-framework/gr/_service -m "Release $CI_COMMIT_TAG"
+
+deploy-to-aur:
+  stage: deploy-to-aur
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  only:
+    - develop@Scientific-IT-Systems/gr
+    - tags@Scientific-IT-Systems/gr
+  script:
+  - mkdir --mode=700 ~/.ssh/
+  - (umask 0377 && echo "$AUR_GR_PRIVATE_KEY" > ~/.ssh/id_rsa
+                && echo "aur.archlinux.org $AUR_HOST_KEY" >> ~/.ssh/known_hosts)
+  - if [[ -n "${CI_COMMIT_TAG}" ]]; then
+      if echo "$CI_COMMIT_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+        git clone "ssh://aur@aur.archlinux.org/gr-framework.git";
+        cd "gr-framework";
+        sed -i -e "/^pkgver=/c\pkgver=\"${CI_COMMIT_TAG#v}\"" -e "/^pkgrel=/c\pkgrel=\"1\"" PKGBUILD;
+        (
+          source PKGBUILD;
+          curl -o source -L "${source[0]}";
+          SHA256SUM="$(sha256sum source | awk '{ print $1 }')";
+          sed -i "/^sha256sums=/c\sha256sums=(\"${SHA256SUM}\")" PKGBUILD;
+        );
+        makepkg --printsrcinfo > .SRCINFO;
+        git commit -a -m "Update to version ${CI_COMMIT_TAG#v}";
+        git push;
+      fi;
+    else
+      PKGVERS="$(git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')";
+      git clone "ssh://aur@aur.archlinux.org/gr-framework-git.git";
+      cd "gr-framework-git";
+      sed -i -e "/^pkgver=/c\pkgver=\"${PKGVERS}\"" -e "/^pkgrel=/c\pkgrel=\"1\"" PKGBUILD;
+      makepkg --printsrcinfo > .SRCINFO;
+      git commit -a -m "Update to version ${PKGVERS}";
+      git push;
+    fi

@@ -29,21 +29,56 @@ static int purge(gks_display_list_t *d, char *t)
  */
 {
   char *s;
-  int sp = 0, tp = 0, *len, *fctid;
+  int i;
+  int sp = 0, tp = 0, *len, fctid;
+  static const char *attribute_buffer[MAX_ATTRIBUTE_FCTID];
+  static const char *color_buffer[MAX_COLOR];
+  memset(attribute_buffer, 0, sizeof(char *) * MAX_ATTRIBUTE_FCTID);
+  memset(color_buffer, 0, sizeof(char *) * MAX_COLOR);
 
   s = d->buffer;
   len = (int *)(s + sp);
   while (*len)
     {
-      fctid = (int *)(s + sp + sizeof(int));
-      /* 48: setcolorrep, 54: setwswindow, 55: setwsviewport */
-      if (*fctid == 48 || *fctid == 54 || *fctid == 55)
+      fctid = *(int *)(s + sp + sizeof(int));
+      switch (fctid)
         {
-          memmove(t + tp, s + sp, *len);
-          tp += *len;
+        case 48: /* setcolorrep */
+          {
+            int colorind = *(int *)(s + sp + 2 * sizeof(int));
+            if (colorind >= 0 && colorind < MAX_COLOR)
+              {
+                color_buffer[colorind] = s + sp;
+              }
+          }
+          break;
+        case 54: /* setwswindow */
+        case 55: /* setwsviewport */
+          attribute_buffer[fctid] = s + sp;
+          break;
+        default:
+          break;
         }
       sp += *len;
       len = (int *)(s + sp);
+    }
+  for (i = 0; i < MAX_COLOR; i++)
+    {
+      if (color_buffer[i])
+        {
+          len = (int *)(color_buffer[i]);
+          memmove(t + tp, color_buffer[i], *len);
+          tp += *len;
+        }
+    }
+  for (i = 0; i < MAX_ATTRIBUTE_FCTID; i++)
+    {
+      if (attribute_buffer[i])
+        {
+          len = (int *)(attribute_buffer[i]);
+          memmove(t + tp, attribute_buffer[i], *len);
+          tp += *len;
+        }
     }
   return tp;
 }
@@ -89,11 +124,8 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
     case 6: /* clear workstation */
 
-      if (d->empty)
-        {
-          t = gks_malloc(d->size);
-          tp = purge(d, t);
-        }
+      t = gks_malloc(d->size);
+      tp = purge(d, t);
       d->nbytes = d->position = 0;
 
       len = 2 * sizeof(int) + sizeof(gks_state_list_t);
@@ -103,11 +135,8 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
       COPY(&fctid, sizeof(int));
       COPY(gkss, sizeof(gks_state_list_t));
 
-      if (d->empty)
-        {
-          COPY(t, tp);
-          free(t);
-        }
+      COPY(t, tp);
+      free(t);
       break;
 
     case 12: /* polyline */

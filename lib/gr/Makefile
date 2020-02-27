@@ -10,11 +10,11 @@ endif
 UNAME := $(shell uname)
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
-               delaunay.o interp2.o md5.o import.o meta.o shade.o grforbnd.o \
+               delaunay.o interp2.o md5.o import.o shade.o grforbnd.o \
                contourf.o boundary.o
       GSDEFS =
      DEFINES = $(GSDEFS)
-    INCLUDES = -I../gks -I$(THIRDPARTYDIR)/include
+    INCLUDES = -I../gks -I$(THIRDPARTYDIR)/include -I$(THIRDPARTYDIR)/include/qhull
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           AR = ar
@@ -106,7 +106,7 @@ clean:
 
 depend:
 	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \
-	image.c delaunay.c interp2.c md5.c import.c meta.c shade.c grforbnd.c \
+	image.c delaunay.c interp2.c md5.c import.c shade.c grforbnd.c \
         2> /dev/null
 
 .FORCE:
@@ -127,7 +127,6 @@ delaunay.o: gr.h
 interp2.o: gr.h
 md5.o: md5.h
 import.o: gr.h
-meta.o: gr.h
 shade.o: gr.h
 grforbnd.o: gr.h
 boundary.o: boundary.h
