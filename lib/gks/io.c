@@ -7,6 +7,7 @@
 #endif
 
 #ifdef _WIN32
+#include <windows.h>
 #include <io.h>
 #endif
 
@@ -24,6 +25,9 @@
 int gks_open_file(const char *path, const char *mode)
 {
   int fd, flags, omode;
+#ifdef _WIN32
+  wchar_t w_path[MAX_PATH];
+#endif
 
   switch (*mode)
     {
@@ -51,7 +55,8 @@ int gks_open_file(const char *path, const char *mode)
     }
 
 #ifdef _WIN32
-  fd = _open(path, flags, omode);
+  MultiByteToWideChar(CP_UTF8, 0, path, strlen(path) + 1, w_path, MAX_PATH);
+  fd = _wopen(w_path, flags, omode);
 #else
   fd = open(path, flags, omode);
 #endif

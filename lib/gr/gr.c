@@ -9382,6 +9382,9 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
   char tex[FILENAME_MAX], dvi[FILENAME_MAX], png[FILENAME_MAX];
   FILE *stream;
   int math, ret;
+#ifdef _WIN32
+  wchar_t w_tex[MAX_PATH];
+#endif
 
   color = ((int)(rgb[0] * 255)) + ((int)(rgb[1] * 255) << 8) + ((int)(rgb[2] * 255) << 16) + (255 << 24);
   sprintf(s, "%d%x%s", pointSize, color, string);
@@ -9414,10 +9417,12 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
       sprintf(png, "%s.png", tmp);
 #ifdef _WIN32
       null = "NUL";
+      MultiByteToWideChar(CP_UTF8, 0, tex, strlen(tex) + 1, w_tex, MAX_PATH);
+      stream = fopen(w_tex, L"w");
 #else
       null = "/dev/null";
-#endif
       stream = fopen(tex, "w");
+#endif
       fprintf(stream, "\
 \\documentclass{article}\n\
 \\pagestyle{empty}\n\

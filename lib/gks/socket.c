@@ -130,11 +130,14 @@ static void *thread_func(void *arg)
 static int start(const char *cmd)
 {
 #ifdef _WIN32
-  PROCESS_INFORMATION processInformation = {0};
+  wchar_t w_cmd[MAX_PATH];
   STARTUPINFO startupInfo = {0};
+  PROCESS_INFORMATION processInformation = {0};
 
+  MultiByteToWideChar(CP_UTF8, 0, cmd, strlen(cmd) + 1, w_cmd, MAX_PATH);
   startupInfo.cb = sizeof(startupInfo);
-  if (!CreateProcess(NULL, cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL, &startupInfo,
+
+  if (!CreateProcess(NULL, w_cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL, &startupInfo,
                      &processInformation))
     return -1;
 #else
