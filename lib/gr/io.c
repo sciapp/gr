@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #else
+#include <windows.h>
 #include <winsock.h>
 #endif
 
@@ -186,6 +187,10 @@ static void append(char *string)
 
 int gr_openstream(const char *path)
 {
+#ifdef _WIN32
+  wchar_t w_path[MAX_PATH];
+#endif
+
   if (path != NULL)
     {
       if (strcmp(path, "-") == 0)
@@ -194,7 +199,12 @@ int gr_openstream(const char *path)
         status = -1;
       else if (strchr(path, ':') == NULL)
         {
+#ifdef _WIN32
+          MultiByteToWideChar(CP_UTF8, 0, path, strlen(path) + 1, w_path, MAX_PATH);
+          stream = _wfopen(w_path, L"w");
+#else
           stream = fopen(path, "w");
+#endif
           if (stream == NULL)
             {
               perror("fopen");
