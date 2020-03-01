@@ -2266,7 +2266,7 @@ error_t plot_polar(grm_args_t *subplot_args)
         }
       for (i = 0; i < rho_length; ++i)
         {
-          double current_rho = (rho[i] - r_min) / (r_max - r_min);
+          double current_rho = rho[i] / r_max;
           x[i] = current_rho * cos(theta[i]);
           y[i] = current_rho * sin(theta[i]);
         }
