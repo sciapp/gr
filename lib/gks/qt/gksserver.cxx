@@ -76,7 +76,7 @@ void GKSConnection::newWidget()
   window_title_stream << "GKS QtTerm";
   if (index > 1)
     {
-      window_title_stream << " (" << index << ")" << std::endl;
+      window_title_stream << " (" << index << ")";
     }
   widget = new GKSWidget();
   widget->setWindowTitle(window_title_stream.str().c_str());
