@@ -137,8 +137,8 @@ static int start(const char *cmd)
   MultiByteToWideChar(CP_UTF8, 0, cmd, strlen(cmd) + 1, w_cmd, MAX_PATH);
   startupInfo.cb = sizeof(startupInfo);
 
-  if (!CreateProcess(NULL, w_cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL, &startupInfo,
-                     &processInformation))
+  if (!CreateProcessW(NULL, w_cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL,
+                      &startupInfo, &processInformation))
     return -1;
 #else
   pthread_t thread;
