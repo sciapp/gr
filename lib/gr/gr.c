@@ -87,6 +87,7 @@ typedef struct
   double up_x, up_y, up_z;
   double focus_point_x, focus_point_y, focus_point_z;
   double s_x, s_y, s_z;
+  double x_axis_scale, y_axis_scale, z_axis_scale;
 } transformation_xform;
 
 typedef struct
@@ -147,7 +148,7 @@ static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
 
 static world_xform wx = {0, 1, 60, 60, 0, 0, 0, 0, 0, 0, 0};
 
-static transformation_xform tx = {0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0};
+static transformation_xform tx = {0, 2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1};
 
 static projection_xform gpx = {-1, 1, -1, 1, 1, 0, 45, GR_PROJECTION_DEFAULT};
 
@@ -950,10 +951,15 @@ static void apply_world_xform(double *x, double *y, double *z)
       double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
       double f[3] = {F[0] / norm_func, F[1] / norm_func, F[2] / norm_func};
 
+      double x_val = *x * tx.x_axis_scale;
+      double y_val = *y * tx.y_axis_scale;
+      double z_val = *z * tx.z_axis_scale;
+
       /* transformation */
-      xw = (*x - tx.camera_pos_x) * tx.s_x + (*y - tx.camera_pos_y) * tx.s_y + (*z - tx.camera_pos_z) * tx.s_z;
-      yw = (*x - tx.camera_pos_x) * tx.up_x + (*y - tx.camera_pos_y) * tx.up_y + (*z - tx.camera_pos_z) * tx.up_z;
-      zw = (tx.camera_pos_x - *x) * f[0] + (tx.camera_pos_y - *y) * f[1] + (tx.camera_pos_z - *z) * f[2];
+      xw = (x_val - tx.camera_pos_x) * tx.s_x + (y_val - tx.camera_pos_y) * tx.s_y + (z_val - tx.camera_pos_z) * tx.s_z;
+      yw = (x_val - tx.camera_pos_x) * tx.up_x + (y_val - tx.camera_pos_y) * tx.up_y +
+           (z_val - tx.camera_pos_z) * tx.up_z;
+      zw = (tx.camera_pos_x - x_val) * f[0] + (tx.camera_pos_y - y_val) * f[1] + (tx.camera_pos_z - z_val) * f[2];
 
       if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE)
         {
@@ -3693,6 +3699,11 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
   tx.s_x = s[0];
   tx.s_y = s[1];
   tx.s_z = s[2];
+
+  /* Redo possible axis scaling */
+  tx.x_axis_scale = 1;
+  tx.y_axis_scale = 1;
+  tx.z_axis_scale = 1;
 
   if (flag_graphics)
     gr_writestream("<settransformationparameters camera_pos_x=\"%g\" camera_pos_y=\"%g\" camera_pos_z=\"%g\" "
@@ -10993,6 +11004,44 @@ void gr_setwindow3d(double xmin, double xmax, double ymin, double ymax, double z
 }
 
 /*!
+ * Set the scale factor for each axis. A one means no scale.
+ *
+ * \param x_axis_scale factor for scaling the x-axis
+ * \param y_axis_scale factor for scaling the y-axis
+ * \param z_axis_scale factor for scaling the z-axis
+ *
+ * All factor have to be != 0.
+ */
+void gr_setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axis_scale)
+{
+  check_autoinit;
+
+  if (x_axis_scale == 0 || y_axis_scale == 0 || z_axis_scale == 0)
+    {
+      fprintf(stderr, "Invalid scale factor. Please check your parameters again.");
+      return;
+    }
+
+  tx.x_axis_scale = x_axis_scale;
+  tx.y_axis_scale = y_axis_scale;
+  tx.z_axis_scale = z_axis_scale;
+
+  if (flag_graphics)
+    gr_writestream("<setscalefactors3d x_axis_scale=\"%g\" y_axis_scale=\"%g\" z_axis_scale=\"%g\"/>\n", x_axis_scale,
+                   y_axis_scale, z_axis_scale);
+}
+
+/*!
+ * Returns the scale factors for each axis.
+ */
+void gr_inqscalefactors3d(double *x_axis_scale, double *y_axis_scale, double *z_axis_scale)
+{
+  x_axis_scale[0] = tx.x_axis_scale;
+  y_axis_scale[0] = tx.y_axis_scale;
+  z_axis_scale[0] = tx.z_axis_scale;
+}
+
+/*!
  * Define the border width of subsequent path output primitives.
  *
  * \param[in] width The border width scale factor
@@ -11038,4 +11087,51 @@ void gr_inqbordercolorind(int *coli)
   check_autoinit;
 
   gks_inq_border_color_index(&errind, coli);
+}
+
+void gr_settransformationparametersfromwindowandspace()
+{
+  double x_len, y_len, z_len;
+  double max_axis_length;
+  double max_val = 0, radius;
+  double x_mid = 0, y_mid = 0, z_mid = 0;
+  double xmax, xmin, ymax, ymin, zmax, zmin;
+  int tilt, rot;
+
+  gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+  gr_inqspace(&zmin, &zmax, &rot, &tilt);
+  gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+
+  if (xmax < 0 || xmin > 0) x_mid = (xmax + xmin) / 2;
+  if (ymax < 0 || ymin > 0) y_mid = (ymin + ymax) / 2;
+  if (zmax < 0 || zmin > 0) z_mid = (zmax + zmin) / 2;
+
+  if (max_val < fabs(xmax) - x_mid) max_val = xmax - x_mid;
+  if (max_val < fabs(xmin) - x_mid) max_val = fabs(xmin) - x_mid;
+  if (max_val < fabs(ymax) - y_mid) max_val = ymax - y_mid;
+  if (max_val < fabs(ymin) - y_mid) max_val = fabs(ymin) - y_mid;
+  if (max_val < fabs(zmax) - z_mid) max_val = zmax - z_mid;
+  if (max_val < fabs(zmin) - z_mid) max_val = fabs(zmin) - z_mid;
+  radius = sqrt(max_val * max_val * 2);
+
+  gr_setorthographicprojection(-max_val, max_val, -max_val, max_val, -2 * radius, 2 * radius);
+  x_len = fabs(xmin) + fabs(xmax);
+  y_len = fabs(ymin) + fabs(ymax);
+  z_len = fabs(zmax) + fabs(zmin);
+  max_axis_length = x_len;
+
+  if (y_len > max_axis_length) max_axis_length = y_len;
+  if (z_len > max_axis_length) max_axis_length = z_len;
+
+  x_mid = (xmax + xmin) / 2;
+  y_mid = (ymax + ymin) / 2;
+  z_mid = (zmax + zmin) / 2;
+
+  //  gr_settransformationparameters(80,18,18, 0, 0, 1, (xmax + xmin) / 2, (ymax + ymin) / 2, (zmax + zmin) / 2);
+  gr_settransformationparameters((radius * cos(tilt * M_PI / 180) * cos((rot - 90) * M_PI / 180)) + x_mid,
+                                 (radius * cos(tilt * M_PI / 180) * sin((rot - 90) * M_PI / 180)) + y_mid,
+                                 (radius * sin(tilt * M_PI / 180)) + z_mid, 0, 0, 1, x_mid, y_mid, z_mid);
+  gr_setscalefactors3d(max_axis_length / x_len, max_axis_length / y_len, max_axis_length / z_len);
+  fprintf(stderr, "%f %f %f", sin(tilt * M_PI / 180) * cos(rot * M_PI / 180),
+          sin(tilt * M_PI / 180) * sin(rot * M_PI / 180), cos(rot * M_PI / 180));
 }
