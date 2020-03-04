@@ -3,7 +3,7 @@
 %define THIRDPARTY_INC %{THIRDPARTY}/include
 %define THIRDPARTY_LIB %{THIRDPARTY}/lib
 
-%if 0%{?__jcns}
+%if 0%{?__jcns} || 0%{?mlz}
 %define fixedversion %{version}
 %else
 # use fixedversion for builds on build.opensuse.org - needed for deb builds.
