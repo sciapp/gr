@@ -18,6 +18,7 @@ Module.onRuntimeInitialized = function() {
 select_canvas = function() {
     Module.canvas = this.current_canvas;
     Module.context = this.current_context;
+    Module.set_dpr();
 };
 
 function GR(canvas_id) {
