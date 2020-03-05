@@ -24,6 +24,8 @@ var Module = {
         this.context = this.canvas.getContext('2d');
         this.context.save();
 
+        this.set_dpr();
+
         return canvas_id;
     }),
     printErr: function(text) {
@@ -34,8 +36,19 @@ var Module = {
             console.warn(text);
         }
     },
+    set_dpr: function() {
+      this.dpr = window.devicePixelRatio || 1;
+      if (this.canvas.style.height == '' || this.canvas.style.width == '' || parseInt(this.canvas.style.width, 10) * this.dpr != this.canvas.width || parseInt(this.canvas.style.height, 10) * this.dpr != this.canvas.height) {
+        this.canvas.style.width = this.canvas.width + "px";
+        this.canvas.style.height = this.canvas.height + "px";
+      }
+      this.canvas.width = parseInt(this.canvas.style.width, 10) * this.dpr;
+      this.canvas.height = parseInt(this.canvas.style.height, 10) * this.dpr;
+      this.context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    },
     canvas: null,
     context: null,
+    dpr: 1,
     setStatus: function(text) {},
     totalDependencies: 0,
     get_dash_list: function(linetype) {

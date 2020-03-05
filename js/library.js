@@ -108,7 +108,7 @@ mergeInto(LibraryManager.library, {
         }
         var text = UTF8ToString(chars);
         context.fillText(text, 0, top * context.canvas.height * valg);
-        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.setTransform(Module.dpr, 0, 0, Module.dpr, 0, 0);
     },
 
     js_line_routine: function(n, px, py, linetype, fill, width, rgb) {
@@ -203,10 +203,10 @@ mergeInto(LibraryManager.library, {
     },
 
     js_get_ws_width: function() {
-        return Module.canvas.width;
+      return Module.canvas.width / Module.dpr;
     },
 
     js_get_ws_height: function() {
-        return Module.canvas.height;
+        return Module.canvas.height / Module.dpr;
     }
 });
