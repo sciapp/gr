@@ -3700,7 +3700,7 @@ void gr_settransformationparameters(double camera_pos_x, double camera_pos_y, do
   tx.s_y = s[1];
   tx.s_z = s[2];
 
-  /* Redo possible axis scaling */
+  /* Undo possible axis scaling */
   tx.x_axis_scale = 1;
   tx.y_axis_scale = 1;
   tx.z_axis_scale = 1;
@@ -10792,22 +10792,21 @@ static void gr_trackballposition(const double *mouse, double r, double *erg)
 {
   double x, y, z;
 
+  x = mouse[0];
+  y = mouse[1];
+
   if (sqrt(mouse[0] * mouse[0] + mouse[1] * mouse[1]) <= r / sqrt(2))
     {
-      x = mouse[0];
-      y = mouse[1];
       z = sqrt(r * r - (mouse[0] * mouse[0] + mouse[1] * mouse[1]));
     }
   else
     {
-      x = mouse[0];
-      y = mouse[1];
       z = r * r / (2 * sqrt(mouse[0] * mouse[0] + mouse[1] * mouse[1]));
     }
 
-  erg[0] = x * tx.s_x + y * tx.up_x + z * (tx.focus_point_x - tx.camera_pos_x);
-  erg[1] = x * tx.s_y + y * tx.up_y + z * (tx.focus_point_y - tx.camera_pos_y);
-  erg[2] = x * tx.s_z + y * tx.up_z + z * (tx.focus_point_z - tx.camera_pos_z);
+  erg[0] = x * tx.s_x + y * tx.up_x + z * (tx.camera_pos_x) - tx.focus_point_x;
+  erg[1] = x * tx.s_y + y * tx.up_y + z * (tx.camera_pos_y) - tx.focus_point_y;
+  erg[2] = x * tx.s_z + y * tx.up_z + z * (tx.camera_pos_z) - tx.focus_point_z;
 }
 
 static void gr_calculateradius(double *radius)
@@ -10896,11 +10895,9 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
 
   if (start_mouse_pos_x != end_mouse_pos_x || start_mouse_pos_y != end_mouse_pos_y)
     {
-      double start[3];
-      double end[3];
+      double start[3], end[3];
       double q[4];
-      double radius;
-      double camera_distance;
+      double radius, camera_distance;
       double wn[4], vp[4];
       int errind, tnr;
 
@@ -10923,11 +10920,6 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
 
       gr_trackballposition(mouse_start, radius, start);
       gr_trackballposition(mouse_end, radius, end);
-
-      end[0] -= tx.focus_point_x;
-      end[1] -= tx.focus_point_y;
-      end[2] -= tx.focus_point_z;
-
 
       gr_quaternionen(start, end, q);
 
@@ -11036,9 +11028,9 @@ void gr_setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axi
  */
 void gr_inqscalefactors3d(double *x_axis_scale, double *y_axis_scale, double *z_axis_scale)
 {
-  x_axis_scale[0] = tx.x_axis_scale;
-  y_axis_scale[0] = tx.y_axis_scale;
-  z_axis_scale[0] = tx.z_axis_scale;
+  *x_axis_scale = tx.x_axis_scale;
+  *y_axis_scale = tx.y_axis_scale;
+  *z_axis_scale = tx.z_axis_scale;
 }
 
 /*!
@@ -11089,49 +11081,67 @@ void gr_inqbordercolorind(int *coli)
   gks_inq_border_color_index(&errind, coli);
 }
 
-void gr_settransformationparametersfromwindowandspace()
+/*!
+ * This is an interface for REPL based languages to enable an easier way to rotate around an object.
+ * It can also be used, if the user prefers angles instead of the direct camera position, but just
+ * to mention, the sideeffect is that the functionality gets reduced.
+ *
+ * \param phi phi angle of the spherical coordinates
+ * \param theta theta angle of the spherical coordinates
+ * \param fov vertical field of view
+ * \param radius camera distance to the focus middle point of the drawn objekt
+ *
+ * fov = 0 or fov = nan means orthographic projection
+ * radius = 0 or radius = nan uses the ball radius for the camera distance
+ */
+void gr_transformationinterfaceforrepl(double phi, double theta, double fov, double radius)
 {
-  double x_len, y_len, z_len;
-  double max_axis_length;
-  double max_val = 0, radius;
-  double x_mid = 0, y_mid = 0, z_mid = 0;
-  double xmax, xmin, ymax, ymin, zmax, zmin;
-  int tilt, rot;
+  double x_len, y_len, z_len, max_axis_length;
+  double camera_distance;
 
-  gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
-  gr_inqspace(&zmin, &zmax, &rot, &tilt);
-  gr_setwindow3d(xmin, xmax, ymin, ymax, zmin, zmax);
+  tx.focus_point_x = (ix.xmax + ix.xmin) / 2;
+  tx.focus_point_y = (ix.ymin + ix.ymax) / 2;
+  tx.focus_point_z = (ix.zmax + ix.zmin) / 2;
 
-  if (xmax < 0 || xmin > 0) x_mid = (xmax + xmin) / 2;
-  if (ymax < 0 || ymin > 0) y_mid = (ymin + ymax) / 2;
-  if (zmax < 0 || zmin > 0) z_mid = (zmax + zmin) / 2;
+  /* calculate the ball radius if necessary */
+  if (radius == 0 || radius != radius)
+    {
+      gr_calculateradius(&radius);
+    }
 
-  if (max_val < fabs(xmax) - x_mid) max_val = xmax - x_mid;
-  if (max_val < fabs(xmin) - x_mid) max_val = fabs(xmin) - x_mid;
-  if (max_val < fabs(ymax) - y_mid) max_val = ymax - y_mid;
-  if (max_val < fabs(ymin) - y_mid) max_val = fabs(ymin) - y_mid;
-  if (max_val < fabs(zmax) - z_mid) max_val = zmax - z_mid;
-  if (max_val < fabs(zmin) - z_mid) max_val = fabs(zmin) - z_mid;
-  radius = sqrt(max_val * max_val * 2);
+  camera_distance = radius;
 
-  gr_setorthographicprojection(-max_val, max_val, -max_val, max_val, -2 * radius, 2 * radius);
-  x_len = fabs(xmin) + fabs(xmax);
-  y_len = fabs(ymin) + fabs(ymax);
-  z_len = fabs(zmax) + fabs(zmin);
+  if (fov != fov || fov == 0)
+    {
+      gr_setorthographicprojection(-radius, radius, -radius, radius, -radius * 2, radius * 2);
+    }
+  else
+    {
+      /* the ball radius is necessary for the clipping planes */
+      gr_calculateradius(&radius);
+      camera_distance = fabs(camera_distance / sin((fov * M_PI / 180) / 2));
+      if (camera_distance < 0.1)
+        {
+          gr_setperspectiveprojection(camera_distance, camera_distance + 2 * radius, fov);
+        }
+      else
+        {
+          gr_setperspectiveprojection(0.1, camera_distance + radius * 2, fov);
+        }
+    }
+
+
+  gr_settransformationparameters(camera_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x,
+                                 camera_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y,
+                                 camera_distance * cos(theta * M_PI / 180) + tx.focus_point_z,
+                                 -cos(phi * M_PI / 180) * cos(theta * M_PI / 180),
+                                 -sin(phi * M_PI / 180) * cos(theta * M_PI / 180), sin(theta * M_PI / 180),
+                                 tx.focus_point_x, tx.focus_point_y, tx.focus_point_z);
+
+  x_len = fabs(ix.xmin) + fabs(ix.xmax);
+  y_len = fabs(ix.ymin) + fabs(ix.ymax);
+  z_len = fabs(ix.zmax) + fabs(ix.zmin);
   max_axis_length = x_len;
 
-  if (y_len > max_axis_length) max_axis_length = y_len;
-  if (z_len > max_axis_length) max_axis_length = z_len;
-
-  x_mid = (xmax + xmin) / 2;
-  y_mid = (ymax + ymin) / 2;
-  z_mid = (zmax + zmin) / 2;
-
-  //  gr_settransformationparameters(80,18,18, 0, 0, 1, (xmax + xmin) / 2, (ymax + ymin) / 2, (zmax + zmin) / 2);
-  gr_settransformationparameters((radius * cos(tilt * M_PI / 180) * cos((rot - 90) * M_PI / 180)) + x_mid,
-                                 (radius * cos(tilt * M_PI / 180) * sin((rot - 90) * M_PI / 180)) + y_mid,
-                                 (radius * sin(tilt * M_PI / 180)) + z_mid, 0, 0, 1, x_mid, y_mid, z_mid);
   gr_setscalefactors3d(max_axis_length / x_len, max_axis_length / y_len, max_axis_length / z_len);
-  fprintf(stderr, "%f %f %f", sin(tilt * M_PI / 180) * cos(rot * M_PI / 180),
-          sin(tilt * M_PI / 180) * sin(rot * M_PI / 180), cos(rot * M_PI / 180));
 }
