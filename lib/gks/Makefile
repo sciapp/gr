@@ -70,11 +70,11 @@ libGKS.so: $(GKSOBJS) $(THIRDPARTYDIR)/lib/libfreetype.a $(THIRDPARTYDIR)/lib/li
 	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(FTLIBS) $(ZLIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)
 
-demo: demo.c libGKS.a $(THIRDPARTYDIR)/lib/libz.a
-	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(ZLIBS) $(LIBS)
+demo: demo.c libGKS.a $(THIRDPARTYDIR)/lib/libfreetype.a $(THIRDPARTYDIR)/lib/libz.a
+	$(CC) -o demo $(LDFLAGS) demo.c libGKS.a $(FTLIBS) $(ZLIBS) $(LIBS)
 
-gksm: gksm.c libGKS.a $(THIRDPARTYDIR)/lib/libz.a
-	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(ZLIBS) $(LIBS)
+gksm: gksm.c libGKS.a $(THIRDPARTYDIR)/lib/libfreetype.a $(THIRDPARTYDIR)/lib/libz.a
+	$(CC) -o gksm $(LDFLAGS) gksm.c libGKS.a $(FTLIBS) $(ZLIBS) $(LIBS)
 
 gksqt:
 	$(MAKE) -C qt -f makefile.mak GRDIR=$(GRDIR)

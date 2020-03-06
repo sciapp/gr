@@ -8,12 +8,17 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#define POINT_INC 1000
+
 #ifndef NO_FT
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 #include FT_XFREE86_H
+#include FT_OUTLINE_H
+#include FT_BBOX_H
+#include FT_TRUETYPE_TABLES_H
 
 #define nint(a) ((int)(a + 0.5))
 
@@ -61,6 +66,11 @@ static const char *fallback_font_list[] = {"LatinModern-Math.otf"};
 static FT_Face fallback_font_faces[] = {NULL};
 static const int NUM_FALLBACK_FACES = sizeof(fallback_font_faces) / sizeof(fallback_font_faces[0]);
 
+static const char *truetype_font_list[] = {"CMUSerif-Math.ttf", "DejaVuSans.ttf"};
+
+static FT_Face truetype_font_faces[] = {NULL, NULL};
+static const int NUM_TRUETYPE_FACES = sizeof(truetype_font_faces) / sizeof(truetype_font_faces[0]);
+
 const static int map[] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
                           23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
@@ -70,11 +80,23 @@ const static double caps[] = {0.662, 0.653, 0.676, 0.669, 0.718, 0.718, 0.718, 0
 
 static FT_Bool init = 0;
 static FT_Library library;
+static FT_Face face;
+
+double horiAdvance = 0, vertAdvance = 0;
+
+static int npoints = 0, maxpoints = 0;
+static double *xpoint = NULL, *ypoint = NULL;
+
+static int num_opcodes = 0;
+static int *opcodes = NULL;
+
+static long pen_x = 0;
 
 static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT_Vector *pen, FT_Bool vertical,
                           FT_Matrix *rotation, FT_Vector *bearing, FT_Int halign, FT_GlyphSlot *glyph_slot_ptr);
 static void gks_ft_init_fallback_faces();
-static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int *length);
+static void gks_ft_init_truetype_faces();
+static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, FT_UInt *length);
 static FT_Long ft_min(FT_Long a, FT_Long b);
 static FT_Long ft_max(FT_Long a, FT_Long b);
 
@@ -191,7 +213,7 @@ static void symbol_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int length)
 }
 
 /* set text string, converting UTF-8 into Unicode */
-static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int *length)
+static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, FT_UInt *length)
 {
   FT_UInt num_glyphs = 0;
   FT_UInt codepoint;
@@ -259,6 +281,7 @@ int gks_ft_init(void)
   init = 1;
 
   gks_ft_init_fallback_faces();
+  gks_ft_init_truetype_faces();
   return error;
 }
 
@@ -342,6 +365,36 @@ static void gks_ft_init_fallback_faces()
     }
 }
 
+static void gks_ft_init_truetype_faces()
+{
+  FT_Error error;
+  int i;
+  for (i = 0; i < NUM_TRUETYPE_FACES; i++)
+    {
+      const char *font = truetype_font_list[i];
+
+      if (!init) gks_ft_init();
+
+      if (truetype_font_faces[i] == NULL)
+        {
+          char *file = gks_ft_get_font_path(font, "");
+          error = FT_New_Face(library, file, 0, &truetype_font_faces[i]);
+          gks_free(file);
+          if (error == FT_Err_Unknown_File_Format)
+            {
+              gks_perror("unknown file format: %s", file);
+              truetype_font_faces[i] = NULL;
+            }
+          else if (error)
+            {
+              gks_perror("could not open font file: %s", file);
+              truetype_font_faces[i] = NULL;
+            }
+        }
+    }
+  face = truetype_font_faces[0];
+}
+
 void *gks_ft_get_face(int textfont)
 {
   FT_Error error;
@@ -400,7 +453,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
   FT_UInt *unicode_string;     /* unicode text string */
   FT_Int halign, valign;       /* alignment */
   FT_Byte *mono_bitmap = NULL; /* target for rendered text */
-  FT_Int num_glyphs;           /* number of glyphs */
+  FT_UInt num_glyphs;          /* number of glyphs */
   FT_Vector anchor;
   FT_Vector up;
   FT_Bitmap ftbitmap;
@@ -707,6 +760,290 @@ int *gks_ft_render(int *x, int *y, int *width, int *height, gks_state_list_t *gk
   return (int *)rgba_bitmap;
 }
 
+static char *xrealloc(void *ptr, int size)
+{
+  char *result = (char *)realloc(ptr, size);
+  if (!result)
+    {
+      gks_perror("out of virtual memory");
+      abort();
+    }
+  return (result);
+}
+
+static void reallocate(int npoints)
+{
+  while (npoints >= maxpoints) maxpoints += POINT_INC;
+
+  xpoint = (double *)xrealloc(xpoint, maxpoints * sizeof(double));
+  ypoint = (double *)xrealloc(ypoint, maxpoints * sizeof(double));
+  opcodes = (int *)xrealloc(opcodes, maxpoints * sizeof(int));
+}
+
+static void load_glyph(FT_UInt code)
+{
+  FT_UInt index = FT_Get_Char_Index(face, code);
+  FT_Error error = FT_Load_Glyph(face, index, FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP);
+  if (error) gks_perror("could not load glyph: %d\n", index);
+}
+
+static void add_point(long x, long y)
+{
+  if (npoints >= maxpoints) reallocate(npoints);
+  xpoint[npoints] = (double)(x + pen_x);
+  ypoint[npoints] = (double)y;
+  npoints += 1;
+}
+
+static int move_to(const FT_Vector *to, void *user)
+{
+  if (npoints >= maxpoints) reallocate(npoints);
+  add_point(to->x, to->y);
+  opcodes[num_opcodes++] = (int)'M';
+  return 0;
+}
+
+static int line_to(const FT_Vector *to, void *user)
+{
+  if (npoints >= maxpoints) reallocate(npoints);
+  add_point(to->x, to->y);
+  opcodes[num_opcodes++] = (int)'L';
+  return 0;
+}
+
+static int conic_to(const FT_Vector *control, const FT_Vector *to, void *user)
+{
+  if (npoints >= maxpoints) reallocate(npoints);
+  add_point(control->x, control->y);
+  add_point(to->x, to->y);
+  opcodes[num_opcodes++] = (int)'Q';
+  return 0;
+}
+
+static int cubic_to(const FT_Vector *control1, const FT_Vector *control2, const FT_Vector *to, void *user)
+{
+  if (npoints >= maxpoints) reallocate(npoints);
+  add_point(control1->x, control1->y);
+  add_point(control2->x, control2->y);
+  add_point(to->x, to->y);
+  opcodes[num_opcodes++] = (int)'C';
+  return 0;
+}
+
+static void get_outline(FT_UInt charcode, FT_Bool first)
+{
+  FT_Outline_Funcs callbacks;
+  FT_GlyphSlot slot;
+  FT_Glyph_Metrics metrics;
+  FT_Outline outline;
+  FT_Error error;
+
+  callbacks.move_to = move_to;
+  callbacks.line_to = line_to;
+  callbacks.conic_to = conic_to;
+  callbacks.cubic_to = cubic_to;
+
+  callbacks.shift = 0;
+  callbacks.delta = 0;
+
+  slot = face->glyph;
+  outline = slot->outline;
+  metrics = slot->metrics;
+
+  if (first) pen_x -= metrics.horiBearingX;
+
+  error = FT_Outline_Decompose(&outline, &callbacks, NULL);
+  if (error) gks_perror("could not extract the outline");
+
+  opcodes[num_opcodes++] = 'f';
+  opcodes[num_opcodes] = '\0';
+
+  if (charcode != 32)
+    pen_x += metrics.horiBearingX + metrics.width;
+  else
+    pen_x += metrics.horiAdvance;
+}
+
+static long get_kerning(FT_UInt left_glyph, FT_UInt right_glyph)
+{
+  FT_UInt left_glyph_index, right_glyph_index;
+  FT_Vector delta;
+  FT_Error error;
+
+  left_glyph_index = FT_Get_Char_Index(face, left_glyph);
+  right_glyph_index = FT_Get_Char_Index(face, right_glyph);
+  error = FT_Get_Kerning(face, left_glyph_index, right_glyph_index, FT_KERNING_UNSCALED, &delta);
+  if (error)
+    {
+      gks_perror("could not get kerning information for %d, %d", left_glyph_index, right_glyph_index);
+      delta.x = 0;
+    }
+
+  return delta.x;
+}
+
+static double get_capheight()
+{
+  TT_PCLT *pclt;
+  FT_BBox bbox;
+  FT_Error error;
+  long capheight;
+
+  if (!init) gks_ft_init();
+
+  pclt = FT_Get_Sfnt_Table(face, ft_sfnt_pclt);
+  if (pclt == NULL)
+    {
+      /* Font does not contain CapHeight information.
+       * Use use the letter 'I' to determine the height of capital letters */
+      load_glyph('I');
+      error = FT_Outline_Get_BBox(&face->glyph->outline, &bbox);
+      if (error)
+        {
+          capheight = face->size->metrics.height;
+          fprintf(stderr, "Couldn't get bounding box: FT_Outline_Get_BBox() failed\n");
+        }
+      else
+        capheight = bbox.yMax - bbox.yMin;
+    }
+  else
+    capheight = pclt->CapHeight;
+
+  return capheight;
+}
+
+static void process_glyphs(double x, double y, char *text, double phi, gks_state_list_t *gkss,
+                           void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY)
+{
+  FT_UInt unicode_string[256];
+  FT_UInt length = strlen(text);
+  int i, j;
+  double xj, yj, cos_f, sin_f;
+  long pen_y;
+  double chh;
+
+  if (!init) gks_ft_init();
+
+  utf_to_unicode((FT_Bytes)text, unicode_string, &length);
+
+  pen_x = 0;
+  cos_f = cos(phi);
+  sin_f = sin(phi);
+  chh = gkss->chh;
+
+  for (i = 0; i < length; i++)
+    {
+      load_glyph(unicode_string[i]);
+
+      if (i > 0 && FT_HAS_KERNING(face)) pen_x += get_kerning(unicode_string[i - 1], unicode_string[i]);
+
+      get_outline(unicode_string[i], i == 0);
+
+      if (npoints > 0 && bBoxX == NULL && bBoxY == NULL)
+        {
+          for (j = 0; j < npoints; j++)
+            {
+              xj = horiAdvance + xpoint[j] * 0.001 * chh;
+              yj = vertAdvance + ypoint[j] * 0.001 * chh;
+              xpoint[j] = x + cos_f * xj - sin_f * yj;
+              ypoint[j] = y + sin_f * xj + cos_f * yj;
+            }
+          (*gdp)(npoints, xpoint, ypoint, GKS_K_GDP_DRAW_PATH, num_opcodes, opcodes);
+        }
+
+      npoints = 0;
+      num_opcodes = 0;
+    }
+
+  if (bBoxX != NULL && bBoxY != NULL)
+    {
+      bBoxX[0] = bBoxX[3] = bBoxX[4] = bBoxX[7] = 0;
+      bBoxX[1] = bBoxX[2] = bBoxX[5] = bBoxX[6] = 0.001 * chh * pen_x;
+      pen_y = get_capheight();
+      /* The vertical extents should actually be determined by the font information,
+       * but these values are usually oversized. */
+      bBoxY[0] = bBoxY[1] = -0.001 * chh * pen_y * 0.3; /* face->descender; */
+      bBoxY[2] = bBoxY[3] = 0.001 * chh * pen_y * 1.2;  /* face->ascender;  */
+      bBoxY[4] = bBoxY[5] = 0;
+      bBoxY[6] = bBoxY[7] = 0.001 * chh * pen_y;
+      for (j = 0; j < 8; j++)
+        {
+          xj = horiAdvance + bBoxX[j];
+          yj = vertAdvance + bBoxY[j];
+          bBoxX[j] = x + cos_f * xj - sin_f * yj;
+          bBoxY[j] = y + sin_f * xj + cos_f * yj;
+        }
+    }
+}
+
+void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
+                 void (*gdp)(int, double *, double *, int, int, int *))
+{
+  double bBoxX[8], bBoxY[8];
+  double phi;
+  int alh, alv;
+  double chux, chuy;
+
+  alh = gkss->txal[0];
+  alv = gkss->txal[1];
+  chux = gkss->chup[0];
+  chuy = gkss->chup[1];
+
+  process_glyphs(x, y, text, 0, gkss, gdp, bBoxX, bBoxY);
+  switch (alh)
+    {
+    case GKS_K_TEXT_HALIGN_LEFT:
+      horiAdvance = 0;
+      break;
+    case GKS_K_TEXT_HALIGN_CENTER:
+      horiAdvance = -0.5 * (bBoxX[1] - bBoxX[0]);
+      break;
+    case GKS_K_TEXT_HALIGN_RIGHT:
+      horiAdvance = -(bBoxX[1] - bBoxX[0]);
+      break;
+    default:
+      horiAdvance = 0;
+      break;
+    }
+  switch (alv)
+    {
+    case GKS_K_TEXT_VALIGN_TOP:
+      vertAdvance = bBoxY[4] - bBoxY[2];
+      break;
+    case GKS_K_TEXT_VALIGN_CAP:
+      vertAdvance = bBoxY[4] - bBoxY[6];
+      break;
+    case GKS_K_TEXT_VALIGN_HALF:
+      vertAdvance = (bBoxY[4] - bBoxY[6]) * 0.5;
+      break;
+    case GKS_K_TEXT_VALIGN_BASE:
+      vertAdvance = 0;
+      break;
+    case GKS_K_TEXT_VALIGN_BOTTOM:
+      vertAdvance = bBoxY[4] - bBoxY[0];
+      break;
+    default:
+      vertAdvance = 0;
+    }
+
+  phi = -atan2(chux, chuy); /* character up vector */
+  process_glyphs(x, y, text, phi, gkss, gdp, NULL, NULL);
+}
+
+void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gkss,
+                            void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY)
+{
+  double phi;
+  int errind;
+  double chux, chuy;
+
+  chux = gkss->chup[0];
+  chuy = gkss->chup[1];
+
+  phi = -atan2(chux, chuy); /* character up vector */
+  process_glyphs(x, y, text, phi, gkss, gdp, bBoxX, bBoxY);
+}
+
 #else
 
 static int init = 0;
@@ -725,5 +1062,17 @@ int *gks_ft_render(int *x, int *y, int *width, int *height, gks_state_list_t *gk
 }
 
 void gks_ft_terminate(void) {}
+
+void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
+                 void (*gdp)(int, double *, double *, int, int, int *))
+{
+  if (!init) gks_ft_init();
+}
+
+void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gkss,
+                            void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY)
+{
+  if (!init) gks_ft_init();
+}
 
 #endif
