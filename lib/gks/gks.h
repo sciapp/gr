@@ -121,6 +121,7 @@ extern "C" {
 #define GKS_K_TEXT_PRECISION_STRING 0
 #define GKS_K_TEXT_PRECISION_CHAR 1
 #define GKS_K_TEXT_PRECISION_STROKE 2
+#define GKS_K_TEXT_PRECISION_OUTLINE 3
 
 /* workstation category */
 
@@ -667,6 +668,9 @@ DLLEXPORT void gks_inq_border_color_index(int *errind, int *coli);
 DLLEXPORT void gks_set_border_width(double bwidth);
 DLLEXPORT void gks_inq_border_width(int *errind, double *bwidth);
 
+DLLEXPORT void gks_set_resample_method(unsigned int flag);
+DLLEXPORT void gks_inq_resample_method(unsigned int *flag);
+
 /* Entry point definitions */
 
 #define gsetlinecolorind gsetlinecolourind
@@ -759,8 +763,6 @@ DLLEXPORT int ginqdisplaysize(Gwstype *, Gdspsize *, Gint *);
 DLLEXPORT int ginqtextextent(Gint, Gpoint *, Gchar *, Gextent *, Gint *);
 DLLEXPORT int ginqnameopenseg(Gint *, Gint *);
 DLLEXPORT int gemergencyclosegks(void);
-DLLEXPORT void gks_inq_resample_method(unsigned int *flag);
-DLLEXPORT void gks_set_resample_method(unsigned int flag);
 
 #ifdef __cplusplus
 }

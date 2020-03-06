@@ -361,6 +361,11 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
                                  int length);
 void *gks_ft_get_face(int);
 void gks_ft_terminate(void);
+void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
+                 void (*gdp)(int, double *, double *, int, int, int *));
+void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gkss,
+                            void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY);
+
 void gks_set_encoding(int encoding);
 void gks_inq_encoding(int *encoding);
 
