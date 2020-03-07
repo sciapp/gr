@@ -987,6 +987,7 @@ void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
   alv = gkss->txal[1];
   chux = gkss->chup[0];
   chuy = gkss->chup[1];
+  if (gkss->txfont >= 1 && gkss->txfont <= NUM_TRUETYPE_FACES) face = truetype_font_faces[gkss->txfont - 1];
 
   process_glyphs(x, y, text, 0, gkss, gdp, bBoxX, bBoxY);
   switch (alh)
@@ -1033,11 +1034,11 @@ void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gk
                             void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY)
 {
   double phi;
-  int errind;
   double chux, chuy;
 
   chux = gkss->chup[0];
   chuy = gkss->chup[1];
+  if (gkss->txfont >= 1 && gkss->txfont <= NUM_TRUETYPE_FACES) face = truetype_font_faces[gkss->txfont - 1];
 
   phi = -atan2(chux, chuy); /* character up vector */
   process_glyphs(x, y, text, phi, gkss, gdp, bBoxX, bBoxY);
