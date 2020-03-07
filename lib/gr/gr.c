@@ -4051,6 +4051,38 @@ static void text2d(double x, double y, const char *chars)
   text2dlbl(x, y, chars, 42., NULL);
 }
 
+static char *gr_ftoa(char *result, double value, double reference)
+{
+  int errind, font, prec, n = 0;
+  char *s, *out;
+
+  s = str_ftoa(result, value, reference);
+
+  gks_inq_text_fontprec(&errind, &font, &prec);
+  if (prec != GKS_K_TEXT_PRECISION_OUTLINE) return s;
+
+  out = xmalloc(256);
+
+  while (*s && n < 255)
+    {
+      if (*s == '-')
+        {
+          out[n++] = 0xe2;
+          out[n++] = 0x88;
+          out[n++] = 0x92;
+        }
+      else
+        out[n++] = *s;
+      s++;
+    }
+  out[n] = '\0';
+
+  strcpy(result, out);
+  free(out);
+
+  return result;
+}
+
 /*!
  * Create axes in the current workspace and supply a custom function for changing
  * the behaviour of the tick labels.
@@ -4201,7 +4233,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                               text2dlbl(x_label, yi, string, yi, fpy);
                             }
                           else
-                            text2dlbl(x_label, yi, str_ftoa(string, yi, 0.), yi, fpy);
+                            text2dlbl(x_label, yi, gr_ftoa(string, yi, 0.), yi, fpy);
                         }
                 }
               else
@@ -4252,7 +4284,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     {
                       xi = major_tick;
                       if (yi != y_org || y_org == y_min || y_org == y_max)
-                        if (major_y > 0) text2dlbl(x_label, yi, str_ftoa(string, yi, y_tick * major_y), yi, fpy);
+                        if (major_y > 0) text2dlbl(x_label, yi, gr_ftoa(string, yi, y_tick * major_y), yi, fpy);
                     }
                   else
                     xi = minor_tick;
@@ -4327,7 +4359,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                               text2dlbl(xi, y_label, string, xi, fpx);
                             }
                           else
-                            text2dlbl(xi, y_label, str_ftoa(string, xi, 0.), xi, fpx);
+                            text2dlbl(xi, y_label, gr_ftoa(string, xi, 0.), xi, fpx);
                         }
                 }
               else
@@ -4378,7 +4410,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                     {
                       yi = major_tick;
                       if (xi != x_org || x_org == x_min || x_org == x_max)
-                        if (major_x > 0) text2dlbl(xi, y_label, str_ftoa(string, xi, x_tick * major_x), xi, fpx);
+                        if (major_x > 0) text2dlbl(xi, y_label, gr_ftoa(string, xi, x_tick * major_x), xi, fpx);
                     }
                   else
                     yi = minor_tick;
@@ -5646,7 +5678,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                             text3d(x_org, y_label, zi, string);
                           }
                         else
-                          text3d(x_org, y_label, zi, str_ftoa(string, zi, 0.));
+                          text3d(x_org, y_label, zi, gr_ftoa(string, zi, 0.));
                       }
                 }
               else
@@ -5695,7 +5727,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     {
                       yi = major_tick;
                       if ((zi != z_org) && (major_z > 0))
-                        text3d(x_org, y_label, zi, str_ftoa(string, zi, z_tick * major_z));
+                        text3d(x_org, y_label, zi, gr_ftoa(string, zi, z_tick * major_z));
                     }
                   else
                     yi = minor_tick;
@@ -5786,7 +5818,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                             text3d(x_label, yi, z_org, string);
                           }
                         else
-                          text3d(x_label, yi, z_org, str_ftoa(string, yi, 0.));
+                          text3d(x_label, yi, z_org, gr_ftoa(string, yi, 0.));
                       }
                 }
               else
@@ -5835,7 +5867,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     {
                       xi = major_tick;
                       if ((yi != y_org) && (major_y > 0))
-                        text3d(x_label, yi, z_org, str_ftoa(string, yi, y_tick * major_y));
+                        text3d(x_label, yi, z_org, gr_ftoa(string, yi, y_tick * major_y));
                     }
                   else
                     xi = minor_tick;
@@ -5927,7 +5959,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                             text3d(xi, y_label, z_org, string);
                           }
                         else
-                          text3d(xi, y_label, z_org, str_ftoa(string, xi, 0.));
+                          text3d(xi, y_label, z_org, gr_ftoa(string, xi, 0.));
                       }
                 }
               else
@@ -5976,7 +6008,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     {
                       yi = major_tick;
                       if ((xi != x_org) && (major_x > 0))
-                        text3d(xi, y_label, z_org, str_ftoa(string, xi, x_tick * major_x));
+                        text3d(xi, y_label, z_org, gr_ftoa(string, xi, x_tick * major_x));
                     }
                   else
                     yi = minor_tick;
@@ -8067,7 +8099,7 @@ void gr_colorbar(void)
     {
       y = ymin + i * dy;
       z = zmin + i * dz;
-      text2d(x, y, str_ftoa(text, z, dz));
+      text2d(x, y, gr_ftoa(text, z, dz));
     }
 
   /* restore text alignment and clipping indicator */
