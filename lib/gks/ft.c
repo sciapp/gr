@@ -919,8 +919,7 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
   FT_UInt length = strlen(text);
   int i, j;
   double xj, yj, cos_f, sin_f;
-  long pen_y;
-  double chh;
+  double chh, height;
 
   if (!init) gks_ft_init();
 
@@ -930,6 +929,7 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
   cos_f = cos(phi);
   sin_f = sin(phi);
   chh = gkss->chh;
+  height = chh / get_capheight();
 
   for (i = 0; i < length; i++)
     {
@@ -943,8 +943,8 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
         {
           for (j = 0; j < npoints; j++)
             {
-              xj = horiAdvance + xpoint[j] * 0.001 * chh;
-              yj = vertAdvance + ypoint[j] * 0.001 * chh;
+              xj = horiAdvance + xpoint[j] * height;
+              yj = vertAdvance + ypoint[j] * height;
               xpoint[j] = x + cos_f * xj - sin_f * yj;
               ypoint[j] = y + sin_f * xj + cos_f * yj;
             }
@@ -958,14 +958,13 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
   if (bBoxX != NULL && bBoxY != NULL)
     {
       bBoxX[0] = bBoxX[3] = bBoxX[4] = bBoxX[7] = 0;
-      bBoxX[1] = bBoxX[2] = bBoxX[5] = bBoxX[6] = 0.001 * chh * pen_x;
-      pen_y = get_capheight();
+      bBoxX[1] = bBoxX[2] = bBoxX[5] = bBoxX[6] = height * pen_x;
       /* The vertical extents should actually be determined by the font information,
        * but these values are usually oversized. */
-      bBoxY[0] = bBoxY[1] = -0.001 * chh * pen_y * 0.3; /* face->descender; */
-      bBoxY[2] = bBoxY[3] = 0.001 * chh * pen_y * 1.2;  /* face->ascender;  */
+      bBoxY[0] = bBoxY[1] = -chh * 0.3; /* face->descender; */
+      bBoxY[2] = bBoxY[3] = chh * 1.2;  /* face->ascender;  */
       bBoxY[4] = bBoxY[5] = 0;
-      bBoxY[6] = bBoxY[7] = 0.001 * chh * pen_y;
+      bBoxY[6] = bBoxY[7] = chh;
       for (j = 0; j < 8; j++)
         {
           xj = horiAdvance + bBoxX[j];
