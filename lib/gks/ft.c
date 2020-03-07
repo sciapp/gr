@@ -22,6 +22,14 @@
 
 #define nint(a) ((int)(a + 0.5))
 
+#define WC_to_NDC(xw, yw, tnr, xn, yn)     \
+  xn = gkss->a[tnr] * (xw) + gkss->b[tnr]; \
+  yn = gkss->c[tnr] * (yw) + gkss->d[tnr]
+
+#define NDC_to_WC(xn, yn, tnr, xw, yw)     \
+  xw = ((xn)-gkss->b[tnr]) / gkss->a[tnr]; \
+  yw = ((yn)-gkss->d[tnr]) / gkss->c[tnr]
+
 const static FT_String *gks_font_list[] = {
     "NimbusRomNo9L-Regu", /* 1: Times New Roman */
     "NimbusRomNo9L-ReguItal",
@@ -797,7 +805,6 @@ static void add_point(long x, long y)
 
 static int move_to(const FT_Vector *to, void *user)
 {
-  if (npoints >= maxpoints) reallocate(npoints);
   add_point(to->x, to->y);
   opcodes[num_opcodes++] = (int)'M';
   return 0;
@@ -805,7 +812,6 @@ static int move_to(const FT_Vector *to, void *user)
 
 static int line_to(const FT_Vector *to, void *user)
 {
-  if (npoints >= maxpoints) reallocate(npoints);
   add_point(to->x, to->y);
   opcodes[num_opcodes++] = (int)'L';
   return 0;
@@ -813,7 +819,6 @@ static int line_to(const FT_Vector *to, void *user)
 
 static int conic_to(const FT_Vector *control, const FT_Vector *to, void *user)
 {
-  if (npoints >= maxpoints) reallocate(npoints);
   add_point(control->x, control->y);
   add_point(to->x, to->y);
   opcodes[num_opcodes++] = (int)'Q';
@@ -822,7 +827,6 @@ static int conic_to(const FT_Vector *control, const FT_Vector *to, void *user)
 
 static int cubic_to(const FT_Vector *control1, const FT_Vector *control2, const FT_Vector *to, void *user)
 {
-  if (npoints >= maxpoints) reallocate(npoints);
   add_point(control1->x, control1->y);
   add_point(control2->x, control2->y);
   add_point(to->x, to->y);
@@ -923,6 +927,7 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
 
   if (!init) gks_ft_init();
 
+  WC_to_NDC(x, y, gkss->cntnr, x, y);
   utf_to_unicode((FT_Bytes)text, unicode_string, &length);
 
   pen_x = 0;
@@ -948,6 +953,7 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
               xpoint[j] = x + cos_f * xj - sin_f * yj;
               ypoint[j] = y + sin_f * xj + cos_f * yj;
             }
+
           (*gdp)(npoints, xpoint, ypoint, GKS_K_GDP_DRAW_PATH, num_opcodes, opcodes);
         }
 
@@ -971,6 +977,7 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
           yj = vertAdvance + bBoxY[j];
           bBoxX[j] = x + cos_f * xj - sin_f * yj;
           bBoxY[j] = y + sin_f * xj + cos_f * yj;
+          NDC_to_WC(bBoxX[j], bBoxY[j], gkss->cntnr, bBoxX[j], bBoxY[j]);
         }
     }
 }
