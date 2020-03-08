@@ -2872,7 +2872,7 @@ void gks_inq_ws_category(int wtype, int *errind, int *wscat)
 void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind, double *cpx, double *cpy, double *tx,
                          double *ty)
 {
-  double bx[8], by[8];
+  double bx[9], by[9];
   int i;
 
   if (gks_list_find(open_ws, wkid) != NULL && strlen(str) != 0)
@@ -2895,7 +2895,8 @@ void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind,
               tx[i] = bx[i];
               ty[i] = by[i];
             }
-          /* TODO: cpx, cpy */
+          *cpx = bx[8];
+          *cpy = by[8];
         }
       *errind = GKS_K_NO_ERROR;
     }
