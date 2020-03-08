@@ -10073,7 +10073,10 @@ int gr_uselinespec(char *linespec)
       if (strcmp(linespec, " ")) def_color = (def_color + 1) % 20;
     }
   else
-    result |= SPEC_COLOR;
+    {
+      if (result == 0) result = SPEC_LINE;
+      result |= SPEC_COLOR;
+    }
 
   gr_setlinecolorind(color);
   gr_setmarkercolorind(color);
