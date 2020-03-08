@@ -924,6 +924,7 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
   int i, j;
   double xj, yj, cos_f, sin_f;
   double chh, height;
+  int alh;
 
   if (!init) gks_ft_init();
 
@@ -935,6 +936,7 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
   sin_f = sin(phi);
   chh = gkss->chh;
   height = chh / get_capheight();
+  alh = gkss->txal[0];
 
   for (i = 0; i < length; i++)
     {
@@ -971,7 +973,16 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
       bBoxY[2] = bBoxY[3] = chh * 1.2;  /* face->ascender;  */
       bBoxY[4] = bBoxY[5] = 0;
       bBoxY[6] = bBoxY[7] = chh;
-      for (j = 0; j < 8; j++)
+
+      if (alh == GKS_K_TEXT_HALIGN_LEFT)
+        bBoxX[8] = bBoxX[1];
+      else if (alh == GKS_K_TEXT_HALIGN_RIGHT)
+        bBoxX[8] = 0;
+      else
+        bBoxX[8] = -horiAdvance;
+      bBoxY[8] = -vertAdvance;
+
+      for (j = 0; j <= 8; j++)
         {
           xj = horiAdvance + bBoxX[j];
           yj = vertAdvance + bBoxY[j];
@@ -985,7 +996,7 @@ static void process_glyphs(double x, double y, char *text, double phi, gks_state
 void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
                  void (*gdp)(int, double *, double *, int, int, int *))
 {
-  double bBoxX[8], bBoxY[8];
+  double bBoxX[9], bBoxY[9];
   double phi;
   int alh, alv;
   double chux, chuy;
