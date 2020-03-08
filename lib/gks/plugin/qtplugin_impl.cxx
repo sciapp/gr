@@ -803,7 +803,8 @@ static void to_DC(int n, double *x, double *y)
     {
       WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
       seg_xform(&xn, &yn);
-      NDC_to_DC(xn, yn, x[i], y[i]);
+      x[i] = p->a * xn + p->b;
+      y[i] = p->c * yn + p->d;
     }
 }
 
@@ -814,6 +815,9 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double cur_x = 0, cur_y = 0;
   double start_x = 0, start_y = 0;
   QPainterPath path;
+
+  p->pixmap->save();
+  p->pixmap->setRenderHint(QPainter::Antialiasing);
 
   j = 0;
   for (i = 0; i < nc; ++i)
@@ -976,6 +980,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           exit(1);
         }
     }
+  p->pixmap->restore();
 }
 
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
