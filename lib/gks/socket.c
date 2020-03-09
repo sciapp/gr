@@ -28,10 +28,44 @@
 typedef struct
 {
   int s;
+  int wstype;
   gks_display_list_t dl;
 } ws_state_list;
 
 static gks_state_list_t *gkss;
+
+#ifndef _WIN32
+static is_running = 0;
+
+static void *thread_func(void *arg)
+{
+  is_running = 1;
+  system((char *)arg);
+  is_running = 0;
+  return NULL;
+}
+#endif
+
+static int start(const char *cmd)
+{
+#ifdef _WIN32
+  wchar_t w_cmd[MAX_PATH];
+  STARTUPINFO startupInfo = {0};
+  PROCESS_INFORMATION processInformation = {0};
+
+  MultiByteToWideChar(CP_UTF8, 0, cmd, strlen(cmd) + 1, w_cmd, MAX_PATH);
+  startupInfo.cb = sizeof(startupInfo);
+
+  if (!CreateProcessW(NULL, w_cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL,
+                      &startupInfo, &processInformation))
+    return -1;
+#else
+  pthread_t thread;
+
+  if (pthread_create(&thread, NULL, thread_func, (void *)cmd)) return -1;
+#endif
+  return 0;
+}
 
 static int connect_socket(int quiet)
 {
@@ -91,7 +125,59 @@ static int connect_socket(int quiet)
   return s;
 }
 
-static int send_socket(int s, char *buf, int size)
+static int open_socket(int wstype)
+{
+  const char *command = NULL, *env;
+  int retry_count;
+  char *cmd = NULL;
+  int s;
+
+  if (wstype == 411)
+    {
+      command = gks_getenv("GKS_QT");
+      if (command == NULL)
+        {
+          env = gks_getenv("GRDIR");
+          if (env == NULL) env = GRDIR;
+
+          cmd = (char *)gks_malloc(MAXPATHLEN);
+#ifndef _WIN32
+#ifdef __APPLE__
+          sprintf(cmd, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
+#else
+          sprintf(cmd, "%s/bin/gksqt", env);
+#endif
+#else
+          sprintf(cmd, "%s\\bin\\gksqt.exe", env);
+#endif
+          command = cmd;
+        }
+    }
+
+  for (retry_count = 1; retry_count <= 10; retry_count++)
+    {
+      if ((s = connect_socket(retry_count != 10)) == -1)
+        {
+          if (command != NULL && retry_count == 1)
+            {
+              if (start(command) != 0) gks_perror("could not auto-start GKS Qt application");
+            }
+#ifndef _WIN32
+          usleep(300000);
+#else
+          Sleep(300);
+#endif
+        }
+      else
+        break;
+    }
+
+  if (cmd != NULL) free(cmd);
+
+  return s;
+}
+
+static int send_socket(int s, char *buf, int size, int quiet)
 {
   int sent, n = 0;
 
@@ -99,7 +185,7 @@ static int send_socket(int s, char *buf, int size)
     {
       if ((n = send(s, buf + sent, size - sent, 0)) == -1)
         {
-          perror("send");
+          if (!quiet) perror("send");
           return -1;
         }
     }
@@ -119,42 +205,10 @@ static int close_socket(int s)
   return 0;
 }
 
-#ifndef _WIN32
-static void *thread_func(void *arg)
-{
-  system((char *)arg);
-  return NULL;
-}
-#endif
-
-static int start(const char *cmd)
-{
-#ifdef _WIN32
-  wchar_t w_cmd[MAX_PATH];
-  STARTUPINFO startupInfo = {0};
-  PROCESS_INFORMATION processInformation = {0};
-
-  MultiByteToWideChar(CP_UTF8, 0, cmd, strlen(cmd) + 1, w_cmd, MAX_PATH);
-  startupInfo.cb = sizeof(startupInfo);
-
-  if (!CreateProcessW(NULL, w_cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL,
-                      &startupInfo, &processInformation))
-    return -1;
-#else
-  pthread_t thread;
-
-  if (pthread_create(&thread, NULL, thread_func, (void *)cmd)) return -1;
-#endif
-  return 0;
-}
-
 void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                     char *chars, void **ptr)
 {
   ws_state_list *wss;
-  const char *command = NULL, *env;
-  int retry_count;
-  char *cmd = NULL;
 
   wss = (ws_state_list *)*ptr;
 
@@ -164,52 +218,11 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       gkss = (gks_state_list_t *)*ptr;
       wss = (ws_state_list *)gks_malloc(sizeof(ws_state_list));
 
-      if (ia[2] == 411)
-        {
-          command = gks_getenv("GKS_QT");
-          if (command == NULL)
-            {
-              env = gks_getenv("GRDIR");
-              if (env == NULL) env = GRDIR;
-
-              cmd = (char *)gks_malloc(MAXPATHLEN);
-#ifndef _WIN32
-#ifdef __APPLE__
-              sprintf(cmd, "%s/Applications/gksqt.app/Contents/MacOS/gksqt", env);
-#else
-              sprintf(cmd, "%s/bin/gksqt", env);
-#endif
-#else
-              sprintf(cmd, "%s\\bin\\gksqt.exe", env);
-#endif
-              command = cmd;
-            }
-        }
-
-      for (retry_count = 1; retry_count <= 10; retry_count++)
-        {
-          if ((wss->s = connect_socket(retry_count != 10)) == -1)
-            {
-              if (command != NULL && retry_count == 1)
-                {
-                  if (start(command) != 0) gks_perror("could not auto-start GKS Qt application");
-                }
-#ifndef _WIN32
-              usleep(300000);
-#else
-              Sleep(300);
-#endif
-            }
-          else
-            break;
-        }
-
-      if (cmd != NULL) free(cmd);
-
+      wss->wstype = ia[2];
+      wss->s = open_socket(ia[2]);
       if (wss->s == -1)
         {
-          gks_perror("can't connect to GKS socket application\n"
-                     "Did you start 'gksqt'?\n");
+          gks_perror("can't connect to GKS socket application\n");
 
           gks_free(wss);
           wss = NULL;
@@ -233,8 +246,15 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
     case 8:
       if (ia[1] & GKS_K_PERFORM_FLAG)
         {
-          send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int));
-          send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes);
+#ifndef _WIN32
+          if (!is_running) close_socket(wss->s);
+#endif
+          if (send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int), 1) == -1)
+            {
+              wss->s = open_socket(wss->wstype);
+              send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int), 0);
+            }
+          send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes, 0);
         }
       break;
     }
