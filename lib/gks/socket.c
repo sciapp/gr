@@ -34,7 +34,12 @@ typedef struct
 
 static gks_state_list_t *gkss;
 
-#ifndef _WIN32
+#ifdef _WIN32
+
+static PROCESS_INFORMATION processInformation = {0};
+
+#else
+
 static is_running = 0;
 
 static void *thread_func(void *arg)
@@ -44,14 +49,14 @@ static void *thread_func(void *arg)
   is_running = 0;
   return NULL;
 }
+
 #endif
 
 static int start(const char *cmd)
 {
 #ifdef _WIN32
   wchar_t w_cmd[MAX_PATH];
-  STARTUPINFO startupInfo = {0};
-  PROCESS_INFORMATION processInformation = {0};
+  STARTUPINFOW startupInfo = {0};
 
   MultiByteToWideChar(CP_UTF8, 0, cmd, strlen(cmd) + 1, w_cmd, MAX_PATH);
   startupInfo.cb = sizeof(startupInfo);
@@ -246,9 +251,12 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
     case 8:
       if (ia[1] & GKS_K_PERFORM_FLAG)
         {
-#ifndef _WIN32
-          if (!is_running) close_socket(wss->s);
+#ifdef _WIN32
+          if (WaitForSingleObject(processInformation.hProcess, 10) == WAIT_TIMEOUT)
+#else
+          if (!is_running)
 #endif
+            close_socket(wss->s);
           if (send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int), 1) == -1)
             {
               wss->s = open_socket(wss->wstype);
