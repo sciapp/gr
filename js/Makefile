@@ -31,19 +31,20 @@ endif
   PNGDIR = ../3rdparty/libpng16
  ZLIBDIR = ../3rdparty/zlib
 QHULLDIR = ../3rdparty/qhull
+   FTDIR = ../3rdparty/freetype
   GKSDIR = ../lib/gks
    GRDIR = ../lib/gr
   GR3DIR = ../lib/gr3
   GRMDIR = ../lib/grm
 INCLUDES = -I$(THIRDPARTYDIR)/include/ -I$(GRMDIR) -I$(GR3DIR) -I$(GRDIR) -I$(GKSDIR) -I$(JPEGDIR) -I$(PNGDIR) \
-           -I$(ZLIBDIR) -I$(QHULLDIR)
+           -I$(ZLIBDIR) -I$(QHULLDIR) -I$(FTDIR)
  GKSOBJS = jsplugin.o $(GKSDIR)/gks.o $(GKSDIR)/font.o $(GKSDIR)/afm.o $(GKSDIR)/util.o \
-           $(GKSDIR)/malloc.o $(GKSDIR)/error.o $(GKSDIR)/wiss.o $(GKSDIR)/io.o
+           $(GKSDIR)/malloc.o $(GKSDIR)/error.o $(GKSDIR)/wiss.o $(GKSDIR)/io.o $(GKSDIR)/ft.o
   GROBJS = $(GRDIR)/gr.o $(GRDIR)/io.o $(GRDIR)/text.o $(GRDIR)/gridit.o \
            $(GRDIR)/strlib.o $(GRDIR)/contour.o $(GRDIR)/spline.o \
            $(GRDIR)/import.o $(GRDIR)/grforbnd.o $(GRDIR)/md5.o \
            $(GRDIR)/interp2.o $(GRDIR)/shade.o $(GRDIR)/delaunay.o \
-           $(GRDIR)/contourf.o $(GRDIR)/image.o
+           $(GRDIR)/contourf.o $(GRDIR)/image.o $(GRDIR)/mathtex2.o $(GRDIR)/mathtex2.tab.o
  GR3OBJS = $(GR3DIR)/gr3.o $(GR3DIR)/gr3_convenience.o \
            $(GR3DIR)/gr3_html.o $(GR3DIR)/gr3_povray.o $(GR3DIR)/gr3_png.o \
            $(GR3DIR)/gr3_jpeg.o $(GR3DIR)/gr3_gr.o $(GR3DIR)/gr3_mc.o
@@ -52,9 +53,12 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ -I$(GRMDIR) -I$(GR3DIR) -I$(GRDIR) -I$(GK
            $(GRMDIR)/util.o $(GRMDIR)/datatype/string_list.o $(GRMDIR)/datatype/string_map.o \
            $(GRMDIR)/datatype/uint_map.o
     OBJS = $(GRMOBJS) $(GR3OBJS) $(GROBJS) $(GKSOBJS)
-    LIBS = $(JPEGDIR)/libjpeg.a $(PNGDIR)/libpng.a $(ZLIBDIR)/libz.a $(QHULLDIR)/libqhull.a
+    LIBS = $(JPEGDIR)/libjpeg.a $(PNGDIR)/libpng.a $(ZLIBDIR)/libz.a $(QHULLDIR)/libqhull.a $(FTDIR)/libfreetype.a
 
 .PHONY: default clean .SECONDARY .FORCE
+
+.SUFFIXES:
+.SUFFIXES: .c .o
 
 .SECONDARY:
 
@@ -83,6 +87,9 @@ $(ZLIBDIR)/libz.a:
 
 $(QHULLDIR)/libqhull.a:
 	$(MAKE) -C $(QHULLDIR)
+
+$(FTDIR)/libfreetype.a:
+	$(MAKE) -C $(FTDIR)
 
 $(GRDIR)/gr.o: ../lib/gr/gr_version.h
 

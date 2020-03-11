@@ -210,9 +210,9 @@ void gks_close_font(int fd);
 
 void gks_lookup_afm(int font, int chr, stroke_data_t *buffer);
 
-char *gks_malloc(int size);
-char *gks_realloc(void *ptr, int size);
-void gks_free(void *ptr);
+DLLEXPORT char *gks_malloc(int size);
+DLLEXPORT char *gks_realloc(void *ptr, int size);
+DLLEXPORT void gks_free(void *ptr);
 
 DLLEXPORT char *gks_strdup(const char *str);
 
@@ -360,14 +360,21 @@ int *gks_ft_render(int *x, int *y, int *width, int *height, gks_state_list_t *gk
 unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_state_list_t *gkss, const char *text,
                                  int length);
 void *gks_ft_get_face(int);
+DLLEXPORT int gks_ft_get_metrics(int font, double fontsize, unsigned int codepoint, unsigned int dpi, double *width,
+                                 double *height, double *depth, double *advance, double *bearing, double *xmin,
+                                 double *xmax, double *ymin, double *ymax);
+DLLEXPORT double gks_ft_get_kerning(int font, double fontsize, unsigned int dpi, unsigned int first_codepoint,
+                                    unsigned int second_codepoint);
 void gks_ft_terminate(void);
 void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
                  void (*gdp)(int, double *, double *, int, int, int *));
 void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gkss,
                             void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY);
+DLLEXPORT void gks_ft_set_bearing_x_direction(int);
+DLLEXPORT void gks_ft_inq_bearing_x_direction(int *);
 
-void gks_set_encoding(int encoding);
-void gks_inq_encoding(int *encoding);
+DLLEXPORT void gks_set_encoding(int encoding);
+DLLEXPORT void gks_inq_encoding(int *encoding);
 
 #ifdef __cplusplus
 }
