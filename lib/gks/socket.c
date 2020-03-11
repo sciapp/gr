@@ -25,6 +25,10 @@
 
 #define PORT 8410
 
+#ifdef _WIN32
+static PROCESS_INFORMATION processInformation = {NULL, NULL, 0, 0};
+#endif
+
 typedef struct
 {
   int s;
@@ -34,13 +38,9 @@ typedef struct
 
 static gks_state_list_t *gkss;
 
-#ifdef _WIN32
-
-static PROCESS_INFORMATION processInformation = {0};
-
-#else
-
 static is_running = 0;
+
+#ifndef _WIN32
 
 static void *thread_func(void *arg)
 {
@@ -61,8 +61,10 @@ static int start(const char *cmd)
   MultiByteToWideChar(CP_UTF8, 0, cmd, strlen(cmd) + 1, w_cmd, MAX_PATH);
   startupInfo.cb = sizeof(startupInfo);
 
-  if (!CreateProcessW(NULL, w_cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL,
-                      &startupInfo, &processInformation))
+  if (CreateProcessW(NULL, w_cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL, &startupInfo,
+                     &processInformation))
+    is_running = 1;
+  else
     return -1;
 #else
   pthread_t thread;
@@ -190,6 +192,9 @@ static int send_socket(int s, char *buf, int size, int quiet)
     {
       if ((n = send(s, buf + sent, size - sent, 0)) == -1)
         {
+#ifdef _WIN32
+          if (WSAGetLastError() == WSAECONNABORTED) is_running = 0;
+#endif
           if (!quiet) perror("send");
           return -1;
         }
@@ -201,6 +206,8 @@ static int close_socket(int s)
 {
 #if defined(_WIN32)
   closesocket(s);
+  CloseHandle(processInformation.hThread);
+  CloseHandle(processInformation.hProcess);
 #else
   close(s);
 #endif
@@ -251,14 +258,14 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
     case 8:
       if (ia[1] & GKS_K_PERFORM_FLAG)
         {
-#ifdef _WIN32
-          if (WaitForSingleObject(processInformation.hProcess, 10) == WAIT_TIMEOUT)
-#else
-          if (!is_running)
+#ifndef _WIN32
+          if (!is_running) close_socket(wss->s);
 #endif
-            close_socket(wss->s);
           if (send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int), 1) == -1)
             {
+#ifdef _WIN32
+              if (!is_running) close_socket(wss->s);
+#endif
               wss->s = open_socket(wss->wstype);
               send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int), 0);
             }
