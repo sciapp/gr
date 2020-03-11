@@ -86,6 +86,8 @@
 #define cleanup_and_set_error_if(condition, error_value) goto_and_set_error_if((condition), (error_value), cleanup)
 #define error_cleanup_and_set_error_if(condition, error_value) \
   goto_and_set_error_if((condition), (error_value), error_cleanup)
+#define cleanup_and_set_error(error_value) goto_and_set_error_if(1, (error_value), cleanup)
+#define error_cleanup_and_set_error(error_value) goto_and_set_error_if(1, (error_value), error_cleanup)
 
 #if (defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5))) || defined(__clang__)
 #define MAYBE_UNUSED __attribute__((unused))

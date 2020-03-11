@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdio.h>
+#include <cm.h>
 
 #include "dump.h"
 #include "event_int.h"
@@ -138,39 +139,45 @@ event_queue_t *event_queue = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static string_map_entry_t kind_to_fmt[] = {
-    {"line", "xys"},     {"hexbin", "xys"},     {"polar", "xys"},     {"shade", "xys"},    {"stem", "xys"},
-    {"step", "xys"},     {"contour", "xyzc"},   {"contourf", "xyzc"}, {"tricont", "xyzc"}, {"trisurf", "xyzc"},
-    {"surface", "xyzc"}, {"wireframe", "xyzc"}, {"plot3", "xyzc"},    {"scatter", "xyzc"}, {"scatter3", "xyzc"},
-    {"quiver", "xyuv"},  {"heatmap", "xyzc"},   {"hist", "x"},        {"barplot", "y"},    {"isosurface", "c"},
-    {"imshow", "c"}};
+static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},         {"hexbin", "xys"},
+                                           {"polar", "xys"},        {"shade", "xys"},
+                                           {"stem", "xys"},         {"step", "xys"},
+                                           {"contour", "xyzc"},     {"contourf", "xyzc"},
+                                           {"tricont", "xyzc"},     {"trisurf", "xyzc"},
+                                           {"surface", "xyzc"},     {"wireframe", "xyzc"},
+                                           {"plot3", "xyzc"},       {"scatter", "xyzc"},
+                                           {"scatter3", "xyzc"},    {"quiver", "xyuv"},
+                                           {"heatmap", "xyzc"},     {"hist", "x"},
+                                           {"barplot", "y"},        {"isosurface", "c"},
+                                           {"imshow", "c"},         {"nonuniformheatmap", "xyzc"},
+                                           {"polar_histogram", "x"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static plot_func_map_entry_t kind_to_func[] = {
-    {"line", plot_line},
-    {"step", plot_step},
-    {"scatter", plot_scatter},
-    {"quiver", plot_quiver},
-    {"stem", plot_stem},
-    {"hist", plot_hist},
-    {"barplot", plot_barplot},
-    {"contour", plot_contour},
-    {"contourf", plot_contourf},
-    {"hexbin", plot_hexbin},
-    {"heatmap", plot_heatmap},
-    {"wireframe", plot_wireframe},
-    {"surface", plot_surface},
-    {"plot3", plot_plot3},
-    {"scatter3", plot_scatter3},
-    {"imshow", plot_imshow},
-    {"isosurface", plot_isosurface},
-    {"polar", plot_polar},
-    {"trisurf", plot_trisurf},
-    {"tricont", plot_tricont},
-    {"shade", plot_shade},
-};
+static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
+                                               {"step", plot_step},
+                                               {"scatter", plot_scatter},
+                                               {"quiver", plot_quiver},
+                                               {"stem", plot_stem},
+                                               {"hist", plot_hist},
+                                               {"barplot", plot_barplot},
+                                               {"contour", plot_contour},
+                                               {"contourf", plot_contourf},
+                                               {"hexbin", plot_hexbin},
+                                               {"heatmap", plot_heatmap},
+                                               {"wireframe", plot_wireframe},
+                                               {"surface", plot_surface},
+                                               {"plot3", plot_plot3},
+                                               {"scatter3", plot_scatter3},
+                                               {"imshow", plot_imshow},
+                                               {"isosurface", plot_isosurface},
+                                               {"polar", plot_polar},
+                                               {"trisurf", plot_trisurf},
+                                               {"tricont", plot_tricont},
+                                               {"shade", plot_shade},
+                                               {"nonuniformheatmap", plot_heatmap},
+                                               {"polar_histogram", plot_polar_histogram}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ maps ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -213,15 +220,15 @@ static int pre_plot_text_encoding = -1;
 
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
+
 const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "adjust_ylim",
                                     "adjust_zlim",
+                                    "angle_ticks",
                                     "backgroundcolor",
                                     "bar_color",
                                     "bar_width",
                                     "colormap",
-                                    "edge_color",
-                                    "edge_width",
                                     "font",
                                     "font_precision",
                                     "ind_bar_color",
@@ -232,8 +239,11 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "labels",
                                     "levels",
                                     "location",
+                                    "normalization",
                                     "panzoom",
+                                    "phiflip",
                                     "reset_ranges",
+                                    "rings",
                                     "rotation",
                                     "series",
                                     "style",
@@ -256,19 +266,44 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "zlim",
                                     "zlog",
                                     NULL};
-const char *valid_series_keys[] = {"a",          "c",
-                                   "crange",     "error",
-                                   "c_dims",     "foreground_color",
-                                   "indices",    "inner_series",
-                                   "isovalue",   "markertype",
-                                   "nbins",      "rgb",
-                                   "s",          "spec",
-                                   "step_where", "u",
-                                   "v",          "weights",
-                                   "x",          "xrange",
-                                   "y",          "yrange",
-                                   "z",          "z_dims",
-                                   "zrange",     NULL};
+const char *valid_series_keys[] = {"a",
+                                   "bin_width",
+                                   "bin_edges",
+                                   "bin_counts",
+                                   "c",
+                                   "c_dims",
+                                   "crange",
+                                   "draw_edges",
+                                   "edge_color",
+                                   "edge_width",
+                                   "error",
+                                   "face_color",
+                                   "foreground_color",
+                                   "indices",
+                                   "inner_series",
+                                   "isovalue",
+                                   "markertype",
+                                   "nbins",
+                                   "philim",
+                                   "rgb",
+                                   "rlim",
+                                   "s",
+                                   "spec",
+                                   "step_where",
+                                   "stairs",
+                                   "u",
+                                   "v",
+                                   "weights",
+                                   "x",
+                                   "xcolormap",
+                                   "xrange",
+                                   "y",
+                                   "ycolormap",
+                                   "yrange",
+                                   "z",
+                                   "z_dims",
+                                   "zrange",
+                                   NULL};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -318,8 +353,9 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"u", "D"},
                                               {"update", "i"},
                                               {"v", "D"},
-                                              {"x", "D"},
+                                              {"x", "D|I"},
                                               {"xbins", "i"},
+                                              {"xcolormap", "i"},
                                               {"xflip", "i"},
                                               {"xform", "i"},
                                               {"xlabel", "s"},
@@ -328,6 +364,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"xlog", "i"},
                                               {"y", "D"},
                                               {"ybins", "i"},
+                                              {"ycolormap", "i"},
                                               {"yflip", "i"},
                                               {"yform", "i"},
                                               {"ylabel", "s"},
@@ -984,7 +1021,7 @@ error_t plot_pre_subplot(grm_args_t *subplot_args)
   plot_process_colormap(subplot_args);
   plot_process_font(subplot_args);
 
-  if (str_equals_any(kind, 1, "polar"))
+  if (str_equals_any(kind, 2, "polar", "polar_histogram"))
     {
       plot_draw_polar_axes(subplot_args);
     }
@@ -1124,13 +1161,17 @@ void plot_process_viewport(grm_args_t *subplot_args)
       gr_restorestate();
     }
 
-  if (strcmp(kind, "polar") == 0)
+  if (str_equals_any(kind, 2, "polar", "polar_histogram"))
     {
       double x_center, y_center, r;
 
       x_center = 0.5 * (viewport[0] + viewport[1]);
       y_center = 0.5 * (viewport[2] + viewport[3]);
       r = 0.5 * min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+      if (grm_args_contains(subplot_args, "title"))
+        {
+          y_center = (y_center + r) / 2.0;
+        }
       viewport[0] = x_center - r;
       viewport[1] = x_center + r;
       viewport[2] = y_center - r;
@@ -1169,7 +1210,7 @@ void plot_process_window(grm_args_t *subplot_args)
   args_values(subplot_args, "yflip", "i", &yflip);
   args_values(subplot_args, "zflip", "i", &zflip);
 
-  if (strcmp(kind, "polar") != 0)
+  if (!str_equals_any(kind, 2, "polar", "polar_histogram"))
     {
       scale |= xlog ? GR_OPTION_X_LOG : 0;
       scale |= ylog ? GR_OPTION_Y_LOG : 0;
@@ -1179,165 +1220,166 @@ void plot_process_window(grm_args_t *subplot_args)
       scale |= zflip ? GR_OPTION_FLIP_Z : 0;
     }
 
-  args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
-  args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
-  if (args_values(subplot_args, "reset_ranges", "i", &reset_ranges) && reset_ranges)
+  if (str_equals_any(kind, 2, "polar", "polar_histogram"))
     {
-      if (args_values(subplot_args, "_original_xlim", "dd", &x_min, &x_max) &&
-          args_values(subplot_args, "_original_ylim", "dd", &y_min, &y_max) &&
-          args_values(subplot_args, "_original_adjust_xlim", "i", &adjust_xlim) &&
-          args_values(subplot_args, "_original_adjust_ylim", "i", &adjust_ylim))
-        {
-          grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
-          grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
-          grm_args_push(subplot_args, "adjust_xlim", "i", adjust_xlim);
-          grm_args_push(subplot_args, "adjust_ylim", "i", adjust_ylim);
-          grm_args_remove(subplot_args, "_original_xlim");
-          grm_args_remove(subplot_args, "_original_ylim");
-          grm_args_remove(subplot_args, "_original_adjust_xlim");
-          grm_args_remove(subplot_args, "_original_adjust_ylim");
-        }
-      grm_args_remove(subplot_args, "reset_ranges");
-    }
-  if (grm_args_contains(subplot_args, "panzoom"))
-    {
-      if (!grm_args_contains(subplot_args, "_original_xlim"))
-        {
-          grm_args_push(subplot_args, "_original_xlim", "dd", x_min, x_max);
-          args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
-          grm_args_push(subplot_args, "_original_adjust_xlim", "i", adjust_xlim);
-          grm_args_push(subplot_args, "adjust_xlim", "i", 0);
-        }
-      if (!grm_args_contains(subplot_args, "_original_ylim"))
-        {
-          grm_args_push(subplot_args, "_original_ylim", "dd", y_min, y_max);
-          args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
-          grm_args_push(subplot_args, "_original_adjust_ylim", "i", adjust_ylim);
-          grm_args_push(subplot_args, "adjust_ylim", "i", 0);
-        }
-      if (!args_values(subplot_args, "panzoom", "dddd", &x, &y, &xzoom, &yzoom))
-        {
-          if (args_values(subplot_args, "panzoom", "ddd", &x, &y, &xzoom))
-            {
-              yzoom = xzoom;
-            }
-          else
-            {
-              /* TODO: Add error handling for type mismatch (-> next statement would fail) */
-              args_values(subplot_args, "panzoom", "dd", &x, &y);
-              yzoom = xzoom = 0.0;
-            }
-        }
-      /* Ensure the correct window is set in GR */
-      if (args_values(subplot_args, "window", "D", &stored_window))
-        {
-          gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
-          logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
-                  stored_window[2], stored_window[3]));
-        }
-      gr_panzoom(x, y, xzoom, yzoom, &x_min, &x_max, &y_min, &y_max);
-      logger((stderr, "Window after `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
-      grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
-      grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
-      grm_args_remove(subplot_args, "panzoom");
-    }
-
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
-    {
-      major_count = 2;
+      y_min = x_min = -1.1;
+      y_max = x_max = 1.1;
     }
   else
     {
-      major_count = 5;
-    }
-
-  if (!(scale & GR_OPTION_X_LOG))
-    {
-      args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
-      if (adjust_xlim)
+      args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
+      args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
+      if (args_values(subplot_args, "reset_ranges", "i", &reset_ranges) && reset_ranges)
         {
-          logger((stderr, "_xlim before \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
-          gr_adjustlimits(&x_min, &x_max);
-          logger((stderr, "_xlim after \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
-        }
-      if (strcmp(kind, "barplot") == 0)
-        {
-          const char *xnotations[5];
-          unsigned int xnotations_length;
-          x_tick = 1;
-          if (args_first_value(subplot_args, "xnotations", "S", &xnotations, &xnotations_length))
+          if (args_values(subplot_args, "_original_xlim", "dd", &x_min, &x_max) &&
+              args_values(subplot_args, "_original_ylim", "dd", &y_min, &y_max) &&
+              args_values(subplot_args, "_original_adjust_xlim", "i", &adjust_xlim) &&
+              args_values(subplot_args, "_original_adjust_ylim", "i", &adjust_ylim))
             {
-              x_major_count = 0;
+              grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
+              grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
+              grm_args_push(subplot_args, "adjust_xlim", "i", adjust_xlim);
+              grm_args_push(subplot_args, "adjust_ylim", "i", adjust_ylim);
+              grm_args_remove(subplot_args, "_original_xlim");
+              grm_args_remove(subplot_args, "_original_ylim");
+              grm_args_remove(subplot_args, "_original_adjust_xlim");
+              grm_args_remove(subplot_args, "_original_adjust_ylim");
+            }
+          grm_args_remove(subplot_args, "reset_ranges");
+        }
+      if (grm_args_contains(subplot_args, "panzoom"))
+        {
+          if (!grm_args_contains(subplot_args, "_original_xlim"))
+            {
+              grm_args_push(subplot_args, "_original_xlim", "dd", x_min, x_max);
+              args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
+              grm_args_push(subplot_args, "_original_adjust_xlim", "i", adjust_xlim);
+              grm_args_push(subplot_args, "adjust_xlim", "i", 0);
+            }
+          if (!grm_args_contains(subplot_args, "_original_ylim"))
+            {
+              grm_args_push(subplot_args, "_original_ylim", "dd", y_min, y_max);
+              args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
+              grm_args_push(subplot_args, "_original_adjust_ylim", "i", adjust_ylim);
+              grm_args_push(subplot_args, "adjust_ylim", "i", 0);
+            }
+          if (!args_values(subplot_args, "panzoom", "dddd", &x, &y, &xzoom, &yzoom))
+            {
+              if (args_values(subplot_args, "panzoom", "ddd", &x, &y, &xzoom))
+                {
+                  yzoom = xzoom;
+                }
+              else
+                {
+                  /* TODO: Add error handling for type mismatch (-> next statement would fail) */
+                  args_values(subplot_args, "panzoom", "dd", &x, &y);
+                  yzoom = xzoom = 0.0;
+                }
+            }
+          /* Ensure the correct window is set in GR */
+          if (args_values(subplot_args, "window", "D", &stored_window))
+            {
+              gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
+              logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
+                      stored_window[2], stored_window[3]));
+            }
+          gr_panzoom(x, y, xzoom, yzoom, &x_min, &x_max, &y_min, &y_max);
+          logger((stderr, "Window after `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
+          grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
+          grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
+          grm_args_remove(subplot_args, "panzoom");
+        }
+
+      if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
+        {
+          major_count = 2;
+        }
+      else
+        {
+          major_count = 5;
+        }
+
+      if (!(scale & GR_OPTION_X_LOG))
+        {
+          args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
+          if (adjust_xlim)
+            {
+              logger((stderr, "_xlim before \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
+              gr_adjustlimits(&x_min, &x_max);
+              logger((stderr, "_xlim after \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
+            }
+          if (strcmp(kind, "barplot") == 0)
+            {
+              const char *xnotations[5];
+              unsigned int xnotations_length;
+              x_tick = 1;
+              if (args_first_value(subplot_args, "xnotations", "S", &xnotations, &xnotations_length))
+                {
+                  x_major_count = 0;
+                }
+              else
+                {
+                  x_major_count = 1;
+                }
             }
           else
             {
-              x_major_count = 1;
+              x_major_count = major_count;
+              x_tick = gr_tick(x_min, x_max) / x_major_count;
             }
         }
       else
         {
-          x_major_count = major_count;
-          x_tick = gr_tick(x_min, x_max) / x_major_count;
+          x_tick = x_major_count = 1;
         }
-    }
-  else
-    {
-      x_tick = x_major_count = 1;
-    }
-  if (!(scale & GR_OPTION_FLIP_X))
-    {
-      x_org_low = x_min;
-      x_org_high = x_max;
-    }
-  else
-    {
-      x_org_low = x_max;
-      x_org_high = x_min;
-    }
-  grm_args_push(subplot_args, "xtick", "d", x_tick);
-  grm_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
-  grm_args_push(subplot_args, "xmajor", "i", x_major_count);
-
-  if (!(scale & GR_OPTION_Y_LOG))
-    {
-      args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
-      if (adjust_ylim)
+      if (!(scale & GR_OPTION_FLIP_X))
         {
-          logger((stderr, "_ylim before \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
-          gr_adjustlimits(&y_min, &y_max);
-          logger((stderr, "_ylim after \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
+          x_org_low = x_min;
+          x_org_high = x_max;
         }
-      y_major_count = major_count;
-      y_tick = gr_tick(y_min, y_max) / y_major_count;
+      else
+        {
+          x_org_low = x_max;
+          x_org_high = x_min;
+        }
+      grm_args_push(subplot_args, "xtick", "d", x_tick);
+      grm_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
+      grm_args_push(subplot_args, "xmajor", "i", x_major_count);
+
+      if (!(scale & GR_OPTION_Y_LOG))
+        {
+          args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
+          if (adjust_ylim)
+            {
+              logger((stderr, "_ylim before \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
+              gr_adjustlimits(&y_min, &y_max);
+              logger((stderr, "_ylim after \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
+            }
+          y_major_count = major_count;
+          y_tick = gr_tick(y_min, y_max) / y_major_count;
+        }
+      else
+        {
+          y_tick = y_major_count = 1;
+        }
+      if (!(scale & GR_OPTION_FLIP_Y))
+        {
+          y_org_low = y_min;
+          y_org_high = y_max;
+        }
+      else
+        {
+          y_org_low = y_max;
+          y_org_high = y_min;
+        }
+      grm_args_push(subplot_args, "ytick", "d", y_tick);
+      grm_args_push(subplot_args, "yorg", "dd", y_org_low, y_org_high);
+      grm_args_push(subplot_args, "ymajor", "i", y_major_count);
     }
-  else
-    {
-      y_tick = y_major_count = 1;
-    }
-  if (!(scale & GR_OPTION_FLIP_Y))
-    {
-      y_org_low = y_min;
-      y_org_high = y_max;
-    }
-  else
-    {
-      y_org_low = y_max;
-      y_org_high = y_min;
-    }
-  grm_args_push(subplot_args, "ytick", "d", y_tick);
-  grm_args_push(subplot_args, "yorg", "dd", y_org_low, y_org_high);
-  grm_args_push(subplot_args, "ymajor", "i", y_major_count);
 
   logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
   grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
-  if (strcmp(kind, "polar") != 0)
-    {
-      gr_setwindow(x_min, x_max, y_min, y_max);
-    }
-  else
-    {
-      gr_setwindow(-1.0, 1.0, -1.0, 1.0);
-    }
+  gr_setwindow(x_min, x_max, y_min, y_max);
 
   if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf"))
     {
@@ -1422,133 +1464,138 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "style", "s", &style);
   string_map_at(fmt_map, kind, (char **)&fmt); /* TODO: check if the map access was successful */
-  current_component_name = data_component_names;
-  current_range_keys = range_keys;
-  while (*current_component_name != NULL)
+  if (strcmp(kind, "polar_histogram") != 0)
     {
-      double min_component = DBL_MAX;
-      double max_component = -DBL_MAX;
-      double step = -DBL_MAX;
-      if (strchr(fmt, **current_component_name) == NULL)
+      current_component_name = data_component_names;
+      current_range_keys = range_keys;
+      while (*current_component_name != NULL)
         {
-          ++current_range_keys;
-          ++current_component_name;
-          continue;
-        }
-      /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
-      if (!grm_args_contains(subplot_args, current_range_keys->subplot) || strcmp(kind, "heatmap") == 0)
-        {
-          args_first_value(subplot_args, "series", "A", &current_series, &series_count);
-          while (*current_series != NULL)
+          double min_component = DBL_MAX;
+          double max_component = -DBL_MAX;
+          double step = -DBL_MAX;
+          if (strchr(fmt, **current_component_name) == NULL)
             {
-              double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
-              if (!args_values(*current_series, current_range_keys->series, "dd", &current_min_component,
-                               &current_max_component))
+              ++current_range_keys;
+              ++current_component_name;
+              continue;
+            }
+          /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
+          if (!grm_args_contains(subplot_args, current_range_keys->subplot) || strcmp(kind, "heatmap") == 0)
+            {
+              args_first_value(subplot_args, "series", "A", &current_series, &series_count);
+              while (*current_series != NULL)
                 {
-                  if (args_first_value(*current_series, *current_component_name, "D", &current_component,
-                                       &current_point_count))
+                  double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
+                  if (!args_values(*current_series, current_range_keys->series, "dd", &current_min_component,
+                                   &current_max_component))
                     {
-                      if (strcmp(style, "stacked") == 0)
-                        {
-                          current_max_component = 0.0;
-                          for (i = 0; i < current_point_count; i++)
-                            {
-                              current_max_component += current_component[i];
-                            }
-                          current_min_component = current_max_component;
-                        }
-                      else
-                        {
-                          for (i = 0; i < current_point_count; i++)
-                            {
-                              current_min_component = min(current_component[i], current_min_component);
-                              current_max_component = max(current_component[i], current_max_component);
-                            }
-                        }
-                    }
-                  else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
-                    {
-                      /* in this case `x` or `y` (or both) are missing
-                       * -> set the current min/max_component to the dimensions of `z`
-                       *    (shifted by half a unit to center color blocks) */
-                      const char *other_component_name = (strcmp(*current_component_name, "x") == 0) ? "y" : "x";
-                      double *other_component;
-                      unsigned int other_point_count;
-                      if (args_first_value(*current_series, other_component_name, "D", &other_component,
-                                           &other_point_count))
-                        {
-                          /* The other component is given -> the missing dimension can be calculated */
-                          double *z;
-                          unsigned int z_length;
-                          cleanup_and_set_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length),
-                                                   ERROR_PLOT_MISSING_DATA);
-                          current_point_count = z_length / other_point_count;
-                        }
-                      else
-                        {
-                          /* A heatmap without `x` and `y` values
-                           * -> dimensions can only be read from `z_dims` */
-                          int rows, cols;
-                          cleanup_and_set_error_if(!args_values(*current_series, "z_dims", "ii", &rows, &cols),
-                                                   ERROR_PLOT_MISSING_DIMENSIONS);
-                          current_point_count = (strcmp(*current_component_name, "x") == 0) ? cols : rows;
-                        }
-                      current_min_component = -0.5;
-                      current_max_component = current_point_count - 0.5;
-                    }
-                }
-              else if (args_first_value(*current_series, "inner_series", "nA", &inner_series, &inner_series_count))
-                {
-                  while (*inner_series != NULL)
-                    {
-                      if (args_first_value(*inner_series, *current_component_name, "D", &current_component,
+                      if (args_first_value(*current_series, *current_component_name, "D", &current_component,
                                            &current_point_count))
                         {
-                          double current_max_component = 0;
-                          for (i = 0; i < current_point_count; i++)
+                          if (strcmp(style, "stacked") == 0)
                             {
-                              current_max_component += current_component[i];
+                              current_max_component = 0.0;
+                              for (i = 0; i < current_point_count; i++)
+                                {
+                                  current_max_component += current_component[i];
+                                }
+                              current_min_component = current_max_component;
                             }
-                          current_min_component = current_max_component;
-                          max_component = max(current_max_component, max_component);
-                          min_component = min(current_min_component, min_component);
+                          else
+                            {
+                              for (i = 0; i < current_point_count; i++)
+                                {
+                                  current_min_component = min(current_component[i], current_min_component);
+                                  current_max_component = max(current_component[i], current_max_component);
+                                }
+                            }
                         }
-                      inner_series++;
+                      else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
+                        {
+                          /* in this case `x` or `y` (or both) are missing
+                           * -> set the current min/max_component to the dimensions of `z`
+                           *    (shifted by half a unit to center color blocks) */
+                          const char *other_component_name = (strcmp(*current_component_name, "x") == 0) ? "y" : "x";
+                          double *other_component;
+                          unsigned int other_point_count;
+                          if (args_first_value(*current_series, other_component_name, "D", &other_component,
+                                               &other_point_count))
+                            {
+                              /* The other component is given -> the missing dimension can be calculated */
+                              double *z;
+                              unsigned int z_length;
+                              cleanup_and_set_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length),
+                                                       ERROR_PLOT_MISSING_DATA);
+                              current_point_count = z_length / other_point_count;
+                            }
+                          else
+                            {
+                              /* A heatmap without `x` and `y` values
+                               * -> dimensions can only be read from `z_dims` */
+                              int rows, cols;
+                              cleanup_and_set_error_if(!args_values(*current_series, "z_dims", "ii", &rows, &cols),
+                                                       ERROR_PLOT_MISSING_DIMENSIONS);
+                              current_point_count = (strcmp(*current_component_name, "x") == 0) ? cols : rows;
+                            }
+                          current_min_component = -0.5;
+                          current_max_component = current_point_count - 0.5;
+                        }
+                    }
+                  else if (args_first_value(*current_series, "inner_series", "nA", &inner_series, &inner_series_count))
+                    {
+                      while (*inner_series != NULL)
+                        {
+                          if (args_first_value(*inner_series, *current_component_name, "D", &current_component,
+                                               &current_point_count))
+                            {
+                              double current_max_component = 0;
+                              for (i = 0; i < current_point_count; i++)
+                                {
+                                  current_max_component += current_component[i];
+                                }
+                              current_min_component = current_max_component;
+                              max_component = max(current_max_component, max_component);
+                              min_component = min(current_min_component, min_component);
+                            }
+                          inner_series++;
+                        }
+                    }
+                  if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
+                    {
+                      grm_args_push(*current_series, current_range_keys->series, "dd", current_min_component,
+                                    current_max_component);
+                    }
+                  min_component = min(current_min_component, min_component);
+                  max_component = max(current_max_component, max_component);
+                  ++current_series;
+                }
+            }
+          if (args_values(subplot_args, current_range_keys->subplot, "dd", &min_component, &max_component))
+            {
+              grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component,
+                            max_component);
+            }
+          else if (min_component != DBL_MAX && max_component != -DBL_MAX)
+            {
+              if ((strcmp(kind, "barplot")) == 0 && strcmp("y", *current_component_name) == 0)
+                {
+                  min_component = 0;
+                }
+              else if (strcmp(kind, "quiver") == 0)
+                {
+                  step = max(find_max_step(current_point_count, current_component), step);
+                  if (step > 0.0)
+                    {
+                      min_component -= step;
+                      max_component += step;
                     }
                 }
-              if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
-                {
-                  grm_args_push(*current_series, current_range_keys->series, "dd", current_min_component,
-                                current_max_component);
-                }
-              min_component = min(current_min_component, min_component);
-              max_component = max(current_max_component, max_component);
-              ++current_series;
+              grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component,
+                            max_component);
             }
+          ++current_range_keys;
+          ++current_component_name;
         }
-      if (args_values(subplot_args, current_range_keys->subplot, "dd", &min_component, &max_component))
-        {
-          grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component, max_component);
-        }
-      else if (min_component != DBL_MAX && max_component != -DBL_MAX)
-        {
-          if ((strcmp(kind, "barplot")) == 0 && strcmp("y", *current_component_name) == 0)
-            {
-              min_component = 0;
-            }
-          else if (strcmp(kind, "quiver") == 0)
-            {
-              step = max(find_max_step(current_point_count, current_component), step);
-              if (step > 0.0)
-                {
-                  min_component -= step;
-                  max_component += step;
-                }
-            }
-          grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component, max_component);
-        }
-      ++current_range_keys;
-      ++current_component_name;
     }
   /* For quiver plots use u^2 + v^2 as z value */
   if (strcmp(kind, "quiver") == 0)
@@ -1667,6 +1714,13 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
             }
           grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
         }
+    }
+  else if (strcmp(kind, "polar_histogram") == 0)
+    {
+      double r_max;
+      error = classes_polar_histogram(subplot_args, &r_max);
+      cleanup_if_error;
+      grm_args_push(subplot_args, "r_max", "d", r_max);
     }
 
 cleanup:
@@ -2095,17 +2149,14 @@ error_t plot_hist(grm_args_t *subplot_args)
   char *kind;
   grm_args_t **current_series;
   double *bar_centers = NULL;
-  int bar_color_index = 989, edge_color_index = 1, i;
+  int bar_color_index = 989, i;
   double bar_color_rgb[3] = {-1};
-  double edge_color_rgb[3] = {-1};
   error_t error = NO_ERROR;
 
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
   args_values(subplot_args, "bar_color", "i", &bar_color_index);
-  args_values(subplot_args, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
-  args_values(subplot_args, "edge_color", "i", &edge_color_index);
   if (bar_color_rgb[0] != -1)
     {
       for (i = 0; i < 3; i++)
@@ -2115,21 +2166,26 @@ error_t plot_hist(grm_args_t *subplot_args)
       bar_color_index = 1000;
       gr_setcolorrep(bar_color_index, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
     }
-  if (edge_color_rgb[0] != -1)
-    {
-      for (i = 0; i < 3; i++)
-        {
-          cleanup_and_set_error_if((edge_color_rgb[i] > 1 || edge_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
-        }
-      edge_color_index = 1001;
-      gr_setcolorrep(edge_color_index, edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]);
-    }
 
   while (*current_series != NULL)
     {
+      double edge_color_index = 1;
+      double edge_color_rgb[3] = {-1};
       double x_min, x_max, bar_width;
       double *bins;
       unsigned int num_bins;
+
+      args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
+      args_values(*current_series, "edge_color", "i", &edge_color_index);
+      if (edge_color_rgb[0] != -1)
+        {
+          for (i = 0; i < 3; i++)
+            {
+              cleanup_and_set_error_if((edge_color_rgb[i] > 1 || edge_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
+            }
+          edge_color_index = 1001;
+          gr_setcolorrep(edge_color_index, edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]);
+        }
 
       args_first_value(*current_series, "bins", "D", &bins, &num_bins);
       args_values(*current_series, "xrange", "dd", &x_min, &x_max);
@@ -2205,9 +2261,6 @@ error_t plot_barplot(grm_args_t *subplot_args)
   args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
   args_values(subplot_args, "bar_color", "i", &bar_color);
   args_values(subplot_args, "bar_width", "d", &bar_width);
-  args_values(subplot_args, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
-  args_values(subplot_args, "edge_color", "i", &edge_color);
-  args_values(subplot_args, "edge_width", "d", &edge_width);
   args_values(subplot_args, "style", "s", &style);
   args_first_value(*current_series, "c", "I", &c, &c_length);
   args_first_value(*current_series, "c", "D", &c_rgb, &c_rgb_length);
@@ -2216,13 +2269,6 @@ error_t plot_barplot(grm_args_t *subplot_args)
       for (i = 0; i < 3; i++)
         {
           cleanup_and_set_error_if((bar_color_rgb[i] > 1 || bar_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
-        }
-    }
-  if (edge_color_rgb[0] != -1)
-    {
-      for (i = 0; i < 3; i++)
-        {
-          cleanup_and_set_error_if((edge_color_rgb[i] > 1 || edge_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
         }
     }
 
@@ -2389,6 +2435,18 @@ error_t plot_barplot(grm_args_t *subplot_args)
       /* Style Varianz */
       double vertical_change = 0;
       double x1, x2, y1, y2;
+
+      args_values(*current_series, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
+      args_values(*current_series, "edge_color", "i", &edge_color);
+      if (edge_color_rgb[0] != -1)
+        {
+          for (i = 0; i < 3; i++)
+            {
+              cleanup_and_set_error_if((edge_color_rgb[i] > 1 || edge_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
+            }
+        }
+      args_values(*current_series, "edge_width", "d", &edge_width);
+
       cleanup_and_set_error_if(
           !(args_first_value(*current_series, "y", "D", &y, &y_length) ||
             (args_first_value(*current_series, "inner_series", "A", &inner_series, &inner_series_length))),
@@ -3515,6 +3573,1058 @@ error_t plot_polar(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
+
+/*!
+ * Plot a polar histogram.
+ *
+ * \param[in] x (series)
+ *            Either a list containing doubles representing angles or ints for bin_counts.
+ * \param[in] normalization a string specifying the normalization (subplot)
+ *            The default value is "count".
+ *          + count: the default normalization.  The height of each bin is the number of observations in each bin.
+ *          + probability: The height of each bin is the relative number of observations,
+ *            (number of observations in bin/total number of observations).
+ *            The sum of the bin heights is 1.
+ *          + countdensity: The height of each bin is the number of observations in bin / (width of bin).
+ *          + pdf: Probability density function estimate. The height of each bin is
+ *            (number of observations in the bin)/(total number of observations * width of bin).
+ *            The area of each bin is the relative number of observations. The sum of the bin areas is 1
+ *          + cumcount: The height of each bin is the cumulative number of observations in each bin and all
+ *            previous bins. The height of the last bin is numel (theta).
+ *          + cdf: Cumulative density function estimate. The height of each bin is equal to the cumulative relative
+ *            number of observations in the bin and all previous bins. The height of the last bin is 1.
+ * \param[in] bin_counts an int which behaves like a boolean (series)
+ *            0: the series contains angles.
+ *            else: the given series contains the direct values for each bin.
+ *            The default value is 0.
+ * \param[in] bin_edges a list containing angles that represent the edges of the bins (series)
+ *            It is not compatible with nbins or bin_width.
+ *            When used with bin_counts: length of bin_edges must equal the length of bin_counts + 1.
+ * \param[in] stairs an int which behaves like a boolean (series)
+ *            0: everything will be drawn.
+ *            else: only the plot outlines will be drawn.
+ *            The default value is 0 and stairs with a value unequal 0 is not compatible with colormap.
+ * \param[in] colormap a list with two ints which represent a gr colormap (series)
+ *            The first int sets the angle colormap and the second one the radius colormap.
+ *            Must be between (inclusive) -1 and 47.
+ *            -1: no colormap
+ * \param[in] draw_edges an int that acts like a boolean (series)
+ *            0: bin edges will not be drawn.
+ *            else: bin edges will be drawn.
+ *            It is only compatible with colormap.
+ *            The default value is 0.
+ * \param[in] philim a list containing two double values representing start and end angle (series)
+ *            The plot will only use the values in the given range and and it will plot bins between those two values.
+ * \param[in] phiflip an integer that represents a boolean (subplot)
+ *            0: the angles will be displayed anti clockwise.
+ *            else: the angles will be displayed clockwise.
+ *            If philim[0] is greater than philim[1], phiflip will be negated.
+ *            The default value is 0.
+ * \param[in] rlim a list containing two double values between (inclusive) 0.0 and 1.0 (series)
+ *            0.0 is the center and 1.0 is the outer edge of the plot.
+ *            rlim will limit the bins' start and end height.
+ * \param[in] bin_width a double value between (exclusive) 0.0 and 2 * pi setting the bins' width (series)
+ *            It is not compatible nbins or bin_edges.
+ * \param[in] nbins an int setting the number of bins (series)
+ *            It is not compatible with bin_edges, nbins or bin_counts.
+ * \param[in] face_alpha double value between 0.0 and 1.0 inclusive (series)
+ *            Sets the opacity of bins.
+ *            A value of 1.0 means fully opaque and 0.0 means completely transparent (invisible).
+ *            The default value is 0.75.
+ * \param[in] face_color sets the fill color of bins (series)
+ *            face_color expects an integer between 0 and 1008.
+ *            The default value is 989.
+ * \param[in] edge_color sets the color of the bin edges (series)
+ *            edge_color expects an integer between 0 and 1008.
+ *            The default value is 1.
+ *
+ * */
+error_t plot_polar_histogram(grm_args_t *subplot_args)
+{
+  unsigned int num_bins;
+  double *classes = NULL;
+  unsigned int length;
+  double max;
+  double *inner = NULL, *outer = NULL;
+  double r;
+  double rect;
+  double *liste = NULL;
+  double liste0;
+  double liste1;
+  double *liste2 = NULL;
+  double *mlist = NULL;
+  double *rectlist = NULL;
+  char *norm = NULL;
+  double bin_width = -1.0;
+  double *bin_edges = NULL;
+  unsigned int num_bin_edges;
+  double *bin_widths = NULL;
+  double *philim = NULL;
+  double *rlim = NULL;
+  unsigned int dummy;
+  double *r_min_list = NULL;
+  double *r_min_list2 = NULL;
+  int stairs;
+  double r_min = 0.0;
+  double r_max = 1.0;
+  double *phi_array = NULL;
+  double *arc_2_x = NULL;
+  double *arc_2_y = NULL;
+  int xcolormap;
+  int ycolormap;
+  int *colormap = NULL;
+  double *angles = NULL;
+  int draw_edges = 0;
+  int phiflip = 0;
+  int x;
+  const double convert = 180 / M_PI;
+  int edge_color = 1;
+  int face_color = 989;
+  double face_alpha = 0.75;
+  grm_args_t **series;
+  unsigned int resample = 0;
+  int *lineardata = NULL;
+  int *bin_counts = NULL;
+  double *f1 = NULL;
+  double *f2 = NULL;
+  int freeable_bin_widths = 0;
+  int freeable_bin_edges = 0;
+  int freeable_angles = 0;
+  error_t error = NO_ERROR;
+
+  gr_inqresamplemethod(&resample);
+  gr_setresamplemethod(0x2020202);
+
+  args_values(subplot_args, "series", "A", &series);
+
+  args_first_value(*series, "classes", "D", &classes, &length);
+
+  /* edge_color */
+  if (args_values(*series, "edge_color", "i", &edge_color) == 0)
+    {
+      edge_color = 1;
+    }
+
+  /* face_color */
+  if (args_values(*series, "face_color", "i", &face_color) == 0)
+    {
+      face_color = 989;
+    }
+
+  /* face_alpha */
+  if (args_values(*series, "face_alpha", "d", &face_alpha) == 0)
+    {
+      face_alpha = 0.75;
+    }
+
+  gr_settransparency(face_alpha);
+
+  args_values(*series, "nbins", "i", &num_bins);
+
+  args_values(subplot_args, "r_max", "d", &max);
+
+  if (args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
+    {
+      phiflip = 0;
+    }
+
+  if (args_values(subplot_args, "normalization", "s", &norm) == 0)
+    {
+      norm = "count";
+    }
+
+  if (args_values(*series, "draw_edges", "i", &draw_edges) == 0)
+    {
+      draw_edges = 0;
+    }
+
+  if (args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
+    {
+      bin_edges = NULL;
+      num_bin_edges = 0;
+      args_values(*series, "bin_width", "d", &bin_width);
+    }
+  else
+    {
+      args_first_value(*series, "bin_widths", "D", &bin_widths, &num_bins);
+    }
+
+
+  if (args_values(*series, "stairs", "i", &stairs) == 0)
+    {
+      stairs = 0;
+    }
+  else
+    {
+      if (draw_edges != 0)
+        {
+          logger((stderr, "stairs is not compatible with draw_edges / colormap\n"));
+          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+        }
+      /* no bin_edges */
+      else if (num_bin_edges == 0)
+        {
+          mlist = (double *)malloc(num_bins * 4 * sizeof(double));
+          cleanup_and_set_error_if(mlist == NULL, ERROR_MALLOC);
+          if (stairs != 0)
+            {
+              stairs = 1;
+            }
+        }
+      else
+        {
+          rectlist = (double *)malloc(num_bins * sizeof(double));
+          cleanup_and_set_error_if(rectlist == NULL, ERROR_MALLOC);
+        }
+    }
+
+  if (args_first_value(*series, "rlim", "D", &rlim, &dummy) == 0)
+    {
+      rlim = NULL;
+    }
+  else
+    {
+      /* TODO: Potential memory leak, s. `malloc` in line 3788 */
+      mlist = (double *)malloc((num_bins + 1) * 4 * sizeof(double));
+      cleanup_and_set_error_if(mlist == NULL, ERROR_MALLOC);
+      if (rlim[0] > rlim[1])
+        {
+          r_min = rlim[1];
+          r_max = rlim[0];
+          rlim[0] = r_min;
+          rlim[1] = r_max;
+        }
+      else
+        {
+          r_min = rlim[0];
+          r_max = rlim[1];
+        }
+
+      if (r_max > 1.0)
+        {
+          r_max = 1.0;
+          logger((stderr, "the max value of rlim can not exceed 1.0\n"));
+          cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
+        }
+      if (r_min < 0.0) r_min = 0.0;
+    }
+
+  length /= num_bins;
+  outer = classes;
+  if (phiflip != 0)
+    {
+      outer += (num_bins - 1) * length;
+    }
+
+  if (!args_values(*series, "xcolormap", "i", &xcolormap) || !args_values(*series, "ycolormap", "i", &ycolormap))
+    {
+      colormap = NULL;
+      if (draw_edges != 0)
+        {
+          logger((stderr, "draw_edges can only be used with colormap\n"));
+          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+        }
+    }
+  else
+    {
+      if (-1 > xcolormap || xcolormap > 47 || ycolormap < -1 || ycolormap > 47)
+        {
+          logger((stderr, "the value for keyword \"colormap\" must contain two integer between -1 and 47\n"));
+          cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
+        }
+      else
+        {
+          int colormap_size = 500;
+          int image_size = 2000;
+          int y, center, center_x, center_y;
+          double radius, angle;
+          int temp1, temp2;
+          int temp = 0;
+          int total = 0;
+          double norm_factor = 1;
+          int count = 0;
+          double max_radius;
+
+
+          lineardata = (int *)calloc(image_size * image_size, sizeof(int));
+          cleanup_and_set_error_if(lineardata == NULL, ERROR_MALLOC);
+
+          bin_counts = (int *)malloc(num_bins * sizeof(int));
+          cleanup_and_set_error_if(bin_counts == NULL, ERROR_MALLOC);
+
+          colormap = create_colormap(xcolormap, ycolormap, colormap_size);
+          cleanup_and_set_error_if(colormap == NULL, ERROR_PLOT_COLORMAP);
+
+          if (num_bin_edges == 0)
+            {
+              angles = (double *)malloc((num_bins + 1) * sizeof(double));
+              cleanup_and_set_error_if(angles == NULL, ERROR_MALLOC);
+              freeable_angles = 1;
+              linspace(0, M_PI * 2, num_bins + 1, angles);
+            }
+          else
+            {
+              angles = bin_edges;
+            }
+
+          outer = classes;
+
+          center_x = image_size / 2;
+          center_y = image_size / 2;
+          center = image_size / 2;
+
+          max_radius = center;
+
+          for (temp1 = 0; temp1 < num_bins; temp1++)
+            {
+              temp = 0;
+              for (temp2 = 0; temp2 < length; temp2++)
+                {
+                  if (classes[temp1 * length + temp2] == -1) break;
+                  ++temp;
+                }
+              bin_counts[temp1] = temp;
+            }
+
+          if (str_equals_any(norm, 2, "probability", "pdf"))
+            {
+              for (temp1 = 0; temp1 < num_bins; ++temp1)
+                {
+                  total += bin_counts[temp1];
+                }
+            }
+          else if (strcmp(norm, "cdf") == 0)
+            total = bin_counts[num_bins - 1];
+
+
+          if (str_equals_any(norm, 2, "probability", "cdf"))
+            norm_factor = total;
+          else if (num_bin_edges == 0 && strcmp(norm, "pdf") == 0)
+            norm_factor = total * bin_width;
+          else if (num_bin_edges == 0 && strcmp(norm, "countdensity") == 0)
+            norm_factor = bin_width;
+
+          if (rlim != NULL)
+            {
+              r_min *= max_radius;
+              r_max *= max_radius;
+            }
+          else
+            {
+              r_min = 0.0;
+              r_max = max_radius;
+            }
+
+          for (y = 0; y < image_size; y++)
+            {
+              for (x = 0; x < image_size; x++)
+                {
+                  int q;
+                  radius = sqrt(pow(x - center_x, 2) + pow(y - center_y, 2));
+                  angle = atan2(y - center_y, x - center_x);
+
+                  if (angle < 0) angle += M_PI * 2;
+                  if (phiflip == 0) angle = 2 * M_PI - angle;
+
+                  for (q = 0; q < num_bins; ++q)
+                    {
+                      if (angle > angles[q] && angle <= angles[q + 1])
+                        {
+                          count = bin_counts[q];
+                          if (strcmp(norm, "pdf") == 0 && num_bin_edges > 0)
+                            {
+                              norm_factor = total * bin_widths[q];
+                            }
+                          else if (strcmp(norm, "countdensity") == 0 && num_bin_edges > 0)
+                            {
+                              norm_factor = bin_widths[q];
+                            }
+
+                          if ((round(radius * 100) / 100) <=
+                                  (round((count * 1.0 / norm_factor / max * center) * 100) / 100) &&
+                              radius <= r_max && radius > r_min)
+                            {
+                              lineardata[y * image_size + x] =
+                                  colormap[(int)(radius / (center * pow(2, 0.5)) * (colormap_size - 1)) *
+                                               colormap_size +
+                                           max(min((int)(angle / (2 * M_PI) * colormap_size), colormap_size - 1), 0)];
+                            }
+
+                        } /* end angle check */
+                    }     /* end for q loop: bin check*/
+                }         /* end x loop*/
+            }             /* end y loop */
+          if (rlim != NULL)
+            {
+              r_min = rlim[0];
+              r_max = rlim[1];
+            }
+          gr_drawimage(-1.0, 1.0, -1.0, 1.0, image_size, image_size, lineardata, 0);
+          free(lineardata);
+          free(bin_counts);
+          lineardata = NULL;
+          bin_counts = NULL;
+        } /* end colormap calculation*/
+
+    } /* end colormap condition */
+
+  outer = classes;
+  if (phiflip != 0) outer += (num_bins - 1) * length;
+
+  if (phiflip != 0 && num_bin_edges > 0)
+    {
+      double *temp = NULL;
+      double *temp2 = NULL;
+      temp = malloc(num_bin_edges * sizeof(double));
+      cleanup_and_set_error_if(temp == NULL, ERROR_MALLOC);
+      temp2 = malloc(num_bins * sizeof(double));
+      cleanup_and_set_error_if(temp2 == NULL, ERROR_MALLOC);
+      int u;
+      for (u = 0; u < num_bin_edges; u++)
+        {
+          temp[u] = 2 * M_PI - bin_edges[num_bin_edges - 1 - u];
+        }
+      for (u = num_bins - 1; u >= 0; --u)
+        {
+          temp2[u] = bin_widths[num_bins - 1 - u];
+        }
+      bin_widths = temp2;
+      freeable_bin_widths = 1;
+      bin_edges = temp;
+      temp = temp2 = NULL;
+      freeable_bin_edges = 1;
+    }
+
+  /* no colormap or colormap combined with draw_edges */
+  if (colormap == NULL || draw_edges == 1)
+    {
+      for (x = 0; x < num_bins; ++x)
+        {
+          double count;
+          int y;
+
+          /*
+           * free memory from the previous iteration
+           * (end of loop is not possible because of `continue` statements)
+           * last iteration memory is freed in the cleanup block
+           */
+          free(liste);
+          liste = NULL;
+          free(liste2);
+          liste2 = NULL;
+          free(r_min_list);
+          r_min_list = NULL;
+          free(r_min_list2);
+          r_min_list2 = NULL;
+
+          count = 0.0;
+          inner = outer;
+
+          if (*inner == -1)
+            {
+              /* stairs bin_edges / philim  */
+              if (rectlist != NULL && philim != NULL)
+                rectlist[x] = r_min;
+              else if (rectlist != NULL)
+                rectlist[x] = 0.0;
+            }
+
+
+          for (y = 0; y < length; ++y)
+            {
+              if (*inner != -1)
+                {
+                  count++;
+                  inner++;
+                }
+            }
+
+          if (str_equals_any(norm, 2, "probability", "cdf"))
+            {
+              count /= length;
+            }
+          else if (strcmp(norm, "pdf") == 0)
+            {
+              if (num_bin_edges == 0)
+                {
+                  count /= length * bin_width;
+                }
+              else
+                {
+                  count /= (length * *(bin_widths + x));
+                }
+            }
+          else if (strcmp(norm, "countdensity") == 0)
+            {
+              if (num_bin_edges == 0)
+                {
+                  count /= bin_width;
+                }
+              else
+                {
+                  count /= *(bin_widths + x);
+                }
+            }
+
+          /* no stairs*/
+          if (stairs == 0)
+            {
+              r = pow((count / max), num_bins * 2);
+              liste = moivre(r, 2 * x, num_bins * 2);
+              cleanup_and_set_error_if(liste == NULL, ERROR_MALLOC);
+              liste0 = liste[0];
+              liste1 = liste[1];
+              rect = sqrt(liste0 * liste0 + liste1 * liste1);
+
+              if (rlim != NULL)
+                {
+                  double temporary;
+                  int i;
+                  liste2 = moivre(r, (2 * x + 2), (num_bins * 2));
+                  cleanup_and_set_error_if(liste2 == NULL, ERROR_MALLOC);
+
+                  *(mlist + x * 4) = liste0;
+                  *(mlist + x * 4 + 1) = liste1;
+                  *(mlist + x * 4 + 2) = *(liste2);
+                  *(mlist + x * 4 + 3) = *(liste2 + 1);
+
+                  r_min_list = moivre(pow((r_min), (num_bins * 2)), (x * 2), num_bins * 2);
+                  cleanup_and_set_error_if(r_min_list == NULL, ERROR_MALLOC);
+                  r_min_list2 = moivre(pow((r_min), (num_bins * 2)), (x * 2 + 2), num_bins * 2);
+                  cleanup_and_set_error_if(r_min_list2 == NULL, ERROR_MALLOC);
+
+                  for (i = 0; i < 2; ++i)
+                    {
+                      temporary = fabs(sqrt(pow(mlist[x * 4 + 2 - i * 2], 2) + pow(mlist[x * 4 + 3 - i * 2], 2)));
+                      if (temporary > r_max)
+                        {
+                          double factor = fabs(r_max / temporary);
+                          mlist[x * 4 + 2 - i * 2] *= factor;
+                          mlist[x * 4 + 3 - i * 2] *= factor;
+                        }
+                    }
+                  r = count / max;
+                  if (r > r_max)
+                    {
+                      r = r_max;
+                    }
+                  free(liste2);
+                  liste2 = NULL;
+                }
+
+              /*  no binedges */
+              if (num_bin_edges == 0)
+                {
+                  if (rlim != NULL)
+                    {
+                      double start_angle;
+                      double end_angle;
+
+                      double diff_angle;
+                      int num_angle;
+
+                      int i;
+
+                      if (r <= r_min)
+                        {
+                          if (phiflip == 1)
+                            outer -= length;
+                          else
+                            outer += length;
+                          continue;
+                        }
+
+                      start_angle = x * (360.0 / num_bins) / convert;
+                      end_angle = (x + 1) * (360.0 / num_bins) / convert;
+
+                      diff_angle = end_angle - start_angle;
+                      num_angle = (int)(diff_angle / (0.2 / convert));
+
+                      phi_array = (double *)malloc(num_angle * sizeof(double));
+                      cleanup_and_set_error_if(phi_array == NULL, ERROR_MALLOC);
+                      linspace(start_angle, end_angle, num_angle, phi_array);
+
+                      f1 = (double *)malloc((4 + 2 * num_angle) * sizeof(double));
+                      cleanup_and_set_error_if(f1 == NULL, ERROR_MALLOC);
+                      /* line_1_x[0] and [1]*/
+                      f1[0] = r_min_list[0];
+                      f1[1] = mlist[4 * x];
+                      /* arc_1_x */
+                      listcomprehension(r, cos, phi_array, num_angle, 2, f1);
+                      /* reversed line_2_x [0] and [1] */
+                      f1[2 + num_angle + 1] = r_min_list2[0];
+                      f1[2 + num_angle] = mlist[4 * x + 2];
+                      /* reversed arc_2_x */
+                      arc_2_x = listcomprehension(r_min, cos, phi_array, num_angle, 0, NULL);
+                      cleanup_and_set_error_if(arc_2_x == NULL, ERROR_MALLOC);
+                      for (i = 0; i < num_angle; ++i)
+                        {
+                          f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
+                        }
+                      free(arc_2_x);
+                      arc_2_x = NULL;
+
+                      f2 = (double *)malloc((4 + 2 * num_angle) * sizeof(double));
+                      cleanup_and_set_error_if(f2 == NULL, ERROR_MALLOC);
+                      /* line_1_y[0] and [1] */
+                      f2[0] = r_min_list[1];
+                      f2[1] = mlist[4 * x + 1];
+                      /*arc_1_y */
+                      listcomprehension(r, sin, phi_array, num_angle, 2, f2);
+                      /* reversed line_2_y [0] and [1] */
+                      f2[2 + num_angle + 1] = r_min_list2[1];
+                      f2[2 + num_angle] = mlist[4 * x + 3];
+                      /* reversed arc_2_y */
+                      arc_2_y = listcomprehension(r_min, sin, phi_array, num_angle, 0, NULL);
+                      cleanup_and_set_error_if(arc_2_y == NULL, ERROR_MALLOC);
+                      for (i = 0; i < num_angle; ++i)
+                        {
+                          f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
+                        }
+                      free(arc_2_y);
+                      arc_2_y = NULL;
+
+                      if (draw_edges == 0)
+                        {
+                          gr_setfillcolorind(face_color);
+                          gr_setfillintstyle(1);
+                          gr_fillarea(4 + 2 * num_angle, f1, f2);
+                        }
+                      gr_setfillintstyle(0);
+                      gr_setfillcolorind(edge_color);
+
+                      gr_fillarea(4 + 2 * num_angle, f1, f2);
+
+                      free(f1);
+                      f1 = NULL;
+                      free(f2);
+                      f2 = NULL;
+                      free(phi_array);
+                      phi_array = NULL;
+                    } /* end rlim condition */
+                  /* no rlim */
+                  else
+                    {
+                      if (draw_edges == 0)
+                        {
+                          gr_setfillintstyle(1);
+                          gr_setfillcolorind(face_color);
+                          gr_fillarc(-rect, rect, -rect, rect, x * (360.0 / num_bins), (x + 1) * (360.0 / num_bins));
+                        }
+
+                      gr_setfillintstyle(0);
+                      gr_setfillcolorind(edge_color);
+
+                      gr_fillarc(-rect, rect, -rect, rect, x * (360.0 / num_bins), (x + 1) * (360.0 / num_bins));
+                    }
+                }
+              /* bin_egdes */
+              else
+                {
+                  if (rlim != NULL)
+                    {
+                      double start_angle;
+                      double end_angle;
+
+                      double diff_angle;
+                      int num_angle;
+
+                      int i;
+
+                      if (r <= r_min)
+                        {
+                          if (phiflip != 0)
+                            outer -= length;
+                          else
+                            outer += length;
+                          continue;
+                        }
+
+                      start_angle = bin_edges[x];
+                      end_angle = bin_edges[x + 1];
+
+                      diff_angle = end_angle - start_angle;
+                      num_angle = (int)(diff_angle / (0.2 / convert));
+                      phi_array = (double *)malloc(num_angle * sizeof(double));
+                      cleanup_and_set_error_if(phi_array == NULL, ERROR_MALLOC);
+                      linspace(start_angle, end_angle, num_angle, phi_array);
+
+                      f1 = (double *)malloc((4 + 2 * num_angle) * sizeof(double));
+                      cleanup_and_set_error_if(f1 == NULL, ERROR_MALLOC);
+                      /* line_1_x[0] and [1]*/
+                      f1[0] = cos(bin_edges[x]) * r_min;
+                      f1[1] = min(rect, r_max) * cos(bin_edges[x]);
+                      /*arc_1_x */
+                      listcomprehension(r, cos, phi_array, num_angle, 2, f1);
+                      /* reversed line_2_x [0] and [1] */
+                      f1[2 + num_angle + 1] = cos(bin_edges[x + 1]) * r_min;
+                      f1[2 + num_angle] = min(rect, r_max) * cos(bin_edges[x + 1]);
+                      /* reversed arc_2_x */
+                      arc_2_x = listcomprehension(r_min, cos, phi_array, num_angle, 0, NULL);
+                      cleanup_and_set_error_if(arc_2_x == NULL, ERROR_MALLOC);
+                      for (i = 0; i < num_angle; ++i)
+                        {
+                          f1[2 + num_angle + 2 + i] = arc_2_x[num_angle - 1 - i];
+                        }
+                      free(arc_2_x);
+                      arc_2_x = NULL;
+
+                      f2 = (double *)malloc((4 + 2 * num_angle) * sizeof(double));
+                      cleanup_and_set_error_if(f2 == NULL, ERROR_MALLOC);
+                      /* line_1_y[0] and [1] */
+                      f2[0] = r_min * sin(bin_edges[x]);
+                      f2[1] = min(rect, r_max) * sin(bin_edges[x]);
+                      /*arc_1_y */
+                      listcomprehension(r, sin, phi_array, num_angle, 2, f2);
+                      /* reversed line_2_y [0] and [1] */
+                      f2[2 + num_angle + 1] = r_min * sin(bin_edges[x + 1]);
+                      f2[2 + num_angle] = min(rect, r_max) * sin(bin_edges[x + 1]);
+                      /* reversed arc_2_y */
+                      arc_2_y = listcomprehension(r_min, sin, phi_array, num_angle, 0, NULL);
+                      cleanup_and_set_error_if(arc_2_y == NULL, ERROR_MALLOC);
+                      for (i = 0; i < num_angle; ++i)
+                        {
+                          f2[2 + num_angle + 2 + i] = arc_2_y[num_angle - 1 - i];
+                        }
+                      free(arc_2_y);
+                      arc_2_y = NULL;
+
+                      if (draw_edges == 0)
+                        {
+                          gr_setfillintstyle(1);
+                          gr_setfillcolorind(face_color);
+                          gr_fillarea(4 + 2 * num_angle, f1, f2);
+                        }
+
+                      gr_setfillintstyle(0);
+                      gr_setfillcolorind(edge_color);
+
+                      gr_fillarea(4 + 2 * num_angle, f1, f2);
+
+                      free(f1);
+                      f1 = NULL;
+                      free(f2);
+                      f2 = NULL;
+                      free(phi_array);
+                      phi_array = NULL;
+                    }
+                  /* no rlim */
+                  else
+                    {
+                      if (draw_edges == 0)
+                        {
+                          gr_setfillintstyle(1);
+                          gr_setfillcolorind(face_color);
+                          gr_fillarc(-rect, rect, -rect, rect, bin_edges[x] * convert, bin_edges[x + 1] * convert);
+                        }
+                      gr_setfillintstyle(0);
+                      gr_setfillcolorind(edge_color);
+
+                      gr_fillarc(-rect, rect, -rect, rect, bin_edges[x] * convert, bin_edges[x + 1] * convert);
+                    }
+                }
+            } /* end no stairs condition */
+          /* stairs without draw_edges (not compatible) */
+          else if (draw_edges == 0 && colormap == NULL)
+            {
+              gr_setfillcolorind(0);
+              gr_setlinecolorind(edge_color);
+              gr_setlinewidth(2.3);
+
+              r = pow((count / max), (num_bins * 2));
+              liste = moivre(r, (2 * x), num_bins * 2);
+              cleanup_and_set_error_if(liste == NULL, ERROR_MALLOC);
+              liste2 = moivre(r, (2 * x + 2), (num_bins * 2));
+              cleanup_and_set_error_if(liste2 == NULL, ERROR_MALLOC);
+              rect = sqrt(*liste * *liste + *(liste + 1) * *(liste + 1));
+
+              /*  no bin_edges */
+              if (num_bin_edges == 0)
+                {
+                  *(mlist + x * 4) = *liste;
+                  *(mlist + x * 4 + 1) = *(liste + 1);
+                  *(mlist + x * 4 + 2) = *(liste2);
+                  *(mlist + x * 4 + 3) = *(liste2 + 1);
+
+                  if (rlim != NULL)
+                    {
+                      double temporary;
+                      int i;
+                      for (i = 0; i < 2; ++i)
+                        {
+                          temporary = fabs(sqrt(pow(mlist[x * 4 + 2 - i * 2], 2) + pow(mlist[x * 4 + 3 - i * 2], 2)));
+                          if (temporary > r_max)
+                            {
+                              double factor = fabs(r_max / temporary);
+                              mlist[x * 4 + 2 - i * 2] *= factor;
+                              mlist[x * 4 + 3 - i * 2] *= factor;
+                            }
+                        }
+
+                      if (rect > r_min)
+                        {
+                          gr_drawarc(-min(rect, r_max), min(rect, r_max), -min(rect, r_max), min(rect, r_max),
+                                     x * (360.0 / num_bins), (x + 1) * 360.0 / num_bins);
+
+                          gr_drawarc(-r_min, r_min, -r_min, r_min, x * (360.0 / num_bins),
+                                     (x + 1) * (360.0 / num_bins));
+                        }
+                    }
+                  /* no rlim */
+                  else
+                    {
+                      gr_drawarc(-rect, rect, -rect, rect, x * (360.0 / num_bins), (x + 1) * (360.0 / num_bins));
+                    }
+                }
+              /* with bin_edges */
+              else
+                {
+                  /* rlim and bin_edges*/
+                  if (rlim != NULL)
+                    {
+                      if (rect < r_min)
+                        {
+                          rectlist[x] = r_min;
+                        }
+                      else if (rect > r_max)
+                        {
+                          rectlist[x] = r_max;
+                        }
+                      else
+                        {
+                          rectlist[x] = rect;
+                        }
+
+                      if (rect > r_min)
+                        {
+                          gr_drawarc(-min(rect, r_max), min(rect, r_max), -min(rect, r_max), min(rect, r_max),
+                                     bin_edges[x] * convert, bin_edges[x + 1] * convert);
+
+                          gr_drawarc(-r_min, r_min, -r_min, r_min, bin_edges[x] * convert, bin_edges[x + 1] * convert);
+                        }
+                    }
+                  /* no rlim */
+                  else
+                    {
+                      *(rectlist + x) = rect;
+                      if (x == num_bin_edges - 1)
+                        {
+                          break;
+                        }
+
+                      gr_drawarc(-rect, rect, -rect, rect, *(bin_edges + x) * convert, *(bin_edges + x + 1) * convert);
+                    }
+                }
+            }
+
+          if (phiflip == 0)
+            outer += length;
+          else
+            {
+              outer -= length;
+            }
+        } /* end of classes for loop */
+
+      if (stairs != 0 && draw_edges == 0)
+        {
+          /* stairs without binedges, rlim */
+          if (mlist != NULL && rlim == NULL && rectlist == NULL)
+            {
+              int s;
+              double line_x[2];
+              double line_y[2];
+              for (s = 0; s < num_bins * 4; s += 2)
+                {
+                  if (s > 2 && s % 4 == 0)
+                    {
+                      line_x[0] = *(mlist + s);
+                      line_x[1] = *(mlist + s - 2);
+                      line_y[0] = *(mlist + s + 1);
+                      line_y[1] = *(mlist + s - 1);
+
+                      gr_polyline(2, line_x, line_y);
+                    }
+                }
+              line_x[0] = *(mlist);
+              line_x[1] = *(mlist + (num_bins - 1) * 4 + 2);
+              line_y[0] = *(mlist + 1);
+              line_y[1] = *(mlist + (num_bins - 1) * 4 + 3);
+              gr_polyline(2, line_x, line_y);
+            }
+
+          /* stairs without bin_edges with rlim*/
+          else if (mlist != NULL && rlim != NULL && rectlist == NULL)
+            {
+              double line_x[2], line_y[2];
+              double rect1, rect2;
+              for (x = 0; x < num_bins; ++x)
+                {
+                  if (x > 0)
+                    {
+                      rect1 = sqrt(pow(mlist[x * 4], 2) + pow(mlist[x * 4 + 1], 2));
+                      rect2 = sqrt(pow(mlist[(x - 1) * 4 + 2], 2) + pow(mlist[(x - 1) * 4 + 3], 2));
+
+                      if (rect1 < r_min && rect2 < r_min) continue;
+                      if (rect1 < r_min)
+                        {
+                          mlist[4 * x] = r_min * cos(2 * M_PI / num_bins * x);
+                          mlist[4 * x + 1] = r_min * sin(2 * M_PI / num_bins * x);
+                        }
+                      else if (rect2 < r_min)
+                        {
+                          mlist[(x - 1) * 4 + 2] = r_min * cos(2 * M_PI / num_bins * x);
+                          mlist[(x - 1) * 4 + 3] = r_min * sin(2 * M_PI / num_bins * x);
+                        }
+                      line_x[0] = mlist[x * 4];
+                      line_x[1] = mlist[(x - 1) * 4 + 2];
+                      line_y[0] = mlist[x * 4 + 1];
+                      line_y[1] = mlist[(x - 1) * 4 + 3];
+                      gr_polyline(2, line_x, line_y);
+                    }
+                }
+              line_x[0] = mlist[(num_bins - 1) * 4 + 2] = max(mlist[(num_bins - 1) * 4 + 2], r_min * cos(0));
+              line_y[0] = mlist[(num_bins - 1) * 4 + 3] = max(mlist[(num_bins - 1) * 4 + 3], r_min * sin(0));
+              line_x[1] = mlist[0] = max(mlist[0], r_min * cos(0));
+              line_y[1] = mlist[1] = max(mlist[1], r_min * sin(0));
+
+              gr_polyline(2, line_x, line_y);
+            }
+
+          /* stairs with binedges without rlim */
+          else if (rectlist != NULL && rlim == NULL)
+            {
+              double startx = 0.0, starty = 0.0;
+              double line_x[2], line_y[2];
+
+              for (x = 0; x < num_bin_edges - 1; ++x)
+                {
+                  line_x[0] = startx;
+                  line_x[1] = *(rectlist + x) * cos(*(bin_edges + x));
+                  line_y[0] = starty;
+                  line_y[1] = *(rectlist + x) * sin(*(bin_edges + x));
+
+                  startx = *(rectlist + x) * cos(*(bin_edges + x + 1));
+                  starty = *(rectlist + x) * sin(*(bin_edges + x + 1));
+
+                  if (!(*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI) || x > 0)
+                    {
+                      gr_polyline(2, line_x, line_y);
+                    }
+                }
+
+              if (*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI)
+                {
+                  line_x[0] = *rectlist * cos(*bin_edges);
+                  line_x[1] = startx;
+                  line_y[0] = *rectlist * sin(*bin_edges);
+                  line_y[1] = starty;
+                  gr_polyline(2, line_x, line_y);
+                }
+              else
+                {
+                  line_x[0] = *(rectlist + num_bin_edges - 2) * cos(*(bin_edges + num_bin_edges - 1));
+                  line_x[1] = 0.0;
+                  line_y[0] = *(rectlist + num_bin_edges - 2) * sin(*(bin_edges + num_bin_edges - 1));
+                  line_y[1] = 0.0;
+                  gr_polyline(2, line_x, line_y);
+                }
+            }
+
+          /* stairs with bin_edges and rlim */
+          else if (rectlist != NULL && rlim != NULL)
+            {
+              double startx = max(rectlist[0] * cos(bin_edges[0]), r_min * cos(bin_edges[0]));
+              double starty = max(rectlist[0] * sin(bin_edges[0]), r_min * sin(bin_edges[0]));
+
+              double line_x[2];
+              double line_y[2];
+
+              for (x = 0; x < num_bin_edges - 1; ++x)
+                {
+                  *line_x = startx;
+                  *(line_x + 1) = *(rectlist + x) * cos(*(bin_edges + x));
+                  *line_y = starty;
+                  *(line_y + 1) = *(rectlist + x) * sin(*(bin_edges + x));
+
+
+                  startx = *(rectlist + x) * cos(*(bin_edges + x + 1));
+                  starty = *(rectlist + x) * sin(*(bin_edges + x + 1));
+
+                  if (((phiflip == 0) &&
+                       (!((*bin_edges > 0.0 && *bin_edges < 0.001) && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI) ||
+                        x > 0)) ||
+                      ((*bin_edges > 1.96 * M_PI &&
+                        !(*(bin_edges + num_bin_edges - 1) > 0.0 && *(bin_edges + num_bin_edges - 1) < 0.001)) ||
+                       x > 0))
+                    {
+                      gr_polyline(2, line_x, line_y);
+                    }
+                }
+
+              if (*bin_edges == 0.0 && *(bin_edges + num_bin_edges - 1) > 1.96 * M_PI)
+                {
+                  *line_x = *rectlist * cos(*bin_edges);
+                  *(line_x + 1) = rectlist[num_bin_edges - 2] * cos(bin_edges[num_bin_edges - 1]);
+                  *line_y = *rectlist * sin(*bin_edges);
+                  *(line_y + 1) = rectlist[num_bin_edges - 2] * sin(bin_edges[num_bin_edges - 1]);
+                  gr_polyline(2, line_x, line_y);
+                }
+              else
+                {
+                  *line_x = *(rectlist + num_bin_edges - 2) * cos(*(bin_edges + num_bin_edges - 1));
+                  *(line_x + 1) = r_min * cos(bin_edges[num_bin_edges - 1]);
+                  *line_y = *(rectlist + num_bin_edges - 2) * sin(*(bin_edges + num_bin_edges - 1));
+                  *(line_y + 1) = r_min * sin(bin_edges[num_bin_edges - 1]);
+
+                  gr_polyline(2, line_x, line_y);
+
+                  line_x[0] = r_min * cos(bin_edges[0]);
+                  line_x[1] = rectlist[0] * cos(bin_edges[0]);
+                  line_y[0] = r_min * sin(bin_edges[0]);
+                  line_y[1] = rectlist[0] * sin(bin_edges[0]);
+
+                  gr_polyline(2, line_x, line_y);
+                }
+            }
+        }
+    }
+
+
+  gr_updatews();
+  gr_updategks();
+  gr_setresamplemethod(resample);
+
+cleanup:
+  free(mlist);
+  free(rectlist);
+  free(lineardata);
+  free(bin_counts);
+  if (freeable_bin_widths == 1)
+    {
+      free(bin_widths);
+    }
+  if (freeable_bin_edges == 1)
+    {
+      free(bin_edges);
+    }
+  if (freeable_angles == 1)
+    {
+      free(angles);
+    }
+  free(phi_array);
+  free(r_min_list);
+  free(r_min_list2);
+  free(f1);
+  free(f2);
+  free(arc_2_x);
+  free(arc_2_y);
+  free(liste);
+  free(liste2);
+  free(colormap);
+
+  return error;
+}
+
 error_t plot_trisurf(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
@@ -3746,16 +4856,24 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
 
 error_t plot_draw_polar_axes(grm_args_t *args)
 {
-  const double *window, *viewport;
+  const double *window, *viewport, *vp;
   double diag;
   double charheight;
   double r_min, r_max;
   double tick;
   double x[2], y[2];
-  int i, n, alpha;
+  int i, n;
+  double alpha;
   char text_buffer[PLOT_POLAR_AXES_TEXT_BUFFER];
+  char *kind;
+  int angle_ticks, rings;
+  int phiflip = 0;
+  double interval;
+  char *title;
+
 
   args_values(args, "viewport", "D", &viewport);
+  args_values(args, "vp", "D", &vp);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = max(0.018 * diag, 0.012);
@@ -3764,38 +4882,78 @@ error_t plot_draw_polar_axes(grm_args_t *args)
   r_min = window[2];
   r_max = window[3];
 
+  if (args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
+    {
+      angle_ticks = 12;
+    }
+  if (args_values(args, "rings", "i", &rings) == 0)
+    {
+      rings = 4;
+    }
+
+  args_values(args, "kind", "s", &kind);
+
+
   gr_savestate();
   gr_setcharheight(charheight);
   gr_setlinetype(GKS_K_LINETYPE_SOLID);
 
-  tick = 0.5 * gr_tick(r_min, r_max);
-  n = (int)ceil((r_max - r_min) / tick);
+
+  if (strcmp(kind, "polar_histogram") == 0)
+    {
+      const char *norm;
+      r_min = 0.0;
+      if (args_values(args, "normalization", "s", &norm) == 0)
+        {
+          norm = "count";
+        }
+
+      args_values(args, "r_max", "d", &r_max);
+
+      if (str_equals_any(norm, 2, "count", "cumcount"))
+        {
+          tick = 1.5 * gr_tick(r_min, r_max);
+        }
+      else if (str_equals_any(norm, 2, "pdf", "probability"))
+        {
+          tick = 1.5 * gr_tick(r_min, r_max);
+        }
+      else if (strcmp(norm, "countdensity") == 0)
+        {
+          tick = 1.5 * gr_tick(r_min, r_max);
+        }
+
+      else if (strcmp(norm, "cdf") == 0)
+        {
+          tick = 1.0 / rings;
+        }
+    }
+  else
+    {
+      tick = 0.5 * gr_tick(r_min, r_max);
+    }
+
+  n = rings;
+  gr_setlinecolorind(88);
+  if (args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
   for (i = 0; i <= n; i++)
     {
       double r = (i * 1.0) / n;
-      if (i % 2 == 0)
-        {
-          gr_setlinecolorind(88);
-          if (i > 0)
-            {
-              gr_drawarc(-r, r, -r, r, 0, 180);
-              gr_drawarc(-r, r, -r, r, 180, 360);
-            }
-          gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-          x[0] = 0.05;
-          y[0] = r;
-          gr_wctondc(x, y);
-          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%g", r_min + i * tick);
-          gr_text(x[0], y[0], text_buffer);
-        }
-      else
-        {
-          gr_setlinecolorind(90);
-          gr_drawarc(-r, r, -r, r, 0, 180);
-          gr_drawarc(-r, r, -r, r, 180, 360);
-        }
+      gr_drawarc(-r, r, -r, r, 0, 180);
+      gr_drawarc(-r, r, -r, r, 180, 360);
+      gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+      x[0] = 0.05;
+      y[0] = r;
+      gr_wctondc(x, y);
+      snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%g", r_min + i * tick);
+      gr_text(x[0], y[0], text_buffer);
     }
-  for (alpha = 0; alpha < 360; alpha += 45)
+  if (strcmp(kind, "polar_histogram") == 0)
+    {
+      grm_args_push(args, "r_max", "d", r_min + n * tick);
+    }
+  interval = 360.0 / angle_ticks;
+  for (alpha = 0.0; alpha < 360; alpha += interval)
     {
       x[0] = cos(alpha * M_PI / 180.0);
       y[0] = sin(alpha * M_PI / 180.0);
@@ -3806,10 +4964,28 @@ error_t plot_draw_polar_axes(grm_args_t *args)
       x[0] *= 1.1;
       y[0] *= 1.1;
       gr_wctondc(x, y);
-      snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", alpha);
+      if (phiflip == 0)
+        {
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", (int)round(alpha));
+        }
+      else
+        {
+          if (alpha == 0.0)
+            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 0);
+          else
+            snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)round(alpha - interval));
+        }
       gr_textext(x[0], y[0], text_buffer);
     }
   gr_restorestate();
+
+  if (args_values(args, "title", "s", &title))
+    {
+      gr_savestate();
+      gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+      gr_textext(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
+      gr_restorestate();
+    }
 
   return NO_ERROR;
 }
@@ -4385,6 +5561,8 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     }
   else if (args_values(plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
     {
+
+
       for (i = 0; i < 2; ++i)
         {
           pixel_size[i] = (int)round(tmp_size_d[i]);
@@ -4576,6 +5754,796 @@ grm_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const d
     }
 
   return subplot_args;
+}
+
+double *moivre(double r, int x, int n)
+{
+  double *result = (double *)malloc(2 * sizeof(double));
+  if (result != NULL)
+    {
+      if (n != 0)
+        {
+          *result = pow(r, (1.0 / n)) * (cos(2.0 * x * M_PI / n));
+          *(result + 1) = pow(r, (1.0 / n)) * (sin(2.0 * x * M_PI / n));
+        }
+      else
+        {
+          *result = 1.0;
+          *(result + 1) = 0.0;
+        }
+    }
+  return result;
+}
+
+
+/* like python list comprehension [factor * func(element) for element in list] saves values in result starting at start
+ * index */
+
+double *listcomprehension(double factor, double (*pFunction)(double), double *list, int num, int start, double *result)
+{
+  int i;
+  if (result == NULL)
+    {
+      result = (double *)malloc(num * sizeof(double));
+      if (result == NULL)
+        {
+          return NULL;
+        }
+    }
+
+  for (i = 0; i < num; ++i)
+    {
+      result[start] = factor * (*pFunction)(list[i]);
+      start++;
+    }
+
+  return result;
+}
+
+/*
+ * mixes gr colormaps with size = size * size. If x and or y < 0
+ * */
+int *create_colormap(int x, int y, int size)
+{
+  int r, g, b, a;
+  int outer, inner;
+  int r1, g1, b1;
+  int r2, g2, b2;
+  int *colormap = NULL;
+  if (x > 47 || y > 47)
+    {
+      logger((stderr, "values for the keyword \"colormap\" can not be greater than 47\n"));
+      return NULL;
+    }
+
+  colormap = malloc(size * size * sizeof(int));
+  if (colormap == NULL)
+    {
+      debug_print_malloc_error();
+      return NULL;
+    }
+  if (x >= 0 && y < 0)
+    {
+      for (outer = 0; outer < size; outer++)
+        {
+          for (inner = 0; inner < size; inner++)
+            {
+              a = 255;
+              r = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 16) & 0xff);
+              g = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 8) & 0xff);
+              b = (cmap_h[x][(int)(inner * 255.0 / size)] & 0xff);
+
+              colormap[outer * size + inner] = (a << 24) + (b << 16) + (g << 8) + (r);
+            }
+        }
+      return colormap;
+    }
+
+  if (x < 0 && y >= 0)
+    {
+      gr_setcolormap(y);
+      for (outer = 0; outer < size; outer++)
+        {
+          for (inner = 0; inner < size; inner++)
+            {
+              a = 255;
+              r = ((cmap_h[y][(int)(inner * 255.0 / size)] >> 16) & 0xff);
+              g = ((cmap_h[y][(int)(inner * 255.0 / size)] >> 8) & 0xff);
+              b = (cmap_h[y][(int)(inner * 255.0 / size)] & 0xff);
+
+              colormap[inner * size + outer] = (a << 24) + (b << 16) + (g << 8) + (r);
+            }
+        }
+
+
+      return colormap;
+    }
+
+  if ((x >= 0 && y >= 0) || (x < 0 && y < 0))
+    {
+      if (x < 0 && y < 0)
+        {
+          x = y = 0;
+        }
+      gr_setcolormap(x);
+      for (outer = 0; outer < size; outer++)
+        {
+          for (inner = 0; inner < size; inner++)
+            {
+              a = 255;
+              r1 = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 16) & 0xff);
+              g1 = ((cmap_h[x][(int)(inner * 255.0 / size)] >> 8) & 0xff);
+              b1 = (cmap_h[x][(int)(inner * 255.0 / size)] & 0xff);
+
+              r2 = ((cmap_h[y][(int)(outer * 255.0 / size)] >> 16) & 0xff);
+              g2 = ((cmap_h[y][(int)(outer * 255.0 / size)] >> 8) & 0xff);
+              b2 = (cmap_h[y][(int)(outer * 255.0 / size)] & 0xff);
+
+              colormap[outer * size + inner] =
+                  (a << 24) + (((b1 + b2) / 2) << 16) + (((g1 + g2) / 2) << 8) + ((r1 + r2) / 2);
+            }
+        }
+      return colormap;
+    }
+  return NULL;
+}
+
+
+/*
+ * Calculates the classes for polar histogram
+ * */
+error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max)
+{
+  unsigned int num_bins;
+  double *theta = NULL;
+  unsigned int length;
+  char *norm;
+  double *classes = NULL;
+
+  double interval;
+  double start;
+  double *p;
+  double max;
+  double temp_max;
+
+  double *bin_edges = NULL;
+  double *bin_edges_buf = NULL;
+  unsigned int num_bin_edges;
+
+  double bin_width;
+
+  double *bin_widths = NULL;
+
+  int is_bin_counts;
+  int *bin_counts = NULL;
+
+  double false = -1;
+
+  double *philim = NULL;
+  unsigned int dummy;
+
+  double *new_theta = NULL;
+  double *new_edges = NULL;
+
+  grm_args_t **series;
+
+  error_t error = NO_ERROR;
+
+
+  args_values(subplot_args, "series", "A", &series);
+
+
+  /* get theta or bin_counts */
+  if (args_values(*series, "bin_counts", "i", &is_bin_counts) == 0)
+    {
+      is_bin_counts = 0;
+      args_first_value(*series, "x", "D", &theta, &length);
+    }
+  else
+    {
+      args_first_value(*series, "x", "I", &bin_counts, &length);
+      is_bin_counts = 1;
+      num_bins = length;
+      grm_args_push(*series, "nbins", "i", num_bins);
+    }
+
+  if (args_first_value(*series, "philim", "D", &philim, &dummy) == 0)
+    {
+      philim = &false;
+    }
+  else
+    {
+      if (philim[0] < 0.0 || philim[1] > 2 * M_PI)
+        {
+          logger((stderr, "philim must be between 0 and 2 * pi\n"));
+          cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
+        }
+      if (philim[1] < philim[0])
+        {
+          double temp = philim[1];
+          int phiflip;
+          philim[1] = philim[0];
+          philim[0] = temp;
+          if (args_values(subplot_args, "phiflip", "i", &phiflip) == 0)
+            {
+              phiflip = 1;
+              grm_args_push(subplot_args, "phiflip", "i", phiflip);
+            }
+          else
+            {
+              grm_args_push(subplot_args, "phiflip", "i", 0);
+            }
+        }
+    }
+
+
+  /* bin_edges and nbins */
+  if (args_first_value(*series, "bin_edges", "D", &bin_edges, &num_bin_edges) == 0)
+    {
+      if (args_values(*series, "nbins", "i", &num_bins) == 0)
+        {
+          num_bins = min(12, (int)(length * 1.0 / 2) - 1);
+          grm_args_push(*series, "nbins", "i", num_bins);
+        }
+      else
+        {
+          if (num_bins <= 0 || num_bins > 200)
+            {
+              num_bins = min(12, (int)(length * 1.0 / 2) - 1);
+              grm_args_push(*series, "nbins", "i", num_bins);
+            }
+        }
+      if (*philim == -1.0)
+        num_bin_edges = 0;
+      else
+        {
+          bin_edges = bin_edges_buf = (double *)malloc((num_bins + 1) * sizeof(double));
+          cleanup_and_set_error_if(bin_edges == NULL, ERROR_MALLOC);
+          linspace(philim[0], philim[1], num_bins + 1, bin_edges);
+          num_bin_edges = num_bins + 1;
+          grm_args_push(*series, "bin_edges", "nD", num_bin_edges, bin_edges);
+        }
+    }
+  /* with bin_edges */
+  else
+    {
+      /* no philim */
+      if (*philim == -1)
+        {
+
+          /* filter bin_edges */
+          int temp = 0;
+          int i;
+          new_edges = malloc(num_bin_edges * sizeof(double));
+          cleanup_and_set_error_if(new_edges == NULL, ERROR_MALLOC);
+
+          for (i = 0; i < num_bin_edges; ++i)
+            {
+              if (0.0 <= bin_edges[i] && bin_edges[i] <= 2 * M_PI)
+                {
+                  new_edges[temp] = bin_edges[i];
+                  temp++;
+                }
+              else
+                {
+                  logger((stderr, "Only values between 0 and 2 * pi allowed\n"));
+                  cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
+                }
+            }
+          if (num_bin_edges > temp)
+            {
+              num_bin_edges = temp;
+              bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
+              cleanup_and_set_error_if(bin_edges == NULL, ERROR_MALLOC);
+            }
+          else
+            {
+              bin_edges = new_edges;
+            }
+          num_bins = num_bin_edges - 1;
+          grm_args_push(*series, "nbins", "i", num_bins);
+        }
+      /* with philim and binedges */
+      else
+        {
+          /* filter bin_edges */
+          int temp = 0;
+          new_edges = malloc(num_bin_edges * sizeof(double));
+          cleanup_and_set_error_if(new_edges == NULL, ERROR_MALLOC);
+
+          int i;
+          for (i = 0; i < num_bin_edges; ++i)
+            {
+              if (philim[0] <= bin_edges[i] && bin_edges[i] <= philim[1])
+                {
+                  new_edges[temp] = bin_edges[i];
+                  temp++;
+                }
+            }
+          if (temp > 1)
+            {
+              if (num_bin_edges > temp)
+                {
+                  num_bin_edges = temp;
+                  bin_edges = bin_edges_buf = (double *)realloc(new_edges, temp * sizeof(double));
+                }
+              else
+                {
+                  bin_edges = new_edges;
+                }
+            }
+          if (num_bin_edges == 1)
+            {
+              logger(
+                  (stderr, "given philim and given bin_edges are not compatible --> filtered len(bin_edges) == 1\n"));
+              cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+            }
+          else
+            {
+              num_bins = num_bin_edges - 1;
+              grm_args_push(*series, "nbins", "i", num_bins);
+              grm_args_push(*series, "bin_edges", "nD", num_bin_edges, bin_edges);
+            }
+        }
+    }
+
+
+  if (args_values(subplot_args, "normalization", "s", &norm) == 0)
+    {
+      norm = "count";
+    }
+  else
+    {
+      if (!str_equals_any(norm, 6, "count", "countdensity", "pdf", "probability", "cumcount", "cdf"))
+        {
+          logger((stderr, "Got keyword \"norm\"  with invalid value \"%s\"\n", norm));
+          cleanup_and_set_error(ERROR_PLOT_NORMALIZATION);
+        }
+    }
+
+  if (args_values(*series, "bin_width", "d", &bin_width) == 0)
+    {
+      if (num_bin_edges > 0)
+        {
+          int i;
+          bin_widths = (double *)malloc((num_bins + 1) * sizeof(double));
+          cleanup_and_set_error_if(bin_widths == NULL, ERROR_MALLOC);
+
+          for (i = 1; i <= num_bin_edges - 1; ++i)
+            {
+              *(bin_widths + i - 1) = *(bin_edges + i) - *(bin_edges + i - 1);
+            }
+          grm_args_push(*series, "bin_widths", "nD", num_bins, bin_widths);
+        }
+      else
+        {
+          bin_width = 2 * M_PI / num_bins;
+          grm_args_push(*series, "bin_width", "d", bin_width);
+        }
+    }
+  /* bin_width is given*/
+  else
+    {
+      int n = 0;
+      int temp;
+
+      if (num_bin_edges > 0 && *philim == -1.0)
+        {
+          int i;
+          logger((stderr, "bin_width is not compatible with bin_edges\n"));
+          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+
+          bin_widths = (double *)malloc(num_bins * sizeof(double));
+          cleanup_and_set_error_if(bin_widths == NULL, ERROR_MALLOC);
+
+          for (i = 1; i <= num_bin_edges - 1; ++i)
+            {
+              *(bin_widths + i - 1) = *(bin_edges + i) - *(bin_edges + i - 1);
+            }
+          grm_args_push(*series, "bin_widths", "nD", num_bins, bin_widths);
+        }
+
+      /* with philim */
+      if (*philim != -1)
+        {
+          if (bin_width < 0 || bin_width > 2 * M_PI)
+            {
+              logger((stderr, "bin_width must be between 0 and 2 * Pi\n"));
+              cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
+            }
+          if (philim[1] - philim[0] < bin_width)
+            {
+              logger((stderr, "the given philim range does not work with the given bin_width\n"));
+              cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+            }
+          else
+            {
+              n = (int)((philim[1] - philim[0]) / bin_width);
+              if (is_bin_counts == 1)
+                {
+                  if (num_bins > n)
+                    {
+                      logger((stderr,
+                              "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
+                      cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+                    }
+                  n = num_bins;
+                }
+              bin_edges = bin_edges_buf = (double *)malloc((n + 1) * sizeof(double));
+              cleanup_and_set_error_if(bin_edges == NULL, ERROR_MALLOC);
+
+              linspace(philim[0], n * bin_width, n + 1, bin_edges);
+            }
+        }
+      /* without philim */
+      else
+        {
+          if (bin_width <= 0 || bin_width > 2 * M_PI)
+            {
+              logger((stderr, "bin_width must be between 0 (exclusive) and 2 * Pi\n"));
+              cleanup_and_set_error(ERROR_PLOT_OUT_OF_RANGE);
+            }
+          else if ((int)(2 * M_PI / bin_width) > 200)
+            {
+              n = 200;
+              bin_width = 2 * M_PI / n;
+            }
+          n = (int)(2 * M_PI / bin_width);
+          if (is_bin_counts == 1)
+            {
+              if (num_bins > n)
+                {
+                  logger(
+                      (stderr, "bin_width does not work with this specific bin_count. Nbins do not fit bin_width\n"));
+                  cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+                }
+              n = num_bins;
+            }
+          bin_edges = bin_edges_buf = (double *)malloc((n + 1) * sizeof(double));
+          cleanup_and_set_error_if(bin_edges == NULL, ERROR_MALLOC);
+
+          linspace(0, n * bin_width, n + 1, bin_edges);
+        }
+      grm_args_push(*series, "nbins", "i", n);
+      num_bin_edges = n + 1;
+      num_bins = n;
+      grm_args_push(*series, "bin_edges", "nD", num_bin_edges, bin_edges);
+      grm_args_push(*series, "bin_width", "d", bin_width);
+      bin_widths = malloc(num_bins * sizeof(double));
+      cleanup_and_set_error_if(bin_widths == NULL, ERROR_MALLOC);
+
+      for (temp = 0; temp < num_bins; ++temp)
+        {
+          bin_widths[temp] = bin_width;
+        }
+      grm_args_push(*series, "bin_widths", "nD", num_bins, bin_widths);
+    }
+
+
+  /* is_bin_counts */
+  if (is_bin_counts == 1)
+    {
+      double temp_max_bc = 0.0;
+      int i;
+      int total = 0;
+      int j;
+      int prev = 0;
+
+      if (num_bin_edges > 0 && num_bins != num_bin_edges - 1)
+        {
+          logger((stderr, "Number of bin_edges must be number of bin_counts + 1\n"));
+          cleanup_and_set_error(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS);
+        }
+
+      /* total number of observations */
+      for (i = 0; i < num_bins; ++i)
+        {
+          total += bin_counts[i];
+        }
+      for (i = 0; i < num_bins; ++i)
+        {
+          if (num_bin_edges > 0) bin_width = bin_widths[i];
+
+          if (strcmp(norm, "pdf") == 0)
+            {
+              if (bin_counts[i] * 1.0 / (total * bin_width) > temp_max_bc)
+                {
+                  temp_max_bc = bin_counts[i] * 1.0 / (total * bin_width);
+                }
+            }
+          else if (strcmp(norm, "countdensity") == 0)
+            {
+              if (bin_counts[i] * 1.0 / (bin_width) > temp_max_bc)
+                {
+                  temp_max_bc = bin_counts[i] * 1.0 / (bin_width);
+                }
+            }
+          else
+            {
+              if (bin_counts[i] > temp_max_bc) temp_max_bc = bin_counts[i];
+            }
+        }
+
+      /* double classes[num_bins][total]; */
+      classes = (double *)malloc((num_bins * total) * sizeof(double));
+      cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
+
+      length = (int)temp_max_bc;
+      p = classes;
+
+      for (i = 0; i < (num_bins * total); ++i)
+        {
+          *p = -1.0;
+          p++;
+        }
+
+      /* fill classes with bin counts */
+      for (i = 0; i < num_bins; ++i)
+        {
+          p = classes + i * total;
+          if (str_equals_any(norm, 2, "cdf", "cumcount"))
+            {
+              prev += bin_counts[i];
+              for (j = 0; j < prev; ++j)
+                {
+                  *p = 1.0;
+                  ++p;
+                }
+            }
+
+          else
+            {
+              for (j = 0; j < bin_counts[i]; ++j)
+                {
+                  *p = 1.0;
+                  ++p;
+                }
+            }
+        }
+
+      grm_args_push(*series, "classes", "nD", total * num_bins, classes);
+      if (strcmp(norm, "probability") == 0)
+        max = temp_max_bc * 1.0 / total;
+      else if (strcmp(norm, "cdf") == 0)
+        max = 1.0;
+      else if (strcmp(norm, "cumcount") == 0)
+        max = total * 1.0;
+      else
+        max = temp_max_bc;
+    }
+
+  /* no is_bin_counts */
+  else
+    {
+      int x;
+
+      /* no bin_edges */
+      if (num_bin_edges == 0)
+        {
+          max = 0.0;
+          start = 0;
+          interval = 2 * M_PI / num_bins;
+          if (str_equals_any(norm, 4, "count", "pdf", "countdensity", "probability"))
+            {
+              /*double classes[num_bins][length];*/
+              classes = (double *)malloc(num_bins * length * sizeof(double));
+              cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
+              p = classes;
+              int i;
+              for (i = 0; i < (num_bins * length); ++i)
+                {
+                  *p = -1.0;
+                  p++;
+                }
+              for (x = 0; x < num_bins; ++x)
+                {
+                  int y;
+                  p = classes + x * length;
+                  temp_max = 0.0;
+                  for (y = 0; y < length; ++y)
+                    {
+                      if (start <= theta[y] && theta[y] < (start + interval))
+                        {
+                          temp_max++;
+                          *p = theta[y];
+                          p++;
+                          if (max < temp_max) max = temp_max;
+                        }
+                    }
+                  start += interval;
+                }
+              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
+            }
+          else if (str_equals_any(norm, 2, "cdf", "cumcount"))
+            {
+              /*double classes[num_bins][length];*/
+              classes = (double *)malloc(num_bins * length * sizeof(double));
+              cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
+              int i;
+              int prev;
+              p = classes;
+
+              for (i = 0; i < (num_bins * length); ++i)
+                {
+                  *p = -1;
+                  p++;
+                }
+
+              prev = 0;
+              for (x = 0; x < num_bins; ++x)
+                {
+                  p = classes + x * length;
+
+                  if (x > 0)
+                    {
+                      double *prev_list;
+                      int y;
+                      /*prev_list = classes[x - 1];*/
+                      prev_list = classes + (x - 1) * length;
+                      for (y = 0; y < prev; ++y)
+                        {
+                          *p = *prev_list;
+                          p++;
+                          prev_list++;
+                        }
+                    }
+                  for (i = 0; i < length; ++i)
+                    {
+                      if (start <= theta[i] && theta[i] < (start + interval))
+                        {
+                          *p = theta[i];
+                          p++;
+                          prev++;
+                        }
+                    }
+                  start += interval;
+                }
+              max = length;
+              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
+            }
+
+          if (str_equals_any(norm, 2, "probability", "cdf"))
+            {
+              max = max / length;
+            }
+          else if (strcmp(norm, "pdf") == 0)
+            {
+              max = max / (length * bin_width);
+            }
+        }
+      /* bin_edges */
+      else
+        {
+          /* filter theta list */
+          int filter;
+          int temp = 0;
+          double bin_min = *bin_edges;
+          double bin_max = bin_edges[num_bin_edges - 1];
+          new_theta = (double *)malloc(length * sizeof(double));
+          cleanup_and_set_error_if(new_theta == NULL, ERROR_MALLOC);
+          for (filter = 0; filter < length; ++filter)
+            {
+              if (theta[filter] >= bin_min && theta[filter] < bin_max)
+                {
+                  new_theta[temp] = theta[filter];
+                  temp++;
+                }
+            }
+          theta = new_theta;
+          length = temp;
+
+          max = 0.0;
+          if (str_equals_any(norm, 4, "count", "pdf", "countdensity", "probability"))
+            {
+              int a;
+              /* double classes[num_bins][length]; */
+              classes = (double *)malloc(num_bins * length * sizeof(double));
+              cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
+              p = classes;
+              for (a = 0; a < (num_bins * length); ++a)
+                {
+                  *p = -1;
+                  p++;
+                }
+              for (x = 0; x < num_bins; ++x)
+                {
+                  int b;
+                  p = classes + x * length;
+                  temp_max = 0.0;
+                  for (b = 0; b < length; ++b)
+                    {
+                      if (x == num_bin_edges - 1) break;
+                      if (*bin_edges <= theta[b] && theta[b] < *(bin_edges + 1))
+                        {
+                          temp_max++;
+                          *p = theta[b];
+                          p++;
+                        }
+                    }
+                  if (strcmp(norm, "pdf") == 0)
+                    {
+                      temp_max /= length * *(bin_widths + x);
+                    }
+                  else if (strcmp(norm, "countdensity") == 0)
+                    {
+                      temp_max /= *(bin_widths + x);
+                    }
+
+                  if (max < temp_max) max = temp_max;
+
+                  bin_edges++;
+                }
+
+              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
+            }
+          else if (str_equals_any(norm, 2, "cdf", "cumcount"))
+            {
+              int c;
+              int prev;
+              int d;
+              classes = (double *)malloc(num_bins * length * sizeof(double));
+              cleanup_and_set_error_if(classes == NULL, ERROR_MALLOC);
+              p = classes;
+              for (c = 0; c < (num_bins * length); ++c)
+                {
+                  *p = -1;
+                  p++;
+                }
+
+              prev = 0;
+              for (d = 0; d < num_bins; ++d)
+                {
+                  int i;
+                  p = classes + d * num_bins;
+
+                  if (d > 0)
+                    {
+                      double *prev_list;
+                      int y;
+                      prev_list = classes + (d - 1) * num_bins;
+
+                      for (y = 0; y < prev; ++y)
+                        {
+                          *p = *prev_list;
+                          p++;
+                          prev_list++;
+                        }
+                    }
+                  for (i = 0; i < length; ++i)
+                    {
+                      if (*bin_edges <= theta[i] && theta[i] < *(bin_edges + 1))
+                        {
+                          *p = theta[i];
+                          p++;
+                          prev++;
+                        }
+                    }
+                  bin_edges++;
+                }
+              max = length;
+              grm_args_push(*series, "classes", "nD", num_bins * length, classes);
+            }
+
+          if (str_equals_any(norm, 2, "probability", "cdf"))
+            {
+              max = max / length;
+            }
+        }
+    }
+
+  if (r_max != NULL)
+    {
+      *r_max = max;
+    }
+
+cleanup:
+  free(bin_edges_buf);
+  free(bin_widths);
+  free(classes);
+  free(new_theta);
+  free(new_edges);
+
+  return error;
 }
 
 

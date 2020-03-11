@@ -1692,11 +1692,16 @@ static void to_DC(int n, double *x, double *y)
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
-  NDC_to_DC(x1, y1, ix1, iy1);
+  NDC_to_DC(x1, y1, x1, y1);
+  ix1 = round(x1);
+  iy1 = round(y1);
 
   WC_to_NDC(xmax, ymin, gkss->cntnr, x2, y2);
   seg_xform(&x2, &y2);
-  NDC_to_DC(x2, y2, ix2, iy2);
+  NDC_to_DC(x2, y2, x2, y2);
+  ix2 = round(x2);
+  iy2 = round(y2);
+
 
   width = abs(ix2 - ix1);
   height = abs(iy2 - iy1);
