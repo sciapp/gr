@@ -14,7 +14,8 @@ endif
      LIBS = -lws2_32 -lmsimg32 -lgdi32
 
 OBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
-	delaunay.o interp2.o md5.o import.o shade.o contourf.o boundary.o
+	delaunay.o interp2.o md5.o import.o shade.o contourf.o boundary.o \
+	mathtex2.o mathtex2.tab.o
 
 
 # Only update gr_version.h if it will result in an actual change
@@ -26,7 +27,8 @@ else
 GR_VERSION_H_DEPS :=
 endif
 
-.SUFFIXES: .o .c
+.SUFFIXES:
+.SUFFIXES: .c .o
 
 default: all
 

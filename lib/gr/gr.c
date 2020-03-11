@@ -2833,6 +2833,19 @@ void gr_settextcolorind(int color)
 }
 
 /*!
+ * Gets the current text color index.
+ *
+ * \param[out] color The text color index (COLOR < 1256)
+ *
+ * This function gets the color of text output primitives.
+ */
+void gr_inqtextcolorind(int *color)
+{
+  int errind;
+  gks_inq_text_color_index(&errind, color);
+}
+
+/*!
  * Set the current character height.
  *
  * \param[in] height Text height value
@@ -2849,6 +2862,21 @@ void gr_setcharheight(double height)
   if (ctx) ctx->chh = height;
 
   if (flag_graphics) gr_writestream("<setcharheight height=\"%g\"/>\n", height);
+}
+
+/*!
+ * Gets the current character height..
+ *
+ * \param[out] height Text height value
+ *
+ * This function gets the height of text output primitives. Text height is
+ * defined as a percentage of the default window. GR uses the default text
+ * height of 0.027 (2.7% of the height of the default window).
+ */
+void gr_inqcharheight(double *height)
+{
+  int errind;
+  gks_inq_text_height(&errind, height);
 }
 
 /*!
@@ -9683,6 +9711,8 @@ static void mathtex(double x, double y, char *string, int inquire, double *tbx, 
     }
 }
 
+void gr_mathtex2(double x, double y, const char *formula);
+
 /*!
  * Generate a character string starting at the given location. Strings can be
  * defined to create mathematical symbols and Greek letters using LaTeX syntax.
@@ -9693,9 +9723,20 @@ static void mathtex(double x, double y, char *string, int inquire, double *tbx, 
  */
 void gr_mathtex(double x, double y, char *string)
 {
+  int unused;
+  int prec;
+
   check_autoinit;
 
-  mathtex(x, y, string, 0, NULL, NULL);
+  gks_inq_text_fontprec(&unused, &unused, &prec);
+  if (prec == 3)
+    {
+      gr_mathtex2(x, y, string);
+    }
+  else
+    {
+      mathtex(x, y, string, 0, NULL, NULL);
+    }
 
   if (flag_graphics) gr_writestream("<mathtex x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
