@@ -25,10 +25,6 @@
 
 #define PORT 8410
 
-#ifdef _WIN32
-static PROCESS_INFORMATION processInformation = {NULL, NULL, 0, 0};
-#endif
-
 typedef struct
 {
   int s;
@@ -40,9 +36,33 @@ static gks_state_list_t *gkss;
 
 static is_running = 0;
 
-#ifndef _WIN32
+#ifdef _WIN32
 
-static void *thread_func(void *arg)
+static DWORD WINAPI gksqt_tread(LPVOID parm)
+{
+  char *cmd = (char *)parm;
+  wchar_t w_cmd[MAX_PATH];
+  STARTUPINFOW startupInfo = {0};
+  PROCESS_INFORMATION processInformation = {NULL, NULL, 0, 0};
+
+  MultiByteToWideChar(CP_UTF8, 0, cmd, strlen(cmd) + 1, w_cmd, MAX_PATH);
+  startupInfo.cb = sizeof(startupInfo);
+
+  is_running = 1;
+  CreateProcessW(NULL, w_cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | DETACHED_PROCESS, NULL, NULL, &startupInfo,
+                 &processInformation);
+  WaitForSingleObject(processInformation.hThread, INFINITE);
+  is_running = 0;
+
+  CloseHandle(processInformation.hProcess);
+  CloseHandle(processInformation.hThread);
+
+  return 0;
+}
+
+#else
+
+static void *gksqt_tread(void *arg)
 {
   is_running = 1;
   system((char *)arg);
@@ -55,21 +75,13 @@ static void *thread_func(void *arg)
 static int start(const char *cmd)
 {
 #ifdef _WIN32
-  wchar_t w_cmd[MAX_PATH];
-  STARTUPINFOW startupInfo = {0};
+  DWORD thread;
 
-  MultiByteToWideChar(CP_UTF8, 0, cmd, strlen(cmd) + 1, w_cmd, MAX_PATH);
-  startupInfo.cb = sizeof(startupInfo);
-
-  if (CreateProcessW(NULL, w_cmd, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW, NULL, NULL, &startupInfo,
-                     &processInformation))
-    is_running = 1;
-  else
-    return -1;
+  if (CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)gksqt_tread, (void *)cmd, 0, &thread) == NULL) return -1;
 #else
   pthread_t thread;
 
-  if (pthread_create(&thread, NULL, thread_func, (void *)cmd)) return -1;
+  if (pthread_create(&thread, NULL, gksqt_tread, (void *)cmd)) return -1;
 #endif
   return 0;
 }
@@ -184,7 +196,7 @@ static int open_socket(int wstype)
   return s;
 }
 
-static int send_socket(int s, char *buf, int size, int quiet)
+static int send_socket(int s, char *buf, int size)
 {
   int sent, n = 0;
 
@@ -192,10 +204,7 @@ static int send_socket(int s, char *buf, int size, int quiet)
     {
       if ((n = send(s, buf + sent, size - sent, 0)) == -1)
         {
-#ifdef _WIN32
-          if (WSAGetLastError() == WSAECONNABORTED) is_running = 0;
-#endif
-          if (!quiet) perror("send");
+          perror("send");
           return -1;
         }
     }
@@ -206,8 +215,6 @@ static int close_socket(int s)
 {
 #if defined(_WIN32)
   closesocket(s);
-  CloseHandle(processInformation.hThread);
-  CloseHandle(processInformation.hProcess);
 #else
   close(s);
 #endif
@@ -258,18 +265,13 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
     case 8:
       if (ia[1] & GKS_K_PERFORM_FLAG)
         {
-#ifndef _WIN32
-          if (!is_running) close_socket(wss->s);
-#endif
-          if (send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int), 1) == -1)
+          if (!is_running)
             {
-#ifdef _WIN32
-              if (!is_running) close_socket(wss->s);
-#endif
+              close_socket(wss->s);
               wss->s = open_socket(wss->wstype);
-              send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int), 0);
             }
-          send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes, 0);
+          send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int));
+          send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes);
         }
       break;
     }
