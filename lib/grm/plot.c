@@ -1563,7 +1563,11 @@ error_t plot_scatter(grm_args_t *subplot_args)
                 {
                   if (i < c_length)
                     {
-                      c_index = 1000 + (int)(255 * (c[i] - c_min) / c_max);
+                      c_index = 1000 + (int)(255 * (c[i] - c_min) / (c_max - c_min));
+                      if (c_index < 1000 || c_index > 1255)
+                        {
+                          continue;
+                        }
                     }
                   else
                     {
