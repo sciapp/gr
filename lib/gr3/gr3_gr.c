@@ -388,7 +388,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
             {
               v[0] = px[i];
               zvalue = pz[k];
-              v[2] = py[j];
+              v[1] = py[j];
             }
           else
             {
@@ -403,7 +403,14 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
             }
           else
             {
-              v[1] = zvalue;
+              if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+                {
+                  v[2] = zvalue;
+                }
+              else
+                {
+                  v[1] = zvalue;
+                }
             }
 
           if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
@@ -659,9 +666,12 @@ GR3API void gr3_drawsurface(int mesh)
 
   if (projection_type == GR_PROJECTION_ORTHOGRAPHIC || projection_type == GR_PROJECTION_PERSPECTIVE)
     {
-      scales[0] = 1.0f;
-      scales[1] = 1.0f;
-      scales[2] = 1.0f;
+      double x_axis_scale, y_axis_scale, z_axis_scale;
+      gr_inqscalefactors3d(&x_axis_scale, &y_axis_scale, &z_axis_scale);
+
+      scales[0] = (float)x_axis_scale;
+      scales[1] = (float)y_axis_scale;
+      scales[2] = (float)z_axis_scale;
       positions[0] = 0.0f;
       positions[1] = 0.0f;
       positions[2] = 0.0f;
