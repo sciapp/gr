@@ -214,6 +214,8 @@ set(GR_SOURCES
     lib/gr/spline.c
     lib/gr/strlib.c
     lib/gr/text.c
+    lib/gr/mathtex2.c
+    lib/gr/mathtex2.tab.c
     ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
 )
 
@@ -362,8 +364,9 @@ foreach(LIBRARY grm_static grm_shared)
     target_link_libraries(${LIBRARY} PUBLIC ws2_32)
   endif()
   target_include_directories(
-    ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/>
-                      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    ${LIBRARY}
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/>
+           $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   set_target_properties(
     ${LIBRARY}

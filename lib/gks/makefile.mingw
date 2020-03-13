@@ -34,7 +34,7 @@ demo.o: demo.c
 	$(CC) -c demo.c
 
 demo.exe: demo.o libGKS.lib
-	$(CC) -o $@ demo.o libGKS.lib ${LIBS}
+	$(CC) -o $@ demo.o libGKS.lib $(FTLIB) ${LIBS}
 
 clean:
 	$(MAKE) -C ../../3rdparty/freetype clean

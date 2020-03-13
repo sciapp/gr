@@ -8,16 +8,29 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#define POINT_INC 1000
+
 #ifndef NO_FT
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 #include FT_XFREE86_H
+#include FT_OUTLINE_H
+#include FT_BBOX_H
+#include FT_TRUETYPE_TABLES_H
 
 #define nint(a) ((int)(a + 0.5))
 
-const static FT_String *gks_font_list[] = {
+#define WC_to_NDC(xw, yw, tnr, xn, yn)     \
+  xn = gkss->a[tnr] * (xw) + gkss->b[tnr]; \
+  yn = gkss->c[tnr] * (yw) + gkss->d[tnr]
+
+#define NDC_to_WC(xn, yn, tnr, xw, yw)     \
+  xw = ((xn)-gkss->b[tnr]) / gkss->a[tnr]; \
+  yw = ((yn)-gkss->d[tnr]) / gkss->c[tnr]
+
+const static FT_String *gks_font_list_pfb[] = {
     "NimbusRomNo9L-Regu", /* 1: Times New Roman */
     "NimbusRomNo9L-ReguItal",
     "NimbusRomNo9L-Medi",
@@ -51,12 +64,22 @@ const static FT_String *gks_font_list[] = {
     "Dingbats"               /* 31: Zapf Dingbats */
 };
 
-static FT_Face font_face_cache[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+const static FT_String *gks_font_list_ttf[] = {
+    NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, "CMUSerif-Math",
+    "DejaVuSans"};
+
+static FT_Face font_face_cache_pfb[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
+static FT_Face font_face_cache_ttf[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 /* TODO: Add fallback fonts for non-Latin languages */
-static const char *fallback_font_list[] = {"LatinModern-Math.otf"};
+static const char *fallback_font_list[] = {NULL};
+static int fallback_font_reference_list[] = {232};
 
 static FT_Face fallback_font_faces[] = {NULL};
 static const int NUM_FALLBACK_FACES = sizeof(fallback_font_faces) / sizeof(fallback_font_faces[0]);
@@ -71,10 +94,20 @@ const static double caps[] = {0.662, 0.653, 0.676, 0.669, 0.718, 0.718, 0.718, 0
 static FT_Bool init = 0;
 static FT_Library library;
 
+double horiAdvance = 0, vertAdvance = 0;
+
+static int npoints = 0, maxpoints = 0;
+static double *xpoint = NULL, *ypoint = NULL;
+
+static int num_opcodes = 0;
+static int *opcodes = NULL;
+
+static long pen_x = 0;
+
 static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT_Vector *pen, FT_Bool vertical,
                           FT_Matrix *rotation, FT_Vector *bearing, FT_Int halign, FT_GlyphSlot *glyph_slot_ptr);
 static void gks_ft_init_fallback_faces();
-static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int *length);
+static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, FT_UInt *length);
 static FT_Long ft_min(FT_Long a, FT_Long b);
 static FT_Long ft_max(FT_Long a, FT_Long b);
 
@@ -86,6 +119,18 @@ static FT_Long ft_min(FT_Long a, FT_Long b)
 static FT_Long ft_max(FT_Long a, FT_Long b)
 {
   return a > b ? a : b;
+}
+
+int gks_ft_bearing_x_direction = -1;
+
+DLLEXPORT void gks_ft_set_bearing_x_direction(int direction)
+{
+  gks_ft_bearing_x_direction = direction;
+}
+
+DLLEXPORT void gks_ft_inq_bearing_x_direction(int *direction)
+{
+  *direction = gks_ft_bearing_x_direction;
 }
 
 /* load a glyph into the slot and compute bearing */
@@ -158,7 +203,7 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT
   else
     {
       if (bearing->x != 0) FT_Vector_Transform(bearing, rotation);
-      pen->x -= bearing->x;
+      pen->x += gks_ft_bearing_x_direction * bearing->x;
       pen->y -= bearing->y;
       bearing->x = 64 * face->glyph->bitmap_left;
       bearing->y = 64 * face->glyph->bitmap_top;
@@ -191,7 +236,7 @@ static void symbol_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int length)
 }
 
 /* set text string, converting UTF-8 into Unicode */
-static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, int *length)
+static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, FT_UInt *length)
 {
   FT_UInt num_glyphs = 0;
   FT_UInt codepoint;
@@ -275,13 +320,22 @@ void gks_ft_terminate(void)
 static int gks_ft_convert_textfont(int textfont)
 {
   textfont = abs(textfont);
-  if (textfont >= 101 && textfont <= 131)
-    textfont -= 100;
+  if (textfont >= 201 && textfont <= 233)
+    {
+      textfont -= 200;
+    }
+  else if (textfont >= 101 && textfont <= 131)
+    {
+      textfont -= 100;
+    }
   else if (textfont > 1 && textfont <= 32)
-    textfont = map[textfont - 1];
+    {
+      textfont = map[textfont - 1];
+    }
   else
-    textfont = 9;
-
+    {
+      textfont = 9;
+    }
   textfont = textfont - 1;
   return textfont;
 }
@@ -319,28 +373,35 @@ static void gks_ft_init_fallback_faces()
   int i;
   for (i = 0; i < NUM_FALLBACK_FACES; i++)
     {
-      const char *font = fallback_font_list[i];
-
       if (!init) gks_ft_init();
 
       if (fallback_font_faces[i] == NULL)
         {
-          char *file = gks_ft_get_font_path(font, "");
-          error = FT_New_Face(library, file, 0, &fallback_font_faces[i]);
-          gks_free(file);
-          if (error == FT_Err_Unknown_File_Format)
+          if (fallback_font_list[i] == NULL)
             {
-              gks_perror("unknown file format: %s", file);
-              fallback_font_faces[i] = NULL;
+              /* fallback font reuses an existing, regular font face */
+              fallback_font_faces[i] = gks_ft_get_face(fallback_font_reference_list[i]);
             }
-          else if (error)
+          else
             {
-              gks_perror("could not open font file: %s", file);
-              fallback_font_faces[i] = NULL;
+              char *file = gks_ft_get_font_path(fallback_font_list[i], "");
+              error = FT_New_Face(library, file, 0, &fallback_font_faces[i]);
+              gks_free(file);
+              if (error == FT_Err_Unknown_File_Format)
+                {
+                  gks_perror("unknown file format: %s", file);
+                  fallback_font_faces[i] = NULL;
+                }
+              else if (error)
+                {
+                  gks_perror("could not open font file: %s", file);
+                  fallback_font_faces[i] = NULL;
+                }
             }
         }
     }
 }
+
 
 void *gks_ft_get_face(int textfont)
 {
@@ -349,13 +410,24 @@ void *gks_ft_get_face(int textfont)
   const FT_String *font;
 
   if (!init) gks_ft_init();
-
+  int use_ttf = (textfont >= 200);
+  int original_textfont = textfont;
   textfont = gks_ft_convert_textfont(textfont);
-  font = gks_font_list[textfont];
+
+  const FT_String **font_list = use_ttf ? gks_font_list_ttf : gks_font_list_pfb;
+  FT_Face *font_face_cache = use_ttf ? font_face_cache_ttf : font_face_cache_pfb;
+
+  font = font_list[textfont];
+
+  if (font == NULL)
+    {
+      gks_perror("Missing font: %d\n", original_textfont);
+      return NULL;
+    }
 
   if (font_face_cache[textfont] == NULL)
     {
-      char *file = gks_ft_get_font_path(font, ".pfb");
+      char *file = gks_ft_get_font_path(font, (use_ttf ? ".ttf" : ".pfb"));
       error = FT_New_Face(library, file, 0, &face);
       gks_free(file);
       if (error == FT_Err_Unknown_File_Format)
@@ -383,6 +455,157 @@ void *gks_ft_get_face(int textfont)
   return (void *)face;
 }
 
+
+int gks_ft_get_metrics(int font, double fontsize, unsigned int codepoint, unsigned int dpi, double *width,
+                       double *height, double *depth, double *advance, double *bearing, double *xmin, double *xmax,
+                       double *ymin, double *ymax)
+{
+  FT_Face face;
+  FT_Error error;
+  int hinting_factor = 8;
+  int i;
+
+  gks_ft_init();
+
+  for (i = -1; i < NUM_FALLBACK_FACES; i++)
+    {
+      if (i < 0)
+        {
+          face = (FT_Face)gks_ft_get_face(font);
+        }
+      else
+        {
+          face = fallback_font_faces[i];
+        }
+      if (!face)
+        {
+          continue;
+        }
+      error = FT_Set_Char_Size(face, (long)(fontsize * 64), 0, (dpi * hinting_factor), dpi);
+      if (error)
+        {
+          continue;
+        }
+
+      FT_Set_Transform(face, NULL, NULL);
+
+      FT_UInt glyph_index;
+
+      glyph_index = FT_Get_Char_Index(face, codepoint);
+      if (!glyph_index)
+        {
+          continue;
+        }
+      error = FT_Load_Glyph(face, glyph_index, 2);
+
+      if (error)
+        {
+          continue;
+        }
+      FT_Glyph newglyph;
+      error = FT_Get_Glyph(face->glyph, &newglyph);
+      if (error)
+        {
+          continue;
+        }
+      if (width)
+        {
+          *width = face->glyph->metrics.width / hinting_factor / 64.0;
+        }
+      if (height)
+        {
+          *height = face->glyph->metrics.horiBearingY / 64.0;
+        }
+      if (depth)
+        {
+          *depth = face->glyph->metrics.height / 64.0 - *height;
+        }
+      if (advance)
+        {
+          *advance = face->glyph->linearHoriAdvance / hinting_factor / 65536.0;
+        }
+      if (bearing)
+        {
+          *bearing = face->glyph->metrics.horiBearingX / hinting_factor / 64.0;
+        }
+
+      FT_BBox cbox;
+      FT_Glyph_Get_CBox(newglyph, FT_GLYPH_BBOX_SUBPIXELS, &cbox);
+      if (xmin)
+        {
+          *xmin = cbox.xMin / 64.0 / hinting_factor;
+        }
+      if (xmax)
+        {
+          *xmax = cbox.xMax / 64.0 / hinting_factor;
+        }
+      if (ymin)
+        {
+          *ymin = cbox.yMin / 64.0;
+        }
+      if (ymax)
+        {
+          *ymax = cbox.yMax / 64.0;
+        }
+      FT_Done_Glyph(newglyph);
+      return 1;
+    }
+  return 0;
+}
+
+double gks_ft_get_kerning(int font, double fontsize, unsigned int dpi, unsigned int first_codepoint,
+                          unsigned int second_codepoint)
+{
+  FT_Face face;
+  FT_Error error;
+  int hinting_factor = 8;
+  int i;
+  FT_UInt first_glyph_index;
+  FT_UInt second_glyph_index;
+
+  gks_ft_init();
+
+  for (i = -1; i < NUM_FALLBACK_FACES; i++)
+    {
+      if (i < 0)
+        {
+          face = (FT_Face)gks_ft_get_face(font);
+        }
+      else
+        {
+          face = fallback_font_faces[i];
+        }
+      if (!face)
+        {
+          continue;
+        }
+      error = FT_Set_Char_Size(face, (long)(fontsize * 64), 0, (dpi * hinting_factor), dpi);
+      if (error)
+        {
+          continue;
+        }
+
+      FT_Set_Transform(face, NULL, NULL);
+
+      first_glyph_index = FT_Get_Char_Index(face, first_codepoint);
+      if (!first_glyph_index)
+        {
+          continue;
+        }
+
+      second_glyph_index = FT_Get_Char_Index(face, second_codepoint);
+      if (!second_glyph_index)
+        {
+          return 0.0;
+        }
+      FT_Vector kerning;
+      FT_Get_Kerning(face, first_glyph_index, second_glyph_index, FT_KERNING_DEFAULT, &kerning);
+      return kerning.x / 64.0 / hinting_factor;
+    }
+  return 0.0;
+}
+
+
 unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_state_list_t *gkss, const char *text,
                                  int length)
 {
@@ -400,7 +623,7 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
   FT_UInt *unicode_string;     /* unicode text string */
   FT_Int halign, valign;       /* alignment */
   FT_Byte *mono_bitmap = NULL; /* target for rendered text */
-  FT_Int num_glyphs;           /* number of glyphs */
+  FT_UInt num_glyphs;          /* number of glyphs */
   FT_Vector anchor;
   FT_Vector up;
   FT_Bitmap ftbitmap;
@@ -707,6 +930,300 @@ int *gks_ft_render(int *x, int *y, int *width, int *height, gks_state_list_t *gk
   return (int *)rgba_bitmap;
 }
 
+static char *xrealloc(void *ptr, int size)
+{
+  char *result = (char *)realloc(ptr, size);
+  if (!result)
+    {
+      gks_perror("out of virtual memory");
+      abort();
+    }
+  return (result);
+}
+
+static void reallocate(int npoints)
+{
+  while (npoints >= maxpoints) maxpoints += POINT_INC;
+
+  xpoint = (double *)xrealloc(xpoint, maxpoints * sizeof(double));
+  ypoint = (double *)xrealloc(ypoint, maxpoints * sizeof(double));
+  opcodes = (int *)xrealloc(opcodes, maxpoints * sizeof(int));
+}
+
+static void load_glyph(FT_Face face, FT_UInt code)
+{
+  FT_UInt index = FT_Get_Char_Index(face, code);
+  FT_Error error = FT_Load_Glyph(face, index, FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP);
+  if (error) gks_perror("could not load glyph: %d\n", index);
+}
+
+static void add_point(long x, long y)
+{
+  if (npoints >= maxpoints) reallocate(npoints);
+  xpoint[npoints] = (double)(x + pen_x);
+  ypoint[npoints] = (double)y;
+  npoints += 1;
+}
+
+static int move_to(const FT_Vector *to, void *user)
+{
+  add_point(to->x, to->y);
+  opcodes[num_opcodes++] = (int)'M';
+  return 0;
+}
+
+static int line_to(const FT_Vector *to, void *user)
+{
+  add_point(to->x, to->y);
+  opcodes[num_opcodes++] = (int)'L';
+  return 0;
+}
+
+static int conic_to(const FT_Vector *control, const FT_Vector *to, void *user)
+{
+  add_point(control->x, control->y);
+  add_point(to->x, to->y);
+  opcodes[num_opcodes++] = (int)'Q';
+  return 0;
+}
+
+static int cubic_to(const FT_Vector *control1, const FT_Vector *control2, const FT_Vector *to, void *user)
+{
+  add_point(control1->x, control1->y);
+  add_point(control2->x, control2->y);
+  add_point(to->x, to->y);
+  opcodes[num_opcodes++] = (int)'C';
+  return 0;
+}
+
+static void get_outline(FT_Face face, FT_UInt charcode, FT_Bool first)
+{
+  FT_Outline_Funcs callbacks;
+  FT_GlyphSlot slot;
+  FT_Glyph_Metrics metrics;
+  FT_Outline outline;
+  FT_Error error;
+
+  callbacks.move_to = move_to;
+  callbacks.line_to = line_to;
+  callbacks.conic_to = conic_to;
+  callbacks.cubic_to = cubic_to;
+
+  callbacks.shift = 0;
+  callbacks.delta = 0;
+
+  slot = face->glyph;
+  outline = slot->outline;
+  metrics = slot->metrics;
+
+  if (first) pen_x -= metrics.horiBearingX;
+
+  error = FT_Outline_Decompose(&outline, &callbacks, NULL);
+  if (error) gks_perror("could not extract the outline");
+
+  opcodes[num_opcodes++] = 'f';
+  opcodes[num_opcodes] = '\0';
+
+  if (charcode != 32)
+    pen_x += metrics.horiBearingX + metrics.width;
+  else
+    pen_x += metrics.horiAdvance;
+}
+
+static long get_kerning(FT_Face face, FT_UInt left_glyph, FT_UInt right_glyph)
+{
+  FT_UInt left_glyph_index, right_glyph_index;
+  FT_Vector delta;
+  FT_Error error;
+
+  left_glyph_index = FT_Get_Char_Index(face, left_glyph);
+  right_glyph_index = FT_Get_Char_Index(face, right_glyph);
+  error = FT_Get_Kerning(face, left_glyph_index, right_glyph_index, FT_KERNING_UNSCALED, &delta);
+  if (error)
+    {
+      gks_perror("could not get kerning information for %d, %d", left_glyph_index, right_glyph_index);
+      delta.x = 0;
+    }
+
+  return delta.x;
+}
+
+static double get_capheight(FT_Face face)
+{
+  TT_PCLT *pclt;
+  FT_BBox bbox;
+  FT_Error error;
+  long capheight;
+
+  if (!init) gks_ft_init();
+
+  pclt = FT_Get_Sfnt_Table(face, ft_sfnt_pclt);
+  if (pclt == NULL)
+    {
+      /* Font does not contain CapHeight information.
+       * Use use the letter 'I' to determine the height of capital letters */
+      load_glyph(face, 'I');
+      error = FT_Outline_Get_BBox(&face->glyph->outline, &bbox);
+      if (error)
+        {
+          capheight = face->size->metrics.height;
+          fprintf(stderr, "Couldn't get bounding box: FT_Outline_Get_BBox() failed\n");
+        }
+      else
+        capheight = bbox.yMax - bbox.yMin;
+    }
+  else
+    capheight = pclt->CapHeight;
+
+  return capheight;
+}
+
+static void process_glyphs(FT_Face face, double x, double y, char *text, double phi, gks_state_list_t *gkss,
+                           void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY)
+{
+  FT_UInt unicode_string[256];
+  FT_UInt length = strlen(text);
+  int i, j;
+  double xj, yj, cos_f, sin_f;
+  double chh, height;
+  int alh;
+
+  if (!init) gks_ft_init();
+
+  WC_to_NDC(x, y, gkss->cntnr, x, y);
+  utf_to_unicode((FT_Bytes)text, unicode_string, &length);
+
+  pen_x = 0;
+  cos_f = cos(phi);
+  sin_f = sin(phi);
+  chh = gkss->chh;
+  height = chh / get_capheight(face);
+  alh = gkss->txal[0];
+
+  for (i = 0; i < length; i++)
+    {
+      load_glyph(face, unicode_string[i]);
+
+      if (i > 0 && FT_HAS_KERNING(face)) pen_x += get_kerning(face, unicode_string[i - 1], unicode_string[i]);
+
+      get_outline(face, unicode_string[i], i == 0);
+
+      if (npoints > 0 && bBoxX == NULL && bBoxY == NULL)
+        {
+          for (j = 0; j < npoints; j++)
+            {
+              xj = horiAdvance + xpoint[j] * height;
+              yj = vertAdvance + ypoint[j] * height;
+              xpoint[j] = x + cos_f * xj - sin_f * yj;
+              ypoint[j] = y + sin_f * xj + cos_f * yj;
+            }
+
+          (*gdp)(npoints, xpoint, ypoint, GKS_K_GDP_DRAW_PATH, num_opcodes, opcodes);
+        }
+
+      npoints = 0;
+      num_opcodes = 0;
+    }
+
+  if (bBoxX != NULL && bBoxY != NULL)
+    {
+      bBoxX[0] = bBoxX[3] = bBoxX[4] = bBoxX[7] = 0;
+      bBoxX[1] = bBoxX[2] = bBoxX[5] = bBoxX[6] = height * pen_x;
+      /* The vertical extents should actually be determined by the font information,
+       * but these values are usually oversized. */
+      bBoxY[0] = bBoxY[1] = -chh * 0.3; /* face->descender; */
+      bBoxY[2] = bBoxY[3] = chh * 1.2;  /* face->ascender;  */
+      bBoxY[4] = bBoxY[5] = 0;
+      bBoxY[6] = bBoxY[7] = chh;
+
+      if (alh == GKS_K_TEXT_HALIGN_LEFT)
+        bBoxX[8] = bBoxX[1];
+      else if (alh == GKS_K_TEXT_HALIGN_RIGHT)
+        bBoxX[8] = 0;
+      else
+        bBoxX[8] = -horiAdvance;
+      bBoxY[8] = -vertAdvance;
+
+      for (j = 0; j <= 8; j++)
+        {
+          xj = horiAdvance + bBoxX[j];
+          yj = vertAdvance + bBoxY[j];
+          bBoxX[j] = x + cos_f * xj - sin_f * yj;
+          bBoxY[j] = y + sin_f * xj + cos_f * yj;
+          NDC_to_WC(bBoxX[j], bBoxY[j], gkss->cntnr, bBoxX[j], bBoxY[j]);
+        }
+    }
+}
+
+void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
+                 void (*gdp)(int, double *, double *, int, int, int *))
+{
+  double bBoxX[9], bBoxY[9];
+  double phi;
+  int alh, alv;
+  double chux, chuy;
+  FT_Face face = (FT_Face)gks_ft_get_face(gkss->txfont);
+
+  alh = gkss->txal[0];
+  alv = gkss->txal[1];
+  chux = gkss->chup[0];
+  chuy = gkss->chup[1];
+
+  process_glyphs(face, x, y, text, 0, gkss, gdp, bBoxX, bBoxY);
+  switch (alh)
+    {
+    case GKS_K_TEXT_HALIGN_LEFT:
+      horiAdvance = 0;
+      break;
+    case GKS_K_TEXT_HALIGN_CENTER:
+      horiAdvance = -0.5 * (bBoxX[1] - bBoxX[0]);
+      break;
+    case GKS_K_TEXT_HALIGN_RIGHT:
+      horiAdvance = -(bBoxX[1] - bBoxX[0]);
+      break;
+    default:
+      horiAdvance = 0;
+      break;
+    }
+  switch (alv)
+    {
+    case GKS_K_TEXT_VALIGN_TOP:
+      vertAdvance = bBoxY[4] - bBoxY[2];
+      break;
+    case GKS_K_TEXT_VALIGN_CAP:
+      vertAdvance = bBoxY[4] - bBoxY[6];
+      break;
+    case GKS_K_TEXT_VALIGN_HALF:
+      vertAdvance = (bBoxY[4] - bBoxY[6]) * 0.5;
+      break;
+    case GKS_K_TEXT_VALIGN_BASE:
+      vertAdvance = 0;
+      break;
+    case GKS_K_TEXT_VALIGN_BOTTOM:
+      vertAdvance = bBoxY[4] - bBoxY[0];
+      break;
+    default:
+      vertAdvance = 0;
+    }
+
+  phi = -atan2(chux, chuy); /* character up vector */
+  process_glyphs(face, x, y, text, phi, gkss, gdp, NULL, NULL);
+}
+
+void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gkss,
+                            void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY)
+{
+  double phi;
+  double chux, chuy;
+  FT_Face face = (FT_Face)gks_ft_get_face(gkss->txfont);
+
+  chux = gkss->chup[0];
+  chuy = gkss->chup[1];
+
+  phi = -atan2(chux, chuy); /* character up vector */
+  process_glyphs(face, x, y, text, phi, gkss, gdp, bBoxX, bBoxY);
+}
+
 #else
 
 static int init = 0;
@@ -725,5 +1242,17 @@ int *gks_ft_render(int *x, int *y, int *width, int *height, gks_state_list_t *gk
 }
 
 void gks_ft_terminate(void) {}
+
+void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
+                 void (*gdp)(int, double *, double *, int, int, int *))
+{
+  if (!init) gks_ft_init();
+}
+
+void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gkss,
+                            void (*gdp)(int, double *, double *, int, int, int *), double *bBoxX, double *bBoxY)
+{
+  if (!init) gks_ft_init();
+}
 
 #endif

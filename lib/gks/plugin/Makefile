@@ -140,7 +140,7 @@ qt5plugin.o: qt5plugin.cxx
 	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT5DEFS) $(QT5INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
 x11plugin.so: x11plugin.o $(GKSLIBS)
-	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(FTLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
 wxplugin.so: wxplugin.o $(GKSLIBS)
 	$(CXX) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(WXLIBS) $(X11LIBS) $(LIBS)
@@ -168,7 +168,7 @@ quartzplugin.so: quartzplugin.o $(GKSLIBS)
 	-lobjc -framework Foundation -framework ApplicationServices -framework AppKit
 
 glplugin.so: glplugin.o $(GKSLIBS)
-	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(GLFWLIBS) $(FTLIBS) $(X11LIBS) $(LIBS)
+	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(GLFWLIBS) $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
 zmqplugin.so: zmqplugin.o $(GKSLIBS)
 	$(CXX) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(ZMQLIBS) $(LIBS)

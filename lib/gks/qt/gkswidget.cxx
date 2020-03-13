@@ -77,8 +77,8 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
 #endif
   p->device_dpi_x = this->physicalDpiX() * p->device_pixel_ratio;
   p->device_dpi_y = this->physicalDpiY() * p->device_pixel_ratio;
-  p->width = 500;
-  p->height = 500;
+  p->width = 500 * p->device_pixel_ratio;
+  p->height = 500 * p->device_pixel_ratio;
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
   p->nominal_size = 1.0;

@@ -1563,7 +1563,11 @@ error_t plot_scatter(grm_args_t *subplot_args)
                 {
                   if (i < c_length)
                     {
-                      c_index = 1000 + (int)(255 * (c[i] - c_min) / c_max);
+                      c_index = 1000 + (int)(255 * (c[i] - c_min) / (c_max - c_min));
+                      if (c_index < 1000 || c_index > 1255)
+                        {
+                          continue;
+                        }
                     }
                   else
                     {
@@ -2266,7 +2270,7 @@ error_t plot_polar(grm_args_t *subplot_args)
         }
       for (i = 0; i < rho_length; ++i)
         {
-          double current_rho = (rho[i] - r_min) / (r_max - r_min);
+          double current_rho = rho[i] / r_max;
           x[i] = current_rho * cos(theta[i]);
           y[i] = current_rho * sin(theta[i]);
         }
@@ -2871,7 +2875,7 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     }
   else if (args_values(plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
     {
-      if (dpi[0] > 200 || dpi[1] > 200)
+      if (dpi[0] > 300 || dpi[1] > 300)
         {
           for (i = 0; i < 2; ++i)
             {

@@ -62,6 +62,7 @@ DLLEXPORT void gr_settextfontprec(int, int);
 DLLEXPORT void gr_setcharexpan(double);
 DLLEXPORT void gr_setcharspace(double);
 DLLEXPORT void gr_settextcolorind(int);
+DLLEXPORT void gr_inqtextcolorind(int *);
 DLLEXPORT void gr_setcharheight(double);
 DLLEXPORT void gr_setcharup(double, double);
 DLLEXPORT void gr_settextpath(int);
@@ -182,17 +183,20 @@ DLLEXPORT void gr_inqborderwidth(double *);
 DLLEXPORT void gr_setbordercolorind(int);
 DLLEXPORT void gr_inqbordercolorind(int *);
 DLLEXPORT void gr_setprojectiontype(int);
-DLLEXPORT void gr_setperspectiveprojection(double, double, double);
-DLLEXPORT void gr_settransformationparameters(double, double, double, double, double, double, double, double, double);
-DLLEXPORT void gr_setorthographicprojection(double, double, double, double, double, double);
 DLLEXPORT void gr_inqprojectiontype(int *);
+DLLEXPORT void gr_setperspectiveprojection(double, double, double);
+DLLEXPORT void gr_inqperspectiveprojection(double *, double *, double *);
+DLLEXPORT void gr_settransformationparameters(double, double, double, double, double, double, double, double, double);
 DLLEXPORT void gr_inqtransformationparameters(double *, double *, double *, double *, double *, double *, double *,
                                               double *, double *);
-DLLEXPORT void gr_inqperspectiveprojection(double *, double *, double *);
+DLLEXPORT void gr_setorthographicprojection(double, double, double, double, double, double);
 DLLEXPORT void gr_inqorthographicprojection(double *, double *, double *, double *, double *, double *);
 DLLEXPORT void gr_camerainteraction(double, double, double, double);
 DLLEXPORT void gr_setwindow3d(double, double, double, double, double, double);
 DLLEXPORT void gr_inqwindow3d(double *, double *, double *, double *, double *, double *);
+DLLEXPORT void gr_setscalefactors3d(double, double, double);
+DLLEXPORT void gr_inqscalefactors3d(double *, double *, double *);
+DLLEXPORT void gr_transformationinterfaceforrepl(double, double, double, double);
 
 #ifdef __cplusplus
 }

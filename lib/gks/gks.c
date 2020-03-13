@@ -390,6 +390,7 @@ void gks_set_encoding(int encoding)
     {
       switch (encoding)
         {
+        case 0:
         case ENCODING_LATIN1:
         case ENCODING_UTF8:
           s->input_encoding = encoding;
@@ -1115,6 +1116,22 @@ void gks_polymarker(int n, double *pxa, double *pya)
     gks_report_error(POLYMARKER, 5);
 }
 
+static void gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
+{
+  int saved_ints = s->ints, saved_facoli = s->facoli;
+  double saved_bwidth = s->bwidth;
+
+  gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+  gks_set_fill_color_index(s->txcoli);
+  gks_set_border_width(0);
+
+  gks_gdp(n, px, py, primid, ldr, datrec);
+
+  gks_set_border_width(saved_bwidth);
+  gks_set_fill_color_index(saved_facoli);
+  gks_set_fill_int_style(saved_ints);
+}
+
 void gks_text(double px, double py, char *str)
 {
   if (state >= GKS_K_WSAC)
@@ -1126,15 +1143,23 @@ void gks_text(double px, double py, char *str)
         }
       else if (strlen(str) < 132)
         {
-          /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
-          char utf8_str[2 * 131 + 1];
-          gks_input2utf8(str, utf8_str, s->input_encoding);
+          if (s->txprec != GKS_K_TEXT_PRECISION_OUTLINE)
+            {
+              /* double the string length as the longest utf8 representation of any latin1 character is two bytes long
+               */
+              char utf8_str[2 * 131 + 1];
+              gks_input2utf8(str, utf8_str, s->input_encoding);
 
-          f_arr_1[0] = px;
-          f_arr_2[0] = py;
+              f_arr_1[0] = px;
+              f_arr_2[0] = py;
 
-          /* call the device driver link routine */
-          gks_ddlk(TEXT, 0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 1, utf8_str, NULL);
+              /* call the device driver link routine */
+              gks_ddlk(TEXT, 0, 0, 0, i_arr, 1, f_arr_1, 1, f_arr_2, 1, utf8_str, NULL);
+            }
+          else
+            {
+              gks_ft_text(px, py, str, s, gdp);
+            }
         }
       else
         /* string is too long */
@@ -2848,14 +2873,33 @@ void gks_inq_ws_category(int wtype, int *errind, int *wscat)
 void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind, double *cpx, double *cpy, double *tx,
                          double *ty)
 {
+  double bx[9], by[9];
+  int i;
+
   if (gks_list_find(open_ws, wkid) != NULL && strlen(str) != 0)
     {
-      /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
-      char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
-      gks_input2utf8(str, utf8_str, s->input_encoding);
-      gks_util_inq_text_extent(px, py, utf8_str, strlen(utf8_str), cpx, cpy, tx, ty);
+      if (s->txprec != GKS_K_TEXT_PRECISION_OUTLINE)
+        {
+          /* double the string length as the longest utf8 representation of any latin1 character is two bytes long */
+          char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
+          gks_input2utf8(str, utf8_str, s->input_encoding);
+
+          gks_util_inq_text_extent(px, py, utf8_str, strlen(utf8_str), cpx, cpy, tx, ty);
+
+          gks_free(utf8_str);
+        }
+      else
+        {
+          gks_ft_inq_text_extent(px, py, str, s, gdp, bx, by);
+          for (i = 0; i < 4; i++)
+            {
+              tx[i] = bx[i];
+              ty[i] = by[i];
+            }
+          *cpx = bx[8];
+          *cpy = by[8];
+        }
       *errind = GKS_K_NO_ERROR;
-      gks_free(utf8_str);
     }
   else
     *errind = GKS_K_ERROR;

@@ -108,7 +108,7 @@ mergeInto(LibraryManager.library, {
         }
         var text = UTF8ToString(chars);
         context.fillText(text, 0, top * context.canvas.height * valg);
-        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.setTransform(Module.dpr, 0, 0, Module.dpr, 0, 0);
     },
 
     js_line_routine: function(n, px, py, linetype, fill, width, rgb) {
@@ -203,10 +203,191 @@ mergeInto(LibraryManager.library, {
     },
 
     js_get_ws_width: function() {
-        return Module.canvas.width;
+      return Module.canvas.width / Module.dpr;
     },
 
     js_get_ws_height: function() {
-        return Module.canvas.height;
+        return Module.canvas.height / Module.dpr;
+    },
+
+  js_draw_path: function(n, px, py, nc, codes, bcoli, facoli, linewidth, to_DC_) {
+      px = Module.HEAPF64.subarray(px / 8, px / 8 + n);
+      py = Module.HEAPF64.subarray(py / 8, py / 8 + n);
+      codes = Module.HEAPU32.subarray(codes / 4, codes / 4 + nc);
+      facoli = Module.HEAPU8.subarray(facoli, facoli + 4);
+      bcoli = Module.HEAPU8.subarray(bcoli, bcoli + 4);
+
+      var i, j;
+      var x = new Array(3), y = new Array(3), w, h, a1, a2;
+      var cur_x = 0, cur_y = 0;
+      var start_x = 0, start_y = 0;
+      var context = Module.context;
+
+      to_DC = function(n, x, y) {
+        var x_ = _malloc(x.length * 8);
+        var y_ = _malloc(y.length * 8);
+        Module.HEAPF64.set(x, x_ / 8);
+        Module.HEAPF64.set(y, y_ / 8);
+        dynCall('viii', to_DC_, [n, x_, y_]);
+        x__ = Module.HEAPF64.subarray(x_ / 8, x_ / 8 + x.length);
+        y__ = Module.HEAPF64.subarray(y_ / 8, y_ / 8 + y.length);
+        for(var i = 0; i < n; ++i) {
+          x[i] = x__[i];
+          y[i] = y__[i];
+        }
+        _free(x_);
+        _free(y_);
+      };
+
+      context.beginPath();
+      context.strokeStyle = "rgba(" + bcoli[0] + "," + bcoli[1] + "," + bcoli[2] + "," + bcoli[3] + ")";
+      context.fillStyle = "rgba(" + facoli[0] + "," + facoli[1] + "," + facoli[2] + "," + facoli[3] + ")";
+      context.lineWidth = linewidth;
+
+      j = 0;
+      for (i = 0; i < nc; ++i)
+        {
+          var code = String.fromCharCode(codes[i]);
+          switch (code)
+            {
+            case 'M':
+            case 'm':
+              x[0] = px[j];
+              y[0] = py[j];
+              if (code == 'm')
+                {
+                  x[0] += cur_x;
+                  y[0] += cur_y;
+                }
+              cur_x = start_x = x[0];
+              cur_y = start_y = y[0];
+              to_DC(1, x, y);
+              context.moveTo(x[0], y[0]);
+              j += 1;
+              break;
+            case 'L':
+            case 'l':
+              x[0] = px[j];
+              y[0] = py[j];
+              if (code == 'l')
+                {
+                  x[0] += cur_x;
+                  y[0] += cur_y;
+                }
+              cur_x = x[0];
+              cur_y = y[0];
+              to_DC(1, x, y);
+              context.lineTo(x[0], y[0]);
+              j += 1;
+              break;
+            case 'Q':
+            case 'q':
+              x[0] = px[j];
+              y[0] = py[j];
+              if (code == 'q')
+                {
+                  x[0] += cur_x;
+                  y[0] += cur_y;
+                }
+              x[1] = px[j + 1];
+              y[1] = py[j + 1];
+              if (code == 'q')
+                {
+                  x[1] += cur_x;
+                  y[1] += cur_y;
+                }
+              cur_x = x[1];
+              cur_y = y[1];
+              to_DC(2, x, y);
+              context.quadraticCurveTo(x[0], y[0], x[1], y[1]);
+              j += 2;
+              break;
+            case 'C':
+            case 'c':
+              x[0] = px[j];
+              y[0] = py[j];
+              if (code == 'c')
+                {
+                  x[0] += cur_x;
+                  y[0] += cur_y;
+                }
+              x[1] = px[j + 1];
+              y[1] = py[j + 1];
+              if (code == 'c')
+                {
+                  x[1] += cur_x;
+                  y[1] += cur_y;
+                }
+              x[2] = px[j + 2];
+              y[2] = py[j + 2];
+              if (code == 'c')
+                {
+                  x[2] += cur_x;
+                  y[2] += cur_y;
+                }
+              cur_x = x[2];
+              cur_y = y[2];
+              to_DC(3, x, y);
+              context.bezierCurveTo(x[0], y[0], x[1], y[1], x[2], y[2]);
+              j += 3;
+              break;
+            case 'A':
+            case 'a':
+              {
+                var rx = Math.abs(px[j]);
+                var ry = Math.abs(py[j]);
+                a1 = px[j + 1];
+                a2 = py[j + 1];
+                var cx = cur_x - rx * Math.cos(a1);
+                var cy = cur_y - ry * Math.sin(a1);
+                x[0] = cx - rx;
+                y[0] = cy - ry;
+                x[1] = cx + rx;
+                y[1] = cy + ry;
+                cur_x = cx + rx * Math.cos(a2);
+                cur_y = cy + ry * Math.sin(a2);
+              }
+              to_DC(2, x, y);
+              w = x[1] - x[0];
+              h = y[1] - y[0];
+              var anticlockwise = a1 < a2;
+              // Use negative angles since the canvas uses a swapped y axis
+              context.ellipse(x[0] + 0.5 * w, y[0] + 0.5 * h, Math.abs(w * 0.5), Math.abs(h * 0.5), 0, -a1, -a2, anticlockwise);
+              j += 3;
+              break;
+            case 's': /* close and stroke */
+              context.closePath();
+              cur_x = start_x;
+              cur_y = start_y;
+              context.stroke();
+              break;
+            case 'S': /* stroke */
+              context.stroke();
+              break;
+            case 'F': /* fill and stroke */
+              context.closePath();
+              cur_x = start_x;
+              cur_y = start_y;
+              context.fill();
+              context.stroke();
+              break;
+            case 'f': /* fill */
+              context.closePath();
+              cur_x = start_x;
+              cur_y = start_y;
+              context.fill();
+              break;
+            case 'Z': /* closepath */
+              context.closePath();
+              cur_x = start_x;
+              cur_y = start_y;
+              break;
+            case '\0':
+              break;
+            default:
+              console.log("invalid path code ('" + code + "')");
+              return;
+            }
+        }
     }
 });

@@ -32,6 +32,8 @@ extern void js_reset_clipping(void);
 extern void js_clear(void);
 extern int js_get_ws_width(void);
 extern int js_get_ws_height(void);
+extern void js_draw_path(int n, double *px, double *py, int nc, int *codes, unsigned char *bcoli, unsigned char *facoli,
+                         int linewidth, void (*to_DC)(int n, double *x, double *y));
 
 #ifdef __cplusplus
 #define }
@@ -731,6 +733,42 @@ static void set_clip_path(int tnr)
   js_clip_path(x, y, width, height);
 }
 
+static void to_DC(int n, double *x, double *y)
+{
+  int i;
+  double xn, yn;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(x[i], y[i], gkss->cntnr, xn, yn);
+      seg_xform(&xn, &yn);
+      x[i] = p->a * xn + p->b;
+      y[i] = p->c * yn + p->d;
+    }
+}
+
+static void draw_path(int n, double *px, double *py, int nc, int *codes)
+{
+  unsigned char bcoli[4], facoli[4];
+  bcoli[0] = p->rgb[gkss->bcoli][0];
+  bcoli[1] = p->rgb[gkss->bcoli][1];
+  bcoli[2] = p->rgb[gkss->bcoli][2];
+  bcoli[3] = p->alpha;
+  facoli[0] = p->rgb[gkss->facoli][0];
+  facoli[1] = p->rgb[gkss->facoli][1];
+  facoli[2] = p->rgb[gkss->facoli][2];
+  facoli[3] = p->alpha;
+
+  js_draw_path(n, px, py, nc, codes, bcoli, facoli, gkss->bwidth * p->linewidth, to_DC);
+}
+
+static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
+{
+  if (primid == GKS_K_GDP_DRAW_PATH)
+    {
+      draw_path(n, px, py, nc, codes);
+    }
+}
 
 void gks_drv_js(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                 char *chars, void **ptr)
@@ -855,6 +893,16 @@ void gks_drv_js(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r
           int true_color = fctid == DRAW_IMAGE;
 
           cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
+          p->empty = 0;
+        }
+      break;
+
+      /* GDP */
+    case 17:
+      if (p->state == GKS_K_WS_ACTIVE)
+        {
+          gks_set_dev_xform(gkss, p->window, p->viewport);
+          gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
           p->empty = 0;
         }
       break;
