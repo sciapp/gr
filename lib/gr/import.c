@@ -139,7 +139,7 @@ static char *xrealloc(void *ptr, int size)
 static int binsearch(char *str[], int nel, char *value)
 {
   int position, begin = 0, end = nel - 1, cond = 0;
-  char key[33];
+  char key[50];
 
   while (begin <= end)
     {
