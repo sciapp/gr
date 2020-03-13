@@ -108,7 +108,7 @@ event_queue_t *event_queue = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-/* TODO: Check format of: "hist", "isosurface", "imshow"  */
+/* TODO: Check format of: "hist", "isosurface"  */
 static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},      {"hexbin", "xys"},
                                            {"polar", "xys"},     {"shade", "xys"},
                                            {"stem", "xys"},      {"step", "xys"},
@@ -119,7 +119,7 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},      {"hexbin", "xys
                                            {"scatter3", "xyzc"}, {"quiver", "xyuv"},
                                            {"heatmap", "xyzc"},  {"hist", "x"},
                                            {"barplot", "xy"},    {"isosurface", "x"},
-                                           {"imshow", ""},       {"nonuniformheatmap", "xyzc"}};
+                                           {"imshow", "c"},       {"nonuniformheatmap", "xyzc"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -192,7 +192,7 @@ const char *valid_subplot_keys[] = {"adjust_xlim",  "adjust_ylim",
                                     "ylog",         "zflip",
                                     "zlim",         "zlog",
                                     "clim",         NULL};
-const char *valid_series_keys[] = {"a", "c", "markertype", "s", "spec", "step_where", "u", "v", "x", "y", "z", NULL};
+const char *valid_series_keys[] = {"a", "c", "c_rows", "markertype", "s", "spec", "step_where", "u", "v", "x", "y", "z", NULL};
 
 /* ========================= functions ============================================================================== */
 
@@ -770,7 +770,7 @@ void plot_pre_subplot(grm_args_t *subplot_args)
 
   args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  if (str_equals_any(kind, 2, "imshow", "isosurface"))
+  if (str_equals_any(kind, 1, "isosurface"))
     {
       plot_process_viewport(subplot_args);
     }
@@ -882,7 +882,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
     {
       viewport[2] += (1 - (subplot[3] - subplot[2]) * (subplot[3] - subplot[2])) * 0.02;
     }
-  if (str_equals_any(kind, 6, "contour", "contourf", "heatmap", "nonuniformheatmap", "hexbin", "quiver"))
+  if (str_equals_any(kind, 7, "imshow", "contour", "contourf", "heatmap", "nonuniformheatmap", "hexbin", "quiver"))
     {
       viewport[1] -= 0.1;
     }
@@ -1257,6 +1257,11 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
           args_values(subplot_args, "zlim", "dd", &min_component, &max_component);
         }
       grm_args_push(subplot_args, "zrange", "dd", min_component, max_component);
+    }
+  else if (strcmp(kind, "imshow") == 0)
+    {
+      grm_args_push(subplot_args, "xrange", "dd", 0.0, 1.0);
+      grm_args_push(subplot_args, "yrange", "dd", 0.0, 1.0);
     }
 }
 
@@ -2211,15 +2216,65 @@ error_t plot_scatter3(grm_args_t *subplot_args)
 error_t plot_imshow(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
+  double *c_data;
+  double c_min, c_max;
+  double *viewport, *vp;
+  unsigned int cols, rows, c_data_length, i;
+  int *real_data;
+
+  double x_min, x_max, y_min, y_max, w, h;
+  error_t error;
 
   args_values(subplot_args, "series", "A", &current_series);
+  return_error_if(!args_values(subplot_args, "crange", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
+  return_error_if(!args_values(subplot_args, "viewport", "D", &viewport), ERROR_PLOT_MISSING_DATA);
+  return_error_if(!args_values(subplot_args, "vp", "D", &vp), ERROR_PLOT_MISSING_DATA);
   while (*current_series != NULL)
     {
-      /* TODO: Implement me! */
+      return_error_if(!args_first_value(*current_series, "c", "D", &c_data, &c_data_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_values(*current_series, "c_rows", "i", &rows), ERROR_PLOT_MISSING_DATA);
+
+      if (rows <= 0 || c_data_length % rows != 0) {
+        return ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
+      }
+
+      cols = c_data_length / rows;
+
+      real_data = malloc(sizeof(int) * c_data_length);
+      logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
+      for (i = 0; i < c_data_length; ++i) {
+        real_data[i] = 1000 + (int)round((1.0 * c_data[i] - c_min) / (c_max - c_min) * 255);
+      }
+
+      if (cols * (viewport[3] - viewport[2]) < rows * (viewport[1] - viewport[0])) {
+        w = (double)cols / (double)rows * (viewport[3] - viewport[2]);
+        x_min = max(0.5 * (viewport[0] + viewport[1] - w), viewport[0]);
+        x_max = min(0.5 * (viewport[0] + viewport[1] + w), viewport[1]);
+        y_min = viewport[2];
+        y_max = viewport[3];
+      } else {
+        h = (double)rows / (double)cols * (viewport[1] - viewport[0]);
+        x_min = viewport[0];
+        x_max = viewport[1];
+        y_min = max(0.5 * (viewport[3] + viewport[2] - h), viewport[2]);
+        y_max = min(0.5 * (viewport[3] + viewport[2] + h), viewport[3]);
+      }
+
+      gr_selntran(0);
+      gr_cellarray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, real_data);
+
+      gr_selntran(1);
+
+      free(real_data);
+
       ++current_series;
     }
 
-  return ERROR_NOT_IMPLEMENTED;
+  if ((error = plot_draw_colorbar(subplot_args, 0.00, 256)) != NO_ERROR) {
+    return error;
+  }
+
+  return NO_ERROR;
 }
 
 error_t plot_isosurface(grm_args_t *subplot_args)
@@ -2436,7 +2491,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           gr_axes3d(0, y_tick, 0, x_org_high, y_org_low, z_org_low, 0, y_major_count, 0, ticksize);
         }
     }
-  else
+  else if (strcmp(kind, "imshow") != 0)
     {
       if (str_equals_any(kind, 3, "heatmap", "shade", "nonuniformheatmap"))
         {
@@ -2668,12 +2723,20 @@ error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors)
   double diag, charheight;
   int scale, flip, options;
   unsigned int i;
+  error_t error;
 
   gr_savestate();
   args_values(args, "viewport", "D", &viewport);
   if (!args_values(args, "clim", "dd", &c_min, &c_max))
     {
-      args_values(args, "zrange", "dd", &c_min, &c_max);
+      if (!args_values(args, "zrange", "dd", &c_min, &c_max))
+        {
+          error = args_values(args, "crange", "dd", &c_min, &c_max);
+          if (!error)
+            {
+              return error;
+            }
+        }
     }
   data = malloc(colors * sizeof(int));
   if (data == NULL)
