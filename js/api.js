@@ -142,6 +142,11 @@ function GR(canvas_id) {
     this.shadepoints = gr_shadepoints;
     this.shadelines = gr_shadelines;
     this.panzoom = gr_panzoom;
+    this.path = gr_path;
+    this.setborderwidth = gr_setborderwidth;
+    this.inqborderwidth = gr_inqborderwidth;
+    this.setbordercolorind = gr_setbordercolorind;
+    this.inqbordercolorind = gr_inqbordercolorind;
 
     // set canvas and context
     Module.set_canvas(canvas_id);
@@ -1272,6 +1277,39 @@ gr_panzoom = function(x, y, zoom, xmin, xmax, ymin, ymax) {
     freearray(__xmax);
     freearray(__ymin);
     freearray(__ymax);
+    return result;
+};
+
+gr_path_c = Module.cwrap('gr_path', '', ['number', 'number', 'number', 'number', ]);
+gr_path = function(n, x, y, codes) {
+    _x = floatarray(x);
+    _y = floatarray(y);
+    _codes = uint8array(codes);
+    gr_path_c(n, _x, _y, _codes);
+    freearray(_x);
+    freearray(_y);
+    freearray(_codes);
+};
+
+gr_setborderwidth = Module.cwrap('gr_setborderwidth', '', ['number', ]);
+
+gr_inqborderwidth_c = Module.cwrap('gr_inqborderwidth', '', ['number', ]);
+gr_inqborderwidth = function() {
+    var _width = Module._malloc(8);
+    gr_inqborderwidth_c(_width);
+    result = Module.HEAPF64.subarray(_width / 8, _width / 8 + 1)[0];
+    freearray(_width);
+    return result;
+};
+
+gr_setbordercolorind = Module.cwrap('gr_setbordercolorind', '', ['number', ]);
+
+gr_inqbordercolorind_c = Module.cwrap('gr_inqbordercolorind', '', ['number', ]);
+gr_inqbordercolorind = function() {
+    var _coli = Module._malloc(4);
+    gr_inqbordercolorind_c(_coli);
+    result = Module.HEAP32.subarray(_coli / 4, _coli / 4 + 1)[0];
+    freearray(_coli);
     return result;
 };
 
