@@ -1,3 +1,12 @@
+/*
+ * This code is derived from matplotlib's mathtext module.
+ *
+ * The code was rewritten in C and yacc, adapted to the GR framework's text and path rendering, and modified so that
+ * its results resemble those of the previous gr_mathtex implementation which uses LaTeX directly.
+ *
+ * The original mathtext module can be found at:
+ * https://github.com/matplotlib/matplotlib/blob/baaec371364deac71de24d8f564fb43f70db7297/lib/matplotlib/mathtext.py
+ */
 
 static const char *spaced_symbols[] = {":",
                                        "<",
