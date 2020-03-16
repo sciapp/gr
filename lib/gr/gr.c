@@ -3599,7 +3599,7 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
 /*!
  * Set the projection type with this flag.
  *
- * \param flag projection type
+ * \param[in] flag projection type
  *
  * The available options are:
  *
@@ -3610,8 +3610,11 @@ int gr_setspace(double zmin, double zmax, int rotation, int tilt)
  * +---------------------------+---+--------------+
  * |GR_PROJECTION_ORTHOGRAPHIC |  1|orthographic  |
  * +---------------------------+---+--------------+
- * |GR_PROJECTION_PERSPECTIVE  |  2|perspective    |
+ * |GR_PROJECTION_PERSPECTIVE  |  2|perspective   |
  * +---------------------------+---+--------------+
+ *
+ * \endverbatim
+ *
  */
 void gr_setprojectiontype(int flag)
 {
