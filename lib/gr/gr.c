@@ -946,9 +946,7 @@ static void apply_world_xform(double *x, double *y, double *z)
   else
     {
       double fov = gpx.fov * M_PI / 180; /* camera angle of perspektiv projection */
-      double width = fabs(gpx.right - gpx.left);
-      double height = fabs(gpx.top - gpx.bottom);
-      double aspect = width / height;
+      double aspect = (ix.xmax - ix.xmin) / (ix.ymax - ix.ymin);
       double F[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
                      tx.focus_point_z - tx.camera_pos_z}; /* direction between camera and focus point */
       double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
@@ -3815,6 +3813,7 @@ void gr_setorthographicprojection(double left, double right, double bottom, doub
                    "far_plane=\"%g\"/>\n",
                    left, right, bottom, top, near_plane, far_plane);
 }
+
 /*!
  * Return the camera position, up vector and focus point.
  */
@@ -6933,8 +6932,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   z = (double *)xmalloc(nx * ny * sizeof(double));
 
   flip_x = OPTION_FLIP_X & lx.scale_options;
-  if (tx.camera_pos_x > 0 &&
-      (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC))
+  if ((gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC) &&
+      tx.camera_pos_x < tx.focus_point_x)
     {
       flip_x = 1;
     }
@@ -6942,8 +6941,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   for (i = 0; i < nx; i++) x[i] = x_lin(px[flip_x ? nx - 1 - i : i]);
 
   flip_y = OPTION_FLIP_Y & lx.scale_options;
-  if (tx.camera_pos_y > 0 &&
-      (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC))
+  if ((gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC) &&
+      tx.camera_pos_y > tx.focus_point_y)
     {
       flip_y = 1;
     }
@@ -6981,9 +6980,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   flip_z = OPTION_FLIP_Z & lx.scale_options;
   gks_set_pline_linetype(flip_z ? GKS_K_LINETYPE_DOTTED : GKS_K_LINETYPE_SOLID);
-
-  if (tx.camera_pos_z >= 0 &&
-      (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC))
+  if ((gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC) &&
+      tx.camera_pos_z < tx.focus_point_z)
     {
       flip_z = 1;
     }
@@ -10828,35 +10826,87 @@ void gr_path(int n, double *x, double *y, const char *codes)
   gks_gdp(n, x, y, GKS_K_GDP_DRAW_PATH, len, code);
 }
 
+/*!
+ * Returns the position on side of the hyperboloid or trackball
+ */
 static void gr_trackballposition(const double *mouse, double r, double *erg)
 {
   double x, y, z;
+  double fx, fy, fz, f_length;
 
   x = mouse[0];
   y = mouse[1];
 
-  if (sqrt(mouse[0] * mouse[0] + mouse[1] * mouse[1]) <= r / sqrt(2))
+  /* reverse projection */
+  if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
-      z = sqrt(r * r - (mouse[0] * mouse[0] + mouse[1] * mouse[1]));
+      x = (gpx.right - gpx.left) * (x + 1) * 0.5 + gpx.left;
+      y = (gpx.bottom - gpx.top) * (y + 1) * 0.5 + gpx.top;
+
+      if (x * x + y * y <= r * r / sqrt(2))
+        {
+          /* sphere */
+          z = sqrt(r * r - (x * x + y * y));
+        }
+      else
+        {
+          /* hyperboloid */
+          z = r * r / (2 * sqrt(x * x + y * y));
+        }
     }
   else
     {
-      z = r * r / (2 * sqrt(mouse[0] * mouse[0] + mouse[1] * mouse[1]));
+      /* point on z_near */
+      double opposite_catheter = tan(gpx.fov / 2);
+      double factor_x = x * opposite_catheter * (ix.xmax - ix.xmin) / (ix.ymax - ix.ymin);
+      double factor_y = y * opposite_catheter;
+      double d[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
+                     tx.focus_point_z - tx.camera_pos_z};
+      /* distance to the focuspoint as offset for the calculated z */
+      double distance = sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+
+      z = (distance - sqrt(-distance * distance * (factor_x * factor_x + factor_y * factor_y) +
+                           r * r * (factor_x * factor_x + factor_y * factor_y + 1))) /
+          (factor_x * factor_x + factor_y * factor_y + 1);
+      x = factor_x * z;
+      y = -factor_y * z;
+
+      if (x * x + y * y > r * r / sqrt(2))
+        {
+          /* position wasnt onside the trackball */
+          z = distance / 2 -
+              sqrt(distance * distance / 4 + r * r / (2 * sqrt(factor_x * factor_x + factor_y * factor_y)));
+          x = factor_x * z;
+          y = factor_y * z;
+        }
     }
 
-  erg[0] = x * tx.s_x + y * tx.up_x + z * (tx.camera_pos_x) - tx.focus_point_x;
-  erg[1] = x * tx.s_y + y * tx.up_y + z * (tx.camera_pos_y) - tx.focus_point_y;
-  erg[2] = x * tx.s_z + y * tx.up_z + z * (tx.camera_pos_z) - tx.focus_point_z;
+  /* calculate and normalize the forward direction */
+  fx = tx.focus_point_x - tx.camera_pos_x;
+  fy = tx.focus_point_y - tx.camera_pos_y;
+  fz = tx.focus_point_z - tx.camera_pos_z;
+  f_length = sqrt(fx * fx + fy * fy + fz * fz);
+  fx /= f_length;
+  fy /= f_length;
+  fz /= f_length;
+
+  /* transform the point into the camera system */
+  erg[0] = x * tx.s_x + y * tx.up_x + z * fx;
+  erg[1] = x * tx.s_y + y * tx.up_y + z * fy;
+  erg[2] = x * tx.s_z + y * tx.up_z + z * fz;
 }
 
+/*!
+ * Returns the radius of the minimum bounding sphere
+ */
 static void gr_calculateradius(double *radius)
 {
   int i;
   double max = 0;
   double left = pow(ix.xmin - tx.focus_point_x, 2);
   double right = pow(ix.xmax - tx.focus_point_x, 2);
-  double top = pow(ix.ymin - tx.focus_point_y, 2);
-  double bottom = pow(ix.ymax - tx.focus_point_y, 2);
+  double bottom = pow(ix.ymin - tx.focus_point_y, 2);
+  double top = pow(ix.ymax - tx.focus_point_y, 2);
   double z_far = pow(ix.zmin - tx.focus_point_z, 2);
   double z_near = pow(ix.zmax - tx.focus_point_z, 2);
 
@@ -10883,43 +10933,6 @@ static void gr_calculateradius(double *radius)
   *radius = max;
 }
 
-static void gr_quaternionen(double *start, double *end, double *q)
-{
-  int i;
-  double n[3]; /* rotation axes */
-
-  double start_norm = sqrt(start[0] * start[0] + start[1] * start[1] + start[2] * start[2]);
-  double end_norm = sqrt(end[0] * end[0] + end[1] * end[1] + end[2] * end[2]);
-  double norm_n = 0;
-
-  for (i = 0; i < 3; i++)
-    {
-      /* normalize start and end */
-      start[i] /= start_norm;
-      end[i] /= end_norm;
-    }
-
-  for (i = 0; i < 3; i++)
-    {
-      /* start cross end */
-      n[i] = start[(i + 1) % 3] * end[(i + 2) % 3] - end[(i + 1) % 3] * start[(i + 2) % 3];
-      norm_n += n[i] * n[i];
-    }
-
-  /* rotation angle */
-  double alpha = atan(sqrt(norm_n) / (start[0] * end[0] + start[1] * end[1] + start[2] * end[2]));
-
-  /* normalize rotation axes */
-  n[0] /= sqrt(norm_n);
-  n[1] /= sqrt(norm_n);
-  n[2] /= sqrt(norm_n);
-
-  /* quaternionen */
-  q[0] = cos(alpha / 2);
-  q[1] = sin(alpha / 2) * n[0];
-  q[2] = sin(alpha / 2) * n[1];
-  q[3] = sin(alpha / 2) * n[2];
-}
 /*!
  * Interface for interaction with the rotation of the model. For this a virtual Arcball is used.
  *
@@ -10933,16 +10946,17 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
 {
   check_autoinit;
 
+  /* check if there is any mouse movement */
   if (start_mouse_pos_x != end_mouse_pos_x || start_mouse_pos_y != end_mouse_pos_y)
     {
       double start[3], end[3];
-      double q[4];
       double radius, camera_distance;
-      double wn[4], vp[4];
-      int errind, tnr;
-
-      gks_inq_current_xformno(&errind, &tnr);
-      gks_inq_xform(tnr, &errind, wn, vp);
+      double start_length, end_length;
+      double cos_angle, c, s;
+      double axis_x, axis_y, axis_z, axis_length;
+      double fx, fy, fz, f_length;
+      double axis_projection_forward;
+      double cam_x, cam_y, cam_z, up_x, up_y, up_z, sx, sy, sz;
 
       gr_calculateradius(&radius);
 
@@ -10954,53 +10968,82 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
         }
 
       /* transform mouseposition onto [-1, 1] */
-      double mouse_start[3] = {fabs(wn[0]) * (start_mouse_pos_x * 2 - 1),
-                               fabs(wn[2]) * (2 * (1 - start_mouse_pos_y) - 1), 0};
-      double mouse_end[3] = {fabs(wn[0]) * (end_mouse_pos_x * 2 - 1), fabs(wn[2]) * (2 * (1 - end_mouse_pos_y) - 1), 0};
+      double mouse_start[3] = {(start_mouse_pos_x * 2 - 1), (2 * start_mouse_pos_y - 1), 0};
+      double mouse_end[3] = {(end_mouse_pos_x * 2 - 1), (2 * end_mouse_pos_y - 1), 0};
 
-      gr_trackballposition(mouse_start, radius, start);
-      gr_trackballposition(mouse_end, radius, end);
+      /* get the trackball positions of the start and end mouseposition */
+      gr_trackballposition(mouse_start, camera_distance, start);
+      gr_trackballposition(mouse_end, camera_distance, end);
 
-      gr_quaternionen(start, end, q);
+      /* calculate the rotation axis and the angle of the rotation */
+      start_length = sqrt(start[0] * start[0] + start[1] * start[1] + start[2] * start[2]);
+      end_length = sqrt(end[0] * end[0] + end[1] * end[1] + end[2] * end[2]);
+      cos_angle = (start[0] * end[0] + start[1] * end[1] + start[2] * end[2]) / start_length / end_length;
+      axis_x = start[1] * end[2] - end[1] * start[2];
+      axis_y = start[2] * end[0] - end[2] * start[0];
+      axis_z = start[0] * end[1] - end[0] * start[1];
 
-      /* rotation matrix */
-      double rotation_mat[9] = {q[1] * q[1] + q[0] * q[0] - q[2] * q[2] - q[3] * q[3],
-                                2 * (q[1] * q[2] - q[0] * q[3]),
-                                2 * (q[1] * q[3] + q[0] * q[2]),
-                                2 * (q[0] * q[3] + q[1] * q[2]),
-                                q[0] * q[0] - q[1] * q[1] + q[2] * q[2] - q[3] * q[3],
-                                2 * (q[2] * q[3] - q[0] * q[1]),
-                                2 * (q[1] * q[3] - q[0] * q[2]),
-                                2 * (q[0] * q[1] + q[2] * q[3]),
-                                q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]};
+      if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+        {
+          /* calculate and normalize the forward direction */
+          fx = tx.focus_point_x - tx.camera_pos_x;
+          fy = tx.focus_point_y - tx.camera_pos_y;
+          fz = tx.focus_point_z - tx.camera_pos_z;
+          f_length = sqrt(fx * fx + fy * fy + fz * fz);
+          fx /= f_length;
+          fy /= f_length;
+          fz /= f_length;
+
+          /* reverse the rotation axis around the forward axis */
+          axis_projection_forward = axis_x * fx + axis_y * fy + axis_z * fz;
+          axis_x -= fx * axis_projection_forward * 2;
+          axis_y -= fy * axis_projection_forward * 2;
+          axis_z -= fz * axis_projection_forward * 2;
+        }
+      axis_length = sqrt(axis_x * axis_x + axis_y * axis_y + axis_z * axis_z);
+      axis_x /= axis_length;
+      axis_y /= axis_length;
+      axis_z /= axis_length;
+
+      /* shorter names for sin and cos to reduce the size of the matrix */
+      c = cos_angle;
+      s = sqrt(1 - c * c);
+
+      double rotation_mat[9] = {axis_x * axis_x * (1 - c) + c,          axis_x * axis_y * (1 - c) - axis_z * s,
+                                axis_x * axis_z * (1 - c) + axis_y * s, axis_y * axis_x * (1 - c) + axis_z * s,
+                                axis_y * axis_y * (1 - c) + c,          axis_y * axis_z * (1 - c) - axis_x * s,
+                                axis_z * axis_x * (1 - c) - axis_y * s, axis_z * axis_y * (1 - c) + axis_x * s,
+                                axis_z * axis_z * (1 - c) + c};
 
       /* rotate camera position */
-      double cam_x =
-          tx.camera_pos_x * rotation_mat[0] + tx.camera_pos_y * rotation_mat[1] + tx.camera_pos_z * rotation_mat[2];
-      double cam_y =
-          tx.camera_pos_x * rotation_mat[3] + tx.camera_pos_y * rotation_mat[4] + tx.camera_pos_z * rotation_mat[5];
-      double cam_z =
-          tx.camera_pos_x * rotation_mat[6] + tx.camera_pos_y * rotation_mat[7] + tx.camera_pos_z * rotation_mat[8];
+      cam_x = (tx.camera_pos_x - tx.focus_point_x) * rotation_mat[0] +
+              (tx.camera_pos_y - tx.focus_point_y) * rotation_mat[1] +
+              (tx.camera_pos_z - tx.focus_point_z) * rotation_mat[2] + tx.focus_point_x;
+      cam_y = (tx.camera_pos_x - tx.focus_point_x) * rotation_mat[3] +
+              (tx.camera_pos_y - tx.focus_point_y) * rotation_mat[4] +
+              (tx.camera_pos_z - tx.focus_point_z) * rotation_mat[5] + tx.focus_point_y;
+      cam_z = (tx.camera_pos_x - tx.focus_point_x) * rotation_mat[6] +
+              (tx.camera_pos_y - tx.focus_point_y) * rotation_mat[7] +
+              (tx.camera_pos_z - tx.focus_point_z) * rotation_mat[8] + tx.focus_point_z;
 
       /* rotate up and right camera axes */
-      double up_x = tx.up_x * rotation_mat[0] + tx.up_y * rotation_mat[1] + tx.up_z * rotation_mat[2];
-      double up_y = tx.up_x * rotation_mat[3] + tx.up_y * rotation_mat[4] + tx.up_z * rotation_mat[5];
-      double up_z = tx.up_x * rotation_mat[6] + tx.up_y * rotation_mat[7] + tx.up_z * rotation_mat[8];
-      double s_x = tx.s_x * rotation_mat[0] + tx.s_y * rotation_mat[1] + tx.s_z * rotation_mat[2];
-      double s_y = tx.s_x * rotation_mat[3] + tx.s_y * rotation_mat[4] + tx.s_z * rotation_mat[5];
-      double s_z = tx.s_x * rotation_mat[6] + tx.s_y * rotation_mat[7] + tx.s_z * rotation_mat[8];
+      up_x = tx.up_x * rotation_mat[0] + tx.up_y * rotation_mat[1] + tx.up_z * rotation_mat[2];
+      up_y = tx.up_x * rotation_mat[3] + tx.up_y * rotation_mat[4] + tx.up_z * rotation_mat[5];
+      up_z = tx.up_x * rotation_mat[6] + tx.up_y * rotation_mat[7] + tx.up_z * rotation_mat[8];
+      sx = tx.s_x * rotation_mat[0] + tx.s_y * rotation_mat[1] + tx.s_z * rotation_mat[2];
+      sy = tx.s_x * rotation_mat[3] + tx.s_y * rotation_mat[4] + tx.s_z * rotation_mat[5];
+      sz = tx.s_x * rotation_mat[6] + tx.s_y * rotation_mat[7] + tx.s_z * rotation_mat[8];
 
-      double cam_norm = sqrt(cam_x * cam_x + cam_y * cam_y + cam_z * cam_z);
-
-      tx.camera_pos_x = cam_x / cam_norm * camera_distance;
-      tx.camera_pos_y = cam_y / cam_norm * camera_distance;
-      tx.camera_pos_z = cam_z / cam_norm * camera_distance;
+      /* save the new calculated values for the transformation */
+      tx.camera_pos_x = cam_x;
+      tx.camera_pos_y = cam_y;
+      tx.camera_pos_z = cam_z;
       tx.up_x = up_x;
       tx.up_y = up_y;
       tx.up_z = up_z;
-      tx.s_x = s_x;
-      tx.s_y = s_y;
-      tx.s_z = s_z;
+      tx.s_x = sx;
+      tx.s_y = sy;
+      tx.s_z = sz;
     }
 
   if (flag_graphics)
@@ -11050,7 +11093,7 @@ void gr_setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axi
 
   if (x_axis_scale == 0 || y_axis_scale == 0 || z_axis_scale == 0)
     {
-      fprintf(stderr, "Invalid scale factor. Please check your parameters again.");
+      fprintf(stderr, "Invalid scale factor. Please check your parameters again.\n");
       return;
     }
 
@@ -11123,60 +11166,64 @@ void gr_inqbordercolorind(int *coli)
 
 /*!
  * This is an interface for REPL based languages to enable an easier way to rotate around an object.
- * It can also be used, if the user prefers angles instead of the direct camera position, but just
- * to mention, the sideeffect is that the functionality gets reduced.
  *
- * \param phi phi angle of the spherical coordinates
- * \param theta theta angle of the spherical coordinates
- * \param fov vertical field of view
- * \param radius camera distance to the focus middle point of the drawn objekt
+ * The center of the 3d window is used as the focus point and the camera is positioned relative to it, using spherical
+ * coordinates. This function can therefore also be used if the user prefers spherical coordinates to setting the direct
+ * camera position, but with reduced functionality in comparison to gr.settransformationparameters,
+ * gr.setperspectiveprojection and gr.setorthographicprojection.
  *
- * fov = 0 or fov = nan means orthographic projection
- * radius = 0 or radius = nan uses the ball radius for the camera distance
+ * \param phi azimuthal angle of the spherical coordinates
+ * \param theta polar angle of the spherical coordinates
+ * \param fov vertical field of view(0 or NaN for orthographic projection)
+ * \param camera_distance distance between the camera and the focus point (0 or NaN for the radius of the object's
+ * smallest bounding sphere)
+ *
+ * This function requires GR runtime version 0.48 or higher.
  */
-void gr_transformationinterfaceforrepl(double phi, double theta, double fov, double radius)
+void gr_transformationinterfaceforrepl(double phi, double theta, double fov, double camera_distance)
 {
   double x_len, y_len, z_len, max_axis_length;
-  double camera_distance;
+  double calculated_cam_distance;
 
   tx.focus_point_x = (ix.xmax + ix.xmin) / 2;
   tx.focus_point_y = (ix.ymin + ix.ymax) / 2;
   tx.focus_point_z = (ix.zmax + ix.zmin) / 2;
 
   /* calculate the ball radius if necessary */
-  if (radius == 0 || radius != radius)
+  if (camera_distance == 0 || camera_distance != camera_distance)
     {
-      gr_calculateradius(&radius);
+      gr_calculateradius(&camera_distance);
     }
 
-  camera_distance = radius;
+  calculated_cam_distance = camera_distance;
 
   if (fov != fov || fov == 0)
     {
-      gr_setorthographicprojection(-radius, radius, -radius, radius, -radius * 2, radius * 2);
+      gr_setorthographicprojection(-camera_distance, camera_distance, -camera_distance, camera_distance,
+                                   -camera_distance * 2, camera_distance * 2);
     }
   else
     {
       /* the ball radius is necessary for the clipping planes */
-      gr_calculateradius(&radius);
-      camera_distance = fabs(camera_distance / sin((fov * M_PI / 180) / 2));
-      if (camera_distance < 0.1)
+      gr_calculateradius(&camera_distance);
+      calculated_cam_distance = fabs(calculated_cam_distance / sin((fov * M_PI / 180) / 2));
+      if (calculated_cam_distance < 0.1)
         {
-          gr_setperspectiveprojection(camera_distance, camera_distance + 2 * radius, fov);
+          gr_setperspectiveprojection(calculated_cam_distance, calculated_cam_distance + 2 * camera_distance, fov);
         }
       else
         {
-          gr_setperspectiveprojection(0.1, camera_distance + radius * 2, fov);
+          gr_setperspectiveprojection(0.1, calculated_cam_distance + camera_distance * 2, fov);
         }
     }
 
 
-  gr_settransformationparameters(camera_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x,
-                                 camera_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y,
-                                 camera_distance * cos(theta * M_PI / 180) + tx.focus_point_z,
-                                 -cos(phi * M_PI / 180) * cos(theta * M_PI / 180),
-                                 -sin(phi * M_PI / 180) * cos(theta * M_PI / 180), sin(theta * M_PI / 180),
-                                 tx.focus_point_x, tx.focus_point_y, tx.focus_point_z);
+  gr_settransformationparameters(
+      calculated_cam_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x,
+      calculated_cam_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y,
+      calculated_cam_distance * cos(theta * M_PI / 180) + tx.focus_point_z,
+      -cos(phi * M_PI / 180) * cos(theta * M_PI / 180), -sin(phi * M_PI / 180) * cos(theta * M_PI / 180),
+      sin(theta * M_PI / 180), tx.focus_point_x, tx.focus_point_y, tx.focus_point_z);
 
   x_len = fabs(ix.xmin) + fabs(ix.xmax);
   y_len = fabs(ix.ymin) + fabs(ix.ymax);
