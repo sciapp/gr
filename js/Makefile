@@ -20,9 +20,7 @@ OPTS = \
 		-s ALLOW_TABLE_GROWTH=1 \
 		--no-heap-copy
 ifndef DEBUG
-    OPTS += -O1
-		# TODO: replace with -O2 or -O3
-		# The optimizer detects a variable wrong (emcc version 1.39.8)
+    OPTS += -O3
 else
     OPTS += -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2
 endif
