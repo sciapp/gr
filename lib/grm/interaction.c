@@ -5,10 +5,13 @@
 /* ######################### includes ############################################################################### */
 
 #include <math.h>
+#include <float.h>
+#include <limits.h>
 
 #include "args_int.h"
 #include "interaction_int.h"
 #include "plot_int.h"
+#include "gr.h"
 
 
 /* ######################### public implementation ################################################################## */
@@ -186,4 +189,113 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   *y = (int)round(height - ((viewport_mid_y + focus_y) - ((viewport_mid_y + focus_y) - viewport[3]) * factor_y) *
                                max_width_height);
   return 1;
+}
+
+grm_hoverbox_info_t *grm_get_hoverbox(const int mouse_x, const int mouse_y)
+{
+  grm_hoverbox_info_t *info = malloc(sizeof(grm_hoverbox_info_t));
+  double *x_series, *y_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
+  double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
+  int width, height, max_width_height;
+  unsigned int num_labels = 0;
+  char *kind, **labels;
+  grm_args_t *subplot_args, **current_series;
+  unsigned int x_length, y_length, series_i = 0, i;
+
+  get_figure_size(NULL, &width, &height, NULL, NULL);
+  max_width_height = max(width, height);
+  x = (double)mouse_x / max_width_height;
+  y = (double)(height - mouse_y) / max_width_height;
+
+  subplot_args = get_subplot_from_ndc_points(1, &x, &y);
+  if (subplot_args != NULL)
+    {
+      args_values(subplot_args, "kind", "s", &kind);
+    }
+  if (subplot_args == NULL || !str_equals_any(kind, 4, "line", "scatter", "stem", "step"))
+    {
+      info->x_px = -1;
+      info->y_px = -1;
+      info->x = 0;
+      info->y = 0;
+      info->xlabel = "x";
+      info->ylabel = "y";
+      info->label = "";
+      return info;
+    }
+  plot_process_viewport(subplot_args);
+  plot_process_window(subplot_args);
+
+  gr_ndctowc(&x, &y);
+  if (!args_values(subplot_args, "xlabel", "s", &info->xlabel))
+    {
+      info->xlabel = "x";
+    }
+  if (!args_values(subplot_args, "ylabel", "s", &info->ylabel))
+    {
+      info->ylabel = "y";
+    }
+
+  x_range_min = (double)(mouse_x - 50) / max_width_height;
+  x_range_max = (double)(mouse_x + 50) / max_width_height;
+  y_range_min = (double)(height - (mouse_y + 50)) / max_width_height;
+  y_range_max = (double)(height - (mouse_y - 50)) / max_width_height;
+  gr_ndctowc(&x_range_min, &y_range_min);
+  gr_ndctowc(&x_range_max, &y_range_max);
+
+  args_values(subplot_args, "series", "A", &current_series);
+  args_values(subplot_args, "xrange", "dd", &x_min, &x_max);
+  args_values(subplot_args, "yrange", "dd", &y_min, &y_max);
+
+  x_range_min = (x_min > x_range_min) ? x_min : x_range_min;
+  y_range_min = (y_min > y_range_min) ? y_min : y_range_min;
+  x_range_max = (x_max < x_range_max) ? x_max : x_range_max;
+  y_range_max = (y_max < y_range_max) ? y_max : y_range_max;
+  args_first_value(subplot_args, "labels", "S", &labels, &num_labels);
+  while (*current_series != NULL)
+    {
+      args_first_value(*current_series, "x", "D", &x_series, &x_length);
+      args_first_value(*current_series, "y", "D", &y_series, &y_length);
+      for (i = 0; i < x_length; i++)
+        {
+          if (x_series[i] < x_range_min || x_series[i] > x_range_max || y_series[i] < y_range_min ||
+              y_series[i] > y_range_max)
+            {
+              continue;
+            }
+          x_px = x_series[i];
+          y_px = y_series[i];
+          gr_wctondc(&x_px, &y_px);
+          x_px = (x_px * max_width_height);
+          y_px = (height - y_px * max_width_height);
+          diff = sqrt((x_px - mouse_x) * (x_px - mouse_x) + (y_px - mouse_y) * (y_px - mouse_y));
+          if (diff < mindiff && diff <= 50)
+            {
+              mindiff = diff;
+              info->x = x_series[i];
+              info->y = y_series[i];
+              info->x_px = (int)x_px;
+              info->y_px = (int)y_px;
+              if (num_labels > series_i)
+                {
+                  info->label = labels[series_i];
+                }
+              else
+                {
+                  info->label = "";
+                }
+            }
+        }
+      ++series_i;
+      ++current_series;
+    }
+  if (mindiff == DBL_MAX)
+    {
+      info->x_px = -1;
+      info->y_px = -1;
+      info->x = 0;
+      info->y = 0;
+      info->label = "";
+    }
+  return info;
 }
