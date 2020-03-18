@@ -13,6 +13,7 @@
 #include "event_int.h"
 #include "gks.h"
 #include "gr.h"
+#include "gr3.h"
 #include "logging_int.h"
 #include "plot_int.h"
 
@@ -52,6 +53,9 @@ DECLARE_MAP_TYPE(args_set, args_set_t *)
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef isfinite
+#define isfinite(x) ((x) - (x) == (x) - (x))
+#endif
 
 /* ========================= methods ================================================================================ */
 
@@ -108,7 +112,6 @@ event_queue_t *event_queue = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-/* TODO: Check format of: "hist", "isosurface"  */
 static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},      {"hexbin", "xys"},
                                            {"polar", "xys"},     {"shade", "xys"},
                                            {"stem", "xys"},      {"step", "xys"},
@@ -117,9 +120,9 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},      {"hexbin", "xys
                                            {"surface", "xyzc"},  {"wireframe", "xyzc"},
                                            {"plot3", "xyzc"},    {"scatter", "xyzc"},
                                            {"scatter3", "xyzc"}, {"quiver", "xyuv"},
-                                           {"heatmap", "xyzc"},  {"hist", "x"},
-                                           {"barplot", "xy"},    {"isosurface", "x"},
-                                           {"imshow", "c"},       {"nonuniformheatmap", "xyzc"}};
+                                           {"heatmap", "xyzc"},  {"hist", "xy"},
+                                           {"barplot", "xy"},    {"isosurface", "c"},
+                                           {"imshow", "c"},      {"nonuniformheatmap", "xyzc"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -192,7 +195,9 @@ const char *valid_subplot_keys[] = {"adjust_xlim",  "adjust_ylim",
                                     "ylog",         "zflip",
                                     "zlim",         "zlog",
                                     "clim",         NULL};
-const char *valid_series_keys[] = {"a", "c", "c_rows", "markertype", "s", "spec", "step_where", "u", "v", "x", "y", "z", NULL};
+const char *valid_series_keys[] = {
+    "a", "c", "c_dims", "foreground_color", "isovalue", "markertype", "s", "spec", "step_where", "u", "v", "x",
+    "y", "z", NULL};
 
 /* ========================= functions ============================================================================== */
 
@@ -770,23 +775,16 @@ void plot_pre_subplot(grm_args_t *subplot_args)
 
   args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-  if (str_equals_any(kind, 1, "isosurface"))
+  plot_process_viewport(subplot_args);
+  plot_store_coordinate_ranges(subplot_args);
+  plot_process_window(subplot_args);
+  if (str_equals_any(kind, 1, "polar"))
     {
-      plot_process_viewport(subplot_args);
+      plot_draw_polar_axes(subplot_args);
     }
   else
     {
-      plot_process_viewport(subplot_args);
-      plot_store_coordinate_ranges(subplot_args);
-      plot_process_window(subplot_args);
-      if (str_equals_any(kind, 1, "polar"))
-        {
-          plot_draw_polar_axes(subplot_args);
-        }
-      else
-        {
-          plot_draw_axes(subplot_args, 1);
-        }
+      plot_draw_axes(subplot_args, 1);
     }
 
   plot_process_colormap(subplot_args);
@@ -2219,8 +2217,9 @@ error_t plot_imshow(grm_args_t *subplot_args)
   double *c_data;
   double c_min, c_max;
   double *viewport, *vp;
-  unsigned int cols, rows, c_data_length, i;
+  unsigned int c_data_length, i, rows, cols;
   int *real_data;
+  unsigned int *shape;
 
   double x_min, x_max, y_min, y_max, w, h;
   error_t error;
@@ -2232,33 +2231,42 @@ error_t plot_imshow(grm_args_t *subplot_args)
   while (*current_series != NULL)
     {
       return_error_if(!args_first_value(*current_series, "c", "D", &c_data, &c_data_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!args_values(*current_series, "c_rows", "i", &rows), ERROR_PLOT_MISSING_DATA);
-
-      if (rows <= 0 || c_data_length % rows != 0) {
-        return ERROR_PLOT_COMPONENT_LENGTH_MISMATCH;
-      }
-
-      cols = c_data_length / rows;
+      return_error_if(!args_first_value(*current_series, "c_dims", "I", &shape, &i), ERROR_PLOT_MISSING_DATA);
+      return_error_if(i != 2, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      return_error_if(shape[0] * shape[1] != c_data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      rows = shape[0];
+      cols = shape[1];
 
       real_data = malloc(sizeof(int) * c_data_length);
-      logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
-      for (i = 0; i < c_data_length; ++i) {
-        real_data[i] = 1000 + (int)round((1.0 * c_data[i] - c_min) / (c_max - c_min) * 255);
-      }
+      if (real_data == NULL)
+        {
+          debug_print_malloc_error();
+          free(real_data);
+          return ERROR_MALLOC;
+        }
 
-      if (cols * (viewport[3] - viewport[2]) < rows * (viewport[1] - viewport[0])) {
-        w = (double)cols / (double)rows * (viewport[3] - viewport[2]);
-        x_min = max(0.5 * (viewport[0] + viewport[1] - w), viewport[0]);
-        x_max = min(0.5 * (viewport[0] + viewport[1] + w), viewport[1]);
-        y_min = viewport[2];
-        y_max = viewport[3];
-      } else {
-        h = (double)rows / (double)cols * (viewport[1] - viewport[0]);
-        x_min = viewport[0];
-        x_max = viewport[1];
-        y_min = max(0.5 * (viewport[3] + viewport[2] - h), viewport[2]);
-        y_max = min(0.5 * (viewport[3] + viewport[2] + h), viewport[3]);
-      }
+      logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
+      for (i = 0; i < c_data_length; ++i)
+        {
+          real_data[i] = 1000 + (int)round((1.0 * c_data[i] - c_min) / (c_max - c_min) * 255);
+        }
+
+      if (cols * (viewport[3] - viewport[2]) < rows * (viewport[1] - viewport[0]))
+        {
+          w = (double)cols / (double)rows * (viewport[3] - viewport[2]);
+          x_min = max(0.5 * (viewport[0] + viewport[1] - w), viewport[0]);
+          x_max = min(0.5 * (viewport[0] + viewport[1] + w), viewport[1]);
+          y_min = viewport[2];
+          y_max = viewport[3];
+        }
+      else
+        {
+          h = (double)rows / (double)cols * (viewport[1] - viewport[0]);
+          x_min = viewport[0];
+          x_max = viewport[1];
+          y_min = max(0.5 * (viewport[3] + viewport[2] - h), viewport[2]);
+          y_max = min(0.5 * (viewport[3] + viewport[2] + h), viewport[3]);
+        }
 
       gr_selntran(0);
       gr_cellarray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, real_data);
@@ -2270,25 +2278,216 @@ error_t plot_imshow(grm_args_t *subplot_args)
       ++current_series;
     }
 
-  if ((error = plot_draw_colorbar(subplot_args, 0.00, 256)) != NO_ERROR) {
-    return error;
-  }
+  if ((error = plot_draw_colorbar(subplot_args, 0.00, 256)) != NO_ERROR)
+    {
+      return error;
+    }
 
   return NO_ERROR;
 }
 
+/*
+ * Checks if the GR3_MC_DTYPE macro is set to unsigned short, as we only support this dtype in plot_isosurface.
+ */
+void gr3_mc_dtype_test_(void)
+{
+  GR3_MC_DTYPE v;
+  switch (0)
+    {
+    case ((sizeof(GR3_MC_DTYPE) == 2) && (((GR3_MC_DTYPE)-1) > 0)):
+    case 0:
+      break;
+    }
+}
+
 error_t plot_isosurface(grm_args_t *subplot_args)
 {
+  /*
+   * Possible arguments to pass:
+   * double[] `c` with the isodata to be drawn
+   * int[3] `c_dims` shape of the c-array
+   * optional double `isovalue` of the surface. All values higher or equal to isovalue are seen as inside the object,
+   * all values below the isovalue are seen as outside the object.
+   * optional double `rotation` in degrees
+   * optional double `tilt` of the camera in degrees
+   * optional double[3] `foreground_color`: color of the surface
+   */
   grm_args_t **current_series;
+  double *orig_data, *viewport, *temp_colors;
+  unsigned int i, data_length, dims;
+  unsigned int *shape;
+  double c_min, c_max, isovalue, width, height, center_x, center_y, x_min, x_max, y_min, y_max, rotation, tilt;
+  float foreground_colors[3], positions[3], directions[3], ups[3], scales[3];
+  float r;
+
+  unsigned short isovalue_int, *conv_data;
+
+  int mesh; /* The mesh id of the drawn surface */
+  int error;
 
   args_values(subplot_args, "series", "A", &current_series);
+  return_error_if(!args_values(subplot_args, "viewport", "D", &viewport), ERROR_PLOT_MISSING_DATA);
+
+  /* subpplot params */
+  rotation = 40;
+  tilt = 70;
+
+  args_values(subplot_args, "rotation", "d", &rotation);
+  args_values(subplot_args, "tilt", "d", &tilt);
+
+  /* Convert to radians */
+  tilt = fmod(tilt, 360.0) / 180.0 * M_PI;
+  rotation = fmod(rotation, 360.0) / 180.0 * M_PI;
+  logger((stderr, "tilt %lf rotation %lf\n", tilt, rotation));
+  /* Calculation of correct viewport */
+  if (viewport[3] - viewport[2] < viewport[1] - viewport[0])
+    {
+      width = viewport[3] - viewport[2];
+      center_x = 0.5 * (viewport[0] + viewport[1]);
+      x_min = max(center_x - 0.5 * width, viewport[0]);
+      x_max = min(center_x + 0.5 * width, viewport[1]);
+      y_min = viewport[2];
+      y_max = viewport[3];
+    }
+  else
+    {
+      height = viewport[1] - viewport[0];
+      center_y = 0.5 * (viewport[2] + viewport[3]);
+      x_min = viewport[0];
+      x_max = viewport[1];
+      y_min = max(center_y - 0.5 * height, viewport[2]);
+      y_max = min(center_y + 0.5 * height, viewport[3]);
+    }
+  logger((stderr, "Viewport: %lf %lf %lf %lf\n", x_min, x_max, y_min, y_max));
   while (*current_series != NULL)
     {
-      /* TODO: Implement me! */
+      return_error_if(!args_first_value(*current_series, "c", "D", &orig_data, &data_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "c_dims", "I", &shape, &dims), ERROR_PLOT_MISSING_DATA);
+      return_error_if(dims != 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      return_error_if(shape[0] * shape[1] * shape[2] != data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      return_error_if(data_length <= 0, ERROR_PLOT_MISSING_DATA);
+
+      /* Capture isovalue, rotation and tilt, also default values */
+      isovalue = 0.5;
+      foreground_colors[0] = 0.0;
+      foreground_colors[1] = 0.5;
+      foreground_colors[2] = 0.8;
+
+      args_values(*current_series, "isovalue", "d", &isovalue);
+      /* We need to convert the double values to floats, as the gr3_drawmesh expects floats, but an argument can only
+       * contain doubles. */
+      if (args_first_value(*current_series, "foreground_color", "D", &temp_colors, &i))
+        {
+          return_error_if(i != 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+          while (i-- > 0)
+            {
+              foreground_colors[i] = (float)temp_colors[i];
+            }
+        }
+      logger((stderr, "Colors; %f %f %f\n", foreground_colors[0], foreground_colors[1], foreground_colors[2]));
+
+      /* Check if even any value is finite in array, also calculation of real min and max */
+      c_min = c_max = *orig_data;
+      for (i = 0; i < data_length; ++i)
+        {
+          if (isfinite(orig_data[i]))
+            {
+              if (isnan(c_min) || c_min > orig_data[i])
+                {
+                  c_min = orig_data[i];
+                }
+              if (isnan(c_max) || c_max < orig_data[i])
+                {
+                  c_max = orig_data[i];
+                }
+            }
+        }
+      return_error_if(c_min == c_max || !isfinite(c_min) || !isfinite(c_max), ERROR_PLOT_MISSING_DATA);
+
+      /* Calculate isovalue in ushort, and translate the original data into ushorts */
+      isovalue_int = (unsigned short)((isovalue - c_min) / (c_max - c_min) * USHRT_MAX);
+
+      logger((stderr, "c_min %lf c_max %lf isovalue_int %hu\n ", c_min, c_max, isovalue_int));
+      conv_data = malloc(sizeof(unsigned short) * data_length);
+      if (conv_data == NULL)
+        {
+          debug_print_malloc_error();
+          free(conv_data);
+          return ERROR_MALLOC;
+        }
+
+      for (i = 0; i < data_length; ++i)
+        {
+          if (isnan(orig_data[i]) || orig_data[i] < c_min)
+            {
+              conv_data[i] = 0;
+            }
+          else if (orig_data[i] > c_max)
+            {
+              conv_data[i] = USHRT_MAX;
+            }
+          else
+            {
+              conv_data[i] = (unsigned short)((orig_data[i] - c_min) / (c_max - c_min) * USHRT_MAX);
+            }
+        }
+
+      gr_selntran(0);
+      gr3_clear();
+      error = gr3_createisosurfacemesh(&mesh, conv_data, isovalue_int,
+
+                                       /* dim_x */ shape[0],
+                                       /* dim_y */ shape[1],
+                                       /* dim_z */ shape[2],
+
+                                       /* stride_x */ shape[1] * shape[2],
+                                       /* stride_y */ shape[2],
+                                       /* stride_z */ 1,
+
+                                       /* step_x */ 2.f / (shape[0] - 1),
+                                       /* step_y */ 2.f / (shape[1] - 1),
+                                       /* step_z */ 2.f / (shape[2] - 1),
+
+                                       /* offset_x */ -1.f,
+                                       /* offset_y */ -1.f,
+                                       /* offset_z */ -1.f);
+      return_error_if(error == GR3_ERROR_OUT_OF_MEM, ERROR_MALLOC);
+      return_error_if(error != GR3_ERROR_NONE, ERROR_INTERNAL);
+
+      gr3_setbackgroundcolor(1.0f, 1.0f, 1.0f, 0.0f);
+
+      positions[0] = 0.0f;
+      positions[1] = 0.0f;
+      positions[2] = 0.0f;
+      directions[0] = 0.0f;
+      directions[1] = 0.0f;
+      directions[2] = 1.0f;
+      ups[0] = 0.0f;
+      ups[1] = 1.0f;
+      ups[2] = 0.0f;
+      scales[0] = 1.0f;
+      scales[1] = 1.0f;
+      scales[2] = 1.0f;
+      gr3_drawmesh(mesh, 1, positions, directions, ups, foreground_colors, scales);
+
+      r = 2.5;
+      ups[0] = 0.0f;
+      ups[1] = (tilt == 0 ? 0.0f : 1.0f);
+      ups[2] = (tilt == 0 ? 1.0f : 0.0f);
+
+      gr3_cameralookat((float)(r * sin(tilt) * sin(rotation)), (float)(r * cos(tilt)),
+                       (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0], ups[1], ups[2]);
+
+      logger((stderr, "gr3_drawimage returned %i\n",
+              gr3_drawimage(x_min, x_max, y_min, y_max, 500, 500, GR3_DRAWABLE_GKS)));
+      gr3_deletemesh(mesh);
+      gr_selntran(1);
+
+      free(conv_data);
       ++current_series;
     }
 
-  return ERROR_NOT_IMPLEMENTED;
+  return NO_ERROR;
 }
 
 error_t plot_polar(grm_args_t *subplot_args)
@@ -2491,7 +2690,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           gr_axes3d(0, y_tick, 0, x_org_high, y_org_low, z_org_low, 0, y_major_count, 0, ticksize);
         }
     }
-  else if (strcmp(kind, "imshow") != 0)
+  else if (!str_equals_any(kind, 2, "imshow", "isosurface"))
     {
       if (str_equals_any(kind, 3, "heatmap", "shade", "nonuniformheatmap"))
         {

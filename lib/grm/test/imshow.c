@@ -14,7 +14,7 @@
 #define ROWS 20
 #define COLS 40
 
-static void test_line(void)
+static void test_plot(void)
 {
   double plot[ROWS][COLS];
   int n = ROWS * COLS;
@@ -28,14 +28,15 @@ static void test_line(void)
     {
       for (j = 0; j < COLS; ++j)
         {
-          plot[i][j] = sin( 4.0 * i / ROWS - 2.0 ) + cos( M_PI * j / COLS );
+          plot[i][j] = sin(4.0 * i / ROWS - 2.0) + cos(M_PI * j / COLS);
         }
     }
 
   args = grm_args_new();
   grm_args_push(args, "kind", "s", "imshow");
+  grm_args_push(args, "title", "s", "imshow-test from c!");
   grm_args_push(args, "c", "nD", n, plot);
-  grm_args_push(args, "c_rows", "i", ROWS);
+  grm_args_push(args, "c_dims", "ii", ROWS, COLS);
   grm_args_push(args, "colormap", "i", 44);
 
   printf("plotting data...\n");
@@ -48,15 +49,10 @@ static void test_line(void)
   grm_args_delete(args);
 }
 
-static void test_plot(void)
-{
-  test_line();
-  grm_finalize();
-}
-
 int main(void)
 {
   test_plot();
+  grm_finalize();
 
   return 0;
 }
