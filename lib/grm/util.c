@@ -188,7 +188,7 @@ unsigned long next_or_equal_power2(unsigned long num)
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
 #if !defined(NDEBUG) && defined(EMSCRIPTEN)
-FILE *grm_get_stdout()
+FILE *grm_get_stdout(void)
 {
   return stdout;
 }
