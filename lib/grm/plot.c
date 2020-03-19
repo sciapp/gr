@@ -2316,9 +2316,11 @@ error_t plot_isosurface(grm_args_t *subplot_args)
   double *orig_data, *viewport, *temp_colors;
   unsigned int i, data_length, dims;
   unsigned int *shape;
-  double c_min, c_max, isovalue, width, height, center_x, center_y, x_min, x_max, y_min, y_max, rotation, tilt;
+  double c_min, c_max, isovalue, x_min, x_max, y_min, y_max, rotation, tilt;
   float foreground_colors[3], positions[3], directions[3], ups[3], scales[3];
   float r;
+  int fig_width, fig_height;
+  int subplot_width, subplot_height;
 
   unsigned short isovalue_int, *conv_data;
 
@@ -2339,26 +2341,21 @@ error_t plot_isosurface(grm_args_t *subplot_args)
   tilt = fmod(tilt, 360.0) / 180.0 * M_PI;
   rotation = fmod(rotation, 360.0) / 180.0 * M_PI;
   logger((stderr, "tilt %lf rotation %lf\n", tilt, rotation));
-  /* Calculation of correct viewport */
-  if (viewport[3] - viewport[2] < viewport[1] - viewport[0])
-    {
-      width = viewport[3] - viewport[2];
-      center_x = 0.5 * (viewport[0] + viewport[1]);
-      x_min = max(center_x - 0.5 * width, viewport[0]);
-      x_max = min(center_x + 0.5 * width, viewport[1]);
-      y_min = viewport[2];
-      y_max = viewport[3];
-    }
-  else
-    {
-      height = viewport[1] - viewport[0];
-      center_y = 0.5 * (viewport[2] + viewport[3]);
-      x_min = viewport[0];
-      x_max = viewport[1];
-      y_min = max(center_y - 0.5 * height, viewport[2]);
-      y_max = min(center_y + 0.5 * height, viewport[3]);
-    }
-  logger((stderr, "Viewport: %lf %lf %lf %lf\n", x_min, x_max, y_min, y_max));
+
+  /* Calculate subplot pixel size */
+  x_min = viewport[0];
+  x_max = viewport[1];
+  y_min = viewport[2];
+  y_max = viewport[3];
+
+  get_figure_size(NULL, &fig_width, &fig_height, NULL, NULL);
+  subplot_width = (int)(max(fig_width, fig_height) * (x_max - x_min));
+  subplot_height = (int)(max(fig_width, fig_height) * (y_max - y_min));
+
+  logger((stderr, "viewport: (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
+  logger((stderr, "viewport ratio: %lf\n", (x_min - x_max) / (y_min - y_max)));
+  logger((stderr, "subplot size: (%d, %d)\n", subplot_width, subplot_height));
+  logger((stderr, "subplot ratio: %lf\n", ((double)subplot_width / (double)subplot_height)));
   while (*current_series != NULL)
     {
       return_error_if(!args_first_value(*current_series, "c", "D", &orig_data, &data_length), ERROR_PLOT_MISSING_DATA);
@@ -2386,7 +2383,7 @@ error_t plot_isosurface(grm_args_t *subplot_args)
         }
       logger((stderr, "Colors; %f %f %f\n", foreground_colors[0], foreground_colors[1], foreground_colors[2]));
 
-      /* Check if even any value is finite in array, also calculation of real min and max */
+      /* Check if any value is finite in array, also calculation of real min and max */
       c_min = c_max = *orig_data;
       for (i = 0; i < data_length; ++i)
         {
@@ -2479,7 +2476,7 @@ error_t plot_isosurface(grm_args_t *subplot_args)
                        (float)(r * sin(tilt) * cos(rotation)), 0.0f, 0.0f, 0.0f, ups[0], ups[1], ups[2]);
 
       logger((stderr, "gr3_drawimage returned %i\n",
-              gr3_drawimage(x_min, x_max, y_min, y_max, 500, 500, GR3_DRAWABLE_GKS)));
+              gr3_drawimage(x_min, x_max, y_min, y_max, subplot_width, subplot_height, GR3_DRAWABLE_GKS)));
       gr3_deletemesh(mesh);
       gr_selntran(1);
 
