@@ -5,7 +5,13 @@ LIBS = -L$(GRDIR)/lib -lGRM -lm
 LDFLAGS = $(LIBS) -Wl,-rpath,$(GRDIR)/lib
 
 
-all: hold_append event_handling plot multi_plot subplots receiver sender custom_receiver custom_sender merge_args
+all: imshow isosurface hold_append event_handling plot multi_plot subplots receiver sender custom_receiver custom_sender merge_args
+
+imshow: imshow.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+isosurface: isosurface.o
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 hold_append: hold_append.o
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -41,7 +47,7 @@ merge_args: merge_args.o
 	$(CC) -c $(CFLAGS) $^
 
 clean:
-	rm -f hold_append event_handling plot multi_plot subplots receiver sender custom_receiver custom_sender merge_args \
+	rm -f imshow isosurface hold_append event_handling plot multi_plot subplots receiver sender custom_receiver custom_sender merge_args \
 	      *.o *.a *.so
 
 .PHONY: all clean
