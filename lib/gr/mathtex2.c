@@ -3560,8 +3560,8 @@ void gr_mathtex2(double x, double y, const char *formula)
   int unused;
   int previous_bearing_x_direction;
   double previous_char_height;
-  double chupx;
-  double chupy;
+  double chupx = 0;
+  double chupy = 0;
   int previous_encoding = ENCODING_LATIN1;
   int horizontal_alignment = GKS_K_TEXT_HALIGN_NORMAL;
   int vertical_alignment = GKS_K_TEXT_VALIGN_NORMAL;
@@ -3580,6 +3580,17 @@ void gr_mathtex2(double x, double y, const char *formula)
   gks_set_encoding(ENCODING_UTF8);
   gks_inq_text_height(&unused, &previous_char_height);
   gks_inq_text_upvec(&unused, &chupx, &chupy);
+  if (chupx * chupx + chupy * chupy == 0)
+    {
+      chupx = 0;
+      chupy = 1;
+    }
+  else
+    {
+      double chup_length = sqrt(chupx * chupx + chupy * chupy);
+      chupx /= chup_length;
+      chupy /= chup_length;
+    }
   transformation[0] = chupy;
   transformation[1] = chupx;
   transformation[2] = -chupx;
