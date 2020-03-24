@@ -366,6 +366,7 @@ function GRM(canvas_id) {
     this.merge_named = grm_merge_named;
     this.switch = grm_switch;
     this.get_box = grm_get_box;
+    this.get_hoverbox = grm_get_hoverbox;
     this.register = grm_register;
     this.unregister = grm_unregister;
     this.dump_json_str = grm_dump_json_str;
@@ -1330,6 +1331,22 @@ grm_get_box = function(top, right, bottom, left, keepAspectRatio) {
     freearray(_w);
     freearray(_h);
     return result;
+};
+
+grm_get_hoverbox_c = Module.cwrap('grm_get_hoverbox', 'number', ['number', 'number']);
+grm_get_hoverbox = function(x, y) {
+    var info = grm_get_hoverbox_c(x, y);
+    var data = {
+        'x': Module.HEAPF64.subarray(info / 8, info / 8 + 1)[0],
+        'y': Module.HEAPF64.subarray(info / 8 + 1, info / 8 + 2)[0],
+        'xpx': Module.HEAP32.subarray(info / 4 + 4, info / 4 + 5)[0],
+        'ypx': Module.HEAP32.subarray(info / 4 + 5, info / 4 + 6)[0],
+        'xlabel':  Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 6, info / 4 + 7)[0]),
+        'ylabel':  Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 7, info / 4 + 8)[0]),
+        'label': Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 8, info / 4 + 9)[0])
+    };
+    freearray(info)
+    return data;
 };
 
 grm_register_c = Module.cwrap('grm_register', 'number', ['number', 'number']);

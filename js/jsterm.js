@@ -9,6 +9,8 @@ JSTerm = function() {
      RECONNECT_PLOT_MAX_ATTEMPTS = 50; // Maximum number of canvas reconnection attempts
      BOXZOOM_FILL_STYLE = '#FFAAAA'; // Fill style of the boxzoom box
      BOXZOOM_STROKE_STYLE = '#FF0000'; // Outline style of the boxzoom box
+     HOVERBOX_FILL_STYLE = '#CCCCCC'; // Fill style of the hover box
+     HOVERBOX_FILL_ALPHA = 0.4;
      DEFAULT_WIDTH = 600;
      DEFAULT_HEIGHT = 450;
 
@@ -51,7 +53,7 @@ JSTerm = function() {
          div.style = 'position: relative; width:' + widget.width + 'px; height: ' + widget.height + 'px;';
          let overlay = document.createElement('canvas');
          overlay.id = 'jsterm-overlay-' + widget.id;
-         overlay.style = 'position:absolute; top: 0; right: 0; z-index: 1;';
+         overlay.style = 'position:absolute; top: 0; right: 0; z-index: 2;';
          overlay.width = widget.width;
          overlay.height = widget.height;
          let canvas = document.createElement('canvas');
@@ -282,6 +284,9 @@ JSTerm = function() {
         * @param  {number} angle_delta angle the wheel has been turned
         */
        this.handleWheel = function(x, y, angle_delta) {
+         let context = this.overlayCanvas.getContext('2d');
+         context.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+
          if (typeof this.boxzoomTriggerTimeout !== 'undefined') {
            clearTimeout(this.boxzoomTriggerTimeout);
          }
@@ -506,6 +511,9 @@ JSTerm = function() {
            let context = this.overlayCanvas.getContext('2d');
            context.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
          }
+         this.overlayDiv.style.display = 'none';
+         this.overlayArrowLeft.style.display = 'none';
+         this.overlayArrowRight.style.display = 'none';
          this.boxzoom = false;
          this.boxzoomPoint = [undefined, undefined];
          this.keepAspectRatio = true;
@@ -533,6 +541,11 @@ JSTerm = function() {
         */
        this.handleMouseMove = function(x, y) {
          if (this.panning) {
+           this.overlayDiv.style.display = 'none';
+           this.overlayArrowLeft.style.display = 'none';
+           this.overlayArrowRight.style.display = 'none';
+           let context = this.overlayCanvas.getContext('2d');
+           context.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
            if (typeof this.boxzoomTriggerTimeout !== 'undefined') {
              clearTimeout(this.boxzoomTriggerTimeout);
            }
@@ -545,6 +558,9 @@ JSTerm = function() {
            grm.args_delete(mouseargs);
            this.prevMousePos = [x, y];
          } else if (this.boxzoom) {
+           this.overlayDiv.style.display = 'none';
+           this.overlayArrowLeft.style.display = 'none';
+           this.overlayArrowRight.style.display = 'none';
            let context = this.overlayCanvas.getContext('2d');
            let diff = [x - this.boxzoomPoint[0], y - this.boxzoomPoint[1]];
            grm.switch(this.id);
@@ -564,8 +580,41 @@ JSTerm = function() {
            context.globalAlpha = 1.0;
            context.stroke();
            context.closePath();
-         }
-       };
+         } else {
+           grm.switch(this.id);
+           coord = grm.get_hoverbox(x, y);
+           if (coord.xpx >= 0 && coord.ypx >= 0) {
+             if (coord.label != "") {
+               text = '<p><strong>' + coord.label + '</strong></p><strong>' + coord.xlabel + ': </strong>' + Math.round((coord.x + Number.EPSILON) * 100) / 100 + '<br><strong>' + coord.ylabel + ': </strong>' + Math.round((coord.y + Number.EPSILON) * 100) / 100;
+            } else {
+               text = '<strong>' + coord.xlabel + ': </strong>' + Math.round((coord.x + Number.EPSILON) * 100) / 100 + '<br><strong>' + coord.ylabel + ': </strong>' + Math.round((coord.y + Number.EPSILON) * 100) / 100;
+            }
+            this.overlayDiv.innerHTML = text;
+            if (coord.xpx > this.overlayCanvas.width / 2.0) {
+              this.overlayDiv.style.right = (this.overlayCanvas.width - coord.xpx + 8) + 'px';
+              this.overlayDiv.style.left = 'auto';
+              this.overlayDiv.style.top = (coord.ypx - 0.5 * this.overlayDiv.clientHeight) + 'px';
+              this.overlayArrowRight.style.right = (this.overlayCanvas.width - coord.xpx) + 'px';
+              this.overlayArrowRight.style.top = (coord.ypx - 5) + 'px';
+              this.overlayArrowRight.style.display = 'block';
+              this.overlayArrowLeft.style.display = 'none';
+            } else {
+              this.overlayDiv.style.left = (coord.xpx + 8) + 'px';
+              this.overlayDiv.style.right = 'auto';
+              this.overlayDiv.style.top = (coord.ypx - 0.5 * this.overlayDiv.clientHeight) + 'px';
+              this.overlayArrowLeft.style.left = coord.xpx + 'px';
+              this.overlayArrowLeft.style.top = (coord.ypx - 5) + 'px';
+              this.overlayArrowLeft.style.display = 'block';
+              this.overlayArrowRight.style.display = 'none';
+            }
+            this.overlayDiv.style.display = 'block';
+          } else {
+            this.overlayDiv.style.display = 'none';
+            this.overlayArrowLeft.style.display = 'none';
+            this.overlayArrowRight.style.display = 'none';
+          }
+        }
+      };
 
        /**
         * Handles a mousemove event triggered by the mouse
@@ -695,9 +744,43 @@ JSTerm = function() {
        this.connectCanvas = function() {
          if (document.getElementById('jsterm-' + this.id) != null) {
            this.div = document.getElementById('jsterm-div-' + this.id);
+           this.div.style.position = 'relative';
            this.canvas = document.getElementById('jsterm-' + this.id);
            this.overlayCanvas = document.getElementById('jsterm-overlay-' + this.id);
            this.overlayCanvas.style.cursor = 'auto';
+           this.overlayDiv = document.createElement('div');
+           this.overlayDiv.style['z-index'] = 1;
+           this.overlayDiv.style.position = 'absolute';
+           this.overlayDiv.innerHTML = '';
+           this.overlayDiv.style.top = '10px';
+           this.overlayDiv.style.left = '10px';
+           this.overlayDiv.style.display = 'none';
+           this.overlayDiv.style['background-color'] = 'rgba(255, 255, 255, 0.6)';
+           this.overlayDiv.style.border = '1px solid #000000';
+           this.overlayDiv.style.padding = '5px';
+           this.div.appendChild(this.overlayDiv);
+
+           this.overlayArrowLeft = document.createElement('div');
+           this.overlayArrowLeft.style.width = 0;
+           this.overlayArrowLeft.style.height = 0;
+           this.overlayArrowLeft.style['border-top'] = '5px solid transparent';
+           this.overlayArrowLeft.style['border-bottom'] = '5px solid transparent';
+           this.overlayArrowLeft.style['border-right'] = '8px solid rgba(122, 122, 122, 0.8)';
+           this.overlayArrowLeft.style['z-index'] = 1;
+           this.overlayArrowLeft.style.position = 'absolute';
+           this.overlayArrowLeft.style.display = 'none';
+           this.div.appendChild(this.overlayArrowLeft);
+
+           this.overlayArrowRight = document.createElement('div');
+           this.overlayArrowRight.style.width = 0;
+           this.overlayArrowRight.style.height = 0;
+           this.overlayArrowRight.style['border-top'] = '5px solid transparent';
+           this.overlayArrowRight.style['border-bottom'] = '5px solid transparent';
+           this.overlayArrowRight.style['border-left'] = '8px solid rgba(122, 122, 122, 0.8)';
+           this.overlayArrowRight.style['z-index'] = 1;
+           this.overlayArrowRight.style.position = 'absolute';
+           this.overlayArrowRight.style.display = 'none';
+           this.div.appendChild(this.overlayArrowRight);
 
            //registering event handler
            this.overlayCanvas.addEventListener('wheel', function(evt) { this.mouseHandleWheel(evt); }.bind(this));
