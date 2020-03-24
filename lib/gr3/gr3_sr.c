@@ -1214,8 +1214,8 @@ static void gr3_dodrawmesh_softwarerendered(queue *queues[MAX_NUM_THREADS], int 
         }
       draw_mesh_softwarerendered(queues, mesh, model_matrix, view, colors + i * 3, scales + i * 3, width, height,
                                  pass_id, draw, i);
-      free(view);
     }
+  free(view);
   free(model_matrix);
 }
 
