@@ -66,8 +66,8 @@ typedef void (*grm_event_callback_t)(const grm_event_t *);
 
 /* ------------------------- event handling ------------------------------------------------------------------------- */
 
-EXPORT int grm_register(grm_event_type_t, grm_event_callback_t);
-EXPORT int grm_unregister(grm_event_type_t);
+EXPORT int grm_register(grm_event_type_t type, grm_event_callback_t callback);
+EXPORT int grm_unregister(grm_event_type_t type);
 
 
 #ifdef __cplusplus

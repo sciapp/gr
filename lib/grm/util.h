@@ -46,7 +46,7 @@ extern "C" {
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
 #if !defined(NDEBUG) && defined(EMSCRIPTEN)
-EXPORT FILE *grm_get_stdout();
+EXPORT FILE *grm_get_stdout(void);
 #endif
 
 
