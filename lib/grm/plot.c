@@ -1203,16 +1203,16 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
                   min_component -= step;
                   max_component += step;
                 }
-              else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
-                {
-                  min_component -= 0.5;
-                  max_component += 0.5;
-                }
-              else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0) &&
-                       strcmp("y", *current_component_name) == 0)
-                {
-                  min_component = 0;
-                }
+            }
+          else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
+            {
+              min_component -= 0.5;
+              max_component += 0.5;
+            }
+          else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0) &&
+                   strcmp("y", *current_component_name) == 0)
+            {
+              min_component = 0;
             }
         }
       else
