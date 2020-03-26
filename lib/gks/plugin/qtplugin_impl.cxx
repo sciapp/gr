@@ -382,7 +382,8 @@ static void polyline(int n, double *px, double *py)
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
-  int r, d, x, y, i;
+  double x, y;
+  int r, d, i;
   int pc, op;
   double scale, xr, yr;
   QPolygon *points;
