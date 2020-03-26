@@ -164,6 +164,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass);
 error_t plot_draw_polar_axes(grm_args_t *args);
 error_t plot_draw_legend(grm_args_t *args);
 error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors);
+error_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, char *kind);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

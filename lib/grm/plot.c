@@ -57,6 +57,29 @@ DECLARE_MAP_TYPE(args_set, args_set_t *)
 #define isfinite(x) ((x) - (x) == (x) - (x))
 #endif
 
+/* ------------------------- args get ------------------------------------------------------------------------------- */
+
+#define ARGS_VALUE_ITERATOR_GET(value_it, length, array) \
+  if (value_it->next(value_it) == NULL)                  \
+    {                                                    \
+      args_value_iterator_delete(value_it);              \
+      return ERROR_INTERNAL;                             \
+    }                                                    \
+  length = value_it->array_length;                       \
+  array = *(double **)value_it->value_ptr;
+
+/* ------------------------- re-implementation of x_lin/x_log ------------------------------------------------------- */
+
+#define X_FLIP_IF(x, scale_options, xmin, xmax) \
+  (GR_OPTION_FLIP_X & scale_options ? xmin + xmax : 0) + (GR_OPTION_FLIP_X & scale_options ? -1 : 1) * x
+
+#define X_LIN(x, scale_options, xmin, xmax, a, b) \
+  X_FLIP_IF((GR_OPTION_X_LOG & scale_options ? (x > 0 ? a * log10(x) + b : -FLT_MAX) : x), scale_options, xmin, xmax)
+
+#define X_LOG(x, scale_options, xmin, xmax, a, b)                                                             \
+  (GR_OPTION_X_LOG & scale_options ? (pow(10.0, (double)((X_FLIP_IF(x, scale_options, xmin, xmax) - b) / a))) \
+                                   : X_FLIP_IF(x, scale_options, xmin, xmax))
+
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- args set ------------------------------------------------------------------------------- */
@@ -196,8 +219,8 @@ const char *valid_subplot_keys[] = {"adjust_xlim",  "adjust_ylim",
                                     "zlim",         "zlog",
                                     "clim",         NULL};
 const char *valid_series_keys[] = {
-    "a", "c", "c_dims", "foreground_color", "isovalue", "markertype", "s", "spec", "step_where", "u", "v", "x",
-    "y", "z", NULL};
+    "a", "c", "error", "c_dims", "foreground_color", "isovalue", "markertype", "s", "spec", "step_where", "u", "v",
+    "x", "y", "z",     NULL};
 
 /* ========================= functions ============================================================================== */
 
@@ -1378,8 +1401,12 @@ error_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name
 error_t plot_line(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
+  error_t error;
+  char *kind;
 
+  kind = "line";
   args_values(subplot_args, "series", "A", &current_series);
+  args_values(subplot_args, "kind", "s", &kind);
   while (*current_series != NULL)
     {
       double *x, *y;
@@ -1399,6 +1426,8 @@ error_t plot_line(grm_args_t *subplot_args)
         {
           gr_polymarker(x_length, x, y);
         }
+      error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
+      return_if_error;
       ++current_series;
     }
 
@@ -1506,8 +1535,11 @@ error_t plot_scatter(grm_args_t *subplot_args)
    * optional `markertype` as integer (see: [Marker types](https://gr-framework.org/markertypes.html?highlight=marker))
    */
   grm_args_t **current_series;
+  error_t error;
+  char *kind;
   int *previous_marker_type = plot_scatter_markertypes;
   args_values(subplot_args, "series", "A", &current_series);
+  args_values(subplot_args, "kind", "s", &kind);
   while (*current_series != NULL)
     {
       double *x = NULL, *y = NULL, *z = NULL, *c = NULL, c_min, c_max;
@@ -1589,6 +1621,8 @@ error_t plot_scatter(grm_args_t *subplot_args)
         {
           gr_polymarker(x_length, x, y);
         }
+      error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
+      return_if_error;
       ++current_series;
     }
 
@@ -1689,9 +1723,12 @@ error_t plot_barplot(grm_args_t *subplot_args)
 {
   const double *window;
   grm_args_t **current_series;
+  error_t error;
+  char *kind;
 
   args_values(subplot_args, "window", "D", &window);
   args_values(subplot_args, "series", "A", &current_series);
+  args_values(subplot_args, "kind", "s", &kind);
   while (*current_series != NULL)
     {
       double *x, *y;
@@ -1709,6 +1746,8 @@ error_t plot_barplot(grm_args_t *subplot_args)
           gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
           gr_fillrect(x[i - 1], x[i], 0, y[i - 1]);
         }
+      error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
+      return_if_error;
       ++current_series;
     }
 
@@ -2979,6 +3018,194 @@ error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors)
       gr_axes(0, c_tick, 1, c_min, 0, 1, 0.005);
     }
   free(data);
+  gr_restorestate();
+
+  return NO_ERROR;
+}
+
+error_t extract_multi_type_argument(grm_args_t *error_container, const char *key, unsigned int x_length,
+                                    unsigned int *downwards_length, unsigned int *upwards_length, double **downwards,
+                                    double **upwards, double *downwards_flt, double *upwards_flt)
+{
+  arg_t *arg_ptr;
+  args_value_iterator_t *value_it;
+  unsigned int length;
+  int i, *ii;
+
+  arg_ptr = args_at(error_container, key);
+  if (!arg_ptr)
+    {
+      return NO_ERROR;
+    }
+  if (strcmp(arg_ptr->value_format, "nDnD") == 0)
+    {
+      value_it = arg_value_iter(arg_ptr);
+      ARGS_VALUE_ITERATOR_GET(value_it, *downwards_length, *downwards);
+      ARGS_VALUE_ITERATOR_GET(value_it, *upwards_length, *upwards);
+      args_value_iterator_delete(value_it);
+
+      return_error_if(*downwards_length != *upwards_length || *downwards_length != x_length,
+                      ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+    }
+  else if (strcmp(arg_ptr->value_format, "nD") == 0)
+    {
+      return_error_if(!args_first_value(error_container, key, "D", downwards, downwards_length), ERROR_INTERNAL);
+      /* Python encapsules all single elements into an array */
+      if (*downwards_length == 1)
+        {
+          *downwards_flt = *upwards_flt = **downwards;
+          *downwards = NULL;
+          *downwards_length = 0;
+          return NO_ERROR;
+        }
+      return_error_if(*downwards_length != x_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      *upwards = *downwards;
+      *upwards_length = *downwards_length;
+    }
+  else if (strcmp(arg_ptr->value_format, "d") == 0)
+    {
+      return_error_if(!args_values(error_container, key, "d", downwards_flt), ERROR_INTERNAL);
+      *upwards_flt = *downwards_flt;
+    }
+  else if (strcmp(arg_ptr->value_format, "nI") == 0)
+    {
+      return_error_if(!args_first_value(error_container, key, "nI", &ii, &length), ERROR_INTERNAL);
+      return_error_if(length != 1, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      *upwards_flt = *downwards_flt = (double)ii[0];
+    }
+  else if (strcmp(arg_ptr->value_format, "i") == 0)
+    {
+      return_error_if(!args_values(error_container, key, "i", &i), ERROR_INTERNAL);
+      *upwards_flt = *downwards_flt = (double)i;
+    }
+  return NO_ERROR;
+}
+
+error_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, char *kind)
+{
+  grm_args_t *error_container;
+  arg_t *arg_ptr;
+  error_t error;
+
+  double *absolute_upwards, *absolute_downwards, *relative_upwards, *relative_downwards;
+  double absolute_upwards_flt, relative_upwards_flt, absolute_downwards_flt, relative_downwards_flt;
+  unsigned int upwards_length, downwards_length, i;
+  int scale_options, color_upwardscap, color_downwardscap, color_errorbar;
+  int is_barplot;
+
+  double marker_size, xmin, xmax, ymin, ymax, tick, a, b, e_upwards, e_downwards, x_value;
+  double line_x[2], line_y[2];
+  absolute_upwards = absolute_downwards = relative_upwards = relative_downwards = NULL;
+  absolute_upwards_flt = absolute_downwards_flt = relative_upwards_flt = relative_downwards_flt = FLT_MAX;
+  is_barplot = strcmp(kind, "barplot") == 0 ? 1 : 0;
+
+  arg_ptr = args_at(series_args, "error");
+  if (!arg_ptr)
+    {
+      return NO_ERROR;
+    }
+  error_container = NULL;
+  if (strcmp(arg_ptr->value_format, "a") == 0 || strcmp(arg_ptr->value_format, "nA") == 0)
+    {
+      return_error_if(!args_values(series_args, "error", "a", &error_container), ERROR_INTERNAL);
+
+      error = extract_multi_type_argument(error_container, "absolute", x_length - is_barplot, &downwards_length,
+                                          &upwards_length, &absolute_downwards, &absolute_upwards,
+                                          &absolute_downwards_flt, &absolute_upwards_flt);
+      return_if_error;
+      error = extract_multi_type_argument(error_container, "relative", x_length - is_barplot, &downwards_length,
+                                          &upwards_length, &relative_downwards, &relative_upwards,
+                                          &relative_downwards_flt, &relative_upwards_flt);
+      return_if_error;
+    }
+  else
+    {
+      error = extract_multi_type_argument(series_args, "error", x_length - is_barplot, &downwards_length,
+                                          &upwards_length, &absolute_downwards, &absolute_upwards,
+                                          &absolute_downwards_flt, &absolute_upwards_flt);
+      return_if_error;
+    }
+
+  if (absolute_upwards == NULL && relative_upwards == NULL && absolute_upwards_flt == FLT_MAX &&
+      relative_upwards_flt == FLT_MAX && absolute_downwards == NULL && relative_downwards == NULL &&
+      absolute_downwards_flt == FLT_MAX && relative_downwards_flt == FLT_MAX)
+    {
+      return ERROR_PLOT_MISSING_DATA;
+    }
+
+  /* Getting GR options and sizes. See gr_verrorbars. */
+  gr_savestate();
+  gr_inqmarkersize(&marker_size);
+  gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+  gr_inqscale(&scale_options);
+  tick = marker_size * 0.0075 * (xmax - xmin);
+  a = (xmax - xmin) / log10(xmax / xmin);
+  b = xmin - a * log10(xmin);
+
+  gr_inqlinecolorind(&color_errorbar);
+  color_upwardscap = color_downwardscap = color_errorbar;
+  if (error_container != NULL)
+    {
+      args_values(error_container, "upwardscap_color", "i", &color_upwardscap);
+      args_values(error_container, "downwardscap_color", "i", &color_downwardscap);
+      args_values(error_container, "errorbar_color", "i", &color_errorbar);
+    }
+
+  /* Actual drawing of bars */
+  e_upwards = e_downwards = FLT_MAX;
+  for (i = 0; i < x_length - is_barplot; i++)
+    {
+      if (absolute_upwards != NULL || relative_upwards != NULL || absolute_upwards_flt != FLT_MAX ||
+          relative_upwards_flt != FLT_MAX)
+        {
+          e_upwards =
+              y[i] * (1. + (relative_upwards != NULL ? relative_upwards[i]
+                                                     : (relative_upwards_flt != FLT_MAX ? relative_upwards_flt : 0))) +
+              (absolute_upwards != NULL ? absolute_upwards[i]
+                                        : (absolute_upwards_flt != FLT_MAX ? absolute_upwards_flt : 0.));
+        }
+
+      if (absolute_downwards != NULL || relative_downwards != NULL || absolute_downwards_flt != FLT_MAX ||
+          relative_downwards_flt != FLT_MAX)
+        {
+          e_downwards =
+              y[i] * (1. - (relative_downwards != NULL
+                                ? relative_downwards[i]
+                                : (relative_downwards_flt != FLT_MAX ? relative_downwards_flt : 0))) -
+              (absolute_downwards != NULL ? absolute_downwards[i]
+                                          : (absolute_downwards_flt != FLT_MAX ? absolute_downwards_flt : 0.));
+        }
+
+      /* See gr_verrorbars for reference */
+      x_value = is_barplot ? (x[i] + x[i + 1]) / 2 : x[i];
+      line_x[0] = X_LOG(X_LIN(x_value - tick, scale_options, xmin, xmax, a, b), scale_options, xmin, xmax, a, b);
+      line_x[1] = X_LOG(X_LIN(x_value + tick, scale_options, xmin, xmax, a, b), scale_options, xmin, xmax, a, b);
+      if (e_upwards != FLT_MAX && color_upwardscap >= 0)
+        {
+          line_y[0] = e_upwards;
+          line_y[1] = e_upwards;
+          gr_setlinecolorind(color_upwardscap);
+          gr_polyline(2, line_x, line_y);
+        }
+
+      if (e_downwards != FLT_MAX && color_downwardscap >= 0)
+        {
+          line_y[0] = e_downwards;
+          line_y[1] = e_downwards;
+          gr_setlinecolorind(color_downwardscap);
+          gr_polyline(2, line_x, line_y);
+        }
+
+      if (color_errorbar >= 0)
+        {
+          line_x[0] = x_value;
+          line_x[1] = x_value;
+          line_y[0] = e_upwards != FLT_MAX ? e_upwards : y[i];
+          line_y[1] = e_downwards != FLT_MAX ? e_downwards : y[i];
+          gr_setlinecolorind(color_errorbar);
+          gr_polyline(2, line_x, line_y);
+        }
+    }
   gr_restorestate();
 
   return NO_ERROR;
