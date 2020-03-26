@@ -9,10 +9,24 @@ JSTerm = function() {
     RECONNECT_PLOT_MAX_ATTEMPTS = 50; // Maximum number of canvas reconnection attempts
     BOXZOOM_FILL_STYLE = '#FFAAAA'; // Fill style of the boxzoom box
     BOXZOOM_STROKE_STYLE = '#FF0000'; // Outline style of the boxzoom box
-    HOVERBOX_FILL_STYLE = '#CCCCCC'; // Fill style of the hover box
-    HOVERBOX_FILL_ALPHA = 0.4;
     DEFAULT_WIDTH = 600;
     DEFAULT_HEIGHT = 450;
+
+    //tooltip layout
+    TOOLTIP_BACKGROUND = 'rgba(255, 255, 255, 0.6)';
+    TOOLTIP_BORDER = '1px solid #3c3c3c';
+    TOOLTIP_PADDING = '5px';
+    TOOLTIP_DEFAULT_HTML_LABEL_SET =
+      `<span style="color: #BED2E8;">{$label}</span><br>
+      <span style="color: #BED2E8;">{$xlabel}: </span>
+      <span style="color: #3c3c3c;">{$x}</span><br>
+      <span style="color: #BED2E8;">{$ylabel}</span>
+      <span style="color: #3c3c3c;">{$y}</span>`;
+    TOOLTIP_DEFAULT_HTML_LABEL_NOT_SET =
+      `<span style="color: #BED2E8;">{$xlabel}: </span>
+      <span style="color: #3c3c3c;">{$x}</span><br>
+      <span style="color: #BED2E8;">{$ylabel}</span>
+      <span style="color: #3c3c3c;">{$y}</span>`;
 
     var grm, comm, widgets = {},
       jupyterRunning = false,
@@ -20,6 +34,19 @@ JSTerm = function() {
     var display = [],
       widgets_to_save = new Set(),
       data_loaded = false;
+
+    encode = function(str) {
+      var buf = [];
+      for (var i = str.length - 1; i >= 0; i--) {
+        buf.unshift(['&#', str[i].charCodeAt(), ';'].join(''));
+      }
+      return buf.join('');
+    };
+    decode = function(str) {
+      return str.replace(/&#(\d+);/g, function(match, dec) {
+        return String.fromCharCode(dec);
+      });
+    };
 
     /**
      * Sends a mouse-event via jupyter-comm
@@ -75,7 +102,7 @@ JSTerm = function() {
     /**
      * Sends a save-event via jupyter-comm
      */
-    saveData = function(data, plot_id, display, width, height) {
+    saveData = function(data, plot_id, display, width, height, tooltip) {
       if (jupyterRunning) {
         comm.send({
           "type": "save",
@@ -86,6 +113,10 @@ JSTerm = function() {
                 "timestamp": Date.now(),
                 "width": width,
                 "height": height,
+                "tooltip": {
+                  "html": encode(tooltip.html),
+                  "data": tooltip.data
+                },
                 "display_id": display,
                 "plot_id": plot_id,
                 "grm": data
@@ -116,7 +147,7 @@ JSTerm = function() {
           if (typeof widgets[data.id] !== 'undefined') {
             widgets[data.id].msgHandleEvent(data);
           }
-        } else if (msg.content.data.type === 'cmd') {
+        } else if (data.type === 'cmd') {
           if (typeof data.id !== 'undefined') {
             if (typeof widgets[data.id] !== 'undefined') {
               widgets[data.id].msgHandleCommand(data);
@@ -173,6 +204,8 @@ JSTerm = function() {
             widgets[widget_data.plot_id].display = widget_data.display_id;
             widgets[widget_data.plot_id].width = widget_data.width;
             widgets[widget_data.plot_id].height = widget_data.height;
+            widgets[widget_data.plot_id].tooltip.html = decode(widget_data.tooltip.html);
+            widgets[widget_data.plot_id].tooltip.data = widget_data.tooltip.data;
             // TODO: Das hier erst am Schluss machen, wenn klar ist, dass keine aktuelleren Daten gefunden wurden
             createCanvas(widgets[widget_data.plot_id]);
             grm.switch(widget_data.plot_id);
@@ -222,6 +255,11 @@ JSTerm = function() {
 
         this.width = DEFAULT_WIDTH;
         this.height = DEFAULT_HEIGHT;
+
+        this.tooltip = {
+          "html": "",
+          "data": {}
+        };
       };
 
       this.init();
@@ -517,7 +555,7 @@ JSTerm = function() {
           let context = this.overlayCanvas.getContext('2d');
           context.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
         }
-        this.overlayDiv.style.display = 'none';
+        this.tooltipDiv.style.display = 'none';
         this.overlayArrowLeft.style.display = 'none';
         this.overlayArrowRight.style.display = 'none';
         this.boxzoom = false;
@@ -547,7 +585,7 @@ JSTerm = function() {
        */
       this.handleMouseMove = function(x, y) {
         if (this.panning) {
-          this.overlayDiv.style.display = 'none';
+          this.tooltipDiv.style.display = 'none';
           this.overlayArrowLeft.style.display = 'none';
           this.overlayArrowRight.style.display = 'none';
           let context = this.overlayCanvas.getContext('2d');
@@ -564,7 +602,7 @@ JSTerm = function() {
           grm.args_delete(mouseargs);
           this.prevMousePos = [x, y];
         } else if (this.boxzoom) {
-          this.overlayDiv.style.display = 'none';
+          this.tooltipDiv.style.display = 'none';
           this.overlayArrowLeft.style.display = 'none';
           this.overlayArrowRight.style.display = 'none';
           let context = this.overlayCanvas.getContext('2d');
@@ -588,34 +626,67 @@ JSTerm = function() {
           context.closePath();
         } else {
           grm.switch(this.id);
-          coord = grm.get_hoverbox(x, y);
-          if (coord.xpx >= 0 && coord.ypx >= 0) {
-            if (coord.label != "") {
-              text = '<p><strong>' + coord.label + '</strong></p><strong>' + coord.xlabel + ': </strong>' + Math.round((coord.x + Number.EPSILON) * 100) / 100 + '<br><strong>' + coord.ylabel + ': </strong>' + Math.round((coord.y + Number.EPSILON) * 100) / 100;
+          tooltip = grm.get_tooltip(x, y);
+          if (tooltip.xpx >= 0 && tooltip.ypx >= 0) {
+            let text;
+            tooltip.x = Math.round((tooltip.x + Number.EPSILON) * 100) / 100;
+            tooltip.y = Math.round((tooltip.y + Number.EPSILON) * 100) / 100;
+            if (typeof this.tooltip === 'undefined' || this.tooltip.html == "") {
+              if (tooltip.label != "") {
+                text = TOOLTIP_DEFAULT_HTML_LABEL_SET;
+              } else {
+                text = TOOLTIP_DEFAULT_HTML_LABEL_NOT_SET;
+              }
             } else {
-              text = '<strong>' + coord.xlabel + ': </strong>' + Math.round((coord.x + Number.EPSILON) * 100) / 100 + '<br><strong>' + coord.ylabel + ': </strong>' + Math.round((coord.y + Number.EPSILON) * 100) / 100;
+              text = this.tooltip.html;
             }
-            this.overlayDiv.innerHTML = text;
-            if (coord.xpx > this.overlayCanvas.width / 2.0) {
-              this.overlayDiv.style.right = (this.overlayCanvas.width - coord.xpx + 8) + 'px';
-              this.overlayDiv.style.left = 'auto';
-              this.overlayDiv.style.top = (coord.ypx - 0.5 * this.overlayDiv.clientHeight) + 'px';
-              this.overlayArrowRight.style.right = (this.overlayCanvas.width - coord.xpx) + 'px';
-              this.overlayArrowRight.style.top = (coord.ypx - 5) + 'px';
+            let index = 0,
+              start, end, key, substr, arrStart, arrEnd, subkey;
+            start = text.indexOf('{$', index);
+            while (start != -1) {
+              end = text.indexOf('}', start);
+              key = text.substring(start + 2, end);
+              text = text.substring(0, start) + tooltip[key] + text.substring(end + 1);
+              index = index - (end - start) + tooltip[key].length;
+              start = text.indexOf('{$', index);
+            }
+            index = 0;
+            start = text.indexOf('{@', index);
+            while (start != -1) {
+              end = text.indexOf('}', start);
+              substr = text.substring(start + 2, end);
+              arrStart = substr.indexOf('[');
+              arrEnd = substr.indexOf(']');
+              key = substr.substring(0, arrStart);
+              subkey = substr.substring(arrStart + 1, arrEnd);
+              if (subkey[0] == '$') {
+                subkey = tooltip[subkey.substring(1)];
+              }
+              text = text.substring(0, start) + this.tooltip.data[key][subkey] + text.substring(end + 1);
+              index = index - (end - start) + this.tooltip.data[key][subkey].length;
+              start = text.indexOf('{@', index);
+            }
+            this.tooltipDiv.innerHTML = text;
+            if (tooltip.xpx > this.overlayCanvas.width / 2.0) {
+              this.tooltipDiv.style.right = (this.overlayCanvas.width - tooltip.xpx + 8) + 'px';
+              this.tooltipDiv.style.left = 'auto';
+              this.tooltipDiv.style.top = (tooltip.ypx - 0.5 * this.tooltipDiv.clientHeight) + 'px';
+              this.overlayArrowRight.style.right = (this.overlayCanvas.width - tooltip.xpx) + 'px';
+              this.overlayArrowRight.style.top = (tooltip.ypx - 5) + 'px';
               this.overlayArrowRight.style.display = 'block';
               this.overlayArrowLeft.style.display = 'none';
             } else {
-              this.overlayDiv.style.left = (coord.xpx + 8) + 'px';
-              this.overlayDiv.style.right = 'auto';
-              this.overlayDiv.style.top = (coord.ypx - 0.5 * this.overlayDiv.clientHeight) + 'px';
-              this.overlayArrowLeft.style.left = coord.xpx + 'px';
-              this.overlayArrowLeft.style.top = (coord.ypx - 5) + 'px';
+              this.tooltipDiv.style.left = (tooltip.xpx + 8) + 'px';
+              this.tooltipDiv.style.right = 'auto';
+              this.tooltipDiv.style.top = (tooltip.ypx - 0.5 * this.tooltipDiv.clientHeight) + 'px';
+              this.overlayArrowLeft.style.left = tooltip.xpx + 'px';
+              this.overlayArrowLeft.style.top = (tooltip.ypx - 5) + 'px';
               this.overlayArrowLeft.style.display = 'block';
               this.overlayArrowRight.style.display = 'none';
             }
-            this.overlayDiv.style.display = 'block';
+            this.tooltipDiv.style.display = 'block';
           } else {
-            this.overlayDiv.style.display = 'none';
+            this.tooltipDiv.style.display = 'none';
             this.overlayArrowLeft.style.display = 'none';
             this.overlayArrowRight.style.display = 'none';
           }
@@ -718,6 +789,11 @@ JSTerm = function() {
           case 'disable_jseventhandling':
             this.handleEvents = false;
             break;
+          case 'tooltip':
+            this.tooltip.html = msg.html;
+            this.tooltip.data = msg.data;
+            this.save();
+            break;
           default:
             break;
         }
@@ -754,17 +830,17 @@ JSTerm = function() {
           this.canvas = document.getElementById('jsterm-' + this.id);
           this.overlayCanvas = document.getElementById('jsterm-overlay-' + this.id);
           this.overlayCanvas.style.cursor = 'auto';
-          this.overlayDiv = document.createElement('div');
-          this.overlayDiv.style['z-index'] = 1;
-          this.overlayDiv.style.position = 'absolute';
-          this.overlayDiv.innerHTML = '';
-          this.overlayDiv.style.top = '10px';
-          this.overlayDiv.style.left = '10px';
-          this.overlayDiv.style.display = 'none';
-          this.overlayDiv.style['background-color'] = 'rgba(255, 255, 255, 0.6)';
-          this.overlayDiv.style.border = '1px solid #000000';
-          this.overlayDiv.style.padding = '5px';
-          this.div.appendChild(this.overlayDiv);
+          this.tooltipDiv = document.createElement('div');
+          this.tooltipDiv.style['z-index'] = 1;
+          this.tooltipDiv.style.position = 'absolute';
+          this.tooltipDiv.innerHTML = '';
+          //this.tooltipDiv.style.top = TOOLTIP_PAD_TOP;
+          //this.tooltipDiv.style.left = TOOLTIP_PAD_LEFT;
+          this.tooltipDiv.style.display = 'none';
+          this.tooltipDiv.style['background-color'] = TOOLTIP_BACKGROUND;
+          this.tooltipDiv.style.border = TOOLTIP_BORDER;
+          this.tooltipDiv.style.padding = TOOLTIP_PADDING;
+          this.div.appendChild(this.tooltipDiv);
 
           this.overlayArrowLeft = document.createElement('div');
           this.overlayArrowLeft.style.width = 0;
@@ -826,7 +902,7 @@ JSTerm = function() {
       this.save = function() {
         grm.switch(this.id);
         let data = grm.dump_json_str();
-        saveData(data, this.id, this.display, this.width, this.height);
+        saveData(data, this.id, this.display, this.width, this.height, this.tooltip);
       };
     };
 

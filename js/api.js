@@ -366,7 +366,7 @@ function GRM(canvas_id) {
     this.merge_named = grm_merge_named;
     this.switch = grm_switch;
     this.get_box = grm_get_box;
-    this.get_hoverbox = grm_get_hoverbox;
+    this.get_tooltip = grm_get_tooltip;
     this.register = grm_register;
     this.unregister = grm_unregister;
     this.dump_json_str = grm_dump_json_str;
@@ -1333,9 +1333,9 @@ grm_get_box = function(top, right, bottom, left, keepAspectRatio) {
     return result;
 };
 
-grm_get_hoverbox_c = Module.cwrap('grm_get_hoverbox', 'number', ['number', 'number']);
-grm_get_hoverbox = function(x, y) {
-    var info = grm_get_hoverbox_c(x, y);
+grm_get_tooltip_c = Module.cwrap('grm_get_tooltip', 'number', ['number', 'number']);
+grm_get_tooltip = function(x, y) {
+    var info = grm_get_tooltip_c(x, y);
     var data = {
         'x': Module.HEAPF64.subarray(info / 8, info / 8 + 1)[0],
         'y': Module.HEAPF64.subarray(info / 8 + 1, info / 8 + 2)[0],
