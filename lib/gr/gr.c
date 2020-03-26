@@ -27,6 +27,10 @@ typedef __int64 int64_t;
 #define is_nan(a) isnan(a)
 #endif
 
+#ifndef NAN
+#define NAN (0.0 / 0.0)
+#endif
+
 #include "gks.h"
 #include "gkscore.h"
 #include "gr.h"
@@ -226,7 +230,6 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 
 #define RESOLUTION_X 4096
 #define BACKGROUND 0
-#define MISSING_VALUE FLT_MAX
 
 #ifndef FLT_MAX
 #define FLT_MAX 1.701411735e+38
@@ -838,7 +841,7 @@ static double x_lin(double x)
       if (x > 0)
         result = lx.a * log10(x) + lx.b;
       else
-        result = -FLT_MAX;
+        result = NAN;
     }
   else
     result = x;
@@ -857,7 +860,7 @@ static double y_lin(double y)
       if (y > 0)
         result = lx.c * log10(y) + lx.d;
       else
-        result = -FLT_MAX;
+        result = NAN;
     }
   else
     result = y;
@@ -876,7 +879,7 @@ static double z_lin(double z)
       if (z > 0)
         result = lx.e * log10(z) + lx.f;
       else
-        result = -FLT_MAX;
+        result = NAN;
     }
   else
     result = z;
@@ -1482,38 +1485,6 @@ void gr_updatews(void)
       }
 }
 
-#define gks(primitive)                             \
-  int npoints = n;                                 \
-  double *px = x, *py = y;                         \
-  int i;                                           \
-                                                   \
-  check_autoinit;                                  \
-                                                   \
-  if (lx.scale_options)                            \
-    {                                              \
-      if (npoints >= maxpath) reallocate(npoints); \
-                                                   \
-      px = xpoint;                                 \
-      py = ypoint;                                 \
-      for (i = 0; i < npoints; i++)                \
-        {                                          \
-          px[i] = x_lin(x[i]);                     \
-          py[i] = y_lin(y[i]);                     \
-        }                                          \
-    }                                              \
-                                                   \
-  primitive(npoints, px, py)
-
-static void polyline(int n, double *x, double *y)
-{
-  gks(gks_polyline);
-}
-
-static void polymarker(int n, double *x, double *y)
-{
-  gks(gks_polymarker);
-}
-
 static void fillarea(int n, double *x, double *y)
 {
   int errind, style;
@@ -1614,6 +1585,37 @@ static void primitive(char *name, int n, double *x, double *y)
   gr_writestream("/>\n");
 }
 
+static void polyline(int n, double *x, double *y)
+{
+  int npoints = n;
+  double *px = x, *py = y;
+  int i;
+
+  if (lx.scale_options)
+    {
+      if (npoints >= maxpath) reallocate(npoints);
+
+      px = xpoint;
+      py = ypoint;
+      npoints = 0;
+      for (i = 0; i < n; i++)
+        {
+          px[npoints] = x_lin(x[i]);
+          py[npoints] = y_lin(y[i]);
+          if (is_nan(px[npoints]) || is_nan(py[npoints]))
+            {
+              if (npoints >= 2) gks_polyline(npoints, px, py);
+
+              npoints = 0;
+            }
+          else
+            npoints++;
+        }
+    }
+
+  if (npoints != 0) gks_polyline(npoints, px, py);
+}
+
 /*!
  * Draw a polyline using the current line attributes, starting from the
  * first data point and ending at the last data point.
@@ -1628,9 +1630,42 @@ static void primitive(char *name, int n, double *x, double *y)
  */
 void gr_polyline(int n, double *x, double *y)
 {
-  gks(gks_polyline);
+  check_autoinit;
+
+  polyline(n, x, y);
 
   if (flag_graphics) primitive("polyline", n, x, y);
+}
+
+static void polymarker(int n, double *x, double *y)
+{
+  int npoints = n;
+  double *px = x, *py = y;
+  int i;
+
+  if (lx.scale_options)
+    {
+      if (npoints >= maxpath) reallocate(npoints);
+
+      px = xpoint;
+      py = ypoint;
+      npoints = 0;
+      for (i = 0; i < n; i++)
+        {
+          px[npoints] = x_lin(x[i]);
+          py[npoints] = y_lin(y[i]);
+          if (is_nan(px[npoints]) || is_nan(py[npoints]))
+            {
+              if (npoints >= 1) gks_polymarker(npoints, px, py);
+
+              npoints = 0;
+            }
+          else
+            npoints++;
+        }
+    }
+
+  if (npoints != 0) gks_polymarker(npoints, px, py);
 }
 
 /*!
@@ -1646,7 +1681,9 @@ void gr_polyline(int n, double *x, double *y)
  */
 void gr_polymarker(int n, double *x, double *y)
 {
-  gks(gks_polymarker);
+  check_autoinit;
+
+  polymarker(n, x, y);
 
   if (flag_graphics) primitive("polymarker", n, x, y);
 }
@@ -7167,7 +7204,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
           for (j = 0; j < ny; j++)
             for (i = 0; i < nx; i++)
               {
-                if (Z(i, j) != MISSING_VALUE)
+                if (!is_nan(Z(i, j)))
                   {
                     color = first_color + (int)((Z(i, j) - wx.zmin) / (wx.zmax - wx.zmin) * (last_color - first_color));
 
