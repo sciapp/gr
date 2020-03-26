@@ -5,7 +5,22 @@ LIBS = -L$(GRDIR)/lib -lGRM -lm
 LDFLAGS = $(LIBS) -Wl,-rpath,$(GRDIR)/lib
 
 
-all: custom_receiver custom_sender event_handling hold_append imshow isosurface line_errorbar merge_args multi_plot plot receiver sender subplots
+all: bar_errorbar custom_receiver custom_sender event_handling hold_append imshow isosurface line_errorbar merge_args multi_plot plot receiver scatter_errorbar sender subplots
+
+bar_errorbar: bar_errorbar.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+custom_receiver: custom_receiver.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+custom_sender: custom_sender.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+event_handling: event_handling.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+hold_append: hold_append.o
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 imshow: imshow.o
 	$(CC) -o $@ $^ $(LDFLAGS)
@@ -16,41 +31,32 @@ isosurface: isosurface.o
 line_errorbar: line_errorbar.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-hold_append: hold_append.o
-	$(CC) -o $@ $^ $(LDFLAGS)
-
-event_handling: event_handling.o
-	$(CC) -o $@ $^ $(LDFLAGS)
-
-plot: plot.o
+merge_args: merge_args.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 multi_plot: multi_plot.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-subplots: subplots.o
+plot: plot.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 receiver: receiver.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
+scatter_errorbar: scatter_errorbar.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
 sender: sender.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-custom_receiver: custom_receiver.o
-	$(CC) -o $@ $^ $(LDFLAGS)
-
-custom_sender: custom_sender.o
-	$(CC) -o $@ $^ $(LDFLAGS)
-
-merge_args: merge_args.o
+subplots: subplots.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) $^
 
 clean:
-	rm -f imshow isosurface line_errorbar hold_append event_handling plot multi_plot subplots receiver sender custom_receiver custom_sender merge_args \
+	rm -f bar_errorbar imshow isosurface line_errorbar hold_append event_handling plot multi_plot scatter_errorbar subplots receiver sender custom_receiver custom_sender merge_args \
 	      *.o *.a *.so
 
 .PHONY: all clean
