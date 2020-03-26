@@ -191,9 +191,9 @@ int grm_get_box(const int x1, const int y1, const int x2, const int y2, const in
   return 1;
 }
 
-grm_hoverbox_info_t *grm_get_hoverbox(const int mouse_x, const int mouse_y)
+grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
 {
-  grm_hoverbox_info_t *info = malloc(sizeof(grm_hoverbox_info_t));
+  grm_tooltip_info_t *info = malloc(sizeof(grm_tooltip_info_t));
   double *x_series, *y_series, x, y, x_min, x_max, y_min, y_max, mindiff = DBL_MAX, diff;
   double x_range_min, x_range_max, y_range_min, y_range_max, x_px, y_px;
   int width, height, max_width_height;
