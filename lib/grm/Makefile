@@ -10,7 +10,7 @@ endif
 UNAME := $(shell uname)
 
      GRMOBJS = args.o dump.o dynamic_args_array.o error.o event.o interaction.o json.o memwriter.o net.o plot.o util.o \
-               datatype/string_list.o datatype/string_map.o datatype/uint_map.o
+               datatype/string_list.o datatype/string_array_map.o datatype/string_map.o datatype/uint_map.o
   GRMHEADERS = args.h dump.h event.h interaction.h net.h plot.h util.h
      DEFINES =
     INCLUDES = -I. -I../gks -I../gr -I../gr3 -I$(THIRDPARTYDIR)/include
