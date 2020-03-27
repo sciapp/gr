@@ -201,23 +201,15 @@ const char *plot_merge_clear_keys[] = {"series", NULL};
 
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
-const char *valid_subplot_keys[] = {"adjust_xlim",  "adjust_ylim",
-                                    "adjust_zlim",  "backgroundcolor",
-                                    "colormap",     "keep_aspect_ratio",
-                                    "kind",         "labels",
-                                    "levels",       "location",
-                                    "nbins",        "panzoom",
-                                    "reset_ranges", "rotation",
-                                    "series",       "subplot",
-                                    "tilt",         "title",
-                                    "xbins",        "xflip",
-                                    "xform",        "xlabel",
-                                    "xlim",         "xlog",
-                                    "ybins",        "yflip",
-                                    "ylabel",       "ylim",
-                                    "ylog",         "zflip",
-                                    "zlim",         "zlog",
-                                    "clim",         NULL};
+const char *valid_subplot_keys[] = {"adjust_xlim", "adjust_ylim", "adjust_zlim",    "backgroundcolor",
+                                    "colormap",    "font",        "font_precision", "keep_aspect_ratio",
+                                    "kind",        "labels",      "levels",         "location",
+                                    "nbins",       "panzoom",     "reset_ranges",   "rotation",
+                                    "series",      "subplot",     "tilt",           "title",
+                                    "xbins",       "xflip",       "xform",          "xlabel",
+                                    "xlim",        "xlog",        "ybins",          "yflip",
+                                    "ylabel",      "ylim",        "ylog",           "zflip",
+                                    "zlim",        "zlog",        "clim",           NULL};
 const char *valid_series_keys[] = {
     "a", "c", "error", "c_dims", "foreground_color", "isovalue", "markertype", "s", "spec", "step_where", "u", "v",
     "x", "y", "z",     NULL};
@@ -697,6 +689,8 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
               (args_values(*current_subplot, "zlim", "dd", &garbage0, &garbage1) ? 0 : PLOT_DEFAULT_ADJUST_ZLIM));
         }
       args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP);
+      args_setdefault(*current_subplot, "font", "i", PLOT_DEFAULT_FONT);
+      args_setdefault(*current_subplot, "font_precision", "i", PLOT_DEFAULT_FONT_PRECISION);
       args_setdefault(*current_subplot, "rotation", "i", PLOT_DEFAULT_ROTATION);
       args_setdefault(*current_subplot, "tilt", "i", PLOT_DEFAULT_TILT);
       args_setdefault(*current_subplot, "keep_aspect_ratio", "i", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
@@ -801,6 +795,10 @@ void plot_pre_subplot(grm_args_t *subplot_args)
   plot_process_viewport(subplot_args);
   plot_store_coordinate_ranges(subplot_args);
   plot_process_window(subplot_args);
+
+  plot_process_colormap(subplot_args);
+  plot_process_font(subplot_args);
+
   if (str_equals_any(kind, 1, "polar"))
     {
       plot_draw_polar_axes(subplot_args);
@@ -810,7 +808,6 @@ void plot_pre_subplot(grm_args_t *subplot_args)
       plot_draw_axes(subplot_args, 1);
     }
 
-  plot_process_colormap(subplot_args);
   gr_uselinespec(" ");
 
   gr_savestate();
@@ -829,6 +826,20 @@ void plot_process_colormap(grm_args_t *subplot_args)
       gr_setcolormap(colormap);
     }
   /* TODO: Implement other datatypes for `colormap` */
+}
+
+void plot_process_font(grm_args_t *subplot_args)
+{
+  int font, font_precision;
+
+  /* `font` and `font_precision` are always set */
+  if (args_values(subplot_args, "font", "i", &font) &&
+      args_values(subplot_args, "font_precision", "i", &font_precision))
+    {
+      logger((stderr, "Using font: %d with precision %d\n", font, font_precision));
+      gr_settextfontprec(font, font_precision);
+    }
+  /* TODO: Implement other datatypes for `font` and `font_precision` */
 }
 
 void plot_process_viewport(grm_args_t *subplot_args)
