@@ -56,7 +56,9 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_ADJUST_XLIM 1
 #define PLOT_DEFAULT_ADJUST_YLIM 1
 #define PLOT_DEFAULT_ADJUST_ZLIM 1
-#define PLOT_DEFAULT_COLORMAP 44 /* VIRIDIS */
+#define PLOT_DEFAULT_COLORMAP 44                                 /* VIRIDIS */
+#define PLOT_DEFAULT_FONT 232                                    /* CMUSerif-Math */
+#define PLOT_DEFAULT_FONT_PRECISION GKS_K_TEXT_PRECISION_OUTLINE /* hardware font rendering */
 #define PLOT_DEFAULT_ROTATION 40
 #define PLOT_DEFAULT_TILT 70
 #define PLOT_DEFAULT_KEEP_ASPECT_RATIO 0
@@ -123,6 +125,7 @@ void plot_pre_plot(grm_args_t *plot_args);
 void plot_process_wswindow_wsviewport(grm_args_t *plot_args);
 void plot_pre_subplot(grm_args_t *subplot_args);
 void plot_process_colormap(grm_args_t *subplot_args);
+void plot_process_font(grm_args_t *subplot_args);
 void plot_process_viewport(grm_args_t *subplot_args);
 void plot_process_window(grm_args_t *subplot_args);
 void plot_store_coordinate_ranges(grm_args_t *subplot_args);
