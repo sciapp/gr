@@ -12,21 +12,61 @@ JSTerm = function() {
     DEFAULT_WIDTH = 600;
     DEFAULT_HEIGHT = 450;
 
-    //tooltip layout
-    TOOLTIP_BACKGROUND = 'rgba(255, 255, 255, 0.6)';
-    TOOLTIP_BORDER = '1px solid #3c3c3c';
-    TOOLTIP_PADDING = '5px';
+    ARROW_SIZE = [8, 7];
+    STYLE_CSS = `
+      .jsterm-tooltip {
+        background-color: rgba(255, 255, 255, 0.95);
+        border: 1px solid #e5e5e5;
+        padding: 3px;
+        position: absolute;
+        z-index: 1;
+        display:none;
+      }
+      .jsterm-tooltip-label {
+        color: #26aae1;
+        font-size: 0.8em;
+        line-height: 0.9;
+      }
+      .jsterm-tooltip-value {
+        color: #3c3c3c;
+        font-size: 0.8em;
+        line-height: 0.9;
+      }
+      .jsterm-right-arrow {
+        width: 0;
+        height: 0;
+        border-top: ` + ARROW_SIZE[0] + `px solid transparent;
+        border-bottom: ` + ARROW_SIZE[0] + `px solid transparent;
+        border-left: ` + ARROW_SIZE[1] + `px solid #909599;
+        z-index: 1;
+        position: absolute;
+        display: none;
+      }
+      .jsterm-left-arrow {
+        width: 0;
+        height: 0;
+        border-top: ` + ARROW_SIZE[0] + `px solid transparent;
+        border-bottom: ` + ARROW_SIZE[0] + `px solid transparent;
+        border-right: ` + ARROW_SIZE[1] + `px solid #909599;
+        z-index: 1;
+        position: absolute;
+        display: none;
+      }
+    `;
+
+    //tooltip template
     TOOLTIP_DEFAULT_HTML_LABEL_SET =
-      `<span style="color: #BED2E8;">{$label}</span><br>
-      <span style="color: #BED2E8;">{$xlabel}: </span>
-      <span style="color: #3c3c3c;">{$x}</span><br>
-      <span style="color: #BED2E8;">{$ylabel}</span>
-      <span style="color: #3c3c3c;">{$y}</span>`;
+      `<span class="jsterm-tooltip-label">{$label}</span><br>
+      <span class="jsterm-tooltip-label">{$xlabel}: </span>
+      <span class="jsterm-tooltip-value">{$x}</span><br>
+      <span class="jsterm-tooltip-label">{$ylabel}</span>
+      <span class="jsterm-tooltip-value">{$y}</span>`;
     TOOLTIP_DEFAULT_HTML_LABEL_NOT_SET =
-      `<span style="color: #BED2E8;">{$xlabel}: </span>
-      <span style="color: #3c3c3c;">{$x}</span><br>
-      <span style="color: #BED2E8;">{$ylabel}</span>
-      <span style="color: #3c3c3c;">{$y}</span>`;
+      `<span class="jsterm-tooltip-label">{$xlabel}: </span>
+      <span class="jsterm-tooltip-value">{$x}</span><br>
+      <span class="jsterm-tooltip-label">{$ylabel}</span>
+      <span class="jsterm-tooltip-value">{$y}</span>`;
+    TOOLTIP_MISSING_VALUE_REPLACEMENT = '[n.d.]';
 
     var grm, comm, widgets = {},
       jupyterRunning = false,
@@ -109,18 +149,23 @@ JSTerm = function() {
           "display_id": display,
           "content": {
             "data": {
-              "widget_data": JSON.stringify({
-                "timestamp": Date.now(),
-                "width": width,
-                "height": height,
-                "tooltip": {
-                  "html": encode(tooltip.html),
-                  "data": tooltip.data
-                },
-                "display_id": display,
-                "plot_id": plot_id,
-                "grm": data
-              })
+              "widget_data": `
+                if (typeof storedData === 'undefined') {
+                  var storedData = [];
+                }
+                storedData.push({
+                  "timestamp": ` + Date.now() + `,
+                  "width": ` + width + `,
+                  "height": ` + height + `,
+                  "tooltip": {
+                    "html": "` + tooltip.html + `",
+                    "data": ` + JSON.stringify(tooltip.data) + `
+                  },
+                  "display_id": "` +  display + `",
+                  "plot_id": ` +  plot_id + `,
+                  "grm": ` + JSON.stringify(data) + `
+                });
+              `
             }
           }
         });
@@ -190,21 +235,21 @@ JSTerm = function() {
       if (data_loaded) {
         return;
       }
+      if (typeof storedData === 'undefined') {
+        return;
+      }
       data_loaded = true;
       let created_widgets = [];
       let timestamps = {};
-      let divs = document.getElementsByClassName("jsterm-data-widget");
-      for (let i = 0; i < divs.length; i++) {
-        let widget_data_str = divs[i].innerText.trim();
-        if (widget_data_str !== 'nothing' && widget_data_str !== '') {
-          let widget_data = JSON.parse(widget_data_str);
+      for (let i = 0; i < storedData.length; i++) {
+          let widget_data = storedData[i];
           if (typeof timestamps[widget_data.plot_id] === 'undefined' || widget_data.timestamp < timestamps[widget_data.plot_id]) {
             timestamps[widget_data.plot_id] = widget_data.timestamp;
             widgets[widget_data.plot_id] = new JSTermWidget(widget_data.plot_id);
             widgets[widget_data.plot_id].display = widget_data.display_id;
             widgets[widget_data.plot_id].width = widget_data.width;
             widgets[widget_data.plot_id].height = widget_data.height;
-            widgets[widget_data.plot_id].tooltip.html = decode(widget_data.tooltip.html);
+            widgets[widget_data.plot_id].tooltip.html = widget_data.tooltip.html;
             widgets[widget_data.plot_id].tooltip.data = widget_data.tooltip.data;
             // TODO: Das hier erst am Schluss machen, wenn klar ist, dass keine aktuelleren Daten gefunden wurden
             createCanvas(widgets[widget_data.plot_id]);
@@ -215,7 +260,7 @@ JSTerm = function() {
             // TODO
             console.log('older widget data for plot ID', widget_data.plot_id, 'found');
           }
-        }
+        //}
       }
     };
 
@@ -555,6 +600,7 @@ JSTerm = function() {
           let context = this.overlayCanvas.getContext('2d');
           context.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
         }
+        this.tooltipDiv.innerHTML = "";
         this.tooltipDiv.style.display = 'none';
         this.overlayArrowLeft.style.display = 'none';
         this.overlayArrowRight.style.display = 'none';
@@ -585,6 +631,7 @@ JSTerm = function() {
        */
       this.handleMouseMove = function(x, y) {
         if (this.panning) {
+          this.tooltipDiv.innerHTML = "";
           this.tooltipDiv.style.display = 'none';
           this.overlayArrowLeft.style.display = 'none';
           this.overlayArrowRight.style.display = 'none';
@@ -602,6 +649,7 @@ JSTerm = function() {
           grm.args_delete(mouseargs);
           this.prevMousePos = [x, y];
         } else if (this.boxzoom) {
+          this.tooltipDiv.innerHTML = "";
           this.tooltipDiv.style.display = 'none';
           this.overlayArrowLeft.style.display = 'none';
           this.overlayArrowRight.style.display = 'none';
@@ -626,13 +674,13 @@ JSTerm = function() {
           context.closePath();
         } else {
           grm.switch(this.id);
-          tooltip = grm.get_tooltip(x, y);
-          if (tooltip.xpx >= 0 && tooltip.ypx >= 0) {
+          let tooltipInfo = grm.get_tooltip(x, y);
+          if (tooltipInfo.xpx >= 0 && tooltipInfo.ypx >= 0) {
             let text;
-            tooltip.x = Math.round((tooltip.x + Number.EPSILON) * 100) / 100;
-            tooltip.y = Math.round((tooltip.y + Number.EPSILON) * 100) / 100;
+            tooltipInfo.x = Math.round((tooltipInfo.x + Number.EPSILON) * 100) / 100;
+            tooltipInfo.y = Math.round((tooltipInfo.y + Number.EPSILON) * 100) / 100;
             if (typeof this.tooltip === 'undefined' || this.tooltip.html == "") {
-              if (tooltip.label != "") {
+              if (tooltipInfo.label != "") {
                 text = TOOLTIP_DEFAULT_HTML_LABEL_SET;
               } else {
                 text = TOOLTIP_DEFAULT_HTML_LABEL_NOT_SET;
@@ -641,13 +689,18 @@ JSTerm = function() {
               text = this.tooltip.html;
             }
             let index = 0,
-              start, end, key, substr, arrStart, arrEnd, subkey;
+              start, end, key, substr, arrStart, arrEnd, subkey, replacement;
             start = text.indexOf('{$', index);
             while (start != -1) {
               end = text.indexOf('}', start);
               key = text.substring(start + 2, end);
-              text = text.substring(0, start) + tooltip[key] + text.substring(end + 1);
-              index = index - (end - start) + tooltip[key].length;
+              if (typeof tooltipInfo[key] !== 'undefined') {
+                replacement = tooltipInfo[key];
+              } else {
+                replacement = TOOLTIP_MISSING_VALUE_REPLACEMENT;
+              }
+              text = text.substring(0, start) + replacement + text.substring(end + 1);
+              index = index - (end - start) + tooltipInfo[key].length;
               start = text.indexOf('{$', index);
             }
             index = 0;
@@ -660,32 +713,38 @@ JSTerm = function() {
               key = substr.substring(0, arrStart);
               subkey = substr.substring(arrStart + 1, arrEnd);
               if (subkey[0] == '$') {
-                subkey = tooltip[subkey.substring(1)];
+                subkey = tooltipInfo[subkey.substring(1)];
               }
-              text = text.substring(0, start) + this.tooltip.data[key][subkey] + text.substring(end + 1);
-              index = index - (end - start) + this.tooltip.data[key][subkey].length;
+              if (typeof this.tooltip.data[key] !== 'undefined' && typeof this.tooltip.data[key][subkey] !== 'undefined') {
+                replacement = this.tooltip.data[key][subkey];
+              } else {
+                replacement = TOOLTIP_MISSING_VALUE_REPLACEMENT;
+              }
+              text = text.substring(0, start) + replacement + text.substring(end + 1);
+              index = index - (end - start) + replacement.length;
               start = text.indexOf('{@', index);
             }
             this.tooltipDiv.innerHTML = text;
-            if (tooltip.xpx > this.overlayCanvas.width / 2.0) {
-              this.tooltipDiv.style.right = (this.overlayCanvas.width - tooltip.xpx + 8) + 'px';
+            if (tooltipInfo.xpx > this.overlayCanvas.width / 2.0) {
+              this.tooltipDiv.style.right = (this.overlayCanvas.width - tooltipInfo.xpx + ARROW_SIZE[1]) + 'px';
               this.tooltipDiv.style.left = 'auto';
-              this.tooltipDiv.style.top = (tooltip.ypx - 0.5 * this.tooltipDiv.clientHeight) + 'px';
-              this.overlayArrowRight.style.right = (this.overlayCanvas.width - tooltip.xpx) + 'px';
-              this.overlayArrowRight.style.top = (tooltip.ypx - 5) + 'px';
+              this.tooltipDiv.style.top = (tooltipInfo.ypx - 0.5 * this.tooltipDiv.clientHeight) + 'px';
+              this.overlayArrowRight.style.right = (this.overlayCanvas.width - tooltipInfo.xpx) + 'px';
+              this.overlayArrowRight.style.top = (tooltipInfo.ypx - 5) + 'px';
               this.overlayArrowRight.style.display = 'block';
               this.overlayArrowLeft.style.display = 'none';
             } else {
-              this.tooltipDiv.style.left = (tooltip.xpx + 8) + 'px';
+              this.tooltipDiv.style.left = (tooltipInfo.xpx  + ARROW_SIZE[1]) + 'px';
               this.tooltipDiv.style.right = 'auto';
-              this.tooltipDiv.style.top = (tooltip.ypx - 0.5 * this.tooltipDiv.clientHeight) + 'px';
-              this.overlayArrowLeft.style.left = tooltip.xpx + 'px';
-              this.overlayArrowLeft.style.top = (tooltip.ypx - 5) + 'px';
+              this.tooltipDiv.style.top = (tooltipInfo.ypx - 0.5 * this.tooltipDiv.clientHeight) + 'px';
+              this.overlayArrowLeft.style.left = tooltipInfo.xpx + 'px';
+              this.overlayArrowLeft.style.top = (tooltipInfo.ypx - 5) + 'px';
               this.overlayArrowLeft.style.display = 'block';
               this.overlayArrowRight.style.display = 'none';
             }
             this.tooltipDiv.style.display = 'block';
           } else {
+            this.tooltipDiv.innerHTML = "";
             this.tooltipDiv.style.display = 'none';
             this.overlayArrowLeft.style.display = 'none';
             this.overlayArrowRight.style.display = 'none';
@@ -789,7 +848,7 @@ JSTerm = function() {
           case 'disable_jseventhandling':
             this.handleEvents = false;
             break;
-          case 'tooltip':
+          case 'settooltip':
             this.tooltip.html = msg.html;
             this.tooltip.data = msg.data;
             this.save();
@@ -831,37 +890,16 @@ JSTerm = function() {
           this.overlayCanvas = document.getElementById('jsterm-overlay-' + this.id);
           this.overlayCanvas.style.cursor = 'auto';
           this.tooltipDiv = document.createElement('div');
-          this.tooltipDiv.style['z-index'] = 1;
-          this.tooltipDiv.style.position = 'absolute';
+          this.tooltipDiv.classList.add('jsterm-tooltip');
           this.tooltipDiv.innerHTML = '';
-          //this.tooltipDiv.style.top = TOOLTIP_PAD_TOP;
-          //this.tooltipDiv.style.left = TOOLTIP_PAD_LEFT;
-          this.tooltipDiv.style.display = 'none';
-          this.tooltipDiv.style['background-color'] = TOOLTIP_BACKGROUND;
-          this.tooltipDiv.style.border = TOOLTIP_BORDER;
-          this.tooltipDiv.style.padding = TOOLTIP_PADDING;
           this.div.appendChild(this.tooltipDiv);
 
           this.overlayArrowLeft = document.createElement('div');
-          this.overlayArrowLeft.style.width = 0;
-          this.overlayArrowLeft.style.height = 0;
-          this.overlayArrowLeft.style['border-top'] = '5px solid transparent';
-          this.overlayArrowLeft.style['border-bottom'] = '5px solid transparent';
-          this.overlayArrowLeft.style['border-right'] = '8px solid rgba(122, 122, 122, 0.8)';
-          this.overlayArrowLeft.style['z-index'] = 1;
-          this.overlayArrowLeft.style.position = 'absolute';
-          this.overlayArrowLeft.style.display = 'none';
+          this.overlayArrowLeft.classList.add('jsterm-left-arrow');
           this.div.appendChild(this.overlayArrowLeft);
 
           this.overlayArrowRight = document.createElement('div');
-          this.overlayArrowRight.style.width = 0;
-          this.overlayArrowRight.style.height = 0;
-          this.overlayArrowRight.style['border-top'] = '5px solid transparent';
-          this.overlayArrowRight.style['border-bottom'] = '5px solid transparent';
-          this.overlayArrowRight.style['border-left'] = '8px solid rgba(122, 122, 122, 0.8)';
-          this.overlayArrowRight.style['z-index'] = 1;
-          this.overlayArrowRight.style.position = 'absolute';
-          this.overlayArrowRight.style.display = 'none';
+          this.overlayArrowRight.classList.add('jsterm-right-arrow');
           this.div.appendChild(this.overlayArrowRight);
 
           //registering event handler
@@ -982,6 +1020,12 @@ JSTerm = function() {
         }
         if (typeof Jupyter !== 'undefined') {
           jupyterRunning = true;
+        }
+        if (document.getElementById('jsterm-style') == null) {
+          let style = document.createElement('style');
+          style.id = 'jsterm-style';
+          style.textContent = STYLE_CSS;
+          document.head.append(style);
         }
         drawSavedData();
       }
