@@ -730,7 +730,7 @@ JSTerm = function() {
               this.tooltipDiv.style.left = 'auto';
               this.tooltipDiv.style.top = (tooltipInfo.ypx - 0.5 * this.tooltipDiv.clientHeight) + 'px';
               this.overlayArrowRight.style.right = (this.overlayCanvas.width - tooltipInfo.xpx) + 'px';
-              this.overlayArrowRight.style.top = (tooltipInfo.ypx - 5) + 'px';
+              this.overlayArrowRight.style.top = (tooltipInfo.ypx - ARROW_SIZE[1]) + 'px';
               this.overlayArrowRight.style.display = 'block';
               this.overlayArrowLeft.style.display = 'none';
             } else {
@@ -738,7 +738,7 @@ JSTerm = function() {
               this.tooltipDiv.style.right = 'auto';
               this.tooltipDiv.style.top = (tooltipInfo.ypx - 0.5 * this.tooltipDiv.clientHeight) + 'px';
               this.overlayArrowLeft.style.left = tooltipInfo.xpx + 'px';
-              this.overlayArrowLeft.style.top = (tooltipInfo.ypx - 5) + 'px';
+              this.overlayArrowLeft.style.top = (tooltipInfo.ypx - ARROW_SIZE[1]) + 'px';
               this.overlayArrowLeft.style.display = 'block';
               this.overlayArrowRight.style.display = 'none';
             }
