@@ -7,8 +7,7 @@ JSTerm = function() {
     KERNEL_CONNECT_WAIT_TIME = 100; // Time to wait between kernel initialisation attempts
     RECONNECT_PLOT_TIMEOUT = 100; // Time to wait between attempts to connect to a plot's canvas
     RECONNECT_PLOT_MAX_ATTEMPTS = 50; // Maximum number of canvas reconnection attempts
-    BOXZOOM_FILL_STYLE = '#FFAAAA'; // Fill style of the boxzoom box
-    BOXZOOM_STROKE_STYLE = '#FF0000'; // Outline style of the boxzoom box
+    BOXZOOM_FILL_STYLE = '#bed2e8'; // Fill style of the boxzoom box
     DEFAULT_WIDTH = 600;
     DEFAULT_HEIGHT = 450;
 
@@ -664,13 +663,10 @@ JSTerm = function() {
             this.overlayCanvas.style.cursor = 'nesw-resize';
           }
           context.fillStyle = BOXZOOM_FILL_STYLE;
-          context.strokeStyle = BOXZOOM_STROKE_STYLE;
           context.beginPath();
           context.rect(box[0], box[1], box[2], box[3]);
-          context.globalAlpha = 0.2;
+          context.globalAlpha = 0.5;
           context.fill();
-          context.globalAlpha = 1.0;
-          context.stroke();
           context.closePath();
         } else {
           grm.switch(this.id);
