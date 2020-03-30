@@ -10869,7 +10869,7 @@ static void gr_trackballposition(const double *mouse, double r, double *erg)
                            r * r * (factor_x * factor_x + factor_y * factor_y + 1))) /
           (factor_x * factor_x + factor_y * factor_y + 1);
       x = factor_x * z;
-      y = -factor_y * z;
+      y = factor_y * z;
 
       if (x * x + y * y > r * r / sqrt(2))
         {
@@ -10983,23 +10983,20 @@ void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, do
       axis_y = start[2] * end[0] - end[2] * start[0];
       axis_z = start[0] * end[1] - end[0] * start[1];
 
-      if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
-        {
-          /* calculate and normalize the forward direction */
-          fx = tx.focus_point_x - tx.camera_pos_x;
-          fy = tx.focus_point_y - tx.camera_pos_y;
-          fz = tx.focus_point_z - tx.camera_pos_z;
-          f_length = sqrt(fx * fx + fy * fy + fz * fz);
-          fx /= f_length;
-          fy /= f_length;
-          fz /= f_length;
+      /* calculate and normalize the forward direction */
+      fx = tx.focus_point_x - tx.camera_pos_x;
+      fy = tx.focus_point_y - tx.camera_pos_y;
+      fz = tx.focus_point_z - tx.camera_pos_z;
+      f_length = sqrt(fx * fx + fy * fy + fz * fz);
+      fx /= f_length;
+      fy /= f_length;
+      fz /= f_length;
 
-          /* reverse the rotation axis around the forward axis */
-          axis_projection_forward = axis_x * fx + axis_y * fy + axis_z * fz;
-          axis_x -= fx * axis_projection_forward * 2;
-          axis_y -= fy * axis_projection_forward * 2;
-          axis_z -= fz * axis_projection_forward * 2;
-        }
+      /* reverse the rotation axis around the forward axis */
+      axis_projection_forward = axis_x * fx + axis_y * fy + axis_z * fz;
+      axis_x -= fx * axis_projection_forward * 2;
+      axis_y -= fy * axis_projection_forward * 2;
+      axis_z -= fz * axis_projection_forward * 2;
       axis_length = sqrt(axis_x * axis_x + axis_y * axis_y + axis_z * axis_z);
       axis_x /= axis_length;
       axis_y /= axis_length;
