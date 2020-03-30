@@ -10827,7 +10827,7 @@ void gr_path(int n, double *x, double *y, const char *codes)
 }
 
 /*!
- * Returns the position on side of the hyperboloid or trackball
+ * Return the position on the hyperboloid or sphere.
  */
 static void gr_trackballposition(const double *mouse, double r, double *erg)
 {
@@ -10841,7 +10841,7 @@ static void gr_trackballposition(const double *mouse, double r, double *erg)
   if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
       x = (gpx.right - gpx.left) * (x + 1) * 0.5 + gpx.left;
-      y = (gpx.bottom - gpx.top) * (y + 1) * 0.5 + gpx.top;
+      y = (gpx.bottom - gpx.top) * (-y + 1) * 0.5 + gpx.top;
 
       if (x * x + y * y <= r * r / sqrt(2))
         {
@@ -10897,7 +10897,7 @@ static void gr_trackballposition(const double *mouse, double r, double *erg)
 }
 
 /*!
- * Returns the radius of the minimum bounding sphere
+ * Return the radius of the minimum bounding sphere for the current 3D window
  */
 static void gr_calculateradius(double *radius)
 {
@@ -10934,12 +10934,15 @@ static void gr_calculateradius(double *radius)
 }
 
 /*!
- * Interface for interaction with the rotation of the model. For this a virtual Arcball is used.
+ * Rotate the current scene according to a virtual arcball.
  *
  * \param start_mouse_pos_x x component of the start mouse position
  * \param start_mouse_pos_y y component of the start mouse position
  * \param end_mouse_pos_x x component of the end mouse position
  * \param end_mouse_pos_y y component of the end mouse position
+ *
+ * This function requires values between 0 (left side or bottom of the drawing
+ * area) and 1 (right side or top of the drawing area).
  */
 void gr_camerainteraction(double start_mouse_pos_x, double start_mouse_pos_y, double end_mouse_pos_x,
                           double end_mouse_pos_y)
@@ -11076,13 +11079,13 @@ void gr_setwindow3d(double xmin, double xmax, double ymin, double ymax, double z
 }
 
 /*!
- * Set the scale factor for each axis. A one means no scale.
+ * Set the scale factor for each axis.
  *
  * \param x_axis_scale factor for scaling the x-axis
  * \param y_axis_scale factor for scaling the y-axis
  * \param z_axis_scale factor for scaling the z-axis
  *
- * All factor have to be != 0.
+ * The scaling factors must not be zero.
  */
 void gr_setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axis_scale)
 {
@@ -11104,7 +11107,7 @@ void gr_setscalefactors3d(double x_axis_scale, double y_axis_scale, double z_axi
 }
 
 /*!
- * Returns the scale factors for each axis.
+ * Returns the scaling factor for each axis.
  */
 void gr_inqscalefactors3d(double *x_axis_scale, double *y_axis_scale, double *z_axis_scale)
 {
@@ -11166,8 +11169,8 @@ void gr_inqbordercolorind(int *coli)
  *
  * The center of the 3d window is used as the focus point and the camera is positioned relative to it, using spherical
  * coordinates. This function can therefore also be used if the user prefers spherical coordinates to setting the direct
- * camera position, but with reduced functionality in comparison to gr.settransformationparameters,
- * gr.setperspectiveprojection and gr.setorthographicprojection.
+ * camera position, but with reduced functionality in comparison to gr_settransformationparameters,
+ * gr_setperspectiveprojection and gr_setorthographicprojection.
  *
  * \param phi azimuthal angle of the spherical coordinates
  * \param theta polar angle of the spherical coordinates
@@ -11175,7 +11178,6 @@ void gr_inqbordercolorind(int *coli)
  * \param camera_distance distance between the camera and the focus point (0 or NaN for the radius of the object's
  * smallest bounding sphere)
  *
- * This function requires GR runtime version 0.48 or higher.
  */
 void gr_transformationinterfaceforrepl(double phi, double theta, double fov, double camera_distance)
 {
