@@ -64,7 +64,7 @@
 
 
 /* First part of user prologue.  */
-#line 3 "mathtex2.y"
+#line 11 "mathtex2.y"
 
 #include "mathtex2.h"
 
@@ -384,18 +384,18 @@ union yyalloc
 #endif /* !YYCOPY_NEEDED */
 
 /* YYFINAL -- State number of the termination state.  */
-#define YYFINAL 84
+#define YYFINAL 85
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST 262
+#define YYLAST 263
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS 44
 /* YYNNTS -- Number of nonterminals.  */
 #define YYNNTS 35
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES 98
+#define YYNRULES 99
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES 150
+#define YYNSTATES 151
 
 #define YYUNDEFTOK 2
 #define YYMAXUTOK 287
@@ -421,11 +421,11 @@ static const yytype_uint8 yytranslate[] = {
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] = {
-    0,   50,  50,  55,  61,  71,  72,  73,  74,  75,  76,  77,  78,  79,  80,  81,  82,  83,  84,  85,
-    90,  93,  96,  103, 107, 110, 114, 117, 123, 131, 138, 149, 163, 167, 171, 175, 179, 186, 190, 194,
-    198, 202, 206, 213, 217, 221, 225, 229, 233, 240, 249, 258, 266, 274, 285, 294, 298, 301, 305, 309,
-    313, 316, 319, 322, 325, 328, 331, 334, 337, 343, 366, 376, 386, 394, 402, 413, 422, 434, 444, 454,
-    464, 470, 481, 487, 494, 502, 513, 531, 549, 567, 586, 587, 593, 599, 605, 614, 618, 626, 630};
+    0,   58,  58,  63,  69,  79,  80,  81,  82,  83,  84,  85,  86,  87,  88,  89,  90,  91,  92,  93,
+    94,  99,  102, 105, 112, 116, 119, 123, 126, 132, 140, 147, 158, 172, 176, 180, 184, 188, 195, 199,
+    203, 207, 211, 215, 222, 226, 230, 234, 238, 242, 249, 258, 267, 275, 283, 294, 303, 307, 310, 314,
+    318, 322, 325, 328, 331, 334, 337, 340, 343, 346, 352, 375, 385, 395, 403, 411, 422, 431, 443, 453,
+    463, 473, 479, 490, 496, 503, 511, 522, 540, 558, 576, 595, 596, 602, 608, 614, 623, 627, 635, 639};
 #endif
 
 #if YYDEBUG || YYERROR_VERBOSE || 0
@@ -521,9 +521,9 @@ static const yytype_uint16 yytoknum[] = {0,   256, 257, 258, 259, 260, 261, 262,
                                          285, 286, 287, 91,  93,  40,  41,  124, 60,  62,  47,  46,  123, 125};
 #endif
 
-#define YYPACT_NINF -105
+#define YYPACT_NINF -109
 
-#define yypact_value_is_default(Yystate) (!!((Yystate) == (-105)))
+#define yypact_value_is_default(Yystate) (!!((Yystate) == (-109)))
 
 #define YYTABLE_NINF -1
 
@@ -532,87 +532,87 @@ static const yytype_uint16 yytoknum[] = {0,   256, 257, 258, 259, 260, 261, 262,
 /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
    STATE-NUM.  */
 static const yytype_int16 yypact[] = {
-    70,   -105, 220,  -105, -34,  -34,  -34,  -34,  -27,  -105, 220,  -105, -105, -17,  -105, -105, -105, -7,   -11,
-    -105, -105, -105, 0,    -34,  7,    -105, -105, -105, -105, -105, -105, -105, -105, -105, -105, -105, -105, 52,
-    70,   -105, -105, -105, -105, -105, -105, 140,  -105, -105, -105, -105, -105, -105, -105, 70,   -105, -105, -105,
-    -105, -105, 70,   -34,  -34,  -34,  -34,  -11,  -105, -105, 2,    -105, -105, -105, -105, -105, -105, -105, -105,
-    -105, -105, -105, -105, 180,  -105, 6,    -105, -105, -105, 140,  140,  32,   70,   11,   70,   16,   -105, -105,
-    -105, -105, 18,   -105, -18,  35,   22,   26,   37,   180,  180,  27,   35,   38,   -105, -105, 90,   -105, -105,
-    -105, -105, -105, 29,   35,   37,   37,   -105, 35,   -105, -105, -105, -105, -34,  -105, -105, -105, -105, -105,
-    -105, -105, 90,   37,   37,   -105, 48,   50,   2,    72,   51,   70,   -34,  75,   -34,  -105, -105};
+    71,   -109, 221,  -109, -27,  -27,  -27,  -27,  -6,   -109, 221,  -109, -109, -1,   -109, -109, -109, 9,    92,
+    -109, -109, -109, -109, 10,   -27,  -16,  -109, -109, -109, -109, -109, -109, -109, -109, -109, -109, -109, -109,
+    50,   71,   -109, -109, -109, -109, -109, -109, 141,  -109, -109, -109, -109, -109, -109, -109, 71,   -109, -109,
+    -109, -109, -109, 71,   -27,  -27,  -27,  -27,  92,   -109, -109, -18,  -109, -109, -109, -109, -109, -109, -109,
+    -109, -109, -109, -109, -109, 181,  -109, -20,  -109, -109, -109, 141,  141,  32,   71,   11,   71,   12,   -109,
+    -109, -109, -109, 17,   -109, 2,    31,   23,   26,   37,   181,  181,  27,   31,   35,   -109, -109, -2,   -109,
+    -109, -109, -109, -109, 29,   31,   37,   37,   -109, 31,   -109, -109, -109, -109, -27,  -109, -109, -109, -109,
+    -109, -109, -109, -2,   37,   37,   -109, 30,   52,   -18,  49,   74,   71,   -27,  75,   -27,  -109, -109};
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
    Performed when YYTABLE does not specify something else to do.  Zero
    means the default is an error.  */
 static const yytype_uint8 yydefact[] = {
-    0,  5,  0,  29, 0,  0,  0,  0,  0,  55, 0,  22, 25, 0,  59, 58, 23, 0,  0,  15, 16, 17, 0,  0,  0,
-    18, 19, 6,  7,  8,  9,  10, 11, 12, 13, 14, 83, 0,  2,  57, 3,  21, 24, 26, 20, 51, 56, 27, 65, 67,
-    68, 66, 60, 84, 61, 62, 63, 64, 30, 0,  0,  0,  0,  0,  0,  54, 82, 0,  41, 35, 42, 36, 38, 37, 32,
-    39, 33, 34, 40, 49, 72, 70, 0,  75, 1,  4,  51, 51, 0,  84, 0,  80, 0,  86, 87, 88, 89, 0,  97, 0,
-    0,  0,  90, 95, 72, 72, 0,  0,  0,  52, 53, 0,  31, 85, 77, 81, 79, 0,  0,  96, 91, 28, 93, 98, 74,
-    73, 71, 0,  47, 48, 44, 43, 45, 46, 50, 0,  92, 94, 76, 0,  0,  0,  0,  0,  84, 0,  0,  0,  78, 69};
+    0,  5,  0,  30, 0,  0,  0,  0,  0,  56, 0,  23, 26, 0,  60, 59, 24, 0,  0,  6,  16, 17, 18, 0,  0,  0,
+    19, 20, 7,  8,  9,  10, 11, 12, 13, 14, 15, 84, 0,  2,  58, 3,  22, 25, 27, 21, 52, 57, 28, 66, 68, 69,
+    67, 61, 85, 62, 63, 64, 65, 31, 0,  0,  0,  0,  0,  0,  55, 83, 0,  42, 36, 43, 37, 39, 38, 33, 40, 34,
+    35, 41, 50, 73, 71, 0,  76, 1,  4,  52, 52, 0,  85, 0,  81, 0,  87, 88, 89, 90, 0,  98, 0,  0,  0,  91,
+    96, 73, 73, 0,  0,  0,  53, 54, 0,  32, 86, 78, 82, 80, 0,  0,  97, 92, 29, 94, 99, 75, 74, 72, 0,  48,
+    49, 45, 44, 46, 47, 51, 0,  93, 95, 77, 0,  0,  0,  0,  0,  85, 0,  0,  0,  79, 70};
 
 /* YYPGOTO[NTERM-NUM].  */
-static const yytype_int8 yypgoto[] = {-105, -105, -105, -105, 3,    -41,  -105, -105, -39, -104, 5,    -16,
-                                      -105, -105, -66,  -105, 34,   -105, -105, -105, -54, -105, -105, -105,
-                                      -5,   30,   -105, -84,  -105, -105, -105, -105, -21, 41,   -90};
+static const yytype_int8 yypgoto[] = {-109, -109, -109, -109, 3,    -41,  -109, -109, -39, -108, 7,    -15,
+                                      -109, -109, -58,  -109, 8,    -109, -109, -109, -61, -109, -109, -109,
+                                      -5,   28,   -109, -84,  -109, -109, -109, -109, -14, 39,   -92};
 
 /* YYDEFGOTO[NTERM-NUM].  */
-static const yytype_int16 yydefgoto[] = {-1, 37, 38,  39, 89, 41,  42, 43, 44, 78, 79, 134, 45, 112, 88,  46,  47, 48,
-                                         49, 50, 106, 51, 52, 145, 60, 92, 53, 90, 54, 55,  56, 57,  101, 102, 103};
+static const yytype_int16 yydefgoto[] = {-1, 38, 39,  40, 90, 42,  43, 44, 45, 79, 80, 135, 46, 113, 89,  47,  48, 49,
+                                         50, 51, 107, 52, 53, 146, 61, 93, 54, 91, 55, 56,  57, 58,  102, 103, 104};
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
    positive, shift that token.  If negative, reduce the rule whose
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_uint8 yytable[] = {
-    61, 62,  63,  40,  86,  113, 87,  133, 59,  119, 120, 68,  69,  98,  70,  64,  71,  119, 81, 83,  109, 110,
-    72, 118, 73,  66,  74,  75,  136, 76,  77,  133, 137, 98,  99,  67,  58,  98,  107, 105, 82, 85,  80,  100,
-    65, 86,  86,  87,  87,  59,  124, 125, 84,  111, 114, 93,  94,  95,  96,  116, 146, 117, 91, 105, 105, 121,
-    98, 122, 123, 97,  126, 135, 127, 1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  11,  12, 13,  14,  15,
-    16, 17,  18,  140, 141, 144, 91,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30, 31,  32,  33,
-    34, 35,  36,  69,  128, 143, 129, 71,  148, 139, 142, 115, 138, 108, 130, 0,   131, 74,  0,  132, 76,  77,
-    0,  0,   0,   0,   0,   0,   0,   0,   147, 0,   149, 1,   2,   3,   4,   5,   6,   7,   8,  9,   10,  0,
-    12, 13,  14,  15,  16,  17,  18,  0,   0,   0,   0,   19,  20,  21,  22,  23,  24,  25,  26, 27,  28,  29,
-    30, 31,  32,  33,  34,  35,  36,  1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  104, 12, 13,  14,  15,
-    16, 17,  0,   0,   0,   0,   0,   19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30, 31,  32,  33,
-    34, 35,  36,  1,   0,   0,   4,   5,   6,   7,   8,   9,   10,  0,   0,   13,  14,  15,  0,  0,   0,   0,
-    0,  0,   0,   19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34, 35,  36};
+    62,  63,  64,  41,  134, 87,  114, 88,  120, 121, 59,  99,  108, 99,  100, 60,  120, 83,  66,  82, 84,  70,
+    129, 101, 130, 72,  60,  137, 134, 110, 111, 138, 131, 99,  132, 75,  65,  133, 77,  78,  106, 67, 86,  119,
+    125, 126, 87,  87,  88,  88,  85,  68,  81,  112, 115, 117, 94,  95,  96,  97,  118, 147, 99,  92, 106, 106,
+    122, 123, 124, 128, 127, 136, 98,  141, 1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  11,  12, 13,  14,
+    15,  16,  17,  18,  144, 19,  142, 92,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31, 32,  33,
+    34,  35,  36,  37,  69,  70,  145, 71,  149, 72,  116, 140, 109, 139, 0,   73,  0,   74,  143, 75, 76,  0,
+    77,  78,  0,   0,   0,   0,   0,   0,   0,   148, 0,   150, 1,   2,   3,   4,   5,   6,   7,   8,  9,   10,
+    0,   12,  13,  14,  15,  16,  17,  18,  0,   19,  0,   0,   20,  21,  22,  23,  24,  25,  26,  27, 28,  29,
+    30,  31,  32,  33,  34,  35,  36,  37,  1,   2,   3,   4,   5,   6,   7,   8,   9,   10,  105, 12, 13,  14,
+    15,  16,  17,  0,   0,   19,  0,   0,   20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31, 32,  33,
+    34,  35,  36,  37,  1,   0,   0,   4,   5,   6,   7,   8,   9,   10,  0,   0,   13,  14,  15,  0,  0,   0,
+    0,   19,  0,   0,   20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35, 36,  37};
 
 static const yytype_int16 yycheck[] = {
-    5,   6,  7,   0,   45,  89, 45, 111, 42,  99, 100, 22, 23,  31, 25, 42,  27,  107, 23, 24, 86,  87, 33,  41,
-    35,  42, 37,  38,  118, 40, 41, 135, 122, 31, 32,  42, 2,   31, 32, 80,  33,  38,  42, 41, 10,  86, 87,  86,
-    87,  42, 104, 105, 0,   21, 43, 60,  61,  62, 63,  43, 144, 43, 59, 104, 105, 43,  31, 41, 31,  64, 43,  42,
-    34,  3,  4,   5,   6,   7,  8,  9,   10,  11, 12,  13, 14,  15, 16, 17,  18,  19,  20, 43, 42,  42, 91,  25,
-    26,  27, 28,  29,  30,  31, 32, 33,  34,  35, 36,  37, 38,  39, 40, 41,  42,  23,  24, 43, 26,  27, 43,  135,
-    141, 91, 127, 82,  34,  -1, 36, 37,  -1,  39, 40,  41, -1,  -1, -1, -1,  -1,  -1,  -1, -1, 145, -1, 147, 3,
-    4,   5,  6,   7,   8,   9,  10, 11,  12,  -1, 14,  15, 16,  17, 18, 19,  20,  -1,  -1, -1, -1,  25, 26,  27,
-    28,  29, 30,  31,  32,  33, 34, 35,  36,  37, 38,  39, 40,  41, 42, 3,   4,   5,   6,  7,  8,   9,  10,  11,
-    12,  13, 14,  15,  16,  17, 18, 19,  -1,  -1, -1,  -1, -1,  25, 26, 27,  28,  29,  30, 31, 32,  33, 34,  35,
-    36,  37, 38,  39,  40,  41, 42, 3,   -1,  -1, 6,   7,  8,   9,  10, 11,  12,  -1,  -1, 15, 16,  17, -1,  -1,
-    -1,  -1, -1,  -1,  -1,  25, 26, 27,  28,  29, 30,  31, 32,  33, 34, 35,  36,  37,  38, 39, 40,  41, 42};
+    5,  6,   7,  0,   112, 46, 90, 46,  100, 101, 2,  31, 32, 31,  32, 42, 108, 33,  10, 24, 25,  23,  24, 41,
+    26, 27,  42, 119, 136, 87, 88, 123, 34,  31,  36, 37, 42, 39,  40, 41, 81,  42,  39, 41, 105, 106, 87, 88,
+    87, 88,  0,  42,  42,  21, 43, 43,  61,  62,  63, 64, 43, 145, 31, 60, 105, 106, 43, 41, 31,  34,  43, 42,
+    65, 43,  3,  4,   5,   6,  7,  8,   9,   10,  11, 12, 13, 14,  15, 16, 17,  18,  19, 20, 43,  22,  42, 92,
+    25, 26,  27, 28,  29,  30, 31, 32,  33,  34,  35, 36, 37, 38,  39, 40, 41,  42,  22, 23, 42,  25,  43, 27,
+    92, 136, 83, 128, -1,  33, -1, 35,  142, 37,  38, -1, 40, 41,  -1, -1, -1,  -1,  -1, -1, -1,  146, -1, 148,
+    3,  4,   5,  6,   7,   8,  9,  10,  11,  12,  -1, 14, 15, 16,  17, 18, 19,  20,  -1, 22, -1,  -1,  25, 26,
+    27, 28,  29, 30,  31,  32, 33, 34,  35,  36,  37, 38, 39, 40,  41, 42, 3,   4,   5,  6,  7,   8,   9,  10,
+    11, 12,  13, 14,  15,  16, 17, 18,  19,  -1,  -1, 22, -1, -1,  25, 26, 27,  28,  29, 30, 31,  32,  33, 34,
+    35, 36,  37, 38,  39,  40, 41, 42,  3,   -1,  -1, 6,  7,  8,   9,  10, 11,  12,  -1, -1, 15,  16,  17, -1,
+    -1, -1,  -1, 22,  -1,  -1, 25, 26,  27,  28,  29, 30, 31, 32,  33, 34, 35,  36,  37, 38, 39,  40,  41, 42};
 
 /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
    symbol of state STATE-NUM.  */
 static const yytype_uint8 yystos[] = {
-    0,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 25, 26, 27, 28, 29, 30,
-    31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 45, 46, 47, 48, 49, 50, 51, 52, 56, 59, 60, 61, 62,
-    63, 65, 66, 70, 72, 73, 74, 75, 60, 42, 68, 68, 68, 68, 42, 60, 42, 42, 22, 23, 25, 27, 33, 35, 37,
-    38, 40, 41, 53, 54, 42, 68, 33, 68, 0,  48, 49, 52, 58, 48, 71, 48, 69, 68, 68, 68, 68, 54, 31, 32,
-    41, 76, 77, 78, 13, 49, 64, 32, 77, 58, 58, 21, 57, 71, 43, 69, 43, 43, 41, 78, 78, 43, 41, 31, 64,
-    64, 43, 34, 24, 26, 34, 36, 39, 53, 55, 42, 78, 78, 68, 55, 43, 42, 76, 43, 42, 67, 71, 68, 43, 68};
+    0,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 25, 26, 27, 28, 29, 30,
+    31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 45, 46, 47, 48, 49, 50, 51, 52, 56, 59, 60, 61, 62, 63,
+    65, 66, 70, 72, 73, 74, 75, 60, 42, 68, 68, 68, 68, 42, 60, 42, 42, 22, 23, 25, 27, 33, 35, 37, 38, 40,
+    41, 53, 54, 42, 68, 33, 68, 0,  48, 49, 52, 58, 48, 71, 48, 69, 68, 68, 68, 68, 54, 31, 32, 41, 76, 77,
+    78, 13, 49, 64, 32, 77, 58, 58, 21, 57, 71, 43, 69, 43, 43, 41, 78, 78, 43, 41, 31, 64, 64, 43, 34, 24,
+    26, 34, 36, 39, 53, 55, 42, 78, 78, 68, 55, 43, 42, 76, 43, 42, 67, 71, 68, 43, 68};
 
 /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] = {0,  44, 45, 46, 46, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47,
-                                    48, 48, 48, 49, 49, 49, 49, 49, 50, 51, 51, 52, 53, 53, 53, 53, 53, 54, 54, 54,
-                                    54, 54, 54, 55, 55, 55, 55, 55, 55, 56, 57, 58, 58, 58, 59, 60, 60, 60, 60, 60,
-                                    60, 60, 60, 60, 60, 60, 60, 60, 60, 61, 62, 63, 64, 64, 64, 65, 65, 66, 67, 68,
-                                    69, 69, 70, 70, 71, 71, 72, 73, 74, 75, 76, 76, 76, 76, 76, 77, 77, 78, 78};
+                                    47, 48, 48, 48, 49, 49, 49, 49, 49, 50, 51, 51, 52, 53, 53, 53, 53, 53, 54, 54,
+                                    54, 54, 54, 54, 55, 55, 55, 55, 55, 55, 56, 57, 58, 58, 58, 59, 60, 60, 60, 60,
+                                    60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 61, 62, 63, 64, 64, 64, 65, 65, 66, 67,
+                                    68, 69, 69, 70, 70, 71, 71, 72, 73, 74, 75, 76, 76, 76, 76, 76, 77, 77, 78, 78};
 
 /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
-static const yytype_uint8 yyr2[] = {0, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1,
-                                    1, 1, 1, 4, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 2,
-                                    2, 0, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 13, 2, 4, 0, 2, 2,
-                                    2, 5, 3, 3, 3, 1, 2, 2, 1, 0, 2, 3, 3, 3, 3, 1, 2, 3, 2, 3,  1, 2, 1, 2};
+static const yytype_uint8 yyr2[] = {0, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1,
+                                    1, 1, 1, 1, 4, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1,
+                                    2, 2, 0, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 13, 2, 4, 0, 2,
+                                    2, 2, 5, 3, 3, 3, 1, 2, 2, 1, 0, 2, 3, 3, 3, 3, 1, 2, 3, 2, 3,  1, 2, 1, 2};
 
 
 #define yyerrok (yyerrstatus = 0)
@@ -1257,234 +1257,242 @@ yyreduce:
   switch (yyn)
     {
     case 2:
-#line 50 "mathtex2.y"
+#line 58 "mathtex2.y"
       {
         result_parser_node_index = copy_parser_node(yyvsp[0]);
       }
-#line 1379 "mathtex2.tab.c"
+#line 1382 "mathtex2.tab.c"
       break;
 
     case 3:
-#line 55 "mathtex2.y"
+#line 63 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.u.math.previous = 0;
         yyval.u.math.token = copy_parser_node(yyvsp[0]);
         yyval.type = NT_MATH;
       }
-#line 1390 "mathtex2.tab.c"
+#line 1393 "mathtex2.tab.c"
       break;
 
     case 4:
-#line 61 "mathtex2.y"
+#line 69 "mathtex2.y"
       {
         yyval = yyvsp[-1];
         yyval.u.math.previous = copy_parser_node(yyvsp[-1]);
         yyval.u.math.token = copy_parser_node(yyvsp[0]);
         yyval.length += yyvsp[0].length;
       }
-#line 1401 "mathtex2.tab.c"
+#line 1404 "mathtex2.tab.c"
       break;
 
     case 5:
-#line 71 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1407 "mathtex2.tab.c"
-      break;
-
-    case 6:
-#line 72 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1413 "mathtex2.tab.c"
-      break;
-
-    case 7:
-#line 73 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1419 "mathtex2.tab.c"
-      break;
-
-    case 8:
-#line 74 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1425 "mathtex2.tab.c"
-      break;
-
-    case 9:
-#line 75 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1431 "mathtex2.tab.c"
-      break;
-
-    case 10:
-#line 76 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1437 "mathtex2.tab.c"
-      break;
-
-    case 11:
-#line 77 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1443 "mathtex2.tab.c"
-      break;
-
-    case 12:
-#line 78 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1449 "mathtex2.tab.c"
-      break;
-
-    case 13:
 #line 79 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1455 "mathtex2.tab.c"
+#line 1410 "mathtex2.tab.c"
       break;
 
-    case 14:
+    case 6:
 #line 80 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1461 "mathtex2.tab.c"
+#line 1416 "mathtex2.tab.c"
       break;
 
-    case 15:
+    case 7:
 #line 81 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1467 "mathtex2.tab.c"
+#line 1422 "mathtex2.tab.c"
       break;
 
-    case 16:
+    case 8:
 #line 82 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1473 "mathtex2.tab.c"
+#line 1428 "mathtex2.tab.c"
       break;
 
-    case 17:
+    case 9:
 #line 83 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1479 "mathtex2.tab.c"
+#line 1434 "mathtex2.tab.c"
       break;
 
-    case 18:
+    case 10:
 #line 84 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1485 "mathtex2.tab.c"
+#line 1440 "mathtex2.tab.c"
       break;
 
-    case 19:
+    case 11:
 #line 85 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1491 "mathtex2.tab.c"
+#line 1446 "mathtex2.tab.c"
       break;
 
-    case 20:
+    case 12:
+#line 86 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1452 "mathtex2.tab.c"
+      break;
+
+    case 13:
+#line 87 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1458 "mathtex2.tab.c"
+      break;
+
+    case 14:
+#line 88 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1464 "mathtex2.tab.c"
+      break;
+
+    case 15:
+#line 89 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1470 "mathtex2.tab.c"
+      break;
+
+    case 16:
 #line 90 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1499 "mathtex2.tab.c"
+#line 1476 "mathtex2.tab.c"
       break;
 
-    case 21:
+    case 17:
+#line 91 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1482 "mathtex2.tab.c"
+      break;
+
+    case 18:
+#line 92 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1488 "mathtex2.tab.c"
+      break;
+
+    case 19:
 #line 93 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1507 "mathtex2.tab.c"
+#line 1494 "mathtex2.tab.c"
+      break;
+
+    case 20:
+#line 94 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1500 "mathtex2.tab.c"
+      break;
+
+    case 21:
+#line 99 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1508 "mathtex2.tab.c"
       break;
 
     case 22:
-#line 96 "mathtex2.y"
+#line 102 "mathtex2.y"
       {
         yyval = yyvsp[0];
-        yyval.type = NT_SYMBOL;
       }
 #line 1516 "mathtex2.tab.c"
       break;
 
     case 23:
-#line 103 "mathtex2.y"
+#line 105 "mathtex2.y"
       {
         yyval = yyvsp[0];
-        yyval.type = NT_SPACE;
+        yyval.type = NT_SYMBOL;
       }
 #line 1525 "mathtex2.tab.c"
       break;
 
     case 24:
-#line 107 "mathtex2.y"
+#line 112 "mathtex2.y"
       {
         yyval = yyvsp[0];
+        yyval.type = NT_SPACE;
       }
-#line 1533 "mathtex2.tab.c"
+#line 1534 "mathtex2.tab.c"
       break;
 
     case 25:
-#line 110 "mathtex2.y"
+#line 116 "mathtex2.y"
       {
         yyval = yyvsp[0];
-        yyval.type = NT_FONT;
       }
 #line 1542 "mathtex2.tab.c"
       break;
 
     case 26:
-#line 114 "mathtex2.y"
+#line 119 "mathtex2.y"
       {
         yyval = yyvsp[0];
+        yyval.type = NT_FONT;
       }
-#line 1550 "mathtex2.tab.c"
+#line 1551 "mathtex2.tab.c"
       break;
 
     case 27:
-#line 117 "mathtex2.y"
+#line 123 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1558 "mathtex2.tab.c"
+#line 1559 "mathtex2.tab.c"
       break;
 
     case 28:
-#line 123 "mathtex2.y"
+#line 126 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1567 "mathtex2.tab.c"
+      break;
+
+    case 29:
+#line 132 "mathtex2.y"
       {
         yyval = yyvsp[-3];
         yyval.length += yyvsp[-2].length + yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_CUSTOMSPACE;
       }
-#line 1568 "mathtex2.tab.c"
+#line 1577 "mathtex2.tab.c"
       break;
 
-    case 29:
-#line 131 "mathtex2.y"
+    case 30:
+#line 140 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.index = 0;
@@ -1492,11 +1500,11 @@ yyreduce:
         yyval.u.subsuper.operator= '\'';
         yyval.u.subsuper.token = 0;
       }
-#line 1580 "mathtex2.tab.c"
+#line 1589 "mathtex2.tab.c"
       break;
 
-    case 30:
-#line 138 "mathtex2.y"
+    case 31:
+#line 147 "mathtex2.y"
       {
         yyval = yyvsp[-1];
         yyval.index = 0;
@@ -1505,11 +1513,11 @@ yyreduce:
         yyval.u.subsuper.operator= yyvsp[-1].source[0];
         yyval.u.subsuper.token = copy_parser_node(yyvsp[0]);
       }
-#line 1593 "mathtex2.tab.c"
+#line 1602 "mathtex2.tab.c"
       break;
 
-    case 31:
-#line 149 "mathtex2.y"
+    case 32:
+#line 158 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-2].source;
@@ -1521,20 +1529,11 @@ yyreduce:
         yyval.u.autodelim.right_delim_length = yyvsp[0].length - 6;
         yyval.u.autodelim.inner_node_index = copy_parser_node(yyvsp[-1]);
       }
-#line 1609 "mathtex2.tab.c"
-      break;
-
-    case 32:
-#line 163 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-        yyval.type = NT_OTHER;
-      }
 #line 1618 "mathtex2.tab.c"
       break;
 
     case 33:
-#line 167 "mathtex2.y"
+#line 172 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1543,7 +1542,7 @@ yyreduce:
       break;
 
     case 34:
-#line 171 "mathtex2.y"
+#line 176 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1552,7 +1551,7 @@ yyreduce:
       break;
 
     case 35:
-#line 175 "mathtex2.y"
+#line 180 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1561,7 +1560,7 @@ yyreduce:
       break;
 
     case 36:
-#line 179 "mathtex2.y"
+#line 184 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1570,7 +1569,7 @@ yyreduce:
       break;
 
     case 37:
-#line 186 "mathtex2.y"
+#line 188 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1579,7 +1578,7 @@ yyreduce:
       break;
 
     case 38:
-#line 190 "mathtex2.y"
+#line 195 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1588,7 +1587,7 @@ yyreduce:
       break;
 
     case 39:
-#line 194 "mathtex2.y"
+#line 199 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1597,7 +1596,7 @@ yyreduce:
       break;
 
     case 40:
-#line 198 "mathtex2.y"
+#line 203 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1606,7 +1605,7 @@ yyreduce:
       break;
 
     case 41:
-#line 202 "mathtex2.y"
+#line 207 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1615,7 +1614,7 @@ yyreduce:
       break;
 
     case 42:
-#line 206 "mathtex2.y"
+#line 211 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1624,7 +1623,7 @@ yyreduce:
       break;
 
     case 43:
-#line 213 "mathtex2.y"
+#line 215 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1633,7 +1632,7 @@ yyreduce:
       break;
 
     case 44:
-#line 217 "mathtex2.y"
+#line 222 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1642,7 +1641,7 @@ yyreduce:
       break;
 
     case 45:
-#line 221 "mathtex2.y"
+#line 226 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1651,7 +1650,7 @@ yyreduce:
       break;
 
     case 46:
-#line 225 "mathtex2.y"
+#line 230 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1660,7 +1659,7 @@ yyreduce:
       break;
 
     case 47:
-#line 229 "mathtex2.y"
+#line 234 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1669,7 +1668,7 @@ yyreduce:
       break;
 
     case 48:
-#line 233 "mathtex2.y"
+#line 238 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
@@ -1678,14 +1677,12 @@ yyreduce:
       break;
 
     case 49:
-#line 240 "mathtex2.y"
+#line 242 "mathtex2.y"
       {
-        yyval.index = 0;
-        yyval.source = yyvsp[-1].source;
-        yyval.length = yyvsp[-1].length + yyvsp[0].length;
+        yyval = yyvsp[0];
         yyval.type = NT_OTHER;
       }
-#line 1773 "mathtex2.tab.c"
+#line 1771 "mathtex2.tab.c"
       break;
 
     case 50:
@@ -1696,11 +1693,22 @@ yyreduce:
         yyval.length = yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_OTHER;
       }
-#line 1784 "mathtex2.tab.c"
+#line 1782 "mathtex2.tab.c"
       break;
 
     case 51:
 #line 258 "mathtex2.y"
+      {
+        yyval.index = 0;
+        yyval.source = yyvsp[-1].source;
+        yyval.length = yyvsp[-1].length + yyvsp[0].length;
+        yyval.type = NT_OTHER;
+      }
+#line 1793 "mathtex2.tab.c"
+      break;
+
+    case 52:
+#line 267 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = NULL;
@@ -1709,24 +1717,11 @@ yyreduce:
         yyval.u.autodeliminner.token = 0;
         yyval.type = NT_AUTO_DELIM_INNER;
       }
-#line 1797 "mathtex2.tab.c"
-      break;
-
-    case 52:
-#line 266 "mathtex2.y"
-      {
-        yyval = yyvsp[-1];
-        yyval.index = 0;
-        yyval.type = NT_AUTO_DELIM_INNER;
-        yyval.u.autodeliminner.previous = copy_parser_node(yyvsp[0]);
-        yyval.u.autodeliminner.token = copy_parser_node(yyvsp[-1]);
-        yyval.length += yyvsp[0].length;
-      }
-#line 1810 "mathtex2.tab.c"
+#line 1806 "mathtex2.tab.c"
       break;
 
     case 53:
-#line 274 "mathtex2.y"
+#line 275 "mathtex2.y"
       {
         yyval = yyvsp[-1];
         yyval.index = 0;
@@ -1735,11 +1730,24 @@ yyreduce:
         yyval.u.autodeliminner.token = copy_parser_node(yyvsp[-1]);
         yyval.length += yyvsp[0].length;
       }
-#line 1823 "mathtex2.tab.c"
+#line 1819 "mathtex2.tab.c"
       break;
 
     case 54:
-#line 285 "mathtex2.y"
+#line 283 "mathtex2.y"
+      {
+        yyval = yyvsp[-1];
+        yyval.index = 0;
+        yyval.type = NT_AUTO_DELIM_INNER;
+        yyval.u.autodeliminner.previous = copy_parser_node(yyvsp[0]);
+        yyval.u.autodeliminner.token = copy_parser_node(yyvsp[-1]);
+        yyval.length += yyvsp[0].length;
+      }
+#line 1832 "mathtex2.tab.c"
+      break;
+
+    case 55:
+#line 294 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.type = NT_ACCENT;
@@ -1747,127 +1755,127 @@ yyreduce:
         yyval.length = yyvsp[-1].length + yyvsp[0].length;
         yyval.u.accent.token = copy_parser_node(yyvsp[0]);
       }
-#line 1835 "mathtex2.tab.c"
-      break;
-
-    case 55:
-#line 294 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-        yyval.type = NT_SYMBOL;
-      }
 #line 1844 "mathtex2.tab.c"
       break;
 
     case 56:
-#line 298 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1852 "mathtex2.tab.c"
-      break;
-
-    case 57:
-#line 301 "mathtex2.y"
+#line 303 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_SYMBOL;
+      }
+#line 1853 "mathtex2.tab.c"
+      break;
+
+    case 57:
+#line 307 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
       }
 #line 1861 "mathtex2.tab.c"
       break;
 
     case 58:
-#line 305 "mathtex2.y"
+#line 310 "mathtex2.y"
       {
         yyval = yyvsp[0];
-        yyval.type = NT_C_OVER_C;
+        yyval.type = NT_SYMBOL;
       }
 #line 1870 "mathtex2.tab.c"
       break;
 
     case 59:
-#line 309 "mathtex2.y"
+#line 314 "mathtex2.y"
       {
         yyval = yyvsp[0];
-        yyval.type = NT_FUNCTION;
+        yyval.type = NT_C_OVER_C;
       }
 #line 1879 "mathtex2.tab.c"
       break;
 
     case 60:
-#line 313 "mathtex2.y"
+#line 318 "mathtex2.y"
       {
         yyval = yyvsp[0];
+        yyval.type = NT_FUNCTION;
       }
-#line 1887 "mathtex2.tab.c"
+#line 1888 "mathtex2.tab.c"
       break;
 
     case 61:
-#line 316 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1895 "mathtex2.tab.c"
-      break;
-
-    case 62:
-#line 319 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 1903 "mathtex2.tab.c"
-      break;
-
-    case 63:
 #line 322 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1911 "mathtex2.tab.c"
+#line 1896 "mathtex2.tab.c"
       break;
 
-    case 64:
+    case 62:
 #line 325 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1919 "mathtex2.tab.c"
+#line 1904 "mathtex2.tab.c"
       break;
 
-    case 65:
+    case 63:
 #line 328 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1927 "mathtex2.tab.c"
+#line 1912 "mathtex2.tab.c"
       break;
 
-    case 66:
+    case 64:
 #line 331 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1935 "mathtex2.tab.c"
+#line 1920 "mathtex2.tab.c"
       break;
 
-    case 67:
+    case 65:
 #line 334 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1943 "mathtex2.tab.c"
+#line 1928 "mathtex2.tab.c"
       break;
 
-    case 68:
+    case 66:
 #line 337 "mathtex2.y"
       {
         yyval = yyvsp[0];
       }
-#line 1951 "mathtex2.tab.c"
+#line 1936 "mathtex2.tab.c"
+      break;
+
+    case 67:
+#line 340 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1944 "mathtex2.tab.c"
+      break;
+
+    case 68:
+#line 343 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1952 "mathtex2.tab.c"
       break;
 
     case 69:
-#line 343 "mathtex2.y"
+#line 346 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+      }
+#line 1960 "mathtex2.tab.c"
+      break;
+
+    case 70:
+#line 352 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-12].source;
@@ -1891,11 +1899,11 @@ yyreduce:
         yyval.u.genfrac.numerator_group = copy_parser_node(yyvsp[-1]);
         yyval.u.genfrac.denominator_group = copy_parser_node(yyvsp[0]);
       }
-#line 1976 "mathtex2.tab.c"
+#line 1985 "mathtex2.tab.c"
       break;
 
-    case 70:
-#line 366 "mathtex2.y"
+    case 71:
+#line 375 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-1].source;
@@ -1903,11 +1911,11 @@ yyreduce:
         yyval.type = NT_OVERLINE;
         yyval.u.overline.body = copy_parser_node(yyvsp[0]);
       }
-#line 1988 "mathtex2.tab.c"
+#line 1997 "mathtex2.tab.c"
       break;
 
-    case 71:
-#line 376 "mathtex2.y"
+    case 72:
+#line 385 "mathtex2.y"
       {
         yyval = yyvsp[-1];
         yyval.index = 0;
@@ -1915,11 +1923,11 @@ yyreduce:
         yyval.length = yyvsp[-3].length + yyvsp[-2].length + yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_OPERATORNAME;
       }
-#line 2000 "mathtex2.tab.c"
+#line 2009 "mathtex2.tab.c"
       break;
 
-    case 72:
-#line 386 "mathtex2.y"
+    case 73:
+#line 395 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = NULL;
@@ -1928,24 +1936,11 @@ yyreduce:
         yyval.u.operatorname.previous = 0;
         yyval.u.operatorname.token = 0;
       }
-#line 2013 "mathtex2.tab.c"
-      break;
-
-    case 73:
-#line 394 "mathtex2.y"
-      {
-        yyval.index = 0;
-        yyval.source = yyvsp[-1].source;
-        yyval.length = yyvsp[-1].length + yyvsp[0].length;
-        yyval.type = NT_OTHER;
-        yyval.u.operatorname.previous = copy_parser_node(yyvsp[0]);
-        yyval.u.operatorname.token = copy_parser_node(yyvsp[-1]);
-      }
-#line 2026 "mathtex2.tab.c"
+#line 2022 "mathtex2.tab.c"
       break;
 
     case 74:
-#line 402 "mathtex2.y"
+#line 403 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-1].source;
@@ -1954,11 +1949,24 @@ yyreduce:
         yyval.u.operatorname.previous = copy_parser_node(yyvsp[0]);
         yyval.u.operatorname.token = copy_parser_node(yyvsp[-1]);
       }
-#line 2039 "mathtex2.tab.c"
+#line 2035 "mathtex2.tab.c"
       break;
 
     case 75:
-#line 413 "mathtex2.y"
+#line 411 "mathtex2.y"
+      {
+        yyval.index = 0;
+        yyval.source = yyvsp[-1].source;
+        yyval.length = yyvsp[-1].length + yyvsp[0].length;
+        yyval.type = NT_OTHER;
+        yyval.u.operatorname.previous = copy_parser_node(yyvsp[0]);
+        yyval.u.operatorname.token = copy_parser_node(yyvsp[-1]);
+      }
+#line 2048 "mathtex2.tab.c"
+      break;
+
+    case 76:
+#line 422 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-1].source;
@@ -1968,11 +1976,11 @@ yyreduce:
         yyval.u.sqrt.index_length = 0;
         yyval.u.sqrt.token = copy_parser_node(yyvsp[0]);
       }
-#line 2053 "mathtex2.tab.c"
+#line 2062 "mathtex2.tab.c"
       break;
 
-    case 76:
-#line 422 "mathtex2.y"
+    case 77:
+#line 431 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-4].source;
@@ -1982,23 +1990,11 @@ yyreduce:
         yyval.u.sqrt.index_length = yyvsp[-2].length;
         yyval.u.sqrt.token = copy_parser_node(yyvsp[0]);
       }
-#line 2067 "mathtex2.tab.c"
-      break;
-
-    case 77:
-#line 434 "mathtex2.y"
-      {
-        yyval = yyvsp[-1];
-        yyval.index = 0;
-        yyval.source = yyvsp[-2].source;
-        yyval.length = yyvsp[-2].length + yyvsp[-1].length + yyvsp[0].length;
-        yyval.type = NT_GROUP;
-      }
-#line 2079 "mathtex2.tab.c"
+#line 2076 "mathtex2.tab.c"
       break;
 
     case 78:
-#line 444 "mathtex2.y"
+#line 443 "mathtex2.y"
       {
         yyval = yyvsp[-1];
         yyval.index = 0;
@@ -2006,11 +2002,11 @@ yyreduce:
         yyval.length = yyvsp[-2].length + yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_GROUP;
       }
-#line 2091 "mathtex2.tab.c"
+#line 2088 "mathtex2.tab.c"
       break;
 
     case 79:
-#line 454 "mathtex2.y"
+#line 453 "mathtex2.y"
       {
         yyval = yyvsp[-1];
         yyval.index = 0;
@@ -2018,22 +2014,34 @@ yyreduce:
         yyval.length = yyvsp[-2].length + yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_GROUP;
       }
-#line 2103 "mathtex2.tab.c"
+#line 2100 "mathtex2.tab.c"
       break;
 
     case 80:
-#line 464 "mathtex2.y"
+#line 463 "mathtex2.y"
+      {
+        yyval = yyvsp[-1];
+        yyval.index = 0;
+        yyval.source = yyvsp[-2].source;
+        yyval.length = yyvsp[-2].length + yyvsp[-1].length + yyvsp[0].length;
+        yyval.type = NT_GROUP;
+      }
+#line 2112 "mathtex2.tab.c"
+      break;
+
+    case 81:
+#line 473 "mathtex2.y"
       {
         yyval = yyvsp[0];
         yyval.type = NT_OTHER;
         yyval.u.group.previous = 0;
         yyval.u.group.token = copy_parser_node(yyvsp[0]);
       }
-#line 2114 "mathtex2.tab.c"
+#line 2123 "mathtex2.tab.c"
       break;
 
-    case 81:
-#line 470 "mathtex2.y"
+    case 82:
+#line 479 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-1].source;
@@ -2042,31 +2050,31 @@ yyreduce:
         yyval.u.group.previous = copy_parser_node(yyvsp[0]);
         yyval.u.group.token = copy_parser_node(yyvsp[-1]);
       }
-#line 2127 "mathtex2.tab.c"
+#line 2136 "mathtex2.tab.c"
       break;
 
-    case 82:
-#line 481 "mathtex2.y"
+    case 83:
+#line 490 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-1].source;
         yyval.length = yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_OTHER;
       }
-#line 2138 "mathtex2.tab.c"
-      break;
-
-    case 83:
-#line 487 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-        yyval.type = NT_OTHER;
-      }
 #line 2147 "mathtex2.tab.c"
       break;
 
     case 84:
-#line 494 "mathtex2.y"
+#line 496 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+        yyval.type = NT_OTHER;
+      }
+#line 2156 "mathtex2.tab.c"
+      break;
+
+    case 85:
+#line 503 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = NULL;
@@ -2075,11 +2083,11 @@ yyreduce:
         yyval.u.group.previous = 0;
         yyval.u.group.token = 0;
       }
-#line 2160 "mathtex2.tab.c"
+#line 2169 "mathtex2.tab.c"
       break;
 
-    case 85:
-#line 502 "mathtex2.y"
+    case 86:
+#line 511 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-1].source;
@@ -2088,11 +2096,11 @@ yyreduce:
         yyval.u.group.previous = copy_parser_node(yyvsp[0]);
         yyval.u.group.token = copy_parser_node(yyvsp[-1]);
       }
-#line 2173 "mathtex2.tab.c"
+#line 2182 "mathtex2.tab.c"
       break;
 
-    case 86:
-#line 513 "mathtex2.y"
+    case 87:
+#line 522 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-2].source;
@@ -2108,11 +2116,11 @@ yyreduce:
         yyval.u.genfrac.numerator_group = copy_parser_node(yyvsp[-1]);
         yyval.u.genfrac.denominator_group = copy_parser_node(yyvsp[0]);
       }
-#line 2193 "mathtex2.tab.c"
+#line 2202 "mathtex2.tab.c"
       break;
 
-    case 87:
-#line 531 "mathtex2.y"
+    case 88:
+#line 540 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-2].source;
@@ -2128,11 +2136,11 @@ yyreduce:
         yyval.u.genfrac.numerator_group = copy_parser_node(yyvsp[-1]);
         yyval.u.genfrac.denominator_group = copy_parser_node(yyvsp[0]);
       }
-#line 2213 "mathtex2.tab.c"
+#line 2222 "mathtex2.tab.c"
       break;
 
-    case 88:
-#line 549 "mathtex2.y"
+    case 89:
+#line 558 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-2].source;
@@ -2148,11 +2156,11 @@ yyreduce:
         yyval.u.genfrac.numerator_group = copy_parser_node(yyvsp[-1]);
         yyval.u.genfrac.denominator_group = copy_parser_node(yyvsp[0]);
       }
-#line 2233 "mathtex2.tab.c"
+#line 2242 "mathtex2.tab.c"
       break;
 
-    case 89:
-#line 567 "mathtex2.y"
+    case 90:
+#line 576 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-2].source;
@@ -2168,103 +2176,103 @@ yyreduce:
         yyval.u.genfrac.numerator_group = copy_parser_node(yyvsp[-1]);
         yyval.u.genfrac.denominator_group = copy_parser_node(yyvsp[0]);
       }
-#line 2253 "mathtex2.tab.c"
-      break;
-
-    case 90:
-#line 586 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-      }
-#line 2259 "mathtex2.tab.c"
+#line 2262 "mathtex2.tab.c"
       break;
 
     case 91:
-#line 587 "mathtex2.y"
+#line 595 "mathtex2.y"
       {
-        yyval.index = 0;
-        yyval.source = yyvsp[-1].source;
-        yyval.length = yyvsp[-1].length + yyvsp[0].length;
-        yyval.type = NT_FLOAT;
+        yyval = yyvsp[0];
       }
-#line 2270 "mathtex2.tab.c"
+#line 2268 "mathtex2.tab.c"
       break;
 
     case 92:
-#line 593 "mathtex2.y"
-      {
-        yyval.index = 0;
-        yyval.source = yyvsp[-2].source;
-        yyval.length = yyvsp[-2].length + yyvsp[-1].length + yyvsp[0].length;
-        yyval.type = NT_FLOAT;
-      }
-#line 2281 "mathtex2.tab.c"
-      break;
-
-    case 93:
-#line 599 "mathtex2.y"
+#line 596 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-1].source;
         yyval.length = yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_FLOAT;
       }
-#line 2292 "mathtex2.tab.c"
+#line 2279 "mathtex2.tab.c"
       break;
 
-    case 94:
-#line 605 "mathtex2.y"
+    case 93:
+#line 602 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-2].source;
         yyval.length = yyvsp[-2].length + yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_FLOAT;
       }
-#line 2303 "mathtex2.tab.c"
+#line 2290 "mathtex2.tab.c"
+      break;
+
+    case 94:
+#line 608 "mathtex2.y"
+      {
+        yyval.index = 0;
+        yyval.source = yyvsp[-1].source;
+        yyval.length = yyvsp[-1].length + yyvsp[0].length;
+        yyval.type = NT_FLOAT;
+      }
+#line 2301 "mathtex2.tab.c"
       break;
 
     case 95:
 #line 614 "mathtex2.y"
       {
-        yyval = yyvsp[0];
-        yyval.type = NT_INTEGER;
+        yyval.index = 0;
+        yyval.source = yyvsp[-2].source;
+        yyval.length = yyvsp[-2].length + yyvsp[-1].length + yyvsp[0].length;
+        yyval.type = NT_FLOAT;
       }
 #line 2312 "mathtex2.tab.c"
       break;
 
     case 96:
-#line 618 "mathtex2.y"
+#line 623 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+        yyval.type = NT_INTEGER;
+      }
+#line 2321 "mathtex2.tab.c"
+      break;
+
+    case 97:
+#line 627 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-1].source;
         yyval.length = yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_INTEGER;
       }
-#line 2323 "mathtex2.tab.c"
-      break;
-
-    case 97:
-#line 626 "mathtex2.y"
-      {
-        yyval = yyvsp[0];
-        yyval.type = NT_OTHER;
-      }
 #line 2332 "mathtex2.tab.c"
       break;
 
     case 98:
-#line 630 "mathtex2.y"
+#line 635 "mathtex2.y"
+      {
+        yyval = yyvsp[0];
+        yyval.type = NT_OTHER;
+      }
+#line 2341 "mathtex2.tab.c"
+      break;
+
+    case 99:
+#line 639 "mathtex2.y"
       {
         yyval.index = 0;
         yyval.source = yyvsp[-1].source;
         yyval.length = yyvsp[-1].length + yyvsp[0].length;
         yyval.type = NT_OTHER;
       }
-#line 2343 "mathtex2.tab.c"
+#line 2352 "mathtex2.tab.c"
       break;
 
 
-#line 2347 "mathtex2.tab.c"
+#line 2356 "mathtex2.tab.c"
 
     default:
       break;
@@ -2481,7 +2489,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 638 "mathtex2.y"
+#line 647 "mathtex2.y"
 
 
 const char *snowflake_symbols[] = {"\\doteqdot", "\\doteq",   "\\dotminus", "\\barleftarrow",
@@ -2496,7 +2504,7 @@ const char *latexfont_symbols[] = {"\\mathrm",   "\\mathcal",     "\\mathit",   
                                    "\\mathfrak", "\\mathcircled", "\\mathscr",     "\\mathregular"};
 const char *c_over_c_symbols[] = {"\\AA"};
 const char *space_symbols[] = {"\\thinspace", "\\enspace", "\\quad", "\\qquad"};
-const char *left_delim_symbols[] = {"\\lfloor", "\\langle", "\\lceil"};
+const char *left_delim_symbols[] = {"\\int", "\\lfloor", "\\langle", "\\lceil", "\\sum"};
 const char *ambi_delim_symbols[] = {"\\backslash", "\\uparrow",     "\\downarrow", "\\updownarrow", "\\Uparrow",
                                     "\\Downarrow", "\\Updownarrow", "\\vert",      "\\Vert"};
 const char *right_delim_symbols[] = {"\\rfloor", "\\rangle", "\\rceil"};

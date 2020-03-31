@@ -2326,7 +2326,7 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
     }
 
   size_t hlist_index = make_hlist();
-  if (left_delim_codepoint)
+  if (left_delim_codepoint && left_delim_codepoint != '.')
     {
       if (isnan(height))
         {
@@ -2342,7 +2342,7 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
   append_to_hlist(hlist_index, make_kern(2 * default_thickness));
   append_to_hlist(hlist_index, middle_node_index);
   append_to_hlist(hlist_index, make_kern(2 * default_thickness));
-  if (right_delim_codepoint)
+  if (right_delim_codepoint && right_delim_codepoint != '.')
     {
       if (isnan(height))
         {

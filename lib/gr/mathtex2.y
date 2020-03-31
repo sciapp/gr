@@ -77,6 +77,7 @@ token {
 
 single_symbol:
 SINGLE_SYMBOL { $$ = $1; }
+| LEFT_DELIM { $$ = $1; }
 | '[' { $$ = $1; }
 | ']' { $$ = $1; }
 | '(' { $$ = $1; }
@@ -653,7 +654,7 @@ const char *font_symbols[] = {"\\rm", "\\cal", "\\it", "\\tt", "\\sf", "\\bf", "
 const char *latexfont_symbols[] = {"\\mathrm", "\\mathcal", "\\mathit", "\\mathtt", "\\mathsf", "\\mathbf", "\\mathdefault", "\\mathbb", "\\mathfrak", "\\mathcircled", "\\mathscr", "\\mathregular"};
 const char *c_over_c_symbols[] = {"\\AA"};
 const char *space_symbols[] = {"\\thinspace", "\\enspace", "\\quad", "\\qquad"};
-const char *left_delim_symbols[] = {"\\lfloor", "\\langle", "\\lceil"};
+const char *left_delim_symbols[] = {"\\int", "\\lfloor", "\\langle", "\\lceil", "\\sum"};
 const char *ambi_delim_symbols[] = {"\\backslash", "\\uparrow", "\\downarrow", "\\updownarrow", "\\Uparrow", "\\Downarrow", "\\Updownarrow", "\\vert", "\\Vert"};
 const char *right_delim_symbols[] = {"\\rfloor", "\\rangle", "\\rceil"};
 const char *function_symbols[] = {"\\arccos", "\\csc", "\\ker", "\\min", "\\arcsin", "\\deg", "\\lg", "\\Pr", "\\arctan", "\\det", "\\lim", "\\sec", "\\arg", "\\dim", "\\liminf", "\\sin", "\\cos", "\\exp", "\\limsup", "\\sinh", "\\cosh", "\\gcd", "\\ln", "\\sup", "\\cot", "\\hom", "\\log", "\\tan", "\\coth", "\\inf", "\\max", "\\tanh"};
