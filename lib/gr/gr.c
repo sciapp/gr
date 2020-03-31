@@ -2792,6 +2792,10 @@ void gr_inqmarkercolorind(int *coli)
  * +--------------------------------------+-----+
  * |FONT_ZAPFDINGBATS                     |  131|
  * +--------------------------------------+-----+
+ * |FONT_COMPUTERMODERN                   |  232|
+ * +--------------------------------------+-----+
+ * |FONT_DEJAVUSANS                       |  233|
+ * +--------------------------------------+-----+
  *
  * The available text precisions are:
  *
@@ -2802,13 +2806,18 @@ void gr_inqmarkercolorind(int *coli)
  * +---------------------------+---+--------------------------------------+
  * |TEXT_PRECISION_STROKE      |  2|Stroke precision (lower quality)      |
  * +---------------------------+---+--------------------------------------+
+ * |TEXT_PRECISION_OUTLINE     |  3|Outline precision (highest quality)   |
+ * +---------------------------+---+--------------------------------------+
  *
  * \endverbatim
  *
  * The appearance of a font depends on the text precision value specified.
- * STRING, CHARACTER or STROKE precision allows for a greater or lesser
- * realization of the text primitives, for efficiency. STRING is the default
- * precision for GR and produces the highest quality output.
+ * STRING, CHARACTER, STROKE or OUTLINE precision allows for a greater or
+ * lesser realization of the text primitives, for efficiency. STRING is the
+ * default precision for GR and produces the high quality output using either
+ * native font rendering or FreeType. OUTLINE uses the GR path rendering
+ * functions to draw individual glyphs and produces the highest quality
+ * output.
  */
 void gr_settextfontprec(int font, int precision)
 {
