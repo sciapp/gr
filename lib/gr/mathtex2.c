@@ -2326,7 +2326,7 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
     }
 
   size_t hlist_index = make_hlist();
-  if (left_delim_codepoint)
+  if (left_delim_codepoint && left_delim_codepoint != '.')
     {
       if (isnan(height))
         {
@@ -2342,7 +2342,7 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
   append_to_hlist(hlist_index, make_kern(2 * default_thickness));
   append_to_hlist(hlist_index, middle_node_index);
   append_to_hlist(hlist_index, make_kern(2 * default_thickness));
-  if (right_delim_codepoint)
+  if (right_delim_codepoint && right_delim_codepoint != '.')
     {
       if (isnan(height))
         {
@@ -2830,14 +2830,14 @@ static size_t convert_sqrt_to_box_model(ParserNode *node)
       append_to_hlist(hlist_index, index_hlist_index);
       append_to_hlist(hlist_index, make_kern(negative_space));
     }
-  float scaling_factor = (inner_height + inner_depth) / state->fontsize;
+  float scaling_factor = (inner_height + inner_depth) / state->fontsize * 0.8;
   size_t sqrt_sign_index = make_auto_height_char(8730, inner_height, inner_depth, NAN);
   append_to_hlist(hlist_index, sqrt_sign_index);
   size_t right_side_index = make_vlist();
   append_to_vlist(right_side_index, make_hrule(default_thickness * scaling_factor));
   append_to_vlist(right_side_index, make_glue(GT_FILL));
   append_to_vlist(right_side_index, padded_inner_index);
-  pack_vlist(right_side_index, inner_height + scaling_factor * 2 * default_thickness, 0, INFINITY);
+  pack_vlist(right_side_index, inner_height + scaling_factor * 0.2 * default_thickness, 0, INFINITY);
 
   append_to_hlist(hlist_index, right_side_index);
   kern_hlist(hlist_index);
