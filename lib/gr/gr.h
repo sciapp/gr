@@ -196,7 +196,7 @@ DLLEXPORT void gr_setwindow3d(double, double, double, double, double, double);
 DLLEXPORT void gr_inqwindow3d(double *, double *, double *, double *, double *, double *);
 DLLEXPORT void gr_setscalefactors3d(double, double, double);
 DLLEXPORT void gr_inqscalefactors3d(double *, double *, double *);
-DLLEXPORT void gr_transformationinterfaceforrepl(double, double, double, double);
+DLLEXPORT void gr_setspace3d(double, double, double, double);
 
 #ifdef __cplusplus
 }

@@ -11174,11 +11174,13 @@ void gr_inqbordercolorind(int *coli)
 }
 
 /*!
- * This is an interface for REPL based languages to enable an easier way to rotate around an object.
+ * Set the camera for orthographic or perspective projection.
  *
- * The center of the 3d window is used as the focus point and the camera is positioned relative to it, using spherical
- * coordinates. This function can therefore also be used if the user prefers spherical coordinates to setting the direct
- * camera position, but with reduced functionality in comparison to gr_settransformationparameters,
+ * The center of the 3d window is used as the focus point and the camera is
+ * positioned relative to it, using camera distance, rotation and tilt similar
+ * to gr_setspace. This function can be used if the user prefers spherical
+ * coordinates to setting the camera position directly, but has reduced
+ * functionality in comparison to gr_settransformationparameters,
  * gr_setperspectiveprojection and gr_setorthographicprojection.
  *
  * \param phi azimuthal angle of the spherical coordinates
@@ -11188,7 +11190,7 @@ void gr_inqbordercolorind(int *coli)
  * smallest bounding sphere)
  *
  */
-void gr_transformationinterfaceforrepl(double phi, double theta, double fov, double camera_distance)
+void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
 {
   double x_len, y_len, z_len, max_axis_length;
   double calculated_cam_distance;
