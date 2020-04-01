@@ -559,7 +559,6 @@ static void polyline(int n, double *px, double *py)
 {
   int ln_type, ln_color, i;
   double ln_width;
-  int width;
   int gks_dashes[10];
 
   if (n > p->max_points)
@@ -572,10 +571,7 @@ static void polyline(int n, double *px, double *py)
   ln_width = gkss->asf[1] ? gkss->lwidth : 1;
   ln_color = gkss->asf[2] ? gkss->plcoli : 1;
 
-  width = nint(ln_width);
-  if (width < 1) width = 1;
-
-  p->linewidth = width * p->nominal_size;
+  p->linewidth = ln_width * p->nominal_size;
   cairo_set_line_width(p->cr, p->linewidth);
 
   p->color = ln_color;
