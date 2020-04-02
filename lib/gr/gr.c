@@ -967,11 +967,8 @@ static void apply_world_xform(double *x, double *y, double *z)
           /* perspective projection */
           xw = ((cos(fov / 2) / sin(fov / 2)) / aspect * xw);
           yw = ((cos(fov / 2) / sin(fov / 2)) * yw);
-          zw = ((gpx.far_plane + gpx.near_plane) / (gpx.near_plane - gpx.far_plane) * zw +
-                2 * gpx.far_plane * gpx.near_plane / (gpx.near_plane - gpx.far_plane));
-          xw /= zw;
-          yw /= zw;
-          zw /= zw;
+          xw /= -zw;
+          yw /= -zw;
         }
       else if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
         {
@@ -11193,52 +11190,52 @@ void gr_inqbordercolorind(int *coli)
 void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
 {
   double x_len, y_len, z_len, max_axis_length;
-  double calculated_cam_distance;
+  double bounding_sphere_radius;
 
   tx.focus_point_x = (ix.xmax + ix.xmin) / 2;
   tx.focus_point_y = (ix.ymin + ix.ymax) / 2;
   tx.focus_point_z = (ix.zmax + ix.zmin) / 2;
 
-  /* calculate the ball radius if necessary */
-  if (camera_distance == 0 || camera_distance != camera_distance)
-    {
-      gr_calculateradius(&camera_distance);
-    }
-
-  calculated_cam_distance = camera_distance;
-
+  gr_calculateradius(&bounding_sphere_radius);
   if (fov != fov || fov == 0)
     {
+      if (camera_distance == 0 || camera_distance != camera_distance)
+        {
+          camera_distance = bounding_sphere_radius;
+        }
       gr_setorthographicprojection(-camera_distance, camera_distance, -camera_distance, camera_distance,
                                    -camera_distance * 2, camera_distance * 2);
     }
   else
     {
-      /* the ball radius is necessary for the clipping planes */
-      gr_calculateradius(&camera_distance);
-      calculated_cam_distance = fabs(calculated_cam_distance / sin((fov * M_PI / 180) / 2));
-      if (calculated_cam_distance < 0.1)
+      if (camera_distance == 0 || camera_distance != camera_distance)
         {
-          gr_setperspectiveprojection(calculated_cam_distance, calculated_cam_distance + 2 * camera_distance, fov);
+          camera_distance = fabs(bounding_sphere_radius / sin((fov * M_PI / 180) / 2));
         }
-      else
-        {
-          gr_setperspectiveprojection(0.1, calculated_cam_distance + camera_distance * 2, fov);
-        }
+      gr_setperspectiveprojection(max(0.01, camera_distance - bounding_sphere_radius * 1.01),
+                                  camera_distance + bounding_sphere_radius * 2, fov);
     }
 
 
-  gr_settransformationparameters(
-      calculated_cam_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x,
-      calculated_cam_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y,
-      calculated_cam_distance * cos(theta * M_PI / 180) + tx.focus_point_z,
-      -cos(phi * M_PI / 180) * cos(theta * M_PI / 180), -sin(phi * M_PI / 180) * cos(theta * M_PI / 180),
-      sin(theta * M_PI / 180), tx.focus_point_x, tx.focus_point_y, tx.focus_point_z);
+  gr_settransformationparameters(camera_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x,
+                                 camera_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y,
+                                 camera_distance * cos(theta * M_PI / 180) + tx.focus_point_z,
+                                 -cos(phi * M_PI / 180) * cos(theta * M_PI / 180),
+                                 -sin(phi * M_PI / 180) * cos(theta * M_PI / 180), sin(theta * M_PI / 180),
+                                 tx.focus_point_x, tx.focus_point_y, tx.focus_point_z);
 
   x_len = fabs(ix.xmin) + fabs(ix.xmax);
   y_len = fabs(ix.ymin) + fabs(ix.ymax);
   z_len = fabs(ix.zmax) + fabs(ix.zmin);
   max_axis_length = x_len;
+  if (y_len > max_axis_length)
+    {
+      max_axis_length = y_len;
+    }
+  if (z_len > max_axis_length)
+    {
+      max_axis_length = z_len;
+    }
 
   gr_setscalefactors3d(max_axis_length / x_len, max_axis_length / y_len, max_axis_length / z_len);
 }
