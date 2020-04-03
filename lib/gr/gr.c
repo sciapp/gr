@@ -146,6 +146,12 @@ typedef struct
   int bcoli;
 } state_list;
 
+typedef struct
+{
+  int a, b, c;
+  double sp;
+} triangle_with_distance;
+
 static norm_xform nx = {1, 0, 1, 0};
 
 static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
@@ -7284,9 +7290,22 @@ static const double *xp, *yp;
 
 static int compar(const void *a, const void *b)
 {
+  /* TODO: Implement a version which works for every case. At the moment the GR_PROJECTION_DEFAULT has the problem, that
+  the current camera position is not considered. For the other projection types the algorithm has some mistakes at the
+  edge of the surface. */
   int ret = -1;
-  if (xp[*(int *)a] > xp[*(int *)b]) ret = 1;
-  if (yp[*(int *)a] < yp[*(int *)b]) ret = 1;
+  if (GR_PROJECTION_DEFAULT == gpx.projection_type)
+    {
+      if (xp[*(int *)a] > xp[*(int *)b]) ret = 1;
+      if (yp[*(int *)a] < yp[*(int *)b]) ret = 1;
+    }
+  else
+    {
+      if (((triangle_with_distance *)b)->sp > ((triangle_with_distance *)a)->sp)
+        {
+          ret = 1;
+        }
+    }
   return ret;
 }
 
@@ -7324,9 +7343,74 @@ void gr_trisurface(int n, double *px, double *py, double *pz)
 
   gr_delaunay(n, px, py, &ntri, &triangles);
 
-  xp = px;
-  yp = py;
-  qsort(triangles, ntri, 3 * sizeof(int), compar);
+  if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC || gpx.projection_type == GR_PROJECTION_PERSPECTIVE)
+    {
+      triangle_with_distance *ps = (triangle_with_distance *)gks_malloc(ntri * (sizeof(triangle_with_distance)));
+      double f[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
+                     tx.focus_point_z - tx.camera_pos_z};
+
+      for (i = 0; i < ntri; i++)
+        {
+          double x_cord, y_cord, z_cord;
+
+          /* simplify the access for each triangle point */
+          double xa[3] = {px[triangles[3 * i + 0]], px[triangles[3 * i + 1]], px[triangles[3 * i + 2]]};
+          double ya[3] = {py[triangles[3 * i + 0]], py[triangles[3 * i + 1]], py[triangles[3 * i + 2]]};
+          double za[3] = {pz[triangles[3 * i + 0]], pz[triangles[3 * i + 1]], pz[triangles[3 * i + 2]]};
+
+          /* calculate the distance of each edge midpoint */
+          x_cord = (xa[1] + xa[0]) / 2;
+          y_cord = (ya[1] + ya[0]) / 2;
+          z_cord = (za[1] + za[0]) / 2;
+          double edge_01_distance[3] = {x_cord - tx.camera_pos_x, y_cord - tx.camera_pos_y, z_cord - tx.camera_pos_z};
+          double edge_01_scalar = edge_01_distance[0] * f[0] + edge_01_distance[1] * f[1] + edge_01_distance[2] * f[2];
+
+          x_cord = (xa[1] + xa[2]) / 2;
+          y_cord = (ya[1] + ya[2]) / 2;
+          z_cord = (za[1] + za[2]) / 2;
+          double edge_12_distance[3] = {x_cord - tx.camera_pos_x, y_cord - tx.camera_pos_y, z_cord - tx.camera_pos_z};
+          double edge_12_scalar = edge_12_distance[0] * f[0] + edge_12_distance[1] * f[1] + edge_12_distance[2] * f[2];
+
+          x_cord = (xa[0] + xa[2]) / 2;
+          y_cord = (ya[0] + ya[2]) / 2;
+          z_cord = (za[0] + za[2]) / 2;
+          double edge_20_distance[3] = {x_cord - tx.camera_pos_x, y_cord - tx.camera_pos_y, z_cord - tx.camera_pos_z};
+          double edge_20_scalar = edge_20_distance[0] * f[0] + edge_20_distance[1] * f[1] + edge_20_distance[2] * f[2];
+
+          double nearest_edge_distance = edge_01_scalar;
+          if (nearest_edge_distance > edge_12_scalar)
+            {
+              nearest_edge_distance = edge_12_scalar;
+            }
+          if (nearest_edge_distance > edge_20_scalar)
+            {
+              nearest_edge_distance = edge_20_scalar;
+            }
+
+          /* create now ntri triangles with the nearest distance attribut */
+          ps[i].a = triangles[3 * i + 0];
+          ps[i].b = triangles[3 * i + 1];
+          ps[i].c = triangles[3 * i + 2];
+          ps[i].sp = nearest_edge_distance;
+        }
+
+      qsort(ps, ntri, sizeof(triangle_with_distance), compar);
+      /* uses the sorted ps to get the sorted triangle which is need for the next steps */
+      for (i = 0; i < ntri; i++)
+        {
+          triangles[3 * i + 0] = ps[i].a;
+          triangles[3 * i + 1] = ps[i].b;
+          triangles[3 * i + 2] = ps[i].c;
+        }
+      gks_free(ps);
+    }
+  else
+    {
+      xp = px;
+      yp = py;
+
+      qsort(triangles, ntri, 3 * sizeof(int), compar);
+    }
 
   for (i = 0; i < ntri; i++)
     {
