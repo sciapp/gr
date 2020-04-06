@@ -55,7 +55,7 @@ osxpkg:
 code-format:
 ifeq ($(UNAME), Darwin)
 	@find -E . -type f \
-	           -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)'
+	           -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)' \
 	         ! -path './3rdparty/*' \
 	         ! -path './apps/*' \
 	           -exec clang-format -i -verbose -style=file {} \;
