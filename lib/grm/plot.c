@@ -1703,7 +1703,10 @@ error_t plot_hist(grm_args_t *subplot_args)
   const double *window;
   double y_min;
   grm_args_t **current_series;
+  error_t error;
+  char *kind;
 
+  args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "window", "D", &window);
   y_min = window[2];
   args_values(subplot_args, "series", "A", &current_series);
@@ -1715,7 +1718,7 @@ error_t plot_hist(grm_args_t *subplot_args)
       return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      for (i = 0; i <= y_length; ++i)
+      for (i = 1; i < y_length; ++i)
         {
           gr_setfillcolorind(989);
           gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
@@ -1724,6 +1727,8 @@ error_t plot_hist(grm_args_t *subplot_args)
           gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
           gr_fillrect(x[i - 1], x[i], y_min, y[i - 1]);
         }
+      error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
+      return_if_error;
       ++current_series;
     }
 
@@ -3108,7 +3113,7 @@ error_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_l
   double line_x[2], line_y[2];
   absolute_upwards = absolute_downwards = relative_upwards = relative_downwards = NULL;
   absolute_upwards_flt = absolute_downwards_flt = relative_upwards_flt = relative_downwards_flt = FLT_MAX;
-  is_barplot = strcmp(kind, "barplot") == 0 ? 1 : 0;
+  is_barplot = strcmp(kind, "barplot") * strcmp(kind, "hist") == 0 ? 1 : 0;
 
   arg_ptr = args_at(series_args, "error");
   if (!arg_ptr)
