@@ -191,12 +191,16 @@ static void resize_window(void)
 
   if (p->pm)
     {
-      if (p->width != p->pm->size().width() || p->height != p->pm->size().height())
+      if (fabs(p->width * p->device_pixel_ratio - p->pm->size().width()) > FEPS ||
+          fabs(p->height * p->device_pixel_ratio - p->pm->size().height()) > FEPS)
         {
           delete p->pixmap;
           delete p->pm;
 
-          p->pm = new QPixmap(p->width, p->height);
+          p->pm = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+          p->pm->setDevicePixelRatio(p->device_pixel_ratio);
+#endif
           p->pm->fill(Qt::white);
 
           p->pixmap = new QPainter(p->pm);
@@ -1373,37 +1377,73 @@ static void release_data()
 static int get_pixmap(void)
 {
   char *env;
+  QPaintDevice *device;
+  bool has_explicit_device_pixel_ratio = false;
 
   env = (char *)gks_getenv("GKS_CONID");
   if (!env) env = (char *)gks_getenv("GKSconid");
 
   if (env != NULL)
     {
-      if (strchr(env, '!') == NULL)
+      bool has_exclamation_mark = strchr(env, '!');
+      bool has_hash_mark = strchr(env, '#');
+      if (has_exclamation_mark && has_hash_mark)
         {
+          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&p->pixmap, &p->device_pixel_ratio);
+          device = p->widget;
+          has_explicit_device_pixel_ratio = true;
+        }
+      else if (has_exclamation_mark)
+        {
+          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->pixmap);
+          device = p->widget;
+        }
+      else if (has_hash_mark)
+        {
+          sscanf(env, "%p#%lf", (void **)&p->pixmap, &p->device_pixel_ratio);
           p->widget = NULL;
-          sscanf(env, "%p", (void **)&p->pixmap);
+          device = p->pixmap->device();
+          has_explicit_device_pixel_ratio = true;
         }
       else
-        sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->pixmap);
+        {
+          sscanf(env, "%p", (void **)&p->pixmap);
+          p->widget = NULL;
+          device = p->pixmap->device();
+        }
     }
   else
     {
       return 1;
     }
 
-  QPaintDevice *device = (p->widget != NULL) ? p->widget : p->pixmap->device();
+  p->width = device->width();
+  p->height = device->height();
+  if (has_explicit_device_pixel_ratio)
+    {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
-  p->device_pixel_ratio = device->devicePixelRatioF();
+      p->width *= device->devicePixelRatioF() / p->device_pixel_ratio;
+      p->height *= device->devicePixelRatioF() / p->device_pixel_ratio;
 #elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-  p->device_pixel_ratio = device->devicePixelRatio();
+      p->width *= device->devicePixelRatio() / p->device_pixel_ratio;
+      p->height *= device->devicePixelRatio() / p->device_pixel_ratio;
 #else
-  p->device_pixel_ratio = 1;
+      p->width /= p->device_pixel_ratio;
+      p->height /= p->device_pixel_ratio;
 #endif
-  p->device_dpi_x = device->physicalDpiX() * p->device_pixel_ratio;
-  p->device_dpi_y = device->physicalDpiY() * p->device_pixel_ratio;
-  p->width = device->width() * p->device_pixel_ratio;
-  p->height = device->height() * p->device_pixel_ratio;
+    }
+  else
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+      p->device_pixel_ratio = device->devicePixelRatioF();
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+      p->device_pixel_ratio = device->devicePixelRatio();
+#else
+      p->device_pixel_ratio = 1.0;
+#endif
+    }
+  p->device_dpi_x = device->physicalDpiX();
+  p->device_dpi_y = device->physicalDpiY();
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
   p->nominal_size = min(p->width, p->height) / 500.0;
