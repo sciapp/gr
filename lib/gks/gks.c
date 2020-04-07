@@ -1116,7 +1116,7 @@ void gks_polymarker(int n, double *pxa, double *pya)
     gks_report_error(POLYMARKER, 5);
 }
 
-static void gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
+void gks_ft_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
 {
   int saved_ints = s->ints, saved_facoli = s->facoli;
   double saved_bwidth = s->bwidth;
@@ -1158,7 +1158,7 @@ void gks_text(double px, double py, char *str)
             }
           else
             {
-              gks_ft_text(px, py, str, s, gdp);
+              gks_ft_text(px, py, str, s, gks_ft_gdp);
             }
         }
       else
@@ -2890,7 +2890,7 @@ void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind,
         }
       else
         {
-          gks_ft_inq_text_extent(px, py, str, s, gdp, bx, by);
+          gks_ft_inq_text_extent(px, py, str, s, gks_ft_gdp, bx, by);
           for (i = 0; i < 4; i++)
             {
               tx[i] = bx[i];
@@ -4175,4 +4175,9 @@ void gks_inq_border_color_index(int *errind, int *coli)
 {
   *errind = GKS_K_NO_ERROR;
   *coli = s->bcoli;
+}
+
+void *gks_state(void)
+{
+  return (void *)s;
 }

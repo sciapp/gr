@@ -671,6 +671,9 @@ DLLEXPORT void gks_inq_border_width(int *errind, double *bwidth);
 DLLEXPORT void gks_set_resample_method(unsigned int flag);
 DLLEXPORT void gks_inq_resample_method(unsigned int *flag);
 
+DLLEXPORT void gks_ft_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec);
+DLLEXPORT void *gks_state(void);
+
 /* Entry point definitions */
 
 #define gsetlinecolorind gsetlinecolourind

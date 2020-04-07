@@ -197,6 +197,8 @@ DLLEXPORT void gr_inqwindow3d(double *, double *, double *, double *, double *, 
 DLLEXPORT void gr_setscalefactors3d(double, double, double);
 DLLEXPORT void gr_inqscalefactors3d(double *, double *, double *);
 DLLEXPORT void gr_setspace3d(double, double, double, double);
+DLLEXPORT void gr_text3d(double, double, double, char *, int axis);
+DLLEXPORT void gr_inqtext3d(double, double, double, char *, int axis, double *, double *);
 
 #ifdef __cplusplus
 }

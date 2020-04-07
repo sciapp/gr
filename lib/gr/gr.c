@@ -5532,7 +5532,6 @@ static void text3d(double x, double y, double z, char *chars)
   p_y = y_lin(y);
   p_z = z_lin(z);
 
-
   apply_world_xform(&p_x, &p_y, &p_z);
 
   gks_inq_current_xformno(&errind, &tnr);
@@ -5546,8 +5545,23 @@ static void text3d(double x, double y, double z, char *chars)
   gr_textex(p_x, p_y, chars, 0, NULL, NULL);
 
   if (tnr != NDC) gks_select_xform(tnr);
+}
 
-  if (flag_graphics) gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\"/>\n", x, y, z, chars);
+void gr_text3d(double x, double y, double z, char *chars, int axis)
+{
+  check_autoinit;
+
+  gks_ft_text3d(x, y, z, chars, axis, gks_state(), gks_ft_gdp, gr_wc3towc);
+
+  if (flag_graphics)
+    gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\" axis=\"%d\"/>\n", x, y, z, chars, axis);
+}
+
+void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *tbx, double *tby)
+{
+  check_autoinit;
+
+  gks_ft_inq_text3d_extent(x, y, z, chars, axis, gks_state(), gks_ft_gdp, gr_wc3towc, tbx, tby);
 }
 
 /*!
