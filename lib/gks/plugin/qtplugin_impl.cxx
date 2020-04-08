@@ -790,7 +790,8 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
               unsigned char red = pixels[(j * width + i) * 4 + 0];
               unsigned char green = pixels[(j * width + i) * 4 + 1];
               unsigned char blue = pixels[(j * width + i) * 4 + 2];
-              unsigned char alpha = pixels[(j * width + i) * 4 + 3];
+              unsigned char alpha = (unsigned char)(pixels[(j * width + i) * 4 + 3] * gkss->alpha);
+
               ((unsigned int *)pixels)[j * width + i] = (alpha << 24u) + (red << 16u) + (green << 8u) + (blue << 0u);
             }
         }
