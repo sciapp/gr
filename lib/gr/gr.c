@@ -5521,7 +5521,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
     }
 }
 
-static void text3d(double x, double y, double z, char *chars)
+static void text3d(double x, double y, double z, char *chars, int axis)
 {
   double p_x, p_y, p_z;
   int errind, tnr;
@@ -5532,19 +5532,26 @@ static void text3d(double x, double y, double z, char *chars)
   p_y = y_lin(y);
   p_z = z_lin(z);
 
-  apply_world_xform(&p_x, &p_y, &p_z);
-
-  gks_inq_current_xformno(&errind, &tnr);
-  if (tnr != NDC)
+  if (axis == 0)
     {
-      p_x = nx.a * p_x + nx.b;
-      p_y = nx.c * p_y + nx.d;
-      gks_select_xform(NDC);
+      apply_world_xform(&p_x, &p_y, &p_z);
+
+      gks_inq_current_xformno(&errind, &tnr);
+      if (tnr != NDC)
+        {
+          p_x = nx.a * p_x + nx.b;
+          p_y = nx.c * p_y + nx.d;
+          gks_select_xform(NDC);
+        }
+
+      gr_textex(p_x, p_y, chars, 0, NULL, NULL);
+
+      if (tnr != NDC) gks_select_xform(tnr);
     }
-
-  gr_textex(p_x, p_y, chars, 0, NULL, NULL);
-
-  if (tnr != NDC) gks_select_xform(tnr);
+  else
+    {
+      gks_ft_text3d(p_x, p_y, p_z, chars, axis, gks_state(), gks_ft_gdp, gr_wc3towc);
+    }
 }
 
 void gr_text3d(double x, double y, double z, char *chars, int axis)
@@ -5616,13 +5623,13 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   double r, alpha, beta;
   double a[2], c[2], text_slant[4];
   int *anglep, which_rep, rep;
-  double flag_gra;
 
   double tick, minor_tick, major_tick, x_label, y_label;
   double x0, y0, z0, xi, yi, zi;
   int64_t i;
   int decade, exponent;
   char string[256];
+  int modern_projection_type;
 
   if (x_tick < 0 || y_tick < 0 || z_tick < 0)
     {
@@ -5637,8 +5644,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   check_autoinit;
 
-  flag_gra = flag_graphics;
-  flag_graphics = 0;
   setscale(lx.scale_options);
 
   /* inquire current normalization transformation */
@@ -5646,7 +5651,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+  modern_projection_type =
+      gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+
+  if (modern_projection_type)
     {
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
@@ -5736,22 +5744,13 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
         }
 
-      if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+      if (!modern_projection_type)
         {
-          if (tx.camera_pos_z < 0)
-            {
-              y_label += 6 * tick;
-            }
-          else
-            {
-              y_label -= 3 * tick;
-            }
+          rep = rep_table[which_rep][2];
+
+          gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
+          gks_set_text_slant(text_slant[axes_rep[rep][2]]);
         }
-
-      rep = rep_table[which_rep][2];
-
-      gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
-      gks_set_text_slant(text_slant[axes_rep[rep][2]]);
 
       if (OPTION_Z_LOG & lx.scale_options)
         {
@@ -5779,10 +5778,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                           {
                             exponent = iround(log10(zi));
                             sprintf(string, "10^{%d}", exponent);
-                            text3d(x_org, y_label, zi, string);
+                            text3d(x_org, y_label, zi, string, 0);
                           }
                         else
-                          text3d(x_org, y_label, zi, gr_ftoa(string, zi, 0.));
+                          text3d(x_org, y_label, zi, gr_ftoa(string, zi, 0.), 0);
                       }
                 }
               else
@@ -5831,7 +5830,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     {
                       yi = major_tick;
                       if ((zi != z_org) && (major_z > 0))
-                        text3d(x_org, y_label, zi, gr_ftoa(string, zi, z_tick * major_z));
+                        text3d(x_org, y_label, zi, gr_ftoa(string, zi, z_tick * major_z),
+                               modern_projection_type ? 3 : 0);
                     }
                   else
                     yi = minor_tick;
@@ -5875,23 +5875,14 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
         }
 
-      if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+      if (!modern_projection_type)
         {
-          if (tx.camera_pos_y < 0)
-            {
-              x_label -= 6 * tick;
-            }
-          else
-            {
-              x_label += 9 * tick;
-            }
+          rep = rep_table[which_rep][1];
+          if (rep == 0) gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+
+          gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
+          gks_set_text_slant(text_slant[axes_rep[rep][2]]);
         }
-
-      rep = rep_table[which_rep][1];
-      if (rep == 0) gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-
-      gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
-      gks_set_text_slant(text_slant[axes_rep[rep][2]]);
 
       if (OPTION_Y_LOG & lx.scale_options)
         {
@@ -5919,10 +5910,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                           {
                             exponent = iround(log10(yi));
                             sprintf(string, "10^{%d}", exponent);
-                            text3d(x_label, yi, z_org, string);
+                            text3d(x_label, yi, z_org, string, 0);
                           }
                         else
-                          text3d(x_label, yi, z_org, gr_ftoa(string, yi, 0.));
+                          text3d(x_label, yi, z_org, gr_ftoa(string, yi, 0.), 0);
                       }
                 }
               else
@@ -5971,7 +5962,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     {
                       xi = major_tick;
                       if ((yi != y_org) && (major_y > 0))
-                        text3d(x_label, yi, z_org, gr_ftoa(string, yi, y_tick * major_y));
+                        text3d(x_label, yi, z_org, gr_ftoa(string, yi, y_tick * major_y),
+                               modern_projection_type ? 2 : 0);
                     }
                   else
                     xi = minor_tick;
@@ -6015,24 +6007,14 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
         }
 
-      if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+      if (!modern_projection_type)
         {
-          if (tx.camera_pos_x < 0)
-            {
-              y_label -= 9. * tick;
-            }
-          else
-            {
-              y_label += 6. * tick;
-              gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
-            }
+          rep = rep_table[which_rep][0];
+          if (rep == 2) gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
+
+          gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
+          gks_set_text_slant(text_slant[axes_rep[rep][2]]);
         }
-
-      rep = rep_table[which_rep][0];
-      if (rep == 2) gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-
-      gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
-      gks_set_text_slant(text_slant[axes_rep[rep][2]]);
 
       if (OPTION_X_LOG & lx.scale_options)
         {
@@ -6060,10 +6042,10 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                           {
                             exponent = iround(log10(xi));
                             sprintf(string, "10^{%d}", exponent);
-                            text3d(xi, y_label, z_org, string);
+                            text3d(xi, y_label, z_org, string, 0);
                           }
                         else
-                          text3d(xi, y_label, z_org, gr_ftoa(string, xi, 0.));
+                          text3d(xi, y_label, z_org, gr_ftoa(string, xi, 0.), 0);
                       }
                 }
               else
@@ -6112,7 +6094,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     {
                       yi = major_tick;
                       if ((xi != x_org) && (major_x > 0))
-                        text3d(xi, y_label, z_org, gr_ftoa(string, xi, x_tick * major_x));
+                        text3d(xi, y_label, z_org, gr_ftoa(string, xi, x_tick * major_x),
+                               modern_projection_type ? 1 : 0);
                     }
                   else
                     yi = minor_tick;
@@ -6143,15 +6126,13 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_set_text_upvec(chux, chuy);
   gks_set_clipping(clsw);
 
-  flag_graphics = flag_gra;
-
   if (flag_graphics)
     gr_writestream("<axes3d xtick=\"%g\" ytick=\"%g\" ztick=\"%g\" "
                    "xorg=\"%g\" yorg=\"%g\" zorg=\"%g\" "
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\" ticksize=\"%g\"/>\n",
                    x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z, tick_size);
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+  if (modern_projection_type)
     {
       gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
       setscale(lx.scale_options);
@@ -6188,6 +6169,7 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
   double xr, yr, zr;
 
   int flip_x, flip_y, flip_z;
+  int modern_projection_type;
 
   check_autoinit;
 
@@ -6198,9 +6180,12 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
+  modern_projection_type =
+      gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+
   if (wx.phi != 0 || wx.delta != 90)
     {
-      if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+      if (modern_projection_type)
         {
           gks_set_window(WC, -1, 1, -1, 1);
           setscale(lx.scale_options);
@@ -6361,7 +6346,7 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
           gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
           gks_set_text_slant(text_slant[axes_rep[rep][2]]);
 
-          text3d(x, y, z, x_title);
+          text3d(x, y, z, x_title, 0);
         }
 
       if (*y_title)
@@ -6406,7 +6391,7 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
           gks_set_text_upvec(a[axes_rep[rep][0]], c[axes_rep[rep][1]]);
           gks_set_text_slant(text_slant[axes_rep[rep][2]]);
 
-          text3d(x, y, z, y_title);
+          text3d(x, y, z, y_title, 0);
         }
 
       if (*z_title)
@@ -6436,7 +6421,7 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
           gks_set_text_align(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BASE);
 
-          text3d(x, y, z, z_title);
+          text3d(x, y, z, z_title, 0);
         }
 
       /* restore text alignment, text font, text slant,
@@ -6500,7 +6485,7 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
   if (flag_graphics)
     gr_writestream("<titles3d xtitle=\"%s\" ytitle=\"%s\" ztitle=\"%s\"/>\n", x_title, y_title, z_title);
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+  if (modern_projection_type)
     {
       gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
       setscale(lx.scale_options);

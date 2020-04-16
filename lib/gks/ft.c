@@ -1242,7 +1242,7 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
   pen_x = 0;
   cos_f = cos(phi);
   sin_f = sin(phi);
-  chh = gkss->chh;
+  chh = gkss->chh * 2 * sqrt(2);
   height = chh / get_capheight(face);
   alh = gkss->txal[0];
 
@@ -1263,22 +1263,22 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
               xpoint[j] = cos_f * xj - sin_f * yj;
               ypoint[j] = sin_f * xj + cos_f * yj;
 
-              if (axis == 0)
+              if (axis == 1)
                 {
                   xj = x - ypoint[j];
                   yj = y + xpoint[j];
                   zj = z;
                 }
-              else if (axis == 1)
+              else if (axis == 2)
                 {
                   xj = x + xpoint[j];
                   yj = y + ypoint[j];
                   zj = z;
                 }
-              else if (axis == 2)
+              else if (axis == 3)
                 {
-                  xj = y;
-                  yj = x + xpoint[j];
+                  xj = x;
+                  yj = y + xpoint[j];
                   zj = z + ypoint[j];
                 }
 
@@ -1320,19 +1320,19 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
 
           if (j >= 8)
             {
-              if (axis == 0)
+              if (axis == 1)
                 {
                   xj = x - bBoxY[j];
                   yj = y + bBoxX[j];
                   zj = z;
                 }
-              else if (axis == 1)
+              else if (axis == 2)
                 {
                   xj = x + bBoxX[j];
                   yj = y + bBoxY[j];
                   zj = z;
                 }
-              else if (axis == 2)
+              else if (axis == 3)
                 {
                   xj = y;
                   yj = x + bBoxX[j];
