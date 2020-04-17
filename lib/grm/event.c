@@ -133,6 +133,7 @@ int event_queue_process_next(event_queue_t *queue)
     {
       queue->event_callbacks[type](event);
     }
+  free(event);
 
   return 1;
 }

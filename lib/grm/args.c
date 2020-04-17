@@ -1207,7 +1207,7 @@ void args_init(grm_args_t *args)
 
 void args_finalize(grm_args_t *args)
 {
-  grm_args_clear(args);
+  args_clear(args, NULL);
 }
 
 grm_args_t *args_flatcopy(const grm_args_t *copy_args)
