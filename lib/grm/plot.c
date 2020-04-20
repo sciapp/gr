@@ -4,6 +4,7 @@
 
 /* ######################### includes ############################################################################### */
 
+#include <ctype.h>
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -18,6 +19,7 @@
 #include "plot_int.h"
 
 #include "datatype/string_map_int.h"
+#include "datatype/string_array_map_int.h"
 #include "datatype/template/map_int.h"
 #include "datatype/template/set_int.h"
 
@@ -181,6 +183,7 @@ static plot_func_map_entry_t kind_to_func[] = {
 static string_map_t *fmt_map = NULL;
 static plot_func_map_t *plot_func_map = NULL;
 static string_map_t *plot_valid_keys_map = NULL;
+static string_array_map_t *type_map = NULL;
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot clear ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -213,6 +216,68 @@ const char *valid_subplot_keys[] = {"adjust_xlim", "adjust_ylim", "adjust_zlim",
 const char *valid_series_keys[] = {
     "a", "c", "error", "c_dims", "foreground_color", "isovalue", "markertype", "s", "spec", "step_where", "u", "v",
     "x", "y", "z",     NULL};
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+/* If multiple formats are supported use `|` as separator
+ * Example: "i|s" for supporting both integer and strings */
+/* TODO: type for format "s"? */
+static string_map_entry_t key_to_formats[] = {
+    {"a", "A"},
+    {"adjust_xlim", "i"},
+    {"adjust_ylim", "i"},
+    {"adjust_zlim", "i"},
+    {"append_plots", "i"},
+    {"backgroundcolor", "i"},
+    {"c", "D"},
+    {"c_dims", "I"},
+    {"clim", "D"},
+    {"colormap", "i"},
+    {"error", "a"},
+    {"fig_size", "D"},
+    {"font", "i"},
+    {"font_precision", "i"},
+    {"foreground_color", "D"},
+    {"hold_plots", "i"},
+    {"isovalue", "d"},
+    {"keep_aspect_ratio", "i"},
+    {"kind", "s"},
+    {"labels", "S"},
+    {"levels", "i"},
+    {"location", "i"},
+    {"markertype", "i"},
+    {"nbins", "i"},
+    {"panzoom", "D"},
+    {"reset_ranges", "i"},
+    {"rotation", "i"},
+    {"size", "D"},
+    {"spec", "s"},
+    {"step_where", "s"},
+    {"subplot", "D"},
+    {"tilt", "i"},
+    {"title", "s"},
+    {"u", "D"},
+    {"update", "i"},
+    {"v", "D"},
+    {"x", "D"},
+    {"xbins", "i"},
+    {"xflip", "i"},
+    {"xform", "i"},
+    {"xlabel", "s"},
+    {"xlim", "D"},
+    {"xlog", "i"},
+    {"y", "D"},
+    {"ybins", "i"},
+    {"yflip", "i"},
+    {"yform", "i"},
+    {"ylabel", "s"},
+    {"ylim", "D"},
+    {"ylog", "i"},
+    {"z", "D"},
+    {"zflip", "i"},
+    {"zlim", "D"},
+    {"zlog", "i"},
+};
 
 /* ========================= functions ============================================================================== */
 
@@ -259,6 +324,8 @@ error_t plot_init_static_variables(void)
             ++hierarchy_keys_ptr;
           }
       }
+      type_map = string_array_map_new_from_string_split(array_size(key_to_formats), key_to_formats, '|');
+      error_cleanup_and_set_error_if(type_map == NULL, ERROR_MALLOC);
       plot_static_variables_initialized = 1;
     }
   return NO_ERROR;
@@ -283,6 +350,11 @@ error_cleanup:
     {
       string_map_delete(plot_valid_keys_map);
       plot_valid_keys_map = NULL;
+    }
+  if (type_map != NULL)
+    {
+      string_array_map_delete(type_map);
+      type_map = NULL;
     }
   return error;
 }
@@ -481,9 +553,41 @@ error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const ch
         }
       else
         {
-          logger((stderr, "Perform a replace on key \"%s\"\n", merge_arg->key));
-          error = args_push_arg(current_args, merge_arg);
-          cleanup_if_error;
+          const char *compatible_format;
+          /* Only accept the new value, if it has a compatible type. Convert if possible */
+          if ((compatible_format = get_compatible_format(merge_arg->key, merge_arg->value_format)) != NULL)
+            {
+              logger((stderr, "Perform a replace on key \"%s\"\n", merge_arg->key));
+              if (strcmp(merge_arg->value_format, compatible_format) == 0)
+                {
+                  /* If the given format is identical to the compatible format, push the new arg without conversion */
+                  error = args_push_arg(current_args, merge_arg);
+                  cleanup_if_error;
+                }
+              else
+                {
+                  /* Otherwise, a single value is given but an array is needed
+                   * -> Push the given value as array instead
+                   * **IMPORTANT**: In this case the existing `merge_arg` node cannot be shared with `current_args`
+                   * (since the stored format does not fit), so the value must be copied (it is owned by the `merge_arg`
+                   * node and would be freed twice otherwise). */
+                  char array_format[3] = "n";
+                  void *copy_buffer;
+                  array_format[1] = *compatible_format;
+                  logger((stderr, "Convert the given format \"%s\" to an array format \"%s\" \n",
+                          merge_arg->value_format, array_format));
+                  copy_buffer = copy_value(tolower(*compatible_format), merge_arg->value_ptr);
+                  cleanup_and_set_error_if(copy_buffer == NULL, ERROR_MALLOC);
+                  grm_args_push(current_args, merge_arg->key, array_format, 1, copy_buffer);
+                  /* x -> copy_buffer -> value, value is now stored and the buffer is not needed any more */
+                  free(copy_buffer);
+                }
+            }
+          else
+            {
+              logger((stderr, "The type \"%s\" of key \"%s\" was rejected and will not be merged.\n",
+                      merge_arg->value_format, merge_arg->key));
+            }
         }
     }
 
@@ -3267,6 +3371,90 @@ const char *next_fmt_key(const char *kind)
     }
 
   return fmt_key;
+}
+
+const char *get_compatible_format(const char *key, const char *given_format)
+{
+  const char **valid_formats;
+  char *reduced_given_format;
+  const char **current_format_ptr;
+  const char *compatible_format = NULL;
+  /* First, get all valid formats */
+  if (!string_array_map_at(type_map, key, (char ***)&valid_formats))
+    {
+      /* If the given key does not exist, there is no type constraint
+       * -> simply return the same type that was given */
+      return given_format;
+    }
+  /* Second, filter the given format -> remove `n` chars because they are irrelevant for the following tests */
+  reduced_given_format = str_filter(given_format, "n");
+  if (reduced_given_format == NULL)
+    {
+      debug_print_malloc_error();
+      goto cleanup;
+    }
+  /* Third, iterate over all valid formats and check if
+   * - there is an exact match
+   * - one or multiple single value types given (e.g. `d` or `dddd`)
+   *   when an array of the same type (`D` in this case) would be valid */
+  current_format_ptr = valid_formats;
+  while (*current_format_ptr != NULL)
+    {
+      if (strcmp(*current_format_ptr, reduced_given_format) == 0)
+        {
+          /* Found an exact match -> simply return the given format */
+          compatible_format = given_format;
+          break;
+        }
+      else if (strlen(*current_format_ptr) == 1 && toupper(**current_format_ptr) == **current_format_ptr)
+        {
+          /* The current format is a single array type -> check if a conversion can be done */
+          if (strlen(reduced_given_format) == 1)
+            {
+              if (toupper(*reduced_given_format) == **current_format_ptr)
+                {
+                  /* The given format is a single value of the same type like the current format
+                   * (e.g. `d` is given and `D` is a valid foramt)
+                   * -> Return the current array type as compatible format */
+                  compatible_format = *current_format_ptr;
+                  break;
+                }
+            }
+          else
+            {
+              /* The given format is longer than 1 -> check if it is homogeneous and has no array types */
+              const char first_format_char = *reduced_given_format;
+              if (tolower(first_format_char) == first_format_char && toupper(first_format_char) == **current_format_ptr)
+                {
+                  /* The first format character is a lower case version of the current array type
+                   * -> now check for homogeneity */
+                  const char *current_format_char_ptr = reduced_given_format + 1;
+                  while (*current_format_char_ptr != '\0')
+                    {
+                      if (*current_format_char_ptr != first_format_char)
+                        {
+                          break;
+                        }
+                      ++current_format_char_ptr;
+                    }
+                  if (*current_format_char_ptr == '\0')
+                    {
+                      /* The whole string was successfully scanned
+                       * -> Return the current array type as compatible format */
+                      compatible_format = *current_format_ptr;
+                      break;
+                    }
+                }
+            }
+        }
+      ++current_format_ptr;
+    }
+
+cleanup:
+  free(reduced_given_format);
+
+  /* The previous tests were not successful -> `NULL` indicates no compatible format */
+  return compatible_format;
 }
 
 int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id)

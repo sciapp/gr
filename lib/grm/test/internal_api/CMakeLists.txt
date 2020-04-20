@@ -51,7 +51,7 @@ project(
   LANGUAGES C
 )
 
-set(EXECUTABLE_SOURCES)
+set(EXECUTABLE_SOURCES datatype/string_array_map.c)
 
 set(GRM_SOURCES
     ../../args.c

@@ -338,6 +338,7 @@ set(GRM_SOURCES
     lib/grm/net.c
     lib/grm/plot.c
     lib/grm/util.c
+    lib/grm/datatype/string_array_map.c
     lib/grm/datatype/string_list.c
     lib/grm/datatype/string_map.c
     lib/grm/datatype/uint_map.c

@@ -42,6 +42,7 @@ struct _argparse_state_t
 typedef struct _argparse_state_t argparse_state_t;
 
 typedef void (*read_param_t)(argparse_state_t *);
+typedef void *(*copy_value_t)(void *);
 typedef void (*delete_value_t)(void *);
 
 
@@ -108,6 +109,11 @@ int args_check_format_compatibility(const arg_t *arg, const char *compatible_for
 void args_decrease_arg_reference_count(args_node_t *args_node);
 
 
+/* ------------------------- value copy ----------------------------------------------------------------------------- */
+
+void *copy_value(char format, void *value_ptr);
+
+
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- argument ------------------------------------------------------------------------------- */
@@ -128,7 +134,8 @@ void args_init(grm_args_t *args);
 void args_finalize(grm_args_t *args);
 
 grm_args_t *args_flatcopy(const grm_args_t *args) UNUSED;
-grm_args_t *args_copy(const grm_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys);
+grm_args_t *args_copy(const grm_args_t *copy_args);
+grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys);
 
 error_t args_push_common(grm_args_t *args, const char *key, const char *value_format, const void *buffer, va_list *vl,
                          int apply_padding);

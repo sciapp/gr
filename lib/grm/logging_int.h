@@ -1,6 +1,20 @@
 #ifndef GRM_LOGGING_INT_H_INCLUDED
 #define GRM_LOGGING_INT_H_INCLUDED
 
+#ifdef __unix__
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200112L
+#endif
+#endif
+
+/* ######################### includes ############################################################################### */
+
+#include <stdio.h>
+#ifdef _WIN32
+#include <io.h>
+#endif
+
+
 /* ######################### interface ############################################################################## */
 
 /* ========================= macros ================================================================================= */
