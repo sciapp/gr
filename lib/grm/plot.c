@@ -146,7 +146,7 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},      {"hexbin", "xys
                                            {"plot3", "xyzc"},    {"scatter", "xyzc"},
                                            {"scatter3", "xyzc"}, {"quiver", "xyuv"},
                                            {"heatmap", "xyzc"},  {"hist", "xy"},
-                                           {"barplot", "xy"},    {"isosurface", "c"},
+                                           {"barplot", "y"},     {"isosurface", "c"},
                                            {"imshow", "c"},      {"nonuniformheatmap", "xyzc"}};
 
 
@@ -204,80 +204,121 @@ const char *plot_merge_clear_keys[] = {"series", NULL};
 
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", NULL};
 const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
-const char *valid_subplot_keys[] = {"adjust_xlim", "adjust_ylim", "adjust_zlim",    "backgroundcolor",
-                                    "colormap",    "font",        "font_precision", "keep_aspect_ratio",
-                                    "kind",        "labels",      "levels",         "location",
-                                    "nbins",       "panzoom",     "reset_ranges",   "rotation",
-                                    "series",      "subplot",     "tilt",           "title",
-                                    "xbins",       "xflip",       "xform",          "xlabel",
-                                    "xlim",        "xlog",        "ybins",          "yflip",
-                                    "ylabel",      "ylim",        "ylog",           "zflip",
-                                    "zlim",        "zlog",        "clim",           NULL};
-const char *valid_series_keys[] = {
-    "a", "c", "error", "c_dims", "foreground_color", "isovalue", "markertype", "s", "spec", "step_where", "u", "v",
-    "x", "y", "z",     NULL};
+const char *valid_subplot_keys[] = {"adjust_xlim",
+                                    "adjust_ylim",
+                                    "adjust_zlim",
+                                    "backgroundcolor",
+                                    "bar_color",
+                                    "bar_width",
+                                    "colormap",
+                                    "edge_color",
+                                    "edge_width",
+                                    "font",
+                                    "font_precision",
+                                    "ind_bar_color",
+                                    "ind_edge_color",
+                                    "ind_edge_width",
+                                    "keep_aspect_ratio",
+                                    "kind",
+                                    "labels",
+                                    "levels",
+                                    "location",
+                                    "nbins",
+                                    "panzoom",
+                                    "reset_ranges",
+                                    "rotation",
+                                    "series",
+                                    "style",
+                                    "subplot",
+                                    "tilt",
+                                    "title",
+                                    "xbins",
+                                    "xflip",
+                                    "xform",
+                                    "xlabel",
+                                    "xlim",
+                                    "xlog",
+                                    "xnotations",
+                                    "ybins",
+                                    "yflip",
+                                    "ylabel",
+                                    "ylim",
+                                    "ylog",
+                                    "zflip",
+                                    "zlim",
+                                    "zlog",
+                                    "clim",
+                                    NULL};
+const char *valid_series_keys[] = {"a",          "c",   "error", "c_dims", "foreground_color", "indices", "isovalue",
+                                   "markertype", "rgb", "s",     "spec",   "step_where",       "u",       "v",
+                                   "x",          "y",   "z",     NULL};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* If multiple formats are supported use `|` as separator
  * Example: "i|s" for supporting both integer and strings */
 /* TODO: type for format "s"? */
-static string_map_entry_t key_to_formats[] = {
-    {"a", "A"},
-    {"adjust_xlim", "i"},
-    {"adjust_ylim", "i"},
-    {"adjust_zlim", "i"},
-    {"append_plots", "i"},
-    {"backgroundcolor", "i"},
-    {"c", "D"},
-    {"c_dims", "I"},
-    {"clim", "D"},
-    {"colormap", "i"},
-    {"error", "a"},
-    {"fig_size", "D"},
-    {"font", "i"},
-    {"font_precision", "i"},
-    {"foreground_color", "D"},
-    {"hold_plots", "i"},
-    {"isovalue", "d"},
-    {"keep_aspect_ratio", "i"},
-    {"kind", "s"},
-    {"labels", "S"},
-    {"levels", "i"},
-    {"location", "i"},
-    {"markertype", "i"},
-    {"nbins", "i"},
-    {"panzoom", "D"},
-    {"reset_ranges", "i"},
-    {"rotation", "i"},
-    {"size", "D"},
-    {"spec", "s"},
-    {"step_where", "s"},
-    {"subplot", "D"},
-    {"tilt", "i"},
-    {"title", "s"},
-    {"u", "D"},
-    {"update", "i"},
-    {"v", "D"},
-    {"x", "D"},
-    {"xbins", "i"},
-    {"xflip", "i"},
-    {"xform", "i"},
-    {"xlabel", "s"},
-    {"xlim", "D"},
-    {"xlog", "i"},
-    {"y", "D"},
-    {"ybins", "i"},
-    {"yflip", "i"},
-    {"yform", "i"},
-    {"ylabel", "s"},
-    {"ylim", "D"},
-    {"ylog", "i"},
-    {"z", "D"},
-    {"zflip", "i"},
-    {"zlim", "D"},
-    {"zlog", "i"},
-};
+static string_map_entry_t key_to_formats[] = {{"a", "A"},
+                                              {"adjust_xlim", "i"},
+                                              {"adjust_ylim", "i"},
+                                              {"adjust_zlim", "i"},
+                                              {"append_plots", "i"},
+                                              {"backgroundcolor", "i"},
+                                              {"bar_color", "D|i"},
+                                              {"c", "D|I"},
+                                              {"c_dims", "I"},
+                                              {"clim", "D"},
+                                              {"colormap", "i"},
+                                              {"edge_color", "D|i"},
+                                              {"edge_width", "d"},
+                                              {"error", "a"},
+                                              {"fig_size", "D"},
+                                              {"font", "i"},
+                                              {"font_precision", "i"},
+                                              {"foreground_color", "D"},
+                                              {"hold_plots", "i"},
+                                              {"ind_bar_color", "A"},
+                                              {"ind_edge_color", "A"},
+                                              {"ind_edge_width", "A"},
+                                              {"isovalue", "d"},
+                                              {"keep_aspect_ratio", "i"},
+                                              {"kind", "s"},
+                                              {"labels", "S"},
+                                              {"levels", "i"},
+                                              {"location", "i"},
+                                              {"markertype", "i"},
+                                              {"nbins", "i"},
+                                              {"panzoom", "D"},
+                                              {"reset_ranges", "i"},
+                                              {"rotation", "i"},
+                                              {"size", "D"},
+                                              {"spec", "s"},
+                                              {"step_where", "s"},
+                                              {"style", "s"},
+                                              {"subplot", "D"},
+                                              {"tilt", "i"},
+                                              {"title", "s"},
+                                              {"u", "D"},
+                                              {"update", "i"},
+                                              {"v", "D"},
+                                              {"x", "D"},
+                                              {"xbins", "i"},
+                                              {"xflip", "i"},
+                                              {"xform", "i"},
+                                              {"xlabel", "s"},
+                                              {"xlim", "D"},
+                                              {"xlog", "i"},
+                                              {"y", "D"},
+                                              {"ybins", "i"},
+                                              {"yflip", "i"},
+                                              {"yform", "i"},
+                                              {"ylabel", "s"},
+                                              {"ylim", "D"},
+                                              {"ylog", "i"},
+                                              {"z", "D"},
+                                              {"zflip", "i"},
+                                              {"zlim", "D"},
+                                              {"zlog", "i"}};
 
 /* ========================= functions ============================================================================== */
 
@@ -1177,8 +1218,25 @@ void plot_process_window(grm_args_t *subplot_args)
           gr_adjustlimits(&x_min, &x_max);
           logger((stderr, "xrange after \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
         }
-      x_major_count = major_count;
-      x_tick = gr_tick(x_min, x_max) / x_major_count;
+      if (strcmp(kind, "barplot") == 0)
+        {
+          const char *xnotations[5];
+          unsigned int xnotations_length;
+          x_tick = 1;
+          if (args_first_value(subplot_args, "xnotations", "S", &xnotations, &xnotations_length))
+            {
+              x_major_count = 0;
+            }
+          else
+            {
+              x_major_count = 1;
+            }
+        }
+      else
+        {
+          x_major_count = major_count;
+          x_tick = gr_tick(x_min, x_max) / x_major_count;
+        }
     }
   else
     {
@@ -1289,6 +1347,7 @@ void plot_process_window(grm_args_t *subplot_args)
 void plot_store_coordinate_ranges(grm_args_t *subplot_args)
 {
   const char *kind;
+  const char *style = "";
   const char *fmt;
   grm_args_t **current_series;
   unsigned int series_count;
@@ -1304,6 +1363,7 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
   /* TODO: support that single `lim` values are `null` / unset! */
 
   args_values(subplot_args, "kind", "s", &kind);
+  args_values(subplot_args, "style", "s", &style);
   string_map_at(fmt_map, kind, (char **)&fmt); /* TODO: check if the map access was successful */
   current_range_keys = range_keys;
   current_component_name = data_component_names;
@@ -1325,10 +1385,22 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
             {
               if (args_first_value(*current_series, *current_component_name, "D", &current_component, &point_count))
                 {
-                  for (i = 0; i < point_count; i++)
+                  if (strcmp(style, "stacked") == 0)
                     {
-                      min_component = min(current_component[i], min_component);
-                      max_component = max(current_component[i], max_component);
+                      double current_max_component = 0;
+                      for (i = 0; i < point_count; i++)
+                        {
+                          current_max_component += current_component[i];
+                        }
+                      max_component = max(current_max_component, max_component);
+                    }
+                  else
+                    {
+                      for (i = 0; i < point_count; i++)
+                        {
+                          min_component = min(current_component[i], min_component);
+                          max_component = max(current_component[i], max_component);
+                        }
                     }
                 }
               ++current_series;
@@ -1347,8 +1419,7 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
               min_component -= 0.5;
               max_component += 0.5;
             }
-          else if ((strcmp(kind, "hist") == 0 || strcmp(kind, "barplot") == 0) &&
-                   strcmp("y", *current_component_name) == 0)
+          else if ((str_equals_any(kind, 2, "barplot", "hist")) && strcmp("y", *current_component_name) == 0)
             {
               min_component = 0;
             }
@@ -1398,6 +1469,19 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
     {
       grm_args_push(subplot_args, "xrange", "dd", 0.0, 1.0);
       grm_args_push(subplot_args, "yrange", "dd", 0.0, 1.0);
+    }
+  else if (strcmp(kind, "barplot") == 0)
+    {
+      double x_min = 0, x_max;
+      if (str_equals_any(style, 2, "lined", "stacked"))
+        {
+          x_max = series_count + 1;
+        }
+      else
+        {
+          x_max = point_count + 1;
+        }
+      grm_args_push(subplot_args, "xrange", "dd", x_min, x_max);
     }
 }
 
@@ -1841,37 +1925,358 @@ error_t plot_hist(grm_args_t *subplot_args)
 
 error_t plot_barplot(grm_args_t *subplot_args)
 {
-  const double *window;
   grm_args_t **current_series;
-  error_t error;
-  char *kind;
 
-  args_values(subplot_args, "window", "D", &window);
+  /* Default */
+  int bar_color = 989, edge_color = 1;
+  double bar_color_rgb[3] = {-1};
+  double edge_color_rgb[3] = {-1};
+  double bar_width = 1, edge_width = 1;
+  const char *style = "default";
+  int *c = NULL;
+  unsigned int c_length;
+  double *c_rgb = NULL;
+  unsigned int c_rgb_length;
+  double *y;
+  unsigned int y_length;
+  grm_args_t **ind_bar_color = NULL;
+  double(*pos_ind_bar_color)[3] = NULL;
+  grm_args_t **ind_edge_color = NULL;
+  double(*pos_ind_edge_color)[3] = NULL;
+  grm_args_t **ind_edge_width = NULL;
+  double *pos_ind_edge_width = NULL;
+  int series_index = 0;
+  double wfac;
+  int len_std_colors = 20;
+  int std_colors[20] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
+                        991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
+  int color_save_spot = 1000;
+  int change_bar_color = 0;
+  int change_edge_color = 0;
+  int change_edge_width = 0;
+  unsigned int i;
+  error_t error = NO_ERROR;
+
   args_values(subplot_args, "series", "A", &current_series);
-  args_values(subplot_args, "kind", "s", &kind);
+  args_values(subplot_args, "bar_color", "ddd", &bar_color_rgb[0], &bar_color_rgb[1], &bar_color_rgb[2]);
+  args_values(subplot_args, "bar_color", "i", &bar_color);
+  args_values(subplot_args, "bar_width", "d", &bar_width);
+  args_values(subplot_args, "edge_color", "ddd", &edge_color_rgb[0], &edge_color_rgb[1], &edge_color_rgb[2]);
+  args_values(subplot_args, "edge_color", "i", &edge_color);
+  args_values(subplot_args, "edge_width", "d", &edge_width);
+  args_values(subplot_args, "style", "s", &style);
+  args_first_value(*current_series, "c", "I", &c, &c_length);
+  args_first_value(*current_series, "c", "D", &c_rgb, &c_rgb_length);
+  if (bar_color_rgb[0] != -1)
+    {
+      for (i = 0; i < 3; i++)
+        {
+          cleanup_and_set_error_if((bar_color_rgb[i] > 1 || bar_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
+        }
+    }
+  if (edge_color_rgb[0] != -1)
+    {
+      for (i = 0; i < 3; i++)
+        {
+          cleanup_and_set_error_if((edge_color_rgb[i] > 1 || edge_color_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
+        }
+    }
+
+  /* ind_parameter */
+  args_first_value(*current_series, "y", "D", &y, &y_length);
+  /* ind_bar_color */
+  if (args_values(subplot_args, "ind_bar_color", "A", &ind_bar_color))
+    {
+      pos_ind_bar_color = malloc(3 * y_length * sizeof(double));
+      cleanup_and_set_error_if(pos_ind_bar_color == NULL, ERROR_MALLOC);
+      change_bar_color = 1;
+      for (i = 0; i < y_length; ++i)
+        {
+          pos_ind_bar_color[i][0] = -1;
+        }
+      while (*ind_bar_color != NULL)
+        {
+          int *indices = NULL;
+          unsigned int indices_length;
+          int index;
+          double rgb[3];
+          unsigned int j;
+          cleanup_and_set_error_if(!(args_first_value(*ind_bar_color, "indices", "I", &indices, &indices_length) ||
+                                     args_values(*ind_bar_color, "indices", "i", &index)),
+                                   ERROR_PLOT_MISSING_DATA);
+          cleanup_and_set_error_if(!args_values(*ind_bar_color, "rgb", "ddd", &rgb[0], &rgb[1], &rgb[2]),
+                                   ERROR_PLOT_MISSING_DATA);
+          for (j = 0; j < 3; j++)
+            {
+              cleanup_and_set_error_if((rgb[j] > 1 || rgb[j] < 0), ERROR_PLOT_OUT_OF_RANGE);
+            }
+
+          if (indices != NULL)
+            {
+              for (j = 0; j < indices_length; ++j)
+                {
+                  cleanup_and_set_error_if(indices[j] - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  pos_ind_bar_color[indices[j] - 1][0] = rgb[0];
+                  pos_ind_bar_color[indices[j] - 1][1] = rgb[1];
+                  pos_ind_bar_color[indices[j] - 1][2] = rgb[2];
+                }
+            }
+          else
+            {
+              cleanup_and_set_error_if(index - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+              pos_ind_bar_color[index - 1][0] = rgb[0];
+              pos_ind_bar_color[index - 1][1] = rgb[1];
+              pos_ind_bar_color[index - 1][2] = rgb[2];
+            }
+          ind_bar_color++;
+        }
+    }
+
+  /* ind_edge_color */
+  if (args_values(subplot_args, "ind_edge_color", "A", &ind_edge_color))
+    {
+      pos_ind_edge_color = malloc(3 * y_length * sizeof(double));
+      cleanup_and_set_error_if(pos_ind_edge_color == NULL, ERROR_MALLOC);
+      change_edge_color = 1;
+      for (i = 0; i < y_length; ++i)
+        {
+          pos_ind_edge_color[i][0] = -1;
+        }
+      while (*ind_edge_color != NULL)
+        {
+          int *indices = NULL;
+          unsigned int indices_length;
+          int index;
+          double rgb[3];
+          unsigned int j;
+          cleanup_and_set_error_if(!(args_first_value(*ind_edge_color, "indices", "I", &indices, &indices_length) ||
+                                     args_values(*ind_edge_color, "indices", "i", &index)),
+                                   ERROR_PLOT_MISSING_DATA);
+          cleanup_and_set_error_if(!args_values(*ind_edge_color, "rgb", "ddd", &rgb[0], &rgb[1], &rgb[2]),
+                                   ERROR_PLOT_MISSING_DATA);
+          for (j = 0; j < 3; j++)
+            {
+              cleanup_and_set_error_if((rgb[j] > 1 || rgb[j] < 0), ERROR_PLOT_OUT_OF_RANGE);
+            }
+
+          if (indices != NULL)
+            {
+              for (j = 0; j < indices_length; ++j)
+                {
+                  cleanup_and_set_error_if(indices[j] - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  pos_ind_edge_color[indices[j] - 1][0] = rgb[0];
+                  pos_ind_edge_color[indices[j] - 1][1] = rgb[1];
+                  pos_ind_edge_color[indices[j] - 1][2] = rgb[2];
+                }
+            }
+          else
+            {
+              cleanup_and_set_error_if(index - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+              pos_ind_edge_color[index - 1][0] = rgb[0];
+              pos_ind_edge_color[index - 1][1] = rgb[1];
+              pos_ind_edge_color[index - 1][2] = rgb[2];
+            }
+          ind_edge_color++;
+        }
+    }
+
+  /* ind_edge_width */
+  if (args_values(subplot_args, "ind_edge_width", "A", &ind_edge_width))
+    {
+      pos_ind_edge_width = malloc(sizeof(double) * y_length);
+      cleanup_and_set_error_if(pos_ind_edge_width == NULL, ERROR_MALLOC);
+      for (i = 0; i < y_length; ++i)
+        {
+          pos_ind_edge_width[i] = -1;
+        }
+      change_edge_width = 1;
+      while (*ind_edge_width != NULL)
+        {
+          int *indices = NULL;
+          unsigned int indices_length;
+          int index;
+          double width;
+          unsigned int j;
+          cleanup_and_set_error_if(!(args_first_value(*ind_edge_width, "indices", "I", &indices, &indices_length) ||
+                                     args_values(*ind_edge_width, "indices", "i", &index)),
+                                   ERROR_PLOT_MISSING_DATA);
+          cleanup_and_set_error_if(!args_values(*ind_edge_width, "width", "d", &width), ERROR_PLOT_MISSING_DATA);
+          cleanup_and_set_error_if(width < 0, ERROR_PLOT_OUT_OF_RANGE);
+
+          if (indices != NULL)
+            {
+              for (j = 0; j < indices_length; ++j)
+                {
+                  cleanup_and_set_error_if(indices[j] - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  pos_ind_edge_width[indices[j] - 1] = width;
+                }
+            }
+          else
+            {
+              cleanup_and_set_error_if(index - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+              pos_ind_edge_width[index - 1] = width;
+            }
+          ind_edge_width++;
+        }
+    }
+
+  wfac = 0.9 * bar_width;
   while (*current_series != NULL)
     {
-      double *x, *y;
-      unsigned int x_length, y_length;
-      unsigned int i;
-      return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length + 1, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      for (i = 1; i <= y_length; ++i)
+      /* Init */
+      double *y;
+      unsigned int y_length;
+      /* Style Varianz */
+      double horizontal_change = 0;
+      double x1, x2, y1, y2;
+      cleanup_and_set_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+      if (c != NULL)
         {
-          gr_setfillcolorind(989);
-          gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
-          gr_fillrect(x[i - 1], x[i], 0, y[i - 1]);
-          gr_setfillcolorind(1);
-          gr_setfillintstyle(GKS_K_INTSTYLE_HOLLOW);
-          gr_fillrect(x[i - 1], x[i], 0, y[i - 1]);
+          cleanup_and_set_error_if(c_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
         }
-      error = plot_draw_errorbars(*current_series, x, x_length, y, kind);
-      return_if_error;
+      if (c_rgb != NULL)
+        {
+          cleanup_and_set_error_if(c_rgb_length != y_length * 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+          for (i = 0; i < y_length * 3; i++)
+            {
+              cleanup_and_set_error_if((c_rgb[i] > 1 || c_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
+            }
+        }
+
+      /* Draw Bar */
+      gr_setfillintstyle(1);
+      for (i = 0; i < y_length; i++)
+        {
+          if (bar_color_rgb[0] != -1)
+            {
+              gr_setcolorrep(color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
+              bar_color = color_save_spot;
+            }
+          gr_setfillcolorind(bar_color);
+          if (c != NULL)
+            {
+              gr_setfillcolorind(c[i]);
+            }
+          else if (c_rgb != NULL)
+            {
+              gr_setcolorrep(color_save_spot, c_rgb[i * 3], c_rgb[i * 3 + 1], c_rgb[i * 3 + 2]);
+              gr_setfillcolorind(color_save_spot);
+            }
+          else if (change_bar_color)
+            {
+              if (*pos_ind_bar_color[i] != -1)
+                {
+                  gr_setcolorrep(color_save_spot, pos_ind_bar_color[i][0], pos_ind_bar_color[i][1],
+                                 pos_ind_bar_color[i][2]);
+                  gr_setfillcolorind(color_save_spot);
+                }
+            }
+          else
+            {
+              if (strcmp(style, "default") != 0)
+                {
+                  int color_index = i % len_std_colors;
+                  gr_setfillcolorind(std_colors[color_index]);
+                }
+            }
+          if (strcmp(style, "default") == 0)
+            {
+              x1 = i + 1 - 0.5 * bar_width;
+              x2 = i + 1 + 0.5 * bar_width;
+              y1 = 0;
+              y2 = y[i];
+            }
+          if (strcmp(style, "stacked") == 0)
+            {
+              x1 = series_index + 1 - 0.5 * bar_width;
+              x2 = series_index + 1 + 0.5 * bar_width;
+              y1 = 0 + horizontal_change;
+              y2 = y[i] + horizontal_change;
+              horizontal_change += y[i];
+            }
+          if (strcmp(style, "lined") == 0)
+            {
+              bar_width = wfac / y_length;
+              x1 = series_index + 1 - 0.5 * wfac + bar_width * i;
+              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
+              y1 = 0;
+              y2 = y[i];
+            }
+          gr_fillrect(x1, x2, y1, y2);
+        }
+
+      /* Draw Edge */
+      horizontal_change = 0;
+      for (i = 0; i < y_length; i++)
+        {
+          gr_setlinewidth(edge_width);
+          if (change_edge_width)
+            {
+              if (pos_ind_edge_width[i] != -1)
+                {
+                  double width = pos_ind_edge_width[i];
+                  gr_setlinewidth(width);
+                }
+            }
+          if (edge_color_rgb[0] != -1)
+            {
+              gr_setcolorrep(color_save_spot, edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]);
+              edge_color = color_save_spot;
+            }
+          gr_setlinecolorind(edge_color);
+          if (change_edge_color)
+            {
+              if (*pos_ind_edge_color[i] != -1)
+                {
+                  gr_setcolorrep(color_save_spot, pos_ind_edge_color[i][0], pos_ind_edge_color[i][1],
+                                 pos_ind_edge_color[i][2]);
+                  gr_setlinecolorind(color_save_spot);
+                }
+            }
+          if (strcmp(style, "default") == 0)
+            {
+              x1 = i + 1 - 0.5 * bar_width;
+              x2 = i + 1 + 0.5 * bar_width;
+              y1 = 0;
+              y2 = y[i];
+            }
+          if (strcmp(style, "stacked") == 0)
+            {
+              x1 = series_index + 1 - 0.5 * bar_width;
+              x2 = series_index + 1 + 0.5 * bar_width;
+              y1 = 0 + horizontal_change;
+              y2 = y[i] + horizontal_change;
+              horizontal_change += y[i];
+            }
+          if (strcmp(style, "lined") == 0)
+            {
+              bar_width = wfac / y_length;
+              x1 = series_index + 1 - 0.5 * wfac + bar_width * i;
+              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
+              y1 = 0;
+              y2 = y[i];
+            }
+          gr_drawrect(x1, x2, y1, y2);
+        }
+      series_index++;
       ++current_series;
     }
 
-  return NO_ERROR;
+cleanup:
+  if (pos_ind_bar_color != NULL)
+    {
+      free(pos_ind_bar_color);
+    }
+  if (pos_ind_edge_color != NULL)
+    {
+      free(pos_ind_edge_color);
+    }
+  if (pos_ind_edge_width != NULL)
+    {
+      free(pos_ind_edge_width);
+    }
+
+  return error;
 }
 
 error_t plot_contour(grm_args_t *subplot_args)
@@ -2892,6 +3297,32 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           gr_setcharup(-1, 0);
           gr_textext(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
           gr_restorestate();
+        }
+    }
+  if (strcmp("barplot", kind) == 0)
+    {
+      grm_args_t **current_series;
+      args_values(args, "series", "A", &current_series);
+      char **xnotations = NULL;
+      unsigned int xnotations_length;
+      int i;
+      if (args_first_value(args, "xnotations", "S", &xnotations, &xnotations_length))
+        {
+          double x1, x2;
+          double *y;
+          unsigned int y_length;
+          const double *window;
+          return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+          return_error_if(xnotations_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+          args_values(args, "window", "D", &window);
+          gr_setcharheight(charheight);
+          gr_settextalign(2, 1);
+          for (i = 1; i <= y_length; i++)
+            {
+              x1 = viewport[0] + ((viewport[1] - viewport[0]) * i) / (window[1] - window[0]);
+              x2 = viewport[2] - 0.5 * charheight;
+              gr_textext(x1, x2, xnotations[i - 1]);
+            }
         }
     }
 

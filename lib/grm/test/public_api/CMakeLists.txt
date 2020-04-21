@@ -53,6 +53,7 @@ project(
 
 set(EXECUTABLE_SOURCES
     bar_errorbar.c
+    barplot.c
     custom_receiver.c
     custom_sender.c
     event_handling.c
