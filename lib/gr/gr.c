@@ -4143,13 +4143,14 @@ static void text2d(double x, double y, const char *chars)
 
 static char *gr_ftoa(char *result, double value, double reference)
 {
-  int errind, font, prec, n = 0;
+  int errind, font, prec, encoding, n = 0;
   char *s, *out;
 
   s = str_ftoa(result, value, reference);
 
   gks_inq_text_fontprec(&errind, &font, &prec);
-  if (prec != GKS_K_TEXT_PRECISION_OUTLINE) return s;
+  gks_inq_encoding(&encoding);
+  if (prec != GKS_K_TEXT_PRECISION_OUTLINE || encoding != ENCODING_UTF8) return s;
 
   out = xmalloc(256);
 
