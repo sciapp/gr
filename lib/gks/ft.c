@@ -1021,8 +1021,11 @@ static void get_outline(FT_Face face, FT_UInt charcode, FT_Bool first)
   error = FT_Outline_Decompose(&outline, &callbacks, NULL);
   if (error) gks_perror("could not extract the outline");
 
-  opcodes[num_opcodes++] = 'f';
-  opcodes[num_opcodes] = '\0';
+  if (num_opcodes > 0)
+    {
+      opcodes[num_opcodes++] = 'f';
+      opcodes[num_opcodes] = '\0';
+    }
 
   if (charcode != 32)
     pen_x += metrics.horiBearingX + metrics.width;

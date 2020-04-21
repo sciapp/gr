@@ -1158,7 +1158,15 @@ void gks_text(double px, double py, char *str)
             }
           else
             {
-              gks_ft_text(px, py, str, s, gks_ft_gdp);
+              if (s->input_encoding == ENCODING_LATIN1)
+                {
+                  char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
+                  gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
+
+                  gks_ft_text(px, py, utf8_str, s, gks_ft_gdp);
+                }
+              else
+                gks_ft_text(px, py, str, s, gks_ft_gdp);
             }
         }
       else
@@ -2890,7 +2898,16 @@ void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind,
         }
       else
         {
-          gks_ft_inq_text_extent(px, py, str, s, gks_ft_gdp, bx, by);
+          if (s->input_encoding == ENCODING_LATIN1)
+            {
+              char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
+              gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
+
+              gks_ft_inq_text_extent(px, py, utf8_str, s, gks_ft_gdp, bx, by);
+            }
+          else
+            gks_ft_inq_text_extent(px, py, str, s, gks_ft_gdp, bx, by);
+
           for (i = 0; i < 4; i++)
             {
               tx[i] = bx[i];
