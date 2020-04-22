@@ -390,7 +390,6 @@ function GRM(canvas_id) {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0]
         };
-        freearray(evt);
         this.callbacks[this.EVENT_NEW_PLOT](evt_data);
     }.bind(this), 'vi'));
 
@@ -399,7 +398,6 @@ function GRM(canvas_id) {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0]
         };
-        freearray(evt);
         this.callbacks[this.EVENT_UPDATE_PLOT](evt_data);
     }.bind(this), 'vi'));
 
@@ -410,7 +408,6 @@ function GRM(canvas_id) {
             'width': Module.HEAP32.subarray(evt / 4 + 2, evt / 4 + 3)[0],
             'height': Module.HEAP32.subarray(evt / 4 + 3, evt / 4 + 4)[0]
         };
-        freearray(evt);
         this.callbacks[this.EVENT_SIZE](evt_data);
     }.bind(this), 'vi'));
 
@@ -419,7 +416,6 @@ function GRM(canvas_id) {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'identificator': Module.UTF8ToString(Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0])
         };
-        freearray(evt);
         this.callbacks[this.EVENT_MERGE_END](evt_data);
     }.bind(this), 'vi'));
 }
