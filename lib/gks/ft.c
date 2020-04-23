@@ -1229,7 +1229,8 @@ void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gk
 
 static void process_glyphs3d(FT_Face face, double x, double y, double z, char *text, int axis, double phi,
                              gks_state_list_t *gkss, void (*gdp)(int, double *, double *, int, int, int *),
-                             void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY)
+                             void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY,
+                             double height_fac, double *scale_facs)
 {
   FT_UInt unicode_string[256];
   FT_UInt length = strlen(text);
@@ -1245,7 +1246,10 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
   pen_x = 0;
   cos_f = cos(phi);
   sin_f = sin(phi);
-  chh = gkss->chh * 2 * sqrt(2);
+  chh = gkss->chh;
+
+  chh /= height_fac;
+
   height = chh / get_capheight(face);
   alh = gkss->txal[0];
 
@@ -1268,21 +1272,21 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
 
               if (axis == 1)
                 {
-                  xj = x - ypoint[j];
-                  yj = y + xpoint[j];
+                  xj = x - ypoint[j] / scale_facs[0];
+                  yj = y + xpoint[j] / scale_facs[1];
                   zj = z;
                 }
               else if (axis == 2)
                 {
-                  xj = x + xpoint[j];
-                  yj = y + ypoint[j];
+                  xj = x + xpoint[j] / scale_facs[0];
+                  yj = y + ypoint[j] / scale_facs[1];
                   zj = z;
                 }
               else if (axis == 3)
                 {
                   xj = x;
-                  yj = y + xpoint[j];
-                  zj = z + ypoint[j];
+                  yj = y + xpoint[j] / scale_facs[1];
+                  zj = z + ypoint[j] / scale_facs[2];
                 }
 
               (*wc3towc)(&xj, &yj, &zj);
@@ -1325,21 +1329,21 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
             {
               if (axis == 1)
                 {
-                  xj = x - bBoxY[j];
-                  yj = y + bBoxX[j];
+                  xj = x - bBoxY[j] / scale_facs[0];
+                  yj = y + bBoxX[j] / scale_facs[1];
                   zj = z;
                 }
               else if (axis == 2)
                 {
-                  xj = x + bBoxX[j];
-                  yj = y + bBoxY[j];
+                  xj = x + bBoxX[j] / scale_facs[0];
+                  yj = y + bBoxY[j] / scale_facs[1];
                   zj = z;
                 }
               else if (axis == 3)
                 {
                   xj = y;
-                  yj = x + bBoxX[j];
-                  zj = z + bBoxY[j];
+                  yj = x + bBoxX[j] / scale_facs[1];
+                  zj = z + bBoxY[j] / scale_facs[2];
                 }
 
               (*wc3towc)(&xj, &yj, &zj);
@@ -1357,7 +1361,8 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
 }
 
 void gks_ft_text3d(double x, double y, double z, char *text, int axis, gks_state_list_t *gkss,
-                   void (*gdp)(int, double *, double *, int, int, int *), void (*wc3towc)(double *, double *, double *))
+                   void (*gdp)(int, double *, double *, int, int, int *), void (*wc3towc)(double *, double *, double *),
+                   double height_fac, double *scale_facs)
 {
   double bBoxX[16], bBoxY[16];
   double phi;
@@ -1370,7 +1375,7 @@ void gks_ft_text3d(double x, double y, double z, char *text, int axis, gks_state
   chux = gkss->chup[0];
   chuy = gkss->chup[1];
 
-  process_glyphs3d(face, x, y, z, text, axis, 0, gkss, gdp, wc3towc, bBoxX, bBoxY);
+  process_glyphs3d(face, x, y, z, text, axis, 0, gkss, gdp, wc3towc, bBoxX, bBoxY, height_fac, scale_facs);
   switch (alh)
     {
     case GKS_K_TEXT_HALIGN_LEFT:
@@ -1408,12 +1413,13 @@ void gks_ft_text3d(double x, double y, double z, char *text, int axis, gks_state
     }
 
   phi = -atan2(chux, chuy); /* character up vector */
-  process_glyphs3d(face, x, y, z, text, axis, phi, gkss, gdp, wc3towc, NULL, NULL);
+  process_glyphs3d(face, x, y, z, text, axis, phi, gkss, gdp, wc3towc, NULL, NULL, height_fac, scale_facs);
 }
 
 void gks_ft_inq_text3d_extent(double x, double y, double z, char *text, int axis, gks_state_list_t *gkss,
                               void (*gdp)(int, double *, double *, int, int, int *),
-                              void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY)
+                              void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY,
+                              double height_fac, double *scale_facs)
 {
   double phi;
   double chux, chuy;
@@ -1423,7 +1429,7 @@ void gks_ft_inq_text3d_extent(double x, double y, double z, char *text, int axis
   chuy = gkss->chup[1];
 
   phi = -atan2(chux, chuy); /* character up vector */
-  process_glyphs3d(face, x, y, z, text, axis, phi, gkss, gdp, wc3towc, bBoxX, bBoxY);
+  process_glyphs3d(face, x, y, z, text, axis, phi, gkss, gdp, wc3towc, bBoxX, bBoxY, height_fac, scale_facs);
 }
 
 #else
@@ -1458,14 +1464,16 @@ void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gk
 }
 
 void gks_ft_text3d(double x, double y, double z, char *text, int axis, gks_state_list_t *gkss,
-                   void (*gdp)(int, double *, double *, int, int, int *), void (*wc3towc)(double *, double *, double *))
+                   void (*gdp)(int, double *, double *, int, int, int *), void (*wc3towc)(double *, double *, double *),
+                   double height_fac, double *scale_facs)
 {
   if (!init) gks_ft_init();
 }
 
 void gks_ft_inq_text3d_extent(double x, double y, double z, char *text, int axis, gks_state_list_t *gkss,
                               void (*gdp)(int, double *, double *, int, int, int *),
-                              void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY)
+                              void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY,
+                              double height_fac, double *scale_facs)
 {
   if (!init) gks_ft_init();
 }
