@@ -11323,3 +11323,19 @@ void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
 
   gr_setscalefactors3d(max_axis_length / x_len, max_axis_length / y_len, max_axis_length / z_len);
 }
+
+void gr_settextencoding(int encoding)
+{
+  check_autoinit;
+
+  gks_set_encoding(encoding);
+
+  if (flag_graphics) gr_writestream("<settextencoding encoding=\"%d\"/>\n", encoding);
+}
+
+void gr_inqtextencoding(int *encoding)
+{
+  check_autoinit;
+
+  gks_inq_encoding(encoding);
+}
