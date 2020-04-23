@@ -200,6 +200,8 @@ DLLEXPORT void gr_inqscalefactors3d(double *, double *, double *);
 DLLEXPORT void gr_setspace3d(double, double, double, double);
 DLLEXPORT void gr_text3d(double, double, double, char *, int axis);
 DLLEXPORT void gr_inqtext3d(double, double, double, char *, int axis, double *, double *);
+DLLEXPORT void gr_settextencoding(int);
+DLLEXPORT void gr_inqtextencoding(int *);
 
 #ifdef __cplusplus
 }
