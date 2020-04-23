@@ -124,6 +124,7 @@ error_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_p
 void plot_set_flag_defaults(void);
 void plot_set_attribute_defaults(grm_args_t *subplot_args);
 void plot_pre_plot(grm_args_t *plot_args);
+void plot_set_text_encoding(void);
 void plot_process_wswindow_wsviewport(grm_args_t *plot_args);
 void plot_pre_subplot(grm_args_t *subplot_args);
 void plot_process_colormap(grm_args_t *subplot_args);
@@ -132,6 +133,7 @@ void plot_process_viewport(grm_args_t *subplot_args);
 void plot_process_window(grm_args_t *subplot_args);
 void plot_store_coordinate_ranges(grm_args_t *subplot_args);
 void plot_post_plot(grm_args_t *plot_args);
+void plot_restore_text_encoding(void);
 void plot_post_subplot(grm_args_t *subplot_args);
 error_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
                                    uint_map_t *hierarchy_to_id, const grm_args_t **found_args,
