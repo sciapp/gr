@@ -1299,6 +1299,19 @@ void gr_closegks(void)
   autoinit = 1;
 }
 
+/*!
+ * Get the current display size.
+ *
+ * \param[out] mwidth Display width in meters
+ * \param[out] mheight Display height in meters
+ * \param[out] width Display width in pixels
+ * \param[out] height Display height in pixels
+ *
+ * Depending on the current workstation type, the current display might be
+ * the primary screen (e.g. when using gksqt or GKSTerm) or a purely virtual
+ * display (e.g. when using Cairo). When a high DPI screen is used as the
+ * current display, width and height will be in logical pixels.
+ */
 void gr_inqdspsize(double *mwidth, double *mheight, int *width, int *height)
 {
   int n = 1, errind, wkid, ol, conid, wtype, dcunit;

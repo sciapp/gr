@@ -17,6 +17,8 @@ public:
   GKSWidget(QWidget *parent = 0);
   virtual ~GKSWidget();
 
+  static void inqdspsize(double *mwidth, double *mheight, int *width, int *height);
+
 public slots:
   void interpret(char *dl);
 

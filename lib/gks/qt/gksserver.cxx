@@ -20,6 +20,19 @@ GKSConnection::GKSConnection(QTcpSocket *socket) : socket(socket), widget(NULL),
   ++index;
   connect(socket, SIGNAL(readyRead()), this, SLOT(readClient()));
   connect(socket, SIGNAL(disconnected()), this, SLOT(disconnectedSocket()));
+  // send information about workstation back to client
+  struct
+  {
+    int nbytes;
+    double mwidth;
+    double mheight;
+    int width;
+    int height;
+    char name[6];
+  } workstation_information = {sizeof(workstation_information), 0, 0, 0, 0, "gksqt"};
+  GKSWidget::inqdspsize(&workstation_information.mwidth, &workstation_information.mheight,
+                        &workstation_information.width, &workstation_information.height);
+  socket->write(reinterpret_cast<const char *>(&workstation_information), workstation_information.nbytes);
 }
 
 GKSConnection::~GKSConnection()

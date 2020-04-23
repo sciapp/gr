@@ -1452,6 +1452,36 @@ static int get_pixmap(void)
   return 0;
 }
 
+static void inqdspsize(double *mwidth, double *mheight, int *width, int *height)
+{
+#include <QtGlobal>
+#if QT_VERSION >= 0x050000
+  QScreen *screen = QGuiApplication::primaryScreen();
+  if (screen)
+    {
+      *mwidth = screen->physicalSize().width() * 0.001;
+      *mheight = screen->physicalSize().height() * 0.001;
+      *width = screen->size().width();
+      *height = screen->size().height();
+    }
+  else
+    {
+      *mwidth = 0;
+      *mheight = 0;
+      *width = 0;
+      *height = 0;
+    }
+#else
+  {
+    QWidget *screen = QApplication::desktop()->screen();
+    *mwidth = screen->widthMM() * 0.001;
+    *mheight = screen->heightMM() * 0.001;
+    *width = screen->width();
+    *height = screen->height();
+  }
+#endif
+}
+
 void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
                           int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr, void **ptr)
 {
@@ -1477,10 +1507,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
         }
       else
         {
-          f_arr_1[0] = 0.25400;
-          f_arr_2[0] = 0.19050;
-          i_arr[0] = 1024;
-          i_arr[1] = 768;
+          inqdspsize(&f_arr_1[0], &f_arr_2[0], &i_arr[0], &i_arr[1]);
         }
 
       *ptr = p;
