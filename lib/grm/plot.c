@@ -197,6 +197,11 @@ const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", "plot_i
 const char *plot_merge_clear_keys[] = {"series", NULL};
 
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ text encoding ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static int pre_plot_text_encoding = -1;
+
+
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid keys ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* IMPORTANT: Every key should only be part of ONE array -> keys can be assigned to the right object, if a user sends a
@@ -873,6 +878,7 @@ void plot_pre_plot(grm_args_t *plot_args)
 
   logger((stderr, "Pre plot processing\n"));
 
+  plot_set_text_encoding();
   args_values(plot_args, "clear", "i", &clear);
   logger((stderr, "Got keyword \"clear\" with value %d\n", clear));
   if (clear)
@@ -880,6 +886,12 @@ void plot_pre_plot(grm_args_t *plot_args)
       gr_clearws();
     }
   plot_process_wswindow_wsviewport(plot_args);
+}
+
+void plot_set_text_encoding(void)
+{
+  gr_inqtextencoding(&pre_plot_text_encoding);
+  gr_settextencoding(ENCODING_UTF8);
 }
 
 void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
@@ -1496,6 +1508,17 @@ void plot_post_plot(grm_args_t *plot_args)
   if (update)
     {
       gr_updatews();
+    }
+  plot_restore_text_encoding();
+}
+
+void plot_restore_text_encoding(void)
+{
+  gr_inqtextencoding(&pre_plot_text_encoding);
+  if (pre_plot_text_encoding >= 0)
+    {
+      gr_settextencoding(pre_plot_text_encoding);
+      pre_plot_text_encoding = -1;
     }
 }
 
@@ -3391,7 +3414,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
       x[0] *= 1.1;
       y[0] *= 1.1;
       gr_wctondc(x, y);
-      snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xb0", alpha);
+      snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", alpha);
       gr_textext(x[0], y[0], text_buffer);
     }
   gr_restorestate();
