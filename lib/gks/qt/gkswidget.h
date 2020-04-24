@@ -25,10 +25,11 @@ public slots:
 protected:
   void paintEvent(QPaintEvent *event);
   void resizeEvent(QResizeEvent *event);
+  void set_window_size_from_dl();
 
 private:
-  int is_mapped;
-  bool prevent_resize;
+  bool is_mapped;
+  bool resize_requested_by_application;
   char *dl;
 };
 
