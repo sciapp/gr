@@ -6,8 +6,12 @@
 
 #include <QtGlobal>
 #if QT_VERSION >= 0x050000
+#include <QtGui/QGuiApplication>
+#include <QtGui/QScreen>
 #include <QtWidgets/QWidget>
 #else
+#include <QtGui/QApplication>
+#include <QtGui/QDesktopWidget>
 #include <QtGui/QWidget>
 #endif
 #include <QtGui/QPainter>
@@ -187,4 +191,10 @@ void GKSWidget::interpret(char *dl)
     }
 
   repaint();
+}
+
+void GKSWidget::inqdspsize(double *mwidth, double *mheight, int *width, int *height)
+{
+  /* forward call to internally included copy of qtplugin_impl.cxx */
+  ::inqdspsize(mwidth, mheight, width, height);
 }
