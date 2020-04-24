@@ -16,6 +16,7 @@
 #endif
 #include <QtGui/QPainter>
 #include <QtGui/QPainterPath>
+#include <QtGui/QResizeEvent>
 #include <QtGui/QImage>
 #include <QIcon>
 #include <QProcessEnvironment>
@@ -64,18 +65,12 @@ static void resize_pixmap(int width, int height)
           p->pixmap = new QPainter(p->pm);
           p->pixmap->setClipRect(0, 0, p->width, p->height);
         }
-      if (!p->resize_requested_by_application)
-        {
-          p->resized_by_user = 1;
-        }
     }
 }
 
-GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
+GKSWidget::GKSWidget(QWidget *parent)
+    : QWidget(parent), is_mapped(false), resize_requested_by_application(false), dl(NULL)
 {
-  is_mapped = 0;
-  dl = NULL;
-
   gkss->fontfile = gks_open_font();
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
@@ -99,7 +94,13 @@ GKSWidget::GKSWidget(QWidget *parent) : QWidget(parent)
   setWindowTitle(tr("GKS QtTerm"));
   setWindowIcon(QIcon(":/images/gksqt.png"));
 
-  prevent_resize = !QProcessEnvironment::systemEnvironment().value("GKS_GKSQT_PREVENT_RESIZE").isEmpty();
+  std::string gks_qt_prevent_resize =
+      QProcessEnvironment::systemEnvironment().value("GKS_GKSQT_PREVENT_RESIZE").toLower().toStdString();
+  if (!gks_qt_prevent_resize.empty())
+    {
+      p->prevent_resize =
+          gks_qt_prevent_resize == "1" || gks_qt_prevent_resize == "true" || gks_qt_prevent_resize == "on";
+    }
 }
 
 GKSWidget::~GKSWidget()
@@ -115,42 +116,35 @@ void GKSWidget::paintEvent(QPaintEvent *)
       QPainter painter(this);
       p->pm->fill(Qt::white);
       interp(dl);
-
-      if (!prevent_resize)
-        {
-          painter.drawPixmap(0, 0, *(p->pm));
-        }
-      else
-        {
-          int x = (width() - p->width) / 2;
-          int y = (height() - p->height) / 2;
-          painter.fillRect(0, 0, width(), height(), Qt::white);
-          painter.drawPixmap(x, y, p->width, p->height, *(p->pm));
-        }
+      painter.drawPixmap(0, 0, *(p->pm));
     }
 }
 
 void GKSWidget::resizeEvent(QResizeEvent *event)
 {
-  (void)event;
   p->mwidth = (double)width() / p->device_dpi_x * 0.0254;
   p->mheight = (double)height() / p->device_dpi_y * 0.0254;
   p->nominal_size = min(width(), height()) / 500.0;
   resize_pixmap(nint(width()), nint(height()));
-  p->resize_requested_by_application = 0;
+  // Ignore the initial resize event (in this case `width()` and `height()` of the oldSize are `-1`))
+  if ((event->oldSize().width() > 0 && event->oldSize().height() > 0) && !resize_requested_by_application)
+    {
+      p->prevent_resize = 1;
+    }
+  resize_requested_by_application = false;
 }
 
-static void set_window_size(char *s)
+void GKSWidget::set_window_size_from_dl()
 {
   int sp = 0, *len, *f;
   double *vp;
-  len = (int *)(s + sp);
+  len = (int *)(dl + sp);
   while (*len)
     {
-      f = (int *)(s + sp + sizeof(int));
+      f = (int *)(dl + sp + sizeof(int));
       if (*f == 55)
         {
-          vp = (double *)(s + sp + 3 * sizeof(int));
+          vp = (double *)(dl + sp + 3 * sizeof(int));
           p->mwidth = vp[1] - vp[0];
           p->width = nint(p->device_dpi_x * p->mwidth / 0.0254);
           if (p->width < 2)
@@ -166,9 +160,14 @@ static void set_window_size(char *s)
               p->height = 2;
               p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
             }
+          resize_requested_by_application = true;
         }
       sp += *len;
-      len = (int *)(s + sp);
+      len = (int *)(dl + sp);
+    }
+  if (resize_requested_by_application)
+    {
+      resize(p->width, p->height);
     }
 }
 
@@ -177,15 +176,13 @@ void GKSWidget::interpret(char *dl)
   delete[] this->dl;
   this->dl = dl;
 
-  set_window_size(this->dl);
-  if (!prevent_resize)
+  if (!p->prevent_resize)
     {
-      p->resize_requested_by_application = 1;
-      resize(p->width, p->height);
+      set_window_size_from_dl();
     }
   if (!is_mapped)
     {
-      is_mapped = 1;
+      is_mapped = true;
       create_pixmap(p);
       show();
     }

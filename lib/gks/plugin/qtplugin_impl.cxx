@@ -102,7 +102,7 @@ typedef struct ws_state_list_t
   int family, capheight;
   double alpha, angle;
   QPixmap *pattern[PATTERNS];
-  int empty, resized_by_user, resize_requested_by_application;
+  int empty, prevent_resize;
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -1132,7 +1132,7 @@ static void interp(char *str)
 
           gkss->fontfile = saved_gkss.fontfile;
 
-          if (!p->resized_by_user)
+          if (!p->prevent_resize)
             {
               p->window[0] = p->window[2] = 0.0;
               p->window[1] = p->window[3] = 1.0;
@@ -1286,7 +1286,7 @@ static void interp(char *str)
           break;
 
         case 54:
-          if (!p->resized_by_user)
+          if (!p->prevent_resize)
             {
               p->window[0] = f_arr_1[0];
               p->window[1] = f_arr_1[1];
@@ -1299,7 +1299,7 @@ static void interp(char *str)
           break;
 
         case 55:
-          if (!p->resized_by_user)
+          if (!p->prevent_resize)
             {
               p->viewport[0] = f_arr_1[0];
               p->viewport[1] = f_arr_1[1];
@@ -1353,8 +1353,7 @@ static void initialize_data()
   for (i = 0; i < PATTERNS; i++) p->pattern[i] = NULL;
 
   p->empty = 1;
-  p->resized_by_user = 0;
-  p->resize_requested_by_application = 0;
+  p->prevent_resize = 0;
   p->window[0] = 0.0;
   p->window[1] = 1.0;
   p->window[2] = 0.0;
