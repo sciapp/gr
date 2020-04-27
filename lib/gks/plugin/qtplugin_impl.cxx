@@ -58,8 +58,8 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
   yn = c[tnr] * (yw)
 
 #define NDC_to_DC(xn, yn, xd, yd) \
-  xd = (int)(p->a * (xn) + p->b); \
-  yd = (int)(p->c * (yn) + p->d);
+  xd = (p->a * (xn) + p->b);      \
+  yd = (p->c * (yn) + p->d);
 
 #define DC_to_NDC(xd, yd, xn, yn) \
   xn = ((xd)-p->b) / p->a;        \
@@ -96,7 +96,7 @@ typedef struct ws_state_list_t
   QRect rect[MAX_TNR];
   QColor rgb[MAX_COLOR];
   int transparency;
-  QPolygon *points;
+  QPolygonF *points;
   int npoints, max_points;
   QFont *font;
   int family, capheight;
@@ -312,15 +312,15 @@ static QPixmap *create_pattern(int pattern)
 
 static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
-  double x, y;
-  int i, x0, y0, xi, yi, xim1, yim1;
+  double x, y, x0, y0, xi, yi, xim1, yim1;
+  int i;
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   seg_xform(&x, &y);
   NDC_to_DC(x, y, x0, y0);
 
   p->npoints = 0;
-  p->points->setPoint(p->npoints++, x0, y0);
+  (*p->points)[p->npoints++] = QPointF(x0, y0);
 
   xim1 = x0;
   yim1 = y0;
@@ -332,12 +332,12 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
       if (i == 1 || xi != xim1 || yi != yim1)
         {
-          p->points->setPoint(p->npoints++, xi, yi);
+          (*p->points)[p->npoints++] = QPointF(xi, yi);
           xim1 = xi;
           yim1 = yi;
         }
     }
-  if (linetype == 0) p->points->setPoint(p->npoints++, x0, y0);
+  if (linetype == 0) (*p->points)[p->npoints++] = QPointF(x0, y0);
 
   p->pixmap->drawPolyline(p->points->constData(), p->npoints);
 }
@@ -390,7 +390,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
   int r, d, i;
   int pc, op;
   double scale, xr, yr;
-  QPolygon *points;
+  QPolygonF *points;
 
 #include "marker.h"
 
@@ -422,7 +422,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 1: /* point */
           p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
-          p->pixmap->drawPoint(x, y);
+          p->pixmap->drawPoint(QPointF(x, y));
           break;
 
         case 2: /* line */
@@ -431,7 +431,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               xr = scale * marker[mtype][pc + 2 * i + 1];
               yr = -scale * marker[mtype][pc + 2 * i + 2];
               seg_xform_rel(&xr, &yr);
-              p->points->setPoint(i, nint(x - xr), nint(y + yr));
+              (*p->points)[i] = QPointF(x - xr, y + yr);
             }
           p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(p->points->constData(), 2);
@@ -439,13 +439,13 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 3: /* polygon */
-          points = new QPolygon(marker[mtype][pc + 1]);
+          points = new QPolygonF(marker[mtype][pc + 1]);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
-              points->setPoint(i, nint(x - xr), nint(y + yr));
+              (*points)[i] = QPointF(x - xr, y + yr);
             }
           p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
@@ -455,7 +455,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
-          points = new QPolygon(marker[mtype][pc + 1]);
+          points = new QPolygonF(marker[mtype][pc + 1]);
           if (op == 4)
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
@@ -471,7 +471,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               xr = scale * marker[mtype][pc + 2 + 2 * i];
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
-              points->setPoint(i, nint(x - xr), nint(y + yr));
+              (*points)[i] = QPointF(x - xr, y + yr);
             }
           p->pixmap->drawPolygon(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
@@ -544,8 +544,8 @@ static void polymarker(int n, double *px, double *py)
 
 static void text_routine(double x, double y, int nchars, char *chars)
 {
-  int i, ch, xstart, ystart, width;
-  double xrel, yrel, ax, ay;
+  int i, ch, width;
+  double xrel, yrel, xstart, ystart, ax, ay;
   QFontMetrics fm = QFontMetrics(*p->font);
   QString s = QString("");
   if (p->family == 3)
@@ -573,8 +573,8 @@ static void text_routine(double x, double y, int nchars, char *chars)
   xrel = width * xfac[gkss->txal[0]];
   yrel = p->capheight * yfac[gkss->txal[1]];
   CharXform(xrel, yrel, ax, ay);
-  xstart += (int)ax;
-  ystart -= (int)ay;
+  xstart += ax;
+  ystart -= ay;
 
   if (fabs(p->angle) > FEPS)
     {
@@ -675,17 +675,16 @@ static void text(double px, double py, int nchars, char *chars)
 static void fill_routine(int n, double *px, double *py, int tnr)
 {
   int i;
-  double x, y;
-  int ix, iy;
-  QPolygon *points;
+  double x, y, xi, yi;
+  QPolygonF *points;
 
-  points = new QPolygon(n);
+  points = new QPolygonF(n);
   for (i = 0; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
-      NDC_to_DC(x, y, ix, iy);
-      points->setPoint(i, ix, iy);
+      NDC_to_DC(x, y, xi, yi);
+      (*points)[i] = QPointF(xi, yi);
     }
   p->pixmap->drawPolygon(points->constData(), n);
 
@@ -1346,7 +1345,7 @@ static void initialize_data()
   p->pm = NULL;
   p->font = new QFont();
 
-  p->points = new QPolygon(MAX_POINTS);
+  p->points = new QPolygonF(MAX_POINTS);
   p->npoints = 0;
   p->max_points = MAX_POINTS;
 
