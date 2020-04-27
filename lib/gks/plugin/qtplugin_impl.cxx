@@ -93,7 +93,7 @@ typedef struct ws_state_list_t
   double a, b, c, d;
   double window[4], viewport[4];
   double nominal_size;
-  QRect rect[MAX_TNR];
+  QRectF rect[MAX_TNR];
   QColor rgb[MAX_COLOR];
   int transparency;
   QPolygonF *points;
@@ -150,7 +150,7 @@ static int unused_variable = 0;
 
 static void set_norm_xform(int tnr, double *wn, double *vp)
 {
-  int xp1, yp1, xp2, yp2;
+  double xp1, yp1, xp2, yp2;
 
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
