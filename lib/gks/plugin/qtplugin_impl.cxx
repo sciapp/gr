@@ -544,8 +544,8 @@ static void polymarker(int n, double *px, double *py)
 
 static void text_routine(double x, double y, int nchars, char *chars)
 {
-  int i, ch, xstart, ystart, width;
-  double xrel, yrel, ax, ay;
+  int i, ch, width;
+  double xrel, yrel, xstart, ystart, ax, ay;
   QFontMetrics fm = QFontMetrics(*p->font);
   QString s = QString("");
   if (p->family == 3)
@@ -573,8 +573,8 @@ static void text_routine(double x, double y, int nchars, char *chars)
   xrel = width * xfac[gkss->txal[0]];
   yrel = p->capheight * yfac[gkss->txal[1]];
   CharXform(xrel, yrel, ax, ay);
-  xstart += (int)ax;
-  ystart -= (int)ay;
+  xstart += ax;
+  ystart -= ay;
 
   if (fabs(p->angle) > FEPS)
     {
@@ -675,8 +675,7 @@ static void text(double px, double py, int nchars, char *chars)
 static void fill_routine(int n, double *px, double *py, int tnr)
 {
   int i;
-  double x, y;
-  int ix, iy;
+  double x, y, xi, yi;
   QPolygonF *points;
 
   points = new QPolygonF(n);
@@ -684,8 +683,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
     {
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
-      NDC_to_DC(x, y, ix, iy);
-      (*points)[i] = QPointF(ix, iy);
+      NDC_to_DC(x, y, xi, yi);
+      (*points)[i] = QPointF(xi, yi);
     }
   p->pixmap->drawPolygon(points->constData(), n);
 
