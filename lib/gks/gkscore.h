@@ -371,12 +371,13 @@ void gks_ft_text(double x, double y, char *text, gks_state_list_t *gkss,
 void gks_ft_inq_text_extent(double x, double y, char *text, gks_state_list_t *gkss,
                             void (*gdp)(int, double *, double *, int, int, int *), double *bx, double *by);
 DLLEXPORT void gks_ft_text3d(double x, double y, double z, char *text, int axis, gks_state_list_t *gkss,
+                             double heightFactor, double *scaleFactors,
                              void (*gdp)(int, double *, double *, int, int, int *),
-                             void (*wc3towc)(double *, double *, double *), double height_fac, double *scale_facs);
+                             void (*wc3towc)(double *, double *, double *));
 DLLEXPORT void gks_ft_inq_text3d_extent(double x, double y, double z, char *text, int axis, gks_state_list_t *gkss,
+                                        double heightFactor, double *scaleFactors,
                                         void (*gdp)(int, double *, double *, int, int, int *),
-                                        void (*wc3towc)(double *, double *, double *), double *bx, double *by,
-                                        double height_fac, double *scale_facs);
+                                        void (*wc3towc)(double *, double *, double *), double *bx, double *by);
 DLLEXPORT void gks_ft_set_bearing_x_direction(int);
 DLLEXPORT void gks_ft_inq_bearing_x_direction(int *);
 
