@@ -148,6 +148,7 @@ static int open_socket(int wstype)
 {
   const char *command = NULL, *env;
   int retry_count;
+  int max_retry_count = 10;
   char *cmd = NULL;
   int s;
 
@@ -173,7 +174,7 @@ static int open_socket(int wstype)
         }
     }
 
-  for (retry_count = 1; retry_count <= 10; retry_count++)
+  for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
     {
       if ((s = connect_socket(retry_count != 10)) == -1)
         {
@@ -191,6 +192,8 @@ static int open_socket(int wstype)
         break;
     }
 
+  is_running = (retry_count <= max_retry_count);
+
   if (cmd != NULL) free(cmd);
 
   return s;
@@ -205,6 +208,7 @@ static int send_socket(int s, char *buf, int size)
       if ((n = send(s, buf + sent, size - sent, 0)) == -1)
         {
           perror("send");
+          is_running = 0;
           return -1;
         }
     }
@@ -219,6 +223,7 @@ static int read_socket(int s, char *buf, int size)
       if ((n = recv(s, buf + read, size - read, 0)) == -1)
         {
           perror("read");
+          is_running = 0;
           return -1;
         }
     }
