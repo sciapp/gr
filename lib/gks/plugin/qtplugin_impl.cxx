@@ -93,7 +93,7 @@ typedef struct ws_state_list_t
   double a, b, c, d;
   double window[4], viewport[4];
   double nominal_size;
-  QRect rect[MAX_TNR];
+  QRectF rect[MAX_TNR];
   QColor rgb[MAX_COLOR];
   int transparency;
   QPolygonF *points;
@@ -150,7 +150,7 @@ static int unused_variable = 0;
 
 static void set_norm_xform(int tnr, double *wn, double *vp)
 {
-  int xp1, yp1, xp2, yp2;
+  double xp1, yp1, xp2, yp2;
 
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -734,31 +734,35 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
                       int true_color)
 {
   double x1, y1, x2, y2;
-  int ix1, ix2, iy1, iy2;
-  int x, y, width, height;
+  double xi1, xi2, yi1, yi2;
+  double x, y;
+  int width, height;
   int i, j, ix, iy, ind;
   int swapx, swapy;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
-  NDC_to_DC(x1, y1, ix1, iy1);
+  NDC_to_DC(x1, y1, xi1, yi1);
 
   WC_to_NDC(xmax, ymin, gkss->cntnr, x2, y2);
   seg_xform(&x2, &y2);
-  NDC_to_DC(x2, y2, ix2, iy2);
+  NDC_to_DC(x2, y2, xi2, yi2);
 
-  width = abs(ix2 - ix1);
-  height = abs(iy2 - iy1);
+  width = nint(abs(xi2 - xi1) * p->device_pixel_ratio);
+  height = nint(abs(yi2 - yi1) * p->device_pixel_ratio);
   if (width == 0 || height == 0) return;
-  x = min(ix1, ix2);
-  y = min(iy1, iy2);
+  x = min(xi1, xi2);
+  y = min(yi1, yi2);
 
-  swapx = ix1 > ix2;
-  swapy = iy1 < iy2;
+  swapx = xi1 > xi2;
+  swapy = yi1 < yi2;
 
   if (!true_color)
     {
       QImage img = QImage(width, height, QImage::Format_RGB32);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+      img.setDevicePixelRatio(p->device_pixel_ratio);
+#endif
       for (j = 0; j < height; j++)
         {
           iy = dy * j / height;
@@ -774,7 +778,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
               img.setPixel(i, j, transparent_color.rgba());
             }
         }
-      p->pixmap->drawPixmap(x, y, QPixmap::fromImage(img));
+      p->pixmap->drawPixmap(QPointF(x, y), QPixmap::fromImage(img));
     }
   else
     {
@@ -794,7 +798,11 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
               ((unsigned int *)pixels)[j * width + i] = (alpha << 24u) + (red << 16u) + (green << 8u) + (blue << 0u);
             }
         }
-      p->pixmap->drawPixmap(x, y, QPixmap::fromImage(QImage(pixels, width, height, QImage::Format_ARGB32)));
+      QImage img = QImage(pixels, width, height, QImage::Format_ARGB32);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+      img.setDevicePixelRatio(p->device_pixel_ratio);
+#endif
+      p->pixmap->drawPixmap(QPointF(x, y), QPixmap::fromImage(img));
       gks_free(pixels);
     }
 }
