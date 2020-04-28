@@ -5535,10 +5535,30 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
     }
 }
 
+static double text3d_get_height()
+{
+  double focus_point_x, focus_point_y, focus_point_z, focus_up_x, focus_up_y, focus_up_z;
+  /* Calculate char height */
+  focus_point_x = tx.focus_point_x;
+  focus_point_y = tx.focus_point_y;
+  focus_point_z = tx.focus_point_z;
+  focus_up_x = focus_point_x + tx.up_x / tx.x_axis_scale;
+  focus_up_y = focus_point_y + tx.up_y / tx.y_axis_scale;
+  focus_up_z = focus_point_z + tx.up_z / tx.z_axis_scale;
+
+  gr_wc3towc(&focus_point_x, &focus_point_y, &focus_point_z);
+  gr_wc3towc(&focus_up_x, &focus_up_y, &focus_up_z);
+
+  gr_wctondc(&focus_point_x, &focus_point_y);
+  gr_wctondc(&focus_up_x, &focus_up_y);
+  return sqrt(pow(focus_point_x - focus_up_x, 2) + pow(focus_point_y - focus_up_y, 2));
+}
+
 static void text3d(double x, double y, double z, char *chars, int axis)
 {
   double p_x, p_y, p_z;
   int errind, tnr;
+  double scaleFactors[3];
 
   check_autoinit;
 
@@ -5564,15 +5584,23 @@ static void text3d(double x, double y, double z, char *chars, int axis)
     }
   else
     {
-      gks_ft_text3d(p_x, p_y, p_z, chars, axis, gks_state(), gks_ft_gdp, gr_wc3towc);
+      scaleFactors[0] = tx.x_axis_scale;
+      scaleFactors[1] = tx.y_axis_scale;
+      scaleFactors[2] = tx.z_axis_scale;
+      gks_ft_text3d(p_x, p_y, p_z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
     }
 }
 
 void gr_text3d(double x, double y, double z, char *chars, int axis)
 {
+  double scaleFactors[3];
+
   check_autoinit;
 
-  gks_ft_text3d(x, y, z, chars, axis, gks_state(), gks_ft_gdp, gr_wc3towc);
+  scaleFactors[0] = tx.x_axis_scale;
+  scaleFactors[1] = tx.y_axis_scale;
+  scaleFactors[2] = tx.z_axis_scale;
+  gks_ft_text3d(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc);
 
   if (flag_graphics)
     gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\" axis=\"%d\"/>\n", x, y, z, chars, axis);
@@ -5580,9 +5608,15 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
 
 void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *tbx, double *tby)
 {
+  double scaleFactors[3];
+
   check_autoinit;
 
-  gks_ft_inq_text3d_extent(x, y, z, chars, axis, gks_state(), gks_ft_gdp, gr_wc3towc, tbx, tby);
+  scaleFactors[0] = tx.x_axis_scale;
+  scaleFactors[1] = tx.y_axis_scale;
+  scaleFactors[2] = tx.z_axis_scale;
+  gks_ft_inq_text3d_extent(x, y, z, chars, axis, gks_state(), text3d_get_height(), scaleFactors, gks_ft_gdp, gr_wc3towc,
+                           tbx, tby);
 }
 
 /*!
