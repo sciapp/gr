@@ -6,6 +6,9 @@
 #include <QApplication>
 #include <QDesktopWidget>
 #include <QtNetwork>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+#include <QScreen>
+#endif
 
 #include "gksserver.h"
 
@@ -93,7 +96,11 @@ void GKSConnection::newWidget()
     }
   widget = new GKSWidget();
   widget->setWindowTitle(window_title_stream.str().c_str());
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+  QPoint desktop_center = widget->window()->screen()->geometry().center();
+#else
   QPoint desktop_center = QApplication::desktop()->screenGeometry().center();
+#endif
   widget->move((desktop_center.x() - widget->width() / 2 + index * window_shift),
                (desktop_center.y() - widget->height() / 2 + index * window_shift));
   connect(this, SIGNAL(data(char *)), widget, SLOT(interpret(char *)));

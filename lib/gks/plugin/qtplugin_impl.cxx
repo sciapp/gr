@@ -569,7 +569,11 @@ static void text_routine(double x, double y, int nchars, char *chars)
 
   NDC_to_DC(x, y, xstart, ystart);
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+  width = fm.horizontalAdvance(s);
+#else
   width = fm.width(s);
+#endif
   xrel = width * xfac[gkss->txal[0]];
   yrel = p->capheight * yfac[gkss->txal[1]];
   CharXform(xrel, yrel, ax, ay);
