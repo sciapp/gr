@@ -198,7 +198,7 @@ static void resize_window(void)
           delete p->pm;
 
           p->pm = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
           p->pm->setDevicePixelRatio(p->device_pixel_ratio);
 #endif
           p->pm->fill(Qt::white);
@@ -760,7 +760,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   if (!true_color)
     {
       QImage img = QImage(width, height, QImage::Format_RGB32);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
       img.setDevicePixelRatio(p->device_pixel_ratio);
 #endif
       for (j = 0; j < height; j++)
@@ -799,7 +799,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
             }
         }
       QImage img = QImage(pixels, width, height, QImage::Format_ARGB32);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
       img.setDevicePixelRatio(p->device_pixel_ratio);
 #endif
       p->pixmap->drawPixmap(QPointF(x, y), QPixmap::fromImage(img));
@@ -1431,7 +1431,7 @@ static int get_pixmap(void)
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
       p->width *= device->devicePixelRatioF() / p->device_pixel_ratio;
       p->height *= device->devicePixelRatioF() / p->device_pixel_ratio;
-#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
       p->width *= device->devicePixelRatio() / p->device_pixel_ratio;
       p->height *= device->devicePixelRatio() / p->device_pixel_ratio;
 #else
@@ -1443,7 +1443,7 @@ static int get_pixmap(void)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
       p->device_pixel_ratio = device->devicePixelRatioF();
-#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 1, 0)
       p->device_pixel_ratio = device->devicePixelRatio();
 #else
       p->device_pixel_ratio = 1.0;
