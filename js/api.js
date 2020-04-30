@@ -366,6 +366,7 @@ function GRM(canvas_id) {
     this.merge_named = grm_merge_named;
     this.switch = grm_switch;
     this.get_box = grm_get_box;
+    this.get_tooltip = grm_get_tooltip;
     this.register = grm_register;
     this.unregister = grm_unregister;
     this.dump_json_str = grm_dump_json_str;
@@ -389,7 +390,6 @@ function GRM(canvas_id) {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0]
         };
-        freearray(evt);
         this.callbacks[this.EVENT_NEW_PLOT](evt_data);
     }.bind(this), 'vi'));
 
@@ -398,7 +398,6 @@ function GRM(canvas_id) {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'plot_id': Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0]
         };
-        freearray(evt);
         this.callbacks[this.EVENT_UPDATE_PLOT](evt_data);
     }.bind(this), 'vi'));
 
@@ -409,7 +408,6 @@ function GRM(canvas_id) {
             'width': Module.HEAP32.subarray(evt / 4 + 2, evt / 4 + 3)[0],
             'height': Module.HEAP32.subarray(evt / 4 + 3, evt / 4 + 4)[0]
         };
-        freearray(evt);
         this.callbacks[this.EVENT_SIZE](evt_data);
     }.bind(this), 'vi'));
 
@@ -418,7 +416,6 @@ function GRM(canvas_id) {
             'evt_type': Module.HEAP32.subarray(evt / 4, evt / 4 + 1)[0],
             'identificator': Module.UTF8ToString(Module.HEAP32.subarray(evt / 4 + 1, evt / 4 + 2)[0])
         };
-        freearray(evt);
         this.callbacks[this.EVENT_MERGE_END](evt_data);
     }.bind(this), 'vi'));
 }
@@ -1330,6 +1327,22 @@ grm_get_box = function(top, right, bottom, left, keepAspectRatio) {
     freearray(_w);
     freearray(_h);
     return result;
+};
+
+grm_get_tooltip_c = Module.cwrap('grm_get_tooltip', 'number', ['number', 'number']);
+grm_get_tooltip = function(x, y) {
+    var info = grm_get_tooltip_c(x, y);
+    var data = {
+        'x': Module.HEAPF64.subarray(info / 8, info / 8 + 1)[0],
+        'y': Module.HEAPF64.subarray(info / 8 + 1, info / 8 + 2)[0],
+        'xpx': Module.HEAP32.subarray(info / 4 + 4, info / 4 + 5)[0],
+        'ypx': Module.HEAP32.subarray(info / 4 + 5, info / 4 + 6)[0],
+        'xlabel':  Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 6, info / 4 + 7)[0]),
+        'ylabel':  Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 7, info / 4 + 8)[0]),
+        'label': Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 8, info / 4 + 9)[0])
+    };
+    freearray(info)
+    return data;
 };
 
 grm_register_c = Module.cwrap('grm_register', 'number', ['number', 'number']);

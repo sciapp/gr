@@ -7,6 +7,8 @@
 #include <QtWidgets/QWidget>
 #include <QtGui/QPainter>
 #include <QtGui/QImage>
+#include <QtGui/QGuiApplication>
+#include <QtGui/QScreen>
 
 #endif
 

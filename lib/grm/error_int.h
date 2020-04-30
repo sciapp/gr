@@ -3,7 +3,7 @@
 
 #ifdef __unix__
 #ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 1
+#define _POSIX_C_SOURCE 200112L
 #endif
 #endif
 
@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #ifdef _WIN32
+#include <io.h>
 #include <winerror.h>
 #endif
 
@@ -113,7 +114,8 @@
   X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 38)         \
   X(ERROR_PLOT_MISSING_LABELS, 39)                    \
   X(ERROR_PLOT_INVALID_ID, 40)                        \
-  Y(ERROR_NOT_IMPLEMENTED, 41)
+  X(ERROR_PLOT_OUT_OF_RANGE, 41)                      \
+  Y(ERROR_NOT_IMPLEMENTED, 42)
 
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value

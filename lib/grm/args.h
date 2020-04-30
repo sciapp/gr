@@ -73,12 +73,13 @@ typedef struct _grm_args_value_iterator_t
 /* ------------------------- argument container --------------------------------------------------------------------- */
 
 EXPORT grm_args_t *grm_args_new(void);
-EXPORT void grm_args_delete(grm_args_t *);
-EXPORT int grm_args_push(grm_args_t *, const char *, const char *, ...);
-EXPORT int grm_args_push_buf(grm_args_t *, const char *, const char *, const void *, int);
-EXPORT int grm_args_contains(const grm_args_t *, const char *);
-EXPORT void grm_args_clear(grm_args_t *);
-EXPORT void grm_args_remove(grm_args_t *, const char *);
+EXPORT void grm_args_delete(grm_args_t *args);
+EXPORT int grm_args_push(grm_args_t *args, const char *key, const char *value_format, ...);
+EXPORT int grm_args_push_buf(grm_args_t *args, const char *key, const char *value_format, const void *buffer,
+                             int apply_padding);
+EXPORT int grm_args_contains(const grm_args_t *args, const char *keyword);
+EXPORT void grm_args_clear(grm_args_t *args);
+EXPORT void grm_args_remove(grm_args_t *args, const char *key);
 
 
 #ifdef __cplusplus

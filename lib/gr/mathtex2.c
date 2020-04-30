@@ -1,3 +1,12 @@
+/*
+ * This code is derived from matplotlib's mathtext module.
+ *
+ * The code was rewritten in C and yacc, adapted to the GR framework's text and path rendering, and modified so that
+ * its results resemble those of the previous gr_mathtex implementation which uses LaTeX directly.
+ *
+ * The original mathtext module can be found at:
+ * https://github.com/matplotlib/matplotlib/blob/baaec371364deac71de24d8f564fb43f70db7297/lib/matplotlib/mathtext.py
+ */
 
 static const char *spaced_symbols[] = {":",
                                        "<",
@@ -2317,7 +2326,7 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
     }
 
   size_t hlist_index = make_hlist();
-  if (left_delim_codepoint)
+  if (left_delim_codepoint && left_delim_codepoint != '.')
     {
       if (isnan(height))
         {
@@ -2333,7 +2342,7 @@ static size_t make_auto_sized_delim(const char *left_delim_start, size_t left_de
   append_to_hlist(hlist_index, make_kern(2 * default_thickness));
   append_to_hlist(hlist_index, middle_node_index);
   append_to_hlist(hlist_index, make_kern(2 * default_thickness));
-  if (right_delim_codepoint)
+  if (right_delim_codepoint && right_delim_codepoint != '.')
     {
       if (isnan(height))
         {
@@ -2821,14 +2830,14 @@ static size_t convert_sqrt_to_box_model(ParserNode *node)
       append_to_hlist(hlist_index, index_hlist_index);
       append_to_hlist(hlist_index, make_kern(negative_space));
     }
-  float scaling_factor = (inner_height + inner_depth) / state->fontsize;
+  float scaling_factor = (inner_height + inner_depth) / state->fontsize * 0.8;
   size_t sqrt_sign_index = make_auto_height_char(8730, inner_height, inner_depth, NAN);
   append_to_hlist(hlist_index, sqrt_sign_index);
   size_t right_side_index = make_vlist();
   append_to_vlist(right_side_index, make_hrule(default_thickness * scaling_factor));
   append_to_vlist(right_side_index, make_glue(GT_FILL));
   append_to_vlist(right_side_index, padded_inner_index);
-  pack_vlist(right_side_index, inner_height + scaling_factor * 2 * default_thickness, 0, INFINITY);
+  pack_vlist(right_side_index, inner_height + scaling_factor * 0.2 * default_thickness, 0, INFINITY);
 
   append_to_hlist(hlist_index, right_side_index);
   kern_hlist(hlist_index);
@@ -3551,8 +3560,8 @@ void gr_mathtex2(double x, double y, const char *formula)
   int unused;
   int previous_bearing_x_direction;
   double previous_char_height;
-  double chupx;
-  double chupy;
+  double chupx = 0;
+  double chupy = 0;
   int previous_encoding = ENCODING_LATIN1;
   int horizontal_alignment = GKS_K_TEXT_HALIGN_NORMAL;
   int vertical_alignment = GKS_K_TEXT_VALIGN_NORMAL;
@@ -3571,6 +3580,17 @@ void gr_mathtex2(double x, double y, const char *formula)
   gks_set_encoding(ENCODING_UTF8);
   gks_inq_text_height(&unused, &previous_char_height);
   gks_inq_text_upvec(&unused, &chupx, &chupy);
+  if (chupx * chupx + chupy * chupy == 0)
+    {
+      chupx = 0;
+      chupy = 1;
+    }
+  else
+    {
+      double chup_length = sqrt(chupx * chupx + chupy * chupy);
+      chupx /= chup_length;
+      chupy /= chup_length;
+    }
   transformation[0] = chupy;
   transformation[1] = chupx;
   transformation[2] = -chupx;

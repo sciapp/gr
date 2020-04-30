@@ -69,7 +69,7 @@ error_t args_list_entry_copy(args_list_entry_t *copy, args_list_const_entry_t en
 {
   args_list_entry_t _copy;
 
-  _copy = args_copy(entry, NULL, NULL);
+  _copy = args_copy(entry);
   if (_copy == NULL)
     {
       return ERROR_MALLOC;

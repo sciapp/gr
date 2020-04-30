@@ -1,5 +1,5 @@
 #ifdef __unix__
-#define _POSIX_C_SOURCE 1
+#define _POSIX_C_SOURCE 200112L
 #endif
 
 /* ######################### includes ############################################################################### */
@@ -22,6 +22,7 @@
 
 static int argparse_valid_format[128];
 static read_param_t argparse_format_to_read_callback[128];
+static copy_value_t argparse_format_to_copy_callback[128];
 static delete_value_t argparse_format_to_delete_callback[128];
 static size_t argparse_format_to_size[128];
 static int argparse_format_has_array_terminator[128];
@@ -403,6 +404,9 @@ void argparse_init_static_variables()
       argparse_format_to_read_callback['s'] = argparse_read_string;
       argparse_format_to_read_callback['a'] = argparse_read_grm_args_ptr_t;
       argparse_format_to_read_callback['n'] = argparse_read_default_array_length;
+
+      argparse_format_to_copy_callback['s'] = (copy_value_t)gks_strdup;
+      argparse_format_to_copy_callback['a'] = (copy_value_t)args_copy;
 
       argparse_format_to_delete_callback['s'] = free;
       argparse_format_to_delete_callback['a'] = (delete_value_t)grm_args_delete;
@@ -955,6 +959,46 @@ void args_decrease_arg_reference_count(args_node_t *args_node)
 }
 
 
+/* ------------------------- value copy ----------------------------------------------------------------------------- */
+
+void *copy_value(char format, void *value_ptr)
+{
+  void **copy;
+
+  if (!argparse_valid_format[(int)format] || !argparse_format_to_size[(int)format])
+    {
+      debug_print_error(("The format '%c' is unsupported.\n", format));
+      return NULL;
+    }
+  if (tolower(format) != format)
+    {
+      debug_print_error(("Array formats are not supported in the function `copy_value`.\n"));
+      return NULL;
+    }
+
+  copy = malloc(argparse_format_to_size[(int)format]);
+  if (copy == NULL)
+    {
+      debug_print_malloc_error();
+      return NULL;
+    }
+
+  /* check if it is a complex or plain datatype */
+  if (argparse_format_to_copy_callback[(int)format])
+    {
+      /* complex datatypes like argument containers or strings need a copy routine */
+      *copy = argparse_format_to_copy_callback[(int)format](*(void **)value_ptr);
+    }
+  else
+    {
+      /* plain datatypes like int, double, char can be copied directly */
+      memcpy(*copy, value_ptr, argparse_format_to_size[(int)format]);
+    }
+
+  return copy;
+}
+
+
 /* ========================= methods ================================================================================ */
 
 /* ------------------------- argument ------------------------------------------------------------------------------- */
@@ -1207,7 +1251,7 @@ void args_init(grm_args_t *args)
 
 void args_finalize(grm_args_t *args)
 {
-  grm_args_clear(args);
+  args_clear(args, NULL);
 }
 
 grm_args_t *args_flatcopy(const grm_args_t *copy_args)
@@ -1265,7 +1309,12 @@ error_cleanup:
   return NULL;
 }
 
-grm_args_t *args_copy(const grm_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys)
+grm_args_t *args_copy(const grm_args_t *copy_args)
+{
+  return args_copy_extended(copy_args, NULL, NULL);
+}
+
+grm_args_t *args_copy_extended(const grm_args_t *copy_args, const char **keys_copy_as_array, const char **ignore_keys)
 {
   /* Clone the linked list and all values that are argument containers as well. Share all other values (-> **no deep
    * copy!**).
@@ -1308,7 +1357,7 @@ grm_args_t *args_copy(const grm_args_t *copy_args, const char **keys_copy_as_arr
               current_args_copy = copied_args_array;
               while (*args_array != NULL)
                 {
-                  *current_args_copy = args_copy(*args_array, keys_copy_as_array, ignore_keys);
+                  *current_args_copy = args_copy_extended(*args_array, keys_copy_as_array, ignore_keys);
                   error_cleanup_if(*current_args_copy == NULL);
                   ++args_array;
                   ++current_args_copy;
@@ -1318,7 +1367,7 @@ grm_args_t *args_copy(const grm_args_t *copy_args, const char **keys_copy_as_arr
             }
           else
             {
-              copied_args = args_copy(*(grm_args_t **)value_it->value_ptr, keys_copy_as_array, ignore_keys);
+              copied_args = args_copy_extended(*(grm_args_t **)value_it->value_ptr, keys_copy_as_array, ignore_keys);
               error_cleanup_if(copied_args == NULL);
               if (keys_copy_as_array != NULL && str_equals_any_in_array(it->arg->key, keys_copy_as_array))
                 {

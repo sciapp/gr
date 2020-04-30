@@ -88,6 +88,40 @@ static void test_line(void)
   grm_args_delete(args);
 }
 
+static void test_line3d(void)
+{
+  double x[1000];
+  double y[1000];
+  double z[1000];
+  int n = sizeof(x) / sizeof(x[0]);
+  grm_args_t *args;
+  int i;
+
+  printf("filling argument container...\n");
+
+  for (i = 0; i < n; ++i)
+    {
+      x[i] = i * 30.0 / n;
+      y[i] = cos(x[i]) * x[i];
+      z[i] = sin(x[i]) * x[i];
+    }
+
+  args = grm_args_new();
+  grm_args_push(args, "kind", "s", "plot3");
+  grm_args_push(args, "x", "nD", n, x);
+  grm_args_push(args, "y", "nD", n, y);
+  grm_args_push(args, "z", "nD", n, z);
+
+  printf("plotting data...\n");
+
+  grm_plot(args);
+
+  printf("Press any key to continue...\n");
+  getchar();
+
+  grm_args_delete(args);
+}
+
 static void test_contourf(void)
 {
   double x[100], y[100], z[100];
@@ -129,6 +163,7 @@ static void test_contourf(void)
 static void test_plot(void)
 {
   test_line();
+  test_line3d();
   test_consecutive_plots();
   test_contourf();
   grm_finalize();

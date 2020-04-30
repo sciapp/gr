@@ -64,6 +64,7 @@ DLLEXPORT void gr_setcharspace(double);
 DLLEXPORT void gr_settextcolorind(int);
 DLLEXPORT void gr_inqtextcolorind(int *);
 DLLEXPORT void gr_setcharheight(double);
+DLLEXPORT void gr_inqcharheight(double *);
 DLLEXPORT void gr_setcharup(double, double);
 DLLEXPORT void gr_settextpath(int);
 DLLEXPORT void gr_settextalign(int, int);
@@ -196,7 +197,11 @@ DLLEXPORT void gr_setwindow3d(double, double, double, double, double, double);
 DLLEXPORT void gr_inqwindow3d(double *, double *, double *, double *, double *, double *);
 DLLEXPORT void gr_setscalefactors3d(double, double, double);
 DLLEXPORT void gr_inqscalefactors3d(double *, double *, double *);
-DLLEXPORT void gr_transformationinterfaceforrepl(double, double, double, double);
+DLLEXPORT void gr_setspace3d(double, double, double, double);
+DLLEXPORT void gr_text3d(double, double, double, char *, int axis);
+DLLEXPORT void gr_inqtext3d(double, double, double, char *, int axis, double *, double *);
+DLLEXPORT void gr_settextencoding(int);
+DLLEXPORT void gr_inqtextencoding(int *);
 
 #ifdef __cplusplus
 }

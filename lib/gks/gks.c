@@ -687,7 +687,7 @@ void gks_open_ws(int wkid, char *path, int wtype)
 
 #ifndef __EMSCRIPTEN__
                           if ((wtype >= 210 && wtype <= 213) || wtype == 218 || wtype == 41 || wtype == 381 ||
-                              wtype == 400 || wtype == 420)
+                              wtype == 400 || wtype == 411 || wtype == 420)
                             {
                               ws_descr_t *p = (ws_descr_t *)element->ptr;
 
@@ -1116,7 +1116,7 @@ void gks_polymarker(int n, double *pxa, double *pya)
     gks_report_error(POLYMARKER, 5);
 }
 
-static void gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
+void gks_ft_gdp(int n, double *px, double *py, int primid, int ldr, int *datrec)
 {
   int saved_ints = s->ints, saved_facoli = s->facoli;
   double saved_bwidth = s->bwidth;
@@ -1158,7 +1158,15 @@ void gks_text(double px, double py, char *str)
             }
           else
             {
-              gks_ft_text(px, py, str, s, gdp);
+              if (s->input_encoding == ENCODING_LATIN1)
+                {
+                  char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
+                  gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
+
+                  gks_ft_text(px, py, utf8_str, s, gks_ft_gdp);
+                }
+              else
+                gks_ft_text(px, py, str, s, gks_ft_gdp);
             }
         }
       else
@@ -2890,7 +2898,16 @@ void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind,
         }
       else
         {
-          gks_ft_inq_text_extent(px, py, str, s, gdp, bx, by);
+          if (s->input_encoding == ENCODING_LATIN1)
+            {
+              char *utf8_str = gks_malloc(strlen(str) * 2 + 1);
+              gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
+
+              gks_ft_inq_text_extent(px, py, utf8_str, s, gks_ft_gdp, bx, by);
+            }
+          else
+            gks_ft_inq_text_extent(px, py, str, s, gks_ft_gdp, bx, by);
+
           for (i = 0; i < 4; i++)
             {
               tx[i] = bx[i];
@@ -4175,4 +4192,9 @@ void gks_inq_border_color_index(int *errind, int *coli)
 {
   *errind = GKS_K_NO_ERROR;
   *coli = s->bcoli;
+}
+
+void *gks_state(void)
+{
+  return (void *)s;
 }

@@ -207,7 +207,7 @@ GR3API void gr3_drawcylindermesh(int n, const float *positions, const float *dir
   int i;
   int j;
   int min_index;
-  int min_n;
+  double min_n;
   float *scales = malloc(n * 3 * sizeof(float));
   float *ups = malloc(n * 3 * sizeof(float));
   GR3_DO_INIT;
@@ -315,7 +315,7 @@ GR3API void gr3_drawconemesh(int n, const float *positions, const float *directi
   int i;
   int j;
   int min_index;
-  int min_n;
+  double min_n;
   float *scales = malloc(n * 3 * sizeof(float));
   float *ups = malloc(n * 3 * sizeof(float));
   GR3_DO_INIT;

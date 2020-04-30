@@ -58,8 +58,8 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
   yn = c[tnr] * (yw)
 
 #define NDC_to_DC(xn, yn, xd, yd) \
-  xd = (int)(p->a * (xn) + p->b); \
-  yd = (int)(p->c * (yn) + p->d);
+  xd = (p->a * (xn) + p->b);      \
+  yd = (p->c * (yn) + p->d);
 
 #define DC_to_NDC(xd, yd, xn, yn) \
   xn = ((xd)-p->b) / p->a;        \
@@ -93,16 +93,16 @@ typedef struct ws_state_list_t
   double a, b, c, d;
   double window[4], viewport[4];
   double nominal_size;
-  QRect rect[MAX_TNR];
+  QRectF rect[MAX_TNR];
   QColor rgb[MAX_COLOR];
   int transparency;
-  QPolygon *points;
+  QPolygonF *points;
   int npoints, max_points;
   QFont *font;
   int family, capheight;
   double alpha, angle;
   QPixmap *pattern[PATTERNS];
-  int empty, resized_by_user, resize_requested_by_application;
+  int empty, prevent_resize;
 } ws_state_list;
 
 static ws_state_list p_, *p = &p_;
@@ -150,7 +150,7 @@ static int unused_variable = 0;
 
 static void set_norm_xform(int tnr, double *wn, double *vp)
 {
-  int xp1, yp1, xp2, yp2;
+  double xp1, yp1, xp2, yp2;
 
   a[tnr] = (vp[1] - vp[0]) / (wn[1] - wn[0]);
   b[tnr] = vp[0] - wn[0] * a[tnr];
@@ -191,12 +191,16 @@ static void resize_window(void)
 
   if (p->pm)
     {
-      if (p->width != p->pm->size().width() || p->height != p->pm->size().height())
+      if (fabs(p->width * p->device_pixel_ratio - p->pm->size().width()) > FEPS ||
+          fabs(p->height * p->device_pixel_ratio - p->pm->size().height()) > FEPS)
         {
           delete p->pixmap;
           delete p->pm;
 
-          p->pm = new QPixmap(p->width, p->height);
+          p->pm = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+          p->pm->setDevicePixelRatio(p->device_pixel_ratio);
+#endif
           p->pm->fill(Qt::white);
 
           p->pixmap = new QPainter(p->pm);
@@ -308,15 +312,15 @@ static QPixmap *create_pattern(int pattern)
 
 static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
-  double x, y;
-  int i, x0, y0, xi, yi, xim1, yim1;
+  double x, y, x0, y0, xi, yi, xim1, yim1;
+  int i;
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   seg_xform(&x, &y);
   NDC_to_DC(x, y, x0, y0);
 
   p->npoints = 0;
-  p->points->setPoint(p->npoints++, x0, y0);
+  (*p->points)[p->npoints++] = QPointF(x0, y0);
 
   xim1 = x0;
   yim1 = y0;
@@ -328,12 +332,12 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
       if (i == 1 || xi != xim1 || yi != yim1)
         {
-          p->points->setPoint(p->npoints++, xi, yi);
+          (*p->points)[p->npoints++] = QPointF(xi, yi);
           xim1 = xi;
           yim1 = yi;
         }
     }
-  if (linetype == 0) p->points->setPoint(p->npoints++, x0, y0);
+  if (linetype == 0) (*p->points)[p->npoints++] = QPointF(x0, y0);
 
   p->pixmap->drawPolyline(p->points->constData(), p->npoints);
 }
@@ -382,10 +386,11 @@ static void polyline(int n, double *px, double *py)
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
-  int r, d, x, y, i;
+  double x, y;
+  int r, d, i;
   int pc, op;
   double scale, xr, yr;
-  QPolygon *points;
+  QPolygonF *points;
 
 #include "marker.h"
 
@@ -417,7 +422,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 1: /* point */
           p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
-          p->pixmap->drawPoint(x, y);
+          p->pixmap->drawPoint(QPointF(x, y));
           break;
 
         case 2: /* line */
@@ -426,7 +431,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               xr = scale * marker[mtype][pc + 2 * i + 1];
               yr = -scale * marker[mtype][pc + 2 * i + 2];
               seg_xform_rel(&xr, &yr);
-              p->points->setPoint(i, nint(x - xr), nint(y + yr));
+              (*p->points)[i] = QPointF(x - xr, y + yr);
             }
           p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(p->points->constData(), 2);
@@ -434,13 +439,13 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           break;
 
         case 3: /* polygon */
-          points = new QPolygon(marker[mtype][pc + 1]);
+          points = new QPolygonF(marker[mtype][pc + 1]);
           for (i = 0; i < marker[mtype][pc + 1]; i++)
             {
               xr = scale * marker[mtype][pc + 2 + 2 * i];
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
-              points->setPoint(i, nint(x - xr), nint(y + yr));
+              (*points)[i] = QPointF(x - xr, y + yr);
             }
           p->pixmap->setPen(QPen(marker_color, p->nominal_size, Qt::SolidLine, Qt::FlatCap));
           p->pixmap->drawPolyline(points->constData(), marker[mtype][pc + 1]);
@@ -450,7 +455,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
         case 4: /* filled polygon */
         case 5: /* hollow polygon */
-          points = new QPolygon(marker[mtype][pc + 1]);
+          points = new QPolygonF(marker[mtype][pc + 1]);
           if (op == 4)
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
@@ -466,7 +471,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               xr = scale * marker[mtype][pc + 2 + 2 * i];
               yr = -scale * marker[mtype][pc + 3 + 2 * i];
               seg_xform_rel(&xr, &yr);
-              points->setPoint(i, nint(x - xr), nint(y + yr));
+              (*points)[i] = QPointF(x - xr, y + yr);
             }
           p->pixmap->drawPolygon(points->constData(), marker[mtype][pc + 1]);
           pc += 1 + 2 * marker[mtype][pc + 1];
@@ -539,8 +544,8 @@ static void polymarker(int n, double *px, double *py)
 
 static void text_routine(double x, double y, int nchars, char *chars)
 {
-  int i, ch, xstart, ystart, width;
-  double xrel, yrel, ax, ay;
+  int i, ch, width;
+  double xrel, yrel, xstart, ystart, ax, ay;
   QFontMetrics fm = QFontMetrics(*p->font);
   QString s = QString("");
   if (p->family == 3)
@@ -568,8 +573,8 @@ static void text_routine(double x, double y, int nchars, char *chars)
   xrel = width * xfac[gkss->txal[0]];
   yrel = p->capheight * yfac[gkss->txal[1]];
   CharXform(xrel, yrel, ax, ay);
-  xstart += (int)ax;
-  ystart -= (int)ay;
+  xstart += ax;
+  ystart -= ay;
 
   if (fabs(p->angle) > FEPS)
     {
@@ -670,17 +675,16 @@ static void text(double px, double py, int nchars, char *chars)
 static void fill_routine(int n, double *px, double *py, int tnr)
 {
   int i;
-  double x, y;
-  int ix, iy;
-  QPolygon *points;
+  double x, y, xi, yi;
+  QPolygonF *points;
 
-  points = new QPolygon(n);
+  points = new QPolygonF(n);
   for (i = 0; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
-      NDC_to_DC(x, y, ix, iy);
-      points->setPoint(i, ix, iy);
+      NDC_to_DC(x, y, xi, yi);
+      (*points)[i] = QPointF(xi, yi);
     }
   p->pixmap->drawPolygon(points->constData(), n);
 
@@ -730,31 +734,35 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
                       int true_color)
 {
   double x1, y1, x2, y2;
-  int ix1, ix2, iy1, iy2;
-  int x, y, width, height;
+  double xi1, xi2, yi1, yi2;
+  double x, y;
+  int width, height;
   int i, j, ix, iy, ind;
   int swapx, swapy;
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
-  NDC_to_DC(x1, y1, ix1, iy1);
+  NDC_to_DC(x1, y1, xi1, yi1);
 
   WC_to_NDC(xmax, ymin, gkss->cntnr, x2, y2);
   seg_xform(&x2, &y2);
-  NDC_to_DC(x2, y2, ix2, iy2);
+  NDC_to_DC(x2, y2, xi2, yi2);
 
-  width = abs(ix2 - ix1);
-  height = abs(iy2 - iy1);
+  width = nint(abs(xi2 - xi1) * p->device_pixel_ratio);
+  height = nint(abs(yi2 - yi1) * p->device_pixel_ratio);
   if (width == 0 || height == 0) return;
-  x = min(ix1, ix2);
-  y = min(iy1, iy2);
+  x = min(xi1, xi2);
+  y = min(yi1, yi2);
 
-  swapx = ix1 > ix2;
-  swapy = iy1 < iy2;
+  swapx = xi1 > xi2;
+  swapy = yi1 < yi2;
 
   if (!true_color)
     {
       QImage img = QImage(width, height, QImage::Format_RGB32);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+      img.setDevicePixelRatio(p->device_pixel_ratio);
+#endif
       for (j = 0; j < height; j++)
         {
           iy = dy * j / height;
@@ -770,7 +778,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
               img.setPixel(i, j, transparent_color.rgba());
             }
         }
-      p->pixmap->drawPixmap(x, y, QPixmap::fromImage(img));
+      p->pixmap->drawPixmap(QPointF(x, y), QPixmap::fromImage(img));
     }
   else
     {
@@ -785,11 +793,16 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
               unsigned char red = pixels[(j * width + i) * 4 + 0];
               unsigned char green = pixels[(j * width + i) * 4 + 1];
               unsigned char blue = pixels[(j * width + i) * 4 + 2];
-              unsigned char alpha = pixels[(j * width + i) * 4 + 3];
+              unsigned char alpha = (unsigned char)(pixels[(j * width + i) * 4 + 3] * gkss->alpha);
+
               ((unsigned int *)pixels)[j * width + i] = (alpha << 24u) + (red << 16u) + (green << 8u) + (blue << 0u);
             }
         }
-      p->pixmap->drawPixmap(x, y, QPixmap::fromImage(QImage(pixels, width, height, QImage::Format_ARGB32)));
+      QImage img = QImage(pixels, width, height, QImage::Format_ARGB32);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+      img.setDevicePixelRatio(p->device_pixel_ratio);
+#endif
+      p->pixmap->drawPixmap(QPointF(x, y), QPixmap::fromImage(img));
       gks_free(pixels);
     }
 }
@@ -1126,7 +1139,7 @@ static void interp(char *str)
 
           gkss->fontfile = saved_gkss.fontfile;
 
-          if (!p->resized_by_user)
+          if (!p->prevent_resize)
             {
               p->window[0] = p->window[2] = 0.0;
               p->window[1] = p->window[3] = 1.0;
@@ -1280,7 +1293,7 @@ static void interp(char *str)
           break;
 
         case 54:
-          if (!p->resized_by_user)
+          if (!p->prevent_resize)
             {
               p->window[0] = f_arr_1[0];
               p->window[1] = f_arr_1[1];
@@ -1293,7 +1306,7 @@ static void interp(char *str)
           break;
 
         case 55:
-          if (!p->resized_by_user)
+          if (!p->prevent_resize)
             {
               p->viewport[0] = f_arr_1[0];
               p->viewport[1] = f_arr_1[1];
@@ -1340,15 +1353,14 @@ static void initialize_data()
   p->pm = NULL;
   p->font = new QFont();
 
-  p->points = new QPolygon(MAX_POINTS);
+  p->points = new QPolygonF(MAX_POINTS);
   p->npoints = 0;
   p->max_points = MAX_POINTS;
 
   for (i = 0; i < PATTERNS; i++) p->pattern[i] = NULL;
 
   p->empty = 1;
-  p->resized_by_user = 0;
-  p->resize_requested_by_application = 0;
+  p->prevent_resize = 0;
   p->window[0] = 0.0;
   p->window[1] = 1.0;
   p->window[2] = 0.0;
@@ -1372,42 +1384,108 @@ static void release_data()
 static int get_pixmap(void)
 {
   char *env;
+  QPaintDevice *device;
+  bool has_explicit_device_pixel_ratio = false;
 
   env = (char *)gks_getenv("GKS_CONID");
   if (!env) env = (char *)gks_getenv("GKSconid");
 
   if (env != NULL)
     {
-      if (strchr(env, '!') == NULL)
+      bool has_exclamation_mark = strchr(env, '!');
+      bool has_hash_mark = strchr(env, '#');
+      if (has_exclamation_mark && has_hash_mark)
         {
+          sscanf(env, "%p!%p#%lf", (void **)&p->widget, (void **)&p->pixmap, &p->device_pixel_ratio);
+          device = p->widget;
+          has_explicit_device_pixel_ratio = true;
+        }
+      else if (has_exclamation_mark)
+        {
+          sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->pixmap);
+          device = p->widget;
+        }
+      else if (has_hash_mark)
+        {
+          sscanf(env, "%p#%lf", (void **)&p->pixmap, &p->device_pixel_ratio);
           p->widget = NULL;
-          sscanf(env, "%p", (void **)&p->pixmap);
+          device = p->pixmap->device();
+          has_explicit_device_pixel_ratio = true;
         }
       else
-        sscanf(env, "%p!%p", (void **)&p->widget, (void **)&p->pixmap);
+        {
+          sscanf(env, "%p", (void **)&p->pixmap);
+          p->widget = NULL;
+          device = p->pixmap->device();
+        }
     }
   else
     {
       return 1;
     }
 
-  QPaintDevice *device = (p->widget != NULL) ? p->widget : p->pixmap->device();
+  p->width = device->width();
+  p->height = device->height();
+  if (has_explicit_device_pixel_ratio)
+    {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
-  p->device_pixel_ratio = device->devicePixelRatioF();
+      p->width *= device->devicePixelRatioF() / p->device_pixel_ratio;
+      p->height *= device->devicePixelRatioF() / p->device_pixel_ratio;
 #elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-  p->device_pixel_ratio = device->devicePixelRatio();
+      p->width *= device->devicePixelRatio() / p->device_pixel_ratio;
+      p->height *= device->devicePixelRatio() / p->device_pixel_ratio;
 #else
-  p->device_pixel_ratio = 1;
+      p->width /= p->device_pixel_ratio;
+      p->height /= p->device_pixel_ratio;
 #endif
-  p->device_dpi_x = device->physicalDpiX() * p->device_pixel_ratio;
-  p->device_dpi_y = device->physicalDpiY() * p->device_pixel_ratio;
-  p->width = device->width() * p->device_pixel_ratio;
-  p->height = device->height() * p->device_pixel_ratio;
+    }
+  else
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+      p->device_pixel_ratio = device->devicePixelRatioF();
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+      p->device_pixel_ratio = device->devicePixelRatio();
+#else
+      p->device_pixel_ratio = 1.0;
+#endif
+    }
+  p->device_dpi_x = device->physicalDpiX();
+  p->device_dpi_y = device->physicalDpiY();
   p->mwidth = (double)p->width / p->device_dpi_x * 0.0254;
   p->mheight = (double)p->height / p->device_dpi_y * 0.0254;
   p->nominal_size = min(p->width, p->height) / 500.0;
 
   return 0;
+}
+
+static void inqdspsize(double *mwidth, double *mheight, int *width, int *height)
+{
+#include <QtGlobal>
+#if QT_VERSION >= 0x050000
+  QScreen *screen = QGuiApplication::primaryScreen();
+  if (screen)
+    {
+      *mwidth = screen->physicalSize().width() * 0.001;
+      *mheight = screen->physicalSize().height() * 0.001;
+      *width = screen->size().width();
+      *height = screen->size().height();
+    }
+  else
+    {
+      *mwidth = 0;
+      *mheight = 0;
+      *width = 0;
+      *height = 0;
+    }
+#else
+  {
+    QWidget *screen = QApplication::desktop()->screen();
+    *mwidth = screen->widthMM() * 0.001;
+    *mheight = screen->heightMM() * 0.001;
+    *width = screen->width();
+    *height = screen->height();
+  }
+#endif
 }
 
 void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1,
@@ -1435,10 +1513,7 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
         }
       else
         {
-          f_arr_1[0] = 0.25400;
-          f_arr_2[0] = 0.19050;
-          i_arr[0] = 1024;
-          i_arr[1] = 768;
+          inqdspsize(&f_arr_1[0], &f_arr_2[0], &i_arr[0], &i_arr[1]);
         }
 
       *ptr = p;

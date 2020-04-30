@@ -56,7 +56,9 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_ADJUST_XLIM 1
 #define PLOT_DEFAULT_ADJUST_YLIM 1
 #define PLOT_DEFAULT_ADJUST_ZLIM 1
-#define PLOT_DEFAULT_COLORMAP 44 /* VIRIDIS */
+#define PLOT_DEFAULT_COLORMAP 44                                 /* VIRIDIS */
+#define PLOT_DEFAULT_FONT 232                                    /* CMUSerif-Math */
+#define PLOT_DEFAULT_FONT_PRECISION GKS_K_TEXT_PRECISION_OUTLINE /* hardware font rendering */
 #define PLOT_DEFAULT_ROTATION 40
 #define PLOT_DEFAULT_TILT 70
 #define PLOT_DEFAULT_KEEP_ASPECT_RATIO 0
@@ -103,6 +105,8 @@ typedef enum
 } gr_option_t;
 
 
+/* ========================= functions ============================================================================== */
+
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ general ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -120,13 +124,16 @@ error_t plot_init_args_structure(grm_args_t *args, const char **hierarchy_name_p
 void plot_set_flag_defaults(void);
 void plot_set_attribute_defaults(grm_args_t *subplot_args);
 void plot_pre_plot(grm_args_t *plot_args);
+void plot_set_text_encoding(void);
 void plot_process_wswindow_wsviewport(grm_args_t *plot_args);
 void plot_pre_subplot(grm_args_t *subplot_args);
 void plot_process_colormap(grm_args_t *subplot_args);
+void plot_process_font(grm_args_t *subplot_args);
 void plot_process_viewport(grm_args_t *subplot_args);
 void plot_process_window(grm_args_t *subplot_args);
 void plot_store_coordinate_ranges(grm_args_t *subplot_args);
 void plot_post_plot(grm_args_t *plot_args);
+void plot_restore_text_encoding(void);
 void plot_post_subplot(grm_args_t *subplot_args);
 error_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
                                    uint_map_t *hierarchy_to_id, const grm_args_t **found_args,
@@ -164,12 +171,14 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass);
 error_t plot_draw_polar_axes(grm_args_t *args);
 error_t plot_draw_legend(grm_args_t *args);
 error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors);
+error_t plot_draw_errorbars(grm_args_t *series_args, double *x, unsigned int x_length, double *y, char *kind);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 double find_max_step(unsigned int n, const double *x);
 const char *next_fmt_key(const char *fmt) UNUSED;
+const char *get_compatible_format(const char *key, const char *given_format);
 int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int *series_id);
 int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
                     double *metric_height);

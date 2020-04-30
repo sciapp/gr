@@ -153,6 +153,33 @@ int uppercase_count(const char *str)
   return uppercase_count;
 }
 
+char *str_filter(const char *str, const char *filter_chars)
+{
+  char *reduced_str;
+  const char *src_ptr;
+  char *dst_ptr;
+
+  reduced_str = malloc(strlen(str) + 1);
+  if (reduced_str == NULL)
+    {
+      return NULL;
+    }
+  src_ptr = str;
+  dst_ptr = reduced_str;
+  while (*src_ptr != '\0')
+    {
+      if (strchr(filter_chars, *src_ptr) == NULL)
+        {
+          *dst_ptr = *src_ptr;
+          ++dst_ptr;
+        }
+      ++src_ptr;
+    }
+  *dst_ptr = '\0';
+
+  return reduced_str;
+}
+
 unsigned long next_or_equal_power2(unsigned long num)
 {
 #if defined(__GNUC__) || defined(__clang__)
@@ -188,7 +215,7 @@ unsigned long next_or_equal_power2(unsigned long num)
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
 #if !defined(NDEBUG) && defined(EMSCRIPTEN)
-FILE *grm_get_stdout()
+FILE *grm_get_stdout(void)
 {
   return stdout;
 }

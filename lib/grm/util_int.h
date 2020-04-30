@@ -116,6 +116,7 @@ int int_equals_any(int number, unsigned int n, ...);
 int str_equals_any(const char *str, unsigned int n, ...);
 int str_equals_any_in_array(const char *str, const char **str_array);
 int uppercase_count(const char *str);
+char *str_filter(const char *str, const char *filter_chars);
 unsigned long next_or_equal_power2(unsigned long num);
 
 #endif /* ifndef GRM_UTIL_INT_H_INCLUDED */

@@ -148,6 +148,7 @@ static int open_socket(int wstype)
 {
   const char *command = NULL, *env;
   int retry_count;
+  int max_retry_count = 10;
   char *cmd = NULL;
   int s;
 
@@ -173,7 +174,7 @@ static int open_socket(int wstype)
         }
     }
 
-  for (retry_count = 1; retry_count <= 10; retry_count++)
+  for (retry_count = 1; retry_count <= max_retry_count; retry_count++)
     {
       if ((s = connect_socket(retry_count != 10)) == -1)
         {
@@ -191,6 +192,8 @@ static int open_socket(int wstype)
         break;
     }
 
+  is_running = (retry_count <= max_retry_count);
+
   if (cmd != NULL) free(cmd);
 
   return s;
@@ -205,10 +208,26 @@ static int send_socket(int s, char *buf, int size)
       if ((n = send(s, buf + sent, size - sent, 0)) == -1)
         {
           perror("send");
+          is_running = 0;
           return -1;
         }
     }
   return sent;
+}
+
+static int read_socket(int s, char *buf, int size)
+{
+  int read, n = 0;
+  for (read = 0; read < size; read += n)
+    {
+      if ((n = recv(s, buf + read, size - read, 0)) == -1)
+        {
+          perror("read");
+          is_running = 0;
+          return -1;
+        }
+    }
+  return read;
 }
 
 static int close_socket(int s)
@@ -249,7 +268,32 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
           ia[0] = ia[1] = 0;
         }
       else
-        *ptr = wss;
+        {
+          *ptr = wss;
+          if (wss->wstype == 411)
+            {
+              /* get workstation information */
+              int nbytes;
+              struct
+              {
+                int nbytes;
+                double mwidth;
+                double mheight;
+                int width;
+                int height;
+                char name[6];
+              } workstation_information = {sizeof(workstation_information), 0, 0, 0, 0, ""};
+              if (read_socket(wss->s, (char *)&nbytes, sizeof(int)) == sizeof(int) &&
+                  nbytes == workstation_information.nbytes)
+                {
+                  read_socket(wss->s, (char *)&workstation_information + sizeof(int), nbytes - (int)sizeof(int));
+                  ia[0] = workstation_information.width;
+                  ia[1] = workstation_information.height;
+                  r1[0] = workstation_information.mwidth;
+                  r2[0] = workstation_information.mheight;
+                }
+            }
+        }
       break;
 
     case 3:
@@ -269,6 +313,17 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
             {
               close_socket(wss->s);
               wss->s = open_socket(wss->wstype);
+              if (wss->s != -1 && wss->wstype == 411)
+                {
+                  /* workstation information was already read during OPEN_WS */
+                  int nbytes;
+                  if (read_socket(wss->s, (char *)&nbytes, sizeof(int)) == sizeof(int))
+                    {
+                      char *buf = gks_malloc(nbytes - (int)sizeof(int));
+                      read_socket(wss->s, buf, nbytes - (int)sizeof(int));
+                      gks_free(buf);
+                    }
+                }
             }
           send_socket(wss->s, (char *)&wss->dl.nbytes, sizeof(int));
           send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes);

@@ -1,5 +1,5 @@
 #ifdef __unix__
-#define _POSIX_C_SOURCE 1
+#define _POSIX_C_SOURCE 200112L
 #endif
 
 /* ######################### includes ############################################################################### */
@@ -133,6 +133,7 @@ int event_queue_process_next(event_queue_t *queue)
     {
       queue->event_callbacks[type](event);
     }
+  free(event);
 
   return 1;
 }

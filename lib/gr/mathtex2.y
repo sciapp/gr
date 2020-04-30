@@ -1,4 +1,12 @@
-/* LaTeX-like math expression grammar */
+/*
+ * This code is derived from matplotlib's mathtext module.
+ *
+ * The code was rewritten in C and yacc, adapted to the GR framework's text and path rendering, and modified so that
+ * its results resemble those of the previous gr_mathtex implementation which uses LaTeX directly.
+ *
+ * The original mathtext module can be found at:
+ * https://github.com/matplotlib/matplotlib/blob/baaec371364deac71de24d8f564fb43f70db7297/lib/matplotlib/mathtext.py
+ */
 
 %{
 #include "mathtex2.h"
@@ -69,6 +77,7 @@ token {
 
 single_symbol:
 SINGLE_SYMBOL { $$ = $1; }
+| LEFT_DELIM { $$ = $1; }
 | '[' { $$ = $1; }
 | ']' { $$ = $1; }
 | '(' { $$ = $1; }
@@ -645,7 +654,7 @@ const char *font_symbols[] = {"\\rm", "\\cal", "\\it", "\\tt", "\\sf", "\\bf", "
 const char *latexfont_symbols[] = {"\\mathrm", "\\mathcal", "\\mathit", "\\mathtt", "\\mathsf", "\\mathbf", "\\mathdefault", "\\mathbb", "\\mathfrak", "\\mathcircled", "\\mathscr", "\\mathregular"};
 const char *c_over_c_symbols[] = {"\\AA"};
 const char *space_symbols[] = {"\\thinspace", "\\enspace", "\\quad", "\\qquad"};
-const char *left_delim_symbols[] = {"\\lfloor", "\\langle", "\\lceil"};
+const char *left_delim_symbols[] = {"\\int", "\\lfloor", "\\langle", "\\lceil", "\\sum"};
 const char *ambi_delim_symbols[] = {"\\backslash", "\\uparrow", "\\downarrow", "\\updownarrow", "\\Uparrow", "\\Downarrow", "\\Updownarrow", "\\vert", "\\Vert"};
 const char *right_delim_symbols[] = {"\\rfloor", "\\rangle", "\\rceil"};
 const char *function_symbols[] = {"\\arccos", "\\csc", "\\ker", "\\min", "\\arcsin", "\\deg", "\\lg", "\\Pr", "\\arctan", "\\det", "\\lim", "\\sec", "\\arg", "\\dim", "\\liminf", "\\sin", "\\cos", "\\exp", "\\limsup", "\\sinh", "\\cosh", "\\gcd", "\\ln", "\\sup", "\\cot", "\\hom", "\\log", "\\tan", "\\coth", "\\inf", "\\max", "\\tanh"};

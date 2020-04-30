@@ -31,9 +31,9 @@ static int purge(gks_display_list_t *d, char *t)
   char *s;
   int i;
   int sp = 0, tp = 0, *len, fctid;
-  static const char *attribute_buffer[MAX_ATTRIBUTE_FCTID];
+  static const char *attribute_buffer[MAX_ATTRIBUTE_FCTID + 1];
   static const char *color_buffer[MAX_COLOR];
-  memset(attribute_buffer, 0, sizeof(char *) * MAX_ATTRIBUTE_FCTID);
+  memset(attribute_buffer, 0, sizeof(char *) * (MAX_ATTRIBUTE_FCTID + 1));
   memset(color_buffer, 0, sizeof(char *) * MAX_COLOR);
 
   s = d->buffer;
@@ -71,7 +71,7 @@ static int purge(gks_display_list_t *d, char *t)
           tp += *len;
         }
     }
-  for (i = 0; i < MAX_ATTRIBUTE_FCTID; i++)
+  for (i = 0; i <= MAX_ATTRIBUTE_FCTID; i++)
     {
       if (attribute_buffer[i])
         {

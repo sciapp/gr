@@ -1153,7 +1153,8 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
 - (void)draw_marker:(double)xn:(double)yn:(int)mtype:(double)mscale:(int)mcolor:(CGContextRef)context
 {
-  int r, x, y, i;
+  double x, y;
+  int r, i;
   double scale, xr, yr;
   int pc, op;
 

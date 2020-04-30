@@ -2,7 +2,7 @@
 
 #ifdef __unix__
 #ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 1
+#define _POSIX_C_SOURCE 200112L
 #endif
 #endif
 
@@ -160,7 +160,7 @@
       {                                                                                                            \
         return 0;                                                                                                  \
       }                                                                                                            \
-    if (!prefix##_map_value_copy(&value_copy, entry.value))                                                        \
+    if (!prefix##_map_value_copy(&value_copy, (prefix##_map_const_value_t)entry.value))                            \
       {                                                                                                            \
         free((char *)key_copy);                                                                                    \
         return 0;                                                                                                  \

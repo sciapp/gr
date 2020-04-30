@@ -133,7 +133,7 @@ typedef struct ws_state_list_t
   int stroke;
   double lastx, lasty;
   double red[MAX_COLOR], green[MAX_COLOR], blue[MAX_COLOR];
-  int color, fillcolor, alpha, ltype, font, size, pt;
+  int alpha, ltype, font, size, pt;
   double lwidth, angle;
   double nominal_size;
   PDF_stream *stream;
@@ -790,7 +790,6 @@ static void set_color_rep(int color, double red, double green, double blue)
       p->red[color] = red;
       p->green[color] = green;
       p->blue[color] = blue;
-      p->color = p->fillcolor = -1;
     }
 }
 
@@ -833,7 +832,6 @@ static void init_context(void)
   p->stroke = 0;
   p->lastx = p->lasty = -1;
 
-  p->color = p->fillcolor = -1;
   p->alpha = 0xff;
   p->ltype = -999;
   p->lwidth = -1.0;
@@ -882,26 +880,12 @@ static void set_clip(double *clrt)
 
 static void set_color(int color)
 {
-  if (color < MAX_COLOR)
-    {
-      if (p->color != color)
-        {
-          pdf_setrgbcolor(p, p->red[color], p->green[color], p->blue[color]);
-          p->color = color;
-        }
-    }
+  if (color < MAX_COLOR) pdf_setrgbcolor(p, p->red[color], p->green[color], p->blue[color]);
 }
 
 static void set_fillcolor(int color)
 {
-  if (color < MAX_COLOR)
-    {
-      if (p->fillcolor != color)
-        {
-          pdf_setfillcolor(p, p->red[color], p->green[color], p->blue[color]);
-          p->fillcolor = color;
-        }
-    }
+  if (color < MAX_COLOR) pdf_setfillcolor(p, p->red[color], p->green[color], p->blue[color]);
 }
 
 static void set_transparency(int alpha)
