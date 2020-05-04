@@ -58,6 +58,7 @@ set(EXECUTABLE_SOURCES
     custom_sender.c
     event_handling.c
     heatmap.c
+    histogram.c
     hold_append.c
     imshow.c
     isosurface.c
