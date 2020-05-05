@@ -5548,9 +5548,9 @@ static double text3d_get_height()
 {
   double focus_point_x, focus_point_y, focus_point_z, focus_up_x, focus_up_y, focus_up_z;
   /* Calculate char height */
-  focus_point_x = tx.focus_point_x;
-  focus_point_y = tx.focus_point_y;
-  focus_point_z = tx.focus_point_z;
+  focus_point_x = tx.focus_point_x / tx.x_axis_scale;
+  focus_point_y = tx.focus_point_y / tx.y_axis_scale;
+  focus_point_z = tx.focus_point_z / tx.z_axis_scale;
   focus_up_x = focus_point_x + tx.up_x / tx.x_axis_scale;
   focus_up_y = focus_point_y + tx.up_y / tx.y_axis_scale;
   focus_up_z = focus_point_z + tx.up_z / tx.z_axis_scale;
@@ -5671,8 +5671,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                int major_y, int major_z, double tick_size)
 {
   int errind, tnr;
-  int ltype, halign, valign, font, prec, clsw;
-  double chux, chuy, slant;
+  int ltype, halign, valign, font, prec, clsw, axis;
+  double chux, chuy, slant, fx, fy, fz, flip;
 
   double clrt[4], wn[4], vp[4];
   double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
@@ -5687,6 +5687,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int decade, exponent;
   char string[256];
   int modern_projection_type;
+  fx = tx.camera_pos_x - tx.focus_point_x;
+  fy = tx.camera_pos_y - tx.focus_point_y;
+  fz = tx.camera_pos_z - tx.focus_point_z;
 
   if (x_tick < 0 || y_tick < 0 || z_tick < 0)
     {
@@ -5877,6 +5880,27 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           start_pline3d(x_org, y_org, z_min);
 
+          flip = tx.up_z < 0 ? -1 : 1;
+          if (fy > fabs(fx))
+            {
+              gks_set_text_upvec(0, flip * 1);
+              axis = -4;
+            }
+          else if (fx > fabs(fy))
+            {
+              gks_set_text_upvec(0, flip * 1);
+              axis = 3;
+            }
+          else if (fy <= - fabs(fx))
+            {
+              gks_set_text_upvec(0, flip * 1);
+              axis = 4;
+            }
+          else
+            {
+              gks_set_text_upvec(0, flip * 1);
+              axis = -3;
+            }
           while (zi <= z_max)
             {
               pline3d(x_org, y_org, zi);
@@ -5888,7 +5912,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       yi = major_tick;
                       if ((zi != z_org) && (major_z > 0))
                         text3d(x_org, y_label, zi, gr_ftoa(string, zi, z_tick * major_z),
-                               modern_projection_type ? 3 : 0);
+                               modern_projection_type ? axis : 0);
                     }
                   else
                     yi = minor_tick;
@@ -6009,6 +6033,27 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           start_pline3d(x_org, y_min, z_org);
 
+          flip = tx.up_y < 0 ? -1 : 1;
+          if (fx <= -fabs(fz))
+            {
+              axis = -3;
+              gks_set_text_upvec(flip * -1, 0);
+            }
+          else if (fz <= -fabs(fx))
+            {
+              axis = -2;
+              gks_set_text_upvec(0, flip * 1);
+            }
+          else if (fx >= fabs(fz))
+            {
+              axis = 3;
+              gks_set_text_upvec(flip * 1, 0);
+            }
+          else
+            {
+              axis = 2;
+              gks_set_text_upvec(0, flip * 1);
+            }
           while (yi <= y_max)
             {
               pline3d(x_org, yi, z_org);
@@ -6020,7 +6065,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       xi = major_tick;
                       if ((yi != y_org) && (major_y > 0))
                         text3d(x_label, yi, z_org, gr_ftoa(string, yi, y_tick * major_y),
-                               modern_projection_type ? 2 : 0);
+                               modern_projection_type ? axis : 0);
                     }
                   else
                     xi = minor_tick;
@@ -6141,6 +6186,27 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           start_pline3d(x_min, y_org, z_org);
 
+          flip = (tx.up_x < 0) ? -1 : 1;
+          if (fy <= -fabs(fz))
+            {
+              gks_set_text_upvec(flip * 1, 0);
+              axis = 4;
+            }
+          else if (fz <= -fabs(fy))
+            {
+              gks_set_text_upvec(0, flip * -1);
+              axis = -1;
+            }
+          else if (fy >= fabs(fz))
+            {
+              gks_set_text_upvec(flip * -1, 0);
+              axis = -4;
+            }
+          else
+            {
+              gks_set_text_upvec(0, flip * -1);
+              axis = 1;
+            }
           while (xi <= x_max)
             {
               pline3d(xi, y_org, z_org);
@@ -6152,7 +6218,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                       yi = major_tick;
                       if ((xi != x_org) && (major_x > 0))
                         text3d(xi, y_label, z_org, gr_ftoa(string, xi, x_tick * major_x),
-                               modern_projection_type ? 1 : 0);
+                               modern_projection_type ? axis : 0);
                     }
                   else
                     yi = minor_tick;
