@@ -3,7 +3,10 @@
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 #include <string.h>
+
+#include "gkscore.h"
 
 #include "error_int.h"
 #include "json_int.h"
@@ -28,6 +31,23 @@ size_t djb2_hash(const char *str)
     }
 
   return hash;
+}
+
+int is_equidistant_array(unsigned int length, const double *x)
+{
+  if (x != NULL && length > 2)
+    {
+      double distance = x[1] - x[0];
+      unsigned int i;
+      for (i = 2; i < length; ++i)
+        {
+          if (fabs((x[i] - x[i - 1]) - distance) > FEPS)
+            {
+              return 0;
+            }
+        }
+    }
+  return 1;
 }
 
 int is_int_number(const char *str)
