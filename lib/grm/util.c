@@ -180,6 +180,20 @@ char *str_filter(const char *str, const char *filter_chars)
   return reduced_str;
 }
 
+int is_homogenous_string_of_char(const char *str, char c)
+{
+  const char *current_format_char_ptr = str;
+  while (*current_format_char_ptr != '\0')
+    {
+      if (*current_format_char_ptr != c)
+        {
+          break;
+        }
+      ++current_format_char_ptr;
+    }
+  return *current_format_char_ptr == '\0';
+}
+
 unsigned long next_or_equal_power2(unsigned long num)
 {
 #if defined(__GNUC__) || defined(__clang__)
