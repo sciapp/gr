@@ -10352,8 +10352,8 @@ void gr_adjustlimits(double *amin, double *amax)
   if (remainder < 0.5) exponent -= 1;
 
   scale = pow(10.0, -exponent);
-  *amin = floor(*amin * scale) / scale;
-  *amax = ceil(*amax * scale) / scale;
+  *amin = floor(*amin * scale + FEPS) / scale;
+  *amax = ceil(*amax * scale - FEPS) / scale;
 }
 
 /*!
