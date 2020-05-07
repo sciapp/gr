@@ -952,7 +952,16 @@ static void apply_world_xform(double *x, double *y, double *z)
   else
     {
       double fov = gpx.fov * M_PI / 180; /* camera angle of perspektiv projection */
-      double aspect = (ix.xmax - ix.xmin) / (ix.ymax - ix.ymin);
+      double xaspect = (vxmax - vxmin) / (vymax - vymin);
+      double yaspect = 1.0 / xaspect;
+      if (xaspect < 1.0)
+        {
+          xaspect = 1.0;
+        }
+      else
+        {
+          yaspect = 1.0;
+        }
       double F[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
                      tx.focus_point_z - tx.camera_pos_z}; /* direction between camera and focus point */
       double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
@@ -971,16 +980,16 @@ static void apply_world_xform(double *x, double *y, double *z)
       if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE)
         {
           /* perspective projection */
-          xw = ((cos(fov / 2) / sin(fov / 2)) / aspect * xw);
-          yw = ((cos(fov / 2) / sin(fov / 2)) * yw);
+          xw = ((cos(fov / 2) / sin(fov / 2)) / xaspect * xw);
+          yw = ((cos(fov / 2) / sin(fov / 2)) / yaspect * yw);
           xw /= -zw;
           yw /= -zw;
         }
       else if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
         {
           /* orthographic projection */
-          xw = (xw * 2 / (gpx.right - gpx.left) - (gpx.left + gpx.right) / (gpx.right - gpx.left));
-          yw = (yw * 2 / (gpx.top - gpx.bottom) - (gpx.bottom + gpx.top) / (gpx.top - gpx.bottom));
+          xw = (xw * 2 / (gpx.right - gpx.left) / xaspect - (gpx.left + gpx.right) / (gpx.right - gpx.left));
+          yw = (yw * 2 / (gpx.top - gpx.bottom) / yaspect - (gpx.bottom + gpx.top) / (gpx.top - gpx.bottom));
           zw = (zw * -2 / (gpx.far_plane - gpx.near_plane) -
                 (gpx.far_plane + gpx.near_plane) / (gpx.far_plane - gpx.near_plane));
         }
@@ -11320,14 +11329,14 @@ void gr_inqbordercolorind(int *coli)
  */
 void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
 {
-  double x_len, y_len, z_len, max_axis_length;
+  double scale_factor_x, scale_factor_y, scale_factor_z;
   double bounding_sphere_radius;
 
   tx.focus_point_x = (ix.xmax + ix.xmin) / 2;
   tx.focus_point_y = (ix.ymin + ix.ymax) / 2;
   tx.focus_point_z = (ix.zmax + ix.zmin) / 2;
 
-  gr_calculateradius(&bounding_sphere_radius);
+  bounding_sphere_radius = sqrt(3);
   if (fov != fov || fov == 0)
     {
       if (camera_distance == 0 || camera_distance != camera_distance)
@@ -11347,28 +11356,20 @@ void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
                                   camera_distance + bounding_sphere_radius * 2, fov);
     }
 
+  scale_factor_x = 2.0 / (ix.xmax - ix.xmin);
+  scale_factor_y = 2.0 / (ix.ymax - ix.ymin);
+  scale_factor_z = 2.0 / (ix.zmax - ix.zmin);
 
-  gr_settransformationparameters(camera_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x,
-                                 camera_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y,
-                                 camera_distance * cos(theta * M_PI / 180) + tx.focus_point_z,
-                                 -cos(phi * M_PI / 180) * cos(theta * M_PI / 180),
-                                 -sin(phi * M_PI / 180) * cos(theta * M_PI / 180), sin(theta * M_PI / 180),
-                                 tx.focus_point_x, tx.focus_point_y, tx.focus_point_z);
 
-  x_len = fabs(ix.xmin) + fabs(ix.xmax);
-  y_len = fabs(ix.ymin) + fabs(ix.ymax);
-  z_len = fabs(ix.zmax) + fabs(ix.zmin);
-  max_axis_length = x_len;
-  if (y_len > max_axis_length)
-    {
-      max_axis_length = y_len;
-    }
-  if (z_len > max_axis_length)
-    {
-      max_axis_length = z_len;
-    }
+  gr_settransformationparameters(
+      camera_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x * scale_factor_x,
+      camera_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y * scale_factor_y,
+      camera_distance * cos(theta * M_PI / 180) + tx.focus_point_z * scale_factor_z,
+      -cos(phi * M_PI / 180) * cos(theta * M_PI / 180), -sin(phi * M_PI / 180) * cos(theta * M_PI / 180),
+      sin(theta * M_PI / 180), tx.focus_point_x * scale_factor_x, tx.focus_point_y * scale_factor_y,
+      tx.focus_point_z * scale_factor_z);
 
-  gr_setscalefactors3d(max_axis_length / x_len, max_axis_length / y_len, max_axis_length / z_len);
+  gr_setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
 }
 
 void gr_settextencoding(int encoding)
