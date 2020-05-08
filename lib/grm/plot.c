@@ -604,15 +604,11 @@ error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const ch
           if ((compatible_format = get_compatible_format(merge_arg->key, merge_arg->value_format)) != NULL)
             {
               logger((stderr, "Perform a replace on key \"%s\"\n", merge_arg->key));
-              if (strcmp(merge_arg->value_format, compatible_format) == 0)
+              if (strlen(merge_arg->value_format) == 1 &&
+                  tolower(*merge_arg->value_format) == *merge_arg->value_format &&
+                  toupper(*compatible_format) == *compatible_format)
                 {
-                  /* If the given format is identical to the compatible format, push the new arg without conversion */
-                  error = args_push_arg(current_args, merge_arg);
-                  cleanup_if_error;
-                }
-              else
-                {
-                  /* Otherwise, a single value is given but an array is needed
+                  /* A single value is given but an array is needed
                    * -> Push the given value as array instead
                    * **IMPORTANT**: In this case the existing `merge_arg` node cannot be shared with `current_args`
                    * (since the stored format does not fit), so the value must be copied (it is owned by the `merge_arg`
@@ -627,6 +623,13 @@ error_t plot_merge_args(grm_args_t *args, const grm_args_t *merge_args, const ch
                   grm_args_push(current_args, merge_arg->key, array_format, 1, copy_buffer);
                   /* x -> copy_buffer -> value, value is now stored and the buffer is not needed any more */
                   free(copy_buffer);
+                }
+              else
+                {
+                  /* Otherwise, push without conversion (needed conversion is done later when extracting values with
+                   * functions like `args_values`) */
+                  error = args_push_arg(current_args, merge_arg);
+                  cleanup_if_error;
                 }
             }
           else
@@ -3873,56 +3876,30 @@ const char *get_compatible_format(const char *key, const char *given_format)
     }
   /* Third, iterate over all valid formats and check if
    * - there is an exact match
-   * - one or multiple single value types given (e.g. `d` or `dddd`)
-   *   when an array of the same type (`D` in this case) would be valid */
+   * - a single format char is valid,
+   *   the type matches (e.g. `d` and `D`) and
+   *   a single value / array or multiple single values of the same type ar given (e.g. `dddd`)
+   */
   current_format_ptr = valid_formats;
   while (*current_format_ptr != NULL)
     {
       if (strcmp(*current_format_ptr, reduced_given_format) == 0)
         {
-          /* Found an exact match -> simply return the given format */
-          compatible_format = given_format;
+          /* Found an exact match */
+          compatible_format = *current_format_ptr;
           break;
         }
-      else if (strlen(*current_format_ptr) == 1 && toupper(**current_format_ptr) == **current_format_ptr)
+      else if ((strlen(*current_format_ptr) == 1) && (tolower(**current_format_ptr) == tolower(*reduced_given_format)))
         {
-          /* The current format is a single array type -> check if a conversion can be done */
-          if (strlen(reduced_given_format) == 1)
+          /* The current format is a single format of the same base type as the given format */
+          if (strlen(reduced_given_format) == 1 ||
+              is_homogenous_string_of_char(reduced_given_format, tolower(*reduced_given_format)))
             {
-              if (toupper(*reduced_given_format) == **current_format_ptr)
-                {
-                  /* The given format is a single value of the same type like the current format
-                   * (e.g. `d` is given and `D` is a valid foramt)
-                   * -> Return the current array type as compatible format */
-                  compatible_format = *current_format_ptr;
-                  break;
-                }
-            }
-          else
-            {
-              /* The given format is longer than 1 -> check if it is homogeneous and has no array types */
-              const char first_format_char = *reduced_given_format;
-              if (tolower(first_format_char) == first_format_char && toupper(first_format_char) == **current_format_ptr)
-                {
-                  /* The first format character is a lower case version of the current array type
-                   * -> now check for homogeneity */
-                  const char *current_format_char_ptr = reduced_given_format + 1;
-                  while (*current_format_char_ptr != '\0')
-                    {
-                      if (*current_format_char_ptr != first_format_char)
-                        {
-                          break;
-                        }
-                      ++current_format_char_ptr;
-                    }
-                  if (*current_format_char_ptr == '\0')
-                    {
-                      /* The whole string was successfully scanned
-                       * -> Return the current array type as compatible format */
-                      compatible_format = *current_format_ptr;
-                      break;
-                    }
-                }
+              /* Either a single format of the same type or
+               * a homogenous format string of single values of the same type
+               * is given */
+              compatible_format = *current_format_ptr;
+              break;
             }
         }
       ++current_format_ptr;

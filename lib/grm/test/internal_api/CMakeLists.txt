@@ -51,7 +51,7 @@ project(
   LANGUAGES C
 )
 
-set(EXECUTABLE_SOURCES datatype/string_array_map.c)
+set(EXECUTABLE_SOURCES get_compatible_format.c datatype/string_array_map.c)
 
 set(GRM_SOURCES
     ../../args.c
@@ -103,6 +103,7 @@ set_target_properties(grm PROPERTIES C_STANDARD 90 C_STANDARD_REQUIRED ON C_EXTE
 foreach(executable_source ${EXECUTABLE_SOURCES})
   get_filename_component(executable "${executable_source}" NAME_WE)
   add_executable("${executable}" "${executable_source}")
+  target_include_directories("${executable}" PRIVATE ".")
   target_link_libraries("${executable}" PRIVATE grm)
   target_link_libraries("${executable}" PRIVATE m)
   set_target_properties("${executable}" PROPERTIES C_STANDARD 90 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
