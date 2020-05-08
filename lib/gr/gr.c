@@ -11314,18 +11314,19 @@ void gr_inqbordercolorind(int *coli)
  * Set the camera for orthographic or perspective projection.
  *
  * The center of the 3d window is used as the focus point and the camera is
- * positioned relative to it, using camera distance, rotation and tilt similar
- * to gr_setspace. This function can be used if the user prefers spherical
- * coordinates to setting the camera position directly, but has reduced
- * functionality in comparison to gr_settransformationparameters,
- * gr_setperspectiveprojection and gr_setorthographicprojection.
+ * positioned relative to it, using camera distance, azimuthal angle and polar
+ * angle similar to gr_setspace.  This function can be used if the user
+ * prefers spherical coordinates to setting the camera position directly, but
+ * has reduced functionality in comparison to gr_settransformationparameters,
+ * gr_setscalefactors3d, gr_setperspectiveprojection and
+ * gr_setorthographicprojection.
  *
  * \param phi azimuthal angle of the spherical coordinates
  * \param theta polar angle of the spherical coordinates
  * \param fov vertical field of view(0 or NaN for orthographic projection)
- * \param camera_distance distance between the camera and the focus point (0 or NaN for the radius of the object's
- * smallest bounding sphere)
- *
+ * \param camera_distance distance between the camera and the focus point (in
+ * arbitrary units, 0 or NaN for the radius of the object's smallest bounding
+ * sphere)
  */
 void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
 {
