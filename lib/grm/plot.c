@@ -940,17 +940,19 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
       (stderr, "Stored wsviewport (%lf, %lf, %lf, %lf)\n", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]));
 }
 
-void plot_pre_subplot(grm_args_t *subplot_args)
+error_t plot_pre_subplot(grm_args_t *subplot_args)
 {
   const char *kind;
   double alpha;
+  error_t error = NO_ERROR;
 
   logger((stderr, "Pre subplot processing\n"));
 
   args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   plot_process_viewport(subplot_args);
-  plot_store_coordinate_ranges(subplot_args);
+  error = plot_store_coordinate_ranges(subplot_args);
+  return_if_error;
   plot_process_window(subplot_args);
 
   plot_process_colormap(subplot_args);
@@ -972,6 +974,8 @@ void plot_pre_subplot(grm_args_t *subplot_args)
     {
       gr_settransparency(alpha);
     }
+
+  return NO_ERROR;
 }
 
 void plot_process_colormap(grm_args_t *subplot_args)
@@ -1356,7 +1360,7 @@ void plot_process_window(grm_args_t *subplot_args)
   gr_setscale(scale);
 }
 
-void plot_store_coordinate_ranges(grm_args_t *subplot_args)
+error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
 {
   const char *kind;
   const char *style = "";
@@ -1459,8 +1463,6 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
         {
           double min_component = DBL_MAX;
           double max_component = -DBL_MAX;
-          double *u, *v;
-          /* TODO: `ERROR_PLOT_COMPONENT_LENGTH_MISMATCH` */
           args_values(subplot_args, "series", "A", &current_series);
           while (*current_series != NULL)
             {
@@ -1468,9 +1470,12 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
               double current_max_component = -DBL_MAX;
               if (!args_values(*current_series, "zlim", "dd", &current_min_component, &current_max_component))
                 {
-                  args_first_value(*current_series, "u", "D", &u, &current_point_count);
-                  args_first_value(*current_series, "v", "D", &v, NULL);
-                  for (i = 0; i < current_point_count; i++)
+                  double *u, *v;
+                  unsigned int u_length, v_length;
+                  return_error_if(!args_first_value(*current_series, "u", "D", &u, &u_length), ERROR_PLOT_MISSING_DATA);
+                  return_error_if(!args_first_value(*current_series, "v", "D", &v, &v_length), ERROR_PLOT_MISSING_DATA);
+                  return_error_if(u_length != v_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  for (i = 0; i < u_length; i++)
                     {
                       double z = u[i] * u[i] + v[i] * v[i];
                       current_min_component = min(z, current_min_component);
@@ -1523,6 +1528,8 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
           grm_args_push(subplot_args, "xrange", "dd", x_min, x_max);
         }
     }
+
+  return NO_ERROR;
 }
 
 void plot_post_plot(grm_args_t *plot_args)
@@ -1882,6 +1889,7 @@ error_t plot_scatter(grm_args_t *subplot_args)
 error_t plot_quiver(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
+  error_t error = NO_ERROR;
 
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
@@ -1892,14 +1900,16 @@ error_t plot_quiver(grm_args_t *subplot_args)
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "u", "D", &u, &u_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "v", "D", &v, &v_length), ERROR_PLOT_MISSING_DATA);
-      return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
-      /* TODO: Check length of `u` and `v` */
+      return_error_if(x_length * y_length != u_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      return_error_if(x_length * y_length != v_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+
       gr_quiver(x_length, y_length, x, y, u, v, 1);
 
       ++current_series;
     }
+  error = plot_draw_colorbar(subplot_args, 0.05, 256);
 
-  return NO_ERROR;
+  return error;
 }
 
 error_t plot_stem(grm_args_t *subplot_args)
@@ -4350,7 +4360,10 @@ int grm_plot(const grm_args_t *args)
   args_values(active_plot_args, "subplots", "A", &current_subplot_args);
   while (*current_subplot_args != NULL)
     {
-      plot_pre_subplot(*current_subplot_args);
+      if (plot_pre_subplot(*current_subplot_args) != NO_ERROR)
+        {
+          return 0;
+        }
       args_values(*current_subplot_args, "kind", "s", &kind);
       logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
       if (!plot_func_map_at(plot_func_map, kind, &plot_func))
