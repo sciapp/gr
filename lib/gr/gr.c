@@ -5891,7 +5891,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
               gks_set_text_upvec(0, flip * 1);
               axis = 3;
             }
-          else if (fy <= - fabs(fx))
+          else if (fy <= -fabs(fx))
             {
               gks_set_text_upvec(0, flip * 1);
               axis = 4;
@@ -5945,13 +5945,13 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
           if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
         }
       else
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
 
           if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
         }
