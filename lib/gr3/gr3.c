@@ -1833,10 +1833,21 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
 
   if (context_struct_.projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
     {
+      double aspect = 1.0 * width / height;
       right = context_struct_.right;
       left = context_struct_.left;
       bottom = context_struct_.bottom;
       top = context_struct_.top;
+      if (aspect > 1)
+        {
+          right *= aspect;
+          left *= aspect;
+        }
+      else
+        {
+          top /= aspect;
+          bottom /= aspect;
+        }
     }
   else
     {

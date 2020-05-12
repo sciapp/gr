@@ -735,7 +735,24 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
           ymax = tmp;
         }
       /* TODO: inquire the required resolution */
-      gr3_drawimage((float)xmin, (float)xmax, (float)ymin, (float)ymax, 500, 500, GR3_DRAWABLE_GKS);
+      int base_resolution = 1000;
+      double vpxmin, vpxmax, vpymin, vpymax;
+      gr_inqviewport(&vpxmin, &vpxmax, &vpymin, &vpymax);
+      double aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
+      if (aspect > 1)
+        {
+          gr3_drawimage((float)xmin, (float)xmax, (float)ymin, (float)ymax, (int)(base_resolution * aspect),
+                        base_resolution, GR3_DRAWABLE_GKS);
+        }
+      else
+        {
+          double fovy = context_struct_.vertical_field_of_view;
+          context_struct_.vertical_field_of_view =
+              (float)(atan(tan(context_struct_.vertical_field_of_view / 360 * M_PI) / aspect) / M_PI * 360);
+          gr3_drawimage((float)xmin, (float)xmax, (float)ymin, (float)ymax, base_resolution,
+                        (int)(base_resolution / aspect), GR3_DRAWABLE_GKS);
+          context_struct_.vertical_field_of_view = (float)fovy;
+        }
       if (gr3_geterror(0, NULL, NULL)) return;
     }
   else
