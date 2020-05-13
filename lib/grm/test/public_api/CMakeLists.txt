@@ -65,6 +65,7 @@ set(EXECUTABLE_SOURCES
     merge_args.c
     multi_plot.c
     plot.c
+    quiver.c
     receiver.c
     scatter_errorbar.c
     sender.c
