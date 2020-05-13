@@ -244,10 +244,10 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "zflip",
                                     "zlog",
                                     NULL};
-const char *valid_series_keys[] = {"a",          "c",        "clim",       "error", "c_dims", "foreground_color",
-                                   "indices",    "isovalue", "markertype", "rgb",   "s",      "spec",
-                                   "step_where", "u",        "v",          "x",     "xlim",   "y",
-                                   "ylim",       "z",        "z_dims",     "zlim",  NULL};
+const char *valid_series_keys[] = {
+    "a",        "c",          "clim", "error", "c_dims", "foreground_color", "indices", "inner_series",
+    "isovalue", "markertype", "rgb",  "s",     "spec",   "step_where",       "u",       "v",
+    "x",        "xlim",       "y",    "ylim",  "z",      "z_dims",           "zlim",    NULL};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -1362,6 +1362,8 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   const char *fmt;
   grm_args_t **current_series;
   unsigned int series_count;
+  grm_args_t **inner_series;
+  unsigned int inner_series_count;
   const char *data_component_names[] = {"x", "y", "z", "c", NULL};
   const char **current_component_name;
   double *current_component = NULL;
@@ -1445,6 +1447,23 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                     }
                   current_min_component = -0.5;
                   current_max_component = current_point_count - 0.5;
+                }
+            }
+          else if (args_first_value(*current_series, "inner_series", "nA", &inner_series, &inner_series_count))
+            {
+              while (*inner_series != NULL)
+                {
+                  if (args_first_value(*inner_series, *current_component_name, "D", &current_component,
+                                       &current_point_count))
+                    {
+                      double current_max_component = 0;
+                      for (i = 0; i < current_point_count; i++)
+                        {
+                          current_max_component += current_component[i];
+                        }
+                      max_component = max(current_max_component, max_component);
+                    }
+                  inner_series++;
                 }
             }
           if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
@@ -2007,6 +2026,8 @@ error_t plot_hist(grm_args_t *subplot_args)
 error_t plot_barplot(grm_args_t *subplot_args)
 {
   grm_args_t **current_series;
+  grm_args_t **inner_series;
+  unsigned int inner_series_length;
 
   /* Default */
   int bar_color = 989, edge_color = 1;
@@ -2020,6 +2041,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
   unsigned int c_rgb_length;
   double *y;
   unsigned int y_length;
+  unsigned int fixed_y_length;
   grm_args_t **ind_bar_color = NULL;
   double(*pos_ind_bar_color)[3] = NULL;
   grm_args_t **ind_edge_color = NULL;
@@ -2064,14 +2086,27 @@ error_t plot_barplot(grm_args_t *subplot_args)
     }
 
   /* ind_parameter */
-  args_first_value(*current_series, "y", "D", &y, &y_length);
+  /* determine the length of y */
+  if (!args_first_value(*current_series, "y", "D", &y, &fixed_y_length))
+    {
+      unsigned int temp_y_length = 0;
+      cleanup_and_set_error_if(
+          !args_first_value(*current_series, "inner_series", "A", &inner_series, &inner_series_length),
+          ERROR_PLOT_MISSING_DATA);
+      while (inner_series != NULL)
+        {
+          args_first_value(*inner_series, "y", "D", &y, &y_length);
+          temp_y_length += fixed_y_length;
+        }
+      fixed_y_length = temp_y_length;
+    }
   /* ind_bar_color */
   if (args_values(subplot_args, "ind_bar_color", "A", &ind_bar_color))
     {
-      pos_ind_bar_color = malloc(3 * y_length * sizeof(double));
+      pos_ind_bar_color = malloc(3 * fixed_y_length * sizeof(double));
       cleanup_and_set_error_if(pos_ind_bar_color == NULL, ERROR_MALLOC);
       change_bar_color = 1;
-      for (i = 0; i < y_length; ++i)
+      for (i = 0; i < fixed_y_length; ++i)
         {
           pos_ind_bar_color[i][0] = -1;
         }
@@ -2096,7 +2131,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
             {
               for (j = 0; j < indices_length; ++j)
                 {
-                  cleanup_and_set_error_if(indices[j] - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  cleanup_and_set_error_if(indices[j] - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
                   pos_ind_bar_color[indices[j] - 1][0] = rgb[0];
                   pos_ind_bar_color[indices[j] - 1][1] = rgb[1];
                   pos_ind_bar_color[indices[j] - 1][2] = rgb[2];
@@ -2104,7 +2139,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
             }
           else
             {
-              cleanup_and_set_error_if(index - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+              cleanup_and_set_error_if(index - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
               pos_ind_bar_color[index - 1][0] = rgb[0];
               pos_ind_bar_color[index - 1][1] = rgb[1];
               pos_ind_bar_color[index - 1][2] = rgb[2];
@@ -2116,10 +2151,10 @@ error_t plot_barplot(grm_args_t *subplot_args)
   /* ind_edge_color */
   if (args_values(subplot_args, "ind_edge_color", "A", &ind_edge_color))
     {
-      pos_ind_edge_color = malloc(3 * y_length * sizeof(double));
+      pos_ind_edge_color = malloc(3 * fixed_y_length * sizeof(double));
       cleanup_and_set_error_if(pos_ind_edge_color == NULL, ERROR_MALLOC);
       change_edge_color = 1;
-      for (i = 0; i < y_length; ++i)
+      for (i = 0; i < fixed_y_length; ++i)
         {
           pos_ind_edge_color[i][0] = -1;
         }
@@ -2144,7 +2179,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
             {
               for (j = 0; j < indices_length; ++j)
                 {
-                  cleanup_and_set_error_if(indices[j] - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  cleanup_and_set_error_if(indices[j] - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
                   pos_ind_edge_color[indices[j] - 1][0] = rgb[0];
                   pos_ind_edge_color[indices[j] - 1][1] = rgb[1];
                   pos_ind_edge_color[indices[j] - 1][2] = rgb[2];
@@ -2152,7 +2187,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
             }
           else
             {
-              cleanup_and_set_error_if(index - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+              cleanup_and_set_error_if(index - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
               pos_ind_edge_color[index - 1][0] = rgb[0];
               pos_ind_edge_color[index - 1][1] = rgb[1];
               pos_ind_edge_color[index - 1][2] = rgb[2];
@@ -2164,9 +2199,9 @@ error_t plot_barplot(grm_args_t *subplot_args)
   /* ind_edge_width */
   if (args_values(subplot_args, "ind_edge_width", "A", &ind_edge_width))
     {
-      pos_ind_edge_width = malloc(sizeof(double) * y_length);
+      pos_ind_edge_width = malloc(sizeof(double) * fixed_y_length);
       cleanup_and_set_error_if(pos_ind_edge_width == NULL, ERROR_MALLOC);
-      for (i = 0; i < y_length; ++i)
+      for (i = 0; i < fixed_y_length; ++i)
         {
           pos_ind_edge_width[i] = -1;
         }
@@ -2188,13 +2223,13 @@ error_t plot_barplot(grm_args_t *subplot_args)
             {
               for (j = 0; j < indices_length; ++j)
                 {
-                  cleanup_and_set_error_if(indices[j] - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+                  cleanup_and_set_error_if(indices[j] - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
                   pos_ind_edge_width[indices[j] - 1] = width;
                 }
             }
           else
             {
-              cleanup_and_set_error_if(index - 1 >= (int)y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+              cleanup_and_set_error_if(index - 1 >= (int)fixed_y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
               pos_ind_edge_width[index - 1] = width;
             }
           ind_edge_width++;
@@ -2205,35 +2240,50 @@ error_t plot_barplot(grm_args_t *subplot_args)
   while (*current_series != NULL)
     {
       /* Init */
+      int inner_series_index;
       double *y;
-      unsigned int y_length;
+      unsigned int y_length = 0;
+      grm_args_t **inner_series;
+      unsigned int inner_series_length = 0;
       /* Style Varianz */
-      double horizontal_change = 0;
+      double vertical_change = 0;
       double x1, x2, y1, y2;
-      cleanup_and_set_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
+      cleanup_and_set_error_if(
+          !(args_first_value(*current_series, "y", "D", &y, &y_length) ||
+            (args_first_value(*current_series, "inner_series", "A", &inner_series, &inner_series_length))),
+          ERROR_PLOT_MISSING_DATA);
+      cleanup_and_set_error_if(style != "lined" && inner_series != NULL, ERROR_UNSUPPORTED_OPERATION);
       if (c != NULL)
         {
-          cleanup_and_set_error_if(c_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+          cleanup_and_set_error_if((c_length < y_length) && (c_length < inner_series_length),
+                                   ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
         }
       if (c_rgb != NULL)
         {
-          cleanup_and_set_error_if(c_rgb_length != y_length * 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+          cleanup_and_set_error_if((c_rgb_length < y_length * 3) && (c_rgb_length < inner_series_length * 3),
+                                   ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
           for (i = 0; i < y_length * 3; i++)
             {
               cleanup_and_set_error_if((c_rgb[i] > 1 || c_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
             }
         }
 
-      /* Draw Bar */
       gr_setfillintstyle(1);
+      gr_setfillcolorind(bar_color);
+      /* Draw Bar */
       for (i = 0; i < y_length; i++)
         {
+          if (strcmp(style, "default") != 0)
+            {
+              int color_index = i % len_std_colors;
+              gr_setfillcolorind(std_colors[color_index]);
+            }
           if (bar_color_rgb[0] != -1)
             {
               gr_setcolorrep(color_save_spot, bar_color_rgb[0], bar_color_rgb[1], bar_color_rgb[2]);
               bar_color = color_save_spot;
+              gr_setfillcolorind(bar_color);
             }
-          gr_setfillcolorind(bar_color);
           if (c != NULL)
             {
               gr_setfillcolorind(c[i]);
@@ -2252,14 +2302,6 @@ error_t plot_barplot(grm_args_t *subplot_args)
                   gr_setfillcolorind(color_save_spot);
                 }
             }
-          else
-            {
-              if (strcmp(style, "default") != 0)
-                {
-                  int color_index = i % len_std_colors;
-                  gr_setfillcolorind(std_colors[color_index]);
-                }
-            }
           if (strcmp(style, "default") == 0)
             {
               x1 = i + 1 - 0.5 * bar_width;
@@ -2271,9 +2313,9 @@ error_t plot_barplot(grm_args_t *subplot_args)
             {
               x1 = series_index + 1 - 0.5 * bar_width;
               x2 = series_index + 1 + 0.5 * bar_width;
-              y1 = 0 + horizontal_change;
-              y2 = y[i] + horizontal_change;
-              horizontal_change += y[i];
+              y1 = 0 + vertical_change;
+              y2 = y[i] + vertical_change;
+              vertical_change += y[i];
             }
           if (strcmp(style, "lined") == 0)
             {
@@ -2286,8 +2328,71 @@ error_t plot_barplot(grm_args_t *subplot_args)
           gr_fillrect(x1, x2, y1, y2);
         }
 
+      /* Draw Bars from inner_series */
+      for (inner_series_index = 0; inner_series_index < inner_series_length; inner_series_index++)
+        {
+          int *inner_c = NULL;
+          unsigned int inner_c_length;
+          double *inner_c_rgb = NULL;
+          unsigned int inner_c_rgb_length;
+          gr_setfillcolorind(std_colors[inner_series_index % len_std_colors]);
+          args_first_value(inner_series[inner_series_index], "y", "D", &y, &y_length);
+          bar_width = wfac / fixed_y_length;
+          if (c != NULL)
+            {
+              gr_setfillcolorind(c[inner_series_index]);
+            }
+          else if (c_rgb != NULL)
+            {
+              gr_setcolorrep(color_save_spot, c_rgb[inner_series_index * 3], c_rgb[inner_series_index * 3 + 1],
+                             c_rgb[inner_series_index * 3 + 2]);
+              gr_setfillcolorind(color_save_spot);
+            }
+          else if (change_bar_color)
+            {
+              if (*pos_ind_bar_color[inner_series_index] != -1)
+                {
+                  gr_setcolorrep(color_save_spot, pos_ind_bar_color[inner_series_index][0],
+                                 pos_ind_bar_color[inner_series_index][1], pos_ind_bar_color[inner_series_index][2]);
+                  gr_setfillcolorind(color_save_spot);
+                }
+            }
+          if (args_first_value(inner_series[inner_series_index], "c", "I", &inner_c, &inner_c_length))
+            {
+              cleanup_and_set_error_if(inner_c_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+            }
+          if (args_first_value(inner_series[inner_series_index], "c", "D", &inner_c_rgb, &inner_c_rgb_length))
+            {
+              cleanup_and_set_error_if(inner_c_rgb_length != 3 * y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+              for (i = 0; i < y_length * 3; i++)
+                {
+                  cleanup_and_set_error_if((inner_c_rgb[i] > 1 || inner_c_rgb[i] < 0), ERROR_PLOT_OUT_OF_RANGE);
+                }
+            }
+          for (i = 0; i < y_length; i++)
+            {
+              if (inner_c != NULL)
+                {
+                  gr_setfillcolorind(inner_c[i]);
+                }
+              if (inner_c_rgb != NULL)
+                {
+                  gr_setcolorrep(color_save_spot, inner_c_rgb[i * 3], inner_c_rgb[i * 3 + 1], inner_c_rgb[i * 3 + 2]);
+                  gr_setfillcolorind(color_save_spot);
+                }
+              x1 = series_index + 1 - 0.5 * wfac + bar_width * inner_series_index;
+              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * inner_series_index;
+              y1 = 0 + vertical_change;
+              y2 = y[i] + vertical_change;
+              vertical_change += y[i];
+              gr_fillrect(x1, x2, y1, y2);
+            }
+          y_length = 0;
+          vertical_change = 0;
+        }
+
+      vertical_change = 0;
       /* Draw Edge */
-      horizontal_change = 0;
       for (i = 0; i < y_length; i++)
         {
           gr_setlinewidth(edge_width);
@@ -2325,9 +2430,9 @@ error_t plot_barplot(grm_args_t *subplot_args)
             {
               x1 = series_index + 1 - 0.5 * bar_width;
               x2 = series_index + 1 + 0.5 * bar_width;
-              y1 = 0 + horizontal_change;
-              y2 = y[i] + horizontal_change;
-              horizontal_change += y[i];
+              y1 = 0 + vertical_change;
+              y2 = y[i] + vertical_change;
+              vertical_change += y[i];
             }
           if (strcmp(style, "lined") == 0)
             {
@@ -2339,6 +2444,51 @@ error_t plot_barplot(grm_args_t *subplot_args)
             }
           gr_drawrect(x1, x2, y1, y2);
         }
+
+      /* Draw Edges from inner_series */
+      for (inner_series_index = 0; inner_series_index < inner_series_length; inner_series_index++)
+        {
+          gr_setlinewidth(edge_width);
+          if (change_edge_width)
+            {
+              if (pos_ind_edge_width[inner_series_index] != -1)
+                {
+                  double width = pos_ind_edge_width[inner_series_index];
+                  gr_setlinewidth(width);
+                }
+            }
+          if (edge_color_rgb[0] != -1)
+            {
+              gr_setcolorrep(color_save_spot, edge_color_rgb[0], edge_color_rgb[1], edge_color_rgb[2]);
+              edge_color = color_save_spot;
+            }
+          gr_setlinecolorind(edge_color);
+          if (change_edge_color)
+            {
+              if (*pos_ind_edge_color[inner_series_index] != -1)
+                {
+                  gr_setcolorrep(color_save_spot, pos_ind_edge_color[inner_series_index][0],
+                                 pos_ind_edge_color[inner_series_index][1], pos_ind_edge_color[inner_series_index][2]);
+                  gr_setlinecolorind(color_save_spot);
+                }
+            }
+
+          args_first_value(inner_series[inner_series_index], "y", "D", &y, &y_length);
+          bar_width = wfac / fixed_y_length;
+          for (i = 0; i < y_length; i++)
+            {
+              gr_setfillcolorind(std_colors[inner_series_index % len_std_colors]);
+              x1 = series_index + 1 - 0.5 * wfac + bar_width * inner_series_index;
+              x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * inner_series_index;
+              y1 = 0 + vertical_change;
+              y2 = y[i] + vertical_change;
+              vertical_change += y[i];
+              gr_drawrect(x1, x2, y1, y2);
+            }
+          y_length = 0;
+          vertical_change = 0;
+        }
+
       series_index++;
       ++current_series;
     }
