@@ -1070,7 +1070,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
     {
       viewport[2] += (1 - (subplot[3] - subplot[2]) * (subplot[3] - subplot[2])) * 0.02;
     }
-  if (str_equals_any(kind, 7, "imshow", "contour", "contourf", "heatmap", "hexbin", "quiver"))
+  if (str_equals_any(kind, 6, "imshow", "contour", "contourf", "heatmap", "hexbin", "quiver"))
     {
       viewport[1] -= 0.1;
     }
@@ -3378,7 +3378,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     }
   else if (!str_equals_any(kind, 2, "imshow", "isosurface"))
     {
-      if (str_equals_any(kind, 3, "heatmap", "shade"))
+      if (str_equals_any(kind, 2, "heatmap", "shade"))
         {
           ticksize = -ticksize;
         }
