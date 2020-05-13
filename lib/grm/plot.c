@@ -137,17 +137,12 @@ event_queue_t *event_queue = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},      {"hexbin", "xys"},
-                                           {"polar", "xys"},     {"shade", "xys"},
-                                           {"stem", "xys"},      {"step", "xys"},
-                                           {"contour", "xyzc"},  {"contourf", "xyzc"},
-                                           {"tricont", "xyzc"},  {"trisurf", "xyzc"},
-                                           {"surface", "xyzc"},  {"wireframe", "xyzc"},
-                                           {"plot3", "xyzc"},    {"scatter", "xyzc"},
-                                           {"scatter3", "xyzc"}, {"quiver", "xyuv"},
-                                           {"heatmap", "xyzc"},  {"hist", "xy"},
-                                           {"barplot", "y"},     {"isosurface", "c"},
-                                           {"imshow", "c"},      {"nonuniformheatmap", "xyzc"}};
+static string_map_entry_t kind_to_fmt[] = {
+    {"line", "xys"},     {"hexbin", "xys"},     {"polar", "xys"},     {"shade", "xys"},    {"stem", "xys"},
+    {"step", "xys"},     {"contour", "xyzc"},   {"contourf", "xyzc"}, {"tricont", "xyzc"}, {"trisurf", "xyzc"},
+    {"surface", "xyzc"}, {"wireframe", "xyzc"}, {"plot3", "xyzc"},    {"scatter", "xyzc"}, {"scatter3", "xyzc"},
+    {"quiver", "xyuv"},  {"heatmap", "xyzc"},   {"hist", "xy"},       {"barplot", "y"},    {"isosurface", "c"},
+    {"imshow", "c"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -174,7 +169,6 @@ static plot_func_map_entry_t kind_to_func[] = {
     {"trisurf", plot_trisurf},
     {"tricont", plot_tricont},
     {"shade", plot_shade},
-    {"nonuniformheatmap", plot_heatmap},
 };
 
 
@@ -253,7 +247,7 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
 const char *valid_series_keys[] = {"a",          "c",        "clim",       "error", "c_dims", "foreground_color",
                                    "indices",    "isovalue", "markertype", "rgb",   "s",      "spec",
                                    "step_where", "u",        "v",          "x",     "xlim",   "y",
-                                   "ylim",       "z",        "zlim",       NULL};
+                                   "ylim",       "z",        "z_dims",     "zlim",  NULL};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -318,6 +312,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"ylim", "D"},
                                               {"ylog", "i"},
                                               {"z", "D"},
+                                              {"z_dims", "I"},
                                               {"zflip", "i"},
                                               {"zlim", "D"},
                                               {"zlog", "i"}};
@@ -821,7 +816,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
       args_setdefault(*current_subplot, "xflip", "i", PLOT_DEFAULT_XFLIP);
       args_setdefault(*current_subplot, "yflip", "i", PLOT_DEFAULT_YFLIP);
       args_setdefault(*current_subplot, "zflip", "i", PLOT_DEFAULT_ZFLIP);
-      if (str_equals_any(kind, 1, "heatmap"))
+      if (strcmp(kind, "heatmap") == 0)
         {
           args_setdefault(*current_subplot, "adjust_xlim", "i", 0);
           args_setdefault(*current_subplot, "adjust_ylim", "i", 0);
@@ -940,17 +935,19 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args)
       (stderr, "Stored wsviewport (%lf, %lf, %lf, %lf)\n", wsviewport[0], wsviewport[1], wsviewport[2], wsviewport[3]));
 }
 
-void plot_pre_subplot(grm_args_t *subplot_args)
+error_t plot_pre_subplot(grm_args_t *subplot_args)
 {
   const char *kind;
   double alpha;
+  error_t error = NO_ERROR;
 
   logger((stderr, "Pre subplot processing\n"));
 
   args_values(subplot_args, "kind", "s", &kind);
   logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
   plot_process_viewport(subplot_args);
-  plot_store_coordinate_ranges(subplot_args);
+  error = plot_store_coordinate_ranges(subplot_args);
+  return_if_error;
   plot_process_window(subplot_args);
 
   plot_process_colormap(subplot_args);
@@ -972,6 +969,8 @@ void plot_pre_subplot(grm_args_t *subplot_args)
     {
       gr_settransparency(alpha);
     }
+
+  return NO_ERROR;
 }
 
 void plot_process_colormap(grm_args_t *subplot_args)
@@ -1071,7 +1070,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
     {
       viewport[2] += (1 - (subplot[3] - subplot[2]) * (subplot[3] - subplot[2])) * 0.02;
     }
-  if (str_equals_any(kind, 7, "imshow", "contour", "contourf", "heatmap", "nonuniformheatmap", "hexbin", "quiver"))
+  if (str_equals_any(kind, 7, "imshow", "contour", "contourf", "heatmap", "hexbin", "quiver"))
     {
       viewport[1] -= 0.1;
     }
@@ -1356,7 +1355,7 @@ void plot_process_window(grm_args_t *subplot_args)
   gr_setscale(scale);
 }
 
-void plot_store_coordinate_ranges(grm_args_t *subplot_args)
+error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
 {
   const char *kind;
   const char *style = "";
@@ -1417,6 +1416,36 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
                         }
                     }
                 }
+              else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
+                {
+                  /* in this case `x` or `y` (or both) are missing
+                   * -> set the current min/max_component to the dimensions of `z`
+                   *    (shifted by half a unit to center color blocks) */
+                  const char *other_component_name = (strcmp(*current_component_name, "x") == 0) ? "y" : "x";
+                  double *other_component;
+                  unsigned int other_point_count;
+                  if (args_first_value(*current_series, other_component_name, "D", &other_component,
+                                       &other_point_count))
+                    {
+                      /* The other component is given -> the missing dimension can be calculated */
+                      double *z;
+                      unsigned int z_length;
+                      return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length),
+                                      ERROR_PLOT_MISSING_DATA);
+                      current_point_count = z_length / other_point_count;
+                    }
+                  else
+                    {
+                      /* A heatmap without `x` and `y` values
+                       * -> dimensions can only be read from `z_dims` */
+                      int rows, cols;
+                      return_error_if(!args_values(*current_series, "z_dims", "ii", &rows, &cols),
+                                      ERROR_PLOT_MISSING_DIMENSIONS);
+                      current_point_count = (strcmp(*current_component_name, "x") == 0) ? cols : rows;
+                    }
+                  current_min_component = -0.5;
+                  current_max_component = current_point_count - 0.5;
+                }
             }
           if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
             {
@@ -1441,11 +1470,6 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
                   min_component -= step;
                   max_component += step;
                 }
-            }
-          else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
-            {
-              min_component -= 0.5;
-              max_component += 0.5;
             }
           grm_args_push(subplot_args, (*current_range_keys)[1], "dd", min_component, max_component);
         }
@@ -1523,6 +1547,8 @@ void plot_store_coordinate_ranges(grm_args_t *subplot_args)
           grm_args_push(subplot_args, "xrange", "dd", x_min, x_max);
         }
     }
+
+  return NO_ERROR;
 }
 
 void plot_post_plot(grm_args_t *plot_args)
@@ -2531,123 +2557,167 @@ error_t plot_heatmap(grm_args_t *subplot_args)
 {
   const char *kind = NULL;
   grm_args_t **current_series;
-  int i, zlim_set, icmap[256], *rgba, *data, zlog;
-  unsigned int width, height, z_length;
-  double *x, *y, *z, z_min, z_max, c_min, c_max, tmp, zv;
+  int icmap[256], *rgba = NULL, *data = NULL, zlog = 0;
+  unsigned int i, j, cols, rows, z_length;
+  double *x = NULL, *y = NULL, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
+  error_t error = NO_ERROR;
 
   args_values(subplot_args, "series", "A", &current_series);
   args_values(subplot_args, "kind", "s", &kind);
-  return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
-  return_error_if(!args_first_value(*current_series, "x", "D", &x, &width), ERROR_PLOT_MISSING_DATA);
-  return_error_if(!args_first_value(*current_series, "y", "D", &y, &height), ERROR_PLOT_MISSING_DATA);
-  args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
-  if (!args_values(subplot_args, "zlog", "i", &zlog))
+  args_values(subplot_args, "zlog", "i", &zlog);
+  while (*current_series != NULL)
     {
-      zlog = 0;
-    }
-
-  if (zlog)
-    {
-      z_min = log(z_min);
-      z_max = log(z_max);
-    }
-
-  if (!args_values(subplot_args, "crange", "dd", &c_min, &c_max))
-    {
-      c_min = z_min;
-      c_max = z_max;
-    }
-  if (zlog)
-    {
-      c_min = log(c_min);
-      c_max = log(c_max);
-    }
-
-  if (str_equals_any(kind, 1, "nonuniformheatmap"))
-    {
-      --width;
-      --height;
-    }
-  for (i = 0; i < 256; i++)
-    {
-      gr_inqcolor(1000 + i, icmap + i);
-    }
-
-  data = malloc(height * width * sizeof(int));
-  if (z_max > z_min)
-    {
-      for (i = 0; i < width * height; i++)
+      int is_uniform_heatmap;
+      args_first_value(*current_series, "x", "D", &x, &cols);
+      args_first_value(*current_series, "y", "D", &y, &rows);
+      is_uniform_heatmap = is_equidistant_array(cols, x) && is_equidistant_array(rows, y);
+      cleanup_and_set_error_if(!is_uniform_heatmap && (x == NULL || y == NULL), ERROR_PLOT_MISSING_DATA);
+      cleanup_and_set_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length), ERROR_PLOT_MISSING_DATA);
+      if (x == NULL && y == NULL)
         {
-          if (zlog)
-            {
-              zv = log(z[i]);
-            }
-          else
-            {
-              zv = z[i];
-            }
+          /* If neither `x` nor `y` are given, we need more information about the shape of `z` */
+          cleanup_and_set_error_if(!args_values(*current_series, "z_dims", "ii", &rows, &cols),
+                                   ERROR_PLOT_MISSING_DIMENSIONS);
+        }
+      else if (x == NULL)
+        {
+          cols = z_length / rows;
+        }
+      else if (y == NULL)
+        {
+          rows = z_length / cols;
+        }
+      if (x == NULL)
+        {
+          args_values(*current_series, "xlim", "dd", &x_min, &x_max);
+        }
+      else
+        {
+          x_min = x[0];
+          x_max = x[cols - 1];
+        }
+      if (x == NULL)
+        {
+          args_values(*current_series, "ylim", "dd", &y_min, &y_max);
+        }
+      else
+        {
+          y_min = y[0];
+          y_max = y[rows - 1];
+        }
+      args_values(*current_series, "zlim", "dd", &z_min, &z_max);
+      if (!args_values(*current_series, "clim", "dd", &c_min, &c_max))
+        {
+          c_min = z_min;
+          c_max = z_max;
+        }
 
-          if (zv > z_max || zv < z_min)
+      if (zlog)
+        {
+          z_min = log(z_min);
+          z_max = log(z_max);
+          c_min = log(c_min);
+          c_max = log(c_max);
+        }
+
+      if (!is_uniform_heatmap)
+        {
+          --cols;
+          --rows;
+        }
+      for (i = 0; i < 256; i++)
+        {
+          gr_inqcolor(1000 + i, icmap + i);
+        }
+
+      data = malloc(rows * cols * sizeof(int));
+      cleanup_and_set_error_if(data == NULL, ERROR_MALLOC);
+      if (z_max > z_min)
+        {
+          for (i = 0; i < cols * rows; i++)
             {
-              data[i] = -1;
-            }
-          else
-            {
-              data[i] = (int)((zv - c_min) / (c_max - c_min) * 255);
-              if (data[i] >= 255)
+              if (zlog)
                 {
-                  data[i] = 255;
+                  zv = log(z[i]);
                 }
-              else if (data[i] < 0)
+              else
                 {
-                  data[i] = 0;
+                  zv = z[i];
+                }
+
+              if (zv > z_max || zv < z_min)
+                {
+                  data[i] = -1;
+                }
+              else
+                {
+                  data[i] = (int)((zv - c_min) / (c_max - c_min) * 255);
+                  if (data[i] >= 255)
+                    {
+                      data[i] = 255;
+                    }
+                  else if (data[i] < 0)
+                    {
+                      data[i] = 0;
+                    }
                 }
             }
         }
-    }
-  else
-    {
-      for (i = 0; i < width * height; i++)
+      else
         {
-          data[i] = 0;
-        }
-    }
-  rgba = malloc(height * width * sizeof(int));
-  if (str_equals_any(kind, 1, "heatmap"))
-    {
-      for (i = 0; i < height * width; i++)
-        {
-          if (data[i] == -1)
+          for (i = 0; i < cols * rows; i++)
             {
-              rgba[i] = 0;
-            }
-          else
-            {
-              rgba[i] = (255 << 24) + icmap[data[i]];
+              data[i] = 0;
             }
         }
-      gr_drawimage(0.5, width + 0.5, height + 0.5, 0.5, width, height, rgba, 0);
-    }
-  else
-    {
-      for (i = 0; i < height * width; i++)
+      rgba = malloc(rows * cols * sizeof(int));
+      cleanup_and_set_error_if(rgba == NULL, ERROR_MALLOC);
+      if (is_uniform_heatmap)
         {
-          if (data[i] == -1)
+          for (i = 0; i < rows * cols; i++)
             {
-              rgba[i] = 1256 + 1; /* Invalid color index -> gr_nonuniformcellarray draws a transparent rectangle */
+              if (data[i] == -1)
+                {
+                  rgba[i] = 0;
+                }
+              else
+                {
+                  rgba[i] = (255 << 24) + icmap[data[i]];
+                }
             }
-          else
-            {
-              rgba[i] = data[i] + 1000;
-            }
+          gr_drawimage(x_min, x_max, y_min, y_max, cols, rows, rgba, 0);
         }
-      gr_nonuniformcellarray(x, y, width, height, 1, 1, width, height, rgba);
+      else
+        {
+          for (i = 0; i < rows * cols; i++)
+            {
+              if (data[i] == -1)
+                {
+                  rgba[i] = 1256 + 1; /* Invalid color index -> gr_nonuniformcellarray draws a transparent rectangle */
+                }
+              else
+                {
+                  rgba[i] = data[i] + 1000;
+                }
+            }
+          gr_nonuniformcellarray(x, y, cols, rows, 1, 1, cols, rows, rgba);
+        }
+
+      free(rgba);
+      free(data);
+      rgba = NULL;
+      data = NULL;
+
+      ++current_series;
     }
+
+  plot_draw_colorbar(subplot_args, 0.0, 256);
+
+cleanup:
   free(rgba);
   free(data);
 
-  plot_draw_colorbar(subplot_args, 0.0, 256);
-  return NO_ERROR;
+  return error;
 }
 
 error_t plot_wireframe(grm_args_t *subplot_args)
@@ -3304,7 +3374,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     }
   else if (!str_equals_any(kind, 2, "imshow", "isosurface"))
     {
-      if (str_equals_any(kind, 3, "heatmap", "shade", "nonuniformheatmap"))
+      if (str_equals_any(kind, 3, "heatmap", "shade"))
         {
           ticksize = -ticksize;
         }
@@ -3564,6 +3634,7 @@ error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors)
 
   gr_savestate();
   args_values(args, "viewport", "D", &viewport);
+  /* TODO: What to do, if there is a `crange` and a `zrange`? Merge both together? */
   if (!args_values(args, "crange", "dd", &c_min, &c_max))
     {
       error = args_values(args, "zrange", "dd", &c_min, &c_max);
@@ -4350,7 +4421,10 @@ int grm_plot(const grm_args_t *args)
   args_values(active_plot_args, "subplots", "A", &current_subplot_args);
   while (*current_subplot_args != NULL)
     {
-      plot_pre_subplot(*current_subplot_args);
+      if (plot_pre_subplot(*current_subplot_args) != NO_ERROR)
+        {
+          return 0;
+        }
       args_values(*current_subplot_args, "kind", "s", &kind);
       logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
       if (!plot_func_map_at(plot_func_map, kind, &plot_func))
