@@ -326,7 +326,8 @@ static void initialise_consumer(queue *queues[MAX_NUM_THREADS], int height, int 
  * \param [in] fovy field of view in y direction
  * \param [in] zNear z coordinate of the near clipping plane
  * \param [in] zFar z coordinate of the far clipping plane
- * \param [in] projection_type can be GR3_PROJECTION_PARALLEL or GR3_PROJECTION_PERSPECTIVE
+ * \param [in] projection_type can be GR3_PROJECTION_PARALLEL, GR3_PROJECTION_PERSPECTIVE or GR3_PROJECTION_ORTHOGRAPHIC
+ *
  */
 static matrix get_projection(int width, int height, float fovy, float zNear, float zFar, int projection_type)
 {
@@ -339,6 +340,24 @@ static matrix get_projection(int width, int height, float fovy, float zNear, flo
   matrix perspective;
   if (projection_type == GR3_PROJECTION_PARALLEL)
     {
+      perspective = matrix_ortho_proj(left, right, bottom, top, zNear, zFar);
+    }
+  else if (projection_type == GR3_PROJECTION_ORTHOGRAPHIC)
+    {
+      left = context_struct_.left;
+      right = context_struct_.right;
+      bottom = context_struct_.bottom;
+      top = context_struct_.top;
+      if (aspect > 1)
+        {
+          right *= aspect;
+          left *= aspect;
+        }
+      else
+        {
+          top /= aspect;
+          bottom /= aspect;
+        }
       perspective = matrix_ortho_proj(left, right, bottom, top, zNear, zFar);
     }
   else
