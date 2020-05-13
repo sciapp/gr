@@ -923,6 +923,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
 #if defined(GR3_CAN_USE_VBO) && (defined(GL_ARB_framebuffer_object) || defined(GL_EXT_framebuffer_object))
   double xmin, ymin, xmax, ymax, zmin, zmax;
   int rotation, tilt, scale;
+  int projection_type;
   double min, max;
   int i;
   int *color_data, *colormap;
@@ -1041,8 +1042,30 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
     }
 
   /* TODO: inquire the required resolution */
-  width = 1000;
-  height = 1000;
+  int base_resolution = 1000;
+  gr_inqprojectiontype(&projection_type);
+  if (projection_type == GR_PROJECTION_DEFAULT)
+    {
+      aspect = 1.0;
+      height = base_resolution;
+      width = base_resolution;
+    }
+  else
+    {
+      double vpxmin, vpxmax, vpymin, vpymax;
+      gr_inqviewport(&vpxmin, &vpxmax, &vpymin, &vpymax);
+      aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
+      if (aspect > 1)
+        {
+          width = (int)(base_resolution * aspect);
+          height = base_resolution;
+        }
+      else
+        {
+          width = base_resolution;
+          height = (int)(base_resolution / aspect);
+        }
+    }
 
   pixel_data = malloc(width * height * sizeof(float));
   assert(pixel_data);
@@ -1098,9 +1121,6 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   glDeleteShader(fragment_shader);
   glUseProgram(program);
 
-  int projection_type;
-  gr_inqprojectiontype(&projection_type);
-
   memset(projection_matrix, 0, 16 * sizeof(GLfloat));
   if (projection_type == GR_PROJECTION_DEFAULT)
     {
@@ -1108,7 +1128,6 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
       fovy = 90.0f;
       zNear = 1.0f;
       zFar = 200.0f;
-      aspect = 1.0f * width / height;
       tfov2 = (GLfloat)tan(fovy * M_PI / 360.0);
       GLfloat right = zNear * aspect * tfov2;
       GLfloat top = zNear * tfov2;
@@ -1125,6 +1144,16 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
     {
       double near, far, left, right, bottom, top;
       gr_inqorthographicprojection(&left, &right, &bottom, &top, &near, &far);
+      if (aspect > 1)
+        {
+          right *= aspect;
+          left *= aspect;
+        }
+      else
+        {
+          top /= aspect;
+          bottom /= aspect;
+        }
 
       projection_matrix[0 + 0 * 4] = (GLfloat)(2. / (right - left));
       projection_matrix[0 + 3 * 4] = (GLfloat)(-(left + right) / (right - left));
@@ -1139,9 +1168,16 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
       double near, far, fov;
       gr_inqperspectiveprojection(&near, &far, &fov);
 
-      aspect = (float)width / height;
-      projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2) / aspect);
-      projection_matrix[1 + 1 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2));
+      if (aspect >= 1)
+        {
+          projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2) / aspect);
+          projection_matrix[1 + 1 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2));
+        }
+      else
+        {
+          projection_matrix[0 + 0 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2));
+          projection_matrix[1 + 1 * 4] = (GLfloat)(cos(fov * M_PI / 180 / 2) / sin(fov * M_PI / 180 / 2) * aspect);
+        }
       projection_matrix[2 + 2 * 4] = (GLfloat)((far + near) / (near - far));
       projection_matrix[2 + 3 * 4] = (GLfloat)(2 * far * near / (near - far));
       projection_matrix[3 + 2 * 4] = -1;
@@ -1271,7 +1307,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   for (i = 0; i < height; i++)
     {
       glPixelStorei(GL_PACK_ROW_LENGTH, width);
-      glReadPixels(0, i, width, 1, GL_RED, GL_FLOAT, pixel_data + i * height);
+      glReadPixels(0, i, width, 1, GL_RED, GL_FLOAT, pixel_data + i * width);
     }
 
   if (dmin_ptr && *dmin_ptr >= 0)
