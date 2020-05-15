@@ -297,6 +297,11 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
       break;
 
     case 3:
+      if (wss->wstype == 411)
+        {
+          int null = 0;
+          send_socket(wss->s, (char *)&null, sizeof(int));
+        }
       close_socket(wss->s);
       if (wss->dl.buffer)
         {
