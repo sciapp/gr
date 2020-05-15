@@ -57,6 +57,12 @@ void GKSConnection::readClient()
           if (socket->bytesAvailable() < (long)sizeof(int)) return;
           socket->read((char *)&dl_size, sizeof(unsigned int));
         }
+      /* If `dl_size` is still `0` this is a close request
+       * -> send a close request signal which is processed in the GKSServer instance */
+      if (dl_size == 0 && widget == NULL)
+        {
+          emit(requestApplicationShutdown(*this));
+        }
       if (socket->bytesAvailable() < dl_size) return;
       dl = new char[dl_size + sizeof(int)];
       socket->read(dl, dl_size);
@@ -133,6 +139,8 @@ void GKSServer::connectSocket()
   QTcpSocket *socket = this->nextPendingConnection();
   GKSConnection *connection = new GKSConnection(socket);
   connect(connection, SIGNAL(close(GKSConnection &)), this, SLOT(closeConnection(GKSConnection &)));
+  connect(connection, SIGNAL(requestApplicationShutdown(GKSConnection &)), this,
+          SLOT(closeConnection(GKSConnection &)));
   connections.push_back(connection);
 }
 
