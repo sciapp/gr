@@ -30,6 +30,9 @@
 
 #include "gkswidget.h"
 
+
+QSize GKSWidget::frame_decoration_size_ = QSize();
+
 static void create_pixmap(ws_state_list *p)
 {
   p->pm = new QPixmap(p->width * p->device_pixel_ratio, p->height * p->device_pixel_ratio);
@@ -91,6 +94,7 @@ GKSWidget::GKSWidget(QWidget *parent)
   initialize_data();
 
   setMinimumSize(2, 2);
+  resize(p->width, p->height);
   setWindowTitle(tr("GKS QtTerm"));
   setWindowIcon(QIcon(":/images/gksqt.png"));
 
@@ -111,6 +115,12 @@ GKSWidget::~GKSWidget()
 
 void GKSWidget::paintEvent(QPaintEvent *)
 {
+  if (!frame_decoration_size_.isValid() && !(frameGeometry().size() - size()).isNull())
+    {
+      /* Before the widget is visible `frameGeometry().size()` and `size` are identical
+       * -> Only the `paintEvent` can be used reliably to get the window decoration size */
+      frame_decoration_size_ = frameGeometry().size() - size();
+    }
   if (dl)
     {
       QPainter painter(this);
@@ -194,4 +204,9 @@ void GKSWidget::inqdspsize(double *mwidth, double *mheight, int *width, int *hei
 {
   /* forward call to internally included copy of qtplugin_impl.cxx */
   ::inqdspsize(mwidth, mheight, width, height);
+}
+
+const QSize &GKSWidget::frame_decoration_size()
+{
+  return frame_decoration_size_;
 }

@@ -4,10 +4,11 @@
 #include <iostream>
 
 #include <QApplication>
-#include <QDesktopWidget>
 #include <QtNetwork>
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QScreen>
+#else
+#include <QDesktopWidget>
 #endif
 
 #include "gksserver.h"
@@ -16,6 +17,21 @@
 const int GKSConnection::window_shift = 30;
 unsigned int GKSConnection::index = 0;
 const unsigned int GKSServer::port = 8410;
+
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 3, 0)
+inline QRect operator-(const QRect &lhs, const QMargins &rhs)
+{
+  return QRect(QPoint(lhs.left() + rhs.left(), lhs.top() + rhs.top()),
+               QPoint(lhs.right() - rhs.right(), lhs.bottom() - rhs.bottom()));
+}
+
+inline QRect &operator-=(QRect &rect, const QMargins &margins)
+{
+  rect = rect - margins;
+  return rect;
+}
+#endif
 
 
 GKSConnection::GKSConnection(QTcpSocket *socket) : socket(socket), widget(NULL), dl(NULL), dl_size(0)
@@ -102,13 +118,27 @@ void GKSConnection::newWidget()
     }
   widget = new GKSWidget();
   widget->setWindowTitle(window_title_stream.str().c_str());
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-  QPoint desktop_center = widget->window()->screen()->geometry().center();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+  QRect screen_geometry = QGuiApplication::primaryScreen()->availableGeometry();
 #else
-  QPoint desktop_center = QApplication::desktop()->screenGeometry().center();
+  QDesktopWidget *desktop = QApplication::desktop();
+  QRect screen_geometry = desktop->screenGeometry(desktop->primaryScreen());
 #endif
-  widget->move((desktop_center.x() - widget->width() / 2 + index * window_shift),
-               (desktop_center.y() - widget->height() / 2 + index * window_shift));
+  QPoint screen_center = screen_geometry.center();
+  QRect valid_position_area = screen_geometry - QMargins(0, 0, widget->width(), widget->height());
+  if (GKSWidget::frame_decoration_size().isValid())
+    {
+      valid_position_area -=
+          QMargins(0, 0, GKSWidget::frame_decoration_size().width(), GKSWidget::frame_decoration_size().height());
+    }
+  QPoint widget_position =
+      QPoint((screen_center.x() - widget->width() / 2 - valid_position_area.left() + index * window_shift) %
+                     valid_position_area.width() +
+                 valid_position_area.left(),
+             (screen_center.y() - widget->height() / 2 - valid_position_area.top() + index * window_shift) %
+                     valid_position_area.height() +
+                 valid_position_area.top());
+  widget->move(widget_position);
   connect(this, SIGNAL(data(char *)), widget, SLOT(interpret(char *)));
 
   widget->setAttribute(Qt::WA_QuitOnClose, false);
