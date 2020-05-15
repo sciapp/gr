@@ -3,13 +3,12 @@ JSTerm = function() {
     BOXZOOM_THRESHOLD = 3; // Minimal size in pixels of the boxzoom-box to trigger a boxzoom-event
     BOXZOOM_TRIGGER_THRESHHOLD = 1000; // Time to wait (in ms) before triggering boxzoom event instead
     // of panning when pressing the left mouse button without moving the mouse
-    MAX_KERNEL_CONNECTION_ATTEMPTS = 1000; // Maximum number of kernel initialisation attempts
-    KERNEL_CONNECT_WAIT_TIME = 100; // Time to wait between kernel initialisation attempts
     RECONNECT_PLOT_TIMEOUT = 100; // Time to wait between attempts to connect to a plot's canvas
     RECONNECT_PLOT_MAX_ATTEMPTS = 50; // Maximum number of canvas reconnection attempts
     BOXZOOM_FILL_STYLE = '#bed2e8'; // Fill style of the boxzoom box
     DEFAULT_WIDTH = 600;
     DEFAULT_HEIGHT = 450;
+    CREATE_CANVAS_TIMEOUT = 5000;
 
     ARROW_SIZE = [8, 7];
     STYLE_CSS = `
@@ -67,38 +66,56 @@ JSTerm = function() {
       <span class="jsterm-tooltip-value">{$y}</span>`;
     TOOLTIP_MISSING_VALUE_REPLACEMENT = '[n.d.]';
 
-    var grm, comm, widgets = {},
-      jupyterRunning = false,
-      scheduled_merges = [];
+    var grm, ws, widgets = {},
+      wsOpen = false,
+      scheduled_merges = [],
+      references = {},
+      ref_id = null;
     var display = [],
       widgets_to_save = new Set(),
-      data_loaded = false;
-
-    encode = function(str) {
-      var buf = [];
-      for (var i = str.length - 1; i >= 0; i--) {
-        buf.unshift(['&#', str[i].charCodeAt(), ';'].join(''));
-      }
-      return buf.join('');
-    };
-    decode = function(str) {
-      return str.replace(/&#(\d+);/g, function(match, dec) {
-        return String.fromCharCode(dec);
-      });
-    };
+      data_loaded = false,
+      prev_id = -1;
 
     /**
-     * Sends a mouse-event via jupyter-comm
+     * Sends a mouse-event via websocket
      * @param  {Object} data Data describing the event
      * @param  {string} id   Identifier of the calling plot
      */
     sendEvt = function(data, id) {
-      if (jupyterRunning) {
-        comm.send({
+      if (wsOpen) {
+        ws.send(JSON.stringify({
           "type": "evt",
           "content": data,
           "id": id
-        });
+        }));
+      }
+    };
+
+    sendAck = function(id) {
+      if (wsOpen) {
+        ws.send(JSON.stringify({
+          "type": "ack",
+          "dispid": id
+        }));
+      }
+    };
+
+    createDisplay = function(id) {
+      if (wsOpen) {
+        ws.send(JSON.stringify({
+          "type": "createDisplay",
+          "dispid": id
+        }));
+      }
+    };
+
+    sendValue = function(key, value) {
+      if (wsOpen) {
+        ws.send(JSON.stringify({
+          "type": "value",
+          "key": key,
+          "value": value
+        }));
       }
     };
 
@@ -106,13 +123,19 @@ JSTerm = function() {
      * Creates a canvas to display a JSTermWidget
      * @param  {JSTermWidget} widget The widget to be displayed
      */
-    createCanvas = function(widget) {
+    createCanvas = function(widget, msg_sent = false) {
       let disp = document.getElementById('jsterm-display-' + widget.display);
       if (disp === null) {
         //TODO: Wenn ungültiges Canvas übergeben wird löst dies ein endlose rekursion aus
         if (display.length > 0) {
-          widget.display = display[0];
-          return createCanvas(widget);
+          if (!msg_sent) {
+            widget.display = display[0];
+            createDisplay(widget.display);
+          }
+          window.setTimeout(function() {
+            createCanvas(widget, msg_sent = true);
+          }, CREATE_CANVAS_TIMEOUT);
+          return;
         } else {
           console.error('Can not create canvas. No active display.');
         }
@@ -135,15 +158,16 @@ JSTerm = function() {
         div.appendChild(canvas);
         disp.appendChild(div);
         widget.connectCanvas();
+        widget.draw();
       }
     };
 
     /**
-     * Sends a save-event via jupyter-comm
+     * Sends a save-event via websocket
      */
     saveData = function(data, plot_id, display, width, height, tooltip) {
-      if (jupyterRunning) {
-        comm.send({
+      if (wsOpen) {
+        ws.send(JSON.stringify({
           "type": "save",
           "display_id": display,
           "content": {
@@ -160,54 +184,70 @@ JSTerm = function() {
                     "html": "` + tooltip.html + `",
                     "data": ` + JSON.stringify(tooltip.data) + `
                   },
-                  "display_id": "` +  display + `",
-                  "plot_id": ` +  plot_id + `,
+                  "display_id": "` + display + `",
+                  "plot_id": ` + plot_id + `,
                   "grm": ` + JSON.stringify(data) + `
                 });
               `
             }
           }
-        });
+        }));
       }
     };
 
     /**
-     * Registration/initialisation of the jupyter-comm
+     * Establishes the websocket connection
      */
-    this.registerComm = function() {
-      let kernel;
-      if (typeof Jupyter !== 'undefined' && Jupyter != null) {
-        kernel = Jupyter.notebook.kernel;
-        if (typeof kernel === 'undefined' || kernel == null) {
-          return;
-        }
-      } else {
+    this.connectWs = function() {
+      if (!GR.is_ready) {
+        GR.ready(function() {
+          return this.connectWs();
+        }.bind(this));
         return;
       }
-      comm = kernel.comm_manager.new_comm('jsterm_comm');
-      comm.on_msg(function(msg) {
-        let data = msg.content.data;
+      ws = new WebSocket(WEB_SOCKET_ADDRESS);
+      ws.onopen = function() {
+        wsOpen = true;
+      };
+      ws.onerror = function(e) {
+        wsOpen = false;
+      };
+      ws.onmessage = function(msg) {
+        let data = JSON.parse(msg.data);
         if (data.type === 'evt') {
-          if (typeof widgets[data.id] !== 'undefined') {
-            widgets[data.id].msgHandleEvent(data);
+          if (typeof references[data.id] !== 'undefined') {
+            references[data.id].msgHandleEvent(data);
           }
         } else if (data.type === 'cmd') {
           if (typeof data.id !== 'undefined') {
-            if (typeof widgets[data.id] !== 'undefined') {
-              widgets[data.id].msgHandleCommand(data);
+            if (typeof references[data.id] !== 'undefined') {
+              references[data.id].msgHandleCommand(data);
             }
           } else {
-            for (let key in widgets) {
-              widgets[key].msgHandleCommand(data);
+            for (let key in references) {
+              references[key].msgHandleCommand(data);
             }
           }
+        } else if (data.type === 'inq') {
+          switch (data.value) {
+            case "prev_id":
+              sendValue("prev_id", prev_id);
+              break;
+          }
+        } else if (data.type === 'set_ref_id') {
+          ref_id = data.id;
         } else if (data.type === 'draw') {
-          draw(msg);
+          draw(data);
         }
-      });
-      comm.on_close(function() {});
+      };
+      ws.onclose = function() {
+        wsOpen = false;
+      };
+      ws.onopen = function() {
+        ws.send('js-running');
+      };
       window.addEventListener('beforeunload', function(e) {
-        comm.close();
+        ws.close();
       });
     };
 
@@ -221,9 +261,9 @@ JSTerm = function() {
         return;
       }
       let arguments = grm.args_new();
-      grm.read(arguments, msg.content.data.json);
-      display.push(msg.content.data.display);
-      grm.merge_named(arguments, "jstermMerge" + msg.content.data.display);
+      grm.read(arguments, msg.json);
+      display.push(msg.display);
+      grm.merge_named(arguments, "jstermMerge" + msg.display);
       grm.args_delete(arguments);
     };
 
@@ -241,25 +281,24 @@ JSTerm = function() {
       let created_widgets = [];
       let timestamps = {};
       for (let i = 0; i < storedData.length; i++) {
-          let widget_data = storedData[i];
-          if (typeof timestamps[widget_data.plot_id] === 'undefined' || widget_data.timestamp < timestamps[widget_data.plot_id]) {
-            timestamps[widget_data.plot_id] = widget_data.timestamp;
-            widgets[widget_data.plot_id] = new JSTermWidget(widget_data.plot_id);
-            widgets[widget_data.plot_id].display = widget_data.display_id;
-            widgets[widget_data.plot_id].width = widget_data.width;
-            widgets[widget_data.plot_id].height = widget_data.height;
-            widgets[widget_data.plot_id].tooltip.html = widget_data.tooltip.html;
-            widgets[widget_data.plot_id].tooltip.data = widget_data.tooltip.data;
-            // TODO: Das hier erst am Schluss machen, wenn klar ist, dass keine aktuelleren Daten gefunden wurden
-            createCanvas(widgets[widget_data.plot_id]);
-            grm.switch(widget_data.plot_id);
-            let data = grm.load_from_str(widget_data.grm);
-            widgets[widget_data.plot_id].draw();
-          } else {
-            // TODO
-            console.log('older widget data for plot ID', widget_data.plot_id, 'found');
-          }
-        //}
+        let widget_data = storedData[i];
+        if (typeof timestamps[widget_data.plot_id] === 'undefined' || widget_data.timestamp < timestamps[widget_data.plot_id]) {
+          timestamps[widget_data.plot_id] = widget_data.timestamp;
+          widgets[widget_data.plot_id] = new JSTermWidget(widget_data.plot_id);
+          widgets[widget_data.plot_id].display = widget_data.display_id;
+          widgets[widget_data.plot_id].width = widget_data.width;
+          widgets[widget_data.plot_id].height = widget_data.height;
+          widgets[widget_data.plot_id].tooltip.html = widget_data.tooltip.html;
+          widgets[widget_data.plot_id].tooltip.data = widget_data.tooltip.data;
+          // TODO: Das hier erst am Schluss machen, wenn klar ist, dass keine aktuelleren Daten gefunden wurden
+          createCanvas(widgets[widget_data.plot_id]);
+          grm.switch(widget_data.plot_id);
+          let data = grm.load_from_str(widget_data.grm);
+          widgets[widget_data.plot_id].draw();
+        } else {
+          // TODO
+          console.log('older widget data for plot ID', widget_data.plot_id, 'found');
+        }
       }
     };
 
@@ -299,6 +338,7 @@ JSTerm = function() {
 
         this.width = DEFAULT_WIDTH;
         this.height = DEFAULT_HEIGHT;
+        this.ref_id = null;
 
         this.tooltip = {
           "html": "",
@@ -329,12 +369,12 @@ JSTerm = function() {
       };
 
       /**
-       * Send an event fired by widget via jupyter-comm
+       * Send an event fired by widget via websocket
        * @param  {Object} data Event description
        */
       this.sendEvt = function(data) {
-        if (this.sendEvents) {
-          sendEvt(data, this.id);
+        if (this.sendEvents && this.ref_id !== null) {
+          sendEvt(data, this.ref_id);
         }
       };
 
@@ -730,7 +770,7 @@ JSTerm = function() {
               this.overlayArrowRight.style.display = 'block';
               this.overlayArrowLeft.style.display = 'none';
             } else {
-              this.tooltipDiv.style.left = (tooltipInfo.xpx  + ARROW_SIZE[1]) + 'px';
+              this.tooltipDiv.style.left = (tooltipInfo.xpx + ARROW_SIZE[1]) + 'px';
               this.tooltipDiv.style.right = 'auto';
               this.tooltipDiv.style.top = (tooltipInfo.ypx - 0.5 * this.tooltipDiv.clientHeight) + 'px';
               this.overlayArrowLeft.style.left = tooltipInfo.xpx + 'px';
@@ -827,7 +867,7 @@ JSTerm = function() {
       };
 
       /**
-       * Handles a command received cia jupyter comm
+       * Handles a command received via websocket
        * @param  {Object} msg Received msg containing the command
        */
       this.msgHandleCommand = function(msg) {
@@ -855,14 +895,14 @@ JSTerm = function() {
       };
 
       /**
-       * Draw a plot described by a message received via jupyter comm
+       * Draw a plot described by a message received via websocket
        * @param  {Object} msg message containing the draw-command
        */
       this.draw = function() {
         if (typeof this.display === 'undefined' || document.getElementById('jsterm-' + this.id) == null) {
           this.canvas = undefined;
           this.display = display[0];
-          createCanvas(this);
+          return createCanvas(this);
         }
         if (document.getElementById('jsterm-' + this.id) !== this.canvas || typeof this.canvas === 'undefined' || typeof this.overlayCanvas === 'undefined') {
           this.connectCanvas();
@@ -954,6 +994,15 @@ JSTerm = function() {
       if (typeof widgets[evt.plot_id] === 'undefined') {
         widgets[evt.plot_id] = new JSTermWidget(evt.plot_id);
       }
+      prev_id = evt.plot_id;
+      if (ref_id != null) {
+        if (typeof references[ref_id] !== 'undefined') {
+          references[ref_id].ref_id = null;
+        }
+        references[ref_id] = widgets[evt.plot_id];
+        references[ref_id].ref_id = ref_id;
+        ref_id = null;
+      }
       widgets_to_save.add(evt.plot_id);
     };
 
@@ -982,6 +1031,7 @@ JSTerm = function() {
         }
         display.shift();
         widgets_to_save.clear();
+        sendAck(display_uuid);
       }
     };
 
@@ -1014,9 +1064,6 @@ JSTerm = function() {
           grm.merge(arguments);
           grm.args_delete(arguments);
         }
-        if (typeof Jupyter !== 'undefined') {
-          jupyterRunning = true;
-        }
         if (document.getElementById('jsterm-style') == null) {
           let style = document.createElement('style');
           style.id = 'jsterm-style';
@@ -1044,5 +1091,5 @@ JSTerm = function() {
 
 if (typeof jsterm === 'undefined') {
   jsterm = new JSTerm();
-  jsterm.registerComm();
+  jsterm.connectWs();
 }
