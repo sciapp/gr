@@ -18,6 +18,7 @@ public:
   virtual ~GKSWidget();
 
   static void inqdspsize(double *mwidth, double *mheight, int *width, int *height);
+  static const QSize &frame_decoration_size();
 
 public slots:
   void interpret(char *dl);
@@ -31,6 +32,7 @@ private:
   bool is_mapped;
   bool resize_requested_by_application;
   char *dl;
+  static QSize frame_decoration_size_;
 };
 
 #endif
