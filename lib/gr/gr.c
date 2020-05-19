@@ -5962,7 +5962,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   yi = modern_text ? new_major[1] : major_tick;
                   if ((zi != z_org) && (major_z > 0))
                     text3d(modern_text ? new_label[0] : x_org, modern_text ? new_label[1] : y_label, zi,
-                           gr_ftoa(string, zi, z_tick * major_z), modern_text ? axis : 0);
+                           gr_ftoa(string, zi, z_tick * major_z), modern_projection_type ? axis : 0);
                 }
               else
                 {
@@ -6061,12 +6061,12 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
           x_label = x_log(x_lin(x_org) + 3. * tick);
           if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
             {
-              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
               if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
             }
           else
             {
-              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
               if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
             }
           axis = 2;
@@ -6161,7 +6161,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   zi = modern_text ? new_major[2] : z_org;
                   if ((yi != y_org) && (major_y > 0))
                     text3d(modern_text ? new_label[0] : x_label, yi, modern_text ? new_label[2] : z_org,
-                           gr_ftoa(string, yi, y_tick * major_y), modern_text ? axis : 0);
+                           gr_ftoa(string, yi, y_tick * major_y), modern_projection_type ? axis : 0);
                 }
               else
                 {
@@ -6363,7 +6363,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   zi = modern_text ? new_major[2] : z_org;
                   if ((xi != x_org) && (major_x > 0))
                     text3d(xi, modern_text ? new_label[1] : y_label, modern_text ? new_label[2] : z_org,
-                           gr_ftoa(string, xi, x_tick * major_x), modern_text ? axis : 0);
+                           gr_ftoa(string, xi, x_tick * major_x), modern_projection_type ? axis : 0);
                 }
               else
                 {
