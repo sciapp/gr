@@ -290,7 +290,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"panzoom", "D"},
                                               {"reset_ranges", "i"},
                                               {"rotation", "i"},
-                                              {"size", "D"},
+                                              {"size", "D|A"},
                                               {"spec", "s"},
                                               {"step_where", "s"},
                                               {"style", "s"},
@@ -4231,6 +4231,27 @@ int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int 
   return _plot_id > 0 || _subplot_id > 0 || _series_id > 0;
 }
 
+static double get_meters_per_unit(const char *unit)
+{
+  const struct
+  {
+    const char *symbol;
+    double meters_per_unit;
+  } units[] = {
+      {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
+      {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
+  };
+  int i;
+  for (i = 0; i < sizeof(units) / sizeof(units[0]); ++i)
+    {
+      if (!strcmp(unit, units[i].symbol))
+        {
+          return units[i].meters_per_unit;
+        }
+    }
+  return 0;
+}
+
 int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
                     double *metric_height)
 {
@@ -4239,6 +4260,8 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
   double dpm[2], dpi[2];
   int tmp_size_i[2], pixel_size[2];
   double tmp_size_d[2], metric_size[2];
+  grm_args_ptr_t tmp_size_a[2];
+  const char *tmp_size_s[2];
   int i;
 
   if (plot_args == NULL)
@@ -4264,27 +4287,16 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     {
       for (i = 0; i < 2; ++i)
         {
-          pixel_size[i] = round(tmp_size_d[i] * dpi[i]);
+          pixel_size[i] = (int)round(tmp_size_d[i] * dpi[i]);
           metric_size[i] = tmp_size_d[i] / 0.0254;
         }
     }
   else if (args_values(plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
     {
-      if (dpi[0] > 300 || dpi[1] > 300)
+      for (i = 0; i < 2; ++i)
         {
-          for (i = 0; i < 2; ++i)
-            {
-              pixel_size[i] = round(tmp_size_d[i] * dpi[i] / 100.0);
-              metric_size[i] = tmp_size_d[i] / 0.000254;
-            }
-        }
-      else
-        {
-          for (i = 0; i < 2; ++i)
-            {
-              pixel_size[i] = round(tmp_size_d[i]);
-              metric_size[i] = tmp_size_d[i] / dpm[i];
-            }
+          pixel_size[i] = (int)round(tmp_size_d[i]);
+          metric_size[i] = tmp_size_d[i] / dpm[i];
         }
     }
   else if (args_values(plot_args, "size", "ii", &tmp_size_i[0], &tmp_size_i[1]))
@@ -4295,6 +4307,43 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
           metric_size[i] = tmp_size_i[i] / dpm[i];
         }
     }
+  else if (args_values(plot_args, "size", "aa", &tmp_size_a[0], &tmp_size_a[1]))
+    {
+      for (i = 0; i < 2; ++i)
+        {
+          double pixels_per_unit = 1;
+          if (args_values(tmp_size_a[i], "unit", "s", &tmp_size_s[i]))
+            {
+              if (strcmp(tmp_size_s[i], "px") != 0)
+                {
+                  double meters_per_unit = get_meters_per_unit(tmp_size_s[i]);
+                  if (meters_per_unit)
+                    {
+                      pixels_per_unit = meters_per_unit * dpm[i];
+                    }
+                  else
+                    {
+                      debug_print_error(("The unit %s is unknown.\n", tmp_size_s[i]));
+                    }
+                }
+            }
+          if (args_values(tmp_size_a[i], "value", "i", &tmp_size_i[i]))
+            {
+              tmp_size_d[i] = tmp_size_i[i] * pixels_per_unit;
+            }
+          else if (args_values(tmp_size_a[i], "value", "d", &tmp_size_d[i]))
+            {
+              tmp_size_d[i] = tmp_size_d[i] * pixels_per_unit;
+            }
+          else
+            {
+              /* If no value is given, fall back to default value */
+              return 0;
+            }
+          pixel_size[i] = (int)round(tmp_size_d[i]);
+          metric_size[i] = tmp_size_d[i] / dpm[i];
+        }
+    }
   else
     {
       /* If this branch is executed, there is an internal error (size has a default value if not set by the user) */
@@ -4302,6 +4351,7 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     }
 
   logger((stderr, "figure pixel size: (%d, %d)\n", pixel_size[0], pixel_size[1]));
+  logger((stderr, "figure metric size: (%f, %f)\n", metric_size[0], metric_size[1]));
   logger((stderr, "device dpi: (%lf, %lf)\n", dpi[0], dpi[1]));
 
   if (pixel_width != NULL)
