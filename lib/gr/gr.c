@@ -5672,7 +5672,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 {
   int errind, tnr;
   int ltype, halign, valign, font, prec, clsw, axis;
-  double chux, chuy, slant, fx, fy, fz, flip;
+  double chux, chuy, slant, fx, fy, fz;
 
   double clrt[4], wn[4], vp[4];
   double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
@@ -5682,11 +5682,12 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int *anglep, which_rep, rep;
 
   double tick, minor_tick, major_tick, x_label, y_label;
+  double new_minor[3], new_major[3], new_label[3];
   double x0, y0, z0, xi, yi, zi;
   int64_t i;
   int decade, exponent;
   char string[256];
-  int modern_projection_type;
+  int modern_projection_type, modern_text, plane, direction, flip;
   fx = tx.camera_pos_x - tx.focus_point_x;
   fy = tx.camera_pos_y - tx.focus_point_y;
   fz = tx.camera_pos_z - tx.focus_point_z;
@@ -5783,27 +5784,98 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (z_tick != 0)
     {
-      tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
-
-      minor_tick = y_log(y_lin(y_org) + tick);
-      major_tick = y_log(y_lin(y_org) + 2. * tick);
-      y_label = y_log(y_lin(y_org) + 3. * tick);
-
-      /* set text alignment */
-
-      if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+      modern_text = modern_projection_type && !(OPTION_Z_LOG & lx.scale_options);
+      if (modern_text)
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+          plane = (fy > fabs(fx) || fy <= -fabs(fx)) ? 1 : 0; /* 1: xz-direction, 0: yz-direction */
+          flip = tx.up_z < 0 ? -1 : 1;
+          direction = (plane && fy <= -fabs(fx)) || (!plane && fx > fabs(fy)); /* 1: positive, 0: negative */
 
-          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+          if (plane)
+            {
+              xi = (x_max + x_min) / 2 - x_org;
+              if (fabs(xi) >= 1e-10)
+                {                                      /* if the origin is not centered in the field */
+                  direction = (xi < 0) == (flip == 1); /* align the text and ticks to the 'outside' */
+                }
+            }
+          else
+            {
+              yi = (y_max + y_min) / 2 - y_org;
+              if (fabs(yi) >= 1e-10)
+                {
+                  direction = (yi < 0) == (flip == 1);
+                }
+            }
+
+          axis = plane ? 4 : 3;
+          axis *= direction ? 1 : -1;
+          if (direction != ((plane && fy <= -fabs(fx)) || (!plane && fx > fabs(fy))))
+            {             /* if direction was flipped to the outside */
+              axis *= -1; /* Flip text and align to appear natural */
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          gks_set_text_upvec(0, flip * 1);
+          if (plane) /* Ticks on x-z plane */
+            {
+              tick = flip * fabs(tick_size) * (x_max - x_min) / (vp[3] - vp[2]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_log(x_lin(x_org) + tick);
+              new_minor[1] = y_org;
+              new_minor[2] = z_org;
+              new_major[0] = x_log(x_lin(x_org) + 2. * tick);
+              new_major[1] = y_org;
+              new_major[2] = z_org;
+              new_label[0] = x_log(x_lin(x_org) + 3. * tick);
+              new_label[1] = y_org;
+              new_label[2] = z_org;
+            }
+          else /* Ticks on y-z plane */
+            {
+              tick = flip * fabs(tick_size) * (y_max - y_min) / (vp[1] - vp[0]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_org;
+              new_minor[1] = y_log(y_lin(y_org) + tick);
+              new_minor[2] = z_org;
+              new_major[0] = x_org;
+              new_major[1] = y_log(y_lin(y_org) + 2. * tick);
+              new_major[2] = z_org;
+              new_label[0] = x_org;
+              new_label[1] = y_log(y_lin(y_org) + 3. * tick);
+              new_label[2] = z_org;
+            }
         }
       else
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
-          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+          minor_tick = y_log(y_lin(y_org) + tick);
+          major_tick = y_log(y_lin(y_org) + 2. * tick);
+          y_label = y_log(y_lin(y_org) + 3. * tick);
+
+          /* set text alignment */
+
+          if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+
+              if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+
+              if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+            }
+
+          axis = 3;
         }
-
       if (!modern_projection_type)
         {
           rep = rep_table[which_rep][2];
@@ -5880,47 +5952,25 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           start_pline3d(x_org, y_org, z_min);
 
-          flip = tx.up_z < 0 ? -1 : 1;
-          if (fy > fabs(fx))
-            {
-              gks_set_text_upvec(0, flip * 1);
-              axis = -4;
-            }
-          else if (fx > fabs(fy))
-            {
-              gks_set_text_upvec(0, flip * 1);
-              axis = 3;
-            }
-          else if (fy <= -fabs(fx))
-            {
-              gks_set_text_upvec(0, flip * 1);
-              axis = 4;
-            }
-          else
-            {
-              gks_set_text_upvec(0, flip * 1);
-              axis = -3;
-            }
           while (zi <= z_max)
             {
               pline3d(x_org, y_org, zi);
 
-              if (major_z != 0)
+              if (major_z == 0 || i % major_z == 0)
                 {
-                  if (i % major_z == 0)
-                    {
-                      yi = major_tick;
-                      if ((zi != z_org) && (major_z > 0))
-                        text3d(x_org, y_label, zi, gr_ftoa(string, zi, z_tick * major_z),
-                               modern_projection_type ? axis : 0);
-                    }
-                  else
-                    yi = minor_tick;
+                  xi = modern_text ? new_major[0] : x_org;
+                  yi = modern_text ? new_major[1] : major_tick;
+                  if ((zi != z_org) && (major_z > 0))
+                    text3d(modern_text ? new_label[0] : x_org, modern_text ? new_label[1] : y_label, zi,
+                           gr_ftoa(string, zi, z_tick * major_z), modern_projection_type ? axis : 0);
                 }
               else
-                yi = major_tick;
+                {
+                  xi = modern_text ? new_minor[0] : x_org;
+                  yi = modern_text ? new_minor[1] : minor_tick;
+                }
 
-              pline3d(x_org, yi, zi);
+              pline3d(xi, yi, zi);
               pline3d(x_org, y_org, zi);
 
               i++;
@@ -5935,26 +5985,94 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (y_tick != 0)
     {
-      tick = tick_size * (x_max - x_min) / (vp[1] - vp[0]);
-
-      minor_tick = x_log(x_lin(x_org) + tick);
-      major_tick = x_log(x_lin(x_org) + 2. * tick);
-      x_label = x_log(x_lin(x_org) + 3. * tick);
-
-      /* set text alignment */
-
-      if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
+      modern_text = modern_projection_type && !(OPTION_Y_LOG & lx.scale_options);
+      if (modern_text)
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          plane = (fx > fabs(fz) || fx <= -fabs(fz)) ? 1 : 0; /* 1: yz-direction, 0: xy-direction */
+          flip = tx.up_y < 0 ? -1 : 1;
+          direction = (plane && fx <= -fabs(fz)) || (!plane && fz > fabs(fx)); /* 1: positive, 0: negative */
 
-          if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
+          if (plane == 0)
+            {
+              xi = (x_max + x_min) / 2 - x_org;
+              if (fabs(xi) >= 1e-10)
+                {                                      /* if the origin is not centered in the field */
+                  direction = (xi < 0) == (flip == 1); /* align the text and ticks to the 'outside' */
+                }
+            }
+          else
+            {
+              zi = (z_max + z_min) / 2 - z_org;
+              if (fabs(zi) >= 1e-10)
+                {
+                  direction = (zi < 0) == (flip == 1);
+                }
+            }
+
+          axis = plane ? 3 : 2;
+          axis *= (direction ? 1 : -1);
+          if ((direction != ((plane && fx <= -fabs(fz)) || (!plane && fz > fabs(fx)))) != plane)
+            {             /* if direction was flipped to the outside */
+              axis *= -1; /* Flip text and align to appear natural */
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          gks_set_text_upvec(-plane * flip, !plane * flip);
+          if (plane) /* Ticks on y-z plane */
+            {
+              tick = flip * fabs(tick_size) * (z_max - z_min) / (vp[1] - vp[0]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_org;
+              new_minor[1] = y_org;
+              new_minor[2] = z_log(z_lin(z_org) + tick);
+              new_major[0] = x_org;
+              new_major[1] = y_org;
+              new_major[2] = z_log(z_lin(z_org) + 2. * tick);
+              new_label[0] = x_org;
+              new_label[1] = y_org;
+              new_label[2] = z_log(z_lin(z_org) + 3. * tick);
+            }
+          else /* Ticks on x-z plane */
+            {
+              tick = flip * fabs(tick_size) * (x_max - x_min) / (vp[1] - vp[0]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_log(x_lin(x_org) + tick);
+              new_minor[1] = y_org;
+              new_minor[2] = z_org;
+              new_major[0] = x_log(x_lin(x_org) + 2. * tick);
+              new_major[1] = y_org;
+              new_major[2] = z_org;
+              new_label[0] = x_log(x_lin(x_org) + 3. * tick);
+              new_label[1] = y_org;
+              new_label[2] = z_org;
+            }
         }
       else
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+          tick = tick_size * (x_max - x_min) / (vp[1] - vp[0]);
 
-          if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
+          minor_tick = x_log(x_lin(x_org) + tick);
+          major_tick = x_log(x_lin(x_org) + 2. * tick);
+          x_label = x_log(x_lin(x_org) + 3. * tick);
+          if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+              if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+              if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
+            }
+          axis = 2;
         }
+
+      /* set text alignment */
 
       if (!modern_projection_type)
         {
@@ -6033,47 +6151,25 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           start_pline3d(x_org, y_min, z_org);
 
-          flip = tx.up_y < 0 ? -1 : 1;
-          if (fx <= -fabs(fz))
-            {
-              axis = -3;
-              gks_set_text_upvec(flip * -1, 0);
-            }
-          else if (fz <= -fabs(fx))
-            {
-              axis = -2;
-              gks_set_text_upvec(0, flip * 1);
-            }
-          else if (fx >= fabs(fz))
-            {
-              axis = 3;
-              gks_set_text_upvec(flip * 1, 0);
-            }
-          else
-            {
-              axis = 2;
-              gks_set_text_upvec(0, flip * 1);
-            }
           while (yi <= y_max)
             {
               pline3d(x_org, yi, z_org);
 
-              if (major_y != 0)
+              if (major_y == 0 || i % major_y == 0)
                 {
-                  if (i % major_y == 0)
-                    {
-                      xi = major_tick;
-                      if ((yi != y_org) && (major_y > 0))
-                        text3d(x_label, yi, z_org, gr_ftoa(string, yi, y_tick * major_y),
-                               modern_projection_type ? axis : 0);
-                    }
-                  else
-                    xi = minor_tick;
+                  xi = modern_text ? new_major[0] : major_tick;
+                  zi = modern_text ? new_major[2] : z_org;
+                  if ((yi != y_org) && (major_y > 0))
+                    text3d(modern_text ? new_label[0] : x_label, yi, modern_text ? new_label[2] : z_org,
+                           gr_ftoa(string, yi, y_tick * major_y), modern_projection_type ? axis : 0);
                 }
               else
-                xi = major_tick;
+                {
+                  xi = modern_text ? new_minor[0] : minor_tick;
+                  zi = modern_text ? new_minor[2] : z_org;
+                }
 
-              pline3d(xi, yi, z_org);
+              pline3d(xi, yi, zi);
               pline3d(x_org, yi, z_org);
 
               i++;
@@ -6088,25 +6184,96 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (x_tick != 0)
     {
-      tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
-
-      minor_tick = y_log(y_lin(y_org) + tick);
-      major_tick = y_log(y_lin(y_org) + 2. * tick);
-      y_label = y_log(y_lin(y_org) + 3. * tick);
-
-      /* set text alignment */
-
-      if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+      modern_text = modern_projection_type && !(OPTION_X_LOG & lx.scale_options);
+      if (modern_text)
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+          plane = (fz > fabs(fy) || fz <= -fabs(fy)) ? 1 : 0; /* 1: xy-direction, 0: xz-direction */
+          flip = tx.up_x < 0 ? -1 : 1;
+          direction = (plane && fz <= -fabs(fy)) || (!plane && fy > fabs(fz)); /* 1: positive, 0: negative */
 
-          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+          if (plane == 0)
+            {
+              zi = (z_max + z_min) / 2 - z_org;
+              if (fabs(zi) >= 1e-10)
+                {                                      /* if the origin is not centered in the field */
+                  direction = (zi < 0) == (flip == 1); /* align the text and ticks to the 'outside' */
+                }
+            }
+          else
+            {
+              yi = (y_max + y_min) / 2 - y_org;
+              if (fabs(yi) >= 1e-10)
+                {
+                  direction = (yi < 0) == (flip == 1);
+                }
+            }
+
+          axis = plane ? 2 : 4;
+          axis *= -(direction ? 1 : -1);
+          if (direction != ((plane && fz <= -fabs(fy)) || (!plane && fy > fabs(fz))))
+            {             /* if direction was flipped to the outside */
+              axis *= -1; /* Flip text and align to appear natural */
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          gks_set_text_upvec(flip, 0);
+          if (plane) /* Ticks on y-z plane */
+            {
+              tick = flip * fabs(tick_size) * (y_max - y_min) / (vp[3] - vp[2]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_org;
+              new_minor[1] = y_log(y_lin(y_org) + tick);
+              new_minor[2] = z_org;
+              new_major[0] = x_org;
+              new_major[1] = y_log(y_lin(y_org) + 2. * tick);
+              new_major[2] = z_org;
+              new_label[0] = x_org;
+              new_label[1] = y_log(y_lin(y_org) + 3. * tick);
+              new_label[2] = z_org;
+            }
+          else /* Ticks on x-z plane */
+            {
+              tick = flip * fabs(tick_size) * (z_max - z_min) / (vp[1] - vp[0]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_org;
+              new_minor[1] = y_org;
+              new_minor[2] = z_log(z_lin(z_org) + tick);
+              new_major[0] = x_org;
+              new_major[1] = y_org;
+              new_major[2] = z_log(z_lin(z_org) + 2. * tick);
+              new_label[0] = x_org;
+              new_label[1] = y_org;
+              new_label[2] = z_log(z_lin(z_org) + 3. * tick);
+            }
         }
       else
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
-          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+          minor_tick = y_log(y_lin(y_org) + tick);
+          major_tick = y_log(y_lin(y_org) + 2. * tick);
+          y_label = y_log(y_lin(y_org) + 3. * tick);
+
+          /* set text alignment */
+
+          if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+
+              if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+
+              if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+            }
+          axis = 1;
         }
 
       if (!modern_projection_type)
@@ -6186,47 +6353,25 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
           start_pline3d(x_min, y_org, z_org);
 
-          flip = (tx.up_x < 0) ? -1 : 1;
-          if (fy <= -fabs(fz))
-            {
-              gks_set_text_upvec(flip * 1, 0);
-              axis = 4;
-            }
-          else if (fz <= -fabs(fy))
-            {
-              gks_set_text_upvec(0, flip * -1);
-              axis = -1;
-            }
-          else if (fy >= fabs(fz))
-            {
-              gks_set_text_upvec(flip * -1, 0);
-              axis = -4;
-            }
-          else
-            {
-              gks_set_text_upvec(0, flip * -1);
-              axis = 1;
-            }
           while (xi <= x_max)
             {
               pline3d(xi, y_org, z_org);
 
-              if (major_x != 0)
+              if (major_x == 0 || i % major_x == 0)
                 {
-                  if (i % major_x == 0)
-                    {
-                      yi = major_tick;
-                      if ((xi != x_org) && (major_x > 0))
-                        text3d(xi, y_label, z_org, gr_ftoa(string, xi, x_tick * major_x),
-                               modern_projection_type ? axis : 0);
-                    }
-                  else
-                    yi = minor_tick;
+                  yi = modern_text ? new_major[1] : major_tick;
+                  zi = modern_text ? new_major[2] : z_org;
+                  if ((xi != x_org) && (major_x > 0))
+                    text3d(xi, modern_text ? new_label[1] : y_label, modern_text ? new_label[2] : z_org,
+                           gr_ftoa(string, xi, x_tick * major_x), modern_projection_type ? axis : 0);
                 }
               else
-                yi = major_tick;
+                {
+                  yi = modern_text ? new_minor[1] : minor_tick;
+                  zi = modern_text ? new_minor[2] : z_org;
+                }
 
-              pline3d(xi, yi, z_org);
+              pline3d(xi, yi, zi);
               pline3d(xi, y_org, z_org);
 
               i++;

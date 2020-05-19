@@ -1267,12 +1267,12 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
             {
               xj = horiAdvance + xpoint[j] * height;
               yj = vertAdvance + ypoint[j] * height;
-              xpoint[j] = cos_f * xj - sin_f * yj;
-              ypoint[j] = sin_f * xj + cos_f * yj;
               if (axis < 0)
                 {
-                  xpoint[j] *= -1;
+                  xj *= -1;
                 }
+              xpoint[j] = cos_f * xj - sin_f * yj;
+              ypoint[j] = sin_f * xj + cos_f * yj;
 
               if (axis == 1 || axis == -1)
                 {
