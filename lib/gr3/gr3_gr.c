@@ -739,6 +739,13 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       double vpxmin, vpxmax, vpymin, vpymax;
       gr_inqviewport(&vpxmin, &vpxmax, &vpymin, &vpymax);
       double aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
+      int projection_type;
+      gr_inqprojectiontype(&projection_type);
+      if (projection_type == GR_PROJECTION_DEFAULT)
+        {
+          /* projection type does not consider the viewport aspect ratio */
+          aspect = 1;
+        }
       if (aspect > 1)
         {
           gr3_drawimage((float)xmin, (float)xmax, (float)ymin, (float)ymax, (int)(base_resolution * aspect),
