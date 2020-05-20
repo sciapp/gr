@@ -1420,6 +1420,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                             {
                               current_max_component += current_component[i];
                             }
+                          current_min_component = current_max_component;
                         }
                       else
                         {
@@ -1473,7 +1474,9 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                             {
                               current_max_component += current_component[i];
                             }
+                          current_min_component = current_max_component;
                           max_component = max(current_max_component, max_component);
+                          min_component = min(current_min_component, min_component);
                         }
                       inner_series++;
                     }
@@ -2259,7 +2262,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
       int inner_series_index;
       double *y;
       unsigned int y_length = 0;
-      grm_args_t **inner_series;
+      grm_args_t **inner_series = NULL;
       unsigned int inner_series_length = 0;
       /* Style Varianz */
       double vertical_change = 0;
@@ -2268,7 +2271,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
           !(args_first_value(*current_series, "y", "D", &y, &y_length) ||
             (args_first_value(*current_series, "inner_series", "A", &inner_series, &inner_series_length))),
           ERROR_PLOT_MISSING_DATA);
-      cleanup_and_set_error_if(style != "lined" && inner_series != NULL, ERROR_UNSUPPORTED_OPERATION);
+      cleanup_and_set_error_if(strcmp(style, "lined") && inner_series != NULL, ERROR_UNSUPPORTED_OPERATION);
       if (c != NULL)
         {
           cleanup_and_set_error_if((c_length < y_length) && (c_length < inner_series_length),
