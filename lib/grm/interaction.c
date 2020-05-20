@@ -244,8 +244,8 @@ grm_tooltip_info_t *grm_get_tooltip(const int mouse_x, const int mouse_y)
   gr_ndctowc(&x_range_max, &y_range_max);
 
   args_values(subplot_args, "series", "A", &current_series);
-  args_values(subplot_args, "xrange", "dd", &x_min, &x_max);
-  args_values(subplot_args, "yrange", "dd", &y_min, &y_max);
+  args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
+  args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
 
   x_range_min = (x_min > x_range_min) ? x_min : x_range_min;
   y_range_min = (y_min > y_range_min) ? y_min : y_range_min;
