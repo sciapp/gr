@@ -1,3 +1,7 @@
+#ifdef __unix__
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #include <ctype.h>
@@ -14,6 +18,11 @@
 
 
 /* ######################### internal implementation ################################################################ */
+
+/* ========================= macros ================================================================================= */
+
+#define PRIVATE_NAME_BUFFER_LEN 80
+
 
 /* ========================= functions ============================================================================== */
 
@@ -214,6 +223,14 @@ int is_homogenous_string_of_char(const char *str, char c)
   return *current_format_char_ptr == '\0';
 }
 
+const char *private_name(const char *public_name)
+{
+  static char private_name_buffer[PRIVATE_NAME_BUFFER_LEN];
+
+  snprintf(private_name_buffer, PRIVATE_NAME_BUFFER_LEN, "_%s", public_name);
+
+  return private_name_buffer;
+}
 unsigned long next_or_equal_power2(unsigned long num)
 {
 #if defined(__GNUC__) || defined(__clang__)

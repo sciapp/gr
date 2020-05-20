@@ -235,19 +235,22 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "xflip",
                                     "xform",
                                     "xlabel",
+                                    "xlim",
                                     "xlog",
                                     "xnotations",
                                     "ybins",
                                     "yflip",
                                     "ylabel",
+                                    "ylim",
                                     "ylog",
                                     "zflip",
+                                    "zlim",
                                     "zlog",
                                     NULL};
 const char *valid_series_keys[] = {
-    "a",        "c",          "clim", "error", "c_dims", "foreground_color", "indices", "inner_series",
-    "isovalue", "markertype", "rgb",  "s",     "spec",   "step_where",       "u",       "v",
-    "x",        "xlim",       "y",    "ylim",  "z",      "z_dims",           "zlim",    NULL};
+    "a",        "c",          "crange", "error",  "c_dims", "foreground_color", "indices", "inner_series",
+    "isovalue", "markertype", "rgb",    "s",      "spec",   "step_where",       "u",       "v",
+    "x",        "xrange",     "y",      "yrange", "z",      "z_dims",           "zrange",  NULL};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -263,7 +266,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"bar_color", "D|i"},
                                               {"c", "D|I"},
                                               {"c_dims", "I"},
-                                              {"clim", "D"},
+                                              {"crange", "D"},
                                               {"colormap", "i"},
                                               {"edge_color", "D|i"},
                                               {"edge_width", "d"},
@@ -303,6 +306,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"xform", "i"},
                                               {"xlabel", "s"},
                                               {"xlim", "D"},
+                                              {"xrange", "D"},
                                               {"xlog", "i"},
                                               {"y", "D"},
                                               {"ybins", "i"},
@@ -310,11 +314,13 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"yform", "i"},
                                               {"ylabel", "s"},
                                               {"ylim", "D"},
+                                              {"yrange", "D"},
                                               {"ylog", "i"},
                                               {"z", "D"},
                                               {"z_dims", "I"},
                                               {"zflip", "i"},
                                               {"zlim", "D"},
+                                              {"zrange", "D"},
                                               {"zlog", "i"}};
 
 /* ========================= functions ============================================================================== */
@@ -1148,40 +1154,40 @@ void plot_process_window(grm_args_t *subplot_args)
       scale |= zflip ? GR_OPTION_FLIP_Z : 0;
     }
 
-  args_values(subplot_args, "xrange", "dd", &x_min, &x_max);
-  args_values(subplot_args, "yrange", "dd", &y_min, &y_max);
+  args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
+  args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
   if (args_values(subplot_args, "reset_ranges", "i", &reset_ranges) && reset_ranges)
     {
-      if (args_values(subplot_args, "original_xrange", "dd", &x_min, &x_max) &&
-          args_values(subplot_args, "original_yrange", "dd", &y_min, &y_max) &&
-          args_values(subplot_args, "original_adjust_xlim", "i", &adjust_xlim) &&
-          args_values(subplot_args, "original_adjust_ylim", "i", &adjust_ylim))
+      if (args_values(subplot_args, "_original_xlim", "dd", &x_min, &x_max) &&
+          args_values(subplot_args, "_original_ylim", "dd", &y_min, &y_max) &&
+          args_values(subplot_args, "_original_adjust_xlim", "i", &adjust_xlim) &&
+          args_values(subplot_args, "_original_adjust_ylim", "i", &adjust_ylim))
         {
-          grm_args_push(subplot_args, "xrange", "dd", x_min, x_max);
-          grm_args_push(subplot_args, "yrange", "dd", y_min, y_max);
+          grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
+          grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
           grm_args_push(subplot_args, "adjust_xlim", "i", adjust_xlim);
           grm_args_push(subplot_args, "adjust_ylim", "i", adjust_ylim);
-          grm_args_remove(subplot_args, "original_xrange");
-          grm_args_remove(subplot_args, "original_yrange");
-          grm_args_remove(subplot_args, "original_adjust_xlim");
-          grm_args_remove(subplot_args, "original_adjust_ylim");
+          grm_args_remove(subplot_args, "_original_xlim");
+          grm_args_remove(subplot_args, "_original_ylim");
+          grm_args_remove(subplot_args, "_original_adjust_xlim");
+          grm_args_remove(subplot_args, "_original_adjust_ylim");
         }
       grm_args_remove(subplot_args, "reset_ranges");
     }
   if (grm_args_contains(subplot_args, "panzoom"))
     {
-      if (!grm_args_contains(subplot_args, "original_xrange"))
+      if (!grm_args_contains(subplot_args, "_original_xlim"))
         {
-          grm_args_push(subplot_args, "original_xrange", "dd", x_min, x_max);
+          grm_args_push(subplot_args, "_original_xlim", "dd", x_min, x_max);
           args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
-          grm_args_push(subplot_args, "original_adjust_xlim", "i", adjust_xlim);
+          grm_args_push(subplot_args, "_original_adjust_xlim", "i", adjust_xlim);
           grm_args_push(subplot_args, "adjust_xlim", "i", 0);
         }
-      if (!grm_args_contains(subplot_args, "original_yrange"))
+      if (!grm_args_contains(subplot_args, "_original_ylim"))
         {
-          grm_args_push(subplot_args, "original_yrange", "dd", y_min, y_max);
+          grm_args_push(subplot_args, "_original_ylim", "dd", y_min, y_max);
           args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
-          grm_args_push(subplot_args, "original_adjust_ylim", "i", adjust_ylim);
+          grm_args_push(subplot_args, "_original_adjust_ylim", "i", adjust_ylim);
           grm_args_push(subplot_args, "adjust_ylim", "i", 0);
         }
       if (!args_values(subplot_args, "panzoom", "dddd", &x, &y, &xzoom, &yzoom))
@@ -1206,8 +1212,8 @@ void plot_process_window(grm_args_t *subplot_args)
         }
       gr_panzoom(x, y, xzoom, yzoom, &x_min, &x_max, &y_min, &y_max);
       logger((stderr, "Window after `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
-      grm_args_push(subplot_args, "xrange", "dd", x_min, x_max);
-      grm_args_push(subplot_args, "yrange", "dd", y_min, y_max);
+      grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
+      grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
       grm_args_remove(subplot_args, "panzoom");
     }
 
@@ -1225,9 +1231,9 @@ void plot_process_window(grm_args_t *subplot_args)
       args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
       if (adjust_xlim)
         {
-          logger((stderr, "xrange before \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
+          logger((stderr, "_xlim before \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
           gr_adjustlimits(&x_min, &x_max);
-          logger((stderr, "xrange after \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
+          logger((stderr, "_xlim after \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
         }
       if (strcmp(kind, "barplot") == 0)
         {
@@ -1272,9 +1278,9 @@ void plot_process_window(grm_args_t *subplot_args)
       args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
       if (adjust_ylim)
         {
-          logger((stderr, "yrange before \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
+          logger((stderr, "_ylim before \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
           gr_adjustlimits(&y_min, &y_max);
-          logger((stderr, "yrange after \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
+          logger((stderr, "_ylim after \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
         }
       y_major_count = major_count;
       y_tick = gr_tick(y_min, y_max) / y_major_count;
@@ -1315,15 +1321,15 @@ void plot_process_window(grm_args_t *subplot_args)
       double z_org_low, z_org_high;
       int rotation, tilt;
 
-      args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
+      args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
       if (!(scale & GR_OPTION_Z_LOG))
         {
           args_values(subplot_args, "adjust_zlim", "i", &adjust_zlim);
           if (adjust_zlim)
             {
-              logger((stderr, "zrange before \"gr_adjustlimits\": (%lf, %lf)\n", z_min, z_max));
+              logger((stderr, "_zlim before \"gr_adjustlimits\": (%lf, %lf)\n", z_min, z_max));
               gr_adjustlimits(&z_min, &z_max);
-              logger((stderr, "zrange after \"gr_adjustlimits\": (%lf, %lf)\n", z_min, z_max));
+              logger((stderr, "_zlim after \"gr_adjustlimits\": (%lf, %lf)\n", z_min, z_max));
             }
           z_major_count = major_count;
           z_tick = gr_tick(z_min, z_max) / z_major_count;
@@ -1368,120 +1374,131 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   const char **current_component_name;
   double *current_component = NULL;
   unsigned int current_point_count = 0;
-  const char *range_keys[][2] = {{"xlim", "xrange"}, {"ylim", "yrange"}, {"zlim", "zrange"}, {"clim", "crange"}};
-  const char *(*current_range_keys)[2];
+  struct
+  {
+    const char *subplot;
+    const char *series;
+  } * current_range_keys,
+      range_keys[] = {{"xlim", "xrange"}, {"ylim", "yrange"}, {"zlim", "zrange"}, {"clim", "crange"}};
   unsigned int i;
 
   logger((stderr, "Storing coordinate ranges\n"));
-  /* TODO: support that single `lim` values are `null` / unset! */
 
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "style", "s", &style);
   string_map_at(fmt_map, kind, (char **)&fmt); /* TODO: check if the map access was successful */
-  current_range_keys = range_keys;
   current_component_name = data_component_names;
+  current_range_keys = range_keys;
   while (*current_component_name != NULL)
     {
       double min_component = DBL_MAX;
       double max_component = -DBL_MAX;
       double step = -DBL_MAX;
-      if (strchr(fmt, **current_component_name) == NULL || grm_args_contains(subplot_args, (*current_range_keys)[1]))
+      if (strchr(fmt, **current_component_name) == NULL)
         {
           ++current_range_keys;
           ++current_component_name;
           continue;
         }
-      args_first_value(subplot_args, "series", "A", &current_series, &series_count);
-      while (*current_series != NULL)
+      /* Heatmaps need calculated range keys, so run the calculation even if limits are given */
+      if (!grm_args_contains(subplot_args, current_range_keys->subplot) || strcmp(kind, "heatmap") == 0)
         {
-          double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
-          if (!args_values(*current_series, (*current_range_keys)[0], "dd", &current_min_component,
-                           &current_max_component))
+          args_first_value(subplot_args, "series", "A", &current_series, &series_count);
+          while (*current_series != NULL)
             {
-              if (args_first_value(*current_series, *current_component_name, "D", &current_component,
-                                   &current_point_count))
+              double current_min_component = DBL_MAX, current_max_component = -DBL_MAX;
+              if (!args_values(*current_series, current_range_keys->series, "dd", &current_min_component,
+                               &current_max_component))
                 {
-                  if (strcmp(style, "stacked") == 0)
-                    {
-                      current_max_component = 0.0;
-                      for (i = 0; i < current_point_count; i++)
-                        {
-                          current_max_component += current_component[i];
-                        }
-                    }
-                  else
-                    {
-                      for (i = 0; i < current_point_count; i++)
-                        {
-                          current_min_component = min(current_component[i], current_min_component);
-                          current_max_component = max(current_component[i], current_max_component);
-                        }
-                    }
-                }
-              else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
-                {
-                  /* in this case `x` or `y` (or both) are missing
-                   * -> set the current min/max_component to the dimensions of `z`
-                   *    (shifted by half a unit to center color blocks) */
-                  const char *other_component_name = (strcmp(*current_component_name, "x") == 0) ? "y" : "x";
-                  double *other_component;
-                  unsigned int other_point_count;
-                  if (args_first_value(*current_series, other_component_name, "D", &other_component,
-                                       &other_point_count))
-                    {
-                      /* The other component is given -> the missing dimension can be calculated */
-                      double *z;
-                      unsigned int z_length;
-                      return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length),
-                                      ERROR_PLOT_MISSING_DATA);
-                      current_point_count = z_length / other_point_count;
-                    }
-                  else
-                    {
-                      /* A heatmap without `x` and `y` values
-                       * -> dimensions can only be read from `z_dims` */
-                      int rows, cols;
-                      return_error_if(!args_values(*current_series, "z_dims", "ii", &rows, &cols),
-                                      ERROR_PLOT_MISSING_DIMENSIONS);
-                      current_point_count = (strcmp(*current_component_name, "x") == 0) ? cols : rows;
-                    }
-                  current_min_component = -0.5;
-                  current_max_component = current_point_count - 0.5;
-                }
-            }
-          else if (args_first_value(*current_series, "inner_series", "nA", &inner_series, &inner_series_count))
-            {
-              while (*inner_series != NULL)
-                {
-                  if (args_first_value(*inner_series, *current_component_name, "D", &current_component,
+                  if (args_first_value(*current_series, *current_component_name, "D", &current_component,
                                        &current_point_count))
                     {
-                      double current_max_component = 0;
-                      for (i = 0; i < current_point_count; i++)
+                      if (strcmp(style, "stacked") == 0)
                         {
-                          current_max_component += current_component[i];
+                          current_max_component = 0.0;
+                          for (i = 0; i < current_point_count; i++)
+                            {
+                              current_max_component += current_component[i];
+                            }
                         }
-                      max_component = max(current_max_component, max_component);
+                      else
+                        {
+                          for (i = 0; i < current_point_count; i++)
+                            {
+                              current_min_component = min(current_component[i], current_min_component);
+                              current_max_component = max(current_component[i], current_max_component);
+                            }
+                        }
                     }
-                  inner_series++;
+                  else if (strcmp(kind, "heatmap") == 0 && str_equals_any(*current_component_name, 2, "x", "y"))
+                    {
+                      /* in this case `x` or `y` (or both) are missing
+                       * -> set the current min/max_component to the dimensions of `z`
+                       *    (shifted by half a unit to center color blocks) */
+                      const char *other_component_name = (strcmp(*current_component_name, "x") == 0) ? "y" : "x";
+                      double *other_component;
+                      unsigned int other_point_count;
+                      if (args_first_value(*current_series, other_component_name, "D", &other_component,
+                                           &other_point_count))
+                        {
+                          /* The other component is given -> the missing dimension can be calculated */
+                          double *z;
+                          unsigned int z_length;
+                          return_error_if(!args_first_value(*current_series, "z", "D", &z, &z_length),
+                                          ERROR_PLOT_MISSING_DATA);
+                          current_point_count = z_length / other_point_count;
+                        }
+                      else
+                        {
+                          /* A heatmap without `x` and `y` values
+                           * -> dimensions can only be read from `z_dims` */
+                          int rows, cols;
+                          return_error_if(!args_values(*current_series, "z_dims", "ii", &rows, &cols),
+                                          ERROR_PLOT_MISSING_DIMENSIONS);
+                          current_point_count = (strcmp(*current_component_name, "x") == 0) ? cols : rows;
+                        }
+                      current_min_component = -0.5;
+                      current_max_component = current_point_count - 0.5;
+                    }
                 }
+              else if (args_first_value(*current_series, "inner_series", "nA", &inner_series, &inner_series_count))
+                {
+                  while (*inner_series != NULL)
+                    {
+                      if (args_first_value(*inner_series, *current_component_name, "D", &current_component,
+                                           &current_point_count))
+                        {
+                          double current_max_component = 0;
+                          for (i = 0; i < current_point_count; i++)
+                            {
+                              current_max_component += current_component[i];
+                            }
+                          max_component = max(current_max_component, max_component);
+                        }
+                      inner_series++;
+                    }
+                }
+              if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
+                {
+                  grm_args_push(*current_series, current_range_keys->series, "dd", current_min_component,
+                                current_max_component);
+                }
+              min_component = min(current_min_component, min_component);
+              max_component = max(current_max_component, max_component);
+              ++current_series;
             }
-          if (current_min_component != DBL_MAX && current_max_component != -DBL_MAX)
+        }
+      if (args_values(subplot_args, current_range_keys->subplot, "dd", &min_component, &max_component))
+        {
+          grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component, max_component);
+        }
+      else if (min_component != DBL_MAX && max_component != -DBL_MAX)
+        {
+          if ((str_equals_any(kind, 2, "barplot", "hist")) && strcmp("y", *current_component_name) == 0)
             {
-              grm_args_push(*current_series, (*current_range_keys)[0], "dd", current_min_component,
-                            current_max_component);
+              min_component = 0;
             }
-          min_component = min(current_min_component, min_component);
-          max_component = max(current_max_component, max_component);
-          ++current_series;
-        }
-      if ((str_equals_any(kind, 2, "barplot", "hist")) && strcmp("y", *current_component_name) == 0)
-        {
-          min_component = 0;
-        }
-      if (min_component != DBL_MAX && max_component != -DBL_MAX)
-        {
-          if (strcmp(kind, "quiver") == 0)
+          else if (strcmp(kind, "quiver") == 0)
             {
               step = max(find_max_step(current_point_count, current_component), step);
               if (step > 0.0)
@@ -1490,7 +1507,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                   max_component += step;
                 }
             }
-          grm_args_push(subplot_args, (*current_range_keys)[1], "dd", min_component, max_component);
+          grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component, max_component);
         }
       ++current_range_keys;
       ++current_component_name;
@@ -1498,16 +1515,16 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
   /* For quiver plots use u^2 + v^2 as z value */
   if (strcmp(kind, "quiver") == 0)
     {
-      if (!grm_args_contains(subplot_args, "zrange"))
+      double min_component = DBL_MAX;
+      double max_component = -DBL_MAX;
+      if (!args_values(subplot_args, "zlim", "dd", &min_component, &max_component))
         {
-          double min_component = DBL_MAX;
-          double max_component = -DBL_MAX;
           args_values(subplot_args, "series", "A", &current_series);
           while (*current_series != NULL)
             {
               double current_min_component = DBL_MAX;
               double current_max_component = -DBL_MAX;
-              if (!args_values(*current_series, "zlim", "dd", &current_min_component, &current_max_component))
+              if (!args_values(*current_series, "zrange", "dd", &current_min_component, &current_max_component))
                 {
                   double *u, *v;
                   unsigned int u_length, v_length;
@@ -1527,22 +1544,29 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
               max_component = max(current_max_component, max_component);
               ++current_series;
             }
-          grm_args_push(subplot_args, "zrange", "dd", min_component, max_component);
         }
+      grm_args_push(subplot_args, "_zlim", "dd", min_component, max_component);
     }
   else if (strcmp(kind, "imshow") == 0)
     {
-      args_setdefault(subplot_args, "xrange", "dd", 0.0, 1.0);
-      args_setdefault(subplot_args, "yrange", "dd", 0.0, 1.0);
+      /* Iterate over `x` and `y` range keys */
+      current_range_keys = range_keys;
+      for (i = 0; i < 2; i++)
+        {
+          double min_component = 0.0;
+          double max_component = 1.0;
+          args_values(subplot_args, current_range_keys->subplot, "dd", &min_component, &max_component);
+          grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component, max_component);
+          ++current_range_keys;
+        }
     }
   else if (strcmp(kind, "barplot") == 0)
     {
-      if (!grm_args_contains(subplot_args, "xrange"))
+      double x_min = 0.0, x_max = -DBL_MAX;
+      if (!args_values(subplot_args, "xlim", "dd", &x_min, &x_max))
         {
-          double x_min = DBL_MAX, x_max = -DBL_MAX;
           if (str_equals_any(style, 2, "lined", "stacked"))
             {
-              x_min = 0.0;
               x_max = series_count + 1;
             }
           else
@@ -1550,22 +1574,14 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
               args_values(subplot_args, "series", "A", &current_series);
               while (*current_series != NULL)
                 {
-                  double current_x_min = 0.0, current_x_max = -DBL_MAX;
-                  if (!args_values(subplot_args, "xlim", "dd", &current_x_min, &current_x_max))
-                    {
-                      double *y;
-                      if (args_first_value(*current_series, "y", "D", &y, &current_point_count))
-                        {
-                          current_x_max = current_point_count + 1;
-                        }
-                    }
-                  x_min = min(current_x_min, x_min);
-                  x_max = max(current_x_max, x_max);
+                  double *y;
+                  args_first_value(*current_series, "y", "D", &y, &current_point_count);
+                  x_max = max(current_point_count + 1, x_max);
                   ++current_series;
                 }
             }
-          grm_args_push(subplot_args, "xrange", "dd", x_min, x_max);
         }
+      grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
     }
 
   return NO_ERROR;
@@ -1876,7 +1892,7 @@ error_t plot_scatter(grm_args_t *subplot_args)
         }
       if (z != NULL || c != NULL)
         {
-          args_values(subplot_args, "crange", "dd", &c_min, &c_max);
+          args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
           for (i = 0; i < x_length; i++)
             {
               if (z != NULL)
@@ -2520,7 +2536,7 @@ error_t plot_contour(grm_args_t *subplot_args)
   int i;
   error_t error = NO_ERROR;
 
-  args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
+  args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
   gr_setspace(z_min, z_max, 0, 90);
   args_values(subplot_args, "levels", "i", &num_levels);
   h = malloc(num_levels * sizeof(double));
@@ -2603,7 +2619,7 @@ error_t plot_contourf(grm_args_t *subplot_args)
   int i;
   error_t error = NO_ERROR;
 
-  args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
+  args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
   gr_setspace(z_min, z_max, 0, 90);
   args_values(subplot_args, "levels", "i", &num_levels);
   h = malloc(num_levels * sizeof(double));
@@ -2698,7 +2714,7 @@ error_t plot_hexbin(grm_args_t *subplot_args)
       /* TODO: return an error in the else case? */
       if (cntmax > 0)
         {
-          grm_args_push(subplot_args, "zrange", "dd", 0.0, 1.0 * cntmax);
+          grm_args_push(subplot_args, "_zlim", "dd", 0.0, 1.0 * cntmax);
           plot_draw_colorbar(subplot_args, 0.0, 256);
         }
       ++current_series;
@@ -2743,7 +2759,7 @@ error_t plot_heatmap(grm_args_t *subplot_args)
         }
       if (x == NULL)
         {
-          args_values(*current_series, "xlim", "dd", &x_min, &x_max);
+          args_values(*current_series, "xrange", "dd", &x_min, &x_max);
         }
       else
         {
@@ -2752,15 +2768,15 @@ error_t plot_heatmap(grm_args_t *subplot_args)
         }
       if (x == NULL)
         {
-          args_values(*current_series, "ylim", "dd", &y_min, &y_max);
+          args_values(*current_series, "yrange", "dd", &y_min, &y_max);
         }
       else
         {
           y_min = y[0];
           y_max = y[rows - 1];
         }
-      args_values(*current_series, "zlim", "dd", &z_min, &z_max);
-      if (!args_values(*current_series, "clim", "dd", &c_min, &c_max))
+      args_values(*current_series, "zrange", "dd", &z_min, &z_max);
+      if (!args_values(*current_series, "crange", "dd", &c_min, &c_max))
         {
           c_min = z_min;
           c_max = z_max;
@@ -3020,7 +3036,7 @@ error_t plot_scatter3(grm_args_t *subplot_args)
       gr_setmarkertype(GKS_K_MARKERTYPE_SOLID_CIRCLE);
       if (args_first_value(*current_series, "c", "D", &c, &c_length))
         {
-          args_values(subplot_args, "crange", "dd", &c_min, &c_max);
+          args_values(subplot_args, "_clim", "dd", &c_min, &c_max);
           for (i = 0; i < x_length; i++)
             {
               if (i < c_length)
@@ -3064,7 +3080,7 @@ error_t plot_imshow(grm_args_t *subplot_args)
   error_t error;
 
   args_values(subplot_args, "series", "A", &current_series);
-  return_error_if(!args_values(subplot_args, "crange", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
+  return_error_if(!args_values(subplot_args, "_clim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
   return_error_if(!args_values(subplot_args, "viewport", "D", &viewport), ERROR_PLOT_MISSING_DATA);
   return_error_if(!args_values(subplot_args, "vp", "D", &vp), ERROR_PLOT_MISSING_DATA);
   while (*current_series != NULL)
@@ -3405,7 +3421,7 @@ error_t plot_tricont(grm_args_t *subplot_args)
   grm_args_t **current_series;
   int i;
 
-  args_values(subplot_args, "zrange", "dd", &z_min, &z_max);
+  args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
   args_values(subplot_args, "levels", "i", &num_levels);
   levels = malloc(num_levels * sizeof(double));
   if (levels == NULL)
@@ -3776,7 +3792,7 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors)
+error_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int colors)
 {
   const double *viewport;
   double c_min, c_max;
@@ -3787,11 +3803,11 @@ error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors)
   error_t error;
 
   gr_savestate();
-  args_values(args, "viewport", "D", &viewport);
-  /* TODO: What to do, if there is a `crange` and a `zrange`? Merge both together? */
-  if (!args_values(args, "crange", "dd", &c_min, &c_max))
+  args_values(subplot_args, "viewport", "D", &viewport);
+  /* TODO: What to do, if there is a `_clim` and a `_zlim`? Merge both together? */
+  if (!args_values(subplot_args, "_clim", "dd", &c_min, &c_max))
     {
-      error = args_values(args, "zrange", "dd", &c_min, &c_max);
+      error = args_values(subplot_args, "_zlim", "dd", &c_min, &c_max);
       if (!error)
         {
           return error;
@@ -3808,12 +3824,12 @@ error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors)
       data[i] = 1000 + 255 * i / (colors - 1);
     }
   gr_inqscale(&options);
-  if (args_values(args, "xflip", "i", &flip) && flip)
+  if (args_values(subplot_args, "xflip", "i", &flip) && flip)
     {
       options = (options | GR_OPTION_FLIP_Y) & ~GR_OPTION_FLIP_X;
       gr_setscale(options);
     }
-  else if (args_values(args, "yflip", "i", &flip) && flip)
+  else if (args_values(subplot_args, "yflip", "i", &flip) && flip)
     {
       options = options & ~GR_OPTION_FLIP_Y & ~GR_OPTION_FLIP_X;
       gr_setscale(options);
@@ -3830,7 +3846,7 @@ error_t plot_draw_colorbar(grm_args_t *args, double off, unsigned int colors)
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
   charheight = max(0.016 * diag, 0.012);
   gr_setcharheight(charheight);
-  args_values(args, "scale", "i", &scale);
+  args_values(subplot_args, "scale", "i", &scale);
   if (scale & GR_OPTION_Z_LOG)
     {
       gr_setscale(GR_OPTION_Y_LOG);

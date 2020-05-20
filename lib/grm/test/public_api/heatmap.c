@@ -84,8 +84,8 @@ static void test_heatmap(void)
   grm_args_push(args, "z", "nD", X_DIM * Y_DIM, z);
   grm_args_push(args, "z_dims", "ii", Y_DIM, X_DIM);
   grm_args_push(args, "kind", "s", "heatmap");
-  grm_args_push(args, "xlim", "dd", -2.0, 2.0);
-  grm_args_push(args, "ylim", "dd", 0.0, M_PI);
+  grm_args_push(args, "xrange", "dd", -2.0, 2.0);
+  grm_args_push(args, "yrange", "dd", 0.0, M_PI);
   grm_plot(args);
 
   printf("Press any key to continue...\n");
@@ -100,8 +100,8 @@ static void test_heatmap(void)
   grm_args_push(args, "z", "nD", X_DIM * Y_DIM, z);
   grm_args_push(args, "z_dims", "ii", Y_DIM, X_DIM);
   grm_args_push(args, "kind", "s", "heatmap");
-  grm_args_push(args, "xlim", "dd", -3.0, 3.0);
-  grm_args_push(args, "ylim", "dd", -1.0, M_PI + 1.0);
+  grm_args_push(args, "xrange", "dd", -3.0, 3.0);
+  grm_args_push(args, "yrange", "dd", -1.0, M_PI + 1.0);
   grm_plot(args);
 
   printf("Press any key to continue...\n");
@@ -114,13 +114,13 @@ static void test_heatmap(void)
   series[0] = grm_args_new();
   grm_args_push(series[0], "z", "nD", X_DIM * Y_DIM, z);
   grm_args_push(series[0], "z_dims", "ii", Y_DIM, X_DIM);
-  grm_args_push(series[0], "xlim", "dd", -4.25, -0.25);
-  grm_args_push(series[0], "ylim", "dd", 0.0, M_PI);
+  grm_args_push(series[0], "xrange", "dd", -4.25, -0.25);
+  grm_args_push(series[0], "yrange", "dd", 0.0, M_PI);
   series[1] = grm_args_new();
   grm_args_push(series[1], "z", "nD", X_DIM * Y_DIM, z);
   grm_args_push(series[1], "z_dims", "ii", Y_DIM, X_DIM);
-  grm_args_push(series[1], "xlim", "dd", 0.25, 4.25);
-  grm_args_push(series[1], "ylim", "dd", 0.0, M_PI);
+  grm_args_push(series[1], "xrange", "dd", 0.25, 4.25);
+  grm_args_push(series[1], "yrange", "dd", 0.0, M_PI);
   grm_args_push(args, "kind", "s", "heatmap");
   grm_args_push(args, "series", "nA", 2, series);
   grm_plot(args);
