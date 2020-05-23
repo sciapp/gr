@@ -1384,6 +1384,14 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
 
   logger((stderr, "Storing coordinate ranges\n"));
 
+  /* If a pan and/or zoom was performed before, do not overwrite limits
+   * -> the user fully controls limits by interaction */
+  if (grm_args_contains(subplot_args, "_original_xlim"))
+    {
+      logger((stderr, "Panzoom active, do not modify limits...\n"));
+      return NO_ERROR;
+    }
+
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "style", "s", &style);
   string_map_at(fmt_map, kind, (char **)&fmt); /* TODO: check if the map access was successful */
