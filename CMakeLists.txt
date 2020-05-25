@@ -357,8 +357,9 @@ set(GRM_SUBDIR_HEADERS
 
 add_library(grm_static STATIC ${GRM_SOURCES})
 add_library(grm_shared SHARED ${GRM_SOURCES})
+add_library(grm_shared_internal SHARED ${GRM_SOURCES})
 
-foreach(LIBRARY grm_static grm_shared)
+foreach(LIBRARY grm_static grm_shared grm_shared_internal)
   target_link_libraries(${LIBRARY} PUBLIC GR::GR)
   target_link_libraries(${LIBRARY} PUBLIC GR::GR3)
   target_link_libraries(${LIBRARY} PUBLIC m)
@@ -381,10 +382,14 @@ foreach(LIBRARY grm_static grm_shared)
                OUTPUT_NAME GRM
   )
 endforeach()
+set_target_properties(grm_shared_internal PROPERTIES C_VISIBILITY_PRESET default)
+set_target_properties(grm_shared_internal PROPERTIES OUTPUT_NAME GRM_int)
 if(WIN32)
   target_compile_definitions(grm_shared PRIVATE BUILDING_DLL)
+  target_compile_definitions(grm_shared_internal PRIVATE BUILDING_DLL)
 endif()
 set_target_properties(grm_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
+set_target_properties(grm_shared_internal PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
 add_library(GR::GRM ALIAS grm_shared)
 
 set(GR_REPORT "GKS plugins:\n")
@@ -834,6 +839,9 @@ if(GR_BUILD_DEMOS)
   add_executable(grdemo lib/gr/demo.c)
   target_link_libraries(grdemo PUBLIC GR::GR)
   set_target_properties(grdemo PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+
+  add_subdirectory(lib/grm/test/public_api grm_test_public_api)
+  add_subdirectory(lib/grm/test/internal_api grm_test_internal_api)
 endif()
 
 if(GR_INSTALL)
