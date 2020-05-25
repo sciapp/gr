@@ -127,17 +127,14 @@ JSTerm = function() {
       let disp = document.getElementById('jsterm-display-' + widget.display);
       if (disp === null) {
         //TODO: Wenn ungültiges Canvas übergeben wird löst dies ein endlose rekursion aus
-        if (display.length > 0) {
-          if (!msg_sent) {
-            widget.display = display[0];
-            createDisplay(widget.display);
-          }
+        if (display.length > 0 && !msg_sent) {
+          widget.display = display[0];
+          createDisplay(widget.display);
+        }
+        if (wsOpen) {
           window.setTimeout(function() {
             createCanvas(widget, msg_sent = true);
           }, CREATE_CANVAS_TIMEOUT);
-          return;
-        } else {
-          console.error('Can not create canvas. No active display.');
         }
       } else {
         disp.style = "display: inline;";
@@ -206,9 +203,6 @@ JSTerm = function() {
         return;
       }
       ws = new WebSocket(WEB_SOCKET_ADDRESS);
-      ws.onopen = function() {
-        wsOpen = true;
-      };
       ws.onerror = function(e) {
         wsOpen = false;
       };
@@ -244,6 +238,7 @@ JSTerm = function() {
         wsOpen = false;
       };
       ws.onopen = function() {
+        wsOpen = true;
         ws.send('js-running');
       };
       window.addEventListener('beforeunload', function(e) {
