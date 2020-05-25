@@ -69,6 +69,7 @@ set(EXECUTABLE_SOURCES
     receiver.c
     scatter_errorbar.c
     sender.c
+    size.c
     subplots.c
 )
 

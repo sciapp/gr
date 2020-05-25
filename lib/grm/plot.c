@@ -18,6 +18,7 @@
 #include "logging_int.h"
 #include "plot_int.h"
 
+#include "datatype/double_map_int.h"
 #include "datatype/string_map_int.h"
 #include "datatype/string_array_map_int.h"
 #include "datatype/template/map_int.h"
@@ -174,6 +175,7 @@ static plot_func_map_entry_t kind_to_func[] = {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ maps ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+static double_map_t *meters_per_unit_map = NULL;
 static string_map_t *fmt_map = NULL;
 static plot_func_map_t *plot_func_map = NULL;
 static string_map_t *plot_valid_keys_map = NULL;
@@ -189,6 +191,14 @@ const char *plot_clear_exclude_keys[] = {"array_index", "in_use", NULL};
 
 const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", "plot_id", "array_index", "in_use", NULL};
 const char *plot_merge_clear_keys[] = {"series", NULL};
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static const double_map_entry_t symbol_to_meters_per_unit[] = {
+    {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
+    {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
+};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ text encoding ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -290,7 +300,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"panzoom", "D"},
                                               {"reset_ranges", "i"},
                                               {"rotation", "i"},
-                                              {"size", "D"},
+                                              {"size", "D|A"},
                                               {"spec", "s"},
                                               {"step_where", "s"},
                                               {"style", "s"},
@@ -344,6 +354,8 @@ error_t plot_init_static_variables(void)
       plot_set_flag_defaults();
       error_cleanup_and_set_error_if(!args_values(global_root_args, "plots", "a", &active_plot_args), ERROR_INTERNAL);
       active_plot_index = 1;
+      meters_per_unit_map = double_map_new_with_data(array_size(symbol_to_meters_per_unit), symbol_to_meters_per_unit);
+      error_cleanup_and_set_error_if(meters_per_unit_map == NULL, ERROR_MALLOC);
       fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
       error_cleanup_and_set_error_if(fmt_map == NULL, ERROR_MALLOC);
       plot_func_map = plot_func_map_new_with_data(array_size(kind_to_func), kind_to_func);
@@ -379,6 +391,11 @@ error_cleanup:
     {
       grm_args_delete(global_root_args);
       global_root_args = NULL;
+    }
+  if (meters_per_unit_map != NULL)
+    {
+      double_map_delete(meters_per_unit_map);
+      meters_per_unit_map = NULL;
     }
   if (fmt_map != NULL)
     {
@@ -4239,6 +4256,8 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
   double dpm[2], dpi[2];
   int tmp_size_i[2], pixel_size[2];
   double tmp_size_d[2], metric_size[2];
+  grm_args_ptr_t tmp_size_a[2];
+  const char *tmp_size_s[2];
   int i;
 
   if (plot_args == NULL)
@@ -4264,27 +4283,16 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     {
       for (i = 0; i < 2; ++i)
         {
-          pixel_size[i] = round(tmp_size_d[i] * dpi[i]);
+          pixel_size[i] = (int)round(tmp_size_d[i] * dpi[i]);
           metric_size[i] = tmp_size_d[i] / 0.0254;
         }
     }
   else if (args_values(plot_args, "size", "dd", &tmp_size_d[0], &tmp_size_d[1]))
     {
-      if (dpi[0] > 300 || dpi[1] > 300)
+      for (i = 0; i < 2; ++i)
         {
-          for (i = 0; i < 2; ++i)
-            {
-              pixel_size[i] = round(tmp_size_d[i] * dpi[i] / 100.0);
-              metric_size[i] = tmp_size_d[i] / 0.000254;
-            }
-        }
-      else
-        {
-          for (i = 0; i < 2; ++i)
-            {
-              pixel_size[i] = round(tmp_size_d[i]);
-              metric_size[i] = tmp_size_d[i] / dpm[i];
-            }
+          pixel_size[i] = (int)round(tmp_size_d[i]);
+          metric_size[i] = tmp_size_d[i] / dpm[i];
         }
     }
   else if (args_values(plot_args, "size", "ii", &tmp_size_i[0], &tmp_size_i[1]))
@@ -4295,6 +4303,43 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
           metric_size[i] = tmp_size_i[i] / dpm[i];
         }
     }
+  else if (args_values(plot_args, "size", "aa", &tmp_size_a[0], &tmp_size_a[1]))
+    {
+      for (i = 0; i < 2; ++i)
+        {
+          double pixels_per_unit = 1;
+          if (args_values(tmp_size_a[i], "unit", "s", &tmp_size_s[i]))
+            {
+              if (strcmp(tmp_size_s[i], "px") != 0)
+                {
+                  double meters_per_unit;
+                  if (double_map_at(meters_per_unit_map, tmp_size_s[i], &meters_per_unit))
+                    {
+                      pixels_per_unit = meters_per_unit * dpm[i];
+                    }
+                  else
+                    {
+                      debug_print_error(("The unit %s is unknown.\n", tmp_size_s[i]));
+                    }
+                }
+            }
+          if (args_values(tmp_size_a[i], "value", "i", &tmp_size_i[i]))
+            {
+              tmp_size_d[i] = tmp_size_i[i] * pixels_per_unit;
+            }
+          else if (args_values(tmp_size_a[i], "value", "d", &tmp_size_d[i]))
+            {
+              tmp_size_d[i] = tmp_size_d[i] * pixels_per_unit;
+            }
+          else
+            {
+              /* If no value is given, fall back to default value */
+              return 0;
+            }
+          pixel_size[i] = (int)round(tmp_size_d[i]);
+          metric_size[i] = tmp_size_d[i] / dpm[i];
+        }
+    }
   else
     {
       /* If this branch is executed, there is an internal error (size has a default value if not set by the user) */
@@ -4302,6 +4347,7 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
     }
 
   logger((stderr, "figure pixel size: (%d, %d)\n", pixel_size[0], pixel_size[1]));
+  logger((stderr, "figure metric size: (%f, %f)\n", metric_size[0], metric_size[1]));
   logger((stderr, "device dpi: (%lf, %lf)\n", dpi[0], dpi[1]));
 
   if (pixel_width != NULL)
@@ -4514,6 +4560,8 @@ void grm_finalize(void)
       active_plot_index = 0;
       event_queue_delete(event_queue);
       event_queue = NULL;
+      double_map_delete(meters_per_unit_map);
+      meters_per_unit_map = NULL;
       string_map_delete(fmt_map);
       fmt_map = NULL;
       plot_func_map_delete(plot_func_map);

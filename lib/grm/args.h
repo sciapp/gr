@@ -81,6 +81,10 @@ EXPORT int grm_args_contains(const grm_args_t *args, const char *keyword);
 EXPORT void grm_args_clear(grm_args_t *args);
 EXPORT void grm_args_remove(grm_args_t *args, const char *key);
 
+/* ------------------------- utilities ------------------------------------------------------------------------------ */
+
+EXPORT grm_args_ptr_t grm_length(double value, const char *unit);
+
 
 #ifdef __cplusplus
 }
