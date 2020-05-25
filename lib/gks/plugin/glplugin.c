@@ -12,6 +12,7 @@
 #include <GL/glext.h>
 #ifdef _WIN32
 #include <windows.h>
+PFNGLLOADTRANSPOSEMATRIXDPROC glLoadTransposeMatrixd;
 #else
 #include <GL/glx.h>
 #endif
@@ -233,6 +234,7 @@ static void gl_init(void)
 #ifndef __APPLE__
 #define _P (const GLubyte *)
 #ifdef _WIN32
+  glLoadTransposeMatrixd = (PFNGLLOADTRANSPOSEMATRIXDPROC)wglGetProcAddress(_P "glLoadTransposeMatrixd");
   glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress(_P "glBufferData");
   glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress(_P "glBindBuffer");
   glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress(_P "glGenBuffers");
