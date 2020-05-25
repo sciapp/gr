@@ -65,6 +65,7 @@ set(GRM_SOURCES
     ../../net.c
     ../../plot.c
     ../../util.c
+    ../../datatype/double_map.c
     ../../datatype/string_array_map.c
     ../../datatype/string_list.c
     ../../datatype/string_map.c

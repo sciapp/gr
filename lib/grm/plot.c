@@ -18,6 +18,7 @@
 #include "logging_int.h"
 #include "plot_int.h"
 
+#include "datatype/double_map_int.h"
 #include "datatype/string_map_int.h"
 #include "datatype/string_array_map_int.h"
 #include "datatype/template/map_int.h"
@@ -174,6 +175,7 @@ static plot_func_map_entry_t kind_to_func[] = {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ maps ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+static double_map_t *meters_per_unit_map = NULL;
 static string_map_t *fmt_map = NULL;
 static plot_func_map_t *plot_func_map = NULL;
 static string_map_t *plot_valid_keys_map = NULL;
@@ -189,6 +191,14 @@ const char *plot_clear_exclude_keys[] = {"array_index", "in_use", NULL};
 
 const char *plot_merge_ignore_keys[] = {"id", "series_id", "subplot_id", "plot_id", "array_index", "in_use", NULL};
 const char *plot_merge_clear_keys[] = {"series", NULL};
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+static const double_map_entry_t symbol_to_meters_per_unit[] = {
+    {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
+    {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
+};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ text encoding ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -344,6 +354,8 @@ error_t plot_init_static_variables(void)
       plot_set_flag_defaults();
       error_cleanup_and_set_error_if(!args_values(global_root_args, "plots", "a", &active_plot_args), ERROR_INTERNAL);
       active_plot_index = 1;
+      meters_per_unit_map = double_map_new_with_data(array_size(symbol_to_meters_per_unit), symbol_to_meters_per_unit);
+      error_cleanup_and_set_error_if(meters_per_unit_map == NULL, ERROR_MALLOC);
       fmt_map = string_map_new_with_data(array_size(kind_to_fmt), kind_to_fmt);
       error_cleanup_and_set_error_if(fmt_map == NULL, ERROR_MALLOC);
       plot_func_map = plot_func_map_new_with_data(array_size(kind_to_func), kind_to_func);
@@ -379,6 +391,11 @@ error_cleanup:
     {
       grm_args_delete(global_root_args);
       global_root_args = NULL;
+    }
+  if (meters_per_unit_map != NULL)
+    {
+      double_map_delete(meters_per_unit_map);
+      meters_per_unit_map = NULL;
     }
   if (fmt_map != NULL)
     {
@@ -4231,27 +4248,6 @@ int get_id_from_args(const grm_args_t *args, int *plot_id, int *subplot_id, int 
   return _plot_id > 0 || _subplot_id > 0 || _series_id > 0;
 }
 
-static double get_meters_per_unit(const char *unit)
-{
-  const struct
-  {
-    const char *symbol;
-    double meters_per_unit;
-  } units[] = {
-      {"m", 1.0},     {"dm", 0.1},    {"cm", 0.01},  {"mm", 0.001},        {"in", 0.0254},
-      {"\"", 0.0254}, {"ft", 0.3048}, {"'", 0.0254}, {"pc", 0.0254 / 6.0}, {"pt", 0.0254 / 72.0},
-  };
-  int i;
-  for (i = 0; i < sizeof(units) / sizeof(units[0]); ++i)
-    {
-      if (!strcmp(unit, units[i].symbol))
-        {
-          return units[i].meters_per_unit;
-        }
-    }
-  return 0;
-}
-
 int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_height, double *metric_width,
                     double *metric_height)
 {
@@ -4316,8 +4312,8 @@ int get_figure_size(const grm_args_t *plot_args, int *pixel_width, int *pixel_he
             {
               if (strcmp(tmp_size_s[i], "px") != 0)
                 {
-                  double meters_per_unit = get_meters_per_unit(tmp_size_s[i]);
-                  if (meters_per_unit)
+                  double meters_per_unit;
+                  if (double_map_at(meters_per_unit_map, tmp_size_s[i], &meters_per_unit))
                     {
                       pixels_per_unit = meters_per_unit * dpm[i];
                     }
@@ -4564,6 +4560,8 @@ void grm_finalize(void)
       active_plot_index = 0;
       event_queue_delete(event_queue);
       event_queue = NULL;
+      double_map_delete(meters_per_unit_map);
+      meters_per_unit_map = NULL;
       string_map_delete(fmt_map);
       fmt_map = NULL;
       plot_func_map_delete(plot_func_map);
