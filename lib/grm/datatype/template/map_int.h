@@ -31,6 +31,7 @@
     const char *key;                                             \
     prefix##_map_value_t value;                                  \
   } prefix##_map_entry_t;                                        \
+  typedef const prefix##_map_entry_t prefix##_map_const_entry_t; \
                                                                  \
   DECLARE_SET_TYPE(string_##prefix##_pair, prefix##_map_entry_t) \
   typedef string_##prefix##_pair_set_t prefix##_map_t;
@@ -45,7 +46,7 @@
   DECLARE_SET_METHODS(string_##prefix##_pair)                                                                         \
                                                                                                                       \
   prefix##_map_t *prefix##_map_new(size_t capacity) MAYBE_UNUSED;                                                     \
-  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries) MAYBE_UNUSED;               \
+  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_const_entry_t *entries) MAYBE_UNUSED;         \
   prefix##_map_t *prefix##_map_copy(const prefix##_map_t *map) MAYBE_UNUSED;                                          \
   void prefix##_map_delete(prefix##_map_t *prefix##_map) MAYBE_UNUSED;                                                \
   int prefix##_map_insert(prefix##_map_t *prefix##_map, const char *key, prefix##_map_const_value_t value)            \
@@ -82,7 +83,7 @@
     return (prefix##_map_t *)string_##prefix##_pair_set;                                                           \
   }                                                                                                                \
                                                                                                                    \
-  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_entry_t *entries)                          \
+  prefix##_map_t *prefix##_map_new_with_data(size_t count, prefix##_map_const_entry_t *entries)                    \
   {                                                                                                                \
     return (prefix##_map_t *)string_##prefix##_pair_set_new_with_data(count, entries);                             \
   }                                                                                                                \
