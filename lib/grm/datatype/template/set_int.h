@@ -33,20 +33,20 @@
 /* ========================= methods ================================================================================ */
 
 #undef DECLARE_SET_METHODS
-#define DECLARE_SET_METHODS(prefix)                                                                     \
-  prefix##_set_t *prefix##_set_new(size_t capacity) MAYBE_UNUSED;                                       \
-  prefix##_set_t *prefix##_set_new_with_data(size_t count, prefix##_set_entry_t *entries) MAYBE_UNUSED; \
-  prefix##_set_t *prefix##_set_copy(const prefix##_set_t *set) MAYBE_UNUSED;                            \
-  void prefix##_set_delete(prefix##_set_t *set);                                                        \
-  int prefix##_set_add(prefix##_set_t *set, prefix##_set_const_entry_t entry) MAYBE_UNUSED;             \
-  int prefix##_set_find(const prefix##_set_t *set, prefix##_set_const_entry_t entry,                    \
-                        prefix##_set_entry_t *saved_entry) MAYBE_UNUSED;                                \
-  int prefix##_set_contains(const prefix##_set_t *set, prefix##_set_const_entry_t entry) MAYBE_UNUSED;  \
-  ssize_t prefix##_set_index(const prefix##_set_t *set, prefix##_set_const_entry_t entry) MAYBE_UNUSED; \
-                                                                                                        \
-  int prefix##_set_entry_copy(prefix##_set_entry_t *copy, prefix##_set_const_entry_t entry);            \
-  void prefix##_set_entry_delete(prefix##_set_entry_t entry);                                           \
-  size_t prefix##_set_entry_hash(prefix##_set_const_entry_t entry);                                     \
+#define DECLARE_SET_METHODS(prefix)                                                                           \
+  prefix##_set_t *prefix##_set_new(size_t capacity) MAYBE_UNUSED;                                             \
+  prefix##_set_t *prefix##_set_new_with_data(size_t count, prefix##_set_const_entry_t *entries) MAYBE_UNUSED; \
+  prefix##_set_t *prefix##_set_copy(const prefix##_set_t *set) MAYBE_UNUSED;                                  \
+  void prefix##_set_delete(prefix##_set_t *set);                                                              \
+  int prefix##_set_add(prefix##_set_t *set, prefix##_set_const_entry_t entry) MAYBE_UNUSED;                   \
+  int prefix##_set_find(const prefix##_set_t *set, prefix##_set_const_entry_t entry,                          \
+                        prefix##_set_entry_t *saved_entry) MAYBE_UNUSED;                                      \
+  int prefix##_set_contains(const prefix##_set_t *set, prefix##_set_const_entry_t entry) MAYBE_UNUSED;        \
+  ssize_t prefix##_set_index(const prefix##_set_t *set, prefix##_set_const_entry_t entry) MAYBE_UNUSED;       \
+                                                                                                              \
+  int prefix##_set_entry_copy(prefix##_set_entry_t *copy, prefix##_set_const_entry_t entry);                  \
+  void prefix##_set_entry_delete(prefix##_set_entry_t entry);                                                 \
+  size_t prefix##_set_entry_hash(prefix##_set_const_entry_t entry);                                           \
   int prefix##_set_entry_equals(prefix##_set_const_entry_t entry1, prefix##_set_const_entry_t entry2);
 
 
@@ -109,7 +109,7 @@
     return NULL;                                                                                                  \
   }                                                                                                               \
                                                                                                                   \
-  prefix##_set_t *prefix##_set_new_with_data(size_t count, prefix##_set_entry_t *entries)                         \
+  prefix##_set_t *prefix##_set_new_with_data(size_t count, prefix##_set_const_entry_t *entries)                   \
   {                                                                                                               \
     prefix##_set_t *set;                                                                                          \
     size_t i;                                                                                                     \
