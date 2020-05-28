@@ -222,7 +222,6 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "labels",
                                     "levels",
                                     "location",
-                                    "nbins",
                                     "panzoom",
                                     "reset_ranges",
                                     "rotation",
@@ -247,19 +246,19 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "zlim",
                                     "zlog",
                                     NULL};
-const char *valid_series_keys[] = {"a",        "c",
-                                   "crange",   "error",
-                                   "c_dims",   "foreground_color",
-                                   "indices",  "inner_series",
-                                   "isovalue", "markertype",
-                                   "rgb",      "s",
-                                   "spec",     "step_where",
-                                   "u",        "v",
-                                   "weights",  "x",
-                                   "xrange",   "y",
-                                   "yrange",   "z",
-                                   "z_dims",   "zrange",
-                                   NULL};
+const char *valid_series_keys[] = {"a",          "c",
+                                   "crange",     "error",
+                                   "c_dims",     "foreground_color",
+                                   "indices",    "inner_series",
+                                   "isovalue",   "markertype",
+                                   "nbins",      "rgb",
+                                   "s",          "spec",
+                                   "step_where", "u",
+                                   "v",          "weights",
+                                   "x",          "xrange",
+                                   "y",          "yrange",
+                                   "z",          "z_dims",
+                                   "zrange",     NULL};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -859,10 +858,6 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
         {
           args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_CONTOUR_LEVELS);
         }
-      else if (strcmp(kind, "hexbin") == 0)
-        {
-          args_setdefault(*current_subplot, "nbins", "i", PLOT_DEFAULT_HEXBIN_NBINS);
-        }
       else if (strcmp(kind, "tricont") == 0)
         {
           args_setdefault(*current_subplot, "levels", "i", PLOT_DEFAULT_TRICONT_LEVELS);
@@ -875,6 +870,10 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
           if (strcmp(kind, "step") == 0)
             {
               args_setdefault(*current_series, "step_where", "s", PLOT_DEFAULT_STEP_WHERE);
+            }
+          else if (strcmp(kind, "hexbin") == 0)
+            {
+              args_setdefault(*current_series, "nbins", "i", PLOT_DEFAULT_HEXBIN_NBINS);
             }
           ++current_series;
         }
@@ -1622,7 +1621,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
                   unsigned int num_bins = 0, num_weights;
                   cleanup_and_set_error_if(!args_first_value(*current_series, "x", "D", &x, &current_point_count),
                                            ERROR_PLOT_MISSING_DATA);
-                  args_values(subplot_args, "nbins", "i", &num_bins);
+                  args_values(*current_series, "nbins", "i", &num_bins);
                   args_first_value(*current_series, "weights", "D", &weights, &num_weights);
                   if (weights != NULL)
                     {
@@ -2806,19 +2805,18 @@ cleanup:
 
 error_t plot_hexbin(grm_args_t *subplot_args)
 {
-  int nbins;
   grm_args_t **current_series;
 
-  args_values(subplot_args, "nbins", "i", &nbins);
   args_values(subplot_args, "series", "A", &current_series);
   while (*current_series != NULL)
     {
       double *x, *y;
       unsigned int x_length, y_length;
-      int cntmax;
+      int cntmax, nbins;
       return_error_if(!args_first_value(*current_series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
       return_error_if(x_length != y_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      args_values(*current_series, "nbins", "i", &nbins);
       cntmax = gr_hexbin(x_length, x, y, nbins);
       /* TODO: return an error in the else case? */
       if (cntmax > 0)
