@@ -313,7 +313,7 @@ char *grm_dump_json_str(void)
   if (tojson_is_complete())
     {
       memwriter_putc(memwriter, '\0');
-      result = malloc(strlen(memwriter_buf(memwriter)) * sizeof(char));
+      result = malloc(memwriter_size(memwriter) + 1);
       strcpy(result, memwriter_buf(memwriter));
       memwriter_delete(memwriter);
       memwriter = NULL;
