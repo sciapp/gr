@@ -109,7 +109,10 @@
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
+void bin_data(unsigned int num_points, double *points, unsigned int num_bins, double *bins, double *weights);
+void linspace(double start, double end, unsigned int n, double *x);
 size_t djb2_hash(const char *str);
+int is_equidistant_array(unsigned int length, const double *x);
 int is_int_number(const char *str);
 int str_to_uint(const char *str, unsigned int *value_ptr);
 int int_equals_any(int number, unsigned int n, ...);
@@ -117,6 +120,8 @@ int str_equals_any(const char *str, unsigned int n, ...);
 int str_equals_any_in_array(const char *str, const char **str_array);
 int uppercase_count(const char *str);
 char *str_filter(const char *str, const char *filter_chars);
+int is_homogenous_string_of_char(const char *str, char c);
+const char *private_name(const char *public_name);
 unsigned long next_or_equal_power2(unsigned long num);
 
 #endif /* ifndef GRM_UTIL_INT_H_INCLUDED */

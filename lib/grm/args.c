@@ -2089,3 +2089,13 @@ void grm_args_remove(grm_args_t *args, const char *key)
       --(args->count);
     }
 }
+
+/* ------------------------- utilities ------------------------------------------------------------------------------ */
+
+grm_args_ptr_t grm_length(double value, const char *unit)
+{
+  grm_args_ptr_t length = grm_args_new();
+  grm_args_push(length, "value", "d", value);
+  grm_args_push(length, "unit", "s", unit);
+  return length;
+}

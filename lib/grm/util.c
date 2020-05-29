@@ -1,9 +1,17 @@
+#ifdef __unix__
+#define _POSIX_C_SOURCE 200112L
+#endif
+
 /* ######################### includes ############################################################################### */
 
 #include <ctype.h>
 #include <errno.h>
+#include <float.h>
 #include <limits.h>
+#include <math.h>
 #include <string.h>
+
+#include "gkscore.h"
 
 #include "error_int.h"
 #include "json_int.h"
@@ -12,9 +20,42 @@
 
 /* ######################### internal implementation ################################################################ */
 
+/* ========================= macros ================================================================================= */
+
+#define PRIVATE_NAME_BUFFER_LEN 80
+
+
 /* ========================= functions ============================================================================== */
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
+
+void bin_data(unsigned int n, double *x, unsigned int num_bins, double *bins, double *weights)
+{
+  double x_min = DBL_MAX, x_max = -DBL_MAX;
+  unsigned int i;
+
+  for (i = 0; i < n; ++i)
+    {
+      x_min = min(x[i], x_min);
+      x_max = max(x[i], x_max);
+    }
+  memset(bins, 0, num_bins * sizeof(double));
+  for (i = 0; i < n; ++i)
+    {
+      unsigned int current_bin = (int)((x[i] - x_min) / (x_max - x_min) * num_bins);
+      if (current_bin == num_bins) --current_bin;
+      bins[current_bin] += (weights != NULL) ? weights[i] : 1;
+    }
+}
+
+void linspace(double start, double end, unsigned int n, double *x)
+{
+  unsigned int i;
+  for (i = 0; i < n; i++)
+    {
+      x[i] = start + i * (end - start) / (n - 1);
+    }
+}
 
 size_t djb2_hash(const char *str)
 {
@@ -28,6 +69,23 @@ size_t djb2_hash(const char *str)
     }
 
   return hash;
+}
+
+int is_equidistant_array(unsigned int length, const double *x)
+{
+  if (x != NULL && length > 2)
+    {
+      double distance = x[1] - x[0];
+      unsigned int i;
+      for (i = 2; i < length; ++i)
+        {
+          if (fabs((x[i] - x[i - 1]) - distance) > FEPS)
+            {
+              return 0;
+            }
+        }
+    }
+  return 1;
 }
 
 int is_int_number(const char *str)
@@ -180,6 +238,28 @@ char *str_filter(const char *str, const char *filter_chars)
   return reduced_str;
 }
 
+int is_homogenous_string_of_char(const char *str, char c)
+{
+  const char *current_format_char_ptr = str;
+  while (*current_format_char_ptr != '\0')
+    {
+      if (*current_format_char_ptr != c)
+        {
+          break;
+        }
+      ++current_format_char_ptr;
+    }
+  return *current_format_char_ptr == '\0';
+}
+
+const char *private_name(const char *public_name)
+{
+  static char private_name_buffer[PRIVATE_NAME_BUFFER_LEN];
+
+  snprintf(private_name_buffer, PRIVATE_NAME_BUFFER_LEN, "_%s", public_name);
+
+  return private_name_buffer;
+}
 unsigned long next_or_equal_power2(unsigned long num)
 {
 #if defined(__GNUC__) || defined(__clang__)

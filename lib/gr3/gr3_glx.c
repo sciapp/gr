@@ -25,7 +25,10 @@ static void gr3_terminateGL_(void)
 {
   gr3_log_("gr3_terminateGL_();");
   context_struct_.gl_is_initialized = 0;
-  platform->terminate();
+  if (platform->terminate)
+    {
+      platform->terminate();
+    }
   platform_loader = NULL;
   platform = NULL;
   dlclose(platform_library);
@@ -92,7 +95,7 @@ int gr3_platform_initGL_(void)
 int gr3_initGL_GLX_(void)
 {
   int error = GR3_ERROR_NONE;
-  gr3_log_("gr3_initGL_CGL_();");
+  gr3_log_("gr3_initGL_GLX_();");
   error = gr3_platform_initGL_();
   if (error != GR3_ERROR_NONE)
     {

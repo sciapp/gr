@@ -10,6 +10,8 @@ project(
   LANGUAGES C CXX
 )
 
+include(GNUInstallDirs)
+
 # Honor `C_VISIBILITY_PRESET hidden` in static libraries
 cmake_policy(SET CMP0063 NEW)
 
@@ -159,27 +161,36 @@ add_library(gks_static STATIC ${GKS_SOURCES})
 add_library(gks_shared SHARED ${GKS_SOURCES})
 
 foreach(LIBRARY gks_static gks_shared)
-  target_link_libraries(${LIBRARY} PUBLIC pthread)
-  target_link_libraries(${LIBRARY} PUBLIC m)
-  if(FREETYPE_FOUND)
-    target_link_libraries(${LIBRARY} PUBLIC Freetype::Freetype)
+  if(LIBRARY MATCHES "static")
+    set(GKS_LINK_MODE PUBLIC)
   else()
-    target_compile_definitions(${LIBRARY} PUBLIC NO_FT)
+    set(GKS_LINK_MODE PRIVATE)
   endif()
-  target_link_libraries(${LIBRARY} PUBLIC Zlib::Zlib)
+  target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} pthread)
+  target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} m)
+  if(FREETYPE_FOUND)
+    target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} Freetype::Freetype)
+  else()
+    target_compile_definitions(
+      ${LIBRARY}
+      ${GKS_LINK_MODE}
+      NO_FT
+    )
+  endif()
+  target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} Zlib::Zlib)
   if(UNIX)
-    target_link_libraries(${LIBRARY} PUBLIC dl)
+    target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} dl)
   elseif(WIN32)
-    target_link_libraries(${LIBRARY} PUBLIC wsock32)
-    target_link_libraries(${LIBRARY} PUBLIC msimg32)
-    target_link_libraries(${LIBRARY} PUBLIC gdi32)
+    target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} wsock32)
+    target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} msimg32)
+    target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} gdi32)
   endif()
-  target_compile_options(${LIBRARY} PUBLIC -pthread)
+  target_compile_options(${LIBRARY} ${GKS_LINK_MODE} -pthread)
   target_include_directories(
     ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/>
                       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
-  target_compile_definitions(${LIBRARY} PUBLIC GRDIR="${GR_DIRECTORY}")
+  target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
@@ -190,7 +201,8 @@ foreach(LIBRARY gks_static gks_shared)
                INSTALL_RPATH "${INSTALL_RPATH}"
   )
 endforeach()
-set_target_properties(gks_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
+unset(GKS_LINK_MODE)
+set_target_properties(gks_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GKS)
 add_library(GR::GKS ALIAS gks_static)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
      "#ifndef GR_VERSION\n#define GR_VERSION \"${GR_VERSION_FULL}\"\n#endif\n"
@@ -223,19 +235,25 @@ add_library(gr_static STATIC ${GR_SOURCES})
 add_library(gr_shared SHARED ${GR_SOURCES})
 
 foreach(LIBRARY gr_static gr_shared)
-  target_link_libraries(${LIBRARY} PUBLIC gks_static)
-  target_link_libraries(${LIBRARY} PUBLIC m)
-  target_link_libraries(${LIBRARY} PUBLIC Qhull::Qhull)
-  target_link_libraries(${LIBRARY} PUBLIC Jpeg::Jpeg)
-  target_link_libraries(${LIBRARY} PUBLIC Libpng::Libpng)
+  if(LIBRARY MATCHES "static")
+    set(GR_LINK_MODE PUBLIC)
+  else()
+    set(GR_LINK_MODE PRIVATE)
+  endif()
+  target_link_libraries(${LIBRARY} ${GR_LINK_MODE} gks_static)
+  target_link_libraries(${LIBRARY} ${GR_LINK_MODE} m)
+  target_link_libraries(${LIBRARY} ${GR_LINK_MODE} Qhull::Qhull)
+  target_link_libraries(${LIBRARY} ${GR_LINK_MODE} Jpeg::Jpeg)
+  target_link_libraries(${LIBRARY} ${GR_LINK_MODE} Libpng::Libpng)
   if(WIN32)
-    target_link_libraries(${LIBRARY} PUBLIC ws2_32)
+    target_link_libraries(${LIBRARY} ${GR_LINK_MODE} ws2_32)
   endif()
   target_include_directories(
     ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/>
                       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   target_include_directories(${LIBRARY} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+  target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
@@ -246,7 +264,8 @@ foreach(LIBRARY gr_static gr_shared)
                OUTPUT_NAME GR
   )
 endforeach()
-set_target_properties(gr_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
+unset(GR_LINK_MODE)
+set_target_properties(gr_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GR)
 add_library(GR::GR ALIAS gr_shared)
 
 set(GR3_SOURCES
@@ -265,6 +284,11 @@ set(GR3_SOURCES
 add_library(gr3_static STATIC ${GR3_SOURCES})
 add_library(gr3_shared SHARED ${GR3_SOURCES})
 foreach(LIBRARY gr3_static gr3_shared)
+  if(LIBRARY MATCHES "static")
+    set(GR3_LINK_MODE PUBLIC)
+  else()
+    set(GR3_LINK_MODE PRIVATE)
+  endif()
   if(APPLE)
     target_sources(${LIBRARY} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_cgl.c)
   elseif(UNIX AND NOT APPLE)
@@ -272,16 +296,20 @@ foreach(LIBRARY gr3_static gr3_shared)
   elseif(WIN32)
     target_sources(${LIBRARY} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/gr3_win.c)
   endif()
-  target_link_libraries(${LIBRARY} PUBLIC GR::GR)
-  target_link_libraries(${LIBRARY} PUBLIC Jpeg::Jpeg)
-  target_link_libraries(${LIBRARY} PUBLIC Libpng::Libpng)
+  target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} GR::GR)
+  target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} Jpeg::Jpeg)
+  target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} Libpng::Libpng)
+  target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} pthread)
+  target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} m)
   if((APPLE OR WIN32) AND OpenGL_FOUND)
-    target_link_libraries(${LIBRARY} PUBLIC OpenGL::GL)
+    target_link_libraries(${LIBRARY} ${GR3_LINK_MODE} OpenGL::GL)
   endif()
   if(APPLE)
     # Apple has deprecated OpenGL in macOS 10.14
     target_compile_definitions(${LIBRARY} PRIVATE GL_SILENCE_DEPRECATION)
   endif()
+  target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
+  target_compile_options(${LIBRARY} ${GR3_LINK_MODE} -pthread)
   target_include_directories(
     ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/>
                       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -296,7 +324,8 @@ foreach(LIBRARY gr3_static gr3_shared)
                OUTPUT_NAME GR3
   )
 endforeach()
-set_target_properties(gr3_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
+unset(GR3_LINK_MODE)
+set_target_properties(gr3_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GR3)
 add_library(GR::GR3 ALIAS gr3_shared)
 
 if(UNIX AND NOT APPLE)
@@ -338,6 +367,7 @@ set(GRM_SOURCES
     lib/grm/net.c
     lib/grm/plot.c
     lib/grm/util.c
+    lib/grm/datatype/double_map.c
     lib/grm/datatype/string_array_map.c
     lib/grm/datatype/string_list.c
     lib/grm/datatype/string_map.c
@@ -356,13 +386,20 @@ set(GRM_SUBDIR_HEADERS
 
 add_library(grm_static STATIC ${GRM_SOURCES})
 add_library(grm_shared SHARED ${GRM_SOURCES})
+add_library(grm_shared_internal SHARED ${GRM_SOURCES})
 
-foreach(LIBRARY grm_static grm_shared)
-  target_link_libraries(${LIBRARY} PUBLIC GR::GR)
-  target_link_libraries(${LIBRARY} PUBLIC GR::GR3)
-  target_link_libraries(${LIBRARY} PUBLIC m)
+foreach(LIBRARY grm_static grm_shared grm_shared_internal)
+  if(LIBRARY MATCHES "static")
+    set(GRM_LINK_MODE PUBLIC)
+  else()
+    set(GRM_LINK_MODE PRIVATE)
+  endif()
+  target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GKS)
+  target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR)
+  target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} GR::GR3)
+  target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} m)
   if(WIN32)
-    target_link_libraries(${LIBRARY} PUBLIC ws2_32)
+    target_link_libraries(${LIBRARY} ${GRM_LINK_MODE} ws2_32)
   endif()
   target_include_directories(
     ${LIBRARY}
@@ -380,10 +417,16 @@ foreach(LIBRARY grm_static grm_shared)
                OUTPUT_NAME GRM
   )
 endforeach()
+unset(GRM_LINK_MODE)
+set_target_properties(grm_shared_internal PROPERTIES C_VISIBILITY_PRESET default)
+set_target_properties(grm_shared_internal PROPERTIES OUTPUT_NAME GRM_int)
+target_include_directories(grm_shared_internal PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/>)
 if(WIN32)
   target_compile_definitions(grm_shared PRIVATE BUILDING_DLL)
+  target_compile_definitions(grm_shared_internal PRIVATE BUILDING_DLL)
 endif()
-set_target_properties(grm_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
+set_target_properties(grm_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GRM)
+set_target_properties(grm_shared_internal PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
 add_library(GR::GRM ALIAS grm_shared)
 
 set(GR_REPORT "GKS plugins:\n")
@@ -832,18 +875,43 @@ if(GR_BUILD_DEMOS)
 
   add_executable(grdemo lib/gr/demo.c)
   target_link_libraries(grdemo PUBLIC GR::GR)
+  target_link_libraries(grdemo PUBLIC GR::GKS)
   set_target_properties(grdemo PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
+
+  add_subdirectory(lib/grm/test/public_api grm_test_public_api)
+  add_subdirectory(lib/grm/test/internal_api grm_test_internal_api)
 endif()
 
 if(GR_INSTALL)
-  include(GNUInstallDirs)
+  include(CMakePackageConfigHelpers)
+  configure_package_config_file(
+    "cmake/Config.cmake.in" "GRConfig.cmake" INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
+  )
+  write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/GRConfigVersion.cmake
+    VERSION ${GR_VERSION}
+    COMPATIBILITY SameMajorVersion
+  )
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/GRConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/GRConfigVersion.cmake"
+          DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
+  )
+  install(
+    TARGETS gks_shared gr_shared gr3_shared grm_shared
+    EXPORT GRTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
+  install(
+    EXPORT GRTargets
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
+    NAMESPACE GR::
+  )
   install(
     TARGETS gks_static
-            gks_shared
             gr_static
-            gr_shared
+            gr3_static
             grm_static
-            grm_shared
             cairoplugin
             glplugin
             gsplugin
@@ -856,8 +924,6 @@ if(GR_INSTALL)
             zmqplugin
             qtplugin
             qt5plugin
-            gr3_static
-            gr3_shared
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

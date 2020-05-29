@@ -2,17 +2,26 @@
 #include "grm.h"
 
 #define N_SERIES 3
+#define INNER_N_SERIES 3
 
 int main()
 {
   int n_y = 3;
   int n_yy = 3;
   double y[] = {4, 5, 8};
-  double yy1[] = {4, 8, 1};
+  double yy1[] = {4, 8, 2};
   double yy2[] = {7, 3, 9};
   double yy3[] = {1, 4, 6};
+  double inner_yy2_1[] = {5, 2};
+  double inner_yy2_2[] = {3};
+  double inner_yy2_3[] = {8};
+  int n_inner_yy2_1 = 2;
   int c[] = {984, 992, 993};
   double c_rgb[3][3] = {{0.5, 0.4, 0.3}, {0.3, 0.4, 0.5}, {0.4, 0.3, 0.5}};
+  int inner_c[] = {989, 984};
+  int n_inner_c = 2;
+  double inner_c_rgb[2][3] = {{0.5, 0.4, 0.3}, {0.8, 0.1, 0.1}};
+  int n_inner_c_rgb = 6;
   int bar_color = 992;
   int edge_color = 989;
   double bar_width = 0.85;
@@ -24,6 +33,7 @@ int main()
   grm_args_t *ind_edge_color;
   grm_args_t *ind_edge_width;
   grm_args_t *series[N_SERIES];
+  grm_args_t *inner_series[INNER_N_SERIES];
   int i, j;
 
   args = grm_args_new();
@@ -116,6 +126,62 @@ int main()
   grm_plot(args);
   sleep(3);
 
+  /* Draw a bar plot that is lined and stacked with inner color list*/
   grm_args_delete(args);
+  args = grm_args_new();
+  for (i = 0; i < N_SERIES; i++)
+    {
+      series[i] = grm_args_new();
+    }
+  for (i = 0; i < INNER_N_SERIES; i++)
+    {
+      inner_series[i] = grm_args_new();
+    }
+
+  grm_args_push(inner_series[0], "y", "nD", n_inner_yy2_1, inner_yy2_1);
+  grm_args_push(inner_series[0], "c", "nI", n_inner_c, inner_c);
+  grm_args_push(inner_series[1], "y", "nD", 1, inner_yy2_2);
+  grm_args_push(inner_series[2], "y", "nD", 1, inner_yy2_3);
+
+  grm_args_push(series[0], "y", "nD", n_yy, yy1);
+  grm_args_push(series[1], "inner_series", "nA", INNER_N_SERIES, inner_series);
+  grm_args_push(series[2], "y", "nD", n_yy, yy3);
+
+  grm_args_push(args, "kind", "s", "barplot");
+  grm_args_push(args, "style", "s", "lined");
+  grm_args_push(args, "series", "nA", N_SERIES, series);
+
+  grm_plot(args);
+  sleep(3);
+
+  /* Draw a bar plot that is lined and stacked with inner color list (rgb) */
+  grm_args_delete(args);
+  args = grm_args_new();
+  for (i = 0; i < N_SERIES; i++)
+    {
+      series[i] = grm_args_new();
+    }
+  for (i = 0; i < INNER_N_SERIES; i++)
+    {
+      inner_series[i] = grm_args_new();
+    }
+
+  grm_args_push(inner_series[0], "y", "nD", n_inner_yy2_1, inner_yy2_1);
+  grm_args_push(inner_series[0], "c", "nD", n_inner_c_rgb, inner_c_rgb);
+  grm_args_push(inner_series[1], "y", "nD", 1, inner_yy2_2);
+  grm_args_push(inner_series[2], "y", "nD", 1, inner_yy2_3);
+
+  grm_args_push(series[0], "y", "nD", n_yy, yy1);
+  grm_args_push(series[1], "inner_series", "nA", INNER_N_SERIES, inner_series);
+  grm_args_push(series[2], "y", "nD", n_yy, yy3);
+
+  grm_args_push(args, "kind", "s", "barplot");
+  grm_args_push(args, "style", "s", "lined");
+  grm_args_push(args, "c", "nD", 3 * n_y, c_rgb);
+  grm_args_push(args, "series", "nA", N_SERIES, series);
+
+  grm_plot(args);
+  sleep(3);
+
   grm_finalize();
 }

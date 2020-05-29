@@ -952,7 +952,16 @@ static void apply_world_xform(double *x, double *y, double *z)
   else
     {
       double fov = gpx.fov * M_PI / 180; /* camera angle of perspektiv projection */
-      double aspect = (ix.xmax - ix.xmin) / (ix.ymax - ix.ymin);
+      double xaspect = (vxmax - vxmin) / (vymax - vymin);
+      double yaspect = 1.0 / xaspect;
+      if (xaspect < 1.0)
+        {
+          xaspect = 1.0;
+        }
+      else
+        {
+          yaspect = 1.0;
+        }
       double F[3] = {tx.focus_point_x - tx.camera_pos_x, tx.focus_point_y - tx.camera_pos_y,
                      tx.focus_point_z - tx.camera_pos_z}; /* direction between camera and focus point */
       double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
@@ -971,16 +980,16 @@ static void apply_world_xform(double *x, double *y, double *z)
       if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE)
         {
           /* perspective projection */
-          xw = ((cos(fov / 2) / sin(fov / 2)) / aspect * xw);
-          yw = ((cos(fov / 2) / sin(fov / 2)) * yw);
+          xw = ((cos(fov / 2) / sin(fov / 2)) / xaspect * xw);
+          yw = ((cos(fov / 2) / sin(fov / 2)) / yaspect * yw);
           xw /= -zw;
           yw /= -zw;
         }
       else if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
         {
           /* orthographic projection */
-          xw = (xw * 2 / (gpx.right - gpx.left) - (gpx.left + gpx.right) / (gpx.right - gpx.left));
-          yw = (yw * 2 / (gpx.top - gpx.bottom) - (gpx.bottom + gpx.top) / (gpx.top - gpx.bottom));
+          xw = (xw * 2 / (gpx.right - gpx.left) / xaspect - (gpx.left + gpx.right) / (gpx.right - gpx.left));
+          yw = (yw * 2 / (gpx.top - gpx.bottom) / yaspect - (gpx.bottom + gpx.top) / (gpx.top - gpx.bottom));
           zw = (zw * -2 / (gpx.far_plane - gpx.near_plane) -
                 (gpx.far_plane + gpx.near_plane) / (gpx.far_plane - gpx.near_plane));
         }
@@ -5539,9 +5548,9 @@ static double text3d_get_height()
 {
   double focus_point_x, focus_point_y, focus_point_z, focus_up_x, focus_up_y, focus_up_z;
   /* Calculate char height */
-  focus_point_x = tx.focus_point_x;
-  focus_point_y = tx.focus_point_y;
-  focus_point_z = tx.focus_point_z;
+  focus_point_x = tx.focus_point_x / tx.x_axis_scale;
+  focus_point_y = tx.focus_point_y / tx.y_axis_scale;
+  focus_point_z = tx.focus_point_z / tx.z_axis_scale;
   focus_up_x = focus_point_x + tx.up_x / tx.x_axis_scale;
   focus_up_y = focus_point_y + tx.up_y / tx.y_axis_scale;
   focus_up_z = focus_point_z + tx.up_z / tx.z_axis_scale;
@@ -5662,8 +5671,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                int major_y, int major_z, double tick_size)
 {
   int errind, tnr;
-  int ltype, halign, valign, font, prec, clsw;
-  double chux, chuy, slant;
+  int ltype, halign, valign, font, prec, clsw, axis;
+  double chux, chuy, slant, fx, fy, fz;
 
   double clrt[4], wn[4], vp[4];
   double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
@@ -5673,11 +5682,15 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int *anglep, which_rep, rep;
 
   double tick, minor_tick, major_tick, x_label, y_label;
+  double new_minor[3], new_major[3], new_label[3];
   double x0, y0, z0, xi, yi, zi;
   int64_t i;
   int decade, exponent;
   char string[256];
-  int modern_projection_type;
+  int modern_projection_type, modern_text, plane, direction, flip;
+  fx = tx.camera_pos_x - tx.focus_point_x;
+  fy = tx.camera_pos_y - tx.focus_point_y;
+  fz = tx.camera_pos_z - tx.focus_point_z;
 
   if (x_tick < 0 || y_tick < 0 || z_tick < 0)
     {
@@ -5771,27 +5784,98 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (z_tick != 0)
     {
-      tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
-
-      minor_tick = y_log(y_lin(y_org) + tick);
-      major_tick = y_log(y_lin(y_org) + 2. * tick);
-      y_label = y_log(y_lin(y_org) + 3. * tick);
-
-      /* set text alignment */
-
-      if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+      modern_text = modern_projection_type && !(OPTION_Z_LOG & lx.scale_options);
+      if (modern_text)
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+          plane = (fy > fabs(fx) || fy <= -fabs(fx)) ? 1 : 0; /* 1: xz-direction, 0: yz-direction */
+          flip = tx.up_z < 0 ? -1 : 1;
+          direction = (plane && fy <= -fabs(fx)) || (!plane && fx > fabs(fy)); /* 1: positive, 0: negative */
 
-          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+          if (plane)
+            {
+              xi = (x_max + x_min) / 2 - x_org;
+              if (fabs(xi) >= 1e-10)
+                {                                      /* if the origin is not centered in the field */
+                  direction = (xi < 0) == (flip == 1); /* align the text and ticks to the 'outside' */
+                }
+            }
+          else
+            {
+              yi = (y_max + y_min) / 2 - y_org;
+              if (fabs(yi) >= 1e-10)
+                {
+                  direction = (yi < 0) == (flip == 1);
+                }
+            }
+
+          axis = plane ? 4 : 3;
+          axis *= direction ? 1 : -1;
+          if (direction != ((plane && fy <= -fabs(fx)) || (!plane && fx > fabs(fy))))
+            {             /* if direction was flipped to the outside */
+              axis *= -1; /* Flip text and align to appear natural */
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          gks_set_text_upvec(0, flip * 1);
+          if (plane) /* Ticks on x-z plane */
+            {
+              tick = flip * fabs(tick_size) * (x_max - x_min) / (vp[3] - vp[2]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_log(x_lin(x_org) + tick);
+              new_minor[1] = y_org;
+              new_minor[2] = z_org;
+              new_major[0] = x_log(x_lin(x_org) + 2. * tick);
+              new_major[1] = y_org;
+              new_major[2] = z_org;
+              new_label[0] = x_log(x_lin(x_org) + 3. * tick);
+              new_label[1] = y_org;
+              new_label[2] = z_org;
+            }
+          else /* Ticks on y-z plane */
+            {
+              tick = flip * fabs(tick_size) * (y_max - y_min) / (vp[1] - vp[0]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_org;
+              new_minor[1] = y_log(y_lin(y_org) + tick);
+              new_minor[2] = z_org;
+              new_major[0] = x_org;
+              new_major[1] = y_log(y_lin(y_org) + 2. * tick);
+              new_major[2] = z_org;
+              new_label[0] = x_org;
+              new_label[1] = y_log(y_lin(y_org) + 3. * tick);
+              new_label[2] = z_org;
+            }
         }
       else
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
-          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+          minor_tick = y_log(y_lin(y_org) + tick);
+          major_tick = y_log(y_lin(y_org) + 2. * tick);
+          y_label = y_log(y_lin(y_org) + 3. * tick);
+
+          /* set text alignment */
+
+          if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+
+              if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+
+              if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+            }
+
+          axis = 3;
         }
-
       if (!modern_projection_type)
         {
           rep = rep_table[which_rep][2];
@@ -5872,22 +5956,21 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             {
               pline3d(x_org, y_org, zi);
 
-              if (major_z != 0)
+              if (major_z == 0 || i % major_z == 0)
                 {
-                  if (i % major_z == 0)
-                    {
-                      yi = major_tick;
-                      if ((zi != z_org) && (major_z > 0))
-                        text3d(x_org, y_label, zi, gr_ftoa(string, zi, z_tick * major_z),
-                               modern_projection_type ? 3 : 0);
-                    }
-                  else
-                    yi = minor_tick;
+                  xi = modern_text ? new_major[0] : x_org;
+                  yi = modern_text ? new_major[1] : major_tick;
+                  if ((zi != z_org) && (major_z > 0))
+                    text3d(modern_text ? new_label[0] : x_org, modern_text ? new_label[1] : y_label, zi,
+                           gr_ftoa(string, zi, z_tick * major_z), modern_projection_type ? axis : 0);
                 }
               else
-                yi = major_tick;
+                {
+                  xi = modern_text ? new_minor[0] : x_org;
+                  yi = modern_text ? new_minor[1] : minor_tick;
+                }
 
-              pline3d(x_org, yi, zi);
+              pline3d(xi, yi, zi);
               pline3d(x_org, y_org, zi);
 
               i++;
@@ -5902,26 +5985,94 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (y_tick != 0)
     {
-      tick = tick_size * (x_max - x_min) / (vp[1] - vp[0]);
-
-      minor_tick = x_log(x_lin(x_org) + tick);
-      major_tick = x_log(x_lin(x_org) + 2. * tick);
-      x_label = x_log(x_lin(x_org) + 3. * tick);
-
-      /* set text alignment */
-
-      if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
+      modern_text = modern_projection_type && !(OPTION_Y_LOG & lx.scale_options);
+      if (modern_text)
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+          plane = (fx > fabs(fz) || fx <= -fabs(fz)) ? 1 : 0; /* 1: yz-direction, 0: xy-direction */
+          flip = tx.up_y < 0 ? -1 : 1;
+          direction = (plane && fx <= -fabs(fz)) || (!plane && fz > fabs(fx)); /* 1: positive, 0: negative */
 
-          if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
+          if (plane == 0)
+            {
+              xi = (x_max + x_min) / 2 - x_org;
+              if (fabs(xi) >= 1e-10)
+                {                                      /* if the origin is not centered in the field */
+                  direction = (xi < 0) == (flip == 1); /* align the text and ticks to the 'outside' */
+                }
+            }
+          else
+            {
+              zi = (z_max + z_min) / 2 - z_org;
+              if (fabs(zi) >= 1e-10)
+                {
+                  direction = (zi < 0) == (flip == 1);
+                }
+            }
+
+          axis = plane ? 3 : 2;
+          axis *= (direction ? 1 : -1);
+          if ((direction != ((plane && fx <= -fabs(fz)) || (!plane && fz > fabs(fx)))) != plane)
+            {             /* if direction was flipped to the outside */
+              axis *= -1; /* Flip text and align to appear natural */
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          gks_set_text_upvec(-plane * flip, !plane * flip);
+          if (plane) /* Ticks on y-z plane */
+            {
+              tick = flip * fabs(tick_size) * (z_max - z_min) / (vp[1] - vp[0]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_org;
+              new_minor[1] = y_org;
+              new_minor[2] = z_log(z_lin(z_org) + tick);
+              new_major[0] = x_org;
+              new_major[1] = y_org;
+              new_major[2] = z_log(z_lin(z_org) + 2. * tick);
+              new_label[0] = x_org;
+              new_label[1] = y_org;
+              new_label[2] = z_log(z_lin(z_org) + 3. * tick);
+            }
+          else /* Ticks on x-z plane */
+            {
+              tick = flip * fabs(tick_size) * (x_max - x_min) / (vp[1] - vp[0]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_log(x_lin(x_org) + tick);
+              new_minor[1] = y_org;
+              new_minor[2] = z_org;
+              new_major[0] = x_log(x_lin(x_org) + 2. * tick);
+              new_major[1] = y_org;
+              new_major[2] = z_org;
+              new_label[0] = x_log(x_lin(x_org) + 3. * tick);
+              new_label[1] = y_org;
+              new_label[2] = z_org;
+            }
         }
       else
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          tick = tick_size * (x_max - x_min) / (vp[1] - vp[0]);
 
-          if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
+          minor_tick = x_log(x_lin(x_org) + tick);
+          major_tick = x_log(x_lin(x_org) + 2. * tick);
+          x_label = x_log(x_lin(x_org) + 3. * tick);
+          if (x_lin(x_org) <= (x_lin(x_min) + x_lin(x_max)) / 2.)
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+              if (tick > 0) x_label = x_log(x_lin(x_org) - tick);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+              if (tick < 0) x_label = x_log(x_lin(x_org) - tick);
+            }
+          axis = 2;
         }
+
+      /* set text alignment */
 
       if (!modern_projection_type)
         {
@@ -6004,22 +6155,21 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             {
               pline3d(x_org, yi, z_org);
 
-              if (major_y != 0)
+              if (major_y == 0 || i % major_y == 0)
                 {
-                  if (i % major_y == 0)
-                    {
-                      xi = major_tick;
-                      if ((yi != y_org) && (major_y > 0))
-                        text3d(x_label, yi, z_org, gr_ftoa(string, yi, y_tick * major_y),
-                               modern_projection_type ? 2 : 0);
-                    }
-                  else
-                    xi = minor_tick;
+                  xi = modern_text ? new_major[0] : major_tick;
+                  zi = modern_text ? new_major[2] : z_org;
+                  if ((yi != y_org) && (major_y > 0))
+                    text3d(modern_text ? new_label[0] : x_label, yi, modern_text ? new_label[2] : z_org,
+                           gr_ftoa(string, yi, y_tick * major_y), modern_projection_type ? axis : 0);
                 }
               else
-                xi = major_tick;
+                {
+                  xi = modern_text ? new_minor[0] : minor_tick;
+                  zi = modern_text ? new_minor[2] : z_org;
+                }
 
-              pline3d(xi, yi, z_org);
+              pline3d(xi, yi, zi);
               pline3d(x_org, yi, z_org);
 
               i++;
@@ -6034,25 +6184,96 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (x_tick != 0)
     {
-      tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
-
-      minor_tick = y_log(y_lin(y_org) + tick);
-      major_tick = y_log(y_lin(y_org) + 2. * tick);
-      y_label = y_log(y_lin(y_org) + 3. * tick);
-
-      /* set text alignment */
-
-      if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+      modern_text = modern_projection_type && !(OPTION_X_LOG & lx.scale_options);
+      if (modern_text)
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+          plane = (fz > fabs(fy) || fz <= -fabs(fy)) ? 1 : 0; /* 1: xy-direction, 0: xz-direction */
+          flip = tx.up_x < 0 ? -1 : 1;
+          direction = (plane && fz <= -fabs(fy)) || (!plane && fy > fabs(fz)); /* 1: positive, 0: negative */
 
-          if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+          if (plane == 0)
+            {
+              zi = (z_max + z_min) / 2 - z_org;
+              if (fabs(zi) >= 1e-10)
+                {                                      /* if the origin is not centered in the field */
+                  direction = (zi < 0) == (flip == 1); /* align the text and ticks to the 'outside' */
+                }
+            }
+          else
+            {
+              yi = (y_max + y_min) / 2 - y_org;
+              if (fabs(yi) >= 1e-10)
+                {
+                  direction = (yi < 0) == (flip == 1);
+                }
+            }
+
+          axis = plane ? 2 : 4;
+          axis *= -(direction ? 1 : -1);
+          if (direction != ((plane && fz <= -fabs(fy)) || (!plane && fy > fabs(fz))))
+            {             /* if direction was flipped to the outside */
+              axis *= -1; /* Flip text and align to appear natural */
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+            }
+          gks_set_text_upvec(flip, 0);
+          if (plane) /* Ticks on y-z plane */
+            {
+              tick = flip * fabs(tick_size) * (y_max - y_min) / (vp[3] - vp[2]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_org;
+              new_minor[1] = y_log(y_lin(y_org) + tick);
+              new_minor[2] = z_org;
+              new_major[0] = x_org;
+              new_major[1] = y_log(y_lin(y_org) + 2. * tick);
+              new_major[2] = z_org;
+              new_label[0] = x_org;
+              new_label[1] = y_log(y_lin(y_org) + 3. * tick);
+              new_label[2] = z_org;
+            }
+          else /* Ticks on x-z plane */
+            {
+              tick = flip * fabs(tick_size) * (z_max - z_min) / (vp[1] - vp[0]);
+              if (!direction) tick *= -1;
+
+              new_minor[0] = x_org;
+              new_minor[1] = y_org;
+              new_minor[2] = z_log(z_lin(z_org) + tick);
+              new_major[0] = x_org;
+              new_major[1] = y_org;
+              new_major[2] = z_log(z_lin(z_org) + 2. * tick);
+              new_label[0] = x_org;
+              new_label[1] = y_org;
+              new_label[2] = z_log(z_lin(z_org) + 3. * tick);
+            }
         }
       else
         {
-          gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          tick = tick_size * (y_max - y_min) / (vp[3] - vp[2]);
 
-          if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+          minor_tick = y_log(y_lin(y_org) + tick);
+          major_tick = y_log(y_lin(y_org) + 2. * tick);
+          y_label = y_log(y_lin(y_org) + 3. * tick);
+
+          /* set text alignment */
+
+          if (y_lin(y_org) <= (y_lin(y_min) + y_lin(y_max)) / 2.)
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_RIGHT, GKS_K_TEXT_VALIGN_HALF);
+
+              if (tick > 0) y_label = y_log(y_lin(y_org) - tick);
+            }
+          else
+            {
+              gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+
+              if (tick < 0) y_label = y_log(y_lin(y_org) - tick);
+            }
+          axis = 1;
         }
 
       if (!modern_projection_type)
@@ -6136,22 +6357,21 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             {
               pline3d(xi, y_org, z_org);
 
-              if (major_x != 0)
+              if (major_x == 0 || i % major_x == 0)
                 {
-                  if (i % major_x == 0)
-                    {
-                      yi = major_tick;
-                      if ((xi != x_org) && (major_x > 0))
-                        text3d(xi, y_label, z_org, gr_ftoa(string, xi, x_tick * major_x),
-                               modern_projection_type ? 1 : 0);
-                    }
-                  else
-                    yi = minor_tick;
+                  yi = modern_text ? new_major[1] : major_tick;
+                  zi = modern_text ? new_major[2] : z_org;
+                  if ((xi != x_org) && (major_x > 0))
+                    text3d(xi, modern_text ? new_label[1] : y_label, modern_text ? new_label[2] : z_org,
+                           gr_ftoa(string, xi, x_tick * major_x), modern_projection_type ? axis : 0);
                 }
               else
-                yi = major_tick;
+                {
+                  yi = modern_text ? new_minor[1] : minor_tick;
+                  zi = modern_text ? new_minor[2] : z_org;
+                }
 
-              pline3d(xi, yi, z_org);
+              pline3d(xi, yi, zi);
               pline3d(xi, y_org, z_org);
 
               i++;
@@ -10352,8 +10572,8 @@ void gr_adjustlimits(double *amin, double *amax)
   if (remainder < 0.5) exponent -= 1;
 
   scale = pow(10.0, -exponent);
-  *amin = floor(*amin * scale) / scale;
-  *amax = ceil(*amax * scale) / scale;
+  *amin = floor(*amin * scale + FEPS) / scale;
+  *amax = ceil(*amax * scale - FEPS) / scale;
 }
 
 /*!
@@ -11305,29 +11525,30 @@ void gr_inqbordercolorind(int *coli)
  * Set the camera for orthographic or perspective projection.
  *
  * The center of the 3d window is used as the focus point and the camera is
- * positioned relative to it, using camera distance, rotation and tilt similar
- * to gr_setspace. This function can be used if the user prefers spherical
- * coordinates to setting the camera position directly, but has reduced
- * functionality in comparison to gr_settransformationparameters,
- * gr_setperspectiveprojection and gr_setorthographicprojection.
+ * positioned relative to it, using camera distance, azimuthal angle and polar
+ * angle similar to gr_setspace.  This function can be used if the user
+ * prefers spherical coordinates to setting the camera position directly, but
+ * has reduced functionality in comparison to gr_settransformationparameters,
+ * gr_setscalefactors3d, gr_setperspectiveprojection and
+ * gr_setorthographicprojection.
  *
  * \param phi azimuthal angle of the spherical coordinates
  * \param theta polar angle of the spherical coordinates
  * \param fov vertical field of view(0 or NaN for orthographic projection)
- * \param camera_distance distance between the camera and the focus point (0 or NaN for the radius of the object's
- * smallest bounding sphere)
- *
+ * \param camera_distance distance between the camera and the focus point (in
+ * arbitrary units, 0 or NaN for the radius of the object's smallest bounding
+ * sphere)
  */
 void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
 {
-  double x_len, y_len, z_len, max_axis_length;
+  double scale_factor_x, scale_factor_y, scale_factor_z;
   double bounding_sphere_radius;
 
   tx.focus_point_x = (ix.xmax + ix.xmin) / 2;
   tx.focus_point_y = (ix.ymin + ix.ymax) / 2;
   tx.focus_point_z = (ix.zmax + ix.zmin) / 2;
 
-  gr_calculateradius(&bounding_sphere_radius);
+  bounding_sphere_radius = sqrt(3);
   if (fov != fov || fov == 0)
     {
       if (camera_distance == 0 || camera_distance != camera_distance)
@@ -11347,28 +11568,20 @@ void gr_setspace3d(double phi, double theta, double fov, double camera_distance)
                                   camera_distance + bounding_sphere_radius * 2, fov);
     }
 
+  scale_factor_x = 2.0 / (ix.xmax - ix.xmin);
+  scale_factor_y = 2.0 / (ix.ymax - ix.ymin);
+  scale_factor_z = 2.0 / (ix.zmax - ix.zmin);
 
-  gr_settransformationparameters(camera_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x,
-                                 camera_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y,
-                                 camera_distance * cos(theta * M_PI / 180) + tx.focus_point_z,
-                                 -cos(phi * M_PI / 180) * cos(theta * M_PI / 180),
-                                 -sin(phi * M_PI / 180) * cos(theta * M_PI / 180), sin(theta * M_PI / 180),
-                                 tx.focus_point_x, tx.focus_point_y, tx.focus_point_z);
 
-  x_len = fabs(ix.xmin) + fabs(ix.xmax);
-  y_len = fabs(ix.ymin) + fabs(ix.ymax);
-  z_len = fabs(ix.zmax) + fabs(ix.zmin);
-  max_axis_length = x_len;
-  if (y_len > max_axis_length)
-    {
-      max_axis_length = y_len;
-    }
-  if (z_len > max_axis_length)
-    {
-      max_axis_length = z_len;
-    }
+  gr_settransformationparameters(
+      camera_distance * sin(theta * M_PI / 180) * cos(phi * M_PI / 180) + tx.focus_point_x * scale_factor_x,
+      camera_distance * sin(theta * M_PI / 180) * sin(phi * M_PI / 180) + tx.focus_point_y * scale_factor_y,
+      camera_distance * cos(theta * M_PI / 180) + tx.focus_point_z * scale_factor_z,
+      -cos(phi * M_PI / 180) * cos(theta * M_PI / 180), -sin(phi * M_PI / 180) * cos(theta * M_PI / 180),
+      sin(theta * M_PI / 180), tx.focus_point_x * scale_factor_x, tx.focus_point_y * scale_factor_y,
+      tx.focus_point_z * scale_factor_z);
 
-  gr_setscalefactors3d(max_axis_length / x_len, max_axis_length / y_len, max_axis_length / z_len);
+  gr_setscalefactors3d(scale_factor_x, scale_factor_y, scale_factor_z);
 }
 
 void gr_settextencoding(int encoding)
