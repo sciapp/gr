@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <float.h>
 #include <limits.h>
 #include <math.h>
 #include <string.h>
@@ -27,6 +28,34 @@
 /* ========================= functions ============================================================================== */
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
+
+void bin_data(unsigned int n, double *x, unsigned int num_bins, double *bins, double *weights)
+{
+  double x_min = DBL_MAX, x_max = -DBL_MAX;
+  unsigned int i;
+
+  for (i = 0; i < n; ++i)
+    {
+      x_min = min(x[i], x_min);
+      x_max = max(x[i], x_max);
+    }
+  memset(bins, 0, num_bins * sizeof(double));
+  for (i = 0; i < n; ++i)
+    {
+      unsigned int current_bin = (int)((x[i] - x_min) / (x_max - x_min) * num_bins);
+      if (current_bin == num_bins) --current_bin;
+      bins[current_bin] += (weights != NULL) ? weights[i] : 1;
+    }
+}
+
+void linspace(double start, double end, unsigned int n, double *x)
+{
+  unsigned int i;
+  for (i = 0; i < n; i++)
+    {
+      x[i] = start + i * (end - start) / (n - 1);
+    }
+}
 
 size_t djb2_hash(const char *str)
 {

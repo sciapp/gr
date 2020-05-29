@@ -109,6 +109,8 @@
 
 /* ------------------------- util ----------------------------------------------------------------------------------- */
 
+void bin_data(unsigned int num_points, double *points, unsigned int num_bins, double *bins, double *weights);
+void linspace(double start, double end, unsigned int n, double *x);
 size_t djb2_hash(const char *str);
 int is_equidistant_array(unsigned int length, const double *x);
 int is_int_number(const char *str);
