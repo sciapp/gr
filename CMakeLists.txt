@@ -895,6 +895,13 @@ if(GR_INSTALL)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/GRConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/GRConfigVersion.cmake"
           DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
   )
+  foreach(PACKAGE gr gr3 gks grm)
+    configure_file("${PACKAGE}.pc.in"
+                   "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}.pc"
+                   @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}.pc"
+            DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
+  endforeach()
   install(
     TARGETS gks_shared gr_shared gr3_shared grm_shared
     EXPORT GRTargets

@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
+sopath=${libdir}/libGR@GR_SHARED_LIBRARY_SUFFIX@
+
+Name: GR
+Description: GR is a universal framework for visualization applications
+Version: @GR_VERSION@
+Cflags: -I${includedir}
+Libs: -L${libdir} -lGR
