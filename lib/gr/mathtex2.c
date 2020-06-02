@@ -946,6 +946,7 @@ double canvas_width = 0;
 
 static double font_size;
 static double transformation[6];
+static double window[4];
 
 const char *input;
 extern const char *cursor;
@@ -2938,9 +2939,9 @@ static void render_character(BoxModelNode *node, double x, double y)
     }
   /* TODO: inquire current workstation window height? */
   int window_height = 2400;
-  gr_setcharheight(node->u.character.state.fontsize / 15.0 * 12 / window_height);
-  gr_settextfontprec(MATH_FONT, 3);
-  gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BASE);
+  gks_set_text_height(node->u.character.state.fontsize / 15.0 * 12 / window_height);
+  gks_set_text_fontprec(MATH_FONT, 3);
+  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BASE);
   if (node->u.character.bearing < 0)
     {
       x -= node->u.character.bearing;
@@ -2948,8 +2949,10 @@ static void render_character(BoxModelNode *node, double x, double y)
     }
   y += node->u.character.shift_amount;
   apply_transformation(&x, &y);
-  gr_wctondc(&x, &y);
-  gr_text(x, y, (char *)utf8_str);
+  gks_select_xform(0);
+  x = (x - window[0]) / (window[1] - window[0]);
+  y = (y - window[2]) / (window[3] - window[2]);
+  gks_text(x, y, (char *)utf8_str);
 }
 
 typedef struct Ship_
@@ -2986,8 +2989,11 @@ static void render_rect(double x, double y, double width, double height)
     for (i = 0; i < 4; i++)
       {
         apply_transformation(xs + i, ys + i);
+        xs[i] = (xs[i] - window[0]) / (window[1] - window[0]);
+        ys[i] = (ys[i] - window[2]) / (window[3] - window[2]);
       }
-    gr_fillarea(4, xs, ys);
+    gks_select_xform(0);
+    gks_fillarea(4, xs, ys);
   }
 }
 
@@ -3300,8 +3306,47 @@ static void mathtex_to_box_model(const char *mathtex, double *width, double *hei
     }
 }
 
+static void calculate_alignment_offsets(int horizontal_alignment, int vertical_alignment, double *x_offset,
+                                        double *y_offset)
+{
+  /* TODO: use actual window height */
+  int window_width = 2400;
+  int window_height = 2400;
+  switch (horizontal_alignment)
+    {
+    case GKS_K_TEXT_HALIGN_RIGHT:
+      *x_offset = -canvas_width / window_width;
+      break;
+    case GKS_K_TEXT_HALIGN_CENTER:
+      *x_offset = -canvas_width / window_width / 2;
+      break;
+    case GKS_K_TEXT_HALIGN_NORMAL:
+    case GKS_K_TEXT_HALIGN_LEFT:
+    default:
+      *x_offset = 0;
+      break;
+    }
+  switch (vertical_alignment)
+    {
+    case GKS_K_TEXT_VALIGN_TOP:
+    case GKS_K_TEXT_VALIGN_CAP:
+      *y_offset = -canvas_height / window_height;
+      break;
+    case GKS_K_TEXT_VALIGN_HALF:
+      *y_offset = -canvas_height / window_height / 2;
+      break;
+    case GKS_K_TEXT_VALIGN_BOTTOM:
+    case GKS_K_TEXT_VALIGN_NORMAL:
+    case GKS_K_TEXT_VALIGN_BASE:
+    default:
+      *y_offset = 0;
+      break;
+    }
+}
+
 static void render_box_model(double x, double y, int horizontal_alignment, int vertical_alignment)
 {
+  int unused;
   int fillcolorind = 1;
   double width, height, depth;
   /* TODO: use actual window height */
@@ -3309,49 +3354,18 @@ static void render_box_model(double x, double y, int horizontal_alignment, int v
   int window_height = 2400;
   double x_offset = 0;
   double y_offset = 0;
-  double viewport_xmin, viewport_xmax, viewport_ymin, viewport_ymax;
-  gr_inqviewport(&viewport_xmin, &viewport_xmax, &viewport_ymin, &viewport_ymax);
-  gr_setviewport(0, 1, 0, 1);
-  gr_savestate();
-  gr_selntran(1);
-  gr_setscale(0);
-  gr_inqtextcolorind(&fillcolorind);
-  gr_setfillcolorind(fillcolorind);
-  gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
-  switch (horizontal_alignment)
-    {
-    case GKS_K_TEXT_HALIGN_RIGHT:
-      x_offset -= canvas_width / window_width;
-      break;
-    case GKS_K_TEXT_HALIGN_CENTER:
-      x_offset -= canvas_width / window_width / 2;
-      break;
-    case GKS_K_TEXT_HALIGN_NORMAL:
-    case GKS_K_TEXT_HALIGN_LEFT:
-    default:
-      break;
-    }
-  switch (vertical_alignment)
-    {
-    case GKS_K_TEXT_VALIGN_TOP:
-    case GKS_K_TEXT_VALIGN_CAP:
-      y_offset -= canvas_height / window_height;
-      break;
-    case GKS_K_TEXT_VALIGN_HALF:
-      y_offset -= canvas_height / window_height / 2;
-      break;
-    case GKS_K_TEXT_VALIGN_BOTTOM:
-    case GKS_K_TEXT_VALIGN_NORMAL:
-    case GKS_K_TEXT_VALIGN_BASE:
-    default:
-      break;
-    }
+  gks_set_viewport(1, 0, 1, 0, 1);
+  gks_inq_text_color_index(&unused, &fillcolorind);
+  gks_set_fill_color_index(fillcolorind);
+  gks_set_fill_int_style(GKS_K_INTSTYLE_SOLID);
+  calculate_alignment_offsets(horizontal_alignment, vertical_alignment, &x_offset, &y_offset);
   transformation[4] += x_offset * window_width * transformation[0] + y_offset * window_height * transformation[1];
   transformation[5] += x_offset * window_width * transformation[2] + y_offset * window_height * transformation[3];
-  gr_setwindow(-x * window_width, (1 - x) * window_width, -y * window_height, (1 - y) * window_height);
+  window[0] = -x * window_width;
+  window[1] = (1 - x) * window_width;
+  window[2] = -y * window_height;
+  window[3] = (1 - x) * window_height;
   get_results(result_box_model_node_index, &width, &height, &depth);
-  gr_restorestate();
-  gr_setviewport(viewport_xmin, viewport_xmax, viewport_ymin, viewport_ymax);
   free_parser_node_buffer();
   free_box_model_node_buffer();
   free_box_model_state_buffer();
@@ -3555,27 +3569,33 @@ static unsigned int get_codepoint_for_character_variant(unsigned int codepoint, 
     }
 }
 
-void gr_mathtex2(double x, double y, const char *formula)
+void mathtex2(double x, double y, const char *formula, int inquire, double *tbx, double *tby)
 {
   int unused;
   int previous_bearing_x_direction;
   double previous_char_height;
   double chupx = 0;
   double chupy = 0;
+  int previous_fill_int_style;
+  int previous_fill_color_index = 0;
   int previous_encoding = ENCODING_LATIN1;
   int horizontal_alignment = GKS_K_TEXT_HALIGN_NORMAL;
   int vertical_alignment = GKS_K_TEXT_VALIGN_NORMAL;
   int font;
   int prec;
+  double previous_viewport_xmin, previous_viewport_xmax, previous_viewport_ymin, previous_viewport_ymax;
   /* TODO: inquire current workstation window height? */
+  int window_width = 2400;
   int window_height = 2400;
   has_parser_error = 0;
   gks_ft_inq_bearing_x_direction(&previous_bearing_x_direction);
   gks_ft_set_bearing_x_direction(1);
-  /* gr call to ensure autoinit has run */
-  gr_inqmarkertype(&unused);
+  /* gr call first to ensure autoinit has run */
+  gr_inqviewport(&previous_viewport_xmin, &previous_viewport_xmax, &previous_viewport_ymin, &previous_viewport_ymax);
   gks_inq_text_fontprec(&unused, &font, &prec);
   gks_inq_text_align(&unused, &horizontal_alignment, &vertical_alignment);
+  gks_inq_fill_color_index(&unused, &previous_fill_color_index);
+  gks_inq_fill_int_style(&unused, &previous_fill_int_style);
   gks_inq_encoding(&previous_encoding);
   gks_set_encoding(ENCODING_UTF8);
   gks_inq_text_height(&unused, &previous_char_height);
@@ -3602,11 +3622,60 @@ void gr_mathtex2(double x, double y, const char *formula)
   mathtex_to_box_model(formula, NULL, NULL, NULL);
   if (!has_parser_error)
     {
-      render_box_model(x, y, horizontal_alignment, vertical_alignment);
+      double x_offset = 0;
+      double y_offset = 0;
+      if (!inquire)
+        {
+          render_box_model(x, y, horizontal_alignment, vertical_alignment);
+        }
+      else
+        {
+          double xmin, xmax, ymin, ymax;
+          calculate_alignment_offsets(horizontal_alignment, vertical_alignment, &x_offset, &y_offset);
+          xmin = x + x_offset;
+          xmax = x + x_offset + canvas_width / window_width;
+          ymin = y + y_offset;
+          ymax = y + y_offset + canvas_height / window_height;
+          if (tbx)
+            {
+              tbx[0] = xmin;
+              tbx[1] = xmax;
+              tbx[2] = xmax;
+              tbx[3] = xmin;
+            }
+          if (tby)
+            {
+              tby[0] = ymin;
+              tby[1] = ymin;
+              tby[2] = ymax;
+              tby[3] = ymax;
+            }
+        }
     }
+  else if (inquire)
+    {
+      if (tbx)
+        {
+          tbx[0] = x;
+          tbx[1] = x;
+          tbx[2] = x;
+          tbx[3] = x;
+        }
+      if (tby)
+        {
+          tby[0] = y;
+          tby[1] = y;
+          tby[2] = y;
+          tby[3] = y;
+        }
+    }
+
   gks_ft_set_bearing_x_direction(previous_bearing_x_direction);
   gks_set_text_height(previous_char_height);
   gks_set_encoding(previous_encoding);
   gks_set_text_fontprec(font, prec);
   gks_set_text_align(horizontal_alignment, vertical_alignment);
+  gks_set_fill_color_index(previous_fill_color_index);
+  gks_set_fill_int_style(previous_fill_int_style);
+  gks_set_viewport(1, previous_viewport_xmin, previous_viewport_xmax, previous_viewport_ymin, previous_viewport_ymax);
 }
