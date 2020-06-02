@@ -1,6 +1,8 @@
 #ifndef _GKSCORE_H_
 #define _GKSCORE_H_
 
+#include <stddef.h>
+
 #ifdef _WIN32
 
 #include <windows.h> /* required for all Windows applications */
