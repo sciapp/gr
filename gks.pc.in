@@ -4,7 +4,7 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 sopath=${libdir}/libGKS@GR_SHARED_LIBRARY_SUFFIX@
 
 Name: GKS
-Description: GKS is Graphical Kernel System
+Description: GKS is a Graphical Kernel System implementation
 Version: @GR_VERSION@
 Cflags: -I${includedir}
 Libs: -L${libdir} -lGKS

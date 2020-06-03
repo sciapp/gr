@@ -5,6 +5,7 @@ sopath=${libdir}/libGR@GR_SHARED_LIBRARY_SUFFIX@
 
 Name: GR
 Description: GR is a universal framework for visualization applications
+Requires.private: gks
 Version: @GR_VERSION@
 Cflags: -I${includedir}
 Libs: -L${libdir} -lGR

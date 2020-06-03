@@ -5,6 +5,8 @@ sopath=${libdir}/libGRM@GR_SHARED_LIBRARY_SUFFIX@
 
 Name: GRM
 Description: GRM is the meta layer for GR and GR3
+Requires.private: gr
+Requires.private: gr3
 Version: @GR_VERSION@
 Cflags: -I${includedir}
 Libs: -L${libdir} -lGRM

@@ -5,6 +5,7 @@ sopath=${libdir}/libGR3@GR_SHARED_LIBRARY_SUFFIX@
 
 Name: GR3
 Description: GR3 is a software library for simple visualization of 3D scenes
+Requires.private: gr
 Version: @GR_VERSION@
 Cflags: -I${includedir}
 Libs: -L${libdir} -lGR3
