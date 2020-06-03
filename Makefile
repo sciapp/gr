@@ -1,5 +1,9 @@
-      GRDIR = /usr/local/gr
-     CONFIG = xft=no
+       GRDIR = /usr/local/gr
+      DOCDIR = $(DESTDIR)$(GRDIR)/share/GR
+      LIBDIR = $(DESTDIR)$(GRDIR)/lib
+      INCDIR = $(DESTDIR)$(GRDIR)/include
+PKGCONFIGDIR = $(LIBDIR)/pkgconfig
+      CONFIG = xft=no
 
 UNAME := $(shell uname)
 
@@ -23,6 +27,13 @@ install: default
 	$(MAKE) -C lib/gr GRDIR=$(GRDIR) install
 	$(MAKE) -C lib/gr3 GRDIR=$(GRDIR) install
 	$(MAKE) -C lib/grm GRDIR=$(GRDIR) install
+	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
+	@if [ ! -d $(DOCDIR) ]; then mkdir -m 755 -p $(DOCDIR); fi
+	cp -p LICENSE.md $(DOCDIR)
+	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
+	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
+	@if [ ! -d $(PKGCONFIGDIR) ]; then mkdir -m 755 $(PKGCONFIGDIR); fi
+	@for package in gks gr gr3 grm; do PREFIX=${DESTDIR}${GRDIR} lib/configure-pkg-config $${package}.pc.in > $(PKGCONFIGDIR)/$${package}.pc; done
 
 clean:
 	rm -f Makedefs
