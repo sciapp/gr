@@ -10,6 +10,7 @@ dist/
 *.so.dSYM
 *.dylib
 *.app
+*.pc
 gr*.deb
 gr*.rpm
 cmake-build-*/
