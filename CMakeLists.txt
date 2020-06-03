@@ -883,6 +883,7 @@ if(GR_BUILD_DEMOS)
 endif()
 
 if(GR_INSTALL)
+  install(FILES LICENSE.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/)
   include(CMakePackageConfigHelpers)
   configure_package_config_file(
     "cmake/Config.cmake.in" "GRConfig.cmake" INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
