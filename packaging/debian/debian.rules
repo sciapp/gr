@@ -10,7 +10,6 @@ export GRDIR=/usr/gr
 export DEB_BUILD_ROOT=/usr/src/packages/BUILD/debian
 #export DEB_BUILD_ROOT=/home/felder/dpkg/gr/debian
 
-QT4_QMAKE=qmake-qt4
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 ifeq ( $(wildcard /usr/lib/$(DEB_HOST_MULTIARCH)/qt5/bin/qmake), )
 	QT5_QMAKE=qmake-qt5
@@ -42,7 +41,6 @@ override_dh_auto_build:
 		EXTRA_CXXFLAGS=-I`pwd`/${THIRDPARTY_INC} \
 		EXTRA_LDFLAGS=-L`pwd`/${THIRDPARTY_LIB} \
 		THIRDPARTYDIR=`pwd`/${THIRDPARTY} \
-		QT4_QMAKE=${QT4_QMAKE} \
 		QT5_QMAKE=${QT5_QMAKE}
 
 override_dh_auto_install:

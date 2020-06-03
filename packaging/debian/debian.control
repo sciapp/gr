@@ -3,11 +3,11 @@ Maintainer: Josef Heinen <j.heinen@fz-juelich.de>
 Section: science
 Priority: optional
 Build-Depends:
- debhelper (>= 7), cmake, libx11-dev, libxft-dev, libxt-dev, libgs-dev,
- libgtk2.0-dev, libgl1-mesa-dev, libqt4-dev, qt4-qmake,
+ debhelper (>= 9), cmake, libx11-dev, libxft-dev, libxt-dev, libgs-dev,
+ xorg-dev, libgtk2.0-dev, libgl1-mesa-dev, qtbase5-dev, qt5-qmake,
  libjpeg-dev, git, ncurses-bin
 # libjpeg-dev needed for Debian 8 by libgs-dev (multiple choices)
-Standards-Version: 3.9.1
+Standards-Version: 3.9.5
 
 Package: gr
 Architecture: any
