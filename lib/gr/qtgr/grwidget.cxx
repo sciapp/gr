@@ -2,6 +2,7 @@
 #include <QStatusBar>
 #include <QMainWindow>
 #include <QDebug>
+#include <QtGlobal>
 
 #include <cstdlib>
 #include <cstdio>
@@ -221,7 +222,7 @@ void InteractiveGRWidget::wheelEvent(QWheelEvent *event)
   fac = 1;
   gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
 
-#if QT_VERSION >= 0x050000
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
   QPoint numDegrees = event->angleDelta() / 8;
 
   if (!numDegrees.isNull())
@@ -242,7 +243,13 @@ void InteractiveGRWidget::wheelEvent(QWheelEvent *event)
         fac = pow(1 / 1.01, numDegrees);
     }
 #endif
+
+#if QT_VERSION <= QT_VERSION_CHECK(5, 14, 2)
   DC_to_NDC(event->x(), event->y(), x, y);
+#else
+  DC_to_NDC((int)event->position().x(), (int)event->position().y(), x, y);
+#endif
+
   gr_ndctowc(&x, &y);
   gr_setwindow(x - (x - xmin) * fac, x + (xmax - x) * fac, y - (y - ymin) * fac, y + (ymax - y) * fac);
   this->repaint();

@@ -1,5 +1,6 @@
 #include <QPainter>
 #include <QResizeEvent>
+#include <QtGlobal>
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -171,11 +172,21 @@ void GRWidget::resizeEvent(QResizeEvent *event)
 
 void GRWidget::wheelEvent(QWheelEvent *event)
 {
-  std::cout << "angle delta: " << event->angleDelta() << ", position: " << event->pos() << std::endl;
+  int x, y;
+
+#if QT_VERSION <= QT_VERSION_CHECK(5, 14, 2)
+  x = event->pos().x();
+  y = event->pos().y();
+#else
+  x = (int)event->position().x();
+  y = (int)event->position().y();
+#endif
+
+  std::cout << "angle delta: " << event->angleDelta() << ", position: " << QPoint(x, y) << std::endl;
 
   grm_args_t *input_args = grm_args_new();
-  grm_args_push(input_args, "x", "i", event->x());
-  grm_args_push(input_args, "y", "i", event->y());
+  grm_args_push(input_args, "x", "i", x);
+  grm_args_push(input_args, "y", "i", y);
   grm_args_push(input_args, "angle_delta", "d", (double)event->angleDelta().y());
   grm_input(input_args);
   grm_args_delete(input_args);
