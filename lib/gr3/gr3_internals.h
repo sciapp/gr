@@ -16,7 +16,7 @@
 /* Core OpenGL (CGL) on Mac OS X */
 #define GR3_USE_CGL
 #include "gr3_cgl.h"
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(FreeBSD)
 /* OpenGL Extension to the X Window System (GLX) on Linux */
 #define GR3_USE_GLX
 #include "gr3_glx.h"
