@@ -3364,7 +3364,7 @@ static void render_box_model(double x, double y, int horizontal_alignment, int v
   window[0] = -x * window_width;
   window[1] = (1 - x) * window_width;
   window[2] = -y * window_height;
-  window[3] = (1 - x) * window_height;
+  window[3] = (1 - y) * window_height;
   get_results(result_box_model_node_index, &width, &height, &depth);
   free_parser_node_buffer();
   free_box_model_node_buffer();
