@@ -34,6 +34,7 @@ void yyerror(char const *);
 %token UNKNOWN_SYMBOL
 %token FONT
 %token LATEXFONT
+%token LATEXTEXT
 %token FUNCTION
 %token C_OVER_C
 %token SPACE
@@ -321,6 +322,10 @@ SNOWFLAKE {
 }
 | group {
     $$ = $1;
+}
+| LATEXTEXT {
+    $$ = $1;
+    $$.type = NT_LATEXTEXT;
 }
 | frac {
     $$ = $1;
@@ -651,7 +656,7 @@ DIGIT {
 const char *snowflake_symbols[] = {"\\doteqdot", "\\doteq", "\\dotminus", "\\barleftarrow", "\\ddots", "\\dotplus", "\\dots", "\\barwedge"};
 const char *accent_symbols[] = {"\\hat", "\\breve", "\\bar", "\\grave", "\\acute", "\\tilde", "\\dot", "\\ddot", "\\vec", "\\overrightarrow", "\\overleftarrow", "\\mathring", "\\widebar", "\\widehat", "\\widetilde"};
 const char *font_symbols[] = {"\\rm", "\\cal", "\\it", "\\tt", "\\sf", "\\bf", "\\default", "\\bb", "\\frak", "\\circled", "\\scr", "\\regular"};
-const char *latexfont_symbols[] = {"\\mathrm", "\\mathcal", "\\mathit", "\\mathtt", "\\mathsf", "\\mathbf", "\\mathdefault", "\\mathbb", "\\mathfrak", "\\mathcircled", "\\mathscr", "\\mathregular"};
+const char *latexfont_symbols[] = {"\\mathrm", "\\mathcal", "\\mathit", "\\mathtt", "\\mathsf", "\\mathbf", "\\mathdefault", "\\mathbb", "\\mathfrak", "\\mathcircled", "\\mathscr", "\\mathregular", "\\textrm", "\\textit", "\\textbf", "\\texttt"};
 const char *c_over_c_symbols[] = {"\\AA"};
 const char *space_symbols[] = {"\\thinspace", "\\enspace", "\\quad", "\\qquad"};
 const char *left_delim_symbols[] = {"\\int", "\\lfloor", "\\langle", "\\lceil", "\\sum"};
@@ -893,6 +898,14 @@ int yylex(void) {
         }
         yylval.source = symbol_start;
         yylval.length = (int)(cursor - symbol_start);
+        if (result == LATEXFONT && *cursor == '{' && strncmp(symbol_start, "\\text", 5) == 0) {
+            const char *text_end = strchr(symbol_start, '}');
+            if (text_end) {
+                yylval.length = (int)(text_end - symbol_start);
+                cursor = text_end+1;
+                result = LATEXTEXT;
+            }
+        }
         return result;
       }
     }

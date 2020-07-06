@@ -36,8 +36,8 @@ typedef enum ParserNodeType_
   NT_C_OVER_C = 16,
   NT_ACCENT = 17,
   NT_SQRT = 18,
-  /* TODO */
-  NT_SUBSUPER,
+  NT_SUBSUPER = 19,
+  NT_LATEXTEXT = 20
 } ParserNodeType;
 
 typedef struct MathNode_
