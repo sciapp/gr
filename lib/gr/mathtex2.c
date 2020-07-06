@@ -2000,6 +2000,88 @@ static size_t convert_overline_to_box_model(ParserNode *node)
   return bm_node_index;
 }
 
+
+static size_t convert_latextext_to_box_model(ParserNode *node)
+{
+  const char *font_str = node->source + 5;
+  size_t font_str_length = strchr(font_str, '{') - font_str;
+  const unsigned char *text_str = (const unsigned char *)font_str + font_str_length + 1;
+  size_t text_str_length = strchr((const char *)text_str, '}') - (const char *)text_str;
+  size_t i;
+  size_t bm_node_index;
+  push_state();
+  if (strncmp("it", font_str, font_str_length) == 0 && strlen("it") == font_str_length)
+    {
+      get_current_state()->font = FV_IT;
+    }
+  else if (strncmp("rm", font_str, font_str_length) == 0 && strlen("rm") == font_str_length)
+    {
+      get_current_state()->font = FV_RM;
+    }
+  else if (strncmp("tt", font_str, font_str_length) == 0 && strlen("tt") == font_str_length)
+    {
+      get_current_state()->font = FV_TT;
+    }
+  else if (strncmp("bf", font_str, font_str_length) == 0 && strlen("bf") == font_str_length)
+    {
+      get_current_state()->font = FV_BF;
+    }
+  else
+    {
+      fprintf(stderr, "Error: unknown font variant %.*s\n", (int)font_str_length, font_str);
+    }
+  bm_node_index = make_hlist();
+
+  for (i = 0; i < text_str_length; i++)
+    {
+      int j;
+      int offset;
+      int following_bytes;
+      unsigned int codepoint = 0;
+
+      if (text_str[i] < 128)
+        {
+          offset = 0;
+          following_bytes = 0;
+        }
+      else if (text_str[i] < 128 + 64 + 32)
+        {
+          offset = 128 + 64;
+          following_bytes = 1;
+        }
+      else if (text_str[i] < 128 + 64 + 32 + 16)
+        {
+          offset = 128 + 64 + 32;
+          following_bytes = 2;
+        }
+      else if (text_str[i] < 128 + 64 + 32 + 16 + 8)
+        {
+          offset = 128 + 64 + 32 + 16;
+          following_bytes = 3;
+        }
+      else
+        {
+          continue;
+        }
+      codepoint = text_str[i] - offset;
+      for (j = 0; j < following_bytes; j++)
+        {
+          codepoint = codepoint * 64;
+          i++;
+          if (text_str[i] < 128 || text_str[i] >= 128 + 64)
+            {
+              continue;
+            }
+          codepoint += text_str[i] - 128;
+        }
+      append_to_hlist(bm_node_index, make_char(codepoint));
+    }
+  pop_state();
+  kern_hlist(bm_node_index);
+  pack_hlist(bm_node_index, 0, 1);
+  return bm_node_index;
+}
+
 static size_t convert_group_to_box_model(ParserNode *node)
 {
   const char *font_str = NULL;
@@ -2887,6 +2969,8 @@ static size_t convert_to_box_model(size_t parser_node_index, size_t previous_box
       return convert_accent_to_box_model(node);
     case NT_SQRT:
       return convert_sqrt_to_box_model(node);
+    case NT_LATEXTEXT:
+      return convert_latextext_to_box_model(node);
     default:
       break;
     }
