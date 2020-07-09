@@ -3715,6 +3715,8 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
       else
         {
           double xmin, xmax, ymin, ymax;
+          double angle;
+          int i;
           calculate_alignment_offsets(horizontal_alignment, vertical_alignment, &x_offset, &y_offset);
           xmin = x + x_offset;
           xmax = x + x_offset + canvas_width / window_width;
@@ -3733,6 +3735,15 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
               tby[1] = ymin;
               tby[2] = ymax;
               tby[3] = ymax;
+            }
+          angle = -atan2(chupx, chupy);
+          for (i = 0; i < 4; i++)
+            {
+              double rx, ry;
+              rx = tbx[i] - x;
+              ry = tby[i] - y;
+              tbx[i] = x + rx * cos(angle) - ry * sin(angle);
+              tby[i] = y + rx * sin(angle) + ry * cos(angle);
             }
         }
     }
