@@ -3028,7 +3028,7 @@ static void render_character(BoxModelNode *node, double x, double y)
   gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BASE);
   if (node->u.character.bearing < 0)
     {
-      x -= node->u.character.bearing;
+      x += node->u.character.bearing;
       x += node->u.character.advance;
     }
   y += node->u.character.shift_amount;
