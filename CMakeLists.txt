@@ -31,6 +31,7 @@ option(GR_BUILD_DEMOS "Build demos for GR" OFF)
 option(GR_INSTALL "Create installation target for GR" ON)
 option(GR_USE_BUNDLED_LIBRARIES "Use thirdparty libraries bundled with GR" OFF)
 option(GR_MANUAL_MOC_AND_RCC "Manually run moc and rcc instead of relying on AUTOMOC and AUTORCC" OFF)
+option(GR_FIND_QT5_BY_VARIABLES "Find Qt5 based on the variables Qt5_INCLUDE_DIR and Qt5_LIBRARY_DIR" OFF)
 
 if(GR_USE_BUNDLED_LIBRARIES)
   list(APPEND CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/3rdparty/build/")
@@ -39,6 +40,10 @@ if(GR_USE_BUNDLED_LIBRARIES)
 else()
   set(GR_THIRDPARTY_LIBRARY_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX})
   set(GR_THIRDPARTY_LIBRARY_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
+endif()
+
+if(GR_FIND_QT5_BY_VARIABLES)
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/optional/qt5")
 endif()
 
 if(WIN32)
@@ -113,7 +118,12 @@ if(Qt5Widgets_FOUND
 endif()
 
 if(X11_FOUND)
-  if(NOT TARGET X11::X11)
+  # older versions of FindX11.cmake set variables but do not create targets
+  if(NOT TARGET X11::X11
+     AND X11_INCLUDE_DIR
+     AND X11_X11_LIB
+     AND X11_Xft_LIB
+  )
     add_library(X11::X11 UNKNOWN IMPORTED)
     set_target_properties(
       X11::X11
@@ -123,7 +133,11 @@ if(X11_FOUND)
                  INTERFACE_LINK_LIBRARIES "${X11_Xft_LIB}"
     )
   endif()
-  if(NOT TARGET X11::Xt)
+  if(NOT TARGET X11::Xt
+     AND X11_INCLUDE_DIR
+     AND X11_Xt_LIB
+     AND TARGET X11:X11
+  )
     add_library(X11::Xt UNKNOWN IMPORTED)
     set_target_properties(
       X11::Xt
@@ -329,13 +343,15 @@ set_target_properties(gr3_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}"
 add_library(GR::GR3 ALIAS gr3_shared)
 
 if(UNIX AND NOT APPLE)
-  if(TARGET X11::X11)
+  if(TARGET X11::X11
+     AND TARGET OpenGL::GLX
+     AND TARGET OPENGL::GL
+  )
     add_library(gr3platform SHARED lib/gr3/gr3_platform_glx.c)
     target_link_libraries(gr3platform PUBLIC GR::GR)
-    if(OpenGL_FOUND)
-      target_link_libraries(gr3platform PUBLIC OpenGL::GL)
-    endif()
     target_link_libraries(gr3platform PUBLIC X11::X11)
+    target_link_libraries(gr3platform PUBLIC OpenGL::GLX)
+    target_link_libraries(gr3platform PUBLIC OpenGL::GL)
     set_target_properties(
       gr3platform
       PROPERTIES C_STANDARD 90
@@ -346,11 +362,11 @@ if(UNIX AND NOT APPLE)
                  OUTPUT_NAME GR3platform
     )
   else()
+    target_compile_definitions(gr3_static PUBLIC -DNO_GL)
+    target_compile_definitions(gr3_shared PUBLIC -DNO_GL)
     message(WARNING "libGR3platform.so requires X11 and will not be built.")
   endif()
-endif()
-
-if(NOT OpenGL_FOUND)
+elseif(NOT OpenGL_FOUND)
   target_compile_definitions(gr3_static PUBLIC -DNO_GL)
   target_compile_definitions(gr3_shared PUBLIC -DNO_GL)
 endif()
@@ -799,6 +815,7 @@ if(Qt4_FOUND
       )
 )
   add_executable(gksqt WIN32 MACOSX_BUNDLE lib/gks/qt/gksqt.cxx lib/gks/qt/gksserver.cxx lib/gks/qt/gkswidget.cxx)
+  set_target_properties(gksqt PROPERTIES CXX_STANDARD 11 CXX_EXTENSIONS OFF CXX_STANDARD_REQUIRED ON)
   target_link_libraries(gksqt PUBLIC gks_static)
   if(Qt5Widgets_FOUND
      AND Qt5Core_FOUND
@@ -883,6 +900,7 @@ if(GR_BUILD_DEMOS)
 endif()
 
 if(GR_INSTALL)
+  install(FILES LICENSE.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/)
   include(CMakePackageConfigHelpers)
   configure_package_config_file(
     "cmake/Config.cmake.in" "GRConfig.cmake" INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
@@ -907,6 +925,10 @@ if(GR_INSTALL)
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
     NAMESPACE GR::
   )
+  foreach(PACKAGE gr gr3 gks grm)
+    configure_file("${PACKAGE}.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}.pc" @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig/")
+  endforeach()
   install(
     TARGETS gks_static
             gr_static

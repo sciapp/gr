@@ -4,8 +4,6 @@
 #define _POSIX_C_SOURCE 200112L
 #endif
 
-#include <string.h>
-
 #include "gkscore.h"
 #include "string_list_int.h"
 
@@ -22,7 +20,7 @@ error_t string_list_entry_copy(string_list_entry_t *copy, const string_list_cons
 {
   string_list_entry_t _copy;
 
-  _copy = strdup(entry);
+  _copy = gks_strdup(entry);
   if (_copy == NULL)
     {
       return ERROR_MALLOC;

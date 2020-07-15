@@ -1,0 +1,14 @@
+#!/bin/sh
+if [ ! -d ${PREFIX} ]; then
+    echo "The PREFIX variable is not set to an existing directory." 1>&2;
+    exit 1;
+fi
+SCRIPT_DIR="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
+VERSION=`${SCRIPT_DIR}/Version | grep define | sed 's/#define GR_VERSION \"\(.*\)\"/\1/'`
+sed "\
+    s|@GR_VERSION@|${VERSION}|; \
+    s|@CMAKE_INSTALL_PREFIX@|${PREFIX}|; \
+    s|@CMAKE_INSTALL_LIBDIR@|lib|; \
+    s|@CMAKE_INSTALL_INCLUDEDIR@|include|; \
+    s|@GR_SHARED_LIBRARY_SUFFIX@|.so| \
+" $1;

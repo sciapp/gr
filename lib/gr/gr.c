@@ -10117,7 +10117,7 @@ static void mathtex(double x, double y, char *string, int inquire, double *tbx, 
     }
 }
 
-void gr_mathtex2(double x, double y, const char *formula);
+void mathtex2(double x, double y, const char *formula, int inquire, double *tbx, double *tby);
 
 /*!
  * Generate a character string starting at the given location. Strings can be
@@ -10137,7 +10137,7 @@ void gr_mathtex(double x, double y, char *string)
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      gr_mathtex2(x, y, string);
+      mathtex2(x, y, string, 0, NULL, NULL);
     }
   else
     {
@@ -10149,9 +10149,20 @@ void gr_mathtex(double x, double y, char *string)
 
 void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
 {
+  int unused;
+  int prec;
+
   check_autoinit;
 
-  mathtex(x, y, string, 1, tbx, tby);
+  gks_inq_text_fontprec(&unused, &unused, &prec);
+  if (prec == 3)
+    {
+      mathtex2(x, y, string, 1, tbx, tby);
+    }
+  else
+    {
+      mathtex(x, y, string, 1, tbx, tby);
+    }
 }
 
 void gr_beginselection(int index, int type)
