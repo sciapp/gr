@@ -3,6 +3,7 @@ override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
 VERSION = 1.1.1
+THEORA_CONFIGURE ?= ./configure
 THEORA_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
 THEORA_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.11
@@ -35,7 +36,7 @@ $(PREFIX)/src/libtheora-$(VERSION)/configure: $(PREFIX)/src/libtheora-$(VERSION)
 
 $(PREFIX)/src/libtheora-$(VERSION)/Makefile: $(PREFIX)/src/libtheora-$(VERSION)/configure $(PREFIX)/lib/libogg.a
 	cd $(PREFIX)/src/libtheora-$(VERSION) && \
-	./configure \
+	$(THEORA_CONFIGURE) \
 		--prefix=$(PREFIX) \
 		--libdir=$(PREFIX)/lib \
 		--enable-static \
