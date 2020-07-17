@@ -5615,6 +5615,21 @@ void gr_text3d(double x, double y, double z, char *chars, int axis)
     gr_writestream("<text3d x=\"%g\" y=\"%g\" z=\"%g\" text=\"%s\" axis=\"%d\"/>\n", x, y, z, chars, axis);
 }
 
+/*!
+ * Allows you to get the 2d coordinates and transformed coordinates of a text as if displayed by gr_text3d
+ *
+ * \param[in] x The base X coordinate
+ * \param[in] y The base Y coordinate
+ * \param[in] z The base z coordinate
+ * \param[in] chars The string to draw
+ * \param[in] axis In which direction the text is drawn (1: YX-plane, 2: XY plane, 3: YZ plane, 4: XZ plane)
+ * \param[in] tbx A double array of 16 elements to write x-coordinates to
+ * \param[in] tby A double array of 16 elements to write y-coordinates to
+ *
+ * The first 8 coordinates are pre-transformation coordinates, while the last 8 coordinates are transformed coordinates
+ * The first 4 coordinates each are the corners of the bounding box, including ascender and descender space, while the
+ * last 4 coordinates are without ascenders and descenders.
+ */
 void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *tbx, double *tby)
 {
   double scaleFactors[3];
@@ -5628,8 +5643,8 @@ void gr_inqtext3d(double x, double y, double z, char *chars, int axis, double *t
                            tbx, tby);
 }
 
-void axes3d_get_params(int axis, int tick_axis, int tick_direction, double x_org, double y_org, double z_org,
-                       int *text_axis)
+static void axes3d_get_params(int axis, int tick_axis, int tick_direction, double x_org, double y_org, double z_org,
+                              int *text_axis)
 {
   /* This function calculates (and sets) the upvec, valign and axis of text for gr_axes3d. It prefers to direct text
    * outwards of the coordinate system, but the tick_axis/tick_direction overwrite the direction, if in the same plane.
@@ -5643,9 +5658,11 @@ void axes3d_get_params(int axis, int tick_axis, int tick_direction, double x_org
   double fx, fy, fz, xi, yi, zi;
   double x_min, x_max, y_min, y_max, z_min, z_max;
   double cam_x, cam_y, cam_z;
+  double bBoxX[16], bBoxY[16];
+  double bBoxSpace, bBoxSpace2;
 
-  int axises[3] = {/* plane (xy, xz, yz) */
-                   2, 4, 3};
+  int axes[3] = {/* plane (xy, xz, yz) */
+                 2, 4, 3};
   int upvecs[4][2] = {
       {0, 1},  /* x pos or y pos if plane = xz */
       {-1, 0}, /* y pos if plane = xy or z pos */
@@ -5657,7 +5674,9 @@ void axes3d_get_params(int axis, int tick_axis, int tick_direction, double x_org
       fprintf(stderr, "Axis should be between 0 and 2\n");
       return;
     }
-
+  /* Reset options for consistent gr_inqtext3d values */
+  gks_set_text_upvec(0, 1);
+  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
   gr_inqwindow3d(&x_min, &x_max, &y_min, &y_max, &z_min, &z_max);
   fx = tx.camera_pos_x - tx.focus_point_x;
   fy = tx.camera_pos_y - tx.focus_point_y;
@@ -5665,85 +5684,106 @@ void axes3d_get_params(int axis, int tick_axis, int tick_direction, double x_org
   cam_x = tx.camera_pos_x / tx.x_axis_scale;
   cam_y = tx.camera_pos_y / tx.y_axis_scale;
   cam_z = tx.camera_pos_z / tx.z_axis_scale;
+  xi = (x_max + x_min) / 2;
+  yi = (x_max + x_min) / 2;
+  zi = (x_max + x_min) / 2;
 
   if (axis == 0)
     {
-      plane = (fz > fabs(fy) || fz <= -fabs(fy)) ? 0 : 1;                  /* 0: xy-plane, 1: xz-plane */
+      gr_inqtext3d(xi, y_org, z_org, "A", axes[1], bBoxX, bBoxY);
+      bBoxSpace =
+          fabs((bBoxX[10] - bBoxX[8]) * (bBoxY[11] - bBoxY[9]) + (bBoxX[11] - bBoxX[9]) * (bBoxY[8] - bBoxY[10]));
+
+      gr_inqtext3d(xi, y_org, z_org, "A", axes[0], bBoxX, bBoxY);
+      bBoxSpace2 =
+          fabs((bBoxX[10] - bBoxX[8]) * (bBoxY[11] - bBoxY[9]) + (bBoxX[11] - bBoxX[9]) * (bBoxY[8] - bBoxY[10]));
+
+      plane = bBoxSpace2 > bBoxSpace ? 0 : 1;                              /* 0: xy-plane, 1: xz-plane */
       direction = (!plane && fz <= -fabs(fy)) || (plane && fy > fabs(fz)); /* 1: positive, 0: negative */
 
       if (plane == 1)
         {
-          zi = (z_max + z_min) / 2 - z_org;
-          if (fabs(zi) >= 1e-10)
-            {                       /* if the origin is not centered in the field */
-              direction = (zi < 0); /* align the text and ticks to the 'outside' */
+          if (fabs(zi - z_org) >= 1e-10)
+            {                           /* if the origin is not centered in the field */
+              direction = (zi < z_org); /* align the text and ticks to the 'outside' */
             }
           if (tick_axis == 2) direction = tick_direction;
         }
       else
         {
-          yi = (y_max + y_min) / 2 - y_org;
-          if (fabs(yi) >= 1e-10)
+          if (fabs(yi - y_org) >= 1e-10)
             {
-              direction = (yi < 0);
+              direction = (yi < y_org);
             }
           if (tick_axis == 1) direction = tick_direction;
         }
-      rotate_text = (tx.up_x < 0);
+      rotate_text = (fx < 0) ^ !direction;
       direction = 1 + 2 * !direction; /* always in y or z-direction */
     }
   else if (axis == 1)
     {
-      plane = (fx > fabs(fz) || fx <= -fabs(fz)) ? 2 : 0;                       /* 2: yz-plane, 0: xy-plane */
-      direction = (2 == plane && fx <= -fabs(fz)) || (!plane && fz > fabs(fx)); /* 1: positive, 0: negative */
+      gr_inqtext3d(x_org, yi, z_org, "A", axes[2], bBoxX, bBoxY);
+      bBoxSpace =
+          fabs((bBoxX[10] - bBoxX[8]) * (bBoxY[11] - bBoxY[9]) + (bBoxX[11] - bBoxX[9]) * (bBoxY[8] - bBoxY[10]));
 
+      gr_inqtext3d(x_org, yi, z_org, "A", axes[0], bBoxX, bBoxY);
+      bBoxSpace2 =
+          fabs((bBoxX[10] - bBoxX[8]) * (bBoxY[11] - bBoxY[9]) + (bBoxX[11] - bBoxX[9]) * (bBoxY[8] - bBoxY[10]));
+
+      plane = bBoxSpace2 > bBoxSpace ? 0 : 2;                                   /* 2: yz-plane, 0: xy-plane */
+      direction = (2 == plane && fx <= -fabs(fz)) || (!plane && fz > fabs(fx)); /* 1: positive, 0: negative */
       if (plane == 0)
         {
-          xi = (x_max + x_min) / 2 - x_org;
-          if (fabs(xi) >= 1e-10)
-            {                       /* if the origin is not centered in the field */
-              direction = (xi < 0); /* align the text and ticks to the 'outside' */
+          if (fabs(xi - x_org) >= 1e-10)
+            {                           /* if the origin is not centered in the field */
+              direction = (xi < x_org); /* align the text and ticks to the 'outside' */
             }
           if (tick_axis == 0) direction = tick_direction;
+          rotate_text = (fy < 0) ^ direction;
         }
       else
         {
-          zi = (z_max + z_min) / 2 - z_org;
-          if (fabs(zi) >= 1e-10)
+          if (fabs(zi - z_org) >= 1e-10)
             {
-              direction = (zi < 0);
+              direction = (zi < z_org);
             }
           if (tick_axis == 2) direction = tick_direction;
+          rotate_text = (fy < 0) ^ !direction;
         }
-      rotate_text = (tx.up_y < 0);
       direction = (plane == 2) + 2 * !direction; /* always in x or z-direction */
     }
   else /* z-axis */
     {
-      plane = (fy > fabs(fx) || fy <= -fabs(fx)) ? 1 : 2;                           /* 1: xz-plane, 0: yz-plane */
+      gr_inqtext3d(x_org, y_org, zi, "A", axes[2], bBoxX, bBoxY);
+      bBoxSpace =
+          fabs((bBoxX[10] - bBoxX[8]) * (bBoxY[11] - bBoxY[9]) + (bBoxX[11] - bBoxX[9]) * (bBoxY[8] - bBoxY[10]));
+
+      gr_inqtext3d(x_org, y_org, zi, "A", axes[1], bBoxX, bBoxY);
+      bBoxSpace2 =
+          fabs((bBoxX[10] - bBoxX[8]) * (bBoxY[11] - bBoxY[9]) + (bBoxX[11] - bBoxX[9]) * (bBoxY[8] - bBoxY[10]));
+
+      plane = bBoxSpace2 > bBoxSpace ? 1 : 2;                                       /* 1: xz-plane, 2: yz-plane */
       direction = (1 == plane && fy <= -fabs(fx)) || (2 == plane && fx > fabs(fy)); /* 1: positive, 0: negative */
 
       if (plane == 1)
         {
-          xi = (x_max + x_min) / 2 - x_org;
-          if (fabs(xi) >= 1e-10)
-            {                       /* if the origin is not centered in the field */
-              direction = (xi < 0); /* align the text and ticks to the 'outside' */
+          if (fabs(xi - x_org) >= 1e-10)
+            {                           /* if the origin is not centered in the field */
+              direction = (xi < x_org); /* align the text and ticks to the 'outside' */
             }
           if (tick_axis == 0) /* Override if ticks are drawn in the same direction as the text */
             direction = tick_direction;
         }
       else
         {
-          yi = (y_max + y_min) / 2 - y_org;
-          if (fabs(yi) >= 1e-10)
+          if (fabs(yi - y_org) >= 1e-10)
             {
-              direction = (yi < 0);
+              direction = (yi < y_org);
             }
           if (tick_axis == 1) direction = tick_direction;
         }
+      rotate_text = (tx.up_z > 0) ^ direction;
 
-      rotate_text = (tx.up_z > 0);
       direction = 2 * !direction; /* always in x or y-direction */
     }
   /* if the camera is on the opposite side of the text, flip/mirror it. */
@@ -5754,7 +5794,7 @@ void axes3d_get_params(int axis, int tick_axis, int tick_direction, double x_org
     {
       direction = (direction + 2) % 4; /* rotate text by 180 degrees */
     }
-  *text_axis = axises[plane];
+  *text_axis = axes[plane];
 
   if (rotate_text ^ flip_text)
     {
