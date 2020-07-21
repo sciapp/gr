@@ -1,5 +1,5 @@
 #!/bin/sh
-if [ ! -d ${PREFIX} ]; then
+if [ ! -d ${DESTDIR}${PREFIX} ]; then
     echo "The PREFIX variable is not set to an existing directory." 1>&2;
     exit 1;
 fi
