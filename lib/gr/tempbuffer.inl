@@ -52,7 +52,10 @@ VALUE_TYPE *CONCAT(get_, VALUE_NAME)(size_t index) {
 }
 
 void CONCAT(CONCAT(free_, VALUE_NAME), _buffer)() {
-    gks_free(MEMORY_NAME);
+    if(MEMORY_NAME)
+      {
+        gks_free(MEMORY_NAME);
+      }
     MEMORY_NAME = 0;
     SIZE_NAME = 0;
     NEXT_INDEX_NAME = 0;
