@@ -16,7 +16,7 @@
 
 Name:				gr
 Summary:			GR, a universal framework for visualization applications
-Version:			0.28.1
+Version:			0.51.1
 Release:			3%{?dist}
 License:			MIT
 Group:				Development/Libraries
@@ -37,6 +37,7 @@ BuildRequires:		gcc-c++
 BuildRequires:		libX11-devel
 BuildRequires:		libXt-devel
 BuildRequires:		libXft-devel
+BuildRequires:		xorg-x11-server-devel
 BuildRequires:		gtk2-devel
 %if 0%{?__jcns}
 %define debug_package %{nil}

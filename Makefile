@@ -33,7 +33,7 @@ install: default
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
 	@if [ ! -d $(PKGCONFIGDIR) ]; then mkdir -m 755 $(PKGCONFIGDIR); fi
-	@for package in gks gr gr3 grm; do PREFIX=${DESTDIR}${GRDIR} lib/configure-pkg-config $${package}.pc.in > $(PKGCONFIGDIR)/$${package}.pc; done
+	@for package in gks gr gr3 grm; do PREFIX=${GRDIR} lib/configure-pkg-config $${package}.pc.in > $(PKGCONFIGDIR)/$${package}.pc; done
 
 clean:
 	rm -f Makedefs
