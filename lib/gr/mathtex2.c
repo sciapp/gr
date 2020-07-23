@@ -3667,6 +3667,19 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
   /* TODO: inquire current workstation window height? */
   int window_width = 2400;
   int window_height = 2400;
+
+  double tbx_fallback[4];
+  double tby_fallback[4];
+  /* use fallback arrays to simplify handling of tbx and tby */
+  if (!tbx)
+    {
+      tbx = tbx_fallback;
+    }
+  if (!tby)
+    {
+      tby = tby_fallback;
+    }
+
   has_parser_error = 0;
   gks_ft_inq_bearing_x_direction(&previous_bearing_x_direction);
   gks_ft_set_bearing_x_direction(1);
@@ -3718,20 +3731,14 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
           xmax = x + x_offset + canvas_width / window_width;
           ymin = y + y_offset;
           ymax = y + y_offset + canvas_height / window_height;
-          if (tbx)
-            {
-              tbx[0] = xmin;
-              tbx[1] = xmax;
-              tbx[2] = xmax;
-              tbx[3] = xmin;
-            }
-          if (tby)
-            {
-              tby[0] = ymin;
-              tby[1] = ymin;
-              tby[2] = ymax;
-              tby[3] = ymax;
-            }
+          tbx[0] = xmin;
+          tbx[1] = xmax;
+          tbx[2] = xmax;
+          tbx[3] = xmin;
+          tby[0] = ymin;
+          tby[1] = ymin;
+          tby[2] = ymax;
+          tby[3] = ymax;
           angle = -atan2(chupx, chupy);
           for (i = 0; i < 4; i++)
             {
@@ -3745,20 +3752,15 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
     }
   else if (inquire)
     {
-      if (tbx)
-        {
-          tbx[0] = x;
-          tbx[1] = x;
-          tbx[2] = x;
-          tbx[3] = x;
-        }
-      if (tby)
-        {
-          tby[0] = y;
-          tby[1] = y;
-          tby[2] = y;
-          tby[3] = y;
-        }
+      tbx[0] = x;
+      tbx[1] = x;
+      tbx[2] = x;
+      tbx[3] = x;
+
+      tby[0] = y;
+      tby[1] = y;
+      tby[2] = y;
+      tby[3] = y;
     }
 
   free_parser_node_buffer();
@@ -3774,4 +3776,13 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
   gks_set_fill_color_index(previous_fill_color_index);
   gks_set_fill_int_style(previous_fill_int_style);
   gks_set_viewport(1, previous_viewport_xmin, previous_viewport_xmax, previous_viewport_ymin, previous_viewport_ymax);
+
+  if (inquire)
+    {
+      int i;
+      for (i = 0; i < 4; i++)
+        {
+          gr_ndctowc(tbx + i, tby + i);
+        }
+    }
 }
