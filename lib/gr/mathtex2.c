@@ -3656,6 +3656,7 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
   double previous_char_height;
   double chupx = 0;
   double chupy = 0;
+  int previous_tnr;
   int previous_fill_int_style;
   int previous_fill_color_index = 0;
   int previous_encoding = ENCODING_LATIN1;
@@ -3685,6 +3686,7 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
   gks_ft_set_bearing_x_direction(1);
   /* gr call first to ensure autoinit has run */
   gr_inqviewport(&previous_viewport_xmin, &previous_viewport_xmax, &previous_viewport_ymin, &previous_viewport_ymax);
+  gks_inq_current_xformno(&unused, &previous_tnr);
   gks_inq_text_fontprec(&unused, &font, &prec);
   gks_inq_text_align(&unused, &horizontal_alignment, &vertical_alignment);
   gks_inq_fill_color_index(&unused, &previous_fill_color_index);
@@ -3776,6 +3778,7 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
   gks_set_fill_color_index(previous_fill_color_index);
   gks_set_fill_int_style(previous_fill_int_style);
   gks_set_viewport(1, previous_viewport_xmin, previous_viewport_xmax, previous_viewport_ymin, previous_viewport_ymax);
+  gks_select_xform(previous_tnr);
 
   if (inquire)
     {
