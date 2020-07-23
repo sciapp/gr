@@ -3450,10 +3450,6 @@ static void render_box_model(double x, double y, int horizontal_alignment, int v
   window[2] = -y * window_height;
   window[3] = (1 - y) * window_height;
   get_results(result_box_model_node_index, &width, &height, &depth);
-  free_parser_node_buffer();
-  free_box_model_node_buffer();
-  free_box_model_state_buffer();
-  current_box_model_state_index = 0;
 }
 
 
@@ -3764,6 +3760,11 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
           tby[3] = y;
         }
     }
+
+  free_parser_node_buffer();
+  free_box_model_node_buffer();
+  free_box_model_state_buffer();
+  current_box_model_state_index = 0;
 
   gks_ft_set_bearing_x_direction(previous_bearing_x_direction);
   gks_set_text_height(previous_char_height);
