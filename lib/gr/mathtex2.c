@@ -3780,7 +3780,7 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
   gks_set_viewport(1, previous_viewport_xmin, previous_viewport_xmax, previous_viewport_ymin, previous_viewport_ymax);
   gks_select_xform(previous_tnr);
 
-  if (inquire)
+  if (inquire && previous_tnr != 0)
     {
       int i;
       for (i = 0; i < 4; i++)
