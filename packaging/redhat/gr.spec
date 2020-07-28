@@ -37,7 +37,6 @@ BuildRequires:		gcc-c++
 BuildRequires:		libX11-devel
 BuildRequires:		libXt-devel
 BuildRequires:		libXft-devel
-BuildRequires:		xorg-x11-server-devel
 BuildRequires:		gtk2-devel
 %if 0%{?__jcns}
 %define debug_package %{nil}
@@ -56,10 +55,12 @@ BuildRequires: qt-devel
 %if 0%{?suse_version}
 %define qmake_qt4 qmake
 %define qmake_qt5 qmake-qt5
+BuildRequires:		xorg-x11-devel
 BuildRequires:		Mesa-libGL-devel
 BuildRequires:		libqt4-devel
 BuildRequires:		libqt5-qtbase-devel
 %else
+BuildRequires:		xorg-x11-server-devel
 BuildRequires:		mesa-libGL-devel
 %endif
 
