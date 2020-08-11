@@ -1100,7 +1100,11 @@ static size_t make_char(unsigned int codepoint)
       if (codepoint == '|')
         {
           bm_node.u.character.advance = advance * 1.5;
-        };
+        }
+      else if (codepoint == 215)
+        {
+          bm_node.u.character.advance = width * 1.25;
+        }
     }
   else
     {
@@ -1880,10 +1884,25 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
 
   if (is_spaced_symbol)
     {
+      size_t char_node_index = make_char(symbol_to_codepoint((const unsigned char *)node->source, node->length));
+      BoxModelCharNode *char_node = &get_box_model_node(char_node_index)->u.character;
       size_t hlist_index = make_hlist();
-      append_to_hlist(hlist_index, make_space(0.2));
-      append_to_hlist(hlist_index, make_char(symbol_to_codepoint((const unsigned char *)node->source, node->length)));
-      append_to_hlist(hlist_index, make_space(0.2));
+      double space;
+      switch (char_node->codepoint)
+        {
+        case 215:
+          space = 0.45;
+          break;
+        case 8712:
+          space = 0.4;
+          break;
+        default:
+          space = 0.35;
+          break;
+        }
+      append_to_hlist(hlist_index, make_space(space));
+      append_to_hlist(hlist_index, char_node_index);
+      append_to_hlist(hlist_index, make_space(space));
       kern_hlist(hlist_index);
       pack_hlist(hlist_index, 0, 1);
       if (node->source[0] == '*' && node->length == 1)
