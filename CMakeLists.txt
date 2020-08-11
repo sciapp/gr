@@ -345,7 +345,7 @@ add_library(GR::GR3 ALIAS gr3_shared)
 if(UNIX AND NOT APPLE)
   if(TARGET X11::X11
      AND TARGET OpenGL::GLX
-     AND TARGET OPENGL::GL
+     AND TARGET OpenGL::GL
   )
     add_library(gr3platform SHARED lib/gr3/gr3_platform_glx.c)
     target_link_libraries(gr3platform PUBLIC GR::GR)
