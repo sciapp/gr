@@ -4771,7 +4771,10 @@ int grm_plot(const grm_args_t *args)
 
 #ifndef NDEBUG
   logger((stderr, "root args after \"grm_plot\" (active_plot_index: %d):\n", active_plot_index - 1));
-  grm_dump(global_root_args, stderr);
+  if (logger_enabled())
+    {
+      grm_dump(global_root_args, stderr);
+    }
 #endif
 
   return 1;

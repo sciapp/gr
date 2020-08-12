@@ -47,8 +47,8 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ -I$(GRMDIR) -I$(GR3DIR) -I$(GRDIR) -I$(GK
            $(GR3DIR)/gr3_html.o $(GR3DIR)/gr3_povray.o $(GR3DIR)/gr3_png.o \
            $(GR3DIR)/gr3_jpeg.o $(GR3DIR)/gr3_gr.o $(GR3DIR)/gr3_mc.o
  GRMOBJS = $(GRMDIR)/args.o $(GRMDIR)/dump.o $(GRMDIR)/dynamic_args_array.o $(GRMDIR)/error.o $(GRMDIR)/event.o \
-           $(GRMDIR)/interaction.o $(GRMDIR)/json.o $(GRMDIR)/memwriter.o $(GRMDIR)/net.o $(GRMDIR)/plot.o \
-           $(GRMDIR)/util.o $(GRMDIR)/datatype/double_map.o $(GRMDIR)/datatype/string_array_map.o \
+           $(GRMDIR)/interaction.o $(GRMDIR)/json.o $(GRMDIR)/logging.o $(GRMDIR)/memwriter.o $(GRMDIR)/net.o \
+           $(GRMDIR)/plot.o $(GRMDIR)/util.o $(GRMDIR)/datatype/double_map.o $(GRMDIR)/datatype/string_array_map.o \
            $(GRMDIR)/datatype/string_list.o $(GRMDIR)/datatype/string_map.o $(GRMDIR)/datatype/uint_map.o
     OBJS = $(GRMOBJS) $(GR3OBJS) $(GROBJS) $(GKSOBJS)
     LIBS = $(JPEGDIR)/libjpeg.a $(PNGDIR)/libpng.a $(ZLIBDIR)/libz.a $(QHULLDIR)/libqhull.a $(FTDIR)/libfreetype.a

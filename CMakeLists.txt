@@ -379,6 +379,7 @@ set(GRM_SOURCES
     lib/grm/event.c
     lib/grm/interaction.c
     lib/grm/json.c
+    lib/grm/logging.c
     lib/grm/memwriter.c
     lib/grm/net.c
     lib/grm/plot.c

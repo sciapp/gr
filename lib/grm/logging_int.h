@@ -1,18 +1,9 @@
 #ifndef GRM_LOGGING_INT_H_INCLUDED
 #define GRM_LOGGING_INT_H_INCLUDED
 
-#ifdef __unix__
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 200112L
-#endif
-#endif
-
 /* ######################### includes ############################################################################### */
 
 #include <stdio.h>
-#ifdef _WIN32
-#include <io.h>
-#endif
 
 
 /* ######################### interface ############################################################################## */
@@ -22,33 +13,26 @@
 /* ------------------------- logging -------------------------------------------------------------------------------- */
 
 #ifndef NDEBUG
-#if defined(_WIN32) || defined(__EMSCRIPTEN__)
-#define logger(logger_arguments)                                            \
-  do                                                                        \
-    {                                                                       \
-      fprintf(stderr, "%s:%d(%s): ", __FILE__, __LINE__, CURRENT_FUNCTION); \
-      fprintf logger_arguments;                                             \
-    }                                                                       \
+#define logger(logger_arguments)                              \
+  do                                                          \
+    {                                                         \
+      logger1_(stderr, __FILE__, __LINE__, CURRENT_FUNCTION); \
+      logger2_ logger_arguments;                              \
+    }                                                         \
   while (0)
-#else
-#define logger(logger_arguments)                                                                          \
-  do                                                                                                      \
-    {                                                                                                     \
-      if (isatty(fileno(stderr)))                                                                         \
-        {                                                                                                 \
-          fprintf(stderr, "\033[36m%s\033[0m:\033[33m%d\033[0m(\033[34m%s\033[0m): ", __FILE__, __LINE__, \
-                  CURRENT_FUNCTION);                                                                      \
-        }                                                                                                 \
-      else                                                                                                \
-        {                                                                                                 \
-          fprintf(stderr, "%s:%d(%s): ", __FILE__, __LINE__, CURRENT_FUNCTION);                           \
-        }                                                                                                 \
-      fprintf logger_arguments;                                                                           \
-    }                                                                                                     \
-  while (0)
-#endif
 #else
 #define logger(logger_arguments)
+#endif
+
+
+/* ========================= functions ============================================================================== */
+
+/* ------------------------- logging -------------------------------------------------------------------------------- */
+
+int logger_enabled(void);
+#ifndef NDEBUG
+void logger1_(FILE *stream, const char *filename, int line_number, const char *current_function);
+void logger2_(FILE *stream, const char *format, ...);
 #endif
 
 
