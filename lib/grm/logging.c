@@ -17,7 +17,9 @@
 
 /* ========================= functions ============================================================================== */
 
+#ifndef NDEBUG
 static void logger_init(void);
+#endif
 
 
 /* ######################### internal implementation ################################################################ */
@@ -29,13 +31,16 @@ static void logger_init(void);
 
 /* ========================= static variables ======================================================================= */
 
+#ifndef NDEBUG
 static int logging_enabled = -1;
+#endif
 
 
 /* ========================= functions ============================================================================== */
 
 /* ------------------------- logging -------------------------------------------------------------------------------- */
 
+#ifndef NDEBUG
 void logger_init(void)
 {
   if (logging_enabled < 0)
@@ -45,6 +50,7 @@ void logger_init(void)
            str_equals_any(getenv(ENABLE_LOGGING_ENV_KEY), 7, "1", "on", "ON", "true", "TRUE", "yes", "YES"));
     }
 }
+#endif
 
 
 /* ######################### public implementation ################################################################## */
@@ -55,8 +61,12 @@ void logger_init(void)
 
 int logger_enabled(void)
 {
+#ifndef NDEBUG
   logger_init();
   return logging_enabled;
+#else
+  return 0;
+#endif
 }
 
 #ifndef NDEBUG
