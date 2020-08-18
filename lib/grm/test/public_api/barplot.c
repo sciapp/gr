@@ -183,5 +183,6 @@ int main()
   grm_plot(args);
   sleep(3);
 
+  grm_args_delete(args);
   grm_finalize();
 }
