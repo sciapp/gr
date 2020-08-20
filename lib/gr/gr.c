@@ -5683,8 +5683,8 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
   cam_y = tx.camera_pos_y / tx.y_axis_scale;
   cam_z = tx.camera_pos_z / tx.z_axis_scale;
   xi = (x_max + x_min) / 2;
-  yi = (x_max + x_min) / 2;
-  zi = (x_max + x_min) / 2;
+  yi = (y_max + y_min) / 2;
+  zi = (z_max + z_min) / 2;
 
   if (axis == 0)
     {
