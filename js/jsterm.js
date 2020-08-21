@@ -202,6 +202,9 @@ JSTerm = function() {
         }.bind(this));
         return;
       }
+      if (typeof WEB_SOCKET_ADDRESS === 'undefined') {
+        WEB_SOCKET_ADDRESS = 'ws://127.0.0.1:8081'
+      }
       ws = new WebSocket(WEB_SOCKET_ADDRESS);
       ws.onerror = function(e) {
         wsOpen = false;
@@ -1088,10 +1091,3 @@ JSTerm = function() {
   }
   var grJSTermRunning = true;
 };
-
-if (typeof jsterm === 'undefined') {
-  jsterm = new JSTerm();
-  if (typeof jsterm_ispluto === 'undefined' || !jsterm_ispluto) {
-      jsterm.connectWs();
-  }
-}
