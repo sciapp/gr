@@ -1265,12 +1265,8 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
         {
           for (j = 0; j < npoints; j++)
             {
-              xj = horiAdvance + xpoint[j] * height;
+              xj = horiAdvance + (axis < 0 ? -1 : 1) * xpoint[j] * height;
               yj = vertAdvance + ypoint[j] * height;
-              if (axis < 0)
-                {
-                  xj *= -1;
-                }
               xpoint[j] = cos_f * xj - sin_f * yj;
               ypoint[j] = sin_f * xj + cos_f * yj;
 
@@ -1330,29 +1326,35 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
 
       for (j = 0; j < 16; j++)
         {
-          xj = horiAdvance + bBoxX[j];
+          xj = horiAdvance + (axis < 0 ? -1 : 1) * bBoxX[j];
           yj = vertAdvance + bBoxY[j];
           bBoxX[j] = cos_f * xj - sin_f * yj;
           bBoxY[j] = sin_f * xj + cos_f * yj;
 
           if (j >= 8)
             {
-              if (axis == 1)
+              if (axis == 1 || axis == -1)
                 {
                   xj = x - bBoxY[j] / scaleFactors[0];
                   yj = y + bBoxX[j] / scaleFactors[1];
                   zj = z;
                 }
-              else if (axis == 2)
+              else if (axis == 2 || axis == -2)
                 {
                   xj = x + bBoxX[j] / scaleFactors[0];
                   yj = y + bBoxY[j] / scaleFactors[1];
                   zj = z;
                 }
-              else if (axis == 3)
+              else if (axis == 3 || axis == -3)
                 {
-                  xj = y;
-                  yj = x + bBoxX[j] / scaleFactors[1];
+                  xj = x;
+                  yj = y + bBoxX[j] / scaleFactors[1];
+                  zj = z + bBoxY[j] / scaleFactors[2];
+                }
+              else if (axis == 4 || axis == -4)
+                {
+                  xj = x + bBoxX[j] / scaleFactors[0];
+                  yj = y;
                   zj = z + bBoxY[j] / scaleFactors[2];
                 }
 
