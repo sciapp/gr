@@ -5655,7 +5655,7 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
   int plane, direction, rotate_text, flip_text;
   double fx, fy, fz, xi, yi, zi;
   double x_min, x_max, y_min, y_max, z_min, z_max;
-  double cam_x, cam_y, cam_z;
+  double cam_x, cam_y, cam_z, up_x, up_y, up_z, nor_x, nor_y, nor_z, angle;
   double bBoxX[16], bBoxY[16];
   double bBoxSpace, bBoxSpace2;
 
@@ -5762,8 +5762,6 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
 
       direction = 2 * !direction; /* always in x or y-direction */
     }
-  /* if the camera is on the opposite side of the text, flip/mirror it. */
-  flip_text = (plane == 0 && cam_z < z_org) || (plane == 1 && cam_y > y_org) || (plane == 2 && cam_x < x_org);
   /* now: direction is the direction (0 for negative, 1 for positive) of either the ticks, or if the ticks are on the */
   /* other plane, the direction facing outwards. */
   if (rotate_text)
@@ -5771,6 +5769,48 @@ static void axes3d_get_params(int axis, int *tick_axis, double x_org, double y_o
       direction = (direction + 2) % 4; /* rotate text by 180 degrees */
     }
   *text_axis = axes[plane];
+  if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+    {
+      if (plane == 0)
+        {
+          cam_x = upvecs[direction][1] * tx.x_axis_scale;
+          cam_y = -upvecs[direction][0] * tx.y_axis_scale;
+          cam_z = 0;
+          up_x = upvecs[direction][0] * tx.x_axis_scale;
+          up_y = upvecs[direction][1] * tx.y_axis_scale;
+          up_z = 0;
+        }
+      else if (plane == 1)
+        {
+          cam_x = upvecs[direction][1] * tx.x_axis_scale;
+          cam_y = 0;
+          cam_z = -upvecs[direction][0] * tx.z_axis_scale;
+          up_x = upvecs[direction][0] * tx.x_axis_scale;
+          up_y = 0;
+          up_z = upvecs[direction][1] * tx.z_axis_scale;
+        }
+      else
+        {
+          cam_x = 0;
+          cam_y = upvecs[direction][1] * tx.y_axis_scale;
+          cam_z = -upvecs[direction][0] * tx.z_axis_scale;
+          up_x = 0;
+          up_y = upvecs[direction][0] * tx.y_axis_scale;
+          up_z = upvecs[direction][1] * tx.z_axis_scale;
+        }
+
+      nor_x = cam_y * up_z - cam_z * up_y;
+      nor_y = cam_z * up_x - cam_x * up_z;
+      nor_z = cam_x * up_y - cam_y * up_x;
+
+      angle = nor_x * fx + nor_y * fy + nor_z * fz;
+      flip_text = angle < 0;
+    }
+  else
+    {
+      /* if the camera is on the opposite side of the text, flip/mirror it. */
+      flip_text = (plane == 0 && cam_z < z_org) || (plane == 1 && cam_y > y_org) || (plane == 2 && cam_x < x_org);
+    }
 
   if (rotate_text ^ flip_text)
     {
