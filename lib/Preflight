@@ -20,7 +20,10 @@ done
 wxdefs=""
 qt4defs=""
 qt5defs=""
-if [ "`uname -m`" = "x86_64" ]; then
+if [ -n "${QT_ARCH}" ]; then
+  qt_arch="${QT_ARCH}"
+  qt_lib_suffix=""
+elif [ "`uname -m`" = "x86_64" ]; then
   qt_lib_suffix="64"
   qt_arch="x86_64"
 else

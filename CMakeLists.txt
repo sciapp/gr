@@ -136,7 +136,7 @@ if(X11_FOUND)
   if(NOT TARGET X11::Xt
      AND X11_INCLUDE_DIR
      AND X11_Xt_LIB
-     AND TARGET X11:X11
+     AND TARGET X11::X11
   )
     add_library(X11::Xt UNKNOWN IMPORTED)
     set_target_properties(
