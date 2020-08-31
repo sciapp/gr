@@ -180,7 +180,12 @@ static int open_socket(int wstype)
         {
           if (command != NULL && retry_count == 1)
             {
-              if (start(command) != 0) gks_perror("could not auto-start GKS Qt application");
+              /* For Julia BinaryBuilder environments the command string can be set to ""
+                 because in this case gksqt is started by the GR.jl wrapper script */
+              if (*command)
+                {
+                  if (start(command) != 0) gks_perror("could not auto-start GKS Qt application");
+                }
             }
 #ifndef _WIN32
           usleep(300000);
