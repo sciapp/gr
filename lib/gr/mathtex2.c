@@ -1100,7 +1100,11 @@ static size_t make_char(unsigned int codepoint)
       if (codepoint == '|')
         {
           bm_node.u.character.advance = advance * 1.5;
-        };
+        }
+      else if (codepoint == 215)
+        {
+          bm_node.u.character.advance = width * 1.25;
+        }
     }
   else
     {
@@ -1880,10 +1884,25 @@ static size_t convert_symbol_to_box_model(ParserNode *node)
 
   if (is_spaced_symbol)
     {
+      size_t char_node_index = make_char(symbol_to_codepoint((const unsigned char *)node->source, node->length));
+      BoxModelCharNode *char_node = &get_box_model_node(char_node_index)->u.character;
       size_t hlist_index = make_hlist();
-      append_to_hlist(hlist_index, make_space(0.2));
-      append_to_hlist(hlist_index, make_char(symbol_to_codepoint((const unsigned char *)node->source, node->length)));
-      append_to_hlist(hlist_index, make_space(0.2));
+      double space;
+      switch (char_node->codepoint)
+        {
+        case 215:
+          space = 0.45;
+          break;
+        case 8712:
+          space = 0.4;
+          break;
+        default:
+          space = 0.35;
+          break;
+        }
+      append_to_hlist(hlist_index, make_space(space));
+      append_to_hlist(hlist_index, char_node_index);
+      append_to_hlist(hlist_index, make_space(space));
       kern_hlist(hlist_index);
       pack_hlist(hlist_index, 0, 1);
       if (node->source[0] == '*' && node->length == 1)
@@ -3413,6 +3432,8 @@ static void calculate_alignment_offsets(int horizontal_alignment, int vertical_a
   switch (vertical_alignment)
     {
     case GKS_K_TEXT_VALIGN_TOP:
+      *y_offset = -1.1 * canvas_height / window_height;
+      break;
     case GKS_K_TEXT_VALIGN_CAP:
       *y_offset = -canvas_height / window_height;
       break;
@@ -3420,6 +3441,8 @@ static void calculate_alignment_offsets(int horizontal_alignment, int vertical_a
       *y_offset = -canvas_height / window_height / 2;
       break;
     case GKS_K_TEXT_VALIGN_BOTTOM:
+      *y_offset = 0.1 * canvas_height / window_height;
+      break;
     case GKS_K_TEXT_VALIGN_NORMAL:
     case GKS_K_TEXT_VALIGN_BASE:
     default:
@@ -3450,10 +3473,6 @@ static void render_box_model(double x, double y, int horizontal_alignment, int v
   window[2] = -y * window_height;
   window[3] = (1 - y) * window_height;
   get_results(result_box_model_node_index, &width, &height, &depth);
-  free_parser_node_buffer();
-  free_box_model_node_buffer();
-  free_box_model_state_buffer();
-  current_box_model_state_index = 0;
 }
 
 
@@ -3660,6 +3679,7 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
   double previous_char_height;
   double chupx = 0;
   double chupy = 0;
+  int previous_tnr;
   int previous_fill_int_style;
   int previous_fill_color_index = 0;
   int previous_encoding = ENCODING_LATIN1;
@@ -3671,11 +3691,25 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
   /* TODO: inquire current workstation window height? */
   int window_width = 2400;
   int window_height = 2400;
+
+  double tbx_fallback[4];
+  double tby_fallback[4];
+  /* use fallback arrays to simplify handling of tbx and tby */
+  if (!tbx)
+    {
+      tbx = tbx_fallback;
+    }
+  if (!tby)
+    {
+      tby = tby_fallback;
+    }
+
   has_parser_error = 0;
   gks_ft_inq_bearing_x_direction(&previous_bearing_x_direction);
   gks_ft_set_bearing_x_direction(1);
   /* gr call first to ensure autoinit has run */
   gr_inqviewport(&previous_viewport_xmin, &previous_viewport_xmax, &previous_viewport_ymin, &previous_viewport_ymax);
+  gks_inq_current_xformno(&unused, &previous_tnr);
   gks_inq_text_fontprec(&unused, &font, &prec);
   gks_inq_text_align(&unused, &horizontal_alignment, &vertical_alignment);
   gks_inq_fill_color_index(&unused, &previous_fill_color_index);
@@ -3722,20 +3756,14 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
           xmax = x + x_offset + canvas_width / window_width;
           ymin = y + y_offset;
           ymax = y + y_offset + canvas_height / window_height;
-          if (tbx)
-            {
-              tbx[0] = xmin;
-              tbx[1] = xmax;
-              tbx[2] = xmax;
-              tbx[3] = xmin;
-            }
-          if (tby)
-            {
-              tby[0] = ymin;
-              tby[1] = ymin;
-              tby[2] = ymax;
-              tby[3] = ymax;
-            }
+          tbx[0] = xmin;
+          tbx[1] = xmax;
+          tbx[2] = xmax;
+          tbx[3] = xmin;
+          tby[0] = ymin;
+          tby[1] = ymin;
+          tby[2] = ymax;
+          tby[3] = ymax;
           angle = -atan2(chupx, chupy);
           for (i = 0; i < 4; i++)
             {
@@ -3749,21 +3777,21 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
     }
   else if (inquire)
     {
-      if (tbx)
-        {
-          tbx[0] = x;
-          tbx[1] = x;
-          tbx[2] = x;
-          tbx[3] = x;
-        }
-      if (tby)
-        {
-          tby[0] = y;
-          tby[1] = y;
-          tby[2] = y;
-          tby[3] = y;
-        }
+      tbx[0] = x;
+      tbx[1] = x;
+      tbx[2] = x;
+      tbx[3] = x;
+
+      tby[0] = y;
+      tby[1] = y;
+      tby[2] = y;
+      tby[3] = y;
     }
+
+  free_parser_node_buffer();
+  free_box_model_node_buffer();
+  free_box_model_state_buffer();
+  current_box_model_state_index = 0;
 
   gks_ft_set_bearing_x_direction(previous_bearing_x_direction);
   gks_set_text_height(previous_char_height);
@@ -3773,4 +3801,14 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
   gks_set_fill_color_index(previous_fill_color_index);
   gks_set_fill_int_style(previous_fill_int_style);
   gks_set_viewport(1, previous_viewport_xmin, previous_viewport_xmax, previous_viewport_ymin, previous_viewport_ymax);
+  gks_select_xform(previous_tnr);
+
+  if (inquire && previous_tnr != 0)
+    {
+      int i;
+      for (i = 0; i < 4; i++)
+        {
+          gr_ndctowc(tbx + i, tby + i);
+        }
+    }
 }

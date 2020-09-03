@@ -2,7 +2,7 @@ ifeq ($(strip $(PREFIX)),)
 override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
- PNGCFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(ARCHS)
+ PNGCFLAGS = -O -I. -I../zlib/ -fPIC -fno-common $(PNG_EXTRA_CFLAGS) $(ARCHS)
 ifeq ($(shell uname),Darwin)
 ifneq ($(notdir $(CC)),emcc)
 PNGCFLAGS += -mmacosx-version-min=10.11

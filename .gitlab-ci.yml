@@ -241,6 +241,88 @@ debian-self-contained-armhf:
     paths:
       - artifacts-debian9-armhf/
 
+debian-self-contained-aarch64:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-aarch64
+  script:
+    - make -C 3rdparty default extras \
+      HOST=aarch64-linux-gnu \
+      ARCHITECTURE=aarch64 \
+      OS=aarch64-linux-gnu \
+      CC=aarch64-linux-gnu-gcc \
+      CXX=aarch64-linux-gnu-g++ \
+      AR=aarch64-linux-gnu-ar \
+      STRIP=aarch64-linux-gnu-strip \
+      PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0" \
+      GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake \
+      OGG_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm" \
+      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=aarch64-linux-gnu- --arch=aarch64 --target-os=linux --pkg-config=pkg-config" \
+      PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      CAIRO_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      TIFF_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=aarch64" \
+      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+    - make self \
+      CC=aarch64-linux-gnu-gcc \
+      LD=aarch64-linux-gnu-ld \
+      AR=aarch64-linux-gnu-ar \
+      CXX=aarch64-linux-gnu-g++ \
+      LINK=aarch64-linux-gnu-g++ \
+      QT_ARCH=aarch64 \
+      QMAKE=/usr/lib/aarch64-linux-gnu/qt5/bin/qmake \
+      GRDIR=/usr/local/gr
+    - mkdir artifacts
+    - cp lib/gks/demo artifacts/gksdemo
+    - cp lib/gks/qt/gksqt artifacts/gksqt
+    - cp lib/gr/demo artifacts/grdemo
+    - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
+      lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
+    - cp -r lib/gks/fonts artifacts/
+    - mkdir artifacts/include/
+    - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
+    - mkdir artifacts/include/grm/
+    - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
+      artifacts/include/grm/
+    - mv artifacts artifacts-debian9-aarch64
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - artifacts-debian9-aarch64/
+
+debian-cmake-self-contained-aarch64:
+  stage: build
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-aarch64
+  script:
+    - make -C 3rdparty default extras \
+      HOST=aarch64-linux-gnu \
+      ARCHITECTURE=aarch64 \
+      OS=aarch64-linux-gnu \
+      CC=aarch64-linux-gnu-gcc \
+      CXX=aarch64-linux-gnu-g++ \
+      AR=aarch64-linux-gnu-ar \
+      STRIP=aarch64-linux-gnu-strip \
+      PNG_EXTRA_CFLAGS="-DPNG_ARM_NEON_OPT=0" \
+      GLFW_EXTRA_CMAKE_FLAGS=-DCMAKE_TOOLCHAIN_FILE=`pwd`/cmake/aarch64-linux-gnu.cmake \
+      OGG_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      THEORA_EXTRA_CONFIGURE_FLAGS="--host=arm-linux --disable-asm" \
+      FFMPEG_EXTRA_CONFIGURE_FLAGS="--cross-prefix=aarch64-linux-gnu- --arch=aarch64 --target-os=linux --pkg-config=pkg-config" \
+      PIXMAN_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      CAIRO_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      TIFF_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu \
+      OPENH264_EXTRA_MAKE_FLAGS="OS=linux ARCH=aarch64" \
+      ZEROMQ_EXTRA_CONFIGURE_FLAGS=--host=aarch64-linux-gnu
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local/gr -DCMAKE_TOOLCHAIN_FILE=../cmake/aarch64-linux-gnu.cmake -DCMAKE_BUILD_TYPE=Release -DGR_USE_BUNDLED_LIBRARIES=ON
+    - make
+    - make install
+    - mv /usr/local/gr ${CI_PROJECT_DIR}/artifacts-debian9-cmake-aarch64
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - artifacts-debian9-cmake-aarch64/
+
 debian-cmake-self-contained-armhf:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/debian-self-contained-armhf
@@ -842,6 +924,14 @@ packages-tar:
   - mv artifacts-debian9-armhf/include Debian-armhf/gr/
   - cp artifacts-js/gr.js Debian-armhf/gr/lib/
   - rm -rf artifacts-debian9-armhf
+  - mkdir -p Debian-aarch64/gr/bin
+  - mkdir -p Debian-aarch64/gr/lib
+  - mv artifacts-debian9-aarch64/*.so Debian-aarch64/gr/lib/
+  - mv artifacts-debian9-aarch64/gksqt Debian-aarch64/gr/bin/
+  - mv artifacts-debian9-aarch64/fonts Debian-aarch64/gr/
+  - mv artifacts-debian9-aarch64/include Debian-aarch64/gr/
+  - cp artifacts-js/gr.js Debian-aarch64/gr/lib/
+  - rm -rf artifacts-debian9-aarch64
   - mkdir -p Ubuntu-x86_64/gr/bin
   - mkdir -p Ubuntu-x86_64/gr/lib
   - mv artifacts-ubuntu1604/*.so Ubuntu-x86_64/gr/lib/
@@ -896,6 +986,7 @@ packages-tar:
   - cd Windows-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Debian-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Debian-armhf && tar czf gr.tar.gz gr && cd -
+  - cd Debian-aarch64 && tar czf gr.tar.gz gr && cd -
   - cd Ubuntu-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd CentOS-x86_64 && tar czf gr.tar.gz gr && cd -
   - cd Linux-i386 && tar czf gr.tar.gz gr && cd -
@@ -908,6 +999,7 @@ packages-tar:
       cp Windows-x86_64/gr.tar.gz Downloads/gr-$VERSION-Windows-x86_64.tar.gz;
       cp Debian-x86_64/gr.tar.gz Downloads/gr-$VERSION-Debian-x86_64.tar.gz;
       cp Debian-armhf/gr.tar.gz Downloads/gr-$VERSION-Debian-armhf.tar.gz;
+      cp Debian-aarch64/gr.tar.gz Downloads/gr-$VERSION-Debian-aarch64.tar.gz;
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$VERSION-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$VERSION-CentOS-x86_64.tar.gz;
       ln -s gr-$VERSION-CentOS-x86_64.tar.gz Downloads/gr-$VERSION-Redhat-x86_64.tar.gz;
@@ -924,6 +1016,7 @@ packages-tar:
       cp Windows-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Windows-x86_64.tar.gz;
       cp Debian-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-x86_64.tar.gz;
       cp Debian-armhf/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-armhf.tar.gz;
+      cp Debian-aarch64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Debian-aarch64.tar.gz;
       cp Ubuntu-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Ubuntu-x86_64.tar.gz;
       cp CentOS-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz;
       ln -s gr-$CI_COMMIT_SHA-CentOS-x86_64.tar.gz Downloads/gr-$CI_COMMIT_SHA-Redhat-x86_64.tar.gz;
@@ -934,7 +1027,7 @@ packages-tar:
         cp Darwin-x86_64/gr.tar.gz Downloads/gr-$CI_COMMIT_SHA-Darwin-x86_64.tar.gz;
       fi;
       cp artifacts-js/gr.js Downloads/gr-$CI_COMMIT_SHA.js;
-      for f in Windows-i686 Windows-x86_64 Debian-x86_64 Debian-armhf Ubuntu-x86_64 CentOS-x86_64 Redhat-x86_64 Linux-i386 Linux-x86_64 ArchLinux-x86_64; do
+      for f in Windows-i686 Windows-x86_64 Debian-x86_64 Debian-armhf Debian-aarch64 Ubuntu-x86_64 CentOS-x86_64 Redhat-x86_64 Linux-i386 Linux-x86_64 ArchLinux-x86_64; do
         ln -s gr-$CI_COMMIT_SHA-$f.tar.gz Downloads/gr-latest-$f.tar.gz;
       done;
       if [ -d Darwin-x86_64 ]; then

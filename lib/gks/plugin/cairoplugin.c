@@ -164,7 +164,7 @@ typedef struct ws_state_list_t
   pthread_t master_thread;
 #endif
   int npoints, max_points;
-  int empty, page_counter;
+  int empty, current_page_written, page_counter;
   double rect[MAX_TNR][2][2];
   unsigned char *patterns;
   int pattern_counter, use_symbols;
@@ -860,6 +860,7 @@ static void create_window(void)
  */
 static void write_empty_page(void)
 {
+  p->current_page_written = 1;
   if (p->wtype == 143 && p->mem)
     {
       int width = cairo_image_surface_get_width(p->surface);
@@ -1269,7 +1270,7 @@ static void write_page(void)
   double alpha;
   int i, j, k, l, bg[3] = {255, 255, 255};
 
-  p->empty = 1;
+  p->current_page_written = 1;
   p->page_counter++;
 
   cairo_show_page(p->cr);
@@ -1904,6 +1905,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->npoints = 0;
 
       p->empty = 1;
+      p->current_page_written = 1;
       p->page_counter = 0;
 
       p->transparency = 1.0;
@@ -1922,7 +1924,17 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       /* close workstation */
       if ((p->wtype != 141 || !exit_due_to_x11_support_) && (p->wtype != 143 || p->mem != NULL))
         {
-          if (!p->empty) write_page();
+          if (!p->current_page_written)
+            {
+              if (p->empty)
+                {
+                  write_empty_page();
+                }
+              else
+                {
+                  write_page();
+                }
+            }
 
           close_page();
           free(p->patterns);
@@ -1950,6 +1962,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       cairo_paint(p->cr);
       cairo_restore(p->cr);
       p->empty = 1;
+      p->current_page_written = 0;
       unlock();
       break;
 
@@ -1977,6 +1990,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           lock();
           polyline(ia[0], r1, r2);
           p->empty = 0;
+          p->current_page_written = 0;
           unlock();
         }
       break;
@@ -1988,6 +2002,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           lock();
           polymarker(ia[0], r1, r2);
           p->empty = 0;
+          p->current_page_written = 0;
           unlock();
         }
       break;
@@ -1999,6 +2014,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           lock();
           text(r1[0], r2[0], strlen(chars), chars);
           p->empty = 0;
+          p->current_page_written = 0;
           unlock();
         }
       break;
@@ -2010,6 +2026,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           lock();
           fillarea(ia[0], r1, r2);
           p->empty = 0;
+          p->current_page_written = 0;
           unlock();
         }
       break;
@@ -2024,6 +2041,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
           lock();
           cellarray(r1[0], r1[1], r2[0], r2[1], dx, dy, dimx, ia, true_color);
           p->empty = 0;
+          p->current_page_written = 0;
           unlock();
         }
       break;
@@ -2033,6 +2051,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
         {
           gdp(ia[0], r1, r2, ia[1], ia[2], ia + 3);
           p->empty = 0;
+          p->current_page_written = 0;
         }
       break;
 

@@ -136,7 +136,7 @@ if(X11_FOUND)
   if(NOT TARGET X11::Xt
      AND X11_INCLUDE_DIR
      AND X11_Xt_LIB
-     AND TARGET X11:X11
+     AND TARGET X11::X11
   )
     add_library(X11::Xt UNKNOWN IMPORTED)
     set_target_properties(
@@ -345,7 +345,7 @@ add_library(GR::GR3 ALIAS gr3_shared)
 if(UNIX AND NOT APPLE)
   if(TARGET X11::X11
      AND TARGET OpenGL::GLX
-     AND TARGET OPENGL::GL
+     AND TARGET OpenGL::GL
   )
     add_library(gr3platform SHARED lib/gr3/gr3_platform_glx.c)
     target_link_libraries(gr3platform PUBLIC GR::GR)
@@ -379,6 +379,7 @@ set(GRM_SOURCES
     lib/grm/event.c
     lib/grm/interaction.c
     lib/grm/json.c
+    lib/grm/logging.c
     lib/grm/memwriter.c
     lib/grm/net.c
     lib/grm/plot.c

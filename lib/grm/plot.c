@@ -4664,6 +4664,8 @@ void grm_finalize(void)
       plot_func_map = NULL;
       string_map_delete(plot_valid_keys_map);
       plot_valid_keys_map = NULL;
+      string_array_map_delete(type_map);
+      type_map = NULL;
       plot_static_variables_initialized = 0;
     }
 }
@@ -4769,7 +4771,10 @@ int grm_plot(const grm_args_t *args)
 
 #ifndef NDEBUG
   logger((stderr, "root args after \"grm_plot\" (active_plot_index: %d):\n", active_plot_index - 1));
-  grm_dump(global_root_args, stderr);
+  if (logger_enabled())
+    {
+      grm_dump(global_root_args, stderr);
+    }
 #endif
 
   return 1;

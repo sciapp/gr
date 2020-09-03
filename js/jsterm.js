@@ -202,6 +202,9 @@ JSTerm = function() {
         }.bind(this));
         return;
       }
+      if (typeof WEB_SOCKET_ADDRESS === 'undefined') {
+        WEB_SOCKET_ADDRESS = 'ws://127.0.0.1:8081'
+      }
       ws = new WebSocket(WEB_SOCKET_ADDRESS);
       ws.onerror = function(e) {
         wsOpen = false;
@@ -231,9 +234,9 @@ JSTerm = function() {
         } else if (data.type === 'set_ref_id') {
           ref_id = data.id;
         } else if (data.type === 'draw') {
-          draw(data);
+          this.draw(data);
         }
-      };
+      }.bind(this);
       ws.onclose = function() {
         wsOpen = false;
       };
@@ -250,13 +253,15 @@ JSTerm = function() {
      * Handles a draw command.
      * @param  {[type]} msg The input message containing the draw command
      */
-    draw = function(msg) {
+    this.draw = function(msg) {
       if (!GR.is_ready) {
-        console.error('GR is not ready.');
+        GR.ready(function() {
+          return this.draw(msg);
+        });
         return;
       }
       let arguments = grm.args_new();
-      grm.read(arguments, msg.json);
+      grm.read(arguments, msg.json.replace(/\"/g, '"'));
       display.push(msg.display);
       grm.merge_named(arguments, "jstermMerge" + msg.display);
       grm.args_delete(arguments);
@@ -368,7 +373,7 @@ JSTerm = function() {
        * @param  {Object} data Event description
        */
       this.sendEvt = function(data) {
-        if (this.sendEvents && this.ref_id !== null) {
+        if (wsOpen && this.sendEvents && this.ref_id !== null) {
           sendEvt(data, this.ref_id);
         }
       };
@@ -969,9 +974,11 @@ JSTerm = function() {
       };
 
       this.save = function() {
-        grm.switch(this.id);
-        let data = grm.dump_json_str();
-        saveData(data, this.id, this.display, this.width, this.height, this.tooltip);
+        if (wsOpen) {
+          grm.switch(this.id);
+          let data = grm.dump_json_str();
+          saveData(data, this.id, this.display, this.width, this.height, this.tooltip);
+        }
       };
     };
 
@@ -1021,8 +1028,10 @@ JSTerm = function() {
       if (display_uuid.length != 0) {
         iter = Array.from(widgets_to_save);
         for (let w in iter) {
-          widgets[iter[w]].draw();
-          widgets[iter[w]].save();
+          if (w != 'last') {
+            widgets[iter[w]].draw();
+            widgets[iter[w]].save();
+          }
         }
         display.shift();
         widgets_to_save.clear();
@@ -1032,7 +1041,6 @@ JSTerm = function() {
 
     /**
      * Function to call when page has been loaded.
-     * Determines if running in a jupyter environment.
      */
     onLoad = function() {
       if (!GR.is_ready) {
@@ -1083,8 +1091,3 @@ JSTerm = function() {
   }
   var grJSTermRunning = true;
 };
-
-if (typeof jsterm === 'undefined') {
-  jsterm = new JSTerm();
-  jsterm.connectWs();
-}

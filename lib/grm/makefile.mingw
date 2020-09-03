@@ -12,8 +12,8 @@ endif
      LIBS = $(GR3LIBS) $(GRLIBS) $(GKSLIBS) -lm -lws2_32 -lmsimg32 -lgdi32
 
 OBJS = args.o datatype/double_map.o datatype/string_array_map.o datatype/string_list.o datatype/string_map.o \
-       datatype/uint_map.o dump.o dynamic_args_array.o error.o event.o interaction.o json.o memwriter.o net.o plot.o \
-       util.o
+       datatype/uint_map.o dump.o dynamic_args_array.o error.o event.o interaction.o json.o logging.o memwriter.o \
+	   net.o plot.o util.o
 
 
 .SUFFIXES: .o .c
