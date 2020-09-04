@@ -160,6 +160,7 @@ typedef struct
   unsigned int resample_method;
   double bwidth;
   int bcoli;
+  char *(*callback)(const char *);
 } gks_state_list_t;
 
 typedef struct gks_list
@@ -385,6 +386,8 @@ DLLEXPORT void gks_ft_inq_bearing_x_direction(int *);
 
 DLLEXPORT void gks_set_encoding(int encoding);
 DLLEXPORT void gks_inq_encoding(int *encoding);
+
+DLLEXPORT void gks_set_callback(char *(*callback)(const char *));
 
 #ifdef __cplusplus
 }

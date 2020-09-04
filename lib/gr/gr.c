@@ -11702,3 +11702,10 @@ void gr_inqtextencoding(int *encoding)
 
   gks_inq_encoding(encoding);
 }
+
+void gr_setcallback(char *(*callback)(const char *arg))
+{
+  check_autoinit;
+
+  gks_set_callback(callback);
+}
