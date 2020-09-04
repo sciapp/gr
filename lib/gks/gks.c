@@ -501,6 +501,8 @@ void gks_init_gks(void)
       s->bcoli = 0;
 
       s->input_encoding = 0;
+
+      s->callback = NULL;
     }
 }
 
@@ -3151,6 +3153,11 @@ void gks_inq_text_slant(int *errind, double *slant)
 {
   *errind = GKS_K_NO_ERROR;
   *slant = s->txslant;
+}
+
+void gks_set_callback(char *(*callback)(const char *arg))
+{
+  s->callback = callback;
 }
 
 static void gksrealloc(int n)
