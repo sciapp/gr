@@ -52,8 +52,14 @@ else()
   set(GR_PLUGIN_SUFFIX ".so")
 endif()
 
+if(APPLE)
+  set(DEFAULT_SHARED_LIBRARY_SUFFIX ".dylib")
+else()
+  set(DEFAULT_SHARED_LIBRARY_SUFFIX "${GR_PLUGIN_SUFFIX}")
+endif()
+
 set(GR_SHARED_LIBRARY_SUFFIX
-    "${GR_PLUGIN_SUFFIX}"
+    "${DEFAULT_SHARED_LIBRARY_SUFFIX}"
     CACHE STRING "File suffix for shared libraries"
 )
 
