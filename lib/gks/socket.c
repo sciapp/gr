@@ -180,13 +180,9 @@ static int open_socket(int wstype)
         {
           if (command != NULL && retry_count == 1)
             {
-              /* For Julia BinaryBuilder environments gksqt has to be started by the
-                 GR.jl wrapper using a callback function */
-              if (gkss->callback != NULL)
-                {
-                  (*gkss->callback)("gksqt");
-                }
-              else
+              /* For Julia BinaryBuilder environments the command string can be set to ""
+                 because in this case gksqt is started by the GR.jl wrapper script */
+              if (*command)
                 {
                   if (start(command) != 0) gks_perror("could not auto-start GKS Qt application");
                 }
