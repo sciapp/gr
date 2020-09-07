@@ -107,16 +107,18 @@
   X(ERROR_NETWORK_WINSOCK_CLEANUP, 31)                \
   X(ERROR_CUSTOM_RECV, 32)                            \
   X(ERROR_CUSTOM_SEND, 33)                            \
-  X(ERROR_PLOT_NORMALIZATION, 34)                     \
-  X(ERROR_PLOT_UNKNOWN_KEY, 35)                       \
-  X(ERROR_PLOT_UNKNOWN_KIND, 36)                      \
-  X(ERROR_PLOT_MISSING_DATA, 37)                      \
-  X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 38)         \
-  X(ERROR_PLOT_MISSING_DIMENSIONS, 39)                \
-  X(ERROR_PLOT_MISSING_LABELS, 40)                    \
-  X(ERROR_PLOT_INVALID_ID, 41)                        \
-  X(ERROR_PLOT_OUT_OF_RANGE, 42)                      \
-  Y(ERROR_NOT_IMPLEMENTED, 43)
+  X(ERROR_PLOT_COLORMAP, 34)                          \
+  X(ERROR_PLOT_NORMALIZATION, 35)                     \
+  X(ERROR_PLOT_UNKNOWN_KEY, 36)                       \
+  X(ERROR_PLOT_UNKNOWN_KIND, 37)                      \
+  X(ERROR_PLOT_MISSING_DATA, 38)                      \
+  X(ERROR_PLOT_COMPONENT_LENGTH_MISMATCH, 39)         \
+  X(ERROR_PLOT_MISSING_DIMENSIONS, 40)                \
+  X(ERROR_PLOT_MISSING_LABELS, 41)                    \
+  X(ERROR_PLOT_INVALID_ID, 42)                        \
+  X(ERROR_PLOT_OUT_OF_RANGE, 43)                      \
+  X(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS, 44)            \
+  Y(ERROR_NOT_IMPLEMENTED, 45)
 
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value
