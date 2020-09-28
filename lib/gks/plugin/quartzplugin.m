@@ -1,3 +1,4 @@
+#include "gkscore.h"
 #ifndef NO_GKSTERM
 
 #import <Foundation/Foundation.h>
@@ -9,7 +10,6 @@
 #include <zmq.h>
 
 #include "gks.h"
-#include "gkscore.h"
 #include "gksquartz.h"
 
 #ifndef MAXPATHLEN
