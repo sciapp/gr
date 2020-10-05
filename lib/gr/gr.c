@@ -10071,7 +10071,7 @@ static void mathtex(double x, double y, char *string, int inquire, double *tbx, 
     pixels = sizex / rh * height;
   else
     pixels = 500;
-  if (wtype == 101 || wtype == 102 || wtype == 120) pixels *= 8;
+  if (wtype == 101 || wtype == 102 || wtype == 120 || wtype == 382) pixels *= 8;
 
   gks_inq_text_height(&errind, &chh);
   gks_inq_text_color_index(&errind, &color);
