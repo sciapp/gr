@@ -1634,7 +1634,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
         }
       grm_args_push(subplot_args, "_zlim", "dd", min_component, max_component);
     }
-  else if (strcmp(kind, "imshow") == 0)
+  else if (str_equals_any(kind, 2, "imshow", "isosurface"))
     {
       /* Iterate over `x` and `y` range keys */
       current_range_keys = range_keys;
