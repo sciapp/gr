@@ -64,17 +64,18 @@ const static FT_String *gks_font_list_pfb[] = {
     "Dingbats"               /* 31: Zapf Dingbats */
 };
 
-const static FT_String *gks_font_list_ttf[] = {
-    NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, "CMUSerif-Math",
-    "DejaVuSans"};
+const static FT_String *gks_font_list_ttf[] = {NULL,         NULL,        NULL, NULL, NULL, NULL, NULL, NULL,
+                                               NULL,         NULL,        NULL, NULL, NULL, NULL, NULL, NULL,
+                                               NULL,         NULL,        NULL, NULL, NULL, NULL, NULL, NULL,
+                                               NULL,         NULL,        NULL, NULL, NULL, NULL, NULL, "CMUSerif-Math",
+                                               "DejaVuSans", "PingFangSC"};
 
-static FT_Face font_face_cache_pfb[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+static FT_Face font_face_cache_pfb[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
-static FT_Face font_face_cache_ttf[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+static FT_Face font_face_cache_ttf[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 /* TODO: Add fallback fonts for non-Latin languages */
@@ -169,10 +170,14 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT
         }
     }
 
+  if (!glyph_index)
+    {
+      gks_perror("glyph missing from current font: %d", codepoint);
+    }
   error = FT_Load_Glyph(face, glyph_index, vertical ? FT_LOAD_VERTICAL_LAYOUT : FT_LOAD_DEFAULT);
   if (error)
     {
-      gks_perror("glyph could not be loaded: %c", codepoint);
+      gks_perror("glyph could not be loaded: %d", codepoint);
       return 1;
     }
   *glyph_slot_ptr = face->glyph;
@@ -320,7 +325,7 @@ void gks_ft_terminate(void)
 static int gks_ft_convert_textfont(int textfont)
 {
   textfont = abs(textfont);
-  if (textfont >= 201 && textfont <= 233)
+  if (textfont >= 201 && textfont <= 234)
     {
       textfont -= 200;
     }
@@ -952,9 +957,10 @@ static void reallocate(int npoints)
 
 static void load_glyph(FT_Face face, FT_UInt code)
 {
-  FT_UInt index = FT_Get_Char_Index(face, code);
-  FT_Error error = FT_Load_Glyph(face, index, FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP);
-  if (error) gks_perror("could not load glyph: %d\n", index);
+  FT_UInt glyph_index = FT_Get_Char_Index(face, code);
+  if (!glyph_index) gks_perror("glyph missing from current font: %d", code);
+  FT_Error error = FT_Load_Glyph(face, glyph_index, FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP);
+  if (error) gks_perror("could not load glyph: %d\n", glyph_index);
 }
 
 static void add_point(long x, long y)
