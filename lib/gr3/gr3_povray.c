@@ -4,6 +4,9 @@
 #include <string.h>
 #include "gr3.h"
 #include "gr3_internals.h"
+#ifndef fabsf
+#define fabsf(x) ((x) < 0 ? -(x) : (x))
+#endif
 
 int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_factor)
 {
