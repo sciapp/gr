@@ -260,11 +260,11 @@ JSTerm = function() {
         });
         return;
       }
-      let arguments = grm.args_new();
-      grm.read(arguments, msg.json.replace(/\"/g, '"'));
+      let args = grm.args_new();
+      grm.read(args, msg.json.replace(/\"/g, '"'));
       display.push(msg.display);
-      grm.merge_named(arguments, "jstermMerge" + msg.display);
-      grm.args_delete(arguments);
+      grm.merge_named(args, "jstermMerge" + msg.display);
+      grm.args_delete(args);
     };
 
     /**
@@ -1061,11 +1061,11 @@ JSTerm = function() {
           grm.register(grm.EVENT_NEW_PLOT, newPlotCallback);
           grm.register(grm.EVENT_UPDATE_PLOT, updatePlotCallback);
           grm.register(grm.EVENT_MERGE_END, mergeEndCallback);
-          let arguments = grm.args_new();
-          grm.args_push(arguments, 'append_plots', 'i', [1]);
-          grm.args_push(arguments, 'hold_plots', 'i', [1]);
-          grm.merge(arguments);
-          grm.args_delete(arguments);
+          let args = grm.args_new();
+          grm.args_push(args, 'append_plots', 'i', [1]);
+          grm.args_push(args, 'hold_plots', 'i', [1]);
+          grm.merge(args);
+          grm.args_delete(args);
         }
         if (document.getElementById('jsterm-style') == null) {
           let style = document.createElement('style');
