@@ -1,4 +1,4 @@
-JSTerm = function() {
+JSTerm = function(ispluto=false) {
   if (typeof grJSTermRunning === 'undefined' || !grJSTermRunning) {
     BOXZOOM_THRESHOLD = 3; // Minimal size in pixels of the boxzoom-box to trigger a boxzoom-event
     BOXZOOM_TRIGGER_THRESHHOLD = 1000; // Time to wait (in ms) before triggering boxzoom event instead
@@ -76,6 +76,8 @@ JSTerm = function() {
       data_loaded = false,
       prev_id = -1;
 
+    var jsterm_ispluto = ispluto;
+
     /**
      * Sends a mouse-event via websocket
      * @param  {Object} data Data describing the event
@@ -125,6 +127,9 @@ JSTerm = function() {
      */
     createCanvas = function(widget, msg_sent = false) {
       let disp = document.getElementById('jsterm-display-' + widget.display);
+      if (jsterm_ispluto) {
+        disp.innerHTML = "";
+      }
       if (disp === null) {
         //TODO: Wenn ungültiges Canvas übergeben wird löst dies ein endlose rekursion aus
         if (display.length > 0 && !msg_sent) {
@@ -257,8 +262,11 @@ JSTerm = function() {
       if (!GR.is_ready) {
         GR.ready(function() {
           return this.draw(msg);
-        });
+        }.bind(this));
         return;
+      }
+      if (typeof grm === 'undefined') {
+        onLoad();
       }
       let args = grm.args_new();
       grm.read(args, msg.json.replace(/\"/g, '"'));
@@ -1073,7 +1081,9 @@ JSTerm = function() {
           style.textContent = STYLE_CSS;
           document.head.append(style);
         }
-        drawSavedData();
+        if (!jsterm_ispluto) {
+          drawSavedData();
+        }
       }
     };
 
