@@ -7,11 +7,18 @@
 #endif
 
 #if defined(EMSCRIPTEN)
+#ifdef NO_GL
+#define GR3_USE_SR
+#define GLfloat float
+#define GLuint unsigned int
+#define GLint int
+#else
 #define GL_GLEXT_LEGACY
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <unistd.h>
+#endif
 #elif defined(__APPLE__)
 /* Core OpenGL (CGL) on Mac OS X */
 #define GR3_USE_CGL
