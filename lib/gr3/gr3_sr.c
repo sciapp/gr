@@ -7,7 +7,9 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
+#ifndef NO_THREADS
 #include <pthread.h>
+#endif
 #include "gr3_internals.h"
 #include "gr3_sr.h"
 #ifdef _WIN32
@@ -83,11 +85,13 @@ static void downsample(unsigned char *pixels_high, unsigned char *pixels_low, in
  * process can begin. The first condition variable waits for all the threads to finish so that the merging of
  * the different pixmaps the threads have drawn into can begin, the second one waits for the merging process
  * to finish so that the main thread can finally return the pixmap containing the final image.*/
+#ifndef NO_THREADS
 static volatile int threads_done = 0;
 static pthread_mutex_t lock;
 static pthread_mutex_t lock_main;
 static pthread_cond_t wait_for_merge;
 static pthread_cond_t wait_after_merge;
+#endif
 
 /* Every thread has its own queue containing equal sized parts of every mesh that has to be drawn. The main
  * threads divides the meshes and enqueues jobs for the worker threads meaning they have to draw a part of
@@ -115,8 +119,10 @@ static queue *queue_new(void)
     {
       return NULL;
     }
+#ifndef NO_THREADS
   pthread_mutex_init(&queue->lock, NULL);
   pthread_cond_init(&queue->cond, NULL);
+#endif
 
   queue->front = queue->back = NULL;
   return queue;
@@ -126,12 +132,18 @@ static void *queue_dequeue(queue *queue)
 {
   struct queue_node_s *node;
   void *argument;
+#ifndef NO_THREADS
   pthread_mutex_lock(&queue->lock);
   if (queue == NULL || queue->front == NULL)
     {
       pthread_cond_wait(&queue->cond, &queue->lock);
     }
+#endif
   node = queue->front;
+  if (node == NULL)
+    {
+      return NULL;
+    }
   argument = node->data;
   queue->front = node->next;
   if (queue->front == NULL)
@@ -139,14 +151,18 @@ static void *queue_dequeue(queue *queue)
       queue->back = NULL;
     }
   free(node);
+#ifndef NO_THREADS
   pthread_mutex_unlock(&queue->lock);
+#endif
   return argument;
 }
 
 static int queue_enqueue(queue *queue, void *data)
 {
   struct queue_node_s *node;
+#ifndef NO_THREADS
   pthread_mutex_lock(&queue->lock);
+#endif
   if (queue == NULL)
     {
       abort();
@@ -169,8 +185,10 @@ static int queue_enqueue(queue *queue, void *data)
       queue->back->next = node;
       queue->back = node;
     }
+#ifndef NO_THREADS
   pthread_mutex_unlock(&queue->lock);
   pthread_cond_signal(&queue->cond);
+#endif
   return SUCCESS;
 }
 
@@ -193,7 +211,11 @@ static void create_queues_and_pixmaps(int width, int height)
     }
   context_struct_.last_height = height;
   context_struct_.last_width = width;
+#ifndef NO_THREADS
+  /* If threading support is enabled, the threads must wait
+   * for work before work packages were put into the queue */
   initialise_consumer(context_struct_.queues, height, width);
+#endif
 }
 
 /*!
@@ -249,6 +271,7 @@ static void *draw_and_merge(void *queue_and_merge_area)
       draw_triangle_indexbuffer(argument);
       if (((args *)argument)->id == 1)
         {
+#ifndef NO_THREADS
           pthread_mutex_lock(&lock);
           threads_done += 1;
           if (threads_done == context_struct_.num_threads)
@@ -260,8 +283,10 @@ static void *draw_and_merge(void *queue_and_merge_area)
               pthread_cond_wait(&wait_for_merge, &lock);
             }
           pthread_mutex_unlock(&lock);
+#endif
 
           merge_pixmaps(queue_and_merge_area_s.width, queue_and_merge_area_s.starty, queue_and_merge_area_s.endy);
+#ifndef NO_THREADS
           pthread_mutex_lock(&lock);
           threads_done += 1;
           pthread_mutex_unlock(&lock);
@@ -269,6 +294,7 @@ static void *draw_and_merge(void *queue_and_merge_area)
             {
               pthread_cond_signal(&wait_after_merge);
             }
+#endif
         }
       else if (((args *)argument)->id == 2)
         {
@@ -315,7 +341,11 @@ static void initialise_consumer(queue *queues[MAX_NUM_THREADS], int height, int 
       queue_and_merge_area->endy = height_start_end[i + 1];
       queue_and_merge_area->queue = queues[i];
       queue_and_merge_area->width = width;
+#ifndef NO_THREADS
       pthread_create(&context_struct_.threads[i], NULL, draw_and_merge, (void *)queue_and_merge_area);
+#else
+      draw_and_merge(queue_and_merge_area);
+#endif
     }
 }
 
@@ -649,6 +679,7 @@ GR3API int gr3_initSR_()
 #endif
   gr3_log_("gr3_initSR_();");
   context_struct_.use_software_renderer = 1;
+#ifndef NO_THREADS
   if (context_struct_.init_struct.num_threads == 0)
     {
       gr3_log_("Number of Threads equals number of cores minus one");
@@ -674,6 +705,9 @@ GR3API int gr3_initSR_()
 
       context_struct_.num_threads = 1;
     }
+#else
+  context_struct_.num_threads = 1;
+#endif
   gr3_appendtorenderpathstring_("software");
   return GR3_ERROR_NONE;
 }
@@ -1038,11 +1072,13 @@ GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, 
   unsigned char b_a = (unsigned char)(context_struct_.background_color[3] * 255);
   width *= ssaa_factor;
   height *= ssaa_factor;
+#ifndef NO_THREADS
   pthread_mutex_init(&lock, NULL);
   pthread_mutex_init(&lock_main, NULL);
   pthread_cond_init(&wait_for_merge, NULL);
   pthread_cond_init(&wait_after_merge, NULL);
   threads_done = 0;
+#endif
   if (width != context_struct_.last_width || height != context_struct_.last_height)
     {
       create_queues_and_pixmaps(width, height);
@@ -1077,13 +1113,21 @@ GR3API void gr3_getpixmap_softwarerendered(char *pixmap, int width, int height, 
     }
   context_struct_.software_renderer_pixmaps_initalised = 1;
   gr3_draw_softwarerendered(context_struct_.queues, width, height);
+#ifdef NO_THREADS
+  /* Run the code which consumes work packages from the queue
+   * after the queue has been filled in `gr3_draw_softwarerendered`
+   * if no threading support is available. */
+  initialise_consumer(context_struct_.queues, height, width);
+#endif
 
+#ifndef NO_THREADS
   pthread_mutex_lock(&lock_main);
   if (threads_done < 2 * context_struct_.num_threads)
     {
       pthread_cond_wait(&wait_after_merge, &lock_main);
     }
   pthread_mutex_unlock(&lock_main);
+#endif
 
   if (ssaa_factor != 1)
     {
@@ -1425,7 +1469,9 @@ GR3API void gr3_terminateSR_()
       arg = malloc_arg(i, 0, MAT4x4_INIT_NUL, MAT4x4_INIT_NUL, MAT3x3_INIT_NUL, VECTOR3x1_INIT_NUL, NULL, NULL, 0, 0, 2,
                        0, 0, NULL);
       queue_enqueue(context_struct_.queues[i], arg);
+#ifndef NO_THREADS
       pthread_join(context_struct_.threads[i], NULL);
+#endif
       queue_destroy(context_struct_.queues[i]);
     }
   for (i = 0; i < context_struct_.mesh_list_capacity_; i++)

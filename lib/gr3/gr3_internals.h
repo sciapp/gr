@@ -252,7 +252,9 @@ typedef struct _GR3_ContextStruct_t_
   int software_renderer_pixmaps_initalised;
   unsigned char *pixmaps[MAX_NUM_THREADS]; /* pixels to be drawn created by the Software Renderer */
   float *depth_buffers[MAX_NUM_THREADS];
+#ifndef NO_THREADS
   pthread_t threads[MAX_NUM_THREADS];
+#endif
   queue *queues[MAX_NUM_THREADS];
   int last_width;
   int last_height;

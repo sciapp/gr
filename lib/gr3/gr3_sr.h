@@ -1,12 +1,18 @@
 #ifndef GR3_SR_H_INCLUDED
 #define GR3_SR_H_INCLUDED
 #include <unistd.h>
+#ifndef NO_THREADS
 #include <pthread.h>
+#endif
 #include "gr.h"
 #include "gr3.h"
 #include "gr3_internals.h"
 #define PI 3.14159265358979323846
+#ifndef NO_THREADS
 #define MAX_NUM_THREADS 256
+#else
+#define MAX_NUM_THREADS 1
+#endif
 #define SUCCESS 0
 #define ERR_INVAL 1
 #define ERR_NOMEM 2
@@ -19,8 +25,10 @@ struct queue_node_s
 
 struct queue_s
 {
+#ifndef NO_THREADS
   pthread_mutex_t lock;
   pthread_cond_t cond;
+#endif
   struct queue_node_s *front;
   struct queue_node_s *back;
 };
