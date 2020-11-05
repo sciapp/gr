@@ -675,10 +675,11 @@ static void fill_routine(int n, double *px, double *py, int tnr)
                      "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
                      "Use\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\">\n"
                      "<g transform=\"scale(%d)\">"
-                     "<path d=\"%s\" style=\"stroke:black; stroke-width:1\"/>"
+                     "<path d=\"%s\" style=\"stroke:#%02x%02x%02x; stroke-width:1; stroke-opacity:%g\"/>"
                      "</g>",
                      p->pattern + 1, 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE, NOMINAL_POINTSIZE,
-                     hatch_paths[p->pattern - HATCH_STYLE]);
+                     hatch_paths[p->pattern - HATCH_STYLE], p->rgb[p->color][0], p->rgb[p->color][1],
+                     p->rgb[p->color][2], p->transparency);
           svg_printf(p->stream, "</pattern>\n</defs>\n");
         }
       else
