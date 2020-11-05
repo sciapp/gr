@@ -274,7 +274,7 @@ static void set_color_rep(int color, double red, double green, double blue)
       p->rgb[color].setRgb(nint(red * 255), nint(green * 255), nint(blue * 255));
       for (i = 0; i < PATTERNS; i++)
         {
-          if (pcolor[i] == color) pcolor[i] = -1;
+          if (p->pcolor[i] == color) p->pcolor[i] = -1;
         }
     }
 }
