@@ -102,6 +102,7 @@ typedef struct ws_state_list_t
   int family, capheight;
   double alpha, angle;
   QPixmap *pattern[PATTERNS];
+  int pcolor[PATTERNS];
   int empty, prevent_resize;
 } ws_state_list;
 
@@ -266,7 +267,16 @@ static void set_clip_rect(int tnr)
 
 static void set_color_rep(int color, double red, double green, double blue)
 {
-  if (color >= 0 && color < MAX_COLOR) p->rgb[color].setRgb(nint(red * 255), nint(green * 255), nint(blue * 255));
+  int i;
+
+  if (color >= 0 && color < MAX_COLOR)
+    {
+      p->rgb[color].setRgb(nint(red * 255), nint(green * 255), nint(blue * 255));
+      for (i = 0; i < PATTERNS; i++)
+        {
+          if (pcolor[i] == color) pcolor[i] = -1;
+        }
+    }
 }
 
 static void init_colors(void)
@@ -289,7 +299,7 @@ static void set_color(int color)
   p->pixmap->setBrush(transparent_color);
 }
 
-static QPixmap *create_pattern(int pattern)
+static QPixmap *create_pattern(int pattern, int color)
 {
   int parray[33];
   int i, j;
@@ -299,7 +309,7 @@ static QPixmap *create_pattern(int pattern)
 
   QImage img(8, 8, QImage::Format_Mono);
   img.setColor(0, qRgb(255, 255, 255));
-  img.setColor(1, qRgb(0, 0, 0));
+  img.setColor(1, p->rgb[color].rgb());
   for (i = 0; i < 8; i++)
     for (j = 0; j < 8; j++) img.setPixel(i, j, (parray[(j % parray[0]) + 1] >> i) & 0x01 ? 0 : 1);
 
@@ -725,7 +735,12 @@ static void fillarea(int n, double *px, double *py)
     {
       if (fl_inter == GKS_K_INTSTYLE_HATCH) fl_style += HATCH_STYLE;
       if (fl_style >= PATTERNS) fl_style = 1;
-      if (p->pattern[fl_style] == NULL) p->pattern[fl_style] = create_pattern(fl_style);
+      if (p->pattern[fl_style] == NULL || p->pcolor[fl_style] != fl_color)
+        {
+          if (p->pattern[fl_style] != NULL) free(p->pattern[fl_style]);
+          p->pattern[fl_style] = create_pattern(fl_style, fl_color);
+          p->pcolor[fl_style] = fl_color;
+        }
       p->pixmap->setPen(Qt::NoPen);
       p->pixmap->setBrush(QBrush(transparent_color, *p->pattern[fl_style]));
       fill_routine(n, px, py, gkss->cntnr);
@@ -1361,7 +1376,11 @@ static void initialize_data()
   p->npoints = 0;
   p->max_points = MAX_POINTS;
 
-  for (i = 0; i < PATTERNS; i++) p->pattern[i] = NULL;
+  for (i = 0; i < PATTERNS; i++)
+    {
+      p->pattern[i] = NULL;
+      p->pcolor[i] = -1;
+    }
 
   p->empty = 1;
   p->prevent_resize = 0;
