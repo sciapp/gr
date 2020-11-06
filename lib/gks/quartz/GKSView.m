@@ -140,6 +140,10 @@ static CGLayerRef patternLayers[PATTERNS];
 
 static int pattern_ = -1;
 
+static int pcolor[PATTERNS];
+
+static int color_ = -1;
+
 static CGContextRef context = NULL;
 
 static CGLayerRef layer;
@@ -175,6 +179,8 @@ static void init_norm_xform(void)
 
 static void set_color_rep(int color, double red, double green, double blue)
 {
+  int i;
+
   if (color >= 0 && color < MAX_COLOR)
     {
       if (p->rgb[color] != 0)
@@ -182,6 +188,10 @@ static void set_color_rep(int color, double red, double green, double blue)
           CGColorRelease(p->rgb[color]);
         }
       p->rgb[color] = CGColorCreateGenericRGB(red, green, blue, gkss->alpha);
+      for (i = 0; i < PATTERNS; i++)
+        {
+          if (pcolor[i] == color) pcolor[i] = -1;
+        }
     }
 }
 
@@ -615,6 +625,7 @@ static void seg_xform_rel(double *x, double *y) {}
       for (i = 0; i < PATTERNS; i++)
         {
           patternLayers[i] = nil;
+          pcolor[i] = -1;
         }
       buffer = NULL;
       size = 0;
@@ -1343,7 +1354,7 @@ static void drawPatternCell(void *info, CGContextRef context)
   CGContextDrawLayerAtPoint(context, CGPointMake(0, 0), patternLayer);
 }
 
-static void draw_pattern(int index, CGPathRef shape, CGContextRef context)
+static void draw_pattern(int index, int coli, CGPathRef shape, CGContextRef context)
 {
   double scale = 0.125 * (int)(p->c + p->a) / 125;
 
@@ -1354,11 +1365,13 @@ static void draw_pattern(int index, CGPathRef shape, CGContextRef context)
   int k = 1, n;
 
   begin_context(context);
-  if (!patternLayers[index])
+  if (!patternLayers[index] || pcolor[index] != coli)
     {
       patternLayers[index] = CGLayerCreateWithContext(context, CGSizeMake(patWidth, patHeight), NULL);
+      pcolor[index] = coli;
       CGContextRef layerContext = CGLayerGetContext(patternLayers[index]);
       CGContextSetShouldAntialias(layerContext, NO);
+      CGContextSetFillColorWithColor(layerContext, p->rgb[coli]);
       for (i = patHeight - scale; i >= 0; i -= scale)
         {
           n = patArray[k];
@@ -1422,7 +1435,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   if (pattern_ > -1)
     {
-      draw_pattern(pattern_, shape, context);
+      draw_pattern(pattern_, color_, shape, context);
     }
   else
     {
@@ -1490,6 +1503,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       if (fl_style >= PATTERNS) fl_style = 1;
 
       pattern_ = fl_style;
+      color_ = fl_color;
       fill_routine(n, px, py, gkss->cntnr);
       pattern_ = -1;
     }
