@@ -120,7 +120,7 @@ typedef struct ws_state_list_t
   double linewidth, nominal_size;
   double phi, angle;
   int family, capheight;
-  int pattern, have_pattern[PATTERNS];
+  int pattern, pattern_count;
   SVG_stream *stream;
   SVG_point *points;
   int npoints, max_points;
@@ -280,23 +280,6 @@ static void init_clip_rects(void)
     }
 }
 
-static int reverse(int value)
-{
-  unsigned char c = value;
-  unsigned char result = 0x00;
-  int i, j;
-
-  for (i = 0, j = 7; i < 8; i++, j--)
-    {
-      if (c & (1 << i))
-        {
-          result |= (1 << j);
-        }
-    }
-
-  return result;
-}
-
 typedef struct WriteCallbackData_t
 {
   png_bytep data_ptr;
@@ -338,17 +321,16 @@ static void create_pattern(void)
 {
   int i, j, height;
   int parray[33];
-  png_byte bit_depth = 1;
-  png_byte color_type = PNG_COLOR_TYPE_GRAY;
+  png_byte bit_depth = 8;
+  png_byte color_type = PNG_COLOR_TYPE_RGB_ALPHA;
   png_structp png_ptr;
   png_infop info_ptr;
   png_bytep *row_pointers;
 
-
   row_pointers = (png_bytep *)malloc(sizeof(png_bytep) * 8);
   for (i = 0; i < 8; i++)
     {
-      row_pointers[i] = (png_byte *)malloc(sizeof(png_byte));
+      row_pointers[i] = (png_byte *)malloc(sizeof(png_byte) * 4 * 8);
     }
   gks_inq_pattern_array(p->pattern, parray);
   height = (*parray == 32) ? 16 : (*parray == 4) ? 8 : *parray;
@@ -360,9 +342,14 @@ static void create_pattern(void)
     {
       png_byte *row = row_pointers[j];
       png_byte *ptr = row;
-      *ptr = reverse(parray[j + 1]);
+      for (i = 0; i < 8; i++)
+        {
+          ptr[4 * i + 0] = parray[j + 1] & (1 << i) ? 255 : p->rgb[p->color][0];
+          ptr[4 * i + 1] = parray[j + 1] & (1 << i) ? 255 : p->rgb[p->color][1];
+          ptr[4 * i + 2] = parray[j + 1] & (1 << i) ? 255 : p->rgb[p->color][2];
+          ptr[4 * i + 3] = 255 * p->transparency;
+        }
     }
-
   current_write_data.data_ptr = NULL;
   current_write_data.size = 0;
   current_write_data.capacity = 0;
@@ -666,18 +653,18 @@ static void fill_routine(int n, double *px, double *py, int tnr)
                                /* sparse cross */
                                "M-4,4.5 l16,0 M3.5,-4 l0,16"};
 
-  if (p->pattern && !p->have_pattern[p->pattern])
+  if (p->pattern)
     {
+      p->pattern_count++;
       if (p->pattern > HATCH_STYLE && p->pattern - HATCH_STYLE < 12 && *hatch_paths[p->pattern - HATCH_STYLE])
         {
-          p->have_pattern[p->pattern] = 1;
           svg_printf(p->stream,
                      "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
                      "Use\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\">\n"
                      "<g transform=\"scale(%d)\">"
                      "<path d=\"%s\" style=\"stroke:#%02x%02x%02x; stroke-width:1; stroke-opacity:%g\"/>"
                      "</g>",
-                     p->pattern + 1, 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE, NOMINAL_POINTSIZE,
+                     p->pattern_count, 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE, NOMINAL_POINTSIZE,
                      hatch_paths[p->pattern - HATCH_STYLE], p->rgb[p->color][0], p->rgb[p->color][1],
                      p->rgb[p->color][2], p->transparency);
           svg_printf(p->stream, "</pattern>\n</defs>\n");
@@ -685,13 +672,12 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       else
         {
           create_pattern();
-          p->have_pattern[p->pattern] = 1;
           svg_printf(p->stream,
                      "<defs>\n  <pattern id=\"pattern%d\" patternUnits=\"userSpaceOn"
                      "Use\" x=\"0\" y=\"0\" width=\"%d\" height=\"%d\">\n"
-                     "<image width=\"%d\" height=\"%d\" "
+                     "<image width=\"%d\" height=\"%d\" image-rendering=\"optimizeSpeed\" "
                      "xlink:href=\"data:image/png;base64,\n",
-                     p->pattern + 1, 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE,
+                     p->pattern_count, 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE, 8 * NOMINAL_POINTSIZE,
                      8 * NOMINAL_POINTSIZE);
           slen = current_write_data.size * 4 / 3 + 4;
           s = (char *)gks_malloc(slen);
@@ -740,7 +726,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
         }
     }
   if (p->pattern)
-    svg_printf(p->stream, " Z\n  \" fill=\"url(#pattern%d)\"", p->pattern + 1);
+    svg_printf(p->stream, " Z\n  \" fill=\"url(#pattern%d)\"", p->pattern_count);
   else
     svg_printf(p->stream, " Z\n  \" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\"",
                p->rgb[p->color][0], p->rgb[p->color][1], p->rgb[p->color][2], p->transparency);
@@ -1382,8 +1368,6 @@ void gks_drv_js(
     int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
     void **ptr)
 {
-  int i;
-
   p = (ws_state_list *)*ptr;
 
   switch (fctid)
@@ -1431,7 +1415,7 @@ void gks_drv_js(
       init_clip_rects();
       set_clip_path(0);
 
-      for (i = 0; i < PATTERNS; i++) p->have_pattern[i] = 0;
+      p->pattern_count = 0;
 
       *ptr = p;
       break;
