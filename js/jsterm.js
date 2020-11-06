@@ -1,4 +1,4 @@
-JSTerm = function() {
+JSTerm = function(ispluto=false) {
   if (typeof grJSTermRunning === 'undefined' || !grJSTermRunning) {
     BOXZOOM_THRESHOLD = 3; // Minimal size in pixels of the boxzoom-box to trigger a boxzoom-event
     BOXZOOM_TRIGGER_THRESHHOLD = 1000; // Time to wait (in ms) before triggering boxzoom event instead
@@ -76,6 +76,8 @@ JSTerm = function() {
       data_loaded = false,
       prev_id = -1;
 
+    var jsterm_ispluto = ispluto;
+
     /**
      * Sends a mouse-event via websocket
      * @param  {Object} data Data describing the event
@@ -125,6 +127,9 @@ JSTerm = function() {
      */
     createCanvas = function(widget, msg_sent = false) {
       let disp = document.getElementById('jsterm-display-' + widget.display);
+      if (jsterm_ispluto) {
+        disp.innerHTML = "";
+      }
       if (disp === null) {
         //TODO: Wenn ungültiges Canvas übergeben wird löst dies ein endlose rekursion aus
         if (display.length > 0 && !msg_sent) {
@@ -257,14 +262,17 @@ JSTerm = function() {
       if (!GR.is_ready) {
         GR.ready(function() {
           return this.draw(msg);
-        });
+        }.bind(this));
         return;
       }
-      let arguments = grm.args_new();
-      grm.read(arguments, msg.json.replace(/\"/g, '"'));
+      if (typeof grm === 'undefined') {
+        onLoad();
+      }
+      let args = grm.args_new();
+      grm.read(args, msg.json.replace(/\"/g, '"'));
       display.push(msg.display);
-      grm.merge_named(arguments, "jstermMerge" + msg.display);
-      grm.args_delete(arguments);
+      grm.merge_named(args, "jstermMerge" + msg.display);
+      grm.args_delete(args);
     };
 
     /**
@@ -1061,11 +1069,11 @@ JSTerm = function() {
           grm.register(grm.EVENT_NEW_PLOT, newPlotCallback);
           grm.register(grm.EVENT_UPDATE_PLOT, updatePlotCallback);
           grm.register(grm.EVENT_MERGE_END, mergeEndCallback);
-          let arguments = grm.args_new();
-          grm.args_push(arguments, 'append_plots', 'i', [1]);
-          grm.args_push(arguments, 'hold_plots', 'i', [1]);
-          grm.merge(arguments);
-          grm.args_delete(arguments);
+          let args = grm.args_new();
+          grm.args_push(args, 'append_plots', 'i', [1]);
+          grm.args_push(args, 'hold_plots', 'i', [1]);
+          grm.merge(args);
+          grm.args_delete(args);
         }
         if (document.getElementById('jsterm-style') == null) {
           let style = document.createElement('style');
@@ -1073,7 +1081,9 @@ JSTerm = function() {
           style.textContent = STYLE_CSS;
           document.head.append(style);
         }
-        drawSavedData();
+        if (!jsterm_ispluto) {
+          drawSavedData();
+        }
       }
     };
 

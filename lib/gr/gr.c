@@ -4163,12 +4163,10 @@ static void text2d(double x, double y, const char *chars)
   text2dlbl(x, y, chars, 42., NULL);
 }
 
-static char *gr_ftoa(char *result, double value, double reference)
+static char *replace_minus_sign(char *string)
 {
   int errind, font, prec, encoding, n = 0;
-  char *s, *out;
-
-  s = str_ftoa(result, value, reference);
+  char *s = string, *out;
 
   gks_inq_text_fontprec(&errind, &font, &prec);
   gks_inq_encoding(&encoding);
@@ -4190,10 +4188,19 @@ static char *gr_ftoa(char *result, double value, double reference)
     }
   out[n] = '\0';
 
-  strcpy(result, out);
+  strcpy(string, out);
   free(out);
 
-  return result;
+  return string;
+}
+
+static char *gr_ftoa(char *string, double value, double reference)
+{
+  char *s;
+
+  s = str_ftoa(string, value, reference);
+
+  return replace_minus_sign(s);
 }
 
 /*!
@@ -4343,7 +4350,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                             {
                               exponent = iround(log10(yi));
                               sprintf(string, "10^{%d}", exponent);
-                              text2dlbl(x_label, yi, string, yi, fpy);
+                              text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
                             }
                           else
                             text2dlbl(x_label, yi, gr_ftoa(string, yi, 0.), yi, fpy);
@@ -4469,7 +4476,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                             {
                               exponent = iround(log10(xi));
                               sprintf(string, "10^{%d}", exponent);
-                              text2dlbl(xi, y_label, string, xi, fpx);
+                              text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
                             }
                           else
                             text2dlbl(xi, y_label, gr_ftoa(string, xi, 0.), xi, fpx);
@@ -6070,7 +6077,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                           {
                             exponent = iround(log10(zi));
                             sprintf(string, "10^{%d}", exponent);
-                            text3d(x_label, y_label, zi, string, 0);
+                            text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
                           }
                         else
                           text3d(x_label, y_label, zi, gr_ftoa(string, zi, 0.), 0);
@@ -6235,7 +6242,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                           {
                             exponent = iround(log10(yi));
                             sprintf(string, "10^{%d}", exponent);
-                            text3d(x_label, yi, z_label, string, 0);
+                            text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
                           }
                         else
                           text3d(x_label, yi, z_label, gr_ftoa(string, yi, 0.), 0);
@@ -6400,7 +6407,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                           {
                             exponent = iround(log10(xi));
                             sprintf(string, "10^{%d}", exponent);
-                            text3d(xi, y_label, z_label, string, 0);
+                            text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
                           }
                         else
                           text3d(xi, y_label, z_label, gr_ftoa(string, xi, 0.), 0);
@@ -10071,7 +10078,7 @@ static void mathtex(double x, double y, char *string, int inquire, double *tbx, 
     pixels = sizex / rh * height;
   else
     pixels = 500;
-  if (wtype == 101 || wtype == 102 || wtype == 120) pixels *= 8;
+  if (wtype == 101 || wtype == 102 || wtype == 120 || wtype == 382) pixels *= 8;
 
   gks_inq_text_height(&errind, &chh);
   gks_inq_text_color_index(&errind, &color);
@@ -11701,4 +11708,11 @@ void gr_inqtextencoding(int *encoding)
   check_autoinit;
 
   gks_inq_encoding(encoding);
+}
+
+void gr_setcallback(char *(*callback)(const char *arg))
+{
+  check_autoinit;
+
+  gks_set_callback(callback);
 }

@@ -160,6 +160,7 @@ error_t plot_scatter3(grm_args_t *subplot_args);
 error_t plot_imshow(grm_args_t *subplot_args);
 error_t plot_isosurface(grm_args_t *subplot_args);
 error_t plot_polar(grm_args_t *subplot_args);
+error_t plot_polar_histogram(grm_args_t *subplot_args);
 error_t plot_trisurf(grm_args_t *subplot_args);
 error_t plot_tricont(grm_args_t *subplot_args);
 error_t plot_shade(grm_args_t *subplot_args);
@@ -187,6 +188,11 @@ int get_focus_and_factor(const int top, const int right, const int bottom, const
                          grm_args_t **subplot_args);
 grm_args_t *get_subplot_from_ndc_point(double x, double y);
 grm_args_t *get_subplot_from_ndc_points(unsigned int n, const double *x, const double *y);
+double *moivre(double r, int x, int n);
+double *listcomprehension(double count, double (*pFunction)(double), double *pDouble, int num, int start,
+                          double *result);
+int *create_colormap(int x, int y, int size);
+error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max);
 
 
 #endif /* ifndef GRM_PLOT_INT_H_INCLUDED */

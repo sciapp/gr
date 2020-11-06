@@ -24,7 +24,7 @@ ifndef DEBUG
 else
     OPTS += -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=2
 endif
- DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\"
+ DEFINES = -DEMSCRIPTEN -D__SVR4 -DGRDIR=\"\" -DNO_GL -DNO_THREADS
  JPEGDIR = ../3rdparty/jpeg
   PNGDIR = ../3rdparty/libpng16
  ZLIBDIR = ../3rdparty/zlib
@@ -45,7 +45,7 @@ INCLUDES = -I$(THIRDPARTYDIR)/include/ -I$(GRMDIR) -I$(GR3DIR) -I$(GRDIR) -I$(GK
            $(GRDIR)/contourf.o $(GRDIR)/image.o $(GRDIR)/mathtex2.o $(GRDIR)/mathtex2.tab.o
  GR3OBJS = $(GR3DIR)/gr3.o $(GR3DIR)/gr3_convenience.o \
            $(GR3DIR)/gr3_html.o $(GR3DIR)/gr3_povray.o $(GR3DIR)/gr3_png.o \
-           $(GR3DIR)/gr3_jpeg.o $(GR3DIR)/gr3_gr.o $(GR3DIR)/gr3_mc.o
+           $(GR3DIR)/gr3_jpeg.o $(GR3DIR)/gr3_gr.o $(GR3DIR)/gr3_mc.o $(GR3DIR)/gr3_sr.o
  GRMOBJS = $(GRMDIR)/args.o $(GRMDIR)/dump.o $(GRMDIR)/dynamic_args_array.o $(GRMDIR)/error.o $(GRMDIR)/event.o \
            $(GRMDIR)/interaction.o $(GRMDIR)/json.o $(GRMDIR)/logging.o $(GRMDIR)/memwriter.o $(GRMDIR)/net.o \
            $(GRMDIR)/plot.o $(GRMDIR)/util.o $(GRMDIR)/datatype/double_map.o $(GRMDIR)/datatype/string_array_map.o \

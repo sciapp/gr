@@ -463,9 +463,9 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 {
   int i, j, k;
   double x, y, ix, iy;
-  int fl_inter, fl_style, size;
+  int fl_inter, fl_style, fl_color, size;
   int gks_pattern[33];
-  cairo_format_t format = CAIRO_FORMAT_A8;
+  cairo_format_t format = CAIRO_FORMAT_ARGB32;
   int stride = cairo_format_stride_for_width(format, 8);
   cairo_pattern_t *pattern;
   cairo_surface_t *image;
@@ -490,6 +490,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   cairo_close_path(p->cr);
 
   fl_inter = gkss->asf[10] ? gkss->ints : predef_ints[gkss->findex - 1];
+  fl_color = gkss->asf[12] ? gkss->facoli : 1;
 
   if (fl_inter == GKS_K_INTSTYLE_PATTERN || fl_inter == GKS_K_INTSTYLE_HATCH)
     {
@@ -505,8 +506,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       gks_inq_pattern_array(fl_style, gks_pattern);
       size = gks_pattern[0];
 
-      p->patterns = (unsigned char *)gks_realloc(p->patterns, size * 8 * sizeof(unsigned char));
-      memset(p->patterns, 0, size * 8 * sizeof(unsigned char));
+      p->patterns = (unsigned char *)gks_realloc(p->patterns, size * 8 * 4 * sizeof(unsigned char));
+      memset(p->patterns, 0, size * 8 * 4 * sizeof(unsigned char));
 
       for (j = 1; j < size + 1; j++)
         {
@@ -515,7 +516,11 @@ static void fill_routine(int n, double *px, double *py, int tnr)
               k = (1 << i) & gks_pattern[j];
               if (!(k))
                 {
-                  p->patterns[((i + 7) % 8) + ((j - 1 + (size - 1)) % size) * 8] = (int)255 * p->transparency;
+                  int p_ind = ((i + 7) % 8) + ((j - 1 + (size - 1)) % size) * 8;
+                  p->patterns[p_ind * 4 + 3] = (unsigned char)(255 * p->transparency);
+                  p->patterns[p_ind * 4 + 2] = (unsigned char)(255 * p->rgb[fl_color][0] * p->transparency);
+                  p->patterns[p_ind * 4 + 1] = (unsigned char)(255 * p->rgb[fl_color][1] * p->transparency);
+                  p->patterns[p_ind * 4 + 0] = (unsigned char)(255 * p->rgb[fl_color][2] * p->transparency);
                 }
             }
         }

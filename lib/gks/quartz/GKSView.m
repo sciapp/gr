@@ -136,9 +136,13 @@ static CGPoint *points = NULL;
 
 static int num_points = 0;
 
-static CGLayerRef patternLayer;
+static CGLayerRef patternLayers[PATTERNS];
 
 static int pattern_ = -1;
+
+static int pcolor[PATTERNS];
+
+static int color_ = -1;
 
 static CGContextRef context = NULL;
 
@@ -175,6 +179,8 @@ static void init_norm_xform(void)
 
 static void set_color_rep(int color, double red, double green, double blue)
 {
+  int i;
+
   if (color >= 0 && color < MAX_COLOR)
     {
       if (p->rgb[color] != 0)
@@ -182,6 +188,10 @@ static void set_color_rep(int color, double red, double green, double blue)
           CGColorRelease(p->rgb[color]);
         }
       p->rgb[color] = CGColorCreateGenericRGB(red, green, blue, gkss->alpha);
+      for (i = 0; i < PATTERNS; i++)
+        {
+          if (pcolor[i] == color) pcolor[i] = -1;
+        }
     }
 }
 
@@ -611,6 +621,12 @@ static void seg_xform_rel(double *x, double *y) {}
 
   if (self)
     {
+      int i;
+      for (i = 0; i < PATTERNS; i++)
+        {
+          patternLayers[i] = nil;
+          pcolor[i] = -1;
+        }
       buffer = NULL;
       size = 0;
       angle = 0;
@@ -737,6 +753,15 @@ static void seg_xform_rel(double *x, double *y) {}
 
 - (void)close
 {
+  int i;
+  for (i = 0; i < PATTERNS; i++)
+    {
+      if (patternLayers[i])
+        {
+          CGLayerRelease(patternLayers[i]);
+          patternLayers[i] = nil;
+        }
+    }
   gks_close_font(fontfile);
   if (buffer)
     {
@@ -1318,6 +1343,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
 static void drawPatternCell(void *info, CGContextRef context)
 {
+  CGLayerRef patternLayer = *(CGLayerRef *)info;
   CGColorSpaceRef patternSpace;
   patternSpace = CGColorSpaceCreatePattern(NULL);
   CGContextSetFillColorSpace(context, patternSpace);
@@ -1328,7 +1354,7 @@ static void drawPatternCell(void *info, CGContextRef context)
   CGContextDrawLayerAtPoint(context, CGPointMake(0, 0), patternLayer);
 }
 
-static void draw_pattern(int index, CGPathRef shape, CGContextRef context)
+static void draw_pattern(int index, int coli, CGPathRef shape, CGContextRef context)
 {
   double scale = 0.125 * (int)(p->c + p->a) / 125;
 
@@ -1338,22 +1364,27 @@ static void draw_pattern(int index, CGPathRef shape, CGContextRef context)
   double i, l;
   int k = 1, n;
 
-  patternLayer = CGLayerCreateWithContext(context, CGSizeMake(patWidth, patHeight), NULL);
-  CGContextRef layerContext = CGLayerGetContext(patternLayer);
-  CGContextSetShouldAntialias(layerContext, NO);
   begin_context(context);
-  for (i = patHeight - scale; i >= 0; i -= scale)
+  if (!patternLayers[index] || pcolor[index] != coli)
     {
-      n = patArray[k];
-      for (l = 0; l < patWidth; l += scale)
+      patternLayers[index] = CGLayerCreateWithContext(context, CGSizeMake(patWidth, patHeight), NULL);
+      pcolor[index] = coli;
+      CGContextRef layerContext = CGLayerGetContext(patternLayers[index]);
+      CGContextSetShouldAntialias(layerContext, NO);
+      CGContextSetFillColorWithColor(layerContext, p->rgb[coli]);
+      for (i = patHeight - scale; i >= 0; i -= scale)
         {
-          if ((n % 2) == 0)
+          n = patArray[k];
+          for (l = 0; l < patWidth; l += scale)
             {
-              CGContextFillRect(layerContext, CGRectMake(l, i, scale, scale));
+              if ((n % 2) == 0)
+                {
+                  CGContextFillRect(layerContext, CGRectMake(l, i, scale, scale));
+                }
+              n >>= 1;
             }
-          n >>= 1;
+          k++;
         }
-      k++;
     }
 
   CGColorSpaceRef patternSpace;
@@ -1364,15 +1395,14 @@ static void draw_pattern(int index, CGPathRef shape, CGContextRef context)
   CGContextSetFillColorSpace(context, patternSpace);
   CGColorSpaceRelease(patternSpace);
 
-  CGPatternRef pattern =
-      CGPatternCreate(NULL, CGRectMake(0, 0, patWidth, patHeight), CGAffineTransformMake(1, 0, 0, 1, 0, 0), patWidth,
-                      patHeight, kCGPatternTilingConstantSpacing, true, &callbacks);
+  CGPatternRef pattern = CGPatternCreate(patternLayers + index, CGRectMake(0, 0, patWidth, patHeight),
+                                         CGAffineTransformMake(1, 0, 0, 1, 0, 0), patWidth, patHeight,
+                                         kCGPatternTilingConstantSpacing, true, &callbacks);
 
   CGContextSetFillPattern(context, pattern, &alpha);
   CGPatternRelease(pattern);
   CGContextAddPath(context, shape);
   CGContextFillPath(context);
-  CGLayerRelease(patternLayer);
   end_context(context);
 }
 
@@ -1405,7 +1435,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
 
   if (pattern_ > -1)
     {
-      draw_pattern(pattern_, shape, context);
+      draw_pattern(pattern_, color_, shape, context);
     }
   else
     {
@@ -1473,6 +1503,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       if (fl_style >= PATTERNS) fl_style = 1;
 
       pattern_ = fl_style;
+      color_ = fl_color;
       fill_routine(n, px, py, gkss->cntnr);
       pattern_ = -1;
     }
@@ -1692,11 +1723,16 @@ static void to_DC(int n, double *x, double *y)
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
-  NDC_to_DC(x1, y1, ix1, iy1);
+  NDC_to_DC(x1, y1, x1, y1);
+  ix1 = round(x1);
+  iy1 = round(y1);
 
   WC_to_NDC(xmax, ymin, gkss->cntnr, x2, y2);
   seg_xform(&x2, &y2);
-  NDC_to_DC(x2, y2, ix2, iy2);
+  NDC_to_DC(x2, y2, x2, y2);
+  ix2 = round(x2);
+  iy2 = round(y2);
+
 
   width = abs(ix2 - ix1);
   height = abs(iy2 - iy1);

@@ -21,6 +21,7 @@ set(EXECUTABLE_SOURCES
     merge_args.c
     multi_plot.c
     plot.c
+    polar_histogram.c
     quiver.c
     receiver.c
     scatter_errorbar.c

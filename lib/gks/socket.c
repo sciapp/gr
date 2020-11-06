@@ -34,7 +34,7 @@ typedef struct
 
 static gks_state_list_t *gkss;
 
-static is_running = 0;
+static int is_running = 0;
 
 #ifdef _WIN32
 

@@ -78,7 +78,7 @@ static ws_descr_t ws_types[] = {{2, GKS_K_METERS, 1.00000, 1.00000, 65536, 65536
                                 {371, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
                                 {380, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
                                 {381, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, NULL, NULL},
-                                {382, GKS_K_METERS, 0.25400, 0.19050, 4096, 3072, 0, "svg", NULL},
+                                {382, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "svg", NULL},
                                 {390, GKS_K_METERS, 0.25400, 0.19050, 1024, 768, 0, "wmf", NULL},
                                 {400, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL},
                                 {410, GKS_K_METERS, 0.28560, 0.17850, 1280, 800, 0, NULL, NULL},
@@ -501,6 +501,8 @@ void gks_init_gks(void)
       s->bcoli = 0;
 
       s->input_encoding = 0;
+
+      s->callback = NULL;
     }
 }
 
@@ -3151,6 +3153,11 @@ void gks_inq_text_slant(int *errind, double *slant)
 {
   *errind = GKS_K_NO_ERROR;
   *slant = s->txslant;
+}
+
+void gks_set_callback(char *(*callback)(const char *arg))
+{
+  s->callback = callback;
 }
 
 static void gksrealloc(int n)
