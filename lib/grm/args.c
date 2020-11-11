@@ -824,11 +824,6 @@ void args_copy_format_string_for_arg(char *dst, const char *format)
           ++format;
           continue;
         }
-      if (isupper(*format))
-        {
-          /* all array formats get an internal size value */
-          *dst++ = 'n';
-        }
       if (*format == 'C')
         {
           /* char arrays and strings are the same -> store them as strings for unified data handling */
@@ -837,6 +832,11 @@ void args_copy_format_string_for_arg(char *dst, const char *format)
         }
       else
         {
+          if (isupper(*format))
+            {
+              /* all array formats get an internal size value */
+              *dst++ = 'n';
+            }
           *dst++ = *format++;
         }
       /* Skip an optional array length since it already saved in the argument buffer itself (-> `n` format) */
