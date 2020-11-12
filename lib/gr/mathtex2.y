@@ -79,6 +79,8 @@ token {
 single_symbol:
 SINGLE_SYMBOL { $$ = $1; }
 | LEFT_DELIM { $$ = $1; }
+| AMBI_DELIM { $$ = $1; }
+| RIGHT_DELIM { $$ = $1; }
 | '[' { $$ = $1; }
 | ']' { $$ = $1; }
 | '(' { $$ = $1; }
