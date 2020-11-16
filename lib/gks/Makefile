@@ -81,7 +81,7 @@ gksqt:
 
 ifeq ($(UNAME), Darwin)
 gksterm: $(THIRDPARTYDIR)/lib/libzmq.a
-	(env CC=cc xcodebuild -project quartz/GKSTerm.xcodeproj)
+	(env CC=cc xcodebuild -arch x86_64 -project quartz/GKSTerm.xcodeproj)
 endif
 
 ifeq ($(UNAME), Darwin)
@@ -121,7 +121,7 @@ clean:
 	rm -f demo gksm pasdemo so_locations *.so *.a *.o *.ppu link.res
 	rm -f *.bak *~
 ifeq ($(UNAME), Darwin)
-	(env CC=cc xcodebuild -project quartz/GKSTerm.xcodeproj clean)
+	(env CC=cc xcodebuild -arch x86_64 -project quartz/GKSTerm.xcodeproj clean)
 endif
 	cp -p quartz/project.pbxproj quartz/GKSTerm.xcodeproj/
 
