@@ -30,6 +30,10 @@
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #endif
 
+#ifndef static_assert /* defined in C11 */
+#define static_assert(cond, message) ((void)sizeof(char[(cond) ? 1 : -1]))
+#endif
+
 /* test macros which can be used like `assert` */
 #define return_error_if(condition, error_value)                                                    \
   do                                                                                               \
