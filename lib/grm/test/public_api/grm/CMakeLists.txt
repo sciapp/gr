@@ -9,6 +9,7 @@ project(
 set(EXECUTABLE_SOURCES
     bar_errorbar.c
     barplot.cxx
+    bson_serialize_deserialize.c
     custom_receiver.c
     custom_sender.c
     dom_render.cxx

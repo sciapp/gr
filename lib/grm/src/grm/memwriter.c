@@ -173,6 +173,22 @@ err_t memwriter_puts(memwriter_t *memwriter, const char *s)
   return memwriter_printf(memwriter, "%s", s);
 }
 
+err_t memwriter_puts_with_len(memwriter_t *memwriter, char *s, size_t length)
+{
+  err_t error = ERROR_NONE;
+
+  while (length > 0)
+    {
+      if ((error = memwriter_putc(memwriter, *(s++))) != ERROR_NONE)
+        {
+          return error;
+        }
+      --length;
+    }
+
+  return error;
+}
+
 err_t memwriter_putc(memwriter_t *memwriter, char c)
 {
   return memwriter_printf(memwriter, "%c", c);
