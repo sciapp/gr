@@ -12,6 +12,7 @@ UNAME := $(shell uname)
      GRMOBJS = src/grm/args.o \
                src/grm/backtrace.o \
                src/grm/base64.o \
+               src/grm/bson.o \
                src/grm/dump.o \
                src/grm/dynamic_args_array.o \
                src/grm/error.o \

@@ -517,6 +517,7 @@ set(GRM_SOURCES
     lib/grm/src/grm/args.c
     lib/grm/src/grm/backtrace.c
     lib/grm/src/grm/base64.c
+    lib/grm/src/grm/bson.c
     lib/grm/src/grm/dump.c
     lib/grm/src/grm/dynamic_args_array.c
     lib/grm/src/grm/error.c
