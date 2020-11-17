@@ -47,6 +47,7 @@ error_t memwriter_enlarge_buf(memwriter_t *memwriter, size_t size_increment);
 error_t memwriter_ensure_buf(memwriter_t *memwriter, size_t needed_additional_size);
 error_t memwriter_printf(memwriter_t *memwriter, const char *format, ...);
 error_t memwriter_puts(memwriter_t *memwriter, const char *s);
+error_t memwriter_puts_with_len(memwriter_t *memwriter, char *s, size_t length);
 error_t memwriter_putc(memwriter_t *memwriter, char c);
 char *memwriter_buf(const memwriter_t *memwriter);
 size_t memwriter_size(const memwriter_t *memwriter);
