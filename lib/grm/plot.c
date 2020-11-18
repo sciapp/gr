@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <cm.h>
 
+#include "base64_int.h"
 #include "dump.h"
 #include "event_int.h"
 #include "gks.h"
@@ -139,18 +140,18 @@ event_queue_t *event_queue = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},         {"hexbin", "xys"},
-                                           {"polar", "xys"},        {"shade", "xys"},
-                                           {"stem", "xys"},         {"step", "xys"},
-                                           {"contour", "xyzc"},     {"contourf", "xyzc"},
-                                           {"tricont", "xyzc"},     {"trisurf", "xyzc"},
-                                           {"surface", "xyzc"},     {"wireframe", "xyzc"},
-                                           {"plot3", "xyzc"},       {"scatter", "xyzc"},
-                                           {"scatter3", "xyzc"},    {"quiver", "xyuv"},
-                                           {"heatmap", "xyzc"},     {"hist", "x"},
-                                           {"barplot", "y"},        {"isosurface", "c"},
-                                           {"imshow", "c"},         {"nonuniformheatmap", "xyzc"},
-                                           {"polar_histogram", "x"}};
+static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},          {"hexbin", "xys"},
+                                           {"polar", "xys"},         {"shade", "xys"},
+                                           {"stem", "xys"},          {"step", "xys"},
+                                           {"contour", "xyzc"},      {"contourf", "xyzc"},
+                                           {"tricont", "xyzc"},      {"trisurf", "xyzc"},
+                                           {"surface", "xyzc"},      {"wireframe", "xyzc"},
+                                           {"plot3", "xyzc"},        {"scatter", "xyzc"},
+                                           {"scatter3", "xyzc"},     {"quiver", "xyuv"},
+                                           {"heatmap", "xyzc"},      {"hist", "x"},
+                                           {"barplot", "y"},         {"isosurface", "c"},
+                                           {"imshow", "c"},          {"nonuniformheatmap", "xyzc"},
+                                           {"polar_histogram", "x"}, {"raw", "d"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -177,7 +178,8 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"tricont", plot_tricont},
                                                {"shade", plot_shade},
                                                {"nonuniformheatmap", plot_heatmap},
-                                               {"polar_histogram", plot_polar_histogram}};
+                                               {"polar_histogram", plot_polar_histogram},
+                                               {"raw", plot_raw}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ maps ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -266,43 +268,25 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "zlim",
                                     "zlog",
                                     NULL};
-const char *valid_series_keys[] = {"a",
-                                   "bin_width",
-                                   "bin_edges",
-                                   "bin_counts",
-                                   "c",
-                                   "c_dims",
-                                   "crange",
-                                   "draw_edges",
-                                   "edge_color",
-                                   "edge_width",
-                                   "error",
-                                   "face_color",
-                                   "foreground_color",
-                                   "indices",
-                                   "inner_series",
-                                   "isovalue",
-                                   "markertype",
-                                   "nbins",
-                                   "philim",
-                                   "rgb",
-                                   "rlim",
-                                   "s",
-                                   "spec",
-                                   "step_where",
-                                   "stairs",
-                                   "u",
-                                   "v",
-                                   "weights",
-                                   "x",
-                                   "xcolormap",
-                                   "xrange",
-                                   "y",
-                                   "ycolormap",
-                                   "yrange",
-                                   "z",
-                                   "z_dims",
-                                   "zrange",
+const char *valid_series_keys[] = {"a",          "bin_width",
+                                   "bin_edges",  "bin_counts",
+                                   "c",          "c_dims",
+                                   "crange",     "data",
+                                   "draw_edges", "edge_color",
+                                   "edge_width", "error",
+                                   "face_color", "foreground_color",
+                                   "indices",    "inner_series",
+                                   "isovalue",   "markertype",
+                                   "nbins",      "philim",
+                                   "rgb",        "rlim",
+                                   "s",          "spec",
+                                   "step_where", "stairs",
+                                   "u",          "v",
+                                   "weights",    "x",
+                                   "xcolormap",  "xrange",
+                                   "y",          "ycolormap",
+                                   "yrange",     "z",
+                                   "z_dims",     "zrange",
                                    NULL};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -321,6 +305,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"c_dims", "I"},
                                               {"crange", "D"},
                                               {"colormap", "i"},
+                                              {"data", "s"},
                                               {"edge_color", "D|i"},
                                               {"edge_width", "d"},
                                               {"error", "a"},
@@ -1634,7 +1619,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
         }
       grm_args_push(subplot_args, "_zlim", "dd", min_component, max_component);
     }
-  else if (str_equals_any(kind, 2, "imshow", "isosurface"))
+  else if (str_equals_any(kind, 3, "imshow", "isosurface", "raw"))
     {
       /* Iterate over `x` and `y` range keys */
       current_range_keys = range_keys;
@@ -4721,6 +4706,35 @@ error_t plot_shade(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
+error_t plot_raw(grm_args_t *subplot_args)
+{
+  grm_args_t **current_series = NULL;
+  const char *base64_data = NULL;
+  char *graphics_data = NULL;
+  error_t error = NO_ERROR;
+
+  args_values(subplot_args, "series", "A", &current_series);
+  while (*current_series != NULL)
+    {
+      cleanup_and_set_error_if(!args_values(*current_series, "data", "s", &base64_data), ERROR_PLOT_MISSING_DATA);
+      graphics_data = base64_decode(NULL, base64_data, NULL, &error);
+      cleanup_if_error;
+      gr_emergencyclosegks();
+      gr_initgr();
+      gr_drawgraphics(graphics_data);
+      free(graphics_data);
+      graphics_data = NULL;
+      ++current_series;
+    }
+
+cleanup:
+  if (graphics_data != NULL)
+    {
+      free(graphics_data);
+    }
+
+  return error;
+}
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ auxiliary drawing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 

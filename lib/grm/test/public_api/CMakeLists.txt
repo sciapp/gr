@@ -23,6 +23,7 @@ set(EXECUTABLE_SOURCES
     plot.c
     polar_histogram.c
     quiver.c
+    raw.c
     receiver.c
     scatter_errorbar.c
     sender.c
@@ -34,6 +35,7 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
   get_filename_component(executable "${executable_source}" NAME_WE)
   add_executable("${PROJECT_NAME}_${executable}" "${executable_source}")
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE grm_shared)
+  target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE gr_shared)
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE m)
   set_target_properties(
     "${PROJECT_NAME}_${executable}" PROPERTIES C_STANDARD 90 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF
