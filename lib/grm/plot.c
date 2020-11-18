@@ -4719,6 +4719,8 @@ error_t plot_raw(grm_args_t *subplot_args)
       cleanup_and_set_error_if(!args_values(*current_series, "data", "s", &base64_data), ERROR_PLOT_MISSING_DATA);
       graphics_data = base64_decode(NULL, base64_data, NULL, &error);
       cleanup_if_error;
+      gr_emergencyclosegks();
+      gr_initgr();
       gr_drawgraphics(graphics_data);
       free(graphics_data);
       graphics_data = NULL;
