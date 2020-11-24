@@ -140,18 +140,18 @@ event_queue_t *event_queue = NULL;
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to fmt ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},          {"hexbin", "xys"},
-                                           {"polar", "xys"},         {"shade", "xys"},
-                                           {"stem", "xys"},          {"step", "xys"},
-                                           {"contour", "xyzc"},      {"contourf", "xyzc"},
-                                           {"tricont", "xyzc"},      {"trisurf", "xyzc"},
-                                           {"surface", "xyzc"},      {"wireframe", "xyzc"},
-                                           {"plot3", "xyzc"},        {"scatter", "xyzc"},
-                                           {"scatter3", "xyzc"},     {"quiver", "xyuv"},
-                                           {"heatmap", "xyzc"},      {"hist", "x"},
-                                           {"barplot", "y"},         {"isosurface", "c"},
-                                           {"imshow", "c"},          {"nonuniformheatmap", "xyzc"},
-                                           {"polar_histogram", "x"}, {"raw", "d"}};
+static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},         {"hexbin", "xys"},
+                                           {"polar", "xys"},        {"shade", "xys"},
+                                           {"stem", "xys"},         {"step", "xys"},
+                                           {"contour", "xyzc"},     {"contourf", "xyzc"},
+                                           {"tricont", "xyzc"},     {"trisurf", "xyzc"},
+                                           {"surface", "xyzc"},     {"wireframe", "xyzc"},
+                                           {"plot3", "xyzc"},       {"scatter", "xyzc"},
+                                           {"scatter3", "xyzc"},    {"quiver", "xyuv"},
+                                           {"heatmap", "xyzc"},     {"hist", "x"},
+                                           {"barplot", "y"},        {"isosurface", "c"},
+                                           {"imshow", "c"},         {"nonuniformheatmap", "xyzc"},
+                                           {"polar_histogram", "x"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -178,8 +178,7 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"tricont", plot_tricont},
                                                {"shade", plot_shade},
                                                {"nonuniformheatmap", plot_heatmap},
-                                               {"polar_histogram", plot_polar_histogram},
-                                               {"raw", plot_raw}};
+                                               {"polar_histogram", plot_polar_histogram}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ maps ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -221,7 +220,7 @@ static int pre_plot_text_encoding = -1;
  * flat object that mixes keys of different hierarchies */
 
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", NULL};
-const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
+const char *valid_plot_keys[] = {"clear", "figsize", "raw", "size", "subplots", "update", NULL};
 
 const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "adjust_ylim",
@@ -268,25 +267,43 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "zlim",
                                     "zlog",
                                     NULL};
-const char *valid_series_keys[] = {"a",          "bin_width",
-                                   "bin_edges",  "bin_counts",
-                                   "c",          "c_dims",
-                                   "crange",     "data",
-                                   "draw_edges", "edge_color",
-                                   "edge_width", "error",
-                                   "face_color", "foreground_color",
-                                   "indices",    "inner_series",
-                                   "isovalue",   "markertype",
-                                   "nbins",      "philim",
-                                   "rgb",        "rlim",
-                                   "s",          "spec",
-                                   "step_where", "stairs",
-                                   "u",          "v",
-                                   "weights",    "x",
-                                   "xcolormap",  "xrange",
-                                   "y",          "ycolormap",
-                                   "yrange",     "z",
-                                   "z_dims",     "zrange",
+const char *valid_series_keys[] = {"a",
+                                   "bin_width",
+                                   "bin_edges",
+                                   "bin_counts",
+                                   "c",
+                                   "c_dims",
+                                   "crange",
+                                   "draw_edges",
+                                   "edge_color",
+                                   "edge_width",
+                                   "error",
+                                   "face_color",
+                                   "foreground_color",
+                                   "indices",
+                                   "inner_series",
+                                   "isovalue",
+                                   "markertype",
+                                   "nbins",
+                                   "philim",
+                                   "rgb",
+                                   "rlim",
+                                   "s",
+                                   "spec",
+                                   "step_where",
+                                   "stairs",
+                                   "u",
+                                   "v",
+                                   "weights",
+                                   "x",
+                                   "xcolormap",
+                                   "xrange",
+                                   "y",
+                                   "ycolormap",
+                                   "yrange",
+                                   "z",
+                                   "z_dims",
+                                   "zrange",
                                    NULL};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -305,7 +322,6 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"c_dims", "I"},
                                               {"crange", "D"},
                                               {"colormap", "i"},
-                                              {"data", "s"},
                                               {"edge_color", "D|i"},
                                               {"edge_width", "d"},
                                               {"error", "a"},
@@ -326,6 +342,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"markertype", "i"},
                                               {"nbins", "i"},
                                               {"panzoom", "D"},
+                                              {"raw", "s"},
                                               {"reset_ranges", "i"},
                                               {"rotation", "i"},
                                               {"size", "D|A"},
@@ -1619,7 +1636,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
         }
       grm_args_push(subplot_args, "_zlim", "dd", min_component, max_component);
     }
-  else if (str_equals_any(kind, 3, "imshow", "isosurface", "raw"))
+  else if (str_equals_any(kind, 2, "imshow", "isosurface"))
     {
       /* Iterate over `x` and `y` range keys */
       current_range_keys = range_keys;
@@ -4706,26 +4723,18 @@ error_t plot_shade(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
-error_t plot_raw(grm_args_t *subplot_args)
+error_t plot_raw(grm_args_t *plot_args)
 {
-  grm_args_t **current_series = NULL;
   const char *base64_data = NULL;
   char *graphics_data = NULL;
   error_t error = NO_ERROR;
 
-  args_values(subplot_args, "series", "A", &current_series);
-  while (*current_series != NULL)
-    {
-      cleanup_and_set_error_if(!args_values(*current_series, "data", "s", &base64_data), ERROR_PLOT_MISSING_DATA);
-      graphics_data = base64_decode(NULL, base64_data, NULL, &error);
-      cleanup_if_error;
-      gr_emergencyclosegks();
-      gr_initgr();
-      gr_drawgraphics(graphics_data);
-      free(graphics_data);
-      graphics_data = NULL;
-      ++current_series;
-    }
+  cleanup_and_set_error_if(!args_values(plot_args, "raw", "s", &base64_data), ERROR_PLOT_MISSING_DATA);
+  graphics_data = base64_decode(NULL, base64_data, NULL, &error);
+  cleanup_if_error;
+  gr_clearws();
+  gr_drawgraphics(graphics_data);
+  gr_updatews();
 
 cleanup:
   if (graphics_data != NULL)
@@ -6725,29 +6734,36 @@ int grm_plot(const grm_args_t *args)
       return 0;
     }
 
-  plot_set_attribute_defaults(active_plot_args);
-  plot_pre_plot(active_plot_args);
-  args_values(active_plot_args, "subplots", "A", &current_subplot_args);
-  while (*current_subplot_args != NULL)
+  if (args_values(active_plot_args, "raw", "s", &current_subplot_args))
     {
-      if (plot_pre_subplot(*current_subplot_args) != NO_ERROR)
-        {
-          return 0;
-        }
-      args_values(*current_subplot_args, "kind", "s", &kind);
-      logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-      if (!plot_func_map_at(plot_func_map, kind, &plot_func))
-        {
-          return 0;
-        }
-      if (plot_func(*current_subplot_args) != NO_ERROR)
-        {
-          return 0;
-        };
-      plot_post_subplot(*current_subplot_args);
-      ++current_subplot_args;
+      plot_raw(active_plot_args);
     }
-  plot_post_plot(active_plot_args);
+  else
+    {
+      plot_set_attribute_defaults(active_plot_args);
+      plot_pre_plot(active_plot_args);
+      args_values(active_plot_args, "subplots", "A", &current_subplot_args);
+      while (*current_subplot_args != NULL)
+        {
+          if (plot_pre_subplot(*current_subplot_args) != NO_ERROR)
+            {
+              return 0;
+            }
+          args_values(*current_subplot_args, "kind", "s", &kind);
+          logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+          if (!plot_func_map_at(plot_func_map, kind, &plot_func))
+            {
+              return 0;
+            }
+          if (plot_func(*current_subplot_args) != NO_ERROR)
+            {
+              return 0;
+            };
+          plot_post_subplot(*current_subplot_args);
+          ++current_subplot_args;
+        }
+      plot_post_plot(active_plot_args);
+    }
 
   process_events();
 
