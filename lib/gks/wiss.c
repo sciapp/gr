@@ -12,17 +12,12 @@
 
 #define SEGM_SIZE 262144 /* 256K */
 
-#if defined(__POWERPC__) || defined(aix)
-#define HAVE_BIG_ENDIAN
-#endif
-
-#ifndef HAVE_BIG_ENDIAN
-#define COPY(s, nmemb, size)                               \
-  memmove(p->buffer + p->nbytes, (void *)s, nmemb * size); \
-  p->nbytes += nmemb * size
-#else
-#define COPY(s, nmemb, size) copy((char *)s, nmemb, size)
-#endif
+#define COPY(s, n)                              \
+  memmove(p->buffer + p->nbytes, (void *)s, n); \
+  p->nbytes += n
+#define PAD(n)                         \
+  memset(p->buffer + p->nbytes, 0, n); \
+  p->nbytes += n
 
 #define RESOLVE(arg, type, nbytes) \
   arg = (type *)(s + sp);          \
@@ -42,32 +37,11 @@ static gks_state_list_t *gkss;
 static int wkid = 1;
 static int unused_variable = 0;
 
-#ifdef HAVE_BIG_ENDIAN
-
-static int swabint(char p[4])
-{
-  return (p[0] << 24) + (p[1] << 16) + (p[2] << 8) + p[3];
-}
-
-static void copy(char *s, int nmemb, int size)
-{
-  int i;
-
-  memmove(p->buffer + p->nbytes, (void *)s, nmemb * size);
-  if (size == 4)
-    {
-      for (i = 0; i < nmemb; i++) swabint(p->buffer + p->nbytes + i * size);
-    }
-  p->nbytes += nmemb * size;
-}
-
-#endif
-
 static void reallocate(int len)
 {
-  while (p->nbytes + len >= p->size) p->size += SEGM_SIZE;
+  while (p->nbytes + len > p->size) p->size += SEGM_SIZE;
 
-  p->buffer = (char *)gks_realloc(p->buffer, p->size);
+  p->buffer = (char *)gks_realloc(p->buffer, p->size + 1);
   if (p->buffer == NULL)
     {
       gks_perror("memory allocation failed");
@@ -97,7 +71,7 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
                        int len_farr_2, double *f_arr_2, int len_c_arr, char *c_arr)
 {
   char s[132];
-  int len = -1, slen;
+  int len = -1, slen, tp = 0;
 
   switch (fctid)
     {
@@ -106,60 +80,63 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
     case 15: /* fill area */
 
       len = 4 * sizeof(int) + 2 * i_arr[0] * sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(i_arr, 1, sizeof(int));
-      COPY(f_arr_1, i_arr[0], sizeof(double));
-      COPY(f_arr_2, i_arr[0], sizeof(double));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(i_arr, sizeof(int));
+      COPY(f_arr_1, i_arr[0] * sizeof(double));
+      COPY(f_arr_2, i_arr[0] * sizeof(double));
       break;
 
     case 14: /* text */
 
       len = 4 * sizeof(int) + 2 * sizeof(double) + 132;
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
       memset((void *)s, 0, 132);
       slen = strlen(c_arr);
       strncpy(s, c_arr, slen);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(f_arr_1, 1, sizeof(double));
-      COPY(f_arr_2, 1, sizeof(double));
-      COPY(&slen, 1, sizeof(int));
-      COPY(s, 1, 132);
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(f_arr_1, sizeof(double));
+      COPY(f_arr_2, sizeof(double));
+      COPY(&slen, sizeof(int));
+      COPY(s, 132);
       break;
 
     case 16:  /* cell array */
     case 201: /* draw image */
 
       len = (6 + dimx * dy) * sizeof(int) + 4 * sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(f_arr_1, 2, sizeof(double));
-      COPY(f_arr_2, 2, sizeof(double));
-      COPY(&dx, 1, sizeof(int));
-      COPY(&dy, 1, sizeof(int));
-      COPY(&dimx, 1, sizeof(int));
-      COPY(i_arr, dimx * dy, sizeof(int));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(f_arr_1, 2 * sizeof(double));
+      COPY(f_arr_2, 2 * sizeof(double));
+      COPY(&dx, sizeof(int));
+      COPY(&dy, sizeof(int));
+      COPY(&dimx, sizeof(int));
+      tp = dimx * (dy - 1) + dx;
+      COPY(i_arr, tp * sizeof(int));
+      PAD((dimx - dx) * sizeof(int)); /* (dimx * dy - tp) elements */
       break;
 
     case 17: /* GDP */
-      len = (2 + 3 + i_arr[2]) * sizeof(int) + 2 * i_arr[0] * sizeof(double);
+      len = (3 + 3 + i_arr[2]) * sizeof(int) + 2 * i_arr[0] * sizeof(double);
       if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(i_arr, (3 + i_arr[2]), sizeof(int));
-      COPY(f_arr_1, i_arr[0], sizeof(double));
-      COPY(f_arr_2, i_arr[0], sizeof(double));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(i_arr, (3 + i_arr[2]) * sizeof(int));
+      COPY(f_arr_1, i_arr[0] * sizeof(double));
+      COPY(f_arr_2, i_arr[0] * sizeof(double));
       break;
 
     case 19:  /* set linetype */
@@ -173,27 +150,28 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
     case 38:  /* set fillarea color index */
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
+    case 108: /* set resample method */
     case 207: /* set border color index */
 
       len = 4 * sizeof(int);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(i_arr, 1, sizeof(int));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(i_arr, sizeof(int));
       break;
 
     case 27: /* set text font and precision */
     case 34: /* set text alignment */
 
       len = 5 * sizeof(int);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(i_arr, 2, sizeof(int));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(i_arr, 2 * sizeof(int));
       break;
 
     case 20:  /* set linewidth scale factor */
@@ -206,83 +184,85 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
     case 206: /* set border width */
 
       len = 3 * sizeof(int) + sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(f_arr_1, 1, sizeof(double));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(f_arr_1, sizeof(double));
       break;
 
     case 32: /* set character up vector */
 
       len = 3 * sizeof(int) + 2 * sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(f_arr_1, 1, sizeof(double));
-      COPY(f_arr_2, 1, sizeof(double));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(f_arr_1, sizeof(double));
+      COPY(f_arr_2, sizeof(double));
       break;
 
     case 41: /* set aspect source flags */
 
       len = 3 * sizeof(int) + 13 * sizeof(int);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(i_arr, 13, sizeof(int));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(i_arr, 13 * sizeof(int));
       break;
 
     case 48: /* set color representation */
 
       len = 4 * sizeof(int) + 3 * sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(&i_arr[1], 1, sizeof(int));
-      COPY(f_arr_1, 3, sizeof(double));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(&i_arr[1], sizeof(int));
+      COPY(f_arr_1, 3 * sizeof(double));
       break;
 
     case 49: /* set window */
     case 50: /* set viewport */
+    case 54: /* set workstation window */
+    case 55: /* set workstation viewport */
 
       len = 4 * sizeof(int) + 4 * sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(i_arr, 1, sizeof(int));
-      COPY(f_arr_1, 2, sizeof(double));
-      COPY(f_arr_2, 2, sizeof(double));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(i_arr, sizeof(int));
+      COPY(f_arr_1, 2 * sizeof(double));
+      COPY(f_arr_2, 2 * sizeof(double));
       break;
 
     case 202: /* set shadow */
 
       len = 3 * sizeof(int) + 3 * sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(f_arr_1, 3, sizeof(double));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(f_arr_1, 3 * sizeof(double));
       break;
 
     case 204: /* set coord xform */
 
       len = 3 * sizeof(int) + 6 * sizeof(double);
-      if (p->nbytes + len >= p->size) reallocate(len);
+      if (p->nbytes + len > p->size) reallocate(len);
 
-      COPY(&len, 1, sizeof(int));
-      COPY(&sgnum, 1, sizeof(int));
-      COPY(&fctid, 1, sizeof(int));
-      COPY(f_arr_1, 6, sizeof(double));
+      COPY(&len, sizeof(int));
+      COPY(&sgnum, sizeof(int));
+      COPY(&fctid, sizeof(int));
+      COPY(f_arr_1, 6 * sizeof(double));
       break;
     }
 }
@@ -422,10 +402,10 @@ void gks_drv_wiss(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_
                 {
                   int fctid = 2, sgnum = 0;
 
-                  COPY(&len, 1, sizeof(int));
-                  COPY(&sgnum, 1, sizeof(int));
-                  COPY(&fctid, 1, sizeof(int));
-                  COPY(gkss, 1, sizeof(gks_state_list_t));
+                  COPY(&len, sizeof(int));
+                  COPY(&sgnum, sizeof(int));
+                  COPY(&fctid, sizeof(int));
+                  COPY(gkss, sizeof(gks_state_list_t));
                 }
 
               write_item(p->segn, fctid, dx, dy, dimx, i_arr, len_farr_1, f_arr_1, len_farr_2, f_arr_2, len_c_arr,
