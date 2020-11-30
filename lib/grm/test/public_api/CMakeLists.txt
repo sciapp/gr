@@ -37,6 +37,7 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE grm_shared)
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE gr_shared)
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE m)
+  target_compile_options("${PROJECT_NAME}_${executable}" PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     "${PROJECT_NAME}_${executable}" PROPERTIES C_STANDARD 90 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF
   )
