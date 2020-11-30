@@ -18,11 +18,13 @@
 #define COPY(s, n)                              \
   memmove(p->buffer + p->nbytes, (void *)s, n); \
   p->nbytes += n
+#define PAD(n)                         \
+  memset(p->buffer + p->nbytes, 0, n); \
+  p->nbytes += n
 
 #define RESOLVE(arg, type, nbytes) \
   arg = (type *)(s + sp);          \
   sp += nbytes
-
 
 typedef struct ws_state_list_struct
 {
@@ -50,7 +52,7 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
                        double *f_arr_2, int len_c_arr, char *c_arr)
 {
   char s[132];
-  int len = -1, slen;
+  int len = -1, slen, tp;
 
   switch (fctid)
     {
@@ -98,7 +100,9 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
       COPY(&dx, sizeof(int));
       COPY(&dy, sizeof(int));
       COPY(&dimx, sizeof(int));
-      COPY(i_arr, dimx * dy * sizeof(int));
+      tp = dimx * (dy - 1) + dx;
+      COPY(i_arr, tp * sizeof(int));
+      PAD((dimx - dx) * sizeof(int)); /* (dimx * dy - tp) elements */
       break;
 
     case 17: /* GDP */
@@ -123,6 +127,7 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
     case 38:  /* set fillarea color index */
     case 52:  /* select normalization transformation */
     case 53:  /* set clipping indicator */
+    case 108: /* set resample method */
     case 207: /* set border color index */
 
       len = 3 * sizeof(int);
@@ -195,6 +200,8 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
 
     case 49: /* set window */
     case 50: /* set viewport */
+    case 54: /* set workstation window */
+    case 55: /* set workstation viewport */
 
       len = 3 * sizeof(int) + 4 * sizeof(double);
       if (p->nbytes + len > p->size) reallocate(len);
@@ -354,6 +361,9 @@ void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
     case 50:
     case 52:
     case 53:
+    case 54:
+    case 55:
+    case 108:
     case 200:
     case 201:
     case 202:
@@ -519,6 +529,7 @@ static void interp(char *str)
         case 38:  /* set fillarea color index */
         case 52:  /* select normalization transformation */
         case 53:  /* set clipping indicator */
+        case 108: /* set resample method */
         case 207: /* set border color index */
 
           RESOLVE(i_arr, int, sizeof(int));
@@ -561,6 +572,8 @@ static void interp(char *str)
 
         case 49: /* set window */
         case 50: /* set viewport */
+        case 54: /* set workstation window */
+        case 55: /* set workstation viewport */
 
           RESOLVE(i_arr, int, sizeof(int));
           RESOLVE(f_arr_1, double, 2 * sizeof(double));
@@ -679,7 +692,16 @@ static void interp(char *str)
         case 53:
           gks_set_clipping(i_arr[0]);
           break;
+        case 54:
+          gks_set_ws_window(i_arr[0], f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1]);
+          break;
+        case 55:
+          gks_set_ws_viewport(i_arr[0], f_arr_1[0], f_arr_1[1], f_arr_2[0], f_arr_2[1]);
+          break;
 
+        case 108:
+          gks_set_resample_method(i_arr[0]);
+          break;
         case 200:
           gks_set_text_slant(f_arr_1[0]);
           break;
