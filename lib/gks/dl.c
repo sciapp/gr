@@ -282,7 +282,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
     case 41: /* set aspect source flags */
 
-      len = 15 * sizeof(int);
+      len = 2 * sizeof(int) + 13 * sizeof(int);
       if (d->nbytes + len > d->size) reallocate(d, len);
 
       COPY(&len, sizeof(int));
