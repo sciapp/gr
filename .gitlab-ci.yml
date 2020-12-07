@@ -480,7 +480,7 @@ centos7-cmake-system-dependencies:
     - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
     - make
 
-centos6-32bit-self-contained:
+centos7-32bit-self-contained:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
@@ -502,15 +502,15 @@ centos6-32bit-self-contained:
   - mkdir artifacts/include/grm/
   - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
        artifacts/include/grm/
-  - mv artifacts artifacts-centos6-32bit
+  - mv artifacts artifacts-centos7-32bit
   artifacts:
     expire_in: 1 week
     paths:
-    - artifacts-centos6-32bit/
+    - artifacts-centos7-32bit/
 
-centos6-32bit-cmake-self-contained:
+centos7-32bit-cmake-self-contained:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos6-32bit-self-contained
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-32bit-self-contained
   script:
     - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-i386.tar.gz
     - tar xf cmake-3.6.3-Linux-i386.tar.gz
@@ -524,93 +524,26 @@ centos6-32bit-cmake-self-contained:
     - make
     - make install
     - cd ..
-    - mv install artifacts-centos6-32bit-cmake
+    - mv install artifacts-centos7-32bit-cmake
   artifacts:
     expire_in: 1 week
     paths:
-      - artifacts-centos6-32bit-cmake/
+      - artifacts-centos7-32bit-cmake/
 
-centos6-32bit-system-dependencies:
+centos7-32bit-system-dependencies:
   stage: build
   image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
   script:
   - make install GRDIR=/usr/local/gr
 
-centos6-32bit-cmake-system-dependencies:
+centos7-32bit-cmake-system-dependencies:
   stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos6-32bit-system-dependencies
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos7-32bit-system-dependencies
   script:
     - yum install -y libtiff-devel bzip2-devel
     - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-i386.tar.gz
     - tar xf cmake-3.6.3-Linux-i386.tar.gz
     - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-i386/bin/cmake
-    - make -C 3rdparty default TARGETS="qhull"
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
-    - make
-
-centos6-64bit-self-contained:
-  stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
-  script:
-  - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-  - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-  - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
-  - make self GRDIR=/usr/local/gr
-  - mkdir artifacts
-  - cp lib/gks/demo artifacts/gksdemo
-  - cp lib/gks/qt/gksqt artifacts/gksqt
-  - cp lib/gr/demo artifacts/grdemo
-  - cp lib/gks/libGKS.so lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.so lib/gr/libGR.a lib/gr3/libGR3.so
-       lib/gr3/libGR3platform.so lib/grm/libGRM.a lib/grm/libGRM.so lib/gr/qtgr/*.so artifacts/
-  - cp -r lib/gks/fonts artifacts/
-  - mkdir artifacts/include/
-  - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
-  - mkdir artifacts/include/grm/
-  - cp lib/grm/args.h lib/grm/dump.h lib/grm/event.h lib/grm/interaction.h lib/grm/net.h lib/grm/plot.h lib/grm/util.h
-       artifacts/include/grm/
-  - mv artifacts artifacts-centos6-64bit
-  artifacts:
-    expire_in: 1 week
-    paths:
-    - artifacts-centos6-64bit/
-
-centos6-64bit-cmake-self-contained:
-  stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos6-64bit-self-contained
-  script:
-    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
-    - make -C 3rdparty default extras
-    - mkdir build
-    - cd build
-    - $CMAKE_CMD .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${CI_PROJECT_DIR}/install -DGR_USE_BUNDLED_LIBRARIES=ON
-    - make
-    - make install
-    - mv ../install/lib64/ ../install/lib/
-    - cd ..
-    - mv install artifacts-centos6-64bit-cmake
-  artifacts:
-    expire_in: 1 week
-    paths:
-      - artifacts-centos6-64bit-cmake/
-
-centos6-64bit-system-dependencies:
-  stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
-  script:
-  - make install GRDIR=/usr/local/gr
-
-centos6-64bit-cmake-system-dependencies:
-  stage: build
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/centos6-64bit-system-dependencies
-  script:
-    - yum install -y libtiff-devel bzip2-devel
-    - curl -LO https://gr-framework.org/downloads/3rdparty/cmake-3.6.3-Linux-x86_64.tar.gz
-    - tar xf cmake-3.6.3-Linux-x86_64.tar.gz
-    - export CMAKE_CMD=`pwd`/cmake-3.6.3-Linux-x86_64/bin/cmake
     - make -C 3rdparty default TARGETS="qhull"
     - mkdir build
     - cd build
@@ -1040,22 +973,15 @@ packages-tar:
   - mv artifacts-centos7/include CentOS-x86_64/gr/
   - cp artifacts-js/gr.js CentOS-x86_64/gr/lib/
   - rm -rf artifacts-centos7
+  - cp -r CentOS-x86_64 Linux-x86_64
   - mkdir -p Linux-i386/gr/bin
   - mkdir -p Linux-i386/gr/lib
-  - mv artifacts-centos6-32bit/*.so Linux-i386/gr/lib/
-  - mv artifacts-centos6-32bit/gksqt Linux-i386/gr/bin/
-  - mv artifacts-centos6-32bit/fonts Linux-i386/gr/
-  - mv artifacts-centos6-32bit/include Linux-i386/gr/
+  - mv artifacts-centos7-32bit/*.so Linux-i386/gr/lib/
+  - mv artifacts-centos7-32bit/gksqt Linux-i386/gr/bin/
+  - mv artifacts-centos7-32bit/fonts Linux-i386/gr/
+  - mv artifacts-centos7-32bit/include Linux-i386/gr/
   - cp artifacts-js/gr.js Linux-i386/gr/lib/
-  - rm -rf artifacts-centos6-32bit
-  - mkdir -p Linux-x86_64/gr/bin
-  - mkdir -p Linux-x86_64/gr/lib
-  - mv artifacts-centos6-64bit/*.so Linux-x86_64/gr/lib/
-  - mv artifacts-centos6-64bit/gksqt Linux-x86_64/gr/bin/
-  - mv artifacts-centos6-64bit/fonts Linux-x86_64/gr/
-  - mv artifacts-centos6-64bit/include Linux-x86_64/gr/
-  - cp artifacts-js/gr.js Linux-x86_64/gr/lib/
-  - rm -rf artifacts-centos6-64bit
+  - rm -rf artifacts-centos7-32bit
   - mkdir -p ArchLinux-x86_64/gr/bin
   - mkdir -p ArchLinux-x86_64/gr/lib
   - mv artifacts-arch/*.so ArchLinux-x86_64/gr/lib/
