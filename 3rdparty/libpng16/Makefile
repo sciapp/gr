@@ -6,6 +6,9 @@ endif
 ifeq ($(shell uname),Darwin)
 ifneq ($(notdir $(CC)),emcc)
 PNGCFLAGS += -mmacosx-version-min=10.11
+ifeq ($(shell arch),arm64)
+PNGCFLAGS += -DPNG_ARM_NEON_OPT=0
+endif
 endif
 endif
       OBJS = \
