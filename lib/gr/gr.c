@@ -2065,7 +2065,7 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
  * \param[in] color color index array
  *
  * The two dimensional color index array is mapped to the resulting image by
- * interpreting the X-axis of the array as the angle and the Y-axis as the raidus.
+ * interpreting the X-axis of the array as the angle and the Y-axis as the radius.
  * The center point of the resulting disk is located at `x_org`, `y_org` and the
  * radius of the disk is `rmax`.
  *
@@ -2224,6 +2224,217 @@ void gr_polarcellarray(double x_org, double y_org, double phimin, double phimax,
 
   gr_drawimage(x_org - rmax, x_org + rmax, y_org + rmax, y_org - rmax, size, size, img_data, 0);
   free(img_data);
+}
+
+/*!
+ * Display a two dimensional color index array mapped to a disk using polar
+ * coordinates with nonuniform cell sizes.
+ *
+ * \param[in] x_org X coordinate of the disk center in world coordinates
+ * \param[in] y_org Y coordinate of the disk center in world coordinates
+ * \param[in] phi array with the angles of the disk sector in degrees
+ * \param[in] r array with the radii of the disk in world coordinates
+ * \param[in] dimphi Phi (X) dimension of the color index array
+ * \param[in] dimr R (Y) dimension of the color index array
+ * \param[in] scol number of leading columns in the color index array and the angle array
+ * \param[in] srow number of leading rows in the color index array and the radii array
+ * \param[in] ncol total number of columns in the color index array and the angle array
+ * \param[in] nrow total number of rows in the color index array and the radii array
+ * \param[in] color color index array
+ *
+ * The mapping of the polar coordinates and the drawing is performed simialr to `gr_polarcellarray`
+ * with the difference that the individual cell sizes are specified allowing nonuniform sized cells.
+ *
+ * `phi` must contain `dimphi`+1 elements and `r` must contain `dimr`+1 elements. The elements
+ * i and i+1 are respectively the edges of the i-th cell.
+ *
+ * `scol` and `srow` can be used to specify a (1-based) starting column and row
+ * in the `color`, `phi` and `r` array. `dimr` and `dimphi` specify the actual dimension of the
+ * arrays in the memory whereof `ncol` and `nrow` values are displayed.
+ *
+ */
+void gr_nonuniformpolarcellarray(double x_org, double y_org, double *phi, double *r, int dimphi, int dimr, int scol,
+                                 int srow, int ncol, int nrow, int *color)
+{
+  int x, y, color_ind, r_ind, phi_ind, phi_reverse, r_reverse, start, end, size = 2000;
+  int *img_data;
+  double cur_r, cur_phi, tmp, phimin, phimax, rmin, rmax, center = size / 2.;
+  double *r_sorted, *phi_sorted;
+
+  if (!(scol >= 1 && srow >= 1 && scol + ncol - 1 <= dimphi && srow + nrow - 1 <= dimr))
+    {
+      fprintf(stderr, "Dimensions of color index array are invalid.\n");
+      return;
+    }
+
+  phimin = phi[scol - 1];
+  phimax = phi[ncol];
+
+  rmin = r[srow - 1];
+  rmax = r[nrow];
+
+  if (phimin == phimax)
+    {
+      fprintf(stderr, "Invalid angles specified.\n");
+      return;
+    }
+
+  if (rmin == rmax || rmin < 0 || rmax < 0)
+    {
+      fprintf(stderr, "Invalid radii specified.\n");
+      return;
+    }
+
+  check_autoinit;
+
+  if ((r_reverse = rmin > rmax))
+    {
+      tmp = rmin;
+      rmin = rmax;
+      rmax = tmp;
+    }
+  r_sorted = (double *)gks_malloc(sizeof(double) * (nrow - srow + 2));
+
+  for (y = 0; y < nrow - srow + 2; y++)
+    {
+      if (r_reverse)
+        {
+          r_sorted[y] = r[nrow - y];
+        }
+      else
+        {
+          r_sorted[y] = r[srow - 1 + y];
+        }
+      if (y && r_sorted[y] < r_sorted[y - 1])
+        {
+          fprintf(stderr, "radii not sorted in ascending order.\n");
+          gks_free(r_sorted);
+          return;
+        }
+    }
+
+  if ((phi_reverse = phimin > phimax))
+    {
+      tmp = phimin;
+      phimin = phimax;
+      phimax = tmp;
+    }
+  phi_sorted = (double *)gks_malloc(sizeof(double) * (ncol - scol + 2));
+
+  for (x = 0; x < ncol - scol + 2; x++)
+    {
+      if (phi_reverse)
+        {
+          phi_sorted[x] = phi[ncol - x];
+        }
+      else
+        {
+          phi_sorted[x] = phi[scol - 1 + x];
+        }
+      phi_sorted[x] = phi_sorted[x] - phimax + 360;
+      if (x && phi_sorted[x] < phi_sorted[x - 1])
+        {
+          fprintf(stderr, "angles not sorted in ascending order.\n");
+          gks_free(r_sorted);
+          gks_free(phi_sorted);
+          return;
+        }
+    }
+  phimin = fmod(phimin, 360);
+  phimax = fmod(phimax, 360);
+
+  img_data = (int *)gks_malloc(size * size * sizeof(int));
+
+  for (y = 0; y < size; y++)
+    {
+      for (x = 0; x < size; x++)
+        {
+          double px = (x - center) / center * rmax;
+          double py = (y - center) / center * rmax;
+
+          cur_r = sqrt(px * px + py * py);
+          if (r_reverse)
+            {
+              cur_r = rmax - cur_r + rmin;
+            }
+
+          if (phi_reverse)
+            {
+              cur_phi = fmod(phimax - fmod(atan2(py, px) * 180 / M_PI + 360, 360) + phimin + 360 - phimax, 360);
+            }
+          else
+            {
+              cur_phi = fmod(fmod(atan2(py, px) * 180 / M_PI + 360, 360) + 360 - phimax, 360);
+            }
+
+          start = 0;
+          end = nrow - srow + 1;
+          if (cur_r < r_sorted[start] || cur_r >= r_sorted[end])
+            {
+              img_data[y * size + x] = 0;
+              continue;
+            }
+
+          while (start != end)
+            {
+              int m = ((start + end) / 2);
+              if (cur_r >= r_sorted[m + 1])
+                {
+                  start = m + 1;
+                }
+              else if (r_sorted[m] > cur_r)
+                {
+                  end = m;
+                }
+              else
+                {
+                  start = end = m;
+                }
+            }
+          r_ind = start;
+
+          start = 0;
+          end = ncol - scol + 1;
+          if (cur_phi < phi_sorted[start] || cur_phi >= phi_sorted[end])
+            {
+              img_data[y * size + x] = 0;
+              continue;
+            }
+          while (start != end)
+            {
+              int m = ((start + end) / 2);
+              if (cur_phi >= phi_sorted[m + 1])
+                {
+                  start = m + 1;
+                }
+              else if (phi_sorted[m] > cur_phi)
+                {
+                  end = m;
+                }
+              else
+                {
+                  start = end = m;
+                }
+            }
+          phi_ind = start;
+
+          color_ind = color[(r_ind + srow - 1) * ncol + phi_ind + scol - 1];
+          if (color_ind >= 0 && color_ind < MAX_COLOR)
+            {
+              img_data[y * size + x] = (255 << 24) + rgb[color_ind];
+            }
+          else
+            {
+              /* invalid color indices in input data result in transparent pixel */
+              img_data[y * size + x] = 0;
+            }
+        }
+    }
+
+  gks_free(r_sorted);
+  gks_free(phi_sorted);
+  gr_drawimage(x_org - rmax, x_org + rmax, y_org + rmax, y_org - rmax, size, size, img_data, 0);
+  gks_free(img_data);
 }
 
 void gr_gdp(int n, double *x, double *y, int primid, int ldr, int *datrec)
