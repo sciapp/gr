@@ -369,7 +369,7 @@ public func titles3d(x_title: String, y_title: String, z_title: String) {
     gr_titles3d(char(str: x_title as NSString), char(str: y_title as NSString), char(str: z_title as NSString))
 }
 
-public func surface(px: [Double], py: [Double], pz: [Double], option: Int) {
+public func surface(px: [Double], py: [Double], pz: [Double], option: Int = 4) {
     let nx = px.count
     let ny = py.count
     let nz = pz.count
@@ -740,3 +740,20 @@ let FONT_PALATINO_BOLD = 128
 let FONT_PALATINO_BOLDITALIC = 129
 let FONT_ZAPFCHANCERY_MEDIUMITALIC = 130
 let FONT_ZAPFDINGBATS = 131
+
+func peaks(n: Int = 49) -> [Double] {
+    var z = Array<Double>(repeating: 0, count: n * n)
+    for i in 0..<n {
+        let x = -3 + Double(i) * 6 / Double(n)
+        for j in 0..<n {
+            let y = -3 + Double(j) * 6 / Double(n)
+            z[j + i*n] = 3 * pow(1-x, 2) * exp(-(pow(x, 2)) - pow(y+1, 2)) - 10*(x/5 - pow(x, 3) - pow(y, 5)) * exp(-pow(x, 2) - pow(y, 2)) - 1/3 * exp(-pow(x+1, 2) - pow(y, 2))
+        }
+    }
+    return z
+}
+
+func linspace(x1: Double, x2: Double, n: Int = 100) -> [Double] {
+    let x = Array<Double>(stride(from: x1, through: x2, by: (x2-x1)/Double(n-1)))
+    return x
+}
