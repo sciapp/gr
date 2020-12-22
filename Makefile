@@ -7,6 +7,13 @@ PKGCONFIGDIR = $(LIBDIR)/pkgconfig
 
 UNAME := $(shell uname)
 
+PREFERRED_CLANG_FORMAT_VERSION="9"
+ifeq ($(shell command -v "clang-format-$(PREFERRED_CLANG_FORMAT_VERSION)"),)
+  CLANG_FORMAT="clang-format"
+else
+  CLANG_FORMAT="clang-format-$(PREFERRED_CLANG_FORMAT_VERSION)"
+endif
+
 default: all
 
 pre-check:
@@ -69,12 +76,14 @@ ifeq ($(UNAME), Darwin)
 	           -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)' \
 	         ! -path './3rdparty/*' \
 	         ! -path './apps/*' \
-	           -exec clang-format -i -verbose -style=file {} \;
+	         ! -path './build/*' \
+	           -exec "$(CLANG_FORMAT)" -i -verbose -style=file {} \;
 	@CMAKE_FORMAT="$$(./.setup_cmakeformat.sh)" && \
 	find -E . -type f \
 	          -regex '(.*/CMakeLists\.txt)|(.*\.cmake)' \
 	        ! -path './3rdparty/*' \
 	        ! -path './apps/*' \
+	        ! -path './build/*' \
 	          -exec echo "Formatting "{} \; \
 	          -exec "$${CMAKE_FORMAT}" -i {} \;
 else
@@ -83,13 +92,15 @@ else
 	        -regex '.*\.(c|cpp|cxx|m|h|hpp|hxx)' \
 	      ! -path './3rdparty/*' \
 	      ! -path './apps/*' \
-	        -exec clang-format -i -verbose -style=file {} \;
+	      ! -path './build/*' \
+	        -exec "$(CLANG_FORMAT)" -i -verbose -style=file {} \;
 	@CMAKE_FORMAT="$$(./.setup_cmakeformat.sh)" && \
 	find . -type f \
 	       -regextype posix-extended \
 	       -regex '(.*/CMakeLists\.txt)|(.*\.cmake)' \
 	     ! -path './3rdparty/*' \
 	     ! -path './apps/*' \
+	     ! -path './build/*' \
 	       -exec echo "Formatting "{} \; \
 	       -exec "$${CMAKE_FORMAT}" -i {} \;
 endif

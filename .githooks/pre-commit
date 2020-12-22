@@ -1,6 +1,7 @@
 #!/bin/bash
 
 EXCLUDED_ROOT_DIRECTORIES=( "3rdparty" "apps" )
+PREFERRED_CLANG_FORMAT_VERSION="9"
 
 is_in_excluded_directory () {
     local file directory
@@ -13,7 +14,14 @@ is_in_excluded_directory () {
 }
 
 format_c_cpp () {
-    local file
+    local clang_format_binary file
+
+    if [[ -n "${PREFERRED_CLANG_FORMAT_VERSION}" ]] && \
+       command -v "clang-format-${PREFERRED_CLANG_FORMAT_VERSION}" >/dev/null 2>&1; then
+      clang_format_binary="clang-format-${PREFERRED_CLANG_FORMAT_VERSION}"
+    else
+      clang_format_binary="clang-format"
+    fi
 
     # Only check staged files (relevant for the current commit) that
     # were added, copied, modified or renamed.
@@ -22,7 +30,7 @@ format_c_cpp () {
         [[ "${file}" =~ \.(c|cpp|cxx|m|h|hpp|hxx)$ ]] || continue
         grep -vr $'\r' "${file}" >/dev/null || { echo "${file} must not contain carriage return as line endings."; return 1; }
         file --mime "${file}" | grep "charset=us-ascii" >/dev/null || { echo "${file} must be encoded as ASCII text."; return 1; }
-        clang-format -i -verbose -style=file "${file}" && \
+        "${clang_format_binary}" -i -verbose -style=file "${file}" && \
         git add "${file}" || exit 1
     done
     return 0
