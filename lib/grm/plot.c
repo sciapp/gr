@@ -19,6 +19,7 @@
 #include "gr3.h"
 #include "logging_int.h"
 #include "plot_int.h"
+#include "util_int.h"
 
 #include "datatype/double_map_int.h"
 #include "datatype/string_map_int.h"

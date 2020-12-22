@@ -1,6 +1,9 @@
 /*
    cc -o demo demo.c -I/usr/local/gr/include -L/usr/local/gr/lib -lGR
  */
+#ifdef __unix__
+#define _XOPEN_SOURCE
+#endif
 
 #include <stdlib.h>
 #include <math.h>

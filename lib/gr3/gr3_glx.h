@@ -214,7 +214,8 @@ GLFUNC void (*gr3_glTexImage2D)(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, G
 #define glTexParameteri gr3_glTexParameteri
 #define glTexImage2D gr3_glTexImage2D
 
+#endif
+
 int gr3_initGL_GLX_(void);
 
-#endif
 #endif

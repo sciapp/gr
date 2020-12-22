@@ -1,3 +1,6 @@
+#ifdef __unix__
+#define _XOPEN_SOURCE
+#endif
 
 #include <stdio.h>
 #include <string.h>

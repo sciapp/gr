@@ -22,12 +22,20 @@
 #define array_size(a) ((sizeof(a) / sizeof(*(a))))
 #endif
 
+#ifndef isnan
+#define isnan(x) ((x) != (x))
+#endif
+
 #ifndef min
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 #endif
 
 #ifndef max
 #define max(x, y) (((x) > (y)) ? (x) : (y))
+#endif
+
+#ifndef round
+#define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
 #endif
 
 #ifndef static_assert /* defined in C11 */

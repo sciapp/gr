@@ -454,8 +454,8 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
         case 8: /* hollow arc */
           {
             num_segments = 4 * r;
-            c = cosf(2 * M_PI / (num_segments - 1));
-            s = sinf(2 * M_PI / (num_segments - 1));
+            c = cos(2 * M_PI / (num_segments - 1));
+            s = sin(2 * M_PI / (num_segments - 1));
             xr = r;
             yr = 0;
             if (op == 7)

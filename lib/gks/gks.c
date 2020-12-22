@@ -1,3 +1,6 @@
+#ifdef __unix__
+#define _POSIX_C_SOURCE 1
+#endif
 
 #include <ctype.h>
 #include <stdio.h>

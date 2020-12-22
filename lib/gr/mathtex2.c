@@ -763,6 +763,15 @@ static const unsigned int symbol_codepoints[] = {
 #ifndef NAN
 #define NAN (0.0 / 0.0)
 #endif
+#ifndef max
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef min
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef round
+#define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
+#endif
 
 #include "mathtex2.h"
 
@@ -1314,20 +1323,20 @@ static void pack_vlist(size_t vlist_index, double h, int m, double l)
           d = 0;
           if (!isinf(node->u.hbox.width))
             {
-              w = fmax(w, node->u.hbox.width);
+              w = max(w, node->u.hbox.width);
             }
           break;
         case BT_VBOX:
           x += d + node->u.vbox.height;
           d = node->u.vbox.depth;
-          w = fmax(w, 0.0);
+          w = max(w, 0.0);
           break;
         case BT_HLIST:
           x += d + node->u.hlist.height;
           d = node->u.hlist.depth;
           if (!isinf(node->u.hlist.width))
             {
-              w = fmax(w, node->u.hlist.width + node->u.hlist.shift_amount);
+              w = max(w, node->u.hlist.width + node->u.hlist.shift_amount);
             }
           break;
         case BT_VLIST:
@@ -1335,7 +1344,7 @@ static void pack_vlist(size_t vlist_index, double h, int m, double l)
           d = node->u.vlist.depth;
           if (!isinf(node->u.vlist.width))
             {
-              w = fmax(w, node->u.vlist.width + node->u.vlist.shift_amount);
+              w = max(w, node->u.vlist.width + node->u.vlist.shift_amount);
             }
           break;
         case BT_HRULE:
@@ -1343,7 +1352,7 @@ static void pack_vlist(size_t vlist_index, double h, int m, double l)
           d = node->u.hrule.depth;
           if (!isinf(node->u.hrule.width))
             {
-              w = fmax(w, node->u.hrule.width);
+              w = max(w, node->u.hrule.width);
             }
           break;
         case BT_KERN:
@@ -1517,43 +1526,43 @@ static void pack_hlist(size_t hlist_index, double w, int m)
         {
         case BT_CHAR:
           x += node->u.character.width;
-          h = fmax(h, node->u.character.height);
-          d = fmax(d, node->u.character.depth);
+          h = max(h, node->u.character.height);
+          d = max(d, node->u.character.depth);
           break;
         case BT_HBOX:
           x += node->u.hbox.width;
-          h = fmax(h, 0.0);
-          d = fmax(d, 0.0);
+          h = max(h, 0.0);
+          d = max(d, 0.0);
           break;
         case BT_VBOX:
           if (!isinf(node->u.vbox.height) && !isinf(node->u.vbox.depth))
             {
-              h = fmax(h, node->u.vbox.height);
-              d = fmax(d, node->u.vbox.depth);
+              h = max(h, node->u.vbox.height);
+              d = max(d, node->u.vbox.depth);
             }
           break;
         case BT_HLIST:
           x += node->u.hlist.width;
           if (!isinf(node->u.hlist.height) && !isinf(node->u.hlist.depth))
             {
-              h = fmax(h, node->u.hlist.height - node->u.hlist.shift_amount);
-              d = fmax(d, node->u.hlist.depth + node->u.hlist.shift_amount);
+              h = max(h, node->u.hlist.height - node->u.hlist.shift_amount);
+              d = max(d, node->u.hlist.depth + node->u.hlist.shift_amount);
             }
           break;
         case BT_VLIST:
           x += node->u.vlist.width;
           if (!isinf(node->u.vlist.height) && !isinf(node->u.vlist.depth))
             {
-              h = fmax(h, node->u.vlist.height - node->u.vlist.shift_amount);
-              d = fmax(d, node->u.vlist.depth + node->u.vlist.shift_amount);
+              h = max(h, node->u.vlist.height - node->u.vlist.shift_amount);
+              d = max(d, node->u.vlist.depth + node->u.vlist.shift_amount);
             }
           break;
         case BT_HRULE:
           x += node->u.hrule.width;
           if (!isinf(node->u.hrule.height) && !isinf(node->u.hrule.depth))
             {
-              h = fmax(h, node->u.hrule.height);
-              d = fmax(d, node->u.hrule.depth);
+              h = max(h, node->u.hrule.height);
+              d = max(d, node->u.hrule.depth);
             }
           break;
         case BT_GLUE:
@@ -2506,7 +2515,7 @@ static size_t convert_genfrac_to_box_model(ParserNode *node)
   BoxModelNode *centered_numerator_node = get_box_model_node(centered_numerator_node_index);
   BoxModelNode *centered_denominator_node = get_box_model_node(centered_denominator_node_index);
 
-  double max_width = fmax(centered_numerator_node->u.hlist.width, centered_denominator_node->u.hlist.width);
+  double max_width = max(centered_numerator_node->u.hlist.width, centered_denominator_node->u.hlist.width);
   pack_hlist(centered_numerator_node_index, max_width, 0);
   pack_hlist(centered_denominator_node_index, max_width, 0);
 
@@ -2692,7 +2701,7 @@ static size_t convert_subsuper_to_box_model(ParserNode *node, size_t previous_bo
       if (is_overunder)
         {
           hlist_node->u.hlist.subsuper_width =
-              fmax(previous_node_width + 4 * default_thickness, body_width + 4 * default_thickness);
+              max(previous_node_width + 4 * default_thickness, body_width + 4 * default_thickness);
         }
       if (node->u.subsuper.operator== '^')
         {
@@ -2876,7 +2885,7 @@ static size_t convert_accent_to_box_model(ParserNode *node)
   BoxModelNode *centered_numerator_node = get_box_model_node(centered_numerator_node_index);
   BoxModelNode *centered_denominator_node = get_box_model_node(centered_denominator_node_index);
 
-  double max_width = fmax(centered_numerator_node->u.hlist.width, centered_denominator_node->u.hlist.width);
+  double max_width = max(centered_numerator_node->u.hlist.width, centered_denominator_node->u.hlist.width);
   pack_hlist(centered_numerator_node_index, max_width, 0);
   pack_hlist(centered_denominator_node_index, max_width, 0);
 
@@ -2928,7 +2937,7 @@ static size_t convert_sqrt_to_box_model(ParserNode *node)
       shrink(index_hlist_index);
       BoxModelNode *inner_hlist_node = get_box_model_node(index_hlist_index);
       inner_hlist_node->u.hlist.shift_amount = -inner_height * 0.5;
-      double negative_space = -fmin(inner_hlist_node->u.hlist.width, (inner_height + inner_depth) * 0.6);
+      double negative_space = -min(inner_hlist_node->u.hlist.width, (inner_height + inner_depth) * 0.6);
       append_to_hlist(hlist_index, index_hlist_index);
       append_to_hlist(hlist_index, make_kern(negative_space));
     }
