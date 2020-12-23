@@ -14,7 +14,7 @@ UNAME := $(shell uname)
                contourf.o boundary.o mathtex2.o mathtex2.tab.o
       GSDEFS =
      DEFINES = $(GSDEFS)
-    INCLUDES = -I../gks -I$(THIRDPARTYDIR)/include -I$(THIRDPARTYDIR)/include/qhull
+    INCLUDES = -I../gks -I$(THIRDPARTYDIR)/include
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)
           AR = ar

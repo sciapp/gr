@@ -42,9 +42,9 @@ clean:
 
 $(PREFIX)/lib/libqhull.a: libqhull.a
 	mkdir -p $(PREFIX)/lib/
-	mkdir -p $(PREFIX)/include/qhull
+	mkdir -p $(PREFIX)/include/libqhull
 	cp libqhull.a $(PREFIX)/lib/
-	cp *.h $(PREFIX)/include/qhull/
+	cp *.h $(PREFIX)/include/libqhull/
 
 install: $(PREFIX)/lib/libqhull.a
 

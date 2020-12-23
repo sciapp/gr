@@ -2,7 +2,7 @@ ifeq ($(strip $(THIRDPARTYDIR)),)
 override THIRDPARTYDIR = $(abspath $(CURDIR)/../../3rdparty/build)
 endif
 
- INCLUDES = -I$(THIRDPARTYDIR)/include -I$(THIRDPARTYDIR)/include/qhull -I../gks -I.
+ INCLUDES = -I$(THIRDPARTYDIR)/include -I../gks -I.
    CFLAGS = -DXMD_H -D_POSIX -D_WIN32_WINNT=0x0600 $(INCLUDES)
   DEFINES = -DGRDIR=\"$(GRDIR)\" -DNO_GS -DNO_X11
  JPEGLIBS = $(THIRDPARTYDIR)/lib/libjpeg.a
