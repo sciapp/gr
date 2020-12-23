@@ -192,7 +192,7 @@ static int open_socket(int wstype)
             }
 #ifndef _WIN32
           {
-            struct timespec delay = {300, 0};
+            struct timespec delay = {0, 300000000};
             nanosleep(&delay, NULL);
           }
 #else
