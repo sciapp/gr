@@ -1,3 +1,7 @@
+#ifdef __unix__
+#define _POSIX_C_SOURCE 1
+#endif
+
 #include "test.h"
 
 #include "plot_int.h"

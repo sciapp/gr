@@ -118,6 +118,10 @@ DLLEXPORT void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *i_arr, 
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
+#ifndef round
+#define round(x) (((x) < 0) ? ceil((x)-.5) : floor((x) + .5))
+#endif
+
 
 /* set this flag so that the exit handler won't try to use Cairo X11 support */
 static int exit_due_to_x11_support_ = 0;
@@ -530,7 +534,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
       pattern = cairo_pattern_create_for_surface(image);
       cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
       cairo_pattern_set_filter(pattern, CAIRO_FILTER_NEAREST);
-      cairo_matrix_init_scale(&pattern_matrix, 500.0 / fmin(p->width, p->height), 500.0 / fmin(p->width, p->height));
+      cairo_matrix_init_scale(&pattern_matrix, 500.0 / min(p->width, p->height), 500.0 / min(p->width, p->height));
       cairo_pattern_set_matrix(pattern, &pattern_matrix);
 
       cairo_set_source(p->cr, pattern);
@@ -583,7 +587,7 @@ static void polyline(int n, double *px, double *py)
   set_color(ln_color);
 
   gks_get_dash_list(ln_type, ln_width, gks_dashes);
-  for (i = 0; i < gks_dashes[0]; i++) p->dashes[i] = gks_dashes[i + 1] * fmin(p->width, p->height) / 500.0;
+  for (i = 0; i < gks_dashes[0]; i++) p->dashes[i] = gks_dashes[i + 1] * min(p->width, p->height) / 500.0;
   cairo_set_dash(p->cr, p->dashes, gks_dashes[0], 0);
 
   gks_set_dev_xform(gkss, p->window, p->viewport);
@@ -2126,7 +2130,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
             {
               p->width = p->viewport[1] * p->w / p->mw;
               p->height = p->viewport[3] * p->h / p->mh;
-              p->nominal_size = fmin(p->width, p->height) / 500.0;
+              p->nominal_size = min(p->width, p->height) / 500.0;
             }
           close_page();
           open_page();

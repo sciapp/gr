@@ -1,3 +1,6 @@
+#ifdef __unix__
+#define _POSIX_C_SOURCE 200809L
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -188,7 +191,10 @@ static int open_socket(int wstype)
                 }
             }
 #ifndef _WIN32
-          usleep(300000);
+          {
+            struct timespec delay = {300, 0};
+            nanosleep(&delay, NULL);
+          }
 #else
           Sleep(300);
 #endif

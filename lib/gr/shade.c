@@ -16,10 +16,13 @@ Link:
 
 #include "gr.h"
 
-#ifdef _WIN32
-#define is_nan(a) _isnan(a)
-#else
+#ifdef isnan
 #define is_nan(a) isnan(a)
+#else
+#define is_nan(x) ((x) != (x))
+#endif
+#ifndef log1p
+#define log1p(x) (log(1 + (x)))
 #endif
 
 #define XFORM_BOOLEAN 0

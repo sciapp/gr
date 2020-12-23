@@ -1,3 +1,10 @@
+#ifdef __unix__
+#define _POSIX_C_SOURCE 200112L
+#endif
+#if defined(_WIN32) && (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 199901L) && defined(__STRICT_ANSI__)
+extern float __cdecl sqrtf(float);
+#endif
+
 #include <assert.h>
 #include <stdio.h>
 #include <math.h>

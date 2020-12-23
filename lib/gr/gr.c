@@ -1,3 +1,6 @@
+#ifdef __unix__
+#define _XOPEN_SOURCE
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -17,14 +20,19 @@ typedef __int64 int64_t;
 
 #ifdef _WIN32
 #include <windows.h>
+#include <wchar.h>
 #define TMPDIR "C:\\Users\\%USERNAME%\\AppData\\Local\\Temp"
 #define DIRDELIM "\\"
-#define is_nan(a) _isnan(a)
 #define WIN32_LEAN_AND_MEAN 1
 #else
 #define TMPDIR "/tmp"
 #define DIRDELIM "/"
+#endif
+
+#ifdef isnan
 #define is_nan(a) isnan(a)
+#else
+#define is_nan(x) ((x) != (x))
 #endif
 
 #ifndef NAN
@@ -220,6 +228,7 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 #define iround(x) ((int)round(x))
 #define gauss(x) floor(x)
 #define igauss(x) ((int)gauss(x))
+#define trunc(x) (((x) > 0) ? floor(x) : ceil(x))
 
 #define NDC 0
 #define WC 1
@@ -10159,7 +10168,7 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
   FILE *stream;
   int math, ret;
 #ifdef _WIN32
-  wchar_t w_tex[MAX_PATH];
+  wchar_t w_path[MAX_PATH];
 #endif
 
   color = ((int)(rgb[0] * 255)) + ((int)(rgb[1] * 255) << 8) + ((int)(rgb[2] * 255) << 16) + (255 << 24);
@@ -10172,7 +10181,12 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 #endif
   sprintf(path, "%s%sgr-cache-%s.png", temp, DIRDELIM, cache);
 
+#ifdef _WIN32
+  MultiByteToWideChar(CP_UTF8, 0, path, strlen(path) + 1, w_path, MAX_PATH);
+  if (_waccess(w_path, R_OK) != 0)
+#else
   if (access(path, R_OK) != 0)
+#endif
     {
       math = strstr(string, "\\(") == NULL;
 #ifdef _WIN32
@@ -10193,8 +10207,8 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
       sprintf(png, "%s.png", tmp);
 #ifdef _WIN32
       null = "NUL";
-      MultiByteToWideChar(CP_UTF8, 0, tex, strlen(tex) + 1, w_tex, MAX_PATH);
-      stream = fopen(w_tex, L"w");
+      MultiByteToWideChar(CP_UTF8, 0, tex, strlen(tex) + 1, w_path, MAX_PATH);
+      stream = _wfopen(w_path, L"w");
 #else
       null = "/dev/null";
       stream = fopen(tex, "w");
@@ -10215,7 +10229,12 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
       sprintf(cmd, "latex -interaction=batchmode -halt-on-error -output-directory=%s %s >%s", temp, tex, null);
       ret = system(cmd);
 
+#ifdef _WIN32
+      MultiByteToWideChar(CP_UTF8, 0, dvi, strlen(dvi) + 1, w_path, MAX_PATH);
+      if (ret == 0 && _waccess(w_path, R_OK) == 0)
+#else
       if (ret == 0 && access(dvi, R_OK) == 0)
+#endif
         {
           sprintf(cmd, "dvipng -bg transparent -q -T tight -x %d %s -o %s >%s", pointSize * 100, dvi, png, null);
           ret = system(cmd);
@@ -10237,7 +10256,15 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
         fprintf(stderr, "latex: failed to create a dvi file\n");
     }
 
-  if (access(path, R_OK) == 0) gr_readimage(path, width, height, data);
+#ifdef _WIN32
+  MultiByteToWideChar(CP_UTF8, 0, path, strlen(path) + 1, w_path, MAX_PATH);
+  if (_waccess(w_path, R_OK) == 0)
+#else
+  if (access(path, R_OK) == 0)
+#endif
+    {
+      gr_readimage(path, width, height, data);
+    }
 }
 
 int *rotl90(int m, int n, int *mat)
