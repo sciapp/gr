@@ -142,7 +142,7 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT
   FT_UInt glyph_index;
 
   glyph_index = FT_Get_Char_Index(face, codepoint);
-  if (FT_HAS_KERNING(face) && *previous && !vertical && glyph_index)
+  if (FT_HAS_KERNING(face) && !FT_IS_FIXED_WIDTH(face) && *previous && !vertical && glyph_index)
     {
       FT_Vector delta;
       FT_Get_Kerning(face, *previous, glyph_index, FT_KERNING_UNFITTED, &delta);
@@ -189,7 +189,7 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT
       return 1;
     }
 
-  bearing->x = face->glyph->metrics.horiBearingX;
+  bearing->x = FT_IS_FIXED_WIDTH(face) ? 0 : face->glyph->metrics.horiBearingX;
   bearing->y = 0;
   if (vertical)
     {
