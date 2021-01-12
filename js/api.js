@@ -1140,17 +1140,66 @@ grm_args_new = function() {
 };
 
 grm_args_push_c = Module.cwrap('grm_args_push', 'number', ['number', 'string', 'string', 'number']);
-grm_args_push = function(args, key, format, vals) {
+grm_args_push = function(args, key, format, ...vals) {
+    function strip_format(format) {
+        return format.replaceAll("n", "");
+    }
+
+    function is_non_empty_string(str) {
+        return Boolean(str);
+    }
+
+    function is_homogeneous_format(format) {
+        var type = format[0];
+        return RegExp("^" + type + "+$").test(format);
+    }
+
+    function stringarray(vals) {
+        var arr;
+        var i;
+
+        arr = [];
+        for (i = 0; i < vals.length; ++i) {
+            arr.push(uint8array(vals[i]));
+        }
+        return intarray(arr);
+    }
+
+    function argsarray(vals) {
+        return intarray(vals);
+    }
+
+    format = strip_format(format);
+    if (!is_non_empty_string(format)) {
+        throw new Error("The \"format\" parameter must not be an empty value!");
+    }
+    if (!is_homogeneous_format(format)) {
+        throw new Error("The \"format\" parameter must be an homogenous string (e.g \"iii\", \"DD\")!");
+    }
+
+    var type_to_conversion_function = {
+        "d": floatarray,
+        "i": intarray,
+        "s": stringarray,
+        "a": argsarray,
+    };
+
     var type = format[0];
     var arr;
-    if (type == "d") {
-        arr = floatarray(vals);
-    } else if (type == "i") {
-        arr = intarray(vals);
-    } else if (type == "s") {
-        var ptr = uint8array(vals);
-        arr = intarray([ptr]);
+    var i;
+
+    if(type == type.toLowerCase()) {
+        arr = type_to_conversion_function[type](vals);
+        format = type.repeat(vals.length);
+    } else {
+        arr = [];
+        for (i = 0; i < vals.length; ++i) {
+            arr.push(vals[i].length, type_to_conversion_function[type.toLowerCase()](vals[i]));
+        }
+        arr = intarray(arr);
+        format = ("n" + type).repeat(vals.length);
     }
+
     return grm_args_push_c(args, key, format, arr);
 };
 
