@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <math.h>
 
+#include "gks.h"
+
 #define MAX(a, b) (a) > (b) ? (a) : (b)
 
 typedef enum
@@ -70,6 +72,30 @@ typedef struct formula_tt
   token_t operator; /* only: Plus, Minus, Mult or None  */
   struct formula_tt *next[POS_COUNT];
 } formula_t;
+
+
+typedef struct
+{
+  char *name;
+  unsigned char byte1, byte2;
+} utf8_t;
+
+static utf8_t utf8[] = {
+    {"Alpha", 0xce, 0x91},    {"Beta", 0xce, 0x92},  {"Gamma", 0xce, 0x93},   {"Delta", 0xce, 0x94},
+    {"Epsilon", 0xce, 0x95},  {"Zeta", 0xce, 0x96},  {"Eta", 0xce, 0x97},     {"Theta", 0xce, 0x98},
+    {"Iota", 0xce, 0x99},     {"Kappa", 0xce, 0x9a}, {"Lamda", 0xce, 0x9b},   {"Mu", 0xce, 0x9c},
+    {"Nu", 0xce, 0x9d},       {"Xi", 0xce, 0x9e},    {"Omicron", 0xce, 0x9f}, {"Pi", 0xce, 0xa0},
+    {"Rho", 0xce, 0xa1},      {"Sigma", 0xce, 0xa3}, {"Tau", 0xce, 0xa4},     {"Upsilon", 0xce, 0xa5},
+    {"Phi", 0xce, 0xa6},      {"Chi", 0xce, 0xa7},   {"Psi", 0xce, 0xa8},     {"Omega", 0xce, 0xa9},
+    {"alpha", 0xce, 0xb1},    {"beta", 0xce, 0xb2},  {"gamma", 0xce, 0xb3},   {"delta", 0xce, 0xb4},
+    {"epsilon", 0xce, 0xb5},  {"zeta", 0xce, 0xb6},  {"eta", 0xce, 0xb7},     {"theta", 0xce, 0xb8},
+    {"iota", 0xce, 0xb9},     {"kappa", 0xce, 0xba}, {"lamda", 0xce, 0xbb},   {"mu", 0xce, 0xbc},
+    {"nu", 0xce, 0xbd},       {"xi", 0xce, 0xbe},    {"omicron", 0xce, 0xbf}, {"pi", 0xcf, 0x80},
+    {"rho", 0xcf, 0x81},      {"sigma", 0xcf, 0x83}, {"tau", 0xcf, 0x84},     {"upsilon", 0xcf, 0x85},
+    {"phi", 0xcf, 0x86},      {"chi", 0xcf, 0x87},   {"psi", 0xcf, 0x88},     {"omega", 0xcf, 0x89},
+    {"vartheta", 0xcf, 0x91}, {"varphi", 0xcf, 0x95}};
+
+static int utf8_len = sizeof(utf8) / sizeof(utf8[0]);
 
 
 #define GREEK_COUNT 54
@@ -386,6 +412,38 @@ static token_t getToken(void)
   return token;
 }
 
+static char *toUTF8(const char *string)
+{
+  const char *s = string;
+  char *r, *result = calloc(2 * strlen(string) + 1, sizeof(char));
+  int i, len;
+
+  r = result;
+  while (*s)
+    {
+      if (*s == '\\')
+        {
+          s++;
+          for (i = 0; i < utf8_len; i++)
+            {
+              len = strlen(utf8[i].name);
+              if (strncmp(s, utf8[i].name, len) == 0)
+                {
+                  s += len;
+                  *r++ = utf8[i].byte1;
+                  *r++ = utf8[i].byte2;
+                  break;
+                }
+            }
+        }
+      else
+        *r++ = *s++;
+    }
+  *r = *s;
+  return result;
+}
+
+
 static char *toGreek(char *string)
 {
   int i, len;
@@ -452,6 +510,8 @@ static bool getString(string_t **string, char *start, int font, int prec)
 
       if (val_or_greek == Value)
         saveString(current, transform(start), font, prec);
+      else if (prec == GKS_K_TEXT_PRECISION_OUTLINE)
+        saveString(current, toUTF8(start), font, prec);
       else
         saveString(current, toGreek(start), GREEK_FONT, prec);
 
@@ -680,8 +740,6 @@ static bool Expression(formula_t **formula, int font, int prec)
 /*                       ####   #    #   ####                      */
 /*                                                                 */
 /*******************************************************************/
-
-#include "gks.h"
 
 #define TOP_PERCENT 0.12
 #define BOTTOM_PERCENT 0.33
