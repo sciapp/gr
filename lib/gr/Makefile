@@ -20,11 +20,13 @@ UNAME := $(shell uname)
           AR = ar
       RANLIB = ar ts
 ifeq ($(UNAME), Darwin)
+GR_SHARED_LIBRARY_SUFFIX ?= .dylib
 	 CFLAGS += -mmacosx-version-min=10.11
-INSTALL_NAME = -Wl,-install_name,@rpath/libGR.so
+INSTALL_NAME = -Wl,-install_name,@rpath/libGR${GR_SHARED_LIBRARY_SUFFIX}
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
      SOFLAGS = -dynamiclib
 else
+GR_SHARED_LIBRARY_SUFFIX ?= .so
 INSTALL_NAME =
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
      SOFLAGS = -shared
@@ -59,7 +61,7 @@ default:
 
 all: targets
 
-targets: prerequisites libGR.a libGR.so demo libqtgr
+targets: prerequisites libGR.a libGR${GR_SHARED_LIBRARY_SUFFIX} demo libqtgr
 
 prerequisites:
 	$(MAKE) -C ../../3rdparty/ PREFIX=$(THIRDPARTYDIR)
@@ -71,7 +73,7 @@ libGR.a: $(GROBJS)
 	$(AR) crv $@ $?
 	$(RANLIB) $@
 
-libGR.so: $(GROBJS) $(GKSLIBS)
+libGR${GR_SHARED_LIBRARY_SUFFIX}: $(GROBJS) $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(GROBJS) $(PNGLIBS) $(GKSLIBS) \
 	$(FTLIBS) $(JPEGLIBS) $(ZLIBS) $(QHLIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)
@@ -105,7 +107,7 @@ clean:
 	$(MAKE) -C ../gks clean
 	$(MAKE) -C ../gks/plugin clean
 	$(MAKE) -C ../../3rdparty/ clean
-	rm -f so_locations demo *.so *.a *.o *.bak *~ gr_version.h
+	rm -f so_locations demo *.so *.a *.o *.bak *~ gr_version.h *${GR_SHARED_LIBRARY_SUFFIX}
 
 depend:
 	makedepend -Y -- gr.c text.c contour.c spline.c gridit.c strlib.c io.c \
