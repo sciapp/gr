@@ -865,8 +865,8 @@ darwin-libvirt-self-contained:
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
-    - cp lib/gks/libGKS.dylib lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.dylib lib/gr/libGR.a lib/gr3/libGR3.dylib
-    lib/grm/libGRM.a lib/grm/libGRM.dylib lib/gr/qtgr/*.dylib artifacts/
+  - cp lib/gks/libGKS.dylib lib/gks/libGKS.a lib/gks/plugin/*.so lib/gr/libGR.dylib lib/gr/libGR.a lib/gr3/libGR3.dylib
+      lib/grm/libGRM.a lib/grm/libGRM.dylib lib/gr/qtgr/*.dylib artifacts/
   - cp -r lib/gks/fonts artifacts/
   - mkdir artifacts/include/
   - cp lib/gks/gks.h lib/gr/gr.h lib/gr3/gr3.h lib/grm/grm.h lib/gr/qtgr/grwidget.h artifacts/include/
