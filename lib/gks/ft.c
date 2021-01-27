@@ -142,7 +142,7 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT
   FT_UInt glyph_index;
 
   glyph_index = FT_Get_Char_Index(face, codepoint);
-  if (FT_HAS_KERNING(face) && *previous && !vertical && glyph_index)
+  if (FT_HAS_KERNING(face) && !FT_IS_FIXED_WIDTH(face) && *previous && !vertical && glyph_index)
     {
       FT_Vector delta;
       FT_Get_Kerning(face, *previous, glyph_index, FT_KERNING_UNFITTED, &delta);
@@ -189,7 +189,7 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT
       return 1;
     }
 
-  bearing->x = face->glyph->metrics.horiBearingX;
+  bearing->x = FT_IS_FIXED_WIDTH(face) ? 0 : face->glyph->metrics.horiBearingX;
   bearing->y = 0;
   if (vertical)
     {
@@ -772,7 +772,6 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
 
   for (i = 0; i < num_glyphs; i++)
     {
-
       codepoint = unicode_string[i];
 
       error = set_glyph(face, codepoint, &previous, &pen, vertical, &rotation, &bearing, halign, &glyph_slot);
@@ -1113,7 +1112,8 @@ static void process_glyphs(FT_Face face, double x, double y, char *text, double 
     {
       load_glyph(face, unicode_string[i]);
 
-      if (i > 0 && FT_HAS_KERNING(face)) pen_x += get_kerning(face, unicode_string[i - 1], unicode_string[i]);
+      if (i > 0 && FT_HAS_KERNING(face) && !FT_IS_FIXED_WIDTH(face))
+        pen_x += get_kerning(face, unicode_string[i - 1], unicode_string[i]);
 
       get_outline(face, unicode_string[i], i == 0);
 
@@ -1263,7 +1263,8 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
     {
       load_glyph(face, unicode_string[i]);
 
-      if (i > 0 && FT_HAS_KERNING(face)) pen_x += get_kerning(face, unicode_string[i - 1], unicode_string[i]);
+      if (i > 0 && FT_HAS_KERNING(face) && !FT_IS_FIXED_WIDTH(face))
+        pen_x += get_kerning(face, unicode_string[i - 1], unicode_string[i]);
 
       get_outline(face, unicode_string[i], i == 0);
 

@@ -83,8 +83,9 @@ static int purge(gks_display_list_t *d, char *t)
   return tp;
 }
 
-void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1,
-                       int lr2, double *r2, int lc, char *c, gks_state_list_t *gkss)
+void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1,
+                       double *f_arr_1, int len_f_arr_2, double *f_arr_2, int len_c_arr, char *c_arr,
+                       gks_state_list_t *gkss)
 {
   char s[132], *t = NULL;
   int len, slen, tp = 0;
@@ -144,14 +145,14 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 15: /* fill area */
       if (d->state == GKS_K_WS_ACTIVE)
         {
-          len = 3 * sizeof(int) + 2 * ia[0] * sizeof(double);
+          len = 3 * sizeof(int) + 2 * i_arr[0] * sizeof(double);
           if (d->nbytes + len > d->size) reallocate(d, len);
 
           COPY(&len, sizeof(int));
           COPY(&fctid, sizeof(int));
-          COPY(ia, sizeof(int));
-          COPY(r1, ia[0] * sizeof(double));
-          COPY(r2, ia[0] * sizeof(double));
+          COPY(i_arr, sizeof(int));
+          COPY(f_arr_1, i_arr[0] * sizeof(double));
+          COPY(f_arr_2, i_arr[0] * sizeof(double));
 
           d->empty = 0;
         }
@@ -165,13 +166,13 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
           if (d->nbytes + len > d->size) reallocate(d, len);
 
           memset((void *)s, 0, 132);
-          slen = strlen(c);
-          strncpy(s, c, slen);
+          slen = strlen(c_arr);
+          strncpy(s, c_arr, slen);
 
           COPY(&len, sizeof(int));
           COPY(&fctid, sizeof(int));
-          COPY(r1, sizeof(double));
-          COPY(r2, sizeof(double));
+          COPY(f_arr_1, sizeof(double));
+          COPY(f_arr_2, sizeof(double));
           COPY(&slen, sizeof(int));
           COPY(s, 132);
 
@@ -189,13 +190,13 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
           COPY(&len, sizeof(int));
           COPY(&fctid, sizeof(int));
-          COPY(r1, 2 * sizeof(double));
-          COPY(r2, 2 * sizeof(double));
+          COPY(f_arr_1, 2 * sizeof(double));
+          COPY(f_arr_2, 2 * sizeof(double));
           COPY(&dx, sizeof(int));
           COPY(&dy, sizeof(int));
           COPY(&dimx, sizeof(int));
           tp = dimx * (dy - 1) + dx;
-          COPY(ia, tp * sizeof(int));
+          COPY(i_arr, tp * sizeof(int));
           PAD((dimx - dx) * sizeof(int)); /* (dimx * dy - tp) elements */
 
           d->empty = 0;
@@ -205,14 +206,14 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
     case 17: /* GDP */
       if (d->state == GKS_K_WS_ACTIVE)
         {
-          len = (2 + 3 + ia[2]) * sizeof(int) + 2 * ia[0] * sizeof(double);
+          len = (2 + 3 + i_arr[2]) * sizeof(int) + 2 * i_arr[0] * sizeof(double);
           if (d->nbytes + len > d->size) reallocate(d, len);
 
           COPY(&len, sizeof(int));
           COPY(&fctid, sizeof(int));
-          COPY(ia, (3 + ia[2]) * sizeof(int));
-          COPY(r1, ia[0] * sizeof(double));
-          COPY(r2, ia[0] * sizeof(double));
+          COPY(i_arr, (3 + i_arr[2]) * sizeof(int));
+          COPY(f_arr_1, i_arr[0] * sizeof(double));
+          COPY(f_arr_2, i_arr[0] * sizeof(double));
 
           d->empty = 0;
         }
@@ -237,7 +238,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(ia, sizeof(int));
+      COPY(i_arr, sizeof(int));
       break;
 
     case 27: /* set text font and precision */
@@ -248,7 +249,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(ia, 2 * sizeof(int));
+      COPY(i_arr, 2 * sizeof(int));
       break;
 
     case 20:  /* set linewidth scale factor */
@@ -265,7 +266,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(r1, sizeof(double));
+      COPY(f_arr_1, sizeof(double));
       break;
 
     case 32: /* set character up vector */
@@ -275,18 +276,18 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(r1, sizeof(double));
-      COPY(r2, sizeof(double));
+      COPY(f_arr_1, sizeof(double));
+      COPY(f_arr_2, sizeof(double));
       break;
 
     case 41: /* set aspect source flags */
 
-      len = 15 * sizeof(int);
+      len = 2 * sizeof(int) + 13 * sizeof(int);
       if (d->nbytes + len > d->size) reallocate(d, len);
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(ia, 13 * sizeof(int));
+      COPY(i_arr, 13 * sizeof(int));
       break;
 
     case 48: /* set color representation */
@@ -296,8 +297,8 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(&ia[1], sizeof(int));
-      COPY(r1, 3 * sizeof(double));
+      COPY(&i_arr[1], sizeof(int));
+      COPY(f_arr_1, 3 * sizeof(double));
       break;
 
     case 49: /* set window */
@@ -310,9 +311,9 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(ia, sizeof(int));
-      COPY(r1, 2 * sizeof(double));
-      COPY(r2, 2 * sizeof(double));
+      COPY(i_arr, sizeof(int));
+      COPY(f_arr_1, 2 * sizeof(double));
+      COPY(f_arr_2, 2 * sizeof(double));
       break;
 
     case 202: /* set shadow */
@@ -322,7 +323,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(r1, 3 * sizeof(double));
+      COPY(f_arr_1, 3 * sizeof(double));
       break;
 
     case 204: /* set coord xform */
@@ -332,7 +333,7 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 
       COPY(&len, sizeof(int));
       COPY(&fctid, sizeof(int));
-      COPY(r1, 6 * sizeof(double));
+      COPY(f_arr_1, 6 * sizeof(double));
       break;
     }
 

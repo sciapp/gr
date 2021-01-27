@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <cm.h>
 
+#include "base64_int.h"
 #include "dump.h"
 #include "event_int.h"
 #include "gks.h"
@@ -18,6 +19,7 @@
 #include "gr3.h"
 #include "logging_int.h"
 #include "plot_int.h"
+#include "util_int.h"
 
 #include "datatype/double_map_int.h"
 #include "datatype/string_map_int.h"
@@ -219,7 +221,7 @@ static int pre_plot_text_encoding = -1;
  * flat object that mixes keys of different hierarchies */
 
 const char *valid_root_keys[] = {"plots", "append_plots", "hold_plots", NULL};
-const char *valid_plot_keys[] = {"clear", "figsize", "size", "subplots", "update", NULL};
+const char *valid_plot_keys[] = {"clear", "figsize", "raw", "size", "subplots", "update", NULL};
 
 const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "adjust_ylim",
@@ -341,6 +343,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"markertype", "i"},
                                               {"nbins", "i"},
                                               {"panzoom", "D"},
+                                              {"raw", "s"},
                                               {"reset_ranges", "i"},
                                               {"rotation", "i"},
                                               {"size", "D|A"},
@@ -4721,6 +4724,27 @@ error_t plot_shade(grm_args_t *subplot_args)
   return NO_ERROR;
 }
 
+error_t plot_raw(grm_args_t *plot_args)
+{
+  const char *base64_data = NULL;
+  char *graphics_data = NULL;
+  error_t error = NO_ERROR;
+
+  cleanup_and_set_error_if(!args_values(plot_args, "raw", "s", &base64_data), ERROR_PLOT_MISSING_DATA);
+  graphics_data = base64_decode(NULL, base64_data, NULL, &error);
+  cleanup_if_error;
+  gr_clearws();
+  gr_drawgraphics(graphics_data);
+  gr_updatews();
+
+cleanup:
+  if (graphics_data != NULL)
+    {
+      free(graphics_data);
+    }
+
+  return error;
+}
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ auxiliary drawing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -6711,29 +6735,36 @@ int grm_plot(const grm_args_t *args)
       return 0;
     }
 
-  plot_set_attribute_defaults(active_plot_args);
-  plot_pre_plot(active_plot_args);
-  args_values(active_plot_args, "subplots", "A", &current_subplot_args);
-  while (*current_subplot_args != NULL)
+  if (args_values(active_plot_args, "raw", "s", &current_subplot_args))
     {
-      if (plot_pre_subplot(*current_subplot_args) != NO_ERROR)
-        {
-          return 0;
-        }
-      args_values(*current_subplot_args, "kind", "s", &kind);
-      logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
-      if (!plot_func_map_at(plot_func_map, kind, &plot_func))
-        {
-          return 0;
-        }
-      if (plot_func(*current_subplot_args) != NO_ERROR)
-        {
-          return 0;
-        };
-      plot_post_subplot(*current_subplot_args);
-      ++current_subplot_args;
+      plot_raw(active_plot_args);
     }
-  plot_post_plot(active_plot_args);
+  else
+    {
+      plot_set_attribute_defaults(active_plot_args);
+      plot_pre_plot(active_plot_args);
+      args_values(active_plot_args, "subplots", "A", &current_subplot_args);
+      while (*current_subplot_args != NULL)
+        {
+          if (plot_pre_subplot(*current_subplot_args) != NO_ERROR)
+            {
+              return 0;
+            }
+          args_values(*current_subplot_args, "kind", "s", &kind);
+          logger((stderr, "Got keyword \"kind\" with value \"%s\"\n", kind));
+          if (!plot_func_map_at(plot_func_map, kind, &plot_func))
+            {
+              return 0;
+            }
+          if (plot_func(*current_subplot_args) != NO_ERROR)
+            {
+              return 0;
+            };
+          plot_post_subplot(*current_subplot_args);
+          ++current_subplot_args;
+        }
+      plot_post_plot(active_plot_args);
+    }
 
   process_events();
 

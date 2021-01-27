@@ -6,6 +6,13 @@ UNAME_S := $(shell uname -s)
 CFLAGS = -O3 -Wall -fPIC $(EXTRA_CFLAGS)
 LDFLAGS = $(EXTRA_LDFLAGS)
 
+
+ifeq ($(UNAME_S),Darwin)
+GR_SHARED_LIBRARY_SUFFIX ?= .dylib
+else
+GR_SHARED_LIBRARY_SUFFIX ?= .so
+endif
+
 ifneq ($(QT4_QMAKE),false)
 QT4INCDIR = `$(QT4_QMAKE) -query QT_INSTALL_HEADERS`
 QT4INC = -I$(QT4INCDIR) -I$(QT4INCDIR)/QtCore -I$(QT4INCDIR)/QtGui
@@ -30,8 +37,8 @@ QT5INC += -std=c++11
 QT5LIBDIR = `$(QT5_QMAKE) -query QT_INSTALL_LIBS`
 ifeq ($(UNAME_S),Darwin)
 	QT5LIBS = -F$(QT5LIBDIR) -framework QtWidgets -framework QtGui -framework QtCore
-	LIBQT4GR_INSTALL_NAME = -Wl,-install_name,@rpath/libqt4gr.so
-	LIBQT5GR_INSTALL_NAME = -Wl,-install_name,@rpath/libqt5gr.so
+	LIBQT4GR_INSTALL_NAME = -Wl,-install_name,@rpath/libqt4gr${GR_SHARED_LIBRARY_SUFFIX}
+	LIBQT5GR_INSTALL_NAME = -Wl,-install_name,@rpath/libqt5gr${GR_SHARED_LIBRARY_SUFFIX}
 else
 	QT5LIBS = -L$(QT5LIBDIR) -lQt5Widgets -lQt5Gui -lQt5Core
 	LIBQT4GR_INSTALL_NAME =
@@ -49,26 +56,26 @@ default:
 
 all: targets
 
-targets: libqt4gr.so libqt5gr.so
+targets: libqt4gr${GR_SHARED_LIBRARY_SUFFIX} libqt5gr${GR_SHARED_LIBRARY_SUFFIX}
 
 ifneq ($(QT4_QMAKE),false)
-libqt4gr.so: grwidget_qt4.o
+libqt4gr${GR_SHARED_LIBRARY_SUFFIX}: grwidget_qt4.o
 	$(CXX) -shared -o $@ $^ $(LDFLAGS) $(QT4LIBS) $(GRLIBS) $(LIBQT4GR_INSTALL_NAME)
 
 grwidget_qt4.o: grwidget.cxx
 	$(CXX) -o $@ -c $(CFLAGS) $(QT4INC) $(GRINC) $<
 else
-libqt4gr.so:
+libqt4gr${GR_SHARED_LIBRARY_SUFFIX}:
 endif
 
 ifneq ($(QT5_QMAKE),false)
-libqt5gr.so: grwidget_qt5.o
+libqt5gr${GR_SHARED_LIBRARY_SUFFIX}: grwidget_qt5.o
 	$(CXX) -shared -o $@ $^ $(LDFLAGS) $(QT5LIBS) $(GRLIBS) $(LIBQT5GR_INSTALL_NAME)
 
 grwidget_qt5.o: grwidget.cxx
 	$(CXX) -o $@ -c $(CFLAGS) $(QT5INC) $(GRINC) $<
 else
-libqt5gr.so:
+libqt5gr${GR_SHARED_LIBRARY_SUFFIX}:
 endif
 
 install:
@@ -80,6 +87,6 @@ ifneq (false false,$(filter false,$(QT4_QMAKE) $(QT5_QMAKE)))   # install only i
 endif
 
 clean:
-	rm -f *.so *.o
+	rm -f *.so *.o *${GR_SHARED_LIBRARY_SUFFIX}
 
 .PHONY: default all targets install clean

@@ -118,7 +118,9 @@
   X(ERROR_PLOT_INVALID_ID, 42)                        \
   X(ERROR_PLOT_OUT_OF_RANGE, 43)                      \
   X(ERROR_PLOT_INCOMPATIBLE_ARGUMENTS, 44)            \
-  Y(ERROR_NOT_IMPLEMENTED, 45)
+  X(ERROR_BASE64_BLOCK_TOO_SHORT, 45)                 \
+  X(ERROR_BASE64_INVALID_CHARACTER, 46)               \
+  Y(ERROR_NOT_IMPLEMENTED, 47)
 
 #define ENUM_VALUE(name, value) name = value,
 #define ENUM_LAST_VALUE(name, value) name = value

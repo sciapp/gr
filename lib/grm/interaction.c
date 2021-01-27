@@ -11,6 +11,7 @@
 #include "args_int.h"
 #include "interaction_int.h"
 #include "plot_int.h"
+#include "util_int.h"
 #include "gr.h"
 
 

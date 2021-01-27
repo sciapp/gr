@@ -164,6 +164,7 @@ error_t plot_polar_histogram(grm_args_t *subplot_args);
 error_t plot_trisurf(grm_args_t *subplot_args);
 error_t plot_tricont(grm_args_t *subplot_args);
 error_t plot_shade(grm_args_t *subplot_args);
+error_t plot_raw(grm_args_t *subplot_args);
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ auxiliary drawing functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */

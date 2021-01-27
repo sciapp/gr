@@ -1169,7 +1169,9 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
       CGContextSetLineDash(context, 0.0, lengths, dashlist[0]);
     }
 
-  CGContextSetLineWidth(context, ln_width * p->nominal_size);
+  // Disable antialiasing for polylines with many points
+  CGContextSetShouldAntialias(context, n > 100000 ? NO : YES);
+
   CGContextAddLines(context, points, n);
   CGContextDrawPath(context, kCGPathStroke);
 

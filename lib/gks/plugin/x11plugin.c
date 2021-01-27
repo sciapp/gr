@@ -1,3 +1,6 @@
+#ifdef __unix__
+#define _POSIX_C_SOURCE 199506L
+#endif
 
 #include <stdio.h>
 
@@ -36,10 +39,6 @@ DLLEXPORT void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *i_arr, in
 
 #if !defined(VMS) && !defined(_WIN32)
 #include <unistd.h>
-#endif
-
-#ifdef __osf__
-int usleep(useconds_t);
 #endif
 
 #ifdef XSHM
@@ -3599,13 +3598,12 @@ static void get_pointer(int *n, double *x, double *y, int *state, int *term)
       *state = Undefined;
       inc = 1;
 
-      if (p->wstype == 212)
 #ifndef _WIN32
-#ifdef __osf__
-        usleep(200000); /* 200 ms */
-#else
-        sleep(1);
-#endif
+      if (p->wstype == 212)
+        {
+          struct timespec delay = {0, 200000000}; /* 200 ms */
+          nanosleep(&delay, NULL);
+        }
 #endif
 
       do
@@ -3954,7 +3952,10 @@ static void *event_loop(void *arg)
   p->run = 1;
   while (p->run)
     {
-      usleep(10000);
+      {
+        struct timespec delay = {0, 10000000}; /* 10 ms */
+        nanosleep(&delay, NULL);
+      }
 
       if (idle && p->run)
         {
@@ -4184,7 +4185,10 @@ void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
               while (!p->done)
                 {
                   p->run = 0;
-                  usleep(10000);
+                  {
+                    struct timespec delay = {0, 10000000}; /* 10 ms */
+                    nanosleep(&delay, NULL);
+                  }
                 }
             }
         }

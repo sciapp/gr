@@ -9,8 +9,8 @@ endif
 
 UNAME := $(shell uname)
 
-     GRMOBJS = args.o dump.o dynamic_args_array.o error.o event.o interaction.o json.o logging.o memwriter.o net.o \
-               plot.o util.o datatype/double_map.o datatype/string_list.o datatype/string_array_map.o \
+     GRMOBJS = args.o base64.o dump.o dynamic_args_array.o error.o event.o interaction.o json.o logging.o memwriter.o \
+               net.o plot.o util.o datatype/double_map.o datatype/string_list.o datatype/string_array_map.o \
                datatype/string_map.o datatype/uint_map.o
   GRMHEADERS = args.h dump.h event.h interaction.h net.h plot.h util.h
      DEFINES =
@@ -20,11 +20,13 @@ UNAME := $(shell uname)
          AR ?= ar
      RANLIB ?= ar ts
 ifeq ($(UNAME), Darwin)
+GR_SHARED_LIBRARY_SUFFIX ?= .dylib
      CFLAGS += -mmacosx-version-min=10.11
-INSTALL_NAME = -Wl,-install_name,@rpath/libGRM.so
+INSTALL_NAME = -Wl,-install_name,@rpath/libGRM${GR_SHARED_LIBRARY_SUFFIX}
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
      SOFLAGS = -dynamiclib
 else
+GR_SHARED_LIBRARY_SUFFIX ?= .so
 INSTALL_NAME =
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
      SOFLAGS = -shared
@@ -42,7 +44,7 @@ default:
 
 all: targets
 
-targets: prerequisites libGRM.a libGRM.so
+targets: prerequisites libGRM.a libGRM${GR_SHARED_LIBRARY_SUFFIX}
 
 prerequisites:
 	$(MAKE) -C ../../3rdparty/ PREFIX=$(THIRDPARTYDIR)
@@ -57,7 +59,7 @@ libGRM.a: $(GRMOBJS)
 	$(AR) crv $@ $?
 	$(RANLIB) $@
 
-libGRM.so: $(GRMOBJS) libGR libGR3
+libGRM${GR_SHARED_LIBRARY_SUFFIX}: $(GRMOBJS) libGR libGR3
 	$(CC) -o $@ $(SOFLAGS) $(GRMOBJS) $(LIBS) $(LDFLAGS) $(INSTALL_NAME)
 
 install:
@@ -70,6 +72,6 @@ install:
 	cp -p $(GRMHEADERS) $(GRMINCDIR)
 
 clean:
-	rm -f *.so *.a *.o datatype/*.o
+	rm -f *.so *.a *.o datatype/*.o *${GR_SHARED_LIBRARY_SUFFIX}
 
 .PHONY: all targets install clean prerequisites libGR libGR3

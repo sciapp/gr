@@ -15,6 +15,18 @@ include(GNUInstallDirs)
 # Honor `C_VISIBILITY_PRESET hidden` in static libraries
 cmake_policy(SET CMP0063 NEW)
 
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  set(COMPILER_OPTION_ERROR_IMPLICIT
+      "-Werror=implicit"
+      CACHE INTERNAL "Compiler flag for generating errors on implicit declarations"
+  )
+else()
+  set(COMPILER_OPTION_ERROR_IMPLICIT
+      ""
+      CACHE INTERNAL "Compiler flag for generating errors on implicit declarations"
+  )
+endif()
+
 if(UNIX)
   if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX
@@ -52,8 +64,14 @@ else()
   set(GR_PLUGIN_SUFFIX ".so")
 endif()
 
+if(APPLE)
+  set(DEFAULT_SHARED_LIBRARY_SUFFIX ".dylib")
+else()
+  set(DEFAULT_SHARED_LIBRARY_SUFFIX "${GR_PLUGIN_SUFFIX}")
+endif()
+
 set(GR_SHARED_LIBRARY_SUFFIX
-    "${GR_PLUGIN_SUFFIX}"
+    "${DEFAULT_SHARED_LIBRARY_SUFFIX}"
     CACHE STRING "File suffix for shared libraries"
 )
 
@@ -200,6 +218,7 @@ foreach(LIBRARY gks_static gks_shared)
     target_link_libraries(${LIBRARY} ${GKS_LINK_MODE} gdi32)
   endif()
   target_compile_options(${LIBRARY} ${GKS_LINK_MODE} -pthread)
+  target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   target_include_directories(
     ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gks/>
                       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -268,6 +287,7 @@ foreach(LIBRARY gr_static gr_shared)
   )
   target_include_directories(${LIBRARY} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
   target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
+  target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
@@ -324,6 +344,7 @@ foreach(LIBRARY gr3_static gr3_shared)
   endif()
   target_compile_definitions(${LIBRARY} PRIVATE GRDIR="${GR_DIRECTORY}")
   target_compile_options(${LIBRARY} ${GR3_LINK_MODE} -pthread)
+  target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   target_include_directories(
     ${LIBRARY} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/gr3/>
                       $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -352,6 +373,7 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(gr3platform PUBLIC X11::X11)
     target_link_libraries(gr3platform PUBLIC OpenGL::GLX)
     target_link_libraries(gr3platform PUBLIC OpenGL::GL)
+    target_compile_options(gr3platform PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
     set_target_properties(
       gr3platform
       PROPERTIES C_STANDARD 90
@@ -373,6 +395,7 @@ endif()
 
 set(GRM_SOURCES
     lib/grm/args.c
+    lib/grm/base64.c
     lib/grm/dump.c
     lib/grm/dynamic_args_array.c
     lib/grm/error.c
@@ -423,6 +446,7 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/grm/>
            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
+  target_compile_options(${LIBRARY} PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     ${LIBRARY}
     PROPERTIES C_STANDARD 90
@@ -465,6 +489,7 @@ if(Cairo_FOUND)
     string(APPEND GR_REPORT "\tTiff output: No (libtiff not found)\n")
     target_compile_definitions(cairoplugin PRIVATE NO_TIFF)
   endif()
+  target_compile_options(cairoplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   string(APPEND GR_REPORT "\tSixel output: Yes\n")
   string(APPEND GR_REPORT "\tMemory output: Yes\n")
   string(APPEND GR_REPORT "\tX11 output: No (not available in CMake build)\n")
@@ -502,6 +527,7 @@ else()
   string(APPEND GR_REPORT "\tGIF output: Yes\n")
   target_link_libraries(videoplugin PUBLIC Ffmpeg::Ffmpeg)
 endif()
+target_compile_options(videoplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   videoplugin
   PROPERTIES C_STANDARD 99
@@ -515,6 +541,7 @@ set_target_properties(
 add_library(pgfplugin SHARED lib/gks/plugin/pgfplugin.c)
 target_link_libraries(pgfplugin PUBLIC gks_static)
 target_link_libraries(pgfplugin PUBLIC Libpng::Libpng)
+target_compile_options(pgfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   pgfplugin
   PROPERTIES C_STANDARD 90
@@ -528,6 +555,7 @@ string(APPEND GR_REPORT "\tTeX output: Yes\n")
 
 add_library(wmfplugin SHARED lib/gks/plugin/wmfplugin.c)
 target_link_libraries(wmfplugin PUBLIC gks_static)
+target_compile_options(wmfplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   wmfplugin
   PROPERTIES C_STANDARD 90
@@ -556,6 +584,7 @@ else()
   string(APPEND GR_REPORT "\tJPEG outout: Yes\n")
   string(APPEND GR_REPORT "\tTiff outout: Yes\n")
 endif()
+target_compile_options(gsplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   gsplugin
   PROPERTIES C_STANDARD 90
@@ -568,6 +597,7 @@ set_target_properties(
 add_library(svgplugin SHARED lib/gks/plugin/svgplugin.c)
 target_link_libraries(svgplugin PUBLIC gks_static)
 target_link_libraries(svgplugin PUBLIC Libpng::Libpng)
+target_compile_options(svgplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   svgplugin
   PROPERTIES C_STANDARD 90
@@ -596,6 +626,7 @@ if(APPLE)
   # Apple has deprecated OpenGL in macOS 10.14
   target_compile_definitions(glplugin PRIVATE GL_SILENCE_DEPRECATION)
 endif()
+target_compile_options(glplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   glplugin
   PROPERTIES C_STANDARD 90
@@ -614,6 +645,7 @@ else()
   string(APPEND GR_REPORT "- zmqplugin: No (ZeroMQ not found)\n")
   target_compile_definitions(zmqplugin PRIVATE NO_ZMQ)
 endif()
+target_compile_options(zmqplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   zmqplugin
   PROPERTIES C_STANDARD 90
@@ -641,6 +673,7 @@ else()
   target_compile_definitions(x11plugin PRIVATE NO_XFT)
   string(APPEND GR_REPORT "- x11plugin: No (X11 / Xft / Xt not found)\n")
 endif()
+target_compile_options(x11plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   x11plugin
   PROPERTIES C_STANDARD 90
@@ -662,6 +695,7 @@ else()
   string(APPEND GR_REPORT "- qt5plugin: No (Qt5 not found)\n")
   target_compile_definitions(qt5plugin PRIVATE NO_QT5)
 endif()
+target_compile_options(qt5plugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   qt5plugin
   PROPERTIES CXX_STANDARD 11
@@ -680,6 +714,7 @@ else()
   string(APPEND GR_REPORT "- qtplugin: No (Qt4 not found)\n")
   target_compile_definitions(qtplugin PRIVATE NO_QT)
 endif()
+target_compile_options(qtplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 set_target_properties(
   qtplugin
   PROPERTIES CXX_STANDARD 11
@@ -699,6 +734,7 @@ set_target_properties(
              PREFIX ""
              SUFFIX "${GR_PLUGIN_SUFFIX}"
 )
+target_compile_options(gtkplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
 string(APPEND GR_REPORT "- gtkplugin: No (not implemented yet)\n")
 
 if(APPLE)
@@ -711,6 +747,7 @@ if(APPLE)
   else()
     target_compile_definitions(quartzplugin PRIVATE NO_GKSTERM)
   endif()
+  target_compile_options(quartzplugin PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(
     quartzplugin
     PROPERTIES C_STANDARD 90
@@ -726,10 +763,10 @@ if(Qt4_FOUND)
   target_link_libraries(qt4gr PUBLIC GR::GR)
   target_link_libraries(qt4gr PUBLIC Qt4::QtCore Qt4::QtGui Qt4::QtNetwork)
   if(MINGW)
-    target_compile_options(qt4gr PRIVATE -fno-exceptions)
+    target_compile_options(qt4gr PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
   endif()
-
-  set_target_properties(qt4gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
+  target_compile_options(qt4gr PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(qt4gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" INSTALL_RPATH "${INSTALL_RPATH}")
   if(GR_MANUAL_MOC_AND_RCC)
     set_target_properties(qt4gr PROPERTIES AUTOMOC OFF AUTORCC OFF)
     add_custom_command(
@@ -753,10 +790,10 @@ if(Qt5Widgets_FOUND
   target_link_libraries(qt5gr PUBLIC GR::GR)
   target_link_libraries(qt5gr PUBLIC Qt5::Widgets Qt5::Core Qt5::Network)
   if(MINGW)
-    target_compile_options(qt5gr PRIVATE -fno-exceptions)
+    target_compile_options(qt5gr PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
   endif()
-
-  set_target_properties(qt5gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
+  target_compile_options(qt5gr PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
+  set_target_properties(qt5gr PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" INSTALL_RPATH "${INSTALL_RPATH}")
   if(GR_MANUAL_MOC_AND_RCC)
     set_target_properties(qt5gr PROPERTIES AUTOMOC OFF AUTORCC OFF)
     add_custom_command(
@@ -794,6 +831,7 @@ if(APPLE)
     )
     target_sources(GKSTerm PRIVATE lib/gks/quartz/GKSTerm.icns)
     set_source_files_properties(lib/gks/quartz/GKSTerm.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources/)
+    target_compile_options(GKSTerm PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
     set_target_properties(
       GKSTerm
       PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "GKSTerm"
@@ -828,8 +866,9 @@ if(Qt4_FOUND
     target_link_libraries(gksqt PUBLIC Qt4::QtCore Qt4::QtGui Qt4::QtNetwork)
   endif()
   if(MINGW)
-    target_compile_options(gksqt PRIVATE -fno-exceptions)
+    target_compile_options(gksqt PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
   endif()
+  target_compile_options(gksqt PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   if(GR_MANUAL_MOC_AND_RCC)
     set_target_properties(gksqt PROPERTIES AUTOMOC OFF AUTORCC OFF)
     if(Qt5Widgets_FOUND
@@ -890,11 +929,13 @@ endif()
 if(GR_BUILD_DEMOS)
   add_executable(gksdemo lib/gks/demo.c)
   target_link_libraries(gksdemo PUBLIC gks_static)
+  target_compile_options(gksdemo PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(gksdemo PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
 
   add_executable(grdemo lib/gr/demo.c)
   target_link_libraries(grdemo PUBLIC GR::GR)
   target_link_libraries(grdemo PUBLIC GR::GKS)
+  target_compile_options(grdemo PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(grdemo PROPERTIES C_STANDARD 90 C_EXTENSIONS OFF C_STANDARD_REQUIRED ON)
 
   add_subdirectory(lib/grm/test/public_api grm_test_public_api)

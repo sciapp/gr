@@ -32,7 +32,10 @@ static void handle_create_window(GKSTerm *gksterm, void *socket, unsigned char *
 
   __block int result = 0;
   dispatch_sync(dispatch_get_main_queue(), ^{
-    result = [gksterm GKSQuartzCreateWindow];
+    @synchronized(gksterm)
+    {
+      result = [gksterm GKSQuartzCreateWindow];
+    }
   });
   char reply[1 + sizeof(int)];
   reply[0] = GKSTERM_FUNCTION_CREATE_WINDOW;
@@ -47,10 +50,11 @@ static void handle_create_window(GKSTerm *gksterm, void *socket, unsigned char *
 static void handle_is_alive(GKSTerm *gksterm, void *socket, unsigned char *data)
 {
   int window = *(int *)data;
-  __block bool result = NO;
-  dispatch_sync(dispatch_get_main_queue(), ^{
+  bool result = NO;
+  @synchronized(gksterm)
+  {
     result = [gksterm GKSQuartzIsAlive:window];
-  });
+  }
   char reply[2];
   reply[0] = GKSTERM_FUNCTION_IS_ALIVE;
   reply[1] = result ? 1 : 0;
@@ -74,10 +78,12 @@ static void handle_draw(GKSTerm *gksterm, void *socket, unsigned char *data)
 
   int window = *(int *)data;
   size_t displaylist_len = *(size_t *)(data + sizeof(int));
-  void *displaylist = (void *)(data + sizeof(int) + sizeof(size_t));
-  dispatch_sync(dispatch_get_main_queue(), ^{
+  void *displaylist = malloc(displaylist_len);
+  memcpy(displaylist, (void *)(data + sizeof(int) + sizeof(size_t)), displaylist_len);
+  dispatch_async(dispatch_get_main_queue(), ^{
     NSData *displaylist_objc = [NSData dataWithBytesNoCopy:displaylist length:displaylist_len freeWhenDone:NO];
     [gksterm GKSQuartzDraw:window displayList:displaylist_objc];
+    free(displaylist);
   });
 }
 
@@ -85,7 +91,10 @@ static void handle_close_window(GKSTerm *gksterm, void *socket, unsigned char *d
 {
   int window = *(int *)data;
   dispatch_sync(dispatch_get_main_queue(), ^{
-    [gksterm GKSQuartzCloseWindow:window];
+    @synchronized(gksterm)
+    {
+      [gksterm GKSQuartzCloseWindow:window];
+    }
   });
   char reply[1];
   reply[0] = GKSTERM_FUNCTION_CLOSE_WINDOW;
