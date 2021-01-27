@@ -28,11 +28,13 @@ UNAME := $(shell uname)
           AR = ar
       RANLIB = ar ts
 ifeq ($(UNAME), Darwin)
+GR_SHARED_LIBRARY_SUFFIX ?= .dylib
 	 CFLAGS += -mmacosx-version-min=10.11
-INSTALL_NAME = -Wl,-install_name,@rpath/libGKS.so
+INSTALL_NAME = -Wl,-install_name,@rpath/libGKS${GR_SHARED_LIBRARY_SUFFIX}
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
      SOFLAGS = -dynamiclib
 else
+GR_SHARED_LIBRARY_SUFFIX ?= .so
 INSTALL_NAME =
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,'$$ORIGIN/.'
      SOFLAGS = -shared
@@ -53,7 +55,7 @@ default:
 
 all: targets
 
-targets: libGKS.a libGKS.so demo gksm plugins gksqt
+targets: libGKS.a libGKS${GR_SHARED_LIBRARY_SUFFIX} demo gksm plugins gksqt
 
 ifeq ($(UNAME), Darwin)
 targets: gksterm
@@ -72,7 +74,7 @@ libGKS.a: $(GKSOBJS)
 	$(AR) crv $@ $?
 	$(RANLIB) $@
 
-libGKS.so: $(GKSOBJS) $(THIRDPARTYDIR)/lib/libfreetype.a $(THIRDPARTYDIR)/lib/libz.a
+libGKS${GR_SHARED_LIBRARY_SUFFIX}: $(GKSOBJS) $(THIRDPARTYDIR)/lib/libfreetype.a $(THIRDPARTYDIR)/lib/libz.a
 	$(CC) -o $@ $(SOFLAGS) $(GKSOBJS) $(FTLIBS) $(ZLIBS) $(LIBS) \
 	$(LDFLAGS) $(INSTALL_NAME)
 
@@ -124,7 +126,7 @@ clean:
 	$(MAKE) -C plugin clean
 	$(MAKE) -C qt -f makefile.mak clean
 	rm -f qt/.qmake.stash
-	rm -f demo gksm pasdemo so_locations *.so *.a *.o *.ppu link.res
+	rm -f demo gksm pasdemo so_locations *.so *.a *.o *.ppu link.res *${GR_SHARED_LIBRARY_SUFFIX}
 	rm -f *.bak *~
 ifeq ($(UNAME), Darwin)
 	(env CC=cc xcodebuild -arch $(ARCH) -project quartz/GKSTerm.xcodeproj clean)

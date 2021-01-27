@@ -18,14 +18,16 @@ UNAME := $(shell uname)
                gr3_jpeg.o gr3_gr.o gr3_mc.o gr3_slices.o gr3_sr.o
 
 ifeq ($(UNAME), Darwin)
+GR_SHARED_LIBRARY_SUFFIX ?= .dylib
       CFLAGS+= -mmacosx-version-min=10.11
       GLLIBS = -framework OpenGL -framework Cocoa
         OBJS+= gr3_cgl.o
-INSTALL_NAME = -Wl,-install_name,@rpath/libGR3.so
+INSTALL_NAME = -Wl,-install_name,@rpath/libGR3${GR_SHARED_LIBRARY_SUFFIX}
      LDFLAGS = $(EXTRA_LDFLAGS) -Wl,-rpath,@loader_path/. -mmacosx-version-min=10.11
      SOFLAGS = -dynamiclib
         LIBS =
 else
+GR_SHARED_LIBRARY_SUFFIX ?= .so
       GLLIBS =
 PLATFORMLIBS = -lX11 -lGL
         OBJS+= gr3_glx.o
@@ -41,7 +43,7 @@ default:
 
 all: targets
 
-targets: prerequisites libGR3.so
+targets: prerequisites libGR3${GR_SHARED_LIBRARY_SUFFIX}
 
 prerequisites:
 	$(MAKE) -C ../gr
@@ -60,7 +62,7 @@ endif
 .c.o:
 	${CC} -c $< $(CFLAGS) $(INCLUDES) $(GLDEFS)
 
-libGR3.so: $(OBJS)
+libGR3${GR_SHARED_LIBRARY_SUFFIX}: $(OBJS)
 	${CC} -o $@ $^ $(CFLAGS) $(JPEGLIBS) $(GLLIBS) $(GRLIBS) $(PNGLIBS) $(ZLIBS) $(LIBS) \
 	$(SOFLAGS) $(LDFLAGS) $(INSTALL_NAME)
 
@@ -81,12 +83,12 @@ gr3_sr.c: gr3_sr.h
 install: targets
 	@if [ ! -d $(DESTDIR)$(GRDIR) ]; then mkdir -m 755 $(DESTDIR)$(GRDIR); fi
 	@if [ ! -d $(LIBDIR) ]; then mkdir -m 755 $(LIBDIR); fi
-	cp -p libGR3.so $(LIBDIR)
+	cp -p libGR3${GR_SHARED_LIBRARY_SUFFIX} $(LIBDIR)
 	@if [ ! -d $(INCDIR) ]; then mkdir -m 755 $(INCDIR); fi
 	cp -p gr3.h $(INCDIR)
 
 clean:
 	$(MAKE) -C ../gr clean
-	rm -rf libGR3.so*
+	rm -rf libGR3${GR_SHARED_LIBRARY_SUFFIX}*
 	rm -rf libGR3platform.so*
 	rm -f *.o
