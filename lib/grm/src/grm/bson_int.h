@@ -86,9 +86,11 @@ typedef struct
   unsigned int struct_nested_level;
 } tobson_permanent_state_t;
 
-/* ========================= methods ================================================================================ */
+/* ========================= small helper functions ================================================================= */
 
 void revmemcpy(void *dest, const void *src, size_t len);
+
+void memcpy_rev_chunks(void *dest, const void *src, size_t len, size_t chunk_size);
 
 char byte_to_type(const char *byte);
 
@@ -107,34 +109,53 @@ err_t frombson_read_value_format(frombson_state_t *state, char *value_format);
 err_t frombson_read_key(frombson_state_t *state, const char **key);
 err_t frombson_skip_key(frombson_state_t *state);
 err_t frombson_read_length(frombson_state_t *state, int *length);
+
 err_t frombson_read_double_value(frombson_state_t *state, double *d);
 err_t frombson_read_int_value(frombson_state_t *state, int *i);
 err_t frombson_read_string_value(frombson_state_t *state, const char **s);
 err_t frombson_read_bool_value(frombson_state_t *state, int *b);
 err_t frombson_read_object(frombson_state_t *state);
+
 err_t frombson_parse_double(frombson_state_t *state);
 err_t frombson_parse_int(frombson_state_t *state);
 err_t frombson_parse_bool(frombson_state_t *state);
 err_t frombson_parse_array(frombson_state_t *state);
 err_t frombson_parse_object(frombson_state_t *state);
+
 err_t frombson_read_int_array(frombson_state_t *state);
 err_t frombson_read_double_array(frombson_state_t *state);
 err_t frombson_read_string_array(frombson_state_t *state);
 err_t frombson_read_bool_array(frombson_state_t *state);
+
 void frombson_init_static_variables(void);
 
 /* ------------------------- bson serializer ------------------------------------------------------------------------ */
 
-err_t tobson_stringify_int_value(memwriter_t *memwriter, int value);
-err_t tobson_stringify_char_value(memwriter_t *memwriter, char value);
-err_t tobson_stringify_double_value(memwriter_t *memwriter, double value);
-err_t tobson_stringify_string_value(memwriter_t *memwriter, char *value);
-err_t tobson_stringify_bool_value(memwriter_t *memwriter, int value);
-err_t tobson_stringify_args_value(memwriter_t *memwriter, grm_args_t *args);
+err_t tobson_int_value(memwriter_t *memwriter, int value);
+err_t tobson_double_value(memwriter_t *memwriter, double value);
+err_t tobson_char_value(memwriter_t *memwriter, char value);
+err_t tobson_string_value(memwriter_t *memwriter, char *value);
+err_t tobson_bool_value(memwriter_t *memwriter, int value);
+err_t tobson_args_value(memwriter_t *memwriter, grm_args_t *args);
+
+err_t tobson_int(tobson_state_t *state);
+err_t tobson_double(tobson_state_t *state);
+err_t tobson_char(tobson_state_t *state);
+err_t tobson_string(tobson_state_t *state);
+err_t tobson_bool(tobson_state_t *state);
+err_t tobson_args(tobson_state_t *state);
+
+err_t tobson_int_array(tobson_state_t *state);
+err_t tobson_double_array(tobson_state_t *state);
+err_t tobson_optimized_array(tobson_state_t *state);
+err_t tobson_char_array(tobson_state_t *state);
+err_t tobson_string_array(tobson_state_t *state);
+err_t tobson_bool_array(tobson_state_t *state);
+err_t tobson_args_array(tobson_state_t *state);
 
 err_t tobson_read_array_length(tobson_state_t *state);
 err_t tobson_skip_bytes(tobson_state_t *state);
-err_t tobson_stringify_object(tobson_state_t *state);
+err_t tobson_object(tobson_state_t *state);
 err_t tobson_close_object(tobson_state_t *state);
 
 int tobson_get_member_count(const char *data_desc);

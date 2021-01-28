@@ -342,7 +342,7 @@ void grm_dump_bson_and_parse(const grm_args_t *args, FILE *f)
       memwriter = memwriter_new();
     }
   tobson_write_args(memwriter, args);
-  if (tojson_is_complete())
+  if (tobson_is_complete())
     {
       memwriter_putc(memwriter, '\0');
 
