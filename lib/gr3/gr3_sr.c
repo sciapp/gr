@@ -45,7 +45,7 @@ vector VECTOR3x1_INIT_NUL = {0, 0, 0};
 matrix MAT4x4_INIT_NUL = {{0}};
 matrix3x3 MAT3x3_INIT_NUL = {{0}};
 
-GR3API void mult_color(color_float *c, float fac, float alpha_fac);
+static void mult_color(color_float *c, float fac, float alpha_fac);
 static color color_float_to_color(color_float c);
 static color_float linearcombination_color(color_float c1, color_float c2, color_float c3, float fac1, float fac2,
                                            float fac3);
@@ -559,7 +559,7 @@ static void divide_by_w(vertex_fp *v_fp)
  * \param [in] c color
  * \param [in] fac factor to multiply
  * \return c*fac where c is a color vector*/
-GR3API void mult_color(color_float *c, float fac, float alpha_fac)
+static void mult_color(color_float *c, float fac, float alpha_fac)
 {
   c->r *= fac;
   c->g *= fac;
