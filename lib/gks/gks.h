@@ -3,16 +3,6 @@
 
 #include <stdio.h>
 
-#ifdef _MSC_VER
-#if _MSC_VER >= 1900
-FILE *__cdecl __iob_func(void)
-{
-  FILE _iob[] = {*stdin, *stdout, *stderr};
-  return _iob;
-}
-#endif
-#endif
-
 #ifdef _WIN32
 
 #include <windows.h> /* required for all Windows applications */

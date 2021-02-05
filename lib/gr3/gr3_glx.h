@@ -12,7 +12,12 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glx.h>
+
+#ifndef _MSC_VER
 #include <unistd.h> /* for getpid() for tempfile names */
+#else
+#include <process.h>
+#endif
 
 #if GL_VERSION_2_1
 #define GR3_CAN_USE_VBO

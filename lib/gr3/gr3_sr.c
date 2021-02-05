@@ -7,6 +7,9 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
+#ifdef _MSC_VER
+#define NO_THREADS 1
+#endif
 #ifndef NO_THREADS
 #include <pthread.h>
 #endif
@@ -42,7 +45,7 @@ vector VECTOR3x1_INIT_NUL = {0, 0, 0};
 matrix MAT4x4_INIT_NUL = {{0}};
 matrix3x3 MAT3x3_INIT_NUL = {{0}};
 
-static void mult_color(color_float *c, float fac, float alpha_fac);
+GR3API void mult_color(color_float *c, float fac, float alpha_fac);
 static color color_float_to_color(color_float c);
 static color_float linearcombination_color(color_float c1, color_float c2, color_float c3, float fac1, float fac2,
                                            float fac3);
