@@ -5,11 +5,7 @@
 /* OpenGL.h in Mac OS X 10.7 doesn't include gl.h anymore */
 #include <OpenGL/gl.h>
 
-#ifndef _MSC_VER
 #include <unistd.h> /* for getpid() for tempfile names */
-#else
-#include <process.h>
-#endif
 
 #if GL_VERSION_2_1
 #define GR3_CAN_USE_VBO
