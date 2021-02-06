@@ -1160,6 +1160,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
   begin_context(context);
 
   CGContextBeginPath(context);
+  CGContextSetLineWidth(context, ln_width * p->nominal_size);
 
   if (ln_type != 1)
     {
