@@ -15,6 +15,12 @@
 #define INF (1.0 / 0.0)
 #endif
 
+#ifdef _MSC_VER
+#define _inf -logf(0.0)
+#else
+#define _inf -INF
+#endif
+
 #define DEFAULT_CONTOUR_LINES 16 /* default number of contour lines */
 
 #define EDGE_N (1 << 0)
@@ -25,9 +31,9 @@
 #define SADDLE1 (1 << 4)
 #define SADDLE2 (1 << 5)
 
-typedef struct
+typedef struct _list
 {
-  void *list;
+  struct _list *list;
   size_t size;
   size_t _capacity;
   size_t _element_size;
@@ -106,7 +112,7 @@ static double padded_array_lookup(const double *z, size_t nx, size_t ny, long i,
     }
   if (z[j * nx + i] != z[j * nx + i])
     {
-      return -INF; /* set NAN values to -inf */
+      return _inf; /* set NAN values to -inf */
     }
   return z[j * nx + i];
 }
@@ -145,8 +151,8 @@ static unsigned char get_bitmask(const double *z, size_t nx, size_t ny, long i, 
 static double interpolate(double v1, double v2, double contour)
 {
   double d = v2 - v1;
-  if (v2 == -INF) return 0;
-  if (v1 == -INF) return 1;
+  if (v2 == _inf) return 0;
+  if (v1 == _inf) return 1;
   if (d == 0)
     {
       return 0;
