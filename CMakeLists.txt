@@ -237,11 +237,16 @@ foreach(LIBRARY gks_static gks_shared)
                C_EXTENSIONS OFF
                C_STANDARD_REQUIRED ON
                POSITION_INDEPENDENT_CODE ON
+               PREFIX "lib"
+               IMPORT_PREFIX "lib"
                OUTPUT_NAME GKS
                INSTALL_RPATH "${INSTALL_RPATH}"
   )
 endforeach()
 unset(GKS_LINK_MODE)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  set_target_properties(gks_static PROPERTIES OUTPUT_NAME GKSstatic)
+endif()
 set_target_properties(gks_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GKS)
 add_library(GR::GKS ALIAS gks_static)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
@@ -307,10 +312,15 @@ foreach(LIBRARY gr_static gr_shared)
                C_STANDARD_REQUIRED ON
                POSITION_INDEPENDENT_CODE ON
                INSTALL_RPATH "${INSTALL_RPATH}"
+               PREFIX "lib"
+               IMPORT_PREFIX "lib"
                OUTPUT_NAME GR
   )
 endforeach()
 unset(GR_LINK_MODE)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  set_target_properties(gr_static PROPERTIES OUTPUT_NAME GRstatic)
+endif()
 set_target_properties(gr_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GR)
 add_library(GR::GR ALIAS gr_shared)
 
@@ -375,10 +385,15 @@ foreach(LIBRARY gr3_static gr3_shared)
                C_STANDARD_REQUIRED ON
                POSITION_INDEPENDENT_CODE ON
                INSTALL_RPATH "${INSTALL_RPATH}"
+               PREFIX "lib"
+               IMPORT_PREFIX "lib"
                OUTPUT_NAME GR3
   )
 endforeach()
 unset(GR3_LINK_MODE)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  set_target_properties(gr3_static PROPERTIES OUTPUT_NAME GR3static)
+endif()
 set_target_properties(gr3_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GR3)
 add_library(GR::GR3 ALIAS gr3_shared)
 
@@ -476,6 +491,8 @@ foreach(LIBRARY grm_static grm_shared grm_shared_internal)
                POSITION_INDEPENDENT_CODE ON
                C_VISIBILITY_PRESET hidden
                INSTALL_RPATH "${INSTALL_RPATH}"
+               PREFIX "lib"
+               IMPORT_PREFIX "lib"
                OUTPUT_NAME GRM
   )
 endforeach()
@@ -486,6 +503,9 @@ target_include_directories(grm_shared_internal PUBLIC $<BUILD_INTERFACE:${CMAKE_
 if(WIN32)
   target_compile_definitions(grm_shared PRIVATE BUILDING_DLL)
   target_compile_definitions(grm_shared_internal PRIVATE BUILDING_DLL)
+endif()
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  set_target_properties(grm_static PROPERTIES OUTPUT_NAME GRMstatic)
 endif()
 set_target_properties(grm_shared PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}" EXPORT_NAME GRM)
 set_target_properties(grm_shared_internal PROPERTIES SUFFIX "${GR_SHARED_LIBRARY_SUFFIX}")
