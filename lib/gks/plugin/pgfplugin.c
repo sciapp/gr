@@ -878,11 +878,15 @@ static void open_page(void)
   if (fd >= 0)
     {
       p->tex_file = fd;
-      sprintf(buf, "\\documentclass[tikz]{standalone}\n"
-                   "\\usetikzlibrary{patterns}\n"
-                   "\\usepackage{pifont}\n\n"
-                   "\\begin{document}\n\\pagenumbering{gobble}\n\\centering\n"
-                   "\\pgfsetxvec{\\pgfpoint{1pt}{0pt}}\n"
+      if (gks_getenv("GKS_PGF_ONLY_CONTENT") == NULL)
+        {
+          sprintf(buf, "\\documentclass[tikz]{standalone}\n"
+                       "\\usetikzlibrary{patterns}\n"
+                       "\\usepackage{pifont}\n\n"
+                       "\\begin{document}\n\\pagenumbering{gobble}\n\\centering\n");
+          gks_write_file(fd, buf, strlen(buf));
+        }
+      sprintf(buf, "\\pgfsetxvec{\\pgfpoint{1pt}{0pt}}\n"
                    "\\pgfsetyvec{\\pgfpoint{0pt}{-1pt}}\n");
       gks_write_file(fd, buf, strlen(buf));
       sprintf(buf, "\\newdimen\\thickness\n\\tikzset{\n"
@@ -936,8 +940,11 @@ static void close_page(void)
 {
   if (p->tex_file >= 0)
     {
-      char buf[] = "\\end{document}\n";
-      gks_write_file(p->tex_file, buf, strlen(buf));
+      if (gks_getenv("GKS_PGF_ONLY_CONTENT") == NULL)
+        {
+          char buf[] = "\\end{document}\n";
+          gks_write_file(p->tex_file, buf, strlen(buf));
+        }
       if (p->tex_file != p->conid)
         {
           gks_close_file(p->tex_file);
