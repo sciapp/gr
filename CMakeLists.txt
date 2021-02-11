@@ -782,7 +782,7 @@ endif()
 if(Qt4_FOUND)
   add_library(qt4gr SHARED lib/gr/qtgr/grwidget.cxx)
   target_link_libraries(qt4gr PUBLIC GR::GR)
-  target_link_libraries(qt4gr PUBLIC Qt4::QtCore Qt4::QtGui Qt4::QtNetwork)
+  target_link_libraries(qt4gr PUBLIC Qt4::QtCore Qt4::QtGui)
   if(MINGW)
     target_compile_options(qt4gr PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
   endif()
@@ -796,20 +796,18 @@ if(Qt4_FOUND)
               ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h -o ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.cxx
     )
-    target_sources(qt5gr PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx)
+    target_sources(qt4gr PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/moc_qt4_grwidget.cxx)
   else()
     set_target_properties(qt4gr PROPERTIES AUTOMOC ON AUTORCC ON)
     target_sources(qt4gr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h)
   endif()
+  add_library(GR::qt4gr ALIAS qt4gr)
 endif()
 
-if(Qt5Widgets_FOUND
-   AND Qt5Core_FOUND
-   AND Qt5Network_FOUND
-)
+if(Qt5Widgets_FOUND AND Qt5Core_FOUND)
   add_library(qt5gr SHARED lib/gr/qtgr/grwidget.cxx)
   target_link_libraries(qt5gr PUBLIC GR::GR)
-  target_link_libraries(qt5gr PUBLIC Qt5::Widgets Qt5::Core Qt5::Network)
+  target_link_libraries(qt5gr PUBLIC Qt5::Core Qt5::Widgets)
   if(MINGW)
     target_compile_options(qt5gr PRIVATE -fno-exceptions ${COMPILER_OPTION_ERROR_IMPLICIT})
   endif()
@@ -828,6 +826,7 @@ if(Qt5Widgets_FOUND
     set_target_properties(qt5gr PROPERTIES AUTOMOC ON AUTORCC ON)
     target_sources(qt5gr PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/gr/qtgr/grwidget.h)
   endif()
+  add_library(GR::qt5gr ALIAS qt5gr)
 endif()
 
 string(APPEND GR_REPORT "\nGKS applications:\n")
@@ -984,6 +983,24 @@ if(GR_INSTALL)
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
+  if(TARGET qt4gr)
+    install(
+      TARGETS qt4gr
+      EXPORT GRTargets
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
+  if(TARGET qt5gr)
+    install(
+      TARGETS qt5gr
+      EXPORT GRTargets
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+  endif()
   install(
     EXPORT GRTargets
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/GR"
@@ -1024,6 +1041,7 @@ if(GR_INSTALL)
   if(TARGET qt4gr)
     install(
       TARGETS qt4gr
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
@@ -1031,6 +1049,7 @@ if(GR_INSTALL)
   if(TARGET qt5gr)
     install(
       TARGETS qt5gr
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
       RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
