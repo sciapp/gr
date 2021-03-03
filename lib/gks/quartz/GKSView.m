@@ -144,6 +144,8 @@ static int pcolor[PATTERNS];
 
 static int color_ = -1;
 
+static CGColorSpaceRef colorSpace = NULL;
+
 static CGContextRef context = NULL;
 
 static CGLayerRef layer;
@@ -767,6 +769,11 @@ static void seg_xform_rel(double *x, double *y) {}
           patternLayers[i] = nil;
         }
     }
+  if (colorSpace != NULL)
+    {
+      CGColorSpaceRelease(colorSpace);
+      colorSpace = NULL;
+    }
   gks_close_font(fontfile);
   if (buffer)
     {
@@ -1026,14 +1033,20 @@ static void seg_xform_rel(double *x, double *y) {}
 
 - (void)set_fill_color:(int)color:(CGContextRef)context
 {
-  update_color(color);
-  CGContextSetFillColorWithColor(context, p->rgb[color]);
+  if (color != -1)
+    {
+      update_color(color);
+      CGContextSetFillColorWithColor(context, p->rgb[color]);
+    }
 }
 
 - (void)set_stroke_color:(int)color:(CGContextRef)context
 {
-  update_color(color);
-  CGContextSetStrokeColorWithColor(context, p->rgb[color]);
+  if (color != -1)
+    {
+      update_color(color);
+      CGContextSetStrokeColorWithColor(context, p->rgb[color]);
+    }
 }
 
 - (void)resize_window
@@ -1702,11 +1715,115 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
+- (void)draw_lines:(int)n:(double *)px:(double *)py:(int *)attributes
+{
+  int i, j = 0, rgba;
+  double x, y;
+  int xim1, yim1, xi, yi;
+  float line_width;
+  CGFloat color[4];
+
+  begin_context(context);
+
+  if (colorSpace == NULL)
+    {
+      colorSpace = CGColorSpaceCreateDeviceRGB();
+    }
+
+  WC_to_NDC(px[0], py[0], gkss->cntnr, x, y);
+  seg_xform(&x, &y);
+  NDC_to_DC(x, y, xi, yi);
+
+  for (i = 1; i < n; i++)
+    {
+      xim1 = xi;
+      yim1 = yi;
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, xi, yi);
+
+      CGContextBeginPath(context);
+      CGContextSetLineJoin(context, kCGLineJoinMiter);
+      CGContextSetLineCap(context, kCGLineCapRound);
+      line_width = 0.01 * attributes[j++];
+      CGContextSetLineWidth(context, line_width * p->nominal_size);
+
+      rgba = attributes[j++];
+      color[0] = (rgba & 0xff) / 255.0;
+      color[1] = ((rgba >> 8) & 0xff) / 255.0;
+      color[2] = ((rgba >> 16) & 0xff) / 255.0;
+      color[3] = gkss->alpha;
+      CGContextSetStrokeColorSpace(context, colorSpace);
+      CGContextSetStrokeColor(context, color);
+
+      CGContextMoveToPoint(context, xim1, yim1);
+      CGContextAddLineToPoint(context, xi, yi);
+      CGContextDrawPath(context, kCGPathStroke);
+    }
+
+  end_context(context);
+}
+
+
+- (void)draw_markers:(int)n:(double *)px:(double *)py:(int *)attributes
+{
+  int mk_type;
+  double x, y, mk_size;
+  double *clrt = gkss->viewport[gkss->cntnr];
+  int i, j = 0, rgba, draw;
+  CGFloat color[4];
+
+  mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
+
+  begin_context(context);
+
+  if (colorSpace == NULL)
+    {
+      colorSpace = CGColorSpaceCreateDeviceRGB();
+    }
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+
+      if (gkss->clip == GKS_K_CLIP)
+        draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
+      else
+        draw = 1;
+
+      mk_size = 0.01 * attributes[j++];
+      rgba = attributes[j++];
+      color[0] = (rgba & 0xff) / 255.0;
+      color[1] = ((rgba >> 8) & 0xff) / 255.0;
+      color[2] = ((rgba >> 16) & 0xff) / 255.0;
+      color[3] = gkss->alpha;
+      CGContextSetFillColorSpace(context, colorSpace);
+      CGContextSetFillColor(context, color);
+
+      if (draw) [self draw_marker:x:y:mk_type:mk_size:-1:context];
+    }
+
+  end_context(context);
+}
+
+
 - (void)gdp:(int)n:(double *)px:(double *)py:(int)primid:(int)nc:(int *)codes
 {
-  if (primid == GKS_K_GDP_DRAW_PATH)
+  switch (primid)
     {
+    case GKS_K_GDP_DRAW_PATH:
       [self draw_path:n:px:py:nc:codes];
+      break;
+    case GKS_K_GDP_DRAW_LINES:
+      [self draw_lines:n:px:py:codes];
+      break;
+    case GKS_K_GDP_DRAW_MARKERS:
+      [self draw_markers:n:px:py:codes];
+      break;
+    default:
+      gks_perror("invalid drawing primitive ('%d')", primid);
+      exit(1);
     }
 }
 

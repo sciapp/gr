@@ -396,7 +396,8 @@ static void polyline(int n, double *px, double *py)
   p->pixmap->restore();
 }
 
-static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
+static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor, QColor marker_color,
+                        QColor border_color)
 {
   double x, y;
   int r, d, i;
@@ -405,11 +406,6 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
   QPolygonF *points;
 
 #include "marker.h"
-
-  QColor marker_color(p->rgb[mcolor]);
-  marker_color.setAlpha(p->transparency);
-  QColor border_color(p->rgb[gkss->bcoli]);
-  border_color.setAlpha(p->transparency);
 
   mscale *= p->nominal_size;
   r = (int)(3 * mscale);
@@ -521,6 +517,11 @@ static void marker_routine(int n, double *px, double *py, int mtype, double msca
   double *clrt = gkss->viewport[gkss->cntnr];
   int i, draw;
 
+  QColor marker_color(p->rgb[mcolor]);
+  marker_color.setAlpha(p->transparency);
+  QColor border_color(p->rgb[gkss->bcoli]);
+  border_color.setAlpha(p->transparency);
+
   for (i = 0; i < n; i++)
     {
       WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
@@ -531,7 +532,7 @@ static void marker_routine(int n, double *px, double *py, int mtype, double msca
       else
         draw = 1;
 
-      if (draw) draw_marker(x, y, mtype, mscale, mcolor);
+      if (draw) draw_marker(x, y, mtype, mscale, mcolor, marker_color, border_color);
     }
 }
 
@@ -1019,11 +1020,100 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   p->pixmap->restore();
 }
 
+static void draw_lines(int n, double *px, double *py, int *attributes)
+{
+  int i, j = 0, rgba;
+  double x, y;
+  int xim1, yim1, xi, yi;
+  float line_width, red, green, blue;
+  QColor color;
+
+  p->pixmap->save();
+  p->pixmap->setRenderHint(QPainter::Antialiasing);
+
+  WC_to_NDC(px[0], py[0], gkss->cntnr, x, y);
+  seg_xform(&x, &y);
+  NDC_to_DC(x, y, xi, yi);
+
+  for (i = 1; i < n; i++)
+    {
+      xim1 = xi;
+      yim1 = yi;
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, xi, yi);
+
+      line_width = 0.01 * attributes[j++];
+      rgba = attributes[j++];
+      red = rgba & 0xff;
+      green = (rgba >> 8) & 0xff;
+      blue = (rgba >> 16) & 0xff;
+      color.setRgb(red, green, blue);
+      color.setAlpha(p->transparency);
+
+      p->pixmap->setPen(QPen(color, line_width * p->nominal_size, Qt::SolidLine, Qt::RoundCap));
+      p->pixmap->drawLine(xim1, yim1, xi, yi);
+    }
+
+  p->pixmap->restore();
+}
+
+static void draw_markers(int n, double *px, double *py, int *attributes)
+{
+  int mk_type;
+  double x, y, mk_size;
+  double *clrt = gkss->viewport[gkss->cntnr];
+  int i, j = 0, rgba, red, green, blue, draw;
+  QColor mk_color;
+
+  mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
+
+  p->pixmap->save();
+  p->pixmap->setRenderHint(QPainter::Antialiasing);
+
+  QColor border_color(p->rgb[gkss->bcoli]);
+  border_color.setAlpha(p->transparency);
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+
+      if (gkss->clip == GKS_K_CLIP)
+        draw = (x >= clrt[0] && x <= clrt[1] && y >= clrt[2] && y <= clrt[3]);
+      else
+        draw = 1;
+
+      mk_size = 0.01 * attributes[j++];
+      rgba = attributes[j++];
+      red = rgba & 0xff;
+      green = (rgba >> 8) & 0xff;
+      blue = (rgba >> 16) & 0xff;
+      mk_color.setRgb(red, green, blue);
+      mk_color.setAlpha(p->transparency);
+
+      if (draw) draw_marker(x, y, mk_type, mk_size, -1, mk_color, border_color);
+    }
+
+  p->pixmap->restore();
+}
+
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
-  if (primid == GKS_K_GDP_DRAW_PATH)
+  switch (primid)
     {
+    case GKS_K_GDP_DRAW_PATH:
       draw_path(n, px, py, nc, codes);
+      break;
+    case GKS_K_GDP_DRAW_LINES:
+      draw_lines(n, px, py, codes);
+      break;
+    case GKS_K_GDP_DRAW_MARKERS:
+      draw_markers(n, px, py, codes);
+      break;
+    default:
+      gks_perror("invalid drawing primitive ('%d')", primid);
+      exit(1);
     }
 }
 

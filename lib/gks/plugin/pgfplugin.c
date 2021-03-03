@@ -1192,11 +1192,26 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   pgf_free_stream(buf);
 }
 
+static void draw_lines(int n, double *px, double *py, int *attributes) {}
+
+static void draw_markers(int n, double *px, double *py, int *attributes) {}
+
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
-  if (primid == GKS_K_GDP_DRAW_PATH)
+  switch (primid)
     {
+    case GKS_K_GDP_DRAW_PATH:
       draw_path(n, px, py, nc, codes);
+      break;
+    case GKS_K_GDP_DRAW_LINES:
+      draw_lines(n, px, py, codes);
+      break;
+    case GKS_K_GDP_DRAW_MARKERS:
+      draw_markers(n, px, py, codes);
+      break;
+    default:
+      gks_perror("invalid drawing primitive ('%d')", primid);
+      exit(1);
     }
 }
 

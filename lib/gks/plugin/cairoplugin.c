@@ -267,7 +267,10 @@ static void init_colors(void)
 
 static void set_color(int index)
 {
-  cairo_set_source_rgba(p->cr, p->rgb[index][0], p->rgb[index][1], p->rgb[index][2], p->transparency);
+  if (index >= 0)
+    {
+      cairo_set_source_rgba(p->cr, p->rgb[index][0], p->rgb[index][1], p->rgb[index][2], p->transparency);
+    }
 }
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
@@ -1805,11 +1808,80 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
     }
 }
 
+static void draw_lines(int n, double *px, double *py, int *attributes)
+{
+  int i, j = 0, rgba;
+  double x, y;
+  int xim1, yim1, xi, yi;
+  double line_width, red, green, blue;
+
+  WC_to_NDC(px[0], py[0], gkss->cntnr, x, y);
+  seg_xform(&x, &y);
+  NDC_to_DC(x, y, xi, yi);
+
+  for (i = 1; i < n; i++)
+    {
+      xim1 = xi;
+      yim1 = yi;
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, xi, yi);
+
+      line_width = 0.01 * attributes[j++];
+      cairo_set_line_width(p->cr, line_width * p->nominal_size);
+      rgba = attributes[j++];
+      red = (rgba & 0xff) / 255.0;
+      green = ((rgba >> 8) & 0xff) / 255.0;
+      blue = ((rgba >> 16) & 0xff) / 255.0;
+      cairo_set_source_rgba(p->cr, red, green, blue, p->transparency);
+      cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
+
+      cairo_move_to(p->cr, xim1, yim1);
+      cairo_line_to(p->cr, xi, yi);
+      cairo_stroke(p->cr);
+    }
+}
+
+static void draw_markers(int n, double *px, double *py, int *attributes)
+{
+  int i, j = 0, rgba;
+  int mk_type, mk_color = -1;
+  double mk_size, x, y, red, green, blue;
+
+  mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
+
+  for (i = 0; i < n; i++)
+    {
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+
+      mk_size = 0.01 * attributes[j++];
+      rgba = attributes[j++];
+      red = (rgba & 0xff) / 255.0;
+      green = ((rgba >> 8) & 0xff) / 255.0;
+      blue = ((rgba >> 16) & 0xff) / 255.0;
+      cairo_set_source_rgba(p->cr, red, green, blue, p->transparency);
+
+      draw_marker(x, y, mk_type, mk_size, mk_color);
+    }
+}
+
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
-  if (primid == GKS_K_GDP_DRAW_PATH)
+  switch (primid)
     {
+    case GKS_K_GDP_DRAW_PATH:
       draw_path(n, px, py, nc, codes);
+      break;
+    case GKS_K_GDP_DRAW_LINES:
+      draw_lines(n, px, py, codes);
+      break;
+    case GKS_K_GDP_DRAW_MARKERS:
+      draw_markers(n, px, py, codes);
+      break;
+    default:
+      gks_perror("invalid drawing primitive ('%d')", primid);
+      exit(1);
     }
 }
 
