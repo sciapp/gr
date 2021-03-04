@@ -345,7 +345,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
           if (op == 4)
             {
-              if (gkss->bcoli != mcolor)
+              if (gkss->bcoli != gkss->pmcoli)
                 {
                   cairo_fill_preserve(p->cr);
                   set_color(gkss->bcoli);
@@ -369,7 +369,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           set_color(mcolor);
           if (op == 7)
             {
-              if (gkss->bcoli != mcolor)
+              if (gkss->bcoli != gkss->pmcoli)
                 {
                   cairo_fill_preserve(p->cr);
                   set_color(gkss->bcoli);

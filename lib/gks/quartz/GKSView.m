@@ -1280,7 +1280,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
           if (op == 4)
             {
               CGContextSetFillColor(context, marker_color);
-              if (gkss->bcoli != mcolor)
+              if (gkss->bcoli != gkss->pmcoli)
                 {
                   CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
                   CGContextSetStrokeColor(context, border_color);
@@ -1299,7 +1299,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
                 CGContextAddLineToPoint(context, x - xr, y + yr);
             }
           CGContextClosePath(context);
-          if (op == 4 && gkss->bcoli != mcolor)
+          if (op == 4 && gkss->bcoli != gkss->pmcoli)
             CGContextDrawPath(context, kCGPathFillStroke);
           else
             CGContextDrawPath(context, kCGPathFill);
@@ -1321,7 +1321,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
           if (op == 7)
             {
               CGContextSetFillColor(context, marker_color);
-              if (gkss->bcoli != mcolor)
+              if (gkss->bcoli != gkss->pmcoli)
                 {
                   CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
                   CGContextSetStrokeColor(context, border_color);
@@ -1330,7 +1330,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
           else
             CGContextSetStrokeColor(context, background_color);
           CGContextAddArc(context, x, y, r, 0.0, 2 * M_PI, 0);
-          if (op == 7 && gkss->bcoli != mcolor)
+          if (op == 7 && gkss->bcoli != gkss->pmcoli)
             CGContextDrawPath(context, kCGPathFillStroke);
           else
             CGContextDrawPath(context, kCGPathFill);

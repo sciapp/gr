@@ -468,7 +468,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
             }
           svg_printf(p->stream, "Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ",
                      p->rgb[color][0], p->rgb[color][1], p->rgb[color][2], p->transparency);
-          if (op == 4 && gkss->bcoli != mcolor)
+          if (op == 4 && gkss->bcoli != gkss->pmcoli)
             svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
                        p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                        gkss->bwidth * p->nominal_size);
@@ -496,7 +496,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                      path_id, p->rect_index, x, y, r);
           svg_printf(p->stream, " fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ", p->rgb[color][0],
                      p->rgb[color][1], p->rgb[color][2], p->transparency);
-          if (op == 7 && gkss->bcoli != mcolor)
+          if (op == 7 && gkss->bcoli != gkss->pmcoli)
             svg_printf(p->stream, "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-width=\"%g\"",
                        p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], p->transparency,
                        gkss->bwidth * p->nominal_size);

@@ -471,7 +471,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 4)
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
-              if (gkss->bcoli != mcolor)
+              if (gkss->bcoli != gkss->pmcoli)
                 p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
               else
                 p->pixmap->setPen(Qt::NoPen);
@@ -500,7 +500,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 7)
             {
               p->pixmap->setBrush(QBrush(marker_color, Qt::SolidPattern));
-              if (gkss->bcoli != mcolor)
+              if (gkss->bcoli != gkss->pmcoli)
                 p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap));
               else
                 p->pixmap->setPen(Qt::NoPen);

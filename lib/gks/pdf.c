@@ -1105,7 +1105,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 4)
             {
               set_fillcolor(mcolor);
-              if (gkss->bcoli != mcolor)
+              if (gkss->bcoli != gkss->pmcoli)
                 {
                   set_linewidth(gkss->bwidth);
                   set_color(gkss->bcoli);
@@ -1123,7 +1123,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
               else
                 pdf_lineto(p, x - xr, y - yr);
             }
-          if (op == 4 && gkss->bcoli != mcolor)
+          if (op == 4 && gkss->bcoli != gkss->pmcoli)
             pdf_printf(p->content, "b*\n");
           else
             pdf_eofill(p);
@@ -1157,7 +1157,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           if (op == 7)
             {
               set_fillcolor(mcolor);
-              if (gkss->bcoli != mcolor)
+              if (gkss->bcoli != gkss->pmcoli)
                 {
                   set_linewidth(gkss->bwidth);
                   set_color(gkss->bcoli);
@@ -1180,7 +1180,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                 }
               pdf_curveto(p);
             }
-          if (op == 7 && gkss->bcoli != mcolor)
+          if (op == 7 && gkss->bcoli != gkss->pmcoli)
             pdf_printf(p->content, "b*\n");
           else
             pdf_eofill(p);
