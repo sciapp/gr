@@ -148,7 +148,7 @@ typedef struct ws_state_list_t
   int mem_resizable;
   double a, b, c, d;
   double window[4], viewport[4];
-  double rgb[MAX_COLOR][3];
+  double rgb[MAX_COLOR + 1][3];
   double transparency;
   int width, height;
   int color;
@@ -267,10 +267,7 @@ static void init_colors(void)
 
 static void set_color(int index)
 {
-  if (index >= 0)
-    {
-      cairo_set_source_rgba(p->cr, p->rgb[index][0], p->rgb[index][1], p->rgb[index][2], p->transparency);
-    }
+  cairo_set_source_rgba(p->cr, p->rgb[index][0], p->rgb[index][1], p->rgb[index][2], p->transparency);
 }
 
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
@@ -1810,10 +1807,10 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
 
 static void draw_lines(int n, double *px, double *py, int *attributes)
 {
-  int i, j = 0, rgba;
+  int i, j = 0, rgba, line_color = MAX_COLOR;
   double x, y;
   int xim1, yim1, xi, yi;
-  double line_width, red, green, blue;
+  double line_width;
 
   WC_to_NDC(px[0], py[0], gkss->cntnr, x, y);
   seg_xform(&x, &y);
@@ -1830,10 +1827,11 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
       line_width = 0.01 * attributes[j++];
       cairo_set_line_width(p->cr, line_width * p->nominal_size);
       rgba = attributes[j++];
-      red = (rgba & 0xff) / 255.0;
-      green = ((rgba >> 8) & 0xff) / 255.0;
-      blue = ((rgba >> 16) & 0xff) / 255.0;
-      cairo_set_source_rgba(p->cr, red, green, blue, p->transparency);
+      p->rgb[line_color][0] = (rgba & 0xff) / 255.0;
+      p->rgb[line_color][1] = ((rgba >> 8) & 0xff) / 255.0;
+      p->rgb[line_color][2] = ((rgba >> 16) & 0xff) / 255.0;
+
+      set_color(line_color);
       cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
 
       cairo_move_to(p->cr, xim1, yim1);
@@ -1845,8 +1843,8 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
 static void draw_markers(int n, double *px, double *py, int *attributes)
 {
   int i, j = 0, rgba;
-  int mk_type, mk_color = -1;
-  double mk_size, x, y, red, green, blue;
+  int mk_type, mk_color = MAX_COLOR;
+  double mk_size, x, y;
 
   mk_type = gkss->asf[3] ? gkss->mtype : gkss->mindex;
 
@@ -1857,10 +1855,11 @@ static void draw_markers(int n, double *px, double *py, int *attributes)
 
       mk_size = 0.01 * attributes[j++];
       rgba = attributes[j++];
-      red = (rgba & 0xff) / 255.0;
-      green = ((rgba >> 8) & 0xff) / 255.0;
-      blue = ((rgba >> 16) & 0xff) / 255.0;
-      cairo_set_source_rgba(p->cr, red, green, blue, p->transparency);
+      p->rgb[mk_color][0] = (rgba & 0xff) / 255.0;
+      p->rgb[mk_color][1] = ((rgba >> 8) & 0xff) / 255.0;
+      p->rgb[mk_color][2] = ((rgba >> 16) & 0xff) / 255.0;
+
+      set_color(mk_color);
 
       draw_marker(x, y, mk_type, mk_size, mk_color);
     }
