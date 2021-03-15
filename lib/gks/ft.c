@@ -10,6 +10,11 @@
 
 #define POINT_INC 1000
 
+#define MAX_NUM_USER_FONTS 100
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
+#endif
+
 #ifndef NO_FT
 
 #include <ft2build.h>
@@ -70,6 +75,8 @@ const static FT_String *gks_font_list_ttf[] = {NULL,         NULL,        NULL, 
                                                NULL,         NULL,        NULL, NULL, NULL, NULL, NULL, "CMUSerif-Math",
                                                "DejaVuSans", "PingFangSC"};
 
+static char gks_font_list_user_defined[MAX_NUM_USER_FONTS][MAXPATHLEN];
+
 static FT_Face font_face_cache_pfb[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
@@ -77,6 +84,8 @@ static FT_Face font_face_cache_pfb[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL
 static FT_Face font_face_cache_ttf[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+
+static FT_Face font_face_cache_user_defined[MAX_NUM_USER_FONTS] = {0};
 
 /* TODO: Add fallback fonts for non-Latin languages */
 static const char *fallback_font_list[] = {NULL};
@@ -337,6 +346,11 @@ static int gks_ft_convert_textfont(int textfont)
     {
       textfont = map[textfont - 1];
     }
+  else if (textfont >= 300 && textfont < 300 + MAX_NUM_USER_FONTS)
+    {
+      /* user-defined font */
+      return textfont - 300;
+    }
   else
     {
       textfont = 9;
@@ -407,6 +421,42 @@ static void gks_ft_init_fallback_faces()
     }
 }
 
+int gks_ft_load_user_font(char *font)
+{
+  static int user_font_index = 300;
+  FT_Error error;
+  FT_Face face;
+  int textfont;
+
+  if (!init) gks_ft_init();
+  if (strlen(font) > MAXPATHLEN - 1)
+    {
+      gks_perror("file name too long: %s", font);
+      return -1;
+    }
+  textfont = gks_ft_convert_textfont(user_font_index);
+  if (textfont >= MAX_NUM_USER_FONTS)
+    {
+      gks_perror("reached maximum number of user defined fonts (%d)", MAX_NUM_USER_FONTS);
+      return -1;
+    }
+
+  error = FT_New_Face(library, font, 0, &face);
+  if (error == FT_Err_Unknown_File_Format)
+    {
+      gks_perror("unknown file format: %s", font);
+      return -1;
+    }
+  else if (error)
+    {
+      gks_perror("could not open font file: %s", font);
+      return -1;
+    }
+
+  strcpy(gks_font_list_user_defined[textfont], font);
+  font_face_cache_user_defined[textfont] = face;
+  return user_font_index++;
+}
 
 void *gks_ft_get_face(int textfont)
 {
@@ -415,9 +465,23 @@ void *gks_ft_get_face(int textfont)
   const FT_String *font;
 
   if (!init) gks_ft_init();
+  int user_defined = (textfont >= 300 && textfont < 300 + MAX_NUM_USER_FONTS);
   int use_ttf = (textfont >= 200);
   int original_textfont = textfont;
   textfont = gks_ft_convert_textfont(textfont);
+
+  if (user_defined)
+    {
+      if (font_face_cache_user_defined[textfont] != NULL)
+        {
+          return (void *)font_face_cache_user_defined[textfont];
+        }
+      else
+        {
+          gks_perror("Missing font: %d\n", original_textfont);
+          return NULL;
+        }
+    }
 
   const FT_String **font_list = use_ttf ? gks_font_list_ttf : gks_font_list_pfb;
   FT_Face *font_face_cache = use_ttf ? font_face_cache_ttf : font_face_cache_pfb;
@@ -1510,6 +1574,12 @@ void gks_ft_inq_text3d_extent(double x, double y, double z, char *text, int axis
                               void (*wc3towc)(double *, double *, double *), double *bBoxX, double *bBoxY)
 {
   if (!init) gks_ft_init();
+}
+
+int gks_ft_load_user_font(char *font)
+{
+  if (!init) gks_ft_init();
+  return -1;
 }
 
 #endif
