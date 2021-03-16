@@ -69,11 +69,10 @@ const static FT_String *gks_font_list_pfb[] = {
     "Dingbats"               /* 31: Zapf Dingbats */
 };
 
-const static FT_String *gks_font_list_ttf[] = {NULL,         NULL,        NULL, NULL, NULL, NULL, NULL, NULL,
-                                               NULL,         NULL,        NULL, NULL, NULL, NULL, NULL, NULL,
-                                               NULL,         NULL,        NULL, NULL, NULL, NULL, NULL, NULL,
-                                               NULL,         NULL,        NULL, NULL, NULL, NULL, NULL, "CMUSerif-Math",
-                                               "DejaVuSans", "PingFangSC"};
+const static FT_String *gks_font_list_ttf[] = {
+    NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, "CMUSerif-Math",
+    "DejaVuSans"};
 
 static char gks_font_list_user_defined[MAX_NUM_USER_FONTS][MAXPATHLEN];
 
@@ -81,9 +80,9 @@ static FT_Face font_face_cache_pfb[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL
                                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
-static FT_Face font_face_cache_ttf[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static FT_Face font_face_cache_ttf[] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
 static FT_Face font_face_cache_user_defined[MAX_NUM_USER_FONTS] = {0};
 
@@ -334,7 +333,7 @@ void gks_ft_terminate(void)
 static int gks_ft_convert_textfont(int textfont)
 {
   textfont = abs(textfont);
-  if (textfont >= 201 && textfont <= 234)
+  if (textfont >= 201 && textfont <= 233)
     {
       textfont -= 200;
     }
