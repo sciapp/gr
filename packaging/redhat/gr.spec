@@ -25,8 +25,8 @@ Source1:			https://gr-framework.org/downloads/3rdparty/libogg-1.3.2.tar.gz
 Source2:			https://gr-framework.org/downloads/3rdparty/libtheora-1.1.1.tar.gz
 Source3:			https://gr-framework.org/downloads/3rdparty/libvpx-1.4.0.tar.bz2
 Source4:			https://gr-framework.org/downloads/3rdparty/ffmpeg-4.2.1.tar.gz
-Source5:			https://gr-framework.org/downloads/3rdparty/glfw-3.1.1.tar.gz
-Source6:			https://gr-framework.org/downloads/3rdparty/zeromq-4.0.4.tar.gz
+Source5:			https://gr-framework.org/downloads/3rdparty/glfw-3.3.3.tar.gz
+Source6:			https://gr-framework.org/downloads/3rdparty/zeromq-4.3.4.tar.gz
 Source7:			https://gr-framework.org/downloads/3rdparty/cmake-2.8.12.2.tar.gz
 Source8:			https://gr-framework.org/downloads/3rdparty/cairo-1.14.6.tar.xz
 Source9:			https://gr-framework.org/downloads/3rdparty/pixman-0.34.0.tar.gz
