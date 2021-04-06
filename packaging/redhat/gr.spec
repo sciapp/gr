@@ -76,8 +76,8 @@ BuildRequires:		ghostscript-devel
 BuildRequires:		libjpeg-turbo-devel
 %endif
 
-# RHEL 6 and Scientific Linux 6 have too old cmake version (build internal)
-%if 0%{?rhel_version} == 600 || 0%{?scientificlinux_version} == 600
+# RHEL 7 and Scientific Linux 7 have too old cmake version (build internal)
+%if 0%{?rhel_version} == 700 || 0%{?scientificlinux_version} == 700
 %else
 BuildRequires:		cmake
 %endif
