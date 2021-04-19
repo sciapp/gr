@@ -1808,6 +1808,10 @@ void plot_post_subplot(grm_args_t *subplot_args)
           plot_draw_pie_legend(subplot_args);
         }
     }
+  if (strcmp(kind, "barplot") == 0)
+    {
+      plot_draw_axes(subplot_args, 2);
+    }
 }
 
 error_t plot_get_args_in_hierarchy(grm_args_t *args, const char **hierarchy_name_start_ptr, const char *key,
@@ -2925,6 +2929,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
       series_index++;
       ++current_series;
     }
+
 
 cleanup:
   if (pos_ind_bar_color != NULL)
@@ -5120,7 +5125,10 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
       if (!str_equals_any(kind, 1, "shade"))
         {
-          gr_grid(x_grid ? x_tick : 0, y_grid ? y_tick : 0, 0, 0, x_major_count, y_major_count);
+          if (pass == 1 || strcmp(kind, "barplot") != 0)
+            {
+              gr_grid(x_grid ? x_tick : 0, y_grid ? y_tick : 0, 0, 0, x_major_count, y_major_count);
+            }
         }
       gr_axes(x_tick, y_tick, x_org_low, y_org_low, x_major_count, y_major_count, ticksize);
       gr_axes(x_tick, y_tick, x_org_high, y_org_high, -x_major_count, -y_major_count, -ticksize);
@@ -5160,7 +5168,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           gr_restorestate();
         }
     }
-  if (strcmp("barplot", kind) == 0)
+  if (strcmp("barplot", kind) == 0 && pass == 2)
     {
       /* xticklabels */
       grm_args_t **current_series;
