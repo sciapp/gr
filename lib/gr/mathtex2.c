@@ -1027,6 +1027,8 @@ static void push_state()
   if (current_box_model_state_index)
     {
       new_state = *get_current_state();
+      /* Unset index so copy will assign a new index in the tempbuffer */
+      new_state.index = 0;
     }
   else
     {
