@@ -9013,6 +9013,25 @@ void gr_setcolormapfromrgb(int n, double *r, double *g, double *b, double *x)
     }
 }
 
+/*!
+ * Inquire the color index range of the current colormap.
+ *
+ * \param[out] first_color_ind The color index of the first color
+ * \param[out] last_color_ind The color index of the last color
+ */
+void gr_inqcolormapinds(int *first_color_ind, int *last_color_ind)
+{
+  check_autoinit;
+  if (first_color_ind != NULL)
+    {
+      *first_color_ind = first_color;
+    }
+  if (last_color_ind != NULL)
+    {
+      *last_color_ind = last_color;
+    }
+}
+
 void gr_colorbar(void)
 {
   int errind, halign, valign, clsw, tnr;
