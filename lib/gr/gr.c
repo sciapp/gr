@@ -12354,10 +12354,10 @@ static void draw_volume(const double *pixels)
         }
     }
 
-  int *colormap = (int *)gks_malloc(256 * sizeof(int));
-  for (i = 0; i < 256; i++)
+  int *colormap = (int *)gks_malloc((last_color - first_color + 1) * sizeof(int));
+  for (i = first_color; i <= last_color; i++)
     {
-      gr_inqcolor(i + 1000, colormap + i);
+      gr_inqcolor(i, colormap + i - first_color);
     }
 
   for (i = 0; i < vt.picture_width * vt.picture_height; i++)
@@ -12370,7 +12370,7 @@ static void draw_volume(const double *pixels)
             }
           else
             {
-              ipixels[i] = (255u << 24) + colormap[(int)(pixels[i] / dmax * 255)];
+              ipixels[i] = (255u << 24) + colormap[(int)(pixels[i] / dmax * (last_color - first_color))];
             }
         }
     }
