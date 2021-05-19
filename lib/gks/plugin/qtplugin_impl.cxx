@@ -1132,7 +1132,8 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
       p->rgb[line_color].setRgb(red, green, blue);
       p->rgb[line_color].setAlpha(p->transparency);
 
-      p->pixmap->setPen(QPen(p->rgb[line_color], gkss->lwidth * p->nominal_size, Qt::SolidLine, Qt::RoundCap));
+      p->pixmap->setPen(
+          QPen(p->rgb[line_color], gkss->lwidth * p->nominal_size, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin));
 
       p->pixmap->drawPolygon(triangle->constData(), 3);
     }
