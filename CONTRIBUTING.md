@@ -20,7 +20,7 @@
 
 ## Submitting Changes
 
-- This repository contains the *GR* runtime. If you wish to submit a change to language binding, please see the corresponding repository ([Python](https://github.com/sciapp/python-gr/), [Julia](https://github.com/jheinen/GR.jl/), [Ruby](https://github.com/red-data-tools/GR.rb/))
+- This repository contains the *GR* runtime. If you wish to submit a change to a language binding, please see the corresponding repository ([Python](https://github.com/sciapp/python-gr/), [Julia](https://github.com/jheinen/GR.jl/), [Ruby](https://github.com/red-data-tools/GR.rb/))
 - We aim to support a wide variety of use cases. Please keep this in mind and prefer generic solutions to specialized ones.
 - Adhere to the code style. You can use `clang-format` and `cmake-format` to apply the code style to individual files, or set up a [pre-commit githook](https://github.com/sciapp/gr/blob/develop/.githooks/pre-commit).
 - Once you are done, push your changes to your fork of *GR* and open up a [pull request](https://github.com/sciapp/gr/compare).
