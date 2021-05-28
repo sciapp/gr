@@ -101,6 +101,22 @@ static void handle_close_window(GKSTerm *gksterm, void *socket, unsigned char *d
   send_message(socket, reply, sizeof(reply));
 }
 
+static void handle_get_state(GKSTerm *gksterm, void *socket, unsigned char *data)
+{
+  int window = *(int *)data;
+  __block gks_ws_state_t state;
+  dispatch_sync(dispatch_get_main_queue(), ^{
+    @synchronized(gksterm)
+    {
+      state = [gksterm GKSQuartzGetState:window];
+    }
+  });
+  char reply[1 + sizeof(gks_ws_state_t)];
+  reply[0] = GKSTERM_FUNCTION_INQ_WS_STATE;
+  memcpy(reply + 1, (void *)&state, sizeof(gks_ws_state_t));
+  send_message(socket, reply, sizeof(reply));
+}
+
 static void handle_unknown(void *socket, unsigned char *data)
 {
   (void)data;
@@ -132,6 +148,9 @@ static void handle_message(GKSTerm *gksterm, void *socket)
       break;
     case GKSTERM_FUNCTION_IS_RUNNING:
       handle_is_running(gksterm, socket, data + 1);
+      break;
+    case GKSTERM_FUNCTION_INQ_WS_STATE:
+      handle_get_state(gksterm, socket, data + 1);
       break;
     default:
       handle_unknown(socket, data + 1);
@@ -322,6 +341,17 @@ static bool initialized = NO;
   window[win] = nil;
 
   curr_win_id = win;
+}
+
+- (gks_ws_state_t)GKSQuartzGetState:(int)win
+{
+  __block gks_ws_state_t state;
+  CGSize size = view[curr_win_id].bounds.size;
+
+  state.width = size.width;
+  state.height = size.height;
+
+  return state;
 }
 
 - (IBAction)cascadeWindows:(id)sender

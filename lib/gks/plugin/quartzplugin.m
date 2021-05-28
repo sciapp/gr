@@ -217,6 +217,18 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
     }
 }
 
+static void gksterm_get_state(gks_ws_state_t *state)
+{
+  size_t request_len = 1;
+  char request[1];
+  request[0] = GKSTERM_FUNCTION_INQ_WS_STATE;
+
+  gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
+    assert(reply_len == sizeof(gks_ws_state_t));
+    memcpy((void *)state, reply, reply_len);
+  });
+}
+
 @interface gks_quartz_thread : NSObject
 + (void)update:(id)param;
 @end
@@ -336,6 +348,7 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
 
   ws_state_list *wss = (ws_state_list *)*ptr;
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  gks_ws_state_t state;
 
   switch (fctid)
     {
@@ -482,6 +495,16 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
       [mutex lock];
       wss->inactivity_counter = 0;
       wss->empty = NO;
+      [mutex unlock];
+      break;
+
+    case INQ_WS_STATE:
+      [mutex lock];
+      if (wss->win != -1)
+        {
+          gksterm_get_state(&state);
+          memcpy((void *)ia, &state, sizeof(gks_ws_state_t));
+        }
       [mutex unlock];
       break;
     }
