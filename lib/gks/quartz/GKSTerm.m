@@ -346,10 +346,26 @@ static bool initialized = NO;
 - (gks_ws_state_t)GKSQuartzGetState:(int)win
 {
   __block gks_ws_state_t state;
-  CGSize size = view[curr_win_id].bounds.size;
+  if (view[win])
+    {
+      CGSize size = view[win].bounds.size;
 
-  state.width = size.width;
-  state.height = size.height;
+      state.width = size.width;
+      state.height = size.height;
+    }
+  else
+    {
+      state.width = 500;
+      state.height = 500;
+    }
+  if (window[win])
+    {
+      state.device_pixel_ratio = [window[win] backingScaleFactor];
+    }
+  else
+    {
+      state.device_pixel_ratio = 1.0;
+    }
 
   return state;
 }

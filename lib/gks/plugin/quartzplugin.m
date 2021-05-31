@@ -217,11 +217,12 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
     }
 }
 
-static void gksterm_get_state(gks_ws_state_t *state)
+static void gksterm_get_state(gks_ws_state_t *state, int window)
 {
-  size_t request_len = 1;
-  char request[1];
+  size_t request_len = 1 + sizeof(int);
+  char request[1 + sizeof(int)];
   request[0] = GKSTERM_FUNCTION_INQ_WS_STATE;
+  *(int *)(request + 1) = window;
 
   gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
     assert(reply_len == sizeof(gks_ws_state_t));
@@ -502,8 +503,10 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
       [mutex lock];
       if (wss->win != -1)
         {
-          gksterm_get_state(&state);
-          memcpy((void *)ia, &state, sizeof(gks_ws_state_t));
+          gksterm_get_state(&state, wss->win);
+          ia[0] = state.width;
+          ia[1] = state.height;
+          r1[0] = state.device_pixel_ratio;
         }
       [mutex unlock];
       break;
