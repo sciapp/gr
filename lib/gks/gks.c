@@ -2959,7 +2959,7 @@ void gks_inq_max_ds_size(int wtype, int *errind, int *dcunit, double *rx, double
     *errind = GKS_K_ERROR;
 }
 
-void gks_inq_vp_size(int wkid, int *errind, int *width, int *height)
+void gks_inq_vp_size(int wkid, int *errind, int *width, int *height, double *device_pixel_ratio)
 {
   gks_list_t *element;
   ws_list_t *ws;
@@ -2974,11 +2974,11 @@ void gks_inq_vp_size(int wkid, int *errind, int *width, int *height)
         {
 #ifndef EMSCRIPTEN
         case 400:
-          gks_quartz_plugin(INQ_WS_STATE, 2, 1, 2, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, &ws->ptr);
+          gks_quartz_plugin(INQ_WS_STATE, 2, 1, 2, i_arr, 1, f_arr_1, 0, f_arr_2, 0, c_arr, &ws->ptr);
           break;
 
         case 411:
-          gks_qt_plugin(INQ_WS_STATE, 2, 1, 2, i_arr, 0, f_arr_1, 0, f_arr_2, 0, c_arr, &ws->ptr);
+          gks_qt_plugin(INQ_WS_STATE, 2, 1, 2, i_arr, 1, f_arr_1, 0, f_arr_2, 0, c_arr, &ws->ptr);
           break;
 #endif
         default:
@@ -2987,12 +2987,14 @@ void gks_inq_vp_size(int wkid, int *errind, int *width, int *height)
 
           i_arr[0] = (int)((ws->vp[1] - ws->vp[0]) / descr->sizex * descr->unitsx + 0.5);
           i_arr[1] = (int)((ws->vp[3] - ws->vp[2]) / descr->sizey * descr->unitsy + 0.5);
+          f_arr_1[0] = 1.0;
         }
 
       *errind = GKS_K_NO_ERROR;
       vp = s->viewport[s->cntnr];
       *width = i_arr[0] * (vp[1] - vp[0]);
       *height = i_arr[1] * (vp[3] - vp[2]);
+      *device_pixel_ratio = f_arr_1[0];
     }
   else
     *errind = GKS_K_ERROR;

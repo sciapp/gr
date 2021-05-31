@@ -215,6 +215,7 @@ typedef struct
 {
   int width;
   int height;
+  double device_pixel_ratio;
 } gks_ws_state_t;
 
 int gks_open_font(void);

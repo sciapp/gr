@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
   int inp_status, tnr, errind;
   int count = 1, wstype = GKS_K_WSTYPE_DEFAULT;
   int width, height;
+  double dpr;
 
   for (i = 0; i < 13; i++) asf[i] = GKS_K_ASF_INDIVIDUAL;
 
@@ -288,8 +289,8 @@ int main(int argc, char *argv[])
 #endif
     }
 
-  gks_inq_vp_size(2, &errind, &width, &height);
-  printf("width=%d height=%d\n", width, height);
+  gks_inq_vp_size(2, &errind, &width, &height, &dpr);
+  printf("width=%d height=%d dpr=%f\n", width, height, dpr);
 
   gks_emergency_close();
 
