@@ -34,7 +34,8 @@ inline QRect &operator-=(QRect &rect, const QMargins &margins)
 #endif
 
 
-GKSConnection::GKSConnection(QTcpSocket *socket) : socket(socket), widget(NULL), dl(NULL), dl_size(0)
+GKSConnection::GKSConnection(QTcpSocket *socket)
+    : socket(socket), widget(NULL), dl(NULL), dl_size(0), socket_function(SocketFunction::unknown)
 {
   ++index;
   connect(socket, SIGNAL(readyRead()), this, SLOT(readClient()));
@@ -68,28 +69,47 @@ void GKSConnection::readClient()
 {
   while (socket->bytesAvailable() > 0)
     {
-      if (dl_size == 0)
+      switch (socket_function)
         {
-          if (socket->bytesAvailable() < (long)sizeof(int)) return;
-          socket->read((char *)&dl_size, sizeof(unsigned int));
+        case SocketFunction::unknown:
+          char socket_function_byte;
+          socket->read(&socket_function_byte, 1);
+          socket_function = static_cast<SocketFunction::Enum>(socket_function_byte);
+          break;
+        case SocketFunction::create_window:
+          if (widget == NULL)
+            {
+              newWidget();
+            }
+          socket_function = SocketFunction::unknown;
+          break;
+        case SocketFunction::draw:
+          if (dl_size == 0)
+            {
+              if (socket->bytesAvailable() < (long)sizeof(int)) return;
+              socket->read((char *)&dl_size, sizeof(int));
+            }
+          if (socket->bytesAvailable() < dl_size) return;
+          dl = new char[dl_size + sizeof(int)];
+          socket->read(dl, dl_size);
+          // The data buffer must be terminated by a zero integer -> `sizeof(int)` zero bytes
+          memset(dl + dl_size, 0, sizeof(int));
+          if (widget == NULL)
+            {
+              newWidget();
+            }
+          emit(data(dl));
+          dl_size = 0;
+          socket_function = SocketFunction::unknown;
+          break;
+        case SocketFunction::close_window:
+          if (widget != NULL)
+            {
+              widget->close();
+            }
+          socket_function = SocketFunction::unknown;
+          break;
         }
-      /* If `dl_size` is still `0` this is a close request
-       * -> send a close request signal which is processed in the GKSServer instance */
-      if (dl_size == 0 && widget == NULL)
-        {
-          emit(requestApplicationShutdown(*this));
-        }
-      if (socket->bytesAvailable() < dl_size) return;
-      dl = new char[dl_size + sizeof(int)];
-      socket->read(dl, dl_size);
-      // The data buffer must be terminated by a zero integer -> `sizeof(int)` zero bytes
-      memset(dl + dl_size, 0, sizeof(int));
-      if (widget == NULL)
-        {
-          newWidget();
-        }
-      emit(data(dl));
-      dl_size = 0;
     }
 }
 
