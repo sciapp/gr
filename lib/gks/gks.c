@@ -2978,7 +2978,7 @@ void gks_inq_vp_size(int wkid, int *errind, int *width, int *height, double *dev
           break;
 
         case 411:
-          gks_qt_plugin(INQ_WS_STATE, 2, 1, 2, i_arr, 1, f_arr_1, 0, f_arr_2, 0, c_arr, &ws->ptr);
+          gks_drv_socket(INQ_WS_STATE, 2, 1, 2, i_arr, 1, f_arr_1, 0, f_arr_2, 0, c_arr, &ws->ptr);
           break;
 #endif
         default:
