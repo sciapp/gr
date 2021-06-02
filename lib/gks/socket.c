@@ -379,6 +379,29 @@ void gks_drv_socket(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doubl
           send_socket(wss->s, wss->dl.buffer, wss->dl.nbytes);
         }
       break;
+
+    case 209: /* inq_ws_state */
+      if (wss->wstype == 411)
+        {
+          char reply[1 + sizeof(gks_ws_state_t)];
+          request_type = SOCKET_FUNCTION_INQ_WS_STATE;
+          if (send_socket(wss->s, &request_type, 1) <= 0)
+            {
+              break;
+            }
+          if (read_socket(wss->s, reply, sizeof(reply)) <= 0)
+            {
+              break;
+            }
+          if (reply[0] == SOCKET_FUNCTION_INQ_WS_STATE)
+            {
+              const gks_ws_state_t *state = (const gks_ws_state_t *)&reply[1];
+              ia[0] = state->width;
+              ia[1] = state->height;
+              r1[0] = state->device_pixel_ratio;
+            }
+        }
+      break;
     }
 
   if (wss != NULL)

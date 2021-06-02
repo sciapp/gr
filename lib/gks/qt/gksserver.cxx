@@ -11,6 +11,8 @@
 #include <QDesktopWidget>
 #endif
 
+#include "gkscore.h"
+
 #include "gksserver.h"
 
 
@@ -67,7 +69,7 @@ GKSConnection::~GKSConnection()
 
 void GKSConnection::readClient()
 {
-  while (socket->bytesAvailable() > 0)
+  while (socket->bytesAvailable() > 0 || socket_function == SocketFunction::inq_ws_state)
     {
       switch (socket_function)
         {
@@ -107,6 +109,31 @@ void GKSConnection::readClient()
             {
               widget->close();
             }
+          socket_function = SocketFunction::unknown;
+          break;
+        case SocketFunction::inq_ws_state:
+          char reply[1 + sizeof(gks_ws_state_t)];
+          if (widget != NULL)
+            {
+              reply[0] = static_cast<char>(SocketFunction::inq_ws_state);
+              double device_pixel_ratio = (
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+                  widget->devicePixelRatioF()
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+                  widget->devicePixelRatio()
+#else
+                  1.0
+#endif
+              );
+              *reinterpret_cast<gks_ws_state_t *>(&reply[1]) =
+                  gks_ws_state_t{widget->width(), widget->height(), device_pixel_ratio};
+            }
+          else
+            {
+              /* If no widget exists, send back `SocketFunction::unknown` */
+              reply[0] = static_cast<char>(SocketFunction::unknown);
+            }
+          socket->write(reply, sizeof(reply));
           socket_function = SocketFunction::unknown;
           break;
         }
