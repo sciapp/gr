@@ -213,7 +213,7 @@ DATALENGTH receive_data_optimiert(struct single_connection* scon, DATALENGTH* re
       return 0;
     }
     else if(oneByte == 1){
-      printf("Heartbeat empfangen\n");
+      //printf("Heartbeat empfangen\n");
       /*Heartbeat "Message*/
       return 0;
     }

@@ -359,7 +359,6 @@ void try_reconnection(struct single_connection* act_con, int* nfds, struct pollf
 
 struct single_connection* new_connection_struct(){
   /*returns a new connection*/
-
   struct single_connection* scon = (struct single_connection*)malloc(
     sizeof(struct single_connection));
     scon->queue_to_network = NULL;
@@ -565,10 +564,10 @@ struct single_connection* new_connection_struct(){
   } */
   /*TODO Heartbeat aktivieren*/
   if (time(NULL)-last_heartbeat > context->diff){ /*send Heartbeat message about every connection*/
-    printf("Soll Heartbeat verschicken\n");
+    //printf("Soll Heartbeat verschicken\n");
     /*iterate over every connection and check if it should be closed*/
     /*TODO remove*/struct single_server* ss = get_by_index(context->servers, 0);
-    printf("time for Heartbeat, Anzahl Client und Server Verbingungen: %d und %d\n", list_size(context->connections), list_size(ss->connections));
+    //printf("time for Heartbeat, Anzahl Client und Server Verbingungen: %d und %d\n", list_size(context->connections), list_size(ss->connections));
     int j;
     for (j=0; j<list_size(context->connections); j++){
       struct single_connection* act_con =
@@ -1220,6 +1219,7 @@ struct single_connection* new_connection_struct(){
   /*Method to create a new Connection to a Server, identified, by ip and port*/
   int new_connection(struct context_object* context, char* server_ip,
     int server_port, char* client_ip, int client_port){
+      printf("in new connection\n");
 
     int fd1[2]; /*Filedescriptor for Threadcommunication*/
     int fd2[2]; /*Filedescriptor for Threadcommunication*/
@@ -1244,6 +1244,7 @@ struct single_connection* new_connection_struct(){
       perror("Failed to Create Pipeline 2\n");
       exit(1);
     }
+    printf("Testprint1\n");
     /*Preparing Arguments for Network Thread to create connection*/
     connection_wish = (struct connection_wish*)malloc(
     sizeof(struct connection_wish));
@@ -1258,31 +1259,38 @@ struct single_connection* new_connection_struct(){
     connection_wish->client_ip = client_ip;
     connection_wish->client_port = client_port;
     /*connection wish to NetworkThread via Queue*/
+    printf("Testprint2\n");
     pthread_mutex_lock (&bibmutex);
     queue_enqueue(context->to_network_queue, (void*)connection_wish);
     if (write(context->connection_request_pipe_write, &ch, 1) < 0){
       printf("MT: Could not write data into Pipeline\n");
     }
     pthread_mutex_unlock (&bibmutex);
+    printf("Testprint3\n");
     /*wait for connection_id*/
     FD_ZERO(&readfds); /*clear the filedescriptor set*/
     FD_SET(context->connection_response_pipe_read, &readfds); /*insert pipeline*/
     int max_fd = (context->connection_response_pipe_read) +1;
     /*wait till connection is alive*/
+    printf("Testprint4, vor select\n");
     int activity = select(max_fd, &readfds, NULL, NULL, NULL);
     if (activity < 0 ){
       printf("MT: error select\n");
       exit(1);
     }
+    printf("Testprint5\n");
     /*clears pipeline*/
     if (read(context->connection_response_pipe_read, &ch, 1) < 0){
       printf("could not read from Netzwerkthread Pipeline\n");
       exit(1);
     }
+    printf("Testprint6\n");
     pthread_mutex_lock (&bibmutex);
     int connection_id = (int)queue_dequeue(context->to_context_queue);
     pthread_mutex_unlock (&bibmutex);
+    printf("Testprint7\n");
     free(connection_wish);
+    printf("Testprint8\n");
     return connection_id;
   }
   /*send data to specific connection, identified by connection_id*/
