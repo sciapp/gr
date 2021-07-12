@@ -157,7 +157,7 @@ static void gksterm_communicate(const char *request, size_t request_len, int tim
                                  userInfo:nil];
   }
   struct message* recv_message = new_message();
-  int rcv = nb_recv_message(nb_context, connection_id, &recv_message, 1, 3);
+  int rcv = nb_recv_message(nb_context, connection_id, &recv_message, 1/*wait*/, 3/*seconds*/);
   if (rcv > 0){
     /*clock_gettime(CLOCK_REALTIME, &end);
     long seconds = end.tv_sec - begin.tv_sec;
@@ -186,7 +186,6 @@ static bool gksterm_is_running()
 
   @try
     {
-      //printf("Is Running versuch\n");
       gksterm_communicate(request, request_len, GKSTERM_IS_RUNNING_TIMEOUT, NO, ^(char *reply, size_t reply_len) {
         assert(reply_len == 0);
       });
@@ -208,7 +207,6 @@ static bool gksterm_is_alive(int window)
   *(int *)(request + 1) = window;
 
   __block bool result = NO;
-  //printf("is alive versuch\n");
   gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
     assert(reply_len == 1);
     result = (reply[0] == 1);
@@ -223,7 +221,6 @@ static int gksterm_create_window()
   request[0] = GKSTERM_FUNCTION_CREATE_WINDOW;
 
   __block int result = 0;
-  //printf("create window versuch\n");
   gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
     assert(reply_len == sizeof(int));
     result = *(int *)reply;
@@ -237,7 +234,6 @@ static void gksterm_close_window(int window)
   char request[1 + sizeof(int)];
   request[0] = GKSTERM_FUNCTION_CLOSE_WINDOW;
   *(int *)(request + 1) = window;
-  //printf("close window versuch\n");
   gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
     assert(reply_len == 0);
   });
@@ -255,7 +251,6 @@ static void gksterm_draw(int window, void *displaylist, size_t displaylist_len)
 
   @try
     {
-        //printf("draw versuch\n");
       gksterm_communicate(request, request_len, GKSTERM_DEFAULT_TIMEOUT, YES, ^(char *reply, size_t reply_len) {
         assert(reply_len == 0);
       });
@@ -432,7 +427,6 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
           mutex = [[NSLock alloc] init];
         }
       wss->master_thread = pthread_self();
-
       if (!is_connected)
         {
           if (!gks_terminal())
@@ -604,7 +598,6 @@ void gks_quartzplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, dou
     }
 
   if (wss != NULL) gks_dl_write_item(&wss->dl, fctid, dx, dy, dimx, ia, lr1, r1, lr2, r2, lc, chars, gkss);
-
   [pool drain];
 }
 #else

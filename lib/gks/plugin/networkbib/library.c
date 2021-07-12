@@ -34,7 +34,6 @@ uint64_t fhtonll(uint64_t value) {
 
 int send_data_optimiert(int socket, struct message* message, int kind){
   /*protocol in one send call*/
-
   /*switch (kind){
     case 1: printf("1,send Info: Heartbeat wird verschickt\n");break;
     case 2: printf("2,send Info: Clientport wird verschickt\n");break;
@@ -43,7 +42,7 @@ int send_data_optimiert(int socket, struct message* message, int kind){
     case 5: printf("5,send Info: Client schickt Server_id zum Wiederaufbau\n");break;
     case 6: printf("6,send Info: Server schickt Client_id zum Wiederaufbau\n");break;
     case 7: printf("7,send Info: Server sagt Client, dass altes Socket geloescht werden kann\n");break;
-    case 8: printf("8, will daten verschicken\n");
+    case 8: printf("8, send will daten verschicken\n");
   }*/
   int n = 1;
   struct timespec begin, end;
@@ -199,14 +198,14 @@ DATALENGTH receive_data_optimiert(struct single_connection* scon, DATALENGTH* re
     *recv_status = oneByte;
     /*switch (oneByte){
     //case 8: printf("send Info: Nachrichtenanteil wird verschickt\n");break;
-      case 1: printf("oneByte: 1\n");break;
-      case 2: printf("oneByte: 2\n");break;
-      case 3: printf("oneByte: 3\n");break;
-      case 4: printf("oneByte: 4\n");break;
-      case 5: printf("oneByte: 5\n");break;
-      case 6: printf("oneByte: 6\n");break;
-      case 7: printf("oneByte: 7\n");break;
-      case 8: printf("oneByte: 8\n");break;
+      case 1: printf("rcv oneByte: 1\n");break;
+      case 2: printf("rcv oneByte: 2\n");break;
+      case 3: printf("rcv oneByte: 3\n");break;
+      case 4: printf("rcv oneByte: 4\n");break;
+      case 5: printf("rcv oneByte: 5\n");break;
+      case 6: printf("rcv oneByte: 6\n");break;
+      case 7: printf("rcv oneByte: 7\n");break;
+      case 8: printf("rcv oneByte: 8\n");break;
     }*/
     if (oneByte == 0){
       /*close connection*/
@@ -224,14 +223,12 @@ DATALENGTH receive_data_optimiert(struct single_connection* scon, DATALENGTH* re
       //DATALENGTH client_port = *client_port_pointer;
       client_port = htonl(client_port);
       scon->target_address->client_port = client_port;
-      printf("Empfangener Port: %d\n", client_port);
       return 0;
     }
     else if (oneByte == 3  || oneByte == 4 || oneByte == 5 || oneByte == 6 || oneByte == 7){
       /*receive id the connection partner uses*/
       memcpy(&connection_id, &protocol[1], sizeof(DATALENGTH));
       connection_id = htonl(connection_id);
-      printf("Empfangene connection_id: %d\n", connection_id);
       if (oneByte == 3){
         if (scon->client_id_set == 0){
           scon->client_id_set = 1;
@@ -814,7 +811,7 @@ DATALENGTH receive_data(struct single_connection* scon, DATALENGTH* recv_status,
       recvd = 0;
       /*one recv call*/
       if (to_receive > max_bytes){
-        printf("param grösser als max_bytes\n");
+        printf("to_receive > max_bytes, exit\n");
         exit(1);}
         //printf("Empfange: %d Bytes\n", to_receive);
         //printf("Message size: %d\n", (*(rcv_message))->datalength);

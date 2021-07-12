@@ -97,7 +97,7 @@ static void nb_handle_get_state(GKSTerm *gksterm, char *data, struct message* me
   char reply[1 + sizeof(gks_ws_state_t)];
   reply[0] = GKSTERM_FUNCTION_INQ_WS_STATE;
   memcpy(reply + 1, (void *)&state, sizeof(gks_ws_state_t));
-  send_nb_message(message, reply, reply_len);
+  send_nb_message(message, reply, sizeof(reply));
 }
 
 static void nb_handle_is_running(GKSTerm *gksterm, char *data, struct message* message)
@@ -121,13 +121,8 @@ static void nb_handle_unknown(char *data, struct message* message)
 
 GKSTerm* gksterm;
 void nb_handle_message(struct message* message){
-<<<<<<< HEAD
-
-=======
->>>>>>> b3bd398e (Performanceproblem behoben)
     char request_type = ((char*)(message->data))[0];
     char* data = ((char*)message->data)+1;
-
     switch (request_type)
     {
     case GKSTERM_FUNCTION_CREATE_WINDOW:

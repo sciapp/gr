@@ -94,7 +94,6 @@ void send_message_list(struct single_connection* act_con){
       perror("Error occurred while trying to send some data\n");
       if(message_and_kind->kind == 8){
         act_message->fully_sent = -1;
-        printf("act_message->fully_sent gesetzt\n");
       }
     }
     /*check if message is sent completely and possibly remove byte from User Pipeline*/
@@ -320,11 +319,8 @@ void try_reconnection(struct single_connection* act_con, int* nfds, struct pollf
         struct message* message = new_message();
         message->scon = act_con;
         /*tell connnection partner that connnection already existed*/
-        //send_data_optimiert(act_con->socket, message, 5);
-        //push_message_to_sending_list(act_con->messages_to_be_send, message, 5);
         send_data_optimiert(act_con->socket, message, 5);
         /*if server did not find the connection, resend clients con_id*/
-        //send_data_optimiert(newsocket, message, 3);
         if(act_con->type == 0){
           //push_message_to_sending_list(act_con->messages_to_be_send, message, 3);
           send_data_optimiert(act_con->socket, message, 3);
@@ -533,16 +529,18 @@ struct single_connection* new_connection_struct(){
           //    printf("tmp: %d\n", tmpp);
           //  }
           //}
+          //printf("vor poll\n");
           activity = poll(fds, nfds, timeout);
+          //printf("nach poll\n");
           /*printf("Poll ausgeloest, Anzahl FDs: %d\n", nfds);*/
           int fd;
           for (fd = 0; fd <nfds; fd ++){
             //printf("Aktuell gecheckter Filedescriptor: %d\n", fds[fd].fd);
             //printf("Filedescriptor events: %d\n", fds[fd].events);
             //printf("Filedescriptor Revents: %d\n", fds[fd].revents);
-            /*if (fds[fd].revents & POLLIN){
-              printf("Der Filedeskriptor mit der Nummer: %d pollt\n", fds[fd].fd);
-            }*/
+            //if (fds[fd].revents & POLLIN){
+              //printf("Der Filedeskriptor mit der Nummer: %d pollt\n", fds[fd].fd);
+            //}
           }
           /*sleep(1);*/
           /*for (int ls=0; ls <list_size(context->servers); ls++){
@@ -582,7 +580,6 @@ struct single_connection* new_connection_struct(){
         /*send heartbeat*/
         if (act_con->status == 0 || act_con->status == 1){
           struct message* empty_message = NULL; /*no new struct needed, to send Heartbeat*/
-          //send_data_optimiert(act_con->socket, (struct message*)&empty_message, 1);
           push_message_to_sending_list(act_con->messages_to_be_send, empty_message, 1);
         }
         else{
@@ -609,7 +606,6 @@ struct single_connection* new_connection_struct(){
           }
           else{ /*send heartbeat*/
             void* empty_message = NULL;
-            //send_data_optimiert(act_con->socket, empty_message, 1);
             printf("Pushe Heartbeat\n");
             push_message_to_sending_list(act_con->messages_to_be_send, empty_message, 1);
           }
@@ -1036,7 +1032,6 @@ struct single_connection* new_connection_struct(){
                 struct message* message = new_message();
                 message->scon = scon;
                 push_message_to_sending_list(scon->messages_to_be_send, message, 4);
-                //send_data_optimiert(scon->socket, message,4);
                 free(message);
                 if (act_server->handle_message_func != NULL){
                   scon->handle_message_func = act_server->handle_message_func;
@@ -1219,7 +1214,6 @@ struct single_connection* new_connection_struct(){
   /*Method to create a new Connection to a Server, identified, by ip and port*/
   int new_connection(struct context_object* context, char* server_ip,
     int server_port, char* client_ip, int client_port){
-      printf("in new connection\n");
 
     int fd1[2]; /*Filedescriptor for Threadcommunication*/
     int fd2[2]; /*Filedescriptor for Threadcommunication*/
@@ -1244,7 +1238,6 @@ struct single_connection* new_connection_struct(){
       perror("Failed to Create Pipeline 2\n");
       exit(1);
     }
-    printf("Testprint1\n");
     /*Preparing Arguments for Network Thread to create connection*/
     connection_wish = (struct connection_wish*)malloc(
     sizeof(struct connection_wish));
@@ -1259,38 +1252,31 @@ struct single_connection* new_connection_struct(){
     connection_wish->client_ip = client_ip;
     connection_wish->client_port = client_port;
     /*connection wish to NetworkThread via Queue*/
-    printf("Testprint2\n");
     pthread_mutex_lock (&bibmutex);
     queue_enqueue(context->to_network_queue, (void*)connection_wish);
     if (write(context->connection_request_pipe_write, &ch, 1) < 0){
       printf("MT: Could not write data into Pipeline\n");
     }
     pthread_mutex_unlock (&bibmutex);
-    printf("Testprint3\n");
     /*wait for connection_id*/
     FD_ZERO(&readfds); /*clear the filedescriptor set*/
     FD_SET(context->connection_response_pipe_read, &readfds); /*insert pipeline*/
     int max_fd = (context->connection_response_pipe_read) +1;
     /*wait till connection is alive*/
-    printf("Testprint4, vor select\n");
     int activity = select(max_fd, &readfds, NULL, NULL, NULL);
     if (activity < 0 ){
       printf("MT: error select\n");
       exit(1);
     }
-    printf("Testprint5\n");
     /*clears pipeline*/
     if (read(context->connection_response_pipe_read, &ch, 1) < 0){
       printf("could not read from Netzwerkthread Pipeline\n");
       exit(1);
     }
-    printf("Testprint6\n");
     pthread_mutex_lock (&bibmutex);
     int connection_id = (int)queue_dequeue(context->to_context_queue);
     pthread_mutex_unlock (&bibmutex);
-    printf("Testprint7\n");
     free(connection_wish);
-    printf("Testprint8\n");
     return connection_id;
   }
   /*send data to specific connection, identified by connection_id*/
