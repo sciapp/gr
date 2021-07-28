@@ -1602,13 +1602,23 @@ static int get_default_ws_type(void)
     {
 #ifndef _WIN32
 #ifdef __APPLE__
-      default_wstype = 400;
+      if (gks_getenv("TERM_PROGRAM") != NULL)
+        default_wstype = 400;
+      else
+        default_wstype = 100;
 #else
-      default_wstype = have_gksqt() ? 411 : 211;
+      if (gks_getenv("DISPLAY") != NULL)
+        default_wstype = have_gksqt() ? 411 : 211;
+      else
+        default_wstype = 100;
 #endif
 #else
       default_wstype = have_gksqt() ? 411 : 41;
 #endif
+    }
+  if (default_wstype == 100)
+    {
+      gks_perror("run GKS in non-interactive mode");
     }
   return default_wstype;
 }
