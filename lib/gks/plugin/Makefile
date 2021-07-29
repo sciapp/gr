@@ -165,8 +165,11 @@ gsplugin.so: gsplugin.o $(GKSLIBS)
 wmfplugin.so: wmfplugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(LIBS)
 
-quartzplugin.so: quartzplugin.o networkbib/libconnection.a $(GKSLIBS) 
-	$(CXX) -g -o $@ $(SOFLAGS) $^ $(LIBS) $(ZMQLIBS) \
+#quartzplugin.so: quartzplugin.o networkbib/libconnection.a $(GKSLIBS)
+#	$(CXX) -o $@ $(SOFLAGS) $(ASAN_FLAGS) $^ $(LIBS) $(ASAN_LIBS) $(ZMQLIBS) \
+#	-lobjc -framework Foundation -framework ApplicationServices -framework AppKit
+quartzplugin.so: quartzplugin.o networkbib/libconnection.a $(GKSLIBS)
+	$(CXX) -o $@ $(SOFLAGS) $^ $(LIBS) $(ZMQLIBS) \
 	-lobjc -framework Foundation -framework ApplicationServices -framework AppKit
 glplugin.so: glplugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(GLFWLIBS) $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
