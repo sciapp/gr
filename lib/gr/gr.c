@@ -12543,6 +12543,19 @@ static void ray_casting_thread(void *arg)
   ray_dir_default[1] /= f_length;
   ray_dir_default[2] /= f_length;
 
+  /* determine aspect_ratio */
+  double xaspect = (vxmax - vxmin) / (vymax - vymin);
+  double yaspect = 1.0 / xaspect;
+  if (xaspect < 1.0)
+    {
+      xaspect = 1.0;
+    }
+  else
+    {
+      yaspect = 1.0;
+    }
+  double aspect_ratio = xaspect / yaspect;
+
   if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
       ray_dir[0] = ray_dir_default[0] / x_spacing;
@@ -12567,8 +12580,16 @@ static void ray_casting_thread(void *arg)
               double heigth_steps = (gpx.top - gpx.bottom) / vt.picture_height;
 
               /* uses the pixel mid point */
-              tmp[0] = gpx.left + (0.5 + i) * width_steps;
-              tmp[1] = gpx.bottom + (0.5 + j) * heigth_steps;
+              if (aspect_ratio > 1)
+                {
+                  tmp[0] = (gpx.left + (0.5 + i) * width_steps) * aspect_ratio;
+                  tmp[1] = gpx.bottom + (0.5 + j) * heigth_steps;
+                }
+              else
+                {
+                  tmp[0] = gpx.left + (0.5 + i) * width_steps;
+                  tmp[1] = (gpx.bottom + (0.5 + j) * heigth_steps) / aspect_ratio;
+                }
               tmp[2] = gpx.near_plane;
 
               /* transform the point into the camera system */
@@ -12618,15 +12639,22 @@ static void ray_casting_thread(void *arg)
                                             pow(lam * ray_dir_default[2], 2));
 
               /* calculate the position where each ray starts on the near plane */
-              ray_start[0] = tx.s_x * (-near_plane_size + 2 * near_plane_size * (i + 0.5) / vt.picture_width) -
-                             tx.up_x * (-near_plane_size + 2 * near_plane_size * (j + 0.5) / vt.picture_height) +
-                             ray_start[0] + lam * ray_dir_default[0];
-              ray_start[1] = tx.s_y * (-near_plane_size + 2 * near_plane_size * (i + 0.5) / vt.picture_width) -
-                             tx.up_y * (-near_plane_size + 2 * near_plane_size * (j + 0.5) / vt.picture_height) +
-                             ray_start[1] + lam * ray_dir_default[1];
-              ray_start[2] = tx.s_z * (-near_plane_size + 2 * near_plane_size * (i + 0.5) / vt.picture_width) -
-                             tx.up_z * (-near_plane_size + 2 * near_plane_size * (j + 0.5) / vt.picture_height) +
-                             ray_start[2] + lam * ray_dir_default[2];
+              if (aspect_ratio > 1)
+                {
+                  double x = (-near_plane_size + 2 * near_plane_size * (i + 0.5) / vt.picture_width) * aspect_ratio;
+                  double y = (-near_plane_size + 2 * near_plane_size * (j + 0.5) / vt.picture_height);
+                  ray_start[0] = tx.s_x * x - tx.up_x * y + ray_start[0] + lam * ray_dir_default[0];
+                  ray_start[1] = tx.s_y * x - tx.up_y * y + ray_start[1] + lam * ray_dir_default[1];
+                  ray_start[2] = tx.s_z * x - tx.up_z * y + ray_start[2] + lam * ray_dir_default[2];
+                }
+              else
+                {
+                  double x = (-near_plane_size + 2 * near_plane_size * (i + 0.5) / vt.picture_width);
+                  double y = (-near_plane_size + 2 * near_plane_size * (j + 0.5) / vt.picture_height) / aspect_ratio;
+                  ray_start[0] = tx.s_x * x - tx.up_x * y + ray_start[0] + lam * ray_dir_default[0];
+                  ray_start[1] = tx.s_y * x - tx.up_y * y + ray_start[1] + lam * ray_dir_default[1];
+                  ray_start[2] = tx.s_z * x - tx.up_z * y + ray_start[2] + lam * ray_dir_default[2];
+                }
 
               /* ray_dir depending on point and angle */
               ray_dir[0] = (ray_start[0] - tx.camera_pos_x) / x_spacing;
@@ -12639,9 +12667,24 @@ static void ray_casting_thread(void *arg)
               ray_dir[2] /= f_length;
             }
           /* transform interval same like the original data points */
-          ray_start[0] = ((ray_start[0] + 1) / 2. * (max_val_t[0] - min_val_t[0])) + min_val_t[0];
-          ray_start[1] = ((ray_start[1] + 1) / 2. * (max_val_t[1] - min_val_t[1])) + min_val_t[1];
-          ray_start[2] = ((ray_start[2] + 1) / 2. * (max_val_t[2] - min_val_t[2])) + min_val_t[2];
+          double x_ortho = 0;
+          double y_ortho = 0;
+          double z_ortho = 0;
+          if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+            {
+              x_ortho = fabs(ix.xmax) - fabs(ix.xmin);
+              y_ortho = fabs(ix.ymax) - fabs(ix.ymin);
+              z_ortho = fabs(ix.zmax) - fabs(ix.zmin);
+            }
+          ray_start[0] =
+              ((ray_start[0] - (ix.xmin * 2 - x_ortho) / (ix.xmax - ix.xmin)) / 2 * (max_val_t[0] - min_val_t[0])) +
+              min_val_t[0];
+          ray_start[1] =
+              ((ray_start[1] - (ix.ymin * 2 - y_ortho) / (ix.ymax - ix.ymin)) / 2 * (max_val_t[1] - min_val_t[1])) +
+              min_val_t[1];
+          ray_start[2] =
+              ((ray_start[2] - (ix.zmin * 2 - z_ortho) / (ix.zmax - ix.zmin)) / 2 * (max_val_t[2] - min_val_t[2])) +
+              min_val_t[2];
 
           double lambda[3] = {
               0,
