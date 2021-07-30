@@ -921,7 +921,7 @@ static void open_page(void)
 #endif
     }
   else if (p->wtype == 140 || p->wtype == 143 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 ||
-           p->wtype == 150)
+           p->wtype == 150 || p->wtype == 151)
     {
       p->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, p->width, p->height);
     }
@@ -1582,6 +1582,33 @@ static void write_page(void)
       write_to_six(path, width, height, pix);
       free(pix);
     }
+  else if (p->wtype == 151)
+    {
+      gks_filepath(path, p->path, "png", p->page_counter, 0);
+      cairo_surface_write_to_png(p->surface, path);
+
+      FILE *stream = fopen(path, "rb");
+      fseek(stream, 0, SEEK_END);
+      long size = ftell(stream);
+      fseek(stream, 0, SEEK_SET);
+
+      char *string = (char *)gks_malloc(size + 1);
+      fread(string, 1, size, stream);
+      fclose(stream);
+      string[size] = 0;
+
+      long b64_size = size * 4 / 3 + 4;
+      char *b64_string = (char *)gks_malloc(b64_size);
+      gks_base64(string, size, b64_string, b64_size);
+
+      fprintf(stdout, "\e]1337;File=inline=1;height=24;preserveAspectRatio=0:%s\a", b64_string);
+      fflush(stdout);
+
+      free(string);
+      free(b64_string);
+
+      remove(path);
+    }
 }
 
 static void select_xform(int tnr)
@@ -1968,7 +1995,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->wtype = ia[2];
       p->mem = NULL;
 
-      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146)
+      if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 || p->wtype == 151)
         {
           p->mw = 0.28575;
           p->mh = 0.19685;
