@@ -5,11 +5,11 @@
 #include <ctype.h>
 #include <math.h>
 
-#if !defined(VMS) && !defined(_WIN32)
+#ifndef _WIN32
+#include <termios.h>
 #include <unistd.h>
-#endif
-
-#ifdef _WIN32
+#include <sys/ioctl.h>
+#else
 #include <io.h>
 #endif
 
@@ -1595,6 +1595,60 @@ static int have_gksqt(void)
 
 #endif
 
+#ifndef _WIN32
+
+static struct termios saved_term;
+
+static void makeraw(void)
+{
+  struct termios term;
+
+  term = saved_term;
+
+  term.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+  term.c_oflag &= ~OPOST;
+  term.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+  term.c_cflag &= ~(CSIZE | PARENB);
+  term.c_cflag |= CS8;
+  term.c_cc[VMIN] = 0;
+  term.c_cc[VTIME] = 2; /* 200ms */
+
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &term) < 0)
+    {
+      perror("tcsetattr");
+    }
+}
+
+static int have_iterm(void)
+{
+  char *req = "\033]1337;ReportCellSize\a";
+  int cc, len = 0;
+  char s[81];
+
+  if (isatty(STDIN_FILENO))
+    {
+      tcgetattr(STDIN_FILENO, &saved_term);
+      makeraw();
+
+      write(STDOUT_FILENO, req, strlen(req));
+      fflush(stdout);
+
+      while ((cc = read(STDIN_FILENO, s + len, 1)) == 1 && len < 80)
+        {
+          if (s[len++] == '\\') break;
+        }
+      s[len] = '\0';
+
+      tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_term);
+
+      return strstr(s, "1337;ReportCellSize=") != NULL ? 1 : 0;
+    }
+
+  return 0;
+}
+
+#endif
+
 static int get_default_ws_type(void)
 {
   static int default_wstype = 0;
@@ -1606,20 +1660,19 @@ static int get_default_ws_type(void)
       if (gks_getenv("TERM_PROGRAM") != NULL)
         default_wstype = 400;
       else
-        default_wstype = 100;
 #else
       if (gks_getenv("DISPLAY") != NULL)
         default_wstype = have_gksqt() ? 411 : 211;
       else
-        default_wstype = 100;
 #endif
+        default_wstype = have_iterm() ? 151 : 100;
+      if (default_wstype == 100)
+        {
+          gks_perror("cannot open display - headless operation mode active");
+        }
 #else
       default_wstype = have_gksqt() ? 411 : 41;
 #endif
-    }
-  if (default_wstype == 100)
-    {
-      gks_perror("cannot open display - headless operation mode active");
     }
   return default_wstype;
 }
