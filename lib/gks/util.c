@@ -5,11 +5,11 @@
 #include <ctype.h>
 #include <math.h>
 
-#if !defined(VMS) && !defined(_WIN32)
+#ifndef _WIN32
+#include <termios.h>
 #include <unistd.h>
-#endif
-
-#ifdef _WIN32
+#include <sys/ioctl.h>
+#else
 #include <io.h>
 #endif
 
@@ -67,10 +67,11 @@ struct wstypes_t
 static struct wstypes_t wstypes[] = {
     {"win", 41},     {"ps", 62},        {"eps", 62},       {"nul", 100},      {"pdf", 102},      {"mov", 120},
     {"gif", 130},    {"cairopng", 140}, {"cairox11", 141}, {"cairojpg", 144}, {"cairobmp", 145}, {"cairotif", 146},
-    {"six", 150},    {"mp4", 160},      {"webm", 161},     {"ogg", 162},      {"x11", 211},      {"pgf", 314},
-    {"bmp", 145},    {"jpeg", 144},     {"jpg", 144},      {"png", 140},      {"tiff", 146},     {"tif", 146},
-    {"gtk", 142},    {"wx", 380},       {"qt", 381},       {"svg", 382},      {"wmf", 390},      {"quartz", 400},
-    {"socket", 410}, {"sock", 410},     {"gksqt", 411},    {"zmq", 415},      {"gl", 420},       {"opengl", 420}};
+    {"six", 150},    {"iterm", 151},    {"mp4", 160},      {"webm", 161},     {"ogg", 162},      {"x11", 211},
+    {"pgf", 314},    {"bmp", 145},      {"jpeg", 144},     {"jpg", 144},      {"png", 140},      {"tiff", 146},
+    {"tif", 146},    {"gtk", 142},      {"wx", 380},       {"qt", 381},       {"svg", 382},      {"wmf", 390},
+    {"quartz", 400}, {"socket", 410},   {"sock", 410},     {"gksqt", 411},    {"zmq", 415},      {"gl", 420},
+    {"opengl", 420}};
 
 static int num_wstypes = sizeof(wstypes) / sizeof(wstypes[0]);
 
@@ -1594,6 +1595,60 @@ static int have_gksqt(void)
 
 #endif
 
+#ifndef _WIN32
+
+static struct termios saved_term;
+
+static void makeraw(void)
+{
+  struct termios term;
+
+  term = saved_term;
+
+  term.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+  term.c_oflag &= ~OPOST;
+  term.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+  term.c_cflag &= ~(CSIZE | PARENB);
+  term.c_cflag |= CS8;
+  term.c_cc[VMIN] = 0;
+  term.c_cc[VTIME] = 2; /* 200ms */
+
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &term) < 0)
+    {
+      perror("tcsetattr");
+    }
+}
+
+static int have_iterm(void)
+{
+  char *req = "\033]1337;ReportCellSize\a";
+  int cc, len = 0;
+  char s[81];
+
+  if (isatty(STDIN_FILENO))
+    {
+      tcgetattr(STDIN_FILENO, &saved_term);
+      makeraw();
+
+      write(STDOUT_FILENO, req, strlen(req));
+      fflush(stdout);
+
+      while ((cc = read(STDIN_FILENO, s + len, 1)) == 1 && len < 80)
+        {
+          if (s[len++] == '\\') break;
+        }
+      s[len] = '\0';
+
+      tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_term);
+
+      return strstr(s, "1337;ReportCellSize=") != NULL ? 1 : 0;
+    }
+
+  return 0;
+}
+
+#endif
+
 static int get_default_ws_type(void)
 {
   static int default_wstype = 0;
@@ -1602,10 +1657,19 @@ static int get_default_ws_type(void)
     {
 #ifndef _WIN32
 #ifdef __APPLE__
-      default_wstype = 400;
+      if (gks_getenv("TERM_PROGRAM") != NULL)
+        default_wstype = 400;
+      else
 #else
-      default_wstype = have_gksqt() ? 411 : 211;
+      if (gks_getenv("DISPLAY") != NULL)
+        default_wstype = have_gksqt() ? 411 : 211;
+      else
 #endif
+        default_wstype = have_iterm() ? 151 : 100;
+      if (default_wstype == 100)
+        {
+          gks_perror("cannot open display - headless operation mode active");
+        }
 #else
       default_wstype = have_gksqt() ? 411 : 41;
 #endif

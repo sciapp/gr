@@ -1083,14 +1083,15 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
       "uniform vec3 camera_direction;\n",
       "uniform vec3 camera_position;\n",
       "uniform mat4 model;\n",
+      "uniform mat4 inv_model;\n",
       "uniform mat4 view;\n",
       "uniform mat4 projection;\n",
       "\n",
       "void main() {\n",
       "    vf_camera_direction = float(abs(projection[2][3]) < 0.5) * (transpose(view)*vec4(camera_direction, 0)).xyz ",
-      "    + float(abs(projection[2][3]) > 0.5) * (position - camera_position);\n",
+      "    + float(abs(projection[2][3]) > 0.5) * (position - (inv_model*vec4(camera_position, 1.0)).xyz);\n",
       "    vf_tex_coord = position*0.5+vec3(0.5);\n",
-      "    gl_Position = projection*view*vec4(position, 1.0);\n",
+      "    gl_Position = projection*view*model*vec4(position, 1.0);\n",
       "}\n",
   };
 
@@ -1431,6 +1432,31 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
       camera_direction[2] = context_struct_.center_z - context_struct_.camera_z;
     }
 
+
+  float model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+  float inv_model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+  if (projection_type != GR_PROJECTION_DEFAULT)
+    {
+      double x_scale_factor, y_scale_factor, z_scale_factor;
+      double x_min, x_max, y_min, y_max, z_min, z_max;
+      gr_inqwindow3d(&x_min, &x_max, &y_min, &y_max, &z_min, &z_max);
+      gr_inqscalefactors3d(&x_scale_factor, &y_scale_factor, &z_scale_factor);
+      model_matrix[0] = 0.5 * (x_max - x_min) * x_scale_factor;
+      inv_model_matrix[0] = 1.0 / model_matrix[0];
+      model_matrix[12] = (0.5 * (x_max - x_min) + x_min) * x_scale_factor;
+      inv_model_matrix[12] = -model_matrix[12] / model_matrix[0];
+      model_matrix[5] = 0.5 * (y_max - y_min) * y_scale_factor;
+      inv_model_matrix[5] = 1.0 / model_matrix[5];
+      model_matrix[13] = (0.5 * (y_max - y_min) + y_min) * y_scale_factor;
+      inv_model_matrix[13] = -model_matrix[13] / model_matrix[5];
+      model_matrix[10] = 0.5 * (z_max - z_min) * z_scale_factor;
+      inv_model_matrix[10] = 1.0 / model_matrix[10];
+      model_matrix[14] = (0.5 * (z_max - z_min) + z_min) * z_scale_factor;
+      inv_model_matrix[14] = -model_matrix[14] / model_matrix[10];
+    }
+
+  glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, model_matrix);
+  glUniformMatrix4fv(glGetUniformLocation(program, "inv_model"), 1, GL_FALSE, inv_model_matrix);
   glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, grviewmatrix);
   glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, projection_matrix);
   glUniform3f(glGetUniformLocation(program, "camera_direction"), camera_direction[0], camera_direction[1],
