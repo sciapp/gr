@@ -1077,7 +1077,6 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
       "#version 120\n",
       "\n",
       "attribute vec3 position;\n",
-      "attribute vec3 normal;\n",
       "varying vec3 vf_tex_coord;\n",
       "varying vec3 vf_camera_direction;\n",
       "uniform vec3 camera_direction;\n",
@@ -1464,7 +1463,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   glUniform3f(glGetUniformLocation(program, "camera_position"), camera_pos[0], camera_pos[1], camera_pos[2]);
   glUniform1i(glGetUniformLocation(program, "n"), nmax);
 
-  glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(vertices[0]));
+  glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(vertices[0]) / 3);
   for (i = 0; i < height; i++)
     {
       glPixelStorei(GL_PACK_ROW_LENGTH, width);
