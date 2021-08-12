@@ -1655,6 +1655,9 @@ static int get_default_ws_type(void)
 
   if (default_wstype == 0)
     {
+#ifdef __EMSCRIPTEN__
+      default_wstype = 100;
+#else
 #ifndef _WIN32
 #ifdef __APPLE__
       if (gks_getenv("TERM_PROGRAM") != NULL)
@@ -1672,6 +1675,7 @@ static int get_default_ws_type(void)
         }
 #else
       default_wstype = have_gksqt() ? 411 : 41;
+#endif
 #endif
     }
   return default_wstype;
