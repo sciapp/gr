@@ -199,15 +199,15 @@ mergeInto(LibraryManager.library, {
         var context = Module.context;
         context.restore();
         context.save();
-        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+        context.clearRect(0, 0, parseInt(Module.canvas.width / Module.dpr, 10), parseInt(Module.canvas.height / Module.dpr, 10));
     },
 
     js_get_ws_width: function() {
-      return Module.canvas.width / Module.dpr;
+      return parseInt(Module.canvas.width / Module.dpr, 10);
     },
 
     js_get_ws_height: function() {
-        return Module.canvas.height / Module.dpr;
+        return parseInt(Module.canvas.height / Module.dpr, 10);
     },
 
   js_draw_path: function(n, px, py, nc, codes, bcoli, facoli, linewidth, to_DC_) {
