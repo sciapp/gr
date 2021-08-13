@@ -2,8 +2,6 @@ var Module = {
     preRun: [],
     postRun: [],
     set_canvas: (function(canvas_id) {
-        this.canvas;
-
         if (typeof canvas_id == "undefined") {
             console.log("gr.js: no canvas name given. Will use default canvas with id 'canvas'");
 
@@ -37,18 +35,30 @@ var Module = {
         }
     },
     set_dpr: function() {
-      this.dpr = window.devicePixelRatio || 1;
-      if (this.canvas.style.height == '' || this.canvas.style.width == '' || parseInt(this.canvas.style.width, 10) * this.dpr != this.canvas.width || parseInt(this.canvas.style.height, 10) * this.dpr != this.canvas.height) {
-        this.canvas.style.width = this.canvas.width + "px";
-        this.canvas.style.height = this.canvas.height + "px";
+      var _dpr = window.devicePixelRatio || 1
+      if (!(this.canvas.id in this.dpr_per_canvas)) {
+        this.dpr_per_canvas[this.canvas.id] = 1;
       }
-      this.canvas.width = parseInt(this.canvas.style.width, 10) * this.dpr;
-      this.canvas.height = parseInt(this.canvas.style.height, 10) * this.dpr;
-      this.context.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      if (this.dpr_per_canvas[this.canvas.id] != _dpr) {
+        var initial_width = this.canvas.width / this.dpr_per_canvas[this.canvas.id];
+        var initial_height = this.canvas.height / this.dpr_per_canvas[this.canvas.id];
+
+        this.canvas.style.width = initial_width + 'px';
+        this.canvas.style.height = initial_height + 'px';
+        this.canvas.width = parseInt(initial_width * _dpr, 10);
+        this.canvas.height = parseInt(initial_height * _dpr, 10);
+
+        this.context.setTransform(_dpr, 0, 0, _dpr, 0, 0);
+        this.dpr_per_canvas[this.canvas.id] = _dpr;
+      }
+      if (this.dpr != this.dpr_per_canvas[this.canvas.id]) {
+        this.dpr = this.dpr_per_canvas[this.canvas.id];
+      }
     },
     canvas: null,
     context: null,
     dpr: 1,
+    dpr_per_canvas: [],
     setStatus: function(text) {},
     totalDependencies: 0,
     get_dash_list: function(linetype) {
