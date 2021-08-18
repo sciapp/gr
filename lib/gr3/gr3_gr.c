@@ -809,6 +809,7 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       double xmin, xmax, ymin, ymax;
       int scale;
       int surfaceoption;
+      int previous_option = context_struct_.option;
       context_struct_.option = option;
       surfaceoption = GR3_SURFACE_GRTRANSFORM;
       if (option == OPTION_Z_SHADED_MESH)
@@ -868,6 +869,7 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
           gr3_drawimage((float)xmin, (float)xmax, (float)ymin, (float)ymax, width, height, GR3_DRAWABLE_GKS);
           context_struct_.vertical_field_of_view = (float)fovy;
         }
+      context_struct_.option = previous_option;
       context_struct_.aspect_override = 0;
       if (gr3_geterror(0, NULL, NULL)) return;
     }

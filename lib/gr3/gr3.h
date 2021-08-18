@@ -248,6 +248,10 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
 
 GR3API void gr3_setorthographicprojection(float left, float right, float bottom, float top, float znear, float zfar);
 
+GR3API void gr3_setsurfaceoption(int option);
+GR3API int gr3_getsurfaceoption(void);
+
+
 #ifdef _WIN32
 #ifdef __cplusplus
 }

@@ -64,7 +64,7 @@ const char *gr3_error_file_ = "";
 #define GR3_ContextStruct_INITIALIZER                                                                                 \
   {                                                                                                                   \
     GR3_InitStruct_INITIALIZER, 0, 0, 0, NULL, 0, NULL, not_initialized_, NULL, NULL, 0, 0, {{0}}, 0, 0, 0, NAN, NAN, \
-        NAN, NAN, {0, 0, 0, 0}, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, -1, 0,   \
+        NAN, NAN, {0, 0, 0, 0}, 0, 0, 0, 0, 0, {0, 0, 0, 1}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, 0, 0, 0, 4, 0,    \
         {0}, {0}, {0}, {0}, 0, 0, 0                                                                                   \
   }
 #else
@@ -2682,4 +2682,14 @@ GR3API void gr3_setorthographicprojection(float left, float right, float bottom,
   context_struct_.zFar = zfar;
 
   gr3_setprojectiontype(GR3_PROJECTION_ORTHOGRAPHIC);
+}
+
+GR3API void gr3_setsurfaceoption(int option)
+{
+  context_struct_.option = option;
+}
+
+GR3API int gr3_getsurfaceoption(void)
+{
+  return context_struct_.option;
 }
