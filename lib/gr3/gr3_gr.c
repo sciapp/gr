@@ -59,7 +59,8 @@ typedef enum
   OPTION_Z_SHADED_MESH,
   OPTION_COLORED_MESH,
   OPTION_CELL_ARRAY,
-  OPTION_SHADED_MESH
+  OPTION_SHADED_MESH,
+  OPTION_3D_MESH
 } gr_surface_option_t;
 
 typedef struct
@@ -299,7 +300,6 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   int *indices;
   int result;
   int scale;
-  int cmap;
   int first_color, last_color;
   int projection_type;
   trans_t tx, ty, tz;
@@ -802,7 +802,7 @@ GR3API void gr3_drawsurface(int mesh)
  */
 GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int option)
 {
-  if (option == OPTION_Z_SHADED_MESH || option == OPTION_COLORED_MESH ||
+  if (option == OPTION_Z_SHADED_MESH || option == OPTION_COLORED_MESH || option == OPTION_3D_MESH ||
       (context_struct_.use_software_renderer && option <= OPTION_FILLED_MESH))
     {
       int mesh;
@@ -820,7 +820,14 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
         {
           surfaceoption |= GR3_SURFACE_GRCOLOR;
         }
-      gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, surfaceoption);
+      if (option == OPTION_3D_MESH)
+        {
+          gr3_createsurface3dmesh(&mesh, nx, ny, px, py, pz);
+        }
+      else
+        {
+          gr3_createsurfacemesh(&mesh, nx, ny, px, py, pz, surfaceoption);
+        }
       if (gr3_geterror(0, NULL, NULL)) return;
       gr3_drawsurface(mesh);
       if (gr3_geterror(0, NULL, NULL)) return;
@@ -901,6 +908,139 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       free(dpy);
       free(dpx);
     }
+}
+
+/*!
+ * Create a mesh of a 3d surface.
+ * Uses the current colormap. To apply changes of the colormap
+ * a new mesh has to be created.
+ * \param [out] mesh    the mesh handle
+ * \param [in]  ncols   number of columns in the coordinate arrays
+ * \param [in]  nrows   number of rows in the coordinate arrays
+ * \param [in]  px      an array containing the x-coordinates
+ * \param [in]  py      an array containing the y-coordinates
+ * \param [in]  pz      an array containing the z-coordinates
+ */
+GR3API int gr3_createsurface3dmesh(int *mesh, int ncols, int nrows, float *px, float *py, float *pz)
+{
+  double xmin, xmax, ymin, ymax, zmin, zmax;
+  int rotation, tilt;
+  int scale;
+  int first_color;
+  int last_color;
+  int projection_type;
+  trans_t tx, ty, tz;
+
+  int i, j, k;
+  int result;
+  int num_vertices = (ncols - 1) * (nrows - 1) * 6;
+  float *vertices = malloc(num_vertices * 3 * sizeof(float));
+  float *normals = malloc(num_vertices * 3 * sizeof(float));
+  float *colors = malloc(num_vertices * 3 * sizeof(float));
+  if (!vertices || !normals || !colors)
+    {
+      if (vertices)
+        {
+          free(vertices);
+        }
+      if (normals)
+        {
+          free(normals);
+        }
+      if (colors)
+        {
+          free(colors);
+        }
+      RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
+    }
+
+  /* load required values from GR */
+  gr_inqcolormapinds(&first_color, &last_color);
+  gr_inqprojectiontype(&projection_type);
+
+  if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+    {
+      gr_inqwindow3d(&xmin, &xmax, &ymin, &ymax, &zmin, &zmax);
+    }
+  else
+    {
+      gr_inqwindow(&xmin, &xmax, &ymin, &ymax);
+      gr_inqspace(&zmin, &zmax, &rotation, &tilt);
+    }
+  gr_inqscale(&scale);
+
+  gr3_ndctrans_(xmin, xmax, &tx, scale & OPTION_X_LOG, scale & OPTION_FLIP_X);
+  /* flip because y-axis is projected to the negative z-axis */
+  gr3_ndctrans_(ymin, ymax, &ty, scale & OPTION_Y_LOG, !(scale & OPTION_FLIP_Y));
+  gr3_ndctrans_(zmin, zmax, &tz, scale & OPTION_Z_LOG, scale & OPTION_FLIP_Z);
+
+  for (i = 0; i < ncols - 1; i++)
+    {
+      for (j = 0; j < nrows - 1; j++)
+        {
+          int offset = (i * (nrows - 1) + j) * 6 * 3;
+          double average_z_value = 0.25 * (pz[i * nrows + j] + pz[i * nrows + j + 1] + pz[(i + 1) * nrows + j] +
+                                           pz[(i + 1) * nrows + j + 1]);
+          int color;
+          int rgb;
+          float red, green, blue;
+          vertices[offset + 0 * 3 + 0] = px[i * nrows + j];
+          vertices[offset + 0 * 3 + 1] = py[i * nrows + j];
+          vertices[offset + 0 * 3 + 2] = pz[i * nrows + j];
+          vertices[offset + 1 * 3 + 0] = px[i * nrows + j + 1];
+          vertices[offset + 1 * 3 + 1] = py[i * nrows + j + 1];
+          vertices[offset + 1 * 3 + 2] = pz[i * nrows + j + 1];
+          vertices[offset + 2 * 3 + 0] = px[(i + 1) * nrows + j];
+          vertices[offset + 2 * 3 + 1] = py[(i + 1) * nrows + j];
+          vertices[offset + 2 * 3 + 2] = pz[(i + 1) * nrows + j];
+          vertices[offset + 3 * 3 + 0] = px[(i + 1) * nrows + j];
+          vertices[offset + 3 * 3 + 1] = py[(i + 1) * nrows + j];
+          vertices[offset + 3 * 3 + 2] = pz[(i + 1) * nrows + j];
+          vertices[offset + 4 * 3 + 0] = px[i * nrows + j + 1];
+          vertices[offset + 4 * 3 + 1] = py[i * nrows + j + 1];
+          vertices[offset + 4 * 3 + 2] = pz[i * nrows + j + 1];
+          vertices[offset + 5 * 3 + 0] = px[(i + 1) * nrows + j + 1];
+          vertices[offset + 5 * 3 + 1] = py[(i + 1) * nrows + j + 1];
+          vertices[offset + 5 * 3 + 2] = pz[(i + 1) * nrows + j + 1];
+
+          color = gr3_transform_(average_z_value, tz) * (last_color - first_color) + first_color;
+          if (color < first_color)
+            {
+              color = first_color;
+            }
+          if (color > last_color)
+            {
+              color = last_color;
+            }
+          gr_inqcolor(color, &rgb);
+          red = (float)(rgb & 0xff) / 255;
+          green = (float)((rgb >> 8) & 0xff) / 255;
+          blue = (float)((rgb >> 16) & 0xff) / 255;
+          for (k = 0; k < 6; k++)
+            {
+              if (projection_type != GR_PROJECTION_ORTHOGRAPHIC && projection_type != GR_PROJECTION_PERSPECTIVE)
+                {
+                  double x = vertices[offset + k * 3 + 0];
+                  double y = vertices[offset + k * 3 + 1];
+                  double z = vertices[offset + k * 3 + 2];
+                  vertices[offset + k * 3 + 0] = gr3_transform_(x, tx);
+                  vertices[offset + k * 3 + 1] = gr3_transform_(z, tz);
+                  vertices[offset + k * 3 + 2] = gr3_transform_(y, ty);
+                }
+              normals[offset + k * 3 + 0] = 0;
+              normals[offset + k * 3 + 1] = 1;
+              normals[offset + k * 3 + 2] = 0;
+              colors[offset + k * 3 + 0] = red;
+              colors[offset + k * 3 + 1] = green;
+              colors[offset + k * 3 + 2] = blue;
+            }
+        }
+    }
+  result = gr3_createmesh(mesh, num_vertices, vertices, normals, colors);
+  free(vertices);
+  free(normals);
+  free(colors);
+  return result;
 }
 
 
