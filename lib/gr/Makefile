@@ -11,9 +11,9 @@ UNAME := $(shell uname)
 
       GROBJS = gr.o text.o contour.o spline.o gridit.o strlib.o io.o image.o \
                delaunay.o interp2.o md5.o import.o shade.o grforbnd.o \
-               contourf.o boundary.o mathtex2.o mathtex2.tab.o threadpool.o
+               contourf.o boundary.o mathtex2.o mathtex2_kerning.o mathtex2.tab.o threadpool.o
       GSDEFS =
-     DEFINES = $(GSDEFS)
+     DEFINES = $(GSDEFS) -DGRDIR=\"$(GRDIR)\"
     INCLUDES = -I../gks -I$(THIRDPARTYDIR)/include
           CC = cc
       CFLAGS = $(DEFINES) -O3 -Wall -fPIC $(EXTRA_CFLAGS)

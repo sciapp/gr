@@ -279,6 +279,7 @@ set(GR_SOURCES
     lib/gr/strlib.c
     lib/gr/text.c
     lib/gr/mathtex2.c
+    lib/gr/mathtex2_kerning.c
     lib/gr/mathtex2.tab.c
     lib/gr/threadpool.c
     ${CMAKE_CURRENT_BINARY_DIR}/gr_version.h
