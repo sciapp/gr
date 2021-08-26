@@ -1,5 +1,5 @@
 /*
-   cc griddata.c -I/usr/local/gr/include -L/usr/local/gr/lib -lGR
+   cc -I/usr/local/gr/include -L/usr/local/gr/lib -lGR -lm griddata.c -o griddata
  */
 
 #include <stdlib.h>
