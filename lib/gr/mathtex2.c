@@ -1619,6 +1619,7 @@ static void pack_hlist(size_t hlist_index, double w, int m)
     }
 }
 
+double gr_get_kerning_offset(unsigned int left, unsigned int right);
 
 static void kern_hlist(size_t hlist_index)
 {
@@ -1647,6 +1648,8 @@ static void kern_hlist(size_t hlist_index)
                   kerning = gks_ft_get_kerning(child->u.character.state.font, child->u.character.state.fontsize,
                                                child->u.character.state.dpi, child->u.character.codepoint,
                                                next->u.character.codepoint);
+                  kerning += gr_get_kerning_offset(child->u.character.codepoint, next->u.character.codepoint) *
+                             child->u.character.state.fontsize;
                 }
               kerning += child->u.character.advance - child->u.character.width;
               if (kerning != 0)

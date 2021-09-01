@@ -82,6 +82,17 @@ JSTerm = function(ispluto=false) {
 
     var jsterm_ispluto = ispluto;
 
+    window.addEventListener('resize', function() {
+      // redraw plots if window zoom changed
+      if (window.devicePixelRatio != Module.dpr) {
+        for (pid in widgets) {
+          if (typeof(widgets[pid].canvas) !== 'undefined' && document.body.contains(widgets[pid].canvas)) {
+            widgets[pid].draw();
+          }
+        }
+      }
+    });
+
     /**
      * Sends a mouse-event via websocket
      * @param  {Object} data Data describing the event
@@ -1134,7 +1145,7 @@ JSTerm = function(ispluto=false) {
       ready_callbacks.forEach(function (callback) {
           callback();
       });
-      ready_callbacks = null;
+      ready_callbacks = [];
     };
 
     if (document.readyState != 'loading') {

@@ -123,7 +123,7 @@ movie_t vc_movie_create(const char *path, int framerate, int bitrate, int width,
     }
   movie->out_fmt = movie->fmt_ctx->oformat;
   codec = avcodec_find_encoder(movie->out_fmt->video_codec);
-  if (!codec && movie->out_fmt->video_codec == 12)
+  if (!codec && movie->out_fmt->video_codec == AV_CODEC_ID_MPEG4)
     {
       codec = avcodec_find_encoder_by_name("libopenh264");
     }
@@ -133,6 +133,11 @@ movie_t vc_movie_create(const char *path, int framerate, int bitrate, int width,
       vc_movie_finish(movie);
       gks_free(movie);
       return NULL;
+    }
+  if (movie->out_fmt->video_codec == AV_CODEC_ID_H264)
+    {
+      width += (4 - width % 4) % 4;
+      height += (4 - height % 4) % 4;
     }
 
   movie->video_st = avformat_new_stream(movie->fmt_ctx, codec);
@@ -256,6 +261,7 @@ void vc_movie_finish(movie_t movie)
       av_frame_free(&movie->frame);
       movie->frame = NULL;
       encode_frame(movie);
+      av_write_trailer(movie->fmt_ctx);
     }
 
   if (movie->sws_ctx)
@@ -270,7 +276,6 @@ void vc_movie_finish(movie_t movie)
 
   if (movie->fmt_ctx && movie->cdc_ctx)
     {
-      av_write_trailer(movie->fmt_ctx);
       avcodec_close(movie->cdc_ctx);
 
       if (!(movie->out_fmt->flags & AVFMT_NOFILE))

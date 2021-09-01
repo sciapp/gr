@@ -193,6 +193,8 @@ GR3API int gr3_createisosurfacemesh(int *mesh, GR3_MC_DTYPE *data, GR3_MC_DTYPE 
 
 GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py, float *pz, int option);
 
+GR3API int gr3_createsurface3dmesh(int *mesh, int ncols, int nrows, float *px, float *py, float *pz);
+
 GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const float *directions, const float *ups,
                                 const float *colors, const float *scales);
 
@@ -247,6 +249,10 @@ GR3API void gr3_drawtrianglesurface(int n, const float *triangles);
 GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, double *dmin_ptr, double *dmax_ptr);
 
 GR3API void gr3_setorthographicprojection(float left, float right, float bottom, float top, float znear, float zfar);
+
+GR3API void gr3_setsurfaceoption(int option);
+GR3API int gr3_getsurfaceoption(void);
+
 
 #ifdef _WIN32
 #ifdef __cplusplus
