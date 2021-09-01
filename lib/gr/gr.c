@@ -1299,11 +1299,12 @@ static void resetgks(int sig)
         {
           exiting = 1;
           gr_emergencyclosegks();
+
+          signal(SIGUSR1, previous_handler);
+          if (previous_handler != SIG_DFL) raise(SIGUSR1);
+
           exiting = 0;
         }
-
-      signal(SIGUSR1, previous_handler);
-      if (previous_handler != SIG_DFL) raise(SIGUSR1);
     }
 }
 
@@ -1365,11 +1366,14 @@ static void initgks(void)
       used[color] = 0;
     }
 
+  if (gks_getenv("GKS_NO_EXIT_HANDLER") == NULL)
+    {
 #ifdef SIGUSR1
-  previous_handler = signal(SIGUSR1, resetgks);
+      previous_handler = signal(SIGUSR1, resetgks);
 #else
-  atexit(resetgks);
+      atexit(resetgks);
 #endif
+    }
 }
 
 void gr_initgr(void)
