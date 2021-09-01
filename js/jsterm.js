@@ -1145,7 +1145,7 @@ JSTerm = function(ispluto=false) {
       ready_callbacks.forEach(function (callback) {
           callback();
       });
-      ready_callbacks = null;
+      ready_callbacks = [];
     };
 
     if (document.readyState != 'loading') {
