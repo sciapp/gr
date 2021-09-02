@@ -5,12 +5,13 @@
    user redefinable constants
 
    for each source file, user.h is included first
+
    see qh-user.htm.  see COPYING for copyright information.
 
    See user.c for sample code.
 
-   before reading any code, review libqhull.h for data structure definitions and
-   the "qh" macro.
+   before reading any code, review libqhull.h for data structure definitions
+   and the "qh" macro.
 
 Sections:
    ============= qhull library constants ======================
@@ -19,7 +20,8 @@ Sections:
    ============= memory constants =============================
    ============= joggle constants =============================
    ============= conditional compilation ======================
-   ============= -merge constants- ============================
+   ============= merge constants ==============================
+   ============= Microsoft DevStudio ==========================
 
 Code flags --
   NOerrors -- the code does not call qh_errexit()
@@ -27,6 +29,8 @@ Code flags --
 
 */
 
+#include <float.h>
+#include <limits.h>
 #include <time.h>
 
 #ifndef qhDEFuser
@@ -38,6 +42,7 @@ Code flags --
 #elif defined(__MWERKS__) && defined(__INTEL__) /* Metrowerks discontinued before the release of Intel Macs */
 #   define QHULL_OS_WIN
 #endif
+
 /*============================================================*/
 /*============= qhull library constants ======================*/
 /*============================================================*/
@@ -56,28 +61,29 @@ Code flags --
 
   msgcode -- Unique message codes for qh_fprintf
 
-  If add new messages, assign these values and increment in user.h and user_r.h
-  See QhullError.h for 10000 errors.
+  If add new messages, assign these values and increment in user.h and user.h
+  See QhullError.h for 10000 error codes.
+  Cannot use '0031' since it would be octal
 
-  def counters =  [27, 1048, 2059, 3026, 4068, 5003,
-     6273, 7081, 8147, 9411, 10000, 11029]
+  def counters =  [31/32/33/38, 1067, 2113, 3079, 4097, 5006,
+     6429, 7027/7028/7035/7068/7070/7102, 8163, 9428, 10000, 11034]
 
   See: qh_ERR* [libqhull.h]
 */
 
-#define MSG_TRACE0 0
-#define MSG_TRACE1 1000
-#define MSG_TRACE2 2000
-#define MSG_TRACE3 3000
-#define MSG_TRACE4 4000
-#define MSG_TRACE5 5000
-#define MSG_ERROR  6000   /* errors written to qh.ferr */
+#define MSG_TRACE0     0   /* always include if logging ('Tn') */
+#define MSG_TRACE1  1000
+#define MSG_TRACE2  2000
+#define MSG_TRACE3  3000
+#define MSG_TRACE4  4000
+#define MSG_TRACE5  5000
+#define MSG_ERROR   6000   /* errors written to qh.ferr */
 #define MSG_WARNING 7000
-#define MSG_STDERR  8000  /* log messages Written to qh.ferr */
+#define MSG_STDERR  8000   /* log messages Written to qh.ferr */
 #define MSG_OUTPUT  9000
 #define MSG_QHULL_ERROR 10000 /* errors thrown by QhullError.cpp (QHULLlastError is in QhullError.h) */
-#define MSG_FIXUP  11000  /* FIXUP QH11... */
-#define MSG_MAXLEN  3000 /* qh_printhelp_degenerate() in user.c */
+#define MSG_FIX    11000   /* Document as 'QH11... FIX: ...' */
+#define MSG_MAXLEN  3000   /* qh_printhelp_degenerate() in user.c */
 
 
 /*-<a                             href="qh-user.htm#TOC"
@@ -165,6 +171,32 @@ Code flags --
 #endif
 
 /*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="countT">-</a>
+
+  countT
+    The type for counts and identifiers (e.g., the number of points, vertex identifiers)
+    Currently used by C++ code-only.  Decided against using it for setT because most sets are small.
+
+    Defined as 'int' for C-code compatibility and QH11026
+
+    QH11026 FIX: countT may be defined as a 'unsigned int', but several code issues need to be solved first.  See countT in Changes.txt
+*/
+
+#ifndef DEFcountT
+#define DEFcountT 1
+typedef int countT;
+#endif
+#define COUNTmax INT_MAX
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="qh_POINTSmax">-</a>
+
+  qh_POINTSmax
+    Maximum number of points for qh.num_points and point allocation in qh_readpoints
+*/
+#define qh_POINTSmax (INT_MAX-16)
+
+/*-<a                             href="qh-user.htm#TOC"
   >--------------------------------</a><a name="CPUclock">-</a>
 
   qh_CPUclock
@@ -196,24 +228,24 @@ Code flags --
 #if (qh_CLOCKtype == 1)
 
 #if defined(CLOCKS_PER_SECOND)
-#define qh_CPUclock    ((unsigned long)clock())  /* return CPU clock */
+#define qh_CPUclock    ((unsigned long)clock())  /* return CPU clock, may be converted to approximate double */
 #define qh_SECticks CLOCKS_PER_SECOND
 
 #elif defined(CLOCKS_PER_SEC)
-#define qh_CPUclock    ((unsigned long)clock())  /* return CPU clock */
+#define qh_CPUclock    ((unsigned long)clock())  /* return CPU clock, may be converted to approximate double */
 #define qh_SECticks CLOCKS_PER_SEC
 
 #elif defined(CLK_TCK)
-#define qh_CPUclock    ((unsigned long)clock())  /* return CPU clock */
+#define qh_CPUclock    ((unsigned long)clock())  /* return CPU clock, may be converted to approximate double */
 #define qh_SECticks CLK_TCK
 
 #else
-#define qh_CPUclock    ((unsigned long)clock())  /* return CPU clock */
+#define qh_CPUclock    ((unsigned long)clock())  /* return CPU clock, may be converted to approximate double */
 #define qh_SECticks 1E6
 #endif
 
 #elif (qh_CLOCKtype == 2)
-#define qh_CPUclock    qh_clock()  /* return CPU clock */
+#define qh_CPUclock    qh_clock()  /* return CPU clock, may be converted to approximate double */
 #define qh_SECticks 100
 
 #else /* qh_CLOCKtype == ? */
@@ -266,12 +298,12 @@ Code flags --
 #define qh_RANDOMmax ((realT)32767)   /* 15 bits (System 5) */
 #endif
 #define qh_RANDOMint  rand()
-#define qh_RANDOMseed_(seed) srand((unsigned)seed);
+#define qh_RANDOMseed_(seed) srand((unsigned int)seed);
 
 #elif (qh_RANDOMtype == 3)
 #define qh_RANDOMmax ((realT)0x7fffffffUL)  /* 31 bits, Sun */
 #define qh_RANDOMint  rand()
-#define qh_RANDOMseed_(seed) srand((unsigned)seed);
+#define qh_RANDOMseed_(seed) srand((unsigned int)seed);
 
 #elif (qh_RANDOMtype == 4)
 #define qh_RANDOMmax ((realT)0x7fffffffUL)  /* 31 bits, lrand38()/MAX */
@@ -280,7 +312,7 @@ Code flags --
 
 #elif (qh_RANDOMtype == 5)
 #define qh_RANDOMmax ((realT)2147483646UL)  /* 31 bits, qh_rand/MAX */
-#define qh_RANDOMint qh_rand()
+#define qh_RANDOMint qh_rand( )
 #define qh_RANDOMseed_(seed) qh_srand(seed);
 /* unlike rand(), never returns 0 */
 
@@ -296,46 +328,56 @@ Code flags --
 */
 #define qh_ORIENTclock 0
 
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="RANDOMdist">-</a>
+
+  qh_RANDOMdist
+    define for random perturbation of qh_distplane and qh_setfacetplane (qh.RANDOMdist, 'QRn')
+
+  For testing qh.DISTround.  Qhull should not depend on computations always producing the same roundoff error 
+
+  #define qh_RANDOMdist 1e-13
+*/
 
 /*============================================================*/
 /*============= joggle constants =============================*/
 /*============================================================*/
 
 /*-<a                             href="qh-user.htm#TOC"
->--------------------------------</a><a name="JOGGLEdefault">-</a>
+  >--------------------------------</a><a name="JOGGLEdefault">-</a>
 
-qh_JOGGLEdefault
-default qh.JOGGLEmax is qh.DISTround * qh_JOGGLEdefault
+  qh_JOGGLEdefault
+    default qh.JOGGLEmax is qh.DISTround * qh_JOGGLEdefault
 
-notes:
-rbox s r 100 | qhull QJ1e-15 QR0 generates 90% faults at distround 7e-16
-rbox s r 100 | qhull QJ1e-14 QR0 generates 70% faults
-rbox s r 100 | qhull QJ1e-13 QR0 generates 35% faults
-rbox s r 100 | qhull QJ1e-12 QR0 generates 8% faults
-rbox s r 100 | qhull QJ1e-11 QR0 generates 1% faults
-rbox s r 100 | qhull QJ1e-10 QR0 generates 0% faults
-rbox 1000 W0 | qhull QJ1e-12 QR0 generates 86% faults
-rbox 1000 W0 | qhull QJ1e-11 QR0 generates 20% faults
-rbox 1000 W0 | qhull QJ1e-10 QR0 generates 2% faults
-the later have about 20 points per facet, each of which may interfere
+  notes:
+    rbox s r 100 | qhull QJ1e-15 QR0 generates 90% faults at distround 7e-16
+    rbox s r 100 | qhull QJ1e-14 QR0 generates 70% faults
+    rbox s r 100 | qhull QJ1e-13 QR0 generates 35% faults
+    rbox s r 100 | qhull QJ1e-12 QR0 generates 8% faults
+    rbox s r 100 | qhull QJ1e-11 QR0 generates 1% faults
+    rbox s r 100 | qhull QJ1e-10 QR0 generates 0% faults
+    rbox 1000 W0 | qhull QJ1e-12 QR0 generates 86% faults
+    rbox 1000 W0 | qhull QJ1e-11 QR0 generates 20% faults
+    rbox 1000 W0 | qhull QJ1e-10 QR0 generates 2% faults
+    the later have about 20 points per facet, each of which may interfere
 
-pick a value large enough to avoid retries on most inputs
+    pick a value large enough to avoid retries on most inputs
 */
 #define qh_JOGGLEdefault 30000.0
 
 /*-<a                             href="qh-user.htm#TOC"
->--------------------------------</a><a name="JOGGLEincrease">-</a>
+  >--------------------------------</a><a name="JOGGLEincrease">-</a>
 
-qh_JOGGLEincrease
-factor to increase qh.JOGGLEmax on qh_JOGGLEretry or qh_JOGGLEagain
+  qh_JOGGLEincrease
+    factor to increase qh.JOGGLEmax on qh_JOGGLEretry or qh_JOGGLEagain
 */
 #define qh_JOGGLEincrease 10.0
 
 /*-<a                             href="qh-user.htm#TOC"
->--------------------------------</a><a name="JOGGLEretry">-</a>
+  >--------------------------------</a><a name="JOGGLEretry">-</a>
 
-qh_JOGGLEretry
-if ZZretry = qh_JOGGLEretry, increase qh.JOGGLEmax
+  qh_JOGGLEretry
+    if ZZretry = qh_JOGGLEretry, increase qh.JOGGLEmax
 
 notes:
 try twice at the original value in case of bad luck the first time
@@ -343,35 +385,35 @@ try twice at the original value in case of bad luck the first time
 #define qh_JOGGLEretry 2
 
 /*-<a                             href="qh-user.htm#TOC"
->--------------------------------</a><a name="JOGGLEagain">-</a>
+  >--------------------------------</a><a name="JOGGLEagain">-</a>
 
-qh_JOGGLEagain
-every following qh_JOGGLEagain, increase qh.JOGGLEmax
+  qh_JOGGLEagain
+    every following qh_JOGGLEagain, increase qh.JOGGLEmax
 
-notes:
-1 is OK since it's already failed qh_JOGGLEretry times
+  notes:
+    1 is OK since it's already failed qh_JOGGLEretry times
 */
 #define qh_JOGGLEagain 1
 
 /*-<a                             href="qh-user.htm#TOC"
->--------------------------------</a><a name="JOGGLEmaxincrease">-</a>
+  >--------------------------------</a><a name="JOGGLEmaxincrease">-</a>
 
-qh_JOGGLEmaxincrease
-maximum qh.JOGGLEmax due to qh_JOGGLEincrease
-relative to qh.MAXwidth
+  qh_JOGGLEmaxincrease
+    maximum qh.JOGGLEmax due to qh_JOGGLEincrease
+    relative to qh.MAXwidth
 
-notes:
-qh.joggleinput will retry at this value until qh_JOGGLEmaxretry
+  notes:
+    qh.joggleinput will retry at this value until qh_JOGGLEmaxretry
 */
 #define qh_JOGGLEmaxincrease 1e-2
 
 /*-<a                             href="qh-user.htm#TOC"
->--------------------------------</a><a name="JOGGLEmaxretry">-</a>
+  >--------------------------------</a><a name="JOGGLEmaxretry">-</a>
 
-qh_JOGGLEmaxretry
-stop after qh_JOGGLEmaxretry attempts
+  qh_JOGGLEmaxretry
+    stop after qh_JOGGLEmaxretry attempts
 */
-#define qh_JOGGLEmaxretry 100
+#define qh_JOGGLEmaxretry 50
 
 /*============================================================*/
 /*============= performance related constants ================*/
@@ -439,7 +481,7 @@ stop after qh_JOGGLEmaxretry attempts
     do not occur in data structures and pointers are the same size.  Be careful
     of machines (e.g., DEC Alpha) with large pointers.
 
-    If using gcc, best alignment is  [fmax_() is defined in geom_r.h]
+    If using gcc, best alignment is [fmax_() is defined in geom.h]
               #define qh_MEMalign fmax_(__alignof__(realT),__alignof__(void *))
 */
 #define qh_MEMalign ((int)(fmax_(sizeof(realT), sizeof(void *))))
@@ -504,6 +546,7 @@ stop after qh_JOGGLEmaxretry attempts
 
   __MWERKS__ && __POWERPC__
     defined by Metrowerks when compiling for PowerPC-based Macintosh
+
   __STDC__
     defined for strict ANSI C
 */
@@ -551,19 +594,21 @@ stop after qh_JOGGLEmaxretry attempts
 
   qh_NOmerge
     disables facet merging if defined
+    For MSVC compiles, use qhull-exports-nomerge.def instead of qhull-exports.def
 
   notes:
-    This saves about 10% space.
+    This saves about 25% space, 30% space in combination with qh_NOtrace, 
+    and 36% with qh_NOtrace and qh_KEEPstatistics 0
 
-    Unless 'Q0'
+    Unless option 'Q0' is used
       qh_NOmerge sets 'QJ' to avoid precision errors
 
-    #define qh_NOmerge
-
   see:
-    <a href="mem.h#NOmem">qh_NOmem</a> in mem.c
+    <a href="mem.h#NOmem">qh_NOmem</a> in mem.h
 
     see user.c/user_eg.c for removing io.o
+
+  #define qh_NOmerge
 */
 
 /*-<a                             href="qh-user.htm#TOC"
@@ -571,11 +616,14 @@ stop after qh_JOGGLEmaxretry attempts
 
   qh_NOtrace
     no tracing if defined
+    disables 'Tn', 'TMn', 'TPn' and 'TWn'
+    override with 'Qw' for qh_addpoint tracing and various other items
 
   notes:
-    This saves about 5% space.
+    This saves about 15% space.
+    Removes all traceN((...)) code and substantial sections of qh.IStracing code
 
-    #define qh_NOtrace
+  #define qh_NOtrace
 */
 
 /*-<a                             href="qh-user.htm#TOC"
@@ -593,8 +641,7 @@ stop after qh_JOGGLEmaxretry attempts
                         only one instance of qhull() can be active at a time
                         default value
 
-  qh_QHpointer_dllimport and qh_dllimport define qh_qh as __declspec(dllimport) [libqhull.h]
-  It is required for msvc-2005.  It is not needed for gcc.
+  For msvc, define qh_QHpointer_dllimport or qh_dllimport for qh_qh as __declspec(dllimport) [libqhull.h]
 
   notes:
     [jan'16] qh_QHpointer is deprecated for Qhull.  Use libqhull_r instead.
@@ -603,15 +650,17 @@ stop after qh_JOGGLEmaxretry attempts
     qhmem is defined in mem.h
     qhstat is defined in stat.h
 
+  #define qh_QHpointer 1
 */
+
 #ifdef qh_QHpointer
-#if qh_dllimport
-#error QH6207 Qhull error: Use qh_QHpointer_dllimport instead of qh_dllimport with qh_QHpointer
+#ifdef qh_dllimport
+#error QH6207 Qhull error: Define qh_QHpointer_dllimport instead of qh_dllimport with qh_QHpointer
 #endif
 #else
 #define qh_QHpointer 0
-#if qh_QHpointer_dllimport
-#error QH6234 Qhull error: Use qh_dllimport instead of qh_QHpointer_dllimport when qh_QHpointer is not defined
+#ifdef qh_QHpointer_dllimport
+#error QH6234 Qhull error: Define qh_dllimport instead of qh_QHpointer_dllimport when qh_QHpointer is not defined
 #endif
 #endif
 #if 0  /* sample code */
@@ -643,28 +692,12 @@ stop after qh_JOGGLEmaxretry attempts
 #define qh_QUICKhelp    0
 
 /*============================================================*/
-/*============= -merge constants- ============================*/
+/*============= merge constants ==============================*/
 /*============================================================*/
 /*
    These constants effect facet merging.  You probably will not need
    to modify them.  They effect the performance of facet merging.
 */
-
-/*-<a                             href="qh-user.htm#TOC"
-  >--------------------------------</a><a name="DIMmergeVertex">-</a>
-
-  qh_DIMmergeVertex
-    max dimension for vertex merging (it is not effective in high-d)
-*/
-#define qh_DIMmergeVertex 6
-
-/*-<a                             href="qh-user.htm#TOC"
-  >--------------------------------</a><a name="DIMreduceBuild">-</a>
-
-  qh_DIMreduceBuild
-     max dimension for vertex reduction during build (slow in high-d)
-*/
-#define qh_DIMreduceBuild 5
 
 /*-<a                             href="qh-user.htm#TOC"
   >--------------------------------</a><a name="BESTcentrum">-</a>
@@ -691,30 +724,6 @@ stop after qh_JOGGLEmaxretry attempts
 #define qh_BESTnonconvex 15
 
 /*-<a                             href="qh-user.htm#TOC"
-  >--------------------------------</a><a name="MAXnewmerges">-</a>
-
-  qh_MAXnewmerges
-    if >n newmerges, qh_merge_nonconvex() calls qh_reducevertices_centrums.
-
-  notes:
-    It is needed because postmerge can merge many facets at once
-*/
-#define qh_MAXnewmerges 2
-
-/*-<a                             href="qh-user.htm#TOC"
-  >--------------------------------</a><a name="MAXnewcentrum">-</a>
-
-  qh_MAXnewcentrum
-    if <= dim+n vertices (n approximates the number of merges),
-      reset the centrum in qh_updatetested() and qh_mergecycle_facets()
-
-  notes:
-    needed to reduce cost and because centrums may move too much if
-    many vertices in high-d
-*/
-#define qh_MAXnewcentrum 5
-
-/*-<a                             href="qh-user.htm#TOC"
   >--------------------------------</a><a name="COPLANARratio">-</a>
 
   qh_COPLANARratio
@@ -724,6 +733,22 @@ stop after qh_JOGGLEmaxretry attempts
     for non-merging, it's DISTround
 */
 #define qh_COPLANARratio 3
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="DIMmergeVertex">-</a>
+
+  qh_DIMmergeVertex
+    max dimension for vertex merging (it is not effective in high-d)
+*/
+#define qh_DIMmergeVertex 6
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="DIMreduceBuild">-</a>
+
+  qh_DIMreduceBuild
+     max dimension for vertex reduction during build (slow in high-d)
+*/
+#define qh_DIMreduceBuild 5
 
 /*-<a                             href="qh-user.htm#TOC"
   >--------------------------------</a><a name="DISToutside">-</a>
@@ -757,6 +782,108 @@ stop after qh_JOGGLEmaxretry attempts
      fmax_((qh MERGING ? 2 : 1)*qh MINoutside, qh max_outside))
 
 /*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="MAXcheckpoint">-</a>
+
+  qh_MAXcheckpoint
+    Report up to qh_MAXcheckpoint errors per facet in qh_check_point ('Tv')
+*/
+#define qh_MAXcheckpoint 10
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="MAXcoplanarcentrum">-</a>
+
+  qh_MAXcoplanarcentrum
+    if pre-merging with qh.MERGEexact ('Qx') and f.nummerge > qh_MAXcoplanarcentrum
+      use f.maxoutside instead of qh.centrum_radius for coplanarity testing
+
+  notes:
+    see qh_test_nonsimplicial_merges
+    with qh.MERGEexact, a coplanar ridge is ignored until post-merging
+    otherwise a large facet with many merges may take all the facets
+*/
+#define qh_MAXcoplanarcentrum 10
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="MAXnewcentrum">-</a>
+
+  qh_MAXnewcentrum
+    if <= dim+n vertices (n approximates the number of merges),
+      reset the centrum in qh_updatetested() and qh_mergecycle_facets()
+
+  notes:
+    needed to reduce cost and because centrums may move too much if
+    many vertices in high-d
+*/
+#define qh_MAXnewcentrum 5
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="MAXnewmerges">-</a>
+
+  qh_MAXnewmerges
+    if >n newmerges, qh_merge_nonconvex() calls qh_reducevertices_centrums.
+
+  notes:
+    It is needed because postmerge can merge many facets at once
+*/
+#define qh_MAXnewmerges 2
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="RATIOconcavehorizon">-</a>
+
+  qh_RATIOconcavehorizon
+    ratio of horizon vertex distance to max_outside for concave, twisted new facets in qh_test_nonsimplicial_merge
+    if too small, end up with vertices far below merged facets
+*/
+#define qh_RATIOconcavehorizon 20.0
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="RATIOconvexmerge">-</a>
+
+  qh_RATIOconvexmerge
+    ratio of vertex distance to qh.min_vertex for clearly convex new facets in qh_test_nonsimplicial_merge
+
+  notes:
+    must be convex for MRGtwisted
+*/
+#define qh_RATIOconvexmerge 10.0
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="RATIOcoplanarapex">-</a>
+
+  qh_RATIOcoplanarapex
+    ratio of best distance for coplanar apex vs. vertex merge in qh_getpinchedmerges
+
+  notes:
+    A coplanar apex always works, while a vertex merge may fail
+*/
+#define qh_RATIOcoplanarapex 3.0
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="RATIOcoplanaroutside">-</a>
+
+  qh_RATIOcoplanaroutside
+    qh.MAXoutside ratio to repartition a coplanar point in qh_partitioncoplanar and qh_check_maxout
+
+  notes:
+    combines several tests, see qh_partitioncoplanar
+
+*/
+#define qh_RATIOcoplanaroutside 30.0
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="RATIOmaxsimplex">-</a>
+
+  qh_RATIOmaxsimplex
+    ratio of max determinate to estimated determinate for searching all points in qh_maxsimplex
+
+  notes:
+    As each point is added to the simplex, the max determinate is should approximate the previous determinate * qh.MAXwidth
+    If maxdet is significantly less, the simplex may not be full-dimensional.
+    If so, all points are searched, stopping at 10 times qh_RATIOmaxsimplex
+*/
+#define qh_RATIOmaxsimplex 1.0e-3
+
+/*-<a                             href="qh-user.htm#TOC"
   >--------------------------------</a><a name="RATIOnearinside">-</a>
 
   qh_RATIOnearinside
@@ -766,9 +893,36 @@ stop after qh_JOGGLEmaxretry attempts
   notes:
     This is overkill since do not know the correct value.
     It effects whether 'Qc' reports all coplanar points
-    Not used for 'd' since non-extreme points are coplanar
+    Not used for 'd' since non-extreme points are coplanar, nearly incident points
 */
 #define qh_RATIOnearinside 5
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="RATIOpinchedsubridge">-</a>
+
+  qh_RATIOpinchedsubridge
+    ratio to qh.ONEmerge to accept vertices in qh_findbest_pinchedvertex
+    skips search of neighboring vertices
+    facet width may increase by this ratio
+*/
+#define qh_RATIOpinchedsubridge 10.0
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="RATIOtrypinched">-</a>
+
+  qh_RATIOtrypinched
+    ratio to qh.ONEmerge to try qh_getpinchedmerges in qh_buildcone_mergepinched
+    otherwise a duplicate ridge will increase facet width by this amount
+*/
+#define qh_RATIOtrypinched 4.0
+
+/*-<a                             href="qh-user.htm#TOC"
+  >--------------------------------</a><a name="RATIOtwisted">-</a>
+
+  qh_RATIOtwisted
+    maximum ratio to qh.ONEmerge to merge twisted facets in qh_merge_twisted
+*/
+#define qh_RATIOtwisted 20.0
 
 /*-<a                             href="qh-user.htm#TOC"
   >--------------------------------</a><a name="SEARCHdist">-</a>
@@ -776,7 +930,7 @@ stop after qh_JOGGLEmaxretry attempts
   qh_SEARCHdist
     When is a facet coplanar with the best facet?
     qh_findbesthorizon: all coplanar facets of the best facet need to be searched.
-
+        increases minsearch if ischeckmax and more than 100 neighbors (is_5x_minsearch)
   See:
     qh_DISToutside -- when is a point clearly outside of a facet
     qh_SEARCHdist -- when is facet coplanar with the best facet?
@@ -798,35 +952,6 @@ stop after qh_JOGGLEmaxretry attempts
     qh_USEfindbestnew -- when to use qh_findbestnew for qh_partitionpoint()
 */
 #define qh_USEfindbestnew (zzval_(Ztotmerge) > 50)
-
-/*-<a                             href="qh-user.htm#TOC"
-  >--------------------------------</a><a name="WIDEcoplanar">-</a>
-
-  qh_WIDEcoplanar
-    n*MAXcoplanar or n*MINvisible for a WIDEfacet
-
-    if vertex is further than qh.WIDEfacet from the hyperplane
-    then its ridges are not counted in computing the area, and
-    the facet's centrum is frozen.
-
-  notes:
-   qh.WIDEfacet= max(qh.MAXoutside,qh_WIDEcoplanar*qh.MAXcoplanar,
-      qh_WIDEcoplanar * qh.MINvisible);
-*/
-#define qh_WIDEcoplanar 6
-
-/*-<a                             href="qh-user.htm#TOC"
-  >--------------------------------</a><a name="WIDEduplicate">-</a>
-
-  qh_WIDEduplicate
-    Merge ratio for errexit from qh_forcedmerges due to duplicate ridge
-    Override with option Q12 no-wide-duplicate
-
-    Notes:
-      Merging a duplicate ridge can lead to very wide facets.
-      A future release of qhull will avoid duplicate ridges by removing duplicate sub-ridges from the horizon
-*/
-#define qh_WIDEduplicate 100
 
 /*-<a                             href="qh-user.htm#TOC"
   >--------------------------------</a><a name="MAXnarrow">-</a>
@@ -855,6 +980,85 @@ stop after qh_JOGGLEmaxretry attempts
     Don't actually see problems until it is -1.0.  See qh-impre.htm
 */
 #define qh_WARNnarrow -0.999999999999999
+
+/*-<a                             href="qh-user.htm#TOC"
+>--------------------------------</a><a name="WIDEcoplanar">-</a>
+
+  qh_WIDEcoplanar
+    n*MAXcoplanar or n*MINvisible for a WIDEfacet
+
+    if vertex is further than qh.WIDEfacet from the hyperplane
+    then its ridges are not counted in computing the area, and
+    the facet's centrum is frozen.
+
+  notes:
+    qh.WIDEfacet= max(qh.MAXoutside,qh_WIDEcoplanar*qh.MAXcoplanar,
+    qh_WIDEcoplanar * qh.MINvisible);
+*/
+#define qh_WIDEcoplanar 6
+
+/*-<a                             href="qh-user.htm#TOC"
+>--------------------------------</a><a name="WIDEduplicate">-</a>
+
+  qh_WIDEduplicate
+    merge ratio for errexit from qh_forcedmerges due to duplicate ridge
+    Override with option Q12-allow-wide
+
+  Notes:
+    Merging a duplicate ridge can lead to very wide facets.
+*/
+#define qh_WIDEduplicate 100
+
+/*-<a                             href="qh-user.htm#TOC"
+>--------------------------------</a><a name="WIDEdupridge">-</a>
+
+  qh_WIDEdupridge
+    Merge ratio for selecting a forced dupridge merge
+
+  Notes:
+    Merging a dupridge can lead to very wide facets.
+*/
+#define qh_WIDEdupridge 50
+
+/*-<a                             href="qh-user.htm#TOC"
+>--------------------------------</a><a name="WIDEmaxoutside">-</a>
+
+  qh_WIDEmaxoutside
+    Precision ratio for maximum increase for qh.max_outside in qh_check_maxout
+    Precision errors while constructing the hull, may lead to very wide facets when checked in qh_check_maxout
+    Nearly incident points in 4-d and higher is the most likely culprit
+    Skip qh_check_maxout with 'Q5' (no-check-outer)
+    Do not error with option 'Q12' (allow-wide)
+    Do not warn with options 'Q12 Pp'
+*/
+#define qh_WIDEmaxoutside 100
+
+/*-<a                             href="qh-user.htm#TOC"
+>--------------------------------</a><a name="WIDEmaxoutside2">-</a>
+
+  qh_WIDEmaxoutside2
+    Precision ratio for maximum qh.max_outside in qh_check_maxout
+    Skip qh_check_maxout with 'Q5' no-check-outer
+    Do not error with option 'Q12' allow-wide
+*/
+#define qh_WIDEmaxoutside2 (10*qh_WIDEmaxoutside)
+
+
+/*-<a                             href="qh-user.htm#TOC"
+>--------------------------------</a><a name="WIDEpinched">-</a>
+
+  qh_WIDEpinched
+    Merge ratio for distance between pinched vertices compared to current facet width for qh_getpinchedmerges and qh_next_vertexmerge
+    Reports warning and merges duplicate ridges instead
+    Enable these attempts with option Q14 merge-pinched-vertices
+
+  notes:
+    Merging pinched vertices should prevent duplicate ridges (see qh_WIDEduplicate)
+    Merging the duplicate ridges may be better than merging the pinched vertices
+    Found up to 45x ratio for qh_pointdist -- for ((i=1; i<20; i++)); do rbox 175 C1,6e-13 t | qhull d T4 2>&1 | tee x.1 | grep  -E 'QH|non-simplicial|Statis|pinched'; done
+    Actual distance to facets is a third to a tenth of the qh_pointdist (T1)
+*/
+#define qh_WIDEpinched 100
 
 /*-<a                             href="qh-user.htm#TOC"
   >--------------------------------</a><a name="ZEROdelaunay">-</a>
@@ -888,7 +1092,7 @@ stop after qh_JOGGLEmaxretry attempts
    From 2005=>msvcr80d, 2010=>msvcr100d, 2012=>msvcr110d
 
    Watch: {,,msvcr80d.dll}_crtBreakAlloc  Value from {n} in the leak report
-   _CrtSetBreakAlloc(689); // qh_lib_check() [global_r.c]
+   _CrtSetBreakAlloc(689); // qh_lib_check() [global.c]
 
    Examples
      http://free-cad.sourceforge.net/SrcDocu/d2/d7f/MemDebug_8cpp_source.html
@@ -903,7 +1107,5 @@ stop after qh_JOGGLEmaxretry attempts
 #include <stdlib.h>
 #include <crtdbg.h>
 #endif
+
 #endif /* qh_DEFuser */
-
-
-
