@@ -241,6 +241,7 @@ extern "C" {
 #define GKS_K_GDP_DRAW_LINES 2
 #define GKS_K_GDP_DRAW_MARKERS 3
 #define GKS_K_GDP_DRAW_TRIANGLES 4
+#define GKS_K_GDP_FILL_POLYGONS 5
 
 /* GKS error codes */
 

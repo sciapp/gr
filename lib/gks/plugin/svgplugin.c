@@ -1364,6 +1364,55 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
     }
 }
 
+static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
+{
+  double x, y;
+  int i, j, k, len;
+  unsigned int rgba;
+  int red, green, blue;
+  double alpha;
+
+  if (n > p->max_points)
+    {
+      p->points = (SVG_point *)realloc(p->points, n * sizeof(SVG_point));
+      p->max_points = n;
+    }
+
+  for (i = 0; i < n; ++i)
+    {
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, p->points[i].x, p->points[i].y);
+    }
+
+  j = 0;
+  while (j < nply)
+    {
+      len = ply[j++];
+      svg_printf(p->stream, "<path clip-path=\"url(#clip%02d%d)\" d=\"", path_id, p->rect_index);
+      svg_printf(p->stream, "M%g %g", p->points[ply[j] - 1].x, p->points[ply[j] - 1].y);
+      j++;
+      for (k = 1; k < len; ++k)
+        {
+          svg_printf(p->stream, " L%g %g", p->points[ply[j] - 1].x, p->points[ply[j] - 1].y);
+          j++;
+        }
+
+      rgba = (unsigned int)ply[j++];
+      red = rgba & 0xff;
+      green = (rgba >> 8) & 0xff;
+      blue = (rgba >> 16) & 0xff;
+      alpha = ((rgba >> 24) & 0xff) / 255.0;
+
+      svg_printf(p->stream, " Z\" fill=\"#%02x%02x%02x\" fill-rule=\"evenodd\" fill-opacity=\"%g\" ", red, green, blue,
+                 alpha);
+      svg_printf(p->stream,
+                 "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linejoin=\"round\" stroke-width=\"%g\" />",
+                 p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], alpha,
+                 gkss->lwidth * p->nominal_size);
+    }
+}
+
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
   switch (primid)
@@ -1379,6 +1428,9 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
       break;
     case GKS_K_GDP_DRAW_TRIANGLES:
       draw_triangles(n, px, py, nc, codes);
+      break;
+    case GKS_K_GDP_FILL_POLYGONS:
+      fill_polygons(n, px, py, nc, codes);
       break;
     default:
       gks_perror("invalid drawing primitive ('%d')", primid);

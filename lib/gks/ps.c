@@ -1777,6 +1777,53 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
     }
 }
 
+static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
+{
+  double x, y, xd, yd;
+  int j, k, len, fl_color = MAX_COLOR;
+  unsigned int rgba;
+  char buffer[50];
+
+  j = 0;
+  while (j < nply)
+    {
+      len = ply[j++];
+
+      packb("np");
+      for (k = 0; k < len; ++k)
+        {
+          WC_to_NDC(px[ply[j] - 1], py[ply[j] - 1], gkss->cntnr, x, y);
+          seg_xform(&x, &y);
+          NDC_to_DC(x, y, xd, yd);
+          j++;
+
+          if (k == 0)
+            {
+              sprintf(buffer, "%.2f %.2f m", xd, yd);
+            }
+          else
+            {
+              sprintf(buffer, "%.2f %.2f l", xd, yd);
+            }
+          packb(buffer);
+        }
+
+      rgba = (unsigned int)ply[j++];
+      p->red[fl_color] = (rgba & 0xff) / 255.0;
+      p->green[fl_color] = ((rgba >> 8) & 0xff) / 255.0;
+      p->blue[fl_color] = ((rgba >> 16) & 0xff) / 255.0;
+
+      packb("cp gs");
+      set_color(-fl_color, p->wtype);
+      packb("fi gr");
+
+      sprintf(buffer, "%.4g %.4g %.4g sc", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
+      packb(buffer);
+      set_linewidth(gkss->lwidth);
+      packb("sk");
+    }
+}
+
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
   switch (primid)
@@ -1792,6 +1839,9 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
       break;
     case GKS_K_GDP_DRAW_TRIANGLES:
       draw_triangles(n, px, py, nc, codes);
+      break;
+    case GKS_K_GDP_FILL_POLYGONS:
+      fill_polygons(n, px, py, nc, codes);
       break;
     default:
       gks_perror("invalid drawing primitive ('%d')", primid);

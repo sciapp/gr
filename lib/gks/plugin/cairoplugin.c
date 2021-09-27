@@ -1592,7 +1592,7 @@ static void write_page(void)
       long size = ftell(stream);
       fseek(stream, 0, SEEK_SET);
 
-      char *string = (char *)gks_malloc(size + 1);
+      unsigned char *string = (unsigned char *)gks_malloc(size + 1);
       fread(string, 1, size, stream);
       fclose(stream);
       string[size] = 0;
@@ -1951,6 +1951,55 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
     }
 }
 
+static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
+{
+  double x, y;
+  int i, j, k, len, fill_color = MAX_COLOR;
+  unsigned int rgba;
+
+  if (n > p->max_points)
+    {
+      p->points = (cairo_point *)gks_realloc(p->points, n * sizeof(cairo_point));
+      p->max_points = n;
+    }
+
+  for (i = 0; i < n; ++i)
+    {
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, p->points[i].x, p->points[i].y);
+    }
+
+  j = 0;
+  while (j < nply)
+    {
+      len = ply[j++];
+      cairo_move_to(p->cr, p->points[ply[j] - 1].x, p->points[ply[j] - 1].y);
+      j++;
+      for (k = 1; k < len; k++)
+        {
+          cairo_line_to(p->cr, p->points[ply[j] - 1].x, p->points[ply[j] - 1].y);
+          j++;
+        }
+
+      rgba = (unsigned int)ply[j++];
+      p->rgb[fill_color][0] = (rgba & 0xff) / 255.0;
+      p->rgb[fill_color][1] = ((rgba >> 8) & 0xff) / 255.0;
+      p->rgb[fill_color][2] = ((rgba >> 16) & 0xff) / 255.0;
+      p->transparency = ((rgba >> 24) & 0xff) / 255.0;
+      set_color(fill_color);
+
+      cairo_close_path(p->cr);
+      cairo_fill_preserve(p->cr);
+
+      set_color(gkss->bcoli);
+      cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
+      cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
+      cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
+      cairo_stroke(p->cr);
+    }
+}
+
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
   switch (primid)
@@ -1966,6 +2015,9 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
       break;
     case GKS_K_GDP_DRAW_TRIANGLES:
       draw_triangles(n, px, py, nc, codes);
+      break;
+    case GKS_K_GDP_FILL_POLYGONS:
+      fill_polygons(n, px, py, nc, codes);
       break;
     default:
       gks_perror("invalid drawing primitive ('%d')", primid);
