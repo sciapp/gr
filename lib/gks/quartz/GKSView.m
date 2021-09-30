@@ -1837,10 +1837,10 @@ static void to_DC(int n, double *x, double *y)
 
 - (void)draw_triangles:(int)n:(double *)px:(double *)py:(int)ntri:(int *)tri
 {
-  double x, y, xt[3], yt[3];
+  double x, y;
   int i, j, k, rgba;
-  CGFloat color[4];
   CGPoint triangle[3];
+  CGFloat color[4];
 
   begin_context(context);
 
@@ -1895,6 +1895,72 @@ static void to_DC(int n, double *x, double *y)
 }
 
 
+- (void)fill_polygons:(int)n:(double *)px:(double *)py:(int)nply:(int *)ply
+{
+  double x, y;
+  int i, j, k, len;
+  CGPoint polygon[6];
+  unsigned int rgba;
+  CGFloat *border_color, color[4];
+
+  begin_context(context);
+
+  if (colorSpace == NULL)
+    {
+      colorSpace = CGColorSpaceCreateDeviceRGB();
+    }
+  CGContextSetStrokeColorSpace(context, colorSpace);
+  CGContextSetFillColorSpace(context, colorSpace);
+
+  CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
+  border_color = CGColorGetComponents(p->rgb[gkss->bcoli]);
+
+  if (n > num_points)
+    {
+      while (n > num_points) num_points += NUM_POINTS;
+      points = (CGPoint *)gks_realloc(points, num_points * sizeof(CGPoint));
+    }
+
+  for (i = 0; i < n; ++i)
+    {
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, points[i].x, points[i].y);
+    }
+
+  j = 0;
+  while (j < nply)
+    {
+      len = ply[j++];
+
+      CGContextBeginPath(context);
+      CGContextMoveToPoint(context, points[ply[j] - 1].x, points[ply[j] - 1].y);
+      j++;
+      for (k = 1; k < len; ++k)
+        {
+          CGContextAddLineToPoint(context, points[ply[j] - 1].x, points[ply[j] - 1].y);
+          j++;
+        }
+
+      CGContextSetLineJoin(context, kCGLineJoinRound);
+      CGContextSetLineWidth(context, gkss->lwidth * p->nominal_size);
+
+      rgba = (unsigned int)ply[j++];
+      color[0] = (rgba & 0xff) / 255.0;
+      color[1] = ((rgba >> 8) & 0xff) / 255.0;
+      color[2] = ((rgba >> 16) & 0xff) / 255.0;
+      color[3] = ((rgba >> 24) & 0xff) / 255.0;
+      CGContextSetStrokeColor(context, border_color);
+      CGContextSetFillColor(context, color);
+
+      CGContextClosePath(context);
+      CGContextDrawPath(context, kCGPathFillStroke);
+    }
+
+  end_context(context);
+}
+
+
 - (void)gdp:(int)n:(double *)px:(double *)py:(int)primid:(int)nc:(int *)codes
 {
   switch (primid)
@@ -1910,6 +1976,9 @@ static void to_DC(int n, double *x, double *y)
       break;
     case GKS_K_GDP_DRAW_TRIANGLES:
       [self draw_triangles:n:px:py:nc:codes];
+      break;
+    case GKS_K_GDP_FILL_POLYGONS:
+      [self fill_polygons:n:px:py:nc:codes];
       break;
     default:
       gks_perror("invalid drawing primitive ('%d')", primid);
