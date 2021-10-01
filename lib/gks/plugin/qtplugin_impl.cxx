@@ -1200,7 +1200,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       fill_color.setAlpha(alpha);
 
       p->pixmap->setBrush(QBrush(fill_color, Qt::SolidPattern));
-      p->pixmap->setPen(QPen(border_color, gkss->lwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+      p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
       p->pixmap->drawPolygon(p->polygon->constData(), len);
     }
 

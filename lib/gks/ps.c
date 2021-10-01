@@ -1819,7 +1819,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
 
       sprintf(buffer, "%.4g %.4g %.4g sc", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
       packb(buffer);
-      set_linewidth(gkss->lwidth);
+      set_linewidth(gkss->bwidth);
       packb("sk");
     }
 }

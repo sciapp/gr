@@ -1943,7 +1943,7 @@ static void to_DC(int n, double *x, double *y)
         }
 
       CGContextSetLineJoin(context, kCGLineJoinRound);
-      CGContextSetLineWidth(context, gkss->lwidth * p->nominal_size);
+      CGContextSetLineWidth(context, gkss->bwidth * p->nominal_size);
 
       rgba = (unsigned int)ply[j++];
       color[0] = (rgba & 0xff) / 255.0;

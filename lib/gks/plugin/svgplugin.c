@@ -1409,7 +1409,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       svg_printf(p->stream,
                  "stroke=\"#%02x%02x%02x\" stroke-opacity=\"%g\" stroke-linejoin=\"round\" stroke-width=\"%g\" />",
                  p->rgb[gkss->bcoli][0], p->rgb[gkss->bcoli][1], p->rgb[gkss->bcoli][2], alpha,
-                 gkss->lwidth * p->nominal_size);
+                 gkss->bwidth * p->nominal_size);
     }
 }
 

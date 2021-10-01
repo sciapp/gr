@@ -1378,7 +1378,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       pgf_printf(p->stream, "\\definecolor{mycolor}{RGB}{%d,%d,%d}\n", red, green, blue);
 
       pgf_printf(p->stream, "\\draw[color=pathstroke, fill=mycolor, line width=%fpt, opacity=%f] ",
-                 gkss->lwidth * p->nominal_size, p->transparency);
+                 gkss->bwidth * p->nominal_size, p->transparency);
 
       for (k = 0; k < len; ++k)
         {
