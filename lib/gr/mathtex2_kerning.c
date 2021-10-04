@@ -77,6 +77,9 @@ static int get_index(unsigned int codepoint)
   switch (codepoint)
     {
     case '.':
+    case ',':
+    case ';':
+    case '!':
       return -1;
     }
 
