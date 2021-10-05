@@ -13395,8 +13395,8 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
   for (i = 0; i < num_connections; i++)
     {
       len = connections[j++];
-      depth = sqrt(pow(mean(x, len, connections + j) - cam_x, 2) + pow(mean(y, len, connections + j) - cam_y, 2) +
-                   pow(mean(z, len, connections + j) - cam_z, 2));
+      depth = sqrt(pow(mean(px, len, connections + j) - cam_x, 2) + pow(mean(py, len, connections + j) - cam_y, 2) +
+                   pow(mean(pz, len, connections + j) - cam_z, 2));
       memcpy(faceP, &depth, sizeof(double));
       faceP += sizeof(double) / sizeof(int);
       memcpy(faceP, &len, sizeof(int));
