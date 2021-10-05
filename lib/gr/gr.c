@@ -13348,15 +13348,15 @@ static double mean(const double *a, const int len, const int *connections)
 
   for (i = 0; i < len; i++)
     {
-      sum += a[connections[i]];
+      sum += a[connections[i] - 1];
     }
   return sum / len;
 }
 
 static int compare_depth(const void *_a, const void *_b)
 {
-  const double *a = _a, *b = _b;
-  return *a > *b ? 1 : *a < *b ? -1 : 0;
+  double a = *(double *)_a, b = *(double *)_b;
+  return a > b ? 1 : a < b ? -1 : 0;
 }
 
 void gr_polygonmesh3d(int num_points, const double *px, const double *py, const double *pz, int num_connections,
@@ -13395,8 +13395,8 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
   for (i = 0; i < num_connections; i++)
     {
       len = connections[j++];
-      depth = sqrt(pow(mean(x, len, connections + 0) - cam_x, 2) + pow(mean(y, len, connections + 1) - cam_y, 2) +
-                   pow(mean(z, len, connections + 2) - cam_z, 2));
+      depth = sqrt(pow(mean(x, len, connections + j) - cam_x, 2) + pow(mean(y, len, connections + j) - cam_y, 2) +
+                   pow(mean(z, len, connections + j) - cam_z, 2));
       memcpy(faceP, &depth, sizeof(double));
       faceP += sizeof(double) / sizeof(int);
       memcpy(faceP, &len, sizeof(int));
