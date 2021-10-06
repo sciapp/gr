@@ -1946,7 +1946,14 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
 
       pdf_setfillcolor(p, p->red[fl_color], p->green[fl_color], p->blue[fl_color]);
       set_transparency(alpha);
-      pdf_printf(p->content, "h b*\n");
+      if (gkss->bwidth != 0)
+        {
+          pdf_printf(p->content, "h b*\n");
+        }
+      else
+        {
+          pdf_printf(p->content, "h f*\n");
+        }
     }
 }
 
