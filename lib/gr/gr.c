@@ -1037,7 +1037,7 @@ static void apply_world_xform(double *x, double *y, double *z)
     {
       xw = wx.a1 * *x + wx.a2 * *y + wx.b;
       yw = wx.c1 * *x + wx.c2 * *y + wx.c3 * *z + wx.d;
-      zw = *z;
+      zw = wx.a2 * wx.c3 * *x - wx.a1 * wx.c3 * *y - wx.c1 * wx.a2 * *z + wx.a1 * wx.c2 * *z;
     }
   else
     {
