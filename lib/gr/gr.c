@@ -13387,7 +13387,7 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
     }
   len_connections = j;
 
-  faces = (int *)xcalloc(num_connections, sizeof(double) + (1 + maxlen) * sizeof(int));
+  faces = (int *)xcalloc(num_connections, sizeof(double) + (1 + maxlen + 1) * sizeof(int));
   gr_inqtransformationparameters(&cam_x, &cam_y, &cam_z, &up_x, &up_y, &up_z, &foc_x, &foc_y, &foc_z);
 
   j = 0;
@@ -13403,9 +13403,11 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
       faceP += 1;
       memcpy(faceP, connections + j, len * sizeof(int));
       faceP += maxlen;
+      memcpy(faceP, &colors[i], sizeof(int));
+      faceP += 1;
       j += len;
     }
-  qsort(faces, num_connections, (sizeof(double) + (1 + maxlen) * sizeof(int)), compare_depth);
+  qsort(faces, num_connections, (sizeof(double) + (1 + maxlen + 1) * sizeof(int)), compare_depth);
 
   attributes = (int *)xcalloc(num_connections, (1 + maxlen + 1) * sizeof(int));
   k = 0;
@@ -13419,8 +13421,9 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
         {
           attributes[k++] = faceP[j];
         }
-      attributes[k++] = colors[i];
       faceP += maxlen;
+      attributes[k++] = *faceP;
+      faceP += 1;
     }
 
   gks_gdp(num_points, x, y, GKS_K_GDP_FILL_POLYGONS, k, attributes);
