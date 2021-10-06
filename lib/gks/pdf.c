@@ -1907,6 +1907,56 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
     }
 }
 
+static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
+{
+  double x, y, xd, yd;
+  int j, k, len, fl_color = MAX_COLOR;
+  unsigned int rgba;
+  int alpha;
+
+  pdf_setlinewidth(p, gkss->bwidth * p->nominal_size);
+  set_color(gkss->bcoli);
+
+  j = 0;
+  while (j < nply)
+    {
+      len = ply[j++];
+      for (k = 0; k < len; ++k)
+        {
+          WC_to_NDC(px[ply[j] - 1], py[ply[j] - 1], gkss->cntnr, x, y);
+          seg_xform(&x, &y);
+          NDC_to_DC(x, y, xd, yd);
+          j++;
+
+          if (k == 0)
+            {
+              pdf_moveto(p, xd, yd);
+            }
+          else
+            {
+              pdf_lineto(p, xd, yd);
+            }
+        }
+
+      rgba = (unsigned int)ply[j++];
+      p->red[fl_color] = (rgba & 0xff) / 255.0;
+      p->green[fl_color] = ((rgba >> 8) & 0xff) / 255.0;
+      p->blue[fl_color] = ((rgba >> 16) & 0xff) / 255.0;
+      alpha = (rgba >> 24) & 0xff;
+
+      pdf_setfillcolor(p, p->red[fl_color], p->green[fl_color], p->blue[fl_color]);
+      set_transparency(alpha);
+      if (gkss->bwidth != 0)
+        {
+          pdf_printf(p->content, "h b*\n");
+        }
+      else
+        {
+          pdf_printf(p->content, "h f*\n");
+        }
+    }
+}
+
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
   if (gkss->clip_tnr != 0)
@@ -1927,6 +1977,9 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
       break;
     case GKS_K_GDP_DRAW_TRIANGLES:
       draw_triangles(n, px, py, nc, codes);
+      break;
+    case GKS_K_GDP_FILL_POLYGONS:
+      fill_polygons(n, px, py, nc, codes);
       break;
     default:
       gks_perror("invalid drawing primitive ('%d')", primid);

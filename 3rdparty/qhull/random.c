@@ -21,22 +21,21 @@
 #endif
 
 /*-<a                             href="qh-globa.htm#TOC"
- >-------------------------------</a><a name="argv_to_command">-</a>
+  >-------------------------------</a><a name="argv_to_command">-</a>
 
- qh_argv_to_command( argc, argv, command, max_size )
+  qh_argv_to_command( argc, argv, command, max_size )
 
     build command from argc/argv
     max_size is at least
 
- returns:
+  returns:
     a space-delimited string of options (just as typed)
     returns false if max_size is too short
 
- notes:
+  notes:
     silently removes
     makes option string easy to input and output
-    matches qh_argv_to_command_size()
-
+    matches qh_argv_to_command_size
     argc may be 0
 */
 int qh_argv_to_command(int argc, char *argv[], char* command, int max_size) {
@@ -81,9 +80,10 @@ int qh_argv_to_command(int argc, char *argv[], char* command, int max_size) {
       *t= '\0';
     }else if (remaining < 0) {
       goto error_argv;
-    }else
+    }else {
       strcat(command, " ");
       strcat(command, s);
+    }
   }
   return 1;
 
@@ -92,18 +92,20 @@ error_argv:
 } /* argv_to_command */
 
 /*-<a                             href="qh-globa.htm#TOC"
->-------------------------------</a><a name="argv_to_command_size">-</a>
+  >-------------------------------</a><a name="argv_to_command_size">-</a>
 
-qh_argv_to_command_size( argc, argv )
+  qh_argv_to_command_size( argc, argv )
 
     return size to allocate for qh_argv_to_command()
 
-notes:
+  notes:
+    only called from rbox with qh_errexit not enabled
+    caller should report error if returned size is less than 1
     argc may be 0
     actual size is usually shorter
 */
 int qh_argv_to_command_size(int argc, char *argv[]) {
-    unsigned int count= 1; /* null-terminator if argc==0 */
+    int count= 1; /* null-terminator if argc==0 */
     int i;
     char *s;
 
@@ -147,24 +149,24 @@ int qh_last_random= 1;  /* define as global variable instead of using qh */
 #define qh_rand_q 127773  /* m div a */
 #define qh_rand_r 2836    /* m mod a */
 
-int qh_rand( void) {
+int qh_rand(void) {
     int lo, hi, test;
-    int seed = qh_last_random;
+    int seed= qh_last_random;
 
-    hi = seed / qh_rand_q;  /* seed div q */
-    lo = seed % qh_rand_q;  /* seed mod q */
-    test = qh_rand_a * lo - qh_rand_r * hi;
+    hi= seed / qh_rand_q;  /* seed div q */
+    lo= seed % qh_rand_q;  /* seed mod q */
+    test= qh_rand_a * lo - qh_rand_r * hi;
     if (test > 0)
         seed= test;
     else
         seed= test + qh_rand_m;
     qh_last_random= seed;
-    /* seed = seed < qh_RANDOMmax/2 ? 0 : qh_RANDOMmax;  for testing */
-    /* seed = qh_RANDOMmax;  for testing */
+    /* seed= seed < qh_RANDOMmax/2 ? 0 : qh_RANDOMmax;  for testing */
+    /* seed= qh_RANDOMmax;  for testing */
     return seed;
 } /* rand */
 
-void qh_srand( int seed) {
+void qh_srand(int seed) {
     if (seed < 1)
         qh_last_random= 1;
     else if (seed >= qh_rand_m)
@@ -192,14 +194,14 @@ realT qh_randomfactor(realT scale, realT offset) {
 /*-<a                             href="qh-geom.htm#TOC"
 >-------------------------------</a><a name="randommatrix">-</a>
 
-qh_randommatrix( buffer, dim, rows )
-  generate a random dim X dim matrix in range [-1,1]
-  assumes buffer is [dim+1, dim]
+  qh_randommatrix( buffer, dim, rows )
+    generate a random dim X dim matrix in range [-1,1]
+    assumes buffer is [dim+1, dim]
 
-returns:
-  sets buffer to random numbers
-  sets rows to rows of buffer
-  sets row[dim] as scratch row
+  returns:
+    sets buffer to random numbers
+    sets rows to rows of buffer
+    sets row[dim] as scratch row
 */
 void qh_randommatrix(realT *buffer, int dim, realT **rows) {
     int i, k;

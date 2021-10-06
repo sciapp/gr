@@ -1342,6 +1342,55 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
     }
 }
 
+static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
+{
+  double x, y;
+  int i, j, k, len;
+  unsigned int rgba;
+  int red, green, blue;
+  double alpha;
+
+  if (n > p->max_points)
+    {
+      p->points = (PGF_point *)realloc(p->points, n * sizeof(PGF_point));
+      p->max_points = n;
+    }
+
+  for (i = 0; i < n; ++i)
+    {
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, p->points[i].x, p->points[i].y);
+    }
+
+  pgf_printf(p->stream, "\\definecolor{pathstroke}{HTML}{%s}\n", p->rgb[gkss->bcoli]);
+
+  j = 0;
+  while (j < nply)
+    {
+      len = ply[j++];
+      rgba = (unsigned int)ply[j + len];
+      red = rgba & 0xff;
+      green = (rgba >> 8) & 0xff;
+      blue = (rgba >> 16) & 0xff;
+      p->transparency = ((rgba >> 24) & 0xff) / 255.0;
+
+      pgf_printf(p->stream, "\\definecolor{mycolor}{RGB}{%d,%d,%d}\n", red, green, blue);
+
+      pgf_printf(p->stream, "\\draw[color=pathstroke, fill=mycolor, line width=%fpt, opacity=%f] ",
+                 gkss->bwidth * p->nominal_size, p->transparency);
+
+      for (k = 0; k < len; ++k)
+        {
+          pgf_printf(p->stream, "(%f,%f) -- ", p->points[ply[j] - 1].x, p->points[ply[j] - 1].y);
+          j++;
+        }
+
+      pgf_printf(p->stream, "cycle;\n");
+      j++;
+    }
+}
+
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
   switch (primid)
@@ -1357,6 +1406,9 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
       break;
     case GKS_K_GDP_DRAW_TRIANGLES:
       draw_triangles(n, px, py, nc, codes);
+      break;
+    case GKS_K_GDP_FILL_POLYGONS:
+      fill_polygons(n, px, py, nc, codes);
       break;
     default:
       gks_perror("invalid drawing primitive ('%d')", primid);

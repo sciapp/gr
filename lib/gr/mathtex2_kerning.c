@@ -73,6 +73,16 @@ double gr_get_kerning_offset(unsigned int left_codepoint, unsigned int right_cod
 
 static int get_index(unsigned int codepoint)
 {
+  /* kerning offsets can be disabled for codepoints by adding them here */
+  switch (codepoint)
+    {
+    case '.':
+    case ',':
+    case ';':
+    case '!':
+      return -1;
+    }
+
   switch (codepoint)
     {
     case 35:

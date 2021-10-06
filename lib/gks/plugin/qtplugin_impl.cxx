@@ -33,6 +33,7 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
 #ifndef NO_QT
 
 #define MAX_POINTS 2048
+#define MAX_POLYGON 32
 #define MAX_SELECTIONS 100
 #define PATTERNS 120
 #define HATCH_STYLE 108
@@ -98,6 +99,8 @@ typedef struct ws_state_list_t
   int transparency;
   QPolygonF *points;
   int npoints, max_points;
+  QPolygonF *polygon;
+  int max_polygon;
   QFont *font;
   int family, capheight;
   double alpha, angle;
@@ -1146,6 +1149,64 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
   p->pixmap->restore();
 }
 
+static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
+{
+  double x, y, xi, yi;
+  int i, j, k, rgba, len;
+  int red, green, blue, alpha;
+  QColor fill_color;
+
+  p->pixmap->save();
+  p->pixmap->setRenderHint(QPainter::Antialiasing);
+
+  QColor border_color(p->rgb[gkss->bcoli]);
+  border_color.setAlpha(p->transparency);
+
+  if (n > p->max_points)
+    {
+      p->points->resize(n);
+      p->max_points = n;
+    }
+
+  for (i = 0; i < n; ++i)
+    {
+      WC_to_NDC(px[i], py[i], gkss->cntnr, x, y);
+      seg_xform(&x, &y);
+      NDC_to_DC(x, y, xi, yi);
+      (*p->points)[i] = QPointF(xi, yi);
+    }
+
+  j = 0;
+  while (j < nply)
+    {
+      len = ply[j++];
+      if (len > p->max_polygon)
+        {
+          p->polygon->resize(len);
+          p->max_polygon = len;
+        }
+      for (k = 0; k < len; ++k)
+        {
+          (*p->polygon)[k] = (*p->points)[ply[j] - 1];
+          j++;
+        }
+
+      rgba = (unsigned int)ply[j++];
+      red = rgba & 0xff;
+      green = (rgba >> 8) & 0xff;
+      blue = (rgba >> 16) & 0xff;
+      alpha = (rgba >> 24) & 0xff;
+      fill_color.setRgb(red, green, blue);
+      fill_color.setAlpha(alpha);
+
+      p->pixmap->setBrush(QBrush(fill_color, Qt::SolidPattern));
+      p->pixmap->setPen(QPen(border_color, gkss->bwidth * p->nominal_size, Qt::SolidLine, Qt::FlatCap, Qt::RoundJoin));
+      p->pixmap->drawPolygon(p->polygon->constData(), len);
+    }
+
+  p->pixmap->restore();
+}
+
 static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 {
   switch (primid)
@@ -1161,6 +1222,9 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
       break;
     case GKS_K_GDP_DRAW_TRIANGLES:
       draw_triangles(n, px, py, nc, codes);
+      break;
+    case GKS_K_GDP_FILL_POLYGONS:
+      fill_polygons(n, px, py, nc, codes);
       break;
     default:
       gks_perror("invalid drawing primitive ('%d')", primid);
@@ -1526,6 +1590,9 @@ static void initialize_data()
   p->npoints = 0;
   p->max_points = MAX_POINTS;
 
+  p->polygon = new QPolygonF(MAX_POLYGON);
+  p->max_polygon = MAX_POLYGON;
+
   for (i = 0; i < PATTERNS; i++)
     {
       p->pattern[i] = NULL;
@@ -1549,6 +1616,7 @@ static void release_data()
   for (i = 0; i < PATTERNS; i++)
     if (p->pattern[i] != NULL) free(p->pattern[i]);
 
+  delete p->polygon;
   delete p->points;
   delete p->font;
   delete p;

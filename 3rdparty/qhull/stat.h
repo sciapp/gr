@@ -6,28 +6,30 @@
 
    see qh-stat.htm and stat.c
 
-   Copyright (c) 1993-2015 The Geometry Center.
-   $Id: //main/2015/qhull/src/libqhull/stat.h#4 $$Change: 2062 $
-   $DateTime: 2016/01/17 13:13:18 $$Author: bbarber $
+   Copyright (c) 1993-2020 The Geometry Center.
+   $Id: //main/2019/qhull/src/libqhull/stat.h#4 $$Change: 2953 $
+   $DateTime: 2020/05/21 22:05:32 $$Author: bbarber $
 
    recompile qhull if you change this file
 
    Integer statistics are Z* while real statistics are W*.
 
-   define maydebugx to call a routine at every statistic event
+   define MAYdebugx to call a routine at every statistic event
 
 */
 
 #ifndef qhDEFstat
 #define qhDEFstat 1
 
-#include "libqhull.h"
+/* Depends on realT.  Do not include "libqhull_r" to avoid circular dependency */
 
 /*-<a                             href="qh-stat.htm#TOC"
   >-------------------------------</a><a name="KEEPstatistics">-</a>
 
   qh_KEEPstatistics
-    0 turns off statistic gathering (except zzdef/zzinc/zzadd/zzval/wwval)
+    0 turns off statistic reporting and gathering (except zzdef/zzinc/zzadd/zzval/wwval)
+
+  set qh_KEEPstatistics in user.h to 0 to turn off statistics
 */
 #ifndef qh_KEEPstatistics
 #define qh_KEEPstatistics 1
@@ -75,8 +77,12 @@ enum qh_statistics {     /* alphabetical after Z/W */
     Zconcave,
     Wconcavemax,
     Wconcavetot,
-    Zconcaveridges,
+    Zconcavecoplanar,
+    Wconcavecoplanarmax,
+    Wconcavecoplanartot,
+    Zconcavecoplanarridge,
     Zconcaveridge,
+    Zconcaveridges,
     Zcoplanar,
     Wcoplanarmax,
     Wcoplanartot,
@@ -99,6 +105,7 @@ enum qh_statistics {     /* alphabetical after Z/W */
     Zdelridge,
     Zdelvertextot,
     Zdelvertexmax,
+    Zdetfacetarea,
     Zdetsimplex,
     Zdistcheck,
     Zdistconvex,
@@ -126,12 +133,13 @@ enum qh_statistics {     /* alphabetical after Z/W */
     Zduplicate,
     Wduplicatemax,
     Wduplicatetot,
-    Zdupridge,
     Zdupsame,
     Zflipped,
     Wflippedmax,
     Wflippedtot,
     Zflippedfacets,
+    Zflipridge,
+    Zflipridge2,
     Zfindbest,
     Zfindbestmax,
     Zfindbesttot,
@@ -174,6 +182,7 @@ enum qh_statistics {     /* alphabetical after Z/W */
     Zmergeinittot,
     Zmergeinitmax,
     Zmergeinittot2,
+    Zmergeintocoplanar,
     Zmergeintohorizon,
     Zmergenew,
     Zmergesettot,
@@ -186,14 +195,16 @@ enum qh_statistics {     /* alphabetical after Z/W */
     Zminnorm,
     Zmultiridge,
     Znearlysingular,
-    Zneighbor,
+    Zredundant,
     Wnewbalance,
     Wnewbalance2,
+    Znewbesthorizon,
     Znewfacettot,
     Znewfacetmax,
     Znewvertex,
     Wnewvertex,
     Wnewvertexmax,
+    Znewvertexridge,
     Znoarea,
     Znonsimplicial,
     Znowsimplicial,
@@ -211,25 +222,33 @@ enum qh_statistics {     /* alphabetical after Z/W */
     Zonehorizon,
     Zpartangle,
     Zpartcoplanar,
-    Zpartflip,
-    Zparthorizon,
+    Zpartcorner,
+    Zparthidden,
     Zpartinside,
     Zpartition,
     Zpartitionall,
     Zpartnear,
+    Zparttwisted,
     Zpbalance,
     Wpbalance,
     Wpbalance2,
+    Zpinchduplicate,
+    Zpinchedapex,
+    Zpinchedvertex,
     Zpostfacets,
     Zpremergetot,
     Zprocessed,
     Zremvertex,
     Zremvertexdel,
+    Zredundantmerge,
     Zrenameall,
     Zrenamepinch,
     Zrenameshare,
     Zretry,
     Wretrymax,
+    Zretryadd,
+    Zretryaddmax,
+    Zretryaddtot,
     Zridge,
     Wridge,
     Wridgemax,
@@ -259,6 +278,11 @@ enum qh_statistics {     /* alphabetical after Z/W */
     Ztridegen,
     Ztrimirror,
     Ztrinull,
+    Ztwisted,
+    Wtwistedtot,
+    Wtwistedmax,
+    Ztwistedridge,
+    Zvertextests,
     Wvertexmax,
     Wvertexmin,
     Zvertexridge,
@@ -300,12 +324,15 @@ enum qh_statistics {     /* for zzdef etc. macros */
   Zdelvertextot,
   Zdistcheck,
   Zdistconvex,
+  Zdistplane,
   Zdistzero,
   Zdoc1,
   Zdoc2,
   Zdoc3,
   Zdoc11,
   Zflippedfacets,
+  Zflipridge,
+  Zflipridge2,
   Zgauss0,
   Zminnorm,
   Zmultiridge,
@@ -315,6 +342,8 @@ enum qh_statistics {     /* for zzdef etc. macros */
   Zpartcoplanar,
   Zpartition,
   Zpartitionall,
+  Zpinchduplicate,
+  Zpinchedvertex,
   Zprocessed,
   Zretry,
   Zridge,
@@ -332,7 +361,8 @@ enum qh_statistics {     /* for zzdef etc. macros */
   Zsetplane,
   Ztotcheck,
   Ztotmerge,
-    ZEND};
+  Zvertextests,
+  ZEND};
 #endif
 
 /*-<a                             href="qh-stat.htm#TOC"
@@ -478,7 +508,7 @@ union intrealT {
                         only one instance of qhull() can be active at a time
                         default value
    qh_QHpointer is defined in libqhull.h
-   qh_QHpointer_dllimport and qh_dllimport define qh_qh as __declspec(dllimport) [libqhull.h]
+   For msvc, qh_QHpointer_dllimport or qh_dllimport define qh_qh as __declspec(dllimport) [libqhull.h]
 
    allocated in stat.c using qh_malloc()
 */
@@ -487,13 +517,13 @@ union intrealT {
 typedef struct qhstatT qhstatT;
 #endif
 
-#if qh_QHpointer_dllimport
+#ifdef qh_QHpointer_dllimport
 #define qhstat qh_qhstat->
 __declspec(dllimport) extern qhstatT *qh_qhstat;
 #elif qh_QHpointer
 #define qhstat qh_qhstat->
 extern qhstatT *qh_qhstat;
-#elif qh_dllimport
+#elif defined(qh_dllimport)
 #define qhstat qh_qhstat.
 __declspec(dllimport) extern qhstatT qh_qhstat;
 #else
@@ -502,16 +532,16 @@ extern qhstatT qh_qhstat;
 #endif
 struct qhstatT {
   intrealT   stats[ZEND];     /* integer and real statistics */
-  unsigned   char id[ZEND+10]; /* id's in print order */
-  const char *doc[ZEND];       /* array of documentation strings */
+  unsigned char id[ZEND+10];  /* id's in print order */
+  const char *doc[ZEND];      /* array of documentation strings */
   short int  count[ZEND];     /* -1 if none, else index of count to use */
   char       type[ZEND];      /* type, see ztypes above */
   char       printed[ZEND];   /* true, if statistic has been printed */
   intrealT   init[ZTYPEend];  /* initial values by types, set initstatistics */
 
   int        next;            /* next index for zdef_ */
-  int        precision;       /* index for precision problems */
-  int        vridges;         /* index for Voronoi ridges */
+  int        precision;       /* index for precision problems, printed on qh_errexit and qh_produce_output2/Q0/QJn */
+  int        vridges;         /* index for Voronoi ridges, printed on qh_produce_output2 */
   int        tempi;
   realT      tempr;
 };
