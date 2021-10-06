@@ -1037,6 +1037,7 @@ static void apply_world_xform(double *x, double *y, double *z)
     {
       xw = wx.a1 * *x + wx.a2 * *y + wx.b;
       yw = wx.c1 * *x + wx.c2 * *y + wx.c3 * *z + wx.d;
+      zw = *z;
     }
   else
     {
@@ -1086,6 +1087,7 @@ static void apply_world_xform(double *x, double *y, double *z)
 
   *x = xw;
   *y = yw;
+  *z = zw;
 }
 
 static void foreach_openws(void (*routine)(int, void *), void *arg)
@@ -13395,8 +13397,7 @@ void gr_polygonmesh3d(int num_points, const double *px, const double *py, const 
   for (i = 0; i < num_connections; i++)
     {
       len = connections[j++];
-      depth = sqrt(pow(mean(px, len, connections + j) - cam_x, 2) + pow(mean(py, len, connections + j) - cam_y, 2) +
-                   pow(mean(pz, len, connections + j) - cam_z, 2));
+      depth = mean(z, len, connections + j);
       memcpy(faceP, &depth, sizeof(double));
       faceP += sizeof(double) / sizeof(int);
       memcpy(faceP, &len, sizeof(int));
