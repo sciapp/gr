@@ -1037,6 +1037,7 @@ static void apply_world_xform(double *x, double *y, double *z)
     {
       xw = wx.a1 * *x + wx.a2 * *y + wx.b;
       yw = wx.c1 * *x + wx.c2 * *y + wx.c3 * *z + wx.d;
+      zw = wx.a2 * wx.c3 * *x - wx.a1 * wx.c3 * *y - wx.c1 * wx.a2 * *z + wx.a1 * wx.c2 * *z;
     }
   else
     {
@@ -1086,6 +1087,7 @@ static void apply_world_xform(double *x, double *y, double *z)
 
   *x = xw;
   *y = yw;
+  *z = zw;
 }
 
 static void foreach_openws(void (*routine)(int, void *), void *arg)
@@ -10386,7 +10388,6 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
  */
 void gr_drawimage(double xmin, double xmax, double ymin, double ymax, int width, int height, int *data, int model)
 {
-  int *img = data;
   int n;
 
   check_autoinit;
@@ -12516,7 +12517,6 @@ static void ray_casting_thread(void *arg)
   int algorithm = rc->algorithm;
   double *data = rc->data, *pixels = rc->pixels;
   double *dmax_ptr = rc->dmax_ptr, *dmin_ptr = rc->dmin_ptr;
-  double *max_val = rc->max_val, *min_val = rc->min_val;
 
   double eps = 1e-8; /* precision parameter for comparisons */
   double x_spacing = 1. / nx;
@@ -13235,7 +13235,7 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
     }
 
   double **ptr = &data;
-  struct ray_casting_attr f[1] = {nx, ny, nz, algorithm, ptr[0], min_ptr, max_ptr, min_val, max_val, pixels};
+  struct ray_casting_attr f[1] = {{nx, ny, nz, algorithm, ptr[0], min_ptr, max_ptr, min_val, max_val, pixels}};
   vt.ray_casting = f;
   int x_start = 0, x_end = 0, y_start = 0, y_end = 0;
 
@@ -13333,7 +13333,6 @@ void gr_cpubasedvolume(int nx, int ny, int nz, double *data, int algorithm, doub
     }
 }
 
-
 void gr_inqvpsize(int *width, int *height, double *device_pixel_ratio)
 {
   int n = 1, errind, wkid, ol;
@@ -13342,4 +13341,110 @@ void gr_inqvpsize(int *width, int *height, double *device_pixel_ratio)
 
   gks_inq_open_ws(n, &errind, &ol, &wkid);
   gks_inq_vp_size(wkid, &errind, width, height, device_pixel_ratio);
+}
+
+static double mean(const double *a, const int len, const int *connections)
+{
+  double sum = 0;
+  int i;
+
+  for (i = 0; i < len; i++)
+    {
+      sum += a[connections[i] - 1];
+    }
+  return sum / len;
+}
+
+static int compare_depth(const void *_a, const void *_b)
+{
+  double a = *(double *)_a, b = *(double *)_b;
+  return a > b ? 1 : a < b ? -1 : 0;
+}
+
+void gr_polygonmesh3d(int num_points, const double *px, const double *py, const double *pz, int num_connections,
+                      const int *connections, const int *colors)
+{
+  int i, j, k, len, maxlen = 0, len_connections;
+  double *x, *y, *z;
+  int *faces, *faceP, *attributes;
+  double cam_x, cam_y, cam_z, up_x, up_y, up_z, foc_x, foc_y, foc_z, depth;
+
+  x = (double *)xcalloc(num_points, sizeof(double));
+  y = (double *)xcalloc(num_points, sizeof(double));
+  z = (double *)xcalloc(num_points, sizeof(double));
+  for (i = 0; i < num_points; i++)
+    {
+      x[i] = px[i];
+      y[i] = py[i];
+      z[i] = pz[i];
+      gr_wc3towc(&x[i], &y[i], &z[i]);
+    }
+
+  j = 0;
+  for (i = 0; i < num_connections; i++)
+    {
+      len = connections[j++];
+      if (len > maxlen) maxlen = len;
+      j += len;
+    }
+  len_connections = j;
+
+  faces = (int *)xcalloc(num_connections, sizeof(double) + (1 + maxlen + 1) * sizeof(int));
+  gr_inqtransformationparameters(&cam_x, &cam_y, &cam_z, &up_x, &up_y, &up_z, &foc_x, &foc_y, &foc_z);
+
+  j = 0;
+  faceP = faces;
+  for (i = 0; i < num_connections; i++)
+    {
+      len = connections[j++];
+      depth = mean(z, len, connections + j);
+      memcpy(faceP, &depth, sizeof(double));
+      faceP += sizeof(double) / sizeof(int);
+      memcpy(faceP, &len, sizeof(int));
+      faceP += 1;
+      memcpy(faceP, connections + j, len * sizeof(int));
+      faceP += maxlen;
+      memcpy(faceP, &colors[i], sizeof(int));
+      faceP += 1;
+      j += len;
+    }
+  qsort(faces, num_connections, (sizeof(double) + (1 + maxlen + 1) * sizeof(int)), compare_depth);
+
+  attributes = (int *)xcalloc(num_connections, (1 + maxlen + 1) * sizeof(int));
+  k = 0;
+  faceP = faces;
+  for (i = 0; i < num_connections; i++)
+    {
+      faceP += sizeof(double) / sizeof(int);
+      len = attributes[k++] = *faceP;
+      faceP += 1;
+      for (j = 0; j < len; j++)
+        {
+          attributes[k++] = faceP[j];
+        }
+      faceP += maxlen;
+      attributes[k++] = *faceP;
+      faceP += 1;
+    }
+
+  gks_gdp(num_points, x, y, GKS_K_GDP_FILL_POLYGONS, k, attributes);
+
+  free(attributes);
+  free(faces);
+  free(z);
+  free(y);
+  free(x);
+
+  if (flag_graphics)
+    {
+      gr_writestream("<polygonmesh3d num_points=\"%d\"", num_points);
+      print_float_array("x", num_points, (double *)px);
+      print_float_array("y", num_points, (double *)py);
+      print_float_array("z", num_points, (double *)pz);
+      gr_writestream(" len_connections=\"%d\"", len_connections);
+      print_int_array("connections", len_connections, (int *)connections);
+      gr_writestream(" num_connections=\"%d\"", num_connections);
+      print_int_array("colors", num_connections, (int *)colors);
+      gr_writestream("/>\n");
+    }
 }

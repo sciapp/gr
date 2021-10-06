@@ -222,6 +222,7 @@ DLLEXPORT void gr_setapproximativecalculation(int);
 DLLEXPORT void gr_inqvolumeflags(int *, int *, int *, int *, int *);
 DLLEXPORT void gr_cpubasedvolume(int, int, int, double *, int, double *, double *, double *, double *);
 DLLEXPORT void gr_inqvpsize(int *, int *, double *);
+DLLEXPORT void gr_polygonmesh3d(int, const double *, const double *, const double *, int, const int *, const int *);
 
 #ifdef __cplusplus
 }
