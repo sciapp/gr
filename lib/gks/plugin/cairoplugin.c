@@ -270,6 +270,11 @@ static void set_color(int index)
   cairo_set_source_rgba(p->cr, p->rgb[index][0], p->rgb[index][1], p->rgb[index][2], p->transparency);
 }
 
+static void set_line_width(double width)
+{
+  cairo_set_line_width(p->cr, width > 1 / 16. ? width : 1 / 16.);
+}
+
 static void draw_marker(double xn, double yn, int mtype, double mscale, int mcolor)
 {
   double x, y;
@@ -301,7 +306,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
         {
         case 1: /* point */
           cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
-          cairo_set_line_width(p->cr, p->nominal_size);
+          set_line_width(p->nominal_size);
           set_color(mcolor);
           cairo_rectangle(p->cr, round(x), round(y), 1.0, 1.0);
           cairo_fill(p->cr);
@@ -317,7 +322,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
           seg_xform_rel(&x2, &y2);
 
           cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
-          cairo_set_line_width(p->cr, p->nominal_size);
+          set_line_width(p->nominal_size);
           set_color(mcolor);
           cairo_move_to(p->cr, x - x1, y - y1);
           cairo_line_to(p->cr, x - x2, y - y2);
@@ -334,7 +339,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
 
           cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
           cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
-          cairo_set_line_width(p->cr, p->nominal_size);
+          set_line_width(p->nominal_size);
           set_color(mcolor);
           cairo_move_to(p->cr, x - xr, y + yr);
           for (i = 1; i < marker[mtype][pc + 1]; i++)
@@ -353,7 +358,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                 {
                   cairo_fill_preserve(p->cr);
                   set_color(gkss->bcoli);
-                  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
+                  set_line_width(gkss->bwidth * p->nominal_size);
                   cairo_stroke(p->cr);
                 }
               else
@@ -377,7 +382,7 @@ static void draw_marker(double xn, double yn, int mtype, double mscale, int mcol
                 {
                   cairo_fill_preserve(p->cr);
                   set_color(gkss->bcoli);
-                  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
+                  set_line_width(gkss->bwidth * p->nominal_size);
                   cairo_stroke(p->cr);
                 }
               else
@@ -454,7 +459,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 
   cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
   cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
-  cairo_set_line_width(p->cr, p->linewidth);
+  set_line_width(p->linewidth);
 
   cairo_move_to(p->cr, x0, y0);
 
@@ -589,7 +594,7 @@ static void polyline(int n, double *px, double *py)
   cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
   cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
   p->linewidth = ln_width * p->nominal_size;
-  cairo_set_line_width(p->cr, p->linewidth);
+  set_line_width(p->linewidth);
 
   p->color = ln_color;
   set_color(ln_color);
@@ -1671,7 +1676,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   cairo_new_path(p->cr);
   cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
   cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
-  cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
+  set_line_width(gkss->bwidth * p->nominal_size);
 
   j = 0;
   for (i = 0; i < nc; ++i)
@@ -1862,7 +1867,7 @@ static void draw_lines(int n, double *px, double *py, int *attributes)
 
       cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_ROUND);
       line_width = 0.01 * attributes[j++];
-      cairo_set_line_width(p->cr, line_width * p->nominal_size);
+      set_line_width(line_width * p->nominal_size);
       rgba = attributes[j++];
       p->rgb[line_color][0] = (rgba & 0xff) / 255.0;
       p->rgb[line_color][1] = ((rgba >> 8) & 0xff) / 255.0;
@@ -1932,7 +1937,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
 
       cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
       cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
-      cairo_set_line_width(p->cr, gkss->lwidth * p->nominal_size);
+      set_line_width(gkss->lwidth * p->nominal_size);
       rgba = tri[j++];
       p->rgb[line_color][0] = (rgba & 0xff) / 255.0;
       p->rgb[line_color][1] = ((rgba >> 8) & 0xff) / 255.0;
@@ -1995,7 +2000,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
       set_color(gkss->bcoli);
       cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
       cairo_set_line_join(p->cr, CAIRO_LINE_JOIN_ROUND);
-      cairo_set_line_width(p->cr, gkss->bwidth * p->nominal_size);
+      set_line_width(gkss->bwidth * p->nominal_size);
       cairo_stroke(p->cr);
     }
 }
