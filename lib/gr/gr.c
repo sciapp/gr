@@ -5364,10 +5364,12 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                int major_y, int major_z)
 {
   int errind, tnr;
+  double clrt[4], wn[4], vp[4];
+  int modern_projection_type;
+
   int ltype, color, clsw, major;
   double width;
 
-  double clrt[4], wn[4], vp[4];
   double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
 
   double x0, y0, z0, xi, yi, zi;
@@ -5389,7 +5391,10 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+  modern_projection_type =
+      gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+
+  if (modern_projection_type)
     {
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
@@ -5625,7 +5630,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                    "majorx=\"%d\" majory=\"%d\" majorz=\"%d\"/>\n",
                    x_tick, y_tick, z_tick, x_org, y_org, z_org, major_x, major_y, major_z);
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+  if (modern_projection_type)
     {
       gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
       setscale(lx.scale_options);
@@ -5858,6 +5863,7 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 {
   int errind, clsw, i, tnr;
   double clrt[4], wn[4], vp[4];
+  int modern_projection_type;
 
   double x, y, z, x0, y0, z0, x1, y1, z1;
   int clip = 1, visible = 1;
@@ -5870,13 +5876,19 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
   gks_inq_xform(tnr, &errind, wn, vp);
   gks_inq_clip(&errind, &clsw, clrt);
 
+  modern_projection_type =
+      gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+
+  if (modern_projection_type)
+    {
+      gks_set_window(WC, -1, 1, -1, 1);
+      setscale(lx.scale_options);
+    }
+
   if (clsw == GKS_K_CLIP)
     {
-      if (gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC || gpx.projection_type == GR_PROJECTION_PERSPECTIVE)
+      if (modern_projection_type)
         {
-          gks_set_window(WC, -1, 1, -1, 1);
-          setscale(lx.scale_options);
-
           cxl = ix.xmin;
           cxr = ix.xmax;
           cyf = ix.ymin;
@@ -5945,7 +5957,7 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
       gr_writestream("/>\n");
     }
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+  if (modern_projection_type)
     {
       gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
       setscale(lx.scale_options);
@@ -5983,6 +5995,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 {
   int errind, clsw, i, tnr;
   double clrt[4], wn[4], vp[4];
+  int modern_projection_type;
 
   double x, y, z;
   point_3d *point;
@@ -5996,6 +6009,15 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
   gks_inq_xform(tnr, &errind, wn, vp);
   gks_inq_clip(&errind, &clsw, clrt);
 
+  modern_projection_type =
+      gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+
+  if (modern_projection_type)
+    {
+      gks_set_window(WC, -1, 1, -1, 1);
+      setscale(lx.scale_options);
+    }
+
   m = 0;
   point = (point_3d *)xmalloc(n * sizeof(point_3d));
 
@@ -6007,16 +6029,13 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
       if (clsw == GKS_K_CLIP)
         {
-          if (gpx.projection_type == GR_PROJECTION_DEFAULT)
+          if (modern_projection_type)
             {
-              visible = x >= lx.xmin && x <= lx.xmax && y >= lx.ymin && y <= lx.ymax && z >= lx.zmin && z <= lx.zmax;
+              visible = x >= ix.xmin && x <= ix.xmax && y >= ix.ymin && y <= ix.ymax && z >= ix.zmin && z <= ix.zmax;
             }
           else
             {
-              gks_set_window(WC, -1, 1, -1, 1);
-              setscale(lx.scale_options);
-
-              visible = x >= ix.xmin && x <= ix.xmax && y >= ix.ymin && y <= ix.ymax && z >= ix.zmin && z <= ix.zmax;
+              visible = x >= lx.xmin && x <= lx.xmax && y >= lx.ymin && y <= lx.ymax && z >= lx.zmin && z <= lx.zmax;
             }
         }
       else
@@ -6060,7 +6079,7 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
       gr_writestream("/>\n");
     }
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+  if (modern_projection_type)
     {
       gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
       setscale(lx.scale_options);
@@ -6394,10 +6413,12 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                int major_y, int major_z, double tick_size)
 {
   int errind, tnr;
+  double clrt[4], wn[4], vp[4];
+  int modern_projection_type;
+
   int ltype, halign, valign, font, prec, clsw, axis, tick_axis;
   double chux, chuy, slant;
 
-  double clrt[4], wn[4], vp[4];
   double x_min = 0, x_max = 0, y_min = 0, y_max = 0, z_min = 0, z_max = 0;
 
   double r, alpha, beta;
@@ -6412,7 +6433,6 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
   int64_t i;
   int decade, exponent;
   char string[256];
-  int modern_projection_type;
 
   if (x_tick < 0 || y_tick < 0 || z_tick < 0)
     {
@@ -7032,10 +7052,12 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 void gr_titles3d(char *x_title, char *y_title, char *z_title)
 {
   int errind, tnr;
+  double clrt[4], wn[4], vp[4];
+  int modern_projection_type;
+
   int halign, valign, clsw, font, prec;
   double chux, chuy;
 
-  double clrt[4], wn[4], vp[4];
   double x_min, x_max, y_min, y_max, z_min, z_max;
   double x_rel, y_rel, z_rel, x, y, z;
 
@@ -7052,7 +7074,6 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
   double xr, yr, zr;
 
   int flip_x, flip_y, flip_z;
-  int modern_projection_type;
 
   check_autoinit;
 
@@ -7066,13 +7087,16 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
   modern_projection_type =
       gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
 
-  if (wx.phi != 0 || wx.delta != 90)
+  if (modern_projection_type)
+    {
+      gks_set_window(WC, -1, 1, -1, 1);
+      setscale(lx.scale_options);
+    }
+
+  if (modern_projection_type || wx.phi != 0 || wx.delta != 90)
     {
       if (modern_projection_type)
         {
-          gks_set_window(WC, -1, 1, -1, 1);
-          setscale(lx.scale_options);
-
           x_min = ix.xmin;
           x_max = ix.xmax;
           y_min = ix.ymin;
@@ -7749,6 +7773,7 @@ static void get_intensity(double *fx, double *fy, double *fz, double *light_sour
 void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 {
   int errind, ltype, coli, int_style, tnr;
+  int modern_projection_type;
 
   int i, ii, j, jj, k;
   int color;
@@ -7795,7 +7820,10 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+  modern_projection_type =
+      gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC;
+
+  if (modern_projection_type)
     {
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
@@ -8161,7 +8189,7 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
       gr_writestream(" option=\"%d\"/>\n", option);
     }
 
-  if (gpx.projection_type == GR_PROJECTION_PERSPECTIVE || gpx.projection_type == GR_PROJECTION_ORTHOGRAPHIC)
+  if (modern_projection_type)
     {
       gks_set_window(WC, wn[0], wn[1], wn[2], wn[3]);
       setscale(lx.scale_options);
