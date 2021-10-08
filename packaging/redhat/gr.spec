@@ -47,7 +47,7 @@ BuildRequires: qt5-local
 BuildRequires: gcc-local
 BuildRequires: cmake-local
 %else
-%if 0%{?centos_version} < 800
+%if 0%{?rhel} < 8
 BuildRequires: qt-devel
 %endif
 %endif
