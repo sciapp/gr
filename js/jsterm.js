@@ -85,7 +85,7 @@ JSTerm = function(ispluto=false) {
     window.addEventListener('resize', function() {
       // redraw plots if window zoom changed
       if (window.devicePixelRatio != Module.dpr) {
-        for (pid in widgets) {
+        for (let pid in widgets) {
           if (typeof(widgets[pid].canvas) !== 'undefined' && document.body.contains(widgets[pid].canvas)) {
             widgets[pid].draw();
           }
@@ -180,11 +180,13 @@ JSTerm = function(ispluto=false) {
         overlay.style = 'position:absolute; top: 0; right: 0; z-index: 2;';
         overlay.width = widget.width;
         overlay.height = widget.height;
+        overlay.style.width = widget.width + "px";
+        overlay.style.height = widget.height + "px";
         let canvas = document.createElement('canvas');
         canvas.id = 'jsterm-' + widget.id;
         canvas.style = 'position: absolute; top: 0; right: 0; z-index: 0';
-        canvas.width = widget.width;
-        canvas.height = widget.height;
+        canvas.style.width = widget.width + "px";
+        canvas.style.height = widget.height + "px";
         div.appendChild(overlay);
         div.appendChild(canvas);
         disp.appendChild(div);
@@ -421,10 +423,12 @@ JSTerm = function(ispluto=false) {
           this.width = width;
           this.height = height;
           if (this.canvas !== undefined) {
-            this.canvas.width = width;
-            this.canvas.height = height;
             this.overlayCanvas.width = width;
             this.overlayCanvas.height = height;
+            this.canvas.style.width = width + "px";
+            this.canvas.style.height = height + "px";
+            this.overlayCanvas.style.width = width + "px";
+            this.overlayCanvas.style.height = height + "px";
             this.div.style = "position: relative; width: " + width + "px; height: " + height + "px;";
           }
           this.draw();
@@ -1116,8 +1120,8 @@ JSTerm = function(ispluto=false) {
         if (typeof grm === 'undefined') {
           let canvas = document.createElement('canvas');
           canvas.id = 'jsterm-hidden-canvas';
-          canvas.width = 640;
-          canvas.height = 480;
+          canvas.style.width = '640px';
+          canvas.style.height = '480px';
           canvas.style = 'display: none;';
           document.body.appendChild(canvas);
           grm = new GRM('jsterm-hidden-canvas');
