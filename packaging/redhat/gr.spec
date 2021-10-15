@@ -77,7 +77,7 @@ BuildRequires:		libjpeg-turbo-devel
 %endif
 
 # RHEL, CentOS and Scientific Linux 7 have too old cmake version (use prebuild)
-%if 0%{?rhel_version} == 700 || 0%{?scientificlinux_version} == 700 || 0%{?centos_version} == 700
+%if 0%{?rhel} == 7
 %else
 BuildRequires:		cmake
 %endif
@@ -95,7 +95,7 @@ BuildRequires:		wxWidgets-devel
 %endif
 
 # Qt5 BuildRequires for Fedora
-%if 0%{?fedora_version} >= 23 || 0%{?centos_version} >= 800
+%if 0%{?fedora_version} >= 23 || 0%{?rhel} >= 8
 %define qmake_qt5 qmake-qt5
 BuildRequires:		qt5-qtbase-devel
 %endif
@@ -123,7 +123,7 @@ mkdir -p %{THIRDPARTY_SRC}
 
 %build
 # RHEL, CentOS and Scientific Linux 7 have too old cmake version (use prebuild)
-%if 0%{?rhel_version} == 700 || 0%{?scientificlinux_version} == 700 || 0%{?centos_version} == 700
+%if 0%{?rhel} == 7
 export PATH=`pwd`/%{THIRDPARTY}/cmake-3.6.3-Linux-x86_64/bin:$PATH
 %endif
 make -C 3rdparty GRDIR=%{grdir} DIR=`pwd`/%{THIRDPARTY}
