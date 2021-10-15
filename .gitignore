@@ -22,3 +22,6 @@ gr_version.h
 Makedefs
 demo
 gksm
+js/fonts/
+js/gr.js
+js/libGR.js
