@@ -82,9 +82,13 @@ JSTerm = function(ispluto=false) {
 
     var jsterm_ispluto = ispluto;
 
+    var dpr = window.devicePixelRatio || 1;
+
     window.addEventListener('resize', function() {
       // redraw plots if window zoom changed
-      if (window.devicePixelRatio != Module.dpr) {
+      let _dpr = window.devicePixelRatio || 1;
+      if (_dpr != dpr) {
+        dpr = _dpr;
         for (let pid in widgets) {
           if (typeof(widgets[pid].canvas) !== 'undefined' && document.body.contains(widgets[pid].canvas)) {
             widgets[pid].draw();
@@ -178,10 +182,12 @@ JSTerm = function(ispluto=false) {
         let overlay = document.createElement('canvas');
         overlay.id = 'jsterm-overlay-' + widget.id;
         overlay.style = 'position:absolute; top: 0; right: 0; z-index: 2;';
-        overlay.width = widget.width;
-        overlay.height = widget.height;
         overlay.style.width = widget.width + "px";
         overlay.style.height = widget.height + "px";
+        overlay.width = parseInt(widget.width * dpr, 10);
+        overlay.height = parseInt(widget.height * dpr, 10);
+        overlay.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+
         let canvas = document.createElement('canvas');
         canvas.id = 'jsterm-' + widget.id;
         canvas.style = 'position: absolute; top: 0; right: 0; z-index: 0';
@@ -423,12 +429,13 @@ JSTerm = function(ispluto=false) {
           this.width = width;
           this.height = height;
           if (this.canvas !== undefined) {
-            this.overlayCanvas.width = width;
-            this.overlayCanvas.height = height;
             this.canvas.style.width = width + "px";
             this.canvas.style.height = height + "px";
             this.overlayCanvas.style.width = width + "px";
             this.overlayCanvas.style.height = height + "px";
+            this.overlayCanvas.width = parseInt(width * dpr, 10);
+            this.overlayCanvas.height = parseInt(height * dpr, 10);
+            this.overlayCanvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
             this.div.style = "position: relative; width: " + width + "px; height: " + height + "px;";
           }
           this.draw();
