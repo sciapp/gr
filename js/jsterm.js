@@ -82,9 +82,13 @@ JSTerm = function(ispluto=false) {
 
     var jsterm_ispluto = ispluto;
 
+    var dpr = window.devicePixelRatio || 1;
+
     window.addEventListener('resize', function() {
       // redraw plots if window zoom changed
-      if (window.devicePixelRatio != Module.dpr) {
+      let _dpr = window.devicePixelRatio || 1;
+      if (_dpr != dpr) {
+        dpr = _dpr;
         for (let pid in widgets) {
           if (typeof(widgets[pid].canvas) !== 'undefined' && document.body.contains(widgets[pid].canvas)) {
             widgets[pid].draw();
