@@ -11,6 +11,7 @@ dist/
 *.dylib
 *.app
 *.pc
+*.pkg
 gr*.deb
 gr*.rpm
 cmake-build-*/
