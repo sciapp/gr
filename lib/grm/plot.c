@@ -5171,8 +5171,6 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   if (strcmp("barplot", kind) == 0 && pass == 2)
     {
       /* xticklabels */
-      grm_args_t **current_series;
-      args_values(args, "series", "A", &current_series);
       char **xticklabels = NULL;
       unsigned int xticklabels_length;
       int i;
@@ -5183,14 +5181,11 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           double x1, x2;
           double x_left = 0, x_right = 1, null;
           double available_width;
-          double *y;
-          unsigned int y_length;
           const double *window;
           /* calculate width available for xticknotations */
           gr_wctondc(&x_left, &null);
           gr_wctondc(&x_right, &null);
           available_width = x_right - x_left;
-          return_error_if(!args_first_value(*current_series, "y", "D", &y, &y_length), ERROR_PLOT_MISSING_DATA);
           args_values(args, "window", "D", &window);
           gr_setcharheight(charheight);
           gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
