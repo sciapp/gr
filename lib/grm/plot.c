@@ -3240,7 +3240,7 @@ error_t plot_heatmap(grm_args_t *subplot_args)
                   zv = z[i];
                 }
 
-              if (zv > z_max || zv < z_min)
+              if (zv > z_max || zv < z_min || isnan(zv))
                 {
                   data[i] = -1;
                 }
