@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "grm.h"
+#include "gks.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -123,6 +124,64 @@ static void test_heatmap(void)
   grm_args_push(series[1], "yrange", "dd", 0.0, M_PI);
   grm_args_push(args, "kind", "s", "heatmap");
   grm_args_push(args, "series", "nA", 2, series);
+  grm_plot(args);
+
+  printf("Press any key to continue...\n");
+  getchar();
+
+  grm_args_delete(args);
+
+  printf("plot a heatmap with x, y z and resample method (nearest)\n");
+  args = grm_args_new();
+  grm_args_push(args, "x", "nD", X_DIM, x);
+  grm_args_push(args, "y", "nD", Y_DIM, y);
+  grm_args_push(args, "z", "nD", X_DIM * Y_DIM, z);
+  grm_args_push(args, "kind", "s", "heatmap");
+  grm_args_push(args, "resample_method", "s", "nearest");
+  grm_plot(args);
+
+  printf("Press any key to continue...\n");
+  getchar();
+
+  grm_args_delete(args);
+
+  printf("plot a heatmap with x, y z and resample method (linear)\n");
+  args = grm_args_new();
+  grm_args_push(args, "x", "nD", X_DIM, x);
+  grm_args_push(args, "y", "nD", Y_DIM, y);
+  grm_args_push(args, "z", "nD", X_DIM * Y_DIM, z);
+  grm_args_push(args, "kind", "s", "heatmap");
+  grm_args_push(args, "resample_method", "s", "linear");
+  grm_plot(args);
+
+  printf("Press any key to continue...\n");
+  getchar();
+
+  grm_args_delete(args);
+
+  printf("plot a heatmap with x, y z and resample method (lanczos)\n");
+  args = grm_args_new();
+  grm_args_push(args, "x", "nD", X_DIM, x);
+  grm_args_push(args, "y", "nD", Y_DIM, y);
+  grm_args_push(args, "z", "nD", X_DIM * Y_DIM, z);
+  grm_args_push(args, "kind", "s", "heatmap");
+  grm_args_push(args, "resample_method", "s", "lanczos");
+  grm_plot(args);
+
+  printf("Press any key to continue...\n");
+  getchar();
+
+  grm_args_delete(args);
+
+  printf("plot a heatmap with x, y z and resample method (custom)\n");
+  args = grm_args_new();
+  grm_args_push(args, "x", "nD", X_DIM, x);
+  grm_args_push(args, "y", "nD", Y_DIM, y);
+  grm_args_push(args, "z", "nD", X_DIM * Y_DIM, z);
+  grm_args_push(args, "kind", "s", "heatmap");
+  grm_args_push(args, "resample_method", "i",
+                GKS_K_DOWNSAMPLE_HORIZONTAL_NEAREST | GKS_K_DOWNSAMPLE_VERTICAL_LINEAR |
+                    GKS_K_UPSAMPLE_HORIZONTAL_LANCZOS | GKS_K_UPSAMPLE_VERTICAL_NEAREST);
   grm_plot(args);
 
   printf("Press any key to continue...\n");
