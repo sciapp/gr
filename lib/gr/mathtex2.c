@@ -1101,6 +1101,11 @@ static size_t make_char(unsigned int codepoint)
       return 0;
     }
   BoxModelNode bm_node;
+  double size_factor = 1.16;
+  if (codepoint == 8747)
+    {
+      size_factor *= 1.25;
+    }
   bm_node.index = 0;
   bm_node.type = BT_CHAR;
   bm_node.u.character.codepoint = codepoint;
@@ -1108,10 +1113,15 @@ static size_t make_char(unsigned int codepoint)
   bm_node.u.character.state = *get_current_state();
   double width, height, depth, advance, bearing;
   if (gks_ft_get_metrics(
-          MATH_FONT, bm_node.u.character.state.fontsize * 1.16,
+          MATH_FONT, bm_node.u.character.state.fontsize * size_factor,
           get_codepoint_for_character_variant(bm_node.u.character.codepoint, bm_node.u.character.state.font),
           bm_node.u.character.state.dpi, &width, &height, &depth, &advance, &bearing, NULL, NULL, NULL, NULL))
     {
+      if (codepoint == 8747)
+        {
+          height *= 0.75;
+          depth *= 1.25;
+        }
       if (codepoint == ' ')
         {
           bm_node.u.character.width = advance;
@@ -3104,7 +3114,12 @@ static void render_character(BoxModelNode *node, double x, double y)
     }
   /* TODO: inquire current workstation window height? */
   int window_height = 2400;
-  gks_set_text_height(node->u.character.state.fontsize / 15.0 * 12 / window_height);
+  double size_factor = 12 / 15.0 / window_height;
+  if (codepoint == 8747)
+    {
+      size_factor *= 1.25;
+    }
+  gks_set_text_height(node->u.character.state.fontsize * size_factor);
   gks_set_text_fontprec(MATH_FONT, 3);
   gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BASE);
   if (node->u.character.bearing < 0)
