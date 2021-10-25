@@ -246,6 +246,7 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "normalization",
                                     "panzoom",
                                     "phiflip",
+                                    "resample_method",
                                     "reset_ranges",
                                     "rings",
                                     "rotation",
@@ -351,6 +352,7 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"nbins", "i"},
                                               {"panzoom", "D"},
                                               {"raw", "s"},
+                                              {"resample_method", "s|i"},
                                               {"reset_ranges", "i"},
                                               {"rotation", "i"},
                                               {"size", "D|A"},
@@ -900,6 +902,7 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
       args_setdefault(*current_subplot, "xgrid", "i", PLOT_DEFAULT_XGRID);
       args_setdefault(*current_subplot, "ygrid", "i", PLOT_DEFAULT_YGRID);
       args_setdefault(*current_subplot, "zgrid", "i", PLOT_DEFAULT_ZGRID);
+      args_setdefault(*current_subplot, "resample_method", "i", PLOT_DEFAULT_RESAMPLE_METHOD);
       if (strcmp(kind, "heatmap") == 0)
         {
           args_setdefault(*current_subplot, "adjust_xlim", "i", 0);
@@ -1036,6 +1039,7 @@ error_t plot_pre_subplot(grm_args_t *subplot_args)
 
   plot_process_colormap(subplot_args);
   plot_process_font(subplot_args);
+  plot_process_resample_method(subplot_args);
 
   if (str_equals_any(kind, 2, "polar", "polar_histogram"))
     {
@@ -1080,6 +1084,33 @@ void plot_process_font(grm_args_t *subplot_args)
       gr_settextfontprec(font, font_precision);
     }
   /* TODO: Implement other datatypes for `font` and `font_precision` */
+}
+
+void plot_process_resample_method(grm_args_t *subplot_args)
+{
+  unsigned int resample_method_flag;
+  if (!args_values(subplot_args, "resample_method", "i", &resample_method_flag))
+    {
+      const char *resample_method_str;
+      args_values(subplot_args, "resample_method", "s", &resample_method_str);
+      if (strcmp(resample_method_str, "nearest") == 0)
+        {
+          resample_method_flag = GKS_K_RESAMPLE_NEAREST;
+        }
+      else if (strcmp(resample_method_str, "linear") == 0)
+        {
+          resample_method_flag = GKS_K_RESAMPLE_LINEAR;
+        }
+      else if (strcmp(resample_method_str, "lanczos") == 0)
+        {
+          resample_method_flag = GKS_K_RESAMPLE_LANCZOS;
+        }
+      else
+        {
+          resample_method_flag = GKS_K_RESAMPLE_DEFAULT;
+        }
+    }
+  gr_setresamplemethod(resample_method_flag);
 }
 
 void plot_process_viewport(grm_args_t *subplot_args)
