@@ -211,6 +211,7 @@ typedef struct text_node
   double line_width;
   int math;
   double width, height;
+  double baseline[2];
 } text_node_t;
 
 static volume_t vt = {1, 0, 1.25, 1000, 1000, NULL, 1};
@@ -1817,326 +1818,6 @@ void gr_polymarker(int n, double *x, double *y)
   polymarker(n, x, y);
 
   if (flag_graphics) primitive("polymarker", n, x, y);
-}
-
-static void append(double x, double y, char *string, int line_number, int math)
-{
-  text_node_t *prev = text;
-  int errInd, n, wkId;
-  double cpx, cpy, tbx[4], tby[4];
-  char *src, *dest;
-
-  if (*string == '\0') return;
-
-  text = (text_node_t *)calloc(1, sizeof(text_node_t));
-  text->next = NULL;
-  if (head == NULL)
-    head = text;
-  else if (prev != NULL)
-    prev->next = text;
-
-  text->x = x;
-  text->y = y;
-  text->string = (char *)calloc(strlen(string) + 1, sizeof(char));
-  src = string;
-  dest = text->string;
-  while (*src)
-    {
-      if (*src == '$' && *(src + 1) == '$') src++;
-      *dest++ = *src++;
-    }
-  *dest = '\0';
-  text->line_number = line_number;
-  text->line_width = 0;
-  text->math = math;
-
-  gks_inq_open_ws(1, &errInd, &n, &wkId);
-  if (math)
-    gr_inqmathtex(0, 0, text->string, tbx, tby);
-  else
-    gks_inq_text_extent(wkId, 0, 0, text->string, &errInd, &cpx, &cpy, tbx, tby);
-
-  text->width = tbx[1] - tbx[0];
-  text->height = tby[2] - tby[1];
-}
-
-static text_node_t *parse(double x, double y, char *string)
-{
-  char *s, *start, *end;
-  int line_number, math;
-
-  head = text = NULL;
-  line_number = 1;
-  math = 0;
-
-  s = (char *)calloc(strlen(string) + 1, sizeof(char));
-  strcpy(s, string);
-
-  start = end = s;
-  while (*end)
-    {
-      if (*end == '\n')
-        {
-          math = 0;
-          *end++ = '\0';
-          append(x, y, start, line_number, math);
-          start = end;
-          line_number++;
-        }
-      else if (*end == '$' && *(end + 1) == '$')
-        {
-          end += 2;
-        }
-      else if (*end == '$')
-        {
-          *end++ = '\0';
-          append(x, y, start, line_number, math);
-          math = !math;
-          start = end;
-        }
-      else
-        end++;
-    }
-  append(x, y, start, line_number, math);
-  free(s);
-
-  return head;
-}
-
-static void text_impl(double x, double y, char *string, int inquire, double *tbx, double *tby)
-{
-  int errInd, hAlign, vAlign;
-  double chuX, chuY, angle, charHeight, xOff, yOff, lineWidth, lineHeight;
-  text_node_t *textP, *p;
-  int lineNumber = 1;
-  double totalWidth = 0, totalHeight = 0;
-  double xx, yy, sx, sy;
-  int i;
-
-  gks_inq_text_upvec(&errInd, &chuX, &chuY);
-  gks_set_text_upvec(0, 1);
-  angle = -atan2(chuX, chuY);
-
-  gks_inq_text_height(&errInd, &charHeight);
-
-  gks_inq_text_align(&errInd, &hAlign, &vAlign);
-  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-
-  text = textP = parse(x, y, string);
-  yOff = 0;
-  while (textP != NULL)
-    {
-      lineWidth = 0;
-      lineHeight = 0;
-      p = textP;
-      while (p != NULL)
-        {
-          if (p->line_number != lineNumber) break;
-          lineHeight = max(p->height, lineHeight);
-          lineWidth += p->width;
-          p = p->next;
-        }
-      xOff = 0;
-      yOff += 0.5 * lineHeight;
-
-      totalWidth = max(totalWidth, lineWidth);
-      totalHeight += lineHeight;
-
-      while (textP != NULL && textP->line_number == lineNumber)
-        {
-          textP->x += xOff;
-          textP->y -= yOff;
-
-          xOff += textP->width;
-          totalWidth = max(totalWidth, xOff);
-
-          textP->line_width = lineWidth;
-          textP = textP->next;
-        }
-      yOff += 0.5 * lineHeight;
-      lineNumber += 1;
-    }
-
-  gks_set_text_upvec(chuX, chuY);
-
-  if (!inquire)
-    {
-      p = text;
-      while (p != NULL)
-        {
-          if (hAlign == 2)
-            p->x += 0.5 * (totalWidth - p->line_width);
-          else if (hAlign == 3)
-            p->x += totalWidth - p->line_width;
-          p = p->next;
-        }
-
-      while (text != NULL)
-        {
-          text_node_t *next = text->next;
-
-          xx = text->x - x;
-          switch (hAlign)
-            {
-            case 2:
-              xx -= 0.5 * totalWidth;
-              break;
-            case 3:
-              xx -= totalWidth;
-              break;
-            default:
-              break;
-            }
-          yy = text->y - y;
-          switch (vAlign)
-            {
-            case 1:
-              yy += charHeight * 0.04;
-              break;
-            case 3:
-              yy += 0.5 * totalHeight;
-              break;
-            case 4:
-              yy += totalHeight;
-              break;
-            case 5:
-              yy += totalHeight - charHeight * 0.04;
-              break;
-            default:
-              break;
-            }
-
-          sx = x + cos(angle) * xx - sin(angle) * yy;
-          sy = y + sin(angle) * xx + cos(angle) * yy;
-
-          if (text->math)
-            gr_mathtex(sx, sy, text->string);
-          else
-            gks_text(sx, sy, text->string);
-
-          free(text->string);
-          free(text);
-          text = next;
-        }
-    }
-  else
-    {
-      xx = x;
-      switch (hAlign)
-        {
-        case 2:
-          xx -= 0.5 * totalWidth;
-          break;
-        case 3:
-          xx -= totalWidth;
-          break;
-        default:
-          break;
-        }
-      yy = y;
-      switch (vAlign)
-        {
-        case 1:
-          yy += charHeight * 0.04;
-          break;
-        case 3:
-          yy += 0.5 * totalHeight;
-          break;
-        case 4:
-          yy += totalHeight;
-          break;
-        case 5:
-          yy += totalHeight - charHeight * 0.04;
-          break;
-        default:
-          break;
-        }
-
-      tbx[0] = xx;
-      tby[0] = yy;
-      tbx[1] = tbx[0] + totalWidth;
-      tby[1] = tby[0];
-      tbx[2] = tbx[1];
-      tby[2] = tby[1] - totalHeight;
-      tbx[3] = tbx[0];
-      tby[3] = tby[2];
-
-      for (i = 0; i < 4; i++)
-        {
-          xx = tbx[i] - x;
-          yy = tby[i] - y;
-          tbx[i] = x + cos(angle) * xx - sin(angle) * yy;
-          tby[i] = y + sin(angle) * xx + cos(angle) * yy;
-        }
-    }
-
-  gks_set_text_align(hAlign, vAlign);
-}
-
-/*!
- * Draw a text at position `x`, `y` using the current text attributes.
- *
- * \param[in] x The X coordinate of the starting position of the text string
- * \param[in] y The Y coordinate of the starting position of the text string
- * \param[in] string The text to be drawn
- *
- * The values for `x` and `y` are in normalized device coordinates.
- * The attributes that control the appearance of text are text font and
- * precision, character expansion factor, character spacing, text color index,
- * character height, character up vector, text path and text alignment.
- */
-void gr_text(double x, double y, char *string)
-{
-  int errind, tnr;
-
-  check_autoinit;
-
-  gks_inq_current_xformno(&errind, &tnr);
-  if (tnr != NDC) gks_select_xform(NDC);
-
-  if (strchr(string, '\n') != NULL && strchr(string, '$'))
-    text_impl(x, y, string, 0, NULL, NULL);
-  else
-    gks_text(x, y, string);
-
-  if (tnr != NDC) gks_select_xform(tnr);
-
-  if (flag_graphics) gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
-}
-
-void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
-{
-  int errind, tnr, n, wkid, i;
-  double cpx, cpy;
-
-  check_autoinit;
-
-  gks_inq_current_xformno(&errind, &tnr);
-  if (tnr != NDC) gks_select_xform(NDC);
-
-  if (strchr(string, '\n') != NULL && strchr(string, '$'))
-    text_impl(x, y, string, 1, tbx, tby);
-  else
-    {
-      gks_inq_open_ws(1, &errind, &n, &wkid);
-      gks_inq_text_extent(wkid, x, y, string, &errind, &cpx, &cpy, tbx, tby);
-    }
-
-  if (tnr != NDC)
-    {
-      gks_select_xform(tnr);
-
-      for (i = 0; i < 4; i++)
-        {
-          tbx[i] = (tbx[i] - nx.b) / nx.a;
-          tby[i] = (tby[i] - nx.d) / nx.c;
-          if (lx.scale_options)
-            {
-              tbx[i] = x_log(tbx[i]);
-              tby[i] = y_log(tby[i]);
-            }
-        }
-    }
 }
 
 /*!
@@ -10980,7 +10661,7 @@ static void mathtex(double x, double y, char *string, int inquire, double *tbx, 
     }
 }
 
-void mathtex2(double x, double y, const char *formula, int inquire, double *tbx, double *tby);
+void mathtex2(double x, double y, const char *formula, int inquire, double *tbx, double *tby, double *baseline);
 
 /*!
  * Generate a character string starting at the given location. Strings can be
@@ -11000,7 +10681,7 @@ void gr_mathtex(double x, double y, char *string)
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, string, 0, NULL, NULL);
+      mathtex2(x, y, string, 0, NULL, NULL, NULL);
     }
   else
     {
@@ -11020,11 +10701,367 @@ void gr_inqmathtex(double x, double y, char *string, double *tbx, double *tby)
   gks_inq_text_fontprec(&unused, &unused, &prec);
   if (prec == 3)
     {
-      mathtex2(x, y, string, 1, tbx, tby);
+      mathtex2(x, y, string, 1, tbx, tby, NULL);
     }
   else
     {
       mathtex(x, y, string, 1, tbx, tby);
+    }
+}
+
+static void append(double x, double y, char *string, int line_number, int math)
+{
+  text_node_t *prev = text;
+  int errInd, n, wkId, font, prec;
+  double cpx, cpy, tbx[4], tby[4];
+  char *src, *dest;
+
+  if (*string == '\0') return;
+
+  text = (text_node_t *)calloc(1, sizeof(text_node_t));
+  text->next = NULL;
+  if (head == NULL)
+    head = text;
+  else if (prev != NULL)
+    prev->next = text;
+
+  text->x = x;
+  text->y = y;
+  text->string = (char *)calloc(strlen(string) + 1, sizeof(char));
+  src = string;
+  dest = text->string;
+  while (*src)
+    {
+      if (*src == '$' && *(src + 1) == '$') src++;
+      *dest++ = *src++;
+    }
+  *dest = '\0';
+  text->line_number = line_number;
+  text->line_width = 0;
+  text->math = math;
+
+  gks_inq_open_ws(1, &errInd, &n, &wkId);
+  if (math)
+    {
+      gks_inq_text_fontprec(&errInd, &font, &prec);
+      if (prec == 3)
+        {
+          mathtex2(0, 0, text->string, 1, tbx, tby, text->baseline);
+        }
+      else
+        {
+          mathtex(0, 0, text->string, 1, tbx, tby);
+        }
+    }
+  else
+    {
+      gks_inq_text_extent(wkId, 0, 0, text->string, &errInd, &cpx, &cpy, tbx, tby);
+    }
+
+  text->width = tbx[1] - tbx[0];
+  text->height = tby[2] - tby[1];
+}
+
+static text_node_t *parse(double x, double y, char *string)
+{
+  char *s, *start, *end;
+  int line_number, math;
+
+  head = text = NULL;
+  line_number = 1;
+  math = 0;
+
+  s = (char *)calloc(strlen(string) + 1, sizeof(char));
+  strcpy(s, string);
+
+  start = end = s;
+  while (*end)
+    {
+      if (*end == '\n')
+        {
+          math = 0;
+          *end++ = '\0';
+          append(x, y, start, line_number, math);
+          start = end;
+          line_number++;
+        }
+      else if (!math && *end == '$' && *(end + 1) == '$')
+        {
+          end += 2;
+        }
+      else if (*end == '$')
+        {
+          *end++ = '\0';
+          append(x, y, start, line_number, math);
+          math = !math;
+          start = end;
+        }
+      else
+        end++;
+    }
+  append(x, y, start, line_number, math);
+  free(s);
+
+  return head;
+}
+
+static void text_impl(double x, double y, char *string, int inquire, double *tbx, double *tby)
+{
+  int errInd, hAlign, vAlign;
+  double chuX, chuY, angle, charHeight, xOff, yOff, lineWidth, lineHeight;
+  text_node_t *textP, *p;
+  int lineNumber = 1;
+  double totalWidth = 0, totalHeight = 0, *baseLine;
+  double xx, yy, sx, sy;
+  int i;
+
+  gks_inq_text_upvec(&errInd, &chuX, &chuY);
+  gks_set_text_upvec(0, 1);
+  angle = -atan2(chuX, chuY);
+
+  gks_inq_text_height(&errInd, &charHeight);
+
+  gks_inq_text_align(&errInd, &hAlign, &vAlign);
+  gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+
+  text = textP = parse(x, y, string);
+  yOff = 0;
+  while (textP != NULL)
+    {
+      lineWidth = 0;
+      lineHeight = 0;
+      p = textP;
+      while (p != NULL)
+        {
+          if (p->line_number != lineNumber) break;
+          lineHeight = max(p->height, lineHeight);
+          lineWidth += p->width;
+          p = p->next;
+        }
+      xOff = 0;
+      yOff += 0.5 * lineHeight;
+
+      totalWidth = max(totalWidth, lineWidth);
+      totalHeight += lineHeight;
+
+      while (textP != NULL && textP->line_number == lineNumber)
+        {
+          textP->x += xOff;
+          textP->y -= yOff;
+
+          xOff += textP->width;
+          totalWidth = max(totalWidth, xOff);
+
+          textP->line_width = lineWidth;
+          textP = textP->next;
+        }
+      yOff += 0.5 * lineHeight;
+      lineNumber += 1;
+    }
+
+  gks_set_text_upvec(chuX, chuY);
+
+  if (!inquire)
+    {
+      p = text;
+      while (p != NULL)
+        {
+          if (hAlign == 2)
+            p->x += 0.5 * (totalWidth - p->line_width);
+          else if (hAlign == 3)
+            p->x += totalWidth - p->line_width;
+          p = p->next;
+        }
+
+      textP = text;
+      while (textP != NULL)
+        {
+          baseLine = NULL;
+          p = text;
+          while (p != NULL && p->line_number != textP->line_number)
+            {
+              p = p->next;
+            }
+          while (p != NULL && p->line_number == textP->line_number)
+            {
+              if (p->math)
+                {
+                  baseLine = p->baseline + 1;
+                  break;
+                }
+              else
+                p = p->next;
+            }
+
+          xx = textP->x - x;
+          switch (hAlign)
+            {
+            case 2:
+              xx -= 0.5 * totalWidth;
+              break;
+            case 3:
+              xx -= totalWidth;
+              break;
+            default:
+              break;
+            }
+
+          yy = textP->y - y - charHeight * 0.2;
+          if (!textP->math && baseLine != NULL)
+            {
+              yy += *baseLine + 0.5 * charHeight;
+            }
+          switch (vAlign)
+            {
+            case 2:
+              yy += charHeight * 0.2;
+              break;
+            case 3:
+              yy += 0.5 * totalHeight;
+              break;
+            case 4:
+              yy += totalHeight - charHeight * 0.2;
+              break;
+            case 5:
+              yy += totalHeight;
+              break;
+            default:
+              break;
+            }
+
+          sx = x + cos(angle) * xx - sin(angle) * yy;
+          sy = y + sin(angle) * xx + cos(angle) * yy;
+
+          if (textP->math)
+            gr_mathtex(sx, sy, textP->string);
+          else
+            gks_text(sx, sy, textP->string);
+
+          textP = textP->next;
+        }
+    }
+  else
+    {
+      xx = x;
+      switch (hAlign)
+        {
+        case 2:
+          xx -= 0.5 * totalWidth;
+          break;
+        case 3:
+          xx -= totalWidth;
+          break;
+        default:
+          break;
+        }
+      yy = y;
+      switch (vAlign)
+        {
+        case 3:
+          yy += 0.5 * totalHeight;
+          break;
+        case 4:
+          yy += totalHeight;
+          break;
+        case 5:
+          yy += totalHeight;
+          break;
+        default:
+          break;
+        }
+
+      tbx[0] = xx;
+      tby[0] = yy;
+      tbx[1] = tbx[0] + totalWidth;
+      tby[1] = tby[0];
+      tbx[2] = tbx[1];
+      tby[2] = tby[1] - totalHeight;
+      tbx[3] = tbx[0];
+      tby[3] = tby[2];
+
+      for (i = 0; i < 4; i++)
+        {
+          xx = tbx[i] - x;
+          yy = tby[i] - y;
+          tbx[i] = x + cos(angle) * xx - sin(angle) * yy;
+          tby[i] = y + sin(angle) * xx + cos(angle) * yy;
+        }
+    }
+
+  while (text != NULL)
+    {
+      text_node_t *next = text->next;
+      free(text->string);
+      free(text);
+      text = next;
+    }
+
+  gks_set_text_align(hAlign, vAlign);
+}
+
+/*!
+ * Draw a text at position `x`, `y` using the current text attributes.
+ *
+ * \param[in] x The X coordinate of the starting position of the text string
+ * \param[in] y The Y coordinate of the starting position of the text string
+ * \param[in] string The text to be drawn
+ *
+ * The values for `x` and `y` are in normalized device coordinates.
+ * The attributes that control the appearance of text are text font and
+ * precision, character expansion factor, character spacing, text color index,
+ * character height, character up vector, text path and text alignment.
+ */
+void gr_text(double x, double y, char *string)
+{
+  int errind, tnr;
+
+  check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  if (tnr != NDC) gks_select_xform(NDC);
+
+  if (strchr(string, '\n') != NULL || strchr(string, '$'))
+    text_impl(x, y, string, 0, NULL, NULL);
+  else
+    gks_text(x, y, string);
+
+  if (tnr != NDC) gks_select_xform(tnr);
+
+  if (flag_graphics) gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+}
+
+void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
+{
+  int errind, tnr, n, wkid, i;
+  double cpx, cpy;
+
+  check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  if (tnr != NDC) gks_select_xform(NDC);
+
+  if (strchr(string, '\n') != NULL || strchr(string, '$'))
+    text_impl(x, y, string, 1, tbx, tby);
+  else
+    {
+      gks_inq_open_ws(1, &errind, &n, &wkid);
+      gks_inq_text_extent(wkid, x, y, string, &errind, &cpx, &cpy, tbx, tby);
+    }
+
+  if (tnr != NDC)
+    {
+      gks_select_xform(tnr);
+
+      for (i = 0; i < 4; i++)
+        {
+          tbx[i] = (tbx[i] - nx.b) / nx.a;
+          tby[i] = (tby[i] - nx.d) / nx.c;
+          if (lx.scale_options)
+            {
+              tbx[i] = x_log(tbx[i]);
+              tby[i] = y_log(tby[i]);
+            }
+        }
     }
 }
 

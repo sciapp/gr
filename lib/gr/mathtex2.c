@@ -968,6 +968,7 @@ typedef struct BoxModelNode_
 
 double canvas_height = 0;
 double canvas_width = 0;
+double canvas_depth = 0;
 
 static double font_size;
 static double transformation[6];
@@ -3472,6 +3473,7 @@ static void mathtex_to_box_model(const char *mathtex, double *width, double *hei
   assert(get_box_model_node(result_box_model_node_index)->type == BT_HLIST);
   canvas_height = result_node->u.hlist.height + result_node->u.hlist.depth;
   canvas_width = result_node->u.hlist.width;
+  canvas_depth = result_node->u.hlist.depth;
   if (width)
     {
       *width = result_node->u.hlist.width;
@@ -3523,7 +3525,7 @@ static void calculate_alignment_offsets(int horizontal_alignment, int vertical_a
     case GKS_K_TEXT_VALIGN_NORMAL:
     case GKS_K_TEXT_VALIGN_BASE:
     default:
-      *y_offset = 0;
+      *y_offset = -canvas_depth / window_height;
       break;
     }
 }
@@ -3787,7 +3789,7 @@ static unsigned int get_codepoint_for_character_variant(unsigned int codepoint, 
     }
 }
 
-void mathtex2(double x, double y, const char *formula, int inquire, double *tbx, double *tby)
+void mathtex2(double x, double y, const char *formula, int inquire, double *tbx, double *tby, double *baseline)
 {
   int unused;
   int previous_bearing_x_direction;
@@ -3880,6 +3882,11 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
           tby[2] = ymax;
           tby[3] = ymax;
           angle = -atan2(chupx, chupy);
+          if (baseline)
+            {
+              baseline[0] = x + x_offset * cos(angle) - (y_offset + canvas_depth / window_height) * sin(angle);
+              baseline[1] = y + x_offset * sin(angle) + (y_offset + canvas_depth / window_height) * cos(angle);
+            }
           for (i = 0; i < 4; i++)
             {
               double rx, ry;
