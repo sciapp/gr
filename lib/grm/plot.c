@@ -2279,7 +2279,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
   const char *style = "default";
   double *y;
   unsigned int y_length;
-  unsigned int fixed_y_length;
+  unsigned int fixed_y_length = 0;
   grm_args_t **ind_bar_color = NULL;
   double(*pos_ind_bar_color)[3] = NULL;
   grm_args_t **ind_edge_color = NULL;
@@ -2318,19 +2318,19 @@ error_t plot_barplot(grm_args_t *subplot_args)
 
   /* ind_parameter */
   /* determine the length of y */
-  if (!args_first_value(*current_series, "y", "D", &y, &fixed_y_length))
+  while (*current_series != NULL)
     {
-      unsigned int temp_y_length = 0;
-      cleanup_and_set_error_if(
-          !args_first_value(*current_series, "inner_series", "A", &inner_series, &inner_series_length),
-          ERROR_PLOT_MISSING_DATA);
-      while (inner_series != NULL)
+      if (!args_first_value(*current_series, "y", "D", &y, &y_length))
         {
-          args_first_value(*inner_series, "y", "D", &y, &y_length);
-          temp_y_length += fixed_y_length;
+          cleanup_and_set_error_if(
+              !args_first_value(*current_series, "inner_series", "A", &inner_series, &inner_series_length),
+              ERROR_PLOT_MISSING_DATA);
+          y_length = inner_series_length;
         }
-      fixed_y_length = temp_y_length;
+      fixed_y_length = max(y_length, fixed_y_length);
+      ++current_series;
     }
+
   /* ind_bar_color */
   if (args_values(subplot_args, "ind_bar_color", "A", &ind_bar_color))
     {
@@ -2467,6 +2467,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
         }
     }
 
+  args_values(subplot_args, "series", "A", &current_series);
   wfac = 0.9 * bar_width;
   while (*current_series != NULL)
     {
