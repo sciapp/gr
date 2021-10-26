@@ -56,6 +56,7 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1
+#define PLOT_DEFAULT_RESAMPLE_METHOD GKS_K_RESAMPLE_DEFAULT
 #define PLOT_DEFAULT_ADJUST_XLIM 1
 #define PLOT_DEFAULT_ADJUST_YLIM 1
 #define PLOT_DEFAULT_ADJUST_ZLIM 1
@@ -132,6 +133,7 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args);
 error_t plot_pre_subplot(grm_args_t *subplot_args);
 void plot_process_colormap(grm_args_t *subplot_args);
 void plot_process_font(grm_args_t *subplot_args);
+void plot_process_resample_method(grm_args_t *subplot_args);
 void plot_process_viewport(grm_args_t *subplot_args);
 void plot_process_window(grm_args_t *subplot_args);
 error_t plot_store_coordinate_ranges(grm_args_t *subplot_args);

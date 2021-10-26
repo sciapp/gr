@@ -37,6 +37,7 @@ foreach(executable_source ${EXECUTABLE_SOURCES})
   add_executable("${PROJECT_NAME}_${executable}" "${executable_source}")
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE grm_shared)
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE gr_shared)
+  target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE gks_shared)
   target_link_libraries("${PROJECT_NAME}_${executable}" PRIVATE m)
   target_compile_options("${PROJECT_NAME}_${executable}" PRIVATE ${COMPILER_OPTION_ERROR_IMPLICIT})
   set_target_properties(

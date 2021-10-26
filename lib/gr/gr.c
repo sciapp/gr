@@ -2745,8 +2745,8 @@ void gr_gridit(int nd, double *xd, double *yd, double *zd, int nx, int ny, doubl
   /* CALL THE SMOOTH SURFACE FIT ROUTINE */
   md = 1;
   ncp = 4;
-  iwk = (int *)calloc(31 * nd + nx * ny, sizeof(int));
-  wk = (double *)calloc(6 * (nd + 1), sizeof(double));
+  iwk = (int *)xcalloc(31 * nd + nx * ny, sizeof(int));
+  wk = (double *)xcalloc(6 * (nd + 1), sizeof(double));
 
   idsfft(&md, &ncp, &nd, xd, yd, zd, &nx, &ny, x, y, z, iwk, wk);
 
@@ -8754,10 +8754,10 @@ int gr_hexbin(int n, double *x, double *y, int nbins)
   ycorr = (vymax - vymin) - ((imax - 2) * 1.5 * R + (imax % 2) * R);
   ycorr = ycorr / 2;
 
-  cell = (int *)calloc(lmax + 1, sizeof(int));
-  cnt = (int *)calloc(lmax + 1, sizeof(int));
-  xcm = (double *)calloc(lmax + 1, sizeof(double));
-  ycm = (double *)calloc(lmax + 1, sizeof(double));
+  cell = (int *)xcalloc(lmax + 1, sizeof(int));
+  cnt = (int *)xcalloc(lmax + 1, sizeof(int));
+  xcm = (double *)xcalloc(lmax + 1, sizeof(double));
+  ycm = (double *)xcalloc(lmax + 1, sizeof(double));
 
   rx[0] = vxmin;
   rx[1] = vxmax;
@@ -10716,9 +10716,7 @@ static void append(double x, double y, char *string, int line_number, int math)
   double cpx, cpy, tbx[4], tby[4];
   char *src, *dest;
 
-  if (*string == '\0') return;
-
-  text = (text_node_t *)calloc(1, sizeof(text_node_t));
+  text = (text_node_t *)xcalloc(1, sizeof(text_node_t));
   text->next = NULL;
   if (head == NULL)
     head = text;
@@ -10727,7 +10725,7 @@ static void append(double x, double y, char *string, int line_number, int math)
 
   text->x = x;
   text->y = y;
-  text->string = (char *)calloc(strlen(string) + 1, sizeof(char));
+  text->string = (char *)xcalloc(strlen(string) + 1, sizeof(char));
   src = string;
   dest = text->string;
   while (*src)
@@ -10755,7 +10753,13 @@ static void append(double x, double y, char *string, int line_number, int math)
     }
   else
     {
-      gks_inq_text_extent(wkId, 0, 0, text->string, &errInd, &cpx, &cpy, tbx, tby);
+      if (*text->string)
+        gks_inq_text_extent(wkId, 0, 0, text->string, &errInd, &cpx, &cpy, tbx, tby);
+      else
+        {
+          gks_inq_text_extent(wkId, 0, 0, "Ag", &errInd, &cpx, &cpy, tbx, tby);
+          tbx[0] = tbx[1] = 0;
+        }
     }
 
   text->width = tbx[1] - tbx[0];
@@ -10771,7 +10775,7 @@ static text_node_t *parse(double x, double y, char *string)
   line_number = 1;
   math = 0;
 
-  s = (char *)calloc(strlen(string) + 1, sizeof(char));
+  s = (char *)xcalloc(strlen(string) + 1, sizeof(char));
   strcpy(s, string);
 
   start = end = s;
