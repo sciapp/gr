@@ -829,7 +829,7 @@ static void seg_xform_rel(double *x, double *y) {}
                       [self savePanelDidEnd:savePanel returnCode:result contextInfo:saveFormatPopUp];
                     }];
 #else
-  [savePanel beginSheetModalForWindow:cWindow
+  [savePanel beginSheetModalForWindow:[self window]
                     completionHandler:^(NSInteger result) {
                       [self savePanelDidEnd:savePanel returnCode:result contextInfo:saveFormatPopUp];
                     }];
