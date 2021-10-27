@@ -15,8 +15,9 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/time.h>
-#include <unistd.h>
 #include <pthread.h>
+#include <unistd.h>
+#include <signal.h>
 #else
 #include <windows.h>
 #endif
@@ -93,9 +94,54 @@ static DWORD WINAPI gksqt_tread(LPVOID parm)
 
 static void *gksqt_tread(void *arg)
 {
+#ifdef __APPLE__
+  sigset_t blockMask, origMask;
+  struct sigaction saIgnore, saOrigQuit, saOrigInt, saDefault;
+  pid_t pid;
+
+  sigemptyset(&blockMask);
+  sigaddset(&blockMask, SIGCHLD);
+  sigprocmask(SIG_BLOCK, &blockMask, &origMask);
+
+  saIgnore.sa_handler = SIG_IGN;
+  saIgnore.sa_flags = 0;
+  sigemptyset(&saIgnore.sa_mask);
+  sigaction(SIGINT, &saIgnore, &saOrigInt);
+  sigaction(SIGQUIT, &saIgnore, &saOrigQuit);
+
+  pid = fork();
+  if (pid < 0)
+    {
+      fprintf(stderr, "Fork failed\n");
+      return -1;
+    }
+  else if (pid == 0)
+    {
+      saDefault.sa_handler = SIG_DFL;
+      saDefault.sa_flags = 0;
+      sigemptyset(&saDefault.sa_mask);
+
+      if (saOrigInt.sa_handler != SIG_IGN) sigaction(SIGINT, &saDefault, NULL);
+      if (saOrigQuit.sa_handler != SIG_IGN) sigaction(SIGQUIT, &saDefault, NULL);
+
+      sigprocmask(SIG_SETMASK, &origMask, NULL);
+
+      is_running = 1;
+      execl("/bin/sh", "sh", "-c", (char *)arg, (char *)NULL);
+      is_running = 0;
+
+      exit(127);
+    }
+
+  sigprocmask(SIG_SETMASK, &origMask, NULL);
+  sigaction(SIGINT, &saOrigInt, NULL);
+  sigaction(SIGQUIT, &saOrigQuit, NULL);
+#else
   is_running = 1;
   system((char *)arg);
   is_running = 0;
+#endif
+
   return NULL;
 }
 
