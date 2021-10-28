@@ -35,6 +35,8 @@ extern const char *plot_clear_exclude_keys[];
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 #define ROOT_DEFAULT_APPEND_PLOTS 0
 #define PLOT_DEFAULT_WIDTH 600.0
 #define PLOT_DEFAULT_HEIGHT 450.0
@@ -80,6 +82,11 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_SURFACE_GRIDIT_N 200
 
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+#define PLOT_CUSTOM_COLOR_INDEX 979
+
+
 /* ========================= datatypes ============================================================================== */
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
@@ -107,6 +114,18 @@ typedef enum
   GR_OPTION_CELL_ARRAY = 5,
   GR_OPTION_SHADED_MESH = 6
 } gr_option_t;
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+typedef enum
+{
+  GR_COLOR_RESET = 0,
+  GR_COLOR_LINE = 1 << 0,
+  GR_COLOR_MARKER = 1 << 1,
+  GR_COLOR_FILL = 1 << 2,
+  GR_COLOR_TEXT = 1 << 3,
+  GR_COLOR_BORDER = 1 << 4
+} gr_color_type_t;
 
 
 /* ========================= functions ============================================================================== */
@@ -206,6 +225,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max);
 double get_lightness_from_rbg(double r, double g, double b);
 void set_text_color_for_background(double r, double g, double b);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width);
+void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type);
 
 
 #endif /* ifndef GRM_PLOT_INT_H_INCLUDED */
