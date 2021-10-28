@@ -4922,19 +4922,17 @@ error_t plot_pie(grm_args_t *subplot_args)
   gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
   gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_HALF);
 
-
   cleanup_and_set_error_if(!args_first_value(series, "x", "D", &x, &x_length), ERROR_PLOT_MISSING_DATA);
   normalized_x = normalize(x_length, x);
   cleanup_and_set_error_if(normalized_x == NULL, ERROR_MALLOC);
   normalized_x_int = normalize_int(x_length, x, 1000);
   cleanup_and_set_error_if(normalized_x_int == NULL, ERROR_MALLOC);
 
+  set_next_color(series, "c", GR_COLOR_FILL);
   start_angle = 90;
   for (i = 0; i < x_length; ++i)
     {
-      gr_uselinespec("");
-      gr_inqlinecolorind(&color_ind);
-      gr_setfillcolorind(color_ind);
+      gr_inqfillcolorind(&color_ind);
       gr_inqcolor(color_ind, (int *)color_rgb);
       set_text_color_for_background(color_rgb[0] / 255.0, color_rgb[1] / 255.0, color_rgb[2] / 255.0);
       end_angle = start_angle - normalized_x[i] * 360.0;
@@ -4950,7 +4948,9 @@ error_t plot_pie(grm_args_t *subplot_args)
         {
           start_angle += 360.0;
         }
+      set_next_color(NULL, NULL, GR_COLOR_FILL);
     }
+  set_next_color(NULL, NULL, GR_COLOR_RESET);
 
   if (args_values(subplot_args, "title", "s", &title))
     {
@@ -5480,17 +5480,17 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
 
 error_t plot_draw_pie_legend(grm_args_t *subplot_args)
 {
+  grm_args_t *series;
   const char **labels, **current_label;
   unsigned int num_labels;
-  grm_args_t **current_series;
   const double *viewport;
   double px, py, w, h;
   double tbx[4], tby[4];
   int color_ind;
 
-
   return_error_if(!args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a pie legend with %d labels\n", num_labels));
+  args_values(subplot_args, "series", "a", &series); /* series exists always */
   args_values(subplot_args, "viewport", "D", &viewport);
   gr_savestate();
   gr_selntran(0);
@@ -5517,18 +5517,18 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
   gr_drawrect(px - 0.02, px + w + 0.02, py - 0.5 * h - 0.02, py + 0.5 * h + 0.02);
   gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
   gr_uselinespec(" ");
+  set_next_color(series, "c", GR_COLOR_FILL);
   for (current_label = labels; *current_label != NULL; ++current_label)
     {
-      gr_uselinespec("");
-      gr_inqlinecolorind(&color_ind);
-      gr_setfillcolorind(color_ind);
       gr_fillrect(px, px + 0.02, py - 0.01, py + 0.01);
       gr_setlinecolorind(1);
       gr_drawrect(px, px + 0.02, py - 0.01, py + 0.01);
       gr_textext(px + 0.03, py, (char *)*current_label);
       gr_inqtextext(0, 0, *(char **)current_label, tbx, tby);
       px += tbx[2] + 0.05;
+      set_next_color(NULL, NULL, GR_COLOR_FILL);
     }
+  set_next_color(NULL, NULL, GR_COLOR_RESET);
   gr_selntran(1);
   gr_restorestate();
 
@@ -7209,6 +7209,110 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
 
   /* draw the rest */
   gr_textext(x1, x2, new_label + cur_start);
+}
+
+/*!
+ * \brief Set colors from color index or rgb arrays.
+ *
+ * Call the function first with an argument container and a key. Afterwards, call the `set_next_color` with `NULL`
+ * pointers to iterate through the color arrays. If `key` does not exist in `args`, the function falls back to default
+ * colors.
+ *
+ * \param args The argument container which stores the color values.
+ * \param key The key of the colors in the argument container. The key may reference integer or double arrays.
+ *            Integer arrays describe colors of the GKS color table (0 - 1255). Double arrays contain RGB tuples in the
+ *            range [0.0, 1.0]. If key does not exist, the routine falls back to default colors (taken from
+ *            `gr_uselinespec`).
+ * \param color_type The color type to set. Can be one of `GR_COLOR_LINE`, `GR_COLOR_MARKER`, `GR_COLOR_FILL`,
+ *                   `GR_COLOR_TEXT`, `GR_COLOR_BORDER` or any combination of them (combined with OR). The special value
+ *                   `GR_COLOR_RESET` resets all color modifications.
+ */
+void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type)
+{
+  const static int fallback_color_indices[] = {989, 982, 980, 981, 996, 983, 995, 988, 986, 990,
+                                               991, 984, 992, 993, 994, 987, 985, 997, 998, 999};
+  static double saved_color[3];
+  static int last_array_index = -1;
+  static const int *color_indices = NULL;
+  static const double *color_rgb_values = NULL;
+  static unsigned int color_array_length = -1;
+  int current_array_index = last_array_index + 1;
+  int color_index;
+  int reset = (color_type == GR_COLOR_RESET);
+  int gks_errind = GKS_K_NO_ERROR;
+
+  if (reset || (args != NULL && key != NULL))
+    {
+      if (last_array_index >= 0 && color_rgb_values != NULL)
+        {
+          gr_setcolorrep(PLOT_CUSTOM_COLOR_INDEX, saved_color[0], saved_color[1], saved_color[2]);
+        }
+      last_array_index = -1;
+      if (!reset && args != NULL && key != NULL)
+        {
+          if (!args_first_value(args, key, "I", &color_indices, &color_array_length) &&
+              !args_first_value(args, key, "D", &color_rgb_values, &color_array_length))
+            {
+              /* use fallback colors if `key` cannot be read from `args` */
+              logger((stderr, "Cannot read \"%s\" from args, falling back to default colors\n", key));
+              color_indices = fallback_color_indices;
+              color_array_length = array_size(fallback_color_indices);
+            }
+        }
+      else
+        {
+          color_indices = NULL;
+          color_rgb_values = NULL;
+          color_array_length = -1;
+        }
+
+      if (reset)
+        {
+          return;
+        }
+    }
+
+  if (last_array_index < 0 && color_rgb_values != NULL)
+    {
+      gks_inq_color_rep(1, PLOT_CUSTOM_COLOR_INDEX, GKS_K_VALUE_SET, &gks_errind, &saved_color[0], &saved_color[1],
+                        &saved_color[2]);
+    }
+
+  current_array_index %= color_array_length;
+
+  if (color_indices != NULL)
+    {
+      color_index = color_indices[current_array_index];
+      last_array_index = current_array_index;
+    }
+  else if (color_rgb_values != NULL)
+    {
+      gr_setcolorrep(PLOT_CUSTOM_COLOR_INDEX, color_rgb_values[current_array_index],
+                     color_rgb_values[current_array_index + 1], color_rgb_values[current_array_index + 2]);
+      color_index = PLOT_CUSTOM_COLOR_INDEX;
+      last_array_index = current_array_index + 2;
+    }
+
+  if (color_type & GR_COLOR_LINE)
+    {
+      gr_setlinecolorind(color_index);
+    }
+  if (color_type & GR_COLOR_MARKER)
+    {
+      gr_setmarkercolorind(color_index);
+    }
+  if (color_type & GR_COLOR_FILL)
+    {
+      gr_setfillcolorind(color_index);
+    }
+  if (color_type & GR_COLOR_TEXT)
+    {
+      gr_settextcolorind(color_index);
+    }
+  if (color_type & GR_COLOR_BORDER)
+    {
+      gr_setbordercolorind(color_index);
+    }
 }
 
 /* ========================= methods ================================================================================ */
