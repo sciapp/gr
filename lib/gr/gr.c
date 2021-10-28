@@ -11034,6 +11034,49 @@ void gr_text(double x, double y, char *string)
   if (flag_graphics) gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
+/*!
+ * Draw a text at position `x`, `y` using the given options and current text
+ * attributes.
+ *
+ * \param[in] x The X coordinate of the starting position of the text string
+ * \param[in] y The Y coordinate of the starting position of the text string
+ * \param[in] string The text to be drawn
+ * \param[in] opts Bit mask including text options (GKS_TEXT_USE_WC,
+ * GKS_TEXT_ENABLE_INLINE_MATH)
+ *
+ * The values for `x` and `y` specify the text position. If the GKS_TEXT_USE_WC
+ * option is set, they are interpreted as world cordinates, otherwise as
+ * normalized device coordinates. The string may contain new line characters
+ * and inline math expressions ($...$). The latter are only taken into account,
+ * if the GKS_TEXT_ENABLE_INLINE_MATH option is set.
+ * The attributes that control the appearance of text are text font and
+ * precision, character expansion factor, character spacing, text color index,
+ * character height, character up vector, text path and text alignment.
+ */
+void gr_textx(double x, double y, char *string, int opts)
+{
+  int errind, tnr;
+  double xn = x, yn = y;
+
+  check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  if (tnr != NDC && (opts & GR_TEXT_USE_WC) != 0)
+    {
+      gr_wctondc(&xn, &yn);
+      gks_select_xform(NDC);
+    }
+
+  if ((strchr(string, '\n') != NULL || strchr(string, '$')) && (opts & GR_TEXT_ENABLE_INLINE_MATH) != 0)
+    text_impl(xn, yn, string, 0, NULL, NULL);
+  else
+    gks_text(xn, yn, string);
+
+  if (tnr != NDC) gks_select_xform(tnr);
+
+  if (flag_graphics) gr_writestream("<textx x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+}
+
 void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
 {
   int errind, tnr, n, wkid, i;
@@ -11052,7 +11095,32 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
       gks_inq_text_extent(wkid, x, y, string, &errind, &cpx, &cpy, tbx, tby);
     }
 
-  if (tnr != NDC)
+  if (tnr != NDC) gks_select_xform(tnr);
+}
+
+void gr_inqtextx(double x, double y, char *string, int opts, double *tbx, double *tby)
+{
+  int errind, tnr, n, wkid, i;
+  double xn = x, yn = y, cpx, cpy;
+
+  check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  if (tnr != NDC && (opts & GR_TEXT_USE_WC) != 0)
+    {
+      gr_wctondc(&xn, &yn);
+      gks_select_xform(NDC);
+    }
+
+  if ((strchr(string, '\n') != NULL || strchr(string, '$')) && (opts & GR_TEXT_ENABLE_INLINE_MATH) != 0)
+    text_impl(xn, yn, string, 1, tbx, tby);
+  else
+    {
+      gks_inq_open_ws(1, &errind, &n, &wkid);
+      gks_inq_text_extent(wkid, xn, yn, string, &errind, &cpx, &cpy, tbx, tby);
+    }
+
+  if (tnr != NDC && (opts & GR_TEXT_USE_WC) != 0)
     {
       gks_select_xform(tnr);
 
