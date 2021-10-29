@@ -11043,14 +11043,14 @@ void gr_text(double x, double y, char *string)
  * \param[in] x The X coordinate of the starting position of the text string
  * \param[in] y The Y coordinate of the starting position of the text string
  * \param[in] string The text to be drawn
- * \param[in] opts Bit mask including text options (GKS_TEXT_USE_WC,
- * GKS_TEXT_ENABLE_INLINE_MATH)
+ * \param[in] opts Bit mask including text options (GR_TEXT_USE_WC,
+ * GR_TEXT_ENABLE_INLINE_MATH)
  *
- * The values for `x` and `y` specify the text position. If the GKS_TEXT_USE_WC
+ * The values for `x` and `y` specify the text position. If the GR_TEXT_USE_WC
  * option is set, they are interpreted as world cordinates, otherwise as
  * normalized device coordinates. The string may contain new line characters
  * and inline math expressions ($...$). The latter are only taken into account,
- * if the GKS_TEXT_ENABLE_INLINE_MATH option is set.
+ * if the GR_TEXT_ENABLE_INLINE_MATH option is set.
  * The attributes that control the appearance of text are text font and
  * precision, character expansion factor, character spacing, text color index,
  * character height, character up vector, text path and text alignment.
@@ -11077,7 +11077,7 @@ void gr_textx(double x, double y, char *string, int opts)
 
   if (tnr != NDC) gks_select_xform(tnr);
 
-  if (flag_graphics) gr_writestream("<textx x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
+  if (flag_graphics) gr_writestream("<textx x=\"%g\" y=\"%g\" text=\"%s\" opts=\"%d\"/>\n", x, y, string, opts);
 }
 
 void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
