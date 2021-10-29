@@ -35,22 +35,14 @@ var Module = {
         }
     },
     set_dpr: function() {
-      var _dpr = window.devicePixelRatio || 1
+      var _dpr = window.devicePixelRatio || 1;
       if (!(this.canvas.id in this.dpr_per_canvas)) {
-        this.dpr_per_canvas[this.canvas.id] = 1;
-      }
-      if (this.dpr_per_canvas[this.canvas.id] != _dpr) {
-        var initial_width = this.canvas.width / this.dpr_per_canvas[this.canvas.id];
-        var initial_height = this.canvas.height / this.dpr_per_canvas[this.canvas.id];
-
-        this.canvas.style.width = initial_width + 'px';
-        this.canvas.style.height = initial_height + 'px';
-        this.canvas.width = parseInt(initial_width * _dpr, 10);
-        this.canvas.height = parseInt(initial_height * _dpr, 10);
-
-        this.context.setTransform(_dpr, 0, 0, _dpr, 0, 0);
         this.dpr_per_canvas[this.canvas.id] = _dpr;
       }
+      this.canvas.width = parseInt(this.canvas.clientWidth * _dpr, 10);
+      this.canvas.height = parseInt(this.canvas.clientHeight * _dpr, 10);
+      this.context.setTransform(_dpr, 0, 0, _dpr, 0, 0);
+      this.dpr_per_canvas[this.canvas.id] = _dpr;
       if (this.dpr != this.dpr_per_canvas[this.canvas.id]) {
         this.dpr = this.dpr_per_canvas[this.canvas.id];
       }

@@ -1183,6 +1183,7 @@ void gks_text(double px, double py, char *str)
                   gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
 
                   gks_ft_text(px, py, utf8_str, s, gks_ft_gdp);
+                  gks_free(utf8_str);
                 }
               else
                 gks_ft_text(px, py, str, s, gks_ft_gdp);
@@ -2933,6 +2934,7 @@ void gks_inq_text_extent(int wkid, double px, double py, char *str, int *errind,
               gks_input2utf8(str, utf8_str, ENCODING_LATIN1);
 
               gks_ft_inq_text_extent(px, py, utf8_str, s, gks_ft_gdp, bx, by);
+              gks_free(utf8_str);
             }
           else
             gks_ft_inq_text_extent(px, py, str, s, gks_ft_gdp, bx, by);

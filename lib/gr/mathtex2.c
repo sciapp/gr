@@ -968,6 +968,7 @@ typedef struct BoxModelNode_
 
 double canvas_height = 0;
 double canvas_width = 0;
+double canvas_depth = 0;
 
 static double font_size;
 static double transformation[6];
@@ -1101,6 +1102,11 @@ static size_t make_char(unsigned int codepoint)
       return 0;
     }
   BoxModelNode bm_node;
+  double size_factor = 1.16;
+  if (codepoint == 8747)
+    {
+      size_factor *= 1.25;
+    }
   bm_node.index = 0;
   bm_node.type = BT_CHAR;
   bm_node.u.character.codepoint = codepoint;
@@ -1108,10 +1114,15 @@ static size_t make_char(unsigned int codepoint)
   bm_node.u.character.state = *get_current_state();
   double width, height, depth, advance, bearing;
   if (gks_ft_get_metrics(
-          MATH_FONT, bm_node.u.character.state.fontsize * 1.16,
+          MATH_FONT, bm_node.u.character.state.fontsize * size_factor,
           get_codepoint_for_character_variant(bm_node.u.character.codepoint, bm_node.u.character.state.font),
           bm_node.u.character.state.dpi, &width, &height, &depth, &advance, &bearing, NULL, NULL, NULL, NULL))
     {
+      if (codepoint == 8747)
+        {
+          height *= 0.75;
+          depth *= 1.25;
+        }
       if (codepoint == ' ')
         {
           bm_node.u.character.width = advance;
@@ -3104,7 +3115,12 @@ static void render_character(BoxModelNode *node, double x, double y)
     }
   /* TODO: inquire current workstation window height? */
   int window_height = 2400;
-  gks_set_text_height(node->u.character.state.fontsize / 15.0 * 12 / window_height);
+  double size_factor = 12 / 15.0 / window_height;
+  if (codepoint == 8747)
+    {
+      size_factor *= 1.25;
+    }
+  gks_set_text_height(node->u.character.state.fontsize * size_factor);
   gks_set_text_fontprec(MATH_FONT, 3);
   gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_BASE);
   if (node->u.character.bearing < 0)
@@ -3457,6 +3473,7 @@ static void mathtex_to_box_model(const char *mathtex, double *width, double *hei
   assert(get_box_model_node(result_box_model_node_index)->type == BT_HLIST);
   canvas_height = result_node->u.hlist.height + result_node->u.hlist.depth;
   canvas_width = result_node->u.hlist.width;
+  canvas_depth = result_node->u.hlist.depth;
   if (width)
     {
       *width = result_node->u.hlist.width;
@@ -3508,7 +3525,7 @@ static void calculate_alignment_offsets(int horizontal_alignment, int vertical_a
     case GKS_K_TEXT_VALIGN_NORMAL:
     case GKS_K_TEXT_VALIGN_BASE:
     default:
-      *y_offset = 0;
+      *y_offset = -canvas_depth / window_height;
       break;
     }
 }
@@ -3772,7 +3789,7 @@ static unsigned int get_codepoint_for_character_variant(unsigned int codepoint, 
     }
 }
 
-void mathtex2(double x, double y, const char *formula, int inquire, double *tbx, double *tby)
+void mathtex2(double x, double y, const char *formula, int inquire, double *tbx, double *tby, double *baseline)
 {
   int unused;
   int previous_bearing_x_direction;
@@ -3865,6 +3882,11 @@ void mathtex2(double x, double y, const char *formula, int inquire, double *tbx,
           tby[2] = ymax;
           tby[3] = ymax;
           angle = -atan2(chupx, chupy);
+          if (baseline)
+            {
+              baseline[0] = x + x_offset * cos(angle) - (y_offset + canvas_depth / window_height) * sin(angle);
+              baseline[1] = y + x_offset * sin(angle) + (y_offset + canvas_depth / window_height) * cos(angle);
+            }
           for (i = 0; i < 4; i++)
             {
               double rx, ry;

@@ -35,6 +35,8 @@ extern const char *plot_clear_exclude_keys[];
 
 /* ------------------------- plot ----------------------------------------------------------------------------------- */
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ plot arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 #define ROOT_DEFAULT_APPEND_PLOTS 0
 #define PLOT_DEFAULT_WIDTH 600.0
 #define PLOT_DEFAULT_HEIGHT 450.0
@@ -56,6 +58,7 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_XGRID 1
 #define PLOT_DEFAULT_YGRID 1
 #define PLOT_DEFAULT_ZGRID 1
+#define PLOT_DEFAULT_RESAMPLE_METHOD GKS_K_RESAMPLE_DEFAULT
 #define PLOT_DEFAULT_ADJUST_XLIM 1
 #define PLOT_DEFAULT_ADJUST_YLIM 1
 #define PLOT_DEFAULT_ADJUST_ZLIM 1
@@ -77,6 +80,11 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_CONTOUR_GRIDIT_N 200
 #define PLOT_WIREFRAME_GRIDIT_N 50
 #define PLOT_SURFACE_GRIDIT_N 200
+
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+#define PLOT_CUSTOM_COLOR_INDEX 979
 
 
 /* ========================= datatypes ============================================================================== */
@@ -107,6 +115,18 @@ typedef enum
   GR_OPTION_SHADED_MESH = 6
 } gr_option_t;
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~ util ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+typedef enum
+{
+  GR_COLOR_RESET = 0,
+  GR_COLOR_LINE = 1 << 0,
+  GR_COLOR_MARKER = 1 << 1,
+  GR_COLOR_FILL = 1 << 2,
+  GR_COLOR_TEXT = 1 << 3,
+  GR_COLOR_BORDER = 1 << 4
+} gr_color_type_t;
+
 
 /* ========================= functions ============================================================================== */
 
@@ -132,6 +152,7 @@ void plot_process_wswindow_wsviewport(grm_args_t *plot_args);
 error_t plot_pre_subplot(grm_args_t *subplot_args);
 void plot_process_colormap(grm_args_t *subplot_args);
 void plot_process_font(grm_args_t *subplot_args);
+void plot_process_resample_method(grm_args_t *subplot_args);
 void plot_process_viewport(grm_args_t *subplot_args);
 void plot_process_window(grm_args_t *subplot_args);
 error_t plot_store_coordinate_ranges(grm_args_t *subplot_args);
@@ -204,6 +225,7 @@ error_t classes_polar_histogram(grm_args_t *subplot_args, double *r_max);
 double get_lightness_from_rbg(double r, double g, double b);
 void set_text_color_for_background(double r, double g, double b);
 void draw_xticklabel(double x1, double x2, const char *label, double available_width);
+void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t color_type);
 
 
 #endif /* ifndef GRM_PLOT_INT_H_INCLUDED */
