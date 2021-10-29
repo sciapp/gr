@@ -102,6 +102,7 @@ static char *format[] = {
     "surface:iiFFFi",
     "text:ffs",
     "textext:ffs",
+    "textx:ffsi",
     "titles3d:sss",
     "tricont:iFFFiF",
     "trisurf:iFFF",
@@ -535,18 +536,21 @@ static void gr(int id)
       gr_textext(f_arg[0], f_arg[1], s_arg[0]);
       break;
     case 82:
-      gr_titles3d(s_arg[0], s_arg[1], s_arg[2]);
+      gr_textx(f_arg[0], f_arg[1], s_arg[0], i_arg[0]);
       break;
     case 83:
-      gr_tricontour(i_arg[0], f_arr[0], f_arr[1], f_arr[2], i_arg[2], f_arr[3]);
+      gr_titles3d(s_arg[0], s_arg[1], s_arg[2]);
       break;
     case 84:
-      gr_trisurface(i_arg[0], f_arr[0], f_arr[1], f_arr[2]);
+      gr_tricontour(i_arg[0], f_arr[0], f_arr[1], f_arr[2], i_arg[2], f_arr[3]);
       break;
     case 85:
-      gr_uselinespec(s_arg[0]);
+      gr_trisurface(i_arg[0], f_arr[0], f_arr[1], f_arr[2]);
       break;
     case 86:
+      gr_uselinespec(s_arg[0]);
+      break;
+    case 87:
       gr_verrorbars(i_arg[0], f_arr[0], f_arr[1], f_arr[2], f_arr[3]);
       break;
     }

@@ -10766,7 +10766,7 @@ static void append(double x, double y, char *string, int line_number, int math)
   text->height = tby[2] - tby[1];
 }
 
-static text_node_t *parse(double x, double y, char *string)
+static text_node_t *parse(double x, double y, char *string, int inline_math)
 {
   char *s, *start, *end;
   int line_number, math;
@@ -10789,11 +10789,11 @@ static text_node_t *parse(double x, double y, char *string)
           start = end;
           line_number++;
         }
-      else if (!math && *end == '$' && *(end + 1) == '$')
+      else if (inline_math && !math && *end == '$' && *(end + 1) == '$')
         {
           end += 2;
         }
-      else if (*end == '$')
+      else if (inline_math && *end == '$')
         {
           *end++ = '\0';
           append(x, y, start, line_number, math);
@@ -10809,7 +10809,7 @@ static text_node_t *parse(double x, double y, char *string)
   return head;
 }
 
-static void text_impl(double x, double y, char *string, int inquire, double *tbx, double *tby)
+static void text_impl(double x, double y, char *string, int inline_math, int inquire, double *tbx, double *tby)
 {
   int errInd, hAlign, vAlign;
   double chuX, chuY, angle, charHeight, xOff, yOff, lineWidth, lineHeight;
@@ -10828,7 +10828,7 @@ static void text_impl(double x, double y, char *string, int inquire, double *tbx
   gks_inq_text_align(&errInd, &hAlign, &vAlign);
   gks_set_text_align(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
 
-  text = textP = parse(x, y, string);
+  text = textP = parse(x, y, string, inline_math);
   yOff = 0;
   while (textP != NULL)
     {
@@ -10910,7 +10910,9 @@ static void text_impl(double x, double y, char *string, int inquire, double *tbx
               break;
             }
 
-          yy = textP->y - y - charHeight * 0.2;
+          yy = textP->y - y;
+          if (inline_math) yy -= charHeight * 0.2;
+
           if (!textP->math && baseLine != NULL)
             {
               yy += *baseLine + 0.5 * charHeight;
@@ -11024,8 +11026,8 @@ void gr_text(double x, double y, char *string)
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
-  if (strchr(string, '\n') != NULL || strchr(string, '$'))
-    text_impl(x, y, string, 0, NULL, NULL);
+  if (strchr(string, '\n') != NULL || strchr(string, '$') != NULL)
+    text_impl(x, y, string, 1, 0, NULL, NULL);
   else
     gks_text(x, y, string);
 
@@ -11034,9 +11036,53 @@ void gr_text(double x, double y, char *string)
   if (flag_graphics) gr_writestream("<text x=\"%g\" y=\"%g\" text=\"%s\"/>\n", x, y, string);
 }
 
+/*!
+ * Draw a text at position `x`, `y` using the given options and current text
+ * attributes.
+ *
+ * \param[in] x The X coordinate of the starting position of the text string
+ * \param[in] y The Y coordinate of the starting position of the text string
+ * \param[in] string The text to be drawn
+ * \param[in] opts Bit mask including text options (GR_TEXT_USE_WC,
+ * GR_TEXT_ENABLE_INLINE_MATH)
+ *
+ * The values for `x` and `y` specify the text position. If the GR_TEXT_USE_WC
+ * option is set, they are interpreted as world cordinates, otherwise as
+ * normalized device coordinates. The string may contain new line characters
+ * and inline math expressions ($...$). The latter are only taken into account,
+ * if the GR_TEXT_ENABLE_INLINE_MATH option is set.
+ * The attributes that control the appearance of text are text font and
+ * precision, character expansion factor, character spacing, text color index,
+ * character height, character up vector, text path and text alignment.
+ */
+void gr_textx(double x, double y, char *string, int opts)
+{
+  int errind, tnr;
+  double xn = x, yn = y;
+  int inline_math = (opts & GR_TEXT_ENABLE_INLINE_MATH) != 0;
+
+  check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  if (tnr != NDC)
+    {
+      if ((opts & GR_TEXT_USE_WC) != 0) gr_wctondc(&xn, &yn);
+      gks_select_xform(NDC);
+    }
+
+  if (strchr(string, '\n') != NULL || (strchr(string, '$') != NULL && inline_math))
+    text_impl(xn, yn, string, inline_math, 0, NULL, NULL);
+  else
+    gks_text(xn, yn, string);
+
+  if (tnr != NDC) gks_select_xform(tnr);
+
+  if (flag_graphics) gr_writestream("<textx x=\"%g\" y=\"%g\" text=\"%s\" opts=\"%d\"/>\n", x, y, string, opts);
+}
+
 void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
 {
-  int errind, tnr, n, wkid, i;
+  int errind, tnr, n, wkid;
   double cpx, cpy;
 
   check_autoinit;
@@ -11044,26 +11090,55 @@ void gr_inqtext(double x, double y, char *string, double *tbx, double *tby)
   gks_inq_current_xformno(&errind, &tnr);
   if (tnr != NDC) gks_select_xform(NDC);
 
-  if (strchr(string, '\n') != NULL || strchr(string, '$'))
-    text_impl(x, y, string, 1, tbx, tby);
+  if (strchr(string, '\n') != NULL || strchr(string, '$') != NULL)
+    text_impl(x, y, string, 1, 1, tbx, tby);
   else
     {
       gks_inq_open_ws(1, &errind, &n, &wkid);
       gks_inq_text_extent(wkid, x, y, string, &errind, &cpx, &cpy, tbx, tby);
     }
 
+  if (tnr != NDC) gks_select_xform(tnr);
+}
+
+void gr_inqtextx(double x, double y, char *string, int opts, double *tbx, double *tby)
+{
+  int errind, tnr, n, wkid, i;
+  double xn = x, yn = y, cpx, cpy;
+  int inline_math = (opts & GR_TEXT_ENABLE_INLINE_MATH) != 0;
+
+  check_autoinit;
+
+  gks_inq_current_xformno(&errind, &tnr);
+  if (tnr != NDC)
+    {
+      if ((opts & GR_TEXT_USE_WC) != 0) gr_wctondc(&xn, &yn);
+      gks_select_xform(NDC);
+    }
+
+  if (strchr(string, '\n') != NULL || (strchr(string, '$') != NULL && inline_math))
+    text_impl(xn, yn, string, inline_math, 1, tbx, tby);
+  else
+    {
+      gks_inq_open_ws(1, &errind, &n, &wkid);
+      gks_inq_text_extent(wkid, xn, yn, string, &errind, &cpx, &cpy, tbx, tby);
+    }
+
   if (tnr != NDC)
     {
       gks_select_xform(tnr);
 
-      for (i = 0; i < 4; i++)
+      if ((opts & GR_TEXT_USE_WC) != 0)
         {
-          tbx[i] = (tbx[i] - nx.b) / nx.a;
-          tby[i] = (tby[i] - nx.d) / nx.c;
-          if (lx.scale_options)
+          for (i = 0; i < 4; i++)
             {
-              tbx[i] = x_log(tbx[i]);
-              tby[i] = y_log(tby[i]);
+              tbx[i] = (tbx[i] - nx.b) / nx.a;
+              tby[i] = (tby[i] - nx.d) / nx.c;
+              if (lx.scale_options)
+                {
+                  tbx[i] = x_log(tbx[i]);
+                  tby[i] = y_log(tby[i]);
+                }
             }
         }
     }

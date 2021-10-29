@@ -26,6 +26,9 @@ extern "C" {
 #define GR_VOLUME_ABSORPTION 1
 #define GR_VOLUME_MIP 2
 
+#define GR_TEXT_USE_WC (1 << 0)
+#define GR_TEXT_ENABLE_INLINE_MATH (1 << 1)
+
 typedef struct
 {
   double x, y;
@@ -45,7 +48,9 @@ DLLEXPORT void gr_updatews(void);
 DLLEXPORT void gr_polyline(int, double *, double *);
 DLLEXPORT void gr_polymarker(int, double *, double *);
 DLLEXPORT void gr_text(double, double, char *);
+DLLEXPORT void gr_textx(double, double, char *, int);
 DLLEXPORT void gr_inqtext(double, double, char *, double *, double *);
+DLLEXPORT void gr_inqtextx(double, double, char *, int, double *, double *);
 DLLEXPORT void gr_fillarea(int, double *, double *);
 DLLEXPORT void gr_cellarray(double, double, double, double, int, int, int, int, int, int, int *);
 DLLEXPORT void gr_nonuniformcellarray(double *, double *, int, int, int, int, int, int, int *);
