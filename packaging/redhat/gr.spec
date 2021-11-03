@@ -136,6 +136,7 @@ make GRDIR=%{grdir} \
      EXTRA_CFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
      EXTRA_CXXFLAGS=-I`pwd`/%{THIRDPARTY_INC} \
      EXTRA_LDFLAGS=-L`pwd`/%{THIRDPARTY_LIB} \
+     EXTRA_LDFLAGS_QT5="" \
      THIRDPARTYDIR=`pwd`/%{THIRDPARTY} \
      %{?qmake_qt4:QT4_QMAKE=%{qmake_qt4}} \
      %{?qmake_qt5:QT5_QMAKE=%{qmake_qt5}}
