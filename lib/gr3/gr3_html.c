@@ -156,7 +156,7 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp, "            \n");
   fprintf(htmlfp, "          }\n");
   fprintf(htmlfp,
-          "          this.draw = function (projectionMatrix, viewMatrix, modelMatrix, scales, lightDirection) {\n");
+          "          this.draw = function (projectionMatrix, viewMatrix, modelMatrix, scales, lightSources) {\n");
   fprintf(htmlfp, "            gl.uniformMatrix4fv(shaderProgram.projectionMatrixLocation, false, new "
                   "Float32Array(projectionMatrix));\n");
   fprintf(htmlfp,
@@ -165,8 +165,60 @@ int gr3_export_html_(const char *filename, int width, int height)
       htmlfp,
       "            gl.uniformMatrix4fv(shaderProgram.modelMatrixLocation, false, new Float32Array(modelMatrix));\n");
   fprintf(htmlfp, "            gl.uniform3fv(shaderProgram.scalesLocation, new Float32Array(scales));\n");
-  fprintf(htmlfp,
-          "            gl.uniform3fv(shaderProgram.lightDirectionLocation, new Float32Array(lightDirection));\n");
+  fprintf(htmlfp, "            gl.uniform3fv(shaderProgram.lightSourcesLocation, new Float32Array(lightSources));\n");
+  fprintf(htmlfp, "            gl.uniform1i(shaderProgram.numLightsLocation, lightSources.length/6);\n");
+  fprintf(htmlfp, "          gl.uniform3f(shaderProgram.clipMinLocation");
+  if (isfinite(context_struct_.clip_xmin))
+    {
+      fprintf(htmlfp, ", %f", context_struct_.clip_xmin);
+    }
+  else
+    {
+      fprintf(htmlfp, ", -Infinity");
+    }
+  if (isfinite(context_struct_.clip_ymin))
+    {
+      fprintf(htmlfp, ", %f", context_struct_.clip_ymin);
+    }
+  else
+    {
+      fprintf(htmlfp, ", -Infinity");
+    }
+  if (isfinite(context_struct_.clip_zmin))
+    {
+      fprintf(htmlfp, ", %f", context_struct_.clip_zmin);
+    }
+  else
+    {
+      fprintf(htmlfp, ", -Infinity");
+    }
+  fprintf(htmlfp, ")\n");
+  fprintf(htmlfp, "          gl.uniform3f(shaderProgram.clipMaxLocation");
+  if (isfinite(context_struct_.clip_xmax))
+    {
+      fprintf(htmlfp, ", %f", context_struct_.clip_xmax);
+    }
+  else
+    {
+      fprintf(htmlfp, ", Infinity");
+    }
+  if (isfinite(context_struct_.clip_ymax))
+    {
+      fprintf(htmlfp, ", %f", context_struct_.clip_ymax);
+    }
+  else
+    {
+      fprintf(htmlfp, ", Infinity");
+    }
+  if (isfinite(context_struct_.clip_zmax))
+    {
+      fprintf(htmlfp, ", %f", context_struct_.clip_zmax);
+    }
+  else
+    {
+      fprintf(htmlfp, ", Infinity");
+    }
+  fprintf(htmlfp, ")\n");
   fprintf(htmlfp, "            \n");
   fprintf(htmlfp, "            gl.drawArrays(gl.TRIANGLES, 0, this.number_of_vertices);\n");
   fprintf(htmlfp, "            \n");
@@ -473,9 +525,14 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp, "        projectionMatrix = transposeMatrix4(projectionMatrix);\n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        \n");
-  fprintf(htmlfp, "        var lightDirection = [\n");
-  fprintf(htmlfp, "          %g, %g, %g\n", context_struct_.light_dir[0], context_struct_.light_dir[1],
-          context_struct_.light_dir[2]);
+  fprintf(htmlfp, "        var lightSources = [\n");
+  for (i = 0; i < context_struct_.num_lights; i++)
+    {
+      fprintf(htmlfp, "          %g, %g, %g,\n", context_struct_.light_sources[i].x, context_struct_.light_sources[i].y,
+              context_struct_.light_sources[i].z);
+      fprintf(htmlfp, "          %g, %g, %g,\n", context_struct_.light_sources[i].r, context_struct_.light_sources[i].g,
+              context_struct_.light_sources[i].b);
+    }
   fprintf(htmlfp, "        ];\n");
   fprintf(htmlfp, "        \n");
   fprintf(htmlfp, "        \n");
@@ -588,12 +645,13 @@ int gr3_export_html_(const char *filename, int width, int height)
             fprintf(htmlfp, "        ];\n");
             fprintf(htmlfp, "        colors.push(color);\n");
           }
-        fprintf(htmlfp, "        gl.enable(gl.BLEND);\n");
-        fprintf(htmlfp, "        gl.blendFunc(gl.CONSTANT_COLOR, gl.ZERO);\n");
         fprintf(htmlfp, "        for (var i = 0; i < %u; i++) {\n", draw->n);
-        fprintf(htmlfp, "          gl.blendColor(colors[i][0],colors[i][1],colors[i][2],1.0);\n");
+        fprintf(
+            htmlfp,
+            "          gl.uniform3f(shaderProgram.modelColorLocation, colors[i][0], colors[i][1], colors[i][2]);\n");
+
         fprintf(htmlfp,
-                "          mesh.draw(projectionMatrix, viewMatrix, modelMatrices[i], scales[i], lightDirection);\n");
+                "          mesh.draw(projectionMatrix, viewMatrix, modelMatrices[i], scales[i], lightSources);\n");
         fprintf(htmlfp, "        }\n");
         draw = draw->next;
       }
@@ -624,9 +682,13 @@ int gr3_export_html_(const char *filename, int width, int height)
   fprintf(htmlfp,
           "        shaderProgram.modelMatrixLocation = gl.getUniformLocation(shaderProgram, \"ModelMatrix\");\n");
   fprintf(htmlfp,
-          "        shaderProgram.lightDirectionLocation = gl.getUniformLocation(shaderProgram, \"LightDirection\");\n");
+          "        shaderProgram.lightSourcesLocation = gl.getUniformLocation(shaderProgram, \"LightSources\");\n");
+  fprintf(htmlfp, "        shaderProgram.numLightsLocation = gl.getUniformLocation(shaderProgram, \"NumLights\");\n");
+  fprintf(htmlfp, "        shaderProgram.clipMinLocation = gl.getUniformLocation(shaderProgram, \"ClipMin\");\n");
+  fprintf(htmlfp, "        shaderProgram.clipMaxLocation = gl.getUniformLocation(shaderProgram, \"ClipMax\");\n");
   fprintf(htmlfp, "        shaderProgram.scalesLocation = gl.getUniformLocation(shaderProgram, \"Scales\");\n");
   fprintf(htmlfp, "        \n");
+  fprintf(htmlfp, "        shaderProgram.modelColorLocation = gl.getUniformLocation(shaderProgram, \"ModelColor\");\n");
   fprintf(htmlfp, "        shaderProgram.vertexLocation = gl.getAttribLocation(shaderProgram, \"in_Vertex\");\n");
   fprintf(htmlfp, "        shaderProgram.normalLocation = gl.getAttribLocation(shaderProgram, \"in_Normal\");\n");
   fprintf(htmlfp, "        shaderProgram.colorLocation = gl.getAttribLocation(shaderProgram, \"in_Color\");\n");
@@ -671,38 +733,74 @@ int gr3_export_html_(const char *filename, int width, int height)
 
   fprintf(htmlfp, "    </script>\n");
 
-  fprintf(htmlfp, "    <script id=\"shader-vs\" type=\"x-shader/x-vertex\">\n");
-  fprintf(htmlfp, "      uniform mat4 ProjectionMatrix;\n");
-  fprintf(htmlfp, "      uniform mat4 ViewMatrix;\n");
-  fprintf(htmlfp, "      uniform mat4 ModelMatrix;\n");
-  fprintf(htmlfp, "      uniform vec3 LightDirection;\n");
-  fprintf(htmlfp, "      uniform vec3 Scales;\n");
-  fprintf(htmlfp, "      attribute vec3 in_Vertex;\n");
-  fprintf(htmlfp, "      attribute vec3 in_Normal;\n");
-  fprintf(htmlfp, "      attribute vec3 in_Color;\n");
-  fprintf(htmlfp, "      varying vec4 Color;\n");
-  fprintf(htmlfp, "      varying vec3 Normal;\n");
-  fprintf(htmlfp, "      void main(void) {\n");
-  fprintf(htmlfp, "        vec4 Position = ViewMatrix*ModelMatrix*(vec4(Scales*in_Vertex,1));\n");
-  fprintf(htmlfp, "        gl_Position=ProjectionMatrix*Position;\n");
-  fprintf(htmlfp, "        Normal = vec3(ViewMatrix*ModelMatrix*vec4(in_Normal,0)).xyz;\n");
-  fprintf(htmlfp, "        Color = vec4(in_Color,1);\n");
-  fprintf(htmlfp, "        float diffuse = Normal.z;\n");
-  fprintf(htmlfp, "        if (dot(LightDirection,LightDirection) > 0.001) {\n");
-  fprintf(htmlfp, "          diffuse = dot(normalize(LightDirection),Normal);\n");
-  fprintf(htmlfp, "        }\n");
-  fprintf(htmlfp, "        Color.rgb = diffuse*Color.rgb;\n");
-  fprintf(htmlfp, "      }\n");
-  fprintf(htmlfp, "    </script>\n");
+  fprintf(htmlfp, "<script id=\"shader-vs\" type=\"x-shader/x-vertex\">\n"
+                  "precision mediump float;\n"
+                  "uniform mat4 ProjectionMatrix;\n"
+                  "uniform mat4 ViewMatrix;\n"
+                  "uniform mat4 ModelMatrix;\n"
+                  "uniform vec3 Scales;\n"
 
-  fprintf(htmlfp, "    <script id=\"shader-fs\" type=\"x-shader/x-fragment\">\n");
-  fprintf(htmlfp, "      precision mediump float;\n");
-  fprintf(htmlfp, "      varying vec4 Color;\n");
-  fprintf(htmlfp, "      varying vec3 Normal;\n");
-  fprintf(htmlfp, "      void main(void) {\n");
-  fprintf(htmlfp, "        gl_FragColor=vec4(Color.rgb,Color.a);\n");
-  fprintf(htmlfp, "      }\n");
-  fprintf(htmlfp, "    </script>\n");
+                  "attribute vec3 in_Vertex;\n"
+                  "attribute vec3 in_Normal;\n"
+                  "attribute vec3 in_Color;\n"
+
+                  "varying vec4 WorldSpacePosition;\n"
+                  "varying vec4 Position;\n"
+                  "varying vec3 Color;\n"
+                  "varying vec3 Normal;\n"
+
+                  "void main(void) {\n"
+                  "  WorldSpacePosition = ModelMatrix*vec4(Scales*in_Vertex,1);\n"
+                  "  Position = ViewMatrix*WorldSpacePosition;\n"
+                  "  Normal = vec3(ViewMatrix*ModelMatrix*vec4(in_Normal,0)).xyz;\n"
+                  "  Color = in_Color;\n"
+                  "  gl_Position = ProjectionMatrix * Position;\n"
+                  "}\n");
+  fprintf(htmlfp, "</script>\n");
+
+  fprintf(htmlfp,
+          "<script id=\"shader-fs\" type=\"x-shader/x-fragment\">\n"
+          "precision mediump float;\n"
+          "uniform mat4 ViewMatrix;\n"
+          "uniform int NumLights;\n"
+          "uniform vec3 LightSources[32];\n"
+          "uniform vec3 ModelColor;\n"
+          "uniform vec3 ClipMin;\n"
+          "uniform vec3 ClipMax;\n"
+
+          "varying vec4 WorldSpacePosition;\n"
+          "varying vec4 Position;\n"
+          "varying vec3 Normal;\n"
+          "varying vec3 Color;\n"
+          "void main(void) {\n"
+          "if (any(lessThan(WorldSpacePosition.xyz, ClipMin)) || any(greaterThan(WorldSpacePosition.xyz, ClipMax))) { "
+          "discard; }\n"
+          "vec3 normal = normalize(Normal);\n"
+          "if (gl_FrontFacing == false) { normal = -normal; }\n"
+          "vec3 diffuse = vec3(0.0);\n"
+          "vec3 spec = vec3(0.0);\n"
+          "float ambient = 0.2;\n"
+          "float specStrength = 0.7;\n"
+          "float diffStrength = 0.8;\n"
+          "if (NumLights == 0) {"
+          "  diffuse += diffStrength * vec3(normal.z);\n"
+          "  spec += specStrength * "
+          "(pow(max(dot(normalize(normalize(-Position.xyz)+vec3(0.0,0.0,1.0)),normal),0.0),128.0));\n"
+          "}\n"
+          "for(int i = 0; i<16;i++)\n"
+          "{\n"
+          "  if(i<NumLights)\n"
+          "  {\n"
+          "    vec3 light_color = LightSources[2*i+1];\n"
+          "    vec3 halfway = -normalize(normalize(Position.xyz)+normalize(mat3(ViewMatrix)*LightSources[2*i]));\n"
+          "    spec += specStrength * (light_color*pow(max(dot(normalize(halfway),normal),0.0),128.0));\n"
+          "    diffuse += diffStrength * "
+          "(light_color*max(dot(mat3(ViewMatrix)*normalize(-LightSources[2*i]),normal),0.0));\n"
+          "  }\n"
+          "}\n"
+          "gl_FragColor=vec4((ambient + diffuse) * Color * ModelColor + spec, 1.0);\n"
+          "}\n");
+  fprintf(htmlfp, "</script>\n");
 
   fprintf(htmlfp, "  </head>\n");
   fprintf(htmlfp, "  <body onload=\"startWebGLCanvas()\">\n");

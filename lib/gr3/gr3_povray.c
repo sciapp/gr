@@ -72,6 +72,41 @@ int gr3_getpovray_(char *pixels, int width, int height, int use_alpha, int ssaa_
   return GR3_ERROR_NONE;
 }
 
+static void gr3_write_clipped_by(FILE *povfp)
+{
+  if (isfinite(context_struct_.clip_xmin) || isfinite(context_struct_.clip_xmax) ||
+      isfinite(context_struct_.clip_ymin) || isfinite(context_struct_.clip_ymax) ||
+      isfinite(context_struct_.clip_zmin) || isfinite(context_struct_.clip_zmax))
+    {
+      fprintf(povfp, "clipped_by { intersection {\n");
+      if (isfinite(context_struct_.clip_xmin))
+        {
+          fprintf(povfp, "plane { x, %f inverse }\n", context_struct_.clip_xmin);
+        }
+      if (isfinite(context_struct_.clip_xmax))
+        {
+          fprintf(povfp, "plane { x, %f }\n", context_struct_.clip_xmax);
+        }
+      if (isfinite(context_struct_.clip_ymin))
+        {
+          fprintf(povfp, "plane { y, %f inverse }\n", context_struct_.clip_ymin);
+        }
+      if (isfinite(context_struct_.clip_ymax))
+        {
+          fprintf(povfp, "plane { y, %f }\n", context_struct_.clip_ymax);
+        }
+      if (isfinite(context_struct_.clip_zmin))
+        {
+          fprintf(povfp, "plane { z, %f inverse }\n", context_struct_.clip_zmin);
+        }
+      if (isfinite(context_struct_.clip_zmax))
+        {
+          fprintf(povfp, "plane { z, %f }\n", context_struct_.clip_zmax);
+        }
+      fprintf(povfp, "} }\n");
+    }
+}
+
 int gr3_export_pov_(const char *filename, int width, int height)
 {
   int i, j, k, l;
@@ -108,23 +143,24 @@ int gr3_export_pov_(const char *filename, int width, int height)
     }
   fprintf(povfp, "}\n");
 
-  if (context_struct_.light_dir[0] == 0 && context_struct_.light_dir[1] == 0 && context_struct_.light_dir[2] == 0)
+  if (context_struct_.num_lights == 0)
     {
       GLfloat camera_pos[3];
       camera_pos[0] = context_struct_.camera_x;
       camera_pos[1] = context_struct_.camera_y;
       camera_pos[2] = context_struct_.camera_z;
-      fprintf(povfp, "light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n", camera_pos[0], camera_pos[1],
-              camera_pos[2]);
-      fprintf(povfp, "light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n", -camera_pos[0], -camera_pos[1],
-              camera_pos[2]);
+      fprintf(povfp, "light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> parallel point_at <0,0,0>}\n",
+              camera_pos[0], camera_pos[1], camera_pos[2]);
     }
   else
     {
-      fprintf(povfp, "light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n", context_struct_.light_dir[0],
-              context_struct_.light_dir[1], context_struct_.light_dir[2]);
-      fprintf(povfp, "light_source { <%f, %f, %f> color rgb <1.0, 1.0, 1.0> }\n", -context_struct_.light_dir[0],
-              -context_struct_.light_dir[1], context_struct_.light_dir[2]);
+      for (i = 0; i < context_struct_.num_lights; i++)
+        {
+          fprintf(povfp, "light_source { <%f, %f, %f> color rgb <%f, %f, %f> parallel point_at <0,0,0>}\n",
+                  -context_struct_.light_sources[i].x, -context_struct_.light_sources[i].y,
+                  -context_struct_.light_sources[i].z, context_struct_.light_sources[i].r,
+                  context_struct_.light_sources[i].g, context_struct_.light_sources[i].b);
+        }
     }
   fprintf(povfp, "background { color rgb <%f, %f, %f> }\n", context_struct_.background_color[0],
           context_struct_.background_color[1], context_struct_.background_color[2]);
@@ -141,9 +177,12 @@ int gr3_export_pov_(const char *filename, int width, int height)
               fprintf(povfp, "  <%f, %f, %f>, %f\n", draw->positions[i * 3 + 0], draw->positions[i * 3 + 1],
                       draw->positions[i * 3 + 2], draw->scales[i * 3 + 0]);
               fprintf(povfp, "  texture {\n");
-              fprintf(povfp, "    pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 }\n",
-                      draw->colors[i * 3 + 0], draw->colors[i * 3 + 1], draw->colors[i * 3 + 2]);
+              fprintf(
+                  povfp,
+                  "    pigment { color rgb <%f, %f, %f> } finish { ambient 0.2 diffuse 0.8 phong 0.7 phong_size 32 }\n",
+                  draw->colors[i * 3 + 0], draw->colors[i * 3 + 1], draw->colors[i * 3 + 2]);
               fprintf(povfp, "  }\n");
+              gr3_write_clipped_by(povfp);
               fprintf(povfp, "}\n");
             }
           break;
@@ -162,9 +201,12 @@ int gr3_export_pov_(const char *filename, int width, int height)
                       draw->positions[i * 3 + 2] + draw->directions[i * 3 + 2] / len * draw->scales[i * 3 + 2],
                       draw->scales[i * 3 + 0]);
               fprintf(povfp, "  texture {\n");
-              fprintf(povfp, "    pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 }\n",
-                      draw->colors[i * 3 + 0], draw->colors[i * 3 + 1], draw->colors[i * 3 + 2]);
+              fprintf(
+                  povfp,
+                  "    pigment { color rgb <%f, %f, %f> } finish { ambient 0.2 diffuse 0.8 phong 0.7 phong_size 32 }\n",
+                  draw->colors[i * 3 + 0], draw->colors[i * 3 + 1], draw->colors[i * 3 + 2]);
               fprintf(povfp, "  }\n");
+              gr3_write_clipped_by(povfp);
               fprintf(povfp, "}\n");
             }
           break;
@@ -182,9 +224,12 @@ int gr3_export_pov_(const char *filename, int width, int height)
                       draw->positions[i * 3 + 1] + draw->directions[i * 3 + 1] / len * draw->scales[i * 3 + 2],
                       draw->positions[i * 3 + 2] + draw->directions[i * 3 + 2] / len * draw->scales[i * 3 + 2], 0.0);
               fprintf(povfp, "  texture {\n");
-              fprintf(povfp, "    pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 }\n",
-                      draw->colors[i * 3 + 0], draw->colors[i * 3 + 1], draw->colors[i * 3 + 2]);
+              fprintf(
+                  povfp,
+                  "    pigment { color rgb <%f, %f, %f> } finish { ambient 0.2 diffuse 0.8 phong 0.7 phong_size 32 }\n",
+                  draw->colors[i * 3 + 0], draw->colors[i * 3 + 1], draw->colors[i * 3 + 2]);
               fprintf(povfp, "  }\n");
+              gr3_write_clipped_by(povfp);
               fprintf(povfp, "}\n");
             }
           break;
@@ -251,10 +296,11 @@ int gr3_export_pov_(const char *filename, int width, int height)
                   float red = (colors[j * 9 + 0] + colors[j * 9 + 3] + colors[j * 9 + 6]) / 3.0;
                   float green = (colors[j * 9 + 1] + colors[j * 9 + 4] + colors[j * 9 + 7]) / 3.0;
                   float blue = (colors[j * 9 + 2] + colors[j * 9 + 5] + colors[j * 9 + 8]) / 3.0;
-                  fprintf(
-                      povfp,
-                      "#local tex = texture { pigment { color rgb <%f, %f, %f> } finish { ambient 0.3 phong 1.0 } }\n",
-                      draw->colors[i * 3 + 0] * red, draw->colors[i * 3 + 1] * green, draw->colors[i * 3 + 2] * blue);
+                  fprintf(povfp,
+                          "#local tex = texture { pigment { color rgb <%f, %f, %f> } finish { ambient 0.2 diffuse 0.8 "
+                          "phong 0.7 phong_size 32 } }\n",
+                          draw->colors[i * 3 + 0] * red, draw->colors[i * 3 + 1] * green,
+                          draw->colors[i * 3 + 2] * blue);
                   fprintf(povfp, "  smooth_triangle {\n");
                   for (k = 0; k < 3; k++)
                     {
@@ -293,6 +339,7 @@ int gr3_export_pov_(const char *filename, int width, int height)
                   fprintf(povfp, "    texture { tex }\n");
                   fprintf(povfp, "  }\n");
                 }
+              gr3_write_clipped_by(povfp);
               fprintf(povfp, "}\n");
             }
           break;

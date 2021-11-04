@@ -253,6 +253,11 @@ GR3API void gr3_setorthographicprojection(float left, float right, float bottom,
 GR3API void gr3_setsurfaceoption(int option);
 GR3API int gr3_getsurfaceoption(void);
 
+GR3API int gr3_getlightsources(int max_num_lights, float *positions, float *colors);
+GR3API int gr3_setlightsources(int num_lights, float *positions, float *colors);
+
+GR3API void gr3_setclipping(float xmin, float xmax, float ymin, float ymax, float zmin, float zmax);
+GR3API void gr3_getclipping(float *xmin, float *xmax, float *ymin, float *ymax, float *zmin, float *zmax);
 
 #ifdef _WIN32
 #ifdef __cplusplus

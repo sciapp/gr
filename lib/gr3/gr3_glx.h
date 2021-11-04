@@ -48,6 +48,7 @@ GLFUNC PFNGLCREATEPROGRAMPROC gr3_glCreateProgram;
 GLFUNC PFNGLDELETEPROGRAMPROC gr3_glDeleteProgram;
 GLFUNC PFNGLUNIFORM1IPROC gr3_glUniform1i;
 GLFUNC PFNGLUNIFORM3FPROC gr3_glUniform3f;
+GLFUNC PFNGLUNIFORM3FVPROC gr3_glUniform3fv;
 GLFUNC PFNGLUNIFORMMATRIX4FVPROC gr3_glUniformMatrix4fv;
 GLFUNC PFNGLUNIFORM4FPROC gr3_glUniform4f;
 GLFUNC PFNGLGETUNIFORMLOCATIONPROC gr3_glGetUniformLocation;
@@ -142,6 +143,7 @@ GLFUNC void (*gr3_glTexImage2D)(GLenum, GLint, GLint, GLsizei, GLsizei, GLint, G
 #define glDeleteProgram gr3_glDeleteProgram
 #define glUniform1i gr3_glUniform1i
 #define glUniform3f gr3_glUniform3f
+#define glUniform3fv gr3_glUniform3fv
 #define glUniformMatrix4fv gr3_glUniformMatrix4fv
 #define glUniform4f gr3_glUniform4f
 #define glGetUniformLocation gr3_glGetUniformLocation

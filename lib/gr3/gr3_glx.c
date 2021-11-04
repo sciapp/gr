@@ -124,6 +124,7 @@ int gr3_initGL_GLX_(void)
     gr3_glDeleteProgram = (PFNGLDELETEPROGRAMPROC)platform->getProcAddress("glDeleteProgram");
     gr3_glUniform1i = (PFNGLUNIFORM1IPROC)platform->getProcAddress("glUniform1i");
     gr3_glUniform3f = (PFNGLUNIFORM3FPROC)platform->getProcAddress("glUniform3f");
+    gr3_glUniform3fv = (PFNGLUNIFORM3FVPROC)platform->getProcAddress("glUniform3fv");
     gr3_glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)platform->getProcAddress("glUniformMatrix4fv");
     gr3_glUniform4f = (PFNGLUNIFORM4FPROC)platform->getProcAddress("glUniform4f");
     gr3_glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)platform->getProcAddress("glGetUniformLocation");
