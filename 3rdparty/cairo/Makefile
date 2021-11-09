@@ -2,7 +2,7 @@ ifeq ($(strip $(PREFIX)),)
 override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
-VERSION = 1.14.6
+VERSION = 1.16.0
 CAIRO_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
 CAIRO_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.11

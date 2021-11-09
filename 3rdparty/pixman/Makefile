@@ -2,7 +2,7 @@ ifeq ($(strip $(PREFIX)),)
 override PREFIX = $(abspath $(CURDIR)/../build)
 endif
 
-VERSION = 0.34.0
+VERSION = 0.40.0
 PIXMAN_EXTRA_CONFIGURE_FLAGS ?=
 ifeq ($(shell uname),Darwin)
 PIXMAN_EXTRA_CONFIGURE_FLAGS += CFLAGS=-mmacosx-version-min=10.11
