@@ -462,6 +462,8 @@ set(GRM_SOURCES
     lib/grm/event.c
     lib/grm/interaction.c
     lib/grm/json.c
+    lib/grm/layout_c.cpp
+    lib/grm/layout.cpp
     lib/grm/logging.c
     lib/grm/memwriter.c
     lib/grm/net.c
@@ -479,6 +481,8 @@ set(GRM_SUBDIR_HEADERS
     lib/grm/dump.h
     lib/grm/event.h
     lib/grm/interaction.h
+    lib/grm/layout.h
+    lib/grm/layout.hpp
     lib/grm/net.h
     lib/grm/plot.h
     lib/grm/util.h
