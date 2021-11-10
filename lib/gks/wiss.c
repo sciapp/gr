@@ -97,7 +97,7 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
 
       memset((void *)s, 0, 132);
       slen = strlen(c_arr);
-      strncpy(s, c_arr, slen);
+      memcpy(s, c_arr, slen < 132 ? slen : 131);
 
       COPY(&len, sizeof(int));
       COPY(&sgnum, sizeof(int));

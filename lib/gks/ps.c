@@ -668,7 +668,7 @@ static void writefile(char *buffer)
 static void ps_header(void)
 {
   int nchars;
-  char info[150], buffer[150];
+  char info[150], buffer[200];
 
   gkinfo(&nchars, info);
   writefile("%!PS-Adobe-2.0\n");
@@ -786,7 +786,7 @@ static void set_clip(double *clrt)
   int i, j;
   int ix1, ix2, iy1, iy2;
   double cx1, cy1, cx2, cy2;
-  char buffer[100];
+  char buffer[120];
 
   i = clrt[0] < clrt[1] ? 0 : 1;
   j = clrt[2] < clrt[3] ? 2 : 3;

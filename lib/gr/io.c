@@ -180,7 +180,7 @@ static void append(char *string)
       buffer = (char *)realloc(buffer, size + 1);
     }
 
-  strncpy(buffer + nbytes, string, len);
+  memcpy(buffer + nbytes, string, len);
   nbytes += len;
   buffer[nbytes] = '\0';
 }

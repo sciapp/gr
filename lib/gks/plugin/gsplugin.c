@@ -714,7 +714,7 @@ static void gkinfo(int *nchars, char *chars)
 static void ps_header(void)
 {
   int nchars;
-  char info[150], buffer[150];
+  char info[150], buffer[200];
 
   gkinfo(&nchars, info);
   packb("%!PS-Adobe-2.0");
@@ -832,7 +832,7 @@ static void set_clipping(double *clrt)
   int i, j;
   int ix1, ix2, iy1, iy2;
   double cx1, cy1, cx2, cy2;
-  char buffer[100];
+  char buffer[200];
 
   i = clrt[0] < clrt[1] ? 0 : 1;
   j = clrt[2] < clrt[3] ? 2 : 3;

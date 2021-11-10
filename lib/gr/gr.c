@@ -10348,7 +10348,7 @@ static void latex2image(char *string, int pointSize, double *rgb, int *width, in
 {
   int color;
   char s[FILENAME_MAX], path[FILENAME_MAX], cache[33];
-  char *tmp, *temp, *null, cmd[1024];
+  char *tmp, *temp, *null, cmd[FILENAME_MAX * 2 + 100];
   static char *preamble = NULL;
   char tex[FILENAME_MAX], dvi[FILENAME_MAX], png[FILENAME_MAX];
   FILE *stream;
@@ -12804,7 +12804,7 @@ static void trilinear_interpolation(double c000, double c001, double c010, doubl
 static void ray_casting_thread(void *arg)
 {
   int i, j, s;
-  double ray_start[3], ray_dir[3], ray_dir_default[3], tmp[3];
+  double ray_start[3] = {0, 0, 0}, ray_dir[3] = {0, 0, 0}, ray_dir_default[3], tmp[3];
 
   /* get the necessary attributes out of the structs */
   struct thread_attr *ta = (struct thread_attr *)arg;

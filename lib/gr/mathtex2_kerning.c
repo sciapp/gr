@@ -50,7 +50,6 @@ double gr_get_kerning_offset(unsigned int left_codepoint, unsigned int right_cod
 {
   int left_index, right_index;
   left_index = get_index(left_codepoint);
-  short tmp;
   if (left_index < 0)
     {
       return 0;

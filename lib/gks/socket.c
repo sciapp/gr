@@ -113,7 +113,7 @@ static void *gksqt_tread(void *arg)
   if (pid < 0)
     {
       fprintf(stderr, "Fork failed\n");
-      return -1;
+      return NULL;
     }
   else if (pid == 0)
     {

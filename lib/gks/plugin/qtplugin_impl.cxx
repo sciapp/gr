@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <string.h>
 #include <math.h>
 
@@ -865,6 +866,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   j = 0;
   for (i = 0; i < nc; ++i)
     {
+      assert(j < n);
       switch (codes[i])
         {
         case 'M':
@@ -1238,7 +1240,7 @@ static void interp(char *str)
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
-  int *n, *primid, *ldr;
+  int *n = NULL, *primid = NULL, *ldr = NULL;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;

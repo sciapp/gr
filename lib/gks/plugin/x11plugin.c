@@ -2609,6 +2609,8 @@ static void text(double px, double py, int nchars, char *chars)
 
 #if !defined(NO_XFT) || defined(NO_FT)
   if (tx_prec != GKS_K_TEXT_PRECISION_STROKE) set_font(tx_font);
+#else
+  tx_font = tx_font; /* dummy assignment to avoid warning 'set but not used' */
 #endif
 
   set_color(tx_color);

@@ -996,7 +996,7 @@ static void interp(char *str)
           break;
 
         case 17:
-          gks_perror("GDP primitive not supported for OpenGL");
+          gks_perror("GDP primitive not supported for OpenGL (primid=%d)", *primid);
           break;
 
         case 19:

@@ -1491,21 +1491,6 @@ static void append_to_hlist(size_t hlist_index, size_t bm_node_index)
     }
 }
 
-static void prepend_to_hlist(size_t hlist_index, size_t bm_node_index)
-{
-  if (bm_node_index == 0)
-    {
-      return;
-    }
-  BoxModelNode *bm_hlist_node = get_box_model_node(hlist_index);
-  BoxModelNode bm_entry_node;
-  bm_entry_node.index = 0;
-  bm_entry_node.type = BT_HLIST_ENTRY;
-  bm_entry_node.u.hlist_entry.next_entry_index = bm_hlist_node->u.hlist.first_entry_index;
-  bm_entry_node.u.hlist_entry.node_index = bm_node_index;
-  bm_hlist_node->u.hlist.first_entry_index = copy_box_model_node(bm_entry_node);
-}
-
 static void hlist_set_glue_(BoxModelNode *hlist_node, double x, int sign, const double *totals, const char *error_type)
 {
 
@@ -3189,7 +3174,6 @@ static void ship_vlist_out(Ship *this, size_t bm_node_index)
   double cur_glue = 0.0;
   int glue_order = box->u.vlist.glue_order;
   int glue_sign = box->u.vlist.glue_sign;
-  double top_edge = this->cur_v;
   double left_edge = this->cur_h;
   this->cur_s += 1;
   if (this->cur_s > this->max_push)
@@ -3316,7 +3300,6 @@ static void ship_hlist_out(Ship *this, size_t bm_node_index)
   int glue_order = box->u.hlist.glue_order;
   int glue_sign = box->u.hlist.glue_sign;
   double base_line = this->cur_v;
-  double left_edge = this->cur_h;
   this->cur_s += 1;
   if (this->cur_s > this->max_push)
     {

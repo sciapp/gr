@@ -1240,7 +1240,7 @@ void plot_process_window(grm_args_t *subplot_args)
   const char *kind;
   int xlog, ylog, zlog;
   int xflip, yflip, zflip;
-  int major_count, x_major_count, y_major_count;
+  int major_count = 0, x_major_count, y_major_count;
   const double *stored_window;
   double x_min, x_max, y_min, y_max, z_min, z_max;
   double x, y, xzoom, yzoom;
@@ -2579,6 +2579,8 @@ error_t plot_barplot(grm_args_t *subplot_args)
       /* Draw Bar */
       for (i = 0; i < y_length; i++)
         {
+          y1 = 0;
+          y2 = y[i];
           if (strcmp(style, "default") != 0)
             {
               int color_index = i % len_std_colors;
@@ -2606,10 +2608,8 @@ error_t plot_barplot(grm_args_t *subplot_args)
             {
               x1 = i + 1 - 0.5 * bar_width;
               x2 = i + 1 + 0.5 * bar_width;
-              y1 = 0;
-              y2 = y[i];
             }
-          if (strcmp(style, "stacked") == 0)
+          else if (strcmp(style, "stacked") == 0)
             {
               x1 = series_index + 1 - 0.5 * bar_width;
               x2 = series_index + 1 + 0.5 * bar_width;
@@ -2626,13 +2626,11 @@ error_t plot_barplot(grm_args_t *subplot_args)
                   neg_vertical_change += y[i];
                 }
             }
-          if (strcmp(style, "lined") == 0)
+          else if (strcmp(style, "lined") == 0)
             {
               bar_width = wfac / y_length;
               x1 = series_index + 1 - 0.5 * wfac + bar_width * i;
               x2 = series_index + 1 - 0.5 * wfac + bar_width + bar_width * i;
-              y1 = 0;
-              y2 = y[i];
             }
           if (y_lightness_to_get > 0 && y_lightness != NULL)
             {
@@ -3185,7 +3183,7 @@ error_t plot_heatmap(grm_args_t *subplot_args)
   const char *kind = NULL;
   grm_args_t **current_series;
   int icmap[256], *rgba = NULL, *data = NULL, zlog = 0;
-  unsigned int i, j, cols, rows, z_length;
+  unsigned int i, cols, rows, z_length;
   double *x = NULL, *y = NULL, *z, x_min, x_max, y_min, y_max, z_min, z_max, c_min, c_max, zv;
   error_t error = NO_ERROR;
 
@@ -3603,7 +3601,6 @@ error_t plot_imshow(grm_args_t *subplot_args)
  */
 void gr3_mc_dtype_test_(void)
 {
-  GR3_MC_DTYPE v;
   switch (0)
     {
     case ((sizeof(GR3_MC_DTYPE) == 2) && (((GR3_MC_DTYPE)-1) > 0)):
@@ -5284,7 +5281,6 @@ error_t plot_draw_polar_axes(grm_args_t *args)
   gr_setcharheight(charheight);
   gr_setlinetype(GKS_K_LINETYPE_SOLID);
 
-
   if (strcmp(kind, "polar_histogram") == 0)
     {
       const char *norm;
@@ -5308,10 +5304,13 @@ error_t plot_draw_polar_axes(grm_args_t *args)
         {
           tick = 1.5 * gr_tick(r_min, r_max);
         }
-
       else if (strcmp(norm, "cdf") == 0)
         {
           tick = 1.0 / rings;
+        }
+      else
+        {
+          tick = gr_tick(r_min, r_max);
         }
     }
   else
@@ -5486,7 +5485,6 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
   const double *viewport;
   double px, py, w, h;
   double tbx[4], tby[4];
-  int color_ind;
 
   return_error_if(!args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a pie legend with %d labels\n", num_labels));
@@ -7237,7 +7235,7 @@ void set_next_color(const grm_args_t *args, const char *key, gr_color_type_t col
   static const double *color_rgb_values = NULL;
   static unsigned int color_array_length = -1;
   int current_array_index = last_array_index + 1;
-  int color_index;
+  int color_index = 0;
   int reset = (color_type == GR_COLOR_RESET);
   int gks_errind = GKS_K_NO_ERROR;
 

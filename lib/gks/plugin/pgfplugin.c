@@ -1348,7 +1348,6 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
   int i, j, k, len;
   unsigned int rgba;
   int red, green, blue;
-  double alpha;
 
   if (n > p->max_points)
     {

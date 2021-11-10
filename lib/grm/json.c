@@ -1654,7 +1654,6 @@ error_t tojson_write_arg(memwriter_t *memwriter, const arg_t *arg)
 
 error_t tojson_write_args(memwriter_t *memwriter, const grm_args_t *args)
 {
-  const char *key_hierarchy_name;
   args_iterator_t *it;
   arg_t *arg;
 

@@ -1587,7 +1587,6 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
   int i, j;
   double xj, yj, zj, cos_f, sin_f, shear_x, shear_y;
   double chh, height, theta;
-  int alh;
 
   if (!init) gks_ft_init();
 
@@ -1602,8 +1601,6 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
   theta = gkss->txslant * M_PI / 180.0;
   shear_x = cos(theta);
   shear_y = sin(theta);
-
-  alh = gkss->txal[0];
 
   for (i = 0; i < length; i++)
     {

@@ -48,7 +48,6 @@ static void *threadpool_worker(void *arg)
 void threadpool_create(threadpool_t *tp, size_t num, worker_func_t worker_func)
 {
   size_t i;
-  int ret;
 
   num = max(num, 1);
 
@@ -64,7 +63,7 @@ void threadpool_create(threadpool_t *tp, size_t num, worker_func_t worker_func)
 
   for (i = 0; i < num; i++)
     {
-      ret = pthread_create(&tp->threads[i], NULL, threadpool_worker, tp);
+      pthread_create(&tp->threads[i], NULL, threadpool_worker, tp);
     }
 }
 
