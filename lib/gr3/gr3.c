@@ -36,7 +36,9 @@ static char not_initialized_[] = "Not initialized";
 /*!
  * The id of the framebuffer object used for rendering.
  */
+#ifndef NO_GL
 static GLuint framebuffer = 0;
+#endif
 static GLuint user_framebuffer = 0;
 
 static int current_object_id = 0;
@@ -78,11 +80,15 @@ const char *gr3_error_file_ = "";
 GR3_ContextStruct_t_ context_struct_ = GR3_ContextStruct_INITIALIZER;
 
 /* For documentation, see the definition. */
+#ifndef NO_GL
 static int gr3_extensionsupported_(const char *extension_name);
+#endif
 static void gr3_meshaddreference_(int mesh);
 static void gr3_meshremovereference_(int mesh);
+#ifndef NO_GL
 static void gr3_dodrawmesh_(int mesh, int n, const float *positions, const float *directions, const float *ups,
                             const float *colors, const float *scales);
+#endif
 
 static int gr3_getpixmap_(char *bitmap, int width, int height, int use_alpha, int ssaa_factor);
 static int gr3_drawimage_opengl_(float xmin, float xmax, float ymin, float ymax, int width, int height);
@@ -126,12 +132,12 @@ GR3API int gr3_init(int *attrib_list)
 {
   int i, error;
   char *renderpath_string = "gr3";
+  GR3_InitStruct_t_ init_struct = GR3_InitStruct_INITIALIZER;
   char *software_renderer;
   software_renderer = getenv("GR3_USE_SR");
 #ifdef NO_GL
   software_renderer = "True";
 #endif
-  GR3_InitStruct_t_ init_struct = GR3_InitStruct_INITIALIZER;
   if (attrib_list)
     {
       for (i = 0; attrib_list[i] != GR3_IA_END_OF_LIST; i++)
@@ -376,16 +382,13 @@ GR3API int gr3_geterror(int clear, int *line, const char **file)
  *             be the same as in the GL_EXTENSIONS string.
  * \returns 1 on success, 0 otherwise.
  */
+#ifndef NO_GL
 static int gr3_extensionsupported_(const char *extension_name)
 {
-#ifndef NO_GL
   const char *extension_string = (const char *)glGetString(GL_EXTENSIONS);
   return strstr(extension_string, extension_name) != NULL;
-#else
-  (void)extension_name;
-  return 0;
-#endif
 }
+#endif
 
 /*!
  * This function terminates the gr3 context.
@@ -480,9 +483,9 @@ GR3API int gr3_clear(void)
       while (context_struct_.draw_list_)
         {
           draw = context_struct_.draw_list_;
-          int i;
           if (context_struct_.use_software_renderer && draw->vertices_fp)
             {
+              int i;
               for (i = 0; i < draw->n; i++)
                 {
                   if (draw->vertices_fp[i])
@@ -696,8 +699,10 @@ err0:
  */
 GR3API int gr3_createmesh_nocopy(int *mesh, int n, float *vertices, float *normals, float *colors)
 {
+#ifndef NO_GL
   int i;
   void *mem;
+#endif
 
   GR3_DO_INIT;
   if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
@@ -2068,6 +2073,7 @@ static int gr3_getpixmap_(char *pixmap, int width, int height, int use_alpha, in
       (void)dx;
       (void)fb_width;
       (void)fb_height;
+      RETURN_ERROR(GR3_ERROR_NONE);
 #endif
     }
   else
@@ -2184,12 +2190,16 @@ void gr3_appendtorenderpathstring_(const char *string)
 /*!
  * The id of the renderbuffer object used for color data.
  */
+#ifndef NO_GL
 static GLuint color_renderbuffer = 0;
+#endif
 
 /*!
  * The id of the renderbuffer object used for depth data.
  */
+#ifndef NO_GL
 static GLuint depth_renderbuffer = 0;
+#endif
 
 #if GL_ARB_framebuffer_object
 /* Framebuffer Object using OpenGL 3.0 or GL_ARB_framebuffer_object */
@@ -2360,8 +2370,8 @@ GR3API void gr3_setobjectid(int id)
   current_object_id = id;
 }
 
-static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height);
 #ifndef NO_GL
+static int gr3_selectiondraw_(int px, int py, GLuint width, GLuint height);
 GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
 {
   int x, y;
@@ -2369,6 +2379,7 @@ GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
   int dx, dy;
   int x_patches, y_patches;
   int view_matrix_all_zeros;
+  int id;
 
   GLfloat zNear = context_struct_.zNear;
   GLfloat zFar = context_struct_.zFar;
@@ -2391,7 +2402,6 @@ GR3API int gr3_selectid(int px, int py, int width, int height, int *object_id)
       top = zNear * tan_halffovy;
       bottom = -top;
     }
-  int id;
   GR3_DO_INIT;
   if (gr3_geterror(0, NULL, NULL)) return gr3_geterror(0, NULL, NULL);
 
