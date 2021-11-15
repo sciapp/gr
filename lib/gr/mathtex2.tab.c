@@ -2545,7 +2545,7 @@ const char *function_symbols[] = {"\\arccos", "\\csc", "\\ker",    "\\min",  "\\
 
 int symbol_in_symbol_list(const char *symbol, size_t length, const char **symbol_list, size_t num_symbols)
 {
-  int i;
+  size_t i;
   for (i = 0; i < num_symbols; i++)
     {
       if (strncmp(symbol, symbol_list[i], length) == 0 && symbol_list[i][length] == 0)

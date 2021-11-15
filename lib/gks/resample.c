@@ -65,9 +65,9 @@ static double *calculate_resampling_factors(size_t source_size, size_t target_si
 {
   size_t i;
   size_t i_flipped;
-  int j;
+  unsigned int j;
   double *factors;
-  int num_steps;
+  unsigned int num_steps;
   if (source_size > target_size)
     {
       num_steps = (int)ceil((double)source_size / target_size * a) * 2;
@@ -76,9 +76,13 @@ static double *calculate_resampling_factors(size_t source_size, size_t target_si
     {
       num_steps = a * 2;
     }
-  factors = (double *)gks_malloc((int)sizeof(double) * (int)target_size * num_steps);
+  factors = (double *)gks_malloc((int)(sizeof(double) * target_size * num_steps));
   for (i = 0; i < target_size; i++)
     {
+      double sum = 0.0;
+      double target_position;
+      int source_index_offset;
+
       if (flip)
         {
           i_flipped = target_size - 1 - i;
@@ -87,43 +91,41 @@ static double *calculate_resampling_factors(size_t source_size, size_t target_si
         {
           i_flipped = i;
         }
-      double sum = 0.0;
-      double target_position;
-      int source_index_offset;
 
       if (source_size > target_size)
         {
-          target_position = i_flipped;
+          target_position = (double)i_flipped;
           source_index_offset = (int)ceil((double)i_flipped / (double)(target_size - 1) * (double)source_size - 0.5 -
-                                          (double)source_size / target_size * a);
+                                          (double)source_size / (double)target_size * a);
         }
       else
         {
-          target_position = i_flipped / (double)(target_size - 1) * source_size - 0.5;
+          target_position = (double)i_flipped / (double)(target_size - 1) * (double)source_size - 0.5;
           source_index_offset = (int)floor(target_position - (a - 1));
         }
       for (j = 0; j < num_steps; j++)
         {
-          int source_index = source_index_offset + j;
+          int source_index = source_index_offset + (int)j;
+          double source_position, factor;
+
           if (source_index < 0)
             {
               continue;
             }
-          if (source_index > source_size - 1)
+          if (source_index > (int)source_size - 1)
             {
               break;
             }
 
-          double source_position;
           if (source_size > target_size)
             {
               source_position = (source_index_offset + j + 0.5) / (double)source_size * (double)(target_size - 1);
             }
           else
             {
-              source_position = source_index;
+              source_position = (double)source_index;
             }
-          double factor = factor_func(source_position, target_position, a);
+          factor = factor_func(source_position, target_position, a);
           sum += factor;
           factors[i * num_steps + j] = factor;
         }
@@ -183,15 +185,17 @@ static void resample_horizontal_rgba(const unsigned char *source_image, double *
           for (i = 0; i < num_steps; i++)
             {
               int source_index = source_index_offset + i;
+              double factor;
+
               if (source_index < 0)
                 {
                   continue;
                 }
-              if (source_index > source_width - 1)
+              if (source_index > (int)source_width - 1)
                 {
                   break;
                 }
-              double factor = factors[ix * num_steps + i];
+              factor = factors[ix * num_steps + i];
               for (j = 0; j < 4; j++)
                 {
                   target_image[(iy * target_width + ix) * 4 + j] +=
@@ -228,6 +232,7 @@ static void resample_vertical_rgba(const double *source_image, unsigned char *ta
       for (iy = 0; iy < target_height; iy++)
         {
           int source_index_offset;
+          double result[4] = {0};
 
           if (flip)
             {
@@ -248,19 +253,21 @@ static void resample_vertical_rgba(const double *source_image, unsigned char *ta
               source_index_offset =
                   (int)floor((double)iy_flipped / (double)(target_height - 1) * (double)source_height + 0.5 - a);
             }
-          double result[4] = {0};
+
           for (i = 0; i < num_steps; i++)
             {
               int source_index = source_index_offset + i;
+              double factor;
+
               if (source_index < 0)
                 {
                   continue;
                 }
-              if (source_index > source_height - 1)
+              if (source_index > (int)source_height - 1)
                 {
                   break;
                 }
-              double factor = factors[iy * num_steps + i];
+              factor = factors[iy * num_steps + i];
               for (j = 0; j < 4; j++)
                 {
                   result[j] += source_image[(source_index * stride + ix) * 4 + j] * factor;
@@ -379,7 +386,7 @@ static unsigned int get_default_resampling_method()
       env = gks_strdup(env);
       for (i = 0; env[i]; i++)
         {
-          if (0 <= env[i] && env[i] <= 127)
+          if (0 <= (signed char)env[i]) /* ensure that env[i] is between 0 and 127 */
             {
               env[i] = (char)tolower(env[i]);
             }

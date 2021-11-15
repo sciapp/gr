@@ -81,7 +81,7 @@ static void list_destroy(_list_t *list)
   free(list);
 }
 
-static double padded_array_lookup(const double *z, size_t nx, size_t ny, long i, long j)
+static double padded_array_lookup(const double *z, long nx, long ny, long i, long j)
 {
   /*
    * This function returns the value of an Array z with the shape nx*ny at the position i, j.
@@ -117,7 +117,7 @@ static double padded_array_lookup(const double *z, size_t nx, size_t ny, long i,
   return z[j * nx + i];
 }
 
-static double padded_array_lookup_1d(const double *z, size_t nx, long i)
+static double padded_array_lookup_1d(const double *z, long nx, long i)
 {
   /*
    * This function performs a safe lookup in a 1 dimensional array z with the length nx.
@@ -150,14 +150,14 @@ static unsigned char get_bitmask(const double *z, size_t nx, size_t ny, long i, 
 
 static double interpolate(double v1, double v2, double contour)
 {
-  double d = v2 - v1;
+  double d = v2 - v1, interp;
   if (v2 == _inf) return 0;
   if (v1 == _inf) return 1;
   if (d == 0)
     {
       return 0;
     }
-  double interp = (contour - v1) / d;
+  interp = (contour - v1) / d;
   if (interp < 0)
     {
       interp *= -1;
@@ -169,8 +169,7 @@ static double interpolate(double v1, double v2, double contour)
   return interp;
 }
 
-static double interpolate_edge(const double *z, size_t nx, size_t ny, long i1, long i2, long j1, long j2,
-                               double contour)
+static double interpolate_edge(const double *z, long nx, long ny, long i1, long i2, long j1, long j2, double contour)
 {
   /*
    * Linear interpolation along the edge of a cell. Return 0 if one point is outside of z.
@@ -188,10 +187,11 @@ static double interpolate_edge(const double *z, size_t nx, size_t ny, long i1, l
 
 static unsigned char check_saddle(const unsigned char edges)
 {
+  int cnt = 0;
+  unsigned char edge_bits = edges & ALL_EDGES;
   /*
    * Return the allowed edges to avoid crossing contour lines at saddle points.
    */
-  unsigned char edge_bits = edges & ALL_EDGES;
   if (!(edges & (SADDLE1 | SADDLE2)))
     {
       /*
@@ -204,7 +204,6 @@ static unsigned char check_saddle(const unsigned char edges)
   /*
    * Count number of edge bits
    */
-  int cnt = 0;
   while (edge_bits)
     {
       if (edge_bits & 1)
@@ -262,7 +261,7 @@ static unsigned char check_saddle(const unsigned char edges)
   return ALL_EDGES;
 }
 
-static void marching_squares(const double *x, const double *y, const double *z, size_t nx, size_t ny,
+static void marching_squares(const double *x, const double *y, const double *z, long nx, long ny,
                              const double *contours, size_t nc, int first_color, int last_color, int draw_polylines)
 {
   /*
@@ -275,10 +274,17 @@ static void marching_squares(const double *x, const double *y, const double *z, 
   double x_step = x[1] - x[0];
   double y_step = y[1] - y[0];
 
-  double x_pos, y_pos;
-  long i, j, fillarea_start_index;
-  size_t contour_index;
+  double x_pos = 0, y_pos = 0;
+  long i, j, fillarea_start_index, num_lines;
+  size_t contour_index, polylines_end_indices, *line_ind;
   double color_step = 0;
+
+  _list_t *polylines_x, *polylines_y, *line_indices;
+
+  long nx_padded = nx + 4;
+  long ny_padded = ny + 4;
+  unsigned char *edges;
+
   if (nc > 1)
     {
       color_step = 1.0 * (last_color - first_color) / (nc - 1);
@@ -289,18 +295,17 @@ static void marching_squares(const double *x, const double *y, const double *z, 
     }
 
   /* Create list structures to store the polyline's vertices and the start index of each individual polyline */
-  _list_t *polylines_x = list_create(nx * ny / 4, sizeof(double));
-  _list_t *polylines_y = list_create(nx * ny / 4, sizeof(double));
-  _list_t *line_indices = list_create(100, sizeof(size_t));
+  polylines_x = list_create(nx * ny / 4, sizeof(double));
+  polylines_y = list_create(nx * ny / 4, sizeof(double));
+  line_indices = list_create(100, sizeof(size_t));
 
-  size_t nx_padded = nx + 4;
-  size_t ny_padded = ny + 4;
-  unsigned char *edges = calloc(nx_padded * ny_padded, sizeof(unsigned char));
+  edges = calloc(nx_padded * ny_padded, sizeof(unsigned char));
   assert(edges);
 
   gr_setfillintstyle(1);
   for (contour_index = 0; contour_index < nc; contour_index++)
     {
+      long n;
       double contour = contours[contour_index];
       fillarea_start_index = polylines_x->size;
 
@@ -441,7 +446,7 @@ static void marching_squares(const double *x, const double *y, const double *z, 
             }
         }
       /* Fill all areas for the current contour. Filling must use Even-Odd-Rule. */
-      long n = polylines_x->size - fillarea_start_index;
+      n = polylines_x->size - fillarea_start_index;
       if (n > 2)
         {
           gr_setfillcolorind(first_color + (int)floor(color_step * contour_index));
@@ -451,15 +456,15 @@ static void marching_squares(const double *x, const double *y, const double *z, 
     }
   free(edges);
 
-  long num_lines = line_indices->size;
+  num_lines = line_indices->size;
   if (!draw_polylines)
     {
       num_lines = 0;
     }
 
-  size_t polylines_end_indices = polylines_x->size;
+  polylines_end_indices = polylines_x->size;
   list_append(line_indices, &(polylines_end_indices));
-  size_t *line_ind = (size_t *)line_indices->list;
+  line_ind = (size_t *)line_indices->list;
 
   /* Draw contour lines for all `contour` values */
   for (i = 0; i < num_lines; i++)

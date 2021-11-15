@@ -67,6 +67,10 @@ DLLEXPORT void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *i_arr, in
 
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #if !defined(NO_X11)
 
 #include "icon.bm"
@@ -487,7 +491,7 @@ static ws_state_list *p;
 static int error_code, request_code, function_id;
 
 
-static int *handler(Display *dpy, XErrorEvent *event)
+static int handler(Display *dpy, XErrorEvent *event)
 {
   char str[80], request[40];
 
@@ -506,7 +510,7 @@ static int *handler(Display *dpy, XErrorEvent *event)
       request_code = event->request_code;
     }
 
-  return (NULL);
+  return 0;
 }
 
 
@@ -629,6 +633,8 @@ static void expose_event(Widget widget, ws_state_list *p, XExposeEvent *event, B
  */
 
 {
+  GKS_UNUSED(widget);
+  GKS_UNUSED(continue_to_dispatch);
   if (p->pixmap)
     {
       set_clipping(False);
@@ -957,6 +963,7 @@ static void free_rendercolors(void)
 
 static void setup_xform(double *window, double *viewport)
 {
+  GKS_UNUSED(viewport);
   p->a = (p->width - 1) / (window[1] - window[0]);
   p->b = -window[0] * p->a;
   p->c = (p->height - 1) / (window[2] - window[3]);
@@ -2610,7 +2617,7 @@ static void text(double px, double py, int nchars, char *chars)
 #if !defined(NO_XFT) || defined(NO_FT)
   if (tx_prec != GKS_K_TEXT_PRECISION_STROKE) set_font(tx_font);
 #else
-  tx_font = tx_font; /* dummy assignment to avoid warning 'set but not used' */
+  GKS_UNUSED(tx_font);
 #endif
 
   set_color(tx_color);
@@ -3819,7 +3826,7 @@ static int dispatch_character(XKeyEvent *event, char *text)
               seq[1] = (char)keysym;
               seq[2] = '\0';
               keysym = lookup_string(seq);
-
+              /* fall through */
             default:
               compose_status.chars_matched = 0;
               break;
@@ -3967,7 +3974,7 @@ static void *event_loop(void *arg)
                 handle_expose_event(p);
               else if (XCheckTypedWindowEvent(p->dpy, p->win, ClientMessage, &event))
                 {
-                  if (event.xclient.data.l[0] == p->wmDeleteMessage)
+                  if (event.xclient.data.l[0] == (long)p->wmDeleteMessage)
                     {
                       if (p->master_thread != 0)
                         {
@@ -3992,6 +3999,9 @@ void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
                    char *chars, void **ptr)
 {
   static int win = 0;
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
 
   idle = False;
 
@@ -4033,6 +4043,7 @@ void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
         case 232:
         case 233:
           p->wstype -= 20;
+          /* fall through */
         case 210:
         case 211:
         case 212:
@@ -4639,6 +4650,18 @@ void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double
 void gks_x11plugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                    char *chars, void **ptr)
 {
+  GKS_UNUSED(dx);
+  GKS_UNUSED(dy);
+  GKS_UNUSED(dimx);
+  GKS_UNUSED(ia);
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(r1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(r2);
+  GKS_UNUSED(lc);
+  GKS_UNUSED(chars);
+  GKS_UNUSED(ptr);
+
   if (fctid == 2)
     {
       gks_perror("X11 support not compiled in");

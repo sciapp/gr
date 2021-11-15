@@ -1389,9 +1389,23 @@ void gks_drv_win(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *
 #include "gks.h"
 #include "gkscore.h"
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 void gks_drv_win(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                  char *chars, void **ptr)
 {
+  GKS_UNUSED(dx);
+  GKS_UNUSED(dy);
+  GKS_UNUSED(dimx);
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(r1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(r2);
+  GKS_UNUSED(lc);
+  GKS_UNUSED(chars);
+  GKS_UNUSED(ptr);
   if (fctid == 2)
     {
       gks_perror("GDI32 support not compiled in");

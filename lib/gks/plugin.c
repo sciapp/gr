@@ -108,7 +108,7 @@ static const char *get_qt_version_string()
   HMODULE handle = GetModuleHandle("Qt5Core.dll");
   if (handle != NULL) qVersion = (qversion_t *)GetProcAddress(handle, "qVersion");
 #else
-  qVersion = (qversion_t *)dlsym(dlopen(NULL, RTLD_LAZY), "qVersion");
+  *(void **)(&qVersion) = dlsym(dlopen(NULL, RTLD_LAZY), "qVersion");
 #endif
   if (qVersion != NULL) return qVersion();
 

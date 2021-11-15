@@ -794,6 +794,10 @@ static const unsigned int symbol_codepoints[] = {
 
 #define MATH_FONT 232
 
+#ifndef GR_UNUSED
+#define GR_UNUSED(x) (void)(x)
+#endif
+
 typedef enum FontVariant_
 {
   FV_DEFAULT = -1,
@@ -1075,6 +1079,7 @@ static double get_em_width(BoxModelState bm_state)
 
 static double get_underline_thickness(FontVariant font, double fontsize, double dpi)
 {
+  GR_UNUSED(font);
   return ((0.75 / 12.0) * fontsize * dpi) / 72.0;
 }
 
@@ -1583,6 +1588,7 @@ static void pack_hlist(size_t hlist_index, double w, int m)
           x += node->u.glue.spec->width * node->u.glue.factor;
           total_stretch[node->u.glue.spec->stretch_order] += node->u.glue.spec->stretch;
           total_shrink[node->u.glue.spec->shrink_order] += node->u.glue.spec->shrink;
+          break;
         case BT_KERN:
           x += node->u.kern.width;
           break;
@@ -1681,7 +1687,7 @@ static size_t convert_space_to_box_model(ParserNode *node)
                       {"\\>", 0.22222}, {"\\:", 0.22222},         {"\\;", 0.27778},
                       {"\\ ", 0.33333}, {"~", 0.33333},           {"\\enspace", 0.5},
                       {"\\quad", 1},    {"\\qquad", 2},           {"\\!", -0.16667}};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(space_widths) / sizeof(space_widths[0]); i++)
     {
       if (strncmp(space_widths[i].symbol, node->source, node->length) == 0)

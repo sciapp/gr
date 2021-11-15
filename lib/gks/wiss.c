@@ -23,6 +23,10 @@
   arg = (type *)(s + sp);          \
   sp += nbytes
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 typedef struct ws_state_list_struct
 {
   int conid, state;
@@ -72,6 +76,9 @@ static void write_item(int sgnum, int fctid, int dx, int dy, int dimx, int *i_ar
 {
   char s[132];
   int len = -1, slen, tp = 0;
+  GKS_UNUSED(len_farr_1);
+  GKS_UNUSED(len_farr_2);
+  GKS_UNUSED(len_c_arr);
 
   switch (fctid)
     {
@@ -362,6 +369,7 @@ void gks_drv_wiss(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_
     case 16:
     case 17:
       p->empty = 0;
+      /* fall through */
     case 19:
     case 20:
     case 21:
@@ -732,5 +740,7 @@ static void interp(char *str, int segn)
 
 void gks_wiss_dispatch(int fctid, int wkid, int segn)
 {
+  GKS_UNUSED(fctid);
+  GKS_UNUSED(wkid);
   interp(p->buffer, segn);
 }

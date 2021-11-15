@@ -14,6 +14,9 @@
   memset(d->buffer + d->nbytes, 0, n); \
   d->nbytes += n
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
 
 static void reallocate(gks_display_list_t *d, int len)
 {
@@ -89,6 +92,10 @@ void gks_dl_write_item(gks_display_list_t *d, int fctid, int dx, int dy, int dim
 {
   char s[132], *t = NULL;
   int len = -1, slen, tp = 0;
+
+  GKS_UNUSED(len_f_arr_1);
+  GKS_UNUSED(len_f_arr_2);
+  GKS_UNUSED(len_c_arr);
 
   switch (fctid)
     {

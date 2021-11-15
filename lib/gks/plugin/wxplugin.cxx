@@ -34,6 +34,10 @@ DLLEXPORT void gks_wxplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int
 }
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #ifndef NO_WX
 
 #define TIMER_INTERVAL 100
@@ -1205,6 +1209,18 @@ void gks_wxplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr
 void gks_wxplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                   char *chars, void **ptr)
 {
+  GKS_UNUSED(dx);
+  GKS_UNUSED(dy);
+  GKS_UNUSED(dimx);
+  GKS_UNUSED(ia);
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(r1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(r2);
+  GKS_UNUSED(lc);
+  GKS_UNUSED(chars);
+  GKS_UNUSED(ptr);
+
   if (fctid == 2)
     {
       gks_perror("Wx support not compiled in");

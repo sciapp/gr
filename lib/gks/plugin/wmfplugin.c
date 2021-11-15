@@ -76,6 +76,10 @@ DLLEXPORT void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *i_arr, in
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #define WMF_STRETCHDIB 0x0f43
 #define WMF_EXTTEXTOUT 0x0a32
 #define WMF_POLYGON 0x0324
@@ -1262,6 +1266,10 @@ static void write_page(void)
 void gks_wmfplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                    char *chars, void **ptr)
 {
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
+
   p = (ws_state_list *)*ptr;
 
   switch (fctid)

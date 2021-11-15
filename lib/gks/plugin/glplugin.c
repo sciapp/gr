@@ -44,6 +44,10 @@ DLLEXPORT void gks_glplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int
 }
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #ifndef NO_GLFW
 
 #define MAX_POINTS 2048
@@ -251,6 +255,7 @@ static void gl_init(void)
 
 static void error_callback(int error, const char *description)
 {
+  GKS_UNUSED(error);
   fprintf(stderr, "GKS GL: %s\n", description);
 }
 
@@ -326,6 +331,8 @@ static void line_routine(int num_points, double *x, double *y, int linetype, int
   int i;
   double xn, yn, xd, yd;
   const double modelview_matrix[16] = {2.0 / p->width, 0, 0, -1, 0, -2.0 / p->height, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1};
+  GKS_UNUSED(linetype);
+  GKS_UNUSED(tnr);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadTransposeMatrixd(modelview_matrix);
@@ -529,6 +536,7 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   static GLuint buffer = 0;
   GLboolean draw_pattern = 0;
   double x, y;
+  GKS_UNUSED(tnr);
 
   const double modelview_matrix[16] = {2.0 / p->width, 0, 0, -1, 0, -2.0 / p->height, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1};
   const double texcoord_matrix[16] = {1. / 8., 0, 0, 0, 0, 1. / 8., 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
@@ -628,6 +636,7 @@ static void cellarray(double xmin, double xmax, double ymin, double ymax, int dx
   GLuint texture = 0;
   int i, j, k, index, rgb;
   GLfloat bitmap[dx][dy][4];
+  GKS_UNUSED(dimx);
 
   WC_to_NDC(xmin, ymax, gkss->cntnr, x1, y1);
   seg_xform(&x1, &y1);
@@ -1202,6 +1211,18 @@ void gks_glplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr
 void gks_glplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int len_f_arr_1, double *f_arr_1, int len_f_arr_2,
                   double *f_arr_2, int len_c_arr, char *c_arr, void **ptr)
 {
+  GKS_UNUSED(dx);
+  GKS_UNUSED(dy);
+  GKS_UNUSED(dimx);
+  GKS_UNUSED(i_arr);
+  GKS_UNUSED(len_f_arr_1);
+  GKS_UNUSED(f_arr_1);
+  GKS_UNUSED(len_f_arr_2);
+  GKS_UNUSED(f_arr_2);
+  GKS_UNUSED(len_c_arr);
+  GKS_UNUSED(c_arr);
+  GKS_UNUSED(ptr);
+
   if (fctid == 2)
     {
       gks_perror("GLFW support not compiled in");

@@ -151,7 +151,7 @@ char *str_ftoa(char *result, double value, double reference)
         }
       else
         {
-          sprintf(format, "%lg", reference);
+          sprintf(format, "%g", reference);
 
           if (strchr(format, 'E') == 0)
 

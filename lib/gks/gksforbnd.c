@@ -15,6 +15,10 @@
 #define STDCALL
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 static double *x = NULL, *y = NULL;
 
 static int max_points = 0;
@@ -36,6 +40,8 @@ void STDCALL GINKS(void)
 
 void STDCALL GOPKS(int *errfil, int *buffer)
 {
+  GKS_UNUSED(errfil);
+  GKS_UNUSED(buffer);
   gks_open_gks(2);
 }
 
@@ -163,6 +169,7 @@ void STDCALL GTXS(float *px, float *py, int *nchars, char *chars, unsigned short
   double _x = (double)*px, _y = (double)*py;
   char s[256];
   int n = *nchars;
+  GKS_UNUSED(len);
 
   if (n > 255) n = 255;
   strncpy(s, chars, n);
@@ -419,6 +426,7 @@ void STDCALL GINLC(int *wkid, int *lcdnr, int *tnr, float *px, float *py, int *p
   double _x = (double)*px, _y = (double)*py;
   double _xmin = (double)*xmin, _xmax = (double)*xmax;
   double _ymin = (double)*ymin, _ymax = (double)*ymax;
+  GKS_UNUSED(len);
 
   gks_initialize_locator(*wkid, *lcdnr, *tnr, _x, _y, *pet, _xmin, _xmax, _ymin, _ymax, *ldr, datrec);
 }
@@ -452,11 +460,13 @@ void STDCALL GRQCH(int *wkid, int *chdnr, int *stat, int *chnr)
 
 void STDCALL GRQST(int *wkid, int *stdnr, int *stat, int *lostr, char *str, unsigned short len)
 {
+  GKS_UNUSED(len);
   gks_request_string(*wkid, *stdnr, stat, lostr, str);
 }
 
 void STDCALL GRDITM(int *wkid, int *lenidr, int *maxodr, char *odr, unsigned short len)
 {
+  GKS_UNUSED(len);
   gks_read_item(*wkid, *lenidr, *maxodr, odr);
 }
 
@@ -467,6 +477,7 @@ void STDCALL GGTITM(int *wkid, int *type, int *lenodr)
 
 void STDCALL GIITM(int *type, int *lenidr, int *dimidr, char *idr, unsigned short len)
 {
+  GKS_UNUSED(len);
   gks_interpret_item(*type, *lenidr, *dimidr, idr);
 }
 
@@ -706,6 +717,7 @@ void STDCALL GQTXXS(int *wkid, float *px, float *py, int *nchars, char *str, int
   char s[256];
   int i, n = *nchars;
   double _cpx, _cpy, _tx[4], _ty[4];
+  GKS_UNUSED(len);
 
   if (n > 255) n = 255;
   strncpy(s, str, n);

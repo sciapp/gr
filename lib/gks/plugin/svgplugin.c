@@ -42,6 +42,10 @@
 extern "C" {
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #ifdef _WIN32
 
 #include <windows.h>
@@ -1073,6 +1077,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
   int large_arc_flag, sweep_flag;
   unsigned int in_path = 0;
+  GKS_UNUSED(n);
 
   p->color = gkss->facoli;
 
@@ -1199,6 +1204,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           sweep_flag = a1 > a2;
           while (fabs(a2 - a1) >= 2 * M_PI)
             {
+              double mx, my;
               if (sweep_flag)
                 {
                   a1 -= M_PI;
@@ -1207,8 +1213,8 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
                 {
                   a1 += M_PI;
                 }
-              double mx = x[0] + w + cos(a1) * w;
-              double my = y[0] + h + sin(a1) * h;
+              mx = x[0] + w + cos(a1) * w;
+              my = y[0] + h + sin(a1) * h;
               svg_printf(p->stream, "A%g %g 0 1 %d %g %g ", w, h, sweep_flag, mx, my);
             }
           large_arc_flag = fabs(a2 - a1) >= M_PI;
@@ -1544,6 +1550,10 @@ void gks_drv_js(
     int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
     void **ptr)
 {
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
+
   p = (ws_state_list *)*ptr;
 
   switch (fctid)

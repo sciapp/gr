@@ -26,6 +26,10 @@
   arg = (type *)(s + sp);          \
   sp += nbytes
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 typedef struct ws_state_list_struct
 {
   int conid, state;
@@ -53,6 +57,9 @@ static void write_item(int fctid, int dx, int dy, int dimx, int *i_arr, int len_
 {
   char s[132];
   int len = -1, slen, tp;
+  GKS_UNUSED(len_farr_1);
+  GKS_UNUSED(len_farr_2);
+  GKS_UNUSED(len_c_arr);
 
   switch (fctid)
     {
@@ -339,6 +346,7 @@ void gks_drv_mo(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
     case 16:
     case 17:
       p->empty = 0;
+      /* fall through */
     case 19:
     case 20:
     case 21:
@@ -746,6 +754,14 @@ void gks_drv_mi(int fctid, int dx, int dy, int dimx, int *i_arr, int len_farr_1,
 {
   char *s;
   int len;
+  GKS_UNUSED(dx);
+  GKS_UNUSED(dy);
+  GKS_UNUSED(dimx);
+  GKS_UNUSED(len_farr_1);
+  GKS_UNUSED(f_arr_1);
+  GKS_UNUSED(len_farr_2);
+  GKS_UNUSED(f_arr_2);
+  GKS_UNUSED(len_c_arr);
 
   p = (ws_state_list *)*ptr;
 

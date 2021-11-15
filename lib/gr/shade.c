@@ -66,7 +66,7 @@ static void rasterize(int n, double *x, double *y, double *roi, int w, int h, in
     }
 }
 
-static void equalize(int w, int h, int *bins, int bmin, int bmax)
+static void equalize(int w, int h, int *bins, int bmax)
 {
   int *hist, num_bins = w * h, i, *lut;
   double sum = 0, scale;
@@ -109,7 +109,7 @@ static void shade(int w, int h, int *bins, int xform)
 
   if (xform == XFORM_EQUALIZED) /* equalize */
     {
-      equalize(w, h, bins, bmin, bmax);
+      equalize(w, h, bins, bmax);
     }
   else
     {

@@ -43,7 +43,11 @@
   xw = ((xn)-gkss->b[tnr]) / gkss->a[tnr]; \
   yw = ((yn)-gkss->d[tnr]) / gkss->c[tnr]
 
-const static FT_String *gks_font_list_pfb[] = {
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
+static const FT_String *gks_font_list_pfb[] = {
     "NimbusRomNo9L-Regu", /* 1: Times New Roman */
     "NimbusRomNo9L-ReguItal",
     "NimbusRomNo9L-Medi",
@@ -77,7 +81,7 @@ const static FT_String *gks_font_list_pfb[] = {
     "Dingbats"               /* 31: Zapf Dingbats */
 };
 
-const static FT_String *gks_font_list_ttf[] = {
+static const FT_String *gks_font_list_ttf[] = {
     NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     NULL,        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, "CMUSerif-Math",
     "DejaVuSans"};
@@ -99,12 +103,12 @@ static const char *fallback_font_list[] = {NULL};
 static int fallback_font_reference_list[] = {232};
 
 static FT_Face fallback_font_faces[] = {NULL};
-static const int NUM_FALLBACK_FACES = sizeof(fallback_font_faces) / sizeof(fallback_font_faces[0]);
+static const unsigned int NUM_FALLBACK_FACES = sizeof(fallback_font_faces) / sizeof(fallback_font_faces[0]);
 
-const static int map[] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
+static const int map[] = {22, 9,  5, 14, 18, 26, 13, 1, 24, 11, 7, 16, 20, 28, 13, 3,
                           23, 10, 6, 15, 19, 27, 13, 2, 25, 12, 8, 17, 21, 29, 13, 4};
 
-const static double caps[] = {0.662, 0.653, 0.676, 0.669, 0.718, 0.718, 0.718, 0.718, 0.562, 0.562, 0.562,
+static const double caps[] = {0.662, 0.653, 0.676, 0.669, 0.718, 0.718, 0.718, 0.718, 0.562, 0.562, 0.562,
                               0.562, 0.667, 0.681, 0.681, 0.681, 0.681, 0.722, 0.722, 0.722, 0.722, 0.740,
                               0.740, 0.740, 0.740, 0.692, 0.692, 0.681, 0.681, 0.587, 0.692};
 
@@ -113,7 +117,7 @@ static FT_Library library;
 
 double horiAdvance = 0, vertAdvance = 0;
 
-static int npoints = 0, maxpoints = 0;
+static unsigned int npoints = 0, maxpoints = 0;
 static double *xpoint = NULL, *ypoint = NULL;
 
 static int num_opcodes = 0;
@@ -418,7 +422,7 @@ static FT_Error set_glyph(FT_Face face, FT_UInt codepoint, FT_UInt *previous, FT
 
   if (!glyph_index)
     {
-      int i;
+      unsigned int i;
       for (i = 0; i < NUM_FALLBACK_FACES; i++)
         {
           if (!fallback_font_faces[i])
@@ -511,7 +515,7 @@ static void utf_to_unicode(FT_Bytes str, FT_UInt *unicode_string, FT_UInt *lengt
   FT_UInt codepoint;
   FT_Byte following_bytes;
   FT_Byte offset;
-  int i, j;
+  unsigned int i, j;
 
   for (i = 0; i < *length; i++)
     {
@@ -644,7 +648,7 @@ static char *gks_ft_get_font_path(const char *font_name, const char *font_file_e
 static void gks_ft_init_fallback_faces()
 {
   FT_Error error;
-  int i;
+  unsigned int i;
   for (i = 0; i < NUM_FALLBACK_FACES; i++)
     {
       if (!init) gks_ft_init();
@@ -732,11 +736,13 @@ void *gks_ft_get_face(int textfont)
   FT_Error error;
   FT_Face face;
   const FT_String *font;
+  int user_defined, use_ttf = (textfont >= 200), original_textfont;
+  const FT_String **font_list = use_ttf ? gks_font_list_ttf : gks_font_list_pfb;
+  FT_Face *font_face_cache = use_ttf ? font_face_cache_ttf : font_face_cache_pfb;
 
   if (!init) gks_ft_init();
-  int user_defined = (textfont >= 300 && textfont < 300 + MAX_NUM_USER_FONTS);
-  int use_ttf = (textfont >= 200);
-  int original_textfont = textfont;
+  user_defined = (textfont >= 300 && textfont < 300 + MAX_NUM_USER_FONTS);
+  original_textfont = textfont;
   textfont = gks_ft_convert_textfont(textfont);
 
   if (user_defined)
@@ -751,9 +757,6 @@ void *gks_ft_get_face(int textfont)
           return NULL;
         }
     }
-
-  const FT_String **font_list = use_ttf ? gks_font_list_ttf : gks_font_list_pfb;
-  FT_Face *font_face_cache = use_ttf ? font_face_cache_ttf : font_face_cache_pfb;
 
   font = font_list[textfont];
 
@@ -800,12 +803,15 @@ int gks_ft_get_metrics(int font, double fontsize, unsigned int codepoint, unsign
 {
   FT_Face face;
   FT_Error error;
+  FT_UInt glyph_index;
+  FT_Glyph newglyph;
+  FT_BBox cbox;
   int hinting_factor = 8;
   int i;
 
   gks_ft_init();
 
-  for (i = -1; i < NUM_FALLBACK_FACES; i++)
+  for (i = -1; i < (int)NUM_FALLBACK_FACES; i++)
     {
       if (i < 0)
         {
@@ -827,8 +833,6 @@ int gks_ft_get_metrics(int font, double fontsize, unsigned int codepoint, unsign
 
       FT_Set_Transform(face, NULL, NULL);
 
-      FT_UInt glyph_index;
-
       glyph_index = FT_Get_Char_Index(face, codepoint);
       if (!glyph_index)
         {
@@ -840,7 +844,6 @@ int gks_ft_get_metrics(int font, double fontsize, unsigned int codepoint, unsign
         {
           continue;
         }
-      FT_Glyph newglyph;
       error = FT_Get_Glyph(face->glyph, &newglyph);
       if (error)
         {
@@ -867,7 +870,6 @@ int gks_ft_get_metrics(int font, double fontsize, unsigned int codepoint, unsign
           *bearing = face->glyph->metrics.horiBearingX / hinting_factor / 64.0;
         }
 
-      FT_BBox cbox;
       FT_Glyph_Get_CBox(newglyph, FT_GLYPH_BBOX_SUBPIXELS, &cbox);
       if (xmin)
         {
@@ -900,10 +902,11 @@ double gks_ft_get_kerning(int font, double fontsize, unsigned int dpi, unsigned 
   int i;
   FT_UInt first_glyph_index;
   FT_UInt second_glyph_index;
+  FT_Vector kerning;
 
   gks_ft_init();
 
-  for (i = -1; i < NUM_FALLBACK_FACES; i++)
+  for (i = -1; i < (int)NUM_FALLBACK_FACES; i++)
     {
       if (i < 0)
         {
@@ -936,7 +939,6 @@ double gks_ft_get_kerning(int font, double fontsize, unsigned int dpi, unsigned 
         {
           return 0.0;
         }
-      FT_Vector kerning;
       FT_Get_Kerning(face, first_glyph_index, second_glyph_index, FT_KERNING_DEFAULT, &kerning);
       return kerning.x / 64.0 / hinting_factor;
     }
@@ -966,8 +968,8 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
   FT_Vector up;
   FT_Bitmap ftbitmap;
   FT_UInt codepoint;
-  int i, textfont, dx, dy, value, pos_x, pos_y;
-  unsigned int j, k;
+  int textfont, dx, dy, value, pos_x, pos_y;
+  unsigned int i, j, k;
   const int direction = (gkss->txp <= 3 && gkss->txp >= 0 ? gkss->txp : 0);
   const FT_Bool vertical = (direction == GKS_K_TEXT_PATH_DOWN || direction == GKS_K_TEXT_PATH_UP);
 
@@ -1088,7 +1090,6 @@ unsigned char *gks_ft_get_bitmap(int *x, int *y, int *width, int *height, gks_st
 
   if (direction == GKS_K_TEXT_PATH_LEFT)
     {
-      int i;
       for (i = 0; i < num_glyphs - 1 - i; i++)
         {
           int tmp = unicode_string[i];
@@ -1278,7 +1279,7 @@ static char *xrealloc(void *ptr, int size)
   return (result);
 }
 
-static void reallocate(int npoints)
+static void reallocate(unsigned int npoints)
 {
   while (npoints >= maxpoints) maxpoints += POINT_INC;
 
@@ -1289,9 +1290,10 @@ static void reallocate(int npoints)
 
 static void load_glyph(FT_Face face, FT_UInt code)
 {
+  FT_Error error;
   FT_UInt glyph_index = FT_Get_Char_Index(face, code);
   if (!glyph_index) gks_perror("glyph missing from current font: %d", code);
-  FT_Error error = FT_Load_Glyph(face, glyph_index, FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP);
+  error = FT_Load_Glyph(face, glyph_index, FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP);
   if (error) gks_perror("could not load glyph: %d\n", glyph_index);
 }
 
@@ -1305,6 +1307,7 @@ static void add_point(long x, long y)
 
 static int move_to(const FT_Vector *to, void *user)
 {
+  GKS_UNUSED(user);
   add_point(to->x, to->y);
   opcodes[num_opcodes++] = (int)'M';
   return 0;
@@ -1312,6 +1315,7 @@ static int move_to(const FT_Vector *to, void *user)
 
 static int line_to(const FT_Vector *to, void *user)
 {
+  GKS_UNUSED(user);
   add_point(to->x, to->y);
   opcodes[num_opcodes++] = (int)'L';
   return 0;
@@ -1319,6 +1323,7 @@ static int line_to(const FT_Vector *to, void *user)
 
 static int conic_to(const FT_Vector *control, const FT_Vector *to, void *user)
 {
+  GKS_UNUSED(user);
   add_point(control->x, control->y);
   add_point(to->x, to->y);
   opcodes[num_opcodes++] = (int)'Q';
@@ -1327,6 +1332,7 @@ static int conic_to(const FT_Vector *control, const FT_Vector *to, void *user)
 
 static int cubic_to(const FT_Vector *control1, const FT_Vector *control2, const FT_Vector *to, void *user)
 {
+  GKS_UNUSED(user);
   add_point(control1->x, control1->y);
   add_point(control2->x, control2->y);
   add_point(to->x, to->y);
@@ -1430,7 +1436,7 @@ static void process_glyphs(FT_Face face, double x, double y, char *text, double 
 {
   FT_UInt unicode_string[256];
   FT_UInt length = strlen(text);
-  int i, j;
+  unsigned int i, j;
   double xj, yj, cos_f, sin_f, shear_x, shear_y;
   double chh, height, theta;
   int alh;
@@ -1584,7 +1590,7 @@ static void process_glyphs3d(FT_Face face, double x, double y, double z, char *t
 {
   FT_UInt unicode_string[256];
   FT_UInt length = strlen(text);
-  int i, j;
+  unsigned int i, j;
   double xj, yj, zj, cos_f, sin_f, shear_x, shear_y;
   double chh, height, theta;
 

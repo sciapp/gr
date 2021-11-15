@@ -667,7 +667,7 @@ const char *right_delim_symbols[] = {"\\rfloor", "\\rangle", "\\rceil"};
 const char *function_symbols[] = {"\\arccos", "\\csc", "\\ker", "\\min", "\\arcsin", "\\deg", "\\lg", "\\Pr", "\\arctan", "\\det", "\\lim", "\\sec", "\\arg", "\\dim", "\\liminf", "\\sin", "\\cos", "\\exp", "\\limsup", "\\sinh", "\\cosh", "\\gcd", "\\ln", "\\sup", "\\cot", "\\hom", "\\log", "\\tan", "\\coth", "\\inf", "\\max", "\\tanh"};
 
 int symbol_in_symbol_list(const char *symbol, size_t length, const char **symbol_list, size_t num_symbols) {
-  int i;
+  size_t i;
   for (i = 0; i < num_symbols; i++) {
     if (strncmp(symbol, symbol_list[i], length) == 0 && symbol_list[i][length] == 0) {
       return 1;

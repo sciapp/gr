@@ -847,7 +847,7 @@ void args_copy_format_string_for_arg(char *dst, const char *format)
 
 int args_check_format_compatibility(const arg_t *arg, const char *compatible_format)
 {
-  char first_compatible_format_char, first_value_format_char;
+  char first_compatible_format_char, first_value_format_char = 0;
   const char *current_format_ptr;
   char *compatible_format_for_arg;
   size_t dataslot_count, len_compatible_format;
@@ -992,7 +992,7 @@ void *copy_value(char format, void *value_ptr)
   else
     {
       /* plain datatypes like int, double, char can be copied directly */
-      memcpy(*copy, value_ptr, argparse_format_to_size[(int)format]);
+      memcpy(copy, value_ptr, argparse_format_to_size[(int)format]);
     }
 
   return copy;

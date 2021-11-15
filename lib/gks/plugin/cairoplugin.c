@@ -53,6 +53,10 @@ typedef __int64 int64_t;
 #include <unistd.h>
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #ifndef NO_CAIRO
 #include <jpeglib.h>
 
@@ -452,6 +456,7 @@ static void line_routine(int n, double *px, double *py, int linetype, int tnr)
 {
   double x, y, x0, y0, xi, yi;
   int i;
+  GKS_UNUSED(linetype);
 
   WC_to_NDC(px[0], py[0], tnr, x, y);
   seg_xform(&x, &y);
@@ -1374,15 +1379,17 @@ static void write_page(void)
         }
       else
         {
-          cairo_surface_flush(p->surface);
-          unsigned char *data = cairo_image_surface_get_data(p->surface);
-          int width = cairo_image_surface_get_width(p->surface);
-          int height = cairo_image_surface_get_height(p->surface);
-          int stride = cairo_image_surface_get_stride(p->surface);
-          unsigned char *row = (unsigned char *)gks_malloc(width * 3);
-
+          unsigned char *data, *row;
+          int width, height, stride;
           struct jpeg_compress_struct cinfo;
           struct jpeg_error_mgr jerr;
+
+          cairo_surface_flush(p->surface);
+          data = cairo_image_surface_get_data(p->surface);
+          width = cairo_image_surface_get_width(p->surface);
+          height = cairo_image_surface_get_height(p->surface);
+          stride = cairo_image_surface_get_stride(p->surface);
+          row = (unsigned char *)gks_malloc(width * 3);
 
           cinfo.err = jpeg_std_error(&jerr);
           jpeg_create_compress(&cinfo);
@@ -1433,16 +1440,18 @@ static void write_page(void)
         }
       else
         {
+          int padding, bmp_stride;
+          unsigned int file_size;
+          unsigned char *row, header[54] = {0};
           cairo_surface_flush(p->surface);
           data = cairo_image_surface_get_data(p->surface);
           width = cairo_image_surface_get_width(p->surface);
           height = cairo_image_surface_get_height(p->surface);
           stride = cairo_image_surface_get_stride(p->surface);
-          int padding = width % 4;
-          int bmp_stride = 3 * width + padding;
-          unsigned int file_size = 54 + bmp_stride * height;
-          unsigned char *row = (unsigned char *)gks_malloc(bmp_stride);
-          unsigned char header[54] = {0};
+          padding = width % 4;
+          bmp_stride = 3 * width + padding;
+          file_size = 54 + bmp_stride * height;
+          row = (unsigned char *)gks_malloc(bmp_stride);
           header[0] = 'B';
           header[1] = 'M';
           header[2] = file_size / (1 << 0);
@@ -1589,24 +1598,32 @@ static void write_page(void)
     }
   else if (p->wtype == 151)
     {
+      FILE *stream;
+      long size, b64_size;
+      unsigned char *string;
+      char *b64_string;
+
       gks_filepath(path, p->path, "png", p->page_counter, 0);
       cairo_surface_write_to_png(p->surface, path);
 
-      FILE *stream = fopen(path, "rb");
+      stream = fopen(path, "rb");
       fseek(stream, 0, SEEK_END);
-      long size = ftell(stream);
+      size = ftell(stream);
       fseek(stream, 0, SEEK_SET);
 
-      unsigned char *string = (unsigned char *)gks_malloc(size + 1);
-      fread(string, 1, size, stream);
+      string = (unsigned char *)gks_malloc(size + 1);
+      if ((long)fread(string, 1, size, stream) != size)
+        {
+          fprintf(stderr, "GKS: Failed to read from file: %s\n", path);
+        }
       fclose(stream);
       string[size] = 0;
 
-      long b64_size = size * 4 / 3 + 4;
-      char *b64_string = (char *)gks_malloc(b64_size);
+      b64_size = size * 4 / 3 + 4;
+      b64_string = (char *)gks_malloc(b64_size);
       gks_base64(string, size, b64_string, b64_size);
 
-      fprintf(stdout, "\e]1337;File=inline=1;height=24;preserveAspectRatio=0:%s\a", b64_string);
+      fprintf(stdout, "\033]1337;File=inline=1;height=24;preserveAspectRatio=0:%s\a", b64_string);
       fflush(stdout);
 
       free(string);
@@ -1672,6 +1689,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   int i, j;
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
+  GKS_UNUSED(n);
 
   cairo_new_path(p->cr);
   cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
@@ -2033,6 +2051,10 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
 void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                      char *chars, void **ptr)
 {
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
+
   p = (ws_state_list *)*ptr;
 
   idle = 0;
@@ -2381,6 +2403,18 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
 void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                      char *chars, void **ptr)
 {
+  GKS_UNUSED(dx);
+  GKS_UNUSED(dy);
+  GKS_UNUSED(dimx);
+  GKS_UNUSED(ia);
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(r1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(r2);
+  GKS_UNUSED(lc);
+  GKS_UNUSED(chars);
+  GKS_UNUSED(ptr);
+
   if (fctid == 2)
     {
       gks_perror("Cairo support not compiled in");

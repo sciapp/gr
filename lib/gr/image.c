@@ -15,7 +15,8 @@
 static int read_jpeg_image(char *path, int *width, int *height, int **data)
 {
   FILE *stream;
-  int i, x, y;
+  unsigned int i;
+  int x, y;
   struct jpeg_decompress_struct cinfo;
   struct jpeg_error_mgr jerr;
   JSAMPARRAY buffer;
@@ -81,7 +82,7 @@ static int read_png_image(char *path, int *width, int *height, int **data)
   int x, y, channels, color_type;
   unsigned int r, g, b, a;
   int *dataP;
-  int ret = -1;
+  volatile int ret = -1;
   size_t nbytes;
 
   if ((stream = fopen(path, "rb")) != NULL)
