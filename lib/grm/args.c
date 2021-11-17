@@ -963,7 +963,7 @@ void args_decrease_arg_reference_count(args_node_t *args_node)
 
 void *copy_value(char format, void *value_ptr)
 {
-  void **copy;
+  void *copy;
 
   if (!argparse_valid_format[(int)format] || !argparse_format_to_size[(int)format])
     {
@@ -987,7 +987,7 @@ void *copy_value(char format, void *value_ptr)
   if (argparse_format_to_copy_callback[(int)format])
     {
       /* complex datatypes like argument containers or strings need a copy routine */
-      *copy = argparse_format_to_copy_callback[(int)format](*(void **)value_ptr);
+      *(void **)copy = argparse_format_to_copy_callback[(int)format](*(void **)value_ptr);
     }
   else
     {
