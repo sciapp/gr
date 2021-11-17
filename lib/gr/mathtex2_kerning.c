@@ -16,6 +16,7 @@ static void init_offsets(void)
 {
   const char *path;
   char offsets_path[MAXPATHLEN];
+  FILE *offsets_fp;
 
   path = gks_getenv("GKS_FONTPATH");
   if (path == NULL)
@@ -29,7 +30,7 @@ static void init_offsets(void)
 #else
   strcat(offsets_path, "\\FONTS\\MATHTEX2_OFFSETS.BIN");
 #endif
-  FILE *offsets_fp = fopen(offsets_path, "rb");
+  offsets_fp = fopen(offsets_path, "rb");
   if (!offsets_fp)
     {
       return;

@@ -357,6 +357,8 @@ SNOWFLAKE {
 
 genfrac:
 GENFRAC '{' left_delim_symbol '}' '{' right_delim_symbol '}' '{' NT_FLOAT '}' simple_group required_group required_group {
+    double thickness = 0;
+    int n = sscanf($9.source, "\\hspace{%lf}", &thickness);
     $$.index = 0;
     $$.source = $1.source;
     $$.length = $1.length + $2.length + $3.length + $4.length + $5.length + $6.length + $7.length + $8.length + $9.length + $10.length + $11.length + $12.length + $13.length;
@@ -365,8 +367,6 @@ GENFRAC '{' left_delim_symbol '}' '{' right_delim_symbol '}' '{' NT_FLOAT '}' si
     $$.u.genfrac.left_delim_length = $3.length;
     $$.u.genfrac.right_delim_start = $6.source;
     $$.u.genfrac.right_delim_length = $6.length;
-    double thickness = 0;
-    int n = sscanf($9.source, "\\hspace{%lf}", &thickness);
     if (n != 1) {
         thickness = NAN;
     }
@@ -848,8 +848,8 @@ int yylex(void) {
         cursor += 1;
         return ACCENT;
       } else {
-        state = OUTSIDE_SYMBOL;
         int result;
+        state = OUTSIDE_SYMBOL;
         yylval.type = NT_TERMINAL_SYMBOL;
         if (strncmp("\\frac", symbol_start, (int)(cursor - symbol_start)) == 0) {
           result = FRAC;

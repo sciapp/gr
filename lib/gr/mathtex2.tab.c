@@ -1907,6 +1907,8 @@ yyreduce:
     case 73:
 #line 359 "mathtex2.y"
       {
+        double thickness = 0;
+        int n = sscanf(yyvsp[-4].source, "\\hspace{%lf}", &thickness);
         yyval.index = 0;
         yyval.source = yyvsp[-12].source;
         yyval.length = yyvsp[-12].length + yyvsp[-11].length + yyvsp[-10].length + yyvsp[-9].length + yyvsp[-8].length +
@@ -1917,8 +1919,6 @@ yyreduce:
         yyval.u.genfrac.left_delim_length = yyvsp[-10].length;
         yyval.u.genfrac.right_delim_start = yyvsp[-7].source;
         yyval.u.genfrac.right_delim_length = yyvsp[-7].length;
-        double thickness = 0;
-        int n = sscanf(yyvsp[-4].source, "\\hspace{%lf}", &thickness);
         if (n != 1)
           {
             thickness = NAN;
@@ -2767,8 +2767,8 @@ int yylex(void)
               }
             else
               {
-                state = OUTSIDE_SYMBOL;
                 int result;
+                state = OUTSIDE_SYMBOL;
                 yylval.type = NT_TERMINAL_SYMBOL;
                 if (strncmp("\\frac", symbol_start, (int)(cursor - symbol_start)) == 0)
                   {
