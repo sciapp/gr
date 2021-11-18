@@ -20,6 +20,7 @@ done
 wxdefs=""
 qt4defs=""
 qt5defs=""
+qt6defs=""
 if [ -n "${QT_ARCH}" ]; then
   qt_arch="${QT_ARCH}"
   qt_lib_suffix=""
@@ -38,6 +39,8 @@ if [ -d /usr/lib/arm-linux-gnueabihf/qt5 ]; then
   qt5_qmake_names=("qmake")
   qt5_qmake_dirs=("/usr/lib/arm-linux-gnueabihf/qt5/bin" "/usr/bin")
 fi
+qt6_qmake_names=("qmake-qt6" "qmake6" "qmake")
+qt6_qmake_dirs=("/usr/lib/${qt_arch}-linux-gnu/qt6/bin" "/usr/bin" "/usr/lib${qt_lib_suffix}/qt6/bin")
 gtkdefs=""
 x11defs=""
 xftdefs=""
@@ -118,7 +121,7 @@ printf "%12s: %s\n" "dvipng" "$info" >&2
 
 if [ "$qt" != "no" ]
 then
-  for qt_major_version in 4 5
+  for qt_major_version in 4 5 6
   do
     eval current_qt="$qt${qt_major_version}"
     if [ "${current_qt}" != "no" ]
@@ -643,4 +646,4 @@ printf "%12s: %s\n" "libtiff" "$info" >&2
 rm -f $tmpsrc $tmpout $tmpver
 
 echo "" >&2
-echo $target $wxdefs $qt4defs $qt5defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $extradefs
+echo $target $wxdefs $qt4defs $qt5defs $qt6defs $gtkdefs $x11defs $xftdefs $gsdefs $glfwdefs $gldefs $zmqdefs $avdefs $cairodefs $tiffdefs $extradefs

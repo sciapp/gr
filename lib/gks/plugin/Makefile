@@ -52,6 +52,23 @@ else
 	EXTRA_LDFLAGS_QT5="-Wl,-rpath=$(QT5LIBDIR)"
 endif
 endif
+ifneq ($(QT6_QMAKE),false)
+     QT6DEFS =
+   QT6INCDIR = `$(QT6_QMAKE) -query QT_INSTALL_HEADERS`
+ifeq ($(UNAME),Darwin)
+      QT6INC = -I$(QT6INCDIR) -I$(QT6LIBDIR)/QtCore.framework/Versions/A/Headers -I$(QT6LIBDIR)/QtGui.framework/Versions/A/Headers -I$(QT6LIBDIR)/QtWidgets.framework/Versions/A/Headers -F$(QT6LIBDIR)
+else
+      QT6INC = -I$(QT6INCDIR) -I$(QT6INCDIR)/QtCore -I$(QT6INCDIR)/QtGui -I$(QT6INCDIR)/QtWidgets
+endif
+	QT6INC += -std=c++17
+	QT6LIBDIR = `$(QT6_QMAKE) -query QT_INSTALL_LIBS`
+ifeq ($(UNAME),Darwin)
+     QT6LIBS = -F$(QT6LIBDIR) -framework QtWidgets -framework QtGui -framework QtCore
+else
+     QT6LIBS = -L$(QT6LIBDIR) -lQt6Widgets -lQt6Gui -lQt6Core
+	EXTRA_LDFLAGS_QT6="-Wl,-rpath=$(QT6LIBDIR)"
+endif
+endif
  GTK_CONFIG = false
     GTKDEFS =
      GTKINC = `$(GTK_CONFIG) gtk+-2.0 --cflags 2>/dev/null`
@@ -119,8 +136,8 @@ default:
 all: targets
 
 targets: prerequisites \
-         x11plugin.so wxplugin.so qtplugin.so qt5plugin.so svgplugin.so \
-         gtkplugin.so gsplugin.so wmfplugin.so glplugin.so \
+         x11plugin.so wxplugin.so qtplugin.so qt5plugin.so qt6plugin.so \
+         svgplugin.so gtkplugin.so gsplugin.so wmfplugin.so glplugin.so \
          zmqplugin.so pgfplugin.so cairoplugin.so videoplugin.so
 
 ifeq ($(UNAME),Darwin)
@@ -139,6 +156,9 @@ qtplugin.o: qtplugin.cxx
 qt5plugin.o: qt5plugin.cxx
 	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT5DEFS) $(QT5INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
 
+qt6plugin.o: qt6plugin.cxx
+	$(CXX) -o $@ -c -DGRDIR=\"$(GRDIR)\" $(DEFINES) $(WXDEFS) $(WXINC) $(QT6DEFS) $(QT6INC) $(GTKDEFS) $(GTKINC) $(GSDEFS) $(GSINC) $(GLFWDEFS) $(GLFWINC) $(ZMQDEFS) $(INCLUDES) $(XFTDEFS) $(FTDEFS) $(FTINC) $(AVDEFS) $(CAIRODEFS) $(X11DEFS) $(X11INC) $(CXXFLAGS) $(ZINC) $<
+
 x11plugin.so: x11plugin.o $(GKSLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(FTLIBS) $(ZLIBS) $(X11LIBS) $(LIBS)
 
@@ -150,6 +170,9 @@ qtplugin.so: qtplugin.o $(GKSLIBS)
 
 qt5plugin.so: qt5plugin.o $(GKSLIBS)
 	$(CXX) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(EXTRA_LDFLAGS_QT5) $(QT5LIBS) $(X11LIBS) $(LIBS)
+
+qt6plugin.so: qt6plugin.o $(GKSLIBS)
+	$(CXX) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(EXTRA_LDFLAGS_QT6) $(QT6LIBS) $(X11LIBS) $(LIBS)
 
 svgplugin.so: svgplugin.o $(GKSLIBS) $(PNGLIBS)
 	$(CC) -o $@ $(SOFLAGS) $(LDFLAGS) $^ $(PNGLIBS) $(ZLIBS) $(LIBS)
@@ -193,5 +216,6 @@ clean:
 
 qtplugin.o: qtplugin_impl.cxx
 qt5plugin.o: qtplugin_impl.cxx
+qt6plugin.o: qtplugin_impl.cxx
 
 .PHONY: clean install default gks

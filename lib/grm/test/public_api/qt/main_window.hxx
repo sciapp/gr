@@ -1,3 +1,5 @@
+#ifndef MAIN_WINDOW_H_INCLUDED
+#define MAIN_WINDOW_H_INCLUDED
 #include <QMainWindow>
 #include "gr_widget.hxx"
 
@@ -15,3 +17,5 @@ public slots:
 private:
   GRWidget *gr_widget_;
 };
+
+#endif /* ifndef MAIN_WINDOW_H_INCLUDED */
