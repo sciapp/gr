@@ -367,7 +367,7 @@ error_t fromjson_parse_array(fromjson_state_t *state)
           ++current_value_ptr;                                                                                     \
           state->next_value_memory = current_value_ptr;                                                            \
         }                                                                                                          \
-      snprintf(array_type + strlen(array_type), NEXT_VALUE_TYPE_SIZE, "%c(%lu)", toupper(*state->next_value_type), \
+      snprintf(array_type + strlen(array_type), NEXT_VALUE_TYPE_SIZE, "%c(%zu)", toupper(*state->next_value_type), \
                array_length);                                                                                      \
     }                                                                                                              \
   while (0)
@@ -1654,7 +1654,6 @@ error_t tojson_write_arg(memwriter_t *memwriter, const arg_t *arg)
 
 error_t tojson_write_args(memwriter_t *memwriter, const grm_args_t *args)
 {
-  const char *key_hierarchy_name;
   args_iterator_t *it;
   arg_t *arg;
 

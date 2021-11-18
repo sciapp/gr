@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <string.h>
 #include <math.h>
 
@@ -28,6 +29,10 @@ DLLEXPORT void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
 #endif
 
 #ifndef NO_QT
@@ -865,6 +870,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   j = 0;
   for (i = 0; i < nc; ++i)
     {
+      assert(j <= n);
       switch (codes[i])
         {
         case 'M':
@@ -1238,7 +1244,7 @@ static void interp(char *str)
   gks_state_list_t *sl = NULL, saved_gkss;
   int sp = 0, *len, *f;
   int *i_arr = NULL, *dx = NULL, *dy = NULL, *dimx = NULL, *len_c_arr = NULL;
-  int *n, *primid, *ldr;
+  int *n = NULL, *primid = NULL, *ldr = NULL;
   double *f_arr_1 = NULL, *f_arr_2 = NULL;
   char *c_arr = NULL;
   int i, true_color = 0;
@@ -1831,6 +1837,18 @@ void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *i_arr, int l
 void QT_PLUGIN_ENTRY_NAME(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2,
                           int lc, char *chars, void **ptr)
 {
+  GKS_UNUSED(dx);
+  GKS_UNUSED(dy);
+  GKS_UNUSED(dimx);
+  GKS_UNUSED(ia);
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(r1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(r2);
+  GKS_UNUSED(lc);
+  GKS_UNUSED(chars);
+  GKS_UNUSED(ptr);
+
   if (fctid == 2)
     {
       gks_perror(QT_NAME_STRING " support not compiled in");

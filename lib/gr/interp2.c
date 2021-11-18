@@ -244,7 +244,7 @@ void gr_interp2(int nx, int ny, const double *x, const double *y, const double *
                 const double *yq, double *zq, int method, double extrapval)
 {
   int ixq, iyq, ix, iy, ind, i;
-  double ***x_splines, **spline, *a, diff;
+  double ***x_splines = NULL, **spline = NULL, *a = NULL, diff;
 
   if (method == INTERP2_SPLINE)
     {

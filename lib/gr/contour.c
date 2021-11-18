@@ -36,7 +36,7 @@ enum contour_op
 
 typedef struct
 {
-  char lblfmt[10];
+  char lblfmt[15];
   int lblmjh;
   int txtflg;
   int use_color;

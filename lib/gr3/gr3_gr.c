@@ -304,9 +304,12 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   int projection_type;
   trans_t tx, ty, tz;
   int new_num_vertices;
-  float *new_vertices, *new_normals, *new_colors;
+  float *new_vertices = NULL;
+  float *new_normals = NULL;
+  float *new_colors = NULL;
   int new_idx, l, errind;
-  double linewidth_y, linewidth_x;
+  float linewidth_y = 0;
+  float linewidth_x = 0;
 
   gr_inqprojectiontype(&projection_type);
   gr_inqcolormapinds(&first_color, &last_color);
@@ -432,7 +435,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               if (option & GR3_SURFACE_GRZSHADED)
                 color = (int)pz[k] + first_color;
               else
-                color = (int)(zvalue * (last_color - first_color) + first_color);
+                color = (int)(zvalue * (float)(last_color - first_color) + (float)first_color);
               if (color < first_color)
                 color = first_color;
               else if (color > last_color)
@@ -445,9 +448,9 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
             }
           else
             {
-              c[0] = 1.0;
-              c[1] = 1.0;
-              c[2] = 1.0;
+              c[0] = 1.0f;
+              c[1] = 1.0f;
+              c[2] = 1.0f;
             }
         }
     }
@@ -477,7 +480,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               else
                 {
                   dx = ((v[1] - v[-dirx + 1]) / (v[0] - v[-dirx + 0]) + (v[dirx + 1] - v[1]) / (v[dirx + 0] - v[0])) /
-                       2.0;
+                       2.0f;
                 }
 
               if (j == 0)
@@ -491,7 +494,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
               else
                 {
                   dy = ((v[1] - v[-diry + 1]) / (v[2] - v[-diry + 2]) + (v[diry + 1] - v[1]) / (v[diry + 2] - v[2])) /
-                       2.0;
+                       2.0f;
                 }
 
               n[0] = -dx;
@@ -504,6 +507,7 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
   new_num_vertices = num_indices;
   if (context_struct_.use_software_renderer && context_struct_.option <= OPTION_FILLED_MESH)
     {
+      double linewidth;
       int quality = context_struct_.quality;
       int ssaa_factor = quality & ~1;
       if (ssaa_factor == 0) ssaa_factor = 1;
@@ -525,13 +529,14 @@ GR3API int gr3_createsurfacemesh(int *mesh, int nx, int ny, float *px, float *py
           free(new_normals);
           RETURN_ERROR(GR3_ERROR_OUT_OF_MEM);
         }
-      gks_inq_pline_linewidth(&errind, &linewidth_y);
-      linewidth_y *= 2 * ssaa_factor;
+      gks_inq_pline_linewidth(&errind, &linewidth);
+      linewidth *= 2 * ssaa_factor;
       if (errind != GKS_K_NO_ERROR)
         {
           RETURN_ERROR(errind);
         }
-      linewidth_x = linewidth_y;
+      linewidth_x = (float)linewidth;
+      linewidth_y = (float)linewidth;
       if (context_struct_.option == OPTION_LINES)
         {
           linewidth_x = 0; /* set to zero to not be drawn */
@@ -722,8 +727,8 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
     }
   else if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
-      memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
       double camera_pos[3], up[3], focus_point[3];
+      memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
       gr_inqtransformationparameters(&camera_pos[0], &camera_pos[1], &camera_pos[2], &up[0], &up[1], &up[2],
                                      &focus_point[0], &focus_point[1], &focus_point[2]);
       gr3_cameralookat((GLfloat)camera_pos[0], (GLfloat)camera_pos[1], (GLfloat)camera_pos[2], (GLfloat)focus_point[0],
@@ -762,12 +767,13 @@ GR3API void gr3_drawmesh_grlike(int mesh, int n, const float *positions, const f
 GR3API void gr3_drawsurface(int mesh)
 {
   int projection_type;
-  gr_inqprojectiontype(&projection_type);
   float directions[3] = {0.0f, 0.0f, 1.0f};
   float ups[3] = {0.0f, 1.0f, 0.0f};
   float positions[3] = {-1.0f, -1.0f, -1.0f};
   float colors[3] = {1.0f, 1.0f, 1.0f};
   float scales[3] = {2.0f, 2.0f, 2.0f};
+
+  gr_inqprojectiontype(&projection_type);
 
   if (projection_type == GR_PROJECTION_ORTHOGRAPHIC || projection_type == GR_PROJECTION_PERSPECTIVE)
     {
@@ -806,6 +812,11 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
       (context_struct_.use_software_renderer && option <= OPTION_FILLED_MESH))
     {
       int mesh;
+      int width, height;
+      double device_pixel_ratio;
+      double vpxmin, vpxmax, vpymin, vpymax;
+      double aspect;
+      int projection_type;
       double xmin, xmax, ymin, ymax;
       int scale;
       int surfaceoption;
@@ -848,15 +859,11 @@ GR3API void gr3_surface(int nx, int ny, float *px, float *py, float *pz, int opt
           ymin = ymax;
           ymax = tmp;
         }
-      int width, height;
-      double device_pixel_ratio;
       gr_inqvpsize(&width, &height, &device_pixel_ratio);
       width *= device_pixel_ratio;
       height *= device_pixel_ratio;
-      double vpxmin, vpxmax, vpymin, vpymax;
       gr_inqviewport(&vpxmin, &vpxmax, &vpymin, &vpymax);
-      double aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
-      int projection_type;
+      aspect = fabs((vpxmax - vpxmin) / (vpymax - vpymin));
       gr_inqprojectiontype(&projection_type);
       if (projection_type == GR_PROJECTION_DEFAULT)
         {
@@ -1055,6 +1062,8 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
   int j;
   int mesh;
   int scale;
+  int width, height;
+  double device_pixel_ratio;
   double z_min;
   double z_max;
   struct
@@ -1141,8 +1150,6 @@ GR3API void gr3_drawtrianglesurface(int n, const float *positions)
       window.y_max = tmp;
     }
 
-  int width, height;
-  double device_pixel_ratio;
   gr_inqvpsize(&width, &height, &device_pixel_ratio);
   width *= device_pixel_ratio;
   height *= device_pixel_ratio;
@@ -1196,7 +1203,10 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   GLsizei vertex_shader_source_lines, fragment_shader_source_lines;
   GLfloat grmatrix[16], grviewmatrix[16], projection_matrix[16];
   GLint width, height;
-  GLfloat camera_direction[3];
+  GLfloat camera_direction[3] = {0, 0, -1};
+  double camera_pos[3];
+  float model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+  float inv_model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
   GLint nmax, success;
   GLuint vertex_shader, fragment_shader, program;
   GLuint vbo, texture, framebuffer, framebuffer_texture;
@@ -1392,21 +1402,22 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   memset(projection_matrix, 0, 16 * sizeof(GLfloat));
   if (projection_type == GR_PROJECTION_DEFAULT)
     {
+      GLfloat right, top;
       /* Set projection parameter like in `gr3_drawmesh_grlike` and create (orthographic) projection matrix */
       fovy = 90.0f;
       zNear = 1.0f;
       zFar = 200.0f;
       tfov2 = (GLfloat)tan(fovy * M_PI / 360.0);
-      GLfloat right = zNear * aspect * tfov2;
-      GLfloat top = zNear * tfov2;
+      right = zNear * aspect * tfov2;
+      top = zNear * tfov2;
 
       projection_matrix[0 + 0 * 4] = (GLfloat)1.0 / right; /* left = -right */
-      projection_matrix[0 + 3 * 4] = 0.0;
+      projection_matrix[0 + 3 * 4] = 0.0f;
       projection_matrix[1 + 1 * 4] = (GLfloat)1.0 / top; /* bottom = -top */
-      projection_matrix[1 + 3 * 4] = 0.0;
+      projection_matrix[1 + 3 * 4] = 0.0f;
       projection_matrix[2 + 2 * 4] = (GLfloat)-2.0 / (zFar - zNear);
       projection_matrix[2 + 3 * 4] = -(zFar + zNear) / (zFar - zNear);
-      projection_matrix[3 + 3 * 4] = 1.0;
+      projection_matrix[3 + 3 * 4] = 1.0f;
     }
   else if (projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
@@ -1452,7 +1463,6 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
     }
 
   /* Create view matrix */
-  double camera_pos[3];
   if (projection_type == GR_PROJECTION_DEFAULT)
     {
       gr_inqspace(&zmin, &zmax, &rotation, &tilt);
@@ -1463,24 +1473,35 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
     }
   else if (projection_type == GR_PROJECTION_PERSPECTIVE || projection_type == GR_PROJECTION_ORTHOGRAPHIC)
     {
-      memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
       double up[3];
       double focus_point[3];
+      double F[3];
+      double norm_func;
+      double f[3];
+      double s_deri[3];
+      double s_norm;
+      double s[3];
+      memset(grviewmatrix, 0, 16 * sizeof(GLfloat));
 
       gr_inqtransformationparameters(&camera_pos[0], &camera_pos[1], &camera_pos[2], &up[0], &up[1], &up[2],
                                      &focus_point[0], &focus_point[1], &focus_point[2]);
 
       /* direction between camera and focus point */
-      double F[3] = {focus_point[0] - camera_pos[0], focus_point[1] - camera_pos[1], focus_point[2] - camera_pos[2]};
-      double norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
-      double f[3] = {F[0] / norm_func, F[1] / norm_func, F[2] / norm_func};
-      double s_deri[3];
+      F[0] = focus_point[0] - camera_pos[0];
+      F[1] = focus_point[1] - camera_pos[1];
+      F[2] = focus_point[2] - camera_pos[2];
+      norm_func = sqrt(F[0] * F[0] + F[1] * F[1] + F[2] * F[2]);
+      f[0] = F[0] / norm_func;
+      f[1] = F[1] / norm_func;
+      f[2] = F[2] / norm_func;
       for (i = 0; i < 3; i++) /* f cross up */
         {
           s_deri[i] = f[(i + 1) % 3] * up[(i + 2) % 3] - up[(i + 1) % 3] * f[(i + 2) % 3];
         }
-      double s_norm = sqrt(s_deri[0] * s_deri[0] + s_deri[1] * s_deri[1] + s_deri[2] * s_deri[2]);
-      double s[3] = {s_deri[0] / s_norm, s_deri[1] / s_norm, s_deri[2] / s_norm};
+      s_norm = sqrt(s_deri[0] * s_deri[0] + s_deri[1] * s_deri[1] + s_deri[2] * s_deri[2]);
+      s[0] = s_deri[0] / s_norm;
+      s[1] = s_deri[1] / s_norm;
+      s[2] = s_deri[2] / s_norm;
 
       /* transformation matrix */
       grviewmatrix[0 + 0 * 4] = (GLfloat)s[0];
@@ -1573,9 +1594,6 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
       camera_direction[2] = context_struct_.center_z - context_struct_.camera_z;
     }
 
-
-  float model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
-  float inv_model_matrix[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
   if (projection_type != GR_PROJECTION_DEFAULT)
     {
       double x_scale_factor, y_scale_factor, z_scale_factor;
@@ -1725,6 +1743,13 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
   glDeleteTextures(1, &texture);
   glDeleteProgram(program);
 #else
+  (void)nx;
+  (void)ny;
+  (void)nz;
+  (void)data;
+  (void)algorithm;
+  (void)dmin_ptr;
+  (void)dmax_ptr;
   fprintf(stderr, "gr_volume support not compiled in.\n");
 #endif
 }

@@ -101,6 +101,10 @@ typedef unsigned long uLong;
 
 #define PDF ws_state_list
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 typedef struct PDF_stream_t
 {
   Byte *buffer;
@@ -1675,6 +1679,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   int i, j;
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
+  GKS_UNUSED(n);
 
   set_linewidth(gkss->bwidth);
   set_transparency(p->alpha);
@@ -1882,6 +1887,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
   double x, y;
   int i, j, k, rgba, ln_color = MAX_COLOR;
   double tri_x[3], tri_y[3];
+  GKS_UNUSED(n);
 
   pdf_setlinewidth(p, gkss->lwidth * p->nominal_size);
 
@@ -1913,6 +1919,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
   int j, k, len, fl_color = MAX_COLOR;
   unsigned int rgba;
   int alpha;
+  GKS_UNUSED(n);
 
   pdf_setlinewidth(p, gkss->bwidth * p->nominal_size);
   set_color(gkss->bcoli);
@@ -1999,6 +2006,9 @@ void gks_drv_js(
     int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc, char *chars,
     void **ptr)
 {
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
   p = (ws_state_list *)*ptr;
 
   switch (fctid)

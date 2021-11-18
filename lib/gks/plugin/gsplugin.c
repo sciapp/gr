@@ -53,6 +53,10 @@ DLLEXPORT void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *i_arr, int
 }
 #endif
 
+#ifndef GKS_UNUSED
+#define GKS_UNUSED(x) (void)(x)
+#endif
+
 #ifndef NO_GS
 
 #if !defined(VMS) && !defined(_WIN32)
@@ -714,7 +718,7 @@ static void gkinfo(int *nchars, char *chars)
 static void ps_header(void)
 {
   int nchars;
-  char info[150], buffer[150];
+  char info[150], buffer[200];
 
   gkinfo(&nchars, info);
   packb("%!PS-Adobe-2.0");
@@ -832,7 +836,7 @@ static void set_clipping(double *clrt)
   int i, j;
   int ix1, ix2, iy1, iy2;
   double cx1, cy1, cx2, cy2;
-  char buffer[100];
+  char buffer[200];
 
   i = clrt[0] < clrt[1] ? 0 : 1;
   j = clrt[2] < clrt[3] ? 2 : 3;
@@ -1561,6 +1565,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
   double x[3], y[3], w, h, a1, a2;
   double cur_x = 0, cur_y = 0, start_x = 0, start_y = 0;
   double x1, y1, x2, y2;
+  GKS_UNUSED(n);
 
   sprintf(buffer, "np ");
   packb(buffer);
@@ -1701,6 +1706,7 @@ static void draw_path(int n, double *px, double *py, int nc, int *codes)
           cur_x = start_x;
           cur_y = start_y;
           packb(buffer);
+          /* fall through */
         case 'S':
           set_linewidth(gkss->bwidth);
           sprintf(buffer, "%.4g %.4g %.4g sc sk", p->red[gkss->bcoli], p->green[gkss->bcoli], p->blue[gkss->bcoli]);
@@ -1808,6 +1814,7 @@ static void draw_triangles(int n, double *px, double *py, int ntri, int *tri)
   int i, j, k, rgba, ln_color = MAX_COLOR;
   double tri_x[3], tri_y[3];
   char buffer[200];
+  GKS_UNUSED(n);
 
   j = 0;
   for (i = 0; i < ntri / 4; ++i)
@@ -1841,6 +1848,7 @@ static void fill_polygons(int n, double *px, double *py, int nply, int *ply)
   int j, k, len, fl_color = MAX_COLOR;
   unsigned int rgba;
   char buffer[50];
+  GKS_UNUSED(n);
 
   j = 0;
   while (j < nply)
@@ -1911,6 +1919,7 @@ static int GSDLLCALL gsdll_stdin(void *instance, char *buf, int len)
 {
   int ch;
   int count = 0;
+  GKS_UNUSED(instance);
 
   while (count < len)
     {
@@ -1932,11 +1941,15 @@ static int GSDLLCALL gsdll_stdin(void *instance, char *buf, int len)
 
 static int GSDLLCALL gsdll_stdout(void *instance, const char *buf, int len)
 {
+  GKS_UNUSED(instance);
+  GKS_UNUSED(buf);
   return len;
 }
 
 static int GSDLLCALL gsdll_stderr(void *instance, const char *buf, int len)
 {
+  GKS_UNUSED(instance);
+  GKS_UNUSED(buf);
   return len;
 }
 
@@ -2022,6 +2035,9 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
   double yres, width, size, x, y, angle;
   int font, tnr, prec;
   int nchars;
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(lc);
 
   p = (ws_state_list *)*ptr;
 
@@ -2297,6 +2313,18 @@ void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double 
 void gks_gsplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                   char *chars, void **ptr)
 {
+  GKS_UNUSED(dx);
+  GKS_UNUSED(dy);
+  GKS_UNUSED(dimx);
+  GKS_UNUSED(ia);
+  GKS_UNUSED(lr1);
+  GKS_UNUSED(r1);
+  GKS_UNUSED(lr2);
+  GKS_UNUSED(r2);
+  GKS_UNUSED(lc);
+  GKS_UNUSED(chars);
+  GKS_UNUSED(ptr);
+
   if (fctid == 2)
     {
       gks_perror("Ghostscript support not compiled in");

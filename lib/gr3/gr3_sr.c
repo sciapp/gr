@@ -385,16 +385,17 @@ static void initialise_consumer(queue *queues[MAX_NUM_THREADS], int height, int 
 static matrix get_projection(int width, int height, float fovy, float zNear, float zFar, int projection_type)
 {
   float aspect = (float)width / height;
+  float tfov2 = tan(fovy * PI / 360.0);
+  float left, right, top, bottom;
+  matrix perspective;
   if (context_struct_.projection_type == GR3_PROJECTION_PARALLEL && context_struct_.aspect_override > 0)
     {
       aspect = context_struct_.aspect_override;
     }
-  float tfov2 = tan(fovy * PI / 360.0);
-  float right = zNear * aspect * tfov2;
-  float top = zNear * tfov2;
-  float left = -right;
-  float bottom = -top;
-  matrix perspective;
+  right = zNear * aspect * tfov2;
+  top = zNear * tfov2;
+  left = -right;
+  bottom = -top;
   if (projection_type == GR3_PROJECTION_PARALLEL)
     {
       perspective = matrix_ortho_proj(left, right, bottom, top, zNear, zFar);
@@ -805,6 +806,8 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
       color line_color;
       color_float dummy_color = {0, 0, 0, 0};
       vector dummy_vector = {0, 0, 0};
+      vertex_fp vertices_fp[3];
+      vertex_fp *vertex_fpp[3];
       if (arg->scales != NULL) /* there is a mesh passed to this function with the intention to finish the rendering
                                 * process and it has all values set to 0/NULL */
         {
@@ -817,12 +820,16 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
                * to be determined */
               int color, errind;
               double r, g, b;
+              color_float line_color_f;
               div_0 = 1;
               div_1 = 1;
               div_2 = 1;
               gks_inq_pline_color_index(&errind, &color);
               gks_inq_color_rep(1, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
-              color_float line_color_f = {r, g, b, 1.0};
+              line_color_f.r = r;
+              line_color_f.g = g;
+              line_color_f.b = b;
+              line_color_f.a = 1.0f;
               line_color = color_float_to_color(line_color_f);
               if (context_struct_.option < 2)
                 {
@@ -833,15 +840,17 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
                 }
               else
                 {
+                  color_float fill_color_f;
                   gks_inq_fill_color_index(&errind, &color);
                   gks_inq_color_rep(1, color, GKS_K_VALUE_SET, &errind, &r, &g, &b);
-                  color_float fill_color_f = {r, g, b, 1.0};
+                  fill_color_f.r = r;
+                  fill_color_f.g = g;
+                  fill_color_f.b = b;
+                  fill_color_f.a = 1.0f;
                   fill_color = color_float_to_color(fill_color_f);
                 }
             }
         }
-      vertex_fp vertices_fp[3];
-      vertex_fp *vertex_fpp[3];
       for (i = arg->idxstart; i < arg->idxend; i++)
         {
           int index = 0;
@@ -884,13 +893,14 @@ static void *draw_triangle_indexbuffer(void *v_arguments)
                    * is given, it must be transformed. */
                   if (vertices_fp[1].normal.z > 0 || vertices_fp[1].normal.z < 0)
                     {
-                      vertex_fp tmp = {vertices_fp[0].normal.y,
-                                       vertices_fp[0].normal.z,
-                                       vertices_fp[1].normal.y,
-                                       1.0,
-                                       1.0,
-                                       dummy_color,
-                                       dummy_vector};
+                      vertex_fp tmp;
+                      tmp.x = vertices_fp[0].normal.y;
+                      tmp.y = vertices_fp[0].normal.z;
+                      tmp.z = vertices_fp[1].normal.y;
+                      tmp.w = 1.0f;
+                      tmp.w_div = 1.0f;
+                      tmp.c = dummy_color;
+                      tmp.normal = dummy_vector;
                       mat_vec_mul_4x1(&arg->model_view_perspective, &tmp);
                       divide_by_w(&tmp);
                       mat_vec_mul_4x1(&arg->viewport, &tmp);
@@ -982,14 +992,34 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
               double d1 = off + 1, d2 = off + 1, d3 = off + 1, d4 = off + 1, d5 = off + 1;
               if (v_fp[0]->normal.x > 0)
                 {
-                  vector diff_vec_1_inv = {x - v_fp[0]->x, y - v_fp[0]->y, 0};
-                  vector diff_vec_1 = {-diff_vec_1_inv.x, -diff_vec_1_inv.y, 0};
-                  vector edge_1_inv = {v_fp[1]->x - v_fp[0]->x, v_fp[1]->y - v_fp[0]->y, 0};
-                  vector diff_vec_2 = {v_fp[1]->x - x, v_fp[1]->y - y, 0};
-                  vector diff_vec_2_inv = {-diff_vec_2.x, -diff_vec_2.y, 0};
-                  vector edge_1 = {-edge_1_inv.x, -edge_1_inv.y, 0};
-                  float angle_01_1 = dot_vector(&diff_vec_1_inv, &edge_1_inv);
-                  float angle_01_2 = dot_vector(&diff_vec_2_inv, &edge_1);
+                  vector diff_vec_1_inv;
+                  vector diff_vec_1;
+                  vector edge_1_inv;
+                  vector diff_vec_2;
+                  vector diff_vec_2_inv;
+                  vector edge_1;
+                  float angle_01_1;
+                  float angle_01_2;
+                  diff_vec_1_inv.x = x - v_fp[0]->x;
+                  diff_vec_1_inv.y = y - v_fp[0]->y;
+                  diff_vec_1_inv.z = 0;
+                  diff_vec_1.x = -diff_vec_1_inv.x;
+                  diff_vec_1.y = -diff_vec_1_inv.y;
+                  diff_vec_1.z = 0;
+                  edge_1_inv.x = v_fp[1]->x - v_fp[0]->x;
+                  edge_1_inv.y = v_fp[1]->y - v_fp[0]->y;
+                  edge_1_inv.z = 0;
+                  diff_vec_2.x = v_fp[1]->x - x;
+                  diff_vec_2.y = v_fp[1]->y - y;
+                  diff_vec_2.z = 0;
+                  diff_vec_2_inv.x = -diff_vec_2.x;
+                  diff_vec_2_inv.y = -diff_vec_2.y;
+                  diff_vec_2_inv.z = 0;
+                  edge_1.x = -edge_1_inv.x;
+                  edge_1.y = -edge_1_inv.y;
+                  edge_1.z = 0;
+                  angle_01_1 = dot_vector(&diff_vec_1_inv, &edge_1_inv);
+                  angle_01_2 = dot_vector(&diff_vec_2_inv, &edge_1);
                   /* The two first cases mean, that the nearest point of the relevant edge
                    * to the pixel, which is questioned to be colored in linecolor, is one
                    * of the vertices of the relevant edge, so there is no perpedicular line between
@@ -1014,14 +1044,34 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
               if (v_fp[1]->normal.x > 0)
                 {
                   vector vec2;
-                  vector diff_vec_2 = {v_fp[1]->x - x, v_fp[1]->y - y, 0};
-                  vector diff_vec_2_inv = {-diff_vec_2.x, -diff_vec_2.y, 0};
-                  vector diff_vec_3 = {v_fp[2]->x - x, v_fp[2]->y - y, 0};
-                  vector diff_vec_3_inv = {-diff_vec_3.x, -diff_vec_3.y, 0};
-                  vector edge_2 = {v_fp[1]->x - v_fp[2]->x, v_fp[1]->y - v_fp[2]->y, 0};
-                  vector edge_2_inv = {-edge_2.x, -edge_2.y, 0};
-                  float angle_12_1 = dot_vector(&diff_vec_2_inv, &edge_2_inv);
-                  float angle_12_2 = dot_vector(&diff_vec_3_inv, &edge_2);
+                  vector diff_vec_2;
+                  vector diff_vec_2_inv;
+                  vector diff_vec_3;
+                  vector diff_vec_3_inv;
+                  vector edge_2;
+                  vector edge_2_inv;
+                  float angle_12_1;
+                  float angle_12_2;
+                  diff_vec_2.x = v_fp[1]->x - x;
+                  diff_vec_2.y = v_fp[1]->y - y;
+                  diff_vec_2.z = 0;
+                  diff_vec_2_inv.x = -diff_vec_2.x;
+                  diff_vec_2_inv.y = -diff_vec_2.y;
+                  diff_vec_2_inv.z = 0;
+                  diff_vec_3.x = v_fp[2]->x - x;
+                  diff_vec_3.y = v_fp[2]->y - y;
+                  diff_vec_3.z = 0;
+                  diff_vec_3_inv.x = -diff_vec_3.x;
+                  diff_vec_3_inv.y = -diff_vec_3.y;
+                  diff_vec_3_inv.z = 0;
+                  edge_2.x = v_fp[1]->x - v_fp[2]->x;
+                  edge_2.y = v_fp[1]->y - v_fp[2]->y;
+                  edge_2.z = 0;
+                  edge_2_inv.x = -edge_2.x;
+                  edge_2_inv.y = -edge_2.y;
+                  edge_2_inv.z = 0;
+                  angle_12_1 = dot_vector(&diff_vec_2_inv, &edge_2_inv);
+                  angle_12_2 = dot_vector(&diff_vec_3_inv, &edge_2);
                   if (angle_12_1 < 0)
                     {
                       d2 = sqrt(dot_vector(&diff_vec_2, &diff_vec_2));
@@ -1039,14 +1089,34 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
               if (v_fp[2]->normal.x > 0)
                 {
                   vector vec3;
-                  vector diff_vec_1_inv = {x - v_fp[0]->x, y - v_fp[0]->y, 0};
-                  vector diff_vec_1 = {-diff_vec_1_inv.x, -diff_vec_1_inv.y, 0};
-                  vector diff_vec_3 = {v_fp[2]->x - x, v_fp[2]->y - y, 0};
-                  vector diff_vec_3_inv = {-diff_vec_3.x, -diff_vec_3.y, 0};
-                  vector edge_3 = {v_fp[2]->x - v_fp[0]->x, v_fp[2]->y - v_fp[0]->y, 0};
-                  vector edge_3_inv = {-edge_3.x, -edge_3.y, 0};
-                  float angle_20_1 = dot_vector(&diff_vec_3_inv, &edge_3_inv);
-                  float angle_20_2 = dot_vector(&diff_vec_1_inv, &edge_3);
+                  vector diff_vec_1_inv;
+                  vector diff_vec_1;
+                  vector diff_vec_3;
+                  vector diff_vec_3_inv;
+                  vector edge_3;
+                  vector edge_3_inv;
+                  float angle_20_1;
+                  float angle_20_2;
+                  diff_vec_1_inv.x = x - v_fp[0]->x;
+                  diff_vec_1_inv.y = y - v_fp[0]->y;
+                  diff_vec_1_inv.z = 0;
+                  diff_vec_1.x = -diff_vec_1_inv.x;
+                  diff_vec_1.y = -diff_vec_1_inv.y;
+                  diff_vec_1.z = 0;
+                  diff_vec_3.x = v_fp[2]->x - x;
+                  diff_vec_3.y = v_fp[2]->y - y;
+                  diff_vec_3.z = 0;
+                  diff_vec_3_inv.x = -diff_vec_3.x;
+                  diff_vec_3_inv.y = -diff_vec_3.y;
+                  diff_vec_3_inv.z = 0;
+                  edge_3.x = v_fp[2]->x - v_fp[0]->x;
+                  edge_3.y = v_fp[2]->y - v_fp[0]->y;
+                  edge_3.z = 0;
+                  edge_3_inv.x = -edge_3.x;
+                  edge_3_inv.y = -edge_3.y;
+                  edge_3_inv.z = 0;
+                  angle_20_1 = dot_vector(&diff_vec_3_inv, &edge_3_inv);
+                  angle_20_2 = dot_vector(&diff_vec_1_inv, &edge_3);
                   if (angle_20_1 < 0)
                     {
                       d3 = sqrt(dot_vector(&diff_vec_3, &diff_vec_3));
@@ -1063,15 +1133,35 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
                 }
               if (v_fp[1]->normal.z > 0.0)
                 {
-                  vector diff_vec_3 = {v_fp[2]->x - x, v_fp[2]->y - y, 0};
-                  vector diff_vec_3_inv = {-diff_vec_3.x, -diff_vec_3.y, 0};
-                  vector diff_vec_4 = {v_fp[0]->normal.y - x, v_fp[0]->normal.z - y, 0};
-                  vector diff_vec_4_inv = {-diff_vec_4.x, -diff_vec_4.y, 0};
+                  vector diff_vec_3;
+                  vector diff_vec_3_inv;
+                  vector diff_vec_4;
+                  vector diff_vec_4_inv;
                   vector vec4;
-                  vector edge_4 = {v_fp[2]->x - v_fp[0]->normal.y, v_fp[2]->y - v_fp[0]->normal.z, 0};
-                  vector edge_4_inv = {-edge_4.x, -edge_4.y, 0};
-                  float angle_23_1 = dot_vector(&diff_vec_4_inv, &edge_4);
-                  float angle_23_2 = dot_vector(&diff_vec_3_inv, &edge_4_inv);
+                  vector edge_4;
+                  vector edge_4_inv;
+                  float angle_23_1;
+                  float angle_23_2;
+                  diff_vec_3.x = v_fp[2]->x - x;
+                  diff_vec_3.y = v_fp[2]->y - y;
+                  diff_vec_3.z = 0;
+                  diff_vec_3_inv.x = -diff_vec_3.x;
+                  diff_vec_3_inv.y = -diff_vec_3.y;
+                  diff_vec_3_inv.z = 0;
+                  diff_vec_4.x = v_fp[0]->normal.y - x;
+                  diff_vec_4.y = v_fp[0]->normal.z - y;
+                  diff_vec_4.z = 0;
+                  diff_vec_4_inv.x = -diff_vec_4.x;
+                  diff_vec_4_inv.y = -diff_vec_4.y;
+                  diff_vec_4_inv.z = 0;
+                  edge_4.x = v_fp[2]->x - v_fp[0]->normal.y;
+                  edge_4.y = v_fp[2]->y - v_fp[0]->normal.z;
+                  edge_4.z = 0;
+                  edge_4_inv.x = -edge_4.x;
+                  edge_4_inv.y = -edge_4.y;
+                  edge_4_inv.z = 0;
+                  angle_23_1 = dot_vector(&diff_vec_4_inv, &edge_4);
+                  angle_23_2 = dot_vector(&diff_vec_3_inv, &edge_4_inv);
                   if (angle_23_1 < 0)
                     {
                       d4 = sqrt(dot_vector(&diff_vec_4, &diff_vec_4));
@@ -1089,14 +1179,34 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
               if (v_fp[1]->normal.z < 0.0)
                 {
                   vector vec4;
-                  vector diff_vec_2 = {v_fp[1]->x - x, v_fp[1]->y - y, 0};
-                  vector diff_vec_2_inv = {-diff_vec_2.x, -diff_vec_2.y, 0};
-                  vector diff_vec_4 = {v_fp[0]->normal.y - x, v_fp[0]->normal.z - y, 0};
-                  vector diff_vec_4_inv = {-diff_vec_4.x, -diff_vec_4.y, 0};
-                  vector edge_4 = {v_fp[1]->x - v_fp[0]->normal.y, v_fp[1]->y - v_fp[0]->normal.z, 0};
-                  vector edge_4_inv = {-edge_4.x, -edge_4.y, 0};
-                  float angle_13_1 = dot_vector(&diff_vec_4_inv, &edge_4);
-                  float angle_13_2 = dot_vector(&diff_vec_2_inv, &edge_4_inv);
+                  vector diff_vec_2;
+                  vector diff_vec_2_inv;
+                  vector diff_vec_4;
+                  vector diff_vec_4_inv;
+                  vector edge_4;
+                  vector edge_4_inv;
+                  float angle_13_1;
+                  float angle_13_2;
+                  diff_vec_2.x = v_fp[1]->x - x;
+                  diff_vec_2.y = v_fp[1]->y - y;
+                  diff_vec_2.z = 0;
+                  diff_vec_2_inv.x = -diff_vec_2.x;
+                  diff_vec_2_inv.y = -diff_vec_2.y;
+                  diff_vec_2_inv.z = 0;
+                  diff_vec_4.x = v_fp[0]->normal.y - x;
+                  diff_vec_4.y = v_fp[0]->normal.z - y;
+                  diff_vec_4.z = 0;
+                  diff_vec_4_inv.x = -diff_vec_4.x;
+                  diff_vec_4_inv.y = -diff_vec_4.y;
+                  diff_vec_4_inv.z = 0;
+                  edge_4.x = v_fp[1]->x - v_fp[0]->normal.y;
+                  edge_4.y = v_fp[1]->y - v_fp[0]->normal.z;
+                  edge_4.z = 0;
+                  edge_4_inv.x = -edge_4.x;
+                  edge_4_inv.y = -edge_4.y;
+                  edge_4_inv.z = 0;
+                  angle_13_1 = dot_vector(&diff_vec_4_inv, &edge_4);
+                  angle_13_2 = dot_vector(&diff_vec_2_inv, &edge_4_inv);
                   if (angle_13_1 < 0)
                     {
                       d5 = sqrt(dot_vector(&diff_vec_4, &diff_vec_4));
@@ -1119,18 +1229,36 @@ static void draw_triangle_with_edges(unsigned char *pixels, float *dep_buf, int 
                 }
               else
                 {
-                  vector edge_1_inv = {v_fp[1]->x - v_fp[0]->x, v_fp[1]->y - v_fp[0]->y, 0};
-                  vector diff_vec_1_inv = {x - v_fp[0]->x, y - v_fp[0]->y, 0};
-                  vector edge_3 = {v_fp[2]->x - v_fp[0]->x, v_fp[2]->y - v_fp[0]->y, 0};
-                  float d00 = dot_vector(&edge_1_inv, &edge_1_inv);
-                  float d01 = dot_vector(&edge_1_inv, &edge_3);
-                  float d11 = dot_vector(&edge_3, &edge_3);
-                  float d20 = dot_vector(&diff_vec_1_inv, &edge_1_inv);
-                  float d21 = dot_vector(&diff_vec_1_inv, &edge_3);
-                  float denom = d00 * d11 - d01 * d01;
-                  float w0 = (d11 * d20 - d01 * d21) / denom;
-                  float w1 = (d00 * d21 - d01 * d20) / denom;
-                  float w2 = 1.0f - w0 - w1;
+                  vector edge_1_inv;
+                  vector diff_vec_1_inv;
+                  vector edge_3;
+                  float d00;
+                  float d01;
+                  float d11;
+                  float d20;
+                  float d21;
+                  float denom;
+                  float w0;
+                  float w1;
+                  float w2;
+                  edge_1_inv.x = v_fp[1]->x - v_fp[0]->x;
+                  edge_1_inv.y = v_fp[1]->y - v_fp[0]->y;
+                  edge_1_inv.z = 0;
+                  diff_vec_1_inv.x = x - v_fp[0]->x;
+                  diff_vec_1_inv.y = y - v_fp[0]->y;
+                  diff_vec_1_inv.z = 0;
+                  edge_3.x = v_fp[2]->x - v_fp[0]->x;
+                  edge_3.y = v_fp[2]->y - v_fp[0]->y;
+                  edge_3.z = 0;
+                  d00 = dot_vector(&edge_1_inv, &edge_1_inv);
+                  d01 = dot_vector(&edge_1_inv, &edge_3);
+                  d11 = dot_vector(&edge_3, &edge_3);
+                  d20 = dot_vector(&diff_vec_1_inv, &edge_1_inv);
+                  d21 = dot_vector(&diff_vec_1_inv, &edge_3);
+                  denom = d00 * d11 - d01 * d01;
+                  w0 = (d11 * d20 - d01 * d21) / denom;
+                  w1 = (d00 * d21 - d01 * d20) / denom;
+                  w2 = 1.0f - w0 - w1;
                   if ((w0 > 0 && w1 > 0 && w2 > 0))
                     {
                       /* the pixel does not belong to a line, but lies inside a triangle => fill color */
