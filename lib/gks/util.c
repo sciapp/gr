@@ -1619,11 +1619,30 @@ static void makeraw(void)
     }
 }
 
+static int have_tmux(void)
+{
+  const char *term_env_var = gks_getenv("TERM");
+  if (term_env_var == NULL)
+    {
+      return 0;
+    }
+  return strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0;
+}
+
 static int have_iterm(void)
 {
-  char *req = "\033]1337;ReportCellSize\a";
+  char *req;
   int cc, len = 0;
   char s[81];
+
+  if (have_tmux())
+    {
+      req = "\033Ptmux;\033\033]1337;ReportCellSize\a\033\\";
+    }
+  else
+    {
+      req = "\033]1337;ReportCellSize\a";
+    }
 
   if (isatty(STDIN_FILENO))
     {

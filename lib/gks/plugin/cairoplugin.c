@@ -96,6 +96,11 @@ DLLEXPORT void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *i_arr, 
 
 #define MAX_TNR 9
 
+#define HEIGHT_IN_CELLS 24
+
+#define STR(x) #x
+#define XSTR(x) STR(x)
+
 #define WC_to_NDC(xw, yw, tnr, xn, yn) \
   xn = a[tnr] * (xw) + b[tnr];         \
   yn = c[tnr] * (yw) + d[tnr]
@@ -144,7 +149,7 @@ typedef struct cairo_point_t
 
 typedef struct ws_state_list_t
 {
-  int conid, state, wtype;
+  int conid, state, wtype, have_tmux;
   double mw, mh;
   int w, h, dpi;
   char *path;
@@ -1623,7 +1628,32 @@ static void write_page(void)
       b64_string = (char *)gks_malloc(b64_size);
       gks_base64(string, size, b64_string, b64_size);
 
-      fprintf(stdout, "\033]1337;File=inline=1;height=24;preserveAspectRatio=0:%s\a", b64_string);
+      if (p->have_tmux)
+        {
+          int i;
+          /*
+           * tmux does not recognize the drawn image and reserves no space for it
+           * -> place the cursor at the end of the drawing area and jump back to make
+           *    a space reservation.
+           */
+          for (i = 0; i < HEIGHT_IN_CELLS; ++i)
+            {
+              fprintf(stdout, "\n"); /* only `\n` creates new lines on the screen */
+            }
+          fprintf(stdout, "\033[%dA", HEIGHT_IN_CELLS); /* Move up `HEIGHT_IN_CELLS` lines */
+          fprintf(stdout, "\033Ptmux;\033");            /* Start a tmux pass-through sequence */
+        }
+      fprintf(stdout, "\033]1337;File=inline=1;height=" XSTR(HEIGHT_IN_CELLS) ";preserveAspectRatio=0:%s\a",
+              b64_string);
+      if (p->have_tmux)
+        {
+          fprintf(stdout, "\033\\"); /* End a tmux pass-through sequence */
+          /*
+           * tmux does not recognize the drawn image and reserves no space for it
+           * -> place the cursor at the end of the drawn image
+           */
+          fprintf(stdout, "\033[%dB", HEIGHT_IN_CELLS); /* Move down `HEIGHT_IN_CELLS` lines */
+        }
       fflush(stdout);
 
       free(string);
@@ -2048,6 +2078,16 @@ static void gdp(int n, double *px, double *py, int primid, int nc, int *codes)
     }
 }
 
+static int have_tmux(void)
+{
+  const char *term_env_var = gks_getenv("TERM");
+  if (term_env_var == NULL)
+    {
+      return 0;
+    }
+  return strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0;
+}
+
 void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, double *r1, int lr2, double *r2, int lc,
                      char *chars, void **ptr)
 {
@@ -2072,6 +2112,14 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->conid = ia[1];
       p->path = chars;
       p->wtype = ia[2];
+      if (p->wtype == 151)
+        {
+          p->have_tmux = have_tmux();
+        }
+      else
+        {
+          p->have_tmux = -1;
+        }
       p->mem = NULL;
 
       if (p->wtype == 140 || p->wtype == 144 || p->wtype == 145 || p->wtype == 146 || p->wtype == 151)
