@@ -1,5 +1,5 @@
 #ifndef UTIL_HXX_INCLUDED
-#define UTIL_HXX_INCLUDED value
+#define UTIL_HXX_INCLUDED
 
 #include <iostream>
 #include <iomanip>
