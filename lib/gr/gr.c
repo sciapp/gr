@@ -96,6 +96,9 @@ typedef struct
 {
   int scale_options;
   double xmin, xmax, ymin, ymax, zmin, zmax, a, b, c, d, e, f;
+  double basex, basey, basez;
+  int tickx, ticky, tickz;
+  char *basex_s, *basey_s, *basez_s;
 } linear_xform;
 
 typedef struct
@@ -217,7 +220,7 @@ static volume_t vt = {1, 0, 1.25, 1000, 1000, NULL, 1};
 
 static norm_xform nx = {1, 0, 1, 0};
 
-static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 10, 10, 10, 9, 9, 9, "10", "10", "10"};
 
 static world_xform wx = {0, 1, 60, 60, 0, 0, 0, 0, 0, 0, 0};
 
@@ -318,6 +321,14 @@ static unsigned int rgb[MAX_COLOR], used[MAX_COLOR];
 #define OPTION_FLIP_X (1 << 3)
 #define OPTION_FLIP_Y (1 << 4)
 #define OPTION_FLIP_Z (1 << 5)
+
+#define OPTION_X_LOG2 (1 << 6)
+#define OPTION_Y_LOG2 (1 << 7)
+#define OPTION_Z_LOG2 (1 << 8)
+
+#define OPTION_X_LN (1 << 9)
+#define OPTION_Y_LN (1 << 10)
+#define OPTION_Z_LN (1 << 11)
 
 #define LEFT (1 << 0)
 #define RIGHT (1 << 1)
@@ -940,6 +951,11 @@ static void reallocate(int npoints)
   code = (int *)xrealloc(code, maxpath * sizeof(int));
 }
 
+static double blog(double base, double x)
+{
+  return log(x) / log(base);
+}
+
 static double x_lin(double x)
 {
   double result;
@@ -947,7 +963,7 @@ static double x_lin(double x)
   if (OPTION_X_LOG & lx.scale_options)
     {
       if (x > 0)
-        result = lx.a * log10(x) + lx.b;
+        result = lx.a * blog(lx.basex, x) + lx.b;
       else
         result = NAN;
     }
@@ -966,7 +982,7 @@ static double y_lin(double y)
   if (OPTION_Y_LOG & lx.scale_options)
     {
       if (y > 0)
-        result = lx.c * log10(y) + lx.d;
+        result = lx.c * blog(lx.basey, y) + lx.d;
       else
         result = NAN;
     }
@@ -985,7 +1001,7 @@ static double z_lin(double z)
   if (OPTION_Z_LOG & lx.scale_options)
     {
       if (z > 0)
-        result = lx.e * log10(z) + lx.f;
+        result = lx.e * blog(lx.basez, z) + lx.f;
       else
         result = NAN;
     }
@@ -1002,7 +1018,7 @@ static double x_log(double x)
   if (OPTION_FLIP_X & lx.scale_options) x = lx.xmax - x + lx.xmin;
 
   if (OPTION_X_LOG & lx.scale_options)
-    return (pow(10.0, (double)((x - lx.b) / lx.a)));
+    return (pow(lx.basex, (double)((x - lx.b) / lx.a)));
   else
     return (x);
 }
@@ -1012,7 +1028,7 @@ static double y_log(double y)
   if (OPTION_FLIP_Y & lx.scale_options) y = lx.ymax - y + lx.ymin;
 
   if (OPTION_Y_LOG & lx.scale_options)
-    return (pow(10.0, (double)((y - lx.d) / lx.c)));
+    return (pow(lx.basey, (double)((y - lx.d) / lx.c)));
   else
     return (y);
 }
@@ -1022,7 +1038,7 @@ static double z_log(double z)
   if (OPTION_FLIP_Z & lx.scale_options) z = lx.zmax - z + lx.zmin;
 
   if (OPTION_Z_LOG & lx.scale_options)
-    return (pow(10.0, (double)((z - lx.f) / lx.e)));
+    return (pow(lx.basez, (double)((z - lx.f) / lx.e)));
   else
     return (z);
 }
@@ -1227,12 +1243,33 @@ static int setscale(int options)
   lx.xmin = x_min;
   lx.xmax = x_max;
 
-  if (OPTION_X_LOG & options)
+  if ((OPTION_X_LOG | OPTION_X_LOG2 | OPTION_X_LN) & options)
     {
       if (x_min > 0)
         {
-          lx.a = (x_max - x_min) / log10(x_max / x_min);
-          lx.b = x_min - lx.a * log10(x_min);
+          if (OPTION_X_LOG2 & options)
+            {
+              lx.basex = 2.0;
+              lx.tickx = 1;
+              lx.basex_s = "2";
+              lx.scale_options |= OPTION_X_LOG2;
+            }
+          else if (OPTION_X_LN & options)
+            {
+              lx.basex = exp(1);
+              lx.tickx = 1;
+              lx.basex_s = "e";
+              lx.scale_options |= OPTION_X_LN;
+            }
+          else
+            {
+              lx.basex = 10.0;
+              lx.tickx = 9;
+              lx.basex_s = "10";
+            }
+
+          lx.a = (x_max - x_min) / blog(lx.basex, x_max / x_min);
+          lx.b = x_min - lx.a * blog(lx.basex, x_min);
           lx.scale_options |= OPTION_X_LOG;
         }
       else
@@ -1242,12 +1279,33 @@ static int setscale(int options)
   lx.ymin = y_min;
   lx.ymax = y_max;
 
-  if (OPTION_Y_LOG & options)
+  if ((OPTION_Y_LOG | OPTION_Y_LOG2 | OPTION_Y_LN) & options)
     {
       if (y_min > 0)
         {
-          lx.c = (y_max - y_min) / log10(y_max / y_min);
-          lx.d = y_min - lx.c * log10(y_min);
+          if (OPTION_Y_LOG2 & options)
+            {
+              lx.basey = 2.0;
+              lx.ticky = 1;
+              lx.basey_s = "2";
+              lx.scale_options |= OPTION_Y_LOG2;
+            }
+          else if (OPTION_Y_LN & options)
+            {
+              lx.basey = exp(1);
+              lx.ticky = 1;
+              lx.basey_s = "e";
+              lx.scale_options |= OPTION_Y_LN;
+            }
+          else
+            {
+              lx.basey = 10.0;
+              lx.ticky = 9;
+              lx.basey_s = "10";
+            }
+
+          lx.c = (y_max - y_min) / blog(lx.basey, y_max / y_min);
+          lx.d = y_min - lx.c * blog(lx.basey, y_min);
           lx.scale_options |= OPTION_Y_LOG;
         }
       else
@@ -1259,12 +1317,33 @@ static int setscale(int options)
   lx.zmin = z_min;
   lx.zmax = z_max;
 
-  if (OPTION_Z_LOG & options)
+  if ((OPTION_Z_LOG | OPTION_Z_LOG2 | OPTION_Z_LN) & options)
     {
       if (lx.zmin > 0)
         {
-          lx.e = (lx.zmax - lx.zmin) / log10(lx.zmax / lx.zmin);
-          lx.f = lx.zmin - lx.e * log10(lx.zmin);
+          if (OPTION_Z_LOG2 & options)
+            {
+              lx.basez = 2.0;
+              lx.tickz = 1;
+              lx.basez_s = "2";
+              lx.scale_options |= OPTION_Z_LOG2;
+            }
+          else if (OPTION_Z_LN & options)
+            {
+              lx.basez = exp(1);
+              lx.tickz = 1;
+              lx.basez_s = "e";
+              lx.scale_options |= OPTION_Z_LN;
+            }
+          else
+            {
+              lx.basez = 10.0;
+              lx.tickz = 9;
+              lx.basez_s = "10";
+            }
+
+          lx.e = (lx.zmax - lx.zmin) / blog(lx.basez, lx.zmax / lx.zmin);
+          lx.f = lx.zmin - lx.e * blog(lx.basez, lx.zmin);
           lx.scale_options |= OPTION_Z_LOG;
         }
       else
@@ -4690,11 +4769,11 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, gauss(log10(y_min)));
+          y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
-          decade = igauss(log10(y_min / y_org));
+          decade = igauss(blog(lx.basey, y_min / y_org));
 
           /* draw Y-axis */
 
@@ -4704,26 +4783,26 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
             {
               pline(x_org, yi);
 
+              xi = minor_tick;
               if (i == 0)
                 {
-                  xi = major_tick;
-
                   if (major_y > 0)
                     if (decade % major_y == 0)
-                      if (yi != y_org || y_org == y_min || y_org == y_max)
-                        {
-                          if (y_tick > 1)
-                            {
-                              exponent = iround(log10(yi));
-                              sprintf(string, "10^{%d}", exponent);
-                              text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
-                            }
-                          else
-                            text2dlbl(x_label, yi, gr_ftoa(string, yi, 0.), yi, fpy);
-                        }
+                      {
+                        xi = major_tick;
+                        if (yi != y_org || y_org == y_min || y_org == y_max)
+                          {
+                            if (y_tick > 1)
+                              {
+                                exponent = iround(blog(lx.basey, yi));
+                                sprintf(string, "%s^{%d}", lx.basey_s, exponent);
+                                text2dlbl(x_label, yi, replace_minus_sign(string), yi, fpy);
+                              }
+                            else
+                              text2dlbl(x_label, yi, gr_ftoa(string, yi, 0.), yi, fpy);
+                          }
+                      }
                 }
-              else
-                xi = minor_tick;
 
               if (i == 0 || abs(major_y) == 1)
                 {
@@ -4731,9 +4810,9 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   pline(x_org, yi);
                 }
 
-              if (i == 9)
+              if (i == lx.ticky)
                 {
-                  y0 = y0 * 10.;
+                  y0 = y0 * lx.basey;
                   i = 0;
                   decade++;
                 }
@@ -4816,11 +4895,11 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
 
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, gauss(log10(x_min)));
+          x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
-          decade = igauss(log10(x_min / x_org));
+          decade = igauss(blog(lx.basex, x_min / x_org));
 
           /* draw X-axis */
 
@@ -4830,26 +4909,26 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
             {
               pline(xi, y_org);
 
+              yi = minor_tick;
               if (i == 0)
                 {
-                  yi = major_tick;
-
                   if (major_x > 0)
                     if (decade % major_x == 0)
-                      if (xi != x_org || x_org == x_min || x_org == x_max)
-                        {
-                          if (x_tick > 1)
-                            {
-                              exponent = iround(log10(xi));
-                              sprintf(string, "10^{%d}", exponent);
-                              text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
-                            }
-                          else
-                            text2dlbl(xi, y_label, gr_ftoa(string, xi, 0.), xi, fpx);
-                        }
+                      {
+                        yi = major_tick;
+                        if (xi != x_org || x_org == x_min || x_org == x_max)
+                          {
+                            if (x_tick > 1)
+                              {
+                                exponent = iround(blog(lx.basex, xi));
+                                sprintf(string, "%s^{%d}", lx.basex_s, exponent);
+                                text2dlbl(xi, y_label, replace_minus_sign(string), xi, fpx);
+                              }
+                            else
+                              text2dlbl(xi, y_label, gr_ftoa(string, xi, 0.), xi, fpx);
+                          }
+                      }
                 }
-              else
-                yi = minor_tick;
 
               if (i == 0 || abs(major_x) == 1)
                 {
@@ -4857,9 +4936,9 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   pline(xi, y_org);
                 }
 
-              if (i == 9)
+              if (i == lx.tickx)
                 {
-                  x0 = x0 * 10.;
+                  x0 = x0 * lx.basex;
                   i = 0;
                   decade++;
                 }
@@ -5047,7 +5126,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
     {
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, gauss(log10(y_min)));
+          y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
@@ -5062,9 +5141,9 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   if (yi != y_min) grid_line(x_min, yi, x_max, yi, color, major);
                 }
 
-              if (i == 9)
+              if (i == lx.ticky)
                 {
-                  y0 = y0 * 10.;
+                  y0 = y0 * lx.basey;
                   i = 0;
                 }
               else
@@ -5103,7 +5182,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
     {
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, gauss(log10(x_min)));
+          x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
@@ -5118,9 +5197,9 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   if (xi != x_min) grid_line(xi, y_min, xi, y_max, color, major);
                 }
 
-              if (i == 9)
+              if (i == lx.tickx)
                 {
-                  x0 = x0 * 10.;
+                  x0 = x0 * lx.basex;
                   i = 0;
                 }
               else
@@ -5282,7 +5361,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
     {
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          z0 = pow(10.0, gauss(log10(z_min)));
+          z0 = pow(lx.basez, gauss(blog(lx.basez, z_min)));
 
           i = ipred(z_min / z0);
           zi = z0 + i * z0;
@@ -5301,9 +5380,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     }
                 }
 
-              if (i == 9)
+              if (i == lx.tickz)
                 {
-                  z0 = z0 * 10.;
+                  z0 = z0 * lx.basez;
                   i = 0;
                 }
               else
@@ -5345,7 +5424,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
     {
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, gauss(log10(y_min)));
+          y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
@@ -5364,9 +5443,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     }
                 }
 
-              if (i == 9)
+              if (i == lx.ticky)
                 {
-                  y0 = y0 * 10.;
+                  y0 = y0 * lx.basey;
                   i = 0;
                 }
               else
@@ -5408,7 +5487,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
     {
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, gauss(log10(x_min)));
+          x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
@@ -5427,9 +5506,9 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     }
                 }
 
-              if (i == 9)
+              if (i == lx.tickx)
                 {
-                  x0 = x0 * 10.;
+                  x0 = x0 * lx.basex;
                   i = 0;
                 }
               else
@@ -6438,11 +6517,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (OPTION_Z_LOG & lx.scale_options)
         {
-          z0 = pow(10.0, gauss(log10(z_min)));
+          z0 = pow(lx.basez, gauss(blog(lx.basez, z_min)));
 
           i = ipred(z_min / z0);
           zi = z0 + i * z0;
-          decade = igauss(log10(z_min / z_org));
+          decade = igauss(blog(lx.basez, z_min / z_org));
 
           /* draw Z-axis */
 
@@ -6452,27 +6531,24 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             {
               pline3d(x_org, y_org, zi);
 
+              xi = x_minor_tick;
+              yi = y_minor_tick;
               if (i == 0)
                 {
-                  xi = x_major_tick;
-                  yi = y_major_tick;
                   if (major_z > 0 && zi != z_org)
                     if (decade % major_z == 0)
                       {
+                        xi = x_major_tick;
+                        yi = y_major_tick;
                         if (z_tick > 1)
                           {
-                            exponent = iround(log10(zi));
-                            sprintf(string, "10^{%d}", exponent);
+                            exponent = iround(blog(lx.basez, zi));
+                            sprintf(string, "%s^{%d}", lx.basez_s, exponent);
                             text3d(x_label, y_label, zi, replace_minus_sign(string), 0);
                           }
                         else
                           text3d(x_label, y_label, zi, gr_ftoa(string, zi, 0.), 0);
                       }
-                }
-              else
-                {
-                  xi = x_minor_tick;
-                  yi = y_minor_tick;
                 }
 
               if (i == 0 || abs(major_z) == 1)
@@ -6481,9 +6557,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   pline3d(x_org, y_org, zi);
                 }
 
-              if (i == 9)
+              if (i == lx.tickz)
                 {
-                  z0 = z0 * 10.;
+                  z0 = z0 * lx.basez;
                   i = 0;
                   decade++;
                 }
@@ -6603,11 +6679,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (OPTION_Y_LOG & lx.scale_options)
         {
-          y0 = pow(10.0, gauss(log10(y_min)));
+          y0 = pow(lx.basey, gauss(blog(lx.basey, y_min)));
 
           i = ipred(y_min / y0);
           yi = y0 + i * y0;
-          decade = igauss(log10(y_min / y_org));
+          decade = igauss(blog(lx.basey, y_min / y_org));
 
           /* draw Y-axis */
 
@@ -6617,27 +6693,24 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             {
               pline3d(x_org, yi, z_org);
 
+              xi = x_minor_tick;
+              zi = z_minor_tick;
               if (i == 0)
                 {
-                  xi = x_major_tick;
-                  zi = z_major_tick;
                   if (major_y > 0 && yi != y_org)
                     if (decade % major_y == 0)
                       {
+                        xi = x_major_tick;
+                        zi = z_major_tick;
                         if (y_tick > 1)
                           {
-                            exponent = iround(log10(yi));
-                            sprintf(string, "10^{%d}", exponent);
+                            exponent = iround(blog(lx.basey, yi));
+                            sprintf(string, "%s^{%d}", lx.basey_s, exponent);
                             text3d(x_label, yi, z_label, replace_minus_sign(string), 0);
                           }
                         else
                           text3d(x_label, yi, z_label, gr_ftoa(string, yi, 0.), 0);
                       }
-                }
-              else
-                {
-                  xi = x_minor_tick;
-                  zi = z_minor_tick;
                 }
 
               if (i == 0 || abs(major_y) == 1)
@@ -6646,9 +6719,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   pline3d(x_org, yi, z_org);
                 }
 
-              if (i == 9)
+              if (i == lx.ticky)
                 {
-                  y0 = y0 * 10.;
+                  y0 = y0 * lx.basey;
                   i = 0;
                   decade++;
                 }
@@ -6768,11 +6841,11 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
       if (OPTION_X_LOG & lx.scale_options)
         {
-          x0 = pow(10.0, gauss(log10(x_min)));
+          x0 = pow(lx.basex, gauss(blog(lx.basex, x_min)));
 
           i = ipred(x_min / x0);
           xi = x0 + i * x0;
-          decade = igauss(log10(x_min / x_org));
+          decade = igauss(blog(lx.basex, x_min / x_org));
 
           /* draw X-axis */
 
@@ -6782,27 +6855,24 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
             {
               pline3d(xi, y_org, z_org);
 
+              yi = y_minor_tick;
+              zi = z_minor_tick;
               if (i == 0)
                 {
-                  yi = y_major_tick;
-                  zi = z_major_tick;
                   if (major_x > 0 && xi != x_org)
                     if (decade % major_x == 0)
                       {
+                        yi = y_major_tick;
+                        zi = z_major_tick;
                         if (x_tick > 1)
                           {
-                            exponent = iround(log10(xi));
-                            sprintf(string, "10^{%d}", exponent);
+                            exponent = iround(blog(lx.basex, xi));
+                            sprintf(string, "%s^{%d}", lx.basex_s, exponent);
                             text3d(xi, y_label, z_label, replace_minus_sign(string), 0);
                           }
                         else
                           text3d(xi, y_label, z_label, gr_ftoa(string, xi, 0.), 0);
                       }
-                }
-              else
-                {
-                  yi = y_minor_tick;
-                  zi = z_minor_tick;
                 }
 
               if (i == 0 || abs(major_x) == 1)
@@ -6811,9 +6881,9 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   pline3d(xi, y_org, z_org);
                 }
 
-              if (i == 9)
+              if (i == lx.tickx)
                 {
-                  x0 = x0 * 10.;
+                  x0 = x0 * lx.basex;
                   i = 0;
                   decade++;
                 }
@@ -10189,12 +10259,12 @@ static void drawimage_calculation(double xmin, double xmax, double ymin, double 
       lx_original = lx;
       lx.xmin = xmin;
       lx.xmax = xmax;
-      lx.a = (xmax - xmin) / log10(xmax / xmin);
-      lx.b = xmin - lx.a * log10(xmin);
+      lx.a = (xmax - xmin) / blog(lx.basex, xmax / xmin);
+      lx.b = xmin - lx.a * blog(lx.basex, xmin);
       lx.ymin = ymin;
       lx.ymax = ymax;
-      lx.c = (ymax - ymin) / log10(ymax / ymin);
-      lx.d = ymin - lx.c * log10(ymin);
+      lx.c = (ymax - ymin) / blog(lx.basey, ymax / ymin);
+      lx.d = ymin - lx.c * blog(lx.basey, ymin);
       imgT = (int *)xmalloc(w * h * sizeof(int));
       for (i = 0; i < w; i++)
         {
