@@ -1993,21 +1993,20 @@ void gr_cellarray(double xmin, double xmax, double ymin, double ymax, int dimx, 
 void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, int srow, int ncol, int nrow,
                             int *color)
 {
-  int img_data_x, img_data_y, color_x_ind, color_y_ind, color_ind, edges_x = 1, edges_y = 1, size = 2000;
+  int img_data_x, img_data_y, color_x_ind, color_y_ind, color_ind, edges_x = 1, edges_y = 1, size = 2000, scale_options;
   int *img_data;
-  double x_pos, y_pos, x_size, y_size, *x_orig = NULL, *y_orig = NULL;
+  double x_pos, y_pos, x_size, y_size, *x_orig = x, *y_orig = y;
+  double xmin, xmax, ymin, ymax;
 
   if (dimx < 0)
     {
       dimx = -dimx;
       edges_x = 0;
-      x_orig = x;
     }
   if (dimy < 0)
     {
       dimy = -dimy;
       edges_y = 0;
-      y_orig = y;
     }
 
   if (scol < 1 || srow < 1 || scol + ncol - 1 > dimx || srow + nrow - 1 > dimy || (!edges_x && ncol < 2) ||
@@ -2024,9 +2023,11 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
   nrow += srow;
   ncol += scol;
 
+  x = (double *)gks_malloc(sizeof(double) * (ncol + 1));
+  y = (double *)gks_malloc(sizeof(double) * (nrow + 1));
+
   if (!edges_x)
     {
-      x = (double *)gks_malloc(sizeof(double) * (ncol + 1));
       x[scol] = x_orig[scol];
       for (color_x_ind = scol + 1; color_x_ind < ncol; color_x_ind++)
         {
@@ -2034,16 +2035,43 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
         }
       x[ncol] = x_orig[ncol - 1];
     }
+  else
+    {
+      memcpy(x, x_orig, sizeof(double) * (ncol + 1));
+    }
+  xmin = x[scol];
+  xmax = x[ncol];
+
+  if (lx.scale_options & (OPTION_X_LOG | OPTION_X_LOG2 | OPTION_X_LN))
+    {
+      for (color_x_ind = scol; color_x_ind <= ncol; color_x_ind++)
+        {
+          x[color_x_ind] = blog(lx.basex, x[color_x_ind]);
+        }
+    }
 
   if (!edges_y)
     {
-      y = (double *)gks_malloc(sizeof(double) * (nrow + 1));
       y[srow] = y_orig[srow];
       for (color_y_ind = srow + 1; color_y_ind < nrow; color_y_ind++)
         {
           y[color_y_ind] = 0.5 * (y_orig[color_y_ind] + y_orig[color_y_ind - 1]);
         }
       y[nrow] = y_orig[nrow - 1];
+    }
+  else
+    {
+      memcpy(y, y_orig, sizeof(double) * (nrow + 1));
+    }
+  ymin = y[nrow];
+  ymax = y[srow];
+
+  if (lx.scale_options & (OPTION_Y_LOG | OPTION_Y_LOG2 | OPTION_Y_LN))
+    {
+      for (color_y_ind = srow; color_y_ind <= nrow; color_y_ind++)
+        {
+          y[color_y_ind] = blog(lx.basey, y[color_y_ind]);
+        }
     }
 
   for (color_x_ind = scol; color_x_ind < ncol; color_x_ind++)
@@ -2113,16 +2141,26 @@ void gr_nonuniformcellarray(double *x, double *y, int dimx, int dimy, int scol, 
         }
     }
 
-  gr_drawimage(x[scol], x[ncol], y[nrow], y[srow], size, size, img_data, 0);
+  scale_options = lx.scale_options;
+  if (scale_options & OPTION_FLIP_X)
+    {
+      double tmp = xmin;
+      xmin = xmax;
+      xmax = tmp;
+    }
+  if (scale_options & OPTION_FLIP_Y)
+    {
+      double tmp = ymin;
+      ymin = ymax;
+      ymax = tmp;
+    }
+  lx.scale_options = 0;
+  gr_drawimage(xmin, xmax, ymin, ymax, size, size, img_data, 0);
   free(img_data);
-  if (!edges_x)
-    {
-      gks_free(x);
-    }
-  if (!edges_y)
-    {
-      gks_free(y);
-    }
+  lx.scale_options = scale_options;
+
+  gks_free(x);
+  gks_free(y);
 }
 
 /*!
