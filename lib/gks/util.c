@@ -1,3 +1,7 @@
+#ifdef __unix__
+/* Needed for popen function */
+#define _POSIX_C_SOURCE 2
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +61,15 @@
 #define WC_to_NDC_rel(xw, yw, tnr, xn, yn) \
   xn = gkss->a[tnr] * (xw);                \
   yn = gkss->c[tnr] * (yw)
+
+#ifndef _WIN32
+enum tmux_state_t
+{
+  NO_TMUX = 0,
+  SINGLE_TMUX_SESSION,
+  NESTED_TMUX_SESSION
+};
+#endif
 
 struct wstypes_t
 {
@@ -1619,14 +1632,44 @@ static void makeraw(void)
     }
 }
 
-static int have_tmux(void)
+static enum tmux_state_t have_tmux(void)
 {
   const char *term_env_var = gks_getenv("TERM");
   if (term_env_var == NULL)
     {
-      return 0;
+      return NO_TMUX;
     }
-  return strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0;
+
+  if (strncmp(term_env_var, "screen", 6) == 0 || strncmp(term_env_var, "tmux", 4) == 0)
+    {
+      /* Check if the tmux session is running locally, otherwise the server cannot be queried */
+      if (gks_getenv("TMUX") != NULL)
+        {
+          FILE *fp;
+          char client_termname[80];
+
+          /* Inside tmux we can query the tmux server for the outer terminal name */
+          fp = popen("tmux display -p '#{client_termname}'", "r");
+          if (fp == NULL)
+            {
+              /* Reading failed, assume a single tmux session */
+              return SINGLE_TMUX_SESSION;
+            }
+          /* Read the output a line at a time - output it. */
+          if (fgets(client_termname, sizeof(client_termname), fp) == NULL)
+            {
+              /* Reading failed, assume a single tmux session */
+              return SINGLE_TMUX_SESSION;
+            }
+          pclose(fp);
+          return (strncmp(client_termname, "screen", 6) == 0 || strncmp(client_termname, "tmux", 4) == 0)
+                     ? NESTED_TMUX_SESSION
+                     : SINGLE_TMUX_SESSION;
+        }
+      return SINGLE_TMUX_SESSION;
+    }
+
+  return NO_TMUX;
 }
 
 static int have_iterm(void)
@@ -1635,13 +1678,17 @@ static int have_iterm(void)
   int cc, len = 0;
   char s[81];
 
-  if (have_tmux())
+  switch (have_tmux())
     {
+    case NESTED_TMUX_SESSION:
+      req = "\033Ptmux;\033\033Ptmux;\033\033\033\033]1337;ReportCellSize\a\033\033\\\033\\";
+      break;
+    case SINGLE_TMUX_SESSION:
       req = "\033Ptmux;\033\033]1337;ReportCellSize\a\033\\";
-    }
-  else
-    {
+      break;
+    default:
       req = "\033]1337;ReportCellSize\a";
+      break;
     }
 
   if (isatty(STDIN_FILENO))
