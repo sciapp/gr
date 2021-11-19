@@ -431,7 +431,7 @@ int main(){
   return 0;
 }
 eof
-    libs="-lGL -lXrandr -lXxf86vm -lXinerama -lXcursor -lXi -lX11 -lrt -lpthread -lm"
+    libs="-lGL -lX11"
   fi
   cmd="${CC} ${EXTRA_CFLAGS} ${EXTRA_LDFLAGS} -o $tmpout $tmpsrc"
   $cmd $libs >/dev/null 2>&1
