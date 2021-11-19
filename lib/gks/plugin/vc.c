@@ -9,32 +9,40 @@
 static void encode_frame(movie_t movie)
 {
   int ret;
-  AVPacket pkt = {0};
-  av_init_packet(&pkt);
+  AVPacket *pkt;
+  pkt = av_packet_alloc();
+  if (pkt == NULL)
+    {
+      fprintf(stderr, "av_packet_alloc failed.\n");
+      return;
+    }
   ret = avcodec_send_frame(movie->cdc_ctx, movie->frame);
   if (ret < 0)
     {
+      av_packet_free(&pkt);
       fprintf(stderr, "Error sending frame %ld for encoding\n", (long)movie->frame->pts);
       return;
     }
   while (ret >= 0)
     {
-      ret = avcodec_receive_packet(movie->cdc_ctx, &pkt);
+      ret = avcodec_receive_packet(movie->cdc_ctx, pkt);
       if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
         {
+          av_packet_free(&pkt);
           return;
         }
       else if (ret < 0)
         {
           fprintf(stderr, "Error during encoding of frame %ld\n", (long)movie->frame->pts);
+          av_packet_free(&pkt);
           return;
         }
-      av_packet_rescale_ts(&pkt, movie->cdc_ctx->time_base, movie->video_st->time_base);
-      pkt.stream_index = movie->video_st->index;
+      av_packet_rescale_ts(pkt, movie->cdc_ctx->time_base, movie->video_st->time_base);
+      pkt->stream_index = movie->video_st->index;
 
-      ret = av_interleaved_write_frame(movie->fmt_ctx, &pkt);
-      av_packet_unref(&pkt);
+      ret = av_interleaved_write_frame(movie->fmt_ctx, pkt);
     }
+  av_packet_free(&pkt);
 }
 
 void vc_movie_append_frame(movie_t movie, frame_t frame)
