@@ -97,7 +97,6 @@ typedef struct
   int scale_options;
   double xmin, xmax, ymin, ymax, zmin, zmax, a, b, c, d, e, f;
   double basex, basey, basez;
-  int tickx, ticky, tickz;
   char *basex_s, *basey_s, *basez_s;
 } linear_xform;
 
@@ -220,7 +219,7 @@ static volume_t vt = {1, 0, 1.25, 1000, 1000, NULL, 1};
 
 static norm_xform nx = {1, 0, 1, 0};
 
-static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 10, 10, 10, 9, 9, 9, "10", "10", "10"};
+static linear_xform lx = {0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 10, 10, 10, "10", "10", "10"};
 
 static world_xform wx = {0, 1, 60, 60, 0, 0, 0, 0, 0, 0, 0};
 
@@ -1250,21 +1249,18 @@ static int setscale(int options)
           if (OPTION_X_LOG2 & options)
             {
               lx.basex = 2.0;
-              lx.tickx = 1;
               lx.basex_s = "2";
               lx.scale_options |= OPTION_X_LOG2;
             }
           else if (OPTION_X_LN & options)
             {
               lx.basex = exp(1);
-              lx.tickx = 1;
               lx.basex_s = "e";
               lx.scale_options |= OPTION_X_LN;
             }
           else
             {
               lx.basex = 10.0;
-              lx.tickx = 9;
               lx.basex_s = "10";
             }
 
@@ -1286,21 +1282,18 @@ static int setscale(int options)
           if (OPTION_Y_LOG2 & options)
             {
               lx.basey = 2.0;
-              lx.ticky = 1;
               lx.basey_s = "2";
               lx.scale_options |= OPTION_Y_LOG2;
             }
           else if (OPTION_Y_LN & options)
             {
               lx.basey = exp(1);
-              lx.ticky = 1;
               lx.basey_s = "e";
               lx.scale_options |= OPTION_Y_LN;
             }
           else
             {
               lx.basey = 10.0;
-              lx.ticky = 9;
               lx.basey_s = "10";
             }
 
@@ -1324,21 +1317,18 @@ static int setscale(int options)
           if (OPTION_Z_LOG2 & options)
             {
               lx.basez = 2.0;
-              lx.tickz = 1;
               lx.basez_s = "2";
               lx.scale_options |= OPTION_Z_LOG2;
             }
           else if (OPTION_Z_LN & options)
             {
               lx.basez = exp(1);
-              lx.tickz = 1;
               lx.basez_s = "e";
               lx.scale_options |= OPTION_Z_LN;
             }
           else
             {
               lx.basez = 10.0;
-              lx.tickz = 9;
               lx.basez_s = "10";
             }
 
@@ -3716,6 +3706,18 @@ void gr_setcolorrep(int index, double red, double green, double blue)
  * +---------------+--------------------+
  * |OPTION_FLIP_Z  |Flip Z-axis         |
  * +---------------+--------------------+
+ * |OPTION_X_LOG2  |log2 scaled X-axis  |
+ * +---------------+--------------------+
+ * |OPTION_Y_LOG2  |log2 scaled Y-axis  |
+ * +---------------+--------------------+
+ * |OPTION_Z_LOG2  |log2 scaled Z-axis  |
+ * +---------------+--------------------+
+ * |OPTION_X_LN    |ln scaled X-axis    |
+ * +---------------+--------------------+
+ * |OPTION_Y_LN    |ln scaled Y-axis    |
+ * +---------------+--------------------+
+ * |OPTION_Z_LN    |ln scaled Z-axis    |
+ * +---------------+--------------------+
  *
  * \endverbatim
  *
@@ -4848,7 +4850,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   pline(x_org, yi);
                 }
 
-              if (i == lx.ticky)
+              if (i == 9 || lx.basey < 10)
                 {
                   y0 = y0 * lx.basey;
                   i = 0;
@@ -4974,7 +4976,7 @@ void gr_axeslbl(double x_tick, double y_tick, double x_org, double y_org, int ma
                   pline(xi, y_org);
                 }
 
-              if (i == lx.tickx)
+              if (i == 9 || lx.basex < 10)
                 {
                   x0 = x0 * lx.basex;
                   i = 0;
@@ -5179,7 +5181,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   if (yi != y_min) grid_line(x_min, yi, x_max, yi, color, major);
                 }
 
-              if (i == lx.ticky)
+              if (i == 9 || lx.basey < 10)
                 {
                   y0 = y0 * lx.basey;
                   i = 0;
@@ -5235,7 +5237,7 @@ void gr_grid(double x_tick, double y_tick, double x_org, double y_org, int major
                   if (xi != x_min) grid_line(xi, y_min, xi, y_max, color, major);
                 }
 
-              if (i == lx.tickx)
+              if (i == 9 || lx.basex < 10)
                 {
                   x0 = x0 * lx.basex;
                   i = 0;
@@ -5418,7 +5420,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     }
                 }
 
-              if (i == lx.tickz)
+              if (i == 9 || lx.basez < 10)
                 {
                   z0 = z0 * lx.basez;
                   i = 0;
@@ -5481,7 +5483,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     }
                 }
 
-              if (i == lx.ticky)
+              if (i == 9 || lx.basey < 10)
                 {
                   y0 = y0 * lx.basey;
                   i = 0;
@@ -5544,7 +5546,7 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
                     }
                 }
 
-              if (i == lx.tickx)
+              if (i == 9 || lx.basex < 10)
                 {
                   x0 = x0 * lx.basex;
                   i = 0;
@@ -6595,7 +6597,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   pline3d(x_org, y_org, zi);
                 }
 
-              if (i == lx.tickz)
+              if (i == 9 || lx.basez < 10)
                 {
                   z0 = z0 * lx.basez;
                   i = 0;
@@ -6757,7 +6759,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   pline3d(x_org, yi, z_org);
                 }
 
-              if (i == lx.ticky)
+              if (i == 9 || lx.basey < 10)
                 {
                   y0 = y0 * lx.basey;
                   i = 0;
@@ -6919,7 +6921,7 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
                   pline3d(xi, y_org, z_org);
                 }
 
-              if (i == lx.tickx)
+              if (i == 9 || lx.basex < 10)
                 {
                   x0 = x0 * lx.basex;
                   i = 0;
