@@ -1338,6 +1338,8 @@ int gr_textex(double x, double y, const char *string, int inquire, double *tbx, 
   int errind, font, prec;
   int align_hor, align_ver;
   double height;
+  double chux, chuy;
+  double ch_length;
   double x_shift, y_shift;
 
   if (inquire && strlen(str) == 1)
@@ -1351,8 +1353,12 @@ int gr_textex(double x, double y, const char *string, int inquire, double *tbx, 
 
   gks_inq_text_fontprec(&errind, &font, &prec);
   gks_inq_text_height(&errind, &height);
-  gks_inq_text_upvec(&errind, &sinphi, &cosphi);
+  gks_inq_text_upvec(&errind, &chux, &chuy);
   gks_inq_text_align(&errind, &align_hor, &align_ver);
+
+  ch_length = sqrt((chux * chux) + (chuy * chuy));
+  sinphi = chux / ch_length;
+  cosphi = chuy / ch_length;
 
   if (Expression(&formula, font, prec) == false)
     {
