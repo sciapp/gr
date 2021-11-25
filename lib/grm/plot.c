@@ -1510,7 +1510,7 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
 
   args_values(subplot_args, "kind", "s", &kind);
   args_values(subplot_args, "style", "s", &style);
-  string_map_at(fmt_map, kind, (char **)&fmt); /* TODO: check if the map access was successful */
+  cleanup_and_set_error_if(!string_map_at(fmt_map, kind, (char **)&fmt), ERROR_PLOT_UNKNOWN_KIND);
   if (!str_equals_any(kind, 2, "pie", "polar_histogram"))
     {
       current_component_name = data_component_names;
