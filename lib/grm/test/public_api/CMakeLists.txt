@@ -30,6 +30,7 @@ set(EXECUTABLE_SOURCES
     sender.c
     size.c
     subplots.c
+    volume.c
 )
 
 foreach(executable_source ${EXECUTABLE_SOURCES})
