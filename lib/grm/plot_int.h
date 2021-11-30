@@ -66,7 +66,7 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_FONT 232                                    /* CMUSerif-Math */
 #define PLOT_DEFAULT_FONT_PRECISION GKS_K_TEXT_PRECISION_OUTLINE /* hardware font rendering */
 #define PLOT_DEFAULT_ROTATION 40
-#define PLOT_DEFAULT_TILT 70
+#define PLOT_DEFAULT_TILT 60
 #define PLOT_DEFAULT_KEEP_ASPECT_RATIO 0
 #define PLOT_DEFAULT_XLABEL ""
 #define PLOT_DEFAULT_YLABEL ""
@@ -183,6 +183,7 @@ error_t plot_plot3(grm_args_t *subplot_args);
 error_t plot_scatter3(grm_args_t *subplot_args);
 error_t plot_imshow(grm_args_t *subplot_args);
 error_t plot_isosurface(grm_args_t *subplot_args);
+error_t plot_volume(grm_args_t *subplot_args);
 error_t plot_polar(grm_args_t *subplot_args);
 error_t plot_polar_histogram(grm_args_t *subplot_args);
 error_t plot_pie(grm_args_t *subplot_args);

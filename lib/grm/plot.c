@@ -152,7 +152,8 @@ static string_map_entry_t kind_to_fmt[] = {{"line", "xys"},          {"hexbin", 
                                            {"heatmap", "xyzc"},      {"hist", "x"},
                                            {"barplot", "y"},         {"isosurface", "c"},
                                            {"imshow", "c"},          {"nonuniformheatmap", "xyzc"},
-                                           {"polar_histogram", "x"}, {"pie", "x"}};
+                                           {"polar_histogram", "x"}, {"pie", "x"},
+                                           {"volume", "c"}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ kind to func ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -180,7 +181,8 @@ static plot_func_map_entry_t kind_to_func[] = {{"line", plot_line},
                                                {"shade", plot_shade},
                                                {"nonuniformheatmap", plot_heatmap},
                                                {"polar_histogram", plot_polar_histogram},
-                                               {"pie", plot_pie}};
+                                               {"pie", plot_pie},
+                                               {"volume", plot_volume}};
 
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ maps ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -274,45 +276,27 @@ const char *valid_subplot_keys[] = {"adjust_xlim",
                                     "zlim",
                                     "zlog",
                                     NULL};
-const char *valid_series_keys[] = {"a",
-                                   "bin_width",
-                                   "bin_edges",
-                                   "bin_counts",
-                                   "c",
-                                   "c_dims",
-                                   "crange",
-                                   "draw_edges",
-                                   "edge_color",
-                                   "edge_width",
-                                   "error",
-                                   "face_color",
-                                   "foreground_color",
-                                   "indices",
-                                   "inner_series",
-                                   "isovalue",
-                                   "markertype",
-                                   "nbins",
-                                   "philim",
-                                   "rgb",
-                                   "rlim",
-                                   "s",
-                                   "spec",
-                                   "step_where",
-                                   "stairs",
-                                   "u",
-                                   "v",
-                                   "weights",
-                                   "x",
-                                   "xcolormap",
-                                   "xrange",
-                                   "y",
-                                   "ycolormap",
-                                   "ylabels",
-                                   "yrange",
-                                   "z",
-                                   "z_dims",
-                                   "zrange",
-                                   NULL};
+const char *valid_series_keys[] = {"a",          "algorithm",
+                                   "bin_width",  "bin_edges",
+                                   "bin_counts", "c",
+                                   "c_dims",     "crange",
+                                   "draw_edges", "dmin",
+                                   "dmax",       "edge_color",
+                                   "edge_width", "error",
+                                   "face_color", "foreground_color",
+                                   "indices",    "inner_series",
+                                   "isovalue",   "markertype",
+                                   "nbins",      "philim",
+                                   "rgb",        "rlim",
+                                   "s",          "spec",
+                                   "step_where", "stairs",
+                                   "u",          "v",
+                                   "weights",    "x",
+                                   "xcolormap",  "xrange",
+                                   "y",          "ycolormap",
+                                   "ylabels",    "yrange",
+                                   "z",          "z_dims",
+                                   "zrange",     NULL};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~ valid types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -320,6 +304,7 @@ const char *valid_series_keys[] = {"a",
  * Example: "i|s" for supporting both integer and strings */
 /* TODO: type for format "s"? */
 static string_map_entry_t key_to_formats[] = {{"a", "A"},
+                                              {"algorithm", "i|s"},
                                               {"adjust_xlim", "i"},
                                               {"adjust_ylim", "i"},
                                               {"adjust_zlim", "i"},
@@ -331,6 +316,8 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"c_dims", "I"},
                                               {"crange", "D"},
                                               {"colormap", "i"},
+                                              {"dmin", "d"},
+                                              {"dmax", "d"},
                                               {"edge_color", "D|i"},
                                               {"edge_width", "d"},
                                               {"error", "a"},
@@ -1156,7 +1143,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
         }
     }
 
-  if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf"))
+  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
       double tmp_vp[4];
       double extent;
@@ -1428,9 +1415,9 @@ void plot_process_window(grm_args_t *subplot_args)
   grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
   gr_setwindow(x_min, x_max, y_min, y_max);
 
-  if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf"))
+  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
-      double z_major_count;
+      int z_major_count;
       double z_tick;
       double z_org_low, z_org_high;
       int rotation, tilt;
@@ -1468,7 +1455,8 @@ void plot_process_window(grm_args_t *subplot_args)
 
       args_values(subplot_args, "rotation", "i", &rotation);
       args_values(subplot_args, "tilt", "i", &tilt);
-      gr_setspace(z_min, z_max, rotation, tilt);
+      gr_setwindow3d(x_min, x_max, y_min, y_max, z_min, z_max);
+      gr_setspace3d(-rotation, tilt, 30, 0);
     }
 
   grm_args_push(subplot_args, "scale", "i", scale);
@@ -1699,13 +1687,13 @@ error_t plot_store_coordinate_ranges(grm_args_t *subplot_args)
         }
       grm_args_push(subplot_args, "_zlim", "dd", min_component, max_component);
     }
-  else if (str_equals_any(kind, 2, "imshow", "isosurface"))
+  else if (str_equals_any(kind, 3, "imshow", "isosurface", "volume"))
     {
-      /* Iterate over `x` and `y` range keys */
+      /* Iterate over `x` and `y` range keys (and `z` depending on `kind`) */
       current_range_keys = range_keys;
-      for (i = 0; i < 2; i++)
+      for (i = 0; i < (strcmp(kind, "volume") != 0 ? 2 : 3); i++)
         {
-          double min_component = 0.0;
+          double min_component = (strcmp(kind, "volume") != 0 ? 0.0 : -1.0);
           double max_component = 1.0;
           args_values(subplot_args, current_range_keys->subplot, "dd", &min_component, &max_component);
           grm_args_push(subplot_args, private_name(current_range_keys->subplot), "dd", min_component, max_component);
@@ -3639,10 +3627,6 @@ error_t plot_isosurface(grm_args_t *subplot_args)
   args_values(subplot_args, "series", "A", &current_series);
   return_error_if(!args_values(subplot_args, "viewport", "D", &viewport), ERROR_PLOT_MISSING_DATA);
 
-  /* subpplot params */
-  rotation = 40;
-  tilt = 70;
-
   args_values(subplot_args, "rotation", "d", &rotation);
   args_values(subplot_args, "tilt", "d", &tilt);
 
@@ -3792,6 +3776,91 @@ error_t plot_isosurface(grm_args_t *subplot_args)
       free(conv_data);
       ++current_series;
     }
+
+  return NO_ERROR;
+}
+
+error_t plot_volume(grm_args_t *subplot_args)
+{
+  grm_args_t **current_series;
+  const char *kind;
+  double dlim[2] = {INFINITY, -INFINITY};
+  error_t error;
+
+  args_values(subplot_args, "series", "A", &current_series);
+  args_values(subplot_args, "kind", "s", &kind);
+  while (*current_series != NULL)
+    {
+      const double *c;
+      unsigned int data_length, dims;
+      unsigned int *shape;
+      int algorithm;
+      const char *algorithm_str;
+      double dmin, dmax;
+      int width, height;
+      double device_pixel_ratio;
+
+      return_error_if(!args_first_value(*current_series, "c", "D", &c, &data_length), ERROR_PLOT_MISSING_DATA);
+      return_error_if(!args_first_value(*current_series, "c_dims", "I", &shape, &dims), ERROR_PLOT_MISSING_DATA);
+      return_error_if(dims != 3, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      return_error_if(shape[0] * shape[1] * shape[2] != data_length, ERROR_PLOT_COMPONENT_LENGTH_MISMATCH);
+      return_error_if(data_length <= 0, ERROR_PLOT_MISSING_DATA);
+
+      if (!args_values(*current_series, "algorithm", "i", &algorithm))
+        {
+          if (args_values(*current_series, "algorithm", "s", &algorithm_str))
+            {
+              if (strcmp(algorithm_str, "emission") == 0)
+                {
+                  algorithm = GR_VOLUME_EMISSION;
+                }
+              else if (strcmp(algorithm_str, "absorption") == 0)
+                {
+                  algorithm = GR_VOLUME_ABSORPTION;
+                }
+              else if (str_equals_any(algorithm_str, 2, "mip", "maximum"))
+                {
+                  algorithm = GR_VOLUME_MIP;
+                }
+              else
+                {
+                  logger((stderr, "Got unknown volume algorithm \"%s\"\n", algorithm_str));
+                  return ERROR_PLOT_UNKNOWN_ALGORITHM;
+                }
+            }
+          else
+            {
+              logger((stderr, "No volume algorithm given! Aborting the volume routine\n"));
+              return ERROR_PLOT_MISSING_ALGORITHM;
+            }
+        }
+      if (algorithm != GR_VOLUME_ABSORPTION && algorithm != GR_VOLUME_EMISSION && algorithm != GR_VOLUME_MIP)
+        {
+          logger((stderr, "Got unknown volume algorithm \"%d\"\n", algorithm));
+          return ERROR_PLOT_UNKNOWN_ALGORITHM;
+        }
+
+      dmin = dmax = -1.0;
+      args_values(*current_series, "dmin", "d", &dmin);
+      args_values(*current_series, "dmax", "d", &dmax);
+
+      gr_inqvpsize(&width, &height, &device_pixel_ratio);
+      gr_setpicturesizeforvolume((int)width * device_pixel_ratio, (int)height * device_pixel_ratio);
+      gr_volume(shape[0], shape[1], shape[2], (double *)c, algorithm, &dmin, &dmax);
+
+      dlim[0] = min(dlim[0], dmin);
+      dlim[1] = max(dlim[1], dmax);
+
+      ++current_series;
+    }
+
+  logger((stderr, "dmin, dmax: (%lf, %lf)\n", dlim[0], dlim[1]));
+  grm_args_push(subplot_args, "_clim", "dd", dlim[0], dlim[1]);
+
+  error = plot_draw_axes(subplot_args, 2);
+  return_if_error;
+  error = plot_draw_colorbar(subplot_args, 0.0, 256);
+  return_if_error;
 
   return NO_ERROR;
 }
@@ -5129,7 +5198,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   charheight = max(0.018 * diag, 0.012);
   gr_setcharheight(charheight);
   ticksize = 0.0075 * diag;
-  if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf"))
+  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
       args_values(args, "ztick", "d", &z_tick);
       args_values(args, "zorg", "dd", &z_org_low, &z_org_high);
@@ -5142,8 +5211,27 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
       else
         {
+          /* TODO: Remove these lines: */
+          logger((stderr, "---> x_org: (%lf, %lf)\n", x_org_low, x_org_high));
+          logger((stderr, "---> y_org: (%lf, %lf)\n", y_org_low, y_org_high));
+          logger((stderr, "---> z_org: (%lf, %lf)\n", z_org_low, z_org_high));
+          logger((stderr, "---> x_tick: %lf\n", x_tick));
+          logger((stderr, "---> y_tick: %lf\n", y_tick));
+          logger((stderr, "---> z_tick: %lf\n", z_tick));
+          logger((stderr, "---> x_major_count: %d\n", x_major_count));
+          logger((stderr, "---> y_major_count: %d\n", y_major_count));
+          logger((stderr, "---> z_major_count: %d\n", z_major_count));
+          logger((stderr, "---> ticksize: %lf\n", ticksize));
+          z_major_count = 5;
+          gr_setwindow(-1.0, 1.0, -1.0, 1.0);
           gr_axes3d(x_tick, 0, z_tick, x_org_low, y_org_low, z_org_low, x_major_count, 0, z_major_count, -ticksize);
           gr_axes3d(0, y_tick, 0, x_org_high, y_org_low, z_org_low, 0, y_major_count, 0, ticksize);
+          {
+            double window3d[6];
+            gr_inqwindow3d(&window3d[0], &window3d[1], &window3d[2], &window3d[3], &window3d[4], &window3d[5]);
+            logger((stderr, "===> window3d: (%lf, %lf, %lf, %lf, %lf, %lf)\n", window3d[0], window3d[1], window3d[2],
+                    window3d[3], window3d[4], window3d[5]));
+          }
         }
     }
   else if (!str_equals_any(kind, 2, "imshow", "isosurface"))
@@ -5171,7 +5259,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
       gr_restorestate();
     }
 
-  if (str_equals_any(kind, 5, "wireframe", "surface", "plot3", "scatter3", "trisurf"))
+  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
       if (args_values(args, "xlabel", "s", &x_label) && args_values(args, "ylabel", "s", &y_label) &&
           args_values(args, "zlabel", "s", &z_label))
