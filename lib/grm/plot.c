@@ -5211,27 +5211,8 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
       else
         {
-          /* TODO: Remove these lines: */
-          logger((stderr, "---> x_org: (%lf, %lf)\n", x_org_low, x_org_high));
-          logger((stderr, "---> y_org: (%lf, %lf)\n", y_org_low, y_org_high));
-          logger((stderr, "---> z_org: (%lf, %lf)\n", z_org_low, z_org_high));
-          logger((stderr, "---> x_tick: %lf\n", x_tick));
-          logger((stderr, "---> y_tick: %lf\n", y_tick));
-          logger((stderr, "---> z_tick: %lf\n", z_tick));
-          logger((stderr, "---> x_major_count: %d\n", x_major_count));
-          logger((stderr, "---> y_major_count: %d\n", y_major_count));
-          logger((stderr, "---> z_major_count: %d\n", z_major_count));
-          logger((stderr, "---> ticksize: %lf\n", ticksize));
-          z_major_count = 5;
-          gr_setwindow(-1.0, 1.0, -1.0, 1.0);
           gr_axes3d(x_tick, 0, z_tick, x_org_low, y_org_low, z_org_low, x_major_count, 0, z_major_count, -ticksize);
           gr_axes3d(0, y_tick, 0, x_org_high, y_org_low, z_org_low, 0, y_major_count, 0, ticksize);
-          {
-            double window3d[6];
-            gr_inqwindow3d(&window3d[0], &window3d[1], &window3d[2], &window3d[3], &window3d[4], &window3d[5]);
-            logger((stderr, "===> window3d: (%lf, %lf, %lf, %lf, %lf, %lf)\n", window3d[0], window3d[1], window3d[2],
-                    window3d[3], window3d[4], window3d[5]));
-          }
         }
     }
   else if (!str_equals_any(kind, 2, "imshow", "isosurface"))
