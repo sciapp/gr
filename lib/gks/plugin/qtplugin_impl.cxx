@@ -703,15 +703,25 @@ static void fill_routine(int n, double *px, double *py, int tnr)
   double x, y, xi, yi;
   QPolygonF *points;
 
-  points = new QPolygonF(n);
+  points = new QPolygonF();
   for (i = 0; i < n; i++)
     {
+      if (isnan(px[i]) || isnan(py[i]))
+        {
+          p->pixmap->drawPolygon(points->constData(), points->size());
+          points->clear();
+          continue;
+        }
       WC_to_NDC(px[i], py[i], tnr, x, y);
       seg_xform(&x, &y);
       NDC_to_DC(x, y, xi, yi);
-      (*points)[i] = QPointF(xi, yi);
+      points->append(QPointF(xi, yi));
     }
-  p->pixmap->drawPolygon(points->constData(), n);
+
+  if (points->size() >= 2)
+    {
+      p->pixmap->drawPolygon(points->constData(), points->size());
+    }
 
   delete points;
 }
