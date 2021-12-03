@@ -708,8 +708,8 @@ static void fill_routine(int n, double *px, double *py, int tnr)
     {
       if (isnan(px[i]) || isnan(py[i]))
         {
-          p->pixmap->drawPolygon(points->constData(), points->size());
-          points->clear();
+          NDC_to_DC(0, 0, xi, yi);
+          points->append(QPointF(xi, yi));
           continue;
         }
       WC_to_NDC(px[i], py[i], tnr, x, y);
