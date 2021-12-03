@@ -1108,6 +1108,9 @@ void plot_process_viewport(grm_args_t *subplot_args)
   double metric_width, metric_height;
   double aspect_ratio_ws;
   double vp[4];
+  double vp0, vp1, vp2, vp3;
+  double left_margin, right_margin, bottom_margin, top_margin;
+  char *x_label, *y_label, *title;
   double viewport[4] = {0.0, 0.0, 0.0, 0.0};
   int background_color_index;
 
@@ -1145,37 +1148,39 @@ void plot_process_viewport(grm_args_t *subplot_args)
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
-      double tmp_vp[4];
       double extent;
 
-      if (str_equals_any(kind, 2, "surface", "trisurf"))
-        {
-          extent = min(vp[1] - vp[0] - 0.1, vp[3] - vp[2]);
-        }
-      else
-        {
-          extent = min(vp[1] - vp[0], vp[3] - vp[2]);
-        }
-      tmp_vp[0] = 0.5 * (vp[0] + vp[1] - extent);
-      tmp_vp[1] = 0.5 * (vp[0] + vp[1] + extent);
-      tmp_vp[2] = 0.5 * (vp[2] + vp[3] - extent);
-      tmp_vp[3] = 0.5 * (vp[2] + vp[3] + extent);
-      memcpy(vp, tmp_vp, 4 * sizeof(double));
+      extent = min(vp[1] - vp[0], vp[3] - vp[2]);
+      vp0 = 0.5 * (vp[0] + vp[1] - extent);
+      vp1 = 0.5 * (vp[0] + vp[1] + extent);
+      vp2 = 0.5 * (vp[2] + vp[3] - extent);
+      vp3 = 0.5 * (vp[2] + vp[3] + extent);
+    }
+  else
+    {
+      vp0 = vp[0];
+      vp1 = vp[1];
+      vp2 = vp[2];
+      vp3 = vp[3];
     }
 
-  viewport[0] = vp[0] + 0.125 * (vp[1] - vp[0]);
-  viewport[1] = vp[0] + 0.925 * (vp[1] - vp[0]);
-  viewport[2] = vp[2] + 0.125 * (vp[3] - vp[2]);
-  viewport[3] = vp[2] + 0.925 * (vp[3] - vp[2]);
+  left_margin = args_values(subplot_args, "ylabel", "s", &y_label) ? 0.05 : 0;
+  if (str_equals_any(kind, 8, "contour", "contourf", "hexbin", "heatmap", "nonuniformheatmap", "surface", "trisurf",
+                     "volume"))
+    {
+      right_margin = (vp1 - vp0) * 0.1;
+    }
+  else
+    {
+      right_margin = 0;
+    }
+  bottom_margin = args_values(subplot_args, "xlabel", "s", &x_label) ? 0.05 : 0;
+  top_margin = args_values(subplot_args, "title", "s", &title) ? 0.075 : 0;
 
-  if (aspect_ratio_ws > 1)
-    {
-      viewport[2] += (1 - (subplot[3] - subplot[2]) * (subplot[3] - subplot[2])) * 0.02;
-    }
-  if (str_equals_any(kind, 6, "imshow", "contour", "contourf", "heatmap", "hexbin", "quiver"))
-    {
-      viewport[1] -= 0.1;
-    }
+  viewport[0] = vp0 + (0.075 + left_margin) * (vp1 - vp0);
+  viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
+  viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
+  viewport[3] = vp2 + (0.95 - top_margin) * (vp3 - vp2);
 
   if (args_values(subplot_args, "backgroundcolor", "i", &background_color_index))
     {
@@ -1219,6 +1224,27 @@ void plot_process_viewport(grm_args_t *subplot_args)
 
   logger((stderr, "Stored vp (%lf, %lf, %lf, %lf)\n", vp[0], vp[1], vp[2], vp[3]));
   logger((stderr, "Stored viewport (%lf, %lf, %lf, %lf)\n", viewport[0], viewport[1], viewport[2], viewport[3]));
+}
+
+double auto_tick(double amin, double amax)
+{
+  double tick_size[] = {5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01};
+  double scale, tick;
+  int i, n;
+
+  scale = pow(10.0, (int)(log10(amax - amin)));
+  tick = 1.0;
+  for (i = 0; i < 9; i++)
+    {
+      n = (amax - amin) / scale / tick_size[i];
+      if (n > 7)
+        {
+          tick = tick_size[i - 1];
+          break;
+        }
+    }
+  tick *= scale;
+  return tick;
 }
 
 void plot_process_window(grm_args_t *subplot_args)
@@ -1359,7 +1385,7 @@ void plot_process_window(grm_args_t *subplot_args)
           else
             {
               x_major_count = major_count;
-              x_tick = gr_tick(x_min, x_max) / x_major_count;
+              x_tick = auto_tick(x_min, x_max) / x_major_count;
             }
         }
       else
@@ -1390,7 +1416,7 @@ void plot_process_window(grm_args_t *subplot_args)
               logger((stderr, "_ylim after \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
             }
           y_major_count = major_count;
-          y_tick = gr_tick(y_min, y_max) / y_major_count;
+          y_tick = auto_tick(y_min, y_max) / y_major_count;
         }
       else
         {
@@ -1413,7 +1439,12 @@ void plot_process_window(grm_args_t *subplot_args)
 
   logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
   grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
-  gr_setwindow(x_min, x_max, y_min, y_max);
+  if (!str_equals_any(kind, 3, "polar", "polar_histogram", "trisurf"))
+    {
+      gr_setwindow(x_min, x_max, y_min, y_max);
+    }
+  else
+    gr_setwindow(-1, 1, -1, 1);
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
@@ -1433,7 +1464,7 @@ void plot_process_window(grm_args_t *subplot_args)
               logger((stderr, "_zlim after \"gr_adjustlimits\": (%lf, %lf)\n", z_min, z_max));
             }
           z_major_count = major_count;
-          z_tick = gr_tick(z_min, z_max) / z_major_count;
+          z_tick = auto_tick(z_min, z_max) / z_major_count;
         }
       else
         {
@@ -3875,7 +3906,7 @@ error_t plot_polar(grm_args_t *subplot_args)
   args_values(subplot_args, "window", "D", &window);
   r_min = window[2];
   r_max = window[3];
-  tick = 0.5 * gr_tick(r_min, r_max);
+  tick = 0.5 * auto_tick(r_min, r_max);
   n = (int)ceil((r_max - r_min) / tick);
   r_max = r_min + n * tick;
   args_values(subplot_args, "series", "A", &current_series);
@@ -5195,11 +5226,11 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
   gr_setlinewidth(1);
   diag = sqrt((viewport[1] - viewport[0]) * (viewport[1] - viewport[0]) +
               (viewport[3] - viewport[2]) * (viewport[3] - viewport[2]));
-  charheight = max(0.018 * diag, 0.012);
-  gr_setcharheight(charheight);
   ticksize = 0.0075 * diag;
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
+      charheight = max(0.024 * diag, 0.012);
+      gr_setcharheight(charheight);
       args_values(args, "ztick", "d", &z_tick);
       args_values(args, "zorg", "dd", &z_org_low, &z_org_high);
       args_values(args, "zmajor", "i", &z_major_count);
@@ -5211,31 +5242,14 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         }
       else
         {
-          /* TODO: Remove these lines: */
-          logger((stderr, "---> x_org: (%lf, %lf)\n", x_org_low, x_org_high));
-          logger((stderr, "---> y_org: (%lf, %lf)\n", y_org_low, y_org_high));
-          logger((stderr, "---> z_org: (%lf, %lf)\n", z_org_low, z_org_high));
-          logger((stderr, "---> x_tick: %lf\n", x_tick));
-          logger((stderr, "---> y_tick: %lf\n", y_tick));
-          logger((stderr, "---> z_tick: %lf\n", z_tick));
-          logger((stderr, "---> x_major_count: %d\n", x_major_count));
-          logger((stderr, "---> y_major_count: %d\n", y_major_count));
-          logger((stderr, "---> z_major_count: %d\n", z_major_count));
-          logger((stderr, "---> ticksize: %lf\n", ticksize));
-          z_major_count = 5;
-          gr_setwindow(-1.0, 1.0, -1.0, 1.0);
           gr_axes3d(x_tick, 0, z_tick, x_org_low, y_org_low, z_org_low, x_major_count, 0, z_major_count, -ticksize);
           gr_axes3d(0, y_tick, 0, x_org_high, y_org_low, z_org_low, 0, y_major_count, 0, ticksize);
-          {
-            double window3d[6];
-            gr_inqwindow3d(&window3d[0], &window3d[1], &window3d[2], &window3d[3], &window3d[4], &window3d[5]);
-            logger((stderr, "===> window3d: (%lf, %lf, %lf, %lf, %lf, %lf)\n", window3d[0], window3d[1], window3d[2],
-                    window3d[3], window3d[4], window3d[5]));
-          }
         }
     }
-  else if (!str_equals_any(kind, 2, "imshow", "isosurface"))
+  else
     {
+      charheight = max(0.018 * diag, 0.012);
+      gr_setcharheight(charheight);
       if (str_equals_any(kind, 2, "heatmap", "shade"))
         {
           ticksize = -ticksize;
@@ -5382,15 +5396,15 @@ error_t plot_draw_polar_axes(grm_args_t *args)
 
       if (str_equals_any(norm, 2, "count", "cumcount"))
         {
-          tick = 1.5 * gr_tick(r_min, r_max);
+          tick = 1.5 * auto_tick(r_min, r_max);
         }
       else if (str_equals_any(norm, 2, "pdf", "probability"))
         {
-          tick = 1.5 * gr_tick(r_min, r_max);
+          tick = 1.5 * auto_tick(r_min, r_max);
         }
       else if (strcmp(norm, "countdensity") == 0)
         {
-          tick = 1.5 * gr_tick(r_min, r_max);
+          tick = 1.5 * auto_tick(r_min, r_max);
         }
       else if (strcmp(norm, "cdf") == 0)
         {
@@ -5398,12 +5412,12 @@ error_t plot_draw_polar_axes(grm_args_t *args)
         }
       else
         {
-          tick = gr_tick(r_min, r_max);
+          tick = auto_tick(r_min, r_max);
         }
     }
   else
     {
-      tick = 0.5 * gr_tick(r_min, r_max);
+      tick = 0.5 * auto_tick(r_min, r_max);
     }
 
   n = rings;
@@ -5683,7 +5697,7 @@ error_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int co
     }
   else
     {
-      double c_tick = 0.5 * gr_tick(c_min, c_max);
+      double c_tick = 0.5 * auto_tick(c_min, c_max);
       gr_axes(0, c_tick, 1, c_min, 0, 1, 0.005);
     }
   free(data);
