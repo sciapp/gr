@@ -5365,6 +5365,8 @@ void gr_grid3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
 
@@ -5841,8 +5843,11 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
   setscale(lx.scale_options);
 
+  /* inquire current normalization transformation */
+
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
+
   gks_inq_clip(&errind, &clsw, clrt);
 
   modern_projection_type =
@@ -5850,6 +5855,8 @@ void gr_polyline3d(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
     }
@@ -5974,8 +5981,11 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
   setscale(lx.scale_options);
 
+  /* inquire current normalization transformation */
+
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
+
   gks_inq_clip(&errind, &clsw, clrt);
 
   modern_projection_type =
@@ -5983,6 +5993,8 @@ void gr_polymarker3d(int n, double *px, double *py, double *pz)
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
     }
@@ -6428,6 +6440,8 @@ void gr_axes3d(double x_tick, double y_tick, double z_tick, double x_org, double
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
 
@@ -7049,6 +7063,8 @@ void gr_titles3d(char *x_title, char *y_title, char *z_title)
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
     }
@@ -7778,6 +7794,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   setscale(lx.scale_options);
 
+  /* inquire current normalization transformation */
+
   gks_inq_current_xformno(&errind, &tnr);
   gks_inq_xform(tnr, &errind, wn, vp);
 
@@ -7786,6 +7804,8 @@ void gr_surface(int nx, int ny, double *px, double *py, double *pz, int option)
 
   if (modern_projection_type)
     {
+      gks_inq_xform(WC, &errind, wn, vp);
+
       gks_set_window(WC, -1, 1, -1, 1);
       setscale(lx.scale_options);
     }
