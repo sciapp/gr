@@ -3012,6 +3012,7 @@ error_t plot_contour(grm_args_t *subplot_args)
   error_t error = NO_ERROR;
 
   args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
+  gr_setprojectiontype(0);
   gr_setspace(z_min, z_max, 0, 90);
   args_values(subplot_args, "levels", "i", &num_levels);
   h = malloc(num_levels * sizeof(double));
@@ -3095,6 +3096,7 @@ error_t plot_contourf(grm_args_t *subplot_args)
   error_t error = NO_ERROR;
 
   args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
+  gr_setprojectiontype(0);
   gr_setspace(z_min, z_max, 0, 90);
   args_values(subplot_args, "levels", "i", &num_levels);
   h = malloc(num_levels * sizeof(double));
