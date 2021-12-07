@@ -1275,7 +1275,6 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
           "#version 120\n",
           "\n",
           "varying vec3 vf_tex_coord;\n",
-          "varying vec3 vf_camera_position;\n",
           "varying vec3 vf_camera_direction;\n",
           "\n",
           "uniform int n;\n",
@@ -1587,7 +1586,7 @@ GR3API void gr_volume(int nx, int ny, int nz, double *data, int algorithm, doubl
       glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)NULL);
       glEnableVertexAttribArray(0);
 
-      if (projection_type != GR_PROJECTION_PERSPECTIVE)
+      if (projection_type == GR_PROJECTION_ORTHOGRAPHIC)
         {
           camera_direction[0] = context_struct_.center_x - context_struct_.camera_x;
           camera_direction[1] = context_struct_.center_y - context_struct_.camera_y;
