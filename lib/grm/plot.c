@@ -1032,7 +1032,7 @@ error_t plot_pre_subplot(grm_args_t *subplot_args)
     {
       plot_draw_polar_axes(subplot_args);
     }
-  else if (strcmp(kind, "pie") != 0)
+  else if (!str_equals_any(kind, 3, "imshow", "isosurface", "pie"))
     {
       plot_draw_axes(subplot_args, 1);
     }
@@ -1055,6 +1055,10 @@ void plot_process_colormap(grm_args_t *subplot_args)
   if (args_values(subplot_args, "colormap", "i", &colormap))
     {
       gr_setcolormap(colormap);
+    }
+  else
+    {
+      gr_setcolormap(44); /* COLORMAP_VIRIDIS */
     }
   /* TODO: Implement other datatypes for `colormap` */
 }
@@ -3542,17 +3546,15 @@ error_t plot_imshow(grm_args_t *subplot_args)
   grm_args_t **current_series;
   double *c_data;
   double c_min, c_max;
-  double *viewport, *vp;
+  double *vp;
   unsigned int c_data_length, i, rows, cols;
   int *real_data;
   unsigned int *shape;
 
   double x_min, x_max, y_min, y_max, w, h;
-  error_t error;
 
   args_values(subplot_args, "series", "A", &current_series);
   return_error_if(!args_values(subplot_args, "_clim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
-  return_error_if(!args_values(subplot_args, "viewport", "D", &viewport), ERROR_PLOT_MISSING_DATA);
   return_error_if(!args_values(subplot_args, "vp", "D", &vp), ERROR_PLOT_MISSING_DATA);
   while (*current_series != NULL)
     {
@@ -3577,36 +3579,32 @@ error_t plot_imshow(grm_args_t *subplot_args)
           real_data[i] = 1000 + (int)round((1.0 * c_data[i] - c_min) / (c_max - c_min) * 255);
         }
 
-      if (cols * (viewport[3] - viewport[2]) < rows * (viewport[1] - viewport[0]))
+      if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
         {
-          w = (double)cols / (double)rows * (viewport[3] - viewport[2]);
-          x_min = max(0.5 * (viewport[0] + viewport[1] - w), viewport[0]);
-          x_max = min(0.5 * (viewport[0] + viewport[1] + w), viewport[1]);
-          y_min = viewport[2];
-          y_max = viewport[3];
+          w = (double)cols / (double)rows * (vp[3] - vp[2]);
+          x_min = max(0.5 * (vp[0] + vp[1] - w), vp[0]);
+          x_max = min(0.5 * (vp[0] + vp[1] + w), vp[1]);
+          y_min = vp[2];
+          y_max = vp[3];
         }
       else
         {
-          h = (double)rows / (double)cols * (viewport[1] - viewport[0]);
-          x_min = viewport[0];
-          x_max = viewport[1];
-          y_min = max(0.5 * (viewport[3] + viewport[2] - h), viewport[2]);
-          y_max = min(0.5 * (viewport[3] + viewport[2] + h), viewport[3]);
+          h = (double)rows / (double)cols * (vp[1] - vp[0]);
+          x_min = vp[0];
+          x_max = vp[1];
+          y_min = max(0.5 * (vp[3] + vp[2] - h), vp[2]);
+          y_max = min(0.5 * (vp[3] + vp[2] + h), vp[3]);
         }
 
       gr_selntran(0);
-      gr_cellarray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, real_data);
+      gr_setscale(0);
+      gr_cellarray(x_min, x_max, y_min, y_max, rows, cols, 1, 1, rows, cols, real_data);
 
       gr_selntran(1);
 
       free(real_data);
 
       ++current_series;
-    }
-
-  if ((error = plot_draw_colorbar(subplot_args, 0.00, 256)) != NO_ERROR)
-    {
-      return error;
     }
 
   return NO_ERROR;
