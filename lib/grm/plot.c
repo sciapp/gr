@@ -1056,10 +1056,6 @@ void plot_process_colormap(grm_args_t *subplot_args)
     {
       gr_setcolormap(colormap);
     }
-  else
-    {
-      gr_setcolormap(44); /* COLORMAP_VIRIDIS */
-    }
   /* TODO: Implement other datatypes for `colormap` */
 }
 
