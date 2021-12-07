@@ -5432,19 +5432,31 @@ error_t plot_draw_polar_axes(grm_args_t *args)
     }
 
   n = rings;
-  gr_setlinecolorind(88);
   if (args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
   for (i = 0; i <= n; i++)
     {
       double r = r_min + i * tick / (r_max - r_min);
-      gr_drawarc(-r, r, -r, r, 0, 180);
-      gr_drawarc(-r, r, -r, r, 180, 360);
-      gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-      x[0] = 0.05;
-      y[0] = r;
-      gr_wctondc(x, y);
-      snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%g", r_min + i * tick);
-      gr_text(x[0], y[0], text_buffer);
+      if (i % 2 == 0)
+        {
+          gr_setlinecolorind(88);
+          if (i > 0)
+            {
+              gr_drawarc(-r, r, -r, r, 0, 180);
+              gr_drawarc(-r, r, -r, r, 180, 360);
+            }
+          gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          x[0] = 0.05;
+          y[0] = r;
+          gr_wctondc(x, y);
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + i * tick);
+          gr_text(x[0], y[0], text_buffer);
+        }
+      else
+        {
+          gr_setlinecolorind(90);
+          gr_drawarc(-r, r, -r, r, 0, 180);
+          gr_drawarc(-r, r, -r, r, 180, 360);
+        }
     }
   if (strcmp(kind, "polar_histogram") == 0)
     {
