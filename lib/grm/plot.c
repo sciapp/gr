@@ -2774,7 +2774,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
                     {
                       gr_settextcolorind(1);
                     }
-                  gr_textext(x1, x2, ylabels[i]);
+                  gr_text(x1, x2, ylabels[i]);
                   --ylabels_left;
                 }
             }
@@ -2948,7 +2948,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
                         {
                           gr_settextcolorind(1);
                         }
-                      gr_textext(x1, x2, ylabels[ylabels_length - ylabels_left]);
+                      gr_text(x1, x2, ylabels[ylabels_length - ylabels_left]);
                       --ylabels_left;
                     }
                 }
@@ -5064,7 +5064,7 @@ error_t plot_pie(grm_args_t *subplot_args)
 
       gr_settextcolorind(1);
       gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      gr_textext(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, (char *)title);
+      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, (char *)title);
     }
 
 cleanup:
@@ -5276,7 +5276,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     {
       gr_savestate();
       gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      gr_textext(0.5 * (viewport[0] + viewport[1]), vp[3], title);
+      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3], title);
       gr_restorestate();
     }
 
@@ -5294,7 +5294,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         {
           gr_savestate();
           gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
-          gr_textext(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
+          gr_text(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
           gr_restorestate();
         }
       if (args_values(args, "ylabel", "s", &y_label))
@@ -5302,7 +5302,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           gr_savestate();
           gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
           gr_setcharup(-1, 0);
-          gr_textext(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
+          gr_text(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
           gr_restorestate();
         }
     }
@@ -5481,7 +5481,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
           else
             snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)round(alpha - interval));
         }
-      gr_textext(x[0], y[0], text_buffer);
+      gr_text(x[0], y[0], text_buffer);
     }
   gr_restorestate();
 
@@ -5489,7 +5489,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
     {
       gr_savestate();
       gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      gr_textext(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
+      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
       gr_restorestate();
     }
 
@@ -5519,7 +5519,7 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
   w = 0;
   for (current_label = labels; *current_label != NULL; ++current_label)
     {
-      gr_inqtextext(0, 0, *(char **)current_label, tbx, tby);
+      gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
       w = max(w, tbx[2]);
     }
 
@@ -5586,7 +5586,7 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
       gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
       if (*current_label != NULL)
         {
-          gr_textext(px, py, (char *)*current_label);
+          gr_text(px, py, (char *)*current_label);
           ++current_label;
         }
       py -= 0.03;
@@ -5618,7 +5618,7 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
   h = 0;
   for (current_label = labels; *current_label != NULL; ++current_label)
     {
-      gr_inqtextext(0, 0, *(char **)current_label, tbx, tby);
+      gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
       w += tbx[2];
       h = max(h, tby[2]);
     }
@@ -5642,8 +5642,8 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
       gr_fillrect(px, px + 0.02, py - 0.01, py + 0.01);
       gr_setlinecolorind(1);
       gr_drawrect(px, px + 0.02, py - 0.01, py + 0.01);
-      gr_textext(px + 0.03, py, (char *)*current_label);
-      gr_inqtextext(0, 0, *(char **)current_label, tbx, tby);
+      gr_text(px + 0.03, py, (char *)*current_label);
+      gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
       px += tbx[2] + 0.05;
       set_next_color(NULL, NULL, GR_COLOR_FILL);
     }
@@ -7283,7 +7283,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
         {
           /* calculate width of the next part of the label to be drawn */
           new_label[i] = '\0';
-          gr_inqtextext(x1, x2, new_label + cur_start, tbx, tby);
+          gr_inqtext(x1, x2, new_label + cur_start, tbx, tby);
           gr_wctondc(&tbx[0], &tby[0]);
           gr_wctondc(&tbx[1], &tby[1]);
           width = tbx[1] - tbx[0];
@@ -7298,7 +7298,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
               if (cur_num_breakpoints == 1)
                 {
                   new_label[i] = '\0';
-                  gr_textext(x1, x2, new_label + cur_start);
+                  gr_text(x1, x2, new_label + cur_start);
 
                   cur_start = i + 1;
                   cur_num_breakpoints = 0;
@@ -7308,7 +7308,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
                 {
                   /* break label at last breakpoint that still allowed the text to fit */
                   new_label[breakpoint_positions[cur_num_breakpoints - 2]] = '\0';
-                  gr_textext(x1, x2, new_label + cur_start);
+                  gr_text(x1, x2, new_label + cur_start);
 
                   cur_start = breakpoint_positions[cur_num_breakpoints - 2] + 1;
                   breakpoint_positions[0] = breakpoint_positions[cur_num_breakpoints - 1];
@@ -7327,7 +7327,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
   new_label[i] = '\0';
 
   /* draw the rest */
-  gr_textext(x1, x2, new_label + cur_start);
+  gr_text(x1, x2, new_label + cur_start);
 }
 
 /*!
