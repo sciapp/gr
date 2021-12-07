@@ -3547,11 +3547,11 @@ error_t plot_imshow(grm_args_t *subplot_args)
   double *c_data;
   double c_min, c_max;
   double *vp;
-  unsigned int c_data_length, i, rows, cols;
-  int *real_data;
+  unsigned int c_data_length, i, j, k, rows, cols;
+  int *img_data;
   unsigned int *shape;
-
-  double x_min, x_max, y_min, y_max, w, h;
+  int xflip, yflip;
+  double x_min, x_max, y_min, y_max, w, h, tmp;
 
   args_values(subplot_args, "series", "A", &current_series);
   return_error_if(!args_values(subplot_args, "_clim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
@@ -3565,19 +3565,21 @@ error_t plot_imshow(grm_args_t *subplot_args)
       rows = shape[0];
       cols = shape[1];
 
-      real_data = malloc(sizeof(int) * c_data_length);
-      if (real_data == NULL)
+      img_data = malloc(sizeof(int) * c_data_length);
+      if (img_data == NULL)
         {
           debug_print_malloc_error();
-          free(real_data);
+          free(img_data);
           return ERROR_MALLOC;
         }
 
       logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
-      for (i = 0; i < c_data_length; ++i)
-        {
-          real_data[i] = 1000 + (int)round((1.0 * c_data[i] - c_min) / (c_max - c_min) * 255);
-        }
+      k = 0;
+      for (j = 0; j < rows; ++j)
+        for (i = 0; i < cols; ++i)
+          {
+            img_data[k++] = 1000 + (int)round((1.0 * c_data[i * rows + j] - c_min) / (c_max - c_min) * 255);
+          }
 
       if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
         {
@@ -3598,11 +3600,25 @@ error_t plot_imshow(grm_args_t *subplot_args)
 
       gr_selntran(0);
       gr_setscale(0);
-      gr_cellarray(x_min, x_max, y_min, y_max, rows, cols, 1, 1, rows, cols, real_data);
+      args_values(subplot_args, "xflip", "i", &xflip);
+      if (xflip)
+        {
+          tmp = x_max;
+          x_max = x_min;
+          x_min = tmp;
+        }
+      args_values(subplot_args, "yflip", "i", &yflip);
+      if (yflip)
+        {
+          tmp = y_max;
+          y_max = y_min;
+          y_min = tmp;
+        }
+      gr_cellarray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, img_data);
 
       gr_selntran(1);
 
-      free(real_data);
+      free(img_data);
 
       ++current_series;
     }
