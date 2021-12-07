@@ -341,13 +341,13 @@ static string_map_entry_t key_to_formats[] = {{"a", "A"},
                                               {"raw", "s"},
                                               {"resample_method", "s|i"},
                                               {"reset_ranges", "i"},
-                                              {"rotation", "i"},
+                                              {"rotation", "d"},
                                               {"size", "D|A"},
                                               {"spec", "s"},
                                               {"step_where", "s"},
                                               {"style", "s"},
                                               {"subplot", "D"},
-                                              {"tilt", "i"},
+                                              {"tilt", "d"},
                                               {"title", "s"},
                                               {"u", "D"},
                                               {"update", "i"},
@@ -910,8 +910,8 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
       args_setdefault(*current_subplot, "colormap", "i", PLOT_DEFAULT_COLORMAP);
       args_setdefault(*current_subplot, "font", "i", PLOT_DEFAULT_FONT);
       args_setdefault(*current_subplot, "font_precision", "i", PLOT_DEFAULT_FONT_PRECISION);
-      args_setdefault(*current_subplot, "rotation", "i", PLOT_DEFAULT_ROTATION);
-      args_setdefault(*current_subplot, "tilt", "i", PLOT_DEFAULT_TILT);
+      args_setdefault(*current_subplot, "rotation", "d", PLOT_DEFAULT_ROTATION);
+      args_setdefault(*current_subplot, "tilt", "d", PLOT_DEFAULT_TILT);
       args_setdefault(*current_subplot, "keep_aspect_ratio", "i", PLOT_DEFAULT_KEEP_ASPECT_RATIO);
 
       if (str_equals_any(kind, 2, "contour", "contourf"))
@@ -1451,7 +1451,7 @@ void plot_process_window(grm_args_t *subplot_args)
       int z_major_count;
       double z_tick;
       double z_org_low, z_org_high;
-      int rotation, tilt;
+      double rotation, tilt;
 
       args_values(subplot_args, "_zlim", "dd", &z_min, &z_max);
       if (!(scale & GR_OPTION_Z_LOG))
@@ -1484,8 +1484,8 @@ void plot_process_window(grm_args_t *subplot_args)
       grm_args_push(subplot_args, "zorg", "dd", z_org_low, z_org_high);
       grm_args_push(subplot_args, "zmajor", "i", z_major_count);
 
-      args_values(subplot_args, "rotation", "i", &rotation);
-      args_values(subplot_args, "tilt", "i", &tilt);
+      args_values(subplot_args, "rotation", "d", &rotation);
+      args_values(subplot_args, "tilt", "d", &tilt);
       gr_setwindow3d(x_min, x_max, y_min, y_max, z_min, z_max);
       gr_setspace3d(-rotation, tilt, 30, 0);
     }

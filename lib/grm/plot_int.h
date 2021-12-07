@@ -65,8 +65,8 @@ extern const char *plot_clear_exclude_keys[];
 #define PLOT_DEFAULT_COLORMAP 44                                 /* VIRIDIS */
 #define PLOT_DEFAULT_FONT 232                                    /* CMUSerif-Math */
 #define PLOT_DEFAULT_FONT_PRECISION GKS_K_TEXT_PRECISION_OUTLINE /* hardware font rendering */
-#define PLOT_DEFAULT_ROTATION 40
-#define PLOT_DEFAULT_TILT 60
+#define PLOT_DEFAULT_ROTATION 40.0
+#define PLOT_DEFAULT_TILT 60.0
 #define PLOT_DEFAULT_KEEP_ASPECT_RATIO 0
 #define PLOT_DEFAULT_XLABEL ""
 #define PLOT_DEFAULT_YLABEL ""
