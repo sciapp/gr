@@ -1032,7 +1032,7 @@ error_t plot_pre_subplot(grm_args_t *subplot_args)
     {
       plot_draw_polar_axes(subplot_args);
     }
-  else if (strcmp(kind, "pie") != 0)
+  else if (!str_equals_any(kind, 3, "imshow", "isosurface", "pie"))
     {
       plot_draw_axes(subplot_args, 1);
     }
@@ -1180,7 +1180,7 @@ void plot_process_viewport(grm_args_t *subplot_args)
   viewport[0] = vp0 + (0.075 + left_margin) * (vp1 - vp0);
   viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
   viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
-  viewport[3] = vp2 + (0.95 - top_margin) * (vp3 - vp2);
+  viewport[3] = vp2 + (0.975 - top_margin) * (vp3 - vp2);
 
   if (args_values(subplot_args, "backgroundcolor", "i", &background_color_index))
     {
@@ -1206,10 +1206,11 @@ void plot_process_viewport(grm_args_t *subplot_args)
 
       x_center = 0.5 * (viewport[0] + viewport[1]);
       y_center = 0.5 * (viewport[2] + viewport[3]);
-      r = 0.5 * min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
+      r = 0.45 * min(viewport[1] - viewport[0], viewport[3] - viewport[2]);
       if (grm_args_contains(subplot_args, "title"))
         {
-          y_center -= 0.1 * r;
+          r *= 0.975;
+          y_center -= 0.025 * r;
         }
       viewport[0] = x_center - r;
       viewport[1] = x_center + r;
@@ -1280,162 +1281,154 @@ void plot_process_window(grm_args_t *subplot_args)
       scale |= zflip ? GR_OPTION_FLIP_Z : 0;
     }
 
-  if (str_equals_any(kind, 3, "pie", "polar", "polar_histogram"))
+  args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
+  args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
+  if (args_values(subplot_args, "reset_ranges", "i", &reset_ranges) && reset_ranges)
     {
-      y_min = x_min = -1.1;
-      y_max = x_max = 1.1;
-    }
-  else
-    {
-      args_values(subplot_args, "_xlim", "dd", &x_min, &x_max);
-      args_values(subplot_args, "_ylim", "dd", &y_min, &y_max);
-      if (args_values(subplot_args, "reset_ranges", "i", &reset_ranges) && reset_ranges)
+      if (args_values(subplot_args, "_original_xlim", "dd", &x_min, &x_max) &&
+          args_values(subplot_args, "_original_ylim", "dd", &y_min, &y_max) &&
+          args_values(subplot_args, "_original_adjust_xlim", "i", &adjust_xlim) &&
+          args_values(subplot_args, "_original_adjust_ylim", "i", &adjust_ylim))
         {
-          if (args_values(subplot_args, "_original_xlim", "dd", &x_min, &x_max) &&
-              args_values(subplot_args, "_original_ylim", "dd", &y_min, &y_max) &&
-              args_values(subplot_args, "_original_adjust_xlim", "i", &adjust_xlim) &&
-              args_values(subplot_args, "_original_adjust_ylim", "i", &adjust_ylim))
-            {
-              grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
-              grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
-              grm_args_push(subplot_args, "adjust_xlim", "i", adjust_xlim);
-              grm_args_push(subplot_args, "adjust_ylim", "i", adjust_ylim);
-              grm_args_remove(subplot_args, "_original_xlim");
-              grm_args_remove(subplot_args, "_original_ylim");
-              grm_args_remove(subplot_args, "_original_adjust_xlim");
-              grm_args_remove(subplot_args, "_original_adjust_ylim");
-            }
-          grm_args_remove(subplot_args, "reset_ranges");
-        }
-      if (grm_args_contains(subplot_args, "panzoom"))
-        {
-          if (!grm_args_contains(subplot_args, "_original_xlim"))
-            {
-              grm_args_push(subplot_args, "_original_xlim", "dd", x_min, x_max);
-              args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
-              grm_args_push(subplot_args, "_original_adjust_xlim", "i", adjust_xlim);
-              grm_args_push(subplot_args, "adjust_xlim", "i", 0);
-            }
-          if (!grm_args_contains(subplot_args, "_original_ylim"))
-            {
-              grm_args_push(subplot_args, "_original_ylim", "dd", y_min, y_max);
-              args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
-              grm_args_push(subplot_args, "_original_adjust_ylim", "i", adjust_ylim);
-              grm_args_push(subplot_args, "adjust_ylim", "i", 0);
-            }
-          if (!args_values(subplot_args, "panzoom", "dddd", &x, &y, &xzoom, &yzoom))
-            {
-              if (args_values(subplot_args, "panzoom", "ddd", &x, &y, &xzoom))
-                {
-                  yzoom = xzoom;
-                }
-              else
-                {
-                  /* TODO: Add error handling for type mismatch (-> next statement would fail) */
-                  args_values(subplot_args, "panzoom", "dd", &x, &y);
-                  yzoom = xzoom = 0.0;
-                }
-            }
-          /* Ensure the correct window is set in GR */
-          if (args_values(subplot_args, "window", "D", &stored_window))
-            {
-              gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
-              logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
-                      stored_window[2], stored_window[3]));
-            }
-          gr_panzoom(x, y, xzoom, yzoom, &x_min, &x_max, &y_min, &y_max);
-          logger((stderr, "Window after `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
           grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
           grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
-          grm_args_remove(subplot_args, "panzoom");
+          grm_args_push(subplot_args, "adjust_xlim", "i", adjust_xlim);
+          grm_args_push(subplot_args, "adjust_ylim", "i", adjust_ylim);
+          grm_args_remove(subplot_args, "_original_xlim");
+          grm_args_remove(subplot_args, "_original_ylim");
+          grm_args_remove(subplot_args, "_original_adjust_xlim");
+          grm_args_remove(subplot_args, "_original_adjust_ylim");
         }
-
-      if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
+      grm_args_remove(subplot_args, "reset_ranges");
+    }
+  if (grm_args_contains(subplot_args, "panzoom"))
+    {
+      if (!grm_args_contains(subplot_args, "_original_xlim"))
         {
-          major_count = 2;
-        }
-      else
-        {
-          major_count = 5;
-        }
-
-      if (!(scale & GR_OPTION_X_LOG))
-        {
+          grm_args_push(subplot_args, "_original_xlim", "dd", x_min, x_max);
           args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
-          if (adjust_xlim)
+          grm_args_push(subplot_args, "_original_adjust_xlim", "i", adjust_xlim);
+          grm_args_push(subplot_args, "adjust_xlim", "i", 0);
+        }
+      if (!grm_args_contains(subplot_args, "_original_ylim"))
+        {
+          grm_args_push(subplot_args, "_original_ylim", "dd", y_min, y_max);
+          args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
+          grm_args_push(subplot_args, "_original_adjust_ylim", "i", adjust_ylim);
+          grm_args_push(subplot_args, "adjust_ylim", "i", 0);
+        }
+      if (!args_values(subplot_args, "panzoom", "dddd", &x, &y, &xzoom, &yzoom))
+        {
+          if (args_values(subplot_args, "panzoom", "ddd", &x, &y, &xzoom))
             {
-              logger((stderr, "_xlim before \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
-              gr_adjustlimits(&x_min, &x_max);
-              logger((stderr, "_xlim after \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
-            }
-          if (strcmp(kind, "barplot") == 0)
-            {
-              const char *xticklabels[5];
-              unsigned int xticklabels_length;
-              x_tick = 1;
-              if (args_first_value(subplot_args, "xticklabels", "S", &xticklabels, &xticklabels_length))
-                {
-                  x_major_count = 0;
-                }
-              else
-                {
-                  x_major_count = 1;
-                }
+              yzoom = xzoom;
             }
           else
             {
-              x_major_count = major_count;
-              x_tick = auto_tick(x_min, x_max) / x_major_count;
+              /* TODO: Add error handling for type mismatch (-> next statement would fail) */
+              args_values(subplot_args, "panzoom", "dd", &x, &y);
+              yzoom = xzoom = 0.0;
             }
         }
-      else
+      /* Ensure the correct window is set in GR */
+      if (args_values(subplot_args, "window", "D", &stored_window))
         {
-          x_tick = x_major_count = 1;
+          gr_setwindow(stored_window[0], stored_window[1], stored_window[2], stored_window[3]);
+          logger((stderr, "Window before `gr_panzoom` (%lf, %lf, %lf, %lf)\n", stored_window[0], stored_window[1],
+                  stored_window[2], stored_window[3]));
         }
-      if (!(scale & GR_OPTION_FLIP_X))
-        {
-          x_org_low = x_min;
-          x_org_high = x_max;
-        }
-      else
-        {
-          x_org_low = x_max;
-          x_org_high = x_min;
-        }
-      grm_args_push(subplot_args, "xtick", "d", x_tick);
-      grm_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
-      grm_args_push(subplot_args, "xmajor", "i", x_major_count);
-
-      if (!(scale & GR_OPTION_Y_LOG))
-        {
-          args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
-          if (adjust_ylim)
-            {
-              logger((stderr, "_ylim before \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
-              gr_adjustlimits(&y_min, &y_max);
-              logger((stderr, "_ylim after \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
-            }
-          y_major_count = major_count;
-          y_tick = auto_tick(y_min, y_max) / y_major_count;
-        }
-      else
-        {
-          y_tick = y_major_count = 1;
-        }
-      if (!(scale & GR_OPTION_FLIP_Y))
-        {
-          y_org_low = y_min;
-          y_org_high = y_max;
-        }
-      else
-        {
-          y_org_low = y_max;
-          y_org_high = y_min;
-        }
-      grm_args_push(subplot_args, "ytick", "d", y_tick);
-      grm_args_push(subplot_args, "yorg", "dd", y_org_low, y_org_high);
-      grm_args_push(subplot_args, "ymajor", "i", y_major_count);
+      gr_panzoom(x, y, xzoom, yzoom, &x_min, &x_max, &y_min, &y_max);
+      logger((stderr, "Window after `gr_panzoom` (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
+      grm_args_push(subplot_args, "_xlim", "dd", x_min, x_max);
+      grm_args_push(subplot_args, "_ylim", "dd", y_min, y_max);
+      grm_args_remove(subplot_args, "panzoom");
     }
+
+  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "polar", "trisurf"))
+    {
+      major_count = 2;
+    }
+  else
+    {
+      major_count = 5;
+    }
+
+  if (!(scale & GR_OPTION_X_LOG))
+    {
+      args_values(subplot_args, "adjust_xlim", "i", &adjust_xlim);
+      if (adjust_xlim)
+        {
+          logger((stderr, "_xlim before \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
+          gr_adjustlimits(&x_min, &x_max);
+          logger((stderr, "_xlim after \"gr_adjustlimits\": (%lf, %lf)\n", x_min, x_max));
+        }
+      if (strcmp(kind, "barplot") == 0)
+        {
+          const char *xticklabels[5];
+          unsigned int xticklabels_length;
+          x_tick = 1;
+          if (args_first_value(subplot_args, "xticklabels", "S", &xticklabels, &xticklabels_length))
+            {
+              x_major_count = 0;
+            }
+          else
+            {
+              x_major_count = 1;
+            }
+        }
+      else
+        {
+          x_major_count = major_count;
+          x_tick = auto_tick(x_min, x_max) / x_major_count;
+        }
+    }
+  else
+    {
+      x_tick = x_major_count = 1;
+    }
+  if (!(scale & GR_OPTION_FLIP_X))
+    {
+      x_org_low = x_min;
+      x_org_high = x_max;
+    }
+  else
+    {
+      x_org_low = x_max;
+      x_org_high = x_min;
+    }
+  grm_args_push(subplot_args, "xtick", "d", x_tick);
+  grm_args_push(subplot_args, "xorg", "dd", x_org_low, x_org_high);
+  grm_args_push(subplot_args, "xmajor", "i", x_major_count);
+
+  if (!(scale & GR_OPTION_Y_LOG))
+    {
+      args_values(subplot_args, "adjust_ylim", "i", &adjust_ylim);
+      if (adjust_ylim)
+        {
+          logger((stderr, "_ylim before \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
+          gr_adjustlimits(&y_min, &y_max);
+          logger((stderr, "_ylim after \"gr_adjustlimits\": (%lf, %lf)\n", y_min, y_max));
+        }
+      y_major_count = major_count;
+      y_tick = auto_tick(y_min, y_max) / y_major_count;
+    }
+  else
+    {
+      y_tick = y_major_count = 1;
+    }
+  if (!(scale & GR_OPTION_FLIP_Y))
+    {
+      y_org_low = y_min;
+      y_org_high = y_max;
+    }
+  else
+    {
+      y_org_low = y_max;
+      y_org_high = y_min;
+    }
+  grm_args_push(subplot_args, "ytick", "d", y_tick);
+  grm_args_push(subplot_args, "yorg", "dd", y_org_low, y_org_high);
+  grm_args_push(subplot_args, "ymajor", "i", y_major_count);
 
   logger((stderr, "Storing window (%lf, %lf, %lf, %lf)\n", x_min, x_max, y_min, y_max));
   grm_args_push(subplot_args, "window", "dddd", x_min, x_max, y_min, y_max);
@@ -1444,7 +1437,9 @@ void plot_process_window(grm_args_t *subplot_args)
       gr_setwindow(x_min, x_max, y_min, y_max);
     }
   else
-    gr_setwindow(-1, 1, -1, 1);
+    {
+      gr_setwindow(-1, 1, -1, 1);
+    }
 
   if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
     {
@@ -2779,7 +2774,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
                     {
                       gr_settextcolorind(1);
                     }
-                  gr_textext(x1, x2, ylabels[i]);
+                  gr_text(x1, x2, ylabels[i]);
                   --ylabels_left;
                 }
             }
@@ -2953,7 +2948,7 @@ error_t plot_barplot(grm_args_t *subplot_args)
                         {
                           gr_settextcolorind(1);
                         }
-                      gr_textext(x1, x2, ylabels[ylabels_length - ylabels_left]);
+                      gr_text(x1, x2, ylabels[ylabels_length - ylabels_left]);
                       --ylabels_left;
                     }
                 }
@@ -3547,17 +3542,15 @@ error_t plot_imshow(grm_args_t *subplot_args)
   grm_args_t **current_series;
   double *c_data;
   double c_min, c_max;
-  double *viewport, *vp;
-  unsigned int c_data_length, i, rows, cols;
-  int *real_data;
+  double *vp;
+  unsigned int c_data_length, i, j, k, rows, cols;
+  int *img_data;
   unsigned int *shape;
-
-  double x_min, x_max, y_min, y_max, w, h;
-  error_t error;
+  int xflip, yflip;
+  double x_min, x_max, y_min, y_max, w, h, tmp;
 
   args_values(subplot_args, "series", "A", &current_series);
   return_error_if(!args_values(subplot_args, "_clim", "dd", &c_min, &c_max), ERROR_PLOT_MISSING_DATA);
-  return_error_if(!args_values(subplot_args, "viewport", "D", &viewport), ERROR_PLOT_MISSING_DATA);
   return_error_if(!args_values(subplot_args, "vp", "D", &vp), ERROR_PLOT_MISSING_DATA);
   while (*current_series != NULL)
     {
@@ -3568,50 +3561,62 @@ error_t plot_imshow(grm_args_t *subplot_args)
       rows = shape[0];
       cols = shape[1];
 
-      real_data = malloc(sizeof(int) * c_data_length);
-      if (real_data == NULL)
+      img_data = malloc(sizeof(int) * c_data_length);
+      if (img_data == NULL)
         {
           debug_print_malloc_error();
-          free(real_data);
+          free(img_data);
           return ERROR_MALLOC;
         }
 
       logger((stderr, "Got min, max %lf %lf\n", c_min, c_max));
-      for (i = 0; i < c_data_length; ++i)
-        {
-          real_data[i] = 1000 + (int)round((1.0 * c_data[i] - c_min) / (c_max - c_min) * 255);
-        }
+      k = 0;
+      for (j = 0; j < rows; ++j)
+        for (i = 0; i < cols; ++i)
+          {
+            img_data[k++] = 1000 + (int)round((1.0 * c_data[i * rows + j] - c_min) / (c_max - c_min) * 255);
+          }
 
-      if (cols * (viewport[3] - viewport[2]) < rows * (viewport[1] - viewport[0]))
+      if (cols * (vp[3] - vp[2]) < rows * (vp[1] - vp[0]))
         {
-          w = (double)cols / (double)rows * (viewport[3] - viewport[2]);
-          x_min = max(0.5 * (viewport[0] + viewport[1] - w), viewport[0]);
-          x_max = min(0.5 * (viewport[0] + viewport[1] + w), viewport[1]);
-          y_min = viewport[2];
-          y_max = viewport[3];
+          w = (double)cols / (double)rows * (vp[3] - vp[2]);
+          x_min = max(0.5 * (vp[0] + vp[1] - w), vp[0]);
+          x_max = min(0.5 * (vp[0] + vp[1] + w), vp[1]);
+          y_min = vp[2];
+          y_max = vp[3];
         }
       else
         {
-          h = (double)rows / (double)cols * (viewport[1] - viewport[0]);
-          x_min = viewport[0];
-          x_max = viewport[1];
-          y_min = max(0.5 * (viewport[3] + viewport[2] - h), viewport[2]);
-          y_max = min(0.5 * (viewport[3] + viewport[2] + h), viewport[3]);
+          h = (double)rows / (double)cols * (vp[1] - vp[0]);
+          x_min = vp[0];
+          x_max = vp[1];
+          y_min = max(0.5 * (vp[3] + vp[2] - h), vp[2]);
+          y_max = min(0.5 * (vp[3] + vp[2] + h), vp[3]);
         }
 
       gr_selntran(0);
-      gr_cellarray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, real_data);
+      gr_setscale(0);
+      args_values(subplot_args, "xflip", "i", &xflip);
+      if (xflip)
+        {
+          tmp = x_max;
+          x_max = x_min;
+          x_min = tmp;
+        }
+      args_values(subplot_args, "yflip", "i", &yflip);
+      if (yflip)
+        {
+          tmp = y_max;
+          y_max = y_min;
+          y_min = tmp;
+        }
+      gr_cellarray(x_min, x_max, y_min, y_max, cols, rows, 1, 1, cols, rows, img_data);
 
       gr_selntran(1);
 
-      free(real_data);
+      free(img_data);
 
       ++current_series;
-    }
-
-  if ((error = plot_draw_colorbar(subplot_args, 0.00, 256)) != NO_ERROR)
-    {
-      return error;
     }
 
   return NO_ERROR;
@@ -5059,7 +5064,7 @@ error_t plot_pie(grm_args_t *subplot_args)
 
       gr_settextcolorind(1);
       gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      gr_textext(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, (char *)title);
+      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, (char *)title);
     }
 
 cleanup:
@@ -5271,7 +5276,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
     {
       gr_savestate();
       gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      gr_textext(0.5 * (viewport[0] + viewport[1]), vp[3], title);
+      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3], title);
       gr_restorestate();
     }
 
@@ -5289,7 +5294,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
         {
           gr_savestate();
           gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_BOTTOM);
-          gr_textext(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
+          gr_text(0.5 * (viewport[0] + viewport[1]), vp[2] + 0.5 * charheight, x_label);
           gr_restorestate();
         }
       if (args_values(args, "ylabel", "s", &y_label))
@@ -5297,7 +5302,7 @@ error_t plot_draw_axes(grm_args_t *args, unsigned int pass)
           gr_savestate();
           gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
           gr_setcharup(-1, 0);
-          gr_textext(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
+          gr_text(vp[0] + 0.5 * charheight, 0.5 * (viewport[2] + viewport[3]), y_label);
           gr_restorestate();
         }
     }
@@ -5371,7 +5376,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
 
   if (args_values(args, "angle_ticks", "i", &angle_ticks) == 0)
     {
-      angle_ticks = 12;
+      angle_ticks = 8;
     }
   if (args_values(args, "rings", "i", &rings) == 0)
     {
@@ -5419,23 +5424,35 @@ error_t plot_draw_polar_axes(grm_args_t *args)
     }
   else
     {
-      tick = 0.5 * auto_tick(r_min, r_max);
+      tick = auto_tick(r_min, r_max);
     }
 
   n = rings;
-  gr_setlinecolorind(88);
   if (args_values(args, "phiflip", "i", &phiflip) == 0) phiflip = 0;
   for (i = 0; i <= n; i++)
     {
-      double r = (i * 1.0) / n;
-      gr_drawarc(-r, r, -r, r, 0, 180);
-      gr_drawarc(-r, r, -r, r, 180, 360);
-      gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-      x[0] = 0.05;
-      y[0] = r;
-      gr_wctondc(x, y);
-      snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%g", r_min + i * tick);
-      gr_text(x[0], y[0], text_buffer);
+      double r = r_min + i * tick / (r_max - r_min);
+      if (i % 2 == 0)
+        {
+          gr_setlinecolorind(88);
+          if (i > 0)
+            {
+              gr_drawarc(-r, r, -r, r, 0, 180);
+              gr_drawarc(-r, r, -r, r, 180, 360);
+            }
+          gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
+          x[0] = 0.05;
+          y[0] = r;
+          gr_wctondc(x, y);
+          snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%.1lf", r_min + i * tick);
+          gr_text(x[0], y[0], text_buffer);
+        }
+      else
+        {
+          gr_setlinecolorind(90);
+          gr_drawarc(-r, r, -r, r, 0, 180);
+          gr_drawarc(-r, r, -r, r, 180, 360);
+        }
     }
   if (strcmp(kind, "polar_histogram") == 0)
     {
@@ -5464,7 +5481,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
           else
             snprintf(text_buffer, PLOT_POLAR_AXES_TEXT_BUFFER, "%d\xc2\xb0", 330 - (int)round(alpha - interval));
         }
-      gr_textext(x[0], y[0], text_buffer);
+      gr_text(x[0], y[0], text_buffer);
     }
   gr_restorestate();
 
@@ -5472,7 +5489,7 @@ error_t plot_draw_polar_axes(grm_args_t *args)
     {
       gr_savestate();
       gr_settextalign(GKS_K_TEXT_HALIGN_CENTER, GKS_K_TEXT_VALIGN_TOP);
-      gr_textext(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
+      gr_text(0.5 * (viewport[0] + viewport[1]), vp[3] - 0.02, title);
       gr_restorestate();
     }
 
@@ -5502,7 +5519,7 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
   w = 0;
   for (current_label = labels; *current_label != NULL; ++current_label)
     {
-      gr_inqtextext(0, 0, *(char **)current_label, tbx, tby);
+      gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
       w = max(w, tbx[2]);
     }
 
@@ -5569,7 +5586,7 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
       gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
       if (*current_label != NULL)
         {
-          gr_textext(px, py, (char *)*current_label);
+          gr_text(px, py, (char *)*current_label);
           ++current_label;
         }
       py -= 0.03;
@@ -5601,7 +5618,7 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
   h = 0;
   for (current_label = labels; *current_label != NULL; ++current_label)
     {
-      gr_inqtextext(0, 0, *(char **)current_label, tbx, tby);
+      gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
       w += tbx[2];
       h = max(h, tby[2]);
     }
@@ -5625,8 +5642,8 @@ error_t plot_draw_pie_legend(grm_args_t *subplot_args)
       gr_fillrect(px, px + 0.02, py - 0.01, py + 0.01);
       gr_setlinecolorind(1);
       gr_drawrect(px, px + 0.02, py - 0.01, py + 0.01);
-      gr_textext(px + 0.03, py, (char *)*current_label);
-      gr_inqtextext(0, 0, *(char **)current_label, tbx, tby);
+      gr_text(px + 0.03, py, (char *)*current_label);
+      gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
       px += tbx[2] + 0.05;
       set_next_color(NULL, NULL, GR_COLOR_FILL);
     }
@@ -7266,7 +7283,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
         {
           /* calculate width of the next part of the label to be drawn */
           new_label[i] = '\0';
-          gr_inqtextext(x1, x2, new_label + cur_start, tbx, tby);
+          gr_inqtext(x1, x2, new_label + cur_start, tbx, tby);
           gr_wctondc(&tbx[0], &tby[0]);
           gr_wctondc(&tbx[1], &tby[1]);
           width = tbx[1] - tbx[0];
@@ -7281,7 +7298,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
               if (cur_num_breakpoints == 1)
                 {
                   new_label[i] = '\0';
-                  gr_textext(x1, x2, new_label + cur_start);
+                  gr_text(x1, x2, new_label + cur_start);
 
                   cur_start = i + 1;
                   cur_num_breakpoints = 0;
@@ -7291,7 +7308,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
                 {
                   /* break label at last breakpoint that still allowed the text to fit */
                   new_label[breakpoint_positions[cur_num_breakpoints - 2]] = '\0';
-                  gr_textext(x1, x2, new_label + cur_start);
+                  gr_text(x1, x2, new_label + cur_start);
 
                   cur_start = breakpoint_positions[cur_num_breakpoints - 2] + 1;
                   breakpoint_positions[0] = breakpoint_positions[cur_num_breakpoints - 1];
@@ -7310,7 +7327,7 @@ void draw_xticklabel(double x1, double x2, const char *label, double available_w
   new_label[i] = '\0';
 
   /* draw the rest */
-  gr_textext(x1, x2, new_label + cur_start);
+  gr_text(x1, x2, new_label + cur_start);
 }
 
 /*!
