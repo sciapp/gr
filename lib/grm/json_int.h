@@ -128,6 +128,7 @@ error_t fromjson_parse_object(fromjson_state_t *state);
 
 fromjson_datatype_t fromjson_check_type(const fromjson_state_t *state);
 error_t fromjson_copy_and_filter_json_string(char **dest, const char *src);
+int fromjson_is_escaped_delimiter(const char *delim_ptr, const char *str);
 int fromjson_find_next_delimiter(const char **delim_ptr, const char *src, int include_start,
                                  int exclude_nested_structures);
 size_t fromjson_get_outer_array_length(const char *str);
