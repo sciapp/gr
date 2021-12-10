@@ -935,6 +935,10 @@ void plot_set_attribute_defaults(grm_args_t *plot_args)
             {
               args_setdefault(*current_series, "nbins", "i", PLOT_DEFAULT_HEXBIN_NBINS);
             }
+          else if (strcmp(kind, "volume") == 0)
+            {
+              args_setdefault(*current_series, "algorithm", "i", PLOT_DEFAULT_VOLUME_ALGORITHM);
+            }
           ++current_series;
         }
       ++current_subplot;
