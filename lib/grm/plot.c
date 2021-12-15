@@ -1104,6 +1104,25 @@ void plot_process_resample_method(grm_args_t *subplot_args)
   gr_setresamplemethod(resample_method_flag);
 }
 
+static void legend_size(grm_args_t *subplot_args, double *w, double *h)
+{
+  double tbx[4], tby[4];
+  const char **labels, **current_label;
+  unsigned int num_labels;
+
+  *w = 0;
+  *h = 0;
+  if (args_first_value(subplot_args, "labels", "S", &labels, &num_labels))
+    {
+      for (current_label = labels; *current_label != NULL; ++current_label)
+        {
+          gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
+          *w = max(*w, tbx[2]);
+          *h += max(tby[2] - tby[0], 0.03);
+        }
+    }
+}
+
 void plot_process_viewport(grm_args_t *subplot_args)
 {
   const char *kind;
@@ -1185,6 +1204,21 @@ void plot_process_viewport(grm_args_t *subplot_args)
   viewport[1] = vp0 + (0.95 - right_margin) * (vp1 - vp0);
   viewport[2] = vp2 + (0.075 + bottom_margin) * (vp3 - vp2);
   viewport[3] = vp2 + (0.975 - top_margin) * (vp3 - vp2);
+
+  if (str_equals_any(kind, 4, "line", "stairs", "scatter", "stem"))
+    {
+      int location;
+      double w, h;
+
+      if (args_values(subplot_args, "location", "i", &location))
+        {
+          if (location == 11 || location == 12 || location == 13)
+            {
+              legend_size(subplot_args, &w, &h);
+              viewport[1] -= w + 0.1;
+            }
+        }
+    }
 
   if (args_values(subplot_args, "backgroundcolor", "i", &background_color_index))
     {
@@ -5510,7 +5544,7 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
   double px, py, w, h;
   double tbx[4], tby[4];
   double legend_symbol_x[2], legend_symbol_y[2];
-
+  int i;
 
   return_error_if(!args_first_value(subplot_args, "labels", "S", &labels, &num_labels), ERROR_PLOT_MISSING_LABELS);
   logger((stderr, "Draw a legend with %d labels\n", num_labels));
@@ -5520,17 +5554,15 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
   gr_savestate();
   gr_selntran(0);
   gr_setscale(0);
-  w = 0;
-  for (current_label = labels; *current_label != NULL; ++current_label)
-    {
-      gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
-      w = max(w, tbx[2]);
-    }
+  legend_size(subplot_args, &w, &h);
 
-  h = (num_series + 1) * 0.03;
-  if (int_equals_any(location, 3, 8, 9, 10))
+  if (int_equals_any(location, 3, 11, 12, 13))
     {
-      px = 0.5 * (viewport[0] + viewport[1] - w);
+      px = viewport[1] + 0.11;
+    }
+  else if (int_equals_any(location, 3, 8, 9, 10))
+    {
+      px = 0.5 * (viewport[0] + viewport[1] - w + 0.05);
     }
   else if (int_equals_any(location, 3, 2, 3, 6))
     {
@@ -5540,13 +5572,21 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
     {
       px = viewport[1] - 0.05 - w;
     }
-  if (int_equals_any(location, 4, 5, 6, 7, 10))
+  if (int_equals_any(location, 5, 5, 6, 7, 10, 12))
     {
       py = 0.5 * (viewport[2] + viewport[3] + h) - 0.03;
     }
-  else if (int_equals_any(location, 3, 3, 4, 8))
+  else if (location == 13)
     {
       py = viewport[2] + h;
+    }
+  else if (int_equals_any(location, 3, 3, 4, 8))
+    {
+      py = viewport[2] + h + 0.03;
+    }
+  else if (location == 11)
+    {
+      py = viewport[3] - 0.03;
     }
   else
     {
@@ -5555,18 +5595,26 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
 
   gr_setfillintstyle(GKS_K_INTSTYLE_SOLID);
   gr_setfillcolorind(0);
-  gr_fillrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_series);
+  gr_fillrect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
   gr_setlinetype(GKS_K_INTSTYLE_SOLID);
   gr_setlinecolorind(1);
   gr_setlinewidth(1);
-  gr_drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - 0.03 * num_series);
+  gr_drawrect(px - 0.08, px + w + 0.02, py + 0.03, py - h);
+  i = 1;
   gr_uselinespec(" ");
   current_label = labels;
   while (*current_series != NULL)
     {
       char *spec;
       int mask;
+      double dy;
 
+      if (i <= num_labels)
+        {
+          gr_inqtext(0, 0, *(char **)current_label, tbx, tby);
+          dy = max((tby[2] - tby[0]) - 0.03, 0);
+          py -= 0.5 * dy;
+        }
       gr_savestate();
       args_values(*current_series, "spec", "s", &spec); /* `spec` is always set */
       mask = gr_uselinespec(spec);
@@ -5588,9 +5636,11 @@ error_t plot_draw_legend(grm_args_t *subplot_args)
         }
       gr_restorestate();
       gr_settextalign(GKS_K_TEXT_HALIGN_LEFT, GKS_K_TEXT_VALIGN_HALF);
-      if (*current_label != NULL)
+      if (i <= num_labels && *current_label != NULL)
         {
           gr_text(px, py, (char *)*current_label);
+          py -= 0.5 * dy;
+          i += 1;
           ++current_label;
         }
       py -= 0.03;
