@@ -5770,7 +5770,7 @@ error_t plot_draw_colorbar(grm_args_t *subplot_args, double off, unsigned int co
     }
   else
     {
-      double c_tick = 0.5 * auto_tick(c_min, c_max);
+      double c_tick = auto_tick(c_min, c_max);
       gr_axes(0, c_tick, 1, c_min, 0, 1, 0.005);
     }
   free(data);
