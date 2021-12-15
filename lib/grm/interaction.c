@@ -126,13 +126,49 @@ int grm_input(const grm_args_t *input_args)
 
           if (args_values(input_args, "xshift", "i", &xshift) && args_values(input_args, "yshift", "i", &yshift))
             {
-              double ndc_xshift, ndc_yshift;
+              double ndc_xshift, ndc_yshift, rotation, tilt;
+              int shift_pressed;
+              const char *kind;
 
-              ndc_xshift = (double)-xshift / max_width_height;
-              ndc_yshift = (double)yshift / max_width_height;
-              logger((stderr, "Translate by ndc coordinates (%lf, %lf)\n", ndc_xshift, ndc_yshift));
-              grm_args_push(subplot_args, "panzoom", "ddd", ndc_xshift, ndc_yshift, 0.0);
+              args_values(subplot_args, "kind", "s", &kind);
 
+              if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume",
+                                 "isosurface"))
+                {
+                  if (args_values(input_args, "shift_pressed", "i", &shift_pressed) && shift_pressed)
+                    {
+                      /*
+                       * TODO Translate in 3D
+                       */
+                    }
+                  else
+                    {
+                      args_values(subplot_args, "rotation", "d", &rotation);
+                      args_values(subplot_args, "tilt", "d", &tilt);
+
+                      rotation += xshift * 0.2;
+                      tilt -= yshift * 0.2;
+
+                      if (tilt > 180)
+                        {
+                          tilt = 180;
+                        }
+                      else if (tilt < 0)
+                        {
+                          tilt = 0;
+                        }
+
+                      grm_args_push(subplot_args, "rotation", "d", rotation);
+                      grm_args_push(subplot_args, "tilt", "d", tilt);
+                    }
+                }
+              else
+                {
+                  ndc_xshift = (double)-xshift / max_width_height;
+                  ndc_yshift = (double)yshift / max_width_height;
+                  logger((stderr, "Translate by ndc coordinates (%lf, %lf)\n", ndc_xshift, ndc_yshift));
+                  grm_args_push(subplot_args, "panzoom", "ddd", ndc_xshift, ndc_yshift, 0.0);
+                }
               return 1;
             }
         }
