@@ -194,6 +194,7 @@ typedef struct ws_state_list_t
 #endif
   int npoints, max_points;
   int empty, current_page_written, page_counter;
+  int scroll;
   double rect[MAX_TNR][2][2];
   unsigned char *patterns;
   int pattern_counter, use_symbols;
@@ -1667,6 +1668,10 @@ static void write_page(void)
               fprintf(stdout, "\033Ptmux;\033\033Ptmux;\033\033\033"); /* Start a nested tmux pass-through sequence */
             }
         }
+      else if (p->page_counter == 0 && !p->scroll)
+        {
+          fprintf(stdout, "\n");
+        }
       fprintf(stdout, "\033]1337;File=inline=1;height=" XSTR(HEIGHT_IN_CELLS) ";preserveAspectRatio=0:%s\a",
               b64_string);
       if (p->have_tmux)
@@ -1684,6 +1689,17 @@ static void write_page(void)
            * -> place the cursor at the end of the drawn image
            */
           fprintf(stdout, "\033[%dB", HEIGHT_IN_CELLS); /* Move down `HEIGHT_IN_CELLS` lines */
+        }
+      else if (!p->scroll)
+        {
+          if (p->page_counter > 0)
+            {
+              fprintf(stdout, "\033[%dA\n", HEIGHT_IN_CELLS + 2);
+            }
+          else
+            {
+              fprintf(stdout, "\n");
+            }
         }
       fflush(stdout);
 
@@ -2274,6 +2290,7 @@ void gks_cairoplugin(int fctid, int dx, int dy, int dimx, int *ia, int lr1, doub
       p->empty = 1;
       p->current_page_written = 1;
       p->page_counter = 0;
+      p->scroll = gks_getenv("GKS_SCROLL_ITERM") != NULL;
 
       p->transparency = 1.0;
       p->linewidth = p->nominal_size;
