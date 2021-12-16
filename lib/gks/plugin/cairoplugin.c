@@ -1668,9 +1668,16 @@ static void write_page(void)
               fprintf(stdout, "\033Ptmux;\033\033Ptmux;\033\033\033"); /* Start a nested tmux pass-through sequence */
             }
         }
-      else if (p->page_counter == 0 && !p->scroll)
+      else if (!p->scroll)
         {
-          fprintf(stdout, "\n");
+          if (p->page_counter == 1)
+            {
+              fprintf(stdout, "\033[H\033[J");
+            }
+          else
+            {
+              fprintf(stdout, "\033[H");
+            }
         }
       fprintf(stdout, "\033]1337;File=inline=1;height=" XSTR(HEIGHT_IN_CELLS) ";preserveAspectRatio=0:%s\a",
               b64_string);
@@ -1692,14 +1699,7 @@ static void write_page(void)
         }
       else if (!p->scroll)
         {
-          if (p->page_counter > 0)
-            {
-              fprintf(stdout, "\033[%dA\n", HEIGHT_IN_CELLS + 2);
-            }
-          else
-            {
-              fprintf(stdout, "\n");
-            }
+          fprintf(stdout, "\033[%dH\n", HEIGHT_IN_CELLS);
         }
       fflush(stdout);
 
