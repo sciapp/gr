@@ -373,6 +373,7 @@ function GRM(canvas_id) {
     this.unregister = grm_unregister;
     this.dump_json_str = grm_dump_json_str;
     this.load_from_str = grm_load_from_str;
+    this.is3d = grm_is3d;
 
     // set canvas and context
     Module.set_canvas(canvas_id);
@@ -1391,6 +1392,12 @@ grm_get_box = function(top, right, bottom, left, keepAspectRatio) {
     return result;
 };
 
+grm_is3d_c = Module.cwrap('grm_is3d', 'number', ['number', 'number']);
+grm_is3d = function(x, y) {
+    var result = grm_is3d_c(x, y);
+    return result;
+};
+
 grm_get_tooltip_c = Module.cwrap('grm_get_tooltip', 'number', ['number', 'number']);
 grm_get_tooltip = function(x, y) {
     var info = grm_get_tooltip_c(x, y);
@@ -1403,7 +1410,7 @@ grm_get_tooltip = function(x, y) {
         'ylabel':  Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 7, info / 4 + 8)[0]),
         'label': Module.UTF8ToString(Module.HEAP32.subarray(info / 4 + 8, info / 4 + 9)[0])
     };
-    freearray(info)
+    freearray(info);
     return data;
 };
 

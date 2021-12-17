@@ -201,6 +201,31 @@ int grm_input(const grm_args_t *input_args)
   return 0;
 }
 
+int grm_is3d(const int x, const int y)
+{
+  int width, height, max_width_height;
+  double ndc_x, ndc_y;
+  grm_args_t *subplot_args;
+  const char *kind;
+
+  get_figure_size(NULL, &width, &height, NULL, NULL);
+  max_width_height = max(width, height);
+  ndc_x = (double)x / max_width_height;
+  ndc_y = (double)y / max_width_height;
+
+  subplot_args = get_subplot_from_ndc_points(1, &ndc_x, &ndc_y);
+
+  if (subplot_args && args_values(subplot_args, "kind", "s", &kind) &&
+      str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
+    {
+      return 1;
+    }
+  else
+    {
+      return 0;
+    }
+}
+
 int grm_get_box(const int x1, const int y1, const int x2, const int y2, const int keep_aspect_ratio, int *x, int *y,
                 int *w, int *h)
 {
