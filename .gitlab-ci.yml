@@ -923,7 +923,7 @@ darwin-self-contained:
   - export MACOSX_DEPLOYMENT_TARGET=10.11
   - sudo mkdir /usr/local/gr
   - sudo chown administrator:wheel /usr/local/gr
-  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake
+  - make self GRDIR=/usr/local/gr QMAKE=/usr/local/qt5/bin/qmake QT5_QMAKE=/usr/local/qt5/bin/qmake QT6_QMAKE=/usr/local/qt6/bin/qmake
   - mkdir artifacts
   - cp lib/gks/demo artifacts/gksdemo
   - cp lib/gr/demo artifacts/grdemo
