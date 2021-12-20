@@ -12578,6 +12578,9 @@ void gr_setwindow3d(double xmin, double xmax, double ymin, double ymax, double z
   ix.zmin = zmin;
   ix.zmax = zmax;
 
+  wx.zmin = zmin;
+  wx.zmax = zmax;
+
   if (flag_graphics)
     gr_writestream("<setwindow3d xmin=\"%g\" xmax=\"%g\" ymin=\"%g\" ymax=\"%g\" zmin=\"%g\" zmax=\"%g\"/>\n", xmin,
                    xmax, ymin, ymax, zmin, zmax);
