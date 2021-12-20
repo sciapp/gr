@@ -1479,7 +1479,7 @@ void plot_process_window(grm_args_t *subplot_args)
       gr_setwindow(-1, 1, -1, 1);
     }
 
-  if (str_equals_any(kind, 6, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume"))
+  if (str_equals_any(kind, 7, "wireframe", "surface", "plot3", "scatter3", "trisurf", "volume", "isosurface"))
     {
       int z_major_count;
       double z_tick;
